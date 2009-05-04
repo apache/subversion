@@ -786,10 +786,6 @@ def status_of_missing_dir_after_revert_replaced_with_history_dir(sbox):
                         'A/D/G/pi',
                         'A/D/G/tau',
                         copied='+', wc_rev='-')
-  if not sbox.using_wc_ng():
-    # see notes/api-errata/wc003.txt. in wc-1 these nodes' individual
-    # copyfrom records come thru intact and appear as distinct additions.
-    expected_status.tweak('A/D/G/rho', 'A/D/G/pi', 'A/D/G/tau', status='A ')
   expected_status.add({
     'A/D/G/alpha' : Item(status='D ', wc_rev='3'),
     'A/D/G/beta' : Item(status='D ', wc_rev='3'),
@@ -812,12 +808,6 @@ def status_of_missing_dir_after_revert_replaced_with_history_dir(sbox):
   revert_paths = [G_path,
                   os.path.join(G_path, 'alpha'),
                   os.path.join(G_path, 'beta')]
-  if not sbox.using_wc_ng():
-    # see notes/api-errata/wc003.txt. in wc-1, these nodes' individual
-    # copyfrom records come thru intact as distinct additions to be reverted
-    revert_paths.extend([os.path.join(G_path, 'pi'),
-                         os.path.join(G_path, 'rho'),
-                         os.path.join(G_path, 'tau')])
 
   expected_output = svntest.verify.UnorderedOutput([
     "Reverted '%s'\n" % path for path in revert_paths])
@@ -825,18 +815,12 @@ def status_of_missing_dir_after_revert_replaced_with_history_dir(sbox):
   svntest.actions.run_and_verify_svn(None, expected_output, [], "revert", "-R",
                                      G_path)
 
-  if not sbox.using_wc_ng():
-    expected_output = svntest.verify.UnorderedOutput(
-      ["?       " + os.path.join(G_path, "pi") + "\n",
-       "?       " + os.path.join(G_path, "rho") + "\n",
-       "?       " + os.path.join(G_path, "tau") + "\n"])
-  else:
-    expected_output = svntest.verify.UnorderedOutput(
-      ["A       " + os.path.join(G_path, "pi") + "\n",
-       "A       " + os.path.join(G_path, "rho") + "\n",
-       "A       " + os.path.join(G_path, "alpha") + "\n",
-       "A       " + os.path.join(G_path, "beta") + "\n",
-       "A       " + os.path.join(G_path, "tau") + "\n"])
+  expected_output = svntest.verify.UnorderedOutput(
+    ["A       " + os.path.join(G_path, "pi") + "\n",
+     "A       " + os.path.join(G_path, "rho") + "\n",
+     "A       " + os.path.join(G_path, "alpha") + "\n",
+     "A       " + os.path.join(G_path, "beta") + "\n",
+     "A       " + os.path.join(G_path, "tau") + "\n"])
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      "status", wc_dir)
 

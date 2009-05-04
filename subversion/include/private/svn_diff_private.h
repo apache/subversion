@@ -42,10 +42,10 @@ typedef struct svn_hunk_t {
 
   /* Hunk ranges as they appeared in the patch file.
    * All numbers are lines, not bytes. */
-  svn_filesize_t original_start;
-  svn_filesize_t original_length;
-  svn_filesize_t modified_start;
-  svn_filesize_t modified_length;
+  svn_linenum_t original_start;
+  svn_linenum_t original_length;
+  svn_linenum_t modified_start;
+  svn_linenum_t modified_length;
 } svn_hunk_t;
 
 /* Data type to manage parsing of patches. */

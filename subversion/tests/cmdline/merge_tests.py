@@ -447,9 +447,6 @@ def add_with_history(sbox):
     'foo'    : Item(status='A ', wc_rev='-', copied='+'),
     'foo2'   : Item(status='A ', wc_rev='-', copied='+'),
     })
-  if not sbox.using_wc_ng():
-    # see notes/api-errata/wc003.txt. in wc-1, these look like separate adds.
-    expected_status.tweak('Q/bar', 'Q/bar2', status='A ')
 
   expected_skip = wc.State(C_path, { })
 
@@ -468,13 +465,6 @@ def add_with_history(sbox):
     'A/C/foo'   : Item(verb='Adding'),
     'A/C/foo2'  : Item(verb='Adding'),
     })
-  if not sbox.using_wc_ng():
-    # see notes/api-errata/wc003.txt. in wc-1, these look like separate adds
-    # from their parent, so they get committed separately.
-    expected_output.add({
-      'A/C/Q/bar' : Item(verb='Adding'),
-      'A/C/Q/bar2': Item(verb='Adding'),
-      })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
     'A/C'         : Item(status='  ', wc_rev=3),
@@ -1735,9 +1725,6 @@ def merge_skips_obstructions(sbox):
     'Q'      : Item(status='A ', wc_rev='-', copied='+'),
     'Q/bar'  : Item(status='  ', wc_rev='-', copied='+'),
     })
-  if not sbox.using_wc_ng():
-    # see notes/api-errata/wc003.txt. in wc-1, this looks like a separate add.
-    expected_status.tweak('Q/bar', status='A ')
   expected_skip = wc.State(C_path, {
     'foo' : Item(),
     })
@@ -2379,11 +2366,6 @@ def merge_funny_chars_on_path(sbox):
     for target in targets:
       key = '%s' % target[1]
       expected_output_dic[key] = Item(verb='Adding')
-      if target[2] and not sbox.using_wc_ng():
-        # see notes/api-errata/wc003.txt. these children appear like separate
-        # adds/commits, instead of a single copy of the parent.
-        key = '%s/%s' % (target[1], target[2])
-        expected_output_dic[key] = Item(verb='Adding')
 
   expected_output = wc.State(F_path, expected_output_dic)
   expected_output.add({
@@ -7149,6 +7131,8 @@ def merge_fails_if_subtree_is_deleted_on_src(sbox):
   #
   # Test for issue #3392 'Parsing error with reverse merges and
   # non-inheritable mergeinfo.
+  #
+  # Test issue #3407 'Shallow merges incorrectly set mergeinfo on children'.
 def merge_away_subtrees_noninheritable_ranges(sbox):
   "subtrees can lose non-inheritable ranges"
 
@@ -7165,6 +7149,8 @@ def merge_away_subtrees_noninheritable_ranges(sbox):
   mu_2_path   = os.path.join(wc_dir, "A_COPY_2", "mu")
   D_COPY_2_path = os.path.join(wc_dir, "A_COPY_2", "D")
   H_COPY_2_path = os.path.join(wc_dir, "A_COPY_2", "D", "H")
+  mu_COPY_path  = os.path.join(wc_dir, "A_COPY", "mu")
+  nu_COPY_path  = os.path.join(wc_dir, "A_COPY", "nu")
 
   # Make a change to directory A/D/H and commit as r8.
   svntest.actions.run_and_verify_svn(None, ['At revision 7.\n'], [],
@@ -7477,6 +7463,39 @@ def merge_away_subtrees_noninheritable_ranges(sbox):
                                        expected_output, expected_disk,
                                        expected_status, expected_skip,
                                        None, None, None, None, None, 1)
+
+  # Test issue #3407 'Shallow merges incorrectly set mergeinfo on children'.
+  #
+  # Revert all local mods.
+  svntest.actions.run_and_verify_svn(None, None, [], 'revert', '-R', wc_dir)
+
+  # Merge all available changes from A to A_COPY at --depth empty. Only the
+  # mergeinfo on A_COPY should be affected.
+  svntest.actions.run_and_verify_svn(None, [], [], 'merge', '--depth', 'empty',
+                                     sbox.repo_url + '/A', A_COPY_path)
+  svntest.actions.run_and_verify_svn(None,
+                                     [A_COPY_path + ' - /A:2-13*\n'],
+                                     [], 'pg', SVN_PROP_MERGEINFO,
+                                     '-R', A_COPY_path)
+
+  # Merge all available changes from A to A_COPY at --depth files. Only the
+  # mergeinfo on A_COPY and its file children should be affected.
+  svntest.actions.run_and_verify_svn(None, None, [], 'revert', '-R', wc_dir)
+  expected_output = expected_merge_output([[2,13],[9,13]],
+                                          ['UU   %s\n' % (mu_COPY_path),
+                                           'A    %s\n' % (nu_COPY_path)])
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'merge', '--depth', 'files',
+                                     sbox.repo_url + '/A', A_COPY_path)
+  expected_output = svntest.verify.UnorderedOutput(
+      [A_COPY_path  + ' - /A:2-13*\n',
+       mu_COPY_path + ' - /A/mu:2-13\n',
+       nu_COPY_path + ' - /A/nu:2-13\n',])
+  svntest.actions.run_and_verify_svn(None,
+                                     expected_output,
+                                     [], 'pg', SVN_PROP_MERGEINFO,
+                                     '-R', A_COPY_path)
+
   # Test for issue #2827
   # Handle merge info for sparsely-populated directories
 def merge_to_sparse_directories(sbox):

@@ -31,6 +31,8 @@
 #ifndef SVN_WC_DB_H
 #define SVN_WC_DB_H
 
+#include "svn_wc.h"
+
 #include "svn_types.h"
 #include "svn_error.h"
 #include "svn_config.h"
@@ -1141,6 +1143,15 @@ svn_wc__db_read_children(const apr_array_header_t **children,
                          apr_pool_t *scratch_pool);
 
 
+/* Return the kind of the node in DB at LOCAL_ABSPATH.  If it doesn't exist,
+   return svn_wc__db_unknown.  Use SCRATCH_POOL for temporary allocations. */
+svn_error_t *
+svn_wc__db_check_node(svn_wc__db_kind_t *kind,
+                      svn_wc__db_t *db,
+                      const char *local_abspath,
+                      apr_pool_t *scratch_pool);
+
+
 /* ### changelists. return an array, or an iterator interface? how big
    ### are these things? are we okay with an in-memory array? examine other
    ### changelist usage -- we may already assume the list fits in memory.
@@ -1193,12 +1204,19 @@ svn_wc__db_global_commit(svn_wc__db_t *db,
  * @{
  */
 
-/** Add LOCK for LOCAL_ABSPATH to DB */
+/** Add or replace LOCK for LOCAL_ABSPATH to DB.  */
 svn_error_t *
 svn_wc__db_lock_add(svn_wc__db_t *db,
                     const char *local_abspath,
                     const svn_wc__db_lock_t *lock,
                     apr_pool_t *scratch_pool);
+
+
+/** Remove any lock for LOCAL_ABSPATH in DB.  */
+svn_error_t *
+svn_wc__db_lock_remove(svn_wc__db_t *db,
+                       const char *local_abspath,
+                       apr_pool_t *scratch_pool);
 
 
 /** @} */

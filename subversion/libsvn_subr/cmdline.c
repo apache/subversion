@@ -670,7 +670,11 @@ svn_cmdline__apply_config_options(apr_hash_t *config,
 
      cfg = apr_hash_get(config, arg->file, APR_HASH_KEY_STRING);
 
-     if (!cfg)
+     if (cfg)
+       {
+         svn_config_set(cfg, arg->section, arg->option, arg->value);
+       }
+     else
        {
          svn_error_t *err = svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
              _("Unrecognized file in argument of %s"), argument_name);
@@ -678,8 +682,6 @@ svn_cmdline__apply_config_options(apr_hash_t *config,
          svn_handle_warning2(stderr, err, prefix);
          svn_error_clear(err);
        }
-
-     svn_config_set(cfg, arg->section, arg->option, arg->value);
     }
 
   return SVN_NO_ERROR;

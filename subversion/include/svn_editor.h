@@ -46,17 +46,6 @@ typedef svn_error_t *(*svn_editor_cb_add_directory_t)(
   apr_hash_t *props,
   apr_pool_t *scratch_pool);
 
-typedef svn_error_t *(*svn_editor_cb_add_directory_streamy_t)(
-  void *baton,
-  const char *relpath,
-  svn_error_t *(*child_cb)(
-    const char **child,
-    void *baton,
-    apr_pool_t *scratch_pool),
-  void *child_baton,
-  apr_hash_t *props,
-  apr_pool_t *scratch_pool);
-
 typedef svn_error_t *(*svn_editor_cb_add_file_t)(
   void *baton,
   const char *relpath,
@@ -143,12 +132,6 @@ svn_editor_setcb_add_directory(svn_editor_t *editor,
                                apr_pool_t *scratch_pool);
 
 svn_error_t *
-svn_editor_setcb_add_directory_streamy(
-  svn_editor_t *editor,
-  svn_editor_cb_add_directory_streamy_t callback,
-  apr_pool_t *scratch_pool);
-
-svn_error_t *
 svn_editor_setcb_add_file(svn_editor_t *editor,
                           svn_editor_cb_add_file_t callback,
                           apr_pool_t *scratch_pool);
@@ -207,7 +190,6 @@ svn_editor_setcb_abort(svn_editor_t *editor,
 typedef struct
 {
   svn_editor_cb_add_directory_t cb_add_directory;
-  svn_editor_cb_add_directory_streamy_t cb_add_directory_streamy;
   svn_editor_cb_add_file_t cb_add_file;
   svn_editor_cb_add_symlink_t cb_add_symlink;
   svn_editor_cb_add_absent_t cb_add_absent;
@@ -235,16 +217,6 @@ svn_editor_add_directory(svn_editor_t *editor,
                          const char *relpath,
                          const apr_array_header_t *children,
                          apr_hash_t *props);
-
-svn_error_t *
-svn_editor_add_directory_streamy(svn_editor_t *editor,
-                                 const char *relpath,
-                                 svn_error_t *(*child_cb)(
-                                   const char **child,
-                                   void *baton,
-                                   apr_pool_t *scratch_pool),
-                                 void *child_baton,
-                                 apr_hash_t *props);
 
 svn_error_t *
 svn_editor_add_file(svn_editor_t *editor,

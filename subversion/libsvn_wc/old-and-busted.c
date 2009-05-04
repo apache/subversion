@@ -26,26 +26,11 @@
 #include "svn_pools.h"
 
 #include "wc.h"
-#include "lock.h"
 #include "adm_files.h"
-#include "adm_ops.h"
 #include "entries.h"
 
 #include "private/svn_wc_private.h"
 #include "svn_private_config.h"
-
-/* Some old defines which this file might need. */
-#define SVN_WC__ENTRY_ATTR_HAS_PROPS          "has-props"
-#define SVN_WC__ENTRY_ATTR_HAS_PROP_MODS      "has-prop-mods"
-#define SVN_WC__ENTRY_ATTR_CACHABLE_PROPS     "cachable-props"
-#define SVN_WC__ENTRY_ATTR_PRESENT_PROPS      "present-props"
-#define SVN_WC__ENTRY_MODIFY_HAS_PROPS          APR_INT64_C(0x0000000004000000)
-#define SVN_WC__ENTRY_MODIFY_HAS_PROP_MODS      APR_INT64_C(0x0000000008000000)
-#define SVN_WC__ENTRY_MODIFY_CACHABLE_PROPS     APR_INT64_C(0x0000000010000000)
-#define SVN_WC__ENTRY_MODIFY_PRESENT_PROPS      APR_INT64_C(0x0000000020000000)
-
-
-
 
 
 static svn_wc_entry_t *
@@ -674,6 +659,345 @@ read_entry(svn_wc_entry_t **new_entry,
 }
 
 
+/* If attribute ATTR_NAME appears in hash ATTS, set *ENTRY_FLAG to its
+ * boolean value and add MODIFY_FLAG into *MODIFY_FLAGS, else set *ENTRY_FLAG
+ * false.  ENTRY_NAME is the name of the WC-entry. */
+static svn_error_t *
+do_bool_attr(svn_boolean_t *entry_flag,
+             apr_uint64_t *modify_flags, apr_uint64_t modify_flag,
+             apr_hash_t *atts, const char *attr_name,
+             const char *entry_name)
+{
+  const char *str = apr_hash_get(atts, attr_name, APR_HASH_KEY_STRING);
+
+  *entry_flag = FALSE;
+  if (str)
+    {
+      if (strcmp(str, "true") == 0)
+        *entry_flag = TRUE;
+      else if (strcmp(str, "false") == 0 || strcmp(str, "") == 0)
+        *entry_flag = FALSE;
+      else
+        return svn_error_createf
+          (SVN_ERR_ENTRY_ATTRIBUTE_INVALID, NULL,
+           _("Entry '%s' has invalid '%s' value"),
+           (entry_name ? entry_name : SVN_WC_ENTRY_THIS_DIR), attr_name);
+
+      *modify_flags |= modify_flag;
+    }
+  return SVN_NO_ERROR;
+}
+
+
+static const char *
+extract_string(apr_uint64_t *result_flags,
+               apr_hash_t *atts,
+               const char *att_name,
+               apr_uint64_t flag,
+               svn_boolean_t normalize,
+               apr_pool_t *result_pool)
+{
+  const char *value = apr_hash_get(atts, att_name, APR_HASH_KEY_STRING);
+
+  if (value == NULL)
+    return NULL;
+
+  *result_flags |= flag;
+
+  if (normalize && *value == '\0')
+    return NULL;
+
+  return apr_pstrdup(result_pool, value);
+}
+
+
+/* NOTE: this is used for running old logs, and for upgrading old XML-based
+   entries file. Be wary of removing items.  */
+svn_error_t *
+svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
+                      apr_uint64_t *modify_flags,
+                      apr_hash_t *atts,
+                      apr_pool_t *pool)
+{
+  svn_wc_entry_t *entry = alloc_entry(pool);
+  const char *name;
+
+  *modify_flags = 0;
+
+  /* Find the name and set up the entry under that name. */
+  name = apr_hash_get(atts, SVN_WC__ENTRY_ATTR_NAME, APR_HASH_KEY_STRING);
+  entry->name = name ? apr_pstrdup(pool, name) : SVN_WC_ENTRY_THIS_DIR;
+
+  /* Attempt to set revision (resolve_to_defaults may do it later, too) */
+  {
+    const char *revision_str
+      = apr_hash_get(atts, SVN_WC__ENTRY_ATTR_REVISION, APR_HASH_KEY_STRING);
+
+    if (revision_str)
+      {
+        entry->revision = SVN_STR_TO_REV(revision_str);
+        *modify_flags |= SVN_WC__ENTRY_MODIFY_REVISION;
+      }
+    else
+      entry->revision = SVN_INVALID_REVNUM;
+  }
+
+  /* Attempt to set up url path (again, see resolve_to_defaults). */
+  entry->url = extract_string(modify_flags, atts,
+                              SVN_WC__ENTRY_ATTR_URL,
+                              SVN_WC__ENTRY_MODIFY_URL,
+                              FALSE, pool);
+
+  /* Set up repository root.  Make sure it is a prefix of url. */
+  entry->repos = extract_string(modify_flags, atts,
+                                SVN_WC__ENTRY_ATTR_REPOS,
+                                SVN_WC__ENTRY_MODIFY_REPOS,
+                                FALSE, pool);
+  if (entry->url && entry->repos
+      && !svn_path_is_ancestor(entry->repos, entry->url))
+    return svn_error_createf(SVN_ERR_WC_CORRUPT, NULL,
+                             _("Entry for '%s' has invalid repository "
+                               "root"),
+                             name ? name : SVN_WC_ENTRY_THIS_DIR);
+
+  /* Set up kind. */
+  {
+    const char *kindstr
+      = apr_hash_get(atts, SVN_WC__ENTRY_ATTR_KIND, APR_HASH_KEY_STRING);
+
+    entry->kind = svn_node_none;
+    if (kindstr)
+      {
+        if (strcmp(kindstr, SVN_WC__ENTRIES_ATTR_FILE_STR) == 0)
+          entry->kind = svn_node_file;
+        else if (strcmp(kindstr, SVN_WC__ENTRIES_ATTR_DIR_STR) == 0)
+          entry->kind = svn_node_dir;
+        else
+          return svn_error_createf
+            (SVN_ERR_NODE_UNKNOWN_KIND, NULL,
+             _("Entry '%s' has invalid node kind"),
+             (name ? name : SVN_WC_ENTRY_THIS_DIR));
+        *modify_flags |= SVN_WC__ENTRY_MODIFY_KIND;
+      }
+  }
+
+  /* Look for a schedule attribute on this entry. */
+  {
+    const char *schedulestr
+      = apr_hash_get(atts, SVN_WC__ENTRY_ATTR_SCHEDULE, APR_HASH_KEY_STRING);
+
+    entry->schedule = svn_wc_schedule_normal;
+    if (schedulestr)
+      {
+        if (strcmp(schedulestr, SVN_WC__ENTRY_VALUE_ADD) == 0)
+          entry->schedule = svn_wc_schedule_add;
+        else if (strcmp(schedulestr, SVN_WC__ENTRY_VALUE_DELETE) == 0)
+          entry->schedule = svn_wc_schedule_delete;
+        else if (strcmp(schedulestr, SVN_WC__ENTRY_VALUE_REPLACE) == 0)
+          entry->schedule = svn_wc_schedule_replace;
+        else if (strcmp(schedulestr, "") == 0)
+          entry->schedule = svn_wc_schedule_normal;
+        else
+          return svn_error_createf
+            (SVN_ERR_ENTRY_ATTRIBUTE_INVALID, NULL,
+             _("Entry '%s' has invalid '%s' value"),
+             (name ? name : SVN_WC_ENTRY_THIS_DIR),
+             SVN_WC__ENTRY_ATTR_SCHEDULE);
+
+        *modify_flags |= SVN_WC__ENTRY_MODIFY_SCHEDULE;
+      }
+  }
+
+  /* Is this entry in a state of mental torment (conflict)? */
+  entry->prejfile = extract_string(modify_flags, atts,
+                                   SVN_WC__ENTRY_ATTR_PREJFILE,
+                                   SVN_WC__ENTRY_MODIFY_PREJFILE,
+                                   TRUE, pool);
+  entry->conflict_old = extract_string(modify_flags, atts,
+                                       SVN_WC__ENTRY_ATTR_CONFLICT_OLD,
+                                       SVN_WC__ENTRY_MODIFY_CONFLICT_OLD,
+                                       TRUE, pool);
+  entry->conflict_new = extract_string(modify_flags, atts,
+                                       SVN_WC__ENTRY_ATTR_CONFLICT_NEW,
+                                       SVN_WC__ENTRY_MODIFY_CONFLICT_NEW,
+                                       TRUE, pool);
+  entry->conflict_wrk = extract_string(modify_flags, atts,
+                                       SVN_WC__ENTRY_ATTR_CONFLICT_WRK,
+                                       SVN_WC__ENTRY_MODIFY_CONFLICT_WRK,
+                                       TRUE, pool);
+  entry->tree_conflict_data = extract_string(
+    modify_flags, atts,
+    SVN_WC__ENTRY_ATTR_TREE_CONFLICT_DATA,
+    SVN_WC__ENTRY_MODIFY_TREE_CONFLICT_DATA,
+    TRUE, pool);
+
+  /* Is this entry copied? */
+  SVN_ERR(do_bool_attr(&entry->copied,
+                       modify_flags, SVN_WC__ENTRY_MODIFY_COPIED,
+                       atts, SVN_WC__ENTRY_ATTR_COPIED, name));
+
+  entry->copyfrom_url = extract_string(modify_flags, atts,
+                                       SVN_WC__ENTRY_ATTR_COPYFROM_URL,
+                                       SVN_WC__ENTRY_MODIFY_COPYFROM_URL,
+                                       FALSE, pool);
+
+  {
+    const char *revstr;
+
+    revstr = apr_hash_get(atts, SVN_WC__ENTRY_ATTR_COPYFROM_REV,
+                          APR_HASH_KEY_STRING);
+    if (revstr)
+      {
+        entry->copyfrom_rev = SVN_STR_TO_REV(revstr);
+        *modify_flags |= SVN_WC__ENTRY_MODIFY_COPYFROM_REV;
+      }
+  }
+
+  /* Is this entry deleted? */
+  SVN_ERR(do_bool_attr(&entry->deleted,
+                       modify_flags, SVN_WC__ENTRY_MODIFY_DELETED,
+                       atts, SVN_WC__ENTRY_ATTR_DELETED, name));
+
+  /* Is this entry absent? */
+  SVN_ERR(do_bool_attr(&entry->absent,
+                       modify_flags, SVN_WC__ENTRY_MODIFY_ABSENT,
+                       atts, SVN_WC__ENTRY_ATTR_ABSENT, name));
+
+  /* Is this entry incomplete? */
+  SVN_ERR(do_bool_attr(&entry->incomplete,
+                       modify_flags, SVN_WC__ENTRY_MODIFY_INCOMPLETE,
+                       atts, SVN_WC__ENTRY_ATTR_INCOMPLETE, name));
+
+  /* Should this item be kept in the working copy after deletion? */
+  SVN_ERR(do_bool_attr(&entry->keep_local,
+                       modify_flags, SVN_WC__ENTRY_MODIFY_KEEP_LOCAL,
+                       atts, SVN_WC__ENTRY_ATTR_KEEP_LOCAL, name));
+
+  /* Attempt to set up timestamps. */
+  {
+    const char *text_timestr;
+
+    text_timestr = apr_hash_get(atts, SVN_WC__ENTRY_ATTR_TEXT_TIME,
+                                APR_HASH_KEY_STRING);
+    if (text_timestr)
+      {
+        if (strcmp(text_timestr, SVN_WC__TIMESTAMP_WC) == 0)
+          {
+            /* Special case:  a magic string that means 'get this value
+               from the working copy' -- we ignore it here, trusting
+               that the caller of this function know what to do about
+               it.  */
+          }
+        else
+          SVN_ERR(svn_time_from_cstring(&entry->text_time, text_timestr,
+                                        pool));
+
+        *modify_flags |= SVN_WC__ENTRY_MODIFY_TEXT_TIME;
+      }
+
+    /* Note: we do not persist prop_time, so there is no need to attempt
+       to parse a new prop_time value from the log. Certainly, on any
+       recent working copy, there will not be a log record to alter
+       the prop_time value. */
+  }
+
+  /* Checksum. */
+  entry->checksum = extract_string(modify_flags, atts,
+                                   SVN_WC__ENTRY_ATTR_CHECKSUM,
+                                   SVN_WC__ENTRY_MODIFY_CHECKSUM,
+                                   FALSE, pool);
+
+  /* UUID. */
+  entry->uuid = extract_string(modify_flags, atts,
+                               SVN_WC__ENTRY_ATTR_UUID,
+                               SVN_WC__ENTRY_MODIFY_UUID,
+                               FALSE, pool);
+
+  /* Setup last-committed values. */
+  {
+    const char *cmt_datestr, *cmt_revstr;
+
+    cmt_datestr = apr_hash_get(atts, SVN_WC__ENTRY_ATTR_CMT_DATE,
+                               APR_HASH_KEY_STRING);
+    if (cmt_datestr)
+      {
+        SVN_ERR(svn_time_from_cstring(&entry->cmt_date, cmt_datestr, pool));
+        *modify_flags |= SVN_WC__ENTRY_MODIFY_CMT_DATE;
+      }
+    else
+      entry->cmt_date = 0;
+
+    cmt_revstr = apr_hash_get(atts, SVN_WC__ENTRY_ATTR_CMT_REV,
+                              APR_HASH_KEY_STRING);
+    if (cmt_revstr)
+      {
+        entry->cmt_rev = SVN_STR_TO_REV(cmt_revstr);
+        *modify_flags |= SVN_WC__ENTRY_MODIFY_CMT_REV;
+      }
+    else
+      entry->cmt_rev = SVN_INVALID_REVNUM;
+
+    entry->cmt_author = extract_string(modify_flags, atts,
+                                       SVN_WC__ENTRY_ATTR_CMT_AUTHOR,
+                                       SVN_WC__ENTRY_MODIFY_CMT_AUTHOR,
+                                       FALSE, pool);
+  }
+
+  /* NOTE: for the lock values, we do not bother to set MODIFY values. Those
+     are only used by the loggy process, and it no longer recognizes changes
+     to the lock data. Since loggy does not create entries with lock mods,
+     this could only occur with stale log data. Since our lock data is merely
+     a cache, it is "deemed acceptable" to forget lock data from old logs.
+     We *DO* want these values from old XML entries files, however.  */
+  entry->lock_token = extract_string(modify_flags, atts,
+                                     SVN_WC__ENTRY_ATTR_LOCK_TOKEN,
+                                     0, FALSE, pool);
+  entry->lock_owner = extract_string(modify_flags, atts,
+                                     SVN_WC__ENTRY_ATTR_LOCK_OWNER,
+                                     0, FALSE, pool);
+  entry->lock_comment = extract_string(modify_flags, atts,
+                                       SVN_WC__ENTRY_ATTR_LOCK_COMMENT,
+                                       0, FALSE, pool);
+  {
+    const char *cdate_str =
+      apr_hash_get(atts, SVN_WC__ENTRY_ATTR_LOCK_CREATION_DATE,
+                   APR_HASH_KEY_STRING);
+    if (cdate_str)
+      {
+        SVN_ERR(svn_time_from_cstring(&entry->lock_creation_date,
+                                      cdate_str, pool));
+      }
+  }
+  /* ----- end of lock handling.  */
+
+  /* Note: if there are attributes for the (deprecated) has_props,
+     has_prop_mods, cachable_props, or present_props, then we're just
+     going to ignore them. */
+
+  /* Translated size */
+  {
+    const char *val
+      = apr_hash_get(atts,
+                     SVN_WC__ENTRY_ATTR_WORKING_SIZE,
+                     APR_HASH_KEY_STRING);
+    if (val)
+      {
+        if (strcmp(val, SVN_WC__WORKING_SIZE_WC) == 0)
+          {
+            /* Special case (same as the timestamps); ignore here
+               these will be handled elsewhere */
+          }
+        else
+          /* Cast to off_t; it's safe: we put in an off_t to start with... */
+          entry->working_size = (apr_off_t)apr_strtoi64(val, NULL, 0);
+
+        *modify_flags |= SVN_WC__ENTRY_MODIFY_WORKING_SIZE;
+      }
+  }
+
+  *new_entry = entry;
+  return SVN_NO_ERROR;
+}
 
 /* Used when reading an entries file in XML format. */
 struct entries_accumulator
@@ -943,1036 +1267,4 @@ svn_wc__read_entries_old(apr_hash_t **entries,
 
   /* Fill in any implied fields. */
   return resolve_to_defaults(*entries, result_pool);
-}
-
-
-
-
-#ifndef BLAST_FORMAT_11
-/* *******************
- *
- * Below is code to write the old-format 'entries' file. This code will
- * eventually disappear, as the eventual plan is to NEVER write the old
- * format. A working copy must be upgraded before use, so (eventually)
- * this functionality will not be required.
- *
- * ******************* */
-
-/* If STR is non-null, append STR to BUF, terminating it with a
-   newline, escaping bytes that needs escaping, using POOL for
-   temporary allocations.  Else if STR is null, just append the
-   terminating newline. */
-static void
-write_str(svn_stringbuf_t *buf, const char *str, apr_pool_t *pool)
-{
-  const char *start = str;
-  if (str)
-    {
-      while (*str)
-        {
-          /* Escape control characters and | and \. */
-          if (svn_ctype_iscntrl(*str) || *str == '\\')
-            {
-              svn_stringbuf_appendbytes(buf, start, str - start);
-              svn_stringbuf_appendcstr(buf,
-                                       apr_psprintf(pool, "\\x%02x", *str));
-              start = str + 1;
-            }
-          ++str;
-        }
-      svn_stringbuf_appendbytes(buf, start, str - start);
-    }
-  svn_stringbuf_appendbytes(buf, "\n", 1);
-}
-
-/* Append the string VAL of length LEN to BUF, without escaping any
-   bytes, followed by a terminator.  If VAL is NULL, ignore LEN and
-   append just the terminator. */
-static void
-write_val(svn_stringbuf_t *buf, const char *val, apr_size_t len)
-{
-  if (val)
-    svn_stringbuf_appendbytes(buf, val, len);
-  svn_stringbuf_appendbytes(buf, "\n", 1);
-}
-
-/* If VAL is true, append FIELD_NAME followed by a terminator to BUF.
-   Else, just append the terminator. */
-static void
-write_bool(svn_stringbuf_t *buf, const char *field_name, svn_boolean_t val)
-{
-  write_val(buf, val ? field_name : NULL, val ? strlen(field_name) : 0);
-}
-
-/* If REVNUM is valid, append the representation of REVNUM to BUF
-   followed by a terminator, using POOL for temporary allocations.
-   Otherwise, just append the terminator. */
-static void
-write_revnum(svn_stringbuf_t *buf, svn_revnum_t revnum, apr_pool_t *pool)
-{
-  if (SVN_IS_VALID_REVNUM(revnum))
-    svn_stringbuf_appendcstr(buf, apr_ltoa(pool, revnum));
-  svn_stringbuf_appendbytes(buf, "\n", 1);
-}
-
-/* Append the timestamp VAL to BUF (or the empty string if VAL is 0),
-   followed by a terminator.  Use POOL for temporary allocations. */
-static void
-write_time(svn_stringbuf_t *buf, apr_time_t val, apr_pool_t *pool)
-{
-  if (val)
-    svn_stringbuf_appendcstr(buf, svn_time_to_cstring(val, pool));
-  svn_stringbuf_appendbytes(buf, "\n", 1);
-}
-
-/* Append a single entry ENTRY to the string OUTPUT, using the
-   entry for "this dir" THIS_DIR for comparison/optimization.
-   Allocations are done in POOL.  */
-static svn_error_t *
-write_entry(svn_stringbuf_t *buf,
-            const svn_wc_entry_t *entry,
-            const char *name,
-            const svn_wc_entry_t *this_dir,
-            apr_pool_t *pool)
-{
-  const char *valuestr;
-  svn_revnum_t valuerev;
-  svn_boolean_t is_this_dir = strcmp(name, SVN_WC_ENTRY_THIS_DIR) == 0;
-  svn_boolean_t is_subdir = ! is_this_dir && (entry->kind == svn_node_dir);
-
-  SVN_ERR_ASSERT(name);
-
-  /* Name. */
-  write_str(buf, name, pool);
-
-  /* Kind. */
-  switch (entry->kind)
-    {
-    case svn_node_dir:
-      write_val(buf, SVN_WC__ENTRIES_ATTR_DIR_STR,
-                 sizeof(SVN_WC__ENTRIES_ATTR_DIR_STR) - 1);
-      break;
-
-    case svn_node_none:
-      write_val(buf, NULL, 0);
-      break;
-
-    case svn_node_file:
-    case svn_node_unknown:
-    default:
-      write_val(buf, SVN_WC__ENTRIES_ATTR_FILE_STR,
-                 sizeof(SVN_WC__ENTRIES_ATTR_FILE_STR) - 1);
-      break;
-    }
-
-  /* Revision. */
-  if (is_this_dir || (! is_subdir && entry->revision != this_dir->revision))
-    valuerev = entry->revision;
-  else
-    valuerev = SVN_INVALID_REVNUM;
-  write_revnum(buf, valuerev, pool);
-
-  /* URL. */
-  if (is_this_dir ||
-      (! is_subdir && strcmp(svn_path_url_add_component2(this_dir->url, name,
-                                                         pool),
-                             entry->url) != 0))
-    valuestr = entry->url;
-  else
-    valuestr = NULL;
-  write_str(buf, valuestr, pool);
-
-  /* Repository root. */
-  if (! is_subdir
-      && (is_this_dir
-          || (this_dir->repos == NULL
-              || (entry->repos
-                  && strcmp(this_dir->repos, entry->repos) != 0))))
-    valuestr = entry->repos;
-  else
-    valuestr = NULL;
-  write_str(buf, valuestr, pool);
-
-  /* Schedule. */
-  switch (entry->schedule)
-    {
-    case svn_wc_schedule_add:
-      write_val(buf, SVN_WC__ENTRY_VALUE_ADD,
-                 sizeof(SVN_WC__ENTRY_VALUE_ADD) - 1);
-      break;
-
-    case svn_wc_schedule_delete:
-      write_val(buf, SVN_WC__ENTRY_VALUE_DELETE,
-                 sizeof(SVN_WC__ENTRY_VALUE_DELETE) - 1);
-      break;
-
-    case svn_wc_schedule_replace:
-      write_val(buf, SVN_WC__ENTRY_VALUE_REPLACE,
-                 sizeof(SVN_WC__ENTRY_VALUE_REPLACE) - 1);
-      break;
-
-    case svn_wc_schedule_normal:
-    default:
-      write_val(buf, NULL, 0);
-      break;
-    }
-
-  /* Text time. */
-  write_time(buf, entry->text_time, pool);
-
-  /* Checksum. */
-  write_val(buf, entry->checksum,
-             entry->checksum ? strlen(entry->checksum) : 0);
-
-  /* Last-commit stuff */
-  write_time(buf, entry->cmt_date, pool);
-  write_revnum(buf, entry->cmt_rev, pool);
-  write_str(buf, entry->cmt_author, pool);
-
-  /* has-props, has-prop-mods, cachable-props, present-props are all
-     deprecated, so write nothing for them. */
-  write_val(buf, NULL, 0);
-  write_val(buf, NULL, 0);
-  write_val(buf, NULL, 0);
-  write_val(buf, NULL, 0);
-
-  /* Conflict. */
-  write_str(buf, entry->prejfile, pool);
-  write_str(buf, entry->conflict_old, pool);
-  write_str(buf, entry->conflict_new, pool);
-  write_str(buf, entry->conflict_wrk, pool);
-
-  write_bool(buf, SVN_WC__ENTRY_ATTR_COPIED, entry->copied);
-
-  /* Copy-related Stuff */
-  write_str(buf, entry->copyfrom_url, pool);
-  write_revnum(buf, entry->copyfrom_rev, pool);
-
-  /* Deleted state */
-  write_bool(buf, SVN_WC__ENTRY_ATTR_DELETED, entry->deleted);
-
-  /* Absent state */
-  write_bool(buf, SVN_WC__ENTRY_ATTR_ABSENT, entry->absent);
-
-  /* Incomplete state */
-  write_bool(buf, SVN_WC__ENTRY_ATTR_INCOMPLETE, entry->incomplete);
-
-  /* UUID. */
-  if (is_this_dir || ! this_dir->uuid || ! entry->uuid
-      || strcmp(this_dir->uuid, entry->uuid) != 0)
-    valuestr = entry->uuid;
-  else
-    valuestr = NULL;
-  write_val(buf, valuestr, valuestr ? strlen(valuestr) : 0);
-
-  /* Lock token. */
-  write_str(buf, entry->lock_token, pool);
-
-  /* Lock owner. */
-  write_str(buf, entry->lock_owner, pool);
-
-  /* Lock comment. */
-  write_str(buf, entry->lock_comment, pool);
-
-  /* Lock creation date. */
-  write_time(buf, entry->lock_creation_date, pool);
-
-  /* Changelist. */
-  write_str(buf, entry->changelist, pool);
-
-  /* Keep in working copy flag. */
-  write_bool(buf, SVN_WC__ENTRY_ATTR_KEEP_LOCAL, entry->keep_local);
-
-  /* Translated size */
-  {
-    const char *val
-      = (entry->working_size != SVN_WC_ENTRY_WORKING_SIZE_UNKNOWN)
-      ? apr_off_t_toa(pool, entry->working_size) : "";
-    write_val(buf, val, strlen(val));
-  }
-
-  /* Depth. */
-  /* Accept `exclude' for subdir entry. */
-  if ((is_subdir && entry->depth != svn_depth_exclude)
-      || entry->depth == svn_depth_infinity)
-    {
-      write_val(buf, NULL, 0);
-    }
-  else
-    {
-      const char *val = svn_depth_to_word(entry->depth);
-      write_val(buf, val, strlen(val));
-    }
-
-  /* Tree conflict data. */
-  write_str(buf, entry->tree_conflict_data, pool);
-
-  /* File externals. */
-  {
-    const char *s;
-    SVN_ERR(svn_wc__serialize_file_external(&s, entry->file_external_path,
-                                            &entry->file_external_peg_rev,
-                                            &entry->file_external_rev, pool));
-    write_str(buf, s, pool);
-  }
-
-  /* Remove redundant separators at the end of the entry. */
-  while (buf->len > 1 && buf->data[buf->len - 2] == '\n')
-    buf->len--;
-
-  svn_stringbuf_appendbytes(buf, "\f\n", 2);
-
-  return SVN_NO_ERROR;
-}
-
-/* Append a single entry ENTRY as an XML element to the string OUTPUT,
-   using the entry for "this dir" THIS_DIR for
-   comparison/optimization.  Allocations are done in POOL.  */
-static svn_error_t *
-write_entry_xml(svn_stringbuf_t **output,
-                const svn_wc_entry_t *entry,
-                const char *name,
-                const svn_wc_entry_t *this_dir,
-                apr_pool_t *pool)
-{
-  apr_hash_t *atts = apr_hash_make(pool);
-  const char *valuestr;
-
-  /*** Create a hash that represents an entry. ***/
-
-  SVN_ERR_ASSERT(name);
-
-  /* Name */
-  apr_hash_set(atts, SVN_WC__ENTRY_ATTR_NAME, APR_HASH_KEY_STRING,
-               entry->name);
-
-  /* Revision */
-  if (SVN_IS_VALID_REVNUM(entry->revision))
-    apr_hash_set(atts, SVN_WC__ENTRY_ATTR_REVISION, APR_HASH_KEY_STRING,
-                 apr_psprintf(pool, "%ld", entry->revision));
-
-  /* URL */
-  if (entry->url)
-    apr_hash_set(atts, SVN_WC__ENTRY_ATTR_URL, APR_HASH_KEY_STRING,
-                 entry->url);
-
-  /* Repository root */
-  if (entry->repos)
-    apr_hash_set(atts, SVN_WC__ENTRY_ATTR_REPOS, APR_HASH_KEY_STRING,
-                 entry->repos);
-
-  /* Kind */
-  switch (entry->kind)
-    {
-    case svn_node_dir:
-      valuestr = SVN_WC__ENTRIES_ATTR_DIR_STR;
-      break;
-
-    case svn_node_none:
-      valuestr = NULL;
-      break;
-
-    case svn_node_file:
-    case svn_node_unknown:
-    default:
-      valuestr = SVN_WC__ENTRIES_ATTR_FILE_STR;
-      break;
-    }
-  apr_hash_set(atts, SVN_WC__ENTRY_ATTR_KIND, APR_HASH_KEY_STRING, valuestr);
-
-  /* Schedule */
-  switch (entry->schedule)
-    {
-    case svn_wc_schedule_add:
-      valuestr = SVN_WC__ENTRY_VALUE_ADD;
-      break;
-
-    case svn_wc_schedule_delete:
-      valuestr = SVN_WC__ENTRY_VALUE_DELETE;
-      break;
-
-    case svn_wc_schedule_replace:
-      valuestr = SVN_WC__ENTRY_VALUE_REPLACE;
-      break;
-
-    case svn_wc_schedule_normal:
-    default:
-      valuestr = NULL;
-      break;
-    }
-  apr_hash_set(atts, SVN_WC__ENTRY_ATTR_SCHEDULE, APR_HASH_KEY_STRING,
-               valuestr);
-
-  /* Conflicts */
-  if (entry->conflict_old)
-    apr_hash_set(atts, SVN_WC__ENTRY_ATTR_CONFLICT_OLD, APR_HASH_KEY_STRING,
-                 entry->conflict_old);
-
-  if (entry->conflict_new)
-    apr_hash_set(atts, SVN_WC__ENTRY_ATTR_CONFLICT_NEW, APR_HASH_KEY_STRING,
-                 entry->conflict_new);
-
-  if (entry->conflict_wrk)
-    apr_hash_set(atts, SVN_WC__ENTRY_ATTR_CONFLICT_WRK, APR_HASH_KEY_STRING,
-                 entry->conflict_wrk);
-
-  if (entry->prejfile)
-    apr_hash_set(atts, SVN_WC__ENTRY_ATTR_PREJFILE, APR_HASH_KEY_STRING,
-                 entry->prejfile);
-
-  /* Copy-related Stuff */
-  apr_hash_set(atts, SVN_WC__ENTRY_ATTR_COPIED, APR_HASH_KEY_STRING,
-               (entry->copied ? "true" : NULL));
-
-  if (SVN_IS_VALID_REVNUM(entry->copyfrom_rev))
-    apr_hash_set(atts, SVN_WC__ENTRY_ATTR_COPYFROM_REV, APR_HASH_KEY_STRING,
-                 apr_psprintf(pool, "%ld",
-                              entry->copyfrom_rev));
-
-  if (entry->copyfrom_url)
-    apr_hash_set(atts, SVN_WC__ENTRY_ATTR_COPYFROM_URL, APR_HASH_KEY_STRING,
-                 entry->copyfrom_url);
-
-  /* Deleted state */
-  apr_hash_set(atts, SVN_WC__ENTRY_ATTR_DELETED, APR_HASH_KEY_STRING,
-               (entry->deleted ? "true" : NULL));
-
-  /* Absent state */
-  apr_hash_set(atts, SVN_WC__ENTRY_ATTR_ABSENT, APR_HASH_KEY_STRING,
-               (entry->absent ? "true" : NULL));
-
-  /* Incomplete state */
-  apr_hash_set(atts, SVN_WC__ENTRY_ATTR_INCOMPLETE, APR_HASH_KEY_STRING,
-               (entry->incomplete ? "true" : NULL));
-
-  /* Timestamps */
-  if (entry->text_time)
-    {
-      apr_hash_set(atts, SVN_WC__ENTRY_ATTR_TEXT_TIME, APR_HASH_KEY_STRING,
-                   svn_time_to_cstring(entry->text_time, pool));
-    }
-  /* Note: prop_time is no longer stored in "entries", so there is no need
-     to persist it into XML either. */
-
-  /* Checksum */
-  if (entry->checksum)
-    apr_hash_set(atts, SVN_WC__ENTRY_ATTR_CHECKSUM, APR_HASH_KEY_STRING,
-                 entry->checksum);
-
-  /* Last-commit stuff */
-  if (SVN_IS_VALID_REVNUM(entry->cmt_rev))
-    apr_hash_set(atts, SVN_WC__ENTRY_ATTR_CMT_REV, APR_HASH_KEY_STRING,
-                 apr_psprintf(pool, "%ld", entry->cmt_rev));
-
-  if (entry->cmt_author)
-    apr_hash_set(atts, SVN_WC__ENTRY_ATTR_CMT_AUTHOR, APR_HASH_KEY_STRING,
-                 entry->cmt_author);
-
-  if (entry->uuid)
-    apr_hash_set(atts, SVN_WC__ENTRY_ATTR_UUID, APR_HASH_KEY_STRING,
-                 entry->uuid);
-
-  if (entry->cmt_date)
-    {
-      apr_hash_set(atts, SVN_WC__ENTRY_ATTR_CMT_DATE, APR_HASH_KEY_STRING,
-                   svn_time_to_cstring(entry->cmt_date, pool));
-    }
-
-  /* Lock token */
-  if (entry->lock_token)
-    apr_hash_set(atts, SVN_WC__ENTRY_ATTR_LOCK_TOKEN, APR_HASH_KEY_STRING,
-                 entry->lock_token);
-
-  /* Lock owner */
-  if (entry->lock_owner)
-    apr_hash_set(atts, SVN_WC__ENTRY_ATTR_LOCK_OWNER, APR_HASH_KEY_STRING,
-                 entry->lock_owner);
-
-  /* Lock comment */
-  if (entry->lock_comment)
-    apr_hash_set(atts, SVN_WC__ENTRY_ATTR_LOCK_COMMENT, APR_HASH_KEY_STRING,
-                 entry->lock_comment);
-
-  /* Lock creation date */
-  if (entry->lock_creation_date)
-    apr_hash_set(atts, SVN_WC__ENTRY_ATTR_LOCK_CREATION_DATE,
-                 APR_HASH_KEY_STRING,
-                 svn_time_to_cstring(entry->lock_creation_date, pool));
-
-  /* has_props, has_prop_mods, cachable_props, and present_props are all
-     deprecated, so do not add any attributes. */
-
-  /* NOTE: if new entries are *added* to svn_wc_entry_t, then they do not
-     have to be written here. This function is ONLY used during the "cleanup"
-     phase just before we upgrade away from an XML entries file. The old
-     logs will never attempt to modify new fields. */
-
-  /*** Now, remove stuff that can be derived through inheritance rules. ***/
-
-  /* We only want to write out 'revision' and 'url' for the
-     following things:
-     1. the current directory's "this dir" entry.
-     2. non-directory entries:
-        a. which are marked for addition (and consequently should
-           have an invalid revnum)
-        b. whose revision or url is valid and different than
-           that of the "this dir" entry.
-  */
-  if (strcmp(name, SVN_WC_ENTRY_THIS_DIR))
-    {
-      /* This is NOT the "this dir" entry */
-
-      SVN_ERR_ASSERT(strcmp(name, ".") != 0);
-          /* By golly, if this isn't recognized as the "this dir"
-             entry, and it looks like '.', we're just asking for an
-             infinite recursion to happen.  Abort! */
-
-
-
-      if (entry->kind == svn_node_dir)
-        {
-          /* We don't write url, revision, repository root or uuid for subdir
-             entries. */
-          apr_hash_set(atts, SVN_WC__ENTRY_ATTR_REVISION, APR_HASH_KEY_STRING,
-                       NULL);
-          apr_hash_set(atts, SVN_WC__ENTRY_ATTR_URL, APR_HASH_KEY_STRING,
-                       NULL);
-          apr_hash_set(atts, SVN_WC__ENTRY_ATTR_REPOS, APR_HASH_KEY_STRING,
-                       NULL);
-          apr_hash_set(atts, SVN_WC__ENTRY_ATTR_UUID, APR_HASH_KEY_STRING,
-                       NULL);
-        }
-      else
-        {
-          /* If this is not the "this dir" entry, and the revision is
-             the same as that of the "this dir" entry, don't write out
-             the revision. */
-          if (entry->revision == this_dir->revision)
-            apr_hash_set(atts, SVN_WC__ENTRY_ATTR_REVISION,
-                         APR_HASH_KEY_STRING, NULL);
-
-          /* If this is not the "this dir" entry, and the uuid is
-             the same as that of the "this dir" entry, don't write out
-             the uuid. */
-          if (entry->uuid && this_dir->uuid)
-            {
-              if (strcmp(entry->uuid, this_dir->uuid) == 0)
-                apr_hash_set(atts, SVN_WC__ENTRY_ATTR_UUID,
-                             APR_HASH_KEY_STRING, NULL);
-            }
-
-          /* If this is not the "this dir" entry, and the url is
-             trivially calculable from that of the "this dir" entry,
-             don't write out the url */
-          if (entry->url)
-            {
-              if (strcmp(entry->url,
-                         svn_path_url_add_component2(this_dir->url,
-                                                     name, pool)) == 0)
-                apr_hash_set(atts, SVN_WC__ENTRY_ATTR_URL,
-                             APR_HASH_KEY_STRING, NULL);
-            }
-
-          /* Avoid writing repository root if that's the same as this_dir. */
-          if (entry->repos && this_dir->repos
-              && strcmp(entry->repos, this_dir->repos) == 0)
-            apr_hash_set(atts, SVN_WC__ENTRY_ATTR_REPOS, APR_HASH_KEY_STRING,
-                         NULL);
-        }
-    }
-
-  /* Append the entry onto the accumulating string. */
-  svn_xml_make_open_tag_hash(output,
-                             pool,
-                             svn_xml_self_closing,
-                             SVN_WC__ENTRIES_ENTRY,
-                             atts);
-
-  return SVN_NO_ERROR;
-}
-
-/* Construct an entries file from the ENTRIES hash in XML format in a
-   newly allocated stringbuf and return it in *OUTPUT.  Allocate the
-   result in POOL.  THIS_DIR is the this_dir entry in ENTRIES.  */
-static svn_error_t *
-write_entries_xml(svn_stringbuf_t **output,
-                  apr_hash_t *entries,
-                  const svn_wc_entry_t *this_dir,
-                  apr_pool_t *pool)
-{
-  apr_hash_index_t *hi;
-  apr_pool_t *subpool = svn_pool_create(pool);
-
-  svn_xml_make_header(output, pool);
-  svn_xml_make_open_tag(output, pool, svn_xml_normal,
-                        SVN_WC__ENTRIES_TOPLEVEL,
-                        "xmlns",
-                        SVN_XML_NAMESPACE,
-                        NULL);
-
-  /* Write out "this dir" */
-  SVN_ERR(write_entry_xml(output, this_dir, SVN_WC_ENTRY_THIS_DIR,
-                          this_dir, pool));
-
-  for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
-    {
-      const void *key;
-      void *val;
-      const svn_wc_entry_t *this_entry;
-
-      svn_pool_clear(subpool);
-
-      /* Get the entry and make sure its attributes are up-to-date. */
-      apr_hash_this(hi, &key, NULL, &val);
-      this_entry = val;
-
-      /* Don't rewrite the "this dir" entry! */
-      if (strcmp(key, SVN_WC_ENTRY_THIS_DIR) == 0)
-        continue;
-
-      /* Append the entry to output */
-      SVN_ERR(write_entry_xml(output, this_entry, key, this_dir, subpool));
-    }
-
-  svn_xml_make_close_tag(output, pool, SVN_WC__ENTRIES_TOPLEVEL);
-
-  svn_pool_destroy(subpool);
-
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn_wc__entries_write_old(apr_hash_t *entries,
-                          svn_wc_adm_access_t *adm_access,
-                          int wc_format,
-                          apr_pool_t *pool)
-{
-  svn_error_t *err = SVN_NO_ERROR;
-  svn_stringbuf_t *bigstr = NULL;
-  svn_stream_t *stream;
-  const char *temp_file_path;
-  const svn_wc_entry_t *this_dir;
-  apr_size_t len;
-
-  SVN_ERR(svn_wc__adm_write_check(adm_access, pool));
-
-  /* Get a copy of the "this dir" entry for comparison purposes. */
-  this_dir = apr_hash_get(entries, SVN_WC_ENTRY_THIS_DIR,
-                          APR_HASH_KEY_STRING);
-
-  /* If there is no "this dir" entry, something is wrong. */
-  if (! this_dir)
-    return svn_error_createf(SVN_ERR_ENTRY_NOT_FOUND, NULL,
-                             _("No default entry in directory '%s'"),
-                             svn_path_local_style
-                             (svn_wc_adm_access_path(adm_access), pool));
-
-  /* Open entries file for writing.  It's important we don't use APR_EXCL
-   * here.  Consider what happens if a log file is interrupted, it may
-   * leave a .svn/tmp/entries file behind.  Then when cleanup reruns the
-   * log file, and it attempts to modify the entries file, APR_EXCL would
-   * cause an error that prevents cleanup running.  We don't use log file
-   * tags such as SVN_WC__LOG_MV to move entries files so any existing file
-   * is not "valuable".
-   */
-  SVN_ERR(svn_wc__open_adm_writable(&stream,
-                                    &temp_file_path,
-                                    svn_wc_adm_access_path(adm_access),
-                                    SVN_WC__ADM_ENTRIES,
-                                    pool, pool));
-
-  if (wc_format > SVN_WC__XML_ENTRIES_VERSION)
-    {
-      apr_pool_t *iterpool = svn_pool_create(pool);
-      apr_hash_index_t *hi;
-
-      bigstr = svn_stringbuf_createf(pool, "%d\n", wc_format);
-
-      /* Write out "this dir" */
-      SVN_ERR(write_entry(bigstr, this_dir, SVN_WC_ENTRY_THIS_DIR,
-                          this_dir, pool));
-
-      for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
-        {
-          const void *key;
-          void *val;
-          const svn_wc_entry_t *this_entry;
-
-          svn_pool_clear(iterpool);
-
-          /* Get the entry and make sure its attributes are up-to-date. */
-          apr_hash_this(hi, &key, NULL, &val);
-          this_entry = val;
-
-          /* Don't rewrite the "this dir" entry! */
-          if (strcmp(key, SVN_WC_ENTRY_THIS_DIR) == 0)
-            continue;
-
-          /* Append the entry to BIGSTR */
-          SVN_ERR(write_entry(bigstr, this_entry, key, this_dir, iterpool));
-        }
-
-      svn_pool_destroy(iterpool);
-    }
-  else
-    /* This is needed during cleanup of a not yet upgraded WC. */
-    SVN_ERR(write_entries_xml(&bigstr, entries, this_dir, pool));
-
-  len = bigstr->len;
-  SVN_ERR_W(svn_stream_write(stream, bigstr->data, &len),
-            apr_psprintf(pool,
-                         _("Error writing to '%s'"),
-                         svn_path_local_style
-                         (svn_wc_adm_access_path(adm_access), pool)));
-
-  err = svn_wc__close_adm_stream(stream, temp_file_path,
-                                 svn_wc_adm_access_path(adm_access),
-                                 SVN_WC__ADM_ENTRIES, pool);
-
-  svn_wc__adm_access_set_entries(adm_access, entries);
-
-  return err;
-}
-
-
-svn_error_t *
-svn_wc__entries_init_old(const char *path,
-                         const char *uuid,
-                         const char *url,
-                         const char *repos,
-                         svn_revnum_t initial_rev,
-                         svn_depth_t depth,
-                         apr_pool_t *pool)
-{
-  svn_stream_t *stream;
-  const char *temp_file_path;
-  svn_stringbuf_t *accum = svn_stringbuf_createf(pool, "%d\n",
-                                                 SVN_WC__VERSION);
-  svn_wc_entry_t *entry = alloc_entry(pool);
-  apr_size_t len;
-
-  SVN_ERR_ASSERT(! repos || svn_path_is_ancestor(repos, url));
-  SVN_ERR_ASSERT(depth == svn_depth_empty
-                 || depth == svn_depth_files
-                 || depth == svn_depth_immediates
-                 || depth == svn_depth_infinity);
-
-  /* Create the entries file, which must not exist prior to this. */
-  SVN_ERR(svn_wc__open_adm_writable(&stream, &temp_file_path,
-                                    path, SVN_WC__ADM_ENTRIES, pool, pool));
-
-  /* Add an entry for the dir itself.  The directory has no name.  It
-     might have a UUID, but otherwise only the revision and default
-     ancestry are present as XML attributes, and possibly an
-     'incomplete' flag if the revnum is > 0. */
-
-  entry->kind = svn_node_dir;
-  entry->url = url;
-  entry->revision = initial_rev;
-  entry->uuid = uuid;
-  entry->repos = repos;
-  entry->depth = depth;
-  if (initial_rev > 0)
-    entry->incomplete = TRUE;
-
-  SVN_ERR(write_entry(accum, entry, SVN_WC_ENTRY_THIS_DIR, entry, pool));
-
-  len = accum->len;
-  SVN_ERR_W(svn_stream_write(stream, accum->data, &len),
-            apr_psprintf(pool,
-                         _("Error writing entries file for '%s'"),
-                         svn_path_local_style(path, pool)));
-
-  /* Now we have a `entries' file with exactly one entry, an entry
-     for this dir.  Close the file and sync it up. */
-  return svn_wc__close_adm_stream(stream, temp_file_path, path,
-                                  SVN_WC__ADM_ENTRIES, pool);
-}
-#endif
-
-
-static svn_error_t *
-get_entries(apr_hash_t **entries,
-            svn_wc__db_t *db,
-            const char *wcroot_abspath,
-            apr_pool_t *scratch_pool)
-{
-  svn_wc_adm_access_t *adm_access;
-
-  /* Is there an existing access baton for this path?  */
-  adm_access = svn_wc__adm_retrieve_internal2(db, wcroot_abspath,
-                                              scratch_pool);
-  if (adm_access == NULL)
-    {
-      /* No access baton. Read the entries into SCRATCH_POOL, and we'll
-         just drop them on the floor.  */
-      SVN_ERR(svn_wc__read_entries_old(entries, wcroot_abspath,
-                                       scratch_pool, scratch_pool));
-    }
-  else
-    {
-      /* Already cached?  */
-      *entries = svn_wc__adm_access_entries(adm_access);
-      if (*entries == NULL)
-        {
-          apr_pool_t *access_pool = svn_wc_adm_access_pool(adm_access);
-
-          /* Read and cache the entries.  */
-          SVN_ERR(svn_wc__read_entries_old(entries, wcroot_abspath,
-                                           access_pool, scratch_pool));
-          svn_wc__adm_access_set_entries(adm_access, *entries);
-        }
-    }
-
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
-svn_wc__read_info_old(svn_wc__db_status_t *status,
-                      svn_wc__db_kind_t *kind,
-                      svn_revnum_t *revision,
-                      const char **repos_relpath,
-                      const char **repos_root_url,
-                      const char **repos_uuid,
-                      svn_revnum_t *changed_rev,
-                      apr_time_t *changed_date,
-                      const char **changed_author,
-                      apr_time_t *last_mod_time,
-                      svn_depth_t *depth,
-                      svn_checksum_t **checksum,
-                      svn_filesize_t *translated_size,
-                      const char **target,
-                      const char **changelist,
-                      const char **original_repos_relpath,
-                      const char **original_root_url,
-                      const char **original_uuid,
-                      svn_revnum_t *original_revision,
-                      svn_boolean_t *text_mod,
-                      svn_boolean_t *props_mod,
-                      svn_boolean_t *base_shadowed,
-                      svn_wc__db_lock_t **lock,
-                      svn_wc__db_t *db,
-                      const char *wcroot_abspath,
-                      const char *local_relpath,
-                      apr_pool_t *result_pool,
-                      apr_pool_t *scratch_pool)
-{
-  apr_hash_t *entries;
-  const svn_wc_entry_t *entry;
-
-  /* Oops. Can't fetch that kind of value with this old working copy.  */
-  if (revision || repos_relpath || repos_root_url
-      || repos_uuid
-      || last_mod_time || translated_size || target || changelist
-      || original_repos_relpath || original_root_url || original_uuid
-      || original_revision || text_mod || props_mod || base_shadowed
-      )
-    return svn_error_createf(SVN_ERR_WC_UPGRADE_REQUIRED, NULL,
-                             _("Unable to return data because the working "
-                               "copy at '%s' needs to be upgraded."),
-                             svn_path_local_style(wcroot_abspath,
-                                                  scratch_pool));
-
-  /* Grab the entries file from an access baton if we can, or just read
-     the sucker in (and later forget it).  */
-  SVN_ERR(get_entries(&entries, db, wcroot_abspath, scratch_pool));
-
-  entry = apr_hash_get(entries, local_relpath, APR_HASH_KEY_STRING);
-  if (entry == NULL)
-    return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
-                             _("Entry '%s' in '%s' is not under version "
-                               "control"),
-                             svn_path_local_style(local_relpath, scratch_pool),
-                             svn_path_local_style(wcroot_abspath,
-                                                  scratch_pool));
-  if (status)
-    {
-      svn_boolean_t obstructed;
-
-      /* Some status values are not returned by this function:
-
-         MOVED_AWAY and MOVED_HERE are not returned since that information
-         is not stored in a wc-1 working copy.
-
-         COPIED is a status returned by scan_addition after reviewing the
-         hierarchy looking for copyfrom information.
-
-         INCOMPLETE cannot be modeled by wc-1. Directories can be marked
-         as "incomplete" as a reference to their children, but it is unknown
-         *which* children should be marked INCOMPLETE.
-
-         EXCLUDED is not (yet) used within wc library.
-
-         BASE_DELETED is a wc_db internal representation that gets mapped
-         into a standard DELETED or MOVED_AWAY status.  */
-
-      /* We're looking at the entry in the parent if this is a directory
-         and its name is not "".  */
-      obstructed = entry->kind == svn_node_dir && *entry->name != '\0';
-
-      if (entry->absent)
-        {
-          /* You can't add/delete/replace over an abent node.  */
-          SVN_ERR_ASSERT(entry->schedule == svn_wc_schedule_normal);
-
-          /* Better be an absent file, or an obstructed subdir (because the
-             subdir should not be on the disk).  */
-          SVN_ERR_ASSERT(entry->kind == svn_node_file || obstructed);
-
-          *status = svn_wc__db_status_absent;
-        }
-      else if (entry->schedule == svn_wc_schedule_add
-               || entry->schedule == svn_wc_schedule_replace
-               || entry->copied)
-        {
-          *status = obstructed ? svn_wc__db_status_obstructed_add
-                               : svn_wc__db_status_added;
-        }
-      else if (entry->schedule == svn_wc_schedule_delete)
-        {
-          *status = obstructed ? svn_wc__db_status_obstructed_delete
-                               : svn_wc__db_status_deleted;
-        }
-      else
-        {
-          SVN_ERR_ASSERT(entry->schedule == svn_wc_schedule_normal);
-          if (entry->copied)
-            {
-              /* This must be a child of a copied subtree. It better not be
-                 obstructed.  */
-              SVN_ERR_ASSERT(!obstructed);
-              *status = svn_wc__db_status_added;
-            }
-          else if (entry->deleted)
-            {
-              *status = svn_wc__db_status_not_present;
-            }
-          else
-            {
-              *status = obstructed ? svn_wc__db_status_obstructed
-                                   : svn_wc__db_status_normal;
-            }
-        }
-    }
-  if (kind)
-    {
-      if (entry->kind == svn_node_file)
-        {
-          *kind = svn_wc__db_kind_file;
-        }
-      else
-        {
-          SVN_ERR_ASSERT(entry->kind == svn_node_dir);
-          *kind = svn_wc__db_kind_dir;
-        }
-      /* ### no kind_symlink, or kind_unknown  */
-    }
-
-  /* ### revision  */
-  /* ### repos_relpath, repos_root_url, repos_uuid  */
-
-  if (changed_rev)
-    *changed_rev = entry->cmt_rev;
-  if (changed_date)
-    *changed_date = entry->cmt_date;
-  if (changed_author)
-    *changed_author = apr_pstrdup(result_pool, entry->cmt_author);
-
-  /* ### last_mod_time  */
-
-  if (depth)
-    {
-      if (entry->kind == svn_node_dir)
-        *depth = entry->depth;
-      else
-        *depth = svn_depth_unknown;
-    }
-  if (checksum)
-    {
-      if (entry->checksum)
-        SVN_ERR(svn_checksum_parse_hex(checksum, svn_checksum_md5,
-                                       entry->checksum, result_pool));
-      else
-        *checksum = NULL;
-    }
-
-  /* ### translated_size  */
-  /* ### target  */
-  /* ### changelist  */
-  /* ### original_repos_relpath, original_root_url, original_uuid,
-     ### original_revision  */
-  /* ### text_mod, props_mod  */
-  /* ### base_shadowed  */
-
-  if (lock)
-    {
-      if (entry->lock_token)
-        {
-          *lock = apr_palloc(result_pool, sizeof(**lock));
-          (*lock)->token = apr_pstrdup(result_pool, entry->lock_token);
-          (*lock)->owner = apr_pstrdup(result_pool, entry->lock_owner);
-          (*lock)->comment = apr_pstrdup(result_pool, entry->lock_comment);
-          (*lock)->date = entry->lock_creation_date;
-        }
-      else
-        {
-          *lock = NULL;
-        }
-    }
-
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
-svn_wc__gather_children_old(const apr_array_header_t **children,
-                            svn_boolean_t base_only,
-                            svn_wc__db_t *db,
-                            const char *wcroot_abspath,
-                            const char *local_relpath,
-                            apr_pool_t *result_pool,
-                            apr_pool_t *scratch_pool)
-{
-  apr_hash_t *entries;
-  apr_array_header_t *child_names;
-  apr_hash_index_t *hi;
-
-  /* ### we don't have the filtering done for BASE_ONLY yet.  */
-  if (base_only)
-    return svn_error_createf(SVN_ERR_WC_UPGRADE_REQUIRED, NULL,
-                             _("Unable to return data because the working "
-                               "copy at '%s' needs to be upgraded."),
-                             svn_path_local_style(wcroot_abspath,
-                                                  scratch_pool));
-
-  /* Grab the entries file from an access baton if we can, or just read
-     the sucker in (and later forget it).  */
-  SVN_ERR(get_entries(&entries, db, wcroot_abspath, scratch_pool));
-
-  /* The returned array will contain the same count as ENTRIES, less one
-     for the omitted "this-dir".  */
-  child_names = apr_array_make(result_pool,
-                               apr_hash_count(entries) - 1,
-                               sizeof(const char *));
-
-  for (hi = apr_hash_first(scratch_pool, entries); hi; hi = apr_hash_next(hi))
-    {
-      const void *key;
-      const char *name;
-
-      apr_hash_this(hi, &key, NULL, NULL);
-      name = key;
-
-      /* Don't insert "this-dir".  */
-      if (*name == '\0')
-        continue;
-
-      APR_ARRAY_PUSH(child_names, const char *) = apr_pstrdup(result_pool,
-                                                              name);
-    }
-
-  *children = child_names;
-
-  return SVN_NO_ERROR;
 }

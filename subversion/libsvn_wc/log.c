@@ -118,16 +118,6 @@
  */
 #define SVN_WC__LOG_COMMITTED           "committed"
 
-/* On target SVN_WC__LOG_ATTR_NAME, set wc property
-   SVN_WC__LOG_ATTR_PROPNAME to value SVN_WC__LOG_ATTR_PROPVAL.  If
-   SVN_WC__LOG_ATTR_PROPVAL is absent, then remove the property. */
-#define SVN_WC__LOG_MODIFY_WCPROP        "modify-wcprop"
-
-
-/* Upgrade the WC format, both .svn/format and the format number in the
-   entries file to SVN_WC__LOG_ATTR_FORMAT. */
-#define SVN_WC__LOG_UPGRADE_FORMAT "upgrade-format"
-
 /** Log attributes.  See the documentation above for log actions for
     how these are used. **/
 
@@ -190,6 +180,9 @@
 /*** Userdata for the callbacks. ***/
 struct log_runner
 {
+  svn_wc__db_t *db;
+  const char *dir_abspath;
+
   apr_pool_t *pool; /* cleared before processing each log element */
   apr_pool_t *result_pool;
   svn_xml_parser_t *parser;
@@ -207,6 +200,12 @@ struct log_runner
      incremented every time start_handler() is called. */
   int count;
 };
+
+
+/* The log body needs to be wrapped in a single, root element to satisfy
+   the Expat parser. These two macros provide the start/end wrapprs.  */
+#define LOG_START "<wc-log xmlns=\"http://subversion.tigris.org/xmlns\">\n"
+#define LOG_END "</wc-log>\n"
 
 
 
@@ -876,20 +875,12 @@ static svn_error_t *
 log_do_delete_lock(struct log_runner *loggy,
                    const char *name)
 {
+  const char *local_abspath;
   svn_error_t *err;
-  svn_wc_entry_t entry;
 
-  entry.lock_token = entry.lock_comment = entry.lock_owner = NULL;
-  entry.lock_creation_date = 0;
+  local_abspath = svn_dirent_join(loggy->dir_abspath, name, loggy->pool);
 
-  /* Now write the new entry out */
-  err = svn_wc__entry_modify(loggy->adm_access, name,
-                             &entry,
-                             SVN_WC__ENTRY_MODIFY_LOCK_TOKEN
-                             | SVN_WC__ENTRY_MODIFY_LOCK_OWNER
-                             | SVN_WC__ENTRY_MODIFY_LOCK_COMMENT
-                             | SVN_WC__ENTRY_MODIFY_LOCK_CREATION_DATE,
-                             loggy->pool);
+  err = svn_wc__db_lock_remove(loggy->db, local_abspath, loggy->pool);
   if (err)
     return svn_error_createf(pick_error_code(loggy), err,
                              _("Error removing lock from entry for '%s'"),
@@ -1440,59 +1431,6 @@ log_do_committed(struct log_runner *loggy,
   return SVN_NO_ERROR;
 }
 
-
-/* See documentation for SVN_WC__LOG_MODIFY_WCPROP. */
-static svn_error_t *
-log_do_modify_wcprop(struct log_runner *loggy,
-                     const char *name,
-                     const char **atts)
-{
-  svn_string_t value;
-  const char *propname, *propval, *path;
-
-  if (strcmp(name, SVN_WC_ENTRY_THIS_DIR) == 0)
-    path = svn_wc_adm_access_path(loggy->adm_access);
-  else
-    path = svn_dirent_join(svn_wc_adm_access_path(loggy->adm_access),
-                           name, loggy->pool);
-
-  propname = svn_xml_get_attr_value(SVN_WC__LOG_ATTR_PROPNAME, atts);
-  propval = svn_xml_get_attr_value(SVN_WC__LOG_ATTR_PROPVAL, atts);
-
-  if (propval)
-    {
-      value.data = propval;
-      value.len = strlen(propval);
-    }
-
-  SVN_ERR(svn_wc__wcprop_set(propname, propval ? &value : NULL,
-                             path, loggy->adm_access, loggy->pool));
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-log_do_upgrade_format(struct log_runner *loggy,
-                      const char **atts)
-{
-  const char *fmtstr = svn_xml_get_attr_value(SVN_WC__LOG_ATTR_FORMAT, atts);
-  int fmt;
-  const char *path
-    = svn_wc__adm_child(svn_wc_adm_access_path(loggy->adm_access),
-                        SVN_WC__ADM_FORMAT, loggy->pool);
-
-  if (! fmtstr || (fmt = atoi(fmtstr)) == 0)
-    return svn_error_create(pick_error_code(loggy), NULL,
-                            _("Invalid 'format' attribute"));
-
-  /* Remove the .svn/format file, if it exists. */
-  svn_error_clear(svn_io_remove_file(path, loggy->pool));
-
-  return svn_error_return(svn_wc__entries_upgrade(loggy->adm_access, fmt,
-                                                  loggy->pool));
-}
-
-
 static svn_error_t *
 log_do_add_tree_conflict(struct log_runner *loggy,
                          const char **atts)
@@ -1542,7 +1480,7 @@ start_handler(void *userData, const char *eltname, const char **atts)
 
   if (strcmp(eltname, "wc-log") == 0)   /* ignore expat pacifier */
     return;
-  else if (! name && strcmp(eltname, SVN_WC__LOG_UPGRADE_FORMAT) != 0)
+  else if (! name)
     {
       SIGNAL_ERROR
         (loggy, svn_error_createf
@@ -1573,9 +1511,6 @@ start_handler(void *userData, const char *eltname, const char **atts)
   }
   else if (strcmp(eltname, SVN_WC__LOG_COMMITTED) == 0) {
     err = log_do_committed(loggy, name, atts);
-  }
-  else if (strcmp(eltname, SVN_WC__LOG_MODIFY_WCPROP) == 0) {
-    err = log_do_modify_wcprop(loggy, name, atts);
   }
   else if (strcmp(eltname, SVN_WC__LOG_RM) == 0) {
     err = log_do_rm(loggy, name);
@@ -1609,9 +1544,6 @@ start_handler(void *userData, const char *eltname, const char **atts)
   }
   else if (strcmp(eltname, SVN_WC__LOG_SET_TIMESTAMP) == 0) {
     err = log_do_file_timestamp(loggy, name, atts);
-  }
-  else if (strcmp(eltname, SVN_WC__LOG_UPGRADE_FORMAT) == 0) {
-    err = log_do_upgrade_format(loggy, atts);
   }
   else if (strcmp(eltname, SVN_WC__LOG_ADD_TREE_CONFLICT) == 0) {
     err = log_do_add_tree_conflict(loggy, atts);
@@ -1729,33 +1661,31 @@ run_log_from_memory(svn_wc_adm_access_t *adm_access,
 {
   struct log_runner *loggy;
   svn_xml_parser_t *parser;
-  /* kff todo: use the tag-making functions here, now. */
-  const char *log_start
-    = "<wc-log xmlns=\"http://subversion.tigris.org/xmlns\">\n";
-  const char *log_end
-    = "</wc-log>\n";
 
   loggy = apr_pcalloc(pool, sizeof(*loggy));
+
+  parser = svn_xml_make_parser(loggy, start_handler, NULL, NULL, pool);
+
+  loggy->db = svn_wc__adm_get_db(adm_access);
+  loggy->dir_abspath = svn_wc__adm_access_abspath(adm_access);
   loggy->adm_access = adm_access;
   loggy->pool = svn_pool_create(pool);
   loggy->result_pool = svn_pool_create(pool);
-  loggy->parser = svn_xml_make_parser(loggy, start_handler,
-                                      NULL, NULL, pool);
+  loggy->parser = parser;
   loggy->rerun = rerun;
   loggy->diff3_cmd = diff3_cmd;
   loggy->count = 0;
   loggy->tree_conflicts_added = FALSE;
   loggy->tree_conflicts = NULL;
 
-  parser = loggy->parser;
   /* Expat wants everything wrapped in a top-level form, so start with
      a ghost open tag. */
-  SVN_ERR(svn_xml_parse(parser, log_start, strlen(log_start), 0));
+  SVN_ERR(svn_xml_parse(parser, LOG_START, strlen(LOG_START), 0));
 
   SVN_ERR(svn_xml_parse(parser, buf, buf_len, 0));
 
   /* Pacify Expat with a pointless closing element tag. */
-  return svn_xml_parse(parser, log_end, strlen(log_end), 1);
+  return svn_xml_parse(parser, LOG_END, strlen(LOG_END), 1);
 }
 
 
@@ -1768,7 +1698,7 @@ run_log(svn_wc_adm_access_t *adm_access,
 {
   const char *dir_abspath = svn_wc__adm_access_abspath(adm_access);
   svn_xml_parser_t *parser;
-  struct log_runner *loggy = apr_pcalloc(pool, sizeof(*loggy));
+  struct log_runner *loggy;
   char *buf = apr_palloc(pool, SVN__STREAM_CHUNK_SIZE);
   const char *logfile_path;
   int log_number;
@@ -1776,13 +1706,12 @@ run_log(svn_wc_adm_access_t *adm_access,
   svn_boolean_t killme, kill_adm_only;
   const svn_wc_entry_t *entry;
 
-  /* kff todo: use the tag-making functions here, now. */
-  const char *log_start
-    = "<wc-log xmlns=\"http://subversion.tigris.org/xmlns\">\n";
-  const char *log_end
-    = "</wc-log>\n";
+  loggy = apr_pcalloc(pool, sizeof(*loggy));
 
   parser = svn_xml_make_parser(loggy, start_handler, NULL, NULL, pool);
+
+  loggy->db = svn_wc__adm_get_db(adm_access);
+  loggy->dir_abspath = svn_wc__adm_access_abspath(adm_access);
   loggy->adm_access = adm_access;
   loggy->pool = svn_pool_create(pool);
   loggy->result_pool = svn_pool_create(pool);
@@ -1802,7 +1731,7 @@ run_log(svn_wc_adm_access_t *adm_access,
 
   /* Expat wants everything wrapped in a top-level form, so start with
      a ghost open tag. */
-  SVN_ERR(svn_xml_parse(parser, log_start, strlen(log_start), 0));
+  SVN_ERR(svn_xml_parse(parser, LOG_START, strlen(LOG_START), 0));
 
   for (log_number = 0; ; log_number++)
     {
@@ -1839,7 +1768,7 @@ run_log(svn_wc_adm_access_t *adm_access,
     }
 
   /* Pacify Expat with a pointless closing element tag. */
-  SVN_ERR(svn_xml_parse(parser, log_end, strlen(log_end), 1));
+  SVN_ERR(svn_xml_parse(parser, LOG_END, strlen(LOG_END), 1));
 
   svn_xml_free_parser(parser);
 
@@ -2178,21 +2107,7 @@ svn_wc__loggy_entry_modify(svn_stringbuf_t **log_accum,
                  SVN_WC__ENTRY_ATTR_CMT_AUTHOR,
                  entry->cmt_author);
 
-  ADD_ENTRY_ATTR(SVN_WC__ENTRY_MODIFY_LOCK_TOKEN,
-                 SVN_WC__ENTRY_ATTR_LOCK_TOKEN,
-                 entry->lock_token);
-
-  ADD_ENTRY_ATTR(SVN_WC__ENTRY_MODIFY_LOCK_OWNER,
-                 SVN_WC__ENTRY_ATTR_LOCK_OWNER,
-                 entry->lock_owner);
-
-  ADD_ENTRY_ATTR(SVN_WC__ENTRY_MODIFY_LOCK_COMMENT,
-                 SVN_WC__ENTRY_ATTR_LOCK_COMMENT,
-                 entry->lock_comment);
-
-  ADD_ENTRY_ATTR(SVN_WC__ENTRY_MODIFY_LOCK_CREATION_DATE,
-                 SVN_WC__ENTRY_ATTR_LOCK_CREATION_DATE,
-                 svn_time_to_cstring(entry->lock_creation_date, pool));
+  /* Note: LOCK flags are no longer passed to this function.  */
 
   /* Note: ignoring the (deprecated) has_props, has_prop_mods,
      cachable_props, and present_props fields. */
@@ -2226,27 +2141,6 @@ svn_wc__loggy_entry_modify(svn_stringbuf_t **log_accum,
   return SVN_NO_ERROR;
 }
 
-
-svn_error_t *
-svn_wc__loggy_modify_wcprop(svn_stringbuf_t **log_accum,
-                            svn_wc_adm_access_t *adm_access,
-                            const char *path,
-                            const char *propname,
-                            const char *propval,
-                            apr_pool_t *pool)
-{
-  svn_xml_make_open_tag(log_accum, pool, svn_xml_self_closing,
-                        SVN_WC__LOG_MODIFY_WCPROP,
-                        SVN_WC__LOG_ATTR_NAME,
-                        loggy_path(path, adm_access),
-                        SVN_WC__LOG_ATTR_PROPNAME,
-                        propname,
-                        SVN_WC__LOG_ATTR_PROPVAL,
-                        propval,
-                        NULL);
-
-  return SVN_NO_ERROR;
-}
 
 svn_error_t *
 svn_wc__loggy_move(svn_stringbuf_t **log_accum,
@@ -2381,21 +2275,6 @@ svn_wc__loggy_remove(svn_stringbuf_t **log_accum,
                         SVN_WC__LOG_RM,
                         SVN_WC__LOG_ATTR_NAME,
                         loggy_path(path, adm_access),
-                        NULL);
-
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn_wc__loggy_upgrade_format(svn_stringbuf_t **log_accum,
-                             int format,
-                             apr_pool_t *pool)
-{
-  svn_xml_make_open_tag(log_accum, pool,
-                        svn_xml_self_closing,
-                        SVN_WC__LOG_UPGRADE_FORMAT,
-                        SVN_WC__LOG_ATTR_FORMAT,
-                        apr_itoa(pool, format),
                         NULL);
 
   return SVN_NO_ERROR;
@@ -2654,20 +2533,12 @@ svn_wc_cleanup3(const char *path,
                              _("'%s' is not a working copy directory"),
                              svn_path_local_style(path, scratch_pool));
 
-  /* First step, run any existing logs. */
-  SVN_ERR(cleanup_internal(db, path, diff3_cmd, cancel_func, cancel_baton,
-                           scratch_pool));
-
   if (upgrade_wc && wc_format_version < SVN_WC__VERSION)
-    {
-      /* Second, do the upgrade. */
-      SVN_ERR(upgrade_working_copy(db, path, diff3_cmd, cancel_func,
-                                   cancel_baton, scratch_pool));
-
-      /* Third, run logs again. */
-      SVN_ERR(cleanup_internal(db, path, diff3_cmd, cancel_func, cancel_baton,
-                               scratch_pool));
-    }
+    SVN_ERR(upgrade_working_copy(db, path, diff3_cmd, cancel_func,
+                                 cancel_baton, scratch_pool));
+  else
+    SVN_ERR(cleanup_internal(db, path, diff3_cmd, cancel_func, cancel_baton,
+                             scratch_pool));
 
   return SVN_NO_ERROR;
 }

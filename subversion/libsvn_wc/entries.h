@@ -125,7 +125,7 @@ svn_error_t *svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
 #define SVN_WC__ENTRY_MODIFY_REPOS              APR_INT64_C(0x0000000000000004)
 #define SVN_WC__ENTRY_MODIFY_KIND               APR_INT64_C(0x0000000000000008)
 #define SVN_WC__ENTRY_MODIFY_TEXT_TIME          APR_INT64_C(0x0000000000000010)
-/* OPEN                                      APR_INT64_C(0x0000000000000020) */
+/* OPEN */
 #define SVN_WC__ENTRY_MODIFY_CHECKSUM           APR_INT64_C(0x0000000000000040)
 #define SVN_WC__ENTRY_MODIFY_SCHEDULE           APR_INT64_C(0x0000000000000080)
 #define SVN_WC__ENTRY_MODIFY_COPIED             APR_INT64_C(0x0000000000000100)
@@ -142,10 +142,7 @@ svn_error_t *svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
 #define SVN_WC__ENTRY_MODIFY_UUID               APR_INT64_C(0x0000000000080000)
 #define SVN_WC__ENTRY_MODIFY_INCOMPLETE         APR_INT64_C(0x0000000000100000)
 #define SVN_WC__ENTRY_MODIFY_ABSENT             APR_INT64_C(0x0000000000200000)
-#define SVN_WC__ENTRY_MODIFY_LOCK_TOKEN         APR_INT64_C(0x0000000000400000)
-#define SVN_WC__ENTRY_MODIFY_LOCK_OWNER         APR_INT64_C(0x0000000000800000)
-#define SVN_WC__ENTRY_MODIFY_LOCK_COMMENT       APR_INT64_C(0x0000000001000000)
-#define SVN_WC__ENTRY_MODIFY_LOCK_CREATION_DATE APR_INT64_C(0x0000000002000000)
+/* OPEN */
 #define SVN_WC__ENTRY_MODIFY_CHANGELIST         APR_INT64_C(0x0000000040000000)
 #define SVN_WC__ENTRY_MODIFY_KEEP_LOCAL         APR_INT64_C(0x0000000080000000)
 #define SVN_WC__ENTRY_MODIFY_WORKING_SIZE       APR_INT64_C(0x0000000100000000)
@@ -314,64 +311,13 @@ svn_wc__read_entries_old(apr_hash_t **entries,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool);
 
-#ifndef BLAST_FORMAT_11
-svn_error_t *
-svn_wc__entries_write_old(apr_hash_t *entries,
-                          svn_wc_adm_access_t *adm_access,
-                          int wc_format,
-                          apr_pool_t *pool);
 
+/* ### return a flag corresponding to the classic "DELETED" concept.  */
 svn_error_t *
-svn_wc__entries_init_old(const char *path,
-                         const char *uuid,
-                         const char *url,
-                         const char *repos,
-                         svn_revnum_t initial_rev,
-                         svn_depth_t depth,
-                         apr_pool_t *pool);
-#endif
-
-/* Fulfill a svn_wc__db_read_info() invocation by reading an old-style
-   entry structure. Limited fields are available.  */
-svn_error_t *
-svn_wc__read_info_old(svn_wc__db_status_t *status,
-                      svn_wc__db_kind_t *kind,
-                      svn_revnum_t *revision,
-                      const char **repos_relpath,
-                      const char **repos_root_url,
-                      const char **repos_uuid,
-                      svn_revnum_t *changed_rev,
-                      apr_time_t *changed_date,
-                      const char **changed_author,
-                      apr_time_t *last_mod_time,
-                      svn_depth_t *depth,
-                      svn_checksum_t **checksum,
-                      svn_filesize_t *translated_size,
-                      const char **target,
-                      const char **changelist,
-                      const char **original_repos_relpath,
-                      const char **original_root_url,
-                      const char **original_uuid,
-                      svn_revnum_t *original_revision,
-                      svn_boolean_t *text_mod,
-                      svn_boolean_t *props_mod,
-                      svn_boolean_t *base_shadowed,
-                      svn_wc__db_lock_t **lock,
-                      svn_wc__db_t *db,
-                      const char *wcroot_abspath,
-                      const char *local_relpath,
-                      apr_pool_t *result_pool,
-                      apr_pool_t *scratch_pool);
-
-
-svn_error_t *
-svn_wc__gather_children_old(const apr_array_header_t **children,
-                            svn_boolean_t base_only,
-                            svn_wc__db_t *db,
-                            const char *wcroot_abspath,
-                            const char *local_relpath,
-                            apr_pool_t *result_pool,
-                            apr_pool_t *scratch_pool);
+svn_wc__node_is_deleted(svn_boolean_t *deleted,
+                        svn_wc__db_t *db,
+                        const char *local_abspath,
+                        apr_pool_t *scratch_pool);
 
 
 /* Parse a file external specification in the NULL terminated STR and

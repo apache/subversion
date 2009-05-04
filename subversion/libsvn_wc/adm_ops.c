@@ -473,11 +473,8 @@ process_committed_leaf(int log_number,
         {
           svn_prop_t *prop = APR_ARRAY_IDX(wcprop_changes, i, svn_prop_t *);
 
-          SVN_ERR(svn_wc__loggy_modify_wcprop
-                  (&logtags, adm_access,
-                   path, prop->name,
-                   prop->value ? prop->value->data : NULL,
-                   pool));
+          SVN_ERR(svn_wc__wcprop_set(prop->name, prop->value, path,
+                                     adm_access, pool));
         }
     }
 
@@ -1219,7 +1216,7 @@ svn_wc_delete3(const char *path,
                                            pool));
             }
         }
-      else
+      else if (was_schedule != svn_wc_schedule_add)
         {
           /* if adm_probe_retrieve returned the parent access baton,
              (which is the same access baton that we came in here
@@ -1239,6 +1236,12 @@ svn_wc_delete3(const char *path,
                                 pool));
             }
         }
+      /* else
+         ### Handle added directory that is deleted in parent_access
+             (was_deleted=TRUE). The current behavior is to just delete the 
+             directory with its administrative area inside, which is OK for WC-1.0,
+             but when we move to a single database per working copy something
+             must unversion the directory. */
     }
 
   if (!(was_kind == svn_node_dir && was_schedule == svn_wc_schedule_add
@@ -1292,6 +1295,16 @@ svn_wc_delete3(const char *path,
     (*notify_func)(notify_baton,
                    svn_wc_create_notify(path, svn_wc_notify_delete,
                                         pool), pool);
+
+  if (was_schedule == svn_wc_schedule_add && dir_access != adm_access)
+    {
+      /* ### We can't be sure that we are the owner of the access baton
+         here, but the baton has to be closed to fix the "update after
+         add/rm of deleted state" test on Windows. In most cases the
+         access baton is opened via svn_wc_adm_probe_try3()
+         at the top of this function, which makes us the owner. */
+      SVN_ERR(svn_wc_adm_close2(dir_access, pool));
+    }
 
   /* By the time we get here, anything that was scheduled to be added has
      become unversioned */
@@ -1706,12 +1719,15 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
   /* Deal with properties. */
   if (entry->schedule == svn_wc_schedule_replace)
     {
+      svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
+      const char *local_abspath;
+
       /* Refer to the original base, before replacement. */
       revert_base = TRUE;
 
       /* Use the revertpath as the new propsbase if it exists. */
-
-      SVN_ERR(svn_wc__load_props(NULL, NULL, &baseprops, entry, fullpath,
+      SVN_ERR(svn_path_get_absolute(&local_abspath, fullpath, pool));
+      SVN_ERR(svn_wc__load_props(NULL, NULL, &baseprops, db, local_abspath,
                                  pool, pool));
 
       /* Ensure the revert propfile gets removed. */
@@ -2166,7 +2182,8 @@ revert_entry(svn_depth_t *depth,
    array of said names.  See svn_wc_revert3() for additional
    documentation. */
 static svn_error_t *
-revert_internal(const char *path,
+revert_internal(svn_wc__db_t *db,
+                const char *path,
                 svn_wc_adm_access_t *parent_access,
                 svn_depth_t depth,
                 svn_boolean_t use_commit_times,
@@ -2192,7 +2209,7 @@ revert_internal(const char *path,
   /* Safeguard 1: the item must be versioned for any reversion to make sense,
      except that a tree conflict can exist on an unversioned item. */
   SVN_ERR(svn_wc_entry(&entry, path, dir_access, FALSE, pool));
-  SVN_ERR(svn_wc__get_tree_conflict(&tree_conflict, path, dir_access, pool));
+  SVN_ERR(svn_wc__get_tree_conflict2(&tree_conflict, path, db, pool, pool));
   if (entry == NULL && tree_conflict == NULL)
     return svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
                              _("Cannot revert unversioned item '%s'"), path);
@@ -2244,7 +2261,7 @@ revert_internal(const char *path,
 
       /* Clear any tree conflict on the path, even if it is not a versioned
          resource. */
-      SVN_ERR(svn_wc__get_tree_conflict(&conflict, path, parent_access, pool));
+      SVN_ERR(svn_wc__get_tree_conflict2(&conflict, path, db, pool, pool));
       if (conflict)
         {
           SVN_ERR(svn_wc__del_tree_conflict(path, parent_access, pool));
@@ -2305,7 +2322,7 @@ revert_internal(const char *path,
           full_entry_path = svn_dirent_join(path, keystring, subpool);
 
           /* Revert the entry. */
-          SVN_ERR(revert_internal(full_entry_path, dir_access,
+          SVN_ERR(revert_internal(db, full_entry_path, dir_access,
                                   depth_under_here, use_commit_times,
                                   changelist_hash, cancel_func, cancel_baton,
                                   notify_func, notify_baton, subpool));
@@ -2333,9 +2350,10 @@ revert_internal(const char *path,
               {
                 /* Found an unversioned tree conflict victim */
                 /* Revert the entry. */
-                SVN_ERR(revert_internal(conflict->path, dir_access,
+                SVN_ERR(revert_internal(db, conflict->path, dir_access,
                                         svn_depth_empty, use_commit_times,
-                                        changelist_hash, cancel_func, cancel_baton,
+                                        changelist_hash,
+                                        cancel_func, cancel_baton,
                                         notify_func, notify_baton, subpool));
               }
           }
@@ -2361,9 +2379,12 @@ svn_wc_revert3(const char *path,
                apr_pool_t *pool)
 {
   apr_hash_t *changelist_hash = NULL;
+
   if (changelists && changelists->nelts)
     SVN_ERR(svn_hash_from_cstring_keys(&changelist_hash, changelists, pool));
-  return revert_internal(path, parent_access, depth, use_commit_times,
+
+  return revert_internal(svn_wc__adm_get_db(parent_access),
+                         path, parent_access, depth, use_commit_times,
                          changelist_hash, cancel_func, cancel_baton,
                          notify_func, notify_baton, pool);
 }
@@ -2846,6 +2867,8 @@ resolve_conflict_on_entry(const char *path,
 
 struct resolve_callback_baton
 {
+  svn_wc__db_t *db;
+
   /* TRUE if text conflicts are to be resolved. */
   svn_boolean_t resolve_text;
   /* TRUE if property conflicts are to be resolved. */
@@ -2930,8 +2953,8 @@ resolve_found_entry_callback(const char *path,
       SVN_ERR(svn_wc_adm_probe_retrieve(&parent_adm_access, baton->adm_access,
                                         conflict_dir, pool));
 
-      SVN_ERR(svn_wc__get_tree_conflict(&conflict, path, parent_adm_access,
-                                        pool));
+      SVN_ERR(svn_wc__get_tree_conflict2(&conflict, path, baton->db,
+                                         pool, pool));
       if (conflict)
         {
           SVN_ERR(svn_wc__del_tree_conflict(path, parent_adm_access, pool));
@@ -3022,79 +3045,86 @@ svn_wc_resolved_conflict4(const char *path,
                           void *cancel_baton,
                           apr_pool_t *pool)
 {
-  struct resolve_callback_baton *baton = apr_pcalloc(pool, sizeof(*baton));
+  struct resolve_callback_baton rcb;
 
-  baton->resolve_text = resolve_text;
-  baton->resolve_props = resolve_props;
-  baton->resolve_tree = resolve_tree;
-  baton->adm_access = adm_access;
-  baton->notify_func = notify_func;
-  baton->notify_baton = notify_baton;
-  baton->conflict_choice = conflict_choice;
+  rcb.db = svn_wc__adm_get_db(adm_access);
+  rcb.resolve_text = resolve_text;
+  rcb.resolve_props = resolve_props;
+  rcb.resolve_tree = resolve_tree;
+  rcb.conflict_choice = conflict_choice;
+  rcb.adm_access = adm_access;
+  rcb.notify_func = notify_func;
+  rcb.notify_baton = notify_baton;
 
   return svn_wc__walk_entries_and_tc(path, adm_access,
-                              &resolve_walk_callbacks, baton, depth,
-                              cancel_func, cancel_baton, pool);
+                                     &resolve_walk_callbacks, &rcb, depth,
+                                     cancel_func, cancel_baton, pool);
 }
 
 svn_error_t *svn_wc_add_lock(const char *path, const svn_lock_t *lock,
                              svn_wc_adm_access_t *adm_access, apr_pool_t *pool)
 {
-  const svn_wc_entry_t *entry;
-  svn_wc_entry_t newentry;
+  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
+  const char *local_abspath;
+  svn_wc__db_lock_t db_lock;
+  svn_error_t *err;
+  const svn_string_t *needs_lock;
 
-  SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access, FALSE, pool));
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+  db_lock.token = lock->token;
+  db_lock.owner = lock->owner;
+  db_lock.comment = lock->comment;
+  db_lock.date = lock->creation_date;
+  err = svn_wc__db_lock_add(db, local_abspath, &db_lock, pool);
+  if (err)
+    {
+      if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
+        return svn_error_return(err);
 
+      /* Remap the error.  */
+      svn_error_clear(err);
+      return svn_error_createf(SVN_ERR_ENTRY_NOT_FOUND, NULL,
+                               _("'%s' is not under version control"),
+                               svn_path_local_style(path, pool));
+    }
 
-  newentry.lock_token = lock->token;
-  newentry.lock_owner = lock->owner;
-  newentry.lock_comment = lock->comment;
-  newentry.lock_creation_date = lock->creation_date;
-
-  SVN_ERR(svn_wc__entry_modify(adm_access, entry->name, &newentry,
-                               SVN_WC__ENTRY_MODIFY_LOCK_TOKEN
-                               | SVN_WC__ENTRY_MODIFY_LOCK_OWNER
-                               | SVN_WC__ENTRY_MODIFY_LOCK_COMMENT
-                               | SVN_WC__ENTRY_MODIFY_LOCK_CREATION_DATE,
-                               pool));
-
-  { /* if svn:needs-lock is present, then make the file read-write. */
-    const svn_string_t *needs_lock;
-
-    SVN_ERR(svn_wc_prop_get(&needs_lock, SVN_PROP_NEEDS_LOCK,
-                            path, adm_access, pool));
-    if (needs_lock)
-      SVN_ERR(svn_io_set_file_read_write(path, FALSE, pool));
-  }
+  /* if svn:needs-lock is present, then make the file read-write. */
+  SVN_ERR(svn_wc__internal_propget(&needs_lock, SVN_PROP_NEEDS_LOCK,
+                                   local_abspath, db, pool, pool));
+  if (needs_lock)
+    SVN_ERR(svn_io_set_file_read_write(path, FALSE, pool));
 
   return SVN_NO_ERROR;
 }
 
 svn_error_t *svn_wc_remove_lock(const char *path,
-                             svn_wc_adm_access_t *adm_access, apr_pool_t *pool)
+                                svn_wc_adm_access_t *adm_access,
+                                apr_pool_t *pool)
 {
-  const svn_wc_entry_t *entry;
-  svn_wc_entry_t newentry;
+  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
+  const char *local_abspath;
+  svn_error_t *err;
+  const svn_string_t *needs_lock;
 
-  SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access, FALSE, pool));
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+  err = svn_wc__db_lock_remove(db, local_abspath, pool);
+  if (err)
+    {
+      if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
+        return svn_error_return(err);
 
-  newentry.lock_token = newentry.lock_owner = newentry.lock_comment = NULL;
-  newentry.lock_creation_date = 0;
-  SVN_ERR(svn_wc__entry_modify(adm_access, entry->name, &newentry,
-                               SVN_WC__ENTRY_MODIFY_LOCK_TOKEN
-                               | SVN_WC__ENTRY_MODIFY_LOCK_OWNER
-                               | SVN_WC__ENTRY_MODIFY_LOCK_COMMENT
-                               | SVN_WC__ENTRY_MODIFY_LOCK_CREATION_DATE,
-                               pool));
+      /* Remap the error.  */
+      svn_error_clear(err);
+      return svn_error_createf(SVN_ERR_ENTRY_NOT_FOUND, NULL,
+                               _("'%s' is not under version control"),
+                               svn_path_local_style(path, pool));
+    }
 
-  { /* if svn:needs-lock is present, then make the file read-only. */
-    const svn_string_t *needs_lock;
-
-    SVN_ERR(svn_wc_prop_get(&needs_lock, SVN_PROP_NEEDS_LOCK,
-                            path, adm_access, pool));
-    if (needs_lock)
-      SVN_ERR(svn_io_set_file_read_only(path, FALSE, pool));
-  }
+  /* if svn:needs-lock is present, then make the file read-only. */
+  SVN_ERR(svn_wc__internal_propget(&needs_lock, SVN_PROP_NEEDS_LOCK,
+                                   local_abspath, db, pool, pool));
+  if (needs_lock)
+    SVN_ERR(svn_io_set_file_read_only(path, FALSE, pool));
 
   return SVN_NO_ERROR;
 }

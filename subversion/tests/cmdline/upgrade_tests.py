@@ -27,11 +27,12 @@ import svntest
 
 Item = svntest.wc.StateItem
 XFail = svntest.testcase.XFail
+SkipUnless = svntest.testcase.SkipUnless
 
 def replace_sbox_with_tarfile(sbox, tar_filename):
   try:
     svntest.main.safe_rmtree(sbox.wc_dir)
-  except OSError, e:
+  except OSError as e:
     pass
 
   tarpath = os.path.join(os.path.dirname(sys.argv[0]), 'upgrade_tests_data',
@@ -45,20 +46,14 @@ def replace_sbox_with_tarfile(sbox, tar_filename):
 
 
 def check_format(sbox, expected_format):
-  if not svntest.main.is_not_ng():
-    import sqlite3
+  import sqlite3
 
   for root, dirs, files in os.walk(sbox.wc_dir):
-    if svntest.main.is_not_ng():
-      format_file = open(os.path.join(root, '.svn', 'entries'))
-      found_format = int(format_file.readline())
-    else:
-      # WC-NG
-      db = sqlite3.connect(os.path.join(root, '.svn', 'wc.db'))
-      c = db.cursor()
-      c.execute('pragma user_version;')
-      found_format = c.fetchone()[0]
-      db.close()
+    db = sqlite3.connect(os.path.join(root, '.svn', 'wc.db'))
+    c = db.cursor()
+    c.execute('pragma user_version;')
+    found_format = c.fetchone()[0]
+    db.close()
 
     if found_format != expected_format:
       raise svntest.Failure("found format '%d'; expected '%d'; in wc '%s'" %
@@ -85,10 +80,7 @@ def basic_upgrade(sbox):
                                      'cleanup', sbox.wc_dir)
 
   # Actually check the sanity of the upgraded working copy
-  if svntest.main.is_not_ng():
-    check_format(sbox, 11)
-  else:
-    check_format(sbox, 12)
+  check_format(sbox, 12)
 
 
 def upgrade_1_5(sbox):
@@ -108,10 +100,7 @@ def upgrade_1_5(sbox):
                                      'cleanup', sbox.wc_dir)
 
   # Check the format of the working copy
-  if svntest.main.is_not_ng():
-    check_format(sbox, 11)
-  else:
-    check_format(sbox, 12)
+  check_format(sbox, 12)
 
 
 def logs_left_1_5(sbox):
@@ -126,15 +115,34 @@ def logs_left_1_5(sbox):
                                      'cleanup', sbox.wc_dir)
 
 
+def upgrade_wcprops(sbox):
+  "test upgrading a working copy with wcprops"
+
+  replace_sbox_with_tarfile(sbox, 'upgrade_wcprops.tar.bz2')
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'cleanup', sbox.wc_dir)
+
+  # Make sure that .svn/all-wcprops has disappeared
+  if os.path.exists(os.path.join(sbox.wc_dir, '.svn', 'all-wcprops')):
+    raise svntest.Failure("all-wcprops file still exists")
+
 
 ########################################################################
 # Run the tests
 
+def has_sqlite():
+  try:
+    import sqlite3
+    return True
+  except ImportError:
+    return False
+
 # list all tests here, starting with None:
 test_list = [ None,
-              basic_upgrade,
-              upgrade_1_5,
-              XFail(logs_left_1_5),
+              SkipUnless(basic_upgrade, has_sqlite),
+              SkipUnless(upgrade_1_5, has_sqlite),
+              logs_left_1_5,
+              upgrade_wcprops,
              ]
 
 

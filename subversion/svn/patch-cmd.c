@@ -44,62 +44,32 @@ svn_cl__patch(apr_getopt_t *os,
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   apr_array_header_t *args, *targets;
   const char *patch_path = NULL, *target_path = NULL;
-  apr_file_t *outfile, *errfile;
-  apr_status_t status;
 
-  /* Sanity checks */
+  /* Get patch file argument. */
+  SVN_ERR(svn_opt_parse_num_args(&args, os, 1, pool));
+  SVN_ERR(svn_path_get_absolute(&patch_path,
+                                APR_ARRAY_IDX(args, 0, const char *),
+                                pool));
 
-  /* Against the patch argument */
-  {
-    svn_node_kind_t patch_path_kind;
+  /* Get WCPATH argument */
+  SVN_ERR(svn_client_args_to_target_array(&targets, os, opt_state->targets,
+                                          ctx, pool));
 
-    SVN_ERR(svn_opt_parse_num_args(&args, os, 1, pool));
-    SVN_ERR(svn_path_get_absolute(&patch_path,
-                                  APR_ARRAY_IDX(args, 0, const char *),
-                                  pool));
-    SVN_ERR(svn_io_check_path(patch_path, &patch_path_kind, pool));
-    if (patch_path_kind == svn_node_none)
-      return svn_error_createf(APR_ENOENT, NULL, _("'%s' does not exist"),
-                               svn_path_local_style(patch_path, pool));
-  }
+  /* Error on extra arguments to allow future extension. */
+  if (targets->nelts > 1)
+    return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL);
 
-  /* Against the WCPATH argument */
-  {
-    int wcformat;
+  svn_opt_push_implicit_dot_target(targets, pool);
 
-    SVN_ERR(svn_client_args_to_target_array(&targets, os, opt_state->targets,
-                                            ctx, pool));
-
-    /* Should we ignore extra arguments?  Let's consider it as a misuse
-     * for now, the user might miss something. */
-    if (targets->nelts > 1)
-      return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL);
-
-    svn_opt_push_implicit_dot_target(targets, pool);
-
-    target_path = APR_ARRAY_IDX(targets, 0, const char *);
-
-    /* Ensure we're given a working copy path. */
-    SVN_ERR(svn_wc_check_wc(target_path, &wcformat, pool));
-    if (! wcformat)
-      return svn_error_create(SVN_ERR_WC_NOT_DIRECTORY, 0, NULL);
-  }
+  target_path = APR_ARRAY_IDX(targets, 0, const char *);
 
   if (! opt_state->quiet)
     svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2, FALSE,
                          FALSE, FALSE, pool);
 
-  
-  /* stdout and stderr pipes we'll link upon call to the external program
-   * (e.g. GNU patch) used to apply the unidiff. */
-  if ((status = apr_file_open_stdout(&outfile, pool)))
-    return svn_error_wrap_apr(status, _("Can't open stdout"));
-  if ((status = apr_file_open_stderr(&errfile, pool)))
-    return svn_error_wrap_apr(status, _("Can't open stderr"));
-
   /* OK we're good. */
-  SVN_ERR(svn_client_patch(patch_path, target_path, opt_state->force, outfile,
-                           errfile, ctx, pool));
+  SVN_ERR(svn_client_patch(patch_path, target_path, opt_state->force, ctx,
+                           pool));
 
   return SVN_NO_ERROR;
 }

@@ -2167,14 +2167,8 @@ def diff_repos_wc_add_with_props(sbox):
     "\n",
     ]
 
-  # The output from the BASE->repos diff is the same content, but in a
-  # different order. WC-NG also present a slightly different ordering.
-  if sbox.using_wc_ng():
-    expected_output_r1_r3 = diff_X_r1_r3 + diff_bar_r1_r3 + diff_foo_r1_r3
-    expected_output_r1_r3_a = diff_foo_r1_r3 + diff_bar_r1_r3 + diff_X_r1_r3
-  else:
-    expected_output_r1_r3 = diff_foo_r1_r3 + diff_X_r1_r3 + diff_bar_r1_r3
-    expected_output_r1_r3_a = diff_foo_r1_r3 + diff_bar_r1_r3 + diff_X_r1_r3
+  expected_output_r1_r3 = diff_X_r1_r3 + diff_bar_r1_r3 + diff_foo_r1_r3
+  expected_output_r1_r3_a = diff_foo_r1_r3 + diff_bar_r1_r3 + diff_X_r1_r3
 
   os.chdir(sbox.wc_dir)
 
