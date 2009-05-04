@@ -8,7 +8,7 @@ http://svn.collab.net/repos/svn/tags/1.6.2
   * make 'status --quiet' show tree conflicts (issue #3396)
   * allow '--set-depth infinity' to expand shallow subtrees (r37169)
   * return an error if attempting to reintegrate from/to the repo root (r37385)
-  * don't store bogus mergeinfo with '--ignore-ancestry', foeign merges (r37333)
+  * don't store bogus mergeinfo with '--ignore-ancestry', foreign merges (r37333)
   * don't allow merge of difference between two repos (r37519)
   * fixed: commit log message template missing paths (issue #3399)
   * fixed: segfault on merge with servers < 1.6 (r37363, -67, -68, -79)
@@ -16,9 +16,9 @@ http://svn.collab.net/repos/svn/tags/1.6.2
   * fixed: another memory leak when performing mergeinfo-aware merges (r37398)
 
  Developer-visible changes:
-  * don't fail when an embedding app has already configured SQLite (issue #3387)
+  * don't fail when an embedding app has already initialized SQLite (issue #3387)
   * resolve naming collisions with static stat() function in svnserve (r37527)
-  * fix an expection for a failng dirent windows test (r37121)
+  * fix an expectation for a failing dirent windows test (r37121)
 
 
 Version 1.6.1
