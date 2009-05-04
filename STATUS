@@ -121,6 +121,9 @@ Candidate changes:
    Votes:
      +1: pburba
 
+Approved changes:
+=================
+
  * r37494, r37499
    Fix issue #3407 'Shallow merges incorrectly set mergeinfo on children'.
    Justification:
@@ -131,7 +134,4 @@ Candidate changes:
    Notes:
      While merging r37494 accept theirs-conflict.
    Votes:
-     +1: pburba, arfrever
-
-Approved changes:
-=================
+     +1: pburba, arfrever, rhuijben
