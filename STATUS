@@ -82,8 +82,15 @@ Candidate changes:
 
  * r37245
    Recommend SQLite 3.6.13.
+   Justification:
+     http://svn.haxx.se/dev/archive-2009-04/0411.shtml
+   Notes:
+     Accept theirs-conflict while merging.
    Votes:
      +1: arfrever, rhuijben
+     +0: pburba (I'm fine with the premise of the change, but merging this
+         change produces a tree conflict on www/svn_1.6_releasenotes.zh.html
+         that need to be addressed first).
 
  * r37478, r37543, r37544, r37545, r37547
    Support using `svnversion` on files and improve some messages printed by
