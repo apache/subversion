@@ -769,11 +769,14 @@ complete_directory(struct edit_baton *eb,
       const void *key;
       void *val;
       const svn_wc_entry_t *current_entry;
+      const char *local_abspath;
 
       svn_pool_clear(subpool);
       apr_hash_this(hi, &key, NULL, &val);
       name = key;
       current_entry = val;
+
+      local_abspath = svn_dirent_join(local_dir_abspath, name, subpool);
 
       /* Any entry still marked as deleted (and not schedule add) can now
          be removed -- if it wasn't undeleted by the update, then it
@@ -784,8 +787,6 @@ complete_directory(struct edit_baton *eb,
         {
           if (current_entry->schedule != svn_wc_schedule_add)
             {
-              const char *local_abspath = svn_dirent_join(
-                    local_dir_abspath, name, subpool);
               SVN_ERR(svn_wc__entry_remove(eb->db, local_abspath, subpool));
               apr_hash_set(entries, name, APR_HASH_KEY_STRING, NULL);
             }
@@ -807,8 +808,6 @@ complete_directory(struct edit_baton *eb,
       else if (current_entry->absent
                && (current_entry->revision != *(eb->target_revision)))
         {
-          const char *local_abspath = svn_dirent_join(
-                local_dir_abspath, name, subpool);
           SVN_ERR(svn_wc__entry_remove(eb->db, local_abspath, subpool));
           apr_hash_set(entries, name, APR_HASH_KEY_STRING, NULL);
         }
@@ -834,8 +833,6 @@ complete_directory(struct edit_baton *eb,
                    && (! current_entry->absent)
                    && (current_entry->schedule != svn_wc_schedule_add))
             {
-              const char *local_abspath = svn_dirent_join(
-                    local_dir_abspath, name, subpool);
               SVN_ERR(svn_wc__entry_remove(eb->db, local_abspath, subpool));
               apr_hash_set(entries, name, APR_HASH_KEY_STRING, NULL);
 
