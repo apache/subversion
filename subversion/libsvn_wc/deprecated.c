@@ -1904,3 +1904,47 @@ svn_wc_copy(const char *src_path,
                       cancel_baton, svn_wc__compat_call_notify_func,
                       &nb, pool);
 }
+
+
+/*** From merge.c ***/
+
+svn_error_t *
+svn_wc_merge2(enum svn_wc_merge_outcome_t *merge_outcome,
+              const char *left,
+              const char *right,
+              const char *merge_target,
+              svn_wc_adm_access_t *adm_access,
+              const char *left_label,
+              const char *right_label,
+              const char *target_label,
+              svn_boolean_t dry_run,
+              const char *diff3_cmd,
+              const apr_array_header_t *merge_options,
+              apr_pool_t *pool)
+{
+  return svn_wc_merge3(merge_outcome,
+                       left, right, merge_target, adm_access,
+                       left_label, right_label, target_label,
+                       dry_run, diff3_cmd, merge_options, NULL,
+                       NULL, NULL, pool);
+}
+
+svn_error_t *
+svn_wc_merge(const char *left,
+             const char *right,
+             const char *merge_target,
+             svn_wc_adm_access_t *adm_access,
+             const char *left_label,
+             const char *right_label,
+             const char *target_label,
+             svn_boolean_t dry_run,
+             enum svn_wc_merge_outcome_t *merge_outcome,
+             const char *diff3_cmd,
+             apr_pool_t *pool)
+{
+  return svn_wc_merge3(merge_outcome,
+                       left, right, merge_target, adm_access,
+                       left_label, right_label, target_label,
+                       dry_run, diff3_cmd, NULL, NULL, NULL,
+                       NULL, pool);
+}
