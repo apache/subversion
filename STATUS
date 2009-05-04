@@ -138,16 +138,6 @@ Candidate changes:
 Approved changes:
 =================
 
- * r37333
-   Don't worry about the merge tracking complexities of non-inheritable
-   mergeinfo and missing subtrees if we are *not* honoring mergeinfo.
-   Justification:
-     Without this change some edge cases where mergeinfo is not being
-     honored (e.g. --ignore-ancestry, foreign repos merges) can record
-     mergeinfo.
-   Votes:
-     +1: pburba, arfrever, rhuijben
-
  * r37527
    Resolve naming collision on static stat() function in svnserve.
    Justification:
