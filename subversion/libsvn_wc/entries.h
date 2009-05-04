@@ -191,19 +191,12 @@ svn_error_t *svn_wc__entry_modify(svn_wc_adm_access_t *adm_access,
                                   apr_uint64_t modify_flags,
                                   apr_pool_t *pool);
 
-/* Remove entry NAME from ENTRIES, unconditionally.  ADM_ACCESS should be
-   the access baton for the directory which contains the .svn administrative
-   directory containing NAME.  The modified ENTRIES will be written out
-   to disk.
-
-   If ENTRIES is NULL, then the entries will be read from disk, modified,
-   and written back to disk.
+/* Remove LOCAL_ABSPATH from DB, unconditionally.
 
    All temporary allocations will be performed in SCRATCH_POOL.  */
 svn_error_t *
-svn_wc__entry_remove(apr_hash_t *entries,
-                     svn_wc_adm_access_t *adm_access,
-                     const char *name,
+svn_wc__entry_remove(svn_wc__db_t *db,
+                     const char *local_abspath,
                      apr_pool_t *scratch_pool);
 
 

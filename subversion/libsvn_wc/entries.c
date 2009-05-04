@@ -2627,16 +2627,20 @@ fold_entry(apr_hash_t *entries,
 
 
 svn_error_t *
-svn_wc__entry_remove(apr_hash_t *entries,
-                     svn_wc_adm_access_t *adm_access,
-                     const char *name,
+svn_wc__entry_remove(svn_wc__db_t *db,
+                     const char *local_abspath,
                      apr_pool_t *scratch_pool)
 {
-  if (entries == NULL)
-    SVN_ERR(svn_wc_entries_read(&entries, adm_access, TRUE, scratch_pool));
+  svn_wc_adm_access_t *adm_access;
+  apr_hash_t *entries;
+  const char *name;
+  const char *parent_dir;
 
+  svn_dirent_split(local_abspath, &parent_dir, &name, scratch_pool);
+  adm_access = svn_wc__adm_retrieve_internal2(db, parent_dir, scratch_pool);
+
+  SVN_ERR(svn_wc_entries_read(&entries, adm_access, TRUE, scratch_pool));
   apr_hash_set(entries, name, APR_HASH_KEY_STRING, NULL);
-
   return svn_error_return(entries_write(entries, adm_access, scratch_pool));
 }
 
