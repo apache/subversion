@@ -94,23 +94,6 @@ Candidate changes:
    Votes:
      +1: arfrever, rhuijben
 
- * r37333
-   Don't worry about the merge tracking complexities of non-inheritable
-   mergeinfo and missing subtrees if we are *not* honoring mergeinfo.
-   Justification:
-     Without this change some edge cases where mergeinfo is not being
-     honored (e.g. --ignore-ancestry, foreign repos merges) can record
-     mergeinfo.
-   Votes:
-     +1: pburba, arfrever
-
- * r37398
-   Fix a memory leak when performing mergeinfo aware merges.
-   Justification:
-     Not always destroying a subpool when processing subtrees wtih mergeinfo.
-   Votes:
-     +1: pburba, arfrever
-     
  * r37491
      Another merge performance improvement: Reduce contacts with server when
      a subtree with mergeinfo has non-inheritable mergeinfo and the subtree's
@@ -154,13 +137,24 @@ Candidate changes:
 
 Approved changes:
 =================
+
  * r37169
    Update --set-depth infinity should expand shallow subtrees.
    Justification:
      update --set-depth infinity won't actually update the target's
      shallow subtrees without this change.
    Votes:
-     +1: pburba, arfrever, steveking
+     +1: pburba, arfrever, steveking, rhuijben
+
+ * r37333
+   Don't worry about the merge tracking complexities of non-inheritable
+   mergeinfo and missing subtrees if we are *not* honoring mergeinfo.
+   Justification:
+     Without this change some edge cases where mergeinfo is not being
+     honored (e.g. --ignore-ancestry, foreign repos merges) can record
+     mergeinfo.
+   Votes:
+     +1: pburba, arfrever, rhuijben
 
  * r37385
    Return an error if attempting to reintegrate from/to the repository root.
@@ -168,7 +162,14 @@ Approved changes:
      A descriptive error is a lot better than a cryptic assertion, see
      http://svn.haxx.se/dev/archive-2009-04/0623.shtml.
    Votes:
-     +1: pburba, stylesen, steveking, arfrever
+     +1: pburba, stylesen, steveking, arfrever, rhuijben
+
+ * r37398
+   Fix a memory leak when performing mergeinfo aware merges.
+   Justification:
+     Not always destroying a subpool when processing subtrees with mergeinfo.
+   Votes:
+     +1: pburba, arfrever, rhuijben
 
  * r37527
    Resolve naming collision on static stat() function in svnserve.
