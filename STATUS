@@ -138,14 +138,6 @@ Candidate changes:
 Approved changes:
 =================
 
- * r37169
-   Update --set-depth infinity should expand shallow subtrees.
-   Justification:
-     update --set-depth infinity won't actually update the target's
-     shallow subtrees without this change.
-   Votes:
-     +1: pburba, arfrever, steveking, rhuijben
-
  * r37333
    Don't worry about the merge tracking complexities of non-inheritable
    mergeinfo and missing subtrees if we are *not* honoring mergeinfo.
