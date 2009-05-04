@@ -244,6 +244,24 @@ AC_ARG_ENABLE(all-static,
 AC_SUBST(LT_CFLAGS)
 AC_SUBST(LT_LDFLAGS)
 
+AC_ARG_ENABLE(local-use,
+  AS_HELP_STRING([--disable-local-use], 
+                 [Disable use of locally built executables]),
+  [
+  if test "$enableval" != "no"; then
+    TRANSFORM_LIBTOOL_SCRIPTS="transform-libtool-scripts"
+  else
+    TRANSFORM_LIBTOOL_SCRIPTS=""
+  fi
+  ], [
+  if test "`uname`" != "Darwin"; then
+    TRANSFORM_LIBTOOL_SCRIPTS="transform-libtool-scripts"
+  else
+    TRANSFORM_LIBTOOL_SCRIPTS=""
+  fi
+])
+AC_SUBST(TRANSFORM_LIBTOOL_SCRIPTS)
+
 dnl Check if -no-undefined is needed for the platform.
 dnl It should always work but with libtool 1.4.3 on OS X it breaks the build.
 dnl So we only turn it on for platforms where we know we really need it.
