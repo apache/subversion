@@ -39,6 +39,10 @@ class SubversionRepositoryTestCase(unittest.TestCase):
     self.fs = repos.fs(self.repos)
     self.rev = fs.youngest_rev(self.fs)
 
+  def tearDown(self):
+    self.fs = None
+    self.repos = None
+
   def test_create(self):
     """Make sure that repos.create doesn't segfault when we set fs-type
        using a config hash"""
