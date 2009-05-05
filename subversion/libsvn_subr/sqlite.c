@@ -91,7 +91,7 @@ struct svn_sqlite__stmt_t
 
 
 svn_error_t *
-svn_sqlite__exec(svn_sqlite__db_t *db, const char *sql)
+exec_sql(svn_sqlite__db_t *db, const char *sql)
 {
   char *err_msg;
   int sqlite_err = sqlite3_exec(db->db3, sql, NULL, NULL, &err_msg);
@@ -110,19 +110,19 @@ svn_sqlite__exec(svn_sqlite__db_t *db, const char *sql)
 svn_error_t *
 svn_sqlite__transaction_begin(svn_sqlite__db_t *db)
 {
-  return svn_sqlite__exec(db, "BEGIN TRANSACTION;");
+  return exec_sql(db, "BEGIN TRANSACTION;");
 }
 
 svn_error_t *
 svn_sqlite__transaction_commit(svn_sqlite__db_t *db)
 {
-  return svn_sqlite__exec(db, "COMMIT TRANSACTION;");
+  return exec_sql(db, "COMMIT TRANSACTION;");
 }
 
 svn_error_t *
 svn_sqlite__transaction_rollback(svn_sqlite__db_t *db)
 {
-  return svn_sqlite__exec(db, "ROLLBACK TRANSACTION;");
+  return exec_sql(db, "ROLLBACK TRANSACTION;");
 }
 
 svn_error_t *
@@ -521,13 +521,13 @@ upgrade_format(svn_sqlite__db_t *db, int current_schema, int latest_schema,
       current_schema++;
 
       /* Run the upgrade SQL */
-      SVN_ERR(svn_sqlite__exec(db, upgrade_sql[current_schema]));
+      SVN_ERR(exec_sql(db, upgrade_sql[current_schema]));
 
       /* Update the user version pragma */
       pragma_cmd = apr_psprintf(scratch_pool,
                                 "PRAGMA user_version = %d;",
                                 current_schema);
-      SVN_ERR(svn_sqlite__exec(db, pragma_cmd));
+      SVN_ERR(exec_sql(db, pragma_cmd));
     }
 
   return SVN_NO_ERROR;
@@ -784,7 +784,7 @@ svn_sqlite__open(svn_sqlite__db_t **db, const char *path,
   sqlite3_trace((*db)->db3, sqlite_tracer, (*db)->db3);
 #endif
 
-  SVN_ERR(svn_sqlite__exec(*db, 
+  SVN_ERR(exec_sql(*db, 
               "PRAGMA case_sensitive_like=1;"
               /* Disable synchronization to disable the explicit disk flushes
                  that make Sqlite up to 50 times slower; especially on small
