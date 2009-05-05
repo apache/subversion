@@ -257,13 +257,8 @@ svn_wc__load_props(apr_hash_t **base_props_p,
                    apr_pool_t *scratch_pool)
 {
   apr_hash_t *base_props = NULL; /* Silence uninitialized warning. */
-  const svn_wc_entry_t *entry;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-
-  SVN_ERR(svn_wc__get_entry(&entry, db, local_abspath, FALSE,
-                            svn_node_unknown, FALSE, scratch_pool,
-                            scratch_pool));
 
   /* We will need the base props if the user requested them, or we need
      them if no (working) prop mods have occurred. */
@@ -292,6 +287,12 @@ svn_wc__load_props(apr_hash_t **base_props_p,
 
   if (revert_props_p)
     {
+      const svn_wc_entry_t *entry;
+
+      SVN_ERR(svn_wc__get_entry(&entry, db, local_abspath, FALSE,
+                                svn_node_unknown, FALSE, scratch_pool,
+                                scratch_pool));
+
       if (entry->schedule == svn_wc_schedule_replace)
         SVN_ERR(load_props(revert_props_p, db, local_abspath,
                            svn_wc__props_revert, result_pool));
