@@ -57,7 +57,7 @@ Candidate changes:
      +1: arfrever
      -0: rhuijben, cmpilato (Introduces new features and changes output)
 
- * r37491
+ * r37491, r37593
    Another merge performance improvement: Reduce contacts with server when
    a subtree with mergeinfo has non-inheritable mergeinfo and the subtree's
    immediate children have no explicit mergeinfo.
@@ -71,8 +71,10 @@ Candidate changes:
      There is a call to svn_uri_basename() in
      inherit_implicit_mereginfo_form_parent() that must be changed to
      svn_path_basename() since the former is new for 1.7.
+     r37491 is the fix, r37593 is a typo fix.
    Votes:
-     +1: pburba, rhuijben
+     +1: pburba
+     +1: rhuijben (r37491 only)
 
 Approved changes:
 =================
