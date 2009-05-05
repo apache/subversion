@@ -2839,7 +2839,7 @@ get_full_mergeinfo(svn_mergeinfo_t *recorded_mergeinfo,
    in POOL.
    */
 static svn_error_t *
-inherit_implicit_mereginfo_form_parent(svn_client__merge_path_t *parent,
+inherit_implicit_mergeinfo_from_parent(svn_client__merge_path_t *parent,
                                        svn_client__merge_path_t *child,
                                        svn_revnum_t revision1,
                                        svn_revnum_t revision2,
@@ -3014,7 +3014,7 @@ filter_merged_revisions(svn_client__merge_path_t *parent,
                  If child->child_of_noninheritable is true, it implies that
                  PARENT must exist per the rules of get_mergeinfo_paths(). */
               if (child->child_of_noninheritable)
-                SVN_ERR(inherit_implicit_mereginfo_form_parent(parent,
+                SVN_ERR(inherit_implicit_mergeinfo_from_parent(parent,
                                                                child,
                                                                revision1,
                                                                revision2,
@@ -3122,7 +3122,7 @@ filter_merged_revisions(svn_client__merge_path_t *parent,
                  If child->child_of_noninheritable is true, it implies that
                  PARENT must exist per the rules of get_mergeinfo_paths(). */
               if (child->child_of_noninheritable)
-                SVN_ERR(inherit_implicit_mereginfo_form_parent(parent,
+                SVN_ERR(inherit_implicit_mergeinfo_from_parent(parent,
                                                                child,
                                                                revision1,
                                                                revision2,
