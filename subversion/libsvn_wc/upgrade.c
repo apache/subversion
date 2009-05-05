@@ -93,39 +93,6 @@ read_wcprops(apr_hash_t **all_wcprops,
   return svn_stream_close(stream);
 }
 
-/* Helper for converting wcprops from the one-file-per-file model.
-   This implements svn_io_walk_func_t(). */
-static svn_error_t *
-convert_wcprops_walker(void *baton,
-                       const char *path,
-                       const apr_finfo_t *finfo,
-                       apr_pool_t *pool)
-{
-  svn_wc__db_t *db = baton;
-  apr_hash_t *proplist;
-  svn_stream_t *stream;
-  const char *local_abspath;
-  int len;
-
-  /* Skip the directory. */
-  if (finfo->filetype == APR_DIR)
-    return SVN_NO_ERROR;
-
-  proplist = apr_hash_make(pool);
-  SVN_ERR(svn_stream_open_readonly(&stream, path, pool, pool));
-  SVN_ERR(svn_hash_read2(proplist, stream, SVN_HASH_TERMINATOR, pool));
-  SVN_ERR(svn_stream_close(stream));
-
-  /* The filename will be something like foo.c.svn-work.  From it, determine
-     the local_abspath of the node.  The magic number of 9 below is basically
-     strlen(".svn-work"). */
-  len = strlen(path);
-  local_abspath = apr_pstrndup(pool, local_abspath, len - 9);
-
-  return svn_error_return(svn_wc__db_base_set_dav_cache(db, local_abspath,
-                                                        proplist, pool));
-}
-
 /* Convert a WC that has wcprops in files to use the wc-ng database.
    Do this for ADM_ACCESS and its file children, using POOL for temporary
    allocations. */
@@ -135,16 +102,17 @@ convert_wcprops(svn_wc_adm_access_t *adm_access,
                 apr_pool_t *scratch_pool)
 {
   svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
+  const char *dir_abspath = svn_wc__adm_access_abspath(adm_access);
 
   if (old_format <= SVN_WC__WCPROPS_MANY_FILES_VERSION)
     {
       svn_stream_t *stream;
       svn_error_t *err;
-      const char *dir_abspath;
-      apr_hash_t *proplist;
+      apr_hash_t *dirents;
+      apr_hash_index_t *hi;
+      apr_pool_t *iterpool;
 
       /* First, look at dir-wcprops. */
-      dir_abspath = svn_wc__adm_access_abspath(adm_access);
       err = svn_wc__open_adm_stream(&stream, dir_abspath,
                                     SVN_WC__ADM_DIR_WCPROPS,
                                     scratch_pool, scratch_pool);
@@ -158,6 +126,8 @@ convert_wcprops(svn_wc_adm_access_t *adm_access,
         }
       else
         {
+          apr_hash_t *proplist;
+
           proplist = apr_hash_make(scratch_pool);
           SVN_ERR(svn_hash_read2(proplist, stream, SVN_HASH_TERMINATOR,
                                  scratch_pool));
@@ -166,20 +136,49 @@ convert_wcprops(svn_wc_adm_access_t *adm_access,
         }
 
       /* Now walk the wcprops directory. */
-      SVN_ERR(svn_io_dir_walk(svn_wc__adm_child(svn_wc_adm_access_path(
-                                                                adm_access),
+      SVN_ERR(svn_io_get_dirents2(&dirents, svn_wc__adm_child(dir_abspath,
                                                 SVN_WC__ADM_WCPROPS,
                                                 scratch_pool),
-                              0 /* wanted */,
-                              convert_wcprops_walker,
-                              db, scratch_pool));
+                                  scratch_pool));
+      iterpool = svn_pool_create(scratch_pool);
+      for (hi = apr_hash_first(scratch_pool, dirents); hi;
+            hi = apr_hash_next(hi))
+        {
+          const void *key;
+          const char *name;
+          apr_hash_t *proplist;
+          const char *local_abspath;
+          int len;
+
+          svn_pool_clear(iterpool);
+
+          apr_hash_this(hi, &key, NULL, NULL);
+          name = key;
+          local_abspath = svn_dirent_join(dir_abspath, name, iterpool);
+
+          proplist = apr_hash_make(iterpool);
+          SVN_ERR(svn_stream_open_readonly(&stream, local_abspath, iterpool,
+                                           iterpool));
+          SVN_ERR(svn_hash_read2(proplist, stream, SVN_HASH_TERMINATOR,
+                                 iterpool));
+          SVN_ERR(svn_stream_close(stream));
+
+          /* The filename will be something like foo.c.svn-work.  From it,
+             determine the local_abspath of the node.  The magic number of 9
+             below is basically strlen(".svn-work"). */
+          len = strlen(local_abspath);
+          local_abspath = apr_pstrndup(iterpool, local_abspath, len - 9);
+
+          SVN_ERR(svn_wc__db_base_set_dav_cache(db, local_abspath, proplist,
+                                                iterpool));
+        }
+      svn_pool_destroy(iterpool);
     }
   else
     {
       apr_hash_t *allprops;
       apr_hash_index_t *hi;
       apr_pool_t *iterpool;
-      const char *dir_abspath = svn_wc__adm_access_abspath(adm_access);
 
       /* Read the all-wcprops file. */
       SVN_ERR(read_wcprops(&allprops, db, svn_wc_adm_access_path(adm_access),
