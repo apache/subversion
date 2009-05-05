@@ -144,9 +144,7 @@ convert_wcprops(svn_wc_adm_access_t *adm_access,
       apr_hash_t *proplist;
 
       /* First, look at dir-wcprops. */
-      SVN_ERR(svn_dirent_get_absolute(&dir_abspath,
-                                      svn_wc_adm_access_path(adm_access),
-                                      scratch_pool));
+      dir_abspath = svn_wc__adm_access_abspath(adm_access);
       err = svn_wc__open_adm_stream(&stream, dir_abspath,
                                     SVN_WC__ADM_DIR_WCPROPS,
                                     scratch_pool, scratch_pool);
@@ -181,6 +179,7 @@ convert_wcprops(svn_wc_adm_access_t *adm_access,
       apr_hash_t *allprops;
       apr_hash_index_t *hi;
       apr_pool_t *iterpool;
+      const char *dir_abspath = svn_wc__adm_access_abspath(adm_access);
 
       /* Read the all-wcprops file. */
       SVN_ERR(read_wcprops(&allprops, db, svn_wc_adm_access_path(adm_access),
@@ -203,10 +202,7 @@ convert_wcprops(svn_wc_adm_access_t *adm_access,
           name = key;
           proplist = val;
 
-          SVN_ERR(svn_dirent_get_absolute(&local_abspath,
-                                          svn_wc_adm_access_path(adm_access),
-                                          iterpool));
-          local_abspath = svn_dirent_join(local_abspath, name, iterpool);
+          local_abspath = svn_dirent_join(dir_abspath, name, iterpool);
           SVN_ERR(svn_wc__db_base_set_dav_cache(db, local_abspath, proplist,
                                                 iterpool));
         }
@@ -223,7 +219,6 @@ svn_wc__upgrade_format(svn_wc_adm_access_t *adm_access,
 {
   int wc_format;
   svn_boolean_t cleanup_required;
-  svn_stringbuf_t *log_accum;
   const svn_wc_entry_t *this_dir;
 
   SVN_ERR(svn_wc__adm_wc_format(&wc_format, adm_access, scratch_pool));
@@ -243,8 +238,8 @@ svn_wc__upgrade_format(svn_wc_adm_access_t *adm_access,
                               scratch_pool));
     }
 
-  /* We can upgrade all formats that are accepted by check_format(). */
-  if (wc_format >= SVN_WC__VERSION)
+  /* Early out of the format is already what we expect it to be.  */
+  if (wc_format == SVN_WC__VERSION)
     return SVN_NO_ERROR;
 
   /* Don't try to mess with the WC if there are old log files left. */
@@ -302,12 +297,8 @@ svn_wc__upgrade_format(svn_wc_adm_access_t *adm_access,
      ### The following code will change as the wc-ng format changes and more
      ### stuff gets migrated to the sqlite format. */
 
-  log_accum = svn_stringbuf_create("", scratch_pool);
-
   /***** WC PROPS *****/
   SVN_ERR(convert_wcprops(adm_access, wc_format, scratch_pool));
-
-  SVN_ERR(svn_wc__write_log(adm_access, 0, log_accum, scratch_pool));
 
   if (wc_format <= SVN_WC__WCPROPS_MANY_FILES_VERSION)
     {
@@ -341,5 +332,5 @@ svn_wc__upgrade_format(svn_wc_adm_access_t *adm_access,
           scratch_pool));
     }
 
-  return svn_wc__run_log(adm_access, NULL, scratch_pool);
+  return SVN_NO_ERROR;
 }
