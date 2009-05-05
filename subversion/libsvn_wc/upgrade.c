@@ -96,14 +96,13 @@ read_wcprops(apr_hash_t **all_wcprops,
 /* Helper for converting wcprops from the one-file-per-file model.
    This implements svn_io_walk_func_t(). */
 static svn_error_t *
-convert_props_walker(void *baton,
-                     const char *path,
-                     const apr_finfo_t *finfo,
-                     apr_pool_t *pool)
+convert_wcprops_walker(void *baton,
+                       const char *path,
+                       const apr_finfo_t *finfo,
+                       apr_pool_t *pool)
 {
   svn_wc__db_t *db = baton;
   apr_hash_t *proplist;
-  apr_file_t *file;
   svn_stream_t *stream;
   const char *local_abspath;
   int len;
@@ -113,9 +112,7 @@ convert_props_walker(void *baton,
     return SVN_NO_ERROR;
 
   proplist = apr_hash_make(pool);
-  SVN_ERR(svn_io_file_open(&file, path, APR_READ | APR_BUFFERED,
-                           APR_OS_DEFAULT, pool));
-  stream = svn_stream_from_aprfile2(file, FALSE, pool);
+  SVN_ERR(svn_stream_open_readonly(&stream, path, pool, pool));
   SVN_ERR(svn_hash_read2(proplist, stream, SVN_HASH_TERMINATOR, pool));
   SVN_ERR(svn_stream_close(stream));
 
@@ -176,7 +173,7 @@ convert_wcprops(svn_wc_adm_access_t *adm_access,
                                                 SVN_WC__ADM_WCPROPS,
                                                 scratch_pool),
                               0 /* wanted */,
-                              convert_props_walker,
+                              convert_wcprops_walker,
                               db, scratch_pool));
     }
   else
