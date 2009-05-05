@@ -51,6 +51,8 @@ class SubversionMergeinfoTestCase(unittest.TestCase):
     self.rev = fs.youngest_rev(self.fs)
 
   def tearDown(self):
+    self.fs = None
+    self.repos = None
     if os.path.exists(REPOS_PATH):
       repos.delete(REPOS_PATH)
 

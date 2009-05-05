@@ -416,6 +416,8 @@ class SubversionWorkingCopyTestCase(unittest.TestCase):
   def tearDown(self):
       wc.adm_close(self.wc)
       core.svn_io_remove_dir(self.path)
+      self.fs = None
+      self.repos = None
 
 def suite():
     return unittest.makeSuite(SubversionWorkingCopyTestCase, 'test')
