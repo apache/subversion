@@ -807,16 +807,3 @@ svn_txdelta_compose_windows(const svn_txdelta_window_t *window_A,
   composite->tview_len = window_B->tview_len;
   return composite;
 }
-
-/* This is a private interlibrary compatibility wrapper. */
-svn_txdelta_window_t *
-svn_txdelta__compose_windows(const svn_txdelta_window_t *window_A,
-                             const svn_txdelta_window_t *window_B,
-                             apr_pool_t *pool);
-svn_txdelta_window_t *
-svn_txdelta__compose_windows(const svn_txdelta_window_t *window_A,
-                             const svn_txdelta_window_t *window_B,
-                             apr_pool_t *pool)
-{
-  return svn_txdelta_compose_windows(window_A, window_B, pool);
-}
