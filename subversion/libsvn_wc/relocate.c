@@ -123,6 +123,8 @@ svn_wc_relocate3(const char *path,
   apr_hash_index_t *hi;
   const svn_wc_entry_t *entry;
   apr_pool_t *subpool;
+  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
+  const char *local_abspath;
 
   SVN_ERR(svn_wc_entry(&entry, path, adm_access, TRUE, pool));
   if (! entry)
@@ -179,5 +181,6 @@ svn_wc_relocate3(const char *path,
 
   svn_pool_destroy(subpool);
 
-  return svn_wc__props_delete(path, svn_wc__props_wcprop, adm_access, pool);
+  SVN_ERR(svn_path_get_absolute(&local_abspath, path, pool));
+  return svn_wc__props_delete(db, local_abspath, svn_wc__props_wcprop, pool);
 }
