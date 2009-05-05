@@ -863,6 +863,7 @@ mark_tree(svn_wc_adm_access_t *adm_access,
   const svn_wc_entry_t *entry;
   svn_wc_entry_t tmp_entry;
   apr_uint64_t this_dir_flags;
+  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
 
   /* Read the entries file for this directory. */
   SVN_ERR(svn_wc_entries_read(&entries, adm_access, FALSE, pool));
@@ -874,6 +875,7 @@ mark_tree(svn_wc_adm_access_t *adm_access,
       const void *key;
       void *val;
       const char *base_name;
+      const char *local_abspath;
 
       /* Clear our per-iteration pool. */
       svn_pool_clear(subpool);
@@ -889,6 +891,7 @@ mark_tree(svn_wc_adm_access_t *adm_access,
       base_name = key;
       fullpath = svn_dirent_join(svn_wc_adm_access_path(adm_access), base_name,
                                  subpool);
+      SVN_ERR(svn_path_get_absolute(&local_abspath, fullpath, subpool));
 
       /* If this is a directory, recurse. */
       if (entry->kind == svn_node_dir)
@@ -913,8 +916,8 @@ mark_tree(svn_wc_adm_access_t *adm_access,
 
       if (copied)
         /* Remove now obsolete wcprops */
-        SVN_ERR(svn_wc__props_delete(fullpath, svn_wc__props_wcprop,
-                                     adm_access, subpool));
+        SVN_ERR(svn_wc__props_delete(db, local_abspath, svn_wc__props_wcprop,
+                                     subpool));
 
       /* Tell someone what we've done. */
       if (schedule == svn_wc_schedule_delete && notify_func != NULL)
@@ -1372,8 +1375,11 @@ svn_wc_add3(const char *path,
   svn_node_kind_t kind;
   apr_uint64_t modify_flags = 0;
   svn_wc_adm_access_t *adm_access;
+  const char *local_abspath;
+  svn_wc__db_t *db = svn_wc__adm_get_db(parent_access);
 
   SVN_ERR(svn_path_check_valid(path, pool));
+  SVN_ERR(svn_path_get_absolute(&local_abspath, path, pool));
 
   /* Make sure something's there. */
   SVN_ERR(svn_io_check_path(path, &kind, pool));
@@ -1505,8 +1511,8 @@ svn_wc_add3(const char *path,
      ### left around. thankfully, this will be properly managed during the
      ### wc-ng upgrade process. for now, we try to compensate... */
   if (copyfrom_url == NULL)
-    SVN_ERR(svn_wc__props_delete(path, svn_wc__props_working,
-                                 adm_access, pool));
+    SVN_ERR(svn_wc__props_delete(db, local_abspath, svn_wc__props_working,
+                                 pool));
 
   if (is_replace)
     {
@@ -1624,8 +1630,8 @@ svn_wc_add3(const char *path,
                             pool));
 
           /* Clean out the now-obsolete wcprops. */
-          SVN_ERR(svn_wc__props_delete(path, svn_wc__props_wcprop,
-                                       adm_access, pool));
+          SVN_ERR(svn_wc__props_delete(db, local_abspath, svn_wc__props_wcprop,
+                                       pool));
         }
     }
 
@@ -2445,8 +2451,12 @@ svn_wc_remove_from_revision_control(svn_wc_adm_access_t *adm_access,
   svn_error_t *err;
   svn_boolean_t is_file;
   svn_boolean_t left_something = FALSE;
+  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
   const char *full_path = apr_pstrdup(pool,
                                       svn_wc_adm_access_path(adm_access));
+  const char *local_abspath;
+
+  SVN_ERR(svn_path_get_absolute(&local_abspath, full_path, pool));
 
   /* Check cancellation here, so recursive calls get checked early. */
   if (cancel_func)
@@ -2460,10 +2470,9 @@ svn_wc_remove_from_revision_control(svn_wc_adm_access_t *adm_access,
       svn_node_kind_t kind;
       svn_boolean_t wc_special, local_special;
       svn_boolean_t text_modified_p;
-      svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
-      const char *local_abspath;
 
       full_path = svn_dirent_join(full_path, name, pool);
+      SVN_ERR(svn_path_get_absolute(&local_abspath, full_path, pool));
 
       /* Only check if the file was modified when it wasn't overwritten with a
          special file */
@@ -2482,16 +2491,15 @@ svn_wc_remove_from_revision_control(svn_wc_adm_access_t *adm_access,
         }
 
       /* Remove the wcprops. */
-      SVN_ERR(svn_wc__props_delete(full_path, svn_wc__props_wcprop,
-                                   adm_access, pool));
+      SVN_ERR(svn_wc__props_delete(db, local_abspath, svn_wc__props_wcprop,
+                                   pool));
       /* Remove prop/NAME, prop-base/NAME.svn-base. */
-      SVN_ERR(svn_wc__props_delete(full_path, svn_wc__props_working,
-                                   adm_access, pool));
-      SVN_ERR(svn_wc__props_delete(full_path, svn_wc__props_base,
-                                   adm_access, pool));
+      SVN_ERR(svn_wc__props_delete(db, local_abspath, svn_wc__props_working,
+                                   pool));
+      SVN_ERR(svn_wc__props_delete(db, local_abspath, svn_wc__props_base,
+                                   pool));
 
       /* Remove NAME from PATH's entries file: */
-      SVN_ERR(svn_path_get_absolute(&local_abspath, full_path, pool));
       SVN_ERR(svn_wc__entry_remove(db, local_abspath, pool));
 
       /* Remove text-base/NAME.svn-base */
@@ -2534,8 +2542,8 @@ svn_wc_remove_from_revision_control(svn_wc_adm_access_t *adm_access,
       /* Get rid of all the wcprops in this directory.  This avoids rewriting
          the wcprops file over and over (meaning O(n^2) complexity)
          below. */
-      SVN_ERR(svn_wc__props_delete(full_path, svn_wc__props_wcprop,
-                                   adm_access, pool));
+      SVN_ERR(svn_wc__props_delete(db, local_abspath, svn_wc__props_wcprop,
+                                   pool));
 
       /* Walk over every entry. */
       SVN_ERR(svn_wc_entries_read(&entries, adm_access, FALSE, pool));
@@ -2591,9 +2599,6 @@ svn_wc_remove_from_revision_control(svn_wc_adm_access_t *adm_access,
                   /* The directory is either missing or excluded,
                      so don't try to recurse, just delete the
                      entry in the parent directory. */
-                  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
-                  const char *local_abspath;
-
                   SVN_ERR(svn_path_get_absolute(&local_abspath, entrypath,
                                                 subpool));
                   SVN_ERR(svn_wc__entry_remove(db, local_abspath, subpool));
@@ -2662,11 +2667,6 @@ svn_wc_remove_from_revision_control(svn_wc_adm_access_t *adm_access,
                                      APR_HASH_KEY_STRING);
             if (dir_entry->depth != svn_depth_exclude)
               {
-                svn_wc__db_t *db = svn_wc__adm_get_db(parent_access);
-                const char *local_abspath;
-
-                SVN_ERR(svn_path_get_absolute(&local_abspath, full_path,
-                                              pool));
                 SVN_ERR(svn_wc__entry_remove(db, local_abspath, pool));
                 apr_hash_set(parent_entries, base_name, APR_HASH_KEY_STRING,
                              NULL);

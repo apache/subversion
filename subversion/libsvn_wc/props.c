@@ -525,17 +525,13 @@ svn_wc__loggy_props_delete(svn_stringbuf_t **log_accum,
 
 
 svn_error_t *
-svn_wc__props_delete(const char *path,
+svn_wc__props_delete(svn_wc__db_t *db,
+                     const char *local_abspath,
                      svn_wc__props_kind_t props_kind,
-                     svn_wc_adm_access_t *adm_access,
                      apr_pool_t *pool)
 {
-  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
-  const char *local_abspath;
   const char *props_file;
-  const svn_wc_entry_t *entry;
-
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+  svn_wc__db_kind_t kind;
 
   if (props_kind == svn_wc__props_wcprop)
     {
@@ -543,8 +539,12 @@ svn_wc__props_delete(const char *path,
                                                             NULL, pool));
     }
 
-  SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access, TRUE, pool));
-  SVN_ERR(svn_wc__prop_path(&props_file, path, entry->kind, props_kind, pool));
+  SVN_ERR(svn_wc__db_check_node(&kind, db, local_abspath, pool));
+  SVN_ERR(svn_wc__prop_path(&props_file, local_abspath,
+                            kind == svn_wc__db_kind_dir
+                              ? svn_node_dir
+                              : svn_node_file,
+                            props_kind, pool));
   return remove_file_if_present(props_file, pool);
 }
 
