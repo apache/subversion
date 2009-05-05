@@ -91,3 +91,5 @@ Approved changes:
                under control of external non-interactive tool), albeit
                the feature is currently so buggy that you can't use it.)
      +1: arfrever, cmpilato
+     -0: hwright (there are merge conflicts.  they aren't big, but they are
+                  non-trivial enough that I'd like to see a backport branch)
