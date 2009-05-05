@@ -2434,7 +2434,6 @@ run_existing_logs(svn_wc_adm_access_t *adm_access,
 static svn_error_t *
 upgrade_working_copy(svn_wc__db_t *db,
                      const char *path,
-                     const char *diff3_cmd,
                      svn_cancel_func_t cancel_func,
                      void *cancel_baton,
                      apr_pool_t *scratch_pool)
@@ -2473,7 +2472,7 @@ upgrade_working_copy(svn_wc__db_t *db,
             || strcmp(key, SVN_WC_ENTRY_THIS_DIR) == 0)
         continue;
 
-      SVN_ERR(upgrade_working_copy(db, entry_path, diff3_cmd, cancel_func,
+      SVN_ERR(upgrade_working_copy(db, entry_path, cancel_func,
                                    cancel_baton, iterpool));
     }
   svn_pool_destroy(iterpool);
@@ -2540,7 +2539,7 @@ svn_wc_cleanup3(const char *path,
                              svn_path_local_style(path, scratch_pool));
 
   if (upgrade_wc && wc_format_version < SVN_WC__VERSION)
-    SVN_ERR(upgrade_working_copy(db, path, diff3_cmd, cancel_func,
+    SVN_ERR(upgrade_working_copy(db, path, cancel_func,
                                  cancel_baton, scratch_pool));
   else
     SVN_ERR(cleanup_internal(db, path, diff3_cmd, cancel_func, cancel_baton,
