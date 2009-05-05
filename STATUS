@@ -111,17 +111,3 @@ Approved changes:
      the performance improvement should be quite significant.
    Votes:
      +1: pburba, rhuijben, cmpilato
-
- * r37245
-   Recommend SQLite 3.6.13.
-   Justification:
-     http://svn.haxx.se/dev/archive-2009-04/0411.shtml
-   Notes:
-     Accept theirs-conflict while merging.
-   Votes:
-     +1: arfrever, rhuijben
-     +1: cmpilato (ignore conflict with www/svn_1.6_releasenotes.zh.html)
-     +0: pburba (I'm fine with the premise of the change, but merging this
-         change produces a tree conflict on www/svn_1.6_releasenotes.zh.html
-         that need to be addressed first).
-
