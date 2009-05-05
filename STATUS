@@ -119,7 +119,7 @@ Candidate changes:
      inherit_implicit_mereginfo_form_parent() that must be changed to
      svn_path_basename() since the former is new for 1.7.
    Votes:
-     +1: pburba
+     +1: pburba, rhuijben
 
 Approved changes:
 =================
