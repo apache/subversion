@@ -100,14 +100,3 @@ Approved changes:
      performance, this alleviates that somewhat in a common use case.
    Votes:
      +1: pburba, rhuijben, cmpilato
-
- * r36509
-   Don't contact the server asking about implicit mergeinfo when the
-   explicit mergeinfo tells us all we need to know about what to merge
-   and what not to.
-   Justification:
-     Avoids needless communication with the server in some use cases.  For
-     users with lots of subtree mergeinfo and slow network connections
-     the performance improvement should be quite significant.
-   Votes:
-     +1: pburba, rhuijben, cmpilato
