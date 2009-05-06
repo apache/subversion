@@ -165,6 +165,7 @@ log_receiver(void *baton,
         {
           void *val;
           svn_log_changed_path2_t *log_item;
+          const char *close_element = NULL;
 
           svn_pool_clear(iterpool);
           apr_hash_this(hi, (void *) &path, NULL, &val);
@@ -180,27 +181,17 @@ log_receiver(void *baton,
                 SVN_ERR(dav_svn__send_xml(lrb->bb, lrb->output,
                                           "<S:added-path"
                                           " copyfrom-path=\"%s\""
-                                          " copyfrom-rev=\"%ld\""
-                                          " node-kind=\"%s\">"
-                                          "%s</S:added-path>" DEBUG_CR,
+                                          " copyfrom-rev=\"%ld\"",
                                           apr_xml_quote_string
                                           (iterpool,
                                            log_item->copyfrom_path,
                                            1), /* escape quotes */
-                                          log_item->copyfrom_rev,
-                                          svn_node_kind_to_word(
-                                                            log_item->node_kind),
-                                          apr_xml_quote_string(iterpool,
-                                                               path, 0)));
+                                          log_item->copyfrom_rev));
               else
                 SVN_ERR(dav_svn__send_xml(lrb->bb, lrb->output,
-                                          "<S:added-path"
-                                          " node-kind=\"%s\">%s</S:added-path>"
-                                          DEBUG_CR,
-                                          svn_node_kind_to_word(
-                                                            log_item->node_kind),
-                                          apr_xml_quote_string(iterpool, path,
-                                                               0)));
+                                          "<S:added-path"));
+
+              close_element = "S:added-path";
               break;
 
             case 'R':
@@ -209,54 +200,53 @@ log_receiver(void *baton,
                 SVN_ERR(dav_svn__send_xml(lrb->bb, lrb->output,
                                           "<S:replaced-path"
                                           " copyfrom-path=\"%s\""
-                                          " copyfrom-rev=\"%ld\""
-                                          " node-kind=\"%s\">"
-                                          "%s</S:replaced-path>" DEBUG_CR,
+                                          " copyfrom-rev=\"%ld\"",
                                           apr_xml_quote_string
                                           (iterpool,
                                            log_item->copyfrom_path,
                                            1), /* escape quotes */
-                                          log_item->copyfrom_rev,
-                                          svn_node_kind_to_word(
-                                                            log_item->node_kind),
-                                          apr_xml_quote_string(iterpool,
-                                                               path, 0)));
+                                          log_item->copyfrom_rev));
               else
                 SVN_ERR(dav_svn__send_xml(lrb->bb, lrb->output,
-                                          "<S:replaced-path"
-                                          " node-kind=\"%s\">%s"
-                                          "</S:replaced-path>" DEBUG_CR,
-                                          svn_node_kind_to_word(
-                                                            log_item->node_kind),
-                                          apr_xml_quote_string(iterpool, path,
-                                                               0)));
+                                          "<S:replaced-path"));
+
+              close_element = "S:replaced-path";
               break;
 
             case 'D':
               SVN_ERR(dav_svn__send_xml(lrb->bb, lrb->output,
-                                        "<S:deleted-path"
-                                        " node-kind=\"%s\">%s</S:deleted-path>"
-                                        DEBUG_CR,
-                                        svn_node_kind_to_word(
-                                                            log_item->node_kind),
-                                        apr_xml_quote_string(iterpool,
-                                                             path, 0)));
+                                        "<S:deleted-path"));
+              close_element = "S:deleted-path";
               break;
 
             case 'M':
               SVN_ERR(dav_svn__send_xml(lrb->bb, lrb->output,
-                                        "<S:modified-path"
-                                        " node-kind=\"%s\">%s"
-                                        "</S:modified-path>" DEBUG_CR,
-                                        svn_node_kind_to_word(
-                                                            log_item->node_kind),
-                                        apr_xml_quote_string(iterpool,
-                                                             path, 0)));
+                                        "<S:modified-path"));
+              close_element = "S:modified-path";
               break;
 
             default:
               break;
             }
+
+          if (close_element)
+          {
+            /* Send the attributes that apply to all changed items and close
+               the element */
+            SVN_ERR(dav_svn__send_xml(lrb->bb, lrb->output,
+                                      " node-kind=\"%s\""
+                                      " text-mods=\"%s\""
+                                      " prop-mods=\"%s\">%s</%s>" DEBUG_CR,
+                                      svn_node_kind_to_word(
+                                                  log_item->node_kind),
+                                      svn_tristate_to_word(
+                                                  log_item->text_modified),
+                                      svn_tristate_to_word(
+                                                  log_item->props_modified),
+                                      apr_xml_quote_string(iterpool, path, 0),
+                                      close_element));
+          }
+
         }
     }
 

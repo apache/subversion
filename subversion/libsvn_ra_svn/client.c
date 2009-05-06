@@ -1198,6 +1198,23 @@ static svn_error_t *ra_svn_diff(svn_ra_session_t *session,
   return SVN_NO_ERROR;
 }
 
+/* Converts a apr_uint64_t with values TRUE, FALSE or
+   SVN_RA_SVN_UNSPECIFIED_NUMBER as provided by svn_ra_svn_parse_tuple
+   to a svn_tristate_t */
+static svn_tristate_t
+optbool_to_tristate(apr_uint64_t v)
+{
+  switch (v)
+  {
+    case TRUE:
+      return svn_tristate_true;
+    case FALSE:
+      return svn_tristate_false;
+    default: /* Contains SVN_RA_SVN_UNSPECIFIED_NUMBER */
+      return svn_tristate_unknown;
+  }
+}
+
 static svn_error_t *ra_svn_log(svn_ra_session_t *session,
                                const apr_array_header_t *paths,
                                svn_revnum_t start, svn_revnum_t end,
@@ -1310,6 +1327,7 @@ static svn_error_t *ra_svn_log(svn_ra_session_t *session,
             {
               svn_log_changed_path2_t *change;
               const char *copy_path, *action, *cpath, *kind_str;
+              apr_uint64_t text_mods, prop_mods;
               svn_revnum_t copy_rev;
               svn_ra_svn_item_t *elt = &APR_ARRAY_IDX(cplist, i,
                                                       svn_ra_svn_item_t);
@@ -1318,9 +1336,10 @@ static svn_error_t *ra_svn_log(svn_ra_session_t *session,
                 return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                         _("Changed-path entry not a list"));
               SVN_ERR(svn_ra_svn_parse_tuple(elt->u.list, iterpool,
-                                             "cw(?cr)?(?c)",
+                                             "cw(?cr)?(?c?BB)",
                                              &cpath, &action, &copy_path,
-                                             &copy_rev, &kind_str));
+                                             &copy_rev, &kind_str,
+                                             &text_mods, &prop_mods));
               cpath = svn_path_canonicalize(cpath, iterpool);
               if (copy_path)
                 copy_path = svn_path_canonicalize(copy_path, iterpool);
@@ -1329,6 +1348,8 @@ static svn_error_t *ra_svn_log(svn_ra_session_t *session,
               change->copyfrom_path = copy_path;
               change->copyfrom_rev = copy_rev;
               change->node_kind = svn_node_kind_from_word(kind_str);
+              change->text_modified = optbool_to_tristate(text_mods);
+              change->props_modified = optbool_to_tristate(prop_mods);
               apr_hash_set(cphash, cpath, APR_HASH_KEY_STRING, change);
             }
         }
