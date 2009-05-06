@@ -21,6 +21,7 @@ Content
    - delta-application algorithm
       (in light of metadata, tree and textual conflicts)
    - 
+ * Upgrading old working copies
  * Implementation plan
 
 
@@ -930,6 +931,62 @@ up until libsvn_client, and may even have an affect on *its* API.
 ### the form of a new API is unknown/TBD.
 
 
+Upgrading old working copies
+============================
+When WC-NG finds a working copy which is pre-wc-ng, it will quit, prompting the
+user to run 'svn upgrade' to upgrade the working copy to a wc-ng state.  The
+reason for not upgrading on-the-fly is two-fold:
+ * We anticipate this process to be irreversible, so we want to ensure the
+   user wants to upgrade (no silent upgrading/breakage).
+ * The upgrade may be I/O and computationally intensive, and keeping with the
+   principle of least surprise, we want to ensure that the upgrade is done
+   intentionally, when the user expects it.
+
+Here's how we plan on implementing 'svn upgrade', so that it maintains
+consistency across the working copy atomically.  We have two requirements:
+do the upgrade completely, and *don't* leave the working copy in an unusable
+state if the upgrade fails.  The steps for upgrading are:
+
+ 1) Create the new wc.db as invisible.db in the working copy root
+ 2) Upgrade the current directory into invisible.db
+ 3) Drop a flag file into the directory to signal an "in process" upgrade
+ 4) Recurse on step 2 for each of the subdirectories
+ 5) Move invisible.db to wc.db in the working copy root
+ 6) Recursively remove each of the .svn subdirs for each wc subdir
+
+Note that nowhere do we attempt to run or upgrade old logs.  This is
+intentional.  In order to simplify the development and maintenance burden,
+we intend to bail when the upgrade process encounters a working copy with
+un-run logs.  In this state, it will be up to the user to run 'svn cleanup'
+with the prior version of Subversion to ensure the working copy is in an
+upgradable state.  Failing that, the user can always do a fresh checkout.
+
+The atomic step is step 5.  Should the upgrade process be interrupted prior
+to Step 5, the working copy will still be usable by a pre-wc-ng client, but
+will just have extra stuff in the .svn directories, namely invisible.db in
+the root, and the various flag files everywhere.  Should the upgrade get
+interrupted *after* Step 5 (but before all the .svn directories are removed),
+the .svn directories will show up as unversioned directories.  Not the ideal,
+but not terribly bad, either.
+
+### perhaps we should have a way of cleaning up all the .svn dirs from an
+    interrupted upgrade?
+
+### what if somebody attempts to use an old Subversion on a working copy
+    with a .svn which hasn't been harvested yet?  it should succeed, but
+    may leave a discrepancy between the wc-ng database and the .svn
+    metadata, since old Subversions don't know to recurse up the tree.
+    could we do something to the working copy to render it unusable by older
+    subversions, but without too much pain?  how about simply bumping the
+    format number in entries.c?  a properly chosen format number would make
+    older Subversions complain, but also make Subversion 1.7 prompt for an
+    upgrade.  hmm.....
+
+When an upgrade is restarted, invisible.db will just be blown away and
+recreated from scratch, since already-upgraded directories could have been
+modified between invocations of 'svn upgrade'.
+
+
 Implementation Plan
 ===================
 The following are tests which need to be accomplished for WC-NG.  There
@@ -999,27 +1056,6 @@ Near-Term Plan
    note: this will also involve merging datastores
 
 8. replace loggy with sqlite-based work journal
-
-Upgrading Old Working Copies
-----------------------------
-When WC-NG finds a working copy which is pre-wc-ng, it will quit, prompting the
-user to run 'svn cleanup' to upgrade the working copy to a wc-ng state.  The
-reason for not upgrading on-the-fly is two-fold:
- * We anticipate this process to be irreversable, so we want to ensure the
-   user wants to upgrade (no silent upgrading/breakage).
- * The upgrade may be I/O and computationally intensive, and keeping with the
-   principle of least surprise, we want to ensure that the upgrade is done
-   intentionally, when the use expects it.
-
-For the implementation, upgrading will consist of the following steps:
- 1) Upgrade the existing working copy information to the new format.
-    [Note: SQLite 3.6.11 added a method to copy an in-memory database to disk.
-     Because of all the effort involved in upgrading, it may be useful to 
-     do the upgrade in memory, and then just write the database out to disk.]
-
- 2) Run any old-style logs against the new format.
-
- 3) Cleanup any old/empty folders
 
 
 Other sections
