@@ -17,7 +17,7 @@
 ######################################################################
 
 #
-# These tests exercise the upgrade capabilities of 'svn cleanup' as it
+# These tests exercise the upgrade capabilities of 'svn upgrade' as it
 # moves working copies between wc-1 and wc-ng.
 #
 
@@ -69,15 +69,15 @@ def basic_upgrade(sbox):
   replace_sbox_with_tarfile(sbox, 'basic_upgrade.tar.bz2')
 
   # Attempt to use the working copy, this should give an error
-  expected_stderr = (".*Working copy format is too old; run 'svn cleanup' "
-                     "to upgrade")
+  expected_stderr = (".*Working copy format is too old; please "
+                     "run 'svn upgrade'")
   svntest.actions.run_and_verify_svn(None, None, expected_stderr,
                                      'info', sbox.wc_dir)
 
 
   # Now upgrade the working copy
   svntest.actions.run_and_verify_svn(None, None, [],
-                                     'cleanup', sbox.wc_dir)
+                                     'upgrade', sbox.wc_dir)
 
   # Actually check the sanity of the upgraded working copy
   check_format(sbox, 12)
@@ -89,15 +89,15 @@ def upgrade_1_5(sbox):
   replace_sbox_with_tarfile(sbox, 'upgrade_1_5.tar.bz2')
 
   # Attempt to use the working copy, this should give an error
-  expected_stderr = (".*Working copy format is too old; run 'svn cleanup' "
-                     "to upgrade")
+  expected_stderr = (".*Working copy format is too old; please "
+                     "run 'svn upgrade'")
   svntest.actions.run_and_verify_svn(None, None, expected_stderr,
                                      'info', sbox.wc_dir)
 
 
   # Now upgrade the working copy
   svntest.actions.run_and_verify_svn(None, None, [],
-                                     'cleanup', sbox.wc_dir)
+                                     'upgrade', sbox.wc_dir)
 
   # Check the format of the working copy
   check_format(sbox, 12)
@@ -112,7 +112,7 @@ def logs_left_1_5(sbox):
   expected_stderr = (".*Cannot upgrade with existing logs; please "
                      "run 'svn cleanup' with Subversion 1.6")
   svntest.actions.run_and_verify_svn(None, None, expected_stderr,
-                                     'cleanup', sbox.wc_dir)
+                                     'upgrade', sbox.wc_dir)
 
 
 def upgrade_wcprops(sbox):
@@ -120,7 +120,7 @@ def upgrade_wcprops(sbox):
 
   replace_sbox_with_tarfile(sbox, 'upgrade_wcprops.tar.bz2')
   svntest.actions.run_and_verify_svn(None, None, [],
-                                     'cleanup', sbox.wc_dir)
+                                     'upgrade', sbox.wc_dir)
 
   # Make sure that .svn/all-wcprops has disappeared
   if os.path.exists(os.path.join(sbox.wc_dir, '.svn', 'all-wcprops')):

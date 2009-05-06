@@ -1014,6 +1014,11 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
     {'r', 'N', opt_depth, opt_set_depth, 'q', opt_merge_cmd, opt_force,
      opt_ignore_externals, opt_changelist, opt_editor_cmd, opt_accept} },
 
+  { "upgrade", svn_cl__upgrade, {0}, N_
+    ("Upgrade the metadata storage format for a working copy.\n"
+     "usage: upgrade TARGET...\n"),
+    {0} },
+
   { NULL, NULL, {0}, NULL, {0} }
 };
 

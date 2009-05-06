@@ -1,8 +1,8 @@
 /*
- * cleanup-cmd.c -- Subversion cleanup command
+ * unlcok-cmd.c -- Upgrade a working copy.
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -22,18 +22,21 @@
 
 /*** Includes. ***/
 
-#include "svn_client.h"
 #include "svn_pools.h"
+#include "svn_client.h"
+#include "svn_error_codes.h"
 #include "svn_error.h"
+#include "svn_cmdline.h"
 #include "cl.h"
-
+#include "svn_private_config.h"
 
 
 /*** Code. ***/
 
+
 /* This implements the `svn_opt_subcommand_t' interface. */
 svn_error_t *
-svn_cl__cleanup(apr_getopt_t *os,
+svn_cl__upgrade(apr_getopt_t *os,
                 void *baton,
                 apr_pool_t *pool)
 {
@@ -57,7 +60,7 @@ svn_cl__cleanup(apr_getopt_t *os,
 
       svn_pool_clear(subpool);
       SVN_ERR(svn_cl__check_cancel(ctx->cancel_baton));
-      SVN_ERR(svn_client_cleanup2(target, FALSE, ctx, subpool));
+      SVN_ERR(svn_client_cleanup2(target, TRUE, ctx, subpool));
     }
 
   svn_pool_destroy(subpool);

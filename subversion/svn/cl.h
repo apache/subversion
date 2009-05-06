@@ -261,7 +261,8 @@ svn_opt_subcommand_t
   svn_cl__status,
   svn_cl__switch,
   svn_cl__unlock,
-  svn_cl__update;
+  svn_cl__update,
+  svn_cl__upgrade;
 
 
 /* See definition in main.c for documentation. */
