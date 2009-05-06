@@ -64,8 +64,7 @@ Candidate changes:
      r37491 is the fix, r37593 is a typo fix, r37618 is some code refactoring
      to address gstein's bloat concern.
    Votes:
-     +1: pburba
-     +1: rhuijben (all but r37618)
+     +1: pburba, rhuijben
      -0: gstein (code bloat)
 
 Approved changes:
