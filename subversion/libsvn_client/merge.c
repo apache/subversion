@@ -2873,6 +2873,64 @@ inherit_implicit_mergeinfo_from_parent(svn_client__merge_path_t *parent,
   return SVN_NO_ERROR;
 }
 
+/* Helper of filter_merged_revisions().
+
+   If we have deferred obtaining CHILD->IMPLICIT_MERGEINFO, then get
+   it now, allocating it in RESULT_POOL.  Use SCRATCH_POOL for all
+   temporary allocations.
+
+   PARENT, CHILD, ENTRY, REVISION1, REVISION2, RA_SESSION, ADM_ACCESS, and
+   CTX are all cascased from the arguments of the same name in
+   filter_merged_revisions() and the same conditions for that function
+   hold here. */
+static svn_error_t *
+ensure_implicit_mergeinfo(svn_client__merge_path_t *parent,
+                          svn_client__merge_path_t *child,
+                          const svn_wc_entry_t *entry,
+                          svn_revnum_t revision1,
+                          svn_revnum_t revision2,
+                          svn_ra_session_t *ra_session,
+                          svn_wc_adm_access_t *adm_access,
+                          svn_client_ctx_t *ctx,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool)
+{
+  /* If we haven't already found CHILD->IMPLICIT_MERGEINFO then
+     contact the server to get it. */
+
+  if (child->implicit_mergeinfo)
+    return SVN_NO_ERROR;
+
+
+  /* If CHILD has explicit mergeinfo only because its parent has
+     non-inheritable mergeinfo (see criteria 3 in
+     get_mergeinfo_paths() then CHILD can inherit PARENT's
+     implicit mergeinfo and we can avoid contacting the server.
+
+     If child->child_of_noninheritable is true, it implies that
+     PARENT must exist per the rules of get_mergeinfo_paths(). */
+  if (child->child_of_noninheritable)
+    SVN_ERR(inherit_implicit_mergeinfo_from_parent(parent,
+                                                   child,
+                                                   revision1,
+                                                   revision2,
+                                                   ra_session,
+                                                   adm_access,
+                                                   ctx,
+                                                   result_pool));
+  else
+    SVN_ERR(get_full_mergeinfo(NULL,
+                               &(child->implicit_mergeinfo),
+                               entry, NULL,
+                               svn_mergeinfo_inherited,
+                               ra_session, child->path,
+                               MAX(revision1, revision2),
+                               MIN(revision1, revision2),
+                               adm_access, ctx, result_pool));
+
+  return SVN_NO_ERROR;
+}
+
 /* Helper for calculate_remaining_ranges().
 
    Initialize CHILD->REMAINING_RANGES to a rangelist representing the
@@ -3002,36 +3060,16 @@ filter_merged_revisions(svn_client__merge_path_t *parent,
         {
           apr_array_header_t *implicit_rangelist;
 
-          /* If we haven't already found CHILD->IMPLICIT_MERGEINFO then
-             contact the server to get it. */
-          if (! (child->implicit_mergeinfo))
-            {
-              /* If CHILD has explicit mergeinfo only because its parent has
-                 non-inheritable mergeinfo (see criteria 3 in
-                 get_mergeinfo_paths() then CHILD can inherit PARENT's
-                 implicit mergeinfo and we can avoid contacting the server.
-
-                 If child->child_of_noninheritable is true, it implies that
-                 PARENT must exist per the rules of get_mergeinfo_paths(). */
-              if (child->child_of_noninheritable)
-                SVN_ERR(inherit_implicit_mergeinfo_from_parent(parent,
-                                                               child,
-                                                               revision1,
-                                                               revision2,
-                                                               ra_session,
-                                                               adm_access,
-                                                               ctx,
-                                                               pool));
-              else
-                SVN_ERR(get_full_mergeinfo(NULL,
-                                           &(child->implicit_mergeinfo),
-                                           entry, NULL,
-                                           svn_mergeinfo_inherited,
-                                           ra_session, child->path,
-                                           MAX(revision1, revision2),
-                                           MIN(revision1, revision2),
-                                           adm_access, ctx, subpool));
-            }
+          SVN_ERR(ensure_implicit_mergeinfo(parent,
+                                            child,
+                                            entry,
+                                            revision1,
+                                            revision2,
+                                            ra_session,
+                                            adm_access,
+                                            ctx,
+                                            pool,
+                                            subpool));
 
           target_implicit_rangelist = apr_hash_get(child->implicit_mergeinfo,
                                                    mergeinfo_path,
@@ -3041,7 +3079,7 @@ filter_merged_revisions(svn_client__merge_path_t *parent,
             SVN_ERR(svn_rangelist_intersect(&implicit_rangelist,
                                             target_implicit_rangelist,
                                             requested_rangelist,
-                                            FALSE, subpool));
+                                            FALSE, pool));
           else
             implicit_rangelist = apr_array_make(subpool, 0,
                                                 sizeof(svn_merge_range_t *));
@@ -3110,36 +3148,17 @@ filter_merged_revisions(svn_client__merge_path_t *parent,
         {
           /* Based on CHILD's TARGET_MERGEINFO there are ranges to merge.
              Check CHILD's implicit mergeinfo to see if these remaining
-             ranges are represented there.  If we don't already have
-             CHILD->IMPLICIT_MERGEINFO then get it now. */
-          if (! (child->implicit_mergeinfo))
-            {
-              /* If CHILD has explicit mergeinfo only because its parent has
-                 non-inheritable mergeinfo (see criteria 3 in
-                 get_mergeinfo_paths() then CHILD can inherit PARENT's
-                 implicit mergeinfo and we can avoid contacting the server.
-
-                 If child->child_of_noninheritable is true, it implies that
-                 PARENT must exist per the rules of get_mergeinfo_paths(). */
-              if (child->child_of_noninheritable)
-                SVN_ERR(inherit_implicit_mergeinfo_from_parent(parent,
-                                                               child,
-                                                               revision1,
-                                                               revision2,
-                                                               ra_session,
-                                                               adm_access,
-                                                               ctx,
-                                                               pool));
-              else
-                SVN_ERR(get_full_mergeinfo(NULL,
-                                           &(child->implicit_mergeinfo),
-                                           entry, NULL,
-                                           svn_mergeinfo_inherited,
-                                           ra_session, child->path,
-                                           MAX(revision1, revision2),
-                                           MIN(revision1, revision2),
-                                           adm_access, ctx, pool));
-            }
+             ranges are represented there.  */
+          SVN_ERR(ensure_implicit_mergeinfo(parent,
+                                            child,
+                                            entry,
+                                            revision1,
+                                            revision2,
+                                            ra_session,
+                                            adm_access,
+                                            ctx,
+                                            pool,
+                                            subpool));
 
           target_implicit_rangelist = apr_hash_get(child->implicit_mergeinfo,
                                                    mergeinfo_path,
