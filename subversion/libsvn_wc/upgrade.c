@@ -212,6 +212,56 @@ convert_wcprops(svn_wc_adm_access_t *adm_access,
 }
 
 
+static svn_error_t *
+upgrade_working_copy(svn_wc__db_t *db,
+                     const char *path,
+                     svn_cancel_func_t cancel_func,
+                     void *cancel_baton,
+                     apr_pool_t *scratch_pool)
+{
+  svn_wc_adm_access_t *adm_access;
+  apr_hash_index_t *hi;
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+  apr_hash_t *entries = NULL;
+
+  /* Check cancellation; note that this catches recursive calls too. */
+  if (cancel_func)
+    SVN_ERR(cancel_func(cancel_baton));
+
+  /* Lock this working copy directory, or steal an existing lock */
+  SVN_ERR(svn_wc__adm_steal_write_lock(&adm_access, db, path,
+                                       scratch_pool, scratch_pool));
+
+  /* Upgrade this directory first. */
+  SVN_ERR(svn_wc__upgrade_format(adm_access, scratch_pool));
+
+  /* Now recurse. */
+  SVN_ERR(svn_wc_entries_read(&entries, adm_access, FALSE, scratch_pool));
+  for (hi = apr_hash_first(scratch_pool, entries); hi; hi = apr_hash_next(hi))
+    {
+      const void *key;
+      void *val;
+      const svn_wc_entry_t *entry;
+      const char *entry_path;
+
+      svn_pool_clear(iterpool);
+      apr_hash_this(hi, &key, NULL, &val);
+      entry = val;
+      entry_path = svn_dirent_join(path, key, iterpool);
+
+      if (entry->kind != svn_node_dir
+            || strcmp(key, SVN_WC_ENTRY_THIS_DIR) == 0)
+        continue;
+
+      SVN_ERR(upgrade_working_copy(db, entry_path, cancel_func,
+                                   cancel_baton, iterpool));
+    }
+  svn_pool_destroy(iterpool);
+
+  return svn_wc_adm_close2(adm_access, scratch_pool);
+}
+
+
 svn_error_t *
 svn_wc__upgrade_format(svn_wc_adm_access_t *adm_access,
                        apr_pool_t *scratch_pool)
@@ -330,6 +380,32 @@ svn_wc__upgrade_format(svn_wc_adm_access_t *adm_access,
                             SVN_WC__ADM_ALL_WCPROPS, scratch_pool),
           scratch_pool));
     }
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc_upgrade(const char *path,
+               svn_cancel_func_t cancel_func,
+               void *cancel_baton,
+               apr_pool_t *scratch_pool)
+{
+  svn_wc__db_t *db;
+  const char *local_abspath;
+  int wc_format_version;
+
+  SVN_ERR(svn_wc__db_open(&db, svn_wc__db_openmode_readwrite,
+                          NULL /* ### config */, scratch_pool, scratch_pool));
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, scratch_pool));
+
+  SVN_ERR(svn_wc__internal_check_wc(&wc_format_version, db, local_abspath,
+                                    scratch_pool));
+
+  if (wc_format_version < SVN_WC__VERSION)
+    SVN_ERR(upgrade_working_copy(db, path, cancel_func, cancel_baton,
+                                 scratch_pool));
 
   return SVN_NO_ERROR;
 }

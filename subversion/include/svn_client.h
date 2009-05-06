@@ -3033,25 +3033,32 @@ svn_client_mergeinfo_log_eligible(const char *path_or_url,
  *
  * Use @a scratch_pool for any temporary allocations.
  *
- * @since New in 1.7.
- */
-svn_error_t *
-svn_client_cleanup2(const char *dir,
-                    svn_boolean_t upgrade_format,
-                    svn_client_ctx_t *ctx,
-                    apr_pool_t *scratch_pool);
-
-/**
- * Same as svn_client_cleanup2(), but with @a upgrade_format set to @c FALSE.
- *
  * @since New in 1.0.
- * @deprecated Provided for backward compatibility with the 1.6 API.
  */
-SVN_DEPRECATED
 svn_error_t *
 svn_client_cleanup(const char *dir,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool);
+
+
+/** @} */
+
+/**
+ * @defgroup Upgrade Upgrade a working copy.
+ *
+ * @{
+ */
+
+/** Recursively upgrade a working copy to a new metadata storage format.
+ *
+ * Use @a scratch_pool for any temporary allocations.
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_client_upgrade(const char *dir,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *scratch_pool);
 
 
 /** @} */
