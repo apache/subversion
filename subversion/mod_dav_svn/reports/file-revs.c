@@ -59,11 +59,11 @@ maybe_send_header(struct file_rev_baton *frb)
 {
   if (frb->needs_header)
     {
-      SVN_ERR(dav_svn__send_xml(frb->bb, frb->output,
-                                DAV_XML_HEADER DEBUG_CR
-                                "<S:file-revs-report xmlns:S=\""
-                                SVN_XML_NAMESPACE "\" "
-                                "xmlns:D=\"DAV:\">" DEBUG_CR));
+      SVN_ERR(dav_svn__brigade_printf(frb->bb, frb->output,
+                                      DAV_XML_HEADER DEBUG_CR
+                                      "<S:file-revs-report xmlns:S=\""
+                                      SVN_XML_NAMESPACE "\" "
+                                      "xmlns:D=\"DAV:\">" DEBUG_CR));
       frb->needs_header = FALSE;
     }
   return SVN_NO_ERROR;
@@ -86,17 +86,17 @@ send_prop(struct file_rev_baton *frb,
       svn_stringbuf_t *tmp = NULL;
       svn_xml_escape_cdata_string(&tmp, val, pool);
       val = svn_string_create(tmp->data, pool);
-      SVN_ERR(dav_svn__send_xml(frb->bb, frb->output,
-                                "<S:%s name=\"%s\">%s</S:%s>" DEBUG_CR,
-                                elem_name, name, val->data, elem_name));
+      SVN_ERR(dav_svn__brigade_printf(frb->bb, frb->output,
+                                      "<S:%s name=\"%s\">%s</S:%s>" DEBUG_CR,
+                                      elem_name, name, val->data, elem_name));
     }
   else
     {
       val = svn_base64_encode_string2(val, TRUE, pool);
-      SVN_ERR(dav_svn__send_xml(frb->bb, frb->output,
-                                "<S:%s name=\"%s\" encoding=\"base64\">"
-                                "%s</S:%s>" DEBUG_CR,
-                                elem_name, name, val->data, elem_name));
+      SVN_ERR(dav_svn__brigade_printf(frb->bb, frb->output,
+                                      "<S:%s name=\"%s\" encoding=\"base64\">"
+                                      "%s</S:%s>" DEBUG_CR,
+                                      elem_name, name, val->data, elem_name));
     }
 
   return SVN_NO_ERROR;
@@ -118,8 +118,8 @@ delta_window_handler(svn_txdelta_window_t *window, void *baton)
     {
       frb->window_handler = NULL;
       frb->window_baton = NULL;
-      SVN_ERR(dav_svn__send_xml(frb->bb, frb->output,
-                                "</S:txdelta></S:file-rev>" DEBUG_CR));
+      SVN_ERR(dav_svn__brigade_printf(frb->bb, frb->output,
+                                      "</S:txdelta></S:file-rev>" DEBUG_CR));
     }
   return SVN_NO_ERROR;
 }
@@ -144,9 +144,11 @@ file_rev_handler(void *baton,
 
   SVN_ERR(maybe_send_header(frb));
 
-  SVN_ERR(dav_svn__send_xml(frb->bb, frb->output,
-                            "<S:file-rev path=\"%s\" rev=\"%ld\">" DEBUG_CR,
-                            apr_xml_quote_string(pool, path, 1), revnum));
+  SVN_ERR(dav_svn__brigade_printf(frb->bb, frb->output,
+                                  "<S:file-rev path=\"%s\" rev=\"%ld\">" 
+                                  DEBUG_CR,
+                                  apr_xml_quote_string(pool, path, 1),
+                                  revnum));
 
   /* Send rev props. */
   for (hi = apr_hash_first(pool, rev_props); hi; hi = apr_hash_next(hi))
@@ -175,18 +177,20 @@ file_rev_handler(void *baton,
       else
         {
           /* Property was removed. */
-          SVN_ERR(dav_svn__send_xml(frb->bb, frb->output,
-                                    "<S:remove-prop name=\"%s\"/>" DEBUG_CR,
-                                    apr_xml_quote_string(subpool, prop->name,
-                                                         1)));
+          SVN_ERR(dav_svn__brigade_printf(frb->bb, frb->output,
+                                          "<S:remove-prop name=\"%s\"/>"
+                                          DEBUG_CR,
+                                          apr_xml_quote_string(subpool,
+                                                               prop->name,
+                                                               1)));
         }
     }
 
   /* Send whether this was the result of a merge or not. */
   if (merged_revision)
     {
-     SVN_ERR(dav_svn__send_xml(frb->bb, frb->output,
-                                "<S:merged-revision/>"));
+     SVN_ERR(dav_svn__brigade_printf(frb->bb, frb->output,
+                                     "<S:merged-revision/>"));
     }
 
 
@@ -203,11 +207,12 @@ file_rev_handler(void *baton,
       *window_baton = frb;
       /* Start the txdelta element wich will be terminated by the window
          handler together with the file-rev element. */
-      SVN_ERR(dav_svn__send_xml(frb->bb, frb->output, "<S:txdelta>"));
+      SVN_ERR(dav_svn__brigade_printf(frb->bb, frb->output, "<S:txdelta>"));
     }
   else
     /* No txdelta, so terminate the element here. */
-    SVN_ERR(dav_svn__send_xml(frb->bb, frb->output, "</S:file-rev>" DEBUG_CR));
+    SVN_ERR(dav_svn__brigade_printf(frb->bb, frb->output, 
+                                    "</S:file-rev>" DEBUG_CR));
 
   svn_pool_destroy(subpool);
 
@@ -311,8 +316,8 @@ dav_svn__file_revs_report(const dav_resource *resource,
       goto cleanup;
     }
 
-  if ((serr = dav_svn__send_xml(frb.bb, frb.output,
-                                "</S:file-revs-report>" DEBUG_CR)))
+  if ((serr = dav_svn__brigade_printf(frb.bb, frb.output,
+                                      "</S:file-revs-report>" DEBUG_CR)))
     {
       derr = dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                   "Error ending REPORT reponse",

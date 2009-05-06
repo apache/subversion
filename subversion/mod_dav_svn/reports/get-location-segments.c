@@ -53,10 +53,10 @@ maybe_send_opener(struct location_segment_baton *b)
 {
   if (! b->sent_opener)
     {
-      SVN_ERR(dav_svn__send_xml(b->bb, b->output, DAV_XML_HEADER DEBUG_CR
-                                "<S:get-location-segments-report xmlns:S=\""
-                                SVN_XML_NAMESPACE "\" xmlns:D=\"DAV:\">"
-                                DEBUG_CR));
+      SVN_ERR(dav_svn__brigade_printf(b->bb, b->output, DAV_XML_HEADER DEBUG_CR
+                                      "<S:get-location-segments-report "
+                                      "xmlns:S=\"" SVN_XML_NAMESPACE 
+                                      "\" xmlns:D=\"DAV:\">" DEBUG_CR));
       b->sent_opener = TRUE;
     }
   return SVN_NO_ERROR;
@@ -213,8 +213,9 @@ dav_svn__get_location_segments_report(const dav_resource *resource,
       goto cleanup;
     }
 
-  if ((serr = dav_svn__send_xml(bb, output,
-                                "</S:get-location-segments-report>" DEBUG_CR)))
+  if ((serr = dav_svn__brigade_printf(bb, output,
+                                      "</S:get-location-segments-report>"
+                                      DEBUG_CR)))
     {
       derr = dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                   "Error ending REPORT response.",
