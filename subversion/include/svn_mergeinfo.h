@@ -202,14 +202,32 @@ svn_error_t *
 svn_mergeinfo_merge(svn_mergeinfo_t mergeinfo, svn_mergeinfo_t changes,
                     apr_pool_t *pool);
 
-/** Removes @a eraser (the subtrahend) from @a whiteboard (the
- * minuend), and places the resulting difference in @a *mergeinfo.
+/** Like svn_mergeinfo_remove2, but always considers inheritance.
  *
- * @since New in 1.5.
+ * @deprecated Provided for backward compatibility with the 1.5 API.
  */
 svn_error_t *
 svn_mergeinfo_remove(svn_mergeinfo_t *mergeinfo, svn_mergeinfo_t eraser,
                      svn_mergeinfo_t whiteboard, apr_pool_t *pool);
+
+/** Removes @a eraser (the subtrahend) from @a whiteboard (the
+ * minuend), and places the resulting difference in @a *mergeinfo.
+ * Allocates @a *mergeinfo in @a result_pool.  Temporary allocations
+ * will be performed in @a scratch_pool.
+ *
+ * @a consider_inheritance determines how to account for the inheritability
+ * of the two mergeinfo's ranges when calculating the range equivalence,
+ * as described for svn_mergeinfo_diff().
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_mergeinfo_remove2(svn_mergeinfo_t *mergeinfo,
+                      svn_mergeinfo_t eraser,
+                      svn_mergeinfo_t whiteboard,
+                      svn_boolean_t consider_inheritance,
+                      apr_pool_t *result_pool,
+                      apr_pool_t *scratch_pool);
 
 /** Calculate the delta between two rangelists consisting of @c
  * svn_merge_range_t * elements (sorted in ascending order), @a from
@@ -267,17 +285,34 @@ svn_rangelist_remove(apr_array_header_t **output, apr_array_header_t *eraser,
                      svn_boolean_t consider_inheritance,
                      apr_pool_t *pool);
 
-/** Find the intersection of two mergeinfos, @a mergeinfo1 and @a
- * mergeinfo2, and place the result in @a *mergeinfo, which is (deeply)
- * allocated in @a pool.
+/** Like svn_mergeinfo_intersect2, but always considers inheritance.
  *
- * @since New in 1.5.
+ * @deprecated Provided for backward compatibility with the 1.5 API.
  */
 svn_error_t *
 svn_mergeinfo_intersect(svn_mergeinfo_t *mergeinfo,
                         svn_mergeinfo_t mergeinfo1,
                         svn_mergeinfo_t mergeinfo2,
                         apr_pool_t *pool);
+
+/** Find the intersection of two mergeinfos, @a mergeinfo1 and @a
+ * mergeinfo2, and place the result in @a *mergeinfo, which is (deeply)
+ * allocated in @a result_pool.  Temporary allocations will be performed
+ * in @a scratch_pool.
+ *
+ * @a consider_inheritance determines how to account for the inheritability
+ * of the two mergeinfo's ranges when calculating the range equivalence,
+ * as described for svn_mergeinfo_diff().
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_mergeinfo_intersect2(svn_mergeinfo_t *mergeinfo,
+                         svn_mergeinfo_t mergeinfo1,
+                         svn_mergeinfo_t mergeinfo2,
+                         svn_boolean_t consider_inheritance,
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool);
 
 /** Find the intersection of two rangelists consisting of @c
  * svn_merge_range_t * elements, @a rangelist1 and @a rangelist2, and
