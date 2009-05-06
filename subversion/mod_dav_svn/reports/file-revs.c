@@ -59,11 +59,11 @@ maybe_send_header(struct file_rev_baton *frb)
 {
   if (frb->needs_header)
     {
-      SVN_ERR(dav_svn__brigade_printf(frb->bb, frb->output,
-                                      DAV_XML_HEADER DEBUG_CR
-                                      "<S:file-revs-report xmlns:S=\""
-                                      SVN_XML_NAMESPACE "\" "
-                                      "xmlns:D=\"DAV:\">" DEBUG_CR));
+      SVN_ERR(dav_svn__brigade_print(frb->bb, frb->output,
+                                     DAV_XML_HEADER DEBUG_CR
+                                     "<S:file-revs-report xmlns:S=\""
+                                     SVN_XML_NAMESPACE "\" "
+                                     "xmlns:D=\"DAV:\">" DEBUG_CR));
       frb->needs_header = FALSE;
     }
   return SVN_NO_ERROR;
@@ -118,8 +118,8 @@ delta_window_handler(svn_txdelta_window_t *window, void *baton)
     {
       frb->window_handler = NULL;
       frb->window_baton = NULL;
-      SVN_ERR(dav_svn__brigade_printf(frb->bb, frb->output,
-                                      "</S:txdelta></S:file-rev>" DEBUG_CR));
+      SVN_ERR(dav_svn__brigade_print(frb->bb, frb->output,
+                                     "</S:txdelta></S:file-rev>" DEBUG_CR));
     }
   return SVN_NO_ERROR;
 }
@@ -188,11 +188,8 @@ file_rev_handler(void *baton,
 
   /* Send whether this was the result of a merge or not. */
   if (merged_revision)
-    {
-     SVN_ERR(dav_svn__brigade_printf(frb->bb, frb->output,
-                                     "<S:merged-revision/>"));
-    }
-
+    SVN_ERR(dav_svn__brigade_print(frb->bb, frb->output,
+                                   "<S:merged-revision/>"));
 
   /* Maybe send text delta. */
   if (window_handler)
@@ -207,12 +204,12 @@ file_rev_handler(void *baton,
       *window_baton = frb;
       /* Start the txdelta element wich will be terminated by the window
          handler together with the file-rev element. */
-      SVN_ERR(dav_svn__brigade_printf(frb->bb, frb->output, "<S:txdelta>"));
+      SVN_ERR(dav_svn__brigade_print(frb->bb, frb->output, "<S:txdelta>"));
     }
   else
     /* No txdelta, so terminate the element here. */
-    SVN_ERR(dav_svn__brigade_printf(frb->bb, frb->output, 
-                                    "</S:file-rev>" DEBUG_CR));
+    SVN_ERR(dav_svn__brigade_print(frb->bb, frb->output,
+                                   "</S:file-rev>" DEBUG_CR));
 
   svn_pool_destroy(subpool);
 
@@ -316,8 +313,8 @@ dav_svn__file_revs_report(const dav_resource *resource,
       goto cleanup;
     }
 
-  if ((serr = dav_svn__brigade_printf(frb.bb, frb.output,
-                                      "</S:file-revs-report>" DEBUG_CR)))
+  if ((serr = dav_svn__brigade_print(frb.bb, frb.output,
+                                     "</S:file-revs-report>" DEBUG_CR)))
     {
       derr = dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                   "Error ending REPORT reponse",
