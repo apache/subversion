@@ -149,13 +149,26 @@ change_file_or_dir_prop(const char *file_or_dir,
 
   if (value)
     {
-      const svn_string_t *enc_value = svn_base64_encode_string2(value, TRUE,
-                                                                pool);
+      apr_status_t apr_err;
+      const svn_string_t *enc_value =
+        svn_base64_encode_string2(value, TRUE, pool);
 
-      SVN_ERR(dav_svn__send_xml
-                (eb->bb, eb->output,
-                 "<S:change-%s-prop name=\"%s\">%s</S:change-%s-prop>" DEBUG_CR,
-                 file_or_dir, qname, enc_value->data, file_or_dir));
+      /* Some versions of apr_brigade_vprintf() have a buffer overflow
+         bug that can be triggered by just the wrong size of a large
+         property value.  The bug has been fixed (see
+         http://svn.apache.org/viewvc?view=rev&revision=768417), but
+         we need a workaround for the buggy APR versions. */
+      SVN_ERR(dav_svn__send_xml(eb->bb, eb->output,
+                                "<S:change-%s-prop name=\"%s\">",
+                                file_or_dir, qname));
+      if ((apr_err = apr_brigade_write(eb->bb, ap_filter_flush, eb->output,
+                                       enc_value->data, enc_value->len)))
+        return svn_error_create(apr_err, 0, NULL);
+      if (eb->output->c->aborted)
+        return svn_error_create(SVN_ERR_APMOD_CONNECTION_ABORTED, 0, NULL);
+      SVN_ERR(dav_svn__send_xml(eb->bb, eb->output,
+                                "</S:change-%s-prop>" DEBUG_CR,
+                                file_or_dir));
     }
   else
     {
