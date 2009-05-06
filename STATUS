@@ -66,6 +66,18 @@ Candidate changes:
      +1: pburba, rhuijben
      -0: gstein (code bloat)
 
+ * 37607
+   Revert a behavioral change introduced in Subversion 1.6.0 that has proven
+   confusing for users and difficult for GUI clients to deal with, namely
+   that 'svn add' with a restricted depth no longer adds the targets reached
+   by that depth with a depth=infinity setting of their own.
+   Justification:
+     Folks hated the change we're reverting here.
+   Notes:
+     Did I mention the whole hatred bit?
+   Votes:
+     +1: cmpilato
+
 Approved changes:
 =================
 
