@@ -150,6 +150,23 @@ push_state(svn_ra_serf__xml_parser_t *parser,
   return parser->state->private;
 }
 
+/* Helper function to parse the common arguments availabe in ATTRS into CHANGE. */
+static svn_error_t *
+read_changed_path_attributes(svn_log_changed_path2_t *change, const char **attrs)
+{
+  /* All these arguments are optional. The *_from_word() functions can handle
+     them for us */
+
+  change->node_kind = svn_node_kind_from_word(
+                           svn_xml_get_attr_value("node-kind", attrs));
+  change->text_modified = svn_tristate_from_word(
+                           svn_xml_get_attr_value("text-mods", attrs));
+  change->props_modified = svn_tristate_from_word(
+                           svn_xml_get_attr_value("prop-mods", attrs));
+
+  return SVN_NO_ERROR;
+}
+
 static svn_error_t *
 start_log(svn_ra_serf__xml_parser_t *parser,
           void *userData,
@@ -225,8 +242,7 @@ start_log(svn_ra_serf__xml_parser_t *parser,
                 }
             }
 
-          info->tmp_path->node_kind = svn_node_kind_from_word(
-                                     svn_xml_get_attr_value("node-kind", attrs));
+          SVN_ERR(read_changed_path_attributes(info->tmp_path, attrs));
         }
       else if (strcmp(name.name, "replaced-path") == 0)
         {
@@ -250,22 +266,21 @@ start_log(svn_ra_serf__xml_parser_t *parser,
                 }
             }
 
-          info->tmp_path->node_kind = svn_node_kind_from_word(
-                                     svn_xml_get_attr_value("node-kind", attrs));
+          SVN_ERR(read_changed_path_attributes(info->tmp_path, attrs));
         }
       else if (strcmp(name.name, "deleted-path") == 0)
         {
           info = push_state(parser, log_ctx, DELETED_PATH);
           info->tmp_path->action = 'D';
-          info->tmp_path->node_kind = svn_node_kind_from_word(
-                                     svn_xml_get_attr_value("node-kind", attrs));
+          
+          SVN_ERR(read_changed_path_attributes(info->tmp_path, attrs));
         }
       else if (strcmp(name.name, "modified-path") == 0)
         {
           info = push_state(parser, log_ctx, MODIFIED_PATH);
           info->tmp_path->action = 'M';
-          info->tmp_path->node_kind = svn_node_kind_from_word(
-                                     svn_xml_get_attr_value("node-kind", attrs));
+
+          SVN_ERR(read_changed_path_attributes(info->tmp_path, attrs));
         }
     }
 
