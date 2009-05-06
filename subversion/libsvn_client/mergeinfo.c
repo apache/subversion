@@ -153,9 +153,8 @@ svn_client__adjust_mergeinfo_source_paths(svn_mergeinfo_t adjusted_mergeinfo,
       /* Copy inherited mergeinfo into our output hash, adjusting the
          merge source as appropriate. */
       apr_hash_this(hi, &merge_source, NULL, &rangelist);
-      path = svn_path_join((const char *) merge_source, rel_path, pool);
-      copied_rangelist = svn_rangelist_dup((apr_array_header_t *)(rangelist),
-                                           pool);
+      path = svn_path_join(merge_source, rel_path, pool);
+      copied_rangelist = svn_rangelist_dup(rangelist, pool);
       apr_hash_set(adjusted_mergeinfo, path, APR_HASH_KEY_STRING,
                    copied_rangelist);
     }
