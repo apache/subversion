@@ -749,14 +749,12 @@ dav_svn__simple_parse_uri(dav_svn__uri_info *info,
 int dav_svn__find_ns(apr_array_header_t *namespaces, const char *uri);
 
 
-/* Output XML data to OUTPUT using BB.  Use FMT as format string for the
-   output. */
-svn_error_t *
-dav_svn__send_xml(apr_bucket_brigade *bb,
-                  ap_filter_t *output,
-                  const char *fmt,
-                  ...)
-       __attribute__((format(printf, 3, 4)));
+/* Write data to OUTPUT using BB, using FMT as the output format string.  */
+svn_error_t *dav_svn__brigade_printf(apr_bucket_brigade *bb,
+                                     ap_filter_t *output,
+                                     const char *fmt,
+                                     ...)
+  __attribute__((format(printf, 3, 4)));
 
 
 /* Test PATH for canonicalness (defined as "what won't make the
