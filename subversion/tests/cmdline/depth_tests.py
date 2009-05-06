@@ -1238,22 +1238,22 @@ def add_tree_with_depth(sbox):
   # Simple case, add new1 only, set depth to files
   svntest.actions.run_and_verify_svn(None, None, [],
                                      "add", "--depth", "files", new1_path)
-  verify_depth(None, "files", new1_path)
+  verify_depth(None, "infinity", new1_path)
 
   # Force add new1 at new1 again, should include new2 at empty, the depth of
   # new1 should not change
   svntest.actions.run_and_verify_svn(None, None, [],
                                      "add", "--depth", "immediates",
                                      "--force", new1_path)
-  verify_depth(None, "files", new1_path)
-  verify_depth(None, "empty", new2_path)
+  verify_depth(None, "infinity", new1_path)
+  verify_depth(None, "infinity", new2_path)
 
   # add new4 with intermediate path, the intermediate path is added at empty
   svntest.actions.run_and_verify_svn(None, None, [],
                                      "add", "--depth", "immediates",
                                      "--parents", new4_path)
   verify_depth(None, "infinity", new3_path)
-  verify_depth(None, "immediates", new4_path)
+  verify_depth(None, "infinity", new4_path)
 
 def upgrade_from_above(sbox):
   "upgrade a depth=empty wc from above"

@@ -349,8 +349,8 @@ add_dir_recursive(const char *dirname,
     SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
 
   /* Add this directory to revision control. */
-  err = svn_wc_add3(dirname, adm_access, depth, NULL, SVN_INVALID_REVNUM,
-                    ctx->cancel_func, ctx->cancel_baton,
+  err = svn_wc_add3(dirname, adm_access, svn_depth_infinity, NULL,
+                    SVN_INVALID_REVNUM, ctx->cancel_func, ctx->cancel_baton,
                     ctx->notify_func2, ctx->notify_baton2, pool);
   if (err && err->apr_err == SVN_ERR_ENTRY_EXISTS && force)
     svn_error_clear(err);
