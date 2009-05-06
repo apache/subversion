@@ -57,7 +57,7 @@ svn_cl__cleanup(apr_getopt_t *os,
 
       svn_pool_clear(subpool);
       SVN_ERR(svn_cl__check_cancel(ctx->cancel_baton));
-      SVN_ERR(svn_client_cleanup2(target, FALSE, ctx, subpool));
+      SVN_ERR(svn_client_cleanup(target, ctx, subpool));
     }
 
   svn_pool_destroy(subpool);
