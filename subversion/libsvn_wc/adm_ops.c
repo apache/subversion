@@ -480,8 +480,11 @@ process_committed_leaf(int log_number,
         {
           svn_prop_t *prop = APR_ARRAY_IDX(wcprop_changes, i, svn_prop_t *);
 
-          SVN_ERR(svn_wc__wcprop_set(prop->name, prop->value, path,
-                                     adm_access, pool));
+          SVN_ERR(svn_wc__loggy_modify_wcprop
+                  (&logtags, adm_access,
+                   path, prop->name,
+                   prop->value ? prop->value->data : NULL,
+                   pool));
         }
     }
 

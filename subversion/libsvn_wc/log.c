@@ -118,6 +118,12 @@
  */
 #define SVN_WC__LOG_COMMITTED           "committed"
 
+/* On target SVN_WC__LOG_ATTR_NAME, set wc property
+   SVN_WC__LOG_ATTR_PROPNAME to value SVN_WC__LOG_ATTR_PROPVAL.  If
+   SVN_WC__LOG_ATTR_PROPVAL is absent, then remove the property. */
+#define SVN_WC__LOG_MODIFY_WCPROP        "modify-wcprop"
+
+
 /** Log attributes.  See the documentation above for log actions for
     how these are used. **/
 
@@ -1437,6 +1443,37 @@ log_do_committed(struct log_runner *loggy,
   return SVN_NO_ERROR;
 }
 
+
+/* See documentation for SVN_WC__LOG_MODIFY_WCPROP. */
+static svn_error_t *
+log_do_modify_wcprop(struct log_runner *loggy,
+                     const char *name,
+                     const char **atts)
+{
+  svn_string_t value;
+  const char *propname, *propval, *path;
+
+  if (strcmp(name, SVN_WC_ENTRY_THIS_DIR) == 0)
+    path = svn_wc_adm_access_path(loggy->adm_access);
+  else
+    path = svn_dirent_join(svn_wc_adm_access_path(loggy->adm_access),
+                           name, loggy->pool);
+
+  propname = svn_xml_get_attr_value(SVN_WC__LOG_ATTR_PROPNAME, atts);
+  propval = svn_xml_get_attr_value(SVN_WC__LOG_ATTR_PROPVAL, atts);
+
+  if (propval)
+    {
+      value.data = propval;
+      value.len = strlen(propval);
+    }
+
+  SVN_ERR(svn_wc__wcprop_set(propname, propval ? &value : NULL,
+                             path, loggy->adm_access, loggy->pool));
+
+  return SVN_NO_ERROR;
+}
+
 static svn_error_t *
 log_do_add_tree_conflict(struct log_runner *loggy,
                          const char **atts)
@@ -1517,6 +1554,9 @@ start_handler(void *userData, const char *eltname, const char **atts)
   }
   else if (strcmp(eltname, SVN_WC__LOG_COMMITTED) == 0) {
     err = log_do_committed(loggy, name, atts);
+  }
+  else if (strcmp(eltname, SVN_WC__LOG_MODIFY_WCPROP) == 0) {
+    err = log_do_modify_wcprop(loggy, name, atts);
   }
   else if (strcmp(eltname, SVN_WC__LOG_RM) == 0) {
     err = log_do_rm(loggy, name);
@@ -2147,6 +2187,27 @@ svn_wc__loggy_entry_modify(svn_stringbuf_t **log_accum,
   return SVN_NO_ERROR;
 }
 
+
+svn_error_t *
+svn_wc__loggy_modify_wcprop(svn_stringbuf_t **log_accum,
+                            svn_wc_adm_access_t *adm_access,
+                            const char *path,
+                            const char *propname,
+                            const char *propval,
+                            apr_pool_t *pool)
+{
+  svn_xml_make_open_tag(log_accum, pool, svn_xml_self_closing,
+                        SVN_WC__LOG_MODIFY_WCPROP,
+                        SVN_WC__LOG_ATTR_NAME,
+                        loggy_path(path, adm_access),
+                        SVN_WC__LOG_ATTR_PROPNAME,
+                        propname,
+                        SVN_WC__LOG_ATTR_PROPVAL,
+                        propval,
+                        NULL);
+
+  return SVN_NO_ERROR;
+}
 
 svn_error_t *
 svn_wc__loggy_move(svn_stringbuf_t **log_accum,
