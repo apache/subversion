@@ -148,6 +148,18 @@ svn_wc__loggy_entry_modify(svn_stringbuf_t **log_accum,
                            apr_uint64_t modify_flags,
                            apr_pool_t *pool);
 
+/* Extend **LOG_ACCUM with log instructions to modify wcprop PROPNAME
+   for PATH, setting it to PROPVAL (which may be NULL to delete the property).
+   ADM_ACCESS is the access baton for PATH.
+*/
+svn_error_t *
+svn_wc__loggy_modify_wcprop(svn_stringbuf_t **log_accum,
+                            svn_wc_adm_access_t *adm_access,
+                            const char *path,
+                            const char *propname,
+                            const char *propval,
+                            apr_pool_t *pool);
+
 
 /* Extend **LOG_ACCUM with log instructions to move the file SRC_PATH to
    DST_PATH, if it exists. If it doesn't and REMOVE_DST_IF_NO_SRC is TRUE
