@@ -999,12 +999,13 @@ mergeinfo_hash_diff_cb(const void *key, apr_ssize_t klen,
 
 /* Record deletions and additions of entire range lists (by path
    presence), and delegate to svn_rangelist_diff() for delta
-   calculations on a specific path. */
+   calculations on a specific path.  */
 static svn_error_t *
 walk_mergeinfo_hash_for_diff(svn_mergeinfo_t from, svn_mergeinfo_t to,
                              svn_mergeinfo_t deleted, svn_mergeinfo_t added,
                              svn_boolean_t consider_inheritance,
-                             apr_pool_t *pool)
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool)
 {
   struct mergeinfo_diff_baton mdb;
   mdb.from = from;
@@ -1012,9 +1013,9 @@ walk_mergeinfo_hash_for_diff(svn_mergeinfo_t from, svn_mergeinfo_t to,
   mdb.deleted = deleted;
   mdb.added = added;
   mdb.consider_inheritance = consider_inheritance;
-  mdb.pool = pool;
+  mdb.pool = result_pool;
 
-  return svn_hash_diff(from, to, mergeinfo_hash_diff_cb, &mdb, pool);
+  return svn_hash_diff(from, to, mergeinfo_hash_diff_cb, &mdb, scratch_pool);
 }
 
 svn_error_t *
@@ -1041,7 +1042,8 @@ svn_mergeinfo_diff(svn_mergeinfo_t *deleted, svn_mergeinfo_t *added,
       if (from && to)
         {
           SVN_ERR(walk_mergeinfo_hash_for_diff(from, to, *deleted, *added,
-                                               consider_inheritance, pool));
+                                               consider_inheritance, pool,
+                                               pool));
         }
     }
 
@@ -1130,9 +1132,21 @@ svn_mergeinfo_intersect(svn_mergeinfo_t *mergeinfo,
                         svn_mergeinfo_t mergeinfo2,
                         apr_pool_t *pool)
 {
+  return svn_mergeinfo__intersect2(mergeinfo, mergeinfo1, mergeinfo2,
+                                   TRUE, pool, pool);
+}
+
+svn_error_t *
+svn_mergeinfo__intersect2(svn_mergeinfo_t *mergeinfo,
+                          svn_mergeinfo_t mergeinfo1,
+                          svn_mergeinfo_t mergeinfo2,
+                          svn_boolean_t consider_ineheritance,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool)
+{
   apr_hash_index_t *hi;
 
-  *mergeinfo = apr_hash_make(pool);
+  *mergeinfo = apr_hash_make(result_pool);
 
   /* ### TODO(reint): Do we care about the case when a path in one
      ### mergeinfo hash has inheritable mergeinfo, and in the other
@@ -1152,11 +1166,13 @@ svn_mergeinfo_intersect(svn_mergeinfo_t *mergeinfo,
         {
           SVN_ERR(svn_rangelist_intersect(&rangelist,
                                           (apr_array_header_t *) val,
-                                          rangelist, TRUE, pool));
+                                          rangelist, consider_ineheritance,
+                                          scratch_pool));
           if (rangelist->nelts > 0)
             apr_hash_set(*mergeinfo,
-                         apr_pstrdup(pool, path),
-                         APR_HASH_KEY_STRING, rangelist);
+                         apr_pstrdup(result_pool, path),
+                         APR_HASH_KEY_STRING,
+                         svn_rangelist_dup(rangelist, result_pool));
         }
     }
   return SVN_NO_ERROR;
@@ -1166,9 +1182,22 @@ svn_error_t *
 svn_mergeinfo_remove(svn_mergeinfo_t *mergeinfo, svn_mergeinfo_t eraser,
                      svn_mergeinfo_t whiteboard, apr_pool_t *pool)
 {
-  *mergeinfo = apr_hash_make(pool);
+  return svn_mergeinfo__remove2(mergeinfo, eraser, whiteboard, TRUE, pool,
+                                pool);
+}
+
+svn_error_t *
+svn_mergeinfo__remove2(svn_mergeinfo_t *mergeinfo,
+                       svn_mergeinfo_t eraser,
+                       svn_mergeinfo_t whiteboard,
+                       svn_boolean_t consider_ineritance,
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool)
+{
+  *mergeinfo = apr_hash_make(result_pool);
   return walk_mergeinfo_hash_for_diff(whiteboard, eraser, *mergeinfo, NULL,
-                                      TRUE, pool);
+                                      consider_ineritance, result_pool,
+                                      scratch_pool);
 }
 
 svn_error_t *
