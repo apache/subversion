@@ -749,6 +749,12 @@ dav_svn__simple_parse_uri(dav_svn__uri_info *info,
 int dav_svn__find_ns(apr_array_header_t *namespaces, const char *uri);
 
 
+/* Write NULL-terminated string DATA to OUTPUT using BB.  */
+svn_error_t *dav_svn__brigade_print(apr_bucket_brigade *bb,
+                                    ap_filter_t *output,
+                                    const char *data);
+
+
 /* Write data to OUTPUT using BB, using FMT as the output format string.  */
 svn_error_t *dav_svn__brigade_printf(apr_bucket_brigade *bb,
                                      ap_filter_t *output,

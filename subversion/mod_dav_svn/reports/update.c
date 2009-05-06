@@ -240,14 +240,13 @@ absent_helper(svn_boolean_t is_dir,
 
   if (! uc->resource_walk)
     {
-      const char *elt = apr_psprintf(pool,
-                                     "<S:absent-%s name=\"%s\"/>" DEBUG_CR,
-                                     DIR_OR_FILE(is_dir),
-                                     apr_xml_quote_string
-                                       (pool,
-                                        svn_uri_basename(path, pool),
-                                        1));
-      SVN_ERR(dav_svn__brigade_printf(uc->bb, uc->output, "%s", elt));
+      SVN_ERR(dav_svn__brigade_printf
+              (uc->bb, uc->output,
+               "<S:absent-%s name=\"%s\"/>" DEBUG_CR,
+               DIR_OR_FILE(is_dir),
+               apr_xml_quote_string(pool, 
+                                    svn_uri_basename(path, pool),
+                                    1)));
     }
 
   return SVN_NO_ERROR;
@@ -360,20 +359,20 @@ add_helper(svn_boolean_t is_dir,
           child->copyfrom = TRUE;
         }
 
-      /* Resist the temptation to pass 'elt' as the format string.
-         Because it contains URIs, it might have sequences that look
-         like format string insert placeholders.  For example,
-         "this%20dir" is a valid printf() format string that means
-         "this[insert an integer of width 20 here]ir". */
-      SVN_ERR(dav_svn__brigade_printf(child->uc->bb, child->uc->output,
-                                      "%s", elt));
+      /* Resist the temptation to use 'elt' as a format string (to the
+         likes of dav_svn__brigade_printf).  Because it contains URIs,
+         it might have sequences that look like format string insert
+         placeholders.  For example, "this%20dir" is a valid printf()
+         format string that means "this[insert an integer of width 20
+         here]ir". */
+      SVN_ERR(dav_svn__brigade_print(child->uc->bb, child->uc->output, elt));
     }
 
   SVN_ERR(send_vsn_url(child, pool));
 
   if (uc->resource_walk)
-    SVN_ERR(dav_svn__brigade_printf(child->uc->bb, child->uc->output,
-                                    "</S:resource>" DEBUG_CR));
+    SVN_ERR(dav_svn__brigade_print(child->uc->bb, child->uc->output,
+                                   "</S:resource>" DEBUG_CR));
 
   *child_baton = child;
 
@@ -429,12 +428,11 @@ close_helper(svn_boolean_t is_dir, item_baton_t *baton)
   if ((! baton->uc->send_all) && baton->changed_props && (! baton->added))
     {
       /* Tell the client to fetch all the props */
-      SVN_ERR(dav_svn__brigade_printf(baton->uc->bb, baton->uc->output,
-                                      "<S:fetch-props/>" DEBUG_CR));
+      SVN_ERR(dav_svn__brigade_print(baton->uc->bb, baton->uc->output,
+                                     "<S:fetch-props/>" DEBUG_CR));
     }
 
-  SVN_ERR(dav_svn__brigade_printf(baton->uc->bb, baton->uc->output,
-                                  "<S:prop>"));
+  SVN_ERR(dav_svn__brigade_print(baton->uc->bb, baton->uc->output, "<S:prop>"));
 
   /* Both modern and non-modern clients need the checksum... */
   if (baton->text_checksum)
@@ -479,8 +477,8 @@ close_helper(svn_boolean_t is_dir, item_baton_t *baton)
     }
 
   /* Close unconditionally, because we sent checksum unconditionally. */
-  SVN_ERR(dav_svn__brigade_printf(baton->uc->bb, baton->uc->output,
-                                  "</S:prop>\n"));
+  SVN_ERR(dav_svn__brigade_print(baton->uc->bb, baton->uc->output,
+                                 "</S:prop>" DEBUG_CR));
 
   if (baton->added)
     SVN_ERR(dav_svn__brigade_printf(baton->uc->bb, baton->uc->output,
@@ -527,8 +525,8 @@ upd_set_target_revision(void *edit_baton,
 
   if (! uc->resource_walk)
     SVN_ERR(dav_svn__brigade_printf(uc->bb, uc->output,
-                                    "<S:target-revision rev=\"%ld"
-                                    "\"/>" DEBUG_CR, target_revision));
+                                    "<S:target-revision rev=\"%ld\"/>"
+                                    DEBUG_CR, target_revision));
 
   return SVN_NO_ERROR;
 }
@@ -571,8 +569,8 @@ upd_open_root(void *edit_baton,
     SVN_ERR(send_vsn_url(b, pool));
 
   if (uc->resource_walk)
-    SVN_ERR(dav_svn__brigade_printf(uc->bb, uc->output,
-                                    "</S:resource>" DEBUG_CR));
+    SVN_ERR(dav_svn__brigade_print(uc->bb, uc->output,
+                                   "</S:resource>" DEBUG_CR));
 
   return SVN_NO_ERROR;
 }
@@ -668,10 +666,9 @@ upd_change_xxx_prop(void *baton,
                                               qname));
             }
 
-          SVN_ERR(dav_svn__brigade_printf(b->uc->bb, b->uc->output, "%s",
-                                          qval));
-          SVN_ERR(dav_svn__brigade_printf(b->uc->bb, b->uc->output,
-                                          "</S:set-prop>" DEBUG_CR));
+          SVN_ERR(dav_svn__brigade_print(b->uc->bb, b->uc->output, qval));
+          SVN_ERR(dav_svn__brigade_print(b->uc->bb, b->uc->output,
+                                         "</S:set-prop>" DEBUG_CR));
         }
       else  /* value is null, so this is a prop removal */
         {
@@ -794,15 +791,17 @@ window_handler(svn_txdelta_window_t *window, void *baton)
   if (! wb->seen_first_window)
     {
       wb->seen_first_window = TRUE;
-      SVN_ERR(dav_svn__brigade_printf(wb->uc->bb, wb->uc->output,
-                                      "<S:txdelta>"));
+      SVN_ERR(dav_svn__brigade_print(wb->uc->bb, wb->uc->output,
+                                     "<S:txdelta>"));
     }
 
   SVN_ERR(wb->handler(window, wb->handler_baton));
 
   if (window == NULL)
-    SVN_ERR(dav_svn__brigade_printf(wb->uc->bb, wb->uc->output,
-                                    "</S:txdelta>"));
+    {
+      SVN_ERR(dav_svn__brigade_print(wb->uc->bb, wb->uc->output,
+                                     "</S:txdelta>"));
+    }
 
   return SVN_NO_ERROR;
 }
@@ -874,13 +873,12 @@ upd_close_file(void *file_baton, const char *text_checksum, apr_pool_t *pool)
      to fetch it. */
   if ((! file->uc->send_all) && (! file->added) && file->text_changed)
     {
-      const char *elt;
-      elt = apr_psprintf(pool, "<S:fetch-file%s%s%s/>" DEBUG_CR,
-                         file->base_checksum ? " base-checksum=\"" : "",
-                         file->base_checksum ? file->base_checksum : "",
-                         file->base_checksum ? "\"" : "");
-      SVN_ERR(dav_svn__brigade_printf(file->uc->bb, file->uc->output, "%s",
-                                      elt));
+      SVN_ERR(dav_svn__brigade_printf
+              (file->uc->bb, file->uc->output,
+               "<S:fetch-file%s%s%s/>" DEBUG_CR,
+               file->base_checksum ? " base-checksum=\"" : "",
+               file->base_checksum ? file->base_checksum : "",
+               file->base_checksum ? "\"" : ""));
     }
 
   return close_helper(FALSE /* is_dir */, file);
@@ -1428,8 +1426,8 @@ dav_svn__update_report(const dav_resource *resource,
           goto cleanup;
         }
 
-      serr = dav_svn__brigade_printf(uc.bb, uc.output,
-                                     "<S:resource-walk>" DEBUG_CR);
+      serr = dav_svn__brigade_print(uc.bb, uc.output,
+                                    "<S:resource-walk>" DEBUG_CR);
       if (serr)
         {
           derr = dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
@@ -1462,8 +1460,8 @@ dav_svn__update_report(const dav_resource *resource,
           goto cleanup;
         }
 
-      serr = dav_svn__brigade_printf(uc.bb, uc.output,
-                                     "</S:resource-walk>" DEBUG_CR);
+      serr = dav_svn__brigade_print(uc.bb, uc.output,
+                                    "</S:resource-walk>" DEBUG_CR);
       if (serr)
         {
           derr = dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
@@ -1477,8 +1475,8 @@ dav_svn__update_report(const dav_resource *resource,
      started in the first place. */
   if (uc.started_update)
     {
-      if ((serr = dav_svn__brigade_printf(uc.bb, uc.output,
-                                          "</S:update-report>" DEBUG_CR)))
+      if ((serr = dav_svn__brigade_print(uc.bb, uc.output,
+                                         "</S:update-report>" DEBUG_CR)))
         {
           derr = dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                       "Unable to complete update report.",

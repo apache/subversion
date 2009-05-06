@@ -141,11 +141,11 @@ dav_svn__get_mergeinfo_report(const dav_resource *resource,
      track ourselves of whether we've sent anything or not.  See the
      long comment after the 'cleanup' label for more details. */
   sent_anything = TRUE;
-  serr = dav_svn__brigade_printf(bb, output,
-                                 DAV_XML_HEADER DEBUG_CR
-                                 "<S:" SVN_DAV__MERGEINFO_REPORT " "
-                                 "xmlns:S=\"" SVN_XML_NAMESPACE "\" "
-                                 "xmlns:D=\"DAV:\">" DEBUG_CR);
+  serr = dav_svn__brigade_print(bb, output,
+                                DAV_XML_HEADER DEBUG_CR
+                                "<S:" SVN_DAV__MERGEINFO_REPORT " "
+                                "xmlns:S=\"" SVN_XML_NAMESPACE "\" "
+                                "xmlns:D=\"DAV:\">" DEBUG_CR);
   if (serr)
     {
       derr = dav_svn__convert_err(serr, HTTP_BAD_REQUEST, serr->message,
@@ -194,9 +194,9 @@ dav_svn__get_mergeinfo_report(const dav_resource *resource,
         }
     }
 
-  if ((serr = dav_svn__brigade_printf(bb, output,
-                                      "</S:" SVN_DAV__MERGEINFO_REPORT ">"
-                                      DEBUG_CR)))
+  if ((serr = dav_svn__brigade_print(bb, output,
+                                     "</S:" SVN_DAV__MERGEINFO_REPORT ">"
+                                     DEBUG_CR)))
     {
       derr = dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                   "Error ending REPORT response.",
