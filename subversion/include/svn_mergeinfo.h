@@ -304,7 +304,7 @@ svn_mergeinfo_intersect(svn_mergeinfo_t *mergeinfo,
  * of the two mergeinfo's ranges when calculating the range equivalence,
  * as described for svn_mergeinfo_diff().
  *
- * @since New in 1.5.
+ * @since New in 1.7.
  */
 svn_error_t *
 svn_mergeinfo_intersect2(svn_mergeinfo_t *mergeinfo,
