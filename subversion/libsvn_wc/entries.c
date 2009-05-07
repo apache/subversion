@@ -69,7 +69,6 @@ enum statement_keys {
   STMT_DELETE_ALL_WORKING,
   STMT_DELETE_ALL_BASE,
   STMT_DELETE_ALL_ACTUAL,
-  STMT_DELETE_ALL_LOCK,
   STMT_SELECT_KEEP_LOCAL_FLAG,
   STMT_SELECT_NOT_PRESENT,
   STMT_SELECT_FILE_EXTERNAL,
@@ -119,8 +118,6 @@ static const char * const statements[] = {
   "delete from base_node;",
 
   "delete from actual_node;",
-
-  "delete from lock;",
 
   "select keep_local from working_node "
   "where wc_id = ?1 and local_relpath = ?2;",
@@ -2352,8 +2349,6 @@ entries_write_body(svn_wc__db_t *db,
   SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db, STMT_DELETE_ALL_BASE));
   SVN_ERR(svn_sqlite__step_done(stmt));
   SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db, STMT_DELETE_ALL_ACTUAL));
-  SVN_ERR(svn_sqlite__step_done(stmt));
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db, STMT_DELETE_ALL_LOCK));
   SVN_ERR(svn_sqlite__step_done(stmt));
 
   /* Write out "this dir" */
