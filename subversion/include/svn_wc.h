@@ -548,6 +548,7 @@ svn_wc_externals_definition_baseurl(svn_wc_externals_definition_t *ext_def);
  *
  * @since New in 1.7.
  */
+SVN_DEPRECATED
 void
 svn_wc_edited_externals2(apr_hash_t **externals_old,
                          apr_hash_t **externals_new,
