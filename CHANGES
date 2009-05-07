@@ -20,7 +20,7 @@ http://svn.collab.net/repos/svn/tags/1.6.2
   * fixed: repeat merge failures with non-inheritable mergeinfo (issue #3392)
   * fixed: another memory leak when performing mergeinfo-aware merges (r37398)
   * fixed: incorrect mergeinfo on children of shallow merges (issue #3407)
-  * fixed: pool lifetime issues in the DBD backend (r37137)
+  * fixed: pool lifetime issues in the BDB backend (r37137)
 
  Developer-visible changes:
   * don't fail if an embedding app has already initialized SQLite (issue #3387)
