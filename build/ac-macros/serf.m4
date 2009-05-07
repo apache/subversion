@@ -14,7 +14,7 @@ AC_DEFUN(SVN_LIB_SERF,
   [
     if test "$withval" = "yes" ; then
       AC_MSG_ERROR([--with-serf requires an argument.])
-    else
+    elif test "$withval" != "no" ; then
       AC_MSG_NOTICE([serf library configuration])
       serf_prefix=$withval
       save_cppflags="$CPPFLAGS $SVN_APR_INCLUDES $SVN_APRUTIL_INCLUDES"
@@ -46,7 +46,12 @@ AC_DEFUN(SVN_LIB_SERF,
   if test $serf_found = "yes"; then
     SVN_SERF_PREFIX="$serf_prefix"
     SVN_SERF_INCLUDES="-I$serf_prefix/include/serf-0"
-    SVN_SERF_LIBS="$serf_prefix/lib/libserf-0.la"
+    if test -e "$serf_prefix/lib/libserf-0.la"; then
+      SVN_SERF_LIBS="$serf_prefix/lib/libserf-0.la"
+    else
+      SVN_SERF_LIBS="-lserf-0"
+      LDFLAGS="$LDFLAGS -L$serf_prefix/lib"
+    fi
     SVN_SERF_EXPORT_LIBS="-L$serf_prefix/lib -lserf-0"
   elif test $serf_found = "reconfig"; then
     serf_found=yes

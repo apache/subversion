@@ -21,6 +21,7 @@
 
 #include "LogMessageCallback.h"
 #include "ProplistCallback.h"
+#include "EnumMapper.h"
 #include "JNIUtil.h"
 #include "svn_time.h"
 #include "svn_sorts.h"
@@ -94,7 +95,7 @@ LogMessageCallback::singleMessage(svn_log_entry_t *log_entry, apr_pool_t *pool)
     {
       midCP = env->GetMethodID(clazzCP,
                                "<init>",
-                               "(Ljava/lang/String;JLjava/lang/String;C)V");
+                               "(Ljava/lang/String;JLjava/lang/String;CI)V");
       if (JNIUtil::isJavaExceptionThrown())
         return SVN_NO_ERROR;
     }
@@ -119,8 +120,8 @@ LogMessageCallback::singleMessage(svn_log_entry_t *log_entry, apr_pool_t *pool)
           svn_sort__item_t *item = &(APR_ARRAY_IDX(sorted_paths, i,
                                                    svn_sort__item_t));
           const char *path = (const char *)item->key;
-          svn_log_changed_path_t *log_item
-            = (svn_log_changed_path_t *)
+          svn_log_changed_path2_t *log_item
+            = (svn_log_changed_path2_t *)
             apr_hash_get(log_entry->changed_paths, item->key, item->klen);
 
           jstring jpath = JNIUtil::makeJString(path);
@@ -136,7 +137,8 @@ LogMessageCallback::singleMessage(svn_log_entry_t *log_entry, apr_pool_t *pool)
           jchar jaction = log_item->action;
 
           jobject cp = env->NewObject(clazzCP, midCP, jpath, jcopyFromRev,
-                                      jcopyFromPath, jaction);
+                                  jcopyFromPath, jaction,
+                                  EnumMapper::mapNodeKind(log_item->node_kind));
           if (JNIUtil::isJavaExceptionThrown())
             return SVN_NO_ERROR;
 

@@ -33,9 +33,11 @@
 #include "svn_types.h"
 #include "svn_opt.h"
 #include "svn_error.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_utf.h"
 #include "svn_time.h"
+#include "svn_props.h"
 
 #include "private/svn_opt_private.h"
 
@@ -776,7 +778,7 @@ svn_opt__args_to_target_array(apr_array_header_t **targets_p,
 
           /* If the target has the same name as a Subversion
              working copy administrative dir, skip it. */
-          base_name = svn_path_basename(true_target, pool);
+          base_name = svn_dirent_basename(true_target, pool);
 
           /* FIXME:
              The canonical list of administrative directory names is
@@ -941,7 +943,7 @@ svn_opt__arg_canonicalize_path(const char **path_out, const char *path_in,
 
   /* convert back to UTF-8. */
   SVN_ERR(svn_path_cstring_to_utf8(path_out, apr_target, pool));
-  *path_out = svn_path_canonicalize(*path_out, pool);
+  *path_out = svn_dirent_canonicalize(*path_out, pool);
 
   return SVN_NO_ERROR;
 }

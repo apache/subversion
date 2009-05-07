@@ -16,9 +16,6 @@
  * ====================================================================
  */
 
-/* ==================================================================== */
-
-/*** Includes. ***/
 #include <apr_pools.h>
 
 #include "svn_error.h"
@@ -28,6 +25,8 @@
 #include "svn_ra.h"
 #include "svn_io.h"
 #include "svn_compat.h"
+#include "svn_props.h"
+
 #include "ra_loader.h"
 #include "svn_private_config.h"
 
@@ -222,7 +221,7 @@ log_receiver(void *baton,
   const char *prev_path;
 
   /* No paths were changed in this revision.  Nothing to do. */
-  if (! log_entry->changed_paths)
+  if (! log_entry->changed_paths2)
     return SVN_NO_ERROR;
 
   /* If we've run off the end of the path's history, there's nothing
@@ -260,7 +259,7 @@ log_receiver(void *baton,
 
   /* Figure out at which repository path our object of interest lived
      in the previous revision. */
-  SVN_ERR(prev_log_path(&prev_path, NULL, NULL, log_entry->changed_paths,
+  SVN_ERR(prev_log_path(&prev_path, NULL, NULL, log_entry->changed_paths2,
                         current_path, lrb->kind, log_entry->revision, pool));
 
   /* Squirrel away our "next place to look" path (suffer the strcmp
@@ -454,7 +453,7 @@ gls_log_receiver(void *baton,
      in the previous revision, and if its current location is the
      result of copy since then. */
   SVN_ERR(prev_log_path(&prev_path, NULL, &copyfrom_rev,
-                        log_entry->changed_paths, current_path,
+                        log_entry->changed_paths2, current_path,
                         lrb->kind, log_entry->revision, pool));
 
   /* If we've run off the end of the path's history, we need to report
@@ -632,7 +631,7 @@ fr_log_message_receiver(void *baton,
     }
 
   return prev_log_path(&lmb->path, &lmb->action,
-                       &lmb->copyrev, log_entry->changed_paths,
+                       &lmb->copyrev, log_entry->changed_paths2,
                        lmb->path, svn_node_file, log_entry->revision,
                        lmb->pool);
 }
@@ -796,8 +795,12 @@ log_path_del_receiver(void *baton,
                       apr_pool_t *pool)
 {
   apr_hash_index_t *hi;
-  
-  for (hi = apr_hash_first(pool, log_entry->changed_paths);
+
+  /* No paths were changed in this revision.  Nothing to do. */
+  if (! log_entry->changed_paths2)
+    return SVN_NO_ERROR;
+
+  for (hi = apr_hash_first(pool, log_entry->changed_paths2);
        hi != NULL;
        hi = apr_hash_next(hi))
     {
@@ -843,7 +846,7 @@ svn_ra__get_deleted_rev_from_log(svn_ra_session_t *session,
   if (end_revision <= peg_revision)
     return svn_error_create(SVN_ERR_CLIENT_BAD_REVISION, NULL,
                             _("Peg revision must precede end revision"));
-  
+
   SVN_ERR(svn_ra_get_session_url(session, &session_url, pool));
   SVN_ERR(svn_ra_get_repos_root2(session, &source_root_url, pool));
   rel_path_url = svn_path_url_add_component(session_url, rel_deleted_path,

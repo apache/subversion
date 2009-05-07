@@ -2,7 +2,7 @@
  * questions.c:  routines for asking questions about working copies
  *
  * ====================================================================
- * Copyright (c) 2000-2004, 2006, 2008 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004, 2006, 2008-2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -19,14 +19,17 @@
 
 
 #include <string.h>
+
 #include <apr_pools.h>
 #include <apr_file_io.h>
 #include <apr_file_info.h>
 #include <apr_time.h>
+
 #include "svn_pools.h"
 #include "svn_types.h"
 #include "svn_string.h"
 #include "svn_error.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_time.h"
 #include "svn_io.h"
@@ -34,114 +37,17 @@
 
 #include "wc.h"
 #include "adm_files.h"
-#include "questions.h"
 #include "entries.h"
 #include "props.h"
 #include "translate.h"
+#include "wc_db.h"
+#include "lock.h"
 
 #include "svn_private_config.h"
 #include "private/svn_wc_private.h"
 
 
-/* ### todo: make this compare repository too?  Or do so in parallel
-   code.  See also adm_files.c:check_adm_exists(), which should
-   probably be merged with this.  */
-svn_error_t *
-svn_wc_check_wc(const char *path,
-                int *wc_format,
-                apr_pool_t *pool)
-{
-  svn_error_t *err;
-  const char *format_file_path = svn_wc__adm_child(path, SVN_WC__ADM_ENTRIES,
-                                                   pool);
 
-  /* ### this logic is duplicated in lock.c */
-
-  /* First try to read the format number from the entries file. */
-  err = svn_io_read_version_file(wc_format, format_file_path, pool);
-
-  /* If that didn't work and the first line of the entries file contains
-     something other than a number, then it is probably in XML format. */
-  if (err && err->apr_err == SVN_ERR_BAD_VERSION_FILE_FORMAT)
-    {
-      svn_error_clear(err);
-      /* Fall back on reading the format file instead.
-         Note that the format file might not exist in newer working copies
-         (format 7 and higher), but in that case, the entries file should
-         have contained the format number. */
-      format_file_path = svn_wc__adm_child(path, SVN_WC__ADM_FORMAT, pool);
-
-      err = svn_io_read_version_file(wc_format, format_file_path, pool);
-    }
-
-  if (err && (APR_STATUS_IS_ENOENT(err->apr_err)
-              || APR_STATUS_IS_ENOTDIR(err->apr_err)))
-    {
-      svn_node_kind_t kind;
-
-      svn_error_clear(err);
-
-      /* Check path itself exists. */
-      SVN_ERR(svn_io_check_path(path, &kind, pool));
-
-      if (kind == svn_node_none)
-        {
-          return svn_error_createf
-            (APR_ENOENT, NULL, _("'%s' does not exist"),
-            svn_path_local_style(path, pool));
-        }
-
-      /* If the format file does not exist or path not directory, then for
-         our purposes this is not a working copy, so return 0. */
-      *wc_format = 0;
-    }
-  else if (err)
-    return err;
-  else
-    {
-      /* If we managed to read the format file we assume that we
-          are dealing with a real wc so we can return a nice
-          error. */
-      SVN_ERR(svn_wc__check_format(*wc_format, path, pool));
-    }
-
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
-svn_wc__check_format(int wc_format, const char *path, apr_pool_t *pool)
-{
-  if (wc_format < 2)
-    {
-      return svn_error_createf
-        (SVN_ERR_WC_UNSUPPORTED_FORMAT, NULL,
-         _("Working copy format of '%s' is too old (%d); "
-           "please check out your working copy again"),
-         svn_path_local_style(path, pool), wc_format);
-    }
-  else if (wc_format > SVN_WC__VERSION)
-    {
-      /* This won't do us much good for the 1.4<->1.5 crossgrade,
-         since 1.4.x clients don't refer to this FAQ entry, but at
-         least post-1.5 crossgrades will be somewhat less painful. */
-      return svn_error_createf
-        (SVN_ERR_WC_UNSUPPORTED_FORMAT, NULL,
-         _("This client is too old to work with working copy '%s'.  You need\n"
-           "to get a newer Subversion client, or to downgrade this working "
-           "copy.\n"
-           "See "
-           "http://subversion.tigris.org/faq.html#working-copy-format-change\n"
-           "for details."
-           ),
-         svn_path_local_style(path, pool));
-    }
-
-  return SVN_NO_ERROR;
-}
-
-
-
 /*** svn_wc_text_modified_p ***/
 
 /* svn_wc_text_modified_p answers the question:
@@ -169,55 +75,6 @@ svn_wc__check_format(int wc_format, const char *path, apr_pool_t *pool)
    out of text-base?  Should it ask whether one meant to officially
    mark it for removal?
 */
-
-
-/* Is PATH's timestamp the same as the one recorded in our
-   `entries' file?  Return the answer in EQUAL_P.  TIMESTAMP_KIND
-   should be one of the enumerated type above. */
-svn_error_t *
-svn_wc__timestamps_equal_p(svn_boolean_t *equal_p,
-                           const char *path,
-                           svn_wc_adm_access_t *adm_access,
-                           enum svn_wc__timestamp_kind timestamp_kind,
-                           apr_pool_t *pool)
-{
-  apr_time_t wfile_time, entrytime = 0;
-  const svn_wc_entry_t *entry;
-
-  /* Get the timestamp from the entries file */
-  SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access, FALSE, pool));
-
-  /* Get the timestamp from the working file and the entry */
-  if (timestamp_kind == svn_wc__text_time)
-    {
-      SVN_ERR(svn_io_file_affected_time(&wfile_time, path, pool));
-      entrytime = entry->text_time;
-    }
-
-  else if (timestamp_kind == svn_wc__prop_time)
-    {
-      SVN_ERR(svn_wc__props_last_modified(&wfile_time,
-                                          path, svn_wc__props_working,
-                                          adm_access, pool));
-      entrytime = entry->prop_time;
-    }
-
-  if (! entrytime)
-    {
-      /* TODO: If either timestamp is inaccessible, the test cannot
-         return an answer.  Assume that the timestamps are
-         different. */
-      *equal_p = FALSE;
-      return SVN_NO_ERROR;
-    }
-
-  if (wfile_time == entrytime)
-    *equal_p = TRUE;
-  else
-    *equal_p = FALSE;
-
-  return SVN_NO_ERROR;
-}
 
 
 /* Set *MODIFIED_P to TRUE if (after translation) VERSIONED_FILE
@@ -252,14 +109,9 @@ compare_and_verify(svn_boolean_t *modified_p,
                               adm_access, NULL, pool));
   SVN_ERR(svn_wc__get_special(&special, versioned_file, adm_access, pool));
 
-
   need_translation = svn_subst_translation_required(eol_style, eol_str,
                                                     keywords, special, TRUE);
-  /* Special files can only be compared through their text bases:
-     they have no working copy representation
-     for example: symlinks aren't guaranteed to be valid, nor does
-                  it make sense to compare with the linked file-or-directory. */
-  compare_textbases |= special;
+
   if (verify_checksum || need_translation)
     {
       /* Reading files is necessary. */
@@ -282,24 +134,35 @@ compare_and_verify(svn_boolean_t *modified_p,
                                                svn_checksum_md5, TRUE, pool);
         }
 
-      if (compare_textbases && need_translation)
+      if (special)
         {
-          /* Create stream for detranslate versioned file to normal form. */
-          SVN_ERR(svn_subst_stream_detranslated(&v_stream,
-                                                versioned_file,
-                                                eol_style,
-                                                eol_str, TRUE,
-                                                keywords, special,
-                                                pool));
+          SVN_ERR(svn_subst_read_specialfile(&v_stream, versioned_file,
+                                             pool, pool));
         }
       else
         {
           SVN_ERR(svn_stream_open_readonly(&v_stream, versioned_file,
                                            pool, pool));
 
-          if (need_translation)
+          if (compare_textbases && need_translation)
             {
-              /* Translate text-base to working copy form. */
+              if (eol_style == svn_subst_eol_style_native)
+                eol_str = SVN_SUBST_NATIVE_EOL_STR;
+              else if (eol_style != svn_subst_eol_style_fixed
+                       && eol_style != svn_subst_eol_style_none)
+                return svn_error_create(SVN_ERR_IO_UNKNOWN_EOL, NULL, NULL);
+
+              /* Wrap file stream to detranslate into normal form. */
+              v_stream = svn_subst_stream_translated(v_stream,
+                                                     eol_str,
+                                                     TRUE,
+                                                     keywords,
+                                                     FALSE /* expand */,
+                                                     pool);
+            }
+          else if (need_translation)
+            {
+              /* Wrap base stream to translate into working copy form. */
               b_stream = svn_subst_stream_translated(b_stream, eol_str,
                                                      FALSE, keywords, TRUE,
                                                      pool);
@@ -319,9 +182,10 @@ compare_and_verify(svn_boolean_t *modified_p,
             {
               return svn_error_createf
                 (SVN_ERR_WC_CORRUPT_TEXT_BASE, NULL,
-                  _("Checksum mismatch indicates corrupt text base: '%s'\n"
-                    "   expected:  %s\n"
-                    "     actual:  %s\n"),
+                 apr_psprintf(pool, "%s\n%s\n%s\n",
+                              _("Checksum mismatch indicates corrupt text base: '%s'"),
+                              _("   expected:  %s"),
+                              _("     actual:  %s")),
                   svn_path_local_style(base_file, pool),
                   entry->checksum,
                   digest);
@@ -335,9 +199,8 @@ compare_and_verify(svn_boolean_t *modified_p,
                                            pool));
     }
 
-
-
   *modified_p = (! same);
+
   return SVN_NO_ERROR;
 }
 
@@ -499,11 +362,11 @@ svn_wc__text_modified_internal_p(svn_boolean_t *modified_p,
       tmp.working_size = finfo.size;
       tmp.text_time = finfo.mtime;
       SVN_ERR(svn_wc__entry_modify(adm_access,
-                                   svn_path_basename(filename, pool),
+                                   svn_dirent_basename(filename, pool),
                                    &tmp,
                                    SVN_WC__ENTRY_MODIFY_TEXT_TIME
                                    | SVN_WC__ENTRY_MODIFY_WORKING_SIZE,
-                                   TRUE, pool));
+                                   pool));
     }
 
   return SVN_NO_ERROR;
@@ -534,7 +397,7 @@ svn_wc_conflicted_p2(svn_boolean_t *text_conflicted_p,
 {
   svn_node_kind_t kind;
   const svn_wc_entry_t *entry;
-  const char* dir_path = svn_path_dirname(path, pool);
+  const char* dir_path = svn_dirent_dirname(path, pool);
 
   SVN_ERR(svn_wc_entry(&entry, path, adm_access, TRUE, pool));
 
@@ -553,21 +416,21 @@ svn_wc_conflicted_p2(svn_boolean_t *text_conflicted_p,
 
           if (entry->conflict_old)
             {
-              path = svn_path_join(dir_path, entry->conflict_old, pool);
+              path = svn_dirent_join(dir_path, entry->conflict_old, pool);
               SVN_ERR(svn_io_check_path(path, &kind, pool));
               *text_conflicted_p = (kind == svn_node_file);
             }
 
           if ((! *text_conflicted_p) && (entry->conflict_new))
             {
-              path = svn_path_join(dir_path, entry->conflict_new, pool);
+              path = svn_dirent_join(dir_path, entry->conflict_new, pool);
               SVN_ERR(svn_io_check_path(path, &kind, pool));
               *text_conflicted_p = (kind == svn_node_file);
             }
 
           if ((! *text_conflicted_p) && (entry->conflict_wrk))
             {
-              path = svn_path_join(dir_path, entry->conflict_wrk, pool);
+              path = svn_dirent_join(dir_path, entry->conflict_wrk, pool);
               SVN_ERR(svn_io_check_path(path, &kind, pool));
               *text_conflicted_p = (kind == svn_node_file);
             }
@@ -583,9 +446,9 @@ svn_wc_conflicted_p2(svn_boolean_t *text_conflicted_p,
         {
           /* A dir's .prej file is _inside_ the dir. */
           if (entry->kind == svn_node_dir)
-            path = svn_path_join(path, entry->prejfile, pool);
+            path = svn_dirent_join(path, entry->prejfile, pool);
           else
-            path = svn_path_join(dir_path, entry->prejfile, pool);
+            path = svn_dirent_join(dir_path, entry->prejfile, pool);
 
           SVN_ERR(svn_io_check_path(path, &kind, pool));
           *prop_conflicted_p = (kind == svn_node_file);
@@ -620,28 +483,28 @@ svn_wc_conflicted_p(svn_boolean_t *text_conflicted_p,
 
   if (entry->conflict_old)
     {
-      path = svn_path_join(dir_path, entry->conflict_old, pool);
+      path = svn_dirent_join(dir_path, entry->conflict_old, pool);
       SVN_ERR(svn_io_check_path(path, &kind, pool));
       *text_conflicted_p = (kind == svn_node_file);
     }
 
   if ((! *text_conflicted_p) && (entry->conflict_new))
     {
-      path = svn_path_join(dir_path, entry->conflict_new, pool);
+      path = svn_dirent_join(dir_path, entry->conflict_new, pool);
       SVN_ERR(svn_io_check_path(path, &kind, pool));
       *text_conflicted_p = (kind == svn_node_file);
     }
 
   if ((! *text_conflicted_p) && (entry->conflict_wrk))
     {
-      path = svn_path_join(dir_path, entry->conflict_wrk, pool);
+      path = svn_dirent_join(dir_path, entry->conflict_wrk, pool);
       SVN_ERR(svn_io_check_path(path, &kind, pool));
       *text_conflicted_p = (kind == svn_node_file);
     }
 
   if (entry->prejfile)
     {
-      path = svn_path_join(dir_path, entry->prejfile, pool);
+      path = svn_dirent_join(dir_path, entry->prejfile, pool);
       SVN_ERR(svn_io_check_path(path, &kind, pool));
       *prop_conflicted_p = (kind == svn_node_file);
     }
@@ -649,25 +512,22 @@ svn_wc_conflicted_p(svn_boolean_t *text_conflicted_p,
   return SVN_NO_ERROR;
 }
 
-
 
 svn_error_t *
-svn_wc_has_binary_prop(svn_boolean_t *has_binary_prop,
-                       const char *path,
-                       svn_wc_adm_access_t *adm_access,
-                       apr_pool_t *pool)
+svn_wc__marked_as_binary(svn_boolean_t *marked,
+                         const char *local_abspath,
+                         svn_wc__db_t *db,
+                         apr_pool_t *scratch_pool)
 {
   const svn_string_t *value;
-  apr_pool_t *subpool = svn_pool_create(pool);
 
-  SVN_ERR(svn_wc_prop_get(&value, SVN_PROP_MIME_TYPE, path, adm_access,
-                          subpool));
+  SVN_ERR(svn_wc__internal_propget(&value, SVN_PROP_MIME_TYPE, local_abspath,
+                                   db, scratch_pool, scratch_pool));
 
   if (value && (svn_mime_type_is_binary(value->data)))
-    *has_binary_prop = TRUE;
+    *marked = TRUE;
   else
-    *has_binary_prop = FALSE;
+    *marked = FALSE;
 
-  svn_pool_destroy(subpool);
   return SVN_NO_ERROR;
 }

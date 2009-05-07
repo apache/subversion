@@ -43,12 +43,12 @@
 #ifndef SVN_PATH_H
 #define SVN_PATH_H
 
-
+#include <apr.h>
 #include <apr_pools.h>
 #include <apr_tables.h>
 
+#include "svn_types.h"
 #include "svn_string.h"
-#include "svn_error.h"
 
 
 #ifdef __cplusplus
@@ -119,7 +119,13 @@ svn_path_join_many(apr_pool_t *pool, const char *base, ...);
  * The returned basename will be allocated in @a pool.
  *
  * @note If an empty string is passed, then an empty string will be returned.
+ *
+ * New code should use either svn_dirent_basename() (for local paths) or
+ * svn_uri_basename() (for urls and repository paths).
+ *
+ * @deprecated Provided for backward compatibility with the 1.6 API.
  */
+SVN_DEPRECATED
 char *
 svn_path_basename(const char *path, apr_pool_t *pool);
 
@@ -128,7 +134,13 @@ svn_path_basename(const char *path, apr_pool_t *pool);
  * returned unchanged.
  *
  * The returned dirname will be allocated in @a pool.
+ *
+ * New code should use either svn_dirent_dirname() (for local paths) or 
+ * svn_uri_dirname() (for urls and repository paths).
+ *
+ * @deprecated Provided for backward compatibility with the 1.6 API.
  */
+SVN_DEPRECATED
 char *
 svn_path_dirname(const char *path, apr_pool_t *pool);
 
@@ -195,7 +207,13 @@ svn_path_remove_components(svn_stringbuf_t *path, apr_size_t n);
  *             - <pre>"X:/"           ==>  "X:/" and "X:/"</pre>
  *             - <pre>"bar"           ==>  ""   and "bar"</pre>
  *             - <pre>""              ==>  ""   and ""</pre>
+ *
+ * New code should use either svn_dirent_split() (for local paths) or
+ * svn_uri_split() (for urls and repository paths).
+ *
+ * @deprecated Provided for backward compatibility with the 1.6 API.
  */
+SVN_DEPRECATED
 void
 svn_path_split(const char *path,
                const char **dirpath,
@@ -211,8 +229,8 @@ int
 svn_path_is_empty(const char *path);
 
 #ifndef SVN_DIRENT_URI_H
-/* This declaration has been moved to svn_dirent_uri.h, remains here only for
-   compatiblity reasons. */
+/* This declaration has been moved to svn_dirent_uri.h, and remains
+   here only for compatibility reasons. */
 svn_boolean_t
 svn_dirent_is_root(const char *dirent, apr_size_t len);
 #endif /* SVN_DIRENT_URI_H */
@@ -280,7 +298,10 @@ svn_path_get_absolute(const char **pabsolute,
  * directory, set @a *pdirectory to @a path, and @a *pfile to the
  * empty string.  If @a path does not exist it is treated as if it is
  * a file, since directories do not normally vanish.
+ *
+ * @deprecated Provided for backward compatibility with the 1.6 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_path_split_if_file(const char *path,
                        const char **pdirectory,
@@ -435,7 +456,7 @@ svn_path_is_dotpath_present(const char *path);
  *       in which case a pointer into @a path2 will be returned to
  *       identify the remainder path.
  *
- * ### todo: the ".." restriction is unfortunate, and would ideally
+ * ### @todo the ".." restriction is unfortunate, and would ideally
  * be lifted by making the implementation smarter.  But this is not
  * trivial: if the path is "../foo", how do you know whether or not
  * the current directory is named "foo" in its parent?
@@ -508,7 +529,7 @@ svn_path_uri_decode(const char *path, apr_pool_t *pool);
  * should not begin with '/', however; if it does, the behavior is
  * undefined.
  *
- * @a url need not be a canonical path; it may have a trailing '/'.
+ * @a url must be in canonical format; it may not have a trailing '/'.
  *
  * @note To add a component that is already URI-encoded, use
  *       <tt>svn_path_join(url, component, pool)</tt> instead.
@@ -522,7 +543,20 @@ svn_path_uri_decode(const char *path, apr_pool_t *pool);
  *
  *       We may implement that someday, which is why leading '/' is
  *       merely undefined right now.
+ *
+ * @since New in 1.6.
  */
+const char *
+svn_path_url_add_component2(const char *url,
+                            const char *component,
+                            apr_pool_t *pool);
+
+/** Like svn_path_url_add_component2, but allows path components that
+ * end with a trailing '/'
+ *
+ * @deprecated Provided for backward compatibility with the 1.5 API.
+ */
+SVN_DEPRECATED
 const char *
 svn_path_url_add_component(const char *url,
                            const char *component,

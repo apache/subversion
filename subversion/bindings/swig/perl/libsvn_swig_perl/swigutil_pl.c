@@ -16,6 +16,10 @@
  * ====================================================================
  */
 
+#include <apr.h>
+#include <apr_general.h>
+#include <apr_portable.h>
+
 #include <EXTERN.h>
 #include <perl.h>
 #include <XSUB.h>
@@ -24,10 +28,6 @@
 #ifdef WIN32
 #include <io.h>
 #endif
-
-#include <apr.h>
-#include <apr_general.h>
-#include <apr_portable.h>
 
 #include "svn_pools.h"
 #include "svn_opt.h"
@@ -826,6 +826,25 @@ svn_error_t *svn_swig_pl_thunk_log_receiver(void *baton,
                                svn_swig_pl_convert_hash(changed_paths, tinfo)
                                : &PL_sv_undef,
                                rev, author, date, msg, pool, POOLINFO);
+
+    return SVN_NO_ERROR;
+}
+
+svn_error_t * svn_swig_pl_thunk_client_diff_summarize_func(
+                     const svn_client_diff_summarize_t *diff,
+                     void *baton,
+                     apr_pool_t *pool)
+{
+    SV *func = baton;
+
+    if(!SvOK(func))
+    return SVN_NO_ERROR;
+
+    svn_swig_pl_callback_thunk(CALL_SV,
+                               func, NULL,
+                               "SS", diff,
+                               _SWIG_TYPE("svn_client_diff_summarize_t *"),
+                               pool, POOLINFO);
 
     return SVN_NO_ERROR;
 }

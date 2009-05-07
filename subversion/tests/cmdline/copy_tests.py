@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2008 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2009 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -18,7 +18,6 @@
 
 # General modules
 import stat, os, re, shutil
-from string import lower, upper
 
 # Our testing module
 import svntest
@@ -1600,7 +1599,11 @@ def url_to_non_existent_url_path(sbox):
 
   # Look for both possible versions of the error message, as the DAV
   # error is worded differently from that of other RA layers.
-  msg = ".*: (Path 'G(/C/E)?' not present|.*G(/C/E)?' path not found)"
+  msg = ".*: (" + \
+        "|".join(["Path 'G(/C/E)?' not present",
+                  ".*G(/C/E)?' path not found",
+                  "File not found.*'/G/C/E/I'",
+                  ]) + ")"
 
   # Expect failure on 'svn cp SRC DST' where one or more ancestor
   # directories of DST do not exist
@@ -1834,7 +1837,7 @@ def force_move(sbox):
   file_path = os.path.join(wc_dir, file_name)
 
   # modify the content
-  file_handle = file(file_path, "a")
+  file_handle = open(file_path, "a")
   file_handle.write("Added contents\n")
   file_handle.close()
   expected_file_content = [ "This is the file 'iota'.\n",
@@ -1842,7 +1845,7 @@ def force_move(sbox):
                           ]
 
   # check for the new content
-  file_handle = file(file_path, "r")
+  file_handle = open(file_path, "r")
   modified_file_content = file_handle.readlines()
   file_handle.close()
   if modified_file_content != expected_file_content:
@@ -1862,7 +1865,7 @@ def force_move(sbox):
   os.chdir(was_cwd)
 
   # check for the new content
-  file_handle = file(os.path.join(wc_dir, "dest"), "r")
+  file_handle = open(os.path.join(wc_dir, "dest"), "r")
   modified_file_content = file_handle.readlines()
   file_handle.close()
   # Error if we dont find the modified contents...
@@ -3992,9 +3995,9 @@ def change_case_of_hostname(input):
   m = re.match(r"^(.*://)([^/]*)(.*)", input)
   if m:
     scheme = m.group(1)
-    host = upper(m.group(2))
+    host = m.group(2).upper()
     if host == m.group(2):
-      host = lower(m.group(2))
+      host = m.group(2).lower()
 
     path = m.group(3)
 

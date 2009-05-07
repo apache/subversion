@@ -456,6 +456,7 @@ public class Info2 implements java.io.Serializable
     /**
      * @return The depth of the directory or <code>null</code> if the
      * item is a file.
+     * @since New in 1.5.
      */
     public int getDepth()
     {
@@ -464,8 +465,9 @@ public class Info2 implements java.io.Serializable
 
     /**
      * @return the tree conflict of which this node is a victim, or null if none
+     * @since New in 1.6.
      */
-    public ConflictDescriptor getTreeConflict()
+    public ConflictDescriptor getConflictDescriptor()
     {
         return treeConflict;
     }

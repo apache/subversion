@@ -69,28 +69,75 @@ class TestHarness:
     'Run all test programs given in LIST.'
     self._open_log('w')
     failed = 0
-    cnt = 0
-    for prog in list:
+    for cnt, prog in enumerate(list):
       failed = self._run_test(prog, cnt, len(list)) or failed
-      cnt += 1
-    self._open_log('r')
+
+    # Open the log in binary mode because it can contain binary data
+    # from diff_tests.py's testing of svnpatch. This may prevent
+    # readlines() from reading the whole log because it thinks it
+    # has encountered the EOF marker.
+    self._open_log('rb')
     log_lines = self.log.readlines()
+
     # Print summaries from least interesting to most interesting.
+    wimptag = ' [[WIMP: '
+    def printxfail(x):
+      wip = x.find(wimptag)
+      if 0 > wip:
+        sys.stdout.write(x)
+      else:
+        sys.stdout.write('%s\n       [[%s'
+                         % (x[:wip], x[wip + len(wimptag):]))
+    passed = [x for x in log_lines if x[:6] == 'PASS: ']
     skipped = [x for x in log_lines if x[:6] == 'SKIP: ']
     if skipped:
       print('At least one test was SKIPPED, checking ' + self.logfile)
       for x in skipped:
         sys.stdout.write(x)
     xfailed = [x for x in log_lines if x[:6] == 'XFAIL:']
+    passwimp = [x for x in log_lines
+                if x[:6] == 'XFAIL:' and 0 <= x.find(wimptag)]
     if xfailed:
       print('At least one test XFAILED, checking ' + self.logfile)
       for x in xfailed:
-        sys.stdout.write(x)
-    if failed:
+        printxfail(x)
+    failed_list = [x for x in log_lines if x[:6] == 'FAIL: ']
+    if failed_list:
       print('At least one test FAILED, checking ' + self.logfile)
-      for x in log_lines:
-        if x[:6] in ('FAIL: ', 'XPASS:'):
-          sys.stdout.write(x)
+      for x in failed_list:
+        sys.stdout.write(x)
+    xpassed = [x for x in log_lines if x[:6] == 'XPASS:']
+    failwimp = [x for x in log_lines
+                if x[:6] == 'XPASS:' and 0 <= x.find(wimptag)]
+    if xpassed:
+      print('At least one test XPASSED, checking ' + self.logfile)
+      for x in xpassed:
+        printxfail(x)
+    if passed or skipped or xfailed or failed_list or xpassed:
+      print('Summary of test results:')
+      if passed:
+        print('  %d test%s PASSED'
+              % (len(passed), 's'*min(len(passed) - 1, 1)))
+      if skipped:
+        print('  %d test%s SKIPPED'
+              % (len(skipped), 's'*min(len(skipped) - 1, 1)))
+      if xfailed:
+        if passwimp:
+          print('  %d test%s XFAILED (%d WORK-IN-PROGRESS)'
+                % (len(xfailed), 's'*min(len(xfailed) - 1, 1), len(passwimp)))
+        else:
+          print('  %d test%s XFAILED'
+                % (len(xfailed), 's'*min(len(xfailed) - 1, 1)))
+      if failed_list:
+        print('  %d test%s FAILED'
+              % (len(failed_list), 's'*min(len(failed_list) - 1, 1)))
+      if xpassed:
+        if failwimp:
+          print('  %d test%s XPASSED (%d WORK-IN-PROGRESS)'
+                % (len(xpassed), 's'*min(len(xpassed) - 1, 1), len(failwimp)))
+        else:
+          print('  %d test%s XPASSED'
+                % (len(xpassed), 's'*min(len(xpassed) - 1, 1)))
     self._close_log()
     return failed
 

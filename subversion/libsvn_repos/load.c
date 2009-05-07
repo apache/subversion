@@ -1,7 +1,7 @@
 /* load.c --- parsing a 'dumpfile'-formatted stream.
  *
  * ====================================================================
- * Copyright (c) 2000-2006, 2008 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006, 2008-2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -1002,10 +1002,11 @@ maybe_add_with_history(struct node_baton *nb,
             return svn_error_createf
               (SVN_ERR_CHECKSUM_MISMATCH,
                NULL,
-               _("Copy source checksum mismatch on copy from '%s'@%ld\n"
-                 " to '%s' in rev based on r%ld:\n"
-                 "   expected:  %s\n"
-                 "     actual:  %s\n"),
+               apr_psprintf(pool, "%s:\n%s\n%s\n",
+                            _("Copy source checksum mismatch on copy from '%s'@%ld\n"
+                              "to '%s' in rev based on r%ld"),
+                            _("   expected:  %s"),
+                            _("     actual:  %s")),
                nb->copyfrom_path, src_rev,
                nb->path, rb->rev,
                svn_checksum_to_cstring_display(nb->copy_source_checksum, pool),
@@ -1287,7 +1288,7 @@ close_revision(void *baton)
       if (err)
         {
           svn_error_clear(svn_fs_abort_txn(rb->txn, rb->pool));
-          return err;
+          return svn_error_return(err);
         }
     }
 
@@ -1298,7 +1299,7 @@ close_revision(void *baton)
       if (conflict_msg)
         return svn_error_quick_wrap(err, conflict_msg);
       else
-        return err;
+        return svn_error_return(err);
     }
 
   /* Run post-commit hook, if so commanded.  */

@@ -17,11 +17,7 @@
  * ====================================================================
  */
 
-/* ==================================================================== */
-
-
-
-/*** Includes. ***/
+#include <apr_xlate.h>  /* for APR_LOCALE_CHARSET */
 
 #define APR_WANT_STDIO
 #define APR_WANT_STRFUNC
@@ -31,6 +27,7 @@
 #include "svn_client.h"
 #include "svn_types.h"
 #include "svn_pools.h"
+
 #include "cl.h"
 
 #include "svn_private_config.h"
@@ -188,7 +185,7 @@ open_editor(svn_boolean_t *performed_edit,
           svn_error_clear(err);
         }
       else if (err)
-        return err;
+        return svn_error_return(err);
       else
         *performed_edit = TRUE;
     }
@@ -219,7 +216,7 @@ launch_resolver(svn_boolean_t *performed_edit,
 
   err = svn_cl__merge_file_externally(desc->base_file, desc->their_file,
                                       desc->my_file, desc->merged_file,
-                                      b->config, pool);
+                                      desc->path, b->config, NULL, pool);
   if (err && err->apr_err == SVN_ERR_CL_NO_EXTERNAL_MERGE_TOOL)
     {
       SVN_ERR(svn_cmdline_fprintf(stderr, pool, "%s\n",
@@ -235,7 +232,7 @@ launch_resolver(svn_boolean_t *performed_edit,
       svn_error_clear(err);
     }
   else if (err)
-    return err;
+    return svn_error_return(err);
   else if (performed_edit)
     *performed_edit = TRUE;
 
@@ -316,7 +313,7 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
               b->external_failed = TRUE;
             }
           else if (err)
-            return err;
+            return svn_error_return(err);
           (*result)->choice = svn_wc_conflict_choose_merged;
           return SVN_NO_ERROR;
         }
@@ -326,6 +323,8 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
       if (desc->base_file && desc->their_file
           && desc->my_file && desc->merged_file)
         {
+          svn_boolean_t remains_in_conflict;
+
           if (b->external_failed)
             {
               (*result)->choice = svn_wc_conflict_choose_postpone;
@@ -336,7 +335,9 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
                                               desc->their_file,
                                               desc->my_file,
                                               desc->merged_file,
+                                              desc->path,
                                               b->config,
+                                              &remains_in_conflict,
                                               pool);
           if (err && err->apr_err == SVN_ERR_CL_NO_EXTERNAL_MERGE_TOOL)
             {
@@ -344,8 +345,8 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
                                           err->message ? err->message :
                                           _("No merge tool found;"
                                             " leaving all conflicts.")));
-              svn_error_clear(err);
               b->external_failed = TRUE;
+              return svn_error_return(err);
             }
           else if (err && err->apr_err == SVN_ERR_EXTERNAL_PROGRAM)
             {
@@ -353,13 +354,16 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
                                           err->message ? err->message :
                                           _("Error running merge tool;"
                                             " leaving all conflicts.")));
-              svn_error_clear(err);
               b->external_failed = TRUE;
+              return svn_error_return(err);
             }
           else if (err)
-            return err;
+            return svn_error_return(err);
 
-          (*result)->choice = svn_wc_conflict_choose_merged;
+          if (remains_in_conflict)
+            (*result)->choice = svn_wc_conflict_choose_postpone;
+          else
+            (*result)->choice = svn_wc_conflict_choose_merged;
           return SVN_NO_ERROR;
         }
       /* else, fall through to prompting. */

@@ -243,7 +243,8 @@ svn_cache__create_memcache(svn_cache__t **cache_p,
 
   wrapper->vtable = &memcache_vtable;
   wrapper->cache_internal = cache;
-  wrapper->error_handler = wrapper->error_baton = NULL;
+  wrapper->error_handler = 0;
+  wrapper->error_baton = 0;
 
   *cache_p = wrapper;
   return SVN_NO_ERROR;

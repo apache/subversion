@@ -51,6 +51,8 @@ class SubversionMergeinfoTestCase(unittest.TestCase):
     self.rev = fs.youngest_rev(self.fs)
 
   def tearDown(self):
+    self.fs = None
+    self.repos = None
     if os.path.exists(REPOS_PATH):
       repos.delete(REPOS_PATH)
 
@@ -132,20 +134,16 @@ class SubversionMergeinfoTestCase(unittest.TestCase):
                       "Missing revision range 'non-inheritable' flag")
 
   def compare_mergeinfo_catalogs(self, catalog1, catalog2):
-    keys1 = list(catalog1.keys())
-    keys1.sort()
-    keys2 = list(catalog2.keys())
-    keys2.sort()
+    keys1 = sorted(catalog1.keys())
+    keys2 = sorted(catalog2.keys())
     self.assertEqual(keys1, keys2)
 
     for k in catalog1.keys():
         self.compare_mergeinfos(catalog1[k], catalog2[k])
 
   def compare_mergeinfos(self, mergeinfo1, mergeinfo2):
-    keys1 = list(mergeinfo1.keys())
-    keys1.sort()
-    keys2 = list(mergeinfo2.keys())
-    keys2.sort()
+    keys1 = sorted(mergeinfo1.keys())
+    keys2 = sorted(mergeinfo2.keys())
     self.assertEqual(keys1, keys2)
 
     for k in mergeinfo1.keys():

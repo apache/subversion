@@ -5,7 +5,7 @@
  *          specific to working copies.
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -19,15 +19,16 @@
  * ====================================================================
  */
 
-
-
 #include <apr_pools.h>
 #include <apr_file_io.h>
+
 #include "svn_io.h"
 #include "svn_types.h"
 #include "svn_error.h"
 #include "svn_dirent_uri.h"
 #include "svn_path.h"
+#include "svn_props.h"
+
 #include "wc.h"   /* just for prototypes of things in this .c file */
 #include "private/svn_wc_private.h"
 
@@ -39,10 +40,8 @@ svn_wc__ensure_directory(const char *path,
                          apr_pool_t *pool)
 {
   svn_node_kind_t kind;
-  svn_error_t *err = svn_io_check_path(path, &kind, pool);
 
-  if (err)
-    return err;
+  SVN_ERR(svn_io_check_path(path, &kind, pool));
 
   if (kind != svn_node_none && kind != svn_node_dir)
     {
@@ -56,8 +55,7 @@ svn_wc__ensure_directory(const char *path,
   else if (kind == svn_node_none)
     {
       /* The dir doesn't exist, and it's our job to change that. */
-
-      err = svn_io_dir_make(path, APR_OS_DEFAULT, pool);
+      svn_error_t *err = svn_io_dir_make(path, APR_OS_DEFAULT, pool);
 
       if (err && !APR_STATUS_IS_ENOENT(err->apr_err))
         {
@@ -73,7 +71,7 @@ svn_wc__ensure_directory(const char *path,
           /* Okay, so the problem is a missing intermediate
              directory.  We don't know which one, so we recursively
              back up one level and try again. */
-          const char *shorter = svn_path_dirname(path, pool);
+          const char *shorter = svn_dirent_dirname(path, pool);
 
           /* Clear the error. */
           svn_error_clear(err);
@@ -86,17 +84,12 @@ svn_wc__ensure_directory(const char *path,
             }
           else  /* We have a valid path, so recursively ensure it. */
             {
-              err = svn_wc__ensure_directory(shorter, pool);
-
-              if (err)
-                return (err);
-              else
-                return svn_wc__ensure_directory(path, pool);
+              SVN_ERR(svn_wc__ensure_directory(shorter, pool));
+              return svn_wc__ensure_directory(path, pool);
             }
         }
 
-      if (err)
-        return err;
+      SVN_ERR(err);
     }
   else  /* No problem, the dir already existed, so just leave. */
     SVN_ERR_ASSERT(kind == svn_node_dir);
@@ -116,19 +109,25 @@ svn_wc_create_notify(const char *path,
                      svn_wc_notify_action_t action,
                      apr_pool_t *pool)
 {
-  svn_wc_notify_t *ret = apr_palloc(pool, sizeof(*ret));
+  svn_wc_notify_t *ret = apr_pcalloc(pool, sizeof(*ret));
   ret->path = path;
   ret->action = action;
   ret->kind = svn_node_unknown;
-  ret->mime_type = NULL;
-  ret->lock = NULL;
-  ret->err = SVN_NO_ERROR;
   ret->content_state = ret->prop_state = svn_wc_notify_state_unknown;
   ret->lock_state = svn_wc_notify_lock_state_unknown;
   ret->revision = SVN_INVALID_REVNUM;
-  ret->changelist_name = NULL;
-  ret->merge_range = NULL;
-  ret->path_prefix = NULL;
+  ret->old_revision = SVN_INVALID_REVNUM;
+
+  return ret;
+}
+
+svn_wc_notify_t *
+svn_wc_create_notify_url(const char *url,
+                         svn_wc_notify_action_t action,
+                         apr_pool_t *pool)
+{
+  svn_wc_notify_t *ret = svn_wc_create_notify(".", action, pool);
+  ret->url = url;
 
   return ret;
 }
@@ -165,8 +164,14 @@ svn_wc_dup_notify(const svn_wc_notify_t *notify,
     ret->changelist_name = apr_pstrdup(pool, ret->changelist_name);
   if (ret->merge_range)
     ret->merge_range = svn_merge_range_dup(ret->merge_range, pool);
+  if (ret->url)
+    ret->url = apr_pstrdup(pool, ret->url);
   if (ret->path_prefix)
     ret->path_prefix = apr_pstrdup(pool, ret->path_prefix);
+  if (ret->prop_name)
+    ret->prop_name = apr_pstrdup(pool, ret->prop_name);
+  if (ret->rev_props)
+    ret->rev_props = svn_prop_hash_dup(ret->rev_props, pool);
 
   return ret;
 }
@@ -255,7 +260,7 @@ svn_wc__path_switched(const char *wc_path,
       return SVN_NO_ERROR;
     }
 
-  wc_parent_path = svn_path_dirname(wc_path, pool);
+  wc_parent_path = svn_dirent_dirname(wc_path, pool);
   err = svn_wc_adm_open3(&parent_adm_access, NULL, wc_parent_path, FALSE, 0,
                          NULL, NULL, pool);
 
@@ -286,8 +291,8 @@ svn_wc__path_switched(const char *wc_path,
     }
 
   parent_child_url
-    = svn_path_url_add_component(parent_entry->url,
-                                 svn_path_basename(wc_path, pool), pool);
+    = svn_path_url_add_component2(parent_entry->url,
+                                  svn_dirent_basename(wc_path, pool), pool);
   *switched = strcmp(parent_child_url, entry->url) != 0;
 
   return SVN_NO_ERROR;

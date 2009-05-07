@@ -43,7 +43,8 @@ Shells That Treat '^' Specially
 -------------------------------
 
 ISSUE:      zsh with 'setopt extendedglob' enabled
-WORKAROUND: quote it in single quotes ('^')
+WORKAROUND: quote it in single quotes:  '^/'
+WORKAROUND: escape it with a backslash: \^/
 
 ISSUE:      cmd.exe
-WORKAROUND: Double it (^^) 
+WORKAROUND: Double it: ^^/

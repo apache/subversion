@@ -4,7 +4,7 @@
 #
 ######################################################################
 #
-# Copyright (c) 2000-2004, 2008 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2004, 2008-2009 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -280,7 +280,7 @@ class DiffEditor(delta.Editor):
     differ = fs.FileDiff(self.base_root, base_path, self.root,
                          path, diffoptions=args)
     pobj = differ.get_pipe()
-    while 1:
+    while True:
       line = pobj.readline()
       if not line:
         break

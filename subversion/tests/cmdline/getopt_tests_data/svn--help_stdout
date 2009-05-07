@@ -30,6 +30,7 @@ Available subcommands:
    mergeinfo
    mkdir
    move (mv, rename, ren)
+   patch
    propdel (pdel, pd)
    propedit (pedit, pe)
    propget (pget, pg)
@@ -42,6 +43,7 @@ Available subcommands:
    switch (sw)
    unlock
    update (up)
+   upgrade
 
 Subversion is a tool for version control.
 For additional information, see http://subversion.tigris.org/

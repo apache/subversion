@@ -22,10 +22,9 @@
 #ifndef SVN_MD5_H
 #define SVN_MD5_H
 
-#include <apr_pools.h>
-#include <apr_md5.h>
-#include "svn_error.h"
-#include "svn_pools.h"
+#include <apr_pools.h>  /* for apr_pool_t */
+
+#include "svn_types.h"  /* for svn_boolean_t */
 
 #ifdef __cplusplus
 extern "C" {

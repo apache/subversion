@@ -13,20 +13,26 @@
 #                   or
 #   $ ./server-version.py https://svn.collab.net/
 #
-# Python 1.5.2 or later is required.
-#
 
 import sys
-import httplib
-import urlparse
+try:
+  # Python >=3.0
+  from http.client import HTTPConnection as http_client_HTTPConnection
+  from http.client import HTTPSConnection as http_client_HTTPSConnection
+  from urllib.parse import urlparse as urllib_parse_urlparse
+except ImportError:
+  # Python <3.0
+  from httplib import HTTPConnection as http_client_HTTPConnection
+  from httplib import HTTPSConnection as http_client_HTTPSConnection
+  from urlparse import urlparse as urllib_parse_urlparse
 
 
 def print_version(url):
-  scheme, netloc, path, params, query, fragment = urlparse.urlparse(url)
+  scheme, netloc, path, params, query, fragment = urllib_parse_urlparse(url)
   if scheme == 'http':
-    conn = httplib.HTTPConnection(netloc)
+    conn = http_client_HTTPConnection(netloc)
   elif scheme == 'https':
-    conn = httplib.HTTPSConnection(netloc)
+    conn = http_client_HTTPSConnection(netloc)
   else:
     print('ERROR: this script only supports "http" and "https" URLs')
     sys.exit(1)

@@ -41,7 +41,7 @@ if options.directory:
 if options.message:
     commit_message = options.message
 elif options.file:
-    commit_message = file(options.file).read()
+    commit_message = open(options.file).read()
 else:
     commit_message = "Move project into new directory '%s'." % new_dir_name
 

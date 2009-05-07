@@ -38,6 +38,8 @@
 #include "svn_path.h"
 #include "svn_ctype.h"
 
+#include "private/svn_utf_private.h"
+
 /* A token, i.e. a line read from a file. */
 typedef struct svn_diff__file_token_t
 {
@@ -369,7 +371,11 @@ datasource_get_next_token(apr_uint32_t *hash, void **token, void *baton,
                                  &file_baton->normalize_state[idx],
                                  curp, file_baton->options);
 
-      file_token->norm_offset = file_token->offset + (c - curp);
+      file_token->norm_offset = file_token->offset;
+      if (file_token->length == 0) 
+        /* move past leading ignored characters */
+        file_token->norm_offset += (c - curp);
+
       file_token->length += length;
 
       *hash = svn_diff__adler32(h, c, length);
@@ -1058,6 +1064,7 @@ output_unified_diff_modified(void *baton,
       if (output_baton->show_c_function)
         {
           int p;
+          const char *invalid_character;
 
           /* Save the extra context for later use.
            * Note that the last byte of the hunk_extra_context array is never
@@ -1073,6 +1080,14 @@ output_unified_diff_modified(void *baton,
                  && svn_ctype_isspace(output_baton->hunk_extra_context[p - 1]))
             {
               output_baton->hunk_extra_context[--p] = '\0';
+            }
+          invalid_character =
+            svn_utf__last_valid(output_baton->hunk_extra_context,
+                                SVN_DIFF__EXTRA_CONTEXT_LENGTH);
+          for (p = invalid_character - output_baton->hunk_extra_context;
+               p < SVN_DIFF__EXTRA_CONTEXT_LENGTH; p++)
+            {
+              output_baton->hunk_extra_context[p] = '\0';
             }
         }
     }

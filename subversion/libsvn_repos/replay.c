@@ -191,7 +191,7 @@ add_subdir(svn_fs_root_t *source_root,
 
   for (hi = apr_hash_first(pool, dirents); hi; hi = apr_hash_next(hi))
     {
-      svn_fs_path_change_t *change;
+      svn_fs_path_change2_t *change;
       svn_boolean_t readable = TRUE;
       svn_fs_dirent_t *dent;
       const char *new_path;
@@ -316,13 +316,11 @@ path_driver_cb_func(void **dir_baton,
   const svn_delta_editor_t *editor = cb->editor;
   void *edit_baton = cb->edit_baton;
   svn_fs_root_t *root = cb->root;
-  svn_fs_path_change_t *change;
+  svn_fs_path_change2_t *change;
   svn_boolean_t do_add = FALSE, do_delete = FALSE;
-  svn_node_kind_t kind;
   void *file_baton = NULL;
-  const char *copyfrom_path = NULL;
-  const char *real_copyfrom_path = NULL;
   svn_revnum_t copyfrom_rev;
+  const char *copyfrom_path;
   svn_boolean_t src_readable = TRUE;
   svn_fs_root_t *source_root = cb->compare_root;
   const char *source_path = source_root ? path : NULL;
@@ -376,8 +374,10 @@ path_driver_cb_func(void **dir_baton,
   /* Fetch the node kind if it makes sense to do so. */
   if (! do_delete || do_add)
     {
-      SVN_ERR(svn_fs_check_path(&kind, root, path, pool));
-      if ((kind != svn_node_dir) && (kind != svn_node_file))
+      if (change->node_kind == svn_node_unknown)
+        SVN_ERR(svn_fs_check_path(&(change->node_kind), root, path, pool));
+      if ((change->node_kind != svn_node_dir) &&
+          (change->node_kind != svn_node_file))
         return svn_error_createf
           (SVN_ERR_FS_NOT_FOUND, NULL,
            _("Filesystem path '%s' is neither a file nor a directory"), path);
@@ -388,8 +388,15 @@ path_driver_cb_func(void **dir_baton,
     {
       svn_fs_root_t *copyfrom_root = NULL;
       /* Was this node copied? */
-      SVN_ERR(svn_fs_copied_from(&copyfrom_rev, &copyfrom_path,
-                                 root, path, pool));
+      if (! change->copyfrom_known)
+        {
+          SVN_ERR(svn_fs_copied_from(&(change->copyfrom_rev),
+                                     &(change->copyfrom_path),
+                                     root, path, pool));
+          change->copyfrom_known = TRUE;
+        }
+      copyfrom_rev = change->copyfrom_rev;
+      copyfrom_path = change->copyfrom_path;
 
       if (copyfrom_path && SVN_IS_VALID_REVNUM(copyfrom_rev))
         {
@@ -405,8 +412,6 @@ path_driver_cb_func(void **dir_baton,
             }
         }
 
-      /* Save away the copyfrom path in case we null it out below. */
-      real_copyfrom_path = copyfrom_path;
       /* If we have a copyfrom path, and we can't read it or we're just
          ignoring it, or the copyfrom rev is prior to the low water mark
          then we just null them out and do a raw add with no history at
@@ -422,15 +427,15 @@ path_driver_cb_func(void **dir_baton,
         }
 
       /* Do the right thing based on the path KIND. */
-      if (kind == svn_node_dir)
+      if (change->node_kind == svn_node_dir)
         {
           /* If this is a copy, but we can't represent it as such,
              then we just do a recursive add of the source path
              contents. */
-          if (real_copyfrom_path && ! copyfrom_path)
+          if (change->copyfrom_path && ! copyfrom_path)
             {
               SVN_ERR(add_subdir(copyfrom_root, root, editor, edit_baton,
-                                 path, parent_baton, real_copyfrom_path,
+                                 path, parent_baton, change->copyfrom_path,
                                  cb->authz_read_func, cb->authz_read_baton,
                                  cb->changed_paths, pool, dir_baton));
             }
@@ -453,7 +458,7 @@ path_driver_cb_func(void **dir_baton,
           /* If it is a directory, make sure descendants get the correct
              delta source by remembering that we are operating inside a
              (possibly nested) copy operation. */
-          if (kind == svn_node_dir)
+          if (change->node_kind == svn_node_dir)
             {
               struct copy_info *info = &APR_ARRAY_PUSH(cb->copies,
                                                        struct copy_info);
@@ -473,7 +478,7 @@ path_driver_cb_func(void **dir_baton,
           /* If an ancestor is added with history, we need to forget about
              that here, go on with life and repeat all the mistakes of our
              past... */
-          if (kind == svn_node_dir && cb->copies->nelts > 0)
+          if (change->node_kind == svn_node_dir && cb->copies->nelts > 0)
             {
               struct copy_info *info = &APR_ARRAY_PUSH(cb->copies,
                                                        struct copy_info);
@@ -489,7 +494,7 @@ path_driver_cb_func(void **dir_baton,
     {
       /* Do the right thing based on the path KIND (and the presence
          of a PARENT_BATON). */
-      if (kind == svn_node_dir)
+      if (change->node_kind == svn_node_dir)
         {
           if (parent_baton)
             {
@@ -560,10 +565,10 @@ path_driver_cb_func(void **dir_baton,
               for (i = 0; i < prop_diffs->nelts; ++i)
                 {
                   svn_prop_t *pc = &APR_ARRAY_IDX(prop_diffs, i, svn_prop_t);
-                   if (kind == svn_node_dir)
+                   if (change->node_kind == svn_node_dir)
                      SVN_ERR(editor->change_dir_prop(*dir_baton, pc->name,
                                                      pc->value, pool));
-                   else if (kind == svn_node_file)
+                   else if (change->node_kind == svn_node_file)
                      SVN_ERR(editor->change_file_prop(file_baton, pc->name,
                                                       pc->value, pool));
                 }
@@ -572,10 +577,10 @@ path_driver_cb_func(void **dir_baton,
             {
               /* Just do a dummy prop change to signal that there are *any*
                  propmods. */
-              if (kind == svn_node_dir)
+              if (change->node_kind == svn_node_dir)
                 SVN_ERR(editor->change_dir_prop(*dir_baton, "", NULL,
                                                 pool));
-              else if (kind == svn_node_file)
+              else if (change->node_kind == svn_node_file)
                 SVN_ERR(editor->change_file_prop(file_baton, "", NULL,
                                                  pool));
             }
@@ -587,8 +592,8 @@ path_driver_cb_func(void **dir_baton,
          aren't allowed to see" case since otherwise the caller will
          have no way to actually get the new file's contents, which
          they are apparently allowed to see. */
-      if (kind == svn_node_file
-          && (change->text_mod || (real_copyfrom_path && ! copyfrom_path)))
+      if (change->node_kind == svn_node_file
+          && (change->text_mod || (change->copyfrom_path && ! copyfrom_path)))
         {
           svn_txdelta_window_handler_t delta_handler;
           void *delta_handler_baton;
@@ -660,7 +665,7 @@ svn_repos_replay2(svn_fs_root_t *root,
   int base_path_len;
 
   /* Fetch the paths changed under ROOT. */
-  SVN_ERR(svn_fs_paths_changed(&fs_changes, root, pool));
+  SVN_ERR(svn_fs_paths_changed2(&fs_changes, root, pool));
 
   if (! base_path)
     base_path = "";
@@ -680,7 +685,7 @@ svn_repos_replay2(svn_fs_root_t *root,
       void *val;
       apr_ssize_t keylen;
       const char *path;
-      svn_fs_path_change_t *change;
+      svn_fs_path_change2_t *change;
       svn_boolean_t allowed = TRUE;
 
       apr_hash_this(hi, &key, &keylen, &val);

@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -17,13 +17,7 @@
  *
  * @file svn_client.h
  * @brief Subversion's client library
- */
-
-
-
-/*** Includes ***/
-
-/*
+ *
  * Requires:  The working copy library and repository access library.
  * Provides:  Broad wrappers around working copy library functionality.
  * Used By:   Client programs.
@@ -32,17 +26,22 @@
 #ifndef SVN_CLIENT_H
 #define SVN_CLIENT_H
 
+#include <apr.h>
+#include <apr_pools.h>
+#include <apr_hash.h>
 #include <apr_tables.h>
+#include <apr_getopt.h>
+#include <apr_file_io.h>
+#include <apr_time.h>
 
 #include "svn_types.h"
-#include "svn_wc.h"
 #include "svn_string.h"
-#include "svn_error.h"
+#include "svn_wc.h"
 #include "svn_opt.h"
 #include "svn_version.h"
 #include "svn_ra.h"
 #include "svn_diff.h"
-
+#include "svn_auth.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -410,7 +409,7 @@ typedef struct svn_client_commit_info_t
 
 /** The commit candidate structure.  In order to avoid backwards
  * compatibility problems clients should use
- * svn_client_commit_item_create2() to allocate and initialize this
+ * svn_client_commit_item3_create() to allocate and initialize this
  * structure instead of doing so themselves.
  *
  * @since New in 1.5.
@@ -539,7 +538,7 @@ typedef struct svn_client_commit_item_t
  * @since New in 1.6.
  */
 svn_client_commit_item3_t *
-svn_client_commit_item_create2(apr_pool_t *pool);
+svn_client_commit_item3_create(apr_pool_t *pool);
 
 /** Like svn_client_commit_item_create2() but with a stupid "const"
  * qualifier on the returned structure, and it returns an error that
@@ -663,21 +662,42 @@ typedef svn_error_t *(*svn_client_get_commit_log_t)
  * @{
  */
 
-/** Callback type used by svn_client_blame4() to notify the caller
+/** Callback type used by svn_client_blame5() to notify the caller
  * that line @a line_no of the blamed file was last changed in
  * @a revision by @a author on @a date, and that the contents were
  * @a line.
  *
  * If svn_client_blame4() was called with @a include_merged_revisions set to
- * TRUE, @a merged_revision, @a merged_author, @a merged_date, and
- * @a merged_path will be set, otherwise they will be NULL.  @a merged_path
- * will be set to the absolute repository path.
+ * TRUE, @a merged_revision, @a merged_rev_props and @a merged_path will be
+ * set, otherwise they will be NULL. @a merged_path will be set to the 
+ * absolute repository path.
  *
  * All allocations should be performed in @a pool.
  *
  * @note If there is no blame information for this line, @a revision will be
- * invalid and @a author and @a date will be NULL.
+ * invalid and @a rev_props will be NULL. In this case @a local_change
+ * will be true if the reason there is no blame information is that the line
+ * was modified locally, In all other cases @a local_change will be false.
  *
+ * @since New in 1.7.
+ */
+typedef svn_error_t *(*svn_client_blame_receiver3_t)
+  (void *baton,
+   apr_int64_t line_no,
+   svn_revnum_t revision,
+   apr_hash_t *rev_props,
+   svn_revnum_t merged_revision,
+   apr_hash_t *merged_rev_props,
+   const char *merged_path,
+   const char *line,
+   svn_boolean_t local_change,
+   apr_pool_t *pool);
+
+/**
+ * Similar to @c svn_client_blame_receiver3_t, but with separate revision
+ * properties and without information about local_only changes
+ *
+ * @deprecated Provided for backward compatibility with the 1.6 API.
  *
  * @since New in 1.5.
  */
@@ -1814,8 +1834,33 @@ svn_client_commit(svn_client_commit_info_t **commit_info_p,
  * it's a member of one of those changelists.  If @a changelists is
  * empty (or altogether @c NULL), no changelist filtering occurs.
  *
- * @since New in 1.6.
+ * All temporary allocations are performed in @a scratch_pool.
+ *
+ * @since New in 1.7.
  */
+svn_error_t *
+svn_client_status5(svn_revnum_t *result_rev,
+                   const char *path,
+                   const svn_opt_revision_t *revision,
+                   svn_wc_status_func4_t status_func,
+                   void *status_baton,
+                   svn_depth_t depth,
+                   svn_boolean_t get_all,
+                   svn_boolean_t update,
+                   svn_boolean_t no_ignore,
+                   svn_boolean_t ignore_externals,
+                   const apr_array_header_t *changelists,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *scratch_pool);
+
+/**
+ * Same as svn_client_status5(), but using @c svn_wc_status_func3_t
+ * instead of @c svn_wc_status_func4_t.
+ *
+ * @since New in 1.6.
+ * @deprecated Provided for backward compatibility with the 1.6 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_status4(svn_revnum_t *result_rev,
                    const char *path,
@@ -2104,8 +2149,31 @@ svn_client_log(const apr_array_header_t *targets,
  *
  * Use @a pool for any temporary allocation.
  *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_client_blame5(const char *path_or_url,
+                  const svn_opt_revision_t *peg_revision,
+                  const svn_opt_revision_t *start,
+                  const svn_opt_revision_t *end,
+                  const svn_diff_file_options_t *diff_options,
+                  svn_boolean_t ignore_mime_type,
+                  svn_boolean_t include_merged_revisions,
+                  svn_client_blame_receiver3_t receiver,
+                  void *receiver_baton,
+                  svn_client_ctx_t *ctx,
+                  apr_pool_t *pool);
+
+
+/**
+ * Similar to svn_client_blame5(), but with @c svn_client_blame_receiver3_t 
+ * as the receiver.
+ *
+ * @deprecated Provided for backwards compatibility with the 1.6 API.
+ *
  * @since New in 1.5.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_blame4(const char *path_or_url,
                   const svn_opt_revision_t *peg_revision,
@@ -2248,11 +2316,41 @@ svn_client_blame(const char *path_or_url,
  * @note @a header_encoding doesn't affect headers generated by external
  * diff programs.
  *
+ * @a svnpatch_format set to @c TRUE enables the svnpatch format diff.
+ *
  * @note @a relative_to_dir doesn't affect the path index generated by
  * external diff programs.
  *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_client_diff5(const apr_array_header_t *diff_options,
+                 const char *path1,
+                 const svn_opt_revision_t *revision1,
+                 const char *path2,
+                 const svn_opt_revision_t *revision2,
+                 const char *relative_to_dir,
+                 svn_depth_t depth,
+                 svn_boolean_t ignore_ancestry,
+                 svn_boolean_t no_diff_deleted,
+                 svn_boolean_t ignore_content_type,
+                 svn_boolean_t svnpatch_format,
+                 const char *header_encoding,
+                 apr_file_t *outfile,
+                 apr_file_t *errfile,
+                 const apr_array_header_t *changelists,
+                 svn_client_ctx_t *ctx,
+                 apr_pool_t *pool);
+
+
+/**
+ * Similar to svn_client_diff5(), but with @a svnpatch_format set to FALSE.
+ *
+ * @deprecated Provided for backward compatibility with the 1.6 API.
+ *
  * @since New in 1.5.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_diff4(const apr_array_header_t *diff_options,
                  const char *path1,
@@ -2352,13 +2450,42 @@ svn_client_diff(const apr_array_header_t *diff_options,
  * be either a working-copy path or URL.
  *
  * If @a peg_revision is @c svn_opt_revision_unspecified, behave
- * identically to svn_client_diff4(), using @a path for both of that
+ * identically to svn_client_diff5(), using @a path for both of that
  * function's @a path1 and @a path2 argments.
  *
- * All other options are handled identically to svn_client_diff4().
+ * All other options are handled identically to svn_client_diff5().
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_client_diff_peg5(const apr_array_header_t *diff_options,
+                     const char *path,
+                     const svn_opt_revision_t *peg_revision,
+                     const svn_opt_revision_t *start_revision,
+                     const svn_opt_revision_t *end_revision,
+                     const char *relative_to_dir,
+                     svn_depth_t depth,
+                     svn_boolean_t ignore_ancestry,
+                     svn_boolean_t no_diff_deleted,
+                     svn_boolean_t ignore_content_type,
+                     svn_boolean_t svnpatch_format,
+                     const char *header_encoding,
+                     apr_file_t *outfile,
+                     apr_file_t *errfile,
+                     const apr_array_header_t *changelists,
+                     svn_client_ctx_t *ctx,
+                     apr_pool_t *pool);
+
+
+/**
+ * Similar to svn_client_diff_peg5(), but with @a svnpatch_format set to
+ * FALSE.
+ *
+ * @deprecated Provided for backward compatibility with the 1.6 API.
  *
  * @since New in 1.5.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_diff_peg4(const apr_array_header_t *diff_options,
                      const char *path,
@@ -2462,7 +2589,7 @@ svn_client_diff_peg(const apr_array_header_t *diff_options,
  * Calls @a summarize_func with @a summarize_baton for each difference
  * with a @c svn_client_diff_summarize_t structure describing the difference.
  *
- * See svn_client_diff4() for a description of the other parameters.
+ * See svn_client_diff5() for a description of the other parameters.
  *
  * @since New in 1.5.
  */
@@ -2518,7 +2645,7 @@ svn_client_diff_summarize(const char *path1,
  * Call @a summarize_func with @a summarize_baton for each difference
  * with a @c svn_client_diff_summarize_t structure describing the difference.
  *
- * See svn_client_diff_peg4() for a description of the other parameters.
+ * See svn_client_diff_peg5() for a description of the other parameters.
  *
  * @since New in 1.5.
  */
@@ -2903,11 +3030,35 @@ svn_client_mergeinfo_log_eligible(const char *path_or_url,
  * ctx->cancel_baton at various points during the operation.  If it
  * returns an error (typically SVN_ERR_CANCELLED), return that error
  * immediately.
+ *
+ * Use @a scratch_pool for any temporary allocations.
+ *
+ * @since New in 1.0.
  */
 svn_error_t *
 svn_client_cleanup(const char *dir,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool);
+
+
+/** @} */
+
+/**
+ * @defgroup Upgrade Upgrade a working copy.
+ *
+ * @{
+ */
+
+/** Recursively upgrade a working copy to a new metadata storage format.
+ *
+ * Use @a scratch_pool for any temporary allocations.
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_client_upgrade(const char *dir,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *scratch_pool);
 
 
 /** @} */
@@ -3133,6 +3284,9 @@ typedef struct svn_client_copy_source_t
  * If @a make_parents is TRUE, create any non-existent parent directories
  * also.
  *
+ * If @a ignore_externals is set, don't process externals definitions
+ * as part of this operation.
+ *
  * If non-NULL, @a revprop_table is a hash table holding additional,
  * custom revision properties (<tt>const char *</tt> names mapped to
  * <tt>svn_string_t *</tt> values) to be set on the new revision in
@@ -3147,8 +3301,27 @@ typedef struct svn_client_copy_source_t
  * for each item added at the new location, passing the new, relative path of
  * the added item.
  *
- * @since New in 1.5.
+ * @since New in 1.6.
  */
+svn_error_t *
+svn_client_copy5(svn_commit_info_t **commit_info_p,
+                 apr_array_header_t *sources,
+                 const char *dst_path,
+                 svn_boolean_t copy_as_child,
+                 svn_boolean_t make_parents,
+                 svn_boolean_t ignore_externals,
+                 const apr_hash_t *revprop_table,
+                 svn_client_ctx_t *ctx,
+                 apr_pool_t *pool);
+
+/**
+ * Similar to svn_client_copy5(), with @a ignore_externals set to @c FALSE.
+ *
+ * @since New in 1.5.
+ *
+ * @deprecated Provided for backward compatibility with the 1.5 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_copy4(svn_commit_info_t **commit_info_p,
                  apr_array_header_t *sources,
@@ -3524,6 +3697,10 @@ svn_client_propset(const char *propname,
  * operation that changes an *unversioned* property attached to a
  * revision.  This can be used to tweak log messages, dates, authors,
  * and the like.  Be careful:  it's a lossy operation.
+
+ * @a ctx->notify_func2 and @a ctx->notify_baton2 are the notification
+ * functions and baton which are called upon successful setting of the
+ * property.
  *
  * Also note that unless the administrator creates a
  * pre-revprop-change hook in the repository, this feature will fail.
@@ -4305,13 +4482,6 @@ svn_client_unlock(const apr_array_header_t *targets,
  */
 #define SVN_INFO_SIZE_UNKNOWN ((apr_size_t) -1)
 
-/** The size of the file is unknown.
- * Used as value in fields of type @c apr_off_t.
- *
- * @since New in 1.6
- */
-#define SVN_FILE_SIZE_UNKNOWN ((apr_off_t) -1)
-
 /**
  * A structure which describes various system-generated metadata about
  * a working-copy path or URL.
@@ -4366,7 +4536,7 @@ typedef struct svn_info_t
   const char *copyfrom_url;
   svn_revnum_t copyfrom_rev;
   apr_time_t text_time;
-  apr_time_t prop_time;
+  apr_time_t prop_time;  /* will always be 0 for svn 1.4 and later */
   const char *checksum;
   const char *conflict_old;
   const char *conflict_new;
@@ -4378,41 +4548,41 @@ typedef struct svn_info_t
   svn_depth_t depth;
 
   /**
-   * Similar to working_size64, but working_size will be
-   * @c SVN_INFO_SIZE_UNKNOWN when its value overflows apr_size_t.
+   * Similar to working_size64, but will be @c SVN_INFO_SIZE_UNKNOWN when
+   * its value would overflow apr_size_t (so when size >= 4 GB - 1 byte).
    *
    * @deprecated Provided for backward compatibility with the 1.5 API.
    */
-  apr_size_t working_size; /* ### Overflows on > 4 GB files. */
+  apr_size_t working_size;
 
   /** @} */
 
   /**
    * Similar to size64, but size will be @c SVN_INFO_SIZE_UNKNOWN when
-   * its value overflows apr_size_t.
+   * its value would overflow apr_size_t (so when size >= 4 GB - 1 byte).
    *
    * @deprecated Provided for backward compatibility with the 1.5 API.
    */
   apr_size_t size;
-  
+
   /**
    * The size of the file in the repository (untranslated,
    * e.g. without adjustment of line endings and keyword
    * expansion). Only applicable for file -- not directory -- URLs.
-   * For working copy paths, size will be @c SVN_FILE_SIZE_UNKNOWN.
+   * For working copy paths, size64 will be @c SVN_INVALID_FILESIZE.
    * @since New in 1.6.
    */
-  apr_off_t size64;
-  
+  svn_filesize_t size64;
+
   /**
    * The size of the file after being translated into its local
-   * representation, or @c SVN_FILE_SIZE_UNKNOWN if
-   * unknown.  Not applicable for directories.
+   * representation, or @c SVN_INVALID_FILESIZE if unknown.
+   * Not applicable for directories.
    * @since New in 1.6.
    * @name Working-copy path fields
-   * @{   
+   * @{
    */
-  apr_off_t working_size64;
+  svn_filesize_t working_size64;
 
   /**
    * Info on any tree conflict of which this node is a victim. Otherwise NULL.
@@ -4520,6 +4690,34 @@ svn_client_info(const char *path_or_url,
                 svn_boolean_t recurse,
                 svn_client_ctx_t *ctx,
                 apr_pool_t *pool);
+
+/** @} */
+
+
+/**
+ * @defgroup Patch
+ *
+ * @{
+ */
+
+/**
+ * Apply a patch that's located at @a patch_path against a working copy
+ * pointed to by @a target.
+ *
+ * The patch might carry Unified diffs, svnpatch diffs, or both.
+ *
+ * If @a force is not set and the patch involves deleting locally modified or
+ * unversioned items the operation will fail.  If @a force is set such items
+ * will be deleted.
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_client_patch(const char *patch_path,
+                 const char *target,
+                 svn_boolean_t force,
+                 svn_client_ctx_t *ctx,
+                 apr_pool_t *pool);
 
 /** @} */
 

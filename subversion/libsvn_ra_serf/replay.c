@@ -86,7 +86,8 @@ typedef struct {
 } prop_info_t;
 
 typedef struct {
-  apr_pool_t *pool;
+  apr_pool_t *src_rev_pool;
+  apr_pool_t *dst_rev_pool;
 
   /* Are we done fetching this file? */
   svn_boolean_t done;
@@ -109,8 +110,8 @@ typedef struct {
   svn_revnum_t low_water_mark;
   svn_boolean_t send_deltas;
 
-  /* Cached vcc_url */
-  const char *vcc_url;
+  /* Cached report target url */
+  const char *report_target;
 
   /* Revision properties for this revision. */
   apr_hash_t *revs_props;
@@ -134,9 +135,9 @@ push_state(svn_ra_serf__xml_parser_t *parser,
     {
       replay_info_t *info;
 
-      info = apr_palloc(parser->state->pool, sizeof(*info));
+      info = apr_palloc(replay_ctx->dst_rev_pool, sizeof(*info));
 
-      info->pool = parser->state->pool;
+      info->pool = replay_ctx->dst_rev_pool;
       info->parent = parser->state->private;
       info->baton = NULL;
       info->stream = NULL;
@@ -147,9 +148,9 @@ push_state(svn_ra_serf__xml_parser_t *parser,
     {
       prop_info_t *info;
 
-      info = apr_pcalloc(parser->state->pool, sizeof(*info));
+      info = apr_pcalloc(replay_ctx->dst_rev_pool, sizeof(*info));
 
-      info->pool = parser->state->pool;
+      info->pool = replay_ctx->dst_rev_pool;
       info->parent = parser->state->private;
 
       parser->state->private = info;
@@ -173,17 +174,19 @@ start_replay(svn_ra_serf__xml_parser_t *parser,
       strcmp(name.name, "editor-report") == 0)
     {
       push_state(parser, ctx, REPORT);
-      ctx->props = apr_hash_make(ctx->pool);
 
-      svn_ra_serf__walk_all_props(ctx->revs_props, ctx->vcc_url, ctx->revision,
-                                  svn_ra_serf__set_bare_props,
-                                  ctx->props, ctx->pool);
+      /* Create a pool for the commit editor. */
+      ctx->dst_rev_pool = svn_pool_create(ctx->src_rev_pool);
+      ctx->props = apr_hash_make(ctx->dst_rev_pool);
+      svn_ra_serf__walk_all_props(ctx->revs_props, ctx->report_target,
+                                  ctx->revision, svn_ra_serf__set_bare_props,
+                                  ctx->props, ctx->dst_rev_pool);
       if (ctx->revstart_func)
         {
           SVN_ERR(ctx->revstart_func(ctx->revision, ctx->replay_baton,
                                      &ctx->editor, &ctx->editor_baton,
                                      ctx->props,
-                                     ctx->pool));
+                                     ctx->dst_rev_pool));
         }
     }
   else if (state == REPORT &&
@@ -200,7 +203,7 @@ start_replay(svn_ra_serf__xml_parser_t *parser,
 
       SVN_ERR(ctx->editor->set_target_revision(ctx->editor_baton,
                                                SVN_STR_TO_REV(rev),
-                                               parser->state->pool));
+                                               ctx->dst_rev_pool));
     }
   else if (state == REPORT &&
            strcmp(name.name, "open-root") == 0)
@@ -219,7 +222,8 @@ start_replay(svn_ra_serf__xml_parser_t *parser,
       info = push_state(parser, ctx, OPEN_DIR);
 
       SVN_ERR(ctx->editor->open_root(ctx->editor_baton,
-                                     SVN_STR_TO_REV(rev), parser->state->pool,
+                                     SVN_STR_TO_REV(rev),
+                                     ctx->dst_rev_pool,
                                      &info->baton));
     }
   else if ((state == OPEN_DIR || state == ADD_DIR) &&
@@ -244,7 +248,7 @@ start_replay(svn_ra_serf__xml_parser_t *parser,
       info = push_state(parser, ctx, DELETE_ENTRY);
 
       SVN_ERR(ctx->editor->delete_entry(file_name, SVN_STR_TO_REV(rev),
-                                        info->baton, parser->state->pool));
+                                        info->baton, ctx->dst_rev_pool));
 
       svn_ra_serf__xml_pop_state(parser);
     }
@@ -271,7 +275,7 @@ start_replay(svn_ra_serf__xml_parser_t *parser,
 
       SVN_ERR(ctx->editor->open_directory(dir_name, info->parent->baton,
                                           SVN_STR_TO_REV(rev),
-                                          parser->state->pool, &info->baton));
+                                          ctx->dst_rev_pool, &info->baton));
     }
   else if ((state == OPEN_DIR || state == ADD_DIR) &&
            strcmp(name.name, "add-directory") == 0)
@@ -298,14 +302,14 @@ start_replay(svn_ra_serf__xml_parser_t *parser,
 
       SVN_ERR(ctx->editor->add_directory(dir_name, info->parent->baton,
                                          copyfrom, rev,
-                                         parser->state->pool, &info->baton));
+                                         ctx->dst_rev_pool, &info->baton));
     }
   else if ((state == OPEN_DIR || state == ADD_DIR) &&
            strcmp(name.name, "close-directory") == 0)
     {
       replay_info_t *info = parser->state->private;
 
-      SVN_ERR(ctx->editor->close_directory(info->baton, parser->state->pool));
+      SVN_ERR(ctx->editor->close_directory(info->baton, ctx->dst_rev_pool));
 
       svn_ra_serf__xml_pop_state(parser);
     }
@@ -332,7 +336,7 @@ start_replay(svn_ra_serf__xml_parser_t *parser,
 
       SVN_ERR(ctx->editor->open_file(file_name, info->parent->baton,
                                      SVN_STR_TO_REV(rev),
-                                     parser->state->pool, &info->baton));
+                                     ctx->dst_rev_pool, &info->baton));
     }
   else if ((state == OPEN_DIR || state == ADD_DIR) &&
            strcmp(name.name, "add-file") == 0)
@@ -359,7 +363,7 @@ start_replay(svn_ra_serf__xml_parser_t *parser,
 
       SVN_ERR(ctx->editor->add_file(file_name, info->parent->baton,
                                     copyfrom, rev,
-                                    parser->state->pool, &info->baton));
+                                    ctx->dst_rev_pool, &info->baton));
     }
   else if ((state == OPEN_FILE || state == ADD_FILE) &&
            strcmp(name.name, "apply-textdelta") == 0)
@@ -396,7 +400,7 @@ start_replay(svn_ra_serf__xml_parser_t *parser,
       checksum = svn_xml_get_attr_value("checksum", attrs);
 
       SVN_ERR(ctx->editor->close_file(info->baton, checksum,
-                                      parser->state->pool));
+                                      ctx->dst_rev_pool));
 
       svn_ra_serf__xml_pop_state(parser);
     }
@@ -418,7 +422,7 @@ start_replay(svn_ra_serf__xml_parser_t *parser,
 
       info = push_state(parser, ctx, CHANGE_PROP);
 
-      info->name = apr_pstrdup(parser->state->pool, prop_name);
+      info->name = apr_pstrdup(ctx->dst_rev_pool, prop_name);
 
       if (svn_xml_get_attr_value("del", attrs))
         info->del_prop = TRUE;
@@ -456,8 +460,9 @@ end_replay(svn_ra_serf__xml_parser_t *parser,
           SVN_ERR(ctx->revfinish_func(ctx->revision, ctx->replay_baton,
                                       ctx->editor, ctx->editor_baton,
                                       ctx->props,
-                                      ctx->pool));
+                                      ctx->dst_rev_pool));
         }
+      svn_pool_destroy(ctx->dst_rev_pool);
     }
   else if (state == OPEN_DIR && strcmp(name.name, "open-directory") == 0)
     {
@@ -494,7 +499,7 @@ end_replay(svn_ra_serf__xml_parser_t *parser,
       prop_info_t *info = parser->state->private;
       const svn_string_t *prop_val;
 
-      if (info->del_prop == TRUE)
+      if (info->del_prop)
         {
           prop_val = NULL;
         }
@@ -505,7 +510,7 @@ end_replay(svn_ra_serf__xml_parser_t *parser,
           tmp_prop.data = info->data;
           tmp_prop.len = info->len;
 
-          prop_val = svn_base64_decode_string(&tmp_prop, parser->state->pool);
+          prop_val = svn_base64_decode_string(&tmp_prop, ctx->dst_rev_pool);
         }
 
       SVN_ERR(info->change(info->parent->baton, info->name, prop_val,
@@ -569,16 +574,17 @@ create_replay_body(void *baton,
                                     NULL);
 
   svn_ra_serf__add_tag_buckets(body_bkt,
-                               "S:revision", apr_ltoa(ctx->pool, ctx->revision),
+                               "S:revision",
+                               apr_ltoa(ctx->src_rev_pool, ctx->revision),
                                alloc);
   svn_ra_serf__add_tag_buckets(body_bkt,
                                "S:low-water-mark",
-                               apr_ltoa(ctx->pool, ctx->low_water_mark),
+                               apr_ltoa(ctx->src_rev_pool, ctx->low_water_mark),
                                alloc);
 
   svn_ra_serf__add_tag_buckets(body_bkt,
                                "S:send-deltas",
-                               apr_ltoa(ctx->pool, ctx->send_deltas),
+                               apr_ltoa(ctx->src_rev_pool, ctx->send_deltas),
                                alloc);
 
   svn_ra_serf__add_close_tag_buckets(body_bkt, alloc, "S:replay-report");
@@ -600,26 +606,24 @@ svn_ra_serf__replay(svn_ra_session_t *ra_session,
   svn_ra_serf__handler_t *handler;
   svn_ra_serf__xml_parser_t *parser_ctx;
   svn_error_t *err;
+  const char *report_target;
   /* We're not really interested in the status code here in replay, but
      the XML parsing code will abort on error if it doesn't have a place
      to store the response status code. */
   int status_code;
-  const char *vcc_url;
 
-  SVN_ERR(svn_ra_serf__discover_root(&vcc_url, NULL,
-                                     session, session->conns[0],
-                                     session->repos_url.path, pool));
+  SVN_ERR(svn_ra_serf__report_resource(&report_target, session, NULL, pool));
 
   replay_ctx = apr_pcalloc(pool, sizeof(*replay_ctx));
-  replay_ctx->pool = pool;
+  replay_ctx->src_rev_pool = pool;
   replay_ctx->editor = editor;
   replay_ctx->editor_baton = edit_baton;
   replay_ctx->done = FALSE;
   replay_ctx->revision = revision;
   replay_ctx->low_water_mark = low_water_mark;
   replay_ctx->send_deltas = send_deltas;
-  replay_ctx->vcc_url = vcc_url;
-  replay_ctx->revs_props = apr_hash_make(replay_ctx->pool);
+  replay_ctx->report_target = report_target;
+  replay_ctx->revs_props = apr_hash_make(replay_ctx->src_rev_pool);
 
   handler = apr_pcalloc(pool, sizeof(*handler));
 
@@ -660,31 +664,34 @@ svn_ra_serf__replay(svn_ra_session_t *ra_session,
   return SVN_NO_ERROR;
 }
 
-/* The maximum number of outstanding requests at any time. When this number is
- * reached, ra_serf will stop sending requests until responses on the previous
- * requests are received and handled.
+/* The maximum number of outstanding requests at any time. When this
+ * number is reached, ra_serf will stop sending requests until
+ * responses on the previous requests are received and handled.
  *
  * Some observations about serf which lead us to the current value.
  * ----------------------------------------------------------------
- * We aim to keep serf's outgoing queue filled with enough requests so the
- * network bandwidth and server capacity is used optimally. Originally we used
- * 5 as the max. number of outstanding requests, but this turned out to be too
- * low.
- * Serf doesn't exit out of the serf_context_run loop as long as it has
- * data to send or receive. With small responses (revs of a few kB), serf
- * doesn't come out of this loop at all. So with MAX_OUTSTANDING_REQUESTS set
- * to a low number, there's a big chance that serf handles those requests
- * completely in its internal loop, and only then gives us a chance to create
- * new requests. This results in hiccups, slowing down the whole process.
  *
- * With a larger MAX_OUTSTANDING_REQUESTS, like 100 or more, there's more chance
- * that serf can come out of its internal loop so we can replenish the outgoing
- * request queue.
- * There's no real disadvantage of using a large number here, besides the memory
- * used to store the message, parser and handler objects (approx. 250 bytes).
+ * We aim to keep serf's outgoing queue filled with enough requests so
+ * the network bandwidth and server capacity is used
+ * optimally. Originally we used 5 as the max. number of outstanding
+ * requests, but this turned out to be too low.
  *
- * In my test setup peak performance was reached at max. 30-35 requests. So I
- * added a small margin and chose 50.
+ * Serf doesn't exit out of the serf_context_run loop as long as it
+ * has data to send or receive. With small responses (revs of a few
+ * kB), serf doesn't come out of this loop at all. So with
+ * MAX_OUTSTANDING_REQUESTS set to a low number, there's a big chance
+ * that serf handles those requests completely in its internal loop,
+ * and only then gives us a chance to create new requests. This
+ * results in hiccups, slowing down the whole process.
+ *
+ * With a larger MAX_OUTSTANDING_REQUESTS, like 100 or more, there's
+ * more chance that serf can come out of its internal loop so we can
+ * replenish the outgoing request queue.  There's no real disadvantage
+ * of using a large number here, besides the memory used to store the
+ * message, parser and handler objects (approx. 250 bytes).
+ *
+ * In my test setup peak performance was reached at max. 30-35
+ * requests. So I added a small margin and chose 50.
  */
 #define MAX_OUTSTANDING_REQUESTS 50
 
@@ -701,12 +708,10 @@ svn_ra_serf__replay_range(svn_ra_session_t *ra_session,
 {
   svn_ra_serf__session_t *session = ra_session->priv;
   svn_revnum_t rev = start_revision;
-  const char *vcc_url;
+  const char *report_target;
   int active_reports = 0;
 
-  SVN_ERR(svn_ra_serf__discover_root(&vcc_url, NULL,
-                                     session, session->conns[0],
-                                     session->repos_url.path, pool));
+  SVN_ERR(svn_ra_serf__report_resource(&report_target, session, NULL, pool));
 
   while (active_reports || rev <= end_revision)
     {
@@ -729,7 +734,7 @@ svn_ra_serf__replay_range(svn_ra_session_t *ra_session,
           apr_pool_t *ctx_pool = svn_pool_create(pool);
 
           replay_ctx = apr_pcalloc(ctx_pool, sizeof(*replay_ctx));
-          replay_ctx->pool = ctx_pool;
+          replay_ctx->src_rev_pool = ctx_pool;
           replay_ctx->revstart_func = revstart_func;
           replay_ctx->revfinish_func = revfinish_func;
           replay_ctx->replay_baton = replay_baton;
@@ -739,16 +744,17 @@ svn_ra_serf__replay_range(svn_ra_session_t *ra_session,
           replay_ctx->send_deltas = send_deltas;
           replay_ctx->done_item.data = replay_ctx;
           /* Request all properties of a certain revision. */
-          replay_ctx->vcc_url = vcc_url;
-          replay_ctx->revs_props = apr_hash_make(replay_ctx->pool);
+          replay_ctx->report_target = report_target;
+          replay_ctx->revs_props = apr_hash_make(replay_ctx->src_rev_pool);
           SVN_ERR(svn_ra_serf__deliver_props(&prop_ctx,
                                              replay_ctx->revs_props, session,
-                                             session->conns[0], vcc_url,
+                                             session->conns[0], report_target,
                                              rev,  "0", all_props,
-                                             TRUE, NULL, replay_ctx->pool));
+                                             TRUE, NULL,
+                                             replay_ctx->src_rev_pool));
 
           /* Send the replay report request. */
-          handler = apr_pcalloc(replay_ctx->pool, sizeof(*handler));
+          handler = apr_pcalloc(replay_ctx->src_rev_pool, sizeof(*handler));
 
           handler->method = "REPORT";
           handler->path = session->repos_url_str;
@@ -757,7 +763,8 @@ svn_ra_serf__replay_range(svn_ra_session_t *ra_session,
           handler->conn = session->conns[0];
           handler->session = session;
 
-          parser_ctx = apr_pcalloc(replay_ctx->pool, sizeof(*parser_ctx));
+          parser_ctx = apr_pcalloc(replay_ctx->src_rev_pool,
+                                   sizeof(*parser_ctx));
 
           /* Setup the XML parser context.
              Because we have not one but a list of requests, the 'done' property
@@ -766,7 +773,7 @@ svn_ra_serf__replay_range(svn_ra_session_t *ra_session,
              done_item to done_list, so by keeping track of the state of
              done_list we know how many requests have been handled completely.
           */
-          parser_ctx->pool = replay_ctx->pool;
+          parser_ctx->pool = replay_ctx->src_rev_pool;
           parser_ctx->user_data = replay_ctx;
           parser_ctx->start = start_replay;
           parser_ctx->end = end_replay;
@@ -790,8 +797,15 @@ svn_ra_serf__replay_range(svn_ra_session_t *ra_session,
       /* Run the serf loop, send outgoing and process incoming requests.
          This request will block when there are no more requests to send or
          responses to receive, so we have to be careful on our bookkeeping. */
-      status = serf_context_run(session->context, SERF_DURATION_FOREVER,
+      status = serf_context_run(session->context, session->timeout,
                                 pool);
+
+      if (APR_STATUS_IS_TIMEUP(status))
+        {
+          return svn_error_create(SVN_ERR_RA_DAV_CONN_TIMEOUT,
+                                  NULL,
+                                  _("Connection timed out"));
+        }
 
       /* Substract the number of completely handled responses from our
          total nr. of open requests', so we'll know when to stop this loop.
@@ -805,11 +819,11 @@ svn_ra_serf__replay_range(svn_ra_session_t *ra_session,
             {
               svn_error_clear(session->pending_error);
               session->pending_error = SVN_NO_ERROR;
-              SVN_ERR(parser_ctx->error);
+              return parser_ctx->error;
             }
 
           done_list = done_list->next;
-          svn_pool_destroy(ctx->pool);
+          svn_pool_destroy(ctx->src_rev_pool);
           active_reports--;
         }
 

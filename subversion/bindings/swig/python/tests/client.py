@@ -1,11 +1,16 @@
-import unittest, os, weakref, tempfile, types, setup_path
+import unittest, os, weakref, tempfile, setup_path
 
 from svn import core, repos, fs, delta, client, wc
 from svn.core import SubversionException
 
 from trac.versioncontrol.tests.svn_fs import SubversionRepositoryTestSetup, \
   REPOS_PATH, REPOS_URL
-from urlparse import urljoin
+try:
+  # Python >=3.0
+  from urllib.parse import urljoin
+except ImportError:
+  # Python <3.0
+  from urlparse import urljoin
 
 class SubversionClientTestCase(unittest.TestCase):
   """Test cases for the basic SWIG Subversion client layer"""
@@ -184,7 +189,7 @@ class SubversionClientTestCase(unittest.TestCase):
     """Test svn_client_uuid_from_url on a file:// URL"""
     self.assert_(isinstance(
                  client.uuid_from_url(REPOS_URL, self.client_ctx),
-                 types.StringTypes))
+                 basestring))
 
   def test_url_from_path(self):
     """Test svn_client_url_from_path for a file:// URL"""
@@ -216,7 +221,7 @@ class SubversionClientTestCase(unittest.TestCase):
                       client.uuid_from_url(REPOS_URL, self.client_ctx))
 
     self.assert_(isinstance(client.uuid_from_path(path, wc_adm,
-                            self.client_ctx), types.StringTypes))
+                            self.client_ctx), basestring))
 
   def test_open_ra_session(self):
       """Test svn_client_open_ra_session()."""

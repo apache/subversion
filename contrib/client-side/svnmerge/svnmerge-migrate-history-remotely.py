@@ -107,7 +107,7 @@ def svnmerge_prop_to_mergeinfo(svnmerge_prop_val):
     svnmerge_prop_val = ''
     for source in sources:
         pieces = source.split(':')
-        if len(pieces) != 2:
+        if not (len(pieces) == 2 and pieces[1]):
             continue
         pieces[0] = urllib.unquote(pieces[0])
         svnmerge_prop_val = svnmerge_prop_val + '%s\n' % (':'.join(pieces))
@@ -237,6 +237,10 @@ class SvnClient:
         ra.get_location_segments(ra_session, rel_path, rev, rev,
                                  oldest_rev, _segment_receiver)
 
+        # Location segments come in youngest to oldest.  But we rather
+        # need oldest-to-youngest for proper revision range ordering.
+        location_segments.sort(lambda a, b: cmp(a.range_start, b.range_start))
+
         # Transform location segments into merge sources and ranges.
         mergeinfo = {}
         for segment in location_segments:
@@ -362,9 +366,9 @@ class SvnmergeHistoryMigrator:
                             sys.stdout.write("   new sanitized chunk:\n")
                             pretty_print_mergeinfo(history, 6)
                         new_mergeinfo = mergeinfo_merge(new_mergeinfo, history)
-                    except svn.core.SubversionException, e:
-                        if not (e.apr_err == svn.core.SVN_ERR_FS_NOT_FOUND
-                                or e.apr_err == svn.core.SVN_ERR_FS_NO_SUCH_REVISION):
+                    except core.SubversionException, e:
+                        if not (e.apr_err == core.SVN_ERR_FS_NOT_FOUND
+                                or e.apr_err == core.SVN_ERR_FS_NO_SUCH_REVISION):
                             raise
 
         if self.verbose:

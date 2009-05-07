@@ -122,14 +122,14 @@ do_resources(const dav_svn_repos *repos,
      and deleted things.  Also, note that deleted things don't merit
      responses of their own -- they are considered modifications to
      their parent.  */
-  SVN_ERR(svn_fs_paths_changed(&changes, root, pool));
+  SVN_ERR(svn_fs_paths_changed2(&changes, root, pool));
 
   for (hi = apr_hash_first(pool, changes); hi; hi = apr_hash_next(hi))
     {
       const void *key;
       void *val;
       const char *path;
-      svn_fs_path_change_t *change;
+      svn_fs_path_change2_t *change;
       svn_boolean_t send_self;
       svn_boolean_t send_parent;
 
@@ -168,7 +168,7 @@ do_resources(const dav_svn_repos *repos,
               svn_node_kind_t kind;
               SVN_ERR(svn_fs_check_path(&kind, root, path, subpool));
               SVN_ERR(send_response(repos, root, path,
-                                    kind == svn_node_dir ? TRUE : FALSE,
+                                    kind == svn_node_dir,
                                     output, bb, subpool));
               apr_hash_set(sent, path, APR_HASH_KEY_STRING, (void *)1);
             }

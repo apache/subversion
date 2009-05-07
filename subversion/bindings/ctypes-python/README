@@ -5,7 +5,7 @@ BUILDING CSVN
 Before building csvn, first verify that you have all the required software
 installed:
 
-  - Python 2.3 or later
+  - Python 2.4 or later
   - ctypes 1.0 or later (NOTE: ctypes is included by default with Python 2.5)
   - Subversion 1.4.3 or later (including header files)
   - APR and APR-util (including header files, and the

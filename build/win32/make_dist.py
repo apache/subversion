@@ -189,10 +189,10 @@ _disttree = {'': OptFile('%(readme)s', 'README.txt'),
                      File('%(blddir)s/svnserve/svnserve.pdb'),
                      File('%(blddir)s/svnversion/svnversion.exe'),
                      File('%(blddir)s/svnversion/svnversion.pdb'),
-                     File('%(blddir)s/../contrib/client-side/svnmucc/svnmucc.exe'),
-                     File('%(blddir)s/../contrib/client-side/svnmucc/svnmucc.pdb'),
                      File('%(blddir)s/../contrib/client-side/svn-push/svn-push.exe'),
                      File('%(blddir)s/../contrib/client-side/svn-push/svn-push.pdb'),
+                     File('%(blddir)s/../tools/client-side/svnmucc/svnmucc.exe'),
+                     File('%(blddir)s/../tools/client-side/svnmucc/svnmucc.pdb'),
                      File('%(blddir)s/../tools/server-side/svnauthz-validate.exe'),
                      File('%(blddir)s/../tools/server-side/svnauthz-validate.pdb'),
                      File('%(blddir)s/../tools/server-side/svn-populate-node-origins-index.exe'),
@@ -432,8 +432,7 @@ def _make_dist(cfg):
       shutil.rmtree(distdir)
     os.makedirs(distdir)
 
-    dirlist = list(_disttree.keys())
-    dirlist.sort()
+    dirlist = sorted(_disttree.keys())
 
     for reldir in dirlist:
       dir = os.path.join(distdir, reldir)
@@ -444,7 +443,7 @@ def _make_dist(cfg):
       action = _disttree[reldir]
       if action is None:
         continue
-      if type(action) == type(()):
+      if isinstance(action, tuple):
         for subaction in action:
           subaction.run(dir, cfg)
       else:

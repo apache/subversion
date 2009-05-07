@@ -28,6 +28,7 @@
 #include "svn_fs.h"
 #include "svn_checksum.h"
 #include "svn_mergeinfo.h"
+#include "svn_props.h"
 
 #include "../svn_test_fs.h"
 
@@ -91,6 +92,15 @@ test_commit_txn(svn_revnum_t *new_rev,
             (SVN_ERR_FS_CONFLICT, NULL,
              "commit conflicted at '%s', but expected conflict at '%s')",
              conflict, expected_conflict);
+        }
+
+      /* The svn_fs_commit_txn() API promises to set *NEW_REV to an
+         invalid revision number in the case of a conflict.  */
+      if (SVN_IS_VALID_REVNUM(*new_rev))
+        {
+          return svn_error_createf
+            (SVN_ERR_FS_GENERAL, NULL,
+             "conflicting commit returned valid new revision");
         }
     }
   else if (err)   /* commit failed, but not due to conflict */
@@ -391,7 +401,7 @@ txn_names_are_not_reused(const char **msg,
     return SVN_NO_ERROR;
 
   /* Bail (with success) on known-untestable scenarios */
-  if ((strcmp(opts->fs_type, "fsfs") == 0) 
+  if ((strcmp(opts->fs_type, "fsfs") == 0)
       && (opts->server_minor_version && (opts->server_minor_version < 5)))
     return SVN_NO_ERROR;
 
@@ -1630,6 +1640,15 @@ merging_commit(const char **msg,
     SVN_ERR(svn_fs_begin_txn(&txn, fs, revisions[1], pool));
     SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
     SVN_ERR(svn_fs_delete(txn_root, "A/D/H", pool));
+
+    /* ### FIXME: It is at this point that our test stops being valid,
+       ### hence its expected failure.  The following call will now
+       ### conflict on /A/D/H, causing revision 6 *not* to be created,
+       ### and the remainer of this test (which was written long ago)
+       ### to suffer from a shift in the expected state and behavior
+       ### of the filesystem as a result of this commit not happening.
+    */
+
     SVN_ERR(test_commit_txn(&after_rev, txn, NULL, pool));
     /*********************************************************************/
     /* REVISION 6 */
@@ -3558,8 +3577,8 @@ check_all_revisions(const char **msg,
 
 
 /* Helper function for large_file_integrity().  Given a ROOT and PATH
-   to a file, calculate and return the MD5 digest for the contents of
-   the file. */
+   to a file, set *CHECKSUM to the checksum of kind CHECKSUM_KIND for the
+   contents of the file. */
 static svn_error_t *
 get_file_checksum(svn_checksum_t **checksum,
                   svn_checksum_kind_t checksum_kind,
@@ -3574,7 +3593,6 @@ get_file_checksum(svn_checksum_t **checksum,
   SVN_ERR(svn_fs_file_contents(&stream, root, path, pool));
 
   /* Get a checksummed stream for the contents. */
-  *checksum = svn_checksum_create(checksum_kind, pool);
   checksum_stream = svn_stream_checksummed2(stream, checksum, NULL,
                                             checksum_kind, TRUE, pool);
 
@@ -4942,8 +4960,9 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS(fetch_youngest_rev),
     SVN_TEST_PASS(basic_commit),
     SVN_TEST_PASS(test_tree_node_validation),
-    SVN_TEST_XFAIL(merging_commit), /* Needs to be written to match new
-                                        merge() algorithm expectations */
+    SVN_TEST_WIMP0(merging_commit,
+                   "needs to be written to match new"
+                   " merge() algorithm expectations"),
     SVN_TEST_PASS(copy_test),
     SVN_TEST_PASS(commit_date),
     SVN_TEST_PASS(check_old_revisions),

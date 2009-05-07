@@ -2,7 +2,7 @@
  * xml.c:  xml helper code shared among the Subversion libraries.
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006, 2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -26,7 +26,8 @@
 #include "svn_xml.h"
 #include "svn_error.h"
 #include "svn_ctype.h"
-#include "utf_impl.h"
+
+#include "private/svn_utf_private.h"
 
 #ifdef SVN_HAVE_OLD_EXPAT
 #include <xmlparse.h>

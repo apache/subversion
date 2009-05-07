@@ -23,6 +23,7 @@
 #include "client.h"
 #include "svn_client.h"
 #include "svn_pools.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_hash.h"
 #include "svn_wc.h"
@@ -57,14 +58,14 @@ build_info_from_dirent(svn_info_t **info,
   tmpinfo->lock                 = lock;
   tmpinfo->depth                = svn_depth_unknown;
   tmpinfo->working_size         = SVN_INFO_SIZE_UNKNOWN;
-  
+
   if (((apr_size_t)dirent->size) == dirent->size)
     tmpinfo->size               = (apr_size_t)dirent->size;
-  else /* >= 4GB - 1 byte */
-    tmpinfo->size               = SVN_INFO_SIZE_UNKNOWN; 
-    
+  else /* >= 4GB */
+    tmpinfo->size               = SVN_INFO_SIZE_UNKNOWN;
+
   tmpinfo->size64               = dirent->size;
-  tmpinfo->working_size         = SVN_FILE_SIZE_UNKNOWN;
+  tmpinfo->working_size64       = SVN_INVALID_FILESIZE;
   tmpinfo->tree_conflict        = NULL;
 
   *info = tmpinfo;
@@ -99,7 +100,6 @@ build_info_from_entry(svn_info_t **info,
   tmpinfo->copyfrom_url         = entry->copyfrom_url;
   tmpinfo->copyfrom_rev         = entry->copyfrom_rev;
   tmpinfo->text_time            = entry->text_time;
-  tmpinfo->prop_time            = entry->prop_time;
   tmpinfo->checksum             = entry->checksum;
   tmpinfo->conflict_old         = entry->conflict_old;
   tmpinfo->conflict_new         = entry->conflict_new;
@@ -109,11 +109,11 @@ build_info_from_entry(svn_info_t **info,
 
   if (((apr_size_t)entry->working_size) == entry->working_size)
     tmpinfo->working_size       = (apr_size_t)entry->working_size;
-  else /* >= 4GB - 1 byte */
+  else /* >= 4GB */
     tmpinfo->working_size       = SVN_INFO_SIZE_UNKNOWN;
 
   tmpinfo->size                 = SVN_INFO_SIZE_UNKNOWN;
-  tmpinfo->size64               = SVN_FILE_SIZE_UNKNOWN;
+  tmpinfo->size64               = SVN_INVALID_FILESIZE;
 
   tmpinfo->working_size64       = entry->working_size;
 
@@ -154,8 +154,8 @@ build_info_for_unversioned(svn_info_t **info,
   tmpinfo->lock                 = NULL;
   tmpinfo->working_size         = SVN_INFO_SIZE_UNKNOWN;
   tmpinfo->size                 = SVN_INFO_SIZE_UNKNOWN;
-  tmpinfo->size64               = SVN_FILE_SIZE_UNKNOWN;
-  tmpinfo->working_size64       = SVN_FILE_SIZE_UNKNOWN;  
+  tmpinfo->size64               = SVN_INVALID_FILESIZE;
+  tmpinfo->working_size64       = SVN_INVALID_FILESIZE;
   tmpinfo->tree_conflict        = NULL;
 
   *info = tmpinfo;
@@ -218,7 +218,7 @@ push_dir_info(svn_ra_session_t *ra_session,
       the_ent = val;
 
       path = svn_path_join(dir, key, subpool);
-      URL  = svn_path_url_add_component(session_URL, key, subpool);
+      URL  = svn_path_url_add_component2(session_URL, key, subpool);
 
       fs_path = svn_path_is_child(repos_root, URL, subpool);
       fs_path = apr_pstrcat(subpool, "/", fs_path, NULL);
@@ -312,7 +312,7 @@ info_error_handler(const char *path,
       svn_wc_conflict_description_t *tree_conflict;
 
       SVN_ERR(svn_wc_adm_probe_try3(&adm_access, fe_baton->adm_access,
-                                    svn_path_dirname(path, pool),
+                                    svn_dirent_dirname(path, pool),
                                     FALSE, 0, NULL, NULL, pool));
       SVN_ERR(svn_wc__get_tree_conflict(&tree_conflict, path, adm_access,
                                         pool));
@@ -332,7 +332,7 @@ info_error_handler(const char *path,
         }
     }
 
-  return err;
+  return svn_error_return(err);
 }
 
 static const svn_wc_entry_callbacks2_t
@@ -405,18 +405,14 @@ same_resource_in_head(svn_boolean_t *same_p,
     {
       svn_error_clear(err);
       *same_p = FALSE;
+      return SVN_NO_ERROR;
     }
-  else if (err)
-    return err;
-  else
-    {
-      /* ### Currently, the URLs should always be equal, since we can't
-         ### walk forwards in history. */
-      if (strcmp(url, head_url) == 0)
-        *same_p = TRUE;
-      else
-        *same_p = FALSE;
-    }
+  else 
+    SVN_ERR(err);
+
+  /* ### Currently, the URLs should always be equal, since we can't
+     ### walk forwards in history. */
+  *same_p = (strcmp(url, head_url) == 0);
 
   return SVN_NO_ERROR;
 }
@@ -472,7 +468,7 @@ svn_client_info2(const char *path_or_url,
   SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root_URL, pool));
   SVN_ERR(svn_ra_get_uuid2(ra_session, &repos_UUID, pool));
 
-  svn_path_split(url, &parent_url, &base_name, pool);
+  svn_uri_split(url, &parent_url, &base_name, pool);
   base_name = svn_path_uri_decode(base_name, pool);
 
   /* Get the dirent for the URL itself. */
@@ -526,7 +522,7 @@ svn_client_info2(const char *path_or_url,
     }
   else if (err)
     {
-      return err;
+      return svn_error_return(err);
     }
 
   if (! the_ent)
@@ -556,7 +552,7 @@ svn_client_info2(const char *path_or_url,
           lock = NULL;
         }
       else if (err)
-        return err;
+        return svn_error_return(err);
     }
   else
     lock = NULL;
@@ -585,7 +581,7 @@ pre_1_2_recurse:
               locks = apr_hash_make(pool); /* use an empty hash */
             }
           else if (err)
-            return err;
+            return svn_error_return(err);
         }
       else
         locks = apr_hash_make(pool); /* use an empty hash */
@@ -597,23 +593,6 @@ pre_1_2_recurse:
     }
 
   return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
-svn_client_info(const char *path_or_url,
-                const svn_opt_revision_t *peg_revision,
-                const svn_opt_revision_t *revision,
-                svn_info_receiver_t receiver,
-                void *receiver_baton,
-                svn_boolean_t recurse,
-                svn_client_ctx_t *ctx,
-                apr_pool_t *pool)
-{
-  return svn_client_info2(path_or_url, peg_revision, revision,
-                          receiver, receiver_baton,
-                          SVN_DEPTH_INFINITY_OR_EMPTY(recurse),
-                          NULL, ctx, pool);
 }
 
 svn_info_t *

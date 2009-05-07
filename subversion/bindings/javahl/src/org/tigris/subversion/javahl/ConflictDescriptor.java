@@ -76,12 +76,23 @@ public class ConflictDescriptor
      */
     private int operation;
 
+    /**
+     * @see ConflictVersion
+     */
+    private ConflictVersion srcLeftVersion;
+
+    /**
+     * @see ConflictVersion
+     */
+    private ConflictVersion srcRightVersion;
+
     /** This constructor should only be called from JNI code. */
     ConflictDescriptor(String path, int conflictKind, int nodeKind,
                        String propertyName, boolean isBinary, String mimeType,
                        int action, int reason, int operation,
                        String basePath, String theirPath,
-                       String myPath, String mergedPath)
+                       String myPath, String mergedPath,
+                       ConflictVersion srcLeft, ConflictVersion srcRight)
     {
         this.path = path;
         this.conflictKind = conflictKind;
@@ -96,6 +107,8 @@ public class ConflictDescriptor
         this.myPath = myPath;
         this.mergedPath = mergedPath;
         this.operation = operation;
+        this.srcLeftVersion = srcLeft;
+        this.srcRightVersion = srcRight;
     }
 
     public String getPath()
@@ -175,6 +188,16 @@ public class ConflictDescriptor
         return operation;
     }
 
+    public ConflictVersion getSrcLeftVersion()
+    {
+        return srcLeftVersion;
+    }
+
+    public ConflictVersion getSrcRightVersion()
+    {
+        return srcRightVersion;
+    }
+
     /**
      * Poor man's enum for <code>svn_wc_conflict_kind_t</code>.
      */
@@ -241,5 +264,11 @@ public class ConflictDescriptor
          * Object is unversioned.
          */
         public static final int unversioned = 4;
+
+        /**
+         * Object is already added or schedule-add.
+         * @since New in 1.6.
+         */
+        public static final int added = 5;
     }
 }

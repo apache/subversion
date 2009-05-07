@@ -21,7 +21,7 @@
 
 #include "ListCallback.h"
 #include "EnumMapper.h"
-#include "SVNClient.h"
+#include "CreateJ.h"
 #include "JNIUtil.h"
 #include "svn_time.h"
 
@@ -98,7 +98,7 @@ ListCallback::doList(const char *path,
   jobject jlock;
   if (lock != NULL)
     {
-      jlock = SVNClient::createJavaLock(lock);
+      jlock = CreateJ::Lock(lock);
       if (JNIUtil::isJavaExceptionThrown())
         return SVN_NO_ERROR;
     }

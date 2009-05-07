@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2006, 2008 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2006, 2008-2009 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -72,10 +72,7 @@ def get_txns(repo_dir):
 
   exit_code, output_lines, error_lines = svntest.main.run_svnadmin('lstxns',
                                                                    repo_dir)
-  txns = list(map(output_lines.strip, output_lines))
-
-  # sort, just in case
-  txns.sort()
+  txns = sorted([output_lines.strip(x) for x in output_lines])
 
   return txns
 
@@ -86,7 +83,7 @@ def load_and_verify_dumpstream(sbox, expected_stdout, expected_stderr,
   using the array of wc.States passed in revs. VARARGS are optional
   arguments passed to the 'load' command"""
 
-  if type(dump) is type(""):
+  if isinstance(dump, str):
     dump = [ dump ]
 
   exit_code, output, errput = svntest.main.run_command_stdin(
@@ -123,7 +120,7 @@ def load_and_verify_dumpstream(sbox, expected_stdout, expected_stderr,
       rev_tree = revs[rev].old_tree()
 
       try:
-        svntest.tree.compare_trees ("rev/disk", rev_tree, wc_tree)
+        svntest.tree.compare_trees("rev/disk", rev_tree, wc_tree)
       except svntest.tree.SVNTreeError:
         svntest.verify.display_trees(None, 'WC TREE', wc_tree, rev_tree)
         raise
@@ -341,11 +338,9 @@ def hotcopy_dot(sbox):
   cwd = os.getcwd()
 
   os.chdir(backup_dir)
-  exit_code, output, errput = svntest.main.run_svnadmin(
+  svntest.actions.run_and_verify_svnadmin(
+    None, None, [],
     "hotcopy", os.path.join(cwd, sbox.repo_dir), '.')
-
-  if errput:
-    raise svntest.Failure
 
   os.chdir(cwd)
 

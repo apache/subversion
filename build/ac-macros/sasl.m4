@@ -30,29 +30,35 @@ AC_DEFUN(SVN_LIB_SASL,
     AC_MSG_RESULT([yes])
     saved_LDFLAGS="$LDFLAGS"
     saved_CPPFLAGS="$CPPFLAGS"
-    
-    dnl If the user doesn't specify a (valid) directory 
-    dnl (or he doesn't supply a --with-sasl option at all), we
-    dnl want to look in the default directories: /usr and /usr/local.
-    dnl However, the compiler always looks in /usr/{lib,include} anyway,
-    dnl so we only need to look in /usr/local
 
-    if test ! -d ${with_sasl}; then
+    if test "$with_sasl" = "yes"; then
       AC_MSG_NOTICE([Looking in default locations])
-      with_sasl="/usr/local"
+      AC_CHECK_HEADER(sasl/sasl.h,
+        [AC_CHECK_HEADER(sasl/saslutil.h,
+         [AC_CHECK_LIB(sasl2, prop_get, 
+                       svn_lib_sasl=yes,
+                       svn_lib_sasl=no)],
+                       svn_lib_sasl=no)], svn_lib_sasl=no)
+      if test "$svn_lib_sasl" = "no"; then
+        with_sasl="/usr/local"
+      fi
+    else
+      svn_lib_sasl=no
     fi
 
-    SVN_SASL_INCLUDES="-I${with_sasl}/include"
-    CPPFLAGS="$CPPFLAGS $SVN_SASL_INCLUDES"
-    LDFLAGS="$LDFLAGS -L${with_sasl}/lib"
-  
-    AC_CHECK_HEADER(sasl/sasl.h,
-      [AC_CHECK_HEADER(sasl/saslutil.h,
-        [AC_CHECK_LIB(sasl2, prop_get, 
-                     svn_lib_sasl=yes,
-                     svn_lib_sasl=no)],
-                     svn_lib_sasl=no)], svn_lib_sasl=no)
-  
+    if test "$svn_lib_sasl" = "no"; then
+      SVN_SASL_INCLUDES="-I${with_sasl}/include"
+      CPPFLAGS="$CPPFLAGS $SVN_SASL_INCLUDES"
+      LDFLAGS="$LDFLAGS -L${with_sasl}/lib"
+
+      AC_CHECK_HEADER(sasl/sasl.h,
+        [AC_CHECK_HEADER(sasl/saslutil.h,
+         [AC_CHECK_LIB(sasl2, prop_get, 
+                       svn_lib_sasl=yes,
+                       svn_lib_sasl=no)],
+                       svn_lib_sasl=no)], svn_lib_sasl=no)
+    fi
+
     AC_MSG_CHECKING([for availability of Cyrus SASL v2])
     if test "$svn_lib_sasl" = "yes"; then
       SVN_SASL_LIBS="-lsasl2"

@@ -16,12 +16,6 @@
  * ====================================================================
  */
 
-/* ==================================================================== */
-
-
-
-/*** Includes. ***/
-
 #define APR_WANT_STRFUNC
 #define APR_WANT_STDIO
 #include <apr_want.h>
@@ -35,6 +29,8 @@
 #include "svn_xml.h"
 #include "svn_time.h"
 #include "svn_cmdline.h"
+#include "svn_props.h"
+
 #include "cl.h"
 
 #include "svn_private_config.h"
@@ -198,13 +194,13 @@ log_entry_receiver(void *baton,
 
   SVN_ERR(svn_cmdline_printf(pool, "\n"));
 
-  if (log_entry->changed_paths)
+  if (log_entry->changed_paths2)
     {
       apr_array_header_t *sorted_paths;
       int i;
 
       /* Get an array of sorted hash keys. */
-      sorted_paths = svn_sort__hash(log_entry->changed_paths,
+      sorted_paths = svn_sort__hash(log_entry->changed_paths2,
                                     svn_sort_compare_items_as_paths, pool);
 
       SVN_ERR(svn_cmdline_printf(pool,
@@ -214,8 +210,8 @@ log_entry_receiver(void *baton,
           svn_sort__item_t *item = &(APR_ARRAY_IDX(sorted_paths, i,
                                                    svn_sort__item_t));
           const char *path = item->key;
-          svn_log_changed_path_t *log_item
-            = apr_hash_get(log_entry->changed_paths, item->key, item->klen);
+          svn_log_changed_path2_t *log_item
+            = apr_hash_get(log_entry->changed_paths2, item->key, item->klen);
           const char *copy_data = "";
 
           if (log_item->copyfrom_path
@@ -354,7 +350,7 @@ log_entry_receiver_xml(void *baton,
   /* <date>xxx</date> */
   svn_cl__xml_tagged_cdata(&sb, pool, "date", date);
 
-  if (log_entry->changed_paths)
+  if (log_entry->changed_paths2)
     {
       apr_hash_index_t *hi;
       char *path;
@@ -363,13 +359,13 @@ log_entry_receiver_xml(void *baton,
       svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "paths",
                             NULL);
 
-      for (hi = apr_hash_first(pool, log_entry->changed_paths);
+      for (hi = apr_hash_first(pool, log_entry->changed_paths2);
            hi != NULL;
            hi = apr_hash_next(hi))
         {
           void *val;
           char action[2];
-          svn_log_changed_path_t *log_item;
+          svn_log_changed_path2_t *log_item;
 
           apr_hash_this(hi, (void *) &path, NULL, &val);
           log_item = val;
@@ -385,13 +381,21 @@ log_entry_receiver_xml(void *baton,
               svn_xml_make_open_tag(&sb, pool, svn_xml_protect_pcdata, "path",
                                     "action", action,
                                     "copyfrom-path", log_item->copyfrom_path,
-                                    "copyfrom-rev", revstr, NULL);
+                                    "copyfrom-rev", revstr,
+                                    "kind", svn_cl__node_kind_str_xml(
+                                                     log_item->node_kind),
+                                    "text-mods", svn_tristate_to_word(
+                                                     log_item->text_modified),
+                                    "prop-mods", svn_tristate_to_word(
+                                                     log_item->props_modified),
+                                    NULL);
             }
           else
             {
               /* <path action="X"> */
               svn_xml_make_open_tag(&sb, pool, svn_xml_protect_pcdata, "path",
-                                    "action", action, NULL);
+                                    "action", action,
+                                    "kind", svn_cl__node_kind_str_xml(log_item->node_kind), NULL);
             }
           /* xxx</path> */
           svn_xml_escape_cdata_cstring(&sb, path, pool);
@@ -475,7 +479,7 @@ svn_cl__log(apr_getopt_t *os,
         {
           return svn_error_create
             (SVN_ERR_CLIENT_BAD_REVISION, NULL,
-             _("Can not mix change revision with revisions"));
+             _("-c and -r are mutually exclusive"));
         }
       for (i = 0; i < opt_state->revision_ranges->nelts; i++)
         {
@@ -527,11 +531,9 @@ svn_cl__log(apr_getopt_t *os,
       if (opt_state->all_revprops)
         revprops = NULL;
       else if(opt_state->no_revprops)
-	{
-	  revprops = apr_array_make(pool,
-				    0,
-                                    sizeof(char *));
-	}
+        {
+          revprops = apr_array_make(pool, 0, sizeof(char *));
+        }
       else if (opt_state->revprop_table != NULL)
         {
           apr_hash_index_t *hi;

@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2008 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2009 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -1691,8 +1691,9 @@ def commit_out_of_date_deletions(sbox):
   svntest.main.run_svn(None, 'rm', C_path, F_path, omega_path, alpha_path,
                        psi_path)
 
-  # A commit of any one of these files or dirs should fail
-  error_re = "out of date"
+  # A commit of any one of these files or dirs should fail, preferably
+  # with an out-of-date error message.
+  error_re = "(out of date|not found)"
   commit(wc_backup, None, None, error_re, C_path)
   commit(wc_backup, None, None, error_re, I_path)
   commit(wc_backup, None, None, error_re, F_path)
@@ -1813,7 +1814,7 @@ def from_wc_top_with_bad_editor(sbox):
     None, svntest.verify.AnyOutput,
     'ci', '--editor-cmd', 'no_such-editor')
 
-  err = " ".join(map(str.strip, err))
+  err = " ".join([x.strip() for x in err])
   if not (re.match(".*no_such-editor.*", err)
           and re.match(".*Commit failed.*", err)):
     print("Commit failed, but not in the way expected.")
@@ -2651,10 +2652,9 @@ def tree_conflicts_resolved(sbox):
   svntest.actions.run_and_verify_resolved(victims)
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak('A/D/G/pi',  status='D ', wc_rev='1')
-  # The expectation on 'rho' reflects partial progress on issue #3334.
+  expected_status.tweak('A/D/G/pi',  status='D ')
   expected_status.tweak('A/D/G/rho', status='A ', copied='+', wc_rev='-')
-  expected_status.tweak('A/D/G/tau', status='D ', wc_rev='1')
+  expected_status.remove('A/D/G/tau')
 
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
@@ -2699,7 +2699,7 @@ test_list = [ None,
               commit_multiple_wc,
               commit_nonrecursive,
               failed_commit,
-              XFail(commit_out_of_date_deletions, svntest.main.is_ra_type_svn),
+              commit_out_of_date_deletions,
               commit_with_bad_log_message,
               commit_with_mixed_line_endings,
               commit_with_mixed_line_endings_in_ignored_part,

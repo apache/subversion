@@ -1,7 +1,7 @@
 /* dbt.c --- DBT-frobbing functions
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004, 2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -21,8 +21,8 @@
 #include <apr_md5.h>
 #include <apr_sha1.h>
 
-#define APU_WANT_DB
-#include <apu_want.h>
+#define SVN_WANT_BDB
+#include "svn_private_config.h"
 
 #include "../id.h"
 #include "dbt.h"

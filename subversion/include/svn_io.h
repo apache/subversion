@@ -27,11 +27,14 @@
 
 #include <apr.h>
 #include <apr_pools.h>
+#include <apr_time.h>
+#include <apr_hash.h>
+#include <apr_tables.h>
 #include <apr_file_io.h>
-#include <apr_thread_proc.h>
+#include <apr_file_info.h>
+#include <apr_thread_proc.h>  /* for apr_proc_t, apr_exit_why_e */
 
 #include "svn_types.h"
-#include "svn_error.h"
 #include "svn_string.h"
 #include "svn_checksum.h"
 
@@ -185,7 +188,7 @@ svn_io_open_uniquely_named(apr_file_t **file,
  *
  * If @a dirpath is @c NULL, use the path returned from svn_io_temp_dir().
  * (Note that when using the system-provided temp directory, it may not
- * be possibly to atomically rename the resulting file due to cross-device
+ * be possible to atomically rename the resulting file due to cross-device
  * issues.)
  *
  * The file will be deleted according to @a delete_when.
@@ -661,6 +664,10 @@ svn_io_dir_file_copy(const char *src_path,
  * to the maximum extent possible; thus, a short read with no
  * associated error implies the end of the input stream, and a short
  * write should never occur without an associated error.
+ *
+ * In Subversion 1.7 reset support was added as an optional feature of
+ * streams. If a stream implements resetting it allows reading the data
+ * again after a successfull call to svn_stream_reset().
  */
 typedef struct svn_stream_t svn_stream_t;
 
@@ -678,6 +685,12 @@ typedef svn_error_t *(*svn_write_fn_t)(void *baton,
 
 /** Close handler function for a generic stream.  @see svn_stream_t. */
 typedef svn_error_t *(*svn_close_fn_t)(void *baton);
+
+/** Reset handler function for a generic stream. @see svn_stream_t and
+ * svn_stream_reset().
+ *
+ * @since New in 1.7. */
+typedef svn_error_t *(*svn_io_reset_fn_t)(void *baton);
 
 
 /** Create a generic stream.  @see svn_stream_t. */
@@ -704,6 +717,12 @@ svn_stream_set_write(svn_stream_t *stream,
 void
 svn_stream_set_close(svn_stream_t *stream,
                      svn_close_fn_t close_fn);
+
+/** Set @a stream's reset function to @a reset_fn
+ * @since New in 1.7. */
+void
+svn_stream_set_reset(svn_stream_t *stream,
+                     svn_io_reset_fn_t reset_fn);
 
 
 /** Create a stream that is empty for reading and infinite for writing. */
@@ -739,7 +758,7 @@ svn_stream_open_readonly(svn_stream_t **stream,
                          apr_pool_t *scratch_pool);
 
 
-/** Create a stream to write a file at @a path. The fille will be *created*
+/** Create a stream to write a file at @a path. The file will be *created*
  * using the APR_BUFFERED and APR_BINARY flag, and APR_OS_DEFAULT for the
  * perms. The file will be created "exclusively", so if it already exists,
  * then an error will be thrown. If you'd like to use different values, or
@@ -765,7 +784,7 @@ svn_stream_open_writable(svn_stream_t **stream,
  *
  * If @a dirpath is @c NULL, use the path returned from svn_io_temp_dir().
  * (Note that when using the system-provided temp directory, it may not
- * be possibly to atomically rename the resulting file due to cross-device
+ * be possible to atomically rename the resulting file due to cross-device
  * issues.)
  *
  * The file will be deleted according to @a delete_when.
@@ -833,7 +852,7 @@ svn_stream_from_stringbuf(svn_stringbuf_t *str,
  *  Allocate the stream in @a pool.
  */
 svn_stream_t *
-svn_stream_from_string(svn_string_t *str,
+svn_stream_from_string(const svn_string_t *str,
                        apr_pool_t *pool);
 
 /** Return a stream that decompresses all data read and compresses all
@@ -910,6 +929,15 @@ svn_stream_write(svn_stream_t *stream,
 svn_error_t *
 svn_stream_close(svn_stream_t *stream);
 
+/** Reset a generic stream back to its origin. E.g. On a file this would be
+ * implemented as a seek to position 0).  This function returns a 
+ * @a SVN_ERR_STREAM_RESET_NOT_SUPPORTED error when the stream doesn't
+ * implement resetting.
+ *
+ * @since New in 1.7. */
+svn_error_t *
+svn_stream_reset(svn_stream_t *stream);
+
 
 /** Write to @a stream using a printf-style @a fmt specifier, passed through
  * apr_psprintf() using memory from @a pool.
@@ -960,7 +988,7 @@ svn_stream_readline(svn_stream_t *stream,
  *
  * @a cancel_func may be @c NULL.
  *
- * @note both @a from and @a to will be closed upon successul completion of
+ * @note both @a from and @a to will be closed upon successful completion of
  * the copy (but an error may still be returned, based on trying to close
  * the two streams). If the closure is not desired, then you can use
  * svn_stream_disown() to protect either or both of the streams from
@@ -1218,11 +1246,14 @@ svn_io_start_cmd(apr_proc_t *cmd_proc,
  * Wait for the process @a *cmd_proc to complete and optionally retrieve
  * its exit code.  @a cmd is used only in error messages.
  *
- * If @a exitcode is not NULL, @a *exitcode will contain the exit code
- * of the process upon return, and if @a exitwhy is not NULL, @a
- * *exitwhy will indicate why the process terminated.  If @a exitwhy is
- * NULL, and the exit reason is not @c APR_PROC_CHECK_EXIT(), or if
- * @a exitcode is NULL and the exit code is non-zero, then an
+ * If @a exitcode is not NULL, and SVN_NO_ERROR is returned, @a *exitcode
+ * will contain the exit code of the process.  If @a exitcode is NULL and
+ * the exit code is non-zero, then an @c SVN_ERR_EXTERNAL_PROGRAM error
+ * will be returned.
+ *
+ * If @a exitwhy is not NULL, and SVN_NO_ERROR is returned, @a *exitwhy
+ * will indicate why the process terminated.  If @a exitwhy is NULL,
+ * and the exit reason is not @c APR_PROC_CHECK_EXIT(), then an
  * @c SVN_ERR_EXTERNAL_PROGRAM error will be returned.
  *
  * @since New in 1.3.
@@ -1250,7 +1281,7 @@ svn_io_run_cmd(const char *path,
                apr_file_t *errfile,
                apr_pool_t *pool);
 
-/** Invoke @c the configured diff program, with @a user_args (an array
+/** Invoke the configured @c diff program, with @a user_args (an array
  * of utf8-encoded @a num_user_args arguments) if they are specified
  * (that is, if @a user_args is non-NULL), or "-u" if they are not.
  * If @a user_args is NULL, the value of @a num_user_args is ignored.
@@ -1268,7 +1299,27 @@ svn_io_run_cmd(const char *path,
  * @a diff_cmd must be non-NULL.
  *
  * Do all allocation in @a pool.
+ * @since New in 1.6.0.
  */
+svn_error_t *
+svn_io_run_diff2(const char *dir,
+                 const char *const *user_args,
+                 int num_user_args,
+                 const char *label1,
+                 const char *label2,
+                 const char *from,
+                 const char *to,
+                 int *exitcode,
+                 apr_file_t *outfile,
+                 apr_file_t *errfile,
+                 const char *diff_cmd,
+                 apr_pool_t *pool);
+
+/** Similar to svn_io_run_diff2() but with @diff_cmd encoded in internal
+ * encoding used by APR.
+ *
+ * @deprecated Provided for backwards compatibility with the 1.5 API. */
+SVN_DEPRECATED
 svn_error_t *
 svn_io_run_diff(const char *dir,
                 const char *const *user_args,
@@ -1282,6 +1333,7 @@ svn_io_run_diff(const char *dir,
                 apr_file_t *errfile,
                 const char *diff_cmd,
                 apr_pool_t *pool);
+
 
 
 /** Invoke the configured @c diff3 program, in utf8-encoded @a dir
@@ -1318,6 +1370,27 @@ svn_io_run_diff(const char *dir,
  *
  * @since New in 1.4.
  */
+svn_error_t *
+svn_io_run_diff3_3(int *exitcode,
+                   const char *dir,
+                   const char *mine,
+                   const char *older,
+                   const char *yours,
+                   const char *mine_label,
+                   const char *older_label,
+                   const char *yours_label,
+                   apr_file_t *merged,
+                   const char *diff3_cmd,
+                   const apr_array_header_t *user_args,
+                   apr_pool_t *pool);
+
+/** Similar to svn_io_run_diff3_3(), but with @a diff3_cmd encoded in
+ * internal encoding used by APR.
+ *
+ * @deprecated Provided for backwards compatibility with the 1.5 API.
+ * @since New in 1.4.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_io_run_diff3_2(int *exitcode,
                    const char *dir,
@@ -1474,7 +1547,7 @@ svn_io_file_write_full(apr_file_t *file,
  *
  * If @a dirpath is @c NULL, use the path returned from svn_io_temp_dir().
  * (Note that when using the system-provided temp directory, it may not
- * be possibly to atomically rename the resulting file due to cross-device
+ * be possible to atomically rename the resulting file due to cross-device
  * issues.)
  *
  * The file will be deleted according to @a delete_when.

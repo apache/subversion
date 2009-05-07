@@ -4,7 +4,7 @@
  * in here.
  *
  * ====================================================================
- * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -42,6 +42,7 @@
 #include "svn_client.h"
 #include "svn_cmdline.h"
 #include "svn_string.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_hash.h"
 #include "svn_io.h"
@@ -158,7 +159,7 @@ svn_cl__edit_file_externally(const char *path,
   int sys_err;
   apr_status_t apr_err;
 
-  svn_path_split(path, &base_dir, &file_name, pool);
+  svn_dirent_split(path, &base_dir, &file_name, pool);
 
   SVN_ERR(find_editor_binary(&editor, editor_cmd, config));
 
@@ -200,7 +201,9 @@ svn_cl__merge_file_externally(const char *base_path,
                               const char *their_path,
                               const char *my_path,
                               const char *merged_path,
+                              const char *wc_path,
                               apr_hash_t *config,
+                              svn_boolean_t *remains_in_conflict,
                               apr_pool_t *pool)
 {
   char *merge_tool;
@@ -238,16 +241,37 @@ svn_cl__merge_file_externally(const char *base_path,
            "configuration option were not set.\n"));
 
   {
-    const char *arguments[] = { merge_tool, base_path, their_path,
-                                my_path, merged_path, NULL};
+    const char *arguments[7] = { 0 };
     char *cwd;
+    int exitcode;
+
     apr_status_t status = apr_filepath_get(&cwd, APR_FILEPATH_NATIVE, pool);
     if (status != 0)
       return svn_error_wrap_apr(status, NULL);
-    return svn_io_run_cmd(svn_path_internal_style(cwd, pool), merge_tool,
-                          arguments, NULL, NULL, TRUE, NULL, NULL, NULL,
-                          pool);
+
+    arguments[0] = merge_tool;
+    arguments[1] = base_path;
+    arguments[2] = their_path;
+    arguments[3] = my_path;
+    arguments[4] = merged_path;
+    arguments[5] = wc_path;
+    arguments[6] = NULL;
+
+    SVN_ERR(svn_io_run_cmd(svn_path_internal_style(cwd, pool), merge_tool,
+                           arguments, &exitcode, NULL, TRUE, NULL, NULL, NULL,
+                           pool));
+    /* Exit code 0 means the merge was successful.
+     * Exit code 1 means the file was left in conflict but it
+     * is OK to continue with the merge.
+     * Any other exit code means there was a real problem. */
+    if (exitcode != 0 && exitcode != 1)
+      return svn_error_createf
+        (SVN_ERR_EXTERNAL_PROGRAM, NULL,
+         _("The external merge tool exited with exit code %d"), exitcode);
+    else if (remains_in_conflict)
+      *remains_in_conflict = exitcode == 1;
   }
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -486,7 +510,7 @@ svn_cl__edit_string_externally(svn_string_t **edited_contents /* UTF-8! */,
                         stderr, TRUE /* fatal */, "svn: ");
     }
 
-  return err;
+  return svn_error_return(err);
 }
 
 
@@ -707,7 +731,7 @@ svn_cl__get_log_message(const char **log_msg,
           else if (! *path)
             path = ".";
 
-          if (path && lmb->base_dir)
+          if (! svn_path_is_url(path) && lmb->base_dir)
             path = svn_path_is_child(lmb->base_dir, path, pool);
 
           /* If still no path, then just use current directory. */
@@ -776,7 +800,7 @@ svn_cl__get_log_message(const char **log_msg,
               (err, _("Could not use external editor to fetch log message; "
                       "consider setting the $SVN_EDITOR environment variable "
                       "or using the --message (-m) or --file (-F) options"));
-          return err;
+          return svn_error_return(err);
         }
 
       if (msg_string)
@@ -862,10 +886,11 @@ svn_cl__may_need_force(svn_error_t *err)
       /* Should this svn_error_compose a new error number? Probably not,
          the error hasn't changed. */
       err = svn_error_quick_wrap
-        (err, _("Use --force to override this restriction") );
+        (err, _("Use --force to override this restriction (local modifications "
+         "may be lost)"));
     }
 
-  return err;
+  return svn_error_return(err);
 }
 
 
@@ -925,7 +950,7 @@ svn_cl__try(svn_error_t *err,
       *success = TRUE;
     }
 
-  return err;
+  return svn_error_return(err);
 }
 
 
@@ -1035,6 +1060,8 @@ const char *
 svn_cl__operation_str_xml(svn_wc_operation_t operation, apr_pool_t *pool)
 {
   switch(operation){
+	case svn_wc_operation_none:
+      return "none";
     case svn_wc_operation_update:
       return "update";
     case svn_wc_operation_switch:
@@ -1050,6 +1077,8 @@ svn_cl__operation_str_human_readable(svn_wc_operation_t operation,
                                      apr_pool_t *pool)
 {
   switch(operation){
+	case svn_wc_operation_none:
+      return _("none");
     case svn_wc_operation_update:
       return _("update");
     case svn_wc_operation_switch:
@@ -1068,18 +1097,18 @@ svn_cl__args_to_target_array_print_reserved(apr_array_header_t **targets,
                                             svn_client_ctx_t *ctx,
                                             apr_pool_t *pool)
 {
-  svn_error_t *error = svn_client_args_to_target_array(targets, os,
-                                                       known_targets,
-                                                       ctx, pool);
-  if (error)
+  svn_error_t *err = svn_client_args_to_target_array(targets, os,
+                                                     known_targets,
+                                                     ctx, pool);
+  if (err)
     {
-      if (error->apr_err ==  SVN_ERR_RESERVED_FILENAME_SPECIFIED)
+      if (err->apr_err ==  SVN_ERR_RESERVED_FILENAME_SPECIFIED)
         {
-          svn_handle_error2(error, stderr, FALSE, "svn: Skipping argument: ");
-          svn_error_clear(error);
+          svn_handle_error2(err, stderr, FALSE, "svn: Skipping argument: ");
+          svn_error_clear(err);
         }
       else
-        return error;
+        return svn_error_return(err);
     }
   return SVN_NO_ERROR;
 }
@@ -1163,7 +1192,7 @@ svn_cl__time_cstring_to_human_cstring(const char **human_cstring,
       return SVN_NO_ERROR;
     }
   else if (err)
-    return err;
+    return svn_error_return(err);
 
   *human_cstring = svn_time_to_human_cstring(when, pool);
 
@@ -1228,10 +1257,10 @@ svn_cl__node_description(const svn_wc_conflict_version_t *node,
 
   /* Construct the whole URL if we can, else use whatever we have. */
   if (node->repos_url && node->path_in_repos)
-    url_str = svn_path_url_add_component(node->repos_url,
-                                         node->path_in_repos, pool);
+    url_str = svn_path_url_add_component2(node->repos_url,
+                                          node->path_in_repos, pool);
   else if (node->repos_url)
-    url_str = svn_path_url_add_component(node->repos_url, "...", pool);
+    url_str = svn_path_url_add_component2(node->repos_url, "...", pool);
   else if (node->path_in_repos)
     url_str = node->path_in_repos;
   else

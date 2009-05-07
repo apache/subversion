@@ -153,8 +153,7 @@ def am_nodes(ctx):
       nid,cid,tid = rec[0].split(".")
       data[tid.rjust(20)+nd.createpath] = (rec[0], nd)
       rec = cur.next()
-    k = list(data.keys())
-    k.sort()
+    k = sorted(data.keys())
     reptype = {"fulltext":"F", "delta":"D"}
     for i in k:
       nd = data[i][1]

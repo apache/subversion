@@ -19,8 +19,6 @@
  * @brief XML code shared by various Subversion libraries.
  */
 
-
-
 #ifndef SVN_XML_H
 #define SVN_XML_H
 
@@ -28,7 +26,7 @@
 #include <apr_pools.h>
 #include <apr_hash.h>
 
-#include "svn_error.h"
+#include "svn_types.h"
 #include "svn_string.h"
 
 #ifdef __cplusplus

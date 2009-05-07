@@ -2,7 +2,7 @@
  * client.h :  shared stuff internal to the client library.
  *
  * ====================================================================
- * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -33,6 +33,8 @@
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
+
+#define SVN_CLIENT_SVNPATCH_VERSION   1
 
 
 /* Set *URL and *PEG_REVNUM (the latter is ignored if NULL) to the
@@ -106,9 +108,9 @@ svn_client__get_revision_number(svn_revnum_t *revnum,
                                 const char *path,
                                 apr_pool_t *pool);
 
-/* Set *COPYFROM_PATH and *COPYFROM_REV to the path and revision that
-   served as the source of the copy from which PATH_OR_URL at REVISION
-   was created, or NULL and SVN_INVALID_REVNUM (respectively) if
+/* Set *COPYFROM_PATH and *COPYFROM_REV to the path (without initial '/')
+   and revision that served as the source of the copy from which PATH_OR_URL
+   at REVISION was created, or NULL and SVN_INVALID_REVNUM (respectively) if
    PATH_OR_URL at REVISION was not the result of a copy operation. */
 svn_error_t *svn_client__get_copy_source(const char *path_or_url,
                                          const svn_opt_revision_t *revision,
@@ -189,8 +191,9 @@ svn_client__repos_location_segments(apr_array_header_t **segments,
    ancestor path (a path relative to the root of the repository) and
    revision, respectively, of the two locations identified as
    PATH_OR_URL1@REV1 and PATH_OR_URL2@REV1.  Use the authentication
-   baton cached in CTX to authenticate against the repository.  Use
-   POOL for all allocations. */
+   baton cached in CTX to authenticate against the repository.
+   This function assumes that PATH_OR_URL1@REV1 and PATH_OR_URL2@REV1
+   both refer to the same repository.  Use POOL for all allocations. */
 svn_error_t *
 svn_client__get_youngest_common_ancestor(const char **ancestor_path,
                                          svn_revnum_t *ancestor_revision,
@@ -687,11 +690,17 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
    If NOTIFY_FUNC is non-null, invoke it with NOTIFY_BATON for each
    file and directory operated on during the edit.
 
-   EDITOR/EDIT_BATON return the newly created editor and baton/  */
+   EDITOR/EDIT_BATON return the newly created editor and baton/
+  
+   SVNPATCH_FILE is the temporary file to which the library dumps
+   serialized ra_svn protocol Editor Commands.  It somehow determines
+   whether or not to utilize svnpatch format in the diff output when
+   checked against NULL.  The caller must allocate the file handler,
+   open and close the file respectively before and after the call. */
 svn_error_t *
 svn_client__get_diff_editor(const char *target,
                             svn_wc_adm_access_t *adm_access,
-                            const svn_wc_diff_callbacks3_t *diff_cmd,
+                            const svn_wc_diff_callbacks4_t *diff_cmd,
                             void *diff_cmd_baton,
                             svn_depth_t depth,
                             svn_boolean_t dry_run,
@@ -703,6 +712,7 @@ svn_client__get_diff_editor(const char *target,
                             void *cancel_baton,
                             const svn_delta_editor_t **editor,
                             void **edit_baton,
+                            apr_file_t *svnpatch_file,
                             apr_pool_t *pool);
 
 
@@ -1045,7 +1055,7 @@ svn_client__fetch_externals(apr_hash_t *externals,
    other options are the same as those passed to svn_client_status(). */
 svn_error_t *
 svn_client__do_external_status(svn_wc_traversal_info_t *traversal_info,
-                               svn_wc_status_func3_t status_func,
+                               svn_wc_status_func4_t status_func,
                                void *status_baton,
                                svn_depth_t depth,
                                svn_boolean_t get_all,

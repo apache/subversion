@@ -2,7 +2,7 @@
  * kwallet.cpp: KWallet provider for SVN_AUTH_CRED_*
  *
  * ====================================================================
- * Copyright (c) 2008 CollabNet.  All rights reserved.
+ * Copyright (c) 2008-2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -37,6 +37,7 @@
 #include "svn_private_config.h"
 
 #include <dbus/dbus.h>
+#include <QtCore/QCoreApplication>
 #include <QtCore/QString>
 
 #include <kaboutdata.h>
@@ -171,8 +172,15 @@ kwallet_password_get(const char **password,
       return FALSE;
     }
 
+  QCoreApplication *app;
+  if (! qApp)
+    {
+      int argc = 1;
+      app = new QCoreApplication(argc, (char *[1]) {(char *) "svn"});
+    }
+
   KCmdLineArgs::init(1,
-                     (char *[1]) { (char *) "svn" },
+                     (char *[1]) {(char *) "svn"},
                      get_application_name(parameters, pool),
                      "subversion",
                      ki18n(get_application_name(parameters, pool)),
@@ -197,7 +205,7 @@ kwallet_password_get(const char **password,
           if (wallet->setFolder(folder))
             {
               QString q_password;
-              if (wallet->readPassword(key, q_password) == 0);
+              if (wallet->readPassword(key, q_password) == 0)
                 {
                   *password = apr_pstrmemdup(pool,
                                              q_password.toUtf8().data(),
@@ -234,8 +242,15 @@ kwallet_password_set(apr_hash_t *creds,
       return FALSE;
     }
 
+  QCoreApplication *app;
+  if (! qApp)
+    {
+      int argc = 1;
+      app = new QCoreApplication(argc, (char *[1]) {(char *) "svn"});
+    }
+
   KCmdLineArgs::init(1,
-                     (char *[1]) { (char *) "svn" },
+                     (char *[1]) {(char *) "svn"},
                      get_application_name(parameters, pool),
                      "subversion",
                      ki18n(get_application_name(parameters, pool)),

@@ -1,6 +1,6 @@
 /*
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006, 2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -107,7 +107,7 @@ typedef struct svn_string_t svn_string_t;
     $1 = NULL;
   } else {
     $1 = svn_stringbuf_ncreate(StringValuePtr($input),
-                               RSTRING($input)->len,
+                               RSTRING_LEN($input),
                                _global_pool);
   }
 }
@@ -123,7 +123,7 @@ typedef struct svn_string_t svn_string_t;
     svn_swig_rb_get_pool(argc, argv, self, &rb_pool, &pool);
 
     $1 = svn_stringbuf_ncreate(StringValuePtr($input),
-                               RSTRING($input)->len,
+                               RSTRING_LEN($input),
                                pool);
   }
 }
@@ -195,7 +195,7 @@ typedef struct svn_string_t svn_string_t;
     $1 = NULL;
   } else {
     value.data = StringValuePtr($input);
-    value.len = RSTRING($input)->len;
+    value.len = RSTRING_LEN($input);
     $1 = &value;
   }
 }

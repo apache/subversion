@@ -60,7 +60,7 @@ svn_repos_check_revision_access(svn_repos_revision_access_level_t *access_level,
 
   /* Fetch the changes associated with REVISION. */
   SVN_ERR(svn_fs_revision_root(&rev_root, fs, revision, pool));
-  SVN_ERR(svn_fs_paths_changed(&changes, rev_root, pool));
+  SVN_ERR(svn_fs_paths_changed2(&changes, rev_root, pool));
 
   /* No changed paths?  We're done. */
   if (apr_hash_count(changes) == 0)
@@ -73,7 +73,7 @@ svn_repos_check_revision_access(svn_repos_revision_access_level_t *access_level,
     {
       const void *key;
       void *val;
-      svn_fs_path_change_t *change;
+      svn_fs_path_change2_t *change;
       svn_boolean_t readable;
 
       svn_pool_clear(subpool);
@@ -181,7 +181,7 @@ detect_changed(apr_hash_t **changed,
   svn_boolean_t found_unreadable = FALSE;
 
   *changed = apr_hash_make(pool);
-  SVN_ERR(svn_fs_paths_changed(&changes, root, pool));
+  SVN_ERR(svn_fs_paths_changed2(&changes, root, pool));
 
   if (apr_hash_count(changes) == 0)
     /* No paths changed in this revision?  Uh, sure, I guess the
@@ -195,10 +195,10 @@ detect_changed(apr_hash_t **changed,
          here, so we'll live with the duplication. */
       const void *key;
       void *val;
-      svn_fs_path_change_t *change;
+      svn_fs_path_change2_t *change;
       const char *path;
       char action;
-      svn_log_changed_path_t *item;
+      svn_log_changed_path2_t *item;
 
       svn_pool_clear(subpool);
 
@@ -247,9 +247,14 @@ detect_changed(apr_hash_t **changed,
           break;
         }
 
-      item = apr_pcalloc(pool, sizeof(*item));
+      item = svn_log_changed_path2_create(pool);
       item->action = action;
+      item->node_kind = change->node_kind;
       item->copyfrom_rev = SVN_INVALID_REVNUM;
+      item->text_modified = change->text_mod ? svn_tristate_true
+                                             : svn_tristate_false;
+      item->props_modified = change->prop_mod ? svn_tristate_true
+                                              : svn_tristate_false;
       if ((action == 'A') || (action == 'R'))
         {
           const char *copyfrom_path;
@@ -359,8 +364,7 @@ get_history(struct path_info *info,
     {
       subpool = info->newpool;
 
-      SVN_ERR(svn_fs_history_prev(&info->hist, info->hist,
-                                  strict ? FALSE : TRUE, subpool));
+      SVN_ERR(svn_fs_history_prev(&info->hist, info->hist, ! strict, subpool));
 
       hist = info->hist;
     }
@@ -375,14 +379,12 @@ get_history(struct path_info *info,
       SVN_ERR(svn_fs_node_history(&hist, history_root, info->path->data,
                                   subpool));
 
-      SVN_ERR(svn_fs_history_prev(&hist, hist, strict ? FALSE : TRUE,
-                                  subpool));
+      SVN_ERR(svn_fs_history_prev(&hist, hist, ! strict, subpool));
 
       if (info->first_time)
         info->first_time = FALSE;
       else
-        SVN_ERR(svn_fs_history_prev(&hist, hist, strict ? FALSE : TRUE,
-                                    subpool));
+        SVN_ERR(svn_fs_history_prev(&hist, hist, ! strict, subpool));
     }
 
   if (! hist)
@@ -532,7 +534,7 @@ fs_mergeinfo_changed(svn_mergeinfo_catalog_t *deleted_mergeinfo_catalog,
   /* We're going to use the changed-paths information for REV to
      narrow down our search. */
   SVN_ERR(svn_fs_revision_root(&root, fs, rev, subpool));
-  SVN_ERR(svn_fs_paths_changed(&changes, root, subpool));
+  SVN_ERR(svn_fs_paths_changed2(&changes, root, subpool));
 
   /* No changed paths?  We're done. */
   if (apr_hash_count(changes) == 0)
@@ -549,7 +551,7 @@ fs_mergeinfo_changed(svn_mergeinfo_catalog_t *deleted_mergeinfo_catalog,
     {
       const void *key;
       void *val;
-      svn_fs_path_change_t *change;
+      svn_fs_path_change2_t *change;
       const char *changed_path, *base_path = NULL;
       svn_revnum_t base_rev = SVN_INVALID_REVNUM;
       svn_fs_root_t *base_root = NULL;
@@ -978,6 +980,7 @@ fill_log_entry(svn_log_entry_t *log_entry,
     }
 
   log_entry->changed_paths = changed_paths;
+  log_entry->changed_paths2 = changed_paths;
   log_entry->revision = rev;
 
   return SVN_NO_ERROR;

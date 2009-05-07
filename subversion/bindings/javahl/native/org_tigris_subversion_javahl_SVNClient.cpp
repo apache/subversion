@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2003-2008 CollabNet.  All rights reserved.
+ * Copyright (c) 2003-2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -288,7 +288,6 @@ Java_org_tigris_subversion_javahl_SVNClient_logMessages
   if (JNIUtil::isExceptionThrown())
     return;
 
-  jclass clazz = env->FindClass(JAVA_PACKAGE"/RevisionRange");
   if (JNIUtil::isExceptionThrown())
     return;
 
@@ -893,7 +892,6 @@ Java_org_tigris_subversion_javahl_SVNClient_merge__Ljava_lang_String_2Lorg_tigri
   if (JNIUtil::isExceptionThrown())
     return;
 
-  jclass clazz = env->FindClass(JAVA_PACKAGE"/RevisionRange");
   if (JNIUtil::isExceptionThrown())
     return;
 

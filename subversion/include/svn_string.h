@@ -70,12 +70,11 @@
 #ifndef SVN_STRING_H
 #define SVN_STRING_H
 
-#include <apr.h>
-#include <apr_tables.h>
-#include <apr_pools.h>       /* APR memory pools for everyone. */
-#include <apr_strings.h>
+#include <apr.h>          /* for apr_size_t */
+#include <apr_pools.h>    /* for apr_pool_t */
+#include <apr_tables.h>   /* for apr_array_header_t */
 
-#include "svn_types.h"
+#include "svn_types.h"    /* for svn_boolean_t, svn_error_t */
 
 #ifdef __cplusplus
 extern "C" {
@@ -193,7 +192,8 @@ svn_stringbuf_ncreate(const char *bytes, apr_size_t size, apr_pool_t *pool);
 /** Create a new empty bytestring with at least @a minimum_size bytes of
  * space available in the memory block.
  *
- * (@a minimum_size should include space for the terminating NULL character.)
+ * The allocated string buffer will be one byte larger then @a minimum_size
+ * to account for a final '\0'.
  *
  * @since New in 1.6.
  */

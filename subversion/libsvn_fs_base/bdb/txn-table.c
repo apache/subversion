@@ -39,7 +39,7 @@
 static svn_boolean_t
 is_committed(transaction_t *txn)
 {
-  return (txn->kind == transaction_kind_committed) ? TRUE : FALSE;
+  return (txn->kind == transaction_kind_committed);
 }
 
 
@@ -290,7 +290,7 @@ svn_fs_bdb__get_txn_list(apr_array_header_t **names_p,
                                                      subpool)))
         {
           svn_bdb_dbc_close(cursor);
-          return err;
+          return svn_error_return(err);
         }
 
       /* If this is an immutable "committed" transaction, ignore it. */

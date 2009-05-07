@@ -23,13 +23,14 @@
 #include "svn_iter.h"
 #include "svn_repos.h"
 #include "svn_string.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_time.h"
 #include "svn_checksum.h"
 #include "svn_props.h"
 
 
-#define ARE_VALID_COPY_ARGS(p,r) ((p && SVN_IS_VALID_REVNUM(r)) ? 1 : 0)
+#define ARE_VALID_COPY_ARGS(p,r) ((p) && SVN_IS_VALID_REVNUM(r))
 
 /*----------------------------------------------------------------------*/
 
@@ -658,7 +659,7 @@ add_directory(const char *path,
   val = apr_hash_get(pb->deleted_entries, path, APR_HASH_KEY_STRING);
 
   /* Detect an add-with-history. */
-  is_copy = ARE_VALID_COPY_ARGS(copyfrom_path, copyfrom_rev) ? TRUE : FALSE;
+  is_copy = ARE_VALID_COPY_ARGS(copyfrom_path, copyfrom_rev);
 
   /* Dump the node. */
   SVN_ERR(dump_node(eb, path,
@@ -698,7 +699,7 @@ open_directory(const char *path,
   if (pb && ARE_VALID_COPY_ARGS(pb->cmp_path, pb->cmp_rev))
     {
       cmp_path = svn_path_join(pb->cmp_path,
-                               svn_path_basename(path, pool), pool);
+                               svn_dirent_basename(path, pool), pool);
       cmp_rev = pb->cmp_rev;
     }
 
@@ -758,7 +759,7 @@ add_file(const char *path,
   val = apr_hash_get(pb->deleted_entries, path, APR_HASH_KEY_STRING);
 
   /* Detect add-with-history. */
-  is_copy = ARE_VALID_COPY_ARGS(copyfrom_path, copyfrom_rev) ? TRUE : FALSE;
+  is_copy = ARE_VALID_COPY_ARGS(copyfrom_path, copyfrom_rev);
 
   /* Dump the node. */
   SVN_ERR(dump_node(eb, path,
@@ -795,7 +796,7 @@ open_file(const char *path,
   if (pb && ARE_VALID_COPY_ARGS(pb->cmp_path, pb->cmp_rev))
     {
       cmp_path = svn_path_join(pb->cmp_path,
-                               svn_path_basename(path, pool), pool);
+                               svn_dirent_basename(path, pool), pool);
       cmp_rev = pb->cmp_rev;
     }
 

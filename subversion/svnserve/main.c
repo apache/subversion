@@ -35,6 +35,7 @@
 #include "svn_error.h"
 #include "svn_ra_svn.h"
 #include "svn_utf.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_opt.h"
 #include "svn_repos.h"
@@ -562,7 +563,7 @@ int main(int argc, const char *argv[])
   if (config_filename)
       SVN_INT_ERR(load_configs(&params.cfg, &params.pwdb, &params.authzdb,
                                config_filename, TRUE,
-                               svn_path_dirname(config_filename, pool),
+                               svn_dirent_dirname(config_filename, pool),
                                NULL, NULL, /* server baton, conn */
                                pool));
 

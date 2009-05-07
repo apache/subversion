@@ -99,10 +99,11 @@ typedef struct {
 
   svn_boolean_t compression;            /* should we use http compression? */
 
-  /* Both of these function as caches, and are NULL when uninitialized
+  /* Each of these function as caches, and are NULL when uninitialized
      or cleared: */
   const char *vcc;                      /* version-controlled-configuration */
   const char *uuid;                     /* repository UUID */
+  const char *act_coll;                 /* activity collection set */
 
   svn_ra_progress_notify_func_t progress_func;
   void *progress_baton;
@@ -115,7 +116,32 @@ typedef struct {
      well-informed internal code may just compare against those
      constants' addresses, therefore). */
   apr_hash_t *capabilities;
+
+  /*** HTTP v2 protocol stuff. ***
+   *
+   * We assume that if mod_dav_svn sends one of the special v2 OPTIONs
+   * response headers, it has sent all of them.  Specifically, we'll
+   * be looking at the presence of the "me resource" as a flag that
+   * the server supports v2 of our HTTP protocol.
+   */
+
+  /* The "me resource".  Typically used as a target for REPORTs that
+     are path-agnostic.  If we have this, we can speak HTTP v2 to the
+     server.  */
+  const char *me_resource;
+
+  /* Opaque URL "stubs".  If the OPTIONS response returns these, then
+     we know we're using HTTP protocol v2. */
+  const char *rev_stub;         /* for accessing revisions (i.e. revprops) */
+  const char *rev_root_stub;    /* for accessing REV/PATH pairs */
+  const char *txn_stub;         /* for accessing transactions (i.e. txnprops) */
+  const char *txn_root_stub;    /* for accessing TXN/PATH pairs */
+
+  /*** End HTTP v2 stuff ***/
+
 } svn_ra_neon__session_t;
+
+#define SVN_RA_NEON__HAVE_HTTPV2_SUPPORT(ras) ((ras)->me_resource != NULL)
 
 
 typedef struct {
@@ -544,14 +570,11 @@ extern const ne_propname svn_ra_neon__vcc_prop;
 extern const ne_propname svn_ra_neon__checked_in_prop;
 
 
-
-
 /* send an OPTIONS request to fetch the activity-collection-set */
-svn_error_t * svn_ra_neon__get_activity_collection
-  (const svn_string_t **activity_coll,
-   svn_ra_neon__session_t *ras,
-   const char *url,
-   apr_pool_t *pool);
+svn_error_t *
+svn_ra_neon__get_activity_collection(const svn_string_t **activity_coll,
+                                     svn_ra_neon__session_t *ras,
+                                     apr_pool_t *pool);
 
 
 /* Call ne_set_request_body_pdovider on REQ with a provider function
@@ -1052,6 +1075,17 @@ svn_ra_neon__has_capability(svn_ra_session_t *session,
                             svn_boolean_t *has,
                             const char *capability,
                             apr_pool_t *pool);
+
+/* Exchange capabilities with the server, by sending an OPTIONS
+   request announcing the client's capabilities, and by filling
+   RAS->capabilities with the server's capabilities as read from the
+   response headers.  Use POOL only for temporary allocation.
+
+   NOTE:  This function also expects the server to announce the
+   activity collection.  */
+svn_error_t *
+svn_ra_neon__exchange_capabilities(svn_ra_neon__session_t *ras,
+                                   apr_pool_t *pool);
 
 /*
  * Implements the get_deleted_rev RA layer function. */

@@ -22,8 +22,11 @@
 #ifndef SVN_BASE64_H
 #define SVN_BASE64_H
 
-#include "svn_io.h"
+#include <apr_pools.h>
+
 #include "svn_types.h"
+#include "svn_io.h"     /* for svn_stream_t */
+#include "svn_string.h"
 
 #ifdef __cplusplus
 extern "C" {

@@ -2,7 +2,7 @@
  * fs_loader.c:  Front-end to the various FS back ends
  *
  * ====================================================================
- * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -34,6 +34,7 @@
 #include "svn_string.h"
 #include "svn_private_config.h"
 
+#include "private/svn_fs_util.h"
 #include "private/svn_utf_private.h"
 
 #include "fs-loader.h"
@@ -652,7 +653,23 @@ svn_error_t *
 svn_fs_commit_txn(const char **conflict_p, svn_revnum_t *new_rev,
                   svn_fs_txn_t *txn, apr_pool_t *pool)
 {
-  return txn->vtable->commit(conflict_p, new_rev, txn, pool);
+#ifdef PACK_AFTER_EVERY_COMMIT
+  svn_fs_root_t *txn_root;
+  svn_fs_t *fs;
+  const char *fs_path;
+
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+  fs = svn_fs_root_fs(txn_root);
+  fs_path = svn_fs_path(fs, pool);
+#endif
+
+  SVN_ERR(txn->vtable->commit(conflict_p, new_rev, txn, pool));
+
+#ifdef PACK_AFTER_EVERY_COMMIT
+  SVN_ERR(svn_fs_pack(fs_path, NULL, NULL, NULL, NULL, pool));
+#endif
+
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -780,10 +797,40 @@ svn_fs_revision_root_revision(svn_fs_root_t *root)
 }
 
 svn_error_t *
+svn_fs_paths_changed2(apr_hash_t **changed_paths_p, svn_fs_root_t *root,
+                      apr_pool_t *pool)
+{
+  return root->vtable->paths_changed(changed_paths_p, root, pool);
+}
+
+svn_error_t *
 svn_fs_paths_changed(apr_hash_t **changed_paths_p, svn_fs_root_t *root,
                      apr_pool_t *pool)
 {
-  return root->vtable->paths_changed(changed_paths_p, root, pool);
+  apr_hash_t *changed_paths_new_structs;
+  apr_hash_index_t *hi;
+
+  SVN_ERR(svn_fs_paths_changed2(&changed_paths_new_structs, root, pool));
+  *changed_paths_p = apr_hash_make(pool);
+  for (hi = apr_hash_first(pool, changed_paths_new_structs);
+       hi;
+       hi = apr_hash_next(hi))
+    {
+      const void *vkey;
+      apr_ssize_t klen;
+      void *vval;
+      svn_fs_path_change2_t *val;
+      svn_fs_path_change_t *change;
+      apr_hash_this(hi, &vkey, &klen, &vval);
+      val = vval;
+      change = apr_palloc(pool, sizeof(*change));
+      change->node_rev_id = val->node_rev_id;
+      change->change_kind = val->change_kind;
+      change->text_mod = val->text_mod;
+      change->prop_mod = val->prop_mod;
+      apr_hash_set(*changed_paths_p, vkey, klen, change);
+    }
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -1274,6 +1321,13 @@ svn_fs_print_modules(svn_stringbuf_t *output,
   return SVN_NO_ERROR;
 }
 
+svn_fs_path_change2_t *
+svn_fs_path_change2_create(const svn_fs_id_t *node_rev_id,
+                           svn_fs_path_change_kind_t change_kind,
+                           apr_pool_t *pool)
+{
+  return svn_fs__path_change2_create(node_rev_id, change_kind, pool);
+}
 
 /* Return the library version number. */
 const svn_version_t *

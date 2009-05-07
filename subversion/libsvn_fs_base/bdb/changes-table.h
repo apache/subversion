@@ -1,7 +1,7 @@
 /* changes-table.h : internal interface to `changes' table
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004, 2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -18,8 +18,8 @@
 #ifndef SVN_LIBSVN_FS_CHANGES_TABLE_H
 #define SVN_LIBSVN_FS_CHANGES_TABLE_H
 
-#define APU_WANT_DB
-#include <apu_want.h>
+#define SVN_WANT_BDB
+#include "svn_private_config.h"
 
 #include "svn_io.h"
 #include "svn_fs.h"
@@ -63,7 +63,7 @@ svn_error_t *svn_fs_bdb__changes_delete(svn_fs_t *fs,
                                         apr_pool_t *pool);
 
 /* Return a hash *CHANGES_P, keyed on const char * paths, and
-   containing svn_fs_path_change_t * values representing summarized
+   containing svn_fs_path_change2_t * values representing summarized
    changed records associated with KEY in FS, as part of TRAIL.
    Allocate the array and its items in POOL.  */
 svn_error_t *svn_fs_bdb__changes_fetch(apr_hash_t **changes_p,

@@ -272,7 +272,7 @@ svn_repos_history2(svn_fs_t *fs,
             }
           else
             {
-              return err;
+              return svn_error_return(err);
             }
         }
 
@@ -337,7 +337,7 @@ svn_repos_deleted_rev(svn_fs_t *fs,
           svn_error_clear(err);
           return SVN_NO_ERROR;
         }
-      return err;
+      return svn_error_return(err);
     }
 
   /* Ensure path was deleted at or before end revision. */
@@ -349,7 +349,7 @@ svn_repos_deleted_rev(svn_fs_t *fs,
     }
   else if (err)
     {
-      return err;
+      return svn_error_return(err);
     }
   else
     {
@@ -454,7 +454,7 @@ svn_repos_deleted_rev(svn_fs_t *fs,
               mid_rev = (start + mid_rev) / 2;
             }
           else
-            return err;
+            return svn_error_return(err);
         }
       else
         {
@@ -1087,7 +1087,7 @@ find_interesting_revisions(apr_array_header_t *path_revisions,
   svn_fs_root_t *root;
   svn_node_kind_t kind;
 
-  /* We switch betwwen two pools while looping, since we need information from
+  /* We switch between two pools while looping, since we need information from
      the last iteration to be available. */
   iter_pool = svn_pool_create(pool);
   last_pool = svn_pool_create(pool);
@@ -1379,7 +1379,7 @@ send_path_revision(struct path_revision *path_rev,
  *     DUPLICATE_PATH_REVS to avoid tracing the same paths of history multiple
  *     times.
  *  3) Send both MAINLINE_PATH_REVISIONS and MERGED_PATH_REVISIONS from
- *     youngest to oldest, interleaving as appropriate.  This is implemented
+ *     oldest to youngest, interleaving as appropriate.  This is implemented
  *     similar to an insertion sort, but instead of inserting into another
  *     array, we just call the appropriate handler.
  */

@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2004, 2008 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2004, 2008-2009 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -675,26 +675,23 @@ def inappropriate_props(sbox):
                                      'propset', SVN_PROP_MERGEINFO,
                                      '/trunk:one', path)
 
-  # ...contain overlapping revision ranges
+  # ...contain overlapping revision ranges of differing inheritability.
   svntest.actions.run_and_verify_svn('overlapping ranges', None,
-                                     "svn: Parsing of overlapping revision "
-                                      "ranges '9-20' and '18-22' is not "
-                                      "supported\n",
+                                     "svn: Unable to parse overlapping "
+                                     "revision ranges '9-20\\*' and "
+                                     "'18-22' with different "
+                                     "inheritance types\n",
                                      'propset', SVN_PROP_MERGEINFO,
-                                     '/branch:5-7,9-20,18-22', path)
+                                     '/branch:5-7,9-20*,18-22', path)
 
   svntest.actions.run_and_verify_svn('overlapping ranges', None,
-                                     "svn: Parsing of overlapping revision "
-                                      "ranges '3' and '3' is not supported\n",
+                                     "svn: Unable to parse overlapping "
+                                     "revision ranges "
+                                     "(('3' and '3\\*')|('3\\*' and '3')) "
+                                     "with different "
+                                     "inheritance types\n",
                                      'propset', SVN_PROP_MERGEINFO,
-                                     '/branch:3,3', path)
-
-  # ...contain unordered revision ranges
-  svntest.actions.run_and_verify_svn('unordered ranges', None,
-                                     "svn: Unable to parse unordered "
-                                      "revision ranges '5' and '2-3'\n",
-                                     'propset', SVN_PROP_MERGEINFO,
-                                     '/featureX:5,2-3,9', path)
+                                     '/branch:3,3*', path)
 
   # ...contain revision ranges with start revisions greater than or
   #    equal to end revisions.
@@ -846,61 +843,42 @@ def prop_value_conversions(sbox):
   lambda_path = os.path.join(wc_dir, 'A', 'B', 'lambda')
   mu_path = os.path.join(wc_dir, 'A', 'mu')
 
-  # We'll use a file to set the prop values, so that weird characters
-  # in the props don't confuse the shell.
-  propval_path = os.path.join(wc_dir, 'propval.tmp')
-  propval_file = open(propval_path, 'wb')
-
-  def set_prop(name, value, path, valf=propval_file, valp=propval_path,
-               expected_error=None):
-    valf.seek(0)
-    valf.truncate(0)
-    valf.write(value)
-    valf.flush()
-    svntest.main.run_svn(expected_error, 'propset', '-F', valp, name, path)
+  # Leading and trailing whitespace should be stripped
+  svntest.actions.set_prop('svn:mime-type', ' text/html\n\n', iota_path)
+  svntest.actions.set_prop('svn:mime-type', 'text/html', mu_path)
 
   # Leading and trailing whitespace should be stripped
-  set_prop('svn:mime-type', ' text/html\n\n', iota_path)
-  set_prop('svn:mime-type', 'text/html', mu_path)
-
-  # Leading and trailing whitespace should be stripped
-  set_prop('svn:eol-style', '\nnative\n', iota_path)
-  set_prop('svn:eol-style', 'native', mu_path)
+  svntest.actions.set_prop('svn:eol-style', '\nnative\n', iota_path)
+  svntest.actions.set_prop('svn:eol-style', 'native', mu_path)
 
   # A trailing newline should be added
-  set_prop('svn:ignore', '*.o\nfoo.c', A_path)
-  set_prop('svn:ignore', '*.o\nfoo.c\n', B_path)
+  svntest.actions.set_prop('svn:ignore', '*.o\nfoo.c', A_path)
+  svntest.actions.set_prop('svn:ignore', '*.o\nfoo.c\n', B_path)
 
   # A trailing newline should be added
-  set_prop('svn:externals', 'foo http://foo.com/repos', A_path)
-  set_prop('svn:externals', 'foo http://foo.com/repos\n', B_path)
+  svntest.actions.set_prop('svn:externals', 'foo http://foo.com/repos', A_path)
+  svntest.actions.set_prop('svn:externals', 'foo http://foo.com/repos\n', B_path)
 
   # Leading and trailing whitespace should be stripped, but not internal
   # whitespace
-  set_prop('svn:keywords', ' Rev Date \n', iota_path)
-  set_prop('svn:keywords', 'Rev  Date', mu_path)
+  svntest.actions.set_prop('svn:keywords', ' Rev Date \n', iota_path)
+  svntest.actions.set_prop('svn:keywords', 'Rev  Date', mu_path)
 
   # svn:executable value should be forced to a '*'
-  set_prop('svn:executable', 'foo', iota_path)
-  set_prop('svn:executable', '*', lambda_path)
+  svntest.actions.set_prop('svn:executable', 'foo', iota_path)
+  svntest.actions.set_prop('svn:executable', '*', lambda_path)
   for pval in ('      ', '', 'no', 'off', 'false'):
-    set_prop('svn:executable', pval, mu_path, propval_file, propval_path,
-             ["svn: warning: To turn off the svn:executable property, "
-              "use 'svn propdel';\n",
-              "setting the property to '" + pval +
-              "' will not turn it off.\n"])
+    svntest.actions.set_prop('svn:executable', pval, mu_path,
+                             ["svn: warning: To turn off the svn:executable property, use 'svn propdel';\n",
+                              "setting the property to '" + pval + "' will not turn it off.\n"])
 
   # Anything else should be untouched
-  set_prop('svn:some-prop', 'bar', lambda_path)
-  set_prop('svn:some-prop', ' bar baz', mu_path)
-  set_prop('svn:some-prop', 'bar\n', iota_path)
-  set_prop('some-prop', 'bar', lambda_path)
-  set_prop('some-prop', ' bar baz', mu_path)
-  set_prop('some-prop', 'bar\n', iota_path)
-
-  # Close and remove the prop value file
-  propval_file.close()
-  os.unlink(propval_path)
+  svntest.actions.set_prop('svn:some-prop', 'bar', lambda_path)
+  svntest.actions.set_prop('svn:some-prop', ' bar baz', mu_path)
+  svntest.actions.set_prop('svn:some-prop', 'bar\n', iota_path)
+  svntest.actions.set_prop('some-prop', 'bar', lambda_path)
+  svntest.actions.set_prop('some-prop', ' bar baz', mu_path)
+  svntest.actions.set_prop('some-prop', 'bar\n', iota_path)
 
   # NOTE: When writing out multi-line prop values in svn:* props, the
   # client converts to local encoding and local eoln style.
@@ -979,21 +957,11 @@ def binary_props(sbox):
   prop_binx = "This property has an <xml> tag and a zer\000 byte."
 
   # Set some binary properties.
-  propval_path = os.path.join(wc_dir, 'propval.tmp')
-  propval_file = open(propval_path, 'wb')
-
-  def set_prop(name, value, path, valf=propval_file, valp=propval_path):
-    valf.seek(0)
-    valf.truncate(0)
-    valf.write(value)
-    valf.flush()
-    svntest.main.run_svn(None, 'propset', '-F', valp, name, path)
-
-  set_prop('prop_zb', prop_zb, B_path)
-  set_prop('prop_ff', prop_ff, iota_path)
-  set_prop('prop_xml', prop_xml, lambda_path)
-  set_prop('prop_binx', prop_binx, mu_path)
-  set_prop('prop_binx', prop_binx, A_path)
+  svntest.actions.set_prop('prop_zb', prop_zb, B_path, )
+  svntest.actions.set_prop('prop_ff', prop_ff, iota_path)
+  svntest.actions.set_prop('prop_xml', prop_xml, lambda_path)
+  svntest.actions.set_prop('prop_binx', prop_binx, mu_path)
+  svntest.actions.set_prop('prop_binx', prop_binx, A_path)
 
   # Create expected output and status trees.
   expected_output = svntest.wc.State(wc_dir, {
@@ -1052,6 +1020,8 @@ def verify_output(expected_out, output, errput):
   output.sort()
   ln = 0
   for line in output:
+    if line.startswith('DBG:'):
+      continue
     if ((line.find(expected_out[ln]) == -1) or
         (line != '' and expected_out[ln] == '')):
       print('Error: expected keywords:  %s' % expected_out)
@@ -1460,8 +1430,9 @@ def invalid_propnames(sbox):
   propname = chr(8)
   propval = 'foo'
 
-  expected_stdout = ["property '%s' deleted from '.'.\n" % (propname,)]
-  svntest.actions.run_and_verify_svn(None, expected_stdout, [],
+  expected_stderr = (".*Attempting to delete nonexistent property "
+                     "'%s'.*" % (propname,))
+  svntest.actions.run_and_verify_svn(None, None, expected_stderr,
                                      'propdel', propname)
   expected_stderr = (".*'%s' is not a valid Subversion"
                      ' property name' % (propname,))
@@ -1500,7 +1471,11 @@ def perms_on_symlink(sbox):
     os.symlink('newdir', 'symlink')
     svntest.actions.run_and_verify_svn(None, None, [], 'add', 'symlink')
     old_mode = os.stat('newdir')[stat.ST_MODE]
-    svntest.actions.run_and_verify_svn(None, None, [], 'propdel',
+    # The only property on 'symlink' is svn:special, so attempting to remove
+    # 'svn:executable' should result in an error
+    expected_stderr = (".*Attempting to delete nonexistent property "
+                       "'svn:executable'.*")
+    svntest.actions.run_and_verify_svn(None, None, expected_stderr, 'propdel',
                                      'svn:executable', 'symlink')
     new_mode = os.stat('newdir')[stat.ST_MODE]
     if not old_mode == new_mode:
@@ -1706,6 +1681,21 @@ def added_moved_file(sbox):
   svntest.actions.check_prop('someprop', foo2_url, ['someval'])
 
 
+# Issue 2220, deleting a non-existent property should error
+def delete_nonexistent_property(sbox):
+  "remove a property which doesn't exist"
+
+  # Bootstrap
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Remove one property
+  expected_stderr = ".*Attempting to delete nonexistent property 'yellow'.*"
+  svntest.actions.run_and_verify_svn(None, None, expected_stderr,
+                                     'propdel', 'yellow',
+                                     os.path.join(wc_dir, 'A', 'D', 'G'))
+
+
 ########################################################################
 # Run the tests
 
@@ -1744,6 +1734,7 @@ test_list = [ None,
                     svntest.main.server_enforces_date_syntax),
               same_replacement_props,
               added_moved_file,
+              delete_nonexistent_property,
              ]
 
 if __name__ == '__main__':

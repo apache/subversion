@@ -16,8 +16,6 @@
  * ====================================================================
  */
 
-
-
 #include <apr_uri.h>
 
 #include <expat.h>
@@ -28,15 +26,17 @@
 #include "svn_ra.h"
 #include "svn_dav.h"
 #include "svn_xml.h"
-#include "../libsvn_ra/ra_loader.h"
 #include "svn_config.h"
 #include "svn_delta.h"
 #include "svn_version.h"
 #include "svn_path.h"
 #include "svn_base64.h"
+#include "svn_props.h"
+
 #include "svn_private_config.h"
 
 #include "ra_serf.h"
+#include "../libsvn_ra/ra_loader.h"
 
 
 /*
@@ -156,7 +156,7 @@ create_propval(blame_info_t *info)
 
   /* Include the null term. */
   s = svn_string_ncreate(info->prop_attr, info->prop_attr_len + 1, info->pool);
-  if (info->prop_base64 == TRUE)
+  if (info->prop_base64)
     {
       s = svn_base64_decode_string(s, info->pool);
     }
@@ -432,10 +432,10 @@ svn_ra_serf__get_file_revs(svn_ra_session_t *ra_session,
   svn_ra_serf__add_close_tag_buckets(buckets, session->bkt_alloc,
                                      "S:file-revs-report");
 
-  SVN_ERR(svn_ra_serf__get_baseline_info(&basecoll_url, &relative_url,
-                                         session, session->repos_url.path,
+  SVN_ERR(svn_ra_serf__get_baseline_info(&basecoll_url, &relative_url, session,
+                                         NULL, session->repos_url.path,
                                          end, NULL, pool));
-  req_url = svn_path_url_add_component(basecoll_url, relative_url, pool);
+  req_url = svn_path_url_add_component2(basecoll_url, relative_url, pool);
 
   handler = apr_pcalloc(pool, sizeof(*handler));
 

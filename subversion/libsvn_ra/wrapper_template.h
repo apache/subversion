@@ -16,6 +16,13 @@
  * @endcopyright
  */
 
+#include <apr_pools.h>
+#include <apr_hash.h>
+#include <apr_time.h>
+
+#include "svn_types.h"
+#include "svn_string.h"
+#include "svn_props.h"
 #include "svn_compat.h"
 
 /* This file is a template for a compatibility wrapper for an RA library.

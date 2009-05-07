@@ -21,7 +21,7 @@
 
 
 
-/*** Includes. ***/
+#include <assert.h>
 
 /* We define this here to remove any further warnings about the usage of
    deprecated functions in this file. */
@@ -31,6 +31,8 @@
 #include "svn_path.h"
 #include "svn_opt.h"
 #include "svn_cmdline.h"
+#include "svn_pools.h"
+#include "svn_dso.h"
 
 #include "opt.h"
 #include "private/svn_opt_private.h"
@@ -95,6 +97,31 @@ kwstruct_to_kwhash(const svn_subst_keywords_t *kwstruct,
     }
 
   return kwhash;
+}
+
+
+svn_error_t *
+svn_subst_translate_stream3(svn_stream_t *src_stream,
+                            svn_stream_t *dst_stream,
+                            const char *eol_str,
+                            svn_boolean_t repair,
+                            apr_hash_t *keywords,
+                            svn_boolean_t expand,
+                            apr_pool_t *pool)
+{
+  /* The docstring requires that *some* translation be requested. */
+  SVN_ERR_ASSERT(eol_str || keywords);
+
+  /* We don't want the copy3 to close the provided streams. */
+  src_stream = svn_stream_disown(src_stream, pool);
+  dst_stream = svn_stream_disown(dst_stream, pool);
+
+  /* Wrap the destination stream with our translation stream. It is more
+     efficient than wrapping the source stream. */
+  dst_stream = svn_subst_stream_translated(dst_stream, eol_str, repair,
+                                           keywords, expand, pool);
+
+  return svn_stream_copy3(src_stream, dst_stream, NULL, NULL, pool);
 }
 
 svn_error_t *
@@ -170,6 +197,81 @@ svn_subst_copy_and_translate2(const char *src,
                                        repair, kh, expand, special,
                                        pool);
 }
+
+svn_error_t *
+svn_subst_stream_translated_to_normal_form(svn_stream_t **stream,
+                                           svn_stream_t *source,
+                                           svn_subst_eol_style_t eol_style,
+                                           const char *eol_str,
+                                           svn_boolean_t always_repair_eols,
+                                           apr_hash_t *keywords,
+                                           apr_pool_t *pool)
+{
+  if (eol_style == svn_subst_eol_style_native)
+    eol_str = SVN_SUBST_NATIVE_EOL_STR;
+  else if (! (eol_style == svn_subst_eol_style_fixed
+              || eol_style == svn_subst_eol_style_none))
+    return svn_error_create(SVN_ERR_IO_UNKNOWN_EOL, NULL, NULL);
+
+ *stream = svn_subst_stream_translated(source, eol_str,
+                                       eol_style == svn_subst_eol_style_fixed
+                                       || always_repair_eols,
+                                       keywords, FALSE, pool);
+
+ return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_subst_stream_detranslated(svn_stream_t **stream_p,
+                              const char *src,
+                              svn_subst_eol_style_t eol_style,
+                              const char *eol_str,
+                              svn_boolean_t always_repair_eols,
+                              apr_hash_t *keywords,
+                              svn_boolean_t special,
+                              apr_pool_t *pool)
+{
+  svn_stream_t *src_stream;
+
+  if (special)
+    return svn_subst_read_specialfile(stream_p, src, pool, pool);
+
+  /* This will be closed by svn_subst_stream_translated_to_normal_form
+     when the returned stream is closed. */
+  SVN_ERR(svn_stream_open_readonly(&src_stream, src, pool, pool));
+
+  return svn_subst_stream_translated_to_normal_form(stream_p, src_stream,
+                                                    eol_style, eol_str,
+                                                    always_repair_eols,
+                                                    keywords, pool);
+}
+
+svn_error_t *
+svn_subst_translate_to_normal_form(const char *src,
+                                   const char *dst,
+                                   svn_subst_eol_style_t eol_style,
+                                   const char *eol_str,
+                                   svn_boolean_t always_repair_eols,
+                                   apr_hash_t *keywords,
+                                   svn_boolean_t special,
+                                   apr_pool_t *pool)
+{
+
+  if (eol_style == svn_subst_eol_style_native)
+    eol_str = SVN_SUBST_NATIVE_EOL_STR;
+  else if (! (eol_style == svn_subst_eol_style_fixed
+              || eol_style == svn_subst_eol_style_none))
+    return svn_error_create(SVN_ERR_IO_UNKNOWN_EOL, NULL, NULL);
+
+  return svn_subst_copy_and_translate3(src, dst, eol_str,
+                                       eol_style == svn_subst_eol_style_fixed
+                                       || always_repair_eols,
+                                       keywords,
+                                       FALSE /* contract keywords */,
+                                       special,
+                                       pool);
+}
+
 
 /*** From opt.c ***/
 /* Same as print_command_info2(), but with deprecated struct revision. */
@@ -515,4 +617,222 @@ svn_io_open_unique_file(apr_file_t **file,
                                     ? svn_io_file_del_on_close
                                     : svn_io_file_del_none,
                                   pool);
+}
+
+svn_error_t *
+svn_io_run_diff(const char *dir,
+                const char *const *user_args,
+                int num_user_args,
+                const char *label1,
+                const char *label2,
+                const char *from,
+                const char *to,
+                int *pexitcode,
+                apr_file_t *outfile,
+                apr_file_t *errfile,
+                const char *diff_cmd,
+                apr_pool_t *pool)
+{
+  SVN_ERR(svn_path_cstring_to_utf8(&diff_cmd, diff_cmd, pool));
+
+  return svn_io_run_diff2(dir, user_args, num_user_args, label1, label2,
+                          from, to, pexitcode, outfile, errfile, diff_cmd,
+                          pool);
+}
+
+svn_error_t *
+svn_io_run_diff3_2(int *exitcode,
+                   const char *dir,
+                   const char *mine,
+                   const char *older,
+                   const char *yours,
+                   const char *mine_label,
+                   const char *older_label,
+                   const char *yours_label,
+                   apr_file_t *merged,
+                   const char *diff3_cmd,
+                   const apr_array_header_t *user_args,
+                   apr_pool_t *pool)
+{
+  SVN_ERR(svn_path_cstring_to_utf8(&diff3_cmd, diff3_cmd, pool));
+
+  return svn_io_run_diff3_3(exitcode, dir, mine, older, yours, mine_label,
+                            older_label, yours_label, merged, diff3_cmd,
+                            user_args, pool);
+}
+
+svn_error_t *
+svn_io_run_diff3(const char *dir,
+                 const char *mine,
+                 const char *older,
+                 const char *yours,
+                 const char *mine_label,
+                 const char *older_label,
+                 const char *yours_label,
+                 apr_file_t *merged,
+                 int *exitcode,
+                 const char *diff3_cmd,
+                 apr_pool_t *pool)
+{
+  return svn_io_run_diff3_2(exitcode, dir, mine, older, yours,
+                            mine_label, older_label, yours_label,
+                            merged, diff3_cmd, NULL, pool);
+}
+
+/*** From constructors.c ***/
+svn_log_changed_path_t *
+svn_log_changed_path_dup(const svn_log_changed_path_t *changed_path,
+                         apr_pool_t *pool)
+{
+  svn_log_changed_path_t *new_changed_path
+    = apr_palloc(pool, sizeof(*new_changed_path));
+
+  *new_changed_path = *changed_path;
+
+  if (new_changed_path->copyfrom_path)
+    new_changed_path->copyfrom_path =
+      apr_pstrdup(pool, new_changed_path->copyfrom_path);
+
+  return new_changed_path;
+}
+
+/*** From cmdline.c ***/
+svn_error_t *
+svn_cmdline_prompt_user(const char **result,
+                        const char *prompt_str,
+                        apr_pool_t *pool)
+{
+  return svn_cmdline_prompt_user2(result, prompt_str, NULL, pool);
+}
+
+svn_error_t *
+svn_cmdline_setup_auth_baton(svn_auth_baton_t **ab,
+                             svn_boolean_t non_interactive,
+                             const char *auth_username,
+                             const char *auth_password,
+                             const char *config_dir,
+                             svn_boolean_t no_auth_cache,
+                             svn_config_t *cfg,
+                             svn_cancel_func_t cancel_func,
+                             void *cancel_baton,
+                             apr_pool_t *pool)
+{
+  return svn_cmdline_create_auth_baton(ab, non_interactive,
+                                       auth_username, auth_password,
+                                       config_dir, no_auth_cache, FALSE,
+                                       cfg, cancel_func, cancel_baton, pool);
+}
+
+/*** From dso.c ***/
+void
+svn_dso_initialize(void)
+{
+  svn_error_t *err = svn_dso_initialize2();
+  if (err)
+    {
+      svn_error_clear(err);
+      abort();
+    }
+}
+
+/*** From simple_providers.c ***/
+void
+svn_auth_get_simple_provider(svn_auth_provider_object_t **provider,
+                             apr_pool_t *pool)
+{
+  svn_auth_get_simple_provider2(provider, NULL, NULL, pool);
+}
+
+/*** From ssl_client_cert_pw_providers.c ***/
+void
+svn_auth_get_ssl_client_cert_pw_file_provider
+  (svn_auth_provider_object_t **provider,
+   apr_pool_t *pool)
+{
+  svn_auth_get_ssl_client_cert_pw_file_provider2(provider, NULL, NULL, pool);
+}
+
+/*** From path.c ***/
+
+#define SVN_EMPTY_PATH ""
+
+const char *
+svn_path_url_add_component(const char *url,
+                           const char *component,
+                           apr_pool_t *pool)
+{
+  /* URL can have trailing '/' */
+  url = svn_path_canonicalize(url, pool);
+
+  return svn_path_url_add_component2(url, component, pool);
+}
+
+void
+svn_path_split(const char *path,
+               const char **dirpath,
+               const char **base_name,
+               apr_pool_t *pool)
+{
+  assert(dirpath != base_name);
+
+  if (dirpath)
+    *dirpath = svn_path_dirname(path, pool);
+
+  if (base_name)
+    *base_name = svn_path_basename(path, pool);
+}
+
+
+svn_error_t *
+svn_path_split_if_file(const char *path,
+                       const char **pdirectory,
+                       const char **pfile,
+                       apr_pool_t *pool)
+{
+  apr_finfo_t finfo;
+  svn_error_t *err;
+
+  SVN_ERR_ASSERT(svn_path_is_canonical(path, pool));
+
+  err = svn_io_stat(&finfo, path, APR_FINFO_TYPE, pool);
+  if (err && ! APR_STATUS_IS_ENOENT(err->apr_err))
+    return err;
+
+  if (err || finfo.filetype == APR_REG)
+    {
+      svn_error_clear(err);
+      svn_path_split(path, pdirectory, pfile, pool);
+    }
+  else if (finfo.filetype == APR_DIR)
+    {
+      *pdirectory = path;
+      *pfile = SVN_EMPTY_PATH;
+    }
+  else
+    {
+      return svn_error_createf(SVN_ERR_BAD_FILENAME, NULL,
+                               _("'%s' is neither a file nor a directory name"),
+                               svn_path_local_style(path, pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/*** From stream.c ***/
+svn_error_t *svn_stream_copy2(svn_stream_t *from, svn_stream_t *to,
+                              svn_cancel_func_t cancel_func,
+                              void *cancel_baton,
+                              apr_pool_t *scratch_pool)
+{
+  return svn_stream_copy3(svn_stream_disown(from, scratch_pool),
+                          svn_stream_disown(to, scratch_pool),
+                          cancel_func, cancel_baton, scratch_pool);
+}
+
+svn_error_t *svn_stream_copy(svn_stream_t *from, svn_stream_t *to,
+                             apr_pool_t *scratch_pool)
+{
+  return svn_stream_copy3(svn_stream_disown(from, scratch_pool),
+                          svn_stream_disown(to, scratch_pool),
+                          NULL, NULL, scratch_pool);
 }

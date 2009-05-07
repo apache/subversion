@@ -342,8 +342,8 @@ winservice_start(void)
     }
 
   winservice_dispatcher_thread =
-    (HANDLE)_beginthreadex(NULL, 0, winservice_dispatcher_thread_routine,
-                           NULL, 0, &thread_id);
+    (HANDLE)CreateThread(NULL, 0, winservice_dispatcher_thread_routine,
+                         NULL, 0, &thread_id);
   if (winservice_dispatcher_thread == NULL)
     {
       apr_status = apr_get_os_error();

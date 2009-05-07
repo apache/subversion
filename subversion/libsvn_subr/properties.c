@@ -32,8 +32,7 @@ svn_boolean_t
 svn_prop_is_svn_prop(const char *prop_name)
 {
   return strncmp(prop_name, SVN_PROP_PREFIX, (sizeof(SVN_PROP_PREFIX) - 1))
-         ? FALSE
-         : TRUE;
+         == 0;
 }
 
 
@@ -269,4 +268,21 @@ svn_prop_name_is_valid(const char *prop_name)
         return FALSE;
     }
   return TRUE;
+}
+
+const char *
+svn_prop_get_value(apr_hash_t *props,
+                   const char *prop_name)
+{
+  svn_string_t *str;
+
+  if (!props)
+    return NULL;
+
+  str = apr_hash_get(props, prop_name, APR_HASH_KEY_STRING);
+
+  if (str)
+    return str->data;
+
+  return NULL;
 }

@@ -59,7 +59,7 @@ $LastChangedDate$
 <li><a href="#filing-issues">Filing bugs / issues</a></li>
 <li><a href="#issue-triage">Issue triage</a></li>
 <li><a href="#commit-access">Commit access</a></li>
-<li><a href="#lightweight-branches">Use lightweight branches</a></li>
+<li><a href="#branch-based-development">Branch-based development</a></li>
 <li><a href="#configury">The configuration/build system under unix</a></li>
 <li><a href="#releasing">How to release a distribution tarball</a></li>
 <li><a href="#release-numbering">Release numbering, compatibility, and deprecation</a></li>
@@ -1081,7 +1081,7 @@ return svn_error_create(SVN_ERR_FOO, NULL,
         <pre>
         error = some_routine(foo);
         if (error)
-          return (error);
+          return svn_error_return(error);
         </pre>
 
         <p>Actually, a better way to do this would be with the
@@ -1160,6 +1160,26 @@ return svn_error_create(SVN_ERR_FOO, NULL,
         svn_io_file_lock.</p>
     </li>
     </ul>
+</li>
+
+<li><p>The <code>SVN_ERR()</code> macro will create a wrapped error when
+       <code>SVN_ERR__TRACING</code> is defined.  This helps developers
+       determine what caused the error, and can be enabled with the
+       <code>--enable-maintainer-mode</code> option to <code>configure</code>.
+       </p>
+</li>
+
+<li><p>Sometimes, you just want to return whatever a called function
+       returns, usually at the end of your own function.  Avoid the
+       temptation to directly return the result:</p>
+    <pre>
+    /* Don't do this! */
+    return some_routine(foo);</pre>
+
+    <p>Instead, use the svn_error_return meta-function to return the value.
+       This ensures that stack tracing happens correctly when enabled.</p>
+    <pre>
+    return svn_error_return(some_routine(foo));</pre>
 
 </li>
 </ol>
@@ -1980,8 +2000,8 @@ what kind.  It does <em>not</em> require actual Subversion development
 experience or commit access.  Expertise in using one's mail reading
 software is optional, but recommended :-).</p>
 
-<p>The current patch manager is Daniel Shahaf 
-&lt;danielsh@tigris.org&gt;.</p>
+<p>The current patch manager is Gavin 'Beau' Baumanis
+&lt;gavin@thespidernet.com&gt;.</p>
 
 </div>
 
@@ -2247,8 +2267,38 @@ Obvious fix.
 
 </div>
 
-<div class="h2" id="lightweight-branches" title="lightweight-branches">
-<h2>Use lightweight branches</h2>
+<div class="h2" id="branch-based-development" title="branch-based-development">
+<h2>Branch-based development</h2>
+
+<p>We prefer to have development performed on the trunk.  Changes made
+to trunk have the highest visibility and get the greatest amount of
+exercise that can be expected from unreleased code.  That said, trunk
+is expected at all times to be stable.  It should build.  It should
+work.  Those policies, combined with our preference to see large
+changes broken up and committed in the smallest logical chunks
+feasible, and applied to particularly large changes (new features,
+sweeping code reorganizations, etc.), makes for set of rules that are
+almost impossible to keep.  It is in those situations that you might
+consider using a custom branch dedicated to your development task.
+The following are some guidelines to make your branch-based
+development work go smoothly.</p>
+
+<div class="h3" id="branch-creation-and-management" title="branch-creation-and-management">
+<h3>Branch creation and management</h3>
+
+<p>There's nothing particularly complex about branch-based
+development.  You make a branch from the trunk (or from whatever
+branch best serves as both source and destination for your work), and
+you do your work on it.  Subversion's merge tracking feature has
+greatly helped to reduce the sort of mental overhead required to work
+in this way, so making good use of that feature (by using Subversion
+1.5 or newer clients, and by performing all merges to and from the
+roots of branches) is highly encouraged.</p>
+
+</div>
+
+<div class="h3" id="lightweight-branches" title="lightweight-branches">
+<h3>Lightweight branches</h3>
 
 <p>If you're working on a feature or bugfix in stages involving
 multiple commits, and some of the intermediate stages aren't stable
@@ -2278,6 +2328,47 @@ remember to remove it.</p>
 <p>See also the <a href="#partial-commit-access" >section on partial
 commit access</a> for our policy on offering commit access to
 experimental branches.</p>
+
+</div>
+
+<div class="h3" id="branch-readme-files" title="branch-readme-files">
+<h3>BRANCH-README files</h3>
+
+<p>For branches you expect to be longer-lived, we recommend the
+creation and regular updating of a file in the root of your branch
+named <tt>BRANCH-README</tt>.  Such a file provides you with a great,
+central place to describe the following aspects of your branch:</p>
+
+<ul>
+
+<li><p>The basic purpose of your branch: what bug it exists to fix, or
+       feature to implement; what issue number(s) it relates to; what
+       list discussion threads surround it; what design docs exists to
+       describe the situation.</p></li>
+
+<li><p>What style of branch management you are using: is this a
+       reintegrate-able branch that will regularly be kept in sync
+       with its source branch and ultimately merged back to that
+       source branch using <tt>svn merge --reintegrate</tt>?  Or is it
+       not reintegrate-able, managed in total disregard to new changes
+       made to the source branch, and expected to be merged back to
+       that source without the <tt>--reintegrate</tt> option <tt>svn
+       merge</tt>?</p></li>
+
+<li><p>What tasks remain for you to accomplish on your branch?  Are
+       those tasks claimed by someone?  Do they need more design
+       input?  How can others help you?</p></li>
+
+</ul>
+
+<p>Why all the fuss?  Because this project idealizes communication and
+collaboration, understanding that the latter is more likely to happen
+when the former is a point of emphasis.</p>
+
+<p>Just remember when you merge your branch back to its source to
+delete the <tt>BRANCH-README</tt> file.</p>
+
+</div>
 
 </div>
 
@@ -2466,6 +2557,33 @@ configuration/build system:</p>
    The voice of experience,
    -Karl
 </pre>
+
+<p>The build system is a vital tool for all developers working on trunk.
+Sometimes, changes made to the build system work perfectly fine for
+one developer, but inadvertently break the build system for another.</p>
+
+<p>
+To prevent loss of productivity, any committer (full or partial) can
+immediately revert any build system change that breaks their ability to
+effectively do development on their platform of choice, as a matter of
+ordinary routing, without fear of accusations of an over-reaction.
+The log message of the commit reverting the change should contain an
+explanatory note saying why the change is being reverted, containing
+sufficient detail to be suitable to start off a discussion of the
+problem on dev@, should someone chose to reply to the commit mail.</p>
+
+<p>However, care should be taken not go into &quot;default revert mode&quot;.
+If you can quickly fix the problem, then please do so. If not, then stop and
+think about it for a minute. After you've thought about it, and you still have
+no solution, go ahead and revert the change, and bring the discussion to the
+list.</p>
+
+<p>Once the change has been reverted, it is up to the original committer of
+the reverted change to either recommit a fixed version of their original
+change, if, based on the reverting committer's rationale, they feel very
+certain that their new version definitely is fixed, or, to submit the
+revised version for testing to the reverting committer before committing
+it again.</p>
 
 </div>
 
@@ -2728,7 +2846,8 @@ prudent to make a new release candidate when they are fixed so that
 those language bindings may be tested.</p>
 
 <p>At the beginning of the final week of the stabilization period, a
-new release candidate tarball should be made if there are any changes
+new release candidate tarball should be made if there are any
+showstopper changes
 pending since the last one.  The final week of the stabilization
 period is reserved for critical bugfixes; fixes for minor bugs should
 be deferred to the A.B.1 release.  A critical bug is a non-edge-case
@@ -2881,6 +3000,28 @@ haven't reviewed the patch carefully.  Neither of these votes counts
 toward the total, but they can be useful for tracking down people who
 are following the change and might be willing to spend more time on
 it.</p>
+
+<p>When votes are listed in the STATUS file, they are placed into a
+section for a given release. Some developers may want to vote the
+change into a <b>later</b> release, if (for example) they believe it
+requires further review or testing. Simply add a comment along with
+your vote:</p>
+
+<pre>
+  * r12345
+    Fiddle with the hoobey-gidget to clean the garblesnarf.
+    Justification:
+      All hell breaks loose if the jobbywonk gets out.
+    Votes:
+      +1: brane
+      +1: gstein (for 1.7.2)
+</pre>
+
+<p>Since votes are tied to specific releases (specified by the section
+they fall under), be very careful when moving change candidates among
+the sections. Existing votes were for the <b>original</b> version, not
+where the candidate has been moved it. Annotate existing votes as
+being cast only for the original version.</p>
 
 <p>There is a somewhat looser voting system for areas that are not
 core code, and that may have fewer experts available to review changes
@@ -3089,9 +3230,8 @@ and on dedicated native language mailing lists (<a
 href="http://subversion.tigris.org/servlets/ProjectMailingListList"
 ><em>l10n-??@subversion.tigris.org</em></a>).</p>
 
-<p>See <a href="http://svn.collab.net/repos/svn/trunk/TRANSLATING"
->http://svn.collab.net/repos/svn/trunk/TRANSLATING</a> for more
-information about translating.</p>
+<p>See the <a href="translating.html">Guide to Translating Subversion</a> for
+more information about translating.</p>
 
 </div>
 

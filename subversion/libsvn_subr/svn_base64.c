@@ -408,10 +408,8 @@ base64_from_checksum(const svn_checksum_t *checksum, apr_pool_t *pool)
 svn_stringbuf_t *
 svn_base64_from_md5(unsigned char digest[], apr_pool_t *pool)
 {
-  svn_checksum_t *checksum;
-
-  checksum = svn_checksum_create(svn_checksum_md5, pool);
-  checksum->digest = digest;
+  svn_checksum_t *checksum
+    = svn_checksum__from_digest(digest, svn_checksum_md5, pool);
 
   return base64_from_checksum(checksum, pool);
 }

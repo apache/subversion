@@ -2,7 +2,7 @@
  *              skeletons
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004, 2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -19,8 +19,8 @@
 #ifndef SVN_LIBSVN_FS_FS_SKELS_H
 #define SVN_LIBSVN_FS_FS_SKELS_H
 
-#define APU_WANT_DB
-#include <apu_want.h>
+#define SVN_WANT_BDB
+#include "svn_private_config.h"
 
 #include <apr_pools.h>
 #include <apr_hash.h>
@@ -36,15 +36,6 @@ extern "C" {
 
 /*** Parsing (conversion from skeleton to native FS type) ***/
 
-
-/* Parse a `PROPLIST' SKEL into a regular hash of properties,
-   *PROPLIST_P, which has const char * property names, and
-   svn_string_t * values, or NULL if SKEL contains no properties.  Use
-   POOL for all allocations.  */
-svn_error_t *
-svn_fs_base__parse_proplist_skel(apr_hash_t **proplist_p,
-                                 svn_skel_t *skel,
-                                 apr_pool_t *pool);
 
 /* Parse a `REVISION' SKEL into *REVISION_P.  Use POOL for all
    allocations.  */
@@ -106,14 +97,6 @@ svn_fs_base__parse_lock_skel(svn_lock_t **lock_p,
 
 /*** Unparsing (conversion from native FS type to skeleton) ***/
 
-
-/* Unparse a PROPLIST hash (which has const char * property names and
-   svn_stringbuf_t * values) into a `PROPLIST' skel *SKEL_P.  Use POOL
-   for all allocations.  */
-svn_error_t *
-svn_fs_base__unparse_proplist_skel(svn_skel_t **skel_p,
-                                   apr_hash_t *proplist,
-                                   apr_pool_t *pool);
 
 /* Unparse REVISION into a `REVISION' skel *SKEL_P.  Use POOL for all
    allocations.  */

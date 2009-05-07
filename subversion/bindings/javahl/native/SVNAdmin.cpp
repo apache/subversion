@@ -20,7 +20,7 @@
  */
 
 #include "SVNAdmin.h"
-#include "SVNClient.h"
+#include "CreateJ.h"
 #include "JNIUtil.h"
 #include "svn_error_codes.h"
 #include "svn_repos.h"
@@ -533,7 +533,7 @@ jobjectArray SVNAdmin::lslocks(const char *path)
       void *val;
       apr_hash_this (hi, NULL, NULL, &val);
       svn_lock_t *lock = (svn_lock_t *)val;
-      jobject jLock = SVNClient::createJavaLock(lock);
+      jobject jLock = CreateJ::Lock(lock);
       env->SetObjectArrayElement(ret, i, jLock);
       if (JNIUtil::isJavaExceptionThrown())
         return NULL;

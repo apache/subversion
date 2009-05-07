@@ -345,7 +345,7 @@ else
   pushd "$ABS_BUILDDIR/subversion/tests/cmdline/" >/dev/null
   TEST="$1"
   shift
-  time "$SCRIPTDIR/${TEST}_tests.py" "--url=$BASE_URL" "$@"
+  time "./${TEST}_tests.py" "--url=$BASE_URL" "$@"
   r=$?
   popd >/dev/null
 fi

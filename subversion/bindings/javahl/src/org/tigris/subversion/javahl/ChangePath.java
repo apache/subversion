@@ -27,7 +27,7 @@ public class ChangePath implements java.io.Serializable
     // http://java.sun.com/j2se/1.4/pdf/serial-spec.pdf
     // http://java.sun.com/j2se/1.5.0/docs/guide/serialization/spec/version.html#6678
     // http://java.sun.com/javase/6/docs/platform/serialization/spec/version.html#6678
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 2L;
 
     /**
      * Constructor to be called from the native code
@@ -35,14 +35,16 @@ public class ChangePath implements java.io.Serializable
      * @param copySrcRevision   copy source revision (if any)
      * @param copySrcPath       copy source path (if any)
      * @param action            action performed
+     * @param nodeKind          the kind of the changed path
      */
     ChangePath(String path, long copySrcRevision, String copySrcPath,
-               char action)
+               char action, int nodeKind)
     {
         this.path = path;
         this.copySrcRevision = copySrcRevision;
         this.copySrcPath = copySrcPath;
         this.action = action;
+        this.nodeKind = nodeKind;
     }
 
     /** Path of commited item */
@@ -56,6 +58,9 @@ public class ChangePath implements java.io.Serializable
 
     /** 'A'dd, 'D'elete, 'R'eplace, 'M'odify */
     private char action;
+
+    /** The kind of the changed path. */
+    private int nodeKind;
 
     /**
      * Retrieve the path to the commited item
@@ -91,5 +96,14 @@ public class ChangePath implements java.io.Serializable
     public char getAction()
     {
         return action;
+    }
+
+    /**
+     * Retrieve the node kind
+     * @return  the node kind
+     */
+    public int getNodeKind()
+    {
+        return nodeKind;
     }
 }

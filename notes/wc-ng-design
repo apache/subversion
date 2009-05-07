@@ -21,6 +21,7 @@ Content
    - delta-application algorithm
       (in light of metadata, tree and textual conflicts)
    - 
+ * Upgrading old working copies
  * Implementation plan
 
 
@@ -127,6 +128,12 @@ expansion, as defined elsewhere.  A BASE tree presents itself in
 repository-normal format by default and can be converted to working-copy
 format. A WORKING or ACTUAL tree presents itself in working-copy format by
 default and can be converted to repository-normal format.
+
+##BHB: For tree, text and property conflicts it would be nice to handle
+MINE, THEIRS (and OLDER?) as semi-trees too. See this mail thread
+http://subversion.tigris.org/ds/viewMessage.do?dsForumId=462&dsMessageId=984982
+This would provide a clean way to access all information about the conflict
+origins: $ svn info file@THEIRS
 
 
 Requirements
@@ -268,7 +275,12 @@ Problems in wc-1.0
  * No strict separation between public and internal APIs: many public
    APIs also used internally, growing arguments which *should* only
    matter for internal use
-
+ * The lock strategy requires writing a file in every directory of a working,
+   which severely reduces our performance in several environments. (Windows, 
+   NFS). Testing showed that in some cases we used more than 50 seconds on
+   writing 8000 lockfiles before we even started looking what to update. A new
+   lock strategy should reduce the number of writes necessary for locking with
+   depth infinity.
 
 Possible solutions
 ==================
@@ -767,6 +779,103 @@ Metadata Schemas
 
 see libsvn_wc/wc-metatdata.sql3
 
+The table below describes, in English, the various combinations of
+"presence" values as the occur in the BASE_NODE and WORKING_NODE
+tables.
+
+BASE_NODE      WORKING_NODE   DESCRIPTION
+
+normal         <none>         Node has been checked out from the
+                              repository normally.
+absent         <none>         Server has marked the node as "absent",
+                              meaning the user does not have
+                              authorization to view the content.
+excluded       <none>         The node has been (locally) marked as
+                              excluded from the working copy.
+not-present    <none>         The node is not present at its current
+                              revision. The parent directory has a
+                              different revision which states the node
+                              *is* present. This state is usually
+                              reached by locally deleting a file and
+                              committing it. Later, when an update is
+                              run, the directory will be bumped to a
+                              revision that does not contain the file,
+                              and this not-present node will be cleared.
+incomplete     <none>         The node is known, but the node's
+                              information has not been downloaded
+                              (yet) from the server. This typically
+                              occurs from an interrupted checkout. The
+                              parent directory was added, specifying
+                              all the children, but the checkout was
+                              stopped before fetching the child.
+base-deleted   *              Not allowed. This presence is only valid
+                              for the WORKING_NODE table.
+absent         <any>          Not allowed. The name exists on the
+                              server and cannot be modified in any way.
+incomplete     <any>          An update "under" some local changes was
+                              terminated before fetching information
+                              on this node.
+<none>         normal         This node has been locally-added through
+                              a simple add, a copy, or a move (other
+                              data needs to be examined to determine
+                              what operation brought the node here).
+normal         normal         The underlying BASE node has been
+                              deleted, and a new node has been added
+                              in its place (this is a "Replace").
+excluded       normal         A node was excluded from the checkout or
+                              update, and we have locally-added a new
+                              node to *replace* it.
+not-present    normal         A node is no longer present in the BASE
+                              tree due to mixed-revision working copy
+                              concerns. This is an addition (not a
+                              replace) of a new node, in the same
+                              location as a node that deleted (and
+                              committed) at some point in history.
+*              absent         Not allowed. This would imply that the
+                              server has prevented our access, but
+                              this is a local, uncommitted change. The
+                              server cannot block the node.
+                              (see Note 1)
+*              excluded       An add-with-history or a move has been
+                              performed, and this node has been
+                              excluded from the working copy. Note:
+                              plain adds cannot have an excluded
+                              node -- we'd just not add the node.
+*              not-present    This node has been locally-deleted. This
+                              can only occur for a child of a copied
+                              or moved subtree (for a plain add, we
+                              simply revert the add; and must be a
+                              child, or we'd just revert the whole
+                              copy or move operation).
+*              incomplete     This node is known, but the information
+                              is missing. A copy or move has been
+                              interrupted, leaving a directory with
+                              known children, but lacking their state.
+                              (see Note 2)
+normal         base-deleted   The BASE node has been locally-deleted.
+excluded       base-deleted   The node was excluded from the working
+                              copy, but has been locally-deleted.
+                              (see Note 3)
+not-present    base-deleted   Not allowed. There is nothing to
+                              delete. The not-present is a tool to
+                              represent mixed-rev working copies;
+                              there is (logically) no node to delete.
+
+
+"<none>" means there is no row in the given table (so no presence value)
+"<any>" means "any value" 
+"*" means "<none> or <any>"
+
+Note 1: this implies you cannot copy/move a working copy tree that has
+  absent nodes in it. If that were made possible, then we may
+  (instead) want to model this as a copy/move followed by a
+  local-delete of the absent node(s).
+Note 2: this will probably only apply to a repository-to-wc copy. For
+  wc-to-wc copies/moves, we will probably transact the entire operation
+  so that a child will never be incomplete.
+Note 3: this may be possible, though we may need more state to pull
+  it off (eg. what revision of the node is "not there" is will be
+  deleted? need the rev for out-of-date checks)
 
 
 Random Notes
@@ -822,6 +931,62 @@ up until libsvn_client, and may even have an affect on *its* API.
 ### the form of a new API is unknown/TBD.
 
 
+Upgrading old working copies
+============================
+When WC-NG finds a working copy which is pre-wc-ng, it will quit, prompting the
+user to run 'svn upgrade' to upgrade the working copy to a wc-ng state.  The
+reason for not upgrading on-the-fly is two-fold:
+ * We anticipate this process to be irreversible, so we want to ensure the
+   user wants to upgrade (no silent upgrading/breakage).
+ * The upgrade may be I/O and computationally intensive, and keeping with the
+   principle of least surprise, we want to ensure that the upgrade is done
+   intentionally, when the user expects it.
+
+Here's how we plan on implementing 'svn upgrade', so that it maintains
+consistency across the working copy atomically.  We have two requirements:
+do the upgrade completely, and *don't* leave the working copy in an unusable
+state if the upgrade fails.  The steps for upgrading are:
+
+ 1) Create the new wc.db as invisible.db in the working copy root
+ 2) Upgrade the current directory into invisible.db
+ 3) Drop a flag file into the directory to signal an "in process" upgrade
+ 4) Recurse on step 2 for each of the subdirectories
+ 5) Move invisible.db to wc.db in the working copy root
+ 6) Recursively remove each of the .svn subdirs for each wc subdir
+
+Note that nowhere do we attempt to run or upgrade old logs.  This is
+intentional.  In order to simplify the development and maintenance burden,
+we intend to bail when the upgrade process encounters a working copy with
+un-run logs.  In this state, it will be up to the user to run 'svn cleanup'
+with the prior version of Subversion to ensure the working copy is in an
+upgradable state.  Failing that, the user can always do a fresh checkout.
+
+The atomic step is step 5.  Should the upgrade process be interrupted prior
+to Step 5, the working copy will still be usable by a pre-wc-ng client, but
+will just have extra stuff in the .svn directories, namely invisible.db in
+the root, and the various flag files everywhere.  Should the upgrade get
+interrupted *after* Step 5 (but before all the .svn directories are removed),
+the .svn directories will show up as unversioned directories.  Not the ideal,
+but not terribly bad, either.
+
+### perhaps we should have a way of cleaning up all the .svn dirs from an
+    interrupted upgrade?
+
+### what if somebody attempts to use an old Subversion on a working copy
+    with a .svn which hasn't been harvested yet?  it should succeed, but
+    may leave a discrepancy between the wc-ng database and the .svn
+    metadata, since old Subversions don't know to recurse up the tree.
+    could we do something to the working copy to render it unusable by older
+    subversions, but without too much pain?  how about simply bumping the
+    format number in entries.c?  a properly chosen format number would make
+    older Subversions complain, but also make Subversion 1.7 prompt for an
+    upgrade.  hmm.....
+
+When an upgrade is restarted, invisible.db will just be blown away and
+recreated from scratch, since already-upgraded directories could have been
+modified between invocations of 'svn upgrade'.
+
+
 Implementation Plan
 ===================
 The following are tests which need to be accomplished for WC-NG.  There
@@ -855,6 +1020,7 @@ Near-Term Plan
          a minimum format level. the user field in the database
          contains the schema version which is our further format-level
          descriptor value.
+   [ this has been largely done. ]
 
 2. convert entries.c to use wc_db. shift the sqlite code into wc_db.
    note: this is a separate step from 1. there is a paradigm shift
@@ -862,22 +1028,34 @@ Near-Term Plan
          ignore that in Step 1, and then handle it in this Step.
    note: put wc_db handle into lock->shared and share the handle
          across all directories/batons.
+   [ because of the borken way the upper layers use the entries API, using
+     the wc_db APIs to write entries proves difficult, since we violate
+     all kinds of constraints. ]
 
 3. convert props.c to use wc_db. migrate props to db simultaneously.
+   [ this is currently in-process. ]
 
-4. incremental shift of pristines from N files into pristine db.
+4. implement 'svn cleanup' as an upgrade path from old-style working
+   copies to wc-ng
+   [ done, but work will continue as the wc-ng format continues to evolve. ]
+
+5. incremental shift of pristines from N files into pristine db.
    note: we could continue to leave .revert-base while we migrate the
          primary base into the pristine dataset.
 
-5. shift libsvn_wc from using entries.h to using wc_db.h.
+6. shift libsvn_wc from using entries.h to using wc_db.h.
    note: since entries.h is "merely" a wrapper for wc_db.h, this will
          allow the libsvn_wc to start using the new wc_db APIs
          wherever it is easy/possible.
    goal: all libsvn_wc code uses wc_db.h, and entries.h exists solely
          to support old backwards-compat code.
+   [ this isn't quite a discreet task, but is happening gradually as we work
+     through the libsvn_wc API. ]
 
-6. centralize the metadata and pristines
+7. centralize the metadata and pristines
    note: this will also involve merging datastores
+
+8. replace loggy with sqlite-based work journal
 
 
 Other sections

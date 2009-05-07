@@ -32,6 +32,11 @@ class SubversionRepositoryAccessTestCase(unittest.TestCase):
     self.callbacks = ra.Callbacks()
     self.ra_ctx = ra.open2(REPOS_URL, self.callbacks, None, None)
 
+  def tearDown(self):
+    self.ra_ctx = None
+    self.fs = None
+    self.repos = None
+
   def test_get_file(self):
     # Test getting the properties of a file
     fs_revnum = fs.youngest_rev(self.fs)
@@ -305,8 +310,7 @@ class SubversionRepositoryAccessTestCase(unittest.TestCase):
       elif len(log_revprops) == 0:
         self.assert_(log_entry.revprops == None or len(log_entry.revprops) == 0)
       else:
-        revprop_names = list(log_entry.revprops.keys())
-        revprop_names.sort()
+        revprop_names = sorted(log_entry.revprops.keys())
         log_revprops.sort()
         self.assertEqual(revprop_names, log_revprops)
         for i in log_revprops:

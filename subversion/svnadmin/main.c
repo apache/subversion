@@ -399,7 +399,7 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
 
   {"pack", subcommand_pack, {0}, N_
    ("usage: svnadmin pack REPOS_PATH\n\n"
-    "Possibly compact the repository into a more effecient storage model.\n"
+    "Possibly compact the repository into a more efficient storage model.\n"
     "This may not apply to all repositories, in which case, exit.\n"),
    {0} },
 

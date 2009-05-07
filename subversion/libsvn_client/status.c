@@ -27,7 +27,7 @@
 #include "svn_pools.h"
 #include "client.h"
 
-#include "svn_path.h"
+#include "svn_dirent_uri.h"
 #include "svn_delta.h"
 #include "svn_client.h"
 #include "svn_error.h"
@@ -47,7 +47,7 @@ struct status_baton
 {
   svn_boolean_t deleted_in_repos;          /* target is deleted in repos */
   apr_hash_t *changelist_hash;             /* keys are changelist names */
-  svn_wc_status_func3_t real_status_func;  /* real status function */
+  svn_wc_status_func4_t real_status_func;  /* real status function */
   void *real_status_baton;                 /* real status baton */
 };
 
@@ -56,12 +56,12 @@ struct status_baton
    need to make (such as noting that the target of the status is
    missing from HEAD in the repository).
 
-   This implements the 'svn_wc_status_func3_t' function type. */
+   This implements the 'svn_wc_status_func4_t' function type.  */
 static svn_error_t *
 tweak_status(void *baton,
              const char *path,
-             svn_wc_status2_t *status,
-             apr_pool_t *pool)
+             const svn_wc_status2_t *status,
+             apr_pool_t *scratch_pool)
 {
   struct status_baton *sb = baton;
 
@@ -69,7 +69,11 @@ tweak_status(void *baton,
      we need to note that fact in all the status structures that come
      through here. */
   if (sb->deleted_in_repos)
-    status->repos_text_status = svn_wc_status_deleted;
+    {
+      svn_wc_status2_t *new_status = svn_wc_dup_status2(status, scratch_pool);
+      new_status->repos_text_status = svn_wc_status_deleted;
+      status = new_status;
+    }
 
   /* If the status item has an entry, but doesn't belong to one of the
      changelists our caller is interested in, we filter our this status
@@ -78,7 +82,8 @@ tweak_status(void *baton,
     return SVN_NO_ERROR;
 
   /* Call the real status function/baton. */
-  return sb->real_status_func(sb->real_status_baton, path, status, pool);
+  return sb->real_status_func(sb->real_status_baton, path, status,
+                              scratch_pool);
 }
 
 /* A baton for our reporter that is used to collect locks. */
@@ -128,10 +133,10 @@ reporter_link_path(void *report_baton, const char *path, const char *url,
   const char *ancestor;
   apr_size_t len;
 
-  ancestor = svn_path_get_longest_ancestor(url, rb->ancestor, pool);
+  ancestor = svn_dirent_get_longest_ancestor(url, rb->ancestor, pool);
 
   /* If we got a shorter ancestor, truncate our current ancestor.
-     Note that svn_path_get_longest_ancestor will allocate its return
+     Note that svn_dirent_get_longest_ancestor will allocate its return
      value even if it identical to one of its arguments. */
   len = strlen(ancestor);
   if (len < strlen(rb->ancestor))
@@ -207,10 +212,10 @@ static svn_ra_reporter3_t lock_fetch_reporter = {
 
 
 svn_error_t *
-svn_client_status4(svn_revnum_t *result_rev,
+svn_client_status5(svn_revnum_t *result_rev,
                    const char *path,
                    const svn_opt_revision_t *revision,
-                   svn_wc_status_func3_t status_func,
+                   svn_wc_status_func4_t status_func,
                    void *status_baton,
                    svn_depth_t depth,
                    svn_boolean_t get_all,
@@ -219,7 +224,7 @@ svn_client_status4(svn_revnum_t *result_rev,
                    svn_boolean_t ignore_externals,
                    const apr_array_header_t *changelists,
                    svn_client_ctx_t *ctx,
-                   apr_pool_t *pool)
+                   apr_pool_t *pool)  /* ### aka scratch_pool */
 {
   svn_wc_adm_access_t *anchor_access, *target_access;
   svn_wc_traversal_info_t *traversal_info = svn_wc_init_traversal_info(pool);
@@ -262,19 +267,19 @@ svn_client_status4(svn_revnum_t *result_rev,
       target_access = anchor_access;
     }
   else
-    return err;
+    return svn_error_return(err);
 
   anchor = svn_wc_adm_access_path(anchor_access);
 
   /* Get the status edit, and use our wrapping status function/baton
      as the callback pair. */
   SVN_ERR(svn_wc_get_default_ignores(&ignores, ctx->config, pool));
-  SVN_ERR(svn_wc_get_status_editor4(&editor, &edit_baton, &set_locks_baton,
+  SVN_ERR(svn_wc_get_status_editor5(&editor, &edit_baton, &set_locks_baton,
                                     &edit_revision, anchor_access, target,
                                     depth, get_all, no_ignore, ignores,
                                     tweak_status, &sb, ctx->cancel_func,
                                     ctx->cancel_baton, traversal_info,
-                                    pool));
+                                    pool, pool));
 
   /* If we want to know about out-of-dateness, we crawl the working copy and
      let the RA layer drive the editor for real.  Otherwise, we just close the
@@ -294,7 +299,7 @@ svn_client_status4(svn_revnum_t *result_rev,
         return svn_error_createf
           (SVN_ERR_ENTRY_MISSING_URL, NULL,
            _("Entry '%s' has no URL"),
-           svn_path_local_style(anchor, pool));
+           svn_dirent_local_style(anchor, pool));
       URL = apr_pstrdup(pool, entry->url);
 
       /* Open a repository session to the URL. */

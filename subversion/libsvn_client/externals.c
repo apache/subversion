@@ -2,7 +2,7 @@
  * externals.c:  handle the svn:externals property
  *
  * ====================================================================
- * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -29,6 +29,7 @@
 #include "svn_hash.h"
 #include "svn_types.h"
 #include "svn_error.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_config.h"
 #include "client.h"
@@ -119,7 +120,7 @@ relegate_dir_external(const char *path,
       svn_error_clear(err);
       err = SVN_NO_ERROR;
 
-      svn_path_split(path, &parent_dir, &dirname, pool);
+      svn_dirent_split(path, &parent_dir, &dirname, pool);
 
       /* Reserve the new dir name. */
       SVN_ERR(svn_io_open_uniquely_named(NULL, &new_path,
@@ -151,7 +152,7 @@ relegate_dir_external(const char *path,
       SVN_ERR(svn_io_file_rename(path, new_path, pool));
     }
 
-  return err;
+  return svn_error_return(err);
 }
 
 /* Try to update a directory external at PATH to URL at REVISION.
@@ -228,7 +229,7 @@ switch_dir_external(const char *path,
                       goto relegate;
                     }
                   else if (err)
-                    return err;
+                    return svn_error_return(err);
                 }
 
               SVN_ERR(svn_client__switch_internal(NULL, path, url,
@@ -261,7 +262,7 @@ switch_dir_external(const char *path,
     {
       /* The target dir might have multiple components.  Guarantee
          the path leading down to the last component. */
-      const char *parent = svn_path_dirname(path, pool);
+      const char *parent = svn_dirent_dirname(path, pool);
       SVN_ERR(svn_io_make_dir_recursively(parent, pool));
     }
 
@@ -341,7 +342,7 @@ switch_file_external(const char *path,
                url, dest_wc_repos_root_url);
         }
       else
-        return err;
+        return svn_error_return(err);
     }
 
   SVN_ERR(svn_wc_entry(&entry, path, target_adm_access, FALSE, subpool));
@@ -448,9 +449,6 @@ switch_file_external(const char *path,
          be reverted, it needs to be removed forcibly from the wc.. */
       revert_file = FALSE;
       remove_from_revision_control = TRUE;
-
-      if (err)
-        goto cleanup;
   }
 
   if (close_adm_access)
@@ -478,12 +476,12 @@ switch_file_external(const char *path,
 
   if (remove_from_revision_control)
     {
-      svn_error_t * e = svn_wc_remove_from_revision_control(target_adm_access,
-                                                            target,
-                                                            TRUE, FALSE,
-                                                            ctx->cancel_func,
-                                                            ctx->cancel_baton,
-                                                            subpool);
+      svn_error_t *e = svn_wc_remove_from_revision_control(target_adm_access,
+                                                           target,
+                                                           TRUE, FALSE,
+                                                           ctx->cancel_func,
+                                                           ctx->cancel_baton,
+                                                           subpool);
       if (e)
         svn_error_clear(e);
     }
@@ -500,7 +498,7 @@ switch_file_external(const char *path,
 
   /* ### should destroy the subpool */
 
-  return err;
+  return svn_error_return(err);
 }
 
 /* Return the scheme of @a uri in @a scheme allocated from @a pool.
@@ -813,7 +811,7 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
         case svn_node_dir:
           /* The target dir might have multiple components.  Guarantee
              the path leading down to the last component. */
-          svn_path_split(path, &parent, NULL, ib->iter_pool);
+          parent = svn_dirent_dirname(path, ib->iter_pool);
           SVN_ERR(svn_io_make_dir_recursively(parent, ib->iter_pool));
 
           /* If we were handling renames the fancy way, then before
@@ -909,7 +907,7 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
           if (err2)
             {
               svn_error_clear(err2);
-              return err;
+              return svn_error_return(err);
             }
           else
             {
@@ -947,7 +945,7 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
         }
 
       if (err && (err->apr_err != SVN_ERR_WC_LEFT_LOCAL_MOD))
-        return err;
+        return svn_error_return(err);
       svn_error_clear(err);
 
       /* ### If there were multiple path components leading down to
@@ -1015,7 +1013,7 @@ handle_external_item_change_wrapper(const void *key, apr_ssize_t klen,
   if (err && ib->ctx->notify_func2)
     {
       const char *path = svn_path_join(ib->parent_dir, key, ib->iter_pool);
-      svn_wc_notify_t *notifier = 
+      svn_wc_notify_t *notifier =
         svn_wc_create_notify(path,
                              svn_wc_notify_failed_external,
                              ib->pool);
@@ -1162,9 +1160,9 @@ handle_externals_desc_change(const void *key, apr_ssize_t klen,
   len = strlen(cb->to_path);
   if (ib.parent_dir[len] == '/')
     ++len;
-  ib.parent_dir_url = svn_path_url_add_component(cb->from_url,
-                                                 ib.parent_dir + len,
-                                                 cb->pool);
+  ib.parent_dir_url = svn_path_url_add_component2(cb->from_url,
+                                                  ib.parent_dir + len,
+                                                  cb->pool);
 
   /* We must use a custom version of svn_hash_diff so that the diff
      entries are processed in the order they were originally specified
@@ -1276,7 +1274,7 @@ svn_client__fetch_externals(apr_hash_t *externals,
 
 svn_error_t *
 svn_client__do_external_status(svn_wc_traversal_info_t *traversal_info,
-                               svn_wc_status_func3_t status_func,
+                               svn_wc_status_func4_t status_func,
                                void *status_baton,
                                svn_depth_t depth,
                                svn_boolean_t get_all,
@@ -1348,7 +1346,7 @@ svn_client__do_external_status(svn_wc_traversal_info_t *traversal_info,
                                     iterpool), iterpool);
 
           /* And then do the status. */
-          SVN_ERR(svn_client_status4(NULL, fullpath,
+          SVN_ERR(svn_client_status5(NULL, fullpath,
                                      &(external->revision),
                                      status_func, status_baton,
                                      depth, get_all, update,

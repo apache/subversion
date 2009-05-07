@@ -2,7 +2,7 @@
  * utf.c:  UTF-8 conversion routines
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007, 2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -30,9 +30,10 @@
 #include "svn_pools.h"
 #include "svn_ctype.h"
 #include "svn_utf.h"
-#include "utf_impl.h"
 #include "svn_private_config.h"
 #include "win32_xlate.h"
+
+#include "private/svn_utf_private.h"
 
 
 

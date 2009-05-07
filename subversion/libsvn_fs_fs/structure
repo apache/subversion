@@ -166,6 +166,10 @@ Mergeinfo metadata:
   Format 3-4: minfo-here and minfo-count node-revision fields are
     maintained.  svn_fs_get_mergeinfo works.
 
+Revision changed paths list:
+  Format 1-3: Does not contain the node's kind.
+  Format 4: Contains the node's kind.
+
 
 Filesystem format options
 -------------------------
@@ -381,6 +385,10 @@ of the deleted node-rev, and <text-mod> and <prop-mod> are always
 the node-rev's copyfrom information if it has any; if it does not, the
 second line is blank.
 
+Starting with FS format 4, <action> may contain the kind ("file" or
+"dir") of the node, after a hyphen; for example, an added directory
+may be represented as "add-dir".
+
 At the very end of a rev file is a pair of lines containing
 "\n<root-offset> <cp-offset>\n", where <root-offset> is the offset of
 the root directory node revision and <cp-offset> is the offset of the
@@ -433,7 +441,8 @@ the changed-path entries in a rev file, except that <id> and <action>
 may both be "reset" (in which case <text-mod> and <prop-mod> are both
 always "false") to indicate that all changes to a path should be
 considered undone.  Reset entries are only used during the final merge
-phase of a transaction.
+phase of a transaction.  Actions in the "changes" file always contain
+a node kind, even if the FS format is older than format 4.
 
 The node-rev files have the same format as node-revs in a revision
 file, except that the "text" and "props" fields are augmented as

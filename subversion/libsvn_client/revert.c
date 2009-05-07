@@ -92,7 +92,7 @@ revert(const char *path,
           svn_error_clear(err);
         }
       else
-        return err;
+        return svn_error_return(err);
     }
 
   return svn_wc_adm_close2(adm_access, pool);
@@ -155,16 +155,5 @@ svn_client_revert2(const apr_array_header_t *paths,
 
   svn_pool_destroy(subpool);
 
-  return err;
-}
-
-
-svn_error_t *
-svn_client_revert(const apr_array_header_t *paths,
-                  svn_boolean_t recursive,
-                  svn_client_ctx_t *ctx,
-                  apr_pool_t *pool)
-{
-  return svn_client_revert2(paths, SVN_DEPTH_INFINITY_OR_EMPTY(recursive),
-                            NULL, ctx, pool);
+  return svn_error_return(err);
 }

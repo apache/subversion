@@ -290,9 +290,9 @@ def depth_empty_with_file(sbox):
   if os.path.exists(iota_path):
     raise svntest.Failure("'%s' exists when it shouldn't" % iota_path)
 
-  # ### I'd love to do this using the recommended {expected_output,
-  # ### expected_status, expected_disk} method here, but after twenty
-  # ### minutes of trying to figure out how, I decided to compromise.
+  ### I'd love to do this using the recommended {expected_output,
+  ### expected_status, expected_disk} method here, but after twenty
+  ### minutes of trying to figure out how, I decided to compromise.
 
   # Update iota by name, expecting to receive it.
   svntest.actions.run_and_verify_svn(None, None, [], 'up', iota_path)
@@ -1238,26 +1238,26 @@ def add_tree_with_depth(sbox):
   # Simple case, add new1 only, set depth to files
   svntest.actions.run_and_verify_svn(None, None, [],
                                      "add", "--depth", "files", new1_path)
-  verify_depth(None, "files", new1_path)
+  verify_depth(None, "infinity", new1_path)
 
   # Force add new1 at new1 again, should include new2 at empty, the depth of
   # new1 should not change
   svntest.actions.run_and_verify_svn(None, None, [],
                                      "add", "--depth", "immediates",
                                      "--force", new1_path)
-  verify_depth(None, "files", new1_path)
-  verify_depth(None, "empty", new2_path)
+  verify_depth(None, "infinity", new1_path)
+  verify_depth(None, "infinity", new2_path)
 
   # add new4 with intermediate path, the intermediate path is added at empty
   svntest.actions.run_and_verify_svn(None, None, [],
                                      "add", "--depth", "immediates",
                                      "--parents", new4_path)
   verify_depth(None, "infinity", new3_path)
-  verify_depth(None, "immediates", new4_path)
+  verify_depth(None, "infinity", new4_path)
 
 def upgrade_from_above(sbox):
   "upgrade a depth=empty wc from above"
-  
+
   # The bug was that 'svn up --set-depth=files' worked from within the
   # working copy, but not from without with working copy top given
   # as an argument.  Both ways would correctly cause 'iota' to
@@ -1271,7 +1271,7 @@ def upgrade_from_above(sbox):
   #   Date: Wed, 19 Sep 2007 23:15:24 +0700
   #   Message-ID: <46F14B1C.8010406@svnkit.com>
 
-  sbox2 = sbox.clone_dependent() 
+  sbox2 = sbox.clone_dependent()
 
   wc, ign_a, ign_b, ign_c = set_up_depthy_working_copies(sbox, empty=True)
 
@@ -1689,7 +1689,7 @@ def depth_folding_clean_trees_2(sbox):
   verify_depth(None, "immediates", A_path)
 
   # pull in directory D at infinity
-  svntest.actions.run_and_verify_svn(None, None, [], 
+  svntest.actions.run_and_verify_svn(None, None, [],
                                      'up', '--set-depth', 'infinity', D_path)
 
   # Run 'svn up --set-depth=immediates' to directory A/D.
@@ -1968,7 +1968,7 @@ def fold_tree_with_unversioned_modified_items(sbox):
 
   # Even though the directory B and D is not deleted because of local
   # modificatoin or unversioned items, there will be only one notification at
-  # B and D. 
+  # B and D.
   expected_output = svntest.wc.State(wc_dir, {
     'A/B'            : Item(status='D '),
     'A/C'            : Item(status='D '),
@@ -2182,7 +2182,7 @@ def excluded_path_misc_operation(sbox):
     'A/L/lambda' : Item(status='  ', wc_rev=2),
     'A/L/F'      : Item(status='  ', wc_rev=2),
     })
-  svntest.actions.run_and_verify_commit(wc_dir, 
+  svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
                                         expected_status,
 					None,
@@ -2236,10 +2236,10 @@ def excluded_receive_remote_removal(sbox):
                                         "--set-depth", "exclude", B_path)
 
   # Remove path B in the repos.
-  svntest.actions.run_and_verify_svn(None, None, [], "delete", "-m", 
+  svntest.actions.run_and_verify_svn(None, None, [], "delete", "-m",
                                      "Delete B.", sbox.repo_url + "/A/B")
 
-  # Update wc, should receive the removal of excluded path B 
+  # Update wc, should receive the removal of excluded path B
   # and handle it silently.
   expected_status = svntest.actions.get_virginal_state(wc, 2)
   expected_status.remove('A/B/lambda', 'A/B/E/alpha', 'A/B/E/beta',
@@ -2257,6 +2257,60 @@ def excluded_receive_remote_removal(sbox):
   expected_output = ['A         '+B_path+'\n']
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'cp', C_path, B_path)
+
+
+# Regression test for r36686.
+def exclude_keeps_hidden_entries(sbox):
+  "'up --set-depth exclude' doesn't lose entries"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  A_path = os.path.join(wc_dir, 'A')
+  os.chdir(A_path)
+
+  # the second 'up' used to cause the entry of 'C' to be lost.
+  svntest.main.run_svn(None, 'up', '--set-depth', 'exclude', 'C')
+  svntest.main.run_svn(None, 'up', '--set-depth', 'exclude', 'D')
+  # we could grep the 'entries' file, but...
+  # or we could use 'info', but info_excluded() is XFail.
+  expected_stderr = ".*svn: 'C' is already under version control.*"
+  svntest.actions.run_and_verify_svn(None, None, expected_stderr,
+                                     'mkdir', 'C')
+
+
+def info_excluded(sbox):
+  "'info' should treat excluded item as versioned"
+
+  # The problem: 'svn info' on an excluded item would behave as if it
+  # was not versioned at all:
+  #
+  #     % svn up --set-depth exclude A
+  #     D         A
+  #     % svn info A
+  #     A:  (Not a versioned resource)
+  #     
+  #     ..\..\..\subversion\svn\info-cmd.c:562: (apr_err=200000)
+  #     svn: A problem occurred; see other errors for details
+  # 
+  # It should acknowledge the existence (in the repos) of ./A and print some
+  # info about it, like it does if '--set-depth empty' is used instead.
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  A_path = os.path.join(wc_dir, 'A')
+  svntest.main.run_svn(None, 'up', '--set-depth', 'exclude', A_path)
+
+  import re
+  expected_info = {
+      'Path' : re.escape(A_path),
+      'Repository Root' : sbox.repo_url,
+      'Repository UUID' : svntest.actions.get_wc_uuid(wc_dir),
+      'Depth' : 'exclude',
+  }
+  svntest.actions.run_and_verify_info([expected_info], A_path)
+
 
 
 #----------------------------------------------------------------------
@@ -2343,9 +2397,9 @@ def make_depth_tree_conflicts(sbox):
                         'A/B/E', 'A/B/E/alpha', 'A/B/E/beta',
                         'A/B/F',
                         'A/D/gamma',
-                        status='D ', wc_rev=1)
+                        status='D ')
   expected_status.tweak('A/mu', 'A/B', 'A/D/gamma',
-                        treeconflict='C', wc_rev=1)
+                        treeconflict='C')
 
   svntest.actions.run_and_verify_update(wc,
                                         expected_output,
@@ -2446,6 +2500,8 @@ test_list = [ None,
               excluded_path_update_operation,
               excluded_path_misc_operation,
               excluded_receive_remote_removal,
+              exclude_keeps_hidden_entries,
+              XFail(info_excluded),
               tree_conflicts_resolved_depth_empty,
               tree_conflicts_resolved_depth_files,
               tree_conflicts_resolved_depth_immediates,

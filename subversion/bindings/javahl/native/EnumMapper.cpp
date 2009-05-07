@@ -237,9 +237,29 @@ jint EnumMapper::mapNotifyAction(svn_wc_notify_action_t action)
       /* A merge operation from a foreign repository has begun. */
       return org_tigris_subversion_javahl_NotifyAction_foreign_merge_begin;
 
-    case svn_wc_notify_property_updated:
-      /* Property updated */
-      return org_tigris_subversion_javahl_NotifyAction_property_updated;
+    case svn_wc_notify_property_added:
+      /* Property added */
+      return org_tigris_subversion_javahl_NotifyAction_property_added;
+
+    case svn_wc_notify_property_modified:
+      /* Property modified */
+      return org_tigris_subversion_javahl_NotifyAction_property_modified;
+
+    case svn_wc_notify_property_deleted:
+      /* Property deleted */
+      return org_tigris_subversion_javahl_NotifyAction_property_deleted;
+
+    case svn_wc_notify_property_deleted_nonexistent:
+      /* Property deleted nonexistent */
+      return org_tigris_subversion_javahl_NotifyAction_property_deleted_nonexistent;
+
+    case svn_wc_notify_revprop_set:
+      /* Revision property set */
+      return org_tigris_subversion_javahl_NotifyAction_revprop_set;
+
+    case svn_wc_notify_revprop_deleted:
+      /* Revision property deleted */
+      return org_tigris_subversion_javahl_NotifyAction_revprop_deleted;
 
     case svn_wc_notify_merge_completed:
       /* Final notification in a merge */
@@ -441,6 +461,9 @@ jint EnumMapper::mapConflictReason(svn_wc_conflict_reason_t reason)
 
     case svn_wc_conflict_reason_unversioned:
       return org_tigris_subversion_javahl_ConflictDescriptor_Reason_unversioned;
+
+    case svn_wc_conflict_reason_added:
+      return org_tigris_subversion_javahl_ConflictDescriptor_Reason_added;
     }
 }
 
@@ -473,6 +496,8 @@ jint EnumMapper::mapOperation(svn_wc_operation_t operation)
 {
   switch (operation)
     {
+    case svn_wc_operation_none:
+      return org_tigris_subversion_javahl_Operation_none;
     case svn_wc_operation_update:
       return org_tigris_subversion_javahl_Operation_update;
     case svn_wc_operation_switch:

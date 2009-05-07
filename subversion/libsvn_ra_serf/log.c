@@ -28,16 +28,17 @@
 #include "svn_ra.h"
 #include "svn_dav.h"
 #include "svn_xml.h"
-#include "../libsvn_ra/ra_loader.h"
 #include "svn_config.h"
 #include "svn_delta.h"
 #include "svn_version.h"
 #include "svn_path.h"
+#include "svn_props.h"
 
 #include "private/svn_dav_protocol.h"
 #include "svn_private_config.h"
 
 #include "ra_serf.h"
+#include "../libsvn_ra/ra_loader.h"
 
 
 /*
@@ -67,7 +68,7 @@ typedef struct {
   apr_size_t tmp_len;
 
   /* Temporary change path - ultimately inserted into changed_paths hash. */
-  svn_log_changed_path_t *tmp_path;
+  svn_log_changed_path2_t *tmp_path;
 
   /* Log information */
   svn_log_entry_t *log_entry;
@@ -125,12 +126,13 @@ push_state(svn_ra_serf__xml_parser_t *parser,
     {
       log_info_t *info = parser->state->private;
 
-      if (!info->log_entry->changed_paths)
+      if (!info->log_entry->changed_paths2)
         {
-          info->log_entry->changed_paths = apr_hash_make(info->pool);
+          info->log_entry->changed_paths2 = apr_hash_make(info->pool);
+          info->log_entry->changed_paths = info->log_entry->changed_paths;
         }
 
-      info->tmp_path = apr_pcalloc(info->pool, sizeof(*info->tmp_path));
+      info->tmp_path = svn_log_changed_path2_create(info->pool);
       info->tmp_path->copyfrom_rev = SVN_INVALID_REVNUM;
     }
 
@@ -146,6 +148,23 @@ push_state(svn_ra_serf__xml_parser_t *parser,
     }
 
   return parser->state->private;
+}
+
+/* Helper function to parse the common arguments availabe in ATTRS into CHANGE. */
+static svn_error_t *
+read_changed_path_attributes(svn_log_changed_path2_t *change, const char **attrs)
+{
+  /* All these arguments are optional. The *_from_word() functions can handle
+     them for us */
+
+  change->node_kind = svn_node_kind_from_word(
+                           svn_xml_get_attr_value("node-kind", attrs));
+  change->text_modified = svn_tristate_from_word(
+                           svn_xml_get_attr_value("text-mods", attrs));
+  change->props_modified = svn_tristate_from_word(
+                           svn_xml_get_attr_value("prop-mods", attrs));
+
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *
@@ -222,6 +241,8 @@ start_log(svn_ra_serf__xml_parser_t *parser,
                   info->tmp_path->copyfrom_rev = copy_rev;
                 }
             }
+
+          SVN_ERR(read_changed_path_attributes(info->tmp_path, attrs));
         }
       else if (strcmp(name.name, "replaced-path") == 0)
         {
@@ -244,16 +265,22 @@ start_log(svn_ra_serf__xml_parser_t *parser,
                   info->tmp_path->copyfrom_rev = copy_rev;
                 }
             }
+
+          SVN_ERR(read_changed_path_attributes(info->tmp_path, attrs));
         }
       else if (strcmp(name.name, "deleted-path") == 0)
         {
           info = push_state(parser, log_ctx, DELETED_PATH);
           info->tmp_path->action = 'D';
+          
+          SVN_ERR(read_changed_path_attributes(info->tmp_path, attrs));
         }
       else if (strcmp(name.name, "modified-path") == 0)
         {
           info = push_state(parser, log_ctx, MODIFIED_PATH);
           info->tmp_path->action = 'M';
+
+          SVN_ERR(read_changed_path_attributes(info->tmp_path, attrs));
         }
     }
 
@@ -377,7 +404,7 @@ end_log(svn_ra_serf__xml_parser_t *parser,
       path = apr_pstrmemdup(info->pool, info->tmp, info->tmp_len);
       info->tmp_len = 0;
 
-      apr_hash_set(info->log_entry->changed_paths, path, APR_HASH_KEY_STRING,
+      apr_hash_set(info->log_entry->changed_paths2, path, APR_HASH_KEY_STRING,
                    info->tmp_path);
       svn_ra_serf__xml_pop_state(parser);
     }
@@ -561,11 +588,10 @@ svn_ra_serf__get_log(svn_ra_session_t *ra_session,
    */
   peg_rev = (start > end) ? start : end;
 
-  SVN_ERR(svn_ra_serf__get_baseline_info(&basecoll_url, &relative_url,
-                                         session, NULL, peg_rev, NULL,
-                                         pool));
+  SVN_ERR(svn_ra_serf__get_baseline_info(&basecoll_url, &relative_url, session,
+                                         NULL, NULL, peg_rev, NULL, pool));
 
-  req_url = svn_path_url_add_component(basecoll_url, relative_url, pool);
+  req_url = svn_path_url_add_component2(basecoll_url, relative_url, pool);
 
   handler = apr_pcalloc(pool, sizeof(*handler));
 

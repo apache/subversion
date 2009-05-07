@@ -44,6 +44,7 @@ struct svn_stream_t {
   svn_read_fn_t read_fn;
   svn_write_fn_t write_fn;
   svn_close_fn_t close_fn;
+  svn_io_reset_fn_t reset_fn;
 };
 
 
@@ -59,6 +60,7 @@ svn_stream_create(void *baton, apr_pool_t *pool)
   stream->baton = baton;
   stream->read_fn = NULL;
   stream->write_fn = NULL;
+  stream->reset_fn = NULL;
   stream->close_fn = NULL;
   return stream;
 }
@@ -84,6 +86,11 @@ svn_stream_set_write(svn_stream_t *stream, svn_write_fn_t write_fn)
   stream->write_fn = write_fn;
 }
 
+void
+svn_stream_set_reset(svn_stream_t *stream, svn_io_reset_fn_t reset_fn)
+{
+  stream->reset_fn = reset_fn;
+}
 
 void
 svn_stream_set_close(svn_stream_t *stream, svn_close_fn_t close_fn)
@@ -105,6 +112,16 @@ svn_stream_write(svn_stream_t *stream, const char *data, apr_size_t *len)
 {
   SVN_ERR_ASSERT(stream->write_fn != NULL);
   return stream->write_fn(stream->baton, data, len);
+}
+
+
+svn_error_t *
+svn_stream_reset(svn_stream_t *stream)
+{
+  if (stream->reset_fn == NULL)
+    return svn_error_create(SVN_ERR_STREAM_RESET_NOT_SUPPORTED, NULL, NULL);
+
+  return stream->reset_fn(stream->baton);
 }
 
 
@@ -221,44 +238,28 @@ svn_error_t *svn_stream_copy3(svn_stream_t *from, svn_stream_t *to,
       apr_size_t len = SVN__STREAM_CHUNK_SIZE;
 
       if (cancel_func)
-        SVN_ERR(cancel_func(cancel_baton));
-
-      SVN_ERR(svn_stream_read(from, buf, &len));
+        {
+          err = cancel_func(cancel_baton);
+          if (err)
+             break;
+        }
+               
+      err = svn_stream_read(from, buf, &len);
+      if (err)
+      	 break;
+      	 
       if (len > 0)
-        SVN_ERR(svn_stream_write(to, buf, &len));
-      if (len != SVN__STREAM_CHUNK_SIZE)
-        break;
+        err = svn_stream_write(to, buf, &len);
+
+      if (err || (len != SVN__STREAM_CHUNK_SIZE))
+          break;
     }
+    
+  err2 = svn_error_compose_create(svn_stream_close(from),
+                                  svn_stream_close(to));
 
-  err = svn_stream_close(from);
-  err2 = svn_stream_close(to);
-  if (err)
-    {
-      /* ### it would be nice to compose the two errors in some way */
-      svn_error_clear(err2);  /* note: might be NULL */
-      return err;
-    }
-  return err2;
+  return svn_error_compose_create(err, err2);
 }
-
-svn_error_t *svn_stream_copy2(svn_stream_t *from, svn_stream_t *to,
-                              svn_cancel_func_t cancel_func,
-                              void *cancel_baton,
-                              apr_pool_t *scratch_pool)
-{
-  return svn_stream_copy3(svn_stream_disown(from, scratch_pool),
-                          svn_stream_disown(to, scratch_pool),
-                          cancel_func, cancel_baton, scratch_pool);
-}
-
-svn_error_t *svn_stream_copy(svn_stream_t *from, svn_stream_t *to,
-                             apr_pool_t *scratch_pool)
-{
-  return svn_stream_copy3(svn_stream_disown(from, scratch_pool),
-                          svn_stream_disown(to, scratch_pool),
-                          NULL, NULL, scratch_pool);
-}
-
 
 svn_error_t *
 svn_stream_contents_same(svn_boolean_t *same,
@@ -307,6 +308,12 @@ write_handler_empty(void *baton, const char *data, apr_size_t *len)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+reset_handler_empty(void *baton)
+{
+  return SVN_NO_ERROR;
+}
+
 
 svn_stream_t *
 svn_stream_empty(apr_pool_t *pool)
@@ -316,6 +323,7 @@ svn_stream_empty(apr_pool_t *pool)
   stream = svn_stream_create(NULL, pool);
   svn_stream_set_read(stream, read_handler_empty);
   svn_stream_set_write(stream, write_handler_empty);
+  svn_stream_set_reset(stream, reset_handler_empty);
   return stream;
 }
 
@@ -327,13 +335,19 @@ svn_stream_empty(apr_pool_t *pool)
 static svn_error_t *
 read_handler_disown(void *baton, char *buffer, apr_size_t *len)
 {
-  return svn_stream_read((svn_stream_t *)baton, buffer, len);
+  return svn_stream_read(baton, buffer, len);
 }
 
 static svn_error_t *
 write_handler_disown(void *baton, const char *buffer, apr_size_t *len)
 {
-  return svn_stream_write((svn_stream_t *)baton, buffer, len);
+  return svn_stream_write(baton, buffer, len);
+}
+
+static svn_error_t *
+reset_handler_disown(void *baton)
+{
+  return svn_stream_reset(baton);
 }
 
 
@@ -344,6 +358,7 @@ svn_stream_disown(svn_stream_t *stream, apr_pool_t *pool)
 
   svn_stream_set_read(s, read_handler_disown);
   svn_stream_set_write(s, write_handler_disown);
+  svn_stream_set_reset(s, reset_handler_disown);
 
   return s;
 }
@@ -380,6 +395,15 @@ write_handler_apr(void *baton, const char *data, apr_size_t *len)
   struct baton_apr *btn = baton;
 
   return svn_io_file_write_full(btn->file, data, *len, len, btn->pool);
+}
+
+static svn_error_t *
+reset_handler_apr(void *baton)
+{
+  apr_off_t offset = 0;
+  struct baton_apr *btn = baton;
+
+  return svn_io_file_seek(btn->file, APR_SET, &offset, btn->pool);
 }
 
 static svn_error_t *
@@ -463,6 +487,7 @@ svn_stream_from_aprfile2(apr_file_t *file,
   stream = svn_stream_create(baton, pool);
   svn_stream_set_read(stream, read_handler_apr);
   svn_stream_set_write(stream, write_handler_apr);
+  svn_stream_set_reset(stream, reset_handler_apr);
 
   if (! disown)
     svn_stream_set_close(stream, close_handler_apr);
@@ -909,18 +934,14 @@ close_handler_md5(void *baton)
   SVN_ERR(svn_stream_close(btn->proxy));
 
   if (btn->read_digest)
-    {
-      *btn->read_digest = apr_palloc(btn->pool, APR_MD5_DIGESTSIZE);
-      memcpy((unsigned char *) *btn->read_digest, btn->read_checksum->digest,
-             APR_MD5_DIGESTSIZE);
-    }
+    *btn->read_digest
+      = apr_pmemdup(btn->pool, btn->read_checksum->digest,
+                    APR_MD5_DIGESTSIZE);
 
   if (btn->write_digest)
-    {
-      *btn->write_digest = apr_palloc(btn->pool, APR_MD5_DIGESTSIZE);
-      memcpy((unsigned char *) *btn->write_digest, btn->write_checksum->digest,
-             APR_MD5_DIGESTSIZE);
-    }
+    *btn->write_digest
+      = apr_pmemdup(btn->pool, btn->write_checksum->digest,
+                    APR_MD5_DIGESTSIZE);
 
   return SVN_NO_ERROR;
 }
@@ -994,6 +1015,14 @@ write_handler_stringbuf(void *baton, const char *data, apr_size_t *len)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+reset_handler_stringbuf(void *baton)
+{
+  struct stringbuf_stream_baton *btn = baton;
+  btn->amt_read = 0;
+  return SVN_NO_ERROR;
+}
+
 svn_stream_t *
 svn_stream_from_stringbuf(svn_stringbuf_t *str,
                           apr_pool_t *pool)
@@ -1010,12 +1039,13 @@ svn_stream_from_stringbuf(svn_stringbuf_t *str,
   stream = svn_stream_create(baton, pool);
   svn_stream_set_read(stream, read_handler_stringbuf);
   svn_stream_set_write(stream, write_handler_stringbuf);
+  svn_stream_set_reset(stream, reset_handler_stringbuf);
   return stream;
 }
 
 struct string_stream_baton
 {
-  svn_string_t *str;
+  const svn_string_t *str;
   apr_size_t amt_read;
 };
 
@@ -1032,7 +1062,7 @@ read_handler_string(void *baton, char *buffer, apr_size_t *len)
 }
 
 svn_stream_t *
-svn_stream_from_string(svn_string_t *str,
+svn_stream_from_string(const svn_string_t *str,
                        apr_pool_t *pool)
 {
   svn_stream_t *stream;

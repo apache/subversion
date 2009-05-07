@@ -7,9 +7,11 @@ SWIG=swig-1.3.36
 
 APR=apr-1.3.3
 APR_UTIL=apr-util-1.3.4
-NEON=neon-0.28.3
-SERF=serf-0.2.0
+NEON=neon-0.28.4
+SERF=serf-0.3.0
 ZLIB=zlib-1.2.3
+SQLITE_VERSION=3.6.13
+SQLITE=sqlite-amalgamation-$SQLITE_VERSION
 
 HTTPD=httpd-2.2.11
 HTTPD_OOPS=
@@ -111,15 +113,18 @@ create_deps() {
     wget -nc http://webdav.org/neon/$NEON.tar.gz
     wget -nc http://serf.googlecode.com/files/$SERF.tar.bz2
     wget -nc http://www.zlib.net/$ZLIB.tar.bz2
+    wget -nc http://www.sqlite.org/$SQLITE.tar.gz
 
     mkdir $BASEDIR/unix-dependencies
     cd $BASEDIR/unix-dependencies
     tar zxvf $TEMPDIR/$NEON.tar.gz
     tar jxvf $TEMPDIR/$ZLIB.tar.bz2
     tar jxvf $TEMPDIR/$SERF.tar.bz2
+    tar zxvf $TEMPDIR/$SQLITE.tar.gz
     mv $NEON neon
     mv $ZLIB zlib
     mv $SERF serf
+    mv sqlite-$SQLITE_VERSION sqlite-amalgamation
     tar jxvf $TEMPDIR/$APR.tar.bz2
     tar jxvf $TEMPDIR/$APR_UTIL.tar.bz2
     mv $APR apr
@@ -131,9 +136,11 @@ create_deps() {
     tar zxvf $TEMPDIR/$NEON.tar.gz
     tar jxvf $TEMPDIR/$ZLIB.tar.bz2
     tar jxvf $TEMPDIR/$SERF.tar.bz2
+    tar zxvf $TEMPDIR/$SQLITE.tar.gz
     mv $NEON neon
     mv $ZLIB zlib
     mv $SERF serf
+    mv sqlite-$SQLITE_VERSION sqlite-amalgamation
     if [ -n "$WIN32_APR_VIA_HTTPD" ]; then
       unzip $TEMPDIR/$HTTPD-win32-src$HTTPD_OOPS.zip
       for i in apr apr-util apr-iconv; do

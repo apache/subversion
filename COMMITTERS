@@ -14,7 +14,7 @@ Blanket commit access:
         kfogel   Karl Fogel <kfogel@red-bean.com>
         gstein   Greg Stein <gstein@gmail.com>
          brane   Branko Čibej <brane@xbc.nu>
-           joe   Joe Orton <joe@light.plus.com>
+           joe   Joe Orton <joe@manyfish.co.uk>
        ghudson   Greg Hudson <ghudson@mit.edu>
           fitz   Brian W. Fitzpatrick <fitz@red-bean.com>
         daniel   Daniel Stenberg <daniel@haxx.se>
@@ -32,7 +32,7 @@ Blanket commit access:
            mbk   Mark Benedetto King <mbk@lowlatency.com>
            epg   Eric Gillespie <epg@pretzelnet.org>
            jaa   Jani Averbach <jaa@iki.fi>
-    julianfoad   Julian Foad <jfoad@collab.net>
+    julianfoad   Julian Foad <julianfoad@btopenworld.com>
      ringstrom   Tobias Ringström <tobias@ringstrom.mine.nu>
        jpieper   Josh Pieper <jjp@pobox.com>
   jszakmeister   John Szakmeister <john@szakmeister.net>
@@ -72,7 +72,6 @@ Commit access for specific areas:
        pmayweg   Patrick Mayweg <mayweg@qint.de>             (JavaHL bindings)
           rey4   Russell Yanofsky <rey4@columbia.edu>        (Swig bindings)
          clkao   Chia-liang Kao <clkao@clkao.org>            (Swig-Perl b.)
-    joeswatosh   Joe Swatosh <joe.swatosh@gmail.com>         (Swig-Ruby b.)
     jrvernooij   Jelmer Vernooij <jelmer@samba.org>          (Python bindings)
           sage   Sage LaTorra <sagelt@gmail.com>             (Ctypes-Python bindings)
 
@@ -186,6 +185,7 @@ Committers who have asked to be listed as dormant:
       rassilon   Bill Tutt <bill@tutts.org> (Win32, COM, issue-1003-dev br.)
          kraai   Matt Kraai <kraai@alumni.cmu.edu>
            kon   Kalle Olavi Niemitalo <kon@iki.fi>          (psvn.el)
+    joeswatosh   Joe Swatosh <joe.swatosh@gmail.com>         (Swig-Ruby b.)
 
 ## Local Variables:
 ## coding:utf-8

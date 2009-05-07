@@ -23,9 +23,10 @@
 #ifndef SVN_SORTS_H
 #define SVN_SORTS_H
 
-#include <apr_pools.h>
-#include <apr_tables.h>         /* for apr_array_header_t */
-#include <apr_hash.h>
+#include <apr.h>         /* for apr_ssize_t */
+#include <apr_pools.h>   /* for apr_pool_t */
+#include <apr_tables.h>  /* for apr_array_header_t */
+#include <apr_hash.h>    /* for apr_hash_t */
 
 /* Define a MAX macro if we don't already have one */
 #ifndef MAX

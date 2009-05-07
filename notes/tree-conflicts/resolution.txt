@@ -130,18 +130,33 @@ Principles
 Renames and Replacements
 ------------------------
 
-An incoming rename is treated here as its two constituent actions - an
-incoming delete and an incoming add - separately.
+Incoming rename:
 
-In an incoming replacement, the delete is assumed to come before the add.
-(Currently, they may sometimes come the wrong way around. I have not analyzed
-the cases in which this can happen, nor the consequences.)
+  An incoming rename is treated here as its two constituent actions - an
+  incoming delete and an incoming add - separately.
 
-Where the ability to schedule a replacement of one node kind with another is
-implied, this ability may not be supported (and currently is not supported) by
-the working copy library. Such cases will therefore be unsupported. This is not
-seen as a deficiency inherent in tree conflict handling, but as a separate
-deficiency that restricts tree conflict handling in certain cases.
+Incoming replacement:
+
+  In an incoming replacement, the delete is assumed to come before the add.
+  (Currently, they may sometimes come the wrong way around. I have not
+  analyzed the cases in which this can happen, nor the consequences.)
+
+Scheduled rename:
+
+  With a scheduled rename, each of the names (the old and the new) will be
+  treated separately as a potential victim of a tree conflict.
+
+Scheduled replacement:
+
+  A scheduled replacement is treated mainly the same as a scheduled deletion,
+  because any incoming change is assumed to apply to the old object that was
+  deleted rather than to the new object that replaced it.
+
+  Where the ability to schedule a replacement of one node kind with another is
+  implied, this ability may not be supported (and currently is not supported)
+  by the working copy library. Such cases will therefore be unsupported. This
+  is not seen as a deficiency inherent in tree conflict handling, but as a
+  separate deficiency that restricts tree conflict handling in certain cases.
 
 Meaning of "Choose Theirs" and "Choose Mine"
 --------------------------------------------

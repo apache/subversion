@@ -119,8 +119,13 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
 {
   struct notify_baton *nb = baton;
   char statchar_buf[5] = "    ";
-  const char *path_local = n->path;
+  const char *path_local;
   svn_error_t *err;
+
+  if (n->url)
+    path_local = n->url;
+  else
+    path_local = n->path;
 
   if (n->path_prefix)
     {
@@ -146,6 +151,13 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
         {
           if ((err = svn_cmdline_printf
                (pool, _("Skipped missing target: '%s'\n"),
+                path_local)))
+            goto print_error;
+        }
+      else if (n->content_state == svn_wc_notify_state_source_missing)
+        {
+          if ((err = svn_cmdline_printf
+               (pool, _("Skipped target: '%s' -- copy-source is missing\n"),
                 path_local)))
             goto print_error;
         }
@@ -345,7 +357,7 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
           svn_handle_warning2(stderr, n->err, "svn: ");
         }
       break;
-      
+
     case svn_wc_notify_update_completed:
       {
         if (! nb->suppress_final_line)
@@ -616,6 +628,39 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
                       : nb->tree_conflicts++;
       if ((err = svn_cmdline_printf(pool, "   C %s\n", path_local)))
         goto print_error;
+      break;
+
+    case svn_wc_notify_property_modified:
+    case svn_wc_notify_property_added:
+        err = svn_cmdline_printf(pool,
+                                 _("property '%s' set on '%s'\n"),
+                                 n->prop_name, path_local);
+        if (err)
+          goto print_error;
+      break;
+
+    case svn_wc_notify_property_deleted:
+        err = svn_cmdline_printf(pool,
+                                 _("property '%s' deleted from '%s'.\n"),
+                                 n->prop_name, path_local);
+        if (err)
+          goto print_error;
+      break;
+
+    case svn_wc_notify_revprop_set:
+        err = svn_cmdline_printf(pool,
+                          _("property '%s' set on repository revision %ld\n"),
+                          n->prop_name, n->revision);
+        if (err)
+          goto print_error;
+      break;
+
+    case svn_wc_notify_revprop_deleted:
+        err = svn_cmdline_printf(pool,
+                     _("property '%s' deleted from repository revision %ld\n"),
+                     n->prop_name, n->revision);
+        if (err)
+          goto print_error;
       break;
 
     default:

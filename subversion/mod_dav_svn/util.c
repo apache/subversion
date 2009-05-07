@@ -19,8 +19,10 @@
 #include <apr_xml.h>
 #include <apr_errno.h>
 #include <apr_uri.h>
+#include <apr_buckets.h>
 
 #include <mod_dav.h>
+#include <http_protocol.h>
 
 #include "svn_error.h"
 #include "svn_fs.h"
@@ -381,10 +383,27 @@ dav_svn__find_ns(apr_array_header_t *namespaces, const char *uri)
 
 
 svn_error_t *
-dav_svn__send_xml(apr_bucket_brigade *bb,
-                  ap_filter_t *output,
-                  const char *fmt,
-                  ...)
+dav_svn__brigade_print(apr_bucket_brigade *bb,
+                       ap_filter_t *output,
+                       const char *data)
+{
+  apr_status_t apr_err;
+  apr_err = apr_brigade_write(bb, ap_filter_flush, output, data, strlen(data));
+  if (apr_err)
+    return svn_error_create(apr_err, 0, NULL);
+  /* Check for an aborted connection, since the brigade functions don't
+     appear to be return useful errors when the connection is dropped. */
+  if (output->c->aborted)
+    return svn_error_create(SVN_ERR_APMOD_CONNECTION_ABORTED, 0, NULL);
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+dav_svn__brigade_printf(apr_bucket_brigade *bb,
+                        ap_filter_t *output,
+                        const char *fmt,
+                        ...)
 {
   apr_status_t apr_err;
   va_list ap;
@@ -394,9 +413,8 @@ dav_svn__send_xml(apr_bucket_brigade *bb,
   va_end(ap);
   if (apr_err)
     return svn_error_create(apr_err, 0, NULL);
-  /* ### check for an aborted connection, since the brigade functions
-     don't appear to be return useful errors when the connection is
-     dropped. */
+  /* Check for an aborted connection, since the brigade functions don't
+     appear to be return useful errors when the connection is dropped. */
   if (output->c->aborted)
     return svn_error_create(SVN_ERR_APMOD_CONNECTION_ABORTED, 0, NULL);
   return SVN_NO_ERROR;
@@ -487,4 +505,75 @@ dav_svn__operational_log(struct dav_resource_private *info, const char *line)
                 svn_path_uri_encode(info->repos->fs_path, info->r->pool));
   apr_table_set(info->r->subprocess_env, "SVN-REPOS-NAME",
                 svn_path_uri_encode(info->repos->repo_basename, info->r->pool));
+}
+
+
+dav_error *
+dav_svn__final_flush_or_error(request_rec *r,
+                              apr_bucket_brigade *bb,
+                              ap_filter_t *output,
+                              dav_error *preferred_err,
+                              apr_pool_t *pool)
+{
+  dav_error *derr = preferred_err;
+  svn_boolean_t do_flush;
+
+  do_flush = r->sent_bodyct > 0;
+  if (! do_flush)
+    {
+      /* Ask about the length of the bucket brigade, ignoring errors. */
+      apr_off_t len;
+      (void)apr_brigade_length(bb, FALSE, &len);
+      do_flush = (len != 0);
+    }
+
+  /* If there's something in the bucket brigade to flush, or we've
+     already started sending data down the wire, flush what we've
+     got.  We only keep any error retrieved from the flush if weren't
+     provided a more-important DERR, though. */
+  if (do_flush)
+    {
+      apr_status_t apr_err = ap_fflush(output, bb);
+      if (apr_err && (! derr))
+        derr = dav_new_error(pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+                             "Error flushing brigade.");
+    }
+  return derr;
+}
+
+
+int
+dav_svn__error_response_tag(request_rec *r,
+                            dav_error *err)
+{
+  r->status = err->status;
+
+  /* ### I really don't think this is needed; gotta test */
+  r->status_line = ap_get_status_line(err->status);
+
+  ap_set_content_type(r, DAV_XML_CONTENT_TYPE);
+  ap_rputs(DAV_XML_HEADER DEBUG_CR "<D:error xmlns:D=\"DAV:\"", r);
+
+  if (err->desc != NULL)
+    ap_rputs(" xmlns:m=\"http://apache.org/dav/xmlns\"", r);
+
+  if (err->namespace != NULL)
+    ap_rprintf(r, " xmlns:C=\"%s\">" DEBUG_CR "<C:%s/>" DEBUG_CR,
+               err->namespace, err->tagname);
+  else
+    ap_rprintf(r, ">" DEBUG_CR "<D:%s/>" DEBUG_CR, err->tagname);
+
+  /* here's our mod_dav specific tag: */
+  if (err->desc != NULL)
+    ap_rprintf(r, "<m:human-readable errcode=\"%d\">" DEBUG_CR "%s" DEBUG_CR
+               "</m:human-readable>" DEBUG_CR, err->error_id,
+               apr_xml_quote_string(r->pool, err->desc, 0));
+
+  ap_rputs("</D:error>" DEBUG_CR, r);
+  
+  /* the response has been sent. */
+  /*
+   * ### Use of DONE obviates logging..!
+   */
+  return DONE;
 }
