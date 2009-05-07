@@ -223,24 +223,27 @@ get_option(const dav_resource *resource,
     }
 
   /* Welcome to the 2nd generation of the svn HTTP protocol, now
-     DeltaV-free! */
-  apr_table_set(r->headers_out, SVN_DAV_ROOT_URI_HEADER, repos_root_uri);
-  apr_table_set(r->headers_out, SVN_DAV_ME_RESOURCE_HEADER,
-                apr_pstrcat(resource->pool, repos_root_uri, "/",
-                            dav_svn__get_me_resource_uri(r), NULL));
-  apr_table_set(r->headers_out, SVN_DAV_REV_ROOT_STUB_HEADER,
-                apr_pstrcat(resource->pool, repos_root_uri, "/",
-                            dav_svn__get_rev_root_stub(r), NULL));
-  apr_table_set(r->headers_out, SVN_DAV_REV_STUB_HEADER,
-                apr_pstrcat(resource->pool, repos_root_uri, "/",
-                            dav_svn__get_rev_stub(r), NULL));
-  apr_table_set(r->headers_out, SVN_DAV_TXN_ROOT_STUB_HEADER,
-                apr_pstrcat(resource->pool, repos_root_uri, "/",
-                            dav_svn__get_txn_root_stub(r), NULL));
-  apr_table_set(r->headers_out, SVN_DAV_TXN_STUB_HEADER,
-                apr_pstrcat(resource->pool, repos_root_uri, "/",
-                            dav_svn__get_txn_stub(r), NULL));
-  
+     DeltaV-free!  If we're configured to advise this support, do so.  */
+  if (resource->info->repos->v2_protocol)
+    {
+      apr_table_set(r->headers_out, SVN_DAV_ROOT_URI_HEADER, repos_root_uri);
+      apr_table_set(r->headers_out, SVN_DAV_ME_RESOURCE_HEADER,
+                    apr_pstrcat(resource->pool, repos_root_uri, "/",
+                                dav_svn__get_me_resource_uri(r), NULL));
+      apr_table_set(r->headers_out, SVN_DAV_REV_ROOT_STUB_HEADER,
+                    apr_pstrcat(resource->pool, repos_root_uri, "/",
+                                dav_svn__get_rev_root_stub(r), NULL));
+      apr_table_set(r->headers_out, SVN_DAV_REV_STUB_HEADER,
+                    apr_pstrcat(resource->pool, repos_root_uri, "/",
+                                dav_svn__get_rev_stub(r), NULL));
+      apr_table_set(r->headers_out, SVN_DAV_TXN_ROOT_STUB_HEADER,
+                    apr_pstrcat(resource->pool, repos_root_uri, "/",
+                                dav_svn__get_txn_root_stub(r), NULL));
+      apr_table_set(r->headers_out, SVN_DAV_TXN_STUB_HEADER,
+                    apr_pstrcat(resource->pool, repos_root_uri, "/",
+                                dav_svn__get_txn_stub(r), NULL));
+    }
+
   return NULL;
 }
 
