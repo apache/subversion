@@ -53,10 +53,10 @@ maybe_start_report(edit_baton_t *eb)
 {
   if (! eb->started)
     {
-      SVN_ERR(dav_svn__brigade_print(eb->bb, eb->output,
-                                     DAV_XML_HEADER DEBUG_CR
-                                     "<S:editor-report xmlns:S=\""
-                                     SVN_XML_NAMESPACE "\">" DEBUG_CR));
+      SVN_ERR(dav_svn__brigade_puts(eb->bb, eb->output,
+                                    DAV_XML_HEADER DEBUG_CR
+                                    "<S:editor-report xmlns:S=\""
+                                    SVN_XML_NAMESPACE "\">" DEBUG_CR));
       eb->started = TRUE;
     }
 
@@ -66,8 +66,8 @@ maybe_start_report(edit_baton_t *eb)
 static svn_error_t *
 end_report(edit_baton_t *eb)
 {
-  SVN_ERR(dav_svn__brigade_print(eb->bb, eb->output,
-                                 "</S:editor-report>" DEBUG_CR));
+  SVN_ERR(dav_svn__brigade_puts(eb->bb, eb->output,
+                                "</S:editor-report>" DEBUG_CR));
 
   return SVN_NO_ERROR;
 }
@@ -78,8 +78,8 @@ maybe_close_textdelta(edit_baton_t *eb)
 {
   if (eb->sending_textdelta)
     {
-      SVN_ERR(dav_svn__brigade_print(eb->bb, eb->output,
-                                     "</S:apply-textdelta>" DEBUG_CR));
+      SVN_ERR(dav_svn__brigade_puts(eb->bb, eb->output,
+                                    "</S:apply-textdelta>" DEBUG_CR));
       eb->sending_textdelta = FALSE;
     }
 
@@ -157,11 +157,14 @@ change_file_or_dir_prop(const char *file_or_dir,
          bug that can be triggered by just the wrong size of a large
          property value.  The bug has been fixed (see
          http://svn.apache.org/viewvc?view=rev&revision=768417), but
-         we need a workaround for the buggy APR versions. */
+         we need a workaround for the buggy APR versions, so we write
+         our potentially large block of property data using a
+         different underlying function. */
       SVN_ERR(dav_svn__brigade_printf(eb->bb, eb->output,
                                       "<S:change-%s-prop name=\"%s\">",
                                       file_or_dir, qname));
-      SVN_ERR(dav_svn__brigade_print(eb->bb, eb->output, enc_value->data));
+      SVN_ERR(dav_svn__brigade_write(eb->bb, eb->output,
+                                     enc_value->data, enc_value->len));
       SVN_ERR(dav_svn__brigade_printf(eb->bb, eb->output,
                                       "</S:change-%s-prop>" DEBUG_CR,
                                       file_or_dir));
@@ -304,13 +307,13 @@ apply_textdelta(void *file_baton,
 {
   edit_baton_t *eb = file_baton;
 
-  SVN_ERR(dav_svn__brigade_print(eb->bb, eb->output, "<S:apply-textdelta"));
+  SVN_ERR(dav_svn__brigade_puts(eb->bb, eb->output, "<S:apply-textdelta"));
 
   if (base_checksum)
     SVN_ERR(dav_svn__brigade_printf(eb->bb, eb->output, " checksum=\"%s\">",
                                     base_checksum));
   else
-    SVN_ERR(dav_svn__brigade_print(eb->bb, eb->output, ">"));
+    SVN_ERR(dav_svn__brigade_puts(eb->bb, eb->output, ">"));
 
   svn_txdelta_to_svndiff2(handler,
                           handler_baton,
@@ -331,14 +334,14 @@ close_file(void *file_baton, const char *text_checksum, apr_pool_t *pool)
 {
   edit_baton_t *eb = file_baton;
   SVN_ERR(maybe_close_textdelta(eb));
-  SVN_ERR(dav_svn__brigade_print(eb->bb, eb->output, "<S:close-file"));
+  SVN_ERR(dav_svn__brigade_puts(eb->bb, eb->output, "<S:close-file"));
 
   if (text_checksum)
     SVN_ERR(dav_svn__brigade_printf(eb->bb, eb->output,
                                     " checksum=\"%s\"/>" DEBUG_CR,
                                     text_checksum));
   else
-    SVN_ERR(dav_svn__brigade_print(eb->bb, eb->output, "/>" DEBUG_CR));
+    SVN_ERR(dav_svn__brigade_puts(eb->bb, eb->output, "/>" DEBUG_CR));
 
   return SVN_NO_ERROR;
 }
@@ -348,8 +351,8 @@ static svn_error_t *
 close_directory(void *dir_baton, apr_pool_t *pool)
 {
   edit_baton_t *eb = dir_baton;
-  return dav_svn__brigade_print(eb->bb, eb->output,
-                                "<S:close-directory/>" DEBUG_CR);
+  return dav_svn__brigade_puts(eb->bb, eb->output,
+                               "<S:close-directory/>" DEBUG_CR);
 }
 
 

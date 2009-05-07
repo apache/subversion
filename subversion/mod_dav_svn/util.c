@@ -382,13 +382,35 @@ dav_svn__find_ns(apr_array_header_t *namespaces, const char *uri)
 }
 
 
+
+/*** Brigade I/O wrappers ***/
+
+
 svn_error_t *
-dav_svn__brigade_print(apr_bucket_brigade *bb,
+dav_svn__brigade_write(apr_bucket_brigade *bb,
                        ap_filter_t *output,
-                       const char *data)
+                       const char *data,
+                       apr_size_t len)
 {
   apr_status_t apr_err;
-  apr_err = apr_brigade_write(bb, ap_filter_flush, output, data, strlen(data));
+  apr_err = apr_brigade_write(bb, ap_filter_flush, output, data, len);
+  if (apr_err)
+    return svn_error_create(apr_err, 0, NULL);
+  /* Check for an aborted connection, since the brigade functions don't
+     appear to be return useful errors when the connection is dropped. */
+  if (output->c->aborted)
+    return svn_error_create(SVN_ERR_APMOD_CONNECTION_ABORTED, 0, NULL);
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+dav_svn__brigade_puts(apr_bucket_brigade *bb,
+                      ap_filter_t *output,
+                      const char *str)
+{
+  apr_status_t apr_err;
+  apr_err = apr_brigade_puts(bb, ap_filter_flush, output, str);
   if (apr_err)
     return svn_error_create(apr_err, 0, NULL);
   /* Check for an aborted connection, since the brigade functions don't
@@ -420,6 +442,8 @@ dav_svn__brigade_printf(apr_bucket_brigade *bb,
   return SVN_NO_ERROR;
 }
 
+
+
 
 dav_error *
 dav_svn__test_canonical(const char *path, apr_pool_t *pool)
