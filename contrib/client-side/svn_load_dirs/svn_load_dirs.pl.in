@@ -68,6 +68,9 @@ my $opt_existing_wc_dir;
 # "global-ignores" option).
 my $opt_glob_ignores;
 
+# Message to use for the final commit.
+my $opt_final_commit_msg;
+
 # This is the character used to separate regular expressions occuring
 # in the tag directory path from the path itself.
 my $REGEX_SEP_CHAR = '@';
@@ -85,7 +88,8 @@ GetOptions('no_user_input'           => \$opt_no_user_input,
            'tag_location=s'          => \$opt_import_tag_location,
            'verbose+'                => \$opt_verbose,
            'wc=s'                    => \$opt_existing_wc_dir,
-           'glob_ignores=s'          => \$opt_glob_ignores)
+           'glob_ignores=s'          => \$opt_glob_ignores,
+           'message=s'               => \$opt_final_commit_msg)
   or &usage;
 &usage("$0: too few arguments") if @ARGV < 2;
 
@@ -1254,7 +1258,11 @@ while (defined (my $load_dir = &get_next_load_dir))
           }
       }
 
-    my $message = wrap('', '', "Load $load_dir into $repos_load_abs_path.\n");
+    my $message = $opt_final_commit_msg;
+    if (!$message)
+      {
+        $message = wrap('', '', "Load $load_dir into $repos_load_abs_path.\n");
+      }
     read_from_process($svn, 'commit',
                       @svn_use_repos_cmd_opts,
                       '-m', $message);
@@ -1335,7 +1343,8 @@ sub usage
       "  -wc path       use the already checked-out working copy at path\n",
       "                 instead of checkout out a fresh working copy\n",
       "  -glob_ignores  List of filename patterns to ignore (as in svn's\n",
-      "                 global-ignores config option)\n";
+      "                 global-ignores config option)\n",
+      "  -message       Final commit message\n";
 }
 
 # Get the next directory to load, either from the command line or from
