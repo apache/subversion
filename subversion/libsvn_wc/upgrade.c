@@ -34,6 +34,23 @@
 #include "svn_private_config.h"
 
 
+
+/* Upgrade the working copy directory represented by ADM_ACCESS
+   to the latest 'SVN_WC__VERSION'.  ADM_ACCESS must contain a write
+   lock.  Use SCRATCH_POOL for all temporary allocation.
+
+   Not all upgrade paths are necessarily supported.  For example,
+   upgrading a version 1 working copy results in an error.
+
+   Sometimes the format file can contain "0" while the administrative
+   directory is being constructed; calling this on a format 0 working
+   copy has no effect and returns no error. */
+static svn_error_t *
+upgrade_format(svn_wc_adm_access_t *adm_access,
+               apr_pool_t *scratch_pool);
+
+
+
 /* For wcprops stored in a single file in this working copy, read that
    file and return it in *ALL_WCPROPS, allocated in RESULT_POOL.   Use
    SCRATCH_POOL for temporary allocations. */
@@ -233,7 +250,7 @@ upgrade_working_copy(svn_wc__db_t *db,
                                        scratch_pool, scratch_pool));
 
   /* Upgrade this directory first. */
-  SVN_ERR(svn_wc__upgrade_format(adm_access, scratch_pool));
+  SVN_ERR(upgrade_format(adm_access, scratch_pool));
 
   /* Now recurse. */
   SVN_ERR(svn_wc_entries_read(&entries, adm_access, FALSE, scratch_pool));
@@ -262,9 +279,9 @@ upgrade_working_copy(svn_wc__db_t *db,
 }
 
 
-svn_error_t *
-svn_wc__upgrade_format(svn_wc_adm_access_t *adm_access,
-                       apr_pool_t *scratch_pool)
+static svn_error_t *
+upgrade_format(svn_wc_adm_access_t *adm_access,
+               apr_pool_t *scratch_pool)
 {
   int wc_format;
   svn_boolean_t cleanup_required;
