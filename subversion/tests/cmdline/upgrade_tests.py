@@ -63,6 +63,26 @@ def check_format(sbox, expected_format):
       dirs.remove('.svn')
 
 
+def check_dav_cache(dir_path, wc_id, expected_dav_caches):
+  import sqlite3
+
+  db = sqlite3.connect(os.path.join(dir_path, '.svn', 'wc.db'))
+  c = db.cursor()
+
+  for local_relpath, expected_dav_cache in expected_dav_caches.items():
+    c.execute('select dav_cache from base_node ' +
+              'where wc_id=? and local_relpath=?',
+        (wc_id, local_relpath))
+    dav_cache = str(c.fetchone()[0])
+
+    if dav_cache != expected_dav_cache:
+      raise svntest.Failure(
+              "wrong dav cache for '%s'\n  Found:    '%s'\n  Expected: '%s'" %
+                (dir_path, dav_cache, expected_dav_cache))
+
+  db.close()
+
+
 def basic_upgrade(sbox):
   "basic upgrade behavior"
 
@@ -79,8 +99,20 @@ def basic_upgrade(sbox):
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'upgrade', sbox.wc_dir)
 
-  # Actually check the sanity of the upgraded working copy
+  # Actually check the format number of the upgraded working copy
   check_format(sbox, 12)
+
+  # Now check the contents of the working copy
+  expected_disk = svntest.main.greek_state.copy()
+  expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
+  expected_output = svntest.wc.State(sbox.wc_dir, {})
+
+  # Do the update (which shouldn't pull anything in) and check the statii
+  svntest.actions.run_and_verify_update(sbox.wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None, None, None)
 
 
 def upgrade_1_5(sbox):
@@ -101,6 +133,32 @@ def upgrade_1_5(sbox):
 
   # Check the format of the working copy
   check_format(sbox, 12)
+
+  # Now check the contents of the working copy
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({
+      'A/D/G/E'        : Item(),
+      'A/D/G/E/alpha'  : Item("This is the file 'alpha'.\n"),
+      'A/D/G/E/beta'   : Item("This is the file 'beta'.\n"),
+    })
+  expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 2)
+  expected_status.add({
+      'A/D/G/E'         : Item(status='  ', wc_rev=2),
+      'A/D/G/E/alpha'   : Item(status='  ', wc_rev=2),
+      'A/D/G/E/beta'    : Item(status='  ', wc_rev=2),
+    })
+  expected_output = svntest.wc.State(sbox.wc_dir, {
+      'A/D/G/E'        : Item(status='A '),
+      'A/D/G/E/alpha'  : Item(status='A '),
+      'A/D/G/E/beta'   : Item(status='A '),
+    })
+
+  # Do the update (which shouldn't pull anything in) and check the statii
+  svntest.actions.run_and_verify_update(sbox.wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None, None, None)
 
 
 def logs_left_1_5(sbox):
@@ -126,6 +184,16 @@ def upgrade_wcprops(sbox):
   if os.path.exists(os.path.join(sbox.wc_dir, '.svn', 'all-wcprops')):
     raise svntest.Failure("all-wcprops file still exists")
 
+  # Just for kicks, let's see if the wcprops are what we'd expect them
+  # to be.  (This could be smarter.)
+  expected_dav_caches = {
+   '' :
+    '(svn:wc:ra_dav:version-url 41 /svn-test-work/local_tmp/repos/!svn/ver/1)',
+   'iota' :
+    '(svn:wc:ra_dav:version-url 46 /svn-test-work/local_tmp/repos/!svn/ver/1/iota)',
+  }
+  check_dav_cache(sbox.wc_dir, 1, expected_dav_caches)
+
 
 ########################################################################
 # Run the tests
@@ -142,7 +210,7 @@ test_list = [ None,
               SkipUnless(basic_upgrade, has_sqlite),
               SkipUnless(upgrade_1_5, has_sqlite),
               logs_left_1_5,
-              upgrade_wcprops,
+              SkipUnless(upgrade_wcprops, has_sqlite),
              ]
 
 
