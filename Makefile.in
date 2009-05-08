@@ -338,10 +338,7 @@ fast-clean: doc-clean
              rm -rf .libs);                                          \
           fi                                                         \
         done
-	rm -f $(CLEAN_FILES) \
-            $(abs_srcdir)/subversion/libsvn_fs_fs/rep-cache-db.h \
-            $(abs_srcdir)/subversion/libsvn_wc/wc-metadata.h \
-            $(abs_srcdir)/subversion/libsvn_wc/wc-checks.h
+	rm -f $(CLEAN_FILES)
 	find $(abs_srcdir) -name "*.pyc" -exec rm {} ';'
 
 # clean all but bulky test output, returning to before './configure' was run.
@@ -362,7 +359,9 @@ local-extraclean: local-distclean extraclean-swig extraclean-ctypes-python
               $(top_srcdir)/build/ltsugar.m4 \
               $(top_srcdir)/build/ltversion.m4 \
               $(top_srcdir)/build/lt~obsolete.m4 \
-              $(top_srcdir)/build/ltmain.sh
+              $(top_srcdir)/build/ltmain.sh \
+              $(EXTRACLEAN_FILES)
+
 
 # clean everything, including test output.
 local-clean: fast-clean check-clean clean-swig clean-ctypes-python
@@ -616,7 +615,7 @@ schema-clean:
            .po .spo .mo .rnc .rng .dtd .xsd .sql .h
 
 .sql.h:
-	$(top_srcdir)/build/transform_sql.sh $< < $< > $(top_srcdir)/$@
+	$(PYTHON) $(top_srcdir)/build/transform_sql.py $< $(top_srcdir)/$@
 
 .c.o:
 	$(COMPILE) -o $@ -c $<

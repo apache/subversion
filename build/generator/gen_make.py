@@ -77,6 +77,7 @@ class Generator(gen_base.GeneratorBase):
       areas=[ ],
       isources=[ ],
       deps=[ ],
+      sql=[],
       )
 
     ########################################
@@ -136,6 +137,15 @@ class Generator(gen_base.GeneratorBase):
          and target.filename[-3:] != '.la':
         cfiles.append(target.filename)
     data.cfiles = sorted(cfiles)
+
+    # here are all the SQL files and their generated headers. the Makefile
+    # has an implicit rule for generating these, so there isn't much to do
+    # except to clean them out. we only do that for 'make extraclean' since
+    # these are included as part of the tarball. the files are transformed
+    # by gen-make, and developers also get a Make rule to keep them updated.
+    for hdrfile, sqlfile in sorted(self.graph.get_deps(gen_base.DT_SQLHDR),
+                                   key=lambda t: t[0]):
+      data.sql.append(_eztdata(header=hdrfile, source=sqlfile[0]))
 
     data.release_mode = ezt.boolean(self.release_mode)
 
