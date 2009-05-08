@@ -20,6 +20,7 @@ TEST_PROGRAMS =[for test_progs] [test_progs][end]
 MANPAGES =[for manpages] [manpages][end]
 
 CLEAN_FILES =[for cfiles] [cfiles][end]
+EXTRACLEAN_FILES =[for sql] [sql.header][end]
 
 SWIG_INCLUDES = -I$(abs_builddir)/subversion \
   -I$(abs_srcdir)/subversion/include \
