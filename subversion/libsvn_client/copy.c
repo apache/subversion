@@ -1044,6 +1044,7 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
     {
       svn_client__copy_pair_t *pair = APR_ARRAY_IDX(copy_pairs, i,
                                                     svn_client__copy_pair_t *);
+      svn_pool_clear(iterpool);
       /* Sanity check if the source path is versioned. */
       SVN_ERR(svn_wc__entry_versioned(&entry, pair->src, adm_access, FALSE,
                                       iterpool));
