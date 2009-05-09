@@ -244,9 +244,9 @@ AC_ARG_ENABLE(all-static,
 AC_SUBST(LT_CFLAGS)
 AC_SUBST(LT_LDFLAGS)
 
-AC_ARG_ENABLE(local-use,
-  AS_HELP_STRING([--disable-local-use], 
-                 [Disable use of locally built executables]),
+AC_ARG_ENABLE(local-library-preloading,
+  AS_HELP_STRING([--disable-local-library-preloading], 
+                 [Disable preloading of locally built libraries in locally built executables]),
   [
   if test "$enableval" != "no"; then
     TRANSFORM_LIBTOOL_SCRIPTS="transform-libtool-scripts"
