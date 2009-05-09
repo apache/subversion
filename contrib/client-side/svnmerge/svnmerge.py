@@ -366,7 +366,7 @@ class PathIdentifier:
         self.external_form = external_form
 
     def __repr__(self):
-        return "<PathIdentifier " + ', '.join('%s=%r' % i for i in self.__dict__.items()) + '>'
+        return "<PathIdentifier " + ', '.join(['%s=%r' % i for i in self.__dict__.items()]) + '>'
 
     def __str__(self):
         """Return a printable string representation"""
