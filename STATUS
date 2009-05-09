@@ -102,6 +102,15 @@ Candidate changes:
    Votes:
      +1: pburba
 
+  * r37646, r37656
+   Fix a segfault in WC to URL copy.
+   Justification:
+     Segfaults are always bad.
+   Notes:
+     r37646 is the fix, r37656 is a follow up to clear iterpool.
+   Votes:
+     +1: stylesen
+
 Approved changes:
 =================
 
