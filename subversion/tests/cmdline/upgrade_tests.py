@@ -83,6 +83,22 @@ def check_dav_cache(dir_path, wc_id, expected_dav_caches):
   db.close()
 
 
+def run_and_verify_status_no_server(wc_dir, expected_status):
+  "same as svntest.actions.run_and_verify_status(), but without '-u'"
+
+  exit_code, output, errput = svntest.main.run_svn(None, 'st', '-q', '-v',
+                                                   wc_dir)
+  actual = svntest.tree.build_tree_from_status(output)
+  try:
+    svntest.tree.compare_trees("status", actual, expected_status.old_tree())
+  except svntest.tree.SVNTreeError:
+    svntest.verify.display_trees(None, 'STATUS OUTPUT TREE',
+                                 output_tree, actual)
+    print("ACTUAL STATUS TREE:")
+    svvtest.tree.dump_tree_script(actual, wc_dir_name + os.sep)
+    raise
+
+
 def basic_upgrade(sbox):
   "basic upgrade behavior"
 
@@ -103,16 +119,8 @@ def basic_upgrade(sbox):
   check_format(sbox, 12)
 
   # Now check the contents of the working copy
-  expected_disk = svntest.main.greek_state.copy()
   expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
-  expected_output = svntest.wc.State(sbox.wc_dir, {})
-
-  # Do the update (which shouldn't pull anything in) and check the statii
-  svntest.actions.run_and_verify_update(sbox.wc_dir,
-                                        expected_output,
-                                        expected_disk,
-                                        expected_status,
-                                        None, None, None, None, None)
+  run_and_verify_status_no_server(sbox.wc_dir, expected_status)
 
 
 def upgrade_1_5(sbox):
@@ -135,30 +143,8 @@ def upgrade_1_5(sbox):
   check_format(sbox, 12)
 
   # Now check the contents of the working copy
-  expected_disk = svntest.main.greek_state.copy()
-  expected_disk.add({
-      'A/D/G/E'        : Item(),
-      'A/D/G/E/alpha'  : Item("This is the file 'alpha'.\n"),
-      'A/D/G/E/beta'   : Item("This is the file 'beta'.\n"),
-    })
-  expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 2)
-  expected_status.add({
-      'A/D/G/E'         : Item(status='  ', wc_rev=2),
-      'A/D/G/E/alpha'   : Item(status='  ', wc_rev=2),
-      'A/D/G/E/beta'    : Item(status='  ', wc_rev=2),
-    })
-  expected_output = svntest.wc.State(sbox.wc_dir, {
-      'A/D/G/E'        : Item(status='A '),
-      'A/D/G/E/alpha'  : Item(status='A '),
-      'A/D/G/E/beta'   : Item(status='A '),
-    })
-
-  # Do the update (which shouldn't pull anything in) and check the statii
-  svntest.actions.run_and_verify_update(sbox.wc_dir,
-                                        expected_output,
-                                        expected_disk,
-                                        expected_status,
-                                        None, None, None, None, None)
+  expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
+  run_and_verify_status_no_server(sbox.wc_dir, expected_status)
 
 
 def logs_left_1_5(sbox):
