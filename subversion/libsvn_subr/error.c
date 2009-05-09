@@ -311,14 +311,61 @@ svn_error_clear(svn_error_t *err)
     }
 }
 
-/* Is MESSAGE the message used for the "fake" errors used in tracing? */
-static svn_boolean_t is_trace_message(const char *message)
+/* Is ERR a tracing-only error chain link?  */
+static svn_boolean_t is_tracing_link(svn_error_t *err)
 {
 #ifdef SVN_ERR__TRACING
-  return (message != NULL && !strcmp(message, SVN_ERR__TRACED));
+  /* ### A strcmp()?  Really?  I think it's the best we can do unless
+     ### we add a boolean field to svn_error_t that's set only for
+     ### these "placeholder error chain" items.  Not such a bad idea,
+     ### really...  */
+  return (err && err->message && !strcmp(err->message, SVN_ERR__TRACED));
 #else
   return FALSE;
 #endif
+}
+
+svn_error_t *
+svn_err_purge_tracing(svn_error_t *err)
+{
+#ifdef SVN_ERR__TRACING  
+  svn_error_t *tmp_err = err;
+  svn_error_t *new_err = NULL, *new_err_leaf = NULL;
+
+  if (! err)
+    return SVN_NO_ERROR;
+
+  while (tmp_err)
+    {
+      /* Skip over any trace-only links. */
+      while (tmp_err && is_tracing_link(tmp_err))
+        tmp_err = tmp_err->child;
+
+      /* Add a new link to the new chain (creating the chain if necessary). */
+      if (! new_err)
+        {
+          new_err = tmp_err;
+          new_err_leaf = new_err;
+        }
+      else
+        {
+          new_err_leaf->child = tmp_err;
+          new_err_leaf = new_err_leaf->child;
+        }
+
+      /* Advance to the next link in the original chain. */
+      tmp_err = tmp_err->child;
+    }
+  
+  /* If we get here, there had better be a real link in this error chain. */
+  assert(new_err_leaf);
+
+  /* Tie off the chain, and return its head. */
+  new_err_leaf->child = NULL;
+  return new_err;
+#else  /* SVN_ERR__TRACING */
+  return err;
+#endif /* SVN_ERR__TRACING */
 }
 
 static void
@@ -353,7 +400,7 @@ print_error(svn_error_t *err, FILE *stream, const char *prefix)
 #endif /* SVN_DEBUG */
 
   /* "traced call" */
-  if (is_trace_message(err->message))
+  if (is_tracing_link(err))
     {
       /* Skip it.  We already printed the file-line coordinates. */
     }
@@ -472,7 +519,7 @@ svn_handle_warning2(FILE *stream, svn_error_t *err, const char *prefix)
   char buf[256];
 
   /* Skip over any trace records.  */
-  while (is_trace_message(err->message))
+  while (is_tracing_link(err))
     err = err->child;
 
   svn_error_clear(svn_cmdline_fprintf
