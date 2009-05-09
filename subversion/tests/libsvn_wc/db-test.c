@@ -61,7 +61,7 @@ static const char * const data_loading_sql[] = {
   NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
   (
    /* Load the table and index definitions. */
-   WC_METADATA_SQL
+   WC_METADATA_SQL_12
    " "
 
    /* Load our test data.
@@ -282,7 +282,8 @@ static const char * const data_loading_sql[] = {
    "insert into actual_node values ("
    "  1, 'I', '', null, null, null, null, null, 'changelist', null, null); "
    " "
-   )
+   ),
+  WC_METADATA_SQL_13
 };
 
 

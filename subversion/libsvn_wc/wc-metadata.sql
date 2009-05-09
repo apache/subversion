@@ -33,6 +33,8 @@
  *   "base-deleted" -- node represents a delete of a BASE node
  */
 
+/* All the SQL below is for format 12: SVN_WC__WC_NG_VERSION  */
+-- format: 12
 
 /* ------------------------------------------------------------------------- */
 
@@ -133,7 +135,7 @@ CREATE TABLE BASE_NODE (
      node does not have any dav-cache. */
   dav_cache  BLOB,
 
-  /* ### this column is obsolete, and should be removed.  */
+  /* ### this column is obsolete. it will always be NULL.  */
   incomplete_children  INTEGER,
 
   /* The serialized file external information. */
@@ -347,3 +349,18 @@ CREATE TABLE LOCK (
 
 
 /* ------------------------------------------------------------------------- */
+
+/* Format 13 introduces the work queue, and erases a few columns from the
+   original schema.  */
+-- format: 13
+
+CREATE TABLE WORK_QUEUE (
+  /* Work items are identified by this value.  */
+  id  INTEGER PRIMARY KEY AUTOINCREMENT,
+
+  /* A serialized skel specifying the work item.  */
+  work  BLOB NOT NULL
+  );
+
+/* Ugh. We cannot remove columns. Just clear the contents instead.  */
+UPDATE BASE_NODE SET incomplete_children = NULL;
