@@ -55,31 +55,14 @@ dav_svn__new_error_tag(apr_pool_t *pool,
 static dav_error *
 build_error_chain(apr_pool_t *pool, svn_error_t *err, int status)
 {
-  svn_error_t *serr = err;
-  dav_error *derr;
+  char *msg = err->message ? apr_pstrdup(pool, err->message) : NULL;
 
-#ifdef SVN_ERR__TRACING
-  /* If we're generated full error tracing chains, we need to trim
-     the placeholder chain items out of the mix here -- our Subversion
-     client wants predictable output from its server.  
+  dav_error *derr = dav_svn__new_error_tag(pool, status, err->apr_err, msg,
+                                           SVN_DAV_ERROR_NAMESPACE,
+                                           SVN_DAV_ERROR_TAG);
 
-     ### A strcmp()?  Really?  I think it's the best we can do unless
-     ### we add a boolean field to svn_error_t that's set only for
-     ### these "placeholder error chain" items.  Not such a bad idea,
-     ### really...
-  */
-  while (serr && serr->message
-         && (strcmp(serr->message, SVN_ERR__TRACED) == 0))
-    serr = serr->child;
-#endif
-
-  derr = dav_svn__new_error_tag(pool, status, serr->apr_err, 
-                                serr->message ? apr_pstrdup(pool,
-                                                            serr->message)
-                                              : NULL,
-                                SVN_DAV_ERROR_NAMESPACE, SVN_DAV_ERROR_TAG);
-  if (serr->child)
-    derr->prev = build_error_chain(pool, serr->child, status);
+  if (err->child)
+    derr->prev = build_error_chain(pool, err->child, status);
 
   return derr;
 }
@@ -92,6 +75,11 @@ dav_svn__convert_err(svn_error_t *serr,
                      apr_pool_t *pool)
 {
     dav_error *derr;
+
+    /* Remove the trace-only error chain links.  We need predictable
+       protocol behavior regardless of whether or not we're in a
+       debugging build. */
+    serr = svn_err_purge_tracing(serr);
 
     /* ### someday mod_dav_svn will send back 'rich' error tags, much
        finer grained than plain old svn_error_t's.  But for now, all

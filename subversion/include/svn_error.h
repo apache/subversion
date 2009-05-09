@@ -297,6 +297,18 @@ svn_handle_warning(FILE *stream,
 #define svn_error_return(expr)  (expr)
 #endif
 
+/**
+ * Purge from @a ERR and its child chain any links associated with
+ * error tracing placeholders, and return the new top-level error
+ * chain item.  @a ERR should be considered unusable after passing
+ * through this function, but should *not* be cleared (as the returned
+ * error is shares memory with @a ERR).
+ *
+ * @since New in 1.6.
+ */
+svn_error_t *svn_err_purge_tracing(svn_error_t *err);
+
+
 /** A statement macro, very similar to @c SVN_ERR.
  *
  * This macro will wrap the error with the specified text before
