@@ -158,7 +158,8 @@ static const char * const upgrade_sql[] = {
   NULL, NULL, NULL, NULL, NULL,
   NULL, NULL, NULL, NULL, NULL,
   NULL, NULL,
-  WC_METADATA_SQL
+  WC_METADATA_SQL_12,
+  WC_METADATA_SQL_13
 };
 
 /* These values map to the members of STATEMENTS below, and should be added
