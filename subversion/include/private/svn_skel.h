@@ -152,7 +152,7 @@ int svn_skel__list_length(const svn_skel_t *skel);
    POOL for all allocations.  */
 svn_error_t *
 svn_skel__parse_proplist(apr_hash_t **proplist_p,
-                         svn_skel_t *skel,
+                         const svn_skel_t *skel,
                          apr_pool_t *pool);
 
 /* Unparse a PROPLIST hash (which has const char * property names and
