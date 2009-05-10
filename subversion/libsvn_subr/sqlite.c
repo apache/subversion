@@ -90,7 +90,7 @@ struct svn_sqlite__stmt_t
 } while (0)
 
 
-svn_error_t *
+static svn_error_t *
 exec_sql(svn_sqlite__db_t *db, const char *sql)
 {
   char *err_msg;
