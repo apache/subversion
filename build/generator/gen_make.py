@@ -183,7 +183,7 @@ class Generator(gen_base.GeneratorBase):
     if not self.release_mode:
       for objname, sources in swig_c_deps:
         data.swig_c.append(_eztdata(c_file=str(objname),
-                                    deps=map(str, sources),
+                                    deps=list(map(str, sources)),
                                     opts=self.swig.opts[objname.lang],
                                     source=str(sources[0])))
 
@@ -417,7 +417,7 @@ class Generator(gen_base.GeneratorBase):
 
     for objname, sources in obj_deps:
       dep = _eztdata(name=str(objname),
-                     deps=map(str, sources),
+                     deps=list(map(str, sources)),
                      cmd=objname.compile_cmd,
                      source=str(sources[0]))
       data.deps.append(dep)
