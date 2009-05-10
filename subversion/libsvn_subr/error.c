@@ -358,7 +358,7 @@ svn_err_purge_tracing(svn_error_t *err)
     }
   
   /* If we get here, there had better be a real link in this error chain. */
-  assert(new_err_leaf);
+  SVN_ERR_ASSERT(new_err_leaf);
 
   /* Tie off the chain, and return its head. */
   new_err_leaf->child = NULL;
