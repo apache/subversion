@@ -358,10 +358,21 @@ the metadata part of the working copy: if a file is completely written,
 store the name of the base-text/prop-text in the entries file, which gets
 rewritten on most wc-transformations anyway.
 
+###GJS: actually, I believe we *rarely* do full walks over the
+   filesystem multiple times. I doubt we will need to cache stat()
+   information. I think performance will primarily derive from
+   omitting the .svn/ location/walks and opening of multiple files
+   therein, in favor of a single SQLite database open.
+   
+   of course, we'll analyze the situation, but I suspect that we will
+   be in great shape as a natural fallout of our new storage system.
+
 
 Cross node type change representation
 -------------------------------------
-####EHU To be done
+###GJS: this is not allowed in wc-1, but should be easily possible in
+  wc-ng. the WORKING tree's node kind is different than the BASE
+  tree. no big deal.
 
 
 Flexibility of metadata storage
@@ -400,16 +411,16 @@ releases).
    *still* don't find it, then some config options will point us to
    the metadata/base-text location.
 
-###GJS: my plan is to upgrade the working copy if we find a pre-1.6
+###GJS: my plan is to upgrade the working copy if we find a pre-1.7
    working copy. all the data will be lifted from the multiple .svn
    subdirectories, and relocated to the "proper" storage location.
-   This will be a non-reversable upgrade, and will preclude pre-1.6
-   clients from using that working copy again.
-   Note: because of the "destructive" nature of this upgrade, and the
-   expected duration, we may want to require the user to perform an
-   explicit action in order to complete the upgrade. However, 1.6 will
-   not be able to *modify* wc-1.0 metadata -- just read it in order to
-   upgrade it to the new storage system.
+   This will be a non-reversable upgrade, and will preclude pre-1.7
+   clients from using that working copy again.  Note: because of the
+   "destructive" nature of this upgrade, and the expected duration, we
+   will require the user to perform an explicit action ('svn upgrade')
+   in order to complete the upgrade. However, 1.7 will not be able to
+   *modify* wc-1.0 metadata -- just read it in order to upgrade it to
+   the new storage system.
 
 When svn detects an old working copy, then it will error out and
 request that the user run "svn cleanup" to upgrade their working copy
@@ -456,6 +467,12 @@ memory in a transaction-based processing model.  In the wc library, a
 need a sane way to handle this kind of situation using pools, or we may
 need a different memory management strategy in wc-ng.
 
+Update (2009-05-10): pool-based management is still being used. we are
+  switching to a "dual pool" system that clarifies the intent of the
+  pools. the result_pool is used for return allocations, and
+  scratch_pool for any temporary allocations.
+
+
 Working copy stability
 ----------------------
 In light of obstructed updates it may not always be desirable to be able
@@ -483,6 +500,11 @@ under more difficult 'weather'.
    in terms of the new APIs, then I'll write a whitebox test. we'll
    see how long I keep that up :-P
 
+Update (2009-05-10): wc-ng currently passes the entire test
+  suite. Additional tests have been implemented ('entries_tests.py'
+  and other) to try and ensure this continued compatibility.
+
+
 Transactional updates
 ---------------------
 
@@ -492,6 +514,40 @@ When applied to files, this can be summarized as:
 
  * Receive transformations (update, delete, add) from
    the server,
+
+
+Work Queue
+----------
+
+Certain operations that affect the filesystem require a stateful
+marker that the operation needs to happen. The best example is when a
+merge conflict occurs: several "pristine" files need to be placed into
+the working copy (e.g. somefile.c.r34). Should processing fail after
+the first file is placed, then we need to "remember" to resume the
+operation and place the rest of the files.
+
+The record of these needed operations will be placed into a "work
+queue" which is a table recorded in the SQLite database. Much like the
+original loggy, a working copy will be unusuable until these actions
+are run to completion.
+
+Each work item must have the following properties:
+
+* order-independent. the work items must be allowed to execute in any
+  sequence.
+* idempotent. the work item must be able to run an arbitrary number of
+  times. whether a previous run completed, or was only partially
+  completed, the work item must be able to complete its operation.
+* independent. each work item must affect only one node in the logical
+  trees. it can apply to any/all of BASE/WORKING/ACTUAL, but it must
+  apply to a single logical node.
+
+The goal here is to reduce interactions across work items. Each must
+be completely self-sufficient and resumable.
+
+The wc_db API will provide a low-level framework for adding, fetching,
+and completing these work items. Each work item will be described by a
+skel, to be interpreted by higher levels.
 
 
 Prerequisites for a good wc implementation
@@ -540,6 +596,12 @@ in this document, or elsewhere in the subversion (source) tree:
 
 Modularization
 ==============
+
+Update (2009-05-10): this section is completely out of date. wc-ng has
+  not used this approach in its development. The primary "new" API
+  layer is wc_db, and the redevelopment focuses around that.
+###GJS: note that hwright has suggested we may want to find lines of
+  division within wc_db. it is already quite large, and growing weekly.
 
 Strict separation must be applied to a number of modules which can be
 recognised.  This will help prevent spaghetti code as in wc-1.0 where
@@ -848,9 +910,10 @@ not-present    normal         A node is no longer present in the BASE
                               child, or we'd just revert the whole
                               copy or move operation).
 *              incomplete     This node is known, but the information
-                              is missing. A copy or move has been
-                              interrupted, leaving a directory with
-                              known children, but lacking their state.
+                              is missing. A copy, move, or deletion
+                              has been interrupted, leaving a
+                              directory with known children, but
+                              lacking their state.
                               (see Note 2)
 normal         base-deleted   The BASE node has been locally-deleted.
 excluded       base-deleted   The node was excluded from the working
@@ -889,16 +952,6 @@ Random Notes
     unexpected. thus, the transformative operations should be able to
     fail in such a way as to leave ACTUAL pretty bunged up.
 
-### maybe use handles to refer to files/dirs? take input pathname,
-    convert to native charset, and return a handle for that. same
-    handle across varous schemas.
-
-    note: could be very handy, as I'm thinking abspath for all names,
-    which gets to be pretty wordy for large working copies.
-    
-    note: with handles, a file entry could have "parent dir" cheaply,
-    and from that, we could derive repos_url/uuid from some dir table.
-
 ### probably want to special-case the checksum and BASETEXT entry for
     the "empty file"
 
@@ -917,6 +970,11 @@ libsvn_wc/wc_db.h  (symbols: svn_wc__db_*)
         Note: this is a random-access, low-level API. Editors will be
         built on top of this layer.
 
+libsvn_wc/workqueue.h  (symbols: svn_wc__wq_*)
+        The "work queue" is a subsystem to replace the old "loggy"
+        subsystem. It will perform (primarily) filesystem operations
+        in a transactional way.
+
 
 svn_wc.h API
 ------------
@@ -929,6 +987,13 @@ Note that removing access batons (and other API changes) will ripple
 up until libsvn_client, and may even have an affect on *its* API.
 
 ### the form of a new API is unknown/TBD.
+
+We are going to add svn_wc_context_t to be created once per process,
+and passed to all svn_wc functions. This will replace the (often
+confusing) use of access batons.
+
+Implementation note: this context will hold an svn_wc__db_t handle,
+and a pointer to the process's svn_config_t object.
 
 
 Upgrading old working copies
@@ -1012,6 +1077,16 @@ Afterwards, we'll need:
 Near-Term Plan
 --------------
 
+Note: we originally envisioned the "ordering" below. In practice,
+however, we have been attacking the overall problem from multiple
+angles. Typically, we are finding conceptual/API bottlenecks that
+make it hard to accomplish a number of other tasks. We solve the
+bottleneck, and move on to solving the higher-level problems. It
+is a continual "evolutionary" process. Some temporary APIs are being
+introduced to help bridge the conceptual gap between wc-1 and wc-ng.
+These should disappear by release time, but serve to mitigate code
+disruption and potential for error.
+
 1. convert entries.c to use sqlite directly. migrate 'entries' file
    during this step. the sqlite file will be in-memory if we are not
    allowed to auto-upgrade the WC; otherwise, we'll write the sqlite
@@ -1056,8 +1131,3 @@ Near-Term Plan
    note: this will also involve merging datastores
 
 8. replace loggy with sqlite-based work journal
-
-
-Other sections
-==============
- remain to be done
