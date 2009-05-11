@@ -322,7 +322,7 @@ static const char * const statements[] = {
   "select presence = 'not-present', revnum from base_node "
   "where wc_id = ?1 and local_relpath = ?2;",
 
-  /* STMT_DELETE_LOC */
+  /* STMT_DELETE_LOCK */
   "delete from lock "
   "where repos_id = ?1 and repos_relpath = ?2;",
 
