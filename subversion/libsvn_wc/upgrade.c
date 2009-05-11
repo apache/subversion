@@ -193,7 +193,7 @@ convert_wcprops(svn_wc_adm_access_t *adm_access,
                                       name,
                                       iterpool);
 
-          SVN_ERR(svn_stream_open_readonly(&stream, local_abspath, iterpool,
+          SVN_ERR(svn_stream_open_readonly(&stream, prop_path, iterpool,
                                            iterpool));
           SVN_ERR(svn_hash_read2(proplist, stream, SVN_HASH_TERMINATOR,
                                  iterpool));
