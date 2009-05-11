@@ -77,9 +77,11 @@ enum statement_keys {
 };
 
 static const char * const statements[] = {
+  /* STMT_INSERT_REPOSITORY */
   "insert into repository (root, uuid) "
   "values (?1, ?2);",
 
+  /* STMT_INSERT_BASE_NODE */
   "insert or replace into base_node "
     "(wc_id, local_relpath, repos_id, repos_relpath, parent_relpath, "
      "presence, "
@@ -88,6 +90,7 @@ static const char * const statements[] = {
   "values (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, "
           "?15, ?16);",
 
+  /* STMT_INSERT_WORKING_NODE */
   "insert or replace into working_node "
     "(wc_id, local_relpath, parent_relpath, presence, kind, "
      "copyfrom_repos_id, "
@@ -97,6 +100,7 @@ static const char * const statements[] = {
   "values (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, "
           "?15, ?16, ?17, ?18, ?19);",
 
+  /* STMT_INSERT_ACTUAL_NODE */
   "insert or replace into actual_node "
     "(wc_id, local_relpath, parent_relpath, properties, conflict_old, "
      "conflict_new, "
@@ -104,31 +108,41 @@ static const char * const statements[] = {
      "tree_conflict_data) "
   "values (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11);",
 
+  /* STMT_SELECT_REPOSITORY */
   "select id, root from repository where root = ?1;",
 
+  /* STMT_SELECT_WCROOT_NULL */
   "select id from wcroot where local_abspath is null;",
 
+  /* STMT_SELECT_ACTUAL_NODE */
   "select wc_id, local_relpath, parent_relpath, properties, conflict_old, "
      "conflict_new, "
      "conflict_working, prop_reject, changelist, text_mod, "
      "tree_conflict_data "
   "from actual_node;",
 
+  /* STMT_DELETE_ALL_WORKING */
   "delete from working_node;",
 
+  /* STMT_DELETE_ALL_BASE */
   "delete from base_node;",
 
+  /* STMT_DELETE_ALL_ACTUAL */
   "delete from actual_node;",
 
+  /* STMT_SELECT_KEEP_LOCAL_FLAG */
   "select keep_local from working_node "
   "where wc_id = ?1 and local_relpath = ?2;",
 
+  /* STMT_SELECT_NOT_PRESENT */
   "select 1 from base_node "
   "where wc_id = ?1 and local_relpath = ?2 and presence = 'not-present';",
 
+  /* STMT_SELECT_FILE_EXTERNAL */
   "select file_external from base_node "
   "where wc_id = ?1 and local_relpath = ?2;",
 
+  /* STMT_UPDATE_FILE_EXTERNAL */
   "update base_node set file_external = ?3 "
   "where wc_id = ?1 and local_relpath = ?2;",
 
