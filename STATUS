@@ -109,7 +109,7 @@ Candidate changes:
    Notes:
      r37646 is the fix, r37656 is a follow up to clear iterpool.
    Votes:
-     +1: stylesen
+     +1: stylesen, arfrever
 
 Approved changes:
 =================
