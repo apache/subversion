@@ -36,7 +36,6 @@
 #include "svn_private_config.h"
 #include "private/svn_sqlite.h"
 #include "private/svn_skel.h"
-#include "private/svn_debug.h"
 
 
 #define NOT_IMPLEMENTED() \
@@ -3478,6 +3477,87 @@ svn_wc__db_scan_deletion(const char **base_del_abspath,
     }
 
   return SVN_NO_ERROR;
+}
+
+
+/* In the WCROOT associated with DB and LOCAL_ABSPATH, add WORK_ITEM to the
+   wcroot's work queue. Use SCRATCH_POOL for all temporary allocations.  */
+svn_error_t *
+svn_wc__db_wq_add(svn_wc__db_t *db,
+                  const char *local_abspath,
+                  const svn_skel_t *work_item,
+                  apr_pool_t *scratch_pool)
+{
+  svn_wc__db_pdh_t *pdh;
+  const char *local_relpath;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+  SVN_ERR_ASSERT(work_item != NULL);
+
+  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
+                              svn_sqlite__mode_readwrite,
+                              scratch_pool, scratch_pool));
+
+  NOT_IMPLEMENTED();
+}
+
+
+/* In the WCROOT associated with DB and LOCAL_ABSPATH, fetch a work item that
+   needs to be completed. Its identifier is returned in ID, and the data in
+   WORK_ITEM.
+
+   There is no particular ordering to the work items returned by this function.
+
+   If there are no work items to be completed, then ID will be set to zero,
+   and WORK_ITEM to NULL.
+
+   RESULT_POOL will be used to allocate WORK_ITEM, and SCRATCH_POOL
+   will be used for all temporary allocations.  */
+svn_error_t *
+svn_wc__db_wq_fetch(apr_uint64_t *id,
+                    svn_skel_t **work_item,
+                    svn_wc__db_t *db,
+                    const char *local_abspath,
+                    apr_pool_t *result_pool,
+                    apr_pool_t *scratch_pool)
+{
+  svn_wc__db_pdh_t *pdh;
+  const char *local_relpath;
+
+  SVN_ERR_ASSERT(id != NULL);
+  SVN_ERR_ASSERT(work_item != NULL);
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
+                              svn_sqlite__mode_readonly,
+                              scratch_pool, scratch_pool));
+
+  NOT_IMPLEMENTED();
+}
+
+
+/* In the WCROOT associated with DB and LOCAL_ABSPATH, mark work item ID as
+   completed. If an error occurs, then it is unknown whether the work item
+   has been marked as completed.
+
+   Uses SCRATCH_POOL for all temporary allocations.  */
+svn_error_t *
+svn_wc__db_wq_completed(svn_wc__db_t *db,
+                        const char *local_abspath,
+                        apr_uint64_t id,
+                        apr_pool_t *scratch_pool)
+{
+  svn_wc__db_pdh_t *pdh;
+  const char *local_relpath;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+  SVN_ERR_ASSERT(id != 0);
+
+  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
+                              svn_sqlite__mode_readwrite,
+                              scratch_pool, scratch_pool));
+
+  NOT_IMPLEMENTED();
 }
 
 
