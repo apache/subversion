@@ -326,7 +326,7 @@ static svn_boolean_t is_tracing_link(svn_error_t *err)
 }
 
 svn_error_t *
-svn_err_purge_tracing(svn_error_t *err)
+svn_error_purge_tracing(svn_error_t *err)
 {
 #ifdef SVN_ERR__TRACING  
   svn_error_t *tmp_err = err;

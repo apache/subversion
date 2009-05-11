@@ -1399,7 +1399,7 @@ merge(dav_resource *target,
     }
   else if (serr)
     {
-      serr = svn_err_purge_tracing(serr);
+      serr = svn_error_purge_tracing(serr);
       if (serr->child && serr->child->message)
         post_commit_err = apr_pstrdup(pool, serr->child->message);
       svn_error_clear(serr);

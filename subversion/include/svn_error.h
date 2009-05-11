@@ -306,7 +306,7 @@ svn_handle_warning(FILE *stream,
  *
  * @since New in 1.6.
  */
-svn_error_t *svn_err_purge_tracing(svn_error_t *err);
+svn_error_t *svn_error_purge_tracing(svn_error_t *err);
 
 
 /** A statement macro, very similar to @c SVN_ERR.
