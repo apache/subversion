@@ -2991,21 +2991,38 @@ svn_wc_entry_dup(const svn_wc_entry_t *entry, apr_pool_t *pool)
 
 
 svn_error_t *
-svn_wc__tweak_entry(svn_wc_adm_access_t *adm_access,
-                    apr_hash_t *entries,
-                    const char *name,
+svn_wc__tweak_entry(svn_wc__db_t *db,
+                    const char *local_abspath,
                     const char *new_url,
                     const char *repos,
                     svn_revnum_t new_rev,
+                    svn_boolean_t this_dir,
                     svn_boolean_t allow_removal,
                     apr_pool_t *scratch_pool)
 {
-  apr_pool_t *state_pool = svn_wc_adm_access_pool(adm_access);
+  apr_hash_t *entries;
   svn_wc_entry_t *entry;
+  const char *name;
+  svn_wc_adm_access_t *adm_access;
+  apr_pool_t *state_pool;
+ 
+  if (this_dir)
+    {
+      name = SVN_WC_ENTRY_THIS_DIR;
+      adm_access = svn_wc__adm_retrieve_internal2(db, local_abspath,
+                                                  scratch_pool);
+    }
+  else
+    {
+      const char *parent_dir;
 
-  if (entries == NULL)
-    SVN_ERR(svn_wc_entries_read(&entries, adm_access, TRUE, scratch_pool));
+      svn_dirent_split(local_abspath, &parent_dir, &name, scratch_pool);
+      adm_access = svn_wc__adm_retrieve_internal2(db, parent_dir,
+                                                  scratch_pool);
+    }
 
+  state_pool = svn_wc_adm_access_pool(adm_access);
+  SVN_ERR(svn_wc_entries_read(&entries, adm_access, TRUE, scratch_pool));
   entry = apr_hash_get(entries, name, APR_HASH_KEY_STRING);
   if (! entry)
     return svn_error_createf(SVN_ERR_ENTRY_NOT_FOUND, NULL,

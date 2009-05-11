@@ -200,31 +200,28 @@ svn_wc__entry_remove(svn_wc__db_t *db,
                      apr_pool_t *scratch_pool);
 
 
-/* Tweak the entry NAME within hash ENTRIES.  If NEW_URL is non-null,
+/* Tweak the information for LOCAL_ABSPATH in DB.  If NEW_URL is non-null,
  * make this the entry's new url.  If NEW_REV is valid, make this the
- * entry's working revision.  (This is purely an in-memory operation.)
- * If REPOS is non-NULL, set the repository root on the entry to REPOS,
- * provided it is a prefix of the entry's URL (and if it is the THIS_DIR
- * entry, all child URLs also match.)
+ * entry's working revision. If REPOS is non-NULL, set the repository root
+ * on the entry to REPOS, provided it is a prefix of the entry's URL (and
+ * if it is the THIS_DIR entry, all child URLs also match.)
  *
  * If ALLOW_REMOVAL is TRUE the tweaks might cause the entry NAME to
  * be removed from the hash, if ALLOW_REMOVAL is FALSE this will not
  * happen.
  *
- * The tweaked ENTRIES will be unconditionally written out to disk.
- *
- * If ENTRIES is NULL, then it will be read via ADM_ACCESS, tweaked,
- * and then written to disk.
+ * THIS_DIR should be true if the LOCAL_ABSPATH refers to a directory, and
+ * the information to be edited is not in the stub entry.
  *
  * (Intended as a helper to svn_wc__do_update_cleanup, which see.)
  */
 svn_error_t *
-svn_wc__tweak_entry(svn_wc_adm_access_t *adm_access,
-                    apr_hash_t *entries,
-                    const char *name,
+svn_wc__tweak_entry(svn_wc__db_t *db,
+                    const char *local_abspath,
                     const char *new_url,
                     const char *repos,
                     svn_revnum_t new_rev,
+                    svn_boolean_t this_dir,
                     svn_boolean_t allow_removal,
                     apr_pool_t *scratch_pool);
 
