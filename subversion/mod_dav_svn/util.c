@@ -79,7 +79,7 @@ dav_svn__convert_err(svn_error_t *serr,
     /* Remove the trace-only error chain links.  We need predictable
        protocol behavior regardless of whether or not we're in a
        debugging build. */
-    serr = svn_err_purge_tracing(serr);
+    serr = svn_error_purge_tracing(serr);
 
     /* ### someday mod_dav_svn will send back 'rich' error tags, much
        finer grained than plain old svn_error_t's.  But for now, all
