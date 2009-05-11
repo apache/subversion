@@ -192,6 +192,7 @@ enum statement_keys {
 };
 
 static const char * const statements[] = {
+  /* STMT_SELECT_BASE_NODE */
   "select wc_id, local_relpath, repos_id, repos_relpath, "
   "  presence, kind, revnum, checksum, translated_size, "
   "  changed_rev, changed_date, changed_author, depth, symlink_target, "
@@ -199,6 +200,7 @@ static const char * const statements[] = {
   "from base_node "
   "where wc_id = ?1 and local_relpath = ?2;",
 
+  /* STMT_SELECT_BASE_NODE_WITH_LOCK */
   "select wc_id, local_relpath, base_node.repos_id, base_node.repos_relpath, "
   "  presence, kind, revnum, checksum, translated_size, "
   "  changed_rev, changed_date, changed_author, depth, symlink_target, "
@@ -209,6 +211,7 @@ static const char * const statements[] = {
   "  and base_node.repos_relpath = lock.repos_relpath "
   "where wc_id = ?1 and local_relpath = ?2;",
 
+  /* STMT_SELECT_WORKING_NODE */
   "select presence, kind, checksum, translated_size, "
   "  changed_rev, changed_date, changed_author, depth, symlink_target, "
   "  copyfrom_repos_id, copyfrom_repos_path, copyfrom_revnum, "
@@ -216,18 +219,24 @@ static const char * const statements[] = {
   "from working_node "
   "where wc_id = ?1 and local_relpath = ?2;",
 
+  /* STMT_SELECT_ACTUAL_NODE */
   "select changelist "
   "from actual_node "
   "where wc_id = ?1 and local_relpath = ?2;",
 
+  /* STMT_SELECT_REPOSITORY_BY_ID */
   "select root, uuid from repository where id = ?1;",
 
+  /* STMT_SELECT_WCROOT_NULL */
   "select id from wcroot where local_abspath is null;",
 
+  /* STMT_SELECT_REPOSITORY */
   "select id from repository where uuid = ?1;",
 
+  /* STMT_INSERT_REPOSITORY */
   "insert into repository (root, uuid) values (?1, ?2);",
 
+  /* STMT_INSERT_BASE_NODE */
   "insert or replace into base_node ("
   "  wc_id, local_relpath, repos_id, repos_relpath, parent_relpath, presence, "
   "  kind, revnum, properties, changed_rev, changed_date, changed_author, "
@@ -235,31 +244,39 @@ static const char * const statements[] = {
   "values (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, "
   "        ?15, ?16);",
 
+  /* STMT_INSERT_BASE_NODE_INCOMPLETE */
   "insert or ignore into base_node ("
   "  wc_id, local_relpath, parent_relpath, presence, kind, revnum) "
   "values (?1, ?2, ?3, 'incomplete', 'unknown', ?5);",
 
+  /* STMT_SELECT_BASE_NODE_CHILDREN */
   "select local_relpath from base_node "
   "where wc_id = ?1 and parent_relpath = ?2;",
 
+  /* STMT_SELECT_WORKING_CHILDREN */
   "select local_relpath from base_node "
   "where wc_id = ?1 and parent_relpath = ?2 "
   "union "
   "select local_relpath from working_node "
   "where wc_id = ?1 and parent_relpath = ?2;",
 
+  /* STMT_SELECT_WORKING_IS_FILE */
   "select kind == 'file' from working_node "
   "where wc_id = ?1 and local_relpath = ?2;",
 
+  /* STMT_SELECT_BASE_IS_FILE */
   "select kind == 'file' from base_node "
   "where wc_id = ?1 and local_relpath = ?2;",
 
+  /* STMT_SELECT_BASE_PROPS */
   "select properties from base_node "
   "where wc_id = ?1 and local_relpath = ?2;",
 
+  /* STMT_UPDATE_ACTUAL_PROPS */
   "update actual_node set properties = ?3 "
   "where wc_id = ?1 and local_relpath = ?2;",
 
+  /* STMT_SELECT_ALL_PROPS */
   "select actual_node.properties, working_node.properties, "
   "  base_node.properties "
   "from base_node "
@@ -269,35 +286,43 @@ static const char * const statements[] = {
   "  and base_node.local_relpath = actual_node.local_relpath "
   "where base_node.wc_id = ?1 and base_node.local_relpath = ?2;",
 
+  /* STMT_SELECT_PRISTINE_PROPS */
   "select working_node.properties, base_node.properties "
   "from base_node "
   "left outer join working_node on base_node.wc_id = working_node.wc_id "
   "  and base_node.local_relpath = working_node.local_relpath "
   "where base_node.wc_id = ?1 and base_node.local_relpath = ?2;",
 
+  /* STMT_INSERT_LOCK */
   "insert or replace into lock "
     "(repos_id, repos_relpath, lock_token, lock_owner, lock_comment, "
     " lock_date)"
   "values (?1, ?2, ?3, ?4, ?5, ?6);",
 
+  /* STMT_INSERT_WCROOT */
   "insert into wcroot (local_abspath) "
   "values (?1);",
 
+  /* STMT_UPDATE_BASE_DAV_CACHE */
   "update base_node set dav_cache = ?3 "
   "where wc_id = ?1 and local_relpath = ?2;",
 
+  /* STMT_SELECT_BASE_DAV_CACHE */
   "select dav_cache from base_node "
   "where wc_id = ?1 and local_relpath = ?2;",
 
+  /* STMT_SELECT_DELETION_INFO */
   "select base_node.presence, working_node.presence, moved_to "
   "from working_node "
   "left outer join base_node on base_node.wc_id = working_node.wc_id "
   "  and base_node.local_relpath = working_node.local_relpath "
   "where working_node.wc_id = ?1 and working_node.local_relpath = ?2;",
 
+  /* STMT_SELECT_PARENT_STUB_INFO */
   "select presence = 'not-present', revnum from base_node "
   "where wc_id = ?1 and local_relpath = ?2;",
 
+  /* STMT_DELETE_LOC */
   "delete from lock "
   "where repos_id = ?1 and repos_relpath = ?2;",
 
