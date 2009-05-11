@@ -137,50 +137,9 @@
 #define SVN_WC__LOG_ATTR_FORCE          "force"
 #define SVN_WC__LOG_ATTR_DATA           "data"
 
-/* This one is for SVN_WC__LOG_MERGE. */
-#define SVN_WC__LOG_ATTR_ARG_1          "arg1"
-/* This one is for SVN_WC__LOG_MERGE
-   and optionally SVN_WC__LOG_CP_AND_(DE)TRANSLATE to indicate a versioned
+/* This one is for SVN_WC__LOG_CP_AND_TRANSLATE to indicate a versioned
    path to take its translation properties from */
 #define SVN_WC__LOG_ATTR_ARG_2          "arg2"
-/* The rest are for SVN_WC__LOG_MERGE.  Extend as necessary. */
-#define SVN_WC__LOG_ATTR_ARG_3          "arg3"
-#define SVN_WC__LOG_ATTR_ARG_4          "arg4"
-#define SVN_WC__LOG_ATTR_ARG_5          "arg5"
-
-
-
-/* DEPRECATED, left for compat with older format working copies
-
-   Copy file SVN_WC__LOG_ATTR_NAME to SVN_WC__LOG_ATTR_DEST. */
-#define SVN_WC__LOG_CP                  "cp"
-
-/* DEPRECATED, left for compat with older format working copies
-
-   Copy file SVN_WC__LOG_ATTR_NAME to SVN_WC__LOG_ATTR_DEST, but
-   contract any keywords and convert to LF eol, according to
-   properties of NAME. */
-#define SVN_WC__LOG_CP_AND_DETRANSLATE    "cp-and-detranslate"
-
-/* DEPRECATED, left for compat with pre-v8 format working copies
-
-   A log command which runs svn_wc_merge2().
-   See its documentation for details.
-
-   Here is a map of entry-attributes to svn_wc_merge arguments:
-
-         SVN_WC__LOG_NAME         : MERGE_TARGET
-         SVN_WC__LOG_ATTR_ARG_1   : LEFT
-         SVN_WC__LOG_ATTR_ARG_2   : RIGHT
-         SVN_WC__LOG_ATTR_ARG_3   : LEFT_LABEL
-         SVN_WC__LOG_ATTR_ARG_4   : RIGHT_LABEL
-         SVN_WC__LOG_ATTR_ARG_5   : TARGET_LABEL
-
-   Of course, the three paths should be *relative* to the directory in
-   which the log is running, as with all other log commands.  (Usually
-   they're just basenames within loggy->path.)
- */
-#define SVN_WC__LOG_MERGE        "merge"
 
 
 /*** Userdata for the callbacks. ***/
@@ -194,7 +153,6 @@ struct log_runner
   svn_xml_parser_t *parser;
   svn_boolean_t rerun;
   svn_wc_adm_access_t *adm_access;  /* the dir in which all this happens */
-  const char *diff3_cmd;            /* external diff3 cmd, or null if none */
   svn_boolean_t tree_conflicts_added;
   apr_array_header_t *tree_conflicts; /* array of pointers to
                                          svn_wc_conflict_description_t. */
@@ -215,47 +173,24 @@ struct log_runner
 
 
 
-/*** Forward declarations ***/
-
-/* log runner forward declaration used in log_do_merge */
-static svn_error_t *
-run_log_from_memory(svn_wc_adm_access_t *adm_access,
-                    const char *buf,
-                    apr_size_t buf_len,
-                    svn_boolean_t rerun,
-                    const char *diff3_cmd,
-                    apr_pool_t *pool);
-
-
-
-
-
 /*** The XML handlers. ***/
 
 /* Used by file_xfer_under_path(). */
 enum svn_wc__xfer_action {
-  svn_wc__xfer_cp,
   svn_wc__xfer_mv,
   svn_wc__xfer_append,
-  svn_wc__xfer_cp_and_translate,
-  svn_wc__xfer_cp_and_detranslate
+  svn_wc__xfer_cp_and_translate
 };
 
 
 /* Perform some sort of copy-related ACTION on NAME and DEST:
 
-      svn_wc__xfer_cp:                 just do a copy of NAME to DEST.
       svn_wc__xfer_mv:                 do a copy, then remove NAME.
       svn_wc__xfer_append:             append contents of NAME to DEST
       svn_wc__xfer_cp_and_translate:   copy NAME to DEST, doing any eol
                                        and keyword expansion according to
                                        the current property vals of VERSIONED
                                        or, if that's NULL, those of DEST.
-      svn_wc__xfer_cp_and_detranslate: copy NAME to DEST, converting to LF
-                                       and contracting keywords according to
-                                       the current property vals of VERSIONED
-                                       or, if that's NULL, those of NAME.
-
 */
 static svn_error_t *
 file_xfer_under_path(svn_wc_adm_access_t *adm_access,
@@ -290,9 +225,6 @@ file_xfer_under_path(svn_wc_adm_access_t *adm_access,
           svn_error_clear(err);
         }
       break;
-
-    case svn_wc__xfer_cp:
-      return svn_io_copy_file(full_from_path, full_dest_path, FALSE, pool);
 
     case svn_wc__xfer_cp_and_translate:
       {
@@ -333,19 +265,6 @@ file_xfer_under_path(svn_wc_adm_access_t *adm_access,
 
         return svn_wc__maybe_set_executable(NULL, full_dest_path,
                                             adm_access, pool);
-      }
-    case svn_wc__xfer_cp_and_detranslate:
-      {
-        const char *tmp_file;
-
-        SVN_ERR(svn_wc_translated_file2
-                (&tmp_file,
-                 full_from_path,
-                 versioned ? full_versioned_path : full_from_path, adm_access,
-                 SVN_WC_TRANSLATE_TO_NF
-                 | SVN_WC_TRANSLATE_FORCE_COPY,
-                 pool));
-        return svn_io_file_rename(tmp_file, full_dest_path, pool);
       }
 
     case svn_wc__xfer_mv:
@@ -529,77 +448,6 @@ pick_error_code(struct log_runner *loggy)
 
 
 /*** Dispatch on the xml opening tag. ***/
-
-static svn_error_t *
-log_do_merge(struct log_runner *loggy,
-             const char *name,
-             const char **atts)
-{
-  const char *left, *right;
-  const char *left_label, *right_label, *target_label;
-  enum svn_wc_merge_outcome_t merge_outcome;
-  svn_stringbuf_t *log_accum = svn_stringbuf_create("", loggy->pool);
-  svn_error_t *err;
-
-  /* NAME is the basename of our merge_target.  Pull out LEFT and RIGHT. */
-  left = svn_xml_get_attr_value(SVN_WC__LOG_ATTR_ARG_1, atts);
-  if (! left)
-    return svn_error_createf(pick_error_code(loggy), NULL,
-                             _("Missing 'left' attribute in '%s'"),
-                             svn_path_local_style
-                             (svn_wc_adm_access_path(loggy->adm_access),
-                              loggy->pool));
-  right = svn_xml_get_attr_value(SVN_WC__LOG_ATTR_ARG_2, atts);
-  if (! right)
-    return svn_error_createf(pick_error_code(loggy), NULL,
-                             _("Missing 'right' attribute in '%s'"),
-                             svn_path_local_style
-                             (svn_wc_adm_access_path(loggy->adm_access),
-                              loggy->pool));
-
-  /* Grab all three labels too.  If non-existent, we'll end up passing
-     NULLs to svn_wc_merge, which is fine -- it will use default
-     labels. */
-  left_label = svn_xml_get_attr_value(SVN_WC__LOG_ATTR_ARG_3, atts);
-  right_label = svn_xml_get_attr_value(SVN_WC__LOG_ATTR_ARG_4, atts);
-  target_label = svn_xml_get_attr_value(SVN_WC__LOG_ATTR_ARG_5, atts);
-
-  /* Convert the 3 basenames into full paths. */
-  left = svn_dirent_join(svn_wc_adm_access_path(loggy->adm_access), left,
-                         loggy->pool);
-  right = svn_dirent_join(svn_wc_adm_access_path(loggy->adm_access), right,
-                          loggy->pool);
-  name = svn_dirent_join(svn_wc_adm_access_path(loggy->adm_access), name,
-                         loggy->pool);
-
-  /* Now do the merge with our full paths. */
-  /* ### TODO: Fill in the left_version and right_version args. */
-  err = svn_wc__merge_internal(&log_accum, &merge_outcome,
-                               left, NULL, right, NULL, name, NULL,
-                               loggy->adm_access, left_label, right_label,
-                               target_label, FALSE, loggy->diff3_cmd, NULL,
-                               NULL, NULL, NULL, loggy->pool);
-  if (err && loggy->rerun && APR_STATUS_IS_ENOENT(err->apr_err))
-    {
-      svn_error_clear(err);
-      return SVN_NO_ERROR;
-    }
-  else
-    if (err)
-      return err;
-
-  err = run_log_from_memory(loggy->adm_access,
-                            log_accum->data, log_accum->len,
-                            loggy->rerun, loggy->diff3_cmd, loggy->pool);
-  if (err && loggy->rerun && APR_STATUS_IS_ENOENT(err->apr_err))
-    {
-      svn_error_clear(err);
-      return SVN_NO_ERROR;
-    }
-  else
-    return err;
-}
-
 
 static svn_error_t *
 log_do_file_xfer(struct log_runner *loggy,
@@ -1561,20 +1409,11 @@ start_handler(void *userData, const char *eltname, const char **atts)
   else if (strcmp(eltname, SVN_WC__LOG_RM) == 0) {
     err = log_do_rm(loggy, name);
   }
-  else if (strcmp(eltname, SVN_WC__LOG_MERGE) == 0) {
-    err = log_do_merge(loggy, name, atts);
-  }
   else if (strcmp(eltname, SVN_WC__LOG_MV) == 0) {
     err = log_do_file_xfer(loggy, name, svn_wc__xfer_mv, atts);
   }
-  else if (strcmp(eltname, SVN_WC__LOG_CP) == 0) {
-    err = log_do_file_xfer(loggy, name, svn_wc__xfer_cp, atts);
-  }
   else if (strcmp(eltname, SVN_WC__LOG_CP_AND_TRANSLATE) == 0) {
     err = log_do_file_xfer(loggy, name, svn_wc__xfer_cp_and_translate, atts);
-  }
-  else if (strcmp(eltname, SVN_WC__LOG_CP_AND_DETRANSLATE) == 0) {
-    err = log_do_file_xfer(loggy, name, svn_wc__xfer_cp_and_detranslate, atts);
   }
   else if (strcmp(eltname, SVN_WC__LOG_APPEND) == 0) {
     err = log_do_file_xfer(loggy, name, svn_wc__xfer_append, atts);
@@ -1691,55 +1530,11 @@ compute_logfile_path(int log_number, apr_pool_t *pool)
   return apr_psprintf(pool, SVN_WC__ADM_LOG ".%d", log_number);
 }
 
-/* Run a series of log-instructions from a memory block of length BUF_LEN
-   at BUF. RERUN and DIFF3_CMD are passed in the log baton to the
-   log runner callbacks.
-
-   Allocations are done in POOL.
-*/
-static svn_error_t *
-run_log_from_memory(svn_wc_adm_access_t *adm_access,
-                    const char *buf,
-                    apr_size_t buf_len,
-                    svn_boolean_t rerun,
-                    const char *diff3_cmd,
-                    apr_pool_t *pool)
-{
-  struct log_runner *loggy;
-  svn_xml_parser_t *parser;
-
-  loggy = apr_pcalloc(pool, sizeof(*loggy));
-
-  parser = svn_xml_make_parser(loggy, start_handler, NULL, NULL, pool);
-
-  loggy->db = svn_wc__adm_get_db(adm_access);
-  loggy->dir_abspath = svn_wc__adm_access_abspath(adm_access);
-  loggy->adm_access = adm_access;
-  loggy->pool = svn_pool_create(pool);
-  loggy->result_pool = svn_pool_create(pool);
-  loggy->parser = parser;
-  loggy->rerun = rerun;
-  loggy->diff3_cmd = diff3_cmd;
-  loggy->count = 0;
-  loggy->tree_conflicts_added = FALSE;
-  loggy->tree_conflicts = NULL;
-
-  /* Expat wants everything wrapped in a top-level form, so start with
-     a ghost open tag. */
-  SVN_ERR(svn_xml_parse(parser, LOG_START, strlen(LOG_START), 0));
-
-  SVN_ERR(svn_xml_parse(parser, buf, buf_len, 0));
-
-  /* Pacify Expat with a pointless closing element tag. */
-  return svn_xml_parse(parser, LOG_END, strlen(LOG_END), 1);
-}
-
 
 /* Run a sequence of log files. */
 static svn_error_t *
 run_log(svn_wc_adm_access_t *adm_access,
         svn_boolean_t rerun,
-        const char *diff3_cmd,
         apr_pool_t *pool)
 {
   const char *dir_abspath = svn_wc__adm_access_abspath(adm_access);
@@ -1763,7 +1558,6 @@ run_log(svn_wc_adm_access_t *adm_access,
   loggy->result_pool = svn_pool_create(pool);
   loggy->parser = parser;
   loggy->rerun = rerun;
-  loggy->diff3_cmd = diff3_cmd;
   loggy->count = 0;
   loggy->tree_conflicts_added = FALSE;
 
@@ -1864,10 +1658,10 @@ run_log(svn_wc_adm_access_t *adm_access,
 
 svn_error_t *
 svn_wc__run_log(svn_wc_adm_access_t *adm_access,
-                const char *diff3_cmd,
+                const char *diff3_cmd,  /* ### OBSOLETE  */
                 apr_pool_t *pool)
 {
-  return run_log(adm_access, FALSE, diff3_cmd, pool);
+  return run_log(adm_access, FALSE, pool);
 }
 
 
@@ -2405,7 +2199,6 @@ svn_wc__write_log(svn_wc_adm_access_t *adm_access,
 static svn_error_t *
 cleanup_internal(svn_wc__db_t *db,
                  const char *path,
-                 const char *diff3_cmd,
                  svn_cancel_func_t cancel_func,
                  void *cancel_baton,
                  apr_pool_t *scratch_pool);
@@ -2413,7 +2206,6 @@ cleanup_internal(svn_wc__db_t *db,
 static svn_error_t *
 run_existing_logs(svn_wc_adm_access_t *adm_access,
                   const char *path,
-                  const char *diff3_cmd,
                   svn_cancel_func_t cancel_func,
                   void *cancel_baton,
                   apr_pool_t *scratch_pool)
@@ -2446,7 +2238,7 @@ run_existing_logs(svn_wc_adm_access_t *adm_access,
           /* Sub-directories */
           SVN_ERR(svn_io_check_path(entry_path, &kind, iterpool));
           if (kind == svn_node_dir)
-            SVN_ERR(cleanup_internal(db, entry_path, diff3_cmd,
+            SVN_ERR(cleanup_internal(db, entry_path,
                                      cancel_func, cancel_baton, iterpool));
         }
       else
@@ -2484,7 +2276,7 @@ run_existing_logs(svn_wc_adm_access_t *adm_access,
       if (cleanup)
         {
           /* ### rerun the log. why? dunno. missing commentary... */
-          SVN_ERR(run_log(adm_access, TRUE, diff3_cmd, scratch_pool));
+          SVN_ERR(run_log(adm_access, TRUE, scratch_pool));
         }
     }
 
@@ -2495,7 +2287,6 @@ run_existing_logs(svn_wc_adm_access_t *adm_access,
 static svn_error_t *
 cleanup_internal(svn_wc__db_t *db,
                  const char *path,
-                 const char *diff3_cmd,
                  svn_cancel_func_t cancel_func,
                  void *cancel_baton,
                  apr_pool_t *scratch_pool)
@@ -2511,7 +2302,7 @@ cleanup_internal(svn_wc__db_t *db,
                                        scratch_pool, scratch_pool));
 
   /* Recurse and run any existing logs. */
-  SVN_ERR(run_existing_logs(adm_access, path, diff3_cmd,
+  SVN_ERR(run_existing_logs(adm_access, path,
                             cancel_func, cancel_baton, scratch_pool));
 
   /* Cleanup the tmp area of the admin subdir, if running the log has not
@@ -2525,7 +2316,7 @@ cleanup_internal(svn_wc__db_t *db,
 
 svn_error_t *
 svn_wc_cleanup2(const char *path,
-                const char *diff3_cmd,
+                const char *diff3_cmd,  /* ### OBSOLETE  */
                 svn_cancel_func_t cancel_func,
                 void *cancel_baton,
                 apr_pool_t *scratch_pool)
@@ -2553,6 +2344,6 @@ svn_wc_cleanup2(const char *path,
                             _("Log format too old, please use "
                               "Subversion 1.6 or earlier"));
 
-  return svn_error_return(cleanup_internal(db, path, diff3_cmd, cancel_func,
-                                           cancel_baton, scratch_pool));
+  return svn_error_return(cleanup_internal(db, path, cancel_func, cancel_baton,
+                                           scratch_pool));
 }
