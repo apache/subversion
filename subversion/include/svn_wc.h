@@ -5251,24 +5251,8 @@ svn_wc_get_pristine_copy_path(const char *path,
  * various points during the operation.  If it returns an error
  * (typically @c SVN_ERR_CANCELLED), return that error immediately.
  *
- * @since New in 1.7.
- */
-svn_error_t *
-svn_wc_cleanup3(const char *path,
-                const char *diff3_cmd,
-                svn_boolean_t upgrade_wc,
-                svn_cancel_func_t cancel_func,
-                void *cancel_baton,
-                apr_pool_t *scratch_pool);
-
-/**
- * Similar to svn_wc_cleanup3(), but does not attempt to do a working copy
- * upgrade.
- *
  * @since New in 1.2.
- * @deprecated Provided for backward compatibility with the 1.6 API.
  */
-SVN_DEPRECATED
 svn_error_t *
 svn_wc_cleanup2(const char *path,
                 const char *diff3_cmd,
@@ -5291,6 +5275,21 @@ svn_wc_cleanup(const char *path,
                void *cancel_baton,
                apr_pool_t *pool);
 
+/**
+ * Upgrade the working copy at @a path to the latest metadata storage format.
+ * @a path should be the root of the working copy.
+ *
+ * If @a cancel_func is non-NULL, invoke it with @a cancel_baton at
+ * various points during the operation.  If it returns an error
+ * (typically @c SVN_ERR_CANCELLED), return that error immediately.
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_wc_upgrade(const char *path,
+               svn_cancel_func_t cancel_func,
+               void *cancel_baton,
+               apr_pool_t *pool);
 
 /** Relocation validation callback typedef.
  *

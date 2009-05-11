@@ -118,6 +118,12 @@
  */
 #define SVN_WC__LOG_COMMITTED           "committed"
 
+/* On target SVN_WC__LOG_ATTR_NAME, set wc property
+   SVN_WC__LOG_ATTR_PROPNAME to value SVN_WC__LOG_ATTR_PROPVAL.  If
+   SVN_WC__LOG_ATTR_PROPVAL is absent, then remove the property. */
+#define SVN_WC__LOG_MODIFY_WCPROP        "modify-wcprop"
+
+
 /** Log attributes.  See the documentation above for log actions for
     how these are used. **/
 
@@ -960,8 +966,14 @@ log_do_delete_entry(struct log_runner *loggy, const char *name)
               err = SVN_NO_ERROR;
 
               if (entry->schedule != svn_wc_schedule_add)
-                SVN_ERR(svn_wc__entry_remove(NULL, loggy->adm_access,
-                                             name, loggy->pool));
+                {
+                  const char *local_abspath;
+
+                  SVN_ERR(svn_path_get_absolute(&local_abspath, full_path,
+                                                loggy->pool));
+                  SVN_ERR(svn_wc__entry_remove(loggy->db, local_abspath,
+                                               loggy->pool));
+                }
             }
           else
             {
@@ -1431,6 +1443,37 @@ log_do_committed(struct log_runner *loggy,
   return SVN_NO_ERROR;
 }
 
+
+/* See documentation for SVN_WC__LOG_MODIFY_WCPROP. */
+static svn_error_t *
+log_do_modify_wcprop(struct log_runner *loggy,
+                     const char *name,
+                     const char **atts)
+{
+  svn_string_t value;
+  const char *propname, *propval, *path;
+
+  if (strcmp(name, SVN_WC_ENTRY_THIS_DIR) == 0)
+    path = svn_wc_adm_access_path(loggy->adm_access);
+  else
+    path = svn_dirent_join(svn_wc_adm_access_path(loggy->adm_access),
+                           name, loggy->pool);
+
+  propname = svn_xml_get_attr_value(SVN_WC__LOG_ATTR_PROPNAME, atts);
+  propval = svn_xml_get_attr_value(SVN_WC__LOG_ATTR_PROPVAL, atts);
+
+  if (propval)
+    {
+      value.data = propval;
+      value.len = strlen(propval);
+    }
+
+  SVN_ERR(svn_wc__wcprop_set(propname, propval ? &value : NULL,
+                             path, loggy->adm_access, loggy->pool));
+
+  return SVN_NO_ERROR;
+}
+
 static svn_error_t *
 log_do_add_tree_conflict(struct log_runner *loggy,
                          const char **atts)
@@ -1511,6 +1554,9 @@ start_handler(void *userData, const char *eltname, const char **atts)
   }
   else if (strcmp(eltname, SVN_WC__LOG_COMMITTED) == 0) {
     err = log_do_committed(loggy, name, atts);
+  }
+  else if (strcmp(eltname, SVN_WC__LOG_MODIFY_WCPROP) == 0) {
+    err = log_do_modify_wcprop(loggy, name, atts);
   }
   else if (strcmp(eltname, SVN_WC__LOG_RM) == 0) {
     err = log_do_rm(loggy, name);
@@ -2143,6 +2189,27 @@ svn_wc__loggy_entry_modify(svn_stringbuf_t **log_accum,
 
 
 svn_error_t *
+svn_wc__loggy_modify_wcprop(svn_stringbuf_t **log_accum,
+                            svn_wc_adm_access_t *adm_access,
+                            const char *path,
+                            const char *propname,
+                            const char *propval,
+                            apr_pool_t *pool)
+{
+  svn_xml_make_open_tag(log_accum, pool, svn_xml_self_closing,
+                        SVN_WC__LOG_MODIFY_WCPROP,
+                        SVN_WC__LOG_ATTR_NAME,
+                        loggy_path(path, adm_access),
+                        SVN_WC__LOG_ATTR_PROPNAME,
+                        propname,
+                        SVN_WC__LOG_ATTR_PROPVAL,
+                        propval,
+                        NULL);
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
 svn_wc__loggy_move(svn_stringbuf_t **log_accum,
                    svn_wc_adm_access_t *adm_access,
                    const char *src_path, const char *dst_path,
@@ -2426,57 +2493,6 @@ run_existing_logs(svn_wc_adm_access_t *adm_access,
 
 
 static svn_error_t *
-upgrade_working_copy(svn_wc__db_t *db,
-                     const char *path,
-                     const char *diff3_cmd,
-                     svn_cancel_func_t cancel_func,
-                     void *cancel_baton,
-                     apr_pool_t *scratch_pool)
-{
-  svn_wc_adm_access_t *adm_access;
-  apr_hash_index_t *hi;
-  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
-  apr_hash_t *entries = NULL;
-
-  /* Check cancellation; note that this catches recursive calls too. */
-  if (cancel_func)
-    SVN_ERR(cancel_func(cancel_baton));
-
-  /* Lock this working copy directory, or steal an existing lock */
-  SVN_ERR(svn_wc__adm_steal_write_lock(&adm_access, db, path,
-                                       scratch_pool, scratch_pool));
-
-  /* Upgrade this directory first. */
-  SVN_ERR(svn_wc__upgrade_format(adm_access, scratch_pool));
-
-  /* Now recurse. */
-  SVN_ERR(svn_wc_entries_read(&entries, adm_access, FALSE, scratch_pool));
-  for (hi = apr_hash_first(scratch_pool, entries); hi; hi = apr_hash_next(hi))
-    {
-      const void *key;
-      void *val;
-      const svn_wc_entry_t *entry;
-      const char *entry_path;
-
-      svn_pool_clear(iterpool);
-      apr_hash_this(hi, &key, NULL, &val);
-      entry = val;
-      entry_path = svn_dirent_join(path, key, iterpool);
-
-      if (entry->kind != svn_node_dir
-            || strcmp(key, SVN_WC_ENTRY_THIS_DIR) == 0)
-        continue;
-
-      SVN_ERR(upgrade_working_copy(db, entry_path, diff3_cmd, cancel_func,
-                                   cancel_baton, iterpool));
-    }
-  svn_pool_destroy(iterpool);
-
-  return svn_wc_adm_close2(adm_access, scratch_pool);
-}
-
-
-static svn_error_t *
 cleanup_internal(svn_wc__db_t *db,
                  const char *path,
                  const char *diff3_cmd,
@@ -2508,9 +2524,8 @@ cleanup_internal(svn_wc__db_t *db,
 
 
 svn_error_t *
-svn_wc_cleanup3(const char *path,
+svn_wc_cleanup2(const char *path,
                 const char *diff3_cmd,
-                svn_boolean_t upgrade_wc,
                 svn_cancel_func_t cancel_func,
                 void *cancel_baton,
                 apr_pool_t *scratch_pool)
@@ -2533,12 +2548,11 @@ svn_wc_cleanup3(const char *path,
                              _("'%s' is not a working copy directory"),
                              svn_path_local_style(path, scratch_pool));
 
-  if (upgrade_wc && wc_format_version < SVN_WC__VERSION)
-    SVN_ERR(upgrade_working_copy(db, path, diff3_cmd, cancel_func,
-                                 cancel_baton, scratch_pool));
-  else
-    SVN_ERR(cleanup_internal(db, path, diff3_cmd, cancel_func, cancel_baton,
-                             scratch_pool));
+  if (wc_format_version < SVN_WC__VERSION)
+    return svn_error_create(SVN_ERR_WC_UNSUPPORTED_FORMAT, NULL,
+                            _("Log format too old, please use "
+                              "Subversion 1.6 or earlier"));
 
-  return SVN_NO_ERROR;
+  return svn_error_return(cleanup_internal(db, path, diff3_cmd, cancel_func,
+                                           cancel_baton, scratch_pool));
 }

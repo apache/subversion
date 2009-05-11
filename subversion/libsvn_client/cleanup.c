@@ -34,10 +34,9 @@
 /*** Code. ***/
 
 svn_error_t *
-svn_client_cleanup2(const char *path,
-                    svn_boolean_t upgrade_format,
-                    svn_client_ctx_t *ctx,
-                    apr_pool_t *scratch_pool)
+svn_client_cleanup(const char *path,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *scratch_pool)
 {
   const char *diff3_cmd;
   svn_error_t *err;
@@ -49,8 +48,18 @@ svn_client_cleanup2(const char *path,
   svn_config_get(cfg, &diff3_cmd, SVN_CONFIG_SECTION_HELPERS,
                  SVN_CONFIG_OPTION_DIFF3_CMD, NULL);
 
-  err = svn_wc_cleanup3(path, diff3_cmd, upgrade_format, ctx->cancel_func,
+  err = svn_wc_cleanup2(path, diff3_cmd, ctx->cancel_func,
                         ctx->cancel_baton, scratch_pool);
   svn_io_sleep_for_timestamps(path, scratch_pool);
   return svn_error_return(err);
+}
+
+
+svn_error_t *
+svn_client_upgrade(const char *path,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *scratch_pool)
+{
+  return svn_error_return(svn_wc_upgrade(path, ctx->cancel_func,
+                                         ctx->cancel_baton, scratch_pool));
 }

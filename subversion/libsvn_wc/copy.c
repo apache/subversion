@@ -797,8 +797,7 @@ copy_dir_administratively(const char *src_path,
      because the source directory was locked.  Running cleanup will remove
      the locks, even though this directory has not yet been added to the
      parent. */
-  SVN_ERR(svn_wc_cleanup3(dst_path, NULL, FALSE, cancel_func, cancel_baton,
-                          pool));
+  SVN_ERR(svn_wc_cleanup2(dst_path, NULL, cancel_func, cancel_baton, pool));
 
   /* We've got some post-copy cleanup to do now. */
   /* ### we should do this open using our existing DB.  */

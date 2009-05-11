@@ -136,8 +136,16 @@ crop_children(svn_wc__db_t *db,
                  Anyway, don't report on excluded subdir, since they are
                  logically not exist. */
               if (depth < svn_depth_immediates)
-                SVN_ERR(svn_wc__entry_remove(entries, dir_access,
-                                             current_entry->name, iterpool));
+                {
+                  const char *local_abspath;
+
+                  local_abspath = svn_dirent_join(local_dir_abspath,
+                                                  current_entry->name,
+                                                  iterpool);
+                  SVN_ERR(svn_wc__entry_remove(db, local_abspath, iterpool));
+                  apr_hash_set(entries, current_entry->name,
+                               APR_HASH_KEY_STRING, NULL);
+                }
               continue;
             }
           else if (depth < svn_depth_immediates)

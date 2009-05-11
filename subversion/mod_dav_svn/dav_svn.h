@@ -106,6 +106,9 @@ typedef struct {
   /* Whether bulk updates are allowed for this repository. */
   svn_boolean_t bulk_updates;
 
+  /* Whether HTTP protocol version 2 is allowed to be used. */
+  svn_boolean_t v2_protocol;
+
   /* the open repository */
   svn_repos_t *repos;
 
@@ -281,6 +284,9 @@ svn_boolean_t dav_svn__get_autoversioning_flag(request_rec *r);
 
 /* for the repository referred to by this request, are bulk updates allowed? */
 svn_boolean_t dav_svn__get_bulk_updates_flag(request_rec *r);
+
+/* for the repository referred to by this request, are bulk updates allowed? */
+svn_boolean_t dav_svn__get_v2_protocol_flag(request_rec *r);
 
 /* for the repository referred to by this request, are subrequests active? */
 svn_boolean_t dav_svn__get_pathauthz_flag(request_rec *r);
@@ -749,15 +755,30 @@ dav_svn__simple_parse_uri(dav_svn__uri_info *info,
 int dav_svn__find_ns(apr_array_header_t *namespaces, const char *uri);
 
 
-/* Output XML data to OUTPUT using BB.  Use FMT as format string for the
-   output. */
-svn_error_t *
-dav_svn__send_xml(apr_bucket_brigade *bb,
-                  ap_filter_t *output,
-                  const char *fmt,
-                  ...)
-       __attribute__((format(printf, 3, 4)));
+
+/*** Brigade I/O wrappers ***/
 
+/* Write LEN bytes from DATA to OUTPUT using BB.  */
+svn_error_t *dav_svn__brigade_write(apr_bucket_brigade *bb,
+                                    ap_filter_t *output,
+                                    const char *buf,
+                                    apr_size_t len);
+
+/* Write NULL-terminated string STR to OUTPUT using BB.  */
+svn_error_t *dav_svn__brigade_puts(apr_bucket_brigade *bb,
+                                   ap_filter_t *output,
+                                   const char *str);
+
+
+/* Write data to OUTPUT using BB, using FMT as the output format string.  */
+svn_error_t *dav_svn__brigade_printf(apr_bucket_brigade *bb,
+                                     ap_filter_t *output,
+                                     const char *fmt,
+                                     ...)
+  __attribute__((format(printf, 3, 4)));
+
+
+
 
 /* Test PATH for canonicalness (defined as "what won't make the
    svn_path_* functions immediately explode"), returning an

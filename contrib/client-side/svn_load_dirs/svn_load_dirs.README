@@ -245,7 +245,8 @@ Steps:
    Example:
 
       svn_load_dirs.pl http://svn.orcaware.com:8000/repos \
-         trunk/orca -t 'tags/orca/@\d+\.\w+@' orca-0.18 orca-0.27b2
+         trunk/orca -t 'tags/orca/@\d+\.\w+@' orca-0.18 orca-0.27b2 \
+         -m 'Import Orca versions 0.18 and 0.27b2.'
 
    The output from this script are:
 

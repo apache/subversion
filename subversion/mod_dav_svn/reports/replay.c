@@ -53,12 +53,10 @@ maybe_start_report(edit_baton_t *eb)
 {
   if (! eb->started)
     {
-      SVN_ERR(dav_svn__send_xml
-                (eb->bb, eb->output,
-                 DAV_XML_HEADER DEBUG_CR
-                 "<S:editor-report xmlns:S=\"" SVN_XML_NAMESPACE "\">"
-                 DEBUG_CR));
-
+      SVN_ERR(dav_svn__brigade_puts(eb->bb, eb->output,
+                                    DAV_XML_HEADER DEBUG_CR
+                                    "<S:editor-report xmlns:S=\""
+                                    SVN_XML_NAMESPACE "\">" DEBUG_CR));
       eb->started = TRUE;
     }
 
@@ -68,8 +66,8 @@ maybe_start_report(edit_baton_t *eb)
 static svn_error_t *
 end_report(edit_baton_t *eb)
 {
-  SVN_ERR(dav_svn__send_xml(eb->bb, eb->output,
-                            "</S:editor-report>" DEBUG_CR));
+  SVN_ERR(dav_svn__brigade_puts(eb->bb, eb->output,
+                                "</S:editor-report>" DEBUG_CR));
 
   return SVN_NO_ERROR;
 }
@@ -80,8 +78,8 @@ maybe_close_textdelta(edit_baton_t *eb)
 {
   if (eb->sending_textdelta)
     {
-      SVN_ERR(dav_svn__send_xml(eb->bb, eb->output,
-                                "</S:apply-textdelta>" DEBUG_CR));
+      SVN_ERR(dav_svn__brigade_puts(eb->bb, eb->output,
+                                    "</S:apply-textdelta>" DEBUG_CR));
       eb->sending_textdelta = FALSE;
     }
 
@@ -107,14 +105,16 @@ add_file_or_directory(const char *file_or_directory,
   *added_baton = (void *)eb;
 
   if (! copyfrom_path)
-    SVN_ERR(dav_svn__send_xml(eb->bb, eb->output,
-                              "<S:add-%s name=\"%s\"/>" DEBUG_CR,
-                              file_or_directory, qname));
+    SVN_ERR(dav_svn__brigade_printf(eb->bb, eb->output,
+                                    "<S:add-%s name=\"%s\"/>" DEBUG_CR,
+                                    file_or_directory, qname));
   else
-    SVN_ERR(dav_svn__send_xml(eb->bb, eb->output,
-                              "<S:add-%s name=\"%s\" copyfrom-path=\"%s\" "
-                                        "copyfrom-rev=\"%ld\"/>" DEBUG_CR,
-                              file_or_directory, qname, qcopy, copyfrom_rev));
+    SVN_ERR(dav_svn__brigade_printf(eb->bb, eb->output,
+                                    "<S:add-%s name=\"%s\" "
+                                    "copyfrom-path=\"%s\" "
+                                    "copyfrom-rev=\"%ld\"/>" DEBUG_CR,
+                                    file_or_directory, qname, 
+                                    qcopy, copyfrom_rev));
 
   return SVN_NO_ERROR;
 }
@@ -130,9 +130,10 @@ open_file_or_directory(const char *file_or_directory,
   const char *qname = apr_xml_quote_string(pool, path, 1);
   SVN_ERR(maybe_close_textdelta(eb));
   *opened_baton = (void *)eb;
-  return dav_svn__send_xml(eb->bb, eb->output,
-                           "<S:open-%s name=\"%s\" rev=\"%ld\"/>" DEBUG_CR,
-                           file_or_directory, qname, base_revision);
+  return dav_svn__brigade_printf(eb->bb, eb->output,
+                                 "<S:open-%s name=\"%s\" rev=\"%ld\"/>"
+                                 DEBUG_CR,
+                                 file_or_directory, qname, base_revision);
 }
 
 
@@ -149,17 +150,28 @@ change_file_or_dir_prop(const char *file_or_dir,
 
   if (value)
     {
-      const svn_string_t *enc_value = svn_base64_encode_string2(value, TRUE,
-                                                                pool);
+      const svn_string_t *enc_value =
+        svn_base64_encode_string2(value, TRUE, pool);
 
-      SVN_ERR(dav_svn__send_xml
-                (eb->bb, eb->output,
-                 "<S:change-%s-prop name=\"%s\">%s</S:change-%s-prop>" DEBUG_CR,
-                 file_or_dir, qname, enc_value->data, file_or_dir));
+      /* Some versions of apr_brigade_vprintf() have a buffer overflow
+         bug that can be triggered by just the wrong size of a large
+         property value.  The bug has been fixed (see
+         http://svn.apache.org/viewvc?view=rev&revision=768417), but
+         we need a workaround for the buggy APR versions, so we write
+         our potentially large block of property data using a
+         different underlying function. */
+      SVN_ERR(dav_svn__brigade_printf(eb->bb, eb->output,
+                                      "<S:change-%s-prop name=\"%s\">",
+                                      file_or_dir, qname));
+      SVN_ERR(dav_svn__brigade_write(eb->bb, eb->output,
+                                     enc_value->data, enc_value->len));
+      SVN_ERR(dav_svn__brigade_printf(eb->bb, eb->output,
+                                      "</S:change-%s-prop>" DEBUG_CR,
+                                      file_or_dir));
     }
   else
     {
-      SVN_ERR(dav_svn__send_xml
+      SVN_ERR(dav_svn__brigade_printf
                 (eb->bb, eb->output,
                  "<S:change-%s-prop name=\"%s\" del=\"true\"/>" DEBUG_CR,
                  file_or_dir, qname));
@@ -179,9 +191,9 @@ set_target_revision(void *edit_baton,
 {
   edit_baton_t *eb = edit_baton;
   SVN_ERR(maybe_start_report(eb));
-  return dav_svn__send_xml(eb->bb, eb->output,
-                           "<S:target-revision rev=\"%ld\"/>" DEBUG_CR,
-                           target_revision);
+  return dav_svn__brigade_printf(eb->bb, eb->output,
+                                 "<S:target-revision rev=\"%ld\"/>" DEBUG_CR,
+                                 target_revision);
 }
 
 
@@ -194,9 +206,9 @@ open_root(void *edit_baton,
   edit_baton_t *eb = edit_baton;
   *root_baton = edit_baton;
   SVN_ERR(maybe_start_report(eb));
-  return dav_svn__send_xml(eb->bb, eb->output,
-                           "<S:open-root rev=\"%ld\"/>" DEBUG_CR,
-                           base_revision);
+  return dav_svn__brigade_printf(eb->bb, eb->output,
+                                 "<S:open-root rev=\"%ld\"/>" DEBUG_CR,
+                                 base_revision);
 }
 
 
@@ -209,9 +221,10 @@ delete_entry(const char *path,
   edit_baton_t *eb = parent_baton;
   const char *qname = apr_xml_quote_string(pool, path, 1);
   SVN_ERR(maybe_close_textdelta(eb));
-  return dav_svn__send_xml(eb->bb, eb->output,
-                           "<S:delete-entry name=\"%s\" rev=\"%ld\"/>" DEBUG_CR,
-                            qname, revision);
+  return dav_svn__brigade_printf(eb->bb, eb->output,
+                                 "<S:delete-entry name=\"%s\" rev=\"%ld\"/>"
+                                 DEBUG_CR,
+                                 qname, revision);
 }
 
 
@@ -294,13 +307,13 @@ apply_textdelta(void *file_baton,
 {
   edit_baton_t *eb = file_baton;
 
-  SVN_ERR(dav_svn__send_xml(eb->bb, eb->output, "<S:apply-textdelta"));
+  SVN_ERR(dav_svn__brigade_puts(eb->bb, eb->output, "<S:apply-textdelta"));
 
   if (base_checksum)
-    SVN_ERR(dav_svn__send_xml(eb->bb, eb->output, " checksum=\"%s\">",
-                              base_checksum));
+    SVN_ERR(dav_svn__brigade_printf(eb->bb, eb->output, " checksum=\"%s\">",
+                                    base_checksum));
   else
-    SVN_ERR(dav_svn__send_xml(eb->bb, eb->output, ">"));
+    SVN_ERR(dav_svn__brigade_puts(eb->bb, eb->output, ">"));
 
   svn_txdelta_to_svndiff2(handler,
                           handler_baton,
@@ -321,13 +334,14 @@ close_file(void *file_baton, const char *text_checksum, apr_pool_t *pool)
 {
   edit_baton_t *eb = file_baton;
   SVN_ERR(maybe_close_textdelta(eb));
-  SVN_ERR(dav_svn__send_xml(eb->bb, eb->output, "<S:close-file"));
+  SVN_ERR(dav_svn__brigade_puts(eb->bb, eb->output, "<S:close-file"));
 
   if (text_checksum)
-    SVN_ERR(dav_svn__send_xml(eb->bb, eb->output, " checksum=\"%s\"/>" DEBUG_CR,
-                              text_checksum));
+    SVN_ERR(dav_svn__brigade_printf(eb->bb, eb->output,
+                                    " checksum=\"%s\"/>" DEBUG_CR,
+                                    text_checksum));
   else
-    SVN_ERR(dav_svn__send_xml(eb->bb, eb->output, "/>" DEBUG_CR));
+    SVN_ERR(dav_svn__brigade_puts(eb->bb, eb->output, "/>" DEBUG_CR));
 
   return SVN_NO_ERROR;
 }
@@ -337,7 +351,8 @@ static svn_error_t *
 close_directory(void *dir_baton, apr_pool_t *pool)
 {
   edit_baton_t *eb = dir_baton;
-  return dav_svn__send_xml(eb->bb, eb->output, "<S:close-directory/>" DEBUG_CR);
+  return dav_svn__brigade_puts(eb->bb, eb->output,
+                               "<S:close-directory/>" DEBUG_CR);
 }
 
 

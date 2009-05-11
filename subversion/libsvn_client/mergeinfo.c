@@ -153,9 +153,8 @@ svn_client__adjust_mergeinfo_source_paths(svn_mergeinfo_t adjusted_mergeinfo,
       /* Copy inherited mergeinfo into our output hash, adjusting the
          merge source as appropriate. */
       apr_hash_this(hi, &merge_source, NULL, &rangelist);
-      path = svn_path_join((const char *) merge_source, rel_path, pool);
-      copied_rangelist = svn_rangelist_dup((apr_array_header_t *)(rangelist),
-                                           pool);
+      path = svn_path_join(merge_source, rel_path, pool);
+      copied_rangelist = svn_rangelist_dup(rangelist, pool);
       apr_hash_set(adjusted_mergeinfo, path, APR_HASH_KEY_STRING,
                    copied_rangelist);
     }
@@ -1272,8 +1271,8 @@ svn_client_mergeinfo_log_merged(const char *path_or_url,
                                                SVN_INVALID_REVNUM,
                                                SVN_INVALID_REVNUM,
                                                NULL, NULL, ctx, pool));
-  SVN_ERR(svn_mergeinfo_intersect(&mergeinfo, tgt_mergeinfo,
-                                  source_history, pool));
+  SVN_ERR(svn_mergeinfo_intersect2(&mergeinfo, tgt_mergeinfo,
+                                   source_history, FALSE, pool, pool));
 
   /* Step 3: Now, we iterate over the eligible paths/rangelists to
      find the youngest revision (and its associated path).  Because
@@ -1415,11 +1414,13 @@ svn_client_mergeinfo_log_eligible(const char *path_or_url,
                                                SVN_INVALID_REVNUM,
                                                SVN_INVALID_REVNUM,
                                                ra_session, NULL, ctx, pool));
-  svn_pool_destroy(sesspool);
 
   /* Now, we want to remove from the possible mergeinfo
      (SOURCE_HISTORY) the merges already present in our PATH_OR_URL. */
-  SVN_ERR(svn_mergeinfo_remove(&available, mergeinfo, source_history, pool));
+  SVN_ERR(svn_mergeinfo_remove2(&available, mergeinfo, source_history,
+                                FALSE, pool, sesspool));
+
+  svn_pool_destroy(sesspool);
 
   /* Step 4: Now, we iterate over the eligible paths/rangelists to
      find the youngest revision (and its associated path).  Because

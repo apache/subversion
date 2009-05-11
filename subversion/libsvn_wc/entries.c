@@ -53,7 +53,8 @@ static const char * const upgrade_sql[] = {
   NULL, NULL, NULL, NULL, NULL,
   NULL, NULL, NULL, NULL, NULL,
   NULL, NULL,
-  WC_METADATA_SQL
+  WC_METADATA_SQL_12,
+  WC_METADATA_SQL_13
 };
 
 /* This values map to the members of STATEMENTS below, and should be added
@@ -69,7 +70,6 @@ enum statement_keys {
   STMT_DELETE_ALL_WORKING,
   STMT_DELETE_ALL_BASE,
   STMT_DELETE_ALL_ACTUAL,
-  STMT_DELETE_ALL_LOCK,
   STMT_SELECT_KEEP_LOCAL_FLAG,
   STMT_SELECT_NOT_PRESENT,
   STMT_SELECT_FILE_EXTERNAL,
@@ -119,8 +119,6 @@ static const char * const statements[] = {
   "delete from base_node;",
 
   "delete from actual_node;",
-
-  "delete from lock;",
 
   "select keep_local from working_node "
   "where wc_id = ?1 and local_relpath = ?2;",
@@ -2353,8 +2351,6 @@ entries_write_body(svn_wc__db_t *db,
   SVN_ERR(svn_sqlite__step_done(stmt));
   SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db, STMT_DELETE_ALL_ACTUAL));
   SVN_ERR(svn_sqlite__step_done(stmt));
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db, STMT_DELETE_ALL_LOCK));
-  SVN_ERR(svn_sqlite__step_done(stmt));
 
   /* Write out "this dir" */
   SVN_ERR(fetch_wc_id(&wc_id, wc_db));
@@ -2627,16 +2623,20 @@ fold_entry(apr_hash_t *entries,
 
 
 svn_error_t *
-svn_wc__entry_remove(apr_hash_t *entries,
-                     svn_wc_adm_access_t *adm_access,
-                     const char *name,
+svn_wc__entry_remove(svn_wc__db_t *db,
+                     const char *local_abspath,
                      apr_pool_t *scratch_pool)
 {
-  if (entries == NULL)
-    SVN_ERR(svn_wc_entries_read(&entries, adm_access, TRUE, scratch_pool));
+  svn_wc_adm_access_t *adm_access;
+  apr_hash_t *entries;
+  const char *name;
+  const char *parent_dir;
 
+  svn_dirent_split(local_abspath, &parent_dir, &name, scratch_pool);
+  adm_access = svn_wc__adm_retrieve_internal2(db, parent_dir, scratch_pool);
+
+  SVN_ERR(svn_wc_entries_read(&entries, adm_access, TRUE, scratch_pool));
   apr_hash_set(entries, name, APR_HASH_KEY_STRING, NULL);
-
   return svn_error_return(entries_write(entries, adm_access, scratch_pool));
 }
 
@@ -2657,25 +2657,19 @@ svn_wc__entry_remove(apr_hash_t *entries,
    use POOL to allocate any memory referenced by ENTRIES.
  */
 static svn_error_t *
-fold_scheduling(apr_hash_t *entries,
+fold_scheduling(svn_boolean_t *skip_schedule_change,
+                apr_hash_t *entries,
                 const char *name,
-                apr_uint64_t *modify_flags,
                 svn_wc_schedule_t *schedule,
                 apr_pool_t *pool)
 {
-  svn_wc_entry_t *entry, *this_dir_entry;
+  const svn_wc_entry_t *entry;
+  const svn_wc_entry_t *this_dir_entry;
 
-  /* If we're not supposed to be bothering with this anyway...return. */
-  if (! (*modify_flags & SVN_WC__ENTRY_MODIFY_SCHEDULE))
-    return SVN_NO_ERROR;
+  *skip_schedule_change = FALSE;
 
   /* Get the current entry */
   entry = apr_hash_get(entries, name, APR_HASH_KEY_STRING);
-
-  /* If we're not merging in changes, the requested schedule is the final
-     schedule. */
-  if (*modify_flags & SVN_WC__ENTRY_MODIFY_FORCE)
-    return SVN_NO_ERROR;
 
   /* The only operation valid on an item not already in revision
      control is addition. */
@@ -2740,15 +2734,13 @@ fold_scheduling(apr_hash_t *entries,
         case svn_wc_schedule_normal:
           /* Normal is a trivial no-op case. Reset the
              schedule modification bit and move along. */
-          *modify_flags &= ~SVN_WC__ENTRY_MODIFY_SCHEDULE;
+          *skip_schedule_change = TRUE;
           return SVN_NO_ERROR;
-
 
         case svn_wc_schedule_delete:
         case svn_wc_schedule_replace:
           /* These are all good. */
           return SVN_NO_ERROR;
-
 
         case svn_wc_schedule_add:
           /* You can't add something that's already been added to
@@ -2774,9 +2766,8 @@ fold_scheduling(apr_hash_t *entries,
              (add + (delete + add)), which resolves to just (add), and
              since this entry is already marked with (add), this too
              is a no-op. */
-          *modify_flags &= ~SVN_WC__ENTRY_MODIFY_SCHEDULE;
+          *skip_schedule_change = TRUE;
           return SVN_NO_ERROR;
-
 
         case svn_wc_schedule_delete:
           /* Not-yet-versioned item being deleted.  If the original
@@ -2805,7 +2796,7 @@ fold_scheduling(apr_hash_t *entries,
 
         case svn_wc_schedule_delete:
           /* These are no-op cases. */
-          *modify_flags &= ~SVN_WC__ENTRY_MODIFY_SCHEDULE;
+          *skip_schedule_change = TRUE;
           return SVN_NO_ERROR;
 
 
@@ -2841,7 +2832,7 @@ fold_scheduling(apr_hash_t *entries,
              + add) + (delete + add)), which is insane!  Make up your
              friggin' mind, dude! :-)  Well, we'll no-op this one,
              too. */
-          *modify_flags &= ~SVN_WC__ENTRY_MODIFY_SCHEDULE;
+          *skip_schedule_change = TRUE;
           return SVN_NO_ERROR;
 
 
@@ -2892,10 +2883,19 @@ svn_wc__entry_modify(svn_wc_adm_access_t *adm_access,
       /* Keep a copy of the unmodified entry on hand. */
       entry_before = apr_hash_get(entries, name, APR_HASH_KEY_STRING);
 
-      /* If scheduling changes were made, we have a special routine to
-         manage those modifications. */
-      SVN_ERR(fold_scheduling(entries, name, &modify_flags,
-                              &entry->schedule, pool));
+      /* We may just want to force the scheduling change in. Otherwise,
+         call our special function to fold the change in.  */
+      if (!(modify_flags & SVN_WC__ENTRY_MODIFY_FORCE))
+        {
+          svn_boolean_t skip_schedule_change;
+
+          /* If scheduling changes were made, we have a special routine to
+             manage those modifications. */
+          SVN_ERR(fold_scheduling(&skip_schedule_change, entries, name,
+                                  &entry->schedule, pool));
+          if (skip_schedule_change)
+            modify_flags &= ~SVN_WC__ENTRY_MODIFY_SCHEDULE;
+        }
 
       /* Special case:  fold_state_changes() may have actually REMOVED
          the entry in question!  If so, don't try to fold_entry, as

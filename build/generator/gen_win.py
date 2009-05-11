@@ -1221,7 +1221,6 @@ class WinGeneratorBase(GeneratorBase):
     else:
       self.swig_exe = 'swig'
 
-    outfp = None
     try:
       outfp = subprocess.Popen([self.swig_exe, '-version'], stdout=subprocess.PIPE, universal_newlines=True).stdout
       txt = outfp.read()
@@ -1245,13 +1244,11 @@ class WinGeneratorBase(GeneratorBase):
         sys.stderr.write('Could not find installed SWIG,'
                          ' assuming version %s\n' % default_version)
         self.swig_libdir = ''
+      outfp.close()
     except OSError:
       sys.stderr.write('Could not find installed SWIG,'
                        ' assuming version %s\n' % default_version)
       self.swig_libdir = ''
-    finally:
-      if outfp:
-        outfp.close()
 
     self.swig_vernum = vernum
     self.swig_libdir = libdir

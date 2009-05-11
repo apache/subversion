@@ -1821,11 +1821,16 @@ static svn_error_t *log_receiver(void *baton,
           change = val;
           action[0] = change->action;
           action[1] = '\0';
-          SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "cw(?cr)(?c)", path,
-                                         action, change->copyfrom_path,
-                                         change->copyfrom_rev,
-                                         svn_node_kind_to_word(
-                                                          change->node_kind)));
+          SVN_ERR(svn_ra_svn_write_tuple(
+                      conn, pool, "cw(?cr)(cbb)",
+                      path,
+                      action, 
+                      change->copyfrom_path,
+                      change->copyfrom_rev,
+                      svn_node_kind_to_word(change->node_kind),
+                      /* text_modified and props_modified are never unknown */
+                      change->text_modified  == svn_tristate_true,
+                      change->props_modified == svn_tristate_true));
         }
     }
   svn_compat_log_revprops_out(&author, &date, &message, log_entry->revprops);
