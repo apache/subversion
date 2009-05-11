@@ -12560,9 +12560,9 @@ def commit_to_subtree_added_by_merge(sbox):
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         wc_status, None, wc_dir)
 
-  # Make a text change to 'A_COPY/D/H/N/nu' and commit it as r5.
-  # This is the first place issue #3240 appears, the commit fails with
-  # an error like this:
+  # Make a text change to 'A_COPY/D/H/N/nu' and commit it as r5.  This
+  # is the first place issue #3240 appears over DAV layers, and the
+  # commit fails with an error like this:
   #   trunk>svn ci -m "" merge_tests-100
   #   Sending        merge_tests-100\A_COPY\D\H\N\nu
   #   Transmitting file data ...\..\..\subversion\libsvn_client\commit.c:919:
@@ -15772,8 +15772,7 @@ test_list = [ None,
               SkipUnless(subtree_source_missing_in_requested_range,
                          server_has_mergeinfo),
               SkipUnless(subtrees_with_empty_mergeinfo, server_has_mergeinfo),
-              SkipUnless(commit_to_subtree_added_by_merge,
-                         svntest.main.is_ra_type_dav),
+              commit_to_subtree_added_by_merge,
               del_identical_file,
               del_sched_add_hist_file,
               del_differing_file,
