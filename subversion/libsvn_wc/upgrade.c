@@ -124,32 +124,39 @@ convert_wcprops(svn_wc_adm_access_t *adm_access,
   if (old_format <= SVN_WC__WCPROPS_MANY_FILES_VERSION)
     {
       svn_stream_t *stream;
-      svn_error_t *err;
       apr_hash_t *dirents;
       apr_hash_index_t *hi;
       apr_pool_t *iterpool;
+      apr_hash_t *proplist;
 
-      /* First, look at dir-wcprops. */
-      err = svn_wc__open_adm_stream(&stream, dir_abspath,
-                                    SVN_WC__ADM_DIR_WCPROPS,
-                                    scratch_pool, scratch_pool);
-      if (err)
+      SVN_ERR(svn_wc__db_base_get_dav_cache(&proplist, db, dir_abspath,
+                                            scratch_pool, scratch_pool));
+
+      /* Don't clobber existing wcprops. */
+      if (proplist == NULL)
         {
-          /* If the file doesn't exist, it means no wcprops. */
-          if (APR_STATUS_IS_ENOENT(err->apr_err))
-            svn_error_clear(err);
+          svn_error_t *err;
+
+          /* First, look at dir-wcprops. */
+          err = svn_wc__open_adm_stream(&stream, dir_abspath,
+                                        SVN_WC__ADM_DIR_WCPROPS,
+                                        scratch_pool, scratch_pool);
+          if (err)
+            {
+              /* If the file doesn't exist, it means no wcprops. */
+              if (APR_STATUS_IS_ENOENT(err->apr_err))
+                svn_error_clear(err);
+              else
+                return svn_error_return(err);
+            }
           else
-            return svn_error_return(err);
-        }
-      else
-        {
-          apr_hash_t *proplist;
-
-          proplist = apr_hash_make(scratch_pool);
-          SVN_ERR(svn_hash_read2(proplist, stream, SVN_HASH_TERMINATOR,
-                                 scratch_pool));
-          SVN_ERR(svn_wc__db_base_set_dav_cache(db, dir_abspath, proplist,
-                                                scratch_pool));
+            {
+              proplist = apr_hash_make(scratch_pool);
+              SVN_ERR(svn_hash_read2(proplist, stream, SVN_HASH_TERMINATOR,
+                                     scratch_pool));
+              SVN_ERR(svn_wc__db_base_set_dav_cache(db, dir_abspath, proplist,
+                                                    scratch_pool));
+            }
         }
 
       /* Now walk the wcprops directory. */
@@ -163,7 +170,6 @@ convert_wcprops(svn_wc_adm_access_t *adm_access,
         {
           const void *key;
           const char *name;
-          apr_hash_t *proplist;
           const char *local_abspath;
           int len;
 
@@ -172,6 +178,13 @@ convert_wcprops(svn_wc_adm_access_t *adm_access,
           apr_hash_this(hi, &key, NULL, NULL);
           name = key;
           local_abspath = svn_dirent_join(dir_abspath, name, iterpool);
+
+          SVN_ERR(svn_wc__db_base_get_dav_cache(&proplist, db, local_abspath,
+                                                iterpool, iterpool));
+
+          /* Don't clobber existing wcprops. */
+          if (proplist != NULL)
+            continue;
 
           proplist = apr_hash_make(iterpool);
           SVN_ERR(svn_stream_open_readonly(&stream, local_abspath, iterpool,
@@ -219,6 +232,13 @@ convert_wcprops(svn_wc_adm_access_t *adm_access,
           proplist = val;
 
           local_abspath = svn_dirent_join(dir_abspath, name, iterpool);
+
+          /* Make sure we don't clobber exiting wcprops */
+          SVN_ERR(svn_wc__db_base_get_dav_cache(&proplist, db, local_abspath,
+                                                iterpool, iterpool));
+          if (proplist != NULL)
+            continue;
+
           SVN_ERR(svn_wc__db_base_set_dav_cache(db, local_abspath, proplist,
                                                 iterpool));
         }
