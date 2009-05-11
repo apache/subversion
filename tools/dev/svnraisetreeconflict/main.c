@@ -8,8 +8,8 @@
  * next to this source file.
  *
  * If you want to "install" svnraisetreeconflict, you may call
- * `make install-contrib' in the Subversion source tree root.
- * (Note: This also installs any other installable contrib-tools.)
+ * `make install-tools' in the Subversion source tree root.
+ * (Note: This also installs any other installable tools.)
  *
  * svnraisetreeconflict cannot be compiled separate from a Subversion
  * source tree.
