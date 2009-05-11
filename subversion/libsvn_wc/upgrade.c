@@ -232,7 +232,6 @@ convert_wcprops(svn_wc_adm_access_t *adm_access,
 
           apr_hash_this(hi, &key, NULL, &val);
           name = key;
-          proplist = val;
 
           local_abspath = svn_dirent_join(dir_abspath, name, iterpool);
 
@@ -242,6 +241,7 @@ convert_wcprops(svn_wc_adm_access_t *adm_access,
           if (proplist != NULL)
             continue;
 
+          proplist = val;
           SVN_ERR(svn_wc__db_base_set_dav_cache(db, local_abspath, proplist,
                                                 iterpool));
         }
