@@ -170,8 +170,8 @@ convert_wcprops(svn_wc_adm_access_t *adm_access,
         {
           const void *key;
           const char *name;
+          const char *prop_path;
           char *local_abspath;
-          int len;
 
           svn_pool_clear(iterpool);
 
@@ -187,20 +187,17 @@ convert_wcprops(svn_wc_adm_access_t *adm_access,
             continue;
 
           proplist = apr_hash_make(iterpool);
+          prop_path = svn_dirent_join(svn_wc__adm_child(dir_abspath,
+                                                        SVN_WC__ADM_WCPROPS,
+                                                        scratch_pool),
+                                      name,
+                                      iterpool);
+
           SVN_ERR(svn_stream_open_readonly(&stream, local_abspath, iterpool,
                                            iterpool));
           SVN_ERR(svn_hash_read2(proplist, stream, SVN_HASH_TERMINATOR,
                                  iterpool));
           SVN_ERR(svn_stream_close(stream));
-
-          /* The filename will be something like .svn/wcprops/foo.c.svn-work.
-             From it, determine the local_abspath of the node.  The magic
-             number of 9 below is basically strlen(".svn-work"); 13 is
-             strlen(".svn/wcprops/"). */
-          len = strlen(local_abspath);
-          local_abspath[len - 9] = 0;
-          local_abspath = strstr(local_abspath, ".svn/wcprops") + 13;
-          local_abspath = svn_dirent_join(dir_abspath, local_abspath, iterpool);
 
           SVN_ERR(svn_wc__db_base_set_dav_cache(db, local_abspath, proplist,
                                                 iterpool));
