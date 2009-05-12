@@ -5793,7 +5793,6 @@ do_file_merge(const char *url1,
         {
           svn_wc_notify_t *n;
           svn_boolean_t header_sent = FALSE;
-          svn_error_t *err = SVN_NO_ERROR;
           svn_ra_session_t *ra_session1, *ra_session2;
 
           /* When using this merge range, account for the exclusivity of
@@ -5922,14 +5921,8 @@ do_file_merge(const char *url1,
           /* Ignore if temporary file not found. It may have been renamed. */
           /* (This is where we complain about missing Lisp, or better yet,
              Python...) */
-          err = svn_io_remove_file(tmpfile1, subpool);
-          if (err && ! APR_STATUS_IS_ENOENT(err->apr_err))
-            return svn_error_return(err);
-          svn_error_clear(err);
-          err = svn_io_remove_file(tmpfile2, subpool);
-          if (err && ! APR_STATUS_IS_ENOENT(err->apr_err))
-            return svn_error_return(err);
-          svn_error_clear(err);
+          SVN_ERR(svn_io_remove_file2(tmpfile1, TRUE, subpool));
+          SVN_ERR(svn_io_remove_file2(tmpfile2, TRUE, subpool));
 
           if ((i < (ranges_to_merge->nelts - 1))
               && is_path_conflicted_by_merge(merge_b))

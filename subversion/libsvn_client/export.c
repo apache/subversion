@@ -230,7 +230,8 @@ copy_one_versioned_file(const char *from,
     err = svn_io_set_file_affected_time(tm, dst_tmp, pool);
 
   if (err)
-    return svn_error_compose_create(err, svn_io_remove_file(dst_tmp, pool));
+    return svn_error_compose_create(err, svn_io_remove_file2(dst_tmp, FALSE,
+                                                             pool));
 
   /* Now that dst_tmp contains the translated data, do the atomic rename. */
   return svn_io_file_rename(dst_tmp, to, pool);
@@ -643,7 +644,7 @@ window_handler(svn_txdelta_window_t *window, void *baton)
   if (err)
     {
       /* We failed to apply the patch; clean up the temporary file.  */
-      svn_error_clear(svn_io_remove_file(hb->tmppath, hb->pool));
+      svn_error_clear(svn_io_remove_file2(hb->tmppath, TRUE, hb->pool));
     }
 
   return svn_error_return(err);
@@ -805,7 +806,7 @@ close_file(void *file_baton,
                fb->special,
                pool));
 
-      SVN_ERR(svn_io_remove_file(fb->tmppath, pool));
+      SVN_ERR(svn_io_remove_file2(fb->tmppath, FALSE, pool));
     }
 
   if (fb->executable_val)

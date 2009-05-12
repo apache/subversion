@@ -425,7 +425,7 @@ delete_lock(svn_fs_t *fs,
           /* Special case:  no goodz, no file.  And remember to nix
              the entry for it in its parent. */
           svn_stringbuf_set(child_to_kill, digest_file);
-          SVN_ERR(svn_io_remove_file(digest_path, subpool));
+          SVN_ERR(svn_io_remove_file2(digest_path, FALSE, subpool));
         }
       else
         {

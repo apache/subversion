@@ -4584,25 +4584,10 @@ svn_fs_fs__purge_txn(svn_fs_t *fs,
          directory.  It's OK if they don't exist (for example, if this
          is post-commit and the proto-rev has been moved into
          place). */
-      svn_error_t *err = svn_io_remove_file(path_txn_proto_rev(fs, txn_id,
-                                                               pool), pool);
-      if (err && APR_STATUS_IS_ENOENT(err->apr_err))
-        {
-          svn_error_clear(err);
-          err = NULL;
-        }
-      if (err)
-        return svn_error_return(err);
-
-      err = svn_io_remove_file(path_txn_proto_rev_lock(fs, txn_id, pool),
-                               pool);
-      if (err && APR_STATUS_IS_ENOENT(err->apr_err))
-        {
-          svn_error_clear(err);
-          err = NULL;
-        }
-      if (err)
-        return svn_error_return(err);
+      SVN_ERR(svn_io_remove_file2(path_txn_proto_rev(fs, txn_id, pool),
+                                  TRUE, pool));
+      SVN_ERR(svn_io_remove_file2(path_txn_proto_rev_lock(fs, txn_id, pool),
+                                  TRUE, pool));
     }
   return SVN_NO_ERROR;
 }
@@ -6697,14 +6682,16 @@ svn_fs_fs__delete_node_revision(svn_fs_t *fs,
 
   /* Delete any mutable property representation. */
   if (noderev->prop_rep && noderev->prop_rep->txn_id)
-    SVN_ERR(svn_io_remove_file(path_txn_node_props(fs, id, pool), pool));
+    SVN_ERR(svn_io_remove_file2(path_txn_node_props(fs, id, pool), FALSE,
+                                pool));
 
   /* Delete any mutable data representation. */
   if (noderev->data_rep && noderev->data_rep->txn_id
       && noderev->kind == svn_node_dir)
-    SVN_ERR(svn_io_remove_file(path_txn_node_children(fs, id, pool), pool));
+    SVN_ERR(svn_io_remove_file2(path_txn_node_children(fs, id, pool), FALSE,
+                                pool));
 
-  return svn_io_remove_file(path_txn_node_rev(fs, id, pool), pool);
+  return svn_io_remove_file2(path_txn_node_rev(fs, id, pool), FALSE, pool);
 }
 
 

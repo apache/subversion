@@ -1034,9 +1034,9 @@ print_diff_tree(svn_fs_root_t *root,
 
   /* Make sure we delete any temporary files. */
   if (orig_path)
-    SVN_ERR(svn_io_remove_file(orig_path, pool));
+    SVN_ERR(svn_io_remove_file2(orig_path, FALSE, pool));
   if (new_path)
-    SVN_ERR(svn_io_remove_file(new_path, pool));
+    SVN_ERR(svn_io_remove_file2(new_path, FALSE, pool));
 
   /*** Now handle property diffs ***/
   if ((node->prop_mod) && (node->action != 'D'))

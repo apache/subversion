@@ -146,7 +146,7 @@ relegate_dir_external(const char *path,
          no big deal.
       */
       /* Do our best, but no biggy if it fails. The rename will fail. */
-      svn_error_clear(svn_io_remove_file(new_path, pool));
+      svn_error_clear(svn_io_remove_file2(new_path, TRUE, pool));
 
       /* Rename. */
       SVN_ERR(svn_io_file_rename(path, new_path, pool));
@@ -487,11 +487,7 @@ switch_file_external(const char *path,
     }
 
   if (unlink_file)
-    {
-      svn_error_t *e = svn_io_remove_file(path, subpool);
-      if (e)
-        svn_error_clear(e);
-    }
+    svn_error_clear(svn_io_remove_file2(path, TRUE, subpool));
 
   if (close_adm_access)
     SVN_ERR(svn_wc_adm_close2(target_adm_access, subpool));
