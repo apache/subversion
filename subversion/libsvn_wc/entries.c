@@ -258,8 +258,7 @@ svn_wc__entry_is_hidden(const svn_wc_entry_t *entry)
   return ((entry->deleted
            || entry->absent
            || entry->depth == svn_depth_exclude)
-          && entry->schedule != svn_wc_schedule_add
-          && entry->schedule != svn_wc_schedule_replace);
+          && entry->schedule != svn_wc_schedule_add);
 }
 
 
