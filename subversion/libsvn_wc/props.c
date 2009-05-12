@@ -2439,7 +2439,10 @@ svn_wc_get_prop_diffs(apr_array_header_t **propchanges,
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
   SVN_ERR(svn_wc__db_check_node(&kind, db, local_abspath, pool));
 
-  SVN_ERR_ASSERT(kind != svn_wc__db_kind_unknown);
+  if (kind == svn_wc__db_kind_unknown)
+    return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+                             _("'%s' is not under version control"),
+                             svn_path_local_style(path, pool));
 
   if (kind == svn_wc__db_kind_dir)
     {
