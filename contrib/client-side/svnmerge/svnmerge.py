@@ -352,7 +352,7 @@ class PathIdentifier:
     about it before we know the form that it takes in the properties (its
     external_form).  Objects are referenced in the class variable 'locobjs',
     keyed by all known forms."""
-    
+
     # a map of UUID (or None) to repository root URL.
     repo_hints = {}
 

@@ -49,7 +49,7 @@
 # serial 0
 AC_DEFUN([STSW_PROG_DOXYGEN],
   [
-    
+
     DOXYFILE_EXCLUDE=""
     AC_SUBST([DOXYFILE_EXCLUDE])
 

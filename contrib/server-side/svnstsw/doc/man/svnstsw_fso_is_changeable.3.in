@@ -38,7 +38,7 @@ or 0 if the file or directory can not be changed.
 
 On error, returns 1 and sets
 .I errno
-(see 
+(see
 .BR errno (3)).
 .SH ERRORS
 Error conditions and

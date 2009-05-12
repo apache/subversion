@@ -15,29 +15,29 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 # 02110-1301  USA
 #
 # --------------------------------------------------------------------
 #
-# This script provides language independant syntax checking 
+# This script provides language independant syntax checking
 # functionality intended to be invoked from a subversion pre-commit
 # hook.
 #
 # Invocation: /path/to/syntax-check $1 $2
-#         or: source syntax-check 
+#         or: source syntax-check
 #
 # Requires bash 3.x or higher.
 #
 
 FPATTERN="\.\(php\|phpt\)$"
-FLANG="PHP" 
+FLANG="PHP"
 SYNTAX_CMD="php"
 SYNTAX_ARGS="-l"
 # address to email notifications of syntax errors
 NOTIFY_SYNTAX="user@domain.tld"
 # adderss to notify for syntax script failures
-NOTIFY_ERROR="user@domain.tld" 
+NOTIFY_ERROR="user@domain.tld"
 # log of syntax errors, must be writable by svn server users
 SYNTAX_LOG="/tmp/syntax.log"
 BYPASSPW="change_this_syntax_bypass_password_please"
@@ -95,7 +95,7 @@ function errormessage() {
   echo "|$SPACES|" >&2
   LINE=`strlpad "" "-" 78`
   echo "|$LINE|" >&2
-  echo 
+  echo
 }
 
 if [ "$SYNTAXENABLED" == "1" ]; then
@@ -111,7 +111,7 @@ if [ "$SYNTAXENABLED" == "1" ]; then
 
   # make sure matched files were changed
   if [ $NUMMATCHCHANGED -gt 0 ]; then
-    # create temporary working directory 
+    # create temporary working directory
     WORKING=/tmp/$(basename $0).$$
     [ -d $WORKING ] && rm -rf $WORKING
     mkdir $WORKING || syntaxexit "failed to create temp dir for syntax check: $WORKING"
@@ -143,7 +143,7 @@ if [ "$SYNTAXENABLED" == "1" ]; then
             SYNTAXERROR=`echo $SYNTAXERROR | sed -e 's/<[^<]*>//g' | cut -d',' -f 2`
             SYNTAXERROR=`echo $SYNTAXERROR | sed -e 's/\(on line [0-9]* \)/\1\n/g'`
           fi
-          
+
           # sloppy email notification
           ETMP=$WORKING/sloppy.txt
           echo "$FLANG Syntax Error: $SYNTAXERROR" > $ETMP
@@ -163,6 +163,6 @@ if [ "$SYNTAXENABLED" == "1" ]; then
     done
     # exit within a loop only sets the return value of the loop itself, check this to exit
     [ $? -ne 0 ] && exit 1
-  fi 
+  fi
   syntaxclean $WORKING
 fi
