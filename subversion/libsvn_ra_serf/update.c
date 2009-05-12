@@ -1751,12 +1751,17 @@ end_report(svn_ra_serf__xml_parser_t *parser,
        */
       if ((! info->delta_base) && (ctx->sess->wc_callbacks->get_wc_prop))
         {
-          ctx->sess->wc_callbacks->get_wc_prop(ctx->sess->wc_callback_baton,
-                                               info->name,
-                                               SVN_RA_SERF__WC_CHECKED_IN_URL,
-                                               &info->delta_base,
-                                               info->pool);
+          SVN_ERR(ctx->sess->wc_callbacks->get_wc_prop(
+            ctx->sess->wc_callback_baton, info->name,
+            SVN_RA_SERF__WC_CHECKED_IN_URL, &info->delta_base, info->pool));
         }
+
+#if 0 /* ### FIXME: Something's not quite right with this algorithm.
+         ### Would be great to figure out the problem and correct it,
+         ### but that'll only bring a performance enhancement to the
+         ### technical correctness of not falling back to this URL
+         ### construction.  Motivation is low on this, though, because
+         ### HTTP v2 won't hit this block.  */
 
       /* STILL no base URL?  Well, all else has failed, but we can
        * manually reconstruct the base URL.  This avoids us having to
@@ -1764,7 +1769,6 @@ end_report(svn_ra_serf__xml_parser_t *parser,
        * grab one full-text and a diff from the server against that
        * other file.
        */
-#ifdef DUMBASS_CODE_THAT_DOESNT_WORK
       if (! info->delta_base)
         {
           const char *c;
