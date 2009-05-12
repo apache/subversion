@@ -368,16 +368,18 @@ upgrade_format(svn_wc_adm_access_t *adm_access,
   /* Migrate the entries over to the new database.
      ### We need to think about atomicity here. */
   SVN_ERR(svn_wc__entries_upgrade(adm_access, SVN_WC__VERSION, scratch_pool));
-  svn_error_clear(svn_io_remove_file(svn_wc__adm_child(svn_wc_adm_access_path(
-                                                                adm_access),
-                                                       SVN_WC__ADM_FORMAT,
-                                                       scratch_pool),
-                                     scratch_pool));
-  SVN_ERR(svn_io_remove_file(svn_wc__adm_child(svn_wc_adm_access_path(
-                                                                adm_access),
-                                               SVN_WC__ADM_ENTRIES,
-                                               scratch_pool),
-                             scratch_pool));
+  SVN_ERR(svn_io_remove_file2(svn_wc__adm_child(svn_wc_adm_access_path(
+                                                  adm_access),
+                                                SVN_WC__ADM_FORMAT,
+                                                scratch_pool),
+                              TRUE,
+                              scratch_pool));
+  SVN_ERR(svn_io_remove_file2(svn_wc__adm_child(svn_wc_adm_access_path(
+                                                  adm_access),
+                                                SVN_WC__ADM_ENTRIES,
+                                                scratch_pool),
+                              FALSE,
+                              scratch_pool));
 
   /* ### Note that lots of this content is cribbed from the old format updater.
      ### The following code will change as the wc-ng format changes and more
@@ -397,24 +399,28 @@ upgrade_format(svn_wc_adm_access_t *adm_access,
           svn_wc__adm_child(svn_wc_adm_access_path(adm_access),
                             SVN_WC__ADM_WCPROPS, scratch_pool),
           FALSE, NULL, NULL, scratch_pool));
-      svn_error_clear(svn_io_remove_file(
+      svn_error_clear(svn_io_remove_file2(
           svn_wc__adm_child(svn_wc_adm_access_path(adm_access),
                             SVN_WC__ADM_DIR_WCPROPS, scratch_pool),
+          TRUE,
           scratch_pool));
-      svn_error_clear(svn_io_remove_file(
+      svn_error_clear(svn_io_remove_file2(
           svn_wc__adm_child(svn_wc_adm_access_path(adm_access),
                             SVN_WC__ADM_EMPTY_FILE, scratch_pool),
+          TRUE,
           scratch_pool));
-      svn_error_clear(svn_io_remove_file(
+      svn_error_clear(svn_io_remove_file2(
           svn_wc__adm_child(svn_wc_adm_access_path(adm_access),
                             SVN_WC__ADM_README, scratch_pool),
+          TRUE,
           scratch_pool));
     }
   else
     {
-      svn_error_clear(svn_io_remove_file(
+      svn_error_clear(svn_io_remove_file2(
           svn_wc__adm_child(svn_wc_adm_access_path(adm_access),
                             SVN_WC__ADM_ALL_WCPROPS, scratch_pool),
+          TRUE,
           scratch_pool));
     }
 

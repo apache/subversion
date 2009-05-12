@@ -1076,7 +1076,7 @@ window_handler(svn_txdelta_window_t *window, void *baton)
   if (err)
     {
       /* We failed to apply the delta; clean up the temporary file.  */
-      svn_error_clear(svn_io_remove_file(hb->work_path, hb->pool));
+      svn_error_clear(svn_io_remove_file2(hb->work_path, TRUE, hb->pool));
     }
   else
     {

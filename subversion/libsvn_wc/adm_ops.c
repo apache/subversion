@@ -826,25 +826,6 @@ svn_wc_process_committed4(const char *path,
   return svn_wc__run_log(adm_access, NULL, pool);
 }
 
-/* Remove FILE if it exists and is a file.  If it does not exist, do
-   nothing.  If it is not a file, error. */
-static svn_error_t *
-remove_file_if_present(const char *file, apr_pool_t *pool)
-{
-  svn_error_t *err;
-
-  /* Try to remove the file. */
-  err = svn_io_remove_file(file, pool);
-
-  /* Ignore file not found error. */
-  if (err && APR_STATUS_IS_ENOENT(err->apr_err))
-    {
-      svn_error_clear(err);
-      err = SVN_NO_ERROR;
-    }
-
-  return err;
-}
 
 
 /* Recursively mark a tree ADM_ACCESS with a SCHEDULE, COPIED and/or KEEP_LOCAL
@@ -988,7 +969,7 @@ erase_unversioned_from_wc(const char *path,
   svn_error_t *err;
 
   /* Optimize the common case: try to delete the file */
-  err = svn_io_remove_file(path, pool);
+  err = svn_io_remove_file2(path, FALSE, pool);
   if (err)
     {
       /* Then maybe it was a directory? */
@@ -1006,7 +987,7 @@ erase_unversioned_from_wc(const char *path,
           svn_error_clear(err);
           SVN_ERR(svn_io_check_path(path, &kind, pool));
           if (kind == svn_node_file)
-            SVN_ERR(svn_io_remove_file(path, pool));
+            SVN_ERR(svn_io_remove_file2(path, FALSE, pool));
           else if (kind == svn_node_dir)
             SVN_ERR(svn_io_remove_dir2(path, FALSE,
                                        cancel_func, cancel_baton, pool));
@@ -1054,7 +1035,7 @@ erase_from_wc(const char *path,
     SVN_ERR(cancel_func(cancel_baton));
 
   if (kind == svn_node_file)
-    SVN_ERR(remove_file_if_present(path, pool));
+    SVN_ERR(svn_io_remove_file2(path, TRUE, pool));
 
   else if (kind == svn_node_dir)
     /* This must be a directory or absent */
@@ -2509,8 +2490,9 @@ svn_wc_remove_from_revision_control(svn_wc_adm_access_t *adm_access,
       SVN_ERR(svn_wc__entry_remove(db, local_abspath, pool));
 
       /* Remove text-base/NAME.svn-base */
-      SVN_ERR(remove_file_if_present(svn_wc__text_base_path(full_path, FALSE,
-                                                            pool), pool));
+      SVN_ERR(svn_io_remove_file2(svn_wc__text_base_path(full_path, FALSE,
+                                                         pool),
+                                  TRUE, pool));
 
       /* If we were asked to destroy the working file, do so unless
          it has local mods. */
@@ -2520,7 +2502,7 @@ svn_wc_remove_from_revision_control(svn_wc_adm_access_t *adm_access,
           if (text_modified_p || (! wc_special && local_special))
             return svn_error_create(SVN_ERR_WC_LEFT_LOCAL_MOD, NULL, NULL);
           else  /* The working file is still present; remove it. */
-            SVN_ERR(remove_file_if_present(full_path, pool));
+            SVN_ERR(svn_io_remove_file2(full_path, TRUE, pool));
         }
 
     }  /* done with file case */
@@ -2729,7 +2711,7 @@ attempt_deletion(const char *parent_dir,
                  apr_pool_t *pool)
 {
   const char *full_path = svn_dirent_join(parent_dir, base_name, pool);
-  svn_error_t *err = svn_io_remove_file(full_path, pool);
+  svn_error_t *err = svn_io_remove_file2(full_path, FALSE, pool);
 
   *was_present = ! err || ! APR_STATUS_IS_ENOENT(err->apr_err);
   if (*was_present)

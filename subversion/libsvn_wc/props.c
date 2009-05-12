@@ -445,15 +445,7 @@ immediate_install_props(const char *path,
   else
     {
       /* No property modifications, remove the file instead. */
-      svn_error_t *err;
-
-      err = svn_io_remove_file(propfile_path, scratch_pool);
-      if (err)
-        {
-          if (!APR_STATUS_IS_ENOENT(err->apr_err))
-            return svn_error_return(err);
-          svn_error_clear(err);
-        }
+      SVN_ERR(svn_io_remove_file2(propfile_path, TRUE, scratch_pool));
     }
 
   return SVN_NO_ERROR;
@@ -484,24 +476,6 @@ svn_wc__working_props_committed(const char *path,
   /* svn_io_file_rename() retains a read-only bit, so there's no
      need to explicitly set it. */
   return svn_io_file_rename(working, base, pool);
-}
-
-static svn_error_t *
-remove_file_if_present(const char *file, apr_pool_t *pool)
-{
-  svn_error_t *err;
-
-  /* Try to remove the file. */
-  err = svn_io_remove_file(file, pool);
-
-  /* Ignore file not found error. */
-  if (err && APR_STATUS_IS_ENOENT(err->apr_err))
-    {
-      svn_error_clear(err);
-      err = SVN_NO_ERROR;
-    }
-
-  return err;
 }
 
 
@@ -546,7 +520,7 @@ svn_wc__props_delete(svn_wc__db_t *db,
                               ? svn_node_dir
                               : svn_node_file,
                             props_kind, pool));
-  return remove_file_if_present(props_file, pool);
+  return svn_error_return(svn_io_remove_file2(props_file, TRUE, pool));
 }
 
 svn_error_t *
