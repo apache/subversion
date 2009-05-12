@@ -2080,7 +2080,7 @@ svn_wc__loggy_set_entry_working_size_from_wc(svn_stringbuf_t **log_accum,
                         SVN_WC__LOG_ATTR_NAME,
                         loggy_path(path, adm_access),
                         SVN_WC__ENTRY_ATTR_WORKING_SIZE,
-                        SVN_WC__TIMESTAMP_WC,
+                        SVN_WC__WORKING_SIZE_WC,
                         NULL);
 
   return SVN_NO_ERROR;
