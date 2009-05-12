@@ -12533,7 +12533,7 @@ def commit_to_subtree_added_by_merge(sbox):
     'omega' : Item(status='  ', wc_rev=2),
     'chi'   : Item(status='  ', wc_rev=2),
     'N'     : Item(status='A ', copied='+', wc_rev='-'),
-    'N/nu'  : Item(status='A ', copied='+', wc_rev='-'),
+    'N/nu'  : Item(status='  ', copied='+', wc_rev='-'),
     })
   expected_disk = wc.State('', {
     ''      : Item(props={SVN_PROP_MERGEINFO : '/A/D/H:2-3'}),
@@ -12550,10 +12550,10 @@ def commit_to_subtree_added_by_merge(sbox):
                                        expected_output, expected_disk,
                                        expected_status, expected_skip,
                                        None, None, None, None, None, 1)
-  expected_output = wc.State(wc_dir,
-                             {'A_COPY/D/H'      : Item(verb='Sending'),
-                              'A_COPY/D/H/N'    : Item(verb='Adding'),
-                              'A_COPY/D/H/N/nu' : Item(verb='Adding')})
+  expected_output = wc.State(wc_dir, {
+    'A_COPY/D/H'      : Item(verb='Sending'),
+    'A_COPY/D/H/N'    : Item(verb='Adding'),
+    })
   wc_status.add({'A_COPY/D/H/N'    : Item(status='  ', wc_rev=4),
                  'A_COPY/D/H/N/nu' : Item(status='  ', wc_rev=4)})
   wc_status.tweak('A_COPY/D/H', wc_rev=4)
