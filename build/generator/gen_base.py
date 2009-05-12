@@ -858,7 +858,7 @@ def _collect_paths(pats, path=None):
       pattern = build_path_join(path, base_pat)
     else:
       pattern = base_pat
-    files = glob.glob(native_path(pattern)) or [pattern]
+    files = sorted(glob.glob(native_path(pattern))) or [pattern]
 
     if path is None:
       # just append the names to the result list
