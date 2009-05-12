@@ -1109,8 +1109,20 @@ svn_stringbuf_from_aprfile(svn_stringbuf_t **result,
                            apr_pool_t *pool);
 
 /** Remove file @a path, a utf8-encoded path.  This wraps apr_file_remove(),
- * converting any error to a Subversion error.
+ * converting any error to a Subversion error. If @a missing_ok is TRUE, and
+ * the file is not present (APR_STATUS_IS_ENOENT returns TRUE), then no
+ * error will be returned.
  */
+svn_error_t *
+svn_io_remove_file2(const char *path,
+                   svn_boolean_t missing_ok,
+                   apr_pool_t *scratch_pool);
+
+/** Similar to svn_io_remove_file2(), except with @a missing_ok set to FALSE.
+ *
+ * @deprecated Provided for backwards compatibility with the 1.6 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_io_remove_file(const char *path,
                    apr_pool_t *pool);
