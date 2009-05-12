@@ -430,7 +430,7 @@ my $native_eol = &determine_native_eol;
       # Trim off the last segment and record the result.
       push(@load_tags_without_last_segment, substr($load_tag, 0, $index));
     }
-  
+
   foreach my $dir ($repos_load_rel_path, @load_tags_without_last_segment)
     {
       next unless length $dir;
@@ -796,7 +796,7 @@ while (defined (my $load_dir = &get_next_load_dir))
                     {
                       goto RELIST;
                     }
-                  
+
                   if ($line =~ /^F$/i)
                     {
                       $got_line = 1;
@@ -1192,7 +1192,7 @@ while (defined (my $load_dir = &get_next_load_dir))
                   {
                     @diff_ignore_space_changes = ('-b');
                   }
-                
+
                 # Write the value to a temporary file in case it's multi-line
                 my ($handle, $tmpfile) = tempfile(DIR => $temp_dir);
                 print $handle $property_value;
@@ -1527,7 +1527,7 @@ sub safe_read_from_pipe
       my @commandline = ();
       my $command;
       my $comment;
-        
+
       while ($command = shift)
         {
           if ("-m" eq $command)
@@ -1536,7 +1536,7 @@ sub safe_read_from_pipe
               my ($handle, $tmpfile) = tempfile(DIR => $temp_dir);
               print $handle $comment;
               close($handle);
-                
+
               push(@commandline, "--file");
               push(@commandline, $tmpfile);
             }
@@ -1553,15 +1553,15 @@ sub safe_read_from_pipe
               push(@commandline, $command);
             }
         }
-        
+
       print "Running @commandline\n";
       if ( $comment ) { print $comment; }
-        
+
       # Now do the pipe.
       open(SAFE_READ, "@commandline |")
         or die "$0: cannot pipe to command: $!\n";
     }
-    
+
   # parent
   my @output;
   while (<SAFE_READ>)

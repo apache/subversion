@@ -3,7 +3,7 @@
 # Copyright 2004 Ben Reser <ben@reser.org>
 # Licensed under the terms subversion ships under or GPLv2.
 
-# Useful for greping in a subversion working copy.  
+# Useful for greping in a subversion working copy.
 # Essentially it behaves the same way your grep command does (in fact it
 # ultimately calls the grep command on your path) with a few exceptions.
 # Ignores the subversion admin directories (.svn) and vi(m) backup files.
@@ -13,10 +13,10 @@
 # If no path is given the current working directory is searched not stdin.
 # Other than that it will take any parameter or pattern your standard grep
 # does.
-# 
+#
 # This script requires GNU findutils and by default GNU grep (though that
 # can be changed with environment variables).
-# 
+#
 # There are three environment variables you can set that modify the default
 # behavior:
 #
@@ -48,7 +48,7 @@ for (( i=1; i <= $arg_count; i++ )); do
             pattern="$arg"
         else
             grepargs="$grepargs $arg"
-        fi  
+        fi
     else
         pathargs="$pathargs $arg"
     fi
