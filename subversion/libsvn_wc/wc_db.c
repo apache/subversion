@@ -2202,11 +2202,13 @@ svn_wc__db_base_get_dav_cache(apr_hash_t **props,
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   if (!have_row)
     {
+      /* We'll gracefully returning an empty hash when our SELECT
+         statement returned nothing because -- for good or for ill --
+         the old WC code did the same for wcprop queries on
+         unversioned items.  */
       SVN_ERR(svn_sqlite__reset(stmt));
-      return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
-                               _("The node '%s' was not found."),
-                               svn_dirent_local_style(local_abspath,
-                                                      scratch_pool));
+      *props = apr_hash_make(result_pool);
+      return SVN_NO_ERROR;
     }
 
   SVN_ERR(svn_sqlite__column_properties(props, stmt, 0, result_pool,
