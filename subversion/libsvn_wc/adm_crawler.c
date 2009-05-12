@@ -1012,7 +1012,7 @@ svn_wc_transmit_text_deltas2(const char **tempfile,
          checksum mismatch is more important to return. */
       svn_error_clear(err);
       if (tempfile)
-        svn_error_clear(svn_io_remove_file(*tempfile, pool));
+        svn_error_clear(svn_io_remove_file2(*tempfile, TRUE, pool));
 
       return svn_error_createf
         (SVN_ERR_WC_CORRUPT_TEXT_BASE, NULL,
