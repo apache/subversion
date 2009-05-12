@@ -528,7 +528,7 @@ operation and place the rest of the files.
 
 The record of these needed operations will be placed into a "work
 queue" which is a table recorded in the SQLite database. Much like the
-original loggy, a working copy will be unusuable until these actions
+original loggy, a working copy will be unusable until these actions
 are run to completion.
 
 Each work item must have the following properties:
@@ -536,11 +536,16 @@ Each work item must have the following properties:
 * order-independent. the work items must be allowed to execute in any
   sequence.
 * idempotent. the work item must be able to run an arbitrary number of
-  times. whether a previous run completed, or was only partially
+  times.
+* resumable. whether a previous run completed, or was only partially
   completed, the work item must be able to complete its operation.
 * independent. each work item must affect only one node in the logical
   trees. it can apply to any/all of BASE/WORKING/ACTUAL, but it must
   apply to a single logical node.
+* complete. a work item must represent a complete operation which
+  takes the WC from one stable state to another. thus, a work item
+  cannot be used to "return the wc to a stable state" (the operation
+  that made it unstable should be included in the work item).
 
 The goal here is to reduce interactions across work items. Each must
 be completely self-sufficient and resumable.
