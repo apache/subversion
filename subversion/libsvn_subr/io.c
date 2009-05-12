@@ -1212,7 +1212,7 @@ reown_file(const char *path,
                                    svn_io_file_del_none, pool, pool));
   SVN_ERR(svn_io_file_rename(path, unique_name, pool));
   SVN_ERR(svn_io_copy_file(unique_name, path, TRUE, pool));
-  return svn_io_remove_file(unique_name, pool);
+  return svn_error_return(svn_io_remove_file2(unique_name, FALSE, pool));
 }
 
 /* Determine what the read-write PERMS for PATH should be by ORing
@@ -1771,7 +1771,9 @@ svn_stringbuf_from_aprfile(svn_stringbuf_t **result,
 /* Deletion. */
 
 svn_error_t *
-svn_io_remove_file(const char *path, apr_pool_t *pool)
+svn_io_remove_file2(const char *path,
+                    svn_boolean_t missing_ok,
+                    apr_pool_t *scratch_pool)
 {
   apr_status_t apr_err;
   const char *path_apr;
@@ -1779,14 +1781,17 @@ svn_io_remove_file(const char *path, apr_pool_t *pool)
 #ifdef WIN32
   /* Set the file writable but only on Windows, because Windows
      will not allow us to remove files that are read-only. */
-  SVN_ERR(svn_io_set_file_read_write(path, TRUE, pool));
+  SVN_ERR(svn_io_set_file_read_write(path, TRUE, scratch_pool));
 #endif /* WIN32 */
 
-  SVN_ERR(cstring_from_utf8(&path_apr, path, pool));
+  SVN_ERR(cstring_from_utf8(&path_apr, path, scratch_pool));
 
-  apr_err = apr_file_remove(path_apr, pool);
+  apr_err = apr_file_remove(path_apr, scratch_pool);
+  if (!apr_err
+      || (missing_ok && APR_STATUS_IS_ENOENT(apr_err)))
+    return SVN_NO_ERROR;
+
 #ifdef WIN32
-  if (apr_err)
     {
       apr_status_t os_err = APR_TO_OS_ERROR(apr_err);
       /* Check to make sure we aren't trying to delete a directory */
@@ -1794,21 +1799,20 @@ svn_io_remove_file(const char *path, apr_pool_t *pool)
         {
           apr_finfo_t finfo;
 
-          if (apr_stat(&finfo, path_apr, APR_FINFO_TYPE, pool) == APR_SUCCESS 
+          if (!apr_stat(&finfo, path_apr, APR_FINFO_TYPE, scratch_pool)
               && finfo.filetype == APR_REG)
             {
-              WIN32_RETRY_LOOP(apr_err, apr_file_remove(path_apr, pool));
+              WIN32_RETRY_LOOP(apr_err, apr_file_remove(path_apr,
+                                                        scratch_pool));
             }
         }
 
       /* Just return the delete error */
     }
 #endif
-  if (apr_err)
-    return svn_error_wrap_apr(apr_err, _("Can't remove file '%s'"),
-                              svn_dirent_local_style(path, pool));
 
-  return SVN_NO_ERROR;
+  return svn_error_wrap_apr(apr_err, _("Can't remove file '%s'"),
+                            svn_dirent_local_style(path, scratch_pool));
 }
 
 
@@ -1935,7 +1939,7 @@ svn_io_remove_dir2(const char *path, svn_boolean_t ignore_enoent,
                   if (cancel_func)
                     SVN_ERR((*cancel_func)(cancel_baton));
 
-                  err = svn_io_remove_file(fullpath, subpool);
+                  err = svn_io_remove_file2(fullpath, FALSE, subpool);
                   if (err)
                     return svn_error_createf
                       (err->apr_err, err, _("Can't remove '%s'"),
@@ -2977,16 +2981,16 @@ svn_io_file_move(const char *from_path, const char *to_path,
       if (err)
         goto failed_tmp;
 
-      err = svn_io_remove_file(from_path, pool);
+      err = svn_io_remove_file2(from_path, FALSE, pool);
       if (! err)
         return SVN_NO_ERROR;
 
-      svn_error_clear(svn_io_remove_file(to_path, pool));
+      svn_error_clear(svn_io_remove_file2(to_path, FALSE, pool));
 
       return err;
 
     failed_tmp:
-      svn_error_clear(svn_io_remove_file(tmp_to_path, pool));
+      svn_error_clear(svn_io_remove_file2(tmp_to_path, FALSE, pool));
     }
 
   return err;
