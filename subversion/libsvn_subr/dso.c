@@ -98,6 +98,10 @@ svn_dso_load(apr_dso_handle_t **dso, const char *fname)
       status = apr_dso_load(dso, fname, dso_pool);
       if (status)
         {
+#ifdef SVN_DEBUG
+          char buf[1024];
+          fprintf(stderr, "%s\n", apr_dso_error(*dso, buf, 1024));
+#endif
           *dso = NULL;
 
           /* It wasn't found, so set the special "we didn't find it" value. */
