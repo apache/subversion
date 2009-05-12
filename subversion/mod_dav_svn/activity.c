@@ -26,6 +26,7 @@
 #include "svn_checksum.h"
 #include "svn_error.h"
 #include "svn_io.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_fs.h"
 #include "svn_props.h"
@@ -204,7 +205,7 @@ dav_svn__store_activity(const dav_svn_repos *repos,
 
   /* ### is there another directory we already have and can write to? */
   err = svn_io_write_unique(&tmp_path,
-                            svn_path_dirname(final_path, repos->pool),
+                            svn_dirent_dirname(final_path, repos->pool),
                             activity_contents, strlen(activity_contents),
                             svn_io_file_del_none, repos->pool);
   if (err)
