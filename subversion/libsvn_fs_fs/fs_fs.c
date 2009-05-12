@@ -4768,7 +4768,7 @@ svn_fs_fs__add_change(svn_fs_t *fs,
                            APR_APPEND | APR_WRITE | APR_CREATE
                            | APR_BUFFERED, APR_OS_DEFAULT, pool));
 
-  change = svn_fs_path_change2_create(id, change_kind, pool);
+  change = svn_fs__path_change2_create(id, change_kind, pool);
   change->text_mod = text_mod;
   change->prop_mod = prop_mod;
   change->node_kind = node_kind;
