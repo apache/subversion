@@ -625,7 +625,9 @@ svn_wc__db_base_set_dav_cache(svn_wc__db_t *db,
 
 
 /** Retrieve the dav cache for LOCAL_ABSPATH into *PROPS, allocated in
-    RESULT_POOL.  Use SCRATCH_POOL for temporary allocations. */
+    RESULT_POOL.  Use SCRATCH_POOL for temporary allocations.  Return
+    SVN_ERR_WC_PATH_NOT_FOUND if no dav cache can be located for
+    LOCAL_ABSPATH in DB.  */
 svn_error_t *
 svn_wc__db_base_get_dav_cache(apr_hash_t **props,
                               svn_wc__db_t *db,

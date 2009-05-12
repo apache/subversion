@@ -1812,9 +1812,17 @@ svn_wc__internal_propget(const svn_string_t **value,
 
   if (kind == svn_prop_wc_kind)
     {
-      SVN_ERR_W(svn_wc__db_base_get_dav_cache(&prophash, db, local_abspath,
-                                              result_pool, scratch_pool),
-                _("Failed to load properties from disk"));
+      /* If no dav cache can be found, just set VALUE to NULL (for
+         compatibility with pre-WC-NG code). */
+      err = svn_wc__db_base_get_dav_cache(&prophash, db, local_abspath,
+                                          result_pool, scratch_pool);
+      if (err && (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND))
+        {
+          *value = NULL;
+          svn_error_clear(err);
+          return SVN_NO_ERROR;
+        }
+      SVN_ERR_W(err, _("Failed to load properties from disk"));
     }
   else
     {
