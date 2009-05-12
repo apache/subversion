@@ -33,7 +33,7 @@
 # WCGREP_IGNORE    Controls what files are ignored by the grep command.
 #                  This is a regex that is passed to the find command with
 #                  -regex so see find's man page for details.  If unset or
-#                  null defaults to '.*~$\|.*/\.\(hg\|git\|svn\)\(/\|$\)',
+#                  null defaults to '.*~$\|.*/\.\(git\|hg\|svn\)\(/\|$\)',
 #                  which will ignore vim backup files, Mercurial, Git and
 #                  Subversion administration directories.
 
@@ -60,7 +60,7 @@ done
 
 find \
     $pathargs \
-    -regex ${WCGREP_IGNORE:-'.*~$\|.*/\.\(hg\|git\|svn\)\(/\|$\)'} \
+    -regex ${WCGREP_IGNORE:-'.*~$\|.*/\.\(git\|hg\|svn\)\(/\|$\)'} \
     -prune \
     -o \
     -type f \
