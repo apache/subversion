@@ -116,6 +116,10 @@ extern "C" {
 /* A version < this uses the old 'entries' file mechanism.  */
 #define SVN_WC__WC_NG_VERSION 12
 
+/* In this version, the wcprops are "lost" between files and wc.db. We want
+   to ignore them in upgrades.  */
+#define SVN_WC__WCPROPS_LOST 12
+
 /* A version < this has no work queue (see workqueue.h).  */
 #define SVN_WC__HAS_WORK_QUEUE 13
 
