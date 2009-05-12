@@ -823,20 +823,11 @@ remove_tmpfiles(apr_hash_t *tempfiles,
     {
       const void *key;
       void *val;
-      svn_error_t *err;
 
       svn_pool_clear(subpool);
       apr_hash_this(hi, &key, NULL, &val);
 
-      err = svn_io_remove_file((const char *)key, subpool);
-
-      if (err)
-        {
-          if (! APR_STATUS_IS_ENOENT(err->apr_err))
-            return err;
-          else
-            svn_error_clear(err);
-        }
+      SVN_ERR(svn_io_remove_file2((const char *)key, TRUE, subpool));
     }
 
   /* Remove the subpool. */

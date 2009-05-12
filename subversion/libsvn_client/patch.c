@@ -268,9 +268,9 @@ merge_file_changed(svn_wc_adm_access_t *adm_access,
                             patch_b->ctx->conflict_func,
                             patch_b->ctx->conflict_baton,
                             subpool));
-      SVN_ERR(svn_io_remove_file
+      SVN_ERR(svn_io_remove_file2
               (apr_pstrcat(subpool, mine, left_label, NULL),
-               subpool));
+               FALSE, subpool));
     }
 
     if (content_state)
@@ -2243,10 +2243,10 @@ apply_one_patch(svn_patch_t *patch, svn_wc_adm_access_t *adm_access,
      * and would truncate the target if we moved the temporary file
      * on top of it. Remove the temporary file.
      * TODO: Dump hunks into reject file? */
-    SVN_ERR(svn_io_remove_file(target->result_path, pool));
+    SVN_ERR(svn_io_remove_file2(target->result_path, FALSE, pool));
   else
     /* No hunks were applied. Just remove the temporary file. */
-    SVN_ERR(svn_io_remove_file(target->result_path, pool));
+    SVN_ERR(svn_io_remove_file2(target->result_path, FALSE, pool));
 
   return SVN_NO_ERROR;
 }

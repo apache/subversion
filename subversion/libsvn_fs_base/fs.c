@@ -983,7 +983,7 @@ svn_fs_base__clean_logs(const char *live_path,
             continue;
         }
 
-        SVN_ERR(svn_io_remove_file(live_log_path, sub_pool));
+        SVN_ERR(svn_io_remove_file2(live_log_path, FALSE, sub_pool));
       }
 
     svn_pool_destroy(sub_pool);
