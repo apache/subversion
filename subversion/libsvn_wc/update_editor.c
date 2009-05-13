@@ -5201,24 +5201,26 @@ check_wc_root(svn_boolean_t *wc_root,
      definitely not a root.  */
   err = svn_wc__get_entry(&entry, db, abspath, TRUE, svn_node_unknown, FALSE,
                           pool, pool);
-  if (err || entry == NULL || entry->kind == svn_node_file
+
+  if (err && err->apr_err == SVN_ERR_NODE_UNEXPECTED_KIND
+        && entry->kind == svn_node_dir && *entry->name != '\0')
+    {
+      /* The (subdir) node is (most likely) not present. We said we wanted
+         the actual information, but got the stub info instead. We can
+         pretend this is a file so the parent will be the anchor.  */
+      svn_error_clear(err);
+
+      if (kind)
+        *kind = svn_node_file;
+      *wc_root = FALSE;
+      return SVN_NO_ERROR;
+    }
+  else if (err)
+    return svn_error_return(err);
+
+  if (entry == NULL || entry->kind == svn_node_file
       || svn_wc__entry_is_hidden(entry))
     {
-      if (err)
-        {
-          if (err->apr_err == SVN_ERR_NODE_UNEXPECTED_KIND
-              && entry->kind == svn_node_dir && *entry->name != '\0')
-            {
-              /* The (subdir) node is (most likely) not present. We said
-                 we wanted the actual information, but got the stub info
-                 instead. We can pretend this is a file so the parent will
-                 be the anchor.  */
-            }
-          else
-            return err;
-          svn_error_clear(err);
-        }
-
       if (kind)
         *kind = svn_node_file;
       *wc_root = FALSE;
