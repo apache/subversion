@@ -5188,6 +5188,7 @@ check_wc_root(svn_boolean_t *wc_root,
   const char *parent, *base_name;
   const svn_wc_entry_t *p_entry, *entry;
   svn_error_t *err;
+  svn_boolean_t hidden;
 
   /* Go ahead and initialize our return value to the most common
      (code-wise) values. */
@@ -5218,8 +5219,16 @@ check_wc_root(svn_boolean_t *wc_root,
   else if (err)
     return svn_error_return(err);
 
-  if (entry == NULL || entry->kind == svn_node_file
-      || svn_wc__entry_is_hidden(entry))
+  if (entry == NULL || entry->kind == svn_node_file)
+    {
+      if (kind)
+        *kind = svn_node_file;
+      *wc_root = FALSE;
+      return SVN_NO_ERROR;
+    }
+
+  SVN_ERR(svn_wc__entry_is_hidden(&hidden, entry));
+  if (hidden)
     {
       if (kind)
         *kind = svn_node_file;
@@ -5252,7 +5261,8 @@ check_wc_root(svn_boolean_t *wc_root,
       svn_error_clear(err);
       return SVN_NO_ERROR;
     }
-  SVN_ERR_ASSERT(!svn_wc__entry_is_hidden(p_entry));
+  SVN_ERR(svn_wc__entry_is_hidden(&hidden, p_entry));
+  SVN_ERR_ASSERT(!hidden);
 
   /* If the parent directory has no url information, something is
      messed up.  Bail with an error. */
@@ -5273,9 +5283,15 @@ check_wc_root(svn_boolean_t *wc_root,
      PATH is a WC root. */
   err = svn_wc__get_entry(&p_entry, db, abspath, FALSE, svn_node_dir, TRUE,
                           pool, pool);
-  if (err || svn_wc__entry_is_hidden(p_entry))
+  if (err)
     {
       svn_error_clear(err);
+      return SVN_NO_ERROR;
+    }
+
+  SVN_ERR(svn_wc__entry_is_hidden(&hidden, p_entry));
+  if (hidden)
+    {
       return SVN_NO_ERROR;
     }
 

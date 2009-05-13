@@ -247,18 +247,20 @@ alloc_entry(apr_pool_t *pool)
 
 /* Is the entry in a 'hidden' state in the sense of the 'show_hidden'
  * switches on svn_wc_entries_read(), svn_wc_walk_entries*(), etc.? */
-svn_boolean_t
-svn_wc__entry_is_hidden(const svn_wc_entry_t *entry)
+svn_error_t *
+svn_wc__entry_is_hidden(svn_boolean_t *hidden, const svn_wc_entry_t *entry)
 {
   /* Note: the condition below may allow certain combinations that the
      rest of the system will never reach (eg. absent/add).
 
      In English, the condition is: "the entry is not present, and I haven't
      scheduled something over the top of it."  */
-  return ((entry->deleted
+  *hidden = ((entry->deleted
            || entry->absent
            || entry->depth == svn_depth_exclude)
           && entry->schedule != svn_wc_schedule_add);
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -1471,8 +1473,14 @@ svn_wc_entry(const svn_wc_entry_t **entry,
       SVN_ERR(svn_wc_entries_read(&entries, dir_access, TRUE, pool));
 
       *entry = apr_hash_get(entries, entry_name, APR_HASH_KEY_STRING);
-      if (!show_hidden && *entry != NULL && svn_wc__entry_is_hidden(*entry))
-        *entry = NULL;
+      if (!show_hidden && *entry != NULL)
+        {
+          svn_boolean_t hidden;
+
+          SVN_ERR(svn_wc__entry_is_hidden(&hidden, *entry));
+          if (hidden)
+            *entry = NULL;
+        }
     }
   else
     *entry = NULL;
@@ -1528,18 +1536,21 @@ svn_wc__node_is_deleted(svn_boolean_t *deleted,
 
 
 /* Prune the deleted entries from the cached entries in ADM_ACCESS, and
-   return that collection.  SCRATCH_POOL is used for local, short
-   term, memory allocation, RESULT_POOL for permanent stuff.  */
-static apr_hash_t *
-prune_deleted(apr_hash_t *entries_all,
+   return that collection in *ENTRIES_PRUNED.  SCRATCH_POOL is used for local,
+   short term, memory allocation, RESULT_POOL for permanent stuff.  */
+static svn_error_t *
+prune_deleted(apr_hash_t **entries_pruned,
+              apr_hash_t *entries_all,
               apr_pool_t *result_pool,
               apr_pool_t *scratch_pool)
 {
   apr_hash_index_t *hi;
-  apr_hash_t *entries;
 
   if (!entries_all)
-    return NULL;
+    {
+      *entries_pruned = NULL;
+      return SVN_NO_ERROR;
+    }
 
   /* I think it will be common for there to be no deleted entries, so
      it is worth checking for that case as we can optimise it. */
@@ -1548,20 +1559,23 @@ prune_deleted(apr_hash_t *entries_all,
        hi = apr_hash_next(hi))
     {
       void *val;
+      svn_boolean_t hidden;
 
       apr_hash_this(hi, NULL, NULL, &val);
-      if (svn_wc__entry_is_hidden(val))
+      SVN_ERR(svn_wc__entry_is_hidden(&hidden, val));
+      if (hidden)
         break;
     }
 
   if (! hi)
     {
       /* There are no deleted entries, so we can use the full hash */
-      return  entries_all;
+      *entries_pruned = entries_all;
+      return SVN_NO_ERROR;
     }
 
   /* Construct pruned hash without deleted entries */
-  entries = apr_hash_make(result_pool);
+  *entries_pruned = apr_hash_make(result_pool);
   for (hi = apr_hash_first(scratch_pool, entries_all);
        hi;
        hi = apr_hash_next(hi))
@@ -1569,16 +1583,18 @@ prune_deleted(apr_hash_t *entries_all,
       void *val;
       const void *key;
       const svn_wc_entry_t *entry;
+      svn_boolean_t hidden;
 
       apr_hash_this(hi, &key, NULL, &val);
       entry = val;
-      if (!svn_wc__entry_is_hidden(entry))
+      SVN_ERR(svn_wc__entry_is_hidden(&hidden, entry));
+      if (!hidden)
         {
-          apr_hash_set(entries, key, APR_HASH_KEY_STRING, entry);
+          apr_hash_set(*entries_pruned, key, APR_HASH_KEY_STRING, entry);
         }
     }
 
-  return entries;
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -1604,8 +1620,9 @@ svn_wc_entries_read(apr_hash_t **entries,
   if (show_hidden)
     *entries = new_entries;
   else
-    *entries = prune_deleted(new_entries, svn_wc_adm_access_pool(adm_access),
-                             pool);
+    SVN_ERR(prune_deleted(entries, new_entries,
+                          svn_wc_adm_access_pool(adm_access),
+                          pool));
 
   return SVN_NO_ERROR;
 }
@@ -3208,6 +3225,7 @@ walker_helper(const char *dirpath,
       void *val;
       const svn_wc_entry_t *current_entry;
       const char *entrypath;
+      svn_boolean_t hidden;
 
       svn_pool_clear(subpool);
 
@@ -3223,6 +3241,7 @@ walker_helper(const char *dirpath,
         continue;
 
       entrypath = svn_dirent_join(dirpath, key, subpool);
+      SVN_ERR(svn_wc__entry_is_hidden(&hidden, current_entry));
 
       /* Call the "found entry" callback for this entry. (For a directory,
        * this is the first visit: as a child.) */
@@ -3239,7 +3258,7 @@ walker_helper(const char *dirpath,
 
       /* Recurse into this entry if appropriate. */
       if (current_entry->kind == svn_node_dir
-          && !svn_wc__entry_is_hidden(current_entry)
+          && !hidden
           && depth >= svn_depth_immediates)
         {
           svn_wc_adm_access_t *entry_access;
@@ -3325,6 +3344,7 @@ svn_wc_walk_entries3(const char *path,
   if (kind == svn_wc__db_kind_file || depth == svn_depth_exclude)
     {
       const svn_wc_entry_t *entry;
+      svn_boolean_t hidden;
 
       /* ### we should stop passing out entry structures.
          ###
@@ -3334,7 +3354,8 @@ svn_wc_walk_entries3(const char *path,
       /* This entry should be present.  */
       SVN_ERR(svn_wc_entry(&entry, path, adm_access, TRUE, pool));
       SVN_ERR_ASSERT(entry != NULL);
-      if (!show_hidden && svn_wc__entry_is_hidden(entry))
+      SVN_ERR(svn_wc__entry_is_hidden(&hidden, entry));
+      if (!show_hidden && hidden)
         {
           /* The fool asked to walk a "hidden" node. Report the node as
              unversioned.
@@ -3395,11 +3416,13 @@ visit_tc_too_found_entry(const char *path,
 {
   struct visit_tc_too_baton_t *baton = walk_baton;
   svn_boolean_t check_children;
+  svn_boolean_t hidden;
 
   /* Call the entry callback for this entry. */
   SVN_ERR(baton->callbacks->found_entry(path, entry, baton->baton, pool));
 
-  if (entry->kind != svn_node_dir || svn_wc__entry_is_hidden(entry))
+  SVN_ERR(svn_wc__entry_is_hidden(&hidden, entry));
+  if (entry->kind != svn_node_dir || hidden)
     return SVN_NO_ERROR;
 
   /* If this is a directory, we may need to also visit any unversioned

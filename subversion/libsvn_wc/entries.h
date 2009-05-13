@@ -277,8 +277,8 @@ svn_wc__get_entry(const svn_wc_entry_t **entry,
 
 /* Is ENTRY in a 'hidden' state in the sense of the 'show_hidden'
  * switches on svn_wc_entries_read(), svn_wc_walk_entries*(), etc.? */
-svn_boolean_t
-svn_wc__entry_is_hidden(const svn_wc_entry_t *entry);
+svn_error_t *
+svn_wc__entry_is_hidden(svn_boolean_t *hidden, const svn_wc_entry_t *entry);
 
 
 /* Set the depth of a directory.  */

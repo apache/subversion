@@ -1782,6 +1782,7 @@ svn_wc__internal_propget(const svn_string_t **value,
   apr_hash_t *prophash = NULL;
   enum svn_prop_kind kind = svn_property_kind(NULL, name);
   const svn_wc_entry_t *entry;
+  svn_boolean_t hidden;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
   SVN_ERR_ASSERT(kind != svn_prop_entry_kind);
@@ -1812,7 +1813,16 @@ svn_wc__internal_propget(const svn_string_t **value,
         }
       return svn_error_return(err);
     }
-  if (entry == NULL || svn_wc__entry_is_hidden(entry))
+  if (entry == NULL)
+    {
+      /* The node is not present, or not really "here". Therefore, the
+         property is not present.  */
+      *value = NULL;
+      return SVN_NO_ERROR;
+    }
+
+  SVN_ERR(svn_wc__entry_is_hidden(&hidden, entry));
+  if (hidden)
     {
       /* The node is not present, or not really "here". Therefore, the
          property is not present.  */
