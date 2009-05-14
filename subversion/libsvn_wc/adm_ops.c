@@ -96,12 +96,12 @@ tweak_entries(svn_wc_adm_access_t *dir_access,
               apr_hash_t *exclude_paths,
               apr_pool_t *pool)
 {
-  apr_hash_t *entries;
-  apr_hash_index_t *hi;
-  apr_pool_t *subpool;
+  apr_pool_t *iterpool;
   svn_wc_notify_t *notify;
   svn_wc__db_t *db = svn_wc__adm_get_db(dir_access);
   const char *dir_abspath = svn_wc__adm_access_abspath(dir_access);
+  const apr_array_header_t *children;
+  int i;
 
   /* Skip an excluded path and its descendants. */
   if (apr_hash_get(exclude_paths, svn_wc_adm_access_path(dir_access),
@@ -119,46 +119,50 @@ tweak_entries(svn_wc_adm_access_t *dir_access,
   if (depth <= svn_depth_empty)
     return SVN_NO_ERROR;
 
-  /* Read DIR_ACCESS's entries. */
-  SVN_ERR(svn_wc_entries_read(&entries, dir_access, TRUE, pool));
+  SVN_ERR(svn_wc__db_read_children(&children, db, dir_abspath, pool, pool));
 
-  subpool = svn_pool_create(pool);
-  for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
+  iterpool = svn_pool_create(pool);
+  for (i = 0; i < children->nelts; i++)
     {
-      const void *key;
-      void *val;
-      const char *name;
-      const svn_wc_entry_t *current_entry;
+      const char *child_basename = APR_ARRAY_IDX(children, i, const char *);
+      const char *child_abspath;
+      svn_wc__db_kind_t kind;
+      svn_depth_t child_depth;
+      svn_wc__db_status_t status;
+
       const char *child_path;
       const char *child_url = NULL;
       svn_boolean_t excluded;
-      const char *child_abspath;
 
-      svn_pool_clear(subpool);
-
-      apr_hash_this(hi, &key, NULL, &val);
-      name = key;
-      current_entry = val;
+      svn_pool_clear(iterpool);
 
       /* Ignore the "this dir" entry. */
-      if (! strcmp(name, SVN_WC_ENTRY_THIS_DIR))
+      if (! strcmp(child_basename, SVN_WC_ENTRY_THIS_DIR))
         continue;
 
       /* Derive the new URL for the current (child) entry */
       if (base_url)
-        child_url = svn_path_url_add_component2(base_url, name, subpool);
+        child_url = svn_path_url_add_component2(base_url, child_basename,
+                                                iterpool);
 
       child_path = svn_dirent_join(svn_wc_adm_access_path(dir_access),
-                                   name, subpool);
-      child_abspath = svn_dirent_join(dir_abspath, name, subpool);
+                                   child_basename, iterpool);
+      child_abspath = svn_dirent_join(dir_abspath, child_basename, iterpool);
       excluded = (apr_hash_get(exclude_paths, child_path,
                                APR_HASH_KEY_STRING) != NULL);
 
+      SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, &child_depth, NULL,
+                                   NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL,
+                                   db, child_abspath, iterpool, iterpool));
+
       /* If a file, or deleted, excluded or absent dir, then tweak the
          entry but don't recurse. */
-      if ((current_entry->kind == svn_node_file)
-          || (current_entry->deleted || current_entry->absent
-              || current_entry->depth == svn_depth_exclude))
+      if (kind == svn_wc__db_kind_file
+            || status == svn_wc__db_status_not_present
+            || status == svn_wc__db_status_absent
+            || child_depth == svn_depth_exclude)
         {
           if (! excluded)
             SVN_ERR(svn_wc__tweak_entry(db, child_abspath,
@@ -170,7 +174,7 @@ tweak_entries(svn_wc_adm_access_t *dir_access,
       /* If a directory and recursive... */
       else if ((depth == svn_depth_infinity
                 || depth == svn_depth_immediates)
-               && (current_entry->kind == svn_node_dir))
+               && (kind == svn_wc__db_kind_dir))
         {
           svn_depth_t depth_below_here = depth;
 
@@ -184,19 +188,18 @@ tweak_entries(svn_wc_adm_access_t *dir_access,
           if (remove_missing_dirs
               && svn_wc__adm_missing(dir_access, child_path))
             {
-              if (current_entry->schedule != svn_wc_schedule_add
+              if (status == svn_wc__db_status_added
                   && !excluded)
                 {
-                  SVN_ERR(svn_wc__entry_remove(db, child_abspath, subpool));
-                  apr_hash_set(entries, name, APR_HASH_KEY_STRING, NULL);
+                  SVN_ERR(svn_wc__entry_remove(db, child_abspath, iterpool));
 
                   if (notify_func)
                     {
                       notify = svn_wc_create_notify(child_path,
                                                     svn_wc_notify_delete,
-                                                    subpool);
-                      notify->kind = current_entry->kind;
-                      (* notify_func)(notify_baton, notify, subpool);
+                                                    iterpool);
+                      notify->kind = kind;
+                      (* notify_func)(notify_baton, notify, iterpool);
                     }
                 }
               /* Else if missing item is schedule-add, do nothing. */
@@ -207,17 +210,17 @@ tweak_entries(svn_wc_adm_access_t *dir_access,
             {
               svn_wc_adm_access_t *child_access;
               SVN_ERR(svn_wc_adm_retrieve(&child_access, dir_access,
-                                          child_path, subpool));
+                                          child_path, iterpool));
               SVN_ERR(tweak_entries(
                             child_access, child_url, repos, new_rev,
                             notify_func, notify_baton, remove_missing_dirs,
-                            depth_below_here, exclude_paths, subpool));
+                            depth_below_here, exclude_paths, iterpool));
             }
         }
     }
 
   /* Cleanup */
-  svn_pool_destroy(subpool);
+  svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
 }
