@@ -85,7 +85,8 @@ typedef struct
 
 /* The main body of svn_wc__do_update_cleanup. */
 static svn_error_t *
-tweak_entries(svn_wc_adm_access_t *dir_access,
+tweak_entries(svn_wc__db_t *db,
+              const char *dir_abspath,
               const char *base_url,
               const char *repos,
               svn_revnum_t new_rev,
@@ -98,14 +99,11 @@ tweak_entries(svn_wc_adm_access_t *dir_access,
 {
   apr_pool_t *iterpool;
   svn_wc_notify_t *notify;
-  svn_wc__db_t *db = svn_wc__adm_get_db(dir_access);
-  const char *dir_abspath = svn_wc__adm_access_abspath(dir_access);
   const apr_array_header_t *children;
   int i;
 
   /* Skip an excluded path and its descendants. */
-  if (apr_hash_get(exclude_paths, svn_wc_adm_access_path(dir_access),
-                   APR_HASH_KEY_STRING))
+  if (apr_hash_get(exclude_paths, dir_abspath, APR_HASH_KEY_STRING))
     return SVN_NO_ERROR;
 
   /* Tweak "this_dir" */
@@ -130,7 +128,6 @@ tweak_entries(svn_wc_adm_access_t *dir_access,
       svn_depth_t child_depth;
       svn_wc__db_status_t status;
 
-      const char *child_path;
       const char *child_url = NULL;
       svn_boolean_t excluded;
 
@@ -145,10 +142,8 @@ tweak_entries(svn_wc_adm_access_t *dir_access,
         child_url = svn_path_url_add_component2(base_url, child_basename,
                                                 iterpool);
 
-      child_path = svn_dirent_join(svn_wc_adm_access_path(dir_access),
-                                   child_basename, iterpool);
       child_abspath = svn_dirent_join(dir_abspath, child_basename, iterpool);
-      excluded = (apr_hash_get(exclude_paths, child_path,
+      excluded = (apr_hash_get(exclude_paths, child_abspath,
                                APR_HASH_KEY_STRING) != NULL);
 
       SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL,
@@ -177,6 +172,8 @@ tweak_entries(svn_wc_adm_access_t *dir_access,
                && (kind == svn_wc__db_kind_dir))
         {
           svn_depth_t depth_below_here = depth;
+          const svn_wc_adm_access_t *dir_access =
+            svn_wc__adm_retrieve_internal2(db, dir_abspath, iterpool);
 
           if (depth == svn_depth_immediates)
             depth_below_here = svn_depth_empty;
@@ -186,7 +183,7 @@ tweak_entries(svn_wc_adm_access_t *dir_access,
              svn_wc__do_update_cleanup, since the update will already have
              restored any missing items that it didn't want to delete. */
           if (remove_missing_dirs
-              && svn_wc__adm_missing(dir_access, child_path))
+              && svn_wc__adm_missing(dir_access, child_abspath))
             {
               if (status == svn_wc__db_status_added
                   && !excluded)
@@ -195,7 +192,7 @@ tweak_entries(svn_wc_adm_access_t *dir_access,
 
                   if (notify_func)
                     {
-                      notify = svn_wc_create_notify(child_path,
+                      notify = svn_wc_create_notify(child_abspath,
                                                     svn_wc_notify_delete,
                                                     iterpool);
                       notify->kind = kind;
@@ -208,13 +205,10 @@ tweak_entries(svn_wc_adm_access_t *dir_access,
           /* Not missing, deleted, or absent, so recurse. */
           else
             {
-              svn_wc_adm_access_t *child_access;
-              SVN_ERR(svn_wc_adm_retrieve(&child_access, dir_access,
-                                          child_path, iterpool));
-              SVN_ERR(tweak_entries(
-                            child_access, child_url, repos, new_rev,
-                            notify_func, notify_baton, remove_missing_dirs,
-                            depth_below_here, exclude_paths, iterpool));
+              SVN_ERR(tweak_entries(db, child_abspath, child_url, repos,
+                                    new_rev, notify_func, notify_baton,
+                                    remove_missing_dirs, depth_below_here,
+                                    exclude_paths, iterpool));
             }
         }
     }
@@ -259,6 +253,9 @@ svn_wc__do_update_cleanup(const char *path,
 {
   const svn_wc_entry_t *entry;
   svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
+  const char *local_abspath;
+
+  SVN_ERR(svn_path_get_absolute(&local_abspath, path, pool));
 
   SVN_ERR(svn_wc_entry(&entry, path, adm_access, TRUE, pool));
   if (entry == NULL)
@@ -269,12 +266,8 @@ svn_wc__do_update_cleanup(const char *path,
           && (entry->deleted || entry->absent
               || entry->depth == svn_depth_exclude)))
     {
-      const char *local_abspath;
-
-      if (apr_hash_get(exclude_paths, path, APR_HASH_KEY_STRING))
+      if (apr_hash_get(exclude_paths, local_abspath, APR_HASH_KEY_STRING))
         return SVN_NO_ERROR;
-
-      SVN_ERR(svn_path_get_absolute(&local_abspath, path, pool));
 
       /* Parent not updated so don't remove PATH entry.  */
       SVN_ERR(svn_wc__tweak_entry(db, local_abspath,
@@ -285,10 +278,7 @@ svn_wc__do_update_cleanup(const char *path,
 
   else if (entry->kind == svn_node_dir)
     {
-      svn_wc_adm_access_t *dir_access;
-      SVN_ERR(svn_wc_adm_retrieve(&dir_access, adm_access, path, pool));
-
-      SVN_ERR(tweak_entries(dir_access, base_url, repos, new_revision,
+      SVN_ERR(tweak_entries(db, local_abspath, base_url, repos, new_revision,
                             notify_func, notify_baton, remove_missing_dirs,
                             depth, exclude_paths, pool));
     }
