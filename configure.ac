@@ -1048,10 +1048,6 @@ AC_CONFIG_COMMANDS([svn_private_config.h],
 AC_CONFIG_FILES([Makefile])
 
 SVN_CONFIG_SCRIPT(tools/backup/hot-backup.py)
-SVN_CONFIG_SCRIPT(contrib/client-side/svn_load_dirs/svn_load_dirs.pl)
-SVN_CONFIG_SCRIPT(contrib/client-side/svncopy/svncopy.pl)
-SVN_CONFIG_SCRIPT(contrib/client-side/svncopy/testsvncopy.pl)
-SVN_CONFIG_SCRIPT(contrib/hook-scripts/commit-email.pl)
 SVN_CONFIG_SCRIPT(tools/hook-scripts/commit-access-control.pl)
 SVN_CONFIG_SCRIPT(subversion/bindings/swig/perl/native/Makefile.PL)
 SVN_CONFIG_SCRIPT(packages/solaris/pkginfo)
