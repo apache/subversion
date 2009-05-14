@@ -1507,10 +1507,10 @@ close_edit(void *edit_baton,
 {
   struct edit_baton *eb = edit_baton;
 
-  svn_pool_destroy(eb->pool);
-
   if (eb->svnpatch_stream)
       SVN_ERR(eb->diff_editor->close_edit(eb, pool));
+
+  svn_pool_destroy(eb->pool);
 
   return SVN_NO_ERROR;
 }
