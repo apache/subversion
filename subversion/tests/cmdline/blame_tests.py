@@ -676,7 +676,7 @@ test_list = [ None,
               SkipUnless(blame_merge_out_of_range, server_has_mergeinfo),
               blame_peg_rev_file_not_in_head,
               blame_file_not_in_head,
-              XFail(blame_output_after_merge),
+              blame_output_after_merge,
              ]
 
 if __name__ == '__main__':
