@@ -82,7 +82,6 @@ swig_pydir = @libdir@/svn-python/libsvn
 swig_pydir_extra = @libdir@/svn-python/svn
 swig_pldir = @libdir@/svn-perl
 swig_rbdir = $(SWIG_RB_SITE_ARCH_DIR)/svn/ext
-contribdir = @bindir@/svn-contrib
 toolsdir = @bindir@/svn-tools
 
 javahl_javadir = @libdir@/svn-javahl
