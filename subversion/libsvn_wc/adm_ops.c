@@ -133,10 +133,6 @@ tweak_entries(svn_wc__db_t *db,
 
       svn_pool_clear(iterpool);
 
-      /* Ignore the "this dir" entry. */
-      if (! strcmp(child_basename, SVN_WC_ENTRY_THIS_DIR))
-        continue;
-
       /* Derive the new URL for the current (child) entry */
       if (base_url)
         child_url = svn_path_url_add_component2(base_url, child_basename,
@@ -153,7 +149,9 @@ tweak_entries(svn_wc__db_t *db,
                                    db, child_abspath, iterpool, iterpool));
 
       /* If a file, or deleted, excluded or absent dir, then tweak the
-         entry but don't recurse. */
+         entry but don't recurse.
+         
+         ### how does this translate into wc_db land? */
       if (kind == svn_wc__db_kind_file
             || status == svn_wc__db_status_not_present
             || status == svn_wc__db_status_absent
@@ -185,7 +183,8 @@ tweak_entries(svn_wc__db_t *db,
           if (remove_missing_dirs
               && svn_wc__adm_missing(dir_access, child_abspath))
             {
-              if (status == svn_wc__db_status_added
+              if ( (status == svn_wc__db_status_added
+                    || status == svn_wc__db_status_obstructed_add)
                   && !excluded)
                 {
                   SVN_ERR(svn_wc__entry_remove(db, child_abspath, iterpool));
@@ -195,7 +194,14 @@ tweak_entries(svn_wc__db_t *db,
                       notify = svn_wc_create_notify(child_abspath,
                                                     svn_wc_notify_delete,
                                                     iterpool);
-                      notify->kind = kind;
+
+                      if (kind == svn_wc__db_kind_dir)
+                        notify->kind = svn_node_dir;
+                      else if (kind == svn_wc__db_kind_file)
+                        notify->kind = svn_node_file;
+                      else
+                        notify->kind = svn_node_unknown;
+
                       (* notify_func)(notify_baton, notify, iterpool);
                     }
                 }
