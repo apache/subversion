@@ -7,31 +7,58 @@ dnl
 
 AC_DEFUN(SVN_LIB_RA_SERF_GSSAPI,
 [
-  gssapi_found=no
+  AC_ARG_WITH(gssapi,
+    [AS_HELP_STRING([[--with-gssapi[=PREFIX]]],
+                    [GSSAPI (Kerberos) support])],
+                    [svn_lib_gssapi="$withval"],
+                    [svn_lib_gssapi="no"])
 
-  AC_ARG_WITH(gssapi,AS_HELP_STRING([--with-gssapi=PREFIX],
-                                  [GSSAPI (Kerberos) support]),
-  [
-    if test "$withval" = "yes" ; then
-      AC_MSG_ERROR([--with-gssapi requires an argument.])
-    elif test "$withval" != "no" ; then
-      AC_MSG_NOTICE([GSSAPI configuration])
-      gssapi_prefix=$withval
-      save_cppflags="$CPPFLAGS"
-      CPPFLAGS="$CPPFLAGS -I$gssapi_prefix/include/gssapi"
-      AC_CHECK_HEADERS(gssapi.h, [
-        save_ldflags="$LDFLAGS"
-        LDFLAGS="$LDFLAGS -L$gssapi_prefix/lib"
-        AC_CHECK_LIB(gssapi_krb5, gss_init_sec_context, [gssapi_found="yes"])
-        LDFLAGS="$save_ldflags"])
-      CPPFLAGS="$save_cppflags"
+  AC_MSG_CHECKING([whether to look for GSSAPI (Kerberos)])
+  if test "$svn_lib_gssapi" != "no"; then
+    AC_MSG_RESULT([yes])
+    if test "$svn_lib_gssapi" != "yes"; then
+      AC_MSG_CHECKING([for krb5-config])
+      krb5_config="$svn_lib_gssapi/bin/krb5-config"
+      if test -f "$krb5_config" && test -x "$krb5_config"; then
+        HAVE_KRB5_CONFIG="yes"
+        AC_MSG_RESULT([yes])
+      else
+        AC_MSG_RESULT([no])
+      fi
+    else
+      AC_CHECK_PROG(HAVE_KRB5_CONFIG, krb5-config, yes)
+      krb5_config="krb5-config"
     fi
-  ])
-
-  svn_lib_gssapi=$gssapi_found
-
-  AC_SUBST(SVN_GSSAPI_PREFIX)
+    if test "$HAVE_KRB5_CONFIG" = "yes"; then
+      AC_MSG_CHECKING([for GSSAPI (Kerberos)])
+      old_CPPFLAGS="$CPPFLAGS"
+      old_CFLAGS="$CFLAGS"
+      old_LIBS="$LIBS"
+      CFLAGS=""
+      SVN_GSSAPI_INCLUDES="`$krb5_config --cflags`"
+      SVN_GSSAPI_LIBS="`$krb5_config --libs gssapi`"
+      CPPFLAGS="$CPPFLAGS $SVN_GSSAPI_INCLUDES"
+      CFLAGS="$old_CFLAGS"
+      LIBS="$LIBS $SVN_GSSAPI_LIBS"
+      AC_LINK_IFELSE([
+#include <gssapi.h>
+int main()
+{gss_init_sec_context(NULL, NULL, NULL, NULL, NULL, 0, 0, NULL, NULL, NULL, NULL, NULL, NULL);}],
+        svn_lib_gssapi="yes", svn_lib_gssapi="no")
+      if test "$svn_lib_gssapi" = "yes"; then
+        AC_MSG_RESULT([yes])
+        CPPFLAGS="$old_CPPFLAGS"
+        LIBS="$old_LIBS"
+      else
+        AC_MSG_RESULT([no])
+        AC_MSG_ERROR([cannot find GSSAPI (Kerberos)])
+      fi
+    else
+      AC_MSG_ERROR([cannot find krb5-config])
+    fi
+  else
+    AC_MSG_RESULT([no])
+  fi
   AC_SUBST(SVN_GSSAPI_INCLUDES)
   AC_SUBST(SVN_GSSAPI_LIBS)
-  AC_SUBST(SVN_GSSAPI_EXPORT_LIBS)
 ])
