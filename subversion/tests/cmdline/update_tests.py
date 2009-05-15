@@ -4759,6 +4759,26 @@ def set_deep_depth_on_target_with_shallow_children(sbox):
                                         '--set-depth', 'infinity',
                                         A_path)
 
+#----------------------------------------------------------------------
+
+def update_wc_of_dir_to_rev_not_containing_this_dir(sbox):
+  "update wc of dir to rev not containing this dir"
+
+  sbox.build()
+
+  # Create working copy of 'A' directory
+  A_url = sbox.repo_url + "/A"
+  other_wc_dir = sbox.add_wc_path("other")
+  svntest.actions.run_and_verify_svn(None, None, [], "co", A_url, other_wc_dir)
+  
+  # Delete 'A' directory from repository
+  svntest.actions.run_and_verify_svn(None, None, [], "rm", A_url, "-m", "")
+
+  # Try to update working copy of 'A' directory
+  svntest.actions.run_and_verify_svn(None, None,
+                                     "svn: Target path '/A' does not exist",
+                                     "up", other_wc_dir)
+
 #######################################################################
 # Run the tests
 
@@ -4823,6 +4843,7 @@ test_list = [ None,
               tree_conflict_uc1_update_deleted_tree,
               tree_conflict_uc2_schedule_re_add,
               set_deep_depth_on_target_with_shallow_children,
+              update_wc_of_dir_to_rev_not_containing_this_dir,
              ]
 
 if __name__ == '__main__':
