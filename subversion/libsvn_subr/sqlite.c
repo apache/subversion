@@ -735,7 +735,7 @@ close_apr(void *data)
 {
   svn_sqlite__db_t *db = data;
   svn_error_t *err = SVN_NO_ERROR;
-  int result;
+  apr_status_t result;
   int i;
 
   /* Check to see if we've already closed this database. */
@@ -828,9 +828,12 @@ svn_sqlite__open(svn_sqlite__db_t **db, const char *path,
 svn_error_t *
 svn_sqlite__close(svn_sqlite__db_t *db)
 {
-  apr_pool_cleanup_run(db->result_pool, db, close_apr);
+  apr_status_t result = apr_pool_cleanup_run(db->result_pool, db, close_apr);
 
-  return SVN_NO_ERROR;
+  if (result == APR_SUCCESS)
+    return SVN_NO_ERROR;
+
+  return svn_error_wrap_apr(result, NULL);
 }
 
 svn_error_t *
