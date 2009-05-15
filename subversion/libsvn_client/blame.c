@@ -526,7 +526,8 @@ normalize_blames(struct blame_chain *chain,
       assert(walk->start == walk_merged->start);
 
       if (walk->next->start < walk_merged->next->start)
-        { /* insert a new chunk in CHAIN_MERGED. */
+        {
+          /* insert a new chunk in CHAIN_MERGED. */
           struct blame *tmp = blame_create(chain_merged, walk_merged->rev,
                                            walk->next->start);
           tmp->next = walk_merged->next;
@@ -534,7 +535,8 @@ normalize_blames(struct blame_chain *chain,
         }
 
       if (walk->next->start > walk_merged->next->start)
-        { /* insert a new chunk in CHAIN. */
+        {
+          /* insert a new chunk in CHAIN. */
           struct blame *tmp = blame_create(chain, walk->rev,
                                            walk_merged->next->start);
           tmp->next = walk->next;
