@@ -27,6 +27,8 @@
 #include "svn_error.h"
 #include "svn_wc.h"
 
+#include "wc_db.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
@@ -126,6 +128,19 @@ extern "C" {
 /* A version < this has wcprops located in files OR in wc.db. Versions using
    this format or later will only have wcprops in BASE_NODE.dav_cache.  */
 #define SVN_WC__USES_DAV_CACHE 13
+
+
+
+/*** Context handling ***/
+struct svn_wc_context_t
+{
+  /* The wc_db handle for this working copy. */
+  svn_wc__db_t *db;
+
+  /* The state pool for this context. */
+  apr_pool_t *state_pool;
+};
+
 
 
 /*** Update traversals. ***/

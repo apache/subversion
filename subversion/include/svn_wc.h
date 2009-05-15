@@ -5328,8 +5328,9 @@ svn_wc_cleanup(const char *path,
                apr_pool_t *pool);
 
 /**
- * Upgrade the working copy at @a path to the latest metadata storage format.
- * @a path should be the root of the working copy.
+ * Upgrade the working copy at @a local_abspath to the latest metadata
+ * storage format.  @a local_abspath should be an absolute path to the
+ * root of the working copy.
  *
  * If @a cancel_func is non-NULL, invoke it with @a cancel_baton at
  * various points during the operation.  If it returns an error
@@ -5338,7 +5339,8 @@ svn_wc_cleanup(const char *path,
  * @since New in 1.7.
  */
 svn_error_t *
-svn_wc_upgrade(const char *path,
+svn_wc_upgrade(svn_wc_context_t *wc_ctx,
+               const char *local_abspath,
                svn_cancel_func_t cancel_func,
                void *cancel_baton,
                apr_pool_t *pool);
