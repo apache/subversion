@@ -30,16 +30,6 @@
 
 
 
-struct svn_wc_context_t
-{
-  /* The wc_db handle for this working copy. */
-  svn_wc__db_t *db;
-
-  /* The state pool for this context. */
-  apr_pool_t *state_pool;
-};
-
-
 /* APR cleanup function used to explicitly close any of our dependent
    data structures before we disappear ourselves. */
 static apr_status_t

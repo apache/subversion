@@ -423,26 +423,20 @@ upgrade_format(svn_wc_adm_access_t *adm_access,
 
 
 svn_error_t *
-svn_wc_upgrade(const char *path,
+svn_wc_upgrade(svn_wc_context_t *wc_ctx,
+               const char *local_abspath,
                svn_cancel_func_t cancel_func,
                void *cancel_baton,
                apr_pool_t *scratch_pool)
 {
-  svn_wc__db_t *db;
-  const char *local_abspath;
   int wc_format_version;
 
-  SVN_ERR(svn_wc__db_open(&db, svn_wc__db_openmode_readwrite,
-                          NULL /* ### config */, scratch_pool, scratch_pool));
-
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, scratch_pool));
-
-  SVN_ERR(svn_wc__internal_check_wc(&wc_format_version, db, local_abspath,
-                                    scratch_pool));
+  SVN_ERR(svn_wc__internal_check_wc(&wc_format_version, wc_ctx->db,
+                                    local_abspath, scratch_pool));
 
   if (wc_format_version < SVN_WC__VERSION)
-    SVN_ERR(upgrade_working_copy(db, path, cancel_func, cancel_baton,
-                                 scratch_pool));
+    SVN_ERR(upgrade_working_copy(wc_ctx->db, local_abspath, cancel_func,
+                                 cancel_baton, scratch_pool));
 
   return SVN_NO_ERROR;
 }
