@@ -7000,17 +7000,17 @@ def merge_with_depth_files(sbox):
                                        '--depth', 'files')
 
 
-  # Test for issue #2976 Subtrees can lose non-inheritable ranges.
-  #
-  # Also test for a bug with paths added as the immediate child of the
-  # merge target when the merge target has non-inheritable mergeinfo
-  # and is also the current working directory, see
-  # http://svn.haxx.se/dev/archive-2008-12/0133.shtml.
-  #
-  # Test for issue #3392 'Parsing error with reverse merges and
-  # non-inheritable mergeinfo.
-  #
-  # Test issue #3407 'Shallow merges incorrectly set mergeinfo on children'.
+# Test for issue #2976 Subtrees can lose non-inheritable ranges.
+#
+# Also test for a bug with paths added as the immediate child of the
+# merge target when the merge target has non-inheritable mergeinfo
+# and is also the current working directory, see
+# http://svn.haxx.se/dev/archive-2008-12/0133.shtml.
+#
+# Test for issue #3392 'Parsing error with reverse merges and
+# non-inheritable mergeinfo.
+#
+# Test issue #3407 'Shallow merges incorrectly set mergeinfo on children'.
 def merge_away_subtrees_noninheritable_ranges(sbox):
   "subtrees can lose non-inheritable ranges"
 
