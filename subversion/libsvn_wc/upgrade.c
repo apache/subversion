@@ -175,7 +175,7 @@ read_wcprops(apr_hash_t **all_wcprops,
       svn_stringbuf_t *line;
       svn_boolean_t eof;
 
-      SVN_ERR(svn_stream_readline(stream, &line, "\n", &eof, scratch_pool));
+      SVN_ERR(svn_stream_readline(stream, &line, "\n", &eof, result_pool));
       if (eof)
         {
           if (line->len > 0)
