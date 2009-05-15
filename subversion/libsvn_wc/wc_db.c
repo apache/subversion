@@ -1457,26 +1457,9 @@ flush_entries(svn_wc__db_pdh_t *pdh)
 }
 
 
-svn_error_t *
-svn_wc__db_open(svn_wc__db_t **db,
-                svn_wc__db_openmode_t mode,
-                svn_config_t *config,
-                apr_pool_t *result_pool,
-                apr_pool_t *scratch_pool)
-{
-  *db = apr_pcalloc(result_pool, sizeof(**db));
-  (*db)->mode = mode;
-  (*db)->config = config;
-  (*db)->dir_data = apr_hash_make(result_pool);
-  (*db)->state_pool = result_pool;
-
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
-svn_wc__db_close(svn_wc__db_t *db,
-                 apr_pool_t *scratch_pool)
+static svn_error_t *
+close_db(svn_wc__db_t *db,
+         apr_pool_t *scratch_pool)
 {
   apr_hash_t *roots = apr_hash_make(scratch_pool);
   apr_hash_index_t *hi;
@@ -1533,6 +1516,57 @@ svn_wc__db_close(svn_wc__db_t *db,
     }
 
   return SVN_NO_ERROR;
+}
+
+
+static apr_status_t
+close_db_apr(void *data)
+{
+  svn_wc__db_t *db = data;
+  svn_error_t *err;
+
+  err = close_db(db, db->state_pool);
+  if (err)
+    {
+      apr_status_t result = err->apr_err;
+      svn_error_clear(err);
+      return result;
+    }
+
+  return APR_SUCCESS;
+}
+
+
+svn_error_t *
+svn_wc__db_open(svn_wc__db_t **db,
+                svn_wc__db_openmode_t mode,
+                svn_config_t *config,
+                apr_pool_t *result_pool,
+                apr_pool_t *scratch_pool)
+{
+  *db = apr_pcalloc(result_pool, sizeof(**db));
+  (*db)->mode = mode;
+  (*db)->config = config;
+  (*db)->dir_data = apr_hash_make(result_pool);
+  (*db)->state_pool = result_pool;
+
+  apr_pool_cleanup_register((*db)->state_pool, *db, close_db_apr,
+                            apr_pool_cleanup_null);
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc__db_close(svn_wc__db_t *db,
+                 apr_pool_t *scratch_pool)
+{
+  apr_status_t result = apr_pool_cleanup_run(db->state_pool, db, close_db_apr);
+
+  if (result == APR_SUCCESS)
+    return SVN_NO_ERROR;
+
+  return svn_error_wrap_apr(result, NULL);
 }
 
 
