@@ -123,12 +123,21 @@ Candidate changes:
    Fix issue where 'blame -g' returns incorrect revisions of some chunks
    that were merged in.
    Justification:
-    Feature not working as advertized.
+     Feature not working as advertized.
    Note: r37723 is the actual fix, r37719 is a regression test and r37741
-    a small comment fix. There's a small conflict when merging the test 
-    (in test_list) but it's easy enough to fix.
+     a small comment fix. There's a small conflict when merging the test 
+     (in test_list) but it's easy enough to fix.
    Votes:
-    +1: lgo
+     +1: lgo
+
+ * r37745
+   Fix an *ancient* bug that permits the setting of properties on out-of-
+   date directories over ra_neon when wcprops cache isn't populated.
+   Justification:
+     Modifying out of date dirprops?  That ain't how we roll.
+   Votes:
+     +1: cmpilato
+
 
 Approved changes:
 =================
