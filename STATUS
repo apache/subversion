@@ -102,7 +102,7 @@ Candidate changes:
    Votes:
      +1: pburba
 
-  * r37646, r37656
+ * r37646, r37656
    Fix a segfault in WC to URL copy.
    Justification:
      Segfaults are always bad.
@@ -110,6 +110,15 @@ Candidate changes:
      r37646 is the fix, r37656 is a follow up to clear iterpool.
    Votes:
      +1: stylesen, arfrever
+
+ * r37735
+   Fix an assertion which occurs when accidentally omitting "--new=" from
+   'svn diff' invocations of the form 'svn diff --old=OLDURL --new=NEWURL'.
+   Justification:
+     Assertions don't often yield helpful corrective info to the users.
+   Votes:
+     +1: cmpilato
+
 
 Approved changes:
 =================
