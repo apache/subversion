@@ -157,13 +157,6 @@ Candidate changes for 1.5.7:
 Approved changes:
 =================
 
- * r35930
-   Adjust basic_tests.py 12 for compatibility with Windows and Python 2.5+.
-   Justification:
-     The mode 'rw+' is invalid with Python 2.5+ on Windows.
-   Votes:
-     +1: rhuijben, pburba, arfrever
-
  * r36159
    Fix proxying of LOCK and UNLOCK requests via WebDAV proxies.
    Justification:
