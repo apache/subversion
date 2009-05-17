@@ -100,7 +100,7 @@ Candidate changes for 1.5.7:
      The merge conflicts in a few places due to some minor cleanups
      performed post-1.5.x.  A backport branch resolving it can be
      found here:
-     http://svn.collab.net/repos/svn/branches/1.5.x-r36919
+     http://svn.collab.net/repos/svn/branches/1.5.x-r37137
    Votes:
      +1: cmpilato, arfrever
 
