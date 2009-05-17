@@ -25,18 +25,17 @@ AC_DEFUN(SVN_LIB_KWALLET,
                 AC_MSG_RESULT([yes])
                 if test "$svn_lib_kwallet" != "yes"; then
                   AC_MSG_CHECKING([for kde4-config])
-                  kde4_config="$svn_lib_kwallet/bin/kde4-config"
-                  if test -f "$kde4_config" && test -x "$kde4_config"; then
-                    HAVE_KDE4_CONFIG="yes"
+                  KDE4_CONFIG="$svn_lib_kwallet/bin/kde4-config"
+                  if test -f "$KDE4_CONFIG" && test -x "$KDE4_CONFIG"; then
                     AC_MSG_RESULT([yes])
                   else
+                    KDE4_CONFIG=""
                     AC_MSG_RESULT([no])
                   fi
                 else
-                  AC_CHECK_PROG(HAVE_KDE4_CONFIG, kde4-config, yes)
-                  kde4_config="kde4-config"
+                  AC_PATH_PROG(KDE4_CONFIG, kde4-config)
                 fi
-                if test "$HAVE_KDE4_CONFIG" = "yes"; then
+                if test -n "$KDE4_CONFIG"; then
                   AC_MSG_CHECKING([for KWallet])
                   old_CXXFLAGS="$CXXFLAGS"
                   old_LDFLAGS="$LDFLAGS"
@@ -45,14 +44,14 @@ AC_DEFUN(SVN_LIB_KWALLET,
                     CPPFLAGS="$CPPFLAGS $d"
                   done
                   qt_include_dirs="`$PKG_CONFIG --cflags-only-I QtCore QtDBus QtGui`"
-                  kde_dir="`$kde4_config --prefix`"
+                  kde_dir="`$KDE4_CONFIG --prefix`"
                   SVN_KWALLET_INCLUDES="$DBUS_CPPFLAGS $qt_include_dirs -I$kde_dir/include"
                   qt_libs_other_options="`$PKG_CONFIG --libs-only-other QtCore QtDBus QtGui`"
                   SVN_KWALLET_LIBS="$DBUS_LIBS -lQtCore -lQtDBus -lQtGui -lkdecore -lkdeui $qt_libs_other_options"
                   CXXFLAGS="$CXXFLAGS $SVN_KWALLET_INCLUDES"
                   LIBS="$LIBS $SVN_KWALLET_LIBS"
                   qt_lib_dirs="`$PKG_CONFIG --libs-only-L QtCore QtDBus QtGui`"
-                  LDFLAGS="$old_LDFLAGS $qt_lib_dirs -L$kde_dir/lib`$kde4_config --libsuffix`"
+                  LDFLAGS="$old_LDFLAGS $qt_lib_dirs -L$kde_dir/lib`$KDE4_CONFIG --libsuffix`"
                   AC_LANG(C++)
                   AC_LINK_IFELSE([
 #include <kwallet.h>

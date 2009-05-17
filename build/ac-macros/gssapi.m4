@@ -18,25 +18,24 @@ AC_DEFUN(SVN_LIB_RA_SERF_GSSAPI,
     AC_MSG_RESULT([yes])
     if test "$svn_lib_gssapi" != "yes"; then
       AC_MSG_CHECKING([for krb5-config])
-      krb5_config="$svn_lib_gssapi/bin/krb5-config"
-      if test -f "$krb5_config" && test -x "$krb5_config"; then
-        HAVE_KRB5_CONFIG="yes"
+      KRB5_CONFIG="$svn_lib_gssapi/bin/krb5-config"
+      if test -f "$KRB5_CONFIG" && test -x "$KRB5_CONFIG"; then
         AC_MSG_RESULT([yes])
       else
+        KRB5_CONFIG=""
         AC_MSG_RESULT([no])
       fi
     else
-      AC_CHECK_PROG(HAVE_KRB5_CONFIG, krb5-config, yes)
-      krb5_config="krb5-config"
+      AC_PATH_PROG(KRB5_CONFIG, krb5-config)
     fi
-    if test "$HAVE_KRB5_CONFIG" = "yes"; then
+    if test -n "$KRB5_CONFIG"; then
       AC_MSG_CHECKING([for GSSAPI (Kerberos)])
       old_CPPFLAGS="$CPPFLAGS"
       old_CFLAGS="$CFLAGS"
       old_LIBS="$LIBS"
       CFLAGS=""
-      SVN_GSSAPI_INCLUDES="`$krb5_config --cflags`"
-      SVN_GSSAPI_LIBS="`$krb5_config --libs gssapi`"
+      SVN_GSSAPI_INCLUDES="`$KRB5_CONFIG --cflags`"
+      SVN_GSSAPI_LIBS="`$KRB5_CONFIG --libs gssapi`"
       CPPFLAGS="$CPPFLAGS $SVN_GSSAPI_INCLUDES"
       CFLAGS="$old_CFLAGS"
       LIBS="$LIBS $SVN_GSSAPI_LIBS"
