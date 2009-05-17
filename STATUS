@@ -157,22 +157,6 @@ Candidate changes for 1.5.7:
 Approved changes:
 =================
 
- * r36613, r36615, r36631, r36641
-   Avoid potential segfault when dealing with subtree mergeinfo.
-   Justification:
-     One user reported a segfault due to the way, prior to this change, that
-     we set children_with_mergeinfo elements to NULL rather than removing
-     the elements from the array, see
-     http://svn.haxx.se/dev/archive-2009-03/0382.shtml.
-   Notes:
-     The fix itself is r36613, r36631, and r36641.  r36615 is a variable
-     renaming change that is necessary to avoid a conflict.  r36613 doesn't
-     merge cleanly due to text conflicts and the lack of SVN_ERR_ASSERT in
-     1.5.x.  A backport branch can be found at
-     http://svn.collab.net/repos/svn/branches/1.5.x-r36613.
-   Votes:
-     +1: pburba, rhuijben, arfrever
-
 * r36851, r36857
    'svnadmin upgrade'-ing pre-1.2 repositories fails for lack of
    'db/format' file.
