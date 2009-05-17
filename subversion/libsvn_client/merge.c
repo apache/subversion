@@ -4165,7 +4165,7 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
                                        pool));
   else
     SVN_ERR(svn_wc_walk_entries3(merge_cmd_baton->target, adm_access,
-                                 &walk_callbacks, &wb, depth,
+                                 &walk_callbacks, &wb,
                                  /* If we are not honoring mergeinfo just
                                     do a depth empty walk so all we put in
                                     *CHILDREN_WITH_MERGEINFO is
