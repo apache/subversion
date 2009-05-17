@@ -66,7 +66,7 @@ I.    INTRODUCTION
 
       You'll need the following build tools to compile Subversion:
 
-      * autoconf 2.58 or later (Unix only)
+      * autoconf 2.59 or later (Unix only)
       * libtool 1.4 or later (Unix only)
       * a reasonable C compiler (gcc, Visual Studio, etc.)
 
@@ -307,7 +307,7 @@ I.    INTRODUCTION
             http://www.zlib.net
 
 
-      3.  autoconf 2.58 or newer (Unix only)
+      3.  autoconf 2.59 or newer (Unix only)
 
       This is required only if you plan to build from the latest source
       (see section II.B). Generally only developers would be doing this.
@@ -667,7 +667,7 @@ II.   INSTALLATION
       section I.)
 
       Note: if the command "autoconf" on your machine does not run
-      autoconf 2.58 or later, but you do have a new enough autoconf
+      autoconf 2.59 or later, but you do have a new enough autoconf
       available, then you can specify the correct one with the
       AUTOCONF variable.  (The AUTOHEADER variable is similar.)  This
       may be required on Debian GNU/Linux, where "autoconf" is
@@ -676,7 +676,7 @@ II.   INSTALLATION
       APR's configuration systems, the Perl script may get it wrong.
       So for example, you might need to do:
 
-          $ AUTOCONF=autoconf2.58 sh ./autogen.sh
+          $ AUTOCONF=autoconf2.59 sh ./autogen.sh
 
       Once you've prepared the working copy by running autogen.sh,
       just follow the usual configuration and build procedure:

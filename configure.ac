@@ -1,7 +1,7 @@
 dnl configure.ac: Autoconfiscation for Subversion
 dnl Process this file with autoconf to produce a configure script.
 
-AC_PREREQ(2.58)
+AC_PREREQ(2.59)
 
 dnl Get the version of Subversion, using m4's esyscmd() command to do this
 dnl at m4-time, since AC_INIT() requires it then.
