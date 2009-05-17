@@ -111,24 +111,29 @@ Candidate changes:
    Votes:
      +1: stylesen, arfrever
 
+ * r37710
+   Fix Issue 3413: Bindings fail to load FS modules with enabled run-time
+   module search.
+   Votes:
+     +1: arfrever
+
  * r37735
    Fix an assertion which occurs when accidentally omitting "--new=" from
    'svn diff' invocations of the form 'svn diff --old=OLDURL --new=NEWURL'.
    Justification:
      Assertions don't often yield helpful corrective info to the users.
    Votes:
-     +1: cmpilato
+     +1: cmpilato, arfrever
 
- * r37723, r37719, r37741
+ * r37719, r37723, r37741
    Fix issue where 'blame -g' returns incorrect revisions of some chunks
    that were merged in.
    Justification:
      Feature not working as advertized.
    Note: r37723 is the actual fix, r37719 is a regression test and r37741
-     a small comment fix. There's a small conflict when merging the test 
-     (in test_list) but it's easy enough to fix.
+     a small comment fix.
    Votes:
-     +1: lgo
+     +1: lgo, arfrever
 
  * r37745
    Fix an *ancient* bug that permits the setting of properties on out-of-
@@ -136,8 +141,7 @@ Candidate changes:
    Justification:
      Modifying out of date dirprops?  That ain't how we roll.
    Votes:
-     +1: cmpilato
-
+     +1: cmpilato, arfrever
 
 Approved changes:
 =================
