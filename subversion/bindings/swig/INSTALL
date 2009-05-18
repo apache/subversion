@@ -281,7 +281,9 @@ BUILDING SWIG BINDINGS FOR SVN ON WINDOWS
 
       Copy subversion\bindings\swig\python\svn\*.py into the svn folder.
       Copy subversion\bindings\swig\python\*.py and
-      Release\subversion\bindings\swig\python\*.dll into the libsvn folder.
+      Release\subversion\bindings\swig\python\*.pyd and
+      Release\subversion\bindings\swig\python\libsvn_swig_py\libsvn_swig_py-1.dll
+      into the libsvn folder.
 
       Optionally, you can run the following commands to compile the Python
       sources into bytecode:

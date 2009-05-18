@@ -445,15 +445,7 @@ immediate_install_props(const char *path,
   else
     {
       /* No property modifications, remove the file instead. */
-      svn_error_t *err;
-
-      err = svn_io_remove_file(propfile_path, scratch_pool);
-      if (err)
-        {
-          if (!APR_STATUS_IS_ENOENT(err->apr_err))
-            return svn_error_return(err);
-          svn_error_clear(err);
-        }
+      SVN_ERR(svn_io_remove_file2(propfile_path, TRUE, scratch_pool));
     }
 
   return SVN_NO_ERROR;
@@ -484,24 +476,6 @@ svn_wc__working_props_committed(const char *path,
   /* svn_io_file_rename() retains a read-only bit, so there's no
      need to explicitly set it. */
   return svn_io_file_rename(working, base, pool);
-}
-
-static svn_error_t *
-remove_file_if_present(const char *file, apr_pool_t *pool)
-{
-  svn_error_t *err;
-
-  /* Try to remove the file. */
-  err = svn_io_remove_file(file, pool);
-
-  /* Ignore file not found error. */
-  if (err && APR_STATUS_IS_ENOENT(err->apr_err))
-    {
-      svn_error_clear(err);
-      err = SVN_NO_ERROR;
-    }
-
-  return err;
 }
 
 
@@ -546,7 +520,7 @@ svn_wc__props_delete(svn_wc__db_t *db,
                               ? svn_node_dir
                               : svn_node_file,
                             props_kind, pool));
-  return remove_file_if_present(props_file, pool);
+  return svn_error_return(svn_io_remove_file2(props_file, TRUE, pool));
 }
 
 svn_error_t *
@@ -1808,6 +1782,7 @@ svn_wc__internal_propget(const svn_string_t **value,
   apr_hash_t *prophash = NULL;
   enum svn_prop_kind kind = svn_property_kind(NULL, name);
   const svn_wc_entry_t *entry;
+  svn_boolean_t hidden;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
   SVN_ERR_ASSERT(kind != svn_prop_entry_kind);
@@ -1816,6 +1791,16 @@ svn_wc__internal_propget(const svn_string_t **value,
                           FALSE, result_pool, scratch_pool);
   if (err)
     {
+      /* For compatibility with wc-1 behavior, disregard some of the
+         various "reason why I can't get an entry" errors here. 
+         ### should SVN_ERR_WC_NOT_WORKING_COPY be here too?  */
+      if (err->apr_err == SVN_ERR_WC_MISSING)
+        {
+          svn_error_clear(err);
+          *value = NULL;
+          return SVN_NO_ERROR;
+        }
+
       if (err->apr_err == SVN_ERR_NODE_UNEXPECTED_KIND)
         {
           /* We're trying to fetch a property on a directory, but we ended
@@ -1828,7 +1813,16 @@ svn_wc__internal_propget(const svn_string_t **value,
         }
       return svn_error_return(err);
     }
-  if (entry == NULL || svn_wc__entry_is_hidden(entry))
+  if (entry == NULL)
+    {
+      /* The node is not present, or not really "here". Therefore, the
+         property is not present.  */
+      *value = NULL;
+      return SVN_NO_ERROR;
+    }
+
+  SVN_ERR(svn_wc__entry_is_hidden(&hidden, entry));
+  if (hidden)
     {
       /* The node is not present, or not really "here". Therefore, the
          property is not present.  */
@@ -1838,9 +1832,17 @@ svn_wc__internal_propget(const svn_string_t **value,
 
   if (kind == svn_prop_wc_kind)
     {
-      SVN_ERR_W(svn_wc__db_base_get_dav_cache(&prophash, db, local_abspath,
-                                              result_pool, scratch_pool),
-                _("Failed to load properties from disk"));
+      /* If no dav cache can be found, just set VALUE to NULL (for
+         compatibility with pre-WC-NG code). */
+      err = svn_wc__db_base_get_dav_cache(&prophash, db, local_abspath,
+                                          result_pool, scratch_pool);
+      if (err && (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND))
+        {
+          *value = NULL;
+          svn_error_clear(err);
+          return SVN_NO_ERROR;
+        }
+      SVN_ERR_W(err, _("Failed to load properties from disk"));
     }
   else
     {
@@ -2439,7 +2441,10 @@ svn_wc_get_prop_diffs(apr_array_header_t **propchanges,
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
   SVN_ERR(svn_wc__db_check_node(&kind, db, local_abspath, pool));
 
-  SVN_ERR_ASSERT(kind != svn_wc__db_kind_unknown);
+  if (kind == svn_wc__db_kind_unknown)
+    return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+                             _("'%s' is not under version control"),
+                             svn_path_local_style(path, pool));
 
   if (kind == svn_wc__db_kind_dir)
     {

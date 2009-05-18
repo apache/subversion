@@ -456,7 +456,7 @@ open_adm_file(svn_stream_t **stream,
     {
       /* Exclusive open failed, delete and retry */
       svn_error_clear(err);
-      SVN_ERR(svn_io_remove_file(path, scratch_pool));
+      SVN_ERR(svn_io_remove_file2(path, FALSE, scratch_pool));
       err = svn_stream_open_writable(stream, path, result_pool, scratch_pool);
     }
 
@@ -518,7 +518,7 @@ svn_wc__remove_adm_file(const char *dir_path,
 {
   const char *path = svn_wc__adm_child(dir_path, filename, scratch_pool);
 
-  return svn_io_remove_file(path, scratch_pool);
+  return svn_error_return(svn_io_remove_file2(path, FALSE, scratch_pool));
 }
 
 

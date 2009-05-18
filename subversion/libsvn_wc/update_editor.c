@@ -255,11 +255,15 @@ check_wc_root(svn_boolean_t *wc_root,
  * Add to EB->skipped_trees a copy (allocated in EB->pool) of the string
  * PATH.
  */
-static void
+static svn_error_t *
 remember_skipped_tree(struct edit_baton *eb, const char *path)
 {
-  apr_hash_set(eb->skipped_trees, apr_pstrdup(eb->pool, path),
-               APR_HASH_KEY_STRING, (void*)1);
+  const char *abspath;
+
+  SVN_ERR(svn_dirent_get_absolute(&abspath, path, eb->pool));
+  apr_hash_set(eb->skipped_trees, abspath, APR_HASH_KEY_STRING, (void*)1);
+
+  return SVN_NO_ERROR;
 }
 
 /* Record in the edit baton EB the root PATH of any locally deleted subtrees.
@@ -307,7 +311,10 @@ in_skipped_tree(struct edit_baton *eb,
 {
     while (!svn_path_is_empty(path) && !svn_dirent_is_root(path, strlen(path)))
     {
-      if (apr_hash_get(eb->skipped_trees, path, APR_HASH_KEY_STRING))
+      const char *abspath;
+
+      svn_dirent_get_absolute(&abspath, path, scratch_pool);
+      if (apr_hash_get(eb->skipped_trees, abspath, APR_HASH_KEY_STRING))
         return TRUE;
 
       path = svn_dirent_dirname(path, scratch_pool);
@@ -1076,7 +1083,7 @@ window_handler(svn_txdelta_window_t *window, void *baton)
   if (err)
     {
       /* We failed to apply the delta; clean up the temporary file.  */
-      svn_error_clear(svn_io_remove_file(hb->work_path, hb->pool));
+      svn_error_clear(svn_io_remove_file2(hb->work_path, TRUE, hb->pool));
     }
   else
     {
@@ -2021,7 +2028,7 @@ do_entry_deletion(struct edit_baton *eb,
   SVN_ERR(already_in_a_tree_conflict(&victim_path, eb->db, full_path, pool));
   if (victim_path != NULL)
     {
-      remember_skipped_tree(eb, full_path);
+      SVN_ERR(remember_skipped_tree(eb, full_path));
 
       /* ### TODO: Also print victim_path in the skip msg. */
       if (eb->notify_func)
@@ -2046,7 +2053,7 @@ do_entry_deletion(struct edit_baton *eb,
       /* When we raise a tree conflict on a directory, we want to avoid
        * making any changes inside it. (Will an update ever try to make
        * further changes to or inside a directory it's just deleted?) */
-      remember_skipped_tree(eb, full_path);
+      SVN_ERR(remember_skipped_tree(eb, full_path));
 
       if (eb->notify_func)
         (*eb->notify_func)(eb->notify_baton,
@@ -2260,7 +2267,7 @@ add_directory(const char *path,
   if (victim_path != NULL)
     {
       /* Record this conflict so that its descendants are skipped silently. */
-      remember_skipped_tree(eb, full_path);
+      SVN_ERR(remember_skipped_tree(eb, full_path));
 
       /* ### TODO: Also print victim_path in the skip msg. */
       if (eb->notify_func)
@@ -2414,7 +2421,7 @@ add_directory(const char *path,
                 {
                   /* Record this conflict so that its descendants are
                      skipped silently. */
-                  remember_skipped_tree(eb, full_path);
+                  SVN_ERR(remember_skipped_tree(eb, full_path));
 
                   if (eb->notify_func)
                     (*eb->notify_func)(eb->notify_baton,
@@ -2664,7 +2671,7 @@ open_directory(const char *path,
       if (!in_deleted_tree(eb, full_path, TRUE, pool))
         db->bump_info->skipped = TRUE;
 
-      remember_skipped_tree(eb, full_path);
+      SVN_ERR(remember_skipped_tree(eb, full_path));
 
       /* Don't bother with a notification if PATH is inside a locally
          deleted tree, a conflict notification will already have been
@@ -3508,7 +3515,7 @@ add_file(const char *path,
   if (victim_path != NULL)
     {
       fb->skipped = TRUE;
-      remember_skipped_tree(eb, full_path);
+      SVN_ERR(remember_skipped_tree(eb, full_path));
 
       if (eb->notify_func)
         (*eb->notify_func)(eb->notify_baton,
@@ -3620,7 +3627,7 @@ add_file(const char *path,
             {
               /* Record the conflict so that the file is skipped silently
                  by the other callbacks. */
-              remember_skipped_tree(eb, full_path);
+              SVN_ERR(remember_skipped_tree(eb, full_path));
               fb->skipped = TRUE;
 
               if (eb->notify_func)
@@ -3742,7 +3749,7 @@ open_file(const char *path,
       if (!locally_deleted)
         fb->skipped = TRUE;
 
-      remember_skipped_tree(eb, full_path);
+      SVN_ERR(remember_skipped_tree(eb, full_path));
 
       /* Don't bother with a notification if PATH is inside a locally
          deleted tree, a conflict notification will already have been
@@ -4688,11 +4695,11 @@ close_edit(void *edit_baton,
            hi = apr_hash_next(hi))
         {
           const void *key;
-          const char *deleted_path;
+          const char *deleted_abspath;
 
           apr_hash_this(hi, &key, NULL, NULL);
-          deleted_path = key;
-          apr_hash_set(eb->skipped_trees, deleted_path,
+          SVN_ERR(svn_dirent_get_absolute(&deleted_abspath, key, eb->pool));
+          apr_hash_set(eb->skipped_trees, deleted_abspath,
                        APR_HASH_KEY_STRING, NULL);
         }
 
@@ -5188,6 +5195,7 @@ check_wc_root(svn_boolean_t *wc_root,
   const char *parent, *base_name;
   const svn_wc_entry_t *p_entry, *entry;
   svn_error_t *err;
+  svn_boolean_t hidden;
 
   /* Go ahead and initialize our return value to the most common
      (code-wise) values. */
@@ -5201,24 +5209,34 @@ check_wc_root(svn_boolean_t *wc_root,
      definitely not a root.  */
   err = svn_wc__get_entry(&entry, db, abspath, TRUE, svn_node_unknown, FALSE,
                           pool, pool);
-  if (err || entry == NULL || entry->kind == svn_node_file
-      || svn_wc__entry_is_hidden(entry))
-    {
-      if (err)
-        {
-          if (err->apr_err == SVN_ERR_NODE_UNEXPECTED_KIND
-              && entry->kind == svn_node_dir && *entry->name != '\0')
-            {
-              /* The (subdir) node is (most likely) not present. We said
-                 we wanted the actual information, but got the stub info
-                 instead. We can pretend this is a file so the parent will
-                 be the anchor.  */
-            }
-          else
-            return err;
-          svn_error_clear(err);
-        }
 
+  if (err && err->apr_err == SVN_ERR_NODE_UNEXPECTED_KIND
+        && entry->kind == svn_node_dir && *entry->name != '\0')
+    {
+      /* The (subdir) node is (most likely) not present. We said we wanted
+         the actual information, but got the stub info instead. We can
+         pretend this is a file so the parent will be the anchor.  */
+      svn_error_clear(err);
+
+      if (kind)
+        *kind = svn_node_file;
+      *wc_root = FALSE;
+      return SVN_NO_ERROR;
+    }
+  else if (err)
+    return svn_error_return(err);
+
+  if (entry == NULL || entry->kind == svn_node_file)
+    {
+      if (kind)
+        *kind = svn_node_file;
+      *wc_root = FALSE;
+      return SVN_NO_ERROR;
+    }
+
+  SVN_ERR(svn_wc__entry_is_hidden(&hidden, entry));
+  if (hidden)
+    {
       if (kind)
         *kind = svn_node_file;
       *wc_root = FALSE;
@@ -5250,7 +5268,8 @@ check_wc_root(svn_boolean_t *wc_root,
       svn_error_clear(err);
       return SVN_NO_ERROR;
     }
-  SVN_ERR_ASSERT(!svn_wc__entry_is_hidden(p_entry));
+  SVN_ERR(svn_wc__entry_is_hidden(&hidden, p_entry));
+  SVN_ERR_ASSERT(!hidden);
 
   /* If the parent directory has no url information, something is
      messed up.  Bail with an error. */
@@ -5271,9 +5290,15 @@ check_wc_root(svn_boolean_t *wc_root,
      PATH is a WC root. */
   err = svn_wc__get_entry(&p_entry, db, abspath, FALSE, svn_node_dir, TRUE,
                           pool, pool);
-  if (err || svn_wc__entry_is_hidden(p_entry))
+  if (err)
     {
       svn_error_clear(err);
+      return SVN_NO_ERROR;
+    }
+
+  SVN_ERR(svn_wc__entry_is_hidden(&hidden, p_entry));
+  if (hidden)
+    {
       return SVN_NO_ERROR;
     }
 

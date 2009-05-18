@@ -490,7 +490,7 @@ svn_cl__edit_string_externally(svn_string_t **edited_contents /* UTF-8! */,
   if (remove_file)
     {
       /* Remove the file from disk.  */
-      err2 = svn_io_remove_file(tmpfile_name, pool);
+      err2 = svn_io_remove_file2(tmpfile_name, FALSE, pool);
 
       /* Only report remove error if there was no previous error. */
       if (! err && err2)
@@ -598,7 +598,7 @@ svn_cl__cleanup_log_msg(void *log_msg_baton,
 
   /* If there was no commit error, cleanup the tmpfile and return. */
   if (! commit_err)
-    return svn_io_remove_file(lmb->tmpfile_left, lmb->pool);
+    return svn_io_remove_file2(lmb->tmpfile_left, FALSE, lmb->pool);
 
   /* There was a commit error; there is a tmpfile.  Leave the tmpfile
      around, and add message about its presence to the commit error
@@ -844,7 +844,7 @@ svn_cl__get_log_message(const char **log_msg,
                  message. */
               if ('a' == letter)
                 {
-                  SVN_ERR(svn_io_remove_file(lmb->tmpfile_left, pool));
+                  SVN_ERR(svn_io_remove_file2(lmb->tmpfile_left, FALSE, pool));
                   *tmp_file = lmb->tmpfile_left = NULL;
                   break;
                 }
@@ -854,7 +854,7 @@ svn_cl__get_log_message(const char **log_msg,
                  also cleanup the temporary file. */
               if ('c' == letter)
                 {
-                  SVN_ERR(svn_io_remove_file(lmb->tmpfile_left, pool));
+                  SVN_ERR(svn_io_remove_file2(lmb->tmpfile_left, FALSE, pool));
                   *tmp_file = lmb->tmpfile_left = NULL;
                   message = svn_stringbuf_create("", pool);
                 }

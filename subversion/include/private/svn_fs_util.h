@@ -176,9 +176,9 @@ svn_fs__next_entry_name(const char **next_p,
    change_kind to CHANGE_KIND.  Set all other fields to their _unknown,
    NULL or invalid value, respectively. */
 svn_fs_path_change2_t *
-svn_fs__path_change2_create(const svn_fs_id_t *node_rev_id,
-                            svn_fs_path_change_kind_t change_kind,
-                            apr_pool_t *pool);
+svn_fs__path_change_create_internal(const svn_fs_id_t *node_rev_id,
+                                    svn_fs_path_change_kind_t change_kind,
+                                    apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

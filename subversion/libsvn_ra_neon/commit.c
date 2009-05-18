@@ -632,10 +632,7 @@ static svn_error_t * commit_open_root(void *edit_baton,
   /* create the root resource. no wr_url (yet). */
   rsrc = apr_pcalloc(dir_pool, sizeof(*rsrc));
   rsrc->pool = dir_pool;
-
-  /* ### should this be 'base_revision' here? we might not always be
-     ### working against the head! (think "properties"). */
-  rsrc->revision = SVN_INVALID_REVNUM;
+  rsrc->revision = base_revision;
 
   rsrc->url = cc->ras->root.path;
   rsrc->local_path = "";

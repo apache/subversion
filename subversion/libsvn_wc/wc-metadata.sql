@@ -362,5 +362,9 @@ CREATE TABLE WORK_QUEUE (
   work  BLOB NOT NULL
   );
 
-/* Ugh. We cannot remove columns. Just clear the contents instead.  */
-UPDATE BASE_NODE SET incomplete_children = NULL;
+/* We cannot remove columns. Just clear the contents of 'incomplete_children'
+   instead.
+
+   The contents of dav_cache are suspect in format 12, so it is best to just
+   erase anything there.  */
+UPDATE BASE_NODE SET incomplete_children=null, dav_cache=null;

@@ -51,17 +51,103 @@ upgrade_format(svn_wc_adm_access_t *adm_access,
 
 
 
+
+/* Read one proplist (allocated from RESULT_POOL) from STREAM, and place it
+   into ALL_WCPROPS at NAME.  */
+static svn_error_t *
+read_one_proplist(apr_hash_t *all_wcprops,
+                  const char *name,
+                  svn_stream_t *stream,
+                  apr_pool_t *result_pool,
+                  apr_pool_t *scratch_pool)
+{
+  apr_hash_t *proplist;
+
+  proplist = apr_hash_make(result_pool);
+  SVN_ERR(svn_hash_read2(proplist, stream, SVN_HASH_TERMINATOR, result_pool));
+  apr_hash_set(all_wcprops, name, APR_HASH_KEY_STRING, proplist);
+
+  return SVN_NO_ERROR;
+}
+
+
+/* Read the wcprops from all the files in the admin area of DIR_ABSPATH,
+   returning them in *ALL_WCPROPS. Results are allocated in RESULT_POOL,
+   and temporary allocations are performed in SCRATCH_POOL.  */
+static svn_error_t *
+read_many_wcprops(apr_hash_t **all_wcprops,
+                  const char *dir_abspath,
+                  apr_pool_t *result_pool,
+                  apr_pool_t *scratch_pool)
+{
+  svn_stream_t *stream;
+  apr_hash_t *dirents;
+  svn_error_t *err;
+  const char *props_dir_abspath;
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+  apr_hash_index_t *hi;
+
+  *all_wcprops = apr_hash_make(result_pool);
+
+  /* First, look at dir-wcprops. */
+  err = svn_wc__open_adm_stream(&stream, dir_abspath,
+                                SVN_WC__ADM_DIR_WCPROPS,
+                                iterpool, iterpool);
+  if (err)
+    {
+      /* If the file doesn't exist, it means no wcprops. */
+      if (APR_STATUS_IS_ENOENT(err->apr_err))
+        svn_error_clear(err);
+      else
+        return svn_error_return(err);
+    }
+  else
+    {
+      SVN_ERR(read_one_proplist(*all_wcprops, SVN_WC_ENTRY_THIS_DIR, stream,
+                                result_pool, iterpool));
+      SVN_ERR(svn_stream_close(stream));
+    }
+
+  props_dir_abspath = svn_wc__adm_child(dir_abspath, SVN_WC__ADM_WCPROPS,
+                                        scratch_pool);
+
+  /* Now walk the wcprops directory. */
+  SVN_ERR(svn_io_get_dirents2(&dirents, props_dir_abspath, scratch_pool));
+
+  for (hi = apr_hash_first(scratch_pool, dirents);
+       hi;
+       hi = apr_hash_next(hi))
+    {
+      const void *key;
+      const char *prop_path;
+
+      svn_pool_clear(iterpool);
+
+      apr_hash_this(hi, &key, NULL, NULL);
+
+      prop_path = svn_dirent_join(props_dir_abspath, key, iterpool);
+
+      SVN_ERR(svn_stream_open_readonly(&stream, prop_path,
+                                       iterpool, iterpool));
+      SVN_ERR(read_one_proplist(*all_wcprops, key, stream,
+                                result_pool, iterpool));
+      SVN_ERR(svn_stream_close(stream));
+    }
+
+  svn_pool_destroy(iterpool);
+  return SVN_NO_ERROR;
+}
+
+
 /* For wcprops stored in a single file in this working copy, read that
    file and return it in *ALL_WCPROPS, allocated in RESULT_POOL.   Use
    SCRATCH_POOL for temporary allocations. */
 static svn_error_t *
 read_wcprops(apr_hash_t **all_wcprops,
-             svn_wc__db_t *db,
              const char *dir_abspath,
              apr_pool_t *result_pool,
              apr_pool_t *scratch_pool)
 {
-  apr_hash_t *proplist;
   svn_stream_t *stream;
   svn_error_t *err;
 
@@ -80,10 +166,8 @@ read_wcprops(apr_hash_t **all_wcprops,
   SVN_ERR(err);
 
   /* Read the proplist for THIS_DIR. */
-  proplist = apr_hash_make(result_pool);
-  SVN_ERR(svn_hash_read2(proplist, stream, SVN_HASH_TERMINATOR, result_pool));
-  apr_hash_set(*all_wcprops, SVN_WC_ENTRY_THIS_DIR, APR_HASH_KEY_STRING,
-               proplist);
+  SVN_ERR(read_one_proplist(*all_wcprops, SVN_WC_ENTRY_THIS_DIR, stream,
+                            result_pool, scratch_pool));
 
   /* And now, the children. */
   while (1729)
@@ -91,7 +175,7 @@ read_wcprops(apr_hash_t **all_wcprops,
       svn_stringbuf_t *line;
       svn_boolean_t eof;
 
-      SVN_ERR(svn_stream_readline(stream, &line, "\n", &eof, scratch_pool));
+      SVN_ERR(svn_stream_readline(stream, &line, "\n", &eof, result_pool));
       if (eof)
         {
           if (line->len > 0)
@@ -101,129 +185,57 @@ read_wcprops(apr_hash_t **all_wcprops,
                svn_path_local_style(dir_abspath, scratch_pool));
           break;
         }
-      proplist = apr_hash_make(result_pool);
-      SVN_ERR(svn_hash_read2(proplist, stream, SVN_HASH_TERMINATOR,
-                             result_pool));
-      apr_hash_set(*all_wcprops, line->data, APR_HASH_KEY_STRING, proplist);
+      SVN_ERR(read_one_proplist(*all_wcprops, line->data, stream,
+                                result_pool, scratch_pool));
     }
 
-  return svn_stream_close(stream);
+  return svn_error_return(svn_stream_close(stream));
 }
 
-/* Convert a WC that has wcprops in files to use the wc-ng database.
-   Do this for ADM_ACCESS and its file children, using POOL for temporary
-   allocations. */
+
+/* Convert a WC that has wcprops in files to use the wc-ng database DB.
+   Do this for DIR_ABSPATH and its file children, using SCRATCH_POOL for
+   temporary allocations. */
 static svn_error_t *
-convert_wcprops(svn_wc_adm_access_t *adm_access,
+convert_wcprops(svn_wc__db_t *db,
+                const char *dir_abspath,
                 int old_format,
                 apr_pool_t *scratch_pool)
 {
-  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
-  const char *dir_abspath = svn_wc__adm_access_abspath(adm_access);
+  apr_pool_t *iterpool;
+  apr_hash_t *all_wcprops;
+  apr_hash_index_t *hi;
+
+  /* Ugh. We don't know precisely where the wcprops are. Ignore them.  */
+  if (old_format == SVN_WC__WCPROPS_LOST)
+    return SVN_NO_ERROR;
+
+  iterpool = svn_pool_create(scratch_pool);
 
   if (old_format <= SVN_WC__WCPROPS_MANY_FILES_VERSION)
-    {
-      svn_stream_t *stream;
-      svn_error_t *err;
-      apr_hash_t *dirents;
-      apr_hash_index_t *hi;
-      apr_pool_t *iterpool;
-
-      /* First, look at dir-wcprops. */
-      err = svn_wc__open_adm_stream(&stream, dir_abspath,
-                                    SVN_WC__ADM_DIR_WCPROPS,
-                                    scratch_pool, scratch_pool);
-      if (err)
-        {
-          /* If the file doesn't exist, it means no wcprops. */
-          if (APR_STATUS_IS_ENOENT(err->apr_err))
-            svn_error_clear(err);
-          else
-            return svn_error_return(err);
-        }
-      else
-        {
-          apr_hash_t *proplist;
-
-          proplist = apr_hash_make(scratch_pool);
-          SVN_ERR(svn_hash_read2(proplist, stream, SVN_HASH_TERMINATOR,
-                                 scratch_pool));
-          SVN_ERR(svn_wc__db_base_set_dav_cache(db, dir_abspath, proplist,
-                                                scratch_pool));
-        }
-
-      /* Now walk the wcprops directory. */
-      SVN_ERR(svn_io_get_dirents2(&dirents, svn_wc__adm_child(dir_abspath,
-                                                SVN_WC__ADM_WCPROPS,
-                                                scratch_pool),
-                                  scratch_pool));
-      iterpool = svn_pool_create(scratch_pool);
-      for (hi = apr_hash_first(scratch_pool, dirents); hi;
-            hi = apr_hash_next(hi))
-        {
-          const void *key;
-          const char *name;
-          apr_hash_t *proplist;
-          const char *local_abspath;
-          int len;
-
-          svn_pool_clear(iterpool);
-
-          apr_hash_this(hi, &key, NULL, NULL);
-          name = key;
-          local_abspath = svn_dirent_join(dir_abspath, name, iterpool);
-
-          proplist = apr_hash_make(iterpool);
-          SVN_ERR(svn_stream_open_readonly(&stream, local_abspath, iterpool,
-                                           iterpool));
-          SVN_ERR(svn_hash_read2(proplist, stream, SVN_HASH_TERMINATOR,
-                                 iterpool));
-          SVN_ERR(svn_stream_close(stream));
-
-          /* The filename will be something like foo.c.svn-work.  From it,
-             determine the local_abspath of the node.  The magic number of 9
-             below is basically strlen(".svn-work"). */
-          len = strlen(local_abspath);
-          local_abspath = apr_pstrndup(iterpool, local_abspath, len - 9);
-
-          SVN_ERR(svn_wc__db_base_set_dav_cache(db, local_abspath, proplist,
-                                                iterpool));
-        }
-      svn_pool_destroy(iterpool);
-    }
+    SVN_ERR(read_many_wcprops(&all_wcprops, dir_abspath,
+                              scratch_pool, iterpool));
   else
+    SVN_ERR(read_wcprops(&all_wcprops, dir_abspath, scratch_pool, iterpool));
+
+  /* Iterate over all the wcprops, writing each one to the wc_db. */
+  for (hi = apr_hash_first(scratch_pool, all_wcprops);
+       hi;
+       hi = apr_hash_next(hi))
     {
-      apr_hash_t *allprops;
-      apr_hash_index_t *hi;
-      apr_pool_t *iterpool;
+      const void *key;
+      void *val;
+      const char *local_abspath;
 
-      /* Read the all-wcprops file. */
-      SVN_ERR(read_wcprops(&allprops, db, svn_wc_adm_access_path(adm_access),
-                           scratch_pool, scratch_pool));
+      svn_pool_clear(iterpool);
 
-      /* Iterate over all the wcprops, writing each one to the wc_db. */
-      iterpool = svn_pool_create(scratch_pool);
-      for (hi = apr_hash_first(scratch_pool, allprops); hi;
-            hi = apr_hash_next(hi))
-        {
-          const void *key;
-          void *val;
-          const char *name;
-          apr_hash_t *proplist;
-          const char *local_abspath;
+      apr_hash_this(hi, &key, NULL, &val);
 
-          svn_pool_clear(iterpool);
-
-          apr_hash_this(hi, &key, NULL, &val);
-          name = key;
-          proplist = val;
-
-          local_abspath = svn_dirent_join(dir_abspath, name, iterpool);
-          SVN_ERR(svn_wc__db_base_set_dav_cache(db, local_abspath, proplist,
-                                                iterpool));
-        }
-      svn_pool_destroy(iterpool);
+      local_abspath = svn_dirent_join(dir_abspath, key, iterpool);
+      SVN_ERR(svn_wc__db_base_set_dav_cache(db, local_abspath, val, iterpool));
     }
+
+  svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
 }
@@ -283,6 +295,8 @@ static svn_error_t *
 upgrade_format(svn_wc_adm_access_t *adm_access,
                apr_pool_t *scratch_pool)
 {
+  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
+  const char *dir_abspath = svn_wc__adm_access_abspath(adm_access);
   int wc_format;
   svn_boolean_t cleanup_required;
   const svn_wc_entry_t *this_dir;
@@ -348,23 +362,25 @@ upgrade_format(svn_wc_adm_access_t *adm_access,
   /* Migrate the entries over to the new database.
      ### We need to think about atomicity here. */
   SVN_ERR(svn_wc__entries_upgrade(adm_access, SVN_WC__VERSION, scratch_pool));
-  svn_error_clear(svn_io_remove_file(svn_wc__adm_child(svn_wc_adm_access_path(
-                                                                adm_access),
-                                                       SVN_WC__ADM_FORMAT,
-                                                       scratch_pool),
-                                     scratch_pool));
-  SVN_ERR(svn_io_remove_file(svn_wc__adm_child(svn_wc_adm_access_path(
-                                                                adm_access),
-                                               SVN_WC__ADM_ENTRIES,
-                                               scratch_pool),
-                             scratch_pool));
+  SVN_ERR(svn_io_remove_file2(svn_wc__adm_child(svn_wc_adm_access_path(
+                                                  adm_access),
+                                                SVN_WC__ADM_FORMAT,
+                                                scratch_pool),
+                              TRUE,
+                              scratch_pool));
+  SVN_ERR(svn_io_remove_file2(svn_wc__adm_child(svn_wc_adm_access_path(
+                                                  adm_access),
+                                                SVN_WC__ADM_ENTRIES,
+                                                scratch_pool),
+                              FALSE,
+                              scratch_pool));
 
   /* ### Note that lots of this content is cribbed from the old format updater.
      ### The following code will change as the wc-ng format changes and more
      ### stuff gets migrated to the sqlite format. */
 
   /***** WC PROPS *****/
-  SVN_ERR(convert_wcprops(adm_access, wc_format, scratch_pool));
+  SVN_ERR(convert_wcprops(db, dir_abspath, wc_format, scratch_pool));
 
   if (wc_format <= SVN_WC__WCPROPS_MANY_FILES_VERSION)
     {
@@ -377,24 +393,28 @@ upgrade_format(svn_wc_adm_access_t *adm_access,
           svn_wc__adm_child(svn_wc_adm_access_path(adm_access),
                             SVN_WC__ADM_WCPROPS, scratch_pool),
           FALSE, NULL, NULL, scratch_pool));
-      svn_error_clear(svn_io_remove_file(
+      svn_error_clear(svn_io_remove_file2(
           svn_wc__adm_child(svn_wc_adm_access_path(adm_access),
                             SVN_WC__ADM_DIR_WCPROPS, scratch_pool),
+          TRUE,
           scratch_pool));
-      svn_error_clear(svn_io_remove_file(
+      svn_error_clear(svn_io_remove_file2(
           svn_wc__adm_child(svn_wc_adm_access_path(adm_access),
                             SVN_WC__ADM_EMPTY_FILE, scratch_pool),
+          TRUE,
           scratch_pool));
-      svn_error_clear(svn_io_remove_file(
+      svn_error_clear(svn_io_remove_file2(
           svn_wc__adm_child(svn_wc_adm_access_path(adm_access),
                             SVN_WC__ADM_README, scratch_pool),
+          TRUE,
           scratch_pool));
     }
   else
     {
-      svn_error_clear(svn_io_remove_file(
+      svn_error_clear(svn_io_remove_file2(
           svn_wc__adm_child(svn_wc_adm_access_path(adm_access),
                             SVN_WC__ADM_ALL_WCPROPS, scratch_pool),
+          TRUE,
           scratch_pool));
     }
 
@@ -403,26 +423,20 @@ upgrade_format(svn_wc_adm_access_t *adm_access,
 
 
 svn_error_t *
-svn_wc_upgrade(const char *path,
+svn_wc_upgrade(svn_wc_context_t *wc_ctx,
+               const char *local_abspath,
                svn_cancel_func_t cancel_func,
                void *cancel_baton,
                apr_pool_t *scratch_pool)
 {
-  svn_wc__db_t *db;
-  const char *local_abspath;
   int wc_format_version;
 
-  SVN_ERR(svn_wc__db_open(&db, svn_wc__db_openmode_readwrite,
-                          NULL /* ### config */, scratch_pool, scratch_pool));
-
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, scratch_pool));
-
-  SVN_ERR(svn_wc__internal_check_wc(&wc_format_version, db, local_abspath,
-                                    scratch_pool));
+  SVN_ERR(svn_wc__internal_check_wc(&wc_format_version, wc_ctx->db,
+                                    local_abspath, scratch_pool));
 
   if (wc_format_version < SVN_WC__VERSION)
-    SVN_ERR(upgrade_working_copy(db, path, cancel_func, cancel_baton,
-                                 scratch_pool));
+    SVN_ERR(upgrade_working_copy(wc_ctx->db, local_abspath, cancel_func,
+                                 cancel_baton, scratch_pool));
 
   return SVN_NO_ERROR;
 }

@@ -36,7 +36,6 @@
 #include "svn_private_config.h"
 #include "private/svn_sqlite.h"
 #include "private/svn_skel.h"
-#include "private/svn_debug.h"
 
 
 #define NOT_IMPLEMENTED() \
@@ -193,6 +192,7 @@ enum statement_keys {
 };
 
 static const char * const statements[] = {
+  /* STMT_SELECT_BASE_NODE */
   "select wc_id, local_relpath, repos_id, repos_relpath, "
   "  presence, kind, revnum, checksum, translated_size, "
   "  changed_rev, changed_date, changed_author, depth, symlink_target, "
@@ -200,6 +200,7 @@ static const char * const statements[] = {
   "from base_node "
   "where wc_id = ?1 and local_relpath = ?2;",
 
+  /* STMT_SELECT_BASE_NODE_WITH_LOCK */
   "select wc_id, local_relpath, base_node.repos_id, base_node.repos_relpath, "
   "  presence, kind, revnum, checksum, translated_size, "
   "  changed_rev, changed_date, changed_author, depth, symlink_target, "
@@ -210,6 +211,7 @@ static const char * const statements[] = {
   "  and base_node.repos_relpath = lock.repos_relpath "
   "where wc_id = ?1 and local_relpath = ?2;",
 
+  /* STMT_SELECT_WORKING_NODE */
   "select presence, kind, checksum, translated_size, "
   "  changed_rev, changed_date, changed_author, depth, symlink_target, "
   "  copyfrom_repos_id, copyfrom_repos_path, copyfrom_revnum, "
@@ -217,18 +219,24 @@ static const char * const statements[] = {
   "from working_node "
   "where wc_id = ?1 and local_relpath = ?2;",
 
+  /* STMT_SELECT_ACTUAL_NODE */
   "select changelist "
   "from actual_node "
   "where wc_id = ?1 and local_relpath = ?2;",
 
+  /* STMT_SELECT_REPOSITORY_BY_ID */
   "select root, uuid from repository where id = ?1;",
 
+  /* STMT_SELECT_WCROOT_NULL */
   "select id from wcroot where local_abspath is null;",
 
+  /* STMT_SELECT_REPOSITORY */
   "select id from repository where uuid = ?1;",
 
+  /* STMT_INSERT_REPOSITORY */
   "insert into repository (root, uuid) values (?1, ?2);",
 
+  /* STMT_INSERT_BASE_NODE */
   "insert or replace into base_node ("
   "  wc_id, local_relpath, repos_id, repos_relpath, parent_relpath, presence, "
   "  kind, revnum, properties, changed_rev, changed_date, changed_author, "
@@ -236,31 +244,39 @@ static const char * const statements[] = {
   "values (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, "
   "        ?15, ?16);",
 
+  /* STMT_INSERT_BASE_NODE_INCOMPLETE */
   "insert or ignore into base_node ("
   "  wc_id, local_relpath, parent_relpath, presence, kind, revnum) "
   "values (?1, ?2, ?3, 'incomplete', 'unknown', ?5);",
 
+  /* STMT_SELECT_BASE_NODE_CHILDREN */
   "select local_relpath from base_node "
   "where wc_id = ?1 and parent_relpath = ?2;",
 
+  /* STMT_SELECT_WORKING_CHILDREN */
   "select local_relpath from base_node "
   "where wc_id = ?1 and parent_relpath = ?2 "
   "union "
   "select local_relpath from working_node "
   "where wc_id = ?1 and parent_relpath = ?2;",
 
+  /* STMT_SELECT_WORKING_IS_FILE */
   "select kind == 'file' from working_node "
   "where wc_id = ?1 and local_relpath = ?2;",
 
+  /* STMT_SELECT_BASE_IS_FILE */
   "select kind == 'file' from base_node "
   "where wc_id = ?1 and local_relpath = ?2;",
 
+  /* STMT_SELECT_BASE_PROPS */
   "select properties from base_node "
   "where wc_id = ?1 and local_relpath = ?2;",
 
+  /* STMT_UPDATE_ACTUAL_PROPS */
   "update actual_node set properties = ?3 "
   "where wc_id = ?1 and local_relpath = ?2;",
 
+  /* STMT_SELECT_ALL_PROPS */
   "select actual_node.properties, working_node.properties, "
   "  base_node.properties "
   "from base_node "
@@ -270,35 +286,43 @@ static const char * const statements[] = {
   "  and base_node.local_relpath = actual_node.local_relpath "
   "where base_node.wc_id = ?1 and base_node.local_relpath = ?2;",
 
+  /* STMT_SELECT_PRISTINE_PROPS */
   "select working_node.properties, base_node.properties "
   "from base_node "
   "left outer join working_node on base_node.wc_id = working_node.wc_id "
   "  and base_node.local_relpath = working_node.local_relpath "
   "where base_node.wc_id = ?1 and base_node.local_relpath = ?2;",
 
+  /* STMT_INSERT_LOCK */
   "insert or replace into lock "
     "(repos_id, repos_relpath, lock_token, lock_owner, lock_comment, "
     " lock_date)"
   "values (?1, ?2, ?3, ?4, ?5, ?6);",
 
+  /* STMT_INSERT_WCROOT */
   "insert into wcroot (local_abspath) "
   "values (?1);",
 
+  /* STMT_UPDATE_BASE_DAV_CACHE */
   "update base_node set dav_cache = ?3 "
   "where wc_id = ?1 and local_relpath = ?2;",
 
+  /* STMT_SELECT_BASE_DAV_CACHE */
   "select dav_cache from base_node "
   "where wc_id = ?1 and local_relpath = ?2;",
 
+  /* STMT_SELECT_DELETION_INFO */
   "select base_node.presence, working_node.presence, moved_to "
   "from working_node "
   "left outer join base_node on base_node.wc_id = working_node.wc_id "
   "  and base_node.local_relpath = working_node.local_relpath "
   "where working_node.wc_id = ?1 and working_node.local_relpath = ?2;",
 
+  /* STMT_SELECT_PARENT_STUB_INFO */
   "select presence = 'not-present', revnum from base_node "
   "where wc_id = ?1 and local_relpath = ?2;",
 
+  /* STMT_DELETE_LOCK */
   "delete from lock "
   "where repos_id = ?1 and repos_relpath = ?2;",
 
@@ -1433,26 +1457,9 @@ flush_entries(svn_wc__db_pdh_t *pdh)
 }
 
 
-svn_error_t *
-svn_wc__db_open(svn_wc__db_t **db,
-                svn_wc__db_openmode_t mode,
-                svn_config_t *config,
-                apr_pool_t *result_pool,
-                apr_pool_t *scratch_pool)
-{
-  *db = apr_pcalloc(result_pool, sizeof(**db));
-  (*db)->mode = mode;
-  (*db)->config = config;
-  (*db)->dir_data = apr_hash_make(result_pool);
-  (*db)->state_pool = result_pool;
-
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
-svn_wc__db_close(svn_wc__db_t *db,
-                 apr_pool_t *scratch_pool)
+static svn_error_t *
+close_db(svn_wc__db_t *db,
+         apr_pool_t *scratch_pool)
 {
   apr_hash_t *roots = apr_hash_make(scratch_pool);
   apr_hash_index_t *hi;
@@ -1509,6 +1516,57 @@ svn_wc__db_close(svn_wc__db_t *db,
     }
 
   return SVN_NO_ERROR;
+}
+
+
+static apr_status_t
+close_db_apr(void *data)
+{
+  svn_wc__db_t *db = data;
+  svn_error_t *err;
+
+  err = close_db(db, db->state_pool);
+  if (err)
+    {
+      apr_status_t result = err->apr_err;
+      svn_error_clear(err);
+      return result;
+    }
+
+  return APR_SUCCESS;
+}
+
+
+svn_error_t *
+svn_wc__db_open(svn_wc__db_t **db,
+                svn_wc__db_openmode_t mode,
+                svn_config_t *config,
+                apr_pool_t *result_pool,
+                apr_pool_t *scratch_pool)
+{
+  *db = apr_pcalloc(result_pool, sizeof(**db));
+  (*db)->mode = mode;
+  (*db)->config = config;
+  (*db)->dir_data = apr_hash_make(result_pool);
+  (*db)->state_pool = result_pool;
+
+  apr_pool_cleanup_register((*db)->state_pool, *db, close_db_apr,
+                            apr_pool_cleanup_null);
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc__db_close(svn_wc__db_t *db,
+                 apr_pool_t *scratch_pool)
+{
+  apr_status_t result = apr_pool_cleanup_run(db->state_pool, db, close_db_apr);
+
+  if (result == APR_SUCCESS)
+    return SVN_NO_ERROR;
+
+  return svn_error_wrap_apr(result, NULL);
 }
 
 
@@ -3478,6 +3536,87 @@ svn_wc__db_scan_deletion(const char **base_del_abspath,
     }
 
   return SVN_NO_ERROR;
+}
+
+
+/* In the WCROOT associated with DB and LOCAL_ABSPATH, add WORK_ITEM to the
+   wcroot's work queue. Use SCRATCH_POOL for all temporary allocations.  */
+svn_error_t *
+svn_wc__db_wq_add(svn_wc__db_t *db,
+                  const char *local_abspath,
+                  const svn_skel_t *work_item,
+                  apr_pool_t *scratch_pool)
+{
+  svn_wc__db_pdh_t *pdh;
+  const char *local_relpath;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+  SVN_ERR_ASSERT(work_item != NULL);
+
+  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
+                              svn_sqlite__mode_readwrite,
+                              scratch_pool, scratch_pool));
+
+  NOT_IMPLEMENTED();
+}
+
+
+/* In the WCROOT associated with DB and LOCAL_ABSPATH, fetch a work item that
+   needs to be completed. Its identifier is returned in ID, and the data in
+   WORK_ITEM.
+
+   There is no particular ordering to the work items returned by this function.
+
+   If there are no work items to be completed, then ID will be set to zero,
+   and WORK_ITEM to NULL.
+
+   RESULT_POOL will be used to allocate WORK_ITEM, and SCRATCH_POOL
+   will be used for all temporary allocations.  */
+svn_error_t *
+svn_wc__db_wq_fetch(apr_uint64_t *id,
+                    svn_skel_t **work_item,
+                    svn_wc__db_t *db,
+                    const char *local_abspath,
+                    apr_pool_t *result_pool,
+                    apr_pool_t *scratch_pool)
+{
+  svn_wc__db_pdh_t *pdh;
+  const char *local_relpath;
+
+  SVN_ERR_ASSERT(id != NULL);
+  SVN_ERR_ASSERT(work_item != NULL);
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
+                              svn_sqlite__mode_readonly,
+                              scratch_pool, scratch_pool));
+
+  NOT_IMPLEMENTED();
+}
+
+
+/* In the WCROOT associated with DB and LOCAL_ABSPATH, mark work item ID as
+   completed. If an error occurs, then it is unknown whether the work item
+   has been marked as completed.
+
+   Uses SCRATCH_POOL for all temporary allocations.  */
+svn_error_t *
+svn_wc__db_wq_completed(svn_wc__db_t *db,
+                        const char *local_abspath,
+                        apr_uint64_t id,
+                        apr_pool_t *scratch_pool)
+{
+  svn_wc__db_pdh_t *pdh;
+  const char *local_relpath;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+  SVN_ERR_ASSERT(id != 0);
+
+  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
+                              svn_sqlite__mode_readwrite,
+                              scratch_pool, scratch_pool));
+
+  NOT_IMPLEMENTED();
 }
 
 

@@ -127,6 +127,58 @@ svn_wc_version(void);
 
 /** @} */
 
+/**
+ * @defgroup svn_wc_context  Working copy context
+ * @{
+ */
+
+/** The context for all working copy interactions.
+ *
+ * This is the client-facing datastructure API consumers are required
+ * to create and use when interacting with a working copy.  Multiple
+ * contexts can be created for the same working copy simultaneously, within
+ * the same process or different processes.  Context mutexing will be handled
+ * internally by the working copy library.
+ */
+typedef struct svn_wc_context_t svn_wc_context_t;
+
+/** Create a context for the working copy, and return it in @a *wc_ctx.  This
+ * context is not associated with a particular working copy, but as operations
+ * are performed, will load the appropriate working copy information.
+ *
+ * @a config should hold the various configuration options that may apply to
+ * this context.  It should live at least as long as @a result_pool.  It may
+ * be @c NULL.
+ *
+ * The context will be allocated in @a result_pool, and will use @a
+ * result_pool for any internal allocations requiring the same longevity as
+ * the context.  The context will be automatically destroyed, and its
+ * resources released, when @a result_pool is cleared, or it may be manually 
+ * destroyed by invoking svn_wc_context_destroy().
+ *
+ * Use @a scratch_pool for temporary allocations.  It may be cleared
+ * immediately upon returning from this function.
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_wc_context_create(svn_wc_context_t **wc_ctx,
+                      svn_config_t *config,
+                      apr_pool_t *result_pool,
+                      apr_pool_t *scratch_pool);
+
+
+/** Destroy the working copy context described by @a wc_ctx, releasing any
+ * acquired resources.
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_wc_context_destroy(svn_wc_context_t *wc_ctx);
+
+
+/** @} */
+
 
 /* Locking/Opening/Closing */
 
@@ -5276,8 +5328,9 @@ svn_wc_cleanup(const char *path,
                apr_pool_t *pool);
 
 /**
- * Upgrade the working copy at @a path to the latest metadata storage format.
- * @a path should be the root of the working copy.
+ * Upgrade the working copy at @a local_abspath to the latest metadata
+ * storage format.  @a local_abspath should be an absolute path to the
+ * root of the working copy.
  *
  * If @a cancel_func is non-NULL, invoke it with @a cancel_baton at
  * various points during the operation.  If it returns an error
@@ -5286,7 +5339,8 @@ svn_wc_cleanup(const char *path,
  * @since New in 1.7.
  */
 svn_error_t *
-svn_wc_upgrade(const char *path,
+svn_wc_upgrade(svn_wc_context_t *wc_ctx,
+               const char *local_abspath,
                svn_cancel_func_t cancel_func,
                void *cancel_baton,
                apr_pool_t *pool);

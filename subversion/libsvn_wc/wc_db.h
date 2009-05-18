@@ -38,6 +38,8 @@
 #include "svn_config.h"
 #include "svn_io.h"
 
+#include "private/svn_skel.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
@@ -623,7 +625,9 @@ svn_wc__db_base_set_dav_cache(svn_wc__db_t *db,
 
 
 /** Retrieve the dav cache for LOCAL_ABSPATH into *PROPS, allocated in
-    RESULT_POOL.  Use SCRATCH_POOL for temporary allocations. */
+    RESULT_POOL.  Use SCRATCH_POOL for temporary allocations.  Return
+    SVN_ERR_WC_PATH_NOT_FOUND if no dav cache can be located for
+    LOCAL_ABSPATH in DB.  */
 svn_error_t *
 svn_wc__db_base_get_dav_cache(apr_hash_t **props,
                               svn_wc__db_t *db,
@@ -1437,6 +1441,52 @@ svn_wc__db_scan_deletion(const char **base_del_abspath,
 
 /** @} */
 
+/**
+ * @defgroup svn_wc__db_wq  Work queue manipulation. see workqueue.h
+ * @{
+ */
+
+/* In the WCROOT associated with DB and LOCAL_ABSPATH, add WORK_ITEM to the
+   wcroot's work queue. Use SCRATCH_POOL for all temporary allocations.  */
+svn_error_t *
+svn_wc__db_wq_add(svn_wc__db_t *db,
+                  const char *local_abspath,
+                  const svn_skel_t *work_item,
+                  apr_pool_t *scratch_pool);
+
+
+/* In the WCROOT associated with DB and LOCAL_ABSPATH, fetch a work item that
+   needs to be completed. Its identifier is returned in ID, and the data in
+   WORK_ITEM.
+
+   There is no particular ordering to the work items returned by this function.
+
+   If there are no work items to be completed, then ID will be set to zero,
+   and WORK_ITEM to NULL.
+
+   RESULT_POOL will be used to allocate WORK_ITEM, and SCRATCH_POOL
+   will be used for all temporary allocations.  */
+svn_error_t *
+svn_wc__db_wq_fetch(apr_uint64_t *id,
+                    svn_skel_t **work_item,
+                    svn_wc__db_t *db,
+                    const char *local_abspath,
+                    apr_pool_t *result_pool,
+                    apr_pool_t *scratch_pool);
+
+
+/* In the WCROOT associated with DB and LOCAL_ABSPATH, mark work item ID as
+   completed. If an error occurs, then it is unknown whether the work item
+   has been marked as completed.
+
+   Uses SCRATCH_POOL for all temporary allocations.  */
+svn_error_t *
+svn_wc__db_wq_completed(svn_wc__db_t *db,
+                        const char *local_abspath,
+                        apr_uint64_t id,
+                        apr_pool_t *scratch_pool);
+
+/** @} */
 
 /**
  * @defgroup svn_wc__db_temp Various temporary functions during transition

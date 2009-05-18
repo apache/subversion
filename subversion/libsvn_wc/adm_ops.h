@@ -66,7 +66,7 @@ extern "C" {
 
    EXCLUDE_PATHS is a hash containing const char * pathnames.  Entries
    for pathnames contained in EXCLUDE_PATHS are not touched by this
-   function.
+   function.  These pathnames should be absolute paths.
 */
 svn_error_t *svn_wc__do_update_cleanup(const char *path,
                                        svn_wc_adm_access_t *adm_access,

@@ -217,6 +217,11 @@ ${SVN:-svn} export -q $EXTRA_EXPORT_OPTIONS -r "$REVISION" \
     "http://svn.collab.net/repos/svn/trunk/www/hacking.html" \
     --username none --password none "$DISTPATH/www/hacking.html"
 
+# Remove contrib/ from our distribution tarball.  Some of it is of
+# unknown license, and usefulness.
+# (See http://svn.haxx.se/dev/archive-2009-04/0166.shtml for discussion.)
+rm -rf "$DISTPATH/contrib"
+
 install_dependency()
 {
   DEP_NAME=$1
