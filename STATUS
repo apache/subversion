@@ -143,6 +143,15 @@ Candidate changes:
    Votes:
      +1: cmpilato, arfrever
 
+ * r37768
+   Make svnadmin load tolerate mergeinfo with "\r\n".
+   Justification:
+     Prior to this change you cannot load a dump file that contains Windows
+     style newlines in svn:mergeinfo.  See
+     http://svn.haxx.se/dev/archive-2009-05/0179.shtml.
+   Votes:
+     +1: pburba
+
 Approved changes:
 =================
 
