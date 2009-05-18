@@ -28,6 +28,7 @@
 #include "svn_private_config.h"
 #include "svn_mergeinfo.h"
 #include "svn_checksum.h"
+#include "svn_subst.h"
 
 #include <apr_lib.h>
 
@@ -308,6 +309,7 @@ parse_property_block(svn_stream_t *stream,
                      svn_filesize_t content_length,
                      const svn_repos_parse_fns2_t *parse_fns,
                      void *record_baton,
+                     void *parse_baton,
                      svn_boolean_t is_node,
                      svn_filesize_t *actual_length,
                      apr_pool_t *pool)
@@ -368,13 +370,48 @@ parse_property_block(svn_stream_t *stream,
 
               /* Now, send the property pair to the vtable! */
               if (is_node)
-                SVN_ERR(parse_fns->set_node_property(record_baton,
-                                                     keybuf,
-                                                     &propstring));
+                {
+                  /* svn_mergeinfo_parse() in parse_fns->set_node_property()
+                     will choke on mergeinfo with "\r\n" line endings, but we
+                     might legitimately encounter these in a dump stream.  If
+                     so normalize the line endings to '\n' and make a
+                     notification to PARSE_BATON->FEEDBACK_STREAM that we
+                     have made this correction. */
+                  if (strcmp(keybuf, SVN_PROP_MERGEINFO) == 0
+                      && strstr(propstring.data, "\r"))
+                    {
+                      const char *prop_eol_normalized;
+                      struct parse_baton *pb = parse_baton;
+
+                      SVN_ERR(svn_subst_translate_cstring2(
+                        propstring.data,
+                        &prop_eol_normalized,
+                        "\n",  /* translate to LF */
+                        FALSE, /* no repair */
+                        NULL,  /* no keywords */
+                        FALSE, /* no expansion */
+                        proppool));
+                      propstring.data = prop_eol_normalized;
+                      propstring.len = strlen(prop_eol_normalized);
+
+                      if (pb->outstream)
+                        SVN_ERR(svn_stream_printf(
+                          pb->outstream,
+                          proppool,
+                          _(" removing '\\r' from %s ..."),
+                          SVN_PROP_MERGEINFO));
+                    }
+
+                  SVN_ERR(parse_fns->set_node_property(record_baton,
+                                                       keybuf,
+                                                       &propstring));
+                }
               else
-                SVN_ERR(parse_fns->set_revision_property(record_baton,
-                                                         keybuf,
-                                                         &propstring));
+                {
+                  SVN_ERR(parse_fns->set_revision_property(record_baton,
+                                                           keybuf,
+                                                           &propstring));
+                }
             }
           else
             return stream_malformed(); /* didn't find expected 'V' line */
@@ -689,6 +726,7 @@ svn_repos_parse_dumpstream2(svn_stream_t *stream,
                    svn__atoui64(prop_cl ? prop_cl : content_length),
                    parse_fns,
                    found_node ? node_baton : rev_baton,
+                   parse_baton,
                    found_node,
                    &actual_prop_length,
                    found_node ? nodepool : revpool));
