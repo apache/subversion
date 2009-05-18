@@ -229,7 +229,7 @@ a <tt>file:</tt> URL?</a></li>
 <li><a href="#debian-libtool">I can't build Subversion from working
     copy source on Debian GNU/Linux; I get errors at the final link
     stage.  What's wrong?</a></li>
-<li><a href="#freebsd-listen-host">I'm using FreeBSD, and I've started
+<li><a href="#svnserve-listen-host">I've started
   svnserve, but it doesn't seem to be listening on port 3690.</a></li>
 <li><a href="#already-under-version-control">I can't add a directory
     because Subversion says it's "already under version control".</a></li>
@@ -3333,14 +3333,14 @@ solution described here was not mentioned in that thread.</p>
 </div>
 
 
-<div class="h3" id="freebsd-listen-host" title="freebsd-listen-host">
-<h3>I'm using FreeBSD, and I've started svnserve, but it doesn't seem
-  to be listening on port 3690.</h3>
+<div class="h3" id="svnserve-listen-host" title="svnserve-listen-host">
+<h3>I've started svnserve, but it doesn't seem to be listening on
+    port 3690.</h3>
     
-<p>Short answer: invoke <tt>svnserve</tt> with
-   the <tt>--listen-host=0.0.0.0</tt> option.</p>
-<p>Slightly longer answer: FreeBSD daemons only listen on tcp6 by
-  default; that option tells them to also listen on tcp4.</p>
+<p>Invoke <tt>svnserve</tt> with the <tt>--listen-host=0.0.0.0</tt> option.
+  Svnserve does not properly support IPv4/IPv6 dual-stack operation. 
+  See <a href="http://subversion.tigris.org/issues/show_bug.cgi?id=2382"
+  >issue #2382</a>.</p>
 </div>
 
 <div class="h3" id="already-under-version-control" title="already-under-version-control">
