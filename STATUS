@@ -152,6 +152,14 @@ Candidate changes:
    Votes:
      +1: pburba
 
+ * r37774
+   Make contrib/client-side/emacs/dsvn.el compatible with Subversion 1.6, in
+   particular the new column in "svn status" output.
+   Justification:
+     It doesn't work with svn 1.6 otherwise.
+   Votes:
+     +1: dkagedal
+
 Approved changes:
 =================
 
