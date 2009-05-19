@@ -163,6 +163,18 @@ Candidate changes for 1.5.7:
    Votes:
      +1: pburba
 
+ * r37779
+   Fix a potential segfault when doing noop file merges.
+   Justification:
+     Not common, but a segfault is a segfault.  See
+     http://svn.haxx.se/dev/archive-2009-05/0363.shtml.
+   Notes:
+     There are text conflicts in both merge.c and merge_tests.py, a
+     backport branch resolving these can be found at:
+     http://svn.collab.net/repos/svn/branches/1.5.x-r37779.
+   Votes:
+     +1: pburba
+
 Approved changes:
 =================
 
