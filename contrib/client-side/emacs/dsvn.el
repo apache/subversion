@@ -6,7 +6,7 @@
 ;;	Mattias Engdegård <mattias@virtutech.com>
 ;; Maintainer: David Kågedal <david@virtutech.com>
 ;; Created: 27 Jan 2006
-;; Version: 1.7
+;; Version: 1.8
 ;; Keywords: docs
 
 ;; This program is free software; you can redistribute it and/or
@@ -187,13 +187,16 @@ Returns the buffer that holds the output from 'svn'."
     (apply 'call-process svn-program nil buf nil (symbol-name command) args)
     buf))
 
-(defun svn-run-predicate (command args)
-  "Run `svn', discarding output, returning t if it succeeded (exited with
-status zero).
+(defun svn-run-for-stdout (command args)
+  "Run `svn', and return standard output as a string, discarding stderr.
 Argument COMMAND is the svn subcommand to run.
 Optional argument ARGS is a list of arguments."
-  (zerop
-   (apply 'call-process svn-program nil nil nil (symbol-name command) args)))
+  (let ((output-buffer (generate-new-buffer "*svn-stdout*")))
+    (apply 'call-process svn-program nil (list output-buffer nil) nil
+	   (symbol-name command) args)
+    (let ((stdout (with-current-buffer output-buffer (buffer-string))))
+      (kill-buffer output-buffer)
+      stdout)))
 
 (defun svn-output-filter (proc str)
   "Output filter for svn output.
@@ -671,7 +674,7 @@ name or revision number)."
   ;; First retrieve the property names, and then the value of each.
   ;; We can't use proplist -v because is output is ambiguous when values
   ;; consist of multiple lines.
-  (unless (svn-run-predicate 'ls (list file))
+  (if (string-equal (svn-run-for-stdout 'info (list file)) "")
     (error "%s is not under version control" file))
   (let (propnames)
     (with-current-buffer (svn-run-hidden 'proplist (list file))
@@ -1041,7 +1044,7 @@ outside."
       (insert str)
       (goto-char svn-output-marker)
       (while (cond ((looking-at
-                     "\\([ ACDGIMRX?!~][ CM][ L][ +][ S][ KOTB]\\) \\(.*\\)\n")
+                     "\\([ ACDGIMRX?!~][ CM][ L][ +][ S][ KOTB]\\)[ C]? \\([^ ].*\\)\n")
                     (let ((status (match-string 1))
                           (filename (match-string 2)))
                       (delete-region (match-beginning 0)
@@ -1068,7 +1071,7 @@ outside."
       (insert str)
       (goto-char svn-output-marker)
       (while (looking-at
-              "\\([ ACDGIMRX?!~][ CM][ L][ +][ S][ KOTB]\\) \\([\\* ]\\) \\(........\\) \\(........\\) \\(............\\) \\(.*\\)\n")
+              "\\([ ACDGIMRX?!~][ CM][ L][ +][ S][ KOTB]\\)[ C]? \\([* ]\\) \\(........\\) \\(........\\) \\(............\\) \\([^ ].*\\)\n")
         (let ((status (match-string 1))
               (filename (match-string 6)))
           (delete-region (match-beginning 0)
@@ -1662,24 +1665,54 @@ argument."
 	     (memq (svn-file-status pos) '(?\  ?D)))
 	   (svn-can-undo-deletion-p (cdr actions)))))
 
+(defun svn-plural (count noun)
+  (format "%d %s" count
+	  (if (= count 1)
+	      noun
+	    (if (equal (substring noun -1) "y")
+		(concat (substring noun 0 -1) "ies")
+	      (concat noun "s")))))
+
+(defun svn-delete-dir-tree (file)
+  "Remove a file or directory tree."
+  (if (file-directory-p file)
+      (progn
+	(mapc #'(lambda (f)
+		  (unless (or (equal f ".") (equal f ".."))
+		    (svn-delete-dir-tree (concat file "/" f))))
+	      (directory-files file))
+	(delete-directory file))
+    (delete-file file)))
+
 (defun svn-remove-file ()
-  "Remove the selected files."
+  "Remove the selected files and directories."
   (interactive)
-  (let ((actions (svn-actions))
-        (inhibit-read-only t))
+  (let* ((actions (svn-actions))
+	 (dir-count
+	  (length (delq nil (mapcar (lambda (fp)
+				      (file-directory-p (car fp)))
+				    actions))))
+	 (nondir-count (- (length actions) dir-count))
+	 (inhibit-read-only t))
     (when (or (svn-can-undo-deletion-p actions)
-	      (y-or-n-p (format "Really remove %d %s? "
-				(length actions)
-				(if (> (length actions) 1)
-				    "files"
-				  "file"))))
+	      (y-or-n-p
+	       (format "Really remove %s? "
+		       (cond ((zerop dir-count)
+			      (svn-plural nondir-count "file"))
+			     ((zerop nondir-count)
+			      (svn-plural dir-count "directory"))
+			     (t
+			      (concat 
+			       (svn-plural dir-count "directory")
+			       " and "
+			       (svn-plural nondir-count "file")))))))
       (let ((svn-files ()))
         (mapc (lambda (fp)
 		(let ((file (car fp))
 		      (pos (cadr fp)))
 		  (if (/= (svn-file-status pos) ?\?)
 		      (setq svn-files (cons file svn-files))
-		    (delete-file file)
+		    (svn-delete-dir-tree file)
 		    (svn-remove-line pos))))
 	      ;; traverse the list backwards, to keep buffer positions of
 	      ;; remaining files valid
