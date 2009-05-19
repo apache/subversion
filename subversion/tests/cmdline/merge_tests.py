@@ -15477,6 +15477,57 @@ def tree_conflicts_merge_del_onto_missing(sbox):
                expected_skip,
              ) ], False)
 
+#----------------------------------------------------------------------
+# File merge optimization caused segfault during noop file merge
+# when multiple ranges are eligible for merge, see
+# http://svn.haxx.se/dev/archive-2009-05/0363.shtml
+def noop_file_merge(sbox):
+  "noop file merge does not segfault"
+
+  # r1: Create a greek tree.
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Some paths we'll care about
+  A_COPY_path    = os.path.join(wc_dir, "A_COPY")
+  beta_COPY_path = os.path.join(wc_dir, "A_COPY", "B", "E", "beta")
+  chi_COPY_path  = os.path.join(wc_dir, "A_COPY", "D", "H", "chi")
+
+  # r2 - r6: Copy A to A_COPY and then make some text changes under A.
+  wc_disk, wc_status = set_up_branch(sbox)
+
+  # Merge r5 from A to A_COPY and commit as r7.  This will split the
+  # eligible ranges to be merged to A_COPY/D/H/chi into two discrete
+  # sets: r1-4 and r5-HEAD
+  svntest.actions.run_and_verify_svn(None,
+                                     expected_merge_output([[5]],
+                                     'U    ' + beta_COPY_path + '\n'),
+                                     [],
+                                     'merge', '-c5',
+                                     sbox.repo_url + '/A',
+                                     A_COPY_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'commit', '-m',
+                                     'Merge r5 from A to A_COPY',
+                                     wc_dir);
+
+  # Update working copy to allow full inheritance and elision.
+  svntest.actions.run_and_verify_svn(None, ["At revision 7.\n"], [],
+                                     'up', wc_dir)
+
+  # Merge all available revisions from A/D/H/chi to A_COPY/D/H/chi.
+  # There are no operative changes in the source, so this should
+  # not produce any output, and only update the mergeinfo on
+  # A_COPY/D/H/chi.  This is where the segfault occurred.
+  svntest.actions.run_and_verify_svn(None, None, [], 'merge',
+                                     sbox.repo_url + '/A/D/H/chi',
+                                     chi_COPY_path)
+  svntest.actions.run_and_verify_svn(None,
+                                     [' M      ' + chi_COPY_path + '\n'],
+                                     [], 'st', chi_COPY_path)
+  svntest.actions.run_and_verify_svn(None,
+                                     ['/A/D/H/chi:2-7\n'],
+                                     [], 'pg', SVN_PROP_MERGEINFO,
+                                     chi_COPY_path)
 
 ########################################################################
 # Run the tests
@@ -15689,6 +15740,8 @@ test_list = [ None,
                          server_has_mergeinfo),
               tree_conflicts_merge_edit_onto_missing,
               tree_conflicts_merge_del_onto_missing,
+              SkipUnless(noop_file_merge,
+                         server_has_mergeinfo),
              ]
 
 if __name__ == '__main__':
