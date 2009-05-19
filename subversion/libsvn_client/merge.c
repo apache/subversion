@@ -5164,42 +5164,50 @@ remove_noop_merge_ranges(apr_array_header_t **operative_ranges_p,
                           apr_array_make(pool, 0, sizeof(const char *)),
                           log_changed_revs, changed_revs, pool));
 
-  /* Our list of changed revisions should be in youngest-to-oldest order. */
-  youngest_changed_rev = *(APR_ARRAY_IDX(changed_revs,
-                                         0, svn_revnum_t *));
-  oldest_changed_rev = *(APR_ARRAY_IDX(changed_revs,
-                                       changed_revs->nelts - 1,
-                                       svn_revnum_t *));
-
-  /* Now, copy from RANGES to *OPERATIVE_RANGES, filtering out ranges
-     that aren't operative (by virtue of not having any revisions
-     represented in the CHANGED_REVS array). */
-  for (i = 0; i < ranges->nelts; i++)
+  /* Are there *any* changes? */
+  if (changed_revs->nelts)
     {
-      svn_merge_range_t *range = APR_ARRAY_IDX(ranges, i, svn_merge_range_t *);
-      svn_revnum_t range_min = MIN(range->start, range->end) + 1;
-      svn_revnum_t range_max = MAX(range->start, range->end);
-      int j;
+      /* Our list of changed revisions should be in youngest-to-oldest
+         order. */
+      youngest_changed_rev = *(APR_ARRAY_IDX(changed_revs,
+                                             0, svn_revnum_t *));
+      oldest_changed_rev = *(APR_ARRAY_IDX(changed_revs,
+                                           changed_revs->nelts - 1,
+                                           svn_revnum_t *));
 
-      /* If the merge range is entirely outside the range of changed
-         revisions, we've no use for it. */
-      if ((range_min > youngest_changed_rev)
-          || (range_max < oldest_changed_rev))
-        continue;
-
-      /* Walk through the changed_revs to see if any of them fall
-         inside our current range. */
-      for (j = 0; j < changed_revs->nelts; j++)
+      /* Now, copy from RANGES to *OPERATIVE_RANGES, filtering out ranges
+         that aren't operative (by virtue of not having any revisions
+         represented in the CHANGED_REVS array). */
+      for (i = 0; i < ranges->nelts; i++)
         {
-          svn_revnum_t *changed_rev =
-            APR_ARRAY_IDX(changed_revs, j, svn_revnum_t *);
-          if ((*changed_rev >= range_min) && (*changed_rev <= range_max))
+          svn_merge_range_t *range = APR_ARRAY_IDX(ranges, i,
+                                                   svn_merge_range_t *);
+          svn_revnum_t range_min = MIN(range->start, range->end) + 1;
+          svn_revnum_t range_max = MAX(range->start, range->end);
+          int j;
+
+          /* If the merge range is entirely outside the range of changed
+             revisions, we've no use for it. */
+          if ((range_min > youngest_changed_rev)
+              || (range_max < oldest_changed_rev))
+            continue;
+
+          /* Walk through the changed_revs to see if any of them fall
+             inside our current range. */
+          for (j = 0; j < changed_revs->nelts; j++)
             {
-              APR_ARRAY_PUSH(operative_ranges, svn_merge_range_t *) = range;
-              break;
+              svn_revnum_t *changed_rev =
+                APR_ARRAY_IDX(changed_revs, j, svn_revnum_t *);
+              if ((*changed_rev >= range_min) && (*changed_rev <= range_max))
+                {
+                  APR_ARRAY_PUSH(operative_ranges, svn_merge_range_t *) =
+                    range;
+                  break;
+                }
             }
         }
     }
+
   *operative_ranges_p = operative_ranges;
   return SVN_NO_ERROR;
 }
