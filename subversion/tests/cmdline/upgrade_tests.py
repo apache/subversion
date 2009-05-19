@@ -73,7 +73,7 @@ def check_dav_cache(dir_path, wc_id, expected_dav_caches):
     c.execute('select dav_cache from base_node ' +
               'where wc_id=? and local_relpath=?',
         (wc_id, local_relpath))
-    dav_cache = str(c.fetchone()[0])
+    dav_cache = bytes(c.fetchone()[0])
 
     if dav_cache != expected_dav_cache:
       raise svntest.Failure(
@@ -174,9 +174,9 @@ def upgrade_wcprops(sbox):
   # to be.  (This could be smarter.)
   expected_dav_caches = {
    '' :
-    '(svn:wc:ra_dav:version-url 41 /svn-test-work/local_tmp/repos/!svn/ver/1)',
+    b'(svn:wc:ra_dav:version-url 41 /svn-test-work/local_tmp/repos/!svn/ver/1)',
    'iota' :
-    '(svn:wc:ra_dav:version-url 46 /svn-test-work/local_tmp/repos/!svn/ver/1/iota)',
+    b'(svn:wc:ra_dav:version-url 46 /svn-test-work/local_tmp/repos/!svn/ver/1/iota)',
   }
   check_dav_cache(sbox.wc_dir, 1, expected_dav_caches)
 
