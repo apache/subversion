@@ -91,7 +91,7 @@ Build the Subversion Release
 
 1. In SharpDevelop, check that the build configuration is set to 'Release'.
 
-2. Build the solution.
+2. Build the solution.  Until this is resolved, build AGAIN.  Files are not correctly referenced until the second time.
 
 3. Enter 
 
