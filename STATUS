@@ -178,12 +178,3 @@ Approved changes:
      +1: arfrever, cmpilato
      -0: hwright (there are merge conflicts.  they aren't big, but they are
                   non-trivial enough that I'd like to see a backport branch)
-
- * r37646, r37656
-   Fix a segfault in WC to URL copy.
-   Justification:
-     Segfaults are always bad.
-   Notes:
-     r37646 is the fix, r37656 is a follow up to clear iterpool.
-   Votes:
-     +1: stylesen, arfrever, stsp

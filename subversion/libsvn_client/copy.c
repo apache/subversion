@@ -1024,21 +1024,29 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
   apr_hash_t *commit_revprops;
   int i;
 
-  /* The commit process uses absolute paths, so we need to open the access
-     baton using absolute paths, and so we really need to use absolute
-     paths everywhere. */
-  for (i = 0; i < copy_pairs->nelts; i++)
-    {
-      svn_client__copy_pair_t *pair = APR_ARRAY_IDX(copy_pairs, i,
-                                                    svn_client__copy_pair_t *);
-      SVN_ERR(svn_path_get_absolute(&pair->src_abs, pair->src, pool));
-    }
-
   /* Find the common root of all the source paths, and probe the wc. */
   get_copy_pair_ancestors(copy_pairs, &top_src_path, NULL, NULL, pool);
   SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, top_src_path,
                                  FALSE, -1, ctx->cancel_func,
                                  ctx->cancel_baton, pool));
+
+  /* The commit process uses absolute paths, so we need to open the access
+     baton using absolute paths, and so we really need to use absolute
+     paths everywhere. */
+  iterpool = svn_pool_create(pool);
+
+  for (i = 0; i < copy_pairs->nelts; i++)
+    {
+      svn_client__copy_pair_t *pair = APR_ARRAY_IDX(copy_pairs, i,
+                                                    svn_client__copy_pair_t *);
+      svn_pool_clear(iterpool);
+      /* Sanity check if the source path is versioned. */
+      SVN_ERR(svn_wc__entry_versioned(&entry, pair->src, adm_access, FALSE,
+                                      iterpool));
+      SVN_ERR(svn_path_get_absolute(&pair->src_abs, pair->src, pool));
+    }
+
+  svn_pool_destroy(iterpool);
 
   /* Determine the longest common ancestor for the destinations, and open an RA
      session to that location. */
