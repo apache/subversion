@@ -1,16 +1,17 @@
-﻿<Project ToolsVersion="3.5" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="3.5" DefaultTargets="Build">
   <PropertyGroup>
     <ProjectGuid>{B7895E09-F3EE-4CD0-B5AB-36611B25752E}</ProjectGuid>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <OutputType>Package</OutputType>
     <RootNamespace>BuildSubversion</RootNamespace>
-    <OutputName>Setup-Subversion-1.5.1</OutputName>
+    <OutputName>Setup-Subversion-1.6.1</OutputName>
     <WixToolPath Condition=" '$(WixToolPath)' == '' ">$(SharpDevelopBinPath)\Tools\Wix</WixToolPath>
     <WixTargetsPath Condition=" '$(WixTargetsPath)' == '' ">$(WixToolPath)\wix.targets</WixTargetsPath>
     <WixTasksPath Condition=" '$(WixTasksPath)' == '' ">$(WixToolPath)\WixTasks.dll</WixTasksPath>
     <SupressIces>ICE45</SupressIces>
     <WixVariables>WixUIInfoRtf=Pre.rtf;WixUIPostRtf=Post.rtf</WixVariables>
+    <RunPostBuildEvent>OnBuildSuccess</RunPostBuildEvent>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
     <OutputPath>bin\Debug\</OutputPath>
@@ -27,8 +28,6 @@
   <Import Project="$(WixToolPath)\wix.targets" />
   <ItemGroup>
     <WixExtension Include="$(WixToolPath)\WixUIExtension.dll" />
-    <None Include="ApacheFiles20x.wxi" />
-    <None Include="ApacheFeature20x.wxi" />
     <None Include="ApacheFeature22x.wxi" />
     <None Include="ApacheFiles22x.wxi" />
     <None Include="CommonBinaryFeature.wxi" />
@@ -41,19 +40,14 @@
     <Compile Include="Files.wxs" />
     <None Include="Post.rtf" />
     <None Include="ProgramMenu.wxi" />
-    <None Include="iconvFeature20x.wxi" />
     <None Include="iconvFeature22x.wxi" />
-    <None Include="iconvFiles20x.wxi" />
     <None Include="iconvFiles22x.wxi" />
-    <None Include="Licenses20x.wxi" />
     <None Include="Licenses22x.wxi" />
     <None Include="LicensesCommon.wxi" />
     <None Include="LicensesCommonFeature.wxi" />
-    <None Include="LicensesFeature20x.wxi" />
     <None Include="LicensesFeature22x.wxi" />
     <Compile Include="Setup.wxs" />
     <None Include="WixDialog\AdminExitDialog.wxs" />
-    <None Include="WixDialog\ApacheSelectDlg.wxs" />
     <None Include="WixDialog\InfoDlg.wxs" />
     <None Include="WixDialog\PostDlg.wxs" />
     <None Include="WixDialog\ReadyDlg.wxs" />
@@ -69,4 +63,8 @@
     <Folder Include="WixDialog" />
     <WixLibrary Include="WixDialog\WixUI_Subversion.wixlib" />
   </ItemGroup>
+  <PropertyGroup>
+    <PreBuildEvent>..\..\..\Tools\prepare_distro.bat</PreBuildEvent>
+    <PostBuildEvent>..\..\..\Tools\finish_distro.bat</PostBuildEvent>
+  </PropertyGroup>
 </Project>
