@@ -43,7 +43,8 @@
 						<Component Guid="3516DB65-3E8F-48C1-ADCB-182914C4DB1B" Id="svnbookchm" DiskId="1">
 							<File Source="..\in\doc\svn-book.chm" Name="svn-book.chm" Id="svnbookchmfl" KeyPath="yes">
 								<Shortcut Name="Subversion Documentation" Id="svnbooksct" Description="Subversion Documentation" Directory="SubversionMenuFolder" Advertise="yes" Icon="doc.ico">
-							    	<Icon Id="doc.ico" SourceFile="..\in\doc\svn-book.chm" />
+									<!-- if there is an error locating hcc.exe, change this to the Microsoft HTML Help installed location -->
+							    	<Icon Id="doc.ico" SourceFile="C:\Program Files (x86)\HTML Help Workshop\hhc.exe" />
 							    </Shortcut>
 							</File>
 	
