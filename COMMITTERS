@@ -72,6 +72,7 @@ Commit access for specific areas:
        pmayweg   Patrick Mayweg <mayweg@qint.de>             (JavaHL bindings)
           rey4   Russell Yanofsky <rey4@columbia.edu>        (Swig bindings)
          clkao   Chia-liang Kao <clkao@clkao.org>            (Swig-Perl b.)
+    joeswatosh   Joe Swatosh <joe.swatosh@gmail.com>         (Swig-Ruby b.)
     jrvernooij   Jelmer Vernooij <jelmer@samba.org>          (Python bindings)
           sage   Sage LaTorra <sagelt@gmail.com>             (Ctypes-Python bindings)
 
@@ -185,7 +186,6 @@ Committers who have asked to be listed as dormant:
       rassilon   Bill Tutt <bill@tutts.org> (Win32, COM, issue-1003-dev br.)
          kraai   Matt Kraai <kraai@alumni.cmu.edu>
            kon   Kalle Olavi Niemitalo <kon@iki.fi>          (psvn.el)
-    joeswatosh   Joe Swatosh <joe.swatosh@gmail.com>         (Swig-Ruby b.)
 
 ## Local Variables:
 ## coding:utf-8
