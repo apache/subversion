@@ -119,9 +119,9 @@
 							<Condition>APACHEVERSION = "Apache22"</Condition>
 						</Component>
 						<Component Guid="34395389-E8B9-42E2-9232-D9CEBEF335A0" Id="READMETxtap22x" DiskId="1">
-							<File Source="\SubversionBuildEnvironment\work\svn-win32-ap22x\README.txt" Name="README.txt" Id="flREADMEtxtap22x">
-								<Shortcut Name="README" Id="readmesctap22x" Description="Subversion ReadMe" Directory="SubversionMenuFolder" Advertise="yes" Icon="readmeap22x.txt">
-							    	<Icon Id="readmeap22x.txt" SourceFile="c:\windows\notepad.exe" />
+							<File Source="\SubversionBuildEnvironment\work\svn-win32-ap22x\README.txt" Name="README.txt" Id="flREADMEtxtap22x" KeyPath="yes">
+								<Shortcut Name="README" Id="readmesctap22x" Description="Subversion ReadMe" Directory="SubversionMenuFolder" Advertise="yes" Icon="readmeap22x.ico">
+							    	<Icon Id="readmeap22x.ico" SourceFile="c:\windows\notepad.exe" />
 							    </Shortcut>
 							</File>
 							<Condition>APACHEVERSION = "Apache22"</Condition>

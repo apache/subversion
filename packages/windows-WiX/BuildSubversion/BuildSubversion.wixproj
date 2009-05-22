@@ -5,7 +5,7 @@
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <OutputType>Package</OutputType>
     <RootNamespace>BuildSubversion</RootNamespace>
-    <OutputName>Setup-Subversion-1.6.1</OutputName>
+    <OutputName>Setup-Subversion-1.6.2</OutputName>
     <WixToolPath Condition=" '$(WixToolPath)' == '' ">$(SharpDevelopBinPath)\Tools\Wix</WixToolPath>
     <WixTargetsPath Condition=" '$(WixTargetsPath)' == '' ">$(WixToolPath)\wix.targets</WixTargetsPath>
     <WixTasksPath Condition=" '$(WixTasksPath)' == '' ">$(WixToolPath)\WixTasks.dll</WixTasksPath>
@@ -53,11 +53,15 @@
     <None Include="WixDialog\ReadyDlg.wxs" />
     <None Include="WixDialog\WelcomeDlgSv.wxs" />
     <None Include="WixDialog\WixUI_en-us-subversion.wxl" />
+    <None Include="WixDialog\WixUI_en-us.wxl" />
     <None Include="WixDialog\WixUI_Subversion.wxs" />
     <None Include="dlgbmp.bmp" />
     <None Include="Pre.rtf" />
     <EmbeddedResource Include="WixDialog\WixUI_en-us-subversion.wxl">
       <Link>WixUI_en-us-subversion.wxl</Link>
+    </EmbeddedResource>
+    <EmbeddedResource Include="WixDialog\WixUI_en-us.wxl">
+      <Link>WixUI_en-us.wxl</Link>
     </EmbeddedResource>
     <None Include="wiz-55x55x24.bmp" />
     <Folder Include="WixDialog" />

@@ -30,9 +30,9 @@
 --><Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
 	<!-- only add new defines at the END of this list, do not change the order -->
 	<?define RTMProductVersion="1.0.0" ?>
-  	<?define ProductVersion="1.6.1" ?> <!-- index 2 in XPath PI - change for upgrade -->
-	<?define RevisionNumber="r37116" ?> <!-- index 3 in XPath PI - change for upgrade -->
-	<?define ProductCode="{C8CFD734-05E1-423F-A44A-2D79E40B4689}" ?> <!-- index 4 in XPath PI - change for upgrade -->
+  	<?define ProductVersion="1.6.2" ?> <!-- index 2 in XPath PI - change for upgrade -->
+	<?define RevisionNumber="r37639" ?> <!-- index 3 in XPath PI - change for upgrade -->
+	<?define ProductCode="{AC29E696-7004-4193-8157-156AA93E4E6D}" ?> <!-- index 4 in XPath PI - change for upgrade -->
 	<?define UpgradeCode="{032A49B2-32FB-4AE0-BAB0-6AB953CC94DA}" ?> <!-- leave this value -->
 	<?define PackageCode="*" ?>
 
@@ -84,8 +84,8 @@
  			Use custom Subversion Fragment
 		-->
 		<UIRef Id="WixUI_Subversion" />
-		<WixVariable Id="WixUIDialogBmp" Value="dlgbmp.bmp" />	
-		<WixVariable Id="WixUIBannerBmp" Value="wiz-55x55x24.bmp" />	
+		<WixVariable Id="WixUIDialogBmp" Value="..\Bitmaps\dlgbmp.bmp" />	
+		<WixVariable Id="WixUIBannerBmp" Value="..\Bitmaps\wiz-55x55x24.bmp" />	
 
 		<!-- Prevent downgrading -->
 		<CustomAction Id="PreventDowngrading" Error="!(loc.NoDowngrade)" />
