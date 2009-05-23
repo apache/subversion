@@ -159,6 +159,15 @@ Candidate changes:
    Votes:
      +1: pburba
 
+ * r37793
+   Delay beginning the drive of the repos update editor until after some
+   common error conditions have been tested for.  This helps provide
+   more user-friendly error messaging for DAV clients.
+   Justification:
+     What part of "user" and "friendly" did you not catch?
+   Votes:
+     +1: cmpilato
+
 Approved changes:
 =================
 
