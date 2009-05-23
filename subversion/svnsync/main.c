@@ -581,7 +581,7 @@ normalize_revprops(apr_hash_t *rev_props,
               /* Replace the existing prop value. */
               apr_hash_set(rev_props, key, APR_HASH_KEY_STRING, val);
               /* And count this. */
-              (*normalized_count) ++;
+              (*normalized_count)++;
             }
         }
     }
@@ -790,7 +790,7 @@ do_initialize(svn_ra_session_t *to_session,
                         baton->quiet, &normalized_rev_props_count, pool));
 
   /* Notify about normalized props, if any. */
-  log_properties_normalized(normalized_rev_props_count, 0, pool);
+  SVN_ERR(log_properties_normalized(normalized_rev_props_count, 0, pool));
 
   /* TODO: It would be nice if we could set the dest repos UUID to be
      equal to the UUID of the source repos, at least optionally.  That
@@ -1127,9 +1127,9 @@ change_file_prop(void *file_baton,
   if (svn_prop_needs_translation(name))
     {
       svn_boolean_t was_normalized;
-      normalize_string(&value, &was_normalized, pool);
+      SVN_ERR(normalize_string(&value, &was_normalized, pool));
       if (was_normalized)
-        (*(eb->normalized_node_props_counter)) ++;
+        (*(eb->normalized_node_props_counter))++;
     }
 
   return eb->wrapped_editor->change_file_prop(fb->wrapped_node_baton,
@@ -1224,10 +1224,10 @@ change_dir_prop(void *dir_baton,
   if (svn_prop_needs_translation(name))
     {
       svn_boolean_t was_normalized;
-      normalize_string((const svn_string_t**)&real_value,
-                       &was_normalized, pool);
+      SVN_ERR(normalize_string((const svn_string_t**)&real_value,
+                               &was_normalized, pool));
       if (was_normalized)
-        (*(eb->normalized_node_props_counter)) ++;
+        (*(eb->normalized_node_props_counter))++;
     }
 
   return eb->wrapped_editor->change_dir_prop(db->wrapped_node_baton,
@@ -1871,7 +1871,7 @@ do_copy_revprops(svn_ra_session_t *to_session,
     }
 
   /* Notify about normalized props, if any. */
-  log_properties_normalized(normalized_rev_props_count, 0, pool);
+  SVN_ERR(log_properties_normalized(normalized_rev_props_count, 0, pool));
 
   return SVN_NO_ERROR;
 }
