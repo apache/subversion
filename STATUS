@@ -134,15 +134,6 @@ Candidate changes:
    Votes:
      +1: cmpilato, arfrever
 
- * r37768
-   Make svnadmin load tolerate mergeinfo with "\r\n".
-   Justification:
-     Prior to this change you cannot load a dump file that contains Windows
-     style newlines in svn:mergeinfo.  See
-     http://svn.haxx.se/dev/archive-2009-05/0179.shtml.
-   Votes:
-     +1: pburba, danielsh
-
  * r37774
    Make contrib/client-side/emacs/dsvn.el compatible with Subversion 1.6, in
    particular the new column in "svn status" output.
@@ -157,18 +148,22 @@ Candidate changes:
      Not common, but a segfault is a segfault.  See
      http://svn.haxx.se/dev/archive-2009-05/0363.shtml.
    Votes:
-     +1: pburba
+     +1: pburba, arfrever
 
  * r37793
+   Fix Issue 3414: DAV RA layers not properly handling update working copy
+   dir to revision in which it didn't exist.
    Delay beginning the drive of the repos update editor until after some
    common error conditions have been tested for.  This helps provide
    more user-friendly error messaging for DAV clients.
    Justification:
      What part of "user" and "friendly" did you not catch?
    Votes:
-     +1: cmpilato
+     +1: cmpilato, arfrever
  
  * r37795
+   Fix Issue 3404: svnsync fails when source has ^M in svn:* properties
+   (eol-style).
    Make svnsync normalize svn:* props to LF line ending style.
    Justification:
      Some clients used to put inconsistent line endings in various svn:*
@@ -198,3 +193,12 @@ Approved changes:
      +1: arfrever, cmpilato
      -0: hwright (there are merge conflicts.  they aren't big, but they are
                   non-trivial enough that I'd like to see a backport branch)
+
+ * r37768
+   Make svnadmin load tolerate mergeinfo with "\r\n".
+   Justification:
+     Prior to this change you cannot load a dump file that contains Windows
+     style newlines in svn:mergeinfo.  See
+     http://svn.haxx.se/dev/archive-2009-05/0179.shtml.
+   Votes:
+     +1: pburba, danielsh, arfrever
