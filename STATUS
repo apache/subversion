@@ -141,7 +141,7 @@ Candidate changes:
      style newlines in svn:mergeinfo.  See
      http://svn.haxx.se/dev/archive-2009-05/0179.shtml.
    Votes:
-     +1: pburba
+     +1: pburba, danielsh
 
  * r37774
    Make contrib/client-side/emacs/dsvn.el compatible with Subversion 1.6, in
@@ -177,6 +177,7 @@ Candidate changes:
      to accept them. Some users are blocked by this.
    Votes:
      +1: neels
+     +1: danielsh (once SVN_ERR() is added around calls to the new functions)
 
 Approved changes:
 =================
