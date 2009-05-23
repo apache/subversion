@@ -161,7 +161,7 @@ Candidate changes:
    Votes:
      +1: cmpilato, arfrever
  
- * r37795
+ * r37795, r37799
    Fix Issue 3404: svnsync fails when source has ^M in svn:* properties
    (eol-style).
    Make svnsync normalize svn:* props to LF line ending style.
@@ -171,8 +171,7 @@ Candidate changes:
      server now enforces consistent line endings in svn:* props by refusing
      to accept them. Some users are blocked by this.
    Votes:
-     +1: neels
-     +1: danielsh (once SVN_ERR() is added around calls to the new functions)
+     +1: neels, danielsh
 
 Approved changes:
 =================
