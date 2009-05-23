@@ -742,6 +742,14 @@ def info_not_synchronized(sbox):
   run_info(sbox.repo_url,
            ".*Repository '%s' is not initialized.*" % sbox.repo_url)
 
+#----------------------------------------------------------------------
+
+def copy_bad_line_endings(sbox):
+  "copy with inconsistent lineendings in svn:props"
+  run_test(sbox, "copy-bad-line-endings.dump",
+           exp_dump_file_name="copy-bad-line-endings.expected.dump")
+
+
 ########################################################################
 # Run the tests
 
@@ -777,6 +785,7 @@ test_list = [ None,
               move_and_modify_in_the_same_revision,
               info_synchronized,
               info_not_synchronized,
+              copy_bad_line_endings,
              ]
 
 if __name__ == '__main__':
