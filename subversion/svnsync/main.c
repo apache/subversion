@@ -25,6 +25,8 @@
 #include "svn_opt.h"
 #include "svn_ra.h"
 #include "svn_utf.h"
+#include "svn_subst.h"
+#include "svn_string.h"
 
 #include "private/svn_opt_private.h"
 #include "private/svn_cmdline_private.h"
@@ -513,6 +515,80 @@ write_revprops(int *filtered_count,
 }
 
 
+/* Normalize the line ending style of *STR, so that it contains only
+ * LF (\n) line endings. After return, *STR may point at a new
+ * svn_string_t* allocated from POOL.
+ *
+ * *WAS_NORMALIZED is set to TRUE when *STR needed to be normalized,
+ * and to FALSE if *STR remains unchanged.
+ */
+static svn_error_t*
+normalize_string(const svn_string_t **str,
+                 svn_boolean_t *was_normalized,
+                 apr_pool_t *pool)
+{
+  *was_normalized = FALSE;
+
+  /* Detect inconsistent line ending style simply by looking
+     for carriage return (\r) characters. */
+  if (strchr((*str)->data, '\r') != NULL)
+    {
+      /* Found some. Normalize. */
+      const char* cstring = NULL;
+      SVN_ERR(svn_subst_translate_cstring2((*str)->data, &cstring,
+                                           "\n", TRUE,
+                                           NULL, FALSE,
+                                           pool));
+      *str = svn_string_create(cstring, pool);
+      *was_normalized = TRUE;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+/* Normalize the line ending style of the values of properties in REV_PROPS
+ * that "need translation" (according to svn_prop_needs_translation(),
+ * currently all svn:* props) so that they contain only LF (\n) line endings.
+ * The number of properties that needed normalization is returned in
+ * *NORMALIZED_COUNT.
+ */
+static svn_error_t *
+normalize_revprops(apr_hash_t *rev_props,
+                   int *normalized_count,
+                   apr_pool_t *pool)
+{
+  apr_hash_index_t *hi;
+  *normalized_count = 0;
+
+  for (hi = apr_hash_first(pool, rev_props);
+       hi;
+       hi = apr_hash_next(hi))
+    {
+      const char *key;
+      const svn_string_t *val;
+
+      apr_hash_this(hi, (const void**)&key, NULL, (void**)&val);
+
+      if (svn_prop_needs_translation(key))
+        {
+          svn_boolean_t was_normalized;
+          SVN_ERR(normalize_string(&val,
+                                   &was_normalized,
+                                   pool));
+          if (was_normalized)
+            {
+              /* Replace the existing prop value. */
+              apr_hash_set(rev_props, key, APR_HASH_KEY_STRING, val);
+              /* And count this. */
+              (*normalized_count) ++;
+            }
+        }
+    }
+  return SVN_NO_ERROR;
+}
+
+
 static svn_error_t *
 log_properties_copied(svn_boolean_t syncprops_found,
                       svn_revnum_t rev,
@@ -531,6 +607,23 @@ log_properties_copied(svn_boolean_t syncprops_found,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+log_properties_normalized(int normalized_rev_props_count,
+                          int normalized_node_props_count,
+                          apr_pool_t *pool)
+{
+  if (normalized_rev_props_count > 0 || normalized_node_props_count > 0)
+    SVN_ERR(svn_cmdline_printf(pool,
+                               _("NOTE: Normalized %s* properties "
+                                 "to LF line endings (%d rev-props, "
+                                 "%d node-props).\n"),
+                               SVN_PROP_PREFIX,
+                               normalized_rev_props_count,
+                               normalized_node_props_count));
+  return SVN_NO_ERROR;
+}
+
+
 /* Copy all the revision properties, except for those that have the
  * "svn:sync-" prefix, from revision REV of the repository associated
  * with RA session FROM_SESSION, to the repository associated with RA
@@ -538,6 +631,10 @@ log_properties_copied(svn_boolean_t syncprops_found,
  *
  * If SYNC is TRUE, then properties on the destination revision that
  * do not exist on the source revision will be removed.
+ *
+ * Make sure the values of svn:* revision properties use only LF (\n)
+ * lineending style, correcting their values as necessary. The number
+ * of properties that were normalized is returned in *NORMALIZED_COUNT.
  */
 static svn_error_t *
 copy_revprops(svn_ra_session_t *from_session,
@@ -545,6 +642,7 @@ copy_revprops(svn_ra_session_t *from_session,
               svn_revnum_t rev,
               svn_boolean_t sync,
               svn_boolean_t quiet,
+              int *normalized_count,
               apr_pool_t *pool)
 {
   apr_pool_t *subpool = svn_pool_create(pool);
@@ -558,6 +656,10 @@ copy_revprops(svn_ra_session_t *from_session,
 
   /* Get the list of revision properties on REV of SOURCE. */
   SVN_ERR(svn_ra_rev_proplist(from_session, rev, &rev_props, subpool));
+
+  /* If necessary, normalize line ending style, and return the count
+     of changes in int *NORMALIZED_COUNT. */
+  SVN_ERR(normalize_revprops(rev_props, normalized_count, pool));
 
   /* Copy all but the svn:svnsync properties. */
   SVN_ERR(write_revprops(&filtered_count, to_session, rev, rev_props, pool));
@@ -619,6 +721,7 @@ do_initialize(svn_ra_session_t *to_session,
   svn_string_t *from_url;
   svn_revnum_t latest;
   const char *uuid, *root_url;
+  int normalized_rev_props_count;
 
   /* First, sanity check to see that we're copying into a brand new repos. */
 
@@ -684,7 +787,10 @@ do_initialize(svn_ra_session_t *to_session,
      repos into the dest repos. */
 
   SVN_ERR(copy_revprops(from_session, to_session, 0, FALSE,
-                        baton->quiet, pool));
+                        baton->quiet, &normalized_rev_props_count, pool));
+
+  /* Notify about normalized props, if any. */
+  log_properties_normalized(normalized_rev_props_count, 0, pool);
 
   /* TODO: It would be nice if we could set the dest repos UUID to be
      equal to the UUID of the source repos, at least optionally.  That
@@ -767,6 +873,7 @@ typedef struct {
   svn_boolean_t mergeinfo_stripped; /* Did we strip svn:mergeinfo? */
   svn_boolean_t svnmerge_migrated;  /* Did we convert svnmerge.py data? */
   svn_boolean_t svnmerge_blocked;   /* Was there any blocked svnmerge data? */
+  int *normalized_node_props_counter;  /* Where to count normalizations? */
 } edit_baton_t;
 
 
@@ -1016,6 +1123,15 @@ change_file_prop(void *file_baton,
       eb->svnmerge_blocked = TRUE;
     }
 
+  /* Normalize svn:* properties as necessary. */
+  if (svn_prop_needs_translation(name))
+    {
+      svn_boolean_t was_normalized;
+      normalize_string(&value, &was_normalized, pool);
+      if (was_normalized)
+        (*(eb->normalized_node_props_counter)) ++;
+    }
+
   return eb->wrapped_editor->change_file_prop(fb->wrapped_node_baton,
                                               name, value, pool);
 }
@@ -1104,6 +1220,16 @@ change_dir_prop(void *dir_baton,
       eb->svnmerge_blocked = TRUE;
     }
 
+  /* Normalize svn:* properties as necessary. */
+  if (svn_prop_needs_translation(name))
+    {
+      svn_boolean_t was_normalized;
+      normalize_string((const svn_string_t**)&real_value,
+                       &was_normalized, pool);
+      if (was_normalized)
+        (*(eb->normalized_node_props_counter)) ++;
+    }
+
   return eb->wrapped_editor->change_dir_prop(db->wrapped_node_baton,
                                              name, real_value, pool);
 }
@@ -1157,6 +1283,10 @@ close_edit(void *edit_baton,
  * revision on which the driver of this returned editor will be basing
  * the commit.  TO_URL is the URL of the root of the repository into
  * which the commit is being made.
+ *
+ * As the sync editor encounters property values, it might see the need to
+ * normalize them (to LF line endings). Each carried out normalization adds 1
+ * to the *NORMALIZED_NODE_PROPS_COUNTER (for notification).
  */
 static svn_error_t *
 get_sync_editor(const svn_delta_editor_t *wrapped_editor,
@@ -1166,6 +1296,7 @@ get_sync_editor(const svn_delta_editor_t *wrapped_editor,
                 svn_boolean_t quiet,
                 const svn_delta_editor_t **editor,
                 void **edit_baton,
+                int *normalized_node_props_counter,
                 apr_pool_t *pool)
 {
   svn_delta_editor_t *tree_editor = svn_delta_default_editor(pool);
@@ -1192,6 +1323,7 @@ get_sync_editor(const svn_delta_editor_t *wrapped_editor,
   eb->base_revision = base_revision;
   eb->to_url = to_url;
   eb->quiet = quiet;
+  eb->normalized_node_props_counter = normalized_node_props_counter;
 
   if (getenv("SVNSYNC_UNSUPPORTED_STRIP_MERGEINFO"))
     {
@@ -1287,6 +1419,8 @@ typedef struct {
   svn_ra_session_t *to_session;
   subcommand_baton_t *sb;
   svn_boolean_t has_commit_revprops_capability;
+  int normalized_rev_props_count;
+  int normalized_node_props_count;
 } replay_baton_t;
 
 /* Return a replay baton allocated from POOL and populated with
@@ -1364,6 +1498,7 @@ replay_rev_started(svn_revnum_t revision,
   replay_baton_t *rb = replay_baton;
   apr_hash_t *filtered;
   int filtered_count;
+  int normalized_count;
 
   /* We set this property so that if we error out for some reason
      we can later determine where we were in the process of
@@ -1402,6 +1537,11 @@ replay_rev_started(svn_revnum_t revision,
     apr_hash_set(filtered, SVN_PROP_REVISION_LOG, APR_HASH_KEY_STRING,
                  svn_string_create("", pool));
 
+  /* If necessary, normalize line ending style, and add the number
+     of changes to the overall count in the replay baton. */
+  SVN_ERR(normalize_revprops(filtered, &normalized_count, pool));
+  rb->normalized_rev_props_count += normalized_count;
+
   SVN_ERR(svn_ra_get_commit_editor3(rb->to_session, &commit_editor,
                                     &commit_baton,
                                     filtered,
@@ -1413,7 +1553,8 @@ replay_rev_started(svn_revnum_t revision,
      to filter those out for us.  */
   SVN_ERR(get_sync_editor(commit_editor, commit_baton, revision - 1,
                           rb->sb->to_url, rb->sb->quiet,
-                          &sync_editor, &sync_baton, pool));
+                          &sync_editor, &sync_baton, 
+                          &(rb->normalized_node_props_count), pool));
 
   SVN_ERR(svn_delta_get_cancellation_editor(check_cancel, NULL,
                                             sync_editor, sync_baton,
@@ -1441,6 +1582,7 @@ replay_rev_finished(svn_revnum_t revision,
   replay_baton_t *rb = replay_baton;
   apr_hash_t *filtered, *existing_props;
   int filtered_count;
+  int normalized_count;
 
   SVN_ERR(editor->close_edit(edit_baton, pool));
 
@@ -1464,6 +1606,12 @@ replay_rev_finished(svn_revnum_t revision,
                             ? filter_include_date_author_sync
                             : filter_exclude_log),
                           subpool);
+
+  /* If necessary, normalize line ending style, and add the number
+     of changes to the overall count in the replay baton. */
+  SVN_ERR(normalize_revprops(filtered, &normalized_count, pool));
+  rb->normalized_rev_props_count += normalized_count;
+
   SVN_ERR(write_revprops(&filtered_count, rb->to_session, revision, filtered,
                          subpool));
 
@@ -1512,6 +1660,7 @@ do_synchronize(svn_ra_session_t *to_session,
   svn_revnum_t to_latest, copying, last_merged;
   svn_revnum_t start_revision, end_revision;
   replay_baton_t *rb;
+  int normalized_rev_props_count = 0;
 
   SVN_ERR(open_source_session(&from_session,
                               &last_merged_rev, to_session,
@@ -1565,6 +1714,7 @@ do_synchronize(svn_ra_session_t *to_session,
             {
               SVN_ERR(copy_revprops(from_session, to_session,
                                     to_latest, TRUE, baton->quiet,
+                                    &normalized_rev_props_count,
                                     pool));
               last_merged = copying;
               last_merged_rev = svn_string_create
@@ -1624,6 +1774,12 @@ do_synchronize(svn_ra_session_t *to_session,
                               0, TRUE, replay_rev_started,
                               replay_rev_finished, rb, pool));
 
+  SVN_ERR(log_properties_normalized(rb->normalized_rev_props_count
+                                      + normalized_rev_props_count,
+                                    rb->normalized_node_props_count,
+                                    pool));
+
+
   return SVN_NO_ERROR;
 }
 
@@ -1678,6 +1834,7 @@ do_copy_revprops(svn_ra_session_t *to_session,
   svn_string_t *last_merged_rev;
   svn_revnum_t i;
   svn_revnum_t step = 1;
+  int normalized_rev_props_count = 0;
 
   SVN_ERR(open_source_session(&from_session, &last_merged_rev,
                               to_session,
@@ -1706,10 +1863,15 @@ do_copy_revprops(svn_ra_session_t *to_session,
   step = (baton->start_rev > baton->end_rev) ? -1 : 1;
   for (i = baton->start_rev; i != baton->end_rev + step; i = i + step)
     {
+      int normalized_count;
       SVN_ERR(check_cancel(NULL));
       SVN_ERR(copy_revprops(from_session, to_session, i, FALSE,
-                            baton->quiet, pool));
+                            baton->quiet, &normalized_count, pool));
+      normalized_rev_props_count += normalized_count;
     }
+
+  /* Notify about normalized props, if any. */
+  log_properties_normalized(normalized_rev_props_count, 0, pool);
 
   return SVN_NO_ERROR;
 }
