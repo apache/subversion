@@ -161,18 +161,6 @@ Candidate changes:
    Votes:
      +1: cmpilato, arfrever
  
- * r37795, r37799
-   Fix Issue 3404: svnsync fails when source has ^M in svn:* properties
-   (eol-style).
-   Make svnsync normalize svn:* props to LF line ending style.
-   Justification:
-     Some clients used to put inconsistent line endings in various svn:*
-     props. These repositories can't be svnsync'ed with SVN 1.6.x, since the
-     server now enforces consistent line endings in svn:* props by refusing
-     to accept them. Some users are blocked by this.
-   Votes:
-     +1: neels, danielsh
-
 Approved changes:
 =================
 
@@ -201,3 +189,15 @@ Approved changes:
      http://svn.haxx.se/dev/archive-2009-05/0179.shtml.
    Votes:
      +1: pburba, danielsh, arfrever
+
+ * r37795, r37799
+   Fix Issue 3404: svnsync fails when source has ^M in svn:* properties
+   (eol-style).
+   Make svnsync normalize svn:* props to LF line ending style.
+   Justification:
+     Some clients used to put inconsistent line endings in various svn:*
+     props. These repositories can't be svnsync'ed with SVN 1.6.x, since the
+     server now enforces consistent line endings in svn:* props by refusing
+     to accept them. Some users are blocked by this.
+   Votes:
+     +1: neels, danielsh, stsp
