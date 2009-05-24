@@ -150,16 +150,19 @@ Candidate changes:
    Votes:
      +1: pburba, arfrever
 
- * r37793
+ * r37747, r37793
    Fix Issue 3414: DAV RA layers not properly handling update working copy
    dir to revision in which it didn't exist.
    Delay beginning the drive of the repos update editor until after some
    common error conditions have been tested for.  This helps provide
    more user-friendly error messaging for DAV clients.
+   Notes:
+     r37747 adds the test. r37793 is the actual fix.
    Justification:
      What part of "user" and "friendly" did you not catch?
    Votes:
-     +1: cmpilato, arfrever
+     +1: cmpilato (r37793 only)
+     +1: arfrever
  
 Approved changes:
 =================
