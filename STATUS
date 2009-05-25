@@ -183,15 +183,6 @@ Approved changes:
                the feature is currently so buggy that you can't use it.)
      +1: arfrever, cmpilato
 
- * r37768
-   Make svnadmin load tolerate mergeinfo with "\r\n".
-   Justification:
-     Prior to this change you cannot load a dump file that contains Windows
-     style newlines in svn:mergeinfo.  See
-     http://svn.haxx.se/dev/archive-2009-05/0179.shtml.
-   Votes:
-     +1: pburba, danielsh, arfrever
-
  * r37795, r37799
    Fix Issue 3404: svnsync fails when source has ^M in svn:* properties
    (eol-style).
