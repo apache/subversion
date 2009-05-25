@@ -249,12 +249,16 @@ AC_ARG_ENABLE(local-library-preloading,
                  [Disable preloading of locally built libraries in locally built executables]),
   [
   if test "$enableval" != "no"; then
-    TRANSFORM_LIBTOOL_SCRIPTS="transform-libtool-scripts"
+    if test "$svn_enable_shared" = "yes"; then
+      TRANSFORM_LIBTOOL_SCRIPTS="transform-libtool-scripts"
+    else
+      AC_MSG_ERROR([--enable-local-library-preloading conflicts with --disable-shared])
+    fi
   else
     TRANSFORM_LIBTOOL_SCRIPTS=""
   fi
   ], [
-  if test "`uname`" != "Darwin"; then
+  if test "`uname`" != "Darwin" && test "$svn_enable_shared" = "yes"; then
     TRANSFORM_LIBTOOL_SCRIPTS="transform-libtool-scripts"
   else
     TRANSFORM_LIBTOOL_SCRIPTS=""
