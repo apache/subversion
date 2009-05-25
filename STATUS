@@ -166,19 +166,3 @@ Candidate changes:
  
 Approved changes:
 =================
-
- * r36178
-   External merge-tool improvements.
-   Justification:
-     Makes automated merging easier, and also fixes a bug where a file
-     which should be marked conflicted was considered successfully merged
-     because the tool's exit status was not properly evaluated.
-   Notes:
-     The bug is only triggered when using an external merge tool with the
-     --accept=launch option. I don't think we need to hold 1.6.0 on this.
-     Backport branch is available at ^/branches/1.6.x-r36178
-   Votes:
-     +1: stsp (I'd say it's a fix for a feature we already support (merge
-               under control of external non-interactive tool), albeit
-               the feature is currently so buggy that you can't use it.)
-     +1: arfrever, cmpilato
