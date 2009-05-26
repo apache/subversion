@@ -1143,8 +1143,6 @@ drive(report_baton_t *b, svn_revnum_t s_rev, path_info_t *info,
       (SVN_ERR_AUTHZ_ROOT_UNREADABLE, NULL,
        _("Not authorized to open root of edit operation"));
 
-  SVN_ERR(b->editor->set_target_revision(b->edit_baton, b->t_rev, pool));
-
   /* Collect information about the source and target nodes. */
   s_fullpath = svn_path_join(b->fs_base, b->s_operand, pool);
   SVN_ERR(get_source_root(b, &s_root, s_rev));
@@ -1170,6 +1168,7 @@ drive(report_baton_t *b, svn_revnum_t s_rev, path_info_t *info,
     return svn_error_create(SVN_ERR_FS_PATH_SYNTAX, NULL,
                             _("Cannot replace a directory from within"));
 
+  SVN_ERR(b->editor->set_target_revision(b->edit_baton, b->t_rev, pool));
   SVN_ERR(b->editor->open_root(b->edit_baton, s_rev, pool, &root_baton));
 
   /* If the anchor is the operand, diff the two directories; otherwise
