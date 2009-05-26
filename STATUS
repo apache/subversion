@@ -121,5 +121,20 @@ Candidate changes:
    Votes:
      +1: stsp, hwright
 
+ * r37838
+   Hopefully fix issue #3347, "svn never times out when (public) IP changes"
+   Justification:
+     The svn client should not assume that network problems are never
+     going to happen, or will always eventually go away if they happen.
+     There is no good reason for infinite timeouts when reading from sockets.
+   Notes:
+     I said "Hopefully fix" only because I have not gotten feedback from the
+     submitter of issue #3347 yet if this patch really fixes his problem.
+     But regardless of that that an infinite timeout when reading from a
+     socket is a bad idea. See issue #3347 and the log message for more info.
+   Votes:
+     +1: stsp
+   
+   
 Approved changes:
 =================
