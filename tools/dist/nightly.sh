@@ -41,7 +41,7 @@ fi
 # Roll the tarballs
 echo '-------------------rolling tarball--------------------'
 head=`svn info $repo/trunk | grep '^Revision' | cut -d ' ' -f 2`
-`dirname $0`/roll.sh trunk $head "-nightly r$head"
+`dirname $0`/roll.sh trunk $head "-nightly"
 cd ..
 
 # Create the information page
