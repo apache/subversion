@@ -18,7 +18,7 @@ Candidate changes:
  * r36450, r36452, r37470, r37479, 37538
    Improve BASH completion.
    Votes:
-     +1: arfrever
+     +1: arfrever, stylesen
 
  * r37478, r37543, r37544, r37545, r37547
    Support using `svnversion` on files and improve some messages printed by
@@ -106,15 +106,7 @@ Candidate changes:
    Fix Issue 3413: Bindings fail to load FS modules with enabled run-time
    module search.
    Votes:
-     +1: arfrever
-
- * r37735
-   Fix an assertion which occurs when accidentally omitting "--new=" from
-   'svn diff' invocations of the form 'svn diff --old=OLDURL --new=NEWURL'.
-   Justification:
-     Assertions don't often yield helpful corrective info to the users.
-   Votes:
-     +1: cmpilato, arfrever
+     +1: arfrever, stylesen
 
  * r37719, r37723, r37741
    Fix issue where 'blame -g' returns incorrect revisions of some chunks
@@ -166,3 +158,11 @@ Candidate changes:
  
 Approved changes:
 =================
+
+ * r37735
+   Fix an assertion which occurs when accidentally omitting "--new=" from
+   'svn diff' invocations of the form 'svn diff --old=OLDURL --new=NEWURL'.
+   Justification:
+     Assertions don't often yield helpful corrective info to the users.
+   Votes:
+     +1: cmpilato, arfrever, stylesen
