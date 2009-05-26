@@ -119,8 +119,3 @@ Candidate changes:
  
 Approved changes:
 =================
-
- * r36450, r36452, r37470, r37479, 37538
-   Improve BASH completion.
-   Votes:
-     +1: arfrever, stylesen
