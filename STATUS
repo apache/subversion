@@ -150,12 +150,3 @@ Approved changes:
      http://svn.haxx.se/dev/archive-2009-05/0363.shtml.
    Votes:
      +1: pburba, arfrever, hwright
-
- * r37774
-   Make contrib/client-side/emacs/dsvn.el compatible with Subversion 1.6, in
-   particular the new column in "svn status" output.
-   Justification:
-     It doesn't work with svn 1.6 otherwise.
-   Votes:
-     +1: dkagedal
-     +0: hwright
