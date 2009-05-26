@@ -6655,10 +6655,10 @@ msgid "'%s' is not a valid Subversion property name"
 msgstr "“%s”不是有效的 Subversion 属性名称"
 
 msgid "Non-numeric limit argument given"
-msgstr "--limit取值不是数字"
+msgstr "--limit 取值不是数字"
 
 msgid "Argument to --limit must be positive"
-msgstr "--limit取值必须为正"
+msgstr "--limit 取值必须为正"
 
 msgid "Can't specify -c with --old"
 msgstr "不能同时指定 -c 和 --old"
