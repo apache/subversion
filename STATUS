@@ -99,9 +99,3 @@ Candidate changes:
 
 Approved changes:
 =================
-
- * r37710
-   Fix Issue 3413: Bindings fail to load FS modules with enabled run-time
-   module search.
-   Votes:
-     +1: arfrever, stylesen, cmpilato

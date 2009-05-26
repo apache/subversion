@@ -33,7 +33,7 @@
 #include "dbt.h"
 #include "changes-table.h"
 
-
+#include "private/svn_fs_util.h"
 #include "svn_private_config.h"
 
 
@@ -217,7 +217,7 @@ fold_change(apr_hash_t *changes,
       /* This change is new to the hash, so make a new public change
          structure from the internal one (in the hash's pool), and dup
          the path into the hash's pool, too. */
-      new_change = svn_fs_path_change2_create(
+      new_change = svn_fs__path_change2_create(
                        svn_fs_base__id_copy(change->noderev_id, pool),
                        change->kind,
                        pool);
