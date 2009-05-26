@@ -708,6 +708,10 @@ send_unversioned_item(const char *name,
   if (is_external)
     status->text_status = svn_wc_status_external;
 
+  /* Don't ever ignore tree conflict victims. */
+  if (status->tree_conflict)
+    ignore_me = FALSE;
+
   /* If we aren't ignoring it, or if it's an externals path, or it has a lock
      in the repository, pass this entry to the status func. */
   if (no_ignore || (! ignore_me) || is_external || status->repos_lock)
