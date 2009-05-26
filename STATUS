@@ -97,5 +97,17 @@ Candidate changes:
    Votes:
      +1: pburba, cmpilato
 
+ * r37827
+   If the configure script check for bindtextdomain() in libintl fails,
+   try again with -liconv.
+   Justification:
+     Fixes NLS support detection at least on OpenBSD, and maybe more systems.
+   Notes:
+     I patched this bug ages ago for the OpenBSD Subversion package
+     but never committed a fix for it here (my bad). Solaris may also
+     be affected, I am waiting for feedback from a user about this.
+   Votes:
+     +1: stsp
+   
 Approved changes:
 =================
