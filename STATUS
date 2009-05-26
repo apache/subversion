@@ -124,11 +124,3 @@ Approved changes:
    Improve BASH completion.
    Votes:
      +1: arfrever, stylesen
-
- * r37745
-   Fix an *ancient* bug that permits the setting of properties on out-of-
-   date directories over ra_neon when wcprops cache isn't populated.
-   Justification:
-     Modifying out of date dirprops?  That ain't how we roll.
-   Votes:
-     +1: cmpilato, arfrever, hwright
