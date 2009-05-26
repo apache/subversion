@@ -108,6 +108,18 @@ Candidate changes:
      be affected, I am waiting for feedback from a user about this.
    Votes:
      +1: stsp
-   
+
+ * r37835
+   Fix issue #3382, "svn status does not show tree conflicts when svn:ignore=*"
+   Justification:
+     You're not going to argue about this, right?
+   Notes:
+     See the issue for more information. If you want to reproduce the
+     bug, follow the steps outlined in this post:
+     http://subversion.tigris.org/ds/viewMessage.do?dsMessageId=1357155&dsForumId=1065
+     And note that svn --no-ignore works around the bug.
+   Votes:
+     +1: stsp
+
 Approved changes:
 =================
