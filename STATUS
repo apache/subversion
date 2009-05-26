@@ -119,7 +119,7 @@ Candidate changes:
      http://subversion.tigris.org/ds/viewMessage.do?dsMessageId=1357155&dsForumId=1065
      And note that svn --no-ignore works around the bug.
    Votes:
-     +1: stsp
+     +1: stsp, hwright
 
 Approved changes:
 =================
