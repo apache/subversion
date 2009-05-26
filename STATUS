@@ -158,11 +158,3 @@ Candidate changes:
  
 Approved changes:
 =================
-
- * r37735
-   Fix an assertion which occurs when accidentally omitting "--new=" from
-   'svn diff' invocations of the form 'svn diff --old=OLDURL --new=NEWURL'.
-   Justification:
-     Assertions don't often yield helpful corrective info to the users.
-   Votes:
-     +1: cmpilato, arfrever, stylesen

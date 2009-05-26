@@ -311,6 +311,12 @@ svn_cl__diff(apr_getopt_t *os,
       svn_pool_clear(iterpool);
       if (! pegged_diff)
         {
+          /* We can't be tacking URLs onto base paths! */
+          if (svn_path_is_url(path))
+            return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                     _("Path '%s' not relative to base URLs"),
+                                     path);
+
           target1 = svn_path_join(old_target, path, iterpool);
           target2 = svn_path_join(new_target, path, iterpool);
 
