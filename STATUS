@@ -142,11 +142,3 @@ Approved changes:
      a small comment fix.
    Votes:
      +1: lgo, arfrever, hwright
-
- * r37779
-   Fix a potential segfault when doing noop file merges.
-   Justification:
-     Not common, but a segfault is a segfault.  See
-     http://svn.haxx.se/dev/archive-2009-05/0363.shtml.
-   Votes:
-     +1: pburba, arfrever, hwright
