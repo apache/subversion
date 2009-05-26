@@ -4,7 +4,11 @@ set -e
 VERSION=$1
 REV=$2
 EXTRA=$3
-BRANCH=${VERSION%.*}.x
+if [ "$VERSION" != "trunk" ]; then
+  BRANCH=branches/${VERSION%.*}.x
+else
+  BRANCH=trunk
+fi
 
 rs=http://svn.collab.net/repos/svn
 
@@ -26,12 +30,12 @@ export PATH="$SVNRM_BIN:$PATH"
 mkdir deploy
 
 (cd unix-dependencies &&
-  `dirname $0`/dist.sh -v $VERSION -pr branches/$BRANCH -r $REV $EXTRA &&
+  `dirname $0`/dist.sh -v $VERSION -pr $BRANCH -r $REV $EXTRA &&
   mv subversion-* ../deploy/ &&
   mv svn_version.h.dist ../deploy/) || exit $?
 
 (cd win32-dependencies &&
-  `dirname $0`/dist.sh -v $VERSION -pr branches/$BRANCH -r $REV -zip $EXTRA &&
+  `dirname $0`/dist.sh -v $VERSION -pr $BRANCH -r $REV -zip $EXTRA &&
   mv subversion-* ../deploy/ &&
   rm svn_version.h.dist) || exit $?
 
