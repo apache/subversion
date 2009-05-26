@@ -541,17 +541,19 @@ normalize_blames(struct blame_chain *chain,
 
       if (walk->next->start < walk_merged->next->start)
         {
-          struct blame *tmp = blame_create(chain_merged, walk_merged->next->rev,
+          /* insert a new chunk in CHAIN_MERGED. */
+          struct blame *tmp = blame_create(chain_merged, walk_merged->rev,
                                            walk->next->start);
-          tmp->next = walk_merged->next->next;
+          tmp->next = walk_merged->next;
           walk_merged->next = tmp;
         }
 
       if (walk->next->start > walk_merged->next->start)
         {
-          struct blame *tmp = blame_create(chain, walk->next->rev,
+          /* insert a new chunk in CHAIN. */
+          struct blame *tmp = blame_create(chain, walk->rev,
                                            walk_merged->next->start);
-          tmp->next = walk->next->next;
+          tmp->next = walk->next;
           walk->next = tmp;
         }
     }

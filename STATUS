@@ -132,13 +132,3 @@ Approved changes:
      Modifying out of date dirprops?  That ain't how we roll.
    Votes:
      +1: cmpilato, arfrever, hwright
-
- * r37719, r37723, r37741
-   Fix issue where 'blame -g' returns incorrect revisions of some chunks
-   that were merged in.
-   Justification:
-     Feature not working as advertized.
-   Note: r37723 is the actual fix, r37719 is a regression test and r37741
-     a small comment fix.
-   Votes:
-     +1: lgo, arfrever, hwright
