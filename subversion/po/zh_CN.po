@@ -37,8 +37,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.6\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2009-04-14 10:50+0800\n"
-"PO-Revision-Date: 2009-04-14 11:18+0800\n"
+"POT-Creation-Date: 2009-05-26 14:06+0800\n"
+"PO-Revision-Date: 2009-05-26 14:13+0800\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Simplified Chinese <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -1343,6 +1343,10 @@ msgid ""
 "Merge from foreign repository is not compatible with mergeinfo modification"
 msgstr "从外部版本库合并与合并信息修改不兼容"
 
+#, c-format
+msgid "'%s' isn't in the same repository as '%s'"
+msgstr "“%s”与“%s”并不在同一个版本库中"
+
 msgid "Cannot reintegrate into a working copy with a switched subtree"
 msgstr "不能复兴到包含已经切换子目录的工作副本"
 
@@ -1369,6 +1373,11 @@ msgstr "“%s@%ld”必须与“%s@%ld”有祖先关系"
 #, c-format
 msgid "'%s' must be from the same repository as '%s'"
 msgstr "“%s”必须与“%s”在同一个版本库中"
+
+#, c-format
+msgid ""
+"Neither the reintegrate source nor target can be the root of the repository"
+msgstr "复兴源或目标都不能是版本库的根。"
 
 #, c-format
 msgid ""
@@ -2517,10 +2526,6 @@ msgid "Repository UUID '%s' doesn't match expected UUID '%s'"
 msgstr "版本库的 UUID“%s”与期望的 UUID“%s”不匹配"
 
 #, c-format
-msgid "'%s' isn't in the same repository as '%s'"
-msgstr "“%s”与“%s”并不在同一个版本库中"
-
-#, c-format
 msgid "  - handles '%s' scheme\n"
 msgstr "  - 处理“%s”方案\n"
 
@@ -3490,6 +3495,10 @@ msgstr "转存流在“%.20s”包含错误头部(没有值)"
 
 msgid "Incomplete or unterminated property block"
 msgstr "不完整或未结束的属性块"
+
+#, c-format
+msgid " removing '\\r' from %s ..."
+msgstr "正在从 '%s' 删除 '\\r' ..."
 
 msgid "Unexpected EOF writing contents"
 msgstr "写内容时意外结束"
@@ -7224,10 +7233,10 @@ msgid "Invalid syntax of argument of --config-option"
 msgstr "参数 --config-option 的语法无效"
 
 msgid "Non-numeric limit argument given"
-msgstr "--limit取值不是数字"
+msgstr "--limit 取值不是数字"
 
 msgid "Argument to --limit must be positive"
-msgstr "--limit取值必须为正"
+msgstr "--limit 取值必须为正"
 
 msgid "Can't specify -c with --old"
 msgstr "不能同时指定 -c 和 --old"
@@ -7793,6 +7802,10 @@ msgid ""
 "configuration option were not set.\n"
 msgstr ""
 "环境变量 SVN_MERGE 没有设置，运行时的配置中也没有设置 “merge-tool-cmd”。\n"
+
+#, c-format
+msgid "The external merge tool exited with exit code %d"
+msgstr "外部合并工具已经退出，代码是 %d"
 
 #, c-format
 msgid "Can't write to '%s'"
@@ -9238,6 +9251,12 @@ msgstr "从版本 %ld (忽略 %s* 属性)复制属性。\n"
 #, c-format
 msgid "Copied properties for revision %ld.\n"
 msgstr "复制版本 %ld 的属性。\n"
+
+#, c-format
+msgid ""
+"NOTE: Normalized %s* properties to LF line endings (%d rev-props, %d node-"
+"props).\n"
+msgstr "注意: 已经标准化 %s* 属性为 LF 行尾 (%d rev-props, %d node-props)。\n"
 
 msgid "Cannot initialize a repository with content in it"
 msgstr "当版本库有内容时不能初始化"
