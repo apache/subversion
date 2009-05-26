@@ -37,7 +37,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.7\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2009-04-14 10:52+0800\n"
+"POT-Creation-Date: 2009-05-26 14:15+0800\n"
 "PO-Revision-Date: 2009-04-14 11:11+0800\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Simplified Chinese <dev@subversion.tigris.org>\n"
@@ -198,6 +198,9 @@ msgstr "非法流数据"
 
 msgid "Unrecognized stream data"
 msgstr "无法识别的流数据"
+
+msgid "Stream doesn't support resetting"
+msgstr "流不支持重置操作"
 
 msgid "Unknown svn_node_kind"
 msgstr "未知的 svn_node_kind"
@@ -832,9 +835,6 @@ msgstr "试图写至只读 SQLite 数据库"
 msgid "Unsupported schema found in SQLite db"
 msgstr "不支持 SQLite 数据库中的方案"
 
-msgid "External program is missing"
-msgstr "丢失外部程序"
-
 msgid "Error parsing arguments"
 msgstr "解析参数出错"
 
@@ -1223,8 +1223,16 @@ msgid "'%s' already exists"
 msgstr "“%s” 已存在"
 
 #, c-format
-msgid "Checksum mismatch for '%s'; expected: '%s', actual: '%s'"
-msgstr "“%s” 的校验和不匹配；期望: “%s”，实际: “%s”"
+msgid "Checksum mismatch for '%s'"
+msgstr "'%s' 的校验和不匹配"
+
+#, c-format
+msgid "   expected:  %s"
+msgstr "       期望:  %s"
+
+#, c-format
+msgid "     actual:  %s"
+msgstr "       实际:  %s"
 
 #, c-format
 msgid ""
@@ -1371,6 +1379,10 @@ msgid ""
 "Merge from foreign repository is not compatible with mergeinfo modification"
 msgstr "从外部版本库合并与合并信息修改不兼容"
 
+#, c-format
+msgid "'%s' isn't in the same repository as '%s'"
+msgstr "“%s”与“%s”并不在同一个版本库中"
+
 msgid "Cannot reintegrate into a working copy with a switched subtree"
 msgstr "不能复兴到包含已经切换子目录的工作副本"
 
@@ -1397,6 +1409,11 @@ msgstr "“%s@%ld”必须与“%s@%ld”有祖先关系"
 #, c-format
 msgid "'%s' must be from the same repository as '%s'"
 msgstr "“%s”必须与“%s”在同一个版本库中"
+
+#, c-format
+msgid ""
+"Neither the reintegrate source nor target can be the root of the repository"
+msgstr "复兴源或目标都不能是版本库的根。"
 
 #, c-format
 msgid ""
@@ -1844,14 +1861,8 @@ msgid "Attempted to set textual contents of an immutable node"
 msgstr "试图设置不变节点的文本内容"
 
 #, c-format
-msgid ""
-"Checksum mismatch, representation '%s':\n"
-"   expected:  %s\n"
-"     actual:  %s\n"
-msgstr ""
-"校验和不匹配，修订版“%s”: \n"
-"  期望: %s\n"
-"  实际: %s\n"
+msgid "Checksum mismatch on representation '%s'"
+msgstr "'%s' 的校验和不匹配"
 
 #, c-format
 msgid "Attempted to open non-existent child node '%s'"
@@ -2023,34 +2034,12 @@ msgid "Failure reading representation '%s'"
 msgstr "读取修订版“%s”失败"
 
 #, c-format
-msgid ""
-"Checksum mismatch on representation '%s':\n"
-"   expected:  %s\n"
-"     actual:  %s\n"
-msgstr ""
-"修订版“%s”的校验和不匹配: \n"
-"       期望:  %s\n"
-"       实际:  %s\n"
+msgid "MD5 checksum mismatch on representation '%s'"
+msgstr "“%s” 的 MD5 校验和不匹配"
 
 #, c-format
-msgid ""
-"MD5 checksum mismatch on representation '%s':\n"
-"   expected:  %s\n"
-"     actual:  %s\n"
-msgstr ""
-"修订版 “%s” 的 MD5 校验和不匹配: \n"
-"       期望:  %s\n"
-"       实际:  %s\n"
-
-#, c-format
-msgid ""
-"SHA1 checksum mismatch on representation '%s':\n"
-"   expected:  %s\n"
-"     actual:  %s\n"
-msgstr ""
-"修订版 “%s” 的 SHA1 校验和不匹配: \n"
-"       期望:  %s\n"
-"       实际:  %s\n"
+msgid "SHA1 checksum mismatch on representation '%s'"
+msgstr "“%s” 的 SHA1 校验和不匹配"
 
 msgid "Null rep, but offset past zero already"
 msgstr "空的版本，但是偏移已经大于零"
@@ -2129,14 +2118,8 @@ msgid "Copy from mutable tree not currently supported"
 msgstr "当前不支持从可变的树复制"
 
 #, c-format
-msgid ""
-"Base checksum mismatch on '%s':\n"
-"   expected:  %s\n"
-"     actual:  %s\n"
-msgstr ""
-"“%s”的基校验和不匹配: \n"
-"  期望: %s\n"
-"  实际: %s\n"
+msgid "Base checksum mismatch on '%s'"
+msgstr "'%s' 的校验和错误"
 
 msgid "Cannot compare file contents between two different filesystems"
 msgstr "不能在两个不同的文件系统间比较文件内容"
@@ -2170,16 +2153,6 @@ msgstr "不能在节点版本 %%s 增加合并信息计数，因为会溢出到�
 msgid ""
 "Can't increment mergeinfo count on *file* node-revision %%s to %%%s (> 1)"
 msgstr "不能在*文件*修订节点增加合并信息计数 %%s 到 %%%s (> 1)"
-
-#, c-format
-msgid ""
-"Checksum mismatch, file '%s':\n"
-"   expected:  %s\n"
-"     actual:  %s\n"
-msgstr ""
-"文件“%s”的校验和不匹配: \n"
-"  期望: %s\n"
-"  实际: %s\n"
 
 msgid "Empty noderev in cache"
 msgstr "缓存中 noderev 为空"
@@ -2371,15 +2344,8 @@ msgstr "svndiff 请求的位置超出了流的结尾"
 msgid "svndiff window length is corrupt"
 msgstr "svndiff 的窗体长度已损坏"
 
-#, c-format
-msgid ""
-"Checksum mismatch while reading representation:\n"
-"   expected:  %s\n"
-"     actual:  %s\n"
-msgstr ""
-"读取修订版时校验和不匹配: \n"
-"       期望:  %s\n"
-"       实际:  %s\n"
+msgid "Checksum mismatch while reading representation"
+msgstr "读取修订版时校验和不匹配"
 
 msgid "Directory entry corrupt"
 msgstr "目录条目损坏"
@@ -2547,10 +2513,6 @@ msgid "Repository UUID '%s' doesn't match expected UUID '%s'"
 msgstr "版本库的 UUID“%s”与期望的 UUID“%s”不匹配"
 
 #, c-format
-msgid "'%s' isn't in the same repository as '%s'"
-msgstr "“%s”与“%s”并不在同一个版本库中"
-
-#, c-format
 msgid "  - handles '%s' scheme\n"
 msgstr "  - 处理“%s”方案\n"
 
@@ -2630,16 +2592,6 @@ msgstr "不能从响应中获得内容类型"
 
 msgid "Could not save file"
 msgstr "无法保存文件"
-
-#, c-format
-msgid ""
-"Checksum mismatch for '%s':\n"
-"   expected checksum:  %s\n"
-"   actual checksum:    %s\n"
-msgstr ""
-"“%s”的校验和不匹配: \n"
-"  期望的校验和: %s\n"
-"  实际的校验和: %s\n"
 
 msgid "Server response missing the expected deadprop-count property"
 msgstr "服务器响应丢失了期望的 deadprop-count 属性"
@@ -2993,8 +2945,14 @@ msgid "Incorrect response-digest in Authentication-Info header."
 msgstr "认证信息头中的 response-digest 错误"
 
 #, c-format
-msgid "Initialization of GSS-API context failed."
-msgstr "初始化 GSS-API 失败"
+msgid ""
+"Initialization of the GSSAPI context failed.\n"
+" %s\n"
+" %s\n"
+msgstr ""
+"初始化 GSSAPI 失败。\n"
+" %s\n"
+" %s\n"
 
 #, c-format
 msgid "Directory '%s' is out of date; try updating"
@@ -3359,13 +3317,10 @@ msgstr "源 URL “%s” 来自其它版本库"
 #, c-format
 msgid ""
 "Checksum mismatch for resulting fulltext\n"
-"(%s):\n"
-"   expected checksum:  %s\n"
-"   actual checksum:    %s\n"
+"(%s)"
 msgstr ""
-"“%s” 的全文校验和不匹配: \n"
-"  期望校验和: %s\n"
-"  实际校验和: %s\n"
+"结果的校验和不匹配: \n"
+"(%s)"
 
 msgid "Unable to open root of edit"
 msgstr "无法打开根来编辑"
@@ -3539,6 +3494,10 @@ msgstr "转存流在“%.20s”包含错误头部(没有值)"
 msgid "Incomplete or unterminated property block"
 msgstr "不完整或未结束的属性块"
 
+#, c-format
+msgid " removing '\\r' from %s ..."
+msgstr "正在从 '%s' 删除 '\\r' ..."
+
 msgid "Unexpected EOF writing contents"
 msgstr "写内容时意外结束"
 
@@ -3566,13 +3525,8 @@ msgstr "当前版本库不存在相对源版本 %ld"
 #, c-format
 msgid ""
 "Copy source checksum mismatch on copy from '%s'@%ld\n"
-" to '%s' in rev based on r%ld:\n"
-"   expected:  %s\n"
-"     actual:  %s\n"
-msgstr ""
-"从 “%s@%ld” 复制到 “%s”，基于版本 r%ld 的源校验和不匹配: \n"
-"  期望: %s\n"
-"  实际: %s\n"
+"to '%s' in rev based on r%ld"
+msgstr "从 “%s@%ld” 复制到 “%s”，基于版本 r%ld 的源校验和不匹配"
 
 msgid "Malformed dumpstream: Revision 0 must not contain node records"
 msgstr "非法的转存流: 版本 0 不能包含节点记录"
@@ -4761,20 +4715,16 @@ msgstr "无法排除根目录"
 msgid "Cannot crop '%s': it is a switched path"
 msgstr "无法修剪 “%s”：它是已切换的路径"
 
-#, c-format
-msgid "Entry '%s' has invalid '%s' value"
-msgstr "入口“%s”有无效值“%s”"
-
-#, c-format
-msgid "Entry for '%s' has invalid repository root"
-msgstr "“%s”条目的版本库根目录无效"
-
-#, c-format
-msgid "Entry '%s' has invalid node kind"
-msgstr "入口“%s”有无效的节点种类"
-
 msgid "No WC table entry"
 msgstr "没有 WC 表入口"
+
+#, c-format
+msgid "Admin area of '%s' is missing"
+msgstr "“%s”的管理目录丢失"
+
+#, c-format
+msgid "'%s' is not of the right kind"
+msgstr "“%s” 的类型错误"
 
 #, c-format
 msgid "No default entry in directory '%s'"
@@ -4819,10 +4769,23 @@ msgstr "“%s”有无法识别的节点种类"
 msgid "Unexpectedly found '%s': path is marked 'missing'"
 msgstr "意外发现“%s”: 路径被标记为“丢失”"
 
+#, c-format
 msgid ""
-"Cannot upgrade with existing logs; please run 'svn cleanup' with Subversion "
-"1.6"
-msgstr "有日志存在时无法升级；请使用 Subversion 1.6 执行“svn cleanup”"
+"Working copy format of '%s' is too old (%d); please check out your working "
+"copy again"
+msgstr "“%s”的工作副本格式太旧(%d)；请重新取出工作副本"
+
+#, c-format
+msgid ""
+"This client is too old to work with working copy '%s'.  You need\n"
+"to get a newer Subversion client, or to downgrade this working copy.\n"
+"See http://subversion.tigris.org/faq.html#working-copy-format-change\n"
+"for details."
+msgstr ""
+"此客户端对于工作副本 “%s” 太旧。你需要取得更新的 Subversion 客户端，或者降级\n"
+"工作副本。参见 http://subversion.tigris.org/faq.html#working-copy-format-"
+"change\n"
+"以获得更详细的信息。"
 
 #, c-format
 msgid "Working copy '%s' locked"
@@ -4888,14 +4851,6 @@ msgid "In directory '%s'"
 msgstr "在目录“%s”中"
 
 #, c-format
-msgid "Missing 'left' attribute in '%s'"
-msgstr "“%s”丢失了“left”属性"
-
-#, c-format
-msgid "Missing 'right' attribute in '%s'"
-msgstr "“%s”丢失了“right”属性"
-
-#, c-format
 msgid "Missing 'dest' attribute in '%s'"
 msgstr "“%s”丢失了“dest”属性"
 
@@ -4951,9 +4906,6 @@ msgstr "比较“%s”与“%s”出错"
 msgid "Error modifying entry of '%s'"
 msgstr "修改“%s”的入口出错"
 
-msgid "Invalid 'format' attribute"
-msgstr "无效的format属性"
-
 #, c-format
 msgid "Log entry missing 'name' attribute (entry '%s' for directory '%s')"
 msgstr "日志项丢失 “name” 属性 (入口 “%s” 对应目录 “%s”)"
@@ -4980,6 +4932,9 @@ msgstr "为 “%s” 写入日志出错"
 #, c-format
 msgid "'%s' is not a working copy directory"
 msgstr "“%s” 不是工作副本目录"
+
+msgid "Log format too old, please use Subversion 1.6 or earlier"
+msgstr "日志格式太旧，请使用 Subversion 1.6 或更新的版本"
 
 msgid "Conflict callback violated API: returned no results"
 msgstr "冲突的回调函数违反 API：没有返回结果。"
@@ -5013,6 +4968,18 @@ msgid "Illegal file external revision kind %d for path '%s'"
 msgstr "非法的外部引用文件的版本类型 %d，在路径 “%s” 中"
 
 #, c-format
+msgid "Entry '%s' has invalid node kind"
+msgstr "入口“%s”有无效的节点种类"
+
+#, c-format
+msgid "Entry for '%s' has invalid repository root"
+msgstr "“%s”条目的版本库根目录无效"
+
+#, c-format
+msgid "Entry '%s' has invalid '%s' value"
+msgstr "入口“%s”有无效值“%s”"
+
+#, c-format
 msgid "Entry '%s' has invalid depth"
 msgstr "入口 “%s” 有无效的深度"
 
@@ -5042,35 +5009,6 @@ msgstr "无效的条目终止符"
 #, c-format
 msgid "Error at entry %d in entries file for '%s':"
 msgstr "条目文件中的条目 %d 出错于 “%s”"
-
-#, c-format
-msgid "Error writing to '%s'"
-msgstr "写入“%s”出错"
-
-#, c-format
-msgid "Error writing entries file for '%s'"
-msgstr "写入“%s”的入口文件出错"
-
-#, c-format
-msgid ""
-"Unable to return data because the working copy at '%s' needs to be upgraded."
-msgstr "由于位于“%s”的工作副本需要升级，所以不能返回数据。"
-
-#, c-format
-msgid "Entry '%s' in '%s' is not under version control"
-msgstr "条目“%s”(位于“%s”)尚未纳入版本控制"
-
-#, c-format
-msgid "'%s' returned error exitcode %d"
-msgstr "“%s”返回错误退出码 %d"
-
-#, c-format
-msgid "Missing end of line in wcprops file for '%s'"
-msgstr "wcprops文件“%s”丢失了行结束符"
-
-#, c-format
-msgid "Cannot write wcprops for '%s'; format %d is too old"
-msgstr "无法为“%s”写入 wcprops；格式 %d 太旧"
 
 msgid "Conflict callback violated API: returned no results."
 msgstr "冲突的回调函数违反 API：没有返回结果。"
@@ -5144,12 +5082,16 @@ msgstr ""
 "试图把属性 “%s” 的值从 “%s” 改为 “%s”，\n"
 "但是属性并不存在。"
 
-msgid "Failed to load properties from disk"
-msgstr "无法从磁盘装载属性"
-
 #, c-format
 msgid "Property '%s' is an entry property"
 msgstr "属性 “%s” 是条目属性"
+
+#, c-format
+msgid "Directory '%s' is missing or obstructed"
+msgstr "目录“%s”丢失或者已经成为障碍"
+
+msgid "Failed to load properties from disk"
+msgstr "无法从磁盘装载属性"
 
 #, c-format
 msgid "Cannot set '%s' on a directory ('%s')"
@@ -5200,32 +5142,8 @@ msgid ""
 msgstr "无效属性 %s 位于 “%s”: 目标 “%s” 包含 “..” 或是绝对路径"
 
 #, c-format
-msgid ""
-"Working copy format of '%s' is too old (%d); please check out your working "
-"copy again"
-msgstr "“%s”的工作副本格式太旧(%d)；请重新取出工作副本"
-
-#, c-format
-msgid ""
-"This client is too old to work with working copy '%s'.  You need\n"
-"to get a newer Subversion client, or to downgrade this working copy.\n"
-"See http://subversion.tigris.org/faq.html#working-copy-format-change\n"
-"for details."
-msgstr ""
-"此客户端对于工作副本 “%s” 太旧。你需要取得更新的 Subversion 客户端，或者降级\n"
-"工作副本。参见 http://subversion.tigris.org/faq.html#working-copy-format-"
-"change\n"
-"以获得更详细的信息。"
-
-#, c-format
-msgid ""
-"Checksum mismatch indicates corrupt text base: '%s'\n"
-"   expected:  %s\n"
-"     actual:  %s\n"
-msgstr ""
-"校验和不一致，表示文件参考基础损坏: “%s”\n"
-"       期望:  %s\n"
-"       实际:  %s\n"
+msgid "Checksum mismatch indicates corrupt text base: '%s'"
+msgstr "校验和不一致，文件参考基础损坏: “%s”"
 
 msgid "Relocate can only change the repository part of an URL"
 msgstr "重新定位只能改变URL中的版本库部分"
@@ -5256,8 +5174,8 @@ msgid "No '.' entry in: '%s'"
 msgstr "“%s” 中不存在条目 “.”"
 
 #, c-format
-msgid "Checksum mismatch while updating '%s'; expected: '%s', actual: '%s'"
-msgstr "更新 “%s” 时，校验和不匹配；期望: “%s”，实际: “%s”"
+msgid "Checksum mismatch while updating '%s'"
+msgstr "更新 “%s” 时，校验和不匹配"
 
 #, c-format
 msgid "Path '%s' is not in the working copy"
@@ -5346,8 +5264,8 @@ msgid "File '%s' in directory '%s' is not a versioned resource"
 msgstr "文件 “%s” 不是版本控制资源，在目录 “%s” 中"
 
 #, c-format
-msgid "Checksum mismatch for '%s'; expected: '%s', recorded: '%s'"
-msgstr "“%s” 的校验和不匹配；期望值: “%s”，记录值: “%s”"
+msgid "   recorded:  %s"
+msgstr "       记录:  %s"
 
 #, c-format
 msgid "'%s' has no ancestry information"
@@ -5356,6 +5274,15 @@ msgstr "“%s”没有演进历程信息"
 #, c-format
 msgid "Copyfrom-url '%s' has different repository root than '%s'"
 msgstr "Copyfrom-url“%s”与“%s”的版本库根目录不相同"
+
+#, c-format
+msgid "Missing end of line in wcprops file for '%s'"
+msgstr "wcprops文件“%s”丢失了行结束符"
+
+msgid ""
+"Cannot upgrade with existing logs; please run 'svn cleanup' with Subversion "
+"1.6"
+msgstr "有日志存在时无法升级；请使用 Subversion 1.6 执行“svn cleanup”"
 
 #, c-format
 msgid "'%s' is not a directory"
@@ -5377,6 +5304,10 @@ msgid "Parent(s) of '%s' should have been present."
 msgstr "'%s' 的父亲应该存在。"
 
 #, c-format
+msgid "The node '%s' was not found."
+msgstr "找不到节点 '%s'。"
+
+#, c-format
 msgid "Parent(s) of '%s' should have repository information."
 msgstr "'%s' 的父亲应该包含版本库的信息。"
 
@@ -5389,10 +5320,6 @@ msgid "The node '%s' has a corrupt checksum value."
 msgstr "节点 '%s' 的校验和损坏。"
 
 #, c-format
-msgid "The node '%s' was not found."
-msgstr "找不到节点 '%s'。"
-
-#, c-format
 msgid "Corrupt data for '%s'"
 msgstr "'%s' 的数据损坏"
 
@@ -5403,6 +5330,10 @@ msgstr "期望节点“%s”被增加。"
 #, c-format
 msgid "Expected node '%s' to be deleted."
 msgstr "期望节点“%s”被删除。"
+
+#, c-format
+msgid "Unrecognized work item in the queue associated with '%s'"
+msgstr "“%s” 关联的队列中的项目无法识别"
 
 msgid "'verbose' option invalid in XML mode"
 msgstr "在XML模式中“verbose”选项无效"
@@ -5646,6 +5577,10 @@ msgstr "“--new” 选项只能与 “--old” 同时使用"
 #, c-format
 msgid "Target lists to diff may not contain both working copy paths and URLs"
 msgstr "差异比较目标不可同时包含工作副本路径与URL"
+
+#, c-format
+msgid "Path '%s' not relative to base URLs"
+msgstr "路径“%s”不是相对于基础 URL"
 
 msgid ""
 "Destination directory exists; please remove the directory or use --force to "
@@ -6099,9 +6034,6 @@ msgstr "使用 ARG 作为合并命令"
 
 msgid "use ARG as external editor"
 msgstr "使用 ARG 作为外部编辑器"
-
-msgid "use ARG as external patch command"
-msgstr "使用 ARG 作为外部补丁命令"
 
 msgid "mark revisions as merged (use with -r)"
 msgstr "标记版本为已合并(使用 -r 参数)"
@@ -6793,11 +6725,12 @@ msgid ""
 "  copy WCPATH into a modified tree that reflects all the changes the\n"
 "  patch carries along.  When WCPATH is omitted '.' is assumed.\n"
 "\n"
-"  The format of bytes embedded in the patch can be of two types: Unified\n"
-"  diff and/or svnpatch diff (see 'svn diff --svnpatch').\n"
+"  The content embedded in the patch file can be of two types:\n"
+"  Unified diff and/or svnpatch diff (see 'svn diff --svnpatch').\n"
+"  Any other content of the patch file is ignored.\n"
 "\n"
 "  This command allows some amount of fuzzing as Unidiff is contextual\n"
-"  and svnpatch revisionless.\n"
+"  and an svnpatch is revisionless.\n"
 msgstr ""
 "应用补丁到工作目录。\n"
 "用法: patch PATCHFILE [WCPATH]\n"
@@ -6807,8 +6740,8 @@ msgstr ""
 "\n"
 "  当省略 WCPATH 时，默认使用 '.'。\n"
 "\n"
-"  补丁的格式有 2 种类型: GNU 统一差异，或 svnpatch 差异(参见\n"
-"  'svn diff --svnpatch')。\n"
+"  补丁文件中的内容可以是 2 种类型: GNU 统一差异，或 svnpatch 差异(参见\n"
+"  'svn diff --svnpatch')。忽略任何其它格式。\n"
 "\n"
 "  此命令允许少许违反统一差异格式的内容，或者没有版本的 svnpatch 内容。\n"
 
@@ -7369,14 +7302,21 @@ msgstr ""
 "  使用“--set-depth”选项设置此操作目标的工作副本之新深度。目前工作副本的\n"
 "  深度只能增加(嵌入更深)；你不能让目录收缩。\n"
 
+msgid ""
+"Upgrade the metadata storage format for a working copy.\n"
+"usage: upgrade TARGET...\n"
+msgstr ""
+"升级工作副本的元数据存储格式。\n"
+"用法: upgrade TARGET...\n"
+
 msgid "Caught signal"
 msgstr "捕捉到信号"
 
 msgid "Non-numeric limit argument given"
-msgstr "--limit取值不是数字"
+msgstr "--limit 取值不是数字"
 
 msgid "Argument to --limit must be positive"
-msgstr "--limit取值必须为正"
+msgstr "--limit 取值必须为正"
 
 msgid "Can't specify -c with --old"
 msgstr "不能同时指定 -c 和 --old"
@@ -7756,14 +7696,6 @@ msgstr "设定属性 “%s” 于版本库版本 %ld\n"
 #, c-format
 msgid "property '%s' deleted from repository revision %ld\n"
 msgstr "删除属性 “%s” 于版本库版本 %ld\n"
-
-msgid ""
-"No 'patch' program was found in your system.  Please try\n"
-"to use --patch-cmd or 'patch-cmd' run-time configuration\n"
-"option or manually use an external tool to apply Unidiffs."
-msgstr ""
-"在你的系统中找不到程序 'patch'。请尝试用命令行参数\n"
-" --patch-cmd 或运行时配置选项 'patch-cmd'，或者手工使用外部工具应用统一差异。"
 
 #, c-format
 msgid "Cannot specify revision for deleting versioned property '%s'"
@@ -9402,6 +9334,12 @@ msgstr "从版本 %ld (忽略 %s* 属性)复制属性。\n"
 msgid "Copied properties for revision %ld.\n"
 msgstr "复制版本 %ld 的属性。\n"
 
+#, c-format
+msgid ""
+"NOTE: Normalized %s* properties to LF line endings (%d rev-props, %d node-"
+"props).\n"
+msgstr "注意: 已经标准化 %s* 属性为 LF 行尾 (%d rev-props, %d node-props)。\n"
+
 msgid "Cannot initialize a repository with content in it"
 msgstr "当版本库有内容时不能初始化"
 
@@ -9570,9 +9508,17 @@ msgid "last changed rather than current revisions"
 msgstr "最近一次改变的，而不是目前的版本"
 
 #, c-format
-msgid "exported%s"
-msgstr "已导出 %s"
+msgid "Unversioned directory%s"
+msgstr "目录 %s 未版本控制"
 
 #, c-format
-msgid "'%s' not versioned, and not exported\n"
-msgstr "“%s”未纳入版本控制，并未导出\n"
+msgid "Unversioned file%s"
+msgstr "文件 %s 未版本控制"
+
+#, c-format
+msgid "'%s' doesn't exist\n"
+msgstr "“%s” 不存在\n"
+
+#, c-format
+msgid "'%s' is of unknown type\n"
+msgstr "“%s” 的类型未知\n"
