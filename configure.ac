@@ -513,9 +513,22 @@ if test "$enable_nls" = "yes"; then
   if test "$MSGFMT" != "none"; then
     AC_SEARCH_LIBS(bindtextdomain, [intl], [],
                    [
-                    AC_MSG_WARN([bindtextdomain() not found.  Disabling NLS.])
                     enable_nls="no"
                    ])
+    if test "$enable_nls" = "no"; then
+      # On some systems, libintl needs libiconv to link properly,
+      # so try again with -liconv.
+      AC_SEARCH_LIBS(bindtextdomain, [intl],
+                     [
+                      # This is here so that -liconv ends up in LIBS
+                      # if it worked with -liconv.
+                      AC_CHECK_LIB(iconv, libiconv_open)
+                     ], 
+                     [
+                      AC_MSG_WARN([bindtextdomain() not found.  Disabling NLS.])
+                      enable_nls="no"
+                     ], -liconv)
+    fi
     if test "$enable_nls" = "yes"; then
       AC_DEFINE(ENABLE_NLS, 1,
                 [Define to 1 if translation of program messages to the user's
