@@ -15,11 +15,6 @@ Status of 1.6.3:
 
 Candidate changes:
 
- * r36450, r36452, r37470, r37479, 37538
-   Improve BASH completion.
-   Votes:
-     +1: arfrever, stylesen
-
  * r37478, r37543, r37544, r37545, r37547
    Support using `svnversion` on files and improve some messages printed by
    `svnversion`.
@@ -108,40 +103,6 @@ Candidate changes:
    Votes:
      +1: arfrever, stylesen
 
- * r37719, r37723, r37741
-   Fix issue where 'blame -g' returns incorrect revisions of some chunks
-   that were merged in.
-   Justification:
-     Feature not working as advertized.
-   Note: r37723 is the actual fix, r37719 is a regression test and r37741
-     a small comment fix.
-   Votes:
-     +1: lgo, arfrever
-
- * r37745
-   Fix an *ancient* bug that permits the setting of properties on out-of-
-   date directories over ra_neon when wcprops cache isn't populated.
-   Justification:
-     Modifying out of date dirprops?  That ain't how we roll.
-   Votes:
-     +1: cmpilato, arfrever
-
- * r37774
-   Make contrib/client-side/emacs/dsvn.el compatible with Subversion 1.6, in
-   particular the new column in "svn status" output.
-   Justification:
-     It doesn't work with svn 1.6 otherwise.
-   Votes:
-     +1: dkagedal
-
- * r37779
-   Fix a potential segfault when doing noop file merges.
-   Justification:
-     Not common, but a segfault is a segfault.  See
-     http://svn.haxx.se/dev/archive-2009-05/0363.shtml.
-   Votes:
-     +1: pburba, arfrever
-
  * r37747, r37793
    Fix Issue 3414: DAV RA layers not properly handling update working copy
    dir to revision in which it didn't exist.
@@ -154,7 +115,47 @@ Candidate changes:
      What part of "user" and "friendly" did you not catch?
    Votes:
      +1: cmpilato (r37793 only)
-     +1: arfrever
+     +1: arfrever, hwright
  
 Approved changes:
 =================
+
+ * r36450, r36452, r37470, r37479, 37538
+   Improve BASH completion.
+   Votes:
+     +1: arfrever, stylesen
+
+ * r37745
+   Fix an *ancient* bug that permits the setting of properties on out-of-
+   date directories over ra_neon when wcprops cache isn't populated.
+   Justification:
+     Modifying out of date dirprops?  That ain't how we roll.
+   Votes:
+     +1: cmpilato, arfrever, hwright
+
+ * r37719, r37723, r37741
+   Fix issue where 'blame -g' returns incorrect revisions of some chunks
+   that were merged in.
+   Justification:
+     Feature not working as advertized.
+   Note: r37723 is the actual fix, r37719 is a regression test and r37741
+     a small comment fix.
+   Votes:
+     +1: lgo, arfrever, hwright
+
+ * r37779
+   Fix a potential segfault when doing noop file merges.
+   Justification:
+     Not common, but a segfault is a segfault.  See
+     http://svn.haxx.se/dev/archive-2009-05/0363.shtml.
+   Votes:
+     +1: pburba, arfrever, hwright
+
+ * r37774
+   Make contrib/client-side/emacs/dsvn.el compatible with Subversion 1.6, in
+   particular the new column in "svn status" output.
+   Justification:
+     It doesn't work with svn 1.6 otherwise.
+   Votes:
+     +1: dkagedal
+     +0: hwright
