@@ -2315,9 +2315,14 @@ entries_write_body(svn_wc__db_t *db,
   svn_boolean_t have_row;
   apr_hash_index_t *hi;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+  const apr_array_header_t *children;
   const char *repos_root;
   apr_int64_t repos_id;
   apr_int64_t wc_id;
+  apr_hash_t *dav_cache;
+  apr_hash_t *child_cache;
+  svn_error_t *err;
+  int i;
 
   /* Get a copy of the "this dir" entry for comparison purposes. */
   this_dir = apr_hash_get(entries, SVN_WC_ENTRY_THIS_DIR,
@@ -2373,6 +2378,52 @@ entries_write_body(svn_wc__db_t *db,
       repos_root = NULL;
     }
 
+  /* Before we nuke all the nodes, we need to get any dav_cache data which may
+     be in them, so that we can reapply it later.
+
+     ### this can go away once we get smart enough not to blow away all the
+         nodes here. */
+  dav_cache = apr_hash_make(scratch_pool);
+  err = svn_wc__db_base_get_dav_cache(&child_cache, db, local_abspath,
+                                      scratch_pool, scratch_pool);
+  if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+    {
+      /* We could be looking at a newly added node, without a BASE node,
+         and hence no dav cache, so just ignore the error. */
+      svn_error_clear(err);
+    }
+  else if (err)
+    return err;
+
+  apr_hash_set(dav_cache, local_abspath, APR_HASH_KEY_STRING, child_cache);
+
+  SVN_ERR(svn_wc__db_base_get_children(&children, db, local_abspath,
+                                       scratch_pool, scratch_pool));
+
+  for (i = 0; i < children->nelts; i++)
+    {
+      const char *child_basename = APR_ARRAY_IDX(children, i, const char *);
+      const char *child_abspath;
+
+      svn_pool_clear(iterpool);
+      child_abspath = svn_dirent_join(local_abspath, child_basename,
+                                      scratch_pool);
+
+      err = svn_wc__db_base_get_dav_cache(&child_cache, db, child_abspath,
+                                          scratch_pool, iterpool);
+      if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+        {
+          /* We could be looking at a newly added node, without a BASE node,
+             and hence no dav cache, so just ignore the error. */
+          svn_error_clear(err);
+          continue;
+        }
+      else if (err)
+        return err;
+
+      apr_hash_set(dav_cache, child_abspath, APR_HASH_KEY_STRING, child_cache);
+    }
+
   /* Remove all WORKING, BASE and ACTUAL nodes for this directory, as well
      as locks, since we're about to replace 'em. */
   SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db, STMT_DELETE_ALL_WORKING));
@@ -2410,6 +2461,22 @@ entries_write_body(svn_wc__db_t *db,
                           this_entry, key,
                           svn_dirent_join(local_abspath, key, iterpool),
                           this_dir, iterpool));
+    }
+
+  for (hi = apr_hash_first(scratch_pool, dav_cache); hi;
+        hi = apr_hash_next(hi))
+    {
+      const void *key;
+      void *val;
+      const char *child_abspath;
+
+      svn_pool_clear(iterpool);
+      apr_hash_this(hi, &key, NULL, &val);
+      child_abspath = key;
+      child_cache = val;
+
+      SVN_ERR(svn_wc__db_base_set_dav_cache(db, child_abspath, child_cache,
+                                            iterpool));
     }
 
   svn_pool_destroy(iterpool);
