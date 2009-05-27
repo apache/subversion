@@ -573,6 +573,7 @@ do_open(svn_wc_adm_access_t **adm_access,
                                    _("'%s' is not a working copy"),
                                    svn_path_local_style(path, pool));
         }
+      SVN_ERR(err);
     }
 
   /* Need to create a new lock */
