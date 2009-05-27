@@ -695,10 +695,10 @@ send_unversioned_item(const char *name,
                       void *status_baton,
                       apr_pool_t *pool)
 {
-  int ignore_me = svn_wc_match_ignore_list(name, patterns, pool);
+  svn_boolean_t ignore_me = svn_wc_match_ignore_list(name, patterns, pool);
   const char *path = svn_dirent_join(svn_wc_adm_access_path(adm_access),
                                      name, pool);
-  int is_external = is_external_path(externals, path, pool);
+  svn_boolean_t is_external = is_external_path(externals, path, pool);
   svn_wc_status2_t *status;
 
   SVN_ERR(assemble_status(&status, path, adm_access, NULL, NULL,
