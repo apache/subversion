@@ -164,7 +164,9 @@ _svn()
 	# svn:* and other (env SVN_BASH_*_PROPS) properties
 	local svnProps revProps allProps psCmds propCmds
 
-	# svn and user configured file properties
+	# svn and user configured "file" (or directory) properties
+	# the "svn:mergeinfo" prop is not included by default because it is
+	# managed automatically, so there should be no need to edit it by hand.
 	svnProps="svn:keywords svn:executable svn:needs-lock svn:externals
 	          svn:ignore svn:eol-style svn:mime-type $SVN_BASH_FILE_PROPS"
 
