@@ -116,10 +116,11 @@ function _svn_lls()
 #      suggested for 'revert', only not svn-managed files for 'add', and so on.
 #      Possible values are:
 #      - username: guess usernames from ~/.subversion/auth/...
+#      - urls: guess urls from ~/.subversion/auth/... or others
 #      - svnstatus: use 'svn status' for completion
 #      - recurse: allow recursion (expensive)
 #      - externals: recurse into externals (very expensive)
-#     Both former options are reasonable, but beware that both later options
+#     Former options are reasonable, but beware that both later options
 #     may be unadvisable if used on large working copies.
 #     None of these costly completions are activated by default.
 #     Argument completion outside a working copy results in an error message.
@@ -131,6 +132,8 @@ function _svn_lls()
 # - obsolete commands could be removed? (e.g. resolved)
 # - completion does not work properly when editing in the middle of the line
 #   status/previous are those at the end of the line, not at the entry position
+# - url completion should select more cases where it is relevant
+# - url completion of http:// schemas could suggest sub directories?
 _svn()
 {
 	local cur cmds cmdOpts pOpts mOpts rOpts qOpts nOpts optsParam opt
@@ -179,6 +182,9 @@ _svn()
 	# subcommands that expect property names
 	psCmds='propset|pset|ps'
 	propCmds="$psCmds|propget|pget|pg|propedit|pedit|pe|propdel|pdel|pd"
+
+	# possible URL schemas to access a subversion server
+	local urlSchemas='file:/// http:// https:// svn:// svn+ssh://'
 
 	# Parse arguments and set various variables about what was found.
 	#
@@ -360,6 +366,45 @@ _svn()
 	then
 	    COMPREPLY=( $( compgen -W "$cmds" -- $cur ) )
 	    return 0
+	fi
+
+	# URL completion
+	if [[ $cmd == @(co|checkout|ls|list) && $stat = 'arg' && \
+			$SVN_BASH_COMPL_EXT == *urls* ]]
+	then
+		# see about COMP_WORDBREAKS workaround in prop completion
+		if [[ $cur == file:* ]]
+		then
+			# file completion for file:// urls
+			local where=${cur/file:/}
+			COMPREPLY=( $(compgen -d -S '/' -X '*/.*' -- $where ) )
+			return
+		elif [[ $cur == *:* ]]
+		then
+			# get known urls
+			local urls= file=
+			for file in ~/.subversion/auth/svn.simple/* ; do
+				if [ -r $file ] ; then
+					local url=$(_svn_read_hashfile svn:realmstring < $file)
+					url=${url/*</}
+					url=${url/>*/}
+					urls="$urls $url"
+				fi
+			done
+
+			# only suggest/show possible suffixes
+			local prefix=${cur%:*} suffix=${cur#*:} c= choices=
+			for c in $urls ; do
+				[[ $c == $prefix:* ]] && choices="$choices ${c#*:}"
+			done
+
+			COMPREPLY=( $(compgen -W "$choices" -- $suffix ) )
+			return
+		else
+			# show schemas
+			COMPREPLY=( $(compgen -W "$urlSchemas" -- $cur) )
+			return
+		fi
 	fi
 
 	if [[ $cmd = 'merge' || $cmd = 'mergeinfo' ]]
