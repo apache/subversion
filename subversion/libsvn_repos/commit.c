@@ -758,33 +758,6 @@ abort_edit(void *edit_baton,
 }
 
 
-/* Copy REVPROP_TABLE and its data to POOL. */
-static apr_hash_t *
-revprop_table_dup(apr_hash_t *revprop_table,
-                  apr_pool_t *pool)
-{
-  apr_hash_t *new_revprop_table = NULL;
-  const void *key;
-  apr_ssize_t klen;
-  void *value;
-  const char *propname;
-  const svn_string_t *propval;
-  apr_hash_index_t *hi;
-
-  new_revprop_table =  apr_hash_make(pool);
-
-  for (hi = apr_hash_first(pool, revprop_table); hi; hi = apr_hash_next(hi))
-    {
-      apr_hash_this(hi, &key, &klen, &value);
-      propname = apr_pstrdup(pool, (const char *) key);
-      propval = svn_string_dup((const svn_string_t *) value, pool);
-      apr_hash_set(new_revprop_table, propname, klen, propval);
-    }
-
-  return new_revprop_table;
-}
-
-
 
 /*** Public interfaces. ***/
 
@@ -839,7 +812,7 @@ svn_repos_get_commit_editor5(const svn_delta_editor_t **editor,
 
   /* Set up the edit baton. */
   eb->pool = subpool;
-  eb->revprop_table = revprop_table_dup(revprop_table, subpool);
+  eb->revprop_table = svn_prop_hash_dup(revprop_table, subpool);
   eb->commit_callback = callback;
   eb->commit_callback_baton = callback_baton;
   eb->authz_callback = authz_callback;
