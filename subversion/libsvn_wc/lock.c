@@ -485,7 +485,7 @@ open_single(svn_wc_adm_access_t **adm_access,
                                _("'%s' is not a working copy"),
                                svn_path_local_style(path, scratch_pool));
     }
-  svn_error_clear(err);
+  SVN_ERR(err);
 
   /* Need to create a new lock */
   SVN_ERR(adm_access_alloc(&lock,
