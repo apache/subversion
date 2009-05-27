@@ -85,27 +85,37 @@ hash_read(apr_hash_t *hash, svn_stream_t *stream, const char *terminator,
   svn_boolean_t eof;
   apr_size_t len, keylen, vallen;
   char c, *end, *keybuf, *valbuf;
+  svn_error_t *err = SVN_NO_ERROR;
+  apr_pool_t *iterpool = svn_pool_create(pool);
 
   while (1)
     {
+      svn_pool_clear(iterpool);
+
       /* Read a key length line.  Might be END, though. */
-      SVN_ERR(svn_stream_readline(stream, &buf, "\n", &eof, pool));
+      SVN_ERR(svn_stream_readline(stream, &buf, "\n", &eof, iterpool));
 
       /* Check for the end of the hash. */
       if ((!terminator && eof && buf->len == 0)
           || (terminator && (strcmp(buf->data, terminator) == 0)))
-        return SVN_NO_ERROR;
+        break;
 
       /* Check for unexpected end of stream */
       if (eof)
-        return svn_error_create(SVN_ERR_MALFORMED_FILE, NULL, NULL);
+        {
+          err = svn_error_create(SVN_ERR_MALFORMED_FILE, NULL, NULL);
+          break;
+        }
 
       if ((buf->len >= 3) && (buf->data[0] == 'K') && (buf->data[1] == ' '))
         {
           /* Get the length of the key */
           keylen = (size_t) strtoul(buf->data + 2, &end, 10);
           if (keylen == (size_t) ULONG_MAX || *end != '\0')
-            return svn_error_create(SVN_ERR_MALFORMED_FILE, NULL, NULL);
+            {
+              err = svn_error_create(SVN_ERR_MALFORMED_FILE, NULL, NULL);
+              break;
+            }
 
           /* Now read that much into a buffer. */
           keybuf = apr_palloc(pool, keylen + 1);
@@ -116,18 +126,24 @@ hash_read(apr_hash_t *hash, svn_stream_t *stream, const char *terminator,
           len = 1;
           SVN_ERR(svn_stream_read(stream, &c, &len));
           if (c != '\n')
-            return svn_error_create(SVN_ERR_MALFORMED_FILE, NULL, NULL);
+            {
+              err = svn_error_create(SVN_ERR_MALFORMED_FILE, NULL, NULL);
+              break;
+            }
 
           /* Read a val length line */
-          SVN_ERR(svn_stream_readline(stream, &buf, "\n", &eof, pool));
+          SVN_ERR(svn_stream_readline(stream, &buf, "\n", &eof, iterpool));
 
           if ((buf->data[0] == 'V') && (buf->data[1] == ' '))
             {
               vallen = (size_t) strtoul(buf->data + 2, &end, 10);
               if (vallen == (size_t) ULONG_MAX || *end != '\0')
-                return svn_error_create(SVN_ERR_MALFORMED_FILE, NULL, NULL);
+                {
+                  err = svn_error_create(SVN_ERR_MALFORMED_FILE, NULL, NULL);
+                  break;
+                }
 
-              valbuf = apr_palloc(pool, vallen + 1);
+              valbuf = apr_palloc(iterpool, vallen + 1);
               SVN_ERR(svn_stream_read(stream, valbuf, &vallen));
               valbuf[vallen] = '\0';
 
@@ -135,14 +151,20 @@ hash_read(apr_hash_t *hash, svn_stream_t *stream, const char *terminator,
               len = 1;
               SVN_ERR(svn_stream_read(stream, &c, &len));
               if (c != '\n')
-                return svn_error_create(SVN_ERR_MALFORMED_FILE, NULL, NULL);
+                {
+                  err = svn_error_create(SVN_ERR_MALFORMED_FILE, NULL, NULL);
+                  break;
+                }
 
               /* Add a new hash entry. */
               apr_hash_set(hash, keybuf, keylen,
                            svn_string_ncreate(valbuf, vallen, pool));
             }
           else
-            return svn_error_create(SVN_ERR_MALFORMED_FILE, NULL, NULL);
+            {
+              err = svn_error_create(SVN_ERR_MALFORMED_FILE, NULL, NULL);
+              break;
+            }
         }
       else if (incremental && (buf->len >= 3)
                && (buf->data[0] == 'D') && (buf->data[1] == ' '))
@@ -153,7 +175,7 @@ hash_read(apr_hash_t *hash, svn_stream_t *stream, const char *terminator,
             return svn_error_create(SVN_ERR_MALFORMED_FILE, NULL, NULL);
 
           /* Now read that much into a buffer. */
-          keybuf = apr_palloc(pool, keylen + 1);
+          keybuf = apr_palloc(iterpool, keylen + 1);
           SVN_ERR(svn_stream_read(stream, keybuf, &keylen));
           keybuf[keylen] = '\0';
 
@@ -161,14 +183,23 @@ hash_read(apr_hash_t *hash, svn_stream_t *stream, const char *terminator,
           len = 1;
           SVN_ERR(svn_stream_read(stream, &c, &len));
           if (c != '\n')
-            return svn_error_create(SVN_ERR_MALFORMED_FILE, NULL, NULL);
+            {
+              err = svn_error_create(SVN_ERR_MALFORMED_FILE, NULL, NULL);
+              break;
+            }
 
           /* Remove this hash entry. */
           apr_hash_set(hash, keybuf, keylen, NULL);
         }
       else
-        return svn_error_create(SVN_ERR_MALFORMED_FILE, NULL, NULL);
+        {
+          err = svn_error_create(SVN_ERR_MALFORMED_FILE, NULL, NULL);
+          break;
+        }
     }
+
+  svn_pool_destroy(iterpool);
+  return err;
 }
 
 
