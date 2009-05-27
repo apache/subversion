@@ -1422,7 +1422,8 @@ svn_subst_copy_and_translate3(const char *src,
         err = svn_error_createf(SVN_ERR_IO_INCONSISTENT_EOL, err,
                                 _("File '%s' has inconsistent newlines"),
                                 svn_path_local_style(src, pool));
-      return svn_error_compose_create(err, svn_io_remove_file(dst_tmp, pool));
+      return svn_error_compose_create(err, svn_io_remove_file2(dst_tmp,
+                                                               FALSE, pool));
     }
 
   /* Now that dst_tmp contains the translated data, do the atomic rename. */
