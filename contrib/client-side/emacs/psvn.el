@@ -950,6 +950,14 @@ If POS is nil, use current buffer location."
     (defsubst svn-match-string-no-properties (match)
       (buffer-substring-no-properties (match-beginning match) (match-end match)))))
 
+; XEmacs doesn't have a function `help-buffer'
+(eval-and-compile
+  (if (fboundp 'help-buffer)
+      (defalias 'svn-help-buffer 'help-buffer) ; FSF Emacs
+    (defun svn-help-buffer ()
+      (buffer-name (get-buffer-create (help-buffer-name "SVN")))))) ; XEmacs
+
+
 ;; XEmacs 21.4.17 does not have an `alist' widget.  Define a replacement.
 ;; To find out whether the `alist' widget exists, we cannot check just
 ;; (get 'alist 'widget-type), because GNU Emacs 21.4 defines it in
@@ -1486,7 +1494,7 @@ When this function resets `svn-process-handle-error-msg' to nil, the default err
                                   "Please unmark all files and position point at the directory you would like to remove.\nThen run commit again."))))))
     (if help-msg
         (save-excursion
-          (with-output-to-temp-buffer (help-buffer)
+          (with-output-to-temp-buffer (svn-help-buffer)
             (princ (format "svn failed: %s\n\n%s" svn-process-handle-error-msg help-msg))))
       (message "svn failed:\n%s" svn-process-handle-error-msg))))
 
