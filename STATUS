@@ -102,8 +102,8 @@ Candidate changes:
      http://subversion.tigris.org/ds/viewMessage.do?dsMessageId=1357155&dsForumId=1065
      And note that svn --no-ignore works around the bug.
    Votes:
-     +1: stsp, hwright (r37835 only)
-     +1: rhuijben
+     +1: hwright (r37835 only)
+     +1: rhuijben, stsp
 
  * r37838
    Hopefully fix issue #3347, "svn never times out when (public) IP changes"
