@@ -961,8 +961,19 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "     or hostname change) but your working copy still reflects the same\n"
      "     directory within the same repository.\n"
      "\n"
+     "     FROM is the root URL which will be relocated from.\n"
+     "     You can use 'svn info' to determine the root URL of the current\n"
+     "     working copy directory (look for 'URL:' in its output).\n"
+     "\n"
+     "     TO is the root URL which will be relocated to.\n"
+     "\n"
      "  See also 'svn help update' for a list of possible characters\n"
-     "  reporting the action taken.\n"),
+     "  reporting the action taken.\n"
+     "\n"
+     "  Examples:\n"
+     "    svn switch ^/branches/1.x-release\n"
+     "    svn switch --relocate http://www.example.com/repo/project \\\n"
+     "                          svn://svn.example.com/repo/project\n"),
     { 'r', 'N', opt_depth, opt_set_depth, 'q', opt_merge_cmd, opt_relocate,
       opt_ignore_externals, opt_force, opt_accept} },
 
