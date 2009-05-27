@@ -92,20 +92,5 @@ Candidate changes:
    Votes:
      +1: stsp
 
- * r37857
-   Fix an error leak (that can lead to an abort()) in the WC code.
-   Branch:
-     ^/branches/1.6.x-r37857
-   Justification:
-     abort() no es bueno.
-   Notes:
-     The trunk code change was a conversion from svn_error_clear() to
-     SVN_ERR(), but the 1.6.x code lacked even the _clear().  It might
-     be a stretch to consider this a real "merge" of the original
-     change, but that detail is of less concern to me than the code
-     abort()ing is.
-   Votes:
-     +1: cmpilato, hwright
-
 Approved changes:
 =================
