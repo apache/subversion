@@ -92,19 +92,6 @@ Candidate changes:
    Votes:
      +1: stsp
 
- * r37835, r37842
-   Fix issue #3382, "svn status does not show tree conflicts when svn:ignore=*"
-   Justification:
-     You're not going to argue about this, right?
-   Notes:
-     See the issue for more information. If you want to reproduce the
-     bug, follow the steps outlined in this post:
-     http://subversion.tigris.org/ds/viewMessage.do?dsMessageId=1357155&dsForumId=1065
-     And note that svn --no-ignore works around the bug.
-   Votes:
-     +1: hwright (r37835 only)
-     +1: rhuijben, stsp
-
  * r37838
    Hopefully fix issue #3347, "svn never times out when (public) IP changes"
    Justification:
@@ -138,3 +125,16 @@ Approved changes:
      these to subversion/include/private/svn_mergeinfo_private.h.
    Votes:
      +1: pburba, cmpilato, rhuijben
+
+ * r37835, r37842
+   Fix issue #3382, "svn status does not show tree conflicts when svn:ignore=*"
+   Justification:
+     You're not going to argue about this, right?
+   Notes:
+     See the issue for more information. If you want to reproduce the
+     bug, follow the steps outlined in this post:
+     http://subversion.tigris.org/ds/viewMessage.do?dsMessageId=1357155&dsForumId=1065
+     And note that svn --no-ignore works around the bug.
+   Votes:
+     +1: hwright (r37835 only)
+     +1: rhuijben, stsp, stylesen
