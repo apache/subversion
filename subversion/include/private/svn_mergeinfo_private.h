@@ -140,6 +140,37 @@ svn_mergeinfo__filter_catalog_by_ranges(
   svn_revnum_t oldest_rev,
   apr_pool_t *pool);
 
+/* Removes ERASER (the subtrahend) from WHITEBOARD (the
+   minuend), and places the resulting difference in *MERGEINFO.
+   Allocates *MERGEINFO in RESULT_POOL.  Temporary allocations
+   will be performed in SCRATCH_POOL.
+
+   CONSIDER_INHERITANCE determines how to account for the inheritability
+   of the two mergeinfo's ranges when calculating the range equivalence,
+   as described for svn_mergeinfo_diff().*/
+svn_error_t *
+svn_mergeinfo__remove2(svn_mergeinfo_t *mergeinfo,
+                       svn_mergeinfo_t eraser,
+                       svn_mergeinfo_t whiteboard,
+                       svn_boolean_t consider_inheritance,
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool);
+
+/* Find the intersection of two mergeinfos, MERGEINFO1 and 
+   MERGEINFO2, and place the result in *MERGEINFO, which is (deeply)
+   allocated in RESULT_POOL.  Temporary allocations will be performed
+   in SCRATCH_POOL.
+
+   CONSIDER_INHERITANCE determines how to account for the inheritability
+   of the two mergeinfo's ranges when calculating the range equivalence,
+   as described for svn_mergeinfo_diff(). */
+svn_error_t *
+svn_mergeinfo__intersect2(svn_mergeinfo_t *mergeinfo,
+                          svn_mergeinfo_t mergeinfo1,
+                          svn_mergeinfo_t mergeinfo2,
+                          svn_boolean_t consider_inheritance,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool);
 
 #ifdef __cplusplus
 }

@@ -94,19 +94,3 @@ Candidate changes:
 
 Approved changes:
 =================
-
-* r37627
-   Fix for issue #3126 'svn mergeinfo shows too few or too many eligible
-   revisions'
-   Branch:
-     ^/branches/1.6.x-r37627
-   Justification:
-     Without this change the svn mergeinfo subcommand gives incorrect
-     and inconsistent results when encountering non-inheritable mergeinfo.
-     See http://subversion.tigris.org/issues/show_bug.cgi?id=3126#desc5.
-   Notes:
-     r37627 revved the svn_mergeinfo_remove and svn_mergeinfo_intersect
-     APIS.  So I created a backport branch that moves the declaration for
-     these to subversion/include/private/svn_mergeinfo_private.h.
-   Votes:
-     +1: pburba, cmpilato, rhuijben

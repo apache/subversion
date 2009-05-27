@@ -32,6 +32,11 @@ SkipUnless = svntest.testcase.SkipUnless
 from svntest.main import SVN_PROP_MERGEINFO
 from svntest.main import server_has_mergeinfo
 
+# Get a couple merge helpers from merge_tests.py
+import merge_tests
+from merge_tests import set_up_branch
+from merge_tests import expected_merge_output
+
 def adjust_error_for_server_version(expected_err):
   "Return the expected error regexp appropriate for the server version."
   if server_has_mergeinfo():
@@ -143,6 +148,73 @@ def mergeinfo_on_unknown_url(sbox):
                                      "mergeinfo", "--show-revs", "eligible",
                                      url, wc_dir)
 
+# Test for issue #3126 'svn mergeinfo shows too few or too many
+# eligible revisions'.  Specifically
+# http://subversion.tigris.org/issues/show_bug.cgi?id=3126#desc5.
+def non_inheritable_mergeinfo(sbox):
+  "non-inheritable mergeinfo shows as merged"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  expected_disk, expected_status = set_up_branch(sbox)
+
+  # Some paths we'll care about
+  A_COPY_path   = os.path.join(wc_dir, "A_COPY")
+  D_COPY_path   = os.path.join(wc_dir, "A_COPY", "D")
+  rho_COPY_path = os.path.join(wc_dir, "A_COPY", "D", "G", "rho")
+  
+  # Update the WC, then merge r4 from A to A_COPY and r6 from A to A_COPY
+  # at --depth empty and commit the merges as r7.  
+  svntest.actions.run_and_verify_svn(None, ["At revision 6.\n"], [], 'up',
+                                     wc_dir)
+  expected_status.tweak(wc_rev=6)
+  svntest.actions.run_and_verify_svn(None,
+                                     expected_merge_output([[4]], 'U    ' +
+                                                           rho_COPY_path +
+                                                           '\n'),
+                                     [], 'merge', '-c4',
+                                     sbox.repo_url + '/A',
+                                     A_COPY_path)
+  svntest.actions.run_and_verify_svn(None,
+                                     [], # Noop due to shallow depth
+                                     [], 'merge', '-c6',
+                                     sbox.repo_url + '/A',
+                                     A_COPY_path, '--depth', 'empty')
+  expected_output = wc.State(wc_dir, {
+    'A_COPY'         : Item(verb='Sending'),
+    'A_COPY/D/G/rho' : Item(verb='Sending'),
+    })
+  expected_status.tweak('A_COPY', 'A_COPY/D/G/rho', wc_rev=7)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None, wc_dir)
+
+  # Update the WC a last time to ensure full inheritance.
+  svntest.actions.run_and_verify_svn(None, ["At revision 7.\n"], [], 'up',
+                                     wc_dir)
+
+  # Despite being non-inheritable, r6 should still show as merged to A_COPY
+  # and not eligible for merging.
+  svntest.actions.run_and_verify_mergeinfo(adjust_error_for_server_version(""),
+                                           [4,6],
+                                           sbox.repo_url + '/A',
+                                           A_COPY_path)
+  svntest.actions.run_and_verify_mergeinfo(adjust_error_for_server_version(""),
+                                           [3,5],
+                                           sbox.repo_url + '/A',
+                                           A_COPY_path,
+                                           '--show-revs', 'eligible')
+  # But if we drop down to A_COPY/D, r6 should show as eligible because it
+  # was only merged into A_COPY, no deeper.
+  svntest.actions.run_and_verify_mergeinfo(adjust_error_for_server_version(""),
+                                           [4],
+                                           sbox.repo_url + '/A/D',
+                                           D_COPY_path)
+  svntest.actions.run_and_verify_mergeinfo(adjust_error_for_server_version(""),
+                                           [3,6],
+                                           sbox.repo_url + '/A/D',
+                                           D_COPY_path,
+                                           '--show-revs', 'eligible')
+
 ########################################################################
 # Run the tests
 
@@ -154,6 +226,7 @@ test_list = [ None,
               SkipUnless(explicit_mergeinfo_source, server_has_mergeinfo),
               XFail(mergeinfo_non_source, server_has_mergeinfo),
               mergeinfo_on_unknown_url,
+              non_inheritable_mergeinfo,
              ]
 
 if __name__ == '__main__':
