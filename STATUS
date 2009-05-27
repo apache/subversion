@@ -99,10 +99,11 @@ Candidate changes:
    Justification:
      abort() no es bueno.
    Notes:
-     The trunk code change was a conversion from svn_error_clear() to 
+     The trunk code change was a conversion from svn_error_clear() to
      SVN_ERR(), but the 1.6.x code lacked even the _clear().  It might
-     be a stretch to consider this a merged changed, but that detail is
-     of less concern to me than the code abort()ing is.
+     be a stretch to consider this a real "merge" of the original
+     change, but that detail is of less concern to me than the code
+     abort()ing is.
    Votes:
      +1: cmpilato
 
