@@ -1,0 +1,75 @@
+Commit from Multiple Working Copies
+ 
+1) Expected behavior 
+
+When committing files, listing their paths, no matter whether they belong to
+the same work copy or not, if they all live in the same repository, they should
+be committed in one transaction successfully.
+ 
+2) Actual behavior
+
+2a) If the committing files belong to the same working copy, they will be
+committed in one transaction successfully. 
+
+2b) Otherwise, if they belong to more than one working copy, svn will output an
+error which indicates that their common ancestor is not a work copy and commit
+action fails.
+ 
+3) Suggested change
+
+This section has two parts. The first part introduces how this issue is solved
+in SVNKit, and then I will give my suggestions on how we should solve this
+issue in the second part.
+ 
+3a) SVNKit's solution
+ 
+1. SVNKit receives list of paths to commit.
+ 
+2. All paths are grouped by wc root path, so we get a map of wc_root:paths
+pairs - one for each working copy.
+ 
+3. For each pair in Map we create SVNWCAccess object - wc_access - which is
+actually a collection of directories being opened for commit (same as
+svn_wc_adm_access_t set in native SVN).
+ 
+4. For each wc_access we collect items to commit, same way as for "normal"
+commit. Each item refers to its wc_access. Then we group all items by its
+repos_url and repos_uuid (fetching it from repos if not available).
+ 
+5. So we have commit items grouped by repository root URL, each item may refer
+to its own wc_access (working copy). We call such a group a "commit packet".  
+
+7. Now we have a list of commit packets-one for each repository. Then we will
+commit each commit packet as a transaction.
+ 
+8. During commit and in post commit code we use that wc_access references that
+is stored in each commit item to update corresponding working copy, write and
+execute log files and then finally to close all open directories.
+ 
+3b) Suggested change for Subversion
+ 
+I think that "One Commit, One Transaction" is the best (and this is also
+compatible with original system). So commit files from different repositories
+at a time and break them into several transactions may be not a good idea. And
+I suggest that we should constrain committing files in the same repository.
+ 
+1. We receives list of paths to commit.
+ 
+2. All paths are grouped by wc root path, so we get a map of wc_root:paths
+pairs - one for each working copy.
+ 
+3. For each pair in Map we create svn_wc_adm_access_t- wc_access.
+ 
+4. For each wc_access we collect items to commit. Each item refers to its
+wc_access. 
+ 
+5. If there are more than one working copies, then we check all items by its
+repos_url and repos_uuid (fetching it from repos if not available). If they are
+not from the same repository, return with error, otherwise, combine them into
+one group.  
+
+6. Commit these items as a transaction.
+ 
+7. During commit and in post commit code we use that wc_access references that
+is stored in each commit item to update corresponding working copy, write and
+execute log files and then finally to close all open directories.
