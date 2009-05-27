@@ -1335,3 +1335,88 @@ _svnsync ()
 	return 0
 }
 complete -F _svnsync -o default svnsync
+
+# reasonable completion for 'svnversion'
+_svnversion ()
+{
+	local cmdOpts=" -n --no-newline -c --committed -h --help --version "
+	local cur=${COMP_WORDS[COMP_CWORD]}
+
+	COMPREPLY=()
+
+	# parse current options
+	local options= wcpath= trailurl= last='none' stat= opt= i=-1 isCur=
+	for opt in ${COMP_WORDS[@]}
+	do
+		[[ $i -eq $COMP_CWORD ]] && stat=$last
+		let i++
+
+		# are we processing the current word?
+		isCur=
+		[[ $i -eq $COMP_CWORD ]] && isCur=1
+
+		# skip first command, should be 'svnversion'
+		if [ $last = 'none' ] ; then
+			last='first'
+			continue
+		fi
+
+		# get options
+		if [[ $last != 'arg' && $opt == -* ]]
+		then
+			# if '--' is at the current position, it means that we are looking
+			# for '--*' options, and not the end of option processing.
+			if [[ $opt = '--' && ! $isCur ]]
+			then
+				last='arg'
+			else
+				options="$options $opt "
+				last='opt'
+			fi
+			continue
+		fi
+		# get arguments
+		if [[ $opt != -* ]]
+		then
+			last='arg'
+			if [[ ! $wcpath ]]
+			then
+				wcpath=$opt
+			elif [[ ! $trailurl ]]
+			then
+				trailurl=$opt
+			fi
+		fi
+	done
+	[[ $stat ]] || stat=$last
+
+	# argument part
+	if [[ $cur != -* || $stat = 'arg' ]]
+	then
+		[[ $wcpath && $trailurl ]] && COMPREPLY=( '' )
+		return 0
+	fi
+
+	# suggest options, and  take out already given options
+	for opt in $options
+	do
+		# take out options
+		cmdOpts=${cmdOpts/ $opt / }
+
+		# take out alternatives
+		case $opt in
+			-n)              cmdOpts=${cmdOpts/ --no-newline / } ;;
+			--no-newline)    cmdOpts=${cmdOpts/ -n / } ;;
+			-h)              cmdOpts=${cmdOpts/ --help / } ;;
+			--help)          cmdOpts=${cmdOpts/ -h / } ;;
+			-c)              cmdOpts=${cmdOpts/ --committed / } ;;
+			--committed)     cmdOpts=${cmdOpts/ -c / } ;;
+		esac
+	done
+
+	COMPREPLY=( $( compgen -W "$cmdOpts" -- $cur ) )
+
+	return 0
+}
+# -X option does not seem to work?
+complete -F _svnversion -o dirnames -X '*.svn*' svnversion
