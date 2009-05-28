@@ -134,7 +134,8 @@ or another dump file."""
                                    'svnsync_tests_data')
   # Load the specified dump file into the master repository.
   master_dumpfile_contents = open(os.path.join(svnsync_tests_dir,
-                                               dump_file_name)).readlines()
+                                               dump_file_name),
+                                  'rb').readlines()
   svntest.actions.run_and_verify_load(sbox.repo_dir, master_dumpfile_contents)
 
   # Create the empty destination repository.
