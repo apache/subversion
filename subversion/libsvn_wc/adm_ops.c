@@ -2463,7 +2463,7 @@ svn_wc_remove_from_revision_control(svn_wc_adm_access_t *adm_access,
 
       /* Only check if the file was modified when it wasn't overwritten with a
          special file */
-      SVN_ERR(svn_wc__get_special(&wc_special, full_path, adm_access, pool));
+      SVN_ERR(svn_wc__get_special(&wc_special, db, local_abspath, pool));
       SVN_ERR(svn_io_check_special_path(full_path, &kind, &local_special,
                                         pool));
       if (wc_special || ! local_special)

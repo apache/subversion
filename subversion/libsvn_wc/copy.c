@@ -523,7 +523,7 @@ copy_file_administratively(const char *src_path,
     {
       svn_boolean_t special;
 
-      SVN_ERR(svn_wc__get_special(&special, src_path, src_access, pool));
+      SVN_ERR(svn_wc__get_special(&special, db, src_local_abspath, pool));
       if (special)
         {
           SVN_ERR(svn_subst_read_specialfile(&contents, src_path,

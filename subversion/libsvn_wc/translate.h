@@ -84,14 +84,13 @@ svn_error_t *svn_wc__get_keywords(apr_hash_t **keywords,
                                   apr_pool_t *pool);
 
 
-/* Determine if the svn:special flag is set on PATH.  If so, set
-   SPECIAL to TRUE, if not, set it to FALSE.  ADM_ACCESS must be an
-   access baton for PATH.  Perform any temporary allocations in
-   POOL. */
+/* Determine if the svn:special flag is set on LOCAL_ABSPATH in DB.  If so,
+   set SPECIAL to TRUE, if not, set it to FALSE.  Perform any temporary
+   allocations in SCRATCH_POOL. */
 svn_error_t *svn_wc__get_special(svn_boolean_t *special,
-                                 const char *path,
-                                 svn_wc_adm_access_t *adm_access,
-                                 apr_pool_t *pool);
+                                 svn_wc__db_t *db,
+                                 const char *local_abspath,
+                                 apr_pool_t *scratch_pool);
 
 /* If the SVN_PROP_EXECUTABLE property is present at all, then set
    PATH executable.  If DID_SET is non-null, then set *DID_SET to
