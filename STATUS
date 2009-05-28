@@ -92,5 +92,14 @@ Candidate changes:
    Votes:
      +1: stsp
 
+ * r37879
+   Fix the svnsync tests introduced by merging r37795, r37799 on Windows
+   Justification:
+     Without this patch the python testcode doesn't pass the exact
+     dumpfile to svnadmin (it removes '\r'-s). svnadmin then fails in
+     reading the property chunks.
+   Votes:
+     +1: rhuijben
+
 Approved changes:
 =================
