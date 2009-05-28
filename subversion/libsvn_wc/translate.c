@@ -71,8 +71,11 @@ svn_wc_translated_stream(svn_stream_t **stream,
   const char *eol;
   apr_hash_t *keywords;
   svn_boolean_t repair_forced = flags & SVN_WC_TRANSLATE_FORCE_EOL_REPAIR;
+  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
+  const char *versioned_abspath;
 
-  SVN_ERR(svn_wc__get_special(&special, versioned_file, adm_access, pool));
+  SVN_ERR(svn_dirent_get_absolute(&versioned_abspath, path, pool));
+  SVN_ERR(svn_wc__get_special(&special, db, versioned_abspath, pool));
 
   if (special)
     {
@@ -149,12 +152,15 @@ svn_wc_translated_file2(const char **xlated_path,
   const char *eol;
   apr_hash_t *keywords;
   svn_boolean_t special;
+  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
+  const char *versioned_abspath;
 
+  SVN_ERR(svn_dirent_get_absolute(&versioned_abspath, versioned_file, pool));
   SVN_ERR(svn_wc__get_eol_style(&style, &eol, versioned_file,
                                 adm_access, pool));
   SVN_ERR(svn_wc__get_keywords(&keywords, versioned_file,
                                adm_access, NULL, pool));
-  SVN_ERR(svn_wc__get_special(&special, versioned_file, adm_access, pool));
+  SVN_ERR(svn_wc__get_special(&special, db, versioned_abspath, pool));
 
   if (! svn_subst_translation_required(style, eol, keywords, special, TRUE)
       && (! (flags & SVN_WC_TRANSLATE_FORCE_COPY)))
@@ -314,19 +320,16 @@ svn_wc__get_keywords(apr_hash_t **keywords,
 
 svn_error_t *
 svn_wc__get_special(svn_boolean_t *special,
-                    const char *path,
-                    svn_wc_adm_access_t *adm_access,
-                    apr_pool_t *pool)
+                    svn_wc__db_t *db,
+                    const char *local_abspath,
+                    apr_pool_t *scratch_pool)
 {
-  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
-  const char *local_abspath;
   const svn_string_t *propval;
 
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
-
   /* Get the property value. */
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
   SVN_ERR(svn_wc__internal_propget(&propval, SVN_PROP_SPECIAL, local_abspath,
-                                   db, pool, pool));
+                                   db, scratch_pool, scratch_pool));
   *special = propval != NULL;
 
   return SVN_NO_ERROR;

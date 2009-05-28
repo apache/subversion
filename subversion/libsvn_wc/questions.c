@@ -101,13 +101,17 @@ compare_and_verify(svn_boolean_t *modified_p,
   apr_hash_t *keywords;
   svn_boolean_t special;
   svn_boolean_t need_translation;
+  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
+  const char *versioned_file_abspath;
 
+  SVN_ERR(svn_dirent_get_absolute(&versioned_file_abspath, versioned_file,
+                                  pool));
 
   SVN_ERR(svn_wc__get_eol_style(&eol_style, &eol_str, versioned_file,
                                 adm_access, pool));
   SVN_ERR(svn_wc__get_keywords(&keywords, versioned_file,
                               adm_access, NULL, pool));
-  SVN_ERR(svn_wc__get_special(&special, versioned_file, adm_access, pool));
+  SVN_ERR(svn_wc__get_special(&special, db, versioned_file_abspath, pool));
 
   need_translation = svn_subst_translation_required(eol_style, eol_str,
                                                     keywords, special, TRUE);

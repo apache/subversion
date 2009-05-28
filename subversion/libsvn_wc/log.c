@@ -203,6 +203,7 @@ file_xfer_under_path(svn_wc_adm_access_t *adm_access,
 {
   svn_error_t *err;
   const char *full_from_path, *full_dest_path, *full_versioned_path;
+  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
 
   full_from_path = svn_dirent_join(svn_wc_adm_access_path(adm_access), name,
                                    pool);
@@ -232,18 +233,22 @@ file_xfer_under_path(svn_wc_adm_access_t *adm_access,
         const char *eol;
         apr_hash_t *keywords;
         svn_boolean_t special;
+        const char *versioned_abspath;
 
         if (! full_versioned_path)
           full_versioned_path = full_dest_path;
 
-        err = svn_wc__get_eol_style(&style, &eol, full_versioned_path,
-                                    adm_access, pool);
+        err = svn_dirent_get_absolute(&versioned_abspath, full_versioned_path,
+                                      pool);
+
+        if (! err)
+          err = svn_wc__get_eol_style(&style, &eol, full_versioned_path,
+                                      adm_access, pool);
         if (! err)
           err = svn_wc__get_keywords(&keywords, full_versioned_path,
                                      adm_access, NULL, pool);
         if (! err)
-          err = svn_wc__get_special(&special, full_versioned_path, adm_access,
-                                    pool);
+          err = svn_wc__get_special(&special, db, versioned_abspath, pool);
 
         if (! err)
           err = svn_subst_copy_and_translate3
@@ -256,7 +261,7 @@ file_xfer_under_path(svn_wc_adm_access_t *adm_access,
         if (err)
           {
             if (! rerun || ! APR_STATUS_IS_ENOENT(err->apr_err))
-              return err;
+              return svn_error_return(err);
             svn_error_clear(err);
           }
 
@@ -319,6 +324,7 @@ install_committed_file(svn_boolean_t *overwrote_working,
   svn_boolean_t same, did_set;
   const char *tmp_wfile;
   svn_boolean_t special;
+  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
 
   /* start off assuming that the working file isn't touched. */
   *overwrote_working = FALSE;
@@ -348,6 +354,7 @@ install_committed_file(svn_boolean_t *overwrote_working,
 
   {
     const char *tmp = (kind == svn_node_file) ? tmp_text_base : filepath;
+    const char *file_abspath;
 
     SVN_ERR(svn_wc_translated_file2(&tmp_wfile,
                                     tmp,
@@ -363,7 +370,8 @@ install_committed_file(svn_boolean_t *overwrote_working,
      * it has the right executable and read_write attributes set.
      */
 
-    SVN_ERR(svn_wc__get_special(&special, filepath, adm_access, pool));
+    SVN_ERR(svn_dirent_get_absolute(&file_abspath, filepath, pool));
+    SVN_ERR(svn_wc__get_special(&special, db, file_abspath, pool));
     if (! special && tmp != tmp_wfile)
       SVN_ERR(svn_io_files_contents_same_p(&same, tmp_wfile,
                                            filepath, pool));

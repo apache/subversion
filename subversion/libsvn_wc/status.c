@@ -255,6 +255,8 @@ assemble_status(svn_wc_status2_t **status,
                 apr_pool_t *pool)
 {
   svn_wc_status2_t *stat;
+  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
+  const char *local_abspath;
   svn_boolean_t has_props;
   svn_boolean_t text_modified_p = FALSE;
   svn_boolean_t prop_modified_p = FALSE;
@@ -274,6 +276,8 @@ assemble_status(svn_wc_status2_t **status,
   enum svn_wc_status_kind pristine_prop_status = svn_wc_status_none;
 
   svn_lock_t *repos_lock = NULL;
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
   /* Check for a repository lock. */
   if (repos_locks)
@@ -405,7 +409,7 @@ assemble_status(svn_wc_status2_t **status,
 
 #ifdef HAVE_SYMLINK
       if (has_props)
-        SVN_ERR(svn_wc__get_special(&wc_special, path, adm_access, pool));
+        SVN_ERR(svn_wc__get_special(&wc_special, db, local_abspath, pool));
       else
         wc_special = FALSE;
 #endif /* HAVE_SYMLINK */

@@ -154,14 +154,14 @@ detranslate_wc_file(const char **detranslated_file,
          detranslate keywords and old eol-style */
       SVN_ERR(svn_wc__get_keywords(&keywords, merge_target,
                                    adm_access, NULL, pool));
-      SVN_ERR(svn_wc__get_special(&special, merge_target, adm_access, pool));
+      SVN_ERR(svn_wc__get_special(&special, db, merge_abspath, pool));
     }
   else
     {
       /* New props indicate texty, regardless of old props */
 
       /* In case the file used to be special, detranslate specially */
-      SVN_ERR(svn_wc__get_special(&special, merge_target, adm_access, pool));
+      SVN_ERR(svn_wc__get_special(&special, db, merge_abspath, pool));
 
       if (special)
         {
@@ -921,12 +921,16 @@ merge_text_file(const char *left,
   else
     {
       svn_boolean_t same, special;
+      svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
+      const char *merge_abspath;
+
+      SVN_ERR(svn_dirent_get_absolute(&merge_abspath, merge_target, pool));
+
       /* If 'special', then use the detranslated form of the
          target file.  This is so we don't try to follow symlinks,
          but the same treatment is probably also appropriate for
          whatever special file types we may invent in the future. */
-      SVN_ERR(svn_wc__get_special(&special, merge_target,
-                                  adm_access, pool));
+      SVN_ERR(svn_wc__get_special(&special, db, merge_abspath, pool));
       SVN_ERR(svn_io_files_contents_same_p(&same, result_target,
                                            (special ?
                                               detranslated_target :
