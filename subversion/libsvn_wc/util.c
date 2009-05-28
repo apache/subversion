@@ -252,7 +252,7 @@ svn_wc__path_switched(const char *wc_path,
   svn_wc_adm_access_t *parent_adm_access;
   svn_error_t *err;
 
-  SVN_ERR(svn_dirent_get_absolute(&wc_path, wc_path, pool));
+  SVN_ERR(svn_path_get_absolute(&wc_path, wc_path, pool));
 
   if (svn_dirent_is_root(wc_path, strlen(wc_path)))
     {

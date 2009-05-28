@@ -324,10 +324,10 @@ do_wc_to_wc_moves(const apr_array_header_t *copy_pairs,
         {
           const char *src_parent_abs, *dst_parent_abs;
 
-          SVN_ERR(svn_dirent_get_absolute(&src_parent_abs, src_parent,
-                                          iterpool));
-          SVN_ERR(svn_dirent_get_absolute(&dst_parent_abs, pair->dst_parent,
-                                          iterpool));
+          SVN_ERR(svn_path_get_absolute(&src_parent_abs, src_parent,
+                                        iterpool));
+          SVN_ERR(svn_path_get_absolute(&dst_parent_abs, pair->dst_parent,
+                                        iterpool));
 
           if ((pair->src_kind == svn_node_dir)
               && (svn_path_is_child(src_parent_abs, dst_parent_abs,
@@ -1048,7 +1048,7 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
       /* Sanity check if the source path is versioned. */
       SVN_ERR(svn_wc__entry_versioned(&entry, pair->src, adm_access, FALSE,
                                       iterpool));
-      SVN_ERR(svn_dirent_get_absolute(&pair->src_abs, pair->src, pool));
+      SVN_ERR(svn_path_get_absolute(&pair->src_abs, pair->src, pool));
     }
 
   svn_pool_destroy(iterpool);
