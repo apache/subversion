@@ -498,7 +498,7 @@ int main(int argc, const char *argv[])
             }
 
           params.root = svn_path_internal_style(params.root, pool);
-          SVN_INT_ERR(svn_dirent_get_absolute(&params.root, params.root, pool));
+          SVN_INT_ERR(svn_path_get_absolute(&params.root, params.root, pool));
           break;
 
         case 'R':
@@ -522,22 +522,22 @@ int main(int argc, const char *argv[])
         case SVNSERVE_OPT_CONFIG_FILE:
           SVN_INT_ERR(svn_utf_cstring_to_utf8(&config_filename, arg, pool));
           config_filename = svn_path_internal_style(config_filename, pool);
-          SVN_INT_ERR(svn_dirent_get_absolute(&config_filename, config_filename,
-                                              pool));
+          SVN_INT_ERR(svn_path_get_absolute(&config_filename, config_filename,
+                                            pool));
           break;
 
         case SVNSERVE_OPT_PID_FILE:
           SVN_INT_ERR(svn_utf_cstring_to_utf8(&pid_filename, arg, pool));
           pid_filename = svn_path_internal_style(pid_filename, pool);
-          SVN_INT_ERR(svn_dirent_get_absolute(&pid_filename, pid_filename,
-                                              pool));
+          SVN_INT_ERR(svn_path_get_absolute(&pid_filename, pid_filename,
+                                            pool));
           break;
 
         case SVNSERVE_OPT_LOG_FILE:
           SVN_INT_ERR(svn_utf_cstring_to_utf8(&log_filename, arg, pool));
           log_filename = svn_path_internal_style(log_filename, pool);
-          SVN_INT_ERR(svn_dirent_get_absolute(&log_filename, log_filename,
-                                              pool));
+          SVN_INT_ERR(svn_path_get_absolute(&log_filename, log_filename,
+                                            pool));
           break;
 
         }

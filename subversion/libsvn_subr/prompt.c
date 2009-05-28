@@ -29,7 +29,6 @@
 #include "svn_string.h"
 #include "svn_auth.h"
 #include "svn_error.h"
-#include "svn_dirent_uri.h"
 #include "svn_path.h"
 
 #include "private/svn_cmdline_private.h"
@@ -342,7 +341,7 @@ svn_cmdline_auth_ssl_client_cert_prompt
   SVN_ERR(maybe_print_realm(realm, pool));
   SVN_ERR(prompt(&cert_file, _("Client certificate filename: "),
                  FALSE, pb, pool));
-  SVN_ERR(svn_dirent_get_absolute(&abs_cert_file, cert_file, pool));
+  SVN_ERR(svn_path_get_absolute(&abs_cert_file, cert_file, pool));
 
   cred = apr_palloc(pool, sizeof(*cred));
   cred->cert_file = abs_cert_file;

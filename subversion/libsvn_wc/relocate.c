@@ -181,6 +181,6 @@ svn_wc_relocate3(const char *path,
 
   svn_pool_destroy(subpool);
 
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+  SVN_ERR(svn_path_get_absolute(&local_abspath, path, pool));
   return svn_wc__props_delete(db, local_abspath, svn_wc__props_wcprop, pool);
 }

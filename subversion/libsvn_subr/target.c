@@ -53,9 +53,9 @@ svn_path_condense_targets(const char **pcommon,
     }
 
   /* Get the absolute path of the first target. */
-  SVN_ERR(svn_dirent_get_absolute(pcommon,
-                                 APR_ARRAY_IDX(targets, 0, const char *),
-                                 pool));
+  SVN_ERR(svn_path_get_absolute(pcommon,
+                                APR_ARRAY_IDX(targets, 0, const char *),
+                                pool));
 
   /* Early exit when there's only one path to work on. */
   if (targets->nelts == 1)
@@ -83,7 +83,7 @@ svn_path_condense_targets(const char **pcommon,
     {
       const char *rel = APR_ARRAY_IDX(targets, i, const char *);
       const char *absolute;
-      SVN_ERR(svn_dirent_get_absolute(&absolute, rel, pool));
+      SVN_ERR(svn_path_get_absolute(&absolute, rel, pool));
       APR_ARRAY_PUSH(abs_targets, const char *) = absolute;
       *pcommon = svn_path_get_longest_ancestor(*pcommon, absolute, pool);
     }
@@ -235,7 +235,7 @@ svn_path_remove_redundancies(apr_array_header_t **pcondensed_targets,
       svn_boolean_t keep_me;
 
       /* Get the absolute path for this target. */
-      SVN_ERR(svn_dirent_get_absolute(&abs_path, rel_path, temp_pool));
+      SVN_ERR(svn_path_get_absolute(&abs_path, rel_path, temp_pool));
 
       /* For each keeper in ABS_TARGETS, see if this target is the
          same as or a child of that keeper. */
