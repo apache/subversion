@@ -536,8 +536,8 @@ copy_file_administratively(const char *src_path,
           apr_hash_t *keywords;
           svn_error_t *err = SVN_NO_ERROR;
 
-          SVN_ERR(svn_wc__get_keywords(&keywords, src_path, src_access, NULL,
-                                       pool));
+          SVN_ERR(svn_wc__get_keywords(&keywords, db, src_local_abspath, NULL,
+                                       pool, pool));
           SVN_ERR(svn_wc__get_eol_style(&eol_style, &eol_str, src_path,
                                         src_access, pool));
 

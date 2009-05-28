@@ -4167,6 +4167,10 @@ merge_file(svn_wc_notify_state_t *content_state,
   svn_boolean_t magic_props_changed;
   enum svn_wc_merge_outcome_t merge_outcome = svn_wc_merge_unchanged;
   const svn_wc_entry_t *entry;
+  svn_wc__db_t *db;
+  const char *local_abspath;
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, fb->path, pool));
 
   /* Accumulated entry modifications. */
   svn_wc_entry_t tmp_entry;
@@ -4194,6 +4198,7 @@ merge_file(svn_wc_notify_state_t *content_state,
   svn_dirent_split(fb->path, &parent_dir, NULL, pool);
   SVN_ERR(svn_wc_adm_retrieve(&adm_access, eb->adm_access,
                               parent_dir, pool));
+  db = svn_wc__adm_get_db(adm_access);
 
   SVN_ERR(svn_wc_entry(&entry, fb->path, adm_access, FALSE, pool));
   if (! entry && ! fb->added)
@@ -4404,8 +4409,8 @@ merge_file(svn_wc_notify_state_t *content_state,
     {
       apr_hash_t *keywords;
 
-      SVN_ERR(svn_wc__get_keywords(&keywords, fb->path,
-                                   adm_access, NULL, pool));
+      SVN_ERR(svn_wc__get_keywords(&keywords, db, local_abspath, NULL, pool,
+                                   pool));
       if (magic_props_changed || keywords)
         /* no new text base, but... */
         {

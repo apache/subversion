@@ -152,8 +152,8 @@ detranslate_wc_file(const char **detranslated_file,
     {
       /* Old props indicate texty, new props indicate binary:
          detranslate keywords and old eol-style */
-      SVN_ERR(svn_wc__get_keywords(&keywords, merge_target,
-                                   adm_access, NULL, pool));
+      SVN_ERR(svn_wc__get_keywords(&keywords, db, merge_abspath, NULL, pool,
+                                   pool));
       SVN_ERR(svn_wc__get_special(&special, db, merge_abspath, pool));
     }
   else
@@ -189,8 +189,8 @@ detranslate_wc_file(const char **detranslated_file,
           /* In case there were keywords, detranslate with keywords
              (iff we were texty) */
           if (!is_binary)
-            SVN_ERR(svn_wc__get_keywords(&keywords, merge_target,
-                                         adm_access, NULL, pool));
+            SVN_ERR(svn_wc__get_keywords(&keywords, db, merge_abspath, NULL,
+                                         pool, pool));
           else
             keywords = NULL;
         }

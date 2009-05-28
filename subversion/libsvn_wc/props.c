@@ -2091,10 +2091,11 @@ svn_wc_prop_set3(const char *name,
                                              APR_HASH_KEY_STRING);
       apr_hash_t *old_keywords, *new_keywords;
 
-      SVN_ERR(svn_wc__get_keywords(&old_keywords, path, adm_access,
-                                   old_value ? old_value->data : "", pool));
-      SVN_ERR(svn_wc__get_keywords(&new_keywords, path, adm_access,
-                                   value ? value->data : "", pool));
+      SVN_ERR(svn_wc__get_keywords(&old_keywords, db, local_abspath,
+                                   old_value ? old_value->data : "",
+                                   pool, pool));
+      SVN_ERR(svn_wc__get_keywords(&new_keywords, db, local_abspath,
+                                   value ? value->data : "", pool, pool));
 
       if (svn_subst_keywords_differ2(old_keywords, new_keywords, FALSE, pool))
         {

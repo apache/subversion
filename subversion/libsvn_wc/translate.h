@@ -61,27 +61,28 @@ svn_error_t *svn_wc__get_eol_style(svn_subst_eol_style_t *style,
 void svn_wc__eol_value_from_string(const char **value,
                                    const char *eol);
 
-/* Expand keywords for the file at PATH, by parsing a
+/* Expand keywords for the file at LOCAL_ABSPATH in DB, by parsing a
    whitespace-delimited list of keywords.  If any keywords are found
-   in the list, allocate *KEYWORDS from POOL and populate it with
+   in the list, allocate *KEYWORDS from RESULT_POOL and populate it with
    mappings from (const char *) keywords to their (svn_string_t *)
-   values (also allocated in POOL).
+   values (also allocated in RESULT_POOL).
 
    If a keyword is in the list, but no corresponding value is
    available, do not create a hash entry for it.  If no keywords are
    found in the list, or if there is no list, set *KEYWORDS to NULL.
 
-   ADM_ACCESS must be an access baton for PATH.
-
    If FORCE_LIST is non-null, use it as the list; else use the
-   SVN_PROP_KEYWORDS property for PATH.  In either case, use PATH to
-   expand keyword values.
+   SVN_PROP_KEYWORDS property for PATH.  In either case, use LOCAL_ABSPATH
+   to expand keyword values.
+
+   Use SCRATCH_POOL for any temporary allocations.
 */
 svn_error_t *svn_wc__get_keywords(apr_hash_t **keywords,
-                                  const char *path,
-                                  svn_wc_adm_access_t *adm_access,
+                                  svn_wc__db_t *db,
+                                  const char *local_abspath,
                                   const char *force_list,
-                                  apr_pool_t *pool);
+                                  apr_pool_t *result_pool,
+                                  apr_pool_t *scratch_pool);
 
 
 /* Determine if the svn:special flag is set on LOCAL_ABSPATH in DB.  If so,
