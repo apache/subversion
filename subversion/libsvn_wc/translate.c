@@ -74,7 +74,7 @@ svn_wc_translated_stream(svn_stream_t **stream,
   svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
   const char *versioned_abspath;
 
-  SVN_ERR(svn_dirent_get_absolute(&versioned_abspath, path, pool));
+  SVN_ERR(svn_dirent_get_absolute(&versioned_abspath, versioned_file, pool));
   SVN_ERR(svn_wc__get_special(&special, db, versioned_abspath, pool));
 
   if (special)
