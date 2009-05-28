@@ -2445,6 +2445,7 @@ entries_write_body(svn_wc__db_t *db,
       const void *key;
       void *val;
       const svn_wc_entry_t *this_entry;
+      const char *child_abspath;
 
       svn_pool_clear(iterpool);
 
@@ -2457,26 +2458,18 @@ entries_write_body(svn_wc__db_t *db,
         continue;
 
       /* Write the entry. */
+      child_abspath = svn_dirent_join(local_abspath, key, iterpool);
       SVN_ERR(write_entry(db, wc_db, wc_id, repos_id, repos_root,
-                          this_entry, key,
-                          svn_dirent_join(local_abspath, key, iterpool),
-                          this_dir, iterpool));
-    }
+                          this_entry, key, child_abspath, this_dir, iterpool));
 
-  for (hi = apr_hash_first(scratch_pool, dav_cache); hi;
-        hi = apr_hash_next(hi))
-    {
-      const void *key;
-      void *val;
-      const char *child_abspath;
-
-      svn_pool_clear(iterpool);
-      apr_hash_this(hi, &key, NULL, &val);
-      child_abspath = key;
-      child_cache = val;
-
-      SVN_ERR(svn_wc__db_base_set_dav_cache(db, child_abspath, child_cache,
-                                            iterpool));
+      /* Write the dav cache.
+         ### This can go away when we stop unconditionally deleting all
+         ### the entries before writing them (see comments above). */
+      child_cache = apr_hash_get(dav_cache, child_abspath,
+                                 APR_HASH_KEY_STRING);
+      if (child_cache)
+        SVN_ERR(svn_wc__db_base_set_dav_cache(db, child_abspath, child_cache,
+                                              iterpool));
     }
 
   svn_pool_destroy(iterpool);
