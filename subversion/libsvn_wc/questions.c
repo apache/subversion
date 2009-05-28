@@ -109,8 +109,8 @@ compare_and_verify(svn_boolean_t *modified_p,
 
   SVN_ERR(svn_wc__get_eol_style(&eol_style, &eol_str, versioned_file,
                                 adm_access, pool));
-  SVN_ERR(svn_wc__get_keywords(&keywords, versioned_file,
-                              adm_access, NULL, pool));
+  SVN_ERR(svn_wc__get_keywords(&keywords, db, versioned_file_abspath, NULL,
+                               pool, pool));
   SVN_ERR(svn_wc__get_special(&special, db, versioned_file_abspath, pool));
 
   need_translation = svn_subst_translation_required(eol_style, eol_str,

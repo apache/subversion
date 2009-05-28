@@ -94,7 +94,7 @@ restore_file(const char *file_path,
 
       SVN_ERR(svn_wc__get_eol_style(&style, &eol_str, file_path, adm_access,
                                     pool));
-      SVN_ERR(svn_wc__get_keywords(&keywords, file_path, adm_access, NULL,
+      SVN_ERR(svn_wc__get_keywords(&keywords, db, local_abspath, NULL, pool,
                                    pool));
 
       /* Get a temporary destination so we can use a rename to create the

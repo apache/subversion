@@ -87,8 +87,8 @@ svn_wc_translated_stream(svn_stream_t **stream,
 
   SVN_ERR(svn_wc__get_eol_style(&style, &eol, versioned_file,
                                 adm_access, pool));
-  SVN_ERR(svn_wc__get_keywords(&keywords, versioned_file,
-                               adm_access, NULL, pool));
+  SVN_ERR(svn_wc__get_keywords(&keywords, db, versioned_abspath, NULL, pool,
+                               pool));
 
   if (to_nf)
     SVN_ERR(svn_stream_open_readonly(stream, path, pool, pool));
@@ -158,8 +158,8 @@ svn_wc_translated_file2(const char **xlated_path,
   SVN_ERR(svn_dirent_get_absolute(&versioned_abspath, versioned_file, pool));
   SVN_ERR(svn_wc__get_eol_style(&style, &eol, versioned_file,
                                 adm_access, pool));
-  SVN_ERR(svn_wc__get_keywords(&keywords, versioned_file,
-                               adm_access, NULL, pool));
+  SVN_ERR(svn_wc__get_keywords(&keywords, db, versioned_abspath, NULL, pool,
+                               pool));
   SVN_ERR(svn_wc__get_special(&special, db, versioned_abspath, pool));
 
   if (! svn_subst_translation_required(style, eol, keywords, special, TRUE)
@@ -267,17 +267,21 @@ svn_wc__eol_value_from_string(const char **value, const char *eol)
 
 svn_error_t *
 svn_wc__get_keywords(apr_hash_t **keywords,
-                     const char *path,
-                     svn_wc_adm_access_t *adm_access,
+                     svn_wc__db_t *db,
+                     const char *local_abspath,
                      const char *force_list,
-                     apr_pool_t *pool)
+                     apr_pool_t *result_pool,
+                     apr_pool_t *scratch_pool)
 {
-  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
-  const char *local_abspath;
   const char *list;
-  const svn_wc_entry_t *entry = NULL;
+  const char *repos_relpath;
+  const char *repos_root_url;
+  svn_revnum_t changed_rev;
+  apr_time_t changed_date;
+  const char *changed_author;
+  const char *url;
 
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
   /* Choose a property list to parse:  either the one that came into
      this function, or the one attached to PATH. */
@@ -286,7 +290,8 @@ svn_wc__get_keywords(apr_hash_t **keywords,
       const svn_string_t *propval;
 
       SVN_ERR(svn_wc__internal_propget(&propval, SVN_PROP_KEYWORDS,
-                                       local_abspath, db, pool, pool));
+                                       local_abspath, db, scratch_pool,
+                                       scratch_pool));
 
       /* The easy answer. */
       if (propval == NULL)
@@ -300,16 +305,31 @@ svn_wc__get_keywords(apr_hash_t **keywords,
   else
     list = force_list;
 
-  SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access, FALSE, pool));
+  SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL, &repos_relpath,
+                               &repos_root_url, NULL, &changed_rev,
+                               &changed_date, &changed_author, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL,
+                               db, local_abspath, scratch_pool, scratch_pool));
+
+  if (repos_root_url == NULL)
+    {
+      SVN_ERR(svn_wc__db_scan_addition(NULL, NULL, &repos_relpath,
+                                       &repos_root_url,
+                                       NULL, NULL, NULL, NULL, NULL,
+                                       db, local_abspath, scratch_pool,
+                                       scratch_pool));
+    }
+  url = svn_uri_join(repos_root_url, repos_relpath, scratch_pool);
 
   SVN_ERR(svn_subst_build_keywords2(keywords,
                                     list,
-                                    apr_psprintf(pool, "%ld",
-                                                 entry->cmt_rev),
-                                    entry->url,
-                                    entry->cmt_date,
-                                    entry->cmt_author,
-                                    pool));
+                                    apr_psprintf(scratch_pool, "%ld",
+                                                 changed_rev),
+                                    url,
+                                    changed_date,
+                                    changed_author,
+                                    result_pool));
 
   if (apr_hash_count(*keywords) == 0)
     *keywords = NULL;
