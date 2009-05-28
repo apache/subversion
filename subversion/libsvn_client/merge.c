@@ -6460,12 +6460,12 @@ record_mergeinfo_for_added_subtrees(svn_merge_range_t *merged_range,
 
               /* Create the new mergeinfo path for
                  added_path's mergeinfo. */
-              SVN_ERR(svn_path_get_absolute(&abs_target_path,
-                                            target_merge_path->path,
-                                            iterpool));
-              SVN_ERR(svn_path_get_absolute(&abs_added_path,
-                                            added_path,
-                                            iterpool));
+              SVN_ERR(svn_dirent_get_absolute(&abs_target_path,
+                                              target_merge_path->path,
+                                              iterpool));
+              SVN_ERR(svn_dirent_get_absolute(&abs_added_path,
+                                              added_path,
+                                              iterpool));
 
               /* abs_added_path had better be a child of abs_target_path
                  or something is *really* wrong. */

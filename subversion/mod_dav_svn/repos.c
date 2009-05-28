@@ -3564,15 +3564,15 @@ copy_resource(const dav_resource *src,
         return err;
     }
 
-  serr = svn_path_get_absolute(&src_repos_path,
-                               svn_repos_path(src->info->repos->repos,
-                                              src->pool),
-                               src->pool);
+  serr = svn_dirent_get_absolute(&src_repos_path,
+                                 svn_repos_path(src->info->repos->repos,
+                                                src->pool),
+                                 src->pool);
   if (!serr)
-    serr = svn_path_get_absolute(&dst_repos_path,
-                                 svn_repos_path(dst->info->repos->repos,
-                                                dst->pool),
-                                 dst->pool);
+    serr = svn_dirent_get_absolute(&dst_repos_path,
+                                   svn_repos_path(dst->info->repos->repos,
+                                                  dst->pool),
+                                   dst->pool);
 
   if (!serr)
     {
