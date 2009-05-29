@@ -111,11 +111,3 @@ Candidate changes:
 
 Approved changes:
 =================
-
- * r37894, r37896
-   Fix regression in commit memory usage between 1.5 and 1.6.
-   Justification:
-     Committing large numbers (1000s) of items can easily lead to out of
-     memory errors -- See http://svn.haxx.se/dev/archive-2009-05/0398.shtml. 
-   Votes:
-     +1: pburba, hwright, cmpilato

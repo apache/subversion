@@ -374,18 +374,16 @@ svn_io_open_uniquely_named(apr_file_t **file,
          the second attempt was actually the first... and if someone's
          got conflicts on their conflicts, we probably don't want to
          add to their confusion :-). */
-      /* ### could alloc in scratch, then copy to result.. but "meh" */
       if (i == 1)
-        unique_name = apr_psprintf(result_pool, "%s%s", path, suffix);
+        unique_name = apr_psprintf(scratch_pool, "%s%s", path, suffix);
       else
-        unique_name = apr_psprintf(result_pool, "%s.%u%s", path, i, suffix);
+        unique_name = apr_psprintf(scratch_pool, "%s.%u%s", path, i, suffix);
 
       /* Hmmm.  Ideally, we would append to a native-encoding buf
          before starting iteration, then convert back to UTF-8 for
          return. But I suppose that would make the appending code
          sensitive to i18n in a way it shouldn't be... Oh well. */
-      /* ### could alloc in scratch, then copy to result in baton... */
-      SVN_ERR(cstring_from_utf8(&unique_name_apr, unique_name, result_pool));
+      SVN_ERR(cstring_from_utf8(&unique_name_apr, unique_name, scratch_pool));
 
       apr_err = file_open(&try_file, unique_name_apr, flag,
                           APR_OS_DEFAULT, FALSE, result_pool);
@@ -432,13 +430,14 @@ svn_io_open_uniquely_named(apr_file_t **file,
       else
         {
           if (delete_when == svn_io_file_del_on_pool_cleanup)
-            baton->name = unique_name_apr;
+            baton->name = apr_pstrdup(result_pool, unique_name_apr);
 
           if (file)
             *file = try_file;
           else
             apr_file_close(try_file);
-          if (unique_path) *unique_path = unique_name;
+          if (unique_path)
+            *unique_path = apr_pstrdup(result_pool, unique_name);
 
           return SVN_NO_ERROR;
         }
