@@ -426,8 +426,10 @@ svn_io_open_uniquely_named(apr_file_t **file,
               /* Else fall through and return the original error. */
             }
 
-          if (file) *file = NULL;
-          if (unique_path) *unique_path = NULL;
+          if (file)
+            *file = NULL;
+          if (unique_path)
+            *unique_path = NULL;
           return svn_error_wrap_apr(apr_err, _("Can't open '%s'"),
                                     svn_dirent_local_style(unique_name,
                                                          scratch_pool));
