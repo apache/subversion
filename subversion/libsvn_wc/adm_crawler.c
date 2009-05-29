@@ -122,7 +122,7 @@ restore_file(const char *file_path,
       SVN_ERR(svn_io_file_rename(tmp_file, file_path, pool));
     }
 
-  SVN_ERR(svn_wc__maybe_set_read_only(NULL, file_path, adm_access, pool));
+  SVN_ERR(svn_wc__maybe_set_read_only(NULL, db, local_abspath, pool));
 
   /* If necessary, tweak the new working file's executable bit. */
   SVN_ERR(svn_wc__maybe_set_executable(NULL, file_path, adm_access, pool));

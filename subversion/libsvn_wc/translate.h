@@ -105,14 +105,16 @@ svn_wc__maybe_set_executable(svn_boolean_t *did_set,
                              apr_pool_t *pool);
 
 /* If the SVN_PROP_NEEDS_LOCK property is present and there is no
-   lock token for the file in the working copy, set PATH to
+   lock token for the file in the working copy, set LOCAL_ABSPATH to
    read-only. If DID_SET is non-null, then set *DID_SET to TRUE if
-   did set PATH read-write, or to FALSE if not.  ADM_ACCESS is an
-   access baton set that contains PATH. */
+   did set LOCAL_ABSPATH read-write, or to FALSE if not.
+
+   Use SCRATCH_POOL for any temporary allocations.
+*/
 svn_error_t * svn_wc__maybe_set_read_only(svn_boolean_t *did_set,
-                                          const char *path,
-                                          svn_wc_adm_access_t *adm_access,
-                                          apr_pool_t *pool);
+                                          svn_wc__db_t *db,
+                                          const char *local_abspath,
+                                          apr_pool_t *scratch_pool);
 
 
 #ifdef __cplusplus
