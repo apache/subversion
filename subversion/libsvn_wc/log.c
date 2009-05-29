@@ -269,8 +269,8 @@ file_xfer_under_path(svn_wc_adm_access_t *adm_access,
 
         SVN_ERR(svn_wc__maybe_set_read_only(NULL, db, dest_abspath, pool));
 
-        return svn_wc__maybe_set_executable(NULL, full_dest_path,
-                                            adm_access, pool);
+        return svn_error_return(svn_wc__maybe_set_executable(
+                                              NULL, db, dest_abspath, pool));
       }
 
     case svn_wc__xfer_mv:
@@ -398,8 +398,7 @@ install_committed_file(svn_boolean_t *overwrote_working,
   else
     {
       /* Set the working file's execute bit if props dictate. */
-      SVN_ERR(svn_wc__maybe_set_executable(&did_set, filepath,
-                                           adm_access, pool));
+      SVN_ERR(svn_wc__maybe_set_executable(&did_set, db, file_abspath, pool));
       if (did_set)
         /* okay, so we didn't -overwrite- the working file, but we changed
            its timestamp, which is the point of returning this flag. :-) */
@@ -514,9 +513,12 @@ log_do_file_maybe_executable(struct log_runner *loggy,
   const char *full_path
     = svn_dirent_join(svn_wc_adm_access_path(loggy->adm_access), name,
                       loggy->pool);
+  const char *full_abspath;
 
-  return svn_wc__maybe_set_executable(NULL, full_path, loggy->adm_access,
-                                     loggy->pool);
+  SVN_ERR(svn_dirent_get_absolute(&full_abspath, full_path, loggy->pool));
+
+  return svn_error_return(svn_wc__maybe_set_executable(
+                                NULL, loggy->db, full_abspath, loggy->pool));
 }
 
 /* Maybe make file NAME in log's CWD readonly */

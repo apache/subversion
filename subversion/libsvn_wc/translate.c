@@ -357,21 +357,21 @@ svn_wc__get_special(svn_boolean_t *special,
 
 svn_error_t *
 svn_wc__maybe_set_executable(svn_boolean_t *did_set,
-                             const char *path,
-                             svn_wc_adm_access_t *adm_access,
-                             apr_pool_t *pool)
+                             svn_wc__db_t *db,
+                             const char *local_abspath,
+                             apr_pool_t *scratch_pool)
 {
-  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
-  const char *local_abspath;
   const svn_string_t *propval;
 
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
   SVN_ERR(svn_wc__internal_propget(&propval, SVN_PROP_EXECUTABLE,
-                                   local_abspath, db, pool, pool));
+                                   local_abspath, db, scratch_pool,
+                                   scratch_pool));
   if (propval != NULL)
     {
-      SVN_ERR(svn_io_set_file_executable(path, TRUE, FALSE, pool));
+      SVN_ERR(svn_io_set_file_executable(local_abspath, TRUE, FALSE,
+                                         scratch_pool));
       if (did_set)
         *did_set = TRUE;
     }
