@@ -814,8 +814,8 @@ log_do_delete_entry(struct log_runner *loggy, const char *name)
                 {
                   const char *local_abspath;
 
-                  SVN_ERR(svn_path_get_absolute(&local_abspath, full_path,
-                                                loggy->pool));
+                  SVN_ERR(svn_dirent_get_absolute(&local_abspath, full_path,
+                                                  loggy->pool));
                   SVN_ERR(svn_wc__entry_remove(loggy->db, local_abspath,
                                                loggy->pool));
                 }

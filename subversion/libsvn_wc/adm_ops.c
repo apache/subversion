@@ -261,7 +261,7 @@ svn_wc__do_update_cleanup(const char *path,
   svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
   const char *local_abspath;
 
-  SVN_ERR(svn_path_get_absolute(&local_abspath, path, pool));
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
   SVN_ERR(svn_wc_entry(&entry, path, adm_access, TRUE, pool));
   if (entry == NULL)
@@ -331,7 +331,7 @@ svn_wc_maybe_set_repos_root(svn_wc_adm_access_t *adm_access,
       svn_wc__db_t *db = svn_wc__adm_get_db(dir_access);
       const char *local_abspath;
 
-      SVN_ERR(svn_path_get_absolute(&local_abspath, path, pool));
+      SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
       SVN_ERR(svn_wc__tweak_entry(db, local_abspath, NULL, repos,
                             SVN_INVALID_REVNUM,
                             strcmp(base_name, SVN_WC_ENTRY_THIS_DIR) == 0,
@@ -878,7 +878,7 @@ mark_tree(svn_wc_adm_access_t *adm_access,
       base_name = key;
       fullpath = svn_dirent_join(svn_wc_adm_access_path(adm_access), base_name,
                                  subpool);
-      SVN_ERR(svn_path_get_absolute(&local_abspath, fullpath, subpool));
+      SVN_ERR(svn_dirent_get_absolute(&local_abspath, fullpath, subpool));
 
       /* If this is a directory, recurse. */
       if (entry->kind == svn_node_dir)
@@ -1212,7 +1212,7 @@ svn_wc_delete3(const char *path,
               svn_wc__db_t *db = svn_wc__adm_get_db(parent_access);
               const char *local_abspath;
 
-              SVN_ERR(svn_path_get_absolute(&local_abspath, path, pool));
+              SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
               SVN_ERR(svn_wc__entry_remove(db, local_abspath, pool));
               apr_hash_set(entries, base_name, APR_HASH_KEY_STRING, NULL);
             }
@@ -1366,7 +1366,7 @@ svn_wc_add3(const char *path,
   svn_wc__db_t *db = svn_wc__adm_get_db(parent_access);
 
   SVN_ERR(svn_path_check_valid(path, pool));
-  SVN_ERR(svn_path_get_absolute(&local_abspath, path, pool));
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
   /* Make sure something's there. */
   SVN_ERR(svn_io_check_path(path, &kind, pool));
@@ -1730,7 +1730,7 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
       revert_base = TRUE;
 
       /* Use the revertpath as the new propsbase if it exists. */
-      SVN_ERR(svn_path_get_absolute(&local_abspath, fullpath, pool));
+      SVN_ERR(svn_dirent_get_absolute(&local_abspath, fullpath, pool));
       SVN_ERR(svn_wc__load_props(NULL, NULL, &baseprops, db, local_abspath,
                                  pool, pool));
 
@@ -2083,7 +2083,7 @@ revert_entry(svn_depth_t *depth,
               svn_wc__db_t *db = svn_wc__adm_get_db(parent_access);
               const char *local_abspath;
 
-              SVN_ERR(svn_path_get_absolute(&local_abspath, path, pool));
+              SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
               SVN_ERR(svn_wc__entry_remove(db, local_abspath, pool));
               apr_hash_set(entries, basey, APR_HASH_KEY_STRING, NULL);
             }
@@ -2443,7 +2443,7 @@ svn_wc_remove_from_revision_control(svn_wc_adm_access_t *adm_access,
                                       svn_wc_adm_access_path(adm_access));
   const char *local_abspath;
 
-  SVN_ERR(svn_path_get_absolute(&local_abspath, full_path, pool));
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, full_path, pool));
 
   /* Check cancellation here, so recursive calls get checked early. */
   if (cancel_func)
@@ -2459,7 +2459,7 @@ svn_wc_remove_from_revision_control(svn_wc_adm_access_t *adm_access,
       svn_boolean_t text_modified_p;
 
       full_path = svn_dirent_join(full_path, name, pool);
-      SVN_ERR(svn_path_get_absolute(&local_abspath, full_path, pool));
+      SVN_ERR(svn_dirent_get_absolute(&local_abspath, full_path, pool));
 
       /* Only check if the file was modified when it wasn't overwritten with a
          special file */
@@ -2587,7 +2587,7 @@ svn_wc_remove_from_revision_control(svn_wc_adm_access_t *adm_access,
                   /* The directory is either missing or excluded,
                      so don't try to recurse, just delete the
                      entry in the parent directory. */
-                  SVN_ERR(svn_path_get_absolute(&local_abspath, entrypath,
+                  SVN_ERR(svn_dirent_get_absolute(&local_abspath, entrypath,
                                                 subpool));
                   SVN_ERR(svn_wc__entry_remove(db, local_abspath, subpool));
                   apr_hash_set(entries, current_entry_name,
