@@ -125,7 +125,7 @@ restore_file(const char *file_path,
   SVN_ERR(svn_wc__maybe_set_read_only(NULL, db, local_abspath, pool));
 
   /* If necessary, tweak the new working file's executable bit. */
-  SVN_ERR(svn_wc__maybe_set_executable(NULL, file_path, adm_access, pool));
+  SVN_ERR(svn_wc__maybe_set_executable(NULL, db, local_abspath, pool));
 
   /* Remove any text conflict */
   SVN_ERR(svn_wc_resolved_conflict4(file_path, adm_access, TRUE, FALSE,
