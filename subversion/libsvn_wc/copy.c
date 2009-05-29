@@ -327,7 +327,7 @@ get_copyfrom_url_rev_via_parent(const char *src_path,
   const char *rest;
   const char *abs_src_path;
 
-  SVN_ERR(svn_path_get_absolute(&abs_src_path, src_path, pool));
+  SVN_ERR(svn_dirent_get_absolute(&abs_src_path, src_path, pool));
 
   svn_dirent_split(abs_src_path, &parent_path, &rest, pool);
 
@@ -515,7 +515,7 @@ copy_file_administratively(const char *src_path,
 
     /* Load source base and working props. */
     db = svn_wc__adm_get_db(src_access);
-    SVN_ERR(svn_path_get_absolute(&src_local_abspath, src_path, pool));
+    SVN_ERR(svn_dirent_get_absolute(&src_local_abspath, src_path, pool));
     SVN_ERR(svn_wc__load_props(&base_props, &props, NULL, db,
                                src_local_abspath, pool, pool));
 
