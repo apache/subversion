@@ -1,3 +1,28 @@
+Version 1.6.3
+(?? Jun 2009, from /branches/1.6.x)
+http://svn.collab.net/repos/svn/tags/1.6.3
+
+ User-visible changes:
+  * fix segfault in WC->URL copy (r37646, -56)
+  * let 'svnadmin load' tolerate mergeinfo with "\r\n" (r37768)
+  * make svnsync normalize svn:* props to LF line endings (issue #3404)
+  * better integration with external merge tools (r36178)
+  * return a friendly error message for 'svn diff' (r37735)
+  * update dsvn.el for 1.6 (r37774)
+  * don't allow setting of props on out-of-date dirs under neon (r37745)
+  * improve BASH completion (r36450, -52, -70, -79, -538)
+  * improve some DAV-based error messages (issue #3414)
+  * always show tree conflicts with 'svn st' (issue #3382)
+  * improve correctness of 'svn mergeinfo' (issue #3126)
+  * decrease the amount of memory needed for large commits (r37894, -6)
+  * fixed: potential segfault with noop file merges (r37779)
+  * fixed: incorrect output with 'svn blame -g' (r37719, -23, -41)
+  * fixed: bindings don't load FS libs when module search enabled (issue #3413)
+  * fixed: potential abort() in the working copy library (r37857)
+
+ Developer-visible changes:
+
+
 Version 1.6.2
 (09 May 2009, from /branches/1.6.x)
 http://svn.collab.net/repos/svn/tags/1.6.2
