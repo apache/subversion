@@ -296,7 +296,7 @@ create_fake_wc(const char *subdir, apr_pool_t *scratch_pool)
   svn_sqlite__db_t *sdb;
 
   SVN_ERR(svn_io_make_dir_recursively(dirpath, scratch_pool));
-  svn_error_clear(svn_io_remove_file2(dbpath, FALSE, scratch_pool));
+  svn_error_clear(svn_io_remove_file(dbpath, scratch_pool));
   SVN_ERR(svn_sqlite__open(&sdb, dbpath, svn_sqlite__mode_rwcreate, NULL,
                            SVN_WC__VERSION,
                            data_loading_sql, scratch_pool, scratch_pool));
