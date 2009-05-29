@@ -203,12 +203,14 @@ file_xfer_under_path(svn_wc_adm_access_t *adm_access,
 {
   svn_error_t *err;
   const char *full_from_path, *full_dest_path, *full_versioned_path;
+  const char *dest_abspath;
   svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
 
   full_from_path = svn_dirent_join(svn_wc_adm_access_path(adm_access), name,
                                    pool);
   full_dest_path = svn_dirent_join(svn_wc_adm_access_path(adm_access), dest,
                                    pool);
+  SVN_ERR(svn_dirent_get_absolute(&dest_abspath, full_dest_path, pool));
   if (versioned)
     full_versioned_path = svn_dirent_join(svn_wc_adm_access_path(adm_access),
                                           versioned, pool);
@@ -265,8 +267,7 @@ file_xfer_under_path(svn_wc_adm_access_t *adm_access,
             svn_error_clear(err);
           }
 
-        SVN_ERR(svn_wc__maybe_set_read_only(NULL, full_dest_path,
-                                            adm_access, pool));
+        SVN_ERR(svn_wc__maybe_set_read_only(NULL, db, dest_abspath, pool));
 
         return svn_wc__maybe_set_executable(NULL, full_dest_path,
                                             adm_access, pool);
@@ -324,12 +325,14 @@ install_committed_file(svn_boolean_t *overwrote_working,
   svn_boolean_t same, did_set;
   const char *tmp_wfile;
   svn_boolean_t special;
+  const char *file_abspath;
   svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
 
   /* start off assuming that the working file isn't touched. */
   *overwrote_working = FALSE;
 
   filepath = svn_dirent_join(svn_wc_adm_access_path(adm_access), name, pool);
+  SVN_ERR(svn_dirent_get_absolute(&file_abspath, filepath, pool));
 
   /* In the commit, newlines and keywords may have been
    * canonicalized and/or contracted... Or they may not have
@@ -354,7 +357,6 @@ install_committed_file(svn_boolean_t *overwrote_working,
 
   {
     const char *tmp = (kind == svn_node_file) ? tmp_text_base : filepath;
-    const char *file_abspath;
 
     SVN_ERR(svn_wc_translated_file2(&tmp_wfile,
                                     tmp,
@@ -370,7 +372,6 @@ install_committed_file(svn_boolean_t *overwrote_working,
      * it has the right executable and read_write attributes set.
      */
 
-    SVN_ERR(svn_dirent_get_absolute(&file_abspath, filepath, pool));
     SVN_ERR(svn_wc__get_special(&special, db, file_abspath, pool));
     if (! special && tmp != tmp_wfile)
       SVN_ERR(svn_io_files_contents_same_p(&same, tmp_wfile,
@@ -414,8 +415,7 @@ install_committed_file(svn_boolean_t *overwrote_working,
     }
   else
     {
-      SVN_ERR(svn_wc__maybe_set_read_only(&did_set, filepath,
-                                          adm_access, pool));
+      SVN_ERR(svn_wc__maybe_set_read_only(&did_set, db, file_abspath, pool));
       if (did_set)
         /* okay, so we didn't -overwrite- the working file, but we changed
            its timestamp, which is the point of returning this flag. :-) */
@@ -527,8 +527,11 @@ log_do_file_maybe_readonly(struct log_runner *loggy,
   const char *full_path
     = svn_dirent_join(svn_wc_adm_access_path(loggy->adm_access), name,
                       loggy->pool);
+  const char *full_abspath;
 
-  return svn_wc__maybe_set_read_only(NULL, full_path, loggy->adm_access,
+  SVN_ERR(svn_dirent_get_absolute(&full_abspath, full_path, loggy->pool));
+
+  return svn_wc__maybe_set_read_only(NULL, loggy->db, full_abspath,
                                      loggy->pool);
 }
 

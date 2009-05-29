@@ -384,29 +384,41 @@ svn_wc__maybe_set_executable(svn_boolean_t *did_set,
 
 svn_error_t *
 svn_wc__maybe_set_read_only(svn_boolean_t *did_set,
-                            const char *path,
-                            svn_wc_adm_access_t *adm_access,
-                            apr_pool_t *pool)
+                            svn_wc__db_t *db,
+                            const char *local_abspath,
+                            apr_pool_t *scratch_pool)
 {
-  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
-  const char *local_abspath;
   const svn_string_t *needs_lock;
-  const svn_wc_entry_t* entry;
+  svn_wc__db_lock_t *lock;
+  svn_error_t *err;
 
   if (did_set)
     *did_set = FALSE;
 
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
-  SVN_ERR(svn_wc_entry(&entry, path, adm_access, FALSE, pool));
-  if (entry && entry->lock_token)
+  err = svn_wc__db_read_info(NULL, NULL, NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL, NULL, &lock,
+                             db, local_abspath, scratch_pool, scratch_pool);
+
+  if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+    {
+      /* If the path wasn't versioned, we still want to set it to read-only. */
+      svn_error_clear(err);
+    }
+  else if (err)
+    return svn_error_return(err);
+  else if (lock)
     return SVN_NO_ERROR;
 
   SVN_ERR(svn_wc__internal_propget(&needs_lock, SVN_PROP_NEEDS_LOCK,
-                                   local_abspath, db, pool, pool));
+                                   local_abspath, db, scratch_pool,
+                                   scratch_pool));
   if (needs_lock != NULL)
     {
-      SVN_ERR(svn_io_set_file_read_only(path, FALSE, pool));
+      SVN_ERR(svn_io_set_file_read_only(local_abspath, FALSE, scratch_pool));
       if (did_set)
         *did_set = TRUE;
     }
