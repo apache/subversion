@@ -437,7 +437,7 @@ svn_io_open_uniquely_named(apr_file_t **file,
       else
         {
           if (delete_when == svn_io_file_del_on_pool_cleanup)
-            baton->name = unique_name_apr;
+            baton->name = apr_pstrdup(result_pool, unique_name_apr);
 
           if (file)
             *file = try_file;
