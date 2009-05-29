@@ -107,8 +107,8 @@ compare_and_verify(svn_boolean_t *modified_p,
   SVN_ERR(svn_dirent_get_absolute(&versioned_file_abspath, versioned_file,
                                   pool));
 
-  SVN_ERR(svn_wc__get_eol_style(&eol_style, &eol_str, versioned_file,
-                                adm_access, pool));
+  SVN_ERR(svn_wc__get_eol_style(&eol_style, &eol_str, db,
+                                versioned_file_abspath, pool, pool));
   SVN_ERR(svn_wc__get_keywords(&keywords, db, versioned_file_abspath, NULL,
                                pool, pool));
   SVN_ERR(svn_wc__get_special(&special, db, versioned_file_abspath, pool));

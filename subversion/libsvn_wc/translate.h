@@ -31,8 +31,8 @@ extern "C" {
 
 /* Newline and keyword translation properties */
 
-/* Query the SVN_PROP_EOL_STYLE property on file PATH.  If STYLE is
-   non-null, set *STYLE to PATH's eol style.  Set *EOL to
+/* Query the SVN_PROP_EOL_STYLE property on file LOCAL_ABSPATH in DB.  If
+   STYLE is non-null, set *STYLE to LOCAL_ABSPATH's eol style.  Set *EOL to
 
       - NULL for svn_subst_eol_style_none, or
 
@@ -45,15 +45,15 @@ extern "C" {
    If STYLE is null on entry, ignore it.  If *EOL is non-null on exit,
    it is a static string not allocated in POOL.
 
-   ADM_ACCESS is an access baton set that contains PATH.
-
-   Use POOL for temporary allocation.
+   Use SCRATCH_POOL for temporary allocation, RESULT_POOL for allocating
+   *STYLE and *EOL.
 */
 svn_error_t *svn_wc__get_eol_style(svn_subst_eol_style_t *style,
                                    const char **eol,
-                                   const char *path,
-                                   svn_wc_adm_access_t *adm_access,
-                                   apr_pool_t *pool);
+                                   svn_wc__db_t *db,
+                                   const char *local_abspath,
+                                   apr_pool_t *result_pool,
+                                   apr_pool_t *scratch_pool);
 
 /* Reverse parser.  Given a real EOL string ("\n", "\r", or "\r\n"),
    return an encoded *VALUE ("LF", "CR", "CRLF") that one might see in
@@ -81,6 +81,7 @@ svn_error_t *svn_wc__get_keywords(apr_hash_t **keywords,
                                   svn_wc__db_t *db,
                                   const char *local_abspath,
                                   const char *force_list,
+
                                   apr_pool_t *result_pool,
                                   apr_pool_t *scratch_pool);
 

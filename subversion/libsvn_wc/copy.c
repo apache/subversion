@@ -538,8 +538,8 @@ copy_file_administratively(const char *src_path,
 
           SVN_ERR(svn_wc__get_keywords(&keywords, db, src_local_abspath, NULL,
                                        pool, pool));
-          SVN_ERR(svn_wc__get_eol_style(&eol_style, &eol_str, src_path,
-                                        src_access, pool));
+          SVN_ERR(svn_wc__get_eol_style(&eol_style, &eol_str, db,
+                                        src_local_abspath, pool, pool));
 
           /* Try with the working file and fallback on its text-base. */
           err = svn_stream_open_readonly(&contents, src_path, pool, pool);

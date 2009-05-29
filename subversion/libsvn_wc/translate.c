@@ -85,8 +85,8 @@ svn_wc_translated_stream(svn_stream_t **stream,
       return svn_subst_create_specialfile(stream, path, pool, pool);
     }
 
-  SVN_ERR(svn_wc__get_eol_style(&style, &eol, versioned_file,
-                                adm_access, pool));
+  SVN_ERR(svn_wc__get_eol_style(&style, &eol, db, versioned_abspath,
+                                pool, pool));
   SVN_ERR(svn_wc__get_keywords(&keywords, db, versioned_abspath, NULL, pool,
                                pool));
 
@@ -156,8 +156,8 @@ svn_wc_translated_file2(const char **xlated_path,
   const char *versioned_abspath;
 
   SVN_ERR(svn_dirent_get_absolute(&versioned_abspath, versioned_file, pool));
-  SVN_ERR(svn_wc__get_eol_style(&style, &eol, versioned_file,
-                                adm_access, pool));
+  SVN_ERR(svn_wc__get_eol_style(&style, &eol, db, versioned_abspath,
+                                pool, pool));
   SVN_ERR(svn_wc__get_keywords(&keywords, db, versioned_abspath, NULL, pool,
                                pool));
   SVN_ERR(svn_wc__get_special(&special, db, versioned_abspath, pool));
@@ -228,19 +228,18 @@ svn_wc_translated_file2(const char **xlated_path,
 svn_error_t *
 svn_wc__get_eol_style(svn_subst_eol_style_t *style,
                       const char **eol,
-                      const char *path,
-                      svn_wc_adm_access_t *adm_access,
-                      apr_pool_t *pool)
+                      svn_wc__db_t *db,
+                      const char *local_abspath,
+                      apr_pool_t *result_pool,
+                      apr_pool_t *scratch_pool)
 {
-  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
-  const char *local_abspath;
   const svn_string_t *propval;
 
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
   /* Get the property value. */
   SVN_ERR(svn_wc__internal_propget(&propval, SVN_PROP_EOL_STYLE, local_abspath,
-                                   db, pool, pool));
+                                   db, result_pool, scratch_pool));
 
   /* Convert it. */
   svn_subst_eol_style_from_value(style, eol, propval ? propval->data : NULL);
