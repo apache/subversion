@@ -4169,11 +4169,11 @@ merge_file(svn_wc_notify_state_t *content_state,
   const svn_wc_entry_t *entry;
   const char *local_abspath;
 
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, fb->path, pool));
-
   /* Accumulated entry modifications. */
   svn_wc_entry_t tmp_entry;
   apr_uint64_t flags = 0;
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, fb->path, pool));
 
   /*
      When this function is called on file F, we assume the following
