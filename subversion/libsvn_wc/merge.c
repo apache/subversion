@@ -178,8 +178,8 @@ detranslate_wc_file(const char **detranslated_file,
               svn_subst_eol_style_from_value(&style, &eol, prop->value->data);
             }
           else if (!is_binary)
-            SVN_ERR(svn_wc__get_eol_style(&style, &eol, merge_target,
-                                          adm_access, pool));
+            SVN_ERR(svn_wc__get_eol_style(&style, &eol, db, merge_abspath,
+                                          pool, pool));
           else
             {
               eol = NULL;

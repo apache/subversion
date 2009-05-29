@@ -92,8 +92,8 @@ restore_file(const char *file_path,
       const char *tmp_file;
       svn_stream_t *tmp_stream;
 
-      SVN_ERR(svn_wc__get_eol_style(&style, &eol_str, file_path, adm_access,
-                                    pool));
+      SVN_ERR(svn_wc__get_eol_style(&style, &eol_str, db, local_abspath,
+                                    pool, pool));
       SVN_ERR(svn_wc__get_keywords(&keywords, db, local_abspath, NULL, pool,
                                    pool));
 

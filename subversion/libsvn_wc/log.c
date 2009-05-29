@@ -242,8 +242,8 @@ file_xfer_under_path(svn_wc_adm_access_t *adm_access,
                                       pool);
 
         if (! err)
-          err = svn_wc__get_eol_style(&style, &eol, full_versioned_path,
-                                      adm_access, pool);
+          err = svn_wc__get_eol_style(&style, &eol, db, versioned_abspath,
+                                      pool, pool);
         if (! err)
           err = svn_wc__get_keywords(&keywords, db, versioned_abspath, NULL,
                                      pool, pool);
