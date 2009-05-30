@@ -295,7 +295,7 @@ if archive_type:
               add_to_zip(zp, path, dirpath, dirs + files)
             
       zp = zipfile.ZipFile(archive_path, 'w', zipfile.ZIP_DEFLATED)
-      for dirpath, dirs, files in os.walk(archive_path):
+      for dirpath, dirs, files in os.walk(backup_subdir):
         add_to_zip(zp, backup_dir, dirpath, dirs + files)
       zp.close()
     except ImportError, e:
