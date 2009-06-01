@@ -1674,6 +1674,76 @@ svn_error_t *svn_io_file_flush_to_disk(apr_file_t *file,
 
 /* TODO write test for these two functions, then refactor. */
 
+/* Set RESULT to an svn_stringbuf_t containing the contents of FILE.
+   FILENAME is the FILE's on-disk APR-safe name, or NULL if that name
+   isn't known.  If CHECK_SIZE is TRUE, the function will attempt to
+   first stat() the file to determine it's size before sucking its
+   contents into the stringbuf.  (Doing so can prevent unnecessary
+   memory usage, an unwanted side effect of the stringbuf growth and
+   reallocation mechanism.)  */
+static svn_error_t *
+stringbuf_from_aprfile(svn_stringbuf_t **result,
+                       const char *filename,
+                       apr_file_t *file,
+                       svn_boolean_t check_size,
+                       apr_pool_t *pool)
+{
+  apr_size_t len;
+  svn_error_t *err;
+  svn_stringbuf_t *res = NULL;
+  apr_size_t res_initial_len = SVN__STREAM_CHUNK_SIZE;
+  char *buf = apr_palloc(pool, SVN__STREAM_CHUNK_SIZE);
+
+  /* If our caller wants us to check the size of the file for
+     efficient memory handling, we'll try to do so. */
+  if (check_size)
+    {
+      apr_status_t status;
+
+      /* If our caller didn't tell us the file's name, we'll ask APR
+         if it knows the name.  No problem if we can't figure it out.  */
+      if (! filename)
+        {
+          const char *filename_apr;
+          if (! (status = apr_file_name_get(&filename_apr, file)))
+            filename = filename_apr;
+        }
+
+      /* If we now know the filename, try to stat().  If we succeed,
+         we know how to allocate our stringbuf.  */
+      if (filename)
+        {
+          apr_finfo_t finfo;
+          if (! (status = apr_stat(&finfo, filename, APR_FINFO_MIN, pool)))
+            res_initial_len = finfo.size;
+        }
+    }
+
+    
+  /* XXX: We should check the incoming data for being of type binary. */
+
+  res = svn_stringbuf_create_ensure(res_initial_len, pool);
+
+  /* apr_file_read will not return data and eof in the same call. So this loop
+   * is safe from missing read data.  */
+  len = SVN__STREAM_CHUNK_SIZE;
+  err = svn_io_file_read(file, buf, &len, pool);
+  while (! err)
+    {
+      svn_stringbuf_appendbytes(res, buf, len);
+      len = SVN__STREAM_CHUNK_SIZE;
+      err = svn_io_file_read(file, buf, &len, pool);
+    }
+
+  /* Having read all the data we *expect* EOF */
+  if (err && !APR_STATUS_IS_EOF(err->apr_err))
+    return err;
+  svn_error_clear(err);
+
+  *result = res;
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_stringbuf_from_file2(svn_stringbuf_t **result,
                          const char *filename,
@@ -1686,17 +1756,13 @@ svn_stringbuf_from_file2(svn_stringbuf_t **result,
       apr_status_t apr_err;
       if ((apr_err = apr_file_open_stdin(&f, pool)))
         return svn_error_wrap_apr(apr_err, _("Can't open stdin"));
+      SVN_ERR(stringbuf_from_aprfile(result, NULL, f, FALSE, pool));
     }
   else
     {
       SVN_ERR(svn_io_file_open(&f, filename, APR_READ, APR_OS_DEFAULT, pool));
+      SVN_ERR(stringbuf_from_aprfile(result, filename, f, TRUE, pool));
     }
-
-  /* ### ugh. we should stat() the file, get its length, and read that
-     ### much data into memory. the _from_aprfile() function uses a
-     ### realloc-style that chews up memory needlessly. */
-
-  SVN_ERR(svn_stringbuf_from_aprfile(result, f, pool));
   return svn_io_file_close(f, pool);
 }
 
@@ -1739,32 +1805,7 @@ svn_stringbuf_from_aprfile(svn_stringbuf_t **result,
                            apr_file_t *file,
                            apr_pool_t *pool)
 {
-  apr_size_t len;
-  svn_error_t *err;
-  svn_stringbuf_t *res = svn_stringbuf_create_ensure(SVN__STREAM_CHUNK_SIZE,
-                                                     pool);
-  char *buf = apr_palloc(pool, SVN__STREAM_CHUNK_SIZE);
-
-  /* XXX: We should check the incoming data for being of type binary. */
-
-  /* apr_file_read will not return data and eof in the same call. So this loop
-   * is safe from missing read data.  */
-  len = SVN__STREAM_CHUNK_SIZE;
-  err = svn_io_file_read(file, buf, &len, pool);
-  while (! err)
-    {
-      svn_stringbuf_appendbytes(res, buf, len);
-      len = SVN__STREAM_CHUNK_SIZE;
-      err = svn_io_file_read(file, buf, &len, pool);
-    }
-
-  /* Having read all the data we *expect* EOF */
-  if (err && !APR_STATUS_IS_EOF(err->apr_err))
-    return err;
-  svn_error_clear(err);
-
-  *result = res;
-  return SVN_NO_ERROR;
+  return stringbuf_from_aprfile(result, NULL, file, TRUE, pool);
 }
 
 
