@@ -3,7 +3,12 @@
 #
 
 import os
-import md5
+try:
+  # Python >=2.5
+  from hashlib import md5 as hashlib_md5
+except ImportError:
+  # Python <2.5
+  from md5 import md5 as hashlib_md5
 
 import gen_base
 import gen_win
@@ -93,7 +98,7 @@ class Generator(gen_win.WinGeneratorBase):
     ### implement this from scratch using the algorithms described in
     ### http://www.webdav.org/specs/draft-leach-uuids-guids-01.txt
 
-    myhash = md5.md5(data).hexdigest()
+    myhash = hashlib_md5(data).hexdigest()
 
     guid = ("{%s-%s-%s-%s-%s}" % (myhash[0:8], myhash[8:12],
                                   myhash[12:16], myhash[16:20],
