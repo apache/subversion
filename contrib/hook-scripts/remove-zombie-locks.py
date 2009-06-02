@@ -98,6 +98,7 @@ class RepositoryZombieLockRemover:
     self.pool = svn.core.svn_pool_create(None)
     self.repos_ptr = svn.repos.open(self.repos_path, self.pool)
     self.fs_ptr = svn.repos.fs(self.repos_ptr)
+    self.fs_type = svn.fs.type(svn.repos.db_env(self.repos_ptr))
     self.rev_root = svn.fs.revision_root(self.fs_ptr,
                                          svn.fs.youngest_rev(self.fs_ptr,
                                                              self.pool),
@@ -121,8 +122,25 @@ class RepositoryZombieLockRemover:
 
     print "Removing all zombie locks from repository at %s\n" \
           "This may take several minutes..." % self.repos_path
-    svn.fs.svn_fs_get_locks(self.fs_ptr, self.repos_subpath,
-                            self.unlock_nonexistant_files, self.pool)
+
+    # Subversion's Berkeley DB implementation doesn't allow reentry of
+    # its BDB-transaction-using APIs from within BDB-transaction-using
+    # APIs (such as svn_fs_get_locks()).  So we have do this in two
+    # steps, first harvest the locks, then checking/removing them.
+    if self.fs_type == svn.fs.SVN_FS_TYPE_BDB:
+      self.locks = []
+      def bdb_lock_callback(lock, callback_pool):
+        self.locks.append(lock)
+      svn.fs.svn_fs_get_locks(self.fs_ptr, self.repos_subpath,
+                              bdb_lock_callback, self.pool)
+      subpool = svn.core.svn_pool_create(self.pool)
+      for lock in self.locks:
+        svn.core.svn_pool_clear(subpool)
+        self.unlock_nonexistant_files(lock, subpool)
+      svn.core.svn_pool_destroy(subpool)
+    else:
+      svn.fs.svn_fs_get_locks(self.fs_ptr, self.repos_subpath,
+                              self.unlock_nonexistant_files, self.pool)
     print "Done."
 
 
