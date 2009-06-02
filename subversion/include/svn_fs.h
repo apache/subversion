@@ -2082,6 +2082,14 @@ typedef svn_error_t *(*svn_fs_get_locks_callback_t)(void *baton,
  * If the @a get_locks_func callback implementation returns an error,
  * lock iteration will terminate and that error will be returned by
  * this function.
+ *
+ * @note On Berkeley-DB-backed filesystems, the @a get_locks_func
+ * callback will invoked from within a Berkeley-DB transaction trail.
+ * Implementors of the callback are, as a result, forbidden from
+ * calling any svn_fs API functions which might themselves attempt to
+ * start a new Berkeley DB transaction (which is most of this svn_fs
+ * API).  Yes, this is a nasty implementation detail to have to be
+ * aware of.  We hope to fix this problem in the future.
  */
 svn_error_t *
 svn_fs_get_locks(svn_fs_t *fs,
