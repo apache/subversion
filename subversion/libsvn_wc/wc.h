@@ -141,6 +141,16 @@ struct svn_wc_context_t
   apr_pool_t *state_pool;
 };
 
+/**
+ * Just like svn_wc_context_create(), only use the provided DB to constuct
+ * the context.  The result pool will be the state pool associated with
+ * DB->state_pool.
+ */
+svn_error_t *
+svn_wc__context_create_with_db(svn_wc_context_t **wc_ctx,
+                               svn_config_t *config,
+                               svn_wc__db_t *db,
+                               apr_pool_t *scratch_pool);
 
 
 /*** Update traversals. ***/

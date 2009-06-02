@@ -528,6 +528,39 @@ svn_wc_resolved_conflict3(const char *path,
                                    cancel_baton, pool);
 }
 
+svn_error_t *
+svn_wc_add_lock(const char *path,
+                const svn_lock_t *lock,
+                svn_wc_adm_access_t *adm_access,
+                apr_pool_t *pool)
+{
+  const char *local_abspath;
+  svn_wc_context_t *wc_ctx;
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+  SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL /* config */,
+                                         svn_wc__adm_get_db(adm_access),
+                                         pool));
+
+  return svn_error_return(svn_wc_add_lock2(wc_ctx, local_abspath, lock, pool));
+}
+
+svn_error_t *
+svn_wc_remove_lock(const char *path,
+                   svn_wc_adm_access_t *adm_access,
+                   apr_pool_t *pool)
+{
+  const char *local_abspath;
+  svn_wc_context_t *wc_ctx;
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+  SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL /* config */,
+                                         svn_wc__adm_get_db(adm_access),
+                                         pool));
+
+  return svn_error_return(svn_wc_remove_lock2(wc_ctx, local_abspath, pool));
+}
+
 /*** From diff.c ***/
 /* Used to wrap svn_wc_diff_callbacks_t. */
 struct callbacks_wrapper_baton {
