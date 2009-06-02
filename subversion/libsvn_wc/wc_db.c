@@ -3927,3 +3927,18 @@ svn_wc__db_check_node(svn_wc__db_kind_t *kind,
 
   return svn_error_return(err);
 }
+
+
+svn_error_t *
+svn_wc__context_create_with_db(svn_wc_context_t **wc_ctx,
+                               svn_config_t *config,
+                               svn_wc__db_t *db,
+                               apr_pool_t *scratch_pool)
+{
+  SVN_ERR(svn_wc_context_create(wc_ctx, config, db->state_pool, scratch_pool));
+  SVN_ERR(svn_wc__db_close((*wc_ctx)->db, scratch_pool));
+
+  (*wc_ctx)->db = db;
+
+  return SVN_NO_ERROR;
+}

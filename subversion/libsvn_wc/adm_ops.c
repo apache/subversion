@@ -3082,21 +3082,21 @@ svn_wc_resolved_conflict4(const char *path,
                                      cancel_func, cancel_baton, pool);
 }
 
-svn_error_t *svn_wc_add_lock(const char *path, const svn_lock_t *lock,
-                             svn_wc_adm_access_t *adm_access, apr_pool_t *pool)
+svn_error_t *
+svn_wc_add_lock2(svn_wc_context_t *wc_ctx,
+                 const char *local_abspath,
+                 const svn_lock_t *lock,
+                 apr_pool_t *scratch_pool)
 {
-  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
-  const char *local_abspath;
   svn_wc__db_lock_t db_lock;
   svn_error_t *err;
   const svn_string_t *needs_lock;
 
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
   db_lock.token = lock->token;
   db_lock.owner = lock->owner;
   db_lock.comment = lock->comment;
   db_lock.date = lock->creation_date;
-  err = svn_wc__db_lock_add(db, local_abspath, &db_lock, pool);
+  err = svn_wc__db_lock_add(wc_ctx->db, local_abspath, &db_lock, scratch_pool);
   if (err)
     {
       if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
@@ -3106,29 +3106,29 @@ svn_error_t *svn_wc_add_lock(const char *path, const svn_lock_t *lock,
       svn_error_clear(err);
       return svn_error_createf(SVN_ERR_ENTRY_NOT_FOUND, NULL,
                                _("'%s' is not under version control"),
-                               svn_path_local_style(path, pool));
+                               svn_path_local_style(local_abspath,
+                                                    scratch_pool));
     }
 
   /* if svn:needs-lock is present, then make the file read-write. */
   SVN_ERR(svn_wc__internal_propget(&needs_lock, SVN_PROP_NEEDS_LOCK,
-                                   local_abspath, db, pool, pool));
+                                   local_abspath, wc_ctx->db, scratch_pool,
+                                   scratch_pool));
   if (needs_lock)
-    SVN_ERR(svn_io_set_file_read_write(path, FALSE, pool));
+    SVN_ERR(svn_io_set_file_read_write(local_abspath, FALSE, scratch_pool));
 
   return SVN_NO_ERROR;
 }
 
-svn_error_t *svn_wc_remove_lock(const char *path,
-                                svn_wc_adm_access_t *adm_access,
-                                apr_pool_t *pool)
+svn_error_t *
+svn_wc_remove_lock2(svn_wc_context_t *wc_ctx,
+                    const char *local_abspath,
+                    apr_pool_t *scratch_pool)
 {
-  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
-  const char *local_abspath;
   svn_error_t *err;
   const svn_string_t *needs_lock;
 
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
-  err = svn_wc__db_lock_remove(db, local_abspath, pool);
+  err = svn_wc__db_lock_remove(wc_ctx->db, local_abspath, scratch_pool);
   if (err)
     {
       if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
@@ -3138,18 +3138,19 @@ svn_error_t *svn_wc_remove_lock(const char *path,
       svn_error_clear(err);
       return svn_error_createf(SVN_ERR_ENTRY_NOT_FOUND, NULL,
                                _("'%s' is not under version control"),
-                               svn_path_local_style(path, pool));
+                               svn_path_local_style(local_abspath,
+                                                    scratch_pool));
     }
 
   /* if svn:needs-lock is present, then make the file read-only. */
   SVN_ERR(svn_wc__internal_propget(&needs_lock, SVN_PROP_NEEDS_LOCK,
-                                   local_abspath, db, pool, pool));
+                                   local_abspath, wc_ctx->db, scratch_pool,
+                                   scratch_pool));
   if (needs_lock)
-    SVN_ERR(svn_io_set_file_read_only(path, FALSE, pool));
+    SVN_ERR(svn_io_set_file_read_only(local_abspath, FALSE, scratch_pool));
 
   return SVN_NO_ERROR;
 }
-
 
 svn_error_t *
 svn_wc_set_changelist(const char *path,

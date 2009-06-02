@@ -5756,20 +5756,52 @@ svn_wc_match_ignore_list(const char *str,
                          apr_pool_t *pool);
 
 
-/** Add @a lock to the working copy for @a path.  @a adm_access must contain
- * a write lock for @a path.  If @a path is read-only, due to locking
- * properties, make it writable.  Perform temporary allocations in @a
- * pool. */
+/** Add @a lock to the working copy for @a local_abspath.  If @a
+ * local_abspath is read-only, due to locking properties, make it writable.
+ * Perform temporary allocations in @a scratch_pool.
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_wc_add_lock2(svn_wc_context_t *wc_ctx,
+                 const char *abspath,
+                 const svn_lock_t *lock,
+                 apr_pool_t *scratch_pool);
+
+/**
+ * Similar to svn_wc_add_lock2(), but with a @c svn_wc_adm_access_t /
+ * relative path parameter pair.
+ * 
+ * @deprecated Provided for backward compatibility with the 1.6 API.
+ * @since New in 1.2.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_add_lock(const char *path,
                 const svn_lock_t *lock,
                 svn_wc_adm_access_t *adm_access,
                 apr_pool_t *pool);
 
-/** Remove any lock from @a path.  @a adm_access must contain a
- * write-lock for @a path.  If @a path has a lock and the locking
- * so specifies, make the file read-only.  Don't return an error if @a
- * path didn't have a lock.  Perform temporary allocations in @a pool. */
+/** Remove any lock from @a local_abspath.  If @a local_abspath has a
+ * lock and the locking so specifies, make the file read-only.  Don't
+ * return an error if @a path didn't have a lock.  Perform temporary
+ * allocations in @a scratch_pool.
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_wc_remove_lock2(svn_wc_context_t *wc_ctx,
+                    const char *local_abspath,
+                    apr_pool_t *scratch_pool);
+
+/**
+ * Similar to svn_wc_remove_lock2(), but with a @c svn_wc_adm_access_t /
+ * relateive path parameter pair.
+ *
+ * @deprecated Provided for backward compatibility with the 1.6 API.
+ * @since New in 1.7.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_remove_lock(const char *path,
                    svn_wc_adm_access_t *adm_access,
