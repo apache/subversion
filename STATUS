@@ -55,15 +55,6 @@ Candidate changes:
    Votes:
      +1: stsp, arfrever
 
- * r37879
-   Fix the svnsync tests introduced by merging r37795, r37799 on Windows
-   Justification:
-     Without this patch the python testcode doesn't pass the exact
-     dumpfile to svnadmin (it removes '\r'-s). svnadmin then fails in
-     reading the property chunks.
-   Votes:
-     +1: rhuijben, arfrever
-
  * r37890 
    Fix issue #3347, "svn never times out when (public) IP changes"
    Justification:
@@ -92,3 +83,12 @@ Approved changes:
    Votes:
      +1: pburba, rhuijben, arfrever
      -0: gstein (code bloat) (before r37618)
+
+ * r37879
+   Fix the svnsync tests introduced by merging r37795, r37799 on Windows
+   Justification:
+     Without this patch the python testcode doesn't pass the exact
+     dumpfile to svnadmin (it removes '\r'-s). svnadmin then fails in
+     reading the property chunks.
+   Votes:
+     +1: rhuijben, arfrever, pburba
