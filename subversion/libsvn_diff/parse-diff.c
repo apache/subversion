@@ -16,6 +16,8 @@
  * ====================================================================
  */
 
+#include <limits.h>  /* for ULONG_MAX */
+
 #include "svn_types.h"
 #include "svn_error.h"
 #include "svn_io.h"
