@@ -214,8 +214,9 @@ typedef struct txn_vtable_t
    which root's vtable is used.  The rule is: if one of the roots is
    named "target", we use that root's vtable; otherwise, we use the
    first root argument's vtable.
-   These callbacks basically correspond to svn_fs_* functions
-   in include/svn_fs.h, see there for details. */
+   These callbacks correspond to svn_fs_* functions in include/svn_fs.h,
+   see there for details.
+   Note: delete_node() corresponds to svn_fs_delete(). */
 typedef struct root_vtable_t
 {
   /* Determining what has changed in a root */
