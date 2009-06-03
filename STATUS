@@ -92,22 +92,3 @@ Approved changes:
    Votes:
      +1: pburba, rhuijben, arfrever
      -0: gstein (code bloat) (before r37618)
-
- * r37622
-   Work around a buffer overflow bug in some APR versions (recently
-   fixed) by (ultimately) using apr_brigade_write() instead of
-   apr_brigade_vprintf() to transmit large chunks of base64-encoded
-   property data.
-   Branch:
-     ^/branches/1.6.x-r37622
-   Justification:
-     Failure case comes as a surprise, and basically blocks svnsync from
-     moving on past a troublesome revision.  Upgrading APR to a fixed
-     version is good, but not necessarily an option.  Our workaround is
-     easier to deploy.
-   Notes:
-     Because of some refactoring work done on trunk, this isn't so
-     much a backport as a reimplementation.  But merging the branch
-     should do the trick.
-   Votes:
-     +1: cmpilato, rhuijben, arfrever
