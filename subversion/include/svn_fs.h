@@ -2084,7 +2084,7 @@ typedef svn_error_t *(*svn_fs_get_locks_callback_t)(void *baton,
  * this function.
  *
  * @note On Berkeley-DB-backed filesystems, the @a get_locks_func
- * callback will invoked from within a Berkeley-DB transaction trail.
+ * callback will be invoked from within a Berkeley-DB transaction trail.
  * Implementors of the callback are, as a result, forbidden from
  * calling any svn_fs API functions which might themselves attempt to
  * start a new Berkeley DB transaction (which is most of this svn_fs

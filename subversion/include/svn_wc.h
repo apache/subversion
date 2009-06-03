@@ -5796,7 +5796,7 @@ svn_wc_remove_lock2(svn_wc_context_t *wc_ctx,
 
 /**
  * Similar to svn_wc_remove_lock2(), but with a @c svn_wc_adm_access_t /
- * relateive path parameter pair.
+ * relative path parameter pair.
  *
  * @deprecated Provided for backward compatibility with the 1.6 API.
  * @since New in 1.7.
