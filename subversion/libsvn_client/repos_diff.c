@@ -544,8 +544,6 @@ transmit_svndiff(const char *path,
                  void *file_baton,
                  apr_pool_t *pool)
 {
-  struct file_baton *fb = file_baton;
-  struct edit_baton *eb = fb->edit_baton;
   svn_txdelta_window_handler_t handler;
   svn_txdelta_stream_t *txdelta_stream;
   apr_file_t *file;
@@ -555,8 +553,8 @@ transmit_svndiff(const char *path,
 
   /* Initialize window_handler/baton to produce svndiff from txdelta
    * windows. */
-  SVN_ERR(eb->diff_editor->apply_textdelta
-          (fb, NULL, pool, &handler, &wh_baton));
+  SVN_ERR(editor->apply_textdelta(file_baton, NULL, pool,
+                                  &handler, &wh_baton));
 
   base_stream = svn_stream_empty(pool);
 
