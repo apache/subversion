@@ -142,7 +142,7 @@ struct svn_wc_context_t
 };
 
 /**
- * Just like svn_wc_context_create(), only use the provided DB to constuct
+ * Just like svn_wc_context_create(), only use the provided DB to construct
  * the context.  The result pool will be the state pool associated with
  * DB->state_pool.
  */
