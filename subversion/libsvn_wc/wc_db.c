@@ -231,7 +231,7 @@ static const char * const statements[] = {
   "select id from wcroot where local_abspath is null;",
 
   /* STMT_SELECT_REPOSITORY */
-  "select id from repository where uuid = ?1;",
+  "select id, root from repository where uuid = ?1;",
 
   /* STMT_INSERT_REPOSITORY */
   "insert into repository (root, uuid) values (?1, ?2);",
@@ -1293,10 +1293,18 @@ create_repos_id(apr_int64_t *repos_id, const char *repos_root_url,
   SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_SELECT_REPOSITORY));
   SVN_ERR(svn_sqlite__bindf(stmt, "s", repos_uuid));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
-  if (have_row)
+
+  while (have_row)
     {
-      *repos_id = svn_sqlite__column_int64(stmt, 0);
-      return svn_sqlite__reset(stmt);
+      const char *fetched_repos_root = svn_sqlite__column_text(stmt, 1, NULL);
+
+      if (strcmp(fetched_repos_root, repos_root_url) == 0)
+        {
+          *repos_id = svn_sqlite__column_int64(stmt, 0);
+          return svn_error_return(svn_sqlite__reset(stmt));
+        }
+
+      SVN_ERR(svn_sqlite__step(&have_row, stmt));
     }
   SVN_ERR(svn_sqlite__reset(stmt));
 
@@ -1311,7 +1319,7 @@ create_repos_id(apr_int64_t *repos_id, const char *repos_root_url,
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_INSERT_REPOSITORY));
   SVN_ERR(svn_sqlite__bindf(stmt, "ss", repos_root_url, repos_uuid));
-  return svn_sqlite__insert(repos_id, stmt);
+  return svn_error_return(svn_sqlite__insert(repos_id, stmt));
 }
 
 
