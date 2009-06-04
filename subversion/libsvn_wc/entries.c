@@ -60,11 +60,9 @@ static const char * const upgrade_sql[] = {
 /* This values map to the members of STATEMENTS below, and should be added
    and removed at the same time. */
 enum statement_keys {
-  STMT_INSERT_REPOSITORY,
   STMT_INSERT_BASE_NODE,
   STMT_INSERT_WORKING_NODE,
   STMT_INSERT_ACTUAL_NODE,
-  STMT_SELECT_REPOSITORY,
   STMT_SELECT_WCROOT_NULL,
   STMT_SELECT_ACTUAL_NODE,
   STMT_DELETE_ALL_WORKING,
@@ -77,10 +75,6 @@ enum statement_keys {
 };
 
 static const char * const statements[] = {
-  /* STMT_INSERT_REPOSITORY */
-  "insert into repository (root, uuid) "
-  "values (?1, ?2);",
-
   /* STMT_INSERT_BASE_NODE */
   "insert or replace into base_node "
     "(wc_id, local_relpath, repos_id, repos_relpath, parent_relpath, "
@@ -107,9 +101,6 @@ static const char * const statements[] = {
      "conflict_working, prop_reject, changelist, text_mod, "
      "tree_conflict_data) "
   "values (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11);",
-
-  /* STMT_SELECT_REPOSITORY */
-  "select id from repository where root = ?1;",
 
   /* STMT_SELECT_WCROOT_NULL */
   "select id from wcroot where local_abspath is null;",
@@ -2338,34 +2329,14 @@ entries_write_body(svn_wc__db_t *db,
   /* Get the repos ID. */
   if (this_dir->uuid != NULL)
     {
-      SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db, STMT_SELECT_REPOSITORY));
-      SVN_ERR(svn_sqlite__bindf(stmt, "s", this_dir->repos));
-      SVN_ERR(svn_sqlite__step(&have_row, stmt));
-
-      if (have_row)
-        {
-          repos_id = svn_sqlite__column_int(stmt, 0);
-        }
-      else
-        {
-          SVN_ERR(svn_sqlite__reset(stmt));
-
-          /* Insert a new row in the REPOSITORY table for using this new,
-             and currently unknown, repository.
-
-             ### does this need to be done on a per-entry basis instead of
-             ### the per-directory way we do it now?  me thinks yes...
-             ###
-             ### when do we harvest repository entries which no longer have
-             ### any members?  */
-          SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db,
-                                            STMT_INSERT_REPOSITORY));
-          SVN_ERR(svn_sqlite__bindf(stmt, "ss", this_dir->repos,
-                                    this_dir->uuid));
-          SVN_ERR(svn_sqlite__insert(&repos_id, stmt));
-        }
-
-      SVN_ERR(svn_sqlite__reset(stmt));
+      /* ### does this need to be done on a per-entry basis instead of
+         ### the per-directory way we do it now?  me thinks yes...
+         ###
+         ### when do we harvest repository entries which no longer have
+         ### any members?  */
+      SVN_ERR(svn_wc__db_repos_ensure(&repos_id, db, local_abspath,
+                                      this_dir->repos, this_dir->uuid,
+                                      scratch_pool));
       repos_root = this_dir->repos;
     }
   else

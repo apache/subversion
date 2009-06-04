@@ -803,6 +803,31 @@ svn_wc__db_pristine_decref(int *new_refcount,
 
 /** @} */
 
+
+/**
+ * @defgroup svn_wc__db_repos  Repository information management
+ * @{
+ */
+
+/**
+ * Ensure an entry for the repository at REPOS_ROOT_URL with UUID exists
+ * in DB for LOCAL_ABSPATH, either by finding the correct row, or inserting
+ * a new row.  In either case return the id in *REPOS_ID.
+ *
+ * Use SCRATCH_POOL for temporary allocations.
+ */
+svn_error_t *
+svn_wc__db_repos_ensure(apr_int64_t *repos_id,
+                        svn_wc__db_t *db,
+                        const char *local_abspath,
+                        const char *repos_root_url,
+                        const char *repos_uuid,
+                        apr_pool_t *scratch_pool);
+                        
+
+/** @} */
+
+
 /**
  * @defgroup svn_wc__db_op  Operations on WORKING tree
  * @{

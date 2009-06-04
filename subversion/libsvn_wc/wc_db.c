@@ -2366,6 +2366,27 @@ svn_wc__db_pristine_decref(int *new_refcount,
 
 
 svn_error_t *
+svn_wc__db_repos_ensure(apr_int64_t *repos_id,
+                        svn_wc__db_t *db,
+                        const char *local_abspath,
+                        const char *repos_root_url,
+                        const char *repos_uuid,
+                        apr_pool_t *scratch_pool)
+{
+  svn_wc__db_pdh_t *pdh;
+  const char *local_relpath;
+
+  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
+                              svn_sqlite__mode_readwrite,
+                              scratch_pool, scratch_pool));
+
+  return svn_error_return(create_repos_id(repos_id, repos_root_url,
+                                          repos_uuid, pdh->wcroot->sdb,
+                                          scratch_pool));
+}
+
+
+svn_error_t *
 svn_wc__db_op_copy(svn_wc__db_t *db,
                    const char *src_abspath,
                    const char *dst_abspath,
