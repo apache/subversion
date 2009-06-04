@@ -2303,7 +2303,6 @@ entries_write_body(svn_wc__db_t *db,
 {
   const svn_wc_entry_t *this_dir;
   svn_sqlite__stmt_t *stmt;
-  svn_boolean_t have_row;
   apr_hash_index_t *hi;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   const apr_array_header_t *children;
