@@ -161,8 +161,8 @@ svn_wc_relocate3(const char *path,
       svn_pool_clear(subpool);
 
       if (recurse && (entry->kind == svn_node_dir)
-          && (! entry->deleted || (entry->schedule == svn_wc_schedule_add))
-          && ! entry->absent
+          && ((! entry->deleted) || (entry->schedule == svn_wc_schedule_add))
+          && (! entry->absent)
           && (entry->depth != svn_depth_exclude))
         {
           svn_wc_adm_access_t *subdir_access;
