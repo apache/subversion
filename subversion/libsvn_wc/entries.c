@@ -109,7 +109,7 @@ static const char * const statements[] = {
   "values (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11);",
 
   /* STMT_SELECT_REPOSITORY */
-  "select id, root from repository where root = ?1;",
+  "select id from repository where root = ?1;",
 
   /* STMT_SELECT_WCROOT_NULL */
   "select id from wcroot where local_abspath is null;",
@@ -2345,10 +2345,6 @@ entries_write_body(svn_wc__db_t *db,
       if (have_row)
         {
           repos_id = svn_sqlite__column_int(stmt, 0);
-
-          /* Note: keep this out of the iterpool. We need it to survive
-             across iterations.  */
-          repos_root = svn_sqlite__column_text(stmt, 1, scratch_pool);
         }
       else
         {
@@ -2367,10 +2363,10 @@ entries_write_body(svn_wc__db_t *db,
           SVN_ERR(svn_sqlite__bindf(stmt, "ss", this_dir->repos,
                                     this_dir->uuid));
           SVN_ERR(svn_sqlite__insert(&repos_id, stmt));
-          repos_root = this_dir->repos;
         }
 
       SVN_ERR(svn_sqlite__reset(stmt));
+      repos_root = this_dir->repos;
     }
   else
     {
