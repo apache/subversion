@@ -83,11 +83,3 @@ Approved changes:
    Votes:
      +1: pburba, rhuijben, arfrever
      -0: gstein (code bloat) (before r37618)
-
- * r37890 
-   Fix issue #3347, "svn never times out when (public) IP changes"
-   Justification:
-     Simple fix. Helps automated svn client jobs using ra_svn in
-     noticing various network-layer problems and giving up instead
-     of just sitting there forever, waiting to be killed.
-   +1: stsp, arfrever, rhuijben
