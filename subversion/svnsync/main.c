@@ -529,6 +529,9 @@ normalize_string(const svn_string_t **str,
 {
   *was_normalized = FALSE;
 
+  if (*str == NULL || (*str)->data == NULL)
+    return SVN_NO_ERROR;
+
   /* Detect inconsistent line ending style simply by looking
      for carriage return (\r) characters. */
   if (strchr((*str)->data, '\r') != NULL)
