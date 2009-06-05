@@ -61,14 +61,25 @@ Candidate changes:
      In some use cases can lead to seriously broken merges as it appears
      some merges have been performed which have not and others have not
      which have.  Sorta defeats the purpose of merge tracking...
-   +1: pburba, rhuijben
+   Votes:
+     +1: pburba, rhuijben
 
  * r37939
    Fix a segfault in r37795 and add regression test.
    Justification:
      This segfault already is in 1.6.x. That's when svnsync tries to sync
      the deletion of an svn:prop. People would positively go mad.
-   +1: neels
+   Votes:
+     +1: neels
+
+ * r37941
+   Bump apr and apr-util versions included in deps to latest.
+   Justification:
+     apr-util 1.3.7 fixes a potential DoS flaw in mod_dav_svn.  Exploit is
+     in the wild, and although we don't need to update the scripts on the
+     branch, it'd be kinda nice.
+   Votes:
+     +1: hwright
 
 Approved changes:
 =================
