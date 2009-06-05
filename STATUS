@@ -65,21 +65,3 @@ Candidate changes:
 
 Approved changes:
 =================
-
- * r37491, r37593, r37618
-   Another merge performance improvement: Reduce contacts with server when
-   a subtree with mergeinfo has non-inheritable mergeinfo and the subtree's
-   immediate children have no explicit mergeinfo.
-   Justification:
-     If you hit this use case and the and the subtree in question has a *lot*
-     of immediate children without mergeinfo then this change will avoid
-     needless round trips for *each* of those children.
-   Notes:
-     There is a call to svn_uri_basename() in
-     inherit_implicit_mereginfo_form_parent() that must be changed to
-     svn_path_basename() since the former is new for 1.7.
-     r37491 is the fix, r37593 is a typo fix, r37618 is some code refactoring
-     to address gstein's bloat concern.
-   Votes:
-     +1: pburba, rhuijben, arfrever
-     -0: gstein (code bloat) (before r37618)

@@ -120,27 +120,33 @@ svn_client__record_wc_mergeinfo(const char *wcpath,
 
 /*** Retrieving mergeinfo. ***/
 
-/* Adjust merge sources in MERGEINFO (which is assumed to be non-NULL). */
-static APR_INLINE void
-adjust_mergeinfo_source_paths(svn_mergeinfo_t mergeinfo, const char *walk_path,
-                              svn_mergeinfo_t wc_mergeinfo, apr_pool_t *pool)
+svn_error_t *
+svn_client__adjust_mergeinfo_source_paths(svn_mergeinfo_t adjusted_mergeinfo,
+                                          const char *rel_path,
+                                          svn_mergeinfo_t mergeinfo,
+                                          apr_pool_t *pool)
 {
   apr_hash_index_t *hi;
   const void *merge_source;
   void *rangelist;
   const char *path;
+  apr_array_header_t *copied_rangelist;
 
-  for (hi = apr_hash_first(NULL, wc_mergeinfo); hi; hi = apr_hash_next(hi))
+  SVN_ERR_ASSERT(adjusted_mergeinfo);
+  SVN_ERR_ASSERT(mergeinfo);
+
+  for (hi = apr_hash_first(NULL, mergeinfo); hi; hi = apr_hash_next(hi))
     {
       /* Copy inherited mergeinfo into our output hash, adjusting the
          merge source as appropriate. */
       apr_hash_this(hi, &merge_source, NULL, &rangelist);
-      path = svn_path_join((const char *) merge_source, walk_path,
-                           apr_hash_pool_get(mergeinfo));
-      /* ### If pool has a different lifetime than mergeinfo->pool,
-         ### this use of "rangelist" will be a problem... */
-      apr_hash_set(mergeinfo, path, APR_HASH_KEY_STRING, rangelist);
+      path = svn_path_join((const char *) merge_source, rel_path, pool);
+      copied_rangelist = svn_rangelist_dup((apr_array_header_t *)(rangelist),
+                                           pool);
+      apr_hash_set(adjusted_mergeinfo, path, APR_HASH_KEY_STRING,
+                   copied_rangelist);
     }
+  return SVN_NO_ERROR;
 }
 
 
@@ -260,8 +266,10 @@ svn_client__get_wc_mergeinfo(svn_mergeinfo_t *mergeinfo,
         {
           *inherited = (wc_mergeinfo != NULL);
           *mergeinfo = apr_hash_make(pool);
-          adjust_mergeinfo_source_paths(*mergeinfo, walk_path, wc_mergeinfo,
-                                        pool);
+          SVN_ERR(svn_client__adjust_mergeinfo_source_paths(*mergeinfo,
+                                                            walk_path,
+                                                            wc_mergeinfo,
+                                                            pool));
         }
       else
         {
@@ -572,9 +580,9 @@ should_elide_mergeinfo(svn_boolean_t *elides,
 
       /* If we need to adjust the paths in PARENT_MERGEINFO do it now. */
       if (path_suffix)
-        adjust_mergeinfo_source_paths(path_tweaked_parent_mergeinfo,
-                                      path_suffix, parent_mergeinfo,
-                                      subpool);
+        SVN_ERR(svn_client__adjust_mergeinfo_source_paths(
+          path_tweaked_parent_mergeinfo,
+          path_suffix, parent_mergeinfo, subpool));
       else
         path_tweaked_parent_mergeinfo = parent_mergeinfo;
 
