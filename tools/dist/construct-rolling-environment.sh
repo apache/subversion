@@ -5,8 +5,8 @@ AUTOCONF=autoconf-2.63
 LIBTOOL=libtool-1.5.26
 SWIG=swig-1.3.36
 
-APR=apr-1.3.3
-APR_UTIL=apr-util-1.3.4
+APR=apr-1.3.5
+APR_UTIL=apr-util-1.3.7
 NEON=neon-0.28.4
 SERF=serf-0.3.0
 ZLIB=zlib-1.2.3
