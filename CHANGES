@@ -16,7 +16,7 @@ http://svn.collab.net/repos/svn/tags/1.6.3
   * improve correctness of 'svn mergeinfo' (issue #3126)
   * decrease the amount of memory needed for large commits (r37894, -6)
   * work around an APR buffer overflow seen by svnsync (r37622)
-  * let svnserve timeout if the public IP changes (issue #3347)
+  * ra_svn clients now use TCP keep-alives if available (issue #3347)
   * improve 'svn merge' perf by reducing server contact (r37491, -593, -618)
   * fixed: potential segfault with noop file merges (r37779)
   * fixed: incorrect output with 'svn blame -g' (r37719, -23, -41)
