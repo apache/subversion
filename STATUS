@@ -63,5 +63,12 @@ Candidate changes:
      which have.  Sorta defeats the purpose of merge tracking...
    +1: pburba, rhuijben
 
+ * r37939
+   Fix a segfault in r37795 and add regression test.
+   Justification:
+     This segfault already is in 1.6.x. That's when svnsync tries to sync
+     the deletion of an svn:prop. People would positively go mad.
+   +1: neels
+
 Approved changes:
 =================
