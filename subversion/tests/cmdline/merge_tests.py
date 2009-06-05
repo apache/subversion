@@ -9599,7 +9599,6 @@ def basic_reintegrate(sbox):
   # change.
   A_path = os.path.join(wc_dir, "A")
   expected_output = wc.State(A_path, {
-    ''             : Item(status=' U'),
     'mu'           : Item(status='U '),
     })
   k_expected_status = wc.State(A_path, {
@@ -9815,7 +9814,6 @@ def reintegrate_with_rename(sbox):
   # change.
   A_path = os.path.join(wc_dir, "A")
   expected_output = wc.State(A_path, {
-    ''             : Item(status=' U'),
     'mu'           : Item(status='U '),
     'D/G/tauprime' : Item(status='A '),
     })
@@ -14830,7 +14828,6 @@ def reintegrate_with_subtree_mergeinfo(sbox):
                                      wc_dir)
   expected_status.tweak(wc_rev=14)
   expected_output = wc.State(A_path, {
-    ''          : Item(status=' U'),
     'B/E/alpha' : Item(status='U '),
     'mu'        : Item(status='UU'),
     'D'         : Item(status=' U'),
@@ -15056,7 +15053,6 @@ def reintegrate_with_subtree_mergeinfo(sbox):
   svntest.actions.run_and_verify_svn(None, ["At revision 19.\n"], [], 'up',
                                      wc_dir)
   expected_output = wc.State(A_path, {
-    ''              : Item(status=' U'),
     'B/E/alpha'     : Item(status='U '),
     'mu'            : Item(status='UU'),
     'D'             : Item(status=' U'),
@@ -15529,6 +15525,181 @@ def noop_file_merge(sbox):
                                      [], 'pg', SVN_PROP_MERGEINFO,
                                      chi_COPY_path)
 
+#----------------------------------------------------------------------
+def multiple_reintegrates_from_the_same_branch(sbox):
+  "multiple reintegrates create self-referential"
+
+  # Make A_COPY branch in r2, and do a few more commits to A in r3-6.
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  expected_disk, expected_status = set_up_branch(sbox)
+
+  # Some paths we'll care about
+  A_path              = os.path.join(wc_dir, "A")
+  mu_path             = os.path.join(wc_dir, "A", "mu")
+  A_COPY_path         = os.path.join(wc_dir, "A_COPY")
+  psi_COPY_path       = os.path.join(wc_dir, "A_COPY", "D", "H", "psi")
+  Feature_branch_path = os.path.join(wc_dir, "A_FEATURE_BRANCH")
+  Feature_beta_path   = os.path.join(wc_dir, "A_FEATURE_BRANCH", "B", "E",
+                                     "beta")
+
+  # Create a feature branch and do multiple reintegrates from the branch
+  # without deleting and recreating it.  We don't recommend doing this,
+  # but regardless, it shouldn't create self-referential mergeinfo on
+  # the reintegrate target.
+  #
+  # r7 - Create the feature branch.
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)  
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'copy', A_path, Feature_branch_path)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'ci', '-m', 'Make a feature branch',
+                                     wc_dir)
+
+  # r8 - Make a change under 'A'.
+  svntest.main.file_write(mu_path, "New trunk content.\n")
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci', '-m',
+                                     "A text change under 'A'",
+                                     wc_dir)
+
+  # r9 - Make a change on the feature branch.  
+  svntest.main.file_write(Feature_beta_path, "New branch content.\n")
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci', '-m',
+                                     "A text change on the feature branch",
+                                     wc_dir)
+
+  # r10 - Sync merge all changes from 'A' to the feature branch.
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  svntest.actions.run_and_verify_svn(None, None, [], 'merge',
+                                     sbox.repo_url + '/A',
+                                     Feature_branch_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci', '-m',
+                                     "Sync merge 'A' to feature branch",
+                                     wc_dir)
+
+  # r11 - Reintegrate the feature branch back to 'A'.
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  svntest.actions.run_and_verify_svn(None, None, [], 'merge', '--reintegrate',
+                                     sbox.repo_url + '/A_FEATURE_BRANCH',
+                                     A_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci', '-m',
+                                     "Reintegrate feature branch back to 'A'",
+                                     wc_dir)
+
+  # r12 - Do a --record-only merge from 'A' to the feature branch so we
+  # don't try to merge r11 from trunk during the next sync merge.
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  svntest.actions.run_and_verify_svn(None, None, [], 'merge',
+                                     '--record-only',
+                                     sbox.repo_url + '/A',
+                                     Feature_branch_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci', '-m',
+                                     "Sync merge 'A' to feature branch",
+                                     wc_dir)
+
+  # r13 - Make another change on the feature branch.  
+  svntest.main.file_write(Feature_beta_path, "Even newer branch content.\n")
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci', '-m',
+                                     "Different text on the feature branch",
+                                     wc_dir)
+
+  # r14 - Sync merge all changes from 'A' to the feature branch in
+  # preparation for a second reintegrate from this branch.
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  svntest.actions.run_and_verify_svn(None, None, [], 'merge',
+                                     sbox.repo_url + '/A',
+                                     Feature_branch_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci', '-m',
+                                     "2nd Sync merge 'A' to feature branch",
+                                     wc_dir)
+
+  # r15 - Reintegrate the feature branch back to 'A' a second time.
+  # No self-referential mergeinfo should be applied on 'A'.
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  expected_output = wc.State(A_path, {
+     #'' : Item(status=' U'), #<-- no self-referential mergeinfo applied!
+    'B/E/beta' : Item(status='U '),
+    })
+  expected_status = wc.State(A_path, {
+    ''          : Item(status=' M'),
+    'B'         : Item(status='  '),
+    'mu'        : Item(status='  '),
+    'B/E'       : Item(status='  '),
+    'B/E/alpha' : Item(status='  '),
+    'B/E/beta'  : Item(status='M '),
+    'B/lambda'  : Item(status='  '),
+    'B/F'       : Item(status='  '),
+    'C'         : Item(status='  '),
+    'D'         : Item(status='  '),
+    'D/G'       : Item(status='  '),
+    'D/G/pi'    : Item(status='  '),
+    'D/G/rho'   : Item(status='  '),
+    'D/G/tau'   : Item(status='  '),
+    'D/gamma'   : Item(status='  '),
+    'D/H'       : Item(status='  '),
+    'D/H/chi'   : Item(status='  '),
+    'D/H/psi'   : Item(status='  '),
+    'D/H/omega' : Item(status='  '),
+    })
+  expected_status.tweak(wc_rev=14)
+  expected_disk = wc.State('', {
+    ''          : Item(props={SVN_PROP_MERGEINFO :
+                              # Prior to r????? we'd get this
+                              # self-referential mergeinfo:
+                              #'/A:2-6\n/A_FEATURE_BRANCH:7-14'}),
+                              '/A_FEATURE_BRANCH:7-14'}),
+    'B'         : Item(),
+    'mu'        : Item("New trunk content.\n"),
+    'B/E'       : Item(),
+    'B/E/alpha' : Item("This is the file 'alpha'.\n"),
+    'B/E/beta'  : Item("Even newer branch content.\n"),
+    'B/lambda'  : Item("This is the file 'lambda'.\n"),
+    'B/F'       : Item(),
+    'C'         : Item(),
+    'D'         : Item(),
+    'D/G'       : Item(),
+    'D/G/pi'    : Item("This is the file 'pi'.\n"),
+    'D/G/rho'   : Item("New content"),
+    'D/G/tau'   : Item("This is the file 'tau'.\n"),
+    'D/gamma'   : Item("This is the file 'gamma'.\n"),
+    'D/H'       : Item(),
+    'D/H/chi'   : Item("This is the file 'chi'.\n"),
+    'D/H/psi'   : Item("New content"),
+    'D/H/omega' : Item("New content"),
+    })
+  expected_skip = wc.State(A_path, { })
+  svntest.actions.run_and_verify_merge(A_path, None, None,
+                                       sbox.repo_url + '/A_FEATURE_BRANCH',
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, None, None, None,
+                                       None, 1, 1, '--reintegrate')
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci', '-m',
+                                     "2nd Reintegrate feature branch back to 'A'",
+                                     wc_dir)
+
+  # Demonstrate the danger of any self-referential mergeinfo on trunk.
+  #
+  # Merge all available revisions except r3 from 'A' to 'A_COPY'.
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  svntest.actions.run_and_verify_svn(None, None, [], 'merge', '-r3:HEAD',
+                                     sbox.repo_url + '/A',
+                                     A_COPY_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci', '-m',
+                                     "Merge -r3:HEAD from 'A' to 'A_COPY'",
+                                     wc_dir)
+  # No self-referential mergeinfo should have been carried on 'A_COPY' from
+  # 'A' that would prevent the following merge from being operative.
+  svntest.actions.run_and_verify_svn(None,
+                                     expected_merge_output([[2,3]], 'U    ' +
+                                                           psi_COPY_path +
+                                                           '\n'),
+                                     [],
+                                     'merge', sbox.repo_url + '/A',
+                                     A_COPY_path)
+
 ########################################################################
 # Run the tests
 
@@ -15741,6 +15912,8 @@ test_list = [ None,
               tree_conflicts_merge_edit_onto_missing,
               tree_conflicts_merge_del_onto_missing,
               SkipUnless(noop_file_merge,
+                         server_has_mergeinfo),
+              SkipUnless(multiple_reintegrates_from_the_same_branch,
                          server_has_mergeinfo),
              ]
 

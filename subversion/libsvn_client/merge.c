@@ -234,6 +234,8 @@ typedef struct merge_cmd_baton_t {
   svn_boolean_t target_missing_child; /* Whether working copy target of the
                                          merge is missing any immediate
                                          children. */
+  svn_boolean_t reintegrate_merge;    /* Whether this is a --reintegrate
+                                         merge or not. */
   const char *added_path;             /* Set to the dir path whenever the
                                          dir is added as a child of a
                                          versioned dir (dry-run only) */
@@ -628,8 +630,9 @@ split_mergeinfo_on_revision(svn_mergeinfo_t *younger_mergeinfo,
    to be added to the working copy PATH.  ADM_ACCESS and MERGE_B are cascaded
    from the arguments of the same name in merge_props_changed().
 
-   If mergeinfo is not being honored and MERGE_B->SAME_REPOS is true, do
-   nothing.  If MERGE_B->SAME_REPOS is false then filter out all mergeinfo
+   If mergeinfo is not being honored, MERGE_B->SAME_REPOS is true, and
+   MERGE_B->REINTEGRATE_MERGE is FALSE do nothing.  Otherwise, if
+   MERGE_B->SAME_REPOS is false, then filter out all mergeinfo
    property additions (Issue #3383) from *PROPS.  If MERGE_B->SAME_REPOS is
    true then filter out mergeinfo property additions to PATH when those
    additions refer to the same line of history as PATH as described below.  
@@ -656,9 +659,13 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
   const svn_wc_entry_t *target_entry;
 
   /* If we aren't honoring mergeinfo and this is a merge from the
-     same repository, then get outta here. */
+     same repository, then get outta here.  If this is a reintegrate
+     merge or a merge from a foreign repository we still need to
+     filter regardless of whether we are honoring mergeinfo or not. */
   mergeinfo_behavior(&honor_mergeinfo, NULL, merge_b);
-  if (! honor_mergeinfo && merge_b->same_repos)
+  if (! honor_mergeinfo
+      && merge_b->same_repos
+      && ! merge_b->reintegrate_merge)
     return SVN_NO_ERROR;
 
   /* If this is a merge from the same repository and PATH itself is
@@ -6888,6 +6895,8 @@ ensure_ra_session_url(svn_ra_session_t **ra_session,
    FORCE, DRY_RUN, RECORD_ONLY, IGNORE_ANCESTRY, DEPTH, MERGE_OPTIONS,
    and CTX are as described in the docstring for svn_client_merge_peg3().
 
+   REINTEGRATE_MERGE is TRUE if this is a reintegrate merge.
+
    *USE_SLEEP will be set TRUE if a sleep is required to ensure timestamp
    integrity, *USE_SLEEP will be unchanged if no sleep is required.
 */
@@ -6903,6 +6912,7 @@ do_merge(apr_array_header_t *merge_sources,
          svn_boolean_t force,
          svn_boolean_t dry_run,
          svn_boolean_t record_only,
+         svn_boolean_t reintegrate_merge,
          svn_depth_t depth,
          const apr_array_header_t *merge_options,
          svn_boolean_t *use_sleep,
@@ -6962,6 +6972,7 @@ do_merge(apr_array_header_t *merge_sources,
   merge_cmd_baton.sources_ancestral = sources_ancestral;
   merge_cmd_baton.ctx = ctx;
   merge_cmd_baton.target_missing_child = FALSE;
+  merge_cmd_baton.reintegrate_merge = reintegrate_merge;
   merge_cmd_baton.target = target;
   merge_cmd_baton.pool = subpool;
   merge_cmd_baton.merge_options = merge_options;
@@ -7172,7 +7183,7 @@ merge_cousins_and_supplement_mergeinfo(const char *target_wcpath,
       APR_ARRAY_PUSH(faux_sources, merge_source_t *) = faux_source;
       SVN_ERR(do_merge(faux_sources, target_wcpath, entry, adm_access,
                        FALSE, TRUE, same_repos,
-                       ignore_ancestry, force, dry_run, FALSE,
+                       ignore_ancestry, force, dry_run, FALSE, TRUE,
                        depth, merge_options, use_sleep, ctx, pool));
     }
   else if (! same_repos)
@@ -7191,11 +7202,11 @@ merge_cousins_and_supplement_mergeinfo(const char *target_wcpath,
     {
       SVN_ERR(do_merge(add_sources, target_wcpath, entry,
                        adm_access, TRUE, TRUE, same_repos,
-                       ignore_ancestry, force, dry_run, TRUE,
+                       ignore_ancestry, force, dry_run, TRUE, TRUE,
                        depth, merge_options, use_sleep, ctx, pool));
       SVN_ERR(do_merge(remove_sources, target_wcpath, entry,
                        adm_access, TRUE, TRUE, same_repos,
-                       ignore_ancestry, force, dry_run, TRUE,
+                       ignore_ancestry, force, dry_run, TRUE, TRUE,
                        depth, merge_options, use_sleep, ctx, pool));
     }
   return SVN_NO_ERROR;
@@ -7448,7 +7459,8 @@ svn_client_merge3(const char *source1,
   err = do_merge(merge_sources, target_wcpath, entry, adm_access,
                  ancestral, related, same_repos,
                  ignore_ancestry, force, dry_run,
-                 record_only, depth, merge_options, &use_sleep, ctx, pool);
+                 record_only, FALSE, depth, merge_options,
+                 &use_sleep, ctx, pool);
 
   if (use_sleep)
     svn_io_sleep_for_timestamps(target_wcpath, pool);
@@ -8422,7 +8434,8 @@ svn_client_merge_peg3(const char *source,
      sources are both ancestral and related.) */
   err = do_merge(merge_sources, target_wcpath, entry, adm_access,
                  TRUE, TRUE, same_repos, ignore_ancestry, force, dry_run,
-                 record_only, depth, merge_options, &use_sleep, ctx, pool);
+                 record_only, FALSE, depth, merge_options,
+                 &use_sleep, ctx, pool);
 
   if (use_sleep)
     svn_io_sleep_for_timestamps(target_wcpath, pool);
