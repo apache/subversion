@@ -2,7 +2,7 @@
  * wc_db.c :  manipulating the administrative database
  *
  * ====================================================================
- * Copyright (c) 2008 CollabNet.  All rights reserved.
+ * Copyright (c) 2008-2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -231,7 +231,7 @@ static const char * const statements[] = {
   "select id from wcroot where local_abspath is null;",
 
   /* STMT_SELECT_REPOSITORY */
-  "select id, root from repository where uuid = ?1;",
+  "select id from repository where uuid = ?1 and root = ?2;",
 
   /* STMT_INSERT_REPOSITORY */
   "insert into repository (root, uuid) values (?1, ?2);",
@@ -1291,20 +1291,13 @@ create_repos_id(apr_int64_t *repos_id, const char *repos_root_url,
   svn_boolean_t have_row;
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_SELECT_REPOSITORY));
-  SVN_ERR(svn_sqlite__bindf(stmt, "s", repos_uuid));
+  SVN_ERR(svn_sqlite__bindf(stmt, "ss", repos_uuid, repos_root_url));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
 
-  while (have_row)
+  if (have_row)
     {
-      const char *fetched_repos_root = svn_sqlite__column_text(stmt, 1, NULL);
-
-      if (strcmp(fetched_repos_root, repos_root_url) == 0)
-        {
-          *repos_id = svn_sqlite__column_int64(stmt, 0);
-          return svn_error_return(svn_sqlite__reset(stmt));
-        }
-
-      SVN_ERR(svn_sqlite__step(&have_row, stmt));
+      *repos_id = svn_sqlite__column_int64(stmt, 0);
+      return svn_error_return(svn_sqlite__reset(stmt));
     }
   SVN_ERR(svn_sqlite__reset(stmt));
 
