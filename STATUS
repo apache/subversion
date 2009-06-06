@@ -64,7 +64,7 @@ Candidate changes:
    Votes:
      +1: pburba, rhuijben
 
- * r37939
+ * r37939, r37946
    Fix a segfault in r37795 and add regression test.
    Justification:
      This segfault already is in 1.6.x. That's when svnsync tries to sync
@@ -73,6 +73,8 @@ Candidate changes:
      The fix is trivial and has a test ready:
      cmdline/svnsync_tests.py 27
      So it's really easy to vote on this one.
+     r37946 addresses pburba's comment on dev@. Now bailing when an
+     an svn_string_t.data is NULL instead of ignoring it.
    Votes:
      +1: neels
 
