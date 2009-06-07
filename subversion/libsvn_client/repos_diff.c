@@ -100,7 +100,7 @@ struct edit_baton {
   apr_off_t savepoint;
 
   /* Diff editor baton */
-  svn_delta_editor_t *svnpatch_callbacks;
+  svn_delta_editor_t *svnpatch_editor;
 
   /* A token holder, helps to build the svnpatch. */
   int next_token;
@@ -869,7 +869,7 @@ delete_entry(const char *path,
     }
 
   if (eb->svnpatch_stream)
-    SVN_ERR(eb->svnpatch_callbacks->delete_entry
+    SVN_ERR(eb->svnpatch_editor->delete_entry
             (path, SVN_INVALID_REVNUM, pb, pool));
 
   return SVN_NO_ERROR;
@@ -1266,7 +1266,7 @@ close_file(void *file_baton,
 
       if (binary_file && eb->svnpatch_stream)
         SVN_ERR(transmit_svndiff(b->path_end_revision,
-                                 eb->svnpatch_callbacks, b, pool));
+                                 eb->svnpatch_editor, b, pool));
     }
 
 
@@ -1323,7 +1323,7 @@ close_file(void *file_baton,
       if (binary_file && !b->added)
           svnpatch_release_savepoint(b, svn_node_file);
 
-      SVN_ERR(eb->svnpatch_callbacks->close_file
+      SVN_ERR(eb->svnpatch_editor->close_file
               (b, binary_file ? text_checksum : NULL, b->pool));
     }
 
@@ -1435,7 +1435,7 @@ close_directory(void *dir_baton,
     }
 
   if (eb->svnpatch_stream)
-    eb->svnpatch_callbacks->close_directory(b, pool);
+    eb->svnpatch_editor->close_directory(b, pool);
 
   return SVN_NO_ERROR;
 }
@@ -1463,7 +1463,7 @@ change_file_prop(void *file_baton,
   /* Restrict to Regular Properties. */
   if (eb->svnpatch_stream
       && svn_property_kind(NULL, name) == svn_prop_regular_kind)
-    SVN_ERR(eb->svnpatch_callbacks->change_file_prop
+    SVN_ERR(eb->svnpatch_editor->change_file_prop
             (b, name, value, pool));
 
   return SVN_NO_ERROR;
@@ -1491,7 +1491,7 @@ change_dir_prop(void *dir_baton,
   /* Restrict to Regular Properties. */
   if (eb->svnpatch_stream
       && svn_property_kind(NULL, name) == svn_prop_regular_kind)
-    SVN_ERR(eb->svnpatch_callbacks->change_dir_prop
+    SVN_ERR(eb->svnpatch_editor->change_dir_prop
             (dir_baton, name, value, pool));
 
   return SVN_NO_ERROR;
@@ -1506,7 +1506,7 @@ close_edit(void *edit_baton,
   struct edit_baton *eb = edit_baton;
 
   if (eb->svnpatch_stream)
-      SVN_ERR(eb->svnpatch_callbacks->close_edit(eb, pool));
+      SVN_ERR(eb->svnpatch_editor->close_edit(eb, pool));
 
   svn_pool_destroy(eb->pool);
 
@@ -1579,22 +1579,22 @@ absent_file(const char *path,
  * drive is being performed by transmit_svndiff() against binary files
  * to generate svndiffs and txdelta Editor Commands though. */
 static void
-get_svnpatch_callbacks(svn_delta_editor_t **callbacks,
+get_svnpatch_editor(svn_delta_editor_t **editor,
                        apr_pool_t *pool)
 {
-  svn_delta_editor_t *cb;
+  svn_delta_editor_t *ed;
 
-  cb = svn_delta_default_editor(pool);
+  ed = svn_delta_default_editor(pool);
+   
+  ed->delete_entry = svnpatch_delete_entry;
+  ed->close_directory = svnpatch_close_directory;
+  ed->apply_textdelta = svnpatch_apply_textdelta;
+  ed->change_file_prop = svnpatch_change_file_prop;
+  ed->change_dir_prop = svnpatch_change_dir_prop;
+  ed->close_file = svnpatch_close_file;
+  ed->close_edit = svnpatch_close_edit;
 
-  cb->delete_entry = svnpatch_delete_entry;
-  cb->close_directory = svnpatch_close_directory;
-  cb->apply_textdelta = svnpatch_apply_textdelta;
-  cb->change_file_prop = svnpatch_change_file_prop;
-  cb->change_dir_prop = svnpatch_change_dir_prop;
-  cb->close_file = svnpatch_close_file;
-  cb->close_edit = svnpatch_close_edit;
-
-  *callbacks = cb;
+  *editor = ed;
 }
 
 /* Create a repository diff editor and baton.  */
@@ -1635,7 +1635,7 @@ svn_client__get_diff_editor(const char *target,
   eb->notify_baton = notify_baton;
   eb->next_token = 0;
   eb->savepoint = 0;
-  eb->svnpatch_callbacks = NULL;
+  eb->svnpatch_editor = NULL;
   eb->svnpatch_stream = NULL;
   eb->svnpatch_file = svnpatch_file;
 
@@ -1644,7 +1644,7 @@ svn_client__get_diff_editor(const char *target,
       eb->svnpatch_stream =
         svn_stream_from_aprfile2(eb->svnpatch_file,
                                  FALSE, eb->pool);
-      get_svnpatch_callbacks(&eb->svnpatch_callbacks, eb->pool);
+      get_svnpatch_editor(&eb->svnpatch_editor, eb->pool);
     }
 
   tree_editor->set_target_revision = set_target_revision;
