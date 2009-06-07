@@ -78,6 +78,9 @@ Candidate changes:
    Votes:
      +1: neels
 
+Approved changes:
+=================
+
  * r37941
    Bump apr and apr-util versions included in deps to latest.
    Justification:
@@ -85,7 +88,4 @@ Candidate changes:
      in the wild, and although we don't need to update the scripts on the
      branch, it'd be kinda nice.
    Votes:
-     +1: hwright, blair
-
-Approved changes:
-=================
+     +1: hwright, blair, stylesen
