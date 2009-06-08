@@ -47,17 +47,6 @@ Candidate changes:
 Approved changes:
 =================
 
- * r37827
-   If the configure script check for bindtextdomain() in libintl fails,
-   try again with -liconv.
-   Justification:
-     Fixes NLS support detection at least on OpenBSD, and maybe more systems.
-   Notes:
-     I patched this bug ages ago for the OpenBSD Subversion package
-     but never committed a fix for it here (my bad).
-   Votes:
-     +1: stsp, arfrever, jwhitlock
-
  * r37939, r37946
    Fix a segfault in r37795 and add regression test.
    Justification:
