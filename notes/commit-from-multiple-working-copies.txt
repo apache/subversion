@@ -54,22 +54,106 @@ at a time and break them into several transactions may be not a good idea. And
 I suggest that we should constrain committing files in the same repository.
  
 1. We receives list of paths to commit.
+
+In subversion\svn\commit-cmd.c: function 
+svn_error_t *
+svn_cl__commit(apr_getopt_t *os,
+               void *baton,
+               apr_pool_t *pool)
+receives the file list first.
+
+Then in E:\subversion\subversion\libsvn_client\commit.c: function
+svn_error_t *
+svn_client_commit4(svn_commit_info_t **commit_info_p,
+                   const apr_array_header_t *targets,
+                   svn_depth_t depth,
+                   svn_boolean_t keep_locks,
+                   svn_boolean_t keep_changelists,
+                   const apr_array_header_t *changelists,
+                   const apr_hash_t *revprop_table,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *pool)
+uses the file list do commit. 
  
 2. All paths are grouped by wc root path, so we get a map of wc_root:paths
 pairs - one for each working copy.
  
+Here use an apr_hash_t * hash of const char * paths, keyed on working copy 
+path directory names to store the wc_root:paths map. It would be a local 
+variable of the function svn_client_commit4, because it is used several times
+in the function. And it is allocated from pool by using apr_hash_make(pool).
+
+It will be created after the paths are checked for non-url form.
+
 3. For each pair in Map we create svn_wc_adm_access_t- wc_access.
- 
+
+Here we use function
+svn_error_t *
+svn_wc_adm_open3(svn_wc_adm_access_t **adm_access,
+                 svn_wc_adm_access_t *associated,
+                 const char *path,
+                 svn_boolean_t write_lock,
+                 int levels_to_lock,
+                 svn_cancel_func_t cancel_func,
+                 void *cancel_baton,
+                 apr_pool_t *pool)
+to create svn_wc_adm_access_t.
+
 4. For each wc_access we collect items to commit. Each item refers to its
 wc_access. 
- 
+
+Here we use function
+svn_error_t *
+svn_client__harvest_committables(apr_hash_t **committables,
+                                 apr_hash_t **lock_tokens,
+                                 svn_wc_adm_access_t *parent_adm,
+                                 apr_array_header_t *targets,
+                                 svn_depth_t depth,
+                                 svn_boolean_t just_locked,
+                                 const apr_array_header_t *changelists,
+                                 svn_client_ctx_t *ctx,
+                                 apr_pool_t *pool)
+to collect commit items for each svn_wc_adm_access_t. here use an apr_hash_t * 
+hash of apr_array_header_t *arrays (of svn_client_commit_item_t * structures),
+keyed
+on wc_access to store the map.
+
 5. If there are more than one working copies, then we check all items by its
 repos_url and repos_uuid (fetching it from repos if not available). If they are
 not from the same repository, return with error, otherwise, combine them into
 one group.  
 
+For each working copy we get its repos_url and repos_uuid and group the commit
+items by repos_url and repos_uuid. If there is more than one group, return 
+error which indicate that the committing files are not from the same 
+repository.
+
 6. Commit these items as a transaction.
+
+Here we can use function
+svn_error_t *
+svn_client__do_commit(const char *base_url,
+                      apr_array_header_t *commit_items,
+                      svn_wc_adm_access_t *adm_access,
+                      const svn_delta_editor_t *editor,
+                      void *edit_baton,
+                      const char *notify_path_prefix,
+                      apr_hash_t **tempfiles,
+                      apr_hash_t **checksums,
+                      svn_client_ctx_t *ctx,
+                      apr_pool_t *pool)
+to commit commit_items.
  
 7. During commit and in post commit code we use that wc_access references that
 is stored in each commit item to update corresponding working copy, write and
 execute log files and then finally to close all open directories.
+
+Here we can use function
+svn_error_t *
+svn_wc_process_committed_queue(svn_wc_committed_queue_t *queue,
+                               svn_wc_adm_access_t *adm_access,
+                               svn_revnum_t new_revnum,
+                               const char *rev_date,
+                               const char *rev_author,
+                               apr_pool_t *pool);
+to update working copyes.
