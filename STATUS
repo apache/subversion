@@ -53,7 +53,7 @@ Candidate changes:
      I patched this bug ages ago for the OpenBSD Subversion package
      but never committed a fix for it here (my bad).
    Votes:
-     +1: stsp, arfrever
+     +1: stsp, arfrever, jwhitlock
 
  * r37939, r37946
    Fix a segfault in r37795 and add regression test.
