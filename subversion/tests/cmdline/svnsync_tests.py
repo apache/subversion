@@ -750,6 +750,12 @@ def copy_bad_line_endings(sbox):
   run_test(sbox, "copy-bad-line-endings.dump",
            exp_dump_file_name="copy-bad-line-endings.expected.dump")
 
+#----------------------------------------------------------------------
+
+def delete_svn_props(sbox):
+  "copy with svn:prop deletions"
+  run_test(sbox, "delete-svn-props.dump")
+
 
 ########################################################################
 # Run the tests
@@ -787,6 +793,7 @@ test_list = [ None,
               info_synchronized,
               info_not_synchronized,
               copy_bad_line_endings,
+              delete_svn_props,
              ]
 
 if __name__ == '__main__':
