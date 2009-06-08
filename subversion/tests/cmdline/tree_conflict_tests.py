@@ -868,10 +868,263 @@ def force_del_tc_inside(sbox):
                         expected_output, expected_status, None,
                         wc_dir)
 
+#----------------------------------------------------------------------
+
+def keep_local_del_tc_is_target(sbox):
+  "--keep-local del on tree-conflicted targets"
+  #          A/C
+  # A  +  C  A/C/dir   <-  delete with --keep-local
+  # A  +  C  A/C/file  <-  delete with --keep-local
+  ### This test currently XFails because the tree-conflicts on dir and
+  ### file remain in the WC but were supposed to be unversioned by a commit
+  ### (because of a delete --keep-local).
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  C   = os.path.join(wc_dir, "A", "C")
+  dir = os.path.join(wc_dir, "A", "C", "dir")
+  file = os.path.join(wc_dir, "A", "C", "file")
+
+  # Add dir
+  main.run_svn(None, 'mkdir', dir)
+
+  # Add file
+  content = "This is the file 'file'.\n"
+  main.file_append(file, content)
+  main.run_svn(None, 'add', file)
+
+  main.run_svn(None, 'commit', '-m', 'Add dir and file', wc_dir)
+
+  # Remove dir and file in r3.
+  main.run_svn(None, 'delete', dir, file)
+  main.run_svn(None, 'commit', '-m', 'Remove dir and file', wc_dir)
+
+  # Warp back to -r2, dir and file coming back.
+  main.run_svn(None, 'update', '-r2', wc_dir)
+
+  # Set a meaningless prop on each dir and file
+  run_and_verify_svn(None,
+                     ["property 'propname' set on '" + dir + "'\n"],
+                     [], 'ps', 'propname', 'propval', dir)
+  run_and_verify_svn(None,
+                     ["property 'propname' set on '" + file + "'\n"],
+                     [], 'ps', 'propname', 'propval', file)
+
+  # Update WC to HEAD, tree conflicts result dir and file
+  # because there are local mods on the props.
+  expected_output = wc.State(wc_dir, {
+    'A/C/dir' : Item(status='  ', treeconflict='C'),
+    'A/C/file' : Item(status='  ', treeconflict='C'),
+    })
+
+  expected_disk = main.greek_state.copy()
+  expected_disk.add({
+    'A/C/dir' : Item(props={'propname' : 'propval'}),
+    'A/C/file' : Item(contents=content, props={'propname' : 'propval'}),
+    })
+
+  expected_status = get_virginal_state(wc_dir, 2)
+  expected_status.tweak(wc_rev='3')
+  expected_status.add({
+    'A/C/dir' : Item(status='A ', wc_rev='-', copied='+', treeconflict='C'),
+    'A/C/file' : Item(status='A ', wc_rev='-', copied='+', treeconflict='C'),
+    })
+  run_and_verify_update(wc_dir,
+                        expected_output, expected_disk, expected_status,
+                        None, None, None, None, None, 1,
+                        wc_dir)  
+
+  # Delete nodes with --keep-local, in effect disarming the tree-conflicts.
+  run_and_verify_svn(None,
+                     ['D         ' + dir + '\n',
+                      'D         ' + file + '\n'],
+                     [],
+                     'delete', dir, file, '--keep-local')
+
+  expected_status.tweak('A/C/dir', status='? ', copied=None, wc_rev=None)
+  expected_status.tweak('A/C/file', status='? ', copied=None, wc_rev=None)
+  run_and_verify_status(wc_dir, expected_status)
+
+  # Commit, remove the "disarmed" tree-conflict.
+  expected_output = wc.State(wc_dir, {})
+
+  ### This is why this test currently XFails. We want the conflicts
+  ### on the unversioned nodes to go away.
+  expected_status.remove('A/C/dir', 'A/C/file')
+
+  run_and_verify_commit(wc_dir,
+                        expected_output, expected_status, None,
+                        wc_dir)
+
+#----------------------------------------------------------------------
+
+def force_del_tc_is_target(sbox):
+  "--force del on tree-conflicted targets"
+  #          A/C
+  # A  +  C  A/C/dir   <-  delete with --force
+  # A  +  C  A/C/file  <-  delete with --force
+  ### This test currently XFails because the tree-conflicts on dir and
+  ### file remain in the WC but were supposed to be unversioned by a commit
+  ### (because of a delete --force).
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  C   = os.path.join(wc_dir, "A", "C")
+  dir = os.path.join(wc_dir, "A", "C", "dir")
+  file = os.path.join(wc_dir, "A", "C", "file")
+
+  # Add dir
+  main.run_svn(None, 'mkdir', dir)
+
+  # Add file
+  content = "This is the file 'file'.\n"
+  main.file_append(file, content)
+  main.run_svn(None, 'add', file)
+
+  main.run_svn(None, 'commit', '-m', 'Add dir and file', wc_dir)
+
+  # Remove dir and file in r3.
+  main.run_svn(None, 'delete', dir, file)
+  main.run_svn(None, 'commit', '-m', 'Remove dir and file', wc_dir)
+
+  # Warp back to -r2, dir and file coming back.
+  main.run_svn(None, 'update', '-r2', wc_dir)
+
+  # Set a meaningless prop on each dir and file
+  run_and_verify_svn(None,
+                     ["property 'propname' set on '" + dir + "'\n"],
+                     [], 'ps', 'propname', 'propval', dir)
+  run_and_verify_svn(None,
+                     ["property 'propname' set on '" + file + "'\n"],
+                     [], 'ps', 'propname', 'propval', file)
+
+  # Update WC to HEAD, tree conflicts result dir and file
+  # because there are local mods on the props.
+  expected_output = wc.State(wc_dir, {
+    'A/C/dir' : Item(status='  ', treeconflict='C'),
+    'A/C/file' : Item(status='  ', treeconflict='C'),
+    })
+
+  expected_disk = main.greek_state.copy()
+  expected_disk.add({
+    'A/C/dir' : Item(props={'propname' : 'propval'}),
+    'A/C/file' : Item(contents=content, props={'propname' : 'propval'}),
+    })
+
+  expected_status = get_virginal_state(wc_dir, 2)
+  expected_status.tweak(wc_rev='3')
+  expected_status.add({
+    'A/C/dir' : Item(status='A ', wc_rev='-', copied='+', treeconflict='C'),
+    'A/C/file' : Item(status='A ', wc_rev='-', copied='+', treeconflict='C'),
+    })
+  run_and_verify_update(wc_dir,
+                        expected_output, expected_disk, expected_status,
+                        None, None, None, None, None, 1,
+                        wc_dir)  
+
+  # Delete nodes with --force, in effect disarming the tree-conflicts.
+  run_and_verify_svn(None,
+                     ['D         ' + dir + '\n',
+                      'D         ' + file + '\n'],
+                     [],
+                     'delete', dir, file, '--force')
+
+  expected_status.tweak('A/C/dir', status='! ', copied=None, wc_rev=None)
+  expected_status.tweak('A/C/file', status='! ', copied=None, wc_rev=None)
+  run_and_verify_status(wc_dir, expected_status)
+
+  # Commit, remove the "disarmed" tree-conflict.
+  expected_output = wc.State(wc_dir, {})
+
+  ### This is why this test currently XFails. We want the conflicts
+  ### in the unversioned nodes to go away.
+  expected_status.remove('A/C/dir', 'A/C/file')
+
+  run_and_verify_commit(wc_dir,
+                        expected_output, expected_status, None,
+                        wc_dir)
+
+#----------------------------------------------------------------------
+
+def query_absent_tree_conflicted_dir(sbox):
+  "query an unversioned tree-conflicted dir"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Some paths we'll care about
+  C_path    = os.path.join(wc_dir, "A", "C")
+  C_C_path = os.path.join(wc_dir, "A", "C", "C")
+
+  # Add a directory A/C/C as r2.
+  main.run_svn(None, 'mkdir', C_C_path)
+  main.run_svn(None, 'commit', '-m', 'Add directory A/C/C', wc_dir)
+
+  # Remove that directory A/C/C as r3.
+  main.run_svn(None, 'delete', C_C_path)
+  main.run_svn(None, 'commit', '-m', 'Remove directory A/C/C', wc_dir)
+
+  # Warp back to -r2 with the directory added.
+  main.run_svn(None, 'update', '-r2', wc_dir)
+
+  # Set a meaningless prop on A/C/C
+  run_and_verify_svn(None,
+                     ["property 'propname' set on '" + C_C_path + "'\n"],
+                     [], 'ps', 'propname', 'propval', C_C_path)
+
+  # Update WC to HEAD, a tree conflict results on A/C/C because of the
+  # working prop on A/C/C.
+  expected_output = wc.State(wc_dir, {
+    'A/C/C' : Item(status='  ', treeconflict='C'),
+    })
+  expected_disk = main.greek_state.copy()
+  expected_disk.add({'A/C/C' : Item(props={'propname' : 'propval'})})
+  expected_status = get_virginal_state(wc_dir, 1)
+  expected_status.tweak(wc_rev='3')
+  expected_status.add({'A/C/C' : Item(status='A ',
+                                      wc_rev='-',
+                                      copied='+',
+                                      treeconflict='C')})
+  run_and_verify_update(wc_dir,
+                        expected_output, expected_disk, expected_status,
+                        None, None, None, None, None, 1,
+                        wc_dir)  
+
+  # Delete A/C with --keep-local, in effect disarming the tree-conflict.
+  run_and_verify_svn(None,
+                     ['D         ' + C_C_path + '\n',
+                      'D         ' + C_path + '\n'],
+                     [],
+                     'delete', C_path, '--keep-local')
+
+  expected_status.tweak('A/C', status='D ')
+  expected_status.tweak('A/C/C', status='? ', copied=None, wc_rev=None)
+  run_and_verify_status(wc_dir, expected_status)
+
+  # Try to access the absent tree-conflict as explicit target.
+  # They should succeed without error. We don't care what they return.
+  ### Currently, these fail like
+  ## CMD: svn status -v -u -q
+  ## [...]
+  ## subversion/svn/status-cmd.c:248: (apr_err=155035)
+  ## subversion/svn/util.c:953: (apr_err=155035)
+  ## subversion/libsvn_client/status.c:270: (apr_err=155035)
+  ## subversion/libsvn_wc/lock.c:607: (apr_err=155035)
+  ## subversion/libsvn_wc/entries.c:1607: (apr_err=155035)
+  ## subversion/libsvn_wc/wc_db.c:3288: (apr_err=155035)
+  ## svn: Expected node '/.../tree_conflict_tests-20/A/C' to be added.
+
+  # using status:
+  run_and_verify_status(C_C_path, None)
+
+  # using info:
+  run_and_verify_svn(None, None, [], 'info', C_C_path)
+
 
 #######################################################################
 # Run the tests
-
 
 # list all tests here, starting with None:
 test_list = [ None,
@@ -894,6 +1147,9 @@ test_list = [ None,
               merge_dir_add_onto_not_none,
               keep_local_del_tc_inside,
               XFail(force_del_tc_inside),
+              XFail(keep_local_del_tc_is_target),
+              XFail(force_del_tc_is_target),
+              XFail(query_absent_tree_conflicted_dir),
              ]
 
 if __name__ == '__main__':
