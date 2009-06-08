@@ -44,6 +44,9 @@ Candidate changes:
      +1: arfrever
      -0: rhuijben, cmpilato (Introduces new features and changes output)
 
+Approved changes:
+=================
+
  * r37827
    If the configure script check for bindtextdomain() in libintl fails,
    try again with -liconv.
@@ -54,6 +57,15 @@ Candidate changes:
      but never committed a fix for it here (my bad).
    Votes:
      +1: stsp, arfrever, jwhitlock
+
+ * r37931
+   Stop propagation of self-referential mergeinfo via --reintegrate merges.
+   Justification:
+     In some use cases can lead to seriously broken merges as it appears
+     some merges have been performed which have not and others have not
+     which have.  Sorta defeats the purpose of merge tracking...
+   Votes:
+     +1: pburba, rhuijben, arfrever
 
  * r37939, r37946
    Fix a segfault in r37795 and add regression test.
@@ -67,20 +79,8 @@ Candidate changes:
      r37946 addresses pburba's comment on dev@. Now bailing when an
      an svn_string_t.data is NULL instead of ignoring it.
    Votes:
-     +1: neels, arfrever
-
-Approved changes:
-=================
-
- * r37931
-   Stop propagation of self-referential mergeinfo via --reintegrate merges.
-   Justification:
-     In some use cases can lead to seriously broken merges as it appears
-     some merges have been performed which have not and others have not
-     which have.  Sorta defeats the purpose of merge tracking...
-   Votes:
-     +1: pburba, rhuijben, arfrever
-
+     +1: neels, arfrever, pburba
+     
  * r37941
    Bump apr and apr-util versions included in deps to latest.
    Justification:
