@@ -919,7 +919,9 @@ mark_tree(svn_wc_adm_access_t *adm_access,
 
   /* Uncommitted directories (schedule add) that are to be scheduled for
      deletion are a special case, they don't need to be changed as they
-     will be removed from their parent's entry list. */
+     will be removed from their parent's entry list.
+     The files and directories are left on the disk in this special
+     case, so KEEP_LOCAL doesn't need to be set either. */
   if (! (entry->schedule == svn_wc_schedule_add
          && schedule == svn_wc_schedule_delete))
   {
@@ -934,14 +936,14 @@ mark_tree(svn_wc_adm_access_t *adm_access,
         tmp_entry.copied = copied;
         this_dir_flags |= SVN_WC__ENTRY_MODIFY_COPIED;
       }
-  }
 
-  /* Set keep_local on the "this dir", if requested. */
-  if (modify_flags & SVN_WC__ENTRY_MODIFY_KEEP_LOCAL)
-    {
-      tmp_entry.keep_local = keep_local;
-      this_dir_flags |= SVN_WC__ENTRY_MODIFY_KEEP_LOCAL;
-    }
+    /* Set keep_local on the "this dir", if requested. */
+    if (modify_flags & SVN_WC__ENTRY_MODIFY_KEEP_LOCAL)
+      {
+        tmp_entry.keep_local = keep_local;
+        this_dir_flags |= SVN_WC__ENTRY_MODIFY_KEEP_LOCAL;
+      }
+  }
 
   /* Modify this_dir entry if requested. */
   if (this_dir_flags)
@@ -2653,7 +2655,8 @@ svn_wc_remove_from_revision_control(svn_wc_adm_access_t *adm_access,
                function is called by svn_wc_crop_tree(). */
             dir_entry = apr_hash_get(parent_entries, base_name,
                                      APR_HASH_KEY_STRING);
-            if (dir_entry->depth != svn_depth_exclude)
+            if (dir_entry
+                && dir_entry->depth != svn_depth_exclude)
               {
                 SVN_ERR(svn_wc__entry_remove(db, local_abspath, pool));
                 apr_hash_set(parent_entries, base_name, APR_HASH_KEY_STRING,
