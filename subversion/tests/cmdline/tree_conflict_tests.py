@@ -21,10 +21,13 @@ import sys, re, os, traceback
 
 # Our testing module
 import svntest
-from svntest import main,wc
+from svntest import main, wc, verify
 from svntest.actions import run_and_verify_svn
 from svntest.actions import run_and_verify_commit
 from svntest.actions import run_and_verify_resolved
+from svntest.actions import run_and_verify_update
+from svntest.actions import run_and_verify_status
+from svntest.actions import get_virginal_state
 
 # (abbreviation)
 Skip = svntest.testcase.Skip
@@ -682,6 +685,189 @@ def merge_dir_add_onto_not_none(sbox):
   test_tc_merge(sbox, d_adds, br_scen = d_adds)  ### + f_adds (at path "D")
   test_tc_merge(sbox2, d_adds, wc_scen = d_adds)  ### + f_adds (at path "D")
 
+#----------------------------------------------------------------------
+
+def keep_local_del_tc_inside(sbox):
+  "--keep-local del on dir with TCs inside"
+  #          A/C       <-  delete with --keep-local
+  # A  +  C  A/C/dir
+  # A  +  C  A/C/file
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  C   = os.path.join(wc_dir, "A", "C")
+  dir = os.path.join(wc_dir, "A", "C", "dir")
+  file = os.path.join(wc_dir, "A", "C", "file")
+
+  # Add dir
+  main.run_svn(None, 'mkdir', dir)
+
+  # Add file
+  content = "This is the file 'file'.\n"
+  main.file_append(file, content)
+  main.run_svn(None, 'add', file)
+
+  main.run_svn(None, 'commit', '-m', 'Add dir and file', wc_dir)
+
+  # Remove dir and file in r3.
+  main.run_svn(None, 'delete', dir, file)
+  main.run_svn(None, 'commit', '-m', 'Remove dir and file', wc_dir)
+
+  # Warp back to -r2, dir and file coming back.
+  main.run_svn(None, 'update', '-r2', wc_dir)
+
+  # Set a meaningless prop on each dir and file
+  run_and_verify_svn(None,
+                     ["property 'propname' set on '" + dir + "'\n"],
+                     [], 'ps', 'propname', 'propval', dir)
+  run_and_verify_svn(None,
+                     ["property 'propname' set on '" + file + "'\n"],
+                     [], 'ps', 'propname', 'propval', file)
+
+  # Update WC to HEAD, tree conflicts result dir and file
+  # because there are local mods on the props.
+  expected_output = wc.State(wc_dir, {
+    'A/C/dir' : Item(status='  ', treeconflict='C'),
+    'A/C/file' : Item(status='  ', treeconflict='C'),
+    })
+
+  expected_disk = main.greek_state.copy()
+  expected_disk.add({
+    'A/C/dir' : Item(props={'propname' : 'propval'}),
+    'A/C/file' : Item(contents=content, props={'propname' : 'propval'}),
+    })
+
+  expected_status = get_virginal_state(wc_dir, 2)
+  expected_status.tweak(wc_rev='3')
+  expected_status.add({
+    'A/C/dir' : Item(status='A ', wc_rev='-', copied='+', treeconflict='C'),
+    'A/C/file' : Item(status='A ', wc_rev='-', copied='+', treeconflict='C'),
+    })
+  run_and_verify_update(wc_dir,
+                        expected_output, expected_disk, expected_status,
+                        None, None, None, None, None, 1,
+                        wc_dir)  
+
+  # Delete A/C with --keep-local, in effect disarming the tree-conflicts.
+  run_and_verify_svn(None,
+                     verify.UnorderedOutput(['D         ' + C + '\n',
+                                             'D         ' + dir + '\n',
+                                             'D         ' + file + '\n']),
+                     [], 'delete', C, '--keep-local')
+
+  # Verify deletion status
+  # Note: the tree conflicts are still in the status.
+  expected_status.tweak('A/C', status='D ')
+  expected_status.tweak('A/C/dir', status='? ', copied=None, wc_rev=None)
+  expected_status.tweak('A/C/file', status='? ', copied=None, wc_rev=None)
+
+  run_and_verify_status(wc_dir, expected_status)
+
+  # Commit, remove the "disarmed" tree-conflict.
+  expected_output = wc.State(wc_dir, { 'A/C' : Item(verb='Deleting') })
+
+  expected_status.remove('A/C', 'A/C/dir', 'A/C/file')
+
+  run_and_verify_commit(wc_dir,
+                        expected_output, expected_status, None,
+                        wc_dir)
+
+#----------------------------------------------------------------------
+
+def force_del_tc_inside(sbox):
+  "--force del on dir with TCs inside"
+  ### This test is currently marked XFail because we don't remove tree
+  ### conflicts upon "delete --force" yet. They linger and block
+  ### the commit.
+  ### This should be handled the same as with --keep-local, but
+  ### the code does not have the proper antennae for that yet.
+  ### Fixing that separately.
+
+  #          A/C       <-  delete with --force
+  # A  +  C  A/C/dir
+  # A  +  C  A/C/file
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  C   = os.path.join(wc_dir, "A", "C")
+  dir = os.path.join(wc_dir, "A", "C", "dir")
+  file = os.path.join(wc_dir, "A", "C", "file")
+
+  # Add dir
+  main.run_svn(None, 'mkdir', dir)
+
+  # Add file
+  content = "This is the file 'file'.\n"
+  main.file_append(file, content)
+  main.run_svn(None, 'add', file)
+
+  main.run_svn(None, 'commit', '-m', 'Add dir and file', wc_dir)
+
+  # Remove dir and file in r3.
+  main.run_svn(None, 'delete', dir, file)
+  main.run_svn(None, 'commit', '-m', 'Remove dir and file', wc_dir)
+
+  # Warp back to -r2, dir and file coming back.
+  main.run_svn(None, 'update', '-r2', wc_dir)
+
+  # Set a meaningless prop on each dir and file
+  run_and_verify_svn(None,
+                     ["property 'propname' set on '" + dir + "'\n"],
+                     [], 'ps', 'propname', 'propval', dir)
+  run_and_verify_svn(None,
+                     ["property 'propname' set on '" + file + "'\n"],
+                     [], 'ps', 'propname', 'propval', file)
+
+  # Update WC to HEAD, tree conflicts result dir and file
+  # because there are local mods on the props.
+  expected_output = wc.State(wc_dir, {
+    'A/C/dir' : Item(status='  ', treeconflict='C'),
+    'A/C/file' : Item(status='  ', treeconflict='C'),
+    })
+
+  expected_disk = main.greek_state.copy()
+  expected_disk.add({
+    'A/C/dir' : Item(props={'propname' : 'propval'}),
+    'A/C/file' : Item(contents=content, props={'propname' : 'propval'}),
+    })
+
+  expected_status = get_virginal_state(wc_dir, 2)
+  expected_status.tweak(wc_rev='3')
+  expected_status.add({
+    'A/C/dir' : Item(status='A ', wc_rev='-', copied='+', treeconflict='C'),
+    'A/C/file' : Item(status='A ', wc_rev='-', copied='+', treeconflict='C'),
+    })
+  run_and_verify_update(wc_dir,
+                        expected_output, expected_disk, expected_status,
+                        None, None, None, None, None, 1,
+                        wc_dir)  
+
+  # Delete A/C with --force, in effect disarming the tree-conflicts.
+  run_and_verify_svn(None,
+                     verify.UnorderedOutput(['D         ' + C + '\n',
+                                             'D         ' + dir + '\n',
+                                             'D         ' + file + '\n']),
+                     [], 'delete', C, '--force')
+
+  # Verify deletion status
+  # Note: the tree conflicts are still in the status.
+  expected_status.tweak('A/C', status='D ')
+  expected_status.tweak('A/C/dir', status='! ', copied=None, wc_rev=None)
+  expected_status.tweak('A/C/file', status='! ', copied=None, wc_rev=None)
+  
+  run_and_verify_status(wc_dir, expected_status)
+
+  # Commit, remove the "disarmed" tree-conflict.
+  expected_output = wc.State(wc_dir, { 'A/C' : Item(verb='Deleting') })
+
+  expected_status.remove('A/C', 'A/C/dir', 'A/C/file')
+
+  run_and_verify_commit(wc_dir,
+                        expected_output, expected_status, None,
+                        wc_dir)
+
 
 #######################################################################
 # Run the tests
@@ -706,6 +892,8 @@ test_list = [ None,
               XFail(merge_dir_del_onto_not_same),
               merge_dir_del_onto_not_dir,
               merge_dir_add_onto_not_none,
+              keep_local_del_tc_inside,
+              XFail(force_del_tc_inside),
              ]
 
 if __name__ == '__main__':

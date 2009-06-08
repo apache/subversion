@@ -1065,7 +1065,7 @@ test_list = [ None,
               revert_with_changelists,
               update_with_changelists,
               tree_conflicts_and_changelists_on_commit1,
-              XFail(tree_conflicts_and_changelists_on_commit2),
+              tree_conflicts_and_changelists_on_commit2,
               tree_conflicts_and_changelists_on_commit3,
              ]
 
