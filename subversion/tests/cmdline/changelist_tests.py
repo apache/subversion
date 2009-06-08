@@ -842,6 +842,214 @@ def update_with_changelists(sbox):
                                         "--depth", "infinity",
                                         wc_dir)
 
+def tree_conflicts_and_changelists_on_commit1(sbox):
+  "tree conflicts, changelists and commit"
+  svntest.actions.build_greek_tree_conflicts(sbox)
+  wc_dir = sbox.wc_dir
+
+  iota = os.path.join(wc_dir, "iota")
+  rho = os.path.join(wc_dir, "A", "D", "G", "rho")
+
+  # This file will ultimately be committed
+  svntest.main.file_append(iota, "More stuff in iota")
+
+  # Verify that the commit is blocked when we include a tree-conflicted
+  # item.
+  svntest.main.run_svn(None, "changelist", "list", iota, rho)
+
+  expected_error = ("svn: Aborting commit: '.*" + rho
+                    + "' remains in .*conflict")
+
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        None, None,
+                                        expected_error,
+                                        wc_dir,
+                                        "--changelist",
+                                        "list")
+
+  # Now, test if we can commit iota without those tree-conflicts
+  # getting in the way.
+  svntest.main.run_svn(None, "changelist", "--remove", rho)
+
+  expected_output = svntest.wc.State(wc_dir, {
+    'iota' : Item(verb='Sending'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak('A/D/G/pi', status='D ', treeconflict='C')
+  expected_status.tweak('A/D/G/tau', status='! ', treeconflict='C',
+                        wc_rev=None)
+  expected_status.tweak('A/D/G/rho', status='A ', copied='+',
+                        treeconflict='C', wc_rev='-')
+  expected_status.tweak('iota', wc_rev=3, status='  ')
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None,
+                                        wc_dir,
+                                        "--changelist",
+                                        "list")
+
+
+def tree_conflicts_and_changelists_on_commit2(sbox):
+  "more tree conflicts, changelists and commit"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  iota = os.path.join(wc_dir, "iota")
+  A = os.path.join(wc_dir, "A",)
+  C = os.path.join(A, "C")
+
+  # Make a tree-conflict on A/C:
+  # Remove it, warp back, add a prop, update.
+  svntest.main.run_svn(None, 'delete', C)
+
+  expected_output = svntest.verify.UnorderedRegexOutput(
+                                     ["Deleting.*" + C], False)
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'commit', '-m', 'delete A/C', C)
+
+  expected_output = svntest.verify.UnorderedRegexOutput(
+                                     "A.*" + C, False)
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'update', C, "-r1")
+
+  expected_output = svntest.verify.UnorderedRegexOutput(
+                                     ".*'propname' set on '" + C + "'", False)
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'propset', 'propname', 'propval', C)
+
+  expected_output = svntest.verify.UnorderedRegexOutput(
+                                     "   C " + C, False)
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'update', wc_dir)
+
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak('A/C', status='A ', copied='+',
+                        treeconflict='C', wc_rev='-')
+
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # So far so good. We have a tree-conflict on an absent dir A/C.
+  # To twist the situation a little, delete it with --keep-local.
+  # The result is the unversioning of the tree-conflict, as bad as it gets.
+  # ### Note: As tree-conflict behaviour changes, we might not be able
+  #     to produce such bad specimen with --keep-local or --force anymore.
+  #     The aim here is to tickle bail_on_tree_conflicted_children()'s
+  #     changelists if-clause in libsvn_client/commit_util.c.
+  svntest.main.run_svn(None, 'delete', C, '--keep-local')
+  expected_status.tweak('A/C', status='? ', copied=None, wc_rev=None)
+
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # Verify that the current situation does not commit.
+  expected_error = "svn: Aborting commit:.* remains in .*conflict";
+
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        None, None,
+                                        expected_error,
+                                        wc_dir)
+
+  # Now try to commit with a changelist, not letting the 
+  # tree-conflict get in the way.
+  svntest.main.file_append(iota, "More stuff in iota")
+  svntest.main.run_svn(None, "changelist", "list", iota)
+
+  expected_output = svntest.wc.State(wc_dir, {
+    'iota' : Item(verb='Sending'),
+    })
+
+  expected_status.tweak('iota', wc_rev=3, status='  ')
+  
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None,
+                                        wc_dir,
+                                        "--changelist",
+                                        "list")
+
+
+def tree_conflicts_and_changelists_on_commit3(sbox):
+  "more tree conflicts, changelists and commit"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  iota = os.path.join(wc_dir, "iota")
+  A = os.path.join(wc_dir, "A",)
+  C = os.path.join(A, "C")
+
+  # Make a tree-conflict on A/C:
+  # Remove it, warp back, add a prop, update.
+  svntest.main.run_svn(None, 'delete', C)
+
+  expected_output = svntest.verify.UnorderedRegexOutput(
+                                     ["Deleting.*" + C], False)
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'commit', '-m', 'delete A/C', C)
+
+  expected_output = svntest.verify.UnorderedRegexOutput(
+                                     "A.*" + C, False)
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'update', C, "-r1")
+
+  expected_output = svntest.verify.UnorderedRegexOutput(
+                                     ".*'propname' set on '" + C + "'", False)
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'propset', 'propname', 'propval', C)
+
+  expected_output = svntest.verify.UnorderedRegexOutput(
+                                     "   C " + C, False)
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'update', wc_dir)
+
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak('A/C', status='A ', copied='+',
+                        treeconflict='C', wc_rev='-')
+
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # So far so good. We have a tree-conflict on an absent dir A/C.
+  # To twist the situation a little, delete it with --force.
+  # The result is the unversioning of the tree-conflict, as bad as it gets.
+  # ### Note: As tree-conflict behaviour changes, we might not be able
+  #     to produce such bad specimen with --keep-local or --force anymore.
+  #     The aim here is to tickle bail_on_tree_conflicted_children()'s
+  #     changelists if-clause in libsvn_client/commit_util.c.
+  svntest.main.run_svn(None, 'delete', C, '--force')
+  expected_status.tweak('A/C', status='! ', copied=None, wc_rev=None)
+
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # Verify that the current situation does not commit.
+  expected_error = "svn: Aborting commit:.* remains in .*conflict";
+
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        None, None,
+                                        expected_error,
+                                        wc_dir)
+
+  # Now try to commit with a changelist, not letting the 
+  # tree-conflict get in the way.
+  svntest.main.file_append(iota, "More stuff in iota")
+  svntest.main.run_svn(None, "changelist", "list", iota)
+
+  expected_output = svntest.wc.State(wc_dir, {
+    'iota' : Item(verb='Sending'),
+    })
+
+  expected_status.tweak('iota', wc_rev=3, status='  ')
+  
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None,
+                                        wc_dir,
+                                        "--changelist",
+                                        "list")
 
 ########################################################################
 # Run the tests
@@ -856,6 +1064,9 @@ test_list = [ None,
               propmods_with_changelists,
               revert_with_changelists,
               update_with_changelists,
+              tree_conflicts_and_changelists_on_commit1,
+              XFail(tree_conflicts_and_changelists_on_commit2),
+              tree_conflicts_and_changelists_on_commit3,
              ]
 
 if __name__ == '__main__':

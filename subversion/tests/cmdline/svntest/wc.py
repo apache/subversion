@@ -293,15 +293,20 @@ class State:
     raise svntest.tree.SVNTreeUnequal
 
   def tweak_for_entries_compare(self):
-    for item in self.desc.values():
+    for path, item in self.desc.items():
       if item.status:
-        # when reading the entry structures, we don't examine for text or
-        # property mods, so clear those flags. we also do not examine the
-        # filesystem, so we cannot detect missing files.
-        if item.status[0] in 'M!':
-          item.status = ' ' + item.status[1]
-        if item.status[1] == 'M':
-          item.status = item.status[0] + ' '
+        # If this is an unversioned tree-conflict, remove it.
+        # These are only in their parents' THIS_DIR, they don't have entries.
+        if item.status[0] in '!?' and item.treeconflict == 'C':
+          del self.desc[path]
+        else:
+          # when reading the entry structures, we don't examine for text or
+          # property mods, so clear those flags. we also do not examine the
+          # filesystem, so we cannot detect missing files.
+          if item.status[0] in 'M!':
+            item.status = ' ' + item.status[1]
+          if item.status[1] == 'M':
+            item.status = item.status[0] + ' '
       if item.writelocked:
         # we don't contact the repository, so our only information is what
         # is in the working copy. 'K' means we have one and it matches the
