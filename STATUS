@@ -58,15 +58,6 @@ Approved changes:
    Votes:
      +1: stsp, arfrever, jwhitlock
 
- * r37931
-   Stop propagation of self-referential mergeinfo via --reintegrate merges.
-   Justification:
-     In some use cases can lead to seriously broken merges as it appears
-     some merges have been performed which have not and others have not
-     which have.  Sorta defeats the purpose of merge tracking...
-   Votes:
-     +1: pburba, rhuijben, arfrever
-
  * r37939, r37946
    Fix a segfault in r37795 and add regression test.
    Justification:
