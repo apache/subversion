@@ -15464,13 +15464,14 @@ def tree_conflicts_merge_del_onto_missing(sbox):
 
   svntest.actions.deep_trees_run_tests_scheme_for_merge(sbox,
     [ DeepTreesTestCase(
-               "local_tree_missing_incoming_leaf_edit",
+               "local_tree_missing_incoming_leaf_del",
                svntest.actions.deep_trees_rmtree,
                leaf_del,
                expected_output,
                expected_disk,
                expected_status,
                expected_skip,
+               commit_block_string = ".*missing.*"
              ) ], False)
 
 #----------------------------------------------------------------------
