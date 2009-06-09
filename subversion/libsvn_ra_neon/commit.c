@@ -1177,6 +1177,8 @@ commit_apply_txdelta(void *file_baton,
   resource_baton_t *file = file_baton;
   put_baton_t *baton;
   svn_stream_t *stream;
+  const char *tempfile_name;
+  svn_checksum_t *checksum;
 
   baton = apr_pcalloc(file->pool, sizeof(*baton));
   baton->ras = file->cc->ras;
@@ -1194,10 +1196,21 @@ commit_apply_txdelta(void *file_baton,
 
   /* Create a temp file in the system area to hold the contents. Note that
      we need a file since we will be rewinding it. The file will be closed
-     and deleted when the pool is cleaned up. */
-  SVN_ERR(svn_io_open_unique_file3(&baton->tmpfile, NULL, NULL,
-                                   svn_io_file_del_on_pool_cleanup,
-                                   file->pool, pool));
+     and deleted when the pool is cleaned up.  Avoid temp file name
+     collisions by requesting unique temp file name based on the checksum
+     of FILE->RSRC->LOCAL_PATH. */
+  SVN_ERR(svn_checksum(&checksum, svn_checksum_md5,
+                       file->rsrc->local_path,
+                       strlen(file->rsrc->local_path),
+                       pool));
+  tempfile_name = apr_psprintf(pool, "tempfile.%s",
+                               svn_checksum_to_cstring_display(checksum,
+                                                               pool));  
+
+  SVN_ERR(svn_io_open_uniquely_named(&baton->tmpfile, NULL, NULL,
+                                     tempfile_name, ".tmp",
+                                     svn_io_file_del_on_pool_cleanup,
+                                     file->pool, pool));
 
   stream = svn_stream_create(baton, pool);
   svn_stream_set_write(stream, commit_stream_write);
