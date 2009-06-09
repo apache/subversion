@@ -53,6 +53,8 @@
 #include "svn_config.h"
 #include "svn_private_config.h"
 
+#include "private/svn_atomic.h"
+
 #define SVN_SLEEP_ENV_VAR "SVN_I_LOVE_CORRUPTED_WORKING_COPIES_SO_DISABLE_SLEEP_FOR_TIMESTAMPS"
 
 /*
@@ -623,19 +625,38 @@ svn_io_copy_link(const char *src,
 #endif
 }
 
+/* Temporary directory name cache for svn_io_temp_dir() */
+static volatile svn_atomic_t temp_dir_init_state;
+static const char *temp_dir;
+
+/* Helper function to initialize temp dir. Passed to svn_atomic__init_once */
+static svn_error_t *
+init_temp_dir(apr_pool_t *scratch_pool)
+{
+  /* Global pool for the temp path */
+  apr_pool_t *global_pool = svn_pool_create(NULL);
+  const char *dir;
+
+  apr_status_t apr_err = apr_temp_dir_get(&dir, scratch_pool);
+
+  if (apr_err)
+    return svn_error_wrap_apr(apr_err, _("Can't find a temporary directory"));
+
+  SVN_ERR(cstring_to_utf8(&dir, dir, scratch_pool));
+
+  temp_dir = svn_dirent_internal_style(dir, global_pool);
+
+  return SVN_NO_ERROR;
+}
+
 
 svn_error_t *
 svn_io_temp_dir(const char **dir,
                 apr_pool_t *pool)
 {
-  apr_status_t apr_err = apr_temp_dir_get(dir, pool);
+  SVN_ERR(svn_atomic__init_once(&temp_dir_init_state, init_temp_dir, pool));
 
-  if (apr_err)
-    return svn_error_wrap_apr(apr_err, _("Can't find a temporary directory"));
-
-  SVN_ERR(cstring_to_utf8(dir, *dir, pool));
-
-  *dir = svn_dirent_internal_style(*dir, pool);
+  *dir = apr_pstrdup(pool, temp_dir);
 
   return SVN_NO_ERROR;
 }
