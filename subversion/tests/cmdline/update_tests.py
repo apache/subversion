@@ -2186,7 +2186,7 @@ def update_wc_on_windows_drive(sbox):
     os.chdir(wc_dir)
 
     expected_disk = svntest.main.greek_state.copy()
-    expected_output = svntest.wc.State(wc_dir, {
+    expected_output = svntest.wc.State('', {
       'A/mu' : Item(status='U '),
       'zeta' : Item(status='D '),
       'dir1' : Item(status='D '),
