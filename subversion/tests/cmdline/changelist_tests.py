@@ -857,7 +857,7 @@ def tree_conflicts_and_changelists_on_commit1(sbox):
   # item.
   svntest.main.run_svn(None, "changelist", "list", iota, rho)
 
-  expected_error = ("svn: Aborting commit: '.*" + rho
+  expected_error = ("svn: Aborting commit: '.*" + re.escape(rho)
                     + "' remains in .*conflict")
 
   svntest.actions.run_and_verify_commit(wc_dir,
@@ -905,22 +905,24 @@ def tree_conflicts_and_changelists_on_commit2(sbox):
   svntest.main.run_svn(None, 'delete', C)
 
   expected_output = svntest.verify.UnorderedRegexOutput(
-                                     ["Deleting.*" + C], False)
+                                     ["Deleting.*" + re.escape(C)],
+                                     False)
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'commit', '-m', 'delete A/C', C)
 
   expected_output = svntest.verify.UnorderedRegexOutput(
-                                     "A.*" + C, False)
+                                     "A.*" + re.escape(C), False)
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'update', C, "-r1")
 
   expected_output = svntest.verify.UnorderedRegexOutput(
-                                     ".*'propname' set on '" + C + "'", False)
+                                     ".*'propname' set on '"
+                                     + re.escape(C) + "'", False)
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'propset', 'propname', 'propval', C)
 
   expected_output = svntest.verify.UnorderedRegexOutput(
-                                     "   C " + C, False)
+                                     "   C " + re.escape(C), False)
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'update', wc_dir)
 
@@ -986,22 +988,24 @@ def tree_conflicts_and_changelists_on_commit3(sbox):
   svntest.main.run_svn(None, 'delete', C)
 
   expected_output = svntest.verify.UnorderedRegexOutput(
-                                     ["Deleting.*" + C], False)
+                                     ["Deleting.*" + re.escape(C)],
+                                     False)
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'commit', '-m', 'delete A/C', C)
 
   expected_output = svntest.verify.UnorderedRegexOutput(
-                                     "A.*" + C, False)
+                                     "A.*" + re.escape(C), False)
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'update', C, "-r1")
 
   expected_output = svntest.verify.UnorderedRegexOutput(
-                                     ".*'propname' set on '" + C + "'", False)
+                                     ".*'propname' set on '" + re.escape(C)
+                                     + "'", False)
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'propset', 'propname', 'propval', C)
 
   expected_output = svntest.verify.UnorderedRegexOutput(
-                                     "   C " + C, False)
+                                     "   C " + re.escape(C), False)
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'update', wc_dir)
 
