@@ -19,6 +19,10 @@ Candidate changes:
    A minor test suite plumbing fix to make fixing a bad backport easier.
    Justification:
      See http://svn.haxx.se/dev/archive-2009-06/0124.shtml.
+   Notes:
+     Only the change from subversion/tests/cmdline/svntest/main.py is needed
+     here so either merge directly to main.py or just revert the (conflicted)
+     changes to subversion/tests/cmdline/switch_tests.py that will result.
    Votes:
      +1: pburba
      +0: rhuijben (Patch is ok, but needs branch or guideline for clean merge)
