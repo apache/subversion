@@ -126,7 +126,7 @@ print_status_normal_or_xml(void *baton,
 static svn_error_t *
 print_status(void *baton,
              const char *path,
-             svn_wc_status2_t *status,
+             const svn_wc_status2_t *status,
              apr_pool_t *pool)
 {
   struct status_baton *sb = baton;
@@ -233,7 +233,7 @@ svn_cl__status(apr_getopt_t *os,
 
       /* Retrieve a hash of status structures with the information
          requested by the user. */
-      SVN_ERR(svn_cl__try(svn_client_status4(&repos_rev, target, &rev,
+      SVN_ERR(svn_cl__try(svn_client_status5(&repos_rev, target, &rev,
                                              print_status, &sb,
                                              opt_state->depth,
                                              opt_state->verbose,

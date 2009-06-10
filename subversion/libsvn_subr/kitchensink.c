@@ -174,3 +174,31 @@ svn_node_kind_from_word(const char *word)
     /* This also handles word == "unknown" */
     return svn_node_unknown;
 }
+
+const char *
+svn_tristate_to_word(svn_tristate_t tristate)
+{
+  switch (tristate)
+    {
+      case svn_tristate_false:
+        return "false";
+      case svn_tristate_true:
+        return "true";
+      case svn_tristate_unknown:
+      default:
+        return NULL;
+    }
+}
+
+svn_tristate_t
+svn_tristate_from_word(const char *word)
+{
+  if (word == NULL)
+    return svn_tristate_unknown;
+  else if (strcmp(word, "true") == 0)
+    return svn_tristate_true;
+  else if (strcmp(word, "false") == 0)
+    return svn_tristate_false;
+
+  return svn_tristate_unknown;
+}

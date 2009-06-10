@@ -269,7 +269,7 @@ svn_cl__propedit(apr_getopt_t *os,
                 SVN_ERR(svn_cl__cleanup_log_msg(ctx->log_msg_baton3,
                                                 err, pool));
               else if (err)
-                return err;
+                return svn_error_return(err);
 
               /* Print a message if we successfully committed or if it
                  was just a wc propset (but not if the user aborted an URL

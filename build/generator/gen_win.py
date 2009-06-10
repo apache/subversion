@@ -6,6 +6,7 @@ import os
 import sys
 import fnmatch
 import re
+import subprocess
 import glob
 import generator.swig.header_wrappers
 import generator.swig.checkout_swig_header
@@ -34,6 +35,8 @@ class GeneratorBase(gen_base.GeneratorBase):
     ('exe', 'object'): '.obj',
     ('lib', 'target'): '.dll',
     ('lib', 'object'): '.obj',
+    ('pyd', 'target'): '.pyd',
+    ('pyd', 'object'): '.obj',
     }
 
   def parse_options(self, options):
@@ -1218,9 +1221,8 @@ class WinGeneratorBase(GeneratorBase):
     else:
       self.swig_exe = 'swig'
 
-    infp, outfp = os.popen4(self.swig_exe + ' -version')
-    infp.close()
     try:
+      outfp = subprocess.Popen([self.swig_exe, '-version'], stdout=subprocess.PIPE, universal_newlines=True).stdout
       txt = outfp.read()
       if txt:
         vermatch = re.compile(r'^SWIG\ Version\ (\d+)\.(\d+)\.(\d+)$', re.M) \
@@ -1242,8 +1244,11 @@ class WinGeneratorBase(GeneratorBase):
         sys.stderr.write('Could not find installed SWIG,'
                          ' assuming version %s\n' % default_version)
         self.swig_libdir = ''
-    finally:
       outfp.close()
+    except OSError:
+      sys.stderr.write('Could not find installed SWIG,'
+                       ' assuming version %s\n' % default_version)
+      self.swig_libdir = ''
 
     self.swig_vernum = vernum
     self.swig_libdir = libdir

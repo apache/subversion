@@ -1,7 +1,7 @@
 dnl configure.ac: Autoconfiscation for Subversion
 dnl Process this file with autoconf to produce a configure script.
 
-AC_PREREQ(2.58)
+AC_PREREQ(2.59)
 
 dnl Get the version of Subversion, using m4's esyscmd() command to do this
 dnl at m4-time, since AC_INIT() requires it then.
@@ -110,6 +110,14 @@ if test "$svn_lib_serf" = "yes"; then
             [Defined if support for Serf is enabled])
 fi
 
+dnl Search for GSSAPI
+SVN_LIB_RA_SERF_GSSAPI
+
+if test "$svn_lib_gssapi" = "yes"; then
+  AC_DEFINE([SVN_RA_SERF_HAVE_GSSAPI], 1,
+            [Defined if support for GSSAPI is enabled])
+fi
+
 dnl Search for apr_memcache (only affects fs_fs)
 SVN_LIB_APR_MEMCACHE
 
@@ -124,7 +132,7 @@ SVN_FIND_APACHE(20020903)
 
 dnl Search for SQLite
 SQLITE_MINIMUM_VER="3.4.0"
-SQLITE_RECOMMENDED_VER="3.6.12"
+SQLITE_RECOMMENDED_VER="3.6.13"
 SQLITE_URL="http://www.sqlite.org/sqlite-amalgamation-${SQLITE_RECOMMENDED_VER}.tar.gz"
 SVN_LIB_SQLITE(${SQLITE_MINIMUM_VER}, ${SQLITE_RECOMMENDED_VER},
                ${SQLITE_URL})
@@ -235,6 +243,28 @@ AC_ARG_ENABLE(all-static,
 
 AC_SUBST(LT_CFLAGS)
 AC_SUBST(LT_LDFLAGS)
+
+AC_ARG_ENABLE(local-library-preloading,
+  AS_HELP_STRING([--disable-local-library-preloading], 
+                 [Disable preloading of locally built libraries in locally built executables]),
+  [
+  if test "$enableval" != "no"; then
+    if test "$svn_enable_shared" = "yes"; then
+      TRANSFORM_LIBTOOL_SCRIPTS="transform-libtool-scripts"
+    else
+      AC_MSG_ERROR([--enable-local-library-preloading conflicts with --disable-shared])
+    fi
+  else
+    TRANSFORM_LIBTOOL_SCRIPTS=""
+  fi
+  ], [
+  if test "`uname`" != "Darwin" && test "$svn_enable_shared" = "yes"; then
+    TRANSFORM_LIBTOOL_SCRIPTS="transform-libtool-scripts"
+  else
+    TRANSFORM_LIBTOOL_SCRIPTS=""
+  fi
+])
+AC_SUBST(TRANSFORM_LIBTOOL_SCRIPTS)
 
 dnl Check if -no-undefined is needed for the platform.
 dnl It should always work but with libtool 1.4.3 on OS X it breaks the build.
@@ -483,9 +513,22 @@ if test "$enable_nls" = "yes"; then
   if test "$MSGFMT" != "none"; then
     AC_SEARCH_LIBS(bindtextdomain, [intl], [],
                    [
-                    AC_MSG_WARN([bindtextdomain() not found.  Disabling NLS.])
                     enable_nls="no"
                    ])
+    if test "$enable_nls" = "no"; then
+      # On some systems, libintl needs libiconv to link properly,
+      # so try again with -liconv.
+      AC_SEARCH_LIBS(bindtextdomain, [intl],
+                     [
+                      # This is here so that -liconv ends up in LIBS
+                      # if it worked with -liconv.
+                      AC_CHECK_LIB(iconv, libiconv_open)
+                     ], 
+                     [
+                      AC_MSG_WARN([bindtextdomain() not found.  Disabling NLS.])
+                      enable_nls="no"
+                     ], -liconv)
+    fi
     if test "$enable_nls" = "yes"; then
       AC_DEFINE(ENABLE_NLS, 1,
                 [Define to 1 if translation of program messages to the user's
@@ -1022,10 +1065,6 @@ AC_CONFIG_COMMANDS([svn_private_config.h],
 AC_CONFIG_FILES([Makefile])
 
 SVN_CONFIG_SCRIPT(tools/backup/hot-backup.py)
-SVN_CONFIG_SCRIPT(contrib/client-side/svn_load_dirs/svn_load_dirs.pl)
-SVN_CONFIG_SCRIPT(contrib/client-side/svncopy/svncopy.pl)
-SVN_CONFIG_SCRIPT(contrib/client-side/svncopy/testsvncopy.pl)
-SVN_CONFIG_SCRIPT(contrib/hook-scripts/commit-email.pl)
 SVN_CONFIG_SCRIPT(tools/hook-scripts/commit-access-control.pl)
 SVN_CONFIG_SCRIPT(subversion/bindings/swig/perl/native/Makefile.PL)
 SVN_CONFIG_SCRIPT(packages/solaris/pkginfo)

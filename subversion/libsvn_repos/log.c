@@ -251,6 +251,10 @@ detect_changed(apr_hash_t **changed,
       item->action = action;
       item->node_kind = change->node_kind;
       item->copyfrom_rev = SVN_INVALID_REVNUM;
+      item->text_modified = change->text_mod ? svn_tristate_true
+                                             : svn_tristate_false;
+      item->props_modified = change->prop_mod ? svn_tristate_true
+                                              : svn_tristate_false;
       if ((action == 'A') || (action == 'R'))
         {
           const char *copyfrom_path;

@@ -43,6 +43,7 @@ def main(fname, gentype, verfname=None,
     generator.compute_hdr_deps()
 
   generator.write()
+  generator.write_sqlite_headers()
 
   if ('--debug', '') in other_options:
     for dep_type, target_dict in generator.graph.deps.items():

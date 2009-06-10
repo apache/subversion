@@ -26,6 +26,12 @@
 #include <apr_strings.h>
 #include <apr_network_io.h>
 #include <apr_uri.h>
+#if APR_HAVE_STDLIB_H
+#include <stdlib.h>
+#endif
+#if APR_HAVE_UNISTD_H
+#include <unistd.h>
+#endif
 
 #include "svn_types.h"
 #include "svn_string.h"
@@ -154,6 +160,21 @@ static svn_error_t *make_connection(const char *hostname, unsigned short port,
   if (status)
     return svn_error_wrap_apr(status, _("Can't connect to host '%s'"),
                               hostname);
+
+  /* Enable TCP keep-alives on the socket so we time out when
+   * the connection breaks due to network-layer problems.
+   * If the peer has dropped the connection due to a network partition
+   * or a crash, or if the peer no longer considers the connection
+   * valid because we are behind a NAT and our public IP has changed,
+   * it will respond to the keep-alive probe with a RST instead of an
+   * acknowledgment segment, which will cause svn to abort the session
+   * even while it is currently blocked waiting for data from the peer.
+   * See issue #3347. */
+  status = apr_socket_opt_set(*sock, APR_SO_KEEPALIVE, 1);
+  if (status)
+    {
+      /* It's not a fatal error if we cannot enable keep-alives. */
+    }
 
   return SVN_NO_ERROR;
 }
@@ -426,6 +447,43 @@ static void handle_child_process_error(apr_pool_t *pool, apr_status_t status,
   svn_error_clear(svn_ra_svn_flush(conn, pool));
 }
 
+static apr_status_t detach_child_cleanup(void *data)
+{
+#if APR_HAVE_STDLIB_H
+#if APR_HAVE_UNISTD_H
+#if APR_HAS_FORK
+  /* Using apr_procattr_detach_set has a number of undesirable
+   * side effects:
+   *   - Redirecting stdin/stdout/stderr to /dev/null
+   *   - Detaching from the controlling terminal
+   *
+   * We can workaround the redirections with some calls to
+   * dup/dup2/fclose in a child cleanup function.   However
+   * that ends up leaving the child with 3 extra open file
+   * handles to /dev/null -- they're not used, but it's not
+   * clean.
+   *
+   * Unfortunately the side effect of detaching from the
+   * controlling terminal is that any tunnel processes that
+   * may need to prompt for a password will get confused
+   * (i.e. ssh).  So instead we just do the detach ourselves
+   * here and avoid using apr_procattr_detach_set.
+   *
+   * Since child_cleanup functions only run on systems with
+   * fork this code is surrounded with the appropriate
+   * #ifdefs.  On systems without fork, the code here
+   * isn't needed anyway.
+   */
+  int x;
+  if ((x = fork()) > 0) {
+    exit(0);
+  }
+#endif
+#endif
+#endif
+  return APR_SUCCESS;
+}
+
 /* (Note: *CONN is an output parameter.) */
 static svn_error_t *make_tunnel(const char **args, svn_ra_svn_conn_t **conn,
                                 apr_pool_t *pool)
@@ -433,6 +491,7 @@ static svn_error_t *make_tunnel(const char **args, svn_ra_svn_conn_t **conn,
   apr_status_t status;
   apr_proc_t *proc;
   apr_procattr_t *attr;
+  apr_pool_t *temp_pool = NULL;
 
   status = apr_procattr_create(&attr, pool);
   if (status == APR_SUCCESS)
@@ -441,11 +500,42 @@ static svn_error_t *make_tunnel(const char **args, svn_ra_svn_conn_t **conn,
     status = apr_procattr_cmdtype_set(attr, APR_PROGRAM_PATH);
   if (status == APR_SUCCESS)
     status = apr_procattr_child_errfn_set(attr, handle_child_process_error);
+  if (status == APR_SUCCESS)
+    status = apr_pool_create(&temp_pool, NULL);
+  if (status == APR_SUCCESS)
+    apr_pool_cleanup_register(temp_pool, NULL, apr_pool_cleanup_null,
+                              detach_child_cleanup);
   proc = apr_palloc(pool, sizeof(*proc));
   if (status == APR_SUCCESS)
     status = apr_proc_create(proc, *args, args, NULL, attr, pool);
+  if (temp_pool)
+    apr_pool_destroy(temp_pool);
   if (status != APR_SUCCESS)
     return svn_error_wrap_apr(status, _("Can't create tunnel"));
+
+  /* Arrange for the tunnel agent to get a SIGKILL on pool
+   * cleanup.  This is a little extreme, but the alternatives
+   * weren't working out:
+   *   - Closing the pipes and waiting for the process to die
+   *     was prone to mysterious hangs which are difficult to
+   *     diagnose (e.g. svnserve dumps core due to unrelated bug;
+   *     sshd goes into zombie state; ssh connection is never
+   *     closed; ssh never terminates).
+   *   - Killing the tunnel agent with SIGTERM leads to unsightly
+   *     stderr output from ssh.
+   * Since we now run the tunnel detached, this is the best way
+   * to avoid zombies without adding any wait delays.  The actual
+   * tunnel itself won't get the signal because it will be detached
+   * by then.
+   * Don't call apr_pool_note_subprocess if WIN32 is defined as
+   * there is no zombie problem there but we DO want the child
+   * to still be allowed to "die in piece, in its own time, on
+   * its own terms." See:
+   *   http://subversion.tigris.org/issues/show_bug.cgi?id=2580
+   */
+#ifndef WIN32
+  apr_pool_note_subprocess(pool, proc, APR_KILL_ALWAYS);
+#endif
 
   /* APR pipe objects inherit by default.  But we don't want the
    * tunnel agent's pipes held open by future child processes
@@ -956,9 +1046,10 @@ static svn_error_t *ra_svn_get_file(svn_ra_session_t *session, const char *path,
       if (strcmp(hex_digest, expected_checksum) != 0)
         return svn_error_createf
           (SVN_ERR_CHECKSUM_MISMATCH, NULL,
-           _("Checksum mismatch for '%s':\n"
-             "   expected checksum:  %s\n"
-             "   actual checksum:    %s\n"),
+           apr_psprintf(pool, "%s:\n%s\n%s\n",
+                        _("Checksum mismatch for '%s'"),
+                        _("   expected:  %s"),
+                        _("     actual:  %s")),
            path, expected_checksum, hex_digest);
     }
 
@@ -1197,6 +1288,23 @@ static svn_error_t *ra_svn_diff(svn_ra_session_t *session,
   return SVN_NO_ERROR;
 }
 
+/* Converts a apr_uint64_t with values TRUE, FALSE or
+   SVN_RA_SVN_UNSPECIFIED_NUMBER as provided by svn_ra_svn_parse_tuple
+   to a svn_tristate_t */
+static svn_tristate_t
+optbool_to_tristate(apr_uint64_t v)
+{
+  switch (v)
+  {
+    case TRUE:
+      return svn_tristate_true;
+    case FALSE:
+      return svn_tristate_false;
+    default: /* Contains SVN_RA_SVN_UNSPECIFIED_NUMBER */
+      return svn_tristate_unknown;
+  }
+}
+
 static svn_error_t *ra_svn_log(svn_ra_session_t *session,
                                const apr_array_header_t *paths,
                                svn_revnum_t start, svn_revnum_t end,
@@ -1298,7 +1406,7 @@ static svn_error_t *ra_svn_log(svn_ra_session_t *session,
       /* Because the svn protocol won't let us send an invalid revnum, we have
          to recover that fact using the extra parameter. */
       if (invalid_revnum_param != SVN_RA_SVN_UNSPECIFIED_NUMBER
-            && invalid_revnum_param == TRUE)
+            && invalid_revnum_param)
         rev = SVN_INVALID_REVNUM;
 
       if (cplist->nelts > 0)
@@ -1309,6 +1417,7 @@ static svn_error_t *ra_svn_log(svn_ra_session_t *session,
             {
               svn_log_changed_path2_t *change;
               const char *copy_path, *action, *cpath, *kind_str;
+              apr_uint64_t text_mods, prop_mods;
               svn_revnum_t copy_rev;
               svn_ra_svn_item_t *elt = &APR_ARRAY_IDX(cplist, i,
                                                       svn_ra_svn_item_t);
@@ -1317,9 +1426,10 @@ static svn_error_t *ra_svn_log(svn_ra_session_t *session,
                 return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                         _("Changed-path entry not a list"));
               SVN_ERR(svn_ra_svn_parse_tuple(elt->u.list, iterpool,
-                                             "cw(?cr)?(?c)",
+                                             "cw(?cr)?(?c?BB)",
                                              &cpath, &action, &copy_path,
-                                             &copy_rev, &kind_str));
+                                             &copy_rev, &kind_str,
+                                             &text_mods, &prop_mods));
               cpath = svn_path_canonicalize(cpath, iterpool);
               if (copy_path)
                 copy_path = svn_path_canonicalize(copy_path, iterpool);
@@ -1328,6 +1438,8 @@ static svn_error_t *ra_svn_log(svn_ra_session_t *session,
               change->copyfrom_path = copy_path;
               change->copyfrom_rev = copy_rev;
               change->node_kind = svn_node_kind_from_word(kind_str);
+              change->text_modified = optbool_to_tristate(text_mods);
+              change->props_modified = optbool_to_tristate(prop_mods);
               apr_hash_set(cphash, cpath, APR_HASH_KEY_STRING, change);
             }
         }

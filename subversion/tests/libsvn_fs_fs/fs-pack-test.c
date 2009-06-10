@@ -120,7 +120,7 @@ create_packed_filesystem(const char *dir,
   subpool = svn_pool_create(pool);
 
   /* Rewrite the format file */
-  SVN_ERR(write_format(dir, SVN_FS_FS__MIN_PACKED_FORMAT,
+  SVN_ERR(write_format(dir, SVN_FS_FS__FORMAT_NUMBER,
                        shard_size, subpool));
 
   /* Reopen the filesystem */

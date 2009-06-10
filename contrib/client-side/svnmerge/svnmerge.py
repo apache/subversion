@@ -352,7 +352,7 @@ class PathIdentifier:
     about it before we know the form that it takes in the properties (its
     external_form).  Objects are referenced in the class variable 'locobjs',
     keyed by all known forms."""
-    
+
     # a map of UUID (or None) to repository root URL.
     repo_hints = {}
 
@@ -366,7 +366,7 @@ class PathIdentifier:
         self.external_form = external_form
 
     def __repr__(self):
-        return "<PathIdentifier " + ', '.join('%s=%r' % i for i in self.__dict__.items()) + '>'
+        return "<PathIdentifier " + ', '.join(['%s=%r' % i for i in self.__dict__.items()]) + '>'
 
     def __str__(self):
         """Return a printable string representation"""

@@ -38,20 +38,6 @@
 extern "C" {
 #endif /* __cplusplus */
 
-/** Internal function used by the svn_wc_entry_versioned() macro.
- *
- * @since New in 1.5.
- */
-svn_error_t *
-svn_wc__entry_versioned_internal(const svn_wc_entry_t **entry,
-                                 const char *path,
-                                 svn_wc_adm_access_t *adm_access,
-                                 svn_boolean_t show_hidden,
-                                 const char *caller_filename,
-                                 int caller_lineno,
-                                 apr_pool_t *pool);
-
-
 /** Same as svn_wc_entry() except that the entry returned
  * is a non @c NULL entry.
  *
@@ -59,16 +45,12 @@ svn_wc__entry_versioned_internal(const svn_wc_entry_t **entry,
  *
  * @since New in 1.5.
  */
-
-#ifdef SVN_DEBUG
-#define svn_wc__entry_versioned(entry, path, adm_access, show_hidden, pool) \
-  svn_wc__entry_versioned_internal((entry), (path), (adm_access), \
-                                   (show_hidden), __FILE__, __LINE__, (pool))
-#else
-#define svn_wc__entry_versioned(entry, path, adm_access, show_hidden, pool) \
-  svn_wc__entry_versioned_internal((entry), (path), (adm_access), \
-                                   (show_hidden), NULL, 0, (pool))
-#endif
+svn_error_t *
+svn_wc__entry_versioned(const svn_wc_entry_t **entry,
+                        const char *path,
+                        svn_wc_adm_access_t *adm_access,
+                        svn_boolean_t show_hidden,
+                        apr_pool_t *pool);
 
 
 /** Given a @a wcpath with its accompanying @a entry, set @a *switched to

@@ -1,7 +1,7 @@
 /* load.c --- parsing a 'dumpfile'-formatted stream.
  *
  * ====================================================================
- * Copyright (c) 2000-2006, 2008 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006, 2008-2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -28,6 +28,7 @@
 #include "svn_private_config.h"
 #include "svn_mergeinfo.h"
 #include "svn_checksum.h"
+#include "svn_subst.h"
 
 #include <apr_lib.h>
 
@@ -195,7 +196,7 @@ read_key_or_val(char **pbuf,
   SVN_ERR(svn_stream_read(stream, buf, &numread));
   *actual_length += numread;
   if (numread != len)
-    return stream_ran_dry();
+    return svn_error_return(stream_ran_dry());
   buf[len] = '\0';
 
   /* Suck up extra newline after key data */
@@ -203,9 +204,9 @@ read_key_or_val(char **pbuf,
   SVN_ERR(svn_stream_read(stream, &c, &numread));
   *actual_length += numread;
   if (numread != 1)
-    return stream_ran_dry();
+    return svn_error_return(stream_ran_dry());
   if (c != '\n')
-    return stream_malformed();
+    return svn_error_return(stream_malformed());
 
   *pbuf = buf;
   return SVN_NO_ERROR;
@@ -308,6 +309,7 @@ parse_property_block(svn_stream_t *stream,
                      svn_filesize_t content_length,
                      const svn_repos_parse_fns2_t *parse_fns,
                      void *record_baton,
+                     void *parse_baton,
                      svn_boolean_t is_node,
                      svn_filesize_t *actual_length,
                      apr_pool_t *pool)
@@ -368,13 +370,48 @@ parse_property_block(svn_stream_t *stream,
 
               /* Now, send the property pair to the vtable! */
               if (is_node)
-                SVN_ERR(parse_fns->set_node_property(record_baton,
-                                                     keybuf,
-                                                     &propstring));
+                {
+                  /* svn_mergeinfo_parse() in parse_fns->set_node_property()
+                     will choke on mergeinfo with "\r\n" line endings, but we
+                     might legitimately encounter these in a dump stream.  If
+                     so normalize the line endings to '\n' and make a
+                     notification to PARSE_BATON->FEEDBACK_STREAM that we
+                     have made this correction. */
+                  if (strcmp(keybuf, SVN_PROP_MERGEINFO) == 0
+                      && strstr(propstring.data, "\r"))
+                    {
+                      const char *prop_eol_normalized;
+                      struct parse_baton *pb = parse_baton;
+
+                      SVN_ERR(svn_subst_translate_cstring2(
+                        propstring.data,
+                        &prop_eol_normalized,
+                        "\n",  /* translate to LF */
+                        FALSE, /* no repair */
+                        NULL,  /* no keywords */
+                        FALSE, /* no expansion */
+                        proppool));
+                      propstring.data = prop_eol_normalized;
+                      propstring.len = strlen(prop_eol_normalized);
+
+                      if (pb->outstream)
+                        SVN_ERR(svn_stream_printf(
+                          pb->outstream,
+                          proppool,
+                          _(" removing '\\r' from %s ..."),
+                          SVN_PROP_MERGEINFO));
+                    }
+
+                  SVN_ERR(parse_fns->set_node_property(record_baton,
+                                                       keybuf,
+                                                       &propstring));
+                }
               else
-                SVN_ERR(parse_fns->set_revision_property(record_baton,
-                                                         keybuf,
-                                                         &propstring));
+                {
+                  SVN_ERR(parse_fns->set_revision_property(record_baton,
+                                                           keybuf,
+                                                           &propstring));
+                }
             }
           else
             return stream_malformed(); /* didn't find expected 'V' line */
@@ -689,6 +726,7 @@ svn_repos_parse_dumpstream2(svn_stream_t *stream,
                    svn__atoui64(prop_cl ? prop_cl : content_length),
                    parse_fns,
                    found_node ? node_baton : rev_baton,
+                   parse_baton,
                    found_node,
                    &actual_prop_length,
                    found_node ? nodepool : revpool));
@@ -1002,10 +1040,11 @@ maybe_add_with_history(struct node_baton *nb,
             return svn_error_createf
               (SVN_ERR_CHECKSUM_MISMATCH,
                NULL,
-               _("Copy source checksum mismatch on copy from '%s'@%ld\n"
-                 " to '%s' in rev based on r%ld:\n"
-                 "   expected:  %s\n"
-                 "     actual:  %s\n"),
+               apr_psprintf(pool, "%s:\n%s\n%s\n",
+                            _("Copy source checksum mismatch on copy from '%s'@%ld\n"
+                              "to '%s' in rev based on r%ld"),
+                            _("   expected:  %s"),
+                            _("     actual:  %s")),
                nb->copyfrom_path, src_rev,
                nb->path, rb->rev,
                svn_checksum_to_cstring_display(nb->copy_source_checksum, pool),
@@ -1287,7 +1326,7 @@ close_revision(void *baton)
       if (err)
         {
           svn_error_clear(svn_fs_abort_txn(rb->txn, rb->pool));
-          return err;
+          return svn_error_return(err);
         }
     }
 
@@ -1298,7 +1337,7 @@ close_revision(void *baton)
       if (conflict_msg)
         return svn_error_quick_wrap(err, conflict_msg);
       else
-        return err;
+        return svn_error_return(err);
     }
 
   /* Run post-commit hook, if so commanded.  */

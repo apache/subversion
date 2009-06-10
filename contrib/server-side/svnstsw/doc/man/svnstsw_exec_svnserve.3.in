@@ -104,7 +104,7 @@ desired environment for the
 .B svnserve
 process.  If this parameter is the null pointer, it is the equivalent
 to passing in an array consisting of only a null terminator.  By
-convention, each string in this array should be in the form of 
+convention, each string in this array should be in the form of
 .IR name = value .
 For security reasons, the contents of
 .I envp

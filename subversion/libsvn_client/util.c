@@ -237,7 +237,7 @@ svn_client__path_relative_to_root(const char **rel_path,
       else
         svn_error_clear(err2);
     }
-  return err;
+  return svn_error_return(err);
 }
 
 svn_error_t *
@@ -307,7 +307,7 @@ svn_client__get_repos_root(const char **repos_root,
       else
         svn_error_clear(err2);
     }
-  return err;
+  return svn_error_return(err);
 }
 
 
@@ -317,7 +317,7 @@ svn_client__default_walker_error_handler(const char *path,
                                          void *walk_baton,
                                          apr_pool_t *pool)
 {
-  return err;
+  return svn_error_return(err);
 }
 
 

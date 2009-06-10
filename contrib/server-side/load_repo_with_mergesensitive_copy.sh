@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#This script installs the 'pre-commit' hook on a 
+#This script installs the 'pre-commit' hook on a
 #repository and loads the dump in a merge sensitive way.
 #Removes the pre-commit script after load is over.
 
@@ -33,17 +33,17 @@ def get_node_creation_rev(repos_path, node_canon_path):
   end = core.svn_opt_revision_t()
   core.svn_opt_parse_revision(start, end, "1:HEAD")
   dir = "file://" + repos_path + node_canon_path
-  client.log3((dir,), end, start, end, 1, False, True, 
+  client.log3((dir,), end, start, end, 1, False, True,
               revnum_receiver, client_ctx)
   return globals()['node_created_at']
 
 def traverse_tree(tree, path, txn_root, repos_path, pool):
   if tree.copyfrom_path:
-    existing_mergeinfo = fs.svn_fs_node_prop(txn_root, path, 
+    existing_mergeinfo = fs.svn_fs_node_prop(txn_root, path,
                                              'svn:mergeinfo', pool)
     if existing_mergeinfo:
       if existing_mergeinfo.find(tree.copyfrom_path + ':') != -1:
-        print sys.stderr.write(("Node %s has similar mergeinfo %s") % 
+        print sys.stderr.write(("Node %s has similar mergeinfo %s") %
                                 (path, existing_mergeinfo))
         sys.exit(1)
     src_created_at = get_node_creation_rev(repos_path, tree.copyfrom_path)
@@ -80,7 +80,7 @@ def main(pool, repos_path, txn_name):
                           editor, edit_baton, None, pool)
   tree = repos.svn_repos_node_from_baton(edit_baton)
   traverse_tree(tree, "", txn_root, repos_path, pool)
-  
+
 
 if __name__ == "__main__":
   if len(sys.argv) < 3:

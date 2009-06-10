@@ -1,8 +1,8 @@
 /*
- * questions.h :  asking questions about working copies
+ * workqueue.h :  manipulating work queue items
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -16,32 +16,39 @@
  * ====================================================================
  */
 
-
-#ifndef SVN_LIBSVN_WC_QUESTIONS_H
-#define SVN_LIBSVN_WC_QUESTIONS_H
+#ifndef SVN_WC_WORKQUEUE_H
+#define SVN_WC_WORKQUEUE_H
 
 #include <apr_pools.h>
+
 #include "svn_types.h"
-#include "svn_error.h"
+#include "svn_wc.h"
+
+#include "wc_db.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
 
-
 
-/* Return an SVN_ERR_WC_UNSUPPORTED_FORMAT error if the working copy
- * format WC_FORMAT is unsupported.  PATH is only used in the error
- * message.
- *
- * Use POOL for any temporary allocation.
- */
+/* For the WCROOT identified by the DB and LOCAL_ABSPATH pair, run any
+   work items that may be present in its workqueue.  */
 svn_error_t *
-svn_wc__check_format(int wc_format, const char *path, apr_pool_t *pool);
+svn_wc__wq_run(svn_wc__db_t *db,
+               const char *local_abspath,
+               apr_pool_t *scratch_pool);
+
+
+/* Record a work item to revert LOCAL_ABSPATH.  */
+svn_error_t *
+svn_wc__wq_add_revert(svn_wc__db_t *db,
+                      const char *local_abspath,
+                      svn_wc_schedule_t orig_schedule,
+                      apr_pool_t *scratch_pool);
 
 
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
 
-#endif /* SVN_LIBSVN_WC_QUESTIONS_H */
+#endif /* SVN_WC_WORKQUEUE_H */

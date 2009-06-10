@@ -43,6 +43,7 @@ SVN_APRUTIL_LIBS = @SVN_APRUTIL_LIBS@
 SVN_APR_MEMCACHE_LIBS = @SVN_APR_MEMCACHE_LIBS@
 SVN_DB_LIBS = @SVN_DB_LIBS@
 SVN_GNOME_KEYRING_LIBS = @SVN_GNOME_KEYRING_LIBS@
+SVN_GSSAPI_LIBS = @SVN_GSSAPI_LIBS@
 SVN_KWALLET_LIBS = @SVN_KWALLET_LIBS@
 SVN_SASL_LIBS = @SVN_SASL_LIBS@
 SVN_SERF_LIBS = @SVN_SERF_LIBS@
@@ -58,6 +59,7 @@ fsmod_libdir = @libdir@
 ramod_libdir = @libdir@
 bdb_libdir = @libdir@
 gnome_keyring_libdir = @libdir@
+gssapi_libdir = @libdir@
 kwallet_libdir = @libdir@
 neon_libdir = @libdir@
 serf_libdir = @libdir@
@@ -80,7 +82,6 @@ swig_pydir = @libdir@/svn-python/libsvn
 swig_pydir_extra = @libdir@/svn-python/svn
 swig_pldir = @libdir@/svn-perl
 swig_rbdir = $(SWIG_RB_SITE_ARCH_DIR)/svn/ext
-contribdir = @bindir@/svn-contrib
 toolsdir = @bindir@/svn-tools
 
 javahl_javadir = @libdir@/svn-javahl
@@ -112,9 +113,9 @@ LT_CXX_LIBADD = @LT_CXX_LIBADD@
 
 INCLUDES = -I$(top_srcdir)/subversion/include -I$(top_builddir)/subversion \
            @SVN_APR_INCLUDES@ @SVN_APRUTIL_INCLUDES@ @SVN_APR_MEMCACHE_INCLUDES@ \
-           @SVN_DB_INCLUDES@ @SVN_GNOME_KEYRING_INCLUDES@ @SVN_KWALLET_INCLUDES@ \
-           @SVN_NEON_INCLUDES@ @SVN_SASL_INCLUDES@ @SVN_SERF_INCLUDES@ \
-           @SVN_SQLITE_INCLUDES@ @SVN_ZLIB_INCLUDES@
+           @SVN_DB_INCLUDES@ @SVN_GNOME_KEYRING_INCLUDES@ @SVN_GSSAPI_INCLUDES@ \
+           @SVN_KWALLET_INCLUDES@ @SVN_NEON_INCLUDES@ @SVN_SASL_INCLUDES@ \
+           @SVN_SERF_INCLUDES@ @SVN_SQLITE_INCLUDES@ @SVN_ZLIB_INCLUDES@
 
 APACHE_INCLUDES = @APACHE_INCLUDES@
 APACHE_LIBEXECDIR = $(DESTDIR)@APACHE_LIBEXECDIR@
@@ -208,6 +209,7 @@ INSTALL_RAMOD_LIB = $(INSTALL_LIB)
 INSTALL_APR_MEMCACHE_LIB = $(INSTALL_LIB)
 INSTALL_BDB_LIB = $(INSTALL_LIB)
 INSTALL_GNOME_KEYRING_LIB = $(INSTALL_LIB)
+INSTALL_GSSAPI_LIB = $(INSTALL_LIB)
 INSTALL_KWALLET_LIB = $(INSTALL_LIB)
 INSTALL_NEON_LIB = $(INSTALL_LIB)
 INSTALL_SERF_LIB = $(INSTALL_LIB)
@@ -310,7 +312,10 @@ install: external-install local-install revision-install
 
 @INCLUDE_OUTPUTS@
 
-local-all: @BUILD_RULES@
+local-all: @BUILD_RULES@ @TRANSFORM_LIBTOOL_SCRIPTS@
+
+transform-libtool-scripts: @BUILD_RULES@
+	@$(top_srcdir)/build/transform_libtool_scripts.sh
 
 locale-gnu-pot:
 	cd $(abs_srcdir) && XGETTEXT="$(XGETTEXT)" MSGMERGE="$(MSGMERGE)" \
@@ -332,10 +337,7 @@ fast-clean: doc-clean
              rm -rf .libs);                                          \
           fi                                                         \
         done
-	rm -f $(CLEAN_FILES) \
-            $(abs_srcdir)/subversion/libsvn_fs_fs/rep-cache-db.h \
-            $(abs_srcdir)/subversion/libsvn_wc/wc-metadata.h \
-            $(abs_srcdir)/subversion/libsvn_wc/wc-checks.h
+	rm -f $(CLEAN_FILES)
 	find $(abs_srcdir) -name "*.pyc" -exec rm {} ';'
 
 # clean all but bulky test output, returning to before './configure' was run.
@@ -356,7 +358,9 @@ local-extraclean: local-distclean extraclean-swig extraclean-ctypes-python
               $(top_srcdir)/build/ltsugar.m4 \
               $(top_srcdir)/build/ltversion.m4 \
               $(top_srcdir)/build/lt~obsolete.m4 \
-              $(top_srcdir)/build/ltmain.sh
+              $(top_srcdir)/build/ltmain.sh \
+              $(EXTRACLEAN_FILES)
+
 
 # clean everything, including test output.
 local-clean: fast-clean check-clean clean-swig clean-ctypes-python
@@ -610,7 +614,7 @@ schema-clean:
            .po .spo .mo .rnc .rng .dtd .xsd .sql .h
 
 .sql.h:
-	$(top_srcdir)/build/transform_sql.sh $< < $< > $(top_srcdir)/$@
+	$(PYTHON) $(top_srcdir)/build/transform_sql.py $< $(top_srcdir)/$@
 
 .c.o:
 	$(COMPILE) -o $@ -c $<
@@ -792,11 +796,7 @@ CTYPESGEN = @CTYPESGEN@
 CTYPES_PYTHON_SRC_DIR = $(abs_srcdir)/subversion/bindings/ctypes-python
 
 ctypes-python: local-all
-	cd $(CTYPES_PYTHON_SRC_DIR); \
-	  $(LT_EXECUTE) $(PYTHON) setup.py build --subversion="$(prefix)" \
-	  --apr="$(SVN_APR_PREFIX)" --apr-util="$(SVN_APRUTIL_PREFIX)" \
-	  --ctypesgen="$(CTYPESGEN)" --svn-headers="$(abs_srcdir)/subversion/include" \
-	  --cppflags="$(CPPFLAGS)" --ldflags="$(EXTRA_CTYPES_LDFLAGS)"
+	$(abs_srcdir)/build/run_ctypesgen.sh "$(LT_EXECUTE)" "$(CPPFLAGS)" "$(EXTRA_CTYPES_LDFLAGS)" "$(PYTHON)" "$(CTYPESGEN)" "$(abs_srcdir)" "$(abs_builddir)" "$(libdir)" "$(SVN_APR_PREFIX)" "$(SVN_APRUTIL_PREFIX)"
 
 install-ctypes-python: ctypes-python
 	cd $(CTYPES_PYTHON_SRC_DIR); \

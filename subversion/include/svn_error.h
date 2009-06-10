@@ -19,9 +19,6 @@
  * @brief Common exception handling for Subversion.
  */
 
-
-
-
 #ifndef SVN_ERROR_H
 #define SVN_ERROR_H
 
@@ -39,6 +36,14 @@
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
+
+
+/* For the Subversion developers, this #define turns on extended "stack
+   traces" of any errors that get thrown. See the SVN_ERR() macro.  */
+#ifdef SVN_DEBUG
+#define SVN_ERR__TRACING
+#endif
+
 
 /** the best kind of (@c svn_error_t *) ! */
 #define SVN_NO_ERROR   0
@@ -264,7 +269,7 @@ svn_handle_warning(FILE *stream,
  *
  * @code
  *   if (a)
- *     SVN_ERR (some operation);
+ *     SVN_ERR(some operation);
  *   else
  *     foo;
  * @endcode
@@ -275,8 +280,33 @@ svn_handle_warning(FILE *stream,
   do {                                          \
     svn_error_t *svn_err__temp = (expr);        \
     if (svn_err__temp)                          \
-      return svn_err__temp;                     \
+      return svn_error_return(svn_err__temp);   \
   } while (0)
+
+/**
+ * A statement macro for returning error values.
+ * 
+ * This macro can be used when directly returning an error to ensure
+ * that the call stack is recorded correctly.
+ */
+#ifdef SVN_ERR__TRACING
+#define SVN_ERR__TRACED "traced call"
+
+#define svn_error_return(expr)  svn_error_quick_wrap((expr), SVN_ERR__TRACED)
+#else
+#define svn_error_return(expr)  (expr)
+#endif
+
+/**
+ * Purge from @a ERR and its child chain any links associated with
+ * error tracing placeholders, and return the new top-level error
+ * chain item.  @a ERR should be considered unusable after passing
+ * through this function, but should *not* be cleared (as the returned
+ * error is shares memory with @a ERR).
+ *
+ * @since New in 1.6.
+ */
+svn_error_t *svn_error_purge_tracing(svn_error_t *err);
 
 
 /** A statement macro, very similar to @c SVN_ERR.
@@ -288,7 +318,8 @@ svn_handle_warning(FILE *stream,
   do {                                                      \
     svn_error_t *svn_err__temp = (expr);                    \
     if (svn_err__temp)                                      \
-      return svn_error_quick_wrap(svn_err__temp, wrap_msg); \
+      return svn_error_return(svn_error_quick_wrap(         \
+                                 svn_err__temp, wrap_msg)); \
   } while (0)
 
 
@@ -351,7 +382,8 @@ svn_handle_warning(FILE *stream,
  */
 #define SVN_ERR_MALFUNCTION()                                      \
   do {                                                             \
-    return svn_error__malfunction(TRUE, __FILE__, __LINE__, NULL); \
+    return svn_error_return(svn_error__malfunction(                \
+                                 TRUE, __FILE__, __LINE__, NULL)); \
   } while (0)
 
 /** Similar to SVN_ERR_MALFUNCTION(), but without the option of returning

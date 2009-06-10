@@ -31,10 +31,14 @@
 #ifndef SVN_WC_DB_H
 #define SVN_WC_DB_H
 
+#include "svn_wc.h"
+
 #include "svn_types.h"
 #include "svn_error.h"
 #include "svn_config.h"
 #include "svn_io.h"
+
+#include "private/svn_skel.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -131,6 +135,10 @@ typedef enum {
 
     /* The information for this directory node is obstructed by something
        in the local filesystem. Full details are not available.
+
+       This is only returned by an unshadowed BASE node. If a WORKING node
+       is present, then obstructed_delete or obstructed_add is returned as
+       appropriate.
 
        ### only used with per-dir .svn subdirectories.  */
     svn_wc__db_status_obstructed,
@@ -607,23 +615,25 @@ svn_wc__db_base_get_children(const apr_array_header_t **children,
                              apr_pool_t *scratch_pool);
 
 
-/** Set the wcprops for LOCAL_ABSPATH to PROPS.  Use SCRATCH_POOL for
+/** Set the dav cache for LOCAL_ABSPATH to PROPS.  Use SCRATCH_POOL for
     temporary allocations. */
 svn_error_t *
-svn_wc__db_base_set_wcprops(svn_wc__db_t *db,
-                            const char *local_abspath,
-                            const apr_hash_t *props,
-                            apr_pool_t *scratch_pool);
+svn_wc__db_base_set_dav_cache(svn_wc__db_t *db,
+                              const char *local_abspath,
+                              const apr_hash_t *props,
+                              apr_pool_t *scratch_pool);
 
 
-/** Retrieve the wcprops for LOCAL_ABSPATH into *PROPS, allocated in
-    RESULT_POOL.  Use SCRATCH_POOL for temporary allocations. */
+/** Retrieve the dav cache for LOCAL_ABSPATH into *PROPS, allocated in
+    RESULT_POOL.  Use SCRATCH_POOL for temporary allocations.  Return
+    SVN_ERR_WC_PATH_NOT_FOUND if no dav cache can be located for
+    LOCAL_ABSPATH in DB.  */
 svn_error_t *
-svn_wc__db_base_get_wcprops(apr_hash_t **props,
-                            svn_wc__db_t *db,
-                            const char *local_abspath,
-                            apr_pool_t *result_pool,
-                            apr_pool_t *scratch_pool);
+svn_wc__db_base_get_dav_cache(apr_hash_t **props,
+                              svn_wc__db_t *db,
+                              const char *local_abspath,
+                              apr_pool_t *result_pool,
+                              apr_pool_t *scratch_pool);
 
 
 /* ### how to handle depth? empty != absent. thus, record depth on each
@@ -792,6 +802,31 @@ svn_wc__db_pristine_decref(int *new_refcount,
                            apr_pool_t *scratch_pool);
 
 /** @} */
+
+
+/**
+ * @defgroup svn_wc__db_repos  Repository information management
+ * @{
+ */
+
+/**
+ * Ensure an entry for the repository at REPOS_ROOT_URL with UUID exists
+ * in DB for LOCAL_ABSPATH, either by finding the correct row, or inserting
+ * a new row.  In either case return the id in *REPOS_ID.
+ *
+ * Use SCRATCH_POOL for temporary allocations.
+ */
+svn_error_t *
+svn_wc__db_repos_ensure(apr_int64_t *repos_id,
+                        svn_wc__db_t *db,
+                        const char *local_abspath,
+                        const char *repos_root_url,
+                        const char *repos_uuid,
+                        apr_pool_t *scratch_pool);
+                        
+
+/** @} */
+
 
 /**
  * @defgroup svn_wc__db_op  Operations on WORKING tree
@@ -1137,6 +1172,15 @@ svn_wc__db_read_children(const apr_array_header_t **children,
                          apr_pool_t *scratch_pool);
 
 
+/* Return the kind of the node in DB at LOCAL_ABSPATH.  If it doesn't exist,
+   return svn_wc__db_unknown.  Use SCRATCH_POOL for temporary allocations. */
+svn_error_t *
+svn_wc__db_check_node(svn_wc__db_kind_t *kind,
+                      svn_wc__db_t *db,
+                      const char *local_abspath,
+                      apr_pool_t *scratch_pool);
+
+
 /* ### changelists. return an array, or an iterator interface? how big
    ### are these things? are we okay with an in-memory array? examine other
    ### changelist usage -- we may already assume the list fits in memory.
@@ -1189,12 +1233,19 @@ svn_wc__db_global_commit(svn_wc__db_t *db,
  * @{
  */
 
-/** Add LOCK for LOCAL_ABSPATH to DB */
+/** Add or replace LOCK for LOCAL_ABSPATH to DB.  */
 svn_error_t *
 svn_wc__db_lock_add(svn_wc__db_t *db,
                     const char *local_abspath,
                     const svn_wc__db_lock_t *lock,
                     apr_pool_t *scratch_pool);
+
+
+/** Remove any lock for LOCAL_ABSPATH in DB.  */
+svn_error_t *
+svn_wc__db_lock_remove(svn_wc__db_t *db,
+                       const char *local_abspath,
+                       apr_pool_t *scratch_pool);
 
 
 /** @} */
@@ -1415,6 +1466,52 @@ svn_wc__db_scan_deletion(const char **base_del_abspath,
 
 /** @} */
 
+/**
+ * @defgroup svn_wc__db_wq  Work queue manipulation. see workqueue.h
+ * @{
+ */
+
+/* In the WCROOT associated with DB and LOCAL_ABSPATH, add WORK_ITEM to the
+   wcroot's work queue. Use SCRATCH_POOL for all temporary allocations.  */
+svn_error_t *
+svn_wc__db_wq_add(svn_wc__db_t *db,
+                  const char *local_abspath,
+                  const svn_skel_t *work_item,
+                  apr_pool_t *scratch_pool);
+
+
+/* In the WCROOT associated with DB and LOCAL_ABSPATH, fetch a work item that
+   needs to be completed. Its identifier is returned in ID, and the data in
+   WORK_ITEM.
+
+   There is no particular ordering to the work items returned by this function.
+
+   If there are no work items to be completed, then ID will be set to zero,
+   and WORK_ITEM to NULL.
+
+   RESULT_POOL will be used to allocate WORK_ITEM, and SCRATCH_POOL
+   will be used for all temporary allocations.  */
+svn_error_t *
+svn_wc__db_wq_fetch(apr_uint64_t *id,
+                    svn_skel_t **work_item,
+                    svn_wc__db_t *db,
+                    const char *local_abspath,
+                    apr_pool_t *result_pool,
+                    apr_pool_t *scratch_pool);
+
+
+/* In the WCROOT associated with DB and LOCAL_ABSPATH, mark work item ID as
+   completed. If an error occurs, then it is unknown whether the work item
+   has been marked as completed.
+
+   Uses SCRATCH_POOL for all temporary allocations.  */
+svn_error_t *
+svn_wc__db_wq_completed(svn_wc__db_t *db,
+                        const char *local_abspath,
+                        apr_uint64_t id,
+                        apr_pool_t *scratch_pool);
+
+/** @} */
 
 /**
  * @defgroup svn_wc__db_temp Various temporary functions during transition
@@ -1447,6 +1544,13 @@ svn_wc__db_temp_base_add_subdir(svn_wc__db_t *db,
                                 svn_depth_t depth,
                                 apr_pool_t *scratch_pool);
 
+svn_error_t *
+svn_wc__db_temp_is_dir_deleted(svn_boolean_t *not_present,
+                               svn_revnum_t *base_revision,
+                               svn_wc__db_t *db,
+                               const char *local_abspath,
+                               apr_pool_t *scratch_pool);
+
 
 /* ### temp function. return the FORMAT for the directory LOCAL_ABSPATH.  */
 svn_error_t *
@@ -1473,7 +1577,7 @@ svn_wc__db_temp_set_access(svn_wc__db_t *db,
                            const char *local_dir_abspath,
                            svn_wc_adm_access_t *adm_access,
                            apr_pool_t *scratch_pool);
-void
+svn_error_t *
 svn_wc__db_temp_close_access(svn_wc__db_t *db,
                              const char *local_dir_abspath,
                              svn_wc_adm_access_t *adm_access,

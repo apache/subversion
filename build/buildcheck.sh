@@ -13,47 +13,40 @@ else
 fi
 
 #--------------------------------------------------------------------------
-# autoconf 2.50 or newer
+# autoconf 2.59 or newer
 #
 ac_version=`${AUTOCONF:-autoconf} --version 2>/dev/null|sed -e 's/^[^0-9]*//' -e 's/[a-z]* *$//' -e 1q`
 if test -z "$ac_version"; then
   echo "buildcheck: autoconf not found."
-  echo "            You need autoconf version 2.50 or newer installed."
+  echo "            You need autoconf version 2.59 or newer installed."
   exit 1
 fi
 IFS=.; set $ac_version; IFS=' '
-if test "$1" = "2" -a "$2" -lt "50" || test "$1" -lt "2"; then
+if test "$1" = "2" -a "$2" -lt "59" || test "$1" -lt "2"; then
   echo "buildcheck: autoconf version $ac_version found."
-  echo "            You need autoconf version 2.50 or newer installed."
+  echo "            You need autoconf version 2.59 or newer installed."
   echo "            If you have a sufficient autoconf installed, but it"
   echo "            is not named 'autoconf', then try setting the"
   echo "            AUTOCONF environment variable.  (See the INSTALL file"
   echo "            for details.)"
   exit 1
 fi
-if test "$ac_version" = "2.58"; then
-  echo "buildcheck: autoconf version 2.58 found."
-  echo "            This version of autoconf is broken.  Please install at"
-  echo "            least autoconf 2.59 or downgrade to version 2.57 which"
-  echo "            is known to work."
-  exit 1
-fi
 
 echo "buildcheck: autoconf version $ac_version (ok)"
 
 #--------------------------------------------------------------------------
-# autoheader 2.50 or newer
+# autoheader 2.59 or newer
 #
 ah_version=`${AUTOHEADER:-autoheader} --version 2>/dev/null|sed -e 's/^[^0-9]*//' -e 's/[a-z]* *$//' -e 1q`
 if test -z "$ah_version"; then
   echo "buildcheck: autoheader not found."
-  echo "            You need autoheader version 2.50 or newer installed."
+  echo "            You need autoheader version 2.59 or newer installed."
   exit 1
 fi
 IFS=.; set $ah_version; IFS=' '
-if test "$1" = "2" -a "$2" -lt "50" || test "$1" -lt "2"; then
+if test "$1" = "2" -a "$2" -lt "59" || test "$1" -lt "2"; then
   echo "buildcheck: autoheader version $ah_version found."
-  echo "            You need autoheader version 2.50 or newer installed."
+  echo "            You need autoheader version 2.59 or newer installed."
   echo "            If you have a sufficient autoheader installed, but it"
   echo "            is not named 'autoheader', then try setting the"
   echo "            AUTOHEADER environment variable.  (See the INSTALL file"

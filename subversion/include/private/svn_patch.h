@@ -22,6 +22,7 @@
 #include <apr_pools.h>
 #include <apr_tables.h>
 
+#include "svn_types.h"
 #include "svn_io.h"
 
 #ifdef __cplusplus

@@ -796,6 +796,10 @@ log_path_del_receiver(void *baton,
 {
   apr_hash_index_t *hi;
 
+  /* No paths were changed in this revision.  Nothing to do. */
+  if (! log_entry->changed_paths2)
+    return SVN_NO_ERROR;
+
   for (hi = apr_hash_first(pool, log_entry->changed_paths2);
        hi != NULL;
        hi = apr_hash_next(hi))

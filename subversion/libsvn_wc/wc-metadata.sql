@@ -33,6 +33,8 @@
  *   "base-deleted" -- node represents a delete of a BASE node
  */
 
+/* All the SQL below is for format 12: SVN_WC__WC_NG_VERSION  */
+-- format: 12
 
 /* ------------------------------------------------------------------------- */
 
@@ -129,14 +131,11 @@ CREATE TABLE BASE_NODE (
      have no information about the properties (a non-present node). */
   properties  BLOB,
 
-  /* serialized skel of this node's wcprops.  could be NULL if the
-     node does not have any wcprops. */
-  wc_props  BLOB,
+  /* serialized skel of this node's dav-cache.  could be NULL if the
+     node does not have any dav-cache. */
+  dav_cache  BLOB,
 
-  /* this node is a directory, and all of its child nodes have not (yet)
-     been created [for this revision number]. Note: boolean value. */
-  /* ### this will probably disappear in favor of incomplete child
-     ### nodes */
+  /* ### this column is obsolete. it will always be NULL.  */
   incomplete_children  INTEGER,
 
   /* The serialized file external information. */
@@ -185,8 +184,9 @@ CREATE TABLE WORKING_NODE (
   local_relpath  TEXT NOT NULL,
 
   /* parent's local_relpath for aggregating children of a given parent.
-     this will be "" if the parent is the wcroot. */
-  parent_relpath  TEXT NOT NULL,
+     this will be "" if the parent is the wcroot. NULL if this is the
+     wcroot node. */
+  parent_relpath  TEXT,
 
   /* Is this node "present" or has it been excluded for some reason?
      Only allowed values: normal, not-present, incomplete, base-deleted.
@@ -297,8 +297,9 @@ CREATE TABLE ACTUAL_NODE (
   local_relpath  TEXT NOT NULL,
 
   /* parent's local_relpath for aggregating children of a given parent.
-     this will be "" if the parent is the wcroot. */
-  parent_relpath  TEXT NOT NULL,
+     this will be "" if the parent is the wcroot. NULL if this is the
+     wcroot node. */
+  parent_relpath  TEXT,
 
   /* serialized skel of this node's properties. NULL implies no change to
      the properties, relative to WORKING/BASE as appropriate. */
@@ -348,3 +349,22 @@ CREATE TABLE LOCK (
 
 
 /* ------------------------------------------------------------------------- */
+
+/* Format 13 introduces the work queue, and erases a few columns from the
+   original schema.  */
+-- format: 13
+
+CREATE TABLE WORK_QUEUE (
+  /* Work items are identified by this value.  */
+  id  INTEGER PRIMARY KEY AUTOINCREMENT,
+
+  /* A serialized skel specifying the work item.  */
+  work  BLOB NOT NULL
+  );
+
+/* We cannot remove columns. Just clear the contents of 'incomplete_children'
+   instead.
+
+   The contents of dav_cache are suspect in format 12, so it is best to just
+   erase anything there.  */
+UPDATE BASE_NODE SET incomplete_children=null, dav_cache=null;

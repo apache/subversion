@@ -1,0 +1,599 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<!-- 
+    Copyright (c) Microsoft Corporation.  All rights reserved.
+
+    The use and distribution terms for this software are covered by the
+    Common Public License 1.0 (http://opensource.org/licenses/cpl.php)
+    which can be found in the file CPL.TXT at the root of this distribution.
+    By using this software in any fashion, you are agreeing to be bound by
+    the terms of this license.
+
+    You must not remove this notice, or any other, from this software.
+-->
+<WixLocalization xmlns="http://schemas.microsoft.com/wix/2006/localization" Culture="uk-ua" Codepage="1251">
+  <String Id="WixUIBack" Overridable="yes">На&amp;зад</String>
+  <String Id="WixUINext" Overridable="yes">&amp;Далі</String>
+  <String Id="WixUICancel" Overridable="yes">Скасувати</String>
+  <String Id="WixUIFinish" Overridable="yes">Завер&amp;шити</String>
+  <String Id="WixUIRetry" Overridable="yes">Ще &amp;раз</String>
+  <String Id="WixUIIgnore" Overridable="yes">Не зва&amp;жати</String>
+  <String Id="WixUIYes" Overridable="yes">&amp;Так</String>
+  <String Id="WixUINo" Overridable="yes">Ні</String>
+  <String Id="WixUIOK" Overridable="yes">ОК</String>
+  <String Id="WixUIPrint" Overridable="yes">Д&amp;рукувати</String>
+
+  <String Id="AdvancedWelcomeEulaDlg_Title" Overridable="yes">Установка [ProductName]</String>
+  <String Id="AdvancedWelcomeEulaDlgBannerBitmap" Overridable="yes">WixUI_Bmp_Banner</String>
+  <String Id="AdvancedWelcomeEulaDlgTitle" Overridable="yes">{\WixUI_Font_Title}Будь ласка, прочитайте ліцензійну угоду [ProductName]</String>
+  <String Id="AdvancedWelcomeEulaDlgLicenseAcceptedCheckBox" Overridable="yes">Я &amp;приймаю умови Ліцензійної Угоди</String>
+  <String Id="AdvancedWelcomeEulaDlgDescriptionPerMachine" Overridable="yes">Натисніть Установити, щоб виконати установку з параметрами за умовчанням для всіх користувачів. Натисніть Додатково, щоб змінити параметри установки.</String>
+  <String Id="AdvancedWelcomeEulaDlgDescriptionPerUser" Overridable="yes">Натисніть Установити, щоб виконати установку з параметрами за умовчанням тільки для вас. Натисніть Додатково, щоб змінити параметри установки.</String>
+  <String Id="AdvancedWelcomeEulaDlgInstall" Overridable="yes">&amp;Установити</String>
+  <String Id="AdvancedWelcomeEulaDlgAdvanced" Overridable="yes">&amp;Додатково</String>
+  <String Id="Advanced_Font_Normal_Size" Overridable="yes">8</String>
+  <String Id="Advanced_Font_Bigger_Size" Overridable="yes">12</String>
+  <String Id="Advanced_Font_Title_Size" Overridable="yes">9</String>
+  <String Id="Advanced_Font_Emphasized_Size" Overridable="yes">8</String>
+  <String Id="Advanced_Font_FaceName" Overridable="yes">Tahoma</String>
+
+  <String Id="BrowseDlg_Title" Overridable="yes">Установка [ProductName]</String>
+  <String Id="BrowseDlgComboLabel" Overridable="yes">&amp;Папка:</String>
+  <String Id="BrowseDlgWixUI_Bmp_Up" Overridable="yes">WixUI_Bmp_Up</String>
+  <String Id="BrowseDlgWixUI_Bmp_UpTooltip" Overridable="yes">На один рівень вгору</String>
+  <String Id="BrowseDlgNewFolder" Overridable="yes">WixUI_Bmp_New</String>
+  <String Id="BrowseDlgNewFolderTooltip" Overridable="yes">Створити нову папку</String>
+  <String Id="BrowseDlgPathLabel" Overridable="yes">Н&amp;азва папки:</String>
+  <String Id="BrowseDlgBannerBitmap" Overridable="yes">WixUI_Bmp_Banner</String>
+  <String Id="BrowseDlgDescription" Overridable="yes">Задайте папку установки</String>
+  <String Id="BrowseDlgTitle" Overridable="yes">{\WixUI_Font_Title}Змініть папку установки</String>
+
+  <String Id="CancelDlg_Title" Overridable="yes">Установка [ProductName]</String>
+  <String Id="CancelDlgText" Overridable="yes">Ви впевнені, що хочете скасувати установку [ProductName]?</String>
+  <String Id="CancelDlgIcon" Overridable="yes">WixUI_Ico_Info</String>
+  <String Id="CancelDlgIconTooltip" Overridable="yes">Іконка відомостей</String>
+
+  <String Id="CustomizeDlg_Title" Overridable="yes">Установка [ProductName]</String>
+  <String Id="CustomizeDlgTree" Overridable="yes">Дерево вибору</String>
+  <String Id="CustomizeDlgBrowse" Overridable="yes">&amp;Огляд...</String>
+  <String Id="CustomizeDlgReset" Overridable="yes">О&amp;чистити</String>
+  <String Id="CustomizeDlgDiskCost" Overridable="yes">Спож&amp;ивання</String>
+  <String Id="CustomizeDlgBannerBitmap" Overridable="yes">WixUI_Bmp_Banner</String>
+  <String Id="CustomizeDlgText" Overridable="yes">Клацніть на іконки в дереві, що нижче, аби вибрати режим установки частин продукту.</String>
+  <String Id="CustomizeDlgDescription" Overridable="yes">Оберіть режим установки частин за бажанням.</String>
+  <String Id="CustomizeDlgTitle" Overridable="yes">{\WixUI_Font_Title}Налаштовувана установка</String>
+  <String Id="CustomizeDlgItemDescription" Overridable="yes">CustomizeDlgItemDescription-CustomizeDlgItemDescription</String>
+  <String Id="CustomizeDlgItemSize" Overridable="yes">CustomizeDlgItemSize-CustomizeDlgItemSize</String>
+  <String Id="CustomizeDlgLocation" Overridable="yes">CustomizeDlgLocation-CustomizeDlgLocation</String>
+  <String Id="CustomizeDlgLocationLabel" Overridable="yes">Розташування:</String>
+
+  <String Id="DiskCostDlg_Title" Overridable="yes">Установка [ProductName]</String>
+  <String Id="DiskCostDlgBannerBitmap" Overridable="yes">WixUI_Bmp_Banner</String>
+  <String Id="DiskCostDlgText" Overridable="yes">На виділених томах бракує вільного місця для обраних частин продукту. Ви можете видалити деякі файли з виділених томів, або скасувати установку деяких частин продукту, або обрати інші розділи диска для установки.</String>
+  <String Id="DiskCostDlgDescription" Overridable="yes">Дисковий простір, потрібний для установки обраних частин продукту.</String>
+  <String Id="DiskCostDlgTitle" Overridable="yes">{\WixUI_Font_Title}Вимоги до дискового простору</String>
+  <String Id="DiskCostDlgVolumeList" Overridable="yes">{100}{70}{45}{45}{45}</String>
+
+  <String Id="ErrorDlg_Title" Overridable="yes">Установка [ProductName]</String>
+  <String Id="ErrorDlgErrorText" Overridable="yes">Інформаційний текст</String>
+  <String Id="ErrorDlgErrorIcon" Overridable="yes">WixUI_Ico_Info</String>
+  <String Id="ErrorDlgErrorIconTooltip" Overridable="yes">Іконка відомостей</String>
+
+  <String Id="ExitDialog_Title" Overridable="yes">Установка [ProductName]</String>
+  <String Id="ExitDialogBitmap" Overridable="yes">WixUI_Bmp_Dialog</String>
+  <String Id="ExitDialogDescription" Overridable="yes">Натисніть кнопку Завершити, щоб вийти з Майстра Установки.</String>
+  <String Id="ExitDialogTitle" Overridable="yes">{\WixUI_Font_Bigger}Завершено Майстер Установки [ProductName]</String>
+
+  <String Id="FatalError_Title" Overridable="yes">Установка [ProductName]</String>
+  <String Id="FatalErrorBitmap" Overridable="yes">WixUI_Bmp_Dialog</String>
+  <String Id="FatalErrorTitle" Overridable="yes">{\WixUI_Font_Bigger}Майстер Установки [ProductName] закінчився передчасно</String>
+  <String Id="FatalErrorDescription1" Overridable="yes">Майстер Установки [ProductName] завершився передчасно через помилку. Змін до Вашої системи внесено не було. Щоб встановити цю програму пізніше, запустіть Майстра Установки ще раз.</String>
+  <String Id="FatalErrorDescription2" Overridable="yes">Натисніть кнопку Завершити, щоб вийти геть з Майстра Установки.</String>
+
+  <String Id="FeaturesDlg_Title" Overridable="yes">Установка [ProductName]</String>
+  <String Id="FeaturesDlgTree" Overridable="yes">Частини продукту</String>
+  <String Id="FeaturesDlgBannerBitmap" Overridable="yes">WixUI_Bmp_Banner</String>
+  <String Id="FeaturesDlgDescription" Overridable="yes">Оберіть режим установки частин за бажанням.</String>
+  <String Id="FeaturesDlgTitle" Overridable="yes">{\WixUI_Font_Title}Частини продукту</String>
+  <String Id="FeaturesDlgItemDescription" Overridable="yes">FeaturesDlgItemDescription</String>
+  <String Id="FeaturesDlgItemSize" Overridable="yes">FeaturesDlgItemSize</String>
+  <String Id="FeaturesDlgInstall" Overridable="yes">&amp;Установити</String>
+  <String Id="FeaturesDlgChange" Overridable="yes">&amp;Змінити</String>
+
+  <String Id="FilesInUse_Title" Overridable="yes">Установка [ProductName]</String>
+  <String Id="FilesInUseExit" Overridable="yes">Ви&amp;хід</String>
+  <String Id="FilesInUseBannerBitmap" Overridable="yes">WixUI_Bmp_Banner</String>
+  <String Id="FilesInUseText" Overridable="yes">Наступні додатки використовують файли, які потрібно обновити цією установкою. Закрийте ці додатки а потім натисніть кнопку Ще &amp;раз щоб продовжити установку або кнопку Вихід, щоб завершити установку.</String>
+  <String Id="FilesInUseDescription" Overridable="yes">Деякі файли, які потрібно обновити, зараз використовуються.</String>
+  <String Id="FilesInUseTitle" Overridable="yes">{\WixUI_Font_Title}Файли що використовуються</String>
+
+  <String Id="InstallDirDlg_Title" Overridable="yes">Установка [ProductName]</String>
+  <String Id="InstallDirDlgChange" Overridable="yes">&amp;Змінити...</String>
+  <String Id="InstallDirDlgTitle" Overridable="yes">{\WixUI_Font_Title}Папка призначення</String>
+  <String Id="InstallDirDlgDescription" Overridable="yes">Натисніть Далі для установки в папку за умовчанням або натисніть Змінити щоб обрати іншу.</String>
+  <String Id="InstallDirDlgBannerBitmap" Overridable="yes">WixUI_Bmp_Banner</String>
+  <String Id="InstallDirDlgFolderLabel" Overridable="yes">Установити [ProductName] в:</String>
+
+  <String Id="InstallScopeDlg_Title" Overridable="yes">Установка [ProductName]</String>
+  <String Id="InstallScopeDlgBannerBitmap" Overridable="yes">WixUI_Bmp_Banner</String>
+  <String Id="InstallScopeDlgDescription" Overridable="yes">Оберіть режим і папку установки</String>
+  <String Id="InstallScopeDlgTitle" Overridable="yes">{\WixUI_Font_Title}Режим установки</String>
+  <String Id="InstallScopeDlgPerUser" Overridable="yes">{\WixUI_Font_Emphasized}Установка тільки для &amp;вас ([USERNAME])</String>
+  <String Id="InstallScopeDlgPerUserDescription" Overridable="yes">[ProductName] буде встановлено в користувацьку папку. Продукт буде доступний тільки для вас. Вам не знадобляться права Адміністратора.</String>
+  <String Id="InstallScopeDlgNoPerUserDescription" Overridable="yes">[ProductName] не підтримує установку для окремого користувача.</String>
+  <String Id="InstallScopeDlgPerMachine" Overridable="yes">{\WixUI_Font_Emphasized}Установка для всіх &amp;користувачів, зареєстрованих на цьому комп'ютері</String>
+  <String Id="InstallScopeDlgPerMachineDescription" Overridable="yes">[ProductName] буде встановлено в загальну папку. Продукт буде доступний для всіх користувачів цього комп'ютера. Натисніть Змінити, щоб змінити папку установки. Для цього варіанту вам знадобляться права Адміністратора.</String>
+  <String Id="InstallScopeDlgFolderLabel" Overridable="yes">&amp;Папка устаноки:</String>
+  <String Id="InstallScopeDlgChange" Overridable="yes">&amp;Змінити...</String>
+
+  <String Id="InvalidDirDlg_Title" Overridable="yes">Установка [ProductName]</String>
+  <String Id="InvalidDirDlgText" Overridable="yes">Папка установки повинна бути на локальному жорсткому диску.</String>
+  <String Id="InvalidDirDlgIcon" Overridable="yes">WixUI_Ico_Info</String>
+  <String Id="InvalidDirDlgIconTooltip" Overridable="yes">Information icon</String>
+
+  <String Id="LicenseAgreementDlg_Title" Overridable="yes">Установка [ProductName]</String>
+  <String Id="LicenseAgreementDlgLicenseAcceptedCheckBox" Overridable="yes">Я &amp;приймаю умови Ліцензійної Угоди</String>
+  <String Id="LicenseAgreementDlgBannerBitmap" Overridable="yes">WixUI_Bmp_Banner</String>
+  <String Id="LicenseAgreementDlgDescription" Overridable="yes">Будь ласка, уважно прочитайте наступну ліцензійну угоду</String>
+  <String Id="LicenseAgreementDlgTitle" Overridable="yes">{\WixUI_Font_Title}Ліцензійна угода кінцевого користувача</String>
+
+  <String Id="MaintenanceTypeDlg_Title" Overridable="yes">Установка [ProductName]</String>
+  <String Id="MaintenanceTypeDlgChangeButton" Overridable="yes">З&amp;мінити</String>
+  <String Id="MaintenanceTypeDlgChangeButtonTooltip" Overridable="yes">Змінити установку</String>
+  <String Id="MaintenanceTypeDlgRepairButton" Overridable="yes">Вип&amp;равити</String>
+  <String Id="MaintenanceTypeDlgRepairButtonTooltip" Overridable="yes">Виправити установку</String>
+  <String Id="MaintenanceTypeDlgRemoveButton" Overridable="yes">&amp;Видалити</String>
+  <String Id="MaintenanceTypeDlgRemoveButtonTooltip" Overridable="yes">Видалити установку</String>
+  <String Id="MaintenanceTypeDlgBannerBitmap" Overridable="yes">WixUI_Bmp_Banner</String>
+  <String Id="MaintenanceTypeDlgDescription" Overridable="yes">Виберіть дію, яку ви бажаєте виконати.</String>
+  <String Id="MaintenanceTypeDlgTitle" Overridable="yes">{\WixUI_Font_Title}Змінити, виправити або видалити програму</String>
+  <String Id="MaintenanceTypeDlgChangeText" Overridable="yes">Дозволить Вам змінити набір установлених частин продукту.</String>
+  <String Id="MaintenanceTypeDlgChangeDisabledText" Overridable="yes">[ProductName] не має жодної частини, що обирається незалежно.</String>
+  <String Id="MaintenanceTypeDlgRemoveText" Overridable="yes">Видалити [ProductName] з Вашого комп’ютера.</String>
+  <String Id="MaintenanceTypeDlgRemoveDisabledText" Overridable="yes">Неможливо видалити [ProductName].</String>
+  <String Id="MaintenanceTypeDlgRepairText" Overridable="yes">Виправити помилки в останній інсталяції шляхом відновлення відсутніх та пошкоджених файлів, ярликів та записів реєстру.</String>
+  <String Id="MaintenanceTypeDlgRepairDisabledText" Overridable="yes">Неможливо виправити [ProductName].</String>
+
+  <String Id="MaintenanceWelcomeDlg_Title" Overridable="yes">Установка [ProductName]</String>
+  <String Id="MaintenanceWelcomeDlgBitmap" Overridable="yes">WixUI_Bmp_Dialog</String>
+  <String Id="MaintenanceWelcomeDlgDescription" Overridable="yes">Майстер Установки дозволить Вам змінити спосіб установки частин [ProductName] на Вашому комп’ютері чи дасть можливість видалити його з Вашого комп’ютера взагалі. Натисніть Далі щоб продовжити, або ж Скасувати щоб вийти з Майстра Установки.</String>
+  <String Id="MaintenanceWelcomeDlgTitle" Overridable="yes">{\WixUI_Font_Bigger}Ласкаво просимо до Майстра Установки [ProductName]</String>
+
+  <String Id="MsiRMFilesInUse_Title" Overridable="yes">Установка [ProductName]</String>
+  <String Id="MsiRMFilesInUseBannerBitmap" Overridable="yes">WixUI_Bmp_Banner</String>
+  <String Id="MsiRMFilesInUseText" Overridable="yes">Наступні додатки використовують файли які потрібно обновити цією установкою. Ви можете дозволити Майстру Установки закрити їх і спробувати перезапустити їх або перезавантажити комп'ютер пізніше.</String>
+  <String Id="MsiRMFilesInUseDescription" Overridable="yes">Деякі файли, які потрібно обновити, зараз використовуються.</String>
+  <String Id="MsiRMFilesInUseTitle" Overridable="yes">{\WixUI_Font_Title}Файли що використовуються</String>
+  <String Id="MsiRMFilesInUseUseRM" Overridable="yes">За&amp;крити додатки і спробувати перезапустити їх.</String>
+  <String Id="MsiRMFilesInUseDontUseRM" Overridable="yes">&amp;Не закривати додатки. Буде потрібне перезавантаження.</String>
+
+  <String Id="OutOfDiskDlg_Title" Overridable="yes">Установка [ProductName]</String>
+  <String Id="OutOfDiskDlgBannerBitmap" Overridable="yes">WixUI_Bmp_Banner</String>
+  <String Id="OutOfDiskDlgText" Overridable="yes">На виділених томах бракує вільного місця для обраних частин продукту. Ви можете видалити деякі файли з виділених томів, або скасувати установку деяких частин продукту, або обрати інші розділи диска для установки.</String>
+  <String Id="OutOfDiskDlgDescription" Overridable="yes">Дисковий простір, необхідний для установки, перевищує наявний дисковий простір.</String>
+  <String Id="OutOfDiskDlgTitle" Overridable="yes">{\WixUI_Font_Title}Бракує місця на диску</String>
+  <String Id="OutOfDiskDlgVolumeList" Overridable="yes">{100}{70}{45}{45}{45}</String>
+
+  <String Id="OutOfRbDiskDlg_Title" Overridable="yes">Установка [ProductName]</String>
+  <String Id="OutOfRbDiskDlgBannerBitmap" Overridable="yes">WixUI_Bmp_Banner</String>
+  <String Id="OutOfRbDiskDlgText" Overridable="yes">На виділених томах бракує вільного місця для обраних частин продукту. Ви можете видалити деякі файли з виділених томів, або скасувати установку деяких частин продукту, або обрати інші розділи диска для установки.</String>
+  <String Id="OutOfRbDiskDlgDescription" Overridable="yes">Дисковий простір, необхідний для установки, перевищує наявний дисковий простір.</String>
+  <String Id="OutOfRbDiskDlgTitle" Overridable="yes">{\WixUI_Font_Title}Бракує місця на диску</String>
+  <String Id="OutOfRbDiskDlgVolumeList" Overridable="yes">{100}{70}{45}{45}{45}</String>
+  <String Id="OutOfRbDiskDlgText2" Overridable="yes">У якості альтернативи, Ви можете відмовитися від можливості відкотити установку. Така відмова відніме можливість відновити попередній стан Вашої системи на момент до установки, якщо установку буде тим чи іншим чином перервано. Натисніть Так якщо Ви погоджуєтеся на ризик, пов’язаний з відмовою від можливості повернути початковий стан системи.</String>
+
+  <String Id="PrepareDlg_Title" Overridable="yes">Установка [ProductName]</String>
+  <String Id="PrepareDlgBitmap" Overridable="yes">WixUI_Bmp_Dialog</String>
+  <String Id="PrepareDlgDescription" Overridable="yes">Будь ласка, зачекайте доки Майстер Установки підготується до виконання установки.</String>
+  <String Id="PrepareDlgTitle" Overridable="yes">{\WixUI_Font_Bigger}Ласкаво просимо до Майстра Установки [ProductName]</String>
+
+  <String Id="ProgressDlg_Title" Overridable="yes">Установка [ProductName]</String>
+  <String Id="ProgressDlgBannerBitmap" Overridable="yes">WixUI_Bmp_Banner</String>
+  <String Id="ProgressDlgTextInstalling" Overridable="yes">Зачекайте, будь ласка, доки Майстер Установки виконає установку [ProductName].</String>
+  <String Id="ProgressDlgTitleInstalling" Overridable="yes">{\WixUI_Font_Title}Встановлення [ProductName]</String>
+  <String Id="ProgressDlgTextChanging" Overridable="yes">Зачекайте, будь ласка, доки Майстер Установки вчинить зміни до [ProductName].</String>
+  <String Id="ProgressDlgTitleChanging" Overridable="yes">{\WixUI_Font_Title}Внесення змін до [ProductName]</String>
+  <String Id="ProgressDlgTextRepairing" Overridable="yes">Зачекайте, будь ласка, доки майстер установки виправить [ProductName].</String>
+  <String Id="ProgressDlgTitleRepairing" Overridable="yes">{\WixUI_Font_Title}Виправлення [ProductName]</String>
+  <String Id="ProgressDlgTextRemoving" Overridable="yes">Зачекайте, будь ласка, доки майстер установки видалить [ProductName].</String>
+  <String Id="ProgressDlgTitleRemoving" Overridable="yes">{\WixUI_Font_Title}Видалення [ProductName]</String>
+  <String Id="ProgressDlgProgressBar" Overridable="yes">Виконано</String>
+  <String Id="ProgressDlgStatusLabel" Overridable="yes">Статус:</String>
+
+  <String Id="ResumeDlg_Title" Overridable="yes">Установка [ProductName]</String>
+  <String Id="ResumeDlgInstall" Overridable="yes">&amp;Установити</String>
+  <String Id="ResumeDlgBitmap" Overridable="yes">WixUI_Bmp_Dialog</String>
+  <String Id="ResumeDlgDescription" Overridable="yes">Майстер Установки продовжить установку [ProductName] на Ваш комп’ютер. Натисніть Установити щоб продовжити, або ж Скасувати, щоб вийти з Майстра Установки.</String>
+  <String Id="ResumeDlgTitle" Overridable="yes">{\WixUI_Font_Bigger}Продовження Майстра Установки [ProductName]</String>
+
+  <String Id="SetupTypeDlg_Title" Overridable="yes">Установка [ProductName]</String>
+  <String Id="SetupTypeDlgTypicalButton" Overridable="yes">&amp;Типова</String>
+  <String Id="SetupTypeDlgTypicalButtonTooltip" Overridable="yes">Типова установка</String>
+  <String Id="SetupTypeDlgCustomButton" Overridable="yes">На&amp;лаштовувана</String>
+  <String Id="SetupTypeDlgCustomButtonTooltip" Overridable="yes">Установка з власними налаштуваннями</String>
+  <String Id="SetupTypeDlgCompleteButton" Overridable="yes">По&amp;вна</String>
+  <String Id="SetupTypeDlgCompleteButtonTooltip" Overridable="yes">Повна установка</String>
+  <String Id="SetupTypeDlgBannerBitmap" Overridable="yes">WixUI_Bmp_Banner</String>
+  <String Id="SetupTypeDlgTitle" Overridable="yes">{\WixUI_Font_Title}Вибір типу установки</String>
+  <String Id="SetupTypeDlgDescription" Overridable="yes">Оберіть тип установки, що найкраще відповідає Вашим потребам</String>
+  <String Id="SetupTypeDlgTypicalText" Overridable="yes">Встановлення найбільш загальних частин програми. Рекомендується для більшості користувачів.</String>
+  <String Id="SetupTypeDlgCustomText" Overridable="yes">Користувач може обрати, які саме частини програми встановити й де. Рекомендовано для більш досвідчених користувачів.</String>
+  <String Id="SetupTypeDlgCompleteText" Overridable="yes">Всі частини програми буде встановлено. Займатиме найбільше місця на диску.</String>
+
+  <String Id="UserExit_Title" Overridable="yes">Установка [ProductName]</String>
+  <String Id="UserExitBitmap" Overridable="yes">WixUI_Bmp_Dialog</String>
+  <String Id="UserExitTitle" Overridable="yes">{\WixUI_Font_Bigger}Майстра Установки [ProductName] було перервано</String>
+  <String Id="UserExitDescription1" Overridable="yes">Установку [ProductName] було перервано. Змін до Вашої системи внесено не було. Щоб установити цю програму пізніше, запустіть установку ще раз, будь ласка.</String>
+  <String Id="UserExitDescription2" Overridable="yes">Натисніть Завершити, щоб вийти з Майстра Установки.</String>
+
+  <String Id="VerifyReadyDlg_Title" Overridable="yes">Установка [ProductName]</String>
+  <String Id="VerifyReadyDlgBannerBitmap" Overridable="yes">WixUI_Bmp_Banner</String>
+  <String Id="VerifyReadyDlgInstall" Overridable="yes">&amp;Установити</String>
+  <String Id="VerifyReadyDlgInstallText" Overridable="yes">Натисніть Установити, щоб установка розпочалась. Щоб щось змінити, натисніть Назад. Щоб вийти геть, натисніть Скасувати.</String>
+  <String Id="VerifyReadyDlgInstallTitle" Overridable="yes">{\WixUI_Font_Title}Готовий до установки [ProductName]</String>
+  <String Id="VerifyReadyDlgChange" Overridable="yes">З&amp;мінити</String>
+  <String Id="VerifyReadyDlgChangeText" Overridable="yes">Натисніть Змінити, щоб змінити цю установку [ProductName]. Якщо Ви бажаєте переглянути або змінити будь-яке з налаштувань для установки, натисніть Назад. Щоб вийти з майстра геть, натисніть Скасувати.</String>
+  <String Id="VerifyReadyDlgChangeTitle" Overridable="yes">{\WixUI_Font_Title}Готовий до внесення змін до [ProductName]</String>
+  <String Id="VerifyReadyDlgRepair" Overridable="yes">Вип&amp;равити</String>
+  <String Id="VerifyReadyDlgRepairText" Overridable="yes">Натисніть Виправити, щоб виправити цю установку [ProductName]. Якщо Ви бажаєте переглянути або змінити будь-яке з налаштувань для установки, натисніть Назад. Щоб вийти з майстра геть, натисніть Скасувати.</String>
+  <String Id="VerifyReadyDlgRepairTitle" Overridable="yes">{\WixUI_Font_Title}Готовий до виправлення [ProductName]</String>
+  <String Id="VerifyReadyDlgRemove" Overridable="yes">&amp;Видалити</String>
+  <String Id="VerifyReadyDlgRemoveText" Overridable="yes">Натисніть Видалити, щоб видалити [ProductName] з Вашого комп’ютера. Якщо Ви бажаєте переглянути або змінити будь-яке з налаштувань для установки, натисніть Назад. Щоб вийти з майстра геть, натисніть Скасувати.</String>
+  <String Id="VerifyReadyDlgRemoveTitle" Overridable="yes">{\WixUI_Font_Title}Готовий до видалення [ProductName]</String>
+
+  <String Id="WaitForCostingDlg_Title" Overridable="yes">Установка [ProductName]</String>
+  <String Id="WaitForCostingDlgReturn" Overridable="yes">&amp;Повернутися</String>
+  <String Id="WaitForCostingDlgText" Overridable="yes">Зачекайте, будь ласка, доки інсталятор закінчить визначення Ваших потреб у дисковому просторі.</String>
+  <String Id="WaitForCostingDlgIcon" Overridable="yes">WixUI_Ico_Exclam</String>
+  <String Id="WaitForCostingDlgIconTooltip" Overridable="yes">Іконка попередження</String>
+
+  <String Id="WelcomeDlg_Title" Overridable="yes">Установка [ProductName]</String>
+  <String Id="WelcomeDlgBitmap" Overridable="yes">WixUI_Bmp_Dialog</String>
+  <String Id="WelcomeDlgDescription" Overridable="yes">Цей майстер установки установить [ProductName] на Ваш комп’ютер. Натисніть Далі, щоб продовжити, або Скасувати, щоб вийти з майстра установки геть.</String>
+  <String Id="WelcomeDlgTitle" Overridable="yes">{\WixUI_Font_Bigger}Ласкаво просимо до Майстра Установки [ProductName]</String>
+
+  <String Id="WelcomeEulaDlg_Title" Overridable="yes">Установка [ProductName]</String>
+  <String Id="WelcomeEulaDlgBitmap" Overridable="yes">WixUI_Bmp_Dialog</String>
+  <String Id="WelcomeEulaDlgLicenseAcceptedCheckBox" Overridable="yes">Я &amp;приймаю умови Ліцензійної Угоди</String>
+  <String Id="WelcomeEulaDlgInstall" Overridable="yes">&amp;Установити</String>
+  <String Id="WelcomeEulaDlgTitle" Overridable="yes">{\WixUI_Font_Title}Будь ласка, ознайомтеся з умовами Ліцензійної Угоди для [ProductName]</String>
+
+  <String Id="ProgressTextInstallValidate" Overridable="yes">Валідація установки</String>
+  <String Id="ProgressTextInstallFiles" Overridable="yes">Копіювання нових файлів</String>
+  <String Id="ProgressTextInstallFilesTemplate" Overridable="yes">Файл: [1], Папка: [9], Розмір: [6]</String>
+  <String Id="ProgressTextInstallAdminPackage" Overridable="yes">Копіювання файлів мережної установки</String>
+  <String Id="ProgressTextInstallAdminPackageTemplate" Overridable="yes">Файл: [1], Папка: [9], Розмір: [6]</String>
+  <String Id="ProgressTextFileCost" Overridable="yes">Підрахунок потреб у вільному просторі</String>
+  <String Id="ProgressTextCostInitialize" Overridable="yes">Підрахунок потреб у вільному просторі</String>
+  <String Id="ProgressTextCostFinalize" Overridable="yes">Підрахунок потреб у вільному просторі</String>
+  <String Id="ProgressTextCreateShortcuts" Overridable="yes">Створення ярликів</String>
+  <String Id="ProgressTextCreateShortcutsTemplate" Overridable="yes">Ярлик: [1]</String>
+  <String Id="ProgressTextPublishComponents" Overridable="yes">Публікування специфікованих компонентів</String>
+  <String Id="ProgressTextPublishComponentsTemplate" Overridable="yes">Ідентифікатор компоненту: [1], Специфікатор: [2]</String>
+  <String Id="ProgressTextPublishFeatures" Overridable="yes">Публікування функціональних частин продукту</String>
+  <String Id="ProgressTextPublishFeaturesTemplate" Overridable="yes">Частина: [1]</String>
+  <String Id="ProgressTextPublishProduct" Overridable="yes">Публікування відомостей про продукт</String>
+  <String Id="ProgressTextRegisterClassInfo" Overridable="yes">Реєстрація серверів класів</String>
+  <String Id="ProgressTextRegisterClassInfoTemplate" Overridable="yes">Ідентифікатор класу: [1]</String>
+  <String Id="ProgressTextRegisterExtensionInfo" Overridable="yes">Реєстрація серверів розширень</String>
+  <String Id="ProgressTextRegisterExtensionInfoTemplate" Overridable="yes">Розширення: [1]</String>
+  <String Id="ProgressTextRegisterMIMEInfo" Overridable="yes">Реєстрація MIME відомостей</String>
+  <String Id="ProgressTextRegisterMIMEInfoTemplate" Overridable="yes">MIME-тип вмісту: [1], Розширення: [2]</String>
+  <String Id="ProgressTextRegisterProgIdInfo" Overridable="yes">Реєстрація ідентифікаторів програм</String>
+  <String Id="ProgressTextRegisterProgIdInfoTemplate" Overridable="yes">ProgId: [1]</String>
+  <String Id="ProgressTextAllocateRegistrySpace" Overridable="yes">Відведення місця в реєстрі</String>
+  <String Id="ProgressTextAllocateRegistrySpaceTemplate" Overridable="yes">Вільне місце: [1]</String>
+  <String Id="ProgressTextAppSearch" Overridable="yes">Пошук встановлених програм</String>
+  <String Id="ProgressTextAppSearchTemplate" Overridable="yes">Властивість: [1], Підпис: [2]</String>
+  <String Id="ProgressTextBindImage" Overridable="yes">Прив’язка виконуваних файлів (*.exe)</String>
+  <String Id="ProgressTextBindImageTemplate" Overridable="yes">Файл: [1]</String>
+  <String Id="ProgressTextCCPSearch" Overridable="yes">Пошук кваліфікуючих продуктів</String>
+  <String Id="ProgressTextCreateFolders" Overridable="yes">Створення папок</String>
+  <String Id="ProgressTextCreateFoldersTemplate" Overridable="yes">Папка: [1]</String>
+  <String Id="ProgressTextDeleteServices" Overridable="yes">Видалення сервісів</String>
+  <String Id="ProgressTextDeleteServicesTemplate" Overridable="yes">Сервіс: [1]</String>
+  <String Id="ProgressTextDuplicateFiles" Overridable="yes">Створення копій файлів</String>
+  <String Id="ProgressTextDuplicateFilesTemplate" Overridable="yes">Файл: [1],  Папка: [9],  Розмір: [6]</String>
+  <String Id="ProgressTextFindRelatedProducts" Overridable="yes">Пошук пов’язаних програм</String>
+  <String Id="ProgressTextFindRelatedProductsTemplate" Overridable="yes">Знайдено програму: [1]</String>
+  <String Id="ProgressTextInstallODBC" Overridable="yes">Встановлення компонентів ODBC</String>
+  <String Id="ProgressTextInstallServices" Overridable="yes">Встановлення нових сервісів</String>
+  <String Id="ProgressTextInstallServicesTemplate" Overridable="yes">Сервіс: [2]</String>
+  <String Id="ProgressTextLaunchConditions" Overridable="yes">Перевірка умов, необхідних для установки</String>
+  <String Id="ProgressTextMigrateFeatureStates" Overridable="yes">Копіювання стану частин пов’язаних програм</String>
+  <String Id="ProgressTextMigrateFeatureStatesTemplate" Overridable="yes">Програма: [1]</String>
+  <String Id="ProgressTextMoveFiles" Overridable="yes">Переміщення файлів</String>
+  <String Id="ProgressTextMoveFilesTemplate" Overridable="yes">Файл: [1],  Папка: [9],  Розмір: [6]</String>
+  <String Id="ProgressTextPatchFiles" Overridable="yes">Внесення виправлень у файли</String>
+  <String Id="ProgressTextPatchFilesTemplate" Overridable="yes">Файл: [1],  Папка: [2],  Розмір: [3]</String>
+  <String Id="ProgressTextProcessComponents" Overridable="yes">Поновлення реєстрації компонентів</String>
+  <String Id="ProgressTextRegisterComPlus" Overridable="yes">Реєстрація програм і компонентів COM+</String>
+  <String Id="ProgressTextRegisterComPlusTemplate" Overridable="yes">AppId: [1]{{, AppType: [2], Користувачі: [3], RSN: [4]}}</String>
+  <String Id="ProgressTextRegisterFonts" Overridable="yes">Реєстрація шрифтів</String>
+  <String Id="ProgressTextRegisterFontsTemplate" Overridable="yes">Шрифт: [1]</String>
+  <String Id="ProgressTextRegisterProduct" Overridable="yes">Реєстрація продукту</String>
+  <String Id="ProgressTextRegisterProductTemplate" Overridable="yes">[1]</String>
+  <String Id="ProgressTextRegisterTypeLibraries" Overridable="yes">Реєстрація бібліотек типів</String>
+  <String Id="ProgressTextRegisterTypeLibrariesTemplate" Overridable="yes">LibID: [1]</String>
+  <String Id="ProgressTextRegisterUser" Overridable="yes">Реєстрація користувачів</String>
+  <String Id="ProgressTextRegisterUserTemplate" Overridable="yes">[1]</String>
+  <String Id="ProgressTextRemoveDuplicateFiles" Overridable="yes">Видалення дубльованих файлів</String>
+  <String Id="ProgressTextRemoveDuplicateFilesTemplate" Overridable="yes">Файл: [1], Папка: [9]</String>
+  <String Id="ProgressTextRemoveEnvironmentStrings" Overridable="yes">Видалення змінних середовища</String>
+  <String Id="ProgressTextRemoveEnvironmentStringsTemplate" Overridable="yes">Назва: [1], значення: [2], дія [3]</String>
+  <String Id="ProgressTextRemoveExistingProducts" Overridable="yes">Видалення програм</String>
+  <String Id="ProgressTextRemoveExistingProductsTemplate" Overridable="yes">Програма: [1], Командний рядок: [2]</String>
+  <String Id="ProgressTextRemoveFiles" Overridable="yes">Видалення файлів</String>
+  <String Id="ProgressTextRemoveFilesTemplate" Overridable="yes">Файл: [1], Папка: [9]</String>
+  <String Id="ProgressTextRemoveFolders" Overridable="yes">Видалення папок</String>
+  <String Id="ProgressTextRemoveFoldersTemplate" Overridable="yes">Папка: [1]</String>
+  <String Id="ProgressTextRemoveIniValues" Overridable="yes">Видалення рядків з INI-файлів</String>
+  <String Id="ProgressTextRemoveIniValuesTemplate" Overridable="yes">Файл: [1],  Секція: [2],  Ключ: [3], Значення: [4]</String>
+  <String Id="ProgressTextRemoveODBC" Overridable="yes">Видалення компонентів ODBC</String>
+  <String Id="ProgressTextRemoveRegistryValues" Overridable="yes">Видалення значень з системного реєстру</String>
+  <String Id="ProgressTextRemoveRegistryValuesTemplate" Overridable="yes">Ключ: [1], Назва: [2]</String>
+  <String Id="ProgressTextRemoveShortcuts" Overridable="yes">Видалення ярликів</String>
+  <String Id="ProgressTextRemoveShortcutsTemplate" Overridable="yes">Ярлик: [1]</String>
+  <String Id="ProgressTextRMCCPSearch" Overridable="yes">Пошук кваліфікуючих продуктів</String>
+  <String Id="ProgressTextSelfRegModules" Overridable="yes">Реєстрація модулів</String>
+  <String Id="ProgressTextSelfRegModulesTemplate" Overridable="yes">Файл: [1], Папка: [2]</String>
+  <String Id="ProgressTextSelfUnregModules" Overridable="yes">Розреєстрація модулів</String>
+  <String Id="ProgressTextSelfUnregModulesTemplate" Overridable="yes">Файл: [1], Папка: [2]</String>
+  <String Id="ProgressTextSetODBCFolders" Overridable="yes">Ініціалізація каталогів ODBC</String>
+  <String Id="ProgressTextStartServices" Overridable="yes">Запускаємо сервіси</String>
+  <String Id="ProgressTextStartServicesTemplate" Overridable="yes">Сервіс: [1]</String>
+  <String Id="ProgressTextStopServices" Overridable="yes">Зупиняємо сервіси</String>
+  <String Id="ProgressTextStopServicesTemplate" Overridable="yes">Сервіс: [1]</String>
+  <String Id="ProgressTextUnpublishComponents" Overridable="yes">Припинення публікації специфікованих компонентів</String>
+  <String Id="ProgressTextUnpublishComponentsTemplate" Overridable="yes">Ідентифікатор компоненту: [1], Специфікатор: [2]</String>
+  <String Id="ProgressTextUnpublishFeatures" Overridable="yes">Припинення публікації частин продукту</String>
+  <String Id="ProgressTextUnpublishFeaturesTemplate" Overridable="yes">Частина: [1]</String>
+  <String Id="ProgressTextUnregisterClassInfo" Overridable="yes">Розреєстрація серверів класів</String>
+  <String Id="ProgressTextUnregisterClassInfoTemplate" Overridable="yes">Ідентифікатор класу: [1]</String>
+  <String Id="ProgressTextUnregisterComPlus" Overridable="yes">Розреєстрація програм і компонентів COM+</String>
+  <String Id="ProgressTextUnregisterComPlusTemplate" Overridable="yes">AppId: [1]{{, AppType: [2]}}</String>
+  <String Id="ProgressTextUnregisterExtensionInfo" Overridable="yes">Розреєстрація серверів розширень</String>
+  <String Id="ProgressTextUnregisterExtensionInfoTemplate" Overridable="yes">Розширення: [1]</String>
+  <String Id="ProgressTextUnregisterFonts" Overridable="yes">Розреєстрація шрифтів</String>
+  <String Id="ProgressTextUnregisterFontsTemplate" Overridable="yes">Шрифт: [1]</String>
+  <String Id="ProgressTextUnregisterMIMEInfo" Overridable="yes">Розреєстрація відомостей MIME</String>
+  <String Id="ProgressTextUnregisterMIMEInfoTemplate" Overridable="yes">MIME-тип вмісту: [1], розширення: [2]</String>
+  <String Id="ProgressTextUnregisterProgIdInfo" Overridable="yes">Розреєстрація ідентифікаторів програм</String>
+  <String Id="ProgressTextUnregisterProgIdInfoTemplate" Overridable="yes">ProgId: [1]</String>
+  <String Id="ProgressTextUnregisterTypeLibraries" Overridable="yes">Розреєстрація бібліотек типів</String>
+  <String Id="ProgressTextUnregisterTypeLibrariesTemplate" Overridable="yes">LibID: [1]</String>
+  <String Id="ProgressTextWriteEnvironmentStrings" Overridable="yes">Встановлення змінних середовища</String>
+  <String Id="ProgressTextWriteEnvironmentStringsTemplate" Overridable="yes">Назва: [1], Значення: [2], Дія [3]</String>
+  <String Id="ProgressTextWriteIniValues" Overridable="yes">Запис в INI-файли</String>
+  <String Id="ProgressTextWriteIniValuesTemplate" Overridable="yes">Файл: [1],  Секція: [2],  Ключ: [3],  Значення: [4]</String>
+  <String Id="ProgressTextWriteRegistryValues" Overridable="yes">Запис значень до системного реєстру</String>
+  <String Id="ProgressTextWriteRegistryValuesTemplate" Overridable="yes">Ключ: [1], Назва: [2], Значення: [3]</String>
+  <String Id="ProgressTextAdvertise" Overridable="yes">Рекламування програми</String>
+  <String Id="ProgressTextGenerateScript" Overridable="yes">Формування сценарію операцій для дії:</String>
+  <String Id="ProgressTextGenerateScriptTemplate" Overridable="yes">[1]</String>
+  <String Id="ProgressTextInstallSFPCatalogFile" Overridable="yes">Встановлення системного каталогу</String>
+  <String Id="ProgressTextInstallSFPCatalogFileTemplate" Overridable="yes">Файл: [1],  Залежності: [2]</String>
+  <String Id="ProgressTextMsiPublishAssemblies" Overridable="yes">Публікування відомостей про збірку</String>
+  <String Id="ProgressTextMsiPublishAssembliesTemplate" Overridable="yes">Контекст програми:[1], Назва збірки:[2]</String>
+  <String Id="ProgressTextMsiUnpublishAssemblies" Overridable="yes">Скасування публікації відомостей про збірку</String>
+  <String Id="ProgressTextMsiUnpublishAssembliesTemplate" Overridable="yes">Контекст програми:[1], Назва збірки:[2]</String>
+  <String Id="ProgressTextRollback" Overridable="yes">Відкочування дії:</String>
+  <String Id="ProgressTextRollbackTemplate" Overridable="yes">[1]</String>
+  <String Id="ProgressTextRollbackCleanup" Overridable="yes">Видалення резервних файлів</String>
+  <String Id="ProgressTextRollbackCleanupTemplate" Overridable="yes">Файл: [1]</String>
+  <String Id="ProgressTextUnmoveFiles" Overridable="yes">Видалення переміщених файлів</String>
+  <String Id="ProgressTextUnmoveFilesTemplate" Overridable="yes">Файл: [1], Папка: [9]</String>
+  <String Id="ProgressTextUnpublishProduct" Overridable="yes">Припинення публікації даних про продукт</String>
+
+  <String Id="Error0" Overridable="yes">{{Фатальна помилка: }}</String>
+  <String Id="Error1" Overridable="yes">{{Помилка [1]. }}</String>
+  <String Id="Error2" Overridable="yes">Попередження [1]. </String>
+  <String Id="Error4" Overridable="yes">До відома [1]. </String>
+  <String Id="Error5" Overridable="yes">Під час встановлення цього пакету, інсталер спіткала несподівана помилка. Це може бути симптомом того, що з даним пакетом щось не гаразд. Код помилки [1]. {{Параметри: [2], [3], [4]}}</String>
+  <String Id="Error7" Overridable="yes">{{Диск переповнено: }}</String>
+  <String Id="Error8" Overridable="yes">Дія [Time]: [1]. [2]</String>
+  <String Id="Error9" Overridable="yes">[ProductName]</String>
+  <String Id="Error10" Overridable="yes">{[2]}{, [3]}{, [4]}</String>
+  <String Id="Error11" Overridable="yes">Тип повідомлення: [1], параметр: [2]</String>
+  <String Id="Error12" Overridable="yes">=== Протоколювання почато: [Date] [Time] ===</String>
+  <String Id="Error13" Overridable="yes">=== Протоколювання припинено: [Date] [Time] ===</String>
+  <String Id="Error14" Overridable="yes">Початок дії [Time]: [1].</String>
+  <String Id="Error15" Overridable="yes">Дію закінчено [Time]: [1]. Return value [2].</String>
+  <String Id="Error16" Overridable="yes">Залишається часу: {[1] хвилин }{[2] секунд}</String>
+  <String Id="Error17" Overridable="yes">Недостатньо пам’яті. Позакривайте інші програми перед тим, як спробувати знов.</String>
+  <String Id="Error18" Overridable="yes">Інсталер не відповідає.</String>
+  <String Id="Error19" Overridable="yes">Інсталер зупинено передчасно.</String>
+  <String Id="Error20" Overridable="yes">Будь ласка, зачекайте доки Windows налаштує [ProductName]</String>
+  <String Id="Error21" Overridable="yes">Збір необхідних відомостей...</String>
+  <String Id="Error22" Overridable="yes">Видаляємо старіші версії цієї програми...</String>
+  <String Id="Error23" Overridable="yes">Підготовка до видалення старіших версій цієї програми...</String>
+  <String Id="Error32" Overridable="yes">{[ProductName] }Установку успішно завершено.</String>
+  <String Id="Error33" Overridable="yes">{[ProductName] }Установка скінчилася невдачею.</String>
+  <String Id="Error1101" Overridable="yes">Помилка під час зчитування файлу: [2]. {{ системна помилка [3].}} Варто пересвідчитись чи цей файл існує й чи ви маєте до нього доступ.</String>
+  <String Id="Error1301" Overridable="yes">Не можу створити файл '[2]'. Папка з таким ім'ям вже існує. Скасуйте установку й спробуйте встановити до іншого місця.</String>
+  <String Id="Error1302" Overridable="yes">Будь ласка, вставте диск: [2]</String>
+  <String Id="Error1303" Overridable="yes">Інсталерові забракло прав, аби відкрити цю папку: [2]. Установку не може бути продовжено. Слід увійти в систему з правами адміністратора або ж покликати вашого системного адміністратора.</String>
+  <String Id="Error1304" Overridable="yes">Помилка під час запису до файлу: [2]. Варто пересвідчитись, чи ва маєте доступ до тієї папки.</String>
+  <String Id="Error1305" Overridable="yes">Помилка зчитування з файлу [2]. {{ Системна помилка [3].}} Варто пересвідчитись, чи цей файл існує й чи маєте ви до нього доступ.</String>
+  <String Id="Error1306" Overridable="yes">Інша програма має виключний доступ до файлу '[2]'. Будь ласка, позакривайте всі інші програми й натисніть Повторити.</String>
+  <String Id="Error1307" Overridable="yes">Недостатньо місця на диску для встановлення цього файлу: [2]. Звільніть місце й натисніть Повторити або ж натисніть Скасувати, щоб вийти геть.</String>
+  <String Id="Error1308" Overridable="yes">Не знайдено вхідного файлу: [2]. Варто пересвідчитись, чи цей файл існує й чи ви маєте до нього доступ.</String>
+  <String Id="Error1309" Overridable="yes">Помилка під час зчитування файлу: [3]. {{ Системна помилка [2].}} Варто пересвідчитись, чи такий файл існує й чи ви маєте до нього доступ.</String>
+  <String Id="Error1310" Overridable="yes">Помилка під час запису до файлу: [3]. {{ Системна помилка [2].}} Слід пересвідчитись, чи ви маєте доступ до тієї папки.</String>
+  <String Id="Error1311" Overridable="yes">Не знайдено вхідного файлу{{(cabinet)}}: [2]. Слід пересвідчитись, чи цей файл існує й чи ви маєте до нього доступ.</String>
+  <String Id="Error1312" Overridable="yes">Не вдається створити папку '[2]'. Файл з такою назвою вже існує. Будь ласка, перейменуйте або пересуньте десь цей файл і натисніть Повторити або ж натисніть Скасувати, щоб вийти геть.</String>
+  <String Id="Error1313" Overridable="yes">Том [2] на даний час є недоступним. Будь ласка, виберіть інший.</String>
+  <String Id="Error1314" Overridable="yes">Вказаний шлях '[2]' недоступний.</String>
+  <String Id="Error1315" Overridable="yes">Не здатен писати до вказаної папки: [2].</String>
+  <String Id="Error1316" Overridable="yes">Сталася помилка мережі під час спроби зчитати з цього файлу: [2]</String>
+  <String Id="Error1317" Overridable="yes">Сталася помилка під час спроби створити цю папку: [2]</String>
+  <String Id="Error1318" Overridable="yes">Сталася помилка мережі під час спроби створити цю папку: [2]</String>
+  <String Id="Error1319" Overridable="yes">Сталася помилка мережі під час спроби відкрити кабінет вхідних файлів: [2]</String>
+  <String Id="Error1320" Overridable="yes">Вказаний шлях занадто довгий: [2]</String>
+  <String Id="Error1321" Overridable="yes">Інсталерові забракло прав для зміни цього файлу: [2].</String>
+  <String Id="Error1322" Overridable="yes">Частина шляху до папки '[2]' є недійсною. Вона або ж пуста, або перевищує дозволений у системі ліміт.</String>
+  <String Id="Error1323" Overridable="yes">Шлях до папки '[2]' містить неприпустимі для шляхів слова.</String>
+  <String Id="Error1324" Overridable="yes">Шлях до папки '[2]' містить неприпустимі символи.</String>
+  <String Id="Error1325" Overridable="yes">'[2]' не є дійсною короткою назвою файлу.</String>
+  <String Id="Error1326" Overridable="yes">Помилка зчитування параметрів безпеки для файлу: [3] GetLastError: [2]</String>
+  <String Id="Error1327" Overridable="yes">Недійсний том: [2]</String>
+  <String Id="Error1328" Overridable="yes">Помилка під час застосування латки до файлу [2]. Мабуть, його було поновлено іншими засобами й цією латкою його вже не змінити. Щоб дізнатися про це більш детально, зв’яжіться з постачальником цієї латки. {{Системна помилка: [3]}}</String>
+  <String Id="Error1329" Overridable="yes">Один з необхідних файлів не може бути встановлено через те, що кабінетний файл [2] не має цифрового підпису. Це може означати, що кабінетний файл пошкоджено.</String>
+  <String Id="Error1330" Overridable="yes">Один з необхідних файлів не може бути встановлено через те, що кабінетний файл [2] має недійсний цифровий підпис. Це може означати, що кабінетний файл пошкоджено.{{ Помилку [3] було повернуто WinVerifyTrust.}}</String>
+  <String Id="Error1331" Overridable="yes">Не зміг як слід зкопіювати [2] файл: помилка CRC.</String>
+  <String Id="Error1332" Overridable="yes">Не зміг як слід пересунути [2] файл: помилка CRC.</String>
+  <String Id="Error1333" Overridable="yes">Не зміг як слід підлатати [2] файл: помилка CRC.</String>
+  <String Id="Error1334" Overridable="yes">Файл '[2]' не може бути встановлено через те, що його не вдається знайти у кабінеті '[3]'. Це може означати помилку мережі, помилку під час зчитування з CD-ROM-у або ж проблеми з цим пакетом.</String>
+  <String Id="Error1335" Overridable="yes">Файл-кабінет '[2]' ,необхідний для даної установки, пошкоджено і його не може бути використано. Це може означати помилку мережі, помилку під час зчитування з CD-ROM-у або ж проблеми з цим пакетом.</String>
+  <String Id="Error1336" Overridable="yes">Сталася помилка під час створення тимчасового файлу, необхідного для здійснення даної установки.{{ Папка: [3]. Код системної помилки: [2]}}</String>
+  <String Id="Error1401" Overridable="yes">Не зміг створити ключ: [2]. {{ Системна помилка [3].}} Слід пересвідчитись, що у вас достатньо прав для доступу до даного ключа або ж повідомити в службу технічної підтримки. </String>
+  <String Id="Error1402" Overridable="yes">Не зміг відкрити ключ: [2]. {{ Системна помилка [3].}} Слід пересвідчитись, що у вас достатньо прав для доступу до даного ключа або ж повідомити в службу технічної підтримки. </String>
+  <String Id="Error1403" Overridable="yes">Не зміг видалити значення [2] з ключа [3]. {{ Системна помилка [4].}} Слід пересвідчитись, що у вас достатньо прав для доступу до даного ключа або ж повідомити в службу технічної підтримки. </String>
+  <String Id="Error1404" Overridable="yes">Не зміг видалити ключ [2]. {{ Системна помилка [3].}} Слід пересвідчитись, що у вас достатньо прав для доступу до даного ключа або ж повідомити в службу технічної підтримки. </String>
+  <String Id="Error1405" Overridable="yes">Не зміг прочитати значення [2] з ключа [3]. {{ Системна помилка [4].}} Слід пересвідчитись, що у вас достатньо прав для доступу до даного ключа або ж повідомити в службу технічної підтримки. </String>
+  <String Id="Error1406" Overridable="yes">не зміг записати значення [2] до ключа [3]. {{ Системна помилка [4].}} Слід пересвідчитись, що у вас достатньо прав для доступу до даного ключа або ж повідомити в службу технічної підтримки.</String>
+  <String Id="Error1407" Overridable="yes">Не зміг отримати назви значень для ключа [2]. {{ Системна помилка [3].}} Слід пересвідчитись, що у вас достатньо прав для доступу до даного ключа або ж повідомити в службу технічної підтримки.</String>
+  <String Id="Error1408" Overridable="yes">Не зміг отримати назви під-ключів для ключа [2]. {{ Системна помилка [3].}} Слід пересвідчитись, що у вас достатньо прав для доступу до даного ключа або ж повідомити в службу технічної підтримки.</String>
+  <String Id="Error1409" Overridable="yes">Не зміг зчитати права для ключа [2]. {{ Системна помилка [3].}} Слід пересвідчитись, що у вас достатньо прав для доступу до даного ключа або ж повідомити в службу технічної підтримки.</String>
+  <String Id="Error1410" Overridable="yes">Не зміг збільшити наявний для реєстру простір. [2] КБ вільного реєстрового місця необхідно для встановлення даної програми.</String>
+  <String Id="Error1500" Overridable="yes">Зафіксовано, що зараз відбувається інша установка. Мусите завершити ту установку перед тим, як продовжити цю.</String>
+  <String Id="Error1501" Overridable="yes">Помилка доступу до захищених даних. Будь ласка, пересвідчіться, що Windows Installer у вас належним чином налаштовано, й спробуйте знову.</String>
+  <String Id="Error1502" Overridable="yes">Користувач '[2]' раніше за Вас розпочав установлення продукту '[3]'. Тому користувачеві доведеться ще раз прогнати установку перед тим, як тим продуктом зможуть користуватися. Розпочату Вами зараз установку не буде продовжено.</String>
+  <String Id="Error1503" Overridable="yes">Користувач '[2]' раніше за Вас розпочав встановлення продукту '[3]'. Тому користувачеві доведеться ще раз прогнати установку перед тим, як тим продуктом зможуть користуватися.</String>
+  <String Id="Error1601" Overridable="yes">Недостатньо місця на диску -- Том: '[2]'; потрібно місця: [3] КБ; наявне місце: [4] КБ. Звільніть дещо місця з спробуйте знову.</String>
+  <String Id="Error1602" Overridable="yes">Ви певні, що хочете скасувати?</String>
+  <String Id="Error1603" Overridable="yes">Файл [2][3] зайнято{ наступним процесом: Назва: [4], Ідентифікатор: [5], Титул вікна: '[6]'}. Закрийте ту програму й спробуйте знову.</String>
+  <String Id="Error1604" Overridable="yes">Продукт '[2]' вже встановлено. Це запобігає установці цього продукту . Два продукти є несумісними.</String>
+  <String Id="Error1605" Overridable="yes">Недостатньо місця на диску у томі '[2]' аби можна було продовжити установку й залишити за собою можливість для відновлення системи. Необхідно [3] КБ, але є лише [4] КБ. Натисніть Не зважати, щоб продовжити установку без збереження відомостей для відновлення системи, натисніть Повторити, щоб повторити перевірку наявного вільного місця, або ж натисніть Скасувати, щоб вийти з програми установки.</String>
+  <String Id="Error1606" Overridable="yes">Не зміг увійти до мережевого ресурсу [2].</String>
+  <String Id="Error1607" Overridable="yes">Наступну програму має бути закрито перед тим, як продовжити установку:</String>
+  <String Id="Error1608" Overridable="yes">На цій машині не встановлено жодного з продуктів, що потрібні для встановленим цього продукту.</String>
+  <String Id="Error1609" Overridable="yes">Сталася помилка під час застосування налаштувань безпеки. [2] не є дійсним користувачем чи групою. Це може бути як проблема з даним пакетом, так і проблеми з підключенням до контролера домену через мережу. Пересвідчіться, що все гаразд з підключенням до мережі, й натисніть Повторити, або ж Скасувати щоб завершити установку. {{Не можу знайти SID користувача, системна помилка [3]}}</String>
+  <String Id="Error1701" Overridable="yes">Ключ [2] не є дійсним. Пересвідчіться, що Ви ввели правильний ключ.</String>
+  <String Id="Error1702" Overridable="yes">Інсталер має перезавантажити Вашу систему перш, ніж подальше конфігурування [2] може бути продовжено. Натисніть Так аби перезавантажити зараз або ж Ні, якщо Ви плануєте власноруч перезавантажити пізніше.</String>
+  <String Id="Error1703" Overridable="yes">Вашу систему має бути перезавантажено, аби зміни до конфігурації, вчинені відносно [2], набули чинності. Натисність Так, щоб перезавантажити зараз, або ж Ні, якщо Ви плануєте власноруч перезавантажити пізніше.</String>
+  <String Id="Error1704" Overridable="yes">Установку [2] поки що призупинено. Ви мусите анулювати зміни, вчинені тією інсталяцією, аби було можливим продовжити. Чи бажаєте ви анулювати ті зміни?</String>
+  <String Id="Error1705" Overridable="yes">Попередня установка цього продукту зараз ще не скінчилася. Мусите анулювати зміни, вчинені тією інсталяцією, аби можливо було продовжити. Чи бажаєте ви анулювати ті зміни?</String>
+  <String Id="Error1706" Overridable="yes">Неможливо знайти пакет установки для продукту [2]. Спробуйте установку знову використовуючи дійсну копію пакету установки '[3]'.</String>
+  <String Id="Error1707" Overridable="yes">Установку успішно завершено.</String>
+  <String Id="Error1708" Overridable="yes">Установка скінчилася невдачею.</String>
+  <String Id="Error1709" Overridable="yes">Продукт: [2] -- [3]</String>
+  <String Id="Error1710" Overridable="yes">Ви можете або ж відновити стан Вашого комп’ютера до попереднього, або ж продовжити установку пізніше. Чи бажаєте ви відновити попередній стан?</String>
+  <String Id="Error1711" Overridable="yes">Сталася помилка під час запису даних інсталяції до диска. Пересвідчіться, що маєте вдосталь вільного місця на диску й натисніть Повторити, або ж натисніть Скасувати щоб завершити установку.</String>
+  <String Id="Error1712" Overridable="yes">Не вдається знайти один чи й більше файлів, необхідних для відновлення Вашого комп’ютера до його попереднього стану. Відновлення до попереднього стану буде неможливим.</String>
+  <String Id="Error1713" Overridable="yes">[2] не може встановити якийсь із необхідних йому продуктів. Зверніться до Вашої групи технічної підтримки. {{Системна помилка: [3].}}</String>
+  <String Id="Error1714" Overridable="yes">Неможливо видалити старіші версії [2]. Зверніться до Вашої групи технічної підтримки. {{Системна помилка [3].}}</String>
+  <String Id="Error1715" Overridable="yes">Встановлено [2]</String>
+  <String Id="Error1716" Overridable="yes">Налаштовано [2]</String>
+  <String Id="Error1717" Overridable="yes">Видалено [2]</String>
+  <String Id="Error1718" Overridable="yes">Файл [2] було відкинуто згідно з чинною політикою цифрових підписів.</String>
+  <String Id="Error1719" Overridable="yes">Неможливо отримати доступ до сервісу Windows Installer-а. Подібне трапляється, наприклад, якщо Windows запущено у безпечному режимі або коли Windows Installer неправильно встановлено. Зверніться по допомогу до служби технічної підтримки.</String>
+  <String Id="Error1720" Overridable="yes">Якась проблема с цим пакетом Windows Installer-а. Неможливо виконати скрипт, потрібний для даної установки. Зверніться по допомогу до служби технічної підтримки або ж до виробника цього пакету. {{Користувацька дія [2] скриптова помилка [3], [4]: [5] Рядок [6], позиція [7], [8] }}</String>
+  <String Id="Error1721" Overridable="yes">Якась проблема с цим пакетом Windows Installer-а. Програму, необхідну для цієї установки, не може бути виконано. Зверніться по допомогу до служби технічної підтримки або ж до виробника цього пакету. {{Дія: [2], місце знаходження: [3], команда: [4] }}</String>
+  <String Id="Error1722" Overridable="yes">Якась проблема с цим пакетом Windows Installer-а. Програма, виконувана як частина установки, завершилася не так, як слід. Зверніться по допомогу до служби технічної підтримки або ж до виробника цього пакету. {{Дія [2], місце знаходження: [3], команда: [4] }}</String>
+  <String Id="Error1723" Overridable="yes">Якась проблема с цим пакетом Windows Installer-а. DLL, необхідну для даної установки, не може бути виконано. Зверніться по допомогу до служби технічної підтримки або ж до виробника цього пакету. {{Дія [2], точка входження: [3], бібліотека: [4] }}</String>
+  <String Id="Error1724" Overridable="yes">Видалення успішно здійснено.</String>
+  <String Id="Error1725" Overridable="yes">Видалення скінчилося невдачею.</String>
+  <String Id="Error1726" Overridable="yes">Рекламування успішно завершено.</String>
+  <String Id="Error1727" Overridable="yes">Рекламування скінчилося невдачею.</String>
+  <String Id="Error1728" Overridable="yes">Конфігурування успішно завершено.</String>
+  <String Id="Error1729" Overridable="yes">Конфігурування скінчилося невдачею.</String>
+  <String Id="Error1730" Overridable="yes">Потрібно бути адміністратором, аби мати можливість видалити цю програму. Щоб видалити програму, можете зайти в систему з правами адміністратора або звернутися по допомогу до Вашої служби технічної підтримки..</String>
+  <String Id="Error1731" Overridable="yes">Вхідний пакет установки для продукту [2] не узгоджується з клієнтським пакетом. Спробуйте встановити знову, використовуючи дійсну копію пакету установки '[3]'.</String>
+  <String Id="Error1732" Overridable="yes">Треба перезавантажити комп’ютер для завершення установки [2]. Але зараз до комп’ютера підключені інші користувачі, і його перезавантаження прямо зараз може спричинити втрату результатів їх роботи. Чи Ви все ще бажаєте перезавантажити комп'ютер зараз?</String>
+  <String Id="Error1801" Overridable="yes">Шлях [2] не є дійсний. Будь ласка, вкажіть дійсний шлях.</String>
+  <String Id="Error1802" Overridable="yes">Недостатньо пам’яті. Позакривайте інші програми, перед тим як спробувати ще раз.</String>
+  <String Id="Error1803" Overridable="yes">Немає диску в приводі [2]. Будь ласка, вставте диска й натисність Повторити або ж натисніть Скасувати, щоб повернутися до попередньо обраного тому.</String>
+  <String Id="Error1804" Overridable="yes">Немає диску в приводі [2]. Будь ласка, вставте диска й натисність Повторити або ж натисніть Скасувати, щоб повернутися до діалогу вибору шляху й оберіть інший том.</String>
+  <String Id="Error1805" Overridable="yes">Папка [2] не існує. Будь ласка, введіть шлях до існуючої папки.</String>
+  <String Id="Error1806" Overridable="yes">Недостатньо прав для читання цієї папки.</String>
+  <String Id="Error1807" Overridable="yes">Неможливо визначити дійсну папку кінцевого призначення для установки.</String>
+  <String Id="Error1901" Overridable="yes">Помилка під час спроби зчитування бази даних вхідної установки: [2].</String>
+  <String Id="Error1902" Overridable="yes">Планування перезавантаження: перейменування файлу [2] у [3]. Доведеться перезавантажити комп'ютер, щоб завершити операцію.</String>
+  <String Id="Error1903" Overridable="yes">Планування перезавантаження: видалення файлу [2]. Доведеться перезавантажити комп'ютер, щоб завершити операцію.</String>
+  <String Id="Error1904" Overridable="yes">Модуль [2] не вдалося зареєструвати. HRESULT [3]. Зверніться до технічної підтримки.</String>
+  <String Id="Error1905" Overridable="yes">Модуль [2] не вдалося розреєструвати. HRESULT [3]. Зверніться до технічної підтримки.</String>
+  <String Id="Error1906" Overridable="yes">Не вдалося закешувати пакет [2]. Помилка: [3]. Зверніться до технічної підтримки.</String>
+  <String Id="Error1907" Overridable="yes">Не зміг зареєструвати шрифт [2]. Пересвідчіться, що маєте вдосталь прав для встановлення шрифтів, а також що система підтримує цей шрифт.</String>
+  <String Id="Error1908" Overridable="yes">Не зміг розреєструвати шрифт [2]. Пересвідчіться, що маєте вдосталь прав для видалення шрифтів.</String>
+  <String Id="Error1909" Overridable="yes">Не зміг створити ярлик [2]. Переконайтеся, що папка, на яку він вказує, існує, і що Ви маєте до неї доступ.</String>
+  <String Id="Error1910" Overridable="yes">Не зміг видалити ярлик [2]. Пересвідчіться, що файл цього ярлика існує, і що Ви маєте до нього доступ.</String>
+  <String Id="Error1911" Overridable="yes">Не зміг зареєструвати бібліотеку типів для файлу [2]. Зверніться до технічної підтримки.</String>
+  <String Id="Error1912" Overridable="yes">Не зміг розреєструвати бібліотеку типів для файлу [2]. Зверніться до технічної підтримки.</String>
+  <String Id="Error1913" Overridable="yes">Не зміг обновити ini файл [2][3]. Пересвідчіться, що файл існує й Ви маєте до нього доступ.</String>
+  <String Id="Error1914" Overridable="yes">Не зміг запланувати заміну файла [3] файлом [2] під час перезавантаження. Пересвідчіться, що маєте права на запис для файлу [3].</String>
+  <String Id="Error1915" Overridable="yes">Помилка під час видалення менеджера ODBC драйверу, код помилки ODBC [2]: [3]. Зверніться до технічної підтримки.</String>
+  <String Id="Error1916" Overridable="yes">Помилка під час встановлення менеджера ODBC драйверу, код помилки ODBC [2]: [3]. Зверніться до технічної підтримки.</String>
+  <String Id="Error1917" Overridable="yes">Помилка під час видалення драйвера ODBC: [4], помилка ODBC [2]: [3]. Пересвідчіться, що маєте достатньо прав для видалення драйверів ODBC.</String>
+  <String Id="Error1918" Overridable="yes">Помилка під час встановлення драйверу ODBC: [4], помилка ODBC [2]: [3]. Пересвідчіться, що файл [4] існує й Ви маєте до нього доступ.</String>
+  <String Id="Error1919" Overridable="yes">Помилка під час конфігурування джерела даних ODBC: [4], помилка ODBC [2]: [3]. Пересвідчіться, що файл [4] існує й Ви маєте до нього доступ.</String>
+  <String Id="Error1920" Overridable="yes">Не вдалося запустити сервіс '[2]' ([3]). Пересвідчіться, що маєте достатньо прав для запуску системних сервісів.</String>
+  <String Id="Error1921" Overridable="yes">Не зміг зупинити сервіс '[2]' ([3]). Пересвідчіться, що маєте достатньо прав для зупинки системних сервісів.</String>
+  <String Id="Error1922" Overridable="yes">Не зміг видалити сервіс '[2]' ([3]). Пересвідчіться, що маєте достатньо прав для видалення системних сервісів.</String>
+  <String Id="Error1923" Overridable="yes">Не зміг встановити сервіс '[2]' ([3]). Пересвідчіться, що маєте достатньо прав для встановлення системних сервісів.</String>
+  <String Id="Error1924" Overridable="yes">Не зміг обновити змінну середовища '[2]'. Пересвідчіться, що маєте достатньо прав для змінювання значень змінних середовища.</String>
+  <String Id="Error1925" Overridable="yes">Вам бракує прав для того, щоб здійснити цю установку для всіх користувачів цієї машини. Зайдіть в систему з правами адміністратора і спробуйте цю установку знову.</String>
+  <String Id="Error1926" Overridable="yes">Не зміг встановити параметри безпеки для файлу '[3]'. Помилка: [2]. Пересвідчіться, що маєте достатньо прав для зміни дозволів для цього файлу.</String>
+  <String Id="Error1927" Overridable="yes">На цьому комп’ютері не встановлено служби компонентів (COM+ 1.0). Для успішного здійснення, цій інсталяції потрібні Служби компонентів. Служби компонентів доступні на Windows 2000.</String>
+  <String Id="Error1928" Overridable="yes">Помилка під час реєстрації програми COM+. Щоб отримати більш детальну інформацію, зверніться до технічної підтримки.</String>
+  <String Id="Error1929" Overridable="yes">Помилка під час розреєстрації програми COM+. Щоб отримати більш детальну інформацію, зверніться до технічної підтримки.</String>
+  <String Id="Error1930" Overridable="yes">Не зміг змінити параметр 'Опис' для сервісу '[2]' ([3]).</String>
+  <String Id="Error1931" Overridable="yes">Сервіс Windows Installer-а не зміг обновити системний файл [2] через те, що цей файл захищено Windows. Можливо, Вам доведеться здійснити обновлення операційної системи аби ця програма запрацювала як слід. {{Версія пакету: [3], Захищена версія ОС: [4]}}</String>
+  <String Id="Error1932" Overridable="yes">Сервіс Windows Installer-а не зміг обновити захищений Windows-ом файл [2]. {{Версія пакету: [3], Захищена версія ОС: [4], Код помилки SFP: [5]}}</String>
+  <String Id="Error1933" Overridable="yes">Сервісові Windows Installer-а не вдається обновити один чи більше з захищених Windows-ом файлів. {{Код помилки SFP: [2]. Список захищених файлів:\r\n[3]}}</String>
+  <String Id="Error1934" Overridable="yes">Користувацькі установки заблоковано через політику машини.</String>
+  <String Id="Error1935" Overridable="yes">Під час встановлення збірки (assembly) '[6]' сталася помилка. Будь ласка, по більш детальну інформацію зазирніть до розділу 'Довідка й підтримка'. HRESULT: [3]. {{інтерфейс збірки: [4], функція: [5], компонент: [2]}}</String>
+  <String Id="Error1936" Overridable="yes">Під час встановлення збірки (assembly) '[6]' сталася помилка. Дану збірку недостатньо строго обізвано або ж не підписано ключем мінімально необхідної довжини. HRESULT: [3]. {{інтерфейс збірки: [4], функція: [5], компонент: [2]}}</String>
+  <String Id="Error1937" Overridable="yes">Під час встановлення збірки (assembly) '[6]' сталася помилка. Підпис або каталог не може бути звірено або не є дійсними. HRESULT: [3]. {{інтерфейс збірки: [4], функція: [5], компонент: [2]}}</String>
+  <String Id="Error1938" Overridable="yes">Під час встановлення збірки (assembly) '[6]' сталася помилка. Один чи більше модулів збірки не може бути знайдено. HRESULT: [3]. {{інтерфейс збірки: [4], функція: [5], компонент: [2]}}</String>
+
+  <String Id="UITextbytes" Overridable="yes">байт(-ів,-а)</String>
+  <String Id="UITextGB" Overridable="yes">ГБ</String>
+  <String Id="UITextKB" Overridable="yes">КБ</String>
+  <String Id="UITextMB" Overridable="yes">МБ</String>
+  <String Id="UITextMenuAbsent" Overridable="yes">Ціла частина буде недоступною</String>
+  <String Id="UITextMenuAdvertise" Overridable="yes">Частина буде встановлена, коли буде потрібна</String>
+  <String Id="UITextMenuAllCD" Overridable="yes">Ціла частина буде встановлена як така, що запускатиметься з CD</String>
+  <String Id="UITextMenuAllLocal" Overridable="yes">Ціла частина буде встановлена на жорсткий диск</String>
+  <String Id="UITextMenuAllNetwork" Overridable="yes">Ціла частина буде встановлена як така, що запускатиметься з мережі</String>
+  <String Id="UITextMenuCD" Overridable="yes">Буде встановлено для запуску з CD</String>
+  <String Id="UITextMenuLocal" Overridable="yes">Буде встановлено на жорсткому диску</String>
+  <String Id="UITextMenuNetwork" Overridable="yes">Буде встановлено для запуску з мережі</String>
+  <String Id="UITextNewFolder" Overridable="yes">Папка|Нова папка</String>
+  <String Id="UITextScriptInProgress" Overridable="yes">Збір необхідних відомостей...</String>
+  <String Id="UITextSelAbsentAbsent" Overridable="yes">Ця частина залишиться не встановленою</String>
+  <String Id="UITextSelAbsentAdvertise" Overridable="yes">Цю частину буде виставлено як таку, що встановиться коли буде потреба</String>
+  <String Id="UITextSelAbsentCD" Overridable="yes">Цю частину буде встановлено як таку, що запускатиметься з CD</String>
+  <String Id="UITextSelAbsentLocal" Overridable="yes">Цю частину буде встановлено на жорсткий диск</String>
+  <String Id="UITextSelAbsentNetwork" Overridable="yes">Цю частину буде встановлено для запуску з мережі</String>
+  <String Id="UITextSelAdvertiseAbsent" Overridable="yes">Ця частина стане недоступною</String>
+  <String Id="UITextSelAdvertiseAdvertise" Overridable="yes">Буде встановлено, коли виникне потреба</String>
+  <String Id="UITextSelAdvertiseCD" Overridable="yes">Ця частина буде доступною для запуску з CD</String>
+  <String Id="UITextSelAdvertiseLocal" Overridable="yes">Цю частину буде встановлено на Ваш жорсткий диск</String>
+  <String Id="UITextSelAdvertiseNetwork" Overridable="yes">Ця частина буде доступною для запуску з мережі</String>
+  <String Id="UITextSelCDAbsent" Overridable="yes">Ця частина буде цілком видалена, ви не зможете запускати її з CD</String>
+  <String Id="UITextSelCDAdvertise" Overridable="yes">Цю частину буде змінено з такої, що запускається з CD, на таку, що встановлюється при потребі</String>
+  <String Id="UITextSelCDCD" Overridable="yes">Ця частина залишиться як така, що запускатиметься з CD</String>
+  <String Id="UITextSelCDLocal" Overridable="yes">Ця частина зміниться з такої, що запускається з CD, на таку, що встановлюється на жорсткий диск</String>
+  <String Id="UITextSelChildCostNeg" Overridable="yes">Ця частина звільнить до [1] на Вашому жорсткому диску.</String>
+  <String Id="UITextSelChildCostPos" Overridable="yes">Ця частина потребує [1] на Вашому жорсткому диску.</String>
+  <String Id="UITextSelCostPending" Overridable="yes">Триває підрахунок вартості для цієї частини...</String>
+  <String Id="UITextSelLocalAbsent" Overridable="yes">Ця частина буде повністю видалена</String>
+  <String Id="UITextSelLocalAdvertise" Overridable="yes">Ця частина буде видалена з Вашого жорсткого диску, але буде виставлено як встановлювану при потребі</String>
+  <String Id="UITextSelLocalCD" Overridable="yes">Цю частину буде видалено з Вашого жорсткого диску, проте вона все ще залишатиметься доступною для запуску з CD</String>
+  <String Id="UITextSelLocalLocal" Overridable="yes">Ця частина залишиться на Вашому жорсткому диску</String>
+  <String Id="UITextSelLocalNetwork" Overridable="yes">Цю частину буде видалено з Вашого жорсткого диску, проте вона все ще залишатиметься доступною для запуску з мережі</String>
+  <String Id="UITextSelNetworkAbsent" Overridable="yes">Цю частину буде видалено повністю, її не можна буде запускати з мережі</String>
+  <String Id="UITextSelNetworkAdvertise" Overridable="yes">Цю частину буде змінено з такої, що запускається з мережі, на таку, що встановлюється при потребі</String>
+  <String Id="UITextSelNetworkLocal" Overridable="yes">Цю частину буде змінено з мережевого стану на встановлену до жорсткого диску</String>
+  <String Id="UITextSelNetworkNetwork" Overridable="yes">Ця частина залишиться як така, що запускатиметься з мережі</String>
+  <String Id="UITextSelParentCostNegNeg" Overridable="yes">Ця частина звільняє до [1] на Вашому жорсткому диску. [2] з [3] її підчастин вибрано. Ці підчастини звільняють до [4] Вашого жорсткого диску.</String>
+  <String Id="UITextSelParentCostNegPos" Overridable="yes">Ця частина звільняє до [1] на Вашому жорсткому диску. [2] з [3] її підчастин вибрано. Цим підчастинам потрібно [4] Вашого жорсткого диску.</String>
+  <String Id="UITextSelParentCostPosNeg" Overridable="yes">Ця частина потребує [1] на Вашому жорсткому диску. [2] з [3] її підчастин вибрано. Ці підчастини звільняють до [4] Вашого жорсткого диску.</String>
+  <String Id="UITextSelParentCostPosPos" Overridable="yes">Ця частина потребує [1] на Вашому жорсткому диску. [2] з [3] її підчастин вибрано. Цим підчастинам потрібно [4] Вашого жорсткого диску.</String>
+  <String Id="UITextTimeRemaining" Overridable="yes">Залишилося: {[1] хвилин }{[2] секунд}</String>
+  <String Id="UITextVolumeCostAvailable" Overridable="yes">Наявно</String>
+  <String Id="UITextVolumeCostDifference" Overridable="yes">Різниця</String>
+  <String Id="UITextVolumeCostRequired" Overridable="yes">Потрібно</String>
+  <String Id="UITextVolumeCostSize" Overridable="yes">Місткість диску</String>
+  <String Id="UITextVolumeCostVolume" Overridable="yes">Том</String>
+</WixLocalization>

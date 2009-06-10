@@ -31,8 +31,8 @@ extern "C" {
 
 /* Newline and keyword translation properties */
 
-/* Query the SVN_PROP_EOL_STYLE property on file PATH.  If STYLE is
-   non-null, set *STYLE to PATH's eol style.  Set *EOL to
+/* Query the SVN_PROP_EOL_STYLE property on file LOCAL_ABSPATH in DB.  If
+   STYLE is non-null, set *STYLE to LOCAL_ABSPATH's eol style.  Set *EOL to
 
       - NULL for svn_subst_eol_style_none, or
 
@@ -45,15 +45,15 @@ extern "C" {
    If STYLE is null on entry, ignore it.  If *EOL is non-null on exit,
    it is a static string not allocated in POOL.
 
-   ADM_ACCESS is an access baton set that contains PATH.
-
-   Use POOL for temporary allocation.
+   Use SCRATCH_POOL for temporary allocation, RESULT_POOL for allocating
+   *STYLE and *EOL.
 */
 svn_error_t *svn_wc__get_eol_style(svn_subst_eol_style_t *style,
                                    const char **eol,
-                                   const char *path,
-                                   svn_wc_adm_access_t *adm_access,
-                                   apr_pool_t *pool);
+                                   svn_wc__db_t *db,
+                                   const char *local_abspath,
+                                   apr_pool_t *result_pool,
+                                   apr_pool_t *scratch_pool);
 
 /* Reverse parser.  Given a real EOL string ("\n", "\r", or "\r\n"),
    return an encoded *VALUE ("LF", "CR", "CRLF") that one might see in
@@ -61,57 +61,62 @@ svn_error_t *svn_wc__get_eol_style(svn_subst_eol_style_t *style,
 void svn_wc__eol_value_from_string(const char **value,
                                    const char *eol);
 
-/* Expand keywords for the file at PATH, by parsing a
+/* Expand keywords for the file at LOCAL_ABSPATH in DB, by parsing a
    whitespace-delimited list of keywords.  If any keywords are found
-   in the list, allocate *KEYWORDS from POOL and populate it with
+   in the list, allocate *KEYWORDS from RESULT_POOL and populate it with
    mappings from (const char *) keywords to their (svn_string_t *)
-   values (also allocated in POOL).
+   values (also allocated in RESULT_POOL).
 
    If a keyword is in the list, but no corresponding value is
    available, do not create a hash entry for it.  If no keywords are
    found in the list, or if there is no list, set *KEYWORDS to NULL.
 
-   ADM_ACCESS must be an access baton for PATH.
-
    If FORCE_LIST is non-null, use it as the list; else use the
-   SVN_PROP_KEYWORDS property for PATH.  In either case, use PATH to
-   expand keyword values.
+   SVN_PROP_KEYWORDS property for PATH.  In either case, use LOCAL_ABSPATH
+   to expand keyword values.
+
+   Use SCRATCH_POOL for any temporary allocations.
 */
 svn_error_t *svn_wc__get_keywords(apr_hash_t **keywords,
-                                  const char *path,
-                                  svn_wc_adm_access_t *adm_access,
+                                  svn_wc__db_t *db,
+                                  const char *local_abspath,
                                   const char *force_list,
-                                  apr_pool_t *pool);
+
+                                  apr_pool_t *result_pool,
+                                  apr_pool_t *scratch_pool);
 
 
-/* Determine if the svn:special flag is set on PATH.  If so, set
-   SPECIAL to TRUE, if not, set it to FALSE.  ADM_ACCESS must be an
-   access baton for PATH.  Perform any temporary allocations in
-   POOL. */
+/* Determine if the svn:special flag is set on LOCAL_ABSPATH in DB.  If so,
+   set SPECIAL to TRUE, if not, set it to FALSE.  Perform any temporary
+   allocations in SCRATCH_POOL. */
 svn_error_t *svn_wc__get_special(svn_boolean_t *special,
-                                 const char *path,
-                                 svn_wc_adm_access_t *adm_access,
-                                 apr_pool_t *pool);
+                                 svn_wc__db_t *db,
+                                 const char *local_abspath,
+                                 apr_pool_t *scratch_pool);
 
 /* If the SVN_PROP_EXECUTABLE property is present at all, then set
-   PATH executable.  If DID_SET is non-null, then set *DID_SET to
-   TRUE if did set PATH executable, or to FALSE if not.  ADM_ACCESS
-   is an access baton set that contains PATH. */
+   LOCAL_ABSPATH in DB executable.  If DID_SET is non-null, then set
+   *DID_SET to TRUE if did set LOCAL_ABSPATH executable, or to FALSE if not.
+
+   Use SCRATCH_POOL for any temporary allocations.
+*/
 svn_error_t *
 svn_wc__maybe_set_executable(svn_boolean_t *did_set,
-                             const char *path,
-                             svn_wc_adm_access_t *adm_access,
-                             apr_pool_t *pool);
+                             svn_wc__db_t *db,
+                             const char *local_abspath,
+                             apr_pool_t *scratch_pool);
 
 /* If the SVN_PROP_NEEDS_LOCK property is present and there is no
-   lock token for the file in the working copy, set PATH to
+   lock token for the file in the working copy, set LOCAL_ABSPATH to
    read-only. If DID_SET is non-null, then set *DID_SET to TRUE if
-   did set PATH read-write, or to FALSE if not.  ADM_ACCESS is an
-   access baton set that contains PATH. */
+   did set LOCAL_ABSPATH read-write, or to FALSE if not.
+
+   Use SCRATCH_POOL for any temporary allocations.
+*/
 svn_error_t * svn_wc__maybe_set_read_only(svn_boolean_t *did_set,
-                                          const char *path,
-                                          svn_wc_adm_access_t *adm_access,
-                                          apr_pool_t *pool);
+                                          svn_wc__db_t *db,
+                                          const char *local_abspath,
+                                          apr_pool_t *scratch_pool);
 
 
 #ifdef __cplusplus

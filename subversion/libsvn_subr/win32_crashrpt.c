@@ -393,7 +393,7 @@ write_var_values(PSYMBOL_INFO sym_info, ULONG sym_size, void *baton)
   else
     return FALSE;
 
-  if (log_params == TRUE && sym_info->Flags & SYMFLAG_PARAMETER)
+  if (log_params && sym_info->Flags & SYMFLAG_PARAMETER)
     {
       if (last_nr_of_frame == nr_of_frame)
         fprintf(log_file, ", ", 2);
@@ -441,7 +441,7 @@ write_function_detail(STACKFRAME64 stack_frame, void *data)
   /* log the function name */
   pIHS->SizeOfStruct = sizeof(SYMBOL_INFO);
   pIHS->MaxNameLen = MAX_PATH;
-  if (SymFromAddr_(proc, stack_frame.AddrPC.Offset, &func_disp, pIHS) == TRUE)
+  if (SymFromAddr_(proc, stack_frame.AddrPC.Offset, &func_disp, pIHS))
     {
       fprintf(log_file,
                     "#%d  0x%08x in %.200s (",
@@ -750,7 +750,7 @@ svn__unhandled_exception_filter(PEXCEPTION_POINTERS ptrs)
     return EXCEPTION_CONTINUE_SEARCH;
 
   /* don't log anything if we're running inside a debugger ... */
-  if (is_debugger_present() == TRUE)
+  if (is_debugger_present())
     return EXCEPTION_CONTINUE_SEARCH;
 
   /* ... or if we can't create the log files ... */

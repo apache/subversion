@@ -1326,7 +1326,7 @@ svn_fs_path_change2_create(const svn_fs_id_t *node_rev_id,
                            svn_fs_path_change_kind_t change_kind,
                            apr_pool_t *pool)
 {
-  return svn_fs__path_change2_create(node_rev_id, change_kind, pool);
+  return svn_fs__path_change_create_internal(node_rev_id, change_kind, pool);
 }
 
 /* Return the library version number. */

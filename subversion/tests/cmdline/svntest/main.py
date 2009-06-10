@@ -190,7 +190,7 @@ config_file = None
 
 # Global variable indicating what the minor version of the server
 # tested against is (4 for 1.4.x, for example).
-server_minor_version = 6
+server_minor_version = 7
 
 # Global variable indicating if this is a child process and no cleanup
 # of global directories is needed.
@@ -461,7 +461,7 @@ def spawn_process(command, binary_mode=0, stdin_lines=None, *varargs):
 
   # Log the command line
   if verbose_mode and not command.endswith('.py'):
-    sys.stdout.write('CMD: %s %s ' % (os.path.basename(command),
+    sys.stdout.write('CMD: %s %s\n' % (os.path.basename(command),
                                       ' '.join([_quote_arg(x) for x in varargs])))
     sys.stdout.flush()
 
@@ -777,6 +777,7 @@ def copy_repos(src_path, dst_path, head_revision, ignore_uuid = 1):
 
   # Do an svnadmin dump|svnadmin load cycle. Print a fake pipe command so that
   # the displayed CMDs can be run by hand
+  os.environ['SVN_DBG_QUIET'] = 'y'
   create_repos(dst_path)
   dump_args = ['dump', src_path]
   load_args = ['load', dst_path]
@@ -784,7 +785,7 @@ def copy_repos(src_path, dst_path, head_revision, ignore_uuid = 1):
   if ignore_uuid:
     load_args = load_args + ['--ignore-uuid']
   if verbose_mode:
-    sys.stdout.write('CMD: %s%s | %s%s ' % (os.path.basename(svnadmin_binary),
+    sys.stdout.write('CMD: %s%s | %s%s\n' % (os.path.basename(svnadmin_binary),
                                             ' '.join(dump_args),
                                             os.path.basename(svnadmin_binary),
                                             ' '.join(load_args)))
@@ -810,6 +811,8 @@ def copy_repos(src_path, dst_path, head_revision, ignore_uuid = 1):
   #load_in is dump_out so it's already closed.
   load_out.close()
   load_err.close()
+
+  del os.environ['SVN_DBG_QUIET']
 
   dump_re = re.compile(r'^\* Dumped revision (\d+)\.\r?$')
   expect_revision = 0
@@ -995,9 +998,6 @@ def is_posix_os():
 def is_os_darwin():
   return sys.platform == 'darwin'
 
-def is_not_ng():
-  return 'SVN_ENABLE_NG' not in os.environ.keys()
-
 def server_has_mergeinfo():
   _check_command_line_parsed()
   return server_minor_version >= 5
@@ -1025,17 +1025,6 @@ def server_has_partial_replay():
 def server_enforces_date_syntax():
   _check_command_line_parsed()
   return server_minor_version >= 5
-
-def has_patch():
-  try:
-    p = subprocess.Popen(["patch", "--version"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    if "Free Software Foundation" in p.stdout.read():
-      return True
-    else:
-      return False
-  except OSError:
-    return False
-
 
 ######################################################################
 

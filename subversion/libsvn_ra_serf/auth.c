@@ -119,7 +119,7 @@ static const svn_ra_serf__auth_protocol_t serf_auth_protocols[] = {
     svn_ra_serf__setup_request_digest_auth,
     svn_ra_serf__validate_response_digest_auth,
   },
-#if SVN_RA_SERF_GSSAPI_ENABLED
+#if SVN_RA_SERF_HAVE_GSSAPI
   {
     401,
     "Negotiate",
@@ -128,7 +128,7 @@ static const svn_ra_serf__auth_protocol_t serf_auth_protocols[] = {
     svn_ra_serf__setup_request_kerb_auth,
     svn_ra_serf__validate_response_kerb_auth,    
   },
-#endif /* SVN_RA_SERF_GSSAPI_ENABLED */
+#endif /* SVN_RA_SERF_HAVE_GSSAPI */
 
   /* ADD NEW AUTHENTICATION IMPLEMENTATIONS HERE (as they're written) */
 

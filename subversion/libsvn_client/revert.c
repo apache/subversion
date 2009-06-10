@@ -92,7 +92,7 @@ revert(const char *path,
           svn_error_clear(err);
         }
       else
-        return err;
+        return svn_error_return(err);
     }
 
   return svn_wc_adm_close2(adm_access, pool);
@@ -155,5 +155,5 @@ svn_client_revert2(const apr_array_header_t *paths,
 
   svn_pool_destroy(subpool);
 
-  return err;
+  return svn_error_return(err);
 }

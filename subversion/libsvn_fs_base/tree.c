@@ -1,7 +1,7 @@
 /* tree.c : tree-like filesystem, built on DAG filesystem
  *
  * ====================================================================
- * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -461,10 +461,10 @@ typedef struct parent_path_t
   /* The parent of NODE, or zero if NODE is the root directory.  */
   struct parent_path_t *parent;
 
-  /* The copy ID inheritence style. */
+  /* The copy ID inheritance style. */
   copy_id_inherit_t copy_inherit;
 
-  /* If copy ID inheritence style is copy_id_inherit_new, this is the
+  /* If copy ID inheritance style is copy_id_inherit_new, this is the
      path which should be implicitly copied; otherwise, this is NULL. */
   const char *copy_src_path;
 
@@ -572,7 +572,7 @@ get_copy_inheritance(copy_id_inherit_t *inherit_p,
     }
 
   /* If we get here, the child and its parent are not on speaking
-     terms -- there will be no parental inheritence handed down in
+     terms -- there will be no parental inheritance handed down in
      *this* generation. */
 
   /* If the child was created at a different path than the one we are
@@ -1161,7 +1161,7 @@ base_check_path(svn_node_kind_t *kind_p,
       *kind_p = svn_node_none;
     }
 
-  return err;
+  return svn_error_return(err);
 }
 
 
@@ -2723,7 +2723,7 @@ svn_fs_base__commit_txn(const char **conflict_p,
         {
           if ((err->apr_err == SVN_ERR_FS_CONFLICT) && conflict_p)
             *conflict_p = merge_args.conflict->data;
-          return err;
+          return svn_error_return(err);
         }
 
       /* Try to commit. */
@@ -2743,16 +2743,17 @@ svn_fs_base__commit_txn(const char **conflict_p,
           if (err2)
             {
               svn_error_clear(err);
-              return err2;  /* err2 is bad, it should not occur */
+              return svn_error_return(err2);  /* err2 is bad,
+                                                 it should not occur */
             }
           else if (youngest_rev == youngish_rev)
-            return err;
+            return svn_error_return(err);
           else
             svn_error_clear(err);
         }
       else if (err)
         {
-          return err;
+          return svn_error_return(err);
         }
       else
         {
@@ -2832,7 +2833,7 @@ base_merge(const char **conflict_p,
     {
       if ((err->apr_err == SVN_ERR_FS_CONFLICT) && conflict_p)
         *conflict_p = merge_args.conflict->data;
-      return err;
+      return svn_error_return(err);
     }
 
   return SVN_NO_ERROR;
@@ -3739,9 +3740,10 @@ txn_body_apply_textdelta(void *baton, trail_t *trail)
         return svn_error_createf
           (SVN_ERR_CHECKSUM_MISMATCH,
            NULL,
-           _("Base checksum mismatch on '%s':\n"
-             "   expected:  %s\n"
-             "     actual:  %s\n"),
+           apr_psprintf(trail->pool, "%s:\n%s\n%s\n",
+                        _("Base checksum mismatch on '%s'"),
+                        _("   expected:  %s"),
+                        _("     actual:  %s")),
            tb->path,
            svn_checksum_to_cstring_display(tb->base_checksum, trail->pool),
            svn_checksum_to_cstring_display(checksum, trail->pool));
@@ -4552,7 +4554,7 @@ txn_body_closest_copy(void *baton, trail_t *trail)
           svn_error_clear(err);
           return SVN_NO_ERROR;
         }
-      return err;
+      return svn_error_return(err);
     }
   if ((svn_fs_base__dag_node_kind(path_node_in_copy_dst) == svn_node_none)
       || (! (svn_fs_base__id_check_related
@@ -4675,7 +4677,7 @@ svn_fs_base__get_path_kind(svn_node_kind_t *kind,
       return SVN_NO_ERROR;
     }
   else if (err)
-    return err;
+    return svn_error_return(err);
 
   *kind = svn_fs_base__dag_node_kind(path_node);
   return SVN_NO_ERROR;
@@ -4710,7 +4712,7 @@ svn_fs_base__get_path_created_rev(svn_revnum_t *rev,
       return SVN_NO_ERROR;
     }
   else if (err)
-    return err;
+    return svn_error_return(err);
 
   /* Find the created_rev of the dag_node. */
   SVN_ERR(svn_fs_base__dag_get_revision(&created_rev, path_node,

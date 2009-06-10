@@ -631,7 +631,7 @@ svn_fs_base__dag_set_proplist(dag_node_t *node,
       else if (err)
         {
           if (err->apr_err != SVN_ERR_FS_NO_SUCH_CHECKSUM_REP)
-            return err;
+            return svn_error_return(err);
 
           svn_error_clear(err);
           err = SVN_NO_ERROR;
@@ -1276,9 +1276,10 @@ svn_fs_base__dag_finalize_edits(dag_node_t *file,
       if (! svn_checksum_match(checksum, test_checksum))
         return svn_error_createf
           (SVN_ERR_CHECKSUM_MISMATCH, NULL,
-           _("Checksum mismatch, representation '%s':\n"
-             "   expected:  %s\n"
-             "     actual:  %s\n"),
+           apr_psprintf(pool, "%s:\n%s\n%s\n",
+                        _("Checksum mismatch on representation '%s'"),
+                        _("   expected:  %s"),
+                        _("     actual:  %s")),
            noderev->edit_key,
            svn_checksum_to_cstring_display(checksum, pool),
            svn_checksum_to_cstring_display(test_checksum, pool));
@@ -1553,7 +1554,7 @@ maybe_store_checksum_rep(const char *rep,
           err = SVN_NO_ERROR;
         }
     }
-  return err;
+  return svn_error_return(err);
 }
 
 svn_error_t *

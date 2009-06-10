@@ -1,7 +1,7 @@
 /* commit.c --- editor for committing changes to a filesystem.
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006, 2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -597,10 +597,10 @@ close_file(void *file_baton,
         {
           return svn_error_createf
             (SVN_ERR_CHECKSUM_MISMATCH, NULL,
-             _("Checksum mismatch for resulting fulltext\n"
-               "(%s):\n"
-               "   expected checksum:  %s\n"
-               "   actual checksum:    %s\n"),
+             apr_psprintf(pool, "%s:\n%s\n%s\n",
+                          _("Checksum mismatch for resulting fulltext\n(%s)"),
+                          _("   expected:  %s"),
+                          _("     actual:  %s")),
              fb->path, svn_checksum_to_cstring_display(text_checksum, pool),
              svn_checksum_to_cstring_display(checksum, pool));
         }
@@ -671,7 +671,16 @@ close_edit(void *edit_baton,
              (to be reported back to the client, who will probably
              display it as a warning) and clear the error. */
           if (err->child && err->child->message)
-            post_commit_err = apr_pstrdup(pool, err->child->message);
+            {
+              svn_error_t *warning_err = err->child;
+#ifdef SVN_ERR__TRACING
+              /* Skip over any trace records.  */
+              while (warning_err->message != NULL
+                     && strcmp(warning_err->message, SVN_ERR__TRACED) == 0)
+                warning_err = warning_err->child;
+#endif
+              post_commit_err = apr_pstrdup(pool, warning_err->message);
+            }
 
           svn_error_clear(err);
           err = SVN_NO_ERROR;
@@ -696,7 +705,7 @@ close_edit(void *edit_baton,
              We ignore the possible error result from svn_fs_abort_txn();
              it's more important to return the original error. */
           svn_error_clear(svn_fs_abort_txn(eb->txn, pool));
-          return err;
+          return svn_error_return(err);
         }
     }
 
@@ -734,7 +743,7 @@ close_edit(void *edit_baton,
       }
   }
 
-  return err;
+  return svn_error_return(err);
 }
 
 
@@ -746,33 +755,6 @@ abort_edit(void *edit_baton,
   if ((! eb->txn) || (! eb->txn_owner))
     return SVN_NO_ERROR;
   return svn_fs_abort_txn(eb->txn, pool);
-}
-
-
-/* Copy REVPROP_TABLE and its data to POOL. */
-static apr_hash_t *
-revprop_table_dup(apr_hash_t *revprop_table,
-                  apr_pool_t *pool)
-{
-  apr_hash_t *new_revprop_table = NULL;
-  const void *key;
-  apr_ssize_t klen;
-  void *value;
-  const char *propname;
-  const svn_string_t *propval;
-  apr_hash_index_t *hi;
-
-  new_revprop_table =  apr_hash_make(pool);
-
-  for (hi = apr_hash_first(pool, revprop_table); hi; hi = apr_hash_next(hi))
-    {
-      apr_hash_this(hi, &key, &klen, &value);
-      propname = apr_pstrdup(pool, (const char *) key);
-      propval = svn_string_dup((const svn_string_t *) value, pool);
-      apr_hash_set(new_revprop_table, propname, klen, propval);
-    }
-
-  return new_revprop_table;
 }
 
 
@@ -830,7 +812,7 @@ svn_repos_get_commit_editor5(const svn_delta_editor_t **editor,
 
   /* Set up the edit baton. */
   eb->pool = subpool;
-  eb->revprop_table = revprop_table_dup(revprop_table, subpool);
+  eb->revprop_table = svn_prop_hash_dup(revprop_table, subpool);
   eb->commit_callback = callback;
   eb->commit_callback_baton = callback_baton;
   eb->authz_callback = authz_callback;

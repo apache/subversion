@@ -27,6 +27,8 @@
 #include "svn_error.h"
 #include "svn_wc.h"
 
+#include "wc_db.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
@@ -85,20 +87,19 @@ extern "C" {
  *
  * The change from 10 to 11 was clearing the has_props, has_prop_mods,
  * cachable_props, and present_props values in the entries file. Older
- * client expect proper values for these fields. Note: this change
- * occurred during 1.7 development, and is not expected to be released.
+ * client expect proper values for these fields.
  *
- * The change from 11 to 12 was a complete rewrite of the wc datastore,
- * which resulted in centralization and migration of data to an sqlite
- * datebase. Shipped in 1.7.
+ * The change from 11 to 12 was a switch from 'entries' to 'wc.db'.
+ *
+ * The change from 12 to 13 added the WORK_QUEUE table into 'wc.db', and
+ * moved the wcprops into the 'dav_cache' column in BASE_NODE.
+ *
+ * == 1.7.x shipped with format ???
  *
  * Please document any further format changes here.
  */
 
-#define SVN_WC__VERSION 11
-
-/* ### only used by devs temporarily during 1.7 development. */
-#define SVN_WC__VERSION_EXPERIMENTAL 12
+#define SVN_WC__VERSION 12
 
 
 /* A version <= this doesn't have property caching in the entries file. */
@@ -114,8 +115,43 @@ extern "C" {
    rules. See issue #2475. */
 #define SVN_WC__CHANGED_CANONICAL_URLS 10
 
-/* A version < this is pre-wc-ng. */
+/* A version < this uses the old 'entries' file mechanism.  */
 #define SVN_WC__WC_NG_VERSION 12
+
+/* In this version, the wcprops are "lost" between files and wc.db. We want
+   to ignore them in upgrades.  */
+#define SVN_WC__WCPROPS_LOST 12
+
+/* A version < this has no work queue (see workqueue.h).  */
+#define SVN_WC__HAS_WORK_QUEUE 13
+
+/* A version < this has wcprops located in files OR in wc.db. Versions using
+   this format or later will only have wcprops in BASE_NODE.dav_cache.  */
+#define SVN_WC__USES_DAV_CACHE 13
+
+
+
+/*** Context handling ***/
+struct svn_wc_context_t
+{
+  /* The wc_db handle for this working copy. */
+  svn_wc__db_t *db;
+
+  /* The state pool for this context. */
+  apr_pool_t *state_pool;
+};
+
+/**
+ * Just like svn_wc_context_create(), only use the provided DB to construct
+ * the context.  The result pool will be the state pool associated with
+ * DB->state_pool.
+ */
+svn_error_t *
+svn_wc__context_create_with_db(svn_wc_context_t **wc_ctx,
+                               svn_config_t *config,
+                               svn_wc__db_t *db,
+                               apr_pool_t *scratch_pool);
+
 
 /*** Update traversals. ***/
 

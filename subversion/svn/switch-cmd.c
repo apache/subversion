@@ -24,6 +24,7 @@
 
 #include "svn_wc.h"
 #include "svn_client.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_error.h"
 #include "svn_pools.h"
@@ -89,9 +90,7 @@ svn_cl__switch(apr_getopt_t *os,
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   apr_array_header_t *targets;
   const char *target = NULL, *switch_url = NULL;
-  svn_wc_adm_access_t *adm_access;
-  const svn_wc_entry_t *entry;
-  const char *parent_dir, *base_tgt, *true_path;
+  const char *true_path;
   svn_opt_revision_t peg_revision;
   svn_depth_t depth;
   svn_boolean_t depth_is_sticky;
@@ -138,23 +137,7 @@ svn_cl__switch(apr_getopt_t *os,
        _("'%s' does not appear to be a URL"), switch_url);
 
   /* Canonicalize the URL. */
-  switch_url = svn_path_canonicalize(switch_url, pool);
-
-  /* Validate the target */
-  SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, target, FALSE, 0,
-                                 ctx->cancel_func, ctx->cancel_baton,
-                                 pool));
-  SVN_ERR(svn_wc_entry(&entry, target, adm_access, FALSE, pool));
-  if (! entry)
-    return svn_error_createf
-      (SVN_ERR_ENTRY_NOT_FOUND, NULL,
-       _("'%s' does not appear to be a working copy path"), target);
-
-  /* We want the switch to print the same letters as a regular update. */
-  if (entry->kind == svn_node_file)
-    SVN_ERR(svn_wc_get_actual_target(target, &parent_dir, &base_tgt, pool));
-  else if (entry->kind == svn_node_dir)
-    parent_dir = target;
+  switch_url = svn_uri_canonicalize(switch_url, pool);
 
   if (! opt_state->quiet)
     svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2, FALSE,

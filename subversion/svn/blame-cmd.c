@@ -354,7 +354,7 @@ svn_cl__blame(apr_getopt_t *os,
             }
           else
             {
-              return err;
+              return svn_error_return(err);
             }
         }
       else if (opt_state->xml)

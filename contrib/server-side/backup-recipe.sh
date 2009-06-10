@@ -27,7 +27,7 @@
 ###########################################################################
 
 # High-level overview of the full backup recipe:
-# 
+#
 #    1. Ask BDB's db_archive for a list of unused log files.
 #
 #    2. Copy the entire db/ dir to the backup area.
@@ -37,11 +37,11 @@
 #
 #    4. Remove the logfiles listed as inactive in step (1) from the
 #       repository, though not from the backup.
-#    
+#
 # High-level overview of the incremental backup recipe:
 #
 #    1. Just copy the Berkeley logfiles to a backup area.
-#    
+#
 # High-level overview of the restoration recipe:
 #
 #    1. Copy all the datafiles and logfiles back to the repository, in
@@ -171,7 +171,7 @@ for day in 1 2 3 4 5 6; do
   for logfile in `${DB_ARCHIVE} -l`; do
     # For maximum paranoia, we want repository activity *while* we're
     # making the incremental backup.  But if we did commits with each
-    # logfile copy, this script would be quite slow (Fibonacci effect). 
+    # logfile copy, this script would be quite slow (Fibonacci effect).
     # So we only exercise on the last two "days" of incrementals.
     if [ ${day} -ge 5 ]; then
       exercise 3

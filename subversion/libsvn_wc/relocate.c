@@ -45,7 +45,6 @@ relocate_entry(svn_wc_adm_access_t *adm_access,
                const char *to,
                svn_wc_relocation_validator3_t validator,
                void *validator_baton,
-               svn_boolean_t do_sync,
                apr_pool_t *pool)
 {
   svn_wc_entry_t entry2;
@@ -106,7 +105,7 @@ relocate_entry(svn_wc_adm_access_t *adm_access,
 
   if (flags)
     SVN_ERR(svn_wc__entry_modify(adm_access, entry->name,
-                                 &entry2, flags, do_sync, pool));
+                                 &entry2, flags, pool));
   return SVN_NO_ERROR;
 }
 
@@ -124,6 +123,8 @@ svn_wc_relocate3(const char *path,
   apr_hash_index_t *hi;
   const svn_wc_entry_t *entry;
   apr_pool_t *subpool;
+  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
+  const char *local_abspath;
 
   SVN_ERR(svn_wc_entry(&entry, path, adm_access, TRUE, pool));
   if (! entry)
@@ -132,8 +133,7 @@ svn_wc_relocate3(const char *path,
   if (entry->kind == svn_node_file
       || entry->depth == svn_depth_exclude)
     return relocate_entry(adm_access, entry, from, to,
-                          validator, validator_baton, TRUE /* sync */,
-                          pool);
+                          validator, validator_baton, pool);
 
   /* Relocate THIS_DIR first, in order to pre-validate the relocated URL
      of all of the other entries.  This is technically cheating because
@@ -143,7 +143,7 @@ svn_wc_relocate3(const char *path,
   SVN_ERR(svn_wc_entries_read(&entries, adm_access, TRUE, pool));
   entry = apr_hash_get(entries, SVN_WC_ENTRY_THIS_DIR, APR_HASH_KEY_STRING);
   SVN_ERR(relocate_entry(adm_access, entry, from, to,
-                         validator, validator_baton, FALSE, pool));
+                         validator, validator_baton, pool));
 
   subpool = svn_pool_create(pool);
 
@@ -161,8 +161,8 @@ svn_wc_relocate3(const char *path,
       svn_pool_clear(subpool);
 
       if (recurse && (entry->kind == svn_node_dir)
-          && (! entry->deleted || (entry->schedule == svn_wc_schedule_add))
-          && ! entry->absent
+          && ((! entry->deleted) || (entry->schedule == svn_wc_schedule_add))
+          && (! entry->absent)
           && (entry->depth != svn_depth_exclude))
         {
           svn_wc_adm_access_t *subdir_access;
@@ -176,11 +176,11 @@ svn_wc_relocate3(const char *path,
                                    validator_baton, subpool));
         }
       SVN_ERR(relocate_entry(adm_access, entry, from, to,
-                             validator, validator_baton, FALSE, subpool));
+                             validator, validator_baton, subpool));
     }
 
   svn_pool_destroy(subpool);
 
-  SVN_ERR(svn_wc__props_delete(path, svn_wc__props_wcprop, adm_access, pool));
-  return svn_wc__entries_write(entries, adm_access, pool);
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+  return svn_wc__props_delete(db, local_abspath, svn_wc__props_wcprop, pool);
 }

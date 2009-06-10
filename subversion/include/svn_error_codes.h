@@ -278,6 +278,11 @@ SVN_ERROR_START
              SVN_ERR_STREAM_CATEGORY_START + 2,
              "Unrecognized stream data")
 
+  /** @since New in 1.7. */
+  SVN_ERRDEF(SVN_ERR_STREAM_RESET_NOT_SUPPORTED,
+             SVN_ERR_STREAM_CATEGORY_START + 3,
+             "Stream doesn't support resetting")
+
   /* node errors */
 
   SVN_ERRDEF(SVN_ERR_NODE_UNKNOWN_KIND,
@@ -1271,11 +1276,6 @@ SVN_ERROR_START
   SVN_ERRDEF(SVN_ERR_SQLITE_UNSUPPORTED_SCHEMA,
              SVN_ERR_MISC_CATEGORY_START + 32,
              "Unsupported schema found in SQLite db")
-
-  /** @since New in 1.7. */
-  SVN_ERRDEF(SVN_ERR_EXTERNAL_PROGRAM_MISSING,
-             SVN_ERR_MISC_CATEGORY_START + 33,
-             "External program is missing")
 
   /* command-line client errors */
 

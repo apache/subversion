@@ -62,11 +62,6 @@ svn_sqlite__step(svn_boolean_t *got_row, svn_sqlite__stmt_t *stmt);
 svn_error_t *
 svn_sqlite__insert(apr_int64_t *row_id, svn_sqlite__stmt_t *stmt);
 
-/* Execute SQL on the sqlite database DB, and raise an SVN error if the
-   result is not okay.  */
-svn_error_t *
-svn_sqlite__exec(svn_sqlite__db_t *db, const char *sql);
-
 /* Return in *VERSION the version of the schema for the database as PATH.
    Use SCRATCH_POOL for temporary allocations. */
 svn_error_t *

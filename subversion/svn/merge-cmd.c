@@ -338,5 +338,5 @@ svn_cl__merge(apr_getopt_t *os,
   if (err && (! opt_state->reintegrate))
     return svn_cl__may_need_force(err);
 
-  return err;
+  return svn_error_return(err);
 }

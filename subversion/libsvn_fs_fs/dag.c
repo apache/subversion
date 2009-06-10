@@ -1,7 +1,7 @@
 /* dag.c : DAG-like interface filesystem, private to libsvn_fs
  *
  * ====================================================================
- * Copyright (c) 2000-2006, 2008 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006, 2008-2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -1016,9 +1016,10 @@ svn_fs_fs__dag_finalize_edits(dag_node_t *file,
                                            checksum->kind, pool));
       if (!svn_checksum_match(checksum, file_checksum))
         return svn_error_createf(SVN_ERR_CHECKSUM_MISMATCH, NULL,
-                                 _("Checksum mismatch, file '%s':\n"
-                                   "   expected:  %s\n"
-                                   "     actual:  %s\n"),
+                                 apr_psprintf(pool, "%s:\n%s\n%s\n",
+                                              _("Checksum mismatch for '%s'"),
+                                              _("   expected:  %s"),
+                                              _("     actual:  %s")),
                                  file->created_path,
                                  svn_checksum_to_cstring_display(checksum,
                                                                  pool),
