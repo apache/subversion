@@ -57,7 +57,7 @@ Candidate changes:
      Greatly improves performance when committing large numbers of items,
      see http://svn.haxx.se/dev/archive-2009-05/0575.shtml.
    Votes:
-     +1: pburba
+     +1: pburba, stsp
 
 Approved changes:
 =================
