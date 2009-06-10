@@ -68,11 +68,3 @@ Candidate changes:
 
 Approved changes:
 =================
-
-* r37972
-   Avoid temp file name collisions when committing with ra_serf/ra_neon.
-   Justification:
-     Greatly improves performance when committing large numbers of items,
-     see http://svn.haxx.se/dev/archive-2009-05/0575.shtml.
-   Votes:
-     +1: pburba, stsp, rhuijben

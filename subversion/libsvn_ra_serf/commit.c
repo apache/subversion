@@ -1576,6 +1576,8 @@ apply_textdelta(void *file_baton,
   file_context_t *ctx = file_baton;
   const svn_ra_callbacks2_t *wc_callbacks;
   void *wc_callback_baton;
+  const char *tempfile_name;
+  svn_checksum_t *checksum;
 
   /* Store the stream in a temporary file; we'll give it to serf when we
    * close this file.
@@ -1588,9 +1590,17 @@ apply_textdelta(void *file_baton,
   wc_callbacks = ctx->commit->session->wc_callbacks;
   wc_callback_baton = ctx->commit->session->wc_callback_baton;
 
-  SVN_ERR(svn_io_open_unique_file3(&ctx->svndiff, NULL, NULL,
-                                   svn_io_file_del_on_pool_cleanup,
-                                   ctx->pool, ctx->pool));
+  /* Avoid temp file name collisions by requesting unique temp file name
+     based on the checksum of CTX->NAME. */
+  SVN_ERR(svn_checksum(&checksum, svn_checksum_md5, ctx->name,
+                       strlen(ctx->name), ctx->pool));
+  tempfile_name = apr_psprintf(ctx->pool, "tempfile.%s",
+                               svn_checksum_to_cstring_display(checksum,
+                                                               ctx->pool));
+  SVN_ERR(svn_io_open_uniquely_named(&ctx->svndiff, NULL, NULL,
+                                     tempfile_name, ".tmp",
+                                     svn_io_file_del_on_pool_cleanup,
+                                     ctx->pool, ctx->pool));
 
   ctx->stream = svn_stream_create(ctx, pool);
   svn_stream_set_write(ctx->stream, svndiff_stream_write);
