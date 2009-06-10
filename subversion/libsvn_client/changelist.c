@@ -25,6 +25,7 @@
 #include "svn_client.h"
 #include "svn_wc.h"
 #include "svn_pools.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_hash.h"
 
@@ -77,7 +78,7 @@ set_entry_changelist(const char *path,
   /* Get the ADM_ACCESS for our file's parent directory,
      specifically. */
   SVN_ERR(svn_wc_adm_retrieve(&adm_access, b->adm_access,
-                              svn_path_dirname(path, pool), pool));
+                              svn_dirent_dirname(path, pool), pool));
   return svn_wc_set_changelist(path, b->changelist, adm_access,
                                b->ctx->cancel_func, b->ctx->cancel_baton,
                                b->ctx->notify_func2, b->ctx->notify_baton2,

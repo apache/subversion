@@ -545,6 +545,117 @@ def blame_file_not_in_head(sbox):
   svntest.actions.run_and_verify_svn(None, [], expected_err,
                                      'blame', notexisting_url)
 
+def blame_output_after_merge(sbox):
+  "blame -g output with inserted lines"
+
+  sbox.build()
+
+  wc_dir = sbox.wc_dir
+  trunk_url = sbox.repo_url + '/trunk'
+  trunk_A_url = trunk_url + '/A'
+  A_url = sbox.repo_url + '/A'
+
+  # r2: mv greek tree in trunk.
+  svntest.actions.run_and_verify_svn(None, ["\n","Committed revision 2.\n"], [],
+                                     'mv', "--parents", A_url, trunk_A_url,
+                                     "-m", "move greek tree to trunk")
+
+  svntest.actions.run_and_verify_update(wc_dir, None, None, None)
+
+  # r3: modify trunk/A/mu, modify and add some lines.
+  mu_path = os.path.join(wc_dir, "trunk", "A", "mu")
+  new_content = "New version of file 'mu'.\n" \
+                "2nd line in file 'mu'.\n" \
+                "3rd line in file 'mu'.\n" \
+                "4th line in file 'mu'.\n" \
+                "5th line in file 'mu'.\n" \
+                "6th line in file 'mu'.\n"
+  svntest.main.file_write(mu_path, new_content)
+
+  expected_output = svntest.wc.State(wc_dir, {
+    'trunk/A/mu' : Item(verb='Sending'),
+    })
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        None, None, wc_dir)
+
+  # r4: create branches/br from trunk
+  branches_br_url = sbox.repo_url + "/branches/br"
+  svntest.actions.run_and_verify_svn(None, ["\n","Committed revision 4.\n"], [],
+                                    'cp', '--parents',
+                                     trunk_url, branches_br_url,
+                                     "-m", "create branch")
+
+  svntest.actions.run_and_verify_update(wc_dir, None, None, None)
+
+  # r5: modify single line in branches/br/A/mu
+  branch_mu_path = os.path.join(wc_dir, "branches", "br", "A", "mu")
+  svntest.main.file_write(branch_mu_path,
+                          "New version of file 'mu'.\n" \
+                          "2nd line in file 'mu'.\n" \
+                          "new 3rd line in file 'mu'.\n" \
+                          "4th line in file 'mu'.\n" \
+                          "5th line in file 'mu'.\n" \
+                          "6th line in file 'mu'.\n")
+
+  expected_output = svntest.wc.State(wc_dir, {
+    'branches/br/A/mu' : Item(verb='Sending'),
+    })
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        None, None, wc_dir)
+
+  # r6: Insert a single line in  branches/A/mu
+  svntest.main.file_write(branch_mu_path,
+                          "New version of file 'mu'.\n" \
+                          "2nd line in file 'mu'.\n" \
+                          "new 3rd line in file 'mu'.\n" \
+                          "add 3.5 line in file 'mu'.\n" \
+                          "4th line in file 'mu'.\n" \
+                          "5th line in file 'mu'.\n" \
+                          "6th line in file 'mu'.\n")
+
+  expected_output = svntest.wc.State(wc_dir, {
+    'branches/br/A/mu' : Item(verb='Sending'),
+    })
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        None, None, wc_dir)
+
+  # r7: merge branches/br back to trunk
+  trunk_path = os.path.join(wc_dir, "trunk")
+  svntest.actions.run_and_verify_svn(wc_dir, None, [], 'merge',
+                                     '-r', '4:HEAD',
+                                     branches_br_url, trunk_path)
+  expected_output = svntest.wc.State(wc_dir, {
+    'trunk' : Item(verb='Sending'),
+    'trunk/A/mu' : Item(verb='Sending'),
+    })
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        None, None, wc_dir)
+
+  # Now test blame, first without the -g option
+  expected_output = [ "     3    jrandom New version of file 'mu'.\n",
+                      "     3    jrandom 2nd line in file 'mu'.\n",
+                      "     7    jrandom new 3rd line in file 'mu'.\n",
+                      "     7    jrandom add 3.5 line in file 'mu'.\n",
+                      "     3    jrandom 4th line in file 'mu'.\n",
+                      "     3    jrandom 5th line in file 'mu'.\n",
+                      "     3    jrandom 6th line in file 'mu'.\n"]
+
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                    'blame',  mu_path)
+
+  # Next test with the -g option
+  # the branch modifications at revision 5 & 6 should show in the output
+  expected_output = [ "       3    jrandom New version of file 'mu'.\n",
+                      "       3    jrandom 2nd line in file 'mu'.\n",
+                      "G      5    jrandom new 3rd line in file 'mu'.\n",
+                      "G      6    jrandom add 3.5 line in file 'mu'.\n",
+                      "       3    jrandom 4th line in file 'mu'.\n",
+                      "       3    jrandom 5th line in file 'mu'.\n",
+                      "       3    jrandom 6th line in file 'mu'.\n"]
+
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                    'blame', '-g', mu_path)
+
 
 ########################################################################
 # Run the tests
@@ -565,6 +676,7 @@ test_list = [ None,
               SkipUnless(blame_merge_out_of_range, server_has_mergeinfo),
               blame_peg_rev_file_not_in_head,
               blame_file_not_in_head,
+              blame_output_after_merge,
              ]
 
 if __name__ == '__main__':

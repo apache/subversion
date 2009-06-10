@@ -25,8 +25,11 @@
 #include "svn_subst.h"
 #include "svn_pools.h"
 #include "svn_props.h"
+#include "svn_dirent_uri.h"
 
 #include "wc.h"
+#include "lock.h"
+#include "props.h"
 
 #include "svn_private_config.h"
 
@@ -523,6 +526,39 @@ svn_wc_resolved_conflict3(const char *path,
                                    svn_wc_conflict_choose_merged,
                                    notify_func, notify_baton, cancel_func,
                                    cancel_baton, pool);
+}
+
+svn_error_t *
+svn_wc_add_lock(const char *path,
+                const svn_lock_t *lock,
+                svn_wc_adm_access_t *adm_access,
+                apr_pool_t *pool)
+{
+  const char *local_abspath;
+  svn_wc_context_t *wc_ctx;
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+  SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL /* config */,
+                                         svn_wc__adm_get_db(adm_access),
+                                         pool));
+
+  return svn_error_return(svn_wc_add_lock2(wc_ctx, local_abspath, lock, pool));
+}
+
+svn_error_t *
+svn_wc_remove_lock(const char *path,
+                   svn_wc_adm_access_t *adm_access,
+                   apr_pool_t *pool)
+{
+  const char *local_abspath;
+  svn_wc_context_t *wc_ctx;
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+  SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL /* config */,
+                                         svn_wc__adm_get_db(adm_access),
+                                         pool));
+
+  return svn_error_return(svn_wc_remove_lock2(wc_ctx, local_abspath, pool));
 }
 
 /*** From diff.c ***/
@@ -1295,6 +1331,39 @@ svn_wc_prop_set(const char *name,
   return svn_wc_prop_set2(name, value, path, adm_access, FALSE, pool);
 }
 
+
+svn_error_t *
+svn_wc_merge_props(svn_wc_notify_state_t *state,
+                   const char *path,
+                   svn_wc_adm_access_t *adm_access,
+                   apr_hash_t *baseprops,
+                   const apr_array_header_t *propchanges,
+                   svn_boolean_t base_merge,
+                   svn_boolean_t dry_run,
+                   apr_pool_t *pool)
+{
+  return svn_wc_merge_props2(state, path, adm_access, baseprops, propchanges,
+                             base_merge, dry_run, NULL, NULL, pool);
+}
+
+
+svn_error_t *
+svn_wc_merge_prop_diffs(svn_wc_notify_state_t *state,
+                        const char *path,
+                        svn_wc_adm_access_t *adm_access,
+                        const apr_array_header_t *propchanges,
+                        svn_boolean_t base_merge,
+                        svn_boolean_t dry_run,
+                        apr_pool_t *pool)
+{
+  /* NOTE: Here, we use implementation knowledge.  The public
+     svn_wc_merge_props2 doesn't allow NULL as baseprops argument, but we know
+     that it works. */
+  return svn_wc_merge_props2(state, path, adm_access, NULL, propchanges,
+                             base_merge, dry_run, NULL, NULL, pool);
+}
+
+
 /*** From status.c ***/
 
 struct status4_wrapper_baton
@@ -1803,7 +1872,9 @@ svn_wc_relocate(const char *path,
                           compat_validator, &cb, pool);
 }
 
+
 /*** From log.c ***/
+
 svn_error_t *
 svn_wc_cleanup(const char *path,
                svn_wc_adm_access_t *optional_adm_access,
@@ -1815,13 +1886,86 @@ svn_wc_cleanup(const char *path,
   return svn_wc_cleanup2(path, diff3_cmd, cancel_func, cancel_baton, pool);
 }
 
+/*** From questions.c ***/
+
 svn_error_t *
-svn_wc_cleanup2(const char *path,
-                const char *diff3_cmd,
-                svn_cancel_func_t cancel_func,
-                void *cancel_baton,
-                apr_pool_t *pool)
+svn_wc_has_binary_prop(svn_boolean_t *has_binary_prop,
+                       const char *path,
+                       svn_wc_adm_access_t *adm_access,
+                       apr_pool_t *pool)
 {
-  return svn_wc_cleanup3(path, diff3_cmd, FALSE, cancel_func, cancel_baton,
-                         pool);
+  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
+  const char *local_abspath;
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+
+  return svn_error_return(svn_wc__marked_as_binary(has_binary_prop,
+                                                   local_abspath, db, pool));
+}
+
+
+/*** From copy.c ***/
+
+svn_error_t *
+svn_wc_copy(const char *src_path,
+            svn_wc_adm_access_t *dst_parent,
+            const char *dst_basename,
+            svn_cancel_func_t cancel_func,
+            void *cancel_baton,
+            svn_wc_notify_func_t notify_func,
+            void *notify_baton,
+            apr_pool_t *pool)
+{
+  svn_wc__compat_notify_baton_t nb;
+
+  nb.func = notify_func;
+  nb.baton = notify_baton;
+
+  return svn_wc_copy2(src_path, dst_parent, dst_basename, cancel_func,
+                      cancel_baton, svn_wc__compat_call_notify_func,
+                      &nb, pool);
+}
+
+
+/*** From merge.c ***/
+
+svn_error_t *
+svn_wc_merge2(enum svn_wc_merge_outcome_t *merge_outcome,
+              const char *left,
+              const char *right,
+              const char *merge_target,
+              svn_wc_adm_access_t *adm_access,
+              const char *left_label,
+              const char *right_label,
+              const char *target_label,
+              svn_boolean_t dry_run,
+              const char *diff3_cmd,
+              const apr_array_header_t *merge_options,
+              apr_pool_t *pool)
+{
+  return svn_wc_merge3(merge_outcome,
+                       left, right, merge_target, adm_access,
+                       left_label, right_label, target_label,
+                       dry_run, diff3_cmd, merge_options, NULL,
+                       NULL, NULL, pool);
+}
+
+svn_error_t *
+svn_wc_merge(const char *left,
+             const char *right,
+             const char *merge_target,
+             svn_wc_adm_access_t *adm_access,
+             const char *left_label,
+             const char *right_label,
+             const char *target_label,
+             svn_boolean_t dry_run,
+             enum svn_wc_merge_outcome_t *merge_outcome,
+             const char *diff3_cmd,
+             apr_pool_t *pool)
+{
+  return svn_wc_merge3(merge_outcome,
+                       left, right, merge_target, adm_access,
+                       left_label, right_label, target_label,
+                       dry_run, diff3_cmd, NULL, NULL, NULL,
+                       NULL, pool);
 }

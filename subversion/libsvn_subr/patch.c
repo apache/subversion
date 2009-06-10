@@ -90,6 +90,7 @@ write_word(svn_stream_t *target,
   return svn_stream_printf(target, pool, "%s ", word);
 }
 
+#if 0 /* NOTUSED */
 /* Append a list of properties PROPS into TARGET. */
 static svn_error_t *
 write_proplist(svn_stream_t *target,
@@ -119,6 +120,7 @@ write_proplist(svn_stream_t *target,
 
   return SVN_NO_ERROR;
 }
+#endif
 
 /* Begin a list, appended into TARGET */
 static svn_error_t *

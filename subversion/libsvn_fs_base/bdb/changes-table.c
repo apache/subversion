@@ -1,7 +1,7 @@
 /* changes-table.c : operations on the `changes' table
  *
  * ====================================================================
- * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -33,7 +33,7 @@
 #include "dbt.h"
 #include "changes-table.h"
 
-
+#include "private/svn_fs_util.h"
 #include "svn_private_config.h"
 
 
@@ -217,7 +217,7 @@ fold_change(apr_hash_t *changes,
       /* This change is new to the hash, so make a new public change
          structure from the internal one (in the hash's pool), and dup
          the path into the hash's pool, too. */
-      new_change = svn_fs_path_change2_create(
+      new_change = svn_fs__path_change_create_internal(
                        svn_fs_base__id_copy(change->noderev_id, pool),
                        change->kind,
                        pool);
@@ -345,7 +345,7 @@ svn_fs_bdb__changes_fetch(apr_hash_t **changes_p,
 
   /* If we had an error prior to closing the cursor, return the error. */
   if (err)
-    return err;
+    return svn_error_return(err);
 
   /* If our only error thus far was when we closed the cursor, return
      that error. */
@@ -428,7 +428,7 @@ svn_fs_bdb__changes_fetch_raw(apr_array_header_t **changes_p,
 
   /* If we had an error prior to closing the cursor, return the error. */
   if (err)
-    return err;
+    return svn_error_return(err);
 
   /* If our only error thus far was when we closed the cursor, return
      that error. */

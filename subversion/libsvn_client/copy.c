@@ -159,7 +159,7 @@ extend_wc_mergeinfo(const char *target_wcpath, const svn_wc_entry_t *entry,
     wc_mergeinfo = mergeinfo;
 
   return svn_client__record_wc_mergeinfo(target_wcpath, wc_mergeinfo,
-                                         adm_access, pool);
+                                         adm_access, ctx, pool);
 }
 
 /* Find the longest common ancestor of paths in COPY_PAIRS.  If
@@ -324,10 +324,10 @@ do_wc_to_wc_moves(const apr_array_header_t *copy_pairs,
         {
           const char *src_parent_abs, *dst_parent_abs;
 
-          SVN_ERR(svn_path_get_absolute(&src_parent_abs, src_parent,
-                                        iterpool));
-          SVN_ERR(svn_path_get_absolute(&dst_parent_abs, pair->dst_parent,
-                                        iterpool));
+          SVN_ERR(svn_dirent_get_absolute(&src_parent_abs, src_parent,
+                                          iterpool));
+          SVN_ERR(svn_dirent_get_absolute(&dst_parent_abs, pair->dst_parent,
+                                          iterpool));
 
           if ((pair->src_kind == svn_node_dir)
               && (svn_path_is_child(src_parent_abs, dst_parent_abs,
@@ -366,7 +366,7 @@ do_wc_to_wc_moves(const apr_array_header_t *copy_pairs,
 
   svn_io_sleep_for_timestamps(dst_path, pool);
 
-  return err;
+  return svn_error_return(err);
 }
 
 
@@ -742,7 +742,7 @@ repos_to_repos_copy(svn_commit_info_t **commit_info_p,
              first_pair->src, first_pair->dst);
         }
       else
-        return err;
+        return svn_error_return(err);
     }
 
   /* Make a list in NEW_DIRS of the parent directories of the destination
@@ -991,7 +991,7 @@ repos_to_repos_copy(svn_commit_info_t **commit_info_p,
     {
       /* At least try to abort the edit (and fs txn) before throwing err. */
       svn_error_clear(editor->abort_edit(edit_baton, pool));
-      return err;
+      return svn_error_return(err);
     }
 
   /* Close the edit. */
@@ -1029,25 +1029,39 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
   apr_hash_t *commit_revprops;
   int i;
 
-  /* The commit process uses absolute paths, so we need to open the access
-     baton using absolute paths, and so we really need to use absolute
-     paths everywhere. */
-  for (i = 0; i < copy_pairs->nelts; i++)
-    {
-      svn_client__copy_pair_t *pair = APR_ARRAY_IDX(copy_pairs, i,
-                                                    svn_client__copy_pair_t *);
-      SVN_ERR(svn_path_get_absolute(&pair->src_abs, pair->src, pool));
-    }
-
   /* Find the common root of all the source paths, and probe the wc. */
   get_copy_pair_ancestors(copy_pairs, &top_src_path, NULL, NULL, pool);
   SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, top_src_path,
                                  FALSE, -1, ctx->cancel_func,
                                  ctx->cancel_baton, pool));
 
+  /* The commit process uses absolute paths, so we need to open the access
+     baton using absolute paths, and so we really need to use absolute
+     paths everywhere. */
+  iterpool = svn_pool_create(pool);
+
+  for (i = 0; i < copy_pairs->nelts; i++)
+    {
+      svn_client__copy_pair_t *pair = APR_ARRAY_IDX(copy_pairs, i,
+                                                    svn_client__copy_pair_t *);
+      svn_pool_clear(iterpool);
+      /* Sanity check if the source path is versioned. */
+      SVN_ERR(svn_wc__entry_versioned(&entry, pair->src, adm_access, FALSE,
+                                      iterpool));
+      SVN_ERR(svn_dirent_get_absolute(&pair->src_abs, pair->src, pool));
+    }
+
+  svn_pool_destroy(iterpool);
+
   /* Determine the longest common ancestor for the destinations, and open an RA
      session to that location. */
   /* ### But why start by getting the _parent_ of the first one? */
+  /* --- That works because multiple destinations always point to the same
+   *     directory. I'm rather wondering why we need to find a common
+   *     destination parent here at all, instead of simply getting
+   *     top_dst_url from get_copy_pair_ancestors() above?
+   *     It looks like the entire block of code hanging off this comment
+   *     is redundant. */
   svn_uri_split(APR_ARRAY_IDX(copy_pairs, 0, svn_client__copy_pair_t *)->dst,
                 &top_dst_url,
                 NULL, pool);
@@ -2018,7 +2032,7 @@ svn_client_copy5(svn_commit_info_t **commit_info_p,
     }
 
   svn_pool_destroy(subpool);
-  return err;
+  return svn_error_return(err);
 }
 
 
@@ -2102,5 +2116,5 @@ svn_client_move5(svn_commit_info_t **commit_info_p,
     }
 
   svn_pool_destroy(subpool);
-  return err;
+  return svn_error_return(err);
 }

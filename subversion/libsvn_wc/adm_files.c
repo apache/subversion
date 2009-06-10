@@ -456,7 +456,7 @@ open_adm_file(svn_stream_t **stream,
     {
       /* Exclusive open failed, delete and retry */
       svn_error_clear(err);
-      SVN_ERR(svn_io_remove_file(path, scratch_pool));
+      SVN_ERR(svn_io_remove_file2(path, FALSE, scratch_pool));
       err = svn_stream_open_writable(stream, path, result_pool, scratch_pool);
     }
 
@@ -499,31 +499,26 @@ svn_wc__close_adm_stream(svn_stream_t *stream,
                          const char *fname,
                          apr_pool_t *scratch_pool)
 {
-  const char *tmp_path = extend_with_adm_name(path, NULL, TRUE, scratch_pool,
-                                              fname, NULL);
   const char *dst_path = extend_with_adm_name(path, NULL, FALSE, scratch_pool,
                                               fname, NULL);
-
-  /* ### eventually, just use the parameter rather than compute tmp_path */
-  SVN_ERR_ASSERT(strcmp(temp_file_path, tmp_path) == 0);
 
   SVN_ERR(svn_stream_close(stream));
 
   /* Put the completed file into its intended location. */
-  SVN_ERR(svn_io_file_rename(tmp_path, dst_path, scratch_pool));
-  return svn_io_set_file_read_only(dst_path, FALSE, scratch_pool);
+  SVN_ERR(svn_io_file_rename(temp_file_path, dst_path, scratch_pool));
+  return svn_error_return(svn_io_set_file_read_only(dst_path, FALSE,
+                                                    scratch_pool));
 }
 
 
 svn_error_t *
-svn_wc__remove_adm_file(const svn_wc_adm_access_t *adm_access,
+svn_wc__remove_adm_file(const char *dir_path,
                         const char *filename,
                         apr_pool_t *scratch_pool)
 {
-  const char *path = svn_wc__adm_child(svn_wc_adm_access_path(adm_access),
-                                       filename, scratch_pool);
+  const char *path = svn_wc__adm_child(dir_path, filename, scratch_pool);
 
-  return svn_io_remove_file(path, scratch_pool);
+  return svn_error_return(svn_io_remove_file2(path, FALSE, scratch_pool));
 }
 
 
@@ -658,11 +653,21 @@ svn_wc_ensure_adm3(const char *path,
                    svn_depth_t depth,
                    apr_pool_t *pool)
 {
+  svn_wc__db_t *db;
+  const char *local_abspath;
   svn_wc_adm_access_t *adm_access;
   const svn_wc_entry_t *entry;
   int format;
 
-  SVN_ERR(svn_wc_check_wc(path, &format, pool));
+  SVN_ERR(svn_wc__db_open(&db, svn_wc__db_openmode_readwrite,
+                          NULL /* ### config */, pool, pool));
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+
+  SVN_ERR(svn_wc__internal_check_wc(&format, db, local_abspath, pool));
+
+  /* ### we just created a DB. we should pass that into the other
+     ### functions below.  */
 
   /* Early out: we know we're not dealing with an existing wc, so
      just create one. */
@@ -723,8 +728,11 @@ svn_wc__adm_destroy(svn_wc_adm_access_t *adm_access,
      directory, which also removes the lock file */
   path = svn_wc__adm_child(svn_wc_adm_access_path(adm_access), NULL,
                            scratch_pool);
+  SVN_ERR(svn_wc_adm_close2(adm_access, scratch_pool));
+
   SVN_ERR(svn_io_remove_dir2(path, FALSE, NULL, NULL, scratch_pool));
-  return svn_wc_adm_close2(adm_access, scratch_pool);
+
+  return SVN_NO_ERROR;
 }
 
 

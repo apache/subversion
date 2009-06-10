@@ -142,19 +142,17 @@ svn_prop_hash_dup(apr_hash_t *hash,
                   apr_pool_t *pool)
 {
   apr_hash_index_t *hi;
-  apr_hash_t *new_hash;
-
-  new_hash = apr_hash_make(pool);
+  apr_hash_t *new_hash = apr_hash_make(pool);
 
   for (hi = apr_hash_first(pool, hash); hi; hi = apr_hash_next(hi))
     {
       const void *key;
+      apr_ssize_t klen;
       void *prop;
 
-      apr_hash_this(hi, &key, NULL, &prop);
-
-      apr_hash_set(new_hash, apr_pstrdup(pool, key),
-      APR_HASH_KEY_STRING, svn_string_dup(prop, pool));
+      apr_hash_this(hi, &key, &klen, &prop);
+      apr_hash_set(new_hash, apr_pstrdup(pool, key), klen,
+                   svn_string_dup(prop, pool));
     }
   return new_hash;
 }

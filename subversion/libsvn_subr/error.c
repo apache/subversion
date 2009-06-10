@@ -185,6 +185,9 @@ svn_error_wrap_apr(apr_status_t status,
 svn_error_t *
 svn_error_quick_wrap(svn_error_t *child, const char *new_msg)
 {
+  if (child == SVN_NO_ERROR)
+    return SVN_NO_ERROR;
+
   return svn_error_create(child->apr_err,
                           child,
                           new_msg);
@@ -308,6 +311,63 @@ svn_error_clear(svn_error_t *err)
     }
 }
 
+/* Is ERR a tracing-only error chain link?  */
+static svn_boolean_t is_tracing_link(svn_error_t *err)
+{
+#ifdef SVN_ERR__TRACING
+  /* ### A strcmp()?  Really?  I think it's the best we can do unless
+     ### we add a boolean field to svn_error_t that's set only for
+     ### these "placeholder error chain" items.  Not such a bad idea,
+     ### really...  */
+  return (err && err->message && !strcmp(err->message, SVN_ERR__TRACED));
+#else
+  return FALSE;
+#endif
+}
+
+svn_error_t *
+svn_error_purge_tracing(svn_error_t *err)
+{
+#ifdef SVN_ERR__TRACING  
+  svn_error_t *tmp_err = err;
+  svn_error_t *new_err = NULL, *new_err_leaf = NULL;
+
+  if (! err)
+    return SVN_NO_ERROR;
+
+  while (tmp_err)
+    {
+      /* Skip over any trace-only links. */
+      while (tmp_err && is_tracing_link(tmp_err))
+        tmp_err = tmp_err->child;
+
+      /* Add a new link to the new chain (creating the chain if necessary). */
+      if (! new_err)
+        {
+          new_err = tmp_err;
+          new_err_leaf = new_err;
+        }
+      else
+        {
+          new_err_leaf->child = tmp_err;
+          new_err_leaf = new_err_leaf->child;
+        }
+
+      /* Advance to the next link in the original chain. */
+      tmp_err = tmp_err->child;
+    }
+  
+  /* If we get here, there had better be a real link in this error chain. */
+  SVN_ERR_ASSERT(new_err_leaf);
+
+  /* Tie off the chain, and return its head. */
+  new_err_leaf->child = NULL;
+  return new_err;
+#else  /* SVN_ERR__TRACING */
+  return err;
+#endif /* SVN_ERR__TRACING */
+}
+
 static void
 print_error(svn_error_t *err, FILE *stream, const char *prefix)
 {
@@ -339,8 +399,13 @@ print_error(svn_error_t *err, FILE *stream, const char *prefix)
                                       ": (apr_err=%d)\n", err->apr_err));
 #endif /* SVN_DEBUG */
 
+  /* "traced call" */
+  if (is_tracing_link(err))
+    {
+      /* Skip it.  We already printed the file-line coordinates. */
+    }
   /* Only print the same APR error string once. */
-  if (err->message)
+  else if (err->message)
     {
       svn_error_clear(svn_cmdline_fprintf(stream, err->pool, "%s%s\n",
                                           prefix, err->message));
@@ -452,6 +517,10 @@ void
 svn_handle_warning2(FILE *stream, svn_error_t *err, const char *prefix)
 {
   char buf[256];
+
+  /* Skip over any trace records.  */
+  while (is_tracing_link(err))
+    err = err->child;
 
   svn_error_clear(svn_cmdline_fprintf
                   (stream, err->pool,

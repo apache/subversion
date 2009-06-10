@@ -26,6 +26,7 @@
 #include "svn_checksum.h"
 #include "svn_error.h"
 #include "svn_io.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_fs.h"
 #include "svn_props.h"
@@ -170,7 +171,7 @@ dav_svn__delete_activity(const dav_svn_repos *repos, const char *activity_id)
     }
 
   /* Finally, we remove the activity from the activities database. */
-  serr = svn_io_remove_file(pathname, repos->pool);
+  serr = svn_io_remove_file2(pathname, FALSE, repos->pool);
   if (serr)
     err = dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                "unable to remove activity.",
@@ -204,7 +205,7 @@ dav_svn__store_activity(const dav_svn_repos *repos,
 
   /* ### is there another directory we already have and can write to? */
   err = svn_io_write_unique(&tmp_path,
-                            svn_path_dirname(final_path, repos->pool),
+                            svn_dirent_dirname(final_path, repos->pool),
                             activity_contents, strlen(activity_contents),
                             svn_io_file_del_none, repos->pool);
   if (err)
@@ -221,7 +222,7 @@ dav_svn__store_activity(const dav_svn_repos *repos,
   err = svn_io_file_rename(tmp_path, final_path, repos->pool);
   if (err)
     {
-      svn_error_clear(svn_io_remove_file(tmp_path, repos->pool));
+      svn_error_clear(svn_io_remove_file2(tmp_path, TRUE, repos->pool));
       return dav_svn__convert_err(err, HTTP_INTERNAL_SERVER_ERROR,
                                   "could not replace files.",
                                   repos->pool);

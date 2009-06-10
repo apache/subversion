@@ -2,7 +2,7 @@
  * adm_crawler.c:  report local WC mods to an Editor.
  *
  * ====================================================================
- * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -64,10 +64,14 @@ restore_file(const char *file_path,
   svn_stream_t *src_stream;
   svn_boolean_t special;
   svn_wc_entry_t newentry;
+  const char *local_abspath;
+  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, file_path, pool));
 
   SVN_ERR(svn_wc_get_pristine_contents(&src_stream, file_path, pool, pool));
 
-  SVN_ERR(svn_wc__get_special(&special, file_path, adm_access, pool));
+  SVN_ERR(svn_wc__get_special(&special, db, local_abspath, pool));
   if (special)
     {
       svn_stream_t *dst_stream;
@@ -88,9 +92,9 @@ restore_file(const char *file_path,
       const char *tmp_file;
       svn_stream_t *tmp_stream;
 
-      SVN_ERR(svn_wc__get_eol_style(&style, &eol_str, file_path, adm_access,
-                                    pool));
-      SVN_ERR(svn_wc__get_keywords(&keywords, file_path, adm_access, NULL,
+      SVN_ERR(svn_wc__get_eol_style(&style, &eol_str, db, local_abspath,
+                                    pool, pool));
+      SVN_ERR(svn_wc__get_keywords(&keywords, db, local_abspath, NULL, pool,
                                    pool));
 
       /* Get a temporary destination so we can use a rename to create the
@@ -118,10 +122,10 @@ restore_file(const char *file_path,
       SVN_ERR(svn_io_file_rename(tmp_file, file_path, pool));
     }
 
-  SVN_ERR(svn_wc__maybe_set_read_only(NULL, file_path, adm_access, pool));
+  SVN_ERR(svn_wc__maybe_set_read_only(NULL, db, local_abspath, pool));
 
   /* If necessary, tweak the new working file's executable bit. */
-  SVN_ERR(svn_wc__maybe_set_executable(NULL, file_path, adm_access, pool));
+  SVN_ERR(svn_wc__maybe_set_executable(NULL, db, local_abspath, pool));
 
   /* Remove any text conflict */
   SVN_ERR(svn_wc_resolved_conflict4(file_path, adm_access, TRUE, FALSE,
@@ -132,11 +136,8 @@ restore_file(const char *file_path,
   /* Possibly set timestamp to last-commit-time. */
   if (use_commit_times && (! special))
     {
-      svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
-      const char *abspath;
       apr_time_t changed_date;
 
-      SVN_ERR(svn_dirent_get_absolute(&abspath, file_path, pool));
       SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL,
                                    NULL, NULL, NULL,
                                    NULL, &changed_date, NULL,
@@ -145,7 +146,7 @@ restore_file(const char *file_path,
                                    NULL, NULL,
                                    NULL, NULL, NULL, NULL,
                                    NULL, NULL, NULL, NULL,
-                                   db, abspath,
+                                   db, local_abspath,
                                    pool, pool));
 
       SVN_ERR(svn_io_set_file_affected_time(changed_date, file_path, pool));
@@ -160,8 +161,7 @@ restore_file(const char *file_path,
 
   /* Modify our entry's text-timestamp to match the working file. */
   return svn_wc__entry_modify(adm_access, svn_dirent_basename(file_path, pool),
-                              &newentry, SVN_WC__ENTRY_MODIFY_TEXT_TIME,
-                              TRUE /* do_sync now */, pool);
+                              &newentry, SVN_WC__ENTRY_MODIFY_TEXT_TIME, pool);
 }
 
 
@@ -232,27 +232,40 @@ report_revisions_and_depths(svn_wc_adm_access_t *adm_access,
                             svn_wc_traversal_info_t *traversal_info,
                             apr_pool_t *pool)
 {
-  apr_hash_t *entries, *dirents;
-  apr_hash_index_t *hi;
+  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
+  const char *full_path;
+  const char *abspath;
+  const apr_array_header_t *children;
+  apr_hash_t *dirents;
   apr_pool_t *subpool = svn_pool_create(pool), *iterpool;
   const svn_wc_entry_t *dot_entry;
-  const char *this_url, *this_path, *full_path, *this_full_path;
+  const char *this_url;
+  const char *this_path;
+  const char *this_full_path;
   svn_wc_adm_access_t *dir_access;
   svn_wc_notify_t *notify;
+  int i;
 
   /* Get both the SVN Entries and the actual on-disk entries.   Also
-     notice that we're picking up hidden entries too. */
+     notice that we're picking up hidden entries too (read_children never
+     hides children). */
   full_path = svn_dirent_join(svn_wc_adm_access_path(adm_access),
                               dir_path, subpool);
+  SVN_ERR(svn_dirent_get_absolute(&abspath, full_path, pool));
+  SVN_ERR(svn_wc__db_read_children(&children, db, abspath,
+                                   subpool, subpool));
+  
   SVN_ERR(svn_wc_adm_retrieve(&dir_access, adm_access, full_path, subpool));
-  SVN_ERR(svn_wc_entries_read(&entries, dir_access, TRUE, subpool));
   SVN_ERR(svn_io_get_dir_filenames(&dirents, full_path, subpool));
 
   /*** Do the real reporting and recursing. ***/
 
   /* First, look at "this dir" to see what its URL is. */
-  dot_entry = apr_hash_get(entries, SVN_WC_ENTRY_THIS_DIR,
-                           APR_HASH_KEY_STRING);
+  SVN_ERR(svn_wc_entry(&dot_entry, full_path, dir_access, TRUE, subpool));
+  /* ### need: depth, url  */
+
+  /* Should be the real entry, not a parent stub.  */
+  SVN_ERR_ASSERT(dot_entry != NULL && *dot_entry->name == '\0');
 
   /* If "this dir" has "svn:externals" property set on it, store its name
      and depth in traversal_info. */
@@ -279,11 +292,11 @@ report_revisions_and_depths(svn_wc_adm_access_t *adm_access,
   /* Looping over current directory's SVN entries: */
   iterpool = svn_pool_create(subpool);
 
-  for (hi = apr_hash_first(subpool, entries); hi; hi = apr_hash_next(hi))
+  for (i = 0; i < children->nelts; ++i)
     {
+      const char *child = APR_ARRAY_IDX(children, i, const char *);
       const void *key;
       apr_ssize_t klen;
-      void *val;
       const svn_wc_entry_t *current_entry;
       svn_io_dirent_t *dirent;
       svn_node_kind_t dirent_kind;
@@ -293,18 +306,27 @@ report_revisions_and_depths(svn_wc_adm_access_t *adm_access,
          of 'continue' jump statements. */
       svn_pool_clear(iterpool);
 
-      /* Get the next entry */
-      apr_hash_this(hi, &key, &klen, &val);
-      current_entry = val;
-
-      /* Compute the name of the entry.  Skip THIS_DIR altogether. */
-      if (! strcmp(key, SVN_WC_ENTRY_THIS_DIR))
-        continue;
+      key = child;
+      klen = strlen(key);
 
       /* Compute the paths and URLs we need. */
       this_url = svn_path_url_add_component2(dot_entry->url, key, iterpool);
       this_path = svn_dirent_join(dir_path, key, iterpool);
       this_full_path = svn_dirent_join(full_path, key, iterpool);
+
+      SVN_ERR(svn_wc_entry(&current_entry, this_full_path, dir_access, TRUE,
+                           iterpool));
+
+      /* ### ugh. for directories, we need the entry from the parent.
+         ### below, we're testing the DELETED flag, and that is only
+         ### present in the parent dir's entry for CHILD.  */
+      if (current_entry->kind == svn_node_dir)
+        {
+          apr_hash_t *entries;
+          SVN_ERR(svn_wc_entries_read(&entries, dir_access, TRUE, subpool));
+          current_entry = apr_hash_get(entries, child, APR_HASH_KEY_STRING);
+          SVN_ERR_ASSERT(current_entry != NULL);
+        }
 
       /*** The Big Tests: ***/
 
@@ -444,7 +466,8 @@ report_revisions_and_depths(svn_wc_adm_access_t *adm_access,
                && (depth > svn_depth_files
                    || depth == svn_depth_unknown))
         {
-          svn_wc_adm_access_t *subdir_access;
+          const char *subdir_abspath;
+          svn_error_t *err;
           const svn_wc_entry_t *subdir_entry;
           svn_boolean_t start_empty;
 
@@ -462,12 +485,21 @@ report_revisions_and_depths(svn_wc_adm_access_t *adm_access,
 
           /* We need to read the full entry of the directory from its
              own "this dir", if available. */
-          if (svn_wc__adm_missing(adm_access, this_full_path))
-            continue;
-          SVN_ERR(svn_wc_adm_retrieve(&subdir_access, adm_access,
-                                      this_full_path, iterpool));
-          SVN_ERR(svn_wc_entry(&subdir_entry, this_full_path, subdir_access,
-                               TRUE, iterpool));
+          subdir_abspath = svn_dirent_join(abspath, key, iterpool);
+          err = svn_wc__get_entry(&subdir_entry, db, subdir_abspath, FALSE,
+                                  svn_node_dir, FALSE, iterpool, iterpool);
+          if (err)
+            {
+              if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND
+                  && err->apr_err != SVN_ERR_WC_MISSING)
+                return svn_error_return(err);
+              svn_error_clear(err);
+
+              /* We found the directory in the parent, but now it is "not
+                 found" in its own subdirectory. This indicates the damned
+                 thing is missing in some way. So... skip the subdir.  */
+              continue;
+            }
 
           start_empty = subdir_entry->incomplete;
           if (depth_compatibility_trick
@@ -981,12 +1013,14 @@ svn_wc_transmit_text_deltas2(const char **tempfile,
          checksum mismatch is more important to return. */
       svn_error_clear(err);
       if (tempfile)
-        svn_error_clear(svn_io_remove_file(*tempfile, pool));
+        svn_error_clear(svn_io_remove_file2(*tempfile, TRUE, pool));
 
       return svn_error_createf
         (SVN_ERR_WC_CORRUPT_TEXT_BASE, NULL,
-         _("Checksum mismatch for '%s'; "
-           "expected: '%s', actual: '%s'"),
+         apr_psprintf(pool, "%s:\n%s\n%s\n",
+                      _("Checksum mismatch for '%s'"),
+                      _("   expected:  %s"),
+                      _("     actual:  %s")),
          svn_path_local_style(svn_wc__text_base_path(path, FALSE, pool),
                               pool),
          svn_checksum_to_cstring_display(expected_checksum, pool),

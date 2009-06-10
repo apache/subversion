@@ -950,6 +950,14 @@ If POS is nil, use current buffer location."
     (defsubst svn-match-string-no-properties (match)
       (buffer-substring-no-properties (match-beginning match) (match-end match)))))
 
+; XEmacs doesn't have a function `help-buffer'
+(eval-and-compile
+  (if (fboundp 'help-buffer)
+      (defalias 'svn-help-buffer 'help-buffer) ; FSF Emacs
+    (defun svn-help-buffer ()
+      (buffer-name (get-buffer-create (help-buffer-name "SVN")))))) ; XEmacs
+
+
 ;; XEmacs 21.4.17 does not have an `alist' widget.  Define a replacement.
 ;; To find out whether the `alist' widget exists, we cannot check just
 ;; (get 'alist 'widget-type), because GNU Emacs 21.4 defines it in
@@ -1486,7 +1494,7 @@ When this function resets `svn-process-handle-error-msg' to nil, the default err
                                   "Please unmark all files and position point at the directory you would like to remove.\nThen run commit again."))))))
     (if help-msg
         (save-excursion
-          (with-output-to-temp-buffer (help-buffer)
+          (with-output-to-temp-buffer (svn-help-buffer)
             (princ (format "svn failed: %s\n\n%s" svn-process-handle-error-msg help-msg))))
       (message "svn failed:\n%s" svn-process-handle-error-msg))))
 
@@ -1723,7 +1731,7 @@ The results are used to build the `svn-status-info' variable."
                 svn-switched-mark (elt svn-marks 4)     ; 5th column - S,X or blank
                 svn-repo-locked-mark (elt svn-marks 5)) ; 6th column - K,O,T,B or blank
           (when svn-status-remote
-              (setq svn-update-mark (elt svn-marks 7))) ; 8th column - * or blank
+            (setq svn-update-mark (elt svn-marks 7)))   ; 8th column - * or blank
           (when (eq svn-property-mark ?\ )     (setq svn-property-mark nil))
           (when (eq svn-wc-locked-mark ?\ )    (setq svn-wc-locked-mark nil))
           (when (eq svn-with-history-mark ?\ ) (setq svn-with-history-mark nil))
@@ -1807,7 +1815,7 @@ The results are used to build the `svn-status-info' variable."
         (setq svn-status-info (sort svn-status-info 'svn-status-sort-predicate))))))
 
 ;;(string-lessp "." "%") => nil
-;(svn-status-sort-predicate '(t t t ".") '(t t t "%")) => t
+;;(svn-status-sort-predicate '(t t t ".") '(t t t "%")) => t
 (defun svn-status-sort-predicate (a b)
   "Return t if A should appear before B in the `svn-status-buffer-name' buffer.
 A and B must be line-info's."
@@ -1901,10 +1909,10 @@ A and B must be line-info's."
   ;; XEmacs allows simultaneous connections to multiple devices with
   ;; different keyboards.
   (define-key svn-status-mode-map
-              (if (member (kbd "DEL") '([(delete)] [delete]))
-                  [(backspace)]         ; XEmacs
-                (kbd "DEL"))            ; GNU Emacs
-              'svn-status-unset-user-mark-backwards)
+    (if (member (kbd "DEL") '([(delete)] [delete]))
+        [(backspace)]         ; XEmacs
+      (kbd "DEL"))            ; GNU Emacs
+    'svn-status-unset-user-mark-backwards)
   (define-key svn-status-mode-map (kbd "$") 'svn-status-toggle-elide)
   (define-key svn-status-mode-map (kbd "w") 'svn-status-copy-current-line-info)
   (define-key svn-status-mode-map (kbd ".") 'svn-status-goto-root-or-return)
@@ -2518,26 +2526,27 @@ When called with a prefix argument, toggle the hiding of all subdirectories for 
         (len-test)
         (elided-list)
         (elide-mark))
-    (while st-info
-      (setq fname (svn-status-line-info->filename (car st-info)))
-      (setq len-fname (length fname))
-      (setq elided-list svn-status-elided-list)
-      (setq elide-mark nil)
-      (while elided-list
-        (setq test (car elided-list))
-        (when (string= test ".")
-          (setq test ""))
-        (setq len-test (length test))
-        (when (and (>= len-fname len-test)
-                   (string= (substring fname 0 len-test) test))
-          (setq elide-mark t)
-          (when (or (string= fname ".")
-                    (and (= len-fname len-test) (svn-status-line-info->directory-p (car st-info))))
-            (setq elide-mark 'directory)))
-        (setq elided-list (cdr elided-list)))
-      ;;(message "fname: %s elide-mark: %S" fname elide-mark)
-      (setcar (nthcdr 1 (svn-status-line-info->ui-status (car st-info))) elide-mark)
-      (setq st-info (cdr st-info))))
+    (when svn-status-elided-list
+      (while st-info
+        (setq fname (svn-status-line-info->filename (car st-info)))
+        (setq len-fname (length fname))
+        (setq elided-list svn-status-elided-list)
+        (setq elide-mark nil)
+        (while elided-list
+          (setq test (car elided-list))
+          (when (string= test ".")
+            (setq test ""))
+          (setq len-test (length test))
+          (when (and (>= len-fname len-test)
+                     (string= (substring fname 0 len-test) test))
+            (setq elide-mark t)
+            (when (or (string= fname ".")
+                      (and (= len-fname len-test) (svn-status-line-info->directory-p (car st-info))))
+              (setq elide-mark 'directory)))
+          (setq elided-list (cdr elided-list)))
+        ;;(message "fname: %s elide-mark: %S" fname elide-mark)
+        (setcar (nthcdr 1 (svn-status-line-info->ui-status (car st-info))) elide-mark)
+        (setq st-info (cdr st-info)))))
   (svn-status-update-buffer))
 
 (defun svn-status-update-with-command-list (cmd-list)

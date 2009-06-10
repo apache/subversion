@@ -176,7 +176,7 @@ skel_err(const char *skel_type)
 
 
 static svn_boolean_t
-is_valid_proplist_skel(svn_skel_t *skel)
+is_valid_proplist_skel(const svn_skel_t *skel)
 {
   int len = svn_skel__list_length(skel);
 
@@ -625,7 +625,7 @@ svn_skel__list_length(const svn_skel_t *skel)
 
 svn_error_t *
 svn_skel__parse_proplist(apr_hash_t **proplist_p,
-                         svn_skel_t *skel,
+                         const svn_skel_t *skel,
                          apr_pool_t *pool)
 {
   apr_hash_t *proplist = NULL;

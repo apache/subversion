@@ -90,8 +90,8 @@ struct svn_sqlite__stmt_t
 } while (0)
 
 
-svn_error_t *
-svn_sqlite__exec(svn_sqlite__db_t *db, const char *sql)
+static svn_error_t *
+exec_sql(svn_sqlite__db_t *db, const char *sql)
 {
   char *err_msg;
   int sqlite_err = sqlite3_exec(db->db3, sql, NULL, NULL, &err_msg);
@@ -110,19 +110,19 @@ svn_sqlite__exec(svn_sqlite__db_t *db, const char *sql)
 svn_error_t *
 svn_sqlite__transaction_begin(svn_sqlite__db_t *db)
 {
-  return svn_sqlite__exec(db, "BEGIN TRANSACTION;");
+  return exec_sql(db, "BEGIN TRANSACTION;");
 }
 
 svn_error_t *
 svn_sqlite__transaction_commit(svn_sqlite__db_t *db)
 {
-  return svn_sqlite__exec(db, "COMMIT TRANSACTION;");
+  return exec_sql(db, "COMMIT TRANSACTION;");
 }
 
 svn_error_t *
 svn_sqlite__transaction_rollback(svn_sqlite__db_t *db)
 {
-  return svn_sqlite__exec(db, "ROLLBACK TRANSACTION;");
+  return exec_sql(db, "ROLLBACK TRANSACTION;");
 }
 
 svn_error_t *
@@ -521,13 +521,13 @@ upgrade_format(svn_sqlite__db_t *db, int current_schema, int latest_schema,
       current_schema++;
 
       /* Run the upgrade SQL */
-      SVN_ERR(svn_sqlite__exec(db, upgrade_sql[current_schema]));
+      SVN_ERR(exec_sql(db, upgrade_sql[current_schema]));
 
       /* Update the user version pragma */
       pragma_cmd = apr_psprintf(scratch_pool,
                                 "PRAGMA user_version = %d;",
                                 current_schema);
-      SVN_ERR(svn_sqlite__exec(db, pragma_cmd));
+      SVN_ERR(exec_sql(db, pragma_cmd));
     }
 
   return SVN_NO_ERROR;
@@ -634,8 +634,8 @@ internal_open(sqlite3 **db3, const char *path, svn_sqlite__mode_t mode,
        All svn objects are single-threaded, so we can already guarantee that
        our use of the SQLite handle will be serialized properly.
        Note: in 3.6.x, we've already config'd SQLite into MULTITHREAD mode,
-       so this is probably redundant... */
-    /* ### yeah. remove when autoconf magic is done for init/config. */
+       so this is probably redundant, but if we are running in a process where
+       somebody initialized SQLite before us it is needed anyway. */
 #ifdef SQLITE_OPEN_NOMUTEX
     flags |= SQLITE_OPEN_NOMUTEX;
 #endif
@@ -657,6 +657,7 @@ internal_open(sqlite3 **db3, const char *path, svn_sqlite__mode_t mode,
              error than the close error at this point. */
           sqlite3_close(*db3);
 
+          msg = apr_pstrcat(scratch_pool, msg, ": '", path, "'", NULL);
           return svn_error_create(SQLITE_ERROR_CODE(err_code), NULL, msg);
         }
     }
@@ -734,7 +735,7 @@ close_apr(void *data)
 {
   svn_sqlite__db_t *db = data;
   svn_error_t *err = SVN_NO_ERROR;
-  int result;
+  apr_status_t result;
   int i;
 
   /* Check to see if we've already closed this database. */
@@ -783,7 +784,7 @@ svn_sqlite__open(svn_sqlite__db_t **db, const char *path,
   sqlite3_trace((*db)->db3, sqlite_tracer, (*db)->db3);
 #endif
 
-  SVN_ERR(svn_sqlite__exec(*db, 
+  SVN_ERR(exec_sql(*db, 
               "PRAGMA case_sensitive_like=1;"
               /* Disable synchronization to disable the explicit disk flushes
                  that make Sqlite up to 50 times slower; especially on small
@@ -827,9 +828,12 @@ svn_sqlite__open(svn_sqlite__db_t **db, const char *path,
 svn_error_t *
 svn_sqlite__close(svn_sqlite__db_t *db)
 {
-  apr_pool_cleanup_run(db->result_pool, db, close_apr);
+  apr_status_t result = apr_pool_cleanup_run(db->result_pool, db, close_apr);
 
-  return SVN_NO_ERROR;
+  if (result == APR_SUCCESS)
+    return SVN_NO_ERROR;
+
+  return svn_error_wrap_apr(result, NULL);
 }
 
 svn_error_t *

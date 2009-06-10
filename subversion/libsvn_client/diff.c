@@ -366,6 +366,8 @@ struct diff_cmd_baton {
  * from clear-text @c callback_baton->svnpatch_file. */
 static svn_error_t *
 dump_svnpatch(struct diff_cmd_baton *callback_baton,
+              svn_cancel_func_t cancel_func,
+              void *cancel_baton,
               apr_pool_t *pool)
 {
   svn_stream_t *svnpatch_stream;
@@ -404,21 +406,16 @@ dump_svnpatch(struct diff_cmd_baton *callback_baton,
    * zlib's.  In other words, the copy operation invokes these two
    * functions in a streamy way: read(svnpatch_file),
    * write(zlib(base64(outfile))).  */
-  svnpatch_stream = svn_stream_from_aprfile2
-                     (callback_baton->svnpatch_file,
-                      FALSE, pool);
-  out_stream = svn_stream_compressed
-                (svn_base64_encode(
-                 svn_stream_from_aprfile2
-                  (callback_baton->outfile,
-                   FALSE, pool),
-                 pool), pool);
-  SVN_ERR(svn_stream_copy(svnpatch_stream, out_stream, pool));
-
-  /* Squeeze out. */
-  SVN_ERR(svn_stream_close(out_stream));
-
-  return SVN_NO_ERROR;
+  svnpatch_stream = svn_stream_from_aprfile2(callback_baton->svnpatch_file,
+                                             TRUE, pool);
+  out_stream = svn_stream_compressed(
+                 svn_base64_encode(
+                   svn_stream_from_aprfile2(callback_baton->outfile,
+                                            FALSE, pool),
+                   pool),
+                 pool);
+  return svn_stream_copy3(svnpatch_stream, out_stream,
+                          cancel_func, cancel_baton, pool);
 }
 
 
@@ -1272,7 +1269,7 @@ diff_repos_repos(const struct diff_parameters *diff_param,
   svn_ra_session_t *extra_ra_session;
 
   const svn_ra_reporter3_t *reporter;
-  void *report_baton;
+  void *reporter_baton;
 
   const svn_delta_editor_t *diff_editor;
   void *diff_edit_baton;
@@ -1310,16 +1307,16 @@ diff_repos_repos(const struct diff_parameters *diff_param,
 
   /* We want to switch our txn into URL2 */
   SVN_ERR(svn_ra_do_diff3
-          (drr.ra_session, &reporter, &report_baton, drr.rev2, drr.target1,
+          (drr.ra_session, &reporter, &reporter_baton, drr.rev2, drr.target1,
            diff_param->depth, diff_param->ignore_ancestry, TRUE,
            drr.url2, diff_editor, diff_edit_baton, pool));
 
   /* Drive the reporter; do the diff. */
-  SVN_ERR(reporter->set_path(report_baton, "", drr.rev1,
+  SVN_ERR(reporter->set_path(reporter_baton, "", drr.rev1,
                              svn_depth_infinity,
                              FALSE, NULL,
                              pool));
-  return reporter->finish_report(report_baton, pool);
+  return reporter->finish_report(reporter_baton, pool);
 }
 
 
@@ -1354,7 +1351,7 @@ diff_repos_wc(const char *path1,
   svn_revnum_t rev;
   svn_ra_session_t *ra_session;
   const svn_ra_reporter3_t *reporter;
-  void *report_baton;
+  void *reporter_baton;
   const svn_delta_editor_t *diff_editor;
   void *diff_edit_baton;
   svn_boolean_t rev2_is_base = (revision2->kind == svn_opt_revision_base);
@@ -1437,7 +1434,7 @@ diff_repos_wc(const char *path1,
     callback_baton->revnum2 = rev;
 
   SVN_ERR(svn_ra_do_diff3(ra_session,
-                          &reporter, &report_baton,
+                          &reporter, &reporter_baton,
                           rev,
                           target ? svn_path_uri_decode(target, pool) : NULL,
                           depth,
@@ -1452,7 +1449,7 @@ diff_repos_wc(const char *path1,
   /* Create a txn mirror of path2;  the diff editor will print
      diffs in reverse.  :-)  */
   SVN_ERR(svn_wc_crawl_revisions4(path2, dir_access,
-                                  reporter, report_baton,
+                                  reporter, reporter_baton,
                                   FALSE, depth, TRUE, (! server_supports_depth),
                                   FALSE, NULL, NULL, /* notification is N/A */
                                   NULL, pool));
@@ -1516,7 +1513,8 @@ do_diff(const struct diff_parameters *diff_param,
     }
 
   if (callback_baton->svnpatch_file)
-    SVN_ERR(dump_svnpatch(callback_baton, pool));
+    SVN_ERR(dump_svnpatch(callback_baton, ctx->cancel_func, ctx->cancel_baton,
+                          pool));
 
   return SVN_NO_ERROR;
 }
@@ -1532,7 +1530,7 @@ diff_summarize_repos_repos(const struct diff_parameters *diff_param,
   svn_ra_session_t *extra_ra_session;
 
   const svn_ra_reporter3_t *reporter;
-  void *report_baton;
+  void *reporter_baton;
 
   const svn_delta_editor_t *diff_editor;
   void *diff_edit_baton;
@@ -1556,16 +1554,16 @@ diff_summarize_repos_repos(const struct diff_parameters *diff_param,
 
   /* We want to switch our txn into URL2 */
   SVN_ERR(svn_ra_do_diff3
-          (drr.ra_session, &reporter, &report_baton, drr.rev2, drr.target1,
+          (drr.ra_session, &reporter, &reporter_baton, drr.rev2, drr.target1,
            diff_param->depth, diff_param->ignore_ancestry,
            FALSE /* do not create text delta */, drr.url2, diff_editor,
            diff_edit_baton, pool));
 
   /* Drive the reporter; do the diff. */
-  SVN_ERR(reporter->set_path(report_baton, "", drr.rev1,
+  SVN_ERR(reporter->set_path(reporter_baton, "", drr.rev1,
                              svn_depth_infinity,
                              FALSE, NULL, pool));
-  return reporter->finish_report(report_baton, pool);
+  return reporter->finish_report(reporter_baton, pool);
 }
 
 /* This is basically just the guts of svn_client_diff_summarize[_peg]2(). */

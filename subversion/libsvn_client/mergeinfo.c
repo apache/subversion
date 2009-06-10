@@ -93,6 +93,7 @@ svn_error_t *
 svn_client__record_wc_mergeinfo(const char *wcpath,
                                 svn_mergeinfo_t mergeinfo,
                                 svn_wc_adm_access_t *adm_access,
+                                svn_client_ctx_t *ctx,
                                 apr_pool_t *pool)
 {
   svn_string_t *mergeinfo_str;
@@ -112,35 +113,52 @@ svn_client__record_wc_mergeinfo(const char *wcpath,
   /* Record the new mergeinfo in the WC. */
   /* ### Later, we'll want behavior more analogous to
      ### svn_client__get_prop_from_wc(). */
-  return svn_wc_prop_set3(SVN_PROP_MERGEINFO, mergeinfo_str, wcpath,
-                          adm_access, TRUE /* skip checks */, NULL, NULL, pool);
+  SVN_ERR(svn_wc_prop_set3(SVN_PROP_MERGEINFO, mergeinfo_str, wcpath,
+                           adm_access, TRUE /* skip checks */, NULL, NULL,
+                           pool));
+
+  if (ctx->notify_func2)
+    {
+      ctx->notify_func2(ctx->notify_baton2,
+                        svn_wc_create_notify(wcpath,
+                                             svn_wc_notify_merge_record_info,
+                                             pool),
+                        pool);
+    }
+
+  return SVN_NO_ERROR;
 }
 
 /*-----------------------------------------------------------------------*/
 
 /*** Retrieving mergeinfo. ***/
 
-/* Adjust merge sources in MERGEINFO (which is assumed to be non-NULL). */
-static APR_INLINE void
-adjust_mergeinfo_source_paths(svn_mergeinfo_t mergeinfo, const char *walk_path,
-                              svn_mergeinfo_t wc_mergeinfo, apr_pool_t *pool)
+svn_error_t *
+svn_client__adjust_mergeinfo_source_paths(svn_mergeinfo_t adjusted_mergeinfo,
+                                          const char *rel_path,
+                                          svn_mergeinfo_t mergeinfo,
+                                          apr_pool_t *pool)
 {
   apr_hash_index_t *hi;
   const void *merge_source;
   void *rangelist;
   const char *path;
+  apr_array_header_t *copied_rangelist;
 
-  for (hi = apr_hash_first(NULL, wc_mergeinfo); hi; hi = apr_hash_next(hi))
+  SVN_ERR_ASSERT(adjusted_mergeinfo);
+  SVN_ERR_ASSERT(mergeinfo);
+
+  for (hi = apr_hash_first(NULL, mergeinfo); hi; hi = apr_hash_next(hi))
     {
       /* Copy inherited mergeinfo into our output hash, adjusting the
          merge source as appropriate. */
       apr_hash_this(hi, &merge_source, NULL, &rangelist);
-      path = svn_path_join((const char *) merge_source, walk_path,
-                           apr_hash_pool_get(mergeinfo));
-      /* ### If pool has a different lifetime than mergeinfo->pool,
-         ### this use of "rangelist" will be a problem... */
-      apr_hash_set(mergeinfo, path, APR_HASH_KEY_STRING, rangelist);
+      path = svn_path_join(merge_source, rel_path, pool);
+      copied_rangelist = svn_rangelist_dup(rangelist, pool);
+      apr_hash_set(adjusted_mergeinfo, path, APR_HASH_KEY_STRING,
+                   copied_rangelist);
     }
+  return SVN_NO_ERROR;
 }
 
 
@@ -229,7 +247,7 @@ svn_client__get_wc_mergeinfo(svn_mergeinfo_t *mergeinfo,
                   *inherited = FALSE;
                   *mergeinfo = wc_mergeinfo;
                 }
-              return err;
+              return svn_error_return(err);
             }
 
           SVN_ERR(svn_wc_entry(&entry, wcpath, adm_access, FALSE, pool));
@@ -260,8 +278,10 @@ svn_client__get_wc_mergeinfo(svn_mergeinfo_t *mergeinfo,
         {
           *inherited = (wc_mergeinfo != NULL);
           *mergeinfo = apr_hash_make(pool);
-          adjust_mergeinfo_source_paths(*mergeinfo, walk_path, wc_mergeinfo,
-                                        pool);
+          SVN_ERR(svn_client__adjust_mergeinfo_source_paths(*mergeinfo,
+                                                            walk_path,
+                                                            wc_mergeinfo,
+                                                            pool));
         }
       else
         {
@@ -316,7 +336,7 @@ svn_client__get_repos_mergeinfo(svn_ra_session_t *ra_session,
           repos_mergeinfo = NULL;
         }
       else
-        return err;
+        return svn_error_return(err);
     }
 
   /* If we reparented the session, put it back where our caller had it. */
@@ -572,9 +592,9 @@ should_elide_mergeinfo(svn_boolean_t *elides,
 
       /* If we need to adjust the paths in PARENT_MERGEINFO do it now. */
       if (path_suffix)
-        adjust_mergeinfo_source_paths(path_tweaked_parent_mergeinfo,
-                                      path_suffix, parent_mergeinfo,
-                                      subpool);
+        SVN_ERR(svn_client__adjust_mergeinfo_source_paths(
+          path_tweaked_parent_mergeinfo,
+          path_suffix, parent_mergeinfo, subpool));
       else
         path_tweaked_parent_mergeinfo = parent_mergeinfo;
 
@@ -605,6 +625,7 @@ elide_mergeinfo(svn_mergeinfo_t parent_mergeinfo,
                 const char *path,
                 const char *path_suffix,
                 svn_wc_adm_access_t *adm_access,
+                svn_client_ctx_t *ctx,
                 apr_pool_t *pool)
 {
   svn_boolean_t elides;
@@ -613,8 +634,20 @@ elide_mergeinfo(svn_mergeinfo_t parent_mergeinfo,
                                  path_suffix, pool));
 
   if (elides)
-    SVN_ERR(svn_wc_prop_set3(SVN_PROP_MERGEINFO, NULL, path, adm_access,
-                             TRUE, NULL, NULL, pool));
+    {
+      SVN_ERR(svn_wc_prop_set3(SVN_PROP_MERGEINFO, NULL, path, adm_access,
+                               TRUE, NULL, NULL, pool));
+
+      if (ctx->notify_func2)
+        {
+          svn_wc_notify_t *notify =
+                svn_wc_create_notify(
+                              svn_dirent_join_many(pool, path, path_suffix),
+                              svn_wc_notify_merge_record_info, pool);
+
+          ctx->notify_func2(ctx->notify_baton2, notify, pool);
+        }
+    }
 
   return SVN_NO_ERROR;
 }
@@ -710,7 +743,7 @@ svn_client__elide_children(apr_array_header_t *children_with_mergeinfo,
 
               SVN_ERR(elide_mergeinfo(target_mergeinfo, child_mergeinfo,
                                       child->path, path_suffix, adm_access,
-                                      iterpool));
+                                      ctx, iterpool));
             }
         }
     svn_pool_destroy(iterpool);
@@ -779,7 +812,7 @@ svn_client__elide_mergeinfo(const char *target_wcpath,
         return SVN_NO_ERROR;
 
       SVN_ERR(elide_mergeinfo(mergeinfo, target_mergeinfo, target_wcpath,
-                              NULL, adm_access, pool));
+                              NULL, adm_access, ctx, pool));
     }
   return SVN_NO_ERROR;
 }
@@ -1238,8 +1271,8 @@ svn_client_mergeinfo_log_merged(const char *path_or_url,
                                                SVN_INVALID_REVNUM,
                                                SVN_INVALID_REVNUM,
                                                NULL, NULL, ctx, pool));
-  SVN_ERR(svn_mergeinfo_intersect(&mergeinfo, tgt_mergeinfo,
-                                  source_history, pool));
+  SVN_ERR(svn_mergeinfo_intersect2(&mergeinfo, tgt_mergeinfo,
+                                   source_history, FALSE, pool, pool));
 
   /* Step 3: Now, we iterate over the eligible paths/rangelists to
      find the youngest revision (and its associated path).  Because
@@ -1381,11 +1414,13 @@ svn_client_mergeinfo_log_eligible(const char *path_or_url,
                                                SVN_INVALID_REVNUM,
                                                SVN_INVALID_REVNUM,
                                                ra_session, NULL, ctx, pool));
-  svn_pool_destroy(sesspool);
 
   /* Now, we want to remove from the possible mergeinfo
      (SOURCE_HISTORY) the merges already present in our PATH_OR_URL. */
-  SVN_ERR(svn_mergeinfo_remove(&available, mergeinfo, source_history, pool));
+  SVN_ERR(svn_mergeinfo_remove2(&available, mergeinfo, source_history,
+                                FALSE, pool, sesspool));
+
+  svn_pool_destroy(sesspool);
 
   /* Step 4: Now, we iterate over the eligible paths/rangelists to
      find the youngest revision (and its associated path).  Because

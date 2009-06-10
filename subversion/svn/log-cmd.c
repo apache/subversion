@@ -382,7 +382,13 @@ log_entry_receiver_xml(void *baton,
                                     "action", action,
                                     "copyfrom-path", log_item->copyfrom_path,
                                     "copyfrom-rev", revstr,
-                                    "kind", svn_cl__node_kind_str_xml(log_item->node_kind), NULL);
+                                    "kind", svn_cl__node_kind_str_xml(
+                                                     log_item->node_kind),
+                                    "text-mods", svn_tristate_to_word(
+                                                     log_item->text_modified),
+                                    "prop-mods", svn_tristate_to_word(
+                                                     log_item->props_modified),
+                                    NULL);
             }
           else
             {

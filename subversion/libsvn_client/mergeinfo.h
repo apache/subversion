@@ -57,7 +57,7 @@ typedef struct svn_client__merge_path_t
      svn_sort_compare_ranges(), but rather are sorted such that the ranges
      with the youngest start revisions come first.  In both the forward and
      reverse merge cases the ranges should never overlap.  This rangelist
-     may be NULL or empty. */
+     may be empty but should never be NULL. */
   apr_array_header_t *remaining_ranges;
 
   svn_mergeinfo_t pre_merge_mergeinfo;  /* Explicit or inherited mergeinfo
@@ -213,11 +213,14 @@ svn_client__parse_mergeinfo(svn_mergeinfo_t *mergeinfo,
 
 /* Write MERGEINFO into the WC for WCPATH.  If MERGEINFO is NULL,
    remove any SVN_PROP_MERGEINFO for WCPATH.  If MERGEINFO is empty,
-   record an empty property value (e.g. ""). */
+   record an empty property value (e.g. "").  If CTX->NOTIFY_FUNC2 is
+   not null call it with notification type
+   svn_wc_notify_merge_record_info. */
 svn_error_t *
 svn_client__record_wc_mergeinfo(const char *wcpath,
                                 svn_mergeinfo_t mergeinfo,
                                 svn_wc_adm_access_t *adm_access,
+                                svn_client_ctx_t *ctx,
                                 apr_pool_t *pool);
 
 /* Elide any svn:mergeinfo set on TARGET_PATH to its nearest working
@@ -285,5 +288,15 @@ svn_error_t *
 svn_client__elide_mergeinfo_catalog(svn_mergeinfo_t mergeinfo_catalog,
                                     apr_pool_t *pool);
 
+/* For each source path : rangelist pair in MERGEINFO, append REL_PATH to
+   the source path and add the new source path : rangelist pair to
+   ADJUSTED_MERGEINFO.  The new source path and rangelist are both deep
+   copies allocated in POOL.  Neither ADJUSTED_MERGEINFO
+   nor MERGEINFO should be NULL. */
+svn_error_t *
+svn_client__adjust_mergeinfo_source_paths(svn_mergeinfo_t adjusted_mergeinfo,
+                                          const char *rel_path,
+                                          svn_mergeinfo_t mergeinfo,
+                                          apr_pool_t *pool);
 
 #endif /* SVN_LIBSVN_CLIENT_MERGEINFO_H */

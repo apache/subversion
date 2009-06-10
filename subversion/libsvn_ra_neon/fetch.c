@@ -2,7 +2,7 @@
  * fetch.c :  routines for fetching updates and checkouts
  *
  * ====================================================================
- * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -753,9 +753,10 @@ svn_error_t *svn_ra_neon__get_file(svn_ra_session_t *session,
           if (strcmp(hex_digest, expected_checksum->data) != 0)
             return svn_error_createf
               (SVN_ERR_CHECKSUM_MISMATCH, NULL,
-               _("Checksum mismatch for '%s':\n"
-                 "   expected checksum:  %s\n"
-                 "   actual checksum:    %s\n"),
+               apr_psprintf(pool, "%s:\n%s\n%s\n",
+                            _("Checksum mismatch for '%s'"),
+                            _("   expected:  %s"),
+                            _("     actual:  %s")),
                path, expected_checksum->data, hex_digest);
         }
     }

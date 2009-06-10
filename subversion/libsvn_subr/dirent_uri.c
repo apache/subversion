@@ -1623,3 +1623,20 @@ svn_dirent_condense_targets(const char **pcommon,
 
   return SVN_NO_ERROR;
 }
+
+svn_boolean_t
+svn_dirent_is_under_root(char **full_path,
+                         const char *base_path,
+                         const char *path,
+                         apr_pool_t *pool)
+
+{
+  apr_status_t status;
+
+  status = apr_filepath_merge(
+     full_path, base_path, path,
+     APR_FILEPATH_NOTABOVEROOT | APR_FILEPATH_SECUREROOTTEST,
+     pool);
+
+  return status == APR_SUCCESS ? TRUE : FALSE;
+}

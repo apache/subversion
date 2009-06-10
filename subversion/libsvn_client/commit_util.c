@@ -217,7 +217,8 @@ static svn_wc_entry_callbacks2_t add_tokens_callbacks = {
  * particular case. In all other cases, this simply bails out a little
  * bit earlier.
  *
- * Note: Tree-conflicts info can only be found in "THIS_DIR" entries. */
+ * Note: Tree-conflicts info can only be found in "THIS_DIR" entries,
+ * where each THIS_DIR will only hold tree-conflicts on its children. */
 static svn_error_t *
 bail_on_tree_conflicted_children(const char *path,
                                  const svn_wc_entry_t *entry,
@@ -241,8 +242,6 @@ bail_on_tree_conflicted_children(const char *path,
   for (i = 0; i < conflicts->nelts; i++)
     {
       const svn_wc_conflict_description_t *conflict;
-      svn_wc_adm_access_t *child_adm_access;
-      const svn_wc_entry_t *child_entry = NULL;
 
       conflict = APR_ARRAY_IDX(conflicts, i,
                                svn_wc_conflict_description_t *);
@@ -252,43 +251,47 @@ bail_on_tree_conflicted_children(const char *path,
         continue;
 
       /* So we've encountered a conflict that is included in DEPTH.
-       * Bail out. */
-
-      /* Get the child's entry, if it has one, else NULL. */
-      if (conflict->node_kind == svn_node_dir)
+         Bail out. But if there are CHANGELISTS, avoid bailing out
+         on an item that doesn't match the CHANGELISTS. */
+      if (changelists != NULL)
         {
-          svn_error_t *err = svn_wc_adm_retrieve(
-                               &child_adm_access, adm_access,
-                               conflict->path, pool);
-          if (err
-              && (svn_error_root_cause(err)->apr_err
-                  == SVN_ERR_WC_PATH_NOT_FOUND))
-            {
-              svn_error_clear(err);
-              err = 0;
-              child_adm_access = NULL;
-            }
-          SVN_ERR(err);
+          svn_wc_adm_access_t *child_adm_access = NULL;
+          const svn_wc_entry_t *child_entry = NULL;
+
+          /* To match with CHANGELISTS, we need an entry. This is all
+             about seeing if there is an entry and getting it if there
+             is. If there is no entry, the CHANGELISTS can't ever match. */
+          /* TODO: Currently, there is no way to set a changelist name on
+           * a tree-conflict victim that has no entry (e.g. locally
+           * deleted). */
+
+          /* If the child is a dir, we need its adm_access.
+             If the child is a file, the current adm_access will do. */
+          if (conflict->node_kind == svn_node_dir)
+            SVN_ERR(svn_wc_adm_probe_retrieve(&child_adm_access, adm_access,
+                                              conflict->path, pool));
+          else
+            child_adm_access = adm_access;
+
+          if (child_adm_access == NULL)
+            continue;
+
+          SVN_ERR(svn_wc_entry(&child_entry, conflict->path,
+                               child_adm_access, TRUE, pool));
+
+          /* If changelists are used but there is no entry, no changelist
+           * can possibly match. */
+          if (child_entry == NULL ||
+              !SVN_WC__CL_MATCH(changelists, child_entry))
+            continue;
         }
-      else
-        child_adm_access = adm_access;
 
-      if (child_adm_access != NULL)
-        SVN_ERR(svn_wc_entry(&child_entry, conflict->path,
-                             child_adm_access, TRUE, pool));
-
-      /* If changelists are used but there is no entry, no changelist
-       * can possibly match. */
-      /* TODO: Currently, there is no way to set a changelist name on
-       * a tree-conflict victim that has no entry (e.g. locally
-       * deleted). */
-      if ((changelists == NULL)
-          || ((child_entry != NULL)
-              && SVN_WC__CL_MATCH(changelists, child_entry)))
-        return svn_error_createf(
-                 SVN_ERR_WC_FOUND_CONFLICT, NULL,
-                 _("Aborting commit: '%s' remains in conflict"),
-                 svn_dirent_local_style(conflict->path, pool));
+      /* At this point, a conflict was found, and either there were no
+         changelists, or the changelists matched. Bail out already! */
+      return svn_error_createf(
+               SVN_ERR_WC_FOUND_CONFLICT, NULL,
+               _("Aborting commit: '%s' remains in conflict"),
+               svn_dirent_local_style(conflict->path, pool));
     }
 
   return SVN_NO_ERROR;
@@ -500,8 +503,13 @@ harvest_committables(apr_hash_t *committables,
         }
     }
 
-  SVN_ERR(bail_on_tree_conflicted_children(path, entry, adm_access, depth,
-                                           changelists, scratch_pool));
+  /* If the entry is deleted with "--keep-local", we can skip checking
+     for conflicts inside. */
+  if (entry->keep_local)
+    SVN_ERR_ASSERT(entry->schedule == svn_wc_schedule_delete);
+  else
+    SVN_ERR(bail_on_tree_conflicted_children(path, entry, adm_access, depth,
+                                             changelists, scratch_pool));
 
   /* If we have our own URL, and we're NOT in COPY_MODE, it wins over
      the telescoping one(s).  In COPY_MODE, URL will always be the

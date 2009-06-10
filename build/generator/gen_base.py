@@ -190,6 +190,16 @@ class GeneratorBase:
         for include_file in include_deps.query(native_path(source.filename)):
           self.graph.add(DT_OBJECT, objectfile, build_path(include_file))
 
+  def write_sqlite_headers(self):
+    "Transform sql files into header files"
+
+    import transform_sql
+    for hdrfile, sqlfile in self.graph.get_deps(DT_SQLHDR):
+      assert len(sqlfile) == 1
+      transform_sql.main(open(sqlfile[0], 'r'),
+                         open(hdrfile, 'w'),
+                         os.path.basename(sqlfile[0]))
+
 
 class DependencyGraph:
   """Record dependencies between build items.
@@ -242,6 +252,7 @@ dep_types = [
   'DT_SWIG_C',   # a swig-generated .c file, depending upon .i filename(s)
   'DT_LINK',     # a libtool-linked filename, depending upon object fnames
   'DT_NONLIB',   # filename depends on object fnames, but isn't linked to them
+  'DT_SQLHDR',   # header generated from a .sql file
   ]
 
 # create some variables for these
@@ -285,7 +296,7 @@ class SourceFile(DependencyNode):
 class SWIGSource(SourceFile):
   def __init__(self, filename):
     SourceFile.__init__(self, filename, build_path_dirname(filename))
-  pass
+
 
 lang_abbrev = {
   'python' : 'py',
@@ -534,12 +545,12 @@ class TargetSWIG(TargetLib):
 
     assert iname[-2:] == '.i'
     cname = iname[:-2] + '.c'
-    oname = iname[:-2] + self.gen_obj._extension_map['lib', 'object']
+    oname = iname[:-2] + self.gen_obj._extension_map['pyd', 'object']
 
     # Extract SWIG module name from .i file name
     module_name = iname[:4] != 'svn_' and iname[:-2] or iname[4:-2]
 
-    lib_extension = self.gen_obj._extension_map['lib', 'target']
+    lib_extension = self.gen_obj._extension_map['pyd', 'target']
     if self.lang == "ruby":
       lib_filename = module_name + lib_extension
     elif self.lang == "perl":
@@ -727,6 +738,24 @@ class TargetJavaClasses(TargetJava):
 
     self.gen_obj.graph.add(DT_INSTALL, self.name, self)
 
+class TargetSQLHeader(Target):
+  def __init__(self, name, options, gen_obj):
+    Target.__init__(self, name, options, gen_obj)
+    self.sources = options.get('sources')
+
+  def add_dependencies(self):
+
+    sources = _collect_paths(self.sources, self.path)
+    assert len(sources) == 1  # support for just one source, for now
+
+    source, reldir = sources[0]
+    assert reldir == ''  # no support for reldir right now
+    assert source.endswith('.sql')
+
+    output = source[:-4] + '.h'
+
+    self.gen_obj.graph.add(DT_SQLHDR, output, source)
+
 
 _build_types = {
   'exe' : TargetExe,
@@ -743,6 +772,7 @@ _build_types = {
   'javah' : TargetJavaHeaders,
   'java' : TargetJavaClasses,
   'i18n' : TargetI18N,
+  'sql-header' : TargetSQLHeader,
   }
 
 
@@ -828,7 +858,7 @@ def _collect_paths(pats, path=None):
       pattern = build_path_join(path, base_pat)
     else:
       pattern = base_pat
-    files = glob.glob(native_path(pattern)) or [pattern]
+    files = sorted(glob.glob(native_path(pattern))) or [pattern]
 
     if path is None:
       # just append the names to the result list
@@ -920,7 +950,9 @@ class IncludeDependencyInfo:
                  self._domain["apr.swg"][0]: '%',
                  fname: '%' }
         for h in self._deps[fname].keys():
-          if _is_public_include(h):
+          if (_is_public_include(h) 
+              or h == os.path.join('subversion', 'include', 'private',
+                                    'svn_debug.h')):
             hdrs[_swig_include_wrapper(h)] = '%'
           else:
             raise RuntimeError("Public include '%s' depends on '%s', " \

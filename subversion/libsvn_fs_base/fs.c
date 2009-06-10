@@ -983,7 +983,7 @@ svn_fs_base__clean_logs(const char *live_path,
             continue;
         }
 
-        SVN_ERR(svn_io_remove_file(live_log_path, sub_pool));
+        SVN_ERR(svn_io_remove_file2(live_log_path, FALSE, sub_pool));
       }
 
     svn_pool_destroy(sub_pool);
@@ -1265,7 +1265,7 @@ base_hotcopy(const char *src_path,
                    "the problem persists, try deactivating this feature\n"
                    "in DB_CONFIG"));
             else
-              return err;
+              return svn_error_return(err);
           }
       }
     svn_pool_destroy(subpool);
@@ -1284,7 +1284,7 @@ base_hotcopy(const char *src_path,
              "hotcopy algorithm.  If the problem persists, try deactivating\n"
              "this feature in DB_CONFIG"));
       else
-        return err;
+        return svn_error_return(err);
     }
 
   /* Only now that the hotcopied filesystem is complete,
@@ -1292,7 +1292,7 @@ base_hotcopy(const char *src_path,
   SVN_ERR(svn_io_write_version_file
           (svn_path_join(dest_path, FORMAT_FILE, pool), format, pool));
 
-  if (clean_logs == TRUE)
+  if (clean_logs)
     SVN_ERR(svn_fs_base__clean_logs(src_path, dest_path, pool));
 
   return SVN_NO_ERROR;

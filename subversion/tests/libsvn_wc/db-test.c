@@ -20,7 +20,15 @@
 #include <apr_general.h>
 
 #include "svn_types.h"
+
+/* Make sure SVN_DEPRECATED is defined as empty before including svn_io.h.
+   We don't want to trigger deprecation warnings.  */
+#ifdef SVN_DEPRECATED
+#undef SVN_DEPRECATED
+#endif
+#define SVN_DEPRECATED
 #include "svn_io.h"
+
 #include "svn_dirent_uri.h"
 
 #include "private/svn_sqlite.h"
@@ -61,7 +69,7 @@ static const char * const data_loading_sql[] = {
   NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
   (
    /* Load the table and index definitions. */
-   WC_METADATA_SQL
+   WC_METADATA_SQL_12
    " "
 
    /* Load our test data.
@@ -282,7 +290,8 @@ static const char * const data_loading_sql[] = {
    "insert into actual_node values ("
    "  1, 'I', '', null, null, null, null, null, 'changelist', null, null); "
    " "
-   )
+   ),
+  WC_METADATA_SQL_13
 };
 
 
@@ -296,10 +305,9 @@ create_fake_wc(const char *subdir, apr_pool_t *scratch_pool)
 
   SVN_ERR(svn_io_make_dir_recursively(dirpath, scratch_pool));
   svn_error_clear(svn_io_remove_file(dbpath, scratch_pool));
-  SVN_ERR(svn_sqlite__open(&sdb, dbpath,
-                           svn_sqlite__mode_rwcreate, NULL,
-                           SVN_WC__VERSION_EXPERIMENTAL, data_loading_sql,
-                           scratch_pool, scratch_pool));
+  SVN_ERR(svn_sqlite__open(&sdb, dbpath, svn_sqlite__mode_rwcreate, NULL,
+                           SVN_WC__VERSION,
+                           data_loading_sql, scratch_pool, scratch_pool));
 
   return SVN_NO_ERROR;
 }

@@ -1131,34 +1131,6 @@ def relocate_and_propset(sbox):
   # Make a propchange on A/D
   svntest.main.run_svn(None, 'ps', 'foo', 'bar', D_path)
 
-  # This test is failing over Neon, which differs in the approach it
-  # takes versus Serf.  Here's a Neon trace:
-  #
-  #   "MKACTIVITY /svn-test-work/repositories/switch_tests-19.other/!svn/act/ACTIVITYID HTTP/1.1" 201 267
-  #   "PROPFIND /svn-test-work/repositories/switch_tests-19.other/A/D HTTP/1.1" 207 762
-  #   "PROPFIND /svn-test-work/repositories/switch_tests-19.other/!svn/vcc/default HTTP/1.1" 207 478
-  #   "CHECKOUT /svn-test-work/repositories/switch_tests-19.other/!svn/bln/2 HTTP/1.1" 201 281
-  #   "PROPPATCH /svn-test-work/repositories/switch_tests-19.other/!svn/wbl/ACTIVITYID/2 HTTP/1.1" 207 500
-  #   "PROPFIND /svn-test-work/repositories/switch_tests-19.other/A/D HTTP/1.1" 207 470
-  #   "CHECKOUT /svn-test-work/repositories/switch_tests-19.other/!svn/ver/2/A/D HTTP/1.1" 201 283
-  #   "PROPPATCH /svn-test-work/repositories/switch_tests-19.other/!svn/wrk/ACTIVITYID/A/D HTTP/1.1" 207 502
-  #   "MERGE /svn-test-work/repositories/switch_tests-19.other/A/D HTTP/1.1" 200 858
-  #   "DELETE /svn-test-work/repositories/switch_tests-19.other/!svn/act/ACTIVITYID HTTP/1.1" 204 -
-  #
-  # Notice the PROPPATCH that succeeds instead of failing.
-  #
-  # Here's the same in Serf:
-  #
-  #   "MKACTIVITY /svn-test-work/repositories/switch_tests-19.other/!svn/act/ACTIVITYID HTTP/1.1" 201 267
-  #   "PROPFIND /svn-test-work/repositories/switch_tests-19.other/A/D HTTP/1.1" 207 762
-  #   "PROPFIND /svn-test-work/repositories/switch_tests-19.other/!svn/vcc/default HTTP/1.1" 207 478
-  #   "PROPFIND /svn-test-work/repositories/switch_tests-19.other/A/D HTTP/1.1" 207 470
-  #   "CHECKOUT /svn-test-work/repositories/switch_tests-19.other/!svn/bln/2 HTTP/1.1" 201 281
-  #   "PROPPATCH /svn-test-work/repositories/switch_tests-19.other/!svn/wbl/ACTIVITYID/2 HTTP/1.1" 207 500
-  #   "CHECKOUT /svn-test-work/repositories/switch_tests-19.other/!svn/ver/2/A/D HTTP/1.1" 201 283
-  #   "PROPPATCH /svn-test-work/repositories/switch_tests-19.other/!svn/wrk/ACTIVITYID/A/D HTTP/1.1" 409 222
-  #   "DELETE /svn-test-work/repositories/switch_tests-19.other/!svn/act/ACTIVITYID HTTP/1.1" 204 -
-
   # Commit and *expect* a repository Merge failure:
   svntest.actions.run_and_verify_commit(wc_dir,
                                         None,
@@ -2405,20 +2377,7 @@ def tree_conflicts_on_switch_2_1(sbox):
   expected_disk = disk_after_leaf_edit.copy()
 
   expected_status = deep_trees_status_local_leaf_edit.copy()
-  # These 'switched' statuses are bogus, because of do_entry_deletion not
-  # updating the URLs (issue #3334).  For example, after the switch, D/D1
-  # has a URL pointing to incoming/D/D1 and is scheduled for addition as a
-  # copy from local/D/D1.  But D/D1/delta, which was an add without history
-  # prior to the switch, still has a URL pointing to local/D/D1/delta, so it
-  # looks like it is switched relative to its parent.
-  # NOTE: wc-ng fixes the bug. see notes/api-errata/wc001.txt
-  if not sbox.using_wc_ng():
-    expected_status.tweak('D/D1/delta',
-                          'DD/D1/D2',
-                          'DF/D1/beta',
-                          'DDD/D1/D2',
-                          'DDF/D1/D2',
-                          switched='S')
+
   # The expectation on 'alpha' reflects partial progress on issue #3334.
   expected_status.tweak('D/D1',
                         'F/alpha',
@@ -2572,7 +2531,7 @@ test_list = [ None,
               relocate_beyond_repos_root,
               refresh_read_only_attribute,
               switch_change_repos_root,
-              XFail(relocate_and_propset, svntest.main.is_ra_type_dav_neon),
+              relocate_and_propset,
               forced_switch,
               forced_switch_failures,
               switch_scheduled_add,

@@ -679,6 +679,13 @@ svn_io_run_diff3(const char *dir,
                             merged, diff3_cmd, NULL, pool);
 }
 
+svn_error_t *
+svn_io_remove_file(const char *path,
+                   apr_pool_t *scratch_pool)
+{
+  return svn_io_remove_file2(path, FALSE, scratch_pool);
+}
+
 /*** From constructors.c ***/
 svn_log_changed_path_t *
 svn_log_changed_path_dup(const svn_log_changed_path_t *changed_path,

@@ -217,6 +217,11 @@ ${SVN:-svn} export -q $EXTRA_EXPORT_OPTIONS -r "$REVISION" \
     "http://svn.collab.net/repos/svn/trunk/www/hacking.html" \
     --username none --password none "$DISTPATH/www/hacking.html"
 
+# Remove contrib/ from our distribution tarball.  Some of it is of
+# unknown license, and usefulness.
+# (See http://svn.haxx.se/dev/archive-2009-04/0166.shtml for discussion.)
+rm -rf "$DISTPATH/contrib"
+
 install_dependency()
 {
   DEP_NAME=$1
@@ -286,14 +291,23 @@ ver_patch=`echo $VERSION | cut -d '.' -f 3`
 
 vsn_file="$DISTPATH/subversion/include/svn_version.h"
 
-sed \
- -e "/#define *SVN_VER_MAJOR/s/[0-9]\+/$ver_major/" \
- -e "/#define *SVN_VER_MINOR/s/[0-9]\+/$ver_minor/" \
- -e "/#define *SVN_VER_PATCH/s/[0-9]\+/$ver_patch/" \
- -e "/#define *SVN_VER_TAG/s/\".*\"/\" ($VER_TAG)\"/" \
- -e "/#define *SVN_VER_NUMTAG/s/\".*\"/\"$VER_NUMTAG\"/" \
- -e "/#define *SVN_VER_REVISION/s/[0-9]\+/$REVISION/" \
-  < "$vsn_file" > "$vsn_file.tmp"
+if [ "$VERSION" != "trunk"]; then
+  sed \
+   -e "/#define *SVN_VER_MAJOR/s/[0-9]\+/$ver_major/" \
+   -e "/#define *SVN_VER_MINOR/s/[0-9]\+/$ver_minor/" \
+   -e "/#define *SVN_VER_PATCH/s/[0-9]\+/$ver_patch/" \
+   -e "/#define *SVN_VER_TAG/s/\".*\"/\" ($VER_TAG)\"/" \
+   -e "/#define *SVN_VER_NUMTAG/s/\".*\"/\"$VER_NUMTAG\"/" \
+   -e "/#define *SVN_VER_REVISION/s/[0-9]\+/$REVISION/" \
+    < "$vsn_file" > "$vsn_file.tmp"
+else
+  # Don't munge the version number if we are creating a nightly trunk tarball
+  sed \
+   -e "/#define *SVN_VER_TAG/s/\".*\"/\" ($VER_TAG)\"/" \
+   -e "/#define *SVN_VER_NUMTAG/s/\".*\"/\"$VER_NUMTAG\"/" \
+   -e "/#define *SVN_VER_REVISION/s/[0-9]\+/$REVISION/" \
+    < "$vsn_file" > "$vsn_file.tmp"
+fi
 
 mv -f "$vsn_file.tmp" "$vsn_file"
 

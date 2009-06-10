@@ -156,7 +156,7 @@ create_propval(blame_info_t *info)
 
   /* Include the null term. */
   s = svn_string_ncreate(info->prop_attr, info->prop_attr_len + 1, info->pool);
-  if (info->prop_base64 == TRUE)
+  if (info->prop_base64)
     {
       s = svn_base64_decode_string(s, info->pool);
     }

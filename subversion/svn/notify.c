@@ -57,6 +57,9 @@ struct notify_baton
   unsigned int ext_prop_conflicts;
   unsigned int ext_tree_conflicts;
   unsigned int ext_skipped_paths;
+
+  /* The cwd, for use in decomposing absolute paths. */
+  const char *path_prefix;
 };
 
 
@@ -120,24 +123,27 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
   struct notify_baton *nb = baton;
   char statchar_buf[5] = "    ";
   const char *path_local;
+  const char *path_prefix;
   svn_error_t *err;
+
+  if (n->path_prefix)
+    path_prefix = n->path_prefix;
+  else
+    path_prefix = nb->path_prefix;
 
   if (n->url)
     path_local = n->url;
   else
     path_local = n->path;
 
-  if (n->path_prefix)
-    {
-      path_local = svn_path_is_child(n->path_prefix, path_local, pool);
+  path_local = svn_path_is_child(path_prefix, path_local, pool);
 
-      if (!path_local)
-        {
-          if (strcmp(n->path, n->path_prefix) == 0)
-            path_local = ".";
-          else
-            path_local = n->path;
-        }
+  if (!path_local)
+    {
+      if (strcmp(n->path, path_prefix) == 0)
+        path_local = ".";
+      else
+        path_local = n->path;
     }
 
   path_local = svn_path_local_style(path_local, pool);
@@ -710,6 +716,7 @@ svn_cl__get_notifier(svn_wc_notify_func2_t *notify_func_p,
   nb->ext_prop_conflicts = 0;
   nb->ext_tree_conflicts = 0;
   nb->ext_skipped_paths = 0;
+  apr_filepath_get((char **)&nb->path_prefix, 0 /* flags */, pool);
 
   *notify_func_p = notify;
   *notify_baton_p = nb;

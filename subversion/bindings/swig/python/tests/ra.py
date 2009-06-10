@@ -32,6 +32,11 @@ class SubversionRepositoryAccessTestCase(unittest.TestCase):
     self.callbacks = ra.Callbacks()
     self.ra_ctx = ra.open2(REPOS_URL, self.callbacks, None, None)
 
+  def tearDown(self):
+    self.ra_ctx = None
+    self.fs = None
+    self.repos = None
+
   def test_get_file(self):
     # Test getting the properties of a file
     fs_revnum = fs.youngest_rev(self.fs)

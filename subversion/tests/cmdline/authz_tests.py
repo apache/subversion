@@ -405,20 +405,22 @@ def authz_checkout_and_update_test(sbox):
   # 1st part: disable read access on folder A/B, checkout should not
   # download this folder
 
-  # write an authz file with *= on /A/B
+  # write an authz file with *= on /A/B and /A/mu.
   write_authz_file(sbox, { "/": "* = r",
-                           "/A/B": "* ="})
+                           "/A/B": "* =",
+                           "/A/mu": "* =",
+                           })
 
-  # checkout a working copy, should not dl /A/B
+  # checkout a working copy, should not dl /A/B or /A/mu.
   expected_output = svntest.main.greek_state.copy()
   expected_output.wc_dir = local_dir
   expected_output.tweak(status='A ', contents=None)
   expected_output.remove('A/B', 'A/B/lambda', 'A/B/E', 'A/B/E/alpha',
-                         'A/B/E/beta', 'A/B/F')
+                         'A/B/E/beta', 'A/B/F', 'A/mu')
 
   expected_wc = svntest.main.greek_state.copy()
   expected_wc.remove('A/B', 'A/B/lambda', 'A/B/E', 'A/B/E/alpha',
-                     'A/B/E/beta', 'A/B/F')
+                     'A/B/E/beta', 'A/B/F', 'A/mu')
 
   svntest.actions.run_and_verify_checkout(sbox.repo_url, local_dir,
                                           expected_output,
@@ -426,8 +428,10 @@ def authz_checkout_and_update_test(sbox):
 
   # 2nd part: now enable read access
 
-  # write an authz file with *=r on /
-  write_authz_file(sbox, { "/": "* = r"})
+  # write an authz file with *=r on /. continue to exclude mu.
+  write_authz_file(sbox, { "/": "* = r",
+                           "/A/mu": "* =",
+                           })
 
   # update the working copy, should download /A/B because we now have read
   # access
@@ -440,8 +444,10 @@ def authz_checkout_and_update_test(sbox):
     'A/B/F' : Item(status='A '),
     })
 
-  expected_wc = svntest.main.greek_state
+  expected_wc = svntest.main.greek_state.copy()
+  expected_wc.remove('A/mu')
   expected_status = svntest.actions.get_virginal_state(local_dir, 1)
+  expected_status.remove('A/mu')
 
   svntest.actions.run_and_verify_update(local_dir,
                                         expected_output,
@@ -843,6 +849,37 @@ def authz_switch_to_directory(sbox):
   # Switch /A/B/E to /A/B/F.
   svntest.main.run_svn(None, 'switch', sbox.repo_url + "/A/B/E", G_path)
 
+# Test to reproduce the problem identified by Issue 3242 in which
+# Subversion's authz, as of Subversion 1.5, requires access to the
+# repository root for copy and move operations.
+def authz_access_required_at_repo_root(sbox):
+  "authz issue #3242 - access required at repo root"
+
+  sbox.build(create_wc = False)
+
+  write_authz_file(sbox, {'/': '* =', '/A': 'jrandom = rw',
+                          '/A-copy': 'jrandom = rw'})
+
+  write_restrictive_svnserve_conf(sbox.repo_dir)
+
+  root_url = sbox.repo_url
+  A_url = root_url + '/A'
+  A_copy_url = root_url + '/A-copy'
+  B_url = root_url + '/A/B'
+  B_copy_url = root_url + '/A/B-copy'
+
+  # Should succeed
+  svntest.main.run_svn(None, 'cp', A_url, A_copy_url, '-m', 'logmsg')
+
+  # Should succeed
+  svntest.main.run_svn(None, 'cp', B_url, B_copy_url, '-m', 'logmsg')
+
+  # Should succeed
+  svntest.main.run_svn(None, 'mv', A_url, A_copy_url, '-m', 'logmsg')
+
+  # Should succeed
+  svntest.main.run_svn(None, 'mv', B_url, B_copy_url, '-m', 'logmsg')
+
 ########################################################################
 # Run the tests
 
@@ -865,6 +902,8 @@ test_list = [ None,
               XFail(SkipUnless(authz_svnserve_anon_access_read,
                                svntest.main.is_ra_type_svn)),
               XFail(Skip(authz_switch_to_directory,
+                         svntest.main.is_ra_type_file)),
+              XFail(Skip(authz_access_required_at_repo_root,
                          svntest.main.is_ra_type_file)),
              ]
 

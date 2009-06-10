@@ -1,3 +1,64 @@
+Version 1.6.3
+(?? Jun 2009, from /branches/1.6.x)
+http://svn.collab.net/repos/svn/tags/1.6.3
+
+ User-visible changes:
+  * fix segfault in WC->URL copy (r37646, -56)
+  * let 'svnadmin load' tolerate mergeinfo with "\r\n" (r37768)
+  * make svnsync normalize svn:* props to LF line endings (issue #3404)
+  * better integration with external merge tools (r36178)
+  * return a friendly error message for 'svn diff' (r37735)
+  * update dsvn.el for 1.6 (r37774)
+  * don't allow setting of props on out-of-date dirs under neon (r37745)
+  * improve BASH completion (r36450, -52, -70, -79, -538)
+  * improve some DAV-based error messages (issue #3414)
+  * always show tree conflicts with 'svn st' (issue #3382)
+  * improve correctness of 'svn mergeinfo' (issue #3126)
+  * decrease the amount of memory needed for large commits (r37894, -6)
+  * work around an APR buffer overflow seen by svnsync (r37622)
+  * ra_svn clients now use TCP keep-alives if available (issue #3347)
+  * improve 'svn merge' perf by reducing server contact (r37491, -593, -618)
+  * stop propagating self-referential mergeinfo in reintegrate merges (r37931)
+  * Fix NLS detection where -liconv is required for bindtextdomain() (r37827)
+  * Bump apr and apr-util versions included in deps to latest. (r37941)
+  * fixed: potential segfault with noop file merges (r37779)
+  * fixed: incorrect output with 'svn blame -g' (r37719, -23, -41)
+  * fixed: bindings don't load FS libs when module search enabled (issue #3413)
+  * fixed: potential abort() in the working copy library (r37857)
+
+ Developer-visible changes:
+
+
+Version 1.6.2
+(09 May 2009, from /branches/1.6.x)
+http://svn.collab.net/repos/svn/tags/1.6.2
+
+ User-visible changes:
+  * vastly improve memory usage with 'svn merge' (issue #3393)
+  * make default depth for merge 'infinity' (r37156)
+  * make 'status --quiet' show tree conflicts (issue #3396)
+  * allow '--set-depth infinity' to expand shallow subtrees (r37169)
+  * return an error if attempting to reintegrate from/to the repo root (r37385)
+  * don't store bogus mergeinfo for '--ignore-ancestry', foreign merges (r37333)
+  * don't allow merge of difference between two repos (r37519)
+  * avoid potential segfault with subtree mergeinfo (r36613, -15, -31, -41)
+  * recommend sqlite 3.6.13 (r37245)
+  * avoid unnecessary server query for implicit mergeinfo (r36509)
+  * avoid unnecessary server query during reverse merges (r36527)
+  * set depth=infinity on 'svn add' items with restricted depth (r37607)
+  * fixed: commit log message template missing paths (issue #3399)
+  * fixed: segfault on merge with servers < 1.6 (r37363, -67, -68, -79)
+  * fixed: repeat merge failures with non-inheritable mergeinfo (issue #3392)
+  * fixed: another memory leak when performing mergeinfo-aware merges (r37398)
+  * fixed: incorrect mergeinfo on children of shallow merges (issue #3407)
+  * fixed: pool lifetime issues in the BDB backend (r37137)
+
+ Developer-visible changes:
+  * don't fail if an embedding app has already initialized SQLite (issue #3387)
+  * resolve naming collisions with static stat() function in svnserve (r37527)
+  * fix an expectation for a failing dirent windows test (r37121)
+
+
 Version 1.6.1
 (10 Apr 2009, from /branches/1.6.x)
 http://svn.collab.net/repos/svn/tags/1.6.1

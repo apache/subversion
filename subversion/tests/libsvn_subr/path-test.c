@@ -26,7 +26,7 @@
 
 /* Make sure SVN_DEPRECATED is defined as empty before including svn_path.h.
    We don't want to trigger deprecation warnings by the tests of those
-   funtions.  */
+   functions.  */
 #ifdef SVN_DEPRECATED
 #undef SVN_DEPRECATED
 #endif

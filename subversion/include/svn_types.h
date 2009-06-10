@@ -141,6 +141,33 @@ svn_node_kind_to_word(svn_node_kind_t kind);
 svn_node_kind_t
 svn_node_kind_from_word(const char *word);
 
+/** Generic three-state property to represent an unknown value for values that
+ * are just like booleans. @since New in 1.7. */
+typedef enum
+{
+  svn_tristate_unknown = 0,
+  svn_tristate_false,
+  svn_tristate_true
+} svn_tristate_t;
+
+/** Return a constant string "true", "false" or NULL representing the value of
+ * @a tristate.
+ *
+ * @since New in 1.7.
+ */
+const char *
+svn_tristate_to_word(svn_tristate_t tristate);
+
+/** Return the appropriate tristate for @a word. If @a word is "true", returns
+ * @c svn_tristate_true; if @a word is "false", returns @c svn_tristate_false,
+ * for all other values (including NULL) returns @c svn_tristate_unknown.
+ *
+ * @since New in 1.7.
+ */
+svn_tristate_t
+svn_tristate_from_word(const char * word);
+
+
 /** About Special Files in Subversion
  *
  * Subversion denotes files that cannot be portably created or
@@ -601,6 +628,14 @@ typedef struct svn_log_changed_path2_t
   /** The type of the node, may be svn_node_unknown. */
   svn_node_kind_t node_kind;
 
+  /** Is the text modified, may be svn_tristate_unknown.
+   * @since New in 1.7. */
+  svn_tristate_t text_modified;
+
+  /** Are properties modified, may be svn_tristate_unknown.
+   * @since New in 1.7. */
+  svn_tristate_t props_modified;
+
   /* NOTE: Add new fields at the end to preserve binary compatibility.
      Also, if you add fields here, you have to update
      svn_log_changed_path2_dup(). */
@@ -1041,6 +1076,19 @@ typedef svn_error_t *(*svn_location_segment_receiver_t)
 svn_location_segment_t *
 svn_location_segment_dup(svn_location_segment_t *segment,
                          apr_pool_t *pool);
+
+/** A line number, such as in a file or a stream.
+ *
+ * @since New in 1.7.
+ */
+typedef unsigned long svn_linenum_t;
+
+/* The maximum value of an svn_linenum_t.
+ *
+ * @since New in 1.7.
+ */
+#define SVN_LINENUM_MAX_VALUE ULONG_MAX
+
 /** @} */
 
 
@@ -1061,6 +1109,16 @@ svn_location_segment_dup(svn_location_segment_t *segment,
  * guard.
  */
 #include "svn_error.h"
+
+
+/*
+ * Subversion developers may want to use some additional debugging facilities
+ * while working on the code. We'll pull that in here, so individual source
+ * files don't have to include this header manually.
+ */
+#ifdef SVN_DEBUG
+#include "private/svn_debug.h"
+#endif
 
 
 #endif /* SVN_TYPES_H */

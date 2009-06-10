@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2008 CollabNet.  All rights reserved.
+ * Copyright (c) 2008-2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -80,7 +80,7 @@ svn_dirent_local_style(const char *dirent,
 
 /** Convert @a uri from the local style to the canonical internal style.
  *
- * @since New in 1.6.
+ * @since New in 1.7.
  */
 const char *
 svn_uri_internal_style(const char *uri,
@@ -88,7 +88,7 @@ svn_uri_internal_style(const char *uri,
 
 /** Convert @a uri from the canonical internal style to the local style.
  *
- * @since New in 1.6.
+ * @since New in 1.7.
  */
 const char *
 svn_uri_local_style(const char *uri,
@@ -265,7 +265,7 @@ svn_uri_basename(const char *uri,
  *
  * The returned dirname will be allocated in @a pool.
  *
- * @since New in 1.6.
+ * @since New in 1.7.
  */
 char *
 svn_uri_dirname(const char *dirent,
@@ -283,7 +283,7 @@ svn_dirent_is_absolute(const char *dirent);
 
 /** Return TRUE if @a uri is considered absolute or is a URL.
  *
- * @since New in 1.6.
+ * @since New in 1.7.
  */
 svn_boolean_t
 svn_uri_is_absolute(const char *uri);
@@ -307,7 +307,7 @@ svn_dirent_is_root(const char *dirent,
  *
  * Do not use this function with URLs.
  *
- * @since New in 1.6
+ * @since New in 1.7
  */
 svn_boolean_t
 svn_uri_is_root(const char *uri,
@@ -345,7 +345,7 @@ svn_dirent_canonicalize(const char *dirent,
  *
  * The returned uri may be statically allocated or allocated from @a pool.
  *
- * @since New in 1.6.
+ * @since New in 1.7.
  */
 const char *
 svn_uri_canonicalize(const char *uri,
@@ -367,7 +367,7 @@ svn_dirent_is_canonical(const char *dirent,
 /** Return @c TRUE iff @a uri is canonical.  Use @a pool for temporary
  * allocations.
  *
- * @since New in 1.6.
+ * @since New in 1.7.
  */
 svn_boolean_t
 svn_uri_is_canonical(const char *uri,
@@ -394,7 +394,7 @@ svn_dirent_get_longest_ancestor(const char *dirent1,
  * different resources), and (b) share a common ancestor in their path
  * component, i.e. 'protocol://' is not a sufficient ancestor.
  *
- * @since New in 1.6.
+ * @since New in 1.7.
  */
 char *
 svn_uri_get_longest_ancestor(const char *path1,
@@ -403,6 +403,7 @@ svn_uri_get_longest_ancestor(const char *path1,
 
 /** Convert @a relative canonicalized dirent to an absolute dirent and
  * return the results in @a *pabsolute, allocated in @a pool.
+ * Raise SVN_ERR_BAD_FILENAME if the absolute dirent cannot be determined.
  *
  * @since New in 1.6.
  */
@@ -431,7 +432,7 @@ svn_dirent_get_absolute(const char **pabsolute,
  * trivial: if the uri is "../foo", how do you know whether or not
  * the current directory is named "foo" in its parent?
  *
- * @since New in 1.6.
+ * @since New in 1.7.
  */
 const char *
 svn_uri_is_child(const char *uri1,
@@ -439,7 +440,7 @@ svn_uri_is_child(const char *uri1,
                  apr_pool_t *pool);
 
 /**
- * This function is similar as @c svn_uri_is_child, except that it supports
+ * This function is similar as svn_uri_is_child(), except that it supports
  * Windows dirents and UNC paths on Windows.
  *
  * @since New in 1.6.
@@ -463,7 +464,7 @@ svn_dirent_is_ancestor(const char *path1,
  *
  * This function supports URLs.
  *
- * @since New in 1.6.
+ * @since New in 1.7.
  */
 svn_boolean_t
 svn_uri_is_ancestor(const char *path1,
@@ -509,6 +510,22 @@ svn_dirent_condense_targets(const char **pcommon,
                             svn_boolean_t remove_redundancies,
                             apr_pool_t *result_pool,
                             apr_pool_t *scratch_pool);
+
+/* Check that when @a path is joined to @a base_path, the resulting path
+ * is still under BASE_PATH in the local filesystem. If not, return @c FALSE.
+ * If @c TRUE is returned, @a *full_path will be set to the absolute path
+ * of @a path, allocated in @a pool.
+ *
+ * Note: Use of this function is strongly encouraged. Do not roll your own.
+ * (http://cve.mitre.org/cgi-bin/cvename.cgi?name=2007-3846)
+ *
+ * @since New in 1.7.
+ */
+svn_boolean_t
+svn_dirent_is_under_root(char **full_path,
+                         const char *base_path,
+                         const char *path,
+                         apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

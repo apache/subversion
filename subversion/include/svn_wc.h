@@ -127,6 +127,58 @@ svn_wc_version(void);
 
 /** @} */
 
+/**
+ * @defgroup svn_wc_context  Working copy context
+ * @{
+ */
+
+/** The context for all working copy interactions.
+ *
+ * This is the client-facing datastructure API consumers are required
+ * to create and use when interacting with a working copy.  Multiple
+ * contexts can be created for the same working copy simultaneously, within
+ * the same process or different processes.  Context mutexing will be handled
+ * internally by the working copy library.
+ */
+typedef struct svn_wc_context_t svn_wc_context_t;
+
+/** Create a context for the working copy, and return it in @a *wc_ctx.  This
+ * context is not associated with a particular working copy, but as operations
+ * are performed, will load the appropriate working copy information.
+ *
+ * @a config should hold the various configuration options that may apply to
+ * this context.  It should live at least as long as @a result_pool.  It may
+ * be @c NULL.
+ *
+ * The context will be allocated in @a result_pool, and will use @a
+ * result_pool for any internal allocations requiring the same longevity as
+ * the context.  The context will be automatically destroyed, and its
+ * resources released, when @a result_pool is cleared, or it may be manually 
+ * destroyed by invoking svn_wc_context_destroy().
+ *
+ * Use @a scratch_pool for temporary allocations.  It may be cleared
+ * immediately upon returning from this function.
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_wc_context_create(svn_wc_context_t **wc_ctx,
+                      svn_config_t *config,
+                      apr_pool_t *result_pool,
+                      apr_pool_t *scratch_pool);
+
+
+/** Destroy the working copy context described by @a wc_ctx, releasing any
+ * acquired resources.
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_wc_context_destroy(svn_wc_context_t *wc_ctx);
+
+
+/** @} */
+
 
 /* Locking/Opening/Closing */
 
@@ -287,7 +339,7 @@ svn_wc_adm_probe_open(svn_wc_adm_access_t **adm_access,
  *
  * @a levels_to_lock determines the levels_to_lock used when opening
  * @a path if @a path is a versioned directory, @a levels_to_lock is
- * ignored otherwise.  If @a write_lock is  @c TRUE the access batons
+ * ignored otherwise.  If @a write_lock is @c TRUE the access batons
  * will hold write locks.
  *
  * If @a cancel_func is non-NULL, call it with @a cancel_baton to determine
@@ -664,7 +716,7 @@ svn_wc_external_item_dup(const svn_wc_external_item_t *item,
  * and don't care about the parsed result, pass NULL for @a externals_p.
  *
  * The format of @a desc is the same as for values of the directory
- * property @c SVN_PROP_EXTERNALS, which see.
+ * property @c SVN_PROP_EXTERNALS.  Look there for more details.
  *
  * Allocate the table, keys, and values in @a pool.
  *
@@ -867,7 +919,14 @@ typedef enum svn_wc_notify_action_t
 
   /** The path is a subdirectory referenced in an externals definition
    * which is unable to be operated on.  @since New in 1.6. */
-  svn_wc_notify_failed_external
+  svn_wc_notify_failed_external,
+
+  /** An update tried to add a file or directory at path but an
+   * unversioned obstruction was found.  @since New in 1.7. */
+  svn_wc_notify_update_obstruction,
+
+  /* The mergeinfo on path was updated.  @since New in 1.7. */
+  svn_wc_notify_merge_record_info
 
 } svn_wc_notify_action_t;
 
@@ -2037,10 +2096,16 @@ svn_wc_check_wc(const char *path,
                 apr_pool_t *pool);
 
 
-/** Set @a *has_binary_prop to @c TRUE iff @a path has been marked
+/** As a replacement for this functionality, @see svn_mime_type_is_binary
+ * and @c SVN_PROP_MIME_TYPE.
+ *
+ * Set @a *has_binary_prop to @c TRUE iff @a path has been marked
  * with a property indicating that it is non-text (in other words, binary).
  * @a adm_access is an access baton set that contains @a path.
+ *
+ * @deprecated Provided for backward compatibility with the 1.6 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_has_binary_prop(svn_boolean_t *has_binary_prop,
                        const char *path,
@@ -2358,7 +2423,7 @@ typedef struct svn_wc_entry_t
    * @since New in 1.6. */
   svn_opt_revision_t file_external_peg_rev;
 
-  /** The entry is a intra-repository file external and this is the
+  /** The entry is an intra-repository file external and this is the
    * operative revision number specified in the externals definition.
    * This field is only valid when the file_external_path field is
    * non-NULL.  The only permissible values are
@@ -3481,7 +3546,7 @@ svn_wc_delete(const char *path,
  *       -  ### @todo Remove old wcprops too, see the '###' below.
  *
  *<pre> ### I think possibly the "switchover" functionality should be
- * ### broken out into a separate function, but its all intertwined in
+ * ### broken out into a separate function, but it's all intertwined in
  * ### the code right now.  Ben, thoughts?  Hard?  Easy?  Mauve?</pre>
  *
  * ### Update: see "###" comment in svn_wc_add_repos_file3()'s doc
@@ -3995,7 +4060,7 @@ svn_wc_process_committed(const char *path,
  * to @a reporter/@a report_baton.  Obviously, if @a path is a file
  * instead of a directory, this depth-first crawl will be a short one.
  *
- * No locks are or logs are created, nor are any animals harmed in the
+ * No locks or logs are created, nor are any animals harmed in the
  * process.  No cleanup is necessary.  @a adm_access must be an access
  * baton for the @a path hierarchy, it does not require a write lock.
  *
@@ -5238,24 +5303,8 @@ svn_wc_get_pristine_copy_path(const char *path,
  * various points during the operation.  If it returns an error
  * (typically @c SVN_ERR_CANCELLED), return that error immediately.
  *
- * @since New in 1.7.
- */
-svn_error_t *
-svn_wc_cleanup3(const char *path,
-                const char *diff3_cmd,
-                svn_boolean_t upgrade_wc,
-                svn_cancel_func_t cancel_func,
-                void *cancel_baton,
-                apr_pool_t *scratch_pool);
-
-/**
- * Similar to svn_wc_cleanup3(), but does not attempt to do a working copy
- * upgrade.
- *
  * @since New in 1.2.
- * @deprecated Provided for backward compatibility with the 1.6 API.
  */
-SVN_DEPRECATED
 svn_error_t *
 svn_wc_cleanup2(const char *path,
                 const char *diff3_cmd,
@@ -5278,6 +5327,23 @@ svn_wc_cleanup(const char *path,
                void *cancel_baton,
                apr_pool_t *pool);
 
+/**
+ * Upgrade the working copy at @a local_abspath to the latest metadata
+ * storage format.  @a local_abspath should be an absolute path to the
+ * root of the working copy.
+ *
+ * If @a cancel_func is non-NULL, invoke it with @a cancel_baton at
+ * various points during the operation.  If it returns an error
+ * (typically @c SVN_ERR_CANCELLED), return that error immediately.
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_wc_upgrade(svn_wc_context_t *wc_ctx,
+               const char *local_abspath,
+               svn_cancel_func_t cancel_func,
+               void *cancel_baton,
+               apr_pool_t *pool);
 
 /** Relocation validation callback typedef.
  *
@@ -5690,20 +5756,52 @@ svn_wc_match_ignore_list(const char *str,
                          apr_pool_t *pool);
 
 
-/** Add @a lock to the working copy for @a path.  @a adm_access must contain
- * a write lock for @a path.  If @a path is read-only, due to locking
- * properties, make it writable.  Perform temporary allocations in @a
- * pool. */
+/** Add @a lock to the working copy for @a local_abspath.  If @a
+ * local_abspath is read-only, due to locking properties, make it writable.
+ * Perform temporary allocations in @a scratch_pool.
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_wc_add_lock2(svn_wc_context_t *wc_ctx,
+                 const char *abspath,
+                 const svn_lock_t *lock,
+                 apr_pool_t *scratch_pool);
+
+/**
+ * Similar to svn_wc_add_lock2(), but with a @c svn_wc_adm_access_t /
+ * relative path parameter pair.
+ * 
+ * @deprecated Provided for backward compatibility with the 1.6 API.
+ * @since New in 1.2.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_add_lock(const char *path,
                 const svn_lock_t *lock,
                 svn_wc_adm_access_t *adm_access,
                 apr_pool_t *pool);
 
-/** Remove any lock from @a path.  @a adm_access must contain a
- * write-lock for @a path.  If @a path has a lock and the locking
- * so specifies, make the file read-only.  Don't return an error if @a
- * path didn't have a lock.  Perform temporary allocations in @a pool. */
+/** Remove any lock from @a local_abspath.  If @a local_abspath has a
+ * lock and the locking so specifies, make the file read-only.  Don't
+ * return an error if @a path didn't have a lock.  Perform temporary
+ * allocations in @a scratch_pool.
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_wc_remove_lock2(svn_wc_context_t *wc_ctx,
+                    const char *local_abspath,
+                    apr_pool_t *scratch_pool);
+
+/**
+ * Similar to svn_wc_remove_lock2(), but with a @c svn_wc_adm_access_t /
+ * relative path parameter pair.
+ *
+ * @deprecated Provided for backward compatibility with the 1.6 API.
+ * @since New in 1.7.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_remove_lock(const char *path,
                    svn_wc_adm_access_t *adm_access,
@@ -5855,38 +5953,15 @@ svn_wc_crop_tree(svn_wc_adm_access_t *anchor,
 
 
 /**
- * Drive @a diff_editor against @a decoded_patch_file's clear-text
- * Editor Commands.
+ * Drive @a diff_editor against @a patch_file's clear-text Editor Commands.
  *
  * @since New in 1.7
  */
 svn_error_t *
-svn_wc_apply_svnpatch(apr_file_t *decoded_patch_file,
+svn_wc_apply_svnpatch(svn_stream_t *patch_file,
                       const svn_delta_editor_t *diff_editor,
                       void *diff_edit_baton,
                       apr_pool_t *pool);
-
-/**
- * Run an external patch program against @a patch_path patch file.  @a
- * outfile and @a errfile are respectively connected to the external
- * program's stdout and stderr pipes when executed.  @a config is looked
- * up for the SVN_CONFIG_OPTION_PATCH_CMD entry to use as the patch
- * program.  If missing or @a config is @c NULL, the function tries to
- * execute 'patch' literally, which should work on most *NIX systems at
- * least.  This involves searching into $PATH.  The external program is
- * given the patch file via its stdin pipe.
- *
- * The program is passed the '--force' argument when @a force is set.
- *
- * @since New in 1.7
- */
-svn_error_t *
-svn_wc_apply_unidiff(const char *patch_path,
-                     svn_boolean_t force,
-                     apr_file_t *outfile,
-                     apr_file_t *errfile,
-                     apr_hash_t *config,
-                     apr_pool_t *pool);
 
 /** @} */
 

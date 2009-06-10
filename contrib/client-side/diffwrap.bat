@@ -3,7 +3,7 @@
 REM Configure your favorite diff program here.
 SET DIFF="C:\Program Files\Funky Stuff\My Diff Tool.exe"
 
-REM Subversion provides the paths we need as the sixth and seventh 
+REM Subversion provides the paths we need as the sixth and seventh
 REM parameters.
 SET LEFT=%6
 SET RIGHT=%7

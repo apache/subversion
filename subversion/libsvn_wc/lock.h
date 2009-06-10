@@ -66,9 +66,8 @@ void svn_wc__adm_access_set_entries(svn_wc_adm_access_t *adm_access,
                                     apr_hash_t *entries);
 
 /* Return the entries hash cached in ADM_ACCESS.  The returned hash may
-   be NULL.  POOL is used for local, short term, memory allocations. */
-apr_hash_t *svn_wc__adm_access_entries(svn_wc_adm_access_t *adm_access,
-                                       apr_pool_t *pool);
+   be NULL.  */
+apr_hash_t *svn_wc__adm_access_entries(svn_wc_adm_access_t *adm_access);
 
 
 /* Return an access baton for PATH in *ADM_ACCESS.  This function is used
@@ -98,11 +97,19 @@ svn_error_t *svn_wc__adm_retrieve_internal(svn_wc_adm_access_t **adm_access,
 
 /* Same as svn_wc__adm_retrieve_internal, but takes a DB and an absolute
    directory path.  */
-svn_error_t *
-svn_wc__adm_retrieve_internal2(svn_wc_adm_access_t **adm_access,
-                               svn_wc__db_t *db,
+svn_wc_adm_access_t *
+svn_wc__adm_retrieve_internal2(svn_wc__db_t *db,
                                const char *abspath,
                                apr_pool_t *scratch_pool);
+
+/* ### this is probably bunk. but I dunna want to trace backwards-compat
+   ### users of svn_wc_check_wc(). probably gonna be rewritten for wc-ng
+   ### in any case.  */
+svn_error_t *
+svn_wc__internal_check_wc(int *wc_format,
+                          svn_wc__db_t *db,
+                          const char *local_abspath,
+                          apr_pool_t *scratch_pool);
 
 /* Return the working copy format version number for ADM_ACCESS. */
 svn_error_t *
@@ -144,21 +151,6 @@ svn_wc__adm_get_db(const svn_wc_adm_access_t *adm_access);
 /* Get a reference to the baton's internal ABSPATH.  */
 const char *
 svn_wc__adm_access_abspath(const svn_wc_adm_access_t *adm_access);
-
-
-/* Upgrade the working copy directory represented by ADM_ACCESS
-   to the latest 'SVN_WC__VERSION'.  ADM_ACCESS must contain a write
-   lock.  Use SCRATCH_POOL for all temporary allocation.
-
-   Not all upgrade paths are necessarily supported.  For example,
-   upgrading a version 1 working copy results in an error.
-
-   Sometimes the format file can contain "0" while the administrative
-   directory is being constructed; calling this on a format 0 working
-   copy has no effect and returns no error. */
-svn_error_t *
-svn_wc__upgrade_format(svn_wc_adm_access_t *adm_access,
-                       apr_pool_t *scratch_pool);
 
 #ifdef __cplusplus
 }

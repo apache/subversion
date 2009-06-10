@@ -490,7 +490,7 @@ svn_cl__edit_string_externally(svn_string_t **edited_contents /* UTF-8! */,
   if (remove_file)
     {
       /* Remove the file from disk.  */
-      err2 = svn_io_remove_file(tmpfile_name, pool);
+      err2 = svn_io_remove_file2(tmpfile_name, FALSE, pool);
 
       /* Only report remove error if there was no previous error. */
       if (! err && err2)
@@ -510,7 +510,7 @@ svn_cl__edit_string_externally(svn_string_t **edited_contents /* UTF-8! */,
                         stderr, TRUE /* fatal */, "svn: ");
     }
 
-  return err;
+  return svn_error_return(err);
 }
 
 
@@ -598,7 +598,7 @@ svn_cl__cleanup_log_msg(void *log_msg_baton,
 
   /* If there was no commit error, cleanup the tmpfile and return. */
   if (! commit_err)
-    return svn_io_remove_file(lmb->tmpfile_left, lmb->pool);
+    return svn_io_remove_file2(lmb->tmpfile_left, FALSE, lmb->pool);
 
   /* There was a commit error; there is a tmpfile.  Leave the tmpfile
      around, and add message about its presence to the commit error
@@ -731,7 +731,7 @@ svn_cl__get_log_message(const char **log_msg,
           else if (! *path)
             path = ".";
 
-          if (path && lmb->base_dir)
+          if (! svn_path_is_url(path) && lmb->base_dir)
             path = svn_path_is_child(lmb->base_dir, path, pool);
 
           /* If still no path, then just use current directory. */
@@ -800,7 +800,7 @@ svn_cl__get_log_message(const char **log_msg,
               (err, _("Could not use external editor to fetch log message; "
                       "consider setting the $SVN_EDITOR environment variable "
                       "or using the --message (-m) or --file (-F) options"));
-          return err;
+          return svn_error_return(err);
         }
 
       if (msg_string)
@@ -844,7 +844,7 @@ svn_cl__get_log_message(const char **log_msg,
                  message. */
               if ('a' == letter)
                 {
-                  SVN_ERR(svn_io_remove_file(lmb->tmpfile_left, pool));
+                  SVN_ERR(svn_io_remove_file2(lmb->tmpfile_left, FALSE, pool));
                   *tmp_file = lmb->tmpfile_left = NULL;
                   break;
                 }
@@ -854,7 +854,7 @@ svn_cl__get_log_message(const char **log_msg,
                  also cleanup the temporary file. */
               if ('c' == letter)
                 {
-                  SVN_ERR(svn_io_remove_file(lmb->tmpfile_left, pool));
+                  SVN_ERR(svn_io_remove_file2(lmb->tmpfile_left, FALSE, pool));
                   *tmp_file = lmb->tmpfile_left = NULL;
                   message = svn_stringbuf_create("", pool);
                 }
@@ -890,7 +890,7 @@ svn_cl__may_need_force(svn_error_t *err)
          "may be lost)"));
     }
 
-  return err;
+  return svn_error_return(err);
 }
 
 
@@ -950,7 +950,7 @@ svn_cl__try(svn_error_t *err,
       *success = TRUE;
     }
 
-  return err;
+  return svn_error_return(err);
 }
 
 
@@ -1097,18 +1097,18 @@ svn_cl__args_to_target_array_print_reserved(apr_array_header_t **targets,
                                             svn_client_ctx_t *ctx,
                                             apr_pool_t *pool)
 {
-  svn_error_t *error = svn_client_args_to_target_array(targets, os,
-                                                       known_targets,
-                                                       ctx, pool);
-  if (error)
+  svn_error_t *err = svn_client_args_to_target_array(targets, os,
+                                                     known_targets,
+                                                     ctx, pool);
+  if (err)
     {
-      if (error->apr_err ==  SVN_ERR_RESERVED_FILENAME_SPECIFIED)
+      if (err->apr_err ==  SVN_ERR_RESERVED_FILENAME_SPECIFIED)
         {
-          svn_handle_error2(error, stderr, FALSE, "svn: Skipping argument: ");
-          svn_error_clear(error);
+          svn_handle_error2(err, stderr, FALSE, "svn: Skipping argument: ");
+          svn_error_clear(err);
         }
       else
-        return error;
+        return svn_error_return(err);
     }
   return SVN_NO_ERROR;
 }
@@ -1192,7 +1192,7 @@ svn_cl__time_cstring_to_human_cstring(const char **human_cstring,
       return SVN_NO_ERROR;
     }
   else if (err)
-    return err;
+    return svn_error_return(err);
 
   *human_cstring = svn_time_to_human_cstring(when, pool);
 

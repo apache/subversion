@@ -26,7 +26,7 @@ do_test()
     echo 'Creating repository, and populating it with baseline data...'
     svnadmin create repos
     svn -q co $REPOS_URL wc
-    
+
     # r1
     mkdir wc/trunk wc/branches wc/tags
     echo 'hello world' > wc/trunk/hello-world.txt
@@ -67,9 +67,9 @@ do_test()
         && svn merge --record-only -c7 $REPOS_URL/trunk \
         && svn -q ci -m 'svn merge --record-only a trunk revision.')
     svn up -q wc
-    
+
     # Migrate the mergeinfo!
-    cd - > /dev/null  
+    cd - > /dev/null
     $SCRIPT_DIR/svnmerge-migrate-history.py $TMP_DIR/repos -v /branches ${flags}
     if [ "$?" != "0" ]; then
         echo '******* TEST FAIL: Mergeinfo migration failed *******' >&2

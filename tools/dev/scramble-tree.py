@@ -40,7 +40,12 @@ try:
 except AttributeError:
   my_getopt = getopt.getopt
 import random
-import md5
+try:
+  # Python >=2.5
+  from hashlib import md5 as hashlib_md5
+except ImportError:
+  # Python <2.5
+  from md5 import md5 as hashlib_md5
 import base64
 
 
@@ -102,7 +107,7 @@ class hashDir:
     # Return a base64-encoded (kinda ... strip the '==\n' from the
     # end) MD5 hash of sorted tree listing.
     self.allfiles.sort()
-    return base64.encodestring(md5.md5(''.join(self.allfiles)).digest())[:-3]
+    return base64.encodestring(hashlib_md5(''.join(self.allfiles)).digest())[:-3]
 
   def walker_callback(self, baselen, dirname, fnames):
     if ((dirname == '.svn') or (dirname == 'CVS')):
