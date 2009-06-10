@@ -21,7 +21,8 @@ Candidate changes:
      See http://svn.haxx.se/dev/archive-2009-06/0124.shtml.
    Votes:
      +1: pburba
- 
+     +0: rhuijben (Patch is ok, but needs branch or guideline for clean merge)
+
  * r37478, r37543, r37544, r37545, r37547
    Support using `svnversion` on files and improve some messages printed by
    `svnversion`.
@@ -51,14 +52,6 @@ Candidate changes:
      +1: arfrever
      -0: rhuijben, cmpilato (Introduces new features and changes output)
 
- * r37972
-   Avoid temp file name collisions when committing with ra_serf/ra_neon.
-   Justification:
-     Greatly improves performance when committing large numbers of items,
-     see http://svn.haxx.se/dev/archive-2009-05/0575.shtml.
-   Votes:
-     +1: pburba, stsp
-
  * r37868, r37979
    Fix memory leak in svn_hash_read2 and svn_hash_read_incremental by
    using an iterpool for temporary allocations.
@@ -71,7 +64,15 @@ Candidate changes:
      a 50MB property without this patch caused httpd memory to peak at
      683 MB, with the patch peak memory use drops to 407 MB.
    Votes:
-     +1: pburba
+     +1: pburba, rhuijben
 
 Approved changes:
 =================
+
+* r37972
+   Avoid temp file name collisions when committing with ra_serf/ra_neon.
+   Justification:
+     Greatly improves performance when committing large numbers of items,
+     see http://svn.haxx.se/dev/archive-2009-05/0575.shtml.
+   Votes:
+     +1: pburba, stsp, rhuijben
