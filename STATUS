@@ -15,17 +15,6 @@ Status of 1.6.3:
 
 Candidate changes:
 
- * r36298
-   A minor test suite plumbing fix to make fixing a bad backport easier.
-   Justification:
-     See http://svn.haxx.se/dev/archive-2009-06/0124.shtml.
-   Notes:
-     Only the change from subversion/tests/cmdline/svntest/main.py is needed
-     here so either merge directly to main.py or just revert the (conflicted)
-     changes to subversion/tests/cmdline/switch_tests.py that will result.
-   Votes:
-     +1: pburba, rhuijben
-
  * r37478, r37543, r37544, r37545, r37547
    Support using `svnversion` on files and improve some messages printed by
    `svnversion`.
@@ -99,3 +88,14 @@ Approved changes:
      683 MB, with the patch peak memory use drops to 407 MB.
    Votes:
      +1: pburba, rhuijben, stsp
+
+ * r36298
+   A minor test suite plumbing fix to make fixing a bad backport easier.
+   Justification:
+     See http://svn.haxx.se/dev/archive-2009-06/0124.shtml.
+   Notes:
+     Only the change from subversion/tests/cmdline/svntest/main.py is needed
+     here so either merge directly to main.py or just revert the (conflicted)
+     changes to subversion/tests/cmdline/switch_tests.py that will result.
+   Votes:
+     +1: pburba, rhuijben, stsp (and what about r36271?)
