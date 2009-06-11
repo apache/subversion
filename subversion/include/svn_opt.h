@@ -621,11 +621,14 @@ svn_opt_parse_all_args(apr_array_header_t **args_p,
  *    "foo/bar@1:2"                  -> error
  *    "foo/bar@baz"                  -> error
  *    "foo/bar@"                     -> "foo/bar",       (base)
+ *    "foo/@bar@"                    -> "foo/@bar",      (base)
  *    "foo/bar/@13"                  -> "foo/bar/",      (number, 13)
  *    "foo/bar@@13"                  -> "foo/bar@",      (number, 13)
  *    "foo/@bar@HEAD"                -> "foo/@bar",      (head)
  *    "foo@/bar"                     -> "foo@/bar",      (unspecified)
  *    "foo@HEAD/bar"                 -> "foo@HEAD/bar",  (unspecified)
+ *    "@foo/bar"                     -> error
+ *    "@foo/bar@"                    -> "@foo/bar",      (unspecified)
  *
  *   [*] Syntactically valid but probably not semantically useful.
  *
@@ -733,6 +736,27 @@ svn_opt_print_help(apr_getopt_t *os,
                    const apr_getopt_option_t *option_table,
                    const char *footer,
                    apr_pool_t *pool);
+
+/* Return, in @a *true_targets_p, a copy of @a targets with peg revision
+ * specifiers snipped off the end of each element.
+ *
+ * This function is useful for subcommands for which peg revisions
+ * do not make any sense. Such subcommands still need to allow peg
+ * revisions to be specified on the command line so that users of
+ * the command line client can consistently escape '@' characters
+ * in filenames by appending an '@' character, regardless of the
+ * subcommand being used.
+ *
+ * If a peg revision is present but cannot be parsed, an error is thrown.
+ * The user has likely forgotten to escape an '@' character in a filename.
+ *
+ * It is safe to pass the address of @a targets as @a true_targets_p.
+ *
+ * Do all allocations in @a pool. */
+svn_error_t *
+svn_opt_eat_peg_revisions(apr_array_header_t **true_targets_p,
+                          apr_array_header_t *targets,
+                          apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

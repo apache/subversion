@@ -73,6 +73,8 @@ svn_cl__mkdir(apr_getopt_t *os,
                                          NULL, ctx->config, pool));
     }
 
+  SVN_ERR(svn_opt_eat_peg_revisions(&targets, targets, pool));
+
   err = svn_client_mkdir3(&commit_info, targets, opt_state->parents,
                           opt_state->revprop_table, ctx, pool);
 
