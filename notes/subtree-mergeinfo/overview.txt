@@ -50,6 +50,9 @@ complaints):
   Proposal: don't modify any unrelated mergeinfos during 'svn merge':
   http://svn.haxx.se/dev/archive-2008-09/0443.shtml
 
+  General user frustrations:
+  http://svn.haxx.se/users/archive-2009-06/0372.shtml
+
 OPEN QUESTIONS AND TODOS:
 -------------------------
 

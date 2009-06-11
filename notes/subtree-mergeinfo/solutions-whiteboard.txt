@@ -1,0 +1,56 @@
+A brain dump of improvements for the problems described in
+notes/subtree-mergeinfo/the-performance-problem.txt.
+
+I) Encourage best practices that reduce the amount of subtree mergeinfo.
+
+  a) Merge only to the roots of branches.
+
+  b) Don't merge to targets with switched subtrees.
+
+  c) Don't do shallow merges (i.e. depths other than infinity).
+
+  d) Don't setup tree structure so the mergers aren't authorized to subtrees
+     in the merge source or target.
+  
+II) Functional changes to reduce/eliminate the amount of subtree mergeinfo.
+
+  a) Stop creating empty mergeinfo during WC-to-WC copies and moves.
+     Mentioning this only for historical reasons, this change was made
+     in 1.5.5.
+     
+  b) Allow Ib), Ic), and/or Id) but simply don't set/create subtree
+     mergeinfo describing the merge.  Make these practives 'use at own risk'.
+
+  c) Restrict merge targets to the roots of branches only.  We'd need to
+     clearly define what this means and a way of identifying the root
+     (svn:is-root property?).
+   
+III) New svn_ra_get_location_segments2 API that accepts multiple paths.
+
+  This should aleviate the 'Implicit Mergeinfo Query Problem' somewhat
+  by allowing us to query the server one time for all the subtree's
+  implicit mergeinfo.
+
+IV) Cache natural history in the WC.
+
+  Uncertain how much this buys us.  The problem is the network round-trip
+  incurred when asking about subtree's natural history.  Caching the natural
+  history would not reduce the number of roundtrips, rather it would restrict
+  the revision range we pass to svn_ra_get_location_segments() in the feature
+  branch case.  Is there a use case where this would actually reduce server
+  queries?
+
+V) Implement smart(er) elision.
+
+    a) Client side: Something like 'svn elide TARGET' or
+       'svn merge --elide TARGET'.
+       
+        ### TODO: Pseudo code for this.
+
+    b) Server side: An svnadmin subcommand to do Va) server-side for the entire
+       repos. 
+
+VI) Mergeinfo2 property that stores only the diff between itself and
+    it's nearest parent with explicit mergeinfo.
+
+    ### TODO: Walk through the benefits here.

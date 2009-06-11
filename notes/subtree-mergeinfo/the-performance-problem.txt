@@ -539,10 +539,3 @@ on subversion/libsvn_client, because those revisions are inoperative on
 trunk/subversion/libsvn_client, the merge code will always consider those
 revisions eligible and try to merge them.  End result: Performance sapping
 inoperative editor drives.
-
-WHAT CAN BE DONE?
------------------
-
-Reduce the amount of subtree mergeinfo.
-
-
