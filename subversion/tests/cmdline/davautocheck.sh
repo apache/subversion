@@ -244,8 +244,8 @@ $LOAD_MOD_AUTHZ_HOST
 LoadModule          authz_svn_module "$MOD_AUTHZ_SVN"
 
 LockFile            lock
-User                $(whoami)
-Group               $(groups | awk '{print $1}')
+User                $(id -un)
+Group               $(id -gn)
 Listen              localhost:$HTTPD_PORT
 ServerName          localhost
 PidFile             "$HTTPD_PID"
