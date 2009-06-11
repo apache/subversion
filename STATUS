@@ -69,17 +69,33 @@ Candidate changes:
    Votes:
      +1: pburba, rhuijben
 
-  * r37988
-    Fix issue #3416, "Cannot add or commit 'dir/@file.txt'"
-    Justification:
-      Makes Subversion's behaviour regarding peg-revision parsing
-      consistent with what The Book describes, and makes all subcommands
-      properly deal with filenames starting with the '@' character.
-    Notes:
-      Doesn't merge cleanly (two tree conflicts), and needed an API
-      change for backport. Backport branch is at ^/branches/1.6.x-r37988
-    Votes:
-      +1: stsp
+ * r37907
+   Make the file-to-stringbuf functions a little smarter about memory usage.
+   Justification:
+     It isn't too often that we load files fully into memory, but it does
+     happen.  When it does, we'd like to do so as efficiently as we reasonably
+     can.
+   Votes:
+     +1: cmpilato
+
+ * r37908
+   Try to reduce the amount of memory consumed by property translation.
+   Justification:
+     Multiple copies of very large properties in memory at once?  Uncool.
+   Votes:
+     +1: cmpilato
+
+ * r37988
+   Fix issue #3416, "Cannot add or commit 'dir/@file.txt'"
+   Justification:
+     Makes Subversion's behaviour regarding peg-revision parsing
+     consistent with what The Book describes, and makes all subcommands
+     properly deal with filenames starting with the '@' character.
+   Notes:
+     Doesn't merge cleanly (two tree conflicts), and needed an API
+     change for backport. Backport branch is at ^/branches/1.6.x-r37988
+   Votes:
+     +1: stsp
 
 Approved changes:
 =================
