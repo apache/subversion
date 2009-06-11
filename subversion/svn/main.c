@@ -1133,6 +1133,10 @@ main(int argc, const char *argv[])
     }
 #endif
 
+#ifdef __USE_BSD
+  setenv("SVN_QAPPLICATION_SAFE", "1", 1);
+#endif
+
   /* Initialize the RA library. */
   err = svn_ra_initialize(pool);
   if (err)

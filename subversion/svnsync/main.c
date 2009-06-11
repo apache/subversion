@@ -2108,6 +2108,10 @@ main(int argc, const char *argv[])
 
   pool = svn_pool_create(NULL);
 
+#ifdef __USE_BSD
+  setenv("SVN_QAPPLICATION_SAFE", "1", 1);
+#endif
+
   err = svn_ra_initialize(pool);
   if (err)
     return svn_cmdline_handle_exit_error(err, pool, "svnsync: ");
