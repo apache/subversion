@@ -431,37 +431,23 @@ obstructed_or_missing(const char *path,
     return svn_wc_notify_state_obstructed;
 }
 
-/* Record a tree conflict in the WC, unless this is a dry run or a record-
- * only merge.
- *
- * The tree conflict, with its victim specified by VICTIM_PATH, is
- * assumed to have happened during a merge using merge baton MERGE_B.
- *
- * ADM_ACCESS must correspond to the victim's parent directory (even if
- * the victim is a directory).
- *
- * NODE_KIND must be the node kind of "old" and "theirs" and "mine";
- * this function cannot cope with node kind clashes.
- * ACTION and REASON correspond to the fields
- * of the same names in svn_wc_tree_conflict_description_t.
+/* Create a tree-conflict description in *CONFLICT.
+ * See tree_conflict() for function parameters.
  */
 static svn_error_t*
-tree_conflict(merge_cmd_baton_t *merge_b,
-              svn_wc_adm_access_t *adm_access,
-              const char *victim_path,
-              svn_node_kind_t node_kind,
-              svn_wc_conflict_action_t action,
-              svn_wc_conflict_reason_t reason)
+make_tree_conflict(svn_wc_conflict_description_t **conflict,
+                   merge_cmd_baton_t *merge_b,
+                   svn_wc_adm_access_t *adm_access,
+                   const char *victim_path,
+                   svn_node_kind_t node_kind,
+                   svn_wc_conflict_action_t action,
+                   svn_wc_conflict_reason_t reason)
 {
-  svn_wc_conflict_description_t *conflict;
   const char *src_repos_url;  /* root URL of source repository */
   const char *left_url;
   const char *right_url;
   svn_wc_conflict_version_t *left;
   svn_wc_conflict_version_t *right;
-
-  if (merge_b->record_only || merge_b->dry_run)
-    return SVN_NO_ERROR;
 
   SVN_ERR(svn_ra_get_repos_root2(merge_b->ra_session1, &src_repos_url,
                                  merge_b->pool));
@@ -494,12 +480,118 @@ tree_conflict(merge_cmd_baton_t *merge_b,
             svn_path_is_child(src_repos_url, right_url, merge_b->pool),
             merge_b->merge_source.rev2, node_kind, merge_b->pool);
 
-  conflict = svn_wc_conflict_description_create_tree(
+  *conflict = svn_wc_conflict_description_create_tree(
     victim_path, adm_access, node_kind, svn_wc_operation_merge,
     left, right, merge_b->pool);
 
-  conflict->action = action;
-  conflict->reason = reason;
+  (*conflict)->action = action;
+  (*conflict)->reason = reason;
+
+  return SVN_NO_ERROR;
+}
+
+/* Record a tree conflict in the WC, unless this is a dry run or a record-
+ * only merge.
+ *
+ * The tree conflict, with its victim specified by VICTIM_PATH, is
+ * assumed to have happened during a merge using merge baton MERGE_B.
+ *
+ * ADM_ACCESS must correspond to the victim's parent directory (even if
+ * the victim is a directory).
+ *
+ * NODE_KIND must be the node kind of "old" and "theirs" and "mine";
+ * this function cannot cope with node kind clashes.
+ * ACTION and REASON correspond to the fields
+ * of the same names in svn_wc_tree_conflict_description_t.
+ */
+static svn_error_t*
+tree_conflict(merge_cmd_baton_t *merge_b,
+              svn_wc_adm_access_t *adm_access,
+              const char *victim_path,
+              svn_node_kind_t node_kind,
+              svn_wc_conflict_action_t action,
+              svn_wc_conflict_reason_t reason)
+{
+  svn_wc_conflict_description_t *conflict;
+  svn_wc_conflict_description_t *existing_conflict;
+
+  if (merge_b->record_only || merge_b->dry_run)
+    return SVN_NO_ERROR;
+
+  /* Construct the new conflict first to get the proper conflict->path */
+  SVN_ERR(make_tree_conflict(&conflict, merge_b, adm_access, victim_path,
+                             node_kind, action, reason));
+
+  SVN_ERR(svn_wc__get_tree_conflict(&existing_conflict, conflict->path,
+                                    adm_access, merge_b->pool));
+
+  if (existing_conflict != NULL)
+    /* Re-adding an existing tree conflict victim is an error. */
+    return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
+                       _("Attempt to add tree conflict that already exists"));
+
+  SVN_ERR(svn_wc__add_tree_conflict(conflict, adm_access, merge_b->pool));
+  return SVN_NO_ERROR;
+}
+
+/* The same as tree_conflict(), but this one is called from
+   merge_*_added() and possibly collapses a new tree-conflict
+   with an existing one. */
+static svn_error_t*
+tree_conflict_on_add(merge_cmd_baton_t *merge_b,
+                     svn_wc_adm_access_t *adm_access,
+                     const char *victim_path,
+                     svn_node_kind_t node_kind,
+                     svn_wc_conflict_action_t action,
+                     svn_wc_conflict_reason_t reason)
+{
+  svn_wc_conflict_description_t *existing_conflict;
+  svn_wc_conflict_description_t *conflict;
+
+  if (merge_b->record_only || merge_b->dry_run)
+    return SVN_NO_ERROR;
+
+  /* Construct the new conflict first to get the proper conflict->path,
+     and also to compare the new conflict with a possibly existing one. */
+  SVN_ERR(make_tree_conflict(&conflict, merge_b, adm_access, victim_path,
+                             node_kind, action, reason));
+
+  SVN_ERR(svn_wc__get_tree_conflict(&existing_conflict, conflict->path,
+                                    adm_access, merge_b->pool));
+
+  if (existing_conflict != NULL)
+    {
+      /* A merge may send two separate tree-conflicts if the merge
+         replaces the item. This means merge will first set a tree-conflict
+         with an incoming "delete", and then one with an incoming "add". */
+      if (existing_conflict->action == svn_wc_conflict_action_delete
+          && conflict->action == svn_wc_conflict_action_add)
+        {
+          if (existing_conflict->node_kind == conflict->node_kind)
+            {
+              /* Same node kinds, this would be a replace, or, say,
+                 an add. We need to remove the existing tree-conflict
+                 and add this new one.*/
+/*              SVN_ERR(svn_wc__del_tree_conflict(conflict->path,*/
+/*                                                adm_access,*/
+/*                                                merge_b->pool));*/
+
+              if (existing_conflict->reason == svn_wc_conflict_reason_edited)
+                /* We simply replaced the contents on top of an edit.
+                   Don't add a new tree-conflict, merge normally. */
+                return SVN_NO_ERROR;
+            }
+          else
+            /* Else, the replace changed the node kind. Let's leave this
+               at the first delete after all. Nothing needs to be changed. */
+            return SVN_NO_ERROR;
+        }
+      else
+        /* Re-adding an existing tree conflict victim is an error in
+           all other cases (that are currently relevant). */
+        return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
+                       _("Attempt to add tree conflict that already exists"));
+    }
 
   SVN_ERR(svn_wc__add_tree_conflict(conflict, adm_access, merge_b->pool));
   return SVN_NO_ERROR;
@@ -1499,10 +1591,10 @@ merge_file_added(svn_wc_adm_access_t *adm_access,
        * conflict victim.
        * See notes about obstructions in notes/tree-conflicts/detection.txt.
        */
-      SVN_ERR(tree_conflict(merge_b, adm_access, mine,
-                            svn_node_file,
-                            svn_wc_conflict_action_add,
-                            svn_wc_conflict_reason_obstructed));
+      SVN_ERR(tree_conflict_on_add(merge_b, adm_access, mine,
+                                   svn_node_file,
+                                   svn_wc_conflict_action_add,
+                                   svn_wc_conflict_reason_obstructed));
       if (tree_conflicted)
         *tree_conflicted = TRUE;
       if (content_state)
@@ -1532,10 +1624,10 @@ merge_file_added(svn_wc_adm_access_t *adm_access,
                  * tree conflict victim. See notes about obstructions in
                  * notes/tree-conflicts/detection.txt.
                  */
-                SVN_ERR(tree_conflict(merge_b, adm_access, mine,
-                                      svn_node_file,
-                                      svn_wc_conflict_action_add,
-                                      svn_wc_conflict_reason_obstructed));
+                SVN_ERR(tree_conflict_on_add(
+                          merge_b, adm_access, mine, svn_node_file,
+                          svn_wc_conflict_action_add,
+                          svn_wc_conflict_reason_obstructed));
                 if (tree_conflicted)
                   *tree_conflicted = TRUE;
               }
