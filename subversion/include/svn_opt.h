@@ -752,7 +752,9 @@ svn_opt_print_help(apr_getopt_t *os,
  *
  * It is safe to pass the address of @a targets as @a true_targets_p.
  *
- * Do all allocations in @a pool. */
+ * Do all allocations in @a pool.
+ *
+ * @since New in 1.7. */
 svn_error_t *
 svn_opt_eat_peg_revisions(apr_array_header_t **true_targets_p,
                           apr_array_header_t *targets,
