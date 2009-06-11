@@ -58,7 +58,7 @@ Candidate changes:
    Justification:
      Multiple copies of very large properties in memory at once?  Uncool.
    Votes:
-     +1: cmpilato
+     +1: cmpilato, stsp
 
  * r37988
    Fix issue #3416, "Cannot add or commit 'dir/@file.txt'"
