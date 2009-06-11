@@ -62,7 +62,7 @@ Candidate changes:
      happen.  When it does, we'd like to do so as efficiently as we reasonably
      can.
    Votes:
-     +1: cmpilato
+     +1: cmpilato, stsp
 
  * r37908
    Try to reduce the amount of memory consumed by property translation.
