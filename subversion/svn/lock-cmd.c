@@ -99,5 +99,7 @@ svn_cl__lock(apr_getopt_t *os,
   svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2, FALSE,
                        FALSE, FALSE, pool);
 
+  SVN_ERR(svn_opt_eat_peg_revisions(&targets, targets, pool));
+
   return svn_client_lock(targets, comment, opt_state->force, ctx, pool);
 }

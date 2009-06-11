@@ -92,6 +92,8 @@ svn_cl__propdel(apr_getopt_t *os,
       ctx->notify_baton2 = &nwb;
     }
 
+  SVN_ERR(svn_opt_eat_peg_revisions(&targets, targets, pool));
+
   if (opt_state->revprop)  /* operate on a revprop */
     {
       svn_revnum_t rev;

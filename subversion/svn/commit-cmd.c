@@ -69,6 +69,8 @@ svn_cl__commit(apr_getopt_t *os,
   /* Add "." if user passed 0 arguments. */
   svn_opt_push_implicit_dot_target(targets, pool);
 
+  SVN_ERR(svn_opt_eat_peg_revisions(&targets, targets, pool));
+
   /* Condense the targets (like commit does)... */
   SVN_ERR(svn_path_condense_targets(&base_dir,
                                     &condensed_targets,
