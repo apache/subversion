@@ -1028,9 +1028,9 @@ svn_opt_print_help3(apr_getopt_t *os,
 }
 
 svn_error_t *
-svn_opt_eat_peg_revisions(apr_array_header_t **true_targets_p,
-                          apr_array_header_t *targets,
-                          apr_pool_t *pool)
+svn_opt__eat_peg_revisions(apr_array_header_t **true_targets_p,
+                           apr_array_header_t *targets,
+                           apr_pool_t *pool)
 {
   unsigned int i;
   apr_array_header_t *true_targets;

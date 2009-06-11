@@ -114,6 +114,27 @@ svn_opt__args_to_target_array(apr_array_header_t **targets_p,
                               apr_array_header_t *known_targets,
                               apr_pool_t *pool);
 
+/* Return, in @a *true_targets_p, a copy of @a targets with peg revision
+ * specifiers snipped off the end of each element.
+ *
+ * This function is useful for subcommands for which peg revisions
+ * do not make any sense. Such subcommands still need to allow peg
+ * revisions to be specified on the command line so that users of
+ * the command line client can consistently escape '@' characters
+ * in filenames by appending an '@' character, regardless of the
+ * subcommand being used.
+ *
+ * If a peg revision is present but cannot be parsed, an error is thrown.
+ * The user has likely forgotten to escape an '@' character in a filename.
+ *
+ * It is safe to pass the address of @a targets as @a true_targets_p.
+ *
+ * Do all allocations in @a pool. */
+svn_error_t *
+svn_opt__eat_peg_revisions(apr_array_header_t **true_targets_p,
+                           apr_array_header_t *targets,
+                           apr_pool_t *pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

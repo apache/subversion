@@ -29,6 +29,9 @@
 #include "svn_pools.h"
 #include "cl.h"
 
+/* We shouldn't be including a private header here, but it is
+ * necessary for fixing issue #3416 */
+#include "private/svn_opt_private.h"
 
 
 /*** Code. ***/
@@ -59,7 +62,7 @@ svn_cl__add(apr_getopt_t *os,
   if (opt_state->depth == svn_depth_unknown)
     opt_state->depth = svn_depth_infinity;
 
-  SVN_ERR(svn_opt_eat_peg_revisions(&targets, targets, pool));
+  SVN_ERR(svn_opt__eat_peg_revisions(&targets, targets, pool));
 
   subpool = svn_pool_create(pool);
   for (i = 0; i < targets->nelts; i++)
