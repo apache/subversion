@@ -55,20 +55,6 @@ Candidate changes:
      +1: arfrever
      -0: rhuijben, cmpilato (Introduces new features and changes output)
 
- * r37868, r37979
-   Fix memory leak in svn_hash_read2 and svn_hash_read_incremental by
-   using an iterpool for temporary allocations.
-   Justification:
-     This is a classic case for using an iterpool.  Without this change
-     memory use can get out of hand when reading hashes with large
-     values, e.g. think multi-10s-of-MB properties (Yes, I know people
-     *shouldn't* use prop vals that big, but enforcing it through OOM
-     failure is not the way to go).  In my own quick testing, committing
-     a 50MB property without this patch caused httpd memory to peak at
-     683 MB, with the patch peak memory use drops to 407 MB.
-   Votes:
-     +1: pburba, rhuijben
-
  * r37907
    Make the file-to-stringbuf functions a little smarter about memory usage.
    Justification:
@@ -99,3 +85,17 @@ Candidate changes:
 
 Approved changes:
 =================
+
+ * r37868, r37979
+   Fix memory leak in svn_hash_read2 and svn_hash_read_incremental by
+   using an iterpool for temporary allocations.
+   Justification:
+     This is a classic case for using an iterpool.  Without this change
+     memory use can get out of hand when reading hashes with large
+     values, e.g. think multi-10s-of-MB properties (Yes, I know people
+     *shouldn't* use prop vals that big, but enforcing it through OOM
+     failure is not the way to go).  In my own quick testing, committing
+     a 50MB property without this patch caused httpd memory to peak at
+     683 MB, with the patch peak memory use drops to 407 MB.
+   Votes:
+     +1: pburba, rhuijben, stsp
