@@ -445,11 +445,11 @@ concern is that, depending on the disposition of elision, we might end up
 with more subtrees with mergeinfo than we would have otherwise, making
 this problem worse.
 
-Use Case B.1 'Feature Branches' and the Implicit Mergeinfo Query Problem
+Use Case B.1 'Feature Branches' and the Inoperative Editor Drive Problem
 ------------------------------------------------------------------------
 
-Feature branches are where not recording inoperative subtree mergeinfo really
-hurts us over our present approach.  We'll start with the same branch(@37464)
+Not recording inoperative subtree mergeinfo really hurts performance when
+dealing with feature branches.  We'll start with the same branch(@37464)
 as at the start of the B.2 example above.  This time though we'll treat it
 like a feature branch and follow the branch changes, sync merge, reintegrate
 model.
