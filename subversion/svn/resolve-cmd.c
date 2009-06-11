@@ -91,6 +91,8 @@ svn_cl__resolve(apr_getopt_t *os,
   if (opt_state->depth == svn_depth_unknown)
     opt_state->depth = svn_depth_empty;
 
+  SVN_ERR(svn_opt_eat_peg_revisions(&targets, targets, pool));
+
   for (i = 0; i < targets->nelts; i++)
     {
       const char *target = APR_ARRAY_IDX(targets, i, const char *);

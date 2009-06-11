@@ -61,6 +61,7 @@ svn_cl__patch(apr_getopt_t *os,
 
   svn_opt_push_implicit_dot_target(targets, pool);
 
+  SVN_ERR(svn_opt_eat_peg_revisions(&targets, targets, pool));
   target_path = APR_ARRAY_IDX(targets, 0, const char *);
 
   if (! opt_state->quiet)

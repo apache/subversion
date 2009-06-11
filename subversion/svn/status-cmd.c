@@ -218,6 +218,8 @@ svn_cl__status(apr_getopt_t *os,
   sb.cached_changelists = master_cl_hash;
   sb.cl_pool = pool;
 
+  SVN_ERR(svn_opt_eat_peg_revisions(&targets, targets, pool));
+
   for (i = 0; i < targets->nelts; i++)
     {
       const char *target = APR_ARRAY_IDX(targets, i, const char *);

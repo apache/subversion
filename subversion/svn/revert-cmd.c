@@ -60,6 +60,8 @@ svn_cl__revert(apr_getopt_t *os,
   if (opt_state->depth == svn_depth_unknown)
     opt_state->depth = svn_depth_empty;
 
+  SVN_ERR(svn_opt_eat_peg_revisions(&targets, targets, pool));
+
   err = svn_client_revert2(targets, opt_state->depth,
                            opt_state->changelists, ctx, pool);
 
