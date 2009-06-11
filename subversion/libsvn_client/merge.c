@@ -572,14 +572,10 @@ tree_conflict_on_add(merge_cmd_baton_t *merge_b,
               /* Same node kinds, this would be a replace, or, say,
                  an add. We need to remove the existing tree-conflict
                  and add this new one.*/
-/*              SVN_ERR(svn_wc__del_tree_conflict(conflict->path,*/
-/*                                                adm_access,*/
-/*                                                merge_b->pool));*/
+              SVN_ERR(svn_wc__del_tree_conflict(conflict->path,
+                                                adm_access,
+                                                merge_b->pool));
 
-              if (existing_conflict->reason == svn_wc_conflict_reason_edited)
-                /* We simply replaced the contents on top of an edit.
-                   Don't add a new tree-conflict, merge normally. */
-                return SVN_NO_ERROR;
             }
           else
             /* Else, the replace changed the node kind. Let's leave this
