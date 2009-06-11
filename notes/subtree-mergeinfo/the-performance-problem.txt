@@ -261,7 +261,7 @@ are missing these revisions from trunk:
   'branches\b1.0\code\README':            r2, r4-20
 
 It doesn't matter that all of these revisions are noops on the paths in
-question on trunk -- the diff editor still gets driven becauase of this.
+question on trunk -- the diff editor still gets driven because of this.
 If we drop this following code snippet at the start of libsvn_client/merge.c:
 drive_merge_report_editor() and rerun the merge we see that this is
 happening.
@@ -371,14 +371,25 @@ subversion.open.collab.net/ds/viewMessage.do?dsForumId=4&dsMessageId=310927
 To get a feel of how bad performance can get I used a mirror of Subversion's
 trunk and made branch 'stmi-test' copied from trunk@36000.  Then I set
 empty mergeinfo on *every* subtree (1731 paths total) in that branch.
-Then I merged r36001-r36500 from trunk to the branch one revision at a time
-using a build of this branch (i.e. branches/subtree-mergeinfo) so subtree
-mergeinfo is not updated if the merge doesn't touch the subtree.
+
+Wait, you are probably wondering why, who would set empty mergeinfo on
+every subtree?  Nobody, but here we only want to create *some* kind of
+starting explicit subtree mergeinfo.  In the "real world" it might have
+come from subtree merges, shallow merges, Wc-to-WC copies made before we
+stopped recording mergeinfo on the desitination, etc., but the point is
+that a newly created branch can have subtree mergeinfo.
+
+Then, in r36965-r37464, I merged r36001-r36500 from trunk to the branch one
+revision at a time using a build of this branch (i.e.
+branches/subtree-mergeinfo) so subtree mergeinfo is not updated if the merge
+doesn't touch the subtree.
+
 Effectively this simulates the worst-case of use case B.1 'FEATURE BRANCHES'
 as this is the ultimate example of ongoing sync merges (i.e. a sync merge
-for each individual rev).  It also simulates the starting point of use case
-B.2 'RELEASE BRANCHES'.  The mergeinfo resulting from this can be found at
-notes/subtree-mergeinfo/full-mergeinfo-list-use-case-B1.txt.
+for each individual rev).  It also simulates the worst case use case
+B.2 'RELEASE BRANCHES' (i.e. every revision from trunk between r36001 and
+r36500 was individually backported).  The mergeinfo resulting from this can
+be found at notes/subtree-mergeinfo/full-mergeinfo-list-use-case-B1.txt.
 
 Let's look at B.2 'RELEASE BRANCHES' first because things aren't quite as
 bad as B.1 and some good (less bad?) news is needed in this discussion.
@@ -428,10 +439,106 @@ implicit mergeinfo to the cases where the answer wasn't already provided
 by the explicit mergeinfo.  But this change doesn't help us here because
 we've never merged r36501.  In fact, for this use case this "Implicit
 Mergeinfo Query Problem" is neither better nor worse if we don't record
-mergeinfo on untouched subtrees.
+mergeinfo on untouched subtrees.  So it would appear that we have nothing
+to lose in not recording inoperative subtree mergeinfo.  The only minor(?)
+concern is that, depending on the disposition of elision, we might end up
+with more subtrees with mergeinfo than we would have otherwise, making
+this problem worse.
 
 Use Case B.1 'Feature Branches' and the Implicit Mergeinfo Query Problem
 ------------------------------------------------------------------------
+
+Feature branches are where not recording inoperative subtree mergeinfo really
+hurts us over our present approach.  We'll start with the same branch(@37464)
+as at the start of the B.2 example above.  This time though we'll treat it
+like a feature branch and follow the branch changes, sync merge, reintegrate
+model.
+
+First we merge all available revisions from trunk (a sync merge).  Normally
+we do this by not specifying any explicit revision ranges, which implies a
+revision range of -r0:HEAD.  Here, to keep things comparable to the B.2
+example we'll act as if HEAD is r36501 by using an explicit range:
+
+  stmi>svn merge ^^/trunk . -r0:36501
+
+  ==========================================================
+  ===== DRIVE EDITOR 1
+  ===== http://localhost/svn-test-work/repositories/svn-MIRROR/trunk@36000:
+  ===== http://localhost/svn-test-work/repositories/svn-MIRROR/trunk@36007
+  ==========================================================
+
+  ==========================================================
+  ===== DRIVE EDITOR 2
+  ===== http://localhost/svn-test-work/repositories/svn-MIRROR/trunk@36007:
+  ===== http://localhost/svn-test-work/repositories/svn-MIRROR/trunk@36008
+  ==========================================================
+
+  .
+  .
+  .
+  <Snipped 318 inoperative editor drive notifications>
+  .
+  .
+  .
+  
+  ==========================================================
+  ===== DRIVE EDITOR 321
+  ===== http://localhost/svn-test-work/repositories/svn-MIRROR/trunk@36497:
+  ===== http://localhost/svn-test-work/repositories/svn-MIRROR/trunk@36498
+  ==========================================================
+
+  ==========================================================
+  ===== DRIVE EDITOR 322
+  ===== http://localhost/svn-test-work/repositories/svn-MIRROR/trunk@36498:
+  ===== http://localhost/svn-test-work/repositories/svn-MIRROR/trunk@36501
+  ==========================================================
+
+  --- Merging r36499 through r36501 into 'subversion\libsvn_wc\wc_db.c':
+  U    subversion\libsvn_wc\wc_db.c
+
+  stmi>svn st
+   M      .
+   M      subversion
+   M      subversion\libsvn_wc
+  MM      subversion\libsvn_wc\wc_db.c
+
+Ouch!  First it should be noted that the 1731 calls to
+svn_ra_get_location_segments() that happened in the B.2 example happen here
+too for that same reasons, so the 'Implicit Mergeinfo Query Problem' is alive
+and well.  On top of that there are 321 inoperative editor drives.  This is
+because, while r36001-36500 *has* been merged from trunk, the subtree
+mergeinfo on the branch does not explicitly reflect this.  We can see this if
+we look at the mergeinfo on a subtree prior to the merge (Note that only the
+operative merges done while merging r36001-36500, one revision at a time,
+were recorded here):
+
+  stmi>svn pg svn:mergeinfo -v subversion\libsvn_client
+  Properties on 'subversion\libsvn_client':
+    svn:mergeinfo
+      /trunk/subversion/libsvn_client:36049-36051,36103-36104,36106,36131,
+      36158,36170,36229,36236,36253,36256,36265,36269,36272,36279-36280,
+      36296-36297,36404,36420,36424-36426,36444,36459,36477
+
+Based on the explicit mergeinfo and natural history of
+subversion\libsvn_client it still appears that r36001-36048, r36052-36102,
+r36105, r36107-36130, r36132-36157, r36159-36169, r36171-36228, r36230-36235,
+r36237-36252, r36254-36255, r36257-36264, r36266-36268, r36270-36271,
+r36273-36278, r36281-36295, r36298-36403, r36405-36419, r36421-36423,
+r36427-36443, r36445-36458, r36460-36476, and r36478-36500 (whew!) all need
+to be merged from trunk/subversion/libsvn_client -- hence the hundreds of
+inoperative editor drives as the merge code tries to do just that.
+
+The merge can't diffrentiate this situation from one where subtree merges
+where done, e.g. maybe r36105 was operative but was reverse merged during a
+subtree merge to libsvn_client and a sync merge of this revision *would* be
+operative within the libsvn_client subtree.  Unfortunately, if we don't
+blindly update all the subtree mergeinfo to describe the sync merge then
+these inoperative editor drives happen every time.  In other words, because
+we are *never* going to set, say '/trunk/subversion/libsvn_client:36001-36048'
+on subversion/libsvn_client, because those revisions are inoperative on
+trunk/subversion/libsvn_client, the merge code will always consider those
+revisions eligible and try to merge them.  End result: Performance sapping
+inoperative editor drives.
 
 WHAT CAN BE DONE?
 -----------------
