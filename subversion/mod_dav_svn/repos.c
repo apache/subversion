@@ -1752,8 +1752,8 @@ do_out_of_date_check(dav_resource_combined *comb, request_rec *r)
  * opens the correct revision and path.
  */
 static dav_error *
-parse_querystring(const char *query, dav_resource_combined *comb,
-                  apr_pool_t *pool)
+parse_querystring(request_rec *r, const char *query,
+                  dav_resource_combined *comb, apr_pool_t *pool)
 {
   svn_error_t *serr;
   svn_revnum_t working_rev, peg_rev;
@@ -1786,16 +1786,34 @@ parse_querystring(const char *query, dav_resource_combined *comb,
                              "invalid working rev in query string");
     }
   else
-    /* No working-rev?  Assume it's equal to the peg-rev, just
-       like the cmdline client does. */
-    working_rev = peg_rev;
+    {
+      /* No working-rev?  Assume it's equal to the peg-rev, just
+         like the cmdline client does. */
+      working_rev = peg_rev;
+    }
 
-  if (working_rev == peg_rev)
-    comb->priv.root.rev = peg_rev;
-  else if (working_rev > peg_rev)
-    return dav_new_error(pool, HTTP_CONFLICT, 0,
+  /* If WORKING_REV is younger than PEG_REV, we have a problem.
+     Our node-tracing algorithms can't handle that scenario, so we'll
+     disallow it here. */
+  if (working_rev > peg_rev)
+    return dav_new_error(pool, HTTP_BAD_REQUEST, 0,
                          "working rev greater than peg rev.");
-  else /* working_rev < peg_rev */
+
+  /* If WORKING_REV and PEG_REV are equivalent, we want to return the
+     resource at the revision.  Otherwise, WORKING_REV is older than
+     PEG_REV, so we need to crawl back through the history of
+     REPOS_PATH@PEG_REV until we hit WORKING_REV.  We'll then redirect
+     the client to the new location/revision pair found by that crawl. */
+  if (working_rev == peg_rev)
+    {
+      comb->priv.root.rev = peg_rev;
+
+      /* Did we have a peg revision?  Remember this little fact (in
+         case deliver() needs to know it). */
+      if (prevstr)
+        comb->priv.pegged = TRUE;
+    }
+  else
     {
       const char *newpath;
       apr_hash_t *locations;
@@ -1807,23 +1825,36 @@ parse_querystring(const char *query, dav_resource_combined *comb,
       arb->repos = comb->priv.repos;
 
       APR_ARRAY_PUSH(loc_revs, svn_revnum_t) = working_rev;
-      serr = svn_repos_trace_node_locations(comb->priv.repos->fs, &locations,
-                                            comb->priv.repos_path, peg_rev,
-                                            loc_revs,
-                                            dav_svn__authz_read_func(arb),
-                                            arb, pool);
-      if (serr != NULL)
+      if ((serr = svn_repos_trace_node_locations(comb->priv.repos->fs,
+                                                 &locations,
+                                                 comb->priv.repos_path,
+                                                 peg_rev,
+                                                 loc_revs,
+                                                 dav_svn__authz_read_func(arb),
+                                                 arb,
+                                                 pool)))
         return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                     "Couldn't trace history.", pool);
+
       newpath = apr_hash_get(locations, &working_rev, sizeof(svn_revnum_t));
-      if (newpath != NULL)
-        {
-          comb->priv.root.rev = working_rev;
-          comb->priv.repos_path = newpath;
-        }
-      else
+      if (! newpath)
         return dav_new_error(pool, HTTP_NOT_FOUND, 0,
                              "path doesn't exist in that revision.");
+
+      /* Redirect folks to a canonical, peg-revision-only location.
+         If they used a peg revision in this request, we can use a
+         permanent redirect.  If they didn't (peg-rev is HEAD), we can
+         only use a temporary redirect. */
+      apr_table_setn(r->headers_out, "Location",
+                     ap_construct_url(r->pool,
+                                      apr_psprintf(r->pool, "%s%s?p=%ld",
+                                                   comb->priv.repos->root_path,
+                                                   newpath, working_rev),
+                                      r));
+      return dav_new_error(r->pool,
+                           prevstr ? HTTP_MOVED_PERMANENTLY
+                                   : HTTP_MOVED_TEMPORARILY,
+                           0, "redirecting to canonical location");
     }
 
   return NULL;
@@ -2188,9 +2219,9 @@ get_resource(request_rec *r,
      us to discover and parse  a "universal" rev-path URI of the form
      "path?[r=REV][&p=PEGREV]" */
   if ((comb->res.type == DAV_RESOURCE_TYPE_REGULAR)
-      && (r->parsed_uri.query != NULL))
-    if ((err = parse_querystring(r->parsed_uri.query, comb, r->pool)) != NULL)
-      return err;
+      && (r->parsed_uri.query != NULL)
+      && ((err = parse_querystring(r, r->parsed_uri.query, comb, r->pool))))
+    return err;
 
 #ifdef SVN_DEBUG
   if (comb->res.type == DAV_RESOURCE_TYPE_UNKNOWN)
@@ -2211,10 +2242,11 @@ get_resource(request_rec *r,
   if (comb->res.collection && comb->res.type == DAV_RESOURCE_TYPE_REGULAR
       && !had_slash && r->method_number == M_GET)
     {
-      /* note that we drop r->args. we don't deal with them anyways */
       const char *new_path = apr_pstrcat(r->pool,
                                          ap_escape_uri(r->pool, r->uri),
                                          "/",
+                                         r->args ? "?" : "",
+                                         r->args ? r->args : "",
                                          NULL);
       apr_table_setn(r->headers_out, "Location",
                      ap_construct_url(r->pool, new_path, r));
@@ -3270,9 +3302,21 @@ deliver(const dav_resource *resource, ap_filter_t *output)
 
           if (gen_html)
             {
-              ap_fprintf(output, bb,
-                         "  <li><a href=\"%s\">%s</a></li>\n",
-                         href, name);
+              /* If our directory was access using the public peg-rev
+                 CGI query interface, we'll let its dirents carry that
+                 peg-rev, too. */
+              if (resource->info->pegged)
+                {
+                  ap_fprintf(output, bb,
+                             "  <li><a href=\"%s?p=%ld\">%s</a></li>\n",
+                             href, resource->info->root.rev, name);
+                }
+              else
+                {
+                  ap_fprintf(output, bb,
+                             "  <li><a href=\"%s\">%s</a></li>\n",
+                             href, name);
+                }
             }
           else
             {
@@ -3280,9 +3324,21 @@ deliver(const dav_resource *resource, ap_filter_t *output)
 
               /* This is where we could search for props */
 
-              ap_fprintf(output, bb,
-                         "    <%s name=\"%s\" href=\"%s\" />\n",
-                         tag, name, href);
+              /* If our directory was access using the public peg-rev
+                 CGI query interface, we'll let its dirents carry that
+                 peg-rev, too. */
+              if (resource->info->pegged)
+                {
+                  ap_fprintf(output, bb,
+                             "    <%s name=\"%s\" href=\"%s?p=%ld\" />\n",
+                             tag, name, href, resource->info->root.rev);
+                }
+              else
+                {
+                  ap_fprintf(output, bb,
+                             "    <%s name=\"%s\" href=\"%s\" />\n",
+                             tag, name, href);
+                }
             }
         }
 
