@@ -225,9 +225,7 @@ svn_fs_base__revision_prop(svn_string_t **value_p,
                                  FALSE, pool));
 
   /* And then the prop from that list (if there was a list). */
-  *value_p = NULL;
-  if (table)
-    *value_p = apr_hash_get(table, propname, APR_HASH_KEY_STRING);
+  *value_p = apr_hash_get(table, propname, APR_HASH_KEY_STRING);
 
   return SVN_NO_ERROR;
 }
@@ -513,9 +511,8 @@ svn_fs_base__txn_prop(svn_string_t **value_p,
                                  FALSE, pool));
 
   /* And then the prop from that list (if there was a list). */
-  *value_p = NULL;
-  if (table)
-    *value_p = apr_hash_get(table, propname, APR_HASH_KEY_STRING);
+  *value_p = apr_hash_get(table, propname, APR_HASH_KEY_STRING);
+
   return SVN_NO_ERROR;
 }
 
