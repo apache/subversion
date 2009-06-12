@@ -59,11 +59,3 @@ Candidate changes:
 Approved changes:
 =================
 
- * r37907
-   Make the file-to-stringbuf functions a little smarter about memory usage.
-   Justification:
-     It isn't too often that we load files fully into memory, but it does
-     happen.  When it does, we'd like to do so as efficiently as we reasonably
-     can.
-   Votes:
-     +1: cmpilato, stsp, rhuijben
