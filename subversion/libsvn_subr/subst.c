@@ -1556,6 +1556,7 @@ svn_subst_translate_string(svn_string_t **new_value,
 {
   const char *val_utf8;
   const char *val_utf8_lf;
+  apr_pool_t *scratch_pool = svn_pool_create(pool);
 
   if (value == NULL)
     {
@@ -1566,11 +1567,11 @@ svn_subst_translate_string(svn_string_t **new_value,
   if (encoding)
     {
       SVN_ERR(svn_utf_cstring_to_utf8_ex2(&val_utf8, value->data,
-                                          encoding, pool));
+                                          encoding, scratch_pool));
     }
   else
     {
-      SVN_ERR(svn_utf_cstring_to_utf8(&val_utf8, value->data, pool));
+      SVN_ERR(svn_utf_cstring_to_utf8(&val_utf8, value->data, scratch_pool));
     }
 
   SVN_ERR(svn_subst_translate_cstring2(val_utf8,
@@ -1579,10 +1580,10 @@ svn_subst_translate_string(svn_string_t **new_value,
                                        FALSE, /* no repair */
                                        NULL,  /* no keywords */
                                        FALSE, /* no expansion */
-                                       pool));
-
+                                       scratch_pool));
+  
   *new_value = svn_string_create(val_utf8_lf, pool);
-
+  svn_pool_destroy(scratch_pool);
   return SVN_NO_ERROR;
 }
 
