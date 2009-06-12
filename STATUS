@@ -56,6 +56,20 @@ Candidate changes:
    Votes:
      +1: stsp
 
+ * r38015, r38017
+   Don't delete unversioned files and directories when calling
+   $ svn rm --keep-local file
+   on them.
+   Justification:
+     Accidently calling svn rm --keep-local file twice on a new file or
+     directory deleted the local copy. I should have used revert, but we
+     shouldn't lose user data this way.
+   Notes:
+     The new test added in r38015 succeeds on ^/trunk (via the WC-NG work)
+     but fails on ^/branches/1.6.x.
+   Votes:
+     +1: rhuijben
+
 Approved changes:
 =================
 
