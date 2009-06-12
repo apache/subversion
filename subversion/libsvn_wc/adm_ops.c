@@ -1156,7 +1156,13 @@ svn_wc_delete3(const char *path,
     entry = NULL;
 
   if (!entry)
-    return erase_unversioned_from_wc(path, cancel_func, cancel_baton, pool);
+    {
+      if (!keep_local)
+        SVN_ERR(erase_unversioned_from_wc(path, cancel_func, cancel_baton,
+                pool));
+
+      return SVN_NO_ERROR;
+    }
 
   /* A file external should not be deleted since the file external is
      implemented as a switched file and it would delete the file the
