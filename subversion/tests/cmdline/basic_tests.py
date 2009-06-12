@@ -1848,7 +1848,7 @@ def delete_keep_local(sbox):
                                         expected_status)
 
 def delete_keep_local_twice(sbox):
-  'delete file and directory with --keep-local 2 times'
+  'delete file and directory with --keep-local twice'
   
   sbox.build()
   wc_dir = sbox.wc_dir
