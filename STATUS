@@ -56,7 +56,7 @@ Candidate changes:
    Votes:
      +1: stsp
 
- * r38015, r38017
+ * r38015, r38017, r38019
    Don't delete unversioned files and directories when calling
    $ svn rm --keep-local file
    on them.
@@ -68,7 +68,7 @@ Candidate changes:
      The new test added in r38015 succeeds on ^/trunk (via the WC-NG work)
      but fails on ^/branches/1.6.x.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, stsp
 
 Approved changes:
 =================
