@@ -138,20 +138,18 @@ get_parent_pid(pid_t pid, apr_pool_t *pool)
   pid_t parent_pid = 0;
 
 #ifdef __linux__
-  svn_error_t *err;
-  const char *path;
-  svn_stream_t *stream;
-  svn_string_t *string;
+  svn_stream_t *stat_file_stream;
+  svn_string_t *stat_file_string;
   const char *preceeding_space, *following_space, *parent_pid_string;
 
-  path = apr_psprintf(pool, "/proc/%ld/stat", long(pid));
-  err = svn_stream_open_readonly(&stream, path, pool, pool);
+  const char *path = apr_psprintf(pool, "/proc/%ld/stat", long(pid));
+  svn_error_t *err = svn_stream_open_readonly(&stat_file_stream, path, pool, pool);
   if (err == SVN_NO_ERROR)
     {
-      err = svn_string_from_stream(&string, stream, pool, pool);
+      err = svn_string_from_stream(&stat_file_string, stat_file_stream, pool, pool);
       if (err == SVN_NO_ERROR)
         {
-          if ((preceeding_space = strchr(string->data, ' ' )))
+          if ((preceeding_space = strchr(stat_file_string->data, ' ')))
             {
               if ((preceeding_space = strchr(preceeding_space + 1, ' ')))
                 {
@@ -197,19 +195,19 @@ get_wid(apr_pool_t *pool)
                                        NET::WMPid).pid()] = *i;
         }
 
-      apr_pool_t *subpool = svn_pool_create(pool);
+      apr_pool_t *iterpool = svn_pool_create(pool);
       pid_t pid = getpid();
       while (pid != 0)
         {
-          svn_pool_clear(subpool);
+          svn_pool_clear(iterpool);
           if (process_info_list.contains(pid))
             {
               wid = process_info_list[pid];
               break;
             }
-          pid = get_parent_pid(pid, pool);
+          pid = get_parent_pid(pid, iterpool);
         }
-      svn_pool_destroy(subpool);
+      svn_pool_destroy(iterpool);
     }
 
   return wid;
