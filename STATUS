@@ -53,13 +53,6 @@ Candidate changes:
    Votes:
      +1: cmpilato, stsp
 
- * r37908
-   Try to reduce the amount of memory consumed by property translation.
-   Justification:
-     Multiple copies of very large properties in memory at once?  Uncool.
-   Votes:
-     +1: cmpilato, stsp
-
  * r37988
    Fix issue #3416, "Cannot add or commit 'dir/@file.txt'"
    Justification:
@@ -85,3 +78,10 @@ Approved changes:
      changes to subversion/tests/cmdline/switch_tests.py that will result.
    Votes:
      +1: pburba, rhuijben, stsp (and what about r36271?)
+
+ * r37908
+   Try to reduce the amount of memory consumed by property translation.
+   Justification:
+     Multiple copies of very large properties in memory at once?  Uncool.
+   Votes:
+     +1: cmpilato, stsp, pburba
