@@ -1133,7 +1133,8 @@ main(int argc, const char *argv[])
     }
 #endif
 
-#ifdef __USE_BSD
+#ifdef HAVE_SETENV
+  /* svn can safely create instance of QApplication class. */
   setenv("SVN_QAPPLICATION_SAFE", "1", 1);
 #endif
 

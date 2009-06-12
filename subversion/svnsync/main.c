@@ -2108,7 +2108,8 @@ main(int argc, const char *argv[])
 
   pool = svn_pool_create(NULL);
 
-#ifdef __USE_BSD
+#ifdef HAVE_SETENV
+  /* svnsync can safely create instance of QApplication class. */
   setenv("SVN_QAPPLICATION_SAFE", "1", 1);
 #endif
 
