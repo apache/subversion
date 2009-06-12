@@ -1847,6 +1847,23 @@ def delete_keep_local(sbox):
                                         expected_disk,
                                         expected_status)
 
+def delete_keep_local_twice(sbox):
+  'delete file and directory with --keep-local 2 times'
+  
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  
+  dir = os.path.join(wc_dir, 'dir')
+  
+  svntest.actions.run_and_verify_svn(None, None, [], 'mkdir', dir)
+  
+  svntest.actions.run_and_verify_svn(None, None, [], 'rm', '--keep-local', dir)
+  svntest.actions.run_and_verify_svn(None, None, [], 'rm', '--keep-local', dir)
+  
+  if not os.path.isdir(dir):
+    print 'Directory was really deleted'
+    raise svntest.Failure
+
 def windows_paths_in_repos(sbox):
   "use folders with names like 'c:hi'"
 
@@ -2488,6 +2505,7 @@ test_list = [ None,
               cat_added_PREV,
               ls_space_in_repo_name,
               delete_keep_local,
+              delete_keep_local_twice,
               windows_paths_in_repos,
               basic_rm_urls_one_repo,
               XFail(basic_rm_urls_multi_repos),
