@@ -106,10 +106,9 @@ class FunctionTestCase(TestCase):
 
     TestCase.__init__(self, doc=doc)
     self.func = func
-    self.func_name = name
 
   def get_function_name(self):
-    return self.func_name
+    return self.func.func_name
 
   def get_sandbox_name(self):
     """Base the sandbox's name on the name of the file in which the
