@@ -1093,6 +1093,9 @@ class TestRunner:
                                    self.pred.list_mode(),
                                    self.pred.description))
 
+  def get_function_name(self):
+    return self.pred.get_function_name()
+
   def _print_name(self, prefix):
     if self.pred.inprogress:
       print("%s %s %s: %s [[WIMP: %s]]" % (prefix,
@@ -1268,7 +1271,8 @@ def usage():
   print("Arguments:")
   print(" <test>  The number of the test to run, or a range of test\n"
         "         numbers, like 10:12 or 10-12. Multiple numbers and\n"
-        "         ranges are ok. If you supply none, all tests are run.\n")
+        "         ranges are ok. If you supply none, all tests are run.\n"
+        "         You can also pass the name of a test function to run.\n")
   print("Options:")
   print(" --list          Print test doc strings instead of running them")
   print(" --fs-type       Subversion file system type (fsfs or bdb)")
@@ -1388,7 +1392,21 @@ def run_tests(test_list, serial_only = False):
           appended = False
 
       if not appended:
-        print("ERROR: invalid test number or range '%s'\n" % arg)
+        try:
+          # Check if the argument is a function name, and translate
+          # it to a number if possible
+          for testnum in list(range(1, len(test_list))):
+            test_case = TestRunner(test_list[testnum], testnum)
+            if test_case.get_function_name() == str(arg):
+              testnums.append(testnum)
+              appended = True
+              break
+        except ValueError:
+          appended = False
+
+      if not appended:
+        print("ERROR: invalid test number, range of numbers, " +
+              "or function '%s'\n" % arg)
         usage()
         sys.exit(1)
 
