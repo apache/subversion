@@ -339,7 +339,7 @@ svn_wc_adm_probe_open(svn_wc_adm_access_t **adm_access,
  *
  * @a levels_to_lock determines the levels_to_lock used when opening
  * @a path if @a path is a versioned directory, @a levels_to_lock is
- * ignored otherwise.  If @a write_lock is  @c TRUE the access batons
+ * ignored otherwise.  If @a write_lock is @c TRUE the access batons
  * will hold write locks.
  *
  * If @a cancel_func is non-NULL, call it with @a cancel_baton to determine
@@ -716,7 +716,7 @@ svn_wc_external_item_dup(const svn_wc_external_item_t *item,
  * and don't care about the parsed result, pass NULL for @a externals_p.
  *
  * The format of @a desc is the same as for values of the directory
- * property @c SVN_PROP_EXTERNALS, look there for more details.
+ * property @c SVN_PROP_EXTERNALS.  Look there for more details.
  *
  * Allocate the table, keys, and values in @a pool.
  *
@@ -2423,7 +2423,7 @@ typedef struct svn_wc_entry_t
    * @since New in 1.6. */
   svn_opt_revision_t file_external_peg_rev;
 
-  /** The entry is a intra-repository file external and this is the
+  /** The entry is an intra-repository file external and this is the
    * operative revision number specified in the externals definition.
    * This field is only valid when the file_external_path field is
    * non-NULL.  The only permissible values are
@@ -3546,7 +3546,7 @@ svn_wc_delete(const char *path,
  *       -  ### @todo Remove old wcprops too, see the '###' below.
  *
  *<pre> ### I think possibly the "switchover" functionality should be
- * ### broken out into a separate function, but its all intertwined in
+ * ### broken out into a separate function, but it's all intertwined in
  * ### the code right now.  Ben, thoughts?  Hard?  Easy?  Mauve?</pre>
  *
  * ### Update: see "###" comment in svn_wc_add_repos_file3()'s doc
@@ -4060,7 +4060,7 @@ svn_wc_process_committed(const char *path,
  * to @a reporter/@a report_baton.  Obviously, if @a path is a file
  * instead of a directory, this depth-first crawl will be a short one.
  *
- * No locks are or logs are created, nor are any animals harmed in the
+ * No locks or logs are created, nor are any animals harmed in the
  * process.  No cleanup is necessary.  @a adm_access must be an access
  * baton for the @a path hierarchy, it does not require a write lock.
  *
@@ -5756,20 +5756,52 @@ svn_wc_match_ignore_list(const char *str,
                          apr_pool_t *pool);
 
 
-/** Add @a lock to the working copy for @a path.  @a adm_access must contain
- * a write lock for @a path.  If @a path is read-only, due to locking
- * properties, make it writable.  Perform temporary allocations in @a
- * pool. */
+/** Add @a lock to the working copy for @a local_abspath.  If @a
+ * local_abspath is read-only, due to locking properties, make it writable.
+ * Perform temporary allocations in @a scratch_pool.
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_wc_add_lock2(svn_wc_context_t *wc_ctx,
+                 const char *abspath,
+                 const svn_lock_t *lock,
+                 apr_pool_t *scratch_pool);
+
+/**
+ * Similar to svn_wc_add_lock2(), but with a @c svn_wc_adm_access_t /
+ * relative path parameter pair.
+ * 
+ * @deprecated Provided for backward compatibility with the 1.6 API.
+ * @since New in 1.2.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_add_lock(const char *path,
                 const svn_lock_t *lock,
                 svn_wc_adm_access_t *adm_access,
                 apr_pool_t *pool);
 
-/** Remove any lock from @a path.  @a adm_access must contain a
- * write-lock for @a path.  If @a path has a lock and the locking
- * so specifies, make the file read-only.  Don't return an error if @a
- * path didn't have a lock.  Perform temporary allocations in @a pool. */
+/** Remove any lock from @a local_abspath.  If @a local_abspath has a
+ * lock and the locking so specifies, make the file read-only.  Don't
+ * return an error if @a path didn't have a lock.  Perform temporary
+ * allocations in @a scratch_pool.
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_wc_remove_lock2(svn_wc_context_t *wc_ctx,
+                    const char *local_abspath,
+                    apr_pool_t *scratch_pool);
+
+/**
+ * Similar to svn_wc_remove_lock2(), but with a @c svn_wc_adm_access_t /
+ * relative path parameter pair.
+ *
+ * @deprecated Provided for backward compatibility with the 1.6 API.
+ * @since New in 1.7.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_remove_lock(const char *path,
                    svn_wc_adm_access_t *adm_access,

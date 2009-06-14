@@ -327,7 +327,7 @@ get_copyfrom_url_rev_via_parent(const char *src_path,
   const char *rest;
   const char *abs_src_path;
 
-  SVN_ERR(svn_path_get_absolute(&abs_src_path, src_path, pool));
+  SVN_ERR(svn_dirent_get_absolute(&abs_src_path, src_path, pool));
 
   svn_dirent_split(abs_src_path, &parent_path, &rest, pool);
 
@@ -515,7 +515,7 @@ copy_file_administratively(const char *src_path,
 
     /* Load source base and working props. */
     db = svn_wc__adm_get_db(src_access);
-    SVN_ERR(svn_path_get_absolute(&src_local_abspath, src_path, pool));
+    SVN_ERR(svn_dirent_get_absolute(&src_local_abspath, src_path, pool));
     SVN_ERR(svn_wc__load_props(&base_props, &props, NULL, db,
                                src_local_abspath, pool, pool));
 
@@ -523,7 +523,7 @@ copy_file_administratively(const char *src_path,
     {
       svn_boolean_t special;
 
-      SVN_ERR(svn_wc__get_special(&special, src_path, src_access, pool));
+      SVN_ERR(svn_wc__get_special(&special, db, src_local_abspath, pool));
       if (special)
         {
           SVN_ERR(svn_subst_read_specialfile(&contents, src_path,
@@ -536,10 +536,10 @@ copy_file_administratively(const char *src_path,
           apr_hash_t *keywords;
           svn_error_t *err = SVN_NO_ERROR;
 
-          SVN_ERR(svn_wc__get_keywords(&keywords, src_path, src_access, NULL,
-                                       pool));
-          SVN_ERR(svn_wc__get_eol_style(&eol_style, &eol_str, src_path,
-                                        src_access, pool));
+          SVN_ERR(svn_wc__get_keywords(&keywords, db, src_local_abspath, NULL,
+                                       pool, pool));
+          SVN_ERR(svn_wc__get_eol_style(&eol_style, &eol_str, db,
+                                        src_local_abspath, pool, pool));
 
           /* Try with the working file and fallback on its text-base. */
           err = svn_stream_open_readonly(&contents, src_path, pool, pool);

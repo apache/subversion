@@ -138,7 +138,12 @@ sock_read_cb(void *baton, char *buffer, apr_size_t *len)
   if (status)
     return svn_error_wrap_apr(status, _("Can't get socket timeout"));
 
-  /* Always block on read. */
+  /* Always block on read.
+   * During pipelining, we set the timeout to 0 for some write
+   * operations so that we can try them without blocking. If APR had
+   * separate timeouts for read and write, we would only set the
+   * write timeout, but it doesn't. So here, we revert back to blocking.
+   */
   apr_socket_timeout_set(b->sock, -1);
   status = apr_socket_recv(b->sock, buffer, len);
   apr_socket_timeout_set(b->sock, interval);

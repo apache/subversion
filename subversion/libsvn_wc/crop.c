@@ -65,92 +65,92 @@ crop_children(svn_wc__db_t *db,
               apr_pool_t *pool)
 {
   const char *local_dir_abspath;
-  apr_hash_t *entries;
-  apr_hash_index_t *hi;
-  svn_wc_adm_access_t *dir_access;
-  const svn_wc_entry_t *dot_entry;
+  const apr_array_header_t *children;
+  svn_depth_t dir_depth;
   apr_pool_t *iterpool;
+  int i;
 
   SVN_ERR_ASSERT(depth != svn_depth_exclude);
 
   SVN_ERR(svn_dirent_get_absolute(&local_dir_abspath, dir_path, pool));
 
-  dir_access = svn_wc__adm_retrieve_internal2(db, local_dir_abspath, pool);
-  SVN_ERR_ASSERT(dir_access != NULL);
-
-  SVN_ERR(svn_wc_entries_read(&entries, dir_access, TRUE, pool));
-  dot_entry = apr_hash_get(entries, SVN_WC_ENTRY_THIS_DIR,
-                           APR_HASH_KEY_STRING);
+  SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, &dir_depth,
+                               NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL,
+                               db, local_dir_abspath, pool, pool));
 
   /* Update the depth of target first, if needed. */
-  if (dot_entry->depth > depth)
+  if (dir_depth > depth)
     {
       SVN_ERR(svn_wc__set_depth(db, local_dir_abspath, depth, pool));
     }
 
   /* Looping over current directory's SVN entries: */
+  SVN_ERR(svn_wc__db_read_children(&children, db, local_dir_abspath, pool,
+                                   pool));
   iterpool = svn_pool_create(pool);
 
-  for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
+  for (i = 0; i < children->nelts; i++)
     {
-      const void *key;
-      const char *this_path;
-      void *val;
-      apr_ssize_t klen;
-      const svn_wc_entry_t *current_entry;
+      const char *child_name = APR_ARRAY_IDX(children, i, const char *);
+      const char *child_abspath;
+      svn_wc__db_kind_t kind;
+      svn_depth_t child_depth;
+
       svn_pool_clear(iterpool);
 
       /* Get the next entry */
-      apr_hash_this(hi, &key, &klen, &val);
-      if (! strcmp(key, SVN_WC_ENTRY_THIS_DIR))
-        continue;
+      child_abspath = svn_dirent_join(local_dir_abspath, child_name, iterpool);
 
-      current_entry = val;
-      this_path = svn_dirent_join(dir_path, current_entry->name, iterpool);
+      SVN_ERR(svn_wc__db_read_info(NULL, &kind, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, &child_depth,
+                                   NULL, NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, NULL, NULL,
+                                   db, child_abspath, iterpool, iterpool));
 
-      if (current_entry->kind == svn_node_file)
+      if (kind == svn_wc__db_kind_file)
         {
           /* We currently crop on a directory basis. So don't worry about
              svn_depth_exclude here. And even we permit excluding a single
              file in the future, svn_wc_remove_from_revision_control() can
              also handle it. We only need to skip the notification in that
              case. */
+          svn_wc_adm_access_t *dir_access = svn_wc__adm_retrieve_internal2(
+                                                  db, local_dir_abspath, pool);
+          SVN_ERR_ASSERT(dir_access != NULL);
+             
           if (depth == svn_depth_empty)
             IGNORE_LOCAL_MOD
-              (svn_wc_remove_from_revision_control(dir_access,
-                                                   current_entry->name,
+              (svn_wc_remove_from_revision_control(dir_access, child_name,
                                                    TRUE, /* destroy */
                                                    FALSE, /* instant error */
-                                                   cancel_func,
-                                                   cancel_baton,
+                                                   cancel_func, cancel_baton,
                                                    iterpool));
           else
             continue;
 
         }
-      else if (current_entry->kind == svn_node_dir)
+      else if (kind == svn_wc__db_kind_dir)
         {
-          if (current_entry->depth == svn_depth_exclude)
+          const char *this_path = svn_dirent_join(dir_path, child_name,
+                                                  iterpool);
+
+          if (child_depth == svn_depth_exclude)
             {
               /* Preserve the excluded entry if the parent need it.
                  Anyway, don't report on excluded subdir, since they are
                  logically not exist. */
               if (depth < svn_depth_immediates)
-                {
-                  const char *local_abspath;
-
-                  local_abspath = svn_dirent_join(local_dir_abspath,
-                                                  current_entry->name,
-                                                  iterpool);
-                  SVN_ERR(svn_wc__entry_remove(db, local_abspath, iterpool));
-                  apr_hash_set(entries, current_entry->name,
-                               APR_HASH_KEY_STRING, NULL);
-                }
+                SVN_ERR(svn_wc__entry_remove(db, child_abspath, iterpool));
               continue;
             }
           else if (depth < svn_depth_immediates)
             {
               svn_wc_adm_access_t *child_access;
+              svn_wc_adm_access_t *dir_access = svn_wc__adm_retrieve_internal2(
+                                                  db, local_dir_abspath, pool);
+              SVN_ERR_ASSERT(dir_access != NULL);
               SVN_ERR(svn_wc_adm_retrieve(&child_access, dir_access,
                                           this_path, iterpool));
 
@@ -180,13 +180,13 @@ crop_children(svn_wc__db_t *db,
         {
           return svn_error_createf
             (SVN_ERR_NODE_UNKNOWN_KIND, NULL, _("Unknown entry kind for '%s'"),
-             svn_path_local_style(this_path, iterpool));
+             svn_path_local_style(child_abspath, iterpool));
         }
 
       if (notify_func)
         {
           svn_wc_notify_t *notify;
-          notify = svn_wc_create_notify(this_path,
+          notify = svn_wc_create_notify(child_abspath,
                                         svn_wc_notify_delete,
                                         iterpool);
           (*notify_func)(notify_baton, notify, iterpool);

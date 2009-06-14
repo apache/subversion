@@ -261,7 +261,7 @@ svn_wc__do_update_cleanup(const char *path,
   svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
   const char *local_abspath;
 
-  SVN_ERR(svn_path_get_absolute(&local_abspath, path, pool));
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
   SVN_ERR(svn_wc_entry(&entry, path, adm_access, TRUE, pool));
   if (entry == NULL)
@@ -331,7 +331,7 @@ svn_wc_maybe_set_repos_root(svn_wc_adm_access_t *adm_access,
       svn_wc__db_t *db = svn_wc__adm_get_db(dir_access);
       const char *local_abspath;
 
-      SVN_ERR(svn_path_get_absolute(&local_abspath, path, pool));
+      SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
       SVN_ERR(svn_wc__tweak_entry(db, local_abspath, NULL, repos,
                             SVN_INVALID_REVNUM,
                             strcmp(base_name, SVN_WC_ENTRY_THIS_DIR) == 0,
@@ -878,7 +878,7 @@ mark_tree(svn_wc_adm_access_t *adm_access,
       base_name = key;
       fullpath = svn_dirent_join(svn_wc_adm_access_path(adm_access), base_name,
                                  subpool);
-      SVN_ERR(svn_path_get_absolute(&local_abspath, fullpath, subpool));
+      SVN_ERR(svn_dirent_get_absolute(&local_abspath, fullpath, subpool));
 
       /* If this is a directory, recurse. */
       if (entry->kind == svn_node_dir)
@@ -919,7 +919,9 @@ mark_tree(svn_wc_adm_access_t *adm_access,
 
   /* Uncommitted directories (schedule add) that are to be scheduled for
      deletion are a special case, they don't need to be changed as they
-     will be removed from their parent's entry list. */
+     will be removed from their parent's entry list.
+     The files and directories are left on the disk in this special
+     case, so KEEP_LOCAL doesn't need to be set either. */
   if (! (entry->schedule == svn_wc_schedule_add
          && schedule == svn_wc_schedule_delete))
   {
@@ -934,14 +936,14 @@ mark_tree(svn_wc_adm_access_t *adm_access,
         tmp_entry.copied = copied;
         this_dir_flags |= SVN_WC__ENTRY_MODIFY_COPIED;
       }
-  }
 
-  /* Set keep_local on the "this dir", if requested. */
-  if (modify_flags & SVN_WC__ENTRY_MODIFY_KEEP_LOCAL)
-    {
-      tmp_entry.keep_local = keep_local;
-      this_dir_flags |= SVN_WC__ENTRY_MODIFY_KEEP_LOCAL;
-    }
+    /* Set keep_local on the "this dir", if requested. */
+    if (modify_flags & SVN_WC__ENTRY_MODIFY_KEEP_LOCAL)
+      {
+        tmp_entry.keep_local = keep_local;
+        this_dir_flags |= SVN_WC__ENTRY_MODIFY_KEEP_LOCAL;
+      }
+  }
 
   /* Modify this_dir entry if requested. */
   if (this_dir_flags)
@@ -1154,7 +1156,13 @@ svn_wc_delete3(const char *path,
     entry = NULL;
 
   if (!entry)
-    return erase_unversioned_from_wc(path, cancel_func, cancel_baton, pool);
+    {
+      if (!keep_local)
+        SVN_ERR(erase_unversioned_from_wc(path, cancel_func, cancel_baton,
+                pool));
+
+      return SVN_NO_ERROR;
+    }
 
   /* A file external should not be deleted since the file external is
      implemented as a switched file and it would delete the file the
@@ -1212,7 +1220,7 @@ svn_wc_delete3(const char *path,
               svn_wc__db_t *db = svn_wc__adm_get_db(parent_access);
               const char *local_abspath;
 
-              SVN_ERR(svn_path_get_absolute(&local_abspath, path, pool));
+              SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
               SVN_ERR(svn_wc__entry_remove(db, local_abspath, pool));
               apr_hash_set(entries, base_name, APR_HASH_KEY_STRING, NULL);
             }
@@ -1366,7 +1374,7 @@ svn_wc_add3(const char *path,
   svn_wc__db_t *db = svn_wc__adm_get_db(parent_access);
 
   SVN_ERR(svn_path_check_valid(path, pool));
-  SVN_ERR(svn_path_get_absolute(&local_abspath, path, pool));
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
   /* Make sure something's there. */
   SVN_ERR(svn_io_check_path(path, &kind, pool));
@@ -1730,7 +1738,7 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
       revert_base = TRUE;
 
       /* Use the revertpath as the new propsbase if it exists. */
-      SVN_ERR(svn_path_get_absolute(&local_abspath, fullpath, pool));
+      SVN_ERR(svn_dirent_get_absolute(&local_abspath, fullpath, pool));
       SVN_ERR(svn_wc__load_props(NULL, NULL, &baseprops, db, local_abspath,
                                  pool, pool));
 
@@ -2083,7 +2091,7 @@ revert_entry(svn_depth_t *depth,
               svn_wc__db_t *db = svn_wc__adm_get_db(parent_access);
               const char *local_abspath;
 
-              SVN_ERR(svn_path_get_absolute(&local_abspath, path, pool));
+              SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
               SVN_ERR(svn_wc__entry_remove(db, local_abspath, pool));
               apr_hash_set(entries, basey, APR_HASH_KEY_STRING, NULL);
             }
@@ -2443,7 +2451,7 @@ svn_wc_remove_from_revision_control(svn_wc_adm_access_t *adm_access,
                                       svn_wc_adm_access_path(adm_access));
   const char *local_abspath;
 
-  SVN_ERR(svn_path_get_absolute(&local_abspath, full_path, pool));
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, full_path, pool));
 
   /* Check cancellation here, so recursive calls get checked early. */
   if (cancel_func)
@@ -2459,11 +2467,11 @@ svn_wc_remove_from_revision_control(svn_wc_adm_access_t *adm_access,
       svn_boolean_t text_modified_p;
 
       full_path = svn_dirent_join(full_path, name, pool);
-      SVN_ERR(svn_path_get_absolute(&local_abspath, full_path, pool));
+      SVN_ERR(svn_dirent_get_absolute(&local_abspath, full_path, pool));
 
       /* Only check if the file was modified when it wasn't overwritten with a
          special file */
-      SVN_ERR(svn_wc__get_special(&wc_special, full_path, adm_access, pool));
+      SVN_ERR(svn_wc__get_special(&wc_special, db, local_abspath, pool));
       SVN_ERR(svn_io_check_special_path(full_path, &kind, &local_special,
                                         pool));
       if (wc_special || ! local_special)
@@ -2587,7 +2595,7 @@ svn_wc_remove_from_revision_control(svn_wc_adm_access_t *adm_access,
                   /* The directory is either missing or excluded,
                      so don't try to recurse, just delete the
                      entry in the parent directory. */
-                  SVN_ERR(svn_path_get_absolute(&local_abspath, entrypath,
+                  SVN_ERR(svn_dirent_get_absolute(&local_abspath, entrypath,
                                                 subpool));
                   SVN_ERR(svn_wc__entry_remove(db, local_abspath, subpool));
                   apr_hash_set(entries, current_entry_name,
@@ -2653,7 +2661,8 @@ svn_wc_remove_from_revision_control(svn_wc_adm_access_t *adm_access,
                function is called by svn_wc_crop_tree(). */
             dir_entry = apr_hash_get(parent_entries, base_name,
                                      APR_HASH_KEY_STRING);
-            if (dir_entry->depth != svn_depth_exclude)
+            if (dir_entry
+                && dir_entry->depth != svn_depth_exclude)
               {
                 SVN_ERR(svn_wc__entry_remove(db, local_abspath, pool));
                 apr_hash_set(parent_entries, base_name, APR_HASH_KEY_STRING,
@@ -3082,21 +3091,21 @@ svn_wc_resolved_conflict4(const char *path,
                                      cancel_func, cancel_baton, pool);
 }
 
-svn_error_t *svn_wc_add_lock(const char *path, const svn_lock_t *lock,
-                             svn_wc_adm_access_t *adm_access, apr_pool_t *pool)
+svn_error_t *
+svn_wc_add_lock2(svn_wc_context_t *wc_ctx,
+                 const char *local_abspath,
+                 const svn_lock_t *lock,
+                 apr_pool_t *scratch_pool)
 {
-  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
-  const char *local_abspath;
   svn_wc__db_lock_t db_lock;
   svn_error_t *err;
   const svn_string_t *needs_lock;
 
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
   db_lock.token = lock->token;
   db_lock.owner = lock->owner;
   db_lock.comment = lock->comment;
   db_lock.date = lock->creation_date;
-  err = svn_wc__db_lock_add(db, local_abspath, &db_lock, pool);
+  err = svn_wc__db_lock_add(wc_ctx->db, local_abspath, &db_lock, scratch_pool);
   if (err)
     {
       if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
@@ -3106,29 +3115,29 @@ svn_error_t *svn_wc_add_lock(const char *path, const svn_lock_t *lock,
       svn_error_clear(err);
       return svn_error_createf(SVN_ERR_ENTRY_NOT_FOUND, NULL,
                                _("'%s' is not under version control"),
-                               svn_path_local_style(path, pool));
+                               svn_path_local_style(local_abspath,
+                                                    scratch_pool));
     }
 
   /* if svn:needs-lock is present, then make the file read-write. */
   SVN_ERR(svn_wc__internal_propget(&needs_lock, SVN_PROP_NEEDS_LOCK,
-                                   local_abspath, db, pool, pool));
+                                   local_abspath, wc_ctx->db, scratch_pool,
+                                   scratch_pool));
   if (needs_lock)
-    SVN_ERR(svn_io_set_file_read_write(path, FALSE, pool));
+    SVN_ERR(svn_io_set_file_read_write(local_abspath, FALSE, scratch_pool));
 
   return SVN_NO_ERROR;
 }
 
-svn_error_t *svn_wc_remove_lock(const char *path,
-                                svn_wc_adm_access_t *adm_access,
-                                apr_pool_t *pool)
+svn_error_t *
+svn_wc_remove_lock2(svn_wc_context_t *wc_ctx,
+                    const char *local_abspath,
+                    apr_pool_t *scratch_pool)
 {
-  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
-  const char *local_abspath;
   svn_error_t *err;
   const svn_string_t *needs_lock;
 
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
-  err = svn_wc__db_lock_remove(db, local_abspath, pool);
+  err = svn_wc__db_lock_remove(wc_ctx->db, local_abspath, scratch_pool);
   if (err)
     {
       if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
@@ -3138,18 +3147,19 @@ svn_error_t *svn_wc_remove_lock(const char *path,
       svn_error_clear(err);
       return svn_error_createf(SVN_ERR_ENTRY_NOT_FOUND, NULL,
                                _("'%s' is not under version control"),
-                               svn_path_local_style(path, pool));
+                               svn_path_local_style(local_abspath,
+                                                    scratch_pool));
     }
 
   /* if svn:needs-lock is present, then make the file read-only. */
   SVN_ERR(svn_wc__internal_propget(&needs_lock, SVN_PROP_NEEDS_LOCK,
-                                   local_abspath, db, pool, pool));
+                                   local_abspath, wc_ctx->db, scratch_pool,
+                                   scratch_pool));
   if (needs_lock)
-    SVN_ERR(svn_io_set_file_read_only(path, FALSE, pool));
+    SVN_ERR(svn_io_set_file_read_only(local_abspath, FALSE, scratch_pool));
 
   return SVN_NO_ERROR;
 }
-
 
 svn_error_t *
 svn_wc_set_changelist(const char *path,

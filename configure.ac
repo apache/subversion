@@ -249,12 +249,16 @@ AC_ARG_ENABLE(local-library-preloading,
                  [Disable preloading of locally built libraries in locally built executables]),
   [
   if test "$enableval" != "no"; then
-    TRANSFORM_LIBTOOL_SCRIPTS="transform-libtool-scripts"
+    if test "$svn_enable_shared" = "yes"; then
+      TRANSFORM_LIBTOOL_SCRIPTS="transform-libtool-scripts"
+    else
+      AC_MSG_ERROR([--enable-local-library-preloading conflicts with --disable-shared])
+    fi
   else
     TRANSFORM_LIBTOOL_SCRIPTS=""
   fi
   ], [
-  if test "`uname`" != "Darwin"; then
+  if test "`uname`" != "Darwin" && test "$svn_enable_shared" = "yes"; then
     TRANSFORM_LIBTOOL_SCRIPTS="transform-libtool-scripts"
   else
     TRANSFORM_LIBTOOL_SCRIPTS=""
@@ -509,9 +513,22 @@ if test "$enable_nls" = "yes"; then
   if test "$MSGFMT" != "none"; then
     AC_SEARCH_LIBS(bindtextdomain, [intl], [],
                    [
-                    AC_MSG_WARN([bindtextdomain() not found.  Disabling NLS.])
                     enable_nls="no"
                    ])
+    if test "$enable_nls" = "no"; then
+      # On some systems, libintl needs libiconv to link properly,
+      # so try again with -liconv.
+      AC_SEARCH_LIBS(bindtextdomain, [intl],
+                     [
+                      # This is here so that -liconv ends up in LIBS
+                      # if it worked with -liconv.
+                      AC_CHECK_LIB(iconv, libiconv_open)
+                     ], 
+                     [
+                      AC_MSG_WARN([bindtextdomain() not found.  Disabling NLS.])
+                      enable_nls="no"
+                     ], -liconv)
+    fi
     if test "$enable_nls" = "yes"; then
       AC_DEFINE(ENABLE_NLS, 1,
                 [Define to 1 if translation of program messages to the user's
@@ -645,6 +662,9 @@ AC_FUNC_VPRINTF
 
 dnl check for functions needed in special file handling
 AC_CHECK_FUNCS(symlink readlink)
+
+dnl check for function needed for handling of environment variables
+AC_CHECK_FUNCS(setenv)
 
 
 dnl Process some configuration options ----------

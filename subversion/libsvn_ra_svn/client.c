@@ -161,6 +161,21 @@ static svn_error_t *make_connection(const char *hostname, unsigned short port,
     return svn_error_wrap_apr(status, _("Can't connect to host '%s'"),
                               hostname);
 
+  /* Enable TCP keep-alives on the socket so we time out when
+   * the connection breaks due to network-layer problems.
+   * If the peer has dropped the connection due to a network partition
+   * or a crash, or if the peer no longer considers the connection
+   * valid because we are behind a NAT and our public IP has changed,
+   * it will respond to the keep-alive probe with a RST instead of an
+   * acknowledgment segment, which will cause svn to abort the session
+   * even while it is currently blocked waiting for data from the peer.
+   * See issue #3347. */
+  status = apr_socket_opt_set(*sock, APR_SO_KEEPALIVE, 1);
+  if (status)
+    {
+      /* It's not a fatal error if we cannot enable keep-alives. */
+    }
+
   return SVN_NO_ERROR;
 }
 

@@ -98,8 +98,19 @@ usage: 1. switch URL[@PEGREV] [PATH]
      or hostname change) but your working copy still reflects the same
      directory within the same repository.
 
+     FROM is the root URL which will be relocated from.
+     You can use 'svn info' to determine the root URL of the current
+     working copy directory (look for 'URL:' in its output).
+
+     TO is the root URL which will be relocated to.
+
   See also 'svn help update' for a list of possible characters
   reporting the action taken.
+
+  Examples:
+    svn switch ^/branches/1.x-release
+    svn switch --relocate http://www.example.com/repo/project \
+                          svn://svn.example.com/repo/project
 
 Valid options:
   -r [--revision] ARG      : ARG (some commands also take ARG1:ARG2 range)

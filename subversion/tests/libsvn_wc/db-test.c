@@ -20,7 +20,15 @@
 #include <apr_general.h>
 
 #include "svn_types.h"
+
+/* Make sure SVN_DEPRECATED is defined as empty before including svn_io.h.
+   We don't want to trigger deprecation warnings.  */
+#ifdef SVN_DEPRECATED
+#undef SVN_DEPRECATED
+#endif
+#define SVN_DEPRECATED
 #include "svn_io.h"
+
 #include "svn_dirent_uri.h"
 
 #include "private/svn_sqlite.h"

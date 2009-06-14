@@ -440,7 +440,7 @@ svn_uri_is_child(const char *uri1,
                  apr_pool_t *pool);
 
 /**
- * This function is similar as @c svn_uri_is_child, except that it supports
+ * This function is similar as svn_uri_is_child(), except that it supports
  * Windows dirents and UNC paths on Windows.
  *
  * @since New in 1.6.

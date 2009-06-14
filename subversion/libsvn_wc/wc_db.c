@@ -2,7 +2,7 @@
  * wc_db.c :  manipulating the administrative database
  *
  * ====================================================================
- * Copyright (c) 2008 CollabNet.  All rights reserved.
+ * Copyright (c) 2008-2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -231,7 +231,7 @@ static const char * const statements[] = {
   "select id from wcroot where local_abspath is null;",
 
   /* STMT_SELECT_REPOSITORY */
-  "select id from repository where uuid = ?1;",
+  "select id from repository where uuid = ?1 and root = ?2;",
 
   /* STMT_INSERT_REPOSITORY */
   "insert into repository (root, uuid) values (?1, ?2);",
@@ -1291,12 +1291,13 @@ create_repos_id(apr_int64_t *repos_id, const char *repos_root_url,
   svn_boolean_t have_row;
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_SELECT_REPOSITORY));
-  SVN_ERR(svn_sqlite__bindf(stmt, "s", repos_uuid));
+  SVN_ERR(svn_sqlite__bindf(stmt, "ss", repos_uuid, repos_root_url));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
+
   if (have_row)
     {
       *repos_id = svn_sqlite__column_int64(stmt, 0);
-      return svn_sqlite__reset(stmt);
+      return svn_error_return(svn_sqlite__reset(stmt));
     }
   SVN_ERR(svn_sqlite__reset(stmt));
 
@@ -1311,7 +1312,7 @@ create_repos_id(apr_int64_t *repos_id, const char *repos_root_url,
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_INSERT_REPOSITORY));
   SVN_ERR(svn_sqlite__bindf(stmt, "ss", repos_root_url, repos_uuid));
-  return svn_sqlite__insert(repos_id, stmt);
+  return svn_error_return(svn_sqlite__insert(repos_id, stmt));
 }
 
 
@@ -2362,6 +2363,27 @@ svn_wc__db_pristine_decref(int *new_refcount,
                            apr_pool_t *scratch_pool)
 {
   NOT_IMPLEMENTED();
+}
+
+
+svn_error_t *
+svn_wc__db_repos_ensure(apr_int64_t *repos_id,
+                        svn_wc__db_t *db,
+                        const char *local_abspath,
+                        const char *repos_root_url,
+                        const char *repos_uuid,
+                        apr_pool_t *scratch_pool)
+{
+  svn_wc__db_pdh_t *pdh;
+  const char *local_relpath;
+
+  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
+                              svn_sqlite__mode_readwrite,
+                              scratch_pool, scratch_pool));
+
+  return svn_error_return(create_repos_id(repos_id, repos_root_url,
+                                          repos_uuid, pdh->wcroot->sdb,
+                                          scratch_pool));
 }
 
 
@@ -3926,4 +3948,19 @@ svn_wc__db_check_node(svn_wc__db_kind_t *kind,
     }
 
   return svn_error_return(err);
+}
+
+
+svn_error_t *
+svn_wc__context_create_with_db(svn_wc_context_t **wc_ctx,
+                               svn_config_t *config,
+                               svn_wc__db_t *db,
+                               apr_pool_t *scratch_pool)
+{
+  SVN_ERR(svn_wc_context_create(wc_ctx, config, db->state_pool, scratch_pool));
+  SVN_ERR(svn_wc__db_close((*wc_ctx)->db, scratch_pool));
+
+  (*wc_ctx)->db = db;
+
+  return SVN_NO_ERROR;
 }

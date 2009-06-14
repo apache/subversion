@@ -2073,7 +2073,8 @@ class DeepTreesTestCase:
   def __init__(self, name, local_action, incoming_action,
                 expected_output = None, expected_disk = None,
                 expected_status = None, expected_skip = None,
-                error_re_string = None):
+                error_re_string = None,
+                commit_block_string = ".*remains in conflict.*"):
     self.name = name
     self.local_action = local_action
     self.incoming_action = incoming_action
@@ -2082,6 +2083,7 @@ class DeepTreesTestCase:
     self.expected_status = expected_status
     self.expected_skip = expected_skip
     self.error_re_string = error_re_string
+    self.commit_block_string = commit_block_string
 
 
 
@@ -2118,6 +2120,9 @@ def deep_trees_run_tests_scheme_for_update(sbox, greater_scheme):
    7) An update to -r3 is performed across all test cases and depths.
       This causes tree-conflicts between the "local" state in the working
       copy and the "incoming" state from the repository, -r3.
+
+   8) A commit is performed in each separate container, to verify
+      that each tree-conflict indeed blocks a commit.
 
   The sbox parameter is just the sbox passed to a test function. No need
   to call sbox.build(), since it is called (once) within this function.
@@ -2213,6 +2218,26 @@ def deep_trees_run_tests_scheme_for_update(sbox, greater_scheme):
       raise
 
 
+  # 8) Verify that commit fails.
+
+  for test_case in greater_scheme:
+    try:
+      base = j(wc_dir, test_case.name)
+
+      x_status = test_case.expected_status
+      if x_status != None:
+        x_status.copy()
+        x_status.wc_dir = base
+
+      run_and_verify_commit(base, None, x_status,
+                            test_case.commit_block_string,
+                            base)
+    except:
+      print("ERROR IN: Tests scheme for update: "
+          + "while checking commit-blocking in '%s'" % test_case.name)
+      raise
+
+
 
 def deep_trees_skipping_on_update(sbox, test_case, skip_paths,
                                   chdir_skip_paths):
@@ -2290,7 +2315,16 @@ def deep_trees_skipping_on_update(sbox, test_case, skip_paths,
     run_and_verify_update('',
                           wc.State('', {skipped : Item(verb='Skipped')}),
                           None, None)
-    os.chdir(was_cwd)
+  os.chdir(was_cwd)
+
+  run_and_verify_unquiet_status(base, x_status)
+
+  # Verify that commit still fails.
+  for path, skipped in chdir_skip_paths:
+
+    run_and_verify_commit(j(base, path), None, None,
+                          test_case.commit_block_string,
+                          base)
 
   run_and_verify_unquiet_status(base, x_status)
 
@@ -2322,6 +2356,9 @@ def deep_trees_run_tests_scheme_for_switch(sbox, greater_scheme):
       corresponding incoming dir.
       This causes conflicts between the "local" state in the working
       copy and the "incoming" state from the incoming subdir (still -r3).
+
+   7) A commit is performed in each separate container, to verify
+      that each tree-conflict indeed blocks a commit.
 
   The sbox parameter is just the sbox passed to a test function. No need
   to call sbox.build(), since it is called (once) within this function.
@@ -2416,6 +2453,26 @@ def deep_trees_run_tests_scheme_for_switch(sbox, greater_scheme):
       raise
 
 
+  # 7) Verify that commit fails.
+
+  for test_case in greater_scheme:
+    try:
+      local = j(wc_dir, test_case.name, 'local')
+
+      x_status = test_case.expected_status
+      if x_status != None:
+        x_status.copy()
+        x_status.wc_dir = local
+
+      run_and_verify_commit(local, None, x_status,
+                            test_case.commit_block_string,
+                            local)
+    except:
+      print("ERROR IN: Tests scheme for switch: "
+          + "while checking commit-blocking in '%s'" % test_case.name)
+      raise
+
+
 def deep_trees_run_tests_scheme_for_merge(sbox, greater_scheme,
                                           do_commit_local_changes):
   """
@@ -2454,6 +2511,9 @@ def deep_trees_run_tests_scheme_for_merge(sbox, greater_scheme,
       "local" subdir.
       This causes conflicts between the "local" state in the working
       copy and the "incoming" state from the incoming subdir.
+
+   9) A commit is performed in each separate container, to verify
+      that each tree-conflict indeed blocks a commit.
 
   The sbox parameter is just the sbox passed to a test function. No need
   to call sbox.build(), since it is called (once) within this function.
@@ -2592,6 +2652,26 @@ def deep_trees_run_tests_scheme_for_merge(sbox, greater_scheme,
     except:
       print("ERROR IN: Tests scheme for merge: "
           + "while verifying in '%s'" % test_case.name)
+      raise
+
+
+  # 9) Verify that commit fails.
+
+  for test_case in greater_scheme:
+    try:
+      local = j(wc_dir, test_case.name, 'local')
+
+      x_status = test_case.expected_status
+      if x_status != None:
+        x_status.copy()
+        x_status.wc_dir = local
+
+      run_and_verify_commit(local, None, x_status,
+                            test_case.commit_block_string,
+                            local)
+    except:
+      print("ERROR IN: Tests scheme for merge: "
+          + "while checking commit-blocking in '%s'" % test_case.name)
       raise
 
 

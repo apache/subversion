@@ -2009,7 +2009,7 @@ do_entry_deletion(struct edit_baton *eb,
     {
       const char *local_abspath;
 
-      SVN_ERR(svn_path_get_absolute(&local_abspath, full_path, pool));
+      SVN_ERR(svn_dirent_get_absolute(&local_abspath, full_path, pool));
       SVN_ERR(svn_wc__entry_remove(eb->db, local_abspath, pool));
 
       if (strcmp(path, eb->target) == 0)
@@ -3130,7 +3130,7 @@ locate_copyfrom(const char *copyfrom_path,
                               "is missing a URL"));
 
   svn_dirent_split(copyfrom_path, &copyfrom_parent, &copyfrom_file, pool);
-  SVN_ERR(svn_path_get_absolute(&abs_dest_dir, dest_dir, pool));
+  SVN_ERR(svn_dirent_get_absolute(&abs_dest_dir, dest_dir, pool));
 
   /* Subtract the dest_dir's URL from the repository "root" URL to get
      the absolute FS path represented by dest_dir. */
@@ -3375,7 +3375,7 @@ add_file_with_history(const char *path,
       const char *src_local_abspath;
       svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
 
-      SVN_ERR(svn_path_get_absolute(&src_local_abspath, src_path, subpool));
+      SVN_ERR(svn_dirent_get_absolute(&src_local_abspath, src_path, subpool));
 
       if (src_entry->schedule == svn_wc_schedule_replace
           && src_entry->copyfrom_url)
@@ -4167,10 +4167,13 @@ merge_file(svn_wc_notify_state_t *content_state,
   svn_boolean_t magic_props_changed;
   enum svn_wc_merge_outcome_t merge_outcome = svn_wc_merge_unchanged;
   const svn_wc_entry_t *entry;
+  const char *local_abspath;
 
   /* Accumulated entry modifications. */
   svn_wc_entry_t tmp_entry;
   apr_uint64_t flags = 0;
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, fb->path, pool));
 
   /*
      When this function is called on file F, we assume the following
@@ -4404,8 +4407,8 @@ merge_file(svn_wc_notify_state_t *content_state,
     {
       apr_hash_t *keywords;
 
-      SVN_ERR(svn_wc__get_keywords(&keywords, fb->path,
-                                   adm_access, NULL, pool));
+      SVN_ERR(svn_wc__get_keywords(&keywords, eb->db, local_abspath, NULL,
+                                   pool, pool));
       if (magic_props_changed || keywords)
         /* no new text base, but... */
         {

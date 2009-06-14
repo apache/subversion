@@ -2072,7 +2072,7 @@ svn_wc_prop_set3(const char *name,
       /* If not, we'll set the file to read-only at commit time. */
     }
 
-  SVN_ERR(svn_path_get_absolute(&local_abspath, path, pool));
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
   SVN_ERR_W(svn_wc__load_props(&base_prophash, &prophash, NULL, db,
                                local_abspath, pool, pool),
             _("Failed to load properties from disk"));
@@ -2091,10 +2091,11 @@ svn_wc_prop_set3(const char *name,
                                              APR_HASH_KEY_STRING);
       apr_hash_t *old_keywords, *new_keywords;
 
-      SVN_ERR(svn_wc__get_keywords(&old_keywords, path, adm_access,
-                                   old_value ? old_value->data : "", pool));
-      SVN_ERR(svn_wc__get_keywords(&new_keywords, path, adm_access,
-                                   value ? value->data : "", pool));
+      SVN_ERR(svn_wc__get_keywords(&old_keywords, db, local_abspath,
+                                   old_value ? old_value->data : "",
+                                   pool, pool));
+      SVN_ERR(svn_wc__get_keywords(&new_keywords, db, local_abspath,
+                                   value ? value->data : "", pool, pool));
 
       if (svn_subst_keywords_differ2(old_keywords, new_keywords, FALSE, pool))
         {
@@ -2387,7 +2388,7 @@ svn_wc_props_modified_p(svn_boolean_t *modified_p,
       return SVN_NO_ERROR;
     }
 
-  SVN_ERR(svn_path_get_absolute(&local_abspath, path, pool));
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
   SVN_ERR(load_props(&localprops, db, local_abspath, svn_wc__props_working,
                      pool));
 

@@ -53,6 +53,8 @@ svn_cl__upgrade(apr_getopt_t *os,
   /* Add "." if user passed 0 arguments */
   svn_opt_push_implicit_dot_target(targets, pool);
 
+  SVN_ERR(svn_opt_eat_peg_revisions(&targets, targets, pool));
+
   subpool = svn_pool_create(pool);
   for (i = 0; i < targets->nelts; i++)
     {

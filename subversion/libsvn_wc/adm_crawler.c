@@ -64,10 +64,14 @@ restore_file(const char *file_path,
   svn_stream_t *src_stream;
   svn_boolean_t special;
   svn_wc_entry_t newentry;
+  const char *local_abspath;
+  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, file_path, pool));
 
   SVN_ERR(svn_wc_get_pristine_contents(&src_stream, file_path, pool, pool));
 
-  SVN_ERR(svn_wc__get_special(&special, file_path, adm_access, pool));
+  SVN_ERR(svn_wc__get_special(&special, db, local_abspath, pool));
   if (special)
     {
       svn_stream_t *dst_stream;
@@ -88,9 +92,9 @@ restore_file(const char *file_path,
       const char *tmp_file;
       svn_stream_t *tmp_stream;
 
-      SVN_ERR(svn_wc__get_eol_style(&style, &eol_str, file_path, adm_access,
-                                    pool));
-      SVN_ERR(svn_wc__get_keywords(&keywords, file_path, adm_access, NULL,
+      SVN_ERR(svn_wc__get_eol_style(&style, &eol_str, db, local_abspath,
+                                    pool, pool));
+      SVN_ERR(svn_wc__get_keywords(&keywords, db, local_abspath, NULL, pool,
                                    pool));
 
       /* Get a temporary destination so we can use a rename to create the
@@ -118,10 +122,10 @@ restore_file(const char *file_path,
       SVN_ERR(svn_io_file_rename(tmp_file, file_path, pool));
     }
 
-  SVN_ERR(svn_wc__maybe_set_read_only(NULL, file_path, adm_access, pool));
+  SVN_ERR(svn_wc__maybe_set_read_only(NULL, db, local_abspath, pool));
 
   /* If necessary, tweak the new working file's executable bit. */
-  SVN_ERR(svn_wc__maybe_set_executable(NULL, file_path, adm_access, pool));
+  SVN_ERR(svn_wc__maybe_set_executable(NULL, db, local_abspath, pool));
 
   /* Remove any text conflict */
   SVN_ERR(svn_wc_resolved_conflict4(file_path, adm_access, TRUE, FALSE,
@@ -132,11 +136,8 @@ restore_file(const char *file_path,
   /* Possibly set timestamp to last-commit-time. */
   if (use_commit_times && (! special))
     {
-      svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
-      const char *abspath;
       apr_time_t changed_date;
 
-      SVN_ERR(svn_dirent_get_absolute(&abspath, file_path, pool));
       SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL,
                                    NULL, NULL, NULL,
                                    NULL, &changed_date, NULL,
@@ -145,7 +146,7 @@ restore_file(const char *file_path,
                                    NULL, NULL,
                                    NULL, NULL, NULL, NULL,
                                    NULL, NULL, NULL, NULL,
-                                   db, abspath,
+                                   db, local_abspath,
                                    pool, pool));
 
       SVN_ERR(svn_io_set_file_affected_time(changed_date, file_path, pool));

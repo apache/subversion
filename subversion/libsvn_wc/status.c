@@ -255,6 +255,8 @@ assemble_status(svn_wc_status2_t **status,
                 apr_pool_t *pool)
 {
   svn_wc_status2_t *stat;
+  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
+  const char *local_abspath;
   svn_boolean_t has_props;
   svn_boolean_t text_modified_p = FALSE;
   svn_boolean_t prop_modified_p = FALSE;
@@ -274,6 +276,8 @@ assemble_status(svn_wc_status2_t **status,
   enum svn_wc_status_kind pristine_prop_status = svn_wc_status_none;
 
   svn_lock_t *repos_lock = NULL;
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
   /* Check for a repository lock. */
   if (repos_locks)
@@ -405,7 +409,7 @@ assemble_status(svn_wc_status2_t **status,
 
 #ifdef HAVE_SYMLINK
       if (has_props)
-        SVN_ERR(svn_wc__get_special(&wc_special, path, adm_access, pool));
+        SVN_ERR(svn_wc__get_special(&wc_special, db, local_abspath, pool));
       else
         wc_special = FALSE;
 #endif /* HAVE_SYMLINK */
@@ -695,10 +699,10 @@ send_unversioned_item(const char *name,
                       void *status_baton,
                       apr_pool_t *pool)
 {
-  int ignore_me = svn_wc_match_ignore_list(name, patterns, pool);
+  svn_boolean_t ignore_me = svn_wc_match_ignore_list(name, patterns, pool);
   const char *path = svn_dirent_join(svn_wc_adm_access_path(adm_access),
                                      name, pool);
-  int is_external = is_external_path(externals, path, pool);
+  svn_boolean_t is_external = is_external_path(externals, path, pool);
   svn_wc_status2_t *status;
 
   SVN_ERR(assemble_status(&status, path, adm_access, NULL, NULL,
@@ -707,6 +711,10 @@ send_unversioned_item(const char *name,
 
   if (is_external)
     status->text_status = svn_wc_status_external;
+
+  /* Don't ever ignore tree conflict victims. */
+  if (status->tree_conflict)
+    ignore_me = FALSE;
 
   /* If we aren't ignoring it, or if it's an externals path, or it has a lock
      in the repository, pass this entry to the status func. */

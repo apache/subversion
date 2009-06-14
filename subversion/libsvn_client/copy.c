@@ -324,10 +324,10 @@ do_wc_to_wc_moves(const apr_array_header_t *copy_pairs,
         {
           const char *src_parent_abs, *dst_parent_abs;
 
-          SVN_ERR(svn_path_get_absolute(&src_parent_abs, src_parent,
-                                        iterpool));
-          SVN_ERR(svn_path_get_absolute(&dst_parent_abs, pair->dst_parent,
-                                        iterpool));
+          SVN_ERR(svn_dirent_get_absolute(&src_parent_abs, src_parent,
+                                          iterpool));
+          SVN_ERR(svn_dirent_get_absolute(&dst_parent_abs, pair->dst_parent,
+                                          iterpool));
 
           if ((pair->src_kind == svn_node_dir)
               && (svn_path_is_child(src_parent_abs, dst_parent_abs,
@@ -1048,7 +1048,7 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
       /* Sanity check if the source path is versioned. */
       SVN_ERR(svn_wc__entry_versioned(&entry, pair->src, adm_access, FALSE,
                                       iterpool));
-      SVN_ERR(svn_path_get_absolute(&pair->src_abs, pair->src, pool));
+      SVN_ERR(svn_dirent_get_absolute(&pair->src_abs, pair->src, pool));
     }
 
   svn_pool_destroy(iterpool);
@@ -1056,6 +1056,12 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
   /* Determine the longest common ancestor for the destinations, and open an RA
      session to that location. */
   /* ### But why start by getting the _parent_ of the first one? */
+  /* --- That works because multiple destinations always point to the same
+   *     directory. I'm rather wondering why we need to find a common
+   *     destination parent here at all, instead of simply getting
+   *     top_dst_url from get_copy_pair_ancestors() above?
+   *     It looks like the entire block of code hanging off this comment
+   *     is redundant. */
   svn_uri_split(APR_ARRAY_IDX(copy_pairs, 0, svn_client__copy_pair_t *)->dst,
                 &top_dst_url,
                 NULL, pool);

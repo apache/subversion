@@ -38,8 +38,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.7\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2009-05-17 22:30+0200\n"
-"PO-Revision-Date: 2009-05-17 22:30+0200\n"
+"POT-Creation-Date: 2009-06-03 19:00+0200\n"
+"PO-Revision-Date: 2009-06-03 19:00+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Polish <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -1242,8 +1242,8 @@ msgid "Path '%s' does not exist"
 msgstr "Ścieżka '%s' nie istnieje"
 
 #: ../libsvn_client/commit.c:767 ../libsvn_client/copy.c:406
-#: ../libsvn_client/copy.c:873 ../libsvn_client/copy.c:1115
-#: ../libsvn_client/copy.c:1540
+#: ../libsvn_client/copy.c:873 ../libsvn_client/copy.c:1121
+#: ../libsvn_client/copy.c:1546
 #, c-format
 msgid "Path '%s' already exists"
 msgstr "Ścieżka '%s' już istnieje"
@@ -1253,7 +1253,7 @@ msgstr "Ścieżka '%s' już istnieje"
 msgid "'%s' is a reserved name and cannot be imported"
 msgstr "'%s' to nazwa zastrzeżona i nie może zostać zaimportowana"
 
-#: ../libsvn_client/commit.c:859 ../libsvn_client/copy.c:1279
+#: ../libsvn_client/commit.c:859 ../libsvn_client/copy.c:1285
 msgid "Commit failed (details follow):"
 msgstr "Zatwierdzenie nie powiodło się (szczegóły poniżej):"
 
@@ -1373,7 +1373,7 @@ msgstr "Element '%s' zaznaczony do skopiowania, lecz wersja jest niewłaściwa"
 msgid "Standard properties can't be set explicitly as revision properties"
 msgstr "Standardowe atrybuty nie mogą być jawnie ustawione jako atrybuty wersji"
 
-#: ../libsvn_client/copy.c:422 ../libsvn_client/copy.c:1556
+#: ../libsvn_client/copy.c:422 ../libsvn_client/copy.c:1562
 #: ../libsvn_client/update.c:142
 #, c-format
 msgid "Path '%s' is not a directory"
@@ -1399,61 +1399,61 @@ msgstr "Nie można przenieść URL-u '%s' do samego siebie"
 msgid "Path '%s' does not exist in revision %ld"
 msgstr "Ścieżka '%s' nie istnieje w wersji %ld"
 
-#: ../libsvn_client/copy.c:1376
+#: ../libsvn_client/copy.c:1382
 #, c-format
 msgid "Source URL '%s' is from foreign repository; leaving it as a disjoint WC"
 msgstr "Źródłowy URL '%s' pochodzi z zewnętrznego repozytorium; pozostaje jako kopia rozłączona"
 
-#: ../libsvn_client/copy.c:1527
+#: ../libsvn_client/copy.c:1533
 #, c-format
 msgid "Path '%s' not found in revision %ld"
 msgstr "Ścieżka '%s' nie znaleziona w wersji '%ld'"
 
-#: ../libsvn_client/copy.c:1532
+#: ../libsvn_client/copy.c:1538
 #, c-format
 msgid "Path '%s' not found in head revision"
 msgstr "Ścieżki '%s' nie znaleziono w wersji HEAD"
 
-#: ../libsvn_client/copy.c:1588 ../libsvn_wc/adm_ops.c:1412
+#: ../libsvn_client/copy.c:1594 ../libsvn_wc/adm_ops.c:1412
 #: ../libsvn_wc/copy.c:908
 #, c-format
 msgid "'%s' is already under version control"
 msgstr "'%s' już podlega zarządzaniu wersjami"
 
-#: ../libsvn_client/copy.c:1596
+#: ../libsvn_client/copy.c:1602
 #, c-format
 msgid "Entry for '%s' exists (though the working file is missing)"
 msgstr "Element '%s' istnieje, choć nie znaleziono kopii roboczej pliku"
 
-#: ../libsvn_client/copy.c:1688 ../libsvn_client/diff.c:1785
+#: ../libsvn_client/copy.c:1694 ../libsvn_client/diff.c:1785
 #: ../libsvn_client/log.c:336 ../libsvn_client/log.c:396
 msgid "Revision type requires a working copy path, not a URL"
 msgstr "Rodzaj wersji wymaga ścieżkę kopii roboczej, nie URL"
 
-#: ../libsvn_client/copy.c:1733
+#: ../libsvn_client/copy.c:1739
 msgid "Cannot mix repository and working copy sources"
 msgstr "Nie można mieszać źródeł repozytorium i kopii roboczej"
 
-#: ../libsvn_client/copy.c:1776
+#: ../libsvn_client/copy.c:1782
 #, c-format
 msgid "Cannot copy path '%s' into its own child '%s'"
 msgstr "Nie można skopiować ścieżki '%s' do własnej podrzędnej '%s'"
 
-#: ../libsvn_client/copy.c:1812
+#: ../libsvn_client/copy.c:1818
 #, c-format
 msgid "Cannot move the file external at '%s'; please propedit the svn:externals description that created it"
 msgstr "Nie można przenieść plikowego eksternału przy '%s'. Proszę zmodyfikować opis svn:externals, który utworzył ten eksternał"
 
-#: ../libsvn_client/copy.c:1833
+#: ../libsvn_client/copy.c:1839
 #, c-format
 msgid "Cannot move path '%s' into itself"
 msgstr "Nie można przenieść ścieżki '%s' do siebie samej"
 
-#: ../libsvn_client/copy.c:1842
+#: ../libsvn_client/copy.c:1848
 msgid "Moves between the working copy and the repository are not supported"
 msgstr "Przeniesienia między kopią roboczą a repozytorium są nieobsługiwane"
 
-#: ../libsvn_client/copy.c:1906
+#: ../libsvn_client/copy.c:1912
 #, c-format
 msgid "'%s' does not have a URL associated with it"
 msgstr "obiekt '%s' nie posiada związanego z nim URL-u"
@@ -1464,11 +1464,11 @@ msgid "'%s' is in the way of the resource actually under version control"
 msgstr "'%s' leży w miejscu pliku podlegającego zarządzaniu wersjami"
 
 #: ../libsvn_client/delete.c:57 ../libsvn_wc/adm_ops.c:3108
-#: ../libsvn_wc/adm_ops.c:3140 ../libsvn_wc/adm_ops.c:3174
+#: ../libsvn_wc/adm_ops.c:3140 ../libsvn_wc/adm_ops.c:3175
 #: ../libsvn_wc/entries.c:1393 ../libsvn_wc/entries.c:1503
-#: ../libsvn_wc/entries.c:2713 ../libsvn_wc/entries.c:3339
-#: ../libsvn_wc/entries.c:3369 ../libsvn_wc/props.c:2446
-#: ../libsvn_wc/update_editor.c:4202
+#: ../libsvn_wc/entries.c:2773 ../libsvn_wc/entries.c:3399
+#: ../libsvn_wc/entries.c:3429 ../libsvn_wc/props.c:2447
+#: ../libsvn_wc/update_editor.c:4205
 #, c-format
 msgid "'%s' is not under version control"
 msgstr "'%s' nie podlega zarządzaniu wersjami"
@@ -1540,8 +1540,8 @@ msgstr "Nie można wyświetlić: plik binarny.%s"
 #. -----------------------------------------------------------------------
 #. ** Utilities. **
 #. Sanity check -- ensure that we have valid revisions to look at.
-#: ../libsvn_client/diff.c:996 ../libsvn_client/merge.c:5408
-#: ../libsvn_client/merge.c:7238 ../libsvn_client/patch.c:65
+#: ../libsvn_client/diff.c:996 ../libsvn_client/merge.c:5416
+#: ../libsvn_client/merge.c:7246 ../libsvn_client/patch.c:65
 msgid "Not all required revisions are specified"
 msgstr "Nie wszystkie wymagane wersje zostały podane"
 
@@ -1591,9 +1591,9 @@ msgid "'%s' already exists"
 msgstr "'%s' już istnieje"
 
 #: ../libsvn_client/export.c:771 ../libsvn_fs_fs/dag.c:1020
-#: ../libsvn_ra_neon/fetch.c:757 ../libsvn_ra_svn/client.c:1035
-#: ../libsvn_wc/adm_crawler.c:1020 ../libsvn_wc/update_editor.c:3871
-#: ../libsvn_wc/update_editor.c:4582
+#: ../libsvn_ra_neon/fetch.c:757 ../libsvn_ra_svn/client.c:1050
+#: ../libsvn_wc/adm_crawler.c:1021 ../libsvn_wc/update_editor.c:3871
+#: ../libsvn_wc/update_editor.c:4585
 #, c-format
 msgid "Checksum mismatch for '%s'"
 msgstr "Niezgodność sumy kontrolnej dla '%s'"
@@ -1603,10 +1603,10 @@ msgstr "Niezgodność sumy kontrolnej dla '%s'"
 #: ../libsvn_fs_base/reps-strings.c:936 ../libsvn_fs_base/tree.c:3745
 #: ../libsvn_fs_fs/dag.c:1021 ../libsvn_fs_fs/fs_fs.c:3152
 #: ../libsvn_fs_fs/tree.c:2448 ../libsvn_ra_neon/fetch.c:758
-#: ../libsvn_ra_svn/client.c:1036 ../libsvn_repos/commit.c:602
-#: ../libsvn_repos/load.c:1008 ../libsvn_wc/adm_crawler.c:1021
-#: ../libsvn_wc/questions.c:187 ../libsvn_wc/update_editor.c:1071
-#: ../libsvn_wc/update_editor.c:3872 ../libsvn_wc/update_editor.c:4583
+#: ../libsvn_ra_svn/client.c:1051 ../libsvn_repos/commit.c:602
+#: ../libsvn_repos/load.c:1046 ../libsvn_wc/adm_crawler.c:1022
+#: ../libsvn_wc/questions.c:191 ../libsvn_wc/update_editor.c:1071
+#: ../libsvn_wc/update_editor.c:3872 ../libsvn_wc/update_editor.c:4586
 #, c-format
 msgid "   expected:  %s"
 msgstr "   oczekiwana:  %s"
@@ -1616,10 +1616,10 @@ msgstr "   oczekiwana:  %s"
 #: ../libsvn_fs_base/reps-strings.c:937 ../libsvn_fs_base/tree.c:3746
 #: ../libsvn_fs_fs/dag.c:1022 ../libsvn_fs_fs/fs_fs.c:3153
 #: ../libsvn_fs_fs/tree.c:2449 ../libsvn_ra_neon/fetch.c:759
-#: ../libsvn_ra_svn/client.c:1037 ../libsvn_repos/commit.c:603
-#: ../libsvn_repos/load.c:1009 ../libsvn_wc/adm_crawler.c:1022
-#: ../libsvn_wc/questions.c:188 ../libsvn_wc/update_editor.c:1072
-#: ../libsvn_wc/update_editor.c:4584
+#: ../libsvn_ra_svn/client.c:1052 ../libsvn_repos/commit.c:603
+#: ../libsvn_repos/load.c:1047 ../libsvn_wc/adm_crawler.c:1023
+#: ../libsvn_wc/questions.c:192 ../libsvn_wc/update_editor.c:1072
+#: ../libsvn_wc/update_editor.c:4587
 #, c-format
 msgid "     actual:  %s"
 msgstr "  rzeczywista:  %s"
@@ -1700,33 +1700,33 @@ msgstr "URL '%s' nie istnieje w wersji %ld"
 msgid "URL '%s' non-existent in that revision"
 msgstr "URL '%s' nie istnieje w tej wersji"
 
-#: ../libsvn_client/locking_commands.c:206
+#: ../libsvn_client/locking_commands.c:201
 msgid "No common parent found, unable to operate on disjoint arguments"
 msgstr "Nie znaleziono wspólnego rodzica, nie można użyć rozłącznych argumentów"
 
-#: ../libsvn_client/locking_commands.c:268 ../libsvn_client/merge.c:7255
-#: ../libsvn_client/merge.c:7261 ../libsvn_client/merge.c:8181
-#: ../libsvn_client/merge.c:8373 ../libsvn_client/ra.c:414
+#: ../libsvn_client/locking_commands.c:263 ../libsvn_client/merge.c:7263
+#: ../libsvn_client/merge.c:7269 ../libsvn_client/merge.c:8189
+#: ../libsvn_client/merge.c:8381 ../libsvn_client/ra.c:414
 #: ../libsvn_client/ra.c:446 ../libsvn_client/ra.c:649
 #, c-format
 msgid "'%s' has no URL"
 msgstr "'%s' nie ma URL-u"
 
-#: ../libsvn_client/locking_commands.c:292
+#: ../libsvn_client/locking_commands.c:287
 msgid "Unable to lock/unlock across multiple repositories"
 msgstr "Nie można założyć/zdjąć blokady jednocześnie dla różnych repozytoriów"
 
-#: ../libsvn_client/locking_commands.c:333
+#: ../libsvn_client/locking_commands.c:328
 #, c-format
 msgid "'%s' is not locked in this working copy"
 msgstr "'%s' nie jest zablokowane w danej kopii roboczej"
 
-#: ../libsvn_client/locking_commands.c:381
+#: ../libsvn_client/locking_commands.c:376
 #, c-format
 msgid "'%s' is not locked"
 msgstr "'%s' nie jest zablokowane"
 
-#: ../libsvn_client/locking_commands.c:414 ../libsvn_fs/fs-loader.c:1190
+#: ../libsvn_client/locking_commands.c:409 ../libsvn_fs/fs-loader.c:1190
 #: ../libsvn_ra/ra_loader.c:927
 msgid "Lock comment contains illegal characters"
 msgstr "Opis zakładanej blokady zawiera nieprawidłowe znaki"
@@ -1794,60 +1794,60 @@ msgstr ""
 "rozwiąż wszystkie konflikty i uruchom merge ponownie, by zastosować\n"
 "pozostałe wersje"
 
-#: ../libsvn_client/merge.c:6920
+#: ../libsvn_client/merge.c:6928
 msgid "Use of two URLs is not compatible with mergeinfo modification"
 msgstr "Użycie dwu URL-i jest niekompatybilne z modyfikacją informacji o połączeniach zmian"
 
-#: ../libsvn_client/merge.c:6927 ../libsvn_client/merge.c:7173
+#: ../libsvn_client/merge.c:6935 ../libsvn_client/merge.c:7181
 msgid "Merge from foreign repository is not compatible with mergeinfo modification"
 msgstr "Łączenie zmian z zewnętrznego repozytorium jest niekompatybilne z modyfikacją informacji o połączeniach zmian"
 
-#: ../libsvn_client/merge.c:7299 ../libsvn_ra/ra_loader.c:514
+#: ../libsvn_client/merge.c:7307 ../libsvn_ra/ra_loader.c:514
 #, c-format
 msgid "'%s' isn't in the same repository as '%s'"
 msgstr "'%s' nie jest tym samym repozytorium co '%s'"
 
-#: ../libsvn_client/merge.c:7472
+#: ../libsvn_client/merge.c:7480
 msgid "Cannot reintegrate into a working copy with a switched subtree"
 msgstr "Nie można reintegrować do kopii roboczej z przełączonym poddrzewem"
 
-#: ../libsvn_client/merge.c:7477
+#: ../libsvn_client/merge.c:7485
 msgid "Cannot reintegrate into a working copy not entirely at infinite depth"
 msgstr "Nie można reintegrować do kopii roboczej z niecałkowicie nieskończoną głębokością"
 
-#: ../libsvn_client/merge.c:7482
+#: ../libsvn_client/merge.c:7490
 msgid "Cannot reintegrate into a working copy that has local modifications"
 msgstr "Nie można reintegrować do kopii roboczej posiadającej lokalne modyfikacje"
 
-#: ../libsvn_client/merge.c:7488
+#: ../libsvn_client/merge.c:7496
 msgid "Cannot determine revision of working copy"
 msgstr "Nie można określić wersji kopii roboczej"
 
-#: ../libsvn_client/merge.c:7492
+#: ../libsvn_client/merge.c:7500
 msgid "Cannot reintegrate into mixed-revision working copy; try updating first"
 msgstr "Nie można reintegrować do kopii roboczej z mieszanymi wersjami. Spróbuj najpierw zaktualizować kopię roboczą"
 
-#: ../libsvn_client/merge.c:7571
+#: ../libsvn_client/merge.c:7579
 #, c-format
 msgid "At least one revision (r%ld) not yet merged from '%s'"
 msgstr "Przynajmniej jedna wersja (r%ld) niepołączona jeszcze z '%s'"
 
-#: ../libsvn_client/merge.c:8046 ../libsvn_client/merge.c:8259
+#: ../libsvn_client/merge.c:8054 ../libsvn_client/merge.c:8267
 #, c-format
 msgid "'%s@%ld' must be ancestrally related to '%s@%ld'"
 msgstr "'%s@%ld' musi być spokrewnione z '%s@%ld'"
 
-#: ../libsvn_client/merge.c:8199
+#: ../libsvn_client/merge.c:8207
 #, c-format
 msgid "'%s' must be from the same repository as '%s'"
 msgstr "'%s' musi być z tego samego repozytorium co '%s'"
 
-#: ../libsvn_client/merge.c:8222
+#: ../libsvn_client/merge.c:8230
 #, c-format
 msgid "Neither the reintegrate source nor target can be the root of the repository"
 msgstr "Ani źródło, ani cel reintegracji nie mogą być katalogiem głównym repozytorium"
 
-#: ../libsvn_client/merge.c:8283
+#: ../libsvn_client/merge.c:8291
 #, c-format
 msgid ""
 "Reintegrate can only be used if revisions %ld through %ld were previously merged from %s to the reintegrate source, but this is not the case:\n"
@@ -1969,7 +1969,7 @@ msgid "Cannot both exclude and switch a path"
 msgstr "Nie można zarówno wykluczyć, jak i przełączyć ścieżki"
 
 #: ../libsvn_client/switch.c:171 ../libsvn_ra_local/ra_plugin.c:193
-#: ../libsvn_ra_local/ra_plugin.c:268 ../libsvn_wc/update_editor.c:4779
+#: ../libsvn_ra_local/ra_plugin.c:268 ../libsvn_wc/update_editor.c:4782
 #, c-format
 msgid ""
 "'%s'\n"
@@ -2900,7 +2900,7 @@ msgstr "Nie można pisać do pliku prototypowej wersji transakcji '%s', poniewa�
 msgid "Cannot write to the prototype revision file of transaction '%s' because a previous representation is currently being written by another process"
 msgstr "Nie można pisać do pliku prototypowej wersji transakcji '%s', ponieważ poprzednia reprezentacja jest obecnie zapisywana przez inny proces"
 
-#: ../libsvn_fs_fs/fs_fs.c:769 ../libsvn_subr/io.c:1605
+#: ../libsvn_fs_fs/fs_fs.c:769 ../libsvn_subr/io.c:1606
 #, c-format
 msgid "Can't get exclusive lock on file '%s'"
 msgstr "Nie można założyć blokady na pliku '%s'"
@@ -3077,7 +3077,7 @@ msgstr "Nie można ustawić tekstowej zawartości katalogu"
 msgid "Corrupt current file"
 msgstr "Bieżący plik jest uszkodzony"
 
-#: ../libsvn_fs_fs/fs_fs.c:5475 ../libsvn_subr/io.c:2917 ../svn/util.c:407
+#: ../libsvn_fs_fs/fs_fs.c:5475 ../libsvn_subr/io.c:2959 ../svn/util.c:407
 #: ../svn/util.c:422 ../svn/util.c:446
 #, c-format
 msgid "Can't stat '%s'"
@@ -3261,7 +3261,7 @@ msgid "URL '%s' is not a child of the session's repository root URL '%s'"
 msgstr "URL '%s' nie jest katalogiem podrzędnym URL-u '%s' katalogu głównego repozytorium sesji"
 
 #: ../libsvn_ra_local/ra_plugin.c:1394 ../libsvn_ra_neon/options.c:416
-#: ../libsvn_ra_serf/options.c:599 ../libsvn_ra_svn/client.c:2358
+#: ../libsvn_ra_serf/options.c:599 ../libsvn_ra_svn/client.c:2373
 #, c-format
 msgid "Don't know anything about capability '%s'"
 msgstr "Nie wiadomo nic o zdolności '%s'"
@@ -3461,7 +3461,7 @@ msgid "Invalid server response to dated-rev request"
 msgstr "Błędna odpowiedź od serwera na żądanie dated-rev"
 
 #: ../libsvn_ra_neon/get_location_segments.c:117
-#: ../libsvn_ra_serf/getlocationsegments.c:101 ../libsvn_ra_svn/client.c:1677
+#: ../libsvn_ra_serf/getlocationsegments.c:101 ../libsvn_ra_svn/client.c:1692
 msgid "Expected valid revision range"
 msgstr "Oczekiwano poprawny zakres wersji"
 
@@ -3512,7 +3512,7 @@ msgid "Missing name attr in revprop element"
 msgstr "Brak atrybutu nazwy w elemencie revprop"
 
 #: ../libsvn_ra_neon/log.c:454 ../libsvn_ra_serf/log.c:568
-#: ../libsvn_ra_svn/client.c:1382
+#: ../libsvn_ra_svn/client.c:1397
 msgid "Server does not support custom revprops via log"
 msgstr "Serwer nie obsługuje własnych atrybutów wersji via log"
 
@@ -3949,59 +3949,59 @@ msgstr "Nieznana nazwa hosta '%s'"
 msgid "Can't connect to host '%s'"
 msgstr "Nieudane połączenie z hostem '%s'"
 
-#: ../libsvn_ra_svn/client.c:184
+#: ../libsvn_ra_svn/client.c:199
 msgid "Prop diffs element not a list"
 msgstr "Element zbioru różnic atrybutów nie jest listą"
 
-#: ../libsvn_ra_svn/client.c:371
+#: ../libsvn_ra_svn/client.c:386
 #, c-format
 msgid "Undefined tunnel scheme '%s'"
 msgstr "Niezdefiniowany protokół tunelu '%s'"
 
-#: ../libsvn_ra_svn/client.c:388
+#: ../libsvn_ra_svn/client.c:403
 #, c-format
 msgid "Tunnel scheme %s requires environment variable %s to be defined"
 msgstr "Schemat tunelu %s wymaga zdefiniowania zmiennej środowiskowej %s"
 
-#: ../libsvn_ra_svn/client.c:399
+#: ../libsvn_ra_svn/client.c:414
 #, c-format
 msgid "Can't tokenize command '%s'"
 msgstr "Nieznane polecenie '%s'"
 
-#: ../libsvn_ra_svn/client.c:430
+#: ../libsvn_ra_svn/client.c:445
 #, c-format
 msgid "Error in child process: %s"
 msgstr "Błąd procesu potomnego: %s"
 
-#: ../libsvn_ra_svn/client.c:499
+#: ../libsvn_ra_svn/client.c:514
 #, c-format
 msgid "Can't create tunnel"
 msgstr "Nie udało się utworzyć tunelu"
 
-#: ../libsvn_ra_svn/client.c:548
+#: ../libsvn_ra_svn/client.c:563
 #, c-format
 msgid "Illegal svn repository URL '%s'"
 msgstr "Nieprawidłowy URL '%s' repozytorium svn"
 
-#: ../libsvn_ra_svn/client.c:609
+#: ../libsvn_ra_svn/client.c:624
 #, c-format
 msgid "Server requires minimum version %d"
 msgstr "Serwer wymaga co najmniej wersji %d"
 
-#: ../libsvn_ra_svn/client.c:613
+#: ../libsvn_ra_svn/client.c:628
 #, c-format
 msgid "Server only supports versions up to %d"
 msgstr "Serwer obsługuje wersje tylko to %d"
 
-#: ../libsvn_ra_svn/client.c:621
+#: ../libsvn_ra_svn/client.c:636
 msgid "Server does not support edit pipelining"
 msgstr "Serwer nie obsługuje edycyjnego pipeliningu"
 
-#: ../libsvn_ra_svn/client.c:659
+#: ../libsvn_ra_svn/client.c:674
 msgid "Impossibly long repository root from server"
 msgstr "Ścieżka katalogu głównego repozytorium jest zbyt długa"
 
-#: ../libsvn_ra_svn/client.c:671
+#: ../libsvn_ra_svn/client.c:686
 msgid ""
 "Module for accessing a repository using the svn network protocol.\n"
 "  - with Cyrus SASL authentication"
@@ -4009,132 +4009,132 @@ msgstr ""
 "Moduł umożliwiający dostęp do repozytorium przy pomocy protokołu svn.\n"
 "  - z uwierzytelnianiem Cyrus SASL"
 
-#: ../libsvn_ra_svn/client.c:675
+#: ../libsvn_ra_svn/client.c:690
 msgid "Module for accessing a repository using the svn network protocol."
 msgstr "Moduł umożliwiający dostęp do repozytorium przy pomocy protokołu svn."
 
-#: ../libsvn_ra_svn/client.c:848
+#: ../libsvn_ra_svn/client.c:863
 msgid "Server did not send repository root"
 msgstr "Serwer nie przesłał głównego katalogu repozytorium"
 
-#: ../libsvn_ra_svn/client.c:921
+#: ../libsvn_ra_svn/client.c:936
 msgid "Server doesn't support setting arbitrary revision properties during commit"
 msgstr "Serwer nie obsługuje ustawiania arbitralnych właściwości wersji podczas zatwierdzania"
 
-#: ../libsvn_ra_svn/client.c:1009
+#: ../libsvn_ra_svn/client.c:1024
 msgid "Non-string as part of file contents"
 msgstr "Plik zawiera dane niebędące tekstem"
 
-#: ../libsvn_ra_svn/client.c:1101
+#: ../libsvn_ra_svn/client.c:1116
 msgid "Dirlist element not a list"
 msgstr "Element dirlist nie jest listą"
 
-#: ../libsvn_ra_svn/client.c:1161
+#: ../libsvn_ra_svn/client.c:1176
 msgid "Mergeinfo element is not a list"
 msgstr "Element mergeinfo nie jest listą"
 
-#: ../libsvn_ra_svn/client.c:1371
+#: ../libsvn_ra_svn/client.c:1386
 msgid "Log entry not a list"
 msgstr "Element log nie jest listą"
 
-#: ../libsvn_ra_svn/client.c:1412
+#: ../libsvn_ra_svn/client.c:1427
 msgid "Changed-path entry not a list"
 msgstr "Element changed-path nie jest listą"
 
-#: ../libsvn_ra_svn/client.c:1537
+#: ../libsvn_ra_svn/client.c:1552
 msgid "'stat' not implemented"
 msgstr "Niezaimplementowane 'stat'"
 
-#: ../libsvn_ra_svn/client.c:1597
+#: ../libsvn_ra_svn/client.c:1612
 msgid "'get-locations' not implemented"
 msgstr "Niezaimplementowane 'get-locations'"
 
-#: ../libsvn_ra_svn/client.c:1612
+#: ../libsvn_ra_svn/client.c:1627
 msgid "Location entry not a list"
 msgstr "Element location nie jest listą"
 
-#: ../libsvn_ra_svn/client.c:1651
+#: ../libsvn_ra_svn/client.c:1666
 msgid "'get-location-segments' not implemented"
 msgstr "Niezaimplementowane 'get-location-segments'"
 
-#: ../libsvn_ra_svn/client.c:1667
+#: ../libsvn_ra_svn/client.c:1682
 msgid "Location segment entry not a list"
 msgstr "Element location segment nie jest listą"
 
-#: ../libsvn_ra_svn/client.c:1718
+#: ../libsvn_ra_svn/client.c:1733
 msgid "'get-file-revs' not implemented"
 msgstr "Niezaimplementowane 'get-file-revs'"
 
-#: ../libsvn_ra_svn/client.c:1742
+#: ../libsvn_ra_svn/client.c:1757
 msgid "Revision entry not a list"
 msgstr "Element revision nie jest listą"
 
-#: ../libsvn_ra_svn/client.c:1759 ../libsvn_ra_svn/client.c:1789
+#: ../libsvn_ra_svn/client.c:1774 ../libsvn_ra_svn/client.c:1804
 msgid "Text delta chunk not a string"
 msgstr "Fragment różnic w tekście nie jest tekstem"
 
-#: ../libsvn_ra_svn/client.c:1801
+#: ../libsvn_ra_svn/client.c:1816
 msgid "The get-file-revs command didn't return any revisions"
 msgstr "Polecenie get-file-revs nie zwróciło żadnych wersji"
 
-#: ../libsvn_ra_svn/client.c:1849
+#: ../libsvn_ra_svn/client.c:1864
 msgid "Server doesn't support the lock command"
 msgstr "Serwer nie obsługuje polecenia zakładania blokady"
 
-#: ../libsvn_ra_svn/client.c:1913
+#: ../libsvn_ra_svn/client.c:1928
 msgid "Server doesn't support the unlock command"
 msgstr "Serwer nie obsługuje polecenia zdejmowania blokady"
 
-#: ../libsvn_ra_svn/client.c:2011
+#: ../libsvn_ra_svn/client.c:2026
 msgid "Lock response not a list"
 msgstr "Odpowiedź lock nie jest listą"
 
-#: ../libsvn_ra_svn/client.c:2025
+#: ../libsvn_ra_svn/client.c:2040
 msgid "Unknown status for lock command"
 msgstr "Nieznany status polecenia lock"
 
-#: ../libsvn_ra_svn/client.c:2049
+#: ../libsvn_ra_svn/client.c:2064
 msgid "Didn't receive end marker for lock responses"
 msgstr "Nie otrzymano znacznika końca dla odpowiedzi zablokowania"
 
-#: ../libsvn_ra_svn/client.c:2139
+#: ../libsvn_ra_svn/client.c:2154
 msgid "Unlock response not a list"
 msgstr "Odpowiedź unlock nie jest listą"
 
-#: ../libsvn_ra_svn/client.c:2153
+#: ../libsvn_ra_svn/client.c:2168
 msgid "Unknown status for unlock command"
 msgstr "Nieznany status polecenia unlock"
 
-#: ../libsvn_ra_svn/client.c:2176
+#: ../libsvn_ra_svn/client.c:2191
 msgid "Didn't receive end marker for unlock responses"
 msgstr "Nie otrzymano znacznika końca dla odpowiedzi odblokowania"
 
-#: ../libsvn_ra_svn/client.c:2200 ../libsvn_ra_svn/client.c:2226
+#: ../libsvn_ra_svn/client.c:2215 ../libsvn_ra_svn/client.c:2241
 msgid "Server doesn't support the get-lock command"
 msgstr "Serwer nie obsługuje polecenia get-lock"
 
-#: ../libsvn_ra_svn/client.c:2240
+#: ../libsvn_ra_svn/client.c:2255
 msgid "Lock element not a list"
 msgstr "Element lock nie jest listą"
 
-#: ../libsvn_ra_svn/client.c:2263
+#: ../libsvn_ra_svn/client.c:2278
 msgid "Server doesn't support the replay command"
 msgstr "Serwer nie obsługuje polecenia powtórzenia"
 
-#: ../libsvn_ra_svn/client.c:2293
+#: ../libsvn_ra_svn/client.c:2308
 msgid "Server doesn't support the replay-range command"
 msgstr "Serwer nie obsługuje polecenia powtórzenia zakresu"
 
-#: ../libsvn_ra_svn/client.c:2311
+#: ../libsvn_ra_svn/client.c:2326
 #, c-format
 msgid "Expected 'revprops', found '%s'"
 msgstr "Oczekiwano 'revprops', znaleziono '%s'"
 
-#: ../libsvn_ra_svn/client.c:2382
+#: ../libsvn_ra_svn/client.c:2397
 msgid "'get-deleted-rev' not implemented"
 msgstr "Niezaimplementowane 'get-deleted-rev'"
 
-#: ../libsvn_ra_svn/client.c:2446
+#: ../libsvn_ra_svn/client.c:2461
 #, c-format
 msgid "Unsupported RA loader version (%d) for ra_svn"
 msgstr "Nieobsługiwana wersja loadera RA (%d) dla ra_svn"
@@ -4227,12 +4227,12 @@ msgstr "Zły format listy błędów"
 msgid "Unknown status '%s' in command response"
 msgstr "Polecenie zwróciło nieznany status '%s'"
 
-#: ../libsvn_ra_svn/streams.c:73 ../libsvn_ra_svn/streams.c:147
+#: ../libsvn_ra_svn/streams.c:73 ../libsvn_ra_svn/streams.c:152
 #, c-format
 msgid "Can't read from connection"
 msgstr "Nie można czytać z połączenia"
 
-#: ../libsvn_ra_svn/streams.c:86 ../libsvn_ra_svn/streams.c:160
+#: ../libsvn_ra_svn/streams.c:86 ../libsvn_ra_svn/streams.c:165
 #, c-format
 msgid "Can't write to connection"
 msgstr "Nie można pisać do połączenia"
@@ -4318,7 +4318,7 @@ msgstr "* Zweryfikowano wersję %ld.\n"
 msgid "Unexpected node kind %d for '%s'"
 msgstr "Nieoczekiwany rodzaj obiektu %d dla '%s'"
 
-#: ../libsvn_repos/fs-wrap.c:59 ../libsvn_repos/load.c:1311
+#: ../libsvn_repos/fs-wrap.c:59 ../libsvn_repos/load.c:1349
 msgid "Commit succeeded, but post-commit hook failed"
 msgstr "Zatwierdzenie powiodło się, lecz nie powiodło się wykonanie skryptu post-commit"
 
@@ -4456,60 +4456,65 @@ msgstr ""
 "Repozytorium nie ma włączonej możliwości zmieniania atrybutów wersji;\n"
 "poproś administratora o utworzenie skryptu hook pre-revprop-change"
 
-#: ../libsvn_repos/load.c:96
+#: ../libsvn_repos/load.c:97
 msgid "Premature end of content data in dumpstream"
 msgstr "Nieoczekiwany koniec danych w strumieniu zrzutu"
 
-#: ../libsvn_repos/load.c:103
+#: ../libsvn_repos/load.c:104
 msgid "Dumpstream data appears to be malformed"
 msgstr "Dane strumienia zrzutu prawdopodobnie są uszkodzone"
 
-#: ../libsvn_repos/load.c:152
+#: ../libsvn_repos/load.c:153
 #, c-format
 msgid "Dump stream contains a malformed header (with no ':') at '%.20s'"
 msgstr "Strumień zrzutu zawiera uszkodzony nagłówek (bez ':') przy '%.20s'"
 
-#: ../libsvn_repos/load.c:165
+#: ../libsvn_repos/load.c:166
 #, c-format
 msgid "Dump stream contains a malformed header (with no value) at '%.20s'"
 msgstr "Strumień zrzutu zawiera uszkodzony nagłówek (bez wartości) przy '%.20s'"
 
-#: ../libsvn_repos/load.c:335
+#: ../libsvn_repos/load.c:337
 msgid "Incomplete or unterminated property block"
 msgstr "Niekompletny lub niepoprawnie zakończony blok atrybutu"
 
-#: ../libsvn_repos/load.c:473
+#: ../libsvn_repos/load.c:401
+#, c-format
+msgid " removing '\\r' from %s ..."
+msgstr " usuwanie '\\r' z %s ..."
+
+#: ../libsvn_repos/load.c:510
 msgid "Unexpected EOF writing contents"
 msgstr "Nieoczekiwany koniec strumienia zapisu"
 
-#: ../libsvn_repos/load.c:502
+#: ../libsvn_repos/load.c:539
 msgid "Malformed dumpfile header"
 msgstr "Błędny nagłówek pliku zrzutu"
 
-#: ../libsvn_repos/load.c:508 ../libsvn_repos/load.c:550
+#: ../libsvn_repos/load.c:545 ../libsvn_repos/load.c:587
 #, c-format
 msgid "Unsupported dumpfile version: %d"
 msgstr "Nieobsługiwana wersja repozytorium: %d"
 
-#: ../libsvn_repos/load.c:653
+#: ../libsvn_repos/load.c:690
 msgid "Unrecognized record type in stream"
 msgstr "Nierozpoznany typ rekordu w strumieniu"
 
-#: ../libsvn_repos/load.c:765
+#: ../libsvn_repos/load.c:803
 msgid "Sum of subblock sizes larger than total block content length"
 msgstr "Suma rozmiarów poszczególnych podbloków jest większa niż długość całego bloku"
 
-#: ../libsvn_repos/load.c:945
+#: ../libsvn_repos/load.c:983
 #, c-format
 msgid "<<< Started new transaction, based on original revision %ld\n"
 msgstr "<<< Rozpoczęta nowa transakcja, na bazie oryginalnej wersji %ld\n"
 
-#: ../libsvn_repos/load.c:990
+#: ../libsvn_repos/load.c:1028
 #, c-format
 msgid "Relative source revision %ld is not available in current repository"
 msgstr "Względna źródłowa wersja %ld nie jest dostępna w bieżącym repozytorium"
 
-#: ../libsvn_repos/load.c:1006
+#: ../libsvn_repos/load.c:1044
 #, c-format
 msgid ""
 "Copy source checksum mismatch on copy from '%s'@%ld\n"
@@ -4518,40 +4523,40 @@ msgstr ""
 "Niezgodność sumy kontrolnej źródła kopii podczas kopiowania z '%s'@%ld\n"
 "do '%s' w wersji bazowanej na r%ld"
 
-#: ../libsvn_repos/load.c:1060
+#: ../libsvn_repos/load.c:1098
 msgid "Malformed dumpstream: Revision 0 must not contain node records"
 msgstr "Uszkodzony strumień zrzutu: Wersja 0 nie może zawierać rekordów węzła"
 
-#: ../libsvn_repos/load.c:1070
+#: ../libsvn_repos/load.c:1108
 #, c-format
 msgid "     * editing path : %s ..."
 msgstr "     * edytowanie ścieżki : %s ..."
 
-#: ../libsvn_repos/load.c:1077
+#: ../libsvn_repos/load.c:1115
 #, c-format
 msgid "     * deleting path : %s ..."
 msgstr "     * usuwanie ścieżki : %s ..."
 
-#: ../libsvn_repos/load.c:1085
+#: ../libsvn_repos/load.c:1123
 #, c-format
 msgid "     * adding path : %s ..."
 msgstr "     * dodawanie ścieżki : %s ..."
 
-#: ../libsvn_repos/load.c:1094
+#: ../libsvn_repos/load.c:1132
 #, c-format
 msgid "     * replacing path : %s ..."
 msgstr "     * zastępowanie ścieżki : %s ..."
 
-#: ../libsvn_repos/load.c:1104
+#: ../libsvn_repos/load.c:1142
 #, c-format
 msgid "Unrecognized node-action on node '%s'"
 msgstr "Nierozpoznany typ node-action dla obiektu '%s'"
 
-#: ../libsvn_repos/load.c:1260
+#: ../libsvn_repos/load.c:1298
 msgid " done.\n"
 msgstr " zrobione.\n"
 
-#: ../libsvn_repos/load.c:1335
+#: ../libsvn_repos/load.c:1373
 #, c-format
 msgid ""
 "\n"
@@ -4562,7 +4567,7 @@ msgstr ""
 "------- Zatwierdzona wersja %ld >>>\n"
 "\n"
 
-#: ../libsvn_repos/load.c:1341
+#: ../libsvn_repos/load.c:1379
 #, c-format
 msgid ""
 "\n"
@@ -4602,33 +4607,33 @@ msgstr "Ścieżka kopii roboczej '%s' nie istnieje w repozytorium"
 msgid "Not authorized to open root of edit operation"
 msgstr "Brak uprawnień do otwarcia katalogu głównego edycji"
 
-#: ../libsvn_repos/reporter.c:1171
+#: ../libsvn_repos/reporter.c:1169
 #, c-format
 msgid "Target path '%s' does not exist"
 msgstr "Docelowa śieżka '%s' nie istnieje"
 
-#: ../libsvn_repos/reporter.c:1179
+#: ../libsvn_repos/reporter.c:1177
 msgid "Cannot replace a directory from within"
 msgstr "Nie można zastąpić katalogu podczas pobytu w tym katalogu"
 
-#: ../libsvn_repos/reporter.c:1221
+#: ../libsvn_repos/reporter.c:1220
 msgid "Invalid report for top level of working copy"
 msgstr "Niepoprawna operacja na katalogu głównym kopii roboczej"
 
-#: ../libsvn_repos/reporter.c:1236
+#: ../libsvn_repos/reporter.c:1235
 msgid "Two top-level reports with no target"
 msgstr "Dwa główne raporty bez obiektu docelowego"
 
-#: ../libsvn_repos/reporter.c:1294
+#: ../libsvn_repos/reporter.c:1293
 #, c-format
 msgid "Unsupported report depth '%s'"
 msgstr "Nieobsługiwana głębokość '%s' raportu"
 
-#: ../libsvn_repos/reporter.c:1322
+#: ../libsvn_repos/reporter.c:1321
 msgid "Depth 'exclude' not supported for link"
 msgstr "Głębokość 'exclude' nieobsługiwana dla odnośnika"
 
-#: ../libsvn_repos/reporter.c:1382
+#: ../libsvn_repos/reporter.c:1381
 msgid "Request depth 'exclude' not supported"
 msgstr "Żądana głębokość 'exclude' nieobsługiwana"
 
@@ -4950,237 +4955,237 @@ msgstr "Nie można sprawdzić ścieżki '%s'"
 msgid "Can't open '%s'"
 msgstr "Nie mozna otworzyć '%s'"
 
-#: ../libsvn_subr/io.c:456 ../libsvn_subr/io.c:555
+#: ../libsvn_subr/io.c:457 ../libsvn_subr/io.c:556
 #, c-format
 msgid "Unable to make name for '%s'"
 msgstr "Nie zdołano przydzielić nazwy dla '%s'"
 
-#: ../libsvn_subr/io.c:542
+#: ../libsvn_subr/io.c:543
 #, c-format
 msgid "Can't create symbolic link '%s'"
 msgstr "Nie można utworzyć dowiązania symbolicznego '%s'"
 
-#: ../libsvn_subr/io.c:559 ../libsvn_subr/io.c:592 ../libsvn_subr/io.c:620
+#: ../libsvn_subr/io.c:560 ../libsvn_subr/io.c:593 ../libsvn_subr/io.c:621
 msgid "Symbolic links are not supported on this platform"
 msgstr "Na tej platformie nie są wspierane dowiązania symboliczne"
 
-#: ../libsvn_subr/io.c:582
+#: ../libsvn_subr/io.c:583
 #, c-format
 msgid "Can't read contents of link"
 msgstr "Nie można przeczytać zawartości wskazywanej przez dowiązanie"
 
-#: ../libsvn_subr/io.c:633
+#: ../libsvn_subr/io.c:634
 #, c-format
 msgid "Can't find a temporary directory"
 msgstr "Nie można znaleźć katalogu tymczasowego"
 
-#: ../libsvn_subr/io.c:741
+#: ../libsvn_subr/io.c:742
 #, c-format
 msgid "Can't copy '%s' to '%s'"
 msgstr "Nie można skopiować '%s' do '%s'"
 
-#: ../libsvn_subr/io.c:807
+#: ../libsvn_subr/io.c:808
 #, c-format
 msgid "Can't set permissions on '%s'"
 msgstr "Nie można przypisać uprawnień dla '%s'"
 
-#: ../libsvn_subr/io.c:829
+#: ../libsvn_subr/io.c:830
 #, c-format
 msgid "Can't append '%s' to '%s'"
 msgstr "Nie można dodać '%s' do '%s'"
 
-#: ../libsvn_subr/io.c:863
+#: ../libsvn_subr/io.c:864
 #, c-format
 msgid "Source '%s' is not a directory"
 msgstr "Źródło '%s' nie jest katalogiem"
 
-#: ../libsvn_subr/io.c:869
+#: ../libsvn_subr/io.c:870
 #, c-format
 msgid "Destination '%s' is not a directory"
 msgstr "Obiekt docelowy '%s' nie jest katalogiem"
 
-#: ../libsvn_subr/io.c:875
+#: ../libsvn_subr/io.c:876
 #, c-format
 msgid "Destination '%s' already exists"
 msgstr "Ścieżka docelowa '%s' już istnieje"
 
-#: ../libsvn_subr/io.c:946 ../libsvn_subr/io.c:1964 ../libsvn_subr/io.c:2015
-#: ../libsvn_subr/io.c:2067
+#: ../libsvn_subr/io.c:947 ../libsvn_subr/io.c:2006 ../libsvn_subr/io.c:2057
+#: ../libsvn_subr/io.c:2109
 #, c-format
 msgid "Can't read directory '%s'"
 msgstr "Nie można odczytać katalogu '%s'"
 
-#: ../libsvn_subr/io.c:951 ../libsvn_subr/io.c:1969 ../libsvn_subr/io.c:2020
-#: ../libsvn_subr/io.c:2072 ../libsvn_subr/io.c:3256
+#: ../libsvn_subr/io.c:952 ../libsvn_subr/io.c:2011 ../libsvn_subr/io.c:2062
+#: ../libsvn_subr/io.c:2114 ../libsvn_subr/io.c:3298
 #, c-format
 msgid "Error closing directory '%s'"
 msgstr "Błąd zamykania katalogu '%s'"
 
-#: ../libsvn_subr/io.c:979
+#: ../libsvn_subr/io.c:980
 #, c-format
 msgid "Can't make directory '%s'"
 msgstr "Nie można stworzyć katalogu '%s'"
 
-#: ../libsvn_subr/io.c:1043
+#: ../libsvn_subr/io.c:1044
 #, c-format
 msgid "Can't set access time of '%s'"
 msgstr "Nie można ustawić informacji o czasie dostępu do '%s'"
 
-#: ../libsvn_subr/io.c:1251
+#: ../libsvn_subr/io.c:1252
 #, c-format
 msgid "Can't get default file perms for file at '%s' (file stat error)"
 msgstr "Nie można odczytać domyślnych uprawnień dla pliku '%s' (błąd stat)"
 
-#: ../libsvn_subr/io.c:1262
+#: ../libsvn_subr/io.c:1263
 #, c-format
 msgid "Can't open file at '%s'"
 msgstr "Nie można otworzyć pliku przy '%s'"
 
-#: ../libsvn_subr/io.c:1266
+#: ../libsvn_subr/io.c:1267
 #, c-format
 msgid "Can't get file perms for file at '%s' (file stat error)"
 msgstr "Nie można odczytać uprawnień dla pliku '%s' (błąd stat)"
 
-#: ../libsvn_subr/io.c:1305 ../libsvn_subr/io.c:1403
+#: ../libsvn_subr/io.c:1306 ../libsvn_subr/io.c:1404
 #, c-format
 msgid "Can't change perms of file '%s'"
 msgstr "Nie można zmienić uprawnień pliku '%s'"
 
-#: ../libsvn_subr/io.c:1444
+#: ../libsvn_subr/io.c:1445
 #, c-format
 msgid "Can't set file '%s' read-only"
 msgstr "Nie można ustawić atrybutu 'tylko do odczytu' dla pliku '%s'"
 
-#: ../libsvn_subr/io.c:1476
+#: ../libsvn_subr/io.c:1477
 #, c-format
 msgid "Can't set file '%s' read-write"
 msgstr "Nie można ustawić atrybutu 'do zapisu i odczytu' dla pliku '%s'"
 
-#: ../libsvn_subr/io.c:1520
+#: ../libsvn_subr/io.c:1521
 #, c-format
 msgid "Error getting UID of process"
 msgstr "Błąd pobierania UID procesu"
 
-#: ../libsvn_subr/io.c:1601
+#: ../libsvn_subr/io.c:1602
 #, c-format
 msgid "Can't get shared lock on file '%s'"
 msgstr "Nie można założyć dzielonej blokady na pliku '%s'"
 
-#: ../libsvn_subr/io.c:1635
+#: ../libsvn_subr/io.c:1636
 #, c-format
 msgid "Can't flush file '%s'"
 msgstr "Nie można opróżnić pliku '%s'"
 
-#: ../libsvn_subr/io.c:1636
+#: ../libsvn_subr/io.c:1637
 #, c-format
 msgid "Can't flush stream"
 msgstr "Nie można opróżnić strumienia"
 
-#: ../libsvn_subr/io.c:1648 ../libsvn_subr/io.c:1665
+#: ../libsvn_subr/io.c:1649 ../libsvn_subr/io.c:1666
 #, c-format
 msgid "Can't flush file to disk"
 msgstr "Nie można opróżnić pliku na dysk"
 
-#: ../libsvn_subr/io.c:1687 ../libsvn_subr/prompt.c:97 ../svnserve/main.c:592
+#: ../libsvn_subr/io.c:1758 ../libsvn_subr/prompt.c:97 ../svnserve/main.c:592
 #, c-format
 msgid "Can't open stdin"
 msgstr "Nie można otworzyć standardowego wejścia"
 
-#: ../libsvn_subr/io.c:1711
+#: ../libsvn_subr/io.c:1778
 msgid "Reading from stdin is disallowed"
 msgstr "Czytanie z standardowego wejścia jest zabronione"
 
-#: ../libsvn_subr/io.c:1725
+#: ../libsvn_subr/io.c:1792
 #, c-format
 msgid "Can't get file name"
 msgstr "Nie można uzyskać nazwy pliku"
 
-#: ../libsvn_subr/io.c:1814
+#: ../libsvn_subr/io.c:1856
 #, c-format
 msgid "Can't remove file '%s'"
 msgstr "Nie można usunąć pliku '%s'"
 
-#: ../libsvn_subr/io.c:1891 ../libsvn_subr/io.c:3103 ../libsvn_subr/io.c:3193
+#: ../libsvn_subr/io.c:1933 ../libsvn_subr/io.c:3145 ../libsvn_subr/io.c:3235
 #, c-format
 msgid "Can't open directory '%s'"
 msgstr "Nie można otworzyć katalogu '%s'"
 
-#: ../libsvn_subr/io.c:1945 ../libsvn_subr/io.c:1975
+#: ../libsvn_subr/io.c:1987 ../libsvn_subr/io.c:2017
 #, c-format
 msgid "Can't remove '%s'"
 msgstr "Nie można usunąć '%s'"
 
-#: ../libsvn_subr/io.c:1955
+#: ../libsvn_subr/io.c:1997
 #, c-format
 msgid "Can't rewind directory '%s'"
 msgstr "Nie można przejść do pierwszego elementu katalogu '%s'"
 
-#: ../libsvn_subr/io.c:2136
+#: ../libsvn_subr/io.c:2178
 #, c-format
 msgid "Can't create process '%s' attributes"
 msgstr "Nie można utworzyć atrybutów procesu '%s'"
 
-#: ../libsvn_subr/io.c:2142
+#: ../libsvn_subr/io.c:2184
 #, c-format
 msgid "Can't set process '%s' cmdtype"
 msgstr "Nie można ustalić sposobu wywołania procesu '%s'"
 
-#: ../libsvn_subr/io.c:2154
+#: ../libsvn_subr/io.c:2196
 #, c-format
 msgid "Can't set process '%s' directory"
 msgstr "Nie można ustawić katalogu dla procesu '%s'"
 
-#: ../libsvn_subr/io.c:2167
+#: ../libsvn_subr/io.c:2209
 #, c-format
 msgid "Can't set process '%s' child input"
 msgstr "Nie można przydzielić procesowi '%s' strumienia wejściowego"
 
-#: ../libsvn_subr/io.c:2174
+#: ../libsvn_subr/io.c:2216
 #, c-format
 msgid "Can't set process '%s' child outfile"
 msgstr "Nie można przydzielić procesowi '%s' strumienia wyjściowego"
 
-#: ../libsvn_subr/io.c:2181
+#: ../libsvn_subr/io.c:2223
 #, c-format
 msgid "Can't set process '%s' child errfile"
 msgstr "Nie można przydzielić procesowi '%s' strumienia błędów"
 
-#: ../libsvn_subr/io.c:2188
+#: ../libsvn_subr/io.c:2230
 #, c-format
 msgid "Can't set process '%s' child errfile for error handler"
 msgstr "Nie można przydzielić procesowi '%s' strumienia błędów dla uchwytu błędów"
 
-#: ../libsvn_subr/io.c:2194
+#: ../libsvn_subr/io.c:2236
 #, c-format
 msgid "Can't set process '%s' error handler"
 msgstr "Nie można przydzielić procesowi '%s' uchwytu błędów"
 
-#: ../libsvn_subr/io.c:2216
+#: ../libsvn_subr/io.c:2258
 #, c-format
 msgid "Can't start process '%s'"
 msgstr "Nie można uruchomić procesu '%s'"
 
-#: ../libsvn_subr/io.c:2240
+#: ../libsvn_subr/io.c:2282
 #, c-format
 msgid "Error waiting for process '%s'"
 msgstr "Błąd podczas czekania na proces '%s'"
 
-#: ../libsvn_subr/io.c:2248
+#: ../libsvn_subr/io.c:2290
 #, c-format
 msgid "Process '%s' failed (exitwhy %d)"
 msgstr "Proces '%s' zakończył się niepowodzeniem (kod błędu: %d)"
 
-#: ../libsvn_subr/io.c:2255
+#: ../libsvn_subr/io.c:2297
 #, c-format
 msgid "Process '%s' returned error exitcode %d"
 msgstr "Proces '%s' zwrócił kod błędu %d"
 
-#: ../libsvn_subr/io.c:2361
+#: ../libsvn_subr/io.c:2403
 #, c-format
 msgid "'%s' returned %d"
 msgstr "'%s' zwrócił kod błędu %d"
 
-#: ../libsvn_subr/io.c:2482
+#: ../libsvn_subr/io.c:2524
 #, c-format
 msgid ""
 "Error running '%s':  exitcode was %d, args were:\n"
@@ -5195,126 +5200,126 @@ msgstr ""
 "%s\n"
 "%s"
 
-#: ../libsvn_subr/io.c:2590
+#: ../libsvn_subr/io.c:2632
 #, c-format
 msgid "Can't detect MIME type of non-file '%s'"
 msgstr "Nie można określić typu MIME dla niepliku '%s'"
 
-#: ../libsvn_subr/io.c:2682
+#: ../libsvn_subr/io.c:2724
 #, c-format
 msgid "Can't open file '%s'"
 msgstr "Nie można otworzyć pliku '%s'"
 
-#: ../libsvn_subr/io.c:2718
+#: ../libsvn_subr/io.c:2760
 #, c-format
 msgid "Can't close file '%s'"
 msgstr "Nie można zamknąć pliku '%s'"
 
-#: ../libsvn_subr/io.c:2719
+#: ../libsvn_subr/io.c:2761
 #, c-format
 msgid "Can't close stream"
 msgstr "Nie można zamknąć strumienia"
 
-#: ../libsvn_subr/io.c:2729 ../libsvn_subr/io.c:2753 ../libsvn_subr/io.c:2766
+#: ../libsvn_subr/io.c:2771 ../libsvn_subr/io.c:2795 ../libsvn_subr/io.c:2808
 #, c-format
 msgid "Can't read file '%s'"
 msgstr "Nie można czytać z pliku '%s'"
 
-#: ../libsvn_subr/io.c:2730 ../libsvn_subr/io.c:2754 ../libsvn_subr/io.c:2767
+#: ../libsvn_subr/io.c:2772 ../libsvn_subr/io.c:2796 ../libsvn_subr/io.c:2809
 #, c-format
 msgid "Can't read stream"
 msgstr "Nie można czytać ze strumienia"
 
-#: ../libsvn_subr/io.c:2741
+#: ../libsvn_subr/io.c:2783
 #, c-format
 msgid "Can't get attribute information from file '%s'"
 msgstr "Nie można uzyskać informacji o atrybutach z pliku '%s'"
 
-#: ../libsvn_subr/io.c:2742
+#: ../libsvn_subr/io.c:2784
 #, c-format
 msgid "Can't get attribute information from stream"
 msgstr "Nie można uzyskać informacji o atrybutach ze strumienia"
 
-#: ../libsvn_subr/io.c:2778
+#: ../libsvn_subr/io.c:2820
 #, c-format
 msgid "Can't set position pointer in file '%s'"
 msgstr "Nie można ustawić wskaźnika pozycji w pliku '%s'"
 
-#: ../libsvn_subr/io.c:2779
+#: ../libsvn_subr/io.c:2821
 #, c-format
 msgid "Can't set position pointer in stream"
 msgstr "Nie można ustawić wskaźnika pozycji w strumieniu"
 
-#: ../libsvn_subr/io.c:2790 ../libsvn_subr/io.c:2824
+#: ../libsvn_subr/io.c:2832 ../libsvn_subr/io.c:2866
 #, c-format
 msgid "Can't write to file '%s'"
 msgstr "Nie można pisać do pliku '%s'"
 
-#: ../libsvn_subr/io.c:2791 ../libsvn_subr/io.c:2825
+#: ../libsvn_subr/io.c:2833 ../libsvn_subr/io.c:2867
 #, c-format
 msgid "Can't write to stream"
 msgstr "Nie można pisać do strumienia"
 
-#: ../libsvn_subr/io.c:2853
+#: ../libsvn_subr/io.c:2895
 #, c-format
 msgid "Can't truncate file '%s'"
 msgstr "Nie można obciąć pliku '%s'"
 
-#: ../libsvn_subr/io.c:2854
+#: ../libsvn_subr/io.c:2896
 #, c-format
 msgid "Can't truncate stream"
 msgstr "Nie można obciąć strumienia"
 
-#: ../libsvn_subr/io.c:2894
+#: ../libsvn_subr/io.c:2936
 #, c-format
 msgid "Can't read length line in file '%s'"
 msgstr "Nie można odczytać linii długości z pliku '%s'"
 
-#: ../libsvn_subr/io.c:2898
+#: ../libsvn_subr/io.c:2940
 msgid "Can't read length line in stream"
 msgstr "Nie można odczytać linii długości ze strumienia"
 
-#: ../libsvn_subr/io.c:2951
+#: ../libsvn_subr/io.c:2993
 #, c-format
 msgid "Can't move '%s' to '%s'"
 msgstr "Nie można przenieść '%s' do '%s'"
 
-#: ../libsvn_subr/io.c:3032
+#: ../libsvn_subr/io.c:3074
 #, c-format
 msgid "Can't create directory '%s'"
 msgstr "Nie można utworzyć katalogu '%s'"
 
-#: ../libsvn_subr/io.c:3043 ../libsvn_wc/copy.c:643
+#: ../libsvn_subr/io.c:3085 ../libsvn_wc/copy.c:643
 #, c-format
 msgid "Can't hide directory '%s'"
 msgstr "Nie można ukryć katalogu '%s'"
 
-#: ../libsvn_subr/io.c:3121
+#: ../libsvn_subr/io.c:3163
 #, c-format
 msgid "Can't remove directory '%s'"
 msgstr "Nie można usunąć katalogu '%s'"
 
-#: ../libsvn_subr/io.c:3139
+#: ../libsvn_subr/io.c:3181
 #, c-format
 msgid "Can't read directory"
 msgstr "Nie można czytać katalogu"
 
-#: ../libsvn_subr/io.c:3212
+#: ../libsvn_subr/io.c:3254
 #, c-format
 msgid "Can't read directory entry in '%s'"
 msgstr "Nie można czytać elementu katalogu w '%s'"
 
-#: ../libsvn_subr/io.c:3337
+#: ../libsvn_subr/io.c:3379
 #, c-format
 msgid "Can't check directory '%s'"
 msgstr "Nie można sprawdzić katalogu '%s'"
 
-#: ../libsvn_subr/io.c:3397
+#: ../libsvn_subr/io.c:3439
 #, c-format
 msgid "Reading '%s'"
 msgstr "Czytanie '%s'"
 
-#: ../libsvn_subr/io.c:3413
+#: ../libsvn_subr/io.c:3455
 #, c-format
 msgid "First line of '%s' contains non-digit"
 msgstr "Pierwsza linia '%s' zawiera niecyfrę"
@@ -5785,11 +5790,11 @@ msgstr "Konflikt wersji w '%s': znaleziona %d.%d.%d%s, oczekiwana %d.%d.%d%s\""
 msgid "Malformed XML: %s at line %ld"
 msgstr "Uszkodzony XML: %s w linii %ld"
 
-#: ../libsvn_wc/adm_crawler.c:797
+#: ../libsvn_wc/adm_crawler.c:798
 msgid "Error aborting report"
 msgstr "Błąd w trakcie przerywania generowania raportu"
 
-#: ../libsvn_wc/adm_crawler.c:1032
+#: ../libsvn_wc/adm_crawler.c:1033
 #, c-format
 msgid "While preparing '%s' for commit"
 msgstr "Podczas przygotowywania '%s' do zatwierdzenia"
@@ -5903,12 +5908,12 @@ msgstr "Plik '%s' zawiera lokalne zmiany"
 msgid "Invalid 'conflict_result' argument"
 msgstr "Błądny argument 'conflict_result'"
 
-#: ../libsvn_wc/adm_ops.c:3179
+#: ../libsvn_wc/adm_ops.c:3180
 #, c-format
 msgid "'%s' is a directory, and thus cannot be a member of a changelist"
 msgstr "%s' jest katalogiem i dlatego nie może być członkiem listy zmian"
 
-#: ../libsvn_wc/adm_ops.c:3199
+#: ../libsvn_wc/adm_ops.c:3200
 #, c-format
 msgid "Removing '%s' from changelist '%s'."
 msgstr "Usuwanie '%s' z listy zmian '%s'."
@@ -5991,52 +5996,52 @@ msgstr "Brak obszaru administracyjnego '%s'"
 msgid "'%s' is not of the right kind"
 msgstr "'%s' jest niewłaściwego rodzaju"
 
-#: ../libsvn_wc/entries.c:2329
+#: ../libsvn_wc/entries.c:2334
 #, c-format
 msgid "No default entry in directory '%s'"
 msgstr "Brak domyślnego wpisu w katalogu '%s'"
 
-#: ../libsvn_wc/entries.c:2740
+#: ../libsvn_wc/entries.c:2800
 #, c-format
 msgid "Can't add '%s' to deleted directory; try undeleting its parent directory first"
 msgstr "Nie można dodać '%s' do kasowanego katalogu, spróbuj cofnąć kasowanie katalogu nadrzędnego"
 
-#: ../libsvn_wc/entries.c:2746
+#: ../libsvn_wc/entries.c:2806
 #, c-format
 msgid "Can't replace '%s' in deleted directory; try undeleting its parent directory first"
 msgstr "Nie można zastąpić '%s' w kasowanym katalogu, spróbuj cofnąć kasowanie katalogu nadrzędnego"
 
-#: ../libsvn_wc/entries.c:2755
+#: ../libsvn_wc/entries.c:2815
 #, c-format
 msgid "'%s' is marked as absent, so it cannot be scheduled for addition"
 msgstr "'%s' jest oznaczony jako nieobecny, więc nie może zostać zlecone jego skasowanie"
 
-#: ../libsvn_wc/entries.c:2782
+#: ../libsvn_wc/entries.c:2842
 #, c-format
 msgid "Entry '%s' is already under version control"
 msgstr "Obiekt '%s' już podlega zarządzaniu wersjami"
 
-#: ../libsvn_wc/entries.c:2882
+#: ../libsvn_wc/entries.c:2942
 #, c-format
 msgid "Entry '%s' has illegal schedule"
 msgstr "Obiekt '%s' ma niepoprawne operacje oczekujące na zatwierdzenie"
 
-#: ../libsvn_wc/entries.c:3045
+#: ../libsvn_wc/entries.c:3105
 #, c-format
 msgid "No such entry: '%s'"
 msgstr "Nie ma takiego obiektu: '%s'"
 
-#: ../libsvn_wc/entries.c:3203
+#: ../libsvn_wc/entries.c:3263
 #, c-format
 msgid "Directory '%s' has no THIS_DIR entry"
 msgstr "Katalog '%s' nie zawiera elementu THIS_DIR"
 
-#: ../libsvn_wc/entries.c:3388
+#: ../libsvn_wc/entries.c:3448
 #, c-format
 msgid "'%s' has an unrecognized node kind"
 msgstr "'%s' ma nierozpoznany rodzaj"
 
-#: ../libsvn_wc/entries.c:3663
+#: ../libsvn_wc/entries.c:3723
 #, c-format
 msgid "Unexpectedly found '%s': path is marked 'missing'"
 msgstr "Nieoczekiwanie znaleziono '%s': ścieżka jest oznaczona jako brakująca"
@@ -6125,7 +6130,7 @@ msgstr "Brak blokady zapisu w '%s'"
 msgid "Lock file '%s' is not a regular file"
 msgstr "Plik blokady '%s' nie jest plikiem zwykłym"
 
-#: ../libsvn_wc/log.c:279
+#: ../libsvn_wc/log.c:285
 msgid "Can't move source to dest"
 msgstr "Przeniesienie nie udało się"
 
@@ -6133,124 +6138,124 @@ msgstr "Przeniesienie nie udało się"
 #.
 #. This is implemented as a macro so that the error created has a useful
 #. line number associated with it.
-#: ../libsvn_wc/log.c:442
+#: ../libsvn_wc/log.c:449
 #, c-format
 msgid "In directory '%s'"
 msgstr "W katalogu '%s'"
 
-#: ../libsvn_wc/log.c:468
+#: ../libsvn_wc/log.c:475
 #, c-format
 msgid "Missing 'dest' attribute in '%s'"
 msgstr "Brak atrybutu 'cel' w '%s'"
 
-#: ../libsvn_wc/log.c:545
+#: ../libsvn_wc/log.c:558
 #, c-format
 msgid "Missing 'timestamp' attribute in '%s'"
 msgstr "Brak atrybutu 'timestamp' w '%s'"
 
-#: ../libsvn_wc/log.c:627
+#: ../libsvn_wc/log.c:640
 #, c-format
 msgid "Error getting 'affected time' on '%s'"
 msgstr "Błąd uzyskiwania czasu modyfikacji '%s'"
 
-#: ../libsvn_wc/log.c:660
+#: ../libsvn_wc/log.c:673
 #, c-format
 msgid "Error getting file size on '%s'"
 msgstr "Błąd uzyskiwania rozmiaru pliku '%s'"
 
-#: ../libsvn_wc/log.c:712
+#: ../libsvn_wc/log.c:725
 #, c-format
 msgid "Error modifying entry for '%s'"
 msgstr "Błąd przy modyfikacji informacji o '%s'"
 
-#: ../libsvn_wc/log.c:729
+#: ../libsvn_wc/log.c:742
 #, c-format
 msgid "Error removing lock from entry for '%s'"
 msgstr "Błąd podczas usuwania blokady dla '%s'"
 
-#: ../libsvn_wc/log.c:750
+#: ../libsvn_wc/log.c:763
 #, c-format
 msgid "Error removing changelist from entry '%s'"
 msgstr "Błąd podczas usuwania listy zmian z wpisu '%s'"
 
-#: ../libsvn_wc/log.c:931
+#: ../libsvn_wc/log.c:944
 #, c-format
 msgid "Missing 'revision' attribute for '%s'"
 msgstr "Brak atrybutu 'revision' dla '%s'"
 
-#: ../libsvn_wc/log.c:955
+#: ../libsvn_wc/log.c:968
 #, c-format
 msgid "Log command for directory '%s' is mislocated"
 msgstr "Polecenie log dla katalogu '%s' jest niepoprawnie umieszczone"
 
-#: ../libsvn_wc/log.c:1124
+#: ../libsvn_wc/log.c:1137
 #, c-format
 msgid "Error replacing text-base of '%s'"
 msgstr "Błąd zastępowania wersji bazowej '%s'"
 
-#: ../libsvn_wc/log.c:1129
+#: ../libsvn_wc/log.c:1142
 #, c-format
 msgid "Error getting 'affected time' of '%s'"
 msgstr "Błąd uzyskiwania czasu modyfikacji '%s'"
 
-#: ../libsvn_wc/log.c:1157
+#: ../libsvn_wc/log.c:1170
 #, c-format
 msgid "Error getting 'affected time' for '%s'"
 msgstr "Błąd uzyskiwania czasu modyfikacji dla '%s'"
 
-#: ../libsvn_wc/log.c:1179
+#: ../libsvn_wc/log.c:1192
 #, c-format
 msgid "Error comparing '%s' and '%s'"
 msgstr "Błąd porównywania '%s' i '%s'"
 
-#: ../libsvn_wc/log.c:1225 ../libsvn_wc/log.c:1273
+#: ../libsvn_wc/log.c:1238 ../libsvn_wc/log.c:1286
 #, c-format
 msgid "Error modifying entry of '%s'"
 msgstr "Błąd modyfikacji wpisu '%s'"
 
-#: ../libsvn_wc/log.c:1368
+#: ../libsvn_wc/log.c:1381
 #, c-format
 msgid "Log entry missing 'name' attribute (entry '%s' for directory '%s')"
 msgstr "Zapis w logu nie zawiera atrybutu 'name' (element '%s' w katalogu '%s')"
 
-#: ../libsvn_wc/log.c:1430
+#: ../libsvn_wc/log.c:1443
 #, c-format
 msgid "Unrecognized logfile element '%s' in '%s'"
 msgstr "Nierozpoznany element '%s' w logu '%s'"
 
-#: ../libsvn_wc/log.c:1441
+#: ../libsvn_wc/log.c:1454
 #, c-format
 msgid "Error processing command '%s' in '%s'"
 msgstr "Błąd podczas wykonywania polecenia '%s' w '%s'"
 
-#: ../libsvn_wc/log.c:1586
+#: ../libsvn_wc/log.c:1599
 msgid "Couldn't open log"
 msgstr "Błąd otwarcia logu"
 
-#: ../libsvn_wc/log.c:1619
+#: ../libsvn_wc/log.c:1632
 #, c-format
 msgid "Error recording tree conflicts in '%s'"
 msgstr "Błąd podczas zapisywania konfliktów drzewnych w '%s'"
 
-#: ../libsvn_wc/log.c:2179
+#: ../libsvn_wc/log.c:2192
 #, c-format
 msgid "Error writing log for '%s'"
 msgstr "Błąd zapisu logu dla '%s'"
 
-#: ../libsvn_wc/log.c:2328
+#: ../libsvn_wc/log.c:2341
 #, c-format
 msgid "'%s' is not a working copy directory"
 msgstr "'%s' nie jest katalogiem kopii roboczej"
 
-#: ../libsvn_wc/log.c:2333
+#: ../libsvn_wc/log.c:2346
 msgid "Log format too old, please use Subversion 1.6 or earlier"
 msgstr "Format logów zbyt stary. Proszę użyć Subversion 1.6 lub wcześniejszy"
 
-#: ../libsvn_wc/merge.c:765 ../libsvn_wc/merge.c:992
+#: ../libsvn_wc/merge.c:765 ../libsvn_wc/merge.c:996
 msgid "Conflict callback violated API: returned no results"
 msgstr "Konfliktowe wywołanie zwrotne naruszyło API: nie zwróciło wyników"
 
-#: ../libsvn_wc/merge.c:1032
+#: ../libsvn_wc/merge.c:1036
 msgid "Conflict callback violated API: returned no merged file"
 msgstr "Konfliktowe wywołanie zwrotne naruszyło API: nie zwróciło połączonego pliku"
 
@@ -6467,37 +6472,37 @@ msgstr "'%s' nie jest plikiem ani katalogiem"
 msgid "File '%s' has binary mime type property"
 msgstr "Plik '%s' ma binarny typ MIME"
 
-#: ../libsvn_wc/props.c:2190
+#: ../libsvn_wc/props.c:2191
 #, c-format
 msgid "Unrecognized line ending style for '%s'"
 msgstr "Nierozpoznany sposób zapisywania końców wiersza dla '%s'"
 
-#: ../libsvn_wc/props.c:2568 ../libsvn_wc/props.c:2644
+#: ../libsvn_wc/props.c:2569 ../libsvn_wc/props.c:2645
 #, c-format
 msgid "Error parsing %s property on '%s': '%s'"
 msgstr "Błąd podczas parsowania atrybutu %s dla '%s': '%s'"
 
-#: ../libsvn_wc/props.c:2613
+#: ../libsvn_wc/props.c:2614
 #, c-format
 msgid "Can't split line into components: '%s'"
 msgstr "Nie można podzielić linii na składniki: '%s'"
 
-#: ../libsvn_wc/props.c:2669
+#: ../libsvn_wc/props.c:2670
 #, c-format
 msgid "Invalid %s property on '%s': cannot use two absolute URLs ('%s' and '%s') in an external; one must be a path where an absolute or relative URL is checked out to"
 msgstr "Nieprawidłowy atrybut %s dla '%s': nie można używać dwu absolutnych URL-i ('%s' i '%s') w zewnętrznej definicji. Jeden musi być ścieżką, do której absolutny lub względny URL jest pobrany"
 
-#: ../libsvn_wc/props.c:2678 ../libsvn_wc/props.c:2686
+#: ../libsvn_wc/props.c:2679 ../libsvn_wc/props.c:2687
 #, c-format
 msgid "Invalid %s property on '%s': cannot use a URL '%s' as the target directory for an external definition"
 msgstr "Nieprawidłowy atrybut %s dla '%s': nie można używać URL-u '%s' jako docelowego katalogu dla zewnętrznej definicji"
 
-#: ../libsvn_wc/props.c:2724
+#: ../libsvn_wc/props.c:2725
 #, c-format
 msgid "Invalid %s property on '%s': target '%s' is an absolute path or involves '..'"
 msgstr "Błędny atrybut %s dla '%s': cel '%s' jest ścieżką bezwględną albo wykorzystuje '..'"
 
-#: ../libsvn_wc/questions.c:186
+#: ../libsvn_wc/questions.c:190
 #, c-format
 msgid "Checksum mismatch indicates corrupt text base: '%s'"
 msgstr "Niezgodność sumy kontrolnej wskazuje na uszkodzony plik bazowy: '%s'"
@@ -6639,12 +6644,12 @@ msgstr "Plik '%s' w katalogu '%s' nie podlega zarządzaniu wersjami"
 msgid "   recorded:  %s"
 msgstr "     zapisana:  %s"
 
-#: ../libsvn_wc/update_editor.c:5279
+#: ../libsvn_wc/update_editor.c:5282
 #, c-format
 msgid "'%s' has no ancestry information"
 msgstr "Brak informacji o pochodzeniu '%s'"
 
-#: ../libsvn_wc/update_editor.c:5504
+#: ../libsvn_wc/update_editor.c:5507
 #, c-format
 msgid "Copyfrom-url '%s' has different repository root than '%s'"
 msgstr "Źródłowy URL '%s' jest z innego repozytorium niż '%s'"
@@ -6740,7 +6745,7 @@ msgstr "Opcja 'incremental' jest prawidłowa tylko w trybie XML"
 msgid "Skipping binary file: '%s'\n"
 msgstr "Pomijanie binarnego pliku: '%s'\n"
 
-#: ../svn/changelist-cmd.c:53 ../svn/main.c:1523
+#: ../svn/changelist-cmd.c:53 ../svn/main.c:1534
 msgid "Changelist names must not be empty"
 msgstr "Nazwy list zmian nie mogą być puste"
 
@@ -7051,7 +7056,7 @@ msgstr ""
 "Subversion jest narzędziem zarządzania wersjami.\n"
 "Dla dodatkowych informacji zobacz http://subversion.tigris.org/\n"
 
-#: ../svn/help-cmd.c:65 ../svnsync/main.c:1897
+#: ../svn/help-cmd.c:65 ../svnsync/main.c:2059
 msgid ""
 "The following repository access (RA) modules are available:\n"
 "\n"
@@ -7371,7 +7376,7 @@ msgstr "wymuś uznanie opisu zmian za poprawny"
 #: ../svn/main.c:124 ../svn/main.c:125 ../svnadmin/main.c:237
 #: ../svnadmin/main.c:240 ../svndumpfilter/main.c:878
 #: ../svndumpfilter/main.c:881 ../svnlook/main.c:97 ../svnlook/main.c:109
-#: ../svnsync/main.c:168 ../svnsync/main.c:170
+#: ../svnsync/main.c:170 ../svnsync/main.c:172
 msgid "show help on a subcommand"
 msgstr "wyświetl tekst pomocy dla podpolecenia"
 
@@ -7432,7 +7437,7 @@ msgid "treat value as being in charset encoding ARG"
 msgstr "zakładaj, iż parametry są podane w kodowaniu ARG"
 
 #: ../svn/main.c:150 ../svnadmin/main.c:243 ../svndumpfilter/main.c:884
-#: ../svnlook/main.c:139 ../svnserve/main.c:205 ../svnsync/main.c:166
+#: ../svnlook/main.c:139 ../svnserve/main.c:205 ../svnsync/main.c:168
 #: ../svnversion/main.c:128
 msgid "show program version information"
 msgstr "pokaż informację o wersji programu"
@@ -7529,11 +7534,11 @@ msgstr ""
 "nie pomijaj plików zwykle ignorowanych (ze względu na domyślne\n"
 "ustawienia lub atrybut svn:ignore)"
 
-#: ../svn/main.c:204 ../svnsync/main.c:134
+#: ../svn/main.c:204 ../svnsync/main.c:136
 msgid "do not cache authentication tokens"
 msgstr "nie zapamiętuj danych uwierzytelniających"
 
-#: ../svn/main.c:206 ../svnsync/main.c:144
+#: ../svn/main.c:206 ../svnsync/main.c:146
 msgid ""
 "accept unknown SSL server certificates without\n"
 "                             prompting (but only with '--non-interactive')"
@@ -7541,7 +7546,7 @@ msgstr ""
 "zaakceptuj nieznane certyfikaty serwera SSL\n"
 "                             bez pytania (ale tylko z '--non-interactive')"
 
-#: ../svn/main.c:210 ../svnsync/main.c:132
+#: ../svn/main.c:210 ../svnsync/main.c:134
 msgid "do no interactive prompting"
 msgstr "nie zadawaj żadnych interaktywnych pytań"
 
@@ -7605,11 +7610,11 @@ msgstr "działaj na atrybucie wersji (do użycia wraz z -r)"
 msgid "relocate via URL-rewriting"
 msgstr "zmień URL repozytorium"
 
-#: ../svn/main.c:236 ../svnadmin/main.c:279 ../svnsync/main.c:156
+#: ../svn/main.c:236 ../svnadmin/main.c:279 ../svnsync/main.c:158
 msgid "read user configuration files from directory ARG"
 msgstr "pobierz konfigurację użytkownika z katalogu ARG"
 
-#: ../svn/main.c:238 ../svnsync/main.c:158
+#: ../svn/main.c:238 ../svnsync/main.c:160
 msgid ""
 "set user configuration option in the format:\n"
 "                                 FILE:SECTION:OPTION=[VALUE]\n"
@@ -8917,8 +8922,19 @@ msgid ""
 "     or hostname change) but your working copy still reflects the same\n"
 "     directory within the same repository.\n"
 "\n"
+"     FROM is the root URL which will be relocated from.\n"
+"     You can use 'svn info' to determine the root URL of the current\n"
+"     working copy directory (look for 'URL:' in its output).\n"
+"\n"
+"     TO is the root URL which will be relocated to.\n"
+"\n"
 "  See also 'svn help update' for a list of possible characters\n"
 "  reporting the action taken.\n"
+"\n"
+"  Examples:\n"
+"    svn switch ^/branches/1.x-release\n"
+"    svn switch --relocate http://www.example.com/repo/project \\\n"
+"                          svn://svn.example.com/repo/project\n"
 msgstr ""
 "Zaktualizuj kopię roboczą do innego URL-u.\n"
 "Użycie: 1. switch URL[@WERSJA] [ŚCIEŻKA]\n"
@@ -8952,10 +8968,22 @@ msgstr ""
 "     (np. zmienia się sposób dostępu albo nazwa maszyny), ale kopia\n"
 "     robocza nadal odpowiada temu samemu katalogowi w tym samym repozytorium.\n"
 "\n"
+"     STARY_URL jest URL-em katalogu głównego, z którego przeprowadzana będzie\n"
+"     relokacja. Możesz użyć polecenia 'svn info', by określić URL katalogu\n"
+"     głównego obecnego katalogu kopii roboczej (szukaj 'URL:' w jego wyjściu).\n"
+"\n"
+"     NOWY_URL jest URL-em katalogu głównego, do którego przeprowadzana będzie\n"
+"     relokacja.\n"
+"\n"
 "  Zobacz też listę możliwych znaków informujących o przeprowadzonej\n"
 "  akcji w 'svn help update'.\n"
+"\n"
+"  Przykłady:\n"
+"  svn switch ^/branches/1.x-release\n"
+"  svn switch --relocate http://www.example.com/repo/project \\\n"
+"                        svn://svn.example.com/repo/project\n"
 
-#: ../svn/main.c:970
+#: ../svn/main.c:981
 msgid ""
 "Unlock working copy paths or URLs.\n"
 "usage: unlock TARGET...\n"
@@ -8967,7 +8995,7 @@ msgstr ""
 "\n"
 "  Użyj opcję --force, aby zerwać blokadę.\n"
 
-#: ../svn/main.c:977
+#: ../svn/main.c:988
 msgid ""
 "Bring changes from the repository into the working copy.\n"
 "usage: update [PATH...]\n"
@@ -9047,7 +9075,7 @@ msgstr ""
 "  tej operacji. Obecnie głębokość kopii roboczej może być tylko zwiększona.\n"
 "  Nie można uczynić katalogu bardziej płytkim.\n"
 
-#: ../svn/main.c:1018
+#: ../svn/main.c:1029
 msgid ""
 "Upgrade the metadata storage format for a working copy.\n"
 "usage: upgrade TARGET...\n"
@@ -9055,79 +9083,79 @@ msgstr ""
 "Zaktualizuj format przechowywania metadanych kopii roboczej.\n"
 "Użycie: upgrade CEL...\n"
 
-#: ../svn/main.c:1062 ../svnadmin/main.c:80 ../svnlook/main.c:342
-#: ../svnsync/main.c:215
+#: ../svn/main.c:1073 ../svnadmin/main.c:80 ../svnlook/main.c:342
+#: ../svnsync/main.c:217
 msgid "Caught signal"
 msgstr "Złapano sygnał"
 
-#: ../svn/main.c:1184 ../svnlook/main.c:2193
+#: ../svn/main.c:1195 ../svnlook/main.c:2193
 msgid "Non-numeric limit argument given"
 msgstr "Nienumeryczny argument określający limit podany"
 
-#: ../svn/main.c:1190 ../svnlook/main.c:2199
+#: ../svn/main.c:1201 ../svnlook/main.c:2199
 msgid "Argument to --limit must be positive"
 msgstr "Argument dla --limit musi być dodatni"
 
-#: ../svn/main.c:1214 ../svn/main.c:1459
+#: ../svn/main.c:1225 ../svn/main.c:1470
 msgid "Can't specify -c with --old"
 msgstr "Nie można użyć opcji -c wraz z opcją --old"
 
-#: ../svn/main.c:1233
+#: ../svn/main.c:1244
 #, c-format
 msgid "Non-numeric change argument (%s) given to -c"
 msgstr "Nienumeryczny argument (%s) określający zmianę podany do -c"
 
-#: ../svn/main.c:1241
+#: ../svn/main.c:1252
 msgid "There is no change 0"
 msgstr "Nie ma zmiany 0"
 
-#: ../svn/main.c:1277 ../svnadmin/main.c:1537
+#: ../svn/main.c:1288 ../svnadmin/main.c:1537
 #, c-format
 msgid "Syntax error in revision argument '%s'"
 msgstr "Błąd składniowy w numerze wersji '%s'"
 
-#: ../svn/main.c:1350 ../svn/main.c:1369
+#: ../svn/main.c:1361 ../svn/main.c:1380
 #, c-format
 msgid "Error converting depth from locale to UTF-8"
 msgstr "Błąd podczas konwersji głębokości z lokalnego kodowania do UTF-8"
 
-#: ../svn/main.c:1358
+#: ../svn/main.c:1369
 #, c-format
 msgid "'%s' is not a valid depth; try 'empty', 'files', 'immediates', or 'infinity'"
 msgstr "'%s' nie jest prawidłową głębokością. Spróbuj 'empty', 'files', 'immediates' lub 'infinity'"
 
-#: ../svn/main.c:1377
+#: ../svn/main.c:1388
 #, c-format
 msgid "'%s' is not a valid depth; try 'exclude', 'empty', 'files', 'immediates', or 'infinity'"
 msgstr "'%s' nie jest prawidłową głębokością. Spróbuj 'exclude', 'empty', 'files', 'immediates' lub 'infinity'"
 
-#: ../svn/main.c:1501
+#: ../svn/main.c:1512
 #, c-format
 msgid "Syntax error in native-eol argument '%s'"
 msgstr "Błąd składniowy w argumencie native-eol '%s'"
 
-#: ../svn/main.c:1559
+#: ../svn/main.c:1570
 #, c-format
 msgid "'%s' is not a valid --accept value"
 msgstr "'%s' nie jest poprawną wartością opcji --accept"
 
-#: ../svn/main.c:1568
+#: ../svn/main.c:1579
 #, c-format
 msgid "'%s' is not a valid --show-revs value"
 msgstr "'%s' nie jest poprawną wartością opcji --show-revs"
 
-#: ../svn/main.c:1630 ../svndumpfilter/main.c:1325 ../svnlook/main.c:2271
+#: ../svn/main.c:1641 ../svndumpfilter/main.c:1325 ../svnlook/main.c:2271
 #, c-format
 msgid "Subcommand argument required\n"
 msgstr "Podpolecenie wymaga podania argumentu\n"
 
-#: ../svn/main.c:1649 ../svnadmin/main.c:1672 ../svndumpfilter/main.c:1344
+#: ../svn/main.c:1660 ../svnadmin/main.c:1672 ../svndumpfilter/main.c:1344
 #: ../svnlook/main.c:2290
 #, c-format
 msgid "Unknown command: '%s'\n"
 msgstr "Nieznane polecenie: '%s'\n"
 
-#: ../svn/main.c:1683
+#: ../svn/main.c:1694
 #, c-format
 msgid ""
 "Subcommand '%s' doesn't accept option '%s'\n"
@@ -9136,76 +9164,76 @@ msgstr ""
 "Podpolecenie '%s' nie obsługuje opcji '%s'.\n"
 "Użyj 'svn help %s', by uzyskać informacje o użyciu.\n"
 
-#: ../svn/main.c:1698
+#: ../svn/main.c:1709
 msgid "Multiple revision arguments encountered; can't specify -c twice, or both -c and -r"
 msgstr "Wielokrotnie podano opcję numeru wersji; nie można określić -c dwa razy, lub obydwu -c i -r"
 
-#: ../svn/main.c:1712
+#: ../svn/main.c:1723
 msgid "-r and -c can't be used with --reintegrate"
 msgstr "-r i -c nie mogą być używane z --reintegrate"
 
-#: ../svn/main.c:1721
+#: ../svn/main.c:1732
 msgid "--depth and --set-depth are mutually exclusive"
 msgstr "Opcje --depth i --set-depth nie mogą występować równocześnie"
 
-#: ../svn/main.c:1731
+#: ../svn/main.c:1742
 msgid "--with-all-revprops and --with-no-revprops are mutually exclusive"
 msgstr "Opcje --with-all-revprops i --with-no-revprops nie mogą występować równocześnie"
 
-#: ../svn/main.c:1741
+#: ../svn/main.c:1752
 msgid "--with-revprop and --with-no-revprops are mutually exclusive"
 msgstr "Opcje --with-revprop i --with-no-revprops nie mogą występować równocześnie"
 
-#: ../svn/main.c:1750 ../svnsync/main.c:2103
+#: ../svn/main.c:1761 ../svnsync/main.c:2265
 msgid "--trust-server-cert requires --non-interactive"
 msgstr "--trust-server-cert wymaga --non-interactive"
 
-#: ../svn/main.c:1800
+#: ../svn/main.c:1811
 msgid "Log message file is a versioned file; use '--force-log' to override"
 msgstr "Plik z opisem zmian jest plikiem podlegającym zarządzaniu wersjami; użyj '--force-log', by wymusić jego użycie."
 
-#: ../svn/main.c:1807
+#: ../svn/main.c:1818
 msgid "Lock comment file is a versioned file; use '--force-log' to override"
 msgstr "Plik z opisem blokady jest plikiem podlegającym zarządzaniu wersjami; użyj '--force-log', by wymusić jego użycie."
 
-#: ../svn/main.c:1827
+#: ../svn/main.c:1838
 msgid "The log message is a pathname (was -F intended?); use '--force-log' to override"
 msgstr "Opis zmian jest ścieżką (chciano użyć -F?); użyj --force-log, by wymusić użycie takiego opisu"
 
-#: ../svn/main.c:1834
+#: ../svn/main.c:1845
 msgid "The lock comment is a pathname (was -F intended?); use '--force-log' to override"
 msgstr "Opis blokady jest ścieżką (chciano użyć -F?); użyj --force-log, bywymusić użycie takiego opisu"
 
-#: ../svn/main.c:1845
+#: ../svn/main.c:1856
 msgid "--relocate and --depth are mutually exclusive"
 msgstr "Opcje --relocate i --depth nie mogą występować równocześnie"
 
-#: ../svn/main.c:1930
+#: ../svn/main.c:1941
 msgid "--auto-props and --no-auto-props are mutually exclusive"
 msgstr "Opcje --auto-props i --no-auto-props nie mogą występować równocześnie"
 
-#: ../svn/main.c:1944
+#: ../svn/main.c:1955
 msgid "--reintegrate cannot be used with --ignore-ancestry or --record-only"
 msgstr "--reintegrate nie może być używane z --ignore-ancestry lub --record-only"
 
-#: ../svn/main.c:1952
+#: ../svn/main.c:1963
 msgid "--reintegrate cannot be used with --ignore-ancestry"
 msgstr "--reintegrate nie może być używane z --ignore-ancestry"
 
-#: ../svn/main.c:1960
+#: ../svn/main.c:1971
 msgid "--reintegrate cannot be used with --record-only"
 msgstr "--reintegrate nie może być używane z --record-only"
 
-#: ../svn/main.c:2074 ../svn/main.c:2080
+#: ../svn/main.c:2085 ../svn/main.c:2091
 #, c-format
 msgid "--accept=%s incompatible with --non-interactive"
 msgstr "--accept=%s jest niekompatybilne z --non-interactive"
 
-#: ../svn/main.c:2107
+#: ../svn/main.c:2118
 msgid "Try 'svn help' for more info"
 msgstr "Użyj 'svn help', by otrzymać dodatkowe instrukcje"
 
-#: ../svn/main.c:2117
+#: ../svn/main.c:2128
 msgid "svn: run 'svn cleanup' to remove locks (type 'svn help cleanup' for details)\n"
 msgstr ""
 "svn: uruchom 'svn cleanup', by usunąć blokady (więcej informacji -\n"
@@ -9251,70 +9279,70 @@ msgstr "Zamiast tego spróbuj wykonać 'svn add' lub 'svn add --non-recursive'."
 msgid "Try 'svn mkdir --parents' instead?"
 msgstr "Zamiast tego spróbuj wykonać 'svn mkdir --parents'."
 
-#: ../svn/notify.c:77
+#: ../svn/notify.c:80
 msgid "Summary of conflicts in external item:\n"
 msgstr "Podsumowanie konfliktów w zewnętrznym obiekcie:\n"
 
-#: ../svn/notify.c:85
+#: ../svn/notify.c:88
 msgid "Summary of conflicts:\n"
 msgstr "Podsumowanie konfliktów:\n"
 
-#: ../svn/notify.c:98
+#: ../svn/notify.c:101
 #, c-format
 msgid "  Text conflicts: %u\n"
 msgstr "  Konflikty tekstowe: %u\n"
 
-#: ../svn/notify.c:102
+#: ../svn/notify.c:105
 #, c-format
 msgid "  Property conflicts: %u\n"
 msgstr "  Konflikty atrybutów: %u\n"
 
-#: ../svn/notify.c:106
+#: ../svn/notify.c:109
 #, c-format
 msgid "  Tree conflicts: %u\n"
 msgstr "  Konflikty drzewne: %u\n"
 
-#: ../svn/notify.c:110
+#: ../svn/notify.c:113
 #, c-format
 msgid "  Skipped paths: %u\n"
 msgstr "  Pominięte ścieżki: %u\n"
 
-#: ../svn/notify.c:153
+#: ../svn/notify.c:159
 #, c-format
 msgid "Skipped missing target: '%s'\n"
 msgstr "Pominięto brakujący obiekt: '%s'\n"
 
-#: ../svn/notify.c:160
+#: ../svn/notify.c:166
 #, c-format
 msgid "Skipped target: '%s' -- copy-source is missing\n"
 msgstr "Ominięty cel: '%s' -- brak copy-source\n"
 
-#: ../svn/notify.c:167
+#: ../svn/notify.c:173
 #, c-format
 msgid "Skipped '%s'\n"
 msgstr "Pominięto '%s'\n"
 
-#: ../svn/notify.c:225
+#: ../svn/notify.c:231
 #, c-format
 msgid "Restored '%s'\n"
 msgstr "Odtworzono '%s'\n"
 
-#: ../svn/notify.c:231
+#: ../svn/notify.c:237
 #, c-format
 msgid "Reverted '%s'\n"
 msgstr "Wycofano zmiany w '%s'\n"
 
-#: ../svn/notify.c:237
+#: ../svn/notify.c:243
 #, c-format
 msgid "Failed to revert '%s' -- try updating instead.\n"
 msgstr "Błąd wycofania zmian w '%s' -- spróbuj aktualizacji.\n"
 
-#: ../svn/notify.c:245
+#: ../svn/notify.c:251
 #, c-format
 msgid "Resolved conflicted state of '%s'\n"
 msgstr "Rozwiązano konflikt w '%s'\n"
 
-#: ../svn/notify.c:325
+#: ../svn/notify.c:331
 #, c-format
 msgid ""
 "\n"
@@ -9323,82 +9351,82 @@ msgstr ""
 "\n"
 "Pobieranie zewnętrznego obiektu do '%s'\n"
 
-#: ../svn/notify.c:353
+#: ../svn/notify.c:359
 #, c-format
 msgid "Error handling externals definition for '%s':"
 msgstr "Błąd podczas obsługi zewnętrznej definicji dla '%s':"
 
-#: ../svn/notify.c:371
+#: ../svn/notify.c:377
 #, c-format
 msgid "Exported external at revision %ld.\n"
 msgstr "Wyeksportowano obiekt zewnętrzny w wersji %ld.\n"
 
-#: ../svn/notify.c:372
+#: ../svn/notify.c:378
 #, c-format
 msgid "Exported revision %ld.\n"
 msgstr "Wyeksportowano wersję %ld.\n"
 
-#: ../svn/notify.c:380
+#: ../svn/notify.c:386
 #, c-format
 msgid "Checked out external at revision %ld.\n"
 msgstr "Pobrano do kopii roboczej obiekt zewnętrzny w wersji %ld.\n"
 
-#: ../svn/notify.c:381
+#: ../svn/notify.c:387
 #, c-format
 msgid "Checked out revision %ld.\n"
 msgstr "Pobrano wersję %ld.\n"
 
-#: ../svn/notify.c:391
+#: ../svn/notify.c:397
 #, c-format
 msgid "Updated external to revision %ld.\n"
 msgstr "Uaktualniono obiekt zewnętrzny do wersji %ld.\n"
 
-#: ../svn/notify.c:392
+#: ../svn/notify.c:398
 #, c-format
 msgid "Updated to revision %ld.\n"
 msgstr "Uaktualniono do wersji %ld.\n"
 
-#: ../svn/notify.c:400
+#: ../svn/notify.c:406
 #, c-format
 msgid "External at revision %ld.\n"
 msgstr "Obiekt zewnętrzny w wersji %ld.\n"
 
-#: ../svn/notify.c:401
+#: ../svn/notify.c:407
 #, c-format
 msgid "At revision %ld.\n"
 msgstr "W wersji %ld.\n"
 
-#: ../svn/notify.c:413
+#: ../svn/notify.c:419
 #, c-format
 msgid "External export complete.\n"
 msgstr "Eksport obiektów zewnętrznych wykonany.\n"
 
-#: ../svn/notify.c:414
+#: ../svn/notify.c:420
 #, c-format
 msgid "Export complete.\n"
 msgstr "Eksport wykonany.\n"
 
-#: ../svn/notify.c:421
+#: ../svn/notify.c:427
 #, c-format
 msgid "External checkout complete.\n"
 msgstr "Pobieranie obiektów zewnętrznych do kopii roboczej wykonane.\n"
 
-#: ../svn/notify.c:422
+#: ../svn/notify.c:428
 #, c-format
 msgid "Checkout complete.\n"
 msgstr "Pobieranie kopii roboczej wykonane.\n"
 
-#: ../svn/notify.c:429
+#: ../svn/notify.c:435
 #, c-format
 msgid "External update complete.\n"
 msgstr "Uaktualnienie obiektów zewnętrznych wykonane.\n"
 
-#: ../svn/notify.c:430
+#: ../svn/notify.c:436
 #, c-format
 msgid "Update complete.\n"
 msgstr "Uaktualnienie wykonane.\n"
 
-#: ../svn/notify.c:462
+#: ../svn/notify.c:468
 #, c-format
 msgid ""
 "\n"
@@ -9407,127 +9435,127 @@ msgstr ""
 "\n"
 "Pobieranie statusu obiektu zewnętrznego '%s'\n"
 
-#: ../svn/notify.c:470
+#: ../svn/notify.c:476
 #, c-format
 msgid "Status against revision: %6ld\n"
 msgstr "Status względem wersji: %6ld\n"
 
-#: ../svn/notify.c:478
+#: ../svn/notify.c:484
 #, c-format
 msgid "Sending        %s\n"
 msgstr "Wysyłanie       %s\n"
 
-#: ../svn/notify.c:487
+#: ../svn/notify.c:493
 #, c-format
 msgid "Adding  (bin)  %s\n"
 msgstr "Dodawanie (bin) %s\n"
 
-#: ../svn/notify.c:494
+#: ../svn/notify.c:500
 #, c-format
 msgid "Adding         %s\n"
 msgstr "Dodawanie       %s\n"
 
-#: ../svn/notify.c:501
+#: ../svn/notify.c:507
 #, c-format
 msgid "Deleting       %s\n"
 msgstr "Usuwanie        %s\n"
 
-#: ../svn/notify.c:508
+#: ../svn/notify.c:514
 #, c-format
 msgid "Replacing      %s\n"
 msgstr "Zastępowanie    %s\n"
 
-#: ../svn/notify.c:518 ../svnsync/main.c:933
+#: ../svn/notify.c:524 ../svnsync/main.c:1040
 #, c-format
 msgid "Transmitting file data "
 msgstr "Przesyłanie treści pliku"
 
-#: ../svn/notify.c:527
+#: ../svn/notify.c:533
 #, c-format
 msgid "'%s' locked by user '%s'.\n"
 msgstr "'%s' zablokowane przez użytkownika '%s'.\n"
 
-#: ../svn/notify.c:533
+#: ../svn/notify.c:539
 #, c-format
 msgid "'%s' unlocked.\n"
 msgstr "'%s' odblokowane.\n"
 
-#: ../svn/notify.c:544
+#: ../svn/notify.c:550
 #, c-format
 msgid "Path '%s' is now a member of changelist '%s'.\n"
 msgstr "Ścieżka '%s' jest teraz członkiem listy zmian '%s'.\n"
 
-#: ../svn/notify.c:552
+#: ../svn/notify.c:558
 #, c-format
 msgid "Path '%s' is no longer a member of a changelist.\n"
 msgstr "Ścieżka '%s' już nie jest członkiem listy zmian.\n"
 
-#: ../svn/notify.c:565
+#: ../svn/notify.c:571
 #, c-format
 msgid "--- Merging differences between repository URLs into '%s':\n"
 msgstr "--- Łączenie zmian nastąpiłych pomiędzy URL-ami repozytorium do '%s':\n"
 
-#: ../svn/notify.c:570
+#: ../svn/notify.c:576
 #, c-format
 msgid "--- Merging r%ld into '%s':\n"
 msgstr "--- Łączenie zmian nastąpiłych w r%ld do '%s':\n"
 
-#: ../svn/notify.c:574
+#: ../svn/notify.c:580
 #, c-format
 msgid "--- Reverse-merging r%ld into '%s':\n"
 msgstr "--- Łączenie odwróconych zmian nastąpiłych w r%ld do '%s':\n"
 
-#: ../svn/notify.c:578
+#: ../svn/notify.c:584
 #, c-format
 msgid "--- Merging r%ld through r%ld into '%s':\n"
 msgstr "--- Łączenie zmian nastąpiłych w od r%ld do r%ld do '%s':\n"
 
-#: ../svn/notify.c:584
+#: ../svn/notify.c:590
 #, c-format
 msgid "--- Reverse-merging r%ld through r%ld into '%s':\n"
 msgstr "--- Łączenie odwróconych zmian nastąpiłych w od r%ld do r%ld do '%s':\n"
 
-#: ../svn/notify.c:595
+#: ../svn/notify.c:601
 #, c-format
 msgid "--- Merging differences between foreign repository URLs into '%s':\n"
 msgstr "--- Łączenie zmian nastąpiłych pomiędzy URL-ami obcego repozytorium do '%s':\n"
 
-#: ../svn/notify.c:601
+#: ../svn/notify.c:607
 #, c-format
 msgid "--- Merging (from foreign repository) r%ld into '%s':\n"
 msgstr "--- Łączenie (z obcego repozytorium) zmian nastąpiłych w r%ld do '%s':\n"
 
-#: ../svn/notify.c:606
+#: ../svn/notify.c:612
 #, c-format
 msgid "--- Reverse-merging (from foreign repository) r%ld into '%s':\n"
 msgstr "--- Łączenie (z obcego repozytorium) odwróconych zmian nastąpiłych w r%ld do '%s':\n"
 
-#: ../svn/notify.c:611
+#: ../svn/notify.c:617
 #, c-format
 msgid "--- Merging (from foreign repository) r%ld through r%ld into '%s':\n"
 msgstr "--- Łączenie (z obcego repozytorium) zmian nastąpiłych w od r%ld do r%ld do '%s':\n"
 
-#: ../svn/notify.c:617
+#: ../svn/notify.c:623
 #, c-format
 msgid "--- Reverse-merging (from foreign repository) r%ld through r%ld into '%s':\n"
 msgstr "--- Łączenie (z obcego repozytorium) odwróconych zmian nastąpiłych w od r%ld do r%ld do '%s':\n"
 
-#: ../svn/notify.c:636
+#: ../svn/notify.c:642
 #, c-format
 msgid "property '%s' set on '%s'\n"
 msgstr "atrybut '%s' ustawiony dla '%s'\n"
 
-#: ../svn/notify.c:644
+#: ../svn/notify.c:650
 #, c-format
 msgid "property '%s' deleted from '%s'.\n"
 msgstr "atrybut '%s' usunięty z '%s'.\n"
 
-#: ../svn/notify.c:652
+#: ../svn/notify.c:658
 #, c-format
 msgid "property '%s' set on repository revision %ld\n"
 msgstr "atrybut '%s' ustawiony dla wersji %ld\n"
 
-#: ../svn/notify.c:660
+#: ../svn/notify.c:666
 #, c-format
 msgid "property '%s' deleted from repository revision %ld\n"
 msgstr "atrybut '%s' usunięty z repozytorium w wersji %ld\n"
@@ -11348,7 +11376,7 @@ msgstr "Nie powiodła się próba podłączenia do Menedżera Usług"
 msgid "The service failed to start; an internal error occurred while starting the service"
 msgstr "Uruchomienie usługi nie powiodło się; wystąpił błąd wewnętrzny"
 
-#: ../svnsync/main.c:74
+#: ../svnsync/main.c:76
 msgid ""
 "usage: svnsync initialize DEST_URL SOURCE_URL\n"
 "\n"
@@ -11382,7 +11410,7 @@ msgstr ""
 "docelowym inaczej niż za pomocą 'svnsync'. Innymi słowy, docelowe\n"
 "repozytorium musi być lustrem tylko do odczytu repozytorium źródłowego.\n"
 
-#: ../svnsync/main.c:92
+#: ../svnsync/main.c:94
 msgid ""
 "usage: svnsync synchronize DEST_URL\n"
 "\n"
@@ -11394,7 +11422,7 @@ msgstr ""
 "Przenieś wszyskie nadchodzące wersje do docelowego repozytorium ze źródłowego\n"
 "repozytorium, którym to repozytorium docelowe zostało zainicjalizowane.\n"
 
-#: ../svnsync/main.c:98
+#: ../svnsync/main.c:100
 msgid ""
 "usage: svnsync copy-revprops DEST_URL [REV[:REV2]]\n"
 "\n"
@@ -11426,7 +11454,7 @@ msgstr ""
 "do docelowego repozytorium. Możesz użyć \"HEAD\" dla każdej wersji, co\n"
 "zostanie zinterpretowane jako \"najnowsza przeniesiona wersja\".\n"
 
-#: ../svnsync/main.c:114
+#: ../svnsync/main.c:116
 msgid ""
 "usage: svnsync info DEST_URL\n"
 "\n"
@@ -11438,7 +11466,7 @@ msgstr ""
 "Wypisz informacje o repozytorium docelowym synchronizacji wskazywanym\n"
 "przez DOCELOWY_URL.\n"
 
-#: ../svnsync/main.c:120
+#: ../svnsync/main.c:122
 msgid ""
 "usage: svnsync help [SUBCOMMAND...]\n"
 "\n"
@@ -11448,11 +11476,11 @@ msgstr ""
 "\n"
 "Opisz użycie tego programu lub jego podpoleceń.\n"
 
-#: ../svnsync/main.c:130
+#: ../svnsync/main.c:132
 msgid "print as little as possible"
 msgstr "wypisuj jak najmniej informacji"
 
-#: ../svnsync/main.c:136
+#: ../svnsync/main.c:138
 msgid ""
 "specify a username ARG (deprecated;\n"
 "                             see --source-username and --sync-username)"
@@ -11460,7 +11488,7 @@ msgstr ""
 "określ nazwę użytkownika jako ARGUMENT (przestarzałe;\n"
 "                             zobacz --source-username i --sync-username)"
 
-#: ../svnsync/main.c:140
+#: ../svnsync/main.c:142
 msgid ""
 "specify a password ARG (deprecated;\n"
 "                             see --source-password and --sync-password)"
@@ -11468,125 +11496,130 @@ msgstr ""
 "określ hasło jako ARGUMENT (przestarzałe;\n"
 "                             zobacz --source-password i --sync-password)"
 
-#: ../svnsync/main.c:148
+#: ../svnsync/main.c:150
 msgid "connect to source repository with username ARG"
 msgstr "połącz z repozytorium źródłowym przy użyciu nazwy użytkownika ARGUMENT"
 
-#: ../svnsync/main.c:150
+#: ../svnsync/main.c:152
 msgid "connect to source repository with password ARG"
 msgstr "połącz z repozytorium źródłowym przy użyciu hasła ARGUMENT"
 
-#: ../svnsync/main.c:152
+#: ../svnsync/main.c:154
 msgid "connect to sync repository with username ARG"
 msgstr "połącz z repozytorium synchronizacyjnym przy użyciu nazwy użytkownika ARGUMENT"
 
-#: ../svnsync/main.c:154
+#: ../svnsync/main.c:156
 msgid "connect to sync repository with password ARG"
 msgstr "połącz z repozytorium synchronizacyjnym przy użyciu hasła ARGUMENT"
 
-#: ../svnsync/main.c:253
+#: ../svnsync/main.c:255
 #, c-format
 msgid "Can't get local hostname"
 msgstr "Nie można uzyskać lokalnej nazwy hosta"
 
-#: ../svnsync/main.c:276
+#: ../svnsync/main.c:278
 #, c-format
 msgid "Failed to get lock on destination repos, currently held by '%s'\n"
 msgstr ""
 "Nie udało się uzyskać blokady na docelowym repozytorium, obecnie\n"
 "trzymanym przez '%s'\n"
 
-#: ../svnsync/main.c:385
+#: ../svnsync/main.c:387
 #, c-format
 msgid "Session is rooted at '%s' but the repos root is '%s'"
 msgstr "Katalog główny sesji to '%s', ale katalog główny repozytorium to '%s'"
 
-#: ../svnsync/main.c:523
+#: ../svnsync/main.c:599
 #, c-format
 msgid "Copied properties for revision %ld (%s* properties skipped).\n"
-msgstr "Skopiowano atrybuty dla wersji %ld (%s* atrybutów pominięto).\n"
+msgstr "Skopiowano atrybuty dla wersji %ld (atrybuty %s* pominięto).\n"
 
-#: ../svnsync/main.c:528
+#: ../svnsync/main.c:604
 #, c-format
 msgid "Copied properties for revision %ld.\n"
 msgstr "Skopiowano atrybuty dla wersji %ld.\n"
 
-#: ../svnsync/main.c:630
+#: ../svnsync/main.c:617
+#, c-format
+msgid "NOTE: Normalized %s* properties to LF line endings (%d rev-props, %d node-props).\n"
+msgstr "UWAGA: Znormalizowano atrybuty %s* do zakończeń linii LF (%d atrybutów wersji, %d atrybutów obiektów).\n"
+
+#: ../svnsync/main.c:733
 msgid "Cannot initialize a repository with content in it"
 msgstr "Nie można zainicjalizować repozytorium posiadającego zawartość"
 
-#: ../svnsync/main.c:641
+#: ../svnsync/main.c:744
 #, c-format
 msgid "Destination repository is already synchronizing from '%s'"
 msgstr "Repozytorium docelowe jest już synchronizujące z '%s'"
 
-#: ../svnsync/main.c:724 ../svnsync/main.c:727 ../svnsync/main.c:1654
-#: ../svnsync/main.c:1804 ../svnsync/main.c:1845
+#: ../svnsync/main.c:830 ../svnsync/main.c:833 ../svnsync/main.c:1810
+#: ../svnsync/main.c:1966 ../svnsync/main.c:2007
 #, c-format
 msgid "Path '%s' is not a URL"
 msgstr "Ścieżka '%s' nie jest URL-em"
 
-#: ../svnsync/main.c:1235
+#: ../svnsync/main.c:1367
 #, c-format
 msgid "Committed revision %ld.\n"
 msgstr "Zatwierdzona wersja %ld.\n"
 
-#: ../svnsync/main.c:1275
+#: ../svnsync/main.c:1407
 msgid "Destination repository has not been initialized"
 msgstr "Docelowe repozytorium nie zostało zainicjalizowane"
 
-#: ../svnsync/main.c:1451
+#: ../svnsync/main.c:1593
 #, c-format
 msgid "Commit created rev %ld but should have created %ld"
 msgstr "Zatwierdzanie zmian utworzyło wersję o numerze %ld, a powinno utworzyć %ld"
 
-#: ../svnsync/main.c:1557
+#: ../svnsync/main.c:1706
 #, c-format
 msgid "Revision being currently copied (%ld), last merged revision (%ld), and destination HEAD (%ld) are inconsistent; have you committed to the destination without using svnsync?"
 msgstr "Wersja obecnie kopiowana (%ld), ostatnio połączona wersja (%ld) i docelowa wersja HEAD (%ld) są niespójne; czy przeprowadziłeś zatwierdzenie do docelowego repozytorium bez użycia svnsync?"
 
-#: ../svnsync/main.c:1594
+#: ../svnsync/main.c:1744
 #, c-format
 msgid "Destination HEAD (%ld) is not the last merged revision (%ld); have you committed to the destination without using svnsync?"
 msgstr "Docelowa wersja HEAD (%ld) nie jest ostatnio połączoną wersją (%ld); czy przeprowadziłeś zatwierdzenie do docelowego repozytorium bez użycia svnsync?"
 
-#: ../svnsync/main.c:1697 ../svnsync/main.c:1702
+#: ../svnsync/main.c:1854 ../svnsync/main.c:1859
 #, c-format
 msgid "Cannot copy revprops for a revision (%ld) that has not been synchronized yet"
 msgstr "Nie można skopiować atrybutów wersji (%ld), która jeszcze nie była synchronizowana"
 
-#: ../svnsync/main.c:1754
+#: ../svnsync/main.c:1916
 #, c-format
 msgid "'%s' is not a valid revision range"
 msgstr "'%s' nie jest poprawnym zakresem wersji"
 
-#: ../svnsync/main.c:1768 ../svnsync/main.c:1788
+#: ../svnsync/main.c:1930 ../svnsync/main.c:1950
 #, c-format
 msgid "Invalid revision number (%ld)"
 msgstr "Błędny numer wersji (%ld)"
 
-#: ../svnsync/main.c:1859
+#: ../svnsync/main.c:2021
 #, c-format
 msgid "Repository '%s' is not initialized for synchronization"
 msgstr "Repozytorium '%s' nie jest zainicjalizowane do synchronizacji"
 
 #. Print the info.
-#: ../svnsync/main.c:1868
+#: ../svnsync/main.c:2030
 #, c-format
 msgid "Source URL: %s\n"
 msgstr "Źródłowy URL: %s\n"
 
-#: ../svnsync/main.c:1870
+#: ../svnsync/main.c:2032
 #, c-format
 msgid "Source Repository UUID: %s\n"
 msgstr "UUID repozytorium źródłowego: %s\n"
 
-#: ../svnsync/main.c:1873
+#: ../svnsync/main.c:2035
 #, c-format
 msgid "Last Merged Revision: %s\n"
 msgstr "Ostatnio połączona wersja: %s\n"
 
-#: ../svnsync/main.c:1890
+#: ../svnsync/main.c:2052
 msgid ""
 "general usage: svnsync SUBCOMMAND DEST_URL  [ARGS & OPTIONS ...]\n"
 "Type 'svnsync help <subcommand>' for help on a specific subcommand.\n"
@@ -11602,11 +11635,11 @@ msgstr ""
 "\n"
 "Dostępne podpolecenia:\n"
 
-#: ../svnsync/main.c:2079
+#: ../svnsync/main.c:2241
 msgid "Cannot use --username or --password with any of --source-username, --source-password, --sync-username, or --sync-password.\n"
 msgstr "Nie można użyć opcji --username lub --password jednocześnie z którąkolwiek z opcji --source-username, --source-password, --sync-username lub --sync-password.\n"
 
-#: ../svnsync/main.c:2169
+#: ../svnsync/main.c:2331
 #, c-format
 msgid ""
 "Subcommand '%s' doesn't accept option '%s'\n"
@@ -11615,7 +11648,7 @@ msgstr ""
 "Podpolecenie '%s' nie obsługuje opcji '%s'.\n"
 "Użyj 'svnsync help %s', by uzyskać informacje o użyciu.\n"
 
-#: ../svnsync/main.c:2251
+#: ../svnsync/main.c:2413
 msgid "Try 'svnsync help' for more info"
 msgstr "Użyj 'svnsync help', aby uzyskać więcej informacji"
 

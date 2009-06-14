@@ -287,7 +287,10 @@ svn_path_get_longest_ancestor(const char *path1,
  *
  * @a relative may be a URL, in which case no attempt is made to convert it,
  * and a copy of the URL is returned.
+ *
+ * @deprecated Provided for backward compatibility with the 1.6 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_path_get_absolute(const char **pabsolute,
                       const char *relative,
