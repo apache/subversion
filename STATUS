@@ -80,6 +80,14 @@ Candidate changes:
    Votes:
      +1: cmpilato
 
+ * r38004, r38014, r38028
+   Make KWallet window attached to terminal window.
+   Justification:
+     Without this change, KWallet window can appear behind terminal window
+     and is left after killing terminal.
+   Votes:
+     +1: arfrever
+
 Approved changes:
 =================
 
