@@ -2,7 +2,7 @@
  * stream-test.c -- test the stream functions
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2002-2003, 2005-2006, 2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -248,7 +248,8 @@ test_stream_range(const char **msg,
   apr_off_t start, end;
   apr_file_t *f;
   apr_status_t status;
-  unsigned int i, j, len;
+  unsigned int i, j;
+  apr_size_t len;
   svn_stream_t *stream;
 
   *msg = "test streams reading from range of file";
@@ -266,7 +267,7 @@ test_stream_range(const char **msg,
   for (j = 0; j < 3; j++)
     {
       len = strlen(file_data[j]);
-      status = apr_file_write(f, file_data[j], &len); 
+      status = apr_file_write(f, file_data[j], &len);
       if (status || len != strlen(file_data[j]))
         return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                                  "Cannot write to '%s'", fname);
