@@ -1445,7 +1445,7 @@ def commit_multiple_wc(sbox):
   svntest.actions.run_and_verify_status(wc1_dir, expected_status1)
   svntest.actions.run_and_verify_status(wc2_dir, expected_status2)
 
-# Same as commit_multiple_wc_nested except that the two WCs come
+# Same as commit_multiple_wc except that the two WCs come
 # from different repositories. Commits to multiple repositories
 # are outside the scope of issue #2381.
 def commit_multiple_wc_multiple_repos(sbox):
@@ -1488,7 +1488,7 @@ def commit_multiple_wc_multiple_repos(sbox):
   svntest.actions.run_and_verify_status(wc2_dir, expected_status2)
 
   # Commit should fail, since WCs come from different repositories.
-  svntest.actions.run_and_verify_svn("Output on stderr expected doesn't match",
+  svntest.actions.run_and_verify_svn("Expected output on stderr doesn't match",
                                      [], ".*is not a working copy.*",
                                      'commit', '-m', 'log',
                                      wc1_dir, wc2_dir)
