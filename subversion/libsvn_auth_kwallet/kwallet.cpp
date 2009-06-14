@@ -64,7 +64,9 @@
 
 
 #define INITIALIZE_APPLICATION                                            \
-  if (getenv("SVN_QAPPLICATION_SAFE"))                                    \
+  if (apr_hash_get(parameters,                                            \
+                   "svn:auth:qapplication-safe",                          \
+                   APR_HASH_KEY_STRING))                                  \
     {                                                                     \
       QApplication *app;                                                  \
       if (! qApp)                                                         \
@@ -133,7 +135,8 @@ get_wallet_name(apr_hash_t *parameters)
 }
 
 static pid_t
-get_parent_pid(pid_t pid, apr_pool_t *pool)
+get_parent_pid(pid_t pid,
+               apr_pool_t *pool)
 {
   pid_t parent_pid = 0;
 
@@ -178,11 +181,14 @@ get_parent_pid(pid_t pid, apr_pool_t *pool)
 }
 
 static WId
-get_wid(apr_pool_t *pool)
+get_wid(apr_hash_t *parameters,
+        apr_pool_t *pool)
 {
   WId wid = -1;
 
-  if (getenv("SVN_QAPPLICATION_SAFE"))
+  if (apr_hash_get(parameters,
+                   "svn:auth:qapplication-safe",
+                   APR_HASH_KEY_STRING))
     {
       QMap<pid_t, WId> process_info_list;
       QList<WId> windows(KWindowSystem::windows());
@@ -227,7 +233,7 @@ get_wallet(QString wallet_name,
                                  APR_HASH_KEY_STRING))
     {
       wallet = KWallet::Wallet::openWallet(wallet_name,
-                                           pool ? get_wid(pool) : -1,
+                                           pool ? get_wid(parameters, pool) : -1,
                                            KWallet::Wallet::Synchronous);
     }
   if (wallet)

@@ -1,6 +1,6 @@
 /*
  * ====================================================================
- * Copyright (c) 2005-2008 CollabNet.  All rights reserved.
+ * Copyright (c) 2005-2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -2108,11 +2108,6 @@ main(int argc, const char *argv[])
 
   pool = svn_pool_create(NULL);
 
-#ifdef HAVE_SETENV
-  /* svnsync can safely create instance of QApplication class. */
-  setenv("SVN_QAPPLICATION_SAFE", "1", 1);
-#endif
-
   err = svn_ra_initialize(pool);
   if (err)
     return svn_cmdline_handle_exit_error(err, pool, "svnsync: ");
@@ -2411,7 +2406,15 @@ main(int argc, const char *argv[])
                                         check_cancel, NULL,
                                         pool);
   if (! err)
-    err = (*subcommand->cmd_func)(os, &opt_baton, pool);
+    {
+      /* svnsync can safely create instance of QApplication class. */
+      svn_auth_set_parameter(opt_baton.source_auth_baton,
+                             "svn:auth:qapplication-safe", "1");
+      svn_auth_set_parameter(opt_baton.sync_auth_baton,
+                             "svn:auth:qapplication-safe", "1");
+
+      err = (*subcommand->cmd_func)(os, &opt_baton, pool);
+    }
   if (err)
     {
       /* For argument-related problems, suggest using the 'help'

@@ -663,9 +663,6 @@ AC_FUNC_VPRINTF
 dnl check for functions needed in special file handling
 AC_CHECK_FUNCS(symlink readlink)
 
-dnl check for function needed for handling of environment variables
-AC_CHECK_FUNCS(setenv)
-
 
 dnl Process some configuration options ----------
 
