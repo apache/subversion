@@ -326,6 +326,52 @@ test_stream_range(const char **msg,
     return SVN_NO_ERROR;
 }
 
+/* An implementation of svn_io_line_filter_cb_t */
+static svn_error_t *
+line_filter(svn_boolean_t *filtered, const char *line, apr_pool_t *scratch_pool)
+{
+  *filtered = strchr(line, '!') != NULL;
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_stream_line_filter(const char **msg,
+                        svn_boolean_t msg_only,
+                        svn_test_opts_t *opts,
+                        apr_pool_t *pool)
+{
+  static const char *lines[4] = {"Not filtered.", "Filtered!",
+                                 "Not filtered either.", "End of the lines!"};
+  svn_string_t *string;
+  svn_stream_t *stream;
+  svn_stringbuf_t *line;
+  svn_boolean_t eof;
+
+  *msg = "test stream line filtering";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  string = svn_string_createf(pool, "%s\n%s\n%s\n%s", lines[0], lines[1],
+                              lines[2], lines[3]);
+  stream = svn_stream_from_string(string, pool);
+
+  svn_stream_set_line_filter_callback(stream, line_filter);
+
+  svn_stream_readline(stream, &line, "\n", &eof, pool);
+  SVN_ERR_ASSERT(strcmp(line->data, lines[0]) == 0);
+  /* line[1] should be filtered */
+  svn_stream_readline(stream, &line, "\n", &eof, pool);
+  SVN_ERR_ASSERT(strcmp(line->data, lines[2]) == 0);
+
+  /* The last line should also be filtered, and the resulting
+   * stringbuf should be empty. */
+  svn_stream_readline(stream, &line, "\n", &eof, pool);
+  SVN_ERR_ASSERT(eof && svn_stringbuf_isempty(line));
+
+  return SVN_NO_ERROR;
+}
+
 
 /* The test table.  */
 
@@ -335,5 +381,6 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS(test_stream_from_string),
     SVN_TEST_PASS(test_stream_compressed),
     SVN_TEST_PASS(test_stream_range),
+    SVN_TEST_PASS(test_stream_line_filter),
     SVN_TEST_NULL
   };

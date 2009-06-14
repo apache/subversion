@@ -692,6 +692,13 @@ typedef svn_error_t *(*svn_close_fn_t)(void *baton);
  * @since New in 1.7. */
 typedef svn_error_t *(*svn_io_reset_fn_t)(void *baton);
 
+/** Line-filtering callback function for a generic stream.
+ * @see svn_stream_t and svn_stream_readline().
+ *
+ * @since New in 1.7. */
+typedef svn_error_t *(*svn_io_line_filter_cb_t)(svn_boolean_t *filtered,
+                                                const char *line,
+                                                apr_pool_t *scrach_pool);
 
 /** Create a generic stream.  @see svn_stream_t. */
 svn_stream_t *
@@ -724,6 +731,11 @@ void
 svn_stream_set_reset(svn_stream_t *stream,
                      svn_io_reset_fn_t reset_fn);
 
+/** Set @a stream's line-filtering callback function to @a line_filter_cb
+ * @since New in 1.7. */
+void
+svn_stream_set_line_filter_callback(svn_stream_t *stream,
+                                    svn_io_line_filter_cb_t line_filter_cb);
 
 /** Create a stream that is empty for reading and infinite for writing. */
 svn_stream_t *
@@ -1007,6 +1019,12 @@ svn_stream_printf_from_utf8(svn_stream_t *stream,
  *
  * If @a stream runs out of bytes before encountering a line-terminator,
  * then set @a *eof to @c TRUE, otherwise set @a *eof to FALSE.
+ *
+ * If a line-filter callback function was set on the stream using
+ * svn_stream_set_line_filter_callback(), lines will only be returned
+ * if they pass the filtering decision of the callback function.
+ * If end-of-file is encountered while reading the line and the line
+ * is filtered, @a *stringbuf will be empty.
  */
 svn_error_t *
 svn_stream_readline(svn_stream_t *stream,
