@@ -45,6 +45,7 @@ struct svn_stream_t {
   svn_write_fn_t write_fn;
   svn_close_fn_t close_fn;
   svn_io_reset_fn_t reset_fn;
+  svn_io_line_filter_cb_t line_filter_cb;
 };
 
 
@@ -62,6 +63,7 @@ svn_stream_create(void *baton, apr_pool_t *pool)
   stream->write_fn = NULL;
   stream->reset_fn = NULL;
   stream->close_fn = NULL;
+  stream->line_filter_cb = NULL;
   return stream;
 }
 
@@ -98,6 +100,12 @@ svn_stream_set_close(svn_stream_t *stream, svn_close_fn_t close_fn)
   stream->close_fn = close_fn;
 }
 
+void
+svn_stream_set_line_filter_callback(svn_stream_t *stream,
+                                    svn_io_line_filter_cb_t line_filter_cb)
+{
+  stream->line_filter_cb = line_filter_cb;
+}
 
 svn_error_t *
 svn_stream_read(svn_stream_t *stream, char *buffer, apr_size_t *len)
@@ -176,6 +184,23 @@ svn_stream_printf_from_utf8(svn_stream_t *stream,
   return svn_stream_write(stream, translated, &len);
 }
 
+static svn_error_t *
+line_filter(svn_stream_t *stream, svn_boolean_t *filtered, const char *line,
+            apr_pool_t *pool)
+{
+  apr_pool_t *scratch_pool;
+
+  if (! stream->line_filter_cb)
+    {
+      *filtered = FALSE;
+      return SVN_NO_ERROR;
+    }
+
+  scratch_pool = svn_pool_create(pool);
+  SVN_ERR(stream->line_filter_cb(filtered, line, scratch_pool));
+  svn_pool_destroy(scratch_pool);
+  return SVN_NO_ERROR;
+}
 
 svn_error_t *
 svn_stream_readline(svn_stream_t *stream,
@@ -184,39 +209,61 @@ svn_stream_readline(svn_stream_t *stream,
                     svn_boolean_t *eof,
                     apr_pool_t *pool)
 {
-  apr_size_t numbytes;
-  const char *match;
-  char c;
-  /* Since we're reading one character at a time, let's at least
-     optimize for the 90% case.  90% of the time, we can avoid the
-     stringbuf ever having to realloc() itself if we start it out at
-     80 chars.  */
-  svn_stringbuf_t *str = svn_stringbuf_create_ensure(80, pool);
+  svn_stringbuf_t *str;
+  apr_pool_t *iterpool;
+  svn_boolean_t filtered;
 
-  match = eol;
-  while (*match)
+  iterpool = svn_pool_create(pool);
+  do
     {
-      numbytes = 1;
-      SVN_ERR(svn_stream_read(stream, &c, &numbytes));
-      if (numbytes != 1)
+      apr_size_t numbytes;
+      const char *match;
+      char c;
+
+      svn_pool_clear(iterpool);
+
+      /* Since we're reading one character at a time, let's at least
+         optimize for the 90% case.  90% of the time, we can avoid the
+         stringbuf ever having to realloc() itself if we start it out at
+         80 chars.  */
+      str = svn_stringbuf_create_ensure(80, iterpool);
+
+      match = eol;
+      while (*match)
         {
-          /* a 'short' read means the stream has run out. */
-          *eof = TRUE;
-          *stringbuf = str;
-          return SVN_NO_ERROR;
+          numbytes = 1;
+          SVN_ERR(svn_stream_read(stream, &c, &numbytes));
+          if (numbytes != 1)
+            {
+              /* a 'short' read means the stream has run out. */
+              *eof = TRUE;
+
+              SVN_ERR(line_filter(stream, &filtered, str->data, iterpool));
+              if (filtered)
+                *stringbuf = svn_stringbuf_create_ensure(0, pool);
+              else
+                *stringbuf = svn_stringbuf_dup(str, pool);
+
+              return SVN_NO_ERROR;
+            }
+
+          if (c == *match)
+            match++;
+          else
+            match = eol;
+
+          svn_stringbuf_appendbytes(str, &c, 1);
         }
 
-      if (c == *match)
-        match++;
-      else
-        match = eol;
+      *eof = FALSE;
+      svn_stringbuf_chop(str, match - eol);
 
-      svn_stringbuf_appendbytes(str, &c, 1);
+      SVN_ERR(line_filter(stream, &filtered, str->data, iterpool));
     }
+  while (filtered);
+  *stringbuf = svn_stringbuf_dup(str, pool);
 
-  *eof = FALSE;
-  svn_stringbuf_chop(str, match - eol);
-  *stringbuf = str;
+  svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
 }
 
