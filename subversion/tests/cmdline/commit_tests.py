@@ -1351,13 +1351,13 @@ def failed_commit(sbox):
 
 #----------------------------------------------------------------------
 
-# Commit from multiple working copies is not yet supported.  At
-# present an error is generated and none of the working copies change.
-# Related to issue 959, this test here doesn't use svn:externals but the
-# behaviour needs to be considered.
+# Commit from multiple working copies is being worked on as issue #2381.
+# Also related to issue #959, this test here doesn't use svn:externals
+# but the behaviour needs to be considered.
+# In this test two WCs are nested, one WC is child of the other.
 
-def commit_multiple_wc(sbox):
-  "attempted commit from multiple wc fails"
+def commit_multiple_wc_nested(sbox):
+  "commit from two nested working copies"
 
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -1384,16 +1384,119 @@ def commit_multiple_wc(sbox):
   expected_status2.tweak('A/B/lambda', status='M ')
   svntest.actions.run_and_verify_status(wc2_dir, expected_status2)
 
-  # Commit should fail, even though one target is a "child" of the other.
-  svntest.actions.run_and_verify_svn("Unexpectedly not locked",
-                                     None, svntest.verify.AnyOutput,
+  # Commit should succeed, even though one target is a "child" of the other.
+  svntest.actions.run_and_verify_svn(None, None, svntest.verify.AnyOutput,
                                      'commit', '-m', 'log',
                                      wc_dir, wc2_dir)
 
-  # Verify status unchanged
+  # Verify status changed
+  expected_status.tweak('A/mu', status='  ', wc_rev=2)
+  expected_status2.tweak('A/B/lambda', status='  ', wc_rev=2)
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
   svntest.actions.run_and_verify_status(wc2_dir, expected_status2)
 
+# Same as commit_multiple_wc_nested except that the two WCs are not nested. 
+def commit_multiple_wc(sbox):
+  "commit from two working copies"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  
+  # Cleanup original wc
+  svntest.sandbox._cleanup_test_path(wc_dir)
+
+  # Checkout two wcs
+  wc1_dir = os.path.join(wc_dir, 'wc1')
+  wc2_dir = os.path.join(wc_dir, 'wc2')
+  url = sbox.repo_url
+  svntest.actions.run_and_verify_svn("Output on stderr where none expected",
+                                     svntest.verify.AnyOutput, [],
+                                     'checkout',
+                                     url, wc1_dir)
+  svntest.actions.run_and_verify_svn("Output on stderr where none expected",
+                                     svntest.verify.AnyOutput, [],
+                                     'checkout',
+                                     url, wc2_dir)
+
+  # Modify both working copies
+  mu1_path = os.path.join(wc1_dir, 'A', 'mu')
+  svntest.main.file_append(mu1_path, 'appended mu1 text')
+  lambda2_path = os.path.join(wc2_dir, 'A', 'B', 'lambda')
+  svntest.main.file_append(lambda2_path, 'appended lambda2 text')
+
+  # Verify modified status
+  expected_status1 = svntest.actions.get_virginal_state(wc1_dir, 1)
+  expected_status1.tweak('A/mu', status='M ')
+  svntest.actions.run_and_verify_status(wc1_dir, expected_status1)
+  expected_status2 = svntest.actions.get_virginal_state(wc2_dir, 1)
+  expected_status2.tweak('A/B/lambda', status='M ')
+  svntest.actions.run_and_verify_status(wc2_dir, expected_status2)
+
+  # Commit should succeed.
+  svntest.actions.run_and_verify_svn("Output on stderr where none expected",
+                                     svntest.verify.AnyOutput, [],
+                                     'commit', '-m', 'log',
+                                     wc1_dir, wc2_dir)
+
+  # Verify status changed
+  expected_status1.tweak('A/mu', status='  ', wc_rev=2)
+  expected_status2.tweak('A/B/lambda', status='  ', wc_rev=2)
+  svntest.actions.run_and_verify_status(wc1_dir, expected_status1)
+  svntest.actions.run_and_verify_status(wc2_dir, expected_status2)
+
+# Same as commit_multiple_wc_nested except that the two WCs come
+# from different repositories. Commits to multiple repositories
+# are outside the scope of issue #2381.
+def commit_multiple_wc_multiple_repos(sbox):
+  "committing two WCs from different repos fails"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Create another repository
+  repo2, url2 = sbox.add_repo_path("repo2")
+  svntest.main.copy_repos(sbox.repo_dir, repo2, 1, 1)
+  
+  # Cleanup original wc
+  svntest.sandbox._cleanup_test_path(wc_dir)
+
+  # Checkout two wcs
+  wc1_dir = os.path.join(wc_dir, 'wc1')
+  wc2_dir = os.path.join(wc_dir, 'wc2')
+  svntest.actions.run_and_verify_svn("Output on stderr where none expected",
+                                     svntest.verify.AnyOutput, [],
+                                     'checkout',
+                                     sbox.repo_url, wc1_dir)
+  svntest.actions.run_and_verify_svn("Output on stderr where none expected",
+                                     svntest.verify.AnyOutput, [],
+                                     'checkout',
+                                     url2, wc2_dir)
+
+  # Modify both working copies
+  mu1_path = os.path.join(wc1_dir, 'A', 'mu')
+  svntest.main.file_append(mu1_path, 'appended mu1 text')
+  lambda2_path = os.path.join(wc2_dir, 'A', 'B', 'lambda')
+  svntest.main.file_append(lambda2_path, 'appended lambda2 text')
+
+  # Verify modified status
+  expected_status1 = svntest.actions.get_virginal_state(wc1_dir, 1)
+  expected_status1.tweak('A/mu', status='M ')
+  svntest.actions.run_and_verify_status(wc1_dir, expected_status1)
+  expected_status2 = svntest.actions.get_virginal_state(wc2_dir, 1)
+  expected_status2.tweak('A/B/lambda', status='M ')
+  svntest.actions.run_and_verify_status(wc2_dir, expected_status2)
+
+  # Commit should fail, since WCs come from different repositories.
+  svntest.actions.run_and_verify_svn("Output on stderr expected doesn't match",
+                                     [], ".*is not a working copy.*",
+                                     'commit', '-m', 'log',
+                                     wc1_dir, wc2_dir)
+
+  # Verify status unchanged
+  svntest.actions.run_and_verify_status(wc1_dir, expected_status1)
+  svntest.actions.run_and_verify_status(wc2_dir, expected_status2)
+  
+#----------------------------------------------------------------------
 
 def commit_nonrecursive(sbox):
   "commit named targets with -N (issues #1195, #1239)"
@@ -2696,7 +2799,9 @@ test_list = [ None,
               commit_from_long_dir,
               commit_with_lock,
               commit_current_dir,
-              commit_multiple_wc,
+              XFail(commit_multiple_wc_nested),
+              XFail(commit_multiple_wc),
+              commit_multiple_wc_multiple_repos,
               commit_nonrecursive,
               failed_commit,
               commit_out_of_date_deletions,
