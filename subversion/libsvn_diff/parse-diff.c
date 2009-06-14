@@ -87,16 +87,15 @@ svn_diff__parse_next_patch(svn_patch_t **patch,
           const char *utf8_path;
           const char *canon_path;
 
-          /* Looks like it, try to find the filename. */
+          /* If we can find a tab, it separates the filename from
+           * the rest of the line which we can discard. */
           apr_size_t tab = svn_stringbuf_find_char_backward(line, '\t');
-          if (tab >= line->len)
-            /* Not found... */
-            continue;
+          if (tab < line->len)
+            line->data[tab] = '\0';
 
           /* Grab the filename and encode it in UTF-8. */
           /* TODO: Allow specifying the patch file's encoding.
            *       For now, we assume its encoding is native. */
-          line->data[tab] = '\0';
           SVN_ERR(svn_utf_cstring_to_utf8(&utf8_path,
                                           line->data + strlen(indicator),
                                           iterpool));
