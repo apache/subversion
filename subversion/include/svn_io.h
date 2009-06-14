@@ -698,7 +698,7 @@ typedef svn_error_t *(*svn_io_reset_fn_t)(void *baton);
  * @since New in 1.7. */
 typedef svn_error_t *(*svn_io_line_filter_cb_t)(svn_boolean_t *filtered,
                                                 const char *line,
-                                                apr_pool_t *scrach_pool);
+                                                apr_pool_t *scratch_pool);
 
 /** Create a generic stream.  @see svn_stream_t. */
 svn_stream_t *
