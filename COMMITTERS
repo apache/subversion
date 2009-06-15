@@ -19,33 +19,24 @@ Blanket commit access:
           fitz   Brian W. Fitzpatrick <fitz@red-bean.com>
         daniel   Daniel Stenberg <daniel@haxx.se>
       cmpilato   C. Michael Pilato <cmpilato@collab.net>
-         kevin   Kevin Pilch-Bisson <kevin@pilch-bisson.net>
         philip   Philip Martin <philip@codematters.co.uk>
    jerenkrantz   Justin Erenkrantz <justin@erenkrantz.com>
         rooneg   Garrett Rooney <rooneg@electricjellyfish.net>
-      bcollins   Ben Collins <bcollins@debian.org>
          blair   Blair Zajac <blair@orcaware.com>
        striker   Sander Striker <striker@apache.org>
-         naked   Nuutti Kotivuori <naked@iki.fi>
-       dwhedon   David Kimdon <dwhedon@debian.org>
            dlr   Daniel Rall <dlr@finemaltcoding.com>
            mbk   Mark Benedetto King <mbk@lowlatency.com>
            epg   Eric Gillespie <epg@pretzelnet.org>
            jaa   Jani Averbach <jaa@iki.fi>
     julianfoad   Julian Foad <julianfoad@btopenworld.com>
-     ringstrom   Tobias Ringström <tobias@ringstrom.mine.nu>
-       jpieper   Josh Pieper <jjp@pobox.com>
   jszakmeister   John Szakmeister <john@szakmeister.net>
       dionisos   Erik Hülsmann <e.huelsmann@gmx.net>
         breser   Ben Reser <ben@reser.org>
-           djh   D.J. Heap <djheap@gmail.com>
           maxb   Max Bowsher <maxb1@ukf.net>
-      lundblad   Peter N. Lundblad <peter@famlundblad.se>
        dberlin   Daniel Berlin <dberlin@dberlin.org>
      danderson   David Anderson <david.anderson@natulte.net>
         zhakov   Ivan Zhakov <chemodax@gmail.com>
         djames   David James <james@cs.toronto.edu>
-       malcolm   Malcolm Rowe <malcolm-svn-dev@farside.org.uk>
         pburba   Paul Burba <pburba@collab.net>
        glasser   David Glasser <glasser@davidglasser.net>
            lgo   Lieven Govaerts <lgo@mobsol.be>
@@ -64,6 +55,24 @@ Blanket commit access:
          neels   Neels J. Hofmeyr <neels@elego.de>
      jwhitlock   Jeremy Whitlock <jcscoobyrs@gmail.com>
        sbutler   Stephen Butler <sbutler@elego.de>
+
+
+Full committers who have asked to be listed as dormant:
+
+        bdenny   Brian Estlin <brian@implementality.com>
+      rassilon   Bill Tutt <bill@tutts.org> (Win32, COM, issue-1003-dev br.)
+         kraai   Matt Kraai <kraai@alumni.cmu.edu>
+           kon   Kalle Olavi Niemitalo <kon@iki.fi>          (psvn.el)
+      bcollins   Ben Collins <bcollins@debian.org>
+           djh   D.J. Heap <djheap@gmail.com>
+       dwhedon   David Kimdon <dwhedon@debian.org>
+       jpieper   Josh Pieper <jjp@pobox.com>
+         kevin   Kevin Pilch-Bisson <kevin@pilch-bisson.net>
+      lundblad   Peter N. Lundblad <peter@famlundblad.se>
+       malcolm   Malcolm Rowe <malcolm-svn-dev@farside.org.uk>
+         naked   Nuutti Kotivuori <naked@iki.fi>
+     ringstrom   Tobias Ringström <tobias@ringstrom.mine.nu>
+
 
 Commit access for specific areas:
 
@@ -180,12 +189,6 @@ giorgio_valoti   Giorgio Valoti <giorgio_v@mac.com>          (po: it)
     firemeteor   Guo Rui <timmyguo@mail.ustc.edu.cn>         (issue-2843-dev
                                                               br.)
 
-Committers who have asked to be listed as dormant:
-
-        bdenny   Brian Estlin <brian@implementality.com>
-      rassilon   Bill Tutt <bill@tutts.org> (Win32, COM, issue-1003-dev br.)
-         kraai   Matt Kraai <kraai@alumni.cmu.edu>
-           kon   Kalle Olavi Niemitalo <kon@iki.fi>          (psvn.el)
 
 ## Local Variables:
 ## coding:utf-8
