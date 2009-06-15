@@ -60,9 +60,7 @@ Blanket commit access:
 Full committers who have asked to be listed as dormant:
 
         bdenny   Brian Estlin <brian@implementality.com>
-      rassilon   Bill Tutt <bill@tutts.org> (Win32, COM, issue-1003-dev br.)
          kraai   Matt Kraai <kraai@alumni.cmu.edu>
-           kon   Kalle Olavi Niemitalo <kon@iki.fi>          (psvn.el)
       bcollins   Ben Collins <bcollins@debian.org>
            djh   D.J. Heap <djheap@gmail.com>
        dwhedon   David Kimdon <dwhedon@debian.org>
@@ -72,6 +70,12 @@ Full committers who have asked to be listed as dormant:
        malcolm   Malcolm Rowe <malcolm-svn-dev@farside.org.uk>
          naked   Nuutti Kotivuori <naked@iki.fi>
      ringstrom   Tobias Ringström <tobias@ringstrom.mine.nu>
+
+
+Partial committers who have asked to be listed as dormant:
+
+           kon   Kalle Olavi Niemitalo <kon@iki.fi>          (psvn.el)
+      rassilon   Bill Tutt <bill@tutts.org> (Win32, COM, issue-1003-dev br.)
 
 
 Commit access for specific areas:
