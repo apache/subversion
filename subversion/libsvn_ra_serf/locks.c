@@ -543,7 +543,7 @@ svn_ra_serf__get_lock(svn_ra_session_t *ra_session,
 
   if (status_code == 404)
     {
-      return svn_error_create(SVN_ERR_RA_ILLEGAL_URL, NULL,
+      return svn_error_create(SVN_ERR_RA_ILLEGAL_URL, err,
                               _("Malformed URL for repository"));
     }
   if (err)
@@ -631,10 +631,7 @@ svn_ra_serf__lock(svn_ra_session_t *ra_session,
       if (!lock_ctx->error)
         {
           if (parser_ctx->error)
-            {
-              svn_error_clear(err);
-              return parser_ctx->error;
-            }
+            return svn_error_compose_create(parser_ctx->error, err);
         }
 
       svn_error_clear(parser_ctx->error);
@@ -647,9 +644,7 @@ svn_ra_serf__lock(svn_ra_session_t *ra_session,
          will be returned this way. */
       if (lock_ctx->error && !SVN_ERR_IS_LOCK_ERROR(lock_ctx->error))
         {
-          svn_error_clear(err);
-
-          return lock_ctx->error;
+          return svn_error_compose_create(lock_ctx->error, err);
         }
 
       if (lock_func)
