@@ -211,7 +211,7 @@ get_category_config(svn_config_t **cfg,
                                  category, NULL);
 #endif /* WIN32 */
 
-      error = svn_config__sys_config_path(&sys_cfg_path, category, pool);
+      err = svn_config__sys_config_path(&sys_cfg_path, category, pool);
       if ((err) && (err->apr_err == SVN_ERR_BAD_FILENAME))
         {
           sys_cfg_path = NULL;
