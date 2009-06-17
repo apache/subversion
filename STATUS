@@ -15,7 +15,7 @@ Status of 1.6.3:
 
 Candidate changes:
 
- * r38053
+ * r38053, r38055
    Do not bail if the ALLUSERPROFILE folder does not exist.
    Justification:
      small change without which svn won't work at all on such systems.
