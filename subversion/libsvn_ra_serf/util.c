@@ -1296,7 +1296,7 @@ setup_request(serf_request_t *request,
 
   if (ctx->setup)
     {
-      serf_response_handler_t response_handler;
+      svn_ra_serf__response_handler_t response_handler;
       void *response_baton;
       svn_error_t *error;
 
