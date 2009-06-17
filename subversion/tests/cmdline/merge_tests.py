@@ -15701,13 +15701,6 @@ def multiple_reintegrates_from_the_same_branch(sbox):
                                      'merge', sbox.repo_url + '/A',
                                      A_COPY_path)
 
-def wip(sbox):
-  "wip"
-
-  sbox.build()
-  wc_dir = sbox.wc_dir
-  expected_disk, expected_status = set_up_branch(sbox)
-  
 ########################################################################
 # Run the tests
 
@@ -15923,7 +15916,6 @@ test_list = [ None,
                          server_has_mergeinfo),
               SkipUnless(multiple_reintegrates_from_the_same_branch,
                          server_has_mergeinfo),
-              #wip,
              ]
 
 if __name__ == '__main__':

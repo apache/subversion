@@ -517,14 +517,11 @@ def merge_fails_if_subtree_is_deleted_on_src(sbox):
                        '--username', svntest.main.wc_author2,
                        '-m', 'creating a rev with no paths.')
 
-  # This merge causes a tree conflict. Since the result of the previous
-  # merge of A/D/gamma into A_copy/D has not yet been committed, it is
-  # considered a local modification of A_Copy/D/gamma by the following
-  # merge. A delete merged ontop of a modified file is a tree conflict.
-  # See notes/tree-conflicts/detection.txt
-  svntest.actions.run_and_verify_svn(None, expected_merge_output([[6], [3,6]],
-                                     ['D    ' + Acopy_gamma_path + '\n',
-                                     'C    ' + Acopy_D_path + '\n']),
+  # A delete merged ontop of a modified file is normally a tree conflict,
+  # see notes/tree-conflicts/detection.txt, but --force currently avoids
+  # this.
+  svntest.actions.run_and_verify_svn(None, expected_merge_output([[3,6]],
+                                     ['D    ' + Acopy_gamma_path + '\n']),
                                      [], 'merge', '-r1:6', '--force',
                                      A_url, Acopy_path)
 
