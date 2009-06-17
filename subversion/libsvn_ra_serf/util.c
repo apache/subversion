@@ -1272,7 +1272,7 @@ cleanup:
 }
 
 /* Implements the serf_request_setup_t interface (which sets up both a
-   request and its response handler callback).  If the CTX->delegate()
+   request and its response handler callback).  If the CTX->setup()
    callback is non-NULL, invoke it to carry out the majority of the
    serf_request_setup_t implementation.  Otherwise, perform default
    setup, with special handling for HEAD requests, and finer-grained
@@ -1294,20 +1294,24 @@ setup_request(serf_request_t *request,
   *acceptor = svn_ra_serf__accept_response;
   *acceptor_baton = ctx->session;
 
-  if (ctx->delegate)
+  if (ctx->setup)
     {
-      apr_status_t status;
+      serf_response_handler_t response_handler;
+      void *response_baton;
+      svn_error_t *error;
 
-      status = ctx->delegate(request, ctx->delegate_baton, req_bkt,
-                             acceptor, acceptor_baton, handler, handler_baton,
-                             pool);
-      if (status)
+      error = ctx->setup(request, ctx->setup_baton, req_bkt,
+                          acceptor, acceptor_baton,
+                          &response_handler, &response_baton,
+                          pool);
+      if (error)
         {
-          return status;
+          ctx->session->pending_error = error;
+          return error->apr_err;
         }
 
-      ctx->response_handler = *handler;
-      ctx->response_baton = *handler_baton;
+      ctx->response_handler = response_handler;
+      ctx->response_baton = response_baton;
     }
   else
     {

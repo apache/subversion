@@ -392,6 +392,18 @@ svn_ra_serf__context_run_wait(svn_boolean_t *done,
                               svn_ra_serf__session_t *sess,
                               apr_pool_t *pool);
 
+/* Callback for setting up a complete serf request */
+typedef svn_error_t *
+(*svn_ra_serf__request_setup_t)(serf_request_t *request,
+                                void *setup_baton,
+                                serf_bucket_t **req_bkt,
+                                serf_response_acceptor_t *acceptor,
+                                void **acceptor_baton,
+                                serf_response_handler_t *handler,
+                                void **handler_baton,
+                                apr_pool_t *pool);
+
+
 /* Callback for when a request body is needed. */
 typedef serf_bucket_t*
 (*svn_ra_serf__request_body_delegate_t)(void *baton,
@@ -454,8 +466,8 @@ typedef struct {
    * This just passes through serf's raw request creation parameters.
    * None of the other parameters will be utilized if this field is set.
    */
-  serf_request_setup_t delegate;
-  void *delegate_baton;
+  svn_ra_serf__request_setup_t setup;
+  void *setup_baton;
 
   /* This function and baton pair allows for custom request headers to
    * be set.
