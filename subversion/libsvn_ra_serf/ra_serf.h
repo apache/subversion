@@ -392,6 +392,15 @@ svn_ra_serf__context_run_wait(svn_boolean_t *done,
                               svn_ra_serf__session_t *sess,
                               apr_pool_t *pool);
 
+/* Callback for response handlers */
+/* ### The return type should be changed to svn_error_t *,
+       but that is work in progress. */
+typedef apr_status_t
+(*svn_ra_serf__response_handler_t)(serf_request_t *request,
+                                   serf_bucket_t *response,
+                                   void *handler_baton,
+                                   apr_pool_t *pool);
+
 /* Callback for setting up a complete serf request */
 typedef svn_error_t *
 (*svn_ra_serf__request_setup_t)(serf_request_t *request,
@@ -399,10 +408,9 @@ typedef svn_error_t *
                                 serf_bucket_t **req_bkt,
                                 serf_response_acceptor_t *acceptor,
                                 void **acceptor_baton,
-                                serf_response_handler_t *handler,
+                                svn_ra_serf__response_handler_t *handler,
                                 void **handler_baton,
                                 apr_pool_t *pool);
-
 
 /* Callback for when a request body is needed. */
 typedef serf_bucket_t*
@@ -450,7 +458,7 @@ typedef struct {
   const char *body_type;
 
   /* The handler and baton pair for our handler. */
-  serf_response_handler_t response_handler;
+  svn_ra_serf__response_handler_t response_handler;
   void *response_baton;
 
   /* The handler and baton pair to be executed when a non-recoverable error
