@@ -217,7 +217,7 @@ get_category_config(svn_config_t **cfg,
           sys_cfg_path = NULL;
           svn_error_clear(err);
         }
-      else
+      else if (err)
         return err;
     }
   else
