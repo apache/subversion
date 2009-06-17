@@ -71,7 +71,7 @@ Candidate changes:
    Notes:
      Details are at http://subversion.tigris.org/issues/show_bug.cgi?id=3425
    Votes:
-     +1: cmpilato
+     +1: cmpilato, hwright
 
  * r38004, r38014, r38028
    Make KWallet window attached to terminal window.
