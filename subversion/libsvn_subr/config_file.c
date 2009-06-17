@@ -314,9 +314,6 @@ svn_config__sys_config_path(const char **path_p,
                             const char *fname,
                             apr_pool_t *pool)
 {
-  /* ### This never actually returns error in practice.  Perhaps the
-     prototype should change? */
-
   *path_p = NULL;
 
   /* Note that even if fname is null, svn_dirent_join_many will DTRT. */
