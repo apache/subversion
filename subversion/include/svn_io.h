@@ -1748,6 +1748,59 @@ svn_io_write_version_file(const char *path,
                           int version,
                           apr_pool_t *pool);
 
+/** Wrapper for apr_file_mktemp().
+ *
+ * @since New in 1.7. */
+svn_error_t *
+svn_io_file_mktemp(apr_file_t **new_file,
+                   char *templ,
+                   apr_int32_t flags,
+                   apr_pool_t *pool);
+
+/** Wrapper for apr_file_name_get().
+ *
+ * @since New in 1.7. */
+svn_error_t *
+svn_io_file_name_get(const char **filename,
+                     apr_file_t *file,
+                     apr_pool_t *pool);
+
+/** Open a new file (for reading and writing) with a unique name based on
+ * utf-8 encoded @a filename, in the directory @a dirpath.  The file handle is
+ * returned in @a *file, and the name is returned in @a *unique_name, also
+ * utf8-encoded.  Either @a file or @a unique_name may be @c NULL.
+ *
+ * If @a delete_when is @c svn_io_file_del_on_close, then the @c APR_DELONCLOSE
+ * flag will be used when opening the file.  The @c APR_BUFFERED flag will
+ * always be used.
+ *
+ * If @a dirpath is NULL, then the directory returned by svn_io_temp_dir()
+ * will be used.
+ *
+ * If @a filename is NULL, a completely random name will be used.
+ * Else, a random name based on @a filename will be used.
+ *
+ * Allocates @a *file and @a *unique_name in @a result_pool. All
+ * intermediate allocations will be performed in @a scratch_pool.
+ *
+ * Claim of Historical Inevitability: this function was written
+ * because
+ *
+ *    - svn_io_open_uniquely_named() creates predictable filenames
+ *      and can cause performance problems when many temporary
+ *      files are needed in a single directory
+ *
+ * @since New in 1.7
+ */
+svn_error_t *
+svn_io_mktemp(apr_file_t **file,
+              const char **unique_name,
+              const char *dirpath,
+              const char *filename,
+              svn_io_file_del_t delete_when,
+              apr_pool_t *result_pool,
+              apr_pool_t *scratch_pool);
+
 /** @} */
 
 #ifdef __cplusplus

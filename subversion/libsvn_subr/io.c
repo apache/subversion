@@ -3566,3 +3566,102 @@ svn_io_files_contents_same_p(svn_boolean_t *same,
 
   return SVN_NO_ERROR;
 }
+
+/* Wrapper for apr_file_mktemp(). */
+svn_error_t *
+svn_io_file_mktemp(apr_file_t **new_file, char *templ,
+                  apr_int32_t flags, apr_pool_t *pool)
+{
+  const char *templ_apr;
+  apr_status_t status;
+
+  SVN_ERR(cstring_from_utf8(&templ_apr, templ, pool));
+
+  /* ### I don't want to copy the template string again just to
+   * make it writable... so cast away const.
+   * Should the UTF-8 conversion functions really be returning const??? */
+  status = apr_file_mktemp(new_file, (char *)templ_apr, flags, pool);
+
+  if (status)
+    return svn_error_wrap_apr(status, _("Can't create temporary file from "
+                              "template '%s'"), templ);
+  else
+    return SVN_NO_ERROR;
+}
+
+/* Wrapper for apr_file_name_get(). */
+svn_error_t *
+svn_io_file_name_get(const char **filename,
+                     apr_file_t *file,
+                     apr_pool_t *pool)
+{
+  const char *fname_apr;
+  apr_status_t status;
+
+  status = apr_file_name_get(&fname_apr, file);
+  if (status)
+    return svn_error_wrap_apr(status, _("Can't get filename"));
+
+  return svn_error_return(cstring_to_utf8(filename, fname_apr, pool));
+}
+
+svn_error_t *
+svn_io_mktemp(apr_file_t **file,
+              const char **unique_path,
+              const char *dirpath,
+              const char *filename,
+              svn_io_file_del_t delete_when,
+              apr_pool_t *result_pool,
+              apr_pool_t *scratch_pool)
+{
+  apr_file_t *tempfile;
+  char *path;
+  const char *x = "XXXXXX";
+  char *template;
+  struct temp_file_cleanup_s *baton = NULL;
+  apr_int32_t flags = (APR_READ | APR_WRITE | APR_CREATE | APR_EXCL |
+                       APR_BUFFERED | APR_BINARY);
+
+  SVN_ERR_ASSERT(file || unique_path);
+  if (file)
+    *file = NULL;
+  if (unique_path)
+    *unique_path = NULL;
+
+  if (dirpath == NULL)
+    SVN_ERR(svn_io_temp_dir(&dirpath, scratch_pool));
+  if (filename == NULL)
+    template = apr_pstrdup(scratch_pool, x);
+  else
+    template = apr_pstrcat(scratch_pool, filename, "-", x, NULL);
+    
+  path = svn_dirent_join(dirpath, template, scratch_pool);
+
+  if (delete_when == svn_io_file_del_on_pool_cleanup)
+    {
+      baton = apr_palloc(result_pool, sizeof(*baton));
+
+      baton->pool = result_pool;
+      baton->name = NULL;
+
+      /* Because cleanups are run LIFO, we need to make sure to register
+         our cleanup before the apr_file_close cleanup:
+
+         On Windows, you can't remove an open file.
+      */
+      apr_pool_cleanup_register(result_pool, baton,
+                                temp_file_plain_cleanup_handler,
+                                temp_file_child_cleanup_handler);
+
+      flags |= APR_DELONCLOSE;
+    }
+
+  SVN_ERR(svn_io_file_mktemp(&tempfile, path, flags, result_pool));
+
+  if (file)
+    *file = tempfile;
+  if (unique_path)
+    SVN_ERR(svn_io_file_name_get(unique_path, tempfile, result_pool));
+    
+  return SVN_NO_ERROR;
+}
