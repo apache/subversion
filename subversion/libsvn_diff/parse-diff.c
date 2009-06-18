@@ -43,6 +43,7 @@ svn_diff__parse_next_patch(svn_patch_t **patch,
   static const char * const minus = "--- ";
   static const char * const plus = "+++ ";
   const char *indicator;
+  const char *fname;
   svn_stream_t *s;
   apr_off_t pos;
   svn_boolean_t eof, in_header;
@@ -55,6 +56,9 @@ svn_diff__parse_next_patch(svn_patch_t **patch,
       return SVN_NO_ERROR;
     }
 
+  /* Get the patch's filename. */
+  SVN_ERR(svn_io_file_name_get(&fname, patch_file, result_pool));
+
   /* Get current seek position -- APR has no ftell() :( */
   pos = 0;
   apr_file_seek(patch_file, APR_CUR, &pos);
@@ -63,7 +67,8 @@ svn_diff__parse_next_patch(svn_patch_t **patch,
   *patch = apr_pcalloc(result_pool, sizeof(**patch));
   (*patch)->patch_file = patch_file;
   (*patch)->eol_str = eol_str;
-  
+  (*patch)->path = fname;
+
   /* Get a stream to read lines from the patch file.
    * The file should not be closed when we close the stream so
    * make sure it is disowned. */
@@ -262,6 +267,24 @@ parse_hunk_header(const char *header, svn_hunk_t *hunk, apr_pool_t *pool)
   return TRUE;
 }
 
+/* A stream line-filter which allows only original text from a hunk. */
+static svn_error_t *
+original_line_filter(svn_boolean_t *filtered, const char *line,
+                     apr_pool_t *scratch_pool)
+{
+  *filtered = line[0] == '+';
+  return SVN_NO_ERROR;
+}
+
+/* A stream line-filter which allows only modified text from a hunk. */
+static svn_error_t *
+modified_line_filter(svn_boolean_t *filtered, const char *line,
+                     apr_pool_t *scratch_pool)
+{
+  *filtered = line[0] == '-';
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_diff__parse_next_hunk(svn_hunk_t **hunk,
                           svn_patch_t *patch,
@@ -272,9 +295,10 @@ svn_diff__parse_next_hunk(svn_hunk_t **hunk,
   static const char * const atat = "@@";
   svn_boolean_t eof, in_hunk, hunk_seen;
   apr_off_t pos, last_line;
-  svn_stringbuf_t *diff_text;
-  svn_stringbuf_t *original_text;
-  svn_stringbuf_t *modified_text;
+  apr_off_t start, end;
+  svn_stream_t *diff_text;
+  svn_stream_t *original_text;
+  svn_stream_t *modified_text;
   svn_stream_t *s;
   apr_pool_t *iterpool;
 
@@ -284,12 +308,6 @@ svn_diff__parse_next_hunk(svn_hunk_t **hunk,
       *hunk = NULL;
       return SVN_NO_ERROR;
     }
-
-  /* With 4096 characters, we probably won't have to realloc
-   * for averagely small hunks. */
-  diff_text = svn_stringbuf_create_ensure(4096, scratch_pool);
-  original_text = svn_stringbuf_create_ensure(4096, scratch_pool);
-  modified_text = svn_stringbuf_create_ensure(4096, scratch_pool);
 
   in_hunk = FALSE;
   hunk_seen = FALSE;
@@ -324,44 +342,26 @@ svn_diff__parse_next_hunk(svn_hunk_t **hunk,
 
       if (in_hunk)
         {
-          char c = line->data[0];
-          if (c == ' ' || c == '-' || c == '+')
+          char c;
+
+          if (! hunk_seen)
             {
-              hunk_seen = TRUE;
-
-              /* Every line of the hunk is part of the diff text. */
-              svn_stringbuf_appendbytes(diff_text, line->data, line->len);
-              svn_stringbuf_appendcstr(diff_text, patch->eol_str);
-
-              /* Grab original/modified texts. */
-              switch (c)
-                {
-                  case ' ':
-                    /* Line occurs in both. */
-                    svn_stringbuf_appendbytes(original_text,
-                                              line->data + 1, line->len - 1);
-                    svn_stringbuf_appendcstr(original_text, patch->eol_str);
-                    svn_stringbuf_appendbytes(modified_text,
-                                              line->data + 1, line->len - 1);
-                    svn_stringbuf_appendcstr(modified_text, patch->eol_str);
-                    break;
-                  case '-':
-                    /* Line occurs in original. */
-                    svn_stringbuf_appendbytes(original_text,
-                                              line->data + 1, line->len - 1);
-                    svn_stringbuf_appendcstr(original_text, patch->eol_str);
-                    break;
-                  case '+':
-                    /* Line occurs in modified. */
-                    svn_stringbuf_appendbytes(modified_text,
-                                              line->data + 1, line->len - 1);
-                    svn_stringbuf_appendcstr(modified_text, patch->eol_str);
-                    break;
-                }
+              /* We're reading the first line of the hunk, so the start
+               * of the line just read is the hunk text's byte offset. */
+              start = last_line;
             }
+          
+          c = line->data[0];
+          if (c == ' ' || c == '-' || c == '+')
+            hunk_seen = TRUE;
           else
             {
               in_hunk = FALSE;
+
+              /* The start of the current line marks the first byte
+               * after the hunk text. */
+              end = last_line;
+
               break; /* Hunk was empty or has been read. */
             }
         }
@@ -386,18 +386,51 @@ svn_diff__parse_next_hunk(svn_hunk_t **hunk,
      * up skipping the line -- it may contain a patch or hunk header. */
     apr_file_seek(patch->patch_file, APR_SET, &last_line);
 
-  if (hunk_seen)
+  if (hunk_seen && start < end)
     {
+      apr_file_t *f;
+      apr_int32_t flags = APR_READ | APR_BUFFERED;
+
+      /* Create a stream which returns the hunk text itself. */
+      SVN_ERR(svn_io_file_open(&f, patch->path, flags, APR_OS_DEFAULT,
+                               result_pool));
+      diff_text = svn_stream_from_aprfile_range_readonly(f, FALSE,
+                                                         start, end,
+                                                         result_pool);
+
+      /* Create a stream which returns the original hunk text. */
+      SVN_ERR(svn_io_file_open(&f, patch->path, flags, APR_OS_DEFAULT,
+                               result_pool));
+      original_text = svn_stream_from_aprfile_range_readonly(f, FALSE,
+                                                             start, end,
+                                                             result_pool);
+      svn_stream_set_line_filter_callback(original_text, original_line_filter);
+
+      /* Create a stream which returns the modified hunk text. */
+      SVN_ERR(svn_io_file_open(&f, patch->path, flags, APR_OS_DEFAULT,
+                               result_pool));
+      modified_text = svn_stream_from_aprfile_range_readonly(f, FALSE,
+                                                             start, end,
+                                                             result_pool);
+      svn_stream_set_line_filter_callback(modified_text, modified_line_filter);
+
       /* Set the hunk's texts. */
-      (*hunk)->diff_text = svn_string_create(diff_text->data, result_pool);
-      (*hunk)->original_text = svn_string_create(original_text->data,
-                                                 result_pool);
-      (*hunk)->modified_text = svn_string_create(modified_text->data,
-                                                 result_pool);
+      (*hunk)->diff_text = diff_text;
+      (*hunk)->original_text = original_text;
+      (*hunk)->modified_text = modified_text;
     }
   else
     /* Something went wrong, just discard the result. */
     *hunk = NULL;
 
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_diff__destroy_hunk(svn_hunk_t *hunk)
+{
+  SVN_ERR(svn_stream_close(hunk->original_text));
+  SVN_ERR(svn_stream_close(hunk->modified_text));
+  SVN_ERR(svn_stream_close(hunk->diff_text));
   return SVN_NO_ERROR;
 }
