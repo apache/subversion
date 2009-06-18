@@ -67,7 +67,7 @@ static apr_status_t err_abort(void *data)
 {
   svn_error_t *err = data;  /* For easy viewing in a debugger */
   err = err; /* Fake a use for the variable to avoid compiler warnings */
-  abort();
+  return 0;
 }
 #endif
 

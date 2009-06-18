@@ -261,6 +261,10 @@ typedef struct report_fetch_t {
 
   /* Are we done fetching this file? */
   svn_boolean_t done;
+
+  /* Discard the rest of the content? */
+  svn_boolean_t discard;
+
   svn_ra_serf__list_t **done_list;
   svn_ra_serf__list_t done_item;
 
@@ -713,13 +717,18 @@ error_fetch(serf_request_t *request,
   fetch_ctx->done_item.next = *fetch_ctx->done_list;
   *fetch_ctx->done_list = &fetch_ctx->done_item;
 
-  serf_request_set_handler(request, svn_ra_serf__handle_discard_body, NULL);
+  /* Discard the rest of this request
+     (This makes sure it doesn't error when the request is aborted later) */
+  serf_request_set_handler(request,
+                           svn_ra_serf__response_discard_handler, NULL);
 
   return APR_SUCCESS;
 }
 
+/* Implements svn_ra_serf__response_handler_t */
 static apr_status_t
-handle_fetch(serf_request_t *request,
+handle_fetch(svn_ra_serf__session_t *session,
+             serf_request_t *request,
              serf_bucket_t *response,
              void *handler_baton,
              apr_pool_t *pool)
@@ -956,8 +965,10 @@ handle_fetch(serf_request_t *request,
   /* not reached */
 }
 
+/* Implements svn_ra_serf__response_handler_t */
 static apr_status_t
-handle_stream(serf_request_t *request,
+handle_stream(svn_ra_serf__session_t *session,
+              serf_request_t *request,
               serf_bucket_t *response,
               void *handler_baton,
               apr_pool_t *pool)
@@ -973,7 +984,7 @@ handle_stream(serf_request_t *request,
     {
       fetch_ctx->done = TRUE;
 
-      return svn_ra_serf__handle_discard_body(request, response, NULL, pool);
+      return svn_ra_serf__handle_discard_body(session, request, response, NULL, pool);
     }
 
   while (1)

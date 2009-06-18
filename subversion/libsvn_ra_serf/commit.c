@@ -254,8 +254,10 @@ create_checkout_body(void *baton,
   return body_bkt;
 }
 
+/* Implements svn_ra_serf__response_handler_t */
 static apr_status_t
-handle_checkout(serf_request_t *request,
+handle_checkout(svn_ra_serf__session_t *session,
+                serf_request_t *request,
                 serf_bucket_t *response,
                 void *handler_baton,
                 apr_pool_t *pool)
@@ -263,8 +265,8 @@ handle_checkout(serf_request_t *request,
   checkout_context_t *ctx = handler_baton;
   apr_status_t status;
 
-  status = svn_ra_serf__handle_status_only(request, response, &ctx->progress,
-                                           pool);
+  status = svn_ra_serf__handle_status_only(session,request, response,
+                                           &ctx->progress, pool);
 
   /* Get the resulting location. */
   if (ctx->progress.done && ctx->progress.status == 201)
@@ -1011,9 +1013,11 @@ post_headers_iterator_callback(void *baton,
 
 /* A custom serf_response_handler_t which is mostly a wrapper around
    svn_ra_serf__handle_status_only -- it just notices POST response
-   headers, too. */
+   headers, too.
+   Implements svn_ra_serf__response_handler_t */
 static apr_status_t
-post_response_handler(serf_request_t *request,
+post_response_handler(svn_ra_serf__session_t *session,
+                      serf_request_t *request,
                       serf_bucket_t *response,
                       void *baton,
                       apr_pool_t *pool)
@@ -1025,7 +1029,7 @@ post_response_handler(serf_request_t *request,
   serf_bucket_headers_do(hdrs, post_headers_iterator_callback, prc);
 
   /* Execute the 'real' response handler to XML-parse the repsonse body. */
-  return svn_ra_serf__handle_status_only(request, response,
+  return svn_ra_serf__handle_status_only(session, request, response,
                                          prc->request_ctx, pool);
 }
 
