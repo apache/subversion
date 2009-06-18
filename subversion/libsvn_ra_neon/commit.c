@@ -1010,9 +1010,9 @@ static svn_error_t * commit_add_file(const char *path,
 
   /* If the parent directory existed before this commit then there may be a
      file with this URL already. We need to ensure such a file does not
-     exist, which we do by attempting a PROPFIND.  Of course, a
-     PROPFIND *should* succeed if this "add" is actually the second
-     half of a "replace".
+     exist, which we do by attempting a PROPFIND in both public URL (the path
+     in HEAD) and the working URL (the path within the transaction), since
+     we cannot differentiate between deleted items.
 
      ### For now, we'll assume that if this path has already been
      added to the valid targets hash, that addition occurred during the
@@ -1023,25 +1023,31 @@ static svn_error_t * commit_add_file(const char *path,
       && (! apr_hash_get(file->cc->valid_targets, path, APR_HASH_KEY_STRING)))
     {
       svn_ra_neon__resource_t *res;
-      svn_error_t *err = svn_ra_neon__get_starting_props(&res,
-                                                         file->cc->ras,
-                                                         file->rsrc->wr_url,
-                                                         NULL, workpool);
-      if (!err)
+      svn_error_t *err1 = svn_ra_neon__get_starting_props(&res,
+                                                          file->cc->ras,
+                                                          file->rsrc->wr_url,
+                                                          NULL, workpool);
+      svn_error_t *err2 = svn_ra_neon__get_starting_props(&res,
+                                                          file->cc->ras,
+                                                          file->rsrc->url,
+                                                          NULL, workpool);
+      if (! err1 && ! err2)
         {
-          /* If the PROPFIND succeeds the file already exists */
+          /* If the PROPFINDs succeed the file already exists */
           return svn_error_createf(SVN_ERR_RA_DAV_ALREADY_EXISTS, NULL,
                                    _("File '%s' already exists"),
                                    file->rsrc->url);
         }
-      else if (err->apr_err == SVN_ERR_FS_NOT_FOUND)
+      else if ((err1 && (err1->apr_err == SVN_ERR_FS_NOT_FOUND))
+               || (err2 && (err2->apr_err == SVN_ERR_FS_NOT_FOUND)))
         {
-          svn_error_clear(err);
+          svn_error_clear(err1);
+          svn_error_clear(err2);
         }
       else
         {
           /* A real error */
-          return err;
+          return svn_error_compose_create(err1, err2);
         }
     }
 
