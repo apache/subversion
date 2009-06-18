@@ -31,14 +31,18 @@ extern "C" {
 
 /* A single hunk inside a patch */
 typedef struct svn_hunk_t {
-  /* The hunk's text as it appeared in the patch file,
+  /* The hunk's unidiff text as it appeared in the patch file,
    * without range information. */
-  const svn_string_t *diff_text;
+  svn_stream_t *diff_text;
 
   /* The original and modified texts in the hunk range.
-   * Derived from the diff text. */
-  const svn_string_t *original_text;
-  const svn_string_t *modified_text;
+   * Derived from the diff text. The lines are read verbatim
+   * from the patch file, so the first character of each line
+   * read from these streams is a space or a '-' in case of
+   * the original text, or a space and a '+' in case of the
+   * modified text. */
+  svn_stream_t *original_text;
+  svn_stream_t *modified_text;
 
   /* Hunk ranges as they appeared in the patch file.
    * All numbers are lines, not bytes. */
@@ -50,6 +54,9 @@ typedef struct svn_hunk_t {
 
 /* Data type to manage parsing of patches. */
 typedef struct svn_patch_t {
+  /* Path to the patch file. */
+  const char *path;
+
   /* The patch file itself. */
   apr_file_t *patch_file;
 
@@ -84,6 +91,15 @@ svn_diff__parse_next_hunk(svn_hunk_t **hunk,
                           svn_patch_t *patch,
                           apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool);
+
+/* 
+ * This function should be called before clearing or destroying the pool
+ * HUNK was allocated in (i.e. the result pool passed to
+ * svn_diff__parse_next_hunk()).
+ * It ensures that all streams which were opened for the hunk are closed.
+ **/
+svn_error_t *
+svn_diff__destroy_hunk(svn_hunk_t *hunk);
 
 #ifdef __cplusplus
 }
