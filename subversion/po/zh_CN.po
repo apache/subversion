@@ -37,8 +37,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.6\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2009-05-26 14:06+0800\n"
-"PO-Revision-Date: 2009-05-26 14:13+0800\n"
+"POT-Creation-Date: 2009-06-18 11:25+0800\n"
+"PO-Revision-Date: 2009-06-18 11:27+0800\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Simplified Chinese <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -5540,6 +5540,10 @@ msgstr "“--new” 选项只能与 “--old” 同时使用"
 #, c-format
 msgid "Target lists to diff may not contain both working copy paths and URLs"
 msgstr "差异比较目标不可同时包含工作副本路径与URL"
+
+#, c-format
+msgid "Path '%s' not relative to base URLs"
+msgstr "路径“%s”不是相对于基础 URL"
 
 msgid ""
 "Destination directory exists; please remove the directory or use --force to "
