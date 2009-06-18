@@ -463,14 +463,9 @@ svn_ra_serf__get_file_revs(svn_ra_session_t *ra_session,
 
   err = svn_ra_serf__context_run_wait(&blame_ctx->done, session, pool);
 
-  if (parser_ctx->error)
-    err = svn_error_compose_create(parser_ctx->error, err);
-  else
-    {
-      err = svn_error_compose_create(
+  err = svn_error_compose_create(
                 svn_ra_serf__error_on_status(status_code, handler->path),
                 err);
-    }
 
   return svn_error_return(err);
 }

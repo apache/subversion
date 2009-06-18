@@ -256,15 +256,16 @@ svn_ra_serf__get_locations(svn_ra_session_t *ra_session,
 
   err = svn_ra_serf__context_run_wait(&loc_ctx->done, session, pool);
 
-  if (loc_ctx->error || parser_ctx->error)
+  if (loc_ctx->error)
     {
       svn_error_clear(err);
       err = SVN_NO_ERROR;
       SVN_ERR(loc_ctx->error);
-      SVN_ERR(parser_ctx->error);
     }
 
-  SVN_ERR(svn_ra_serf__error_on_status(loc_ctx->status_code, req_url));
+  SVN_ERR(svn_error_compose_create(
+              svn_ra_serf__error_on_status(loc_ctx->status_code, req_url),
+              err));
 
-  return err;
+  return SVN_NO_ERROR;
 }

@@ -398,11 +398,8 @@ handle_lock(svn_ra_serf__session_t *session,
 
           err = svn_time_from_cstring(&ctx->lock->creation_date, val,
                                       ctx->pool);
-          if (err)
-            {
-              xml_ctx->error = err;
-              return err->apr_err;
-            }
+
+          SVN_SESSION_ERR(session, err);
         }
 
       ctx->read_headers = TRUE;
@@ -534,14 +531,16 @@ svn_ra_serf__get_lock(svn_ra_session_t *ra_session,
 
   svn_ra_serf__request_create(handler);
   err = svn_ra_serf__context_run_wait(&lock_ctx->done, session, pool);
-  if (lock_ctx->error || parser_ctx->error)
+  if (lock_ctx->error)
     {
       svn_error_clear(err);
+      err = NULL;
       /* A 403 forbidden error indicates there's no lock, which we can ignore
          here. */
       if (lock_ctx->error && lock_ctx->status_code == 403)
         svn_error_clear(lock_ctx->error);
-      SVN_ERR(parser_ctx->error);
+      else
+        err = lock_ctx->error;
     }
 
   if (status_code == 404)
@@ -630,14 +629,6 @@ svn_ra_serf__lock(svn_ra_session_t *ra_session,
 
       svn_ra_serf__request_create(handler);
       err = svn_ra_serf__context_run_wait(&lock_ctx->done, session, subpool);
-
-      if (!lock_ctx->error)
-        {
-          if (parser_ctx->error)
-            return svn_error_compose_create(parser_ctx->error, err);
-        }
-
-      svn_error_clear(parser_ctx->error);
 
       /* An error stored in lock_ctx->error will always have a more specific
          error code as the one returen from serf_context_run (err), so we prefer

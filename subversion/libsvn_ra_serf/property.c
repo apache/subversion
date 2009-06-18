@@ -696,12 +696,6 @@ svn_ra_serf__wait_for_props(svn_ra_serf__propfind_context_t *prop_ctx,
 
   err = svn_ra_serf__context_run_wait(&prop_ctx->done, sess, pool);
 
-  if (prop_ctx->parser_ctx->error)
-    {
-      svn_error_clear(err);
-      SVN_ERR(prop_ctx->parser_ctx->error);
-    }
-
   err2 = svn_ra_serf__error_on_status(prop_ctx->status_code, prop_ctx->path);
   if (err2)
     {
@@ -984,9 +978,7 @@ svn_ra_serf__get_baseline_info(const char **bc_url,
              more specific ones over the more generic. */
           SVN_ERR(svn_error_compose_create(
             svn_ra_serf__get_options_error(opt_ctx),
-            svn_error_compose_create(
-              svn_ra_serf__get_options_parser_error(opt_ctx),
-              err)));
+            err));
 
           *latest_revnum = svn_ra_serf__options_get_youngest_rev(opt_ctx);
           if (! SVN_IS_VALID_REVNUM(*latest_revnum))

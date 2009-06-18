@@ -1073,13 +1073,13 @@ svn_ra_serf__handle_xml_parser(svn_ra_serf__session_t *session,
           ctx->error = svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
                                          "XML parsing failed: (%d %s)",
                                          sl.code, sl.reason);
-          return ctx->error->apr_err;
+          SVN_SESSION_ERR(session, ctx->error);
         }
 
       if (ctx->error && ctx->ignore_errors == FALSE)
         {
           XML_ParserFree(ctx->xmlp);
-          return ctx->error->apr_err;
+          SVN_SESSION_ERR(session, ctx->error);
         }
 
       if (APR_STATUS_IS_EAGAIN(status))
@@ -1094,6 +1094,7 @@ svn_ra_serf__handle_xml_parser(svn_ra_serf__session_t *session,
           if (xml_status == XML_STATUS_ERROR && ctx->ignore_errors == FALSE)
             {
               svn_error_clear(ctx->error);
+              ctx->error = NULL;
             }
 
           *ctx->done = TRUE;
