@@ -42,9 +42,11 @@
 
 #define ROOT_ONE "http://example.com/one/"
 #define ROOT_TWO "http://example.com/two/"
+#define ROOT_THREE "http://example.com/three/"
 
 #define UUID_ONE "uuid1"
 #define UUID_TWO "uuid2"
+#define UUID_THREE "uuid3"
 
 #define TIME_1 1235142208
 #define TIME_2 1235142268
@@ -1189,6 +1191,74 @@ test_scan_deletion(apr_pool_t *pool)
 }
 
 
+static svn_error_t *
+test_op_relocate(apr_pool_t *pool)
+{
+  const char *local_abspath;
+  svn_wc__db_t *db;
+  const char *repos_relpath;
+  const char *repos_root_url;
+  const char *repos_uuid;
+  
+  SVN_ERR(create_fake_wc("test_op_relocate", pool));
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath,
+                                  "fake-wc/test_op_relocate",
+                                  pool));
+  SVN_ERR(svn_wc__db_open(&db, svn_wc__db_openmode_readonly,
+                          NULL, pool, pool));
+
+  /* Initial sanity check. */
+  SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL,
+                               &repos_relpath, &repos_root_url, &repos_uuid,
+                               NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL,
+                               db, svn_dirent_join(local_abspath, "G", pool),
+                               pool, pool));
+
+  SVN_TEST_ASSERT(strcmp(repos_relpath, "G-alt") == 0);
+  SVN_TEST_ASSERT(strcmp(repos_root_url, ROOT_TWO) == 0);
+  SVN_TEST_ASSERT(strcmp(repos_uuid, UUID_TWO) == 0);
+
+  /* Test relocating to a repos existant in the db */
+  SVN_ERR(svn_wc__db_op_relocate(db,
+                                 svn_dirent_join(local_abspath, "G", pool),
+                                 ROOT_ONE, UUID_ONE,
+                                 pool));
+  SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL,
+                               &repos_relpath, &repos_root_url, &repos_uuid,
+                               NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL,
+                               db, svn_dirent_join(local_abspath, "G", pool),
+                               pool, pool));
+  SVN_TEST_ASSERT(strcmp(repos_relpath, "G-alt") == 0);
+  SVN_TEST_ASSERT(strcmp(repos_root_url, ROOT_ONE) == 0);
+  SVN_TEST_ASSERT(strcmp(repos_uuid, UUID_ONE) == 0);
+
+  /* Test relocating to a repos not existant in the db */
+  SVN_ERR(svn_wc__db_op_relocate(db,
+                                 svn_dirent_join(local_abspath, "G", pool),
+                                 ROOT_THREE, UUID_THREE,
+                                 pool));
+  SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL,
+                               &repos_relpath, &repos_root_url, &repos_uuid,
+                               NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL,
+                               db, svn_dirent_join(local_abspath, "G", pool),
+                               pool, pool));
+  SVN_TEST_ASSERT(strcmp(repos_relpath, "G-alt") == 0);
+  SVN_TEST_ASSERT(strcmp(repos_root_url, ROOT_THREE) == 0);
+  SVN_TEST_ASSERT(strcmp(repos_uuid, UUID_THREE) == 0);
+
+  return SVN_NO_ERROR;
+}
+
+
 struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
@@ -1206,5 +1276,7 @@ struct svn_test_descriptor_t test_funcs[] =
                    "scanning added working nodes"),
     SVN_TEST_PASS2(test_scan_deletion,
                    "deletion introspection functions"),
+    SVN_TEST_PASS2(test_op_relocate,
+                   "relocating a node"),
     SVN_TEST_NULL
   };

@@ -188,7 +188,10 @@ enum statement_keys {
   STMT_SELECT_BASE_DAV_CACHE,
   STMT_SELECT_DELETION_INFO,
   STMT_SELECT_PARENT_STUB_INFO,
-  STMT_DELETE_LOCK
+  STMT_DELETE_LOCK,
+  STMT_UPDATE_BASE_REPO,
+  STMT_UPDATE_WORKING_COPYFROM_REPO,
+  STMT_UPDATE_LOCK_REPOS_ID
 };
 
 static const char * const statements[] = {
@@ -324,6 +327,18 @@ static const char * const statements[] = {
 
   /* STMT_DELETE_LOCK */
   "delete from lock "
+  "where repos_id = ?1 and repos_relpath = ?2;",
+
+  /* STMT_UPDATE_BASE_REPO */
+  "update base_node set repos_id = ?3 "
+  "where wc_id = ?1 and local_relpath = ?2;",
+
+  /* STMT_UPDATE_WORKING_COPYFROM_REPO */
+  "update working_node set copyfrom_repos_id = ?3 "
+  "where wc_id = ?1 and local_relpath = ?2;",
+
+  /* STMT_UPDATE_LOCK_REPOS_ID */
+  "update lock set repos_id = ?3 "
   "where repos_id = ?1 and repos_relpath = ?2;",
 
   NULL
@@ -2548,6 +2563,105 @@ svn_wc__db_op_revert(svn_wc__db_t *db,
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
   NOT_IMPLEMENTED();
+}
+
+
+struct relocate_baton
+{
+  apr_int64_t wc_id;
+  const char *local_relpath;
+  const char *repos_root_url;
+  const char *repos_uuid;
+
+  apr_pool_t *scratch_pool;
+};
+
+
+static svn_error_t *
+relocate_txn(void *baton, svn_sqlite__db_t *sdb)
+{
+  struct relocate_baton *rb = baton;
+  apr_pool_t *scratch_pool = rb->scratch_pool;
+  const char *repos_relpath;
+  svn_sqlite__stmt_t *stmt;
+  apr_int64_t old_repos_id;
+  apr_int64_t new_repos_id;
+  svn_boolean_t have_row;
+  svn_boolean_t update_working;
+
+  SVN_ERR(create_repos_id(&new_repos_id, rb->repos_root_url, rb->repos_uuid,
+                          sdb, scratch_pool));
+
+  /* Get the existing repos_id of the base node, since we'll need it to
+     update a potential lock. */
+  /* ### is it faster to fetch fewer columns? */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_SELECT_BASE_NODE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", rb->wc_id, rb->local_relpath));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  old_repos_id = svn_sqlite__column_int64(stmt, 2);
+  repos_relpath = svn_sqlite__column_text(stmt, 3, scratch_pool);
+  SVN_ERR(svn_sqlite__reset(stmt));
+
+  /* Update the BASE_NODE.repos_id. */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_UPDATE_BASE_REPO));
+  SVN_ERR(svn_sqlite__bindf(stmt, "isi", rb->wc_id, rb->local_relpath,
+                            new_repos_id));
+
+  SVN_ERR(svn_sqlite__step_done(stmt));
+
+  /* Check to see if WORKING_NODE.copyfrom_repos_id is not null.  If it
+     isn't, update it with the new repos_id */
+
+  /* ### is it faster to fetch fewer columns? */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_SELECT_WORKING_NODE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", rb->wc_id, rb->local_relpath));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  update_working = (have_row && !svn_sqlite__column_is_null(stmt, 9));
+  SVN_ERR(svn_sqlite__reset(stmt));
+
+  if (update_working)
+    {
+      SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
+                                        STMT_UPDATE_WORKING_COPYFROM_REPO));
+      SVN_ERR(svn_sqlite__bindf(stmt, "isi", rb->wc_id, rb->local_relpath,
+                                new_repos_id));
+
+      SVN_ERR(svn_sqlite__step_done(stmt));
+    }
+
+  /* Update any lock, update it's repos_id, too. */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_UPDATE_LOCK_REPOS_ID));
+  SVN_ERR(svn_sqlite__bindf(stmt, "isi",
+                            old_repos_id, repos_relpath, new_repos_id));
+  SVN_ERR(svn_sqlite__step_done(stmt));
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc__db_op_relocate(svn_wc__db_t *db,
+                       const char *local_abspath,
+                       const char *repos_root_url,
+                       const char *repos_uuid,
+                       apr_pool_t *scratch_pool)
+{
+  svn_wc__db_pdh_t *pdh;
+  struct relocate_baton rb;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  SVN_ERR(parse_local_abspath(&pdh, &rb.local_relpath, db, local_abspath,
+                              svn_sqlite__mode_readonly,
+                              scratch_pool, scratch_pool));
+
+  rb.wc_id = pdh->wcroot->wc_id;
+  rb.repos_root_url = repos_root_url;
+  rb.repos_uuid = repos_uuid;
+  rb.scratch_pool = scratch_pool;
+
+  return svn_error_return(svn_sqlite__with_transaction(pdh->wcroot->sdb,
+                                                       relocate_txn, &rb));
 }
 
 
