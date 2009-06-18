@@ -452,8 +452,10 @@ svn_io_open_uniquely_named(apr_file_t **file,
         }
     }
 
-  if (file) *file = NULL;
-  if (unique_path) *unique_path = NULL;
+  if (file)
+    *file = NULL;
+  if (unique_path)
+    *unique_path = NULL;
   return svn_error_createf(SVN_ERR_IO_UNIQUE_NAMES_EXHAUSTED,
                            NULL,
                            _("Unable to make name for '%s'"),
