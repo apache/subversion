@@ -987,7 +987,7 @@ static svn_error_t * commit_add_file(const char *path,
 
   /*
   ** To add a new file into the repository, we CHECKOUT the parent
-  ** collection, then PUT the file as a member of the resuling working
+  ** collection, then PUT the file as a member of the resulting working
   ** collection.
   **
   ** If the file was copied from elsewhere, then we will use the COPY
