@@ -2507,6 +2507,43 @@ def tree_conflicts_on_switch_3(sbox):
                         expected_status) ] )
 
 
+def single_file_relocate(sbox):
+  "relocate a single file"
+
+  # Create virgin repos and working copy
+  svntest.main.safe_rmtree(sbox.repo_dir, 1)
+  svntest.main.create_repos(sbox.repo_dir)
+
+  wc_dir = sbox.wc_dir
+  iota_path = os.path.join(sbox.wc_dir, 'iota')
+  repo_dir = sbox.repo_dir
+  repo_url = sbox.repo_url
+  iota_url = repo_url + '/iota'
+
+  # import the greek tree
+  svntest.main.greek_state.write_to_disk(svntest.main.greek_dump_dir)
+  exit_code, output, errput = svntest.main.run_svn(
+    None, 'import', '-m', 'Log message for revision 1.',
+    svntest.main.greek_dump_dir, sbox.repo_url)
+
+  # checkout
+  svntest.main.safe_rmtree(wc_dir, 1)
+  svntest.actions.run_and_verify_svn(None,
+                                     None, [],
+                                     'checkout',
+                                     repo_url, wc_dir)
+
+  # Relocate
+  other_repo_dir, other_repo_url = sbox.add_repo_path('other')
+  other_iota_url = other_repo_url + '/iota'
+  svntest.main.copy_repos(repo_dir, other_repo_dir, 1, 0)
+  svntest.main.safe_rmtree(repo_dir, 1)
+  svntest.actions.run_and_verify_svn(None, None,
+                                     ".*Cannot relocate a single file\n",
+                                     'switch', '--relocate',
+                                     iota_url, other_iota_url, iota_path)
+
+
 
 ########################################################################
 # Run the tests
@@ -2548,6 +2585,7 @@ test_list = [ None,
               tree_conflicts_on_switch_2_1,
               tree_conflicts_on_switch_2_2,
               tree_conflicts_on_switch_3,
+              single_file_relocate,
              ]
 
 if __name__ == '__main__':
