@@ -128,7 +128,7 @@ create_fs(svn_fs_t **fs_p,
 
 static svn_error_t *
 maybe_install_fsfs_conf(svn_fs_t *fs,
-                        svn_test_opts_t *opts,
+                        const svn_test_opts_t *opts,
                         svn_boolean_t *must_reopen,
                         apr_pool_t *pool)
 {
@@ -148,7 +148,7 @@ maybe_install_fsfs_conf(svn_fs_t *fs,
 svn_error_t *
 svn_test__create_bdb_fs(svn_fs_t **fs_p,
                         const char *name,
-                        svn_test_opts_t *opts,
+                        const svn_test_opts_t *opts,
                         apr_pool_t *pool)
 {
   return create_fs(fs_p, name, "bdb", opts->server_minor_version, pool);
@@ -158,7 +158,7 @@ svn_test__create_bdb_fs(svn_fs_t **fs_p,
 svn_error_t *
 svn_test__create_fs(svn_fs_t **fs_p,
                     const char *name,
-                    svn_test_opts_t *opts,
+                    const svn_test_opts_t *opts,
                     apr_pool_t *pool)
 {
   svn_boolean_t must_reopen;
@@ -180,7 +180,7 @@ svn_test__create_fs(svn_fs_t **fs_p,
 svn_error_t *
 svn_test__create_repos(svn_repos_t **repos_p,
                        const char *name,
-                       svn_test_opts_t *opts,
+                       const svn_test_opts_t *opts,
                        apr_pool_t *pool)
 {
   apr_finfo_t finfo;
