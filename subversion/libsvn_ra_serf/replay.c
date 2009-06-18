@@ -655,10 +655,6 @@ svn_ra_serf__replay(svn_ra_session_t *ra_session,
 
   err = svn_ra_serf__context_run_wait(&replay_ctx->done, session, pool);
 
-  if (parser_ctx->error) {
-    svn_error_clear(err);
-    return parser_ctx->error;
-  }
   SVN_ERR(err);
 
   return SVN_NO_ERROR;
@@ -814,13 +810,6 @@ svn_ra_serf__replay_range(svn_ra_session_t *ra_session,
       while (done_list)
         {
           replay_context_t *ctx = (replay_context_t *)done_list->data;
-          svn_ra_serf__xml_parser_t *parser_ctx = ctx->parser_ctx;
-          if (parser_ctx->error)
-            {
-              svn_error_clear(session->pending_error);
-              session->pending_error = SVN_NO_ERROR;
-              return parser_ctx->error;
-            }
 
           done_list = done_list->next;
           svn_pool_destroy(ctx->src_rev_pool);

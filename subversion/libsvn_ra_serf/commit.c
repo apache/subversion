@@ -1134,9 +1134,7 @@ open_root(void *edit_baton,
          more specific ones over the more generic. */
       SVN_ERR(svn_error_compose_create(
         svn_ra_serf__get_options_error(opt_ctx),
-        svn_error_compose_create(
-          svn_ra_serf__get_options_parser_error(opt_ctx),
-          err)));
+        err));
 
       activity_str = svn_ra_serf__options_get_activity_collection(opt_ctx);
       if (!activity_str)

@@ -248,13 +248,6 @@ svn_ra_serf__get_options_error(svn_ra_serf__options_context_t *ctx)
   return ctx->error;
 }
 
-svn_error_t *
-svn_ra_serf__get_options_parser_error(svn_ra_serf__options_context_t *ctx)
-{
-  return ctx->parser_ctx->error;
-}
-
-
 /* Context for both options_response_handler() and capabilities callback. */
 struct options_response_ctx_t {
   /* Baton for __handle_xml_parser() */
@@ -493,9 +486,7 @@ svn_ra_serf__exchange_capabilities(svn_ra_serf__session_t *serf_sess,
      more specific ones over the more generic. */
   return svn_error_compose_create(
     svn_ra_serf__get_options_error(opt_ctx),
-    svn_error_compose_create(
-      svn_ra_serf__get_options_parser_error(opt_ctx),
-      err));
+    err);
 }
 
 

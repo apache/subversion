@@ -288,13 +288,7 @@ svn_ra_serf__get_mergeinfo(svn_ra_session_t *ra_session,
       SVN_ERR(err2);
     }
 
-  if (parser_ctx->error)
-    {
-      svn_error_clear(err);
-      SVN_ERR(parser_ctx->error);
-    }
-  else
-    SVN_ERR(err);
+  SVN_ERR(err);
 
   if (mergeinfo_ctx->done)
     *catalog = mergeinfo_ctx->result_catalog;

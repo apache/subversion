@@ -1077,9 +1077,6 @@ svn_ra_serf__options_get_youngest_rev(svn_ra_serf__options_context_t *ctx);
 svn_error_t *
 svn_ra_serf__get_options_error(svn_ra_serf__options_context_t *ctx);
 
-svn_error_t *
-svn_ra_serf__get_options_parser_error(svn_ra_serf__options_context_t *ctx);
-
 /* Create an OPTIONS request.  When run, ask for an
    activity-collection-set in the request body (retrievable via
    accessor above) and also parse the server's capability headers into
@@ -1489,6 +1486,22 @@ svn_ra_serf__encode_auth_header(const char *protocol,
 svn_error_t *
 svn_ra_serf__error_on_status(int status_code, const char *path);
 
+/* If EXPR is an error, set EXPR as primary error in SESSION->pending_error
+   adding the existing errors in the chain behind it and return expr->apr_err
+
+   ### All invocations will be replaced by a normal SVN_ERR when the function
+       prototypes have changed to returning a svn_error_t * */
+#define SVN_SESSION_ERR(session, expr)                        \
+  do {                                                        \
+    svn_error_t *svn_err__temp = (expr);                      \
+    if (svn_err__temp)                                        \
+      {                                                       \
+        session->pending_error =                              \
+            svn_error_compose_create(svn_err__temp,           \
+                                     session->pending_error); \
+        return svn_err__temp->apr_err;                        \
+      }                                                       \
+  } while (0)
 
 #ifdef __cplusplus
 }

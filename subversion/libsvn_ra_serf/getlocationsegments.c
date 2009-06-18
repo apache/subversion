@@ -203,19 +203,19 @@ svn_ra_serf__get_location_segments(svn_ra_session_t *ra_session,
 
   err = svn_ra_serf__context_run_wait(&gls_ctx->done, session, pool);
 
-  if (gls_ctx->error || parser_ctx->error)
+  if (gls_ctx->error)
     {
       svn_error_clear(err);
       err = SVN_NO_ERROR;
       SVN_ERR(gls_ctx->error);
-      SVN_ERR(parser_ctx->error);
     }
 
   if (gls_ctx->inside_report)
-    err = svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
+    err = svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, err,
                             _("Location segment report failed on '%s'@'%ld'"),
                               path, peg_revision);
 
+  /* ### Leaks err */
   SVN_ERR(svn_ra_serf__error_on_status(gls_ctx->status_code, handler->path));
 
   svn_pool_destroy(gls_ctx->subpool);
