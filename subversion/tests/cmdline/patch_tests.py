@@ -171,6 +171,14 @@ def patch_unidiff(sbox):
     "@@ -1 +1,2 @@\n",
     " This is the file 'iota'.\n",
     "+Some more bytes\n",
+    "\n",
+    "Index: new\n",
+    "===================================================================\n",
+    "--- new	(revision 0)\n",
+    "+++ new	(revision 0)\n",
+    "@@ -0,0 +1 @@\n",
+    "+new\n",
+    "\n",
   ]
 
   svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
@@ -178,18 +186,22 @@ def patch_unidiff(sbox):
   expected_output = [
     'U    %s\n' % os.path.join('A', 'D', 'gamma'),
     'U    iota\n',
+    'A    new\n',
   ]
 
   gamma_contents = "It is the file 'gamma'.\n"
   iota_contents = "This is the file 'iota'.\nSome more bytes\n"
+  new_contents = "new\n"
 
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.tweak('A/D/gamma', contents=gamma_contents)
   expected_disk.tweak('iota', contents=iota_contents)
+  expected_disk.add({'new' : Item(contents=new_contents)})
 
   expected_status = svntest.actions.get_virginal_state('.', 1)
   expected_status.tweak('A/D/gamma', status='M ')
   expected_status.tweak('iota', status='M ')
+  expected_status.add({'new' : Item(status='A ', wc_rev=0)})
 
   expected_skip = wc.State('', { })
 
