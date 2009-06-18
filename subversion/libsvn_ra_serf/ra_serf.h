@@ -396,7 +396,8 @@ svn_ra_serf__context_run_wait(svn_boolean_t *done,
 /* ### The return type should be changed to svn_error_t *,
        but that is work in progress. */
 typedef apr_status_t
-(*svn_ra_serf__response_handler_t)(serf_request_t *request,
+(*svn_ra_serf__response_handler_t)(svn_ra_serf__session_t *session,
+                                   serf_request_t *request,
                                    serf_bucket_t *response,
                                    void *handler_baton,
                                    apr_pool_t *pool);
@@ -677,18 +678,20 @@ typedef struct {
 /*
  * Serf handler for @a request / @a response pair that takes in a
  * @a baton (@see svn_ra_serf__simple_request_context_t).
+ * Implements svn_ra_serf__response_handler_t.
  *
  * Temporary allocations are made in @a pool.
  */
 apr_status_t
-svn_ra_serf__handle_status_only(serf_request_t *request,
+svn_ra_serf__handle_status_only(svn_ra_serf__session_t *session,
+                                serf_request_t *request,
                                 serf_bucket_t *response,
                                 void *baton,
                                 apr_pool_t *pool);
 
 /*
  * Handler that discards the entire @a response body associated with a
- * @a request.
+ * @a request.  Implements svn_ra_serf__response_handler_t.
  *
  * If @a baton is a svn_ra_serf__server_error_t (i.e. non-NULL) and an
  * error is detected, it will be populated for later detection.
@@ -696,7 +699,8 @@ svn_ra_serf__handle_status_only(serf_request_t *request,
  * All temporary allocations will be made in a @a pool.
  */
 apr_status_t
-svn_ra_serf__handle_discard_body(serf_request_t *request,
+svn_ra_serf__handle_discard_body(svn_ra_serf__session_t *session,
+                                 serf_request_t *request,
                                  serf_bucket_t *response,
                                  void *baton,
                                  apr_pool_t *pool);
@@ -704,24 +708,28 @@ svn_ra_serf__handle_discard_body(serf_request_t *request,
 /*
  * Handler that retrieves the embedded XML error response from the
  * the @a response body associated with a @a request.
+ * Implements svn_ra_serf__response_handler_t.
  *
  * All temporary allocations will be made in a @a pool.
  */
 svn_error_t *
-svn_ra_serf__handle_server_error(serf_request_t *request,
+svn_ra_serf__handle_server_error(svn_ra_serf__session_t *session,
+                                 serf_request_t *request,
                                  serf_bucket_t *response,
                                  apr_pool_t *pool);
 
 /*
  * Handler that retrieves the embedded XML multistatus response from the
  * the @a RESPONSE body associated with a @a REQUEST. *DONE is set to TRUE.
+ * Implements svn_ra_serf__response_handler_t.
  *
  * The @a BATON should be of type svn_ra_serf__simple_request_context_t.
  *
  * All temporary allocations will be made in a @a pool.
  */
 apr_status_t
-svn_ra_serf__handle_multistatus_only(serf_request_t *request,
+svn_ra_serf__handle_multistatus_only(svn_ra_serf__session_t *session,
+                                     serf_request_t *request,
                                      serf_bucket_t *response,
                                      void *baton,
                                      apr_pool_t *pool);
@@ -729,6 +737,7 @@ svn_ra_serf__handle_multistatus_only(serf_request_t *request,
 /*
  * This function will feed the RESPONSE body into XMLP.  When parsing is
  * completed (i.e. an EOF is received), *DONE is set to TRUE.
+ * Implements svn_ra_serf__response_handler_t.
  *
  * If an error occurs during processing RESP_ERR is invoked with the
  * RESP_ERR_BATON.
@@ -736,10 +745,22 @@ svn_ra_serf__handle_multistatus_only(serf_request_t *request,
  * Temporary allocations are made in POOL.
  */
 apr_status_t
-svn_ra_serf__handle_xml_parser(serf_request_t *request,
+svn_ra_serf__handle_xml_parser(svn_ra_serf__session_t *session,
+                               serf_request_t *request,
                                serf_bucket_t *response,
                                void *handler_baton,
                                apr_pool_t *pool);
+
+/* serf_response_handler_t implementation that completely discards
+ * the response.
+ *
+ * All temporary allocations will be made in @a pool.
+ */
+apr_status_t
+svn_ra_serf__response_discard_handler(serf_request_t *request,
+                                      serf_bucket_t *response,
+                                      void *baton,
+                                      apr_pool_t *pool);
 
 /** XML helper functions. **/
 

@@ -341,8 +341,10 @@ set_lock_headers(serf_bucket_t *headers,
   return APR_SUCCESS;
 }
 
+/* Implements svn_ra_serf__response_handler_t */
 static apr_status_t
-handle_lock(serf_request_t *request,
+handle_lock(svn_ra_serf__session_t *session,
+            serf_request_t *request,
             serf_bucket_t *response,
             void *handler_baton,
             apr_pool_t *pool)
@@ -367,8 +369,8 @@ handle_lock(serf_request_t *request,
       /* 423 == Locked */
       if (sl.code == 423)
         {
-          ctx->error = svn_ra_serf__handle_server_error(request, response,
-                                                        pool);
+          ctx->error = svn_ra_serf__handle_server_error(session, request,
+                                                        response, pool);
 
           /* Older servers may not give a descriptive error. */
           if (!ctx->error)
@@ -409,7 +411,8 @@ handle_lock(serf_request_t *request,
   /* Forbidden when a lock doesn't exist. */
   if (ctx->status_code == 403)
     {
-      status = svn_ra_serf__handle_discard_body(request, response, NULL, pool);
+      status = svn_ra_serf__handle_discard_body(session, request, response,
+                                                NULL, pool);
       if (APR_STATUS_IS_EOF(status))
         {
           ctx->done = TRUE;
@@ -420,8 +423,8 @@ handle_lock(serf_request_t *request,
     }
   else
     {
-      status = svn_ra_serf__handle_xml_parser(request, response, handler_baton,
-                                              pool);
+      status = svn_ra_serf__handle_xml_parser(session, request, response,
+                                              handler_baton, pool);
     }
 
   return status;
