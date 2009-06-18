@@ -2369,20 +2369,47 @@ apply_one_patch(svn_patch_t *patch, svn_wc_adm_access_t *adm_access,
       SVN_ERR(svn_io_file_rename(target->result_path, patch->new_filename,
                                  pool));
 
+      /* If the target file didn't exist previously, add it to version
+       * control.  Suppress the notification, we'll do it manually in
+       * a minute (which is a work-around for otherwise not quite pretty
+       * output of the svn CLI client...) */
+      if (target->file == NULL)
+        {
+          svn_wc_adm_access_t *parent_adm_access;
+          const char *dirname = svn_dirent_dirname(patch->new_filename, pool);
+          SVN_ERR(svn_wc_adm_retrieve(&parent_adm_access, adm_access,
+                                      dirname, pool));
+          SVN_ERR(svn_wc_add3(patch->new_filename,
+                              parent_adm_access,
+                              svn_depth_infinity,
+                              NULL, SVN_INVALID_REVNUM,
+                              ctx->cancel_func, ctx->cancel_baton,
+                              NULL, NULL, pool));
+        }
+
       /* Send a notification. */
       if (ctx->notify_func2)
         {
           svn_wc_notify_t *notify;
+          svn_wc_notify_action_t action;
 
-          notify = svn_wc_create_notify(target->path,
-                                        svn_wc_notify_update_update, pool);
-          notify->kind = svn_node_file;
-          if (target->conflicted)
-            notify->content_state = svn_wc_notify_state_conflicted;
-          else if (target->local_mods)
-            notify->content_state = svn_wc_notify_state_merged;
+          if (target->file == NULL)
+            action = svn_wc_notify_update_add;
           else
-            notify->content_state = svn_wc_notify_state_changed;
+            action = svn_wc_notify_update_update;
+
+          notify = svn_wc_create_notify(target->path, action, pool);
+          notify->kind = svn_node_file;
+
+          if (action == svn_wc_notify_update_update)
+            {
+              if (target->conflicted)
+                notify->content_state = svn_wc_notify_state_conflicted;
+              else if (target->local_mods)
+                notify->content_state = svn_wc_notify_state_merged;
+              else
+                notify->content_state = svn_wc_notify_state_changed;
+            }
 
           (*ctx->notify_func2)(ctx->notify_baton2, notify, pool);
         }
