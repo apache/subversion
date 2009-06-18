@@ -2444,7 +2444,7 @@ apply_textdiffs(const char *patch_path, svn_wc_adm_access_t *adm_access,
       SVN_ERR(svn_diff__parse_next_patch(&patch, patch_file, patch_eol_str,
                                          iterpool, iterpool));
       if (patch)
-          SVN_ERR(apply_one_patch(patch, adm_access, ctx, tempfiles, iterpool));
+        SVN_ERR(apply_one_patch(patch, adm_access, ctx, tempfiles, iterpool));
     }
   while (patch);
   svn_pool_destroy(iterpool);
