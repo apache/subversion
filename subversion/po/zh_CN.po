@@ -37,8 +37,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.7\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2009-05-26 14:15+0800\n"
-"PO-Revision-Date: 2009-04-14 11:11+0800\n"
+"POT-Creation-Date: 2009-06-18 11:24+0800\n"
+"PO-Revision-Date: 2009-06-18 11:25+0800\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Simplified Chinese <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -1342,6 +1342,9 @@ msgstr "URL 中没有方案(一般需要svn://，http://，file://等开头): �
 #, c-format
 msgid "Access scheme mixtures not yet supported ('%s' and '%s')"
 msgstr "不支持存取混合方案 (“%s”与“%s”)"
+
+msgid "Attempt to add tree conflict that already exists"
+msgstr "试图增加已经存在的树冲突"
 
 #. xgettext: the '.working', '.merge-left.r%ld' and
 #. '.merge-right.r%ld' strings are used to tag onto a file
@@ -4263,6 +4266,10 @@ msgid "'%s' is not a valid Subversion property name"
 msgstr "“%s”不是有效的 Subversion 属性名称"
 
 #, c-format
+msgid "'%s' is just a peg revision. Maybe try '%s@' instead?"
+msgstr "'%s' 是 peg 版本。也许你需要使用 '%s@'?"
+
+#, c-format
 msgid "URL '%s' is not properly URI-encoded"
 msgstr "URL“%s”不是正确的URI编码"
 
@@ -5165,9 +5172,6 @@ msgstr "树冲突描述中有非法的 “node_kind” 域"
 
 msgid "Error parsing tree conflict skel"
 msgstr "解析树冲突骨架出错"
-
-msgid "Attempt to add tree conflict that already exists"
-msgstr "试图增加已经存在的树冲突"
 
 #, c-format
 msgid "No '.' entry in: '%s'"
@@ -7197,8 +7201,19 @@ msgid ""
 "     or hostname change) but your working copy still reflects the same\n"
 "     directory within the same repository.\n"
 "\n"
+"     FROM is the root URL which will be relocated from.\n"
+"     You can use 'svn info' to determine the root URL of the current\n"
+"     working copy directory (look for 'URL:' in its output).\n"
+"\n"
+"     TO is the root URL which will be relocated to.\n"
+"\n"
 "  See also 'svn help update' for a list of possible characters\n"
 "  reporting the action taken.\n"
+"\n"
+"  Examples:\n"
+"    svn switch ^/branches/1.x-release\n"
+"    svn switch --relocate http://www.example.com/repo/project \\\n"
+"                          svn://svn.example.com/repo/project\n"
 msgstr ""
 "更新工作副本至不同的 URL。\n"
 "用法:  1、switch URL[@PEGREV] [PATH]\n"
@@ -7222,7 +7237,17 @@ msgstr ""
 "     变(比如方案或者主机名称变动)，但是工作副本仍旧对应同一版本库的同一目录\n"
 "     时，使用这个命令更新工作副本与档案库的对应关系。\n"
 "\n"
+"     FROM 是重新定位源之根 URL。你可以使用 'svn info' 确定工作目录的根 URL\n"
+"     (即输出中的 'URL:' 字段)。\n"
+"\n"
+"     TO 是重新定位目的之根 URL。\n"
+"\n"
 "  参见 “svn help update” 以获取报告执行动作的字符列表。\n"
+"\n"
+"  样例:\n"
+"    svn switch ^/branches/1.x-release\n"
+"    svn switch --relocate http://www.example.com/repo/project \\\n"
+"                          svn://svn.example.com/repo/project\n"
 
 msgid ""
 "Unlock working copy paths or URLs.\n"
