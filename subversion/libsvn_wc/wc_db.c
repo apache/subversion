@@ -2587,6 +2587,7 @@ relocate_txn(void *baton, svn_sqlite__db_t *sdb)
   apr_int64_t old_repos_id;
   apr_int64_t new_repos_id;
   svn_boolean_t have_row;
+  svn_boolean_t have_base_node;
   svn_boolean_t update_working;
 
   SVN_ERR(create_repos_id(&new_repos_id, rb->repos_root_url, rb->repos_uuid,
@@ -2597,17 +2598,23 @@ relocate_txn(void *baton, svn_sqlite__db_t *sdb)
   /* ### is it faster to fetch fewer columns? */
   SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_SELECT_BASE_NODE));
   SVN_ERR(svn_sqlite__bindf(stmt, "is", rb->wc_id, rb->local_relpath));
-  SVN_ERR(svn_sqlite__step(&have_row, stmt));
-  old_repos_id = svn_sqlite__column_int64(stmt, 2);
-  repos_relpath = svn_sqlite__column_text(stmt, 3, scratch_pool);
+  SVN_ERR(svn_sqlite__step(&have_base_node, stmt));
+  if (have_base_node)
+    {
+      old_repos_id = svn_sqlite__column_int64(stmt, 2);
+      repos_relpath = svn_sqlite__column_text(stmt, 3, scratch_pool);
+    }
   SVN_ERR(svn_sqlite__reset(stmt));
 
-  /* Update the BASE_NODE.repos_id. */
-  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_UPDATE_BASE_REPO));
-  SVN_ERR(svn_sqlite__bindf(stmt, "isi", rb->wc_id, rb->local_relpath,
-                            new_repos_id));
+  if (have_base_node)
+    {
+      /* Update the BASE_NODE.repos_id. */
+      SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_UPDATE_BASE_REPO));
+      SVN_ERR(svn_sqlite__bindf(stmt, "isi", rb->wc_id, rb->local_relpath,
+                                new_repos_id));
 
-  SVN_ERR(svn_sqlite__step_done(stmt));
+      SVN_ERR(svn_sqlite__step_done(stmt));
+    }
 
   /* Check to see if WORKING_NODE.copyfrom_repos_id is not null.  If it
      isn't, update it with the new repos_id */
@@ -2629,11 +2636,16 @@ relocate_txn(void *baton, svn_sqlite__db_t *sdb)
       SVN_ERR(svn_sqlite__step_done(stmt));
     }
 
-  /* Update any lock, update it's repos_id, too. */
-  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_UPDATE_LOCK_REPOS_ID));
-  SVN_ERR(svn_sqlite__bindf(stmt, "isi",
-                            old_repos_id, repos_relpath, new_repos_id));
-  SVN_ERR(svn_sqlite__step_done(stmt));
+  /* Update any lock, update it's repos_id, too.
+     There won't be a lock if we don't have a base node. */
+  if (have_base_node)
+    {
+      SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
+                                        STMT_UPDATE_LOCK_REPOS_ID));
+      SVN_ERR(svn_sqlite__bindf(stmt, "isi",
+                                old_repos_id, repos_relpath, new_repos_id));
+      SVN_ERR(svn_sqlite__step_done(stmt));
+    }
 
   return SVN_NO_ERROR;
 }
