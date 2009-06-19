@@ -419,13 +419,19 @@ svn_client_lock(const apr_array_header_t *targets,
            adm_access ? svn_wc_adm_access_path(adm_access) : NULL,
            adm_access, NULL, FALSE, FALSE, ctx, pool));
 
-  cb.pool = pool;
   if (adm_access)
-    cb.base_path = svn_wc_adm_access_path(adm_access);
+    {
+      cb.base_path = svn_wc_adm_access_path(adm_access);
+      SVN_ERR(svn_wc_adm_close2(adm_access, pool));
+    }
   else
-    cb.base_path = NULL;
+    {
+      cb.base_path = NULL;
+    }
   cb.urls_to_paths = urls_to_paths;
   cb.ctx = ctx;
+  cb.pool = pool;
+
   SVN_ERR(svn_wc_context_create(&cb.wc_ctx, NULL /* config */, pool, pool));
 
   /* Lock the paths. */
@@ -433,10 +439,6 @@ svn_client_lock(const apr_array_header_t *targets,
                       steal_lock, store_locks_callback, &cb, pool));
 
   SVN_ERR(svn_wc_context_destroy(cb.wc_ctx));
-
-  /* Unlock the wc. */
-  if (adm_access)
-    return svn_wc_adm_close2(adm_access, pool);
 
   return SVN_NO_ERROR;
 }
@@ -473,13 +475,19 @@ svn_client_unlock(const apr_array_header_t *targets,
   if (! adm_access && !break_lock)
     SVN_ERR(fetch_tokens(ra_session, path_tokens, pool));
 
-  cb.pool = pool;
   if (adm_access)
-    cb.base_path = svn_wc_adm_access_path(adm_access);
+    {
+      cb.base_path = svn_wc_adm_access_path(adm_access);
+      SVN_ERR(svn_wc_adm_close2(adm_access, pool));
+    }
   else
-    cb.base_path = NULL;
+    {
+      cb.base_path = NULL;
+    }
   cb.urls_to_paths = urls_to_paths;
   cb.ctx = ctx;
+  cb.pool = pool;
+
   SVN_ERR(svn_wc_context_create(&cb.wc_ctx, NULL /* config */, pool, pool));
 
   /* Unlock the paths. */
@@ -487,10 +495,6 @@ svn_client_unlock(const apr_array_header_t *targets,
                         store_locks_callback, &cb, pool));
 
   SVN_ERR(svn_wc_context_destroy(cb.wc_ctx));
-
-  /* Unlock the wc. */
-  if (adm_access)
-    return svn_wc_adm_close2(adm_access, pool);
 
   return SVN_NO_ERROR;
 }
