@@ -45,9 +45,6 @@ typedef struct {
   /* True iff we're looking at a child of the outer report tag */
   svn_boolean_t inside_report;
 
-  /* Return error code */
-  svn_error_t *error;
-
   int status_code;
 
   svn_boolean_t done;
@@ -141,7 +138,6 @@ svn_ra_serf__get_location_segments(svn_ra_session_t *ra_session,
   gls_ctx->receiver_baton = receiver_baton;
   gls_ctx->subpool = svn_pool_create(pool);
   gls_ctx->inside_report = FALSE;
-  gls_ctx->error = SVN_NO_ERROR;
   gls_ctx->done = FALSE;
 
   buckets = serf_bucket_aggregate_create(session->bkt_alloc);
@@ -202,13 +198,6 @@ svn_ra_serf__get_location_segments(svn_ra_session_t *ra_session,
   svn_ra_serf__request_create(handler);
 
   err = svn_ra_serf__context_run_wait(&gls_ctx->done, session, pool);
-
-  if (gls_ctx->error)
-    {
-      svn_error_clear(err);
-      err = SVN_NO_ERROR;
-      SVN_ERR(gls_ctx->error);
-    }
 
   if (gls_ctx->inside_report)
     err = svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, err,
