@@ -82,9 +82,6 @@ typedef struct {
 
   /* are we done? */
   svn_boolean_t done;
-
-  /* Any errors. */
-  svn_error_t *error;
 } lock_info_t;
 
 
@@ -351,6 +348,7 @@ handle_lock(svn_ra_serf__session_t *session,
 {
   svn_ra_serf__xml_parser_t *xml_ctx = handler_baton;
   lock_info_t *ctx = xml_ctx->user_data;
+  svn_error_t *err;
   apr_status_t status;
 
   if (ctx->read_headers == FALSE)
@@ -369,18 +367,19 @@ handle_lock(svn_ra_serf__session_t *session,
       /* 423 == Locked */
       if (sl.code == 423)
         {
-          ctx->error = svn_ra_serf__handle_server_error(session, request,
-                                                        response, pool);
+          err = svn_ra_serf__handle_server_error(session, request,
+                                                  response, pool);
 
           /* Older servers may not give a descriptive error. */
-          if (!ctx->error)
+          if (!err)
             {
-              ctx->error = svn_error_createf(SVN_ERR_FS_PATH_ALREADY_LOCKED,
-                                             NULL,
-                                             _("Lock request failed: %d %s"),
-                                             ctx->status_code, ctx->reason);
+              err = svn_error_createf(SVN_ERR_FS_PATH_ALREADY_LOCKED,
+                                      NULL,
+                                      _("Lock request failed: %d %s"),
+                                      ctx->status_code, ctx->reason);
             }
-          return ctx->error->apr_err;
+
+          SVN_SESSION_ERR(session, err);
         }
 
       headers = serf_bucket_response_get_headers(response);
@@ -394,12 +393,9 @@ handle_lock(svn_ra_serf__session_t *session,
       val = serf_bucket_headers_get(headers, SVN_DAV_CREATIONDATE_HEADER);
       if (val)
         {
-          svn_error_t *err;
-
-          err = svn_time_from_cstring(&ctx->lock->creation_date, val,
-                                      ctx->pool);
-
-          SVN_SESSION_ERR(session, err);
+          SVN_SESSION_ERR(session, svn_time_from_cstring(
+                                      &ctx->lock->creation_date, val,
+                                      ctx->pool));
         }
 
       ctx->read_headers = TRUE;
@@ -413,9 +409,11 @@ handle_lock(svn_ra_serf__session_t *session,
       if (APR_STATUS_IS_EOF(status))
         {
           ctx->done = TRUE;
-          ctx->error = svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
-                                         _("Lock request failed: %d %s"),
-                                         ctx->status_code, ctx->reason);
+          SVN_SESSION_ERR(session,
+                          svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED,
+                                            NULL,
+                                            _("Lock request failed: %d %s"),
+                                            ctx->status_code, ctx->reason));
         }
     }
   else
@@ -531,16 +529,17 @@ svn_ra_serf__get_lock(svn_ra_session_t *ra_session,
 
   svn_ra_serf__request_create(handler);
   err = svn_ra_serf__context_run_wait(&lock_ctx->done, session, pool);
-  if (lock_ctx->error)
+  if (err)
     {
-      svn_error_clear(err);
-      err = NULL;
       /* A 403 forbidden error indicates there's no lock, which we can ignore
-         here. */
-      if (lock_ctx->error && lock_ctx->status_code == 403)
-        svn_error_clear(lock_ctx->error);
-      else
-        err = lock_ctx->error;
+         here.
+
+         ### BH: Is this assumption really ok or are we ignoring real errors? */
+      if (lock_ctx->status_code == 403)
+        {
+          svn_error_clear(err);
+          err = NULL;
+        }
     }
 
   if (status_code == 404)
@@ -630,22 +629,10 @@ svn_ra_serf__lock(svn_ra_session_t *ra_session,
       svn_ra_serf__request_create(handler);
       err = svn_ra_serf__context_run_wait(&lock_ctx->done, session, subpool);
 
-      /* An error stored in lock_ctx->error will always have a more specific
-         error code as the one returen from serf_context_run (err), so we prefer
-         to pass this back to the caller. However, if no such error is stored in
-         lock_ctx->error, we still want to use the error returned from
-         serf_context_run, as in some situations, eg. an 'out of date' error
-         will be returned this way. */
-      if (lock_ctx->error && !SVN_ERR_IS_LOCK_ERROR(lock_ctx->error))
-        {
-          return svn_error_compose_create(lock_ctx->error, err);
-        }
-
       if (lock_func)
         new_err = lock_func(lock_baton, lock_ctx->path, TRUE, lock_ctx->lock,
-                        lock_ctx->error ? lock_ctx->error : err, subpool);
+                            err, subpool);
       svn_error_clear(err);
-      svn_error_clear(lock_ctx->error);
 
       SVN_ERR(new_err);
     }
