@@ -24,19 +24,12 @@
 #include "../svn_test.h"
 
 static svn_error_t *
-test_checksum_parse(const char **msg,
-                    svn_boolean_t msg_only,
-                    svn_test_opts_t *opts,
-                    apr_pool_t *pool)
+test_checksum_parse(apr_pool_t *pool)
 {
   const char *md5_digest = "8518b76f7a45fe4de2d0955085b41f98";
   const char *sha1_digest = "74d82379bcc6771454377db03b912c2b62704139";
   const char *checksum_display;
   svn_checksum_t *checksum;
-
-  *msg = "checksum parse";
-  if (msg_only)
-    return SVN_NO_ERROR;
 
   SVN_ERR(svn_checksum_parse_hex(&checksum, svn_checksum_md5, md5_digest, pool));
   checksum_display = svn_checksum_to_cstring_display(checksum, pool);
@@ -66,6 +59,7 @@ test_checksum_parse(const char **msg,
 struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
-    SVN_TEST_PASS(test_checksum_parse),
+    SVN_TEST_PASS2(test_checksum_parse,
+                   "checksum parse"),
     SVN_TEST_NULL
   };

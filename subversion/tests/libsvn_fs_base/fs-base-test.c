@@ -1,7 +1,7 @@
 /* fs-test.c --- tests for the filesystem
  *
  * ====================================================================
- * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -45,17 +45,10 @@
 
 /* Create a filesystem.  */
 static svn_error_t *
-create_berkeley_filesystem(const char **msg,
-                           svn_boolean_t msg_only,
-                           svn_test_opts_t *opts,
+create_berkeley_filesystem(const svn_test_opts_t *opts,
                            apr_pool_t *pool)
 {
   svn_fs_t *fs;
-
-  *msg = "svn_fs_create_berkeley";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
 
   /* Create and close a repository. */
   SVN_ERR(svn_test__create_bdb_fs(&fs, "test-repo-create-berkeley", opts,
@@ -75,17 +68,10 @@ berkeley_error_handler(const char *errpfx, char *msg)
 
 /* Open an existing filesystem.  */
 static svn_error_t *
-open_berkeley_filesystem(const char **msg,
-                         svn_boolean_t msg_only,
-                         svn_test_opts_t *opts,
+open_berkeley_filesystem(const svn_test_opts_t *opts,
                          apr_pool_t *pool)
 {
   svn_fs_t *fs, *fs2;
-
-  *msg = "open an existing Berkeley DB filesystem";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
 
   /* Create and close a repository (using fs). */
   SVN_ERR(svn_test__create_bdb_fs(&fs, "test-repo-open-berkeley", opts,
@@ -262,20 +248,13 @@ check_id_absent(svn_fs_t *fs, const svn_fs_id_t *id, apr_pool_t *pool)
    NOTE: This function tests internal filesystem interfaces, not just
    the public filesystem interface.  */
 static svn_error_t *
-abort_txn(const char **msg,
-          svn_boolean_t msg_only,
-          svn_test_opts_t *opts,
+abort_txn(const svn_test_opts_t *opts,
           apr_pool_t *pool)
 {
   svn_fs_t *fs;
   svn_fs_txn_t *txn1, *txn2;
   svn_fs_root_t *txn1_root, *txn2_root;
   const char *txn1_name, *txn2_name;
-
-  *msg = "abort a transaction";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
 
   /* Prepare two txns to receive the Greek tree. */
   SVN_ERR(svn_test__create_bdb_fs(&fs, "test-repo-abort-txn", opts,
@@ -501,20 +480,13 @@ abort_txn(const char **msg,
  * now be worthwhile to combine it with delete().
  */
 static svn_error_t *
-delete_mutables(const char **msg,
-                svn_boolean_t msg_only,
-                svn_test_opts_t *opts,
+delete_mutables(const svn_test_opts_t *opts,
                 apr_pool_t *pool)
 {
   svn_fs_t *fs;
   svn_fs_txn_t *txn;
   svn_fs_root_t *txn_root;
   svn_error_t *err;
-
-  *msg = "delete mutable nodes from directories";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
 
   /* Prepare a txn to receive the greek tree. */
   SVN_ERR(svn_test__create_bdb_fs(&fs, "test-repo-del-from-dir", opts,
@@ -688,20 +660,13 @@ delete_mutables(const char **msg,
  * delete_mutables().  It might be worthwhile to combine them.
  */
 static svn_error_t *
-delete(const char **msg,
-       svn_boolean_t msg_only,
-       svn_test_opts_t *opts,
+delete(const svn_test_opts_t *opts,
        apr_pool_t *pool)
 {
   svn_fs_t *fs;
   svn_fs_txn_t *txn;
   svn_fs_root_t *txn_root;
   svn_revnum_t new_rev;
-
-  *msg = "delete nodes tree";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
 
   /* This function tests 5 cases:
    *
@@ -1122,9 +1087,7 @@ struct node_created_rev_args {
 
 
 static svn_error_t *
-canonicalize_abspath(const char **msg,
-                     svn_boolean_t msg_only,
-                     svn_test_opts_t *opts,
+canonicalize_abspath(const svn_test_opts_t *opts,
                      apr_pool_t *pool)
 {
   apr_size_t i;
@@ -1153,11 +1116,6 @@ canonicalize_abspath(const char **msg,
     { "///foo///bar///baz///", "/foo/bar/baz" },
   };
 
-  *msg = "test svn_fs__canonicalize_abspath";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-
   for (i = 0; i < (sizeof(paths) / 2 / sizeof(const char *)); i++)
     {
       const char *input = paths[i][0];
@@ -1182,9 +1140,7 @@ canonicalize_abspath(const char **msg,
 
 
 static svn_error_t *
-create_within_copy(const char **msg,
-                   svn_boolean_t msg_only,
-                   svn_test_opts_t *opts,
+create_within_copy(const svn_test_opts_t *opts,
                    apr_pool_t *pool)
 {
   apr_pool_t *spool = svn_pool_create(pool);
@@ -1193,11 +1149,6 @@ create_within_copy(const char **msg,
   svn_fs_root_t *txn_root, *rev_root;
   int i;
   svn_revnum_t youngest_rev = 0;
-
-  *msg = "create new items within a copied directory";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
 
   /* Create a filesystem and repository. */
   SVN_ERR(svn_test__create_bdb_fs(&fs, "test-repo-create-within-copy", opts,
@@ -1310,9 +1261,7 @@ create_within_copy(const char **msg,
  * then try retrieving those revisions.
  */
 static svn_error_t *
-skip_deltas(const char **msg,
-            svn_boolean_t msg_only,
-            svn_test_opts_t *opts,
+skip_deltas(const svn_test_opts_t *opts,
             apr_pool_t *pool)
 {
   svn_fs_t *fs;
@@ -1322,11 +1271,6 @@ skip_deltas(const char **msg,
   svn_revnum_t youngest_rev = 0;
   const char *one_line = "This is a line in file 'f'.\n";
   svn_stringbuf_t *f = svn_stringbuf_create(one_line, pool);
-
-  *msg = "test skip deltas";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
 
   /* Create a filesystem and repository. */
   SVN_ERR(svn_test__create_bdb_fs(&fs, "test-repo-skip-deltas", opts,
@@ -1388,9 +1332,7 @@ txn_body_get_txn(void *baton, trail_t *trail)
 
 
 static svn_error_t *
-redundant_copy(const char **msg,
-               svn_boolean_t msg_only,
-               svn_test_opts_t *opts,
+redundant_copy(const svn_test_opts_t *opts,
                apr_pool_t *pool)
 {
   svn_fs_t *fs;
@@ -1401,11 +1343,6 @@ redundant_copy(const char **msg,
   const svn_fs_id_t *old_D_id, *new_D_id;
   svn_revnum_t youngest_rev = 0;
   struct get_txn_args args;
-
-  *msg = "ensure no-op for redundant copies";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
 
   /* Create a filesystem and repository. */
   SVN_ERR(svn_test__create_bdb_fs(&fs, "test-repo-redundant-copy", opts,
@@ -1464,9 +1401,7 @@ redundant_copy(const char **msg,
 
 
 static svn_error_t *
-orphaned_textmod_change(const char **msg,
-                        svn_boolean_t msg_only,
-                        svn_test_opts_t *opts,
+orphaned_textmod_change(const svn_test_opts_t *opts,
                         apr_pool_t *pool)
 {
   apr_pool_t *subpool = svn_pool_create(pool);
@@ -1477,10 +1412,6 @@ orphaned_textmod_change(const char **msg,
   svn_txdelta_window_handler_t wh_func;
   void *wh_baton;
   apr_hash_t *changed_paths;
-
-  *msg = "test for orphaned textmod changed paths";
-  if (msg_only)
-    return SVN_NO_ERROR;
 
   /* Create a filesystem and repository. */
   SVN_ERR(svn_test__create_bdb_fs(&fs, "test-repo-orphaned-changes", opts,
@@ -1536,15 +1467,25 @@ orphaned_textmod_change(const char **msg,
 struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
-    SVN_TEST_PASS(create_berkeley_filesystem),
-    SVN_TEST_PASS(open_berkeley_filesystem),
-    SVN_TEST_PASS(delete_mutables),
-    SVN_TEST_PASS(delete),
-    SVN_TEST_PASS(abort_txn),
-    SVN_TEST_PASS(create_within_copy),
-    SVN_TEST_PASS(canonicalize_abspath),
-    SVN_TEST_PASS(skip_deltas),
-    SVN_TEST_PASS(redundant_copy),
-    SVN_TEST_PASS(orphaned_textmod_change),
+    SVN_TEST_OPTS_PASS(create_berkeley_filesystem,
+                       "svn_fs_create_berkeley"),
+    SVN_TEST_OPTS_PASS(open_berkeley_filesystem,
+                       "open an existing Berkeley DB filesystem"),
+    SVN_TEST_OPTS_PASS(delete_mutables,
+                       "delete mutable nodes from directories"),
+    SVN_TEST_OPTS_PASS(delete,
+                       "delete nodes tree"),
+    SVN_TEST_OPTS_PASS(abort_txn,
+                       "abort a transaction"),
+    SVN_TEST_OPTS_PASS(create_within_copy,
+                       "create new items within a copied directory"),
+    SVN_TEST_OPTS_PASS(canonicalize_abspath,
+                       "test svn_fs__canonicalize_abspath"),
+    SVN_TEST_OPTS_PASS(skip_deltas,
+                       "test skip deltas"),
+    SVN_TEST_OPTS_PASS(redundant_copy,
+                       "ensure no-op for redundant copies"),
+    SVN_TEST_OPTS_PASS(orphaned_textmod_change,
+                       "test for orphaned textmod changed paths"),
     SVN_TEST_NULL
   };

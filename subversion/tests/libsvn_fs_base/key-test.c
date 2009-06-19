@@ -1,7 +1,7 @@
 /* key-test.c --- tests for the key gen functions
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -30,10 +30,7 @@
 
 
 static svn_error_t *
-key_test(const char **msg,
-         svn_boolean_t msg_only,
-         svn_test_opts_t *opts,
-         apr_pool_t *pool)
+key_test(apr_pool_t *pool)
 {
   int i;
   const char *keys[9][2] = {
@@ -47,11 +44,6 @@ key_test(const char **msg,
     { "a9z", "aa0" },
     { "z", "10" }
   };
-
-  *msg = "testing sequential alphanumeric key generation";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
 
   for (i = 0; i < 9; i++)
     {
@@ -86,6 +78,7 @@ key_test(const char **msg,
 struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
-    SVN_TEST_PASS(key_test),
+    SVN_TEST_PASS2(key_test,
+                   "testing sequential alphanumeric key generation"),
     SVN_TEST_NULL
   };

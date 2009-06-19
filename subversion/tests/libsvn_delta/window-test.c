@@ -2,7 +2,7 @@
  * window-test.c:  Test delta window generation
  *
  * ====================================================================
- * Copyright (c) 2008 CollabNet.  All rights reserved.
+ * Copyright (c) 2008-2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -26,10 +26,7 @@
 
 
 static svn_error_t *
-stream_window_test(const char **msg,
-                   svn_boolean_t msg_only,
-                   svn_test_opts_t *opts,
-                   apr_pool_t *pool)
+stream_window_test(apr_pool_t *pool)
 {
   /* Note: put these in data segment, not the stack */
   static char source[109001];
@@ -43,10 +40,6 @@ stream_window_test(const char **msg,
   svn_stream_t *source_stream;
   svn_stream_t *target_stream;
   svn_txdelta_stream_t *txstream;
-
-  *msg = "txdelta stream and windows test";
-  if (msg_only)
-    return SVN_NO_ERROR;
 
   memcpy(source, "a\nb\nc\nd\ne", 9);
   for (i = 100; i--; )
@@ -104,6 +97,7 @@ stream_window_test(const char **msg,
 struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
-    SVN_TEST_PASS(stream_window_test),
+    SVN_TEST_PASS2(stream_window_test,
+                   "txdelta stream and windows test"),
     SVN_TEST_NULL
   };

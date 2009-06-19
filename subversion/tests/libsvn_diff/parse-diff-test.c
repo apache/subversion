@@ -2,7 +2,7 @@
  * Regression tests for the diff/diff3 library -- parsing unidiffs
  *
  * ====================================================================
- * Copyright (c) 2003-2006, 2008 CollabNet.  All rights reserved.
+ * Copyright (c) 2003-2006, 2008-2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -53,10 +53,7 @@ static const char *unidiff =
   ""                                                                    NL;
 
 static svn_error_t *
-test_parse_unidiff(const char **msg,
-                   svn_boolean_t msg_only,
-                   svn_test_opts_t *opts,
-                   apr_pool_t *pool)
+test_parse_unidiff(apr_pool_t *pool)
 {
   apr_file_t *patch_file;
   apr_status_t status;
@@ -67,11 +64,6 @@ test_parse_unidiff(const char **msg,
   svn_hunk_t *hunk;
   svn_stringbuf_t *buf;
   svn_boolean_t eof;
-
-  *msg = "test unidiff parsing";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
 
   /* Create a patch file. */
   status = apr_file_open(&patch_file, fname,
@@ -157,6 +149,7 @@ test_parse_unidiff(const char **msg,
 struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
-    SVN_TEST_PASS(test_parse_unidiff),
+    SVN_TEST_PASS2(test_parse_unidiff,
+                   "test unidiff parsing"),
     SVN_TEST_NULL
   };

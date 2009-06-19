@@ -29,20 +29,12 @@ fail(apr_pool_t *pool, const char *fmt, ...)
 }
 
 static svn_error_t *
-test_read_tree_conflict(const char **msg,
-                        svn_boolean_t msg_only,
-                        svn_test_opts_t *opts,
-                        apr_pool_t *pool)
+test_read_tree_conflict(apr_pool_t *pool)
 {
   svn_wc_conflict_description_t *conflict;
   apr_array_header_t *conflicts;
   svn_wc_conflict_description_t *exp_conflict;
   const char *tree_conflict_data;
-
-  *msg = "read 1 tree conflict";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
 
   tree_conflict_data = "((conflict Foo.c file update deleted edited "
                          "(version 0  2 -1 0  0 ) (version 0  2 -1 0  0 )))";
@@ -72,20 +64,12 @@ test_read_tree_conflict(const char **msg,
 }
 
 static svn_error_t *
-test_read_2_tree_conflicts(const char **msg,
-                           svn_boolean_t msg_only,
-                           svn_test_opts_t *opts,
-                           apr_pool_t *pool)
+test_read_2_tree_conflicts(apr_pool_t *pool)
 {
   const char *tree_conflict_data;
   svn_wc_conflict_description_t *conflict1, *conflict2;
   apr_array_header_t *conflicts;
   svn_wc_conflict_description_t *exp_conflict1, *exp_conflict2;
-
-  *msg = "read 2 tree conflicts";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
 
   tree_conflict_data =
     "((conflict Foo.c file update deleted edited "
@@ -162,20 +146,12 @@ static const char* broken_tree_conflict_test_data[] = {
 };
 
 static svn_error_t *
-test_read_invalid_tree_conflicts(const char **msg,
-                                         svn_boolean_t msg_only,
-                                         svn_test_opts_t *opts,
-                                         apr_pool_t *pool)
+test_read_invalid_tree_conflicts(apr_pool_t *pool)
 {
   int i;
   const char *tree_conflict_data;
   apr_array_header_t *conflicts;
   svn_error_t *err;
-
-  *msg = "detect broken tree conflict data";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
 
   conflicts = apr_array_make(pool, 16, sizeof(svn_wc_conflict_description_t *));
   for (i = 0; broken_tree_conflict_test_data[i] != NULL; i++)
@@ -193,20 +169,12 @@ test_read_invalid_tree_conflicts(const char **msg,
 }
 
 static svn_error_t *
-test_write_tree_conflict(const char **msg,
-                         svn_boolean_t msg_only,
-                         svn_test_opts_t *opts,
-                         apr_pool_t *pool)
+test_write_tree_conflict(apr_pool_t *pool)
 {
   svn_wc_conflict_description_t *conflict;
   const char *tree_conflict_data;
   apr_array_header_t *conflicts;
   const char *expected;
-
-  *msg = "write 1 tree conflict";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
 
   conflict = svn_wc_conflict_description_create_tree("Foo.c", NULL,
                                                      svn_node_file,
@@ -233,20 +201,12 @@ test_write_tree_conflict(const char **msg,
 }
 
 static svn_error_t *
-test_write_2_tree_conflicts(const char **msg,
-                            svn_boolean_t msg_only,
-                            svn_test_opts_t *opts,
-                            apr_pool_t *pool)
+test_write_2_tree_conflicts(apr_pool_t *pool)
 {
   svn_wc_conflict_description_t *conflict1, *conflict2;
   apr_array_header_t *conflicts;
   const char *tree_conflict_data;
   const char *expected;
-
-  *msg = "write 2 tree conflicts";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
 
   conflict1 = svn_wc_conflict_description_create_tree("Foo.c", NULL,
                                                       svn_node_file,
@@ -283,20 +243,12 @@ test_write_2_tree_conflicts(const char **msg,
 }
 
 static svn_error_t *
-test_write_invalid_tree_conflicts(const char **msg,
-                                         svn_boolean_t msg_only,
-                                         svn_test_opts_t *opts,
-                                         apr_pool_t *pool)
+test_write_invalid_tree_conflicts(apr_pool_t *pool)
 {
   svn_wc_conflict_description_t *conflict;
   apr_array_header_t *conflicts;
   const char *tree_conflict_data;
   svn_error_t *err;
-
-  *msg = "detect broken tree conflict data while writing";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
 
   /* Configure so that we can test for errors caught by SVN_ERR_ASSERT. */
   svn_error_set_malfunction_handler(svn_error_raise_on_malfunction);
@@ -392,17 +344,9 @@ test_write_invalid_tree_conflicts(const char **msg,
 }
 
 static svn_error_t *
-test_exists_0(const char **msg,
-              svn_boolean_t msg_only,
-              svn_test_opts_t *opts,
-              apr_pool_t *pool)
+test_exists_0(apr_pool_t *pool)
 {
   apr_array_header_t *conflicts;
-
-  *msg = "search for victim in array of 0 conflicts";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
 
   conflicts = apr_array_make(pool, 0,
       sizeof(svn_wc_conflict_description_t *));
@@ -414,18 +358,10 @@ test_exists_0(const char **msg,
 }
 
 static svn_error_t *
-test_exists_1(const char **msg,
-              svn_boolean_t msg_only,
-              svn_test_opts_t *opts,
-              apr_pool_t *pool)
+test_exists_1(apr_pool_t *pool)
 {
   svn_wc_conflict_description_t *conflict;
   apr_array_header_t *conflicts;
-
-  *msg = "search for victim in array of 1 conflict";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
 
   conflict = svn_wc_conflict_description_create_tree("Foo.c", NULL,
                                                      svn_node_file,
@@ -448,18 +384,10 @@ test_exists_1(const char **msg,
 }
 
 static svn_error_t *
-test_exists_2(const char **msg,
-              svn_boolean_t msg_only,
-              svn_test_opts_t *opts,
-              apr_pool_t *pool)
+test_exists_2(apr_pool_t *pool)
 {
   svn_wc_conflict_description_t *conflict1, *conflict2;
   apr_array_header_t *conflicts;
-
-  *msg = "search for victim in array of 2 conflicts";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
 
   conflict1 = svn_wc_conflict_description_create_tree("Foo.c", NULL,
                                                       svn_node_file,
@@ -499,15 +427,24 @@ test_exists_2(const char **msg,
 struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
-    SVN_TEST_PASS(test_read_tree_conflict),
-    SVN_TEST_PASS(test_read_2_tree_conflicts),
-    SVN_TEST_XFAIL(test_read_invalid_tree_conflicts),
-    SVN_TEST_PASS(test_write_tree_conflict),
-    SVN_TEST_PASS(test_write_2_tree_conflicts),
-    SVN_TEST_PASS(test_write_invalid_tree_conflicts),
-    SVN_TEST_PASS(test_exists_0),
-    SVN_TEST_PASS(test_exists_1),
-    SVN_TEST_PASS(test_exists_2),
+    SVN_TEST_PASS2(test_read_tree_conflict,
+                   "read 1 tree conflict"),
+    SVN_TEST_PASS2(test_read_2_tree_conflicts,
+                   "read 2 tree conflicts"),
+    SVN_TEST_XFAIL2(test_read_invalid_tree_conflicts,
+                    "detect broken tree conflict data"),
+    SVN_TEST_PASS2(test_write_tree_conflict,
+                   "write 1 tree conflict"),
+    SVN_TEST_PASS2(test_write_2_tree_conflicts,
+                   "write 2 tree conflicts"),
+    SVN_TEST_PASS2(test_write_invalid_tree_conflicts,
+                   "detect broken tree conflict data while writing"),
+    SVN_TEST_PASS2(test_exists_0,
+                   "search for victim in array of 0 conflicts"),
+    SVN_TEST_PASS2(test_exists_1,
+                   "search for victim in array of 1 conflict"),
+    SVN_TEST_PASS2(test_exists_2,
+                   "search for victim in array of 2 conflicts"),
     SVN_TEST_NULL
   };
 

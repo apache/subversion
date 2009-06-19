@@ -2,7 +2,7 @@
  * time-test.c -- test the time functions
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004, 2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -32,17 +32,9 @@ const char *test_old_timestring =
 
 
 static svn_error_t *
-test_time_to_cstring(const char **msg,
-                     svn_boolean_t msg_only,
-                     svn_test_opts_t *opts,
-                     apr_pool_t *pool)
+test_time_to_cstring(apr_pool_t *pool)
 {
   const char *timestring;
-
-  *msg = "test svn_time_to_cstring";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
 
   timestring = svn_time_to_cstring(test_timestamp,pool);
 
@@ -60,17 +52,9 @@ test_time_to_cstring(const char **msg,
 
 
 static svn_error_t *
-test_time_from_cstring(const char **msg,
-                       svn_boolean_t msg_only,
-                       svn_test_opts_t *opts,
-                       apr_pool_t *pool)
+test_time_from_cstring(apr_pool_t *pool)
 {
   apr_time_t timestamp;
-
-  *msg = "test svn_time_from_cstring";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
 
   SVN_ERR(svn_time_from_cstring(&timestamp, test_timestring, pool));
 
@@ -108,18 +92,10 @@ static const char *failure_old_tests[] = {
 };
 
 static svn_error_t *
-test_time_from_cstring_old(const char **msg,
-                           svn_boolean_t msg_only,
-                           svn_test_opts_t *opts,
-                           apr_pool_t *pool)
+test_time_from_cstring_old(apr_pool_t *pool)
 {
   apr_time_t timestamp;
   const char **ft;
-
-  *msg = "test svn_time_from_cstring (old format)";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
 
   SVN_ERR(svn_time_from_cstring(&timestamp, test_old_timestring, pool));
 
@@ -155,19 +131,11 @@ test_time_from_cstring_old(const char **msg,
 
 
 static svn_error_t *
-test_time_invariant(const char **msg,
-                    svn_boolean_t msg_only,
-                    svn_test_opts_t *opts,
-                    apr_pool_t *pool)
+test_time_invariant(apr_pool_t *pool)
 {
   apr_time_t current_timestamp = apr_time_now();
   const char *timestring;
   apr_time_t timestamp;
-
-  *msg = "test svn_time_[to/from]_cstring() invariant";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
 
   timestring = svn_time_to_cstring(current_timestamp, pool);
   SVN_ERR(svn_time_from_cstring(&timestamp, timestring, pool));
@@ -300,21 +268,13 @@ compare_results(struct date_test *dt,
 }
 
 static svn_error_t *
-test_parse_date(const char **msg,
-                svn_boolean_t msg_only,
-                svn_test_opts_t *opts,
-                apr_pool_t *pool)
+test_parse_date(apr_pool_t *pool)
 {
   apr_time_t now, result;
   apr_time_exp_t nowexp, expt;
   svn_boolean_t matched;
   struct date_test *dt;
   const char **ft;
-
-  *msg = "test svn_parse_date";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
 
   now = apr_time_now();
   if (apr_time_exp_lt(&nowexp, now) != APR_SUCCESS)
@@ -377,10 +337,15 @@ test_parse_date(const char **msg,
 struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
-    SVN_TEST_PASS(test_time_to_cstring),
-    SVN_TEST_PASS(test_time_from_cstring),
-    SVN_TEST_PASS(test_time_from_cstring_old),
-    SVN_TEST_PASS(test_time_invariant),
-    SVN_TEST_PASS(test_parse_date),
+    SVN_TEST_PASS2(test_time_to_cstring,
+                   "test svn_time_to_cstring"),
+    SVN_TEST_PASS2(test_time_from_cstring,
+                   "test svn_time_from_cstring"),
+    SVN_TEST_PASS2(test_time_from_cstring_old,
+                   "test svn_time_from_cstring (old format)"),
+    SVN_TEST_PASS2(test_time_invariant,
+                   "test svn_time_[to/from]_cstring() invariant"),
+    SVN_TEST_PASS2(test_parse_date,
+                   "test svn_parse_date"),
     SVN_TEST_NULL
   };
