@@ -1120,21 +1120,14 @@ open_root(void *edit_baton,
       svn_ra_serf__propfind_context_t *propfind_ctx;
       const char *activity_str;
       const char *vcc_url;
-      svn_error_t *err;
 
       svn_ra_serf__create_options_req(&opt_ctx, ctx->session,
                                       ctx->session->conns[0],
                                       ctx->session->repos_url.path, ctx->pool);
 
-      err = svn_ra_serf__context_run_wait(
+      SVN_ERR(svn_ra_serf__context_run_wait(
         svn_ra_serf__get_options_done_ptr(opt_ctx),
-        ctx->session, ctx->pool);
-
-      /* Return all of the three available errors, favoring the
-         more specific ones over the more generic. */
-      SVN_ERR(svn_error_compose_create(
-        svn_ra_serf__get_options_error(opt_ctx),
-        err));
+        ctx->session, ctx->pool));
 
       activity_str = svn_ra_serf__options_get_activity_collection(opt_ctx);
       if (!activity_str)

@@ -68,9 +68,6 @@ struct svn_ra_serf__options_context_t {
   options_state_list_t *state;
   options_state_list_t *free_state;
 
-  /* Return error code */
-  svn_error_t *error;
-
   /* HTTP Status code */
   int status_code;
 
@@ -240,12 +237,6 @@ svn_revnum_t
 svn_ra_serf__options_get_youngest_rev(svn_ra_serf__options_context_t *ctx)
 {
   return ctx->youngest_rev;
-}
-
-svn_error_t *
-svn_ra_serf__get_options_error(svn_ra_serf__options_context_t *ctx)
-{
-  return ctx->error;
 }
 
 /* Context for both options_response_handler() and capabilities callback. */
@@ -473,20 +464,15 @@ svn_ra_serf__exchange_capabilities(svn_ra_serf__session_t *serf_sess,
                                    apr_pool_t *pool)
 {
   svn_ra_serf__options_context_t *opt_ctx;
-  svn_error_t *err;
 
   /* This routine automatically fills in serf_sess->capabilities */
   svn_ra_serf__create_options_req(&opt_ctx, serf_sess, serf_sess->conns[0],
                                   serf_sess->repos_url_str, pool);
 
-  err = svn_ra_serf__context_run_wait(
-    svn_ra_serf__get_options_done_ptr(opt_ctx), serf_sess, pool);
+  SVN_ERR(svn_ra_serf__context_run_wait(
+    svn_ra_serf__get_options_done_ptr(opt_ctx), serf_sess, pool));
 
-  /* Return all of the three available errors, favoring the
-     more specific ones over the more generic. */
-  return svn_error_compose_create(
-    svn_ra_serf__get_options_error(opt_ctx),
-    err);
+  return SVN_NO_ERROR;
 }
 
 
