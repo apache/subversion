@@ -1074,9 +1074,6 @@ svn_ra_serf__options_get_activity_collection(svn_ra_serf__options_context_t *ctx
 svn_revnum_t
 svn_ra_serf__options_get_youngest_rev(svn_ra_serf__options_context_t *ctx);
 
-svn_error_t *
-svn_ra_serf__get_options_error(svn_ra_serf__options_context_t *ctx);
-
 /* Create an OPTIONS request.  When run, ask for an
    activity-collection-set in the request body (retrievable via
    accessor above) and also parse the server's capability headers into
