@@ -221,7 +221,13 @@ class MailedOutput(OutputBase):
            'MIME-Version: 1.0\n' \
            'Content-Type: text/plain; charset=UTF-8\n' \
            'Content-Transfer-Encoding: 8bit\n' \
-           % (self.from_addr, ', '.join(self.to_addrs), subject)
+           'X-Svn-Commit-Project: %s\n' \
+           'X-Svn-Commit-Author: %s\n' \
+           'X-Svn-Commit-Revision: %d\n' \
+           'X-Svn-Commit-Repository: %s\n' \
+           % (self.from_addr, ', '.join(self.to_addrs), subject,
+              group, self.repos.author or 'no_author', self.repos.rev,
+              os.path.basename(self.repos.repos_dir))
     if self.reply_to:
       hdrs = '%sReply-To: %s\n' % (hdrs, self.reply_to)
     return hdrs + '\n'
