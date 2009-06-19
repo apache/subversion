@@ -40,10 +40,10 @@ extern "C" {
  * This macro should be used in place of SVN_ERR_ASSERT() since we don't
  * want to core-dump the test.
  */
-#define SVN_TEST_ASSERT(expr)                                  \
-  do {                                                         \
-    if (!(expr))                                               \
-      return svn_error_create(SVN_ERR_TEST_FAILED, 0, #expr);  \
+#define SVN_TEST_ASSERT(expr)                                     \
+  do {                                                            \
+    if (!(expr))                                                  \
+      return svn_error_create(SVN_ERR_TEST_FAILED, NULL, #expr);  \
   } while (0)
 
 /** Handy macro for testing string equality.
@@ -60,7 +60,7 @@ extern "C" {
       break;                                                        \
     if (   (tst_str2 != NULL && tst_str1 == NULL)                   \
         || (strcmp(tst_str2, tst_str1) != 0)  )                     \
-      return svn_error_create(SVN_ERR_TEST_FAILED, 0,               \
+      return svn_error_create(SVN_ERR_TEST_FAILED, NULL,            \
          apr_psprintf(pool,                                         \
           "Strings not equal\n  Expected: '%s'\n  Found:    '%s'",  \
           tst_str2, tst_str1));                                     \
