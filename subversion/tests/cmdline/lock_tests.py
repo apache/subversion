@@ -1463,8 +1463,7 @@ test_list = [ None,
               examine_lock_encoded_recurse,
               XFail(unlocked_lock_of_other_user,
                     svntest.main.is_ra_type_dav),
-              XFail(lock_funky_comment_chars,
-                    svntest.main.is_ra_type_dav_neon),
+              lock_funky_comment_chars,
             ]
 
 if __name__ == '__main__':
