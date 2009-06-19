@@ -69,13 +69,6 @@ typedef svn_error_t* (*svn_test_driver2_t)(apr_pool_t *pool);
 typedef svn_error_t* (*svn_test_driver_opts_t)(const svn_test_opts_t *opts,
                                                apr_pool_t *pool);
 
-/* Prototype for test driver functions.
-   @deprecated Use svn_test_driver2_t instead.  */
-typedef svn_error_t* (*svn_test_driver_t)(const char **msg,
-                                          svn_boolean_t msg_only,
-                                          svn_test_opts_t *opts,
-                                          apr_pool_t *pool);
-
 /* Test modes. */
 enum svn_test_mode_t
   {
@@ -89,9 +82,6 @@ enum svn_test_mode_t
  */
 struct svn_test_descriptor_t
 {
-  /* Obsolete. A pointer to an old-style test driver function. */
-  svn_test_driver_t func;
-
   /* Is the test marked XFAIL? */
   enum svn_test_mode_t mode;
 
@@ -117,47 +107,36 @@ extern struct svn_test_descriptor_t test_funcs[];
 #define SVN_TEST_NULL  {0}
 
 /* Initializer for PASS tests */
-#define SVN_TEST_PASS2(func, msg)  {NULL , svn_test_pass, func, NULL, msg}
+#define SVN_TEST_PASS2(func, msg)  {svn_test_pass, func, NULL, msg}
 
 /* Initializer for XFAIL tests */
-#define SVN_TEST_XFAIL2(func, msg) {NULL, svn_test_xfail, func, NULL, msg}
+#define SVN_TEST_XFAIL2(func, msg) {svn_test_xfail, func, NULL, msg}
 
 /* Initializer for conditional XFAIL tests */
 #define SVN_TEST_XFAIL_COND2(func, p, msg) \
-  {NULL, (p) ? svn_test_xfail : svn_test_pass, func, NULL, msg}
+  {(p) ? svn_test_xfail : svn_test_pass, func, NULL, msg}
 
 /* Initializer for SKIP tests */
 #define SVN_TEST_SKIP2(func, p, msg) \
-  {NULL, (p) ? svn_test_skip : svn_test_pass, func, NULL, msg}
+  {(p) ? svn_test_skip : svn_test_pass, func, NULL, msg}
 
 /* Similar macros, but for tests needing options.  */
-#define SVN_TEST_OPTS_PASS(func, msg)  {NULL, svn_test_pass, NULL, func, msg}
-#define SVN_TEST_OPTS_XFAIL(func, msg) {NULL, svn_test_xfail, NULL, func, msg}
+#define SVN_TEST_OPTS_PASS(func, msg)  {svn_test_pass, NULL, func, msg}
+#define SVN_TEST_OPTS_XFAIL(func, msg) {svn_test_xfail, NULL, func, msg}
 #define SVN_TEST_OPTS_XFAIL_COND(func, p, msg) \
-  {NULL, (p) ? svn_test_xfail : svn_test_pass, NULL, func, msg}
+  {(p) ? svn_test_xfail : svn_test_pass, NULL, func, msg}
 #define SVN_TEST_OPTS_SKIP(func, p, msg) \
-  {NULL, (p) ? svn_test_skip : svn_test_pass, NULL, func, msg}
-
-/* Obsolete initializer macros.  */
-#define SVN_TEST_PASS(func)  {func, svn_test_pass}
-#define SVN_TEST_XFAIL(func) {func, svn_test_xfail}
-#define SVN_TEST_XFAIL_COND(func, p) \
-                                {func, (p) ? svn_test_xfail : svn_test_pass}
-#define SVN_TEST_SKIP(func, p) {func, ((p) ? svn_test_skip : svn_test_pass)}
+  {(p) ? svn_test_skip : svn_test_pass, NULL, func, msg}
 
 /* Initializer for XFAIL tests for works-in-progress. */
 #define SVN_TEST_WIMP(func, msg, wip) \
-  {NULL, svn_test_xfail, func, NULL, msg, wip}
+  {svn_test_xfail, func, NULL, msg, wip}
 #define SVN_TEST_WIMP_COND(func, p, msg, wip) \
-  {NULL, (p) ? svn_test_xfail : svn_test_pass, func, NULL, msg, wip}
+  {(p) ? svn_test_xfail : svn_test_pass, func, NULL, msg, wip}
 #define SVN_TEST_OPTS_WIMP(func, msg, wip) \
-  {NULL, svn_test_xfail, NULL, func, msg, wip}
+  {svn_test_xfail, NULL, func, msg, wip}
 #define SVN_TEST_OPTS_WIMP_COND(func, p, msg, wip) \
-  {NULL, (p) ? svn_test_xfail : svn_test_pass, NULL, func, msg, wip}
-
-/* Obsolete version of work-in-progress macros. */
-#define SVN_TEST_WIMP0(func, wip) \
-  {func, svn_test_xfail, NULL, NULL, NULL, wip}
+  {(p) ? svn_test_xfail : svn_test_pass, NULL, func, msg, wip}
 
 
 
