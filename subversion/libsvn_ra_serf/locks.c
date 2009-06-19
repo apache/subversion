@@ -339,9 +339,8 @@ set_lock_headers(serf_bucket_t *headers,
 }
 
 /* Implements svn_ra_serf__response_handler_t */
-static apr_status_t
-handle_lock(svn_ra_serf__session_t *session,
-            serf_request_t *request,
+static svn_error_t *
+handle_lock(serf_request_t *request,
             serf_bucket_t *response,
             void *handler_baton,
             apr_pool_t *pool)
@@ -349,7 +348,6 @@ handle_lock(svn_ra_serf__session_t *session,
   svn_ra_serf__xml_parser_t *xml_ctx = handler_baton;
   lock_info_t *ctx = xml_ctx->user_data;
   svn_error_t *err;
-  apr_status_t status;
 
   if (ctx->read_headers == FALSE)
     {
@@ -367,8 +365,7 @@ handle_lock(svn_ra_serf__session_t *session,
       /* 423 == Locked */
       if (sl.code == 423)
         {
-          err = svn_ra_serf__handle_server_error(session, request,
-                                                  response, pool);
+          err = svn_ra_serf__handle_server_error(request, response, pool);
 
           /* Older servers may not give a descriptive error. */
           if (!err)
@@ -379,7 +376,7 @@ handle_lock(svn_ra_serf__session_t *session,
                                       ctx->status_code, ctx->reason);
             }
 
-          SVN_SESSION_ERR(session, err);
+          SVN_ERR(err);
         }
 
       headers = serf_bucket_response_get_headers(response);
@@ -393,9 +390,8 @@ handle_lock(svn_ra_serf__session_t *session,
       val = serf_bucket_headers_get(headers, SVN_DAV_CREATIONDATE_HEADER);
       if (val)
         {
-          SVN_SESSION_ERR(session, svn_time_from_cstring(
-                                      &ctx->lock->creation_date, val,
-                                      ctx->pool));
+          SVN_ERR(svn_time_from_cstring(&ctx->lock->creation_date, val,
+                                        ctx->pool));
         }
 
       ctx->read_headers = TRUE;
@@ -404,25 +400,27 @@ handle_lock(svn_ra_serf__session_t *session,
   /* Forbidden when a lock doesn't exist. */
   if (ctx->status_code == 403)
     {
-      status = svn_ra_serf__handle_discard_body(session, request, response,
-                                                NULL, pool);
-      if (APR_STATUS_IS_EOF(status))
+      svn_error_t * err = svn_ra_serf__handle_discard_body(request, response,
+                                                           NULL, pool);
+
+      if (err && APR_STATUS_IS_EOF(err->apr_err))
         {
           ctx->done = TRUE;
-          SVN_SESSION_ERR(session,
-                          svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED,
-                                            NULL,
-                                            _("Lock request failed: %d %s"),
-                                            ctx->status_code, ctx->reason));
+          SVN_ERR(svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED,
+                                    err,
+                                    _("Lock request failed: %d %s"),
+                                    ctx->status_code, ctx->reason));
         }
+
+      SVN_ERR(err);
     }
   else
     {
-      status = svn_ra_serf__handle_xml_parser(session, request, response,
-                                              handler_baton, pool);
+      return svn_ra_serf__handle_xml_parser(request, response,
+                                            handler_baton, pool);
     }
 
-  return status;
+  return SVN_NO_ERROR;
 }
 
 static serf_bucket_t*

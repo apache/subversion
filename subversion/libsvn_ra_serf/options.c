@@ -366,9 +366,8 @@ capabilities_headers_iterator_callback(void *baton,
    svn_ra_serf__handle_xml_parser -- it just notices OPTIONS response
    headers first, before handing off to the xml parser.
    Implements svn_ra_serf__response_handler_t */
-static apr_status_t
-options_response_handler(svn_ra_serf__session_t *session,
-                         serf_request_t *request,
+static svn_error_t *
+options_response_handler(serf_request_t *request,
                          serf_bucket_t *response,
                          void *baton,
                          apr_pool_t *pool)
@@ -388,7 +387,7 @@ options_response_handler(svn_ra_serf__session_t *session,
   serf_bucket_headers_do(hdrs, capabilities_headers_iterator_callback, orc);
 
   /* Execute the 'real' response handler to XML-parse the repsonse body. */
-  return svn_ra_serf__handle_xml_parser(session, request, response,
+  return svn_ra_serf__handle_xml_parser(request, response,
                                         orc->parser_ctx, pool);
 }
 

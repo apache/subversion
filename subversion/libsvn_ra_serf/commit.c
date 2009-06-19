@@ -255,18 +255,16 @@ create_checkout_body(void *baton,
 }
 
 /* Implements svn_ra_serf__response_handler_t */
-static apr_status_t
-handle_checkout(svn_ra_serf__session_t *session,
-                serf_request_t *request,
+static svn_error_t *
+handle_checkout(serf_request_t *request,
                 serf_bucket_t *response,
                 void *handler_baton,
                 apr_pool_t *pool)
 {
   checkout_context_t *ctx = handler_baton;
-  apr_status_t status;
 
-  status = svn_ra_serf__handle_status_only(session,request, response,
-                                           &ctx->progress, pool);
+  SVN_ERR(svn_ra_serf__handle_status_only(request, response,
+                                          &ctx->progress, pool));
 
   /* Get the resulting location. */
   if (ctx->progress.done && ctx->progress.status == 201)
@@ -279,14 +277,14 @@ handle_checkout(svn_ra_serf__session_t *session,
       location = serf_bucket_headers_get(hdrs, "Location");
       if (!location)
         {
-          abort();
+          SVN_ERR_MALFUNCTION();
         }
       apr_uri_parse(pool, location, &uri);
 
       ctx->resource_url = svn_uri_canonicalize(uri.path, ctx->pool);
     }
 
-  return status;
+  return SVN_NO_ERROR;
 }
 
 /* Return the relative path from DIR's topmost parent to DIR, in
@@ -1015,9 +1013,8 @@ post_headers_iterator_callback(void *baton,
    svn_ra_serf__handle_status_only -- it just notices POST response
    headers, too.
    Implements svn_ra_serf__response_handler_t */
-static apr_status_t
-post_response_handler(svn_ra_serf__session_t *session,
-                      serf_request_t *request,
+static svn_error_t *
+post_response_handler(serf_request_t *request,
                       serf_bucket_t *response,
                       void *baton,
                       apr_pool_t *pool)
@@ -1029,7 +1026,7 @@ post_response_handler(svn_ra_serf__session_t *session,
   serf_bucket_headers_do(hdrs, post_headers_iterator_callback, prc);
 
   /* Execute the 'real' response handler to XML-parse the repsonse body. */
-  return svn_ra_serf__handle_status_only(session, request, response,
+  return svn_ra_serf__handle_status_only(request, response,
                                          prc->request_ctx, pool);
 }
 

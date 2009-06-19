@@ -395,9 +395,8 @@ svn_ra_serf__context_run_wait(svn_boolean_t *done,
 /* Callback for response handlers */
 /* ### The return type should be changed to svn_error_t *,
        but that is work in progress. */
-typedef apr_status_t
-(*svn_ra_serf__response_handler_t)(svn_ra_serf__session_t *session,
-                                   serf_request_t *request,
+typedef svn_error_t *
+(*svn_ra_serf__response_handler_t)(serf_request_t *request,
                                    serf_bucket_t *response,
                                    void *handler_baton,
                                    apr_pool_t *pool);
@@ -682,9 +681,8 @@ typedef struct {
  *
  * Temporary allocations are made in @a pool.
  */
-apr_status_t
-svn_ra_serf__handle_status_only(svn_ra_serf__session_t *session,
-                                serf_request_t *request,
+svn_error_t *
+svn_ra_serf__handle_status_only(serf_request_t *request,
                                 serf_bucket_t *response,
                                 void *baton,
                                 apr_pool_t *pool);
@@ -698,9 +696,8 @@ svn_ra_serf__handle_status_only(svn_ra_serf__session_t *session,
  *
  * All temporary allocations will be made in a @a pool.
  */
-apr_status_t
-svn_ra_serf__handle_discard_body(svn_ra_serf__session_t *session,
-                                 serf_request_t *request,
+svn_error_t *
+svn_ra_serf__handle_discard_body(serf_request_t *request,
                                  serf_bucket_t *response,
                                  void *baton,
                                  apr_pool_t *pool);
@@ -713,8 +710,7 @@ svn_ra_serf__handle_discard_body(svn_ra_serf__session_t *session,
  * All temporary allocations will be made in a @a pool.
  */
 svn_error_t *
-svn_ra_serf__handle_server_error(svn_ra_serf__session_t *session,
-                                 serf_request_t *request,
+svn_ra_serf__handle_server_error(serf_request_t *request,
                                  serf_bucket_t *response,
                                  apr_pool_t *pool);
 
@@ -727,9 +723,8 @@ svn_ra_serf__handle_server_error(svn_ra_serf__session_t *session,
  *
  * All temporary allocations will be made in a @a pool.
  */
-apr_status_t
-svn_ra_serf__handle_multistatus_only(svn_ra_serf__session_t *session,
-                                     serf_request_t *request,
+svn_error_t *
+svn_ra_serf__handle_multistatus_only(serf_request_t *request,
                                      serf_bucket_t *response,
                                      void *baton,
                                      apr_pool_t *pool);
@@ -744,9 +739,8 @@ svn_ra_serf__handle_multistatus_only(svn_ra_serf__session_t *session,
  *
  * Temporary allocations are made in POOL.
  */
-apr_status_t
-svn_ra_serf__handle_xml_parser(svn_ra_serf__session_t *session,
-                               serf_request_t *request,
+svn_error_t *
+svn_ra_serf__handle_xml_parser(serf_request_t *request,
                                serf_bucket_t *response,
                                void *handler_baton,
                                apr_pool_t *pool);
@@ -1482,23 +1476,6 @@ svn_ra_serf__encode_auth_header(const char *protocol,
  */
 svn_error_t *
 svn_ra_serf__error_on_status(int status_code, const char *path);
-
-/* If EXPR is an error, set EXPR as primary error in SESSION->pending_error
-   adding the existing errors in the chain behind it and return expr->apr_err
-
-   ### All invocations will be replaced by a normal SVN_ERR when the function
-       prototypes have changed to returning a svn_error_t * */
-#define SVN_SESSION_ERR(session, expr)                        \
-  do {                                                        \
-    svn_error_t *svn_err__temp = (expr);                      \
-    if (svn_err__temp)                                        \
-      {                                                       \
-        session->pending_error =                              \
-            svn_error_compose_create(svn_err__temp,           \
-                                     session->pending_error); \
-        return svn_err__temp->apr_err;                        \
-      }                                                       \
-  } while (0)
 
 #ifdef __cplusplus
 }
