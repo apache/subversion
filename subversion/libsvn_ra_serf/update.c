@@ -704,7 +704,7 @@ cancel_fetch(serf_request_t *request,
   SVN_ERR_MALFUNCTION_NO_RETURN();
 }
 
-static apr_status_t
+static svn_error_t *
 error_fetch(serf_request_t *request,
             report_fetch_t *fetch_ctx,
             svn_error_t *err)
@@ -722,13 +722,12 @@ error_fetch(serf_request_t *request,
   serf_request_set_handler(request,
                            svn_ra_serf__response_discard_handler, NULL);
 
-  return APR_SUCCESS;
+  return SVN_NO_ERROR;
 }
 
 /* Implements svn_ra_serf__response_handler_t */
-static apr_status_t
-handle_fetch(svn_ra_serf__session_t *session,
-             serf_request_t *request,
+static svn_error_t *
+handle_fetch(serf_request_t *request,
              serf_bucket_t *response,
              void *handler_baton,
              apr_pool_t *pool)
@@ -821,7 +820,7 @@ handle_fetch(svn_ra_serf__session_t *session,
   status = serf_bucket_response_status(response, &sl);
   if (SERF_BUCKET_READ_ERROR(status))
     {
-      return status;
+      return svn_error_wrap_apr(status, NULL);
     }
   if (sl.code != 200)
     {
@@ -840,7 +839,7 @@ handle_fetch(svn_ra_serf__session_t *session,
       status = serf_bucket_read(response, 8000, &data, &len);
       if (SERF_BUCKET_READ_ERROR(status))
         {
-          return status;
+          return svn_error_wrap_apr(status, NULL);
         }
 
       fetch_ctx->read_size += len;
@@ -853,13 +852,13 @@ handle_fetch(svn_ra_serf__session_t *session,
               /* Eek.  What did the file shrink or something? */
               if (APR_STATUS_IS_EOF(status))
                 {
-                  SVN_ERR_MALFUNCTION_NO_RETURN();
+                  SVN_ERR_MALFUNCTION();
                 }
 
               /* Skip on to the next iteration of this loop. */
               if (APR_STATUS_IS_EAGAIN(status))
                 {
-                  return status;
+                  return svn_error_wrap_apr(status, NULL);
                 }
               continue;
             }
@@ -955,20 +954,20 @@ handle_fetch(svn_ra_serf__session_t *session,
           svn_pool_destroy(info->editor_pool);
           svn_pool_destroy(info->pool);
 
-          return status;
+          if (status)
+            return svn_error_wrap_apr(status, NULL);
         }
       if (APR_STATUS_IS_EAGAIN(status))
         {
-          return status;
+          return svn_error_wrap_apr(status, NULL);
         }
     }
   /* not reached */
 }
 
 /* Implements svn_ra_serf__response_handler_t */
-static apr_status_t
-handle_stream(svn_ra_serf__session_t *session,
-              serf_request_t *request,
+static svn_error_t *
+handle_stream(serf_request_t *request,
               serf_bucket_t *response,
               void *handler_baton,
               apr_pool_t *pool)
@@ -984,7 +983,7 @@ handle_stream(svn_ra_serf__session_t *session,
     {
       fetch_ctx->done = TRUE;
 
-      return svn_ra_serf__handle_discard_body(session, request, response, NULL, pool);
+      return svn_ra_serf__handle_discard_body(request, response, NULL, pool);
     }
 
   while (1)
@@ -996,7 +995,7 @@ handle_stream(svn_ra_serf__session_t *session,
       status = serf_bucket_read(response, 8000, &data, &len);
       if (SERF_BUCKET_READ_ERROR(status))
         {
-          return status;
+          return svn_error_wrap_apr(status, NULL);
         }
 
       fetch_ctx->read_size += len;
@@ -1015,7 +1014,7 @@ handle_stream(svn_ra_serf__session_t *session,
               /* Skip on to the next iteration of this loop. */
               if (APR_STATUS_IS_EAGAIN(status))
                 {
-                  return status;
+                  return svn_error_wrap_apr(status, NULL);
                 }
               continue;
             }
@@ -1044,7 +1043,7 @@ handle_stream(svn_ra_serf__session_t *session,
 
       if (status)
         {
-          return status;
+          return svn_error_wrap_apr(status, NULL);
         }
     }
   /* not reached */
