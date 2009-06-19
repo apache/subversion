@@ -20,7 +20,7 @@ Candidate changes:
    Justification:
      small change without which svn won't work at all on such systems.
    Votes:
-     +1: steveking
+     +1: steveking, rhuijben
  
  * r37478, r37543, r37544, r37545, r37547
    Support using `svnversion` on files and improve some messages printed by
@@ -89,7 +89,7 @@ Candidate changes:
    Justification:
      This was introduced in 1.5.1 and propagated till now.
    Votes:
-     +1: stylesen
+     +1: stylesen, rhuijben
 
  * r38101, r38102
    Fix a bug that causes locking to fail over ra-neon if the user provides
@@ -97,7 +97,7 @@ Candidate changes:
    Justification:
      Bugfixes are what maintenance releases are for.  Ya dig?
    Votes:
-     +1: cmpilato
+     +1: cmpilato, rhuijben
 
 Approved changes:
 =================
