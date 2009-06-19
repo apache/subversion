@@ -65,9 +65,6 @@ typedef struct {
   loc_state_list_t *state;
   loc_state_list_t *free_state;
 
-  /* Return error code */
-  svn_error_t *error;
-
   int status_code;
 
   svn_boolean_t done;
@@ -192,7 +189,6 @@ svn_ra_serf__get_locations(svn_ra_session_t *ra_session,
 
   loc_ctx = apr_pcalloc(pool, sizeof(*loc_ctx));
   loc_ctx->pool = pool;
-  loc_ctx->error = SVN_NO_ERROR;
   loc_ctx->done = FALSE;
   loc_ctx->paths = apr_hash_make(loc_ctx->pool);
 
@@ -255,13 +251,6 @@ svn_ra_serf__get_locations(svn_ra_session_t *ra_session,
   svn_ra_serf__request_create(handler);
 
   err = svn_ra_serf__context_run_wait(&loc_ctx->done, session, pool);
-
-  if (loc_ctx->error)
-    {
-      svn_error_clear(err);
-      err = SVN_NO_ERROR;
-      SVN_ERR(loc_ctx->error);
-    }
 
   SVN_ERR(svn_error_compose_create(
               svn_ra_serf__error_on_status(loc_ctx->status_code, req_url),
