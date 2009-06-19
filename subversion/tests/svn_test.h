@@ -47,9 +47,6 @@ extern "C" {
   } while (0)
 
 /** Handy macro for testing string equality.
- *
- * Note: This assumes there is an a pool available for use somewhere in
- * in the variable namespace.
  */
 #define SVN_TEST_STRING_ASSERT(expr, expected_expr)                 \
   do {                                                              \
@@ -60,10 +57,9 @@ extern "C" {
       break;                                                        \
     if (   (tst_str2 != NULL && tst_str1 == NULL)                   \
         || (strcmp(tst_str2, tst_str1) != 0)  )                     \
-      return svn_error_create(SVN_ERR_TEST_FAILED, NULL,            \
-         apr_psprintf(pool,                                         \
+      return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,           \
           "Strings not equal\n  Expected: '%s'\n  Found:    '%s'",  \
-          tst_str2, tst_str1));                                     \
+          tst_str2, tst_str1);                                      \
   } while(0)
 
 
