@@ -542,11 +542,11 @@ svn_ra_serf__get_log(svn_ra_session_t *ra_session,
             want_custom_revprops = TRUE;
         }
       if (revprops->nelts == 0)
-	{
-	  svn_ra_serf__add_tag_buckets(buckets,
-				       "S:no-revprops", NULL,
-				       session->bkt_alloc);
-	}
+        {
+          svn_ra_serf__add_tag_buckets(buckets,
+                                       "S:no-revprops", NULL,
+                                       session->bkt_alloc);
+        }
     }
   else
     {
