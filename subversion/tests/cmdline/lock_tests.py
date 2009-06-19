@@ -1405,6 +1405,24 @@ def unlocked_lock_of_other_user(sbox):
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 
+#----------------------------------------------------------------------
+def lock_funky_comment_chars(sbox):
+  "lock a file using a comment with xml special chars"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # lock a file as wc_author
+  fname = 'iota'
+  file_path = os.path.join(sbox.wc_dir, fname)
+
+  svntest.main.file_append(file_path, "This represents a binary file\n")
+  svntest.main.run_svn(None, 'commit',
+                       '-m', '', file_path)
+  svntest.actions.run_and_verify_svn(None, ".*locked by user", [], 'lock',
+                                     '-m', 'lock & load', file_path)
+
+
 ########################################################################
 # Run the tests
 
@@ -1444,7 +1462,9 @@ test_list = [ None,
               XFail(unlock_wrong_token, svntest.main.is_ra_type_dav),
               examine_lock_encoded_recurse,
               XFail(unlocked_lock_of_other_user,
-                    svntest.main.is_ra_type_dav)
+                    svntest.main.is_ra_type_dav),
+              XFail(lock_funky_comment_chars,
+                    svntest.main.is_ra_type_dav_neon),
             ]
 
 if __name__ == '__main__':
