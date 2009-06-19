@@ -367,7 +367,10 @@ class TestFactory:
       for line in self.lines:
         if line[1] is None:
           # fall back to just that line as it was in the source
-          stream.write("  # don't know how to handle:\n")
+          stripped = line[0].strip()
+          if not stripped.startswith('#'):
+            # for comments, don't say this:
+            stream.write("  # don't know how to handle:\n")
           stream.write("  " + line[0].strip() + '\n')
         else:
           if line[0] is not None:
