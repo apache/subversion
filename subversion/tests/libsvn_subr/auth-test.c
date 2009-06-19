@@ -22,18 +22,11 @@
 #include "../svn_test.h"
 
 static svn_error_t *
-test_platform_specific_auth_providers(const char **msg,
-                                      svn_boolean_t msg_only,
-                                      svn_test_opts_t *opts,
-                                      apr_pool_t *pool)
+test_platform_specific_auth_providers(apr_pool_t *pool)
 {
   apr_array_header_t *providers;
   svn_auth_provider_object_t *provider;
   int number_of_providers = 0;
-  *msg = "test retrieving platform-specific auth providers";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
 
   /* Test non-available auth provider */
   svn_auth_get_platform_specific_provider(&provider, "fake", "fake", pool);
@@ -209,6 +202,7 @@ test_platform_specific_auth_providers(const char **msg,
 struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
-    SVN_TEST_PASS(test_platform_specific_auth_providers),
+    SVN_TEST_PASS2(test_platform_specific_auth_providers,
+                   "test retrieving platform-specific auth providers"),
     SVN_TEST_NULL
   };

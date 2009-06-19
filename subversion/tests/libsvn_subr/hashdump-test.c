@@ -2,7 +2,7 @@
  * hashdump-test.c :  testing the reading/writing of hashes
  *
  * ====================================================================
- * Copyright (c) 2000-2004, 2008 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004, 2008-2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -47,19 +47,11 @@ const char *review =
 
 
 static svn_error_t *
-test1(const char **msg,
-      svn_boolean_t msg_only,
-      svn_test_opts_t *opts,
-      apr_pool_t *pool)
+test1(apr_pool_t *pool)
 {
   svn_error_t *result;
   svn_stringbuf_t *key;
   apr_file_t *f;
-
-  *msg = "write a hash to a file";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
 
   /* Build a hash in memory, and fill it with test data. */
   proplist = apr_hash_make(pool);
@@ -100,18 +92,10 @@ test1(const char **msg,
 
 
 static svn_error_t *
-test2(const char **msg,
-      svn_boolean_t msg_only,
-      svn_test_opts_t *opts,
-      apr_pool_t *pool)
+test2(apr_pool_t *pool)
 {
   svn_error_t *result;
   apr_file_t *f;
-
-  *msg = "read a file into a hash";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
 
   new_proplist = apr_hash_make(pool);
 
@@ -130,30 +114,16 @@ test2(const char **msg,
 
 
 static svn_error_t *
-test3(const char **msg,
-      svn_boolean_t msg_only,
-      svn_test_opts_t *opts,
-      apr_pool_t *pool)
+test3(apr_pool_t *pool)
 {
   apr_hash_index_t *this;
-  svn_error_t *err;
   int found_discrepancy = 0;
-  const char *ignored;
-
-  *msg = "write hash out, read back in, compare";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
 
   /* Build a hash in global variable "proplist", then write to a file. */
-  err = test1(&ignored, FALSE, opts, pool);
-  if (err)
-    return err;
+  SVN_ERR(test1(pool));
 
   /* Read this file back into global variable "new_proplist" */
-  err = test2(&ignored, FALSE, opts, pool);
-  if (err)
-    return err;
+  SVN_ERR(test2(pool));
 
   /* Now let's make sure that proplist and new_proplist contain the
      same data. */
@@ -205,8 +175,11 @@ test3(const char **msg,
 struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
-    SVN_TEST_PASS(test1),
-    SVN_TEST_PASS(test2),
-    SVN_TEST_PASS(test3),
+    SVN_TEST_PASS2(test1,
+                   "write a hash to a file"),
+    SVN_TEST_PASS2(test2,
+                   "read a file into a hash"),
+    SVN_TEST_PASS2(test3,
+                   "write hash out, read back in, compare"),
     SVN_TEST_NULL
   };

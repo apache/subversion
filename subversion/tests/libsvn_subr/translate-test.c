@@ -2,7 +2,7 @@
  * translate-test.c -- test the eol and keyword translation subroutine
  *
  * ====================================================================
- * Copyright (c) 2000-2004, 2008 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004, 2008-2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -772,16 +772,8 @@ substitute_and_verify(const char *test_name,
 
 
 static svn_error_t *
-noop(const char **msg,
-     svn_boolean_t msg_only,
-     svn_test_opts_t *opts,
-     apr_pool_t *pool)
+noop(apr_pool_t *pool)
 {
-  *msg = "no conversions";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-
   SVN_ERR(substitute_and_verify
           ("noop", NULL, NULL, 0, NULL, NULL, NULL, NULL, 1, pool));
 
@@ -803,234 +795,106 @@ noop(const char **msg,
 /** EOL conversion alone. **/
 
 static svn_error_t *
-crlf_to_crlf(const char **msg,
-             svn_boolean_t msg_only,
-             svn_test_opts_t *opts,
-             apr_pool_t *pool)
+crlf_to_crlf(apr_pool_t *pool)
 {
-  *msg = "convert CRLF to CRLF";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-
-  SVN_ERR(substitute_and_verify
+  return substitute_and_verify
           ("crlf_to_crlf", "\r\n", "\r\n", 0,
-           NULL, NULL, NULL, NULL, 1, pool));
-
-  return SVN_NO_ERROR;
+           NULL, NULL, NULL, NULL, 1, pool);
 }
 
 
 static svn_error_t *
-lf_to_crlf(const char **msg,
-           svn_boolean_t msg_only,
-           svn_test_opts_t *opts,
-           apr_pool_t *pool)
+lf_to_crlf(apr_pool_t *pool)
 {
-  *msg = "convert LF to CRLF";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-
-  SVN_ERR(substitute_and_verify
-          ("lf_to_crlf", "\n", "\r\n", 0, NULL, NULL, NULL, NULL, 1, pool));
-
-  return SVN_NO_ERROR;
+  return substitute_and_verify
+          ("lf_to_crlf", "\n", "\r\n", 0, NULL, NULL, NULL, NULL, 1, pool);
 }
 
 
 static svn_error_t *
-cr_to_crlf(const char **msg,
-           svn_boolean_t msg_only,
-           svn_test_opts_t *opts,
-           apr_pool_t *pool)
+cr_to_crlf(apr_pool_t *pool)
 {
-  *msg = "convert CR to CRLF";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-
-  SVN_ERR(substitute_and_verify
-          ("cr_to_crlf", "\r", "\r\n", 0, NULL, NULL, NULL, NULL, 1, pool));
-
-  return SVN_NO_ERROR;
+  return substitute_and_verify
+          ("cr_to_crlf", "\r", "\r\n", 0, NULL, NULL, NULL, NULL, 1, pool);
 }
 
 
 static svn_error_t *
-mixed_to_crlf(const char **msg,
-              svn_boolean_t msg_only,
-              svn_test_opts_t *opts,
-              apr_pool_t *pool)
+mixed_to_crlf(apr_pool_t *pool)
 {
-  *msg = "convert mixed line endings to CRLF";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-
-  SVN_ERR(substitute_and_verify
+  return substitute_and_verify
           ("mixed_to_crlf", NULL, "\r\n", 1,
-           NULL, NULL, NULL, NULL, 1, pool));
-
-  return SVN_NO_ERROR;
+           NULL, NULL, NULL, NULL, 1, pool);
 }
 
 
 static svn_error_t *
-lf_to_lf(const char **msg,
-         svn_boolean_t msg_only,
-         svn_test_opts_t *opts,
-         apr_pool_t *pool)
+lf_to_lf(apr_pool_t *pool)
 {
-  *msg = "convert LF to LF";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-
-  SVN_ERR(substitute_and_verify
-          ("lf_to_lf", "\n", "\n", 0, NULL, NULL, NULL, NULL, 1, pool));
-
-  return SVN_NO_ERROR;
+  return substitute_and_verify
+          ("lf_to_lf", "\n", "\n", 0, NULL, NULL, NULL, NULL, 1, pool);
 }
 
 
 static svn_error_t *
-crlf_to_lf(const char **msg,
-           svn_boolean_t msg_only,
-           svn_test_opts_t *opts,
-           apr_pool_t *pool)
+crlf_to_lf(apr_pool_t *pool)
 {
-  *msg = "convert CRLF to LF";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-
-  SVN_ERR(substitute_and_verify
-          ("crlf_to_lf", "\r\n", "\n", 0, NULL, NULL, NULL, NULL, 1, pool));
-
-  return SVN_NO_ERROR;
+  return substitute_and_verify
+          ("crlf_to_lf", "\r\n", "\n", 0, NULL, NULL, NULL, NULL, 1, pool);
 }
 
 
 static svn_error_t *
-cr_to_lf(const char **msg,
-         svn_boolean_t msg_only,
-         svn_test_opts_t *opts,
-         apr_pool_t *pool)
+cr_to_lf(apr_pool_t *pool)
 {
-  *msg = "convert CR to LF";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-
-  SVN_ERR(substitute_and_verify
-          ("cr_to_lf", "\r", "\n", 0, NULL, NULL, NULL, NULL, 1, pool));
-
-  return SVN_NO_ERROR;
+  return substitute_and_verify
+          ("cr_to_lf", "\r", "\n", 0, NULL, NULL, NULL, NULL, 1, pool);
 }
 
 
 static svn_error_t *
-mixed_to_lf(const char **msg,
-            svn_boolean_t msg_only,
-            svn_test_opts_t *opts,
-            apr_pool_t *pool)
+mixed_to_lf(apr_pool_t *pool)
 {
-  *msg = "convert mixed line endings to LF";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-
-  SVN_ERR(substitute_and_verify
-          ("cr_to_lf", NULL, "\n", 1, NULL, NULL, NULL, NULL, 1, pool));
-
-  return SVN_NO_ERROR;
+  return substitute_and_verify
+          ("cr_to_lf", NULL, "\n", 1, NULL, NULL, NULL, NULL, 1, pool);
 }
 
 
 static svn_error_t *
-crlf_to_cr(const char **msg,
-           svn_boolean_t msg_only,
-           svn_test_opts_t *opts,
-           apr_pool_t *pool)
+crlf_to_cr(apr_pool_t *pool)
 {
-  *msg = "convert CRLF to CR";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-
-  SVN_ERR(substitute_and_verify
-          ("crlf_to_cr", "\r\n", "\r", 0, NULL, NULL, NULL, NULL, 1, pool));
-
-  return SVN_NO_ERROR;
+  return substitute_and_verify
+          ("crlf_to_cr", "\r\n", "\r", 0, NULL, NULL, NULL, NULL, 1, pool);
 }
 
 
 static svn_error_t *
-lf_to_cr(const char **msg,
-         svn_boolean_t msg_only,
-         svn_test_opts_t *opts,
-         apr_pool_t *pool)
+lf_to_cr(apr_pool_t *pool)
 {
-  *msg = "convert LF to CR";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-
-  SVN_ERR(substitute_and_verify
-          ("lf_to_cr", "\n", "\r", 0, NULL, NULL, NULL, NULL, 1, pool));
-
-  return SVN_NO_ERROR;
+  return substitute_and_verify
+          ("lf_to_cr", "\n", "\r", 0, NULL, NULL, NULL, NULL, 1, pool);
 }
 
 
 static svn_error_t *
-cr_to_cr(const char **msg,
-         svn_boolean_t msg_only,
-         svn_test_opts_t *opts,
-         apr_pool_t *pool)
+cr_to_cr(apr_pool_t *pool)
 {
-  *msg = "convert CR to CR";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-
-  SVN_ERR(substitute_and_verify
-          ("cr_to_cr", "\r", "\r", 0, NULL, NULL, NULL, NULL, 1, pool));
-
-  return SVN_NO_ERROR;
+  return substitute_and_verify
+          ("cr_to_cr", "\r", "\r", 0, NULL, NULL, NULL, NULL, 1, pool);
 }
 
 
 static svn_error_t *
-mixed_to_cr(const char **msg,
-            svn_boolean_t msg_only,
-            svn_test_opts_t *opts,
-            apr_pool_t *pool)
+mixed_to_cr(apr_pool_t *pool)
 {
-  *msg = "convert mixed line endings to CR";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-
-  SVN_ERR(substitute_and_verify
-          ("mixed_to_cr", NULL, "\r", 1, NULL, NULL, NULL, NULL, 1, pool));
-
-  return SVN_NO_ERROR;
+  return substitute_and_verify
+          ("mixed_to_cr", NULL, "\r", 1, NULL, NULL, NULL, NULL, 1, pool);
 }
 
 
 static svn_error_t *
-mixed_no_repair(const char **msg,
-                svn_boolean_t msg_only,
-                svn_test_opts_t *opts,
-                apr_pool_t *pool)
+mixed_no_repair(apr_pool_t *pool)
 {
-  *msg = "keep mixed line endings without repair flag";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-
   SVN_ERR(substitute_and_verify
           ("mixed_no_repair", NULL, "\n", 0,
            NULL, NULL, NULL, NULL, 1, pool));
@@ -1047,16 +911,8 @@ mixed_no_repair(const char **msg,
 /** Keyword expansion alone. **/
 
 static svn_error_t *
-expand_author(const char **msg,
-              svn_boolean_t msg_only,
-              svn_test_opts_t *opts,
-              apr_pool_t *pool)
+expand_author(apr_pool_t *pool)
 {
-  *msg = "expand author";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-
   SVN_ERR(substitute_and_verify
           ("author", "\n", NULL, 0, NULL, NULL, "jrandom", NULL, 1, pool));
 
@@ -1068,16 +924,8 @@ expand_author(const char **msg,
 
 
 static svn_error_t *
-expand_date(const char **msg,
-            svn_boolean_t msg_only,
-            svn_test_opts_t *opts,
-            apr_pool_t *pool)
+expand_date(apr_pool_t *pool)
 {
-  *msg = "expand date";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-
   SVN_ERR(substitute_and_verify
           ("date", "\n", NULL, 0,
            NULL, "Wed Jan  9 07:49:05 2002", NULL, NULL, 1, pool));
@@ -1091,16 +939,8 @@ expand_date(const char **msg,
 
 
 static svn_error_t *
-expand_author_date(const char **msg,
-                   svn_boolean_t msg_only,
-                   svn_test_opts_t *opts,
-                   apr_pool_t *pool)
+expand_author_date(apr_pool_t *pool)
 {
-  *msg = "expand author and date";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-
   SVN_ERR(substitute_and_verify
           ("author_date", "\n", NULL, 0,
            NULL, "Wed Jan  9 07:49:05 2002", "jrandom", NULL, 1, pool));
@@ -1114,16 +954,8 @@ expand_author_date(const char **msg,
 
 
 static svn_error_t *
-expand_author_rev(const char **msg,
-                  svn_boolean_t msg_only,
-                  svn_test_opts_t *opts,
-                  apr_pool_t *pool)
+expand_author_rev(apr_pool_t *pool)
 {
-  *msg = "expand author and rev";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-
   SVN_ERR(substitute_and_verify
           ("author_rev", "\n", NULL, 0,
            "1729", NULL, "jrandom", NULL, 1, pool));
@@ -1137,16 +969,8 @@ expand_author_rev(const char **msg,
 
 
 static svn_error_t *
-expand_rev(const char **msg,
-           svn_boolean_t msg_only,
-           svn_test_opts_t *opts,
-           apr_pool_t *pool)
+expand_rev(apr_pool_t *pool)
 {
-  *msg = "expand rev";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-
   SVN_ERR(substitute_and_verify
           ("rev", "\n", NULL, 0,
            "1729", NULL, NULL, NULL, 1, pool));
@@ -1160,16 +984,8 @@ expand_rev(const char **msg,
 
 
 static svn_error_t *
-expand_rev_url(const char **msg,
-               svn_boolean_t msg_only,
-               svn_test_opts_t *opts,
-               apr_pool_t *pool)
+expand_rev_url(apr_pool_t *pool)
 {
-  *msg = "expand rev and url";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-
   SVN_ERR(substitute_and_verify
           ("rev_url", "\n", NULL, 0,
            "1729", NULL, NULL, "http://subversion.tigris.org", 1, pool));
@@ -1183,16 +999,8 @@ expand_rev_url(const char **msg,
 
 
 static svn_error_t *
-expand_author_date_rev_url(const char **msg,
-                           svn_boolean_t msg_only,
-                           svn_test_opts_t *opts,
-                           apr_pool_t *pool)
+expand_author_date_rev_url(apr_pool_t *pool)
 {
-  *msg = "expand author, date, rev, and url";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-
   SVN_ERR(substitute_and_verify
           ("author_date_rev_url", "\n", NULL, 0,
            "1729",
@@ -1217,121 +1025,61 @@ expand_author_date_rev_url(const char **msg,
 /** Keyword expansion and EOL conversion together. **/
 
 static svn_error_t *
-lf_to_crlf_expand_author(const char **msg,
-                         svn_boolean_t msg_only,
-                         svn_test_opts_t *opts,
-                         apr_pool_t *pool)
+lf_to_crlf_expand_author(apr_pool_t *pool)
 {
-  *msg = "lf_to_crlf; expand author";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-
-  SVN_ERR(substitute_and_verify
+  return substitute_and_verify
           ("lf_to_crlf_author", "\n", "\r\n", 0,
-           NULL, NULL, "jrandom", NULL, 1, pool));
-
-  return SVN_NO_ERROR;
+           NULL, NULL, "jrandom", NULL, 1, pool);
 }
 
 
 static svn_error_t *
-mixed_to_lf_expand_author_date(const char **msg,
-                               svn_boolean_t msg_only,
-                               svn_test_opts_t *opts,
-                               apr_pool_t *pool)
+mixed_to_lf_expand_author_date(apr_pool_t *pool)
 {
-  *msg = "mixed_to_lf; expand author and date";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-
-  SVN_ERR(substitute_and_verify
+  return substitute_and_verify
           ("mixed_to_lf_author_date", NULL, "\n", 1,
-           NULL, "Wed Jan  9 07:49:05 2002", "jrandom", NULL, 1, pool));
-
-  return SVN_NO_ERROR;
+           NULL, "Wed Jan  9 07:49:05 2002", "jrandom", NULL, 1, pool);
 }
 
 
 static svn_error_t *
-crlf_to_cr_expand_author_rev(const char **msg,
-                             svn_boolean_t msg_only,
-                             svn_test_opts_t *opts,
-                             apr_pool_t *pool)
+crlf_to_cr_expand_author_rev(apr_pool_t *pool)
 {
-  *msg = "crlf_to_cr; expand author and rev";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-
-  SVN_ERR(substitute_and_verify
+  return substitute_and_verify
           ("crlf_to_cr_author_rev", "\r\n", "\r", 0,
-           "1729", NULL, "jrandom", NULL, 1, pool));
-
-  return SVN_NO_ERROR;
+           "1729", NULL, "jrandom", NULL, 1, pool);
 }
 
 
 static svn_error_t *
-cr_to_crlf_expand_rev(const char **msg,
-                      svn_boolean_t msg_only,
-                      svn_test_opts_t *opts,
-                      apr_pool_t *pool)
+cr_to_crlf_expand_rev(apr_pool_t *pool)
 {
-  *msg = "cr_to_crlf; expand rev";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-
-  SVN_ERR(substitute_and_verify
+  return substitute_and_verify
           ("cr_to_crlf_rev", "\r", "\r\n", 0,
-           "1729", NULL, NULL, NULL, 1, pool));
-
-  return SVN_NO_ERROR;
+           "1729", NULL, NULL, NULL, 1, pool);
 }
 
 
 static svn_error_t *
-cr_to_crlf_expand_rev_url(const char **msg,
-                          svn_boolean_t msg_only,
-                          svn_test_opts_t *opts,
-                          apr_pool_t *pool)
+cr_to_crlf_expand_rev_url(apr_pool_t *pool)
 {
-  *msg = "cr_to_crlf; expand rev and url";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-
-  SVN_ERR(substitute_and_verify
+  return substitute_and_verify
           ("cr_to_crlf_rev_url", "\r", "\r\n", 0,
-           "1729", NULL, NULL, "http://subversion.tigris.org", 1, pool));
-
-  return SVN_NO_ERROR;
+           "1729", NULL, NULL, "http://subversion.tigris.org", 1, pool);
 }
 
 
 static svn_error_t *
-mixed_to_crlf_expand_author_date_rev_url(const char **msg,
-                                         svn_boolean_t msg_only,
-                                         svn_test_opts_t *opts,
-                                         apr_pool_t *pool)
+mixed_to_crlf_expand_author_date_rev_url(apr_pool_t *pool)
 {
-  *msg = "mixed_to_crlf; expand author, date, rev, and url";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-
-  SVN_ERR(substitute_and_verify
+  return substitute_and_verify
           ("mixed_to_crlf_author_date_rev_url", NULL, "\r\n", 1,
            "1729",
            "Wed Jan  9 07:49:05 2002",
            "jrandom",
            "http://subversion.tigris.org",
            1,
-           pool));
-
-  return SVN_NO_ERROR;
+           pool);
 }
 
 
@@ -1339,16 +1087,8 @@ mixed_to_crlf_expand_author_date_rev_url(const char **msg,
 /** Keyword unexpansion alone. **/
 
 static svn_error_t *
-unexpand_author(const char **msg,
-                svn_boolean_t msg_only,
-                svn_test_opts_t *opts,
-                apr_pool_t *pool)
+unexpand_author(apr_pool_t *pool)
 {
-  *msg = "unexpand author";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-
   SVN_ERR(substitute_and_verify
           ("author", "\n", NULL, 0, NULL, NULL, "jrandom", NULL, 0, pool));
 
@@ -1360,16 +1100,8 @@ unexpand_author(const char **msg,
 
 
 static svn_error_t *
-unexpand_date(const char **msg,
-              svn_boolean_t msg_only,
-              svn_test_opts_t *opts,
-              apr_pool_t *pool)
+unexpand_date(apr_pool_t *pool)
 {
-  *msg = "unexpand date";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-
   SVN_ERR(substitute_and_verify
           ("date", "\n", NULL, 0,
            NULL, "Wed Jan  9 07:49:05 2002", NULL, NULL, 0, pool));
@@ -1383,16 +1115,8 @@ unexpand_date(const char **msg,
 
 
 static svn_error_t *
-unexpand_author_date(const char **msg,
-                     svn_boolean_t msg_only,
-                     svn_test_opts_t *opts,
-                     apr_pool_t *pool)
+unexpand_author_date(apr_pool_t *pool)
 {
-  *msg = "unexpand author and date";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-
   SVN_ERR(substitute_and_verify
           ("author_date", "\n", NULL, 0,
            NULL, "Wed Jan  9 07:49:05 2002", "jrandom", NULL, 0, pool));
@@ -1406,16 +1130,8 @@ unexpand_author_date(const char **msg,
 
 
 static svn_error_t *
-unexpand_author_rev(const char **msg,
-                    svn_boolean_t msg_only,
-                    svn_test_opts_t *opts,
-                    apr_pool_t *pool)
+unexpand_author_rev(apr_pool_t *pool)
 {
-  *msg = "unexpand author and rev";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-
   SVN_ERR(substitute_and_verify
           ("author_rev", "\n", NULL, 0,
            "1729", NULL, "jrandom", NULL, 0, pool));
@@ -1429,16 +1145,8 @@ unexpand_author_rev(const char **msg,
 
 
 static svn_error_t *
-unexpand_rev(const char **msg,
-             svn_boolean_t msg_only,
-             svn_test_opts_t *opts,
-             apr_pool_t *pool)
+unexpand_rev(apr_pool_t *pool)
 {
-  *msg = "unexpand rev";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-
   SVN_ERR(substitute_and_verify
           ("rev", "\n", NULL, 0,
            "1729", NULL, NULL, NULL, 0, pool));
@@ -1452,16 +1160,8 @@ unexpand_rev(const char **msg,
 
 
 static svn_error_t *
-unexpand_rev_url(const char **msg,
-                 svn_boolean_t msg_only,
-                 svn_test_opts_t *opts,
-                 apr_pool_t *pool)
+unexpand_rev_url(apr_pool_t *pool)
 {
-  *msg = "unexpand rev and url";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-
   SVN_ERR(substitute_and_verify
           ("rev_url", "\n", NULL, 0,
            "1729", NULL, NULL, "http://subversion.tigris.org", 0, pool));
@@ -1475,16 +1175,8 @@ unexpand_rev_url(const char **msg,
 
 
 static svn_error_t *
-unexpand_author_date_rev_url(const char **msg,
-                             svn_boolean_t msg_only,
-                             svn_test_opts_t *opts,
-                             apr_pool_t *pool)
+unexpand_author_date_rev_url(apr_pool_t *pool)
 {
-  *msg = "unexpand author, date, rev, and url";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-
   SVN_ERR(substitute_and_verify
           ("author_date_rev_url", "\n", NULL, 0,
            "1729",
@@ -1509,121 +1201,61 @@ unexpand_author_date_rev_url(const char **msg,
 /** Keyword unexpansion and EOL conversion together. **/
 
 static svn_error_t *
-lf_to_crlf_unexpand_author(const char **msg,
-                           svn_boolean_t msg_only,
-                           svn_test_opts_t *opts,
-                           apr_pool_t *pool)
+lf_to_crlf_unexpand_author(apr_pool_t *pool)
 {
-  *msg = "lf_to_crlf; unexpand author";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-
-  SVN_ERR(substitute_and_verify
+  return substitute_and_verify
           ("lf_to_crlf_author", "\n", "\r\n", 0,
-           NULL, NULL, "jrandom", NULL, 0, pool));
-
-  return SVN_NO_ERROR;
+           NULL, NULL, "jrandom", NULL, 0, pool);
 }
 
 
 static svn_error_t *
-mixed_to_lf_unexpand_author_date(const char **msg,
-                                 svn_boolean_t msg_only,
-                                 svn_test_opts_t *opts,
-                                 apr_pool_t *pool)
+mixed_to_lf_unexpand_author_date(apr_pool_t *pool)
 {
-  *msg = "mixed_to_lf; unexpand author and date";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-
-  SVN_ERR(substitute_and_verify
+  return substitute_and_verify
           ("mixed_to_lf_author_date", NULL, "\n", 1,
-           NULL, "Wed Jan  9 07:49:05 2002", "jrandom", NULL, 0, pool));
-
-  return SVN_NO_ERROR;
+           NULL, "Wed Jan  9 07:49:05 2002", "jrandom", NULL, 0, pool);
 }
 
 
 static svn_error_t *
-crlf_to_cr_unexpand_author_rev(const char **msg,
-                               svn_boolean_t msg_only,
-                               svn_test_opts_t *opts,
-                               apr_pool_t *pool)
+crlf_to_cr_unexpand_author_rev(apr_pool_t *pool)
 {
-  *msg = "crlf_to_cr; unexpand author and rev";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-
-  SVN_ERR(substitute_and_verify
+  return substitute_and_verify
           ("crlf_to_cr_author_rev", "\r\n", "\r", 0,
-           "1729", NULL, "jrandom", NULL, 0, pool));
-
-  return SVN_NO_ERROR;
+           "1729", NULL, "jrandom", NULL, 0, pool);
 }
 
 
 static svn_error_t *
-cr_to_crlf_unexpand_rev(const char **msg,
-                        svn_boolean_t msg_only,
-                        svn_test_opts_t *opts,
-                        apr_pool_t *pool)
+cr_to_crlf_unexpand_rev(apr_pool_t *pool)
 {
-  *msg = "cr_to_crlf; unexpand rev";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-
-  SVN_ERR(substitute_and_verify
+  return substitute_and_verify
           ("cr_to_crlf_rev", "\r", "\r\n", 0,
-           "1729", NULL, NULL, NULL, 0, pool));
-
-  return SVN_NO_ERROR;
+           "1729", NULL, NULL, NULL, 0, pool);
 }
 
 
 static svn_error_t *
-cr_to_crlf_unexpand_rev_url(const char **msg,
-                            svn_boolean_t msg_only,
-                            svn_test_opts_t *opts,
-                            apr_pool_t *pool)
+cr_to_crlf_unexpand_rev_url(apr_pool_t *pool)
 {
-  *msg = "cr_to_crlf; unexpand rev and url";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-
-  SVN_ERR(substitute_and_verify
+  return substitute_and_verify
           ("cr_to_crlf_rev_url", "\r", "\r\n", 0,
-           "1729", NULL, NULL, "http://subversion.tigris.org", 0, pool));
-
-  return SVN_NO_ERROR;
+           "1729", NULL, NULL, "http://subversion.tigris.org", 0, pool);
 }
 
 
 static svn_error_t *
-mixed_to_crlf_unexpand_author_date_rev_url(const char **msg,
-                                           svn_boolean_t msg_only,
-                                           svn_test_opts_t *opts,
-                                           apr_pool_t *pool)
+mixed_to_crlf_unexpand_author_date_rev_url(apr_pool_t *pool)
 {
-  *msg = "mixed_to_crlf; unexpand author, date, rev, url";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-
-  SVN_ERR(substitute_and_verify
+  return substitute_and_verify
           ("mixed_to_crlf_author_date_rev_url", NULL, "\r\n", 1,
            "1729",
            "Wed Jan  9 07:49:05 2002",
            "jrandom",
            "http://subversion.tigris.org",
            0,
-           pool));
-
-  return SVN_NO_ERROR;
+           pool);
 }
 
 
@@ -1634,53 +1266,93 @@ struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
   /* The no-op conversion. */
-    SVN_TEST_PASS(noop),
+    SVN_TEST_PASS2(noop,
+                   "no conversions"),
     /* Conversions resulting in crlf, no keywords involved. */
-    SVN_TEST_PASS(crlf_to_crlf),
-    SVN_TEST_PASS(lf_to_crlf),
-    SVN_TEST_PASS(cr_to_crlf),
-    SVN_TEST_PASS(mixed_to_crlf),
+    SVN_TEST_PASS2(crlf_to_crlf,
+                   "convert CRLF to CRLF"),
+    SVN_TEST_PASS2(lf_to_crlf,
+                   "convert LF to CRLF"),
+    SVN_TEST_PASS2(cr_to_crlf,
+                   "convert CR to CRLF"),
+    SVN_TEST_PASS2(mixed_to_crlf,
+                   "convert mixed line endings to CRLF"),
     /* Conversions resulting in lf, no keywords involved. */
-    SVN_TEST_PASS(lf_to_lf),
-    SVN_TEST_PASS(crlf_to_lf),
-    SVN_TEST_PASS(cr_to_lf),
-    SVN_TEST_PASS(mixed_to_lf),
+    SVN_TEST_PASS2(lf_to_lf,
+                   "convert LF to LF"),
+    SVN_TEST_PASS2(crlf_to_lf,
+                   "convert CRLF to LF"),
+    SVN_TEST_PASS2(cr_to_lf,
+                   "convert CR to LF"),
+    SVN_TEST_PASS2(mixed_to_lf,
+                   "convert mixed line endings to LF"),
     /* Conversions resulting in cr, no keywords involved. */
-    SVN_TEST_PASS(crlf_to_cr),
-    SVN_TEST_PASS(lf_to_cr),
-    SVN_TEST_PASS(cr_to_cr),
-    SVN_TEST_PASS(mixed_to_cr),
+    SVN_TEST_PASS2(crlf_to_cr,
+                   "convert CRLF to CR"),
+    SVN_TEST_PASS2(lf_to_cr,
+                   "convert LF to CR"),
+    SVN_TEST_PASS2(cr_to_cr,
+                   "convert CR to CR"),
+    SVN_TEST_PASS2(mixed_to_cr,
+                   "convert mixed line endings to CR"),
     /* Random eol stuff. */
-    SVN_TEST_PASS(mixed_no_repair),
+    SVN_TEST_PASS2(mixed_no_repair,
+                   "keep mixed line endings without repair flag"),
     /* Keyword expansion alone, no eol conversion involved. */
-    SVN_TEST_PASS(expand_author),
-    SVN_TEST_PASS(expand_date),
-    SVN_TEST_PASS(expand_author_date),
-    SVN_TEST_PASS(expand_author_rev),
-    SVN_TEST_PASS(expand_rev),
-    SVN_TEST_PASS(expand_rev_url),
-    SVN_TEST_PASS(expand_author_date_rev_url),
+    SVN_TEST_PASS2(expand_author,
+                   "expand author"),
+    SVN_TEST_PASS2(expand_date,
+                   "expand date"),
+    SVN_TEST_PASS2(expand_author_date,
+                   "expand author and date"),
+    SVN_TEST_PASS2(expand_author_rev,
+                   "expand author and rev"),
+    SVN_TEST_PASS2(expand_rev,
+                   "expand rev"),
+    SVN_TEST_PASS2(expand_rev_url,
+                   "expand rev and url"),
+    SVN_TEST_PASS2(expand_author_date_rev_url,
+                   "expand author, date, rev, and url"),
     /* Keyword expansion and eol conversion together. */
-    SVN_TEST_PASS(lf_to_crlf_expand_author),
-    SVN_TEST_PASS(mixed_to_lf_expand_author_date),
-    SVN_TEST_PASS(crlf_to_cr_expand_author_rev),
-    SVN_TEST_PASS(cr_to_crlf_expand_rev),
-    SVN_TEST_PASS(cr_to_crlf_expand_rev_url),
-    SVN_TEST_PASS(mixed_to_crlf_expand_author_date_rev_url),
+    SVN_TEST_PASS2(lf_to_crlf_expand_author,
+                   "lf_to_crlf; expand author"),
+    SVN_TEST_PASS2(mixed_to_lf_expand_author_date,
+                   "mixed_to_lf; expand author and date"),
+    SVN_TEST_PASS2(crlf_to_cr_expand_author_rev,
+                   "crlf_to_cr; expand author and rev"),
+    SVN_TEST_PASS2(cr_to_crlf_expand_rev,
+                   "cr_to_crlf; expand rev"),
+    SVN_TEST_PASS2(cr_to_crlf_expand_rev_url,
+                   "cr_to_crlf; expand rev and url"),
+    SVN_TEST_PASS2(mixed_to_crlf_expand_author_date_rev_url,
+                   "mixed_to_crlf; expand author, date, rev, and url"),
     /* Keyword unexpansion alone, no eol conversion involved. */
-    SVN_TEST_PASS(unexpand_author),
-    SVN_TEST_PASS(unexpand_date),
-    SVN_TEST_PASS(unexpand_author_date),
-    SVN_TEST_PASS(unexpand_author_rev),
-    SVN_TEST_PASS(unexpand_rev),
-    SVN_TEST_PASS(unexpand_rev_url),
-    SVN_TEST_PASS(unexpand_author_date_rev_url),
+    SVN_TEST_PASS2(unexpand_author,
+                   "unexpand author"),
+    SVN_TEST_PASS2(unexpand_date,
+                   "unexpand date"),
+    SVN_TEST_PASS2(unexpand_author_date,
+                   "unexpand author and date"),
+    SVN_TEST_PASS2(unexpand_author_rev,
+                   "unexpand author and rev"),
+    SVN_TEST_PASS2(unexpand_rev,
+                   "unexpand rev"),
+    SVN_TEST_PASS2(unexpand_rev_url,
+                   "unexpand rev and url"),
+    SVN_TEST_PASS2(unexpand_author_date_rev_url,
+                   "unexpand author, date, rev, and url"),
     /* Keyword unexpansion and eol conversion together. */
-    SVN_TEST_PASS(lf_to_crlf_unexpand_author),
-    SVN_TEST_PASS(mixed_to_lf_unexpand_author_date),
-    SVN_TEST_PASS(crlf_to_cr_unexpand_author_rev),
-    SVN_TEST_PASS(cr_to_crlf_unexpand_rev),
-    SVN_TEST_PASS(cr_to_crlf_unexpand_rev_url),
-    SVN_TEST_PASS(mixed_to_crlf_unexpand_author_date_rev_url),
+    SVN_TEST_PASS2(lf_to_crlf_unexpand_author,
+                   "lf_to_crlf; unexpand author"),
+    SVN_TEST_PASS2(mixed_to_lf_unexpand_author_date,
+                   "mixed_to_lf; unexpand author and date"),
+    SVN_TEST_PASS2(crlf_to_cr_unexpand_author_rev,
+                   "crlf_to_cr; unexpand author and rev"),
+    SVN_TEST_PASS2(cr_to_crlf_unexpand_rev,
+                   "cr_to_crlf; unexpand rev"),
+    SVN_TEST_PASS2(cr_to_crlf_unexpand_rev_url,
+                   "cr_to_crlf; unexpand rev and url"),
+    SVN_TEST_PASS2(mixed_to_crlf_unexpand_author_date_rev_url,
+                   "mixed_to_crlf; unexpand author, date, rev, url"),
     SVN_TEST_NULL
   };

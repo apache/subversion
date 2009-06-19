@@ -1,7 +1,7 @@
 /* fs-pack-test.c --- tests for the filesystem
  *
  * ====================================================================
- * Copyright (c) 2008 CollabNet.  All rights reserved.
+ * Copyright (c) 2008-2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -101,7 +101,7 @@ get_rev_contents(svn_revnum_t rev, apr_pool_t *pool)
    and create MAX_REV number of revisions.  Use POOL for allocations. */
 static svn_error_t *
 create_packed_filesystem(const char *dir,
-                         svn_test_opts_t *opts,
+                         const svn_test_opts_t *opts,
                          int max_rev,
                          int shard_size,
                          apr_pool_t *pool)
@@ -154,9 +154,7 @@ create_packed_filesystem(const char *dir,
 #define SHARD_SIZE 7
 #define MAX_REV 53
 static svn_error_t *
-pack_filesystem(const char **msg,
-                svn_boolean_t msg_only,
-                svn_test_opts_t *opts,
+pack_filesystem(const svn_test_opts_t *opts,
                 apr_pool_t *pool)
 {
   int i;
@@ -165,11 +163,6 @@ pack_filesystem(const char **msg,
   char buf[80];
   apr_file_t *file;
   apr_size_t len;
-
-  *msg = "pack a FSFS filesystem";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
 
   /* Bail (with success) on known-untestable scenarios */
   if ((strcmp(opts->fs_type, "fsfs") != 0)
@@ -242,18 +235,11 @@ pack_filesystem(const char **msg,
 #define SHARD_SIZE 4
 #define MAX_REV 10
 static svn_error_t *
-pack_even_filesystem(const char **msg,
-                     svn_boolean_t msg_only,
-                     svn_test_opts_t *opts,
+pack_even_filesystem(const svn_test_opts_t *opts,
                      apr_pool_t *pool)
 {
   svn_node_kind_t kind;
   const char *path;
-
-  *msg = "pack FSFS where revs % shard = 0";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
 
   /* Bail (with success) on known-untestable scenarios */
   if ((strcmp(opts->fs_type, "fsfs") != 0)
@@ -278,20 +264,13 @@ pack_even_filesystem(const char **msg,
 /* Check reading from a packed filesystem. */
 #define REPO_NAME "test-repo-read-packed-fs"
 static svn_error_t *
-read_packed_fs(const char **msg,
-               svn_boolean_t msg_only,
-               svn_test_opts_t *opts,
+read_packed_fs(const svn_test_opts_t *opts,
                apr_pool_t *pool)
 {
   svn_fs_t *fs;
   svn_stream_t *rstream;
   svn_stringbuf_t *rstring;
   svn_revnum_t i;
-
-  *msg = "read from a packed FSFS filesystem";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
 
   /* Bail (with success) on known-untestable scenarios */
   if ((strcmp(opts->fs_type, "fsfs") != 0)
@@ -327,9 +306,7 @@ read_packed_fs(const char **msg,
 /* Check reading from a packed filesystem. */
 #define REPO_NAME "test-repo-commit-packed-fs"
 static svn_error_t *
-commit_packed_fs(const char **msg,
-                 svn_boolean_t msg_only,
-                 svn_test_opts_t *opts,
+commit_packed_fs(const svn_test_opts_t *opts,
                  apr_pool_t *pool)
 {
   svn_fs_t *fs;
@@ -337,11 +314,6 @@ commit_packed_fs(const char **msg,
   svn_fs_root_t *txn_root;
   const char *conflict;
   svn_revnum_t after_rev;
-
-  *msg = "commit to a packed FSFS filesystem";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
 
   /* Bail (with success) on known-untestable scenarios */
   if ((strcmp(opts->fs_type, "fsfs") != 0)
@@ -371,9 +343,13 @@ commit_packed_fs(const char **msg,
 struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
-    SVN_TEST_PASS(pack_filesystem),
-    SVN_TEST_PASS(pack_even_filesystem),
-    SVN_TEST_PASS(read_packed_fs),
-    SVN_TEST_PASS(commit_packed_fs),
+    SVN_TEST_OPTS_PASS(pack_filesystem,
+                       "pack a FSFS filesystem"),
+    SVN_TEST_OPTS_PASS(pack_even_filesystem,
+                       "pack FSFS where revs % shard = 0"),
+    SVN_TEST_OPTS_PASS(read_packed_fs,
+                       "read from a packed FSFS filesystem"),
+    SVN_TEST_OPTS_PASS(commit_packed_fs,
+                       "commit to a packed FSFS filesystem"),
     SVN_TEST_NULL
   };

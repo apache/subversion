@@ -129,12 +129,8 @@ check_copy_count(int src_cp, int tgt_cp)
 
 
 static svn_error_t *
-random_range_index_test(const char **msg,
-                        svn_boolean_t msg_only,
-                        apr_pool_t *pool)
+random_range_index_test(apr_pool_t *pool)
 {
-  static char msg_buff[256];
-
   unsigned long seed, bytes_range;
   int i, maxlen, iterations, dump_files, print_windows;
   const char *random_bytes;
@@ -145,15 +141,9 @@ random_range_index_test(const char **msg,
      or something. */
   init_params(&seed, &maxlen, &iterations, &dump_files, &print_windows,
               &random_bytes, &bytes_range, pool);
-  sprintf(msg_buff, "random range index test, seed = %lu", seed);
-  *msg = msg_buff;
 
   /* ### This test is expected to fail randomly at the moment, so don't
      enable it by default. --xbc */
-  if (msg_only)
-    return SVN_NO_ERROR;
-  else
-    printf("SEED: %s\n", msg_buff);
 
   ndx = create_range_index(pool);
   for (i = 1; i <= iterations; ++i)

@@ -2,7 +2,7 @@
  * error-test.c -- test the error functions
  *
  * ====================================================================
- * Copyright (c) 2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2006, 2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -26,21 +26,13 @@
 #include "../svn_test.h"
 
 static svn_error_t *
-test_error_root_cause(const char **msg,
-                      svn_boolean_t msg_only,
-                      svn_test_opts_t *opts,
-                      apr_pool_t *pool)
+test_error_root_cause(apr_pool_t *pool)
 {
   apr_status_t secondary_err_codes[] = { SVN_ERR_STREAM_UNRECOGNIZED_DATA,
                                          SVN_ERR_STREAM_MALFORMED_DATA };
   apr_status_t root_cause_err_code = SVN_ERR_STREAM_UNEXPECTED_EOF;
   int i;
   svn_error_t *err, *root_err;
-
-  *msg = "test svn_error_root_cause";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
 
   /* Nest several errors. */
   err = svn_error_create(root_cause_err_code, NULL, "root cause");
@@ -87,6 +79,7 @@ test_error_root_cause(const char **msg,
 struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
-    SVN_TEST_PASS(test_error_root_cause),
+    SVN_TEST_PASS2(test_error_root_cause,
+                   "test svn_error_root_cause"),
     SVN_TEST_NULL
   };

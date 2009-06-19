@@ -2,7 +2,7 @@
  * Regression tests for logic in the libsvn_client library.
  *
  * ====================================================================
- * Copyright (c) 2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2007-2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -45,17 +45,10 @@ static mergeinfo_catalog_item elide_testcases[][MAX_ITEMS] = {
 };
 
 static svn_error_t *
-test_elide_mergeinfo_catalog(const char **msg,
-                             svn_boolean_t msg_only,
-                             svn_test_opts_t *opts,
-                             apr_pool_t *pool)
+test_elide_mergeinfo_catalog(apr_pool_t *pool)
 {
   int i;
   apr_pool_t *iterpool;
-
-  *msg = "test svn_client__elide_mergeinfo_catalog";
-  if (msg_only)
-    return SVN_NO_ERROR;
 
   iterpool = svn_pool_create(pool);
 
@@ -100,10 +93,7 @@ test_elide_mergeinfo_catalog(const char **msg,
 }
 
 static svn_error_t *
-test_args_to_target_array(const char **msg,
-                          svn_boolean_t msg_only,
-                          svn_test_opts_t *opts,
-                          apr_pool_t *pool)
+test_args_to_target_array(apr_pool_t *pool)
 {
   apr_size_t i;
   apr_pool_t *iterpool;
@@ -130,10 +120,6 @@ test_args_to_target_array(const char **msg,
     { "foo@///bar",             "foo@/bar" },
     { "foo@HEAD///bar",         "foo@HEAD/bar" },
   };
-
-  *msg = "test svn_client_args_to_target_array";
-  if (msg_only)
-    return SVN_NO_ERROR;
 
   SVN_ERR(svn_client_create_context(&ctx, pool));
 
@@ -213,7 +199,9 @@ test_args_to_target_array(const char **msg,
 struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
-    SVN_TEST_PASS(test_elide_mergeinfo_catalog),
-    SVN_TEST_PASS(test_args_to_target_array),
+    SVN_TEST_PASS2(test_elide_mergeinfo_catalog,
+                   "test svn_client__elide_mergeinfo_catalog"),
+    SVN_TEST_PASS2(test_args_to_target_array,
+                   "test svn_client_args_to_target_array"),
     SVN_TEST_NULL
   };

@@ -25,10 +25,7 @@
 
 
 static svn_error_t *
-test_parse_peg_rev(const char **msg,
-                   svn_boolean_t msg_only,
-                   svn_test_opts_t *opts,
-                   apr_pool_t *pool)
+test_parse_peg_rev(apr_pool_t *pool)
 {
   apr_size_t i;
   static struct {
@@ -51,10 +48,6 @@ test_parse_peg_rev(const char **msg,
     { "foo@/bar",             "foo@/bar",     {svn_opt_revision_unspecified} },
     { "foo@HEAD/bar",         "foo@HEAD/bar", {svn_opt_revision_unspecified} },
   };
-
-  *msg = "test svn_opt_parse_path";
-  if (msg_only)
-    return SVN_NO_ERROR;
 
   for (i = 0; i < sizeof(tests) / sizeof(tests[0]); i++)
     {
@@ -92,10 +85,7 @@ test_parse_peg_rev(const char **msg,
 }
 
 static svn_error_t *
-test_svn_opt_args_to_target_array2(const char **msg,
-                                   svn_boolean_t msg_only,
-                                   svn_test_opts_t *opts,
-                                   apr_pool_t *pool)
+test_svn_opt_args_to_target_array2(apr_pool_t *pool)
 {
   apr_size_t i;
   static struct {
@@ -120,10 +110,6 @@ test_svn_opt_args_to_target_array2(const char **msg,
     { "foo@///bar",             "foo@/bar" },
     { "foo@HEAD///bar",         "foo@HEAD/bar" },
   };
-
-  *msg = "test svn_opt_args_to_target_array2";
-  if (msg_only)
-    return SVN_NO_ERROR;
 
   for (i = 0; i < sizeof(tests) / sizeof(tests[0]); i++)
     {
@@ -200,7 +186,9 @@ test_svn_opt_args_to_target_array2(const char **msg,
 struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
-    SVN_TEST_PASS(test_parse_peg_rev),
-    SVN_TEST_PASS(test_svn_opt_args_to_target_array2),
+    SVN_TEST_PASS2(test_parse_peg_rev,
+                   "test svn_opt_parse_path"),
+    SVN_TEST_PASS2(test_svn_opt_args_to_target_array2,
+                   "test svn_opt_args_to_target_array2"),
     SVN_TEST_NULL
   };
