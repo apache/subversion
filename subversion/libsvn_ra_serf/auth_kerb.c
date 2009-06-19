@@ -320,8 +320,8 @@ cleanup_gss_ctx(void *data)
    Kerberos. */
 svn_error_t *
 svn_ra_serf__init_kerb_connection(svn_ra_serf__session_t *session,
-				  svn_ra_serf__connection_t *conn,
-				  apr_pool_t *pool)
+                                  svn_ra_serf__connection_t *conn,
+                                  apr_pool_t *pool)
 {
   serf_gss_api_context_t *gss_api_ctx;
 
@@ -344,11 +344,11 @@ svn_ra_serf__init_kerb_connection(svn_ra_serf__session_t *session,
 /* A 401 response was received, handle the authentication. */
 svn_error_t *
 svn_ra_serf__handle_kerb_auth(svn_ra_serf__handler_t *ctx,
-			      serf_request_t *request,
-			      serf_bucket_t *response,
-			      const char *auth_hdr,
-			      const char *auth_attr,
-			      apr_pool_t *pool)
+                              serf_request_t *request,
+                              serf_bucket_t *response,
+                              const char *auth_hdr,
+                              const char *auth_attr,
+                              apr_pool_t *pool)
 {
   return do_auth(ctx->conn->auth_context,
                  ctx->conn,
@@ -363,9 +363,9 @@ svn_ra_serf__handle_kerb_auth(svn_ra_serf__handler_t *ctx,
 /* Setup the authn headers on this request message. */
 svn_error_t *
 svn_ra_serf__setup_request_kerb_auth(svn_ra_serf__connection_t *conn,
-				     const char *method,
-				     const char *uri,
-				     serf_bucket_t *hdrs_bkt)
+                                     const char *method,
+                                     const char *uri,
+                                     serf_bucket_t *hdrs_bkt)
 {
   /* Take the default authentication header for this connection, if any. */
   if (conn->auth_header && conn->auth_value)
@@ -399,13 +399,13 @@ svn_ra_serf__validate_response_kerb_auth(svn_ra_serf__handler_t *ctx,
   if (gss_api_ctx->state != gss_api_auth_completed)
     {
       return do_auth(ctx->conn->auth_context,
-		     ctx->conn,
-		     ctx->session->auth_protocol->auth_name,
-		     &ctx->conn->auth_value,
-		     auth_attr,
-		     &ctx->conn->auth_header,
-		     "Authorization",
-		     pool);
+                     ctx->conn,
+                     ctx->session->auth_protocol->auth_name,
+                     &ctx->conn->auth_value,
+                     auth_attr,
+                     &ctx->conn->auth_header,
+                     "Authorization",
+                     pool);
     }
 
   return SVN_NO_ERROR;

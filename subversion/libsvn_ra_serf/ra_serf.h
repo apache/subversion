@@ -1401,9 +1401,9 @@ typedef svn_error_t *
  */
 typedef svn_error_t *
 (*svn_serf__setup_request_func_t)(svn_ra_serf__connection_t *conn,
-				  const char *method,
-				  const char *uri,
-				  serf_bucket_t *hdrs_bkt);
+                                  const char *method,
+                                  const char *uri,
+                                  serf_bucket_t *hdrs_bkt);
 
 /**
  * This function will be called when a response is received, so that the 
@@ -1412,9 +1412,9 @@ typedef svn_error_t *
  */
 typedef svn_error_t *
 (*svn_serf__validate_response_func_t)(svn_ra_serf__handler_t *ctx,
-				      serf_request_t *request,
-				      serf_bucket_t *response,
-				      apr_pool_t *pool);
+                                      serf_request_t *request,
+                                      serf_bucket_t *response,
+                                      apr_pool_t *pool);
 
 /**
  * svn_ra_serf__auth_protocol_t: vtable for an authn protocol provider.
