@@ -226,7 +226,7 @@ def run_and_verify_svn2(message, expected_stdout, expected_stderr,
     raise verify.SVNIncorrectDatatype("expected_stderr must not be None")
 
   want_err = None
-  if expected_stderr is not None and expected_stderr != []:
+  if expected_stderr != []:
     want_err = True
 
   exit_code, out, err = main.run_svn(want_err, *varargs)
@@ -1115,6 +1115,37 @@ def run_and_verify_switch(wc_dir_name,
                 singleton_handler_b, b_baton,
                 check_props)
 
+def process_output_for_commit(output):
+  """Helper for run_and_verify_commit(), also used in the factory."""
+  # Remove the final output line, and verify that the commit succeeded.
+  lastline = ""
+  if len(output):
+    lastline = output.pop().strip()
+
+    cm = re.compile("(Committed|Imported) revision [0-9]+.")
+    match = cm.search(lastline)
+    if not match:
+      print("ERROR:  commit did not succeed.")
+      print("The final line from 'svn ci' was:")
+      print(lastline)
+      raise main.SVNCommitFailure
+
+  # The new 'final' line in the output is either a regular line that
+  # mentions {Adding, Deleting, Sending, ...}, or it could be a line
+  # that says "Transmitting file data ...".  If the latter case, we
+  # want to remove the line from the output; it should be ignored when
+  # building a tree.
+  if len(output):
+    lastline = output.pop()
+
+    tm = re.compile("Transmitting file data.+")
+    match = tm.search(lastline)
+    if not match:
+      # whoops, it was important output, put it back.
+      output.append(lastline)
+
+  return output
+
 
 def run_and_verify_commit(wc_dir_name, output_tree, status_tree,
                           error_re_string = None,
@@ -1152,34 +1183,8 @@ def run_and_verify_commit(wc_dir_name, output_tree, status_tree,
 
   # Else not expecting error:
 
-  # Remove the final output line, and verify that the commit succeeded.
-  lastline = ""
-  if len(output):
-    lastline = output.pop().strip()
-
-    cm = re.compile("(Committed|Imported) revision [0-9]+.")
-    match = cm.search(lastline)
-    if not match:
-      print("ERROR:  commit did not succeed.")
-      print("The final line from 'svn ci' was:")
-      print(lastline)
-      raise main.SVNCommitFailure
-
-  # The new 'final' line in the output is either a regular line that
-  # mentions {Adding, Deleting, Sending, ...}, or it could be a line
-  # that says "Transmitting file data ...".  If the latter case, we
-  # want to remove the line from the output; it should be ignored when
-  # building a tree.
-  if len(output):
-    lastline = output.pop()
-
-    tm = re.compile("Transmitting file data.+")
-    match = tm.search(lastline)
-    if not match:
-      # whoops, it was important output, put it back.
-      output.append(lastline)
-
   # Convert the output into a tree.
+  output = process_output_for_commit(output)
   actual = tree.build_tree_from_commit(output)
 
   # Verify actual output against expected output.
@@ -1516,6 +1521,10 @@ def lock_admin_dir(wc_dir):
 def get_wc_uuid(wc_dir):
   "Return the UUID of the working copy at WC_DIR."
   return run_and_parse_info(wc_dir)[0]['Repository UUID']
+
+def get_wc_base_rev(wc_dir):
+  "Return the BASE revision of the working copy at WC_DIR."
+  return run_and_parse_info(wc_dir)[0]['Revision']
 
 def create_failing_hook(repo_dir, hook_name, text):
   """Create a HOOK_NAME hook in REPO_DIR that prints TEXT to stderr and exits
