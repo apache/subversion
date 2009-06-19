@@ -46,6 +46,26 @@ extern "C" {
       return svn_error_create(SVN_ERR_TEST_FAILED, 0, #expr);  \
   } while (0)
 
+/** Handy macro for testing string equality.
+ *
+ * Note: This assumes there is an a pool available for use somewhere in
+ * in the variable namespace.
+ */
+#define SVN_TEST_STRING_ASSERT(expr, expected_expr)                 \
+  do {                                                              \
+    const char *tst_str1 = (expr);                                  \
+    const char *tst_str2 = (expected_expr);                         \
+                                                                    \
+    if (tst_str2 == NULL && tst_str1 == NULL)                       \
+      break;                                                        \
+    if (   (tst_str2 != NULL && tst_str1 == NULL)                   \
+        || (strcmp(tst_str2, tst_str1) != 0)  )                     \
+      return svn_error_create(SVN_ERR_TEST_FAILED, 0,               \
+         apr_psprintf(pool,                                         \
+          "Strings not equal\n  Expected: '%s'\n  Found:    '%s'",  \
+          tst_str2, tst_str1));                                     \
+  } while(0)
+
 
 /* Baton for any arguments that need to be passed from main() to svn
  * test functions.
