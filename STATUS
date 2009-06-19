@@ -83,5 +83,12 @@ Candidate changes:
      -0: psamuelson, stsp (code is ugly and Linux-specific -
                            would getenv("WINDOWID") work instead?)
 
+ * r38068
+   "File '...' already exists" when it obviously doesn't, during commit.
+   Justification:
+     This was introduced in 1.5.1 and propagated till now.
+   Votes:
+     +1: stylesen
+
 Approved changes:
 =================
