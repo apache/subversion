@@ -209,24 +209,45 @@ class SVNTreeNode:
       stream.write("    Children:  None (node is probably a file)\n")
     stream.flush()
 
-  def print_script(self, stream = sys.stdout, subtree = ""):
-    """Python-script-print the meta data for this node to STREAM.
-    Print only those nodes whose path string starts with the string SUBTREE,
-    and print only the part of the path string that remains after SUBTREE."""
-
-    # remove some occurrences of root_node_name = "__SVN_ROOT_NODE",
-    # it is in the way when matching for a subtree, and looks bad.
+  def get_printable_path(self):
+    """Remove some occurrences of root_node_name = "__SVN_ROOT_NODE",
+    it is in the way when matching for a subtree, and looks bad."""
     path = self.path
     if path.startswith(root_node_name + os.sep):
       path = path[len(root_node_name + os.sep):]
+    return path
+
+  def print_script(self, stream = sys.stdout, subtree = "", prepend="\n  ",
+                   drop_empties = True):
+    """Python-script-print the meta data for this node to STREAM.
+    Print only those nodes whose path string starts with the string SUBTREE,
+    and print only the part of the path string that remains after SUBTREE.
+    PREPEND is a string prepended to each node printout (does the line
+    feed if desired, don't include a comma in PREPEND).
+    If DROP_EMPTIES is true, all dir nodes that have no data set in them
+    (no props, no atts) and that have children (so they are included
+    implicitly anyway) are not printed.
+    Return 1 if this node was printed, 0 otherwise (added up by
+    dump_tree_script())"""
+
+    # figure out if this node would be obsolete to print.
+    if drop_empties and len(self.props) < 1 and len(self.atts) < 1 and \
+       self.contents is None and self.children is not None:
+      return 0
+
+    path = self.get_printable_path()
 
     # remove the subtree path, skip this node if necessary.
     if path.startswith(subtree):
       path = path[len(subtree):]
     else:
-      return
+      return 0
 
-    line = "  %-20s: Item(" % ("'%s'" % path)
+    if path.startswith(os.sep):
+      path = path[1:]
+
+    line = prepend
+    line += "%-20s: Item(" % ("'%s'" % path)
     comma = False
 
     mime_type = self.props.get("svn:mime-type")
@@ -266,8 +287,9 @@ class SVNTreeNode:
       comma = True
 
     line += "),"
-    stream.write("%s\n" % line)
+    stream.write("%s" % line)
     stream.flush()
+    return 1
 
 
   def __str__(self):
@@ -337,6 +359,23 @@ class SVNTreeNode:
                                 self.atts.get('writelocked'),
                                 self.atts.get('treeconflict'))
 
+  def recurse(self, function):
+    results = []
+    results += [ function(self) ]
+    if self.children:
+      for child in self.children:
+        results += child.recurse(function)
+    return results
+
+  def find_node(self, path):
+    if self.get_printable_path() == path:
+      return self
+    if self.children:
+      for child in self.children:
+        result = child.find_node(path)
+        if result:
+          return result
+    return None
 
 # reserved name of the root of the tree
 root_node_name = "__SVN_ROOT_NODE"
@@ -666,26 +705,34 @@ def dump_tree(n,indent=""):
       dump_tree(c,indent + "  |-- ")
 
 
-def dump_tree_script__crawler(n, subtree=""):
+def dump_tree_script__crawler(n, subtree="", stream=sys.stdout):
   "Helper for dump_tree_script. See that comment."
+  count = 0
 
   # skip printing the root node.
   if n.name != root_node_name:
-    n.print_script(subtree=subtree)
+    count += n.print_script(stream, subtree)
 
   for child in n.children or []:
-    dump_tree_script__crawler(child, subtree)
+    count += dump_tree_script__crawler(child, subtree, stream)
+  
+  return count
 
 
-def dump_tree_script(n, subtree=""):
+def dump_tree_script(n, subtree="", stream=sys.stdout, wc_varname='wc_dir'):
   """Print out a python script representation of the structure of the tree
   in the SVNTreeNode N. Print only those nodes whose path string starts
   with the string SUBTREE, and print only the part of the path string
-  that remains after SUBTREE."""
+  that remains after SUBTREE.
+  The result is printed to STREAM.
+  The WC_VARNAME is inserted in the svntest.wc.State(wc_dir,{}) call
+  that is printed out (this is used by factory.py)."""
 
-  print("svntest.wc.State('%s', {" % subtree)
-  dump_tree_script__crawler(n, subtree)
-  print("})")
+  stream.write("svntest.wc.State(" + wc_varname + ", {")
+  count = dump_tree_script__crawler(n, subtree, stream)
+  if count > 0:
+    stream.write('\n')
+  stream.write("})")
 
 
 ###################################################################

@@ -31,6 +31,8 @@ class Sandbox:
 
   def __init__(self, module, idx):
     self._set_name("%s-%d" % (module, idx))
+    # This flag is set to True by build() and returned by is_built()
+    self._is_built = False
 
   def _set_name(self, name, read_only=False):
     """A convenience method for renaming a sandbox, useful when
@@ -89,6 +91,8 @@ class Sandbox:
     if svntest.actions.make_repo_and_wc(self, create_wc, read_only):
       raise svntest.Failure("Could not build repository and sandbox '%s'"
                             % self.name)
+    else:
+      self._is_built = True
 
   def add_test_path(self, path, remove=True):
     self.test_paths.append(path)
@@ -117,6 +121,10 @@ class Sandbox:
     for path in self.test_paths:
       if not path is svntest.main.pristine_dir:
         _cleanup_test_path(path)
+
+  def is_built(self):
+    "Returns True when build() has been called on this instance."
+    return self._is_built
 
 
 _deferred_test_paths = []
