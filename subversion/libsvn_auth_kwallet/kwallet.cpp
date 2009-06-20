@@ -184,7 +184,7 @@ static WId
 get_wid(apr_hash_t *parameters,
         apr_pool_t *pool)
 {
-  WId wid = -1;
+  WId wid = 1;
 
   if (apr_hash_get(parameters,
                    "svn:auth:qapplication-safe",
@@ -216,6 +216,19 @@ get_wid(apr_hash_t *parameters,
       svn_pool_destroy(iterpool);
     }
 
+  if (wid == 1)
+    {
+      const char *wid_env_string = getenv("WINDOWID");
+      if (wid_env_string)
+        {
+          long wid_env = atol(wid_env_string);
+          if (wid_env != 0)
+            {
+              wid = wid_env;
+            }
+        }
+    }
+
   return wid;
 }
 
@@ -233,7 +246,7 @@ get_wallet(QString wallet_name,
                                  APR_HASH_KEY_STRING))
     {
       wallet = KWallet::Wallet::openWallet(wallet_name,
-                                           pool ? get_wid(parameters, pool) : -1,
+                                           pool ? get_wid(parameters, pool) : 1,
                                            KWallet::Wallet::Synchronous);
     }
   if (wallet)
