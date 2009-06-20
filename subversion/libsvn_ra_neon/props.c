@@ -2,7 +2,7 @@
  * props.c :  routines for fetching DAV properties
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -625,8 +625,8 @@ svn_error_t * svn_ra_neon__get_one_prop(const svn_string_t **propval,
     {
       /* ### need an SVN_ERR here */
       return svn_error_createf(SVN_ERR_FS_NOT_FOUND, NULL,
-                               _("'%s' was not present on the resource"),
-                               name);
+                               _("'%s' was not present on the resource '%s'"),
+                               name, url);
     }
 
   *propval = value;
