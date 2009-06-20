@@ -2,7 +2,7 @@
  * lock.c:  routines for locking working copy subdirectories.
  *
  * ====================================================================
- * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -421,9 +421,9 @@ check_format_upgrade(const svn_wc_adm_access_t *adm_access,
 
   if (wc_format != SVN_WC__VERSION)
     {
-      return svn_error_createf(SVN_ERR_WC_UPGRADE_REQUIRED, NULL,
-                               "Working copy format is too old; please run "
-                               "'svn upgrade'");
+      return svn_error_create(SVN_ERR_WC_UPGRADE_REQUIRED, NULL,
+                              _("Working copy format is too old; please run "
+                                "'svn upgrade'"));
     }
 
   return SVN_NO_ERROR;
