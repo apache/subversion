@@ -277,7 +277,8 @@ class TestFactory:
 
     # Those command line options that expect an argument following
     # which is not a path. (don't expand args following these)
-    self.keep_args_of = ['--depth', '--encoding', '-r', '--changelist']
+    self.keep_args_of = ['--depth', '--encoding', '-r',
+                         '--changelist', '-m', '--message']
 
     # A stack of $PWDs, to be able to chdir back after a chdir.
     self.prevdirs = []
@@ -553,8 +554,6 @@ class TestFactory:
             self.tree2py(actual_out, wc) + "\n\n")
 
       pystatus = self.get_current_status(wc)
-      if len(pystatus) > 0:
-        pystatus += '\n'
       py += pystatus
 
       py += pychdir
@@ -1604,6 +1603,7 @@ class TestFactory:
         if arg in keep_args_of:
           i += 1
           if i < len(args):
+            arg = args[i]
             pyargs += [ self.str2svntest(arg) ]
             runargs += [ arg ]
 
