@@ -136,6 +136,9 @@ or another dump file."""
   master_dumpfile_contents = open(os.path.join(svnsync_tests_dir,
                                                dump_file_name),
                                   'rb').readlines()
+  if sys.version_info[0] >= 3:
+    # Python >=3.0
+    master_dumpfile_contents = [x.decode() for x in master_dumpfile_contents]
   svntest.actions.run_and_verify_load(sbox.repo_dir, master_dumpfile_contents)
 
   # Create the empty destination repository.
