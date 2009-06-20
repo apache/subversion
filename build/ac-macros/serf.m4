@@ -40,7 +40,6 @@ AC_DEFUN(SVN_LIB_SERF,
     SVN_SERF_PREFIX="$serf_prefix"
     SVN_SERF_INCLUDES="-I$srcdir/serf"
     SVN_SERF_LIBS="$abs_builddir/serf/libserf-0.la"
-    SVN_SERF_EXPORT_LIBS="-L$serf_prefix/lib -lserf-0"
   fi
 
   if test $serf_found = "yes"; then
@@ -52,7 +51,6 @@ AC_DEFUN(SVN_LIB_SERF,
       SVN_SERF_LIBS="-lserf-0"
       LDFLAGS="$LDFLAGS -L$serf_prefix/lib"
     fi
-    SVN_SERF_EXPORT_LIBS="-L$serf_prefix/lib -lserf-0"
   elif test $serf_found = "reconfig"; then
     serf_found=yes
   fi
@@ -62,5 +60,4 @@ AC_DEFUN(SVN_LIB_SERF,
   AC_SUBST(SVN_SERF_PREFIX)
   AC_SUBST(SVN_SERF_INCLUDES)
   AC_SUBST(SVN_SERF_LIBS)
-  AC_SUBST(SVN_SERF_EXPORT_LIBS)
 ])
