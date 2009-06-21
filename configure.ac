@@ -1144,19 +1144,15 @@ dnl Configure is long - users tend to miss warnings printed during it.
 dnl Hence, print a warnings about what we did and didn't configure at the 
 dnl end, where people will actually see them.
 
-case "$svn_lib_berkeley_db" in
-  "no" )
-    db_version="$SVN_FS_WANT_DB_MAJOR.$SVN_FS_WANT_DB_MINOR.$SVN_FS_WANT_DB_PATCH"
-    AC_MSG_WARN([we have configured without BDB filesystem support
+if test "$svn_lib_berkeley_db" = "no" && test "$with_berkeley_db" != "no"; then
+  db_version="$SVN_FS_WANT_DB_MAJOR.$SVN_FS_WANT_DB_MINOR.$SVN_FS_WANT_DB_PATCH"
+  AC_MSG_WARN([we have configured without BDB filesystem support
 
 
 You don't seem to have Berkeley DB version $db_version or newer
-installed and linked to APR-UTIL.  We have created Makefiles which
-will build without the Berkeley DB back-end; your repositories will
-use FSFS as the default back-end.  You can find the latest version of
-Berkeley DB here:
+installed and linked to APR-UTIL.  We have created Makefile which will build
+Subversion without support for the Berkeley DB back-end.  You can find the
+latest version of Berkeley DB here:
   http://www.oracle.com/technology/software/products/berkeley-db/index.html
 ])
-;;
-esac
-
+fi
