@@ -250,6 +250,10 @@ struct dav_resource_private {
   /* was this resource auto-checked-out? */
   svn_boolean_t auto_checked_out;
 
+  /* was this resource fetched using our public peg-/working-rev CGI
+     interface (ie: /path/to/item?p=PEGREV]? */
+  svn_boolean_t pegged;
+
   /* Pool to allocate temporary data from */
   apr_pool_t *pool;
 };
