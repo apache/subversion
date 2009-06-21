@@ -81,10 +81,3 @@ Candidate changes:
 
 Approved changes:
 =================
-
- * r38053, r38055, r38057
-   Do not bail if the ALLUSERPROFILE folder does not exist.
-   Justification:
-     small change without which svn won't work at all on such systems.
-   Votes:
-     +1: steveking, rhuijben, arfrever
