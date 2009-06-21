@@ -198,6 +198,7 @@ get_category_config(svn_config_t **cfg,
 {
   const char *usr_reg_path = NULL, *sys_reg_path = NULL;
   const char *usr_cfg_path, *sys_cfg_path;
+  svn_error_t *err = NULL;
 
   *cfg = NULL;
 
@@ -210,7 +211,14 @@ get_category_config(svn_config_t **cfg,
                                  category, NULL);
 #endif /* WIN32 */
 
-      SVN_ERR(svn_config__sys_config_path(&sys_cfg_path, category, pool));
+      err = svn_config__sys_config_path(&sys_cfg_path, category, pool);
+      if ((err) && (err->apr_err == SVN_ERR_BAD_FILENAME))
+        {
+          sys_cfg_path = NULL;
+          svn_error_clear(err);
+        }
+      else if (err)
+        return err;
     }
   else
     sys_cfg_path = NULL;

@@ -261,6 +261,10 @@ typedef struct report_fetch_t {
 
   /* Are we done fetching this file? */
   svn_boolean_t done;
+
+  /* Discard the rest of the content? */
+  svn_boolean_t discard;
+
   svn_ra_serf__list_t **done_list;
   svn_ra_serf__list_t done_item;
 
@@ -700,7 +704,7 @@ cancel_fetch(serf_request_t *request,
   SVN_ERR_MALFUNCTION_NO_RETURN();
 }
 
-static apr_status_t
+static svn_error_t *
 error_fetch(serf_request_t *request,
             report_fetch_t *fetch_ctx,
             svn_error_t *err)
@@ -713,12 +717,16 @@ error_fetch(serf_request_t *request,
   fetch_ctx->done_item.next = *fetch_ctx->done_list;
   *fetch_ctx->done_list = &fetch_ctx->done_item;
 
-  serf_request_set_handler(request, svn_ra_serf__handle_discard_body, NULL);
+  /* Discard the rest of this request
+     (This makes sure it doesn't error when the request is aborted later) */
+  serf_request_set_handler(request,
+                           svn_ra_serf__response_discard_handler, NULL);
 
-  return APR_SUCCESS;
+  return SVN_NO_ERROR;
 }
 
-static apr_status_t
+/* Implements svn_ra_serf__response_handler_t */
+static svn_error_t *
 handle_fetch(serf_request_t *request,
              serf_bucket_t *response,
              void *handler_baton,
@@ -812,7 +820,7 @@ handle_fetch(serf_request_t *request,
   status = serf_bucket_response_status(response, &sl);
   if (SERF_BUCKET_READ_ERROR(status))
     {
-      return status;
+      return svn_error_wrap_apr(status, NULL);
     }
   if (sl.code != 200)
     {
@@ -831,7 +839,7 @@ handle_fetch(serf_request_t *request,
       status = serf_bucket_read(response, 8000, &data, &len);
       if (SERF_BUCKET_READ_ERROR(status))
         {
-          return status;
+          return svn_error_wrap_apr(status, NULL);
         }
 
       fetch_ctx->read_size += len;
@@ -844,13 +852,13 @@ handle_fetch(serf_request_t *request,
               /* Eek.  What did the file shrink or something? */
               if (APR_STATUS_IS_EOF(status))
                 {
-                  SVN_ERR_MALFUNCTION_NO_RETURN();
+                  SVN_ERR_MALFUNCTION();
                 }
 
               /* Skip on to the next iteration of this loop. */
               if (APR_STATUS_IS_EAGAIN(status))
                 {
-                  return status;
+                  return svn_error_wrap_apr(status, NULL);
                 }
               continue;
             }
@@ -946,17 +954,19 @@ handle_fetch(serf_request_t *request,
           svn_pool_destroy(info->editor_pool);
           svn_pool_destroy(info->pool);
 
-          return status;
+          if (status)
+            return svn_error_wrap_apr(status, NULL);
         }
       if (APR_STATUS_IS_EAGAIN(status))
         {
-          return status;
+          return svn_error_wrap_apr(status, NULL);
         }
     }
   /* not reached */
 }
 
-static apr_status_t
+/* Implements svn_ra_serf__response_handler_t */
+static svn_error_t *
 handle_stream(serf_request_t *request,
               serf_bucket_t *response,
               void *handler_baton,
@@ -985,7 +995,7 @@ handle_stream(serf_request_t *request,
       status = serf_bucket_read(response, 8000, &data, &len);
       if (SERF_BUCKET_READ_ERROR(status))
         {
-          return status;
+          return svn_error_wrap_apr(status, NULL);
         }
 
       fetch_ctx->read_size += len;
@@ -1004,7 +1014,7 @@ handle_stream(serf_request_t *request,
               /* Skip on to the next iteration of this loop. */
               if (APR_STATUS_IS_EAGAIN(status))
                 {
-                  return status;
+                  return svn_error_wrap_apr(status, NULL);
                 }
               continue;
             }
@@ -1033,7 +1043,7 @@ handle_stream(serf_request_t *request,
 
       if (status)
         {
-          return status;
+          return svn_error_wrap_apr(status, NULL);
         }
     }
   /* not reached */
@@ -2221,12 +2231,6 @@ finish_report(void *report_baton,
         }
       if (status)
         {
-          if (parser_ctx->error)
-            {
-              svn_error_clear(sess->pending_error);
-              sess->pending_error = SVN_NO_ERROR;
-              return parser_ctx->error;
-            }
           SVN_ERR(sess->pending_error);
 
           return svn_error_wrap_apr(status, _("Error retrieving REPORT (%d)"),

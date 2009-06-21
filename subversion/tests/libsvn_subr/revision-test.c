@@ -2,7 +2,7 @@
  * revision-test.c -- test the revision functions
  *
  * ====================================================================
- * Copyright (c) 2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2007, 2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -21,10 +21,7 @@
 #include "../svn_test.h"
 
 static svn_error_t *
-test_revnum_parse(const char **msg,
-                  svn_boolean_t msg_only,
-                  svn_test_opts_t *opts,
-                  apr_pool_t *pool)
+test_revnum_parse(apr_pool_t *pool)
 {
   const char **t;
 
@@ -41,8 +38,6 @@ test_revnum_parse(const char **msg,
     "12345ABC",
     NULL
   };
-
-  *msg = "test svn_revnum_parse";
 
   /* These tests should succeed. */
   for (t=success_tests; *t; ++t)
@@ -118,6 +113,7 @@ test_revnum_parse(const char **msg,
 struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
-    SVN_TEST_PASS(test_revnum_parse),
+    SVN_TEST_PASS2(test_revnum_parse,
+                   "test svn_revnum_parse"),
     SVN_TEST_NULL
   };

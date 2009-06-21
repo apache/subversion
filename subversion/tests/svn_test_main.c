@@ -150,7 +150,7 @@ get_array_size(void)
 {
   int i;
 
-  for (i = 1; test_funcs[i].msg || test_funcs[i].func; i++)
+  for (i = 1; test_funcs[i].func2 || test_funcs[i].func_opts; i++)
     {
     }
 
@@ -188,18 +188,13 @@ do_test_num(const char *progname,
   wimp = xfail && desc->wip;
 
   /* Do test */
-  if (desc->func)
-    err = (*desc->func)(&msg, msg_only || skip, opts, pool);
+  msg = desc->msg;
+  if (msg_only || skip)
+    ; /* pass */
+  else if (desc->func2)
+    err = (*desc->func2)(pool);
   else
-    {
-      msg = desc->msg;
-      if (msg_only || skip)
-        ; /* pass */
-      else if (desc->func2)
-        err = (*desc->func2)(pool);
-      else
-        err = (*desc->func_opts)(opts, pool);
-    }
+    err = (*desc->func_opts)(opts, pool);
 
   if (err && err->apr_err == SVN_ERR_TEST_SKIPPED)
     {
@@ -252,7 +247,7 @@ do_test_num(const char *progname,
       if (apr_isupper(msg[0]))
         printf("WARNING: Test docstring is capitalized\n");
     }
-  if (desc->func == NULL && desc->msg == NULL)
+  if (desc->msg == NULL)
     printf("WARNING: New-style test descriptor is missing a docstring.\n");
 
   skip_cleanup = test_failed;

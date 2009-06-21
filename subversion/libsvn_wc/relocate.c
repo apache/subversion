@@ -109,31 +109,28 @@ relocate_entry(svn_wc_adm_access_t *adm_access,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_wc_relocate3(const char *path,
-                 svn_wc_adm_access_t *adm_access,
-                 const char *from,
-                 const char *to,
-                 svn_boolean_t recurse,
-                 svn_wc_relocation_validator3_t validator,
-                 void *validator_baton,
-                 apr_pool_t *pool)
+static svn_error_t *
+relocate_dir(const char *path,
+             const svn_wc_entry_t *dir_entry,
+             svn_wc_adm_access_t *adm_access,
+             const char *from,
+             const char *to,
+             svn_boolean_t recurse,
+             svn_wc_relocation_validator3_t validator,
+             void *validator_baton,
+             apr_pool_t *pool)
 {
   apr_hash_t *entries;
   apr_hash_index_t *hi;
-  const svn_wc_entry_t *entry;
   apr_pool_t *subpool;
   svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
   const char *local_abspath;
+  svn_wc_entry_t *entry;
 
-  SVN_ERR(svn_wc_entry(&entry, path, adm_access, TRUE, pool));
-  if (! entry)
-    return svn_error_create(SVN_ERR_ENTRY_NOT_FOUND, NULL, NULL);
-
-  if (entry->kind == svn_node_file
-      || entry->depth == svn_depth_exclude)
-    return relocate_entry(adm_access, entry, from, to,
-                          validator, validator_baton, pool);
+  SVN_ERR_ASSERT(dir_entry->kind == svn_node_dir);
+  if (dir_entry->depth == svn_depth_exclude)
+    return svn_error_return(relocate_entry(adm_access, dir_entry, from, to,
+                                           validator, validator_baton, pool));
 
   /* Relocate THIS_DIR first, in order to pre-validate the relocated URL
      of all of the other entries.  This is technically cheating because
@@ -167,13 +164,17 @@ svn_wc_relocate3(const char *path,
         {
           svn_wc_adm_access_t *subdir_access;
           const char *subdir = svn_dirent_join(path, key, subpool);
+          const svn_wc_entry_t *subdir_entry;
+
           if (svn_wc__adm_missing(adm_access, subdir))
             continue;
           SVN_ERR(svn_wc_adm_retrieve(&subdir_access, adm_access,
                                       subdir, subpool));
-          SVN_ERR(svn_wc_relocate3(subdir, subdir_access, from, to,
-                                   recurse, validator,
-                                   validator_baton, subpool));
+          SVN_ERR(svn_wc_entry(&subdir_entry, subdir, subdir_access, TRUE,
+                               subpool));
+          SVN_ERR(relocate_dir(subdir, subdir_entry, subdir_access, from, to,
+                               recurse, validator,
+                               validator_baton, subpool));
         }
       SVN_ERR(relocate_entry(adm_access, entry, from, to,
                              validator, validator_baton, subpool));
@@ -183,4 +184,30 @@ svn_wc_relocate3(const char *path,
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
   return svn_wc__props_delete(db, local_abspath, svn_wc__props_wcprop, pool);
+}
+
+svn_error_t *
+svn_wc_relocate3(const char *path,
+                 svn_wc_adm_access_t *adm_access,
+                 const char *from,
+                 const char *to,
+                 svn_boolean_t recurse,
+                 svn_wc_relocation_validator3_t validator,
+                 void *validator_baton,
+                 apr_pool_t *pool)
+{
+  const svn_wc_entry_t *entry;
+  
+  SVN_ERR(svn_wc_entry(&entry, path, adm_access, TRUE, pool));
+  if (! entry)
+    return svn_error_create(SVN_ERR_ENTRY_NOT_FOUND, NULL, NULL);
+
+  if (entry->kind != svn_node_dir)
+    return svn_error_create
+      (SVN_ERR_CLIENT_INVALID_RELOCATION, NULL,
+       _("Cannot relocate a single file"));
+
+  return svn_error_return(relocate_dir(path, entry, adm_access, from, to,
+                                       recurse, validator, validator_baton,
+                                       pool));
 }

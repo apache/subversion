@@ -692,6 +692,13 @@ typedef svn_error_t *(*svn_close_fn_t)(void *baton);
  * @since New in 1.7. */
 typedef svn_error_t *(*svn_io_reset_fn_t)(void *baton);
 
+/** Line-filtering callback function for a generic stream.
+ * @see svn_stream_t and svn_stream_readline().
+ *
+ * @since New in 1.7. */
+typedef svn_error_t *(*svn_io_line_filter_cb_t)(svn_boolean_t *filtered,
+                                                const char *line,
+                                                apr_pool_t *scratch_pool);
 
 /** Create a generic stream.  @see svn_stream_t. */
 svn_stream_t *
@@ -724,6 +731,11 @@ void
 svn_stream_set_reset(svn_stream_t *stream,
                      svn_io_reset_fn_t reset_fn);
 
+/** Set @a stream's line-filtering callback function to @a line_filter_cb
+ * @since New in 1.7. */
+void
+svn_stream_set_line_filter_callback(svn_stream_t *stream,
+                                    svn_io_line_filter_cb_t line_filter_cb);
 
 /** Create a stream that is empty for reading and infinite for writing. */
 svn_stream_t *
@@ -1007,6 +1019,12 @@ svn_stream_printf_from_utf8(svn_stream_t *stream,
  *
  * If @a stream runs out of bytes before encountering a line-terminator,
  * then set @a *eof to @c TRUE, otherwise set @a *eof to FALSE.
+ *
+ * If a line-filter callback function was set on the stream using
+ * svn_stream_set_line_filter_callback(), lines will only be returned
+ * if they pass the filtering decision of the callback function.
+ * If end-of-file is encountered while reading the line and the line
+ * is filtered, @a *stringbuf will be empty.
  */
 svn_error_t *
 svn_stream_readline(svn_stream_t *stream,
@@ -1729,6 +1747,59 @@ svn_error_t *
 svn_io_write_version_file(const char *path,
                           int version,
                           apr_pool_t *pool);
+
+/** Wrapper for apr_file_mktemp().
+ *
+ * @since New in 1.7. */
+svn_error_t *
+svn_io_file_mktemp(apr_file_t **new_file,
+                   char *templ,
+                   apr_int32_t flags,
+                   apr_pool_t *pool);
+
+/** Wrapper for apr_file_name_get().
+ *
+ * @since New in 1.7. */
+svn_error_t *
+svn_io_file_name_get(const char **filename,
+                     apr_file_t *file,
+                     apr_pool_t *pool);
+
+/** Open a new file (for reading and writing) with a unique name based on
+ * utf-8 encoded @a filename, in the directory @a dirpath.  The file handle is
+ * returned in @a *file, and the name is returned in @a *unique_name, also
+ * utf8-encoded.  Either @a file or @a unique_name may be @c NULL.
+ *
+ * If @a delete_when is @c svn_io_file_del_on_close, then the @c APR_DELONCLOSE
+ * flag will be used when opening the file.  The @c APR_BUFFERED flag will
+ * always be used.
+ *
+ * If @a dirpath is NULL, then the directory returned by svn_io_temp_dir()
+ * will be used.
+ *
+ * If @a filename is NULL, a completely random name will be used.
+ * Else, a random name based on @a filename will be used.
+ *
+ * Allocates @a *file and @a *unique_name in @a result_pool. All
+ * intermediate allocations will be performed in @a scratch_pool.
+ *
+ * Claim of Historical Inevitability: this function was written
+ * because
+ *
+ *    - svn_io_open_uniquely_named() creates predictable filenames
+ *      and can cause performance problems when many temporary
+ *      files are needed in a single directory
+ *
+ * @since New in 1.7
+ */
+svn_error_t *
+svn_io_mktemp(apr_file_t **file,
+              const char **unique_name,
+              const char *dirpath,
+              const char *filename,
+              svn_io_file_del_t delete_when,
+              apr_pool_t *result_pool,
+              apr_pool_t *scratch_pool);
 
 /** @} */
 

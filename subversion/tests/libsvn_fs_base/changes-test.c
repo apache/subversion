@@ -161,17 +161,10 @@ txn_body_changes_delete(void *baton, trail_t *trail)
 /* The tests.  */
 
 static svn_error_t *
-changes_add(const char **msg,
-            svn_boolean_t msg_only,
-            svn_test_opts_t *opts,
+changes_add(const svn_test_opts_t *opts,
             apr_pool_t *pool)
 {
   svn_fs_t *fs;
-
-  *msg = "add changes to the changes table";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
 
   /* Create a new fs and repos */
   SVN_ERR(svn_test__create_bdb_fs(&fs, "test-repo-changes-add", opts,
@@ -185,9 +178,7 @@ changes_add(const char **msg,
 
 
 static svn_error_t *
-changes_fetch_raw(const char **msg,
-                  svn_boolean_t msg_only,
-                  svn_test_opts_t *opts,
+changes_fetch_raw(const svn_test_opts_t *opts,
                   apr_pool_t *pool)
 {
   svn_fs_t *fs;
@@ -195,11 +186,6 @@ changes_fetch_raw(const char **msg,
   int num_txns = sizeof(standard_txns) / sizeof(const char *);
   int cur_change_index = 0;
   struct changes_args args;
-
-  *msg = "fetch raw changes from the changes table";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
 
   /* Create a new fs and repos */
   SVN_ERR(svn_test__create_bdb_fs(&fs, "test-repo-changes-fetch", opts,
@@ -294,20 +280,13 @@ changes_fetch_raw(const char **msg,
 
 
 static svn_error_t *
-changes_delete(const char **msg,
-               svn_boolean_t msg_only,
-               svn_test_opts_t *opts,
+changes_delete(const svn_test_opts_t *opts,
                apr_pool_t *pool)
 {
   svn_fs_t *fs;
   int i;
   int num_txns = sizeof(standard_txns) / sizeof(const char *);
   struct changes_args args;
-
-  *msg = "delete changes from the changes table";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
 
   /* Create a new fs and repos */
   SVN_ERR(svn_test__create_bdb_fs(&fs, "test-repo-changes-delete", opts,
@@ -433,7 +412,7 @@ get_ideal_changes(const char *txn_id,
 static svn_error_t *
 compare_changes(apr_hash_t *ideals,
                 apr_hash_t *changes,
-                svn_test_opts_t *opts,
+                const svn_test_opts_t *opts,
                 const char *txn_id,
                 apr_pool_t *pool)
 {
@@ -491,19 +470,13 @@ compare_changes(apr_hash_t *ideals,
 
 
 static svn_error_t *
-changes_fetch(const char **msg,
-              svn_boolean_t msg_only,
-              svn_test_opts_t *opts,
+changes_fetch(const svn_test_opts_t *opts,
               apr_pool_t *pool)
 {
   svn_fs_t *fs;
   int i;
   int num_txns = sizeof(standard_txns) / sizeof(const char *);
   struct changes_args args;
-  *msg = "fetch compressed changes from the changes table";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
 
   /* Create a new fs and repos */
   SVN_ERR(svn_test__create_bdb_fs(&fs, "test-repo-changes-fetch", opts,
@@ -557,9 +530,7 @@ changes_fetch(const char **msg,
 
 
 static svn_error_t *
-changes_fetch_ordering(const char **msg,
-                       svn_boolean_t msg_only,
-                       svn_test_opts_t *opts,
+changes_fetch_ordering(const svn_test_opts_t *opts,
                        apr_pool_t *pool)
 {
   svn_fs_t *fs;
@@ -570,11 +541,6 @@ changes_fetch_ordering(const char **msg,
   struct changes_args args;
   apr_pool_t *subpool = svn_pool_create(pool);
   apr_hash_index_t *hi;
-
-  *msg = "verify ordered-ness of fetched compressed changes";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
 
   /* Create a new fs and repos */
   SVN_ERR(svn_test__create_bdb_fs
@@ -733,10 +699,15 @@ changes_fetch_ordering(const char **msg,
 struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
-    SVN_TEST_PASS(changes_add),
-    SVN_TEST_PASS(changes_fetch_raw),
-    SVN_TEST_PASS(changes_delete),
-    SVN_TEST_PASS(changes_fetch),
-    SVN_TEST_PASS(changes_fetch_ordering),
+    SVN_TEST_OPTS_PASS(changes_add,
+                       "add changes to the changes table"),
+    SVN_TEST_OPTS_PASS(changes_fetch_raw,
+                       "fetch raw changes from the changes table"),
+    SVN_TEST_OPTS_PASS(changes_delete,
+                       "delete changes from the changes table"),
+    SVN_TEST_OPTS_PASS(changes_fetch,
+                       "fetch compressed changes from the changes table"),
+    SVN_TEST_OPTS_PASS(changes_fetch_ordering,
+                       "verify ordered-ness of fetched compressed changes"),
     SVN_TEST_NULL
   };

@@ -2,7 +2,7 @@
  * stream-test.c -- test the stream functions
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2002-2003, 2005-2006, 2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -25,10 +25,7 @@
 
 
 static svn_error_t *
-test_stream_from_string(const char **msg,
-                        svn_boolean_t msg_only,
-                        svn_test_opts_t *opts,
-                        apr_pool_t *pool)
+test_stream_from_string(apr_pool_t *pool)
 {
   int i;
   apr_pool_t *subpool = svn_pool_create(pool);
@@ -51,11 +48,6 @@ test_stream_from_string(const char **msg,
     "it--but I feel that it is safe to assume that I'm far longer than my "
     "peers.  And that demands some amount of respect, wouldn't you say?"
   };
-
-  *msg = "test svn_stream_from_string";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
 
   /* Test svn_stream_from_stringbuf() as a readable stream. */
   for (i = 0; i < NUM_TEST_STRINGS; i++)
@@ -147,10 +139,7 @@ generate_test_bytes(int num_bytes, apr_pool_t *pool)
 
 
 static svn_error_t *
-test_stream_compressed(const char **msg,
-                       svn_boolean_t msg_only,
-                       svn_test_opts_t *opts,
-                       apr_pool_t *pool)
+test_stream_compressed(apr_pool_t *pool)
 {
 #define NUM_TEST_STRINGS 5
 #define TEST_BUF_SIZE 10
@@ -176,11 +165,6 @@ test_stream_compressed(const char **msg,
     "peers.  And that demands some amount of respect, wouldn't you say?"
   };
 
-
-  *msg = "test compressed streams";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
 
   for (i = 0; i < (NUM_TEST_STRINGS - 1); i++)
     bufs[i] = svn_stringbuf_create(strings[i], pool);
@@ -236,10 +220,7 @@ test_stream_compressed(const char **msg,
 }
 
 static svn_error_t *
-test_stream_range(const char **msg,
-                  svn_boolean_t msg_only,
-                  svn_test_opts_t *opts,
-                  apr_pool_t *pool)
+test_stream_range(apr_pool_t *pool)
 {
   static const char *file_data[3] = {"Before", "Now", "After"};
   const char *before, *now, *after;
@@ -248,13 +229,9 @@ test_stream_range(const char **msg,
   apr_off_t start, end;
   apr_file_t *f;
   apr_status_t status;
-  unsigned int i, j, len;
+  unsigned int i, j;
+  apr_size_t len;
   svn_stream_t *stream;
-
-  *msg = "test streams reading from range of file";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
 
   status = apr_file_open(&f, fname, (APR_READ | APR_WRITE | APR_CREATE |
                          APR_TRUNCATE | APR_DELONCLOSE), APR_OS_DEFAULT, pool);
@@ -266,7 +243,7 @@ test_stream_range(const char **msg,
   for (j = 0; j < 3; j++)
     {
       len = strlen(file_data[j]);
-      status = apr_file_write(f, file_data[j], &len); 
+      status = apr_file_write(f, file_data[j], &len);
       if (status || len != strlen(file_data[j]))
         return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                                  "Cannot write to '%s'", fname);
@@ -325,14 +302,57 @@ test_stream_range(const char **msg,
     return SVN_NO_ERROR;
 }
 
+/* An implementation of svn_io_line_filter_cb_t */
+static svn_error_t *
+line_filter(svn_boolean_t *filtered, const char *line, apr_pool_t *scratch_pool)
+{
+  *filtered = strchr(line, '!') != NULL;
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_stream_line_filter(apr_pool_t *pool)
+{
+  static const char *lines[4] = {"Not filtered.", "Filtered!",
+                                 "Not filtered either.", "End of the lines!"};
+  svn_string_t *string;
+  svn_stream_t *stream;
+  svn_stringbuf_t *line;
+  svn_boolean_t eof;
+
+  string = svn_string_createf(pool, "%s\n%s\n%s\n%s", lines[0], lines[1],
+                              lines[2], lines[3]);
+  stream = svn_stream_from_string(string, pool);
+
+  svn_stream_set_line_filter_callback(stream, line_filter);
+
+  svn_stream_readline(stream, &line, "\n", &eof, pool);
+  SVN_ERR_ASSERT(strcmp(line->data, lines[0]) == 0);
+  /* line[1] should be filtered */
+  svn_stream_readline(stream, &line, "\n", &eof, pool);
+  SVN_ERR_ASSERT(strcmp(line->data, lines[2]) == 0);
+
+  /* The last line should also be filtered, and the resulting
+   * stringbuf should be empty. */
+  svn_stream_readline(stream, &line, "\n", &eof, pool);
+  SVN_ERR_ASSERT(eof && svn_stringbuf_isempty(line));
+
+  return SVN_NO_ERROR;
+}
+
 
 /* The test table.  */
 
 struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
-    SVN_TEST_PASS(test_stream_from_string),
-    SVN_TEST_PASS(test_stream_compressed),
-    SVN_TEST_PASS(test_stream_range),
+    SVN_TEST_PASS2(test_stream_from_string,
+                   "test svn_stream_from_string"),
+    SVN_TEST_PASS2(test_stream_compressed,
+                   "test compressed streams"),
+    SVN_TEST_PASS2(test_stream_range,
+                   "test streams reading from range of file"),
+    SVN_TEST_PASS2(test_stream_line_filter,
+                   "test stream line filtering"),
     SVN_TEST_NULL
   };

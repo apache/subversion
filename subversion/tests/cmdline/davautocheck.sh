@@ -207,6 +207,9 @@ LOAD_MOD_AUTHN_FILE="$(get_loadmodule_config mod_authn_file)" \
     || fail "Authn_File module not found."
 LOAD_MOD_AUTHZ_USER="$(get_loadmodule_config mod_authz_user)" \
     || fail "Authz_User module not found."
+
+LOAD_MOD_UNIXD=$(get_loadmodule_config mod_unixd) \
+    || fail "UnixD module not found"
 }
 
 HTTPD_PORT=$(($RANDOM+1024))
@@ -233,6 +236,7 @@ touch $HTTPD_MIME_TYPES
 cat > "$HTTPD_CFG" <<__EOF__
 $LOAD_MOD_LOG_CONFIG
 $LOAD_MOD_MIME
+$LOAD_MOD_UNIXD
 $LOAD_MOD_DAV
 LoadModule          dav_svn_module "$MOD_DAV_SVN"
 $LOAD_MOD_AUTH

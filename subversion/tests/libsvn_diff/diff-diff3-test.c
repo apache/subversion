@@ -2,7 +2,7 @@
  * Incomplete regression tests for the diff/diff3 library.
  *
  * ====================================================================
- * Copyright (c) 2003-2006, 2008 CollabNet.  All rights reserved.
+ * Copyright (c) 2003-2006, 2008-2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -419,15 +419,8 @@ make_random_merge_file(const char *filename,
 /* ========================================================================== */
 
 static svn_error_t *
-dump_core(const char **msg,
-          svn_boolean_t msg_only,
-          svn_test_opts_t *opts,
-          apr_pool_t *pool)
+dump_core(apr_pool_t *pool)
 {
-  *msg = "these dump core";
-  if (msg_only)
-    return SVN_NO_ERROR;
-
   SVN_ERR(two_way_diff("foo1", "bar1",
                        "",
                        "",
@@ -469,15 +462,9 @@ dump_core(const char **msg,
 
 
 static svn_error_t *
-test_two_way_unified(const char **msg,
-                     svn_boolean_t msg_only,
-                     svn_test_opts_t *opts,
-                     apr_pool_t *pool)
+test_two_way_unified(apr_pool_t *pool)
 {
   svn_diff_file_options_t *diff_opts = svn_diff_file_options_create(pool);
-  *msg = "2-way unified diff and trivial merge";
-  if (msg_only)
-    return SVN_NO_ERROR;
 
   SVN_ERR(two_way_diff("foo4", "bar4",
                        "Aa\n",
@@ -925,15 +912,8 @@ test_two_way_unified(const char **msg,
 
 
 static svn_error_t *
-test_two_way_unified_suspect(const char **msg,
-                             svn_boolean_t msg_only,
-                             svn_test_opts_t *opts,
-                             apr_pool_t *pool)
+test_two_way_unified_suspect(apr_pool_t *pool)
 {
-  *msg = "2-way unified diff where output is suspect";
-  if (msg_only)
-    return SVN_NO_ERROR;
-
   SVN_ERR(two_way_diff("foo15a", "bar15a",
                        "Aa\n"
                        "Bb\n"
@@ -1043,15 +1023,9 @@ test_two_way_unified_suspect(const char **msg,
 
 
 static svn_error_t *
-test_three_way_merge_no_overlap(const char **msg,
-                                svn_boolean_t msg_only,
-                                svn_test_opts_t *opts,
-                                apr_pool_t *pool)
+test_three_way_merge_no_overlap(apr_pool_t *pool)
 {
   svn_diff_file_options_t *diff_opts = svn_diff_file_options_create(pool);
-  *msg = "3-way merge, non-overlapping changes";
-  if (msg_only)
-    return SVN_NO_ERROR;
 
   SVN_ERR(three_way_merge("zig1", "zag1", "zog1",
                           "Aa\n"
@@ -1388,15 +1362,8 @@ test_three_way_merge_no_overlap(const char **msg,
 
 
 static svn_error_t *
-test_three_way_merge_with_overlap(const char **msg,
-                                  svn_boolean_t msg_only,
-                                  svn_test_opts_t *opts,
-                                  apr_pool_t *pool)
+test_three_way_merge_with_overlap(apr_pool_t *pool)
 {
-  *msg = "3-way merge, non-conflicting overlapping changes";
-  if (msg_only)
-    return SVN_NO_ERROR;
-
   SVN_ERR(three_way_merge("splish1", "splash1", "splosh1",
                           "Aa\n"
                           "Bb\n"
@@ -1554,15 +1521,8 @@ test_three_way_merge_with_overlap(const char **msg,
 
 
 static svn_error_t *
-test_three_way_merge_with_conflict(const char **msg,
-                                   svn_boolean_t msg_only,
-                                   svn_test_opts_t *opts,
-                                   apr_pool_t *pool)
+test_three_way_merge_with_conflict(apr_pool_t *pool)
 {
-  *msg = "3-way merge, conflicting overlapping changes";
-  if (msg_only)
-    return SVN_NO_ERROR;
-
   SVN_ERR(three_way_merge("dig1", "dug1", "dag1",
                           "Aa\n"
                           "Bb\n"
@@ -1716,10 +1676,7 @@ test_three_way_merge_with_conflict(const char **msg,
 
 
 static svn_error_t *
-test_three_way_merge_conflict_styles(const char **msg,
-                                     svn_boolean_t msg_only,
-                                     svn_test_opts_t *opts,
-                                     apr_pool_t *pool)
+test_three_way_merge_conflict_styles(apr_pool_t *pool)
 {
   static const char *original =
     "a\n"
@@ -1815,11 +1772,6 @@ test_three_way_merge_conflict_styles(const char **msg,
      'k' through 'o'; and they both inserted "hello world yay" in the
      middle.  Also, there are non-conflicting changes to the first and
      last lines. */
-
-  *msg = "3-way merge with conflict styles";
-  if (msg_only)
-    return SVN_NO_ERROR;
-
 
   SVN_ERR(three_way_merge("style-normal1", "style-normal2", "style-normal3",
                           original, modified, latest,
@@ -2093,17 +2045,12 @@ test_three_way_merge_conflict_styles(const char **msg,
 
 
 static svn_error_t *
-random_trivial_merge(const char **msg,
-                     svn_boolean_t msg_only,
-                     svn_test_opts_t *opts,
-                     apr_pool_t *pool)
+random_trivial_merge(apr_pool_t *pool)
 {
   int i;
   apr_pool_t *subpool = svn_pool_create(pool);
 
-  *msg = apr_psprintf(pool, "random trivial merge (seed:%u)", seed_val());
-  if (msg_only)
-    return SVN_NO_ERROR;
+  seed_val();
 
   for (i = 0; i < 5; ++i)
     {
@@ -2150,17 +2097,12 @@ random_trivial_merge(const char **msg,
    selected line is distinct and no two selected lines are adjacent. This
    means the two sets of changes should merge without conflict.  */
 static svn_error_t *
-random_three_way_merge(const char **msg,
-                       svn_boolean_t msg_only,
-                       svn_test_opts_t *opts,
-                       apr_pool_t *pool)
+random_three_way_merge(apr_pool_t *pool)
 {
   int i;
   apr_pool_t *subpool = svn_pool_create(pool);
 
-  *msg = apr_psprintf(pool, "random 3-way merge (seed:%u)", seed_val());
-  if (msg_only)
-    return SVN_NO_ERROR;
+  seed_val();
 
   for (i = 0; i < 20; ++i)
     {
@@ -2223,18 +2165,12 @@ random_three_way_merge(const char **msg,
    present in modified1).  Since the overlapping changes match exactly the
    merge should work without a conflict. */
 static svn_error_t *
-merge_with_part_already_present(const char **msg,
-                                svn_boolean_t msg_only,
-                                svn_test_opts_t *opts,
-                                apr_pool_t *pool)
+merge_with_part_already_present(apr_pool_t *pool)
 {
   int i;
   apr_pool_t *subpool = svn_pool_create(pool);
 
-  *msg = apr_psprintf(pool, "merge with part already present (seed:%u)",
-                      seed_val());
-  if (msg_only)
-    return SVN_NO_ERROR;
+  seed_val();
 
   for (i = 0; i < 20; ++i)
     {
@@ -2301,15 +2237,8 @@ merge_with_part_already_present(const char **msg,
  * http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=35014
  */
 static svn_error_t *
-merge_adjacent_changes(const char **msg,
-                       svn_boolean_t msg_only,
-                       svn_test_opts_t *opts,
-                       apr_pool_t *pool)
+merge_adjacent_changes(apr_pool_t *pool)
 {
-  *msg = "3-way merge, adjacent changes";
-  if (msg_only)
-    return SVN_NO_ERROR;
-
   SVN_ERR(three_way_merge("adj1", "adj2", "adj3",
 
                           "foo\n"
@@ -2344,16 +2273,27 @@ merge_adjacent_changes(const char **msg,
 struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
-    SVN_TEST_PASS(dump_core),
-    SVN_TEST_PASS(test_two_way_unified),
-    SVN_TEST_PASS(test_two_way_unified_suspect),
-    SVN_TEST_PASS(test_three_way_merge_no_overlap),
-    SVN_TEST_PASS(test_three_way_merge_with_overlap),
-    SVN_TEST_PASS(test_three_way_merge_with_conflict),
-    SVN_TEST_PASS(random_trivial_merge),
-    SVN_TEST_PASS(random_three_way_merge),
-    SVN_TEST_PASS(merge_with_part_already_present),
-    SVN_TEST_PASS(merge_adjacent_changes),
-    SVN_TEST_PASS(test_three_way_merge_conflict_styles),
+    SVN_TEST_PASS2(dump_core,
+                   "these dump core"),
+    SVN_TEST_PASS2(test_two_way_unified,
+                   "2-way unified diff and trivial merge"),
+    SVN_TEST_PASS2(test_two_way_unified_suspect,
+                   "2-way unified diff where output is suspect"),
+    SVN_TEST_PASS2(test_three_way_merge_no_overlap,
+                   "3-way merge, non-overlapping changes"),
+    SVN_TEST_PASS2(test_three_way_merge_with_overlap,
+                   "3-way merge, non-conflicting overlapping changes"),
+    SVN_TEST_PASS2(test_three_way_merge_with_conflict,
+                   "3-way merge, conflicting overlapping changes"),
+    SVN_TEST_PASS2(random_trivial_merge,
+                   "random trivial merge"),
+    SVN_TEST_PASS2(random_three_way_merge,
+                   "random 3-way merge"),
+    SVN_TEST_PASS2(merge_with_part_already_present,
+                   "merge with part already present"),
+    SVN_TEST_PASS2(merge_adjacent_changes,
+                   "3-way merge, adjacent changes"),
+    SVN_TEST_PASS2(test_three_way_merge_conflict_styles,
+                   "3-way merge with conflict styles"),
     SVN_TEST_NULL
   };

@@ -118,6 +118,14 @@ svn_client_relocate(const char *path,
 {
   svn_wc_adm_access_t *adm_access;
   struct validator_baton_t vb;
+  svn_node_kind_t kind;
+
+  /* We can't relocate an individual file, so don't even try. */
+  SVN_ERR(svn_io_check_path(path, &kind, pool));
+  if (kind != svn_node_dir)
+    return svn_error_create
+      (SVN_ERR_CLIENT_INVALID_RELOCATION, NULL,
+       _("Cannot relocate a single file"));
 
   /* Get an access baton for PATH. */
   SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, path,

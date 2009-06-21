@@ -54,10 +54,7 @@ range_rand(apr_uint32_t min_val,
 
 /* Explicit tests of various valid/invalid sequences */
 static svn_error_t *
-utf_validate(const char **msg,
-             svn_boolean_t msg_only,
-             svn_test_opts_t *opts,
-             apr_pool_t *pool)
+utf_validate(apr_pool_t *pool)
 {
   struct data {
     svn_boolean_t valid;
@@ -149,12 +146,6 @@ utf_validate(const char **msg,
   };
   int i = 0;
 
-  *msg = "test is_valid/last_valid";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-
-
   while (tests[i].valid != -1)
     {
       const char *last = svn_utf__last_valid(tests[i].string,
@@ -181,18 +172,11 @@ utf_validate(const char **msg,
 
 /* Compare the two different implementations using random data. */
 static svn_error_t *
-utf_validate2(const char **msg,
-              svn_boolean_t msg_only,
-              svn_test_opts_t *opts,
-              apr_pool_t *pool)
+utf_validate2(apr_pool_t *pool)
 {
   int i;
 
-  *msg = apr_psprintf(pool,
-                      "test last_valid/last_valid2 (seed:%u)", seed_val());
-
-  if (msg_only)
-    return SVN_NO_ERROR;
+  seed_val();
 
   /* We want enough iterations so that most runs get both valid and invalid
      strings.  We also want enough iterations such that a deliberate error
@@ -227,10 +211,7 @@ utf_validate2(const char **msg,
 
 /* Test conversion from different codepages to utf8. */
 static svn_error_t *
-test_utf_cstring_to_utf8_ex2(const char **msg,
-                             svn_boolean_t msg_only,
-                             svn_test_opts_t *opts,
-                             apr_pool_t *pool)
+test_utf_cstring_to_utf8_ex2(apr_pool_t *pool)
 {
   apr_size_t i;
   apr_pool_t *subpool = svn_pool_create(pool);
@@ -243,11 +224,6 @@ test_utf_cstring_to_utf8_ex2(const char **msg,
       {"ascii text\n", "ascii text\n", "unexistant-page"},
       {"Edelwei\xdf", "Edelwei\xc3\x9f", "ISO-8859-1"}
   };
-
-  *msg = "test svn_utf_cstring_to_utf8_ex2";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
 
   for (i = 0; i < sizeof(tests) / sizeof(tests[0]); i++)
     {
@@ -275,10 +251,7 @@ test_utf_cstring_to_utf8_ex2(const char **msg,
 
 /* Test conversion to different codepages from utf8. */
 static svn_error_t *
-test_utf_cstring_from_utf8_ex2(const char **msg,
-                               svn_boolean_t msg_only,
-                               svn_test_opts_t *opts,
-                               apr_pool_t *pool)
+test_utf_cstring_from_utf8_ex2(apr_pool_t *pool)
 {
   apr_size_t i;
   apr_pool_t *subpool = svn_pool_create(pool);
@@ -291,11 +264,6 @@ test_utf_cstring_from_utf8_ex2(const char **msg,
       {"ascii text\n", "ascii text\n", "unexistant-page"},
       {"Edelwei\xc3\x9f", "Edelwei\xdf", "ISO-8859-1"}
   };
-
-  *msg = "test svn_utf_cstring_from_utf8_ex2";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
 
   for (i = 0; i < sizeof(tests) / sizeof(tests[0]); i++)
     {
@@ -327,9 +295,13 @@ test_utf_cstring_from_utf8_ex2(const char **msg,
 struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
-    SVN_TEST_PASS(utf_validate),
-    SVN_TEST_PASS(utf_validate2),
-    SVN_TEST_PASS(test_utf_cstring_to_utf8_ex2),
-    SVN_TEST_PASS(test_utf_cstring_from_utf8_ex2),
+    SVN_TEST_PASS2(utf_validate,
+                   "test is_valid/last_valid"),
+    SVN_TEST_PASS2(utf_validate2,
+                   "test last_valid/last_valid2"),
+    SVN_TEST_PASS2(test_utf_cstring_to_utf8_ex2,
+                   "test svn_utf_cstring_to_utf8_ex2"),
+    SVN_TEST_PASS2(test_utf_cstring_from_utf8_ex2,
+                   "test svn_utf_cstring_from_utf8_ex2"),
     SVN_TEST_NULL
   };

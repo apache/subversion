@@ -22,7 +22,7 @@ import time
 
 # Our testing module
 import svntest
-from svntest import wc
+from svntest import main, wc, verify, actions
 
 # (abbreviation)
 Item = wc.StateItem
@@ -15702,6 +15702,140 @@ def multiple_reintegrates_from_the_same_branch(sbox):
                                      'merge', sbox.repo_url + '/A',
                                      A_COPY_path)
 
+#----------------------------------------------------------------------
+
+def merge_replace_causes_tree_conflict(sbox):
+  "replace that causes a tree-conflict"
+
+  ### THIS TEST IS XFAIL because the summary still says it's
+  ### two tree-conflicts (see right at the bottom).
+
+  # svntest.factory.make(sbox,"""
+  #                           # make a branch, do a replace on it.
+  #                           svn cp $URL/A/D/G $URL/branch
+  #                           svn up
+  #                           svn delete branch/rho
+  #                           svn ci
+  #                           echo "replacement for rho" > branch/rho
+  #                           svn add branch/rho
+  #                           svn ci
+  #                           # merge that onto a local modification
+  #                           echo modified > A/D/G/rho
+  #                           svn merge $URL/A/D/G $URL/branch branch
+  #                           svn st
+  #                           """)
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  url = sbox.repo_url
+
+  A_D_G_rho = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
+  branch = os.path.join(wc_dir, 'branch')
+  branch_rho = os.path.join(wc_dir, 'branch', 'rho')
+  url_A_D_G = url + '/A/D/G'
+  url_branch = url + '/branch'
+
+  # make a branch, do a replace on it.
+  # svn cp $URL/A/D/G $URL/branch
+  expected_stdout = verify.UnorderedOutput([
+    '\n',
+    'Committed revision 2.\n',
+  ])
+
+  actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'cp',
+    url_A_D_G, url_branch, '-m', 'copy log')
+
+  # svn up
+  expected_output = svntest.wc.State(wc_dir, {
+    'branch'            : Item(status='A '),
+    'branch/rho'        : Item(status='A '),
+    'branch/pi'         : Item(status='A '),
+    'branch/tau'        : Item(status='A '),
+  })
+
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({
+    'branch/pi'         : Item(contents="This is the file 'pi'.\n"),
+    'branch/rho'        : Item(contents="This is the file 'rho'.\n"),
+    'branch/tau'        : Item(contents="This is the file 'tau'.\n"),
+  })
+
+  expected_status = actions.get_virginal_state(wc_dir, 2)
+  expected_status.add({
+    'branch'            : Item(status='  ', wc_rev='2'),
+    'branch/pi'         : Item(status='  ', wc_rev='2'),
+    'branch/tau'        : Item(status='  ', wc_rev='2'),
+    'branch/rho'        : Item(status='  ', wc_rev='2'),
+  })
+
+  actions.run_and_verify_update(wc_dir, expected_output, expected_disk,
+    expected_status, None, None, None, None, None, False, wc_dir)
+
+  # svn delete branch/rho
+  expected_stdout = ['D         ' + branch_rho + '\n']
+
+  actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'delete',
+    branch_rho)
+
+  # svn ci
+  expected_output = svntest.wc.State(wc_dir, {
+    'branch/rho'        : Item(verb='Deleting'),
+  })
+
+  expected_status.remove('branch/rho')
+
+
+  actions.run_and_verify_commit(wc_dir, expected_output, expected_status,
+    None, wc_dir)
+
+  # echo "replacement for rho" > branch/rho
+  main.file_write(branch_rho, 'replacement for rho')
+
+  # svn add branch/rho
+  expected_stdout = ['A         ' + branch_rho + '\n']
+
+  actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'add',
+    branch_rho)
+
+  # svn ci
+  expected_output = svntest.wc.State(wc_dir, {
+    'branch/rho'        : Item(verb='Adding'),
+  })
+
+  expected_status.add({
+    'branch/rho'        : Item(status='  ', wc_rev='4'),
+  })
+
+
+  actions.run_and_verify_commit(wc_dir, expected_output, expected_status,
+    None, wc_dir)
+
+  # merge that onto a local modification
+  # echo modified > A/D/G/rho
+  main.file_write(A_D_G_rho, 'modified')
+
+  # svn merge $URL/A/D/G $URL/branch branch
+  ### XFAIL because svn currently reports 'Tree conflicts: 2' and
+  ### reports 'C branch_mu' twice.
+  expected_stdout = verify.UnorderedOutput([
+    "--- Merging differences between repository URLs into '" + branch +
+    "':\n",
+    '   C ' + branch_rho + '\n',
+    'Summary of conflicts:\n',
+    '  Tree conflicts: 1\n',
+  ])
+
+  actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'merge',
+    url_A_D_G, url_branch, branch)
+
+  # svn st
+  expected_status.tweak('A/D/G/rho', status='M ')
+  expected_status.tweak('branch', status=' M')
+  expected_status.tweak('branch/rho', treeconflict='C')
+
+  actions.run_and_verify_status(wc_dir, expected_status)
+
+
 ########################################################################
 # Run the tests
 
@@ -15917,6 +16051,7 @@ test_list = [ None,
                          server_has_mergeinfo),
               SkipUnless(multiple_reintegrates_from_the_same_branch,
                          server_has_mergeinfo),
+              XFail(merge_replace_causes_tree_conflict),
              ]
 
 if __name__ == '__main__':

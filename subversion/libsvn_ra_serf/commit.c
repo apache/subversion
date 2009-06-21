@@ -254,17 +254,17 @@ create_checkout_body(void *baton,
   return body_bkt;
 }
 
-static apr_status_t
+/* Implements svn_ra_serf__response_handler_t */
+static svn_error_t *
 handle_checkout(serf_request_t *request,
                 serf_bucket_t *response,
                 void *handler_baton,
                 apr_pool_t *pool)
 {
   checkout_context_t *ctx = handler_baton;
-  apr_status_t status;
 
-  status = svn_ra_serf__handle_status_only(request, response, &ctx->progress,
-                                           pool);
+  SVN_ERR(svn_ra_serf__handle_status_only(request, response,
+                                          &ctx->progress, pool));
 
   /* Get the resulting location. */
   if (ctx->progress.done && ctx->progress.status == 201)
@@ -277,14 +277,14 @@ handle_checkout(serf_request_t *request,
       location = serf_bucket_headers_get(hdrs, "Location");
       if (!location)
         {
-          abort();
+          SVN_ERR_MALFUNCTION();
         }
       apr_uri_parse(pool, location, &uri);
 
       ctx->resource_url = svn_uri_canonicalize(uri.path, ctx->pool);
     }
 
-  return status;
+  return SVN_NO_ERROR;
 }
 
 /* Return the relative path from DIR's topmost parent to DIR, in
@@ -1011,8 +1011,9 @@ post_headers_iterator_callback(void *baton,
 
 /* A custom serf_response_handler_t which is mostly a wrapper around
    svn_ra_serf__handle_status_only -- it just notices POST response
-   headers, too. */
-static apr_status_t
+   headers, too.
+   Implements svn_ra_serf__response_handler_t */
+static svn_error_t *
 post_response_handler(serf_request_t *request,
                       serf_bucket_t *response,
                       void *baton,
@@ -1116,23 +1117,14 @@ open_root(void *edit_baton,
       svn_ra_serf__propfind_context_t *propfind_ctx;
       const char *activity_str;
       const char *vcc_url;
-      svn_error_t *err;
 
       svn_ra_serf__create_options_req(&opt_ctx, ctx->session,
                                       ctx->session->conns[0],
                                       ctx->session->repos_url.path, ctx->pool);
 
-      err = svn_ra_serf__context_run_wait(
+      SVN_ERR(svn_ra_serf__context_run_wait(
         svn_ra_serf__get_options_done_ptr(opt_ctx),
-        ctx->session, ctx->pool);
-
-      /* Return all of the three available errors, favoring the
-         more specific ones over the more generic. */
-      SVN_ERR(svn_error_compose_create(
-        svn_ra_serf__get_options_error(opt_ctx),
-        svn_error_compose_create(
-          svn_ra_serf__get_options_parser_error(opt_ctx),
-          err)));
+        ctx->session, ctx->pool));
 
       activity_str = svn_ra_serf__options_get_activity_collection(opt_ctx);
       if (!activity_str)

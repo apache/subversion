@@ -20,6 +20,7 @@
 
 #define APR_WANT_STRFUNC
 #include <apr_want.h>
+#include <apr_xml.h>
 
 #include "svn_error.h"
 #include "svn_pools.h"
@@ -270,9 +271,12 @@ do_lock(svn_lock_t **lock,
      " <D:locktype><D:write /></D:locktype>" DEBUG_CR
      "%s" /* maybe owner */
      "</D:lockinfo>",
-     (comment
-      ? apr_psprintf(req->pool, " <D:owner>%s</D:owner>" DEBUG_CR, comment)
-      : ""));
+     comment ? apr_pstrcat(pool, 
+                           "<D:owner>",
+                           apr_xml_quote_string(pool, comment, 0),
+                           "</D:owner>",
+                           NULL)
+             : "");
 
   extra_headers = apr_hash_make(req->pool);
   svn_ra_neon__set_header(extra_headers, "Depth", "0");

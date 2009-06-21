@@ -53,6 +53,10 @@ extern "C" {
                    APR_STRINGIFY(SERF_MINOR_VERSION) "." \
                    APR_STRINGIFY(SERF_PATCH_VERSION)
 
+#ifdef WIN32
+#define SVN_RA_SERF_SSPI_ENABLED
+#endif
+
 
 /* Forward declarations. */
 typedef struct svn_ra_serf__session_t svn_ra_serf__session_t;
@@ -392,6 +396,26 @@ svn_ra_serf__context_run_wait(svn_boolean_t *done,
                               svn_ra_serf__session_t *sess,
                               apr_pool_t *pool);
 
+/* Callback for response handlers */
+/* ### The return type should be changed to svn_error_t *,
+       but that is work in progress. */
+typedef svn_error_t *
+(*svn_ra_serf__response_handler_t)(serf_request_t *request,
+                                   serf_bucket_t *response,
+                                   void *handler_baton,
+                                   apr_pool_t *pool);
+
+/* Callback for setting up a complete serf request */
+typedef svn_error_t *
+(*svn_ra_serf__request_setup_t)(serf_request_t *request,
+                                void *setup_baton,
+                                serf_bucket_t **req_bkt,
+                                serf_response_acceptor_t *acceptor,
+                                void **acceptor_baton,
+                                svn_ra_serf__response_handler_t *handler,
+                                void **handler_baton,
+                                apr_pool_t *pool);
+
 /* Callback for when a request body is needed. */
 typedef serf_bucket_t*
 (*svn_ra_serf__request_body_delegate_t)(void *baton,
@@ -438,7 +462,7 @@ typedef struct {
   const char *body_type;
 
   /* The handler and baton pair for our handler. */
-  serf_response_handler_t response_handler;
+  svn_ra_serf__response_handler_t response_handler;
   void *response_baton;
 
   /* The handler and baton pair to be executed when a non-recoverable error
@@ -454,8 +478,8 @@ typedef struct {
    * This just passes through serf's raw request creation parameters.
    * None of the other parameters will be utilized if this field is set.
    */
-  serf_request_setup_t delegate;
-  void *delegate_baton;
+  svn_ra_serf__request_setup_t setup;
+  void *setup_baton;
 
   /* This function and baton pair allows for custom request headers to
    * be set.
@@ -657,10 +681,11 @@ typedef struct {
 /*
  * Serf handler for @a request / @a response pair that takes in a
  * @a baton (@see svn_ra_serf__simple_request_context_t).
+ * Implements svn_ra_serf__response_handler_t.
  *
  * Temporary allocations are made in @a pool.
  */
-apr_status_t
+svn_error_t *
 svn_ra_serf__handle_status_only(serf_request_t *request,
                                 serf_bucket_t *response,
                                 void *baton,
@@ -668,14 +693,14 @@ svn_ra_serf__handle_status_only(serf_request_t *request,
 
 /*
  * Handler that discards the entire @a response body associated with a
- * @a request.
+ * @a request.  Implements svn_ra_serf__response_handler_t.
  *
  * If @a baton is a svn_ra_serf__server_error_t (i.e. non-NULL) and an
  * error is detected, it will be populated for later detection.
  *
  * All temporary allocations will be made in a @a pool.
  */
-apr_status_t
+svn_error_t *
 svn_ra_serf__handle_discard_body(serf_request_t *request,
                                  serf_bucket_t *response,
                                  void *baton,
@@ -684,6 +709,7 @@ svn_ra_serf__handle_discard_body(serf_request_t *request,
 /*
  * Handler that retrieves the embedded XML error response from the
  * the @a response body associated with a @a request.
+ * Implements svn_ra_serf__response_handler_t.
  *
  * All temporary allocations will be made in a @a pool.
  */
@@ -695,12 +721,13 @@ svn_ra_serf__handle_server_error(serf_request_t *request,
 /*
  * Handler that retrieves the embedded XML multistatus response from the
  * the @a RESPONSE body associated with a @a REQUEST. *DONE is set to TRUE.
+ * Implements svn_ra_serf__response_handler_t.
  *
  * The @a BATON should be of type svn_ra_serf__simple_request_context_t.
  *
  * All temporary allocations will be made in a @a pool.
  */
-apr_status_t
+svn_error_t *
 svn_ra_serf__handle_multistatus_only(serf_request_t *request,
                                      serf_bucket_t *response,
                                      void *baton,
@@ -709,17 +736,29 @@ svn_ra_serf__handle_multistatus_only(serf_request_t *request,
 /*
  * This function will feed the RESPONSE body into XMLP.  When parsing is
  * completed (i.e. an EOF is received), *DONE is set to TRUE.
+ * Implements svn_ra_serf__response_handler_t.
  *
  * If an error occurs during processing RESP_ERR is invoked with the
  * RESP_ERR_BATON.
  *
  * Temporary allocations are made in POOL.
  */
-apr_status_t
+svn_error_t *
 svn_ra_serf__handle_xml_parser(serf_request_t *request,
                                serf_bucket_t *response,
                                void *handler_baton,
                                apr_pool_t *pool);
+
+/* serf_response_handler_t implementation that completely discards
+ * the response.
+ *
+ * All temporary allocations will be made in @a pool.
+ */
+apr_status_t
+svn_ra_serf__response_discard_handler(serf_request_t *request,
+                                      serf_bucket_t *response,
+                                      void *baton,
+                                      apr_pool_t *pool);
 
 /** XML helper functions. **/
 
@@ -1032,12 +1071,6 @@ svn_ra_serf__options_get_activity_collection(svn_ra_serf__options_context_t *ctx
 
 svn_revnum_t
 svn_ra_serf__options_get_youngest_rev(svn_ra_serf__options_context_t *ctx);
-
-svn_error_t *
-svn_ra_serf__get_options_error(svn_ra_serf__options_context_t *ctx);
-
-svn_error_t *
-svn_ra_serf__get_options_parser_error(svn_ra_serf__options_context_t *ctx);
 
 /* Create an OPTIONS request.  When run, ask for an
    activity-collection-set in the request body (retrievable via
@@ -1372,9 +1405,9 @@ typedef svn_error_t *
  */
 typedef svn_error_t *
 (*svn_serf__setup_request_func_t)(svn_ra_serf__connection_t *conn,
-				  const char *method,
-				  const char *uri,
-				  serf_bucket_t *hdrs_bkt);
+                                  const char *method,
+                                  const char *uri,
+                                  serf_bucket_t *hdrs_bkt);
 
 /**
  * This function will be called when a response is received, so that the 
@@ -1383,9 +1416,9 @@ typedef svn_error_t *
  */
 typedef svn_error_t *
 (*svn_serf__validate_response_func_t)(svn_ra_serf__handler_t *ctx,
-				      serf_request_t *request,
-				      serf_bucket_t *response,
-				      apr_pool_t *pool);
+                                      serf_request_t *request,
+                                      serf_bucket_t *response,
+                                      apr_pool_t *pool);
 
 /**
  * svn_ra_serf__auth_protocol_t: vtable for an authn protocol provider.
@@ -1447,7 +1480,6 @@ svn_ra_serf__encode_auth_header(const char *protocol,
  */
 svn_error_t *
 svn_ra_serf__error_on_status(int status_code, const char *path);
-
 
 #ifdef __cplusplus
 }

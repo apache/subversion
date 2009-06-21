@@ -132,7 +132,7 @@ SVN_FIND_APACHE(20020903)
 
 dnl Search for SQLite
 SQLITE_MINIMUM_VER="3.4.0"
-SQLITE_RECOMMENDED_VER="3.6.13"
+SQLITE_RECOMMENDED_VER="3.6.15"
 SQLITE_URL="http://www.sqlite.org/sqlite-amalgamation-${SQLITE_RECOMMENDED_VER}.tar.gz"
 SVN_LIB_SQLITE(${SQLITE_MINIMUM_VER}, ${SQLITE_RECOMMENDED_VER},
                ${SQLITE_URL})
@@ -311,6 +311,73 @@ fi
 
 
 dnl Check for libraries --------------------
+
+dnl Expat -------------------
+
+AC_ARG_WITH(expat,
+  AS_HELP_STRING([--with-expat=INCLUDES:LIB_SEARCH_DIRS:LIBS], 
+                 [Specify location of Expat]),
+                 [svn_lib_expat="$withval"],
+                 [svn_lib_expat="::expat"])
+
+AC_MSG_CHECKING([for Expat])
+if test -n "`echo "$svn_lib_expat" | $EGREP ":.*:"`"; then
+  SVN_XML_INCLUDES=""
+  for i in [`echo "$svn_lib_expat" | sed -e "s/\([^:]*\):.*/\1/"`]; do
+    SVN_XML_INCLUDES="$SVN_XML_INCLUDES -I$i"
+  done
+  SVN_XML_INCLUDES="${SVN_XML_INCLUDES## }"
+  for l in [`echo "$svn_lib_expat" | sed -e "s/.*:\([^:]*\):.*/\1/"`]; do
+    LDFLAGS="$LDFLAGS -L$l"
+  done
+  for l in [`echo "$svn_lib_expat" | sed -e "s/.*:\([^:]*\)/\1/"`]; do
+    SVN_XML_LIBS="$SVN_XML_LIBS -l$l"
+  done
+  SVN_XML_LIBS="${SVN_XML_LIBS## }"
+  old_CPPFLAGS="$CPPFLAGS"
+  old_LIBS="$LIBS"
+  CPPFLAGS="$CPPFLAGS $SVN_XML_INCLUDES"
+  LIBS="$LIBS $SVN_XML_LIBS"
+  AC_LINK_IFELSE([
+#include <expat.h>
+int main()
+{XML_ParserCreate(NULL);}], svn_lib_expat="yes", svn_lib_expat="no")
+  if test "$svn_lib_expat" = "yes"; then
+    AC_MSG_RESULT([yes])
+    CPPFLAGS="$old_CPPFLAGS"
+    LIBS="$old_LIBS"
+  else
+    SVN_XML_INCLUDES=""
+    SVN_XML_LIBS=""
+    apu_libs="`$apu_config --libs`"
+    LIBS="$old_LIBS $apu_libs"
+    AC_LINK_IFELSE([
+#include <expat.h>
+int main()
+{XML_ParserCreate(NULL);}], svn_lib_expat="yes", svn_lib_expat="no")
+    if test "$svn_lib_expat" = "yes"; then
+      AC_MSG_RESULT([yes])
+      AC_MSG_WARN([Expat found amongst libraries used by APR-Util, but Subversion libraries might be needlessly linked against additional unused libraries. It can be avoided by specifying exact location of Expat in argument of --with-expat option.])
+      CPPFLAGS="$old_CPPFLAGS"
+    else
+      AC_MSG_RESULT([no])
+      AC_MSG_ERROR([Expat not found])
+    fi
+  fi
+else
+  AC_MSG_RESULT([no])
+  if test "$svn_lib_expat" = "yes"; then
+    AC_MSG_ERROR([--with-expat option requires argument])
+  elif test "$svn_lib_expat" = "no"; then
+    AC_MSG_ERROR([Expat is required])
+  else
+    AC_MSG_ERROR([Invalid syntax of argument of --with-expat option])
+  fi
+fi
+AC_SUBST(SVN_XML_INCLUDES)
+AC_SUBST(SVN_XML_LIBS)
+
+dnl Berkeley DB -------------------
 
 # Berkeley DB on SCO OpenServer needs -lsocket
 AC_CHECK_LIB(socket, socket)
@@ -654,7 +721,6 @@ AC_TYPE_SIZE_T
 
 dnl Check for library functions ----------
 
-dnl libsvn_string uses memcmp()
 AC_FUNC_MEMCMP
 
 dnl svn_error's default warning handler uses vfprintf()
@@ -662,9 +728,6 @@ AC_FUNC_VPRINTF
 
 dnl check for functions needed in special file handling
 AC_CHECK_FUNCS(symlink readlink)
-
-dnl check for function needed for handling of environment variables
-AC_CHECK_FUNCS(setenv)
 
 
 dnl Process some configuration options ----------
@@ -1081,19 +1144,15 @@ dnl Configure is long - users tend to miss warnings printed during it.
 dnl Hence, print a warnings about what we did and didn't configure at the 
 dnl end, where people will actually see them.
 
-case "$svn_lib_berkeley_db" in
-  "no" )
-    db_version="$SVN_FS_WANT_DB_MAJOR.$SVN_FS_WANT_DB_MINOR.$SVN_FS_WANT_DB_PATCH"
-    AC_MSG_WARN([we have configured without BDB filesystem support
+if test "$svn_lib_berkeley_db" = "no" && test "$with_berkeley_db" != "no"; then
+  db_version="$SVN_FS_WANT_DB_MAJOR.$SVN_FS_WANT_DB_MINOR.$SVN_FS_WANT_DB_PATCH"
+  AC_MSG_WARN([we have configured without BDB filesystem support
 
 
 You don't seem to have Berkeley DB version $db_version or newer
-installed and linked to APR-UTIL.  We have created Makefiles which
-will build without the Berkeley DB back-end; your repositories will
-use FSFS as the default back-end.  You can find the latest version of
-Berkeley DB here:
+installed and linked to APR-UTIL.  We have created Makefile which will build
+Subversion without support for the Berkeley DB back-end.  You can find the
+latest version of Berkeley DB here:
   http://www.oracle.com/technology/software/products/berkeley-db/index.html
 ])
-;;
-esac
-
+fi

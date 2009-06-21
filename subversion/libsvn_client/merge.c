@@ -3035,7 +3035,10 @@ ensure_implicit_mergeinfo(svn_client__merge_path_t *parent,
    For forward merges remove any ranges from CHILD->REMAINING_RANGES that
    have already been merged to CHILD->PATH per TARGET_MERGEINFO or
    CHILD->IMPLICIT_MERGEINFO.  For reverse merges remove any ranges from
-   CHILD->REMAINING_RANGES that have not alreay been merged to CHILD->PATH.
+   CHILD->REMAINING_RANGES that have not already been merged to CHILD->PATH
+   per TARGET_MERGEINFO or CHILD->IMPLICIT_MERGEINFO.  If we have deferred
+   obtaining CHILD->IMPLICIT_MERGEINFO and it is necessary to use it for
+   these calculations, then get it from the server, allocating it in POOL.
 
    CHILD represents a working copy path which is the merge target or one of
    target's subtrees, if not NULL, PARENT is CHILD's nearest path-wise

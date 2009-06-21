@@ -40,10 +40,7 @@
 #define SVN_EMPTY_PATH ""
 
 static svn_error_t *
-test_path_is_child(const char **msg,
-                   svn_boolean_t msg_only,
-                   svn_test_opts_t *opts,
-                   apr_pool_t *pool)
+test_path_is_child(apr_pool_t *pool)
 {
   int i, j;
 
@@ -81,11 +78,6 @@ test_path_is_child(const char **msg,
     { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
   };
 
-  *msg = "test svn_path_is_child";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-
   for (i = 0; i < NUM_TEST_PATHS; i++)
     {
       for (j = 0; j < NUM_TEST_PATHS; j++)
@@ -111,10 +103,7 @@ test_path_is_child(const char **msg,
 
 
 static svn_error_t *
-test_path_split(const char **msg,
-                svn_boolean_t msg_only,
-                svn_test_opts_t *opts,
-                apr_pool_t *pool)
+test_path_split(apr_pool_t *pool)
 {
   apr_size_t i;
 
@@ -134,11 +123,6 @@ test_path_split(const char **msg,
     { "/flu\\b/\\blarg", "/flu\\b",       "\\blarg" },
     { "/",               "/",             "/" },
   };
-
-  *msg = "test svn_path_split";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
 
   for (i = 0; i < sizeof(paths) / sizeof(paths[0]); i++)
     {
@@ -165,10 +149,7 @@ test_path_split(const char **msg,
 
 
 static svn_error_t *
-test_path_is_url(const char **msg,
-                 svn_boolean_t msg_only,
-                 svn_test_opts_t *opts,
-                 apr_pool_t *pool)
+test_path_is_url(apr_pool_t *pool)
 {
   apr_size_t i;
 
@@ -203,11 +184,6 @@ test_path_is_url(const char **msg,
     { "//srv/shr/fld", FALSE },
   };
 
-  *msg = "test svn_path_is_url";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-
   for (i = 0; i < sizeof(tests) / sizeof(tests[0]); i++)
     {
       svn_boolean_t retval;
@@ -226,10 +202,7 @@ test_path_is_url(const char **msg,
 
 
 static svn_error_t *
-test_path_is_uri_safe(const char **msg,
-                      svn_boolean_t msg_only,
-                      svn_test_opts_t *opts,
-                      apr_pool_t *pool)
+test_path_is_uri_safe(apr_pool_t *pool)
 {
   apr_size_t i;
 
@@ -249,11 +222,6 @@ test_path_is_uri_safe(const char **msg,
     { "http://svn.collab.net/repos%2a/svn", TRUE  },
   };
 
-  *msg = "test svn_path_is_uri_safe";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-
   for (i = 0; i < (sizeof(tests) / sizeof(tests[0])); i++)
     {
       svn_boolean_t retval;
@@ -272,10 +240,7 @@ test_path_is_uri_safe(const char **msg,
 
 
 static svn_error_t *
-test_uri_encode(const char **msg,
-                svn_boolean_t msg_only,
-                svn_test_opts_t *opts,
-                apr_pool_t *pool)
+test_uri_encode(apr_pool_t *pool)
 {
   int i;
 
@@ -294,11 +259,6 @@ test_uri_encode(const char **msg,
     { "\"Ouch!\"  \"Did that hurt?\"",
          "%22Ouch!%22%20%20%22Did%20that%20hurt%3F%22" }
   };
-
-  *msg = "test svn_path_uri_[en/de]code";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
 
   for (i = 0; i < 5; i++)
     {
@@ -329,10 +289,7 @@ test_uri_encode(const char **msg,
 
 
 static svn_error_t *
-test_uri_decode(const char **msg,
-                svn_boolean_t msg_only,
-                svn_test_opts_t *opts,
-                apr_pool_t *pool)
+test_uri_decode(apr_pool_t *pool)
 {
   int i;
 
@@ -347,11 +304,6 @@ test_uri_decode(const char **msg,
     { "http://c.r.a/s%68me",
          "http://c.r.a/shme" },
   };
-
-  *msg = "test svn_path_uri_decode with invalid escape";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
 
   for (i = 0; i < 3; i++)
     {
@@ -372,10 +324,7 @@ test_uri_decode(const char **msg,
 
 
 static svn_error_t *
-test_uri_autoescape(const char **msg,
-                    svn_boolean_t msg_only,
-                    svn_test_opts_t *opts,
-                    apr_pool_t *pool)
+test_uri_autoescape(apr_pool_t *pool)
 {
   struct {
     const char *path;
@@ -386,11 +335,6 @@ test_uri_autoescape(const char **msg,
     { "http://[::1]", "http://[::1]" }
   };
   int i;
-
-  *msg = "test svn_path_uri_autoescape";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
 
   for (i = 0; i < 3; ++i)
     {
@@ -412,10 +356,7 @@ test_uri_autoescape(const char **msg,
 }
 
 static svn_error_t *
-test_uri_from_iri(const char **msg,
-                  svn_boolean_t msg_only,
-                  svn_test_opts_t *opts,
-                  apr_pool_t *pool)
+test_uri_from_iri(apr_pool_t *pool)
 {
   /* We have to code the IRIs like this because the compiler might translate
      character and string literals outside of ASCII to some character set,
@@ -435,11 +376,6 @@ test_uri_from_iri(const char **msg,
       "file:///ab%20cd" }
   };
   int i;
-
-  *msg = "test svn_path_uri_from_iri";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
 
   for (i = 0; i < 2; ++i)
     {
@@ -461,10 +397,7 @@ test_uri_from_iri(const char **msg,
 }
 
 static svn_error_t *
-test_path_join(const char **msg,
-               svn_boolean_t msg_only,
-               svn_test_opts_t *opts,
-               apr_pool_t *pool)
+test_path_join(apr_pool_t *pool)
 {
   int i;
   char *result;
@@ -520,10 +453,6 @@ test_path_join(const char **msg,
     { "X:/abc", "X:/def", "X:/abc/X:/def" },
 #endif /* non-WIN32 */
   };
-
-  *msg = "test svn_path_join(_many)";
-  if (msg_only)
-    return SVN_NO_ERROR;
 
   for (i = sizeof(joins) / sizeof(joins[0]); i--; )
     {
@@ -635,10 +564,7 @@ test_path_join(const char **msg,
 
 
 static svn_error_t *
-test_path_basename(const char **msg,
-              svn_boolean_t msg_only,
-              svn_test_opts_t *opts,
-              apr_pool_t *pool)
+test_path_basename(apr_pool_t *pool)
 {
   int i;
   char *result;
@@ -678,10 +604,6 @@ test_path_basename(const char **msg,
 #endif /* non-WIN32 */
   };
 
-  *msg = "test svn_path_basename";
-  if (msg_only)
-    return SVN_NO_ERROR;
-
   for (i = sizeof(tests) / sizeof(tests[0]); i--; )
     {
       const char *path = tests[i].path;
@@ -700,10 +622,7 @@ test_path_basename(const char **msg,
 
 
 static svn_error_t *
-test_path_dirname(const char **msg,
-             svn_boolean_t msg_only,
-             svn_test_opts_t *opts,
-             apr_pool_t *pool)
+test_path_dirname(apr_pool_t *pool)
 {
   int i;
   char *result;
@@ -740,10 +659,6 @@ test_path_dirname(const char **msg,
 #endif /* non-WIN32 */
   };
 
-  *msg = "test svn_path_dirname";
-  if (msg_only)
-    return SVN_NO_ERROR;
-
   for (i = sizeof(tests) / sizeof(tests[0]); i--; )
     {
       const char *path = tests[i].path;
@@ -762,10 +677,7 @@ test_path_dirname(const char **msg,
 
 
 static svn_error_t *
-test_path_decompose(const char **msg,
-                    svn_boolean_t msg_only,
-                    svn_test_opts_t *opts,
-                    apr_pool_t *pool)
+test_path_decompose(apr_pool_t *pool)
 {
   static const char * const paths[] = {
     "/", "/", NULL,
@@ -779,10 +691,6 @@ test_path_decompose(const char **msg,
     NULL,
   };
   int i = 0;
-
-  *msg = "test svn_path_decompose";
-  if (msg_only)
-    return SVN_NO_ERROR;
 
   for (;;)
     {
@@ -821,10 +729,7 @@ test_path_decompose(const char **msg,
 }
 
 static svn_error_t *
-test_path_canonicalize(const char **msg,
-                       svn_boolean_t msg_only,
-                       svn_test_opts_t *opts,
-                       apr_pool_t *pool)
+test_path_canonicalize(apr_pool_t *pool)
 {
   struct {
     const char *path;
@@ -909,10 +814,6 @@ test_path_canonicalize(const char **msg,
   };
   int i;
 
-  *msg = "test svn_path_canonicalize";
-  if (msg_only)
-    return SVN_NO_ERROR;
-
   i = 0;
   while (tests[i].path)
     {
@@ -930,10 +831,7 @@ test_path_canonicalize(const char **msg,
 }
 
 static svn_error_t *
-test_path_remove_component(const char **msg,
-                           svn_boolean_t msg_only,
-                           svn_test_opts_t *opts,
-                           apr_pool_t *pool)
+test_path_remove_component(apr_pool_t *pool)
 {
   struct {
     const char *path;
@@ -965,10 +863,6 @@ test_path_remove_component(const char **msg,
   int i;
   svn_stringbuf_t *buf;
 
-  *msg = "test svn_path_remove_component";
-  if (msg_only)
-    return SVN_NO_ERROR;
-
   buf = svn_stringbuf_create("", pool);
 
   i = 0;
@@ -990,10 +884,7 @@ test_path_remove_component(const char **msg,
 }
 
 static svn_error_t *
-test_path_check_valid(const char **msg,
-                      svn_boolean_t msg_only,
-                      svn_test_opts_t *opts,
-                      apr_pool_t *pool)
+test_path_check_valid(apr_pool_t *pool)
 {
   apr_size_t i;
 
@@ -1014,11 +905,6 @@ test_path_check_valid(const char **msg,
     { "",              TRUE },
   };
 
-  *msg = "test svn_path_check_valid";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-
   for (i = 0; i < sizeof(tests) / sizeof(tests[0]); i++)
     {
       svn_error_t *err = svn_path_check_valid(tests[i].path, pool);
@@ -1037,10 +923,7 @@ test_path_check_valid(const char **msg,
 }
 
 static svn_error_t *
-test_path_is_ancestor(const char **msg,
-                      svn_boolean_t msg_only,
-                      svn_test_opts_t *opts,
-                      apr_pool_t *pool)
+test_path_is_ancestor(apr_pool_t *pool)
 {
   apr_size_t i;
 
@@ -1096,11 +979,6 @@ test_path_is_ancestor(const char **msg,
 #endif /* non-WIN32 */
   };
 
-  *msg = "test svn_path_is_ancestor";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-
   for (i = 0; i < sizeof(tests) / sizeof(tests[0]); i++)
     {
       svn_boolean_t retval;
@@ -1117,10 +995,7 @@ test_path_is_ancestor(const char **msg,
 }
 
 static svn_error_t *
-test_is_single_path_component(const char **msg,
-                              svn_boolean_t msg_only,
-                              svn_test_opts_t *opts,
-                              apr_pool_t *pool)
+test_is_single_path_component(apr_pool_t *pool)
 {
   apr_size_t i;
 
@@ -1140,11 +1015,6 @@ test_is_single_path_component(const char **msg,
     { "",              FALSE },
   };
 
-  *msg = "test svn_path_is_single_path_component";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-
   for (i = 0; i < sizeof(tests) / sizeof(tests[0]); i++)
     {
       svn_boolean_t retval;
@@ -1162,10 +1032,7 @@ test_is_single_path_component(const char **msg,
 }
 
 static svn_error_t *
-test_compare_paths(const char **msg,
-                   svn_boolean_t msg_only,
-                   svn_test_opts_t *opts,
-                   apr_pool_t *pool)
+test_compare_paths(apr_pool_t *pool)
 {
   apr_size_t i;
 
@@ -1207,11 +1074,6 @@ test_compare_paths(const char **msg,
 #endif /* WIN32 or Cygwin */
   };
 
-  *msg = "test svn_path_compare_paths";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-
   for (i = 0; i < sizeof(tests) / sizeof(tests[0]); i++)
     {
       int retval;
@@ -1230,10 +1092,7 @@ test_compare_paths(const char **msg,
 }
 
 static svn_error_t *
-test_path_get_longest_ancestor(const char **msg,
-                               svn_boolean_t msg_only,
-                               svn_test_opts_t *opts,
-                               apr_pool_t *pool)
+test_path_get_longest_ancestor(apr_pool_t *pool)
 {
   apr_size_t i;
 
@@ -1290,11 +1149,6 @@ test_path_get_longest_ancestor(const char **msg,
 #endif /* non-WIN32 */
   };
 
-  *msg = "test svn_path_get_longest_ancestor";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-
   for (i = 0; i < sizeof(tests) / sizeof(tests[0]); i++)
     {
       const char *retval;
@@ -1323,10 +1177,7 @@ test_path_get_longest_ancestor(const char **msg,
 
 
 static svn_error_t *
-test_path_splitext(const char **msg,
-                   svn_boolean_t msg_only,
-                   svn_test_opts_t *opts,
-                   apr_pool_t *pool)
+test_path_splitext(apr_pool_t *pool)
 {
   apr_size_t i;
   apr_pool_t *subpool = svn_pool_create(pool);
@@ -1355,11 +1206,6 @@ test_path_splitext(const char **msg,
     { "a.out",                     "a.",                     "out" },
     { "",                          "",                       "" },
   };
-
-  *msg = "test svn_path_splitext";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
 
   for (i = 0; i < sizeof(tests) / sizeof(tests[0]); i++)
     {
@@ -1406,10 +1252,7 @@ test_path_splitext(const char **msg,
 
 
 static svn_error_t *
-test_path_compose(const char **msg,
-                  svn_boolean_t msg_only,
-                  svn_test_opts_t *opts,
-                  apr_pool_t *pool)
+test_path_compose(apr_pool_t *pool)
 {
   static const char * const paths[] = {
     "",
@@ -1424,10 +1267,6 @@ test_path_compose(const char **msg,
   };
   const char * const *path_ptr = paths;
   const char *input_path;
-
-  *msg = "test svn_path_decompose";
-  if (msg_only)
-    return SVN_NO_ERROR;
 
   for (input_path = *path_ptr; *path_ptr; input_path = *++path_ptr)
     {
@@ -1446,10 +1285,7 @@ test_path_compose(const char **msg,
 }
 
 static svn_error_t *
-test_path_is_canonical(const char **msg,
-                       svn_boolean_t msg_only,
-                       svn_test_opts_t *opts,
-                       apr_pool_t *pool)
+test_path_is_canonical(apr_pool_t *pool)
 {
   struct {
     const char *path;
@@ -1518,10 +1354,6 @@ test_path_is_canonical(const char **msg,
   };
   int i;
 
-  *msg = "test svn_path_is_canonical";
-  if (msg_only)
-    return SVN_NO_ERROR;
-
   for (i = 0; tests[i].path; i++)
     {
       svn_boolean_t canonical;
@@ -1540,10 +1372,7 @@ test_path_is_canonical(const char **msg,
 }
 
 static svn_error_t *
-test_path_local_style(const char **msg,
-                       svn_boolean_t msg_only,
-                       svn_test_opts_t *opts,
-                       apr_pool_t *pool)
+test_path_local_style(apr_pool_t *pool)
 {
   struct {
     const char *path;
@@ -1567,13 +1396,8 @@ test_path_local_style(const char **msg,
 #endif
     { NULL, NULL }
   };
-  int i;
+  int i = 0;
 
-  *msg = "test svn_path_local_style";
-  if (msg_only)
-    return SVN_NO_ERROR;
-
-  i = 0;
   while (tests[i].path)
     {
       const char *local = svn_path_local_style(tests[i].path, pool);
@@ -1590,10 +1414,7 @@ test_path_local_style(const char **msg,
 }
 
 static svn_error_t *
-test_path_internal_style(const char **msg,
-                         svn_boolean_t msg_only,
-                         svn_test_opts_t *opts,
-                         apr_pool_t *pool)
+test_path_internal_style(apr_pool_t *pool)
 {
   struct {
     const char *path;
@@ -1620,10 +1441,6 @@ test_path_internal_style(const char **msg,
     { NULL, NULL }
   };
   int i;
-
-  *msg = "test svn_path_internal_style";
-  if (msg_only)
-    return SVN_NO_ERROR;
 
   i = 0;
   while (tests[i].path)
@@ -1655,29 +1472,53 @@ test_path_internal_style(const char **msg,
 struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
-    SVN_TEST_PASS(test_path_is_child),
-    SVN_TEST_PASS(test_path_split),
-    SVN_TEST_PASS(test_path_is_url),
-    SVN_TEST_PASS(test_path_is_uri_safe),
-    SVN_TEST_PASS(test_uri_encode),
-    SVN_TEST_PASS(test_uri_decode),
-    SVN_TEST_PASS(test_uri_autoescape),
-    SVN_TEST_PASS(test_uri_from_iri),
-    SVN_TEST_PASS(test_path_join),
-    SVN_TEST_PASS(test_path_basename),
-    SVN_TEST_PASS(test_path_dirname),
-    SVN_TEST_PASS(test_path_decompose),
-    SVN_TEST_PASS(test_path_canonicalize),
-    SVN_TEST_PASS(test_path_remove_component),
-    SVN_TEST_PASS(test_path_is_ancestor),
-    SVN_TEST_PASS(test_path_check_valid),
-    SVN_TEST_PASS(test_is_single_path_component),
-    SVN_TEST_PASS(test_compare_paths),
-    SVN_TEST_PASS(test_path_get_longest_ancestor),
-    SVN_TEST_PASS(test_path_splitext),
-    SVN_TEST_PASS(test_path_compose),
-    SVN_TEST_PASS(test_path_is_canonical),
-    SVN_TEST_PASS(test_path_local_style),
-    SVN_TEST_PASS(test_path_internal_style),
+    SVN_TEST_PASS2(test_path_is_child,
+                   "test svn_path_is_child"),
+    SVN_TEST_PASS2(test_path_split,
+                   "test svn_path_split"),
+    SVN_TEST_PASS2(test_path_is_url,
+                   "test svn_path_is_url"),
+    SVN_TEST_PASS2(test_path_is_uri_safe,
+                   "test svn_path_is_uri_safe"),
+    SVN_TEST_PASS2(test_uri_encode,
+                   "test svn_path_uri_[en/de]code"),
+    SVN_TEST_PASS2(test_uri_decode,
+                   "test svn_path_uri_decode with invalid escape"),
+    SVN_TEST_PASS2(test_uri_autoescape,
+                   "test svn_path_uri_autoescape"),
+    SVN_TEST_PASS2(test_uri_from_iri,
+                   "test svn_path_uri_from_iri"),
+    SVN_TEST_PASS2(test_path_join,
+                   "test svn_path_join(_many)"),
+    SVN_TEST_PASS2(test_path_basename,
+                   "test svn_path_basename"),
+    SVN_TEST_PASS2(test_path_dirname,
+                   "test svn_path_dirname"),
+    SVN_TEST_PASS2(test_path_decompose,
+                   "test svn_path_decompose"),
+    SVN_TEST_PASS2(test_path_canonicalize,
+                   "test svn_path_canonicalize"),
+    SVN_TEST_PASS2(test_path_remove_component,
+                   "test svn_path_remove_component"),
+    SVN_TEST_PASS2(test_path_is_ancestor,
+                   "test svn_path_is_ancestor"),
+    SVN_TEST_PASS2(test_path_check_valid,
+                   "test svn_path_check_valid"),
+    SVN_TEST_PASS2(test_is_single_path_component,
+                   "test svn_path_is_single_path_component"),
+    SVN_TEST_PASS2(test_compare_paths,
+                   "test svn_path_compare_paths"),
+    SVN_TEST_PASS2(test_path_get_longest_ancestor,
+                   "test svn_path_get_longest_ancestor"),
+    SVN_TEST_PASS2(test_path_splitext,
+                   "test svn_path_splitext"),
+    SVN_TEST_PASS2(test_path_compose,
+                   "test svn_path_decompose"),
+    SVN_TEST_PASS2(test_path_is_canonical,
+                   "test svn_path_is_canonical"),
+    SVN_TEST_PASS2(test_path_local_style,
+                   "test svn_path_local_style"),
+    SVN_TEST_PASS2(test_path_internal_style,
+                   "test svn_path_internal_style"),
     SVN_TEST_NULL
   };

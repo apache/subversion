@@ -68,9 +68,6 @@ struct svn_ra_serf__options_context_t {
   options_state_list_t *state;
   options_state_list_t *free_state;
 
-  /* Return error code */
-  svn_error_t *error;
-
   /* HTTP Status code */
   int status_code;
 
@@ -242,19 +239,6 @@ svn_ra_serf__options_get_youngest_rev(svn_ra_serf__options_context_t *ctx)
   return ctx->youngest_rev;
 }
 
-svn_error_t *
-svn_ra_serf__get_options_error(svn_ra_serf__options_context_t *ctx)
-{
-  return ctx->error;
-}
-
-svn_error_t *
-svn_ra_serf__get_options_parser_error(svn_ra_serf__options_context_t *ctx)
-{
-  return ctx->parser_ctx->error;
-}
-
-
 /* Context for both options_response_handler() and capabilities callback. */
 struct options_response_ctx_t {
   /* Baton for __handle_xml_parser() */
@@ -380,8 +364,9 @@ capabilities_headers_iterator_callback(void *baton,
 
 /* A custom serf_response_handler_t which is mostly a wrapper around
    svn_ra_serf__handle_xml_parser -- it just notices OPTIONS response
-   headers first, before handing off to the xml parser.  */
-static apr_status_t
+   headers first, before handing off to the xml parser.
+   Implements svn_ra_serf__response_handler_t */
+static svn_error_t *
 options_response_handler(serf_request_t *request,
                          serf_bucket_t *response,
                          void *baton,
@@ -402,7 +387,8 @@ options_response_handler(serf_request_t *request,
   serf_bucket_headers_do(hdrs, capabilities_headers_iterator_callback, orc);
 
   /* Execute the 'real' response handler to XML-parse the repsonse body. */
-  return svn_ra_serf__handle_xml_parser(request, response, orc->parser_ctx, pool);
+  return svn_ra_serf__handle_xml_parser(request, response,
+                                        orc->parser_ctx, pool);
 }
 
 
@@ -477,22 +463,15 @@ svn_ra_serf__exchange_capabilities(svn_ra_serf__session_t *serf_sess,
                                    apr_pool_t *pool)
 {
   svn_ra_serf__options_context_t *opt_ctx;
-  svn_error_t *err;
 
   /* This routine automatically fills in serf_sess->capabilities */
   svn_ra_serf__create_options_req(&opt_ctx, serf_sess, serf_sess->conns[0],
                                   serf_sess->repos_url_str, pool);
 
-  err = svn_ra_serf__context_run_wait(
-    svn_ra_serf__get_options_done_ptr(opt_ctx), serf_sess, pool);
+  SVN_ERR(svn_ra_serf__context_run_wait(
+    svn_ra_serf__get_options_done_ptr(opt_ctx), serf_sess, pool));
 
-  /* Return all of the three available errors, favoring the
-     more specific ones over the more generic. */
-  return svn_error_compose_create(
-    svn_ra_serf__get_options_error(opt_ctx),
-    svn_error_compose_create(
-      svn_ra_serf__get_options_parser_error(opt_ctx),
-      err));
+  return SVN_NO_ERROR;
 }
 
 

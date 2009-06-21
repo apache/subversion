@@ -1133,11 +1133,6 @@ main(int argc, const char *argv[])
     }
 #endif
 
-#ifdef HAVE_SETENV
-  /* svn can safely create instance of QApplication class. */
-  setenv("SVN_QAPPLICATION_SAFE", "1", 1);
-#endif
-
   /* Initialize the RA library. */
   err = svn_ra_initialize(pool);
   if (err)
@@ -2055,6 +2050,9 @@ main(int argc, const char *argv[])
                                            ctx->cancel_baton,
                                            pool)))
     svn_handle_error2(err, stderr, TRUE, "svn: ");
+
+  /* svn can safely create instance of QApplication class. */
+  svn_auth_set_parameter(ab, "svn:auth:qapplication-safe", "1");
 
   ctx->auth_baton = ab;
 

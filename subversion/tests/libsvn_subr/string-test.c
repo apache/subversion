@@ -2,7 +2,7 @@
  * string-test.c:  a collection of libsvn_string tests
  *
  * ====================================================================
- * Copyright (c) 2000-2004, 2008 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004, 2008-2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -61,16 +61,8 @@ const char *phrase_2 = "a longish phrase of sorts, longer than 16 anyway";
 
 
 static svn_error_t *
-test1(const char **msg,
-      svn_boolean_t msg_only,
-      svn_test_opts_t *opts,
-      apr_pool_t *pool)
+test1(apr_pool_t *pool)
 {
-  *msg = "make svn_stringbuf_t from cstring";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-
   a = svn_stringbuf_create(phrase_1, pool);
 
   /* Test that length, data, and null-termination are correct. */
@@ -82,16 +74,8 @@ test1(const char **msg,
 
 
 static svn_error_t *
-test2(const char **msg,
-      svn_boolean_t msg_only,
-      svn_test_opts_t *opts,
-      apr_pool_t *pool)
+test2(apr_pool_t *pool)
 {
-  *msg = "make svn_stringbuf_t from substring of cstring";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-
   b = svn_stringbuf_ncreate(phrase_2, 16, pool);
 
   /* Test that length, data, and null-termination are correct. */
@@ -103,18 +87,10 @@ test2(const char **msg,
 
 
 static svn_error_t *
-test3(const char **msg,
-      svn_boolean_t msg_only,
-      svn_test_opts_t *opts,
-      apr_pool_t *pool)
+test3(apr_pool_t *pool)
 {
   char *tmp;
   size_t old_len;
-
-  *msg = "append svn_stringbuf_t to svn_stringbuf_t";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
 
   a = svn_stringbuf_create(phrase_1, pool);
   b = svn_stringbuf_ncreate(phrase_2, 16, pool);
@@ -134,16 +110,8 @@ test3(const char **msg,
 
 
 static svn_error_t *
-test4(const char **msg,
-      svn_boolean_t msg_only,
-      svn_test_opts_t *opts,
-      apr_pool_t *pool)
+test4(apr_pool_t *pool)
 {
-  *msg = "append C string to svn_stringbuf_t";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-
   a = svn_stringbuf_create(phrase_1, pool);
   svn_stringbuf_appendcstr(a, "new bytes to append");
 
@@ -157,16 +125,8 @@ test4(const char **msg,
 
 
 static svn_error_t *
-test5(const char **msg,
-      svn_boolean_t msg_only,
-      svn_test_opts_t *opts,
-      apr_pool_t *pool)
+test5(apr_pool_t *pool)
 {
-  *msg = "append bytes, then compare two strings";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-
   a = svn_stringbuf_create(phrase_1, pool);
   svn_stringbuf_appendbytes(a, "new bytes to append", 9);
 
@@ -180,16 +140,8 @@ test5(const char **msg,
 
 
 static svn_error_t *
-test6(const char **msg,
-      svn_boolean_t msg_only,
-      svn_test_opts_t *opts,
-      apr_pool_t *pool)
+test6(apr_pool_t *pool)
 {
-  *msg = "dup two strings, then compare";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-
   a = svn_stringbuf_create(phrase_1, pool);
   b = svn_stringbuf_create(phrase_2, pool);
   c = svn_stringbuf_dup(a, pool);
@@ -203,18 +155,10 @@ test6(const char **msg,
 
 
 static svn_error_t *
-test7(const char **msg,
-      svn_boolean_t msg_only,
-      svn_test_opts_t *opts,
-      apr_pool_t *pool)
+test7(apr_pool_t *pool)
 {
   char *tmp;
   size_t tmp_len;
-
-  *msg = "chopping a string";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
 
   c = svn_stringbuf_create(phrase_2, pool);
 
@@ -234,16 +178,8 @@ test7(const char **msg,
 
 
 static svn_error_t *
-test8(const char **msg,
-      svn_boolean_t msg_only,
-      svn_test_opts_t *opts,
-      apr_pool_t *pool)
+test8(apr_pool_t *pool)
 {
-  *msg = "emptying a string";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-
   c = svn_stringbuf_create(phrase_2, pool);
 
   svn_stringbuf_setempty(c);
@@ -256,16 +192,8 @@ test8(const char **msg,
 
 
 static svn_error_t *
-test9(const char **msg,
-      svn_boolean_t msg_only,
-      svn_test_opts_t *opts,
-      apr_pool_t *pool)
+test9(apr_pool_t *pool)
 {
-  *msg = "fill string with hashmarks";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-
   a = svn_stringbuf_create(phrase_1, pool);
 
   svn_stringbuf_fillchar(a, '#');
@@ -282,21 +210,13 @@ test9(const char **msg,
 
 
 static svn_error_t *
-test10(const char **msg,
-       svn_boolean_t msg_only,
-       svn_test_opts_t *opts,
-       apr_pool_t *pool)
+test10(apr_pool_t *pool)
 {
   svn_stringbuf_t *s, *t;
   size_t len_1 = 0;
   size_t len_2 = 0;
   size_t block_len_1 = 0;
   size_t block_len_2 = 0;
-
-  *msg = "block initialization and growth";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
 
   s = svn_stringbuf_create("a small string", pool);
   len_1       = (s->len);
@@ -322,17 +242,9 @@ test10(const char **msg,
 
 
 static svn_error_t *
-test11(const char **msg,
-       svn_boolean_t msg_only,
-       svn_test_opts_t *opts,
-       apr_pool_t *pool)
+test11(apr_pool_t *pool)
 {
   svn_stringbuf_t *s;
-
-  *msg = "formatting strings from varargs";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
 
   s = svn_stringbuf_createf(pool,
                             "This %s is used in test %d.",
@@ -385,10 +297,7 @@ check_string_contents(svn_stringbuf_t *string,
 
 
 static svn_error_t *
-test12(const char **msg,
-       svn_boolean_t msg_only,
-       svn_test_opts_t *opts,
-       apr_pool_t *pool)
+test12(apr_pool_t *pool)
 {
   svn_stringbuf_t *s;
   const char fname[] = "string-test.tmp";
@@ -400,11 +309,6 @@ test12(const char **msg,
     "Just some boring text. Avoiding newlines 'cos I don't know"
     "if any of the Subversion platfoms will mangle them! There's no"
     "need to test newline handling here anyway, it's not relevant.";
-
-  *msg = "create string from file";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
 
   status = apr_file_open(&file, fname, APR_WRITE | APR_TRUNCATE | APR_CREATE,
                          APR_OS_DEFAULT, pool);
@@ -468,13 +372,9 @@ test_find_char_backward(const char* data,
                         apr_size_t len,
                         char ch,
                         apr_size_t pos,
-                        svn_boolean_t msg_only,
                         apr_pool_t *pool)
 {
   apr_size_t i;
-
-  if (msg_only)
-    return SVN_NO_ERROR;
 
   a = svn_stringbuf_create(data, pool);
   i = svn_stringbuf_find_char_backward(a, ch);
@@ -486,92 +386,59 @@ test_find_char_backward(const char* data,
 }
 
 static svn_error_t *
-test13(const char **msg,
-       svn_boolean_t msg_only,
-       svn_test_opts_t *opts,
-       apr_pool_t *pool)
+test13(apr_pool_t *pool)
 {
-  *msg = "find_char_backward; middle case";
   a = svn_stringbuf_create("test, test", pool);
 
-  return
-    test_find_char_backward(a->data, a->len, ',', 4, msg_only, pool);
+  return test_find_char_backward(a->data, a->len, ',', 4, pool);
 }
 
 static svn_error_t *
-test14(const char **msg,
-       svn_boolean_t msg_only,
-       svn_test_opts_t *opts,
-       apr_pool_t *pool)
+test14(apr_pool_t *pool)
 {
-  *msg = "find_char_backward; 0 case";
-
   a = svn_stringbuf_create(",test test", pool);
 
-  return
-    test_find_char_backward(a->data, a->len, ',', 0, msg_only, pool);
+  return test_find_char_backward(a->data, a->len, ',', 0, pool);
 }
 
 static svn_error_t *
-test15(const char **msg,
-       svn_boolean_t msg_only,
-       svn_test_opts_t *opts,
-       apr_pool_t *pool)
+test15(apr_pool_t *pool)
 {
-  *msg = "find_char_backward; strlen - 1 case";
-
   a = svn_stringbuf_create("testing,", pool);
 
   return test_find_char_backward(a->data,
                                  a->len,
                                  ',',
                                  a->len - 1,
-                                 msg_only,
                                  pool);
 }
 
 static svn_error_t *
-test16(const char **msg,
-       svn_boolean_t msg_only,
-       svn_test_opts_t *opts,
-       apr_pool_t *pool)
+test16(apr_pool_t *pool)
 {
-  *msg = "find_char_backward; len = 0 case";
-
   a = svn_stringbuf_create("", pool);
 
-  return
-    test_find_char_backward(a->data, a->len, ',', 0, msg_only, pool);
+  return test_find_char_backward(a->data, a->len, ',', 0, pool);
 }
 
 static svn_error_t *
-test17(const char **msg,
-       svn_boolean_t msg_only,
-       svn_test_opts_t *opts,
-       apr_pool_t *pool)
+test17(apr_pool_t *pool)
 {
-  *msg = "find_char_backward; no occurence case";
-
   a = svn_stringbuf_create("test test test", pool);
 
   return test_find_char_backward(a->data,
                                  a->len,
                                  ',',
                                  a->len,
-                                 msg_only,
                                  pool);
 }
 
 static svn_error_t *
 test_first_non_whitespace(const char *str,
                           const apr_size_t pos,
-                          svn_boolean_t msg_only,
                           apr_pool_t *pool)
 {
   apr_size_t i;
-
-  if (msg_only)
-    return SVN_NO_ERROR;
 
   a = svn_stringbuf_create(str, pool);
 
@@ -584,49 +451,26 @@ test_first_non_whitespace(const char *str,
 }
 
 static svn_error_t *
-test18(const char **msg,
-       svn_boolean_t msg_only,
-       svn_test_opts_t *opts,
-       apr_pool_t *pool)
+test18(apr_pool_t *pool)
 {
-  *msg = "check whitespace removal; common case";
-
-  return test_first_non_whitespace("   \ttest", 4, msg_only, pool);
+  return test_first_non_whitespace("   \ttest", 4, pool);
 }
 
 static svn_error_t *
-test19(const char **msg,
-       svn_boolean_t msg_only,
-       svn_test_opts_t *opts,
-       apr_pool_t *pool)
+test19(apr_pool_t *pool)
 {
-  *msg = "check whitespace removal; no whitespace case";
-
-  return test_first_non_whitespace("test", 0, msg_only, pool);
+  return test_first_non_whitespace("test", 0, pool);
 }
 
 static svn_error_t *
-test20(const char **msg,
-       svn_boolean_t msg_only,
-       svn_test_opts_t *opts,
-       apr_pool_t *pool)
+test20(apr_pool_t *pool)
 {
-  *msg = "check whitespace removal; all whitespace case";
-
-  return test_first_non_whitespace("   ", 3, msg_only, pool);
+  return test_first_non_whitespace("   ", 3, pool);
 }
 
 static svn_error_t *
-test21(const char **msg,
-       svn_boolean_t msg_only,
-       svn_test_opts_t *opts,
-       apr_pool_t *pool)
+test21(apr_pool_t *pool)
 {
-  *msg = "check that whitespace will be stripped correctly";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-
   a = svn_stringbuf_create("    \ttest\t\t  \t  ", pool);
   b = svn_stringbuf_create("test", pool);
 
@@ -641,12 +485,8 @@ test21(const char **msg,
 static svn_error_t *
 test_stringbuf_unequal(const char* str1,
                        const char* str2,
-                       svn_boolean_t msg_only,
                        apr_pool_t *pool)
 {
-  if (msg_only)
-    return SVN_NO_ERROR;
-
   a = svn_stringbuf_create(str1, pool);
   b = svn_stringbuf_create(str2, pool);
 
@@ -657,25 +497,15 @@ test_stringbuf_unequal(const char* str1,
 }
 
 static svn_error_t *
-test22(const char **msg,
-       svn_boolean_t msg_only,
-       svn_test_opts_t *opts,
-       apr_pool_t *pool)
+test22(apr_pool_t *pool)
 {
-  *msg = "compare stringbufs; different lengths";
-
-  return test_stringbuf_unequal("abc", "abcd", msg_only, pool);
+  return test_stringbuf_unequal("abc", "abcd", pool);
 }
 
 static svn_error_t *
-test23(const char **msg,
-       svn_boolean_t msg_only,
-       svn_test_opts_t *opts,
-       apr_pool_t *pool)
+test23(apr_pool_t *pool)
 {
-  *msg = "compare stringbufs; same length, different content";
-
-  return test_stringbuf_unequal("abc", "abb", msg_only, pool);
+  return test_stringbuf_unequal("abc", "abb", pool);
 }
 
 /*
@@ -689,28 +519,51 @@ test23(const char **msg,
 struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
-    SVN_TEST_PASS(test1),
-    SVN_TEST_PASS(test2),
-    SVN_TEST_PASS(test3),
-    SVN_TEST_PASS(test4),
-    SVN_TEST_PASS(test5),
-    SVN_TEST_PASS(test6),
-    SVN_TEST_PASS(test7),
-    SVN_TEST_PASS(test8),
-    SVN_TEST_PASS(test9),
-    SVN_TEST_PASS(test10),
-    SVN_TEST_PASS(test11),
-    SVN_TEST_PASS(test12),
-    SVN_TEST_PASS(test13),
-    SVN_TEST_PASS(test14),
-    SVN_TEST_PASS(test15),
-    SVN_TEST_PASS(test16),
-    SVN_TEST_PASS(test17),
-    SVN_TEST_PASS(test18),
-    SVN_TEST_PASS(test19),
-    SVN_TEST_PASS(test20),
-    SVN_TEST_PASS(test21),
-    SVN_TEST_PASS(test22),
-    SVN_TEST_PASS(test23),
+    SVN_TEST_PASS2(test1,
+                   "make svn_stringbuf_t from cstring"),
+    SVN_TEST_PASS2(test2,
+                   "make svn_stringbuf_t from substring of cstring"),
+    SVN_TEST_PASS2(test3,
+                   "append svn_stringbuf_t to svn_stringbuf_t"),
+    SVN_TEST_PASS2(test4,
+                   "append C string to svn_stringbuf_t"),
+    SVN_TEST_PASS2(test5,
+                   "append bytes, then compare two strings"),
+    SVN_TEST_PASS2(test6,
+                   "dup two strings, then compare"),
+    SVN_TEST_PASS2(test7,
+                   "chopping a string"),
+    SVN_TEST_PASS2(test8,
+                   "emptying a string"),
+    SVN_TEST_PASS2(test9,
+                   "fill string with hashmarks"),
+    SVN_TEST_PASS2(test10,
+                   "block initialization and growth"),
+    SVN_TEST_PASS2(test11,
+                   "formatting strings from varargs"),
+    SVN_TEST_PASS2(test12,
+                   "create string from file"),
+    SVN_TEST_PASS2(test13,
+                   "find_char_backward; middle case"),
+    SVN_TEST_PASS2(test14,
+                   "find_char_backward; 0 case"),
+    SVN_TEST_PASS2(test15,
+                   "find_char_backward; strlen - 1 case"),
+    SVN_TEST_PASS2(test16,
+                   "find_char_backward; len = 0 case"),
+    SVN_TEST_PASS2(test17,
+                   "find_char_backward; no occurence case"),
+    SVN_TEST_PASS2(test18,
+                   "check whitespace removal; common case"),
+    SVN_TEST_PASS2(test19,
+                   "check whitespace removal; no whitespace case"),
+    SVN_TEST_PASS2(test20,
+                   "check whitespace removal; all whitespace case"),
+    SVN_TEST_PASS2(test21,
+                   "check that whitespace will be stripped correctly"),
+    SVN_TEST_PASS2(test22,
+                   "compare stringbufs; different lengths"),
+    SVN_TEST_PASS2(test23,
+                   "compare stringbufs; same length, different content"),
     SVN_TEST_NULL
   };

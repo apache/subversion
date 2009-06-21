@@ -1,5 +1,5 @@
 Version 1.6.3
-(?? Jun 2009, from /branches/1.6.x)
+(19 Jun 2009, from /branches/1.6.x)
 http://svn.collab.net/repos/svn/tags/1.6.3
 
  User-visible changes:
@@ -19,14 +19,19 @@ http://svn.collab.net/repos/svn/tags/1.6.3
   * ra_svn clients now use TCP keep-alives if available (issue #3347)
   * improve 'svn merge' perf by reducing server contact (r37491, -593, -618)
   * stop propagating self-referential mergeinfo in reintegrate merges (r37931)
-  * Fix NLS detection where -liconv is required for bindtextdomain() (r37827)
-  * Bump apr and apr-util versions included in deps to latest. (r37941)
+  * fix NLS detection where -liconv is required for bindtextdomain() (r37827)
+  * don't delete unversioned files with 'rm --keel-local' (r38015, -17, -19)
+  * bump apr and apr-util versions included in deps to latest. (r37941)
+  * avoid temp file name collisions with ra_serf, ra_neon (r37972)
   * fixed: potential segfault with noop file merges (r37779)
   * fixed: incorrect output with 'svn blame -g' (r37719, -23, -41)
   * fixed: bindings don't load FS libs when module search enabled (issue #3413)
   * fixed: potential abort() in the working copy library (r37857)
+  * fixed: memory leak in hash reading functions (r37868, -979)
 
  Developer-visible changes:
+  * improve memory usage in file-to-stringbuf APIs (r37907)
+  * reduce memory usage for temp string manipulation (r38010)
 
 
 Version 1.6.2

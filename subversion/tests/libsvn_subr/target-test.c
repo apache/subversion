@@ -2,7 +2,7 @@
  * target-test.c: test the condense_targets functions
  *
  * ====================================================================
- * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -132,10 +132,7 @@ condense_targets_tests_helper(const char* title,
 
 
 static svn_error_t *
-test_path_condense_targets(const char **msg,
-                           svn_boolean_t msg_only,
-                           svn_test_opts_t *opts,
-                           apr_pool_t *pool)
+test_path_condense_targets(apr_pool_t *pool)
 {
   int i;
   struct {
@@ -169,11 +166,6 @@ test_path_condense_targets(const char **msg,
      "", "%/z/A,http://host/A/C" },
   };
 
-  *msg = "test svn_path_condense_targets";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-
   for (i = 0; i < sizeof(tests) / sizeof(tests[0]); i++)
     {
       SVN_ERR(condense_targets_tests_helper(tests[i].title,
@@ -195,6 +187,7 @@ test_path_condense_targets(const char **msg,
 struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
-    SVN_TEST_PASS(test_path_condense_targets),
+    SVN_TEST_PASS2(test_path_condense_targets,
+                   "test svn_path_condense_targets"),
     SVN_TEST_NULL
   };
