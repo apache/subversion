@@ -53,6 +53,10 @@ extern "C" {
                    APR_STRINGIFY(SERF_MINOR_VERSION) "." \
                    APR_STRINGIFY(SERF_PATCH_VERSION)
 
+#ifdef WIN32
+#define SVN_RA_SERF_SSPI_ENABLED
+#endif
+
 
 /* Forward declarations. */
 typedef struct svn_ra_serf__session_t svn_ra_serf__session_t;
