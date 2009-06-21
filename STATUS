@@ -88,11 +88,3 @@ Approved changes:
      small change without which svn won't work at all on such systems.
    Votes:
      +1: steveking, rhuijben, arfrever
-
- * r38068
-   Fix issue #3119, "File '...' already exists" when it obviously doesn't,
-   during commit.
-   Justification:
-     This was introduced in 1.5.1 and propagated till now.
-   Votes:
-     +1: stylesen, rhuijben, arfrever
