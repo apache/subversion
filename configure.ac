@@ -347,8 +347,22 @@ int main()
     CPPFLAGS="$old_CPPFLAGS"
     LIBS="$old_LIBS"
   else
-    AC_MSG_RESULT([no])
-    AC_MSG_ERROR([Expat not found])
+    apu_libs="`$apu_config --libs`"
+    LIBS="$LIBS $apu_libs"
+    AC_LINK_IFELSE([
+#include <expat.h>
+int main()
+{XML_ParserCreate(NULL);}], svn_lib_expat="yes", svn_lib_expat="no")
+    if test "$svn_lib_expat" = "yes"; then
+      AC_MSG_RESULT([yes])
+      AC_MSG_WARN([Expat found amongst libraries used by APR-Util, but Subversion libraries might be needlessly linked against additional unused libraries. It can be avoided by specifying exact location of Expat in argument of --with-expat option.])
+      CPPFLAGS="$old_CPPFLAGS"
+      LIBS="$old_LIBS $apu_libs"
+      SVN_XML_LIBS=""
+    else
+      AC_MSG_RESULT([no])
+      AC_MSG_ERROR([Expat not found])
+    fi
   fi
 else
   AC_MSG_RESULT([no])
