@@ -21,7 +21,6 @@
 #include "svn_wc.h"
 #include "svn_pools.h"
 #include "svn_error.h"
-#include "svn_client.h"
 #include "svn_error_codes.h"
 #include "svn_dirent_uri.h"
 #include "svn_path.h"
