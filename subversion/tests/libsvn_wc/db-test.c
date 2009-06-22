@@ -1192,7 +1192,7 @@ test_scan_deletion(apr_pool_t *pool)
 
 
 static svn_error_t *
-test_op_relocate(apr_pool_t *pool)
+test_global_relocate(apr_pool_t *pool)
 {
   const char *local_abspath;
   svn_wc__db_t *db;
@@ -1200,9 +1200,9 @@ test_op_relocate(apr_pool_t *pool)
   const char *repos_root_url;
   const char *repos_uuid;
   
-  SVN_ERR(create_fake_wc("test_op_relocate", pool));
+  SVN_ERR(create_fake_wc("test_global_relocate", pool));
   SVN_ERR(svn_dirent_get_absolute(&local_abspath,
-                                  "fake-wc/test_op_relocate",
+                                  "fake-wc/test_global_relocate",
                                   pool));
   SVN_ERR(svn_wc__db_open(&db, svn_wc__db_openmode_readonly,
                           NULL, pool, pool));
@@ -1214,42 +1214,54 @@ test_op_relocate(apr_pool_t *pool)
                                NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL,
-                               db, svn_dirent_join(local_abspath, "G", pool),
+                               db, local_abspath,
                                pool, pool));
 
-  SVN_TEST_STRING_ASSERT(repos_relpath, "G-alt");
-  SVN_TEST_STRING_ASSERT(repos_root_url, ROOT_TWO);
-  SVN_TEST_STRING_ASSERT(repos_uuid, UUID_TWO);
-
-  /* Test relocating to a repos existant in the db */
-  SVN_ERR(svn_wc__db_op_relocate(db,
-                                 svn_dirent_join(local_abspath, "G", pool),
-                                 ROOT_ONE, UUID_ONE,
-                                 pool));
-  SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL,
-                               &repos_relpath, &repos_root_url, &repos_uuid,
-                               NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL,
-                               db, svn_dirent_join(local_abspath, "G", pool),
-                               pool, pool));
-  SVN_TEST_STRING_ASSERT(repos_relpath, "G-alt");
+  SVN_TEST_STRING_ASSERT(repos_relpath, "");
   SVN_TEST_STRING_ASSERT(repos_root_url, ROOT_ONE);
   SVN_TEST_STRING_ASSERT(repos_uuid, UUID_ONE);
 
-  /* Test relocating to a repos not existant in the db */
-  SVN_ERR(svn_wc__db_op_relocate(db,
-                                 svn_dirent_join(local_abspath, "G", pool),
-                                 ROOT_THREE, UUID_THREE,
-                                 pool));
+  /* Test relocating to a repos existant in the db */
+  SVN_ERR(svn_wc__db_global_relocate(db, local_abspath,
+                                     ROOT_TWO, UUID_TWO,
+                                     pool));
   SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL,
                                &repos_relpath, &repos_root_url, &repos_uuid,
                                NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL,
-                               db, svn_dirent_join(local_abspath, "G", pool),
+                               db, local_abspath,
+                               pool, pool));
+  SVN_TEST_STRING_ASSERT(repos_relpath, "");
+  SVN_TEST_STRING_ASSERT(repos_root_url, ROOT_TWO);
+  SVN_TEST_STRING_ASSERT(repos_uuid, UUID_TWO);
+
+  /* Test relocating to a repos not existant in the db */
+  SVN_ERR(svn_wc__db_global_relocate(db, local_abspath,
+                                     ROOT_THREE, UUID_THREE,
+                                     pool));
+  SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL,
+                               &repos_relpath, &repos_root_url, &repos_uuid,
+                               NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL,
+                               db, local_abspath,
+                               pool, pool));
+  SVN_TEST_STRING_ASSERT(repos_relpath, "");
+  SVN_TEST_STRING_ASSERT(repos_root_url, ROOT_THREE);
+  SVN_TEST_STRING_ASSERT(repos_uuid, UUID_THREE);
+
+  /* While we're at it, let's see if the children have been relocated, too. */
+  SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL,
+                               &repos_relpath, &repos_root_url, &repos_uuid,
+                               NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL,
+                               db, svn_dirent_join(local_abspath, "G",
+                                                   pool),
                                pool, pool));
   SVN_TEST_STRING_ASSERT(repos_relpath, "G-alt");
   SVN_TEST_STRING_ASSERT(repos_root_url, ROOT_THREE);
@@ -1276,7 +1288,7 @@ struct svn_test_descriptor_t test_funcs[] =
                    "scanning added working nodes"),
     SVN_TEST_PASS2(test_scan_deletion,
                    "deletion introspection functions"),
-    SVN_TEST_PASS2(test_op_relocate,
+    SVN_TEST_PASS2(test_global_relocate,
                    "relocating a node"),
     SVN_TEST_NULL
   };
