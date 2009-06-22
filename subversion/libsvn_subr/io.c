@@ -2,7 +2,7 @@
  * io.c:   shared file reading, writing, and probing code.
  *
  * ====================================================================
- * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -3600,7 +3600,7 @@ svn_io_file_name_get(const char **filename,
 
   status = apr_file_name_get(&fname_apr, file);
   if (status)
-    return svn_error_wrap_apr(status, _("Can't get filename"));
+    return svn_error_wrap_apr(status, _("Can't get file name"));
 
   return svn_error_return(cstring_to_utf8(filename, fname_apr, pool));
 }
