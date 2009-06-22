@@ -358,7 +358,7 @@ class TestFactory:
     except:
       for line in self.lines:
         if line[1] is not None:
-          print line[1]
+          print(line[1])
       raise
 
   

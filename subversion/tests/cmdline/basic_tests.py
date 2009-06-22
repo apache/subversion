@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2008 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2009 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -629,8 +629,8 @@ def basic_conflict(sbox):
     # probably reveal the cause for the failure, if they were
     # uncommented:
     #
-    # print "Not all extra reject files have been accounted for:"
-    # print extra_files
+    # print("Not all extra reject files have been accounted for:")
+    # print(extra_files)
     ### we should raise a less generic error here. which?
     raise svntest.Failure
 
@@ -1861,7 +1861,7 @@ def delete_keep_local_twice(sbox):
   svntest.actions.run_and_verify_svn(None, None, [], 'rm', '--keep-local', dir)
   
   if not os.path.isdir(dir):
-    print 'Directory was really deleted'
+    print('Directory was really deleted')
     raise svntest.Failure
 
 def windows_paths_in_repos(sbox):
@@ -2133,8 +2133,8 @@ def automatic_conflict_resolution(sbox):
     # probably reveal the cause for the failure, if they were
     # uncommented:
     #
-    # print "Not all extra reject files have been accounted for:"
-    # print extra_files
+    # print("Not all extra reject files have been accounted for:")
+    # print(extra_files)
     ### we should raise a less generic error here. which?
     raise svntest.Failure
 
