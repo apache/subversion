@@ -348,7 +348,7 @@ to ask for review on the developer mailing list.</p>
 <h2>Code modularity and interface visibility</h2>
 
 <p>Subversion's code and headers files are segregated along a couple
-of key lines: module-specific vs. inter-module; public vs. private.
+of key lines: library-specific vs. inter-library; public vs. private.
 This separation is done primarily because of our focus on proper
 modularity and code organization, but also because of our promises as
 providers and maintainers of a widely adopted public API.  As you
@@ -356,21 +356,21 @@ write new functions in Subversion, you'll need to carefully consider
 these things, asking some questions of yourself as you go along:</p>
 
 <p><em>"Are the consumers of my new code local to a particular source
-code file in a single module?"</em>  If so, you probably want a static
+code file in a single library?"</em>  If so, you probably want a static
 function in that same source file.</p>
 
 <p><em>"Is my new function of the sort that other source code within
-this module will need to use, but nothing *outside* the module?"</em>
+this library will need to use, but nothing *outside* the library?"</em>
 If so, you want to use a non-static, double-underscore-named function
 (such as <tt>svn_foo__do_something</tt>), with its prototype in the
-appropriate module-specific header file.</p>
+appropriate library-specific header file.</p>
 
 <p><em>"Will my code need to be accessed from a different
-module?"</em>  Here you have some additional questions to answer, such
-as <em>"Should my code live in the original module I was going to put
+library?"</em>  Here you have some additional questions to answer, such
+as <em>"Should my code live in the original library I was going to put
 it in, or should it live in a more generic utility library such as
 libsvn_subr?"</em>  Either way, you're now looking at using an
-inter-module header file.  But see the next question before you decide
+inter-library header file.  But see the next question before you decide
 which one...</p>
 
 <p><em>"Is my code such that it has a clean, maintainable API that can
@@ -379,7 +379,7 @@ Subversion public API offering?"</em>  If so, you'll be adding
 prototypes to the public API, immediately
 inside <tt>subversion/include/</tt>.  If not, double-check your plans
 -- maybe you haven't chosen the best way to abstract your
-functionality.  But sometimes it just happens that modules need to
+functionality.  But sometimes it just happens that libraries need to
 share some function that is arguably of no use to other software
 besides Subversion itself.  In those cases, use the private header
 files in <tt>subversion/include/private/</tt>.</p>
