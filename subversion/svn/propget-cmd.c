@@ -30,6 +30,7 @@
 #include "svn_error.h"
 #include "svn_utf.h"
 #include "svn_subst.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_props.h"
 #include "svn_xml.h"
@@ -136,7 +137,7 @@ print_properties(svn_stream_t *out,
           /* Print the file name. */
 
           if (! is_url)
-            filename = svn_path_local_style(filename, iterpool);
+            filename = svn_dirent_local_style(filename, iterpool);
 
           /* In verbose mode, print exactly same as "proplist" does;
            * otherwise, print a brief header. */

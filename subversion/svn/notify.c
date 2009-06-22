@@ -28,6 +28,7 @@
 
 #include "svn_cmdline.h"
 #include "svn_pools.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "cl.h"
 
@@ -146,7 +147,7 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
         path_local = n->path;
     }
 
-  path_local = svn_path_local_style(path_local, pool);
+  path_local = svn_dirent_local_style(path_local, pool);
 
   switch (n->action)
     {

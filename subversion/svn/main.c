@@ -1797,7 +1797,7 @@ main(int argc, const char *argv[])
         {
           svn_wc_adm_access_t *adm_access;
           const svn_wc_entry_t *e;
-          const char *fname_utf8 = svn_path_internal_style(dash_F_arg, pool);
+          const char *fname_utf8 = svn_dirent_internal_style(dash_F_arg, pool);
           err = svn_wc_adm_probe_open3(&adm_access, NULL, fname_utf8,
                                        FALSE, 0, NULL, NULL, pool);
           if (! err)
