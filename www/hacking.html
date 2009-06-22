@@ -38,6 +38,7 @@ $LastChangedDate$
 <li><a href="#docs">Theory and documentation</a></li>
 <li><a href="#code-to-read">Code to read</a></li>
 <li><a href="#directory-layout">Directory layout</a></li>
+<li><a href="#interface-visibility">Code modularity and interface visibility</a></li>
 <li><a href="#coding-style">Coding style</a></li>
 <li><a href="#secure-coding">Secure coding guidelines</a></li>
 <li><a href="#destruction-of-stacked-resources">Destruction of stacked resources</a></li>
@@ -343,6 +344,47 @@ to ask for review on the developer mailing list.</p>
 
 </div>
 
+<div class="h2" id="interface-visibility" title="interface-visibility">
+<h2>Code modularity and interface visibility</h2>
+
+<p>Subversion's code and headers files are segregated along a couple
+of key lines: module-specific vs. inter-module; public vs. private.
+This separation is done primarily because of our focus on proper
+modularity and code organization, but also because of our promises as
+providers and maintainers of a widely adopted public API.  As you
+write new functions in Subversion, you'll need to carefully consider
+these things, asking some questions of yourself as you go along:</p>
+
+<p><em>"Are the consumers of my new code local to a particular source
+code file in a single module?"</em>  If so, you probably want a static
+function in that same source file.</p>
+
+<p><em>"Is my new function of the sort that other source code within
+this module will need to use, but nothing *outside* the module?"</em>
+If so, you want to use a non-static, double-underscore-named function
+(such as <tt>svn_foo__do_something</tt>), with its prototype in the
+appropriate module-specific header file.</p>
+
+<p><em>"Will my code need to be accessed from a different
+module?"</em>  Here you have some additional questions to answer, such
+as <em>"Should my code live in the original module I was going to put
+it in, or should it live in a more generic utility library such as
+libsvn_subr?"</em>  Either way, you're now looking at using an
+inter-module header file.  But see the next question before you decide
+which one...</p>
+
+<p><em>"Is my code such that it has a clean, maintainable API that can
+reasonably be maintained in perpetuity and brings value to the
+Subversion public API offering?"</em>  If so, you'll be adding
+prototypes to the public API, immediately
+inside <tt>subversion/include/</tt>.  If not, double-check your plans
+-- maybe you haven't chosen the best way to abstract your
+functionality.  But sometimes it just happens that modules need to
+share some function that is arguably of no use to other software
+besides Subversion itself.  In those cases, use the private header
+files in <tt>subversion/include/private/</tt>.</p>
+
+</div>
 
 <div class="h2" id="coding-style" title="coding-style">
 <h2>Coding style</h2>
