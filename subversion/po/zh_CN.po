@@ -37,8 +37,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.7\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2009-06-18 11:24+0800\n"
-"PO-Revision-Date: 2009-06-18 11:25+0800\n"
+"POT-Creation-Date: 2009-06-22 14:23+0800\n"
+"PO-Revision-Date: 2009-06-22 14:25+0800\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Simplified Chinese <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -1513,6 +1513,9 @@ msgstr "“%s” 不是版本库的根"
 msgid "The repository at '%s' has uuid '%s', but the WC has '%s'"
 msgstr "版本库 “%s” 的 uuid 是 “%s”，但是工作副本的是 “%s”"
 
+msgid "Cannot relocate a single file"
+msgstr "无法重新定位单个文件"
+
 #, c-format
 msgid "Path '%s' has no committed revision"
 msgstr "路径 “%s” 没有提交过"
@@ -2783,8 +2786,8 @@ msgid "Failed to find label '%s' for URL '%s'"
 msgstr "无法找到标签 “%s” 于 URL “%s”"
 
 #, c-format
-msgid "'%s' was not present on the resource"
-msgstr "资源没有“%s”"
+msgid "'%s' was not present on the resource '%s'"
+msgstr "'%s' 不在资源 '%s' 中"
 
 #, c-format
 msgid "Neon was unable to parse URL '%s'"
@@ -3066,8 +3069,13 @@ msgstr "GET 请求失败: %d %s"
 msgid "Error retrieving REPORT (%d)"
 msgstr "获取报告出错(%d)"
 
+#, c-format
+msgid "Error running context"
+msgstr "执行上下文错误"
+
+#, c-format
 msgid "Premature EOF seen from server"
-msgstr "从服务器发现EOF太早"
+msgstr "从服务器发现 EOF 太早"
 
 msgid "Unspecified error message"
 msgstr "未指明的错误信息"
@@ -4170,6 +4178,14 @@ msgid "First line of '%s' contains non-digit"
 msgstr "“%s” 的第一行包含了非数字"
 
 #, c-format
+msgid "Can't create temporary file from template '%s'"
+msgstr "无法从模版“%s”创建临时文件"
+
+#, c-format
+msgid "Can't get filename"
+msgstr "无法获取文件名"
+
+#, c-format
 msgid "Invalid revision number found parsing '%s'"
 msgstr "解析 “%s” 时发现无效的版本号"
 
@@ -4801,6 +4817,9 @@ msgstr "工作副本“%s”已经锁定"
 #, c-format
 msgid "Path '%s' ends in '%s', which is unsupported for this operation"
 msgstr "路径“%s”以“%s”结束，此操作不支持"
+
+msgid "Working copy format is too old; please run 'svn upgrade'"
+msgstr "工作副本格式太旧; 请执行 'svn upgrade'"
 
 #, c-format
 msgid "'%s' is not a working copy"
@@ -6328,7 +6347,7 @@ msgstr ""
 "    如果 PATH 是未版本控制或者已修改的项目，或者包含这些项目，那么仅当\n"
 "    给出 --force 参数时这些项目才会被删除。\n"
 "\n"
-"  2、每个 UR L指定的项目会通过立即提交从版本库中删除。\n"
+"  2、每个 URL 指定的项目会通过立即提交从版本库中删除。\n"
 
 msgid ""
 "Display the differences between two revisions or paths.\n"
