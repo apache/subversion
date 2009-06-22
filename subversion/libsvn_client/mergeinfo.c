@@ -181,7 +181,7 @@ svn_client__get_wc_mergeinfo(svn_mergeinfo_t *mergeinfo,
   svn_revnum_t base_revision = entry->revision;
 
   if (limit_path)
-    SVN_ERR(svn_path_get_absolute(&limit_path, limit_path, pool));
+    SVN_ERR(svn_dirent_get_absolute(&limit_path, limit_path, pool));
 
   while (TRUE)
     {
