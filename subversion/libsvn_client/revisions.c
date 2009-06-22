@@ -22,6 +22,7 @@
 
 #include "svn_error.h"
 #include "svn_ra.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "client.h"
 
@@ -125,7 +126,7 @@ svn_client__get_revision_number(svn_revnum_t *revnum,
       return svn_error_createf(SVN_ERR_CLIENT_BAD_REVISION, NULL,
                                _("Unrecognized revision type requested for "
                                  "'%s'"),
-                               svn_path_local_style(path, pool));
+                               svn_dirent_local_style(path, pool));
     }
 
   /* Final check -- if our caller provided a youngest revision, and

@@ -3884,7 +3884,7 @@ make_merge_conflict_error(const char *target_wcpath,
        "'%s' --\n"
        "resolve all conflicts and rerun the merge to apply the remaining\n"
        "unmerged revisions"),
-     r->start, r->end, svn_path_local_style(target_wcpath, pool));
+     r->start, r->end, svn_dirent_local_style(target_wcpath, pool));
 }
 
 /* Remove the element at IDX from the array ARR.
@@ -7363,13 +7363,13 @@ svn_client_merge3(const char *source1,
   if (! URL1)
     return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
                              _("'%s' has no URL"),
-                             svn_path_local_style(source1, pool));
+                             svn_dirent_local_style(source1, pool));
 
   SVN_ERR(svn_client_url_from_path(&URL2, source2, pool));
   if (! URL2)
     return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
                              _("'%s' has no URL"),
-                             svn_path_local_style(source2, pool));
+                             svn_dirent_local_style(source2, pool));
 
   /* Open an admistrative session with the working copy. */
   SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, target_wcpath,
@@ -8290,7 +8290,7 @@ svn_client_merge_reintegrate(const char *source,
   if (! url2)
     return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
                              _("'%s' has no URL"),
-                             svn_path_local_style(source, pool));
+                             svn_dirent_local_style(source, pool));
 
   /* Determine the working copy target's repository root URL. */
   working_revision.kind = svn_opt_revision_working;
@@ -8308,8 +8308,8 @@ svn_client_merge_reintegrate(const char *source,
   if (strcmp(source_repos_root, wc_repos_root) != 0)
     return svn_error_createf(SVN_ERR_CLIENT_UNRELATED_RESOURCES, NULL,
                              _("'%s' must be from the same repository as "
-                               "'%s'"), svn_path_local_style(source, pool),
-                             svn_path_local_style(target_wcpath, pool));
+                               "'%s'"), svn_dirent_local_style(source, pool),
+                             svn_dirent_local_style(target_wcpath, pool));
 
   SVN_ERR(ensure_wc_reflects_repository_subtree(target_wcpath, ctx, pool));
 
@@ -8482,7 +8482,7 @@ svn_client_merge_peg3(const char *source,
   if (! URL)
     return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
                              _("'%s' has no URL"),
-                             svn_path_local_style(source, pool));
+                             svn_dirent_local_style(source, pool));
 
   /* Determine the working copy target's repository root URL. */
   working_rev.kind = svn_opt_revision_working;

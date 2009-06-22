@@ -261,7 +261,7 @@ organize_lock_targets(const char **common_parent,
           if (! entry->url)
             return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
                                      _("'%s' has no URL"),
-                                     svn_path_local_style(target, pool));
+                                     svn_dirent_local_style(target, pool));
 
           APR_ARRAY_PUSH(urls, const char *) = apr_pstrdup(pool,
                                                            entry->url);

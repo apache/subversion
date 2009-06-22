@@ -154,7 +154,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
   if (! entry->url)
     return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
                              _("Entry '%s' has no URL"),
-                             svn_path_local_style(anchor, pool));
+                             svn_dirent_local_style(anchor, pool));
 
   /* We may need to crop the tree if the depth is sticky */
   if (depth_is_sticky && depth < svn_depth_infinity)
