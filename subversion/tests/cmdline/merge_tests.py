@@ -15118,10 +15118,19 @@ def reintegrate_with_subtree_mergeinfo(sbox):
                                        None, None, None, None,
                                        None, 1, 1, "--reintegrate")
 
-def dont_merge_gaps_in_history(sbox):
-  "mergeinfo aware merges ignore natural history gaps"
-
-  ## See http://svn.haxx.se/dev/archive-2008-11/0618.shtml ##
+def set_up_natural_history_gap(sbox):
+  '''Starting with standard greek tree, do the following:
+    r2 - A/D/H/psi
+    r3 - A/D/G/rho
+    r4 - A/B/E/beta
+    r5 - A/D/H/omega
+    r6 - Delete A
+    r7 - "Resurrect" A, by copying A@2 to A
+    r8 - Copy A to A_COPY
+    r9 - Text mod to A/D/gamma
+  Lastly it updates the WC to r9.
+  All text mods set file contents to "New content".
+  Return (expected_disk, expected_status).'''
 
   # r1: Create a standard greek tree.
   sbox.build()
@@ -15180,8 +15189,26 @@ def dont_merge_gaps_in_history(sbox):
   svntest.main.file_write(gamma_path, "New content")
   expected_output = wc.State(wc_dir, {'A/D/gamma' : Item(verb='Sending')})
   wc_status.tweak('A/D/gamma', wc_rev=9)
+
+  # Update the WC to a uniform revision.  
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         wc_status, None, wc_dir)
+  svntest.actions.run_and_verify_svn(None, ["At revision 9.\n"], [],
+                                     'up', wc_dir)
+  return wc_disk, wc_status  
+
+def dont_merge_gaps_in_history(sbox):
+  "mergeinfo aware merges ignore natural history gaps"
+
+  ## See http://svn.haxx.se/dev/archive-2008-11/0618.shtml ##
+
+  wc_dir = sbox.wc_dir
+
+  # Create a branch with gaps in its natural history.
+  set_up_natural_history_gap(sbox)
+
+  # Some paths we'll care about.
+  A_COPY_path = os.path.join(wc_dir, "A_COPY")
 
   # Now merge all available changes from 'A' to 'A_COPY'.  The only
   # available revisions are r8 and r9.  Only r9 effects the source/target
@@ -15220,7 +15247,7 @@ def dont_merge_gaps_in_history(sbox):
     'D/H/psi'   : Item(status='  '),
     'D/H/omega' : Item(status='  '),
     })
-  expected_status.tweak(wc_rev=8)
+  expected_status.tweak(wc_rev=9)
   expected_disk = wc.State('', {
     ''          : Item(props={SVN_PROP_MERGEINFO : '/A:8-9'}),
     'B'         : Item(),
@@ -15252,6 +15279,114 @@ def dont_merge_gaps_in_history(sbox):
                                        expected_skip,
                                        None, None, None, None,
                                        None, 1)
+
+# Test for issue #3432 'Merge can record mergeinfo from natural history
+# gaps'.  See http://subversion.tigris.org/issues/show_bug.cgi?id=3432
+def handle_gaps_in_implicit_mergeinfo(sbox):
+  "correctly consider natural history gaps"
+
+  wc_dir = sbox.wc_dir
+
+  # Create a branch with gaps in its natural history.
+  #
+  # r1--------r2--------r3--------r4--------r5--------r6
+  # Add 'A'   edit      edit      edit      edit      Delete A
+  #           psi       rho       beta      omega
+  #           |
+  #           V
+  #           r7--------r9----------------->
+  #           Rez 'A'   edit
+  #           |         gamma
+  #           |
+  #           V
+  #           r8--------------------------->
+  #           Copy 'A@7' to
+  #           'A_COPY'
+  #
+  expected_disk, expected_status = set_up_natural_history_gap(sbox)
+
+  # Some paths we'll care about.
+  A_COPY_path = os.path.join(wc_dir, "A_COPY")
+  
+  # Merge r4 to 'A_COPY' from A@4, which is *not* part of A_COPY's history.
+  expected_output = wc.State(A_COPY_path, {
+    'B/E/beta' : Item(status='U '),
+    })
+  expected_status = wc.State(A_COPY_path, {
+    ''          : Item(status=' M'),
+    'B'         : Item(status='  '),
+    'mu'        : Item(status='  '),
+    'B/E'       : Item(status='  '),
+    'B/E/alpha' : Item(status='  '),
+    'B/E/beta'  : Item(status='M '),
+    'B/lambda'  : Item(status='  '),
+    'B/F'       : Item(status='  '),
+    'C'         : Item(status='  '),
+    'D'         : Item(status='  '),
+    'D/G'       : Item(status='  '),
+    'D/G/pi'    : Item(status='  '),
+    'D/G/rho'   : Item(status='  '),
+    'D/G/tau'   : Item(status='  '),
+    'D/gamma'   : Item(status='  '),
+    'D/H'       : Item(status='  '),
+    'D/H/chi'   : Item(status='  '),
+    'D/H/psi'   : Item(status='  '),
+    'D/H/omega' : Item(status='  '),
+    })
+  expected_status.tweak(wc_rev=9)
+  expected_disk = wc.State('', {
+    ''          : Item(props={SVN_PROP_MERGEINFO : '/A:4'}),
+    'B'         : Item(),
+    'mu'        : Item("This is the file 'mu'.\n"),
+    'B/E'       : Item(),
+    'B/E/alpha' : Item("This is the file 'alpha'.\n"),
+    'B/E/beta'  : Item("New content"), # From the merge of A@4
+    'B/lambda'  : Item("This is the file 'lambda'.\n"),
+    'B/F'       : Item(),
+    'C'         : Item(),
+    'D'         : Item(),
+    'D/G'       : Item(),
+    'D/G/pi'    : Item("This is the file 'pi'.\n"),
+    'D/G/rho'   : Item("This is the file 'rho'.\n"),
+    'D/G/tau'   : Item("This is the file 'tau'.\n"),
+    'D/gamma'   : Item("This is the file 'gamma'.\n"),
+    'D/H'       : Item(),
+    'D/H/chi'   : Item("This is the file 'chi'.\n"),
+    'D/H/psi'   : Item("New content"), # From A@2
+    'D/H/omega' : Item("This is the file 'omega'.\n"),
+    })
+  expected_skip = wc.State(A_COPY_path, { })
+  svntest.actions.run_and_verify_merge(A_COPY_path, 3, 4,
+                                       sbox.repo_url + \
+                                       '/A@4',
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, None, None, None,
+                                       None, 1)
+
+  # Now reverse merge -r9:2 from 'A@HEAD' to 'A_COPY'.  This should be
+  # a no-op since the only operative change made on 'A@HEAD' between r2:9
+  # is the text mod to 'A/D/gamma' made in r9, but since that was after
+  # 'A_COPY' was copied from 'A 'and that change was never merged, we don't
+  # try to reverse merge it.
+  #
+  # Also, the mergeinfo recorded by the previous merge, i.e. '/A:4', should
+  # *not* be removed!  A@4 is not on the same line of history as 'A@9'.
+  #
+  # Currently this  mergeinfo *is* being removed.  This test is marked as
+  # XFail until issue #3432 is fixed. 
+  expected_output = wc.State(A_COPY_path, {})
+  svntest.actions.run_and_verify_merge(A_COPY_path, 9, 2,
+                                       sbox.repo_url + \
+                                       '/A',
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, None, None, None,
+                                       None, 1)  
 
 #----------------------------------------------------------------------
 # Test for issue #3323 'Mergeinfo deleted by a merge should disappear'
@@ -16051,6 +16186,8 @@ test_list = [ None,
               SkipUnless(multiple_reintegrates_from_the_same_branch,
                          server_has_mergeinfo),
               XFail(merge_replace_causes_tree_conflict),
+              XFail(handle_gaps_in_implicit_mergeinfo,
+                    server_has_mergeinfo)
              ]
 
 if __name__ == '__main__':
