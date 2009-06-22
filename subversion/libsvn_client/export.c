@@ -442,11 +442,11 @@ open_root_internal(const char *path,
   else if (kind == svn_node_file)
     return svn_error_createf(SVN_ERR_WC_NOT_DIRECTORY, NULL,
                              _("'%s' exists and is not a directory"),
-                             svn_path_local_style(path, pool));
+                             svn_dirent_local_style(path, pool));
   else if ((kind != svn_node_dir) || (! force))
     return svn_error_createf(SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
                              _("'%s' already exists"),
-                             svn_path_local_style(path, pool));
+                             svn_dirent_local_style(path, pool));
 
   if (notify_func)
     {
@@ -585,11 +585,11 @@ add_directory(const char *path,
   else if (kind == svn_node_file)
     return svn_error_createf(SVN_ERR_WC_NOT_DIRECTORY, NULL,
                              _("'%s' exists and is not a directory"),
-                             svn_path_local_style(full_path, pool));
+                             svn_dirent_local_style(full_path, pool));
   else if (! (kind == svn_node_dir && eb->force))
     return svn_error_createf(SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
                              _("'%s' already exists"),
-                             svn_path_local_style(full_path, pool));
+                             svn_dirent_local_style(full_path, pool));
 
   if (eb->notify_func)
     {
@@ -771,7 +771,7 @@ close_file(void *file_baton,
                           _("Checksum mismatch for '%s'"),
                           _("   expected:  %s"),
                           _("     actual:  %s")),
-             svn_path_local_style(fb->path, pool),
+             svn_dirent_local_style(fb->path, pool),
              text_checksum, actual_checksum);
         }
     }

@@ -349,9 +349,9 @@ int main()
   else
     SVN_XML_INCLUDES=""
     SVN_XML_LIBS=""
-    apu_libs="`$apu_config --libs`"
-    LIBS="$old_LIBS $apu_libs"
-    AC_LINK_IFELSE([
+    CPPFLAGS="$CPPFLAGS $SVN_APRUTIL_INCLUDES"
+    SVN_APRUTIL_LIBS="$SVN_APRUTIL_LIBS `$apu_config --libs`"
+    AC_COMPILE_IFELSE([
 #include <expat.h>
 int main()
 {XML_ParserCreate(NULL);}], svn_lib_expat="yes", svn_lib_expat="no")

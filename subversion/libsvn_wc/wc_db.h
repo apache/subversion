@@ -956,25 +956,6 @@ svn_wc__db_op_revert(svn_wc__db_t *db,
                      apr_pool_t *scratch_pool);
 
 
-/*
- * Associate LOCAL_ABSPATH with REPOS_UUID located at REPOS_ROOT_URL.  The
- * relative path to the repos root will not change, just the repository root.
- * This also updates any locks which may exist for the node, as well as
- * any copyfrom repository information.
- *
- * Use SCRATCH_POOL for any temporary allocations.
- *
- * ### Assuming the future ability to copy across repositories, should w
- * ### refrain from resetting the copyfrom information in this operation?
- */
-svn_error_t *
-svn_wc__db_op_relocate(svn_wc__db_t *db,
-                       const char *local_abspath,
-                       const char *repos_root_url,
-                       const char *repos_uuid,
-                       apr_pool_t *scratch_pool);
-
-
 
 /* ### status */
 
@@ -1215,14 +1196,29 @@ svn_wc__db_check_node(svn_wc__db_kind_t *kind,
  * @{
  */
 
-/* ### local_dir_abspath "should be" the wcroot or a switch root. all URLs
-   ### under this directory (depth=infinity) will be rewritten. */
+/*
+ * Associate LOCAL_DIR_ABSPATH, and all its children with REPOS_UUID located
+ * at REPOS_ROOT_URL.  The relative path to the repos root will not change,
+ * just the repository root.  This also updates any locks which may exist for
+ * the node, as well as any copyfrom repository information.
+ *
+ * Use SCRATCH_POOL for any temporary allocations.
+ *
+ * ### local_dir_abspath "should be" the wcroot or a switch root. all URLs
+ * ### under this directory (depth=infinity) will be rewritten.
+ *
+ * ### This API had a depth parameter, which was removed, should it be
+ * ### resurrected?  What's the purpose if we claim relocate is infinitely
+ * ### recursive?
+ *
+ * ### Assuming the future ability to copy across repositories, should we
+ * ### refrain from resetting the copyfrom information in this operation?
+ */
 svn_error_t *
 svn_wc__db_global_relocate(svn_wc__db_t *db,
                            const char *local_dir_abspath,
-                           const char *from_url,
-                           const char *to_url,
-                           svn_depth_t depth,
+                           const char *repos_root_url,
+                           const char *repos_uuid,
                            apr_pool_t *scratch_pool);
 
 

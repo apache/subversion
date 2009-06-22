@@ -5408,6 +5408,7 @@ svn_wc_relocate3(const char *path,
 
 /** Similar to svn_wc_relocate3(), but uses @c svn_wc_relocation_validator2_t.
  *
+ * @since New in 1.4.
  * @deprecated Provided for backwards compatibility with the 1.4 API. */
 SVN_DEPRECATED
 svn_error_t *

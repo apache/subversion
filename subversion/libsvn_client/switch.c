@@ -151,7 +151,7 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
   if (! entry->url)
     return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
                              _("Directory '%s' has no URL"),
-                             svn_path_local_style(anchor, pool));
+                             svn_dirent_local_style(anchor, pool));
 
   URL = apr_pstrdup(pool, entry->url);
 

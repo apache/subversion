@@ -29,6 +29,7 @@
 #include "svn_error.h"
 #include "svn_pools.h"
 #include "svn_xml.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_cmdline.h"
 #include "cl.h"
@@ -230,7 +231,7 @@ svn_cl__status(apr_getopt_t *os,
       SVN_ERR(svn_cl__check_cancel(ctx->cancel_baton));
 
       if (opt_state->xml)
-        SVN_ERR(print_start_target_xml(svn_path_local_style(target, subpool),
+        SVN_ERR(print_start_target_xml(svn_dirent_local_style(target, subpool),
                                        subpool));
 
       /* Retrieve a hash of status structures with the information

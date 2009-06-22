@@ -335,7 +335,7 @@ fi
 move_dependency neon
 move_dependency serf
 move_dependency zlib
-move_dependency sqlite
+move_dependency sqlite-amalgamation
 
 if [ -z "$ZIP" ]; then
   # Do not use tar, it's probably GNU tar which produces tar files that are

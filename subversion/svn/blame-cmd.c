@@ -21,6 +21,7 @@
 
 #include "svn_client.h"
 #include "svn_error.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_pools.h"
 #include "svn_props.h"
@@ -322,7 +323,7 @@ svn_cl__blame(apr_getopt_t *os,
              a target element if this path is skipped. */
           const char *outpath = truepath;
           if (! svn_path_is_url(target))
-            outpath = svn_path_local_style(truepath, subpool);
+            outpath = svn_dirent_local_style(truepath, subpool);
           svn_xml_make_open_tag(&bl.sbuf, pool, svn_xml_normal, "target",
                                 "path", outpath, NULL);
 

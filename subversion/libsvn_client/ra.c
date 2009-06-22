@@ -106,7 +106,7 @@ push_wc_prop(void *baton,
     return svn_error_createf
       (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
        _("Attempt to set wc property '%s' on '%s' in a non-commit operation"),
-       name, svn_path_local_style(relpath, pool));
+       name, svn_dirent_local_style(relpath, pool));
 
   for (i = 0; i < cb->commit_items->nelts; i++)
     {
@@ -412,7 +412,7 @@ svn_client_uuid_from_path(const char **uuid,
          ok. */
       return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
                                _("'%s' has no URL"),
-                               svn_path_local_style(path, pool));
+                               svn_dirent_local_style(path, pool));
     }
 
   return SVN_NO_ERROR;
@@ -647,7 +647,7 @@ svn_client__repos_locations(const char **start_url,
         {
           return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
                                    _("'%s' has no URL"),
-                                   svn_path_local_style(path, pool));
+                                   svn_dirent_local_style(path, pool));
         }
     }
   else
@@ -716,7 +716,7 @@ svn_client__repos_locations(const char **start_url,
     return svn_error_createf
       (SVN_ERR_CLIENT_UNRELATED_RESOURCES, NULL,
        _("Unable to find repository location for '%s' in revision %ld"),
-       svn_path_local_style(path, pool), start_revnum);
+       svn_dirent_local_style(path, pool), start_revnum);
 
   end_path = apr_hash_get(rev_locs, &end_revnum, sizeof(svn_revnum_t));
   if (! end_path)
@@ -724,7 +724,7 @@ svn_client__repos_locations(const char **start_url,
       (SVN_ERR_CLIENT_UNRELATED_RESOURCES, NULL,
        _("The location for '%s' for revision %ld does not exist in the "
          "repository or refers to an unrelated object"),
-       svn_path_local_style(path, pool), end_revnum);
+       svn_dirent_local_style(path, pool), end_revnum);
 
   /* Repository paths might be absolute, but we want to treat them as
      relative.

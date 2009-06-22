@@ -90,7 +90,7 @@ print_info_xml(void *baton,
 
   /* "<entry ...>" */
   svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "entry",
-                        "path", svn_path_local_style(target, pool),
+                        "path", svn_dirent_local_style(target, pool),
                         "kind", svn_cl__node_kind_str_xml(info->kind),
                         "revision", rev_str,
                         NULL);
@@ -234,7 +234,7 @@ print_info(void *baton,
            apr_pool_t *pool)
 {
   SVN_ERR(svn_cmdline_printf(pool, _("Path: %s\n"),
-                             svn_path_local_style(target, pool)));
+                             svn_dirent_local_style(target, pool)));
 
   /* ### remove this someday:  it's only here for cmdline output
      compatibility with svn 1.1 and older.  */
@@ -365,24 +365,24 @@ print_info(void *baton,
       if (info->conflict_old)
         SVN_ERR(svn_cmdline_printf(pool,
                                    _("Conflict Previous Base File: %s\n"),
-                                   svn_path_local_style(info->conflict_old,
-                                                        pool)));
+                                   svn_dirent_local_style(info->conflict_old,
+                                                          pool)));
 
       if (info->conflict_wrk)
         SVN_ERR(svn_cmdline_printf
                 (pool, _("Conflict Previous Working File: %s\n"),
-                 svn_path_local_style(info->conflict_wrk, pool)));
+                 svn_dirent_local_style(info->conflict_wrk, pool)));
 
       if (info->conflict_new)
         SVN_ERR(svn_cmdline_printf(pool,
                                    _("Conflict Current Base File: %s\n"),
-                                   svn_path_local_style(info->conflict_new,
-                                                        pool)));
+                                   svn_dirent_local_style(info->conflict_new,
+                                                          pool)));
 
       if (info->prejfile)
         SVN_ERR(svn_cmdline_printf(pool, _("Conflict Properties File: %s\n"),
-                                   svn_path_local_style(info->prejfile,
-                                                        pool)));
+                                   svn_dirent_local_style(info->prejfile,
+                                                          pool)));
     }
 
   if (info->lock)
@@ -535,14 +535,14 @@ svn_cl__info(apr_getopt_t *os,
               SVN_ERR(svn_cmdline_fprintf
                       (stderr, subpool,
                        _("%s:  (Not a versioned resource)\n\n"),
-                       svn_path_local_style(target, pool)));
+                       svn_dirent_local_style(target, pool)));
             }
           else if (err->apr_err == SVN_ERR_RA_ILLEGAL_URL)
             {
               SVN_ERR(svn_cmdline_fprintf
                       (stderr, subpool,
                        _("%s:  (Not a valid URL)\n\n"),
-                       svn_path_local_style(target, pool)));
+                       svn_dirent_local_style(target, pool)));
             }
           else
             {

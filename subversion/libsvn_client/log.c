@@ -26,6 +26,7 @@
 #include "svn_client.h"
 #include "svn_compat.h"
 #include "svn_error.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_sorts.h"
 #include "svn_props.h"
@@ -474,7 +475,7 @@ svn_client_log5(const apr_array_header_t *targets,
             return svn_error_createf
               (SVN_ERR_ENTRY_MISSING_URL, NULL,
                _("Entry '%s' has no URL"),
-               svn_path_local_style(target, pool));
+               svn_dirent_local_style(target, pool));
 
           URL = apr_pstrdup(pool, entry->url);
           SVN_ERR(svn_wc_adm_close2(adm_access, iterpool));

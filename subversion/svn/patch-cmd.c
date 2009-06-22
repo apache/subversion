@@ -23,6 +23,7 @@
 /*** Includes. ***/
 
 #include "svn_client.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_error.h"
 #include "svn_types.h"
@@ -47,7 +48,7 @@ svn_cl__patch(apr_getopt_t *os,
 
   /* Get patch file argument. */
   SVN_ERR(svn_opt_parse_num_args(&args, os, 1, pool));
-  SVN_ERR(svn_path_get_absolute(&patch_path,
+  SVN_ERR(svn_dirent_get_absolute(&patch_path,
                                 APR_ARRAY_IDX(args, 0, const char *),
                                 pool));
 

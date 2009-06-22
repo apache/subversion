@@ -395,7 +395,7 @@ wc_to_wc_copy(const apr_array_header_t *copy_pairs,
       if (pair->src_kind == svn_node_none)
         return svn_error_createf(SVN_ERR_NODE_UNKNOWN_KIND, NULL,
                                  _("Path '%s' does not exist"),
-                                 svn_path_local_style(pair->src, pool));
+                                 svn_dirent_local_style(pair->src, pool));
 
       /* If DST_PATH does not exist, then its basename will become a new
          file or dir added to its parent (possibly an implicit '.').
@@ -404,7 +404,7 @@ wc_to_wc_copy(const apr_array_header_t *copy_pairs,
       if (dst_kind != svn_node_none)
         return svn_error_createf(SVN_ERR_ENTRY_EXISTS, NULL,
                                  _("Path '%s' already exists"),
-                                 svn_path_local_style(pair->dst, pool));
+                                 svn_dirent_local_style(pair->dst, pool));
 
       svn_dirent_split(pair->dst, &pair->dst_parent, &pair->base_name, pool);
 
@@ -420,7 +420,7 @@ wc_to_wc_copy(const apr_array_header_t *copy_pairs,
         {
           return svn_error_createf(SVN_ERR_WC_NOT_DIRECTORY, NULL,
                                    _("Path '%s' is not a directory"),
-                                   svn_path_local_style(pair->dst_parent,
+                                   svn_dirent_local_style(pair->dst_parent,
                                                         pool));
         }
     }
@@ -1544,7 +1544,7 @@ repos_to_wc_copy(const apr_array_header_t *copy_pairs,
         {
           return svn_error_createf(SVN_ERR_ENTRY_EXISTS, NULL,
                                    _("Path '%s' already exists"),
-                                   svn_path_local_style(pair->dst, pool));
+                                   svn_dirent_local_style(pair->dst, pool));
         }
 
       /* Make sure the destination parent is a directory and produce a clear
@@ -1560,7 +1560,7 @@ repos_to_wc_copy(const apr_array_header_t *copy_pairs,
         {
           return svn_error_createf(SVN_ERR_WC_NOT_DIRECTORY, NULL,
                                    _("Path '%s' is not a directory"),
-                                   svn_path_local_style(dst_parent, pool));
+                                   svn_dirent_local_style(dst_parent, pool));
         }
     }
 
@@ -1592,7 +1592,7 @@ repos_to_wc_copy(const apr_array_header_t *copy_pairs,
               return svn_error_createf
                 (SVN_ERR_ENTRY_EXISTS,
                  NULL, _("'%s' is already under version control"),
-                 svn_path_local_style(pair->dst, pool));
+                 svn_dirent_local_style(pair->dst, pool));
             }
           else if ((ent->kind != svn_node_dir) &&
                    (ent->schedule != svn_wc_schedule_delete)
@@ -1600,7 +1600,7 @@ repos_to_wc_copy(const apr_array_header_t *copy_pairs,
             return svn_error_createf
               (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
                _("Entry for '%s' exists (though the working file is missing)"),
-               svn_path_local_style(pair->dst, pool));
+               svn_dirent_local_style(pair->dst, pool));
         }
     }
 
@@ -1780,8 +1780,8 @@ try_copy(svn_commit_info_t **commit_info_p,
             return svn_error_createf
               (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
                _("Cannot copy path '%s' into its own child '%s'"),
-               svn_path_local_style(pair->src, pool),
-               svn_path_local_style(pair->dst, pool));
+               svn_dirent_local_style(pair->src, pool),
+               svn_dirent_local_style(pair->dst, pool));
         }
 
       svn_pool_destroy(iterpool);
@@ -1819,7 +1819,7 @@ try_copy(svn_commit_info_t **commit_info_p,
                                        "'%s'; please propedit the "
                                        "svn:externals description that "
                                        "created it"),
-                                     svn_path_local_style(pair->src, pool));
+                                     svn_dirent_local_style(pair->src, pool));
         }
       svn_pool_destroy(iterpool);
     }
@@ -1837,7 +1837,7 @@ try_copy(svn_commit_info_t **commit_info_p,
                 return svn_error_createf
                   (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
                    _("Cannot move path '%s' into itself"),
-                   svn_path_local_style(pair->src, pool));
+                   svn_dirent_local_style(pair->src, pool));
             }
         }
       else
@@ -1910,7 +1910,7 @@ try_copy(svn_commit_info_t **commit_info_p,
                     return svn_error_createf
                       (SVN_ERR_ENTRY_MISSING_URL, NULL,
                        _("'%s' does not have a URL associated with it"),
-                       svn_path_local_style(pair->src, pool));
+                       svn_dirent_local_style(pair->src, pool));
 
                   pair->src = apr_pstrdup(pool, url);
 

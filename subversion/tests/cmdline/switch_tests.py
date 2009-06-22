@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2004, 2008 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2004, 2008-2009 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -2544,6 +2544,56 @@ def single_file_relocate(sbox):
                                      iota_url, other_iota_url, iota_path)
 
 
+def relocate_with_switched_children(sbox):
+  "relocate a directory with switched children"
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Setup (and verify) some switched things
+  do_routine_switching(sbox.wc_dir, sbox.repo_url, False)
+
+  # Relocate
+  repo_dir = sbox.repo_dir
+  repo_url = sbox.repo_url
+  other_repo_dir, other_repo_url = sbox.add_repo_path('other')
+  svntest.main.copy_repos(repo_dir, other_repo_dir, 1, 0)
+  svntest.main.safe_rmtree(repo_dir, 1)
+
+  # Do the switch and check the results in three ways.
+  svntest.actions.run_and_verify_svn(None, None, [], 'switch', '--relocate',
+                                     repo_url, other_repo_url, wc_dir)
+
+  # Attempt to commit changes and examine results
+  expected_output = svntest.wc.State(wc_dir, { })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/B', 'iota',
+                        switched='S')
+  expected_status.remove('A/B/E', 'A/B/F', 'A/B/E/alpha', 'A/B/E/beta',
+                         'A/B/lambda')
+  expected_status.add({
+    'A/B/pi'       : Item(status='  ', wc_rev='1'),
+    'A/B/rho'      : Item(status='  ', wc_rev='1'),
+    'A/B/tau'      : Item(status='  ', wc_rev='1'),
+    })
+
+  # This won't actually do a commit, because nothing should be modified.
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output, expected_status,
+                                        None, wc_dir)
+
+  # Check the URLs of various nodes.
+  info_output = {
+        wc_dir:                                '.*.other$',
+        os.path.join(wc_dir, 'iota'):          '.*.other/A/D/gamma$',
+        os.path.join(wc_dir, 'A', 'B'):        '.*.other/A/D/G$',
+        os.path.join(wc_dir, 'A', 'B', 'pi'):  '.*.other/A/D/G/pi$',
+    }
+
+  for path, pattern in info_output.items():
+    expected_info = { 'URL' : pattern }
+    svntest.actions.run_and_verify_info([expected_info], path)
+
+
 
 ########################################################################
 # Run the tests
@@ -2586,6 +2636,7 @@ test_list = [ None,
               tree_conflicts_on_switch_2_2,
               tree_conflicts_on_switch_3,
               single_file_relocate,
+              relocate_with_switched_children,
              ]
 
 if __name__ == '__main__':
