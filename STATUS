@@ -79,18 +79,6 @@ Candidate changes for 1.5.7:
    Votes:
      +1: pburba, arfrever
 
- * r37117
-   Fix issue #3393 'Merge consuming too much memory'.
-   Justification:
-     A merge which targets a WC with thousands of subtrees with mergeinfo
-     can consume multiple GB of memory in a hurry.
-   Notes:
-     This is as simple a fix to review as you've ever seen with the
-     word 'merge' in the title (though as gstein points out, the
-     function this change is in desperately needs a dose of clarity).
-   Votes:
-     +1: pburba, hwright
-
  * r37137
    Make some sweeping pool lifetime fixes in the BDB backend.
    Justification:
@@ -104,56 +92,6 @@ Candidate changes for 1.5.7:
    Votes:
      +1: cmpilato, arfrever
 
- * r37156
-   Make default depth of merge infinity, rather than the depth of target.
-   Justification:
-     Is it technically a bug?  Dunno, but there is nothing but confusion
-     regarding the old behavior, see
-     http://svn.haxx.se/dev/archive-2009-04/0328.shtml and
-     http://svn.haxx.se/dev/archive-2009-03/0701.shtml.
-   Notes:
-     Changes to the merge tests in r37156 expect tree conflicts which
-     obviously don't exist in 1.5.x.  Created a backport branch at
-     http://svn.collab.net/repos/svn/branches/1.5.x-r37156 which adjusts
-     the test to expect skips rather than tree conflicts.
-   Votes:
-     +1: pburba, arfrever
-
- * r37169
-   Update --set-depth infinity should expand shallow subtrees.
-   Justification:
-     update --set-depth infinity won't actually update the target's
-     shallow subtrees without this change.
-   Notes:
-     The test added in r37169 uses update --set-depth to make subtrees
-     in a WC shallow, but 1.5.x does not support shallowing of WC depths.
-     A backport branch can be found at
-     http://svn.collab.net/repos/svn/branches/1.5.x-r37169 which makes
-     minor adjustments to the test to work around this limitation.  These
-     adjusments affect *only* the setup of the test.
-   Votes:
-     +1: pburba, arfrever
-
- * r37385
-   Return an error if attempting to reintegrate from/to the repository root.
-   Justification:
-     A descriptive error is a lot better than a cryptic assertion, see
-     http://svn.haxx.se/dev/archive-2009-04/0623.shtml.
-   Votes:
-     +1: pburba, arfrever
-
-  * r37646, r37656
-   Fix a segfault in WC to URL copy.
-   Justification:
-     Segfaults are always bad.
-   Notes:
-     r37646 is the fix, r37656 is a follow up to clear iterpool.
-     Merging r37646, conflicts in subversion/libsvn_client/copy.c, a backport
-     branch resolving it can be found here:
-     http://svn.collab.net/repos/svn/branches/1.5.x-r37646
-   Votes:
-     +1: stylesen, arfrever
-
  * r37768
    Make svnadmin load tolerate mergeinfo with "\r\n".
    Justification:
@@ -161,7 +99,7 @@ Candidate changes for 1.5.7:
      style newlines in svn:mergeinfo.  See
      http://svn.haxx.se/dev/archive-2009-05/0179.shtml.
    Votes:
-     +1: pburba
+     +1: pburba, cmpilato
 
  * r37779
    Fix a potential segfault when doing noop file merges.
@@ -197,3 +135,65 @@ Approved changes:
    Votes:
      +1: cmpilato, danielsh, rhuijben
      -0: hwright (until such time as a backport branch exists)
+
+ * r37117
+   Fix issue #3393 'Merge consuming too much memory'.
+   Justification:
+     A merge which targets a WC with thousands of subtrees with mergeinfo
+     can consume multiple GB of memory in a hurry.
+   Notes:
+     This is as simple a fix to review as you've ever seen with the
+     word 'merge' in the title (though as gstein points out, the
+     function this change is in desperately needs a dose of clarity).
+   Votes:
+     +1: pburba, hwright, cmpilato
+
+ * r37385
+   Return an error if attempting to reintegrate from/to the repository root.
+   Justification:
+     A descriptive error is a lot better than a cryptic assertion, see
+     http://svn.haxx.se/dev/archive-2009-04/0623.shtml.
+   Votes:
+     +1: pburba, arfrever, cmpilato
+
+ * r37156
+   Make default depth of merge infinity, rather than the depth of target.
+   Justification:
+     Is it technically a bug?  Dunno, but there is nothing but confusion
+     regarding the old behavior, see
+     http://svn.haxx.se/dev/archive-2009-04/0328.shtml and
+     http://svn.haxx.se/dev/archive-2009-03/0701.shtml.
+   Notes:
+     Changes to the merge tests in r37156 expect tree conflicts which
+     obviously don't exist in 1.5.x.  Created a backport branch at
+     http://svn.collab.net/repos/svn/branches/1.5.x-r37156 which adjusts
+     the test to expect skips rather than tree conflicts.
+   Votes:
+     +1: pburba, arfrever, cmpilato
+
+ * r37169
+   Update --set-depth infinity should expand shallow subtrees.
+   Justification:
+     update --set-depth infinity won't actually update the target's
+     shallow subtrees without this change.
+   Notes:
+     The test added in r37169 uses update --set-depth to make subtrees
+     in a WC shallow, but 1.5.x does not support shallowing of WC depths.
+     A backport branch can be found at
+     http://svn.collab.net/repos/svn/branches/1.5.x-r37169 which makes
+     minor adjustments to the test to work around this limitation.  These
+     adjusments affect *only* the setup of the test.
+   Votes:
+     +1: pburba, arfrever, cmpilato
+
+  * r37646, r37656
+   Fix a segfault in WC to URL copy.
+   Justification:
+     Segfaults are always bad.
+   Notes:
+     r37646 is the fix, r37656 is a follow up to clear iterpool.
+     Merging r37646, conflicts in subversion/libsvn_client/copy.c, a backport
+     branch resolving it can be found here:
+     http://svn.collab.net/repos/svn/branches/1.5.x-r37646
+   Votes:
+     +1: stylesen, arfrever, cmpilato
