@@ -28,6 +28,7 @@
 #include "svn_ra.h"
 #include "svn_types.h"
 #include "svn_error.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_io.h"
 #include "svn_opt.h"
@@ -198,7 +199,7 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
           errmsg = apr_psprintf
             (pool,
              _("'%s' is already a working copy for a different URL"),
-             svn_path_local_style(path, pool));
+             svn_dirent_local_style(path, pool));
           if (entry->incomplete)
             errmsg = apr_pstrcat
               (pool, errmsg, _("; run 'svn update' to complete it"), NULL);
@@ -212,7 +213,7 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
       return svn_error_createf
         (SVN_ERR_WC_NODE_KIND_CHANGE, NULL,
          _("'%s' already exists and is not a directory"),
-         svn_path_local_style(path, pool));
+         svn_dirent_local_style(path, pool));
     }
 
  done:

@@ -26,6 +26,7 @@
 #include "svn_opt.h"
 #include "svn_wc.h"
 #include "svn_client.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 
 #include "private/svn_wc_private.h"
@@ -153,7 +154,7 @@ svn_client__entry_location(const char **url, svn_revnum_t *revnum,
     {
       return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
                                _("Entry for '%s' has no URL"),
-                               svn_path_local_style(wc_path, pool));
+                               svn_dirent_local_style(wc_path, pool));
     }
 
   return SVN_NO_ERROR;

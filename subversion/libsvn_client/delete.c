@@ -51,11 +51,11 @@ find_undeletables(void *baton,
     return svn_error_createf(SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
                              _("'%s' is in the way of the resource "
                                "actually under version control"),
-                             svn_path_local_style(path, pool));
+                             svn_dirent_local_style(path, pool));
   else if (! status->entry)
     return svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
                              _("'%s' is not under version control"),
-                             svn_path_local_style(path, pool));
+                             svn_dirent_local_style(path, pool));
 
   else if ((status->text_status != svn_wc_status_normal
             && status->text_status != svn_wc_status_deleted
@@ -66,7 +66,7 @@ find_undeletables(void *baton,
     return svn_error_createf(SVN_ERR_CLIENT_MODIFIED, NULL,
                              _("'%s' has local modifications -- commit or "
                                "revert them first"),
-                             svn_path_local_style(path, pool));
+                             svn_dirent_local_style(path, pool));
 
   return SVN_NO_ERROR;
 }
@@ -184,7 +184,7 @@ delete_urls(svn_commit_info_t **commit_info_p,
       if (kind == svn_node_none)
         return svn_error_createf(SVN_ERR_FS_NOT_FOUND, NULL,
                                  "URL '%s' does not exist",
-                                 svn_path_local_style(path, pool));
+                                 svn_dirent_local_style(path, pool));
     }
   svn_pool_destroy(subpool);
 

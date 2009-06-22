@@ -202,7 +202,7 @@ display_prop_diffs(const apr_array_header_t *propchanges,
   SVN_ERR(file_printf_from_utf8(file, encoding,
                                 _("%sProperty changes on: %s%s"),
                                 APR_EOL_STR,
-                                svn_path_local_style(path, pool),
+                                svn_dirent_local_style(path, pool),
                                 APR_EOL_STR));
 
   SVN_ERR(file_printf_from_utf8(file, encoding, "%s" APR_EOL_STR,
@@ -521,7 +521,7 @@ diff_content_changed(const char *path,
 
   /* ### Should diff labels print paths in local style?  Is there
      already a standard for this?  In any case, this code depends on
-     a particular style, so not calling svn_path_local_style() on the
+     a particular style, so not calling svn_dirent_local_style() on the
      paths below.*/
   if (path1[0] == '\0')
     path1 = apr_psprintf(subpool, "%s", path);
@@ -1374,7 +1374,7 @@ diff_repos_wc(const char *path1,
   if (! entry->url)
     return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
                              _("Directory '%s' has no URL"),
-                             svn_path_local_style(anchor, pool));
+                             svn_dirent_local_style(anchor, pool));
   anchor_url = apr_pstrdup(pool, entry->url);
 
   /* If we are performing a pegged diff, we need to find out what our
