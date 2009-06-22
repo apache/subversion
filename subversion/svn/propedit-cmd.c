@@ -246,7 +246,7 @@ svn_cl__propedit(apr_getopt_t *os,
                                                  subpool));
 
           target_local = svn_path_is_url(target) ? target
-            : svn_path_local_style(target, subpool);
+            : svn_dirent_local_style(target, subpool);
 
           /* ...and re-set the property's value accordingly. */
           if (edited_propval && !svn_string_compare(propval, edited_propval))

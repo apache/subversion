@@ -25,6 +25,7 @@
 #include "svn_pools.h"
 #include "svn_client.h"
 #include "svn_string.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_error_codes.h"
 #include "svn_error.h"
@@ -91,7 +92,7 @@ summarize_xml(const svn_client_diff_summarize_t *summary,
 
   /* Convert non-urls to local style, so that things like "" show up as "." */
   if (! svn_path_is_url(path))
-    path = svn_path_local_style(path, pool);
+    path = svn_dirent_local_style(path, pool);
 
   svn_xml_make_open_tag(&sb, pool, svn_xml_protect_pcdata, "path",
                         "kind", svn_cl__node_kind_str_xml(summary->node_kind),
@@ -120,7 +121,7 @@ summarize_regular(const svn_client_diff_summarize_t *summary,
 
   /* Convert non-urls to local style, so that things like "" show up as "." */
   if (! svn_path_is_url(path))
-    path = svn_path_local_style(path, pool);
+    path = svn_dirent_local_style(path, pool);
 
   /* Note: This output format tries to look like the output of 'svn status',
    *       thus the blank spaces where information that is not relevant to

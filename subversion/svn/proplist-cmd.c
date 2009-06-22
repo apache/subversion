@@ -27,6 +27,7 @@
 #include "svn_client.h"
 #include "svn_error_codes.h"
 #include "svn_error.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_xml.h"
 #include "cl.h"
@@ -56,7 +57,7 @@ proplist_receiver_xml(void *baton,
   const char *name_local;
 
   if (! is_url)
-    name_local = svn_path_local_style(path, pool);
+    name_local = svn_dirent_local_style(path, pool);
   else
     name_local = path;
 
@@ -86,7 +87,7 @@ proplist_receiver(void *baton,
   const char *name_local;
 
   if (! is_url)
-    name_local = svn_path_local_style(path, pool);
+    name_local = svn_dirent_local_style(path, pool);
   else
     name_local = path;
 

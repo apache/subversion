@@ -257,7 +257,7 @@ svn_cl__merge_file_externally(const char *base_path,
     arguments[5] = wc_path;
     arguments[6] = NULL;
 
-    SVN_ERR(svn_io_run_cmd(svn_path_internal_style(cwd, pool), merge_tool,
+    SVN_ERR(svn_io_run_cmd(svn_dirent_internal_style(cwd, pool), merge_tool,
                            arguments, &exitcode, NULL, TRUE, NULL, NULL, NULL,
                            pool));
     /* Exit code 0 means the merge was successful.
@@ -608,7 +608,7 @@ svn_cl__cleanup_log_msg(void *log_msg_baton,
 
   err = svn_error_createf(commit_err->apr_err, NULL,
                           "   '%s'",
-                          svn_path_local_style(lmb->tmpfile_left, pool));
+                          svn_dirent_local_style(lmb->tmpfile_left, pool));
   svn_error_compose(commit_err,
                     svn_error_create(commit_err->apr_err, err,
                       _("Your commit message was left in "
