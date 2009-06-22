@@ -3068,7 +3068,7 @@ msgid "Error retrieving REPORT (%d)"
 msgstr "获取报告出错(%d)"
 
 msgid "Premature EOF seen from server"
-msgstr "从服务器发现EOF太早"
+msgstr "从服务器发现 EOF 太早"
 
 msgid "Unspecified error message"
 msgstr "未指明的错误信息"
@@ -6280,7 +6280,7 @@ msgstr ""
 "    如果 PATH 是未版本控制或者已修改的项目，或者包含这些项目，那么仅当\n"
 "    给出 --force 参数时这些项目才会被删除。\n"
 "\n"
-"  2、每个 UR L指定的项目会通过立即提交从版本库中删除。\n"
+"  2、每个 URL 指定的项目会通过立即提交从版本库中删除。\n"
 
 msgid ""
 "Display the differences between two revisions or paths.\n"
