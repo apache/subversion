@@ -85,7 +85,9 @@ load_config(svn_ra_serf__session_t *session,
   const char *proxy_host = NULL;
   const char *port_str = NULL;
   const char *timeout_str = NULL;
+  const char *exceptions;
   unsigned int proxy_port;
+  svn_boolean_t is_exception = FALSE;
 
   if (config_hash)
     {
@@ -122,15 +124,30 @@ load_config(svn_ra_serf__session_t *session,
         }
     }
 
-  /* Load the global proxy server settings, if set. */
-  svn_config_get(config, &proxy_host, SVN_CONFIG_SECTION_GLOBAL,
-                 SVN_CONFIG_OPTION_HTTP_PROXY_HOST, NULL);
-  svn_config_get(config, &port_str, SVN_CONFIG_SECTION_GLOBAL,
-                 SVN_CONFIG_OPTION_HTTP_PROXY_PORT, NULL);
-  svn_config_get(config, &session->proxy_username, SVN_CONFIG_SECTION_GLOBAL,
-                 SVN_CONFIG_OPTION_HTTP_PROXY_USERNAME, NULL);
-  svn_config_get(config, &session->proxy_password, SVN_CONFIG_SECTION_GLOBAL,
-                 SVN_CONFIG_OPTION_HTTP_PROXY_PASSWORD, NULL);
+  /* Use the default proxy-specific settings if and only if
+     "http-proxy-exceptions" is not set to exclude this host. */
+  svn_config_get(config, &exceptions, SVN_CONFIG_SECTION_GLOBAL,
+                 SVN_CONFIG_OPTION_HTTP_PROXY_EXCEPTIONS, NULL);
+  if (exceptions)
+    {
+      apr_array_header_t *l = svn_cstring_split(exceptions, ",", TRUE, pool);
+      is_exception = svn_cstring_match_glob_list(session->repos_url.hostname, l);
+    }
+  if (! is_exception)
+    {
+      /* Load the global proxy server settings, if set. */
+      svn_config_get(config, &proxy_host, SVN_CONFIG_SECTION_GLOBAL,
+                     SVN_CONFIG_OPTION_HTTP_PROXY_HOST, NULL);
+      svn_config_get(config, &port_str, SVN_CONFIG_SECTION_GLOBAL,
+                     SVN_CONFIG_OPTION_HTTP_PROXY_PORT, NULL);
+      svn_config_get(config, &session->proxy_username,
+                     SVN_CONFIG_SECTION_GLOBAL,
+                     SVN_CONFIG_OPTION_HTTP_PROXY_USERNAME, NULL);
+      svn_config_get(config, &session->proxy_password,
+                     SVN_CONFIG_SECTION_GLOBAL,
+                     SVN_CONFIG_OPTION_HTTP_PROXY_PASSWORD, NULL);
+    }
+
   /* Load the global ssl settings, if set. */
   SVN_ERR(svn_config_get_bool(config, &session->trust_default_ca,
                               SVN_CONFIG_SECTION_GLOBAL,
