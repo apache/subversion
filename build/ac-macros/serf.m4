@@ -23,7 +23,7 @@ AC_DEFUN(SVN_LIB_SERF,
         save_ldflags="$LDFLAGS"
         LDFLAGS="$LDFLAGS -L$serf_prefix/lib"
         AC_CHECK_LIB(serf-0, serf_context_create,[serf_found="yes"], ,
-          $SVN_APRUTIL_LIBS $SVN_APR_LIBS -lz)
+          $SVN_APRUTIL_EXPORT_LIBS $SVN_APR_EXPORT_LIBS -lz)
         LDFLAGS="$save_ldflags"])
       CPPFLAGS="$save_cppflags"
     fi
