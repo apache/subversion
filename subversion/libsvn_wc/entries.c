@@ -1356,8 +1356,8 @@ svn_wc__get_entry(const svn_wc_entry_t **entry,
           SVN_ERR_ASSERT(*entry != NULL && (*entry)->kind == svn_node_dir);
           return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
                                  _("Admin area of '%s' is missing"),
-                                 svn_path_local_style(local_abspath,
-                                                      scratch_pool));
+                                 svn_dirent_local_style(local_abspath,
+                                                        scratch_pool));
         }
     }
   else
@@ -1382,8 +1382,8 @@ svn_wc__get_entry(const svn_wc_entry_t **entry,
         return SVN_NO_ERROR;
       return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
                                _("'%s' is not under version control"),
-                               svn_path_local_style(local_abspath,
-                                                    scratch_pool));
+                               svn_dirent_local_style(local_abspath,
+                                                      scratch_pool));
     }
 
   /* Give the caller a valid entry.  */
@@ -1394,8 +1394,8 @@ svn_wc__get_entry(const svn_wc_entry_t **entry,
       || (kind == svn_node_dir && (*entry)->kind != svn_node_dir))
     return svn_error_createf(SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
                              _("'%s' is not of the right kind"),
-                             svn_path_local_style(local_abspath,
-                                                  scratch_pool));
+                             svn_dirent_local_style(local_abspath,
+                                                    scratch_pool));
 
   if (kind == svn_node_unknown)
     {
@@ -1403,8 +1403,8 @@ svn_wc__get_entry(const svn_wc_entry_t **entry,
       if (need_parent_stub && (*entry)->kind != svn_node_dir)
         return svn_error_createf(SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
                                  _("'%s' is not of the right kind"),
-                                 svn_path_local_style(local_abspath,
-                                                      scratch_pool));
+                                 svn_dirent_local_style(local_abspath,
+                                                        scratch_pool));
 
       /* The actual (directory) information was wanted, but we got a stub.  */
       if (!need_parent_stub
@@ -1412,8 +1412,8 @@ svn_wc__get_entry(const svn_wc_entry_t **entry,
           && *(*entry)->name != '\0')
         return svn_error_createf(SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
                                  _("'%s' is not of the right kind"),
-                                 svn_path_local_style(local_abspath,
-                                                      scratch_pool));
+                                 svn_dirent_local_style(local_abspath,
+                                                        scratch_pool));
     }
 
   return SVN_NO_ERROR;
@@ -1492,7 +1492,7 @@ svn_wc__entry_versioned(const svn_wc_entry_t **entry,
   if (! *entry)
     return svn_error_createf(SVN_ERR_ENTRY_NOT_FOUND, NULL,
                              _("'%s' is not under version control"),
-                             svn_path_local_style(path, pool));
+                             svn_dirent_local_style(path, pool));
 
   return SVN_NO_ERROR;
 }
@@ -2322,8 +2322,8 @@ entries_write_body(svn_wc__db_t *db,
   if (! this_dir)
     return svn_error_createf(SVN_ERR_ENTRY_NOT_FOUND, NULL,
                              _("No default entry in directory '%s'"),
-                             svn_path_local_style(local_abspath,
-                                                  scratch_pool));
+                             svn_dirent_local_style(local_abspath,
+                                                    scratch_pool));
 
   /* Get the repos ID. */
   if (this_dir->uuid != NULL)
@@ -3227,7 +3227,7 @@ walker_helper(const char *dirpath,
     return walk_callbacks->handle_error
       (dirpath, svn_error_createf(SVN_ERR_ENTRY_NOT_FOUND, NULL,
                                   _("Directory '%s' has no THIS_DIR entry"),
-                                  svn_path_local_style(dirpath, pool)),
+                                  svn_dirent_local_style(dirpath, pool)),
        walk_baton, pool);
 
   /* Call the "found entry" callback for this directory as a "this dir"
@@ -3363,7 +3363,7 @@ svn_wc_walk_entries3(const char *path,
       return walk_callbacks->handle_error(
         path, svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
                                 _("'%s' is not under version control"),
-                                svn_path_local_style(path, pool)),
+                                svn_dirent_local_style(path, pool)),
         walk_baton, pool);
     }
 
@@ -3393,7 +3393,7 @@ svn_wc_walk_entries3(const char *path,
           return walk_callbacks->handle_error(
             path, svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
                                     _("'%s' is not under version control"),
-                                    svn_path_local_style(path, pool)),
+                                    svn_dirent_local_style(path, pool)),
             walk_baton, pool);
         }
 
@@ -3412,7 +3412,7 @@ svn_wc_walk_entries3(const char *path,
   return walk_callbacks->handle_error(
        path, svn_error_createf(SVN_ERR_NODE_UNKNOWN_KIND, NULL,
                                _("'%s' has an unrecognized node kind"),
-                               svn_path_local_style(path, pool)),
+                               svn_dirent_local_style(path, pool)),
        walk_baton, pool);
 }
 
@@ -3688,5 +3688,5 @@ svn_wc_mark_missing_deleted(const char *path,
     return svn_error_createf(SVN_ERR_WC_PATH_FOUND, NULL,
                              _("Unexpectedly found '%s': "
                                "path is marked 'missing'"),
-                             svn_path_local_style(path, pool));
+                             svn_dirent_local_style(path, pool));
 }

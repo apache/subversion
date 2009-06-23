@@ -1021,8 +1021,8 @@ svn_wc_transmit_text_deltas2(const char **tempfile,
                       _("Checksum mismatch for '%s'"),
                       _("   expected:  %s"),
                       _("     actual:  %s")),
-         svn_path_local_style(svn_wc__text_base_path(path, FALSE, pool),
-                              pool),
+         svn_dirent_local_style(svn_wc__text_base_path(path, FALSE, pool),
+                                pool),
          svn_checksum_to_cstring_display(expected_checksum, pool),
          svn_checksum_to_cstring_display(verify_checksum, pool));
     }
@@ -1031,7 +1031,7 @@ svn_wc_transmit_text_deltas2(const char **tempfile,
      thinking about it after this point. */
   SVN_ERR_W(err, apr_psprintf(pool,
                               _("While preparing '%s' for commit"),
-                              svn_path_local_style(path, pool)));
+                              svn_dirent_local_style(path, pool)));
 
   if (digest)
     memcpy(digest, local_checksum->digest, svn_checksum_size(local_checksum));

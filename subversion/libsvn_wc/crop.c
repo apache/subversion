@@ -179,7 +179,7 @@ crop_children(svn_wc__db_t *db,
         {
           return svn_error_createf
             (SVN_ERR_NODE_UNKNOWN_KIND, NULL, _("Unknown entry kind for '%s'"),
-             svn_path_local_style(child_abspath, iterpool));
+             svn_dirent_local_style(child_abspath, iterpool));
         }
 
       if (notify_func)
@@ -232,7 +232,7 @@ svn_wc_crop_tree(svn_wc_adm_access_t *anchor,
       (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
        _("Cannot crop '%s': it is going to be removed from repository."
          " Try commit instead"),
-       svn_path_local_style(full_path, pool));
+       svn_dirent_local_style(full_path, pool));
 
   /* Crop the target itself if we are requested to. */
   if (depth == svn_depth_exclude)
@@ -282,7 +282,7 @@ svn_wc_crop_tree(svn_wc_adm_access_t *anchor,
               return svn_error_createf
                 (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
                  _("Cannot crop '%s': it is a switched path"),
-                 svn_path_local_style(full_path, pool));
+                 svn_dirent_local_style(full_path, pool));
             }
         }
 
