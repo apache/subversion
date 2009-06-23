@@ -1055,7 +1055,7 @@ def query_absent_tree_conflicted_dir(sbox):
   wc_dir = sbox.wc_dir
 
   # Some paths we'll care about
-  C_path    = os.path.join(wc_dir, "A", "C")
+  C_path = os.path.join(wc_dir, "A", "C")
   C_C_path = os.path.join(wc_dir, "A", "C", "C")
 
   # Add a directory A/C/C as r2.

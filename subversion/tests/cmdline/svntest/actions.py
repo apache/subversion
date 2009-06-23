@@ -340,12 +340,7 @@ def run_and_verify_checkout(URL, wc_dir_name, output_tree, disk_tree,
   # Remove dir if it's already there, unless this is a forced checkout.
   # In that case assume we want to test a forced checkout's toleration
   # of obstructing paths.
-  remove_wc = True
-  for arg in args:
-    if arg == '--force':
-      remove_wc = False
-      break
-  if remove_wc:
+  if '--force' not in args:
     main.safe_rmtree(wc_dir_name)
 
   # Checkout and make a tree of the output, using l:foo/p:bar

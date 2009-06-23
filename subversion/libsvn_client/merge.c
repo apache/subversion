@@ -575,7 +575,6 @@ tree_conflict_on_add(merge_cmd_baton_t *merge_b,
               SVN_ERR(svn_wc__del_tree_conflict(conflict->path,
                                                 adm_access,
                                                 merge_b->pool));
-
             }
           else
             /* Else, the replace changed the node kind. Let's leave this
