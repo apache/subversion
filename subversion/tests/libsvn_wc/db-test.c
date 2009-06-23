@@ -1221,26 +1221,8 @@ test_global_relocate(apr_pool_t *pool)
   SVN_TEST_STRING_ASSERT(repos_root_url, ROOT_ONE);
   SVN_TEST_STRING_ASSERT(repos_uuid, UUID_ONE);
 
-  /* Test relocating to a repos existant in the db */
-  SVN_ERR(svn_wc__db_global_relocate(db, local_abspath,
-                                     ROOT_TWO, UUID_TWO,
-                                     pool));
-  SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL,
-                               &repos_relpath, &repos_root_url, &repos_uuid,
-                               NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL,
-                               db, local_abspath,
-                               pool, pool));
-  SVN_TEST_STRING_ASSERT(repos_relpath, "");
-  SVN_TEST_STRING_ASSERT(repos_root_url, ROOT_TWO);
-  SVN_TEST_STRING_ASSERT(repos_uuid, UUID_TWO);
-
   /* Test relocating to a repos not existant in the db */
-  SVN_ERR(svn_wc__db_global_relocate(db, local_abspath,
-                                     ROOT_THREE, UUID_THREE,
-                                     pool));
+  SVN_ERR(svn_wc__db_global_relocate(db, local_abspath, ROOT_THREE, pool));
   SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL,
                                &repos_relpath, &repos_root_url, &repos_uuid,
                                NULL, NULL, NULL, NULL,
@@ -1251,7 +1233,8 @@ test_global_relocate(apr_pool_t *pool)
                                pool, pool));
   SVN_TEST_STRING_ASSERT(repos_relpath, "");
   SVN_TEST_STRING_ASSERT(repos_root_url, ROOT_THREE);
-  SVN_TEST_STRING_ASSERT(repos_uuid, UUID_THREE);
+  /* The UUID should still be the same. */
+  SVN_TEST_STRING_ASSERT(repos_uuid, UUID_ONE);
 
   /* While we're at it, let's see if the children have been relocated, too. */
   SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL,
@@ -1265,7 +1248,8 @@ test_global_relocate(apr_pool_t *pool)
                                pool, pool));
   SVN_TEST_STRING_ASSERT(repos_relpath, "G-alt");
   SVN_TEST_STRING_ASSERT(repos_root_url, ROOT_THREE);
-  SVN_TEST_STRING_ASSERT(repos_uuid, UUID_THREE);
+  /* The UUID should still be the same. */
+  SVN_TEST_STRING_ASSERT(repos_uuid, UUID_ONE);
 
   return SVN_NO_ERROR;
 }
