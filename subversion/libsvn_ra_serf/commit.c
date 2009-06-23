@@ -1118,9 +1118,10 @@ open_root(void *edit_baton,
       const char *activity_str;
       const char *vcc_url;
 
-      svn_ra_serf__create_options_req(&opt_ctx, ctx->session,
-                                      ctx->session->conns[0],
-                                      ctx->session->repos_url.path, ctx->pool);
+      SVN_ERR(svn_ra_serf__create_options_req(&opt_ctx, ctx->session,
+                                              ctx->session->conns[0],
+                                              ctx->session->repos_url.path,
+                                              ctx->pool));
 
       SVN_ERR(svn_ra_serf__context_run_wait(
         svn_ra_serf__get_options_done_ptr(opt_ctx),
@@ -1170,9 +1171,11 @@ open_root(void *edit_baton,
 
       props = apr_hash_make(ctx->pool);
       propfind_ctx = NULL;
-      svn_ra_serf__deliver_props(&propfind_ctx, props, ctx->session,
-                                 ctx->conn, vcc_url, SVN_INVALID_REVNUM, "0",
-                                 checked_in_props, FALSE, NULL, ctx->pool);
+      SVN_ERR(svn_ra_serf__deliver_props(&propfind_ctx, props, ctx->session,
+                                         ctx->conn, vcc_url,
+                                         SVN_INVALID_REVNUM, "0",
+                                         checked_in_props, FALSE,
+                                         NULL, ctx->pool));
 
       SVN_ERR(svn_ra_serf__wait_for_props(propfind_ctx, ctx->session,
                                           ctx->pool));
