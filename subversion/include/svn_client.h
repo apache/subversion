@@ -407,8 +407,9 @@ typedef struct svn_client_commit_info_t
 #define SVN_CLIENT_COMMIT_ITEM_LOCK_TOKEN  0x20
 /** @} */
 
-/** The commit candidate structure.  In order to avoid backwards
- * compatibility problems clients should use
+/** The commit candidate structure.
+ *
+ * In order to avoid backwards compatibility problems clients should use
  * svn_client_commit_item3_create() to allocate and initialize this
  * structure instead of doing so themselves.
  *
@@ -416,6 +417,8 @@ typedef struct svn_client_commit_info_t
  */
 typedef struct svn_client_commit_item3_t
 {
+  /* IMPORTANT: If you extend this structure, add new fields to the end. */
+
   /** absolute working-copy path of item */
   const char *path;
 
