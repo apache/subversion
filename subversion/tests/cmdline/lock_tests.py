@@ -1114,19 +1114,12 @@ def repos_lock_with_info(sbox):
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   # Get repository lock token
-  exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
-                                                              'info', file_url)
-  for line in output:
-    if line.find("Lock Token:") != -1:
-      repos_lock_token = line[12:]
-      break
-  else:
-    print("Error: Lock token not found")
-    raise svntest.Failure
+  repos_lock_token \
+    = svntest.actions.run_and_parse_info(file_url)[0]['Lock Token']
 
   # info with revision option
   expected_infos = [
-      { 'Lock Token' : repos_lock_token[:-1] },
+      { 'Lock Token' : repos_lock_token },
     ]
   svntest.actions.run_and_verify_info(expected_infos, file_path, '-r1')
 
