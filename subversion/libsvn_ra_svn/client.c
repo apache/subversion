@@ -373,7 +373,16 @@ static svn_error_t *find_tunnel_agent(const char *tunnel,
 
   /* We have one predefined tunnel scheme, if it isn't overridden by config. */
   if (!val && strcmp(tunnel, "ssh") == 0)
-    val = "$SVN_SSH ssh";
+    {
+      /* Killing the tunnel agent with SIGTERM leads to unsightly
+       * stderr output from ssh, unless we pass -q.
+       * The "-q" option to ssh is widely supported: all versions of
+       * OpenSSH have it, the old ssh-1.x and the 2.x, 3.x ssh.com
+       * versions have it too. If the user is using some other ssh
+       * implementation that doesn't accept it, they can override it
+       * in the [tunnels] section of the config. */
+      val = "$SVN_SSH ssh -q";
+    }
 
   if (!val || !*val)
     return svn_error_createf(SVN_ERR_BAD_URL, NULL,
@@ -461,6 +470,21 @@ static svn_error_t *make_tunnel(const char **args, svn_ra_svn_conn_t **conn,
     status = apr_proc_create(proc, *args, args, NULL, attr, pool);
   if (status != APR_SUCCESS)
     return svn_error_wrap_apr(status, _("Can't create tunnel"));
+
+  /* Arrange for the tunnel agent to get a SIGTERM on pool
+   * cleanup.  This is a little extreme, but the alternatives
+   * weren't working out.
+   *
+   * Closing the pipes and waiting for the process to die
+   * was prone to mysterious hangs which are difficult to
+   * diagnose (e.g. svnserve dumps core due to unrelated bug;
+   * sshd goes into zombie state; ssh connection is never
+   * closed; ssh never terminates).
+   * See also the long dicussion in issue #2580 if you really
+   * want to know various reasons for these problems and
+   * the different opinions on this issue.
+   */
+  apr_pool_note_subprocess(pool, proc, APR_KILL_ONLY_ONCE);
 
   /* APR pipe objects inherit by default.  But we don't want the
    * tunnel agent's pipes held open by future child processes
