@@ -1008,7 +1008,7 @@ handle_stream(serf_request_t *request,
               /* Eek.  What did the file shrink or something? */
               if (APR_STATUS_IS_EOF(status))
                 {
-                  SVN_ERR_MALFUNCTION_NO_RETURN();
+                  SVN_ERR_MALFUNCTION();
                 }
 
               /* Skip on to the next iteration of this loop. */
