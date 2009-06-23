@@ -707,8 +707,8 @@ def run_and_parse_info(*args):
   for line in output:
     line = line[:-1] # trim '\n'
 
-    # mop up any lock comment lines
     if lock_comment_lines > 0:
+      # mop up any lock comment lines
       lock_comments.append(line)
       lock_comment_lines = lock_comment_lines - 1
       if lock_comment_lines == 0:
@@ -759,9 +759,16 @@ def run_and_verify_info(expected_infos, *args):
   actual_infos = run_and_parse_info(*args)
 
   try:
+    # zip() won't complain, so check this manually
+    if len(actual_infos) != len(expected_infos):
+      raise verify.SVNUnexpectedStdout(
+          "Expected %d infos, found %d infos"
+           % (len(expected_infos), len(actual_infos)))
+
     for actual, expected in zip(actual_infos, expected_infos):
       # compare dicts
       for key, value in expected.items():
+        assert ':' not in key # caller passed impossible expectations?
         if value is None and key in actual:
           raise main.SVNLineUnequal("Found unexpected key '%s' with value '%s'"
                                     % (key, actual[key]))
