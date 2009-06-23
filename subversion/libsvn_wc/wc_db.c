@@ -236,7 +236,7 @@ static const char * const statements[] = {
   "select id from wcroot where local_abspath is null;",
 
   /* STMT_SELECT_REPOSITORY */
-  "select id from repository where uuid = ?1 and root = ?2;",
+  "select id from repository where root = ?1;",
 
   /* STMT_INSERT_REPOSITORY */
   "insert into repository (root, uuid) values (?1, ?2);",
@@ -1317,7 +1317,7 @@ create_repos_id(apr_int64_t *repos_id, const char *repos_root_url,
   svn_boolean_t have_row;
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_SELECT_REPOSITORY));
-  SVN_ERR(svn_sqlite__bindf(stmt, "ss", repos_uuid, repos_root_url));
+  SVN_ERR(svn_sqlite__bindf(stmt, "s", repos_root_url));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
 
   if (have_row)
