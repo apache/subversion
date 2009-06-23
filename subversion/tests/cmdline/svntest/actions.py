@@ -712,10 +712,8 @@ def run_and_parse_info(*args):
       lock_comments.append(line)
       lock_comment_lines = lock_comment_lines - 1
       if lock_comment_lines == 0:
-        iter_info['Lock Comment'] = lock_comments
-      continue
-
-    if len(line) == 0:
+        iter_info[prev_key] = lock_comments
+    elif len(line) == 0:
       # separator line between items
       all_infos.append(iter_info)
       iter_info = {}
@@ -725,17 +723,22 @@ def run_and_parse_info(*args):
     elif line[0].isspace():
       # continuation line (for tree conflicts)
       iter_info[prev_key] += line[1:]
-    elif re.match('Lock Comment \((\d+) lines?\):', line):
-      lock_comment_lines = int(re.match('Lock Comment \((\d+) lines?\):',
-                                        line).group(1))
-      prev_key = 'Lock Comment'
     else:
       # normal line
       key, value = line.split(':', 1)
-      if len(value) > 1:
+
+      if re.search(' \(\d+ lines?\)$', key):
+        # numbered continuation lines
+        match = re.match('^(.*) \((\d+) lines?\)$', key)
+        key = match.group(1)
+        lock_comment_lines = int(match.group(2))
+      elif len(value) > 1:
+        # normal normal line
         iter_info[key] = value[1:]
       else:
-        # it's a "Tree conflict:\n" line; value is in continuation lines
+        ### originally added for "Tree conflict:\n" lines;
+        ### tree-conflicts output format has changed since then
+        # continuation lines are implicit (prefixed by whitespace)
         iter_info[key] = ''
       prev_key = key
 
