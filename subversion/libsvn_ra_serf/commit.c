@@ -263,8 +263,15 @@ handle_checkout(serf_request_t *request,
 {
   checkout_context_t *ctx = handler_baton;
 
-  SVN_ERR(svn_ra_serf__handle_status_only(request, response,
-                                          &ctx->progress, pool));
+  svn_error_t *err = svn_ra_serf__handle_status_only(request, response,
+                                                     &ctx->progress, pool);
+
+  /* These handler functions are supposed to return an APR_EOF status 
+     wrapped in a svn_error_t to indicate to serf that the response was 
+     completely read. While we have to return this status code to our
+     caller, we should treat it as the normal case for now. */
+  if (err && ! APR_STATUS_IS_EOF(err->apr_err))
+    return err;
 
   /* Get the resulting location. */
   if (ctx->progress.done && ctx->progress.status == 201)
@@ -284,7 +291,7 @@ handle_checkout(serf_request_t *request,
       ctx->resource_url = svn_uri_canonicalize(uri.path, ctx->pool);
     }
 
-  return SVN_NO_ERROR;
+  return err;
 }
 
 /* Return the relative path from DIR's topmost parent to DIR, in
