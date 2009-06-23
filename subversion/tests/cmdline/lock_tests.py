@@ -1228,8 +1228,8 @@ def info_moved_path(sbox):
 
   # Get info for old iota at r1. This shouldn't give us any lock info.
   expected_infos = [
-      { 'URL'           : '.*' },
-      { 'Lock Token: '  : None },
+      { 'URL'           : '.*' ,
+        'Lock Token'    : None },
     ]
   svntest.actions.run_and_verify_info(expected_infos, fname2, '-r1')
 
