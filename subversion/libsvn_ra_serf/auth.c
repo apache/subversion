@@ -80,6 +80,7 @@ static const svn_ra_serf__auth_protocol_t serf_auth_protocols[] = {
   {
     401,
     "Basic",
+    svn_ra_serf__authn_basic,
     init_basic_connection,
     handle_basic_auth,
     setup_request_basic_auth,
@@ -88,6 +89,7 @@ static const svn_ra_serf__auth_protocol_t serf_auth_protocols[] = {
   {
     407,
     "Basic",
+    svn_ra_serf__authn_basic,
     init_proxy_basic_connection,
     handle_proxy_basic_auth,
     setup_request_proxy_basic_auth,
@@ -97,6 +99,7 @@ static const svn_ra_serf__auth_protocol_t serf_auth_protocols[] = {
   {
     401,
     "NTLM",
+    svn_ra_serf__authn_ntlm,
     svn_ra_serf__init_sspi_connection,
     svn_ra_serf__handle_sspi_auth,
     svn_ra_serf__setup_request_sspi_auth,
@@ -105,6 +108,7 @@ static const svn_ra_serf__auth_protocol_t serf_auth_protocols[] = {
   {
     407,
     "NTLM",
+    svn_ra_serf__authn_ntlm,
     svn_ra_serf__init_proxy_sspi_connection,
     svn_ra_serf__handle_proxy_sspi_auth,
     svn_ra_serf__setup_request_proxy_sspi_auth,
@@ -114,6 +118,7 @@ static const svn_ra_serf__auth_protocol_t serf_auth_protocols[] = {
   {
     401,
     "Digest",
+    svn_ra_serf__authn_digest,
     svn_ra_serf__init_digest_connection,
     svn_ra_serf__handle_digest_auth,
     svn_ra_serf__setup_request_digest_auth,
@@ -123,6 +128,7 @@ static const svn_ra_serf__auth_protocol_t serf_auth_protocols[] = {
   {
     401,
     "Negotiate",
+    svn_ra_serf__authn_negotiate,
     svn_ra_serf__init_kerb_connection,
     svn_ra_serf__handle_kerb_auth,
     svn_ra_serf__setup_request_kerb_auth,
@@ -222,7 +228,8 @@ handle_auth_header(void *baton,
   for (prot = serf_auth_protocols; prot->code != 0; ++prot)
     {
       if (ab->code == prot->code &&
-          svn_cstring_casecmp(auth_name, prot->auth_name) == 0)
+          svn_cstring_casecmp(auth_name, prot->auth_name) == 0 &&
+          session->authn_types & prot->auth_type)
         {
           svn_serf__auth_handler_func_t handler = prot->handle_func;
           svn_error_t *err = NULL;
