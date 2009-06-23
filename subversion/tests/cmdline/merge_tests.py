@@ -15662,6 +15662,7 @@ def noop_file_merge(sbox):
                                      chi_COPY_path)
 
 #----------------------------------------------------------------------
+
 def multiple_reintegrates_from_the_same_branch(sbox):
   "multiple reintegrates create self-referential"
 

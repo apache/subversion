@@ -105,10 +105,17 @@
 # Quote char escaping is done like this:
 #   echo "my \\" content" > A/new_file
 #   echo 'my \\' content' > A/new_file
+# If you use r""" echo 'my \' content' > A/new_file """ (triple quotes
+# with a leading 'r' character), you don't need to double-escape any
+# characters.
 #
 # You can either supply multiple lines, or separate the lines with ';'.
 #   factory.make(sbox, 'echo foo > bar; svn add bar')
 #   factory.make(sbox, 'echo foo > bar\n svn add bar')
+#   factory.make(sbox, r"""
+#                      echo "foo\nbar" > bar
+#                      svn add bar
+#                      """)
 #
 #
 # WORKING COPY PATHS
