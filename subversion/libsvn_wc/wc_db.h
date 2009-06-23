@@ -1197,10 +1197,11 @@ svn_wc__db_check_node(svn_wc__db_kind_t *kind,
  */
 
 /*
- * Associate LOCAL_DIR_ABSPATH, and all its children with REPOS_UUID located
+ * Associate LOCAL_DIR_ABSPATH, and all its children with the repository at
  * at REPOS_ROOT_URL.  The relative path to the repos root will not change,
- * just the repository root.  This also updates any locks which may exist for
- * the node, as well as any copyfrom repository information.
+ * just the repository root.  The repos uuid will also remain the same.
+ * This also updates any locks which may exist for the node, as well as any
+ * copyfrom repository information.
  *
  * Use SCRATCH_POOL for any temporary allocations.
  *
@@ -1218,7 +1219,6 @@ svn_error_t *
 svn_wc__db_global_relocate(svn_wc__db_t *db,
                            const char *local_dir_abspath,
                            const char *repos_root_url,
-                           const char *repos_uuid,
                            apr_pool_t *scratch_pool);
 
 
