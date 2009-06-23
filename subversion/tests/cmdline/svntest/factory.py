@@ -1357,7 +1357,7 @@ class TestFactory:
         for add in adds:
           path = add[0]
           node = add[1]
-          py += self.node2py(node, wc, "\n  ")
+          py += self.node2py(node, wc, "\n  ", False)
         py += "\n})\n"
 
       else:
