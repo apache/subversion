@@ -79,5 +79,15 @@ Candidate changes:
    Votes:
      +1: cmpilato, rhuijben
 
+ * r38166, r38168
+   Fix issue #2580, svn+ssh SIGKILLs ssh processes
+   Justification:
+     Without this fix, svn+ssh:// does not play nicely with ssh
+     connection pooling.
+   Notes:
+     See the issue for (an overwhelming amount of) details.
+   Votes:
+     +1: stsp
+
 Approved changes:
 =================
