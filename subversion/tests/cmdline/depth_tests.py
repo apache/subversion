@@ -2032,11 +2032,11 @@ def depth_empty_update_on_file(sbox):
                                         '--depth=empty', '-r1', iota_path)
 
   # Check the revision and created rev.
-  expected_infos = [
-      { 'Revision'           : '^1$' },
-      { 'Last Changed Rev'   : '^1$' },
-    ]
-  svntest.actions.run_and_verify_info(expected_infos, iota_path)
+  expected_infos = {
+      'Revision'           : '^1$',
+      'Last Changed Rev'   : '^1$',
+    }
+  svntest.actions.run_and_verify_info([expected_infos], iota_path)
 
 
 def excluded_path_update_operation(sbox):
