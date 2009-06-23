@@ -695,40 +695,24 @@ def nonrecursive_switching(sbox):
                                      'switch', '-N', version1_url, wc2_dir)
 
   # Check the URLs of the (not switched) directories.
-  exit_code, out, err = svntest.actions.run_and_verify_svn(None, None, [],
-                                                           'info', wc2_B_dir)
-  if out[1].find('/A/B') == -1:
-    print(out[1])
-    raise svntest.Failure
-
-  exit_code, out, err = svntest.actions.run_and_verify_svn(None, None, [],
-                                                           'info', wc2_C_dir)
-  if out[1].find('/A/C') == -1:
-    print(out[1])
-    raise svntest.Failure
-
-  exit_code, out, err = svntest.actions.run_and_verify_svn(None, None, [],
-                                                           'info', wc2_D_dir)
-  if out[1].find('/A/D') == -1:
-    print(out[1])
-    raise svntest.Failure
+  expected_infos = [
+      { 'URL' : '.*/A/B$' },
+      { 'URL' : '.*/A/C$' },
+      { 'URL' : '.*/A/D$' },
+    ]
+  svntest.actions.run_and_verify_info(expected_infos,
+                                      wc2_B_dir, wc2_C_dir, wc2_D_dir)
 
   # Check the URLs of the switched files.
   # ("svn status -u" might be a better check: it fails when newfile's URL
   # is bad, and shows "S" when mu's URL is wrong.)
   # mu: not switched
-  exit_code, out, err = svntest.actions.run_and_verify_svn(None, None, [],
-                                                           'info', wc2_mu_file)
-  if out[2].find('/branch/version1/mu') == -1:
-    print(out[2])
-    raise svntest.Failure
-  # newfile: wrong URL
-  exit_code, out, err = svntest.actions.run_and_verify_svn(None, None, [],
-                                                           'info',
-                                                           wc2_new_file)
-  if out[2].find('/branch/version1/newfile') == -1:
-    print(out[2])
-    raise svntest.Failure
+  expected_infos = [
+      { 'URL' : '.*/branch/version1/mu$' },
+      { 'URL' : '.*/branch/version1/newfile$' },   # newfile: wrong URL
+    ]
+  svntest.actions.run_and_verify_info(expected_infos,
+                                      wc2_mu_file, wc2_new_file)
 
 
 #----------------------------------------------------------------------
@@ -770,13 +754,10 @@ def failed_anchor_is_target(sbox):
 
   # There was a bug whereby the failed switch left the wrong URL in
   # the target directory H.  Check for that.
-  exit_code, out, err = svntest.actions.run_and_verify_svn(None, None, [],
-                                                           'info', H_path)
-  for line in out:
-    if line == 'URL: ' + G_url + '\n':
-      break
-  else:
-    raise svntest.Failure
+  expected_infos = [
+      { 'URL' : '.*' + G_url + '$' },
+    ]
+  svntest.actions.run_and_verify_info(expected_infos, H_path)
 
   # Resolve tree conflict at psi.
   svntest.actions.run_and_verify_resolved([psi_path])
@@ -819,11 +800,10 @@ def bad_intermediate_urls(sbox):
     raise svntest.Failure
 
   # However, the URL for A should now reflect A/C/A, not something else.
-  exit_code, out, err = svntest.actions.run_and_verify_svn(None, None, [],
-                                                           'info', A_path)
-  if out[1].find('/A/C/A') == -1:
-    raise svntest.Failure
-
+  expected_infos = [
+      { 'URL' : '.*/A/C/A$' },
+    ]
+  svntest.actions.run_and_verify_info(expected_infos, A_path)
 
 
 #----------------------------------------------------------------------
@@ -964,10 +944,16 @@ def relocate_beyond_repos_root(sbox):
   # relocate actually changed the URI.  Escape the expected URI to
   # avoid problems from any regex meta-characters it may contain
   # (e.g. '+').
-  escaped_exp = '^URL: ' + re.escape(other_A_url) + '$' \
-                '|Path.+|Repository.+|Revision.+|Node.+|Last.+|\n'
-  svntest.actions.run_and_verify_svn(None, escaped_exp, [],
-                                     'info', '-rHEAD', A_wc_dir)
+  expected_infos = [
+      { 'URL'                : re.escape(other_A_url) + '$',
+        'Path'               : '.+',
+        'Repository UUID'    : '.+',
+        'Revision'           : '.+',
+        'Node Kind'          : '.+',
+        'Last Changed Date'  : '.+' },
+    ]
+  svntest.actions.run_and_verify_info(expected_infos, A_wc_dir, '-rHEAD')
+
 
 #----------------------------------------------------------------------
 # Issue 2306.

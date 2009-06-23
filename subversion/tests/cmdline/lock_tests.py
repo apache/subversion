@@ -1125,37 +1125,14 @@ def repos_lock_with_info(sbox):
     raise svntest.Failure
 
   # info with revision option
-  exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
-                                                              'info',
-                                                              file_path, '-r1')
-
-  for line in output:
-    if line.find("Lock Token:") != -1:
-      lock_token = line[12:]
-      break
-  else:
-    print("Error: Lock token not found")
-    raise svntest.Failure
-
-  if (repos_lock_token != lock_token):
-    print("Error: expected repository lock information not found.")
-    raise svntest.Failure
+  expected_infos = [
+      { 'Lock Token' : repos_lock_token[:-1] },
+    ]
+  svntest.actions.run_and_verify_info(expected_infos, file_path, '-r1')
 
   # info with peg revision
-  exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
-                                                              'info',
-                                                              file_path + '@1')
-  for line in output:
-    if line.find("Lock Token:") != -1:
-      lock_token = line[12:]
-      break
-  else:
-    print("Error: Lock token not found")
-    raise svntest.Failure
+  svntest.actions.run_and_verify_info(expected_infos, file_path + '@1')
 
-  if (repos_lock_token != lock_token):
-    print("Error: expected repository lock information not found.")
-    raise svntest.Failure
 
 #----------------------------------------------------------------------
 def unlock_already_unlocked_files(sbox):
@@ -1257,21 +1234,11 @@ def info_moved_path(sbox):
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   # Get info for old iota at r1. This shouldn't give us any lock info.
-  exit_code, output, errput = svntest.actions.run_and_verify_svn(
-    None, None, [], 'info', fname2, '-r1')
-
-  # Since we want to make sure that there is *no* lock info, to make this
-  # more robust, we also check that the info command actually output some info.
-  got_url = 0
-  for line in output:
-    if line.find("URL:") >= 0:
-      got_url = 1
-    if line.find("Lock Token:") >= 0:
-      print(fname2 + " was reported as locked.")
-      raise svntest.Failure
-  if not got_url:
-    print("Info didn't output an URL.")
-    raise svntest.Failure
+  expected_infos = [
+      { 'URL'           : '.*' },
+      { 'Lock Token: '  : None },
+    ]
+  svntest.actions.run_and_verify_info(expected_infos, fname2, '-r1')
 
 #----------------------------------------------------------------------
 def ls_url_encoded(sbox):

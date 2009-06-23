@@ -187,14 +187,10 @@ def ignore_externals(sbox):
   # Update to get it on disk
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
   ext_path = os.path.join(C_path, 'ext')
-  exit_code, out, err = svntest.actions.run_and_verify_svn(
-    None, svntest.verify.AnyOutput, [], 'info', ext_path)
-
-  for line in out:
-    if line.find('Revision: 1') != -1:
-      break
-  else:
-    raise svntest.Failure
+  expected_infos = [
+      { 'Revision' : '^1$' },
+    ]
+  svntest.actions.run_and_verify_info(expected_infos, ext_path)
 
   svntest.actions.run_and_verify_svnversion("working copy with svn:externals",
                                             wc_dir, repo_url,
