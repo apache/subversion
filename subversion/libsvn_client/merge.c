@@ -1960,10 +1960,10 @@ merge_dir_added(svn_wc_adm_access_t *adm_access,
           else
             {
               /* This is a tree conflict. */
-              SVN_ERR(tree_conflict(merge_b, adm_access, path,
-                                    svn_node_dir,
-                                    svn_wc_conflict_action_add,
-                                    svn_wc_conflict_reason_added));
+              SVN_ERR(tree_conflict_on_add(merge_b, adm_access, path,
+                                           svn_node_dir,
+                                           svn_wc_conflict_action_add,
+                                           svn_wc_conflict_reason_added));
               if (tree_conflicted)
                 *tree_conflicted = TRUE;
               if (state)
