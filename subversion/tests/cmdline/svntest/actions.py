@@ -699,19 +699,36 @@ def run_and_parse_info(*args):
   # per-target variables
   iter_info = {}
   prev_key = None
+  lock_comment_lines = 0
+  lock_comments = []
 
   exit_code, output, errput = main.run_svn(None, 'info', *args)
 
   for line in output:
     line = line[:-1] # trim '\n'
+
+    # mop up any lock comment lines
+    if lock_comment_lines > 0:
+      lock_comments.append(line)
+      lock_comment_lines = lock_comment_lines - 1
+      if lock_comment_lines == 0:
+        iter_info['Lock Comment'] = lock_comments
+      continue
+
     if len(line) == 0:
       # separator line between items
       all_infos.append(iter_info)
       iter_info = {}
       prev_key = None
+      lock_comment_lines = 0
+      lock_comments = []
     elif line[0].isspace():
       # continuation line (for tree conflicts)
       iter_info[prev_key] += line[1:]
+    elif re.match('Lock Comment \((\d+) lines?\):', line):
+      lock_comment_lines = int(re.match('Lock Comment \((\d+) lines?\):',
+                                        line).group(1))
+      prev_key = 'Lock Comment'
     else:
       # normal line
       key, value = line.split(':', 1)

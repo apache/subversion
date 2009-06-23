@@ -1729,18 +1729,10 @@ def info_nonhead(sbox):
                                         None,
                                         wc_dir)
   # Get info for old iota at r1.
-  exit_code, output, errput = svntest.actions.run_and_verify_svn(None, None,
-                                                                 [], 'info',
-                                                                 furl + '@1',
-                                                                 '-r1')
-  got_url = 0
-  for line in output:
-    if line.find("URL:") >= 0:
-      got_url = 1
-  if not got_url:
-    print("Info didn't output an URL.")
-    raise svntest.Failure
-
+  expected_infos = [
+      { 'URL' : '.*' },
+    ]
+  svntest.actions.run_and_verify_info(expected_infos, furl + '@1', '-r1')
 
 
 #----------------------------------------------------------------------
