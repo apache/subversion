@@ -50,7 +50,7 @@ svn_wc__ensure_directory(const char *path,
          Might happen if there's a file in the way, for example. */
       return svn_error_createf(APR_ENOTDIR, NULL,
                                _("'%s' is not a directory"),
-                               svn_path_local_style(path, pool));
+                               svn_dirent_local_style(path, pool));
     }
   else if (kind == svn_node_none)
     {
@@ -287,7 +287,7 @@ svn_wc__path_switched(const char *wc_path,
       const char *no_url_path = parent_entry->url ? wc_path : wc_parent_path;
       return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
                                _("Cannot find a URL for '%s'"),
-                               svn_path_local_style(no_url_path, pool));
+                               svn_dirent_local_style(no_url_path, pool));
     }
 
   parent_child_url

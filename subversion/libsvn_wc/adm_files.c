@@ -99,7 +99,7 @@ svn_wc_set_adm_dir(const char *name, apr_pool_t *pool)
   return svn_error_createf
     (SVN_ERR_BAD_FILENAME, NULL,
      _("'%s' is not a valid administrative directory name"),
-     svn_path_local_style(name, pool));
+     svn_dirent_local_style(name, pool));
 }
 
 

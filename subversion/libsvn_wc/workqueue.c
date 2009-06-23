@@ -104,8 +104,8 @@ svn_wc__wq_run(svn_wc__db_t *db,
           return svn_error_createf(SVN_ERR_WC_BAD_ADM_LOG, NULL,
                                    _("Unrecognized work item in the queue "
                                      "associated with '%s'"),
-                                   svn_path_local_style(local_abspath,
-                                                        iterpool));
+                                   svn_dirent_local_style(local_abspath,
+                                                          iterpool));
         }
 
       SVN_ERR(svn_wc__db_wq_completed(db, local_abspath, id, iterpool));

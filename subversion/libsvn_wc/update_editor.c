@@ -749,7 +749,7 @@ complete_directory(struct edit_baton *eb,
   if (! entry)
     return svn_error_createf(SVN_ERR_ENTRY_NOT_FOUND, NULL,
                              _("No '.' entry in: '%s'"),
-                             svn_path_local_style(path, pool));
+                             svn_dirent_local_style(path, pool));
   tmp_entry.incomplete = FALSE;
   SVN_ERR(svn_wc__entry_modify(adm_access, NULL /* THIS_DIR */,
                                &tmp_entry, SVN_WC__ENTRY_MODIFY_INCOMPLETE,
@@ -2287,7 +2287,7 @@ add_directory(const char *path,
        SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
        _("Failed to add directory '%s': a non-directory object of the "
          "same name already exists"),
-       svn_path_local_style(db->path, pool));
+       svn_dirent_local_style(db->path, pool));
     }
 
   if (kind == svn_node_dir)
@@ -2330,7 +2330,7 @@ add_directory(const char *path,
                  SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
                  _("Failed to add directory '%s': an unversioned "
                    "directory of the same name already exists"),
-                 svn_path_local_style(db->path, pool));
+                 svn_dirent_local_style(db->path, pool));
             }
         }
       else /* Obstructing dir *is* versioned or scheduled for addition. */
@@ -2380,7 +2380,7 @@ add_directory(const char *path,
                   SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
                   _("UUID mismatch: existing directory '%s' was checked out "
                     "from a different repository"),
-                  svn_path_local_style(db->path, pool));
+                  svn_dirent_local_style(db->path, pool));
             }
 
           if (!eb->switch_url
@@ -2389,7 +2389,7 @@ add_directory(const char *path,
                SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
                _("URL '%s' of existing directory '%s' does not match "
                  "expected URL '%s'"),
-               entry->url, svn_path_local_style(db->path, pool),
+               entry->url, svn_dirent_local_style(db->path, pool),
                db->new_URL);
 
           if (! entry_in_parent)
@@ -2397,7 +2397,7 @@ add_directory(const char *path,
                  SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
                  _("Failed to add directory '%s': a versioned "
                    "directory of the same name already exists"),
-                 svn_path_local_style(db->path, pool));
+                 svn_dirent_local_style(db->path, pool));
 
           if ((entry->schedule == svn_wc_schedule_add
                || entry->schedule == svn_wc_schedule_replace)
@@ -2443,7 +2443,7 @@ add_directory(const char *path,
        SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
        _("Failed to add directory '%s': object of the same name as the "
          "administrative directory"),
-       svn_path_local_style(db->path, pool));
+       svn_dirent_local_style(db->path, pool));
 
 
   /* Either we got real copyfrom args... */
@@ -2477,7 +2477,7 @@ add_directory(const char *path,
          SVN_ERR_UNSUPPORTED_FEATURE, NULL,
          _("Failed to add directory '%s': "
            "copyfrom arguments not yet supported"),
-         svn_path_local_style(db->path, pool));
+         svn_dirent_local_style(db->path, pool));
     }
   else  /* ...or we got invalid copyfrom args. */
     {
@@ -3038,7 +3038,7 @@ absent_file_or_dir(const char *path,
        SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
        _("Failed to mark '%s' absent: item of the same name is already "
          "scheduled for addition"),
-       svn_path_local_style(path, pool));
+       svn_dirent_local_style(path, pool));
 
   /* Immediately create an entry for the new item in the parent.  Note
      that the parent must already be either added or opened, and thus
@@ -3535,7 +3535,7 @@ add_file(const char *path,
        SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
        _("Failed to add file '%s': a non-file object of the "
          "same name already exists"),
-       svn_path_local_style(full_path, subpool));
+       svn_dirent_local_style(full_path, subpool));
 
   /* An unversioned, obstructing file may be OK. */
   if (!entry && kind == svn_node_file)
@@ -3558,7 +3558,7 @@ add_file(const char *path,
              SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
              _("Failed to add file '%s': an unversioned "
                "file of the same name already exists"),
-             svn_path_local_style(full_path, subpool));
+             svn_dirent_local_style(full_path, subpool));
         }
     }
 
@@ -3595,7 +3595,7 @@ add_file(const char *path,
            SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
            _("UUID mismatch: existing file '%s' was checked out "
              "from a different repository"),
-           svn_path_local_style(full_path, pool));
+           svn_dirent_local_style(full_path, pool));
 
       if (!eb->switch_url
           && strcmp(fb->new_URL, entry->url) != 0)
@@ -3603,7 +3603,7 @@ add_file(const char *path,
            SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
            _("URL '%s' of existing file '%s' does not match "
              "expected URL '%s'"),
-           entry->url, svn_path_local_style(full_path, pool),
+           entry->url, svn_dirent_local_style(full_path, pool),
            fb->new_URL);
     }
 
@@ -3700,7 +3700,7 @@ open_file(const char *path,
                              _("File '%s' in directory '%s' "
                                "is not a versioned resource"),
                              fb->name,
-                             svn_path_local_style(pb->path, pool));
+                             svn_dirent_local_style(pb->path, pool));
 
   locally_deleted = in_deleted_tree(eb, full_path, TRUE, pool);
 
@@ -3871,7 +3871,7 @@ apply_textdelta(void *file_baton,
                      _("Checksum mismatch for '%s'"),
                      _("   expected:  %s"),
                      _("   recorded:  %s")),
-        svn_path_local_style(fb->path, pool), base_checksum, checksum);
+        svn_dirent_local_style(fb->path, pool), base_checksum, checksum);
     }
 
   /* Open the text base for reading, unless this is an added file. */
@@ -4203,7 +4203,7 @@ merge_file(svn_wc_notify_state_t *content_state,
     return svn_error_createf(
         SVN_ERR_UNVERSIONED_RESOURCE, NULL,
         _("'%s' is not under version control"),
-        svn_path_local_style(fb->path, pool));
+        svn_dirent_local_style(fb->path, pool));
 
   /* Determine if any of the propchanges are the "magic" ones that
      might require changing the working file. */
@@ -4585,7 +4585,7 @@ close_file(void *file_baton,
                     _("Checksum mismatch for '%s'"),
                     _("   expected:  %s"),
                     _("     actual:  %s")),
-       svn_path_local_style(fb->path, pool), expected_hex_digest,
+       svn_dirent_local_style(fb->path, pool), expected_hex_digest,
        svn_checksum_to_cstring_display(actual_checksum, pool));
 
   SVN_ERR(merge_file(&content_state, &prop_state, &lock_state, fb,
@@ -5280,7 +5280,7 @@ check_wc_root(svn_boolean_t *wc_root,
     return svn_error_createf(
        SVN_ERR_ENTRY_MISSING_URL, NULL,
        _("'%s' has no ancestry information"),
-       svn_path_local_style(parent, pool));
+       svn_dirent_local_style(parent, pool));
 
   /* If PATH's parent in the WC is not its parent in the repository,
      PATH is a WC root. */

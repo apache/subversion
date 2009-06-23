@@ -1809,7 +1809,7 @@ svn_wc__internal_propget(const svn_string_t **value,
           return svn_error_createf(
             SVN_ERR_WC_PATH_NOT_FOUND, err,
             _("Directory '%s' is missing or obstructed"),
-            svn_path_local_style(local_abspath, scratch_pool));
+            svn_dirent_local_style(local_abspath, scratch_pool));
         }
       return svn_error_return(err);
     }
@@ -1882,7 +1882,7 @@ validate_prop_against_node_kind(const char *name,
                                  NULL };
   const char **node_kind_prohibit;
   const char *path_display
-    = svn_path_is_url(path) ? path : svn_path_local_style(path, pool);
+    = svn_path_is_url(path) ? path : svn_dirent_local_style(path, pool);
 
   switch (node_kind)
     {
@@ -1958,7 +1958,7 @@ validate_eol_prop_against_file(const char *path,
   svn_error_t *err;
   const svn_string_t *mime_type;
   const char *path_display
-    = svn_path_is_url(path) ? path : svn_path_local_style(path, pool);
+    = svn_path_is_url(path) ? path : svn_dirent_local_style(path, pool);
 
   /* First just ask the "getter" for the MIME type. */
   SVN_ERR(getter(&mime_type, NULL, getter_baton, pool));
@@ -2189,7 +2189,7 @@ svn_wc_canonicalize_svn_prop(const svn_string_t **propval_p,
       if (eol_style == svn_subst_eol_style_unknown)
         return svn_error_createf(SVN_ERR_IO_UNKNOWN_EOL, NULL,
                                  _("Unrecognized line ending style for '%s'"),
-                                 svn_path_local_style(path, pool));
+                                 svn_dirent_local_style(path, pool));
       SVN_ERR(validate_eol_prop_against_file(path, getter, getter_baton,
                                              pool));
     }
@@ -2445,7 +2445,7 @@ svn_wc_get_prop_diffs(apr_array_header_t **propchanges,
   if (kind == svn_wc__db_kind_unknown)
     return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
                              _("'%s' is not under version control"),
-                             svn_path_local_style(path, pool));
+                             svn_dirent_local_style(path, pool));
 
   if (kind == svn_wc__db_kind_dir)
     {
@@ -2582,7 +2582,7 @@ svn_wc_parse_externals_description3(apr_array_header_t **externals_p,
   apr_array_header_t *lines = svn_cstring_split(desc, "\n\r", TRUE, pool);
   int i;
   const char *parent_directory_display = svn_path_is_url(parent_directory) ?
-    parent_directory : svn_path_local_style(parent_directory, pool);
+    parent_directory : svn_dirent_local_style(parent_directory, pool);
 
   if (externals_p)
     *externals_p = apr_array_make(pool, 1, sizeof(svn_wc_external_item2_t *));
@@ -2716,7 +2716,7 @@ svn_wc_parse_externals_description3(apr_array_header_t **externals_p,
                                         pool));
 
       item->target_dir = svn_path_canonicalize
-        (svn_path_internal_style(item->target_dir, pool), pool);
+        (svn_dirent_internal_style(item->target_dir, pool), pool);
 
       if (item->target_dir[0] == '\0' || item->target_dir[0] == '/'
           || svn_path_is_backpath_present(item->target_dir))

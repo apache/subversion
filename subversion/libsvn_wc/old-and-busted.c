@@ -1082,7 +1082,7 @@ parse_entries_xml(const char *path,
   SVN_ERR_W(svn_xml_parse(svn_parser, buf, size, TRUE),
             apr_psprintf(scratch_pool,
                          _("XML parser failed in '%s'"),
-                         svn_path_local_style(path, scratch_pool)));
+                         svn_dirent_local_style(path, scratch_pool)));
 
   svn_pool_destroy(accum.scratch_pool);
 
@@ -1232,7 +1232,7 @@ svn_wc__read_entries_old(apr_hash_t **entries,
         return svn_error_createf(SVN_ERR_WC_CORRUPT, NULL,
                                  _("Invalid version line in entries file "
                                    "of '%s'"),
-                                 svn_path_local_style(path, scratch_pool));
+                                 svn_dirent_local_style(path, scratch_pool));
       entryno = 1;
 
       while (curp != endp)
@@ -1256,7 +1256,8 @@ svn_wc__read_entries_old(apr_hash_t **entries,
                                      _("Error at entry %d in entries file for "
                                        "'%s':"),
                                      entryno,
-                                     svn_path_local_style(path, scratch_pool));
+                                     svn_dirent_local_style(path,
+                                                            scratch_pool));
 
           ++curp;
           ++entryno;

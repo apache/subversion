@@ -232,8 +232,8 @@ copy_added_dir_administratively(const char *src_path,
                     return svn_error_wrap_apr(apr_err,
                                               _("Can't close "
                                                 "directory '%s'"),
-                                              svn_path_local_style(src_path,
-                                                                   subpool));
+                                              svn_dirent_local_style(src_path,
+                                                                     subpool));
                   break;
                 }
               else
@@ -241,8 +241,8 @@ copy_added_dir_administratively(const char *src_path,
                   return svn_error_createf(err->apr_err, err,
                                            _("Error during recursive copy "
                                              "of '%s'"),
-                                           svn_path_local_style(src_path,
-                                                            subpool));
+                                           svn_dirent_local_style(src_path,
+                                                                  subpool));
                 }
             }
 
@@ -364,7 +364,7 @@ get_copyfrom_url_rev_via_parent(const char *src_path,
               return svn_error_createf(
                  SVN_ERR_WC_COPYFROM_PATH_NOT_FOUND, NULL,
                  _("no parent with copyfrom information found above '%s'"),
-                 svn_path_local_style(src_path, pool));
+                 svn_dirent_local_style(src_path, pool));
             }
         }
     }
@@ -454,7 +454,7 @@ copy_file_administratively(const char *src_path,
   if (dst_kind != svn_node_none)
     return svn_error_createf(SVN_ERR_ENTRY_EXISTS, NULL,
                              _("'%s' already exists and is in the way"),
-                             svn_path_local_style(dst_path, pool));
+                             svn_dirent_local_style(dst_path, pool));
 
   /* Even if DST_PATH doesn't exist it may still be a versioned item; it
      may be scheduled for deletion, or the user may simply have removed the
@@ -465,7 +465,7 @@ copy_file_administratively(const char *src_path,
     {
       return svn_error_createf(SVN_ERR_ENTRY_EXISTS, NULL,
                                _("There is already a versioned item '%s'"),
-                               svn_path_local_style(dst_path, pool));
+                               svn_dirent_local_style(dst_path, pool));
     }
 
   /* Sanity check 1: You cannot make a copy of something that's not
@@ -481,7 +481,7 @@ copy_file_administratively(const char *src_path,
       (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
        _("Cannot copy or move '%s': it is not in the repository yet; "
          "try committing first"),
-       svn_path_local_style(src_path, pool));
+       svn_dirent_local_style(src_path, pool));
 
 
   /* Schedule the new file for addition in its parent, WITH HISTORY. */
@@ -641,7 +641,7 @@ post_copy_cleanup(svn_wc__db_t *db,
                                 subpool);
     if (status)
       return svn_error_wrap_apr(status, _("Can't hide directory '%s'"),
-                                svn_path_local_style(adm_dir, subpool));
+                                svn_dirent_local_style(adm_dir, subpool));
   }
 #endif
 
@@ -779,7 +779,7 @@ copy_dir_administratively(const char *src_path,
       (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
        _("Cannot copy or move '%s': it is not in the repository yet; "
          "try committing first"),
-       svn_path_local_style(src_path, pool));
+       svn_dirent_local_style(src_path, pool));
 
   /* Recursively copy the whole directory over.  This gets us all
      text-base, props, base-props, as well as entries, local mods,
@@ -886,13 +886,13 @@ svn_wc_copy2(const char *src_path,
       (SVN_ERR_WC_INVALID_SCHEDULE, NULL,
        _("Cannot copy to '%s', as it is not from repository '%s'; "
          "it is from '%s'"),
-       svn_path_local_style(svn_wc_adm_access_path(dst_parent), pool),
+       svn_dirent_local_style(svn_wc_adm_access_path(dst_parent), pool),
        src_entry->repos, dst_entry->repos);
   if (dst_entry->schedule == svn_wc_schedule_delete)
     return svn_error_createf
       (SVN_ERR_WC_INVALID_SCHEDULE, NULL,
        _("Cannot copy to '%s' as it is scheduled for deletion"),
-       svn_path_local_style(svn_wc_adm_access_path(dst_parent), pool));
+       svn_dirent_local_style(svn_wc_adm_access_path(dst_parent), pool));
 
   /* TODO(#2843): Rework the error report. */
   /* Check if the copy target is missing or hidden and thus not exist on the
@@ -906,7 +906,7 @@ svn_wc_copy2(const char *src_path,
       return svn_error_createf
         (SVN_ERR_ENTRY_EXISTS,
          NULL, _("'%s' is already under version control"),
-         svn_path_local_style(target_path, pool));
+         svn_dirent_local_style(target_path, pool));
     }
 
   SVN_ERR(svn_io_check_path(src_path, &src_kind, pool));

@@ -190,7 +190,7 @@ compare_and_verify(svn_boolean_t *modified_p,
                               _("Checksum mismatch indicates corrupt text base: '%s'"),
                               _("   expected:  %s"),
                               _("     actual:  %s")),
-                  svn_path_local_style(base_file, pool),
+                  svn_dirent_local_style(base_file, pool),
                   entry->checksum,
                   digest);
             }
