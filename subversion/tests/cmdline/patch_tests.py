@@ -153,8 +153,46 @@ def patch_unidiff(sbox):
   wc_dir = sbox.wc_dir
 
   patch_file_path = tempfile.mkstemp(dir=os.path.abspath(svntest.main.temp_dir))[1]
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
 
-  os.chdir(wc_dir)
+  mu_contents = [
+    "Dear internet user,\n",
+    "\n",
+    "We wish to congratulate you over your email success in our computer\n",
+    "Balloting. This is a Millennium Scientific Electronic Computer Draw\n",
+    "in which email addresses were used. All participants were selected\n",
+    "through a computer ballot system drawn from over 100,000 company\n",
+    "and 50,000,000 individual email addresses from all over the world.\n",
+    "\n",
+    "Your email address drew and have won the sum of  750,000 Euros\n",
+    "( Seven Hundred and Fifty Thousand Euros) in cash credited to\n",
+    "file with\n",
+    "    REFERENCE NUMBER: ESP/WIN/008/05/10/MA;\n",
+    "    WINNING NUMBER : 14-17-24-34-37-45-16\n",
+    "    BATCH NUMBERS :\n",
+    "    EULO/1007/444/606/08;\n",
+    "    SERIAL NUMBER: 45327\n",
+    "and PROMOTION DATE: 13th June. 2009\n",
+    "\n",
+    "To claim your winning prize, you are to contact the appointed\n",
+    "agent below as soon as possible for the immediate release of your\n",
+    "winnings with the below details.\n",
+    "\n",
+    "Again, we wish to congratulate you over your email success in our\n"
+    "computer Balloting.\n"
+  ]
+
+  # Set mu contents
+  svntest.main.file_write(mu_path, ''.join(mu_contents))
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/mu'       : Item(verb='Sending'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/mu', wc_rev=2)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None, wc_dir)
+
+  # Apply patch
 
   unidiff_patch = [
     "Index: A/D/gamma\n",
@@ -179,29 +217,85 @@ def patch_unidiff(sbox):
     "@@ -0,0 +1 @@\n",
     "+new\n",
     "\n",
+    "--- A/mu.orig	2009-06-24 15:23:55.000000000 +0100\n",
+    "+++ A/mu	2009-06-24 15:21:23.000000000 +0100\n",
+    "@@ -6,6 +6,9 @@\n",
+    " through a computer ballot system drawn from over 100,000 company\n",
+    " and 50,000,000 individual email addresses from all over the world.\n",
+    " \n",
+    "+It is a promotional program aimed at encouraging internet users;\n",
+    "+therefore you do not need to buy ticket to enter for it.\n",
+    "+\n",
+    " Your email address drew and have won the sum of  750,000 Euros\n",
+    " ( Seven Hundred and Fifty Thousand Euros) in cash credited to\n",
+    " file with\n",
+    "@@ -14,11 +17,8 @@\n",
+    "     BATCH NUMBERS :\n",
+    "     EULO/1007/444/606/08;\n",
+    "     SERIAL NUMBER: 45327\n",
+    "-and PROMOTION DATE: 13th June. 2009\n",
+    "+and PROMOTION DATE: 14th June. 2009\n",
+    " \n",
+    " To claim your winning prize, you are to contact the appointed\n",
+    " agent below as soon as possible for the immediate release of your\n",
+    " winnings with the below details.\n",
+    "-\n",
+    "-Again, we wish to congratulate you over your email success in our\n",
+    "-computer Balloting.\n",
   ]
 
   svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
+
+  gamma_contents = "It is the file 'gamma'.\n"
+  iota_contents = "This is the file 'iota'.\nSome more bytes\n"
+  new_contents = "new\n"
+  mu_contents = [
+    "Dear internet user,\n",
+    "\n",
+    "We wish to congratulate you over your email success in our computer\n",
+    "Balloting. This is a Millennium Scientific Electronic Computer Draw\n",
+    "in which email addresses were used. All participants were selected\n",
+    "through a computer ballot system drawn from over 100,000 company\n",
+    "and 50,000,000 individual email addresses from all over the world.\n",
+    "\n",
+    "It is a promotional program aimed at encouraging internet users;\n",
+    "therefore you do not need to buy ticket to enter for it.\n",
+    "\n",
+    "Your email address drew and have won the sum of  750,000 Euros\n",
+    "( Seven Hundred and Fifty Thousand Euros) in cash credited to\n",
+    "file with\n",
+    "    REFERENCE NUMBER: ESP/WIN/008/05/10/MA;\n",
+    "    WINNING NUMBER : 14-17-24-34-37-45-16\n",
+    "    BATCH NUMBERS :\n",
+    "    EULO/1007/444/606/08;\n",
+    "    SERIAL NUMBER: 45327\n",
+    "and PROMOTION DATE: 14th June. 2009\n",
+    "\n",
+    "To claim your winning prize, you are to contact the appointed\n",
+    "agent below as soon as possible for the immediate release of your\n",
+    "winnings with the below details.\n",
+  ]
+
+  os.chdir(wc_dir)
 
   expected_output = [
     'U    %s\n' % os.path.join('A', 'D', 'gamma'),
     'U    iota\n',
     'A    new\n',
+    'U    %s\n' % os.path.join('A', 'mu'),
   ]
-
-  gamma_contents = "It is the file 'gamma'.\n"
-  iota_contents = "This is the file 'iota'.\nSome more bytes\n"
-  new_contents = "new\n"
 
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.tweak('A/D/gamma', contents=gamma_contents)
   expected_disk.tweak('iota', contents=iota_contents)
   expected_disk.add({'new' : Item(contents=new_contents)})
+  expected_disk.tweak('A/mu', contents=''.join(mu_contents))
 
   expected_status = svntest.actions.get_virginal_state('.', 1)
   expected_status.tweak('A/D/gamma', status='M ')
   expected_status.tweak('iota', status='M ')
   expected_status.add({'new' : Item(status='A ', wc_rev=0)})
+  expected_status.tweak('A/mu', status='M ', wc_rev=2)
 
   expected_skip = wc.State('', { })
 
