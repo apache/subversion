@@ -23,10 +23,11 @@
 #define TARGETS_H
 
 #include <jni.h>
+#include "Pool.h"
 
 struct apr_array_header_t;
 struct svn_error_t;
-class Pool;
+class SVN::Pool;
 
 #include "Path.h"
 #include <vector>
@@ -43,7 +44,7 @@ class Targets
   Targets(const char *path);
   void add(const char *path);
   ~Targets();
-  const apr_array_header_t *array(const Pool &pool);
+  const apr_array_header_t *array(const SVN::Pool &pool);
   svn_error_t *error_occured();
   void setDoesNotContainsPath();
 };

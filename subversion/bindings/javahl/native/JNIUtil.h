@@ -23,11 +23,12 @@
 #define JNIUTIL_H
 
 #include <list>
+#include "Pool.h"
 struct apr_pool_t;
 struct svn_error;
 class JNIMutex;
 class SVNBase;
-class Pool;
+class SVN::Pool;
 #include <jni.h>
 #include <fstream>
 #include <apr_time.h>
@@ -58,8 +59,8 @@ class JNIUtil
 
   static void throwNullPointerException(const char *message);
   static jbyteArray makeJByteArray(const signed char *data, int length);
-  static void setRequestPool(Pool *pool);
-  static Pool *getRequestPool();
+  static void setRequestPool(SVN::Pool *pool);
+  static SVN::Pool *getRequestPool();
   static jobject createDate(apr_time_t time);
   static void logMessage(const char *message);
   static int getLogLevel();

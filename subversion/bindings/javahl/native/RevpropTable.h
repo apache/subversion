@@ -23,10 +23,11 @@
 #define REVPROPTABLE_H
 
 #include <jni.h>
+#include "Pool.h"
 
 struct apr_hash_t;
 struct svn_error_t;
-class Pool;
+class SVN::Pool;
 
 #include "Path.h"
 #include <map>
@@ -40,7 +41,7 @@ class RevpropTable
  public:
   RevpropTable(jobject jrevpropTable);
   ~RevpropTable();
-  const apr_hash_t *hash(const Pool &pool);
+  const apr_hash_t *hash(const SVN::Pool &pool);
 };
 
 #endif // REVPROPTABLE_H

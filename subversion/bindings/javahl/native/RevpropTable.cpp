@@ -20,7 +20,6 @@
  */
 
 #include "RevpropTable.h"
-#include "Pool.h"
 #include "JNIUtil.h"
 #include "JNIStringHolder.h"
 #include <apr_tables.h>
@@ -36,7 +35,7 @@ RevpropTable::~RevpropTable()
     JNIUtil::getEnv()->DeleteLocalRef(m_revpropTable);
 }
 
-const apr_hash_t *RevpropTable::hash(const Pool &pool)
+const apr_hash_t *RevpropTable::hash(const SVN::Pool &pool)
 {
   if (m_revprops.size() == 0)
     return NULL;

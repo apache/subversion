@@ -42,7 +42,7 @@ class Inputer
  public:
   Inputer(jobject jthis);
   ~Inputer();
-  svn_stream_t *getStream(const Pool &pool);
+  svn_stream_t *getStream(const SVN::Pool &pool);
 };
 
 #endif // INPUTER_H

@@ -29,7 +29,7 @@
  * Constructor to create one apr pool as the subpool of the global pool
  * store this pool as the request pool.
  */
-Pool::Pool()
+SVN::Pool::Pool()
 {
   JNICriticalSection criticalSection(*JNIUtil::getGlobalPoolMutex());
   m_pool = svn_pool_create(JNIUtil::getPool());
@@ -40,7 +40,7 @@ Pool::Pool()
  * Destructor to destroy the apr pool and to clear the request pool
  * pointer.
  */
-Pool::~Pool()
+SVN::Pool::~Pool()
 {
   JNICriticalSection criticalSection(*JNIUtil::getGlobalPoolMutex());
   JNIUtil::setRequestPool(NULL);

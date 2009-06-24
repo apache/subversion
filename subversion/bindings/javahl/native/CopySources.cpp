@@ -41,7 +41,7 @@ CopySources::~CopySources()
 }
 
 jobject
-CopySources::makeJCopySource(const char *path, svn_revnum_t rev, Pool &pool)
+CopySources::makeJCopySource(const char *path, svn_revnum_t rev, SVN::Pool &pool)
 {
   JNIEnv *env = JNIUtil::getEnv();
 
@@ -84,7 +84,7 @@ CopySources::makeJCopySource(const char *path, svn_revnum_t rev, Pool &pool)
 }
 
 apr_array_header_t *
-CopySources::array(Pool &pool)
+CopySources::array(SVN::Pool &pool)
 {
   apr_pool_t *p = pool.pool();
   if (m_copySources == NULL)
