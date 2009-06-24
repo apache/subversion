@@ -2266,7 +2266,8 @@ merge_hunk(patch_target_t *target, svn_hunk_t *hunk,
                                           NULL, NULL, NULL, NULL,
                                           conflict_style, pool));
       target->modified = TRUE;
-      target->conflicted = svn_diff_contains_conflicts(diff);
+      if (! target->conflicted)
+        target->conflicted = svn_diff_contains_conflicts(diff);
     }
 
   return SVN_NO_ERROR;
