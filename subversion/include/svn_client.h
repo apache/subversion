@@ -465,6 +465,9 @@ typedef struct svn_client_commit_item3_t
    * same lifetime as this data structure.
    */
   apr_array_header_t *outgoing_prop_changes;
+
+  /** adm_access of this item */
+  svn_wc_adm_access_t *adm_access;
 } svn_client_commit_item3_t;
 
 /** The commit candidate structure.
@@ -554,8 +557,9 @@ svn_client_commit_item_create(const svn_client_commit_item3_t **item,
                               apr_pool_t *pool);
 
 /**
- * Return a duplicate of @a item, allocated in @a pool. No part of the new
- * structure will be shared with @a item.
+ * Return a duplicate of @a item, allocated in @a pool. No part of the
+ * new structure will be shared with @a item, except for the adm_access
+ * member.
  *
  * @since New in 1.5.
  */
