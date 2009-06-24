@@ -25,6 +25,7 @@
 #include "svn_dirent_uri.h"
 #include "svn_wc.h"
 #include "svn_checksum.h"
+#include "svn_pools.h"
 
 #include "wc.h"
 #include "wc_db.h"
@@ -3118,7 +3119,7 @@ relocate_txn(void *baton, svn_sqlite__db_t *sdb)
   SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
                                STMT_UPDATE_WORKING_CHILDREN_COPYFROM_REPO));
   SVN_ERR(svn_sqlite__bindf(stmt, "isi", rb->wc_id,
-                            apr_psprintf(scratch_pool, "%s%%",
+                            apr_psprintf(scratch_pool, "%s/%%",
                                          rb->local_relpath),
                             new_repos_id));
   SVN_ERR(svn_sqlite__step_done(stmt));
@@ -3139,7 +3140,7 @@ relocate_txn(void *baton, svn_sqlite__db_t *sdb)
                                         STMT_UPDATE_LOCK_REPOS_ID));
       SVN_ERR(svn_sqlite__bindf(stmt, "isi",
                                 rb->old_repos_id,
-                                apr_psprintf(scratch_pool, "%s%%",
+                                apr_psprintf(scratch_pool, "%s/%%",
                                              rb->repos_relpath),
                                 new_repos_id));
       SVN_ERR(svn_sqlite__step_done(stmt));
@@ -3153,6 +3154,7 @@ svn_error_t *
 svn_wc__db_global_relocate(svn_wc__db_t *db,
                            const char *local_dir_abspath,
                            const char *repos_root_url,
+                           svn_boolean_t single_db,  /* ### */
                            apr_pool_t *scratch_pool)
 {
   svn_wc__db_pdh_t *pdh;
@@ -3196,8 +3198,51 @@ svn_wc__db_global_relocate(svn_wc__db_t *db,
   rb.repos_root_url = repos_root_url;
   rb.scratch_pool = scratch_pool;
 
-  return svn_error_return(svn_sqlite__with_transaction(pdh->wcroot->sdb,
-                                                       relocate_txn, &rb));
+  SVN_ERR(svn_sqlite__with_transaction(pdh->wcroot->sdb, relocate_txn, &rb));
+
+  if (!single_db)
+    {
+      /* ### Now, a bit of a dance because we don't yet have a centralized
+             metadata store.  We need to update the repos_id in the databases
+             of subdirectories. */
+      apr_pool_t *iterpool;
+      const apr_array_header_t *children;
+      int i;
+
+      iterpool = svn_pool_create(scratch_pool);
+      SVN_ERR(svn_wc__db_read_children(&children, db, local_dir_abspath,
+                                       scratch_pool, iterpool));
+
+      for (i = 0; i < children->nelts; i++)
+        {
+          const char *child = APR_ARRAY_IDX(children, i, const char *);
+          const char *child_abspath;
+          svn_wc__db_kind_t kind;
+
+          svn_pool_clear(iterpool);
+
+          child_abspath = svn_dirent_join(local_dir_abspath, child, iterpool);
+          SVN_ERR(svn_wc__db_read_info(NULL, &kind, NULL,
+                                       NULL, NULL, NULL,
+                                       NULL, NULL, NULL,
+                                       NULL, NULL, NULL,
+                                       NULL, NULL, NULL,
+                                       NULL, NULL, NULL, NULL,
+                                       NULL, NULL, NULL, NULL,
+                                       db, child_abspath,
+                                       iterpool, iterpool));
+          if (kind != svn_wc__db_kind_dir)
+            continue;
+
+          /* Recurse on the child directory */
+          SVN_ERR(svn_wc__db_global_relocate(db, child_abspath, repos_root_url,
+                                             single_db, iterpool));
+        }
+
+      svn_pool_destroy(iterpool);
+    }
+
+  return SVN_NO_ERROR;
 }
 
 
