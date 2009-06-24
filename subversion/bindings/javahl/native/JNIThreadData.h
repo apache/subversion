@@ -25,7 +25,7 @@
 #include <jni.h>
 #include "JNIUtil.h"
 struct apr_threadkey_t;
-class Pool;
+class SVN::Pool;
 
 /**
  * This class implements thread local storage for JNIUtil.
@@ -59,7 +59,7 @@ class JNIThreadData
   /**
    * The pool for the current request (call).
    */
-  Pool *m_requestPool;
+  SVN::Pool *m_requestPool;
  private:
   /**
    * Pointer to previous thread information to enable reentrent

@@ -651,7 +651,7 @@ jobject JNIUtil::createDate(apr_time_t time)
  * request (call).
  * @return the pool to be used for this request
  */
-Pool *JNIUtil::getRequestPool()
+SVN::Pool *JNIUtil::getRequestPool()
 {
   return JNIThreadData::getThreadData()->m_requestPool;
 }
@@ -660,7 +660,7 @@ Pool *JNIUtil::getRequestPool()
  * Set the request pool in thread local storage.
  * @param pool  the request pool
  */
-void JNIUtil::setRequestPool(Pool *pool)
+void JNIUtil::setRequestPool(SVN::Pool *pool)
 {
   JNIThreadData::getThreadData()->m_requestPool = pool;
 }

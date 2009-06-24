@@ -39,7 +39,7 @@ RevisionRange::~RevisionRange()
     // explicitly destroyed.
 }
 
-const svn_opt_revision_range_t *RevisionRange::toRange(Pool &pool) const
+const svn_opt_revision_range_t *RevisionRange::toRange(SVN::Pool &pool) const
 {
   JNIEnv *env = JNIUtil::getEnv();
 

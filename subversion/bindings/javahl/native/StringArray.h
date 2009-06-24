@@ -23,10 +23,11 @@
 #define STRINGARRAY_H
 
 #include <jni.h>
+#include "Pool.h"
 
 struct apr_array_header_t;
 struct svn_error_t;
-class Pool;
+class SVN::Pool;
 
 #include "Path.h"
 #include <vector>
@@ -40,7 +41,7 @@ class StringArray
  public:
   StringArray(jobjectArray jstrings);
   ~StringArray();
-  const apr_array_header_t *array(const Pool &pool);
+  const apr_array_header_t *array(const SVN::Pool &pool);
 };
 
 #endif // STRINGARRAY_H

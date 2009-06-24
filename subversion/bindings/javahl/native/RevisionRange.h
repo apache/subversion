@@ -25,7 +25,7 @@
 #include <jni.h>
 #include "svn_types.h"
 
-class Pool;
+class SVN::Pool;
 
 /**
  * A container for our copy sources, which can convert them into an
@@ -48,7 +48,7 @@ class RevisionRange
   /**
    * Return an svn_opt_revision_range_t.
    */
-  const svn_opt_revision_range_t *toRange(Pool &pool) const;
+  const svn_opt_revision_range_t *toRange(SVN::Pool &pool) const;
 
   /**
    * Make a (single) RevisionRange Java object.

@@ -20,7 +20,6 @@
  */
 
 #include "Targets.h"
-#include "Pool.h"
 #include "JNIUtil.h"
 #include "JNIStringHolder.h"
 #include <apr_tables.h>
@@ -47,7 +46,7 @@ void Targets::add(const char *path)
   m_targets.push_back (path);
 }
 
-const apr_array_header_t *Targets::array(const Pool &pool)
+const apr_array_header_t *Targets::array(const SVN::Pool &pool)
 {
   if (m_targetArray != NULL)
     {
