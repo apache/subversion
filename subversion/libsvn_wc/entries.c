@@ -3275,7 +3275,7 @@ walker_helper(const char *dirpath,
           || depth >= svn_depth_immediates)
         {
           err = walk_callbacks->found_entry(entrypath, current_entry,
-                                            walk_baton, pool);
+                                            walk_baton, subpool);
 
           if (err)
             SVN_ERR(walk_callbacks->handle_error(entrypath, err,
@@ -3305,7 +3305,7 @@ walker_helper(const char *dirpath,
                                   walk_callbacks, walk_baton,
                                   depth_below_here, show_hidden,
                                   cancel_func, cancel_baton,
-                                  pool));
+                                  subpool));
         }
     }
 
