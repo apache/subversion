@@ -3231,7 +3231,7 @@ walker_helper(const char *dirpath,
        walk_baton, pool);
 
   /* Call the "found entry" callback for this directory as a "this dir"
-   * entry. Note that if this directory has been reached by recusrion, this
+   * entry. Note that if this directory has been reached by recursion, this
    * is the second visit as it will already have been visited once as a
    * child entry of its parent. */
 
@@ -3275,7 +3275,7 @@ walker_helper(const char *dirpath,
           || depth >= svn_depth_immediates)
         {
           err = walk_callbacks->found_entry(entrypath, current_entry,
-                                            walk_baton, subpool);
+                                            walk_baton, pool);
 
           if (err)
             SVN_ERR(walk_callbacks->handle_error(entrypath, err,
@@ -3305,7 +3305,7 @@ walker_helper(const char *dirpath,
                                   walk_callbacks, walk_baton,
                                   depth_below_here, show_hidden,
                                   cancel_func, cancel_baton,
-                                  subpool));
+                                  pool));
         }
     }
 
