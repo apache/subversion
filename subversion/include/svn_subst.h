@@ -565,6 +565,30 @@ svn_error_t *svn_subst_detranslate_string(svn_string_t **new_value,
                                           svn_boolean_t for_output,
                                           apr_pool_t *pool);
 
+/* Generic EOL character helper routines */
+
+/* Look for the start of an end-of-line sequence (i.e. CR or LF)
+ * in the array pointed to by @a buf , of length @a len.
+ * If such a byte is found, return the pointer to it, else return NULL.
+ *
+ * @since New in 1.7
+ */
+char *
+svn_subst_find_eol_start(char *buf, apr_size_t len);
+
+/* Return the first eol marker found in [@a buf, @a endp) as a
+ * NUL-terminated string, or NULL if no eol marker is found.
+ *
+ * If the last valid character of @a buf is the first byte of a
+ * potentially two-byte eol sequence, just return "\r", that is,
+ * assume @a buf represents a CR-only file.  This is correct for callers
+ * that pass an entire file at once, and is no more likely to be
+ * incorrect than correct for any caller that doesn't.
+ *
+ * @since New in 1.7
+ */
+const char *
+svn_subst_detect_eol(char *buf, char *endp);
 
 #ifdef __cplusplus
 }
