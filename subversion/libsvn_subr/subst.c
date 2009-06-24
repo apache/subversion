@@ -1642,3 +1642,33 @@ svn_subst_detranslate_string(svn_string_t **new_value,
 
   return SVN_NO_ERROR;
 }
+
+char *
+svn_subst_find_eol_start(char *buf, apr_size_t len)
+{
+  for (; len > 0; ++buf, --len)
+    {
+      if (*buf == '\n' || *buf == '\r')
+        return buf;
+    }
+  return NULL;
+}
+
+const char *
+svn_subst_detect_eol(char *buf, char *endp)
+{
+  const char *eol = svn_subst_find_eol_start(buf, endp - buf);
+  if (eol)
+    {
+      if (*eol == '\n')
+        return "\n";
+
+      /* We found a CR. */
+      ++eol;
+      if (eol == endp || *eol != '\n')
+        return "\r";
+      return "\r\n";
+    }
+
+  return NULL;
+}

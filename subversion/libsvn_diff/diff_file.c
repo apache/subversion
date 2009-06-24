@@ -30,6 +30,7 @@
 #include "svn_diff.h"
 #include "svn_types.h"
 #include "svn_string.h"
+#include "svn_subst.h"
 #include "svn_io.h"
 #include "svn_utf.h"
 #include "svn_pools.h"
@@ -77,22 +78,6 @@ typedef struct svn_diff__file_baton_t
 
   apr_pool_t *pool;
 } svn_diff__file_baton_t;
-
-
-/* Look for the start of an end-of-line sequence (i.e. CR or LF)
- * in the array pointed to by BUF, of length LEN.
- * If such a byte is found, return the pointer to it, else return NULL.
- */
-static char *
-find_eol_start(char *buf, apr_size_t len)
-{
-  for (; len > 0; ++buf, --len)
-    {
-      if (*buf == '\n' || *buf == '\r')
-        return buf;
-    }
-  return NULL;
-}
 
 static int
 datasource_to_index(svn_diff_datasource_e datasource)
@@ -305,7 +290,7 @@ datasource_get_next_token(apr_uint32_t *hash, void **token, void *baton,
 
   while (1)
     {
-      eol = find_eol_start(curp, endp - curp);
+      eol = svn_subst_find_eol_start(curp, endp - curp);
       if (eol)
         {
           had_cr = (*eol == '\r');
@@ -835,7 +820,7 @@ output_unified_line(svn_diff__file_output_baton_t *baton,
                 }
             }
 
-          eol = find_eol_start(curp, length);
+          eol = svn_subst_find_eol_start(curp, length);
 
           if (eol != NULL)
             {
@@ -1436,7 +1421,7 @@ output_line(svn_diff3__file_output_baton_t *baton,
   if (curp == endp)
     return SVN_NO_ERROR;
 
-  eol = find_eol_start(curp, endp - curp);
+  eol = svn_subst_find_eol_start(curp, endp - curp);
   if (!eol)
     eol = endp;
   else
@@ -1660,35 +1645,6 @@ output_conflict(void *baton,
   return SVN_NO_ERROR;
 }
 
-
-/* Return the first eol marker found in [BUF, ENDP) as a
- * NUL-terminated string, or NULL if no eol marker is found.
- *
- * If the last valid character of BUF is the first byte of a
- * potentially two-byte eol sequence, just return "\r", that is,
- * assume BUF represents a CR-only file.  This is correct for callers
- * that pass an entire file at once, and is no more likely to be
- * incorrect than correct for any caller that doesn't.
- */
-static const char *
-detect_eol(char *buf, char *endp)
-{
-  const char *eol = find_eol_start(buf, endp - buf);
-  if (eol)
-    {
-      if (*eol == '\n')
-        return "\n";
-
-      /* We found a CR. */
-      ++eol;
-      if (eol == endp || *eol != '\n')
-        return "\r";
-      return "\r\n";
-    }
-
-  return NULL;
-}
-
 svn_error_t *
 svn_diff_file_output_merge2(svn_stream_t *output_stream,
                             svn_diff_t *diff,
@@ -1763,7 +1719,7 @@ svn_diff_file_output_merge2(svn_stream_t *output_stream,
   /* Check what eol marker we should use for conflict markers.
      We use the eol marker of the modified file and fall back on the
      platform's eol marker if that file doesn't contain any newlines. */
-  eol = detect_eol(baton.buffer[1], baton.endp[1]);
+  eol = svn_subst_detect_eol(baton.buffer[1], baton.endp[1]);
   if (! eol)
     eol = APR_EOL_STR;
   baton.marker_eol = eol;
