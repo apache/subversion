@@ -580,10 +580,11 @@ svn_subst_find_eol_start(char *buf, apr_size_t len);
  * NUL-terminated string, or NULL if no eol marker is found.
  *
  * If the last valid character of @a buf is the first byte of a
- * potentially two-byte eol sequence, just return "\r", that is,
- * assume @a buf represents a CR-only file.  This is correct for callers
- * that pass an entire file at once, and is no more likely to be
- * incorrect than correct for any caller that doesn't.
+ * potentially two-byte eol sequence, just return that single-character
+ * sequence, that is, assume @a buf represents a CR-only or LF-only file.
+ * This is correct for callers that pass an entire file at once, and is
+ * no more likely to be incorrect than correct for any caller that
+ * doesn't.
  *
  * @since New in 1.7
  */
