@@ -184,12 +184,10 @@ compare_and_verify(svn_boolean_t *modified_p,
           digest = svn_checksum_to_cstring_display(checksum, pool);
           if (strcmp(digest, entry->checksum) != 0)
             {
-              return svn_error_createf
-                (SVN_ERR_WC_CORRUPT_TEXT_BASE, NULL,
-                 apr_psprintf(pool, "%s\n%s\n%s\n",
-                              _("Checksum mismatch indicates corrupt text base: '%s'"),
-                              _("   expected:  %s"),
-                              _("     actual:  %s")),
+              return svn_error_createf(SVN_ERR_WC_CORRUPT_TEXT_BASE, NULL,
+                   _("Checksum mismatch indicates corrupt text base: '%s':\n"
+                     "   expected:  %s\n"
+                     "     actual:  %s\n"),
                   svn_dirent_local_style(base_file, pool),
                   entry->checksum,
                   digest);
