@@ -15980,13 +15980,13 @@ def merge_replace_causes_tree_conflict(sbox):
   # svn delete branch/mu branch/B/E branch/D/G/pi branch/D/H
   expected_stdout = verify.UnorderedOutput([
     'D         ' + branch_mu + '\n',
-    'D         ' + branch_B_E + '/alpha\n',
-    'D         ' + branch_B_E + '/beta\n',
+    'D         ' + os.path.join(branch_B_E, 'alpha') + '\n',
+    'D         ' + os.path.join(branch_B_E, 'beta') + '\n',
     'D         ' + branch_B_E + '\n',
     'D         ' + branch_D_G_pi + '\n',
-    'D         ' + branch_D_H + '/chi\n',
-    'D         ' + branch_D_H + '/omega\n',
-    'D         ' + branch_D_H + '/psi\n',
+    'D         ' + os.path.join(branch_D_H, 'chi') + '\n',
+    'D         ' + os.path.join(branch_D_H, 'omega') + '\n',
+    'D         ' + os.path.join(branch_D_H, 'psi') + '\n',
     'D         ' + branch_D_H + '\n',
   ])
 
