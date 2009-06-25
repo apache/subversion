@@ -1791,6 +1791,67 @@ svn_wc_translated_file(const char **xlated_p,
 }
 
 /*** From relocate.c ***/
+svn_error_t *
+svn_wc_relocate3(const char *path,
+                 svn_wc_adm_access_t *adm_access,
+                 const char *from,
+                 const char *to,
+                 svn_boolean_t recurse,
+                 svn_wc_relocation_validator3_t validator,
+                 void *validator_baton,
+                 apr_pool_t *pool)
+{
+  const char *local_abspath;
+  svn_wc_context_t *wc_ctx;
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+  SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL /* config */,
+                                         svn_wc__adm_get_db(adm_access),
+                                         pool));
+
+  if (recurse)
+    return svn_error_return(svn_wc_relocate4(wc_ctx, local_abspath, from, to,
+                                             validator, validator_baton,
+                                             pool));
+  else
+    {
+      /* This gets sticky.  We need to do the above relocation, and then
+         relocate each of the children *back* to the original location.  Ugh.
+       */
+      const apr_array_header_t *children;
+      apr_pool_t *iterpool;
+      int i;
+
+      SVN_ERR(svn_wc_relocate4(wc_ctx, local_abspath, from, to,
+                               validator, validator_baton, pool));
+
+      SVN_ERR(svn_wc__db_read_children(&children, wc_ctx->db, local_abspath,
+                                       pool, pool));
+      iterpool = svn_pool_create(pool);
+      for (i = 0; i < children->nelts; i++)
+        {
+          const char *child = APR_ARRAY_IDX(children, i, const char *);
+          const char *child_abspath;
+          const char *child_from;
+          const char *child_to;
+
+          svn_pool_clear(iterpool);
+          child_abspath = svn_dirent_join(local_abspath, child, iterpool);
+
+          /* We invert the "from" and "to" because we're switching the
+             children back to the original location. */
+          child_from = svn_uri_join(to, child, iterpool);
+          child_to = svn_uri_join(from, child, iterpool);
+
+          SVN_ERR(svn_wc_relocate4(wc_ctx, child_abspath, child_from,
+                                   child_to, validator, validator_baton,
+                                   iterpool));
+        }
+
+      svn_pool_destroy(iterpool);
+      return SVN_NO_ERROR;
+    }
+}
 
 /* Compatibility baton and wrapper. */
 struct compat2_baton {

@@ -110,37 +110,3 @@ svn_wc_relocate4(svn_wc_context_t *wc_ctx,
                                                      new_repos_root, FALSE,
                                                      scratch_pool));
 }
-
-svn_error_t *
-svn_wc_relocate3(const char *path,
-                 svn_wc_adm_access_t *adm_access,
-                 const char *from,
-                 const char *to,
-                 svn_boolean_t recurse,
-                 svn_wc_relocation_validator3_t validator,
-                 void *validator_baton,
-                 apr_pool_t *pool)
-{
-  const char *local_abspath;
-  svn_wc_context_t *wc_ctx;
-
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
-  SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL /* config */,
-                                         svn_wc__adm_get_db(adm_access),
-                                         pool));
-
-  if (recurse)
-    return svn_error_return(svn_wc_relocate4(wc_ctx, local_abspath, from, to,
-                                             validator, validator_baton,
-                                             pool));
-  else
-    {
-      /* This gets sticky.  We need to do the above relocation, and then
-         relocate each of the children *back* to the original location.  Ugh.
-       */
-
-      /* ### TODO: Actually implement. */
-      return svn_error__malfunction(TRUE, __FILE__, __LINE__,
-                                    "Not implemented.");
-    }
-}
