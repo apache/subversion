@@ -1015,16 +1015,15 @@ svn_wc_transmit_text_deltas2(const char **tempfile,
       if (tempfile)
         svn_error_clear(svn_io_remove_file2(*tempfile, TRUE, pool));
 
-      return svn_error_createf
-        (SVN_ERR_WC_CORRUPT_TEXT_BASE, NULL,
-         apr_psprintf(pool, "%s:\n%s\n%s\n",
-                      _("Checksum mismatch for '%s'"),
-                      _("   expected:  %s"),
-                      _("     actual:  %s")),
-         svn_dirent_local_style(svn_wc__text_base_path(path, FALSE, pool),
-                                pool),
-         svn_checksum_to_cstring_display(expected_checksum, pool),
-         svn_checksum_to_cstring_display(verify_checksum, pool));
+      return svn_error_createf(SVN_ERR_WC_CORRUPT_TEXT_BASE, NULL,
+                      _("Checksum mismatch for '%s':\n"
+                        "   expected:  %s\n"
+                        "     actual:  %s\n"),
+                      svn_dirent_local_style(svn_wc__text_base_path(
+                                                            path, FALSE, pool),
+                                             pool),
+                      svn_checksum_to_cstring_display(expected_checksum, pool),
+                      svn_checksum_to_cstring_display(verify_checksum, pool));
     }
 
   /* Now, handle that delta transmission error if any, so we can stop

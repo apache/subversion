@@ -1064,12 +1064,10 @@ window_handler(svn_txdelta_window_t *window, void *baton)
       if (!err2 && !svn_checksum_match(hb->expected_source_checksum,
                                        hb->actual_source_checksum))
         {
-          err = svn_error_createf(
-                    SVN_ERR_WC_CORRUPT_TEXT_BASE, err,
-                    apr_psprintf(hb->pool, "%s:\n%s\n%s\n",
-                                 _("Checksum mismatch while updating '%s'"),
-                                 _("   expected:  %s"),
-                                 _("     actual:  %s")),
+          err = svn_error_createf(SVN_ERR_WC_CORRUPT_TEXT_BASE, err,
+                    _("Checksum mismatch while updating '%s':\n"
+                      "   expected:  %s\n"
+                      "     actual:  %s\n"),
                     svn_dirent_local_style(fb->path, hb->pool),
                     svn_checksum_to_cstring(hb->expected_source_checksum,
                                             hb->pool),
@@ -3865,13 +3863,12 @@ apply_textdelta(void *file_baton,
   if (!replaced && checksum && base_checksum
       && strcmp(base_checksum, checksum) != 0)
     {
-      return svn_error_createf(
-        SVN_ERR_WC_CORRUPT_TEXT_BASE, NULL,
-        apr_psprintf(pool, "%s:\n%s\n%s\n",
-                     _("Checksum mismatch for '%s'"),
-                     _("   expected:  %s"),
-                     _("   recorded:  %s")),
-        svn_dirent_local_style(fb->path, pool), base_checksum, checksum);
+      return svn_error_createf(SVN_ERR_WC_CORRUPT_TEXT_BASE, NULL,
+                     _("Checksum mismatch for '%s':\n"
+                       "   expected:  %s\n"
+                       "   recorded:  %s\n"),
+                     svn_dirent_local_style(fb->path, pool),
+                     base_checksum, checksum);
     }
 
   /* Open the text base for reading, unless this is an added file. */
@@ -4579,14 +4576,12 @@ close_file(void *file_baton,
   /* window-handler assembles new pristine text in .svn/tmp/text-base/  */
   if (new_base_path && expected_checksum
       && !svn_checksum_match(expected_checksum, actual_checksum))
-    return svn_error_createf(
-       SVN_ERR_CHECKSUM_MISMATCH, NULL,
-       apr_psprintf(pool, "%s:\n%s\n%s\n",
-                    _("Checksum mismatch for '%s'"),
-                    _("   expected:  %s"),
-                    _("     actual:  %s")),
-       svn_dirent_local_style(fb->path, pool), expected_hex_digest,
-       svn_checksum_to_cstring_display(actual_checksum, pool));
+    return svn_error_createf(SVN_ERR_CHECKSUM_MISMATCH, NULL,
+            _("Checksum mismatch for '%s':\n"
+              "   expected:  %s\n"
+              "     actual:  %s\n"),
+            svn_dirent_local_style(fb->path, pool), expected_hex_digest,
+            svn_checksum_to_cstring_display(actual_checksum, pool));
 
   SVN_ERR(merge_file(&content_state, &prop_state, &lock_state, fb,
                      new_base_path,

@@ -765,14 +765,12 @@ close_file(void *file_baton,
 
       if (actual_checksum && (strcmp(text_checksum, actual_checksum) != 0))
         {
-          return svn_error_createf
-            (SVN_ERR_CHECKSUM_MISMATCH, NULL,
-             apr_psprintf(pool, "%s:\n%s\n%s\n",
-                          _("Checksum mismatch for '%s'"),
-                          _("   expected:  %s"),
-                          _("     actual:  %s")),
-             svn_dirent_local_style(fb->path, pool),
-             text_checksum, actual_checksum);
+          return svn_error_createf(SVN_ERR_CHECKSUM_MISMATCH, NULL,
+                          _("Checksum mismatch for '%s':\n"
+                            "   expected:  %s\n"
+                            "     actual:  %s\n"),
+                          svn_dirent_local_style(fb->path, pool),
+                          text_checksum, actual_checksum);
         }
     }
 
