@@ -351,10 +351,8 @@ static svn_error_t *new_sasl_ctx(sasl_conn_t **sasl_ctx,
                                 sasl_errdetail(*sasl_ctx));
     }
 
-  /* Set security properties. Don't allow PLAIN or LOGIN, since we
-     don't support TLS yet. */
+  /* Set security properties. */
   svn_ra_svn__default_secprops(&secprops);
-  secprops.security_flags = SASL_SEC_NOPLAINTEXT;
   sasl_setprop(*sasl_ctx, SASL_SEC_PROPS, &secprops);
 
   return SVN_NO_ERROR;
