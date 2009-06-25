@@ -3450,8 +3450,7 @@ calculate_remaining_ranges(svn_client__merge_path_t *parent,
    For each child in CHILDREN_WITH_MERGEINFO, populate that
    child's remaining_ranges list.  CHILDREN_WITH_MERGEINFO is expected
    to be sorted in depth first order and each child must be processed in
-   that order.  All persistent allocations are from
-   CHILDREN_WITH_MERGEINFO->pool.
+   that order.  All persistent allocations are from POOL.
 
    If HONOR_MERGEINFO is set, this function will actually try to be
    intelligent about populating remaining_ranges list.  Otherwise, it
@@ -3477,13 +3476,13 @@ populate_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
                           svn_ra_session_t *ra_session,
                           const char *parent_merge_src_canon_path,
                           svn_wc_adm_access_t *adm_access,
-                          merge_cmd_baton_t *merge_b)
+                          merge_cmd_baton_t *merge_b,
+                          apr_pool_t *pool)
 {
-  apr_pool_t *iterpool, *pool;
+  apr_pool_t *iterpool;
   int merge_target_len = strlen(merge_b->target);
   int i;
 
-  pool = children_with_mergeinfo->pool;
   iterpool = svn_pool_create(pool);
 
   /* If we aren't honoring mergeinfo or this is a --record-only merge,
@@ -4532,6 +4531,9 @@ struct get_mergeinfo_walk_baton
   /* RA session and client context cascaded from do_directory_merge() */
   svn_ra_session_t *ra_session;
   svn_client_ctx_t *ctx;
+
+  /* Pool from which to allocate new elements of CHILDREN_WITH_MERGEINFO. */
+  apr_pool_t *pool;
 };
 
 
@@ -4544,7 +4546,7 @@ struct get_mergeinfo_walk_baton
    working svn:mergeinfo and this walk is being done as part of a reverse
    merge, is missing a child due to a sparse checkout, is absent from disk,
    is scheduled for deletion, then create a svn_client__merge_path_t *
-   representing *PATH, allocated in WB->CHILDREN_WITH_MERGEINFO->POOL, and
+   representing *PATH, allocated in BATON->POOL, and
    push it onto the WB->CHILDREN_WITH_MERGEINFO array. */
 static svn_error_t *
 get_mergeinfo_walk_cb(const char *path,
@@ -4719,8 +4721,8 @@ get_mergeinfo_walk_cb(const char *path,
           )
     {
       svn_client__merge_path_t *child =
-        apr_pcalloc(wb->children_with_mergeinfo->pool, sizeof(*child));
-      child->path = apr_pstrdup(wb->children_with_mergeinfo->pool, path);
+        apr_pcalloc(wb->pool, sizeof(*child));
+      child->path = apr_pstrdup(wb->pool, path);
       child->missing_child = (entry->depth == svn_depth_empty
                               || entry->depth == svn_depth_files
                               || ((wb->depth == svn_depth_immediates) &&
@@ -4818,12 +4820,13 @@ get_child_with_mergeinfo(const apr_array_header_t *children_with_mergeinfo,
 }
 
 /* Insert a deep copy of INSERT_ELEMENT into the CHILDREN_WITH_MERGEINFO
-   array at its correct position.  Allocate the new storage from the array's
-   pool.  CHILDREN_WITH_MERGEINFO is a depth first sorted array of
+   array at its correct position.  Allocate the new storage in POOL.
+   CHILDREN_WITH_MERGEINFO is a depth first sorted array of
    (svn_client__merge_path_t *). */
 static void
 insert_child_to_merge(apr_array_header_t *children_with_mergeinfo,
-                      const svn_client__merge_path_t *insert_element)
+                      const svn_client__merge_path_t *insert_element,
+                      apr_pool_t *pool)
 {
   int insert_index;
   const svn_client__merge_path_t *new_element;
@@ -4833,8 +4836,7 @@ insert_child_to_merge(apr_array_header_t *children_with_mergeinfo,
     svn_sort__bsearch_lower_bound(&insert_element, children_with_mergeinfo,
                                   compare_merge_path_t_as_paths);
 
-  new_element = svn_client__merge_path_dup(insert_element,
-                                           children_with_mergeinfo->pool);
+  new_element = svn_client__merge_path_dup(insert_element, pool);
   svn_sort__array_insert(&new_element, children_with_mergeinfo, insert_index);
 }
 
@@ -4856,7 +4858,7 @@ insert_child_to_merge(apr_array_header_t *children_with_mergeinfo,
    already present in CHILDREN_WITH_MERGEINFO are also added to the array,
    limited by DEPTH (e.g. don't add directory siblings of a switched file).
    Use POOL for temporary allocations only, any new CHILDREN_WITH_MERGEINFO
-   elements are allocated in CHILDREN_WITH_MERGEINFO->POOL. */
+   elements are allocated in POOL. */
 static svn_error_t *
 insert_parent_and_sibs_of_sw_absent_del_entry(
                                    apr_array_header_t *children_with_mergeinfo,
@@ -4886,11 +4888,11 @@ insert_parent_and_sibs_of_sw_absent_del_entry(
   else
     {
       /* Create a new element to insert into CHILDREN_WITH_MERGEINFO. */
-      parent = apr_pcalloc(children_with_mergeinfo->pool, sizeof(*parent));
-      parent->path = apr_pstrdup(children_with_mergeinfo->pool, parent_path);
+      parent = apr_pcalloc(pool, sizeof(*parent));
+      parent->path = apr_pstrdup(pool, parent_path);
       parent->missing_child = TRUE;
       /* Insert PARENT into CHILDREN_WITH_MERGEINFO. */
-      insert_child_to_merge(children_with_mergeinfo, parent);
+      insert_child_to_merge(children_with_mergeinfo, parent, pool);
       /* Increment for loop index so we don't process the inserted element. */
       (*curr_index)++;
     } /*(parent == NULL) */
@@ -4928,11 +4930,12 @@ insert_parent_and_sibs_of_sw_absent_del_entry(
                 continue;
             }
 
-          sibling_of_missing = apr_pcalloc(children_with_mergeinfo->pool,
+          sibling_of_missing = apr_pcalloc(pool,
                                            sizeof(*sibling_of_missing));
-          sibling_of_missing->path = apr_pstrdup(children_with_mergeinfo->pool,
+          sibling_of_missing->path = apr_pstrdup(pool,
                                                  child_path);
-          insert_child_to_merge(children_with_mergeinfo, sibling_of_missing);
+          insert_child_to_merge(children_with_mergeinfo, sibling_of_missing,
+                                pool);
         }
     }
   return SVN_NO_ERROR;
@@ -5027,6 +5030,7 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
   wb.depth = depth;
   wb.ra_session = ra_session;
   wb.ctx = merge_cmd_baton->ctx;
+  wb.pool = pool;
 
   /* Cover cases 1), 2), and 6), 7), 8), 9), and 10) by walking the WC to get
      all paths which have mergeinfo and/or are switched or are absent from
@@ -5146,14 +5150,15 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
                          directory and file children. */
 
                       child_of_noninheritable =
-                        apr_pcalloc(children_with_mergeinfo->pool,
+                        apr_pcalloc(pool,
                                     sizeof(*child_of_noninheritable));
                       child_of_noninheritable->child_of_noninheritable = TRUE;
                       child_of_noninheritable->path =
-                        apr_pstrdup(children_with_mergeinfo->pool,
+                        apr_pstrdup(pool,
                                     child_path);
                       insert_child_to_merge(children_with_mergeinfo,
-                                            child_of_noninheritable);
+                                            child_of_noninheritable,
+                                            pool);
                       if (!merge_cmd_baton->dry_run
                           && merge_cmd_baton->same_repos)
                         {
@@ -5182,7 +5187,7 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
           /* Case 4 and 5 are handled by the following function. */
           SVN_ERR(insert_parent_and_sibs_of_sw_absent_del_entry(
             children_with_mergeinfo, merge_cmd_baton, &i, child,
-            depth, adm_access, iterpool));
+            depth, adm_access, pool));
         } /* i < children_with_mergeinfo->nelts */
       svn_pool_destroy(iterpool);
     } /* honor_mergeinfo */
@@ -6112,10 +6117,8 @@ do_file_merge(const char *url1,
    latter is set to a rangelist equal to the remaining_ranges of the path's
    nearest path-wise ancestor in NOTIFY_B->CHILDREN_WITH_MERGEINFO.
 
-   POOL is used only for temporary allocations, any elements added to
-   NOTIFY_B->CHILDREN_WITH_MERGEINFO are allocated in
-   NOTIFY_B->CHILDREN_WITH_MERGEINFO->POOL.
-   */
+   Any elements added to NOTIFY_B->CHILDREN_WITH_MERGEINFO are allocated
+   in POOL. */
 static svn_error_t *
 process_children_with_new_mergeinfo(merge_cmd_baton_t *merge_b,
                                     notification_receiver_baton_t *notify_b,
@@ -6210,12 +6213,9 @@ process_children_with_new_mergeinfo(merge_cmd_baton_t *merge_b,
                     APR_ARRAY_IDX(notify_b->children_with_mergeinfo,
                                   parent_index,
                                   svn_client__merge_path_t *);
-                  new_child =
-                    apr_pcalloc(notify_b->children_with_mergeinfo->pool,
-                                sizeof(*new_child));
-                  new_child->path =
-                    apr_pstrdup(notify_b->children_with_mergeinfo->pool,
-                                path_with_new_mergeinfo);
+                  new_child = apr_pcalloc(pool, sizeof(*new_child));
+                  new_child->path = apr_pstrdup(pool,
+                                                path_with_new_mergeinfo);
 
                   /* If path_with_new_mergeinfo is the merge target itself
                      then it should already be in
@@ -6230,10 +6230,9 @@ process_children_with_new_mergeinfo(merge_cmd_baton_t *merge_b,
 
                   /* Set the path's remaining_ranges equal to its parent's. */
                   new_child->remaining_ranges = svn_rangelist_dup(
-                     parent->remaining_ranges,
-                     notify_b->children_with_mergeinfo->pool);
+                     parent->remaining_ranges, pool);
                   insert_child_to_merge(notify_b->children_with_mergeinfo,
-                                        new_child);
+                                        new_child, pool);
                 }
             }
           /* Return MERGE_B->RA_SESSION2 to its initial state if we
@@ -6700,7 +6699,7 @@ do_directory_merge(const char *url1,
                                     url1, revision1, url2, revision2,
                                     inheritable, honor_mergeinfo,
                                     ra_session, mergeinfo_path,
-                                    adm_access, merge_b));
+                                    adm_access, merge_b, pool));
 
   /* Always start with a range which describes the most inclusive merge
      possible, i.e. REVISION1:REVISION2. */
@@ -6834,8 +6833,7 @@ do_directory_merge(const char *url1,
                  inherited is recorded and then add these paths to
                  MERGE_B->CHILDREN_WITH_MERGEINFO.*/
               SVN_ERR(process_children_with_new_mergeinfo(merge_b, notify_b,
-                                                          adm_access,
-                                                          iterpool));
+                                                          adm_access, pool));
 
               /* If any subtrees had their explicit mergeinfo deleted as a
                  result of the merge then remove these paths from
