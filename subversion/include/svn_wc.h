@@ -5387,16 +5387,33 @@ typedef svn_error_t *(*svn_wc_relocation_validator_t)(void *baton,
                                                       const char *uuid,
                                                       const char *url);
 
-/** Change repository references at @a path that begin with @a from
- * to begin with @a to instead.  Perform necessary allocations in @a pool.
- * If @a recurse is TRUE, do so.  @a validator (and its baton,
- * @a validator_baton), will be called for each newly generated URL.
+/** Change repository references at @a local_abspath and all it's children.
+ * The pre-change URL should be @a from, and the post-change URL will be
+ * @a to.  @a validator (and its baton, @a validator_baton), will be called
+ * for the newly generated base URL and calculated repo root.
  *
- * @a adm_access is an access baton for the directory containing
- * @a path.
+ * @a wc_ctx is an working copy context.
+ *
+ * @a scratch_pool will be used for temporary allocations.
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_wc_relocate4(svn_wc_context_t *wc_ctx,
+                 const char *local_abspath,
+                 const char *from,
+                 const char *to,
+                 svn_wc_relocation_validator3_t validator,
+                 void *validator_baton,
+                 apr_pool_t *scratch_pool);
+
+/** Similar to svn_wc_relocate4(), but with a @c svn_wc_adm_access_t /
+ * relative path parameter pair, and a recursive flag.
  *
  * @since New in 1.5.
+ * @deprecated Provided for backwards compatibility with the 1.6 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_relocate3(const char *path,
                  svn_wc_adm_access_t *adm_access,
