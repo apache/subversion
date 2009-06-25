@@ -2641,7 +2641,8 @@ typedef struct svn_wc_entry_callbacks_t
  * @a path, which can be a file or dir.  Call callbacks in
  * @a walk_callbacks, passing @a walk_baton to each.  Use @a pool for
  * looping, recursion, and to allocate all entries returned.
- * @a adm_access must be an access baton for @a path.
+ * @a adm_access must be an access baton for @a path.  The pool
+ * passed to @a walk_callbacks is a temporary subpool of @a pool.
  *
  * If @a depth is @c svn_depth_empty, invoke the callbacks on @a path
  * and return without recursing further.  If @c svn_depth_files, do

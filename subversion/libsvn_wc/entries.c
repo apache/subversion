@@ -3235,7 +3235,7 @@ walker_helper(const char *dirpath,
    * is the second visit as it will already have been visited once as a
    * child entry of its parent. */
 
-  err = walk_callbacks->found_entry(dirpath, dot_entry, walk_baton, pool);
+  err = walk_callbacks->found_entry(dirpath, dot_entry, walk_baton, subpool);
 
 
   if(err)
