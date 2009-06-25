@@ -590,6 +590,20 @@ svn_subst_find_eol_start(char *buf, apr_size_t len);
 const char *
 svn_subst_detect_eol(char *buf, char *endp);
 
+/* Detect the EOL marker used in @a file and return it in @a *eol.
+ * If it cannot be detected, set @a *eol to NULL.
+ *
+ * The file is searched starting at the current file cursor position.
+ * The first EOL marker found will be returnd. So if the file has
+ * inconsistent EOL markers, this won't be detected.
+ *
+ * Upon return, the original file cursor position is always preserved,
+ * even if an error is thrown.
+ *
+ * Do temporary allocations in @a pool. */
+svn_error_t *
+svn_subst_detect_file_eol(const char **eol, apr_file_t *file, apr_pool_t *pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
