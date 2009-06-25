@@ -1657,7 +1657,10 @@ svn_subst_find_eol_start(char *buf, apr_size_t len)
 const char *
 svn_subst_detect_eol(char *buf, char *endp)
 {
-  const char *eol = svn_subst_find_eol_start(buf, endp - buf);
+  const char *eol;
+  
+  SVN_ERR_ASSERT_NO_RETURN(buf <= endp);
+  eol = svn_subst_find_eol_start(buf, endp - buf);
   if (eol)
     {
       if (*eol == '\n')
