@@ -1991,11 +1991,23 @@ init_patch_target(patch_target_t **target, svn_patch_t *patch,
 
   new_target->patch = patch;
   new_target->current_line = 1;
-  new_target->eol_str = APR_EOL_STR; /* TODO: determine actual EOL-style. */
+  new_target->eol_str = NULL; /* set below */
   new_target->modified = FALSE;
   new_target->conflicted = FALSE;
   new_target->eof = FALSE;
   new_target->tempfiles = tempfiles;
+
+  if (new_target->file)
+    SVN_ERR(svn_subst_detect_file_eol(&new_target->eol_str, new_target->file,
+                                      scratch_pool));
+  if (new_target->eol_str == NULL)
+    {
+      /* If we can't figure out the target files's EOL scheme,
+       * just assume native. Maybe the file doesn't exist.
+       * Writing out the target file with native EOL markers
+       * is generally not a bad thing to do anyway. */
+      new_target->eol_str = APR_EOL_STR;
+    }
 
   /* Check whether the target file has local modifications. */
   dirname = svn_dirent_dirname(new_target->path, scratch_pool);
@@ -2336,8 +2348,6 @@ apply_one_patch(svn_patch_t *patch, svn_wc_adm_access_t *adm_access,
     /* Can't apply the patch. */
     return SVN_NO_ERROR;
 
-  /* TODO: Make sure target EOL-style matches patch, if not, normalise. */
-
   /* Apply hunks. */
   iterpool = svn_pool_create(pool);
   do
@@ -2439,7 +2449,7 @@ apply_textdiffs(const char *patch_path, svn_wc_adm_access_t *adm_access,
 {
   svn_patch_t *patch;
   apr_pool_t *iterpool;
-  const char *patch_eol_str = APR_EOL_STR;
+  const char *patch_eol_str;
   apr_file_t *patch_file;
   hunk_tempfiles_t *tempfiles;
 
@@ -2447,8 +2457,14 @@ apply_textdiffs(const char *patch_path, svn_wc_adm_access_t *adm_access,
   SVN_ERR(svn_io_file_open(&patch_file, patch_path,
                            APR_READ | APR_BINARY, 0, pool));
 
-  /* TODO: Determine EOL-style of patch file.
-   * patch_eol_str = ? */
+  SVN_ERR(svn_subst_detect_file_eol(&patch_eol_str, patch_file, pool));
+  if (patch_eol_str == NULL)
+    {
+      /* If we can't figure out the EOL scheme, just assume native.
+       * It's most likely a bad patch file anyway that will fail to
+       * apply later. */
+      patch_eol_str = APR_EOL_STR;
+    }
 
   tempfiles = apr_pcalloc(pool, sizeof(tempfiles));
 
