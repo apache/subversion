@@ -190,12 +190,14 @@ enum statement_keys {
   STMT_SELECT_DELETION_INFO,
   STMT_SELECT_PARENT_STUB_INFO,
   STMT_DELETE_LOCK,
-  STMT_UPDATE_BASE_REPO,
-  STMT_UPDATE_BASE_CHILDREN_REPO,
-  STMT_UPDATE_WORKING_COPYFROM_REPO,
-  STMT_UPDATE_WORKING_CHILDREN_COPYFROM_REPO,
+  STMT_UPDATE_BASE_RECURSIVE_REPO,
+  STMT_UPDATE_WORKING_RECURSIVE_COPYFROM_REPO,
   STMT_UPDATE_LOCK_REPOS_ID
 };
+
+/* This is a character used to escape itself and the globbing character in
+   globbing sql expressions below.  See escape_sqlite_glob(). */
+#define LIKE_ESCAPE_CHAR     "#"
 
 static const char * const statements[] = {
   /* STMT_SELECT_BASE_NODE */
@@ -332,26 +334,23 @@ static const char * const statements[] = {
   "delete from lock "
   "where repos_id = ?1 and repos_relpath = ?2;",
 
-  /* STMT_UPDATE_BASE_REPO */
-  "update base_node set repos_id = ?3 "
-  "where wc_id = ?1 and local_relpath = ?2;",
+  /* STMT_UPDATE_BASE_RECURSIVE_REPO */
+  "update base_node set repos_id = ?4 "
+  "where repos_id is not null and wc_id = ?1 and "
+  "  (local_relpath = ?2 or "
+  "   local_relpath like ?3 escape '" LIKE_ESCAPE_CHAR "');",
 
-  /* STMT_UPDATE_BASE_CHILDREN_REPO */
-  "update base_node set repos_id = ?3 "
-  "where repos_id is not null and wc_id = ?1 and parent_relpath like ?2;",
-
-  /* STMT_UPDATE_WORKING_COPYFROM_REPO */
-  "update working_node set copyfrom_repos_id = ?3 "
-  "where copyfrom_repos_id is not null and wc_id = ?1 and local_relpath = ?2;",
-
-  /* STMT_UPDATE_WORKING_CHILDREN_COPYFROM_REPO */
-  "update working_node set copyfrom_repos_id = ?3 "
-  "where copyfrom_repos_id is not null and wc_id = ?1 "
-  "  and parent_relpath like ?2;",
+  /* STMT_UPDATE_WORKING_RECURSIVE_COPYFROM_REPO */
+  "update working_node set copyfrom_repos_id = ?4 "
+  "where copyfrom_repos_id is not null and wc_id = ?1 and "
+  "  (local_relpath = ?2 or "
+  "   local_relpath like ?3 escape '" LIKE_ESCAPE_CHAR "');",
 
   /* STMT_UPDATE_LOCK_REPOS_ID */
-  "update lock set repos_id = ?3 "
-  "where repos_id = ?1 and repos_relpath like ?2;",
+  "update lock set repos_id = ?4 "
+  "where repos_id = ?1 and "
+  "  (repos_relpath = ?2 or "
+  "   repos_relpath like ?3 escape '" LIKE_ESCAPE_CHAR "');",
 
   NULL
 };
@@ -483,6 +482,42 @@ get_translated_size(svn_sqlite__stmt_t *stmt, int slot)
   if (svn_sqlite__column_is_null(stmt, slot))
     return SVN_INVALID_FILESIZE;
   return svn_sqlite__column_int64(stmt, slot);
+}
+
+static const char *
+escape_sqlite_like(const char * const str, apr_pool_t *result_pool)
+{
+  char *result;
+  const char *old_ptr;
+  char *new_ptr;
+  int len = 0;
+
+  /* Count the number of extra characters we'll need in the escaped string.
+     We could just use the worst case (double) value, but we'd still need to
+     iterate over the string to get it's length.  So why not do something
+     useful why iterating over it, and save some memory at the same time? */
+  for (old_ptr = str; *old_ptr; ++old_ptr)
+    {
+      len++;
+      if (*old_ptr == '%'
+            || *old_ptr == '_'
+            || *old_ptr == LIKE_ESCAPE_CHAR[0])
+        len++;
+    }
+
+  result = apr_pcalloc(result_pool, len + 1);
+
+  /* Now do the escaping. */
+  for (old_ptr = str, new_ptr = result; *old_ptr; ++old_ptr, ++new_ptr)
+    {
+      if (*old_ptr == '%'
+            || *old_ptr == '_'
+            || *old_ptr == LIKE_ESCAPE_CHAR[0])
+        *(new_ptr++) = LIKE_ESCAPE_CHAR[0];
+      *new_ptr = *old_ptr;
+    }
+
+  return result;
 }
 
 
@@ -3083,6 +3118,7 @@ static svn_error_t *
 relocate_txn(void *baton, svn_sqlite__db_t *sdb)
 {
   struct relocate_baton *rb = baton;
+  const char *like_arg;
   apr_pool_t *scratch_pool = rb->scratch_pool;
   svn_sqlite__stmt_t *stmt;
   apr_int64_t new_repos_id;
@@ -3098,51 +3134,41 @@ relocate_txn(void *baton, svn_sqlite__db_t *sdb)
   SVN_ERR(create_repos_id(&new_repos_id, rb->repos_root_url, rb->repos_uuid,
                           sdb, scratch_pool));
 
-  if (rb->have_base_node)
-    {
-      /* Update the BASE_NODE.repos_id. */
-      SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_UPDATE_BASE_REPO));
-      SVN_ERR(svn_sqlite__bindf(stmt, "isi", rb->wc_id, rb->local_relpath,
-                                new_repos_id));
+  if (rb->local_relpath[0] == 0)
+    like_arg = "%";
+  else
+    like_arg = apr_psprintf(scratch_pool, "%s/%%",
+                       escape_sqlite_like(rb->local_relpath, scratch_pool));
 
-      SVN_ERR(svn_sqlite__step_done(stmt));
-    }
-
-  /* Update a non-NULL WORKING_NODE.copyfrom_repos_id. */
+  /* Update non-NULL WORKING_NODE.copyfrom_repos_id. */
   SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
-                                    STMT_UPDATE_WORKING_COPYFROM_REPO));
-  SVN_ERR(svn_sqlite__bindf(stmt, "isi", rb->wc_id, rb->local_relpath,
-                            new_repos_id));
-  SVN_ERR(svn_sqlite__step_done(stmt));
-
-  /* Update and child working nodes. */
-  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
-                               STMT_UPDATE_WORKING_CHILDREN_COPYFROM_REPO));
-  SVN_ERR(svn_sqlite__bindf(stmt, "isi", rb->wc_id,
-                            apr_psprintf(scratch_pool, "%s/%%",
-                                         rb->local_relpath),
-                            new_repos_id));
+                               STMT_UPDATE_WORKING_RECURSIVE_COPYFROM_REPO));
+  SVN_ERR(svn_sqlite__bindf(stmt, "issi", rb->wc_id, rb->local_relpath,
+                            like_arg, new_repos_id));
   SVN_ERR(svn_sqlite__step_done(stmt));
 
   /* Do a bunch of stuff which is conditional on us actually having a
      base_node in the first place. */
   if (rb->have_base_node)
     {
-      /* Update any children which have non-NULL repos_id's */
+      /* Update any BASE which have non-NULL repos_id's */
       SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
-                                        STMT_UPDATE_BASE_CHILDREN_REPO));
-      SVN_ERR(svn_sqlite__bindf(stmt, "isi", rb->wc_id, rb->local_relpath,
-                                new_repos_id));
+                                        STMT_UPDATE_BASE_RECURSIVE_REPO));
+      SVN_ERR(svn_sqlite__bindf(stmt, "issi", rb->wc_id, rb->local_relpath,
+                                like_arg, new_repos_id));
       SVN_ERR(svn_sqlite__step_done(stmt));
 
       /* Update any locks for the root or its children. */
+      if (rb->repos_relpath[0] == 0)
+        like_arg = "%";
+      else
+        like_arg = apr_psprintf(scratch_pool, "%s/%%",
+                       escape_sqlite_like(rb->repos_relpath, scratch_pool));
+
       SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
                                         STMT_UPDATE_LOCK_REPOS_ID));
-      SVN_ERR(svn_sqlite__bindf(stmt, "isi",
-                                rb->old_repos_id,
-                                apr_psprintf(scratch_pool, "%s/%%",
-                                             rb->repos_relpath),
-                                new_repos_id));
+      SVN_ERR(svn_sqlite__bindf(stmt, "issi", rb->old_repos_id,
+                                rb->repos_relpath, like_arg, new_repos_id));
       SVN_ERR(svn_sqlite__step_done(stmt));
     }
 
