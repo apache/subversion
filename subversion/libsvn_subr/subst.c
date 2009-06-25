@@ -1675,3 +1675,61 @@ svn_subst_detect_eol(char *buf, char *endp)
 
   return NULL;
 }
+
+svn_error_t *
+svn_subst_detect_file_eol(const char **eol, apr_file_t *file, apr_pool_t *pool)
+{
+  char buf[512];
+  apr_size_t nbytes;
+  svn_error_t *err;
+  apr_off_t orig_pos;
+  apr_off_t pos;
+
+  /* Remember original file offset. */
+  orig_pos = 0;
+  SVN_ERR(svn_io_file_seek(file, APR_CUR, &orig_pos, pool));
+
+  do
+    {
+      memset(buf, '\0', sizeof(buf));
+
+      /* Read a chunk. */
+      nbytes = sizeof(buf);
+      err = svn_io_file_read(file, buf, &nbytes, pool);
+      if (err)
+        {
+          /* An error occured. We're going to return in any case,
+           * so reset the file cursor right now. */
+          pos = orig_pos;
+          SVN_ERR(svn_io_file_seek(file, APR_SET, &pos, pool));
+          SVN_ERR_ASSERT(orig_pos == pos);
+
+          /* If we reached the end of the file, the file has no
+           * EOL markers at all... */
+          if (APR_STATUS_IS_EOF(err->apr_err))
+            {
+              svn_error_clear(err);
+              return SVN_NO_ERROR;
+            }
+          else
+            {
+              /* Whatever happened, it's something we don't know how
+               * to deal with. Just return the error. */
+              return svn_error_return(err);
+            }
+        }
+
+      /* Try to detect the EOL style of the file by searching the
+       * current chunk. */
+      SVN_ERR_ASSERT(nbytes <= sizeof(buf));
+      *eol = svn_subst_detect_eol(buf, buf + nbytes);
+    }
+  while (*eol == NULL);
+
+  /* We're done, reset the file cursor to the original offset. */
+  pos = orig_pos;
+  SVN_ERR(svn_io_file_seek(file, APR_SET, &pos, pool));
+  SVN_ERR_ASSERT(orig_pos == pos);
+
+  return SVN_NO_ERROR;
+}
