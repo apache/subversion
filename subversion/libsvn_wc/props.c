@@ -232,14 +232,22 @@ get_existing_prop_reject_file(const char **reject_file,
                               const char *path,
                               apr_pool_t *pool)
 {
-  const svn_wc_entry_t *entry;
+  const char *local_abspath;
+  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
 
-  SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access, FALSE, pool));
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+  SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, reject_file, NULL,
+                               db, local_abspath,
+                               pool, pool));
 
-  *reject_file = entry->prejfile
-    ? svn_dirent_join(svn_wc_adm_access_path(adm_access), entry->prejfile,
-                      pool)
-    : NULL;
+  if (*reject_file)
+    *reject_file = svn_dirent_join(svn_wc_adm_access_path(adm_access),
+                                   *reject_file, pool);
+
   return SVN_NO_ERROR;
 }
 
