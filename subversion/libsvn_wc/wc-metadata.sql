@@ -310,6 +310,9 @@ CREATE TABLE ACTUAL_NODE (
   conflict_new  TEXT,
   conflict_working  TEXT,
   prop_reject  TEXT,  /* ### is this right? */
+                      /* ### also, should prop_reject be an absolute path?
+                         ###   it isn't currently, but that would be more
+                         ###   consistent with other columns. */
 
   /* if not NULL, this node is part of a changelist. */
   changelist  TEXT,
