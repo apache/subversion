@@ -94,14 +94,13 @@ svn_error_t *svn_wc__merge_props(svn_wc_notify_state_t *state,
                                  apr_pool_t *pool,
                                  svn_stringbuf_t **entry_accum);
 
-/* Set a single 'wcprop' NAME to VALUE for versioned object PATH.
-   If VALUE is null, remove property NAME.  ADM_ACCESS is an access
-   baton set that contains PATH.  */
-svn_error_t *svn_wc__wcprop_set(const char *name,
+/* Set a single 'wcprop' NAME to VALUE for versioned object LOCAL_ABSPATH.
+   If VALUE is null, remove property NAME.  */
+svn_error_t *svn_wc__wcprop_set(svn_wc__db_t *db,
+                                const char *local_abspath,
+                                const char *name,
                                 const svn_string_t *value,
-                                const char *path,
-                                svn_wc_adm_access_t *adm_access,
-                                apr_pool_t *pool);
+                                apr_pool_t *scratch_pool);
 
 /* Returns TRUE if PROPS contains the svn:special property */
 svn_boolean_t svn_wc__has_special_property(apr_hash_t *props);

@@ -1710,26 +1710,24 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
 
 
 svn_error_t *
-svn_wc__wcprop_set(const char *name,
+svn_wc__wcprop_set(svn_wc__db_t *db,
+                   const char *local_abspath,
+                   const char *name,
                    const svn_string_t *value,
-                   const char *path,
-                   svn_wc_adm_access_t *adm_access,
-                   apr_pool_t *pool)
+                   apr_pool_t *scratch_pool)
 {
-  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
-  const char *local_abspath;
   apr_hash_t *prophash;
 
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
   SVN_ERR(svn_wc__db_base_get_dav_cache(&prophash, db, local_abspath,
-                                        pool, pool));
+                                        scratch_pool, scratch_pool));
 
   if (prophash == NULL)
-    prophash = apr_hash_make(pool);
+    prophash = apr_hash_make(scratch_pool);
 
   apr_hash_set(prophash, name, APR_HASH_KEY_STRING, value);
   return svn_error_return(svn_wc__db_base_set_dav_cache(db, local_abspath,
-                                                        prophash, pool));
+                                                        prophash,
+                                                        scratch_pool));
 }
 
 /*------------------------------------------------------------------*/
@@ -2027,8 +2025,10 @@ svn_wc_prop_set3(const char *name,
   svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
   const char *local_abspath;
 
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+
   if (prop_kind == svn_prop_wc_kind)
-    return svn_wc__wcprop_set(name, value, path, adm_access, pool);
+    return svn_wc__wcprop_set(db, local_abspath, name, value, pool);
 
   /* we don't do entry properties here */
   if (prop_kind == svn_prop_entry_kind)
@@ -2087,7 +2087,6 @@ svn_wc_prop_set3(const char *name,
       /* If not, we'll set the file to read-only at commit time. */
     }
 
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
   SVN_ERR_W(svn_wc__load_props(&base_prophash, &prophash, NULL, db,
                                local_abspath, pool, pool),
             _("Failed to load properties from disk"));

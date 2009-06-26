@@ -1302,6 +1302,7 @@ log_do_modify_wcprop(struct log_runner *loggy,
 {
   svn_string_t value;
   const char *propname, *propval, *path;
+  const char *local_abspath;
 
   if (strcmp(name, SVN_WC_ENTRY_THIS_DIR) == 0)
     path = svn_wc_adm_access_path(loggy->adm_access);
@@ -1318,8 +1319,9 @@ log_do_modify_wcprop(struct log_runner *loggy,
       value.len = strlen(propval);
     }
 
-  SVN_ERR(svn_wc__wcprop_set(propname, propval ? &value : NULL,
-                             path, loggy->adm_access, loggy->pool));
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, loggy->pool));
+  SVN_ERR(svn_wc__wcprop_set(loggy->db, local_abspath,
+                             propname, propval ? &value : NULL, loggy->pool));
 
   return SVN_NO_ERROR;
 }
