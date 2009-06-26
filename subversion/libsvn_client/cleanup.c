@@ -64,12 +64,18 @@ svn_client_upgrade(const char *path,
   svn_wc_context_t *wc_ctx;
   const char *local_abspath;
 
-  SVN_ERR(svn_wc_context_create(&wc_ctx, NULL /* config */,
-                                scratch_pool, scratch_pool));
+  if (!ctx->wc_ctx)
+    SVN_ERR(svn_wc_context_create(&wc_ctx, NULL /* config */,
+                                  scratch_pool, scratch_pool));
+  else
+    wc_ctx = ctx->wc_ctx;
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, scratch_pool));
   SVN_ERR(svn_wc_upgrade(wc_ctx, local_abspath, ctx->cancel_func,
                          ctx->cancel_baton, scratch_pool));
 
-  return svn_error_return(svn_wc_context_destroy(wc_ctx));
+  if (!ctx->wc_ctx)
+    SVN_ERR(svn_wc_context_destroy(wc_ctx));
+
+  return SVN_NO_ERROR;
 }
