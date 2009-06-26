@@ -295,13 +295,20 @@ svn_wc__load_props(apr_hash_t **base_props_p,
 
   if (revert_props_p)
     {
-      const svn_wc_entry_t *entry;
+      svn_wc__db_status_t status;
+      svn_boolean_t base_shadowed;
 
-      SVN_ERR(svn_wc__get_entry(&entry, db, local_abspath, FALSE,
-                                svn_node_unknown, FALSE, scratch_pool,
-                                scratch_pool));
+      SVN_ERR(svn_wc__db_read_info(&status, NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, &base_shadowed, NULL, NULL,
+                                   db, local_abspath,
+                                   scratch_pool, scratch_pool));
 
-      if (entry->schedule == svn_wc_schedule_replace)
+      if ((status == svn_wc__db_status_added
+                || status == svn_wc__db_status_obstructed_add)
+            && base_shadowed)
         SVN_ERR(load_props(revert_props_p, db, local_abspath,
                            svn_wc__props_revert, result_pool));
       else
