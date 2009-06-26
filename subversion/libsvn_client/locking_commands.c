@@ -432,13 +432,17 @@ svn_client_lock(const apr_array_header_t *targets,
   cb.ctx = ctx;
   cb.pool = pool;
 
-  SVN_ERR(svn_wc_context_create(&cb.wc_ctx, NULL /* config */, pool, pool));
+  if (!ctx->wc_ctx)
+    SVN_ERR(svn_wc_context_create(&cb.wc_ctx, NULL /* config */, pool, pool));
+  else
+    cb.wc_ctx = ctx->wc_ctx;
 
   /* Lock the paths. */
   SVN_ERR(svn_ra_lock(ra_session, path_revs, comment,
                       steal_lock, store_locks_callback, &cb, pool));
 
-  SVN_ERR(svn_wc_context_destroy(cb.wc_ctx));
+  if (!ctx->wc_ctx)
+    SVN_ERR(svn_wc_context_destroy(cb.wc_ctx));
 
   return SVN_NO_ERROR;
 }
@@ -488,13 +492,17 @@ svn_client_unlock(const apr_array_header_t *targets,
   cb.ctx = ctx;
   cb.pool = pool;
 
-  SVN_ERR(svn_wc_context_create(&cb.wc_ctx, NULL /* config */, pool, pool));
+  if (!ctx->wc_ctx)
+    SVN_ERR(svn_wc_context_create(&cb.wc_ctx, NULL /* config */, pool, pool));
+  else
+    cb.wc_ctx = ctx->wc_ctx;
 
   /* Unlock the paths. */
   SVN_ERR(svn_ra_unlock(ra_session, path_tokens, break_lock,
                         store_locks_callback, &cb, pool));
 
-  SVN_ERR(svn_wc_context_destroy(cb.wc_ctx));
+  if (!ctx->wc_ctx)
+    SVN_ERR(svn_wc_context_destroy(cb.wc_ctx));
 
   return SVN_NO_ERROR;
 }

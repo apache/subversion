@@ -934,6 +934,13 @@ typedef struct svn_client_ctx_t
    * @since New in 1.5. */
   const char *client_name;
 
+  /** An optional working copy context for the client operation to use.
+   * If not @c NULL, the client operation will use this context instead of
+   * creating a new one, and leave it intact when done.
+   *
+   * @since New in 1.7.  */
+  svn_wc_context_t *wc_ctx;
+
 } svn_client_ctx_t;
 
 /** Initialize a client context.
