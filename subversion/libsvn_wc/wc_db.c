@@ -505,7 +505,7 @@ escape_sqlite_like(const char * const str, apr_pool_t *result_pool)
         len++;
     }
 
-  result = apr_pcalloc(result_pool, len + 1);
+  result = apr_palloc(result_pool, len + 1);
 
   /* Now do the escaping. */
   for (old_ptr = str, new_ptr = result; *old_ptr; ++old_ptr, ++new_ptr)
@@ -3137,8 +3137,9 @@ relocate_txn(void *baton, svn_sqlite__db_t *sdb)
   if (rb->local_relpath[0] == 0)
     like_arg = "%";
   else
-    like_arg = apr_psprintf(scratch_pool, "%s/%%",
-                       escape_sqlite_like(rb->local_relpath, scratch_pool));
+    like_arg = apr_pstrcat(scratch_pool,
+                           escape_sqlite_like(rb->local_relpath, scratch_pool),
+                           "/%", NULL);
 
   /* Update non-NULL WORKING_NODE.copyfrom_repos_id. */
   SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
@@ -3162,8 +3163,9 @@ relocate_txn(void *baton, svn_sqlite__db_t *sdb)
       if (rb->repos_relpath[0] == 0)
         like_arg = "%";
       else
-        like_arg = apr_psprintf(scratch_pool, "%s/%%",
-                       escape_sqlite_like(rb->repos_relpath, scratch_pool));
+        like_arg = apr_pstrcat(scratch_pool,
+                           escape_sqlite_like(rb->repos_relpath, scratch_pool),
+                           "/%", NULL);
 
       SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
                                         STMT_UPDATE_LOCK_REPOS_ID));
