@@ -736,6 +736,7 @@ read_entries_new(apr_hash_t **result_entries,
       const char *entry_abspath;
       const char *original_repos_relpath;
       const char *original_root_url;
+      const char *prop_reject_file;
       svn_boolean_t base_shadowed;
 
       svn_pool_clear(iterpool);
@@ -771,6 +772,7 @@ read_entries_new(apr_hash_t **result_entries,
                 NULL,
                 NULL,
                 &base_shadowed,
+                &prop_reject_file,
                 &lock,
                 db,
                 entry_abspath,
@@ -1128,6 +1130,9 @@ read_entries_new(apr_hash_t **result_entries,
       if (checksum)
         entry->checksum = svn_checksum_to_cstring(checksum, result_pool);
 
+      if (prop_reject_file != NULL)
+        entry->prejfile = apr_pstrdup(result_pool, prop_reject_file);
+
      if (lock)
        {
          entry->lock_token = lock->token;
@@ -1156,10 +1161,6 @@ read_entries_new(apr_hash_t **result_entries,
                   entry->conflict_wrk =
                     apr_pstrdup(result_pool, actual_node->conflict_working);
                 }
-
-              if (actual_node->prop_reject != NULL)
-                entry->prejfile =
-                  apr_pstrdup(result_pool, actual_node->prop_reject);
 
               if (actual_node->tree_conflict_data != NULL)
                 entry->tree_conflict_data =
@@ -3351,7 +3352,7 @@ svn_wc_walk_entries3(const char *path,
                              NULL, NULL,
                              NULL, NULL,
                              NULL, NULL, NULL, NULL,
-                             NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL, NULL,
                              db, abspath,
                              pool, pool);
   if (err)
