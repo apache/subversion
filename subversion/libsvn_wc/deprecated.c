@@ -1809,11 +1809,10 @@ svn_wc_relocate3(const char *path,
                                          svn_wc__adm_get_db(adm_access),
                                          pool));
 
-  if (recurse)
-    return svn_error_return(svn_wc_relocate4(wc_ctx, local_abspath, from, to,
-                                             validator, validator_baton,
-                                             pool));
-  else
+  SVN_ERR(svn_wc_relocate4(wc_ctx, local_abspath, from, to,
+                           validator, validator_baton, pool));
+
+  if (!recurse)
     {
       /* This gets sticky.  We need to do the above relocation, and then
          relocate each of the children *back* to the original location.  Ugh.
@@ -1821,9 +1820,6 @@ svn_wc_relocate3(const char *path,
       const apr_array_header_t *children;
       apr_pool_t *iterpool;
       int i;
-
-      SVN_ERR(svn_wc_relocate4(wc_ctx, local_abspath, from, to,
-                               validator, validator_baton, pool));
 
       SVN_ERR(svn_wc__db_read_children(&children, wc_ctx->db, local_abspath,
                                        pool, pool));
@@ -1849,8 +1845,9 @@ svn_wc_relocate3(const char *path,
         }
 
       svn_pool_destroy(iterpool);
-      return SVN_NO_ERROR;
     }
+
+  return SVN_NO_ERROR;
 }
 
 /* Compatibility baton and wrapper. */
