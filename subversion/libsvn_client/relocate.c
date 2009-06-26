@@ -2,7 +2,7 @@
  * relocate.c:  wrapper around wc relocation functionality.
  *
  * ====================================================================
- * Copyright (c) 2002-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2002-2004, 2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -26,6 +26,7 @@
 #include "svn_client.h"
 #include "svn_pools.h"
 #include "svn_error.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "client.h"
 
@@ -116,31 +117,27 @@ svn_client_relocate(const char *path,
                     svn_client_ctx_t *ctx,
                     apr_pool_t *pool)
 {
-  svn_wc_adm_access_t *adm_access;
   struct validator_baton_t vb;
-  svn_node_kind_t kind;
+  svn_wc_context_t *wc_ctx;
+  const char *local_abspath;
 
-  /* We can't relocate an individual file, so don't even try. */
-  SVN_ERR(svn_io_check_path(path, &kind, pool));
-  if (kind != svn_node_dir)
-    return svn_error_create
-      (SVN_ERR_CLIENT_INVALID_RELOCATION, NULL,
-       _("Cannot relocate a single file"));
-
-  /* Get an access baton for PATH. */
-  SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, path,
-                                 TRUE, recurse ? -1 : 0,
-                                 ctx->cancel_func, ctx->cancel_baton,
-                                 pool));
+  if (!ctx->wc_ctx)
+    SVN_ERR(svn_wc_context_create(&wc_ctx, NULL /* config */, pool, pool));
+  else
+    wc_ctx = ctx->wc_ctx;
 
   /* Now, populate our validator callback baton, and call the relocate code. */
   vb.ctx = ctx;
   vb.path = path;
   vb.url_uuids = apr_array_make(pool, 1, sizeof(struct url_uuid_t));
   vb.pool = pool;
-  SVN_ERR(svn_wc_relocate3(path, adm_access, from, to,
-                           recurse, validator_func, &vb, pool));
 
-  /* All done.  Clean up, and move on out. */
-  return svn_wc_adm_close2(adm_access, pool);
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+  SVN_ERR(svn_wc_relocate4(wc_ctx, local_abspath, from, to, recurse,
+                           validator_func, &vb, pool));
+
+  if (!ctx->wc_ctx)
+    SVN_ERR(svn_wc_context_destroy(wc_ctx));
+
+  return SVN_NO_ERROR;
 }
