@@ -72,6 +72,7 @@ svn_wc_relocate4(svn_wc_context_t *wc_ctx,
                  const char *local_abspath,
                  const char *from,
                  const char *to,
+                 svn_boolean_t recurse,
                  svn_wc_relocation_validator3_t validator,
                  void *validator_baton,
                  apr_pool_t *scratch_pool)
@@ -106,7 +107,43 @@ svn_wc_relocate4(svn_wc_context_t *wc_ctx,
 
   SVN_ERR(validator(validator_baton, NULL, to, new_repos_root, scratch_pool));
 
-  return svn_error_return(svn_wc__db_global_relocate(wc_ctx->db, local_abspath,
-                                                     new_repos_root, FALSE,
-                                                     scratch_pool));
+  SVN_ERR(svn_wc__db_global_relocate(wc_ctx->db, local_abspath, new_repos_root,
+                                     FALSE, scratch_pool));
+
+  if (!recurse)
+    {
+      /* This gets sticky.  We need to do the above relocation, and then
+         relocate each of the children *back* to the original location.  Ugh.
+       */
+      const apr_array_header_t *children;
+      apr_pool_t *iterpool;
+      int i;
+
+      SVN_ERR(svn_wc__db_read_children(&children, wc_ctx->db, local_abspath,
+                                       scratch_pool, scratch_pool));
+      iterpool = svn_pool_create(scratch_pool);
+      for (i = 0; i < children->nelts; i++)
+        {
+          const char *child = APR_ARRAY_IDX(children, i, const char *);
+          const char *child_abspath;
+          const char *child_from;
+          const char *child_to;
+
+          svn_pool_clear(iterpool);
+          child_abspath = svn_dirent_join(local_abspath, child, iterpool);
+
+          /* We invert the "from" and "to" because we're switching the
+             children back to the original location. */
+          child_from = svn_uri_join(to, child, iterpool);
+          child_to = svn_uri_join(from, child, iterpool);
+
+          SVN_ERR(svn_wc_relocate4(wc_ctx, child_abspath, child_from,
+                                   child_to, TRUE, validator, validator_baton,
+                                   iterpool));
+        }
+
+      svn_pool_destroy(iterpool);
+    }
+
+  return SVN_NO_ERROR;
 }

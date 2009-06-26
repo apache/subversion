@@ -5392,7 +5392,8 @@ typedef svn_error_t *(*svn_wc_relocation_validator_t)(void *baton,
  * @a to.  @a validator (and its baton, @a validator_baton), will be called
  * for the newly generated base URL and calculated repo root.
  *
- * @a wc_ctx is an working copy context.
+ * If @a recurse is @c FALSE, none of the children of @a local_abspath will
+ * be changed.  @a wc_ctx is an working copy context.
  *
  * @a scratch_pool will be used for temporary allocations.
  *
@@ -5403,6 +5404,7 @@ svn_wc_relocate4(svn_wc_context_t *wc_ctx,
                  const char *local_abspath,
                  const char *from,
                  const char *to,
+                 svn_boolean_t recurse,
                  svn_wc_relocation_validator3_t validator,
                  void *validator_baton,
                  apr_pool_t *scratch_pool);
