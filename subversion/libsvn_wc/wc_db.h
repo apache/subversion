@@ -1010,6 +1010,7 @@ svn_wc__db_op_revert(svn_wc__db_t *db,
  *   TEXT_MOD                n/a (always available)
  *   PROPS_MOD               n/a (always available)
  *   BASE_SHADOWED           n/a (always available)
+ *   PROP_REJECT_FILE        NULL
  *   LOCK                    NULL
  *
  * If DEPTH is requested, and the node is NOT a directory, then
@@ -1100,6 +1101,8 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,  /* ### derived */
                      svn_boolean_t *props_mod,
                      svn_boolean_t *base_shadowed,  /* ### WORKING shadows a
                                                        ### deleted BASE? */
+
+                     const char **prop_reject_file,  /* ### is this right? */
 
                      svn_wc__db_lock_t **lock,
 

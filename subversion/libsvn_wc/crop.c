@@ -76,7 +76,7 @@ crop_children(svn_wc__db_t *db,
   SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, &dir_depth,
                                NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                db, local_dir_abspath, pool, pool));
 
   /* Update the depth of target first, if needed. */
@@ -105,7 +105,7 @@ crop_children(svn_wc__db_t *db,
       SVN_ERR(svn_wc__db_read_info(NULL, &kind, NULL, NULL, NULL, NULL,
                                    NULL, NULL, NULL, NULL, &child_depth,
                                    NULL, NULL, NULL, NULL, NULL, NULL,
-                                   NULL, NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                    db, child_abspath, iterpool, iterpool));
 
       if (kind == svn_wc__db_kind_file)
