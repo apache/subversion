@@ -40,7 +40,7 @@ AC_DEFUN(SVN_LIB_APRUTIL,
     # shipped in 2.0.43 contains a correct version number, but
     # stupidly doesn't understand the --version switch.)
     apu_version=`grep "APRUTIL_DOTTED_VERSION=" $(which $apu_config) | tr -d "APRUTIL_DOTTED_VERSION="| tr -d '"'`
-    #AC_MSG_ERROR([
+    #SVN_MSG_ERROR([
     #    apu-config --version failed.
     #    Your apu-config doesn't support the --version switch, please upgrade
     #    to APR-UTIL more recent than 2002-Nov-05.])
@@ -57,36 +57,36 @@ AC_DEFUN(SVN_LIB_APRUTIL,
 
   if test $APU_WANTED_REGEX_MATCH -eq 0; then
     echo "wanted regexes are $APRUTIL_WANTED_REGEXES"
-    AC_MSG_ERROR([invalid apr-util version found])
+    SVN_MSG_ERROR([invalid apr-util version found])
   fi
 
   dnl Get libraries and thread flags from APRUTIL ---------------------
 
   LDFLAGS="$LDFLAGS `$apu_config --ldflags`"
   if test $? -ne 0; then
-    AC_MSG_ERROR([apu-config --ldflags failed])
+    SVN_MSG_ERROR([apu-config --ldflags failed])
   fi
 
   SVN_APRUTIL_INCLUDES="`$apu_config --includes`"
   if test $? -ne 0; then
-    AC_MSG_ERROR([apu-config --includes failed])
+    SVN_MSG_ERROR([apu-config --includes failed])
   fi
 
   SVN_APRUTIL_PREFIX="`$apu_config --prefix`"
   if test $? -ne 0; then
-    AC_MSG_ERROR([apu-config --prefix failed])
+    SVN_MSG_ERROR([apu-config --prefix failed])
   fi
 
   dnl When APR stores the dependent libs in the .la file, we don't need
   dnl --libs.
   SVN_APRUTIL_LIBS="`$apu_config --link-libtool --libs`"
   if test $? -ne 0; then
-    AC_MSG_ERROR([apu-config --link-libtool --libs failed])
+    SVN_MSG_ERROR([apu-config --link-libtool --libs failed])
   fi
 
   SVN_APRUTIL_EXPORT_LIBS="`$apu_config --link-ld --libs`"
   if test $? -ne 0; then
-    AC_MSG_ERROR([apu-config --link-ld --libs failed])
+    SVN_MSG_ERROR([apu-config --link-ld --libs failed])
   fi
 
   AC_SUBST(SVN_APRUTIL_INCLUDES)
@@ -121,5 +121,5 @@ AC_DEFUN(SVN_DOWNLOAD_APRUTIL,
   echo "Afterwards, run apr-util/buildconf in that subdirectory and"
   echo "then run configure again here."
   echo ""
-  AC_MSG_ERROR([no suitable APRUTIL found])
+  SVN_MSG_ERROR([no suitable APRUTIL found])
 ])

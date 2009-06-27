@@ -46,7 +46,7 @@ AC_DEFUN(SVN_FIND_SWIG,
       SWIG="$where/bin/swig"
     fi
     if test ! -f "$SWIG" || test ! -x "$SWIG"; then
-      AC_MSG_ERROR([Could not find swig binary at $SWIG])
+      SVN_MSG_ERROR([Could not find swig binary at $SWIG])
     fi 
   fi
 
@@ -142,7 +142,7 @@ AC_DEFUN(SVN_FIND_SWIG,
     ])
     CPPFLAGS="$SVN_PYCFMT_SAVE_CPPFLAGS"
     if test "x$svn_cv_pycfmt_apr_int64_t" = "x"; then
-      AC_MSG_ERROR([failed to recognize APR_INT64_T_FMT on this platform])
+      SVN_MSG_ERROR([failed to recognize APR_INT64_T_FMT on this platform])
     fi
     AC_DEFINE_UNQUOTED([SVN_APR_INT64_T_PYCFMT],
                        ["$svn_cv_pycfmt_apr_int64_t"],

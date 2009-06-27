@@ -69,7 +69,7 @@ AC_DEFUN(SVN_LIB_SASL,
       if test "$required" = "yes"; then
         dnl The user explicitly requested SASL, but we couldn't find it.
         dnl Exit with an error message.
-        AC_MSG_ERROR([Could not find Cyrus SASL v2])
+        SVN_MSG_ERROR([Could not find Cyrus SASL v2])
       fi
       
       SVN_SASL_INCLUDES=""

@@ -50,10 +50,10 @@ int main()
         LIBS="$old_LIBS"
       else
         AC_MSG_RESULT([no])
-        AC_MSG_ERROR([cannot find GSSAPI (Kerberos)])
+        SVN_MSG_ERROR([cannot find GSSAPI (Kerberos)])
       fi
     else
-      AC_MSG_ERROR([cannot find krb5-config])
+      SVN_MSG_ERROR([cannot find krb5-config])
     fi
   else
     AC_MSG_RESULT([no])

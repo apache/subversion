@@ -13,7 +13,7 @@ AC_DEFUN(SVN_LIB_Z,
                                   [zlib compression library]),
   [
     if test "$withval" = "yes" ; then
-      AC_MSG_ERROR([--with-zlib requires an argument.])
+      SVN_MSG_ERROR([--with-zlib requires an argument.])
     else
       AC_MSG_NOTICE([zlib library configuration])
       zlib_prefix=$withval
@@ -35,7 +35,7 @@ AC_DEFUN(SVN_LIB_Z,
   ])
 
   if test "$zlib_found" = "no"; then
-    AC_MSG_ERROR([subversion requires zlib])
+    SVN_MSG_ERROR([subversion requires zlib])
   fi
 
   if test "$zlib_found" = "yes"; then

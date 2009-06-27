@@ -36,7 +36,7 @@ AC_DEFUN(SVN_LIB_SQLITE,
                           [Use installed SQLite library or amalgamation file.]),
   [
     if test "$withval" = "yes" ; then
-      AC_MSG_ERROR([--with-sqlite requires an argument.])
+      SVN_MSG_ERROR([--with-sqlite requires an argument.])
     else
       sqlite_dir="$withval"
     fi
@@ -224,5 +224,5 @@ AC_DEFUN(SVN_DOWNLOAD_SQLITE,
   echo "$abs_srcdir/sqlite-amalgamation/sqlite3.c"
   echo "This file also ships as part of the subversion-deps distribution."
   echo ""
-  AC_MSG_ERROR([Subversion requires SQLite])
+  SVN_MSG_ERROR([Subversion requires SQLite])
 ])
