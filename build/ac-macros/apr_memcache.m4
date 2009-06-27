@@ -39,7 +39,7 @@ dnl   Try just looking in apr-util (>= 1.3 has it already).
       CPPFLAGS="$CPPFLAGS $SVN_APR_INCLUDES $SVN_APRUTIL_INCLUDES"
       AC_CHECK_HEADER(apr_memcache.h,[
         save_ldflags="$LDFLAGS"
-        LDFLAGS="$LDFLAGS $SVN_APRUTIL_EXPORT_LIBS"
+        LDFLAGS="$LDFLAGS $SVN_APRUTIL_LIBS"
         AC_CHECK_LIB(aprutil-1, apr_memcache_create,
           [apr_memcache_found="aprutil"])
         LDFLAGS="$save_ldflags"])

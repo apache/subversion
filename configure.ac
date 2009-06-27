@@ -312,6 +312,73 @@ fi
 
 dnl Check for libraries --------------------
 
+dnl Expat -------------------
+
+AC_ARG_WITH(expat,
+  AS_HELP_STRING([--with-expat=INCLUDES:LIB_SEARCH_DIRS:LIBS], 
+                 [Specify location of Expat]),
+                 [svn_lib_expat="$withval"],
+                 [svn_lib_expat="::expat"])
+
+AC_MSG_CHECKING([for Expat])
+if test -n "`echo "$svn_lib_expat" | $EGREP ":.*:"`"; then
+  SVN_XML_INCLUDES=""
+  for i in [`echo "$svn_lib_expat" | sed -e "s/\([^:]*\):.*/\1/"`]; do
+    SVN_XML_INCLUDES="$SVN_XML_INCLUDES -I$i"
+  done
+  SVN_XML_INCLUDES="${SVN_XML_INCLUDES## }"
+  for l in [`echo "$svn_lib_expat" | sed -e "s/.*:\([^:]*\):.*/\1/"`]; do
+    LDFLAGS="$LDFLAGS -L$l"
+  done
+  for l in [`echo "$svn_lib_expat" | sed -e "s/.*:\([^:]*\)/\1/"`]; do
+    SVN_XML_LIBS="$SVN_XML_LIBS -l$l"
+  done
+  SVN_XML_LIBS="${SVN_XML_LIBS## }"
+  old_CPPFLAGS="$CPPFLAGS"
+  old_LIBS="$LIBS"
+  CPPFLAGS="$CPPFLAGS $SVN_XML_INCLUDES"
+  LIBS="$LIBS $SVN_XML_LIBS"
+  AC_LINK_IFELSE([
+#include <expat.h>
+int main()
+{XML_ParserCreate(NULL);}], svn_lib_expat="yes", svn_lib_expat="no")
+  if test "$svn_lib_expat" = "yes"; then
+    AC_MSG_RESULT([yes])
+    CPPFLAGS="$old_CPPFLAGS"
+    LIBS="$old_LIBS"
+  else
+    SVN_XML_INCLUDES=""
+    SVN_XML_LIBS=""
+    CPPFLAGS="$CPPFLAGS $SVN_APRUTIL_INCLUDES"
+    SVN_APRUTIL_LIBS="$SVN_APRUTIL_LIBS `$apu_config --libs`"
+    AC_COMPILE_IFELSE([
+#include <expat.h>
+int main()
+{XML_ParserCreate(NULL);}], svn_lib_expat="yes", svn_lib_expat="no")
+    if test "$svn_lib_expat" = "yes"; then
+      AC_MSG_RESULT([yes])
+      AC_MSG_WARN([Expat found amongst libraries used by APR-Util, but Subversion libraries might be needlessly linked against additional unused libraries. It can be avoided by specifying exact location of Expat in argument of --with-expat option.])
+      CPPFLAGS="$old_CPPFLAGS"
+    else
+      AC_MSG_RESULT([no])
+      AC_MSG_ERROR([Expat not found])
+    fi
+  fi
+else
+  AC_MSG_RESULT([no])
+  if test "$svn_lib_expat" = "yes"; then
+    AC_MSG_ERROR([--with-expat option requires argument])
+  elif test "$svn_lib_expat" = "no"; then
+    AC_MSG_ERROR([Expat is required])
+  else
+    AC_MSG_ERROR([Invalid syntax of argument of --with-expat option])
+  fi
+fi
+AC_SUBST(SVN_XML_INCLUDES)
+AC_SUBST(SVN_XML_LIBS)
+
+dnl Berkeley DB -------------------
+
 # Berkeley DB on SCO OpenServer needs -lsocket
 AC_CHECK_LIB(socket, socket)
 
@@ -654,7 +721,6 @@ AC_TYPE_SIZE_T
 
 dnl Check for library functions ----------
 
-dnl libsvn_string uses memcmp()
 AC_FUNC_MEMCMP
 
 dnl svn_error's default warning handler uses vfprintf()
