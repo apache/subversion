@@ -13,7 +13,7 @@ AC_DEFUN(SVN_LIB_SERF,
                                   [Serf WebDAV client library]),
   [
     if test "$withval" = "yes" ; then
-      AC_MSG_ERROR([--with-serf requires an argument.])
+      SVN_MSG_ERROR([--with-serf requires an argument.])
     elif test "$withval" != "no" ; then
       AC_MSG_NOTICE([serf library configuration])
       serf_prefix=$withval

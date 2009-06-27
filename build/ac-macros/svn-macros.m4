@@ -1,5 +1,28 @@
 # Miscellaneous additional macros for Subversion's own use.
 
+dnl SVN_MSG_ERROR(ERROR_MESSAGE)
+dnl
+dnl Wrapper for AC_MSG_ERROR which additionally prints the content of
+dnl config.log.
+AC_DEFUN([SVN_MSG_ERROR], [
+  if true; then
+    {
+      while true; do
+        if test -f config.log && test -n "`tail -n1 config.log | grep "configure: exit 1"`"; then
+          echo
+          echo "************************************************"
+          echo "****************** config.log ******************"
+          echo "************************************************"
+          cat config.log
+          break
+        fi
+      done
+    } &
+  fi
+  AC_MSG_ERROR([$1])
+])
+
+
 # SVN_CONFIG_NICE(FILENAME)
 # Write a shell script to FILENAME (typically 'config.nice') which reinvokes
 # configure with all of the arguments.  Reserves use of the filename
