@@ -5410,7 +5410,7 @@ svn_wc_relocate4(svn_wc_context_t *wc_ctx,
                  apr_pool_t *scratch_pool);
 
 /** Similar to svn_wc_relocate4(), but with a @c svn_wc_adm_access_t /
- * relative path parameter pair, and a recursive flag.
+ * relative path parameter pair.
  *
  * @since New in 1.5.
  * @deprecated Provided for backwards compatibility with the 1.6 API.
