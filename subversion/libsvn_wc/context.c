@@ -36,16 +36,20 @@ static apr_status_t
 close_ctx_apr(void *data)
 {
   svn_wc_context_t *ctx = data;
-  svn_error_t *err;
 
-  /* We can use the state pool here, because this handler will only get
-     run if the state pool is being cleaned up posthaste. */
-  err = svn_wc__db_close(ctx->db, ctx->state_pool);
-  if (err)
+  if (ctx->close_db_on_destroy)
     {
-      int result = err->apr_err;
-      svn_error_clear(err);
-      return result;
+      svn_error_t *err;
+
+      /* We can use the state pool here, because this handler will only get
+         run if the state pool is being cleaned up posthaste. */
+      err = svn_wc__db_close(ctx->db, ctx->state_pool);
+      if (err)
+        {
+          int result = err->apr_err;
+          svn_error_clear(err);
+          return result;
+        }
     }
 
   return APR_SUCCESS;
@@ -64,6 +68,31 @@ svn_wc_context_create(svn_wc_context_t **wc_ctx,
   ctx->state_pool = svn_pool_create(result_pool);
   SVN_ERR(svn_wc__db_open(&ctx->db, svn_wc__db_openmode_readwrite, config,
                           ctx->state_pool, scratch_pool));
+  ctx->close_db_on_destroy = TRUE;
+
+  apr_pool_cleanup_register(ctx->state_pool, ctx, close_ctx_apr,
+                            apr_pool_cleanup_null);
+
+  *wc_ctx = ctx;
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc__context_create_with_db(svn_wc_context_t **wc_ctx,
+                               svn_config_t *config,
+                               svn_wc__db_t *db,
+                               apr_pool_t *result_pool)
+{
+  svn_wc_context_t *ctx = apr_pcalloc(result_pool, sizeof(*ctx));
+
+  /* Create the state pool.  We don't put the wc_db in it, because it's
+     already open in a separate pool somewhere.  We also won't close the
+     wc_db when we destroy the context, since it's not ours to close. */
+  ctx->state_pool = svn_pool_create(result_pool);
+  ctx->db = db;
+  ctx->close_db_on_destroy = FALSE;
 
   apr_pool_cleanup_register(ctx->state_pool, ctx, close_ctx_apr,
                             apr_pool_cleanup_null);
