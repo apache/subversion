@@ -570,21 +570,25 @@ normalize_revprops(apr_hash_t *rev_props,
        hi;
        hi = apr_hash_next(hi))
     {
-      const char *key;
-      const svn_string_t *val;
+      const void *key;
+      void *val;
+      const char *propname;
+      const svn_string_t *propval;
 
-      apr_hash_this(hi, (const void**)&key, NULL, (void**)&val);
+      apr_hash_this(hi, &key, NULL, &val);
+      propname = key;
+      propval = val;
 
-      if (svn_prop_needs_translation(key))
+      if (svn_prop_needs_translation(propname))
         {
           svn_boolean_t was_normalized;
-          SVN_ERR(normalize_string(&val,
+          SVN_ERR(normalize_string(&propval,
                                    &was_normalized,
                                    pool));
           if (was_normalized)
             {
               /* Replace the existing prop value. */
-              apr_hash_set(rev_props, key, APR_HASH_KEY_STRING, val);
+              apr_hash_set(rev_props, key, APR_HASH_KEY_STRING, propval);
               /* And count this. */
               (*normalized_count)++;
             }
