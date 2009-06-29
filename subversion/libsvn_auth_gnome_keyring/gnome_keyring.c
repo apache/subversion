@@ -251,9 +251,6 @@ password_get_gnome_keyring(const char **password,
 {
   char *default_keyring = NULL;
 
-  if (non_interactive)
-    return FALSE;
-
   if (! dbus_bus_get(DBUS_BUS_SESSION, NULL))
     return FALSE;
 
@@ -323,9 +320,6 @@ password_set_gnome_keyring(apr_hash_t *creds,
                            apr_pool_t *pool)
 {
   char *default_keyring = NULL;
-
-  if (non_interactive)
-    return FALSE;
 
   if (! dbus_bus_get(DBUS_BUS_SESSION, NULL))
     return FALSE;
