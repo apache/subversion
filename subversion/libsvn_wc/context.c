@@ -39,11 +39,7 @@ close_ctx_apr(void *data)
 
   if (ctx->close_db_on_destroy)
     {
-      svn_error_t *err;
-
-      /* We can use the state pool here, because this handler will only get
-         run if the state pool is being cleaned up posthaste. */
-      err = svn_wc__db_close(ctx->db, ctx->state_pool);
+      svn_error_t *err = svn_wc__db_close(ctx->db);
       if (err)
         {
           int result = err->apr_err;
