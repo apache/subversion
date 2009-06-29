@@ -476,7 +476,6 @@ immediate_install_props(const char *path,
 svn_error_t *
 svn_wc__working_props_committed(const char *path,
                                 svn_wc_adm_access_t *adm_access,
-                                svn_boolean_t sync_entries,
                                 apr_pool_t *pool)
 {
   const char *working;

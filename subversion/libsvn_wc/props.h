@@ -165,14 +165,10 @@ svn_error_t *
 svn_wc__wcprops_flush(svn_wc_adm_access_t *adm_access,
                       apr_pool_t *scratch_pool);
 
-/* Install PATHs working props as base props, clearing the
-   has_prop_mods cache value in the entries file.
-
-   Updates the on-disk entries file if SYNC_ENTRIES is TRUE.*/
+/* Install PATHs working props as base props. */
 svn_error_t *
 svn_wc__working_props_committed(const char *path,
                                 svn_wc_adm_access_t *adm_access,
-                                svn_boolean_t sync_entries,
                                 apr_pool_t *pool);
 
 /* Load the base, working and revert props for ENTRY at PATH returning
