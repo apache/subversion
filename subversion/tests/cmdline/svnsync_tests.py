@@ -756,6 +756,11 @@ def delete_svn_props(sbox):
   "copy with svn:prop deletions"
   run_test(sbox, "delete-svn-props.dump")
 
+def commit_a_copy_of_root(sbox):
+  "commit a copy of root causes sync to fail"
+  #Testcase for issue 3438.
+  run_test(sbox, "repo_with_copy_of_root_dir.dump")
+
 
 ########################################################################
 # Run the tests
@@ -794,6 +799,7 @@ test_list = [ None,
               info_not_synchronized,
               copy_bad_line_endings,
               delete_svn_props,
+              XFail(commit_a_copy_of_root, svntest.main.is_ra_type_dav),
              ]
 
 if __name__ == '__main__':
