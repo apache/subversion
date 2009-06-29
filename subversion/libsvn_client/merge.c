@@ -3450,7 +3450,8 @@ calculate_remaining_ranges(svn_client__merge_path_t *parent,
    For each child in CHILDREN_WITH_MERGEINFO, populate that
    child's remaining_ranges list.  CHILDREN_WITH_MERGEINFO is expected
    to be sorted in depth first order and each child must be processed in
-   that order.  All persistent allocations are from POOL.
+   that order.  All persistent allocations are from POOL.  The inheritability
+   of all calculated ranges is TRUE.
 
    If HONOR_MERGEINFO is set, this function will actually try to be
    intelligent about populating remaining_ranges list.  Otherwise, it
@@ -3471,7 +3472,6 @@ populate_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
                           svn_revnum_t revision1,
                           const char *url2,
                           svn_revnum_t revision2,
-                          svn_boolean_t inheritable,
                           svn_boolean_t honor_mergeinfo,
                           svn_ra_session_t *ra_session,
                           const char *parent_merge_src_canon_path,
@@ -3499,7 +3499,7 @@ populate_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
 
           range->start = revision1;
           range->end = revision2;
-          range->inheritable = inheritable;
+          range->inheritable = TRUE;
 
           child->remaining_ranges =
             apr_array_make(pool, 1, sizeof(svn_merge_range_t *));
@@ -3632,108 +3632,51 @@ populate_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
 
 /*** Other Helper Functions ***/
 
+/* Helper for record_mergeinfo_for_dir_merge().
 
-/* Create mergeinfo describing the merge of RANGELIST into TARGET_WCPATH,
-   accounting for paths unaffected by the merge due to skips or conflicts from
-   NOTIFY_B. For 'immediates' merge it sets an inheritable mergeinfo
-   corresponding to current merge on merge target. For 'files' merge it sets
-   an inheritable mergeinfo corrsponding to current merge on merged files.
-   If TARGET_WCPATH is a directory and it is missing an immediate child then
-   TARGET_MISSING_CHILD should be true, otherwise it is false.*/
+   Adjust, in place, the inheritability of the ranges in RANGELIST to
+   describe a merge of RANGELIST into WC_WCPATH at depth DEPTH.  ENTRY
+   is the entry for WC_PATH.
+   
+   WC_PATH_IS_MERGE_TARGET is true if WC_PATH is the target of the merge,
+   otherwise WC_PATH is a subtree.
+
+   WC_PATH_HAS_MISSING_CHILD is true if WC_PATH is missing an immediate child
+   because the child is switched or absent from the WC, or due to a sparse
+   checkout -- see get_mergeinfo_paths(). */
 static svn_error_t *
-determine_merges_performed(apr_hash_t **merges, const char *target_wcpath,
-                           apr_array_header_t *rangelist,
-                           svn_depth_t depth,
-                           svn_wc_adm_access_t *adm_access,
-                           notification_receiver_baton_t *notify_b,
-                           merge_cmd_baton_t *merge_b,
-                           apr_pool_t *pool)
+calculate_merge_inheritance(apr_array_header_t *rangelist,
+                            const char *wc_path,
+                            const svn_wc_entry_t *entry,
+                            svn_boolean_t wc_path_is_merge_target,
+                            svn_boolean_t wc_path_has_missing_child,
+                            svn_depth_t depth)
 {
-  apr_size_t nbr_skips = (notify_b->skipped_paths != NULL ?
-                          apr_hash_count(notify_b->skipped_paths) : 0);
-
-  *merges = apr_hash_make(pool);
-  apr_hash_set(*merges, target_wcpath, APR_HASH_KEY_STRING, rangelist);
-  if (nbr_skips > 0)
+  if (entry->kind == svn_node_file)
     {
-      apr_hash_index_t *hi;
-
-      /* Override the mergeinfo for child paths which weren't
-         actually merged. */
-      for (hi = apr_hash_first(NULL, notify_b->skipped_paths); hi;
-           hi = apr_hash_next(hi))
+      /* Files *never* have non-inheritable mergeinfo. */
+      svn_rangelist__set_inheritance(rangelist, TRUE);
+    }
+  else if (entry->kind == svn_node_dir)
+    {
+      if (wc_path_is_merge_target)
         {
-          const void *skipped_path;
-          svn_wc_status2_t *status;
-
-          apr_hash_this(hi, &skipped_path, NULL, NULL);
-
-          /* Before we override, make sure this is a versioned path, it
-             might be an unversioned obstruction. */
-          SVN_ERR(svn_wc_status2(&status, skipped_path, adm_access, pool));
-          if (status->text_status == svn_wc_status_none
-              || status->text_status == svn_wc_status_unversioned)
-            continue;
-
-          /* Add an empty range list for this path.
-
-             ### TODO: This works fine for a file path skipped because it is
-             ### missing as long as the file's parent directory is present.
-             ### But missing directory paths skipped are not handled yet,
-             ### see issue #2915. */
-          apr_hash_set(*merges, (const char *) skipped_path,
-                       APR_HASH_KEY_STRING,
-                       apr_array_make(pool, 0, sizeof(svn_merge_range_t)));
-
-          if (nbr_skips < notify_b->nbr_notifications)
-            /* ### Use RANGELIST as the mergeinfo for all children of
-               ### this path which were not also explicitly
-               ### skipped? */
-            ;
+          if (wc_path_has_missing_child
+              || depth == svn_depth_files
+              || depth == svn_depth_empty)
+            svn_rangelist__set_inheritance(rangelist, FALSE);
+          else /* depth == svn_depth_files || depth == svn_depth_empty */
+            svn_rangelist__set_inheritance(rangelist, TRUE);
+        }
+      else /* WC_PATH is a directory subtree of the target. */
+        {
+          if (wc_path_has_missing_child
+              || depth == svn_depth_immediates)
+            svn_rangelist__set_inheritance(rangelist, FALSE);
+          else /* depth == infinity */
+            svn_rangelist__set_inheritance(rangelist, TRUE);  
         }
     }
-  if ((depth != svn_depth_infinity) && notify_b->merged_paths)
-    {
-      apr_hash_index_t *hi;
-      const void *merged_path;
-
-      for (hi = apr_hash_first(NULL, notify_b->merged_paths); hi;
-           hi = apr_hash_next(hi))
-        {
-          const svn_wc_entry_t *child_entry;
-          apr_array_header_t *rangelist_of_child = NULL;
-          apr_hash_this(hi, &merged_path, NULL, NULL);
-          SVN_ERR(svn_wc__entry_versioned(&child_entry,
-                                          merged_path,
-                                          adm_access, FALSE,
-                                          pool));
-          if (((child_entry->kind == svn_node_dir)
-               && (strcmp(merge_b->target, merged_path) == 0)
-               && (depth == svn_depth_immediates))
-              || ((child_entry->kind == svn_node_file)
-                  && (depth == svn_depth_files)))
-            {
-              /* Set the explicit inheritable mergeinfo for,
-                 1. Merge target directory if depth is immediates.
-                 2. If merge is on a file and requested depth is 'files'.
-               */
-              int i;
-              rangelist_of_child = svn_rangelist_dup(rangelist, pool);
-              for (i = 0; i < rangelist_of_child->nelts; i++)
-                {
-                  svn_merge_range_t *rng =
-                    APR_ARRAY_IDX(rangelist_of_child, i, svn_merge_range_t *);
-                  rng->inheritable = TRUE;
-                }
-            }
-          if (rangelist_of_child)
-            {
-              apr_hash_set(*merges, (const char *)merged_path,
-                           APR_HASH_KEY_STRING, rangelist_of_child);
-            }
-        }
-    }
-
   return SVN_NO_ERROR;
 }
 
@@ -3868,6 +3811,84 @@ update_wc_mergeinfo(const char *target_wcpath, const svn_wc_entry_t *entry,
   return SVN_NO_ERROR;
 }
 
+/* Helper for record_mergeinfo_for_dir_merge().
+
+   Record override mergeinfo on any paths skipped during a merge.
+
+   Set empty mergeinfo on each path in NOTIFY_B->SKIPPED_PATHS so the path
+   does not incorrectly inherit mergeinfo that will later be describing
+   the merge.
+
+   MERGEINFO_PATH, ADM_ACCESS, NOTIFY_B, and MERGE_B are all cascased from
+   arguments of the same name in the caller.
+
+   TARGET_ENTRY is the entry from MERGE_B->TARGET.  IS_ROLLBACK is true if
+   the caller is recording a reverse merge and false otherwise.  RANGELIST
+   is the set of revisions being merged from MERGEINFO_PATH to
+   MERGE_B->TARGET. */
+static svn_error_t *
+record_skips(const char *mergeinfo_path,
+             const svn_wc_entry_t *target_entry,
+             apr_array_header_t *rangelist,
+             svn_boolean_t is_rollback,
+             svn_wc_adm_access_t *adm_access,
+             notification_receiver_baton_t *notify_b,
+             merge_cmd_baton_t *merge_b,
+             apr_pool_t *pool)
+{
+  apr_size_t nbr_skips = (notify_b->skipped_paths != NULL ?
+                          apr_hash_count(notify_b->skipped_paths) : 0);
+
+  if (nbr_skips > 0)
+    {
+      apr_hash_index_t *hi;
+      apr_hash_t *merges = apr_hash_make(pool);
+
+      /* Override the mergeinfo for child paths which weren't
+         actually merged. */
+      for (hi = apr_hash_first(NULL, notify_b->skipped_paths); hi;
+           hi = apr_hash_next(hi))
+        {
+          const void *skipped_path;
+          svn_wc_status2_t *status;
+
+          apr_hash_this(hi, &skipped_path, NULL, NULL);
+
+          /* Before we override, make sure this is a versioned path, it
+             might be an unversioned obstruction. */
+          SVN_ERR(svn_wc_status2(&status, skipped_path, adm_access, pool));
+          if (status->text_status == svn_wc_status_none
+              || status->text_status == svn_wc_status_unversioned)
+            continue;
+
+          /* Add an empty range list for this path.
+
+             ### TODO: This works fine for a file path skipped because it is
+             ### missing as long as the file's parent directory is present.
+             ### But missing directory paths skipped are not handled yet,
+             ### see issue #2915.
+             
+             ### TODO: An empty range is fine if the skipped path doesn't
+             ### inherit any mergeinfo from a parent, but if it does
+             ### we need to account for that.  See issue #3440
+             ### http://subversion.tigris.org/issues/show_bug.cgi?id=3440. */
+          apr_hash_set(merges, (const char *) skipped_path,
+                       APR_HASH_KEY_STRING,
+                       apr_array_make(pool, 0, sizeof(svn_merge_range_t)));
+
+          if (nbr_skips < notify_b->nbr_notifications)
+            /* ### Use RANGELIST as the mergeinfo for all children of
+               ### this path which were not also explicitly
+               ### skipped? */
+            ;
+        }
+      SVN_ERR(update_wc_mergeinfo(merge_b->target, target_entry,
+                                  mergeinfo_path, merges,
+                                  is_rollback, adm_access,
+                                  merge_b->ctx, pool));
+    }
+  return SVN_NO_ERROR;
+}
 
 /* Create and return an error structure appropriate for the unmerged
    revisions range(s). */
@@ -6050,7 +6071,6 @@ do_file_merge(const char *url1,
      merge ranges, include the noop ones.  */
   if (record_mergeinfo && remaining_ranges->nelts)
     {
-      apr_hash_t *merges;
       apr_array_header_t *filtered_rangelist;
 
       /* Filter any ranges from TARGET_WCPATH's own history, there is no
@@ -6062,13 +6082,15 @@ do_file_merge(const char *url1,
         merge_target->implicit_mergeinfo,
         &range, subpool));
 
-      if (filtered_rangelist->nelts)
+      /* Only record mergeinfo if there is something other than
+         self-referential mergeinfo, but don't record mergeinfo if
+         TARGET_WCPATH was skipped. */
+      if (filtered_rangelist->nelts
+          && (!notify_b->skipped_paths
+              || (apr_hash_count(notify_b->skipped_paths) == 0)))
         {
-          SVN_ERR(determine_merges_performed(&merges, target_wcpath,
-                                             filtered_rangelist,
-                                             svn_depth_infinity,
-                                             adm_access, notify_b,
-                                             merge_b, subpool));
+          apr_hash_t *merges = apr_hash_make(subpool);
+
           /* If merge target has indirect mergeinfo set it before
              recording the first merge range. */
           if (indirect)
@@ -6076,6 +6098,8 @@ do_file_merge(const char *url1,
                                                     target_mergeinfo,
                                                     adm_access, ctx, subpool));
 
+          apr_hash_set(merges, target_wcpath, APR_HASH_KEY_STRING,
+                       filtered_rangelist);
           SVN_ERR(update_wc_mergeinfo(target_wcpath, entry, mergeinfo_path,
                                       merges, is_rollback, adm_access,
                                       ctx, subpool));
@@ -6317,15 +6341,10 @@ record_mergeinfo_for_dir_merge(const svn_wc_entry_t *target_entry,
 {
   int i;
   int merge_target_len = strlen(merge_b->target);
-  apr_array_header_t *filtered_rangelist;
-  svn_client__merge_path_t *merge_target =
-    APR_ARRAY_IDX(notify_b->children_with_mergeinfo, 0,
-                  svn_client__merge_path_t *);
   svn_boolean_t is_rollback = (merged_range->start > merged_range->end);
 
   /* Update the WC mergeinfo here to account for our new
      merges, minus any unresolved conflicts and skips. */
-  apr_hash_t *merges;
 
   /* We need a scratch pool for iterations below. */
   apr_pool_t *iterpool = svn_pool_create(pool);
@@ -6335,25 +6354,6 @@ record_mergeinfo_for_dir_merge(const svn_wc_entry_t *target_entry,
      before we calculate the merges performed. */
   remove_absent_children(merge_b->target,
                          notify_b->children_with_mergeinfo, notify_b);
-
-  /* Filter any ranges from MERGE_B->TARGET's own history, there is no
-     need to record this explicitly in mergeinfo, it is already part of
-     MERGE_B->TARGET's natural history (implicit mergeinfo). */
-  SVN_ERR(filter_natural_history_from_mergeinfo(
-    &filtered_rangelist, mergeinfo_path, merge_target->implicit_mergeinfo,
-    merged_range, iterpool));
-
-  if (filtered_rangelist->nelts)
-    {
-      SVN_ERR(determine_merges_performed(&merges, merge_b->target,
-                                         filtered_rangelist, depth,
-                                         adm_access, notify_b,
-                                         merge_b, iterpool));
-      SVN_ERR(update_wc_mergeinfo(merge_b->target, target_entry,
-                                  mergeinfo_path, merges,
-                                  is_rollback, adm_access, merge_b->ctx,
-                                  iterpool));
-    }
 
   for (i = 0; i < notify_b->children_with_mergeinfo->nelts; i++)
     {
@@ -6382,45 +6382,42 @@ record_mergeinfo_for_dir_merge(const svn_wc_entry_t *target_entry,
       SVN_ERR(svn_wc__entry_versioned(&child_entry, child->path,
                                       adm_access, FALSE, iterpool));
 
-      child_merges = apr_hash_make(iterpool);
-
-      /* As we did above for the merge target, filter any ranges from
-         each child's natural history before setting mergeinfo. */
+      /* Filter any ranges from each child's natural history before
+         setting mergeinfo describing the merge. */
       SVN_ERR(filter_natural_history_from_mergeinfo(
         &child_merge_rangelist, child_merge_src_canon_path,
         child->implicit_mergeinfo, merged_range, iterpool));
 
       if (child_merge_rangelist->nelts == 0)
         continue;
-      else
-        {
-          int j;
-          for (j = 0; j < child_merge_rangelist->nelts; j++)
-            {
-              svn_merge_range_t *rng =
-                APR_ARRAY_IDX(child_merge_rangelist, j,
-                              svn_merge_range_t *);
-              if (child_entry->kind == svn_node_file)
-                rng->inheritable = TRUE;
-              else
-                rng->inheritable = (!(child->missing_child)
-                                    && (depth == svn_depth_infinity
-                                 || depth == svn_depth_immediates));
-            }
-        }
-      apr_hash_set(child_merges, child->path, APR_HASH_KEY_STRING,
-                   child_merge_rangelist);
-      /* If merge target has indirect mergeinfo set it before
+
+      /* If we are here we know we will be recording some mergeinfo, but
+         before we do set override mergeinfo on skipped paths so they
+         don't incorrectly inherit the mergeinfo we are about to set.
+         We only need to do this once. */
+      if (i == 0)
+        SVN_ERR(record_skips(mergeinfo_path,
+                             target_entry, child_merge_rangelist,
+                             is_rollback, adm_access,
+                             notify_b, merge_b, iterpool));
+
+      SVN_ERR(calculate_merge_inheritance(child_merge_rangelist, child->path,
+                                          child_entry, i == 0,
+                                          child->missing_child,
+                                          depth));
+
+      /* If CHILD has indirect mergeinfo set it before
          recording the first merge range. */
       if (child->indirect_mergeinfo)
-        {
-          SVN_ERR(svn_client__record_wc_mergeinfo(
-                                           child->path,
-                                           child->pre_merge_mergeinfo,
-                                           adm_access,
-                                           merge_b->ctx,
-                                           iterpool));
-        }
+        SVN_ERR(svn_client__record_wc_mergeinfo(child->path,
+                                                child->pre_merge_mergeinfo,
+                                                adm_access,
+                                                merge_b->ctx,
+                                                iterpool));
+
+      child_merges = apr_hash_make(iterpool);
+      apr_hash_set(child_merges, child->path, APR_HASH_KEY_STRING,
+                   child_merge_rangelist);
       SVN_ERR(update_wc_mergeinfo(child->path, child_entry,
                                   child_merge_src_canon_path,
                                   child_merges, is_rollback,
@@ -6636,7 +6633,6 @@ do_directory_merge(const char *url1,
   svn_error_t *err = SVN_NO_ERROR;
   svn_merge_range_t range;
   svn_ra_session_t *ra_session;
-  svn_boolean_t inheritable;
   const char *target_wcpath = svn_wc_adm_access_path(adm_access);
   svn_client__merge_path_t *target_merge_path;
   svn_boolean_t is_rollback = (revision1 > revision2);
@@ -6686,9 +6682,6 @@ do_directory_merge(const char *url1,
   target_merge_path = APR_ARRAY_IDX(notify_b->children_with_mergeinfo, 0,
                                     svn_client__merge_path_t *);
   merge_b->target_missing_child = target_merge_path->missing_child;
-  inheritable = ((! merge_b->target_missing_child)
-                 && ((depth == svn_depth_infinity)
-                     || (depth == svn_depth_immediates)));
 
   /* If we are honoring mergeinfo, then for each item in
      NOTIFY_B->CHILDREN_WITH_MERGEINFO, we need to calculate what needs to be
@@ -6697,7 +6690,7 @@ do_directory_merge(const char *url1,
   SVN_ERR(populate_remaining_ranges(notify_b->children_with_mergeinfo,
                                     source_root_url,
                                     url1, revision1, url2, revision2,
-                                    inheritable, honor_mergeinfo,
+                                    honor_mergeinfo,
                                     ra_session, mergeinfo_path,
                                     adm_access, merge_b, pool));
 
@@ -6705,7 +6698,7 @@ do_directory_merge(const char *url1,
      possible, i.e. REVISION1:REVISION2. */
   range.start = revision1;
   range.end = revision2;
-  range.inheritable = inheritable;
+  range.inheritable = TRUE;
 
   if (honor_mergeinfo && !merge_b->record_only)
     {
