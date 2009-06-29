@@ -266,12 +266,9 @@ svn_wc__db_open(svn_wc__db_t **db,
 
 /**
  * Close DB.
- *
- * Temporary allocations will be made in SCRATCH_POOL.
  */
 svn_error_t *
-svn_wc__db_close(svn_wc__db_t *db,
-                 apr_pool_t *scratch_pool);
+svn_wc__db_close(svn_wc__db_t *db);
 
 
 /**

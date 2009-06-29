@@ -197,7 +197,7 @@ svn_wc_check_wc(const char *path,
   SVN_ERR(svn_wc__db_open(&db, svn_wc__db_openmode_readonly,
                           NULL /* ### config */, pool, pool));
   err = svn_wc__internal_check_wc(wc_format, db, local_abspath, pool);
-  svn_error_clear(svn_wc__db_close(db, pool));
+  svn_error_clear(svn_wc__db_close(db));
 
   return svn_error_return(err);
 }
@@ -562,7 +562,7 @@ close_single(svn_wc_adm_access_t *adm_access,
                                                           scratch_pool);
       if (apr_hash_count(opened) == 0)
         {
-          SVN_ERR(svn_wc__db_close(adm_access->db, scratch_pool));
+          SVN_ERR(svn_wc__db_close(adm_access->db));
           adm_access->db = NULL;
         }
     }
@@ -805,7 +805,7 @@ svn_wc_adm_probe_open3(svn_wc_adm_access_t **adm_access,
       SVN_ERR(svn_wc__db_open(&db, svn_wc__db_openmode_readonly,
                               NULL /* ### config */, pool, pool));
       err = probe(db, &dir, path, pool);
-      svn_error_clear(svn_wc__db_close(db, pool));
+      svn_error_clear(svn_wc__db_close(db));
       SVN_ERR(err);
     }
   else

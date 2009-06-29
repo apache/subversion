@@ -5385,7 +5385,7 @@ svn_wc_get_actual_target(const char *path,
   SVN_ERR(svn_wc__db_open(&db, svn_wc__db_openmode_readonly,
                           NULL /* ### config */, pool, pool));
   SVN_ERR(check_wc_root(&is_wc_root, &kind, path, db, pool));
-  SVN_ERR(svn_wc__db_close(db, pool));
+  SVN_ERR(svn_wc__db_close(db));
 
   /* If PATH is not a WC root, or if it is a file, lop off a basename. */
   if ((! is_wc_root) || (kind == svn_node_file))
