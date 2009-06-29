@@ -1782,14 +1782,13 @@ svn_wc_prop_list(apr_hash_t **props,
 }
 
 svn_error_t *
-svn_wc_prop_get(const svn_string_t **value,
-                const char *name,
-                const char *path,
-                svn_wc_adm_access_t *adm_access,
-                apr_pool_t *pool)
+svn_wc_prop_get2(const svn_string_t **value,
+                 svn_wc_context_t *wc_ctx,
+                 const char *local_abspath,
+                 const char *name,
+                 apr_pool_t *result_pool,
+                 apr_pool_t *scratch_pool)
 {
-  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
-  const char *local_abspath;
   enum svn_prop_kind kind = svn_property_kind(NULL, name);
 
   if (kind == svn_prop_entry_kind)
@@ -1799,10 +1798,10 @@ svn_wc_prop_get(const svn_string_t **value,
                                _("Property '%s' is an entry property"), name);
     }
 
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+  SVN_ERR(svn_wc__internal_propget(value, name, local_abspath, wc_ctx->db,
+                                   result_pool, scratch_pool));
 
-  return svn_error_return(svn_wc__internal_propget(value, name, local_abspath,
-                                                   db, pool, pool));
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *

@@ -4553,7 +4553,23 @@ svn_wc_prop_list(apr_hash_t **props,
  * @a name may be a regular or wc property; if it is an entry property,
  * return the error @c SVN_ERR_BAD_PROP_KIND.  @a adm_access is an access
  * baton set that contains @a path.
+ *
+ * @since New in 1.7.
  */
+svn_error_t *
+svn_wc_prop_get2(const svn_string_t **value,
+                 svn_wc_context_t *wc_ctx,
+                 const char *local_abspath,
+                 const char *name,
+                 apr_pool_t *result_pool,
+                 apr_pool_t *scratch_pool);
+
+/** Similar to svn_wc_prop_get2(), but with a @c svn_wc_adm_access_t /
+ * relative path parameter pair.
+ *
+ * @deprecated Provided for backwards compatibility with the 1.6 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_prop_get(const svn_string_t **value,
                 const char *name,
