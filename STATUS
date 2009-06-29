@@ -135,15 +135,3 @@ Approved changes:
    Votes:
      +1: cmpilato, danielsh, rhuijben
      -0: hwright (until such time as a backport branch exists)
-
- * r37117
-   Fix issue #3393 'Merge consuming too much memory'.
-   Justification:
-     A merge which targets a WC with thousands of subtrees with mergeinfo
-     can consume multiple GB of memory in a hurry.
-   Notes:
-     This is as simple a fix to review as you've ever seen with the
-     word 'merge' in the title (though as gstein points out, the
-     function this change is in desperately needs a dose of clarity).
-   Votes:
-     +1: pburba, hwright, cmpilato
