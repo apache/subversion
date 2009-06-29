@@ -55,9 +55,11 @@ Candidate changes:
      Makes Subversion's behaviour regarding peg-revision parsing
      consistent with what The Book describes, and makes all subcommands
      properly deal with filenames starting with the '@' character.
+   Branch:
+     ^/branches/1.6.x-r37988
    Notes:
-     Doesn't merge cleanly (two tree conflicts), and needed an API
-     change for backport. Backport branch is at ^/branches/1.6.x-r37988
+     Doesn't merge cleanly (two tree conflicts) from trunk, and needed an API
+     change for backport.
    Votes:
      +1: stsp
 
@@ -105,11 +107,11 @@ Candidate changes:
    Fix GNOME Keyring with '--non-interactive' option.
    Justification:
      This was introduced in 1.6.x
+   Branch:
+     ^/branches/1.6.x-r38222
    Notes:
-     Merging r38221:r38223, conflicts in 
-     subversion/libsvn_auth_gnome_keyring/gnome_keyring.c, a backport
-     branch resolving it can be found here:
-     http://svn.collab.net/repos/svn/branches/1.6.x-r38222
+     Merging r38221:r38223 from trunk conflicts in 
+     subversion/libsvn_auth_gnome_keyring/gnome_keyring.c.
    Votes:
      +1: stylesen
 
