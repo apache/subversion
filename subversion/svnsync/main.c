@@ -1156,7 +1156,6 @@ change_dir_prop(void *dir_baton,
 {
   node_baton_t *db = dir_baton;
   edit_baton_t *eb = db->edit_baton;
-  svn_string_t *real_value = (svn_string_t *)value;
 
   /* Only regular properties can pass over libsvn_ra */
   if (svn_property_kind(NULL, name) != svn_prop_regular_kind)
@@ -1188,6 +1187,7 @@ change_dir_prop(void *dir_baton,
           int i;
           apr_array_header_t *sources =
             svn_cstring_split(value->data, " \t\n", TRUE, pool);
+          svn_string_t *new_value;
 
           for (i = 0; i < sources->nelts; i++)
             {
@@ -1220,7 +1220,8 @@ change_dir_prop(void *dir_baton,
               svn_error_clear(err);
               return SVN_NO_ERROR;
             }
-          SVN_ERR(svn_mergeinfo_to_string(&real_value, mergeinfo, pool));
+          SVN_ERR(svn_mergeinfo_to_string(&new_value, mergeinfo, pool));
+          value = new_value;
         }
       name = SVN_PROP_MERGEINFO;
       eb->svnmerge_migrated = TRUE;
@@ -1236,14 +1237,13 @@ change_dir_prop(void *dir_baton,
   if (svn_prop_needs_translation(name))
     {
       svn_boolean_t was_normalized;
-      SVN_ERR(normalize_string((const svn_string_t**)&real_value,
-                               &was_normalized, pool));
+      SVN_ERR(normalize_string(&value, &was_normalized, pool));
       if (was_normalized)
         (*(eb->normalized_node_props_counter))++;
     }
 
   return eb->wrapped_editor->change_dir_prop(db->wrapped_node_baton,
-                                             name, real_value, pool);
+                                             name, value, pool);
 }
 
 static svn_error_t *
