@@ -601,7 +601,9 @@ svn_subst_detect_eol(char *buf, char *endp);
  * Upon return, the original file cursor position is always preserved,
  * even if an error is thrown.
  *
- * Do temporary allocations in @a pool. */
+ * Do temporary allocations in @a pool.
+ *
+ * @since New in 1.7 */
 svn_error_t *
 svn_subst_detect_file_eol(const char **eol, apr_file_t *file, apr_pool_t *pool);
 
