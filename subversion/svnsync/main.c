@@ -612,6 +612,9 @@ log_properties_copied(svn_boolean_t syncprops_found,
   return SVN_NO_ERROR;
 }
 
+/* Print a notification that NORMALIZED_REV_PROPS_COUNT rev-props and
+ * NORMALIZED_NODE_PROPS_COUNT node-props were normalized to LF line
+ * endings, if either of those numbers is non-zero. */
 static svn_error_t *
 log_properties_normalized(int normalized_rev_props_count,
                           int normalized_node_props_count,
@@ -714,7 +717,7 @@ make_subcommand_baton(opt_baton_t *opt_baton,
 /*** `svnsync init' ***/
 
 /* Initialize the repository associated with RA session TO_SESSION,
- * using information found in baton B, while the repository is
+ * using information found in BATON, while the repository is
  * locked.  Implements `with_locked_func_t' interface.
  */
 static svn_error_t *
@@ -1651,7 +1654,7 @@ replay_rev_finished(svn_revnum_t revision,
 }
 
 /* Synchronize the repository associated with RA session TO_SESSION,
- * using information found in baton B, while the repository is
+ * using information found in BATON, while the repository is
  * locked.  Implements `with_locked_func_t' interface.
  */
 static svn_error_t *
@@ -1828,7 +1831,7 @@ synchronize_cmd(apr_getopt_t *os, void *b, apr_pool_t *pool)
 /*** `svnsync copy-revprops' ***/
 
 /* Copy revision properties to the repository associated with RA
- * session TO_SESSION, using information found in baton B, while the
+ * session TO_SESSION, using information found in BATON, while the
  * repository is locked.  Implements `with_locked_func_t' interface.
  */
 static svn_error_t *
