@@ -860,7 +860,7 @@ svn_stream_from_aprfile(apr_file_t *file,
  * the remaining amount of bytes is returned.
  *
  * If @a file is @c NULL, or if @a start is not smaller than @a end,
- * or if @a start is negative, or if @end is zero or negative,
+ * or if @a start is negative, or if @a end is zero or negative,
  * or if the file cursor cannot be set to the @a start offset,
  * an empty stream created by svn_stream_empty() is returned.
  *
@@ -1379,7 +1379,7 @@ svn_io_run_diff2(const char *dir,
                  const char *diff_cmd,
                  apr_pool_t *pool);
 
-/** Similar to svn_io_run_diff2() but with @diff_cmd encoded in internal
+/** Similar to svn_io_run_diff2() but with @a diff_cmd encoded in internal
  * encoding used by APR.
  *
  * @deprecated Provided for backwards compatibility with the 1.5 API. */

@@ -396,9 +396,9 @@ svn_mergeinfo_inheritable(svn_mergeinfo_t *inheritable_mergeinfo,
                           svn_revnum_t end,
                           apr_pool_t *pool);
 
-/** Take a mergeinfo in MERGEINPUT, and convert it back to unparsed
- *  mergeinfo in *OUTPUT.  If INPUT contains no elements, return the
- *  empty string.
+/** Take a mergeinfo in @a mergeinput, and convert it to unparsed
+ *  mergeinfo. Set @a *output to the result, allocated in @a pool.
+ *  If @a input contains no elements, set @a *output to the empty string.
  *
  * @since New in 1.5.
 */
