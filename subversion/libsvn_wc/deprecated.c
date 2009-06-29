@@ -1331,6 +1331,25 @@ svn_wc_prop_set(const char *name,
   return svn_wc_prop_set2(name, value, path, adm_access, FALSE, pool);
 }
 
+svn_error_t *
+svn_wc_prop_get(const svn_string_t **value,
+                const char *name,
+                const char *path,
+                svn_wc_adm_access_t *adm_access,
+                apr_pool_t *pool)
+{
+
+  svn_wc_context_t *wc_ctx;
+  const char *local_abspath;
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+  SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL /* config */,
+                                         svn_wc__adm_get_db(adm_access), pool));
+
+  SVN_ERR(svn_wc_prop_get2(value, wc_ctx, local_abspath, name, pool, pool));
+
+  return svn_error_return(svn_wc_context_destroy(wc_ctx));
+}
 
 svn_error_t *
 svn_wc_merge_props(svn_wc_notify_state_t *state,
