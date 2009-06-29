@@ -228,25 +228,31 @@ append_prop_conflict(svn_stream_t *stream,
    name of that file, or to NULL if no such file exists. */
 static svn_error_t *
 get_existing_prop_reject_file(const char **reject_file,
-                              svn_wc_adm_access_t *adm_access,
-                              const char *path,
-                              apr_pool_t *pool)
+                              svn_wc__db_t *db,
+                              const char *local_abspath,
+                              apr_pool_t *result_pool,
+                              apr_pool_t *scratch_pool)
 {
-  const char *local_abspath;
-  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
+  svn_wc__db_kind_t kind;
 
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
-  SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL, NULL, NULL, NULL,
+  SVN_ERR(svn_wc__db_read_info(NULL, &kind, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, reject_file, NULL,
                                db, local_abspath,
-                               pool, pool));
+                               result_pool, scratch_pool));
 
   if (*reject_file)
-    *reject_file = svn_dirent_join(svn_wc_adm_access_path(adm_access),
-                                   *reject_file, pool);
+    {
+      if (kind == svn_wc__db_kind_dir)
+        *reject_file = svn_dirent_join(local_abspath, *reject_file,
+                                       result_pool);
+      else
+        *reject_file = svn_dirent_join(svn_dirent_dirname(local_abspath,
+                                                          scratch_pool),
+                                       *reject_file, result_pool);
+    }
 
   return SVN_NO_ERROR;
 }
@@ -1668,8 +1674,8 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
 
       /* Now try to get the name of a pre-existing .prej file from the
          entries file */
-      SVN_ERR(get_existing_prop_reject_file(&reject_path,
-                                            adm_access, path, pool));
+      SVN_ERR(get_existing_prop_reject_file(&reject_path, db, local_abspath,
+                                            pool, pool));
 
       if (! reject_path)
         {
