@@ -185,15 +185,3 @@ Approved changes:
      adjusments affect *only* the setup of the test.
    Votes:
      +1: pburba, arfrever, cmpilato
-
-  * r37646, r37656
-   Fix a segfault in WC to URL copy.
-   Justification:
-     Segfaults are always bad.
-   Notes:
-     r37646 is the fix, r37656 is a follow up to clear iterpool.
-     Merging r37646, conflicts in subversion/libsvn_client/copy.c, a backport
-     branch resolving it can be found here:
-     http://svn.collab.net/repos/svn/branches/1.5.x-r37646
-   Votes:
-     +1: stylesen, arfrever, cmpilato
