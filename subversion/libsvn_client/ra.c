@@ -36,6 +36,33 @@
 #include "svn_private_config.h"
 #include "private/svn_wc_private.h"
 
+
+/* This is the baton that we pass svn_ra_open3(), and is associated with
+   the callback table we provide to RA. */
+typedef struct
+{
+  /* Holds the directory that corresponds to the REPOS_URL at svn_ra_open3()
+     time. When callbacks specify a relative path, they are joined with
+     this base directory. */
+  const char *base_dir;
+  svn_wc_adm_access_t *base_access;
+
+  /* When true, makes sure temporary files are created
+     outside the working copy. */
+  svn_boolean_t read_only_wc;
+
+  /* An array of svn_client_commit_item3_t * structures, present only
+     during working copy commits. */
+  apr_array_header_t *commit_items;
+
+  /* A client context. */
+  svn_client_ctx_t *ctx;
+
+  /* The pool to use for session-related items. */
+  apr_pool_t *pool;
+
+} callback_baton_t;
+
 
 
 static svn_error_t *
@@ -57,7 +84,7 @@ get_wc_prop(void *baton,
             const svn_string_t **value,
             apr_pool_t *pool)
 {
-  svn_client__callback_baton_t *cb = baton;
+  callback_baton_t *cb = baton;
 
   *value = NULL;
 
@@ -97,7 +124,7 @@ push_wc_prop(void *baton,
              const svn_string_t *value,
              apr_pool_t *pool)
 {
-  svn_client__callback_baton_t *cb = baton;
+  callback_baton_t *cb = baton;
   int i;
 
   /* If we're committing, search through the commit_items list for a
@@ -146,7 +173,7 @@ set_wc_prop(void *baton,
             const svn_string_t *value,
             apr_pool_t *pool)
 {
-  svn_client__callback_baton_t *cb = baton;
+  callback_baton_t *cb = baton;
   svn_wc_adm_access_t *adm_access;
   const svn_wc_entry_t *entry;
   const char *full_path = svn_dirent_join(cb->base_dir, path, pool);
@@ -223,7 +250,7 @@ invalidate_wc_props(void *baton,
                     const char *prop_name,
                     apr_pool_t *pool)
 {
-  svn_client__callback_baton_t *cb = baton;
+  callback_baton_t *cb = baton;
   svn_wc_entry_callbacks2_t walk_callbacks = { invalidate_wcprop_for_entry,
                               svn_client__default_walker_error_handler };
   struct invalidate_wcprop_walk_baton wb;
@@ -246,7 +273,7 @@ invalidate_wc_props(void *baton,
 static svn_error_t *
 cancel_callback(void *baton)
 {
-  svn_client__callback_baton_t *b = baton;
+  callback_baton_t *b = baton;
   return svn_error_return((b->ctx->cancel_func)(b->ctx->cancel_baton));
 }
 
@@ -256,7 +283,7 @@ get_client_string(void *baton,
                   const char **name,
                   apr_pool_t *pool)
 {
-  svn_client__callback_baton_t *b = baton;
+  callback_baton_t *b = baton;
   *name = apr_pstrdup(pool, b->ctx->client_name);
   return SVN_NO_ERROR;
 }
@@ -273,7 +300,7 @@ svn_client__open_ra_session_internal(svn_ra_session_t **ra_session,
                                      apr_pool_t *pool)
 {
   svn_ra_callbacks2_t *cbtable = apr_pcalloc(pool, sizeof(*cbtable));
-  svn_client__callback_baton_t *cb = apr_pcalloc(pool, sizeof(*cb));
+  callback_baton_t *cb = apr_pcalloc(pool, sizeof(*cb));
   const char *uuid = NULL;
 
   cbtable->open_tmp_file = open_tmp_file;

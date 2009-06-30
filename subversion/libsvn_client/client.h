@@ -353,33 +353,6 @@ svn_client__default_walker_error_handler(const char *path,
 #define SVN_CLIENT__HAS_LOG_MSG_FUNC(ctx) \
         ((ctx)->log_msg_func3 || (ctx)->log_msg_func2 || (ctx)->log_msg_func)
 
-/* This is the baton that we pass svn_ra_open3(), and is associated with
-   the callback table we provide to RA. */
-typedef struct
-{
-  /* Holds the directory that corresponds to the REPOS_URL at svn_ra_open3()
-     time. When callbacks specify a relative path, they are joined with
-     this base directory. */
-  const char *base_dir;
-  svn_wc_adm_access_t *base_access;
-
-  /* When true, makes sure temporary files are created
-     outside the working copy. */
-  svn_boolean_t read_only_wc;
-
-  /* An array of svn_client_commit_item3_t * structures, present only
-     during working copy commits. */
-  apr_array_header_t *commit_items;
-
-  /* A client context. */
-  svn_client_ctx_t *ctx;
-
-  /* The pool to use for session-related items. */
-  apr_pool_t *pool;
-
-} svn_client__callback_baton_t;
-
-
 /* Open an RA session, returning it in *RA_SESSION.
 
    The root of the session is specified by BASE_URL and BASE_DIR.
