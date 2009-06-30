@@ -15388,6 +15388,26 @@ def handle_gaps_in_implicit_mergeinfo(sbox):
                                        None, None, None, None,
                                        None, 1)  
 
+  # Now merge all available revisions from 'A' to 'A_COPY'.
+  # The mergeinfo '/A:4' on 'A_COPY' should have no impact on this merge
+  # since it refers to another line of history.  Since 'A_COPY' was copied
+  # from 'A@7' the only available revisions are r8 and r9.
+  expected_output = wc.State(A_COPY_path, {
+    'D/gamma' : Item(status='U '),
+    })
+  expected_status.tweak('D/gamma', status='M ')
+  expected_disk.tweak('D/gamma', contents='New content')
+  expected_disk.tweak('', props={SVN_PROP_MERGEINFO : '/A:4,8-9'})
+  svntest.actions.run_and_verify_merge(A_COPY_path, None, None,
+                                       sbox.repo_url + \
+                                       '/A',
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, None, None, None,
+                                       None, 1)
+
 #----------------------------------------------------------------------
 # Test for issue #3323 'Mergeinfo deleted by a merge should disappear'
 def mergeinfo_deleted_by_a_merge_should_disappear(sbox):
