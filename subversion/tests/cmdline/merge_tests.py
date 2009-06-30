@@ -16343,8 +16343,8 @@ test_list = [ None,
               SkipUnless(multiple_reintegrates_from_the_same_branch,
                          server_has_mergeinfo),
               merge_replace_causes_tree_conflict,
-              XFail(handle_gaps_in_implicit_mergeinfo,
-                    server_has_mergeinfo)
+              XFail(SkipUnless(handle_gaps_in_implicit_mergeinfo,
+                               server_has_mergeinfo)),
              ]
 
 if __name__ == '__main__':
