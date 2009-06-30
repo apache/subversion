@@ -343,10 +343,16 @@ add_dir_recursive(const char *dirname,
   apr_int32_t flags = APR_FINFO_TYPE | APR_FINFO_NAME;
   svn_wc_adm_access_t *dir_access;
   apr_array_header_t *ignores;
+  svn_wc_context_t *wc_ctx;
 
   /* Check cancellation; note that this catches recursive calls too. */
   if (ctx->cancel_func)
     SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
+
+  if (!ctx->wc_ctx)
+    SVN_ERR(svn_wc_context_create(&wc_ctx, NULL /* config */, pool, pool));
+  else
+    wc_ctx = ctx->wc_ctx;
 
   /* Add this directory to revision control. */
   err = svn_wc_add3(dirname, adm_access, svn_depth_infinity, NULL,
@@ -359,10 +365,18 @@ add_dir_recursive(const char *dirname,
 
   SVN_ERR(svn_wc_adm_retrieve(&dir_access, adm_access, dirname, pool));
 
-  if (!no_ignore)
-    SVN_ERR(svn_wc_get_ignores(&ignores, ctx->config, dir_access, pool));
-
   subpool = svn_pool_create(pool);
+
+  if (!no_ignore)
+    {
+      const char *dir_abspath;
+
+      SVN_ERR(svn_dirent_get_absolute(&dir_abspath,
+                                      svn_wc_adm_access_path(dir_access),
+                                      subpool));
+      SVN_ERR(svn_wc_get_ignores2(&ignores, wc_ctx, dir_abspath, ctx->config,
+                                  pool, subpool));
+    }
 
   SVN_ERR(svn_io_dir_open(&dir, dirname, pool));
 

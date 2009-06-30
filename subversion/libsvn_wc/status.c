@@ -631,7 +631,8 @@ collect_ignore_patterns(apr_array_header_t **patterns,
   for (i = 0; i < ignores->nelts; i++)
     {
       const char *ignore = APR_ARRAY_IDX(ignores, i, const char *);
-      APR_ARRAY_PUSH(*patterns, const char *) = ignore;
+      APR_ARRAY_PUSH(*patterns, const char *) = apr_pstrdup(result_pool,
+                                                            ignore);
     }
 
   /* Then add any svn:ignore globs to the PATTERNS array. */
