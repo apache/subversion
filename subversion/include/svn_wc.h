@@ -5771,11 +5771,27 @@ svn_wc_get_default_ignores(apr_array_header_t **patterns,
 
 /** Get the list of ignore patterns from the @c svn_config_t's in the
  * @a config hash and the local ignore patterns from the directory
- * in @a adm_access, and store them in @a *patterns.
- * Allocate @a *patterns and its contents in @a pool.
+ * at @a local_abspath, using @a wc_ctx, and store them in @a *patterns.
+ * Allocate @a *patterns and its contents in @a result_pool, use @a
+ * scrach_pool for temporary allocations.
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_wc_get_ignores2(apr_array_header_t **patterns,
+                    svn_wc_context_t *wc_ctx,
+                    const char *local_abspath,
+                    apr_hash_t *config,
+                    apr_pool_t *result_pool,
+                    apr_pool_t *scratch_pool);
+
+/** Similar to svn_wc_get_ignores2(), but with a @c svn_wc_adm_access_t
+ * parameter in place of @c svn_wc_context_t and @c local_abspath parameters.
  *
  * @since New in 1.3.
+ * @deprecated Provided for backwards compatibility with the 1.6 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_get_ignores(apr_array_header_t **patterns,
                    apr_hash_t *config,
