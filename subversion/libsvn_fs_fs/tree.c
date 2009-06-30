@@ -1675,9 +1675,7 @@ svn_fs_fs__commit_txn(const char **conflict_p,
 
       svn_pool_clear(iterpool);
 
-      /* Get the *current* youngest revision, in one short-lived
-         Berkeley transaction.  (We don't want the revisions table
-         locked while we do the main merge.)  We call it "youngish"
+      /* Get the *current* youngest revision.  We call it "youngish"
          because new revisions might get committed after we've
          obtained it. */
 
@@ -1685,13 +1683,13 @@ svn_fs_fs__commit_txn(const char **conflict_p,
       SVN_ERR(svn_fs_fs__revision_root(&youngish_root, fs, youngish_rev,
                                        iterpool));
 
-      /* Get the dag node for the youngest revision, also in one
-         Berkeley transaction.  Later we'll use it as the SOURCE
-         argument to a merge, and if the merge succeeds, this youngest
-         root node will become the new base root for the svn txn that
-         was the target of the merge (but note that the youngest rev
-         may have changed by then -- that's why we're careful to get
-         this root in its own bdb txn here). */
+      /* Get the dag node for the youngest revision.  Later we'll use
+         it as the SOURCE argument to a merge, and if the merge
+         succeeds, this youngest root node will become the new base
+         root for the svn txn that was the target of the merge (but
+         note that the youngest rev may have changed by then -- that's
+         why we're careful to get this root in its own bdb txn
+         here). */
       SVN_ERR(get_root(&youngish_root_node, youngish_root, iterpool));
 
       /* Try to merge.  If the merge succeeds, the base root node of
