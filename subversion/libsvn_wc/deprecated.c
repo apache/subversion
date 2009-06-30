@@ -1604,6 +1604,28 @@ svn_wc_dup_status(const svn_wc_status_t *orig_stat,
   return new_stat;
 }
 
+svn_error_t *
+svn_wc_get_ignores(apr_array_header_t **patterns,
+                   apr_hash_t *config,
+                   svn_wc_adm_access_t *adm_access,
+                   apr_pool_t *pool)
+{
+  svn_wc_context_t *wc_ctx;
+  const char *local_abspath;
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath,
+                                  svn_wc_adm_access_path(adm_access), pool));
+
+  SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL /* config */,
+                                         svn_wc__adm_get_db(adm_access),
+                                         pool));
+
+  SVN_ERR(svn_wc_get_ignores2(patterns, wc_ctx, local_abspath, config, pool,
+                              pool));
+
+  return svn_error_return(svn_wc_context_destroy(wc_ctx));
+}
+
 
 /*** From update_editor.c ***/
 svn_error_t *
