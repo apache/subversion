@@ -58,6 +58,9 @@ typedef struct
   /* A client context. */
   svn_client_ctx_t *ctx;
 
+  /* A working copy context. */
+  svn_wc_context_t *wc_ctx;
+
   /* The pool to use for session-related items. */
   apr_pool_t *pool;
 
@@ -85,6 +88,7 @@ get_wc_prop(void *baton,
             apr_pool_t *pool)
 {
   callback_baton_t *cb = baton;
+  const char *local_abspath;
 
   *value = NULL;
 
@@ -98,10 +102,14 @@ get_wc_prop(void *baton,
           svn_client_commit_item3_t *item
             = APR_ARRAY_IDX(cb->commit_items, i,
                             svn_client_commit_item3_t *);
+        
+          SVN_ERR(svn_dirent_get_absolute(&local_abspath, item->path, pool));
+
           if (! strcmp(relpath,
                        svn_path_uri_decode(item->url, pool)))
-            return svn_error_return(svn_wc_prop_get(value, name, item->path,
-                                        cb->base_access, pool));
+            return svn_error_return(svn_wc_prop_get2(value, cb->wc_ctx,
+                                                     local_abspath, name,
+                                                     pool, pool));
         }
 
       return SVN_NO_ERROR;
@@ -111,9 +119,12 @@ get_wc_prop(void *baton,
   else if (cb->base_dir == NULL)
     return SVN_NO_ERROR;
 
-  return svn_error_return(svn_wc_prop_get(value, name,
-                               svn_path_join(cb->base_dir, relpath, pool),
-                               cb->base_access, pool));
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath,
+                                  svn_path_join(cb->base_dir, relpath, pool),
+                                  pool));
+
+  return svn_error_return(svn_wc_prop_get2(value, cb->wc_ctx, local_abspath,
+                                           name, pool, pool));
 }
 
 /* This implements the 'svn_ra_push_wc_prop_func_t' interface. */
@@ -320,6 +331,10 @@ svn_client__open_ra_session_internal(svn_ra_session_t **ra_session,
   cb->pool = pool;
   cb->commit_items = commit_items;
   cb->ctx = ctx;
+  if (!ctx->wc_ctx)
+    SVN_ERR(svn_wc_context_create(&cb->wc_ctx, NULL /* config */, pool, pool));
+  else
+    cb->wc_ctx = ctx->wc_ctx;
 
   if (base_access)
     {
