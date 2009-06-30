@@ -1948,8 +1948,8 @@ validate_prop_against_node_kind(const char *name,
 
 
 struct getter_baton {
-  const char *path;
-  svn_wc_adm_access_t *adm_access;
+  const char *local_abspath;
+  svn_wc__db_t *db;
 };
 
 
@@ -1962,15 +1962,15 @@ get_file_for_validation(const svn_string_t **mime_type,
   struct getter_baton *gb = baton;
 
   if (mime_type)
-    SVN_ERR(svn_wc_prop_get(mime_type, SVN_PROP_MIME_TYPE,
-                            gb->path, gb->adm_access, pool));
+    SVN_ERR(svn_wc__internal_propget(mime_type, SVN_PROP_MIME_TYPE,
+                                     gb->local_abspath, gb->db, pool, pool));
 
   if (stream)
     {
       svn_stream_t *read_stream;
 
       /* Open PATH. */
-      SVN_ERR(svn_stream_open_readonly(&read_stream, gb->path,
+      SVN_ERR(svn_stream_open_readonly(&read_stream, gb->local_abspath,
                                        pool, pool));
 
       /* Copy from the file into the translating stream. */
@@ -2078,8 +2078,8 @@ svn_wc_prop_set3(const char *name,
       const svn_string_t *new_value;
       struct getter_baton *gb = apr_pcalloc(pool, sizeof(*gb));
 
-      gb->path = path;
-      gb->adm_access = adm_access;
+      SVN_ERR(svn_dirent_get_absolute(&gb->local_abspath, path, pool));
+      gb->db = svn_wc__adm_get_db(adm_access);
 
       SVN_ERR(svn_wc_canonicalize_svn_prop(&new_value, name, value, path,
                                            entry->kind, skip_checks,
