@@ -254,6 +254,12 @@ copy_versioned_files(const char *from,
   apr_pool_t *iterpool;
   apr_hash_t *entries;
   apr_hash_index_t *hi;
+  svn_wc_context_t *wc_ctx;
+
+  if (!ctx->wc_ctx)
+    SVN_ERR(svn_wc_context_create(&wc_ctx, NULL /* config */, pool, pool));
+  else
+    wc_ctx = ctx->wc_ctx;
 
   SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, from, FALSE,
                                  0, ctx->cancel_func, ctx->cancel_baton,
@@ -364,9 +370,12 @@ copy_versioned_files(const char *from,
         {
           apr_array_header_t *ext_items;
           const svn_string_t *prop_val;
+          const char *from_abspath;
 
-          SVN_ERR(svn_wc_prop_get(&prop_val, SVN_PROP_EXTERNALS,
-                                  from, adm_access, pool));
+          SVN_ERR(svn_dirent_get_absolute(&from_abspath, from, pool));
+
+          SVN_ERR(svn_wc_prop_get2(&prop_val, wc_ctx, from_abspath,
+                                   SVN_PROP_EXTERNALS, pool, pool));
           if (prop_val != NULL)
             {
               int i;
