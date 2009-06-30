@@ -103,7 +103,7 @@ Candidate changes:
    Votes:
      +1: stsp
 
- * r38222, r38223
+ * r38222, r38223, r38261
    Fix GNOME Keyring with '--non-interactive' option.
    Justification:
      This was introduced in 1.6.x
@@ -112,6 +112,7 @@ Candidate changes:
    Notes:
      Merging r38221:r38223 from trunk conflicts in 
      subversion/libsvn_auth_gnome_keyring/gnome_keyring.c.
+     r38261 is also merged to the backport branch.
    Votes:
      +1: stylesen
 
