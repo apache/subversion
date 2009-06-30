@@ -1606,8 +1606,8 @@ svn_io_file_write_full(apr_file_t *file,
 
 /**
  * Open a unique file in @a dirpath, and write @a nbytes from @a buf to
- * the file before closing it.  Return the name of the newly created file
- * in @a *tmp_path, allocated in @a pool.
+ * the file before flushing it to disk and closing it.  Return the name
+ * of the newly created file in @a *tmp_path, allocated in @a pool.
  *
  * If @a dirpath is @c NULL, use the path returned from svn_io_temp_dir().
  * (Note that when using the system-provided temp directory, it may not
