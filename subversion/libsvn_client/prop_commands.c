@@ -527,6 +527,7 @@ pristine_or_working_props(apr_hash_t **props,
  */
 static svn_error_t *
 pristine_or_working_propval(const svn_string_t **propval,
+                            svn_wc_context_t *wc_ctx,
                             const char *propname,
                             const char *path,
                             svn_wc_adm_access_t *adm_access,
@@ -543,7 +544,11 @@ pristine_or_working_propval(const svn_string_t **propval,
     }
   else  /* get the working revision */
     {
-      SVN_ERR(svn_wc_prop_get(propval, propname, path, adm_access, pool));
+      const char *local_abspath;
+
+      SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+      SVN_ERR(svn_wc_prop_get2(propval, wc_ctx, local_abspath, propname,
+                               pool, pool));
     }
 
   return SVN_NO_ERROR;
@@ -556,6 +561,7 @@ struct propget_walk_baton
   const char *propname;  /* The name of the property to get. */
   svn_boolean_t pristine;  /* Select base rather than working props. */
   svn_wc_adm_access_t *base_access;  /* Access for the tree being walked. */
+  svn_wc_context_t *wc_ctx;  /* Context for the tree being walked. */
   apr_hash_t *changelist_hash;  /* Keys are changelists to filter on. */
   apr_hash_t *props;  /* Out: mapping of (path:propval). */
 };
@@ -596,8 +602,8 @@ propget_walk_cb(const char *path,
   if (! SVN_WC__CL_MATCH(wb->changelist_hash, entry))
     return SVN_NO_ERROR;
 
-  SVN_ERR(pristine_or_working_propval(&propval, wb->propname, path,
-                                      wb->base_access, wb->pristine,
+  SVN_ERR(pristine_or_working_propval(&propval, wb->wc_ctx, wb->propname,
+                                      path, wb->base_access, wb->pristine,
                                       pool));
 
   if (propval)
@@ -786,6 +792,10 @@ svn_client__get_prop_from_wc(apr_hash_t *props,
   wb.base_access = adm_access;
   wb.changelist_hash = changelist_hash;
   wb.props = props;
+  if (!ctx->wc_ctx)
+    SVN_ERR(svn_wc_context_create(&wb.wc_ctx, NULL /* config */, pool, pool));
+  else
+    wb.wc_ctx = ctx->wc_ctx;
 
   /* Fetch the property, recursively or for a single resource. */
   if (depth >= svn_depth_files && entry->kind == svn_node_dir)
