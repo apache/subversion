@@ -799,7 +799,7 @@ test_list = [ None,
               info_not_synchronized,
               copy_bad_line_endings,
               delete_svn_props,
-              XFail(commit_a_copy_of_root, svntest.main.is_ra_type_dav),
+              commit_a_copy_of_root,
              ]
 
 if __name__ == '__main__':
