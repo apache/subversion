@@ -54,6 +54,9 @@ struct edit_baton
   const char *target;
   svn_wc_adm_access_t *adm_access;
 
+  /* The DB handle for managing the working copy state.  */
+  svn_wc__db_t *db;
+
   /* The overall depth of this edit (a dir baton may override this).
    *
    * If this is svn_depth_unknown, the depths found in the working
@@ -856,7 +859,6 @@ get_dir_status(struct edit_baton *eb,
 {
   apr_hash_t *entries;
   apr_hash_index_t *hi;
-  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
   const svn_wc_entry_t *dir_entry;
   const char *path = svn_wc_adm_access_path(adm_access);
   const char *local_abspath;
@@ -890,8 +892,9 @@ get_dir_status(struct edit_baton *eb,
      status more accurately.) */
     {
       const svn_string_t *prop_val;
-      SVN_ERR(svn_wc_prop_get(&prop_val, SVN_PROP_EXTERNALS, path,
-                              adm_access, subpool));
+      SVN_ERR(svn_wc__internal_propget(&prop_val, SVN_PROP_EXTERNALS,
+                                       local_abspath, eb->db, subpool,
+                                       subpool));
       if (prop_val)
         {
           apr_array_header_t *ext_items;
@@ -957,7 +960,7 @@ get_dir_status(struct edit_baton *eb,
       else if (dirent_p)
         {
           if (ignore_patterns && ! patterns)
-            SVN_ERR(collect_ignore_patterns(&patterns, db, local_abspath,
+            SVN_ERR(collect_ignore_patterns(&patterns, eb->db, local_abspath,
                                             ignore_patterns, subpool,
                                             subpool));
           SVN_ERR(send_unversioned_item(entry, dirent_p->kind,
@@ -979,7 +982,8 @@ get_dir_status(struct edit_baton *eb,
               /* A tree conflict will block commit, so we'll pass TRUE
                  instead of the user's no_ignore arg. */
               if (ignore_patterns && ! patterns)
-                SVN_ERR(collect_ignore_patterns(&patterns, db, local_abspath,
+                SVN_ERR(collect_ignore_patterns(&patterns, eb->db,
+                                                local_abspath,
                                                 ignore_patterns, subpool,
                                                 subpool));
               SVN_ERR(send_unversioned_item(entry, svn_node_none, FALSE,
@@ -1039,7 +1043,7 @@ get_dir_status(struct edit_baton *eb,
         continue;
 
       if (ignore_patterns && ! patterns)
-        SVN_ERR(collect_ignore_patterns(&patterns, db, local_abspath,
+        SVN_ERR(collect_ignore_patterns(&patterns, eb->db, local_abspath,
                                         ignore_patterns, subpool, subpool));
 
       SVN_ERR(send_unversioned_item(key, dirent_p->kind, dirent_p->special,
@@ -1071,7 +1075,7 @@ get_dir_status(struct edit_baton *eb,
         continue;
 
       if (ignore_patterns && ! patterns)
-        SVN_ERR(collect_ignore_patterns(&patterns, db, local_abspath,
+        SVN_ERR(collect_ignore_patterns(&patterns, eb->db, local_abspath,
                                         ignore_patterns, subpool, subpool));
 
       SVN_ERR(send_unversioned_item(tree_basename, svn_node_none, FALSE,
@@ -2208,6 +2212,7 @@ svn_wc_get_status_editor5(const svn_delta_editor_t **editor,
   eb = apr_palloc(result_pool, sizeof(*eb));
   eb->default_depth     = depth;
   eb->target_revision   = edit_revision;
+  eb->db                = svn_wc__adm_get_db(anchor);
   eb->adm_access        = anchor;
   eb->get_all           = get_all;
   eb->no_ignore         = no_ignore;
