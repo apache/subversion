@@ -203,7 +203,7 @@ write_digest_file(apr_hash_t *children,
       return svn_error_createf(err->apr_err,
                                err,
                                _("Cannot write lock/entries hashfile '%s'"),
-                               svn_path_local_style(tmp_path, pool));
+                               svn_dirent_local_style(tmp_path, pool));
     }
 
   SVN_ERR(svn_stream_close(stream));
@@ -255,7 +255,7 @@ read_digest_file(apr_hash_t **children_p,
       return svn_error_createf(err->apr_err,
                                err,
                                _("Can't parse lock/entries hashfile '%s'"),
-                               svn_path_local_style(digest_path, pool));
+                               svn_dirent_local_style(digest_path, pool));
     }
   SVN_ERR(svn_stream_close(stream));
 

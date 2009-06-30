@@ -263,7 +263,7 @@ svn_fs_fs__path_rev_absolute(const char **path,
             return svn_error_createf(APR_ENOENT, NULL,
                                      _("Revision file '%s' does not exist, "
                                        "and r%ld is not packed"),
-                                     svn_path_local_style(*path, pool),
+                                     svn_dirent_local_style(*path, pool),
                                      rev);
           /* Fall through. */
         }
@@ -767,7 +767,7 @@ get_writable_proto_rev_body(svn_fs_t *fs, const void *baton, apr_pool_t *pool)
 
         return svn_error_wrap_apr(apr_err,
                                   _("Can't get exclusive lock on file '%s'"),
-                                  svn_path_local_style(lockfile_path, pool));
+                                  svn_dirent_local_style(lockfile_path, pool));
       }
 
     *lockcookie = lockfile;
@@ -879,7 +879,7 @@ check_format_file_buffer_numeric(const char *buf, const char *path,
     if (!apr_isdigit(*p))
       return svn_error_createf(SVN_ERR_BAD_VERSION_FILE_FORMAT, NULL,
         _("Format file '%s' contains an unexpected non-digit"),
-        svn_path_local_style(path, pool));
+        svn_dirent_local_style(path, pool));
 
   return SVN_NO_ERROR;
 }
@@ -928,7 +928,7 @@ read_format(int *pformat, int *max_files_per_dir,
       svn_error_clear(err);
       return svn_error_createf(SVN_ERR_BAD_VERSION_FILE_FORMAT, NULL,
                                _("Can't read first line of format file '%s'"),
-                               svn_path_local_style(path, pool));
+                               svn_dirent_local_style(path, pool));
     }
   SVN_ERR(err);
 
@@ -972,7 +972,7 @@ read_format(int *pformat, int *max_files_per_dir,
 
       return svn_error_createf(SVN_ERR_BAD_VERSION_FILE_FORMAT, NULL,
          _("'%s' contains invalid filesystem format option '%s'"),
-         svn_path_local_style(path, pool), buf);
+         svn_dirent_local_style(path, pool), buf);
     }
 
   return svn_io_file_close(file, pool);
@@ -5473,11 +5473,11 @@ svn_fs_fs__dup_perms(const char *filename,
   status = apr_stat(&finfo, perms_reference_apr, APR_FINFO_PROT, pool);
   if (status)
     return svn_error_wrap_apr(status, _("Can't stat '%s'"),
-                              svn_path_local_style(perms_reference, pool));
+                              svn_dirent_local_style(perms_reference, pool));
   status = apr_file_perms_set(filename_apr, finfo.protection);
   if (status)
     return svn_error_wrap_apr(status, _("Can't chmod '%s'"),
-                              svn_path_local_style(filename, pool));
+                              svn_dirent_local_style(filename, pool));
 #endif
   return SVN_NO_ERROR;
 }
