@@ -245,9 +245,9 @@ struct edit_baton
 static svn_error_t *
 check_wc_root(svn_boolean_t *wc_root,
               svn_node_kind_t *kind,
-              const char *path,
               svn_wc__db_t *db,
-              apr_pool_t *pool);
+              const char *local_abspath,
+              apr_pool_t *scratch_pool);
 
 
 /* Record in the edit baton EB that PATH's base version is not being updated.
@@ -1743,10 +1743,11 @@ already_in_a_tree_conflict(const char **victim_path,
                            apr_pool_t *pool)
 {
   const char *ancestor = path;
-  const char *local_abspath;
+  const char *ancestor_abspath;
   svn_error_t *err;
   apr_array_header_t *ancestors;
   const svn_wc_entry_t *entry;
+  apr_pool_t *iterpool;
   int i;
 
   *victim_path = NULL;
@@ -1754,8 +1755,8 @@ already_in_a_tree_conflict(const char **victim_path,
   ancestors = apr_array_make(pool, 0, sizeof(const char *));
 
   /* If PATH is under version control, put it on the ancestor list. */
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, ancestor, pool));
-  err = svn_wc__get_entry(&entry, db, local_abspath, TRUE,
+  SVN_ERR(svn_dirent_get_absolute(&ancestor_abspath, ancestor, pool));
+  err = svn_wc__get_entry(&entry, db, ancestor_abspath, TRUE,
                           svn_node_unknown, FALSE, pool, pool);
   if (err)
     {
@@ -1775,11 +1776,15 @@ already_in_a_tree_conflict(const char **victim_path,
 
   /* Append to the list all ancestor-dirs in the working copy.  Ignore
      the root because it can't be tree-conflicted. */
+  iterpool = svn_pool_create(pool);
   while (! svn_path_is_empty(ancestor))
     {
       svn_boolean_t is_wc_root;
 
-      SVN_ERR(check_wc_root(&is_wc_root, NULL, ancestor, db, pool));
+      svn_pool_clear(iterpool);
+      SVN_ERR(svn_dirent_get_absolute(&ancestor_abspath, ancestor, iterpool));
+      SVN_ERR(check_wc_root(&is_wc_root, NULL, db, ancestor_abspath,
+                            iterpool));
       if (is_wc_root)
         break;
 
@@ -1795,7 +1800,9 @@ already_in_a_tree_conflict(const char **victim_path,
 
       ancestor = APR_ARRAY_IDX(ancestors, i, const char *);
 
-      SVN_ERR(svn_wc__get_tree_conflict2(&conflict, ancestor, db, pool, pool));
+      svn_pool_clear(iterpool);
+      SVN_ERR(svn_wc__get_tree_conflict2(&conflict, ancestor, db, pool,
+                                         iterpool));
       if (conflict != NULL)
         {
           *victim_path = ancestor;
@@ -1803,6 +1810,8 @@ already_in_a_tree_conflict(const char **victim_path,
           return SVN_NO_ERROR;
         }
     }
+
+  svn_pool_clear(iterpool);
 
   return SVN_NO_ERROR;
 }
@@ -2813,6 +2822,7 @@ close_directory(void *dir_baton,
   apr_array_header_t *entry_props, *wc_props, *regular_props;
   apr_hash_t *base_props = NULL, *working_props = NULL;
   svn_wc_adm_access_t *adm_access;
+  const char *local_abspath;
 
   /* Skip if we're in a conflicted tree. */
   if (in_skipped_tree(db->edit_baton, db->path, pool)
@@ -2824,6 +2834,7 @@ close_directory(void *dir_baton,
       return SVN_NO_ERROR;
     }
 
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, db->path, pool));
   SVN_ERR(svn_categorize_props(db->propchanges, &entry_props, &wc_props,
                                &regular_props, pool));
 
@@ -2836,12 +2847,10 @@ close_directory(void *dir_baton,
      deleted (issue #1672). */
   if (db->was_incomplete)
     {
-      const char *local_abspath;
       const svn_wc_entry_t *entry;
       int i;
       apr_hash_t *props_to_delete;
 
-      SVN_ERR(svn_dirent_get_absolute(&local_abspath, db->path, pool));
       SVN_ERR(svn_wc__get_entry(&entry, db->edit_baton->db, local_abspath,
                                 TRUE, svn_node_unknown, FALSE, pool, pool));
       if (entry == NULL)
@@ -2894,9 +2903,9 @@ close_directory(void *dir_baton,
                   const svn_string_t *new_val_s = change->value;
                   const svn_string_t *old_val_s;
 
-                  SVN_ERR(svn_wc_prop_get(
-                           &old_val_s, SVN_PROP_EXTERNALS,
-                           db->path, adm_access, db->pool));
+                  SVN_ERR(svn_wc__internal_propget(
+                           &old_val_s, SVN_PROP_EXTERNALS, local_abspath,
+                           db->edit_baton->db, db->pool, db->pool));
 
                   if ((new_val_s == NULL) && (old_val_s == NULL))
                     ; /* No value before, no value after... so do nothing. */
@@ -2953,9 +2962,7 @@ close_directory(void *dir_baton,
       if (wc_props && wc_props->nelts > 0)
         {
           svn_wc__db_t *wc_db = svn_wc__adm_get_db(adm_access);
-          const char *local_abspath;
 
-          SVN_ERR(svn_dirent_get_absolute(&local_abspath, db->path, pool));
           SVN_ERR(svn_wc__db_base_set_dav_cache(wc_db, local_abspath,
                                                 prop_hash_from_array(wc_props,
                                                                      pool),
@@ -4603,6 +4610,9 @@ close_file(void *file_baton,
       const svn_string_t *mime_type;
       svn_wc_notify_t *notify;
       svn_wc_notify_action_t action = svn_wc_notify_update_update;
+      const char *local_abspath;
+
+      SVN_ERR(svn_dirent_get_absolute(&local_abspath, fb->path, pool));
 
       if (fb->tree_conflicted)
         action = svn_wc_notify_tree_conflict;
@@ -4625,8 +4635,8 @@ close_file(void *file_baton,
       notify->old_revision = fb->old_revision;
 
       /* Fetch the mimetype */
-      SVN_ERR(svn_wc_prop_get(&mime_type, SVN_PROP_MIME_TYPE, fb->path,
-                              eb->adm_access, pool));
+      SVN_ERR(svn_wc__internal_propget(&mime_type, SVN_PROP_MIME_TYPE,
+                                       local_abspath, eb->db, pool, pool));
       notify->mime_type = mime_type == NULL ? NULL : mime_type->data;
 
       (*eb->notify_func)(eb->notify_baton, notify, pool);
@@ -4881,6 +4891,7 @@ svn_wc_get_update_editor3(svn_revnum_t *target_revision,
                           svn_wc_traversal_info_t *traversal_info,
                           apr_pool_t *pool)
 {
+  /* ### rev this to allow the caller to provide a context. */
   return make_editor(target_revision, anchor, svn_wc_adm_access_path(anchor),
                      target, use_commit_times, NULL, depth, depth_is_sticky,
                      allow_unver_obstructions, notify_func, notify_baton,
@@ -4971,6 +4982,7 @@ svn_wc_get_switch_editor3(svn_revnum_t *target_revision,
 {
   SVN_ERR_ASSERT(switch_url && svn_path_is_canonical(switch_url, pool));
 
+  /* ### rev this to allow the caller to provide a context. */
   return make_editor(target_revision, anchor, svn_wc_adm_access_path(anchor),
                      target, use_commit_times, switch_url,
                      depth, depth_is_sticky, allow_unver_obstructions,
@@ -5185,11 +5197,10 @@ svn_wc_traversed_depths(apr_hash_t **depths,
 static svn_error_t *
 check_wc_root(svn_boolean_t *wc_root,
               svn_node_kind_t *kind,
-              const char *path,
               svn_wc__db_t *db,
-              apr_pool_t *pool)
+              const char *local_abspath,
+              apr_pool_t *scratch_pool)
 {
-  const char *abspath;
   const char *parent, *base_name;
   const svn_wc_entry_t *p_entry, *entry;
   svn_error_t *err;
@@ -5199,14 +5210,12 @@ check_wc_root(svn_boolean_t *wc_root,
      (code-wise) values. */
   *wc_root = TRUE;
 
-  SVN_ERR(svn_dirent_get_absolute(&abspath, path, pool));
-
   /* Get our ancestry.  In the event that the path is unversioned (or
      otherwise hidden), treat it as if it were a file so that the anchor
      will be the parent directory. If the node is a FILE, then it is
      definitely not a root.  */
-  err = svn_wc__get_entry(&entry, db, abspath, TRUE, svn_node_unknown, FALSE,
-                          pool, pool);
+  err = svn_wc__get_entry(&entry, db, local_abspath, TRUE, svn_node_unknown,
+                          FALSE, scratch_pool, scratch_pool);
 
   if (err && err->apr_err == SVN_ERR_NODE_UNEXPECTED_KIND
         && entry->kind == svn_node_dir && *entry->name != '\0')
@@ -5245,22 +5254,16 @@ check_wc_root(svn_boolean_t *wc_root,
   if (kind)
     *kind = svn_node_dir;
 
-  /* If PATH is the current working directory, we have no choice but
-     to consider it a WC root (we can't examine its parent at all) */
-  /* ### not entirely true! we have an abspath.  */
-  if (svn_path_is_empty(path))
-    return SVN_NO_ERROR;
-
   /* If this is the root folder (of a drive), it should be the WC
      root too. */
-  if (svn_dirent_is_root(path, strlen(path)))
+  if (svn_dirent_is_root(local_abspath, strlen(local_abspath)))
     return SVN_NO_ERROR;
 
-  svn_dirent_split(abspath, &parent, &base_name, pool);
+  svn_dirent_split(local_abspath, &parent, &base_name, scratch_pool);
 
   /* If we cannot get an entry for PATH's parent, PATH is a WC root. */
   err = svn_wc__get_entry(&p_entry, db, parent, FALSE, svn_node_dir, FALSE,
-                          pool, pool);
+                          scratch_pool, scratch_pool);
   if (err)
     {
       svn_error_clear(err);
@@ -5275,19 +5278,20 @@ check_wc_root(svn_boolean_t *wc_root,
     return svn_error_createf(
        SVN_ERR_ENTRY_MISSING_URL, NULL,
        _("'%s' has no ancestry information"),
-       svn_dirent_local_style(parent, pool));
+       svn_dirent_local_style(parent, scratch_pool));
 
   /* If PATH's parent in the WC is not its parent in the repository,
      PATH is a WC root. */
   if (entry && entry->url
-      && (strcmp(svn_path_url_add_component2(p_entry->url, base_name, pool),
+      && (strcmp(svn_path_url_add_component2(p_entry->url, base_name,
+                                             scratch_pool),
                  entry->url) != 0))
     return SVN_NO_ERROR;
 
   /* If PATH's parent in the repository is not its parent in the WC,
      PATH is a WC root. */
-  err = svn_wc__get_entry(&p_entry, db, abspath, FALSE, svn_node_dir, TRUE,
-                          pool, pool);
+  err = svn_wc__get_entry(&p_entry, db, local_abspath, FALSE, svn_node_dir,
+                          TRUE, scratch_pool, scratch_pool);
   if (err)
     {
       svn_error_clear(err);
@@ -5314,8 +5318,11 @@ svn_wc_is_wc_root(svn_boolean_t *wc_root,
                   apr_pool_t *pool)
 {
   svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
+  const char *local_abspath;
 
-  return check_wc_root(wc_root, NULL, path, db, pool);
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+
+  return check_wc_root(wc_root, NULL, db, local_abspath, pool);
 }
 
 
@@ -5326,8 +5333,11 @@ svn_wc__strictly_is_wc_root(svn_boolean_t *wc_root,
                            apr_pool_t *pool)
 {
   svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
+  const char *local_abspath;
 
-  SVN_ERR(check_wc_root(wc_root, NULL, path, db, pool));
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+
+  SVN_ERR(check_wc_root(wc_root, NULL, db, local_abspath, pool));
 
   if (*wc_root)
     {
@@ -5380,11 +5390,13 @@ svn_wc_get_actual_target(const char *path,
   svn_wc__db_t *db;
   svn_boolean_t is_wc_root;
   svn_node_kind_t kind;
+  const char *local_abspath;
 
-  /* ### this sucks. somebody should pass us a DB instead.  */
+  /* ### this sucks. somebody should pass us a DB/ABSPATH instead.  */
   SVN_ERR(svn_wc__db_open(&db, svn_wc__db_openmode_readonly,
                           NULL /* ### config */, pool, pool));
-  SVN_ERR(check_wc_root(&is_wc_root, &kind, path, db, pool));
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+  SVN_ERR(check_wc_root(&is_wc_root, &kind, db, local_abspath, pool));
   SVN_ERR(svn_wc__db_close(db));
 
   /* If PATH is not a WC root, or if it is a file, lop off a basename. */
