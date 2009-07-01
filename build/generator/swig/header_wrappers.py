@@ -267,7 +267,7 @@ class Generator(generator.swig.Generator):
     # but NamedTemporaryFile() only supports its 'delete' parameter
     # in python 2.6 and above, and renaming the file while it's opened
     # exclusively is probably not a good idea.
-    outputfile = open(output_fname, 'w+') # w+ truncates
+    outputfile = open(output_fname, 'w')
     self.ofile.seek(0)
     shutil.copyfileobj(self.ofile, outputfile)
 
