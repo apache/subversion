@@ -5051,9 +5051,9 @@ svn_wc_diff(svn_wc_adm_access_t *anchor,
             apr_pool_t *pool);
 
 
-/** Given a @a path to a file or directory under version control, discover
- * any local changes made to properties and/or the set of 'pristine'
- * properties.  @a adm_access is an access baton set for @a path.
+/** Given a @a local_abspath to a file or directory under version control,
+ * discover any local changes made to properties and/or the set of 'pristine'
+ * properties.  @a wc_ctx will be used to access the working copy.
  *
  * If @a propchanges is non-@c NULL, return these changes as an array of
  * @c svn_prop_t structures stored in @a *propchanges.  The structures and
@@ -5063,9 +5063,23 @@ svn_wc_diff(svn_wc_adm_access_t *anchor,
  * If @a original_props is non-@c NULL, then set @a *original_props to
  * hashtable (<tt>const char *name</tt> -> <tt>const svn_string_t *value</tt>)
  * that represents the 'pristine' property list of @a path.  This hashtable is
- * allocated in @a pool, and can be used to compare old and new values of
- * properties.
+ * allocated in @a result_pool, and can be used to compare old and new values
+ * of properties.  Use @a scratch_pool for temporary allocations.
  */
+svn_error_t *
+svn_wc_get_prop_diffs2(apr_array_header_t **propchanges,
+                       apr_hash_t **original_props,
+                       svn_wc_context_t *wc_ctx,
+                       const char *local_abspath,
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool);
+
+/** Similar to svn_wc_get_prop_diffs2(), but with a @c svn_wc_adm_access_t /
+ * relative path parameter pair.
+ *
+ * @deprecated Provided for backwards compatibility with the 1.6 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_get_prop_diffs(apr_array_header_t **propchanges,
                       apr_hash_t **original_props,
