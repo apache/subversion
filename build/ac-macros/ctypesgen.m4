@@ -48,8 +48,8 @@ AC_DEFUN(SVN_FIND_CTYPESGEN,
     fi
 
     if test ! -f "$CTYPESGEN" || test ! -x "$CTYPESGEN"; then
-      SVN_MSG_ERROR([Could not find ctypesgen at $where/ctypesgen.py or at
-                     $where/bin/ctypesgen.py])
+      AC_MSG_ERROR([Could not find ctypesgen at $where/ctypesgen.py or at
+                    $where/bin/ctypesgen.py])
     else
       AC_MSG_RESULT([$CTYPESGEN])
     fi

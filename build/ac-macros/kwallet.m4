@@ -64,29 +64,29 @@ int main()
                     LIBS="$old_LIBS"
                   else
                     AC_MSG_RESULT([no])
-                    SVN_MSG_ERROR([cannot find KWallet])
+                    AC_MSG_ERROR([cannot find KWallet])
                   fi
                 else
-                  SVN_MSG_ERROR([cannot find kde4-config])
+                  AC_MSG_ERROR([cannot find kde4-config])
                 fi
               else
                 AC_MSG_RESULT([no])
-                SVN_MSG_ERROR([cannot find QtCore, QtDBus, QtGui])
+                AC_MSG_ERROR([cannot find QtCore, QtDBus, QtGui])
               fi
             else
-              SVN_MSG_ERROR([cannot find D-Bus])
+              AC_MSG_ERROR([cannot find D-Bus])
             fi
           else
-            SVN_MSG_ERROR([cannot find pkg-config])
+            AC_MSG_ERROR([cannot find pkg-config])
           fi
         else
-          SVN_MSG_ERROR([missing support for internationalization])
+          AC_MSG_ERROR([missing support for internationalization])
         fi
       else
-        SVN_MSG_ERROR([APR does not have support for DSOs])
+        AC_MSG_ERROR([APR does not have support for DSOs])
       fi
     else
-      SVN_MSG_ERROR([--with-kwallet conflicts with --disable-shared])
+      AC_MSG_ERROR([--with-kwallet conflicts with --disable-shared])
     fi
   else
     AC_MSG_RESULT([no])

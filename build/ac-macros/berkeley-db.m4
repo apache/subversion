@@ -40,23 +40,23 @@ AC_DEFUN(SVN_LIB_BERKELEY_DB,
     elif test "$withval" = "yes"; then
       apu_db_version="`$apu_config --db-version`"
       if test $? -ne 0; then
-        SVN_MSG_ERROR([Can't determine whether apr-util is linked against a
-                       proper version of Berkeley DB.])
+        AC_MSG_ERROR([Can't determine whether apr-util is linked against a
+                      proper version of Berkeley DB.])
       fi
 
       if test "$withval" = "yes"; then
         if test "$apu_db_version" != "4"; then
-          SVN_MSG_ERROR([APR-UTIL wasn't linked against Berkeley DB 4,
-                         while the fs component is required.  Reinstall
-                         APR-UTIL with the appropiate options.])
+          AC_MSG_ERROR([APR-UTIL wasn't linked against Berkeley DB 4,
+                        while the fs component is required.  Reinstall
+                        APR-UTIL with the appropiate options.])
         fi
         
         status=required
 
       elif test "$apu_found" != "reconfig"; then
         if test "$apu_db_version" != 4; then
-          SVN_MSG_ERROR([APR-UTIL was installed independently, it won't be
-                         possible to use the specified Berkeley DB: $withval])
+          AC_MSG_ERROR([APR-UTIL was installed independently, it won't be
+                        possible to use the specified Berkeley DB: $withval])
         fi
 
         status=required
@@ -80,7 +80,7 @@ AC_DEFUN(SVN_LIB_BERKELEY_DB,
 
         status=required
       else
-        SVN_MSG_ERROR([Invalid syntax of argument of --with-berkeley-db option])
+        AC_MSG_ERROR([Invalid syntax of argument of --with-berkeley-db option])
       fi
     fi
   ],
@@ -115,7 +115,7 @@ AC_DEFUN(SVN_LIB_BERKELEY_DB,
       AC_MSG_RESULT([no])
       svn_lib_berkeley_db=no
       if test "$status" = "required"; then
-        SVN_MSG_ERROR([Berkeley DB $db_version or newer wasn't found.])
+        AC_MSG_ERROR([Berkeley DB $db_version or newer wasn't found.])
       fi
     fi
   fi

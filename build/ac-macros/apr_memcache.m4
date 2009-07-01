@@ -15,7 +15,7 @@ AC_DEFUN(SVN_LIB_APR_MEMCACHE,
                                   [Standalone apr_memcache client library]),
   [
     if test "$withval" = "yes" ; then
-      SVN_MSG_ERROR([--with-apr_memcache requires an argument.])
+      AC_MSG_ERROR([--with-apr_memcache requires an argument.])
     else
       AC_MSG_NOTICE([looking for separate apr_memcache package])
       apr_memcache_prefix=$withval

@@ -127,7 +127,7 @@ AC_DEFUN(SVN_FIND_JDK,
     if test -n "$requested_jikes" && test "$requested_jikes" != "no"; then
       dnl Jikes was explicitly requested.  Verify that it was provided.
       if test -z "$jikes_found"; then
-        SVN_MSG_ERROR([Could not find a usable version of Jikes])
+        AC_MSG_ERROR([Could not find a usable version of Jikes])
       elif test -n "$jikes_found" && test "$requested_jikes" != "yes" &&
            test "$JAVAC" != "$requested_jikes"; then
         AC_MSG_WARN([--with-jikes PATH was invalid, substitute found])

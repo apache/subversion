@@ -30,7 +30,7 @@ AC_DEFUN(SVN_LIB_APR,
   AC_MSG_CHECKING([APR version])    
   apr_version="`$apr_config --version`"
   if test $? -ne 0; then
-    SVN_MSG_ERROR([apr-config --version failed])
+    AC_MSG_ERROR([apr-config --version failed])
   fi
   AC_MSG_RESULT([$apr_version])
 
@@ -44,51 +44,51 @@ AC_DEFUN(SVN_LIB_APR,
       
   if test $APR_WANTED_REGEX_MATCH -eq 0; then
     echo "wanted regexes are $APR_WANTED_REGEXES"
-    SVN_MSG_ERROR([invalid apr version found])
+    AC_MSG_ERROR([invalid apr version found])
   fi
 
   dnl Get build information from APR
 
   CPPFLAGS="$CPPFLAGS `$apr_config --cppflags`"
   if test $? -ne 0; then
-    SVN_MSG_ERROR([apr-config --cppflags failed])
+    AC_MSG_ERROR([apr-config --cppflags failed])
   fi
 
   CFLAGS="$CFLAGS `$apr_config --cflags`"
   if test $? -ne 0; then
-    SVN_MSG_ERROR([apr-config --cflags failed])
+    AC_MSG_ERROR([apr-config --cflags failed])
   fi
 
   LDFLAGS="$LDFLAGS `$apr_config --ldflags`"
   if test $? -ne 0; then
-    SVN_MSG_ERROR([apr-config --ldflags failed])
+    AC_MSG_ERROR([apr-config --ldflags failed])
   fi
 
   SVN_APR_INCLUDES="`$apr_config --includes`"
   if test $? -ne 0; then
-    SVN_MSG_ERROR([apr-config --includes failed])
+    AC_MSG_ERROR([apr-config --includes failed])
   fi
 
   SVN_APR_PREFIX="`$apr_config --prefix`"
   if test $? -ne 0; then
-    SVN_MSG_ERROR([apr-config --prefix failed])
+    AC_MSG_ERROR([apr-config --prefix failed])
   fi
 
   if test "$enable_all_static" = "yes"; then
     SVN_APR_LIBS="`$apr_config --link-ld --libs`"
     if test $? -ne 0; then
-      SVN_MSG_ERROR([apr-config --link-ld --libs failed])
+      AC_MSG_ERROR([apr-config --link-ld --libs failed])
     fi
   else
     SVN_APR_LIBS="`$apr_config --link-ld`"
     if test $? -ne 0; then
-      SVN_MSG_ERROR([apr-config --link-ld failed])
+      AC_MSG_ERROR([apr-config --link-ld failed])
     fi
   fi
 
   SVN_APR_SHLIB_PATH_VAR="`$apr_config --shlib-path-var`"
   if test $? -ne 0; then
-    SVN_MSG_ERROR([apr-config --shlib-path-var failed])
+    AC_MSG_ERROR([apr-config --shlib-path-var failed])
   fi
 
   AC_SUBST(SVN_APR_PREFIX)
@@ -126,5 +126,5 @@ AC_DEFUN(SVN_DOWNLOAD_APR,
   echo "    http://svn.apache.org/repos/asf/apr/apr-util/branches/1.2.x \\"
   echo "    apr-util"
   echo ""
-  SVN_MSG_ERROR([no suitable apr found])
+  AC_MSG_ERROR([no suitable apr found])
 ])

@@ -55,14 +55,14 @@ VERSION_OKAY
         [AC_MSG_RESULT([recent enough])],
         [AC_MSG_RESULT([apache too old:  mmn must be at least $HTTPD_WANTED_MMN])
          if test "$APXS_EXPLICIT" != ""; then
-             SVN_MSG_ERROR([Apache APXS build explicitly requested, but apache version is too old])
+             AC_MSG_ERROR([Apache APXS build explicitly requested, but apache version is too old])
          fi
          APXS=""
         ])
 
     elif test "$APXS_EXPLICIT" != ""; then
-        SVN_MSG_ERROR(no - APXS refers to an old version of Apache
-                      Unable to locate $APXS_INCLUDE/mod_dav.h)
+        AC_MSG_ERROR([no - APXS refers to an old version of Apache
+                      Unable to locate $APXS_INCLUDE/mod_dav.h])
     else
         AC_MSG_RESULT(no - Unable to locate $APXS_INCLUDE/mod_dav.h)
         APXS=""
@@ -82,7 +82,7 @@ if test -n "$APXS" && test "$APXS" != "no"; then
       apache_minor_version_wanted_regex=["[1-4]"]
       ;;
     *)
-      SVN_MSG_ERROR([unknown APR version])
+      AC_MSG_ERROR([unknown APR version])
       ;;
   esac
   AC_EGREP_CPP([apache_minor_version= *$apache_minor_version_wanted_regex],
@@ -91,7 +91,7 @@ if test -n "$APXS" && test "$APXS" != "no"; then
 apache_minor_version=AP_SERVER_MINORVERSION_NUMBER],
                [AC_MSG_RESULT([yes])],
                [AC_MSG_RESULT([no])
-                SVN_MSG_ERROR([Apache version incompatible with APR version])])
+                AC_MSG_ERROR([Apache version incompatible with APR version])])
 fi
 
 AC_ARG_WITH(apache-libexecdir,
