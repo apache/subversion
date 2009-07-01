@@ -40,7 +40,7 @@ AC_DEFUN(SVN_LIB_APRUTIL,
     # shipped in 2.0.43 contains a correct version number, but
     # stupidly doesn't understand the --version switch.)
     apu_version=`grep "APRUTIL_DOTTED_VERSION=" $(which $apu_config) | tr -d "APRUTIL_DOTTED_VERSION="| tr -d '"'`
-    #SVN_MSG_ERROR([
+    #AC_MSG_ERROR([
     #    apu-config --version failed.
     #    Your apu-config doesn't support the --version switch, please upgrade
     #    to APR-UTIL more recent than 2002-Nov-05.])
@@ -57,35 +57,35 @@ AC_DEFUN(SVN_LIB_APRUTIL,
 
   if test $APU_WANTED_REGEX_MATCH -eq 0; then
     echo "wanted regexes are $APRUTIL_WANTED_REGEXES"
-    SVN_MSG_ERROR([invalid apr-util version found])
+    AC_MSG_ERROR([invalid apr-util version found])
   fi
 
   dnl Get libraries and thread flags from APRUTIL ---------------------
 
   LDFLAGS="$LDFLAGS `$apu_config --ldflags`"
   if test $? -ne 0; then
-    SVN_MSG_ERROR([apu-config --ldflags failed])
+    AC_MSG_ERROR([apu-config --ldflags failed])
   fi
 
   SVN_APRUTIL_INCLUDES="`$apu_config --includes`"
   if test $? -ne 0; then
-    SVN_MSG_ERROR([apu-config --includes failed])
+    AC_MSG_ERROR([apu-config --includes failed])
   fi
 
   SVN_APRUTIL_PREFIX="`$apu_config --prefix`"
   if test $? -ne 0; then
-    SVN_MSG_ERROR([apu-config --prefix failed])
+    AC_MSG_ERROR([apu-config --prefix failed])
   fi
 
   if test "$enable_all_static" = "yes"; then
     SVN_APRUTIL_LIBS="`$apu_config --link-ld --libs`"
     if test $? -ne 0; then
-      SVN_MSG_ERROR([apu-config --link-ld --libs failed])
+      AC_MSG_ERROR([apu-config --link-ld --libs failed])
     fi
   else
     SVN_APRUTIL_LIBS="`$apu_config --link-ld`"
     if test $? -ne 0; then
-      SVN_MSG_ERROR([apu-config --link-ld failed])
+      AC_MSG_ERROR([apu-config --link-ld failed])
     fi
   fi
 
@@ -120,5 +120,5 @@ AC_DEFUN(SVN_DOWNLOAD_APRUTIL,
   echo "Afterwards, run apr-util/buildconf in that subdirectory and"
   echo "then run configure again here."
   echo ""
-  SVN_MSG_ERROR([no suitable APRUTIL found])
+  AC_MSG_ERROR([no suitable APRUTIL found])
 ])

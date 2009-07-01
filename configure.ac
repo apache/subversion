@@ -228,7 +228,7 @@ elif test "$svn_enable_shared" = "yes" ; then
   fi
   LT_LDFLAGS="-shared $LT_LDFLAGS"
 else
-  SVN_MSG_ERROR([can not disable both shared and static libraries])
+  AC_MSG_ERROR([cannot disable both shared and static libraries])
 fi
 
 dnl Check for --enable-all-static option
@@ -252,7 +252,7 @@ AC_ARG_ENABLE(local-library-preloading,
     if test "$svn_enable_shared" = "yes"; then
       TRANSFORM_LIBTOOL_SCRIPTS="transform-libtool-scripts"
     else
-      SVN_MSG_ERROR([--enable-local-library-preloading conflicts with --disable-shared])
+      AC_MSG_ERROR([--enable-local-library-preloading conflicts with --disable-shared])
     fi
   else
     TRANSFORM_LIBTOOL_SCRIPTS=""
@@ -540,23 +540,23 @@ if test "$with_gnome_keyring" != "no"; then
               SVN_GNOME_KEYRING_LIBS="$DBUS_LIBS `$PKG_CONFIG --libs glib-2.0 gnome-keyring-1`"
             else
               AC_MSG_RESULT([no])
-              SVN_MSG_ERROR([cannot find GNOME Keyring])
+              AC_MSG_ERROR([cannot find GNOME Keyring])
             fi
           else
             AC_MSG_RESULT([no])
-            SVN_MSG_ERROR([cannot find GLib and GNOME Keyring .pc files])
+            AC_MSG_ERROR([cannot find GLib and GNOME Keyring .pc files])
           fi
         else
-          SVN_MSG_ERROR([cannot find D-Bus])
+          AC_MSG_ERROR([cannot find D-Bus])
         fi
       else
-        SVN_MSG_ERROR([cannot find pkg-config])
+        AC_MSG_ERROR([cannot find pkg-config])
       fi
     else
-      SVN_MSG_ERROR([APR does not have support for DSOs])
+      AC_MSG_ERROR([APR does not have support for DSOs])
     fi
   else
-    SVN_MSG_ERROR([--with-gnome-keyring conflicts with --disable-shared])
+    AC_MSG_ERROR([--with-gnome-keyring conflicts with --disable-shared])
   fi
 else
   AC_MSG_RESULT([no])
@@ -779,7 +779,7 @@ AS_HELP_STRING([--enable-maintainer-mode],
 [
     if test "$enableval" = "yes" ; then
       if test "$enable_debugging" = "no" ; then
-        SVN_MSG_ERROR(Can't have --disable-debug and --enable-maintainer-mode)
+        AC_MSG_ERROR([Can't have --disable-debug and --enable-maintainer-mode])
       fi
       enable_debugging=yes
       if test "$GCC" = "yes"; then
@@ -844,7 +844,7 @@ AS_HELP_STRING([--with-editor=PATH],
 [
 
     if test "$withval" = "yes" ; then
-      SVN_MSG_ERROR([--with-editor requires an argument.])
+      AC_MSG_ERROR([--with-editor requires an argument.])
     else
       SVN_CLIENT_EDITOR=$withval
       AC_DEFINE_UNQUOTED(SVN_CLIENT_EDITOR, "$SVN_CLIENT_EDITOR",
@@ -881,8 +881,8 @@ AS_HELP_STRING([--enable-gprof],
       dnl feel free to extend this to include them.
       if test "$GCC" = "yes"; then
         if test "$svn_enable_shared" = "yes" ; then
-          SVN_MSG_ERROR(Can't have --enable-gprof without --disable-shared (we
-                        recommend also using --enable-all-static).)
+          AC_MSG_ERROR([Can't have --enable-gprof without --disable-shared (we
+                        recommend also using --enable-all-static).])
         fi
         if test ! "$enable_all_static" = "yes" ; then
           AC_MSG_WARN(We recommend --enable-all-static with --enable-gprof.)
@@ -892,7 +892,7 @@ AS_HELP_STRING([--enable-gprof],
         CXXFLAGS="$CXXFLAGS -pg"
         LT_LDFLAGS="$LT_LDFLAGS -pg"
       else
-        SVN_MSG_ERROR(We only support --enable-gprof with GCC right now.)
+        AC_MSG_ERROR([We only support --enable-gprof with GCC right now.])
       fi
     fi
 ])
@@ -958,7 +958,7 @@ AS_HELP_STRING([--enable-runtime-module-search],
     if test "$enableval" = "yes"; then
       use_dso=yes
       if test "$svn_enable_shared" = "no"; then
-        SVN_MSG_ERROR([--enable-runtime-module-search conflicts with --disable-shared])
+        AC_MSG_ERROR([--enable-runtime-module-search conflicts with --disable-shared])
       fi
       AC_DEFINE(SVN_USE_DSO, 1,
                 [Defined if svn should try to load DSOs])
@@ -1048,8 +1048,8 @@ LT_CXX_LIBADD=""
 if test "$do_javahl_build" = "yes"; then
   dnl Check for suitable JDK
   if test "$JDK_SUITABLE" = "no"; then
-    SVN_MSG_ERROR([Cannot compile JavaHL without a suitable JDK. 
-                   Please specify a suitable JDK using the --with-jdk option.])
+    AC_MSG_ERROR([Cannot compile JavaHL without a suitable JDK. 
+                  Please specify a suitable JDK using the --with-jdk option.])
   fi
   
   dnl The temporary directory where libtool compiles libsvnjavahl.
