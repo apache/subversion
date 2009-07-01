@@ -5,7 +5,7 @@
 #                     header files
 #
 
-import os, re, sys, glob, shutil
+import os, re, sys, glob, shutil, tempfile
 if __name__ == "__main__":
   parent_dir = os.path.dirname(os.path.abspath(os.path.dirname(sys.argv[0])))
   sys.path[0:0] = [ parent_dir, os.path.dirname(parent_dir) ]
@@ -238,8 +238,8 @@ class Generator(generator.swig.Generator):
     output_fname = os.path.join(self.proxy_dir,
       self.proxy_filename(base_fname))
 
-    # Open the output file
-    self.ofile = open(output_fname, 'w')
+    # Open a temporary output file
+    self.ofile = tempfile.TemporaryFile(dir=self.proxy_dir)
     self.ofile.write('/* Proxy classes for %s\n' % base_fname)
     self.ofile.write(' * DO NOT EDIT -- AUTOMATICALLY GENERATED */\n')
 
@@ -262,8 +262,21 @@ class Generator(generator.swig.Generator):
     # Write callback definitions into the SWIG interface file
     self._write_callbacks(callbacks)
 
-    # Close our output file
+    # Copy the temporary file over to the result file.
+    # Ideally we'd simply rename the temporary file to output_fname,
+    # but NamedTemporaryFile() only supports its 'delete' parameter
+    # in python 2.6 and above, and renaming the file while it's opened
+    # exclusively is probably not a good idea.
+    outputfile = open(output_fname, 'w+') # w+ truncates
+    self.ofile.seek(0)
+    shutil.copyfileobj(self.ofile, outputfile)
+
+    # Close our temporary file.
+    # It will also be deleted automatically.
     self.ofile.close()
+
+    # Close our output file, too.
+    outputfile.close()
 
   def process_header_file(self, fname):
     """Generate a wrapper around a header file"""
