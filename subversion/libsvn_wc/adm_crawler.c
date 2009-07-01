@@ -272,8 +272,8 @@ report_revisions_and_depths(svn_wc_adm_access_t *adm_access,
   if (traversal_info)
     {
       const svn_string_t *val;
-      SVN_ERR(svn_wc_prop_get(&val, SVN_PROP_EXTERNALS, full_path, adm_access,
-                              subpool));
+      SVN_ERR(svn_wc__internal_propget(&val, SVN_PROP_EXTERNALS, abspath, db,
+                                       subpool, subpool));
       if (val)
         {
           apr_pool_t *dup_pool = traversal_info->pool;
