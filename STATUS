@@ -137,7 +137,7 @@ Candidate changes:
    Votes:
      +1: blair, hwright
 
-  * r38290
+  * r38290, r38293, r38294 
     Fix detection of Apache <2.0.56.
     AP_SERVER_MINORVERSION_NUMBER does not exist in earlier versions.
     But AP_SERVER_MINORVERSION (which is a string) does exist, so use that.
