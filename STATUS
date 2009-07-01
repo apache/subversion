@@ -116,7 +116,7 @@ Candidate changes:
    Votes:
      +1: stylesen
 
- * r38229,r38264
+ * r38229, r38264
    Fix issue #3438, svnsync fails while syncing a rev that has
    copy of '/' over ra_neon and ra_serf.
    Justification:
@@ -124,7 +124,7 @@ Candidate changes:
    Notes:
      See the issue for details.
    Votes:
-     +1: kameshj
+     +1: kameshj, stylesen
 
  * r38279
    Fix issue #3441, on ext4 and GPFS filesystems with a fsfs
