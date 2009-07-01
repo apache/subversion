@@ -1400,6 +1400,26 @@ svn_wc_merge_prop_diffs(svn_wc_notify_state_t *state,
                              base_merge, dry_run, NULL, NULL, pool);
 }
 
+svn_error_t *
+svn_wc_get_prop_diffs(apr_array_header_t **propchanges,
+                      apr_hash_t **original_props,
+                      const char *path,
+                      svn_wc_adm_access_t *adm_access,
+                      apr_pool_t *pool)
+{
+  svn_wc_context_t *wc_ctx;
+  const char *local_abspath;
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+  SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL /* config */,
+                                         svn_wc__adm_get_db(adm_access), pool));
+
+  SVN_ERR(svn_wc_get_prop_diffs2(propchanges, original_props, wc_ctx,
+                                 local_abspath, pool, pool));
+
+  return svn_error_return(svn_wc_context_destroy(wc_ctx));
+}
+
 
 /*** From status.c ***/
 
