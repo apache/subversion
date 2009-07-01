@@ -4536,11 +4536,26 @@ svn_wc_get_switch_editor(svn_revnum_t *target_revision,
 
 /** Set @a *props to a hash table mapping <tt>char *</tt> names onto
  * <tt>svn_string_t *</tt> values for all the regular properties of
- * @a path.  Allocate the table, names, and values in @a pool.  If
- * the node has no properties, or does not exist in the working copy,
- * then an empty hash is returned.  @a adm_access is an access baton
- * set that contains @a path.
+ * @a local_abspath.  Allocate the table, names, and values in
+ * @a result_pool.  If the node has no properties, or does not exist in
+ * the working copy, then an empty hash is returned.  Use @a wc_ctx to
+ * access the working copy, and @a scratch_pool for temporary allocations.
+ *
+ * @since New in 1.7.
  */
+svn_error_t *
+svn_wc_prop_list2(apr_hash_t **props,
+                  svn_wc_context_t *wc_ctx,
+                  const char *local_abspath,
+                  apr_pool_t *result_pool,
+                  apr_pool_t *scratch_pool);
+
+/** Similar to svn_wc_prop_list2() but with a @c svn_wc_adm_access_t /
+ * relative path parameter pair.
+ *
+ * @deprecated Provided for backwards compatibility with the 1.6 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_prop_list(apr_hash_t **props,
                  const char *path,
