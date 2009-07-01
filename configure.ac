@@ -238,6 +238,8 @@ AC_ARG_ENABLE(all-static,
   [
     if test "$enableval" = "yes" ; then
       LT_LDFLAGS="-all-static $LT_LDFLAGS"
+    elif test "$enableval" != "no" ; then
+      AC_MSG_ERROR([--enable-all-static doesn't accept argument])
     fi
 ])
 
@@ -342,15 +344,16 @@ if test -n "`echo "$svn_lib_expat" | $EGREP ":.*:"`"; then
 #include <expat.h>
 int main()
 {XML_ParserCreate(NULL);}], svn_lib_expat="yes", svn_lib_expat="no")
+  LIBS="$old_LIBS"
   if test "$svn_lib_expat" = "yes"; then
     AC_MSG_RESULT([yes])
-    CPPFLAGS="$old_CPPFLAGS"
-    LIBS="$old_LIBS"
   else
     SVN_XML_INCLUDES=""
     SVN_XML_LIBS=""
     CPPFLAGS="$CPPFLAGS $SVN_APRUTIL_INCLUDES"
-    SVN_APRUTIL_LIBS="$SVN_APRUTIL_LIBS `$apu_config --libs`"
+    if test "$enable_all_static" != "yes"; then
+      SVN_APRUTIL_LIBS="$SVN_APRUTIL_LIBS `$apu_config --libs`"
+    fi
     AC_COMPILE_IFELSE([
 #include <expat.h>
 int main()
@@ -358,12 +361,12 @@ int main()
     if test "$svn_lib_expat" = "yes"; then
       AC_MSG_RESULT([yes])
       AC_MSG_WARN([Expat found amongst libraries used by APR-Util, but Subversion libraries might be needlessly linked against additional unused libraries. It can be avoided by specifying exact location of Expat in argument of --with-expat option.])
-      CPPFLAGS="$old_CPPFLAGS"
     else
       AC_MSG_RESULT([no])
       AC_MSG_ERROR([Expat not found])
     fi
   fi
+  CPPFLAGS="$old_CPPFLAGS"
 else
   AC_MSG_RESULT([no])
   if test "$svn_lib_expat" = "yes"; then
