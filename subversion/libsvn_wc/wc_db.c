@@ -192,7 +192,8 @@ enum statement_keys {
   STMT_DELETE_LOCK,
   STMT_UPDATE_BASE_RECURSIVE_REPO,
   STMT_UPDATE_WORKING_RECURSIVE_COPYFROM_REPO,
-  STMT_UPDATE_LOCK_REPOS_ID
+  STMT_UPDATE_LOCK_REPOS_ID,
+  STMT_UPDATE_BASE_LAST_MOD_TIME
 };
 
 /* This is a character used to escape itself and the globbing character in
@@ -351,6 +352,10 @@ static const char * const statements[] = {
   "where repos_id = ?1 and "
   "  (repos_relpath = ?2 or "
   "   repos_relpath like ?3 escape '" LIKE_ESCAPE_CHAR "');",
+
+  /* STMT_UPDATE_BASE_LAST_MOD_TIME */
+  "update base_node set last_mod_time = ?3 "
+  "where repos_id = ?1 and local_relpath = ?2;",
 
   NULL
 };
@@ -2609,6 +2614,24 @@ svn_wc__db_op_revert(svn_wc__db_t *db,
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
   NOT_IMPLEMENTED();
+}
+
+svn_error_t *
+svn_wc__db_op_invalidate_last_mod_time(svn_wc__db_t *db,
+                                       const char *local_abspath,
+                                       apr_pool_t *scratch_pool)
+{
+  svn_sqlite__stmt_t *stmt;
+
+  SVN_ERR(get_statement_for_path(&stmt, db, local_abspath,
+                                 STMT_UPDATE_BASE_LAST_MOD_TIME,
+                                 scratch_pool));
+
+  /* Setting the last mod time to zero will effectively invalidate it's
+     value. */
+  SVN_ERR(svn_sqlite__bind_int64(stmt, 3, 0));
+
+  return svn_error_return(svn_sqlite__step_done(stmt));
 }
 
 

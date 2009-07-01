@@ -953,6 +953,16 @@ svn_wc__db_op_revert(svn_wc__db_t *db,
                      apr_pool_t *scratch_pool);
 
 
+/** Invalidate the last mod time cache for the appropriate BASE node
+ * for LOCAL_ABSPATH in DB.
+ *
+ * Use SCRATCH_POOL for any temporary allocations.
+ */
+svn_error_t *
+svn_wc__db_op_invalidate_last_mod_time(svn_wc__db_t *db,
+                                       const char *local_abspath,
+                                       apr_pool_t *scratch_pool);
+
 
 /* ### status */
 

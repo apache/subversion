@@ -2134,18 +2134,14 @@ svn_wc_prop_set3(const char *name,
 
       if (svn_subst_keywords_differ2(old_keywords, new_keywords, FALSE, pool))
         {
-          const char *entryname = svn_dirent_basename(path, pool);
-          svn_wc_entry_t tmp_entry;
-
           /* NOTE: this change is immediate. If the overall propset fails,
              then we end up with an un-cached text_time. Big whoop.  */
 
           /* If we changed the keywords or newlines, void the entry
              timestamp for this file, so svn_wc_text_modified_p() does
              a real (albeit slow) check later on. */
-          tmp_entry.text_time = 0;
-          SVN_ERR(svn_wc__entry_modify(adm_access, entryname, &tmp_entry,
-                                       SVN_WC__ENTRY_MODIFY_TEXT_TIME, pool));
+          SVN_ERR(svn_wc__db_op_invalidate_last_mod_time(db, local_abspath,
+                                                         pool));
         }
     }
 
