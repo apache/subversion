@@ -5643,6 +5643,8 @@ commit_body(void *baton, apr_pool_t *pool)
   apr_off_t changed_path_offset;
   char *buf;
   apr_hash_t *txnprops;
+  apr_array_header_t *txnprop_list;
+  svn_prop_t prop;
   svn_string_t date;
 
   /* Get the current youngest revision. */
@@ -5697,29 +5699,24 @@ commit_body(void *baton, apr_pool_t *pool)
 
   /* Remove any temporary txn props representing 'flags'. */
   SVN_ERR(svn_fs_fs__txn_proplist(&txnprops, cb->txn, pool));
-  if (txnprops)
+  txnprop_list = apr_array_make(pool, 3, sizeof(svn_prop_t));
+  prop.value = NULL;
+
+  if (apr_hash_get(txnprops, SVN_FS__PROP_TXN_CHECK_OOD, APR_HASH_KEY_STRING))
     {
-      apr_array_header_t *props = apr_array_make(pool, 3, sizeof(svn_prop_t));
-      svn_prop_t prop;
-      prop.value = NULL;
-
-      if (apr_hash_get(txnprops, SVN_FS__PROP_TXN_CHECK_OOD,
-                       APR_HASH_KEY_STRING))
-        {
-          prop.name = SVN_FS__PROP_TXN_CHECK_OOD;
-          APR_ARRAY_PUSH(props, svn_prop_t) = prop;
-        }
-
-      if (apr_hash_get(txnprops, SVN_FS__PROP_TXN_CHECK_LOCKS,
-                       APR_HASH_KEY_STRING))
-        {
-          prop.name = SVN_FS__PROP_TXN_CHECK_LOCKS;
-          APR_ARRAY_PUSH(props, svn_prop_t) = prop;
-        }
-
-      if (! apr_is_empty_array(props))
-        SVN_ERR(svn_fs_fs__change_txn_props(cb->txn, props, pool));
+      prop.name = SVN_FS__PROP_TXN_CHECK_OOD;
+      APR_ARRAY_PUSH(txnprop_list, svn_prop_t) = prop;
     }
+
+  if (apr_hash_get(txnprops, SVN_FS__PROP_TXN_CHECK_LOCKS,
+                   APR_HASH_KEY_STRING))
+    {
+      prop.name = SVN_FS__PROP_TXN_CHECK_LOCKS;
+      APR_ARRAY_PUSH(txnprop_list, svn_prop_t) = prop;
+    }
+
+  if (! apr_is_empty_array(txnprop_list))
+    SVN_ERR(svn_fs_fs__change_txn_props(cb->txn, txnprop_list, pool));
 
   /* Create the shard for the rev and revprop file, if we're sharding and
      this is the first revision of a new shard.  We don't care if this
