@@ -2030,26 +2030,25 @@ validate_eol_prop_against_file(const char *path,
 
 
 svn_error_t *
-svn_wc_prop_set3(const char *name,
+svn_wc_prop_set4(svn_wc_context_t *wc_ctx,
+                 const char *local_abspath,
+                 const char *name,
                  const svn_string_t *value,
-                 const char *path,
-                 svn_wc_adm_access_t *adm_access,
                  svn_boolean_t skip_checks,
                  svn_wc_notify_func2_t notify_func,
                  void *notify_baton,
-                 apr_pool_t *pool)
+                 apr_pool_t *scratch_pool)
 {
   apr_hash_t *prophash, *base_prophash;
   enum svn_prop_kind prop_kind = svn_property_kind(NULL, name);
-  const svn_wc_entry_t *entry;
   svn_wc_notify_action_t notify_action;
-  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
-  const char *local_abspath;
+  svn_wc__db_kind_t kind;
 
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
   if (prop_kind == svn_prop_wc_kind)
-    return svn_wc__wcprop_set(db, local_abspath, name, value, pool);
+    return svn_error_return(svn_wc__wcprop_set(wc_ctx->db, local_abspath,
+                                               name, value, scratch_pool));
 
   /* we don't do entry properties here */
   if (prop_kind == svn_prop_entry_kind)
@@ -2058,15 +2057,14 @@ svn_wc_prop_set3(const char *name,
 
   /* Else, handle a regular property: */
 
-  /* Get the entry and name for this path. */
-  SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access, FALSE, pool));
-
-  /* Get the access baton for the entry's directory. */
-  if (entry->kind == svn_node_dir)
-    SVN_ERR(svn_wc_adm_retrieve(&adm_access, adm_access, path, pool));
-  else
-    SVN_ERR(svn_wc_adm_retrieve(&adm_access, adm_access,
-                                svn_dirent_dirname(path, pool), pool));
+  /* Get the node kind for this path. */
+  SVN_ERR(svn_wc__db_read_info(NULL, &kind, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL,
+                               wc_ctx->db, local_abspath,
+                               scratch_pool, scratch_pool));
 
   /* Setting an inappropriate property is not allowed (unless
      overridden by 'skip_checks', in some circumstances).  Deleting an
@@ -2076,40 +2074,48 @@ svn_wc_prop_set3(const char *name,
   if (value && svn_prop_is_svn_prop(name))
     {
       const svn_string_t *new_value;
-      struct getter_baton *gb = apr_pcalloc(pool, sizeof(*gb));
+      struct getter_baton *gb = apr_pcalloc(scratch_pool, sizeof(*gb));
 
-      SVN_ERR(svn_dirent_get_absolute(&gb->local_abspath, path, pool));
-      gb->db = svn_wc__adm_get_db(adm_access);
+      gb->local_abspath = local_abspath;
+      gb->db = wc_ctx->db;
 
-      SVN_ERR(svn_wc_canonicalize_svn_prop(&new_value, name, value, path,
-                                           entry->kind, skip_checks,
-                                           get_file_for_validation, gb, pool));
+      SVN_ERR(svn_wc_canonicalize_svn_prop(&new_value, name, value,
+                                           local_abspath,
+                                           kind == svn_wc__db_kind_dir ?
+                                                    svn_node_dir :
+                                                    svn_node_file,
+                                           skip_checks,
+                                           get_file_for_validation, gb,
+                                           scratch_pool));
       value = new_value;
     }
 
-  if (entry->kind == svn_node_file && strcmp(name, SVN_PROP_EXECUTABLE) == 0)
+  if (kind == svn_wc__db_kind_file && strcmp(name, SVN_PROP_EXECUTABLE) == 0)
     {
       /* If the svn:executable property was set, then chmod +x.
          If the svn:executable property was deleted (NULL value passed
          in), then chmod -x. */
       if (value == NULL)
-        SVN_ERR(svn_io_set_file_executable(path, FALSE, TRUE, pool));
+        SVN_ERR(svn_io_set_file_executable(local_abspath, FALSE, TRUE,
+                                           scratch_pool));
       else
-        SVN_ERR(svn_io_set_file_executable(path, TRUE, TRUE, pool));
+        SVN_ERR(svn_io_set_file_executable(local_abspath, TRUE, TRUE,
+                                           scratch_pool));
     }
 
-  if (entry->kind == svn_node_file && strcmp(name, SVN_PROP_NEEDS_LOCK) == 0)
+  if (kind == svn_wc__db_kind_file && strcmp(name, SVN_PROP_NEEDS_LOCK) == 0)
     {
       /* If the svn:needs-lock property was set to NULL, set the file
          to read-write */
       if (value == NULL)
-        SVN_ERR(svn_io_set_file_read_write(path, FALSE, pool));
+        SVN_ERR(svn_io_set_file_read_write(local_abspath, FALSE,
+                                           scratch_pool));
 
       /* If not, we'll set the file to read-only at commit time. */
     }
 
-  SVN_ERR_W(svn_wc__load_props(&base_prophash, &prophash, NULL, db,
-                               local_abspath, pool, pool),
+  SVN_ERR_W(svn_wc__load_props(&base_prophash, &prophash, NULL, wc_ctx->db,
+                               local_abspath, scratch_pool, scratch_pool),
             _("Failed to load properties from disk"));
 
   /* If we're changing this file's list of expanded keywords, then
@@ -2120,19 +2126,21 @@ svn_wc_prop_set3(const char *name,
    * property is set, we'll grab the new list and see if it differs
    * from the old one.
    */
-  if (entry->kind == svn_node_file && strcmp(name, SVN_PROP_KEYWORDS) == 0)
+  if (kind == svn_wc__db_kind_file && strcmp(name, SVN_PROP_KEYWORDS) == 0)
     {
       svn_string_t *old_value = apr_hash_get(prophash, SVN_PROP_KEYWORDS,
                                              APR_HASH_KEY_STRING);
       apr_hash_t *old_keywords, *new_keywords;
 
-      SVN_ERR(svn_wc__get_keywords(&old_keywords, db, local_abspath,
+      SVN_ERR(svn_wc__get_keywords(&old_keywords, wc_ctx->db, local_abspath,
                                    old_value ? old_value->data : "",
-                                   pool, pool));
-      SVN_ERR(svn_wc__get_keywords(&new_keywords, db, local_abspath,
-                                   value ? value->data : "", pool, pool));
+                                   scratch_pool, scratch_pool));
+      SVN_ERR(svn_wc__get_keywords(&new_keywords, wc_ctx->db, local_abspath,
+                                   value ? value->data : "",
+                                   scratch_pool, scratch_pool));
 
-      if (svn_subst_keywords_differ2(old_keywords, new_keywords, FALSE, pool))
+      if (svn_subst_keywords_differ2(old_keywords, new_keywords, FALSE,
+                                     scratch_pool))
         {
           /* NOTE: this change is immediate. If the overall propset fails,
              then we end up with an un-cached text_time. Big whoop.  */
@@ -2140,8 +2148,9 @@ svn_wc_prop_set3(const char *name,
           /* If we changed the keywords or newlines, void the entry
              timestamp for this file, so svn_wc_text_modified_p() does
              a real (albeit slow) check later on. */
-          SVN_ERR(svn_wc__db_op_invalidate_last_mod_time(db, local_abspath,
-                                                         pool));
+          SVN_ERR(svn_wc__db_op_invalidate_last_mod_time(wc_ctx->db,
+                                                         local_abspath,
+                                                         scratch_pool));
         }
     }
 
@@ -2172,15 +2181,20 @@ svn_wc_prop_set3(const char *name,
 
   /* Drop it right onto the disk. We don't need loggy since we aren't
      coordinating this change with anything else.  */
-  SVN_ERR(immediate_install_props(path, entry->kind,
-                                  base_prophash, prophash, pool));
+  SVN_ERR(immediate_install_props(local_abspath,
+                                  kind == svn_wc__db_kind_dir ?
+                                           svn_node_dir :
+                                           svn_node_file,
+                                  base_prophash, prophash, scratch_pool));
 
   if (notify_func)
     {
-      svn_wc_notify_t *notify = svn_wc_create_notify(path, notify_action, pool);
+      svn_wc_notify_t *notify = svn_wc_create_notify(local_abspath,
+                                                     notify_action,
+                                                     scratch_pool);
       notify->prop_name = name;
 
-      (*notify_func)(notify_baton, notify, pool);
+      (*notify_func)(notify_baton, notify, scratch_pool);
     }
 
   return SVN_NO_ERROR;
