@@ -94,6 +94,7 @@ static svn_error_t *
 copy_one_versioned_file(const char *from,
                         const char *to,
                         svn_wc_adm_access_t *adm_access,
+                        svn_wc_context_t *wc_ctx,
                         const svn_opt_revision_t *revision,
                         const char *native_eol,
                         apr_pool_t *pool)
@@ -110,6 +111,9 @@ copy_one_versioned_file(const char *from,
   svn_stream_t *dst_stream;
   const char *dst_tmp;
   svn_error_t *err;
+  const char *from_abspath;
+
+  SVN_ERR(svn_dirent_get_absolute(&from_abspath, from, pool));
 
   SVN_ERR(svn_wc_entry(&entry, from, adm_access, FALSE, pool));
 
@@ -129,7 +133,8 @@ copy_one_versioned_file(const char *from,
   if (revision->kind != svn_opt_revision_working)
     {
       SVN_ERR(svn_wc_get_pristine_contents(&source, from, pool, pool));
-      SVN_ERR(svn_wc_get_prop_diffs(NULL, &props, from, adm_access, pool));
+      SVN_ERR(svn_wc_get_prop_diffs2(NULL, &props, wc_ctx, from_abspath,
+                                     pool, pool));
     }
   else
     {
@@ -139,7 +144,7 @@ copy_one_versioned_file(const char *from,
          ### the file readonly if it is a regular file. */
       SVN_ERR(svn_subst_read_specialfile(&source, from, pool, pool));
 
-      SVN_ERR(svn_wc_prop_list(&props, from, adm_access, pool));
+      SVN_ERR(svn_wc_prop_list2(&props, wc_ctx, from_abspath, pool, pool));
       SVN_ERR(svn_wc_status2(&status, from, adm_access, pool));
       if (status->text_status != svn_wc_status_normal)
         local_mod = TRUE;
@@ -246,6 +251,7 @@ copy_versioned_files(const char *from,
                      svn_depth_t depth,
                      const char *native_eol,
                      svn_client_ctx_t *ctx,
+                     svn_wc_context_t *wc_ctx,
                      apr_pool_t *pool)
 {
   svn_wc_adm_access_t *adm_access;
@@ -254,12 +260,6 @@ copy_versioned_files(const char *from,
   apr_pool_t *iterpool;
   apr_hash_t *entries;
   apr_hash_index_t *hi;
-  svn_wc_context_t *wc_ctx;
-
-  if (!ctx->wc_ctx)
-    SVN_ERR(svn_wc_context_create(&wc_ctx, NULL /* config */, pool, pool));
-  else
-    wc_ctx = ctx->wc_ctx;
 
   SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, from, FALSE,
                                  0, ctx->cancel_func, ctx->cancel_baton,
@@ -348,7 +348,7 @@ copy_versioned_files(const char *from,
                       SVN_ERR(copy_versioned_files(new_from, new_to,
                                                    revision, force,
                                                    ignore_externals, depth,
-                                                   native_eol, ctx,
+                                                   native_eol, ctx, wc_ctx,
                                                    iterpool));
                     }
                 }
@@ -359,7 +359,7 @@ copy_versioned_files(const char *from,
               const char *new_to = svn_path_join(to, item, iterpool);
 
               SVN_ERR(copy_one_versioned_file(new_from, new_to, adm_access,
-                                              revision, native_eol,
+                                              wc_ctx, revision, native_eol,
                                               iterpool));
             }
         }
@@ -408,7 +408,7 @@ copy_versioned_files(const char *from,
                   SVN_ERR(copy_versioned_files(new_from, new_to,
                                                revision, force, FALSE,
                                                svn_depth_infinity, native_eol,
-                                               ctx, iterpool));
+                                               ctx, wc_ctx, iterpool));
                 }
             }
         }
@@ -417,7 +417,7 @@ copy_versioned_files(const char *from,
     }
   else if (entry->kind == svn_node_file)
     {
-      SVN_ERR(copy_one_versioned_file(from, to, adm_access, revision,
+      SVN_ERR(copy_one_versioned_file(from, to, adm_access, wc_ctx, revision,
                                       native_eol, pool));
     }
 
@@ -1008,11 +1008,20 @@ svn_client_export4(svn_revnum_t *result_rev,
   else
     {
       /* This is a working copy export. */
+      svn_wc_context_t *wc_ctx;
+
+      if (!ctx->wc_ctx)
+        SVN_ERR(svn_wc_context_create(&wc_ctx, NULL /* config */, pool, pool));
+      else
+        wc_ctx = ctx->wc_ctx;
 
       /* just copy the contents of the working copy into the target path. */
       SVN_ERR(copy_versioned_files(from, to, revision, overwrite,
                                    ignore_externals, depth, native_eol,
-                                   ctx, pool));
+                                   ctx, wc_ctx, pool));
+
+      if (!ctx->wc_ctx)
+        SVN_ERR(svn_wc_context_destroy(wc_ctx));
     }
 
 
