@@ -59,7 +59,10 @@ if test "$INSTALL" = "build/install-sh -c"; then
   INSTALL="$abs_srcdir/$INSTALL"
 fi
 
-AC_SUBST([MKDIR], ["$INSTALL -d"])
+if test -z "$MKDIR"; then
+  MKDIR="$INSTALL -d"
+fi
+AC_SUBST([MKDIR])
 
 # ==== Libraries, for which we may have source to build ======================
 
