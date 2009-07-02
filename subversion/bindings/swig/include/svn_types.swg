@@ -576,7 +576,8 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
 %apply apr_pool_t *pool {
     apr_pool_t *dir_pool,
     apr_pool_t *file_pool,
-    apr_pool_t *node_pool
+    apr_pool_t *node_pool,
+    apr_pool_t *result_pool
 };
 #endif
 
@@ -584,7 +585,8 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
 %apply apr_pool_t *pool {
     apr_pool_t *dir_pool,
     apr_pool_t *file_pool,
-    apr_pool_t *node_pool
+    apr_pool_t *node_pool,
+    apr_pool_t *result_pool
 };
 #endif
 
