@@ -126,7 +126,7 @@ Candidate changes:
    Votes:
      +1: kameshj, stylesen
 
- * r38279
+ * r38279, r38311
    Fix issue #3442, on ext4 and GPFS filesystems with a fsfs
    repository.  If a crash occurs just after a commit is finished,
    then it's possible for the rev and current file to be fine but the
@@ -135,7 +135,7 @@ Candidate changes:
    Justification:
      Data loss is bad.
    Votes:
-     +1: blair, hwright
+     +1: blair (r38279 only), hwright
 
   * r38290, r38293, r38294 
     Fix detection of Apache <2.0.56.
