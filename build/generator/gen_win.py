@@ -333,7 +333,7 @@ class WinGeneratorBase(GeneratorBase):
       install_targets = [x for x in install_targets if x.name != 'libsvn_ra_neon']
 
     # Drop the swig targets if we don't have swig
-    if not self.swig_path:
+    if not self.swig_path and not self.swig_libdir:
       install_targets = [x for x in install_targets
                                      if not (isinstance(x, gen_base.TargetSWIG)
                                              or isinstance(x, gen_base.TargetSWIGLib)
