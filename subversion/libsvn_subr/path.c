@@ -1100,7 +1100,7 @@ svn_path_check_valid(const char *path, apr_pool_t *pool)
             (SVN_ERR_FS_PATH_SYNTAX, NULL,
              _("Invalid control character '0x%02x' in path '%s'"),
              (unsigned char)*c,
-             illegal_path_escape(svn_path_local_style(path, pool), pool));
+             illegal_path_escape(svn_dirent_local_style(path, pool), pool));
         }
     }
 

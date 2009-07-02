@@ -21,6 +21,7 @@
 #include "svn_error.h"
 #include "svn_pools.h"
 #include "svn_sorts.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_ra.h"
 #include "svn_io.h"
@@ -173,7 +174,7 @@ prev_log_path(const char **prev_path_p,
         return svn_error_createf(SVN_ERR_CLIENT_UNRELATED_RESOURCES, NULL,
                                  _("Missing changed-path information for "
                                    "'%s' in revision %ld"),
-                                 svn_path_local_style(path, pool), revision);
+                                 svn_dirent_local_style(path, pool), revision);
     }
 
   *prev_path_p = prev_path;

@@ -36,6 +36,7 @@
 
 #include "svn_cmdline.h"
 #include "svn_dso.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_pools.h"
 #include "svn_error.h"
@@ -247,7 +248,7 @@ svn_cmdline_path_local_style_from_utf8(const char **dest,
                                        apr_pool_t *pool)
 {
   return svn_cmdline_cstring_from_utf8(dest,
-                                       svn_path_local_style(src, pool),
+                                       svn_dirent_local_style(src, pool),
                                        pool);
 }
 

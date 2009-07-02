@@ -1421,7 +1421,7 @@ svn_subst_copy_and_translate3(const char *src,
       if (err->apr_err == SVN_ERR_IO_INCONSISTENT_EOL)
         err = svn_error_createf(SVN_ERR_IO_INCONSISTENT_EOL, err,
                                 _("File '%s' has inconsistent newlines"),
-                                svn_path_local_style(src, pool));
+                                svn_dirent_local_style(src, pool));
       return svn_error_compose_create(err, svn_io_remove_file2(dst_tmp,
                                                                FALSE, pool));
     }
@@ -1454,7 +1454,7 @@ read_handler_special(void *baton, char *buffer, apr_size_t *len)
   else
     return svn_error_createf(APR_ENOENT, NULL,
                              "Can't read special file: File '%s' not found",
-                             svn_path_local_style(btn->path, btn->pool));
+                             svn_dirent_local_style(btn->path, btn->pool));
 }
 
 static svn_error_t *

@@ -1311,7 +1311,7 @@ svn_dirent_get_absolute(const char **pabsolute,
     return svn_error_createf(SVN_ERR_BAD_FILENAME,
                              svn_error_create(apr_err, NULL, NULL),
                              _("Couldn't determine absolute path of '%s'"),
-                             svn_path_local_style(relative, pool));
+                             svn_dirent_local_style(relative, pool));
 
   SVN_ERR(svn_path_cstring_to_utf8(pabsolute, buffer, pool));
   *pabsolute = svn_dirent_canonicalize(*pabsolute, pool);
