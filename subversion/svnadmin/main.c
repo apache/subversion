@@ -118,7 +118,7 @@ parse_local_repos_path(apr_getopt_t *os,
     {
       const char * path = os->argv[os->ind++];
       SVN_ERR(svn_utf_cstring_to_utf8(repos_path, path, pool));
-      *repos_path = svn_path_internal_style(*repos_path, pool);
+      *repos_path = svn_dirent_internal_style(*repos_path, pool);
     }
 
   if (*repos_path == NULL)
@@ -1005,7 +1005,7 @@ set_revprop(const char *prop_name, const char *filename,
   const char *filename_utf8;
 
   SVN_ERR(svn_utf_cstring_to_utf8(&filename_utf8, filename, pool));
-  filename_utf8 = svn_path_internal_style(filename_utf8, pool);
+  filename_utf8 = svn_dirent_internal_style(filename_utf8, pool);
 
   SVN_ERR(svn_stringbuf_from_file2(&file_contents, filename_utf8, pool));
 
@@ -1583,7 +1583,7 @@ main(int argc, const char *argv[])
         if (err)
           return svn_cmdline_handle_exit_error(err, pool, "svnadmin: ");
         opt_state.parent_dir
-          = svn_path_internal_style(opt_state.parent_dir, pool);
+          = svn_dirent_internal_style(opt_state.parent_dir, pool);
         break;
       case svnadmin__use_pre_commit_hook:
         opt_state.use_pre_commit_hook = TRUE;
