@@ -250,6 +250,7 @@ svn_client__get_auto_props(apr_hash_t **properties,
 static svn_error_t *
 add_file(const char *path,
          svn_client_ctx_t *ctx,
+         svn_wc_context_t *wc_ctx,
          svn_wc_adm_access_t *adm_access,
          apr_pool_t *pool)
 {
@@ -258,6 +259,9 @@ add_file(const char *path,
   const char *mimetype;
   svn_node_kind_t kind;
   svn_boolean_t is_special;
+  const char *local_abspath;
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
   /* Check to see if this is a special file. */
   SVN_ERR(svn_io_check_special_path(path, &kind, &is_special, pool));
@@ -279,10 +283,9 @@ add_file(const char *path,
 
   if (is_special)
     /* This must be a special file. */
-    SVN_ERR(svn_wc_prop_set3
-            (SVN_PROP_SPECIAL,
-             svn_string_create(SVN_PROP_BOOLEAN_TRUE, pool),
-             path, adm_access, FALSE, NULL, NULL, pool));
+    SVN_ERR(svn_wc_prop_set4(wc_ctx, local_abspath, SVN_PROP_SPECIAL,
+                             svn_string_create(SVN_PROP_BOOLEAN_TRUE, pool),
+                             FALSE, NULL, NULL, pool));
   else if (properties)
     {
       /* loop through the hashtable and add the properties */
@@ -296,7 +299,7 @@ add_file(const char *path,
           /* It's probably best to pass 0 for force, so that if
              the autoprops say to set some weird combination,
              we just error and let the user sort it out. */
-          SVN_ERR(svn_wc_prop_set3(pname, pval, path, adm_access, FALSE,
+          SVN_ERR(svn_wc_prop_set4(wc_ctx, local_abspath, pname, pval, FALSE,
                                    NULL, NULL, pool));
         }
     }
@@ -334,6 +337,7 @@ add_dir_recursive(const char *dirname,
                   svn_boolean_t force,
                   svn_boolean_t no_ignore,
                   svn_client_ctx_t *ctx,
+                  svn_wc_context_t *wc_ctx,
                   apr_pool_t *pool)
 {
   apr_dir_t *dir;
@@ -343,16 +347,10 @@ add_dir_recursive(const char *dirname,
   apr_int32_t flags = APR_FINFO_TYPE | APR_FINFO_NAME;
   svn_wc_adm_access_t *dir_access;
   apr_array_header_t *ignores;
-  svn_wc_context_t *wc_ctx;
 
   /* Check cancellation; note that this catches recursive calls too. */
   if (ctx->cancel_func)
     SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
-
-  if (!ctx->wc_ctx)
-    SVN_ERR(svn_wc_context_create(&wc_ctx, NULL /* config */, pool, pool));
-  else
-    wc_ctx = ctx->wc_ctx;
 
   /* Add this directory to revision control. */
   err = svn_wc_add3(dirname, adm_access, svn_depth_infinity, NULL,
@@ -444,13 +442,13 @@ add_dir_recursive(const char *dirname,
             depth_below_here = svn_depth_empty;
 
           SVN_ERR(add_dir_recursive(fullpath, dir_access, depth_below_here,
-                                    force, no_ignore, ctx, subpool));
+                                    force, no_ignore, ctx, wc_ctx, subpool));
         }
       else if (this_entry.filetype != APR_UNKFILE
                && this_entry.filetype != APR_DIR
                && depth >= svn_depth_files)
         {
-          err = add_file(fullpath, ctx, dir_access, subpool);
+          err = add_file(fullpath, ctx, wc_ctx, dir_access, subpool);
           if (err && err->apr_err == SVN_ERR_ENTRY_EXISTS && force)
             svn_error_clear(err);
           else if (err)
@@ -478,6 +476,7 @@ add(const char *path,
     svn_boolean_t no_ignore,
     svn_wc_adm_access_t *adm_access,
     svn_client_ctx_t *ctx,
+    svn_wc_context_t *wc_ctx,
     apr_pool_t *pool)
 {
   svn_node_kind_t kind;
@@ -490,10 +489,10 @@ add(const char *path,
          and pass depth along no matter what it is, so that the
          target's depth will be set correctly. */
       err = add_dir_recursive(path, adm_access, depth,
-                              force, no_ignore, ctx, pool);
+                              force, no_ignore, ctx, wc_ctx, pool);
     }
   else if (kind == svn_node_file)
-    err = add_file(path, ctx, adm_access, pool);
+    err = add_file(path, ctx, wc_ctx, adm_access, pool);
   else
     err = svn_wc_add3(path, adm_access, depth, NULL, SVN_INVALID_REVNUM,
                       ctx->cancel_func, ctx->cancel_baton,
@@ -577,6 +576,12 @@ svn_client_add4(const char *path,
   svn_error_t *err, *err2;
   svn_wc_adm_access_t *adm_access;
   const char *parent_dir;
+  svn_wc_context_t *wc_ctx;
+
+  if (!ctx->wc_ctx)
+    SVN_ERR(svn_wc_context_create(&wc_ctx, NULL /* config */, pool, pool));
+  else
+    wc_ctx = ctx->wc_ctx;
 
   if (add_parents)
     {
@@ -599,9 +604,12 @@ svn_client_add4(const char *path,
                            TRUE, 0, ctx->cancel_func, ctx->cancel_baton,
                            pool));
 
-  err = add(path, depth, force, no_ignore, adm_access, ctx, pool);
+  err = add(path, depth, force, no_ignore, adm_access, ctx, wc_ctx, pool);
 
-  err2 = svn_wc_adm_close2(adm_access, pool);
+  if (!ctx->wc_ctx)
+    err2 = svn_wc_context_destroy(wc_ctx);
+
+  err2 = svn_error_compose_create(svn_wc_adm_close2(adm_access, pool), err2);
   if (err2)
     {
       if (err)
