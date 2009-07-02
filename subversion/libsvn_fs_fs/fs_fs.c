@@ -4378,7 +4378,6 @@ svn_fs_fs__change_txn_props(svn_fs_txn_t *txn,
                             apr_array_header_t *props,
                             apr_pool_t *pool)
 {
-  apr_file_t *txn_prop_file;
   const char *txn_prop_filename;
   svn_stringbuf_t *buf;
   svn_stream_t *stream;
