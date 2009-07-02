@@ -4593,9 +4593,9 @@ svn_wc_prop_get(const svn_string_t **value,
                 apr_pool_t *pool);
 
 /**
- * Set property @a name to @a value for @a path, or if @a value is
- * NULL, remove property @a name from @a path.  @a adm_access is an
- * access baton with a write lock for @a path.
+ * Set property @a name to @a value for @a local_abspath, or if @a value is
+ * NULL, remove property @a name from @a local_abspath.  Use @a wc_ctx to
+ * access @a local_abspath.
  *
  * If @a skip_checks is TRUE, do no validity checking.  But if @a
  * skip_checks is FALSE, and @a name is not a valid property for @a
@@ -4612,10 +4612,27 @@ svn_wc_prop_get(const svn_string_t **value,
  * with its path and the @a notify_baton.  @a notify_func may be @c NULL
  * if you are not interested in this information.
  *
- * Use @a pool for temporary allocation.
+ * Use @a scratch_pool for temporary allocation.
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_wc_prop_set4(svn_wc_context_t *wc_ctx,
+                 const char *local_abspath,
+                 const char *name,
+                 const svn_string_t *value,
+                 svn_boolean_t skip_checks,
+                 svn_wc_notify_func2_t notify_func,
+                 void *notify_baton,
+                 apr_pool_t *scratch_pool);
+
+/** Similar to svn_wc_prop_set4(), but with a @c svn_wc_adm_access_t /
+ * relative path parameter pair.
  *
  * @since New in 1.6.
+ * @deprecated Provided for backwards compatibility with the 1.6 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_prop_set3(const char *name,
                  const svn_string_t *value,
