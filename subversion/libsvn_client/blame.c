@@ -668,6 +668,15 @@ svn_client_blame5(const char *target,
          working copy file with keywords unexpanded */
       svn_wc_adm_access_t *adm_access;
       svn_wc_status2_t *status;
+      const char *target_abspath;
+      svn_wc_context_t *wc_ctx;
+
+      if (!ctx->wc_ctx)
+        SVN_ERR(svn_wc_context_create(&wc_ctx, NULL /* config */, pool, pool));
+      else
+        wc_ctx = ctx->wc_ctx;
+
+      SVN_ERR(svn_dirent_get_absolute(&target_abspath, target, pool));
 
       SVN_ERR(svn_wc_adm_open3(&adm_access, NULL,
                                svn_dirent_dirname(target, pool), FALSE,
@@ -685,7 +694,8 @@ svn_client_blame5(const char *target,
           const char *temppath;
           apr_hash_t *kw = NULL;
 
-          SVN_ERR(svn_wc_prop_list(&props, target, adm_access, pool));
+          SVN_ERR(svn_wc_prop_list2(&props, wc_ctx, target_abspath, pool,
+                                    pool));
           SVN_ERR(svn_stream_open_readonly(&wcfile, target, pool, pool));
           
           keywords = apr_hash_get(props, SVN_PROP_KEYWORDS,
@@ -710,6 +720,11 @@ svn_client_blame5(const char *target,
 
           frb.last_filename = temppath;
         }
+
+      if (!ctx->wc_ctx)
+        SVN_ERR(svn_wc_context_destroy(wc_ctx));
+
+      SVN_ERR(svn_wc_adm_close2(adm_access, pool));
     }
 
   /* Report the blame to the caller. */
