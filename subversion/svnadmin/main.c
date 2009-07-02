@@ -26,6 +26,7 @@
 #include "svn_opt.h"
 #include "svn_utf.h"
 #include "svn_subst.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_config.h"
 #include "svn_repos.h"
@@ -900,7 +901,7 @@ list_dblogs(apr_getopt_t *os, void *baton, svn_boolean_t only_unused,
       log_utf8 = svn_path_join(opt_state->repository_path,
                                APR_ARRAY_IDX(logfiles, i, const char *),
                                pool);
-      log_utf8 = svn_path_local_style(log_utf8, pool);
+      log_utf8 = svn_dirent_local_style(log_utf8, pool);
       SVN_ERR(svn_cmdline_printf(pool, "%s\n", log_utf8));
     }
 
