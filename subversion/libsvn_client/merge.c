@@ -641,6 +641,7 @@ split_mergeinfo_on_revision(svn_mergeinfo_t *younger_mergeinfo,
                             apr_pool_t *pool)
 {
   apr_hash_index_t *hi;
+  apr_pool_t *iterpool = svn_pool_create(pool);
 
   *younger_mergeinfo = NULL;
   for (hi = apr_hash_first(NULL, *mergeinfo); hi; hi = apr_hash_next(hi))
@@ -650,6 +651,8 @@ split_mergeinfo_on_revision(svn_mergeinfo_t *younger_mergeinfo,
       void *value;
       apr_array_header_t *rangelist;
       const char *merge_source_path;
+
+      svn_pool_clear(iterpool);
 
       apr_hash_this(hi, &key, NULL, &value);
       rangelist = value;
@@ -701,12 +704,15 @@ split_mergeinfo_on_revision(svn_mergeinfo_t *younger_mergeinfo,
               apr_hash_set(*younger_mergeinfo,
                            (const char *)merge_source_path,
                            APR_HASH_KEY_STRING, younger_rangelist);
-              SVN_ERR(svn_mergeinfo_remove(mergeinfo, *younger_mergeinfo,
-                                           *mergeinfo, pool));
+              SVN_ERR(svn_mergeinfo_remove2(mergeinfo, *younger_mergeinfo,
+                                            *mergeinfo, TRUE, pool, iterpool));
               break; /* ...out of for (i = 0; i < rangelist->nelts; i++) */
             }
         }
     }
+
+  svn_pool_destroy(iterpool);
+
   return SVN_NO_ERROR;
 }
 
@@ -744,6 +750,7 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
   apr_array_header_t *adjusted_props;
   int i;
   const svn_wc_entry_t *target_entry;
+  apr_pool_t *iterpool;
 
   /* If we aren't honoring mergeinfo and this is a merge from the
      same repository, then get outta here.  If this is a reintegrate
@@ -765,6 +772,7 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
     return SVN_NO_ERROR;
 
   adjusted_props = apr_array_make(pool, (*props)->nelts, sizeof(svn_prop_t));
+  iterpool = svn_pool_create(pool);
   for (i = 0; i < (*props)->nelts; ++i)
     {
       svn_prop_t *prop = &APR_ARRAY_IDX((*props), i, svn_prop_t);
@@ -988,9 +996,9 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
             pool));
 
           /* Remove PATH's implicit mergeinfo from the incoming mergeinfo. */
-          SVN_ERR(svn_mergeinfo_remove(&filtered_mergeinfo,
-                                       implicit_mergeinfo,
-                                       mergeinfo, pool));
+          SVN_ERR(svn_mergeinfo_remove2(&filtered_mergeinfo,
+                                        implicit_mergeinfo,
+                                        mergeinfo, TRUE, pool, iterpool));
         }
 
       /* If we reparented MERGE_B->RA_SESSION2 above, put it back
@@ -1023,6 +1031,8 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
           APR_ARRAY_PUSH(adjusted_props, svn_prop_t) = *adjusted_prop;
         }
     }
+  svn_pool_destroy(iterpool);
+
   *props = adjusted_props;
   return SVN_NO_ERROR;
 }
@@ -7799,10 +7809,10 @@ find_unmerged_mergeinfo(svn_mergeinfo_catalog_t *unmerged_to_source_catalog,
              this source path and the corresponding target's history then we
              know that at least one merge was done from the target to the
              source. */
-          SVN_ERR(svn_mergeinfo_intersect(
+          SVN_ERR(svn_mergeinfo_intersect2(
             &explicit_source_target_history_intersection,
-            source_mergeinfo, target_history_as_mergeinfo,
-            iterpool));
+            source_mergeinfo, target_history_as_mergeinfo, TRUE,
+            iterpool, iterpool));
           if (apr_hash_count(explicit_source_target_history_intersection))
             {
               *never_synched = FALSE;
@@ -7868,18 +7878,18 @@ find_unmerged_mergeinfo(svn_mergeinfo_catalog_t *unmerged_to_source_catalog,
          corresponding target's history is *not* part of source_path's total
          history; because it is neither shared history nor was it ever merged
          from the target to the source. */
-      SVN_ERR(svn_mergeinfo_intersect(&common_mergeinfo,
-                                      source_mergeinfo,
-                                      target_history_as_mergeinfo,
-                                      iterpool));
+      SVN_ERR(svn_mergeinfo_intersect2(&common_mergeinfo,
+                                       source_mergeinfo,
+                                       target_history_as_mergeinfo, TRUE,
+                                       iterpool, iterpool));
 
       /* Use subpool rather than iterpool because filtered_mergeinfo is
          going into new_catalog below and needs to last to the end of
          this function. */
-      SVN_ERR(svn_mergeinfo_remove(&filtered_mergeinfo,
-                                   common_mergeinfo,
-                                   target_history_as_mergeinfo,
-                                   subpool));
+      SVN_ERR(svn_mergeinfo_remove2(&filtered_mergeinfo,
+                                    common_mergeinfo,
+                                    target_history_as_mergeinfo, TRUE,
+                                    subpool, iterpool));
 
       /* As with svn_mergeinfo_intersect above, we need to use subpool
          rather than iterpool. */
@@ -7951,10 +7961,11 @@ find_unmerged_mergeinfo(svn_mergeinfo_catalog_t *unmerged_to_source_catalog,
                  on this source path and the corresponding target's history
                  then we know that at least one merge was done from the target
                  to the source. */
-              SVN_ERR(svn_mergeinfo_intersect(
+              SVN_ERR(svn_mergeinfo_intersect2(
                 &explicit_source_target_history_intersection,
-                source_mergeinfo, target_history_as_mergeinfo,
-                                                          iterpool));
+                source_mergeinfo, target_history_as_mergeinfo, TRUE,
+                iterpool, iterpool));
+
               if (apr_hash_count(explicit_source_target_history_intersection))
                 {
                   *never_synched = FALSE;
@@ -7983,17 +7994,17 @@ find_unmerged_mergeinfo(svn_mergeinfo_catalog_t *unmerged_to_source_catalog,
               SVN_ERR(svn_mergeinfo_merge(source_mergeinfo,
                                           source_history_as_mergeinfo,
                                           iterpool));
-              SVN_ERR(svn_mergeinfo_intersect(&common_mergeinfo,
-                                              source_mergeinfo,
-                                              target_history_as_mergeinfo,
-                                              iterpool));
+              SVN_ERR(svn_mergeinfo_intersect2(&common_mergeinfo,
+                                               source_mergeinfo,
+                                               target_history_as_mergeinfo,
+                                               TRUE, iterpool, iterpool));
               /* Use subpool rather than iterpool because filtered_mergeinfo
                  is  going into new_catalog below and needs to last to the
                  end of this function. */
-              SVN_ERR(svn_mergeinfo_remove(&filtered_mergeinfo,
-                                           common_mergeinfo,
-                                           target_history_as_mergeinfo,
-                                           subpool));
+              SVN_ERR(svn_mergeinfo_remove2(&filtered_mergeinfo,
+                                            common_mergeinfo,
+                                            target_history_as_mergeinfo,
+                                            TRUE, subpool, iterpool));
               if (apr_hash_count(filtered_mergeinfo))
                 apr_hash_set(new_catalog,
                              apr_pstrdup(subpool, source_path),
