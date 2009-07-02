@@ -568,7 +568,7 @@ struct callbacks_wrapper_baton {
   void *baton;
 };
 
-/* An svn_wc_diff_callbacks4_t function for wrapping svn_wc_diff_callbacks_t. */
+/* An svn_wc_diff_callbacks3_t function for wrapping svn_wc_diff_callbacks_t. */
 static svn_error_t *
 file_changed(svn_wc_adm_access_t *adm_access,
              svn_wc_notify_state_t *contentstate,
@@ -636,7 +636,7 @@ file_added(svn_wc_adm_access_t *adm_access,
   return SVN_NO_ERROR;
 }
 
-/* An svn_wc_diff_callbacks4_t function for wrapping svn_wc_diff_callbacks_t. */
+/* An svn_wc_diff_callbacks3_t function for wrapping svn_wc_diff_callbacks_t. */
 static svn_error_t *
 file_deleted(svn_wc_adm_access_t *adm_access,
              svn_wc_notify_state_t *state,
@@ -678,7 +678,7 @@ dir_added(svn_wc_adm_access_t *adm_access,
   return b->callbacks->dir_added(adm_access, state, path, rev, b->baton);
 }
 
-/* An svn_wc_diff_callbacks4_t function for wrapping svn_wc_diff_callbacks_t. */
+/* An svn_wc_diff_callbacks3_t function for wrapping svn_wc_diff_callbacks_t. */
 static svn_error_t *
 dir_deleted(svn_wc_adm_access_t *adm_access,
             svn_wc_notify_state_t *state,
@@ -694,7 +694,7 @@ dir_deleted(svn_wc_adm_access_t *adm_access,
   return b->callbacks->dir_deleted(adm_access, state, path, b->baton);
 }
 
-/* An svn_wc_diff_callbacks4_t function for wrapping svn_wc_diff_callbacks_t. */
+/* An svn_wc_diff_callbacks3_t function for wrapping svn_wc_diff_callbacks_t. */
 static svn_error_t *
 dir_props_changed(svn_wc_adm_access_t *adm_access,
                   svn_wc_notify_state_t *state,
@@ -713,8 +713,8 @@ dir_props_changed(svn_wc_adm_access_t *adm_access,
                                      originalprops, b->baton);
 }
 
-/* An svn_wc_diff_callbacks4_t function for wrapping svn_wc_diff_callbacks_t,
-   svn_wc_diff_callbacks2_t and svn_wc_diff_callbacks3_t. */
+/* An svn_wc_diff_callbacks3_t function for wrapping svn_wc_diff_callbacks_t
+   and svn_wc_diff_callbacks2_t. */
 static svn_error_t *
 dir_opened(svn_wc_adm_access_t *adm_access,
            svn_boolean_t *tree_conflicted,
@@ -728,8 +728,8 @@ dir_opened(svn_wc_adm_access_t *adm_access,
   return SVN_NO_ERROR;
 }
 
-/* An svn_wc_diff_callbacks4_t function for wrapping svn_wc_diff_callbacks_t,
-   svn_wc_diff_callbacks2_t and svn_wc_diff_callbacks3_t. */
+/* An svn_wc_diff_callbacks3_t function for wrapping svn_wc_diff_callbacks_t
+   and svn_wc_diff_callbacks2_t. */
 static svn_error_t *
 dir_closed(svn_wc_adm_access_t *adm_access,
            svn_wc_notify_state_t *propstate,
@@ -928,6 +928,32 @@ struct callbacks3_wrapper_baton {
 /* An svn_wc_diff_callbacks4_t function for wrapping
  * svn_wc_diff_callbacks3_t. */
 static svn_error_t *
+file_changed3(svn_wc_adm_access_t *adm_access,
+              svn_wc_notify_state_t *contentstate,
+              svn_wc_notify_state_t *propstate,
+              svn_boolean_t *tree_conflicted,
+              const char *path,
+              const char *tmpfile1,
+              const char *tmpfile2,
+              svn_revnum_t rev1,
+              svn_revnum_t rev2,
+              const char *mimetype1,
+              const char *mimetype2,
+              const apr_array_header_t *propchanges,
+              apr_hash_t *originalprops,
+              void *diff_baton)
+{
+  struct callbacks3_wrapper_baton *b = diff_baton;
+
+  return b->callbacks3->file_changed(adm_access, contentstate, propstate,
+                                     tree_conflicted, path, tmpfile1, tmpfile2,
+                                     rev1, rev2, mimetype1, mimetype2,
+                                     propchanges, originalprops, b->baton);
+}
+
+/* An svn_wc_diff_callbacks4_t function for wrapping
+ * svn_wc_diff_callbacks3_t. */
+static svn_error_t *
 file_added3(svn_wc_adm_access_t *adm_access,
             svn_wc_notify_state_t *contentstate,
             svn_wc_notify_state_t *propstate,
@@ -956,6 +982,28 @@ file_added3(svn_wc_adm_access_t *adm_access,
 /* An svn_wc_diff_callbacks4_t function for wrapping
  * svn_wc_diff_callbacks3_t. */
 static svn_error_t *
+file_deleted3(svn_wc_adm_access_t *adm_access,
+              svn_wc_notify_state_t *state,
+              svn_boolean_t *tree_conflicted,
+              const char *path,
+              const char *tmpfile1,
+              const char *tmpfile2,
+              const char *mimetype1,
+              const char *mimetype2,
+              apr_hash_t *originalprops,
+              void *diff_baton)
+{
+  struct callbacks3_wrapper_baton *b = diff_baton;
+
+  return b->callbacks3->file_deleted(adm_access, state, tree_conflicted,
+                                     path, tmpfile1, tmpfile2,
+                                     mimetype1, mimetype2, originalprops,
+                                     b->baton);
+}
+
+/* An svn_wc_diff_callbacks4_t function for wrapping
+ * svn_wc_diff_callbacks3_t. */
+static svn_error_t *
 dir_added3(svn_wc_adm_access_t *adm_access,
            svn_wc_notify_state_t *state,
            svn_boolean_t *tree_conflicted,
@@ -970,16 +1018,82 @@ dir_added3(svn_wc_adm_access_t *adm_access,
   return b->callbacks3->dir_added(adm_access, state, tree_conflicted, path, rev, b->baton);
 }
 
+/* An svn_wc_diff_callbacks4_t function for wrapping
+ * svn_wc_diff_callbacks3_t. */
+static svn_error_t *
+dir_deleted3(svn_wc_adm_access_t *adm_access,
+            svn_wc_notify_state_t *state,
+            svn_boolean_t *tree_conflicted,
+            const char *path,
+            void *diff_baton)
+{
+  struct callbacks3_wrapper_baton *b = diff_baton;
+
+  return b->callbacks3->dir_deleted(adm_access, state, tree_conflicted,
+                                    path, b->baton);
+}
+
+/* An svn_wc_diff_callbacks4_t function for wrapping
+ * svn_wc_diff_callbacks3_t. */
+static svn_error_t *
+dir_props_changed3(svn_wc_adm_access_t *adm_access,
+                   svn_wc_notify_state_t *propstate,
+                   svn_boolean_t *tree_conflicted,
+                   const char *path,
+                   const apr_array_header_t *propchanges,
+                   apr_hash_t *original_props,
+                   void *diff_baton)
+{
+  struct callbacks3_wrapper_baton *b = diff_baton;
+
+  return b->callbacks3->dir_props_changed(adm_access, propstate,
+                                          tree_conflicted, path,
+                                          propchanges, original_props,
+                                          b->baton);
+}
+
+/* An svn_wc_diff_callbacks4_t function for wrapping
+ * svn_wc_diff_callbacks3_t. */
+static svn_error_t *
+dir_opened2(svn_wc_adm_access_t *adm_access,
+            svn_boolean_t *tree_conflicted,
+            const char *path,
+            svn_revnum_t rev,
+            void *diff_baton)
+{
+  struct callbacks3_wrapper_baton *b = diff_baton;
+
+  return b->callbacks3->dir_opened(adm_access, tree_conflicted, path, rev,
+                                   b->baton);
+}
+
+/* An svn_wc_diff_callbacks4_t function for wrapping
+ * svn_wc_diff_callbacks3_t. */
+static svn_error_t *
+dir_closed2(svn_wc_adm_access_t *adm_access,
+            svn_wc_notify_state_t *contentstate,
+            svn_wc_notify_state_t *propstate,
+            svn_boolean_t *tree_conflicted,
+            const char *path,
+            void *diff_baton)
+{
+  struct callbacks3_wrapper_baton *b = diff_baton;
+
+  return b->callbacks3->dir_closed(adm_access, contentstate, propstate,
+                                   tree_conflicted, path, b->baton);
+}
+
+
 /* Used to wrap svn_diff_callbacks3_t as an svn_wc_diff_callbacks4_t. */
 static struct svn_wc_diff_callbacks4_t callbacks3_wrapper = {
-  file_changed2,
+  file_changed3,
   file_added3,
-  file_deleted2,
+  file_deleted3,
   dir_added3,
-  dir_deleted2,
-  dir_props_changed2,
-  dir_opened,
-  dir_closed
+  dir_deleted3,
+  dir_props_changed3,
+  dir_opened2,
+  dir_closed2
 };
 
 svn_error_t *
