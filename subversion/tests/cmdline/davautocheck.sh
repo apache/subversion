@@ -209,7 +209,7 @@ LOAD_MOD_AUTHZ_USER="$(get_loadmodule_config mod_authz_user)" \
     || fail "Authz_User module not found."
 
 LOAD_MOD_UNIXD=$(get_loadmodule_config mod_unixd) \
-    || fail "UnixD module not found"
+    || say "UnixD module not found. Assuming we run against Apache <2.4+"
 }
 
 HTTPD_PORT=$(($RANDOM+1024))
