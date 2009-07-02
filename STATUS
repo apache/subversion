@@ -135,7 +135,7 @@ Candidate changes:
    Justification:
      Data loss is bad.
    Votes:
-     +1: blair (r38279 only), hwright
+     +1: blair, hwright
 
   * r38290, r38293, r38294 
     Fix detection of Apache <2.0.56.
