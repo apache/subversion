@@ -106,6 +106,7 @@ svn_client__get_wc_mergeinfo(svn_mergeinfo_t *mergeinfo,
                              const char **walked_path,
                              svn_wc_adm_access_t *adm_access,
                              svn_client_ctx_t *ctx,
+                             svn_wc_context_t *wc_ctx,
                              apr_pool_t *pool);
 
 /* Obtain any mergeinfo for the root-relative repository filesystem path
@@ -167,6 +168,7 @@ svn_client__get_wc_or_repos_mergeinfo(svn_mergeinfo_t *target_mergeinfo,
                                       const char *target_wcpath,
                                       svn_wc_adm_access_t *adm_access,
                                       svn_client_ctx_t *ctx,
+                                      svn_wc_context_t *wc_ctx,
                                       apr_pool_t *pool);
 
 /* Set *MERGEINFO_P to a mergeinfo constructed solely from the
@@ -208,19 +210,22 @@ svn_client__parse_mergeinfo(svn_mergeinfo_t *mergeinfo,
                             svn_boolean_t pristine,
                             svn_wc_adm_access_t *adm_access,
                             svn_client_ctx_t *ctx,
+                            svn_wc_context_t *wc_ctx,
                             apr_pool_t *pool);
 
-/* Write MERGEINFO into the WC for WCPATH.  If MERGEINFO is NULL,
-   remove any SVN_PROP_MERGEINFO for WCPATH.  If MERGEINFO is empty,
+/* Write MERGEINFO into the WC for LOCAL_ABSPATH.  If MERGEINFO is NULL,
+   remove any SVN_PROP_MERGEINFO for LOCAL_ABSPATH.  If MERGEINFO is empty,
    record an empty property value (e.g. "").  If CTX->NOTIFY_FUNC2 is
-   not null call it with notification type
-   svn_wc_notify_merge_record_info. */
+   not null call it with notification type svn_wc_notify_merge_record_info.
+   
+   Use WC_CTX to access the working copy, and SCRATCH_POOL for any temporary
+   allocations. */
 svn_error_t *
-svn_client__record_wc_mergeinfo(const char *wcpath,
+svn_client__record_wc_mergeinfo(const char *local_abspath,
                                 svn_mergeinfo_t mergeinfo,
-                                svn_wc_adm_access_t *adm_access,
                                 svn_client_ctx_t *ctx,
-                                apr_pool_t *pool);
+                                svn_wc_context_t *wc_ctx,
+                                apr_pool_t *scratch_pool);
 
 /* Elide any svn:mergeinfo set on TARGET_PATH to its nearest working
    copy (or possibly repository) ancestor with equivalent mergeinfo.
@@ -256,6 +261,7 @@ svn_client__elide_mergeinfo(const char *target_wcpath,
                             const svn_wc_entry_t *entry,
                             svn_wc_adm_access_t *adm_access,
                             svn_client_ctx_t *ctx,
+                            svn_wc_context_t *wc_ctx,
                             apr_pool_t *pool);
 
 /* For each path in CHILDREN_WITH_MERGEINFO which is an immediate child of
@@ -272,6 +278,7 @@ svn_client__elide_children(apr_array_header_t *children_with_mergeinfo,
                            const svn_wc_entry_t *entry,
                            svn_wc_adm_access_t *adm_access,
                            svn_client_ctx_t *ctx,
+                           svn_wc_context_t *wc_ctx,
                            apr_pool_t *pool);
 
 /* A wrapper which calls svn_client__elide_mergeinfo() on each child
@@ -280,6 +287,7 @@ svn_error_t *
 svn_client__elide_mergeinfo_for_tree(apr_hash_t *children_with_mergeinfo,
                                      svn_wc_adm_access_t *adm_access,
                                      svn_client_ctx_t *ctx,
+                                     svn_wc_context_t *wc_ctx,
                                      apr_pool_t *pool);
 
 /* TODO(reint): Document. */
