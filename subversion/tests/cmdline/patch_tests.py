@@ -542,9 +542,9 @@ def patch_unidiff_absolute_paths(sbox):
 # list all tests here, starting with None:
 test_list = [ None,
               patch_basic,
-              XFail(patch_unidiff, is_os_windows),
-              XFail(patch_copy_and_move, is_os_windows),
-              XFail(patch_unidiff_absolute_paths, is_os_windows),
+              patch_unidiff,
+              patch_copy_and_move,
+              patch_unidiff_absolute_paths,
               ]
 
 if __name__ == '__main__':
