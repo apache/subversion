@@ -247,6 +247,13 @@ typedef struct merge_cmd_baton_t {
      reflect the merge_source_t *currently* being merged by do_merge(). */
   merge_source_t merge_source;
 
+  /* Rangelist containing single range which describes the gap, if any,
+     in the natural history of the merge source currently being processed.
+     See http://subversion.tigris.org/issues/show_bug.cgi?id=3432.
+     Updated during each call to do_directory_merge().  May be NULL if there
+     is no gap. */
+  apr_array_header_t *implicit_src_gap;
+
   svn_client_ctx_t *ctx;              /* Client context for callbacks, etc. */
 
   /* Whether invocation of the merge_file_added() callback required
@@ -3294,8 +3301,12 @@ filter_merged_revisions(svn_client__merge_path_t *parent,
    been merged to CHILD->PATH and populate CHILD->REMAINING_RANGES with the
    ranges that still need merging.
 
-   URL1, REVISION1, URL2, REVISION2, TARGET_MERGEINFO, ADM_ACCESS, and CTX
-   are all cascaded from the caller's arguments of the same names.
+   URL1, REVISION1, URL2, REVISION2, ADM_ACCESS, and CTX are all cascaded
+   from the caller's arguments of the same names.  Note that this means URL1,
+   REVISION1, URL2, and REVISION2 adhere to the requirements noted in
+   `MERGEINFO MERGE SOURCE NORMALIZATION'.
+
+   TARGET_MERGEINFO is the working mergeinfo on CHILD.
 
    RA_SESSION is the session for, and SOURCE_ROOT_URL is the repository root
    for, the younger of URL1@REVISION1 and URL2@REVISION2.
@@ -3309,6 +3320,9 @@ filter_merged_revisions(svn_client__merge_path_t *parent,
 
    If IS_SUBTREE is FALSE then PARENT is ignored, otherwise PARENT must
    represent the nearest working copy ancestor of CHILD.
+
+   If not null, IMPLICIT_SRC_GAP is the gap, if any, in the natural history
+   of URL1@REVISION1:URL2@REVISION2, see merge_cmd_baton_t.implicit_src_gap.
 
    NOTE: This should only be called when honoring mergeinfo.
 
@@ -3331,6 +3345,7 @@ calculate_remaining_ranges(svn_client__merge_path_t *parent,
                            const char *url2,
                            svn_revnum_t revision2,
                            svn_mergeinfo_t target_mergeinfo,
+                           apr_array_header_t *implicit_src_gap,
                            svn_boolean_t is_subtree,
                            svn_ra_session_t *ra_session,
                            const svn_wc_entry_t *entry,
@@ -3340,18 +3355,47 @@ calculate_remaining_ranges(svn_client__merge_path_t *parent,
 {
   const char *mergeinfo_path;
   const char *primary_url = (revision1 < revision2) ? url2 : url1;
+  svn_mergeinfo_t adjusted_target_mergeinfo = NULL;
 
   /* Determine which of the requested ranges to consider merging... */
   SVN_ERR(svn_client__path_relative_to_root(&mergeinfo_path, primary_url,
                                             source_root_url, TRUE,
                                             ra_session, NULL, pool));
 
+  /* Consider: CHILD might have explicit mergeinfo '/MERGEINFO_PATH:M-N'
+     where M-N fall into the gap in URL1@REVISION1:URL2@REVISION2's natural
+     history allowed by 'MERGEINFO MERGE SOURCE NORMALIZATION'.  If this is
+     the case, then '/MERGEINFO_PATH:N' actually refers to a completely
+     different line of history than URL1@REVISION1:URL2@REVISION2 and we
+     *don't* want to consider those revisions merged already. */
+  if (implicit_src_gap && child->pre_merge_mergeinfo)
+    {
+      apr_array_header_t *explicit_mergeinfo_gap_ranges =
+        apr_hash_get(child->pre_merge_mergeinfo, mergeinfo_path,
+                     APR_HASH_KEY_STRING);
+
+      if (explicit_mergeinfo_gap_ranges)
+        {
+          svn_mergeinfo_t gap_mergeinfo = apr_hash_make(pool);
+          
+          apr_hash_set(gap_mergeinfo, mergeinfo_path, APR_HASH_KEY_STRING,
+                       implicit_src_gap);
+          SVN_ERR(svn_mergeinfo_remove2(&adjusted_target_mergeinfo,
+                                        gap_mergeinfo, target_mergeinfo,
+                                        FALSE, pool, pool));
+        }
+    }
+  else
+    {
+      adjusted_target_mergeinfo = target_mergeinfo;
+    }
+
   /* Initialize CHILD->REMAINING_RANGES and filter out revisions already
      merged (or, in the case of reverse merges, ranges not yet merged). */
   SVN_ERR(filter_merged_revisions(parent, child, entry, mergeinfo_path,
-                                  target_mergeinfo,
-                                  revision1, revision2, ra_session,
-                                  adm_access, ctx, pool));
+                                  adjusted_target_mergeinfo,
+                                  revision1, revision2,
+                                  ra_session, adm_access, ctx, pool));
 
   if (is_subtree)
     {
@@ -3456,6 +3500,146 @@ calculate_remaining_ranges(svn_client__merge_path_t *parent,
   return SVN_NO_ERROR;
 }
 
+/* Helper for populate_remaining_ranges().
+
+   URL1, REVISION1, URL2, REVISION2, RA_SESSION, MERGE_SRC_CANON_PATH,
+   and MERGE_B are all cascaded from the arguments of the same name in
+   populate_remaining_ranges().  MERGE_SRC_CANON_PATH is the absolute
+   repository path of URL2.
+
+   Note: The following comments assume a forward merge, i.e.
+   REVISION1 < REVISION2.  If this is a reverse merge then all the following
+   comments still apply, but with URL1 switched with URL2 and REVISION1
+   switched with REVISION2.
+
+   Like populate_remaining_ranges(), URL1@REVISION1:URL2@REVISION2 must adhere
+   to the restrictions documented in 'MERGEINFO MERGE SOURCE NORMALIZATION'.
+   These restrictions allow for a *single* gap, URL@GAP_REV1:URL2@GAP_REV2,
+   (where REVISION1 < GAP_REV1 <= GAP_REV2 < REVISION2) in
+   URL1@REVISION1:URL2@REVISION2 if URL2@REVISION2 was copied from
+   URL1@REVISION1.  If such a gap exists, set *GAP_START and *GAP_END to the
+   starting and ending revisions of the gap.  Otherwise set both to
+   SVN_INVALID_REVNUM.
+
+   For example, if the natural history of URL@2:URL@9 is 'trunk/:2,7-9' this
+   would indicate that trunk@7 was copied from trunk@2.  This function would
+   return GAP_START:GAP_END of 2:6 in this case.  Note that a path 'trunk'
+   might exist at r3-6, but it would not be on the same line of history as
+   trunk@9. */
+static svn_error_t *
+find_gaps_in_merge_source_history(svn_revnum_t *gap_start,
+                                  svn_revnum_t *gap_end,
+                                  const char *merge_src_canon_path,
+                                  const char *url1,
+                                  svn_revnum_t revision1,
+                                  const char *url2,
+                                  svn_revnum_t revision2,
+                                  svn_ra_session_t *ra_session,
+                                  merge_cmd_baton_t *merge_b,
+                                  apr_pool_t *scratch_pool,
+                                  apr_pool_t *result_pool)
+{
+  svn_mergeinfo_t implicit_src_mergeinfo;
+  svn_opt_revision_t peg_rev;
+  svn_revnum_t young_rev = MAX(revision1, revision2);
+  svn_revnum_t old_rev = MIN(revision1, revision2);
+  apr_array_header_t *rangelist;
+  const char *url = (revision2 < revision1) ? url1 : url2;
+
+  /* Start by assuming there is no gap. */
+  *gap_start = *gap_end = SVN_INVALID_REVNUM;
+
+  /* Get URL1@REVISION1:URL2@REVISION2 as mergeinfo. */
+  peg_rev.kind = svn_opt_revision_number;
+  peg_rev.value.number = young_rev;
+  SVN_ERR(svn_client__get_history_as_mergeinfo(&implicit_src_mergeinfo, url,
+                                               &peg_rev, young_rev, old_rev,
+                                               ra_session, NULL,
+                                               merge_b->ctx, scratch_pool));
+
+  rangelist = apr_hash_get(implicit_src_mergeinfo,
+                           merge_src_canon_path,
+                           APR_HASH_KEY_STRING);
+
+  if (rangelist) /* ### Can we ever not find a rangelist? */
+    {
+      /* A gap in natural history can result from either a copy or
+         a rename.  If from a copy then history as mergeinfo will look
+         something like this:
+         
+           '/trunk:X,Y-Z'
+         
+         If from a rename it will look like this:
+
+           '/trunk_old_name:X'
+           '/trunk_new_name:Y-Z'
+      
+        In both cases the gap, if it exists, is M-N, where M = X + 1 and
+        N = Y - 1.
+
+        Note that per the rules of 'MERGEINFO MERGE SOURCE NORMALIZATION' we
+        should never have multiple gaps, e.g. if we see anything like the
+        following then something is quite wrong:
+
+            '/trunk_old_name:A,B-C'
+            '/trunk_new_name:D-E'
+      */
+
+      if (rangelist->nelts > 1) /* Copy */
+        {
+          /* As mentioned above, multiple gaps *shouldn't* be possible. */
+          SVN_ERR_ASSERT(apr_hash_count(implicit_src_mergeinfo) == 1);
+
+          *gap_start = MIN(revision1, revision2);
+          *gap_end = (APR_ARRAY_IDX(rangelist,
+                                    rangelist->nelts - 1,
+                                    svn_merge_range_t *))->start;
+        }
+      else if (apr_hash_count(implicit_src_mergeinfo) > 1) /* Rename */
+        {
+          apr_array_header_t *requested_rangelist =
+            init_rangelist(MIN(revision1, revision2),
+                           MAX(revision1, revision2),
+                           TRUE, scratch_pool);
+          apr_array_header_t *implicit_rangelist =
+            apr_array_make(scratch_pool, 2, sizeof(svn_merge_range_t *));
+          apr_array_header_t *gap_rangelist;
+          apr_hash_index_t *hi;
+
+          for (hi = apr_hash_first(scratch_pool, implicit_src_mergeinfo);
+               hi;
+               hi = apr_hash_next(hi))
+            {
+              const void *key;
+              void *value;
+              const char *path;
+              apr_array_header_t *rangelist;
+
+              apr_hash_this(hi, &key, NULL, &value);
+              path = key;
+              rangelist = value;
+              SVN_ERR(svn_rangelist_merge(&implicit_rangelist, rangelist,
+                                          scratch_pool));
+            }
+          SVN_ERR(svn_rangelist_remove(&gap_rangelist, implicit_rangelist,
+                                       requested_rangelist, FALSE,
+                                       scratch_pool));
+
+          /* If there is anything left it is the gap. */
+          if (gap_rangelist->nelts)
+            {
+              svn_merge_range_t *gap_range =
+                APR_ARRAY_IDX(gap_rangelist, 0, svn_merge_range_t *);
+
+              *gap_start = gap_range->start;
+              *gap_end = gap_range->end;
+            }
+        }
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /* Helper for do_directory_merge().
 
    For each child in CHILDREN_WITH_MERGEINFO, populate that
@@ -3493,6 +3677,7 @@ populate_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
   apr_pool_t *iterpool;
   int merge_target_len = strlen(merge_b->target);
   int i;
+  svn_revnum_t gap_start, gap_end;
 
   iterpool = svn_pool_create(pool);
 
@@ -3518,6 +3703,31 @@ populate_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
         }
       return SVN_NO_ERROR;
     }
+
+  /* If, in the merge source's history, there was a copy from a older
+     revision, then URL2 won't exist at some range M:N, where
+     REVISION1 < M < N < REVISION2. The rules of 'MERGEINFO MERGE SOURCE
+     NORMALIZATION' allow this, but we must ignore these gaps when
+     calculating what ranges remain to be merged from
+     URL1@REVISION1:URL2@REVISION2.  If we don't and try to merge any part
+     of URL2@M:URL2@N we would break the editor since no part of that
+     actually exists.  See http://svn.haxx.se/dev/archive-2008-11/0618.shtml.
+
+     Find the gaps in the merge target's history, if any.  Eventually
+     we will adjust CHILD->REMAINING_RANGES such that we don't describe
+     non-existent paths to the editor. */
+  SVN_ERR(find_gaps_in_merge_source_history(&gap_start, &gap_end,
+                                            parent_merge_src_canon_path,
+                                            url1, revision1,
+                                            url2, revision2,
+                                            ra_session, merge_b,
+                                            iterpool, pool));
+
+  /* Stash any gap in the merge command baton, we'll need it later when
+     recording mergeinfo describing this merge. */
+  if (SVN_IS_VALID_REVNUM(gap_start) && SVN_IS_VALID_REVNUM(gap_end))
+    merge_b->implicit_src_gap = init_rangelist(gap_start, gap_end, TRUE,
+                                               pool);
 
   for (i = 0; i < children_with_mergeinfo->nelts; i++)
     {
@@ -3564,52 +3774,6 @@ populate_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
         MIN(revision1, revision2),
         adm_access, merge_b->ctx, pool));
 
-      /* If, in the merge target's history, there was a copy from a older
-         source which didn't exist at the time of the copy, then URL2 won't
-         exist at some range M:N, where REVISION1 < M < N < REVISION2.  If
-         there were multiple instances of such copies then there will be
-         multiple 'gaps' like this.  The rules of 'MERGEINFO MERGE SOURCE
-         NORMALIZATION' allow this, but we must ignore these gaps when
-         calculating what ranges remain to be merged from
-         URL1@REVISION1:URL2@REVISION2.  In other words, we can't try to
-         merge any part of URL2@M:URL2@N since no part of that actually
-         exists and would break the editor.  We can "ignore" these gaps by
-         adjusting the target's implicit mergeinfo to make it look like they
-         are already part of the target's natural history. */
-      if (i == 0) /* CHILDREN_WITH_MERGEINFO[0] is always the target. */
-        {
-          apr_hash_index_t *hi;
-          svn_revnum_t youngest_rev, oldest_rev;
-
-          SVN_ERR(svn_mergeinfo__get_range_endpoints(
-            &youngest_rev, &oldest_rev, child->implicit_mergeinfo,
-            iterpool));
-
-          /* Adjust the target's implicit mergeinfo so there are no gaps */
-          for (hi = apr_hash_first(iterpool, child->implicit_mergeinfo);
-               hi;
-               hi = apr_hash_next(hi))
-            {
-              const void *key;
-              void *value;
-              const char *source_path;
-              apr_array_header_t *source_rangelist, *rev1_rev2_rangelist;
-
-              apr_hash_this(hi, &key, NULL, &value);
-              source_path = key;
-              source_rangelist = value;
-              youngest_rev = (APR_ARRAY_IDX(source_rangelist,
-                                            source_rangelist->nelts - 1,
-                                            svn_merge_range_t *))->end;
-              rev1_rev2_rangelist = init_rangelist(oldest_rev, youngest_rev,
-                                                   TRUE, iterpool);
-              svn_rangelist_merge(&source_rangelist, rev1_rev2_rangelist,
-                                  pool);
-              apr_hash_set(child->implicit_mergeinfo, source_path,
-                           APR_HASH_KEY_STRING, source_rangelist);
-             }
-        }
-
       /* If CHILD isn't the merge target find its parent. */
       if (i > 0)
         {
@@ -3628,10 +3792,81 @@ populate_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
                                          child_url1, revision1,
                                          child_url2, revision2,
                                          child->pre_merge_mergeinfo,
+                                         merge_b->implicit_src_gap,
                                          i > 0, /* is subtree */
                                          ra_session, child_entry,
                                          adm_access, merge_b->ctx,
                                          pool));
+
+      /* Deal with any gap in URL1@REVISION1:URL2@REVISION2's natural history.
+
+         If the gap is a proper subset of CHILD->REMAINING_RANGES then we can
+         safely ignore it since we won't describe this path/rev pair.
+         
+         If the gap exactly matches or is a superset of a range in
+         CHILD->REMAINING_RANGES then we must remove that range so we don't
+         attempt to describe non-existent paths via the reporter, this will
+         break the editor and our merge.
+
+         If the gap adjoins or overlaps a range in CHILD->REMAINING_RANGES
+         then we must *add* the gap so we span the missing revisions. */
+      if (child->remaining_ranges->nelts
+          && merge_b->implicit_src_gap)
+        {
+          int j;
+          svn_revnum_t start, end;
+          svn_boolean_t proper_subset = FALSE;
+          svn_boolean_t equals = FALSE;
+          svn_boolean_t overlaps_or_adjoins = FALSE;
+
+          /* If this is a reverse merge reorder CHILD->REMAINING_RANGES
+              so it will work with the svn_rangelist_* APIs below. */
+          if (revision1 > revision2)
+            svn_rangelist_reverse(child->remaining_ranges, iterpool);
+
+          for (j = 0; j < child->remaining_ranges->nelts; j++)
+            {
+              start = (APR_ARRAY_IDX(child->remaining_ranges, j,
+                                     svn_merge_range_t *))->start;
+              end = (APR_ARRAY_IDX(child->remaining_ranges, j,
+                                   svn_merge_range_t *))->end;
+              if ((start <= gap_start && gap_end < end)
+                  || (start < gap_start && gap_end <= end))
+                {
+                  proper_subset = TRUE;
+                  break;
+                }
+              else if ((gap_start == start) && (end == gap_end))
+                {
+                  equals = TRUE;
+                  break;
+                }
+              else if (gap_start <= end && start <= gap_end)  /* intersect */
+                {
+                  overlaps_or_adjoins = TRUE;
+                  break;
+                }
+            }
+
+          if (!proper_subset)
+            {
+              /* We need to make adjustements.  Remove from, or add the gap
+                 to, CHILD->REMAINING_RANGES as appropriate. */
+
+              if (overlaps_or_adjoins)
+                SVN_ERR(svn_rangelist_merge(&(child->remaining_ranges),
+                                            merge_b->implicit_src_gap,
+                                            pool));
+              else /* equals == TRUE */
+                SVN_ERR(svn_rangelist_remove(&(child->remaining_ranges),
+                                             merge_b->implicit_src_gap,
+                                             child->remaining_ranges, FALSE,
+                                             pool));
+            }
+
+          if (revision1 > revision2) /* Reverse merge */
+            svn_rangelist_reverse(child->remaining_ranges, iterpool);
+        }
     }
 
   svn_pool_destroy(iterpool);
@@ -5892,7 +6127,7 @@ do_file_merge(const char *url1,
                                              source_root_url,
                                              url1, revision1, url2, revision2,
                                              target_mergeinfo,
-                                             FALSE,
+                                             merge_b->implicit_src_gap, FALSE,
                                              merge_b->ra_session1,
                                              entry, adm_access, ctx, pool));
           remaining_ranges = merge_target->remaining_ranges;
@@ -6425,6 +6660,20 @@ record_mergeinfo_for_dir_merge(const svn_wc_entry_t *target_entry,
                                                 adm_access,
                                                 merge_b->ctx,
                                                 iterpool));
+      if (merge_b->implicit_src_gap)
+        {
+          /* If this is a reverse merge reorder CHILD->REMAINING_RANGES
+             so it will work with the svn_rangelist_remove API. */
+          if (is_rollback)
+            SVN_ERR(svn_rangelist_reverse(child_merge_rangelist, iterpool));
+
+            SVN_ERR(svn_rangelist_remove(&child_merge_rangelist,
+                                         merge_b->implicit_src_gap,
+                                         child_merge_rangelist, FALSE,
+                                         iterpool));
+          if (is_rollback)
+            SVN_ERR(svn_rangelist_reverse(child_merge_rangelist, iterpool));
+        }
 
       child_merges = apr_hash_make(iterpool);
       apr_hash_set(child_merges, child->path, APR_HASH_KEY_STRING,
@@ -7112,6 +7361,7 @@ do_merge(apr_array_header_t *merge_sources,
       /* Populate the portions of the merge context baton that need to
          be reset for each merge source iteration. */
       merge_cmd_baton.merge_source = *merge_source;
+      merge_cmd_baton.implicit_src_gap = NULL;
       merge_cmd_baton.added_path = NULL;
       merge_cmd_baton.add_necessitated_merge = FALSE;
       merge_cmd_baton.dry_run_deletions =
