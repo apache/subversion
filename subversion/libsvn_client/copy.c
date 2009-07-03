@@ -77,6 +77,7 @@ calculate_target_mergeinfo(svn_ra_session_t *ra_session,
                            svn_revnum_t src_revnum,
                            svn_boolean_t no_repos_access,
                            svn_client_ctx_t *ctx,
+                           svn_wc_context_t *wc_ctx,
                            apr_pool_t *pool)
 {
   const svn_wc_entry_t *entry = NULL;
@@ -130,7 +131,8 @@ calculate_target_mergeinfo(svn_ra_session_t *ra_session,
           SVN_ERR(svn_client__get_wc_mergeinfo(&src_mergeinfo, &inherited,
                                                FALSE, svn_mergeinfo_inherited,
                                                entry, src_path_or_url, NULL,
-                                               NULL, adm_access, ctx, pool));
+                                               NULL, adm_access, ctx,
+                                               wc_ctx, pool));
         }
     }
 
@@ -154,7 +156,7 @@ extend_wc_mergeinfo(const char *target_abspath,
   /* Get a fresh copy of the pre-existing state of the WC's mergeinfo
      updating it. */
   SVN_ERR(svn_client__parse_mergeinfo(&wc_mergeinfo, entry, target_abspath,
-                                      FALSE, adm_access, ctx, pool));
+                                      FALSE, adm_access, ctx, wc_ctx, pool));
 
   /* Combine the provided mergeinfo with any mergeinfo from the WC. */
   if (wc_mergeinfo && mergeinfo)
@@ -163,7 +165,7 @@ extend_wc_mergeinfo(const char *target_abspath,
     wc_mergeinfo = mergeinfo;
 
   return svn_client__record_wc_mergeinfo(target_abspath, wc_mergeinfo,
-                                         adm_access, ctx, pool);
+                                         ctx, wc_ctx, pool);
 }
 
 /* Find the longest common ancestor of paths in COPY_PAIRS.  If
@@ -649,6 +651,7 @@ repos_to_repos_copy(svn_commit_info_t **commit_info_p,
                     svn_boolean_t make_parents,
                     const apr_hash_t *revprop_table,
                     svn_client_ctx_t *ctx,
+                    svn_wc_context_t *wc_ctx,
                     svn_boolean_t is_move,
                     apr_pool_t *pool)
 {
@@ -961,7 +964,7 @@ repos_to_repos_copy(svn_commit_info_t **commit_info_p,
       apr_hash_t *mergeinfo;
       SVN_ERR(calculate_target_mergeinfo(ra_session, &mergeinfo, NULL,
                                          info->src_url, info->src_revnum,
-                                         FALSE, ctx, pool));
+                                         FALSE, ctx, wc_ctx, pool));
       if (mergeinfo)
         SVN_ERR(svn_mergeinfo_to_string(&info->mergeinfo, mergeinfo, pool));
 
@@ -1015,6 +1018,7 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
                  svn_boolean_t make_parents,
                  const apr_hash_t *revprop_table,
                  svn_client_ctx_t *ctx,
+                 svn_wc_context_t *wc_ctx,
                  apr_pool_t *pool)
 {
   const char *message;
@@ -1235,11 +1239,11 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
                                                    sizeof(svn_prop_t *));
       SVN_ERR(calculate_target_mergeinfo(ra_session, &mergeinfo, adm_access,
                                          pair->src, pair->src_revnum,
-                                         FALSE, ctx, pool));
+                                         FALSE, ctx, wc_ctx, pool));
       SVN_ERR(svn_wc_entry(&entry, pair->src, adm_access, FALSE, pool));
       SVN_ERR(svn_client__parse_mergeinfo(&wc_mergeinfo, entry,
                                           pair->src, FALSE, adm_access, ctx,
-                                          pool));
+                                          wc_ctx, pool));
       if (wc_mergeinfo && mergeinfo)
         SVN_ERR(svn_mergeinfo_merge(mergeinfo, wc_mergeinfo, pool));
       else if (! mergeinfo)
@@ -1371,7 +1375,7 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
              ### source path. */
           SVN_ERR(calculate_target_mergeinfo(ra_session, &src_mergeinfo, NULL,
                                              pair->src, src_revnum,
-                                             FALSE, ctx, pool));
+                                             FALSE, ctx, wc_ctx, pool));
           SVN_ERR(extend_wc_mergeinfo(dst_abspath, dst_entry, src_mergeinfo,
                                       dst_access, ctx, wc_ctx, pool));
         }
@@ -1431,7 +1435,7 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
       SVN_ERR(svn_wc_entry(&dst_entry, pair->dst, adm_access, FALSE, pool));
       SVN_ERR(calculate_target_mergeinfo(ra_session, &src_mergeinfo,
                                          NULL, pair->src, src_revnum,
-                                         FALSE, ctx, pool));
+                                         FALSE, ctx, wc_ctx, pool));
       SVN_ERR(extend_wc_mergeinfo(dst_abspath, dst_entry, src_mergeinfo,
                                   adm_access, ctx, wc_ctx, pool));
 
@@ -1957,7 +1961,7 @@ try_copy(svn_commit_info_t **commit_info_p,
   else if ((! srcs_are_urls) && (dst_is_url))
     {
       return wc_to_repos_copy(commit_info_p, copy_pairs, make_parents,
-                              revprop_table, ctx, pool);
+                              revprop_table, ctx, wc_ctx, pool);
     }
   else if ((srcs_are_urls) && (! dst_is_url))
     {
@@ -1968,7 +1972,7 @@ try_copy(svn_commit_info_t **commit_info_p,
   else
     {
       return repos_to_repos_copy(commit_info_p, copy_pairs, make_parents,
-                                 revprop_table, ctx, is_move, pool);
+                                 revprop_table, ctx, wc_ctx, is_move, pool);
     }
 }
 
@@ -1992,7 +1996,7 @@ svn_client_copy5(svn_commit_info_t **commit_info_p,
   svn_wc_context_t *wc_ctx;
 
   if (!ctx->wc_ctx)
-    SVN_ERR(svn_wc_context_create(&wc_ctx, NULL /* config */, subpool,
+    SVN_ERR(svn_wc_context_create(&wc_ctx, NULL /* config */, pool,
                                   subpool));
   else
     wc_ctx = ctx->wc_ctx;

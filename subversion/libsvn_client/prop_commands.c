@@ -782,6 +782,7 @@ svn_client__get_prop_from_wc(apr_hash_t *props,
                              svn_depth_t depth,
                              const apr_array_header_t *changelists,
                              svn_client_ctx_t *ctx,
+                             svn_wc_context_t *wc_ctx,
                              apr_pool_t *pool)
 {
   apr_hash_t *changelist_hash = NULL;
@@ -804,10 +805,7 @@ svn_client__get_prop_from_wc(apr_hash_t *props,
   wb.pristine = pristine;
   wb.changelist_hash = changelist_hash;
   wb.props = props;
-  if (!ctx->wc_ctx)
-    SVN_ERR(svn_wc_context_create(&wb.wc_ctx, NULL /* config */, pool, pool));
-  else
-    wb.wc_ctx = ctx->wc_ctx;
+  wb.wc_ctx = wc_ctx;
 
   /* Fetch the property, recursively or for a single resource. */
   if (depth >= svn_depth_files && entry->kind == svn_node_dir)
@@ -856,6 +854,12 @@ svn_client_propget3(apr_hash_t **props,
       const svn_wc_entry_t *node;
       svn_boolean_t pristine;
       int adm_lock_level = SVN_WC__LEVELS_TO_LOCK_FROM_DEPTH(depth);
+      svn_wc_context_t *wc_ctx;
+
+      if (!ctx->wc_ctx)
+        SVN_ERR(svn_wc_context_create(&wc_ctx, NULL /* config */, pool, pool));
+      else
+        wc_ctx = ctx->wc_ctx;
 
       SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, path_or_url,
                                      FALSE, adm_lock_level,
@@ -873,8 +877,10 @@ svn_client_propget3(apr_hash_t **props,
 
       SVN_ERR(svn_client__get_prop_from_wc(*props, propname, path_or_url,
                                            pristine, node, adm_access,
-                                           depth, changelists, ctx, pool));
+                                           depth, changelists, ctx, wc_ctx,
+                                           pool));
 
+      SVN_ERR(svn_wc_context_destroy(wc_ctx));
       SVN_ERR(svn_wc_adm_close2(adm_access, pool));
     }
   else
