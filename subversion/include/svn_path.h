@@ -49,6 +49,7 @@
 
 #include "svn_types.h"
 #include "svn_string.h"
+#include "svn_dirent_uri.h"
 
 
 #ifdef __cplusplus
