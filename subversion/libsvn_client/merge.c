@@ -1698,21 +1698,27 @@ files_same_p(svn_boolean_t *same,
              apr_hash_t *original_props,
              const char *mine,
              svn_wc_adm_access_t *adm_access,
-             apr_pool_t *pool)
+             svn_wc_context_t *wc_ctx,
+             apr_pool_t *scratch_pool)
 {
   apr_hash_t *working_props;
+  const char *mine_abspath;
 
-  SVN_ERR(svn_wc_prop_list(&working_props, mine, adm_access, pool));
+  SVN_ERR(svn_dirent_get_absolute(&mine_abspath, mine, scratch_pool));
+
+  SVN_ERR(svn_wc_prop_list2(&working_props, wc_ctx, mine_abspath,
+                            scratch_pool, scratch_pool));
 
   /* Compare the properties */
-  SVN_ERR(properties_same_p(same, original_props, working_props, pool));
+  SVN_ERR(properties_same_p(same, original_props, working_props,
+                            scratch_pool));
   if (*same)
     {
       svn_boolean_t modified;
 
       /* Compare the file content, translating 'mine' to 'normal' form. */
       SVN_ERR(svn_wc__versioned_file_modcheck(&modified, mine, adm_access,
-                                              older, TRUE, pool));
+                                              older, TRUE, scratch_pool));
       *same = !modified;
     }
 
@@ -1774,7 +1780,7 @@ merge_file_deleted(svn_wc_adm_access_t *adm_access,
 
         /* If the files are identical, attempt deletion */
         SVN_ERR(files_same_p(&same, older, original_props, mine, adm_access,
-                             subpool));
+                             merge_b->wc_ctx, subpool));
         if (same || merge_b->force || merge_b->record_only /* ### why? */)
           {
             /* Passing NULL for the notify_func and notify_baton because
@@ -4818,6 +4824,9 @@ struct get_mergeinfo_walk_baton
   svn_ra_session_t *ra_session;
   svn_client_ctx_t *ctx;
 
+  /* A working copy context */
+  svn_wc_context_t *wc_ctx;
+
   /* Pool from which to allocate new elements of CHILDREN_WITH_MERGEINFO. */
   apr_pool_t *pool;
 };
@@ -4848,6 +4857,9 @@ get_mergeinfo_walk_cb(const char *path,
   svn_boolean_t path_is_merge_target =
     !svn_path_compare_paths(path, wb->merge_target_path);
   const char *parent_path = svn_dirent_dirname(path, pool);
+  const char *local_abspath;
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
   /* TODO(#2843) How to deal with a excluded item on merge? */
 
@@ -4871,8 +4883,8 @@ get_mergeinfo_walk_cb(const char *path,
     }
   else
     {
-      SVN_ERR(svn_wc_prop_get(&propval, SVN_PROP_MERGEINFO, path,
-                              wb->base_access, pool));
+      SVN_ERR(svn_wc_prop_get2(&propval, wb->wc_ctx, local_abspath,
+                               SVN_PROP_MERGEINFO, pool, pool));
       /* We always include the merge target regardless of its mergeinfo.
          So we don't need to check that PATH's mergeinfo corresponds to
          the merge source. */
@@ -5316,6 +5328,7 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
   wb.depth = depth;
   wb.ra_session = ra_session;
   wb.ctx = merge_cmd_baton->ctx;
+  wb.wc_ctx = merge_cmd_baton->wc_ctx;
   wb.pool = pool;
 
   /* Cover cases 1), 2), and 6), 7), 8), 9), and 10) by walking the WC to get
@@ -6801,6 +6814,7 @@ record_mergeinfo_for_added_subtrees(svn_merge_range_t *merged_range,
           const void *key;
           const char *added_path;
           const char *added_abspath;
+          const char *dir_abspath;
           const svn_string_t *added_path_parent_propval;
 
           apr_hash_this(hi, &key, NULL, NULL);
@@ -6809,6 +6823,10 @@ record_mergeinfo_for_added_subtrees(svn_merge_range_t *merged_range,
           apr_pool_clear(iterpool);
           SVN_ERR(svn_dirent_get_absolute(&added_abspath, added_path,
                                           iterpool));
+          SVN_ERR(svn_dirent_get_absolute(&dir_abspath,
+                                          svn_dirent_dirname(added_path,
+                                                             iterpool),
+                                          iterpool));
 
           /* Rather than using svn_client__get_wc_mergeinfo() and
              analyzing the mergeinfo it returns to determine if
@@ -6816,10 +6834,9 @@ record_mergeinfo_for_added_subtrees(svn_merge_range_t *merged_range,
              much simpler to just get the svn_string_t representation
              of the svn:mergeinfo prop and look for the '*'
              non-inheritable marker. */
-          SVN_ERR(svn_wc_prop_get(&added_path_parent_propval,
-                                  SVN_PROP_MERGEINFO,
-                                  svn_dirent_dirname(added_path, iterpool),
-                                  adm_access, iterpool));
+          SVN_ERR(svn_wc_prop_get2(&added_path_parent_propval,
+                                   merge_b->wc_ctx, dir_abspath,
+                                   SVN_PROP_MERGEINFO, iterpool, iterpool));
           if (added_path_parent_propval
               && strstr(added_path_parent_propval->data,
                         SVN_MERGEINFO_NONINHERITABLE_STR))
@@ -8509,6 +8526,9 @@ struct get_subtree_mergeinfo_walk_baton
   /* Access for the tree being walked. */
   svn_wc_adm_access_t *base_access;
   svn_client_ctx_t *ctx;
+
+  /* A working copy context. */
+  svn_wc_context_t *wc_ctx;
 };
 
 /* svn_wc_entry_callbacks2_t found_entry() callback for get_mergeinfo_paths.
@@ -8529,6 +8549,9 @@ get_subtree_mergeinfo_walk_cb(const char *path,
 {
   struct get_subtree_mergeinfo_walk_baton *wb = walk_baton;
   const svn_string_t *propval;
+  const char *local_abspath;
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
   /* We're going to receive dirents twice;  we want to ignore the
      first one (where it's a child of a parent dir), and only use
@@ -8539,8 +8562,8 @@ get_subtree_mergeinfo_walk_cb(const char *path,
       && !entry->absent)
     return SVN_NO_ERROR;
 
-  SVN_ERR(svn_wc_prop_get(&propval, SVN_PROP_MERGEINFO, path,
-                          wb->base_access, pool));
+  SVN_ERR(svn_wc_prop_get2(&propval, wb->wc_ctx, local_abspath,
+                           SVN_PROP_MERGEINFO, pool, pool));
 
   /* We always want to include the reintegrate target even if it has
      no explicit mergeinfo.  It still has natural history we'll need
@@ -8657,6 +8680,7 @@ svn_client_merge_reintegrate(const char *source,
   wb.base_access = adm_access;
   wb.subtrees_with_mergeinfo = apr_hash_make(pool);
   wb.ctx = ctx;
+  wb.wc_ctx = wc_ctx;
   SVN_ERR(svn_wc_walk_entries3(target_wcpath, adm_access, &walk_callbacks,
                                &wb, svn_depth_infinity, TRUE,
                                ctx->cancel_func, ctx->cancel_baton, pool));
