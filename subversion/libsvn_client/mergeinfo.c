@@ -626,34 +626,40 @@ should_elide_mergeinfo(svn_boolean_t *elides,
    the child) in the working copy via ADM_ACCESS appropriately.
 
    If CHILD_MERGEINFO is NULL, do nothing.
+
+   Use SCRATCH_POOL for temporary allocations.
 */
 static svn_error_t *
 elide_mergeinfo(svn_mergeinfo_t parent_mergeinfo,
                 svn_mergeinfo_t child_mergeinfo,
-                const char *path,
+                const char *local_abspath,
                 const char *path_suffix,
-                svn_wc_adm_access_t *adm_access,
                 svn_client_ctx_t *ctx,
-                apr_pool_t *pool)
+                svn_wc_context_t *wc_ctx,
+                apr_pool_t *scratch_pool)
 {
   svn_boolean_t elides;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
   SVN_ERR(should_elide_mergeinfo(&elides,
                                  parent_mergeinfo, child_mergeinfo,
-                                 path_suffix, pool));
+                                 path_suffix, scratch_pool));
 
   if (elides)
     {
-      SVN_ERR(svn_wc_prop_set3(SVN_PROP_MERGEINFO, NULL, path, adm_access,
-                               TRUE, NULL, NULL, pool));
+      SVN_ERR(svn_wc_prop_set4(wc_ctx, local_abspath, SVN_PROP_MERGEINFO,
+                               NULL, TRUE, NULL, NULL, scratch_pool));
 
       if (ctx->notify_func2)
         {
           svn_wc_notify_t *notify =
                 svn_wc_create_notify(
-                              svn_dirent_join_many(pool, path, path_suffix),
-                              svn_wc_notify_merge_record_info, pool);
+                              svn_dirent_join_many(scratch_pool, local_abspath,
+                                                   path_suffix),
+                              svn_wc_notify_merge_record_info, scratch_pool);
 
-          ctx->notify_func2(ctx->notify_baton2, notify, pool);
+          ctx->notify_func2(ctx->notify_baton2, notify, scratch_pool);
         }
     }
 
@@ -690,6 +696,7 @@ svn_client__elide_children(apr_array_header_t *children_with_mergeinfo,
           svn_mergeinfo_t child_mergeinfo;
           svn_boolean_t switched;
           const svn_wc_entry_t *child_entry;
+          const char *child_abspath;
           svn_client__merge_path_t *child =
             APR_ARRAY_IDX(children_with_mergeinfo, i,
                           svn_client__merge_path_t *);
@@ -727,6 +734,9 @@ svn_client__elide_children(apr_array_header_t *children_with_mergeinfo,
               last_immediate_child = child->path;
             }
 
+          SVN_ERR(svn_dirent_get_absolute(&child_abspath, child->path,
+                                          iterpool));
+
           /* Don't try to elide switched children. */
           SVN_ERR(svn_wc__entry_versioned(&child_entry, child->path,
                                           adm_access, FALSE, iterpool));
@@ -753,8 +763,8 @@ svn_client__elide_children(apr_array_header_t *children_with_mergeinfo,
                 }
 
               SVN_ERR(elide_mergeinfo(target_mergeinfo, child_mergeinfo,
-                                      child->path, path_suffix, adm_access,
-                                      ctx, iterpool));
+                                      child_abspath, path_suffix, ctx,
+                                      wc_ctx, iterpool));
             }
         }
     svn_pool_destroy(iterpool);
@@ -773,6 +783,10 @@ svn_client__elide_mergeinfo(const char *target_wcpath,
                             svn_wc_context_t *wc_ctx,
                             apr_pool_t *pool)
 {
+  const char *target_abspath;
+
+  SVN_ERR(svn_dirent_get_absolute(&target_abspath, target_wcpath, pool));
+
   /* Check for first easy out: We are already at the limit path. */
   if (!wc_elision_limit_path
       || strcmp(target_wcpath, wc_elision_limit_path) != 0)
@@ -823,8 +837,8 @@ svn_client__elide_mergeinfo(const char *target_wcpath,
       if (!mergeinfo && wc_elision_limit_path)
         return SVN_NO_ERROR;
 
-      SVN_ERR(elide_mergeinfo(mergeinfo, target_mergeinfo, target_wcpath,
-                              NULL, adm_access, ctx, pool));
+      SVN_ERR(elide_mergeinfo(mergeinfo, target_mergeinfo, target_abspath,
+                              NULL, ctx, wc_ctx, pool));
     }
   return SVN_NO_ERROR;
 }
