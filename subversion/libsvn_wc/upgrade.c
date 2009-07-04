@@ -182,7 +182,7 @@ read_wcprops(apr_hash_t **all_wcprops,
             return svn_error_createf
               (SVN_ERR_WC_CORRUPT, NULL,
                _("Missing end of line in wcprops file for '%s'"),
-               svn_path_local_style(dir_abspath, scratch_pool));
+               svn_dirent_local_style(dir_abspath, scratch_pool));
           break;
         }
       SVN_ERR(read_one_proplist(*all_wcprops, line->data, stream,
@@ -314,8 +314,8 @@ upgrade_format(svn_wc_adm_access_t *adm_access,
            "http://subversion.tigris.org/faq.html#working-copy-format-change\n"
            "for details."
            ),
-         svn_path_local_style(svn_wc_adm_access_path(adm_access),
-                              scratch_pool));
+         svn_dirent_local_style(svn_wc_adm_access_path(adm_access),
+                                scratch_pool));
     }
 
   /* Early out of the format is already what we expect it to be.  */

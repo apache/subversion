@@ -447,9 +447,9 @@ pick_error_code(struct log_runner *loggy)
   svn_xml_signal_bailout                                           \
     (svn_error_createf(pick_error_code(loggy), err,                \
                        _("In directory '%s'"),                     \
-                       svn_path_local_style(svn_wc_adm_access_path \
-                                            (loggy->adm_access),   \
-                                            loggy->pool)),         \
+                       svn_dirent_local_style(svn_wc_adm_access_path \
+                                              (loggy->adm_access),   \
+                                              loggy->pool)),         \
      loggy->parser)
 
 
@@ -473,7 +473,7 @@ log_do_file_xfer(struct log_runner *loggy,
   if (! dest)
     return svn_error_createf(pick_error_code(loggy), NULL,
                              _("Missing 'dest' attribute in '%s'"),
-                             svn_path_local_style
+                             svn_dirent_local_style
                              (svn_wc_adm_access_path(loggy->adm_access),
                               loggy->pool));
 
@@ -556,7 +556,7 @@ log_do_file_timestamp(struct log_runner *loggy,
   if (! timestamp_string)
     return svn_error_createf(pick_error_code(loggy), NULL,
                              _("Missing 'timestamp' attribute in '%s'"),
-                             svn_path_local_style
+                             svn_dirent_local_style
                              (svn_wc_adm_access_path(loggy->adm_access),
                               loggy->pool));
 
@@ -638,7 +638,7 @@ log_do_modify_entry(struct log_runner *loggy,
         return svn_error_createf
           (pick_error_code(loggy), err,
            _("Error getting 'affected time' on '%s'"),
-           svn_path_local_style(tfile, loggy->pool));
+           svn_dirent_local_style(tfile, loggy->pool));
 
       entry->text_time = text_time;
     }
@@ -671,7 +671,7 @@ log_do_modify_entry(struct log_runner *loggy,
         return svn_error_createf
           (pick_error_code(loggy), NULL,
             _("Error getting file size on '%s'"),
-            svn_path_local_style(tfile, loggy->pool));
+            svn_dirent_local_style(tfile, loggy->pool));
 
       entry->working_size = finfo.size;
     }
@@ -1111,7 +1111,7 @@ log_do_committed(struct log_runner *loggy,
         }
 
       SVN_ERR(svn_wc__working_props_committed(full_path, loggy->adm_access,
-                                              FALSE, pool));
+                                              pool));
   }
 
   if (entry->kind == svn_node_file)
@@ -1140,7 +1140,7 @@ log_do_committed(struct log_runner *loggy,
                              APR_FINFO_MIN | APR_FINFO_LINK, pool)))
         return svn_error_createf(pick_error_code(loggy), err,
                                  _("Error getting 'affected time' of '%s'"),
-                                 svn_path_local_style(full_path, pool));
+                                 svn_dirent_local_style(full_path, pool));
 
       /* We will compute and modify the size and timestamp */
       modify_flags |= SVN_WC__ENTRY_MODIFY_WORKING_SIZE
@@ -1168,7 +1168,7 @@ log_do_committed(struct log_runner *loggy,
             return svn_error_createf
               (pick_error_code(loggy), err,
                _("Error getting 'affected time' for '%s'"),
-               svn_path_local_style(basef, pool));
+               svn_dirent_local_style(basef, pool));
           else
             {
               svn_boolean_t modified;
@@ -1190,8 +1190,8 @@ log_do_committed(struct log_runner *loggy,
                     return svn_error_createf
                       (pick_error_code(loggy), err,
                        _("Error comparing '%s' and '%s'"),
-                       svn_path_local_style(full_path, pool),
-                       svn_path_local_style(basef, pool));
+                       svn_dirent_local_style(full_path, pool),
+                       svn_dirent_local_style(basef, pool));
                 }
               /* If they are the same, use the working file's timestamp,
                  else use the base file's timestamp. */
@@ -1302,6 +1302,7 @@ log_do_modify_wcprop(struct log_runner *loggy,
 {
   svn_string_t value;
   const char *propname, *propval, *path;
+  const char *local_abspath;
 
   if (strcmp(name, SVN_WC_ENTRY_THIS_DIR) == 0)
     path = svn_wc_adm_access_path(loggy->adm_access);
@@ -1318,8 +1319,9 @@ log_do_modify_wcprop(struct log_runner *loggy,
       value.len = strlen(propval);
     }
 
-  SVN_ERR(svn_wc__wcprop_set(propname, propval ? &value : NULL,
-                             path, loggy->adm_access, loggy->pool));
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, loggy->pool));
+  SVN_ERR(svn_wc__wcprop_set(loggy->db, local_abspath,
+                             propname, propval ? &value : NULL, loggy->pool));
 
   return SVN_NO_ERROR;
 }
@@ -1381,8 +1383,8 @@ start_handler(void *userData, const char *eltname, const char **atts)
           _("Log entry missing 'name' attribute (entry '%s' "
             "for directory '%s')"),
           eltname,
-          svn_path_local_style(svn_wc_adm_access_path(loggy->adm_access),
-                               loggy->pool)));
+          svn_dirent_local_style(svn_wc_adm_access_path(loggy->adm_access),
+                                 loggy->pool)));
       return;
     }
 
@@ -1442,8 +1444,8 @@ start_handler(void *userData, const char *eltname, const char **atts)
          (pick_error_code(loggy), NULL,
           _("Unrecognized logfile element '%s' in '%s'"),
           eltname,
-          svn_path_local_style(svn_wc_adm_access_path(loggy->adm_access),
-                               loggy->pool)));
+          svn_dirent_local_style(svn_wc_adm_access_path(loggy->adm_access),
+                                 loggy->pool)));
       return;
     }
 
@@ -1453,8 +1455,8 @@ start_handler(void *userData, const char *eltname, const char **atts)
        (pick_error_code(loggy), err,
         _("Error processing command '%s' in '%s'"),
         eltname,
-        svn_path_local_style(svn_wc_adm_access_path(loggy->adm_access),
-                             loggy->pool)));
+        svn_dirent_local_style(svn_wc_adm_access_path(loggy->adm_access),
+                               loggy->pool)));
 
   return;
 }
@@ -2190,7 +2192,7 @@ svn_wc__write_log(svn_wc_adm_access_t *adm_access,
 
   SVN_ERR_W(svn_stream_write(stream, log_content->data, &len),
             apr_psprintf(pool, _("Error writing log for '%s'"),
-                         svn_path_local_style(logfile_name, pool)));
+                         svn_dirent_local_style(logfile_name, pool)));
 
   return svn_wc__close_adm_stream(stream, temp_file_path, adm_path,
                                   logfile_name, pool);
@@ -2339,7 +2341,7 @@ svn_wc_cleanup2(const char *path,
   if (wc_format_version == 0)
     return svn_error_createf(SVN_ERR_WC_NOT_DIRECTORY, NULL,
                              _("'%s' is not a working copy directory"),
-                             svn_path_local_style(path, scratch_pool));
+                             svn_dirent_local_style(path, scratch_pool));
 
   if (wc_format_version < SVN_WC__VERSION)
     return svn_error_create(SVN_ERR_WC_UNSUPPORTED_FORMAT, NULL,

@@ -68,6 +68,16 @@ Main;
 # DOES       This is the program's main function
 sub Main
 {
+	#provided translations
+#	&mkLang('de');
+	&mkLang('en');
+#	&mkLang('es');
+#	&mkLang('it');
+#	&mkLang('ru');
+}
+
+sub mkLang
+{
     my $CntMkHtmBat='';
     my %Values;
     my $RootSvnBook=&cmn_ValuePathfile('svn_dynamics.ini', 'path_svnbook');
@@ -117,7 +127,7 @@ sub Main
 
     #Copy style sheet and background image to $RootSvnBook\src\out
     system ("copy /Y .\\templates\\svn-doc.css $RootSvnBook\\src\\out");
-    system ("copy /Y .\\images\\svn_bck.png $RootSvnBook\\src\\out");
+    system ("copy /Y ..\\BuildSubversion\\Bitmaps\\svn_bck.png $RootSvnBook\\src\\out");
 
     # Set the revision number in $RootSvnBook\src\en\book\version.xml
     chdir "$RootSvnBook\\src\\en";

@@ -407,8 +407,9 @@ typedef struct svn_client_commit_info_t
 #define SVN_CLIENT_COMMIT_ITEM_LOCK_TOKEN  0x20
 /** @} */
 
-/** The commit candidate structure.  In order to avoid backwards
- * compatibility problems clients should use
+/** The commit candidate structure.
+ *
+ * In order to avoid backwards compatibility problems clients should use
  * svn_client_commit_item3_create() to allocate and initialize this
  * structure instead of doing so themselves.
  *
@@ -416,6 +417,8 @@ typedef struct svn_client_commit_info_t
  */
 typedef struct svn_client_commit_item3_t
 {
+  /* IMPORTANT: If you extend this structure, add new fields to the end. */
+
   /** absolute working-copy path of item */
   const char *path;
 
@@ -462,6 +465,12 @@ typedef struct svn_client_commit_item3_t
    * same lifetime as this data structure.
    */
   apr_array_header_t *outgoing_prop_changes;
+
+  /** adm_access of this item
+   *
+   * @since New in 1.7.
+   * ### This will be obsoleted by WC-NG. */
+  svn_wc_adm_access_t *adm_access;
 } svn_client_commit_item3_t;
 
 /** The commit candidate structure.
@@ -551,8 +560,9 @@ svn_client_commit_item_create(const svn_client_commit_item3_t **item,
                               apr_pool_t *pool);
 
 /**
- * Return a duplicate of @a item, allocated in @a pool. No part of the new
- * structure will be shared with @a item.
+ * Return a duplicate of @a item, allocated in @a pool. No part of the
+ * new structure will be shared with @a item, except for the adm_access
+ * member.
  *
  * @since New in 1.5.
  */
@@ -923,6 +933,13 @@ typedef struct svn_client_ctx_t
   /** Custom client name string, or @c null.
    * @since New in 1.5. */
   const char *client_name;
+
+  /** An optional working copy context for the client operation to use.
+   * If not @c NULL, the client operation will use this context instead of
+   * creating a new one, and leave it intact when done.
+   *
+   * @since New in 1.7.  */
+  svn_wc_context_t *wc_ctx;
 
 } svn_client_ctx_t;
 

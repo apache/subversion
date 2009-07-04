@@ -59,7 +59,10 @@ if test "$INSTALL" = "build/install-sh -c"; then
   INSTALL="$abs_srcdir/$INSTALL"
 fi
 
-AC_SUBST([MKDIR], ["$INSTALL -d"])
+if test -z "$MKDIR"; then
+  MKDIR="$INSTALL -d"
+fi
+AC_SUBST([MKDIR])
 
 # ==== Libraries, for which we may have source to build ======================
 
@@ -228,7 +231,7 @@ elif test "$svn_enable_shared" = "yes" ; then
   fi
   LT_LDFLAGS="-shared $LT_LDFLAGS"
 else
-  AC_MSG_ERROR([can not disable both shared and static libraries])
+  AC_MSG_ERROR([cannot disable both shared and static libraries])
 fi
 
 dnl Check for --enable-all-static option
@@ -238,6 +241,8 @@ AC_ARG_ENABLE(all-static,
   [
     if test "$enableval" = "yes" ; then
       LT_LDFLAGS="-all-static $LT_LDFLAGS"
+    elif test "$enableval" != "no" ; then
+      AC_MSG_ERROR([--enable-all-static doesn't accept argument])
     fi
 ])
 
@@ -342,15 +347,16 @@ if test -n "`echo "$svn_lib_expat" | $EGREP ":.*:"`"; then
 #include <expat.h>
 int main()
 {XML_ParserCreate(NULL);}], svn_lib_expat="yes", svn_lib_expat="no")
+  LIBS="$old_LIBS"
   if test "$svn_lib_expat" = "yes"; then
     AC_MSG_RESULT([yes])
-    CPPFLAGS="$old_CPPFLAGS"
-    LIBS="$old_LIBS"
   else
     SVN_XML_INCLUDES=""
     SVN_XML_LIBS=""
     CPPFLAGS="$CPPFLAGS $SVN_APRUTIL_INCLUDES"
-    SVN_APRUTIL_LIBS="$SVN_APRUTIL_LIBS `$apu_config --libs`"
+    if test "$enable_all_static" != "yes"; then
+      SVN_APRUTIL_LIBS="$SVN_APRUTIL_LIBS `$apu_config --libs`"
+    fi
     AC_COMPILE_IFELSE([
 #include <expat.h>
 int main()
@@ -358,12 +364,12 @@ int main()
     if test "$svn_lib_expat" = "yes"; then
       AC_MSG_RESULT([yes])
       AC_MSG_WARN([Expat found amongst libraries used by APR-Util, but Subversion libraries might be needlessly linked against additional unused libraries. It can be avoided by specifying exact location of Expat in argument of --with-expat option.])
-      CPPFLAGS="$old_CPPFLAGS"
     else
       AC_MSG_RESULT([no])
       AC_MSG_ERROR([Expat not found])
     fi
   fi
+  CPPFLAGS="$old_CPPFLAGS"
 else
   AC_MSG_RESULT([no])
   if test "$svn_lib_expat" = "yes"; then
@@ -779,7 +785,7 @@ AS_HELP_STRING([--enable-maintainer-mode],
 [
     if test "$enableval" = "yes" ; then
       if test "$enable_debugging" = "no" ; then
-        AC_MSG_ERROR(Can't have --disable-debug and --enable-maintainer-mode)
+        AC_MSG_ERROR([Can't have --disable-debug and --enable-maintainer-mode])
       fi
       enable_debugging=yes
       if test "$GCC" = "yes"; then
@@ -881,8 +887,8 @@ AS_HELP_STRING([--enable-gprof],
       dnl feel free to extend this to include them.
       if test "$GCC" = "yes"; then
         if test "$svn_enable_shared" = "yes" ; then
-          AC_MSG_ERROR(Can't have --enable-gprof without --disable-shared (we
-                  recommend also using --enable-all-static).)
+          AC_MSG_ERROR([Can't have --enable-gprof without --disable-shared (we
+                        recommend also using --enable-all-static).])
         fi
         if test ! "$enable_all_static" = "yes" ; then
           AC_MSG_WARN(We recommend --enable-all-static with --enable-gprof.)
@@ -892,7 +898,7 @@ AS_HELP_STRING([--enable-gprof],
         CXXFLAGS="$CXXFLAGS -pg"
         LT_LDFLAGS="$LT_LDFLAGS -pg"
       else
-        AC_MSG_ERROR(We only support --enable-gprof with GCC right now.)
+        AC_MSG_ERROR([We only support --enable-gprof with GCC right now.])
       fi
     fi
 ])

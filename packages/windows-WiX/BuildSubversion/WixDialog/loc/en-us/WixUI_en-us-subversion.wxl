@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+# Copyright (c) 2000-2009 CollabNet.  All rights reserved.
+#
+# This software is licensed as described in the file COPYING, which
+# you should have received as part of this distribution.  The terms
+# are also available at http://subversion.tigris.org/license-1.html.
+# If newer versions of this license are posted there, you may use a
+# newer version instead, at your option.
+#
+# This software consists of voluntary contributions made by many
+# individuals.  For exact contribution history, see the revision
+# history and logs, available at http://subversion.tigris.org/.
+-->
+<WixLocalization Culture="en-us" xmlns="http://schemas.microsoft.com/wix/2006/localization">
+    <String Id="ProductName" Overridable="no">Subversion</String>
+    <String Id="PackageDescription" Overridable="no">Subversion win32 Installer</String>
+    <String Id="Keywords" Overridable="no">subversion</String>
+    <String Id="NoDowngrade" Overridable="no">A newer version of Subversion is already installed.  Please remove the newer version first before downgrading.</String>
+
+    <String Id="InfoDlg_Title" Overridable="no">[ProductName] Setup</String>
+    <String Id="InfoDlgBannerBitmap" Overridable="no">WixUI_Bmp_Banner</String>
+    <String Id="InfoDlgInstruction" Overridable="no">When you are ready to continue with Setup, click Next.</String>
+    <String Id="InfoDlgDescription" Overridable="no">Please read the following important information before continuing.</String>
+    <String Id="InfoDlgTitle" Overridable="no">{\WixUI_Font_Bold}Information</String>
+
+    <String Id="ReadyDlg_Title" Overridable="no">[ProductName] Setup</String>
+    <String Id="ReadyDlgBannerBitmap" Overridable="no">WixUI_Bmp_Banner</String>
+    <String Id="ReadyDlgDetail" Overridable="no">Destination location:&#xa;[INSTALLDIR]&#xa;&#xa;Start Menu folder:&#xa;[SubversionMenuFolder]</String>
+    <String Id="ReadyDlgInstruction" Overridable="no">Click Next to continue with the installation, or click Back if you want to review or change any settings.</String>
+    <String Id="ReadyDlgDescription" Overridable="no">Setup is now ready to begin installing [ProductName] on your computer.</String>
+    <String Id="ReadyDlgTitle" Overridable="no">{\WixUI_Font_Bold}Ready to Install</String>
+
+    <String Id="ApacheSelectDlg_Title" Overridable="no">[ProductName] Setup</String>
+    <String Id="ApacheSelectDlgBannerBitmap" Overridable="no">WixUI_Bmp_Banner</String>
+    <String Id="ApacheSelectDlgInstruction" Overridable="no">When you have made your selection, click Next.</String>
+    <String Id="ApacheSelectDlgDescription" Overridable="no">If you do not use Apache the following selection will have no effect.</String>
+    <String Id="ApacheSelectDlgTitle" Overridable="no">{\WixUI_Font_Bold}Select Apache Binding</String>
+    <String Id="ApacheSelectDlgRadio1" Overridable="no">Binding for Apache 2.0.x</String>
+    <String Id="ApacheSelectDlgRadio2" Overridable="no">Binding for Apache 2.2.x</String>
+
+    <String Id="PostDlg_Title" Overridable="no">[ProductName] Setup</String>
+    <String Id="PostDlgBannerBitmap" Overridable="no">WixUI_Bmp_Banner</String>
+    <String Id="PostDlgDescription" Overridable="no">Click the Finish button to exit the Setup Wizard.</String>
+    <String Id="PostDlgUninstDescription" Overridable="no">[ProductName] has been uninstalled from your computer.</String>
+    <String Id="PostDlgRepairDescription" Overridable="no">The [ProductName] installation has been repaired.</String>
+    <String Id="PostDlgTitle" Overridable="no">{\WixUI_Font_Bigger}Completed the [ProductName] Setup Wizard</String>
+
+	<String Id="PreText" Overridable="no">.\loc\en-us\pre.rtf</String>
+	<String Id="PostText" Overridable="no">.\loc\en-us\post.rtf</String>
+	
+    <!-- overrides -->
+    <String Id="WelcomeDlgDescription" Overridable="no">This will install [ProductName] [ProductVersion]-[ProductRevision] on your computer.&#xa;&#xa;It is recommended that you close all other applications before continuing.&#xa;&#xa;Click Next to continue or Cancel to exit Setup.</String>
+</WixLocalization>

@@ -20,7 +20,6 @@
  */
 
 #include "StringArray.h"
-#include "Pool.h"
 #include "JNIUtil.h"
 #include "JNIStringHolder.h"
 #include <apr_tables.h>
@@ -34,7 +33,7 @@ StringArray::~StringArray()
     JNIUtil::getEnv()->DeleteLocalRef(m_stringArray);
 }
 
-const apr_array_header_t *StringArray::array(const Pool &pool)
+const apr_array_header_t *StringArray::array(const SVN::Pool &pool)
 {
   apr_array_header_t *strings
     = apr_array_make(pool.pool(), m_strings.size(), sizeof(char *));

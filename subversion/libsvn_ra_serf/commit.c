@@ -263,8 +263,15 @@ handle_checkout(serf_request_t *request,
 {
   checkout_context_t *ctx = handler_baton;
 
-  SVN_ERR(svn_ra_serf__handle_status_only(request, response,
-                                          &ctx->progress, pool));
+  svn_error_t *err = svn_ra_serf__handle_status_only(request, response,
+                                                     &ctx->progress, pool);
+
+  /* These handler functions are supposed to return an APR_EOF status 
+     wrapped in a svn_error_t to indicate to serf that the response was 
+     completely read. While we have to return this status code to our
+     caller, we should treat it as the normal case for now. */
+  if (err && ! APR_STATUS_IS_EOF(err->apr_err))
+    return err;
 
   /* Get the resulting location. */
   if (ctx->progress.done && ctx->progress.status == 201)
@@ -284,7 +291,7 @@ handle_checkout(serf_request_t *request,
       ctx->resource_url = svn_uri_canonicalize(uri.path, ctx->pool);
     }
 
-  return SVN_NO_ERROR;
+  return err;
 }
 
 /* Return the relative path from DIR's topmost parent to DIR, in
@@ -406,8 +413,8 @@ checkout_dir(dir_context_t *dir)
       if (err->apr_err == SVN_ERR_FS_CONFLICT)
         SVN_ERR_W(err, apr_psprintf(dir->pool,
                   _("Directory '%s' is out of date; try updating"),
-                  svn_path_local_style(relative_dir_path(dir, dir->pool),
-                                       dir->pool)));
+                  svn_dirent_local_style(relative_dir_path(dir, dir->pool),
+                                         dir->pool)));
       return err;
     }
 
@@ -577,8 +584,8 @@ checkout_file(file_context_t *file)
       if (err->apr_err == SVN_ERR_FS_CONFLICT)
         SVN_ERR_W(err, apr_psprintf(file->pool,
                   _("File '%s' is out of date; try updating"),
-                  svn_path_local_style(relative_file_path(file, file->pool),
-                                       file->pool)));
+                  svn_dirent_local_style(relative_file_path(file, file->pool),
+                                         file->pool)));
       return err;
     }
 
@@ -1118,9 +1125,10 @@ open_root(void *edit_baton,
       const char *activity_str;
       const char *vcc_url;
 
-      svn_ra_serf__create_options_req(&opt_ctx, ctx->session,
-                                      ctx->session->conns[0],
-                                      ctx->session->repos_url.path, ctx->pool);
+      SVN_ERR(svn_ra_serf__create_options_req(&opt_ctx, ctx->session,
+                                              ctx->session->conns[0],
+                                              ctx->session->repos_url.path,
+                                              ctx->pool));
 
       SVN_ERR(svn_ra_serf__context_run_wait(
         svn_ra_serf__get_options_done_ptr(opt_ctx),
@@ -1170,9 +1178,11 @@ open_root(void *edit_baton,
 
       props = apr_hash_make(ctx->pool);
       propfind_ctx = NULL;
-      svn_ra_serf__deliver_props(&propfind_ctx, props, ctx->session,
-                                 ctx->conn, vcc_url, SVN_INVALID_REVNUM, "0",
-                                 checked_in_props, FALSE, NULL, ctx->pool);
+      SVN_ERR(svn_ra_serf__deliver_props(&propfind_ctx, props, ctx->session,
+                                         ctx->conn, vcc_url,
+                                         SVN_INVALID_REVNUM, "0",
+                                         checked_in_props, FALSE,
+                                         NULL, ctx->pool));
 
       SVN_ERR(svn_ra_serf__wait_for_props(propfind_ctx, ctx->session,
                                           ctx->pool));

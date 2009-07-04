@@ -181,6 +181,34 @@ $ saslpasswd2 -c -u svntest jconstant
 
 As usual, both users should use the password 'rayjandom'.
 
+
+Running tests in a RAM disk
+--------------------------
+
+Test execution can be dramatically sped up by keeping Subversion test
+data on a RAM disk. On a Linux system, you can mount a RAM disk on the
+fly with the command:
+
+ mount -t tmpfs tmpfs /path/to/src/subversion/tests/cmdline/svn-test-work \
+  -o uid=$USER,mode=770,size=32m
+
+Or, for a more permanent solution, add lines like the following in your
+/etc/fstab file:
+
+ tmpfs /path/to/src/svn/subversion/tests/cmdline/svn-test-work tmpfs defaults,user,noauto,exec,size=32m
+
+The minimum required size for testing ramdisk is approximately 700MB.
+However, flagging your test targets for cleanup dramatically reduces
+the space requirements (as shown in the example configuration above),
+and thus your memory usage. Cleanup means more I/O, but since test
+data is in-memory, there will be no performance degradation. Example:
+
+  make check CLEANUP=true 
+
+See http://svn.haxx.se/dev/archive-2003-02/0068.shtml for the original
+authoritative discussion on use of RAM disks.
+
+
 Directory Contents
 ==================
 

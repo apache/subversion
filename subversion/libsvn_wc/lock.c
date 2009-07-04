@@ -112,7 +112,7 @@ check_format(int wc_format, const char *path, apr_pool_t *pool)
         (SVN_ERR_WC_UNSUPPORTED_FORMAT, NULL,
          _("Working copy format of '%s' is too old (%d); "
            "please check out your working copy again"),
-         svn_path_local_style(path, pool), wc_format);
+         svn_dirent_local_style(path, pool), wc_format);
     }
   else if (wc_format > SVN_WC__VERSION)
     {
@@ -128,7 +128,7 @@ check_format(int wc_format, const char *path, apr_pool_t *pool)
            "http://subversion.tigris.org/faq.html#working-copy-format-change\n"
            "for details."
            ),
-         svn_path_local_style(path, pool));
+         svn_dirent_local_style(path, pool));
     }
 
   return SVN_NO_ERROR;
@@ -168,8 +168,8 @@ svn_wc__internal_check_wc(int *wc_format,
       if (kind == svn_node_none)
         {
           return svn_error_createf(APR_ENOENT, NULL, _("'%s' does not exist"),
-                                   svn_path_local_style(local_abspath,
-                                                        scratch_pool));
+                                   svn_dirent_local_style(local_abspath,
+                                                          scratch_pool));
         }
 
       return SVN_NO_ERROR;
@@ -197,7 +197,7 @@ svn_wc_check_wc(const char *path,
   SVN_ERR(svn_wc__db_open(&db, svn_wc__db_openmode_readonly,
                           NULL /* ### config */, pool, pool));
   err = svn_wc__internal_check_wc(wc_format, db, local_abspath, pool);
-  svn_error_clear(svn_wc__db_close(db, pool));
+  svn_error_clear(svn_wc__db_close(db));
 
   return svn_error_return(err);
 }
@@ -229,7 +229,7 @@ create_lock(const char *path, apr_pool_t *scratch_pool)
       svn_error_clear(err);
       return svn_error_createf(SVN_ERR_WC_LOCKED, NULL,
                                _("Working copy '%s' locked"),
-                               svn_path_local_style(path, scratch_pool));
+                               svn_dirent_local_style(path, scratch_pool));
     }
 
   return err;
@@ -398,7 +398,7 @@ probe(svn_wc__db_t *db,
             (SVN_ERR_WC_BAD_PATH, NULL,
              _("Path '%s' ends in '%s', "
                "which is unsupported for this operation"),
-             svn_path_local_style(path, pool), base_name);
+             svn_dirent_local_style(path, pool), base_name);
         }
 
       *dir = svn_dirent_dirname(path, pool);
@@ -421,9 +421,12 @@ check_format_upgrade(const svn_wc_adm_access_t *adm_access,
 
   if (wc_format != SVN_WC__VERSION)
     {
-      return svn_error_create(SVN_ERR_WC_UPGRADE_REQUIRED, NULL,
-                              _("Working copy format is too old; please run "
-                                "'svn upgrade'"));
+      return svn_error_createf(SVN_ERR_WC_UPGRADE_REQUIRED, NULL,
+                               _("Working copy format of '%s' is too old (%d); "
+                                 "please run 'svn upgrade'"),
+                               svn_dirent_local_style(adm_access->path,
+                                                      scratch_pool),
+                               wc_format);
     }
 
   return SVN_NO_ERROR;
@@ -483,7 +486,7 @@ open_single(svn_wc_adm_access_t **adm_access,
     {
       return svn_error_createf(SVN_ERR_WC_NOT_DIRECTORY, err,
                                _("'%s' is not a working copy"),
-                               svn_path_local_style(path, scratch_pool));
+                               svn_dirent_local_style(path, scratch_pool));
     }
   SVN_ERR(err);
 
@@ -559,7 +562,7 @@ close_single(svn_wc_adm_access_t *adm_access,
                                                           scratch_pool);
       if (apr_hash_count(opened) == 0)
         {
-          SVN_ERR(svn_wc__db_close(adm_access->db, scratch_pool));
+          SVN_ERR(svn_wc__db_close(adm_access->db));
           adm_access->db = NULL;
         }
     }
@@ -743,7 +746,7 @@ svn_wc_adm_open3(svn_wc_adm_access_t **adm_access,
            call svn_wc_adm_retrieve.  */
         return svn_error_createf(SVN_ERR_WC_LOCKED, NULL,
                                  _("Working copy '%s' locked"),
-                                 svn_path_local_style(path, pool));
+                                 svn_dirent_local_style(path, pool));
       db = associated->db;
       db_provided = associated->db_provided;
     }
@@ -802,7 +805,7 @@ svn_wc_adm_probe_open3(svn_wc_adm_access_t **adm_access,
       SVN_ERR(svn_wc__db_open(&db, svn_wc__db_openmode_readonly,
                               NULL /* ### config */, pool, pool));
       err = probe(db, &dir, path, pool);
-      svn_error_clear(svn_wc__db_close(db, pool));
+      svn_error_clear(svn_wc__db_close(db));
       SVN_ERR(err);
     }
   else
@@ -842,7 +845,7 @@ svn_wc_adm_probe_open3(svn_wc_adm_access_t **adm_access,
           svn_error_clear(err);
           return svn_error_createf(SVN_ERR_WC_NOT_DIRECTORY, NULL,
                                    _("'%s' is not a working copy"),
-                                   svn_path_local_style(path, pool));
+                                   svn_dirent_local_style(path, pool));
         }
 
       return err;
@@ -942,7 +945,7 @@ svn_wc_adm_retrieve(svn_wc_adm_access_t **adm_access,
         {
           return svn_error_createf(SVN_ERR_WC_NOT_LOCKED, err,
                                    _("Unable to check path existence for '%s'"),
-                                   svn_path_local_style(path, pool));
+                                   svn_dirent_local_style(path, pool));
         }
 
       if (subdir_entry)
@@ -952,7 +955,7 @@ svn_wc_adm_retrieve(svn_wc_adm_access_t **adm_access,
             {
               const char *err_msg = apr_psprintf
                 (pool, _("Expected '%s' to be a directory but found a file"),
-                 svn_path_local_style(path, pool));
+                 svn_dirent_local_style(path, pool));
               return svn_error_create(SVN_ERR_WC_NOT_LOCKED,
                                       svn_error_create
                                         (SVN_ERR_WC_NOT_DIRECTORY, NULL,
@@ -964,7 +967,7 @@ svn_wc_adm_retrieve(svn_wc_adm_access_t **adm_access,
             {
               const char *err_msg = apr_psprintf
                 (pool, _("Expected '%s' to be a file but found a directory"),
-                 svn_path_local_style(path, pool));
+                 svn_dirent_local_style(path, pool));
               return svn_error_create(SVN_ERR_WC_NOT_LOCKED,
                                       svn_error_create(SVN_ERR_WC_NOT_FILE,
                                                        NULL, err_msg),
@@ -981,14 +984,14 @@ svn_wc_adm_retrieve(svn_wc_adm_access_t **adm_access,
         {
           return svn_error_createf(SVN_ERR_WC_NOT_LOCKED, err,
                                    _("Unable to check path existence for '%s'"),
-                                   svn_path_local_style(wcpath, pool));
+                                   svn_dirent_local_style(wcpath, pool));
         }
 
       if (kind == svn_node_none)
         {
           const char *err_msg = apr_psprintf(pool,
                                              _("Directory '%s' is missing"),
-                                             svn_path_local_style(path, pool));
+                                             svn_dirent_local_style(path, pool));
           return svn_error_create(SVN_ERR_WC_NOT_LOCKED,
                                   svn_error_create(SVN_ERR_WC_PATH_NOT_FOUND,
                                                    NULL, err_msg),
@@ -998,17 +1001,17 @@ svn_wc_adm_retrieve(svn_wc_adm_access_t **adm_access,
       else if (kind == svn_node_dir && wckind == svn_node_none)
         return svn_error_createf(SVN_ERR_WC_NOT_LOCKED, NULL,
                                  _("Directory '%s' containing working copy admin area is missing"),
-                                 svn_path_local_style(wcpath, pool));
+                                 svn_dirent_local_style(wcpath, pool));
 
       else if (kind == svn_node_dir && wckind == svn_node_dir)
         return svn_error_createf(SVN_ERR_WC_NOT_LOCKED, NULL,
                                  _("Unable to lock '%s'"),
-                                 svn_path_local_style(path, pool));
+                                 svn_dirent_local_style(path, pool));
 
       /* If all else fails, return our useless generic error.  */
       return svn_error_createf(SVN_ERR_WC_NOT_LOCKED, NULL,
                                _("Working copy '%s' is not locked"),
-                               svn_path_local_style(path, pool));
+                               svn_dirent_local_style(path, pool));
     }
 
   return SVN_NO_ERROR;
@@ -1442,16 +1445,16 @@ svn_wc__adm_write_check(const svn_wc_adm_access_t *adm_access,
           if (! locked)
             return svn_error_createf(SVN_ERR_WC_NOT_LOCKED, NULL,
                                      _("Write-lock stolen in '%s'"),
-                                     svn_path_local_style(adm_access->path,
-                                                          scratch_pool));
+                                     svn_dirent_local_style(adm_access->path,
+                                                            scratch_pool));
         }
     }
   else
     {
       return svn_error_createf(SVN_ERR_WC_NOT_LOCKED, NULL,
                                _("No write-lock in '%s'"),
-                               svn_path_local_style(adm_access->path,
-                                                    scratch_pool));
+                               svn_dirent_local_style(adm_access->path,
+                                                      scratch_pool));
     }
 
   return SVN_NO_ERROR;
@@ -1471,7 +1474,7 @@ svn_wc_locked(svn_boolean_t *locked, const char *path, apr_pool_t *pool)
   else
     return svn_error_createf(SVN_ERR_WC_LOCKED, NULL,
                              _("Lock file '%s' is not a regular file"),
-                             svn_path_local_style(lockfile, pool));
+                             svn_dirent_local_style(lockfile, pool));
 
   return SVN_NO_ERROR;
 }

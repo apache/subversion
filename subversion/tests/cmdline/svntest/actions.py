@@ -340,12 +340,7 @@ def run_and_verify_checkout(URL, wc_dir_name, output_tree, disk_tree,
   # Remove dir if it's already there, unless this is a forced checkout.
   # In that case assume we want to test a forced checkout's toleration
   # of obstructing paths.
-  remove_wc = True
-  for arg in args:
-    if arg == '--force':
-      remove_wc = False
-      break
-  if remove_wc:
+  if '--force' not in args:
     main.safe_rmtree(wc_dir_name)
 
   # Checkout and make a tree of the output, using l:foo/p:bar
@@ -704,26 +699,46 @@ def run_and_parse_info(*args):
   # per-target variables
   iter_info = {}
   prev_key = None
+  lock_comment_lines = 0
+  lock_comments = []
 
   exit_code, output, errput = main.run_svn(None, 'info', *args)
 
   for line in output:
     line = line[:-1] # trim '\n'
-    if len(line) == 0:
+
+    if lock_comment_lines > 0:
+      # mop up any lock comment lines
+      lock_comments.append(line)
+      lock_comment_lines = lock_comment_lines - 1
+      if lock_comment_lines == 0:
+        iter_info[prev_key] = lock_comments
+    elif len(line) == 0:
       # separator line between items
       all_infos.append(iter_info)
       iter_info = {}
       prev_key = None
+      lock_comment_lines = 0
+      lock_comments = []
     elif line[0].isspace():
       # continuation line (for tree conflicts)
       iter_info[prev_key] += line[1:]
     else:
       # normal line
       key, value = line.split(':', 1)
-      if len(value) > 1:
+
+      if re.search(' \(\d+ lines?\)$', key):
+        # numbered continuation lines
+        match = re.match('^(.*) \((\d+) lines?\)$', key)
+        key = match.group(1)
+        lock_comment_lines = int(match.group(2))
+      elif len(value) > 1:
+        # normal normal line
         iter_info[key] = value[1:]
       else:
-        # it's a "Tree conflict:\n" line; value is in continuation lines
+        ### originally added for "Tree conflict:\n" lines;
+        ### tree-conflicts output format has changed since then
+        # continuation lines are implicit (prefixed by whitespace)
         iter_info[key] = ''
       prev_key = key
 
@@ -744,9 +759,16 @@ def run_and_verify_info(expected_infos, *args):
   actual_infos = run_and_parse_info(*args)
 
   try:
+    # zip() won't complain, so check this manually
+    if len(actual_infos) != len(expected_infos):
+      raise verify.SVNUnexpectedStdout(
+          "Expected %d infos, found %d infos"
+           % (len(expected_infos), len(actual_infos)))
+
     for actual, expected in zip(actual_infos, expected_infos):
       # compare dicts
       for key, value in expected.items():
+        assert ':' not in key # caller passed impossible expectations?
         if value is None and key in actual:
           raise main.SVNLineUnequal("Found unexpected key '%s' with value '%s'"
                                     % (key, actual[key]))

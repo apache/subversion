@@ -948,7 +948,7 @@ svn_opt__arg_canonicalize_path(const char **path_out, const char *path_in,
   else
     return svn_error_createf(apr_err, NULL,
                              _("Error resolving case of '%s'"),
-                             svn_path_local_style(path_in, pool));
+                             svn_dirent_local_style(path_in, pool));
 
   /* convert back to UTF-8. */
   SVN_ERR(svn_path_cstring_to_utf8(path_out, apr_target, pool));

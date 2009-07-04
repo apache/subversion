@@ -25,6 +25,7 @@
 #include "svn_dirent_uri.h"
 #include "svn_wc.h"
 #include "svn_checksum.h"
+#include "svn_pools.h"
 
 #include "wc.h"
 #include "wc_db.h"
@@ -189,12 +190,15 @@ enum statement_keys {
   STMT_SELECT_DELETION_INFO,
   STMT_SELECT_PARENT_STUB_INFO,
   STMT_DELETE_LOCK,
-  STMT_UPDATE_BASE_REPO,
-  STMT_UPDATE_BASE_CHILDREN_REPO,
-  STMT_UPDATE_WORKING_COPYFROM_REPO,
-  STMT_UPDATE_WORKING_CHILDREN_COPYFROM_REPO,
-  STMT_UPDATE_LOCK_REPOS_ID
+  STMT_UPDATE_BASE_RECURSIVE_REPO,
+  STMT_UPDATE_WORKING_RECURSIVE_COPYFROM_REPO,
+  STMT_UPDATE_LOCK_REPOS_ID,
+  STMT_UPDATE_BASE_LAST_MOD_TIME
 };
+
+/* This is a character used to escape itself and the globbing character in
+   globbing sql expressions below.  See escape_sqlite_glob(). */
+#define LIKE_ESCAPE_CHAR     "#"
 
 static const char * const statements[] = {
   /* STMT_SELECT_BASE_NODE */
@@ -225,7 +229,7 @@ static const char * const statements[] = {
   "where wc_id = ?1 and local_relpath = ?2;",
 
   /* STMT_SELECT_ACTUAL_NODE */
-  "select changelist "
+  "select prop_reject, changelist "
   "from actual_node "
   "where wc_id = ?1 and local_relpath = ?2;",
 
@@ -236,7 +240,7 @@ static const char * const statements[] = {
   "select id from wcroot where local_abspath is null;",
 
   /* STMT_SELECT_REPOSITORY */
-  "select id from repository where uuid = ?1 and root = ?2;",
+  "select id from repository where root = ?1;",
 
   /* STMT_INSERT_REPOSITORY */
   "insert into repository (root, uuid) values (?1, ?2);",
@@ -331,26 +335,27 @@ static const char * const statements[] = {
   "delete from lock "
   "where repos_id = ?1 and repos_relpath = ?2;",
 
-  /* STMT_UPDATE_BASE_REPO */
-  "update base_node set repos_id = ?3 "
-  "where wc_id = ?1 and local_relpath = ?2;",
+  /* STMT_UPDATE_BASE_RECURSIVE_REPO */
+  "update base_node set repos_id = ?4 "
+  "where repos_id is not null and wc_id = ?1 and "
+  "  (local_relpath = ?2 or "
+  "   local_relpath like ?3 escape '" LIKE_ESCAPE_CHAR "');",
 
-  /* STMT_UPDATE_BASE_CHILDREN_REPO */
-  "update base_node set repos_id = ?3 "
-  "where repos_id is not null and wc_id = ?1 and parent_relpath like ?2;",
-
-  /* STMT_UPDATE_WORKING_COPYFROM_REPO */
-  "update working_node set copyfrom_repos_id = ?3 "
-  "where copyfrom_repos_id is not null and wc_id = ?1 and local_relpath = ?2;",
-
-  /* STMT_UPDATE_WORKING_CHILDREN_COPYFROM_REPO */
-  "update working_node set copyfrom_repos_id = ?3 "
-  "where copyfrom_repos_id is not null and wc_id = ?1 "
-  "  and parent_relpath like ?2;",
+  /* STMT_UPDATE_WORKING_RECURSIVE_COPYFROM_REPO */
+  "update working_node set copyfrom_repos_id = ?4 "
+  "where copyfrom_repos_id is not null and wc_id = ?1 and "
+  "  (local_relpath = ?2 or "
+  "   local_relpath like ?3 escape '" LIKE_ESCAPE_CHAR "');",
 
   /* STMT_UPDATE_LOCK_REPOS_ID */
-  "update lock set repos_id = ?3 "
-  "where repos_id = ?1 and repos_relpath like ?2;",
+  "update lock set repos_id = ?4 "
+  "where repos_id = ?1 and "
+  "  (repos_relpath = ?2 or "
+  "   repos_relpath like ?3 escape '" LIKE_ESCAPE_CHAR "');",
+
+  /* STMT_UPDATE_BASE_LAST_MOD_TIME */
+  "update base_node set last_mod_time = ?3 "
+  "where repos_id = ?1 and local_relpath = ?2;",
 
   NULL
 };
@@ -482,6 +487,42 @@ get_translated_size(svn_sqlite__stmt_t *stmt, int slot)
   if (svn_sqlite__column_is_null(stmt, slot))
     return SVN_INVALID_FILESIZE;
   return svn_sqlite__column_int64(stmt, slot);
+}
+
+static const char *
+escape_sqlite_like(const char * const str, apr_pool_t *result_pool)
+{
+  char *result;
+  const char *old_ptr;
+  char *new_ptr;
+  int len = 0;
+
+  /* Count the number of extra characters we'll need in the escaped string.
+     We could just use the worst case (double) value, but we'd still need to
+     iterate over the string to get it's length.  So why not do something
+     useful why iterating over it, and save some memory at the same time? */
+  for (old_ptr = str; *old_ptr; ++old_ptr)
+    {
+      len++;
+      if (*old_ptr == '%'
+            || *old_ptr == '_'
+            || *old_ptr == LIKE_ESCAPE_CHAR[0])
+        len++;
+    }
+
+  result = apr_palloc(result_pool, len + 1);
+
+  /* Now do the escaping. */
+  for (old_ptr = str, new_ptr = result; *old_ptr; ++old_ptr, ++new_ptr)
+    {
+      if (*old_ptr == '%'
+            || *old_ptr == '_'
+            || *old_ptr == LIKE_ESCAPE_CHAR[0])
+        *(new_ptr++) = LIKE_ESCAPE_CHAR[0];
+      *new_ptr = *old_ptr;
+    }
+
+  return result;
 }
 
 
@@ -1317,7 +1358,7 @@ create_repos_id(apr_int64_t *repos_id, const char *repos_root_url,
   svn_boolean_t have_row;
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_SELECT_REPOSITORY));
-  SVN_ERR(svn_sqlite__bindf(stmt, "ss", repos_uuid, repos_root_url));
+  SVN_ERR(svn_sqlite__bindf(stmt, "s", repos_root_url));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
 
   if (have_row)
@@ -1585,8 +1626,7 @@ svn_wc__db_open(svn_wc__db_t **db,
 
 
 svn_error_t *
-svn_wc__db_close(svn_wc__db_t *db,
-                 apr_pool_t *scratch_pool)
+svn_wc__db_close(svn_wc__db_t *db)
 {
   apr_status_t result = apr_pool_cleanup_run(db->state_pool, db, close_db_apr);
 
@@ -2576,6 +2616,24 @@ svn_wc__db_op_revert(svn_wc__db_t *db,
   NOT_IMPLEMENTED();
 }
 
+svn_error_t *
+svn_wc__db_op_invalidate_last_mod_time(svn_wc__db_t *db,
+                                       const char *local_abspath,
+                                       apr_pool_t *scratch_pool)
+{
+  svn_sqlite__stmt_t *stmt;
+
+  SVN_ERR(get_statement_for_path(&stmt, db, local_abspath,
+                                 STMT_UPDATE_BASE_LAST_MOD_TIME,
+                                 scratch_pool));
+
+  /* Setting the last mod time to zero will effectively invalidate it's
+     value. */
+  SVN_ERR(svn_sqlite__bind_int64(stmt, 3, 0));
+
+  return svn_error_return(svn_sqlite__step_done(stmt));
+}
+
 
 svn_error_t *
 svn_wc__db_read_info(svn_wc__db_status_t *status,
@@ -2600,6 +2658,7 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
                      svn_boolean_t *text_mod,
                      svn_boolean_t *props_mod,
                      svn_boolean_t *base_shadowed,
+                     const char **prop_reject_file,
                      svn_wc__db_lock_t **lock,
                      svn_wc__db_t *db,
                      const char *local_abspath,
@@ -2871,9 +2930,17 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
       if (changelist)
         {
           if (have_act)
-            *changelist = svn_sqlite__column_text(stmt_act, 0, result_pool);
+            *changelist = svn_sqlite__column_text(stmt_act, 1, result_pool);
           else
             *changelist = NULL;
+        }
+      if (prop_reject_file)
+        {
+          if (have_act)
+            *prop_reject_file = svn_sqlite__column_text(stmt_act, 0,
+                                                        result_pool);
+          else
+            *prop_reject_file = NULL;
         }
       if (original_repos_relpath)
         {
@@ -3068,8 +3135,11 @@ struct relocate_baton
 {
   apr_int64_t wc_id;
   const char *local_relpath;
+  const char *repos_relpath;
   const char *repos_root_url;
   const char *repos_uuid;
+  svn_boolean_t have_base_node;
+  apr_int64_t old_repos_id;
 
   apr_pool_t *scratch_pool;
 };
@@ -3079,15 +3149,10 @@ static svn_error_t *
 relocate_txn(void *baton, svn_sqlite__db_t *sdb)
 {
   struct relocate_baton *rb = baton;
+  const char *like_arg;
   apr_pool_t *scratch_pool = rb->scratch_pool;
-  const char *repos_relpath;
   svn_sqlite__stmt_t *stmt;
-  apr_int64_t old_repos_id;
   apr_int64_t new_repos_id;
-  svn_boolean_t have_base_node;
-
-  SVN_ERR(create_repos_id(&new_repos_id, rb->repos_root_url, rb->repos_uuid,
-                          sdb, scratch_pool));
 
   /* This function affects all the children of the given local_relpath,
      but the way that it does this is through the repos inheritance mechanism.
@@ -3096,64 +3161,47 @@ relocate_txn(void *baton, svn_sqlite__db_t *sdb)
      repos_id fields in the locks and working_node tables.
    */
 
-  /* Get the existing repos_id of the base node, since we'll need it to
-     update a potential lock. */
-  /* ### is it faster to fetch fewer columns? */
-  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_SELECT_BASE_NODE));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", rb->wc_id, rb->local_relpath));
-  SVN_ERR(svn_sqlite__step(&have_base_node, stmt));
-  if (have_base_node)
-    {
-      old_repos_id = svn_sqlite__column_int64(stmt, 2);
-      repos_relpath = svn_sqlite__column_text(stmt, 3, scratch_pool);
-    }
-  SVN_ERR(svn_sqlite__reset(stmt));
+  /* Get the repos_id for the new repository. */
+  SVN_ERR(create_repos_id(&new_repos_id, rb->repos_root_url, rb->repos_uuid,
+                          sdb, scratch_pool));
 
-  if (have_base_node)
-    {
-      /* Update the BASE_NODE.repos_id. */
-      SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_UPDATE_BASE_REPO));
-      SVN_ERR(svn_sqlite__bindf(stmt, "isi", rb->wc_id, rb->local_relpath,
-                                new_repos_id));
+  if (rb->local_relpath[0] == 0)
+    like_arg = "%";
+  else
+    like_arg = apr_pstrcat(scratch_pool,
+                           escape_sqlite_like(rb->local_relpath, scratch_pool),
+                           "/%", NULL);
 
-      SVN_ERR(svn_sqlite__step_done(stmt));
-    }
-
-  /* Update a non-NULL WORKING_NODE.copyfrom_repos_id. */
+  /* Update non-NULL WORKING_NODE.copyfrom_repos_id. */
   SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
-                                    STMT_UPDATE_WORKING_COPYFROM_REPO));
-  SVN_ERR(svn_sqlite__bindf(stmt, "isi", rb->wc_id, rb->local_relpath,
-                            new_repos_id));
-  SVN_ERR(svn_sqlite__step_done(stmt));
-
-  /* Update and child working nodes. */
-  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
-                               STMT_UPDATE_WORKING_CHILDREN_COPYFROM_REPO));
-  SVN_ERR(svn_sqlite__bindf(stmt, "isi", rb->wc_id,
-                            apr_psprintf(scratch_pool, "%s%%",
-                                         rb->local_relpath),
-                            new_repos_id));
+                               STMT_UPDATE_WORKING_RECURSIVE_COPYFROM_REPO));
+  SVN_ERR(svn_sqlite__bindf(stmt, "issi", rb->wc_id, rb->local_relpath,
+                            like_arg, new_repos_id));
   SVN_ERR(svn_sqlite__step_done(stmt));
 
   /* Do a bunch of stuff which is conditional on us actually having a
      base_node in the first place. */
-  if (have_base_node)
+  if (rb->have_base_node)
     {
-      /* Update any children which have non-NULL repos_id's */
+      /* Update any BASE which have non-NULL repos_id's */
       SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
-                                        STMT_UPDATE_BASE_CHILDREN_REPO));
-      SVN_ERR(svn_sqlite__bindf(stmt, "isi", rb->wc_id, rb->local_relpath,
-                                new_repos_id));
+                                        STMT_UPDATE_BASE_RECURSIVE_REPO));
+      SVN_ERR(svn_sqlite__bindf(stmt, "issi", rb->wc_id, rb->local_relpath,
+                                like_arg, new_repos_id));
       SVN_ERR(svn_sqlite__step_done(stmt));
 
       /* Update any locks for the root or its children. */
+      if (rb->repos_relpath[0] == 0)
+        like_arg = "%";
+      else
+        like_arg = apr_pstrcat(scratch_pool,
+                           escape_sqlite_like(rb->repos_relpath, scratch_pool),
+                           "/%", NULL);
+
       SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
                                         STMT_UPDATE_LOCK_REPOS_ID));
-      SVN_ERR(svn_sqlite__bindf(stmt, "isi",
-                                old_repos_id,
-                                apr_psprintf(scratch_pool, "%s%%",
-                                             repos_relpath),
-                                new_repos_id));
+      SVN_ERR(svn_sqlite__bindf(stmt, "issi", rb->old_repos_id,
+                                rb->repos_relpath, like_arg, new_repos_id));
       SVN_ERR(svn_sqlite__step_done(stmt));
     }
 
@@ -3165,11 +3213,12 @@ svn_error_t *
 svn_wc__db_global_relocate(svn_wc__db_t *db,
                            const char *local_dir_abspath,
                            const char *repos_root_url,
-                           const char *repos_uuid,
+                           svn_boolean_t single_db,  /* ### */
                            apr_pool_t *scratch_pool)
 {
   svn_wc__db_pdh_t *pdh;
   struct relocate_baton rb;
+  svn_sqlite__stmt_t *stmt;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_dir_abspath));
   /* ### assert that we were passed a directory?  */
@@ -3178,13 +3227,81 @@ svn_wc__db_global_relocate(svn_wc__db_t *db,
                               svn_sqlite__mode_readonly,
                               scratch_pool, scratch_pool));
 
+  /* Get the existing repos_id of the base node, since we'll need it to
+     update a potential lock. */
+  /* ### is it faster to fetch fewer columns? */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+                                    STMT_SELECT_BASE_NODE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id,
+                            rb.local_relpath));
+  SVN_ERR(svn_sqlite__step(&rb.have_base_node, stmt));
+  if (rb.have_base_node)
+    {
+      rb.old_repos_id = svn_sqlite__column_int64(stmt, 2);
+      rb.repos_relpath = svn_sqlite__column_text(stmt, 3, scratch_pool);
+      SVN_ERR(svn_sqlite__reset(stmt));
+
+      SVN_ERR(fetch_repos_info(NULL, &rb.repos_uuid, pdh->wcroot->sdb,
+                               rb.old_repos_id, scratch_pool));
+    }
+  else
+    {
+      SVN_ERR(svn_sqlite__reset(stmt));
+      SVN_ERR(svn_wc__db_scan_addition(NULL, NULL, NULL, NULL, &rb.repos_uuid,
+                                       NULL, NULL, NULL, NULL,
+                                       db, local_dir_abspath, scratch_pool,
+                                       scratch_pool));
+    }
+
   rb.wc_id = pdh->wcroot->wc_id;
   rb.repos_root_url = repos_root_url;
-  rb.repos_uuid = repos_uuid;
   rb.scratch_pool = scratch_pool;
 
-  return svn_error_return(svn_sqlite__with_transaction(pdh->wcroot->sdb,
-                                                       relocate_txn, &rb));
+  SVN_ERR(svn_sqlite__with_transaction(pdh->wcroot->sdb, relocate_txn, &rb));
+
+  if (!single_db)
+    {
+      /* ### Now, a bit of a dance because we don't yet have a centralized
+             metadata store.  We need to update the repos_id in the databases
+             of subdirectories. */
+      apr_pool_t *iterpool;
+      const apr_array_header_t *children;
+      int i;
+
+      iterpool = svn_pool_create(scratch_pool);
+      SVN_ERR(svn_wc__db_read_children(&children, db, local_dir_abspath,
+                                       scratch_pool, iterpool));
+
+      for (i = 0; i < children->nelts; i++)
+        {
+          const char *child = APR_ARRAY_IDX(children, i, const char *);
+          const char *child_abspath;
+          svn_wc__db_kind_t kind;
+
+          svn_pool_clear(iterpool);
+
+          child_abspath = svn_dirent_join(local_dir_abspath, child, iterpool);
+          SVN_ERR(svn_wc__db_read_info(NULL, &kind, NULL,
+                                       NULL, NULL, NULL,
+                                       NULL, NULL, NULL,
+                                       NULL, NULL, NULL,
+                                       NULL, NULL, NULL,
+                                       NULL, NULL, NULL, NULL,
+                                       NULL, NULL, NULL, NULL, NULL,
+                                       db, child_abspath,
+                                       iterpool, iterpool));
+          if (kind != svn_wc__db_kind_dir)
+            continue;
+
+          /* Recurse on the child directory */
+          SVN_ERR(svn_wc__db_global_relocate(db, child_abspath, repos_root_url,
+                                             single_db, iterpool));
+        }
+
+      svn_pool_destroy(iterpool);
+    }
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -4068,7 +4185,7 @@ svn_wc__db_check_node(svn_wc__db_kind_t *kind,
   err = svn_wc__db_read_info(NULL, kind, NULL, NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                             NULL, NULL,
+                             NULL, NULL, NULL,
                              db, local_abspath, scratch_pool, scratch_pool);
 
   if (!err)
@@ -4082,19 +4199,4 @@ svn_wc__db_check_node(svn_wc__db_kind_t *kind,
     }
 
   return svn_error_return(err);
-}
-
-
-svn_error_t *
-svn_wc__context_create_with_db(svn_wc_context_t **wc_ctx,
-                               svn_config_t *config,
-                               svn_wc__db_t *db,
-                               apr_pool_t *scratch_pool)
-{
-  SVN_ERR(svn_wc_context_create(wc_ctx, config, db->state_pool, scratch_pool));
-  SVN_ERR(svn_wc__db_close((*wc_ctx)->db, scratch_pool));
-
-  (*wc_ctx)->db = db;
-
-  return SVN_NO_ERROR;
 }

@@ -263,7 +263,7 @@ svn_fs_fs__path_rev_absolute(const char **path,
             return svn_error_createf(APR_ENOENT, NULL,
                                      _("Revision file '%s' does not exist, "
                                        "and r%ld is not packed"),
-                                     svn_path_local_style(*path, pool),
+                                     svn_dirent_local_style(*path, pool),
                                      rev);
           /* Fall through. */
         }
@@ -767,7 +767,7 @@ get_writable_proto_rev_body(svn_fs_t *fs, const void *baton, apr_pool_t *pool)
 
         return svn_error_wrap_apr(apr_err,
                                   _("Can't get exclusive lock on file '%s'"),
-                                  svn_path_local_style(lockfile_path, pool));
+                                  svn_dirent_local_style(lockfile_path, pool));
       }
 
     *lockcookie = lockfile;
@@ -879,7 +879,7 @@ check_format_file_buffer_numeric(const char *buf, const char *path,
     if (!apr_isdigit(*p))
       return svn_error_createf(SVN_ERR_BAD_VERSION_FILE_FORMAT, NULL,
         _("Format file '%s' contains an unexpected non-digit"),
-        svn_path_local_style(path, pool));
+        svn_dirent_local_style(path, pool));
 
   return SVN_NO_ERROR;
 }
@@ -928,7 +928,7 @@ read_format(int *pformat, int *max_files_per_dir,
       svn_error_clear(err);
       return svn_error_createf(SVN_ERR_BAD_VERSION_FILE_FORMAT, NULL,
                                _("Can't read first line of format file '%s'"),
-                               svn_path_local_style(path, pool));
+                               svn_dirent_local_style(path, pool));
     }
   SVN_ERR(err);
 
@@ -972,7 +972,7 @@ read_format(int *pformat, int *max_files_per_dir,
 
       return svn_error_createf(SVN_ERR_BAD_VERSION_FILE_FORMAT, NULL,
          _("'%s' contains invalid filesystem format option '%s'"),
-         svn_path_local_style(path, pool), buf);
+         svn_dirent_local_style(path, pool), buf);
     }
 
   return svn_io_file_close(file, pool);
@@ -4378,7 +4378,8 @@ svn_fs_fs__change_txn_props(svn_fs_txn_t *txn,
                             apr_array_header_t *props,
                             apr_pool_t *pool)
 {
-  apr_file_t *txn_prop_file;
+  const char *txn_prop_filename;
+  svn_stringbuf_t *buf;
   svn_stream_t *stream;
   apr_hash_t *txn_prop = apr_hash_make(pool);
   int i;
@@ -4403,15 +4404,19 @@ svn_fs_fs__change_txn_props(svn_fs_txn_t *txn,
 
   /* Create a new version of the file and write out the new props. */
   /* Open the transaction properties file. */
-  SVN_ERR(svn_io_file_open(&txn_prop_file,
-                           path_txn_props(txn->fs, txn->id, pool),
-                           APR_WRITE | APR_CREATE | APR_TRUNCATE
-                           | APR_BUFFERED, APR_OS_DEFAULT, pool));
-
-  stream = svn_stream_from_aprfile2(txn_prop_file, FALSE, pool);
+  buf = svn_stringbuf_create_ensure(1024, pool);
+  stream = svn_stream_from_stringbuf(buf, pool);
   SVN_ERR(svn_hash_write2(txn_prop, stream, SVN_HASH_TERMINATOR, pool));
-
-  return svn_stream_close(stream);
+  SVN_ERR(svn_stream_close(stream));
+  SVN_ERR(svn_io_write_unique(&txn_prop_filename,
+                              path_txn_dir(txn->fs, txn->id, pool),
+                              buf->data,
+                              buf->len,
+                              svn_io_file_del_none,
+                              pool));
+  return svn_io_file_rename(txn_prop_filename,
+                            path_txn_props(txn->fs, txn->id, pool),
+                            pool);
 }
 
 svn_error_t *
@@ -5473,11 +5478,11 @@ svn_fs_fs__dup_perms(const char *filename,
   status = apr_stat(&finfo, perms_reference_apr, APR_FINFO_PROT, pool);
   if (status)
     return svn_error_wrap_apr(status, _("Can't stat '%s'"),
-                              svn_path_local_style(perms_reference, pool));
+                              svn_dirent_local_style(perms_reference, pool));
   status = apr_file_perms_set(filename_apr, finfo.protection);
   if (status)
     return svn_error_wrap_apr(status, _("Can't chmod '%s'"),
-                              svn_path_local_style(filename, pool));
+                              svn_dirent_local_style(filename, pool));
 #endif
   return SVN_NO_ERROR;
 }
@@ -5643,6 +5648,8 @@ commit_body(void *baton, apr_pool_t *pool)
   apr_off_t changed_path_offset;
   char *buf;
   apr_hash_t *txnprops;
+  apr_array_header_t *txnprop_list;
+  svn_prop_t prop;
   svn_string_t date;
 
   /* Get the current youngest revision. */
@@ -5697,29 +5704,24 @@ commit_body(void *baton, apr_pool_t *pool)
 
   /* Remove any temporary txn props representing 'flags'. */
   SVN_ERR(svn_fs_fs__txn_proplist(&txnprops, cb->txn, pool));
-  if (txnprops)
+  txnprop_list = apr_array_make(pool, 3, sizeof(svn_prop_t));
+  prop.value = NULL;
+
+  if (apr_hash_get(txnprops, SVN_FS__PROP_TXN_CHECK_OOD, APR_HASH_KEY_STRING))
     {
-      apr_array_header_t *props = apr_array_make(pool, 3, sizeof(svn_prop_t));
-      svn_prop_t prop;
-      prop.value = NULL;
-
-      if (apr_hash_get(txnprops, SVN_FS__PROP_TXN_CHECK_OOD,
-                       APR_HASH_KEY_STRING))
-        {
-          prop.name = SVN_FS__PROP_TXN_CHECK_OOD;
-          APR_ARRAY_PUSH(props, svn_prop_t) = prop;
-        }
-
-      if (apr_hash_get(txnprops, SVN_FS__PROP_TXN_CHECK_LOCKS,
-                       APR_HASH_KEY_STRING))
-        {
-          prop.name = SVN_FS__PROP_TXN_CHECK_LOCKS;
-          APR_ARRAY_PUSH(props, svn_prop_t) = prop;
-        }
-
-      if (! apr_is_empty_array(props))
-        SVN_ERR(svn_fs_fs__change_txn_props(cb->txn, props, pool));
+      prop.name = SVN_FS__PROP_TXN_CHECK_OOD;
+      APR_ARRAY_PUSH(txnprop_list, svn_prop_t) = prop;
     }
+
+  if (apr_hash_get(txnprops, SVN_FS__PROP_TXN_CHECK_LOCKS,
+                   APR_HASH_KEY_STRING))
+    {
+      prop.name = SVN_FS__PROP_TXN_CHECK_LOCKS;
+      APR_ARRAY_PUSH(txnprop_list, svn_prop_t) = prop;
+    }
+
+  if (! apr_is_empty_array(txnprop_list))
+    SVN_ERR(svn_fs_fs__change_txn_props(cb->txn, txnprop_list, pool));
 
   /* Create the shard for the rev and revprop file, if we're sharding and
      this is the first revision of a new shard.  We don't care if this

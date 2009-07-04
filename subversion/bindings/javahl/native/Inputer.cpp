@@ -44,7 +44,7 @@ Inputer::~Inputer()
  * @param pool  the pool, from which the structure is allocated
  * @return the input stream
  */
-svn_stream_t *Inputer::getStream(const Pool &pool)
+svn_stream_t *Inputer::getStream(const SVN::Pool &pool)
 {
   // Create a stream with this as the baton and set the read and
   // close functions.

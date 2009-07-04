@@ -47,7 +47,7 @@ Outputer::~Outputer()
  * @param pool  the pool, from which the structure is allocated
  * @return the output stream
  */
-svn_stream_t *Outputer::getStream(const Pool &pool)
+svn_stream_t *Outputer::getStream(const SVN::Pool &pool)
 {
   // Create a stream with this as the baton and set the write and
   // close functions.

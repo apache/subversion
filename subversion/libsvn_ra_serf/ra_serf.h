@@ -62,6 +62,16 @@ extern "C" {
 typedef struct svn_ra_serf__session_t svn_ra_serf__session_t;
 typedef struct svn_ra_serf__auth_protocol_t svn_ra_serf__auth_protocol_t;
 
+typedef enum
+{
+  svn_ra_serf__authn_none      = 0x00,
+  svn_ra_serf__authn_basic     = 0x01,
+  svn_ra_serf__authn_digest    = 0x02,
+  svn_ra_serf__authn_ntlm      = 0x04,
+  svn_ra_serf__authn_negotiate = 0x08,
+  svn_ra_serf__authn_all       = 0xFF,
+} svn_ra_serf__authn_types;
+
 /* A serf connection and optionally associated SSL context.  */
 typedef struct {
   /* Our connection to a server. */
@@ -175,6 +185,9 @@ struct svn_ra_serf__session_t {
 
   /* vtable and info object handling the authentication */
   const svn_ra_serf__auth_protocol_t *auth_protocol;
+
+  /* List of authn types supported by the client.*/
+  svn_ra_serf__authn_types authn_types;
 
   /* Maps SVN_RA_CAPABILITY_foo keys to "yes" or "no" values.
      If a capability is not yet discovered, it is absent from the table.
@@ -1433,6 +1446,9 @@ struct svn_ra_serf__auth_protocol_t {
   /* The name of this authentication protocol. This should be a case
      sensitive match of the string sent in the HTTP authentication header. */
   const char *auth_name;
+
+  /* Internal code used for this authn type. */
+  svn_ra_serf__authn_types auth_type;
 
   /* The initialization function if any; otherwise, NULL */
   svn_serf__init_conn_func_t init_conn_func;

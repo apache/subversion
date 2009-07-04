@@ -2641,7 +2641,8 @@ typedef struct svn_wc_entry_callbacks_t
  * @a path, which can be a file or dir.  Call callbacks in
  * @a walk_callbacks, passing @a walk_baton to each.  Use @a pool for
  * looping, recursion, and to allocate all entries returned.
- * @a adm_access must be an access baton for @a path.
+ * @a adm_access must be an access baton for @a path.  The pool
+ * passed to @a walk_callbacks is a temporary subpool of @a pool.
  *
  * If @a depth is @c svn_depth_empty, invoke the callbacks on @a path
  * and return without recursing further.  If @c svn_depth_files, do
@@ -4535,11 +4536,26 @@ svn_wc_get_switch_editor(svn_revnum_t *target_revision,
 
 /** Set @a *props to a hash table mapping <tt>char *</tt> names onto
  * <tt>svn_string_t *</tt> values for all the regular properties of
- * @a path.  Allocate the table, names, and values in @a pool.  If
- * the node has no properties, or does not exist in the working copy,
- * then an empty hash is returned.  @a adm_access is an access baton
- * set that contains @a path.
+ * @a local_abspath.  Allocate the table, names, and values in
+ * @a result_pool.  If the node has no properties, or does not exist in
+ * the working copy, then an empty hash is returned.  Use @a wc_ctx to
+ * access the working copy, and @a scratch_pool for temporary allocations.
+ *
+ * @since New in 1.7.
  */
+svn_error_t *
+svn_wc_prop_list2(apr_hash_t **props,
+                  svn_wc_context_t *wc_ctx,
+                  const char *local_abspath,
+                  apr_pool_t *result_pool,
+                  apr_pool_t *scratch_pool);
+
+/** Similar to svn_wc_prop_list2() but with a @c svn_wc_adm_access_t /
+ * relative path parameter pair.
+ *
+ * @deprecated Provided for backwards compatibility with the 1.6 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_prop_list(apr_hash_t **props,
                  const char *path,
@@ -4552,7 +4568,23 @@ svn_wc_prop_list(apr_hash_t **props,
  * @a name may be a regular or wc property; if it is an entry property,
  * return the error @c SVN_ERR_BAD_PROP_KIND.  @a adm_access is an access
  * baton set that contains @a path.
+ *
+ * @since New in 1.7.
  */
+svn_error_t *
+svn_wc_prop_get2(const svn_string_t **value,
+                 svn_wc_context_t *wc_ctx,
+                 const char *local_abspath,
+                 const char *name,
+                 apr_pool_t *result_pool,
+                 apr_pool_t *scratch_pool);
+
+/** Similar to svn_wc_prop_get2(), but with a @c svn_wc_adm_access_t /
+ * relative path parameter pair.
+ *
+ * @deprecated Provided for backwards compatibility with the 1.6 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_prop_get(const svn_string_t **value,
                 const char *name,
@@ -4561,9 +4593,9 @@ svn_wc_prop_get(const svn_string_t **value,
                 apr_pool_t *pool);
 
 /**
- * Set property @a name to @a value for @a path, or if @a value is
- * NULL, remove property @a name from @a path.  @a adm_access is an
- * access baton with a write lock for @a path.
+ * Set property @a name to @a value for @a local_abspath, or if @a value is
+ * NULL, remove property @a name from @a local_abspath.  Use @a wc_ctx to
+ * access @a local_abspath.
  *
  * If @a skip_checks is TRUE, do no validity checking.  But if @a
  * skip_checks is FALSE, and @a name is not a valid property for @a
@@ -4580,10 +4612,27 @@ svn_wc_prop_get(const svn_string_t **value,
  * with its path and the @a notify_baton.  @a notify_func may be @c NULL
  * if you are not interested in this information.
  *
- * Use @a pool for temporary allocation.
+ * Use @a scratch_pool for temporary allocation.
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_wc_prop_set4(svn_wc_context_t *wc_ctx,
+                 const char *local_abspath,
+                 const char *name,
+                 const svn_string_t *value,
+                 svn_boolean_t skip_checks,
+                 svn_wc_notify_func2_t notify_func,
+                 void *notify_baton,
+                 apr_pool_t *scratch_pool);
+
+/** Similar to svn_wc_prop_set4(), but with a @c svn_wc_adm_access_t /
+ * relative path parameter pair.
  *
  * @since New in 1.6.
+ * @deprecated Provided for backwards compatibility with the 1.6 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_prop_set3(const char *name,
                  const svn_string_t *value,
@@ -5019,9 +5068,9 @@ svn_wc_diff(svn_wc_adm_access_t *anchor,
             apr_pool_t *pool);
 
 
-/** Given a @a path to a file or directory under version control, discover
- * any local changes made to properties and/or the set of 'pristine'
- * properties.  @a adm_access is an access baton set for @a path.
+/** Given a @a local_abspath to a file or directory under version control,
+ * discover any local changes made to properties and/or the set of 'pristine'
+ * properties.  @a wc_ctx will be used to access the working copy.
  *
  * If @a propchanges is non-@c NULL, return these changes as an array of
  * @c svn_prop_t structures stored in @a *propchanges.  The structures and
@@ -5031,9 +5080,23 @@ svn_wc_diff(svn_wc_adm_access_t *anchor,
  * If @a original_props is non-@c NULL, then set @a *original_props to
  * hashtable (<tt>const char *name</tt> -> <tt>const svn_string_t *value</tt>)
  * that represents the 'pristine' property list of @a path.  This hashtable is
- * allocated in @a pool, and can be used to compare old and new values of
- * properties.
+ * allocated in @a result_pool, and can be used to compare old and new values
+ * of properties.  Use @a scratch_pool for temporary allocations.
  */
+svn_error_t *
+svn_wc_get_prop_diffs2(apr_array_header_t **propchanges,
+                       apr_hash_t **original_props,
+                       svn_wc_context_t *wc_ctx,
+                       const char *local_abspath,
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool);
+
+/** Similar to svn_wc_get_prop_diffs2(), but with a @c svn_wc_adm_access_t /
+ * relative path parameter pair.
+ *
+ * @deprecated Provided for backwards compatibility with the 1.6 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_get_prop_diffs(apr_array_header_t **propchanges,
                       apr_hash_t **original_props,
@@ -5386,16 +5449,35 @@ typedef svn_error_t *(*svn_wc_relocation_validator_t)(void *baton,
                                                       const char *uuid,
                                                       const char *url);
 
-/** Change repository references at @a path that begin with @a from
- * to begin with @a to instead.  Perform necessary allocations in @a pool.
- * If @a recurse is TRUE, do so.  @a validator (and its baton,
- * @a validator_baton), will be called for each newly generated URL.
+/** Change repository references at @a local_abspath and all it's children.
+ * The pre-change URL should be @a from, and the post-change URL will be
+ * @a to.  @a validator (and its baton, @a validator_baton), will be called
+ * for the newly generated base URL and calculated repo root.
  *
- * @a adm_access is an access baton for the directory containing
- * @a path.
+ * If @a recurse is @c FALSE, none of the children of @a local_abspath will
+ * be changed.  @a wc_ctx is an working copy context.
+ *
+ * @a scratch_pool will be used for temporary allocations.
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_wc_relocate4(svn_wc_context_t *wc_ctx,
+                 const char *local_abspath,
+                 const char *from,
+                 const char *to,
+                 svn_boolean_t recurse,
+                 svn_wc_relocation_validator3_t validator,
+                 void *validator_baton,
+                 apr_pool_t *scratch_pool);
+
+/** Similar to svn_wc_relocate4(), but with a @c svn_wc_adm_access_t /
+ * relative path parameter pair.
  *
  * @since New in 1.5.
+ * @deprecated Provided for backwards compatibility with the 1.6 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_relocate3(const char *path,
                  svn_wc_adm_access_t *adm_access,
@@ -5735,11 +5817,27 @@ svn_wc_get_default_ignores(apr_array_header_t **patterns,
 
 /** Get the list of ignore patterns from the @c svn_config_t's in the
  * @a config hash and the local ignore patterns from the directory
- * in @a adm_access, and store them in @a *patterns.
- * Allocate @a *patterns and its contents in @a pool.
+ * at @a local_abspath, using @a wc_ctx, and store them in @a *patterns.
+ * Allocate @a *patterns and its contents in @a result_pool, use @a
+ * scrach_pool for temporary allocations.
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_wc_get_ignores2(apr_array_header_t **patterns,
+                    svn_wc_context_t *wc_ctx,
+                    const char *local_abspath,
+                    apr_hash_t *config,
+                    apr_pool_t *result_pool,
+                    apr_pool_t *scratch_pool);
+
+/** Similar to svn_wc_get_ignores2(), but with a @c svn_wc_adm_access_t
+ * parameter in place of @c svn_wc_context_t and @c local_abspath parameters.
  *
  * @since New in 1.3.
+ * @deprecated Provided for backwards compatibility with the 1.6 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_get_ignores(apr_array_header_t **patterns,
                    apr_hash_t *config,

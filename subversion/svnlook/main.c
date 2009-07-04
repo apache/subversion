@@ -2313,7 +2313,7 @@ main(int argc, const char *argv[])
           SVN_INT_ERR(svn_utf_cstring_to_utf8(&repos_path,
                                               os->argv[os->ind++],
                                               pool));
-          repos_path = svn_path_internal_style(repos_path, pool);
+          repos_path = svn_dirent_internal_style(repos_path, pool);
         }
 
       if (repos_path == NULL)
@@ -2342,7 +2342,7 @@ main(int argc, const char *argv[])
         {
           SVN_INT_ERR(svn_utf_cstring_to_utf8
                       (&arg1, os->argv[os->ind++], pool));
-          arg1 = svn_path_internal_style(arg1, pool);
+          arg1 = svn_dirent_internal_style(arg1, pool);
         }
       opt_state.arg1 = arg1;
 
@@ -2351,7 +2351,7 @@ main(int argc, const char *argv[])
         {
           SVN_INT_ERR(svn_utf_cstring_to_utf8
                       (&arg2, os->argv[os->ind++], pool));
-          arg2 = svn_path_internal_style(arg2, pool);
+          arg2 = svn_dirent_internal_style(arg2, pool);
         }
       opt_state.arg2 = arg2;
     }

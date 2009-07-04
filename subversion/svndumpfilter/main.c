@@ -27,6 +27,7 @@
 #include "svn_string.h"
 #include "svn_opt.h"
 #include "svn_utf.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_hash.h"
 #include "svn_repos.h"
@@ -1366,7 +1367,7 @@ main(int argc, const char *argv[])
           /* Ensure that each prefix is UTF8-encoded, in internal
              style, and absolute. */
           SVN_INT_ERR(svn_utf_cstring_to_utf8(&prefix, os->argv[i], pool));
-          prefix = svn_path_internal_style(prefix, pool);
+          prefix = svn_dirent_internal_style(prefix, pool);
           prefix = svn_path_join("/", prefix, pool);
           APR_ARRAY_PUSH(opt_state.prefixes, const char *) = prefix;
         }

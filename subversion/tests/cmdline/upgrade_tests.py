@@ -29,6 +29,10 @@ Item = svntest.wc.StateItem
 XFail = svntest.testcase.XFail
 SkipUnless = svntest.testcase.SkipUnless
 
+wc_is_too_old_regex = (".*Working copy format of '.*' is too old \(\d+\); " +
+                    "please run 'svn upgrade'")
+
+
 def replace_sbox_with_tarfile(sbox, tar_filename):
   try:
     svntest.main.safe_rmtree(sbox.wc_dir)
@@ -98,15 +102,13 @@ def run_and_verify_status_no_server(wc_dir, expected_status):
     svvtest.tree.dump_tree_script(actual, wc_dir_name + os.sep)
     raise
 
-
 def basic_upgrade(sbox):
   "basic upgrade behavior"
 
   replace_sbox_with_tarfile(sbox, 'basic_upgrade.tar.bz2')
 
   # Attempt to use the working copy, this should give an error
-  expected_stderr = (".*Working copy format is too old; please "
-                     "run 'svn upgrade'")
+  expected_stderr = wc_is_too_old_regex
   svntest.actions.run_and_verify_svn(None, None, expected_stderr,
                                      'info', sbox.wc_dir)
 
@@ -129,8 +131,7 @@ def upgrade_1_5(sbox):
   replace_sbox_with_tarfile(sbox, 'upgrade_1_5.tar.bz2')
 
   # Attempt to use the working copy, this should give an error
-  expected_stderr = (".*Working copy format is too old; please "
-                     "run 'svn upgrade'")
+  expected_stderr = wc_is_too_old_regex
   svntest.actions.run_and_verify_svn(None, None, expected_stderr,
                                      'info', sbox.wc_dir)
 

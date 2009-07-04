@@ -778,6 +778,7 @@ test_working_info(apr_pool_t *pool)
   svn_boolean_t text_mod;
   svn_boolean_t props_mod;
   svn_boolean_t base_shadowed;
+  const char *prop_reject_file;
   svn_wc__db_lock_t *lock;
   svn_wc__db_t *db;
 
@@ -797,7 +798,7 @@ test_working_info(apr_pool_t *pool)
             &depth, &checksum, &translated_size, &target,
             &changelist, &original_repos_relpath, &original_root_url,
             &original_uuid, &original_revnum,
-            &text_mod, &props_mod, &base_shadowed, &lock,
+            &text_mod, &props_mod, &base_shadowed, &prop_reject_file, &lock,
             db, svn_dirent_join(local_abspath, "I", pool),
             pool, pool));
   SVN_TEST_ASSERT(status == svn_wc__db_status_added);
@@ -821,6 +822,7 @@ test_working_info(apr_pool_t *pool)
   SVN_TEST_ASSERT(text_mod == FALSE);
   SVN_TEST_ASSERT(props_mod == FALSE);
   SVN_TEST_ASSERT(base_shadowed == TRUE);
+  SVN_TEST_ASSERT(prop_reject_file == NULL);
   SVN_TEST_ASSERT(lock == NULL);
 
 
@@ -1213,7 +1215,7 @@ test_global_relocate(apr_pool_t *pool)
                                NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL,
                                db, local_abspath,
                                pool, pool));
 
@@ -1221,37 +1223,21 @@ test_global_relocate(apr_pool_t *pool)
   SVN_TEST_STRING_ASSERT(repos_root_url, ROOT_ONE);
   SVN_TEST_STRING_ASSERT(repos_uuid, UUID_ONE);
 
-  /* Test relocating to a repos existant in the db */
-  SVN_ERR(svn_wc__db_global_relocate(db, local_abspath,
-                                     ROOT_TWO, UUID_TWO,
-                                     pool));
-  SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL,
-                               &repos_relpath, &repos_root_url, &repos_uuid,
-                               NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL,
-                               db, local_abspath,
-                               pool, pool));
-  SVN_TEST_STRING_ASSERT(repos_relpath, "");
-  SVN_TEST_STRING_ASSERT(repos_root_url, ROOT_TWO);
-  SVN_TEST_STRING_ASSERT(repos_uuid, UUID_TWO);
-
   /* Test relocating to a repos not existant in the db */
-  SVN_ERR(svn_wc__db_global_relocate(db, local_abspath,
-                                     ROOT_THREE, UUID_THREE,
+  SVN_ERR(svn_wc__db_global_relocate(db, local_abspath, ROOT_THREE, TRUE,
                                      pool));
   SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL,
                                &repos_relpath, &repos_root_url, &repos_uuid,
                                NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL,
                                db, local_abspath,
                                pool, pool));
   SVN_TEST_STRING_ASSERT(repos_relpath, "");
   SVN_TEST_STRING_ASSERT(repos_root_url, ROOT_THREE);
-  SVN_TEST_STRING_ASSERT(repos_uuid, UUID_THREE);
+  /* The UUID should still be the same. */
+  SVN_TEST_STRING_ASSERT(repos_uuid, UUID_ONE);
 
   /* While we're at it, let's see if the children have been relocated, too. */
   SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL,
@@ -1259,13 +1245,14 @@ test_global_relocate(apr_pool_t *pool)
                                NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL,
                                db, svn_dirent_join(local_abspath, "G",
                                                    pool),
                                pool, pool));
   SVN_TEST_STRING_ASSERT(repos_relpath, "G-alt");
   SVN_TEST_STRING_ASSERT(repos_root_url, ROOT_THREE);
-  SVN_TEST_STRING_ASSERT(repos_uuid, UUID_THREE);
+  /* The UUID should still be the same. */
+  SVN_TEST_STRING_ASSERT(repos_uuid, UUID_ONE);
 
   return SVN_NO_ERROR;
 }

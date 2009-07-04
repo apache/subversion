@@ -85,7 +85,7 @@ struct propset_walk_baton
 {
   const char *propname;  /* The name of the property to set. */
   const svn_string_t *propval;  /* The value to set. */
-  svn_wc_adm_access_t *base_access;  /* Access for the tree being walked. */
+  svn_wc_context_t *wc_ctx;  /* Context for the tree being walked. */
   svn_boolean_t force;  /* True iff force was passed. */
   apr_hash_t *changelist_hash;  /* Keys are changelists to filter on. */
   svn_wc_notify_func2_t notify_func;
@@ -105,8 +105,10 @@ propset_walk_cb(const char *path,
                 apr_pool_t *pool)
 {
   struct propset_walk_baton *wb = walk_baton;
+  const char *local_abspath;
   svn_error_t *err;
-  svn_wc_adm_access_t *adm_access;
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
   /* We're going to receive dirents twice;  we want to ignore the
      first one (where it's a child of a parent dir), and only use
@@ -123,11 +125,7 @@ propset_walk_cb(const char *path,
   if (! SVN_WC__CL_MATCH(wb->changelist_hash, entry))
     return SVN_NO_ERROR;
 
-  SVN_ERR(svn_wc_adm_retrieve(&adm_access, wb->base_access,
-                              (entry->kind == svn_node_dir ? path
-                               : svn_dirent_dirname(path, pool)),
-                              pool));
-  err = svn_wc_prop_set3(wb->propname, wb->propval, path, adm_access,
+  err = svn_wc_prop_set4(wb->wc_ctx, local_abspath, wb->propname, wb->propval,
                          wb->force, wb->notify_func, wb->notify_baton, pool);
   if (err)
     {
@@ -373,6 +371,15 @@ svn_client_propset3(svn_commit_info_t **commit_info_p,
       int adm_lock_level = SVN_WC__LEVELS_TO_LOCK_FROM_DEPTH(depth);
       const svn_wc_entry_t *entry;
       apr_hash_t *changelist_hash = NULL;
+      svn_wc_context_t *wc_ctx;
+      const char *target_abspath;
+
+      SVN_ERR(svn_dirent_get_absolute(&target_abspath, target, pool));
+
+      if (!ctx->wc_ctx)
+        SVN_ERR(svn_wc_context_create(&wc_ctx, NULL /* config */, pool, pool));
+      else
+        wc_ctx = ctx->wc_ctx;
 
       if (changelists && changelists->nelts)
         SVN_ERR(svn_hash_from_cstring_keys(&changelist_hash,
@@ -390,7 +397,7 @@ svn_client_propset3(svn_commit_info_t **commit_info_p,
             = { propset_walk_cb, svn_client__default_walker_error_handler };
           struct propset_walk_baton wb;
 
-          wb.base_access = adm_access;
+          wb.wc_ctx = wc_ctx;
           wb.propname = propname;
           wb.propval = propval;
           wb.force = skip_checks;
@@ -403,10 +410,14 @@ svn_client_propset3(svn_commit_info_t **commit_info_p,
         }
       else if (SVN_WC__CL_MATCH(changelist_hash, entry))
         {
-          SVN_ERR(svn_wc_prop_set3(propname, propval, target,
-                                   adm_access, skip_checks, ctx->notify_func2,
+          SVN_ERR(svn_wc_prop_set4(wc_ctx, target_abspath, propname, propval,
+                                   skip_checks, ctx->notify_func2,
                                    ctx->notify_baton2, pool));
         }
+
+      if (!ctx->wc_ctx)
+        SVN_ERR(svn_wc_context_destroy(wc_ctx));
+
       return svn_wc_adm_close2(adm_access, pool);
     }
 }
@@ -500,24 +511,28 @@ svn_client_revprop_set2(const char *propname,
 }
 
 
-/* Set *PROPS to the pristine (base) properties at PATH, if PRISTINE
+/* Set *PROPS to the pristine (base) properties at LOCAL_ABSPATH, if PRISTINE
  * is true, or else the working value if PRISTINE is false.
  *
  * The keys of *PROPS will be 'const char *' property names, and the
  * values 'const svn_string_t *' property values.  Allocate *PROPS
- * and its contents in POOL.
+ * and its contents in RESULT_POOL.  Use SCRATCH_POOL for temporary
+ * allocations.
  */
 static svn_error_t *
 pristine_or_working_props(apr_hash_t **props,
-                          const char *path,
-                          svn_wc_adm_access_t *adm_access,
+                          svn_wc_context_t *wc_ctx,
+                          const char *local_abspath,
                           svn_boolean_t pristine,
-                          apr_pool_t *pool)
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool)
 {
   if (pristine)
-    return svn_wc_get_prop_diffs(NULL, props, path, adm_access, pool);
+    return svn_wc_get_prop_diffs2(NULL, props, wc_ctx, local_abspath,
+                                  result_pool, scratch_pool);
   else
-    return svn_wc_prop_list(props, path, adm_access, pool);
+    return svn_wc_prop_list2(props, wc_ctx, local_abspath, result_pool,
+                             scratch_pool);
 }
 
 
@@ -527,23 +542,25 @@ pristine_or_working_props(apr_hash_t **props,
  */
 static svn_error_t *
 pristine_or_working_propval(const svn_string_t **propval,
+                            svn_wc_context_t *wc_ctx,
+                            const char *local_abspath,
                             const char *propname,
-                            const char *path,
-                            svn_wc_adm_access_t *adm_access,
                             svn_boolean_t pristine,
-                            apr_pool_t *pool)
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool)
 {
   if (pristine)
     {
       apr_hash_t *pristine_props;
 
-      SVN_ERR(svn_wc_get_prop_diffs(NULL, &pristine_props, path, adm_access,
-                                    pool));
+      SVN_ERR(svn_wc_get_prop_diffs2(NULL, &pristine_props, wc_ctx,
+                                    local_abspath, result_pool, scratch_pool));
       *propval = apr_hash_get(pristine_props, propname, APR_HASH_KEY_STRING);
     }
   else  /* get the working revision */
     {
-      SVN_ERR(svn_wc_prop_get(propval, propname, path, adm_access, pool));
+      SVN_ERR(svn_wc_prop_get2(propval, wc_ctx, local_abspath, propname,
+                               result_pool, scratch_pool));
     }
 
   return SVN_NO_ERROR;
@@ -555,7 +572,7 @@ struct propget_walk_baton
 {
   const char *propname;  /* The name of the property to get. */
   svn_boolean_t pristine;  /* Select base rather than working props. */
-  svn_wc_adm_access_t *base_access;  /* Access for the tree being walked. */
+  svn_wc_context_t *wc_ctx;  /* Context for the tree being walked. */
   apr_hash_t *changelist_hash;  /* Keys are changelists to filter on. */
   apr_hash_t *props;  /* Out: mapping of (path:propval). */
 };
@@ -579,6 +596,9 @@ propget_walk_cb(const char *path,
 {
   struct propget_walk_baton *wb = walk_baton;
   const svn_string_t *propval;
+  const char *local_abspath;
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
   /* We're going to receive dirents twice;  we want to ignore the
      first one (where it's a child of a parent dir), and only use
@@ -596,14 +616,13 @@ propget_walk_cb(const char *path,
   if (! SVN_WC__CL_MATCH(wb->changelist_hash, entry))
     return SVN_NO_ERROR;
 
-  SVN_ERR(pristine_or_working_propval(&propval, wb->propname, path,
-                                      wb->base_access, wb->pristine,
-                                      pool));
+  SVN_ERR(pristine_or_working_propval(&propval, wb->wc_ctx, local_abspath,
+                                      wb->propname, wb->pristine,
+                                      apr_hash_pool_get(wb->props), pool));
 
   if (propval)
     {
       path = apr_pstrdup(apr_hash_pool_get(wb->props), path);
-      propval = svn_string_dup(propval, apr_hash_pool_get(wb->props));
       apr_hash_set(wb->props, path, APR_HASH_KEY_STRING, propval);
     }
 
@@ -763,6 +782,7 @@ svn_client__get_prop_from_wc(apr_hash_t *props,
                              svn_depth_t depth,
                              const apr_array_header_t *changelists,
                              svn_client_ctx_t *ctx,
+                             svn_wc_context_t *wc_ctx,
                              apr_pool_t *pool)
 {
   apr_hash_t *changelist_hash = NULL;
@@ -783,9 +803,9 @@ svn_client__get_prop_from_wc(apr_hash_t *props,
 
   wb.propname = propname;
   wb.pristine = pristine;
-  wb.base_access = adm_access;
   wb.changelist_hash = changelist_hash;
   wb.props = props;
+  wb.wc_ctx = wc_ctx;
 
   /* Fetch the property, recursively or for a single resource. */
   if (depth >= svn_depth_files && entry->kind == svn_node_dir)
@@ -834,6 +854,12 @@ svn_client_propget3(apr_hash_t **props,
       const svn_wc_entry_t *node;
       svn_boolean_t pristine;
       int adm_lock_level = SVN_WC__LEVELS_TO_LOCK_FROM_DEPTH(depth);
+      svn_wc_context_t *wc_ctx;
+
+      if (!ctx->wc_ctx)
+        SVN_ERR(svn_wc_context_create(&wc_ctx, NULL /* config */, pool, pool));
+      else
+        wc_ctx = ctx->wc_ctx;
 
       SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, path_or_url,
                                      FALSE, adm_lock_level,
@@ -851,8 +877,10 @@ svn_client_propget3(apr_hash_t **props,
 
       SVN_ERR(svn_client__get_prop_from_wc(*props, propname, path_or_url,
                                            pristine, node, adm_access,
-                                           depth, changelists, ctx, pool));
+                                           depth, changelists, ctx, wc_ctx,
+                                           pool));
 
+      SVN_ERR(svn_wc_context_destroy(wc_ctx));
       SVN_ERR(svn_wc_adm_close2(adm_access, pool));
     }
   else
@@ -1064,8 +1092,8 @@ remote_proplist(const char *target_prefix,
 struct proplist_walk_baton
 {
   svn_boolean_t pristine;  /* Select base rather than working props. */
-  svn_wc_adm_access_t *base_access;  /* Access for the tree being walked. */
   apr_hash_t *changelist_hash; /* Keys are changelists to filter on. */
+  svn_wc_context_t *wc_ctx;  /* Context for the tree being walked. */
   svn_proplist_receiver_t receiver;  /* Proplist receiver to call. */
   void *receiver_baton;    /* Baton for the proplist receiver. */
 };
@@ -1084,7 +1112,10 @@ proplist_walk_cb(const char *path,
                  apr_pool_t *pool)
 {
   struct proplist_walk_baton *wb = walk_baton;
+  const char *local_abspath;
   apr_hash_t *hash;
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
   /* We're going to receive dirents twice;  we want to ignore the
      first one (where it's a child of a parent dir), and only use
@@ -1104,8 +1135,8 @@ proplist_walk_cb(const char *path,
 
   path = apr_pstrdup(pool, path);
 
-  SVN_ERR(pristine_or_working_props(&hash, path, wb->base_access,
-                                    wb->pristine, pool));
+  SVN_ERR(pristine_or_working_props(&hash, wb->wc_ctx, local_abspath,
+                                    wb->pristine, pool, pool));
   return call_receiver(path, hash, wb->receiver, wb->receiver_baton, pool);
 }
 
@@ -1140,6 +1171,15 @@ svn_client_proplist3(const char *path_or_url,
       int levels_to_lock = SVN_WC__LEVELS_TO_LOCK_FROM_DEPTH(depth);
       const svn_wc_entry_t *entry;
       apr_hash_t *changelist_hash = NULL;
+      const char *local_abspath;
+      svn_wc_context_t *wc_ctx;
+
+      SVN_ERR(svn_dirent_get_absolute(&local_abspath, path_or_url, pool));
+
+      if (!ctx->wc_ctx)
+        SVN_ERR(svn_wc_context_create(&wc_ctx, NULL /* config */, pool, pool));
+      else
+        wc_ctx = ctx->wc_ctx;
 
       SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, path_or_url,
                                      FALSE, levels_to_lock,
@@ -1169,7 +1209,7 @@ svn_client_proplist3(const char *path_or_url,
             = { proplist_walk_cb, svn_client__default_walker_error_handler };
           struct proplist_walk_baton wb;
 
-          wb.base_access = adm_access;
+          wb.wc_ctx = wc_ctx;
           wb.pristine = pristine;
           wb.changelist_hash = changelist_hash;
           wb.receiver = receiver;
@@ -1184,12 +1224,13 @@ svn_client_proplist3(const char *path_or_url,
         {
           apr_hash_t *hash;
 
-          SVN_ERR(pristine_or_working_props(&hash, path_or_url, adm_access,
-                                            pristine, pool));
+          SVN_ERR(pristine_or_working_props(&hash, wc_ctx, local_abspath,
+                                            pristine, pool, pool));
           SVN_ERR(call_receiver(path_or_url, hash,
                                 receiver, receiver_baton, pool));
 
         }
+      SVN_ERR(svn_wc_context_destroy(wc_ctx));
 
       SVN_ERR(svn_wc_adm_close2(adm_access, pool));
     }

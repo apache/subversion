@@ -413,6 +413,10 @@ harvest_committables(apr_hash_t *committables,
   svn_boolean_t is_special;
   apr_pool_t *token_pool = (lock_tokens ? apr_hash_pool_get(lock_tokens)
                             : NULL);
+  svn_wc_context_t *wc_ctx;
+  const char *local_abspath;
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, scratch_pool));
 
   /* Early out if the item is already marked as committable. */
   if (look_up_committable(committables, path, scratch_pool))
@@ -449,8 +453,15 @@ harvest_committables(apr_hash_t *committables,
 
   /* Verify that the node's type has not changed before attempting to
      commit. */
-  SVN_ERR(svn_wc_prop_get(&propval, SVN_PROP_SPECIAL, path, adm_access,
-                          scratch_pool));
+  if (!ctx->wc_ctx)
+    SVN_ERR(svn_wc_context_create(&wc_ctx, NULL /* config */, scratch_pool,
+                                  scratch_pool));
+  else
+    wc_ctx = ctx->wc_ctx;
+  SVN_ERR(svn_wc_prop_get2(&propval, wc_ctx, local_abspath, SVN_PROP_SPECIAL,
+                           scratch_pool, scratch_pool));
+  if (!ctx->wc_ctx)
+    SVN_ERR(svn_wc_context_destroy(wc_ctx));
 
   if ((((! propval) && (is_special))
 #ifdef HAVE_SYMLINK
@@ -1347,9 +1358,21 @@ do_item_commit(void **dir_baton,
           if (item->kind == svn_node_file)
             {
               const svn_string_t *propval;
-              SVN_ERR(svn_wc_prop_get
-                      (&propval, SVN_PROP_MIME_TYPE, item->path, adm_access,
-                       pool));
+              const char *local_abspath;
+              svn_wc_context_t *wc_ctx;
+
+              SVN_ERR(svn_dirent_get_absolute(&local_abspath, item->path,
+                                              pool));
+              if (!ctx->wc_ctx)
+                SVN_ERR(svn_wc_context_create(&wc_ctx, NULL /* config */,
+                                              pool, pool));
+              else
+                wc_ctx = ctx->wc_ctx;
+              SVN_ERR(svn_wc_prop_get2(&propval, wc_ctx, local_abspath,
+                                       SVN_PROP_MIME_TYPE, pool, pool));
+              if (!ctx->wc_ctx)
+                SVN_ERR(svn_wc_context_destroy(wc_ctx));
+            
               if (propval)
                 notify->mime_type = propval->data;
             }

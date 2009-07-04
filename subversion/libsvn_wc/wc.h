@@ -137,20 +137,27 @@ struct svn_wc_context_t
   /* The wc_db handle for this working copy. */
   svn_wc__db_t *db;
 
+  /* Close the DB when we destroy this context?
+     (This is used inside backward compat wrappers, and should only be
+      modified by the proper create() functions. */
+  svn_boolean_t close_db_on_destroy;
+
   /* The state pool for this context. */
   apr_pool_t *state_pool;
 };
 
 /**
  * Just like svn_wc_context_create(), only use the provided DB to construct
- * the context.  The result pool will be the state pool associated with
- * DB->state_pool.
+ * the context.
+ *
+ * Even though DB is not allocated from the same pool at *WC_CTX, it is
+ * expected to remain open throughout the life of *WC_CTX.
  */
 svn_error_t *
 svn_wc__context_create_with_db(svn_wc_context_t **wc_ctx,
                                svn_config_t *config,
                                svn_wc__db_t *db,
-                               apr_pool_t *scratch_pool);
+                               apr_pool_t *result_pool);
 
 
 /*** Update traversals. ***/

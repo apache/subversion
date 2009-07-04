@@ -145,7 +145,7 @@ restore_file(const char *file_path,
                                    NULL, NULL,
                                    NULL, NULL,
                                    NULL, NULL, NULL, NULL,
-                                   NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, NULL,
                                    db, local_abspath,
                                    pool, pool));
 
@@ -272,8 +272,8 @@ report_revisions_and_depths(svn_wc_adm_access_t *adm_access,
   if (traversal_info)
     {
       const svn_string_t *val;
-      SVN_ERR(svn_wc_prop_get(&val, SVN_PROP_EXTERNALS, full_path, adm_access,
-                              subpool));
+      SVN_ERR(svn_wc__internal_propget(&val, SVN_PROP_EXTERNALS, abspath, db,
+                                       subpool, subpool));
       if (val)
         {
           apr_pool_t *dup_pool = traversal_info->pool;
@@ -927,7 +927,7 @@ svn_wc_transmit_text_deltas2(const char **tempfile,
                                    &expected_checksum, NULL,
                                    NULL, NULL,
                                    NULL, NULL, NULL, NULL,
-                                   NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, NULL,
                                    db, abspath,
                                    pool, pool));
 
@@ -1015,23 +1015,22 @@ svn_wc_transmit_text_deltas2(const char **tempfile,
       if (tempfile)
         svn_error_clear(svn_io_remove_file2(*tempfile, TRUE, pool));
 
-      return svn_error_createf
-        (SVN_ERR_WC_CORRUPT_TEXT_BASE, NULL,
-         apr_psprintf(pool, "%s:\n%s\n%s\n",
-                      _("Checksum mismatch for '%s'"),
-                      _("   expected:  %s"),
-                      _("     actual:  %s")),
-         svn_path_local_style(svn_wc__text_base_path(path, FALSE, pool),
-                              pool),
-         svn_checksum_to_cstring_display(expected_checksum, pool),
-         svn_checksum_to_cstring_display(verify_checksum, pool));
+      return svn_error_createf(SVN_ERR_WC_CORRUPT_TEXT_BASE, NULL,
+                      _("Checksum mismatch for '%s':\n"
+                        "   expected:  %s\n"
+                        "     actual:  %s\n"),
+                      svn_dirent_local_style(svn_wc__text_base_path(
+                                                            path, FALSE, pool),
+                                             pool),
+                      svn_checksum_to_cstring_display(expected_checksum, pool),
+                      svn_checksum_to_cstring_display(verify_checksum, pool));
     }
 
   /* Now, handle that delta transmission error if any, so we can stop
      thinking about it after this point. */
   SVN_ERR_W(err, apr_psprintf(pool,
                               _("While preparing '%s' for commit"),
-                              svn_path_local_style(path, pool)));
+                              svn_dirent_local_style(path, pool)));
 
   if (digest)
     memcpy(digest, local_checksum->digest, svn_checksum_size(local_checksum));

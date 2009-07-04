@@ -925,6 +925,12 @@ add_directory(const char *path,
 
   if (eb->notify_func)
     {
+      /* If a path was replaced, we issue a separate 'D' notification
+         here, followed by the 'A' notification in the usual way.
+         However, if the path was replaced on top of a conflicting mod,
+         this is a tree-conflict case. The path is already marked tree-
+         conflicted (either by some previous run altogether, or by this
+         replace's delete operation). No need to notify again here. */
       svn_wc_notify_t *notify;
       svn_boolean_t is_replace = FALSE;
       deleted_path_notify_t *dpn = apr_hash_get(eb->deleted_paths, b->wcpath,
@@ -932,6 +938,7 @@ add_directory(const char *path,
       if (dpn)
         {
           svn_wc_notify_action_t new_action;
+
           if (dpn->action == svn_wc_notify_update_delete
               && action == svn_wc_notify_update_add)
             {
@@ -940,11 +947,19 @@ add_directory(const char *path,
             }
           else
             new_action = dpn->action;
-          notify = svn_wc_create_notify(b->wcpath, new_action, pool);
-          notify->kind = dpn->kind;
-          notify->content_state = notify->prop_state = dpn->state;
-          notify->lock_state = svn_wc_notify_lock_state_inapplicable;
-          (*eb->notify_func)(eb->notify_baton, notify, pool);
+
+          /* Tree-conflicts during replace were notified about elsewhere. */
+          if (action != svn_wc_notify_tree_conflict)
+            {
+              notify = svn_wc_create_notify(b->wcpath, new_action, pool);
+              notify->kind = dpn->kind;
+              notify->content_state = notify->prop_state = dpn->state;
+              notify->lock_state = svn_wc_notify_lock_state_inapplicable;
+              (*eb->notify_func)(eb->notify_baton, notify, pool);
+            }
+
+          /* Remove from the list of deleted paths. We don't want to
+             notify about this path any more than we did already. */
           apr_hash_set(eb->deleted_paths, b->wcpath,
                        APR_HASH_KEY_STRING, NULL);
         }
@@ -1297,11 +1312,15 @@ close_file(void *file_baton,
             }
           else
             new_action = dpn->action;
-          notify  = svn_wc_create_notify(b->wcpath, new_action, pool);
-          notify->kind = dpn->kind;
-          notify->content_state = notify->prop_state = dpn->state;
-          notify->lock_state = svn_wc_notify_lock_state_inapplicable;
-          (*eb->notify_func)(eb->notify_baton, notify, pool);
+
+          if (action != svn_wc_notify_tree_conflict)
+            {
+              notify  = svn_wc_create_notify(b->wcpath, new_action, pool);
+              notify->kind = dpn->kind;
+              notify->content_state = notify->prop_state = dpn->state;
+              notify->lock_state = svn_wc_notify_lock_state_inapplicable;
+              (*eb->notify_func)(eb->notify_baton, notify, pool);
+            }
           apr_hash_set(eb->deleted_paths, b->wcpath,
                        APR_HASH_KEY_STRING, NULL);
         }

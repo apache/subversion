@@ -46,6 +46,9 @@
     <String Id="PostDlgRepairDescription" Overridable="yes">The [ProductName] installation has been repaired.</String>
     <String Id="PostDlgTitle" Overridable="yes">{\WixUI_Font_Bigger}Completed the [ProductName] Setup Wizard</String>
 
+	<String Id="PreText" Overridable="yes">.\loc\en-us\pre.rtf</String>
+	<String Id="PostText" Overridable="yes">.\loc\en-us\post.rtf</String>
+	
     <!-- overrides -->
     <String Id="WelcomeDlgDescription" Overridable="yes">This will install [ProductName] [ProductVersion]-[ProductRevision] on your computer.&#xa;&#xa;It is recommended that you close all other applications before continuing.&#xa;&#xa;Click Next to continue or Cancel to exit Setup.</String>
 </WixLocalization>

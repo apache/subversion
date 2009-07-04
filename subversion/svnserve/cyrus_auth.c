@@ -282,9 +282,6 @@ svn_error_t *cyrus_auth_request(svn_ra_svn_conn_t *conn,
   /* Initialize security properties. */
   svn_ra_svn__default_secprops(&secprops);
 
-  /* Don't allow PLAIN or LOGIN, since we don't support TLS yet. */
-  secprops.security_flags = SASL_SEC_NOPLAINTEXT;
-
   /* Don't allow ANONYMOUS if a username is required. */
   no_anonymous = needs_username || get_access(b, UNAUTHENTICATED) < required;
   if (no_anonymous)

@@ -217,7 +217,7 @@ load_authorities(svn_ra_serf__connection_t *conn, const char *authorities,
           return svn_error_createf
             (SVN_ERR_BAD_CONFIG_VALUE, NULL,
              _("Invalid config: unable to load certificate file '%s'"),
-             svn_path_local_style(file, pool));
+             svn_dirent_local_style(file, pool));
         }
       files = NULL;
     }
@@ -1021,7 +1021,7 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
   if (sl.code == 404 && ctx->ignore_errors == FALSE)
     {
       /* If our caller won't know about the 404, abort() for now. */
-      SVN_ERR_ASSERT_NO_RETURN(ctx->status_code);
+      SVN_ERR_ASSERT(ctx->status_code);
 
       if (*ctx->done == FALSE)
         {
@@ -1066,7 +1066,7 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
         {
           XML_ParserFree(ctx->xmlp);
 
-          SVN_ERR_ASSERT_NO_RETURN(ctx->status_code);
+          SVN_ERR_ASSERT(ctx->status_code);
 
           if (*ctx->done == FALSE)
             {
