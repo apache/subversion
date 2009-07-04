@@ -1320,6 +1320,7 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
   svn_boolean_t commit_in_progress = FALSE;
   const char *current_dir = "";
   const char *notify_prefix;
+  svn_wc_context_t *wc_ctx;
   int i;
 
   /* Committing URLs doesn't make sense, so error if it's tried. */
@@ -1336,6 +1337,12 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
   SVN_ERR(svn_dirent_condense_targets(&base_dir, &rel_targets, targets,
                                       depth == svn_depth_infinity,
                                       pool, pool));
+
+  /* Get a wc context. */
+  if (!ctx->wc_ctx)
+    SVN_ERR(svn_wc_context_create(&wc_ctx, NULL /* config */, pool, pool));
+  else
+    wc_ctx = ctx->wc_ctx;
 
   /* No targets means nothing to commit, so just return. */
   if (! base_dir)
@@ -1586,6 +1593,7 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
                                                   ! keep_locks,
                                                   changelists,
                                                   ctx,
+                                                  wc_ctx,
                                                   pool)))
     goto cleanup;
 
