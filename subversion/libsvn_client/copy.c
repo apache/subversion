@@ -1185,7 +1185,7 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
 
   SVN_ERR(svn_client__get_copy_committables(&committables,
                                             copy_pairs, dir_access,
-                                            ctx, pool));
+                                            ctx, wc_ctx, pool));
 
   /* ### todo: There should be only one hash entry, which currently
      has a hacked name until we have the entries files storing
