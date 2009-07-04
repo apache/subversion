@@ -185,18 +185,10 @@ set_wc_prop(void *baton,
             apr_pool_t *pool)
 {
   callback_baton_t *cb = baton;
-  svn_wc_adm_access_t *adm_access;
-  const svn_wc_entry_t *entry;
   const char *full_path = svn_dirent_join(cb->base_dir, path, pool);
+  const char *local_abspath;
 
-  SVN_ERR(svn_wc__entry_versioned(&entry, full_path, cb->base_access, FALSE,
-                                 pool));
-
-  SVN_ERR(svn_wc_adm_retrieve(&adm_access, cb->base_access,
-                              (entry->kind == svn_node_dir
-                               ? full_path
-                               : svn_dirent_dirname(full_path, pool)),
-                              pool));
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, full_path, pool));
 
   /* We pass 1 for the 'force' parameter here.  Since the property is
      coming from the repository, we definitely want to accept it.
@@ -206,8 +198,8 @@ set_wc_prop(void *baton,
      right, but the conflict would remind the user to make sure.
      Unfortunately, we don't have a clean mechanism for doing that
      here, so we just set the property and hope for the best. */
-  return svn_error_return(svn_wc_prop_set3(name, value, full_path, adm_access,
-                                           TRUE, NULL, NULL, pool));
+  return svn_error_return(svn_wc_prop_set4(cb->wc_ctx, local_abspath, name,
+                                           value, TRUE, NULL, NULL, pool));
 }
 
 
@@ -216,8 +208,8 @@ struct invalidate_wcprop_walk_baton
   /* The wcprop to invalidate. */
   const char *prop_name;
 
-  /* Access baton for the top of the walk. */
-  svn_wc_adm_access_t *base_access;
+  /* A context for accessing the working copy. */
+  svn_wc_context_t *wc_ctx;
 };
 
 
@@ -230,18 +222,15 @@ invalidate_wcprop_for_entry(const char *path,
                             apr_pool_t *pool)
 {
   struct invalidate_wcprop_walk_baton *wb = walk_baton;
-  svn_wc_adm_access_t *entry_access;
+  const char *local_abspath;
   svn_error_t *err;
 
-  SVN_ERR(svn_wc_adm_retrieve(&entry_access, wb->base_access,
-                              ((entry->kind == svn_node_dir)
-                               ? path
-                               : svn_dirent_dirname(path, pool)),
-                              pool));
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+
   /* It doesn't matter if we pass 0 or 1 for force here, since
      property deletion is always permitted. */
-  err = svn_wc_prop_set3(wb->prop_name, NULL, path, entry_access, FALSE,
-                         NULL, NULL, pool);
+  err = svn_wc_prop_set4(wb->wc_ctx, local_abspath, wb->prop_name, NULL,
+                         FALSE, NULL, NULL, pool);
   if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
     {
       svn_error_clear(err);
@@ -267,8 +256,8 @@ invalidate_wc_props(void *baton,
   struct invalidate_wcprop_walk_baton wb;
   svn_wc_adm_access_t *adm_access;
 
-  wb.base_access = cb->base_access;
   wb.prop_name = prop_name;
+  wb.wc_ctx = cb->wc_ctx;
 
   path = svn_path_join(cb->base_dir, path, pool);
   SVN_ERR(svn_wc_adm_probe_retrieve(&adm_access, cb->base_access, path,
