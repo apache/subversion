@@ -2028,16 +2028,15 @@ validate_eol_prop_against_file(const char *path,
   return SVN_NO_ERROR;
 }
 
-
 svn_error_t *
-svn_wc_prop_set4(svn_wc_context_t *wc_ctx,
-                 const char *local_abspath,
-                 const char *name,
-                 const svn_string_t *value,
-                 svn_boolean_t skip_checks,
-                 svn_wc_notify_func2_t notify_func,
-                 void *notify_baton,
-                 apr_pool_t *scratch_pool)
+svn_wc__internal_propset(svn_wc__db_t *db,
+                         const char *local_abspath,
+                         const char *name,
+                         const svn_string_t *value,
+                         svn_boolean_t skip_checks,
+                         svn_wc_notify_func2_t notify_func,
+                         void *notify_baton,
+                         apr_pool_t *scratch_pool)
 {
   apr_hash_t *prophash, *base_prophash;
   enum svn_prop_kind prop_kind = svn_property_kind(NULL, name);
@@ -2047,7 +2046,7 @@ svn_wc_prop_set4(svn_wc_context_t *wc_ctx,
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
   if (prop_kind == svn_prop_wc_kind)
-    return svn_error_return(svn_wc__wcprop_set(wc_ctx->db, local_abspath,
+    return svn_error_return(svn_wc__wcprop_set(db, local_abspath,
                                                name, value, scratch_pool));
 
   /* we don't do entry properties here */
@@ -2063,7 +2062,7 @@ svn_wc_prop_set4(svn_wc_context_t *wc_ctx,
                                NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL,
-                               wc_ctx->db, local_abspath,
+                               db, local_abspath,
                                scratch_pool, scratch_pool));
 
   /* Setting an inappropriate property is not allowed (unless
@@ -2077,7 +2076,7 @@ svn_wc_prop_set4(svn_wc_context_t *wc_ctx,
       struct getter_baton *gb = apr_pcalloc(scratch_pool, sizeof(*gb));
 
       gb->local_abspath = local_abspath;
-      gb->db = wc_ctx->db;
+      gb->db = db;
 
       SVN_ERR(svn_wc_canonicalize_svn_prop(&new_value, name, value,
                                            local_abspath,
@@ -2114,7 +2113,7 @@ svn_wc_prop_set4(svn_wc_context_t *wc_ctx,
       /* If not, we'll set the file to read-only at commit time. */
     }
 
-  SVN_ERR_W(svn_wc__load_props(&base_prophash, &prophash, NULL, wc_ctx->db,
+  SVN_ERR_W(svn_wc__load_props(&base_prophash, &prophash, NULL, db,
                                local_abspath, scratch_pool, scratch_pool),
             _("Failed to load properties from disk"));
 
@@ -2132,10 +2131,10 @@ svn_wc_prop_set4(svn_wc_context_t *wc_ctx,
                                              APR_HASH_KEY_STRING);
       apr_hash_t *old_keywords, *new_keywords;
 
-      SVN_ERR(svn_wc__get_keywords(&old_keywords, wc_ctx->db, local_abspath,
+      SVN_ERR(svn_wc__get_keywords(&old_keywords, db, local_abspath,
                                    old_value ? old_value->data : "",
                                    scratch_pool, scratch_pool));
-      SVN_ERR(svn_wc__get_keywords(&new_keywords, wc_ctx->db, local_abspath,
+      SVN_ERR(svn_wc__get_keywords(&new_keywords, db, local_abspath,
                                    value ? value->data : "",
                                    scratch_pool, scratch_pool));
 
@@ -2148,7 +2147,7 @@ svn_wc_prop_set4(svn_wc_context_t *wc_ctx,
           /* If we changed the keywords or newlines, void the entry
              timestamp for this file, so svn_wc_text_modified_p() does
              a real (albeit slow) check later on. */
-          SVN_ERR(svn_wc__db_op_invalidate_last_mod_time(wc_ctx->db,
+          SVN_ERR(svn_wc__db_op_invalidate_last_mod_time(db,
                                                          local_abspath,
                                                          scratch_pool));
         }
@@ -2198,6 +2197,21 @@ svn_wc_prop_set4(svn_wc_context_t *wc_ctx,
     }
 
   return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc_prop_set4(svn_wc_context_t *wc_ctx,
+                 const char *local_abspath,
+                 const char *name,
+                 const svn_string_t *value,
+                 svn_boolean_t skip_checks,
+                 svn_wc_notify_func2_t notify_func,
+                 void *notify_baton,
+                 apr_pool_t *scratch_pool)
+{
+  return svn_error_return(svn_wc__internal_propset(wc_ctx->db, local_abspath,
+                                   name, value, skip_checks, notify_func,
+                                   notify_baton, scratch_pool));
 }
 
 

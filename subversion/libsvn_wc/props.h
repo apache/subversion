@@ -59,6 +59,18 @@ svn_wc__internal_propget(const svn_string_t **value,
                          apr_pool_t *scratch_pool);
 
 
+/* Internal function for setting a property.  */
+svn_error_t *
+svn_wc__internal_propset(svn_wc__db_t *db,
+                         const char *local_abspath,
+                         const char *name,
+                         const svn_string_t *value,
+                         svn_boolean_t skip_checks,
+                         svn_wc_notify_func2_t notify_func,
+                         void *notify_baton,
+                         apr_pool_t *scratch_pool);
+
+
 /* Given ADM_ACCESS/PATH and an array of PROPCHANGES based on
    SERVER_BASEPROPS, merge the changes into the working copy.
    Append all necessary log entries to ENTRY_ACCUM.
