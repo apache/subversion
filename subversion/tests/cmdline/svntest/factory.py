@@ -236,7 +236,7 @@
 # - ask dev@
 # - ask neels
 
-import sys, re, os, shutil, bisect, textwrap
+import sys, re, os, shutil, bisect, textwrap, shlex
 
 import svntest
 from svntest import main, actions, tree
@@ -398,7 +398,7 @@ class TestFactory:
 
   def switch(self, line):
     "Given one input line, delegates to the appropriate sub-functions."
-    args = tokenize(line)
+    args = shlex.split(line)
     if len(args) < 1:
       return ""
     first = args[0]
@@ -1065,6 +1065,7 @@ class TestFactory:
     def replace(str, path, name, quote):
       return str.replace(path, quote + " + " + name + " + " + quote)
 
+    # We want longer paths first.
     for var in reversed(self.sorted_vars_by_pathlen):
       name = var[1]
       path = var[2]
@@ -1376,8 +1377,11 @@ class TestFactory:
     return py
       
 
-  def path2svntest(self, path, do_remove_on_new_wc_path=True, argnr=None):
-    "Given an input argument, do one hell of a path expansion on it."
+  def path2svntest(self, path, argnr=None):
+    """Given an input argument, do one hell of a path expansion on it.
+    ARGNR is simply inserted into the resulting Target.
+    Returns a self.Target instance.
+    """
     wc = self.WorkingCopy('wc_dir', self.sbox.wc_dir, None)
     url = self.sbox.repo_url  # do we need multiple URLs too??
 
@@ -1758,51 +1762,10 @@ def get_quote_style(str):
 
   return quote_char, at
 
-def tokenize(line):
-  "bind quoted strings together, otherwise act like str.split(None)"
-
-  char, start = get_quote_style(line)
-
-  if start is None:
-    return line.split(None)
-  else:
-    # find the end of the quote
-    findstart = start
-    while 1:
-      found = line[findstart:].find(char)
-      if found < 0:
-        # end not found. give up.
-        return line.split(None)
-      else:
-        end = findstart + found - 1
-        if line[end] == '\\' and line[end-1] != '\\':
-          findstart = findstart + found + 1
-        else:
-          break
-
-    # process the part up to here
-    tokens = line[:start-1].split(None)
-
-    # add the quoted token,
-    # allow sequences like "\n" to result in real control chars
-    tokens += [ sh2str(line[start:end+1]) ]
-
-    # and process the rest
-    tokens += tokenize( line[end+2:] )
-
-  return tokens
-
-def split_remove_empty(str, sep=None):
+def split_remove_empty(str, sep):
   "do a split, then remove empty elements."
   list = str.split(sep)
-  i = 0
-  while i < len(list):
-    item = list[i]
-    if not item or len(item) < 1:
-      del list[i]
-    else:
-      i += 1
-  return list
+  return filter(lambda item: item and len(item) > 0, list)
 
 def str2py(str):
   "returns the string enclosed in quotes, suitable for py scripts."
