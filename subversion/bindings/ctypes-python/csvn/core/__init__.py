@@ -1,5 +1,3 @@
-#!/home/djames/bin/python
-
 from ctypes import *
 import functions
 from functions import *
