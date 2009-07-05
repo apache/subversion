@@ -1338,12 +1338,6 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
                                       depth == svn_depth_infinity,
                                       pool, pool));
 
-  /* Get a wc context. */
-  if (!ctx->wc_ctx)
-    SVN_ERR(svn_wc_context_create(&wc_ctx, NULL /* config */, pool, pool));
-  else
-    wc_ctx = ctx->wc_ctx;
-
   /* No targets means nothing to commit, so just return. */
   if (! base_dir)
     goto cleanup;
@@ -1521,6 +1515,12 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
 
       svn_pool_destroy(subpool);
     }
+
+  /* Get a wc context. */
+  if (!ctx->wc_ctx)
+    SVN_ERR(svn_wc_context_create(&wc_ctx, NULL /* config */, pool, pool));
+  else
+    wc_ctx = ctx->wc_ctx;
 
   SVN_ERR(svn_wc_adm_open3(&base_dir_access, NULL, base_dir,
                            TRUE,  /* Write lock */
@@ -1701,6 +1701,9 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
                                          (*commit_info_p)->author,
                                          pool);
     }
+
+  if (!ctx->wc_ctx)
+    SVN_ERR(svn_wc_context_destroy(wc_ctx));
 
   /* Sleep to ensure timestamp integrity. */
   svn_io_sleep_for_timestamps(base_dir, pool);
