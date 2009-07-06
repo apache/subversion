@@ -921,6 +921,7 @@ log_do_committed(struct log_runner *loggy,
   svn_boolean_t wc_root, remove_executable = FALSE;
   svn_boolean_t set_read_write = FALSE;
   const char *full_path;
+  const char *local_abspath;
   const char *pdir, *base_name;
   apr_hash_t *entries;
   const svn_wc_entry_t *orig_entry;
@@ -935,6 +936,8 @@ log_do_committed(struct log_runner *loggy,
                                 name, pool);
   else
     full_path = apr_pstrdup(pool, svn_wc_adm_access_path(loggy->adm_access));
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, full_path, pool));
 
   /*** Perform sanity checking operations ***/
 
@@ -1094,8 +1097,8 @@ log_do_committed(struct log_runner *loggy,
           apr_array_header_t *propchanges;
 
 
-          SVN_ERR(svn_wc_get_prop_diffs(&propchanges, NULL,
-                                        full_path, loggy->adm_access, pool));
+          SVN_ERR(svn_wc__internal_propdiff(&propchanges, NULL, loggy->db,
+                                            local_abspath, pool, pool));
           for (i = 0; i < propchanges->nelts; i++)
             {
               svn_prop_t *propchange

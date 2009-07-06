@@ -49,6 +49,16 @@ svn_error_t *svn_wc__has_props(svn_boolean_t *has_props,
                                apr_pool_t *pool);
 
 
+/* Internal function for diffing props. */
+svn_error_t *
+svn_wc__internal_propdiff(apr_array_header_t **propchanges,
+                          apr_hash_t **original_props,
+                          svn_wc__db_t *db,
+                          const char *local_abspath,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool);
+
+
 /* Internal function for fetching a property.  */
 svn_error_t *
 svn_wc__internal_propget(const svn_string_t **value,
