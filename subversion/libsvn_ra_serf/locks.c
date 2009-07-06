@@ -365,9 +365,9 @@ handle_lock(serf_request_t *request,
       /* 423 == Locked */
       if (sl.code == 423)
         {
+          /* Older servers may not give a descriptive error, so we'll
+             make one of our own if we can't find one in the response. */
           err = svn_ra_serf__handle_server_error(request, response, pool);
-
-          /* Older servers may not give a descriptive error. */
           if (!err)
             {
               err = svn_error_createf(SVN_ERR_FS_PATH_ALREADY_LOCKED,
@@ -375,8 +375,7 @@ handle_lock(serf_request_t *request,
                                       _("Lock request failed: %d %s"),
                                       ctx->status_code, ctx->reason);
             }
-
-          SVN_ERR(err);
+          return err;
         }
 
       headers = serf_bucket_response_get_headers(response);
@@ -400,9 +399,9 @@ handle_lock(serf_request_t *request,
   /* Forbidden when a lock doesn't exist. */
   if (ctx->status_code == 403)
     {
-      svn_error_t * err = svn_ra_serf__handle_discard_body(request, response,
-                                                           NULL, pool);
-
+      /* If we get an "unexpected EOF" error, we'll wrap it with
+         generic request failure error. */
+      err = svn_ra_serf__handle_discard_body(request, response, NULL, pool);
       if (err && APR_STATUS_IS_EOF(err->apr_err))
         {
           ctx->done = TRUE;
@@ -411,7 +410,6 @@ handle_lock(serf_request_t *request,
                                     _("Lock request failed: %d %s"),
                                     ctx->status_code, ctx->reason));
         }
-
       SVN_ERR(err);
     }
   else
