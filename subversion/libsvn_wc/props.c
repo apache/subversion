@@ -2073,10 +2073,10 @@ svn_wc__internal_propset(svn_wc__db_t *db,
   if (value && svn_prop_is_svn_prop(name))
     {
       const svn_string_t *new_value;
-      struct getter_baton *gb = apr_pcalloc(scratch_pool, sizeof(*gb));
+      struct getter_baton gb;
 
-      gb->local_abspath = local_abspath;
-      gb->db = db;
+      gb.local_abspath = local_abspath;
+      gb.db = db;
 
       SVN_ERR(svn_wc_canonicalize_svn_prop(&new_value, name, value,
                                            local_abspath,
@@ -2084,7 +2084,7 @@ svn_wc__internal_propset(svn_wc__db_t *db,
                                                     svn_node_dir :
                                                     svn_node_file,
                                            skip_checks,
-                                           get_file_for_validation, gb,
+                                           get_file_for_validation, &gb,
                                            scratch_pool));
       value = new_value;
     }
