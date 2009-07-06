@@ -4106,10 +4106,18 @@ svn_client_export(svn_revnum_t *result_rev,
  * @{
  */
 
-/** Invoked by svn_client_list2() for each @a path with its @a dirent and,
- * if @a path is locked, its @a lock.  @a abs_path is the filesystem path
- * to which @a path is relative.  @a baton is the baton passed to the
- * caller.  @a pool may be used for temporary allocations.
+/** The type of function invoked by svn_client_list2() to report the details
+ * of each directory entry being listed.
+ *
+ * @a baton is the baton that was passed to the caller.  @a path is the
+ * entry's path relative to @a abs_path; it is the empty path when reporting
+ * the top node of the list operation.  @a dirent contains some or all of
+ * the directory entry's details, as determined by the caller.  @a lock is
+ * the entry's lock, if it is locked and if lock information is being
+ * reported by the caller; otherwise @a lock is NULL.  @a abs_path is the
+ * repository path of the top node of the list operation; it is relative to
+ * the repository root and begins with "/".  @a pool may be used for
+ * temporary allocations.
  *
  * @since New in 1.4.
  */
