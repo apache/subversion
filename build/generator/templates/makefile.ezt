@@ -80,7 +80,7 @@ $([target.varname]_OBJECTS): $([target.varname]_SRC)
 [else][target.varname]_DEPS = [target.add_deps][for target.objects] [target.objects][end][for target.deps] [target.deps][end]
 [target.varname]_OBJECTS =[for target.objnames] [target.objnames][end]
 [target.filename]: $([target.varname]_DEPS)
-	cd [target.path] && [target.link_cmd] -o [target.basename] [target.undefined_flag] $([target.varname]_OBJECTS)[for target.libs] [target.libs][end] $(LIBS)
+	cd [target.path] && [target.link_cmd] $([target.varname]_LDFLAGS) -o [target.basename] [target.undefined_flag] $([target.varname]_OBJECTS)[for target.libs] [target.libs][end] $(LIBS)
 [end][end][end]
 
 ########################################
