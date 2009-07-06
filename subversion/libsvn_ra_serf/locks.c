@@ -405,20 +405,16 @@ handle_lock(serf_request_t *request,
       if (err && APR_STATUS_IS_EOF(err->apr_err))
         {
           ctx->done = TRUE;
-          SVN_ERR(svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED,
-                                    err,
-                                    _("Lock request failed: %d %s"),
-                                    ctx->status_code, ctx->reason));
+          err = svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED,
+                                  err,
+                                  _("Lock request failed: %d %s"),
+                                  ctx->status_code, ctx->reason);
         }
-      SVN_ERR(err);
-    }
-  else
-    {
-      return svn_ra_serf__handle_xml_parser(request, response,
-                                            handler_baton, pool);
+      return err;
     }
 
-  return SVN_NO_ERROR;
+  return svn_ra_serf__handle_xml_parser(request, response,
+                                        handler_baton, pool);
 }
 
 static serf_bucket_t*
