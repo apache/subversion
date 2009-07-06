@@ -41,7 +41,6 @@ struct lock_baton
   const char *base_path;
   apr_hash_t *urls_to_paths;
   svn_client_ctx_t *ctx;
-  svn_wc_context_t *wc_ctx;
   apr_pool_t *pool;
 };
 
@@ -93,7 +92,8 @@ store_locks_callback(void *baton,
         {
           if (!ra_err)
             {
-              SVN_ERR(svn_wc_add_lock2(lb->wc_ctx, abs_path, lock, lb->pool));
+              SVN_ERR(svn_wc_add_lock2(lb->ctx->wc_ctx, abs_path, lock,
+                                       lb->pool));
               notify->lock_state = svn_wc_notify_lock_state_locked;
             }
           else
@@ -109,7 +109,7 @@ store_locks_callback(void *baton,
           if (!ra_err ||
               (ra_err && (ra_err->apr_err != SVN_ERR_FS_LOCK_OWNER_MISMATCH)))
             {
-              SVN_ERR(svn_wc_remove_lock2(lb->wc_ctx, abs_path, lb->pool));
+              SVN_ERR(svn_wc_remove_lock2(lb->ctx->wc_ctx, abs_path, lb->pool));
               notify->lock_state = svn_wc_notify_lock_state_unlocked;
             }
           else
@@ -432,17 +432,9 @@ svn_client_lock(const apr_array_header_t *targets,
   cb.ctx = ctx;
   cb.pool = pool;
 
-  if (!ctx->wc_ctx)
-    SVN_ERR(svn_wc_context_create(&cb.wc_ctx, NULL /* config */, pool, pool));
-  else
-    cb.wc_ctx = ctx->wc_ctx;
-
   /* Lock the paths. */
   SVN_ERR(svn_ra_lock(ra_session, path_revs, comment,
                       steal_lock, store_locks_callback, &cb, pool));
-
-  if (!ctx->wc_ctx)
-    SVN_ERR(svn_wc_context_destroy(cb.wc_ctx));
 
   return SVN_NO_ERROR;
 }
@@ -492,17 +484,9 @@ svn_client_unlock(const apr_array_header_t *targets,
   cb.ctx = ctx;
   cb.pool = pool;
 
-  if (!ctx->wc_ctx)
-    SVN_ERR(svn_wc_context_create(&cb.wc_ctx, NULL /* config */, pool, pool));
-  else
-    cb.wc_ctx = ctx->wc_ctx;
-
   /* Unlock the paths. */
   SVN_ERR(svn_ra_unlock(ra_session, path_tokens, break_lock,
                         store_locks_callback, &cb, pool));
-
-  if (!ctx->wc_ctx)
-    SVN_ERR(svn_wc_context_destroy(cb.wc_ctx));
 
   return SVN_NO_ERROR;
 }

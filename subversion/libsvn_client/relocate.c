@@ -118,13 +118,7 @@ svn_client_relocate(const char *path,
                     apr_pool_t *pool)
 {
   struct validator_baton_t vb;
-  svn_wc_context_t *wc_ctx;
   const char *local_abspath;
-
-  if (!ctx->wc_ctx)
-    SVN_ERR(svn_wc_context_create(&wc_ctx, NULL /* config */, pool, pool));
-  else
-    wc_ctx = ctx->wc_ctx;
 
   /* Now, populate our validator callback baton, and call the relocate code. */
   vb.ctx = ctx;
@@ -133,11 +127,8 @@ svn_client_relocate(const char *path,
   vb.pool = pool;
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
-  SVN_ERR(svn_wc_relocate4(wc_ctx, local_abspath, from, to, recurse,
+  SVN_ERR(svn_wc_relocate4(ctx->wc_ctx, local_abspath, from, to, recurse,
                            validator_func, &vb, pool));
-
-  if (!ctx->wc_ctx)
-    SVN_ERR(svn_wc_context_destroy(wc_ctx));
 
   return SVN_NO_ERROR;
 }

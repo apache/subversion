@@ -1320,7 +1320,6 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
   svn_boolean_t commit_in_progress = FALSE;
   const char *current_dir = "";
   const char *notify_prefix;
-  svn_wc_context_t *wc_ctx;
   int i;
 
   /* Committing URLs doesn't make sense, so error if it's tried. */
@@ -1516,12 +1515,6 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
       svn_pool_destroy(subpool);
     }
 
-  /* Get a wc context. */
-  if (!ctx->wc_ctx)
-    SVN_ERR(svn_wc_context_create(&wc_ctx, NULL /* config */, pool, pool));
-  else
-    wc_ctx = ctx->wc_ctx;
-
   SVN_ERR(svn_wc_adm_open3(&base_dir_access, NULL, base_dir,
                            TRUE,  /* Write lock */
                            lock_base_dir_recursive ? -1 : 0, /* lock levels */
@@ -1593,7 +1586,6 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
                                                   ! keep_locks,
                                                   changelists,
                                                   ctx,
-                                                  wc_ctx,
                                                   pool)))
     goto cleanup;
 
@@ -1701,9 +1693,6 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
                                          (*commit_info_p)->author,
                                          pool);
     }
-
-  if (!ctx->wc_ctx)
-    SVN_ERR(svn_wc_context_destroy(wc_ctx));
 
   /* Sleep to ensure timestamp integrity. */
   svn_io_sleep_for_timestamps(base_dir, pool);

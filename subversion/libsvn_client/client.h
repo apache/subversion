@@ -322,7 +322,6 @@ svn_client__get_prop_from_wc(apr_hash_t *props,
                              svn_depth_t depth,
                              const apr_array_header_t *changelists,
                              svn_client_ctx_t *ctx,
-                             svn_wc_context_t *wc_ctx,
                              apr_pool_t *pool);
 
 /* Retrieve the oldest revision of the node at REL_PATH at REV since
@@ -866,9 +865,7 @@ typedef struct
 
    If CTX->CANCEL_FUNC is non-null, it will be called with
    CTX->CANCEL_BATON while harvesting to determine if the client has
-   cancelled the operation.
-   
-   WC_CTX is a working copy context used to access the working copy. */
+   cancelled the operation. */
 svn_error_t *
 svn_client__harvest_committables(apr_hash_t **committables,
                                  apr_hash_t **lock_tokens,
@@ -878,7 +875,6 @@ svn_client__harvest_committables(apr_hash_t **committables,
                                  svn_boolean_t just_locked,
                                  const apr_array_header_t *changelists,
                                  svn_client_ctx_t *ctx,
-                                 svn_wc_context_t *wc_ctx,
                                  apr_pool_t *pool);
 
 
@@ -891,15 +887,12 @@ svn_client__harvest_committables(apr_hash_t **committables,
 
    If CTX->CANCEL_FUNC is non-null, it will be called with
    CTX->CANCEL_BATON while harvesting to determine if the client has
-   cancelled the operation.
-   
-   WC_CTX is a working copy context used to access the working copy. */
+   cancelled the operation.  */
 svn_error_t *
 svn_client__get_copy_committables(apr_hash_t **committables,
                                   const apr_array_header_t *copy_pairs,
                                   svn_wc_adm_access_t *adm_access,
                                   svn_client_ctx_t *ctx,
-                                  svn_wc_context_t *wc_ctx,
                                   apr_pool_t *pool);
 
 
