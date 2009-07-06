@@ -522,6 +522,8 @@ svn_wc__props_delete(svn_wc__db_t *db,
   const char *props_file;
   svn_wc__db_kind_t kind;
 
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
   if (props_kind == svn_wc__props_wcprop)
     {
       return svn_error_return(svn_wc__db_base_set_dav_cache(db, local_abspath,
@@ -1740,6 +1742,8 @@ svn_wc__wcprop_set(svn_wc__db_t *db,
 {
   apr_hash_t *prophash;
 
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
   SVN_ERR(svn_wc__db_base_get_dav_cache(&prophash, db, local_abspath,
                                         scratch_pool, scratch_pool));
 
@@ -1767,6 +1771,8 @@ svn_wc_prop_list2(apr_hash_t **props,
 {
   svn_wc__db_kind_t kind;
 
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
   /* if there is no entry, 'path' is not under version control and
      therefore has no props. */
   SVN_ERR(svn_wc__db_check_node(&kind, wc_ctx->db, local_abspath,
@@ -1790,6 +1796,8 @@ svn_wc_prop_get2(const svn_string_t **value,
                  apr_pool_t *scratch_pool)
 {
   enum svn_prop_kind kind = svn_property_kind(NULL, name);
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
   if (kind == svn_prop_entry_kind)
     {
@@ -2495,6 +2503,8 @@ svn_wc_get_prop_diffs2(apr_array_header_t **propchanges,
 {
   svn_wc__db_kind_t kind;
   apr_hash_t *baseprops, *props;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
   SVN_ERR(svn_wc__db_check_node(&kind, wc_ctx->db, local_abspath,
                                 scratch_pool));
