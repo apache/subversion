@@ -123,7 +123,6 @@ static svn_error_t *
 check_prop_mods(svn_boolean_t *props_changed,
                 svn_boolean_t *eol_prop_changed,
                 const char *path,
-                svn_wc_adm_access_t *adm_access,
                 svn_wc_context_t *wc_ctx,
                 apr_pool_t *pool)
 {
@@ -134,17 +133,19 @@ check_prop_mods(svn_boolean_t *props_changed,
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
   *eol_prop_changed = *props_changed = FALSE;
-  SVN_ERR(svn_wc_props_modified_p(props_changed, path, adm_access, pool));
-  if (! *props_changed)
-    return SVN_NO_ERROR;
   SVN_ERR(svn_wc_get_prop_diffs2(&prop_mods, NULL, wc_ctx, local_abspath,
                                  pool, pool));
+  if (prop_mods->nelts == 0)
+    return SVN_NO_ERROR;
+
+  *props_changed = TRUE;
   for (i = 0; i < prop_mods->nelts; i++)
     {
       svn_prop_t *prop_mod = &APR_ARRAY_IDX(prop_mods, i, svn_prop_t);
       if (strcmp(prop_mod->name, SVN_PROP_EOL_STYLE) == 0)
         *eol_prop_changed = TRUE;
     }
+
   return SVN_NO_ERROR;
 }
 
@@ -625,7 +626,7 @@ harvest_committables(apr_hash_t *committables,
 
       /* See if there are property modifications to send. */
       SVN_ERR(check_prop_mods(&prop_mod, &eol_prop_changed, path,
-                              adm_access, ctx->wc_ctx, scratch_pool));
+                              ctx->wc_ctx, scratch_pool));
 
       /* Regular adds of files have text mods, but for copies we have
          to test for textual mods.  Directories simply don't have text! */
@@ -655,7 +656,7 @@ harvest_committables(apr_hash_t *committables,
 
       /* See if there are property modifications to send. */
       SVN_ERR(check_prop_mods(&prop_mod, &eol_prop_changed, path,
-                              adm_access, ctx->wc_ctx, scratch_pool));
+                              ctx->wc_ctx, scratch_pool));
 
       /* Check for text mods on files.  If EOL_PROP_CHANGED is TRUE,
          then we need to force a translated byte-for-byte comparison

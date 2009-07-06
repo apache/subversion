@@ -2146,7 +2146,13 @@ svn_wc_text_modified_p(svn_boolean_t *modified_p,
 /** Set @a *modified_p to non-zero if @a path's properties are modified
  * with regard to the base revision, else set @a modified_p to zero.
  * @a adm_access must be an access baton for @a path.
+ *
+ * If you want to use this with a post-wc-ng working copy, just call
+ * svn_wc_get_prop_diffs2() and examine the output.
+ *
+ * @deprecated Provided for backward compatibility with the 1.6 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_props_modified_p(svn_boolean_t *modified_p,
                         const char *path,
