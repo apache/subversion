@@ -3617,10 +3617,9 @@ find_gaps_in_merge_source_history(svn_revnum_t *gap_start,
                hi;
                hi = apr_hash_next(hi))
             {
-              const void *key;
               void *value;
 
-              apr_hash_this(hi, &key, NULL, &value);
+              apr_hash_this(hi, NULL, NULL, &value);
               SVN_ERR(svn_rangelist_merge(&implicit_rangelist, value,
                                           scratch_pool));
             }
