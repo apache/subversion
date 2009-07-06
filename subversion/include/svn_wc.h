@@ -5074,14 +5074,16 @@ svn_wc_diff(svn_wc_adm_access_t *anchor,
  *
  * If @a propchanges is non-@c NULL, return these changes as an array of
  * @c svn_prop_t structures stored in @a *propchanges.  The structures and
- * array will be allocated in @a pool.  If there are no local property
- * modifications on @a path, then set @a *propchanges to @c NULL.
+ * array will be allocated in @a result_pool.  If there are no local property
+ * modifications on @a local_abspath, then set @a *propchanges will be empty.
  *
  * If @a original_props is non-@c NULL, then set @a *original_props to
  * hashtable (<tt>const char *name</tt> -> <tt>const svn_string_t *value</tt>)
  * that represents the 'pristine' property list of @a path.  This hashtable is
  * allocated in @a result_pool, and can be used to compare old and new values
- * of properties.  Use @a scratch_pool for temporary allocations.
+ * of properties.
+ *
+ * Use @a scratch_pool for temporary allocations.
  */
 svn_error_t *
 svn_wc_get_prop_diffs2(apr_array_header_t **propchanges,
