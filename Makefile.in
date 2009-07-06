@@ -194,6 +194,25 @@ LINK_CXX = $(LIBTOOL) $(LTCXXFLAGS) --mode=link $(CXX) $(LT_LDFLAGS) $(CXXFLAGS)
 # special link rule for mod_dav_svn
 LINK_APACHE_MOD = $(LIBTOOL) $(LTFLAGS) --mode=link $(CC) $(LT_LDFLAGS) $(CFLAGS) $(LDFLAGS) -rpath $(APACHE_LIBEXECDIR) -avoid-version -module $(APACHE_LDFLAGS)
 
+# Special LDFLAGS for some libraries
+libsvn_auth_gnome_keyring_LDFLAGS = @libsvn_auth_gnome_keyring_LDFLAGS@
+libsvn_auth_kwallet_LDFLAGS = @libsvn_auth_kwallet_LDFLAGS@
+libsvn_client_LDFLAGS = @libsvn_client_LDFLAGS@
+libsvn_delta_LDFLAGS = @libsvn_delta_LDFLAGS@
+libsvn_diff_LDFLAGS = @libsvn_diff_LDFLAGS@
+libsvn_fs_LDFLAGS = @libsvn_fs_LDFLAGS@
+libsvn_fs_base_LDFLAGS = @libsvn_fs_base_LDFLAGS@
+libsvn_fs_fs_LDFLAGS = @libsvn_fs_fs_LDFLAGS@
+libsvn_fs_util_LDFLAGS = @libsvn_fs_util_LDFLAGS@
+libsvn_ra_LDFLAGS = @libsvn_ra_LDFLAGS@
+libsvn_ra_local_LDFLAGS = @libsvn_ra_local_LDFLAGS@
+libsvn_ra_neon_LDFLAGS = @libsvn_ra_neon_LDFLAGS@
+libsvn_ra_serf_LDFLAGS = @libsvn_ra_serf_LDFLAGS@
+libsvn_ra_svn_LDFLAGS = @libsvn_ra_svn_LDFLAGS@
+libsvn_repos_LDFLAGS = @libsvn_repos_LDFLAGS@
+libsvn_subr_LDFLAGS = @libsvn_subr_LDFLAGS@
+libsvn_wc_LDFLAGS = @libsvn_wc_LDFLAGS@
+
 # Compilation of SWIG-generated C source code
 COMPILE_PY_WRAPPER = $(LIBTOOL) $(LTFLAGS) --mode=compile $(SWIG_PY_COMPILE) $(LT_CFLAGS) $(CPPFLAGS) $(SWIG_PY_INCLUDES) -prefer-pic -c -o $@
 COMPILE_RB_WRAPPER = $(LIBTOOL) $(LTFLAGS) --mode=compile $(SWIG_RB_COMPILE) $(LT_CFLAGS) $(CPPFLAGS) $(SWIG_RB_INCLUDES) -prefer-pic -c -o $@

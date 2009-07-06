@@ -779,6 +779,40 @@ AC_COMPILE_IFELSE([AC_LANG_SOURCE([[]])], [CFLAGS_KEEP="$CFLAGS"])
 CFLAGS="$CFLAGS_KEEP"
 
 
+dnl Use -Wl,--no-undefined during linking of some libraries
+AC_MSG_CHECKING([for -Wl,--no-undefined])
+old_LDFLAGS="$LDFLAGS"
+LDFLAGS="$LDFLAGS -Wl,--no-undefined"
+AC_LINK_IFELSE([int main(){;}], [svn_wl_no_undefined="yes"], [svn_wl_no_undefined="no"])
+LDFLAGS="$old_LDFLAGS"
+libraries="auth_gnome_keyring auth_kwallet client delta diff fs fs_base fs_fs fs_util ra ra_local ra_neon ra_serf ra_svn repos subr wc"
+if test "$svn_wl_no_undefined" = "yes"; then
+  AC_MSG_RESULT([yes])
+  for library in $libraries; do
+    eval "libsvn_${library}_LDFLAGS=-Wl,--no-undefined"
+  done
+else
+  AC_MSG_RESULT([no])
+fi
+AC_SUBST([libsvn_auth_gnome_keyring_LDFLAGS])
+AC_SUBST([libsvn_auth_kwallet_LDFLAGS])
+AC_SUBST([libsvn_client_LDFLAGS])
+AC_SUBST([libsvn_delta_LDFLAGS])
+AC_SUBST([libsvn_diff_LDFLAGS])
+AC_SUBST([libsvn_fs_LDFLAGS])
+AC_SUBST([libsvn_fs_base_LDFLAGS])
+AC_SUBST([libsvn_fs_fs_LDFLAGS])
+AC_SUBST([libsvn_fs_util_LDFLAGS])
+AC_SUBST([libsvn_ra_LDFLAGS])
+AC_SUBST([libsvn_ra_local_LDFLAGS])
+AC_SUBST([libsvn_ra_neon_LDFLAGS])
+AC_SUBST([libsvn_ra_serf_LDFLAGS])
+AC_SUBST([libsvn_ra_svn_LDFLAGS])
+AC_SUBST([libsvn_repos_LDFLAGS])
+AC_SUBST([libsvn_subr_LDFLAGS])
+AC_SUBST([libsvn_wc_LDFLAGS])
+
+
 AC_ARG_ENABLE(maintainer-mode,
 AS_HELP_STRING([--enable-maintainer-mode],
                [Turn on debugging and very strict compile-time warnings]),
