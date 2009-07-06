@@ -933,8 +933,9 @@ svn_fs_change_txn_props(svn_fs_txn_t *txn,
 typedef struct svn_fs_root_t svn_fs_root_t;
 
 
-/** Set @a *root_p to the root directory of revision @a rev in filesystem
- * @a fs.  Allocate @a *root_p in @a pool.
+/** Set @a *root_p to the root directory of revision @a rev in filesystem @a fs.
+ * Allocate @a *root_p in a private subpool of @a pool; the root can be
+ * destroyed earlier than @a pool by calling @c svn_fs_close_root.
  */
 svn_error_t *
 svn_fs_revision_root(svn_fs_root_t **root_p,
@@ -943,8 +944,9 @@ svn_fs_revision_root(svn_fs_root_t **root_p,
                      apr_pool_t *pool);
 
 
-/** Set @a *root_p to the root directory of @a txn.  Allocate @a *root_p in
- * @a pool.
+/** Set @a *root_p to the root directory of @a txn.  Allocate @a *root_p in a
+ * private subpool of @a pool; the root can be destroyed earlier than @a pool by
+ * calling @c svn_fs_close_root.
  */
 svn_error_t *
 svn_fs_txn_root(svn_fs_root_t **root_p,
@@ -952,9 +954,10 @@ svn_fs_txn_root(svn_fs_root_t **root_p,
                 apr_pool_t *pool);
 
 
-/** Free the root directory @a root.  Simply clearing or destroying the
- * pool @a root was allocated in will have the same effect as calling
- * this function.
+/** Free the root directory @a root; this only needs to be used if you want to
+ * free the memory associated with @a root earlier than the time you destroy the
+ * pool passed to the function that created it (@c svn_fs_revision_root or @c
+ * svn_fs_txn_root).
  */
 void
 svn_fs_close_root(svn_fs_root_t *root);

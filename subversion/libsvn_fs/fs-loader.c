@@ -745,13 +745,19 @@ svn_error_t *
 svn_fs_revision_root(svn_fs_root_t **root_p, svn_fs_t *fs, svn_revnum_t rev,
                      apr_pool_t *pool)
 {
-  return fs->vtable->revision_root(root_p, fs, rev, pool);
+  /* We create a subpool for each root object to allow us to implement
+     svn_fs_close_root.  */
+  apr_pool_t *subpool = svn_pool_create(pool);
+  return fs->vtable->revision_root(root_p, fs, rev, subpool);
 }
 
 svn_error_t *
 svn_fs_txn_root(svn_fs_root_t **root_p, svn_fs_txn_t *txn, apr_pool_t *pool)
 {
-  return txn->vtable->root(root_p, txn, pool);
+  /* We create a subpool for each root object to allow us to implement
+     svn_fs_close_root.  */
+  apr_pool_t *subpool = svn_pool_create(pool);
+  return txn->vtable->root(root_p, txn, subpool);
 }
 
 void

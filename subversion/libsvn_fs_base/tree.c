@@ -5414,14 +5414,11 @@ static svn_fs_root_t *
 make_root(svn_fs_t *fs,
           apr_pool_t *pool)
 {
-  /* We create a subpool for each root object to allow us to implement
-     svn_fs_close_root.  */
-  apr_pool_t *subpool = svn_pool_create(pool);
-  svn_fs_root_t *root = apr_pcalloc(subpool, sizeof(*root));
-  base_root_data_t *brd = apr_palloc(subpool, sizeof(*brd));
+  svn_fs_root_t *root = apr_pcalloc(pool, sizeof(*root));
+  base_root_data_t *brd = apr_palloc(pool, sizeof(*brd));
 
   root->fs = fs;
-  root->pool = subpool;
+  root->pool = pool;
 
   /* Init the node ID cache. */
   brd->node_cache = apr_hash_make(pool);
