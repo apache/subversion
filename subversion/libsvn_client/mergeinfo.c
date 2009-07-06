@@ -650,7 +650,7 @@ elide_mergeinfo(svn_mergeinfo_t parent_mergeinfo,
           svn_wc_notify_t *notify =
                 svn_wc_create_notify(
                               svn_dirent_join_many(scratch_pool, local_abspath,
-                                                   path_suffix),
+                                                   path_suffix, NULL),
                               svn_wc_notify_merge_record_info, scratch_pool);
 
           ctx->notify_func2(ctx->notify_baton2, notify, scratch_pool);
