@@ -395,7 +395,7 @@ struct svn_fs_txn_t
 
 struct svn_fs_root_t
 {
-  /* A pool managing this root */
+  /* A pool managing this root (and only this root!) */
   apr_pool_t *pool;
 
   /* The filesystem to which this root belongs */
