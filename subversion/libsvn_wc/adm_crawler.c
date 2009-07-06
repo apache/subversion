@@ -1065,13 +1065,17 @@ svn_wc_transmit_prop_deltas(const char *path,
 {
   int i;
   apr_array_header_t *propmods;
+  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
+  const char *local_abspath;
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
   if (tempfile)
     *tempfile = NULL;
 
   /* Get an array of local changes by comparing the hashes. */
-  SVN_ERR(svn_wc_get_prop_diffs(&propmods, NULL,
-                                path, adm_access, pool));
+  SVN_ERR(svn_wc__internal_propdiff(&propmods, NULL, db, local_abspath,
+                                    pool, pool));
 
   /* Apply each local change to the baton */
   for (i = 0; i < propmods->nelts; i++)

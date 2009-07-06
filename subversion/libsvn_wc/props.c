@@ -2492,6 +2492,38 @@ svn_wc_props_modified_p(svn_boolean_t *modified_p,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_wc__internal_propdiff(apr_array_header_t **propchanges,
+                          apr_hash_t **original_props,
+                          svn_wc__db_t *db,
+                          const char *local_abspath,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool)
+{
+  svn_wc__db_kind_t kind;
+  apr_hash_t *baseprops, *props;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  SVN_ERR(svn_wc__db_check_node(&kind, db, local_abspath, scratch_pool));
+
+  if (kind == svn_wc__db_kind_unknown)
+    return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+                             _("'%s' is not under version control"),
+                             svn_dirent_local_style(local_abspath,
+                                                    scratch_pool));
+
+  SVN_ERR(svn_wc__load_props(&baseprops, propchanges ? &props : NULL, NULL,
+                             db, local_abspath, result_pool, scratch_pool));
+
+  if (original_props != NULL)
+    *original_props = baseprops;
+
+  if (propchanges != NULL)
+    SVN_ERR(svn_prop_diffs(propchanges, props, baseprops, result_pool));
+
+  return SVN_NO_ERROR;
+}
 
 svn_error_t *
 svn_wc_get_prop_diffs2(apr_array_header_t **propchanges,
@@ -2501,31 +2533,9 @@ svn_wc_get_prop_diffs2(apr_array_header_t **propchanges,
                        apr_pool_t *result_pool,
                        apr_pool_t *scratch_pool)
 {
-  svn_wc__db_kind_t kind;
-  apr_hash_t *baseprops, *props;
-
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-
-  SVN_ERR(svn_wc__db_check_node(&kind, wc_ctx->db, local_abspath,
-                                scratch_pool));
-
-  if (kind == svn_wc__db_kind_unknown)
-    return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
-                             _("'%s' is not under version control"),
-                             svn_dirent_local_style(local_abspath,
-                                                    scratch_pool));
-
-  SVN_ERR(svn_wc__load_props(&baseprops, propchanges ? &props : NULL, NULL,
-                             wc_ctx->db, local_abspath, result_pool,
-                             scratch_pool));
-
-  if (original_props != NULL)
-    *original_props = baseprops;
-
-  if (propchanges != NULL)
-    SVN_ERR(svn_prop_diffs(propchanges, props, baseprops, result_pool));
-
-  return SVN_NO_ERROR;
+  return svn_error_return(svn_wc__internal_propdiff(propchanges,
+                                    original_props, wc_ctx->db, local_abspath,
+                                    result_pool, scratch_pool));
 }
 
 
