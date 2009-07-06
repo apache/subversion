@@ -405,7 +405,6 @@ harvest_committables(apr_hash_t *committables,
                      svn_boolean_t just_locked,
                      apr_hash_t *changelists,
                      svn_client_ctx_t *ctx,
-                     svn_wc_context_t *wc_ctx,
                      apr_pool_t *scratch_pool)
 {
   apr_hash_t *entries = NULL;
@@ -458,8 +457,8 @@ harvest_committables(apr_hash_t *committables,
 
   /* Verify that the node's type has not changed before attempting to
      commit. */
-  SVN_ERR(svn_wc_prop_get2(&propval, wc_ctx, local_abspath, SVN_PROP_SPECIAL,
-                           scratch_pool, scratch_pool));
+  SVN_ERR(svn_wc_prop_get2(&propval, ctx->wc_ctx, local_abspath,
+                           SVN_PROP_SPECIAL, scratch_pool, scratch_pool));
 
   if ((((! propval) && (is_special))
 #ifdef HAVE_SYMLINK
@@ -626,7 +625,7 @@ harvest_committables(apr_hash_t *committables,
 
       /* See if there are property modifications to send. */
       SVN_ERR(check_prop_mods(&prop_mod, &eol_prop_changed, path,
-                              adm_access, wc_ctx, scratch_pool));
+                              adm_access, ctx->wc_ctx, scratch_pool));
 
       /* Regular adds of files have text mods, but for copies we have
          to test for textual mods.  Directories simply don't have text! */
@@ -656,7 +655,7 @@ harvest_committables(apr_hash_t *committables,
 
       /* See if there are property modifications to send. */
       SVN_ERR(check_prop_mods(&prop_mod, &eol_prop_changed, path,
-                              adm_access, wc_ctx, scratch_pool));
+                              adm_access, ctx->wc_ctx, scratch_pool));
 
       /* Check for text mods on files.  If EOL_PROP_CHANGED is TRUE,
          then we need to force a translated byte-for-byte comparison
@@ -843,7 +842,6 @@ harvest_committables(apr_hash_t *committables,
                      just_locked,
                      changelists,
                      ctx,
-                     wc_ctx,
                      iterpool));
           }
         }
@@ -905,7 +903,6 @@ svn_client__harvest_committables(apr_hash_t **committables,
                                  svn_boolean_t just_locked,
                                  const apr_array_header_t *changelists,
                                  svn_client_ctx_t *ctx,
-                                 svn_wc_context_t *wc_ctx,
                                  apr_pool_t *pool)
 {
   int i = 0;
@@ -1064,7 +1061,7 @@ svn_client__harvest_committables(apr_hash_t **committables,
                                    dir_access, entry->url, NULL,
                                    entry, NULL, FALSE, FALSE, depth,
                                    just_locked, changelist_hash,
-                                   ctx, wc_ctx, subpool));
+                                   ctx, subpool));
 
       i++;
     }
@@ -1083,7 +1080,6 @@ struct copy_committables_baton
 {
   svn_wc_adm_access_t *adm_access;
   svn_client_ctx_t *ctx;
-  svn_wc_context_t *wc_ctx;
   apr_hash_t *committables;
 };
 
@@ -1114,7 +1110,7 @@ harvest_copy_committables(void *baton, void *item, apr_pool_t *pool)
   return harvest_committables(btn->committables, NULL, pair->src,
                               dir_access, pair->dst, entry->url, entry,
                               NULL, FALSE, TRUE, svn_depth_infinity,
-                              FALSE, NULL, btn->ctx, btn->wc_ctx, pool);
+                              FALSE, NULL, btn->ctx, pool);
 }
 
 
@@ -1124,7 +1120,6 @@ svn_client__get_copy_committables(apr_hash_t **committables,
                                   const apr_array_header_t *copy_pairs,
                                   svn_wc_adm_access_t *adm_access,
                                   svn_client_ctx_t *ctx,
-                                  svn_wc_context_t *wc_ctx,
                                   apr_pool_t *pool)
 {
   struct copy_committables_baton btn;
@@ -1134,7 +1129,6 @@ svn_client__get_copy_committables(apr_hash_t **committables,
   btn.adm_access = adm_access;
   btn.ctx = ctx;
   btn.committables = *committables;
-  btn.wc_ctx = wc_ctx;
 
   /* For each copy pair, harvest the committables for that pair into the
      committables hash. */
@@ -1362,19 +1356,11 @@ do_item_commit(void **dir_baton,
             {
               const svn_string_t *propval;
               const char *local_abspath;
-              svn_wc_context_t *wc_ctx;
 
               SVN_ERR(svn_dirent_get_absolute(&local_abspath, item->path,
                                               pool));
-              if (!ctx->wc_ctx)
-                SVN_ERR(svn_wc_context_create(&wc_ctx, NULL /* config */,
-                                              pool, pool));
-              else
-                wc_ctx = ctx->wc_ctx;
-              SVN_ERR(svn_wc_prop_get2(&propval, wc_ctx, local_abspath,
+              SVN_ERR(svn_wc_prop_get2(&propval, ctx->wc_ctx, local_abspath,
                                        SVN_PROP_MIME_TYPE, pool, pool));
-              if (!ctx->wc_ctx)
-                SVN_ERR(svn_wc_context_destroy(wc_ctx));
             
               if (propval)
                 notify->mime_type = propval->data;

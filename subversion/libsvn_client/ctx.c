@@ -47,6 +47,8 @@ svn_client_create_context(svn_client_ctx_t **ctx,
 {
   *ctx = apr_pcalloc(pool, sizeof(svn_client_ctx_t));
   (*ctx)->notify_func2 = call_notify_func;
+  SVN_ERR(svn_wc_context_create(&(*ctx)->wc_ctx, NULL /* config */, pool,
+                                pool));
   (*ctx)->notify_baton2 = *ctx;
   return SVN_NO_ERROR;
 }

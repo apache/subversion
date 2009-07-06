@@ -191,12 +191,6 @@ svn_client_cat2(svn_stream_t *out,
       && SVN_CLIENT__REVKIND_IS_LOCAL_TO_WC(revision->kind))
     {
       svn_wc_adm_access_t *adm_access;
-      svn_wc_context_t *wc_ctx;
-
-      if (!ctx->wc_ctx)
-        SVN_ERR(svn_wc_context_create(&wc_ctx, NULL /* config */, pool, pool));
-      else
-        wc_ctx = ctx->wc_ctx;
 
       SVN_ERR(svn_wc_adm_open3(&adm_access, NULL,
                                svn_dirent_dirname(path_or_url, pool),
@@ -204,10 +198,8 @@ svn_client_cat2(svn_stream_t *out,
                                pool));
 
       SVN_ERR(cat_local_file(path_or_url, out, adm_access, revision,
-                             ctx->cancel_func, ctx->cancel_baton, wc_ctx,
+                             ctx->cancel_func, ctx->cancel_baton, ctx->wc_ctx,
                              pool));
-
-      SVN_ERR(svn_wc_context_destroy(wc_ctx));
 
       return svn_wc_adm_close2(adm_access, pool);
     }

@@ -371,15 +371,9 @@ svn_client_propset3(svn_commit_info_t **commit_info_p,
       int adm_lock_level = SVN_WC__LEVELS_TO_LOCK_FROM_DEPTH(depth);
       const svn_wc_entry_t *entry;
       apr_hash_t *changelist_hash = NULL;
-      svn_wc_context_t *wc_ctx;
       const char *target_abspath;
 
       SVN_ERR(svn_dirent_get_absolute(&target_abspath, target, pool));
-
-      if (!ctx->wc_ctx)
-        SVN_ERR(svn_wc_context_create(&wc_ctx, NULL /* config */, pool, pool));
-      else
-        wc_ctx = ctx->wc_ctx;
 
       if (changelists && changelists->nelts)
         SVN_ERR(svn_hash_from_cstring_keys(&changelist_hash,
@@ -397,7 +391,7 @@ svn_client_propset3(svn_commit_info_t **commit_info_p,
             = { propset_walk_cb, svn_client__default_walker_error_handler };
           struct propset_walk_baton wb;
 
-          wb.wc_ctx = wc_ctx;
+          wb.wc_ctx = ctx->wc_ctx;
           wb.propname = propname;
           wb.propval = propval;
           wb.force = skip_checks;
@@ -410,13 +404,10 @@ svn_client_propset3(svn_commit_info_t **commit_info_p,
         }
       else if (SVN_WC__CL_MATCH(changelist_hash, entry))
         {
-          SVN_ERR(svn_wc_prop_set4(wc_ctx, target_abspath, propname, propval,
-                                   skip_checks, ctx->notify_func2,
+          SVN_ERR(svn_wc_prop_set4(ctx->wc_ctx, target_abspath, propname,
+                                   propval, skip_checks, ctx->notify_func2,
                                    ctx->notify_baton2, pool));
         }
-
-      if (!ctx->wc_ctx)
-        SVN_ERR(svn_wc_context_destroy(wc_ctx));
 
       return svn_wc_adm_close2(adm_access, pool);
     }
@@ -782,7 +773,6 @@ svn_client__get_prop_from_wc(apr_hash_t *props,
                              svn_depth_t depth,
                              const apr_array_header_t *changelists,
                              svn_client_ctx_t *ctx,
-                             svn_wc_context_t *wc_ctx,
                              apr_pool_t *pool)
 {
   apr_hash_t *changelist_hash = NULL;
@@ -805,7 +795,7 @@ svn_client__get_prop_from_wc(apr_hash_t *props,
   wb.pristine = pristine;
   wb.changelist_hash = changelist_hash;
   wb.props = props;
-  wb.wc_ctx = wc_ctx;
+  wb.wc_ctx = ctx->wc_ctx;
 
   /* Fetch the property, recursively or for a single resource. */
   if (depth >= svn_depth_files && entry->kind == svn_node_dir)
@@ -854,12 +844,6 @@ svn_client_propget3(apr_hash_t **props,
       const svn_wc_entry_t *node;
       svn_boolean_t pristine;
       int adm_lock_level = SVN_WC__LEVELS_TO_LOCK_FROM_DEPTH(depth);
-      svn_wc_context_t *wc_ctx;
-
-      if (!ctx->wc_ctx)
-        SVN_ERR(svn_wc_context_create(&wc_ctx, NULL /* config */, pool, pool));
-      else
-        wc_ctx = ctx->wc_ctx;
 
       SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, path_or_url,
                                      FALSE, adm_lock_level,
@@ -877,10 +861,8 @@ svn_client_propget3(apr_hash_t **props,
 
       SVN_ERR(svn_client__get_prop_from_wc(*props, propname, path_or_url,
                                            pristine, node, adm_access,
-                                           depth, changelists, ctx, wc_ctx,
-                                           pool));
+                                           depth, changelists, ctx, pool));
 
-      SVN_ERR(svn_wc_context_destroy(wc_ctx));
       SVN_ERR(svn_wc_adm_close2(adm_access, pool));
     }
   else
@@ -1172,14 +1154,8 @@ svn_client_proplist3(const char *path_or_url,
       const svn_wc_entry_t *entry;
       apr_hash_t *changelist_hash = NULL;
       const char *local_abspath;
-      svn_wc_context_t *wc_ctx;
 
       SVN_ERR(svn_dirent_get_absolute(&local_abspath, path_or_url, pool));
-
-      if (!ctx->wc_ctx)
-        SVN_ERR(svn_wc_context_create(&wc_ctx, NULL /* config */, pool, pool));
-      else
-        wc_ctx = ctx->wc_ctx;
 
       SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, path_or_url,
                                      FALSE, levels_to_lock,
@@ -1209,7 +1185,7 @@ svn_client_proplist3(const char *path_or_url,
             = { proplist_walk_cb, svn_client__default_walker_error_handler };
           struct proplist_walk_baton wb;
 
-          wb.wc_ctx = wc_ctx;
+          wb.wc_ctx = ctx->wc_ctx;
           wb.pristine = pristine;
           wb.changelist_hash = changelist_hash;
           wb.receiver = receiver;
@@ -1224,13 +1200,12 @@ svn_client_proplist3(const char *path_or_url,
         {
           apr_hash_t *hash;
 
-          SVN_ERR(pristine_or_working_props(&hash, wc_ctx, local_abspath,
+          SVN_ERR(pristine_or_working_props(&hash, ctx->wc_ctx, local_abspath,
                                             pristine, pool, pool));
           SVN_ERR(call_receiver(path_or_url, hash,
                                 receiver, receiver_baton, pool));
 
         }
-      SVN_ERR(svn_wc_context_destroy(wc_ctx));
 
       SVN_ERR(svn_wc_adm_close2(adm_access, pool));
     }
