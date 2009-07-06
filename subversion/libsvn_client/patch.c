@@ -1714,7 +1714,7 @@ extract_svnpatch(const char *original_patch_path,
 /* ### forward-declaration */
 static svn_error_t *
 apply_textdiffs(const char *patch_path, svn_wc_adm_access_t *adm_access,
-                svn_client_ctx_t *ctx, apr_pool_t *pool);
+                const svn_client_ctx_t *ctx, apr_pool_t *pool);
 
 svn_error_t *
 svn_client_patch(const char *patch_path,
@@ -1784,7 +1784,7 @@ typedef struct {
 
 typedef struct {
   /* The patch being applied. */
-  svn_patch_t *patch;
+  const svn_patch_t *patch;
 
   /* The target path, relative to the working copy directory the
    * patch is being applied to. */
@@ -1814,7 +1814,7 @@ typedef struct {
   const char *eol_str;
 
   /* Temporary files for hunk merging. */
-  hunk_tempfiles_t *tempfiles;
+  const hunk_tempfiles_t *tempfiles;
 
   /* The node kind of the target as found on disk prior
    * to patch application. */
@@ -1960,9 +1960,10 @@ check_local_mods(svn_boolean_t *local_mods, const char *file_path,
  * Else, set *target to NULL.
  * Use SCRATCH_POOL for all other allocations. */
 static svn_error_t *
-init_patch_target(patch_target_t **target, svn_patch_t *patch,
-                  svn_wc_adm_access_t *adm_access, svn_client_ctx_t *ctx,
-                  hunk_tempfiles_t *tempfiles,
+init_patch_target(patch_target_t **target, const svn_patch_t *patch,
+                  svn_wc_adm_access_t *adm_access,
+                  const svn_client_ctx_t *ctx,
+                  const hunk_tempfiles_t *tempfiles,
                   apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
   patch_target_t *new_target;
@@ -2026,7 +2027,7 @@ init_patch_target(patch_target_t **target, svn_patch_t *patch,
  * line offset specified in HUNK -- the user will have to resolve
  * conflicts in this case. */
 static svn_linenum_t
-determine_hunk_line(svn_hunk_t *hunk, patch_target_t *target)
+determine_hunk_line(const svn_hunk_t *hunk, patch_target_t *target)
 {
   /* TODO: For now, just apply the hunk wherever it thinks it should go.
    * We can add line offset searching here later.
@@ -2208,7 +2209,7 @@ copy_latest_text(svn_stream_t *latest_text, apr_file_t *file,
 }
 
 static svn_error_t *
-merge_hunk(patch_target_t *target, svn_hunk_t *hunk,
+merge_hunk(patch_target_t *target, const svn_hunk_t *hunk,
            svn_stream_t *latest_text, apr_pool_t *pool)
 {
   svn_diff_t *diff;
@@ -2259,7 +2260,7 @@ merge_hunk(patch_target_t *target, svn_hunk_t *hunk,
 
 /* Apply a HUNK to a patch TARGET. Do all allocations in POOL. */
 static svn_error_t *
-apply_one_hunk(svn_hunk_t *hunk, patch_target_t *target, apr_pool_t *pool)
+apply_one_hunk(const svn_hunk_t *hunk, patch_target_t *target, apr_pool_t *pool)
 {
   svn_linenum_t line;
   svn_stream_t *latest_text;
@@ -2303,8 +2304,8 @@ apply_one_hunk(svn_hunk_t *hunk, patch_target_t *target, apr_pool_t *pool)
 /* Use client context CTX to send a suitable notification for a patch TARGET.
  * Use POOL for temporary allocations. */
 static void
-maybe_send_patch_target_notification(patch_target_t *target,
-                                     svn_client_ctx_t *ctx,
+maybe_send_patch_target_notification(const patch_target_t *target,
+                                     const svn_client_ctx_t *ctx,
                                      apr_pool_t *pool)
 {
   svn_wc_notify_t *notify;
@@ -2354,7 +2355,7 @@ maybe_send_patch_target_notification(patch_target_t *target,
  * Do all allocations in POOL. */
 static svn_error_t *
 apply_one_patch(svn_patch_t *patch, svn_wc_adm_access_t *adm_access,
-                svn_client_ctx_t *ctx, hunk_tempfiles_t *tempfiles,
+                const svn_client_ctx_t *ctx, const hunk_tempfiles_t *tempfiles,
                 apr_pool_t *pool)
 {
   patch_target_t *target;
@@ -2451,7 +2452,7 @@ apply_one_patch(svn_patch_t *patch, svn_wc_adm_access_t *adm_access,
  * Do all allocations in POOL.  */
 static svn_error_t *
 apply_textdiffs(const char *patch_path, svn_wc_adm_access_t *adm_access,
-                svn_client_ctx_t *ctx, apr_pool_t *pool)
+                const svn_client_ctx_t *ctx, apr_pool_t *pool)
 {
   svn_patch_t *patch;
   apr_pool_t *iterpool;
