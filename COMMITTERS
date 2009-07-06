@@ -26,7 +26,6 @@ Blanket commit access:
        striker   Sander Striker <striker@apache.org>
            dlr   Daniel Rall <dlr@finemaltcoding.com>
            mbk   Mark Benedetto King <mbk@lowlatency.com>
-           epg   Eric Gillespie <epg@pretzelnet.org>
            jaa   Jani Averbach <jaa@iki.fi>
     julianfoad   Julian Foad <julianfoad@btopenworld.com>
   jszakmeister   John Szakmeister <john@szakmeister.net>
@@ -61,6 +60,7 @@ Blanket commit access:
 Full committers who have asked to be listed as dormant:
 
         bdenny   Brian Estlin <brian@implementality.com>
+           epg   Eric Gillespie <epg@pretzelnet.org>
          kraai   Matt Kraai <kraai@alumni.cmu.edu>
       bcollins   Ben Collins <bcollins@debian.org>
            djh   D.J. Heap <djheap@gmail.com>
