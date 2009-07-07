@@ -401,7 +401,7 @@ As a release branch we'll likely be cherry picking small numbers of
 individual revisions for backport, let's keep things simple and assume a
 single revision to the root of the branch:
 
-  C:\SVN\stmi-test-stmibranch>svn merge %url% trunk -c36501
+  C:\SVN\stmi-test-stmibranch>svn merge ^^trunk -c36501
   
   ==========================================================
   ===== DRIVE EDITOR
@@ -528,7 +528,7 @@ r36427-36443, r36445-36458, r36460-36476, and r36478-36500 (whew!) all need
 to be merged from trunk/subversion/libsvn_client -- hence the hundreds of
 inoperative editor drives as the merge code tries to do just that.
 
-The merge can't diffrentiate this situation from one where subtree merges
+The merge can't differentiate this situation from one where subtree merges
 where done, e.g. maybe r36105 was operative but was reverse merged during a
 subtree merge to libsvn_client and a sync merge of this revision *would* be
 operative within the libsvn_client subtree.  Unfortunately, if we don't
