@@ -192,7 +192,7 @@ class RemoteRepository(object):
            You can iterate through the log information for several revisions
            using a regular for loop. For example:
              for entry in session.log(start_rev, end_rev):
-               print "Revision %d" % entry.revision
+               print("Revision %d" % entry.revision)
                ...
 
            ARGUMENTS:
