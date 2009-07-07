@@ -2376,18 +2376,8 @@ entries_write_body(svn_wc__db_t *db,
       child_abspath = svn_dirent_join(local_abspath, child_basename,
                                       scratch_pool);
 
-      err = svn_wc__db_base_get_dav_cache(&child_cache, db, child_abspath,
-                                          scratch_pool, iterpool);
-      if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
-        {
-          /* We could be looking at a newly added node, without a BASE node,
-             and hence no dav cache, so just ignore the error. */
-          svn_error_clear(err);
-          continue;
-        }
-      else if (err)
-        return err;
-
+      SVN_ERR(svn_wc__db_base_get_dav_cache(&child_cache, db, child_abspath,
+                                            scratch_pool, iterpool));
       apr_hash_set(dav_cache, child_abspath, APR_HASH_KEY_STRING, child_cache);
     }
 
