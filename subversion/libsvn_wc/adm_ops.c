@@ -1719,6 +1719,8 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
   svn_stringbuf_t *log_accum = svn_stringbuf_create("", pool);
   apr_hash_t *baseprops = NULL;
   svn_boolean_t revert_base = FALSE;
+  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
+  const char *local_abspath;
 
   /* By default, assume no action; we'll see what happens later. */
   *reverted = FALSE;
@@ -1728,17 +1730,15 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
   if (strcmp(name, SVN_WC_ENTRY_THIS_DIR) != 0)
     fullpath = svn_dirent_join(fullpath, name, pool);
 
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, fullpath, pool));
+
   /* Deal with properties. */
   if (entry->schedule == svn_wc_schedule_replace)
     {
-      svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
-      const char *local_abspath;
-
       /* Refer to the original base, before replacement. */
       revert_base = TRUE;
 
       /* Use the revertpath as the new propsbase if it exists. */
-      SVN_ERR(svn_dirent_get_absolute(&local_abspath, fullpath, pool));
       SVN_ERR(svn_wc__load_props(NULL, NULL, &baseprops, db, local_abspath,
                                  pool, pool));
 
@@ -1764,8 +1764,8 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
 
           /* Get the full list of property changes and see if any magic
              properties were changed. */
-          SVN_ERR(svn_wc_get_prop_diffs(&propchanges, &baseprops, fullpath,
-                                        adm_access, pool));
+          SVN_ERR(svn_wc__internal_propdiff(&propchanges, &baseprops, db,
+                                            local_abspath, pool, pool));
 
           /* Determine if any of the propchanges are the "magic" ones that
              might require changing the working file. */
