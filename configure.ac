@@ -780,19 +780,25 @@ CFLAGS="$CFLAGS_KEEP"
 
 
 dnl Use -Wl,--no-undefined during linking of some libraries
-AC_MSG_CHECKING([for -Wl,--no-undefined])
-old_LDFLAGS="$LDFLAGS"
-LDFLAGS="$LDFLAGS -Wl,--no-undefined"
-AC_LINK_IFELSE([int main(){;}], [svn_wl_no_undefined="yes"], [svn_wl_no_undefined="no"])
-LDFLAGS="$old_LDFLAGS"
-libraries="auth_gnome_keyring auth_kwallet client delta diff fs fs_base fs_fs fs_util ra ra_local ra_neon ra_serf ra_svn repos subr wc"
-if test "$svn_wl_no_undefined" = "yes"; then
-  AC_MSG_RESULT([yes])
-  for library in $libraries; do
-    eval "libsvn_${library}_LDFLAGS=-Wl,--no-undefined"
-  done
-else
-  AC_MSG_RESULT([no])
+AC_ARG_ENABLE(disallowing-of-undefined-references,
+  [AS_HELP_STRING([--enable-disallowing-of-undefined-references],
+                  [Use -Wl,--no-undefined flag during linking of some libraries to disallow undefined references])])
+if test "$enable_disallowing_of_undefined_references" = "yes"; then
+  AC_MSG_CHECKING([for -Wl,--no-undefined])
+  old_LDFLAGS="$LDFLAGS"
+  LDFLAGS="$LDFLAGS -Wl,--no-undefined"
+  AC_LINK_IFELSE([int main(){;}], [svn_wl_no_undefined="yes"], [svn_wl_no_undefined="no"])
+  LDFLAGS="$old_LDFLAGS"
+  libraries="auth_gnome_keyring auth_kwallet client delta diff fs fs_base fs_fs fs_util ra ra_local ra_neon ra_serf ra_svn repos subr wc"
+  if test "$svn_wl_no_undefined" = "yes"; then
+    AC_MSG_RESULT([yes])
+    for library in $libraries; do
+      eval "libsvn_${library}_LDFLAGS=-Wl,--no-undefined"
+    done
+  else
+    AC_MSG_RESULT([no])
+    AC_MSG_ERROR([--enable-disallowing-of-undefined-references explicitly requested, but -Wl,--no-undefined not supported])
+  fi
 fi
 AC_SUBST([libsvn_auth_gnome_keyring_LDFLAGS])
 AC_SUBST([libsvn_auth_kwallet_LDFLAGS])
