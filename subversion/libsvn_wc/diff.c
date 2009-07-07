@@ -481,9 +481,10 @@ get_base_mimetype(const char **mimetype,
 static svn_error_t *
 get_working_mimetype(const char **mimetype,
                      apr_hash_t **workingprops,
-                     svn_wc_adm_access_t *adm_access,
-                     const char *path,
-                     apr_pool_t *pool)
+                     const char *local_abspath,
+                     svn_wc__db_t *db,
+                     apr_pool_t *result_pool,
+                     apr_pool_t *scratch_pool)
 {
   apr_hash_t *props = NULL;
 
@@ -491,7 +492,8 @@ get_working_mimetype(const char **mimetype,
     workingprops = &props;
 
   if (*workingprops == NULL)
-    SVN_ERR(svn_wc_prop_list(workingprops, path, adm_access, pool));
+    SVN_ERR(svn_wc__load_props(NULL, workingprops, NULL, db, local_abspath,
+                               result_pool, scratch_pool));
 
   *mimetype = get_prop_mimetype(*workingprops);
 
@@ -668,8 +670,8 @@ file_diff(struct dir_baton *dir_baton,
 
     case svn_wc_schedule_add:
       /* Get svn:mime-type from working props of PATH. */
-      SVN_ERR(get_working_mimetype(&working_mimetype, NULL,
-                                   adm_access, path, pool));
+      SVN_ERR(get_working_mimetype(&working_mimetype, NULL, local_abspath,
+                                   eb->db, pool, pool));
 
       SVN_ERR(svn_wc_translated_file2
               (&translated, path, path, adm_access,
@@ -717,8 +719,8 @@ file_diff(struct dir_baton *dir_baton,
           /* Get svn:mime-type for both base and working file. */
           SVN_ERR(get_base_mimetype(&base_mimetype, &baseprops,
                                     adm_access, path, pool));
-          SVN_ERR(get_working_mimetype(&working_mimetype, NULL,
-                                       adm_access, path, pool));
+          SVN_ERR(get_working_mimetype(&working_mimetype, NULL, local_abspath,
+                                       eb->db, pool, pool));
 
           SVN_ERR(dir_baton->edit_baton->callbacks->file_changed
                   (NULL, NULL, NULL, NULL,
@@ -1093,15 +1095,19 @@ report_wc_file_as_added(struct dir_baton *dir_baton,
   const char *source_file;
   const char *translated_file;
   svn_boolean_t file_need_close = TRUE;
+  const char *local_abspath;
 
   /* If this entry is filtered by changelist specification, do nothing. */
   if (! SVN_WC__CL_MATCH(dir_baton->edit_baton->changelist_hash, entry))
     return SVN_NO_ERROR;
 
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+
   SVN_ERR(get_empty_file(eb, &empty_file));
 
   /* We can't show additions for files that don't exist. */
-  SVN_ERR_ASSERT(!(entry->schedule == svn_wc_schedule_delete && !eb->use_text_base));
+  SVN_ERR_ASSERT(!(entry->schedule == svn_wc_schedule_delete
+                                                && !eb->use_text_base));
 
   /* If the file was added *with history*, then we don't want to
      see a comparison to the empty file;  we want the usual working
@@ -1123,8 +1129,8 @@ report_wc_file_as_added(struct dir_baton *dir_baton,
     SVN_ERR(get_base_mimetype(&mimetype, &wcprops,
                               adm_access, path, pool));
   else
-    SVN_ERR(get_working_mimetype(&mimetype, &wcprops,
-                                 adm_access, path, pool));
+    SVN_ERR(get_working_mimetype(&mimetype, &wcprops, local_abspath,
+                                 eb->db, pool, pool));
 
   SVN_ERR(svn_prop_diffs(&propchanges,
                          wcprops, emptyprops, pool));
@@ -1224,11 +1230,10 @@ report_wc_directory_as_added(struct dir_baton *dir_baton,
         SVN_ERR(svn_wc__internal_propdiff(NULL, &wcprops, eb->db, dir_abspath,
                                           pool, pool));
       else
-        SVN_ERR(svn_wc_prop_list(&wcprops,
-                                 dir_baton->path, adm_access, pool));
+        SVN_ERR(svn_wc__load_props(NULL, &wcprops, NULL, eb->db, dir_abspath,
+                                   pool, pool));
 
-      SVN_ERR(svn_prop_diffs(&propchanges,
-                             wcprops, emptyprops, pool));
+      SVN_ERR(svn_prop_diffs(&propchanges, wcprops, emptyprops, pool));
 
       if (eb->svnpatch_stream)
         {
@@ -2011,8 +2016,8 @@ close_directory(void *dir_baton,
             {
               apr_hash_t *base_props, *repos_props;
 
-              SVN_ERR(svn_wc_prop_list(&originalprops, b->path,
-                                       b->edit_baton->anchor, pool));
+              SVN_ERR(svn_wc__load_props(NULL, &originalprops, NULL,
+                                         eb->db, dir_abspath, pool, pool));
 
               /* Load the BASE and repository directory properties. */
               SVN_ERR(svn_wc__internal_propdiff(NULL, &base_props, eb->db,
@@ -2427,8 +2432,8 @@ close_file(void *file_baton,
     }
   else
     {
-      SVN_ERR(svn_wc_prop_list(&originalprops,
-                               b->path, adm_access, pool));
+      SVN_ERR(svn_wc__load_props(NULL, &originalprops, NULL, eb->db,
+                                 local_abspath, pool, pool));
 
       /* We have the repository properties in repos_props, and the
          WORKING properties in originalprops.  Recalculate

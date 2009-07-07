@@ -44,16 +44,16 @@
 /* Copy all properties of SRC_PATH to DST_PATH. */
 static svn_error_t *
 copy_props(svn_wc__db_t *db,
-           const char *src_path,
+           const char *src_abspath,
            const char *dst_abspath,
-           svn_wc_adm_access_t *src_access,
-           apr_pool_t *pool)
+           apr_pool_t *scratch_pool)
 {
   apr_hash_t *props;
   apr_hash_index_t *hi;
 
-  SVN_ERR(svn_wc_prop_list(&props, src_path, src_access, pool));
-  for (hi = apr_hash_first(pool, props); hi; hi = apr_hash_next(hi))
+  SVN_ERR(svn_wc__load_props(NULL, &props, NULL, db, src_abspath,
+                             scratch_pool, scratch_pool));
+  for (hi = apr_hash_first(scratch_pool, props); hi; hi = apr_hash_next(hi))
     {
       const char *propname;
       svn_string_t *propval;
@@ -66,7 +66,7 @@ copy_props(svn_wc__db_t *db,
 
       SVN_ERR(svn_wc__internal_propset(db, dst_abspath, propname, propval,
                                        FALSE /* skip_checks */,
-                                       NULL, NULL, pool));
+                                       NULL, NULL, scratch_pool));
     }
 
   return SVN_NO_ERROR;
@@ -92,7 +92,6 @@ copy_props(svn_wc__db_t *db,
 static svn_error_t *
 copy_added_file_administratively(const char *src_path,
                                  svn_boolean_t src_is_added,
-                                 svn_wc_adm_access_t *src_access,
                                  svn_wc_adm_access_t *dst_parent_access,
                                  const char *dst_basename,
                                  svn_cancel_func_t cancel_func,
@@ -106,8 +105,10 @@ copy_added_file_administratively(const char *src_path,
                       dst_basename, pool);
   svn_wc__db_t *db = svn_wc__adm_get_db(dst_parent_access);
   const char *dst_abspath;
+  const char *src_abspath;
 
   SVN_ERR(svn_dirent_get_absolute(&dst_abspath, dst_path, pool));
+  SVN_ERR(svn_dirent_get_absolute(&src_abspath, src_path, pool));
 
   /* Copy this file and possibly put it under version control. */
   SVN_ERR(svn_io_copy_file(src_path, dst_path, TRUE, pool));
@@ -119,7 +120,7 @@ copy_added_file_administratively(const char *src_path,
                           cancel_baton, notify_func,
                           notify_baton, pool));
 
-      SVN_ERR(copy_props(db, src_path, dst_abspath, src_access, pool));
+      SVN_ERR(copy_props(db, src_abspath, dst_abspath, pool));
     }
 
   return SVN_NO_ERROR;
@@ -182,8 +183,10 @@ copy_added_dir_administratively(const char *src_path,
       /* The 'dst_path' is simply dst_parent/dst_basename */
       const char *dst_path = svn_dirent_join(dst_parent, dst_basename, pool);
       const char *dst_abspath;
+      const char *src_abspath;
 
       SVN_ERR(svn_dirent_get_absolute(&dst_abspath, dst_path, pool));
+      SVN_ERR(svn_dirent_get_absolute(&src_abspath, src_path, pool));
 
       /* Check cancellation; note that this catches recursive calls too. */
       if (cancel_func)
@@ -200,7 +203,7 @@ copy_added_dir_administratively(const char *src_path,
                           notify_func, notify_baton, pool));
 
       /* Copy properties. */
-      SVN_ERR(copy_props(db, src_path, dst_abspath, src_access, pool));
+      SVN_ERR(copy_props(db, src_abspath, dst_abspath, pool));
 
       /* Get the accesses for the newly added dir and its source, we'll
          need both to process any of SRC_PATHS's children below. */
@@ -293,7 +296,6 @@ copy_added_dir_administratively(const char *src_path,
             {
               SVN_ERR(copy_added_file_administratively(src_fullpath,
                                                        entry != NULL,
-                                                       src_child_dir_access,
                                                        dst_child_dir_access,
                                                        this_entry.name,
                                                        cancel_func,
@@ -922,7 +924,7 @@ svn_wc_copy2(const char *src_path,
       if (src_entry->schedule == svn_wc_schedule_add
           && (! src_entry->copied))
         {
-          SVN_ERR(copy_added_file_administratively(src_path, TRUE, adm_access,
+          SVN_ERR(copy_added_file_administratively(src_path, TRUE,
                                                    dst_parent, dst_basename,
                                                    cancel_func, cancel_baton,
                                                    notify_func, notify_baton,
