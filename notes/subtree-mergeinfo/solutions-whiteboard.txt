@@ -19,7 +19,7 @@ II) Functional changes to reduce/eliminate the amount of subtree mergeinfo.
      in 1.5.5.
      
   b) Allow Ib), Ic), and/or Id) but simply don't set/create subtree
-     mergeinfo describing the merge.  Make these practives 'use at own risk'.
+     mergeinfo describing the merge.  Make these practices 'use at own risk'.
 
   c) Restrict merge targets to the roots of branches only.  We'd need to
      clearly define what this means and a way of identifying the root
@@ -42,15 +42,139 @@ IV) Cache natural history in the WC.
 
 V) Implement smart(er) elision.
 
-    a) Client side: Something like 'svn elide TARGET' or
-       'svn merge --elide TARGET'.
+    a) Client side: Something like 'svn elide WC_TARGET' or
+       'svn merge --elide WC_TARGET'.
        
         ### TODO: Pseudo code for this.
-
+        
     b) Server side: An svnadmin subcommand to do Va) server-side for the entire
-       repos. 
+       repos.
 
-VI) Mergeinfo2 property that stores only the diff between itself and
-    it's nearest parent with explicit mergeinfo.
+    c) Make part of current post-merge elision process.
 
-    ### TODO: Walk through the benefits here.
+VI) A new mergeinfo property that stores only the diff between itself and
+    it's nearest parent with explicit mergeinfo.  For brevity we'll refer
+    to this as 'mergeinfo2'.
+
+    This was suggested by Mike Pilato as a potential solution to some/all of
+    the subtree mergeinfo problems created by not recording inoperative
+    mergeinfo on subtrees.  Let's look at how this would work in the examples
+    documented in notes/subtree-mergeinfo/the-performance-problem.txt.
+        
+    But first, the obvious question: If a path with explicit mergeinfo doesn't
+    have *any* parent with explicit mergeinfo then how do we interpret the
+    mergeinfo2 property?  The easy answer is that we treat it like regular
+    mergeinfo, i.e. as the complete description of everything merged to the
+    path.  This is fine if we are dealing with a "typical" repository
+    structure like this:
+    
+    /trunk
+    /branches
+    /branches/branch1
+    /branches/branch2
+    .
+    .
+    .
+    /tags
+    /tags/t1
+    /tags/t1.1
+    .
+    .
+    .
+    
+    Here branch roots would be the highest paths in the repos tree with
+    mergeinfo2 and as such wouldn't represent a diff against anything. It is
+    possible that some users will have a structure like this:
+
+    /project1/README
+    /project1/trunk
+    /project1/branches
+    /project1/branches/branch1
+    /project1/branches/branch2
+    .
+    .
+    .
+    /project1/tags
+    /project1/tags/t1
+    /project1/tags/t1.1
+    .
+    .
+    .
+    /project2/README
+    /project2/trunk
+    /project2/branches
+    /project2/branches/branch1
+    /project2/branches/branch2
+    .
+    .
+    .
+    /project2/tags
+    /project2/tags/t1
+    /project2/tags/t1.1
+    .
+    .
+    .
+    
+    Now suppose they merged a change to /project1/README, but used project1
+    as the source and project2 as the target?  This would create explicit
+    mergeinfo on project2 and the branch root's mergeinfo2 would describe a
+    diff against that.  No obvious problems with that though.
+    
+    Ok, on to the two basic use cases:
+    
+    Use Case B.2 'Release Branches' and the Implicit Mergeinfo Query Problem
+    ------------------------------------------------------------------------
+    
+    Again we'll create a release branch from trunk@36000 and then set explicit
+    empty mergeinfo on every subtree (1806 in total)...or not, because What
+    does empty mergeinfo2 mean?  Previously it was a way of saying "nothing
+    has been merged to this path, only it's natural history/implicit mergeinfo
+    applies".  Now, if a path has some parent to diff against, then empty
+    mergeinfo2 means "this path has nothing merged to it that hasn't been
+    merged to its parent".  So this is redundant and shouldn't be allowed.
+    What if the path has no parent to diff against?  Then it it means what it
+    did with old-style mergeinfo, but it never really meant anything there
+    either.  So there appears to be no reason to allow empty mergeinfo2.
+    
+    So for our example we'll set explicit merginfo on every path that
+    describes merges from some other legitimate path, rather than using empty mergeinfo: 
+
+    stmi>svn ps svn:mergeinfo "/svnraisetc/Makefile.in:35074"	Makefile.in
+    stmi>svn ps svn:mergeinfo "/svnraisetc/build.conf:35074"	build.conf
+    stmi>svn ps svn:mergeinfo "/svnraisetc/win-tests.py:35074"	win-tests.py
+    .
+    .
+    .
+    stmi>svn ps svn:mergeinfo "/svnraisetc/packages/rpm/rhel-5/README:35074"
+         packages\rpm\rhel-5\README
+    stmi>svn ps svn:mergeinfo "/svnraisetc/packages/rpm/rhel-5/Makefile:35074"
+         packages\rpm\rhel-5\Makefile
+    stmi>svn ps svn:mergeinfo "/svnraisetc/packages/rpm/README:35074"
+         packages\rpm\README
+        
+    Now we perform our first backport:
+    
+    stmi>svn merge ^^/trunk . -c36501
+    --- Merging r36001 into '.':
+    U    subversion\libsvn_subr\sqlite.c
+    U    subversion\include\private\svn_sqlite.h
+    U    subversion\libsvn_wc\entries.c
+
+    - Would need to be able to record negated ranges
+      http://subversion.tigris.org/issues/show_bug.cgi?id=2881
+      
+    ### More to come...
+
+VII) For the 'Implicit Mergeinfo Query Problem' why not just rely on the
+     implicit mergeinfo of the merge target (or the root of switched
+     subtrees)?  Put another way:
+     
+     When merging SRC -rX:Y to TARGET with a subtree with explicit mergeinfo
+     TARGET/SUBTREE, if SRC -rX:Y is part of TARGET's natural history/implicit
+     mergeinfo, when is SRC/SUBTREE -rX:Y *not* part of of TARGET/SUBTREE's
+     natural history?  Or inversely, if SRC -rX:Y is not part of TARGET's
+     natural history/implicit mergeinfo, when *is* SRC/SUBTREE -rX:Y part of
+     TARGET/SUBTREE's natural history?
+     
+     This would essentially eliminate this problem.  Would it would break some
+     (bizzare?) use cases though?
