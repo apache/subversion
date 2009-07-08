@@ -224,6 +224,24 @@ svn_wc__strictly_is_wc_root(svn_boolean_t *wc_root,
                             svn_wc_adm_access_t *adm_access,
                             apr_pool_t *pool);
 
+/** Like svn_wc_adm_open3() but with a svn_wc_ctx_t* instead of an associated
+ * baton.
+ *
+ * ### BH: This function is not for public consumption. New code should either
+ *         use the deprecated access battons or the new wc contexts but not
+ *         both. Too bad the WC-NG conversion is not done yet.
+ *
+ * @since New in 1.7.*/
+svn_error_t *
+svn_wc__adm_open_in_context(svn_wc_adm_access_t **adm_access,
+                            svn_wc_context_t *wc_ctx,
+                            const char *path,
+                            svn_boolean_t write_lock,
+                            int levels_to_lock,
+                            svn_cancel_func_t cancel_func,
+                            void *cancel_baton,
+                            apr_pool_t *pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

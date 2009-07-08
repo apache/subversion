@@ -1035,7 +1035,8 @@ svn_wc_adm_probe_retrieve(svn_wc_adm_access_t **adm_access,
 
   SVN_ERR_ASSERT(associated != NULL);
 
-  SVN_ERR(svn_wc_entry(&entry, path, associated, TRUE, pool));
+  if (associated->abspath)
+    SVN_ERR(svn_wc_entry(&entry, path, associated, TRUE, pool));
 
   if (! entry)
     /* Not a versioned item, probe it */
@@ -1639,3 +1640,20 @@ svn_wc__adm_extend_lock_to_tree(svn_wc_adm_access_t *adm_access,
                               svn_depth_infinity, FALSE, NULL, NULL, pool);
 }
 
+svn_error_t *
+svn_wc__adm_open_in_context(svn_wc_adm_access_t **adm_access,
+                            svn_wc_context_t *wc_ctx,
+                            const char *path,
+                            svn_boolean_t write_lock,
+                            int levels_to_lock,
+                            svn_cancel_func_t cancel_func,
+                            void *cancel_baton,
+                            apr_pool_t *pool)
+{
+  SVN_ERR_ASSERT(wc_ctx != NULL);
+
+  SVN_ERR(open_all(adm_access, path, wc_ctx->db, TRUE, write_lock,
+                   levels_to_lock, cancel_func, cancel_baton, pool));
+
+  return SVN_NO_ERROR;
+}
