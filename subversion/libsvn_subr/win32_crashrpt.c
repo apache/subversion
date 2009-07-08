@@ -588,52 +588,11 @@ is_debugger_present()
   return result;
 }
 
-/* Match the version of dbghelp.dll with the minimum expected version */
-static BOOL
-check_dbghelp_version(WORD exp_major, WORD exp_minor, WORD exp_build,
-                      WORD exp_qfe)
-{
-  DWORD version     = 0,
-        exp_version = MAKELONG(MAKEWORD(exp_qfe, exp_build),
-                               MAKEWORD(exp_minor, exp_major));
-  DWORD h = 0;
-  DWORD resource_size = GetFileVersionInfoSize(DBGHELP_DLL, &h);
-
-  if (resource_size)
-    {
-      void *resource_data = malloc(resource_size);
-      if (GetFileVersionInfo(DBGHELP_DLL, h, resource_size,
-                              resource_data) != FALSE)
-        {
-          void *buf = NULL;
-          UINT len;
-          if (VerQueryValue(resource_data, "\\", &buf, &len))
-            {
-              VS_FIXEDFILEINFO *info = (VS_FIXEDFILEINFO*)buf;
-              version = MAKELONG(MAKEWORD(LOWORD(info->dwFileVersionLS),
-                                          HIWORD(info->dwFileVersionLS)),
-                                 MAKEWORD(LOWORD(info->dwFileVersionMS),
-                                          HIWORD(info->dwFileVersionMS)));
-            }
-        }
-      free(resource_data);
-    }
-
-   if (version >= exp_version)
-     return TRUE;
-
-   return FALSE;
-}
-
 /* Load the dbghelp.dll file, try to find a version that matches our
    requirements. */
 static BOOL
 load_dbghelp_dll()
 {
-  /* check version of the dll, should be at least 6.6.7.5 */
-  if (check_dbghelp_version(6, 6, 7, 5) == FALSE)
-    return FALSE;
-
   dbghelp_dll = LoadLibrary(DBGHELP_DLL);
   if (dbghelp_dll != INVALID_HANDLE_VALUE)
     {
