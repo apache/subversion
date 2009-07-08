@@ -1802,8 +1802,9 @@ typedef struct {
    * file did not exist prior to patch application. */
   apr_file_t *file;
 
-  /* True if end-of-file was reached while reading from the target. */
-  svn_boolean_t eof;
+  /* A stream to read lines form the target file. This is NULL in case
+   * the target file did not exist prior to patch application. */
+  svn_stream_t *stream;
 
   /* The result stream, write-only, not seekable.
    * This is where we write the patched result to. */
@@ -1824,6 +1825,9 @@ typedef struct {
   /* The node kind of the target as found on disk prior
    * to patch application. */
   svn_node_kind_t kind;
+
+  /* True if end-of-file was reached while reading from the target. */
+  svn_boolean_t eof;
 
   /* True if the target had to be skipped for some reason. */
   svn_boolean_t skipped;
@@ -1991,6 +1995,8 @@ init_patch_target(patch_target_t **target, const svn_patch_t *patch,
                                APR_OS_DEFAULT, result_pool));
       SVN_ERR(svn_subst_detect_file_eol(&new_target->eol_str, new_target->file,
                                         scratch_pool));
+      new_target->stream = svn_stream_from_aprfile2(new_target->file, FALSE,
+                                                    result_pool);
     }
 
   if (new_target->eol_str == NULL)
@@ -2050,12 +2056,7 @@ static svn_error_t *
 copy_lines_to_target(patch_target_t *target, svn_linenum_t line,
                      apr_pool_t *pool)
 {
-  svn_stream_t *s;
   apr_pool_t *iterpool;
-
-  /* ### Could we use svn_stream_copy3 here somehow? */
-
-  s = svn_stream_from_aprfile2(target->file, TRUE, pool);
 
   iterpool = svn_pool_create(pool);
   while ((target->current_line < line || line == 0) && ! target->eof)
@@ -2065,18 +2066,18 @@ copy_lines_to_target(patch_target_t *target, svn_linenum_t line,
 
       svn_pool_clear(iterpool);
 
-      SVN_ERR(svn_stream_readline(s, &buf, target->eol_str, &target->eof,
-                                  iterpool));
+      SVN_ERR(svn_stream_readline(target->stream, &buf, target->eol_str,
+                                  &target->eof, iterpool));
       if (! target->eof)
-        svn_stringbuf_appendcstr(buf, target->eol_str);
-      target->current_line++;
+        {
+          svn_stringbuf_appendcstr(buf, target->eol_str);
+          target->current_line++;
+        }
 
       len = buf->len;
       SVN_ERR(svn_stream_write(target->result, buf->data, &len));
     }
   svn_pool_destroy(iterpool);
-
-  SVN_ERR(svn_stream_close(s));
 
   return SVN_NO_ERROR;
 }
@@ -2084,6 +2085,7 @@ copy_lines_to_target(patch_target_t *target, svn_linenum_t line,
 /* Read at most NLINES from the TARGET file, returning lines read in *LINES,
  * separated by the EOL sequence specified in TARGET->patch_eol_str.
  * Allocate *LINES in RESULT_POOL.
+ * The caller is responsible for closing *LINES.
  * Use SCRATCH_POOL for all other allocations. */
 static svn_error_t *
 read_lines_from_target(svn_stream_t **lines, svn_linenum_t nlines,
@@ -2091,13 +2093,10 @@ read_lines_from_target(svn_stream_t **lines, svn_linenum_t nlines,
                        apr_pool_t *scratch_pool)
 {
   apr_file_t *file;
-  svn_stream_t *stream;
   apr_pool_t *iterpool;
   svn_linenum_t i;
   apr_off_t start, end;
   apr_int32_t flags = APR_READ | APR_BUFFERED;
-
-  stream = svn_stream_from_aprfile2(target->file, TRUE, scratch_pool);
 
   start = 0;
   SVN_ERR(svn_io_file_seek(target->file, APR_CUR, &start, scratch_pool));
@@ -2109,14 +2108,12 @@ read_lines_from_target(svn_stream_t **lines, svn_linenum_t nlines,
 
       svn_pool_clear(iterpool);
 
-      SVN_ERR(svn_stream_readline(stream, &line, target->eol_str, &target->eof,
-                                  iterpool));
+      SVN_ERR(svn_stream_readline(target->stream, &line, target->eol_str,
+                                  &target->eof, iterpool));
       if (target->eof)
         break;
     }
   svn_pool_destroy(iterpool);
-
-  SVN_ERR(svn_stream_close(stream));
 
   end = 0;
   SVN_ERR(svn_io_file_seek(target->file, APR_CUR, &end, scratch_pool));
@@ -2189,7 +2186,6 @@ copy_latest_text(svn_stream_t *latest_text, apr_file_t *file,
                  const char *target_eol_str, const char *patch_eol_str,
                  apr_pool_t *scratch_pool)
 {
-  svn_stream_t *stream;
   svn_stream_t *disowned_stream;
   svn_stream_t *disowned_latest_text;
   apr_off_t pos;
@@ -2197,13 +2193,14 @@ copy_latest_text(svn_stream_t *latest_text, apr_file_t *file,
   /* Since we use the latest text verbatim, we can do a direct stream copy. */
   pos = 0;
   SVN_ERR(svn_io_file_seek(file, APR_SET, &pos, scratch_pool));
-  stream = svn_stream_from_aprfile2(file, TRUE, scratch_pool);
   /* Make sure to disown the streams, we don't want underlying
    * files to be closed. */
-  disowned_stream = svn_stream_disown(stream, scratch_pool);
+  disowned_stream = svn_stream_from_aprfile2(file, TRUE, scratch_pool);
   disowned_latest_text = svn_stream_disown(latest_text, scratch_pool);
   SVN_ERR(svn_stream_copy3(disowned_latest_text, disowned_stream, NULL, NULL,
                            scratch_pool));
+  SVN_ERR(svn_stream_close(disowned_stream));
+  SVN_ERR(svn_stream_close(disowned_latest_text));
 
   /* Truncate and flush temporary file. */
   SVN_ERR(svn_io_file_seek(file, APR_CUR, &pos, scratch_pool));
@@ -2302,6 +2299,8 @@ apply_one_hunk(const svn_hunk_t *hunk, patch_target_t *target, apr_pool_t *pool)
     latest_text = svn_stream_empty(pool);
 
   SVN_ERR(merge_hunk(target, hunk, latest_text, pool));
+
+  svn_stream_close(latest_text);
 
   return SVN_NO_ERROR;
 }
@@ -2407,7 +2406,8 @@ apply_one_patch(svn_patch_t *patch, svn_wc_adm_access_t *adm_access,
               target->skipped = TRUE;
             }
 
-          SVN_ERR(svn_io_file_close(target->file, pool));
+          /* Closing this stream will also close the underlying file. */
+          SVN_ERR(svn_stream_close(target->stream));
         }
 
       SVN_ERR(svn_stream_close(target->result));
