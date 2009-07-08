@@ -49,6 +49,7 @@
 #include "svn_iter.h"
 
 #include "client.h"
+#include "private/svn_wc_private.h"
 
 #include "svn_private_config.h"
 
@@ -1520,11 +1521,13 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
       svn_pool_destroy(subpool);
     }
 
-  SVN_ERR(svn_wc_adm_open3(&base_dir_access, NULL, base_dir,
-                           TRUE,  /* Write lock */
-                           lock_base_dir_recursive ? -1 : 0, /* lock levels */
-                           ctx->cancel_func, ctx->cancel_baton,
-                           pool));
+  SVN_ERR(svn_wc__adm_open_in_context(&base_dir_access,
+                                      ctx->wc_ctx,
+                                      base_dir,
+                                      TRUE,  /* Write lock */
+                                      lock_base_dir_recursive ? -1 : 0,
+                                      ctx->cancel_func, ctx->cancel_baton,
+                                      pool));
 
   if (!lock_base_dir_recursive)
     {
