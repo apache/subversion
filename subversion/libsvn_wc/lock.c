@@ -1035,8 +1035,7 @@ svn_wc_adm_probe_retrieve(svn_wc_adm_access_t **adm_access,
 
   SVN_ERR_ASSERT(associated != NULL);
 
-  if (associated->abspath)
-    SVN_ERR(svn_wc_entry(&entry, path, associated, TRUE, pool));
+  SVN_ERR(svn_wc_entry(&entry, path, associated, TRUE, pool));
 
   if (! entry)
     /* Not a versioned item, probe it */
