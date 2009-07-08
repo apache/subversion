@@ -2033,18 +2033,207 @@ init_patch_target(patch_target_t **target, const svn_patch_t *patch,
   return SVN_NO_ERROR;
 }
 
-/* Determine the line at which a HUNK applies to the TARGET file.
+/* Indicate in *MATCHED whether the original text of HUNK matches
+ * the patch TARGET at its current line.
+ * When this function returns, neither TARGET->CURRENT_LINE nor the
+ * file offset in the target file will have changed.
+ * HUNK->ORIGINAL_TEXT will be reset. Do temporary allocations in POOL. */
+static svn_error_t *
+match_hunk(svn_boolean_t *matched, patch_target_t *target,
+           const svn_hunk_t *hunk, apr_pool_t *pool)
+{
+  svn_stringbuf_t *hunk_line;
+  svn_stringbuf_t *target_line;
+  svn_boolean_t hunk_eof;
+  svn_boolean_t lines_matched;
+  apr_off_t pos;
+  apr_pool_t *iterpool;
+
+  *matched = FALSE;
+
+  pos = 0;
+  SVN_ERR(svn_io_file_seek(target->file, APR_CUR, &pos, iterpool));
+
+  svn_stream_reset(hunk->original_text);
+
+  lines_matched = FALSE;
+  iterpool = svn_pool_create(pool);
+  do
+    {
+      svn_pool_clear(iterpool);
+
+      SVN_ERR(svn_stream_readline(hunk->original_text, &hunk_line,
+                                  target->patch->eol_str, &hunk_eof, iterpool));
+      SVN_ERR(svn_stream_readline(target->stream, &target_line, target->eol_str,
+                                  &target->eof, iterpool));
+      if (! hunk_eof && hunk_line->len > 0)
+        {
+          char c = hunk_line->data[0];
+          SVN_ERR_ASSERT(c == ' ' || c == '-');
+          lines_matched = ! strcmp(hunk_line->data + 1, target_line->data);
+        }
+    }
+  while (lines_matched && ! (hunk_eof || target->eof));
+  svn_pool_destroy(iterpool);
+
+  /* Determine whether we had a match. */
+  if (hunk_eof)
+    *matched = lines_matched;
+  else if (target->eof)
+    *matched = FALSE;
+  
+  svn_stream_reset(hunk->original_text);
+  SVN_ERR(svn_io_file_seek(target->file, APR_SET, &pos, pool));
+  target->eof = FALSE;
+
+  return SVN_NO_ERROR;
+}
+
+/* Scan lines of TARGET for a match of the original text of HUNK,
+ * up to but not including the specified UPPER_LINE.
+ * If UPPER_LINE is zero scan until EOF occurs when reading from TARGET.
+ * Indicate in *MATCHED whether HUNK was matched during the scan.
+ * If the hunk matched exactly once, return the line number at which
+ * the hunk matched in *MATCHED_LINE.
+ * If the hunk matched multiple times, and MATCH_FIRST is TRUE,
+ * return the line number at which the first match occured in *MATCHED_LINE.
+ * If the hunk matched multiple times, and MATCH_FIRST is FALSE,
+ * return the line number at which the last match occured in *MATCHED_LINE.
+ * Do all allocations in POOL. */
+static svn_error_t *
+scan_for_match(svn_boolean_t *match, svn_linenum_t *matched_line,
+               patch_target_t *target, const svn_hunk_t *hunk,
+               svn_boolean_t match_first, svn_linenum_t upper_line,
+               apr_pool_t *pool)
+{
+  svn_boolean_t matched;
+  apr_pool_t *iterpool;
+
+  *match = FALSE;
+  iterpool = svn_pool_create(pool);
+  while ((target->current_line < upper_line || upper_line == 0) &&
+         ! target->eof)
+    {
+      svn_stringbuf_t *buf;
+
+      svn_pool_clear(iterpool);
+
+      SVN_ERR(match_hunk(&matched, target, hunk, pool));
+      if (matched)
+        {
+          *match = TRUE;
+          *matched_line = target->current_line;
+          if (match_first)
+            break;
+        }
+
+      SVN_ERR(svn_stream_readline(target->stream, &buf, target->eol_str,
+                                  &target->eof, iterpool));
+      target->current_line++;
+    }
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
+/* Determine the *LINE at which a HUNK applies to the TARGET file.
  * If no correct line can be determined, fall back to the original
  * line offset specified in HUNK -- the user will have to resolve
- * conflicts in this case. */
-static svn_linenum_t
-determine_hunk_line(const svn_hunk_t *hunk, patch_target_t *target)
+ * conflicts in this case.
+ * When this function returns, neither TARGET->CURRENT_LINE nor the
+ * file offset in the target file will have changed.
+ * Do temporary allocations in POOL. */
+static svn_error_t *
+determine_hunk_line(svn_linenum_t *line, patch_target_t *target,
+                    const svn_hunk_t *hunk, apr_pool_t *pool)
 {
-  /* TODO: For now, just apply the hunk wherever it thinks it should go.
-   * We can add line offset searching here later.
-   * If the file didn't originally exist, the starting line is zero,
+  svn_linenum_t hunk_start;
+  svn_boolean_t early_match;
+  svn_linenum_t early_matched_line;
+  svn_boolean_t match;
+  svn_linenum_t matched_line;
+  svn_linenum_t saved_line;
+  apr_off_t saved_pos;
+
+  saved_line = target->current_line;
+  saved_pos = 0;
+  SVN_ERR(svn_io_file_seek(target->file, APR_CUR, &saved_pos, pool));
+
+  /* If the file didn't originally exist, the starting line is zero,
    * but we're counting lines starting from 1 so fix that up. */
-  return hunk->original_start == 0 ? 1 : hunk->original_start;
+  hunk_start = hunk->original_start == 0 ? 1 : hunk->original_start;
+
+  /* Scan forward towards the hunk's line and look for a line where the
+   * hunk matches, in case there are local changes in the target which 
+   * cause the hunk to match early. */
+  SVN_ERR(scan_for_match(&early_match, &early_matched_line, target, hunk,
+                         FALSE, hunk_start, pool));
+
+  /* Scan for a match at the line where the hunk thinks it should be going. */
+  SVN_ERR_ASSERT(target->current_line == hunk_start);
+  SVN_ERR(scan_for_match(&match, &matched_line, target, hunk, TRUE,
+                         target->current_line + 1, pool));
+  if (match)
+    {
+      /* Neat, an exact match. */
+      SVN_ERR_ASSERT(matched_line == hunk_start);
+      *line = hunk_start;
+    }
+  else
+    {
+      /* Scan forward towards the end of the file and look for a line where
+       * the hunk matches, in case there are local changes in the target
+       * which cause the hunk to match late. */
+      SVN_ERR(scan_for_match(&match, &matched_line, target, hunk, TRUE, 0,
+                             pool));
+      if (match && ! early_match)
+        {
+          /* We have a late match only, so use it. */
+          *line = matched_line;
+        }
+      else if (! match && early_match)
+        {
+          /* We have a early match only, so use it. */
+          *line = early_matched_line;
+        }
+      else if (match && early_match)
+        {
+          apr_off_t early_offset;
+          apr_off_t late_offset;
+
+          /* We have both a late and an early match. Use whichever is
+           * closest to where the hunk thinks it should be going. */
+          SVN_ERR_ASSERT(early_matched_line < hunk_start);
+          SVN_ERR_ASSERT(matched_line > hunk_start);
+          early_offset = hunk_start - early_matched_line;
+          late_offset = matched_line - hunk_start;
+
+          if (early_offset < late_offset)
+            *line = early_matched_line;
+          else if (early_offset > late_offset)
+            *line = matched_line;
+          else if (early_offset == late_offset)
+            {
+              /* But don't try to be smart about breaking a tie.
+               * Just apply the hunk where it thinks it should be going.
+               * There will be conflicts. */
+              *line = hunk_start;
+            }
+        }
+      else
+        {
+          /* We found no match at all.
+           * Just apply the hunk where it thinks it should be going.
+           * There will be conflicts. */
+          *line = hunk_start;
+        }
+    }
+
+  target->current_line = saved_line;
+  SVN_ERR(svn_io_file_seek(target->file, APR_SET, &saved_pos, pool));
+  target->eof = FALSE;
+
+  return SVN_NO_ERROR;
 }
 
 /* Copy lines to the result stream of TARGET until the specified
@@ -2264,23 +2453,25 @@ merge_hunk(patch_target_t *target, const svn_hunk_t *hunk,
 static svn_error_t *
 apply_one_hunk(const svn_hunk_t *hunk, patch_target_t *target, apr_pool_t *pool)
 {
-  svn_linenum_t line;
+  svn_linenum_t hunk_line;
   svn_stream_t *latest_text;
 
-  /* Determine the line the hunk should be applied at. */
-  line = determine_hunk_line(hunk, target);
-
-  if (target->current_line > line)
-    /* If we already passed the line that the hunk should be applied to,
-     * the hunks in the patch file are out of order. */
-    /* TODO: Warn, create reject file? */
-    return SVN_NO_ERROR;
-
-  /* Move forward to the hunk's line, copying data as we go. */
-  if (target->file)
+  if (target->kind == svn_node_file)
     {
-      if (target->current_line < line)
-        SVN_ERR(copy_lines_to_target(target, line, pool));
+      /* Determine the line the hunk should be applied at. */
+      SVN_ERR(determine_hunk_line(&hunk_line, target, hunk, pool));
+
+      if (target->current_line > hunk_line)
+        {
+          /* If we already passed the line that the hunk should be applied to,
+           * the hunks in the patch file are out of order. */
+          /* TODO: Warn, create reject file? */
+          return SVN_NO_ERROR;
+        }
+
+      /* Move forward to the hunk's line, copying data as we go. */
+      if (target->current_line < hunk_line)
+        SVN_ERR(copy_lines_to_target(target, hunk_line, pool));
       if (target->eof)
         {
           /* File is shorter than it should be. */
@@ -2296,7 +2487,10 @@ apply_one_hunk(const svn_hunk_t *hunk, patch_target_t *target, apr_pool_t *pool)
                                      target, pool, pool));
     }
   else
-    latest_text = svn_stream_empty(pool);
+    {
+      /* We're creating a new file, so the latest text is simply empty. */
+      latest_text = svn_stream_empty(pool);
+    }
 
   SVN_ERR(merge_hunk(target, hunk, latest_text, pool));
 

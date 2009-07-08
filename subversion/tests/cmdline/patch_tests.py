@@ -544,6 +544,216 @@ def patch_unidiff_absolute_paths(sbox):
                                        1, # check-props
                                        0) # dry-run
 
+def patch_unidiff_offset(sbox):
+  "apply a unidiff patch with offset searching"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  patch_file_path = tempfile.mkstemp(dir=os.path.abspath(svntest.main.temp_dir))[1]
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+  iota_path = os.path.join(wc_dir, 'iota')
+
+  mu_contents = [
+    "Dear internet user,\n",
+    # The missing line here will cause the first hunk to match early
+    "We wish to congratulate you over your email success in our computer\n",
+    "Balloting. This is a Millennium Scientific Electronic Computer Draw\n",
+    "in which email addresses were used. All participants were selected\n",
+    "through a computer ballot system drawn from over 100,000 company\n",
+    "and 50,000,000 individual email addresses from all over the world.\n",
+    "\n",
+    "Your email address drew and have won the sum of  750,000 Euros\n",
+    "( Seven Hundred and Fifty Thousand Euros) in cash credited to\n",
+    "file with\n",
+    "    REFERENCE NUMBER: ESP/WIN/008/05/10/MA;\n",
+    "These extra lines will cause the second hunk to match late\n",
+    "These extra lines will cause the second hunk to match late\n",
+    "These extra lines will cause the second hunk to match late\n",
+    "These extra lines will cause the second hunk to match late\n",
+    "These extra lines will cause the second hunk to match late\n",
+    "    WINNING NUMBER : 14-17-24-34-37-45-16\n",
+    "    BATCH NUMBERS :\n",
+    "    EULO/1007/444/606/08;\n",
+    "    SERIAL NUMBER: 45327\n",
+    "and PROMOTION DATE: 13th June. 2009\n",
+    "\n",
+    "To claim your winning prize, you are to contact the appointed\n",
+    "agent below as soon as possible for the immediate release of your\n",
+    "winnings with the below details.\n",
+    "\n",
+    "Again, we wish to congratulate you over your email success in our\n"
+    "computer Balloting.\n",
+  ]
+
+  # iota's content will make both a late and early match possible.
+  # The hunk to be applied is replicated here for reference:
+  # @@ -5,6 +5,7 @@
+  #  iota
+  #  iota
+  #  iota
+  # +x
+  #  iota
+  #  iota
+  #  iota
+  #
+  # This hunk wants to be applied at line 5, but that isn't
+  # possible because line 8 ("zzz") does not match "iota".
+  # The early match happens at line 2 (offset 3 = 5 - 2).
+  # The late match happens at line 9 (offset 4 = 9 - 5).
+  # Subversion will pick the early match in this case because it
+  # is closer to line 5.
+  iota_contents = [
+    "iota\n",
+    "iota\n",
+    "iota\n",
+    "iota\n",
+    "iota\n",
+    "iota\n",
+    "iota\n",
+    "zzz\n",
+    "iota\n",
+    "iota\n",
+    "iota\n",
+    "iota\n",
+    "iota\n",
+    "iota\n",
+    "iota\n"
+  ]
+
+  # Set mu and iota contents
+  svntest.main.file_write(mu_path, ''.join(mu_contents))
+  svntest.main.file_write(iota_path, ''.join(iota_contents))
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/mu'       : Item(verb='Sending'),
+    'iota'       : Item(verb='Sending'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/mu', wc_rev=2)
+  expected_status.tweak('iota', wc_rev=2)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None, wc_dir)
+
+  # Apply patch
+
+  unidiff_patch = [
+    "--- A/mu.orig	2009-06-24 15:23:55.000000000 +0100\n",
+    "+++ A/mu	2009-06-24 15:21:23.000000000 +0100\n",
+    "@@ -6,6 +6,9 @@\n",
+    " through a computer ballot system drawn from over 100,000 company\n",
+    " and 50,000,000 individual email addresses from all over the world.\n",
+    " \n",
+    "+It is a promotional program aimed at encouraging internet users;\n",
+    "+therefore you do not need to buy ticket to enter for it.\n",
+    "+\n",
+    " Your email address drew and have won the sum of  750,000 Euros\n",
+    " ( Seven Hundred and Fifty Thousand Euros) in cash credited to\n",
+    " file with\n",
+    "@@ -14,11 +17,8 @@\n",
+    "     BATCH NUMBERS :\n",
+    "     EULO/1007/444/606/08;\n",
+    "     SERIAL NUMBER: 45327\n",
+    "-and PROMOTION DATE: 13th June. 2009\n",
+    "+and PROMOTION DATE: 14th June. 2009\n",
+    " \n",
+    " To claim your winning prize, you are to contact the appointed\n",
+    " agent below as soon as possible for the immediate release of your\n",
+    " winnings with the below details.\n",
+    "-\n",
+    "-Again, we wish to congratulate you over your email success in our\n",
+    "-computer Balloting.\n",
+    "Index: iota\n",
+    "===================================================================\n",
+    "--- iota	(revision XYZ)\n",
+    "+++ iota	(working copy)\n",
+    "@@ -5,6 +5,7 @@\n",
+    " iota\n",
+    " iota\n",
+    " iota\n",
+    "+x\n",
+    " iota\n",
+    " iota\n",
+    " iota\n",
+  ]
+
+  svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
+
+  mu_contents = [
+    "Dear internet user,\n",
+    "We wish to congratulate you over your email success in our computer\n",
+    "Balloting. This is a Millennium Scientific Electronic Computer Draw\n",
+    "in which email addresses were used. All participants were selected\n",
+    "through a computer ballot system drawn from over 100,000 company\n",
+    "and 50,000,000 individual email addresses from all over the world.\n",
+    "\n",
+    "It is a promotional program aimed at encouraging internet users;\n",
+    "therefore you do not need to buy ticket to enter for it.\n",
+    "\n",
+    "Your email address drew and have won the sum of  750,000 Euros\n",
+    "( Seven Hundred and Fifty Thousand Euros) in cash credited to\n",
+    "file with\n",
+    "    REFERENCE NUMBER: ESP/WIN/008/05/10/MA;\n",
+    "These extra lines will cause the second hunk to match late\n",
+    "These extra lines will cause the second hunk to match late\n",
+    "These extra lines will cause the second hunk to match late\n",
+    "These extra lines will cause the second hunk to match late\n",
+    "These extra lines will cause the second hunk to match late\n",
+    "    WINNING NUMBER : 14-17-24-34-37-45-16\n",
+    "    BATCH NUMBERS :\n",
+    "    EULO/1007/444/606/08;\n",
+    "    SERIAL NUMBER: 45327\n",
+    "and PROMOTION DATE: 14th June. 2009\n",
+    "\n",
+    "To claim your winning prize, you are to contact the appointed\n",
+    "agent below as soon as possible for the immediate release of your\n",
+    "winnings with the below details.\n",
+  ]
+  
+  iota_contents = [
+    "iota\n",
+    "iota\n",
+    "iota\n",
+    "iota\n",
+    "x\n",
+    "iota\n",
+    "iota\n",
+    "iota\n",
+    "zzz\n",
+    "iota\n",
+    "iota\n",
+    "iota\n",
+    "iota\n",
+    "iota\n",
+    "iota\n",
+    "iota\n",
+  ]
+
+  os.chdir(wc_dir)
+
+  expected_output = [
+    'U    %s\n' % os.path.join('A', 'mu'),
+    'U    iota\n'
+  ]
+
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('A/mu', contents=''.join(mu_contents))
+  expected_disk.tweak('iota', contents=''.join(iota_contents))
+
+  expected_status = svntest.actions.get_virginal_state('.', 1)
+  expected_status.tweak('A/mu', status='M ', wc_rev=2)
+  expected_status.tweak('iota', status='M ', wc_rev=2)
+
+  expected_skip = wc.State('', { })
+
+  svntest.actions.run_and_verify_patch('.', os.path.abspath(patch_file_path),
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, # expected err
+                                       1, # check-props
+                                       0) # dry-run
+
 ########################################################################
 #Run the tests
 
@@ -553,6 +763,7 @@ test_list = [ None,
               patch_unidiff,
               patch_copy_and_move,
               patch_unidiff_absolute_paths,
+              patch_unidiff_offset,
               ]
 
 if __name__ == '__main__':
