@@ -348,7 +348,7 @@ merge_file_added(svn_wc_adm_access_t *adm_access,
   if (! adm_access)
     {
       if (patch_b->dry_run && patch_b->added_path
-          && svn_path_is_child(patch_b->added_path, mine, subpool))
+          && svn_dirent_is_child(patch_b->added_path, mine, subpool))
         {
           if (content_state)
             *content_state = svn_wc_notify_state_changed;
@@ -611,7 +611,7 @@ merge_dir_added(svn_wc_adm_access_t *adm_access,
       if (state)
         {
           if (patch_b->dry_run && patch_b->added_path
-              && svn_path_is_child(patch_b->added_path, path, subpool))
+              && svn_dirent_is_child(patch_b->added_path, path, subpool))
             *state = svn_wc_notify_state_changed;
           else
             *state = svn_wc_notify_state_missing;
@@ -620,7 +620,7 @@ merge_dir_added(svn_wc_adm_access_t *adm_access,
       return SVN_NO_ERROR;
     }
 
-  child = svn_path_is_child(patch_b->target, path, subpool);
+  child = svn_dirent_is_child(patch_b->target, path, subpool);
   assert(child != NULL);
 
   SVN_ERR(svn_io_check_path(path, &kind, subpool));
@@ -956,7 +956,7 @@ make_dir_baton(const char *path,
   dir_baton->added = added;
   dir_baton->pool = pool;
   dir_baton->path = apr_pstrdup(pool, path);
-  dir_baton->wcpath = svn_path_join(edit_baton->target, path, pool);
+  dir_baton->wcpath = svn_dirent_join(edit_baton->target, path, pool);
   dir_baton->propchanges  = apr_array_make(pool, 1, sizeof(svn_prop_t));
 
   return dir_baton;
@@ -983,7 +983,7 @@ make_file_baton(const char *path,
   file_baton->added = added;
   file_baton->pool = pool;
   file_baton->path = apr_pstrdup(pool, path);
-  file_baton->wcpath = svn_path_join(eb->target, path, pool);
+  file_baton->wcpath = svn_dirent_join(eb->target, path, pool);
   file_baton->propchanges  = apr_array_make(pool, 1, sizeof(svn_prop_t));
   file_baton->dir_baton = parent_baton;
   file_baton->is_binary = FALSE;
@@ -1162,7 +1162,7 @@ delete_entry(const char *path,
           {
             SVN_ERR(eb->diff_callbacks->dir_deleted 
                     (adm_access, &state, NULL,
-                     svn_path_join(eb->target, path, pool),
+                     svn_dirent_join(eb->target, path, pool),
                      eb->diff_cmd_baton));
             break;
           }
@@ -1177,7 +1177,7 @@ delete_entry(const char *path,
           if (eb->dry_run)
             {
               /* Remember what we _would've_ deleted (issue #2584). */
-              const char *wcpath = svn_path_join(eb->target, path, pb->pool);
+              const char *wcpath = svn_dirent_join(eb->target, path, pb->pool);
               apr_hash_set(dry_run_deletions_hash(eb->diff_cmd_baton),
                            wcpath, APR_HASH_KEY_STRING, wcpath);
 
@@ -1191,7 +1191,7 @@ delete_entry(const char *path,
   if (eb->notify_func)
     {
       svn_wc_notify_t *notify
-        = svn_wc_create_notify(svn_path_join(eb->target, path, pool),
+        = svn_wc_create_notify(svn_dirent_join(eb->target, path, pool),
                                action, pool);
       notify->kind = kind;
       notify->content_state = notify->prop_state = state;
@@ -2078,12 +2078,12 @@ match_hunk(svn_boolean_t *matched, patch_target_t *target,
   *matched = FALSE;
 
   pos = 0;
+  iterpool = svn_pool_create(pool);
   SVN_ERR(svn_io_file_seek(target->file, APR_CUR, &pos, iterpool));
 
   svn_stream_reset(hunk->original_text);
 
   lines_matched = FALSE;
-  iterpool = svn_pool_create(pool);
   do
     {
       svn_pool_clear(iterpool);
