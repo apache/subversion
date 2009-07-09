@@ -215,7 +215,8 @@ svn_error_t *
 svn_editor_add_directory(svn_editor_t *editor,
                          const char *relpath,
                          const apr_array_header_t *children,
-                         apr_hash_t *props)
+                         apr_hash_t *props,
+                         svn_revnum_t replaces_rev)
 {
   svn_error_t *err;
 
@@ -225,7 +226,8 @@ svn_editor_add_directory(svn_editor_t *editor,
     SVN_ERR((*editor->cancel_func)(editor->cancel_baton));
 
   err = (*editor->funcs.cb_add_directory)(editor->baton, relpath, children,
-                                          props, editor->scratch_pool);
+                                          props, replaces_rev,
+                                          editor->scratch_pool);
   svn_pool_clear(editor->scratch_pool);
   return err;
 }
@@ -234,7 +236,8 @@ svn_editor_add_directory(svn_editor_t *editor,
 svn_error_t *
 svn_editor_add_file(svn_editor_t *editor,
                     const char *relpath,
-                    apr_hash_t *props)
+                    apr_hash_t *props,
+                    svn_revnum_t replaces_rev)
 {
   svn_error_t *err;
 
@@ -244,7 +247,7 @@ svn_editor_add_file(svn_editor_t *editor,
     SVN_ERR((*editor->cancel_func)(editor->cancel_baton));
 
   err = (*editor->funcs.cb_add_file)(editor->baton, relpath, props,
-                                     editor->scratch_pool);
+                                     replaces_rev, editor->scratch_pool);
   svn_pool_clear(editor->scratch_pool);
   return err;
 }
@@ -254,7 +257,8 @@ svn_error_t *
 svn_editor_add_symlink(svn_editor_t *editor,
                        const char *relpath,
                        const char *target,
-                       apr_hash_t *props)
+                       apr_hash_t *props,
+                       svn_revnum_t replaces_rev)
 {
   svn_error_t *err;
 
@@ -264,7 +268,7 @@ svn_editor_add_symlink(svn_editor_t *editor,
     SVN_ERR((*editor->cancel_func)(editor->cancel_baton));
 
   err = (*editor->funcs.cb_add_symlink)(editor->baton, relpath, target, props,
-                                        editor->scratch_pool);
+                                        replaces_rev, editor->scratch_pool);
   svn_pool_clear(editor->scratch_pool);
   return err;
 }
@@ -273,7 +277,8 @@ svn_editor_add_symlink(svn_editor_t *editor,
 svn_error_t *
 svn_editor_add_absent(svn_editor_t *editor,
                       const char *relpath,
-                      svn_node_kind_t kind)
+                      svn_node_kind_t kind,
+                      svn_revnum_t replaces_rev)
 {
   svn_error_t *err;
 
@@ -283,7 +288,7 @@ svn_editor_add_absent(svn_editor_t *editor,
     SVN_ERR((*editor->cancel_func)(editor->cancel_baton));
 
   err = (*editor->funcs.cb_add_absent)(editor->baton, relpath, kind,
-                                       editor->scratch_pool);
+                                       replaces_rev, editor->scratch_pool);
   svn_pool_clear(editor->scratch_pool);
   return err;
 }
