@@ -1734,8 +1734,10 @@ svn_client_patch(const char *patch_path,
   svn_wc_adm_access_t *adm_access;
   struct edit_baton *eb;
   svn_boolean_t dry_run = FALSE; /* disable dry_run for now */
+  const char *abs_target;
 
-  SVN_ERR(svn_wc_adm_open3(&adm_access, NULL, target,
+  SVN_ERR(svn_dirent_get_absolute(&abs_target, target, pool));
+  SVN_ERR(svn_wc_adm_open3(&adm_access, NULL, abs_target,
                            TRUE, -1, ctx->cancel_func, ctx->cancel_baton,
                            pool));
 
@@ -1749,13 +1751,13 @@ svn_client_patch(const char *patch_path,
       patch_cmd_baton.force = force;
       patch_cmd_baton.dry_run = dry_run;
       patch_cmd_baton.added_path = NULL;
-      patch_cmd_baton.target = target;
+      patch_cmd_baton.target = abs_target;
       patch_cmd_baton.ctx = ctx;
       patch_cmd_baton.dry_run_deletions = (dry_run ? apr_hash_make(pool)
                                             : NULL);
       patch_cmd_baton.pool = pool;
 
-      eb = make_editor_baton(target, adm_access, dry_run, &patch_callbacks,
+      eb = make_editor_baton(abs_target, adm_access, dry_run, &patch_callbacks,
                              &patch_cmd_baton, ctx->notify_func2,
                              ctx->notify_baton2, &diff_editor, pool);
 
@@ -1791,11 +1793,17 @@ typedef struct {
   /* The patch being applied. */
   const svn_patch_t *patch;
 
-  /* The target path, relative to the working copy directory the
-   * patch is being applied to. */
-  const char *path;
+  /* The target path, as it appeared in the patch file.
+   * This is always known. */
+  const char *patch_path;
 
-  /* The absolute path of the target */
+  /* The target path, relative to the working copy directory the
+   * patch is being applied to. A patch strip count applies to this
+   * and only this path. Is not always known, so may be NULL. */
+  const char *wc_path;
+
+  /* The absolute path of the target.
+   * Is not always known, so it may be NULL. */
   char *abs_path;
 
   /* The target file, read-only, seekable. This is NULL in case the target
@@ -1843,73 +1851,93 @@ typedef struct {
   svn_boolean_t local_mods;
 } patch_target_t;
 
-/* Resolve the exact path for a patch TARGET at path TARGET_PATH,
- * and set up TARGET->PATH, TARGET->ABS_PATH, and TARGET->KIND accordingly.
- * Also indicate whether the target should be skipped in TARGET->SKIPPED.
- *
- * If TARGET_PATH is absolute, resolve symlinks it might contain,
- * and make sure that it points somewhere inside of the working copy
- * directory WC_PATH.
- *
- * Use RESULT_POOL for allocations of fields in TARGET.
- * */
+/* Resolve the exact path for a patch TARGET at path PATCH_TARGET_PATH,
+ * which is the path of the target as it appeared in the patch file.
+ * Set up TARGET->PATCH_PATH, TARGET->WC_PATH, TARGET->ABS_PATH, and
+ * TARGET->KIND accordingly.
+ * Indicate in TARGET->SKIPPED whether the target should be skipped.
+ * Use RESULT_POOL for allocations of fields in TARGET. */
 static svn_error_t *
-resolve_target_path(patch_target_t *target, const char *target_path,
+resolve_target_path(patch_target_t *target, const char *patch_target_path,
                     const char *wc_path, apr_pool_t *result_pool,
                     apr_pool_t *scratch_pool)
 {
   const char *abs_wc_path;
-  const char *child_path;
+  const char *canon_target_path;
 
-  /* If the path is a child of the working copy directory,
-   * pass a relative path to svn_dirent_is_under_root() below.
-   * Passing it an absolute path will always fail. */
   SVN_ERR(svn_dirent_get_absolute(&abs_wc_path, wc_path, scratch_pool));
-  child_path = svn_dirent_is_child(abs_wc_path, target_path, scratch_pool);
+  canon_target_path = svn_dirent_canonicalize(patch_target_path, scratch_pool);
 
-  /* Make sure the path is secure to use. We want the target to be inside
-   * of the working copy. */
-  if (svn_dirent_is_under_root(&target->abs_path, abs_wc_path,
-                               child_path ? child_path : target_path,
-                               result_pool))
+  if (strlen(canon_target_path) == 0)
     {
-      target->path = svn_dirent_is_child(abs_wc_path, target->abs_path,
-                                         result_pool);
-      SVN_ERR_ASSERT(target->path);
+      /* An empty patch target path? What gives? Skip this. */
+      target->skipped = TRUE;
+      target->kind = svn_node_file;
+      target->patch_path = "";
+      target->abs_path = NULL;
+      target->wc_path = NULL;
+      return SVN_NO_ERROR;
+    }
 
-      /* Find out if there is a suitable patch target at the target path,
-       * and determine if the target should be skipped. */
-      SVN_ERR(svn_io_check_path(target->abs_path, &target->kind, scratch_pool));
-      switch (target->kind)
+  target->patch_path = apr_pstrdup(result_pool, patch_target_path);
+
+  if (svn_dirent_is_absolute(canon_target_path))
+    {
+      /* TODO: strip count */
+      target->wc_path = svn_dirent_is_child(abs_wc_path, canon_target_path,
+                                            scratch_pool);
+      if (! target->wc_path)
         {
-          case svn_node_file:
-            target->skipped = FALSE;
-            break;
-          case svn_node_none:
-            {
-              const char *dirname;
-              svn_node_kind_t kind;
-
-              /* The file is not there, that's fine. The patch might want to
-               * create it. But the containing directory of the target needs
-               * to exists. Otherwise we won't be able to apply the patch. */
-              dirname = svn_dirent_dirname(target->abs_path, scratch_pool);
-              SVN_ERR(svn_io_check_path(dirname, &kind, scratch_pool));
-              target->skipped = (kind != svn_node_dir);
-              break;
-            }
-          default:
-            target->skipped = TRUE;
-            break;
+          /* The target path is either outside of the working copy
+           * or it is the working copy itself. Skip it. */
+          target->skipped = TRUE;
+          target->kind = svn_node_file;
+          target->abs_path = apr_pstrdup(result_pool, canon_target_path);
+          target->wc_path = NULL;
+          return SVN_NO_ERROR;
         }
     }
   else
     {
+      target->wc_path = canon_target_path; /* TODO: strip count */
+    }
+
+  /* Make sure the path is secure to use. We want the target to be inside
+   * of the working copy and not be fooled by symlinks it might contain. */
+  if (! svn_dirent_is_under_root(&target->abs_path, abs_wc_path,
+                                 target->wc_path, result_pool))
+    {
       /* The target path is outside of the working copy. Skip it. */
       target->skipped = TRUE;
       target->kind = svn_node_file;
-      target->path = target_path;
       target->abs_path = NULL;
+      return SVN_NO_ERROR;
+    }
+
+  /* Find out if there is a suitable patch target at the target path,
+   * and determine if the target should be skipped. */
+  SVN_ERR(svn_io_check_path(target->abs_path, &target->kind, scratch_pool));
+  switch (target->kind)
+    {
+      case svn_node_file:
+        target->skipped = FALSE;
+        break;
+      case svn_node_none:
+        {
+          const char *dirname;
+          svn_node_kind_t kind;
+
+          /* The file is not there, that's fine. The patch might want to
+           * create it. But the containing directory of the target needs
+           * to exists. Otherwise we won't be able to apply the patch. */
+          dirname = svn_dirent_dirname(target->abs_path, scratch_pool);
+          SVN_ERR(svn_io_check_path(dirname, &kind, scratch_pool));
+          target->skipped = (kind != svn_node_dir);
+          break;
+        }
+      default:
+        target->skipped = TRUE;
+        break;
     }
 
   return SVN_NO_ERROR;
@@ -1981,8 +2009,6 @@ init_patch_target(patch_target_t **target, const svn_patch_t *patch,
   *target = NULL;
   new_target = apr_pcalloc(result_pool, sizeof(*new_target));
 
-  /* TODO: strip count */
-
   SVN_ERR(resolve_target_path(new_target, patch->new_filename,
                               svn_wc_adm_access_path(adm_access),
                               result_pool, scratch_pool));
@@ -1990,7 +2016,7 @@ init_patch_target(patch_target_t **target, const svn_patch_t *patch,
   if (new_target->kind == svn_node_file && ! new_target->skipped)
     {
       /* Try to open the target file */
-      SVN_ERR(svn_io_file_open(&new_target->file, new_target->path,
+      SVN_ERR(svn_io_file_open(&new_target->file, new_target->abs_path,
                                APR_READ | APR_BINARY | APR_BUFFERED,
                                APR_OS_DEFAULT, result_pool));
       SVN_ERR(svn_subst_detect_file_eol(&new_target->eol_str, new_target->file,
@@ -2018,7 +2044,7 @@ init_patch_target(patch_target_t **target, const svn_patch_t *patch,
                                      svn_io_file_del_none,
                                      result_pool, scratch_pool));
 
-      SVN_ERR(check_local_mods(&new_target->local_mods, new_target->path,
+      SVN_ERR(check_local_mods(&new_target->local_mods, new_target->abs_path,
                                adm_access, scratch_pool));
      }
 
@@ -2309,7 +2335,7 @@ read_lines_from_target(svn_stream_t **lines, svn_linenum_t nlines,
 
   target->current_line += i;
 
-  SVN_ERR(svn_io_file_open(&file, target->path, flags, APR_OS_DEFAULT,
+  SVN_ERR(svn_io_file_open(&file, target->abs_path, flags, APR_OS_DEFAULT,
                            result_pool));
   *lines = svn_stream_from_aprfile_range_readonly(file, FALSE, start, end,
                                                   result_pool);
@@ -2499,18 +2525,21 @@ apply_one_hunk(const svn_hunk_t *hunk, patch_target_t *target, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
-/* Use client context CTX to send a suitable notification for a patch TARGET.
+/* Use client context CTX to send a suitable notification for a patch
+ * TARGET being applied to WC_DIR.
  * Use POOL for temporary allocations. */
-static void
+static svn_error_t *
 maybe_send_patch_target_notification(const patch_target_t *target,
+                                     const char *wc_dir,
                                      const svn_client_ctx_t *ctx,
                                      apr_pool_t *pool)
 {
   svn_wc_notify_t *notify;
   svn_wc_notify_action_t action;
+  const char *path;
 
   if (! ctx->notify_func2)
-    return;
+    return SVN_NO_ERROR;
 
   if (target->skipped)
     action = svn_wc_notify_skip;
@@ -2519,7 +2548,17 @@ maybe_send_patch_target_notification(const patch_target_t *target,
   else
     action = svn_wc_notify_update_update;
 
-  notify = svn_wc_create_notify(target->path, action, pool);
+  /* Figure out which path to report for the patch target.
+   * Try all possibilities in order of preference. */
+  if (target->wc_path)
+    path = svn_dirent_join(wc_dir, target->wc_path, pool);
+  else if (target->abs_path)
+    path = target->abs_path;
+  else
+    path = target->patch_path;
+  SVN_ERR_ASSERT(path);
+
+  notify = svn_wc_create_notify(path, action, pool);
   notify->kind = svn_node_file;
 
   if (action == svn_wc_notify_skip)
@@ -2544,6 +2583,8 @@ maybe_send_patch_target_notification(const patch_target_t *target,
     }
 
   (*ctx->notify_func2)(ctx->notify_baton2, notify, pool);
+
+  return SVN_NO_ERROR;
 }
 
 /* Apply a PATCH. Use client context CTX to send notifiations.
@@ -2557,6 +2598,7 @@ apply_one_patch(svn_patch_t *patch, svn_wc_adm_access_t *adm_access,
                 apr_pool_t *pool)
 {
   patch_target_t *target;
+  const char *wc_path;
 
   SVN_ERR(init_patch_target(&target, patch, adm_access, ctx,
                             tempfiles, pool, pool));
@@ -2610,7 +2652,7 @@ apply_one_patch(svn_patch_t *patch, svn_wc_adm_access_t *adm_access,
         {
           /* Install the patched temporary file over the working file.
            * ### Should this rather be done in a loggy fashion? */
-          SVN_ERR(svn_io_file_rename(target->result_path, patch->new_filename,
+          SVN_ERR(svn_io_file_rename(target->result_path, target->abs_path,
                                      pool));
 
           if (target->kind == svn_node_none)
@@ -2619,13 +2661,7 @@ apply_one_patch(svn_patch_t *patch, svn_wc_adm_access_t *adm_access,
                * control.  Suppress the notification, we'll do it manually in
                * a minute (which is a work-around for otherwise not quite pretty
                * output of the svn CLI client...) */
-              svn_wc_adm_access_t *parent_adm_access;
-              const char *dirname = svn_dirent_dirname(patch->new_filename,
-                                                       pool);
-              SVN_ERR(svn_wc_adm_retrieve(&parent_adm_access, adm_access,
-                                          dirname, pool));
-              SVN_ERR(svn_wc_add3(patch->new_filename,
-                                  parent_adm_access,
+              SVN_ERR(svn_wc_add3(target->abs_path, adm_access,
                                   svn_depth_infinity,
                                   NULL, SVN_INVALID_REVNUM,
                                   ctx->cancel_func, ctx->cancel_baton,
@@ -2639,7 +2675,8 @@ apply_one_patch(svn_patch_t *patch, svn_wc_adm_access_t *adm_access,
         }
     }
 
-  maybe_send_patch_target_notification(target, ctx, pool);
+  wc_path = svn_wc_adm_access_path(adm_access);
+  SVN_ERR(maybe_send_patch_target_notification(target, wc_path, ctx, pool));
 
   return SVN_NO_ERROR;
 }
