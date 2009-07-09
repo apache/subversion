@@ -149,7 +149,7 @@ Candidate changes:
   * r38388
     Handle incomplete deleted rev report request.
     Justification:
-      Incomplete request will cuase uninitialized variables to be referenced.
+      Incomplete request will cause uninitialized variables to be referenced.
     Votes:
       +1: glasser (via e-mail), pburba
 
