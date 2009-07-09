@@ -2548,15 +2548,11 @@ maybe_send_patch_target_notification(const patch_target_t *target,
   else
     action = svn_wc_notify_update_update;
 
-  /* Figure out which path to report for the patch target.
-   * Try all possibilities in order of preference. */
+  /* Figure out which path to report for the patch target. */
   if (target->wc_path)
     path = svn_dirent_join(wc_dir, target->wc_path, pool);
-  else if (target->abs_path)
-    path = target->abs_path;
   else
     path = target->patch_path;
-  SVN_ERR_ASSERT(path);
 
   notify = svn_wc_create_notify(path, action, pool);
   notify->kind = svn_node_file;
