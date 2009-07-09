@@ -66,7 +66,7 @@ AC_DEFUN(SVN_LIB_APRUTIL,
   if test $? -ne 0; then
     AC_MSG_ERROR([apu-config --ldflags failed])
   fi
-  LDFLAGS="$LDFLAGS `SVN_REMOVE_REDUNDANT_LIB_DIRS($apu_ldflags)`"
+  LDFLAGS="$LDFLAGS `SVN_REMOVE_STANDARD_LIB_DIRS($apu_ldflags)`"
 
   SVN_APRUTIL_INCLUDES="`$apu_config --includes`"
   if test $? -ne 0; then
@@ -89,7 +89,7 @@ AC_DEFUN(SVN_LIB_APRUTIL,
       AC_MSG_ERROR([apu-config --link-ld failed])
     fi
   fi
-  SVN_APRUTIL_LIBS="`SVN_REMOVE_REDUNDANT_LIB_DIRS($SVN_APRUTIL_LIBS)`"
+  SVN_APRUTIL_LIBS="`SVN_REMOVE_STANDARD_LIB_DIRS($SVN_APRUTIL_LIBS)`"
 
   AC_SUBST(SVN_APRUTIL_INCLUDES)
   AC_SUBST(SVN_APRUTIL_LIBS)
