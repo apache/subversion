@@ -249,8 +249,7 @@ new_revision_record(void **revision_baton,
 {
   struct revision_baton_t *rb;
   apr_hash_index_t *hi;
-  const void *key;
-  void *val;
+  const char *rev_orig;
   svn_stream_t *header_stream;
 
   *revision_baton = apr_palloc(pool, sizeof(struct revision_baton_t));
@@ -265,9 +264,9 @@ new_revision_record(void **revision_baton,
 
   header_stream = svn_stream_from_stringbuf(rb->header, pool);
 
-  val = apr_hash_get(headers, SVN_REPOS_DUMPFILE_REVISION_NUMBER,
-                     APR_HASH_KEY_STRING);
-  rb->rev_orig = SVN_STR_TO_REV(val);
+  rev_orig = apr_hash_get(headers, SVN_REPOS_DUMPFILE_REVISION_NUMBER,
+                          APR_HASH_KEY_STRING);
+  rb->rev_orig = SVN_STR_TO_REV(rev_orig);
 
   if (rb->pb->do_renumber_revs)
     rb->rev_actual = rb->rev_orig - rb->pb->rev_drop_count;
@@ -280,7 +279,9 @@ new_revision_record(void **revision_baton,
 
   for (hi = apr_hash_first(pool, headers); hi; hi = apr_hash_next(hi))
     {
-      apr_hash_this(hi, &key, NULL, &val);
+      const char *key = svn_apr_hash_index_key(hi);
+      const char *val = svn_apr_hash_index_val(hi);
+
       if ((!strcmp(key, SVN_REPOS_DUMPFILE_CONTENT_LENGTH))
           || (!strcmp(key, SVN_REPOS_DUMPFILE_PROP_CONTENT_LENGTH))
           || (!strcmp(key, SVN_REPOS_DUMPFILE_REVISION_NUMBER)))
@@ -289,8 +290,7 @@ new_revision_record(void **revision_baton,
       /* passthru: put header into header stringbuf. */
 
       SVN_ERR(svn_stream_printf(header_stream, pool, "%s: %s\n",
-                                (const char *)key,
-                                (const char *)val));
+                                key, val));
     }
 
   SVN_ERR(svn_stream_close(header_stream));
@@ -345,10 +345,10 @@ output_revision(struct revision_baton_t *rb)
            hi;
            hi = apr_hash_next(hi))
         {
-          const void *key;
-          void *val;
-          apr_hash_this(hi, &key, NULL, &val);
-          write_prop_to_stringbuf(&props, key, val);
+          const char *pname = svn_apr_hash_index_key(hi);
+          const svn_string_t *pval = svn_apr_hash_index_val(hi);
+
+          write_prop_to_stringbuf(&props, pname, pval);
         }
       svn_stringbuf_appendcstr(props, "PROPS-END\n");
       svn_stringbuf_appendcstr(rb->header,
@@ -456,8 +456,6 @@ new_node_record(void **node_baton,
   struct node_baton_t *nb;
   char *node_path, *copyfrom_path;
   apr_hash_index_t *hi;
-  const void *key;
-  void *val;
   const char *tcl;
 
   *node_baton = apr_palloc(pool, sizeof(struct node_baton_t));
@@ -544,7 +542,9 @@ new_node_record(void **node_baton,
 
       for (hi = apr_hash_first(pool, headers); hi; hi = apr_hash_next(hi))
         {
-          apr_hash_this(hi, (const void **) &key, NULL, &val);
+          const char *key = svn_apr_hash_index_key(hi);
+          const char *val = svn_apr_hash_index_val(hi);
+
           if ((!strcmp(key, SVN_REPOS_DUMPFILE_CONTENT_LENGTH))
               || (!strcmp(key, SVN_REPOS_DUMPFILE_PROP_CONTENT_LENGTH))
               || (!strcmp(key, SVN_REPOS_DUMPFILE_TEXT_CONTENT_LENGTH)))
@@ -581,8 +581,7 @@ new_node_record(void **node_baton,
 
           SVN_ERR(svn_stream_printf(nb->rb->pb->out_stream,
                                     pool, "%s: %s\n",
-                                    (const char *)key,
-                                    (const char *)val));
+                                    key, val));
         }
     }
 
@@ -663,16 +662,10 @@ adjust_mergeinfo(svn_string_t **final_val, const svn_string_t *initial_val,
   SVN_ERR(svn_mergeinfo_parse(&mergeinfo, initial_val->data, subpool));
   for (hi = apr_hash_first(NULL, mergeinfo); hi; hi = apr_hash_next(hi))
     {
-      const char *merge_source;
-      apr_array_header_t *rangelist;
+      const char *merge_source = svn_apr_hash_index_key(hi);
+      apr_array_header_t *rangelist = svn_apr_hash_index_val(hi);
       struct parse_baton_t *pb = rb->pb;
       int i;
-      const void *key;
-      void *val;
-
-      apr_hash_this(hi, &key, NULL, &val);
-      merge_source = (const char *) key;
-      rangelist = (apr_array_header_t *) val;
 
       /* Determine whether the merge_source is a part of the prefix. */
       if (skip_path(merge_source, pb->prefixes, pb->do_exclude))
@@ -1045,7 +1038,6 @@ do_filter(apr_getopt_t *os,
   struct parse_baton_t *pb;
   apr_hash_index_t *hi;
   apr_array_header_t *keys;
-  const void *key;
   int i, num_keys;
 
   if (! opt_state->quiet)
@@ -1107,8 +1099,9 @@ do_filter(apr_getopt_t *os,
            hi;
            hi = apr_hash_next(hi))
         {
-          apr_hash_this(hi, &key, NULL, NULL);
-          APR_ARRAY_PUSH(keys, svn_revnum_t) = *((const svn_revnum_t *) key);
+          const svn_revnum_t *revnum = svn_apr_hash_index_key(hi);
+
+          APR_ARRAY_PUSH(keys, svn_revnum_t) = *revnum;
         }
       qsort(keys->elts, keys->nelts,
             keys->elt_size, svn_sort_compare_revisions);
@@ -1150,8 +1143,9 @@ do_filter(apr_getopt_t *os,
            hi;
            hi = apr_hash_next(hi))
         {
-          apr_hash_this(hi, &key, NULL, NULL);
-          APR_ARRAY_PUSH(keys, const char *) = key;
+          const char *path = svn_apr_hash_index_key(hi);
+
+          APR_ARRAY_PUSH(keys, const char *) = path;
         }
       qsort(keys->elts, keys->nelts, keys->elt_size, svn_sort_compare_paths);
       for (i = 0; i < keys->nelts; i++)

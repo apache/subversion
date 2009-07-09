@@ -76,16 +76,11 @@ print_properties_xml(const char *pname,
 
   for (hi = apr_hash_first(pool, props); hi; hi = apr_hash_next(hi))
     {
-      const void *key;
-      void *val;
-      const char *filename;
-      svn_string_t *propval;
+      const char *filename = svn_apr_hash_index_key(hi);
+      svn_string_t *propval = svn_apr_hash_index_val(hi);
       svn_stringbuf_t *sb = NULL;
 
       svn_pool_clear(iterpool);
-      apr_hash_this(hi, &key, NULL, &val);
-      filename = key;
-      propval = val;
 
       svn_xml_make_open_tag(&sb, iterpool, svn_xml_normal, "target",
                         "path", filename, NULL);
@@ -125,15 +120,10 @@ print_properties(svn_stream_t *out,
 
   for (hi = apr_hash_first(pool, props); hi; hi = apr_hash_next(hi))
     {
-      const void *key;
-      void *val;
-      const char *filename;
-      svn_string_t *propval;
+      const char *filename = svn_apr_hash_index_key(hi);
+      svn_string_t *propval = svn_apr_hash_index_val(hi);
 
       svn_pool_clear(iterpool);
-      apr_hash_this(hi, &key, NULL, &val);
-      filename = key;
-      propval = val;
 
       if (print_filenames)
         {
