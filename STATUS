@@ -146,5 +146,12 @@ Candidate changes:
     Votes:
       +1: arfrever, stsp
 
+  * r38388
+    Handle incomplete deleted rev report request.
+    Justification:
+      Incomplete request will cuase uninitialized variables to be referenced.
+    Votes:
+      +1: glasser (via e-mail), pburba
+
 Approved changes:
 =================
