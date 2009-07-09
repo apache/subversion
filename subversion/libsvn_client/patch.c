@@ -2526,7 +2526,7 @@ apply_one_hunk(const svn_hunk_t *hunk, patch_target_t *target, apr_pool_t *pool)
 }
 
 /* Use client context CTX to send a suitable notification for a patch
- * TARGET being applied to WC_DIR.
+ * TARGET, the patch of which is being applied to WC_DIR.
  * Use POOL for temporary allocations. */
 static svn_error_t *
 maybe_send_patch_target_notification(const patch_target_t *target,
