@@ -258,8 +258,8 @@ do_wc_to_wc_copies(const apr_array_header_t *copy_pairs,
      the directory once, and use it for each copy. */
   /* ### If we didn't potentially use DST_ACCESS as the SRC_ACCESS, we
      ### could use a read lock here. */
-  SVN_ERR(svn_wc_adm_open3(&dst_access, NULL, dst_parent, TRUE, 0,
-                           ctx->cancel_func, ctx->cancel_baton, pool));
+  SVN_ERR(svn_wc__adm_open_in_context(&dst_access, ctx->wc_ctx, dst_parent,
+                           TRUE, 0, ctx->cancel_func, ctx->cancel_baton, pool));
 
   for (i = 0; i < copy_pairs->nelts; i++)
     {
@@ -318,8 +318,8 @@ do_wc_to_wc_moves(const apr_array_header_t *copy_pairs,
 
       svn_dirent_split(pair->src, &src_parent, NULL, iterpool);
 
-      SVN_ERR(svn_wc_adm_open3(&src_access, NULL, src_parent, TRUE,
-                               pair->src_kind == svn_node_dir ? -1 : 0,
+      SVN_ERR(svn_wc__adm_open_in_context(&src_access, ctx->wc_ctx, src_parent,
+                               TRUE, pair->src_kind == svn_node_dir ? -1 : 0,
                                ctx->cancel_func, ctx->cancel_baton,
                                iterpool));
 
@@ -347,10 +347,11 @@ do_wc_to_wc_moves(const apr_array_header_t *copy_pairs,
             }
           else
             {
-              SVN_ERR(svn_wc_adm_open3(&dst_access, NULL, pair->dst_parent,
-                                       TRUE, 0, ctx->cancel_func,
-                                       ctx->cancel_baton,
-                                       iterpool));
+              SVN_ERR(svn_wc__adm_open_in_context(&dst_access, ctx->wc_ctx,
+                                                  pair->dst_parent, TRUE, 0,
+                                                  ctx->cancel_func,
+                                                  ctx->cancel_baton,
+                                                  iterpool));
             }
         }
 
