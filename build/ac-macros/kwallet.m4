@@ -51,7 +51,8 @@ AC_DEFUN(SVN_LIB_KWALLET,
                   CXXFLAGS="$CXXFLAGS $SVN_KWALLET_INCLUDES"
                   LIBS="$LIBS $SVN_KWALLET_LIBS"
                   qt_lib_dirs="`$PKG_CONFIG --libs-only-L QtCore QtDBus QtGui`"
-                  LDFLAGS="$old_LDFLAGS $qt_lib_dirs -L$kde_dir/lib`$KDE4_CONFIG --libsuffix`"
+                  kde_lib_suffix="`$KDE4_CONFIG --libsuffix`"
+                  LDFLAGS="$old_LDFLAGS `SVN_REMOVE_REDUNDANT_LIB_DIRS($qt_lib_dirs -L$kde_dir/lib$kde_lib_suffix)`"
                   AC_LANG(C++)
                   AC_LINK_IFELSE([
 #include <kwallet.h>

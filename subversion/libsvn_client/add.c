@@ -2,17 +2,22 @@
  * add.c:  wrappers around wc add/mkdir functionality.
  *
  * ====================================================================
- * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -250,7 +255,6 @@ svn_client__get_auto_props(apr_hash_t **properties,
 static svn_error_t *
 add_file(const char *path,
          svn_client_ctx_t *ctx,
-         svn_wc_context_t *wc_ctx,
          svn_wc_adm_access_t *adm_access,
          apr_pool_t *pool)
 {
@@ -283,7 +287,7 @@ add_file(const char *path,
 
   if (is_special)
     /* This must be a special file. */
-    SVN_ERR(svn_wc_prop_set4(wc_ctx, local_abspath, SVN_PROP_SPECIAL,
+    SVN_ERR(svn_wc_prop_set4(ctx->wc_ctx, local_abspath, SVN_PROP_SPECIAL,
                              svn_string_create(SVN_PROP_BOOLEAN_TRUE, pool),
                              FALSE, NULL, NULL, pool));
   else if (properties)
@@ -299,8 +303,8 @@ add_file(const char *path,
           /* It's probably best to pass 0 for force, so that if
              the autoprops say to set some weird combination,
              we just error and let the user sort it out. */
-          SVN_ERR(svn_wc_prop_set4(wc_ctx, local_abspath, pname, pval, FALSE,
-                                   NULL, NULL, pool));
+          SVN_ERR(svn_wc_prop_set4(ctx->wc_ctx, local_abspath, pname, pval,
+                                   FALSE, NULL, NULL, pool));
         }
     }
 
@@ -337,7 +341,6 @@ add_dir_recursive(const char *dirname,
                   svn_boolean_t force,
                   svn_boolean_t no_ignore,
                   svn_client_ctx_t *ctx,
-                  svn_wc_context_t *wc_ctx,
                   apr_pool_t *pool)
 {
   apr_dir_t *dir;
@@ -372,8 +375,8 @@ add_dir_recursive(const char *dirname,
       SVN_ERR(svn_dirent_get_absolute(&dir_abspath,
                                       svn_wc_adm_access_path(dir_access),
                                       subpool));
-      SVN_ERR(svn_wc_get_ignores2(&ignores, wc_ctx, dir_abspath, ctx->config,
-                                  pool, subpool));
+      SVN_ERR(svn_wc_get_ignores2(&ignores, ctx->wc_ctx, dir_abspath,
+                                  ctx->config, pool, subpool));
     }
 
   SVN_ERR(svn_io_dir_open(&dir, dirname, pool));
@@ -442,13 +445,13 @@ add_dir_recursive(const char *dirname,
             depth_below_here = svn_depth_empty;
 
           SVN_ERR(add_dir_recursive(fullpath, dir_access, depth_below_here,
-                                    force, no_ignore, ctx, wc_ctx, subpool));
+                                    force, no_ignore, ctx, subpool));
         }
       else if (this_entry.filetype != APR_UNKFILE
                && this_entry.filetype != APR_DIR
                && depth >= svn_depth_files)
         {
-          err = add_file(fullpath, ctx, wc_ctx, dir_access, subpool);
+          err = add_file(fullpath, ctx, dir_access, subpool);
           if (err && err->apr_err == SVN_ERR_ENTRY_EXISTS && force)
             svn_error_clear(err);
           else if (err)
@@ -476,7 +479,6 @@ add(const char *path,
     svn_boolean_t no_ignore,
     svn_wc_adm_access_t *adm_access,
     svn_client_ctx_t *ctx,
-    svn_wc_context_t *wc_ctx,
     apr_pool_t *pool)
 {
   svn_node_kind_t kind;
@@ -489,10 +491,10 @@ add(const char *path,
          and pass depth along no matter what it is, so that the
          target's depth will be set correctly. */
       err = add_dir_recursive(path, adm_access, depth,
-                              force, no_ignore, ctx, wc_ctx, pool);
+                              force, no_ignore, ctx, pool);
     }
   else if (kind == svn_node_file)
-    err = add_file(path, ctx, wc_ctx, adm_access, pool);
+    err = add_file(path, ctx, adm_access, pool);
   else
     err = svn_wc_add3(path, adm_access, depth, NULL, SVN_INVALID_REVNUM,
                       ctx->cancel_func, ctx->cancel_baton,
@@ -576,12 +578,6 @@ svn_client_add4(const char *path,
   svn_error_t *err, *err2;
   svn_wc_adm_access_t *adm_access;
   const char *parent_dir;
-  svn_wc_context_t *wc_ctx;
-
-  if (!ctx->wc_ctx)
-    SVN_ERR(svn_wc_context_create(&wc_ctx, NULL /* config */, pool, pool));
-  else
-    wc_ctx = ctx->wc_ctx;
 
   if (add_parents)
     {
@@ -604,12 +600,9 @@ svn_client_add4(const char *path,
                            TRUE, 0, ctx->cancel_func, ctx->cancel_baton,
                            pool));
 
-  err = add(path, depth, force, no_ignore, adm_access, ctx, wc_ctx, pool);
+  err = add(path, depth, force, no_ignore, adm_access, ctx, pool);
 
-  if (!ctx->wc_ctx)
-    err2 = svn_wc_context_destroy(wc_ctx);
-
-  err2 = svn_error_compose_create(svn_wc_adm_close2(adm_access, pool), err2);
+  err2 = svn_wc_adm_close2(adm_access, pool);
   if (err2)
     {
       if (err)

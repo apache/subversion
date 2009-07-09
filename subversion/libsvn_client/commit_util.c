@@ -2,17 +2,22 @@
  * commit_util.c:  Driver for the WC commit process.
  *
  * ====================================================================
- * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -123,23 +128,29 @@ static svn_error_t *
 check_prop_mods(svn_boolean_t *props_changed,
                 svn_boolean_t *eol_prop_changed,
                 const char *path,
-                svn_wc_adm_access_t *adm_access,
+                svn_wc_context_t *wc_ctx,
                 apr_pool_t *pool)
 {
   apr_array_header_t *prop_mods;
+  const char *local_abspath;
   int i;
 
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+
   *eol_prop_changed = *props_changed = FALSE;
-  SVN_ERR(svn_wc_props_modified_p(props_changed, path, adm_access, pool));
-  if (! *props_changed)
+  SVN_ERR(svn_wc_get_prop_diffs2(&prop_mods, NULL, wc_ctx, local_abspath,
+                                 pool, pool));
+  if (prop_mods->nelts == 0)
     return SVN_NO_ERROR;
-  SVN_ERR(svn_wc_get_prop_diffs(&prop_mods, NULL, path, adm_access, pool));
+
+  *props_changed = TRUE;
   for (i = 0; i < prop_mods->nelts; i++)
     {
       svn_prop_t *prop_mod = &APR_ARRAY_IDX(prop_mods, i, svn_prop_t);
       if (strcmp(prop_mod->name, SVN_PROP_EOL_STYLE) == 0)
         *eol_prop_changed = TRUE;
     }
+
   return SVN_NO_ERROR;
 }
 
@@ -413,7 +424,6 @@ harvest_committables(apr_hash_t *committables,
   svn_boolean_t is_special;
   apr_pool_t *token_pool = (lock_tokens ? apr_hash_pool_get(lock_tokens)
                             : NULL);
-  svn_wc_context_t *wc_ctx;
   const char *local_abspath;
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, scratch_pool));
@@ -453,15 +463,8 @@ harvest_committables(apr_hash_t *committables,
 
   /* Verify that the node's type has not changed before attempting to
      commit. */
-  if (!ctx->wc_ctx)
-    SVN_ERR(svn_wc_context_create(&wc_ctx, NULL /* config */, scratch_pool,
-                                  scratch_pool));
-  else
-    wc_ctx = ctx->wc_ctx;
-  SVN_ERR(svn_wc_prop_get2(&propval, wc_ctx, local_abspath, SVN_PROP_SPECIAL,
-                           scratch_pool, scratch_pool));
-  if (!ctx->wc_ctx)
-    SVN_ERR(svn_wc_context_destroy(wc_ctx));
+  SVN_ERR(svn_wc_prop_get2(&propval, ctx->wc_ctx, local_abspath,
+                           SVN_PROP_SPECIAL, scratch_pool, scratch_pool));
 
   if ((((! propval) && (is_special))
 #ifdef HAVE_SYMLINK
@@ -628,7 +631,7 @@ harvest_committables(apr_hash_t *committables,
 
       /* See if there are property modifications to send. */
       SVN_ERR(check_prop_mods(&prop_mod, &eol_prop_changed, path,
-                              adm_access, scratch_pool));
+                              ctx->wc_ctx, scratch_pool));
 
       /* Regular adds of files have text mods, but for copies we have
          to test for textual mods.  Directories simply don't have text! */
@@ -658,7 +661,7 @@ harvest_committables(apr_hash_t *committables,
 
       /* See if there are property modifications to send. */
       SVN_ERR(check_prop_mods(&prop_mod, &eol_prop_changed, path,
-                              adm_access, scratch_pool));
+                              ctx->wc_ctx, scratch_pool));
 
       /* Check for text mods on files.  If EOL_PROP_CHANGED is TRUE,
          then we need to force a translated byte-for-byte comparison
@@ -1359,19 +1362,11 @@ do_item_commit(void **dir_baton,
             {
               const svn_string_t *propval;
               const char *local_abspath;
-              svn_wc_context_t *wc_ctx;
 
               SVN_ERR(svn_dirent_get_absolute(&local_abspath, item->path,
                                               pool));
-              if (!ctx->wc_ctx)
-                SVN_ERR(svn_wc_context_create(&wc_ctx, NULL /* config */,
-                                              pool, pool));
-              else
-                wc_ctx = ctx->wc_ctx;
-              SVN_ERR(svn_wc_prop_get2(&propval, wc_ctx, local_abspath,
+              SVN_ERR(svn_wc_prop_get2(&propval, ctx->wc_ctx, local_abspath,
                                        SVN_PROP_MIME_TYPE, pool, pool));
-              if (!ctx->wc_ctx)
-                SVN_ERR(svn_wc_context_destroy(wc_ctx));
             
               if (propval)
                 notify->mime_type = propval->data;

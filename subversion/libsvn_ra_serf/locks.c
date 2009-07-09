@@ -2,17 +2,22 @@
  * locks.c :  entry point for locking RA functions for ra_serf
  *
  * ====================================================================
- * Copyright (c) 2006 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -365,9 +370,9 @@ handle_lock(serf_request_t *request,
       /* 423 == Locked */
       if (sl.code == 423)
         {
+          /* Older servers may not give a descriptive error, so we'll
+             make one of our own if we can't find one in the response. */
           err = svn_ra_serf__handle_server_error(request, response, pool);
-
-          /* Older servers may not give a descriptive error. */
           if (!err)
             {
               err = svn_error_createf(SVN_ERR_FS_PATH_ALREADY_LOCKED,
@@ -375,8 +380,7 @@ handle_lock(serf_request_t *request,
                                       _("Lock request failed: %d %s"),
                                       ctx->status_code, ctx->reason);
             }
-
-          SVN_ERR(err);
+          return err;
         }
 
       headers = serf_bucket_response_get_headers(response);
@@ -400,27 +404,22 @@ handle_lock(serf_request_t *request,
   /* Forbidden when a lock doesn't exist. */
   if (ctx->status_code == 403)
     {
-      svn_error_t * err = svn_ra_serf__handle_discard_body(request, response,
-                                                           NULL, pool);
-
+      /* If we get an "unexpected EOF" error, we'll wrap it with
+         generic request failure error. */
+      err = svn_ra_serf__handle_discard_body(request, response, NULL, pool);
       if (err && APR_STATUS_IS_EOF(err->apr_err))
         {
           ctx->done = TRUE;
-          SVN_ERR(svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED,
-                                    err,
-                                    _("Lock request failed: %d %s"),
-                                    ctx->status_code, ctx->reason));
+          err = svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED,
+                                  err,
+                                  _("Lock request failed: %d %s"),
+                                  ctx->status_code, ctx->reason);
         }
-
-      SVN_ERR(err);
-    }
-  else
-    {
-      return svn_ra_serf__handle_xml_parser(request, response,
-                                            handler_baton, pool);
+      return err;
     }
 
-  return SVN_NO_ERROR;
+  return svn_ra_serf__handle_xml_parser(request, response,
+                                        handler_baton, pool);
 }
 
 static serf_bucket_t*

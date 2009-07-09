@@ -1,17 +1,22 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2000-2009 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  * @endcopyright
  *
@@ -935,8 +940,8 @@ typedef struct svn_client_ctx_t
   const char *client_name;
 
   /** An optional working copy context for the client operation to use.
-   * If not @c NULL, the client operation will use this context instead of
-   * creating a new one, and leave it intact when done.
+   * This is initialized by svn_client_create_context() and should never
+   * be @c NULL.
    *
    * @since New in 1.7.  */
   svn_wc_context_t *wc_ctx;
@@ -4106,10 +4111,18 @@ svn_client_export(svn_revnum_t *result_rev,
  * @{
  */
 
-/** Invoked by svn_client_list2() for each @a path with its @a dirent and,
- * if @a path is locked, its @a lock.  @a abs_path is the filesystem path
- * to which @a path is relative.  @a baton is the baton passed to the
- * caller.  @a pool may be used for temporary allocations.
+/** The type of function invoked by svn_client_list2() to report the details
+ * of each directory entry being listed.
+ *
+ * @a baton is the baton that was passed to the caller.  @a path is the
+ * entry's path relative to @a abs_path; it is the empty path when reporting
+ * the top node of the list operation.  @a dirent contains some or all of
+ * the directory entry's details, as determined by the caller.  @a lock is
+ * the entry's lock, if it is locked and if lock information is being
+ * reported by the caller; otherwise @a lock is NULL.  @a abs_path is the
+ * repository path of the top node of the list operation; it is relative to
+ * the repository root and begins with "/".  @a pool may be used for
+ * temporary allocations.
  *
  * @since New in 1.4.
  */

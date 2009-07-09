@@ -7,17 +7,22 @@
  *            file in the working copy).
  *
  * ====================================================================
- * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -1719,6 +1724,8 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
   svn_stringbuf_t *log_accum = svn_stringbuf_create("", pool);
   apr_hash_t *baseprops = NULL;
   svn_boolean_t revert_base = FALSE;
+  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
+  const char *local_abspath;
 
   /* By default, assume no action; we'll see what happens later. */
   *reverted = FALSE;
@@ -1728,17 +1735,15 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
   if (strcmp(name, SVN_WC_ENTRY_THIS_DIR) != 0)
     fullpath = svn_dirent_join(fullpath, name, pool);
 
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, fullpath, pool));
+
   /* Deal with properties. */
   if (entry->schedule == svn_wc_schedule_replace)
     {
-      svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
-      const char *local_abspath;
-
       /* Refer to the original base, before replacement. */
       revert_base = TRUE;
 
       /* Use the revertpath as the new propsbase if it exists. */
-      SVN_ERR(svn_dirent_get_absolute(&local_abspath, fullpath, pool));
       SVN_ERR(svn_wc__load_props(NULL, NULL, &baseprops, db, local_abspath,
                                  pool, pool));
 
@@ -1764,8 +1769,8 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
 
           /* Get the full list of property changes and see if any magic
              properties were changed. */
-          SVN_ERR(svn_wc_get_prop_diffs(&propchanges, &baseprops, fullpath,
-                                        adm_access, pool));
+          SVN_ERR(svn_wc__internal_propdiff(&propchanges, &baseprops, db,
+                                            local_abspath, pool, pool));
 
           /* Determine if any of the propchanges are the "magic" ones that
              might require changing the working file. */

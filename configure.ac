@@ -86,7 +86,7 @@ AC_PATH_PROG(PKG_CONFIG, pkg-config)
 # Either a space-separated list of allowable Neon versions, or "any" to
 # mean allow anything.
 NEON_ALLOWED_LIST="0\.25 0\.26 0\.27\.2 0\.28"
-NEON_RECOMMENDED_VER=0.28.4
+NEON_RECOMMENDED_VER=0.28.5
 NEON_URL="http://www.webdav.org/neon/neon-${NEON_RECOMMENDED_VER}.tar.gz"
 dnl You can skip the neon version check only if you know what you are doing 
 AC_ARG_ENABLE(neon-version-check,
@@ -777,6 +777,46 @@ CFLAGS_KEEP="$CFLAGS"
 CFLAGS="$CFLAGS_KEEP -Werror=implicit-function-declaration"
 AC_COMPILE_IFELSE([AC_LANG_SOURCE([[]])], [CFLAGS_KEEP="$CFLAGS"])
 CFLAGS="$CFLAGS_KEEP"
+
+
+dnl Use -Wl,--no-undefined during linking of some libraries
+AC_ARG_ENABLE(disallowing-of-undefined-references,
+  [AS_HELP_STRING([--enable-disallowing-of-undefined-references],
+                  [Use -Wl,--no-undefined flag during linking of some libraries to disallow undefined references])])
+if test "$enable_disallowing_of_undefined_references" = "yes"; then
+  AC_MSG_CHECKING([for -Wl,--no-undefined])
+  old_LDFLAGS="$LDFLAGS"
+  LDFLAGS="$LDFLAGS -Wl,--no-undefined"
+  AC_LINK_IFELSE([int main(){;}], [svn_wl_no_undefined="yes"], [svn_wl_no_undefined="no"])
+  LDFLAGS="$old_LDFLAGS"
+  libraries="auth_gnome_keyring auth_kwallet client delta diff fs fs_base fs_fs fs_util ra ra_local ra_neon ra_serf ra_svn repos subr wc"
+  if test "$svn_wl_no_undefined" = "yes"; then
+    AC_MSG_RESULT([yes])
+    for library in $libraries; do
+      eval "libsvn_${library}_LDFLAGS=-Wl,--no-undefined"
+    done
+  else
+    AC_MSG_RESULT([no])
+    AC_MSG_ERROR([--enable-disallowing-of-undefined-references explicitly requested, but -Wl,--no-undefined not supported])
+  fi
+fi
+AC_SUBST([libsvn_auth_gnome_keyring_LDFLAGS])
+AC_SUBST([libsvn_auth_kwallet_LDFLAGS])
+AC_SUBST([libsvn_client_LDFLAGS])
+AC_SUBST([libsvn_delta_LDFLAGS])
+AC_SUBST([libsvn_diff_LDFLAGS])
+AC_SUBST([libsvn_fs_LDFLAGS])
+AC_SUBST([libsvn_fs_base_LDFLAGS])
+AC_SUBST([libsvn_fs_fs_LDFLAGS])
+AC_SUBST([libsvn_fs_util_LDFLAGS])
+AC_SUBST([libsvn_ra_LDFLAGS])
+AC_SUBST([libsvn_ra_local_LDFLAGS])
+AC_SUBST([libsvn_ra_neon_LDFLAGS])
+AC_SUBST([libsvn_ra_serf_LDFLAGS])
+AC_SUBST([libsvn_ra_svn_LDFLAGS])
+AC_SUBST([libsvn_repos_LDFLAGS])
+AC_SUBST([libsvn_subr_LDFLAGS])
+AC_SUBST([libsvn_wc_LDFLAGS])
 
 
 AC_ARG_ENABLE(maintainer-mode,

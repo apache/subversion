@@ -2,17 +2,22 @@
  * export.c:  export a tree.
  *
  * ====================================================================
- * Copyright (c) 2000-2009 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -251,7 +256,6 @@ copy_versioned_files(const char *from,
                      svn_depth_t depth,
                      const char *native_eol,
                      svn_client_ctx_t *ctx,
-                     svn_wc_context_t *wc_ctx,
                      apr_pool_t *pool)
 {
   svn_wc_adm_access_t *adm_access;
@@ -348,8 +352,7 @@ copy_versioned_files(const char *from,
                       SVN_ERR(copy_versioned_files(new_from, new_to,
                                                    revision, force,
                                                    ignore_externals, depth,
-                                                   native_eol, ctx, wc_ctx,
-                                                   iterpool));
+                                                   native_eol, ctx, iterpool));
                     }
                 }
             }
@@ -359,8 +362,8 @@ copy_versioned_files(const char *from,
               const char *new_to = svn_path_join(to, item, iterpool);
 
               SVN_ERR(copy_one_versioned_file(new_from, new_to, adm_access,
-                                              wc_ctx, revision, native_eol,
-                                              iterpool));
+                                              ctx->wc_ctx, revision,
+                                              native_eol, iterpool));
             }
         }
 
@@ -374,7 +377,7 @@ copy_versioned_files(const char *from,
 
           SVN_ERR(svn_dirent_get_absolute(&from_abspath, from, pool));
 
-          SVN_ERR(svn_wc_prop_get2(&prop_val, wc_ctx, from_abspath,
+          SVN_ERR(svn_wc_prop_get2(&prop_val, ctx->wc_ctx, from_abspath,
                                    SVN_PROP_EXTERNALS, pool, pool));
           if (prop_val != NULL)
             {
@@ -408,7 +411,7 @@ copy_versioned_files(const char *from,
                   SVN_ERR(copy_versioned_files(new_from, new_to,
                                                revision, force, FALSE,
                                                svn_depth_infinity, native_eol,
-                                               ctx, wc_ctx, iterpool));
+                                               ctx, iterpool));
                 }
             }
         }
@@ -417,8 +420,8 @@ copy_versioned_files(const char *from,
     }
   else if (entry->kind == svn_node_file)
     {
-      SVN_ERR(copy_one_versioned_file(from, to, adm_access, wc_ctx, revision,
-                                      native_eol, pool));
+      SVN_ERR(copy_one_versioned_file(from, to, adm_access, ctx->wc_ctx,
+                                      revision, native_eol, pool));
     }
 
   return svn_wc_adm_close2(adm_access, pool);
@@ -1008,20 +1011,10 @@ svn_client_export4(svn_revnum_t *result_rev,
   else
     {
       /* This is a working copy export. */
-      svn_wc_context_t *wc_ctx;
-
-      if (!ctx->wc_ctx)
-        SVN_ERR(svn_wc_context_create(&wc_ctx, NULL /* config */, pool, pool));
-      else
-        wc_ctx = ctx->wc_ctx;
-
       /* just copy the contents of the working copy into the target path. */
       SVN_ERR(copy_versioned_files(from, to, revision, overwrite,
                                    ignore_externals, depth, native_eol,
-                                   ctx, wc_ctx, pool));
-
-      if (!ctx->wc_ctx)
-        SVN_ERR(svn_wc_context_destroy(wc_ctx));
+                                   ctx, pool));
     }
 
 

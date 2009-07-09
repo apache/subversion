@@ -2,17 +2,22 @@
  * mergeinfo.h : Client library-internal mergeinfo APIs.
  *
  * ====================================================================
- * Copyright (c) 2007 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -106,7 +111,6 @@ svn_client__get_wc_mergeinfo(svn_mergeinfo_t *mergeinfo,
                              const char **walked_path,
                              svn_wc_adm_access_t *adm_access,
                              svn_client_ctx_t *ctx,
-                             svn_wc_context_t *wc_ctx,
                              apr_pool_t *pool);
 
 /* Obtain any mergeinfo for the root-relative repository filesystem path
@@ -168,7 +172,6 @@ svn_client__get_wc_or_repos_mergeinfo(svn_mergeinfo_t *target_mergeinfo,
                                       const char *target_wcpath,
                                       svn_wc_adm_access_t *adm_access,
                                       svn_client_ctx_t *ctx,
-                                      svn_wc_context_t *wc_ctx,
                                       apr_pool_t *pool);
 
 /* Set *MERGEINFO_P to a mergeinfo constructed solely from the
@@ -210,7 +213,6 @@ svn_client__parse_mergeinfo(svn_mergeinfo_t *mergeinfo,
                             svn_boolean_t pristine,
                             svn_wc_adm_access_t *adm_access,
                             svn_client_ctx_t *ctx,
-                            svn_wc_context_t *wc_ctx,
                             apr_pool_t *pool);
 
 /* Write MERGEINFO into the WC for LOCAL_ABSPATH.  If MERGEINFO is NULL,
@@ -224,7 +226,6 @@ svn_error_t *
 svn_client__record_wc_mergeinfo(const char *local_abspath,
                                 svn_mergeinfo_t mergeinfo,
                                 svn_client_ctx_t *ctx,
-                                svn_wc_context_t *wc_ctx,
                                 apr_pool_t *scratch_pool);
 
 /* Elide any svn:mergeinfo set on TARGET_PATH to its nearest working
@@ -261,7 +262,6 @@ svn_client__elide_mergeinfo(const char *target_wcpath,
                             const svn_wc_entry_t *entry,
                             svn_wc_adm_access_t *adm_access,
                             svn_client_ctx_t *ctx,
-                            svn_wc_context_t *wc_ctx,
                             apr_pool_t *pool);
 
 /* For each path in CHILDREN_WITH_MERGEINFO which is an immediate child of
@@ -278,7 +278,6 @@ svn_client__elide_children(apr_array_header_t *children_with_mergeinfo,
                            const svn_wc_entry_t *entry,
                            svn_wc_adm_access_t *adm_access,
                            svn_client_ctx_t *ctx,
-                           svn_wc_context_t *wc_ctx,
                            apr_pool_t *pool);
 
 /* A wrapper which calls svn_client__elide_mergeinfo() on each child
@@ -287,7 +286,6 @@ svn_error_t *
 svn_client__elide_mergeinfo_for_tree(apr_hash_t *children_with_mergeinfo,
                                      svn_wc_adm_access_t *adm_access,
                                      svn_client_ctx_t *ctx,
-                                     svn_wc_context_t *wc_ctx,
                                      apr_pool_t *pool);
 
 /* TODO(reint): Document. */

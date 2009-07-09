@@ -2,17 +2,22 @@
  * ra.c :  routines for interacting with the RA layer
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -57,9 +62,6 @@ typedef struct
 
   /* A client context. */
   svn_client_ctx_t *ctx;
-
-  /* A working copy context. */
-  svn_wc_context_t *wc_ctx;
 
   /* The pool to use for session-related items. */
   apr_pool_t *pool;
@@ -107,7 +109,7 @@ get_wc_prop(void *baton,
 
           if (! strcmp(relpath,
                        svn_path_uri_decode(item->url, pool)))
-            return svn_error_return(svn_wc_prop_get2(value, cb->wc_ctx,
+            return svn_error_return(svn_wc_prop_get2(value, cb->ctx->wc_ctx,
                                                      local_abspath, name,
                                                      pool, pool));
         }
@@ -123,8 +125,8 @@ get_wc_prop(void *baton,
                                   svn_path_join(cb->base_dir, relpath, pool),
                                   pool));
 
-  return svn_error_return(svn_wc_prop_get2(value, cb->wc_ctx, local_abspath,
-                                           name, pool, pool));
+  return svn_error_return(svn_wc_prop_get2(value, cb->ctx->wc_ctx,
+                                           local_abspath, name, pool, pool));
 }
 
 /* This implements the 'svn_ra_push_wc_prop_func_t' interface. */
@@ -198,7 +200,7 @@ set_wc_prop(void *baton,
      right, but the conflict would remind the user to make sure.
      Unfortunately, we don't have a clean mechanism for doing that
      here, so we just set the property and hope for the best. */
-  return svn_error_return(svn_wc_prop_set4(cb->wc_ctx, local_abspath, name,
+  return svn_error_return(svn_wc_prop_set4(cb->ctx->wc_ctx, local_abspath, name,
                                            value, TRUE, NULL, NULL, pool));
 }
 
@@ -257,7 +259,7 @@ invalidate_wc_props(void *baton,
   svn_wc_adm_access_t *adm_access;
 
   wb.prop_name = prop_name;
-  wb.wc_ctx = cb->wc_ctx;
+  wb.wc_ctx = cb->ctx->wc_ctx;
 
   path = svn_path_join(cb->base_dir, path, pool);
   SVN_ERR(svn_wc_adm_probe_retrieve(&adm_access, cb->base_access, path,
@@ -320,10 +322,6 @@ svn_client__open_ra_session_internal(svn_ra_session_t **ra_session,
   cb->pool = pool;
   cb->commit_items = commit_items;
   cb->ctx = ctx;
-  if (!ctx->wc_ctx)
-    SVN_ERR(svn_wc_context_create(&cb->wc_ctx, NULL /* config */, pool, pool));
-  else
-    cb->wc_ctx = ctx->wc_ctx;
 
   if (base_access)
     {

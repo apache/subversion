@@ -2,17 +2,22 @@
  * relocate.c:  wrapper around wc relocation functionality.
  *
  * ====================================================================
- * Copyright (c) 2002-2004, 2009 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -118,13 +123,7 @@ svn_client_relocate(const char *path,
                     apr_pool_t *pool)
 {
   struct validator_baton_t vb;
-  svn_wc_context_t *wc_ctx;
   const char *local_abspath;
-
-  if (!ctx->wc_ctx)
-    SVN_ERR(svn_wc_context_create(&wc_ctx, NULL /* config */, pool, pool));
-  else
-    wc_ctx = ctx->wc_ctx;
 
   /* Now, populate our validator callback baton, and call the relocate code. */
   vb.ctx = ctx;
@@ -133,11 +132,8 @@ svn_client_relocate(const char *path,
   vb.pool = pool;
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
-  SVN_ERR(svn_wc_relocate4(wc_ctx, local_abspath, from, to, recurse,
+  SVN_ERR(svn_wc_relocate4(ctx->wc_ctx, local_abspath, from, to, recurse,
                            validator_func, &vb, pool));
-
-  if (!ctx->wc_ctx)
-    SVN_ERR(svn_wc_context_destroy(wc_ctx));
 
   return SVN_NO_ERROR;
 }
