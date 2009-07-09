@@ -284,13 +284,11 @@ def patch_unidiff(sbox):
     "winnings with the below details.\n",
   ]
 
-  os.chdir(wc_dir)
-
   expected_output = [
-    'U    %s\n' % os.path.join('A', 'D', 'gamma'),
-    'U    iota\n',
-    'A    new\n',
-    'U    %s\n' % os.path.join('A', 'mu'),
+    'U    %s\n' % os.path.join(wc_dir, 'A', 'D', 'gamma'),
+    'U    %s\n' % os.path.join(wc_dir, 'iota'),
+    'A    %s\n' % os.path.join(wc_dir, 'new'),
+    'U    %s\n' % os.path.join(wc_dir, 'A', 'mu'),
   ]
 
   expected_disk = svntest.main.greek_state.copy()
@@ -299,7 +297,7 @@ def patch_unidiff(sbox):
   expected_disk.add({'new' : Item(contents=new_contents)})
   expected_disk.tweak('A/mu', contents=''.join(mu_contents))
 
-  expected_status = svntest.actions.get_virginal_state('.', 1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/D/gamma', status='M ')
   expected_status.tweak('iota', status='M ')
   expected_status.add({'new' : Item(status='A ', wc_rev=0)})
@@ -307,7 +305,7 @@ def patch_unidiff(sbox):
 
   expected_skip = wc.State('', { })
 
-  svntest.actions.run_and_verify_patch('.', os.path.abspath(patch_file_path),
+  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
                                        expected_output,
                                        expected_disk,
                                        expected_status,
