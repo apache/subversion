@@ -318,6 +318,7 @@ copy_versioned_files(const char *from,
       for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
         {
           const char *item;
+          const svn_wc_entry_t *child_entry;
           const void *key;
           void *val;
 
@@ -326,7 +327,7 @@ copy_versioned_files(const char *from,
           apr_hash_this(hi, &key, NULL, &val);
 
           item = key;
-          entry = val;
+          child_entry = val;
 
           if (ctx->cancel_func)
             SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
@@ -334,7 +335,7 @@ copy_versioned_files(const char *from,
           /* ### We could also invoke ctx->notify_func somewhere in
              ### here... Is it called for, though?  Not sure. */
 
-          if (entry->kind == svn_node_dir)
+          if (child_entry->kind == svn_node_dir)
             {
               if (strcmp(item, SVN_WC_ENTRY_THIS_DIR) == 0)
                 {
@@ -356,7 +357,7 @@ copy_versioned_files(const char *from,
                     }
                 }
             }
-          else if (entry->kind == svn_node_file)
+          else if (child_entry->kind == svn_node_file)
             {
               const char *new_from = svn_path_join(from, item, iterpool);
               const char *new_to = svn_path_join(to, item, iterpool);
