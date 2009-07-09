@@ -49,12 +49,14 @@ typedef svn_error_t *(*svn_editor_cb_add_directory_t)(
   const char *relpath,
   const apr_array_header_t *children,
   apr_hash_t *props,
+  svn_revnum_t replaces_rev,
   apr_pool_t *scratch_pool);
 
 typedef svn_error_t *(*svn_editor_cb_add_file_t)(
   void *baton,
   const char *relpath,
   apr_hash_t *props,
+  svn_revnum_t replaces_rev,
   apr_pool_t *scratch_pool);
 
 typedef svn_error_t *(*svn_editor_cb_add_symlink_t)(
@@ -62,12 +64,14 @@ typedef svn_error_t *(*svn_editor_cb_add_symlink_t)(
   const char *relpath,
   const char *target,
   apr_hash_t *props,
+  svn_revnum_t replaces_rev,
   apr_pool_t *scratch_pool);
 
 typedef svn_error_t *(*svn_editor_cb_add_absent_t)(
   void *baton,
   const char *relpath,
   svn_node_kind_t kind,
+  svn_revnum_t replaces_rev,
   apr_pool_t *scratch_pool);
 
 typedef svn_error_t *(*svn_editor_cb_set_props_t)(
@@ -221,23 +225,27 @@ svn_error_t *
 svn_editor_add_directory(svn_editor_t *editor,
                          const char *relpath,
                          const apr_array_header_t *children,
-                         apr_hash_t *props);
+                         apr_hash_t *props,
+                         svn_revnum_t replaces_rev);
 
 svn_error_t *
 svn_editor_add_file(svn_editor_t *editor,
                     const char *relpath,
-                    apr_hash_t *props);
+                    apr_hash_t *props,
+                    svn_revnum_t replaces_rev);
 
 svn_error_t *
 svn_editor_add_symlink(svn_editor_t *editor,
                        const char *relpath,
                        const char *target,
-                       apr_hash_t *props);
+                       apr_hash_t *props,
+                       svn_revnum_t replaces_rev);
 
 svn_error_t *
 svn_editor_add_absent(svn_editor_t *editor,
                       const char *relpath,
-                      svn_node_kind_t kind);
+                      svn_node_kind_t kind,
+                      svn_revnum_t replaces_rev);
 
 svn_error_t *
 svn_editor_set_props(svn_editor_t *editor,
