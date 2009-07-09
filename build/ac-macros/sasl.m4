@@ -49,7 +49,7 @@ AC_DEFUN(SVN_LIB_SASL,
     if test "$svn_lib_sasl" = "no"; then
       SVN_SASL_INCLUDES="-I${with_sasl}/include"
       CPPFLAGS="$CPPFLAGS $SVN_SASL_INCLUDES"
-      LDFLAGS="$LDFLAGS -L${with_sasl}/lib"
+      LDFLAGS="$LDFLAGS `SVN_REMOVE_REDUNDANT_LIB_DIRS(-L${with_sasl}/lib)`"
 
       AC_CHECK_HEADER(sasl/sasl.h,
         [AC_CHECK_HEADER(sasl/saslutil.h,

@@ -152,3 +152,28 @@ AC_DEFUN(SVN_MAYBE_ADD_TO_CFLAGS,
     CFLAGS="$svn_maybe_add_to_cflags_saved_flags"
   fi
 ])
+
+dnl SVN_REMOVE_REDUNDANT_LIB_DIRS
+dnl
+dnl Remove redundant library directories (e.g. /usr/lib).
+AC_DEFUN([SVN_REMOVE_REDUNDANT_LIB_DIRS],
+[
+  input_flags="$1"
+  output_flags=""
+  filtered_dirs="/lib /lib64 /usr/lib /usr/lib64"
+  for flag in $input_flags; do
+    filter="no"
+    for dir in $filtered_dirs; do
+      if test "$flag" = "-L$dir"; then
+        filter="yes"
+        break
+      fi
+    done
+    if test "$filter" = "no"; then
+      output_flags="$output_flags $flag"
+    fi
+  done
+  if test -n "$output_flags"; then
+    printf "%s" "${output_flags# }"
+  fi
+])

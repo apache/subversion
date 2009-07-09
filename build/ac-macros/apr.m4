@@ -59,10 +59,11 @@ AC_DEFUN(SVN_LIB_APR,
     AC_MSG_ERROR([apr-config --cflags failed])
   fi
 
-  LDFLAGS="$LDFLAGS `$apr_config --ldflags`"
+  apr_ldflags="`$apr_config --ldflags`"
   if test $? -ne 0; then
     AC_MSG_ERROR([apr-config --ldflags failed])
   fi
+  LDFLAGS="$LDFLAGS `SVN_REMOVE_REDUNDANT_LIB_DIRS($apr_ldflags)`"
 
   SVN_APR_INCLUDES="`$apr_config --includes`"
   if test $? -ne 0; then
@@ -85,6 +86,7 @@ AC_DEFUN(SVN_LIB_APR,
       AC_MSG_ERROR([apr-config --link-ld failed])
     fi
   fi
+  SVN_APR_LIBS="`SVN_REMOVE_REDUNDANT_LIB_DIRS($SVN_APR_LIBS)`"
 
   SVN_APR_SHLIB_PATH_VAR="`$apr_config --shlib-path-var`"
   if test $? -ne 0; then

@@ -142,7 +142,7 @@ SQLITE_VERSION_OKAY
                         SVN_SQLITE_LIBS="-lsqlite3"
                       else
                         SVN_SQLITE_INCLUDES="-I$sqlite_dir/include"
-                        SVN_SQLITE_LIBS="-L$sqlite_dir/lib -lsqlite3"
+                        SVN_SQLITE_LIBS="`SVN_REMOVE_REDUNDANT_LIB_DIRS(-L$sqlite_dir/lib -lsqlite3)`"
                       fi
                   ])], [AC_MSG_RESULT([unsupported SQLite version])])
     ])
