@@ -111,6 +111,23 @@ typedef struct svn_error_t
 
 /** @} */
 
+/** @defgroup apr_hash_utilities APR Hash Table Helpers
+ * These functions enable the caller to dereference an APR hash table index
+ * without type casts or temporary variables.
+ * @{
+ */
+
+/** Return the key of the hash table entry indexed by @a hi. */
+const void *svn_apr_hash_index_key(const apr_hash_index_t *hi);
+
+/** Return the key length of the hash table entry indexed by @a hi. */
+apr_ssize_t svn_apr_hash_index_klen(const apr_hash_index_t *hi);
+
+/** Return the value of the hash table entry indexed by @a hi. */
+void *svn_apr_hash_index_val(const apr_hash_index_t *hi);
+
+/** @} */
+
 /** The various types of nodes in the Subversion filesystem. */
 typedef enum
 {
