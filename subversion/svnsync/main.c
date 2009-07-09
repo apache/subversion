@@ -413,15 +413,13 @@ remove_props_not_in_source(svn_ra_session_t *session,
        hi;
        hi = apr_hash_next(hi))
     {
-      const void *key;
+      const void *propname = svn_apr_hash_index_key(hi);
 
       svn_pool_clear(subpool);
 
-      apr_hash_this(hi, &key, NULL, NULL);
-
-      /* Delete property if the key can't be found in SOURCE_PROPS. */
-      if (! apr_hash_get(source_props, key, APR_HASH_KEY_STRING))
-        SVN_ERR(svn_ra_change_rev_prop(session, rev, key, NULL,
+      /* Delete property if the name can't be found in SOURCE_PROPS. */
+      if (! apr_hash_get(source_props, propname, APR_HASH_KEY_STRING))
+        SVN_ERR(svn_ra_change_rev_prop(session, rev, propname, NULL,
                                        subpool));
     }
 
@@ -455,18 +453,15 @@ filter_props(int *filtered_count, apr_hash_t *props,
 
   for (hi = apr_hash_first(pool, props); hi ; hi = apr_hash_next(hi))
     {
-      void *val;
-      const void *key;
-      apr_ssize_t len;
-
-      apr_hash_this(hi, &key, &len, &val);
+      const char *propname = svn_apr_hash_index_key(hi);
+      void *propval = svn_apr_hash_index_val(hi);
 
       /* Copy all properties:
           - not matching the exclude pattern if provided OR
           - matching the include pattern if provided */
-      if (!filter || filter(key) == FALSE)
+      if (!filter || filter(propname) == FALSE)
         {
-          apr_hash_set(filtered, key, APR_HASH_KEY_STRING, val);
+          apr_hash_set(filtered, propname, APR_HASH_KEY_STRING, propval);
         }
       else
         {
@@ -497,16 +492,16 @@ write_revprops(int *filtered_count,
 
   for (hi = apr_hash_first(pool, rev_props); hi; hi = apr_hash_next(hi))
     {
-      const void *key;
-      void *val;
+      const char *propname = svn_apr_hash_index_key(hi);
+      const svn_string_t *propval = svn_apr_hash_index_val(hi);
 
       svn_pool_clear(subpool);
-      apr_hash_this(hi, &key, NULL, &val);
 
-      if (strncmp(key, SVNSYNC_PROP_PREFIX,
+      if (strncmp(propname, SVNSYNC_PROP_PREFIX,
                   sizeof(SVNSYNC_PROP_PREFIX) - 1) != 0)
         {
-          SVN_ERR(svn_ra_change_rev_prop(session, rev, key, val, subpool));
+          SVN_ERR(svn_ra_change_rev_prop(session, rev, propname, propval,
+                                         subpool));
         }
       else
         {
@@ -575,14 +570,8 @@ normalize_revprops(apr_hash_t *rev_props,
        hi;
        hi = apr_hash_next(hi))
     {
-      const void *key;
-      void *val;
-      const char *propname;
-      const svn_string_t *propval;
-
-      apr_hash_this(hi, &key, NULL, &val);
-      propname = key;
-      propval = val;
+      const char *propname = svn_apr_hash_index_key(hi);
+      const svn_string_t *propval = svn_apr_hash_index_val(hi);
 
       if (svn_prop_needs_translation(propname))
         {
@@ -593,7 +582,7 @@ normalize_revprops(apr_hash_t *rev_props,
           if (was_normalized)
             {
               /* Replace the existing prop value. */
-              apr_hash_set(rev_props, key, APR_HASH_KEY_STRING, propval);
+              apr_hash_set(rev_props, propname, APR_HASH_KEY_STRING, propval);
               /* And count this. */
               (*normalized_count)++;
             }
