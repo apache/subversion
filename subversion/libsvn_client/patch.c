@@ -1793,6 +1793,10 @@ typedef struct {
   /* The patch being applied. */
   const svn_patch_t *patch;
 
+  /* The target path as it appeared in the patch file,
+   * but in canonicalised form. */
+  const char *canon_path_from_patchfile;
+
   /* The target path, relative to the working copy directory the
    * patch is being applied to. A patch strip count applies to this
    * and only this path. Is not always known, so may be NULL. */
@@ -1850,6 +1854,8 @@ typedef struct {
 
 /* Resolve the exact path for a patch TARGET at path PATH_FROM_PATCHFILE,
  * which is the path of the target as it appeared in the patch file.
+ * Put a canonicalized version of PATH_FROM_PATCHFILE into
+ * TARGET->CANON_PATH_FROM_PATCHFILE.
  * If possible, determine TARGET->WC_PATH, TARGET->ABS_PATH, and TARGET->KIND.
  * Indicate in TARGET->SKIPPED whether the target should be skipped.
  * Use RESULT_POOL for allocations of fields in TARGET. */
@@ -1859,13 +1865,12 @@ resolve_target_path(patch_target_t *target, const char *path_from_patchfile,
                     apr_pool_t *scratch_pool)
 {
   const char *abs_wc_path;
-  const char *canon_path_from_patchfile;
 
   SVN_ERR(svn_dirent_get_absolute(&abs_wc_path, wc_path, scratch_pool));
-  canon_path_from_patchfile = svn_dirent_canonicalize(path_from_patchfile,
-                                                      scratch_pool);
+  target->canon_path_from_patchfile = svn_dirent_canonicalize(
+                                        path_from_patchfile, result_pool);
 
-  if (strlen(canon_path_from_patchfile) == 0)
+  if (strlen(target->canon_path_from_patchfile) == 0)
     {
       /* An empty patch target path? What gives? Skip this. */
       target->skipped = TRUE;
@@ -1875,11 +1880,11 @@ resolve_target_path(patch_target_t *target, const char *path_from_patchfile,
       return SVN_NO_ERROR;
     }
 
-  if (svn_dirent_is_absolute(canon_path_from_patchfile))
+  if (svn_dirent_is_absolute(target->canon_path_from_patchfile))
     {
       /* TODO: strip count */
       target->wc_path = svn_dirent_is_child(abs_wc_path,
-                                            canon_path_from_patchfile,
+                                            target->canon_path_from_patchfile,
                                             scratch_pool);
       if (! target->wc_path)
         {
@@ -1894,7 +1899,8 @@ resolve_target_path(patch_target_t *target, const char *path_from_patchfile,
     }
   else
     {
-      target->wc_path = canon_path_from_patchfile; /* TODO: strip count */
+      /* TODO: strip count */
+      target->wc_path = target->canon_path_from_patchfile;
     }
 
   /* Make sure the path is secure to use. We want the target to be inside
@@ -2547,7 +2553,7 @@ maybe_send_patch_target_notification(const patch_target_t *target,
   if (! target->skipped && target->wc_path)
     path = svn_dirent_join(wc_path, target->wc_path, pool);
   else
-    path = target->patch->new_filename;
+    path = target->canon_path_from_patchfile;
 
   notify = svn_wc_create_notify(path, action, pool);
   notify->kind = svn_node_file;
