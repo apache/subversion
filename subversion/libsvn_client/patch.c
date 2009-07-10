@@ -1870,7 +1870,7 @@ resolve_target_path(patch_target_t *target, const char *path_from_patchfile,
   target->canon_path_from_patchfile = svn_dirent_canonicalize(
                                         path_from_patchfile, result_pool);
 
-  if (strlen(target->canon_path_from_patchfile) == 0)
+  if (target->canon_path_from_patchfile[0] == '\0')
     {
       /* An empty patch target path? What gives? Skip this. */
       target->skipped = TRUE;
