@@ -2097,7 +2097,8 @@ match_hunk(svn_boolean_t *matched, patch_target_t *target,
         {
           char c = hunk_line->data[0];
           SVN_ERR_ASSERT(c == ' ' || c == '-');
-          lines_matched = ! strcmp(hunk_line->data + 1, target_line->data);
+          lines_matched = (hunk_line->len == target_line->len + 1 &&
+                           ! strcmp(hunk_line->data + 1, target_line->data));
         }
     }
   while (lines_matched && ! (hunk_eof || target->eof));
