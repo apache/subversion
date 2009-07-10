@@ -569,7 +569,7 @@ svn_ra_serf__lock(svn_ra_session_t *ra_session,
   apr_hash_index_t *hi;
   apr_pool_t *subpool;
 
-  apr_pool_create(&subpool, pool);
+  subpool = svn_pool_create(pool);
 
   for (hi = apr_hash_first(pool, path_revs); hi; hi = apr_hash_next(hi))
     {
@@ -671,7 +671,7 @@ svn_ra_serf__unlock(svn_ra_session_t *ra_session,
   apr_hash_index_t *hi;
   apr_pool_t *subpool;
 
-  apr_pool_create(&subpool, pool);
+  subpool = svn_pool_create(pool);
 
   for (hi = apr_hash_first(pool, path_tokens); hi; hi = apr_hash_next(hi))
     {

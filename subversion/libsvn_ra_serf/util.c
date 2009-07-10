@@ -129,7 +129,7 @@ ssl_server_cert(void *baton, int failures,
       return APR_SUCCESS;
     }
 
-  apr_pool_create(&subpool, conn->session->pool);
+  subpool = svn_pool_create(conn->session->pool);
 
   /* Extract the info from the certificate */
   subject = serf_ssl_cert_subject(cert, subpool);
