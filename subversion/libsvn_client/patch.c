@@ -2157,7 +2157,8 @@ scan_for_match(svn_boolean_t *match, svn_linenum_t *matched_line,
 
       SVN_ERR(svn_stream_readline(target->stream, &buf, target->eol_str,
                                   &target->eof, iterpool));
-      target->current_line++;
+      if (! target->eof)
+        target->current_line++;
     }
   svn_pool_destroy(iterpool);
 
@@ -2329,13 +2330,13 @@ read_lines_from_target(svn_stream_t **lines, svn_linenum_t nlines,
                                   &target->eof, iterpool));
       if (target->eof)
         break;
+      else
+        target->current_line++;
     }
   svn_pool_destroy(iterpool);
 
   end = 0;
   SVN_ERR(svn_io_file_seek(target->file, APR_CUR, &end, scratch_pool));
-
-  target->current_line += i;
 
   SVN_ERR(svn_io_file_open(&file, target->abs_path, flags, APR_OS_DEFAULT,
                            result_pool));
