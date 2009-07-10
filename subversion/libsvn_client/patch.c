@@ -1866,10 +1866,8 @@ resolve_target_path(patch_target_t *target, const char *path_from_patchfile,
 {
   const char *abs_wc_path;
 
-  SVN_ERR(svn_dirent_get_absolute(&abs_wc_path, wc_path, scratch_pool));
   target->canon_path_from_patchfile = svn_dirent_canonicalize(
                                         path_from_patchfile, result_pool);
-
   if (target->canon_path_from_patchfile[0] == '\0')
     {
       /* An empty patch target path? What gives? Skip this. */
@@ -1879,6 +1877,8 @@ resolve_target_path(patch_target_t *target, const char *path_from_patchfile,
       target->wc_path = NULL;
       return SVN_NO_ERROR;
     }
+
+  SVN_ERR(svn_dirent_get_absolute(&abs_wc_path, wc_path, scratch_pool));
 
   if (svn_dirent_is_absolute(target->canon_path_from_patchfile))
     {
