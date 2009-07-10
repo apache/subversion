@@ -312,7 +312,7 @@ svn_ra_serf__xml_push_state(svn_ra_serf__xml_parser_t *parser,
   if (!parser->free_state)
     {
       new_state = apr_palloc(parser->pool, sizeof(*new_state));
-      apr_pool_create(&new_state->pool, parser->pool);
+      new_state->pool = svn_pool_create(parser->pool);
     }
   else
     {

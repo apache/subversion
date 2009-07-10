@@ -367,7 +367,7 @@ push_state(svn_ra_serf__xml_parser_t *parser,
       report_info_t *new_info;
 
       new_info = apr_pcalloc(info_parent_pool, sizeof(*new_info));
-      apr_pool_create(&new_info->pool, info_parent_pool);
+      new_info->pool = svn_pool_create(info_parent_pool);
       new_info->lock_token = NULL;
 
       new_info->dir = apr_pcalloc(new_info->pool, sizeof(*new_info->dir));
@@ -409,7 +409,7 @@ push_state(svn_ra_serf__xml_parser_t *parser,
       report_info_t *new_info;
 
       new_info = apr_pcalloc(info_parent_pool, sizeof(*new_info));
-      apr_pool_create(&new_info->pool, info_parent_pool);
+      new_info->pool = svn_pool_create(info_parent_pool);
       new_info->file_baton = NULL;
       new_info->lock_token = NULL;
       new_info->fetch_file = FALSE;
@@ -499,7 +499,7 @@ open_dir(report_dir_t *dir)
 
   if (dir->base_name[0] == '\0')
     {
-      apr_pool_create(&dir->dir_baton_pool, dir->pool);
+      dir->dir_baton_pool = svn_pool_create(dir->pool);
 
       if (dir->report_context->destination &&
           dir->report_context->sess->wc_callbacks->invalidate_wc_props)
@@ -518,7 +518,7 @@ open_dir(report_dir_t *dir)
     {
       SVN_ERR(open_dir(dir->parent_dir));
 
-      apr_pool_create(&dir->dir_baton_pool, dir->parent_dir->dir_baton_pool);
+      dir->dir_baton_pool = svn_pool_create(dir->parent_dir->dir_baton_pool);
 
       if (SVN_IS_VALID_REVNUM(dir->base_rev))
         {
@@ -760,7 +760,7 @@ handle_fetch(serf_request_t *request,
           return error_fetch(request, fetch_ctx, err);
         }
 
-      apr_pool_create(&info->editor_pool, info->dir->dir_baton_pool);
+      info->editor_pool = svn_pool_create(info->dir->dir_baton_pool);
 
       /* Expand our full name now if we haven't done so yet. */
       if (!info->name)
@@ -1060,7 +1060,7 @@ handle_propchange_only(report_info_t *info)
   /* Ensure our parent is open. */
   SVN_ERR(open_dir(info->dir));
 
-  apr_pool_create(&info->editor_pool, info->dir->dir_baton_pool);
+  info->editor_pool = svn_pool_create(info->dir->dir_baton_pool);
 
   /* Expand our full name now if we haven't done so yet. */
   if (!info->name)
@@ -1448,7 +1448,7 @@ start_report(svn_ra_serf__xml_parser_t *parser,
 
       SVN_ERR(open_dir(info->dir));
 
-      apr_pool_create(&tmppool, info->dir->dir_baton_pool);
+      tmppool = svn_pool_create(info->dir->dir_baton_pool);
 
       name_buf = svn_stringbuf_dup(info->dir->name_buf, tmppool);
       svn_path_add_component(name_buf, file_name);
