@@ -2199,9 +2199,8 @@ determine_hunk_line(svn_linenum_t *line, patch_target_t *target,
                          FALSE, hunk_start, pool));
 
   /* Scan for a match at the line where the hunk thinks it should be going. */
-  SVN_ERR_ASSERT(target->current_line == hunk_start);
   SVN_ERR(scan_for_match(&match, &matched_line, target, hunk, TRUE,
-                         target->current_line + 1, pool));
+                         hunk_start + 1, pool));
   if (match)
     {
       /* Neat, an exact match. */
