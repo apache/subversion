@@ -135,8 +135,7 @@ merge_props_changed(svn_wc_adm_access_t *adm_access,
          discover_and_merge_children() may call this (indirectly) with
          the access for the patch_b->target instead (issue #2781).
          So, if we have the wrong access, get the right one. */
-      if (svn_path_compare_paths(svn_wc_adm_access_path(adm_access),
-                                 path) != 0)
+      if (strcmp(svn_wc_adm_access_path(adm_access), path) != 0)
         SVN_ERR(svn_wc_adm_probe_try3(&adm_access, adm_access, path,
                                       TRUE, -1, patch_b->ctx->cancel_func,
                                       patch_b->ctx->cancel_baton, subpool));
