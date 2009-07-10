@@ -508,7 +508,7 @@ def patch_unidiff_absolute_paths(sbox):
 
   svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
   
-  lambda_path = os.path.join(os.path.sep, 'A', 'B', 'lambda')
+  lambda_path = os.path.abspath(os.path.join(os.path.sep, 'A', 'B', 'lambda'))
   expected_output = [
     'U    %s\n' % os.path.join('A', 'B', 'E', 'alpha'),
     'Skipped \'%s\'\n' % lambda_path
