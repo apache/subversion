@@ -66,4 +66,4 @@ if __name__ == '__main__':
     for func in extract_funcs(fname):
       print(func)
     if os.path.basename(fname) == 'svn_ctype.h':
-      print('svn_ctype_table = svn_ctype_table_internal CONSTANT')
+      print('svn_ctype_table = svn_ctype_table_internal DATA')
