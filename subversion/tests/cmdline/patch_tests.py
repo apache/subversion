@@ -43,7 +43,6 @@ from svntest.main import SVN_PROP_MERGEINFO, is_os_windows
 # (abbreviation)
 Skip = svntest.testcase.Skip
 SkipUnless = svntest.testcase.SkipUnless
-XFail = svntest.testcase.XFail
 Item = svntest.wc.StateItem
 
 ########################################################################
@@ -164,8 +163,6 @@ def patch_basic(sbox):
                                        1, # check-props
                                        0) # no dry-run, outputs differ
 
-# Marked as XFail on Windows, because the newlines in gamma and iota
-# don't match the native eol "\r\n"
 def patch_unidiff(sbox):
   "apply a unidiff patch"
 
@@ -296,13 +293,11 @@ def patch_unidiff(sbox):
     "winnings with the below details.\n",
   ]
 
-  os.chdir(wc_dir)
-
   expected_output = [
-    'U    %s\n' % os.path.join('A', 'D', 'gamma'),
-    'U    iota\n',
-    'A    new\n',
-    'U    %s\n' % os.path.join('A', 'mu'),
+    'U    %s\n' % os.path.join(wc_dir, 'A', 'D', 'gamma'),
+    'U    %s\n' % os.path.join(wc_dir, 'iota'),
+    'A    %s\n' % os.path.join(wc_dir, 'new'),
+    'U    %s\n' % os.path.join(wc_dir, 'A', 'mu'),
   ]
 
   expected_disk = svntest.main.greek_state.copy()
@@ -311,7 +306,7 @@ def patch_unidiff(sbox):
   expected_disk.add({'new' : Item(contents=new_contents)})
   expected_disk.tweak('A/mu', contents=''.join(mu_contents))
 
-  expected_status = svntest.actions.get_virginal_state('.', 1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/D/gamma', status='M ')
   expected_status.tweak('iota', status='M ')
   expected_status.add({'new' : Item(status='A ', wc_rev=0)})
@@ -319,7 +314,7 @@ def patch_unidiff(sbox):
 
   expected_skip = wc.State('', { })
 
-  svntest.actions.run_and_verify_patch('.', os.path.abspath(patch_file_path),
+  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
                                        expected_output,
                                        expected_disk,
                                        expected_status,
@@ -328,8 +323,6 @@ def patch_unidiff(sbox):
                                        1, # check-props
                                        0) # dry-run
 
-# Marked as XFail on Windows, because the newlines in gamma don't match
-# the native eol "\r\n".
 def patch_copy_and_move(sbox):
   "test copy and move operations"
 
@@ -492,8 +485,6 @@ def patch_copy_and_move(sbox):
                                        1, # check-props
                                        0) # dry-run
 
-# Marked as XFail on Windows, because the newlines in alpha and lamba don't
-# match the native eol "\r\n".
 def patch_unidiff_absolute_paths(sbox):
   "apply a unidiff patch containing absolute paths"
 

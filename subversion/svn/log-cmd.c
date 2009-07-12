@@ -358,7 +358,6 @@ log_entry_receiver_xml(void *baton,
   if (log_entry->changed_paths2)
     {
       apr_hash_index_t *hi;
-      char *path;
 
       /* <paths> */
       svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "paths",
@@ -368,12 +367,9 @@ log_entry_receiver_xml(void *baton,
            hi != NULL;
            hi = apr_hash_next(hi))
         {
-          void *val;
+          const char *path = svn_apr_hash_index_key(hi);
+          svn_log_changed_path2_t *log_item = svn_apr_hash_index_val(hi);
           char action[2];
-          svn_log_changed_path2_t *log_item;
-
-          apr_hash_this(hi, (void *) &path, NULL, &val);
-          log_item = val;
 
           action[0] = log_item->action;
           action[1] = '\0';
@@ -549,9 +545,9 @@ svn_cl__log(apr_getopt_t *os,
                hi != NULL;
                hi = apr_hash_next(hi))
             {
-              char *property;
-              svn_string_t *value;
-              apr_hash_this(hi, (void *)&property, NULL, (void *)&value);
+              const char *property = svn_apr_hash_index_key(hi);
+              svn_string_t *value = svn_apr_hash_index_val(hi);
+
               if (value && value->data[0] != '\0')
                 return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                                          _("cannot assign with 'with-revprop'"

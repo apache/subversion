@@ -112,7 +112,7 @@ AC_DEFUN(SVN_FIND_SWIG,
     AC_CACHE_CHECK([for linking Python libraries], [ac_cv_python_libs],[
       ac_cv_python_libs="`$PYTHON ${abs_srcdir}/build/get-py-info.py --libs`"
     ])
-    SWIG_PY_LIBS="$ac_cv_python_libs"
+    SWIG_PY_LIBS="`SVN_REMOVE_STANDARD_LIB_DIRS($ac_cv_python_libs)`"
 
     dnl Sun Forte adds an extra space before substituting APR_INT64_T_FMT
     dnl gcc-2.95 adds an extra space after substituting APR_INT64_T_FMT
@@ -205,7 +205,7 @@ AC_DEFUN(SVN_FIND_SWIG,
     AC_CACHE_CHECK([for linking Ruby libraries], [ac_cv_ruby_libs], [
       ac_cv_ruby_libs="$rbconfig_LIBRUBYARG"
     ])
-    SWIG_RB_LIBS="$ac_cv_ruby_libs"
+    SWIG_RB_LIBS="`SVN_REMOVE_STANDARD_LIB_DIRS($ac_cv_ruby_libs)`"
 
     AC_MSG_CHECKING([for rb_errinfo])
     old_CFLAGS="$CFLAGS"

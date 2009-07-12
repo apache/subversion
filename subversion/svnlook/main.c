@@ -1160,12 +1160,9 @@ print_tree(svn_fs_root_t *root,
       subpool = svn_pool_create(pool);
       for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
         {
-          void *val;
-          svn_fs_dirent_t *entry;
+          svn_fs_dirent_t *entry = svn_apr_hash_index_val(hi);
 
           svn_pool_clear(subpool);
-          apr_hash_this(hi, NULL, NULL, &val);
-          entry = val;
           SVN_ERR(print_tree(root, svn_uri_join(path, entry->name, pool),
                              entry->id, (entry->kind == svn_node_dir),
                              indentation + 1, show_ids, full_paths,
@@ -1637,16 +1634,10 @@ do_plist(svnlook_ctxt_t *c,
 
   for (hi = apr_hash_first(pool, props); hi; hi = apr_hash_next(hi))
     {
-      const void *key;
-      void *val;
-      const char *pname;
-      svn_string_t *propval;
+      const char *pname = svn_apr_hash_index_key(hi);
+      svn_string_t *propval = svn_apr_hash_index_val(hi);
 
       SVN_ERR(check_cancel(NULL));
-
-      apr_hash_this(hi, &key, NULL, &val);
-      pname = key;
-      propval = val;
 
       /* Since we're already adding a trailing newline (and possible a
          colon and some spaces) anyway, just mimic the output of the

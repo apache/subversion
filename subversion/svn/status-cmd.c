@@ -272,15 +272,9 @@ svn_cl__status(apr_getopt_t *os,
       for (hi = apr_hash_first(pool, master_cl_hash); hi;
            hi = apr_hash_next(hi))
         {
-          const char *changelist_name;
-          apr_array_header_t *path_array;
-          const void *key;
-          void *val;
+          const char *changelist_name = svn_apr_hash_index_key(hi);
+          apr_array_header_t *path_array = svn_apr_hash_index_val(hi);
           int j;
-
-          apr_hash_this(hi, &key, NULL, &val);
-          changelist_name = key;
-          path_array = val;
 
           /* ### TODO: For non-XML output, we shouldn't print the
              ### leading \n on the first changelist if there were no

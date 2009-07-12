@@ -153,10 +153,16 @@ AC_DEFUN(SVN_MAYBE_ADD_TO_CFLAGS,
   fi
 ])
 
-dnl SVN_REMOVE_REDUNDANT_LIB_DIRS
+dnl SVN_REMOVE_STANDARD_LIB_DIRS(OPTIONS)
 dnl
-dnl Remove redundant library directories (e.g. /usr/lib).
-AC_DEFUN([SVN_REMOVE_REDUNDANT_LIB_DIRS],
+dnl Remove standard library search directories.
+dnl OPTIONS is a list of compiler/linker options.
+dnl This macro prints input options except -L options whose arguments are
+dnl standard library search directories (e.g. /usr/lib).
+dnl
+dnl This macro is used to avoid linking against Subversion libraries
+dnl potentially placed in standard library search directories.
+AC_DEFUN([SVN_REMOVE_STANDARD_LIB_DIRS],
 [
   input_flags="$1"
   output_flags=""
@@ -164,7 +170,7 @@ AC_DEFUN([SVN_REMOVE_REDUNDANT_LIB_DIRS],
   for flag in $input_flags; do
     filter="no"
     for dir in $filtered_dirs; do
-      if test "$flag" = "-L$dir"; then
+      if test "$flag" = "-L$dir" || test "$flag" = "-L$dir/"; then
         filter="yes"
         break
       fi
