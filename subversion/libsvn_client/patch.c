@@ -1718,13 +1718,14 @@ extract_svnpatch(const char *original_patch_path,
 /* ### forward-declaration */
 static svn_error_t *
 apply_textdiffs(const char *patch_path, const char *wc_path,
-                svn_wc_adm_access_t *adm_access, const svn_client_ctx_t *ctx,
-                apr_pool_t *pool);
+                svn_wc_adm_access_t *adm_access, svn_boolean_t dry_run,
+                const svn_client_ctx_t *ctx, apr_pool_t *pool);
 
 svn_error_t *
 svn_client_patch(const char *patch_path,
                  const char *target,
                  svn_boolean_t force,
+                 svn_boolean_t dry_run,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *pool)
 {
@@ -1733,7 +1734,6 @@ svn_client_patch(const char *patch_path,
   const svn_delta_editor_t *diff_editor;
   svn_wc_adm_access_t *adm_access;
   struct edit_baton *eb;
-  svn_boolean_t dry_run = FALSE; /* disable dry_run for now */
   const char *abs_target;
 
   SVN_ERR(svn_dirent_get_absolute(&abs_target, target, pool));
@@ -1766,7 +1766,7 @@ svn_client_patch(const char *patch_path,
     }
 
   /* Now proceed with the text-diff bytes. */
-  SVN_ERR(apply_textdiffs(patch_path, target, adm_access, ctx, pool));
+  SVN_ERR(apply_textdiffs(patch_path, target, adm_access, dry_run, ctx, pool));
 
   SVN_ERR(svn_wc_adm_close2(adm_access, pool));
 
@@ -2592,8 +2592,9 @@ maybe_send_patch_target_notification(const patch_target_t *target,
  * Do all allocations in POOL. */
 static svn_error_t *
 apply_one_patch(svn_patch_t *patch, const char *wc_path,
-                svn_wc_adm_access_t *adm_access, const svn_client_ctx_t *ctx,
-                const hunk_tempfiles_t *tempfiles, apr_pool_t *pool)
+                svn_wc_adm_access_t *adm_access,
+                const hunk_tempfiles_t *tempfiles, svn_boolean_t dry_run,
+                const svn_client_ctx_t *ctx, apr_pool_t *pool)
 {
   patch_target_t *target;
 
@@ -2645,7 +2646,7 @@ apply_one_patch(svn_patch_t *patch, const char *wc_path,
 
       SVN_ERR(svn_stream_close(target->result));
 
-      if (target->modified)
+      if (! dry_run && target->modified)
         {
           /* Install the patched temporary file over the working file.
            * ### Should this rather be done in a loggy fashion? */
@@ -2667,7 +2668,8 @@ apply_one_patch(svn_patch_t *patch, const char *wc_path,
         }
       else
         {
-          /* No hunks were applied. Just remove the temporary file. */
+          /* Either no hunks were applied or we're doing a dry run.
+           * Just remove the temporary file. */
           SVN_ERR(svn_io_remove_file2(target->result_path, FALSE, pool));
         }
     }
@@ -2683,8 +2685,8 @@ apply_one_patch(svn_patch_t *patch, const char *wc_path,
  * Do all allocations in POOL.  */
 static svn_error_t *
 apply_textdiffs(const char *patch_path, const char *wc_path,
-                svn_wc_adm_access_t *adm_access, const svn_client_ctx_t *ctx,
-                apr_pool_t *pool)
+                svn_wc_adm_access_t *adm_access, svn_boolean_t dry_run,
+                const svn_client_ctx_t *ctx, apr_pool_t *pool)
 {
   svn_patch_t *patch;
   apr_pool_t *iterpool;
@@ -2727,8 +2729,8 @@ apply_textdiffs(const char *patch_path, const char *wc_path,
       SVN_ERR(svn_diff__parse_next_patch(&patch, patch_file, patch_eol_str,
                                          iterpool, iterpool));
       if (patch)
-        SVN_ERR(apply_one_patch(patch, wc_path, adm_access, ctx,
-                                tempfiles, iterpool));
+        SVN_ERR(apply_one_patch(patch, wc_path, adm_access, tempfiles,
+                                dry_run, ctx, iterpool));
     }
   while (patch);
   svn_pool_destroy(iterpool);
