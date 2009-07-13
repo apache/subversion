@@ -3642,23 +3642,28 @@ svn_io_mktemp(apr_file_t **file,
     
   path = svn_dirent_join(dirpath, template, scratch_pool);
 
-  if (delete_when == svn_io_file_del_on_pool_cleanup)
+  switch (delete_when)
     {
-      baton = apr_palloc(result_pool, sizeof(*baton));
+      case svn_io_file_del_on_pool_cleanup:
+        baton = apr_palloc(result_pool, sizeof(*baton));
+        baton->pool = result_pool;
+        baton->name = NULL;
 
-      baton->pool = result_pool;
-      baton->name = NULL;
+        /* Because cleanups are run LIFO, we need to make sure to register
+           our cleanup before the apr_file_close cleanup:
 
-      /* Because cleanups are run LIFO, we need to make sure to register
-         our cleanup before the apr_file_close cleanup:
+           On Windows, you can't remove an open file.
+        */
+        apr_pool_cleanup_register(result_pool, baton,
+                                  temp_file_plain_cleanup_handler,
+                                  temp_file_child_cleanup_handler);
 
-         On Windows, you can't remove an open file.
-      */
-      apr_pool_cleanup_register(result_pool, baton,
-                                temp_file_plain_cleanup_handler,
-                                temp_file_child_cleanup_handler);
-
-      flags |= APR_DELONCLOSE;
+        break;
+      case svn_io_file_del_on_close:
+        flags |= APR_DELONCLOSE;
+        break;
+      default:
+        break;
     }
 
   SVN_ERR(svn_io_file_mktemp(&tempfile, path, flags, result_pool));
