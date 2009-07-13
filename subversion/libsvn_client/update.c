@@ -184,13 +184,6 @@ svn_client__update_internal(svn_revnum_t *result_rev,
         }
     }
 
-  /* Get revnum set to something meaningful, so we can fetch the
-     update editor. */
-  if (revision->kind == svn_opt_revision_number)
-    revnum = revision->value.number;
-  else
-    revnum = SVN_INVALID_REVNUM;
-
   /* Get the external diff3, if any. */
   svn_config_get(cfg, &diff3_cmd, SVN_CONFIG_SECTION_HELPERS,
                  SVN_CONFIG_OPTION_DIFF3_CMD, NULL);
