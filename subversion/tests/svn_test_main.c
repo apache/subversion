@@ -2,17 +2,22 @@
  * tests-main.c:  shared main() & friends for SVN test-suite programs
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -150,7 +155,7 @@ get_array_size(void)
 {
   int i;
 
-  for (i = 1; test_funcs[i].msg || test_funcs[i].func; i++)
+  for (i = 1; test_funcs[i].func2 || test_funcs[i].func_opts; i++)
     {
     }
 
@@ -188,18 +193,13 @@ do_test_num(const char *progname,
   wimp = xfail && desc->wip;
 
   /* Do test */
-  if (desc->func)
-    err = (*desc->func)(&msg, msg_only || skip, opts, pool);
+  msg = desc->msg;
+  if (msg_only || skip)
+    ; /* pass */
+  else if (desc->func2)
+    err = (*desc->func2)(pool);
   else
-    {
-      msg = desc->msg;
-      if (msg_only || skip)
-        ; /* pass */
-      else if (desc->func2)
-        err = (*desc->func2)(pool);
-      else
-        err = (*desc->func_opts)(opts, pool);
-    }
+    err = (*desc->func_opts)(opts, pool);
 
   if (err && err->apr_err == SVN_ERR_TEST_SKIPPED)
     {
@@ -252,7 +252,7 @@ do_test_num(const char *progname,
       if (apr_isupper(msg[0]))
         printf("WARNING: Test docstring is capitalized\n");
     }
-  if (desc->func == NULL && desc->msg == NULL)
+  if (desc->msg == NULL)
     printf("WARNING: New-style test descriptor is missing a docstring.\n");
 
   skip_cleanup = test_failed;

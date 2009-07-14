@@ -2,17 +2,22 @@
  * ra.c :  routines for interacting with the RA layer
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -36,6 +41,33 @@
 #include "svn_private_config.h"
 #include "private/svn_wc_private.h"
 
+
+/* This is the baton that we pass svn_ra_open3(), and is associated with
+   the callback table we provide to RA. */
+typedef struct
+{
+  /* Holds the directory that corresponds to the REPOS_URL at svn_ra_open3()
+     time. When callbacks specify a relative path, they are joined with
+     this base directory. */
+  const char *base_dir;
+  svn_wc_adm_access_t *base_access;
+
+  /* When true, makes sure temporary files are created
+     outside the working copy. */
+  svn_boolean_t read_only_wc;
+
+  /* An array of svn_client_commit_item3_t * structures, present only
+     during working copy commits. */
+  apr_array_header_t *commit_items;
+
+  /* A client context. */
+  svn_client_ctx_t *ctx;
+
+  /* The pool to use for session-related items. */
+  apr_pool_t *pool;
+
+} callback_baton_t;
+
 
 
 static svn_error_t *
@@ -57,7 +89,8 @@ get_wc_prop(void *baton,
             const svn_string_t **value,
             apr_pool_t *pool)
 {
-  svn_client__callback_baton_t *cb = baton;
+  callback_baton_t *cb = baton;
+  const char *local_abspath;
 
   *value = NULL;
 
@@ -71,10 +104,14 @@ get_wc_prop(void *baton,
           svn_client_commit_item3_t *item
             = APR_ARRAY_IDX(cb->commit_items, i,
                             svn_client_commit_item3_t *);
+        
+          SVN_ERR(svn_dirent_get_absolute(&local_abspath, item->path, pool));
+
           if (! strcmp(relpath,
                        svn_path_uri_decode(item->url, pool)))
-            return svn_error_return(svn_wc_prop_get(value, name, item->path,
-                                        cb->base_access, pool));
+            return svn_error_return(svn_wc_prop_get2(value, cb->ctx->wc_ctx,
+                                                     local_abspath, name,
+                                                     pool, pool));
         }
 
       return SVN_NO_ERROR;
@@ -84,9 +121,12 @@ get_wc_prop(void *baton,
   else if (cb->base_dir == NULL)
     return SVN_NO_ERROR;
 
-  return svn_error_return(svn_wc_prop_get(value, name,
-                               svn_path_join(cb->base_dir, relpath, pool),
-                               cb->base_access, pool));
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath,
+                                  svn_path_join(cb->base_dir, relpath, pool),
+                                  pool));
+
+  return svn_error_return(svn_wc_prop_get2(value, cb->ctx->wc_ctx,
+                                           local_abspath, name, pool, pool));
 }
 
 /* This implements the 'svn_ra_push_wc_prop_func_t' interface. */
@@ -97,7 +137,7 @@ push_wc_prop(void *baton,
              const svn_string_t *value,
              apr_pool_t *pool)
 {
-  svn_client__callback_baton_t *cb = baton;
+  callback_baton_t *cb = baton;
   int i;
 
   /* If we're committing, search through the commit_items list for a
@@ -106,7 +146,7 @@ push_wc_prop(void *baton,
     return svn_error_createf
       (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
        _("Attempt to set wc property '%s' on '%s' in a non-commit operation"),
-       name, svn_path_local_style(relpath, pool));
+       name, svn_dirent_local_style(relpath, pool));
 
   for (i = 0; i < cb->commit_items->nelts; i++)
     {
@@ -146,19 +186,11 @@ set_wc_prop(void *baton,
             const svn_string_t *value,
             apr_pool_t *pool)
 {
-  svn_client__callback_baton_t *cb = baton;
-  svn_wc_adm_access_t *adm_access;
-  const svn_wc_entry_t *entry;
+  callback_baton_t *cb = baton;
   const char *full_path = svn_dirent_join(cb->base_dir, path, pool);
+  const char *local_abspath;
 
-  SVN_ERR(svn_wc__entry_versioned(&entry, full_path, cb->base_access, FALSE,
-                                 pool));
-
-  SVN_ERR(svn_wc_adm_retrieve(&adm_access, cb->base_access,
-                              (entry->kind == svn_node_dir
-                               ? full_path
-                               : svn_dirent_dirname(full_path, pool)),
-                              pool));
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, full_path, pool));
 
   /* We pass 1 for the 'force' parameter here.  Since the property is
      coming from the repository, we definitely want to accept it.
@@ -168,8 +200,8 @@ set_wc_prop(void *baton,
      right, but the conflict would remind the user to make sure.
      Unfortunately, we don't have a clean mechanism for doing that
      here, so we just set the property and hope for the best. */
-  return svn_error_return(svn_wc_prop_set3(name, value, full_path, adm_access,
-                                           TRUE, NULL, NULL, pool));
+  return svn_error_return(svn_wc_prop_set4(cb->ctx->wc_ctx, local_abspath, name,
+                                           value, TRUE, NULL, NULL, pool));
 }
 
 
@@ -178,8 +210,8 @@ struct invalidate_wcprop_walk_baton
   /* The wcprop to invalidate. */
   const char *prop_name;
 
-  /* Access baton for the top of the walk. */
-  svn_wc_adm_access_t *base_access;
+  /* A context for accessing the working copy. */
+  svn_wc_context_t *wc_ctx;
 };
 
 
@@ -192,18 +224,15 @@ invalidate_wcprop_for_entry(const char *path,
                             apr_pool_t *pool)
 {
   struct invalidate_wcprop_walk_baton *wb = walk_baton;
-  svn_wc_adm_access_t *entry_access;
+  const char *local_abspath;
   svn_error_t *err;
 
-  SVN_ERR(svn_wc_adm_retrieve(&entry_access, wb->base_access,
-                              ((entry->kind == svn_node_dir)
-                               ? path
-                               : svn_dirent_dirname(path, pool)),
-                              pool));
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+
   /* It doesn't matter if we pass 0 or 1 for force here, since
      property deletion is always permitted. */
-  err = svn_wc_prop_set3(wb->prop_name, NULL, path, entry_access, FALSE,
-                         NULL, NULL, pool);
+  err = svn_wc_prop_set4(wb->wc_ctx, local_abspath, wb->prop_name, NULL,
+                         FALSE, NULL, NULL, pool);
   if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
     {
       svn_error_clear(err);
@@ -223,14 +252,14 @@ invalidate_wc_props(void *baton,
                     const char *prop_name,
                     apr_pool_t *pool)
 {
-  svn_client__callback_baton_t *cb = baton;
+  callback_baton_t *cb = baton;
   svn_wc_entry_callbacks2_t walk_callbacks = { invalidate_wcprop_for_entry,
                               svn_client__default_walker_error_handler };
   struct invalidate_wcprop_walk_baton wb;
   svn_wc_adm_access_t *adm_access;
 
-  wb.base_access = cb->base_access;
   wb.prop_name = prop_name;
+  wb.wc_ctx = cb->ctx->wc_ctx;
 
   path = svn_path_join(cb->base_dir, path, pool);
   SVN_ERR(svn_wc_adm_probe_retrieve(&adm_access, cb->base_access, path,
@@ -246,7 +275,7 @@ invalidate_wc_props(void *baton,
 static svn_error_t *
 cancel_callback(void *baton)
 {
-  svn_client__callback_baton_t *b = baton;
+  callback_baton_t *b = baton;
   return svn_error_return((b->ctx->cancel_func)(b->ctx->cancel_baton));
 }
 
@@ -256,7 +285,7 @@ get_client_string(void *baton,
                   const char **name,
                   apr_pool_t *pool)
 {
-  svn_client__callback_baton_t *b = baton;
+  callback_baton_t *b = baton;
   *name = apr_pstrdup(pool, b->ctx->client_name);
   return SVN_NO_ERROR;
 }
@@ -273,7 +302,7 @@ svn_client__open_ra_session_internal(svn_ra_session_t **ra_session,
                                      apr_pool_t *pool)
 {
   svn_ra_callbacks2_t *cbtable = apr_pcalloc(pool, sizeof(*cbtable));
-  svn_client__callback_baton_t *cb = apr_pcalloc(pool, sizeof(*cb));
+  callback_baton_t *cb = apr_pcalloc(pool, sizeof(*cb));
   const char *uuid = NULL;
 
   cbtable->open_tmp_file = open_tmp_file;
@@ -412,7 +441,7 @@ svn_client_uuid_from_path(const char **uuid,
          ok. */
       return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
                                _("'%s' has no URL"),
-                               svn_path_local_style(path, pool));
+                               svn_dirent_local_style(path, pool));
     }
 
   return SVN_NO_ERROR;
@@ -647,7 +676,7 @@ svn_client__repos_locations(const char **start_url,
         {
           return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
                                    _("'%s' has no URL"),
-                                   svn_path_local_style(path, pool));
+                                   svn_dirent_local_style(path, pool));
         }
     }
   else
@@ -716,7 +745,7 @@ svn_client__repos_locations(const char **start_url,
     return svn_error_createf
       (SVN_ERR_CLIENT_UNRELATED_RESOURCES, NULL,
        _("Unable to find repository location for '%s' in revision %ld"),
-       svn_path_local_style(path, pool), start_revnum);
+       svn_dirent_local_style(path, pool), start_revnum);
 
   end_path = apr_hash_get(rev_locs, &end_revnum, sizeof(svn_revnum_t));
   if (! end_path)
@@ -724,7 +753,7 @@ svn_client__repos_locations(const char **start_url,
       (SVN_ERR_CLIENT_UNRELATED_RESOURCES, NULL,
        _("The location for '%s' for revision %ld does not exist in the "
          "repository or refers to an unrelated object"),
-       svn_path_local_style(path, pool), end_revnum);
+       svn_dirent_local_style(path, pool), end_revnum);
 
   /* Repository paths might be absolute, but we want to treat them as
      relative.

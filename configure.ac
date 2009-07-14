@@ -59,7 +59,10 @@ if test "$INSTALL" = "build/install-sh -c"; then
   INSTALL="$abs_srcdir/$INSTALL"
 fi
 
-AC_SUBST([MKDIR], ["$INSTALL -d"])
+if test -z "$MKDIR"; then
+  MKDIR="$INSTALL -d"
+fi
+AC_SUBST([MKDIR])
 
 # ==== Libraries, for which we may have source to build ======================
 
@@ -83,7 +86,7 @@ AC_PATH_PROG(PKG_CONFIG, pkg-config)
 # Either a space-separated list of allowable Neon versions, or "any" to
 # mean allow anything.
 NEON_ALLOWED_LIST="0\.25 0\.26 0\.27\.2 0\.28"
-NEON_RECOMMENDED_VER=0.28.4
+NEON_RECOMMENDED_VER=0.28.5
 NEON_URL="http://www.webdav.org/neon/neon-${NEON_RECOMMENDED_VER}.tar.gz"
 dnl You can skip the neon version check only if you know what you are doing 
 AC_ARG_ENABLE(neon-version-check,
@@ -132,7 +135,7 @@ SVN_FIND_APACHE(20020903)
 
 dnl Search for SQLite
 SQLITE_MINIMUM_VER="3.4.0"
-SQLITE_RECOMMENDED_VER="3.6.13"
+SQLITE_RECOMMENDED_VER="3.6.15"
 SQLITE_URL="http://www.sqlite.org/sqlite-amalgamation-${SQLITE_RECOMMENDED_VER}.tar.gz"
 SVN_LIB_SQLITE(${SQLITE_MINIMUM_VER}, ${SQLITE_RECOMMENDED_VER},
                ${SQLITE_URL})
@@ -228,7 +231,7 @@ elif test "$svn_enable_shared" = "yes" ; then
   fi
   LT_LDFLAGS="-shared $LT_LDFLAGS"
 else
-  AC_MSG_ERROR([can not disable both shared and static libraries])
+  AC_MSG_ERROR([cannot disable both shared and static libraries])
 fi
 
 dnl Check for --enable-all-static option
@@ -238,6 +241,8 @@ AC_ARG_ENABLE(all-static,
   [
     if test "$enableval" = "yes" ; then
       LT_LDFLAGS="-all-static $LT_LDFLAGS"
+    elif test "$enableval" != "no" ; then
+      AC_MSG_ERROR([--enable-all-static doesn't accept argument])
     fi
 ])
 
@@ -311,6 +316,74 @@ fi
 
 
 dnl Check for libraries --------------------
+
+dnl Expat -------------------
+
+AC_ARG_WITH(expat,
+  AS_HELP_STRING([--with-expat=INCLUDES:LIB_SEARCH_DIRS:LIBS], 
+                 [Specify location of Expat]),
+                 [svn_lib_expat="$withval"],
+                 [svn_lib_expat="::expat"])
+
+AC_MSG_CHECKING([for Expat])
+if test -n "`echo "$svn_lib_expat" | $EGREP ":.*:"`"; then
+  SVN_XML_INCLUDES=""
+  for i in [`echo "$svn_lib_expat" | sed -e "s/\([^:]*\):.*/\1/"`]; do
+    SVN_XML_INCLUDES="$SVN_XML_INCLUDES -I$i"
+  done
+  SVN_XML_INCLUDES="${SVN_XML_INCLUDES## }"
+  for l in [`echo "$svn_lib_expat" | sed -e "s/.*:\([^:]*\):.*/\1/"`]; do
+    LDFLAGS="$LDFLAGS -L$l"
+  done
+  for l in [`echo "$svn_lib_expat" | sed -e "s/.*:\([^:]*\)/\1/"`]; do
+    SVN_XML_LIBS="$SVN_XML_LIBS -l$l"
+  done
+  SVN_XML_LIBS="${SVN_XML_LIBS## }"
+  old_CPPFLAGS="$CPPFLAGS"
+  old_LIBS="$LIBS"
+  CPPFLAGS="$CPPFLAGS $SVN_XML_INCLUDES"
+  LIBS="$LIBS $SVN_XML_LIBS"
+  AC_LINK_IFELSE([
+#include <expat.h>
+int main()
+{XML_ParserCreate(NULL);}], svn_lib_expat="yes", svn_lib_expat="no")
+  LIBS="$old_LIBS"
+  if test "$svn_lib_expat" = "yes"; then
+    AC_MSG_RESULT([yes])
+  else
+    SVN_XML_INCLUDES=""
+    SVN_XML_LIBS=""
+    CPPFLAGS="$CPPFLAGS $SVN_APRUTIL_INCLUDES"
+    if test "$enable_all_static" != "yes"; then
+      SVN_APRUTIL_LIBS="$SVN_APRUTIL_LIBS `$apu_config --libs`"
+    fi
+    AC_COMPILE_IFELSE([
+#include <expat.h>
+int main()
+{XML_ParserCreate(NULL);}], svn_lib_expat="yes", svn_lib_expat="no")
+    if test "$svn_lib_expat" = "yes"; then
+      AC_MSG_RESULT([yes])
+      AC_MSG_WARN([Expat found amongst libraries used by APR-Util, but Subversion libraries might be needlessly linked against additional unused libraries. It can be avoided by specifying exact location of Expat in argument of --with-expat option.])
+    else
+      AC_MSG_RESULT([no])
+      AC_MSG_ERROR([Expat not found])
+    fi
+  fi
+  CPPFLAGS="$old_CPPFLAGS"
+else
+  AC_MSG_RESULT([no])
+  if test "$svn_lib_expat" = "yes"; then
+    AC_MSG_ERROR([--with-expat option requires argument])
+  elif test "$svn_lib_expat" = "no"; then
+    AC_MSG_ERROR([Expat is required])
+  else
+    AC_MSG_ERROR([Invalid syntax of argument of --with-expat option])
+  fi
+fi
+AC_SUBST(SVN_XML_INCLUDES)
+AC_SUBST(SVN_XML_LIBS)
+
+dnl Berkeley DB -------------------
 
 # Berkeley DB on SCO OpenServer needs -lsocket
 AC_CHECK_LIB(socket, socket)
@@ -654,7 +727,6 @@ AC_TYPE_SIZE_T
 
 dnl Check for library functions ----------
 
-dnl libsvn_string uses memcmp()
 AC_FUNC_MEMCMP
 
 dnl svn_error's default warning handler uses vfprintf()
@@ -707,13 +779,53 @@ AC_COMPILE_IFELSE([AC_LANG_SOURCE([[]])], [CFLAGS_KEEP="$CFLAGS"])
 CFLAGS="$CFLAGS_KEEP"
 
 
+dnl Use -Wl,--no-undefined during linking of some libraries
+AC_ARG_ENABLE(disallowing-of-undefined-references,
+  [AS_HELP_STRING([--enable-disallowing-of-undefined-references],
+                  [Use -Wl,--no-undefined flag during linking of some libraries to disallow undefined references])])
+if test "$enable_disallowing_of_undefined_references" = "yes"; then
+  AC_MSG_CHECKING([for -Wl,--no-undefined])
+  old_LDFLAGS="$LDFLAGS"
+  LDFLAGS="$LDFLAGS -Wl,--no-undefined"
+  AC_LINK_IFELSE([int main(){;}], [svn_wl_no_undefined="yes"], [svn_wl_no_undefined="no"])
+  LDFLAGS="$old_LDFLAGS"
+  libraries="auth_gnome_keyring auth_kwallet client delta diff fs fs_base fs_fs fs_util ra ra_local ra_neon ra_serf ra_svn repos subr wc"
+  if test "$svn_wl_no_undefined" = "yes"; then
+    AC_MSG_RESULT([yes])
+    for library in $libraries; do
+      eval "libsvn_${library}_LDFLAGS=-Wl,--no-undefined"
+    done
+  else
+    AC_MSG_RESULT([no])
+    AC_MSG_ERROR([--enable-disallowing-of-undefined-references explicitly requested, but -Wl,--no-undefined not supported])
+  fi
+fi
+AC_SUBST([libsvn_auth_gnome_keyring_LDFLAGS])
+AC_SUBST([libsvn_auth_kwallet_LDFLAGS])
+AC_SUBST([libsvn_client_LDFLAGS])
+AC_SUBST([libsvn_delta_LDFLAGS])
+AC_SUBST([libsvn_diff_LDFLAGS])
+AC_SUBST([libsvn_fs_LDFLAGS])
+AC_SUBST([libsvn_fs_base_LDFLAGS])
+AC_SUBST([libsvn_fs_fs_LDFLAGS])
+AC_SUBST([libsvn_fs_util_LDFLAGS])
+AC_SUBST([libsvn_ra_LDFLAGS])
+AC_SUBST([libsvn_ra_local_LDFLAGS])
+AC_SUBST([libsvn_ra_neon_LDFLAGS])
+AC_SUBST([libsvn_ra_serf_LDFLAGS])
+AC_SUBST([libsvn_ra_svn_LDFLAGS])
+AC_SUBST([libsvn_repos_LDFLAGS])
+AC_SUBST([libsvn_subr_LDFLAGS])
+AC_SUBST([libsvn_wc_LDFLAGS])
+
+
 AC_ARG_ENABLE(maintainer-mode,
 AS_HELP_STRING([--enable-maintainer-mode],
                [Turn on debugging and very strict compile-time warnings]),
 [
     if test "$enableval" = "yes" ; then
       if test "$enable_debugging" = "no" ; then
-        AC_MSG_ERROR(Can't have --disable-debug and --enable-maintainer-mode)
+        AC_MSG_ERROR([Can't have --disable-debug and --enable-maintainer-mode])
       fi
       enable_debugging=yes
       if test "$GCC" = "yes"; then
@@ -815,8 +927,8 @@ AS_HELP_STRING([--enable-gprof],
       dnl feel free to extend this to include them.
       if test "$GCC" = "yes"; then
         if test "$svn_enable_shared" = "yes" ; then
-          AC_MSG_ERROR(Can't have --enable-gprof without --disable-shared (we
-                  recommend also using --enable-all-static).)
+          AC_MSG_ERROR([Can't have --enable-gprof without --disable-shared (we
+                        recommend also using --enable-all-static).])
         fi
         if test ! "$enable_all_static" = "yes" ; then
           AC_MSG_WARN(We recommend --enable-all-static with --enable-gprof.)
@@ -826,7 +938,7 @@ AS_HELP_STRING([--enable-gprof],
         CXXFLAGS="$CXXFLAGS -pg"
         LT_LDFLAGS="$LT_LDFLAGS -pg"
       else
-        AC_MSG_ERROR(We only support --enable-gprof with GCC right now.)
+        AC_MSG_ERROR([We only support --enable-gprof with GCC right now.])
       fi
     fi
 ])
@@ -1078,19 +1190,15 @@ dnl Configure is long - users tend to miss warnings printed during it.
 dnl Hence, print a warnings about what we did and didn't configure at the 
 dnl end, where people will actually see them.
 
-case "$svn_lib_berkeley_db" in
-  "no" )
-    db_version="$SVN_FS_WANT_DB_MAJOR.$SVN_FS_WANT_DB_MINOR.$SVN_FS_WANT_DB_PATCH"
-    AC_MSG_WARN([we have configured without BDB filesystem support
+if test "$svn_lib_berkeley_db" = "no" && test "$with_berkeley_db" != "no"; then
+  db_version="$SVN_FS_WANT_DB_MAJOR.$SVN_FS_WANT_DB_MINOR.$SVN_FS_WANT_DB_PATCH"
+  AC_MSG_WARN([we have configured without BDB filesystem support
 
 
 You don't seem to have Berkeley DB version $db_version or newer
-installed and linked to APR-UTIL.  We have created Makefiles which
-will build without the Berkeley DB back-end; your repositories will
-use FSFS as the default back-end.  You can find the latest version of
-Berkeley DB here:
+installed and linked to APR-UTIL.  We have created Makefile which will build
+Subversion without support for the Berkeley DB back-end.  You can find the
+latest version of Berkeley DB here:
   http://www.oracle.com/technology/software/products/berkeley-db/index.html
 ])
-;;
-esac
-
+fi

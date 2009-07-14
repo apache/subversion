@@ -1,17 +1,22 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2009 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  * @endcopyright
  *
@@ -44,12 +49,14 @@ typedef svn_error_t *(*svn_editor_cb_add_directory_t)(
   const char *relpath,
   const apr_array_header_t *children,
   apr_hash_t *props,
+  svn_revnum_t replaces_rev,
   apr_pool_t *scratch_pool);
 
 typedef svn_error_t *(*svn_editor_cb_add_file_t)(
   void *baton,
   const char *relpath,
   apr_hash_t *props,
+  svn_revnum_t replaces_rev,
   apr_pool_t *scratch_pool);
 
 typedef svn_error_t *(*svn_editor_cb_add_symlink_t)(
@@ -57,12 +64,14 @@ typedef svn_error_t *(*svn_editor_cb_add_symlink_t)(
   const char *relpath,
   const char *target,
   apr_hash_t *props,
+  svn_revnum_t replaces_rev,
   apr_pool_t *scratch_pool);
 
 typedef svn_error_t *(*svn_editor_cb_add_absent_t)(
   void *baton,
   const char *relpath,
   svn_node_kind_t kind,
+  svn_revnum_t replaces_rev,
   apr_pool_t *scratch_pool);
 
 typedef svn_error_t *(*svn_editor_cb_set_props_t)(
@@ -216,23 +225,27 @@ svn_error_t *
 svn_editor_add_directory(svn_editor_t *editor,
                          const char *relpath,
                          const apr_array_header_t *children,
-                         apr_hash_t *props);
+                         apr_hash_t *props,
+                         svn_revnum_t replaces_rev);
 
 svn_error_t *
 svn_editor_add_file(svn_editor_t *editor,
                     const char *relpath,
-                    apr_hash_t *props);
+                    apr_hash_t *props,
+                    svn_revnum_t replaces_rev);
 
 svn_error_t *
 svn_editor_add_symlink(svn_editor_t *editor,
                        const char *relpath,
                        const char *target,
-                       apr_hash_t *props);
+                       apr_hash_t *props,
+                       svn_revnum_t replaces_rev);
 
 svn_error_t *
 svn_editor_add_absent(svn_editor_t *editor,
                       const char *relpath,
-                      svn_node_kind_t kind);
+                      svn_node_kind_t kind,
+                      svn_revnum_t replaces_rev);
 
 svn_error_t *
 svn_editor_set_props(svn_editor_t *editor,

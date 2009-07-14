@@ -1,17 +1,22 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2003-2007 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  * @endcopyright
  *
@@ -57,7 +62,7 @@ void SVNAdmin::create(const char *path, bool disableFsyncCommits,
                       bool keepLogs, const char *configPath,
                       const char *fstype)
 {
-  Pool requestPool;
+  SVN::Pool requestPool;
   SVN_JNI_NULL_PTR_EX(path, "path", );
   path = svn_path_internal_style(path, requestPool.pool());
   if (configPath != NULL)
@@ -86,14 +91,14 @@ void SVNAdmin::create(const char *path, bool disableFsyncCommits,
 
 void SVNAdmin::deltify(const char *path, Revision &revStart, Revision &revEnd)
 {
-  Pool requestPool;
+  SVN::Pool requestPool;
   SVN_JNI_NULL_PTR_EX(path, "path", );
   path = svn_path_internal_style(path, requestPool.pool());
   svn_repos_t *repos;
   svn_fs_t *fs;
   svn_revnum_t start = SVN_INVALID_REVNUM, end = SVN_INVALID_REVNUM;
   svn_revnum_t youngest, revision;
-  Pool revisionPool;
+  SVN::Pool revisionPool;
 
   SVN_JNI_ERR(svn_repos_open(&repos, path, requestPool.pool()), );
   fs = svn_repos_fs (repos);
@@ -150,7 +155,7 @@ void SVNAdmin::dump(const char *path, Outputer &dataOut, Outputer &messageOut,
                     Revision &revsionStart, Revision &revisionEnd,
                     bool incremental, bool useDeltas)
 {
-  Pool requestPool;
+  SVN::Pool requestPool;
   SVN_JNI_NULL_PTR_EX(path, "path", );
   path = svn_path_internal_style(path, requestPool.pool());
   svn_repos_t *repos;
@@ -211,7 +216,7 @@ void SVNAdmin::dump(const char *path, Outputer &dataOut, Outputer &messageOut,
 void SVNAdmin::hotcopy(const char *path, const char *targetPath,
                        bool cleanLogs)
 {
-  Pool requestPool;
+  SVN::Pool requestPool;
   SVN_JNI_NULL_PTR_EX(path, "path", );
   SVN_JNI_NULL_PTR_EX(targetPath, "targetPath", );
   path = svn_path_internal_style(path, requestPool.pool());
@@ -223,7 +228,7 @@ void SVNAdmin::hotcopy(const char *path, const char *targetPath,
 static void
 list_dblogs (const char *path, MessageReceiver &receiver, bool only_unused)
 {
-  Pool requestPool;
+  SVN::Pool requestPool;
   SVN_JNI_NULL_PTR_EX(path, "path", );
   path = svn_path_internal_style(path, requestPool.pool());
   apr_array_header_t *logfiles;
@@ -265,7 +270,7 @@ void SVNAdmin::load(const char *path,
                     bool usePostCommitHook,
                     const char *relativePath)
 {
-  Pool requestPool;
+  SVN::Pool requestPool;
   SVN_JNI_NULL_PTR_EX(path, "path", );
   path = svn_path_internal_style(path, requestPool.pool());
   svn_repos_t *repos;
@@ -285,7 +290,7 @@ void SVNAdmin::load(const char *path,
 
 void SVNAdmin::lstxns(const char *path, MessageReceiver &messageReceiver)
 {
-  Pool requestPool;
+  SVN::Pool requestPool;
   SVN_JNI_NULL_PTR_EX(path, "path", );
   path = svn_path_internal_style(path, requestPool.pool());
   svn_repos_t *repos;
@@ -308,7 +313,7 @@ void SVNAdmin::lstxns(const char *path, MessageReceiver &messageReceiver)
 
 jlong SVNAdmin::recover(const char *path)
 {
-  Pool requestPool;
+  SVN::Pool requestPool;
   SVN_JNI_NULL_PTR_EX(path, "path", -1);
   path = svn_path_internal_style(path, requestPool.pool());
   svn_revnum_t youngest_rev;
@@ -330,7 +335,7 @@ jlong SVNAdmin::recover(const char *path)
 
 void SVNAdmin::rmtxns(const char *path, Targets &transactions)
 {
-  Pool requestPool;
+  SVN::Pool requestPool;
   SVN_JNI_NULL_PTR_EX(path, "path", );
   path = svn_path_internal_style(path, requestPool.pool());
   svn_repos_t *repos;
@@ -338,7 +343,7 @@ void SVNAdmin::rmtxns(const char *path, Targets &transactions)
   svn_fs_txn_t *txn;
   const apr_array_header_t *args;
   int i;
-  Pool transactionPool;
+  SVN::Pool transactionPool;
 
   SVN_JNI_ERR(svn_repos_open(&repos, path, requestPool.pool()), );
   fs = svn_repos_fs (repos);
@@ -379,7 +384,7 @@ void SVNAdmin::setRevProp(const char *path, Revision &revision,
                           bool usePreRevPropChangeHook,
                           bool usePostRevPropChangeHook)
 {
-  Pool requestPool;
+  SVN::Pool requestPool;
   SVN_JNI_NULL_PTR_EX(path, "path", );
   SVN_JNI_NULL_PTR_EX(propName, "propName", );
   SVN_JNI_NULL_PTR_EX(propValue, "propValue", );
@@ -450,7 +455,7 @@ SVNAdmin::getRevnum(svn_revnum_t *revnum, const svn_opt_revision_t *revision,
 void SVNAdmin::verify(const char *path, Outputer &messageOut,
                       Revision &revisionStart, Revision &revisionEnd)
 {
-  Pool requestPool;
+  SVN::Pool requestPool;
   SVN_JNI_NULL_PTR_EX(path, "path", );
   path = svn_path_internal_style(path, requestPool.pool());
   svn_repos_t *repos;
@@ -495,7 +500,7 @@ void SVNAdmin::verify(const char *path, Outputer &messageOut,
 
 jobjectArray SVNAdmin::lslocks(const char *path)
 {
-  Pool requestPool;
+  SVN::Pool requestPool;
   SVN_JNI_NULL_PTR_EX(path, "path", NULL);
   path = svn_path_internal_style(path, requestPool.pool());
   svn_repos_t *repos;
@@ -548,7 +553,7 @@ jobjectArray SVNAdmin::lslocks(const char *path)
 
 void SVNAdmin::rmlocks(const char *path, Targets &locks)
 {
-  Pool requestPool;
+  SVN::Pool requestPool;
   apr_pool_t *pool = requestPool.pool();
   SVN_JNI_NULL_PTR_EX(path, "path", );
   path = svn_path_internal_style(path, requestPool.pool());
@@ -582,7 +587,7 @@ void SVNAdmin::rmlocks(const char *path, Targets &locks)
   /* Attach the access context to the filesystem. */
   SVN_JNI_ERR(svn_fs_set_access(fs, access), );
 
-  Pool subpool;
+  SVN::Pool subpool;
   const apr_array_header_t *args = locks.array(requestPool);
   for (int i = 0; i < args->nelts; ++i)
     {

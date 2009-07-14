@@ -2,17 +2,22 @@
  * context.c:  routines for managing a working copy context
  *
  * ====================================================================
- * Copyright (c) 2009 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -36,16 +41,16 @@ static apr_status_t
 close_ctx_apr(void *data)
 {
   svn_wc_context_t *ctx = data;
-  svn_error_t *err;
 
-  /* We can use the state pool here, because this handler will only get
-     run if the state pool is being cleaned up posthaste. */
-  err = svn_wc__db_close(ctx->db, ctx->state_pool);
-  if (err)
+  if (ctx->close_db_on_destroy)
     {
-      int result = err->apr_err;
-      svn_error_clear(err);
-      return result;
+      svn_error_t *err = svn_wc__db_close(ctx->db);
+      if (err)
+        {
+          int result = err->apr_err;
+          svn_error_clear(err);
+          return result;
+        }
     }
 
   return APR_SUCCESS;
@@ -64,6 +69,31 @@ svn_wc_context_create(svn_wc_context_t **wc_ctx,
   ctx->state_pool = svn_pool_create(result_pool);
   SVN_ERR(svn_wc__db_open(&ctx->db, svn_wc__db_openmode_readwrite, config,
                           ctx->state_pool, scratch_pool));
+  ctx->close_db_on_destroy = TRUE;
+
+  apr_pool_cleanup_register(ctx->state_pool, ctx, close_ctx_apr,
+                            apr_pool_cleanup_null);
+
+  *wc_ctx = ctx;
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc__context_create_with_db(svn_wc_context_t **wc_ctx,
+                               svn_config_t *config,
+                               svn_wc__db_t *db,
+                               apr_pool_t *result_pool)
+{
+  svn_wc_context_t *ctx = apr_pcalloc(result_pool, sizeof(*ctx));
+
+  /* Create the state pool.  We don't put the wc_db in it, because it's
+     already open in a separate pool somewhere.  We also won't close the
+     wc_db when we destroy the context, since it's not ours to close. */
+  ctx->state_pool = svn_pool_create(result_pool);
+  ctx->db = db;
+  ctx->close_db_on_destroy = FALSE;
 
   apr_pool_cleanup_register(ctx->state_pool, ctx, close_ctx_apr,
                             apr_pool_cleanup_null);

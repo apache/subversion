@@ -2,6 +2,7 @@ import unittest, os, weakref, tempfile, setup_path
 
 from svn import core, repos, fs, delta, client, wc
 from svn.core import SubversionException
+import weakref
 
 from trac.versioncontrol.tests.svn_fs import SubversionRepositoryTestSetup, \
   REPOS_PATH, REPOS_URL
@@ -49,14 +50,15 @@ class SubversionClientTestCase(unittest.TestCase):
 
   def testBatonPlay(self):
     """Test playing with C batons"""
-    self.client_ctx.log_msg_baton2 = self.client_ctx.auth_baton
-    self.assertEquals(str(self.client_ctx.log_msg_baton2),
-                      str(self.client_ctx.auth_baton))
-    self.client_ctx.log_msg_baton2 = self.client_ctx.log_msg_baton2
-    self.assertEquals(str(self.client_ctx.log_msg_baton2),
-                      str(self.client_ctx.auth_baton))
+    baton = lambda: 1
+    weakref_baton = weakref.ref(baton)
+    self.client_ctx.log_msg_baton2 = baton
+    baton = None
+    self.assertEquals(self.client_ctx.log_msg_baton2(), 1)
+    self.assertEquals(weakref_baton()(), 1)
     self.client_ctx.log_msg_baton2 = None
     self.assertEquals(self.client_ctx.log_msg_baton2, None)
+    self.assertEquals(weakref_baton(), None)
 
     # External objects should retain their current parent pool
     self.assertNotEquals(self.client_ctx._parent_pool,

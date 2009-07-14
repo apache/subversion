@@ -2,17 +2,22 @@
  * relocate.c:  wrapper around wc relocation functionality.
  *
  * ====================================================================
- * Copyright (c) 2002-2004 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -26,6 +31,7 @@
 #include "svn_client.h"
 #include "svn_pools.h"
 #include "svn_error.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "client.h"
 
@@ -116,23 +122,18 @@ svn_client_relocate(const char *path,
                     svn_client_ctx_t *ctx,
                     apr_pool_t *pool)
 {
-  svn_wc_adm_access_t *adm_access;
   struct validator_baton_t vb;
-
-  /* Get an access baton for PATH. */
-  SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, path,
-                                 TRUE, recurse ? -1 : 0,
-                                 ctx->cancel_func, ctx->cancel_baton,
-                                 pool));
+  const char *local_abspath;
 
   /* Now, populate our validator callback baton, and call the relocate code. */
   vb.ctx = ctx;
   vb.path = path;
   vb.url_uuids = apr_array_make(pool, 1, sizeof(struct url_uuid_t));
   vb.pool = pool;
-  SVN_ERR(svn_wc_relocate3(path, adm_access, from, to,
-                           recurse, validator_func, &vb, pool));
 
-  /* All done.  Clean up, and move on out. */
-  return svn_wc_adm_close2(adm_access, pool);
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+  SVN_ERR(svn_wc_relocate4(ctx->wc_ctx, local_abspath, from, to, recurse,
+                           validator_func, &vb, pool));
+
+  return SVN_NO_ERROR;
 }

@@ -1,17 +1,22 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  * @endcopyright
  *
@@ -933,8 +938,9 @@ svn_fs_change_txn_props(svn_fs_txn_t *txn,
 typedef struct svn_fs_root_t svn_fs_root_t;
 
 
-/** Set @a *root_p to the root directory of revision @a rev in filesystem
- * @a fs.  Allocate @a *root_p in @a pool.
+/** Set @a *root_p to the root directory of revision @a rev in filesystem @a fs.
+ * Allocate @a *root_p in a private subpool of @a pool; the root can be
+ * destroyed earlier than @a pool by calling @c svn_fs_close_root.
  */
 svn_error_t *
 svn_fs_revision_root(svn_fs_root_t **root_p,
@@ -943,8 +949,9 @@ svn_fs_revision_root(svn_fs_root_t **root_p,
                      apr_pool_t *pool);
 
 
-/** Set @a *root_p to the root directory of @a txn.  Allocate @a *root_p in
- * @a pool.
+/** Set @a *root_p to the root directory of @a txn.  Allocate @a *root_p in a
+ * private subpool of @a pool; the root can be destroyed earlier than @a pool by
+ * calling @c svn_fs_close_root.
  */
 svn_error_t *
 svn_fs_txn_root(svn_fs_root_t **root_p,
@@ -952,9 +959,10 @@ svn_fs_txn_root(svn_fs_root_t **root_p,
                 apr_pool_t *pool);
 
 
-/** Free the root directory @a root.  Simply clearing or destroying the
- * pool @a root was allocated in will have the same effect as calling
- * this function.
+/** Free the root directory @a root; this only needs to be used if you want to
+ * free the memory associated with @a root earlier than the time you destroy the
+ * pool passed to the function that created it (@c svn_fs_revision_root or @c
+ * svn_fs_txn_root).
  */
 void
 svn_fs_close_root(svn_fs_root_t *root);

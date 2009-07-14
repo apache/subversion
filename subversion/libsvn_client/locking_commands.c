@@ -2,17 +2,22 @@
  * locking_commands.c:  Implementation of lock and unlock.
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -41,7 +46,6 @@ struct lock_baton
   const char *base_path;
   apr_hash_t *urls_to_paths;
   svn_client_ctx_t *ctx;
-  svn_wc_context_t *wc_ctx;
   apr_pool_t *pool;
 };
 
@@ -93,7 +97,8 @@ store_locks_callback(void *baton,
         {
           if (!ra_err)
             {
-              SVN_ERR(svn_wc_add_lock2(lb->wc_ctx, abs_path, lock, lb->pool));
+              SVN_ERR(svn_wc_add_lock2(lb->ctx->wc_ctx, abs_path, lock,
+                                       lb->pool));
               notify->lock_state = svn_wc_notify_lock_state_locked;
             }
           else
@@ -109,7 +114,7 @@ store_locks_callback(void *baton,
           if (!ra_err ||
               (ra_err && (ra_err->apr_err != SVN_ERR_FS_LOCK_OWNER_MISMATCH)))
             {
-              SVN_ERR(svn_wc_remove_lock2(lb->wc_ctx, abs_path, lb->pool));
+              SVN_ERR(svn_wc_remove_lock2(lb->ctx->wc_ctx, abs_path, lb->pool));
               notify->lock_state = svn_wc_notify_lock_state_unlocked;
             }
           else
@@ -261,7 +266,7 @@ organize_lock_targets(const char **common_parent,
           if (! entry->url)
             return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
                                      _("'%s' has no URL"),
-                                     svn_path_local_style(target, pool));
+                                     svn_dirent_local_style(target, pool));
 
           APR_ARRAY_PUSH(urls, const char *) = apr_pstrdup(pool,
                                                            entry->url);
@@ -419,24 +424,22 @@ svn_client_lock(const apr_array_header_t *targets,
            adm_access ? svn_wc_adm_access_path(adm_access) : NULL,
            adm_access, NULL, FALSE, FALSE, ctx, pool));
 
-  cb.pool = pool;
   if (adm_access)
-    cb.base_path = svn_wc_adm_access_path(adm_access);
+    {
+      cb.base_path = svn_wc_adm_access_path(adm_access);
+      SVN_ERR(svn_wc_adm_close2(adm_access, pool));
+    }
   else
-    cb.base_path = NULL;
+    {
+      cb.base_path = NULL;
+    }
   cb.urls_to_paths = urls_to_paths;
   cb.ctx = ctx;
-  SVN_ERR(svn_wc_context_create(&cb.wc_ctx, NULL /* config */, pool, pool));
+  cb.pool = pool;
 
   /* Lock the paths. */
   SVN_ERR(svn_ra_lock(ra_session, path_revs, comment,
                       steal_lock, store_locks_callback, &cb, pool));
-
-  SVN_ERR(svn_wc_context_destroy(cb.wc_ctx));
-
-  /* Unlock the wc. */
-  if (adm_access)
-    return svn_wc_adm_close2(adm_access, pool);
 
   return SVN_NO_ERROR;
 }
@@ -473,24 +476,22 @@ svn_client_unlock(const apr_array_header_t *targets,
   if (! adm_access && !break_lock)
     SVN_ERR(fetch_tokens(ra_session, path_tokens, pool));
 
-  cb.pool = pool;
   if (adm_access)
-    cb.base_path = svn_wc_adm_access_path(adm_access);
+    {
+      cb.base_path = svn_wc_adm_access_path(adm_access);
+      SVN_ERR(svn_wc_adm_close2(adm_access, pool));
+    }
   else
-    cb.base_path = NULL;
+    {
+      cb.base_path = NULL;
+    }
   cb.urls_to_paths = urls_to_paths;
   cb.ctx = ctx;
-  SVN_ERR(svn_wc_context_create(&cb.wc_ctx, NULL /* config */, pool, pool));
+  cb.pool = pool;
 
   /* Unlock the paths. */
   SVN_ERR(svn_ra_unlock(ra_session, path_tokens, break_lock,
                         store_locks_callback, &cb, pool));
-
-  SVN_ERR(svn_wc_context_destroy(cb.wc_ctx));
-
-  /* Unlock the wc. */
-  if (adm_access)
-    return svn_wc_adm_close2(adm_access, pool);
 
   return SVN_NO_ERROR;
 }

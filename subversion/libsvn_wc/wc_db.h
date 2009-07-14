@@ -1,17 +1,22 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2008 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  * @endcopyright
  *
@@ -266,12 +271,9 @@ svn_wc__db_open(svn_wc__db_t **db,
 
 /**
  * Close DB.
- *
- * Temporary allocations will be made in SCRATCH_POOL.
  */
 svn_error_t *
-svn_wc__db_close(svn_wc__db_t *db,
-                 apr_pool_t *scratch_pool);
+svn_wc__db_close(svn_wc__db_t *db);
 
 
 /**
@@ -956,6 +958,17 @@ svn_wc__db_op_revert(svn_wc__db_t *db,
                      apr_pool_t *scratch_pool);
 
 
+/** Invalidate the last mod time cache for the appropriate BASE node
+ * for LOCAL_ABSPATH in DB.
+ *
+ * Use SCRATCH_POOL for any temporary allocations.
+ */
+svn_error_t *
+svn_wc__db_op_invalidate_last_mod_time(svn_wc__db_t *db,
+                                       const char *local_abspath,
+                                       apr_pool_t *scratch_pool);
+
+
 /* ### status */
 
 
@@ -1009,6 +1022,7 @@ svn_wc__db_op_revert(svn_wc__db_t *db,
  *   TEXT_MOD                n/a (always available)
  *   PROPS_MOD               n/a (always available)
  *   BASE_SHADOWED           n/a (always available)
+ *   PROP_REJECT_FILE        NULL
  *   LOCK                    NULL
  *
  * If DEPTH is requested, and the node is NOT a directory, then
@@ -1099,6 +1113,8 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,  /* ### derived */
                      svn_boolean_t *props_mod,
                      svn_boolean_t *base_shadowed,  /* ### WORKING shadows a
                                                        ### deleted BASE? */
+
+                     const char **prop_reject_file,  /* ### is this right? */
 
                      svn_wc__db_lock_t **lock,
 
@@ -1195,14 +1211,33 @@ svn_wc__db_check_node(svn_wc__db_kind_t *kind,
  * @{
  */
 
-/* ### local_dir_abspath "should be" the wcroot or a switch root. all URLs
-   ### under this directory (depth=infinity) will be rewritten. */
+/*
+ * Associate LOCAL_DIR_ABSPATH, and all its children with the repository at
+ * at REPOS_ROOT_URL.  The relative path to the repos root will not change,
+ * just the repository root.  The repos uuid will also remain the same.
+ * This also updates any locks which may exist for the node, as well as any
+ * copyfrom repository information.
+ *
+ * Use SCRATCH_POOL for any temporary allocations.
+ *
+ * ### local_dir_abspath "should be" the wcroot or a switch root. all URLs
+ * ### under this directory (depth=infinity) will be rewritten.
+ *
+ * ### This API had a depth parameter, which was removed, should it be
+ * ### resurrected?  What's the purpose if we claim relocate is infinitely
+ * ### recursive?
+ *
+ * ### Assuming the future ability to copy across repositories, should we
+ * ### refrain from resetting the copyfrom information in this operation?
+ *
+ * ### SINGLE_DB is a temp argument, and should be TRUE if using compressed
+ * ### metadata.  When *all* metadata gets compressed, it should disappear.
+ */
 svn_error_t *
 svn_wc__db_global_relocate(svn_wc__db_t *db,
                            const char *local_dir_abspath,
-                           const char *from_url,
-                           const char *to_url,
-                           svn_depth_t depth,
+                           const char *repos_root_url,
+                           svn_boolean_t single_db,
                            apr_pool_t *scratch_pool);
 
 

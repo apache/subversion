@@ -39,7 +39,7 @@ dnl   Try just looking in apr-util (>= 1.3 has it already).
       CPPFLAGS="$CPPFLAGS $SVN_APR_INCLUDES $SVN_APRUTIL_INCLUDES"
       AC_CHECK_HEADER(apr_memcache.h,[
         save_ldflags="$LDFLAGS"
-        LDFLAGS="$LDFLAGS $SVN_APRUTIL_EXPORT_LIBS"
+        LDFLAGS="$LDFLAGS $SVN_APRUTIL_LIBS"
         AC_CHECK_LIB(aprutil-1, apr_memcache_create,
           [apr_memcache_found="aprutil"])
         LDFLAGS="$save_ldflags"])
@@ -55,21 +55,18 @@ dnl   Try just looking in apr-util (>= 1.3 has it already).
     SVN_APR_MEMCACHE_PREFIX="$apr_memcache_prefix"
     SVN_APR_MEMCACHE_INCLUDES="-I$srcdir/memcache"
     SVN_APR_MEMCACHE_LIBS="$abs_builddir/memcache/libapr_memcache.la"
-    SVN_APR_MEMCACHE_EXPORT_LIBS="-L$apr_memcache_prefix/lib -lapr_memcache"
   fi
 
   if test $apr_memcache_found = "standalone"; then
     SVN_APR_MEMCACHE_PREFIX="$apr_memcache_prefix"
     SVN_APR_MEMCACHE_INCLUDES="-I$apr_memcache_prefix/include/apr_memcache-0"
     SVN_APR_MEMCACHE_LIBS="$apr_memcache_prefix/lib/libapr_memcache.la"
-    SVN_APR_MEMCACHE_EXPORT_LIBS="-L$apr_memcache_prefix/lib -lapr_memcache"
     svn_lib_apr_memcache=yes
   elif test $apr_memcache_found = "aprutil"; then
 dnl We are already linking apr-util everywhere, so no special treatement needed.
     SVN_APR_MEMCACHE_PREFIX=""
     SVN_APR_MEMCACHE_INCLUDES=""
     SVN_APR_MEMCACHE_LIBS=""
-    SVN_APR_MEMCACHE_EXPORT_LIBS=""
     svn_lib_apr_memcache=yes
   elif test $apr_memcache_found = "reconfig"; then
     svn_lib_apr_memcache=yes
@@ -80,5 +77,4 @@ dnl We are already linking apr-util everywhere, so no special treatement needed.
   AC_SUBST(SVN_APR_MEMCACHE_PREFIX)
   AC_SUBST(SVN_APR_MEMCACHE_INCLUDES)
   AC_SUBST(SVN_APR_MEMCACHE_LIBS)
-  AC_SUBST(SVN_APR_MEMCACHE_EXPORT_LIBS)
 ])

@@ -6,14 +6,22 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+#    Licensed to the Subversion Corporation (SVN Corp.) under one
+#    or more contributor license agreements.  See the NOTICE file
+#    distributed with this work for additional information
+#    regarding copyright ownership.  The SVN Corp. licenses this file
+#    to you under the Apache License, Version 2.0 (the
+#    "License"); you may not use this file except in compliance
+#    with the License.  You may obtain a copy of the License at
 #
-# This software is licensed as described in the file COPYING, which
-# you should have received as part of this distribution.  The terms
-# are also available at http://subversion.tigris.org/license-1.html.
-# If newer versions of this license are posted there, you may use a
-# newer version instead, at your option.
+#      http://www.apache.org/licenses/LICENSE-2.0
 #
+#    Unless required by applicable law or agreed to in writing,
+#    software distributed under the License is distributed on an
+#    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+#    KIND, either express or implied.  See the License for the
+#    specific language governing permissions and limitations
+#    under the License.
 ######################################################################
 
 # General modules
@@ -517,14 +525,11 @@ def merge_fails_if_subtree_is_deleted_on_src(sbox):
                        '--username', svntest.main.wc_author2,
                        '-m', 'creating a rev with no paths.')
 
-  # This merge causes a tree conflict. Since the result of the previous
-  # merge of A/D/gamma into A_copy/D has not yet been committed, it is
-  # considered a local modification of A_Copy/D/gamma by the following
-  # merge. A delete merged ontop of a modified file is a tree conflict.
-  # See notes/tree-conflicts/detection.txt
-  svntest.actions.run_and_verify_svn(None, expected_merge_output([[6], [3,6]],
-                                     ['D    ' + Acopy_gamma_path + '\n',
-                                     'C    ' + Acopy_D_path + '\n']),
+  # A delete merged ontop of a modified file is normally a tree conflict,
+  # see notes/tree-conflicts/detection.txt, but --force currently avoids
+  # this.
+  svntest.actions.run_and_verify_svn(None, expected_merge_output([[3,6]],
+                                     ['D    ' + Acopy_gamma_path + '\n']),
                                      [], 'merge', '-r1:6', '--force',
                                      A_url, Acopy_path)
 

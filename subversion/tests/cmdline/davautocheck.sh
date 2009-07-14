@@ -195,13 +195,15 @@ LOAD_MOD_AUTH="$(get_loadmodule_config mod_auth_basic)" \
     || fail "Auth_Basic module not found."
 LOAD_MOD_ACCESS_COMPAT="$(get_loadmodule_config mod_access_compat)" \
     && {
-say "Found Auth modules for Apache 2.3.0+"
+say "Found modules for Apache 2.3.0+"
 LOAD_MOD_AUTHN_CORE="$(get_loadmodule_config mod_authn_core)" \
     || fail "Authn_Core module not found."
 LOAD_MOD_AUTHZ_CORE="$(get_loadmodule_config mod_authz_core)" \
     || fail "Authz_Core module not found."
 LOAD_MOD_AUTHZ_HOST="$(get_loadmodule_config mod_authz_host)" \
     || fail "Authz_Host module not found."
+LOAD_MOD_UNIXD=$(get_loadmodule_config mod_unixd) \
+    || fail "UnixD module not found"
 }
 LOAD_MOD_AUTHN_FILE="$(get_loadmodule_config mod_authn_file)" \
     || fail "Authn_File module not found."
@@ -233,6 +235,7 @@ touch $HTTPD_MIME_TYPES
 cat > "$HTTPD_CFG" <<__EOF__
 $LOAD_MOD_LOG_CONFIG
 $LOAD_MOD_MIME
+$LOAD_MOD_UNIXD
 $LOAD_MOD_DAV
 LoadModule          dav_svn_module "$MOD_DAV_SVN"
 $LOAD_MOD_AUTH
@@ -244,8 +247,8 @@ $LOAD_MOD_AUTHZ_HOST
 LoadModule          authz_svn_module "$MOD_AUTHZ_SVN"
 
 LockFile            lock
-User                $(whoami)
-Group               $(groups | awk '{print $1}')
+User                $(id -un)
+Group               $(id -gn)
 Listen              localhost:$HTTPD_PORT
 ServerName          localhost
 PidFile             "$HTTPD_PID"

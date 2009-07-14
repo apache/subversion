@@ -2,17 +2,22 @@
  * commit.c :  entry point for commit RA functions for ra_serf
  *
  * ====================================================================
- * Copyright (c) 2006, 2008 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -254,17 +259,24 @@ create_checkout_body(void *baton,
   return body_bkt;
 }
 
-static apr_status_t
+/* Implements svn_ra_serf__response_handler_t */
+static svn_error_t *
 handle_checkout(serf_request_t *request,
                 serf_bucket_t *response,
                 void *handler_baton,
                 apr_pool_t *pool)
 {
   checkout_context_t *ctx = handler_baton;
-  apr_status_t status;
 
-  status = svn_ra_serf__handle_status_only(request, response, &ctx->progress,
-                                           pool);
+  svn_error_t *err = svn_ra_serf__handle_status_only(request, response,
+                                                     &ctx->progress, pool);
+
+  /* These handler functions are supposed to return an APR_EOF status 
+     wrapped in a svn_error_t to indicate to serf that the response was 
+     completely read. While we have to return this status code to our
+     caller, we should treat it as the normal case for now. */
+  if (err && ! APR_STATUS_IS_EOF(err->apr_err))
+    return err;
 
   /* Get the resulting location. */
   if (ctx->progress.done && ctx->progress.status == 201)
@@ -277,14 +289,14 @@ handle_checkout(serf_request_t *request,
       location = serf_bucket_headers_get(hdrs, "Location");
       if (!location)
         {
-          abort();
+          SVN_ERR_MALFUNCTION();
         }
       apr_uri_parse(pool, location, &uri);
 
       ctx->resource_url = svn_uri_canonicalize(uri.path, ctx->pool);
     }
 
-  return status;
+  return err;
 }
 
 /* Return the relative path from DIR's topmost parent to DIR, in
@@ -406,8 +418,8 @@ checkout_dir(dir_context_t *dir)
       if (err->apr_err == SVN_ERR_FS_CONFLICT)
         SVN_ERR_W(err, apr_psprintf(dir->pool,
                   _("Directory '%s' is out of date; try updating"),
-                  svn_path_local_style(relative_dir_path(dir, dir->pool),
-                                       dir->pool)));
+                  svn_dirent_local_style(relative_dir_path(dir, dir->pool),
+                                         dir->pool)));
       return err;
     }
 
@@ -577,8 +589,8 @@ checkout_file(file_context_t *file)
       if (err->apr_err == SVN_ERR_FS_CONFLICT)
         SVN_ERR_W(err, apr_psprintf(file->pool,
                   _("File '%s' is out of date; try updating"),
-                  svn_path_local_style(relative_file_path(file, file->pool),
-                                       file->pool)));
+                  svn_dirent_local_style(relative_file_path(file, file->pool),
+                                         file->pool)));
       return err;
     }
 
@@ -1011,8 +1023,9 @@ post_headers_iterator_callback(void *baton,
 
 /* A custom serf_response_handler_t which is mostly a wrapper around
    svn_ra_serf__handle_status_only -- it just notices POST response
-   headers, too. */
-static apr_status_t
+   headers, too.
+   Implements svn_ra_serf__response_handler_t */
+static svn_error_t *
 post_response_handler(serf_request_t *request,
                       serf_bucket_t *response,
                       void *baton,
@@ -1116,23 +1129,15 @@ open_root(void *edit_baton,
       svn_ra_serf__propfind_context_t *propfind_ctx;
       const char *activity_str;
       const char *vcc_url;
-      svn_error_t *err;
 
-      svn_ra_serf__create_options_req(&opt_ctx, ctx->session,
-                                      ctx->session->conns[0],
-                                      ctx->session->repos_url.path, ctx->pool);
+      SVN_ERR(svn_ra_serf__create_options_req(&opt_ctx, ctx->session,
+                                              ctx->session->conns[0],
+                                              ctx->session->repos_url.path,
+                                              ctx->pool));
 
-      err = svn_ra_serf__context_run_wait(
+      SVN_ERR(svn_ra_serf__context_run_wait(
         svn_ra_serf__get_options_done_ptr(opt_ctx),
-        ctx->session, ctx->pool);
-
-      /* Return all of the three available errors, favoring the
-         more specific ones over the more generic. */
-      SVN_ERR(svn_error_compose_create(
-        svn_ra_serf__get_options_error(opt_ctx),
-        svn_error_compose_create(
-          svn_ra_serf__get_options_parser_error(opt_ctx),
-          err)));
+        ctx->session, ctx->pool));
 
       activity_str = svn_ra_serf__options_get_activity_collection(opt_ctx);
       if (!activity_str)
@@ -1178,9 +1183,11 @@ open_root(void *edit_baton,
 
       props = apr_hash_make(ctx->pool);
       propfind_ctx = NULL;
-      svn_ra_serf__deliver_props(&propfind_ctx, props, ctx->session,
-                                 ctx->conn, vcc_url, SVN_INVALID_REVNUM, "0",
-                                 checked_in_props, FALSE, NULL, ctx->pool);
+      SVN_ERR(svn_ra_serf__deliver_props(&propfind_ctx, props, ctx->session,
+                                         ctx->conn, vcc_url,
+                                         SVN_INVALID_REVNUM, "0",
+                                         checked_in_props, FALSE,
+                                         NULL, ctx->pool));
 
       SVN_ERR(svn_ra_serf__wait_for_props(propfind_ctx, ctx->session,
                                           ctx->pool));

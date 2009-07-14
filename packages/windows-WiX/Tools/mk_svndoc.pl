@@ -3,17 +3,22 @@
 # FILE       mk_svndoc
 # PURPOSE    Making MS HTML-help from the Subversion source documentation
 # ====================================================================
-# Copyright (c) 2000-2009 CollabNet.  All rights reserved.
+#    Licensed to the Subversion Corporation (SVN Corp.) under one
+#    or more contributor license agreements.  See the NOTICE file
+#    distributed with this work for additional information
+#    regarding copyright ownership.  The SVN Corp. licenses this file
+#    to you under the Apache License, Version 2.0 (the
+#    "License"); you may not use this file except in compliance
+#    with the License.  You may obtain a copy of the License at
 #
-# This software is licensed as described in the file COPYING, which
-# you should have received as part of this distribution.  The terms
-# are also available at http://subversion.tigris.org/license-1.html.
-# If newer versions of this license are posted there, you may use a
-# newer version instead, at your option.
+#      http://www.apache.org/licenses/LICENSE-2.0
 #
-# This software consists of voluntary contributions made by many
-# individuals.  For exact contribution history, see the revision
-# history and logs, available at http://subversion.tigris.org/.
+#    Unless required by applicable law or agreed to in writing,
+#    software distributed under the License is distributed on an
+#    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+#    KIND, either express or implied.  See the License for the
+#    specific language governing permissions and limitations
+#    under the License.
 # ====================================================================
 
 ##########################################################################
@@ -68,6 +73,16 @@ Main;
 # DOES       This is the program's main function
 sub Main
 {
+	#provided translations
+#	&mkLang('de');
+	&mkLang('en');
+#	&mkLang('es');
+#	&mkLang('it');
+#	&mkLang('ru');
+}
+
+sub mkLang
+{
     my $CntMkHtmBat='';
     my %Values;
     my $RootSvnBook=&cmn_ValuePathfile('svn_dynamics.ini', 'path_svnbook');
@@ -117,7 +132,7 @@ sub Main
 
     #Copy style sheet and background image to $RootSvnBook\src\out
     system ("copy /Y .\\templates\\svn-doc.css $RootSvnBook\\src\\out");
-    system ("copy /Y .\\images\\svn_bck.png $RootSvnBook\\src\\out");
+    system ("copy /Y ..\\BuildSubversion\\Bitmaps\\svn_bck.png $RootSvnBook\\src\\out");
 
     # Set the revision number in $RootSvnBook\src\en\book\version.xml
     chdir "$RootSvnBook\\src\\en";

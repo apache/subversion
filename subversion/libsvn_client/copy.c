@@ -2,17 +2,22 @@
  * copy.c:  copy/move wrappers around wc 'copy' functionality.
  *
  * ====================================================================
- * Copyright (c) 2000-2009 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -130,7 +135,8 @@ calculate_target_mergeinfo(svn_ra_session_t *ra_session,
           SVN_ERR(svn_client__get_wc_mergeinfo(&src_mergeinfo, &inherited,
                                                FALSE, svn_mergeinfo_inherited,
                                                entry, src_path_or_url, NULL,
-                                               NULL, adm_access, ctx, pool));
+                                               NULL, adm_access, ctx,
+                                               pool));
         }
     }
 
@@ -141,15 +147,18 @@ calculate_target_mergeinfo(svn_ra_session_t *ra_session,
 /* Extend the mergeinfo for the single WC path TARGET_WCPATH, adding
    MERGEINFO to any mergeinfo pre-existing in the WC. */
 static svn_error_t *
-extend_wc_mergeinfo(const char *target_wcpath, const svn_wc_entry_t *entry,
-                    apr_hash_t *mergeinfo, svn_wc_adm_access_t *adm_access,
-                    svn_client_ctx_t *ctx, apr_pool_t *pool)
+extend_wc_mergeinfo(const char *target_abspath,
+                    const svn_wc_entry_t *entry,
+                    apr_hash_t *mergeinfo,
+                    svn_wc_adm_access_t *adm_access,
+                    svn_client_ctx_t *ctx,
+                    apr_pool_t *pool)
 {
   apr_hash_t *wc_mergeinfo;
 
   /* Get a fresh copy of the pre-existing state of the WC's mergeinfo
      updating it. */
-  SVN_ERR(svn_client__parse_mergeinfo(&wc_mergeinfo, entry, target_wcpath,
+  SVN_ERR(svn_client__parse_mergeinfo(&wc_mergeinfo, entry, target_abspath,
                                       FALSE, adm_access, ctx, pool));
 
   /* Combine the provided mergeinfo with any mergeinfo from the WC. */
@@ -158,8 +167,8 @@ extend_wc_mergeinfo(const char *target_wcpath, const svn_wc_entry_t *entry,
   else if (! wc_mergeinfo)
     wc_mergeinfo = mergeinfo;
 
-  return svn_client__record_wc_mergeinfo(target_wcpath, wc_mergeinfo,
-                                         adm_access, ctx, pool);
+  return svn_client__record_wc_mergeinfo(target_abspath, wc_mergeinfo,
+                                         ctx, pool);
 }
 
 /* Find the longest common ancestor of paths in COPY_PAIRS.  If
@@ -249,8 +258,8 @@ do_wc_to_wc_copies(const apr_array_header_t *copy_pairs,
      the directory once, and use it for each copy. */
   /* ### If we didn't potentially use DST_ACCESS as the SRC_ACCESS, we
      ### could use a read lock here. */
-  SVN_ERR(svn_wc_adm_open3(&dst_access, NULL, dst_parent, TRUE, 0,
-                           ctx->cancel_func, ctx->cancel_baton, pool));
+  SVN_ERR(svn_wc__adm_open_in_context(&dst_access, ctx->wc_ctx, dst_parent,
+                           TRUE, 0, ctx->cancel_func, ctx->cancel_baton, pool));
 
   for (i = 0; i < copy_pairs->nelts; i++)
     {
@@ -309,8 +318,8 @@ do_wc_to_wc_moves(const apr_array_header_t *copy_pairs,
 
       svn_dirent_split(pair->src, &src_parent, NULL, iterpool);
 
-      SVN_ERR(svn_wc_adm_open3(&src_access, NULL, src_parent, TRUE,
-                               pair->src_kind == svn_node_dir ? -1 : 0,
+      SVN_ERR(svn_wc__adm_open_in_context(&src_access, ctx->wc_ctx, src_parent,
+                               TRUE, pair->src_kind == svn_node_dir ? -1 : 0,
                                ctx->cancel_func, ctx->cancel_baton,
                                iterpool));
 
@@ -338,10 +347,11 @@ do_wc_to_wc_moves(const apr_array_header_t *copy_pairs,
             }
           else
             {
-              SVN_ERR(svn_wc_adm_open3(&dst_access, NULL, pair->dst_parent,
-                                       TRUE, 0, ctx->cancel_func,
-                                       ctx->cancel_baton,
-                                       iterpool));
+              SVN_ERR(svn_wc__adm_open_in_context(&dst_access, ctx->wc_ctx,
+                                                  pair->dst_parent, TRUE, 0,
+                                                  ctx->cancel_func,
+                                                  ctx->cancel_baton,
+                                                  iterpool));
             }
         }
 
@@ -395,7 +405,7 @@ wc_to_wc_copy(const apr_array_header_t *copy_pairs,
       if (pair->src_kind == svn_node_none)
         return svn_error_createf(SVN_ERR_NODE_UNKNOWN_KIND, NULL,
                                  _("Path '%s' does not exist"),
-                                 svn_path_local_style(pair->src, pool));
+                                 svn_dirent_local_style(pair->src, pool));
 
       /* If DST_PATH does not exist, then its basename will become a new
          file or dir added to its parent (possibly an implicit '.').
@@ -404,7 +414,7 @@ wc_to_wc_copy(const apr_array_header_t *copy_pairs,
       if (dst_kind != svn_node_none)
         return svn_error_createf(SVN_ERR_ENTRY_EXISTS, NULL,
                                  _("Path '%s' already exists"),
-                                 svn_path_local_style(pair->dst, pool));
+                                 svn_dirent_local_style(pair->dst, pool));
 
       svn_dirent_split(pair->dst, &pair->dst_parent, &pair->base_name, pool);
 
@@ -420,7 +430,7 @@ wc_to_wc_copy(const apr_array_header_t *copy_pairs,
         {
           return svn_error_createf(SVN_ERR_WC_NOT_DIRECTORY, NULL,
                                    _("Path '%s' is not a directory"),
-                                   svn_path_local_style(pair->dst_parent,
+                                   svn_dirent_local_style(pair->dst_parent,
                                                         pool));
         }
     }
@@ -1305,6 +1315,9 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
   svn_revnum_t src_revnum = pair->src_revnum;
   apr_hash_t *src_mergeinfo;
   const svn_wc_entry_t *dst_entry;
+  const char *dst_abspath;
+
+  SVN_ERR(svn_dirent_get_absolute(&dst_abspath, pair->dst, pool));
 
   if (pair->src_kind == svn_node_dir)
     {
@@ -1364,7 +1377,7 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
           SVN_ERR(calculate_target_mergeinfo(ra_session, &src_mergeinfo, NULL,
                                              pair->src, src_revnum,
                                              FALSE, ctx, pool));
-          SVN_ERR(extend_wc_mergeinfo(pair->dst, dst_entry, src_mergeinfo,
+          SVN_ERR(extend_wc_mergeinfo(dst_abspath, dst_entry, src_mergeinfo,
                                       dst_access, ctx, pool));
         }
       else  /* different repositories */
@@ -1424,7 +1437,7 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
       SVN_ERR(calculate_target_mergeinfo(ra_session, &src_mergeinfo,
                                          NULL, pair->src, src_revnum,
                                          FALSE, ctx, pool));
-      SVN_ERR(extend_wc_mergeinfo(pair->dst, dst_entry, src_mergeinfo,
+      SVN_ERR(extend_wc_mergeinfo(dst_abspath, dst_entry, src_mergeinfo,
                                   adm_access, ctx, pool));
 
       /* Ideally, svn_wc_add_repos_file3() would take a notify function
@@ -1544,7 +1557,7 @@ repos_to_wc_copy(const apr_array_header_t *copy_pairs,
         {
           return svn_error_createf(SVN_ERR_ENTRY_EXISTS, NULL,
                                    _("Path '%s' already exists"),
-                                   svn_path_local_style(pair->dst, pool));
+                                   svn_dirent_local_style(pair->dst, pool));
         }
 
       /* Make sure the destination parent is a directory and produce a clear
@@ -1560,7 +1573,7 @@ repos_to_wc_copy(const apr_array_header_t *copy_pairs,
         {
           return svn_error_createf(SVN_ERR_WC_NOT_DIRECTORY, NULL,
                                    _("Path '%s' is not a directory"),
-                                   svn_path_local_style(dst_parent, pool));
+                                   svn_dirent_local_style(dst_parent, pool));
         }
     }
 
@@ -1592,7 +1605,7 @@ repos_to_wc_copy(const apr_array_header_t *copy_pairs,
               return svn_error_createf
                 (SVN_ERR_ENTRY_EXISTS,
                  NULL, _("'%s' is already under version control"),
-                 svn_path_local_style(pair->dst, pool));
+                 svn_dirent_local_style(pair->dst, pool));
             }
           else if ((ent->kind != svn_node_dir) &&
                    (ent->schedule != svn_wc_schedule_delete)
@@ -1600,7 +1613,7 @@ repos_to_wc_copy(const apr_array_header_t *copy_pairs,
             return svn_error_createf
               (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
                _("Entry for '%s' exists (though the working file is missing)"),
-               svn_path_local_style(pair->dst, pool));
+               svn_dirent_local_style(pair->dst, pool));
         }
     }
 
@@ -1780,8 +1793,8 @@ try_copy(svn_commit_info_t **commit_info_p,
             return svn_error_createf
               (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
                _("Cannot copy path '%s' into its own child '%s'"),
-               svn_path_local_style(pair->src, pool),
-               svn_path_local_style(pair->dst, pool));
+               svn_dirent_local_style(pair->src, pool),
+               svn_dirent_local_style(pair->dst, pool));
         }
 
       svn_pool_destroy(iterpool);
@@ -1819,7 +1832,7 @@ try_copy(svn_commit_info_t **commit_info_p,
                                        "'%s'; please propedit the "
                                        "svn:externals description that "
                                        "created it"),
-                                     svn_path_local_style(pair->src, pool));
+                                     svn_dirent_local_style(pair->src, pool));
         }
       svn_pool_destroy(iterpool);
     }
@@ -1837,7 +1850,7 @@ try_copy(svn_commit_info_t **commit_info_p,
                 return svn_error_createf
                   (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
                    _("Cannot move path '%s' into itself"),
-                   svn_path_local_style(pair->src, pool));
+                   svn_dirent_local_style(pair->src, pool));
             }
         }
       else
@@ -1910,7 +1923,7 @@ try_copy(svn_commit_info_t **commit_info_p,
                     return svn_error_createf
                       (SVN_ERR_ENTRY_MISSING_URL, NULL,
                        _("'%s' does not have a URL associated with it"),
-                       svn_path_local_style(pair->src, pool));
+                       svn_dirent_local_style(pair->src, pool));
 
                   pair->src = apr_pstrdup(pool, url);
 

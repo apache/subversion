@@ -2,17 +2,22 @@
  * ra-local-test.c :  basic tests for the RA LOCAL library
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -77,7 +82,7 @@ current_directory_url(const char **url,
 static svn_error_t *
 make_and_open_local_repos(svn_ra_session_t **session,
                           const char *repos_name,
-                          svn_test_opts_t *opts,
+                          const svn_test_opts_t *opts,
                           apr_pool_t *pool)
 {
   svn_repos_t *repos;
@@ -109,17 +114,10 @@ make_and_open_local_repos(svn_ra_session_t **session,
 
 /* Open an RA session to a local repository. */
 static svn_error_t *
-open_ra_session(const char **msg,
-                svn_boolean_t msg_only,
-                svn_test_opts_t *opts,
+open_ra_session(const svn_test_opts_t *opts,
                 apr_pool_t *pool)
 {
   svn_ra_session_t *session;
-
-  *msg = "open an ra session to a local repository";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
 
   SVN_ERR(make_and_open_local_repos(&session,
                                     "test-repo-open", opts, pool));
@@ -130,18 +128,11 @@ open_ra_session(const char **msg,
 
 /* Discover the youngest revision in a repository.  */
 static svn_error_t *
-get_youngest_rev(const char **msg,
-                 svn_boolean_t msg_only,
-                 svn_test_opts_t *opts,
+get_youngest_rev(const svn_test_opts_t *opts,
                  apr_pool_t *pool)
 {
   svn_ra_session_t *session;
   svn_revnum_t latest_rev;
-
-  *msg = "get the youngest revision in a repository";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
 
   SVN_ERR(make_and_open_local_repos(&session,
                                     "test-repo-getrev", opts,
@@ -180,17 +171,9 @@ try_split_url(const char *url, apr_pool_t *pool)
 
 
 static svn_error_t *
-split_url_syntax(const char **msg,
-                 svn_boolean_t msg_only,
-                 svn_test_opts_t *opts,
-                 apr_pool_t *pool)
+split_url_syntax(apr_pool_t *pool)
 {
   apr_status_t apr_err;
-
-  *msg = "svn_ra_local__split_URL: syntax validation";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
 
   /* TEST 1:  Make sure we can recognize bad URLs (this should not
      require a filesystem) */
@@ -220,17 +203,9 @@ split_url_syntax(const char **msg,
 }
 
 static svn_error_t *
-split_url_bad_host(const char **msg,
-                   svn_boolean_t msg_only,
-                   svn_test_opts_t *opts,
-                   apr_pool_t *pool)
+split_url_bad_host(apr_pool_t *pool)
 {
   apr_status_t apr_err;
-
-  *msg = "svn_ra_local__split_URL: invalid host names";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
 
   /* Give a hostname other than `' or `localhost' */
   apr_err = try_split_url("file://myhost/repos/path", pool);
@@ -243,17 +218,9 @@ split_url_bad_host(const char **msg,
 }
 
 static svn_error_t *
-split_url_host(const char **msg,
-               svn_boolean_t msg_only,
-               svn_test_opts_t *opts,
-               apr_pool_t *pool)
+split_url_host(apr_pool_t *pool)
 {
   apr_status_t apr_err;
-
-  *msg = "svn_ra_local__split_URL: valid host names";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
 
   /* Make sure we *don't* fuss about a good URL (note that this URL
      still doesn't point to an existing versioned resource) */
@@ -286,7 +253,7 @@ split_url_host(const char **msg,
 static svn_error_t *
 check_split_url(const char *repos_path,
                 const char *in_repos_path,
-                svn_test_opts_t *opts,
+                const svn_test_opts_t *opts,
                 apr_pool_t *pool)
 {
   svn_repos_t *repos;
@@ -324,16 +291,9 @@ check_split_url(const char *repos_path,
 
 
 static svn_error_t *
-split_url_test(const char **msg,
-               svn_boolean_t msg_only,
-               svn_test_opts_t *opts,
+split_url_test(const svn_test_opts_t *opts,
                apr_pool_t *pool)
 {
-  *msg = "test svn_ra_local__split_URL correctness";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-
   /* TEST 2: Given well-formed URLs, make sure that we can correctly
      find where the filesystem portion of the path ends and the
      in-repository path begins.  */
@@ -366,11 +326,17 @@ split_url_test(const char **msg,
 struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
-    SVN_TEST_PASS(open_ra_session),
-    SVN_TEST_PASS(get_youngest_rev),
-    SVN_TEST_PASS(split_url_syntax),
-    SVN_TEST_SKIP(split_url_bad_host, HAS_UNC_HOST),
-    SVN_TEST_PASS(split_url_host),
-    SVN_TEST_PASS(split_url_test),
+    SVN_TEST_OPTS_PASS(open_ra_session,
+                       "open an ra session to a local repository"),
+    SVN_TEST_OPTS_PASS(get_youngest_rev,
+                      "get the youngest revision in a repository"),
+    SVN_TEST_PASS2(split_url_syntax,
+                   "svn_ra_local__split_URL: syntax validation"),
+    SVN_TEST_SKIP2(split_url_bad_host, HAS_UNC_HOST,
+                   "svn_ra_local__split_URL: invalid host names"),
+    SVN_TEST_PASS2(split_url_host,
+                   "svn_ra_local__split_URL: valid host names"),
+    SVN_TEST_OPTS_PASS(split_url_test,
+                       "test svn_ra_local__split_URL correctness"),
     SVN_TEST_NULL
   };

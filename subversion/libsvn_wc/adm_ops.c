@@ -7,17 +7,22 @@
  *            file in the working copy).
  *
  * ====================================================================
- * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -145,7 +150,7 @@ tweak_entries(svn_wc__db_t *db,
       SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL,
                                    NULL, NULL, NULL, NULL, &child_depth, NULL,
                                    NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                   NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, NULL,
                                    db, child_abspath, iterpool, iterpool));
 
       /* If a file, or deleted, excluded or absent dir, then tweak the
@@ -292,7 +297,7 @@ svn_wc__do_update_cleanup(const char *path,
   else
     return svn_error_createf(SVN_ERR_NODE_UNKNOWN_KIND, NULL,
                              _("Unrecognized node kind: '%s'"),
-                             svn_path_local_style(path, pool));
+                             svn_dirent_local_style(path, pool));
 
   return SVN_NO_ERROR;
 }
@@ -996,11 +1001,11 @@ erase_unversioned_from_wc(const char *path,
           else if (kind == svn_node_none)
             return svn_error_createf(SVN_ERR_BAD_FILENAME, NULL,
                                      _("'%s' does not exist"),
-                                     svn_path_local_style(path, pool));
+                                     svn_dirent_local_style(path, pool));
           else
             return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
                                      _("Unsupported node kind for path '%s'"),
-                                     svn_path_local_style(path, pool));
+                                     svn_dirent_local_style(path, pool));
 
         }
     }
@@ -1156,7 +1161,13 @@ svn_wc_delete3(const char *path,
     entry = NULL;
 
   if (!entry)
-    return erase_unversioned_from_wc(path, cancel_func, cancel_baton, pool);
+    {
+      if (!keep_local)
+        SVN_ERR(erase_unversioned_from_wc(path, cancel_func, cancel_baton,
+                pool));
+
+      return SVN_NO_ERROR;
+    }
 
   /* A file external should not be deleted since the file external is
      implemented as a switched file and it would delete the file the
@@ -1167,7 +1178,7 @@ svn_wc_delete3(const char *path,
                              _("Cannot remove the file external at '%s'; "
                                "please propedit or propdel the svn:externals "
                                "description that created it"),
-                             svn_path_local_style(path, pool));
+                             svn_dirent_local_style(path, pool));
 
   /* Note: Entries caching?  What happens to this entry when the entries
      file is updated?  Lets play safe and copy the values */
@@ -1375,11 +1386,11 @@ svn_wc_add3(const char *path,
   if (kind == svn_node_none)
     return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
                              _("'%s' not found"),
-                             svn_path_local_style(path, pool));
+                             svn_dirent_local_style(path, pool));
   if (kind == svn_node_unknown)
     return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
                              _("Unsupported node kind for path '%s'"),
-                             svn_path_local_style(path, pool));
+                             svn_dirent_local_style(path, pool));
 
   /* Get the original entry for this path if one exists (perhaps
      this is actually a replacement of a previously deleted thing).
@@ -1412,7 +1423,7 @@ svn_wc_add3(const char *path,
           return svn_error_createf
             (SVN_ERR_ENTRY_EXISTS, NULL,
              _("'%s' is already under version control"),
-             svn_path_local_style(path, pool));
+             svn_dirent_local_style(path, pool));
         }
       else if (orig_entry->kind != kind)
         {
@@ -1426,8 +1437,8 @@ svn_wc_add3(const char *path,
              _("Can't replace '%s' with a node of a differing type; "
                "the deletion must be committed and the parent updated "
                "before adding '%s'"),
-             svn_path_local_style(path, pool),
-             svn_path_local_style(path, pool));
+             svn_dirent_local_style(path, pool),
+             svn_dirent_local_style(path, pool));
         }
       if (orig_entry->schedule == svn_wc_schedule_delete)
         is_replace = TRUE;
@@ -1441,17 +1452,17 @@ svn_wc_add3(const char *path,
     return svn_error_createf
       (SVN_ERR_ENTRY_NOT_FOUND, NULL,
        _("Can't find parent directory's entry while trying to add '%s'"),
-       svn_path_local_style(path, pool));
+       svn_dirent_local_style(path, pool));
   if (svn_wc_is_adm_dir(base_name, pool))
     return svn_error_createf
       (SVN_ERR_ENTRY_FORBIDDEN, NULL,
        _("Can't create an entry with a reserved name while trying to add '%s'"),
-       svn_path_local_style(path, pool));
+       svn_dirent_local_style(path, pool));
   if (parent_entry->schedule == svn_wc_schedule_delete)
     return svn_error_createf
       (SVN_ERR_WC_SCHEDULE_CONFLICT, NULL,
        _("Can't add '%s' to a parent directory scheduled for deletion"),
-       svn_path_local_style(path, pool));
+       svn_dirent_local_style(path, pool));
 
   /* Init the modify flags. */
   modify_flags = SVN_WC__ENTRY_MODIFY_SCHEDULE | SVN_WC__ENTRY_MODIFY_KIND;
@@ -1713,6 +1724,8 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
   svn_stringbuf_t *log_accum = svn_stringbuf_create("", pool);
   apr_hash_t *baseprops = NULL;
   svn_boolean_t revert_base = FALSE;
+  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
+  const char *local_abspath;
 
   /* By default, assume no action; we'll see what happens later. */
   *reverted = FALSE;
@@ -1722,17 +1735,15 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
   if (strcmp(name, SVN_WC_ENTRY_THIS_DIR) != 0)
     fullpath = svn_dirent_join(fullpath, name, pool);
 
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, fullpath, pool));
+
   /* Deal with properties. */
   if (entry->schedule == svn_wc_schedule_replace)
     {
-      svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
-      const char *local_abspath;
-
       /* Refer to the original base, before replacement. */
       revert_base = TRUE;
 
       /* Use the revertpath as the new propsbase if it exists. */
-      SVN_ERR(svn_dirent_get_absolute(&local_abspath, fullpath, pool));
       SVN_ERR(svn_wc__load_props(NULL, NULL, &baseprops, db, local_abspath,
                                  pool, pool));
 
@@ -1758,8 +1769,8 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
 
           /* Get the full list of property changes and see if any magic
              properties were changed. */
-          SVN_ERR(svn_wc_get_prop_diffs(&propchanges, &baseprops, fullpath,
-                                        adm_access, pool));
+          SVN_ERR(svn_wc__internal_propdiff(&propchanges, &baseprops, db,
+                                            local_abspath, pool, pool));
 
           /* Determine if any of the propchanges are the "magic" ones that
              might require changing the working file. */
@@ -1820,7 +1831,7 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
                  case all we can do is deliver the expected error. */
               return svn_error_createf(APR_ENOENT, NULL,
                                        _("Error restoring text for '%s'"),
-                                       svn_path_local_style(fullpath, pool));
+                                       svn_dirent_local_style(fullpath, pool));
             }
           else
             {
@@ -1832,7 +1843,7 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
           return svn_error_createf
             (SVN_ERR_NODE_UNKNOWN_KIND, NULL,
              _("unexpected kind for revert-base '%s'"),
-             svn_path_local_style(revert_base_path, pool));
+             svn_dirent_local_style(revert_base_path, pool));
         }
 
       /* You'd think we could just write out one log command to move
@@ -2101,7 +2112,7 @@ revert_entry(svn_depth_t *depth,
           return svn_error_createf(SVN_ERR_NODE_UNKNOWN_KIND, NULL,
                                    _("Unknown or unexpected kind for path "
                                      "'%s'"),
-                                   svn_path_local_style(path, pool));
+                                   svn_dirent_local_style(path, pool));
 
         }
 
@@ -2250,7 +2261,7 @@ revert_internal(svn_wc__db_t *db,
     return svn_error_createf
       (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
        _("Cannot revert '%s': unsupported entry node kind"),
-       svn_path_local_style(path, pool));
+       svn_dirent_local_style(path, pool));
 
   /* Safeguard 3:  can we deal with the node kind of PATH currently in
      the working copy? */
@@ -2261,7 +2272,7 @@ revert_internal(svn_wc__db_t *db,
     return svn_error_createf
       (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
        _("Cannot revert '%s': unsupported node kind in working copy"),
-       svn_path_local_style(path, pool));
+       svn_dirent_local_style(path, pool));
 
   /* If the entry passes changelist filtering, revert it!  */
   if (SVN_WC__CL_MATCH(changelist_hash, entry))
@@ -2476,7 +2487,7 @@ svn_wc_remove_from_revision_control(svn_wc_adm_access_t *adm_access,
           if (text_modified_p && instant_error)
             return svn_error_createf(SVN_ERR_WC_LEFT_LOCAL_MOD, NULL,
                    _("File '%s' has local modifications"),
-                   svn_path_local_style(full_path, pool));
+                   svn_dirent_local_style(full_path, pool));
         }
 
       /* Remove the wcprops. */
@@ -3109,8 +3120,8 @@ svn_wc_add_lock2(svn_wc_context_t *wc_ctx,
       svn_error_clear(err);
       return svn_error_createf(SVN_ERR_ENTRY_NOT_FOUND, NULL,
                                _("'%s' is not under version control"),
-                               svn_path_local_style(local_abspath,
-                                                    scratch_pool));
+                               svn_dirent_local_style(local_abspath,
+                                                      scratch_pool));
     }
 
   /* if svn:needs-lock is present, then make the file read-write. */
@@ -3141,8 +3152,8 @@ svn_wc_remove_lock2(svn_wc_context_t *wc_ctx,
       svn_error_clear(err);
       return svn_error_createf(SVN_ERR_ENTRY_NOT_FOUND, NULL,
                                _("'%s' is not under version control"),
-                               svn_path_local_style(local_abspath,
-                                                    scratch_pool));
+                               svn_dirent_local_style(local_abspath,
+                                                      scratch_pool));
     }
 
   /* if svn:needs-lock is present, then make the file read-only. */

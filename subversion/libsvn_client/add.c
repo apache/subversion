@@ -2,17 +2,22 @@
  * add.c:  wrappers around wc add/mkdir functionality.
  *
  * ====================================================================
- * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -258,6 +263,9 @@ add_file(const char *path,
   const char *mimetype;
   svn_node_kind_t kind;
   svn_boolean_t is_special;
+  const char *local_abspath;
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
   /* Check to see if this is a special file. */
   SVN_ERR(svn_io_check_special_path(path, &kind, &is_special, pool));
@@ -279,10 +287,9 @@ add_file(const char *path,
 
   if (is_special)
     /* This must be a special file. */
-    SVN_ERR(svn_wc_prop_set3
-            (SVN_PROP_SPECIAL,
-             svn_string_create(SVN_PROP_BOOLEAN_TRUE, pool),
-             path, adm_access, FALSE, NULL, NULL, pool));
+    SVN_ERR(svn_wc_prop_set4(ctx->wc_ctx, local_abspath, SVN_PROP_SPECIAL,
+                             svn_string_create(SVN_PROP_BOOLEAN_TRUE, pool),
+                             FALSE, NULL, NULL, pool));
   else if (properties)
     {
       /* loop through the hashtable and add the properties */
@@ -296,8 +303,8 @@ add_file(const char *path,
           /* It's probably best to pass 0 for force, so that if
              the autoprops say to set some weird combination,
              we just error and let the user sort it out. */
-          SVN_ERR(svn_wc_prop_set3(pname, pval, path, adm_access, FALSE,
-                                   NULL, NULL, pool));
+          SVN_ERR(svn_wc_prop_set4(ctx->wc_ctx, local_abspath, pname, pval,
+                                   FALSE, NULL, NULL, pool));
         }
     }
 
@@ -359,10 +366,18 @@ add_dir_recursive(const char *dirname,
 
   SVN_ERR(svn_wc_adm_retrieve(&dir_access, adm_access, dirname, pool));
 
-  if (!no_ignore)
-    SVN_ERR(svn_wc_get_ignores(&ignores, ctx->config, dir_access, pool));
-
   subpool = svn_pool_create(pool);
+
+  if (!no_ignore)
+    {
+      const char *dir_abspath;
+
+      SVN_ERR(svn_dirent_get_absolute(&dir_abspath,
+                                      svn_wc_adm_access_path(dir_access),
+                                      subpool));
+      SVN_ERR(svn_wc_get_ignores2(&ignores, ctx->wc_ctx, dir_abspath,
+                                  ctx->config, pool, subpool));
+    }
 
   SVN_ERR(svn_io_dir_open(&dir, dirname, pool));
 

@@ -2,17 +2,22 @@
  * blame.c:  return blame messages
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -668,6 +673,9 @@ svn_client_blame5(const char *target,
          working copy file with keywords unexpanded */
       svn_wc_adm_access_t *adm_access;
       svn_wc_status2_t *status;
+      const char *target_abspath;
+
+      SVN_ERR(svn_dirent_get_absolute(&target_abspath, target, pool));
 
       SVN_ERR(svn_wc_adm_open3(&adm_access, NULL,
                                svn_dirent_dirname(target, pool), FALSE,
@@ -685,7 +693,8 @@ svn_client_blame5(const char *target,
           const char *temppath;
           apr_hash_t *kw = NULL;
 
-          SVN_ERR(svn_wc_prop_list(&props, target, adm_access, pool));
+          SVN_ERR(svn_wc_prop_list2(&props, ctx->wc_ctx, target_abspath, pool,
+                                    pool));
           SVN_ERR(svn_stream_open_readonly(&wcfile, target, pool, pool));
           
           keywords = apr_hash_get(props, SVN_PROP_KEYWORDS,
@@ -710,6 +719,8 @@ svn_client_blame5(const char *target,
 
           frb.last_filename = temppath;
         }
+
+      SVN_ERR(svn_wc_adm_close2(adm_access, pool));
     }
 
   /* Report the blame to the caller. */

@@ -3,157 +3,119 @@ Commit from Multiple Working Copies
 1) Expected behavior 
 
 When committing files, listing their paths, no matter whether they belong to
-the same work copy or not, if they all live in the same repository, they should
-be committed in one transaction successfully.
+the same work copy or not, if they all live in the same repository, they 
+should be committed successfully.
  
 2) Actual behavior
 
-2a) If the committing files belong to the same working copy, they will be
-committed in one transaction successfully. 
+Currently, the code "condenses" all target paths, which means it
+tries to find a common root for them, and then it tries to lock that
+common root. If the common root is not a working copy, locking the
+common root fails and the commit is simply aborted ("svn: <common root>
+is not a working copy"). Multiple commit targets will only be committed
+successfully if all they all belong to the same working copy.
 
-2b) Otherwise, if they belong to more than one working copy, svn will output an
-error which indicates that their common ancestor is not a work copy and commit
-action fails.
- 
-3) Suggested change
+3) Suggested behaviour
 
-This section has two parts. The first part introduces how this issue is solved
-in SVNKit, and then I will give my suggestions on how we should solve this
-issue in the second part.
- 
-3a) SVNKit's solution
- 
-1. SVNKit receives list of paths to commit.
- 
-2. All paths are grouped by wc root path, so we get a map of wc_root:paths
-pairs - one for each working copy.
- 
-3. For each pair in Map we create SVNWCAccess object - wc_access - which is
-actually a collection of directories being opened for commit (same as
-svn_wc_adm_access_t set in native SVN).
- 
-4. For each wc_access we collect items to commit, same way as for "normal"
-commit. Each item refers to its wc_access. Then we group all items by its
-repos_url and repos_uuid (fetching it from repos if not available).
- 
-5. So we have commit items grouped by repository root URL, each item may refer
-to its own wc_access (working copy). We call such a group a "commit packet".  
+There are three possible solutions, listed in order of difficulty.
 
-7. Now we have a list of commit packets-one for each repository. Then we will
-commit each commit packet as a transaction.
- 
-8. During commit and in post commit code we use that wc_access references that
-is stored in each commit item to update corresponding working copy, write and
-execute log files and then finally to close all open directories.
- 
-3b) Suggested change for Subversion
- 
-I think that "One Commit, One Transaction" is the best (and this is also
-compatible with original system). So commit files from different repositories
-at a time and break them into several transactions may be not a good idea. And
-I suggest that we should constrain committing files in the same repository.
- 
-1. We receives list of paths to commit.
+A  Make svn_client_commit4() do multiple commits, one for each
+   target working copy. Essentially:
+     svn commit wc1; svn commit wc2; ...; svn commit wcN;
+   This solution has many drawbacks, but is the easiest one to implement.
+   Most people won't like it and it will probably never end up
+   in a Subversion release. The solution will be discarded
+   anyway later when commit functionality is rebased on WC-NG.
 
-In subversion\svn\commit-cmd.c: function 
-svn_error_t *
-svn_cl__commit(apr_getopt_t *os,
-               void *baton,
-               apr_pool_t *pool)
-receives the file list first.
+B  Try to change the current commit code into passing around a
+   list of access batons, and make it create truly atomic commits
+   from multiple working copies as people would expect. This solution
+   is much more involved than A.
+   People might like it, and it could even end up in a release if
+   WC-NG continues to progress at the current slow speed.
+   The solution will be discarded or amended later when commit
+   functionality is rebased on WC-NG.
 
-Then in E:\subversion\subversion\libsvn_client\commit.c: function
-svn_error_t *
-svn_client_commit4(svn_commit_info_t **commit_info_p,
-                   const apr_array_header_t *targets,
-                   svn_depth_t depth,
-                   svn_boolean_t keep_locks,
-                   svn_boolean_t keep_changelists,
-                   const apr_array_header_t *changelists,
-                   const apr_hash_t *revprop_table,
-                   svn_client_ctx_t *ctx,
+C  Start working on WC-NG instead of doing this in wc-1. A lot of
+   things are still left to do before svn commit will even start using
+   WC-NG code. So the goal will change from "allow commit from multiple
+   working copies" to "help get WC-NG ready so that, one day, we can have
+   truly atomic commits from multiple working copies". 
+ 
+Since this problem is being worked on as part of Summer of Code,
+and the student has no prior experience with the Subversion code
+base, it is reasonable to solve the problem in multiple steps,
+implementing solution A first, and then extend that to solution B,
+or jump straight to solution C.
+
+Below, we describe how solution A will be implemented.
+
+Because solution A will make more than one commit, we'll have to make
+svn_client_commit4() return an array of svn_commit_info_t
+objects, one for each commit made, instead of just a single
+svn_commit_info_t object. Because this changes the public API,
+we need to bump the function's revision to 5: svn_client_commit5().
+This API change will be reverted in case solution B or solution C
+gets implemented, or in case solution A gets discarded before release.
+
+1. We receive a list of targets to commit.
+
+  In subversion\svn\commit-cmd.c the function 
+    svn_error_t *
+    svn_cl__commit(apr_getopt_t *os,
+                   void *baton,
                    apr_pool_t *pool)
-uses the file list do commit. 
+  receives the targest list first.
+
+  Then, in E:\subversion\subversion\libsvn_client\commit.c the function
+    svn_error_t *
+    svn_client_commit4(svn_commit_info_t **commit_info_p,
+                       const apr_array_header_t *targets,
+                       svn_depth_t depth,
+                       svn_boolean_t keep_locks,
+                       svn_boolean_t keep_changelists,
+                       const apr_array_header_t *changelists,
+                       const apr_hash_t *revprop_table,
+                       svn_client_ctx_t *ctx,
+                       apr_pool_t *pool)
+  uses the targest list to do a commit.
  
-2. All paths are grouped by wc root path, so we get a map of wc_root:paths
-pairs - one for each working copy.
- 
-Here use an apr_hash_t * hash of const char * paths, keyed on working copy 
-path directory names to store the wc_root:paths map. It would be a local 
-variable of the function svn_client_commit4, because it is used several times
-in the function. And it is allocated from pool by using apr_hash_make(pool).
+2. If targets are not from the same working copy, we do the following 
+   instead of aborting the commit:
 
-It will be created after the paths are checked for non-url form.
+   If locking the common root failed:
+    For each target path we got:
+      For each working copy root we already know (initially we don't
+        know any working copy roots):
+          Check if the current target path is below the working copy root.
+          If it is, put it into this root's group ("commit packet")
+          and continue with the next target path.
 
-3. For each pair in Map we create svn_wc_adm_access_t- wc_access.
+      If we end up here, no suitable working copy root was found
+      for the current target path.
+      Walk the current target path downwards, starting from the common
+      root (the root which we could not lock, in the code this is often
+      called the "base_dir").
+      Try to lock the current directory at each step.
+      If locking succeeds, we have found a new WC root!
+      Store its access baton in the set of known working copy roots.
+      Put the current target path into the group of the root we just found.
+      
+      Here we use a struct to store each "commit packet":
+        typedef struct
+        {
+            /* Working copy root of a wc */
+            const char *base_dir;
 
-Here we use function
-svn_error_t *
-svn_wc_adm_open3(svn_wc_adm_access_t **adm_access,
-                 svn_wc_adm_access_t *associated,
-                 const char *path,
-                 svn_boolean_t write_lock,
-                 int levels_to_lock,
-                 svn_cancel_func_t cancel_func,
-                 void *cancel_baton,
-                 apr_pool_t *pool)
-to create svn_wc_adm_access_t.
+            /* Targets under base_dir */
+            apr_array_header_t *targets;
 
-4. For each wc_access we collect items to commit. Each item refers to its
-wc_access. 
+            svn_wc_adm_access_t *base_dir_access;
 
-Here we use function
-svn_error_t *
-svn_client__harvest_committables(apr_hash_t **committables,
-                                 apr_hash_t **lock_tokens,
-                                 svn_wc_adm_access_t *parent_adm,
-                                 apr_array_header_t *targets,
-                                 svn_depth_t depth,
-                                 svn_boolean_t just_locked,
-                                 const apr_array_header_t *changelists,
-                                 svn_client_ctx_t *ctx,
-                                 apr_pool_t *pool)
-to collect commit items for each svn_wc_adm_access_t. here use an apr_hash_t * 
-hash of apr_array_header_t *arrays (of svn_client_commit_item_t * structures),
-keyed
-on wc_access to store the map.
+        } commit_packet_t; 
+      It would be a local variable of the function svn_client_commit5(), 
+      because it is used only in the function. And it is allocated from pool.
 
-5. If there are more than one working copies, then we check all items by its
-repos_url and repos_uuid (fetching it from repos if not available). If they are
-not from the same repository, return with error, otherwise, combine them into
-one group.  
-
-For each working copy we get its repos_url and repos_uuid and group the commit
-items by repos_url and repos_uuid. If there is more than one group, return 
-error which indicate that the committing files are not from the same 
-repository.
-
-6. Commit these items as a transaction.
-
-Here we can use function
-svn_error_t *
-svn_client__do_commit(const char *base_url,
-                      apr_array_header_t *commit_items,
-                      svn_wc_adm_access_t *adm_access,
-                      const svn_delta_editor_t *editor,
-                      void *edit_baton,
-                      const char *notify_path_prefix,
-                      apr_hash_t **tempfiles,
-                      apr_hash_t **checksums,
-                      svn_client_ctx_t *ctx,
-                      apr_pool_t *pool)
-to commit commit_items.
- 
-7. During commit and in post commit code we use that wc_access references that
-is stored in each commit item to update corresponding working copy, write and
-execute log files and then finally to close all open directories.
-
-Here we can use function
-svn_error_t *
-svn_wc_process_committed_queue(svn_wc_committed_queue_t *queue,
-                               svn_wc_adm_access_t *adm_access,
-                               svn_revnum_t new_revnum,
-                               const char *rev_date,
-                               const char *rev_author,
-                               apr_pool_t *pool);
-to update working copyes.
+  Now run a commit for each working copy root we found.
+  This is done just like before when the code only knew about
+  a single root, but it's done for each root in turn.

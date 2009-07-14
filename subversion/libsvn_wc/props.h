@@ -2,17 +2,22 @@
  * props.h :  properties
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -49,6 +54,16 @@ svn_error_t *svn_wc__has_props(svn_boolean_t *has_props,
                                apr_pool_t *pool);
 
 
+/* Internal function for diffing props. */
+svn_error_t *
+svn_wc__internal_propdiff(apr_array_header_t **propchanges,
+                          apr_hash_t **original_props,
+                          svn_wc__db_t *db,
+                          const char *local_abspath,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool);
+
+
 /* Internal function for fetching a property.  */
 svn_error_t *
 svn_wc__internal_propget(const svn_string_t **value,
@@ -56,6 +71,18 @@ svn_wc__internal_propget(const svn_string_t **value,
                          const char *local_abspath,
                          svn_wc__db_t *db,
                          apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool);
+
+
+/* Internal function for setting a property.  */
+svn_error_t *
+svn_wc__internal_propset(svn_wc__db_t *db,
+                         const char *local_abspath,
+                         const char *name,
+                         const svn_string_t *value,
+                         svn_boolean_t skip_checks,
+                         svn_wc_notify_func2_t notify_func,
+                         void *notify_baton,
                          apr_pool_t *scratch_pool);
 
 
@@ -94,14 +121,13 @@ svn_error_t *svn_wc__merge_props(svn_wc_notify_state_t *state,
                                  apr_pool_t *pool,
                                  svn_stringbuf_t **entry_accum);
 
-/* Set a single 'wcprop' NAME to VALUE for versioned object PATH.
-   If VALUE is null, remove property NAME.  ADM_ACCESS is an access
-   baton set that contains PATH.  */
-svn_error_t *svn_wc__wcprop_set(const char *name,
+/* Set a single 'wcprop' NAME to VALUE for versioned object LOCAL_ABSPATH.
+   If VALUE is null, remove property NAME.  */
+svn_error_t *svn_wc__wcprop_set(svn_wc__db_t *db,
+                                const char *local_abspath,
+                                const char *name,
                                 const svn_string_t *value,
-                                const char *path,
-                                svn_wc_adm_access_t *adm_access,
-                                apr_pool_t *pool);
+                                apr_pool_t *scratch_pool);
 
 /* Returns TRUE if PROPS contains the svn:special property */
 svn_boolean_t svn_wc__has_special_property(apr_hash_t *props);
@@ -166,14 +192,10 @@ svn_error_t *
 svn_wc__wcprops_flush(svn_wc_adm_access_t *adm_access,
                       apr_pool_t *scratch_pool);
 
-/* Install PATHs working props as base props, clearing the
-   has_prop_mods cache value in the entries file.
-
-   Updates the on-disk entries file if SYNC_ENTRIES is TRUE.*/
+/* Install PATHs working props as base props. */
 svn_error_t *
 svn_wc__working_props_committed(const char *path,
                                 svn_wc_adm_access_t *adm_access,
-                                svn_boolean_t sync_entries,
                                 apr_pool_t *pool);
 
 /* Load the base, working and revert props for ENTRY at PATH returning

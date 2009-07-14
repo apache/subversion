@@ -62,10 +62,11 @@ AC_DEFUN(SVN_LIB_APRUTIL,
 
   dnl Get libraries and thread flags from APRUTIL ---------------------
 
-  LDFLAGS="$LDFLAGS `$apu_config --ldflags`"
+  apu_ldflags="`$apu_config --ldflags`"
   if test $? -ne 0; then
     AC_MSG_ERROR([apu-config --ldflags failed])
   fi
+  LDFLAGS="$LDFLAGS `SVN_REMOVE_STANDARD_LIB_DIRS($apu_ldflags)`"
 
   SVN_APRUTIL_INCLUDES="`$apu_config --includes`"
   if test $? -ne 0; then
@@ -77,21 +78,21 @@ AC_DEFUN(SVN_LIB_APRUTIL,
     AC_MSG_ERROR([apu-config --prefix failed])
   fi
 
-  dnl When APR stores the dependent libs in the .la file, we don't need
-  dnl --libs.
-  SVN_APRUTIL_LIBS="`$apu_config --link-libtool --libs`"
-  if test $? -ne 0; then
-    AC_MSG_ERROR([apu-config --link-libtool --libs failed])
+  if test "$enable_all_static" = "yes"; then
+    SVN_APRUTIL_LIBS="`$apu_config --link-ld --libs`"
+    if test $? -ne 0; then
+      AC_MSG_ERROR([apu-config --link-ld --libs failed])
+    fi
+  else
+    SVN_APRUTIL_LIBS="`$apu_config --link-ld`"
+    if test $? -ne 0; then
+      AC_MSG_ERROR([apu-config --link-ld failed])
+    fi
   fi
-
-  SVN_APRUTIL_EXPORT_LIBS="`$apu_config --link-ld --libs`"
-  if test $? -ne 0; then
-    AC_MSG_ERROR([apu-config --link-ld --libs failed])
-  fi
+  SVN_APRUTIL_LIBS="`SVN_REMOVE_STANDARD_LIB_DIRS($SVN_APRUTIL_LIBS)`"
 
   AC_SUBST(SVN_APRUTIL_INCLUDES)
   AC_SUBST(SVN_APRUTIL_LIBS)
-  AC_SUBST(SVN_APRUTIL_EXPORT_LIBS)
   AC_SUBST(SVN_APRUTIL_PREFIX)
 
   dnl What version of Expat are we using? -----------------

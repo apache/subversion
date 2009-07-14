@@ -2,17 +2,22 @@
  * subst.c :  generic eol/keyword substitution routines
  *
  * ====================================================================
- * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -1421,7 +1426,7 @@ svn_subst_copy_and_translate3(const char *src,
       if (err->apr_err == SVN_ERR_IO_INCONSISTENT_EOL)
         err = svn_error_createf(SVN_ERR_IO_INCONSISTENT_EOL, err,
                                 _("File '%s' has inconsistent newlines"),
-                                svn_path_local_style(src, pool));
+                                svn_dirent_local_style(src, pool));
       return svn_error_compose_create(err, svn_io_remove_file2(dst_tmp,
                                                                FALSE, pool));
     }
@@ -1454,7 +1459,7 @@ read_handler_special(void *baton, char *buffer, apr_size_t *len)
   else
     return svn_error_createf(APR_ENOENT, NULL,
                              "Can't read special file: File '%s' not found",
-                             svn_path_local_style(btn->path, btn->pool));
+                             svn_dirent_local_style(btn->path, btn->pool));
 }
 
 static svn_error_t *
@@ -1639,6 +1644,97 @@ svn_subst_detranslate_string(svn_string_t **new_value,
     }
 
   *new_value = svn_string_create(val_nlocale_neol, pool);
+
+  return SVN_NO_ERROR;
+}
+
+char *
+svn_subst_find_eol_start(char *buf, apr_size_t len)
+{
+  for (; len > 0; ++buf, --len)
+    {
+      if (*buf == '\n' || *buf == '\r')
+        return buf;
+    }
+  return NULL;
+}
+
+const char *
+svn_subst_detect_eol(char *buf, char *endp)
+{
+  const char *eol;
+  
+  SVN_ERR_ASSERT_NO_RETURN(buf <= endp);
+  eol = svn_subst_find_eol_start(buf, endp - buf);
+  if (eol)
+    {
+      if (*eol == '\n')
+        return "\n";
+
+      /* We found a CR. */
+      ++eol;
+      if (eol == endp || *eol != '\n')
+        return "\r";
+      return "\r\n";
+    }
+
+  return NULL;
+}
+
+svn_error_t *
+svn_subst_detect_file_eol(const char **eol, apr_file_t *file, apr_pool_t *pool)
+{
+  char buf[512];
+  apr_size_t nbytes;
+  svn_error_t *err;
+  apr_off_t orig_pos;
+  apr_off_t pos;
+
+  /* Remember original file offset. */
+  orig_pos = 0;
+  SVN_ERR(svn_io_file_seek(file, APR_CUR, &orig_pos, pool));
+
+  do
+    {
+      memset(buf, '\0', sizeof(buf));
+
+      /* Read a chunk. */
+      nbytes = sizeof(buf);
+      err = svn_io_file_read(file, buf, &nbytes, pool);
+      if (err)
+        {
+          /* An error occured. We're going to return in any case,
+           * so reset the file cursor right now. */
+          pos = orig_pos;
+          SVN_ERR(svn_io_file_seek(file, APR_SET, &pos, pool));
+          SVN_ERR_ASSERT(orig_pos == pos);
+
+          /* If we reached the end of the file, the file has no
+           * EOL markers at all... */
+          if (APR_STATUS_IS_EOF(err->apr_err))
+            {
+              svn_error_clear(err);
+              return SVN_NO_ERROR;
+            }
+          else
+            {
+              /* Whatever happened, it's something we don't know how
+               * to deal with. Just return the error. */
+              return svn_error_return(err);
+            }
+        }
+
+      /* Try to detect the EOL style of the file by searching the
+       * current chunk. */
+      SVN_ERR_ASSERT(nbytes <= sizeof(buf));
+      *eol = svn_subst_detect_eol(buf, buf + nbytes);
+    }
+  while (*eol == NULL);
+
+  /* We're done, reset the file cursor to the original offset. */
+  pos = orig_pos;
+  SVN_ERR(svn_io_file_seek(file, APR_SET, &pos, pool));
+  SVN_ERR_ASSERT(orig_pos == pos);
 
   return SVN_NO_ERROR;
 }
