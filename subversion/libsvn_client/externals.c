@@ -1299,19 +1299,13 @@ svn_client__do_external_status(svn_wc_traversal_info_t *traversal_info,
        hi = apr_hash_next(hi))
     {
       apr_array_header_t *exts;
-      const void *key;
-      void *val;
-      const char *path;
-      const char *propval;
+      const char *path = svn_apr_hash_index_key(hi);
+      const char *propval = svn_apr_hash_index_val(hi);
       apr_pool_t *iterpool;
       int i;
 
       /* Clear the subpool. */
       svn_pool_clear(subpool);
-
-      apr_hash_this(hi, &key, NULL, &val);
-      path = key;
-      propval = val;
 
       /* Parse the svn:externals property value.  This results in a
          hash mapping subdirectories to externals structures. */

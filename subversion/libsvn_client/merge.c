@@ -659,16 +659,10 @@ split_mergeinfo_on_revision(svn_mergeinfo_t *younger_mergeinfo,
   for (hi = apr_hash_first(NULL, *mergeinfo); hi; hi = apr_hash_next(hi))
     {
       int i;
-      const void *key;
-      void *value;
-      apr_array_header_t *rangelist;
-      const char *merge_source_path;
+      const char *merge_source_path = svn_apr_hash_index_key(hi);
+      apr_array_header_t *rangelist = svn_apr_hash_index_val(hi);
 
       svn_pool_clear(iterpool);
-
-      apr_hash_this(hi, &key, NULL, &value);
-      rangelist = value;
-      merge_source_path = key;
 
       for (i = 0; i < rangelist->nelts; i++)
         {
@@ -871,17 +865,12 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
                hi; hi = apr_hash_next(hi))
             {
               int j;
-              const void *key;
-              void *value;
-              const char *source_path;
-              apr_array_header_t *rangelist;
+              const char *source_path = svn_apr_hash_index_key(hi);
+              apr_array_header_t *rangelist = svn_apr_hash_index_val(hi);
               const char *merge_source_url;
               apr_array_header_t *adjusted_rangelist =
                 apr_array_make(pool, 0, sizeof(svn_merge_range_t *));
 
-              apr_hash_this(hi, &key, NULL, &value);
-              source_path = key;
-              rangelist = value;
               merge_source_url =
                     svn_path_url_add_component2(merge_source_root_url,
                                                 source_path + 1, pool);
@@ -3642,9 +3631,8 @@ find_gaps_in_merge_source_history(svn_revnum_t *gap_start,
                hi;
                hi = apr_hash_next(hi))
             {
-              void *value;
+              apr_array_header_t *value = svn_apr_hash_index_val(hi);
 
-              apr_hash_this(hi, NULL, NULL, &value);
               SVN_ERR(svn_rangelist_merge(&implicit_rangelist, value,
                                           scratch_pool));
             }
@@ -3985,19 +3973,14 @@ update_wc_mergeinfo(const char *target_wcpath,
      the WC with its on-disk mergeinfo. */
   for (hi = apr_hash_first(pool, merges); hi; hi = apr_hash_next(hi))
     {
-      const void *key;
-      void *value;
-      const char *path;
+      const char *path = svn_apr_hash_index_key(hi);
+      apr_array_header_t *ranges = svn_apr_hash_index_val(hi);
       const char *local_abspath;
-      apr_array_header_t *ranges, *rangelist;
+      apr_array_header_t *rangelist;
       size_t len;
       svn_error_t *err;
 
       svn_pool_clear(subpool);
-
-      apr_hash_this(hi, &key, NULL, &value);
-      path = key;
-      ranges = value;
 
       SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, subpool));
 
@@ -4138,10 +4121,8 @@ record_skips(const char *mergeinfo_path,
       for (hi = apr_hash_first(NULL, notify_b->skipped_paths); hi;
            hi = apr_hash_next(hi))
         {
-          const void *skipped_path;
+          const char *skipped_path = svn_apr_hash_index_key(hi);
           svn_wc_status2_t *status;
-
-          apr_hash_this(hi, &skipped_path, NULL, NULL);
 
           /* Before we override, make sure this is a versioned path, it
              might be an unversioned obstruction. */
@@ -4161,7 +4142,7 @@ record_skips(const char *mergeinfo_path,
              ### inherit any mergeinfo from a parent, but if it does
              ### we need to account for that.  See issue #3440
              ### http://subversion.tigris.org/issues/show_bug.cgi?id=3440. */
-          apr_hash_set(merges, (const char *) skipped_path,
+          apr_hash_set(merges, skipped_path,
                        APR_HASH_KEY_STRING,
                        apr_array_make(pool, 0, sizeof(svn_merge_range_t)));
 
@@ -5217,17 +5198,15 @@ insert_parent_and_sibs_of_sw_absent_del_entry(
   SVN_ERR(svn_wc_entries_read(&entries, parent_access, FALSE, pool));
   for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
     {
-      const void *key;
+      const char *name = svn_apr_hash_index_key(hi);
       svn_client__merge_path_t *sibling_of_missing;
       const char *child_path;
 
-      apr_hash_this(hi, &key, NULL, NULL);
-
-      if (strcmp(key, SVN_WC_ENTRY_THIS_DIR) == 0)
+      if (strcmp(name, SVN_WC_ENTRY_THIS_DIR) == 0)
         continue;
 
       /* Does this child already exist in CHILDREN_WITH_MERGEINFO? */
-      child_path = svn_path_join(parent->path, key, pool);
+      child_path = svn_path_join(parent->path, name, pool);
       sibling_of_missing = get_child_with_mergeinfo(children_with_mergeinfo,
                                                     child_path);
       /* Create the missing child and insert it into CHILDREN_WITH_MERGEINFO.*/
@@ -5430,20 +5409,18 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
               for (hi = apr_hash_first(iterpool, entries); hi;
                    hi = apr_hash_next(hi))
                 {
-                  const void *key;
+                  const char *name = svn_apr_hash_index_key(hi);
                   svn_client__merge_path_t *child_of_noninheritable;
                   const char *child_path;
 
-                  apr_hash_this(hi, &key, NULL, NULL);
-
-                  if (strcmp(key, SVN_WC_ENTRY_THIS_DIR) == 0)
+                  if (strcmp(name, SVN_WC_ENTRY_THIS_DIR) == 0)
                     continue;
 
                   /* Does this child already exist in CHILDREN_WITH_MERGEINFO?
                      If not, create it and insert it into
                      CHILDREN_WITH_MERGEINFO and set override mergeinfo on
                      it. */
-                  child_path = svn_path_join(child->path, key, iterpool);
+                  child_path = svn_path_join(child->path, name, iterpool);
                   child_of_noninheritable =
                     get_child_with_mergeinfo(children_with_mergeinfo,
                                              child_path);
@@ -6460,8 +6437,7 @@ process_children_with_new_mergeinfo(merge_cmd_baton_t *merge_b,
            hi;
            hi = apr_hash_next(hi))
         {
-          const void *key;
-          const char *path_with_new_mergeinfo;
+          const char *path_with_new_mergeinfo = svn_apr_hash_index_key(hi);
           const char *pwnm_abspath;
           const char *old_session_url = NULL;
           svn_mergeinfo_t path_inherited_mergeinfo;
@@ -6471,8 +6447,6 @@ process_children_with_new_mergeinfo(merge_cmd_baton_t *merge_b,
           svn_client__merge_path_t *new_child;
 
           apr_pool_clear(iterpool);
-          apr_hash_this(hi, &key, NULL, NULL);
-          path_with_new_mergeinfo = key;
           SVN_ERR(svn_dirent_get_absolute(&pwnm_abspath,
                                           path_with_new_mergeinfo, iterpool));
           SVN_ERR(svn_wc__entry_versioned(&path_entry,
@@ -6816,14 +6790,10 @@ record_mergeinfo_for_added_subtrees(svn_merge_range_t *merged_range,
       for (hi = apr_hash_first(NULL, notify_b->added_paths); hi;
            hi = apr_hash_next(hi))
         {
-          const void *key;
-          const char *added_path;
+          const char *added_path = svn_apr_hash_index_key(hi);
           const char *added_abspath;
           const char *dir_abspath;
           const svn_string_t *added_path_parent_propval;
-
-          apr_hash_this(hi, &key, NULL, NULL);
-          added_path = key;
 
           apr_pool_clear(iterpool);
           SVN_ERR(svn_dirent_get_absolute(&added_abspath, added_path,
@@ -7942,25 +7912,15 @@ ensure_all_missing_ranges_are_phantoms(svn_ra_session_t *ra_session,
   for (hi1 = apr_hash_first(pool, unmerged_history); hi1;
        hi1 = apr_hash_next(hi1))
     {
-      const void *key;
-      void *value;
-      const char *catalog_path;
-      svn_mergeinfo_t history_as_mergeinfo;
-
-      apr_hash_this(hi1, &key, NULL, &value);
-      catalog_path = key;
-      history_as_mergeinfo = value;
+      const char *catalog_path = svn_apr_hash_index_key(hi1);
+      svn_mergeinfo_t history_as_mergeinfo = svn_apr_hash_index_val(hi1);
 
       for (hi2 = apr_hash_first(pool, history_as_mergeinfo); hi2;
            hi2 = apr_hash_next(hi2))
         {
-          const char *path;
-          apr_array_header_t *rangelist;
+          const char *path = svn_apr_hash_index_key(hi2);
+          apr_array_header_t *rangelist = svn_apr_hash_index_val(hi2);
           int i;
-
-          apr_hash_this(hi2, &key, NULL, &value);
-          path = key;
-          rangelist = value;
 
           /* mergeinfo hashes contain paths that start with slashes;
              ra APIs take paths without slashes. */
@@ -8085,16 +8045,12 @@ find_unmerged_mergeinfo(svn_mergeinfo_catalog_t *unmerged_to_source_catalog,
        hi;
        hi = apr_hash_next(hi))
     {
-      const void *key;
-      void *val;
-      const char *path, *source_path;
-      apr_array_header_t *segments;
+      const char *path = svn_apr_hash_index_key(hi);
+      apr_array_header_t *segments = svn_apr_hash_index_val(hi);
+      const char *source_path;
       svn_mergeinfo_t source_mergeinfo, filtered_mergeinfo;
 
       svn_pool_clear(iterpool);
-      apr_hash_this(hi, &key, NULL, &val);
-      path = key;
-      segments = val;
 
       source_path = path + strlen(target_repos_rel_path);
       if (source_path[0] == '/') /* Remove leading '/' for svn_path_join. */
@@ -8226,18 +8182,14 @@ find_unmerged_mergeinfo(svn_mergeinfo_catalog_t *unmerged_to_source_catalog,
            hi;
            hi = apr_hash_next(hi))
         {
-          const void *key;
-          void *val;
-          const char *source_path;
-          svn_mergeinfo_t source_mergeinfo, filtered_mergeinfo;
+          const char *source_path = svn_apr_hash_index_key(hi);
+          svn_mergeinfo_t source_mergeinfo = svn_apr_hash_index_val(hi);
+          svn_mergeinfo_t filtered_mergeinfo;
           const char *target_path;
           apr_array_header_t *segments;
           svn_error_t *err;
 
           svn_pool_clear(iterpool);
-          apr_hash_this(hi, &key, NULL, &val);
-          source_path = key;
-          source_mergeinfo = val;
 
           target_path = source_path + strlen(source_repos_rel_path);
           if (target_path[0] == '/') /* Remove leading '/' for svn_path_join */
@@ -8404,12 +8356,8 @@ calculate_left_hand_side(const char **url_left,
        hi;
        hi = apr_hash_next(hi))
     {
-      const void *key;
-      void *val;
-      const char *path;
+      const char *path = svn_apr_hash_index_key(hi);
 
-      apr_hash_this(hi, &key, NULL, &val);
-      path = key;
       SVN_ERR(svn_client__repos_location_segments(&segments,
                                                   ra_session,
                                                   path,

@@ -813,17 +813,12 @@ svn_client__get_youngest_common_ancestor(const char **ancestor_path,
      remembering the youngest matching location. */
   for (hi = apr_hash_first(NULL, history1); hi; hi = apr_hash_next(hi))
     {
-      const void *key;
-      apr_ssize_t klen;
-      void *val;
-      const char *path;
-      apr_array_header_t *ranges1, *ranges2, *common;
+      const char *path = svn_apr_hash_index_key(hi);
+      apr_ssize_t path_len = svn_apr_hash_index_klen(hi);
+      apr_array_header_t *ranges1 = svn_apr_hash_index_val(hi);
+      apr_array_header_t *ranges2, *common;
 
-      apr_hash_this(hi, &key, &klen, &val);
-      path = key;
-      ranges1 = val;
-
-      ranges2 = apr_hash_get(history2, key, klen);
+      ranges2 = apr_hash_get(history2, path, path_len);
       if (ranges2)
         {
           /* We have a path match.  Now, did our two histories share

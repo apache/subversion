@@ -317,17 +317,10 @@ copy_versioned_files(const char *from,
       iterpool = svn_pool_create(pool);
       for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
         {
-          const char *item;
-          const svn_wc_entry_t *child_entry;
-          const void *key;
-          void *val;
+          const char *item = svn_apr_hash_index_key(hi);
+          const svn_wc_entry_t *child_entry = svn_apr_hash_index_val(hi);
 
           svn_pool_clear(iterpool);
-
-          apr_hash_this(hi, &key, NULL, &val);
-
-          item = key;
-          child_entry = val;
 
           if (ctx->cancel_func)
             SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
@@ -926,10 +919,10 @@ svn_client_export4(svn_revnum_t *result_rev,
            * with information. */
           for (hi = apr_hash_first(pool, props); hi; hi = apr_hash_next(hi))
             {
-              const void *key;
-              void *val;
-              apr_hash_this(hi, &key, NULL, &val);
-              SVN_ERR(change_file_prop(fb, key, val, pool));
+              const char *propname = svn_apr_hash_index_key(hi);
+              const svn_string_t *propval = svn_apr_hash_index_val(hi);
+
+              SVN_ERR(change_file_prop(fb, propname, propval, pool));
             }
 
           /* And now just use close_file() to do all the keyword and EOL

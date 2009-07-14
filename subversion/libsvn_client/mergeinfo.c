@@ -147,8 +147,6 @@ svn_client__adjust_mergeinfo_source_paths(svn_mergeinfo_t adjusted_mergeinfo,
                                           apr_pool_t *pool)
 {
   apr_hash_index_t *hi;
-  const void *merge_source;
-  void *rangelist;
   const char *path;
   apr_array_header_t *copied_rangelist;
 
@@ -157,9 +155,11 @@ svn_client__adjust_mergeinfo_source_paths(svn_mergeinfo_t adjusted_mergeinfo,
 
   for (hi = apr_hash_first(NULL, mergeinfo); hi; hi = apr_hash_next(hi))
     {
+      const char *merge_source = svn_apr_hash_index_key(hi);
+      apr_array_header_t *rangelist = svn_apr_hash_index_val(hi);
+
       /* Copy inherited mergeinfo into our output hash, adjusting the
          merge source as appropriate. */
-      apr_hash_this(hi, &merge_source, NULL, &rangelist);
       path = svn_path_join(merge_source, rel_path, pool);
       copied_rangelist = svn_rangelist_dup(rangelist, pool);
       apr_hash_set(adjusted_mergeinfo, path, APR_HASH_KEY_STRING,
@@ -1307,13 +1307,10 @@ svn_client_mergeinfo_log_merged(const char *path_or_url,
   rangelist = apr_array_make(pool, 64, sizeof(svn_merge_range_t *));
   for (hi = apr_hash_first(pool, mergeinfo); hi; hi = apr_hash_next(hi))
     {
-      const void *key;
-      void *val;
+      const char *key = svn_apr_hash_index_key(hi);
+      apr_array_header_t *list = svn_apr_hash_index_val(hi);
       svn_merge_range_t *range;
-      apr_array_header_t *list;
 
-      apr_hash_this(hi, &key, NULL, &val);
-      list = val;
       range = APR_ARRAY_IDX(list, list->nelts - 1, svn_merge_range_t *);
       if ((! SVN_IS_VALID_REVNUM(youngest_rev))
           || (range->end > youngest_rev))
@@ -1365,11 +1362,10 @@ svn_client_mergeinfo_get_merged(apr_hash_t **mergeinfo_p,
       full_path_mergeinfo = apr_hash_make(pool);
       for (hi = apr_hash_first(pool, mergeinfo); hi; hi = apr_hash_next(hi))
         {
-          const void *key;
-          void *val;
+          const char *key = svn_apr_hash_index_key(hi);
+          void *val = svn_apr_hash_index_val(hi);
           const char *source_url;
 
-          apr_hash_this(hi, &key, NULL, &val);
           source_url = svn_path_uri_encode(key, pool);
           source_url = svn_path_join(repos_root, source_url + 1, pool);
           apr_hash_set(full_path_mergeinfo, source_url,
@@ -1457,13 +1453,10 @@ svn_client_mergeinfo_log_eligible(const char *path_or_url,
   rangelist = apr_array_make(pool, 64, sizeof(svn_merge_range_t *));
   for (hi = apr_hash_first(pool, available); hi; hi = apr_hash_next(hi))
     {
-      const void *key;
-      void *val;
+      const char *key = svn_apr_hash_index_key(hi);
+      apr_array_header_t *list = svn_apr_hash_index_val(hi);
       svn_merge_range_t *range;
-      apr_array_header_t *list;
 
-      apr_hash_this(hi, &key, NULL, &val);
-      list = val;
       range = APR_ARRAY_IDX(list, list->nelts - 1, svn_merge_range_t *);
       if ((! SVN_IS_VALID_REVNUM(youngest_rev))
           || (range->end > youngest_rev))
@@ -1539,11 +1532,8 @@ svn_client_suggest_merge_sources(apr_array_header_t **suggestions,
     {
       for (hi = apr_hash_first(NULL, mergeinfo); hi; hi = apr_hash_next(hi))
         {
-          const void *key;
-          const char *rel_path;
+          const char *rel_path = svn_apr_hash_index_key(hi);
 
-          apr_hash_this(hi, &key, NULL, NULL);
-          rel_path = key;
           if (copyfrom_path == NULL || strcmp(rel_path, copyfrom_path) != 0)
             APR_ARRAY_PUSH(list, const char *) = \
               svn_path_url_add_component2(repos_root, rel_path + 1, pool);
