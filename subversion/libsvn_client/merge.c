@@ -7912,7 +7912,6 @@ ensure_all_missing_ranges_are_phantoms(svn_ra_session_t *ra_session,
   for (hi1 = apr_hash_first(pool, unmerged_history); hi1;
        hi1 = apr_hash_next(hi1))
     {
-      const char *catalog_path = svn_apr_hash_index_key(hi1);
       svn_mergeinfo_t history_as_mergeinfo = svn_apr_hash_index_val(hi1);
 
       for (hi2 = apr_hash_first(pool, history_as_mergeinfo); hi2;
