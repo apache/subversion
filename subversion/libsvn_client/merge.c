@@ -2988,8 +2988,12 @@ inherit_implicit_mergeinfo_from_parent(svn_client__merge_path_t *parent,
   SVN_ERR_ASSERT(common_ancestor);
 
   /* Calculate the pathwise difference between the longest common ancestor
-     and CHILD->PATH.  Add 1 to avoid a leading '/'. */
-  path_diff = apr_pstrdup(pool, (child->path + strlen(common_ancestor) + 1));
+     and CHILD->PATH. */
+  path_diff = apr_pstrdup(pool, (child->path + strlen(common_ancestor)));
+
+  if (path_diff[0] == '/') /* Remove any leading '/'. */
+    path_diff++;
+
   SVN_ERR(svn_client__adjust_mergeinfo_source_paths(
     child->implicit_mergeinfo, path_diff,
     parent->implicit_mergeinfo, pool));
