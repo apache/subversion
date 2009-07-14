@@ -30,6 +30,21 @@ III) New svn_ra_get_location_segments2 API that accepts multiple paths.
   This should aleviate the 'Implicit Mergeinfo Query Problem' somewhat
   by allowing us to query the server one time for all the subtree's
   implicit mergeinfo.
+  
+  Cons:
+  
+    Right now we defer asking about implicit mergeinfo at the last possible
+    moment.  In some use cases we never need to know about implicit mergeinfo,
+    e.g. reverse merges of ranges already recorded in explicit mergeinfo.
+    This change would require us to ask about every subtree's implicit
+    mergeinfo at the start of the merge.  Might not matter much, perhaps
+    performance will be fine, but it is something to consider.
+    
+    Obviously this is not something that will help 1.5-1.6 users.
+  
+  Update: With the changes made in VII) there is not a pressing need for
+  this change at the moment, since the 'Implicit Mergeinfo Query Problem'
+  is solved...for now.
 
 IV) Cache natural history in the WC.
 
@@ -178,3 +193,14 @@ VII) For the 'Implicit Mergeinfo Query Problem' why not just rely on the
      
      This would essentially eliminate this problem.  Would it would break some
      (bizzare?) use cases though?
+     
+     Cons: Implicit subtree mergeinfo *can* differ from merge target's
+     implicit mergeinfo.  See issue #3443 and this thread for more
+     http://svn.haxx.se/dev/archive-2009-07/0149.shtml.
+     
+     Update: While implicit subtree mergeinfo can differ, we were treating
+     it inconsistently, depending whether the subtree also had explicit
+     mergeinfo or not.  Ultimately it was decided that consistency was
+     preferable and this change was implemented in r38417.  This may not be
+     the end of the story here, but for now the 'Implicit Mergeinfo Query
+     Problem' is solved.
