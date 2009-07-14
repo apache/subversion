@@ -1004,7 +1004,7 @@ II.   INSTALLATION
       C:>call ..\ms\test
       C:>cd ..\..
 
-      *Note: Use "call ms\do_nasm" of you have nasm instead of MASM, or
+      *Note: Use "call ms\do_nasm" if you have nasm instead of MASM, or
              "call ms\do_ms" if you don't have an assembler.
 
       Apache 2
