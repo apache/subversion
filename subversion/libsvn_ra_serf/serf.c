@@ -2,17 +2,22 @@
  * serf.c :  entry point for ra_serf
  *
  * ====================================================================
- * Copyright (c) 2006-2008 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -74,6 +79,56 @@ ra_serf_get_schemes(apr_pool_t *pool)
   return serf_ssl;
 }
 
+/* Load the setting http-auth-types from the global or server specific
+   section, parse its value and set the types of authentication we should
+   accept from the server. */
+static svn_error_t *
+load_http_auth_types(apr_pool_t *pool, svn_config_t *config,
+                     const char *server_group,
+                     svn_ra_serf__authn_types *authn_types)
+{                   
+  const char *http_auth_types = NULL;
+  *authn_types = svn_ra_serf__authn_none;
+
+  svn_config_get(config, &http_auth_types, SVN_CONFIG_SECTION_GLOBAL,
+               SVN_CONFIG_OPTION_HTTP_AUTH_TYPES, NULL);
+
+  if (server_group)
+    {
+      svn_config_get(config, &http_auth_types, server_group,
+                     SVN_CONFIG_OPTION_HTTP_AUTH_TYPES, http_auth_types);
+    }
+
+  if (http_auth_types)
+    {
+      char *token, *last;
+      char *auth_types_list = apr_palloc(pool, strlen(http_auth_types) + 1);
+      apr_collapse_spaces(auth_types_list, http_auth_types);
+      while ((token = apr_strtok(auth_types_list, ";", &last)) != NULL)
+        {
+          auth_types_list = NULL;
+          if (svn_cstring_casecmp("basic", token) == 0)
+            *authn_types |= svn_ra_serf__authn_basic;
+          else if (svn_cstring_casecmp("digest", token) == 0)
+            *authn_types |= svn_ra_serf__authn_digest;
+          else if (svn_cstring_casecmp("ntlm", token) == 0)
+            *authn_types |= svn_ra_serf__authn_ntlm;
+          else if (svn_cstring_casecmp("negotiate", token) == 0)
+            *authn_types |= svn_ra_serf__authn_negotiate;
+          else
+            return svn_error_createf(SVN_ERR_BAD_CONFIG_VALUE, NULL,
+                                     _("Invalid config: unknown http auth"
+                                       "type '%s'"), token);
+      }
+    }
+  else
+    {
+      /* Nothing specified by the user, so accept all types. */
+      *authn_types = svn_ra_serf__authn_all;
+    }
+
+  return SVN_NO_ERROR;
+}
 #define DEFAULT_HTTP_TIMEOUT 3600
 static svn_error_t *
 load_config(svn_ra_serf__session_t *session,
@@ -85,7 +140,9 @@ load_config(svn_ra_serf__session_t *session,
   const char *proxy_host = NULL;
   const char *port_str = NULL;
   const char *timeout_str = NULL;
+  const char *exceptions;
   unsigned int proxy_port;
+  svn_boolean_t is_exception = FALSE;
 
   if (config_hash)
     {
@@ -122,15 +179,30 @@ load_config(svn_ra_serf__session_t *session,
         }
     }
 
-  /* Load the global proxy server settings, if set. */
-  svn_config_get(config, &proxy_host, SVN_CONFIG_SECTION_GLOBAL,
-                 SVN_CONFIG_OPTION_HTTP_PROXY_HOST, NULL);
-  svn_config_get(config, &port_str, SVN_CONFIG_SECTION_GLOBAL,
-                 SVN_CONFIG_OPTION_HTTP_PROXY_PORT, NULL);
-  svn_config_get(config, &session->proxy_username, SVN_CONFIG_SECTION_GLOBAL,
-                 SVN_CONFIG_OPTION_HTTP_PROXY_USERNAME, NULL);
-  svn_config_get(config, &session->proxy_password, SVN_CONFIG_SECTION_GLOBAL,
-                 SVN_CONFIG_OPTION_HTTP_PROXY_PASSWORD, NULL);
+  /* Use the default proxy-specific settings if and only if
+     "http-proxy-exceptions" is not set to exclude this host. */
+  svn_config_get(config, &exceptions, SVN_CONFIG_SECTION_GLOBAL,
+                 SVN_CONFIG_OPTION_HTTP_PROXY_EXCEPTIONS, NULL);
+  if (exceptions)
+    {
+      apr_array_header_t *l = svn_cstring_split(exceptions, ",", TRUE, pool);
+      is_exception = svn_cstring_match_glob_list(session->repos_url.hostname, l);
+    }
+  if (! is_exception)
+    {
+      /* Load the global proxy server settings, if set. */
+      svn_config_get(config, &proxy_host, SVN_CONFIG_SECTION_GLOBAL,
+                     SVN_CONFIG_OPTION_HTTP_PROXY_HOST, NULL);
+      svn_config_get(config, &port_str, SVN_CONFIG_SECTION_GLOBAL,
+                     SVN_CONFIG_OPTION_HTTP_PROXY_PORT, NULL);
+      svn_config_get(config, &session->proxy_username,
+                     SVN_CONFIG_SECTION_GLOBAL,
+                     SVN_CONFIG_OPTION_HTTP_PROXY_USERNAME, NULL);
+      svn_config_get(config, &session->proxy_password,
+                     SVN_CONFIG_SECTION_GLOBAL,
+                     SVN_CONFIG_OPTION_HTTP_PROXY_PASSWORD, NULL);
+    }
+
   /* Load the global ssl settings, if set. */
   SVN_ERR(svn_config_get_bool(config, &session->trust_default_ca,
                               SVN_CONFIG_SECTION_GLOBAL,
@@ -231,6 +303,10 @@ load_config(svn_ra_serf__session_t *session,
   else
     session->using_proxy = FALSE;
 
+  /* Load the list of support authn types. */
+   SVN_ERR(load_http_auth_types(pool, config, server_group,
+           &session->authn_types));
+
   return SVN_NO_ERROR;
 }
 #undef DEFAULT_HTTP_TIMEOUT
@@ -261,7 +337,7 @@ svn_ra_serf__open(svn_ra_session_t *session,
   const char *client_string = NULL;
 
   serf_sess = apr_pcalloc(pool, sizeof(*serf_sess));
-  apr_pool_create(&serf_sess->pool, pool);
+  serf_sess->pool = svn_pool_create(pool);
   serf_sess->bkt_alloc = serf_bucket_allocator_create(serf_sess->pool, NULL,
                                                       NULL);
   serf_sess->cached_props = apr_hash_make(serf_sess->pool);

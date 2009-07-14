@@ -2,17 +2,22 @@
  * random-test.c:  Test delta generation and application using random data.
  *
  * ====================================================================
- * Copyright (c) 2000-2004, 2008 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -281,13 +286,8 @@ copy_tempfile(apr_file_t *fp, apr_pool_t *pool)
 
 /* Implements svn_test_driver_t. */
 static svn_error_t *
-random_test(const char **msg,
-            svn_boolean_t msg_only,
-            svn_test_opts_t *opts,
-            apr_pool_t *pool)
+random_test(apr_pool_t *pool)
 {
-  static char msg_buff[256];
-
   apr_uint32_t seed, bytes_range, maxlen;
   int i, iterations, dump_files, print_windows;
   const char *random_bytes;
@@ -296,13 +296,6 @@ random_test(const char **msg,
      or something. */
   init_params(&seed, &maxlen, &iterations, &dump_files, &print_windows,
               &random_bytes, &bytes_range, pool);
-  sprintf(msg_buff, "random delta test, seed = %lu", (unsigned long) seed);
-  *msg = msg_buff;
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-  else
-    printf("SEED:  %s\n", msg_buff);
 
   for (i = 0; i < iterations; i++)
     {
@@ -369,13 +362,9 @@ random_test(const char **msg,
 
 /* (Note: *LAST_SEED is an output parameter.) */
 static svn_error_t *
-do_random_combine_test(const char **msg,
-                       svn_boolean_t msg_only,
-                       apr_pool_t *pool,
+do_random_combine_test(apr_pool_t *pool,
                        apr_uint32_t *last_seed)
 {
-  static char msg_buff[256];
-
   apr_uint32_t seed, bytes_range, maxlen;
   int i, iterations, dump_files, print_windows;
   const char *random_bytes;
@@ -384,14 +373,6 @@ do_random_combine_test(const char **msg,
      or something. */
   init_params(&seed, &maxlen, &iterations, &dump_files, &print_windows,
               &random_bytes, &bytes_range, pool);
-  sprintf(msg_buff,
-          "random combine delta test, seed = %lu", (unsigned long) seed);
-  *msg = msg_buff;
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-  else
-    printf("SEED:  %s\n", msg_buff);
 
   for (i = 0; i < iterations; i++)
     {
@@ -509,15 +490,10 @@ do_random_combine_test(const char **msg,
 
 /* Implements svn_test_driver_t. */
 static svn_error_t *
-random_combine_test(const char **msg,
-                    svn_boolean_t msg_only,
-                    svn_test_opts_t *opts,
-                    apr_pool_t *pool)
+random_combine_test(apr_pool_t *pool)
 {
   apr_uint32_t seed;
-  svn_error_t *err = do_random_combine_test(msg, msg_only, pool, &seed);
-  if (!msg_only)
-    printf("SEED:  Last seen = %lu\n", (unsigned long) seed);
+  svn_error_t *err = do_random_combine_test(pool, &seed);
   return err;
 }
 
@@ -534,10 +510,13 @@ random_combine_test(const char **msg,
 struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
-    SVN_TEST_PASS(random_test),
-    SVN_TEST_PASS(random_combine_test),
+    SVN_TEST_PASS2(random_test,
+                   "random delta test"),
+    SVN_TEST_PASS2(random_combine_test,
+                   "random combine delta test"),
 #ifdef SVN_RANGE_INDEX_TEST_H
-    SVN_TEST_PASS(random_range_index_test),
+    SVN_TEST_PASS2(random_range_index_test,
+                   "random range index test"),
 #endif
     SVN_TEST_NULL
   };

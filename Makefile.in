@@ -2,17 +2,22 @@
 # Makefile.in:  template Makefile for Subversion
 #
 # ====================================================================
-# Copyright (c) 2000-2009 CollabNet.  All rights reserved.
+#    Licensed to the Subversion Corporation (SVN Corp.) under one
+#    or more contributor license agreements.  See the NOTICE file
+#    distributed with this work for additional information
+#    regarding copyright ownership.  The SVN Corp. licenses this file
+#    to you under the Apache License, Version 2.0 (the
+#    "License"); you may not use this file except in compliance
+#    with the License.  You may obtain a copy of the License at
 #
-# This software is licensed as described in the file COPYING, which
-# you should have received as part of this distribution.  The terms
-# are also available at http://subversion.tigris.org/license-1.html.
-# If newer versions of this license are posted there, you may use a
-# newer version instead, at your option.
+#      http://www.apache.org/licenses/LICENSE-2.0
 #
-# This software consists of voluntary contributions made by many
-# individuals.  For exact contribution history, see the revision
-# history and logs, available at http://subversion.tigris.org/.
+#    Unless required by applicable law or agreed to in writing,
+#    software distributed under the License is distributed on an
+#    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+#    KIND, either express or implied.  See the License for the
+#    specific language governing permissions and limitations
+#    under the License.
 # ====================================================================
 #
 
@@ -48,6 +53,7 @@ SVN_KWALLET_LIBS = @SVN_KWALLET_LIBS@
 SVN_SASL_LIBS = @SVN_SASL_LIBS@
 SVN_SERF_LIBS = @SVN_SERF_LIBS@
 SVN_SQLITE_LIBS = @SVN_SQLITE_LIBS@
+SVN_XML_LIBS = @SVN_XML_LIBS@
 SVN_ZLIB_LIBS = @SVN_ZLIB_LIBS@
 
 LIBS = @LIBS@
@@ -115,7 +121,8 @@ INCLUDES = -I$(top_srcdir)/subversion/include -I$(top_builddir)/subversion \
            @SVN_APR_INCLUDES@ @SVN_APRUTIL_INCLUDES@ @SVN_APR_MEMCACHE_INCLUDES@ \
            @SVN_DB_INCLUDES@ @SVN_GNOME_KEYRING_INCLUDES@ @SVN_GSSAPI_INCLUDES@ \
            @SVN_KWALLET_INCLUDES@ @SVN_NEON_INCLUDES@ @SVN_SASL_INCLUDES@ \
-           @SVN_SERF_INCLUDES@ @SVN_SQLITE_INCLUDES@ @SVN_ZLIB_INCLUDES@
+           @SVN_SERF_INCLUDES@ @SVN_SQLITE_INCLUDES@ @SVN_XML_INCLUDES@ \
+           @SVN_ZLIB_INCLUDES@
 
 APACHE_INCLUDES = @APACHE_INCLUDES@
 APACHE_LIBEXECDIR = $(DESTDIR)@APACHE_LIBEXECDIR@
@@ -192,9 +199,28 @@ LINK_CXX = $(LIBTOOL) $(LTCXXFLAGS) --mode=link $(CXX) $(LT_LDFLAGS) $(CXXFLAGS)
 # special link rule for mod_dav_svn
 LINK_APACHE_MOD = $(LIBTOOL) $(LTFLAGS) --mode=link $(CC) $(LT_LDFLAGS) $(CFLAGS) $(LDFLAGS) -rpath $(APACHE_LIBEXECDIR) -avoid-version -module $(APACHE_LDFLAGS)
 
+# Special LDFLAGS for some libraries
+libsvn_auth_gnome_keyring_LDFLAGS = @libsvn_auth_gnome_keyring_LDFLAGS@
+libsvn_auth_kwallet_LDFLAGS = @libsvn_auth_kwallet_LDFLAGS@
+libsvn_client_LDFLAGS = @libsvn_client_LDFLAGS@
+libsvn_delta_LDFLAGS = @libsvn_delta_LDFLAGS@
+libsvn_diff_LDFLAGS = @libsvn_diff_LDFLAGS@
+libsvn_fs_LDFLAGS = @libsvn_fs_LDFLAGS@
+libsvn_fs_base_LDFLAGS = @libsvn_fs_base_LDFLAGS@
+libsvn_fs_fs_LDFLAGS = @libsvn_fs_fs_LDFLAGS@
+libsvn_fs_util_LDFLAGS = @libsvn_fs_util_LDFLAGS@
+libsvn_ra_LDFLAGS = @libsvn_ra_LDFLAGS@
+libsvn_ra_local_LDFLAGS = @libsvn_ra_local_LDFLAGS@
+libsvn_ra_neon_LDFLAGS = @libsvn_ra_neon_LDFLAGS@
+libsvn_ra_serf_LDFLAGS = @libsvn_ra_serf_LDFLAGS@
+libsvn_ra_svn_LDFLAGS = @libsvn_ra_svn_LDFLAGS@
+libsvn_repos_LDFLAGS = @libsvn_repos_LDFLAGS@
+libsvn_subr_LDFLAGS = @libsvn_subr_LDFLAGS@
+libsvn_wc_LDFLAGS = @libsvn_wc_LDFLAGS@
+
 # Compilation of SWIG-generated C source code
-COMPILE_PY_WRAPPER = $(LIBTOOL) $(LTFLAGS) --mode=compile $(LT_CFLAGS) $(SWIG_PY_COMPILE) $(CPPFLAGS) $(SWIG_PY_INCLUDES) -prefer-pic -c -o $@
-COMPILE_RB_WRAPPER = $(LIBTOOL) $(LTFLAGS) --mode=compile $(LT_CFLAGS) $(SWIG_RB_COMPILE) $(CPPFLAGS) $(SWIG_RB_INCLUDES) -prefer-pic -c -o $@
+COMPILE_PY_WRAPPER = $(LIBTOOL) $(LTFLAGS) --mode=compile $(SWIG_PY_COMPILE) $(LT_CFLAGS) $(CPPFLAGS) $(SWIG_PY_INCLUDES) -prefer-pic -c -o $@
+COMPILE_RB_WRAPPER = $(LIBTOOL) $(LTFLAGS) --mode=compile $(SWIG_RB_COMPILE) $(LT_CFLAGS) $(CPPFLAGS) $(SWIG_RB_INCLUDES) -prefer-pic -c -o $@
 
 # these commands link the wrapper objects into an extension library/module
 LINK_PY_WRAPPER = $(LIBTOOL) $(LTFLAGS) --mode=link $(SWIG_PY_LINK) $(SWIG_LDFLAGS) -rpath $(swig_pydir) -avoid-version -module

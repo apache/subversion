@@ -2,17 +2,22 @@
  * main.c: Subversion server administration tool.
  *
  * ====================================================================
- * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -26,6 +31,7 @@
 #include "svn_opt.h"
 #include "svn_utf.h"
 #include "svn_subst.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_config.h"
 #include "svn_repos.h"
@@ -117,7 +123,7 @@ parse_local_repos_path(apr_getopt_t *os,
     {
       const char * path = os->argv[os->ind++];
       SVN_ERR(svn_utf_cstring_to_utf8(repos_path, path, pool));
-      *repos_path = svn_path_internal_style(*repos_path, pool);
+      *repos_path = svn_dirent_internal_style(*repos_path, pool);
     }
 
   if (*repos_path == NULL)
@@ -900,7 +906,7 @@ list_dblogs(apr_getopt_t *os, void *baton, svn_boolean_t only_unused,
       log_utf8 = svn_path_join(opt_state->repository_path,
                                APR_ARRAY_IDX(logfiles, i, const char *),
                                pool);
-      log_utf8 = svn_path_local_style(log_utf8, pool);
+      log_utf8 = svn_dirent_local_style(log_utf8, pool);
       SVN_ERR(svn_cmdline_printf(pool, "%s\n", log_utf8));
     }
 
@@ -1004,7 +1010,7 @@ set_revprop(const char *prop_name, const char *filename,
   const char *filename_utf8;
 
   SVN_ERR(svn_utf_cstring_to_utf8(&filename_utf8, filename, pool));
-  filename_utf8 = svn_path_internal_style(filename_utf8, pool);
+  filename_utf8 = svn_dirent_internal_style(filename_utf8, pool);
 
   SVN_ERR(svn_stringbuf_from_file2(&file_contents, filename_utf8, pool));
 
@@ -1241,15 +1247,10 @@ subcommand_lslocks(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
   for (hi = apr_hash_first(pool, locks); hi; hi = apr_hash_next(hi))
     {
-      const void *key;
-      void *val;
-      const char *path, *cr_date, *exp_date = "";
-      svn_lock_t *lock;
+      const char *cr_date, *exp_date = "";
+      const char *path = svn_apr_hash_index_key(hi);
+      svn_lock_t *lock = svn_apr_hash_index_val(hi);
       int comment_lines = 0;
-
-      apr_hash_this(hi, &key, NULL, &val);
-      path = key;
-      lock = val;
 
       cr_date = svn_time_to_human_cstring(lock->creation_date, pool);
 
@@ -1582,7 +1583,7 @@ main(int argc, const char *argv[])
         if (err)
           return svn_cmdline_handle_exit_error(err, pool, "svnadmin: ");
         opt_state.parent_dir
-          = svn_path_internal_style(opt_state.parent_dir, pool);
+          = svn_dirent_internal_style(opt_state.parent_dir, pool);
         break;
       case svnadmin__use_pre_commit_hook:
         opt_state.use_pre_commit_hook = TRUE;

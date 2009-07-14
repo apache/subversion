@@ -1,17 +1,22 @@
 /* tree.c : tree-like filesystem, built on DAG filesystem
  *
  * ====================================================================
- * Copyright (c) 2000-2009 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -39,6 +44,7 @@
 #include "svn_private_config.h"
 #include "svn_pools.h"
 #include "svn_error.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_mergeinfo.h"
 #include "svn_fs.h"
@@ -1675,9 +1681,7 @@ svn_fs_fs__commit_txn(const char **conflict_p,
 
       svn_pool_clear(iterpool);
 
-      /* Get the *current* youngest revision, in one short-lived
-         Berkeley transaction.  (We don't want the revisions table
-         locked while we do the main merge.)  We call it "youngish"
+      /* Get the *current* youngest revision.  We call it "youngish"
          because new revisions might get committed after we've
          obtained it. */
 
@@ -1685,13 +1689,13 @@ svn_fs_fs__commit_txn(const char **conflict_p,
       SVN_ERR(svn_fs_fs__revision_root(&youngish_root, fs, youngish_rev,
                                        iterpool));
 
-      /* Get the dag node for the youngest revision, also in one
-         Berkeley transaction.  Later we'll use it as the SOURCE
-         argument to a merge, and if the merge succeeds, this youngest
-         root node will become the new base root for the svn txn that
-         was the target of the merge (but note that the youngest rev
-         may have changed by then -- that's why we're careful to get
-         this root in its own bdb txn here). */
+      /* Get the dag node for the youngest revision.  Later we'll use
+         it as the SOURCE argument to a merge, and if the merge
+         succeeds, this youngest root node will become the new base
+         root for the svn txn that was the target of the merge (but
+         note that the youngest rev may have changed by then -- that's
+         why we're careful to get this root in its own bdb txn
+         here). */
       SVN_ERR(get_root(&youngish_root_node, youngish_root, iterpool));
 
       /* Try to merge.  If the merge succeeds, the base root node of
@@ -3714,13 +3718,10 @@ static svn_fs_root_t *
 make_root(svn_fs_t *fs,
           apr_pool_t *pool)
 {
-  /* We create a subpool for each root object to allow us to implement
-     svn_fs_close_root.  */
-  apr_pool_t *subpool = svn_pool_create(pool);
-  svn_fs_root_t *root = apr_pcalloc(subpool, sizeof(*root));
+  svn_fs_root_t *root = apr_pcalloc(pool, sizeof(*root));
 
   root->fs = fs;
-  root->pool = subpool;
+  root->pool = pool;
   root->vtable = &root_vtable;
 
   return root;

@@ -2,17 +2,22 @@
  * upgrade.c:  routines for upgrading a working copy
  *
  * ====================================================================
- * Copyright (c) 2009 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -182,7 +187,7 @@ read_wcprops(apr_hash_t **all_wcprops,
             return svn_error_createf
               (SVN_ERR_WC_CORRUPT, NULL,
                _("Missing end of line in wcprops file for '%s'"),
-               svn_path_local_style(dir_abspath, scratch_pool));
+               svn_dirent_local_style(dir_abspath, scratch_pool));
           break;
         }
       SVN_ERR(read_one_proplist(*all_wcprops, line->data, stream,
@@ -314,8 +319,8 @@ upgrade_format(svn_wc_adm_access_t *adm_access,
            "http://subversion.tigris.org/faq.html#working-copy-format-change\n"
            "for details."
            ),
-         svn_path_local_style(svn_wc_adm_access_path(adm_access),
-                              scratch_pool));
+         svn_dirent_local_style(svn_wc_adm_access_path(adm_access),
+                                scratch_pool));
     }
 
   /* Early out of the format is already what we expect it to be.  */

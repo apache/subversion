@@ -2,17 +2,22 @@
  * opt.c :  option and argument parsing for Subversion command lines
  *
  * ====================================================================
- * Copyright (c) 2000-2009 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -873,13 +878,22 @@ svn_opt__split_arg_at_peg_revision(const char **true_target,
 
   if (peg_start)
     {
+      /* Error out if target is the empty string. */
+      if (j == 0)
+        return svn_error_createf(SVN_ERR_BAD_FILENAME, NULL,
+                                 _("'%s' is just a peg revision. "
+                                   "Maybe try '%s@' instead?"),
+                                 utf8_target, utf8_target);
+
       *true_target = apr_pstrmemdup(pool, utf8_target, j);
-      *peg_revision = apr_pstrdup(pool, peg_start);
+      if (peg_revision)
+        *peg_revision = apr_pstrdup(pool, peg_start);
     }
   else
     {
       *true_target = utf8_target;
-      *peg_revision = "";
+      if (peg_revision)
+        *peg_revision = "";
     }
 
   return SVN_NO_ERROR;
@@ -939,7 +953,7 @@ svn_opt__arg_canonicalize_path(const char **path_out, const char *path_in,
   else
     return svn_error_createf(apr_err, NULL,
                              _("Error resolving case of '%s'"),
-                             svn_path_local_style(path_in, pool));
+                             svn_dirent_local_style(path_in, pool));
 
   /* convert back to UTF-8. */
   SVN_ERR(svn_path_cstring_to_utf8(path_out, apr_target, pool));
@@ -960,11 +974,12 @@ svn_opt__print_version_info(const char *pgm_name,
   SVN_ERR(svn_cmdline_printf(pool, _("%s, version %s\n"
                                      "   compiled %s, %s\n\n"), pgm_name,
                              SVN_VERSION, __DATE__, __TIME__));
-  SVN_ERR(svn_cmdline_fputs(_("Copyright (C) 2000-2009 CollabNet.\n"
+  SVN_ERR(svn_cmdline_fputs(_("Copyright (C) 2009 The Subversion Corporation.\n"
+                              "This software consists of"
+                              " contributions made by many people;\n"
+                              "see the NOTICE file for more information.\n"
                               "Subversion is open source software, see"
-                              " http://subversion.tigris.org/\n"
-                              "This product includes software developed by "
-                              "CollabNet (http://www.Collab.Net/).\n\n"),
+                              " http://subversion.tigris.org/\n\n"),
                             stdout, pool));
 
   if (footer)
@@ -1015,6 +1030,32 @@ svn_opt_print_help3(apr_getopt_t *os,
   else                                       /* unknown option or cmd */
     SVN_ERR(svn_cmdline_fprintf(stderr, pool,
                                 _("Type '%s help' for usage.\n"), pgm_name));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_opt_eat_peg_revisions(apr_array_header_t **true_targets_p,
+                          apr_array_header_t *targets,
+                          apr_pool_t *pool)
+{
+  unsigned int i;
+  apr_array_header_t *true_targets;
+
+  true_targets = apr_array_make(pool, DEFAULT_ARRAY_SIZE, sizeof(const char *));
+
+  for (i = 0; i < targets->nelts; i++)
+    {
+      const char *target = APR_ARRAY_IDX(targets, i, const char *);
+      const char *true_target;
+
+      SVN_ERR(svn_opt__split_arg_at_peg_revision(&true_target, NULL,
+                                                 target, pool));
+      APR_ARRAY_PUSH(true_targets, const char *) = true_target;
+    }
+
+  SVN_ERR_ASSERT(true_targets_p);
+  *true_targets_p = true_targets;
 
   return SVN_NO_ERROR;
 }

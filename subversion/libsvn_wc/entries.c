@@ -2,17 +2,22 @@
  * entries.c :  manipulating the administrative `entries' file.
  *
  * ====================================================================
- * Copyright (c) 2000-2009 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -736,6 +741,7 @@ read_entries_new(apr_hash_t **result_entries,
       const char *entry_abspath;
       const char *original_repos_relpath;
       const char *original_root_url;
+      const char *prop_reject_file;
       svn_boolean_t base_shadowed;
 
       svn_pool_clear(iterpool);
@@ -771,6 +777,7 @@ read_entries_new(apr_hash_t **result_entries,
                 NULL,
                 NULL,
                 &base_shadowed,
+                &prop_reject_file,
                 &lock,
                 db,
                 entry_abspath,
@@ -1128,6 +1135,9 @@ read_entries_new(apr_hash_t **result_entries,
       if (checksum)
         entry->checksum = svn_checksum_to_cstring(checksum, result_pool);
 
+      if (prop_reject_file != NULL)
+        entry->prejfile = apr_pstrdup(result_pool, prop_reject_file);
+
      if (lock)
        {
          entry->lock_token = lock->token;
@@ -1156,10 +1166,6 @@ read_entries_new(apr_hash_t **result_entries,
                   entry->conflict_wrk =
                     apr_pstrdup(result_pool, actual_node->conflict_working);
                 }
-
-              if (actual_node->prop_reject != NULL)
-                entry->prejfile =
-                  apr_pstrdup(result_pool, actual_node->prop_reject);
 
               if (actual_node->tree_conflict_data != NULL)
                 entry->tree_conflict_data =
@@ -1356,8 +1362,8 @@ svn_wc__get_entry(const svn_wc_entry_t **entry,
           SVN_ERR_ASSERT(*entry != NULL && (*entry)->kind == svn_node_dir);
           return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
                                  _("Admin area of '%s' is missing"),
-                                 svn_path_local_style(local_abspath,
-                                                      scratch_pool));
+                                 svn_dirent_local_style(local_abspath,
+                                                        scratch_pool));
         }
     }
   else
@@ -1382,8 +1388,8 @@ svn_wc__get_entry(const svn_wc_entry_t **entry,
         return SVN_NO_ERROR;
       return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
                                _("'%s' is not under version control"),
-                               svn_path_local_style(local_abspath,
-                                                    scratch_pool));
+                               svn_dirent_local_style(local_abspath,
+                                                      scratch_pool));
     }
 
   /* Give the caller a valid entry.  */
@@ -1394,8 +1400,8 @@ svn_wc__get_entry(const svn_wc_entry_t **entry,
       || (kind == svn_node_dir && (*entry)->kind != svn_node_dir))
     return svn_error_createf(SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
                              _("'%s' is not of the right kind"),
-                             svn_path_local_style(local_abspath,
-                                                  scratch_pool));
+                             svn_dirent_local_style(local_abspath,
+                                                    scratch_pool));
 
   if (kind == svn_node_unknown)
     {
@@ -1403,8 +1409,8 @@ svn_wc__get_entry(const svn_wc_entry_t **entry,
       if (need_parent_stub && (*entry)->kind != svn_node_dir)
         return svn_error_createf(SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
                                  _("'%s' is not of the right kind"),
-                                 svn_path_local_style(local_abspath,
-                                                      scratch_pool));
+                                 svn_dirent_local_style(local_abspath,
+                                                        scratch_pool));
 
       /* The actual (directory) information was wanted, but we got a stub.  */
       if (!need_parent_stub
@@ -1412,8 +1418,8 @@ svn_wc__get_entry(const svn_wc_entry_t **entry,
           && *(*entry)->name != '\0')
         return svn_error_createf(SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
                                  _("'%s' is not of the right kind"),
-                                 svn_path_local_style(local_abspath,
-                                                      scratch_pool));
+                                 svn_dirent_local_style(local_abspath,
+                                                        scratch_pool));
     }
 
   return SVN_NO_ERROR;
@@ -1492,7 +1498,7 @@ svn_wc__entry_versioned(const svn_wc_entry_t **entry,
   if (! *entry)
     return svn_error_createf(SVN_ERR_ENTRY_NOT_FOUND, NULL,
                              _("'%s' is not under version control"),
-                             svn_path_local_style(path, pool));
+                             svn_dirent_local_style(path, pool));
 
   return SVN_NO_ERROR;
 }
@@ -2322,8 +2328,8 @@ entries_write_body(svn_wc__db_t *db,
   if (! this_dir)
     return svn_error_createf(SVN_ERR_ENTRY_NOT_FOUND, NULL,
                              _("No default entry in directory '%s'"),
-                             svn_path_local_style(local_abspath,
-                                                  scratch_pool));
+                             svn_dirent_local_style(local_abspath,
+                                                    scratch_pool));
 
   /* Get the repos ID. */
   if (this_dir->uuid != NULL)
@@ -2380,7 +2386,11 @@ entries_write_body(svn_wc__db_t *db,
       if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
         {
           /* We could be looking at a newly added node, without a BASE node,
-             and hence no dav cache, so just ignore the error. */
+             and hence no dav cache, so just ignore the error.
+             ### we shouldn't have to do this dance, since the children
+             ### we are looping over are all the BASE children.  but something
+             ### is mysteriously awry, and in the interested of passing tests,
+             ### I'm going to leave this in for a bit.  TODO: Investigate.*/
           svn_error_clear(err);
           continue;
         }
@@ -3227,15 +3237,15 @@ walker_helper(const char *dirpath,
     return walk_callbacks->handle_error
       (dirpath, svn_error_createf(SVN_ERR_ENTRY_NOT_FOUND, NULL,
                                   _("Directory '%s' has no THIS_DIR entry"),
-                                  svn_path_local_style(dirpath, pool)),
+                                  svn_dirent_local_style(dirpath, pool)),
        walk_baton, pool);
 
   /* Call the "found entry" callback for this directory as a "this dir"
-   * entry. Note that if this directory has been reached by recusrion, this
+   * entry. Note that if this directory has been reached by recursion, this
    * is the second visit as it will already have been visited once as a
    * child entry of its parent. */
 
-  err = walk_callbacks->found_entry(dirpath, dot_entry, walk_baton, pool);
+  err = walk_callbacks->found_entry(dirpath, dot_entry, walk_baton, subpool);
 
 
   if(err)
@@ -3351,7 +3361,7 @@ svn_wc_walk_entries3(const char *path,
                              NULL, NULL,
                              NULL, NULL,
                              NULL, NULL, NULL, NULL,
-                             NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL, NULL,
                              db, abspath,
                              pool, pool);
   if (err)
@@ -3363,7 +3373,7 @@ svn_wc_walk_entries3(const char *path,
       return walk_callbacks->handle_error(
         path, svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
                                 _("'%s' is not under version control"),
-                                svn_path_local_style(path, pool)),
+                                svn_dirent_local_style(path, pool)),
         walk_baton, pool);
     }
 
@@ -3393,7 +3403,7 @@ svn_wc_walk_entries3(const char *path,
           return walk_callbacks->handle_error(
             path, svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
                                     _("'%s' is not under version control"),
-                                    svn_path_local_style(path, pool)),
+                                    svn_dirent_local_style(path, pool)),
             walk_baton, pool);
         }
 
@@ -3412,7 +3422,7 @@ svn_wc_walk_entries3(const char *path,
   return walk_callbacks->handle_error(
        path, svn_error_createf(SVN_ERR_NODE_UNKNOWN_KIND, NULL,
                                _("'%s' has an unrecognized node kind"),
-                               svn_path_local_style(path, pool)),
+                               svn_dirent_local_style(path, pool)),
        walk_baton, pool);
 }
 
@@ -3688,5 +3698,5 @@ svn_wc_mark_missing_deleted(const char *path,
     return svn_error_createf(SVN_ERR_WC_PATH_FOUND, NULL,
                              _("Unexpectedly found '%s': "
                                "path is marked 'missing'"),
-                             svn_path_local_style(path, pool));
+                             svn_dirent_local_style(path, pool));
 }

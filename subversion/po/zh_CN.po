@@ -1,6 +1,22 @@
 #
 # Simplified Chinese translation for subversion package
-# This file is distributed under the same license as the subversion package.
+#
+#    Licensed to the Subversion Corporation (SVN Corp.) under one
+#    or more contributor license agreements.  See the NOTICE file
+#    distributed with this work for additional information
+#    regarding copyright ownership.  The SVN Corp. licenses this file
+#    to you under the Apache License, Version 2.0 (the
+#    "License"); you may not use this file except in compliance
+#    with the License.  You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+#    Unless required by applicable law or agreed to in writing,
+#    software distributed under the License is distributed on an
+#    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+#    KIND, either express or implied.  See the License for the
+#    specific language governing permissions and limitations
+#    under the License.
 #
 # Update to new pot:
 #    msgmerge --update zh_CN.po subversion.pot
@@ -37,8 +53,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.7\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2009-05-26 14:15+0800\n"
-"PO-Revision-Date: 2009-04-14 11:11+0800\n"
+"POT-Creation-Date: 2009-06-22 14:23+0800\n"
+"PO-Revision-Date: 2009-06-22 14:25+0800\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Simplified Chinese <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -1343,6 +1359,9 @@ msgstr "URL 中没有方案(一般需要svn://，http://，file://等开头): �
 msgid "Access scheme mixtures not yet supported ('%s' and '%s')"
 msgstr "不支持存取混合方案 (“%s”与“%s”)"
 
+msgid "Attempt to add tree conflict that already exists"
+msgstr "试图增加已经存在的树冲突"
+
 #. xgettext: the '.working', '.merge-left.r%ld' and
 #. '.merge-right.r%ld' strings are used to tag onto a file
 #. name in case of a merge conflict
@@ -1509,6 +1528,9 @@ msgstr "“%s” 不是版本库的根"
 #, c-format
 msgid "The repository at '%s' has uuid '%s', but the WC has '%s'"
 msgstr "版本库 “%s” 的 uuid 是 “%s”，但是工作副本的是 “%s”"
+
+msgid "Cannot relocate a single file"
+msgstr "无法重新定位单个文件"
 
 #, c-format
 msgid "Path '%s' has no committed revision"
@@ -2780,8 +2802,8 @@ msgid "Failed to find label '%s' for URL '%s'"
 msgstr "无法找到标签 “%s” 于 URL “%s”"
 
 #, c-format
-msgid "'%s' was not present on the resource"
-msgstr "资源没有“%s”"
+msgid "'%s' was not present on the resource '%s'"
+msgstr "'%s' 不在资源 '%s' 中"
 
 #, c-format
 msgid "Neon was unable to parse URL '%s'"
@@ -3063,8 +3085,13 @@ msgstr "GET 请求失败: %d %s"
 msgid "Error retrieving REPORT (%d)"
 msgstr "获取报告出错(%d)"
 
+#, c-format
+msgid "Error running context"
+msgstr "执行上下文错误"
+
+#, c-format
 msgid "Premature EOF seen from server"
-msgstr "从服务器发现EOF太早"
+msgstr "从服务器发现 EOF 太早"
 
 msgid "Unspecified error message"
 msgstr "未指明的错误信息"
@@ -4167,6 +4194,14 @@ msgid "First line of '%s' contains non-digit"
 msgstr "“%s” 的第一行包含了非数字"
 
 #, c-format
+msgid "Can't create temporary file from template '%s'"
+msgstr "无法从模版“%s”创建临时文件"
+
+#, c-format
+msgid "Can't get filename"
+msgstr "无法获取文件名"
+
+#, c-format
 msgid "Invalid revision number found parsing '%s'"
 msgstr "解析 “%s” 时发现无效的版本号"
 
@@ -4261,6 +4296,10 @@ msgstr "版本属性对为空"
 #, c-format
 msgid "'%s' is not a valid Subversion property name"
 msgstr "“%s”不是有效的 Subversion 属性名称"
+
+#, c-format
+msgid "'%s' is just a peg revision. Maybe try '%s@' instead?"
+msgstr "'%s' 是 peg 版本。也许你需要使用 '%s@'?"
 
 #, c-format
 msgid "URL '%s' is not properly URI-encoded"
@@ -4795,6 +4834,9 @@ msgstr "工作副本“%s”已经锁定"
 msgid "Path '%s' ends in '%s', which is unsupported for this operation"
 msgstr "路径“%s”以“%s”结束，此操作不支持"
 
+msgid "Working copy format is too old; please run 'svn upgrade'"
+msgstr "工作副本格式太旧; 请执行 'svn upgrade'"
+
 #, c-format
 msgid "'%s' is not a working copy"
 msgstr "“%s”不是工作副本"
@@ -5165,9 +5207,6 @@ msgstr "树冲突描述中有非法的 “node_kind” 域"
 
 msgid "Error parsing tree conflict skel"
 msgstr "解析树冲突骨架出错"
-
-msgid "Attempt to add tree conflict that already exists"
-msgstr "试图增加已经存在的树冲突"
 
 #, c-format
 msgid "No '.' entry in: '%s'"
@@ -6324,7 +6363,7 @@ msgstr ""
 "    如果 PATH 是未版本控制或者已修改的项目，或者包含这些项目，那么仅当\n"
 "    给出 --force 参数时这些项目才会被删除。\n"
 "\n"
-"  2、每个 UR L指定的项目会通过立即提交从版本库中删除。\n"
+"  2、每个 URL 指定的项目会通过立即提交从版本库中删除。\n"
 
 msgid ""
 "Display the differences between two revisions or paths.\n"
@@ -7197,8 +7236,19 @@ msgid ""
 "     or hostname change) but your working copy still reflects the same\n"
 "     directory within the same repository.\n"
 "\n"
+"     FROM is the root URL which will be relocated from.\n"
+"     You can use 'svn info' to determine the root URL of the current\n"
+"     working copy directory (look for 'URL:' in its output).\n"
+"\n"
+"     TO is the root URL which will be relocated to.\n"
+"\n"
 "  See also 'svn help update' for a list of possible characters\n"
 "  reporting the action taken.\n"
+"\n"
+"  Examples:\n"
+"    svn switch ^/branches/1.x-release\n"
+"    svn switch --relocate http://www.example.com/repo/project \\\n"
+"                          svn://svn.example.com/repo/project\n"
 msgstr ""
 "更新工作副本至不同的 URL。\n"
 "用法:  1、switch URL[@PEGREV] [PATH]\n"
@@ -7222,7 +7272,17 @@ msgstr ""
 "     变(比如方案或者主机名称变动)，但是工作副本仍旧对应同一版本库的同一目录\n"
 "     时，使用这个命令更新工作副本与档案库的对应关系。\n"
 "\n"
+"     FROM 是重新定位源之根 URL。你可以使用 'svn info' 确定工作目录的根 URL\n"
+"     (即输出中的 'URL:' 字段)。\n"
+"\n"
+"     TO 是重新定位目的之根 URL。\n"
+"\n"
 "  参见 “svn help update” 以获取报告执行动作的字符列表。\n"
+"\n"
+"  样例:\n"
+"    svn switch ^/branches/1.x-release\n"
+"    svn switch --relocate http://www.example.com/repo/project \\\n"
+"                          svn://svn.example.com/repo/project\n"
 
 msgid ""
 "Unlock working copy paths or URLs.\n"

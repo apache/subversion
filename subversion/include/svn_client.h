@@ -1,17 +1,22 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2000-2009 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  * @endcopyright
  *
@@ -407,8 +412,9 @@ typedef struct svn_client_commit_info_t
 #define SVN_CLIENT_COMMIT_ITEM_LOCK_TOKEN  0x20
 /** @} */
 
-/** The commit candidate structure.  In order to avoid backwards
- * compatibility problems clients should use
+/** The commit candidate structure.
+ *
+ * In order to avoid backwards compatibility problems clients should use
  * svn_client_commit_item3_create() to allocate and initialize this
  * structure instead of doing so themselves.
  *
@@ -416,6 +422,8 @@ typedef struct svn_client_commit_info_t
  */
 typedef struct svn_client_commit_item3_t
 {
+  /* IMPORTANT: If you extend this structure, add new fields to the end. */
+
   /** absolute working-copy path of item */
   const char *path;
 
@@ -462,6 +470,12 @@ typedef struct svn_client_commit_item3_t
    * same lifetime as this data structure.
    */
   apr_array_header_t *outgoing_prop_changes;
+
+  /** adm_access of this item
+   *
+   * @since New in 1.7.
+   * ### This will be obsoleted by WC-NG. */
+  svn_wc_adm_access_t *adm_access;
 } svn_client_commit_item3_t;
 
 /** The commit candidate structure.
@@ -551,8 +565,9 @@ svn_client_commit_item_create(const svn_client_commit_item3_t **item,
                               apr_pool_t *pool);
 
 /**
- * Return a duplicate of @a item, allocated in @a pool. No part of the new
- * structure will be shared with @a item.
+ * Return a duplicate of @a item, allocated in @a pool. No part of the
+ * new structure will be shared with @a item, except for the adm_access
+ * member.
  *
  * @since New in 1.5.
  */
@@ -923,6 +938,13 @@ typedef struct svn_client_ctx_t
   /** Custom client name string, or @c null.
    * @since New in 1.5. */
   const char *client_name;
+
+  /** An optional working copy context for the client operation to use.
+   * This is initialized by svn_client_create_context() and should never
+   * be @c NULL.
+   *
+   * @since New in 1.7.  */
+  svn_wc_context_t *wc_ctx;
 
 } svn_client_ctx_t;
 
@@ -4089,10 +4111,18 @@ svn_client_export(svn_revnum_t *result_rev,
  * @{
  */
 
-/** Invoked by svn_client_list2() for each @a path with its @a dirent and,
- * if @a path is locked, its @a lock.  @a abs_path is the filesystem path
- * to which @a path is relative.  @a baton is the baton passed to the
- * caller.  @a pool may be used for temporary allocations.
+/** The type of function invoked by svn_client_list2() to report the details
+ * of each directory entry being listed.
+ *
+ * @a baton is the baton that was passed to the caller.  @a path is the
+ * entry's path relative to @a abs_path; it is the empty path when reporting
+ * the top node of the list operation.  @a dirent contains some or all of
+ * the directory entry's details, as determined by the caller.  @a lock is
+ * the entry's lock, if it is locked and if lock information is being
+ * reported by the caller; otherwise @a lock is NULL.  @a abs_path is the
+ * repository path of the top node of the list operation; it is relative to
+ * the repository root and begins with "/".  @a pool may be used for
+ * temporary allocations.
  *
  * @since New in 1.4.
  */
@@ -4710,12 +4740,16 @@ svn_client_info(const char *path_or_url,
  * unversioned items the operation will fail.  If @a force is set such items
  * will be deleted.
  *
+ * If @a dry_run is TRUE, the patching process is carried out, and full
+ * notification feedback is provided, but the working copy is not modified.
+ *
  * @since New in 1.7.
  */
 svn_error_t *
 svn_client_patch(const char *patch_path,
                  const char *target,
                  svn_boolean_t force,
+                 svn_boolean_t dry_run,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *pool);
 

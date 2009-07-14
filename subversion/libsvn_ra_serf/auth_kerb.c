@@ -2,17 +2,22 @@
  * auth_kerb.c : Kerberos authn implementation
  *
  * ====================================================================
- * Copyright (c) 2009 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -320,8 +325,8 @@ cleanup_gss_ctx(void *data)
    Kerberos. */
 svn_error_t *
 svn_ra_serf__init_kerb_connection(svn_ra_serf__session_t *session,
-				  svn_ra_serf__connection_t *conn,
-				  apr_pool_t *pool)
+                                  svn_ra_serf__connection_t *conn,
+                                  apr_pool_t *pool)
 {
   serf_gss_api_context_t *gss_api_ctx;
 
@@ -344,11 +349,11 @@ svn_ra_serf__init_kerb_connection(svn_ra_serf__session_t *session,
 /* A 401 response was received, handle the authentication. */
 svn_error_t *
 svn_ra_serf__handle_kerb_auth(svn_ra_serf__handler_t *ctx,
-			      serf_request_t *request,
-			      serf_bucket_t *response,
-			      const char *auth_hdr,
-			      const char *auth_attr,
-			      apr_pool_t *pool)
+                              serf_request_t *request,
+                              serf_bucket_t *response,
+                              const char *auth_hdr,
+                              const char *auth_attr,
+                              apr_pool_t *pool)
 {
   return do_auth(ctx->conn->auth_context,
                  ctx->conn,
@@ -363,9 +368,9 @@ svn_ra_serf__handle_kerb_auth(svn_ra_serf__handler_t *ctx,
 /* Setup the authn headers on this request message. */
 svn_error_t *
 svn_ra_serf__setup_request_kerb_auth(svn_ra_serf__connection_t *conn,
-				     const char *method,
-				     const char *uri,
-				     serf_bucket_t *hdrs_bkt)
+                                     const char *method,
+                                     const char *uri,
+                                     serf_bucket_t *hdrs_bkt)
 {
   /* Take the default authentication header for this connection, if any. */
   if (conn->auth_header && conn->auth_value)
@@ -399,13 +404,13 @@ svn_ra_serf__validate_response_kerb_auth(svn_ra_serf__handler_t *ctx,
   if (gss_api_ctx->state != gss_api_auth_completed)
     {
       return do_auth(ctx->conn->auth_context,
-		     ctx->conn,
-		     ctx->session->auth_protocol->auth_name,
-		     &ctx->conn->auth_value,
-		     auth_attr,
-		     &ctx->conn->auth_header,
-		     "Authorization",
-		     pool);
+                     ctx->conn,
+                     ctx->session->auth_protocol->auth_name,
+                     &ctx->conn->auth_value,
+                     auth_attr,
+                     &ctx->conn->auth_header,
+                     "Authorization",
+                     pool);
     }
 
   return SVN_NO_ERROR;

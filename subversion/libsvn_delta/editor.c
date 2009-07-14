@@ -2,17 +2,22 @@
  * editor.c :  editing trees of versioned resources
  *
  * ====================================================================
- * Copyright (c) 2009 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -210,7 +215,8 @@ svn_error_t *
 svn_editor_add_directory(svn_editor_t *editor,
                          const char *relpath,
                          const apr_array_header_t *children,
-                         apr_hash_t *props)
+                         apr_hash_t *props,
+                         svn_revnum_t replaces_rev)
 {
   svn_error_t *err;
 
@@ -220,7 +226,8 @@ svn_editor_add_directory(svn_editor_t *editor,
     SVN_ERR((*editor->cancel_func)(editor->cancel_baton));
 
   err = (*editor->funcs.cb_add_directory)(editor->baton, relpath, children,
-                                          props, editor->scratch_pool);
+                                          props, replaces_rev,
+                                          editor->scratch_pool);
   svn_pool_clear(editor->scratch_pool);
   return err;
 }
@@ -229,7 +236,8 @@ svn_editor_add_directory(svn_editor_t *editor,
 svn_error_t *
 svn_editor_add_file(svn_editor_t *editor,
                     const char *relpath,
-                    apr_hash_t *props)
+                    apr_hash_t *props,
+                    svn_revnum_t replaces_rev)
 {
   svn_error_t *err;
 
@@ -239,7 +247,7 @@ svn_editor_add_file(svn_editor_t *editor,
     SVN_ERR((*editor->cancel_func)(editor->cancel_baton));
 
   err = (*editor->funcs.cb_add_file)(editor->baton, relpath, props,
-                                     editor->scratch_pool);
+                                     replaces_rev, editor->scratch_pool);
   svn_pool_clear(editor->scratch_pool);
   return err;
 }
@@ -249,7 +257,8 @@ svn_error_t *
 svn_editor_add_symlink(svn_editor_t *editor,
                        const char *relpath,
                        const char *target,
-                       apr_hash_t *props)
+                       apr_hash_t *props,
+                       svn_revnum_t replaces_rev)
 {
   svn_error_t *err;
 
@@ -259,7 +268,7 @@ svn_editor_add_symlink(svn_editor_t *editor,
     SVN_ERR((*editor->cancel_func)(editor->cancel_baton));
 
   err = (*editor->funcs.cb_add_symlink)(editor->baton, relpath, target, props,
-                                        editor->scratch_pool);
+                                        replaces_rev, editor->scratch_pool);
   svn_pool_clear(editor->scratch_pool);
   return err;
 }
@@ -268,7 +277,8 @@ svn_editor_add_symlink(svn_editor_t *editor,
 svn_error_t *
 svn_editor_add_absent(svn_editor_t *editor,
                       const char *relpath,
-                      svn_node_kind_t kind)
+                      svn_node_kind_t kind,
+                      svn_revnum_t replaces_rev)
 {
   svn_error_t *err;
 
@@ -278,7 +288,7 @@ svn_editor_add_absent(svn_editor_t *editor,
     SVN_ERR((*editor->cancel_func)(editor->cancel_baton));
 
   err = (*editor->funcs.cb_add_absent)(editor->baton, relpath, kind,
-                                       editor->scratch_pool);
+                                       replaces_rev, editor->scratch_pool);
   svn_pool_clear(editor->scratch_pool);
   return err;
 }

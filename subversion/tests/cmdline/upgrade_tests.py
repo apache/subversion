@@ -6,14 +6,22 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2009 CollabNet.  All rights reserved.
+#    Licensed to the Subversion Corporation (SVN Corp.) under one
+#    or more contributor license agreements.  See the NOTICE file
+#    distributed with this work for additional information
+#    regarding copyright ownership.  The SVN Corp. licenses this file
+#    to you under the Apache License, Version 2.0 (the
+#    "License"); you may not use this file except in compliance
+#    with the License.  You may obtain a copy of the License at
 #
-# This software is licensed as described in the file COPYING, which
-# you should have received as part of this distribution.  The terms
-# are also available at http://subversion.tigris.org/license-1.html.
-# If newer versions of this license are posted there, you may use a
-# newer version instead, at your option.
+#      http://www.apache.org/licenses/LICENSE-2.0
 #
+#    Unless required by applicable law or agreed to in writing,
+#    software distributed under the License is distributed on an
+#    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+#    KIND, either express or implied.  See the License for the
+#    specific language governing permissions and limitations
+#    under the License.
 ######################################################################
 
 #
@@ -28,6 +36,10 @@ import svntest
 Item = svntest.wc.StateItem
 XFail = svntest.testcase.XFail
 SkipUnless = svntest.testcase.SkipUnless
+
+wc_is_too_old_regex = (".*Working copy format of '.*' is too old \(\d+\); " +
+                    "please run 'svn upgrade'")
+
 
 def replace_sbox_with_tarfile(sbox, tar_filename):
   try:
@@ -98,15 +110,13 @@ def run_and_verify_status_no_server(wc_dir, expected_status):
     svvtest.tree.dump_tree_script(actual, wc_dir_name + os.sep)
     raise
 
-
 def basic_upgrade(sbox):
   "basic upgrade behavior"
 
   replace_sbox_with_tarfile(sbox, 'basic_upgrade.tar.bz2')
 
   # Attempt to use the working copy, this should give an error
-  expected_stderr = (".*Working copy format is too old; please "
-                     "run 'svn upgrade'")
+  expected_stderr = wc_is_too_old_regex
   svntest.actions.run_and_verify_svn(None, None, expected_stderr,
                                      'info', sbox.wc_dir)
 
@@ -129,8 +139,7 @@ def upgrade_1_5(sbox):
   replace_sbox_with_tarfile(sbox, 'upgrade_1_5.tar.bz2')
 
   # Attempt to use the working copy, this should give an error
-  expected_stderr = (".*Working copy format is too old; please "
-                     "run 'svn upgrade'")
+  expected_stderr = wc_is_too_old_regex
   svntest.actions.run_and_verify_svn(None, None, expected_stderr,
                                      'info', sbox.wc_dir)
 

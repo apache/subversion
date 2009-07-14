@@ -1,16 +1,21 @@
 /*
  * ====================================================================
- * Copyright (c) 2005-2008 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -408,15 +413,13 @@ remove_props_not_in_source(svn_ra_session_t *session,
        hi;
        hi = apr_hash_next(hi))
     {
-      const void *key;
+      const void *propname = svn_apr_hash_index_key(hi);
 
       svn_pool_clear(subpool);
 
-      apr_hash_this(hi, &key, NULL, NULL);
-
-      /* Delete property if the key can't be found in SOURCE_PROPS. */
-      if (! apr_hash_get(source_props, key, APR_HASH_KEY_STRING))
-        SVN_ERR(svn_ra_change_rev_prop(session, rev, key, NULL,
+      /* Delete property if the name can't be found in SOURCE_PROPS. */
+      if (! apr_hash_get(source_props, propname, APR_HASH_KEY_STRING))
+        SVN_ERR(svn_ra_change_rev_prop(session, rev, propname, NULL,
                                        subpool));
     }
 
@@ -450,18 +453,15 @@ filter_props(int *filtered_count, apr_hash_t *props,
 
   for (hi = apr_hash_first(pool, props); hi ; hi = apr_hash_next(hi))
     {
-      void *val;
-      const void *key;
-      apr_ssize_t len;
-
-      apr_hash_this(hi, &key, &len, &val);
+      const char *propname = svn_apr_hash_index_key(hi);
+      void *propval = svn_apr_hash_index_val(hi);
 
       /* Copy all properties:
           - not matching the exclude pattern if provided OR
           - matching the include pattern if provided */
-      if (!filter || filter(key) == FALSE)
+      if (!filter || filter(propname) == FALSE)
         {
-          apr_hash_set(filtered, key, APR_HASH_KEY_STRING, val);
+          apr_hash_set(filtered, propname, APR_HASH_KEY_STRING, propval);
         }
       else
         {
@@ -492,16 +492,16 @@ write_revprops(int *filtered_count,
 
   for (hi = apr_hash_first(pool, rev_props); hi; hi = apr_hash_next(hi))
     {
-      const void *key;
-      void *val;
+      const char *propname = svn_apr_hash_index_key(hi);
+      const svn_string_t *propval = svn_apr_hash_index_val(hi);
 
       svn_pool_clear(subpool);
-      apr_hash_this(hi, &key, NULL, &val);
 
-      if (strncmp(key, SVNSYNC_PROP_PREFIX,
+      if (strncmp(propname, SVNSYNC_PROP_PREFIX,
                   sizeof(SVNSYNC_PROP_PREFIX) - 1) != 0)
         {
-          SVN_ERR(svn_ra_change_rev_prop(session, rev, key, val, subpool));
+          SVN_ERR(svn_ra_change_rev_prop(session, rev, propname, propval,
+                                         subpool));
         }
       else
         {
@@ -570,21 +570,19 @@ normalize_revprops(apr_hash_t *rev_props,
        hi;
        hi = apr_hash_next(hi))
     {
-      const char *key;
-      const svn_string_t *val;
+      const char *propname = svn_apr_hash_index_key(hi);
+      const svn_string_t *propval = svn_apr_hash_index_val(hi);
 
-      apr_hash_this(hi, (const void**)&key, NULL, (void**)&val);
-
-      if (svn_prop_needs_translation(key))
+      if (svn_prop_needs_translation(propname))
         {
           svn_boolean_t was_normalized;
-          SVN_ERR(normalize_string(&val,
+          SVN_ERR(normalize_string(&propval,
                                    &was_normalized,
                                    pool));
           if (was_normalized)
             {
               /* Replace the existing prop value. */
-              apr_hash_set(rev_props, key, APR_HASH_KEY_STRING, val);
+              apr_hash_set(rev_props, propname, APR_HASH_KEY_STRING, propval);
               /* And count this. */
               (*normalized_count)++;
             }
@@ -612,6 +610,9 @@ log_properties_copied(svn_boolean_t syncprops_found,
   return SVN_NO_ERROR;
 }
 
+/* Print a notification that NORMALIZED_REV_PROPS_COUNT rev-props and
+ * NORMALIZED_NODE_PROPS_COUNT node-props were normalized to LF line
+ * endings, if either of those numbers is non-zero. */
 static svn_error_t *
 log_properties_normalized(int normalized_rev_props_count,
                           int normalized_node_props_count,
@@ -714,7 +715,7 @@ make_subcommand_baton(opt_baton_t *opt_baton,
 /*** `svnsync init' ***/
 
 /* Initialize the repository associated with RA session TO_SESSION,
- * using information found in baton B, while the repository is
+ * using information found in BATON, while the repository is
  * locked.  Implements `with_locked_func_t' interface.
  */
 static svn_error_t *
@@ -946,9 +947,12 @@ add_directory(const char *path,
   edit_baton_t *eb = pb->edit_baton;
   node_baton_t *b = apr_palloc(pool, sizeof(*b));
 
-  if (copyfrom_path)
-    copyfrom_path = apr_psprintf(pool, "%s%s", eb->to_url,
-                                 svn_path_uri_encode(copyfrom_path, pool));
+  /* if copyfrom_path starts with '/' join rest of copyfrom_path leaving
+   * leading '/' with canonicalized url eb->to_url.
+   */
+  if (copyfrom_path && copyfrom_path[0] == '/')
+    copyfrom_path = svn_path_url_add_component2(eb->to_url,
+                                                copyfrom_path + 1, pool);
 
   SVN_ERR(eb->wrapped_editor->add_directory(path, pb->wrapped_node_baton,
                                             copyfrom_path,
@@ -1149,7 +1153,6 @@ change_dir_prop(void *dir_baton,
 {
   node_baton_t *db = dir_baton;
   edit_baton_t *eb = db->edit_baton;
-  svn_string_t *real_value = (svn_string_t *)value;
 
   /* Only regular properties can pass over libsvn_ra */
   if (svn_property_kind(NULL, name) != svn_prop_regular_kind)
@@ -1181,6 +1184,7 @@ change_dir_prop(void *dir_baton,
           int i;
           apr_array_header_t *sources =
             svn_cstring_split(value->data, " \t\n", TRUE, pool);
+          svn_string_t *new_value;
 
           for (i = 0; i < sources->nelts; i++)
             {
@@ -1213,7 +1217,8 @@ change_dir_prop(void *dir_baton,
               svn_error_clear(err);
               return SVN_NO_ERROR;
             }
-          SVN_ERR(svn_mergeinfo_to_string(&real_value, mergeinfo, pool));
+          SVN_ERR(svn_mergeinfo_to_string(&new_value, mergeinfo, pool));
+          value = new_value;
         }
       name = SVN_PROP_MERGEINFO;
       eb->svnmerge_migrated = TRUE;
@@ -1229,14 +1234,13 @@ change_dir_prop(void *dir_baton,
   if (svn_prop_needs_translation(name))
     {
       svn_boolean_t was_normalized;
-      SVN_ERR(normalize_string((const svn_string_t**)&real_value,
-                               &was_normalized, pool));
+      SVN_ERR(normalize_string(&value, &was_normalized, pool));
       if (was_normalized)
         (*(eb->normalized_node_props_counter))++;
     }
 
   return eb->wrapped_editor->change_dir_prop(db->wrapped_node_baton,
-                                             name, real_value, pool);
+                                             name, value, pool);
 }
 
 static svn_error_t *
@@ -1651,7 +1655,7 @@ replay_rev_finished(svn_revnum_t revision,
 }
 
 /* Synchronize the repository associated with RA session TO_SESSION,
- * using information found in baton B, while the repository is
+ * using information found in BATON, while the repository is
  * locked.  Implements `with_locked_func_t' interface.
  */
 static svn_error_t *
@@ -1756,7 +1760,7 @@ do_synchronize(svn_ra_session_t *to_session,
   /* Now check to see if there are any revisions to copy. */
   SVN_ERR(svn_ra_get_latest_revnum(from_session, &from_latest, pool));
 
-  if (from_latest < atol(last_merged_rev->data))
+  if (from_latest < last_merged)
     return SVN_NO_ERROR;
 
   /* Ok, so there are new revisions, iterate over them copying them
@@ -1770,7 +1774,7 @@ do_synchronize(svn_ra_session_t *to_session,
                                 SVN_RA_CAPABILITY_COMMIT_REVPROPS,
                                 pool));
 
-  start_revision = atol(last_merged_rev->data) + 1;
+  start_revision = last_merged + 1;
   end_revision = from_latest;
 
   SVN_ERR(check_cancel(NULL));
@@ -1828,7 +1832,7 @@ synchronize_cmd(apr_getopt_t *os, void *b, apr_pool_t *pool)
 /*** `svnsync copy-revprops' ***/
 
 /* Copy revision properties to the repository associated with RA
- * session TO_SESSION, using information found in baton B, while the
+ * session TO_SESSION, using information found in BATON, while the
  * repository is locked.  Implements `with_locked_func_t' interface.
  */
 static svn_error_t *
@@ -2406,7 +2410,15 @@ main(int argc, const char *argv[])
                                         check_cancel, NULL,
                                         pool);
   if (! err)
-    err = (*subcommand->cmd_func)(os, &opt_baton, pool);
+    {
+      /* svnsync can safely create instance of QApplication class. */
+      svn_auth_set_parameter(opt_baton.source_auth_baton,
+                             "svn:auth:qapplication-safe", "1");
+      svn_auth_set_parameter(opt_baton.sync_auth_baton,
+                             "svn:auth:qapplication-safe", "1");
+
+      err = (*subcommand->cmd_func)(os, &opt_baton, pool);
+    }
   if (err)
     {
       /* For argument-related problems, suggest using the 'help'

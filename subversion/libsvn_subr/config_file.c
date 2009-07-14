@@ -2,17 +2,22 @@
  * config_file.c :  parsing configuration files
  *
  * ====================================================================
- * Copyright (c) 2000-2004, 2008 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -314,9 +319,6 @@ svn_config__sys_config_path(const char **path_p,
                             const char *fname,
                             apr_pool_t *pool)
 {
-  /* ### This never actually returns error in practice.  Perhaps the
-     prototype should change? */
-
   *path_p = NULL;
 
   /* Note that even if fname is null, svn_dirent_join_many will DTRT. */
@@ -1012,7 +1014,7 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "### passed to the tunnel agent as <user>@<hostname>.)  If the"      NL
         "### built-in ssh scheme were not predefined, it could be defined"   NL
         "### as:"                                                            NL
-        "# ssh = $SVN_SSH ssh"                                               NL
+        "# ssh = $SVN_SSH ssh -q"                                            NL
         "### If you wanted to define a new 'rsh' scheme, to be used with"    NL
         "### 'svn+rsh:' URLs, you could do so as follows:"                   NL
         "# rsh = rsh"                                                        NL

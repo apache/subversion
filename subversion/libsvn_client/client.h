@@ -2,17 +2,22 @@
  * client.h :  shared stuff internal to the client library.
  *
  * ====================================================================
- * Copyright (c) 2000-2009 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -352,33 +357,6 @@ svn_client__default_walker_error_handler(const char *path,
 /* CTX is of type "svn_client_ctx_t *". */
 #define SVN_CLIENT__HAS_LOG_MSG_FUNC(ctx) \
         ((ctx)->log_msg_func3 || (ctx)->log_msg_func2 || (ctx)->log_msg_func)
-
-/* This is the baton that we pass svn_ra_open3(), and is associated with
-   the callback table we provide to RA. */
-typedef struct
-{
-  /* Holds the directory that corresponds to the REPOS_URL at svn_ra_open3()
-     time. When callbacks specify a relative path, they are joined with
-     this base directory. */
-  const char *base_dir;
-  svn_wc_adm_access_t *base_access;
-
-  /* When true, makes sure temporary files are created
-     outside the working copy. */
-  svn_boolean_t read_only_wc;
-
-  /* An array of svn_client_commit_item3_t * structures, present only
-     during working copy commits. */
-  apr_array_header_t *commit_items;
-
-  /* A client context. */
-  svn_client_ctx_t *ctx;
-
-  /* The pool to use for session-related items. */
-  apr_pool_t *pool;
-
-} svn_client__callback_baton_t;
-
 
 /* Open an RA session, returning it in *RA_SESSION.
 
@@ -892,7 +870,7 @@ typedef struct
 
    If CTX->CANCEL_FUNC is non-null, it will be called with
    CTX->CANCEL_BATON while harvesting to determine if the client has
-   cancelled the operation.  */
+   cancelled the operation. */
 svn_error_t *
 svn_client__harvest_committables(apr_hash_t **committables,
                                  apr_hash_t **lock_tokens,

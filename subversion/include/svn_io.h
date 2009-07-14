@@ -1,17 +1,22 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  * @endcopyright
  *
@@ -692,6 +697,13 @@ typedef svn_error_t *(*svn_close_fn_t)(void *baton);
  * @since New in 1.7. */
 typedef svn_error_t *(*svn_io_reset_fn_t)(void *baton);
 
+/** Line-filtering callback function for a generic stream.
+ * @see svn_stream_t and svn_stream_readline().
+ *
+ * @since New in 1.7. */
+typedef svn_error_t *(*svn_io_line_filter_cb_t)(svn_boolean_t *filtered,
+                                                const char *line,
+                                                apr_pool_t *scratch_pool);
 
 /** Create a generic stream.  @see svn_stream_t. */
 svn_stream_t *
@@ -724,6 +736,11 @@ void
 svn_stream_set_reset(svn_stream_t *stream,
                      svn_io_reset_fn_t reset_fn);
 
+/** Set @a stream's line-filtering callback function to @a line_filter_cb
+ * @since New in 1.7. */
+void
+svn_stream_set_line_filter_callback(svn_stream_t *stream,
+                                    svn_io_line_filter_cb_t line_filter_cb);
 
 /** Create a stream that is empty for reading and infinite for writing. */
 svn_stream_t *
@@ -832,6 +849,40 @@ SVN_DEPRECATED
 svn_stream_t *
 svn_stream_from_aprfile(apr_file_t *file,
                         apr_pool_t *pool);
+
+/** Create a stream for reading from a range of an APR file.
+ * The stream cannot be written to.
+ *
+ * @a start and @a end specify the start and end offsets for read
+ * operations from @a file, in bytes. @a start marks the first byte
+ * to be read from the file. When the stream is first created, the
+ * cursor of the underlying file is set to the @a start offset.
+ * The byte at @a end, and any bytes past @a end, will never be read.
+ *
+ * The stream returns 0 bytes if a read operation occurs past of
+ * the specified range. If the requested number of bytes in a read
+ * operation is larger than the remaining bytes in the range, only
+ * the remaining amount of bytes is returned.
+ *
+ * If @a file is @c NULL, or if @a start is not smaller than @a end,
+ * or if @a start is negative, or if @a end is zero or negative,
+ * or if the file cursor cannot be set to the @a start offset,
+ * an empty stream created by svn_stream_empty() is returned.
+ *
+ * This function should normally be called with @a disown set to FALSE,
+ * in which case closing the stream will also close the underlying file.
+ *
+ * If @a disown is TRUE, the stream will disown the underlying file,
+ * meaning that svn_stream_close() will not close the file.
+ *
+ * @since New in 1.7.
+ */
+svn_stream_t*
+svn_stream_from_aprfile_range_readonly(apr_file_t *file,
+                                       svn_boolean_t disown,
+                                       apr_off_t start,
+                                       apr_off_t end,
+                                       apr_pool_t *pool);
 
 /** Set @a *out to a generic stream connected to stdout, allocated in
  * @a pool.  The stream and its underlying APR handle will be closed
@@ -973,6 +1024,12 @@ svn_stream_printf_from_utf8(svn_stream_t *stream,
  *
  * If @a stream runs out of bytes before encountering a line-terminator,
  * then set @a *eof to @c TRUE, otherwise set @a *eof to FALSE.
+ *
+ * If a line-filter callback function was set on the stream using
+ * svn_stream_set_line_filter_callback(), lines will only be returned
+ * if they pass the filtering decision of the callback function.
+ * If end-of-file is encountered while reading the line and the line
+ * is filtered, @a *stringbuf will be empty.
  */
 svn_error_t *
 svn_stream_readline(svn_stream_t *stream,
@@ -1327,7 +1384,7 @@ svn_io_run_diff2(const char *dir,
                  const char *diff_cmd,
                  apr_pool_t *pool);
 
-/** Similar to svn_io_run_diff2() but with @diff_cmd encoded in internal
+/** Similar to svn_io_run_diff2() but with @a diff_cmd encoded in internal
  * encoding used by APR.
  *
  * @deprecated Provided for backwards compatibility with the 1.5 API. */
@@ -1554,8 +1611,8 @@ svn_io_file_write_full(apr_file_t *file,
 
 /**
  * Open a unique file in @a dirpath, and write @a nbytes from @a buf to
- * the file before closing it.  Return the name of the newly created file
- * in @a *tmp_path, allocated in @a pool.
+ * the file before flushing it to disk and closing it.  Return the name
+ * of the newly created file in @a *tmp_path, allocated in @a pool.
  *
  * If @a dirpath is @c NULL, use the path returned from svn_io_temp_dir().
  * (Note that when using the system-provided temp directory, it may not
@@ -1695,6 +1752,59 @@ svn_error_t *
 svn_io_write_version_file(const char *path,
                           int version,
                           apr_pool_t *pool);
+
+/** Wrapper for apr_file_mktemp().
+ *
+ * @since New in 1.7. */
+svn_error_t *
+svn_io_file_mktemp(apr_file_t **new_file,
+                   char *templ,
+                   apr_int32_t flags,
+                   apr_pool_t *pool);
+
+/** Wrapper for apr_file_name_get().
+ *
+ * @since New in 1.7. */
+svn_error_t *
+svn_io_file_name_get(const char **filename,
+                     apr_file_t *file,
+                     apr_pool_t *pool);
+
+/** Open a new file (for reading and writing) with a unique name based on
+ * utf-8 encoded @a filename, in the directory @a dirpath.  The file handle is
+ * returned in @a *file, and the name is returned in @a *unique_name, also
+ * utf8-encoded.  Either @a file or @a unique_name may be @c NULL.
+ *
+ * If @a delete_when is @c svn_io_file_del_on_close, then the @c APR_DELONCLOSE
+ * flag will be used when opening the file.  The @c APR_BUFFERED flag will
+ * always be used.
+ *
+ * If @a dirpath is NULL, then the directory returned by svn_io_temp_dir()
+ * will be used.
+ *
+ * If @a filename is NULL, a completely random name will be used.
+ * Else, a random name based on @a filename will be used.
+ *
+ * Allocates @a *file and @a *unique_name in @a result_pool. All
+ * intermediate allocations will be performed in @a scratch_pool.
+ *
+ * Claim of Historical Inevitability: this function was written
+ * because
+ *
+ *    - svn_io_open_uniquely_named() creates predictable filenames
+ *      and can cause performance problems when many temporary
+ *      files are needed in a single directory
+ *
+ * @since New in 1.7
+ */
+svn_error_t *
+svn_io_mktemp(apr_file_t **file,
+              const char **unique_name,
+              const char *dirpath,
+              const char *filename,
+              svn_io_file_del_t delete_when,
+              apr_pool_t *result_pool,
+              apr_pool_t *scratch_pool);
 
 /** @} */
 

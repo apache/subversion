@@ -2,17 +2,22 @@
  * io.c:   shared file reading, writing, and probing code.
  *
  * ====================================================================
- * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -452,8 +457,10 @@ svn_io_open_uniquely_named(apr_file_t **file,
         }
     }
 
-  if (file) *file = NULL;
-  if (unique_path) *unique_path = NULL;
+  if (file)
+    *file = NULL;
+  if (unique_path)
+    *unique_path = NULL;
   return svn_error_createf(SVN_ERR_IO_UNIQUE_NAMES_EXHAUSTED,
                            NULL,
                            _("Unable to make name for '%s'"),
@@ -3562,5 +3569,109 @@ svn_io_files_contents_same_p(svn_boolean_t *same,
   else
     *same = 0;
 
+  return SVN_NO_ERROR;
+}
+
+/* Wrapper for apr_file_mktemp(). */
+svn_error_t *
+svn_io_file_mktemp(apr_file_t **new_file, char *templ,
+                  apr_int32_t flags, apr_pool_t *pool)
+{
+  const char *templ_apr;
+  apr_status_t status;
+
+  SVN_ERR(cstring_from_utf8(&templ_apr, templ, pool));
+
+  /* ### I don't want to copy the template string again just to
+   * make it writable... so cast away const.
+   * Should the UTF-8 conversion functions really be returning const??? */
+  status = apr_file_mktemp(new_file, (char *)templ_apr, flags, pool);
+
+  if (status)
+    return svn_error_wrap_apr(status, _("Can't create temporary file from "
+                              "template '%s'"), templ);
+  else
+    return SVN_NO_ERROR;
+}
+
+/* Wrapper for apr_file_name_get(). */
+svn_error_t *
+svn_io_file_name_get(const char **filename,
+                     apr_file_t *file,
+                     apr_pool_t *pool)
+{
+  const char *fname_apr;
+  apr_status_t status;
+
+  status = apr_file_name_get(&fname_apr, file);
+  if (status)
+    return svn_error_wrap_apr(status, _("Can't get file name"));
+
+  return svn_error_return(cstring_to_utf8(filename, fname_apr, pool));
+}
+
+svn_error_t *
+svn_io_mktemp(apr_file_t **file,
+              const char **unique_path,
+              const char *dirpath,
+              const char *filename,
+              svn_io_file_del_t delete_when,
+              apr_pool_t *result_pool,
+              apr_pool_t *scratch_pool)
+{
+  apr_file_t *tempfile;
+  char *path;
+  const char *x = "XXXXXX";
+  char *template;
+  struct temp_file_cleanup_s *baton = NULL;
+  apr_int32_t flags = (APR_READ | APR_WRITE | APR_CREATE | APR_EXCL |
+                       APR_BUFFERED | APR_BINARY);
+
+  SVN_ERR_ASSERT(file || unique_path);
+  if (file)
+    *file = NULL;
+  if (unique_path)
+    *unique_path = NULL;
+
+  if (dirpath == NULL)
+    SVN_ERR(svn_io_temp_dir(&dirpath, scratch_pool));
+  if (filename == NULL)
+    template = apr_pstrdup(scratch_pool, x);
+  else
+    template = apr_pstrcat(scratch_pool, filename, "-", x, NULL);
+    
+  path = svn_dirent_join(dirpath, template, scratch_pool);
+
+  switch (delete_when)
+    {
+      case svn_io_file_del_on_pool_cleanup:
+        baton = apr_palloc(result_pool, sizeof(*baton));
+        baton->pool = result_pool;
+        baton->name = NULL;
+
+        /* Because cleanups are run LIFO, we need to make sure to register
+           our cleanup before the apr_file_close cleanup:
+
+           On Windows, you can't remove an open file.
+        */
+        apr_pool_cleanup_register(result_pool, baton,
+                                  temp_file_plain_cleanup_handler,
+                                  temp_file_child_cleanup_handler);
+
+        break;
+      case svn_io_file_del_on_close:
+        flags |= APR_DELONCLOSE;
+        break;
+      default:
+        break;
+    }
+
+  SVN_ERR(svn_io_file_mktemp(&tempfile, path, flags, result_pool));
+
+  if (file)
+    *file = tempfile;
+  if (unique_path)
+    SVN_ERR(svn_io_file_name_get(unique_path, tempfile, result_pool));
+    
   return SVN_NO_ERROR;
 }

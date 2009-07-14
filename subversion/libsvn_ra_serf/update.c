@@ -2,17 +2,22 @@
  * update.c :  entry point for update RA functions for ra_serf
  *
  * ====================================================================
- * Copyright (c) 2006 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -261,6 +266,10 @@ typedef struct report_fetch_t {
 
   /* Are we done fetching this file? */
   svn_boolean_t done;
+
+  /* Discard the rest of the content? */
+  svn_boolean_t discard;
+
   svn_ra_serf__list_t **done_list;
   svn_ra_serf__list_t done_item;
 
@@ -358,7 +367,7 @@ push_state(svn_ra_serf__xml_parser_t *parser,
       report_info_t *new_info;
 
       new_info = apr_pcalloc(info_parent_pool, sizeof(*new_info));
-      apr_pool_create(&new_info->pool, info_parent_pool);
+      new_info->pool = svn_pool_create(info_parent_pool);
       new_info->lock_token = NULL;
 
       new_info->dir = apr_pcalloc(new_info->pool, sizeof(*new_info->dir));
@@ -400,7 +409,7 @@ push_state(svn_ra_serf__xml_parser_t *parser,
       report_info_t *new_info;
 
       new_info = apr_pcalloc(info_parent_pool, sizeof(*new_info));
-      apr_pool_create(&new_info->pool, info_parent_pool);
+      new_info->pool = svn_pool_create(info_parent_pool);
       new_info->file_baton = NULL;
       new_info->lock_token = NULL;
       new_info->fetch_file = FALSE;
@@ -490,7 +499,7 @@ open_dir(report_dir_t *dir)
 
   if (dir->base_name[0] == '\0')
     {
-      apr_pool_create(&dir->dir_baton_pool, dir->pool);
+      dir->dir_baton_pool = svn_pool_create(dir->pool);
 
       if (dir->report_context->destination &&
           dir->report_context->sess->wc_callbacks->invalidate_wc_props)
@@ -509,7 +518,7 @@ open_dir(report_dir_t *dir)
     {
       SVN_ERR(open_dir(dir->parent_dir));
 
-      apr_pool_create(&dir->dir_baton_pool, dir->parent_dir->dir_baton_pool);
+      dir->dir_baton_pool = svn_pool_create(dir->parent_dir->dir_baton_pool);
 
       if (SVN_IS_VALID_REVNUM(dir->base_rev))
         {
@@ -700,7 +709,7 @@ cancel_fetch(serf_request_t *request,
   SVN_ERR_MALFUNCTION_NO_RETURN();
 }
 
-static apr_status_t
+static svn_error_t *
 error_fetch(serf_request_t *request,
             report_fetch_t *fetch_ctx,
             svn_error_t *err)
@@ -713,12 +722,16 @@ error_fetch(serf_request_t *request,
   fetch_ctx->done_item.next = *fetch_ctx->done_list;
   *fetch_ctx->done_list = &fetch_ctx->done_item;
 
-  serf_request_set_handler(request, svn_ra_serf__handle_discard_body, NULL);
+  /* Discard the rest of this request
+     (This makes sure it doesn't error when the request is aborted later) */
+  serf_request_set_handler(request,
+                           svn_ra_serf__response_discard_handler, NULL);
 
-  return APR_SUCCESS;
+  return SVN_NO_ERROR;
 }
 
-static apr_status_t
+/* Implements svn_ra_serf__response_handler_t */
+static svn_error_t *
 handle_fetch(serf_request_t *request,
              serf_bucket_t *response,
              void *handler_baton,
@@ -747,7 +760,7 @@ handle_fetch(serf_request_t *request,
           return error_fetch(request, fetch_ctx, err);
         }
 
-      apr_pool_create(&info->editor_pool, info->dir->dir_baton_pool);
+      info->editor_pool = svn_pool_create(info->dir->dir_baton_pool);
 
       /* Expand our full name now if we haven't done so yet. */
       if (!info->name)
@@ -812,7 +825,7 @@ handle_fetch(serf_request_t *request,
   status = serf_bucket_response_status(response, &sl);
   if (SERF_BUCKET_READ_ERROR(status))
     {
-      return status;
+      return svn_error_wrap_apr(status, NULL);
     }
   if (sl.code != 200)
     {
@@ -831,7 +844,7 @@ handle_fetch(serf_request_t *request,
       status = serf_bucket_read(response, 8000, &data, &len);
       if (SERF_BUCKET_READ_ERROR(status))
         {
-          return status;
+          return svn_error_wrap_apr(status, NULL);
         }
 
       fetch_ctx->read_size += len;
@@ -844,13 +857,13 @@ handle_fetch(serf_request_t *request,
               /* Eek.  What did the file shrink or something? */
               if (APR_STATUS_IS_EOF(status))
                 {
-                  SVN_ERR_MALFUNCTION_NO_RETURN();
+                  SVN_ERR_MALFUNCTION();
                 }
 
               /* Skip on to the next iteration of this loop. */
               if (APR_STATUS_IS_EAGAIN(status))
                 {
-                  return status;
+                  return svn_error_wrap_apr(status, NULL);
                 }
               continue;
             }
@@ -946,17 +959,19 @@ handle_fetch(serf_request_t *request,
           svn_pool_destroy(info->editor_pool);
           svn_pool_destroy(info->pool);
 
-          return status;
+          if (status)
+            return svn_error_wrap_apr(status, NULL);
         }
       if (APR_STATUS_IS_EAGAIN(status))
         {
-          return status;
+          return svn_error_wrap_apr(status, NULL);
         }
     }
   /* not reached */
 }
 
-static apr_status_t
+/* Implements svn_ra_serf__response_handler_t */
+static svn_error_t *
 handle_stream(serf_request_t *request,
               serf_bucket_t *response,
               void *handler_baton,
@@ -985,7 +1000,7 @@ handle_stream(serf_request_t *request,
       status = serf_bucket_read(response, 8000, &data, &len);
       if (SERF_BUCKET_READ_ERROR(status))
         {
-          return status;
+          return svn_error_wrap_apr(status, NULL);
         }
 
       fetch_ctx->read_size += len;
@@ -998,13 +1013,13 @@ handle_stream(serf_request_t *request,
               /* Eek.  What did the file shrink or something? */
               if (APR_STATUS_IS_EOF(status))
                 {
-                  SVN_ERR_MALFUNCTION_NO_RETURN();
+                  SVN_ERR_MALFUNCTION();
                 }
 
               /* Skip on to the next iteration of this loop. */
               if (APR_STATUS_IS_EAGAIN(status))
                 {
-                  return status;
+                  return svn_error_wrap_apr(status, NULL);
                 }
               continue;
             }
@@ -1033,7 +1048,7 @@ handle_stream(serf_request_t *request,
 
       if (status)
         {
-          return status;
+          return svn_error_wrap_apr(status, NULL);
         }
     }
   /* not reached */
@@ -1045,7 +1060,7 @@ handle_propchange_only(report_info_t *info)
   /* Ensure our parent is open. */
   SVN_ERR(open_dir(info->dir));
 
-  apr_pool_create(&info->editor_pool, info->dir->dir_baton_pool);
+  info->editor_pool = svn_pool_create(info->dir->dir_baton_pool);
 
   /* Expand our full name now if we haven't done so yet. */
   if (!info->name)
@@ -1433,7 +1448,7 @@ start_report(svn_ra_serf__xml_parser_t *parser,
 
       SVN_ERR(open_dir(info->dir));
 
-      apr_pool_create(&tmppool, info->dir->dir_baton_pool);
+      tmppool = svn_pool_create(info->dir->dir_baton_pool);
 
       name_buf = svn_stringbuf_dup(info->dir->name_buf, tmppool);
       svn_path_add_component(name_buf, file_name);
@@ -2221,12 +2236,6 @@ finish_report(void *report_baton,
         }
       if (status)
         {
-          if (parser_ctx->error)
-            {
-              svn_error_clear(sess->pending_error);
-              sess->pending_error = SVN_NO_ERROR;
-              return parser_ctx->error;
-            }
           SVN_ERR(sess->pending_error);
 
           return svn_error_wrap_apr(status, _("Error retrieving REPORT (%d)"),

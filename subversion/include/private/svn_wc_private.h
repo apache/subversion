@@ -1,17 +1,22 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2007-2008 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  * @endcopyright
  *
@@ -217,6 +222,24 @@ svn_error_t *
 svn_wc__strictly_is_wc_root(svn_boolean_t *wc_root,
                             const char *path,
                             svn_wc_adm_access_t *adm_access,
+                            apr_pool_t *pool);
+
+/** Like svn_wc_adm_open3() but with a svn_wc_ctx_t* instead of an associated
+ * baton.
+ *
+ * ### BH: This function is not for public consumption. New code should either
+ *         use the deprecated access battons or the new wc contexts but not
+ *         both. Too bad the WC-NG conversion is not done yet.
+ *
+ * @since New in 1.7.*/
+svn_error_t *
+svn_wc__adm_open_in_context(svn_wc_adm_access_t **adm_access,
+                            svn_wc_context_t *wc_ctx,
+                            const char *path,
+                            svn_boolean_t write_lock,
+                            int levels_to_lock,
+                            svn_cancel_func_t cancel_func,
+                            void *cancel_baton,
                             apr_pool_t *pool);
 
 #ifdef __cplusplus

@@ -190,13 +190,17 @@ Contents
 ===============
 
   Cyrus SASL has two authentication mechanisms, PLAIN and LOGIN, that send the
-  password over the network in plain text.  This would be fine if the
-  transmission medium was already encrypted with TLS (Transport Layer
-  Security).  However, the svn:// protocol doesn't support TLS yet, so both
-  these mechanisms are currently disabled in both the client and the server.
+  password over the network in plain text. The svn:// protocol doesn't support
+  TLS yet, so both these mechanisms expose passwords to the network in clear
+  text.
   
-  As a consequence, you won't be able to use the saslauthd daemon to
-  authenticate users, because that method only works with plain text passwords.
+  As a consequence, users should take great care to secure the network link
+  by other means, such as by deploying a secure VPN or by using stunnel for
+  SSL encryption (http://stunnel.mirt.net/)
+
+  In particular, this problem affects users using the saslauthd daemon
+  to authenticate users, because that method only works with plain text
+  passwords.
 
 8. GSSAPI
 =========

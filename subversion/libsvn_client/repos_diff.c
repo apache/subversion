@@ -2,17 +2,22 @@
  * repos_diff.c -- The diff editor for comparing two repository versions
  *
  * ====================================================================
- * Copyright (c) 2000-2009 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -925,6 +930,12 @@ add_directory(const char *path,
 
   if (eb->notify_func)
     {
+      /* If a path was replaced, we issue a separate 'D' notification
+         here, followed by the 'A' notification in the usual way.
+         However, if the path was replaced on top of a conflicting mod,
+         this is a tree-conflict case. The path is already marked tree-
+         conflicted (either by some previous run altogether, or by this
+         replace's delete operation). No need to notify again here. */
       svn_wc_notify_t *notify;
       svn_boolean_t is_replace = FALSE;
       deleted_path_notify_t *dpn = apr_hash_get(eb->deleted_paths, b->wcpath,
@@ -932,6 +943,7 @@ add_directory(const char *path,
       if (dpn)
         {
           svn_wc_notify_action_t new_action;
+
           if (dpn->action == svn_wc_notify_update_delete
               && action == svn_wc_notify_update_add)
             {
@@ -940,11 +952,19 @@ add_directory(const char *path,
             }
           else
             new_action = dpn->action;
-          notify = svn_wc_create_notify(b->wcpath, new_action, pool);
-          notify->kind = dpn->kind;
-          notify->content_state = notify->prop_state = dpn->state;
-          notify->lock_state = svn_wc_notify_lock_state_inapplicable;
-          (*eb->notify_func)(eb->notify_baton, notify, pool);
+
+          /* Tree-conflicts during replace were notified about elsewhere. */
+          if (action != svn_wc_notify_tree_conflict)
+            {
+              notify = svn_wc_create_notify(b->wcpath, new_action, pool);
+              notify->kind = dpn->kind;
+              notify->content_state = notify->prop_state = dpn->state;
+              notify->lock_state = svn_wc_notify_lock_state_inapplicable;
+              (*eb->notify_func)(eb->notify_baton, notify, pool);
+            }
+
+          /* Remove from the list of deleted paths. We don't want to
+             notify about this path any more than we did already. */
           apr_hash_set(eb->deleted_paths, b->wcpath,
                        APR_HASH_KEY_STRING, NULL);
         }
@@ -1297,11 +1317,15 @@ close_file(void *file_baton,
             }
           else
             new_action = dpn->action;
-          notify  = svn_wc_create_notify(b->wcpath, new_action, pool);
-          notify->kind = dpn->kind;
-          notify->content_state = notify->prop_state = dpn->state;
-          notify->lock_state = svn_wc_notify_lock_state_inapplicable;
-          (*eb->notify_func)(eb->notify_baton, notify, pool);
+
+          if (action != svn_wc_notify_tree_conflict)
+            {
+              notify  = svn_wc_create_notify(b->wcpath, new_action, pool);
+              notify->kind = dpn->kind;
+              notify->content_state = notify->prop_state = dpn->state;
+              notify->lock_state = svn_wc_notify_lock_state_inapplicable;
+              (*eb->notify_func)(eb->notify_baton, notify, pool);
+            }
           apr_hash_set(eb->deleted_paths, b->wcpath,
                        APR_HASH_KEY_STRING, NULL);
         }

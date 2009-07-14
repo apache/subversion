@@ -2,17 +2,22 @@
  * log-cmd.c -- Display log messages
  *
  * ====================================================================
- * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -353,7 +358,6 @@ log_entry_receiver_xml(void *baton,
   if (log_entry->changed_paths2)
     {
       apr_hash_index_t *hi;
-      char *path;
 
       /* <paths> */
       svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "paths",
@@ -363,12 +367,9 @@ log_entry_receiver_xml(void *baton,
            hi != NULL;
            hi = apr_hash_next(hi))
         {
-          void *val;
+          const char *path = svn_apr_hash_index_key(hi);
+          svn_log_changed_path2_t *log_item = svn_apr_hash_index_val(hi);
           char action[2];
-          svn_log_changed_path2_t *log_item;
-
-          apr_hash_this(hi, (void *) &path, NULL, &val);
-          log_item = val;
 
           action[0] = log_item->action;
           action[1] = '\0';
@@ -544,9 +545,9 @@ svn_cl__log(apr_getopt_t *os,
                hi != NULL;
                hi = apr_hash_next(hi))
             {
-              char *property;
-              svn_string_t *value;
-              apr_hash_this(hi, (void *)&property, NULL, (void *)&value);
+              const char *property = svn_apr_hash_index_key(hi);
+              svn_string_t *value = svn_apr_hash_index_val(hi);
+
               if (value && value->data[0] != '\0')
                 return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                                          _("cannot assign with 'with-revprop'"

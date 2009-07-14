@@ -1,17 +1,22 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  * @endcopyright
  *
@@ -621,11 +626,14 @@ svn_opt_parse_all_args(apr_array_header_t **args_p,
  *    "foo/bar@1:2"                  -> error
  *    "foo/bar@baz"                  -> error
  *    "foo/bar@"                     -> "foo/bar",       (base)
+ *    "foo/@bar@"                    -> "foo/@bar",      (base)
  *    "foo/bar/@13"                  -> "foo/bar/",      (number, 13)
  *    "foo/bar@@13"                  -> "foo/bar@",      (number, 13)
  *    "foo/@bar@HEAD"                -> "foo/@bar",      (head)
  *    "foo@/bar"                     -> "foo@/bar",      (unspecified)
  *    "foo@HEAD/bar"                 -> "foo@HEAD/bar",  (unspecified)
+ *    "@foo/bar"                     -> error
+ *    "@foo/bar@"                    -> "@foo/bar",      (unspecified)
  *
  *   [*] Syntactically valid but probably not semantically useful.
  *
@@ -733,6 +741,29 @@ svn_opt_print_help(apr_getopt_t *os,
                    const apr_getopt_option_t *option_table,
                    const char *footer,
                    apr_pool_t *pool);
+
+/* Return, in @a *true_targets_p, a copy of @a targets with peg revision
+ * specifiers snipped off the end of each element.
+ *
+ * This function is useful for subcommands for which peg revisions
+ * do not make any sense. Such subcommands still need to allow peg
+ * revisions to be specified on the command line so that users of
+ * the command line client can consistently escape '@' characters
+ * in filenames by appending an '@' character, regardless of the
+ * subcommand being used.
+ *
+ * If a peg revision is present but cannot be parsed, an error is thrown.
+ * The user has likely forgotten to escape an '@' character in a filename.
+ *
+ * It is safe to pass the address of @a targets as @a true_targets_p.
+ *
+ * Do all allocations in @a pool.
+ *
+ * @since New in 1.7. */
+svn_error_t *
+svn_opt_eat_peg_revisions(apr_array_header_t **true_targets_p,
+                          apr_array_header_t *targets,
+                          apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

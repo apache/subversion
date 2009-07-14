@@ -6,14 +6,22 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2008 CollabNet.  All rights reserved.
+#    Licensed to the Subversion Corporation (SVN Corp.) under one
+#    or more contributor license agreements.  See the NOTICE file
+#    distributed with this work for additional information
+#    regarding copyright ownership.  The SVN Corp. licenses this file
+#    to you under the Apache License, Version 2.0 (the
+#    "License"); you may not use this file except in compliance
+#    with the License.  You may obtain a copy of the License at
 #
-# This software is licensed as described in the file COPYING, which
-# you should have received as part of this distribution.  The terms
-# are also available at http://subversion.tigris.org/license-1.html.
-# If newer versions of this license are posted there, you may use a
-# newer version instead, at your option.
+#      http://www.apache.org/licenses/LICENSE-2.0
 #
+#    Unless required by applicable law or agreed to in writing,
+#    software distributed under the License is distributed on an
+#    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+#    KIND, either express or implied.  See the License for the
+#    specific language governing permissions and limitations
+#    under the License.
 ######################################################################
 
 # General modules
@@ -629,8 +637,8 @@ def basic_conflict(sbox):
     # probably reveal the cause for the failure, if they were
     # uncommented:
     #
-    # print "Not all extra reject files have been accounted for:"
-    # print extra_files
+    # print("Not all extra reject files have been accounted for:")
+    # print(extra_files)
     ### we should raise a less generic error here. which?
     raise svntest.Failure
 
@@ -1660,14 +1668,14 @@ def basic_peg_revision(sbox):
   wc_dir = sbox.wc_dir
   repos_dir = sbox.repo_url
   filename = 'abc@abc'
-
-  wc_file = wc_dir + '/' + filename
+  wc_file = os.path.join(wc_dir,  filename)
   url = repos_dir + '/' + filename
 
   svntest.main.file_append(wc_file, 'xyz\n')
-  svntest.main.run_svn(None, 'add', wc_file)
+  # We need to escape the @ in the middle of abc@abc by appending another @
+  svntest.main.run_svn(None, 'add', wc_file + '@')
   svntest.main.run_svn(None,
-                       'ci', '-m', 'secret log msg', wc_file)
+                       'ci', '-m', 'secret log msg', wc_file + '@')
 
   # Without the trailing "@", expect failure.
   exit_code, output, errlines = svntest.actions.run_and_verify_svn(
@@ -1677,10 +1685,34 @@ def basic_peg_revision(sbox):
 
   # With the trailing "@", expect success.
   exit_code, output, errlines = svntest.actions.run_and_verify_svn(
-    None, ["xyz\n"], [], 'cat', wc_file+'@')
+    None, ["xyz\n"], [], 'cat', wc_file + '@')
   exit_code, output, errlines = svntest.actions.run_and_verify_svn(
-    None, ["xyz\n"], [], 'cat', url+'@')
+    None, ["xyz\n"], [], 'cat', url + '@')
 
+  # Test with leading @ character in filename.
+  filename = '@abc'
+  wc_file = os.path.join(wc_dir,  filename)
+  url = repos_dir + '/' + filename
+
+  svntest.main.file_append(wc_file, 'xyz\n')
+  exit_code, output, errlines = svntest.actions.run_and_verify_svn(
+    None, None, [], 'add', wc_file + '@')
+  exit_code, output, errlines = svntest.actions.run_and_verify_svn(
+    None, None, [], 'ci', '-m', 'secret log msg',  wc_file + '@')
+
+  # With a leading "@" which isn't escaped, expect failure.
+  # Note that we just test with filename starting with '@', because
+  # wc_file + '@' + filename is a different situation where svn
+  # will try to parse filename as a peg revision.
+  exit_code, output, errlines = svntest.actions.run_and_verify_svn(
+    None, None, ".*'%s' is just a peg revision.*" % filename,
+    'cat', filename)
+
+  # With a leading "@" which is escaped, expect success.
+  exit_code, output, errlines = svntest.actions.run_and_verify_svn(
+    None, ["xyz\n"], [], 'cat', wc_file + '@')
+  exit_code, output, errlines = svntest.actions.run_and_verify_svn(
+    None, ["xyz\n"], [], 'cat', repos_dir + '/' + filename + '@')
 
 def info_nonhead(sbox):
   "info on file not existing in HEAD"
@@ -1705,18 +1737,10 @@ def info_nonhead(sbox):
                                         None,
                                         wc_dir)
   # Get info for old iota at r1.
-  exit_code, output, errput = svntest.actions.run_and_verify_svn(None, None,
-                                                                 [], 'info',
-                                                                 furl + '@1',
-                                                                 '-r1')
-  got_url = 0
-  for line in output:
-    if line.find("URL:") >= 0:
-      got_url = 1
-  if not got_url:
-    print("Info didn't output an URL.")
-    raise svntest.Failure
-
+  expected_infos = [
+      { 'URL' : '.*' },
+    ]
+  svntest.actions.run_and_verify_info(expected_infos, furl + '@1', '-r1')
 
 
 #----------------------------------------------------------------------
@@ -1822,6 +1846,23 @@ def delete_keep_local(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status)
+
+def delete_keep_local_twice(sbox):
+  'delete file and directory with --keep-local twice'
+  
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  
+  dir = os.path.join(wc_dir, 'dir')
+  
+  svntest.actions.run_and_verify_svn(None, None, [], 'mkdir', dir)
+  
+  svntest.actions.run_and_verify_svn(None, None, [], 'rm', '--keep-local', dir)
+  svntest.actions.run_and_verify_svn(None, None, [], 'rm', '--keep-local', dir)
+  
+  if not os.path.isdir(dir):
+    print('Directory was really deleted')
+    raise svntest.Failure
 
 def windows_paths_in_repos(sbox):
   "use folders with names like 'c:hi'"
@@ -2092,8 +2133,8 @@ def automatic_conflict_resolution(sbox):
     # probably reveal the cause for the failure, if they were
     # uncommented:
     #
-    # print "Not all extra reject files have been accounted for:"
-    # print extra_files
+    # print("Not all extra reject files have been accounted for:")
+    # print(extra_files)
     ### we should raise a less generic error here. which?
     raise svntest.Failure
 
@@ -2464,6 +2505,7 @@ test_list = [ None,
               cat_added_PREV,
               ls_space_in_repo_name,
               delete_keep_local,
+              delete_keep_local_twice,
               windows_paths_in_repos,
               basic_rm_urls_one_repo,
               XFail(basic_rm_urls_multi_repos),

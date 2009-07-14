@@ -2,17 +2,22 @@
  * stream.c:   svn_stream operations
  *
  * ====================================================================
- * Copyright (c) 2000-2004, 2006 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -45,6 +50,7 @@ struct svn_stream_t {
   svn_write_fn_t write_fn;
   svn_close_fn_t close_fn;
   svn_io_reset_fn_t reset_fn;
+  svn_io_line_filter_cb_t line_filter_cb;
 };
 
 
@@ -62,6 +68,7 @@ svn_stream_create(void *baton, apr_pool_t *pool)
   stream->write_fn = NULL;
   stream->reset_fn = NULL;
   stream->close_fn = NULL;
+  stream->line_filter_cb = NULL;
   return stream;
 }
 
@@ -98,6 +105,12 @@ svn_stream_set_close(svn_stream_t *stream, svn_close_fn_t close_fn)
   stream->close_fn = close_fn;
 }
 
+void
+svn_stream_set_line_filter_callback(svn_stream_t *stream,
+                                    svn_io_line_filter_cb_t line_filter_cb)
+{
+  stream->line_filter_cb = line_filter_cb;
+}
 
 svn_error_t *
 svn_stream_read(svn_stream_t *stream, char *buffer, apr_size_t *len)
@@ -176,6 +189,23 @@ svn_stream_printf_from_utf8(svn_stream_t *stream,
   return svn_stream_write(stream, translated, &len);
 }
 
+static svn_error_t *
+line_filter(svn_stream_t *stream, svn_boolean_t *filtered, const char *line,
+            apr_pool_t *pool)
+{
+  apr_pool_t *scratch_pool;
+
+  if (! stream->line_filter_cb)
+    {
+      *filtered = FALSE;
+      return SVN_NO_ERROR;
+    }
+
+  scratch_pool = svn_pool_create(pool);
+  SVN_ERR(stream->line_filter_cb(filtered, line, scratch_pool));
+  svn_pool_destroy(scratch_pool);
+  return SVN_NO_ERROR;
+}
 
 svn_error_t *
 svn_stream_readline(svn_stream_t *stream,
@@ -184,39 +214,61 @@ svn_stream_readline(svn_stream_t *stream,
                     svn_boolean_t *eof,
                     apr_pool_t *pool)
 {
-  apr_size_t numbytes;
-  const char *match;
-  char c;
-  /* Since we're reading one character at a time, let's at least
-     optimize for the 90% case.  90% of the time, we can avoid the
-     stringbuf ever having to realloc() itself if we start it out at
-     80 chars.  */
-  svn_stringbuf_t *str = svn_stringbuf_create_ensure(80, pool);
+  svn_stringbuf_t *str;
+  apr_pool_t *iterpool;
+  svn_boolean_t filtered;
 
-  match = eol;
-  while (*match)
+  iterpool = svn_pool_create(pool);
+  do
     {
-      numbytes = 1;
-      SVN_ERR(svn_stream_read(stream, &c, &numbytes));
-      if (numbytes != 1)
+      apr_size_t numbytes;
+      const char *match;
+      char c;
+
+      svn_pool_clear(iterpool);
+
+      /* Since we're reading one character at a time, let's at least
+         optimize for the 90% case.  90% of the time, we can avoid the
+         stringbuf ever having to realloc() itself if we start it out at
+         80 chars.  */
+      str = svn_stringbuf_create_ensure(80, iterpool);
+
+      match = eol;
+      while (*match)
         {
-          /* a 'short' read means the stream has run out. */
-          *eof = TRUE;
-          *stringbuf = str;
-          return SVN_NO_ERROR;
+          numbytes = 1;
+          SVN_ERR(svn_stream_read(stream, &c, &numbytes));
+          if (numbytes != 1)
+            {
+              /* a 'short' read means the stream has run out. */
+              *eof = TRUE;
+
+              SVN_ERR(line_filter(stream, &filtered, str->data, iterpool));
+              if (filtered)
+                *stringbuf = svn_stringbuf_create_ensure(0, pool);
+              else
+                *stringbuf = svn_stringbuf_dup(str, pool);
+
+              return SVN_NO_ERROR;
+            }
+
+          if (c == *match)
+            match++;
+          else
+            match = eol;
+
+          svn_stringbuf_appendbytes(str, &c, 1);
         }
 
-      if (c == *match)
-        match++;
-      else
-        match = eol;
+      *eof = FALSE;
+      svn_stringbuf_chop(str, match - eol);
 
-      svn_stringbuf_appendbytes(str, &c, 1);
+      SVN_ERR(line_filter(stream, &filtered, str->data, iterpool));
     }
+  while (filtered);
+  *stringbuf = svn_stringbuf_dup(str, pool);
 
-  *eof = FALSE;
-  svn_stringbuf_chop(str, match - eol);
-  *stringbuf = str;
+  svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
 }
 
@@ -369,6 +421,11 @@ svn_stream_disown(svn_stream_t *stream, apr_pool_t *pool)
 struct baton_apr {
   apr_file_t *file;
   apr_pool_t *pool;
+
+  /* Offsets when reading from a range of the file.
+   * When either of these is negative, no range has been specified. */
+  apr_off_t start;
+  apr_off_t end;
 };
 
 
@@ -377,6 +434,35 @@ read_handler_apr(void *baton, char *buffer, apr_size_t *len)
 {
   struct baton_apr *btn = baton;
   svn_error_t *err;
+
+  /* Check for range restriction. */
+  if (btn->start >= 0 && btn->end > 0)
+    {
+      /* Get the current file position and make sure it is in range. */
+      apr_off_t pos;
+      
+      pos = 0;
+      SVN_ERR(svn_io_file_seek(btn->file, APR_CUR, &pos, btn->pool));
+      if (pos < btn->start)
+        {
+          /* We're before the range, so forward the file cursor to
+           * the start of the range. */
+          pos = btn->start;
+          SVN_ERR(svn_io_file_seek(btn->file, APR_SET, &pos, btn->pool));
+        }
+      else if (pos >= btn->end)
+        {
+          /* We're past the range, indicate that no bytes can be read. */
+          *len = 0;
+          return SVN_NO_ERROR;
+        }
+      else
+        {
+          /* We're in range, but don't read over the end of the range. */
+          if (pos + *len > btn->end)
+              *len = btn->end - pos; 
+        }
+    }
 
   err = svn_io_file_read_full(btn->file, buffer, *len, len, btn->pool);
   if (err && APR_STATUS_IS_EOF(err->apr_err))
@@ -400,8 +486,12 @@ write_handler_apr(void *baton, const char *data, apr_size_t *len)
 static svn_error_t *
 reset_handler_apr(void *baton)
 {
-  apr_off_t offset = 0;
+  apr_off_t offset;
   struct baton_apr *btn = baton;
+
+  /* If we're reading from a range, reset to the start of the range.
+   * Otherwise, reset to the start of the file. */
+  offset = btn->start >= 0 ? btn->start : 0;
 
   return svn_io_file_seek(btn->file, APR_SET, &offset, btn->pool);
 }
@@ -484,6 +574,8 @@ svn_stream_from_aprfile2(apr_file_t *file,
   baton = apr_palloc(pool, sizeof(*baton));
   baton->file = file;
   baton->pool = pool;
+  baton->start = -1;
+  baton->end = -1;
   stream = svn_stream_create(baton, pool);
   svn_stream_set_read(stream, read_handler_apr);
   svn_stream_set_write(stream, write_handler_apr);
@@ -501,6 +593,39 @@ svn_stream_from_aprfile(apr_file_t *file, apr_pool_t *pool)
   return svn_stream_from_aprfile2(file, TRUE, pool);
 }
 
+svn_stream_t *
+svn_stream_from_aprfile_range_readonly(apr_file_t *file,
+                                       svn_boolean_t disown,
+                                       apr_off_t start,
+                                       apr_off_t end,
+                                       apr_pool_t *pool)
+{
+  struct baton_apr *baton;
+  svn_stream_t *stream;
+  apr_off_t pos;
+
+  if (file == NULL || start < 0 || end <= 0 || start >= end)
+    return svn_stream_empty(pool);
+
+  /* Set the file pointer to the start of the range. */
+  pos = start;
+  if (apr_file_seek(file, APR_SET, &pos) != APR_SUCCESS)
+    return svn_stream_empty(pool);
+
+  baton = apr_palloc(pool, sizeof(*baton));
+  baton->file = file;
+  baton->pool = pool;
+  baton->start = start;
+  baton->end = end;
+  stream = svn_stream_create(baton, pool);
+  svn_stream_set_read(stream, read_handler_apr);
+  svn_stream_set_reset(stream, reset_handler_apr);
+
+  if (! disown)
+    svn_stream_set_close(stream, close_handler_apr);
+
+  return stream;
+}
 
 
 /* Compressed stream support */

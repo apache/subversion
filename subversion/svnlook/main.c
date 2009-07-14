@@ -2,17 +2,22 @@
  * main.c: Subversion server inspection tool.
  *
  * ====================================================================
- * Copyright (c) 2000-2006, 2008-2009 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -1155,12 +1160,9 @@ print_tree(svn_fs_root_t *root,
       subpool = svn_pool_create(pool);
       for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
         {
-          void *val;
-          svn_fs_dirent_t *entry;
+          svn_fs_dirent_t *entry = svn_apr_hash_index_val(hi);
 
           svn_pool_clear(subpool);
-          apr_hash_this(hi, NULL, NULL, &val);
-          entry = val;
           SVN_ERR(print_tree(root, svn_uri_join(path, entry->name, pool),
                              entry->id, (entry->kind == svn_node_dir),
                              indentation + 1, show_ids, full_paths,
@@ -1632,16 +1634,10 @@ do_plist(svnlook_ctxt_t *c,
 
   for (hi = apr_hash_first(pool, props); hi; hi = apr_hash_next(hi))
     {
-      const void *key;
-      void *val;
-      const char *pname;
-      svn_string_t *propval;
+      const char *pname = svn_apr_hash_index_key(hi);
+      svn_string_t *propval = svn_apr_hash_index_val(hi);
 
       SVN_ERR(check_cancel(NULL));
-
-      apr_hash_this(hi, &key, NULL, &val);
-      pname = key;
-      propval = val;
 
       /* Since we're already adding a trailing newline (and possible a
          colon and some spaces) anyway, just mimic the output of the
@@ -2313,7 +2309,7 @@ main(int argc, const char *argv[])
           SVN_INT_ERR(svn_utf_cstring_to_utf8(&repos_path,
                                               os->argv[os->ind++],
                                               pool));
-          repos_path = svn_path_internal_style(repos_path, pool);
+          repos_path = svn_dirent_internal_style(repos_path, pool);
         }
 
       if (repos_path == NULL)
@@ -2342,7 +2338,7 @@ main(int argc, const char *argv[])
         {
           SVN_INT_ERR(svn_utf_cstring_to_utf8
                       (&arg1, os->argv[os->ind++], pool));
-          arg1 = svn_path_internal_style(arg1, pool);
+          arg1 = svn_dirent_internal_style(arg1, pool);
         }
       opt_state.arg1 = arg1;
 
@@ -2351,7 +2347,7 @@ main(int argc, const char *argv[])
         {
           SVN_INT_ERR(svn_utf_cstring_to_utf8
                       (&arg2, os->argv[os->ind++], pool));
-          arg2 = svn_path_internal_style(arg2, pool);
+          arg2 = svn_dirent_internal_style(arg2, pool);
         }
       opt_state.arg2 = arg2;
     }

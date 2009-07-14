@@ -2,17 +2,22 @@
  * serve.c :  Functions for serving the Subversion protocol
  *
  * ====================================================================
- * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -1346,14 +1351,10 @@ static svn_error_t *get_dir(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                             apr_array_header_t *params, void *baton)
 {
   server_baton_t *b = baton;
-  const char *path, *full_path, *file_path, *name, *cauthor, *cdate;
+  const char *path, *full_path, *file_path, *cauthor, *cdate;
   svn_revnum_t rev;
   apr_hash_t *entries, *props = NULL, *file_props;
   apr_hash_index_t *hi;
-  svn_fs_dirent_t *fsent;
-  svn_dirent_t *entry;
-  const void *key;
-  void *val;
   svn_fs_root_t *root;
   apr_pool_t *subpool;
   svn_boolean_t want_props, want_contents;
@@ -1429,9 +1430,9 @@ static svn_error_t *get_dir(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
       subpool = svn_pool_create(pool);
       for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
         {
-          apr_hash_this(hi, &key, NULL, &val);
-          name = key;
-          fsent = val;
+          const char *name = svn_apr_hash_index_key(hi);
+          svn_fs_dirent_t *fsent = svn_apr_hash_index_val(hi);
+          svn_dirent_t *entry;
 
           svn_pool_clear(subpool);
 
@@ -1494,9 +1495,9 @@ static svn_error_t *get_dir(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
     {
       for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
         {
-          apr_hash_this(hi, &key, NULL, &val);
-          name = key;
-          entry = val;
+          const char *name = svn_apr_hash_index_key(hi);
+          svn_dirent_t *entry = svn_apr_hash_index_val(hi);
+
           cdate = (entry->time == (time_t) -1) ? NULL
             : svn_time_to_cstring(entry->time, pool);
           SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "cwnbr(?c)(?c)", name,
@@ -1760,17 +1761,14 @@ static svn_error_t *get_mergeinfo(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   iterpool = svn_pool_create(pool);
   for (hi = apr_hash_first(pool, mergeinfo); hi; hi = apr_hash_next(hi))
     {
-      const void *key;
-      void *value;
+      const char *key = svn_apr_hash_index_key(hi);
+      svn_mergeinfo_t value = svn_apr_hash_index_val(hi);
       svn_string_t *mergeinfo_string;
 
       svn_pool_clear(iterpool);
 
-      apr_hash_this(hi, &key, NULL, &value);
-      SVN_ERR(svn_mergeinfo_to_string(&mergeinfo_string,
-                                      (svn_mergeinfo_t) value,
-                                      iterpool));
-      SVN_ERR(svn_ra_svn_write_tuple(conn, iterpool, "cs", (const char *) key,
+      SVN_ERR(svn_mergeinfo_to_string(&mergeinfo_string, value, iterpool));
+      SVN_ERR(svn_ra_svn_write_tuple(conn, iterpool, "cs", key,
                                      mergeinfo_string));
     }
   svn_pool_destroy(iterpool);
@@ -1787,10 +1785,6 @@ static svn_error_t *log_receiver(void *baton,
   log_baton_t *b = baton;
   svn_ra_svn_conn_t *conn = b->conn;
   apr_hash_index_t *h;
-  const void *key;
-  void *val;
-  const char *path;
-  svn_log_changed_path2_t *change;
   svn_boolean_t invalid_revnum = FALSE;
   char action[2];
   const char *author, *date, *message;
@@ -1816,9 +1810,9 @@ static svn_error_t *log_receiver(void *baton,
       for (h = apr_hash_first(pool, log_entry->changed_paths2); h;
                                                         h = apr_hash_next(h))
         {
-          apr_hash_this(h, &key, NULL, &val);
-          path = key;
-          change = val;
+          const char *path = svn_apr_hash_index_key(h);
+          svn_log_changed_path2_t *change = svn_apr_hash_index_val(h);
+
           action[0] = change->action;
           action[1] = '\0';
           SVN_ERR(svn_ra_svn_write_tuple(
@@ -2043,10 +2037,7 @@ static svn_error_t *get_locations(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   const char *relative_path;
   svn_revnum_t peg_revision;
   apr_hash_t *fs_locations;
-  apr_hash_index_t *iter;
   const char *abs_path;
-  const void *iter_key;
-  void *iter_value;
 
   /* Parse the arguments. */
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "crl", &relative_path,
@@ -2088,13 +2079,16 @@ static svn_error_t *get_locations(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
     {
       if (fs_locations)
         {
+          apr_hash_index_t *iter;
+
           for (iter = apr_hash_first(pool, fs_locations); iter;
               iter = apr_hash_next(iter))
             {
-              apr_hash_this(iter, &iter_key, NULL, &iter_value);
+              const svn_revnum_t *iter_key = svn_apr_hash_index_key(iter);
+              const char *iter_value = svn_apr_hash_index_val(iter);
+
               SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "rc",
-                                             *(const svn_revnum_t *)iter_key,
-                                             (const char *)iter_value));
+                                             *iter_key, iter_value));
             }
         }
     }
@@ -2580,8 +2574,6 @@ static svn_error_t *get_locks(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   const char *full_path;
   apr_hash_t *locks;
   apr_hash_index_t *hi;
-  void *val;
-  svn_lock_t *l;
 
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c", &path));
 
@@ -2599,8 +2591,8 @@ static svn_error_t *get_locks(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w((!", "success"));
   for (hi = apr_hash_first(pool, locks); hi; hi = apr_hash_next(hi))
     {
-      apr_hash_this(hi, NULL, NULL, &val);
-      l = val;
+      svn_lock_t *l = svn_apr_hash_index_val(hi);
+
       SVN_ERR(write_lock(conn, pool, l));
     }
   SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!))"));
