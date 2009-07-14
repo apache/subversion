@@ -1429,9 +1429,9 @@ close_directory(void *dir_baton,
       for (hi = apr_hash_first(NULL, eb->deleted_paths); hi;
            hi = apr_hash_next(hi))
         {
-          const void *deleted_path;
-          deleted_path_notify_t *dpn;
-          apr_hash_this(hi, &deleted_path, NULL, (void *)&dpn);
+          const char *deleted_path = svn_apr_hash_index_key(hi);
+          deleted_path_notify_t *dpn = svn_apr_hash_index_val(hi);
+
           notify = svn_wc_create_notify(deleted_path, dpn->action, pool);
           notify->kind = dpn->kind;
           notify->content_state = notify->prop_state = dpn->state;

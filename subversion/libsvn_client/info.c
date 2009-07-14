@@ -199,7 +199,6 @@ push_dir_info(svn_ra_session_t *ra_session,
               apr_pool_t *pool)
 {
   apr_hash_t *tmpdirents;
-  svn_dirent_t *the_ent;
   svn_info_t *info;
   apr_hash_index_t *hi;
   apr_pool_t *subpool = svn_pool_create(pool);
@@ -210,20 +209,17 @@ push_dir_info(svn_ra_session_t *ra_session,
   for (hi = apr_hash_first(pool, tmpdirents); hi; hi = apr_hash_next(hi))
     {
       const char *path, *URL, *fs_path;
-      const void *key;
       svn_lock_t *lock;
-      void *val;
+      const char *name = svn_apr_hash_index_key(hi);
+      svn_dirent_t *the_ent = svn_apr_hash_index_val(hi);
 
       svn_pool_clear(subpool);
 
       if (ctx->cancel_func)
         SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
 
-      apr_hash_this(hi, &key, NULL, &val);
-      the_ent = val;
-
-      path = svn_path_join(dir, key, subpool);
-      URL  = svn_path_url_add_component2(session_URL, key, subpool);
+      path = svn_path_join(dir, name, subpool);
+      URL  = svn_path_url_add_component2(session_URL, name, subpool);
 
       fs_path = svn_path_is_child(repos_root, URL, subpool);
       fs_path = apr_pstrcat(subpool, "/", fs_path, NULL);
