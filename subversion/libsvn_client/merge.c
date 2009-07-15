@@ -526,6 +526,7 @@ tree_conflict(merge_cmd_baton_t *merge_b,
 {
   svn_wc_conflict_description_t *conflict;
   svn_wc_conflict_description_t *existing_conflict;
+  const char *conflict_abspath;
 
   if (merge_b->record_only || merge_b->dry_run)
     return SVN_NO_ERROR;
@@ -534,8 +535,11 @@ tree_conflict(merge_cmd_baton_t *merge_b,
   SVN_ERR(make_tree_conflict(&conflict, merge_b, adm_access, victim_path,
                              node_kind, action, reason));
 
-  SVN_ERR(svn_wc__get_tree_conflict(&existing_conflict, conflict->path,
-                                    adm_access, merge_b->pool));
+  SVN_ERR(svn_dirent_get_absolute(&conflict_abspath, conflict->path,
+                                  merge_b->pool));
+  SVN_ERR(svn_wc__get_tree_conflict(&existing_conflict, merge_b->ctx->wc_ctx,
+                                    conflict_abspath, merge_b->pool,
+                                    merge_b->pool));
 
   if (existing_conflict != NULL)
     /* Re-adding an existing tree conflict victim is an error. */
@@ -559,6 +563,7 @@ tree_conflict_on_add(merge_cmd_baton_t *merge_b,
 {
   svn_wc_conflict_description_t *existing_conflict;
   svn_wc_conflict_description_t *conflict;
+  const char *conflict_abspath;
 
   if (merge_b->record_only || merge_b->dry_run)
     return SVN_NO_ERROR;
@@ -568,8 +573,11 @@ tree_conflict_on_add(merge_cmd_baton_t *merge_b,
   SVN_ERR(make_tree_conflict(&conflict, merge_b, adm_access, victim_path,
                              node_kind, action, reason));
 
-  SVN_ERR(svn_wc__get_tree_conflict(&existing_conflict, conflict->path,
-                                    adm_access, merge_b->pool));
+  SVN_ERR(svn_dirent_get_absolute(&conflict_abspath, conflict->path,
+                                  merge_b->pool));
+  SVN_ERR(svn_wc__get_tree_conflict(&existing_conflict, merge_b->ctx->wc_ctx,
+                                    conflict_abspath, merge_b->pool,
+                                    merge_b->pool));
 
   if (existing_conflict != NULL)
     {

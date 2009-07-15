@@ -30,6 +30,7 @@
 #include "log.h"
 #include "entries.h"
 #include "lock.h"
+#include "wc.h"
 
 #include "private/svn_skel.h"
 #include "private/svn_wc_private.h"
@@ -520,10 +521,14 @@ svn_wc__add_tree_conflict(const svn_wc_conflict_description_t *conflict,
 {
   svn_wc_conflict_description_t *existing_conflict;
   svn_stringbuf_t *log_accum = NULL;
+  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
+  const char *conflict_abspath;
+
+  SVN_ERR(svn_dirent_get_absolute(&conflict_abspath, conflict->path, pool));
 
   /* Re-adding an existing tree conflict victim is an error. */
-  SVN_ERR(svn_wc__get_tree_conflict(&existing_conflict, conflict->path,
-                                    adm_access, pool));
+  SVN_ERR(svn_wc__get_tree_conflict2(&existing_conflict, conflict_abspath, db,
+                                     pool, pool));
   if (existing_conflict != NULL)
     return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
                          _("Attempt to add tree conflict that already exists"));
@@ -620,27 +625,29 @@ svn_wc__loggy_del_tree_conflict(svn_stringbuf_t **log_accum,
 
 svn_error_t *
 svn_wc__get_tree_conflict(svn_wc_conflict_description_t **tree_conflict,
-                          const char *victim_path,
-                          svn_wc_adm_access_t *adm_access,
-                          apr_pool_t *pool)
+                          svn_wc_context_t *wc_ctx,
+                          const char *victim_abspath,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool)
 {
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(victim_abspath));
+
   return svn_error_return(svn_wc__get_tree_conflict2(
                             tree_conflict,
-                            victim_path,
-                            svn_wc__adm_get_db(adm_access),
-                            pool,
-                            pool));
+                            victim_abspath,
+                            wc_ctx->db,
+                            result_pool,
+                            scratch_pool));
 }
 
 
 svn_error_t *
 svn_wc__get_tree_conflict2(svn_wc_conflict_description_t **tree_conflict,
-                           const char *victim_path,
+                           const char *victim_abspath,
                            svn_wc__db_t *db,
                            apr_pool_t *result_pool,
                            apr_pool_t *scratch_pool)
 {
-  const char *victim_abspath;
   const char *parent_abspath;
   const char *victim_name;
   svn_error_t *err;
@@ -648,7 +655,8 @@ svn_wc__get_tree_conflict2(svn_wc_conflict_description_t **tree_conflict,
   const svn_wc_entry_t *entry;
   int i;
 
-  SVN_ERR(svn_dirent_get_absolute(&victim_abspath, victim_path, scratch_pool));
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(victim_abspath));
+
   svn_dirent_split(victim_abspath, &parent_abspath, &victim_name,
                    scratch_pool);
   err = svn_wc__get_entry(&entry, db, parent_abspath, FALSE,
@@ -665,7 +673,7 @@ svn_wc__get_tree_conflict2(svn_wc_conflict_description_t **tree_conflict,
     }
 
   SVN_ERR(svn_wc__read_tree_conflicts(&conflicts, entry->tree_conflict_data,
-                                      svn_dirent_dirname(victim_path,
+                                      svn_dirent_dirname(victim_abspath,
                                                          scratch_pool),
                                       result_pool));
 

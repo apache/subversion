@@ -1806,7 +1806,8 @@ already_in_a_tree_conflict(const char **victim_path,
       ancestor = APR_ARRAY_IDX(ancestors, i, const char *);
 
       svn_pool_clear(iterpool);
-      SVN_ERR(svn_wc__get_tree_conflict2(&conflict, ancestor, db, pool,
+      SVN_ERR(svn_dirent_get_absolute(&ancestor_abspath, ancestor, iterpool));
+      SVN_ERR(svn_wc__get_tree_conflict2(&conflict, ancestor_abspath, db, pool,
                                          iterpool));
       if (conflict != NULL)
         {

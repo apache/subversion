@@ -258,6 +258,7 @@ struct found_entry_baton
   apr_hash_t *changelist_hash;
   svn_info_receiver_t receiver;
   void *receiver_baton;
+  svn_wc_context_t *wc_ctx;
   svn_wc_adm_access_t *adm_access;  /* adm access baton for root of walk */
 };
 
@@ -269,6 +270,7 @@ info_found_entry_callback(const char *path,
                           apr_pool_t *pool)
 {
   struct found_entry_baton *fe_baton = walk_baton;
+  const char *local_abspath;
 
   /* We're going to receive dirents twice;  we want to ignore the
      first one (where it's a child of a parent dir), and only print
@@ -277,17 +279,14 @@ info_found_entry_callback(const char *path,
       && (strcmp(entry->name, SVN_WC_ENTRY_THIS_DIR)))
     return SVN_NO_ERROR;
 
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
   if (SVN_WC__CL_MATCH(fe_baton->changelist_hash, entry))
     {
       svn_info_t *info;
-      svn_wc_adm_access_t *adm_access;
 
       SVN_ERR(build_info_from_entry(&info, entry, path, pool));
-      SVN_ERR(svn_wc_adm_probe_try3(&adm_access, fe_baton->adm_access, path,
-                               FALSE /* read-only */, 0 /* levels */,
-                               NULL, NULL, pool));
-      SVN_ERR(svn_wc__get_tree_conflict(&info->tree_conflict, path, adm_access,
-                                        pool));
+      SVN_ERR(svn_wc__get_tree_conflict(&info->tree_conflict, fe_baton->wc_ctx,
+                                        local_abspath, pool, pool));
       SVN_ERR(fe_baton->receiver(fe_baton->receiver_baton, path, info, pool));
     }
   return SVN_NO_ERROR;
@@ -309,14 +308,12 @@ info_error_handler(const char *path,
   if (err && (err->apr_err == SVN_ERR_UNVERSIONED_RESOURCE))
     {
       struct found_entry_baton *fe_baton = walk_baton;
-      svn_wc_adm_access_t *adm_access;
       svn_wc_conflict_description_t *tree_conflict;
+      const char *local_abspath;
 
-      SVN_ERR(svn_wc_adm_probe_try3(&adm_access, fe_baton->adm_access,
-                                    svn_dirent_dirname(path, pool),
-                                    FALSE, 0, NULL, NULL, pool));
-      SVN_ERR(svn_wc__get_tree_conflict(&tree_conflict, path, adm_access,
-                                        pool));
+      SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+      SVN_ERR(svn_wc__get_tree_conflict(&tree_conflict, fe_baton->wc_ctx,
+                                        local_abspath, pool, pool));
 
       if (tree_conflict)
         {
@@ -367,6 +364,7 @@ crawl_entries(const char *wcpath,
   fe_baton.receiver = receiver;
   fe_baton.receiver_baton = receiver_baton;
   fe_baton.adm_access = adm_access;
+  fe_baton.wc_ctx = ctx->wc_ctx;
   return svn_wc_walk_entries3(wcpath, adm_access,
                               &entry_walk_callbacks, &fe_baton,
                               depth, FALSE, ctx->cancel_func,

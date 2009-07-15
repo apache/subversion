@@ -3561,6 +3561,9 @@ visit_tc_too_error_handler(const char *path,
                            apr_pool_t *pool)
 {
   struct visit_tc_too_baton_t *baton = walk_baton;
+  const char *local_abspath;
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
   /* If this is an unversioned tree conflict victim, call the "found entry"
    * callback. This can occur on the root node of the walk; we do not expect
@@ -3570,7 +3573,7 @@ visit_tc_too_error_handler(const char *path,
       svn_wc_conflict_description_t *conflict;
 
       /* See if there is any tree conflict on this path. */
-      SVN_ERR(svn_wc__get_tree_conflict2(&conflict, path, baton->db,
+      SVN_ERR(svn_wc__get_tree_conflict2(&conflict, local_abspath, baton->db,
                                          pool, pool));
 
       /* If so, don't regard it as an error but call the "found entry"
@@ -3608,9 +3611,12 @@ svn_wc__walk_entries_and_tc(const char *path,
                             apr_pool_t *pool)
 {
   svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
+  const char *local_abspath;
   svn_error_t *err;
   svn_wc_adm_access_t *path_adm_access;
   const svn_wc_entry_t *entry;
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
   /* Is 'path' versioned? Set path_adm_access accordingly. */
   /* First: Get item's adm access (meaning parent's if it's a file). */
@@ -3658,7 +3664,8 @@ svn_wc__walk_entries_and_tc(const char *path,
        * call the "found entry" callback with a null "entry" parameter. */
       svn_wc_conflict_description_t *conflict;
 
-      SVN_ERR(svn_wc__get_tree_conflict2(&conflict, path, db, pool, pool));
+      SVN_ERR(svn_wc__get_tree_conflict2(&conflict, local_abspath, db, pool,
+                                         pool));
       if (conflict)
         SVN_ERR(walk_callbacks->found_entry(path, NULL, walk_baton, pool));
     }

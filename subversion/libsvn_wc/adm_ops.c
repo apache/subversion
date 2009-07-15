@@ -2219,6 +2219,9 @@ revert_internal(svn_wc__db_t *db,
   const svn_wc_entry_t *entry;
   svn_wc_adm_access_t *dir_access;
   svn_wc_conflict_description_t *tree_conflict;
+  const char *local_abspath;
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
   /* Check cancellation here, so recursive calls get checked early. */
   if (cancel_func)
@@ -2230,7 +2233,8 @@ revert_internal(svn_wc__db_t *db,
   /* Safeguard 1: the item must be versioned for any reversion to make sense,
      except that a tree conflict can exist on an unversioned item. */
   SVN_ERR(svn_wc_entry(&entry, path, dir_access, FALSE, pool));
-  SVN_ERR(svn_wc__get_tree_conflict2(&tree_conflict, path, db, pool, pool));
+  SVN_ERR(svn_wc__get_tree_conflict2(&tree_conflict, local_abspath, db, pool,
+                                     pool));
   if (entry == NULL && tree_conflict == NULL)
     return svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
                              _("Cannot revert unversioned item '%s'"), path);
@@ -2282,7 +2286,8 @@ revert_internal(svn_wc__db_t *db,
 
       /* Clear any tree conflict on the path, even if it is not a versioned
          resource. */
-      SVN_ERR(svn_wc__get_tree_conflict2(&conflict, path, db, pool, pool));
+      SVN_ERR(svn_wc__get_tree_conflict2(&conflict, local_abspath, db, pool,
+                                         pool));
       if (conflict)
         {
           SVN_ERR(svn_wc__del_tree_conflict(path, parent_access, pool));
@@ -2938,6 +2943,9 @@ resolve_found_entry_callback(const char *path,
   struct resolve_callback_baton *baton = walk_baton;
   svn_boolean_t resolved = FALSE;
   svn_boolean_t wc_root = FALSE;
+  const char *local_abspath;
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
   /* We're going to receive dirents twice;  we want to ignore the
      first one (where it's a child of a parent dir), and only process
@@ -2988,7 +2996,7 @@ resolve_found_entry_callback(const char *path,
       SVN_ERR(svn_wc_adm_probe_retrieve(&parent_adm_access, baton->adm_access,
                                         conflict_dir, pool));
 
-      SVN_ERR(svn_wc__get_tree_conflict2(&conflict, path, baton->db,
+      SVN_ERR(svn_wc__get_tree_conflict2(&conflict, local_abspath, baton->db,
                                          pool, pool));
       if (conflict)
         {
