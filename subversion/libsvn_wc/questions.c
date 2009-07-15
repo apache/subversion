@@ -472,8 +472,8 @@ svn_wc_conflicted_p2(svn_boolean_t *text_conflicted_p,
       svn_wc_conflict_description_t *conflict;
 
       SVN_ERR_ASSERT(adm_access != NULL);
-      SVN_ERR(svn_wc__get_tree_conflict2(&conflict, local_abspath, db, pool,
-                                         pool));
+      SVN_ERR(svn_wc__internal_get_tree_conflict(&conflict, local_abspath, db,
+                                                 pool, pool));
       *tree_conflicted_p = (conflict != NULL);
     }
 
