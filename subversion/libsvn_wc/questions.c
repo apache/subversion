@@ -47,6 +47,7 @@
 #include "translate.h"
 #include "wc_db.h"
 #include "lock.h"
+#include "tree_conflicts.h"
 
 #include "svn_private_config.h"
 #include "private/svn_wc_private.h"
@@ -405,7 +406,10 @@ svn_wc_conflicted_p2(svn_boolean_t *text_conflicted_p,
   svn_node_kind_t kind;
   const svn_wc_entry_t *entry;
   const char* dir_path = svn_dirent_dirname(path, pool);
+  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
+  const char *local_abspath;
 
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
   SVN_ERR(svn_wc_entry(&entry, path, adm_access, TRUE, pool));
 
   if (text_conflicted_p)
@@ -468,7 +472,8 @@ svn_wc_conflicted_p2(svn_boolean_t *text_conflicted_p,
       svn_wc_conflict_description_t *conflict;
 
       SVN_ERR_ASSERT(adm_access != NULL);
-      SVN_ERR(svn_wc__get_tree_conflict(&conflict, path, adm_access, pool));
+      SVN_ERR(svn_wc__get_tree_conflict2(&conflict, local_abspath, db, pool,
+                                         pool));
       *tree_conflicted_p = (conflict != NULL);
     }
 

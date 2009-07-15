@@ -943,6 +943,7 @@ svn_client__harvest_committables(apr_hash_t **committables,
       svn_wc_adm_access_t *adm_access;
       const svn_wc_entry_t *entry;
       const char *target;
+      const char *target_abspath;
       svn_error_t *err;
 
       svn_pool_clear(subpool);
@@ -957,6 +958,8 @@ svn_client__harvest_committables(apr_hash_t **committables,
       else
         target = svn_wc_adm_access_path(parent_adm);
 
+      SVN_ERR(svn_dirent_get_absolute(&target_abspath, target, subpool));
+
       /* No entry?  This TARGET isn't even under version control! */
       SVN_ERR(svn_wc_adm_probe_retrieve(&adm_access, parent_adm,
                                         target, subpool));
@@ -969,7 +972,8 @@ svn_client__harvest_committables(apr_hash_t **committables,
       if (err && (err->apr_err == SVN_ERR_ENTRY_NOT_FOUND))
         {
           svn_wc_conflict_description_t *conflict = NULL;
-          svn_wc__get_tree_conflict(&conflict, target, adm_access, pool);
+          svn_wc__get_tree_conflict(&conflict, ctx->wc_ctx, target_abspath,
+                                    pool, subpool);
           if (conflict != NULL)
             {
               svn_error_clear(err);

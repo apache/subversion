@@ -146,17 +146,19 @@ svn_wc__set_file_external_location(svn_wc_adm_access_t *adm_access,
 
 /** Set @a *tree_conflict to a newly allocated @c
  * svn_wc_conflict_description_t structure describing the tree
- * conflict state of @a victim_path, or to @c NULL if @a victim_path
- * is not in a state of tree conflict. @a adm_access is the admin
- * access baton for @a victim_path. Use @a pool for all allocations.
+ * conflict state of @a victim_abspath, or to @c NULL if @a victim_abspath
+ * is not in a state of tree conflict. @a wc_ctx is a working copy context
+ * used to access @a victim_path.  Allocate @a *tree_conflict in @a result_pool,
+ * use @a scratch_pool for temporary allocations.
  *
- * @since New in 1.6.
+ * @since New in 1.7.
  */
 svn_error_t *
 svn_wc__get_tree_conflict(svn_wc_conflict_description_t **tree_conflict,
-                          const char *victim_path,
-                          svn_wc_adm_access_t *adm_access,
-                          apr_pool_t *pool);
+                          svn_wc_context_t *wc_ctx,
+                          const char *victim_abspath,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool);
 
 /** Record the tree conflict described by @a conflict in the WC.
  * @a adm_access must be a write-access baton for the parent directory of
