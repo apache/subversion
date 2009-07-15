@@ -777,6 +777,9 @@ read_entries_new(apr_hash_t **result_entries,
                 NULL,
                 NULL,
                 &base_shadowed,
+                &entry->conflict_old,
+                &entry->conflict_new,
+                &entry->conflict_wrk,
                 &prop_reject_file,
                 &lock,
                 db,
@@ -1157,16 +1160,6 @@ read_entries_new(apr_hash_t **result_entries,
                                      entry->name, APR_HASH_KEY_STRING);
           if (actual_node)
             {
-              if (actual_node->conflict_old != NULL)
-                {
-                  entry->conflict_old =
-                    apr_pstrdup(result_pool, actual_node->conflict_old);
-                  entry->conflict_new =
-                    apr_pstrdup(result_pool, actual_node->conflict_new);
-                  entry->conflict_wrk =
-                    apr_pstrdup(result_pool, actual_node->conflict_working);
-                }
-
               if (actual_node->tree_conflict_data != NULL)
                 entry->tree_conflict_data =
                   apr_pstrdup(result_pool, actual_node->tree_conflict_data);
@@ -3362,6 +3355,7 @@ svn_wc_walk_entries3(const char *path,
                              NULL, NULL,
                              NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL,
                              db, abspath,
                              pool, pool);
   if (err)
