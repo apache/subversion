@@ -314,6 +314,7 @@ svn_wc__get_keywords(apr_hash_t **keywords,
                                &changed_date, &changed_author, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL,
                                db, local_abspath, scratch_pool, scratch_pool));
 
   if (repos_root_url == NULL)
@@ -405,7 +406,8 @@ svn_wc__maybe_set_read_only(svn_boolean_t *did_set,
   err = svn_wc__db_read_info(NULL, NULL, NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL, NULL, NULL,
-                             NULL, NULL, NULL, NULL, NULL, NULL, &lock,
+                             NULL, NULL, NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL, &lock,
                              db, local_abspath, scratch_pool, scratch_pool);
 
   if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)

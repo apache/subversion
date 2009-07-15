@@ -150,6 +150,7 @@ tweak_entries(svn_wc__db_t *db,
       SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL,
                                    NULL, NULL, NULL, NULL, &child_depth, NULL,
                                    NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL,
                                    NULL, NULL, NULL, NULL, NULL,
                                    db, child_abspath, iterpool, iterpool));
 
