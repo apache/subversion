@@ -396,55 +396,67 @@ svn_wc_text_modified_p(svn_boolean_t *modified_p,
 
 
 svn_error_t *
-svn_wc_conflicted_p2(svn_boolean_t *text_conflicted_p,
+svn_wc_conflicted_p3(svn_boolean_t *text_conflicted_p,
                      svn_boolean_t *prop_conflicted_p,
                      svn_boolean_t *tree_conflicted_p,
-                     const char *path,
-                     svn_wc_adm_access_t *adm_access,
-                     apr_pool_t *pool)
+                     svn_wc_context_t *wc_ctx,
+                     const char *local_abspath,
+                     apr_pool_t *scratch_pool)
 {
   svn_node_kind_t kind;
-  const svn_wc_entry_t *entry;
-  const char* dir_path = svn_dirent_dirname(path, pool);
-  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
-  const char *local_abspath;
+  svn_wc__db_kind_t node_kind;
+  const char *prop_rej_file;
+  const char *conflict_old;
+  const char *conflict_new;
+  const char *conflict_working;
+  const char* dir_path = svn_dirent_dirname(local_abspath, scratch_pool);
 
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
-  SVN_ERR(svn_wc_entry(&entry, path, adm_access, TRUE, pool));
+  SVN_ERR(svn_wc__db_read_info(NULL, &node_kind, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL,
+                               &conflict_old, &conflict_new,
+                               &conflict_working, &prop_rej_file,
+                               NULL,
+                               wc_ctx->db, local_abspath, scratch_pool,
+                               scratch_pool));
 
   if (text_conflicted_p)
     {
       *text_conflicted_p = FALSE;
 
-      if (entry)
+      /* Look for any text conflict, exercising only as much effort as
+         necessary to obtain a definitive answer.  This only applies to
+         files, but we don't have to explicitly check that entry is a
+         file, since these attributes would never be set on a directory
+         anyway.  A conflict file entry notation only counts if the
+         conflict file still exists on disk.  */
+
+      /* ### the conflict paths are currently relative.  sure would be nice
+         ### if we store them as absolute paths... */
+
+      if (conflict_old)
         {
-          /* Look for any text conflict, exercising only as much effort as
-             necessary to obtain a definitive answer.  This only applies to
-             files, but we don't have to explicitly check that entry is a
-             file, since these attributes would never be set on a directory
-             anyway.  A conflict file entry notation only counts if the
-             conflict file still exists on disk.  */
+          const char *path = svn_dirent_join(dir_path, conflict_old,
+                                             scratch_pool);
+          SVN_ERR(svn_io_check_path(path, &kind, scratch_pool));
+          *text_conflicted_p = (kind == svn_node_file);
+        }
 
-          if (entry->conflict_old)
-            {
-              path = svn_dirent_join(dir_path, entry->conflict_old, pool);
-              SVN_ERR(svn_io_check_path(path, &kind, pool));
-              *text_conflicted_p = (kind == svn_node_file);
-            }
+      if ((! *text_conflicted_p) && (conflict_new))
+        {
+          const char *path = svn_dirent_join(dir_path, conflict_new,
+                                             scratch_pool);
+          SVN_ERR(svn_io_check_path(path, &kind, scratch_pool));
+          *text_conflicted_p = (kind == svn_node_file);
+        }
 
-          if ((! *text_conflicted_p) && (entry->conflict_new))
-            {
-              path = svn_dirent_join(dir_path, entry->conflict_new, pool);
-              SVN_ERR(svn_io_check_path(path, &kind, pool));
-              *text_conflicted_p = (kind == svn_node_file);
-            }
-
-          if ((! *text_conflicted_p) && (entry->conflict_wrk))
-            {
-              path = svn_dirent_join(dir_path, entry->conflict_wrk, pool);
-              SVN_ERR(svn_io_check_path(path, &kind, pool));
-              *text_conflicted_p = (kind == svn_node_file);
-            }
+      if ((! *text_conflicted_p) && (conflict_working))
+        {
+          const char *path = svn_dirent_join(dir_path, conflict_working,
+                                             scratch_pool);
+          SVN_ERR(svn_io_check_path(path, &kind, scratch_pool));
+          *text_conflicted_p = (kind == svn_node_file);
         }
     }
 
@@ -453,15 +465,17 @@ svn_wc_conflicted_p2(svn_boolean_t *text_conflicted_p,
     {
       *prop_conflicted_p = FALSE;
 
-      if (entry && entry->prejfile)
+      if (prop_rej_file)
         {
           /* A dir's .prej file is _inside_ the dir. */
-          if (entry->kind == svn_node_dir)
-            path = svn_dirent_join(path, entry->prejfile, pool);
-          else
-            path = svn_dirent_join(dir_path, entry->prejfile, pool);
+          const char *path;
 
-          SVN_ERR(svn_io_check_path(path, &kind, pool));
+          if (node_kind == svn_wc__db_kind_dir)
+            path = svn_dirent_join(local_abspath, prop_rej_file, scratch_pool);
+          else
+            path = svn_dirent_join(dir_path, prop_rej_file, scratch_pool);
+
+          SVN_ERR(svn_io_check_path(path, &kind, scratch_pool));
           *prop_conflicted_p = (kind == svn_node_file);
         }
     }
@@ -471,11 +485,48 @@ svn_wc_conflicted_p2(svn_boolean_t *text_conflicted_p,
     {
       svn_wc_conflict_description_t *conflict;
 
-      SVN_ERR_ASSERT(adm_access != NULL);
-      SVN_ERR(svn_wc__internal_get_tree_conflict(&conflict, local_abspath, db,
-                                                 pool, pool));
+      SVN_ERR(svn_wc__internal_get_tree_conflict(&conflict, local_abspath,
+                                                 wc_ctx->db, scratch_pool,
+                                                 scratch_pool));
       *tree_conflicted_p = (conflict != NULL);
     }
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc_conflicted_p2(svn_boolean_t *text_conflicted_p,
+                     svn_boolean_t *prop_conflicted_p,
+                     svn_boolean_t *tree_conflicted_p,
+                     const char *path,
+                     svn_wc_adm_access_t *adm_access,
+                     apr_pool_t *pool)
+{
+  const char *local_abspath;
+  svn_wc_context_t *wc_ctx;
+  svn_error_t *err;
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+  SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL /* config */,
+                                         svn_wc__adm_get_db(adm_access),
+                                         pool));
+
+  err = svn_wc_conflicted_p3(text_conflicted_p, prop_conflicted_p,
+                             tree_conflicted_p, wc_ctx, local_abspath, pool);
+
+  if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+    {
+      svn_error_clear(err);
+
+      if (text_conflicted_p)
+        *text_conflicted_p = FALSE;
+      if (prop_conflicted_p)
+        *prop_conflicted_p = FALSE;
+      if (tree_conflicted_p)
+        *tree_conflicted_p = FALSE;
+    }
+  else if (err)
+    return err;
 
   return SVN_NO_ERROR;
 }

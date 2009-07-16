@@ -2542,13 +2542,13 @@ svn_wc_entry_dup(const svn_wc_entry_t *entry,
                  apr_pool_t *pool);
 
 
-/** Given a @a path in a dir under version control, decide if it is in a
- * state of conflict; return the answers in @a *text_conflicted_p, @a
+/** Given @a local_abspath in a dir under version control, decide if it is
+ * in a state of conflict; return the answers in @a *text_conflicted_p, @a
  * *prop_conflicted_p, and @a *tree_conflicted_p.  If one or two of the
  * answers are uninteresting, simply pass @c NULL pointers for those.
  *
- * If @a path is unversioned or does not exist, @a *text_conflicted_p and
- * @a *prop_conflicted_p will be @c FALSE if non-NULL.
+ * If @a path is unversioned or does not exist, return
+ * @c SVN_ERR_WC_PATH_NOT_FOUND.
  *
  * @a adm_access is the admin access baton of the parent directory.
  *
@@ -2563,8 +2563,23 @@ svn_wc_entry_dup(const svn_wc_entry_t *entry,
  * @a *tree_conflicted_p can't be auto-resolved in this fashion.  An
  * explicit `resolved' is needed.
  *
- * @since New in 1.6.
+ * @since New in 1.7.
  */
+svn_error_t *
+svn_wc_conflicted_p3(svn_boolean_t *text_conflicted_p,
+                     svn_boolean_t *prop_conflicted_p,
+                     svn_boolean_t *tree_conflicted_p,
+                     svn_wc_context_t *wc_ctx,
+                     const char *local_abspath,
+                     apr_pool_t *scratch_pool);
+
+/** Similar to svn_wc_conflicted_p3(), but with a path/adm_access parameter
+ * pair in place of a wc_ctx/local_abspath pair.
+ *
+ * @since New in 1.6.
+ * @deprecated Provided for backward compatibility with the 1.6 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_conflicted_p2(svn_boolean_t *text_conflicted_p,
                      svn_boolean_t *prop_conflicted_p,
