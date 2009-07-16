@@ -1022,6 +1022,9 @@ svn_wc__db_op_invalidate_last_mod_time(svn_wc__db_t *db,
  *   TEXT_MOD                n/a (always available)
  *   PROPS_MOD               n/a (always available)
  *   BASE_SHADOWED           n/a (always available)
+ *   CONFLICT_OLD            NULL
+ *   CONFLICT_NEW            NULL
+ *   CONFLICT_WORKING        NULL
  *   PROP_REJECT_FILE        NULL
  *   LOCK                    NULL
  *
@@ -1114,6 +1117,9 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,  /* ### derived */
                      svn_boolean_t *base_shadowed,  /* ### WORKING shadows a
                                                        ### deleted BASE? */
 
+                     const char **conflict_old,
+                     const char **conflict_new,
+                     const char **conflict_working,
                      const char **prop_reject_file,  /* ### is this right? */
 
                      svn_wc__db_lock_t **lock,

@@ -46,15 +46,14 @@ static apr_hash_t *
 string_hash_dup(apr_hash_t *hash, apr_pool_t *pool)
 {
   apr_hash_index_t *hi;
-  const void *key;
-  apr_ssize_t klen;
-  void *val;
   apr_hash_t *new_hash = apr_hash_make(pool);
+
   for (hi = apr_hash_first(pool, hash); hi; hi = apr_hash_next(hi))
     {
-      apr_hash_this(hi, &key, &klen, &val);
-      key = apr_pstrdup(pool, key);
-      val = svn_string_dup(val, pool);
+      const char *key = apr_pstrdup(pool, svn_apr_hash_index_key(hi));
+      apr_ssize_t klen = svn_apr_hash_index_klen(hi);
+      svn_string_t *val = svn_string_dup(svn_apr_hash_index_val(hi), pool);
+
       apr_hash_set(new_hash, key, klen, val);
     }
   return new_hash;

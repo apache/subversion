@@ -126,14 +126,13 @@ svn_wc__tree_conflict_exists(const apr_array_header_t *conflicts,
                              apr_pool_t *pool);
 
 
-/* See svn_wc__get_tree_conflict() in svn_wc_private.h. This is a variant
-   that takes a DB and dual-pools. This function is preferred.  */
+/* See svn_wc__get_tree_conflict() in svn_wc_private.h. */
 svn_error_t *
-svn_wc__get_tree_conflict2(svn_wc_conflict_description_t **tree_conflict,
-                           const char *victim_path,
-                           svn_wc__db_t *db,
-                           apr_pool_t *result_pool,
-                           apr_pool_t *scratch_pool);
+svn_wc__internal_get_tree_conflict(svn_wc_conflict_description_t **tree_conflict,
+                                   const char *victim_path,
+                                   svn_wc__db_t *db,
+                                   apr_pool_t *result_pool,
+                                   apr_pool_t *scratch_pool);
 
 #ifdef __cplusplus
 }
