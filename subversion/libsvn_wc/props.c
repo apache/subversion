@@ -245,6 +245,7 @@ get_existing_prop_reject_file(const char **reject_file,
                                NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL,
                                NULL, NULL, NULL, reject_file, NULL,
                                db, local_abspath,
                                pool, pool));
@@ -308,6 +309,7 @@ svn_wc__load_props(apr_hash_t **base_props_p,
                                    NULL, NULL, NULL, NULL,
                                    NULL, NULL, NULL, NULL, NULL,
                                    NULL, NULL, &base_shadowed, NULL, NULL,
+                                   NULL, NULL, NULL,
                                    db, local_abspath,
                                    scratch_pool, scratch_pool));
 
@@ -2075,6 +2077,7 @@ svn_wc__internal_propset(svn_wc__db_t *db,
                                NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL,
                                db, local_abspath,
                                scratch_pool, scratch_pool));
 

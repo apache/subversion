@@ -234,7 +234,8 @@ static const char * const statements[] = {
   "where wc_id = ?1 and local_relpath = ?2;",
 
   /* STMT_SELECT_ACTUAL_NODE */
-  "select prop_reject, changelist "
+  "select prop_reject, changelist, conflict_old, conflict_new, "
+  "conflict_working "
   "from actual_node "
   "where wc_id = ?1 and local_relpath = ?2;",
 
@@ -2663,6 +2664,9 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
                      svn_boolean_t *text_mod,
                      svn_boolean_t *props_mod,
                      svn_boolean_t *base_shadowed,
+                     const char **conflict_old,
+                     const char **conflict_new,
+                     const char **conflict_working,
                      const char **prop_reject_file,
                      svn_wc__db_lock_t **lock,
                      svn_wc__db_t *db,
@@ -2938,6 +2942,28 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
             *changelist = svn_sqlite__column_text(stmt_act, 1, result_pool);
           else
             *changelist = NULL;
+        }
+      if (conflict_old)
+        {
+          if (have_act)
+            *conflict_old = svn_sqlite__column_text(stmt_act, 2, result_pool);
+          else
+            *conflict_old = NULL;
+        }
+      if (conflict_new)
+        {
+          if (have_act)
+            *conflict_new = svn_sqlite__column_text(stmt_act, 3, result_pool);
+          else
+            *conflict_new = NULL;
+        }
+      if (conflict_working)
+        {
+          if (have_act)
+            *conflict_working = svn_sqlite__column_text(stmt_act, 4,
+                                                        result_pool);
+          else
+            *conflict_working = NULL;
         }
       if (prop_reject_file)
         {
@@ -3287,6 +3313,7 @@ svn_wc__db_global_relocate(svn_wc__db_t *db,
 
           child_abspath = svn_dirent_join(local_dir_abspath, child, iterpool);
           SVN_ERR(svn_wc__db_read_info(NULL, &kind, NULL,
+                                       NULL, NULL, NULL,
                                        NULL, NULL, NULL,
                                        NULL, NULL, NULL,
                                        NULL, NULL, NULL,
@@ -4190,7 +4217,7 @@ svn_wc__db_check_node(svn_wc__db_kind_t *kind,
   err = svn_wc__db_read_info(NULL, kind, NULL, NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                             NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL, NULL, NULL,
                              db, local_abspath, scratch_pool, scratch_pool);
 
   if (!err)

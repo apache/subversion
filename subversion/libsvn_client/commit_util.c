@@ -166,12 +166,8 @@ look_up_committable(apr_hash_t *committables,
 
   for (hi = apr_hash_first(pool, committables); hi; hi = apr_hash_next(hi))
     {
-      void *val;
-      apr_array_header_t *these_committables;
+      apr_array_header_t *these_committables = svn_apr_hash_index_val(hi);
       int i;
-
-      apr_hash_this(hi, NULL, NULL, &val);
-      these_committables = val;
 
       for (i = 0; i < these_committables->nelts; i++)
         {
@@ -721,10 +717,8 @@ harvest_committables(apr_hash_t *committables,
            hi;
            hi = apr_hash_next(hi))
         {
-          const void *key;
-          void *val;
-          const svn_wc_entry_t *this_entry;
-          const char *name;
+          const char *name = svn_apr_hash_index_key(hi);
+          const svn_wc_entry_t *this_entry = svn_apr_hash_index_val(hi);
           const char *full_path;
           const char *used_url = NULL;
           const char *this_cf_url = cf_url ? cf_url : copyfrom_url;
@@ -732,16 +726,9 @@ harvest_committables(apr_hash_t *committables,
 
           svn_pool_clear(iterpool);
 
-          /* Get the next entry.  Name is an entry name; value is an
-             entry structure. */
-          apr_hash_this(hi, &key, NULL, &val);
-          name = key;
-
           /* Skip "this dir" */
           if (! strcmp(name, SVN_WC_ENTRY_THIS_DIR))
             continue;
-
-          this_entry = val;
 
           /* Skip the excluded item. */
           if (this_entry->depth == svn_depth_exclude)
@@ -956,6 +943,7 @@ svn_client__harvest_committables(apr_hash_t **committables,
       svn_wc_adm_access_t *adm_access;
       const svn_wc_entry_t *entry;
       const char *target;
+      const char *target_abspath;
       svn_error_t *err;
 
       svn_pool_clear(subpool);
@@ -970,6 +958,8 @@ svn_client__harvest_committables(apr_hash_t **committables,
       else
         target = svn_wc_adm_access_path(parent_adm);
 
+      SVN_ERR(svn_dirent_get_absolute(&target_abspath, target, subpool));
+
       /* No entry?  This TARGET isn't even under version control! */
       SVN_ERR(svn_wc_adm_probe_retrieve(&adm_access, parent_adm,
                                         target, subpool));
@@ -982,7 +972,8 @@ svn_client__harvest_committables(apr_hash_t **committables,
       if (err && (err->apr_err == SVN_ERR_ENTRY_NOT_FOUND))
         {
           svn_wc_conflict_description_t *conflict = NULL;
-          svn_wc__get_tree_conflict(&conflict, target, adm_access, pool);
+          svn_wc__get_tree_conflict(&conflict, ctx->wc_ctx, target_abspath,
+                                    pool, subpool);
           if (conflict != NULL)
             {
               svn_error_clear(err);
@@ -1644,9 +1635,8 @@ svn_client__do_commit(const char *base_url,
   /* Transmit outstanding text deltas. */
   for (hi = apr_hash_first(pool, file_mods); hi; hi = apr_hash_next(hi))
     {
-      struct file_mod_t *mod;
+      struct file_mod_t *mod = svn_apr_hash_index_val(hi);
       svn_client_commit_item3_t *item;
-      void *val;
       void *file_baton;
       const char *tempfile, *dir_path;
       unsigned char digest[APR_MD5_DIGESTSIZE];
@@ -1654,9 +1644,6 @@ svn_client__do_commit(const char *base_url,
       svn_wc_adm_access_t *item_access;
 
       svn_pool_clear(iterpool);
-      /* Get the next entry. */
-      apr_hash_this(hi, NULL, NULL, &val);
-      mod = val;
 
       /* Transmit the entry. */
       item = mod->item;
