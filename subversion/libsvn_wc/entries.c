@@ -2359,8 +2359,8 @@ entries_write_body(svn_wc__db_t *db,
     }
   else if (err)
     return err;
-
-  apr_hash_set(dav_cache, local_abspath, APR_HASH_KEY_STRING, child_cache);
+  else
+    apr_hash_set(dav_cache, local_abspath, APR_HASH_KEY_STRING, child_cache);
 
   SVN_ERR(svn_wc__db_base_get_children(&children, db, local_abspath,
                                        scratch_pool, scratch_pool));
