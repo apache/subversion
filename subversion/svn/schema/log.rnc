@@ -22,8 +22,8 @@ attlist.path &=
   attribute action { "A" | "D" | "R" | "M" },
   ## kind is "" when repository was < 1.6 when committing
   attribute kind { "file" | "dir" | "" },
-  attribute text-mods { "true" | "false } ?
-  attribute prop-mods { "true" | "false } ?
+  attribute text-mods { "true" | "false" }?,
+  attribute prop-mods { "true" | "false" }?,
   (
    ## The copyfrom path within repository.
    attribute copyfrom-path { text },
