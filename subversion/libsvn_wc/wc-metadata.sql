@@ -441,7 +441,7 @@ CREATE TEMPORARY TABLE BASE_NODE_BACKUP(
 INSERT INTO BASE_NODE_BACKUP SELECT
   wc_id, local_relpath, repos_id, repos_relpath, parent_relpath, presence,
   kind, revnum, checksum, translated_size, changed_rev, changed_date,
-  changed_author, depth, symlink_target, last_mod_time, properties dav_cache,
+  changed_author, depth, symlink_target, last_mod_time, properties, dav_cache,
   file_external
 FROM BASE_NODE;
 
@@ -469,7 +469,7 @@ CREATE TABLE BASE_NODE(
   last_mod_time  INTEGER,
   properties  BLOB,
   dav_cache  BLOB,
-  file_external  TEXT
+  file_external  TEXT,
 
   PRIMARY KEY (wc_id, local_relpath)
   );
@@ -481,7 +481,7 @@ CREATE INDEX I_PARENT ON BASE_NODE (wc_id, parent_relpath);
 INSERT INTO BASE_NODE SELECT
   wc_id, local_relpath, repos_id, repos_relpath, parent_relpath, presence,
   kind, revnum, checksum, translated_size, changed_rev, changed_date,
-  changed_author, depth, symlink_target, last_mod_time, properties dav_cache,
+  changed_author, depth, symlink_target, last_mod_time, properties, dav_cache,
   file_external
 FROM BASE_NODE_BACKUP;
 
@@ -524,7 +524,7 @@ CREATE TABLE ACTUAL_NODE (
   conflict_working  TEXT,
   prop_reject  TEXT,
   changelist  TEXT,
-  text_mod  TEXT
+  text_mod  TEXT,
 
   PRIMARY KEY (wc_id, local_relpath)
   );
