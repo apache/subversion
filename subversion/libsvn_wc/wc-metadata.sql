@@ -140,7 +140,7 @@ CREATE TABLE BASE_NODE (
      node does not have any dav-cache. */
   dav_cache  BLOB,
 
-  /* ### this column is obsolete. it will always be NULL.  */
+  /* ### this column is removed in format 13. it will always be NULL.  */
   incomplete_children  INTEGER,
 
   /* The serialized file external information. */
@@ -361,6 +361,7 @@ CREATE TABLE LOCK (
 /* Format 13 introduces the work queue, and erases a few columns from the
    original schema.  */
 -- format: 13
+BEGIN TRANSACTION;
 
 CREATE TABLE WORK_QUEUE (
   /* Work items are identified by this value.  */
@@ -370,9 +371,82 @@ CREATE TABLE WORK_QUEUE (
   work  BLOB NOT NULL
   );
 
-/* We cannot remove columns. Just clear the contents of 'incomplete_children'
-   instead.
+/* We cannot directly remove columns, so we use a temporary table instead. */
+/* First create the temporary table without the undesired column(s). */
+CREATE TEMPORARY TABLE BASE_NODE_BACKUP(
+  wc_id  INTEGER NOT NULL,
+  local_relpath  TEXT NOT NULL,
+  repos_id  INTEGER,
+  repos_relpath  TEXT,
+  parent_relpath  TEXT,
+  presence  TEXT NOT NULL,
+  kind  TEXT NOT NULL,
+  revnum  INTEGER,
+  checksum  TEXT,
+  translated_size  INTEGER,
+  changed_rev  INTEGER,
+  changed_date  INTEGER,
+  changed_author  TEXT,
+  depth  TEXT,
+  symlink_target  TEXT,
+  last_mod_time  INTEGER,
+  properties  BLOB,
+  dav_cache  BLOB,
+  file_external  TEXT
+);
 
-   The contents of dav_cache are suspect in format 12, so it is best to just
+/* Copy everything into the temporary table. */
+INSERT INTO BASE_NODE_BACKUP SELECT
+  wc_id, local_relpath, repos_id, repos_relpath, parent_relpath, presence,
+  kind, revnum, checksum, translated_size, changed_rev, changed_date,
+  changed_author, depth, symlink_target, last_mod_time, properties dav_cache,
+  file_external
+FROM BASE_NODE;
+
+/* Drop the original table. */
+DROP TABLE BASE_NODE;
+
+/* Recreate the original table, this time less the temporary columns.
+   Column descriptions are same as BASE_NODE in format 12 */
+CREATE TABLE BASE_NODE(
+  wc_id  INTEGER NOT NULL,
+  local_relpath  TEXT NOT NULL,
+  repos_id  INTEGER,
+  repos_relpath  TEXT,
+  parent_relpath  TEXT,
+  presence  TEXT NOT NULL,
+  kind  TEXT NOT NULL,
+  revnum  INTEGER,
+  checksum  TEXT,
+  translated_size  INTEGER,
+  changed_rev  INTEGER,
+  changed_date  INTEGER,
+  changed_author  TEXT,
+  depth  TEXT,
+  symlink_target  TEXT,
+  last_mod_time  INTEGER,
+  properties  BLOB,
+  dav_cache  BLOB,
+  file_external  TEXT
+
+  PRIMARY KEY (wc_id, local_relpath)
+  );
+
+/* Recreate the index. */
+CREATE INDEX I_PARENT ON BASE_NODE (wc_id, parent_relpath);
+
+/* Copy everything back into the original table. */
+INSERT INTO BASE_NODE SELECT
+  wc_id, local_relpath, repos_id, repos_relpath, parent_relpath, presence,
+  kind, revnum, checksum, translated_size, changed_rev, changed_date,
+  changed_author, depth, symlink_target, last_mod_time, properties dav_cache,
+  file_external
+FROM BASE_NODE_BACKUP;
+
+/* Drop the temporary table. */
+DROP TABLE BASE_NODE_BACKUP;
+
+/* The contents of dav_cache are suspect in format 12, so it is best to just
    erase anything there.  */
 UPDATE BASE_NODE SET incomplete_children=null, dav_cache=null;
+COMMIT;
