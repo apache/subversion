@@ -1279,7 +1279,7 @@ typedef enum svn_wc_conflict_reason_t
 
 
 /** The type of conflict being described by an @c
- * svn_wc_conflict_description_t (see below).
+ * svn_wc_conflict_description2_t (see below).
  *
  * @since New in 1.5.
  */
@@ -1380,7 +1380,7 @@ svn_wc_conflict_version_dup(const svn_wc_conflict_version_t *version,
 
 
 /** A struct that describes a conflict that has occurred in the
- * working copy.  Passed to @c svn_wc_conflict_resolver_func_t.
+ * working copy.  Passed to @c svn_wc_conflict_resolver_func2_t.
  *
  * The conflict described by this structure is one of:
  *   - a conflict on the content of the file node @a path
@@ -1389,11 +1389,97 @@ svn_wc_conflict_version_dup(const svn_wc_conflict_version_t *version,
  * @note Fields may be added to the end of this structure in future
  * versions.  Therefore, to preserve binary compatibility, users
  * should not directly allocate structures of this type but should use
- * svn_wc_create_conflict_description_text() or
- * svn_wc_create_conflict_description_prop() or
- * svn_wc_create_conflict_description_tree() instead.
+ * svn_wc_create_conflict_description_text2() or
+ * svn_wc_create_conflict_description_prop2() or
+ * svn_wc_create_conflict_description_tree2() instead.
+ *
+ * @since New in 1.7.
+ */
+typedef struct svn_wc_conflict_description2_t
+{
+  /** The path that is in conflict (for a tree conflict, it is the victim) */
+  const char *local_abspath;
+
+  /** The node type of the path being operated on (for a tree conflict,
+   *  ### which version?) */
+  svn_node_kind_t node_kind;
+
+  /** What sort of conflict are we describing? */
+  svn_wc_conflict_kind_t kind;
+
+  /** The name of the property whose conflict is being described.
+   *  (Only if @a kind is 'property'; else undefined.) */
+  const char *property_name;
+
+  /** Whether svn thinks ('my' version of) @c path is a 'binary' file.
+   *  (Only if @c kind is 'text', else undefined.) */
+  svn_boolean_t is_binary;
+
+  /** The svn:mime-type property of ('my' version of) @c path, if available,
+   *  else NULL.
+   *  (Only if @c kind is 'text', else undefined.) */
+  const char *mime_type;
+
+  /** The action being attempted on the conflicted node or property.
+   *  (When @c kind is 'text', this action must be 'edit'.) */
+  svn_wc_conflict_action_t action;
+
+  /** The state of the target node or property, relative to its merge-left
+   *  source, that is the reason for the conflict.
+   *  (When @c kind is 'text', this reason must be 'edited'.) */
+  svn_wc_conflict_reason_t reason;
+
+  /** If this is text-conflict and involves the merging of two files
+   * descended from a common ancestor, here are the paths of up to
+   * four fulltext files that can be used to interactively resolve the
+   * conflict.  All four files will be in repository-normal form -- LF
+   * line endings and contracted keywords.  (If any of these files are
+   * not available, they default to NULL.)
+   *
+   * On the other hand, if this is a property-conflict, then these
+   * paths represent temporary files that contain the three different
+   * property-values in conflict.  The fourth path (@c merged_file)
+   * may or may not be NULL;  if set, it represents libsvn_wc's
+   * attempt to merge the property values together.  (Remember that
+   * property values are technically binary values, and thus can't
+   * always be merged.)
+   */
+  const char *base_file;     /* common ancestor of the two files being merged */
+
+  /** their version of the file */
+  const char *their_file;
+
+  /** my locally-edited version of the file */
+  const char *my_file;
+
+  /** merged version; may contain conflict markers */
+  const char *merged_file;
+
+  /** The operation that exposed the conflict.
+   * Used only for tree conflicts.
+   *
+   * @since New in 1.6.
+   */
+  svn_wc_operation_t operation;
+
+  /** Info on the "merge-left source" or "older" version of incoming change.
+   * @since New in 1.6. */
+  svn_wc_conflict_version_t *src_left_version;
+
+  /** Info on the "merge-right source" or "their" version of incoming change.
+   * @since New in 1.6. */
+  svn_wc_conflict_version_t *src_right_version;
+
+  /* Remember to adjust svn_wc__conflict_description_dup()
+   * if you add new fields to this struct. */
+} svn_wc_conflict_description2_t;
+
+
+/** Similar to svn_wc_conflict_description2_t, but with relative paths and
+ * adm_access batons.  Passed to @c svn_wc_conflict_resolver_func_t.
  *
  * @since New in 1.5.
+ * @deprecated Provided for backward compatibility with the 1.6 API.
  */
 typedef struct svn_wc_conflict_description_t
 {
@@ -1483,41 +1569,64 @@ typedef struct svn_wc_conflict_description_t
 } svn_wc_conflict_description_t;
 
 /**
- * Allocate an @c svn_wc_conflict_description_t structure in @a pool,
+ * Allocate an @c svn_wc_conflict_description_t structure in @a result_pool,
  * initialize to represent a text conflict, and return it.
  *
- * Set the @c path field of the created struct to @a path, the @c access
- * field to @a adm_access, the @c kind field to @c
- * svn_wc_conflict_kind_text, the @c node_kind to @c svn_node_file, the @c
- * action to @c svn_wc_conflict_action_edit, and the @c reason to @c
- * svn_wc_conflict_reason_edited. Make only shallow copies of the pointer
- * arguments.
+ * Set the @c local_abspath field of the created struct to @a local_abspath
+ * (which must be an absolute path), the @c kind field to
+ * @c svn_wc_conflict_kind_text, the @c node_kind to @c svn_node_file,
+ * the @c action to @c svn_wc_conflict_action_edit, and the @c reason to @c
+ * svn_wc_conflict_reason_edited.
  *
  * @note: It is the caller's responsibility to set the other required fields
  * (such as the four file names and @c mime_type and @c is_binary).
  *
- * @since New in 1.6.
+ * @since New in 1.7.
  */
+svn_wc_conflict_description2_t *
+svn_wc_conflict_description_create_text2(const char *local_abspath,
+                                         apr_pool_t *result_pool);
+
+
+/** Similar to svn_wc_conflict_description_create_text2(), but returns
+ * a @c svn_wc_conflict_descriptor_t *.
+ *
+ * @since New in 1.6.
+ * @deprecated Provided for backward compatibility with the 1.6 API.
+ */
+SVN_DEPRECATED
 svn_wc_conflict_description_t *
 svn_wc_conflict_description_create_text(const char *path,
                                         svn_wc_adm_access_t *adm_access,
                                         apr_pool_t *pool);
 
 /**
- * Allocate an @c svn_wc_conflict_description_t structure in @a pool,
+ * Allocate an @c svn_wc_conflict_description_t structure in @a result_pool,
  * initialize to represent a property conflict, and return it.
  *
- * Set the @c path field of the created struct to @a path, the @c access
- * field to @a adm_access, the @c kind field to @c
- * svn_wc_conflict_kind_prop, the @c node_kind to @a node_kind, and the @c
- * property_name to @a property_name. Make only shallow copies of the pointer
- * arguments.
+ * Set the @c local_abspath field of the created struct to @a local_abspath
+ * (which must be an absolute path), the @c kind field
+ * to @c svn_wc_conflict_kind_prop, the @c node_kind to @a node_kind, and
+ * the @c property_name to @a property_name.
  *
  * @note: It is the caller's responsibility to set the other required fields
  * (such as the four file names and @c action and @c reason).
  *
- * @since New in 1.6.
+ * @since New in 1.7.
  */
+svn_wc_conflict_description2_t *
+svn_wc_conflict_description_create_prop2(const char *local_abspath,
+                                         svn_node_kind_t node_kind,
+                                         const char *property_name,
+                                         apr_pool_t *result_pool);
+
+/** Similar to svn_wc_conflict_descriptor_create_prop(), but returns
+ * a @c svn_wc_conflict_descriptor_t *.
+ *
+ * @since New in 1.6.
+ * @deprecated Provided for backward compatibility with the 1.6 API.
+ */
+SVN_DEPRECATED
 svn_wc_conflict_description_t *
 svn_wc_conflict_description_create_prop(const char *path,
                                         svn_wc_adm_access_t *adm_access,
@@ -1529,19 +1638,35 @@ svn_wc_conflict_description_create_prop(const char *path,
  * Allocate an @c svn_wc_conflict_description_t structure in @a pool,
  * initialize to represent a tree conflict, and return it.
  *
- * Set the @c path field of the created struct to @a path, the @c access
- * field to @a adm_access, the @c kind field to @c
- * svn_wc_conflict_kind_tree, the @c node_kind to @a node_kind, the @c
+ * Set the @c local_abspath field of the created struct to @a local_abspath
+ * (which must be an absolute path), the @c kind field to
+ * @c svn_wc_conflict_kind_tree, the @c node_kind to @a node_kind, the @c
  * operation to @a operation, the @c src_left_version field to
  * @a src_left_version, and the @c src_right_version field to
  * @a src_right_version.
- * Make only shallow copies of the pointer arguments.
  *
  * @note: It is the caller's responsibility to set the other required fields
  * (such as the four file names and @c action and @c reason).
  *
- * @since New in 1.6.
+ * @since New in 1.7.
  */
+svn_wc_conflict_description2_t *
+svn_wc_conflict_description_create_tree2(const char *local_abspath,
+                                         svn_node_kind_t node_kind,
+                                         svn_wc_operation_t operation,
+                                         svn_wc_conflict_version_t
+                                           *src_left_version,
+                                         svn_wc_conflict_version_t
+                                           *src_right_version,
+                                         apr_pool_t *result_pool);
+
+/** Similar to svn_wc_conflict_description_create_tree(), but returns
+ * a @c svn_wc_conflict_descriptor_t *.
+ *
+ * @since New in 1.6.
+ * @deprecated Provided for backward compatibility with the 1.6 API.
+ */
+SVN_DEPRECATED
 svn_wc_conflict_description_t *
 svn_wc_conflict_description_create_tree(const char *path,
                                         svn_wc_adm_access_t *adm_access,
@@ -1632,9 +1757,10 @@ svn_wc_create_conflict_result(svn_wc_conflict_choice_t choice,
  * @a description describes the exact nature of the conflict, and
  * provides information to help resolve it.  @a baton is a closure
  * object; it should be provided by the implementation, and passed by
- * the caller.  All allocations should be performed in @a pool.  When
- * finished, the callback signals its resolution by returning a
- * structure in @a *result.  (See @c svn_wc_conflict_result_t.)
+ * the caller.  When finished, the callback signals its resolution by
+ * returning a structure in @a *result, which should be allocated in
+ * @a result_pool.  (See @c svn_wc_conflict_result_t.)  @a scratch_pool
+ * should be used for any temporary allocations.
  *
  * The values @c svn_wc_conflict_choose_mine_conflict and @c
  * svn_wc_conflict_choose_theirs_conflict are not legal for conflicts
@@ -1649,7 +1775,22 @@ svn_wc_create_conflict_result(svn_wc_conflict_choice_t choice,
  * of conflicts are automatically resolvable and which require user
  * interaction.
  *
+ * @since New in 1.7.
+ */
+typedef svn_error_t *(*svn_wc_conflict_resolver_func2_t)
+    (svn_wc_conflict_result_t **result,
+     const svn_wc_conflict_description2_t *description,
+     void *baton,
+     apr_pool_t *result_pool,
+     apr_pool_t *scratch_pool);
+
+
+/** Similar to @c svn_wc_conflict_resolver_func2_t, but using
+ * @c svn_wc_conflict_description_t instead of 
+ * @c svn_wc_conflict_description2_t
+ *
  * @since New in 1.5.
+ * @deprecated Provided for backward compatibility with the 1.6 API.
  */
 typedef svn_error_t *(*svn_wc_conflict_resolver_func_t)
     (svn_wc_conflict_result_t **result,

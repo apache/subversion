@@ -303,61 +303,57 @@ svn_wc__path_switched(const char *wc_path,
   return SVN_NO_ERROR;
 }
 
-svn_wc_conflict_description_t *
-svn_wc_conflict_description_create_text(const char *path,
-                                        svn_wc_adm_access_t *adm_access,
-                                        apr_pool_t *pool)
+svn_wc_conflict_description2_t *
+svn_wc_conflict_description_create_text2(const char *local_abspath,
+                                         apr_pool_t *result_pool)
 {
-  svn_wc_conflict_description_t *conflict;
+  svn_wc_conflict_description2_t *conflict;
 
-  conflict = apr_pcalloc(pool, sizeof(*conflict));
-  conflict->path = path;
+  conflict = apr_pcalloc(result_pool, sizeof(*conflict));
+  conflict->local_abspath = apr_pstrdup(result_pool, local_abspath);
   conflict->node_kind = svn_node_file;
   conflict->kind = svn_wc_conflict_kind_text;
-  conflict->access = adm_access;
   conflict->action = svn_wc_conflict_action_edit;
   conflict->reason = svn_wc_conflict_reason_edited;
   return conflict;
 }
 
-svn_wc_conflict_description_t *
-svn_wc_conflict_description_create_prop(const char *path,
-                                        svn_wc_adm_access_t *adm_access,
-                                        svn_node_kind_t node_kind,
-                                        const char *property_name,
-                                        apr_pool_t *pool)
+svn_wc_conflict_description2_t *
+svn_wc_conflict_description_create_prop2(const char *local_abspath,
+                                         svn_node_kind_t node_kind,
+                                         const char *property_name,
+                                         apr_pool_t *result_pool)
 {
-  svn_wc_conflict_description_t *conflict;
+  svn_wc_conflict_description2_t *conflict;
 
-  conflict = apr_pcalloc(pool, sizeof(*conflict));
-  conflict->path = path;
+  conflict = apr_pcalloc(result_pool, sizeof(*conflict));
+  conflict->local_abspath = apr_pstrdup(result_pool, local_abspath);
   conflict->node_kind = node_kind;
   conflict->kind = svn_wc_conflict_kind_property;
-  conflict->access = adm_access;
-  conflict->property_name = property_name;
+  conflict->property_name = apr_pstrdup(result_pool, property_name);
   return conflict;
 }
 
-svn_wc_conflict_description_t *
-svn_wc_conflict_description_create_tree(
-                            const char *path,
-                            svn_wc_adm_access_t *adm_access,
+svn_wc_conflict_description2_t *
+svn_wc_conflict_description_create_tree2(
+                            const char *local_abspath,
                             svn_node_kind_t node_kind,
                             svn_wc_operation_t operation,
                             svn_wc_conflict_version_t *src_left_version,
                             svn_wc_conflict_version_t *src_right_version,
-                            apr_pool_t *pool)
+                            apr_pool_t *result_pool)
 {
-  svn_wc_conflict_description_t *conflict;
+  svn_wc_conflict_description2_t *conflict;
 
-  conflict = apr_pcalloc(pool, sizeof(*conflict));
-  conflict->path = path;
+  conflict = apr_pcalloc(result_pool, sizeof(*conflict));
+  conflict->local_abspath = apr_pstrdup(result_pool, local_abspath);
   conflict->node_kind = node_kind;
   conflict->kind = svn_wc_conflict_kind_tree;
-  conflict->access = adm_access;
   conflict->operation = operation;
-  conflict->src_left_version = src_left_version;
-  conflict->src_right_version = src_right_version;
+  conflict->src_left_version = svn_wc_conflict_version_dup(src_left_version,
+                                                           result_pool);
+  conflict->src_right_version = svn_wc_conflict_version_dup(src_right_version,
+                                                            result_pool);
   return conflict;
 }
 
