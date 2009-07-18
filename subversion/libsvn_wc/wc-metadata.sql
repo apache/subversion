@@ -327,7 +327,8 @@ CREATE TABLE ACTUAL_NODE (
      ### scanning the filesystem). */
   text_mod  TEXT,
 
-  /* if a directory, serialized data for all of tree conflicts therein. */
+  /* if a directory, serialized data for all of tree conflicts therein.
+     removed in format 13, in favor of the TREE_CONFLICT_VICTIM table*/
   tree_conflict_data  TEXT,
 
   PRIMARY KEY (wc_id, local_relpath)
@@ -370,6 +371,47 @@ CREATE TABLE WORK_QUEUE (
   /* A serialized skel specifying the work item.  */
   work  BLOB NOT NULL
   );
+
+CREATE TABLE TREE_CONFLICT_VICTIM (
+  /* specifies the location of this node in the local filesystem */
+  wc_id  INTEGER NOT NULL,
+  local_relpath  TEXT NOT NULL,
+
+  /* parent's local_relpath for aggregating children of a given parent.
+     this will be "" if the parent is the wcroot. NULL if this is the
+     wcroot node. */
+  parent_relpath  TEXT,
+  
+  /* what kind of node is this? may be "unknown" if the node is not present */
+  kind  TEXT NOT NULL,
+
+  /* the name of the property in conflict, or NULL */
+  property_name  TEXT,
+
+  /* conflict information, if kind is 'text' */
+  conflict_action  TEXT,
+  conflict_reason  TEXT,
+
+  /* operation which exposed the conflict, if kind is 'tree' */
+  operation  TEXT,
+
+  /* the 'merge-left' source, or 'older' version of the incoming change. */
+  left_repos_id  INTEGER,
+  left_repos_relpath  TEXT,
+  left_peg_rev  INTEGER,
+  left_kind  TEXT,
+
+  /* the 'merge-right' source, or 'their' version of the incoming change. */
+  right_repos_id  INTEGER,
+  right_repos_relpath  TEXT,
+  right_peg_rev  INTEGER,
+  right_kind  TEXT,
+
+  PRIMARY KEY (wc_id, local_relpath)
+  );
+
+CREATE INDEX I_TCPARENT ON TREE_CONFLICT_VICTIM (wc_id, parent_relpath);
+
 
 /* We cannot directly remove columns, so we use a temporary table instead. */
 /* First create the temporary table without the undesired column(s). */
@@ -449,4 +491,52 @@ DROP TABLE BASE_NODE_BACKUP;
 /* The contents of dav_cache are suspect in format 12, so it is best to just
    erase anything there.  */
 UPDATE BASE_NODE SET incomplete_children=null, dav_cache=null;
+
+
+/* Now "drop" the tree_conflict_data column from actual_node. */
+CREATE TABLE ACTUAL_NODE_BACKUP (
+  wc_id  INTEGER NOT NULL,
+  local_relpath  TEXT NOT NULL,
+  parent_relpath  TEXT,
+  properties  BLOB,
+  conflict_old  TEXT,
+  conflict_new  TEXT,
+  conflict_working  TEXT,
+  prop_reject  TEXT,
+  changelist  TEXT,
+  text_mod  TEXT
+  );
+
+INSERT INTO ACTUAL_NODE_BACKUP SELECT
+  wc_id, local_relpath, parent_relpath, properties, conflict_old,
+  conflict_new, conflict_working, prop_reject, changelist, text_mod
+FROM ACTUAL_NODE;
+
+DROP TABLE ACTUAL_NODE;
+
+CREATE TABLE ACTUAL_NODE (
+  wc_id  INTEGER NOT NULL,
+  local_relpath  TEXT NOT NULL,
+  parent_relpath  TEXT,
+  properties  BLOB,
+  conflict_old  TEXT,
+  conflict_new  TEXT,
+  conflict_working  TEXT,
+  prop_reject  TEXT,
+  changelist  TEXT,
+  text_mod  TEXT
+
+  PRIMARY KEY (wc_id, local_relpath)
+  );
+
+CREATE INDEX I_ACTUAL_PARENT ON ACTUAL_NODE (wc_id, parent_relpath);
+CREATE INDEX I_ACTUAL_CHANGELIST ON ACTUAL_NODE (changelist);
+
+INSERT INTO ACTUAL_NODE SELECT
+  wc_id, local_relpath, parent_relpath, properties, conflict_old,
+  conflict_new, conflict_working, prop_reject, changelist, text_mod
+FROM ACTUAL_NODE_BACKUP;
+
+DROP TABLE ACTUAL_NODE_BACKUP;
+
 COMMIT;
