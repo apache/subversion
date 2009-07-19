@@ -35,6 +35,7 @@
 #include "svn_props.h"
 
 #include "wc.h"   /* just for prototypes of things in this .c file */
+#include "entries.h"
 #include "private/svn_wc_private.h"
 
 #include "svn_private_config.h"
@@ -247,6 +248,67 @@ svn_wc_match_ignore_list(const char *str, apr_array_header_t *list,
 }
 
 svn_error_t *
+svn_wc__internal_path_switched(svn_boolean_t *switched,
+                               svn_wc__db_t *db,
+                               const char *local_abspath,
+                               apr_pool_t *scratch_pool)
+{
+  const char *parent_abspath;
+  const char *parent_child_url;
+  const svn_wc_entry_t *parent_entry;
+  const svn_wc_entry_t *entry;
+  svn_error_t *err;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  if (svn_dirent_is_root(local_abspath, strlen(local_abspath)))
+    {
+      *switched = FALSE;
+      return SVN_NO_ERROR;
+    }
+
+  SVN_ERR(svn_wc__get_entry(&entry, db, local_abspath, FALSE, svn_node_unknown,
+                            FALSE, scratch_pool, scratch_pool));
+
+  parent_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
+  err = svn_wc__get_entry(&parent_entry, db, parent_abspath, FALSE,
+                          svn_node_dir, FALSE, scratch_pool, scratch_pool);
+
+  if (err && (err->apr_err == SVN_ERR_WC_NOT_DIRECTORY
+        || err->apr_err == SVN_ERR_WC_MISSING))
+    {
+      svn_error_clear(err);
+      *switched = FALSE;
+      return SVN_NO_ERROR;
+    }
+  else if (err)
+    return err;
+
+  /* Without complete entries (and URLs) for WC_PATH and it's parent
+     we return SVN_ERR_ENTRY_MISSING_URL. */
+  if (!parent_entry->url || !entry->url)
+    {
+      const char *no_url_path = parent_entry->url ?
+                            local_abspath : parent_abspath;
+      return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
+                               _("Cannot find a URL for '%s'"),
+                               svn_dirent_local_style(no_url_path,
+                                                      scratch_pool));
+    }
+
+  parent_child_url
+    = svn_path_url_add_component2(parent_entry->url,
+                                  svn_dirent_basename(local_abspath,
+                                                      scratch_pool),
+                                  scratch_pool);
+  *switched = strcmp(parent_child_url, entry->url) != 0;
+
+  return SVN_NO_ERROR;
+}
+
+
+/* ### This needs to be rewritten in terms of the above. */
+svn_error_t *
 svn_wc__path_switched(const char *wc_path,
                       svn_boolean_t *switched,
                       const svn_wc_entry_t *entry,
@@ -302,6 +364,7 @@ svn_wc__path_switched(const char *wc_path,
 
   return SVN_NO_ERROR;
 }
+
 
 svn_wc_conflict_description2_t *
 svn_wc_conflict_description_create_text2(const char *local_abspath,
