@@ -2971,7 +2971,8 @@ resolve_found_entry_callback(const char *path,
            * subtree itself might be a tree conflict victim. */
           svn_boolean_t switched;
           svn_error_t *err;
-          err = svn_wc__path_switched(path, &switched, entry, pool);
+          err = svn_wc__internal_path_switched(&switched, baton->db,
+                                               local_abspath, pool);
           if (err && (err->apr_err == SVN_ERR_ENTRY_MISSING_URL))
             svn_error_clear(err);
           else

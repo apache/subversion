@@ -407,6 +407,16 @@ svn_wc__walk_entries_and_tc(const char *path,
                             void *cancel_baton,
                             apr_pool_t *pool);
 
+
+/* Similar to svn_wc__path_switched(), but with a wc_db parameter instead of
+ * a wc_context. */
+svn_error_t *
+svn_wc__internal_path_switched(svn_boolean_t *switched,
+                               svn_wc__db_t *wc_db,
+                               const char *local_abspath,
+                               apr_pool_t *scratch_pool);
+
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

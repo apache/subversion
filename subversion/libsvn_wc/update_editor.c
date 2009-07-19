@@ -5364,7 +5364,8 @@ svn_wc__strictly_is_wc_root(svn_boolean_t *wc_root,
           svn_error_t *err;
           svn_boolean_t switched;
 
-          err = svn_wc__path_switched(path, &switched, entry, pool);
+          err = svn_wc__internal_path_switched(&switched, db, local_abspath,
+                                               pool);
 
           if (err && (err->apr_err == SVN_ERR_ENTRY_MISSING_URL))
             {
