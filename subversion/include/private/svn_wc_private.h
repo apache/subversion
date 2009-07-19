@@ -58,18 +58,19 @@ svn_wc__entry_versioned(const svn_wc_entry_t **entry,
                         apr_pool_t *pool);
 
 
-/** Given a @a wcpath with its accompanying @a entry, set @a *switched to
- * true if @a wcpath is switched, otherwise set @a *switched to false.
- * If @a entry is an incomplete entry obtained from @a wcpath's parent return
- * @c SVN_ERR_ENTRY_MISSING_URL.  All allocations are done in @a pool.
+/** Given a @a local_abspath with a @a wc_ctx, set @a *switched to
+ * TRUE if @a local_abspath is switched, otherwise set @a *switched to FALSE.
+ * If neither @a local_abspath or its parent have valid URLs, return
+ * @c SVN_ERR_ENTRY_MISSING_URL.  All temporaryallocations are done in
+ * @a scratch_pool.
  *
- * @since New in 1.5.
+ * @since New in 1.7.
  */
 svn_error_t *
-svn_wc__path_switched(const char *wcpath,
-                      svn_boolean_t *switched,
-                      const svn_wc_entry_t *entry,
-                      apr_pool_t *pool);
+svn_wc__path_switched(svn_boolean_t *switched,
+                      svn_wc_context_t *wc_ctx,
+                      const char *local_abspath,
+                      apr_pool_t *scratch_pool);
 
 
 /* Return the shallowest sufficient @c levels_to_lock value for @a depth;
