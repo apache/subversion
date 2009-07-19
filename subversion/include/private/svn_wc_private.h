@@ -219,12 +219,12 @@ svn_wc__conflict_description_dup(const svn_wc_conflict_description_t *conflict,
 /** Like svn_wc_is_wc_root(), but it doesn't consider switched subdirs or
  * deleted entries as working copy roots.
  *
- * @since New in 1.6.*/
+ * @since New in 1.7.*/
 svn_error_t *
 svn_wc__strictly_is_wc_root(svn_boolean_t *wc_root,
-                            const char *path,
-                            svn_wc_adm_access_t *adm_access,
-                            apr_pool_t *pool);
+                            svn_wc_context_t *wc_ctx,
+                            const char *local_abspath,
+                            apr_pool_t *scratch_pool);
 
 /** Like svn_wc_adm_open3() but with a svn_wc_ctx_t* instead of an associated
  * baton.

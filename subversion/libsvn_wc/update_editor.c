@@ -5334,38 +5334,45 @@ svn_wc_is_wc_root(svn_boolean_t *wc_root,
 
 svn_error_t*
 svn_wc__strictly_is_wc_root(svn_boolean_t *wc_root,
-                           const char *path,
-                           svn_wc_adm_access_t *adm_access,
-                           apr_pool_t *pool)
+                            svn_wc_context_t *wc_ctx,
+                            const char *local_abspath,
+                            apr_pool_t *scratch_pool)
 {
-  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
-  const char *local_abspath;
-
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
-
-  SVN_ERR(check_wc_root(wc_root, NULL, db, local_abspath, pool));
+  SVN_ERR(check_wc_root(wc_root, NULL, wc_ctx->db, local_abspath,
+                        scratch_pool));
 
   if (*wc_root)
     {
-      const svn_wc_entry_t *entry;
+      svn_wc__db_kind_t kind;
+      svn_error_t *err;
 
       /* Check whether this is a switched subtree or an absent item.
        * Switched subtrees are considered working copy roots by
        * svn_wc_is_wc_root(). */
-      SVN_ERR(svn_wc_entry(&entry, path, adm_access, TRUE, pool));
+      err = svn_wc__db_read_info(NULL, &kind, NULL, NULL, NULL, NULL,
+                                 NULL, NULL, NULL, NULL,
+                                 NULL, NULL, NULL, NULL,
+                                 NULL, NULL, NULL, NULL, NULL,
+                                 NULL, NULL, NULL,
+                                 NULL, NULL, NULL, NULL, NULL,
+                                 wc_ctx->db, local_abspath,
+                                 scratch_pool, scratch_pool);
 
-      /* If this has no entry, it can't possibly be a switched subdir.
+      /* If the node doesn't exist, it can't possibly be a switched subdir.
        * It can't be a WC root either, for that matter.*/
-      if (entry == NULL)
-        *wc_root = FALSE;
-      else
-      if (entry->kind == svn_node_dir)
+      if (err)
         {
-          svn_error_t *err;
+          svn_error_clear(err);
+          *wc_root = FALSE;
+          return SVN_NO_ERROR;
+        }
+
+      if (kind == svn_wc__db_kind_dir)
+        {
           svn_boolean_t switched;
 
-          err = svn_wc__internal_path_switched(&switched, db, local_abspath,
-                                               pool);
+          err = svn_wc__internal_path_switched(&switched, wc_ctx->db,
+                                               local_abspath, scratch_pool);
 
           if (err && (err->apr_err == SVN_ERR_ENTRY_MISSING_URL))
             {
