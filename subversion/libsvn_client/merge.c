@@ -5003,7 +5003,8 @@ get_mergeinfo_walk_cb(const char *path,
          can later tweak PATH's parent to reflect a missing child (implying it
          needs non-inheritable mergeinfo ranges) and PATH's siblings so they
          get their own complete set of mergeinfo. */
-      SVN_ERR(svn_wc__path_switched(path, &switched, entry, pool));
+      SVN_ERR(svn_wc__path_switched(&switched, wb->ctx->wc_ctx, local_abspath,
+                                    pool));
     }
 
   /* Store PATHs with explict mergeinfo, which are switched, are missing
