@@ -235,7 +235,7 @@ static const char * const statements[] = {
 
   /* STMT_SELECT_ACTUAL_NODE */
   "select prop_reject, changelist, conflict_old, conflict_new, "
-  "conflict_working "
+  "conflict_working, tree_conflict_data "
   "from actual_node "
   "where wc_id = ?1 and local_relpath = ?2;",
 
@@ -2669,6 +2669,7 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
                      const char **conflict_working,
                      const char **prop_reject_file,
                      svn_wc__db_lock_t **lock,
+                     const char **tree_conflict_data,
                      svn_wc__db_t *db,
                      const char *local_abspath,
                      apr_pool_t *result_pool,
@@ -2972,6 +2973,14 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
                                                         result_pool);
           else
             *prop_reject_file = NULL;
+        }
+      if (tree_conflict_data)
+        {
+          if (have_act)
+            *tree_conflict_data = svn_sqlite__column_text(stmt_act, 5,
+                                                          result_pool);
+          else
+            *tree_conflict_data = NULL;
         }
       if (original_repos_relpath)
         {
@@ -3319,7 +3328,7 @@ svn_wc__db_global_relocate(svn_wc__db_t *db,
                                        NULL, NULL, NULL,
                                        NULL, NULL, NULL,
                                        NULL, NULL, NULL, NULL,
-                                       NULL, NULL, NULL, NULL, NULL,
+                                       NULL, NULL, NULL, NULL, NULL, NULL,
                                        db, child_abspath,
                                        iterpool, iterpool));
           if (kind != svn_wc__db_kind_dir)
@@ -4217,7 +4226,7 @@ svn_wc__db_check_node(svn_wc__db_kind_t *kind,
   err = svn_wc__db_read_info(NULL, kind, NULL, NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                             NULL, NULL, NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                              db, local_abspath, scratch_pool, scratch_pool);
 
   if (!err)

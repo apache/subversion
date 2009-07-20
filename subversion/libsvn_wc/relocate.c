@@ -93,7 +93,7 @@ svn_wc_relocate4(svn_wc_context_t *wc_ctx,
                                NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL,
                                wc_ctx->db, local_abspath, scratch_pool,
                                scratch_pool));
 

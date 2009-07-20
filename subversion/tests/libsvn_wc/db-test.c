@@ -788,6 +788,7 @@ test_working_info(apr_pool_t *pool)
   const char *conflict_working;
   const char *prop_reject_file;
   svn_wc__db_lock_t *lock;
+  const char *tree_conflict_data;
   svn_wc__db_t *db;
 
   SVN_ERR(create_fake_wc("test_working_info", pool));
@@ -808,7 +809,7 @@ test_working_info(apr_pool_t *pool)
             &original_uuid, &original_revnum,
             &text_mod, &props_mod, &base_shadowed,
             &conflict_old, &conflict_new, &conflict_working,
-            &prop_reject_file, &lock,
+            &prop_reject_file, &lock, &tree_conflict_data,
             db, svn_dirent_join(local_abspath, "I", pool),
             pool, pool));
   SVN_TEST_ASSERT(status == svn_wc__db_status_added);
@@ -837,6 +838,7 @@ test_working_info(apr_pool_t *pool)
   SVN_TEST_ASSERT(conflict_working == NULL);
   SVN_TEST_ASSERT(prop_reject_file == NULL);
   SVN_TEST_ASSERT(lock == NULL);
+  SVN_TEST_ASSERT(tree_conflict_data == NULL);
 
 
   /* ### we need a hojillion more tests in here. I just want to get this
@@ -1229,7 +1231,7 @@ test_global_relocate(apr_pool_t *pool)
                                NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL,
                                db, local_abspath,
                                pool, pool));
 
@@ -1246,7 +1248,7 @@ test_global_relocate(apr_pool_t *pool)
                                NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL,
                                db, local_abspath,
                                pool, pool));
   SVN_TEST_STRING_ASSERT(repos_relpath, "");
@@ -1261,7 +1263,7 @@ test_global_relocate(apr_pool_t *pool)
                                NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL,
                                db, svn_dirent_join(local_abspath, "G",
                                                    pool),
                                pool, pool));

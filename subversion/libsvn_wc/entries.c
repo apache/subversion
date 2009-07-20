@@ -69,7 +69,6 @@ enum statement_keys {
   STMT_INSERT_WORKING_NODE,
   STMT_INSERT_ACTUAL_NODE,
   STMT_SELECT_WCROOT_NULL,
-  STMT_SELECT_ACTUAL_NODE,
   STMT_DELETE_ALL_WORKING,
   STMT_DELETE_ALL_BASE,
   STMT_DELETE_ALL_ACTUAL,
@@ -109,13 +108,6 @@ static const char * const statements[] = {
 
   /* STMT_SELECT_WCROOT_NULL */
   "select id from wcroot where local_abspath is null;",
-
-  /* STMT_SELECT_ACTUAL_NODE */
-  "select wc_id, local_relpath, parent_relpath, properties, conflict_old, "
-     "conflict_new, "
-     "conflict_working, prop_reject, changelist, text_mod, "
-     "tree_conflict_data "
-  "from actual_node;",
 
   /* STMT_DELETE_ALL_WORKING */
   "delete from working_node;",
@@ -287,77 +279,6 @@ take_from_entry(const svn_wc_entry_t *src,
     {
       dst->uuid = src->uuid;
     }
-}
-
-
-/* Select all the rows from actual_node table in WC_DB and put them into
-   *NODES allocated in RESULT_POOL. */
-static svn_error_t *
-fetch_actual_nodes(apr_hash_t **nodes,
-                   svn_sqlite__db_t *wc_db,
-                   apr_pool_t *result_pool,
-                   apr_pool_t *scratch_pool)
-{
-  svn_sqlite__stmt_t *stmt;
-  svn_boolean_t have_row;
-
-  *nodes = apr_hash_make(result_pool);
-
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db, STMT_SELECT_ACTUAL_NODE));
-  SVN_ERR(svn_sqlite__step(&have_row, stmt));
-  while (have_row)
-    {
-      db_actual_node_t *actual_node = apr_pcalloc(result_pool,
-                                                  sizeof(*actual_node));
-
-      actual_node->wc_id = svn_sqlite__column_int(stmt, 0);
-      actual_node->local_relpath = svn_sqlite__column_text(stmt, 1,
-                                                           result_pool);
-      actual_node->parent_relpath = svn_sqlite__column_text(stmt, 2,
-                                                            result_pool);
-
-      if (!svn_sqlite__column_is_null(stmt, 3))
-        {
-          apr_size_t len;
-          const void *val;
-
-          val = svn_sqlite__column_blob(stmt, 3, &len);
-          SVN_ERR(svn_skel__parse_proplist(&actual_node->properties,
-                                           svn_skel__parse(val, len,
-                                                           scratch_pool),
-                                           result_pool));
-        }
-
-      if (!svn_sqlite__column_is_null(stmt, 4))
-        {
-          actual_node->conflict_old = svn_sqlite__column_text(stmt, 4,
-                                                              result_pool);
-          actual_node->conflict_new = svn_sqlite__column_text(stmt, 5,
-                                                              result_pool);
-          actual_node->conflict_working = svn_sqlite__column_text(stmt, 6,
-                                                                  result_pool);
-        }
-
-      if (!svn_sqlite__column_is_null(stmt, 7))
-        actual_node->prop_reject = svn_sqlite__column_text(stmt, 7,
-                                                           result_pool);
-
-      if (!svn_sqlite__column_is_null(stmt, 8))
-        actual_node->changelist = svn_sqlite__column_text(stmt, 8,
-                                                          result_pool);
-
-      /* ### column 9 is text_mod */
-
-      if (!svn_sqlite__column_is_null(stmt, 10))
-        actual_node->tree_conflict_data = svn_sqlite__column_text(stmt, 10,
-                                                                  result_pool);
-
-      apr_hash_set(*nodes, actual_node->local_relpath, APR_HASH_KEY_STRING,
-                   actual_node);
-      SVN_ERR(svn_sqlite__step(&have_row, stmt));
-    }
-
-  return svn_sqlite__reset(stmt);
 }
 
 static svn_error_t *
@@ -696,7 +617,6 @@ read_entries_new(apr_hash_t **result_entries,
                  apr_pool_t *result_pool,
                  apr_pool_t *scratch_pool)
 {
-  apr_hash_t *actual_nodes;
   svn_sqlite__db_t *wc_db;
   apr_hash_t *entries;
   const char *wc_db_path;
@@ -715,10 +635,6 @@ read_entries_new(apr_hash_t **result_entries,
   SVN_ERR(svn_sqlite__open(&wc_db, wc_db_path, svn_sqlite__mode_readonly,
                            statements, SVN_WC__VERSION,
                            upgrade_sql, scratch_pool, scratch_pool));
-
-  /* ### some of the data is not in the wc_db interface. grab it manually.
-     ### trim back the columns fetched?  */
-  SVN_ERR(fetch_actual_nodes(&actual_nodes, wc_db, scratch_pool, scratch_pool));
 
   SVN_ERR(svn_wc__db_read_children(&children, db,
                                    local_abspath,
@@ -782,6 +698,7 @@ read_entries_new(apr_hash_t **result_entries,
                 &entry->conflict_wrk,
                 &prop_reject_file,
                 &lock,
+                &entry->tree_conflict_data,
                 db,
                 entry_abspath,
                 result_pool,
@@ -1148,23 +1065,6 @@ read_entries_new(apr_hash_t **result_entries,
          entry->lock_comment = lock->comment;
          entry->lock_creation_date = lock->date;
        }
-
-      /* ### there may be an ACTUAL_NODE to grab info from.  really, this
-         ### should probably only exist for added/copied files, but it
-         ### seems to always be needed. Just do so, for now.  */
-      if (TRUE)
-        {
-          const db_actual_node_t *actual_node;
-
-          actual_node = apr_hash_get(actual_nodes,
-                                     entry->name, APR_HASH_KEY_STRING);
-          if (actual_node)
-            {
-              if (actual_node->tree_conflict_data != NULL)
-                entry->tree_conflict_data =
-                  apr_pstrdup(result_pool, actual_node->tree_conflict_data);
-            }
-        }
 
       /* Let's check for a file external.
          ### right now this is ugly, since we have no good way querying
@@ -3355,7 +3255,7 @@ svn_wc_walk_entries3(const char *path,
                              NULL, NULL,
                              NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL, NULL,
-                             NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL,
                              db, abspath,
                              pool, pool);
   if (err)
