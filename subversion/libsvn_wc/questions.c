@@ -396,12 +396,12 @@ svn_wc_text_modified_p(svn_boolean_t *modified_p,
 
 
 svn_error_t *
-svn_wc_conflicted_p3(svn_boolean_t *text_conflicted_p,
-                     svn_boolean_t *prop_conflicted_p,
-                     svn_boolean_t *tree_conflicted_p,
-                     svn_wc_context_t *wc_ctx,
-                     const char *local_abspath,
-                     apr_pool_t *scratch_pool)
+svn_wc__internal_conflicted_p(svn_boolean_t *text_conflicted_p,
+                              svn_boolean_t *prop_conflicted_p,
+                              svn_boolean_t *tree_conflicted_p,
+                              svn_wc__db_t *db,
+                              const char *local_abspath,
+                              apr_pool_t *scratch_pool)
 {
   svn_node_kind_t kind;
   svn_wc__db_kind_t node_kind;
@@ -418,7 +418,7 @@ svn_wc_conflicted_p3(svn_boolean_t *text_conflicted_p,
                                &conflict_old, &conflict_new,
                                &conflict_working, &prop_rej_file,
                                NULL, NULL,
-                               wc_ctx->db, local_abspath, scratch_pool,
+                               db, local_abspath, scratch_pool,
                                scratch_pool));
 
   if (text_conflicted_p)
@@ -486,7 +486,7 @@ svn_wc_conflicted_p3(svn_boolean_t *text_conflicted_p,
       svn_wc_conflict_description_t *conflict;
 
       SVN_ERR(svn_wc__internal_get_tree_conflict(&conflict, local_abspath,
-                                                 wc_ctx->db, scratch_pool,
+                                                 db, scratch_pool,
                                                  scratch_pool));
       *tree_conflicted_p = (conflict != NULL);
     }
@@ -494,6 +494,21 @@ svn_wc_conflicted_p3(svn_boolean_t *text_conflicted_p,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_wc_conflicted_p3(svn_boolean_t *text_conflicted_p,
+                     svn_boolean_t *prop_conflicted_p,
+                     svn_boolean_t *tree_conflicted_p,
+                     svn_wc_context_t *wc_ctx,
+                     const char *local_abspath,
+                     apr_pool_t *scratch_pool)
+{
+  return svn_error_return(svn_wc__internal_conflicted_p(text_conflicted_p,
+                                                        prop_conflicted_p,
+                                                        tree_conflicted_p,
+                                                        wc_ctx->db,
+                                                        local_abspath,
+                                                        scratch_pool));
+}
 
 svn_error_t *
 svn_wc__marked_as_binary(svn_boolean_t *marked,

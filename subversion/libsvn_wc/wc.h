@@ -417,6 +417,16 @@ svn_wc__internal_path_switched(svn_boolean_t *switched,
                                apr_pool_t *scratch_pool);
 
 
+/* Similar to svn_wc_conflicted_p3(), but with a wc_db parameter in place of
+ * a wc_context. */
+svn_error_t *
+svn_wc__internal_conflicted_p(svn_boolean_t *text_conflicted_p,
+                              svn_boolean_t *prop_conflicted_p,
+                              svn_boolean_t *tree_conflicted_p,
+                              svn_wc__db_t *db,
+                              const char *local_abspath,
+                              apr_pool_t *scratch_pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
