@@ -323,7 +323,6 @@ bail_on_tree_conflicted_ancestor(svn_wc_context_t *wc_ctx,
 
   while(1)
     {
-      /* Here, ADM_ACCESS refers to PATH. */
       svn_wc__strictly_is_wc_root(&wc_root,
                                   wc_ctx,
                                   local_abspath,
@@ -490,8 +489,8 @@ harvest_committables(apr_hash_t *committables,
     {
       svn_boolean_t tc, pc, treec;
 
-      SVN_ERR(svn_wc_conflicted_p2(&tc, &pc, &treec, path, adm_access,
-                                   scratch_pool));
+      SVN_ERR(svn_wc_conflicted_p3(&tc, &pc, &treec, ctx->wc_ctx,
+                                   local_abspath, scratch_pool));
       if (tc || pc || treec)
         {
           return svn_error_createf(

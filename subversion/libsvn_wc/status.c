@@ -452,8 +452,9 @@ assemble_status(svn_wc_status2_t **status,
           /* The entry says there was a conflict, but the user might have
              marked it as resolved by deleting the artifact files, so check
              for that. */
-            SVN_ERR(svn_wc_conflicted_p2(&text_conflict_p, &prop_conflict_p,
-                                         NULL, path, adm_access, pool));
+            SVN_ERR(svn_wc__internal_conflicted_p(&text_conflict_p,
+                                                  &prop_conflict_p, NULL, db,
+                                                  local_abspath, pool));
 
           if (text_conflict_p)
             final_text_status = svn_wc_status_conflicted;

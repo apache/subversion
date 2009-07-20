@@ -2622,8 +2622,11 @@ open_directory(const char *path,
   svn_wc_adm_access_t *parent_adm_access;
   const char *victim_path = NULL;
   const char *full_path = svn_dirent_join(eb->anchor, path, pool);
+  const char *local_abspath;
   svn_wc_conflict_description_t *tree_conflict;
   svn_boolean_t prop_conflicted;
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, full_path, pool));
 
   SVN_ERR(make_dir_baton(&db, path, eb, pb, FALSE, pool));
   *child_baton = db;
@@ -2676,8 +2679,8 @@ open_directory(const char *path,
     remember_deleted_tree(eb, full_path);
 
   /* If property-conflicted, skip the tree with notification. */
-  SVN_ERR(svn_wc_conflicted_p2(NULL, &prop_conflicted, NULL, full_path,
-                               adm_access, pool));
+  SVN_ERR(svn_wc__internal_conflicted_p(NULL, &prop_conflicted, NULL,
+                                        eb->db, local_abspath, pool));
 
   if (victim_path != NULL || tree_conflict != NULL || prop_conflicted)
     {
@@ -3685,12 +3688,15 @@ open_file(const char *path,
   svn_boolean_t prop_conflicted;
   svn_boolean_t locally_deleted;
   const char *full_path = svn_dirent_join(eb->anchor, path, pool);
+  const char *local_abspath;
   const char *victim_path;
   svn_wc_conflict_description_t *tree_conflict;
 
   /* the file_pool can stick around for a *long* time, so we want to use
      a subpool for any temporary allocations. */
   apr_pool_t *subpool = svn_pool_create(pool);
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, full_path, pool));
 
   SVN_ERR(make_file_baton(&fb, pb, path, FALSE, pool));
   *file_baton = fb;
@@ -3737,8 +3743,8 @@ open_file(const char *path,
                                 svn_node_file, fb->new_URL, pool));
 
   /* Does the file already have text or property conflicts? */
-  SVN_ERR(svn_wc_conflicted_p2(&text_conflicted, &prop_conflicted, NULL,
-                               full_path, adm_access, pool));
+  SVN_ERR(svn_wc__internal_conflicted_p(&text_conflicted, &prop_conflicted,
+                                        NULL, eb->db, local_abspath, pool));
 
   /* Remember any locally deleted files that are not already within
      a locally delete tree. */
