@@ -1695,17 +1695,13 @@ properties_same_p(svn_boolean_t *same,
  * expansion and end-of-line style. */
 static svn_error_t *
 files_same_p(svn_boolean_t *same,
-             const char *older,
+             const char *older_abspath,
              apr_hash_t *original_props,
-             const char *mine,
-             svn_wc_adm_access_t *adm_access,
+             const char *mine_abspath,
              svn_wc_context_t *wc_ctx,
              apr_pool_t *scratch_pool)
 {
   apr_hash_t *working_props;
-  const char *mine_abspath;
-
-  SVN_ERR(svn_dirent_get_absolute(&mine_abspath, mine, scratch_pool));
 
   SVN_ERR(svn_wc_prop_list2(&working_props, wc_ctx, mine_abspath,
                             scratch_pool, scratch_pool));
@@ -1718,8 +1714,9 @@ files_same_p(svn_boolean_t *same,
       svn_boolean_t modified;
 
       /* Compare the file content, translating 'mine' to 'normal' form. */
-      SVN_ERR(svn_wc__versioned_file_modcheck(&modified, mine, adm_access,
-                                              older, TRUE, scratch_pool));
+      SVN_ERR(svn_wc__versioned_file_modcheck(&modified, wc_ctx, mine_abspath,
+                                              older_abspath, TRUE,
+                                              scratch_pool));
       *same = !modified;
     }
 
@@ -1778,10 +1775,15 @@ merge_file_deleted(svn_wc_adm_access_t *adm_access,
     case svn_node_file:
       {
         svn_boolean_t same;
+        const char *older_abspath;
+        const char *mine_abspath;
+
+        SVN_ERR(svn_dirent_get_absolute(&older_abspath, older, subpool));
+        SVN_ERR(svn_dirent_get_absolute(&mine_abspath, mine, subpool));
 
         /* If the files are identical, attempt deletion */
-        SVN_ERR(files_same_p(&same, older, original_props, mine, adm_access,
-                             merge_b->ctx->wc_ctx, subpool));
+        SVN_ERR(files_same_p(&same, older_abspath, original_props,
+                             mine_abspath, merge_b->ctx->wc_ctx, subpool));
         if (same || merge_b->force || merge_b->record_only /* ### why? */)
           {
             /* Passing NULL for the notify_func and notify_baton because

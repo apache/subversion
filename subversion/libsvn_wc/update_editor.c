@@ -4251,10 +4251,16 @@ merge_file(svn_wc_notify_state_t *content_state,
     SVN_ERR(svn_wc__text_modified_internal_p(&is_locally_modified, fb->path,
                                              FALSE, adm_access, FALSE, pool));
   else if (new_text_base_path)
-    SVN_ERR(svn_wc__versioned_file_modcheck(&is_locally_modified, fb->path,
-                                            adm_access,
-                                            new_text_base_path,
-                                            FALSE, pool));
+    {
+      const char *new_text_base_abspath;
+
+      SVN_ERR(svn_dirent_get_absolute(&new_text_base_abspath,
+                                      new_text_base_path, pool));
+      SVN_ERR(svn_wc__internal_versioned_file_modcheck(&is_locally_modified,
+                                                       eb->db, local_abspath,
+                                                       new_text_base_abspath,
+                                                       FALSE, pool));
+    }
   else
     is_locally_modified = FALSE;
 
