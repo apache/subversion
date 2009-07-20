@@ -1180,6 +1180,9 @@ log_do_committed(struct log_runner *loggy,
           else
             {
               svn_boolean_t modified;
+              const char *base_abspath;
+
+              SVN_ERR(svn_dirent_get_absolute(&base_abspath, basef, pool));
 
               /* Verify that the working file is the same as the base file
                  by comparing file sizes, then timestamps and the contents
@@ -1191,9 +1194,11 @@ log_do_committed(struct log_runner *loggy,
               modified = finfo.size != basef_finfo.size;
               if (finfo.mtime != basef_finfo.mtime && ! modified)
                 {
-                  err = svn_wc__versioned_file_modcheck(&modified, full_path,
-                                                        loggy->adm_access,
-                                                        basef, FALSE, pool);
+                  err = svn_wc__internal_versioned_file_modcheck(&modified,
+                                                                 loggy->db,
+                                                                 local_abspath,
+                                                                 base_abspath,
+                                                                 FALSE, pool);
                   if (err)
                     return svn_error_createf
                       (pick_error_code(loggy), err,

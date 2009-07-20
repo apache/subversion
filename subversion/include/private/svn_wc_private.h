@@ -93,26 +93,25 @@ svn_wc__path_switched(svn_boolean_t *switched,
                               APR_HASH_KEY_STRING))) ? TRUE : FALSE)
 
 
-/* Set *MODIFIED_P to true if VERSIONED_FILE is modified with respect
- * to BASE_FILE, or false if it is not.  The comparison compensates
- * for VERSIONED_FILE's eol and keyword properties, but leaves
- * BASE_FILE alone (as though BASE_FILE were a text-base file, which
- * it usually is, only sometimes we're calling this on incoming
- * temporary text-bases).  ADM_ACCESS must be an access baton for
- * VERSIONED_FILE.  If COMPARE_TEXTBASES is false, a clean copy of the
- * versioned file is compared to VERSIONED_FILE.
+/* Set *MODIFIED_P to true if VERSIONED_FILE_ABSPATH is modified with respect
+ * to BASE_FILE_ABSPATH, or false if it is not.  The comparison compensates
+ * for VERSIONED_FILE_ABSPATH's eol and keyword properties, but leaves
+ * BASE_FILE_ABSPATH alone (as though BASE_FILE_ABSPATH were a text-base file,
+ * which it usually is, only sometimes we're calling this on incoming
+ * temporary text-bases).  If COMPARE_TEXTBASES is false, a clean copy of the
+ * versioned file is compared to VERSIONED_FILE_ABSPATH.
  *
  * If an error is returned, the effect on *MODIFIED_P is undefined.
  *
- * Use POOL for temporary allocation.
+ * Use SCRATCH_POOL for temporary allocation; WC_CTX is the normal thing.
  */
 svn_error_t *
 svn_wc__versioned_file_modcheck(svn_boolean_t *modified_p,
-                                const char *versioned_file,
-                                svn_wc_adm_access_t *adm_access,
-                                const char *base_file,
+                                svn_wc_context_t *wc_ctx,
+                                const char *versioned_file_abspath,
+                                const char *base_file_abspath,
                                 svn_boolean_t compare_textbases,
-                                apr_pool_t *pool);
+                                apr_pool_t *scratch_pool);
 
 /**
  * Return a boolean answer to the question "Is @a status something that
