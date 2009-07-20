@@ -439,6 +439,16 @@ svn_wc__internal_versioned_file_modcheck(svn_boolean_t *modified_p,
                                          apr_pool_t *scratch_pool);
 
 
+/* A convenience function for creating a new-style conflict description from
+   an old one.
+   ### This should probably disappear once all the old-style conflict
+       descriptions are gone. */
+svn_wc_conflict_description2_t *
+svn_wc__conflict_desc2_from_conflict_desc(const svn_wc_conflict_description_t *
+                                                                     conflict,
+                                          apr_pool_t *result_pool);
+
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
