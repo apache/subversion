@@ -417,7 +417,7 @@ svn_wc_conflicted_p3(svn_boolean_t *text_conflicted_p,
                                NULL, NULL, NULL, NULL, NULL,
                                &conflict_old, &conflict_new,
                                &conflict_working, &prop_rej_file,
-                               NULL,
+                               NULL, NULL,
                                wc_ctx->db, local_abspath, scratch_pool,
                                scratch_pool));
 

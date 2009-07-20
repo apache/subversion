@@ -5354,7 +5354,7 @@ svn_wc__strictly_is_wc_root(svn_boolean_t *wc_root,
                                  NULL, NULL, NULL, NULL,
                                  NULL, NULL, NULL, NULL, NULL,
                                  NULL, NULL, NULL,
-                                 NULL, NULL, NULL, NULL, NULL,
+                                 NULL, NULL, NULL, NULL, NULL, NULL,
                                  wc_ctx->db, local_abspath,
                                  scratch_pool, scratch_pool);
 
