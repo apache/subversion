@@ -6635,6 +6635,9 @@ record_mergeinfo_for_dir_merge(const svn_wc_entry_t *target_entry,
 
       svn_pool_clear(iterpool);
 
+      SVN_ERR(svn_wc__entry_versioned(&child_entry, child->path,
+                                      adm_access, FALSE, iterpool));
+
       /* ### subtree-mergeinfo-branch: Our initial simplistic approach:
          ### Don't record mergeinfo on any subtree not touched by the
          ### merge.
@@ -6652,91 +6655,95 @@ record_mergeinfo_for_dir_merge(const svn_wc_entry_t *target_entry,
           && (!operative_merge
               || !subtree_touched_by_merge(child->path, notify_b,
                                            iterpool)))
+        {
+          /* If CHILD is in NOTIFY_B->CHILDREN_WITH_MERGEINFO simply
+             because it had no explicit mergeinfo of its own at the
+             start of the merge but is the child of of some path with
+             non-inheritable mergeinfo, then the explicit mergeinfo it
+             has *now* was set by get_mergeinfo_paths() -- see criteria
+             3 in that function's doc string.  So since CHILD->PATH
+             was not touched by the merge we can remove the
+             mergeinfo. */
+          if (child->child_of_noninheritable)
+            SVN_ERR(svn_client__record_wc_mergeinfo(child->path,
+                                                    NULL,
+                                                    merge_b->ctx,
+                                                    iterpool));
+        }
+      else /* Record mergeinfo on CHILD. */
+        {
+          SVN_ERR(svn_dirent_get_absolute(&child_abspath, child->path,
+                                          iterpool));
+
+          if (strlen(child->path) == merge_target_len)
+            child_repos_path = "";
+          else
+            child_repos_path = child->path +
+              (merge_target_len ? merge_target_len + 1 : 0);
+          child_merge_src_canon_path = svn_path_join(mergeinfo_path,
+                                                     child_repos_path,
+                                                     iterpool);
+
+          /* Filter any ranges from each child's natural history before
+             setting mergeinfo describing the merge. */
+          SVN_ERR(filter_natural_history_from_mergeinfo(
+            &child_merge_rangelist, child_merge_src_canon_path,
+            child->implicit_mergeinfo, &range, iterpool));
+
+          if (child_merge_rangelist->nelts == 0)
+            continue;
+
+          /* If we are here we know we will be recording some mergeinfo, but
+             before we do set override mergeinfo on skipped paths so they
+             don't incorrectly inherit the mergeinfo we are about to set.
+             We only need to do this once. */
+          if (i == 0)
+            SVN_ERR(record_skips(mergeinfo_path,
+                                 target_entry, child_merge_rangelist,
+                                 is_rollback, adm_access,
+                                 notify_b, merge_b, iterpool));
+
+          SVN_ERR(calculate_merge_inheritance(child_merge_rangelist,
+                                              child->path,
+                                              child_entry, i == 0,
+                                              child->missing_child,
+                                              depth));
+
+          /* If CHILD has indirect mergeinfo set it before
+             recording the first merge range. */
+          if (child->indirect_mergeinfo)
+            SVN_ERR(svn_client__record_wc_mergeinfo(
+              child_abspath,
+              child->pre_merge_mergeinfo,
+              merge_b->ctx,
+              iterpool));
+          if (merge_b->implicit_src_gap)
             {
-              /* If CHILD is in NOTIFY_B->CHILDREN_WITH_MERGEINFO simply
-                 because it had no explicit mergeinfo of its own at the
-                 start of the merge but is the child of of some path with
-                 non-inheritable mergeinfo, then the explicit mergeinfo it
-                 has *now* was set by get_mergeinfo_paths() -- see criteria
-                 3 in that function's doc string.  So since CHILD->PATH
-                 was not touched by the merge we can remove the
-                 mergeinfo. */
-              if (child->child_of_noninheritable)
-                SVN_ERR(svn_client__record_wc_mergeinfo(child->path,
-                                                        NULL,
-                                                        merge_b->ctx,
-                                                        iterpool));
-              continue;
+              /* If this is a reverse merge reorder CHILD->REMAINING_RANGES
+                 so it will work with the svn_rangelist_remove API. */
+              if (is_rollback)
+                SVN_ERR(svn_rangelist_reverse(child_merge_rangelist,
+                                              iterpool));
+
+                SVN_ERR(svn_rangelist_remove(&child_merge_rangelist,
+                                             merge_b->implicit_src_gap,
+                                             child_merge_rangelist, FALSE,
+                                             iterpool));
+              if (is_rollback)
+                SVN_ERR(svn_rangelist_reverse(child_merge_rangelist,
+                                              iterpool));
             }
 
-      SVN_ERR(svn_dirent_get_absolute(&child_abspath, child->path, iterpool));
-
-      if (strlen(child->path) == merge_target_len)
-        child_repos_path = "";
-      else
-        child_repos_path = child->path +
-          (merge_target_len ? merge_target_len + 1 : 0);
-      child_merge_src_canon_path = svn_path_join(mergeinfo_path,
-                                                 child_repos_path,
-                                                 iterpool);
-      SVN_ERR(svn_wc__entry_versioned(&child_entry, child->path,
-                                      adm_access, FALSE, iterpool));
-
-      /* Filter any ranges from each child's natural history before
-         setting mergeinfo describing the merge. */
-      SVN_ERR(filter_natural_history_from_mergeinfo(
-        &child_merge_rangelist, child_merge_src_canon_path,
-        child->implicit_mergeinfo, &range, iterpool));
-
-      if (child_merge_rangelist->nelts == 0)
-        continue;
-
-      /* If we are here we know we will be recording some mergeinfo, but
-         before we do set override mergeinfo on skipped paths so they
-         don't incorrectly inherit the mergeinfo we are about to set.
-         We only need to do this once. */
-      if (i == 0)
-        SVN_ERR(record_skips(mergeinfo_path,
-                             target_entry, child_merge_rangelist,
-                             is_rollback, adm_access,
-                             notify_b, merge_b, iterpool));
-
-      SVN_ERR(calculate_merge_inheritance(child_merge_rangelist, child->path,
-                                          child_entry, i == 0,
-                                          child->missing_child,
-                                          depth));
-
-      /* If CHILD has indirect mergeinfo set it before
-         recording the first merge range. */
-      if (child->indirect_mergeinfo)
-        SVN_ERR(svn_client__record_wc_mergeinfo(child_abspath,
-                                                child->pre_merge_mergeinfo,
-                                                merge_b->ctx,
-                                                iterpool));
-      if (merge_b->implicit_src_gap)
-        {
-          /* If this is a reverse merge reorder CHILD->REMAINING_RANGES
-             so it will work with the svn_rangelist_remove API. */
-          if (is_rollback)
-            SVN_ERR(svn_rangelist_reverse(child_merge_rangelist, iterpool));
-
-            SVN_ERR(svn_rangelist_remove(&child_merge_rangelist,
-                                         merge_b->implicit_src_gap,
-                                         child_merge_rangelist, FALSE,
-                                         iterpool));
-          if (is_rollback)
-            SVN_ERR(svn_rangelist_reverse(child_merge_rangelist, iterpool));
+          child_merges = apr_hash_make(iterpool);
+          apr_hash_set(child_merges, child->path, APR_HASH_KEY_STRING,
+                       child_merge_rangelist);
+          SVN_ERR(update_wc_mergeinfo(child->path, child_entry,
+                                      child_merge_src_canon_path,
+                                      child_merges, is_rollback,
+                                      adm_access, merge_b->ctx, iterpool));
         }
 
-      child_merges = apr_hash_make(iterpool);
-      apr_hash_set(child_merges, child->path, APR_HASH_KEY_STRING,
-                   child_merge_rangelist);
-      SVN_ERR(update_wc_mergeinfo(child->path, child_entry,
-                                  child_merge_src_canon_path,
-                                  child_merges, is_rollback,
-                                  adm_access, merge_b->ctx, iterpool));
-
-      /* Elide explicit subtree mergeinfo. */
+      /* Elide explicit subtree mergeinfo whether or not we updated it. */
       if (i > 0)
         {
           svn_boolean_t in_switched_subtree = FALSE;

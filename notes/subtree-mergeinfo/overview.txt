@@ -24,6 +24,13 @@ no-op merges, I still plan for no-op merges to record mergeinfo on the merge
 target.  Rather this is about whether to modify subtree mergeinfo when the
 subtree is unaffected by the merge.
 
+Presently this branch also attempts to elide subtree mergeinfo for all SWMI,
+regardless of whether the subtree is touched by the merge (see r38455).
+This is one time it makes sense to modify subtree mergeinfo when that subtree
+is unaffected by the merge, since it is *reducing* the amount of subtree
+mergefino which I suspect everyone will agree is a good thing...and if not
+it's easy to flip the behavior.
+
 Recording mergeinfo on SWMI unaffected by the merge has not, to put it
 charitably, proven very popular or very well understood.  The major
 complaints are of the "I just merged rN from trunk which changes one file
