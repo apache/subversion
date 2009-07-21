@@ -6647,7 +6647,8 @@ record_mergeinfo_for_dir_merge(const svn_wc_entry_t *target_entry,
          ### don't know that child would not have been modified, so
          ### not recording non-inheritable mergeinfo on the path
          ### is incorrect. */
-      if (!merge_b->record_only
+      if (i > 0 /* Always record mergeinfo on the merge target. */
+          && !merge_b->record_only
           && (!operative_merge
               || !subtree_touched_by_merge(child->path, notify_b,
                                            iterpool)))
