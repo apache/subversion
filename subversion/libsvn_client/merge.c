@@ -6665,10 +6665,14 @@ record_mergeinfo_for_dir_merge(const svn_wc_entry_t *target_entry,
              was not touched by the merge we can remove the
              mergeinfo. */
           if (child->child_of_noninheritable)
-            SVN_ERR(svn_client__record_wc_mergeinfo(child->path,
-                                                    NULL,
-                                                    merge_b->ctx,
-                                                    iterpool));
+            {
+              SVN_ERR(svn_dirent_get_absolute(&child_abspath, child->path,
+                                              iterpool));
+              SVN_ERR(svn_client__record_wc_mergeinfo(child_abspath,
+                                                      NULL,
+                                                      merge_b->ctx,
+                                                      iterpool));
+            }
         }
       else /* Record mergeinfo on CHILD. */
         {
