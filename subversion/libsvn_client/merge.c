@@ -6614,8 +6614,9 @@ record_mergeinfo_for_dir_merge(const svn_wc_entry_t *target_entry,
                          notify_b->children_with_mergeinfo, notify_b);
 
   /* Record mergeinfo on any subtree affected by the merge or for
-     every subtree if this is a --record-only merge. */
-  for (i = 1; i < notify_b->children_with_mergeinfo->nelts; i++)
+     every subtree if this is a --record-only merge.  Always record
+     mergeinfo on the merge target CHILDREN_WITH_MERGEINFO[0]. */
+  for (i = 0; i < notify_b->children_with_mergeinfo->nelts; i++)
     {
       const char *child_repos_path;
       const char *child_merge_src_canon_path;
