@@ -372,7 +372,7 @@ CREATE TABLE WORK_QUEUE (
   work  BLOB NOT NULL
   );
 
-CREATE TABLE TREE_CONFLICT_VICTIM (
+CREATE TABLE CONFLICT_VICTIM (
   /* specifies the location of this node in the local filesystem */
   wc_id  INTEGER NOT NULL,
   local_relpath  TEXT NOT NULL,
@@ -383,7 +383,10 @@ CREATE TABLE TREE_CONFLICT_VICTIM (
   parent_relpath  TEXT,
   
   /* what kind of node is this? may be "unknown" if the node is not present */
-  kind  TEXT NOT NULL,
+  node_kind  TEXT NOT NULL,
+
+  /* what sort of conflict are we describing? */
+  conflict_kind  TEXT NOT NULL,
 
   /* the name of the property in conflict, or NULL */
   property_name  TEXT,
@@ -410,7 +413,7 @@ CREATE TABLE TREE_CONFLICT_VICTIM (
   PRIMARY KEY (wc_id, local_relpath)
   );
 
-CREATE INDEX I_TCPARENT ON TREE_CONFLICT_VICTIM (wc_id, parent_relpath);
+CREATE INDEX I_TCPARENT ON CONFLICT_VICTIM (wc_id, parent_relpath);
 
 
 /* We cannot directly remove columns, so we use a temporary table instead. */
