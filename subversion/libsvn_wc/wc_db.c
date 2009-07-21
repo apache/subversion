@@ -49,6 +49,12 @@
 
 
 /*
+ * Some filename constants.
+ */
+#define SDB_FILE  "wc.db"
+
+
+/*
  * PARAMETER ASSERTIONS
  *
  * Every (semi-)public entrypoint in this file has a set of assertions on
@@ -1020,7 +1026,7 @@ parse_local_abspath(svn_wc__db_pdh_t **pdh,
       svn_error_t *err;
 
       err = svn_sqlite__open(&sdb,
-                             svn_wc__adm_child(local_abspath, "wc.db",
+                             svn_wc__adm_child(local_abspath, SDB_FILE,
                                                scratch_pool),
                              smode, statements, SVN_WC__VERSION,
                              upgrade_sql, db->state_pool, scratch_pool);
@@ -1167,7 +1173,7 @@ parse_local_abspath(svn_wc__db_pdh_t **pdh,
         {
           svn_error_t *err = svn_sqlite__open(&sdb,
                                               svn_wc__adm_child(parent_dir,
-                                                                "wc.db",
+                                                                SDB_FILE,
                                                                 scratch_pool),
                                               smode, statements,
                                               SVN_WC__VERSION, upgrade_sql,
@@ -1659,7 +1665,7 @@ svn_wc__db_init(const char *local_abspath,
   insert_base_baton_t ibb;
 
   SVN_ERR(svn_sqlite__open(&sdb,
-                           svn_wc__adm_child(local_abspath, "wc.db",
+                           svn_wc__adm_child(local_abspath, SDB_FILE,
                                              scratch_pool),
                            svn_sqlite__mode_rwcreate, statements,
                            SVN_WC__VERSION,
