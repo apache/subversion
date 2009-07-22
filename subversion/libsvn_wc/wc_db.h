@@ -44,6 +44,7 @@
 #include "svn_io.h"
 
 #include "private/svn_skel.h"
+#include "private/svn_sqlite.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -1639,6 +1640,20 @@ svn_wc__db_temp_clear_access(svn_wc__db_t *db,
 apr_hash_t *
 svn_wc__db_temp_get_all_access(svn_wc__db_t *db,
                                apr_pool_t *result_pool);
+
+/* ### temp function to open an sqlite database to the appropriate location.
+   ### The *only* reason for this function is because entries.c still
+   ### manually hacks the sqlite database.
+
+   ### No matter how tempted you may be DO NOT USE THIS FUNCTION!
+   ### (if you do, gstein will hunt you down and burn your knee caps off
+   ### in the middle of the night) */
+svn_error_t *
+svn_wc__db_temp_get_sdb(svn_sqlite__db_t **db,
+                        const char *local_dir_abspath,
+                        const char * const statements_in[],
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool);
 
 /** @} */
 

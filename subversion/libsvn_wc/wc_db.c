@@ -4172,6 +4172,23 @@ svn_wc__db_temp_get_all_access(svn_wc__db_t *db,
 
 
 svn_error_t *
+svn_wc__db_temp_get_sdb(svn_sqlite__db_t **db,
+                        const char *local_dir_abspath,
+                        const char * const statements_in[],
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool)
+{
+  const char *db_path = svn_dirent_join(local_dir_abspath, ".svn/" SDB_FILE,
+                                        scratch_pool);
+  SVN_ERR(svn_sqlite__open(db, db_path, svn_sqlite__mode_readwrite,
+                           statements_in, SVN_WC__VERSION, upgrade_sql,
+                           NULL, NULL, result_pool, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
 svn_wc__db_temp_is_dir_deleted(svn_boolean_t *not_present,
                                svn_revnum_t *base_revision,
                                svn_wc__db_t *db,
