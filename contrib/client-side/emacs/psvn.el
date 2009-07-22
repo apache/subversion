@@ -2962,6 +2962,8 @@ Additionally clear the psvn-extra-info field in all line-info lists."
         (setq marked-count (+ marked-count 1)))
       (setq overlay (make-overlay start-pos (point)))
       (overlay-put overlay 'svn-info (car st-info))
+      (overlay-put overlay 'svn-info (car st-info))
+      (overlay-put overlay 'evaporate t)
       (setq st-info (cdr st-info)))
     ;; Insert status information at the buffer beginning
     (goto-char (point-min))
