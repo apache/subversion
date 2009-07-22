@@ -49,18 +49,7 @@
 #include "private/svn_skel.h"
 #include "private/svn_debug.h"
 
-#include "wc-metadata.h"
-#include "wc-checks.h"
-
 #define MAYBE_ALLOC(x,p) ((x) ? (x) : apr_pcalloc((p), sizeof(*(x))))
-
-static const char * const upgrade_sql[] = {
-  NULL, NULL, NULL, NULL, NULL,
-  NULL, NULL, NULL, NULL, NULL,
-  NULL, NULL,
-  WC_METADATA_SQL_12,
-  WC_METADATA_SQL_13
-};
 
 /* This values map to the members of STATEMENTS below, and should be added
    and removed at the same time. */
@@ -201,15 +190,6 @@ static svn_error_t *
 entries_write(apr_hash_t *entries,
               svn_wc_adm_access_t *adm_access,
               apr_pool_t *pool);
-
-/* Return the location of the sqlite database containing the entry information
-   for PATH in the filesystem.  Allocate in RESULT_POOL. ***/
-static const char *
-db_path(const char *path,
-        apr_pool_t *result_pool)
-{
-  return svn_wc__adm_child(path, "wc.db", result_pool);
-}
 
 
 
@@ -619,7 +599,6 @@ read_entries_new(apr_hash_t **result_entries,
 {
   svn_sqlite__db_t *wc_db;
   apr_hash_t *entries;
-  const char *wc_db_path;
   const apr_array_header_t *children;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   int i;
@@ -629,12 +608,8 @@ read_entries_new(apr_hash_t **result_entries,
   entries = apr_hash_make(result_pool);
 
   /* ### need database to determine: incomplete, keep_local, ACTUAL info.  */
-  wc_db_path = db_path(local_abspath, scratch_pool);
-
-  /* Open the wc.db sqlite database. */
-  SVN_ERR(svn_sqlite__open(&wc_db, wc_db_path, svn_sqlite__mode_readonly,
-                           statements, SVN_WC__VERSION, upgrade_sql,
-                           NULL, NULL, scratch_pool, scratch_pool));
+  SVN_ERR(svn_wc__db_temp_get_sdb(&wc_db, local_abspath, statements,
+                                  scratch_pool, scratch_pool));
 
   SVN_ERR(svn_wc__db_read_children(&children, db,
                                    local_abspath,
@@ -2359,11 +2334,8 @@ entries_write(apr_hash_t *entries,
   SVN_ERR(svn_wc__adm_write_check(adm_access, pool));
 
   /* Open the wc.db sqlite database. */
-  SVN_ERR(svn_sqlite__open(&wc_db,
-                           db_path(svn_wc_adm_access_path(adm_access), pool),
-                           svn_sqlite__mode_readwrite, statements,
-                           SVN_WC__VERSION, upgrade_sql,
-                           NULL, NULL, scratch_pool, scratch_pool));
+  SVN_ERR(svn_wc__db_temp_get_sdb(&wc_db, svn_wc_adm_access_path(adm_access),
+                                  statements, scratch_pool, scratch_pool));
 
   /* Write the entries. */
   SVN_ERR(entries_write_body(db, local_abspath, wc_db, entries, scratch_pool));
