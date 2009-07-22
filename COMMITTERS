@@ -89,6 +89,7 @@ Commit access for specific areas:
     joeswatosh   Joe Swatosh <joe.swatosh@gmail.com>         (Swig-Ruby b.)
     jrvernooij   Jelmer Vernooij <jelmer@samba.org>          (Python bindings)
           sage   Sage LaTorra <sagelt@gmail.com>             (Ctypes-Python bindings)
+        rdonch   Роман Донченко <DXDragon@yandex.ru>         (Swig-Python b.)
 
   Packages:
 
