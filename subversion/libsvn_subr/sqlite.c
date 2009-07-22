@@ -513,12 +513,23 @@ static const int latest_schema_format =
 
 #endif
 
-
-static svn_error_t *
-upgrade_format(svn_sqlite__db_t *db, int current_schema, int latest_schema,
-               const char * const *upgrade_sql, apr_pool_t *scratch_pool)
+struct upgrade_baton
 {
-  while (current_schema < latest_schema)
+  int current_schema;
+  int latest_schema;
+  const char * const *upgrade_sql;
+  apr_pool_t *scratch_pool;
+};
+
+/* This implements svn_sqlite__transaction_callback_t */
+static svn_error_t *
+upgrade_format(void *baton,
+               svn_sqlite__db_t *db)
+{
+  struct upgrade_baton *ub = baton;
+  int current_schema = ub->current_schema;
+
+  while (current_schema < ub->latest_schema)
     {
       const char *pragma_cmd;
 
@@ -526,10 +537,11 @@ upgrade_format(svn_sqlite__db_t *db, int current_schema, int latest_schema,
       current_schema++;
 
       /* Run the upgrade SQL */
-      SVN_ERR(exec_sql(db, upgrade_sql[current_schema]));
+      if (ub->upgrade_sql[current_schema])
+        SVN_ERR(exec_sql(db, ub->upgrade_sql[current_schema]));
 
       /* Update the user version pragma */
-      pragma_cmd = apr_psprintf(scratch_pool,
+      pragma_cmd = apr_psprintf(ub->scratch_pool,
                                 "PRAGMA user_version = %d;",
                                 current_schema);
       SVN_ERR(exec_sql(db, pragma_cmd));
@@ -571,8 +583,16 @@ check_format(svn_sqlite__db_t *db, int latest_schema,
     return SVN_NO_ERROR;
 
   if (current_schema < latest_schema)
-    return upgrade_format(db, current_schema, latest_schema, upgrade_sql,
-                          scratch_pool);
+    {
+      struct upgrade_baton ub;
+
+      ub.current_schema = current_schema;
+      ub.latest_schema = latest_schema;
+      ub.upgrade_sql = upgrade_sql;
+      ub.scratch_pool = scratch_pool;
+
+      return svn_sqlite__with_transaction(db, upgrade_format, &ub);
+    }
 
   return svn_error_createf(SVN_ERR_SQLITE_UNSUPPORTED_SCHEMA, NULL,
                            _("Schema format %d not recognized"),

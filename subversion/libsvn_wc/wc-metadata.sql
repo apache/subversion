@@ -362,8 +362,6 @@ CREATE TABLE LOCK (
 /* Format 13 introduces the work queue, and erases a few columns from the
    original schema.  */
 -- format: 13
-BEGIN TRANSACTION;
-
 CREATE TABLE WORK_QUEUE (
   /* Work items are identified by this value.  */
   id  INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -541,5 +539,3 @@ INSERT INTO ACTUAL_NODE SELECT
 FROM ACTUAL_NODE_BACKUP;
 
 DROP TABLE ACTUAL_NODE_BACKUP;
-
-COMMIT;
