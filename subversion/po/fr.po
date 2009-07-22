@@ -485,7 +485,7 @@ msgstr "Relocalisation invalide"
 
 #: ../include/svn_error_codes.h:443
 msgid "Invalid switch"
-msgstr "Ré-aiguillage invalide"
+msgstr "Ré-aiguillage (switch) invalide"
 
 #: ../include/svn_error_codes.h:448
 msgid "Changelist doesn't match"
@@ -1904,7 +1904,7 @@ msgstr "'%s' n'est pas dans le même dépôt que '%s'"
 
 #: ../libsvn_client/merge.c:7882
 msgid "Cannot reintegrate into a working copy with a switched subtree"
-msgstr "Impossible de réintégrer dans une copie de travail avec un sous-arbre ré-aiguillé"
+msgstr "Impossible de réintégrer dans une copie de travail avec un sous-arbre ré-aiguillé (switch)"
 
 #: ../libsvn_client/merge.c:7887
 msgid "Cannot reintegrate into a working copy not entirely at infinite depth"
@@ -6104,7 +6104,7 @@ msgstr "Impossible d'exclure le répertoire racine"
 #: ../libsvn_wc/crop.c:291
 #, c-format
 msgid "Cannot crop '%s': it is a switched path"
-msgstr "Impossible de tronquer '%s' c'est un chemin ré-aiguillé"
+msgstr "Impossible de tronquer '%s' c'est un chemin ré-aiguillé (switch)"
 
 #: ../libsvn_wc/entries.c:372
 msgid "No WC table entry"
@@ -8918,7 +8918,7 @@ msgstr ""
 "      '+' ajout avec reprise d'historique prévu\n"
 "    5ème colonne : si l'élément est ré-aiguillé par rapport à son parent\n"
 "      ' ' normal\n"
-"      'S' ré-aiguillé par rapport à son parent (switched)\n"
+"      'S' ré-aiguillé par rapport à son parent (switch)\n"
 "      'X' élément versionné créé par une référence externe\n"
 "    6ème colonne : si un verrou est posé\n"
 "      (sans -u)\n"
@@ -11721,20 +11721,20 @@ msgstr ""
 "\n"
 "  Produit un 'numéro de version' compacte pour la copie de travail précisée\n"
 "  par CT_CHEMIN. FIN_URL est la partie finale de l'URL de référence pour\n"
-"  déterminer si CT_CHEMIN a été ré-aiguillée (switched).\n"
+"  déterminer si CT_CHEMIN a été ré-aiguillée (switch).\n"
 "  Le numéro de version est envoyé sur la sortie standard. Exemple :\n"
 "\n"
 "  svnversion . /depot/projet/trunk\n"
 "  4168\n"
 "\n"
 "  Le numéro de version est simple si la copie de travail ne concerne qu'une\n"
-"  révision, non modifiée, non ré-aiguillée et dont l'URL de référence\n"
+"  révision, non modifiée, non ré-aiguillée (switch) et dont l'URL de référence\n"
 "  correspond à FIN_URL.\n"
 "  Dans les autres cas, le numéro de version est plus compliqué :\n"
 "\n"
 "    4123:4168     copie mixte, composée de différentes révisions\n"
 "    4168M         copie localement modifiée\n"
-"    4123S         copie ré-aiguillée\n"
+"    4123S         copie ré-aiguillée (switch)\n"
 "    4123P         copie partielle tirée d'une extraction partielle (sparse)\n"
 "    4123:4168MS   copie mixte, modifiée, ré-aiguillée...\n"
 "\n"
