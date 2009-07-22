@@ -4370,7 +4370,8 @@ static char * data[] = {
 
 (defsubst svn-status-in-vc-mode? ()
   "Is vc-svn active?"
-  (and vc-mode (string-match "^ SVN" (svn-substring-no-properties vc-mode))))
+  (if (and (boundp 'vc-mode) vc-mode)
+      (string-match "^ SVN" (svn-substring-no-properties vc-mode))))
 
 (when svn-status-fancy-file-state-in-modeline
   (defadvice vc-find-file-hook (after svn-status-vc-svn-find-file-hook activate)
