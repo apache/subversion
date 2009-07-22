@@ -518,6 +518,10 @@ struct upgrade_baton
   int current_schema;
   int latest_schema;
   const char * const *upgrade_sql;
+
+  svn_sqlite__upgrade_func_t upgrade_func;
+  void *upgrade_baton;
+
   apr_pool_t *scratch_pool;
 };
 
@@ -528,10 +532,13 @@ upgrade_format(void *baton,
 {
   struct upgrade_baton *ub = baton;
   int current_schema = ub->current_schema;
+  apr_pool_t *iterpool = svn_pool_create(ub->scratch_pool);
 
   while (current_schema < ub->latest_schema)
     {
       const char *pragma_cmd;
+
+      svn_pool_clear(iterpool);
 
       /* Go to the next schema */
       current_schema++;
@@ -540,12 +547,19 @@ upgrade_format(void *baton,
       if (ub->upgrade_sql[current_schema])
         SVN_ERR(exec_sql(db, ub->upgrade_sql[current_schema]));
 
+      /* Run the upgrade callback. */
+      if (ub->upgrade_func)
+        SVN_ERR(ub->upgrade_func(ub->upgrade_baton, db, current_schema,
+                                 iterpool));
+
       /* Update the user version pragma */
-      pragma_cmd = apr_psprintf(ub->scratch_pool,
+      pragma_cmd = apr_psprintf(iterpool,
                                 "PRAGMA user_version = %d;",
                                 current_schema);
       SVN_ERR(exec_sql(db, pragma_cmd));
     }
+
+  svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
 }
@@ -572,7 +586,9 @@ svn_sqlite__read_schema_version(int *version,
    Return SVN_NO_ERROR if everything is okay. */
 static svn_error_t *
 check_format(svn_sqlite__db_t *db, int latest_schema,
-             const char * const *upgrade_sql, apr_pool_t *scratch_pool)
+             const char * const *upgrade_sql, 
+             svn_sqlite__upgrade_func_t upgrade_func, void *upgrade_baton,
+             apr_pool_t *scratch_pool)
 {
   int current_schema;
 
@@ -590,6 +606,9 @@ check_format(svn_sqlite__db_t *db, int latest_schema,
       ub.latest_schema = latest_schema;
       ub.upgrade_sql = upgrade_sql;
       ub.scratch_pool = scratch_pool;
+
+      ub.upgrade_func = upgrade_func;
+      ub.upgrade_baton = upgrade_baton;
 
       return svn_sqlite__with_transaction(db, upgrade_format, &ub);
     }
@@ -797,6 +816,7 @@ svn_error_t *
 svn_sqlite__open(svn_sqlite__db_t **db, const char *path,
                  svn_sqlite__mode_t mode, const char * const statements[],
                  int latest_schema, const char * const *upgrade_sql,
+                 svn_sqlite__upgrade_func_t upgrade_func, void *upgrade_baton,
                  apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
   SVN_ERR(svn_atomic__init_once(&sqlite_init_state, init_sqlite, scratch_pool));
@@ -826,7 +846,8 @@ svn_sqlite__open(svn_sqlite__db_t **db, const char *path,
               "PRAGMA synchronous=OFF;"));
 
   /* Validate the schema, upgrading if necessary. */
-  SVN_ERR(check_format(*db, latest_schema, upgrade_sql, scratch_pool));
+  SVN_ERR(check_format(*db, latest_schema, upgrade_sql, upgrade_func,
+                       upgrade_baton, scratch_pool));
 
   /* Store the provided statements. */
   if (statements)

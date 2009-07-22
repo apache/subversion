@@ -43,6 +43,19 @@ typedef enum svn_sqlite__mode_e {
     svn_sqlite__mode_rwcreate    /* open/create the database read-write */
 } svn_sqlite__mode_t;
 
+/* A callback which is called between format upgrades when doing automagic
+   sql schema upgrades.  CURRENT_SCHEMA refers to the schema version to which
+   the schema is being upgraded, and for which the upgrade sql has already
+   been run.
+
+   This function may be called multiple times, in the case where a format needs
+   to be upgraded past multiple versions.
+
+   SCRATCH_POOL will be cleared between invocations. */
+typedef svn_error_t *(*svn_sqlite__upgrade_func_t)
+  (void *baton, svn_sqlite__db_t *db, int current_schema,
+   apr_pool_t *scratch_pool);
+
 
 /* Steps the given statement; if it returns SQLITE_DONE, resets the statement.
    Otherwise, raises an SVN error.  */
@@ -92,12 +105,18 @@ svn_sqlite__read_schema_version(int *version,
    STATEMENTS itself may be NULL, in which case it has no impact.
    See svn_sqlite__get_statement() for how these strings are used.
 
+   UPGRADE_FUNC and UPGRADE_BATON provide a means for the caller to do
+   data conversion during a schema upgrade.  UPGRADE_FUNC will be called with
+   UPGRADE_BATON *after* each step in upgrading the schema given in
+   UPGRADE_SQL.  See svn_sqlite__upgrade_func_t for more info.
+
    The statements will be finalized and the SQLite database will be closed
    when RESULT_POOL is cleaned up. */
 svn_error_t *
 svn_sqlite__open(svn_sqlite__db_t **db, const char *repos_path,
                  svn_sqlite__mode_t mode, const char * const statements[],
                  int latest_schema, const char * const *upgrade_sql,
+                 svn_sqlite__upgrade_func_t upgrade_func, void *upgrade_baton,
                  apr_pool_t *result_pool, apr_pool_t *scratch_pool);
 
 /* Explicity close the connection in DB. */

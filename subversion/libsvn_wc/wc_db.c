@@ -1028,8 +1028,8 @@ parse_local_abspath(svn_wc__db_pdh_t **pdh,
       err = svn_sqlite__open(&sdb,
                              svn_wc__adm_child(local_abspath, SDB_FILE,
                                                scratch_pool),
-                             smode, statements, SVN_WC__VERSION,
-                             upgrade_sql, db->state_pool, scratch_pool);
+                             smode, statements, SVN_WC__VERSION, upgrade_sql,
+                             NULL, NULL, db->state_pool, scratch_pool);
       if (err == NULL)
         break;
       if (err->apr_err != SVN_ERR_SQLITE_ERROR
@@ -1177,6 +1177,7 @@ parse_local_abspath(svn_wc__db_pdh_t **pdh,
                                                                 scratch_pool),
                                               smode, statements,
                                               SVN_WC__VERSION, upgrade_sql,
+                                              NULL, NULL,
                                               db->state_pool, scratch_pool);
           if (err)
             {
@@ -1668,8 +1669,8 @@ svn_wc__db_init(const char *local_abspath,
                            svn_wc__adm_child(local_abspath, SDB_FILE,
                                              scratch_pool),
                            svn_sqlite__mode_rwcreate, statements,
-                           SVN_WC__VERSION,
-                           upgrade_sql, scratch_pool, scratch_pool));
+                           SVN_WC__VERSION, upgrade_sql,
+                           NULL, NULL, scratch_pool, scratch_pool));
 
   /* Insert the repository. */
   SVN_ERR(create_repos_id(&repos_id, repos_root_url, repos_uuid, sdb,

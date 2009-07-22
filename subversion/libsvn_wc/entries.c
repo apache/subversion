@@ -633,8 +633,8 @@ read_entries_new(apr_hash_t **result_entries,
 
   /* Open the wc.db sqlite database. */
   SVN_ERR(svn_sqlite__open(&wc_db, wc_db_path, svn_sqlite__mode_readonly,
-                           statements, SVN_WC__VERSION,
-                           upgrade_sql, scratch_pool, scratch_pool));
+                           statements, SVN_WC__VERSION, upgrade_sql,
+                           NULL, NULL, scratch_pool, scratch_pool));
 
   SVN_ERR(svn_wc__db_read_children(&children, db,
                                    local_abspath,
@@ -2362,8 +2362,8 @@ entries_write(apr_hash_t *entries,
   SVN_ERR(svn_sqlite__open(&wc_db,
                            db_path(svn_wc_adm_access_path(adm_access), pool),
                            svn_sqlite__mode_readwrite, statements,
-                           SVN_WC__VERSION,
-                           upgrade_sql, scratch_pool, scratch_pool));
+                           SVN_WC__VERSION, upgrade_sql,
+                           NULL, NULL, scratch_pool, scratch_pool));
 
   /* Write the entries. */
   SVN_ERR(entries_write_body(db, local_abspath, wc_db, entries, scratch_pool));
