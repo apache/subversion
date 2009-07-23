@@ -35,12 +35,15 @@
 #include "svn_io.h"
 
 #include "svn_dirent_uri.h"
+#include "svn_pools.h"
 
 #include "private/svn_sqlite.h"
 
 #include "../../libsvn_wc/wc.h"
 #include "../../libsvn_wc/wc_db.h"
 #include "../../libsvn_wc/wc-metadata.h"
+
+#include "private/svn_wc_private.h"
 
 #include "../svn_test.h"
 
@@ -71,6 +74,8 @@
 #define MD5_1 "2d18c5e57e84c5b8a5e9a6e13fa394dc"
 #define MD5_2 "5d41402abc4b2a76b9719d911017c592"
 #define SHA1_1 "aaf4c61ddcc5e8a2dabede0f3b482cd9aea9434d"
+
+#define I_TC_DATA "((conflict F file update edited deleted (version 23 " ROOT_ONE " 1 2 branch1/ft/F none) (version 23 " ROOT_ONE " 1 3 branch1/ft/F file)) (conflict G file update edited deleted (version 23 " ROOT_ONE " 1 2 branch1/ft/F none) (version 23 " ROOT_ONE " 1 3 branch1/ft/F file)) )"
 
 static const char * const data_loading_sql[] = {
   NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
@@ -295,15 +300,15 @@ static const char * const data_loading_sql[] = {
    "  null, null, null, 0, null, null, '()', 0); "
    " "
    "insert into actual_node values ("
-   "  1, 'I', '', null, null, null, null, null, 'changelist', null, null); "
-   " "
+   "  1, 'I', '', null, null, null, null, null, 'changelist', null, "
+   "'" I_TC_DATA "');"
    ),
   WC_METADATA_SQL_13
 };
 
 
 static svn_error_t *
-create_fake_wc(const char *subdir, apr_pool_t *scratch_pool)
+create_fake_wc(const char *subdir, int format, apr_pool_t *scratch_pool)
 {
   const char *dirpath = svn_dirent_join_many(scratch_pool,
                                              "fake-wc", subdir, ".svn", NULL);
@@ -313,8 +318,9 @@ create_fake_wc(const char *subdir, apr_pool_t *scratch_pool)
   SVN_ERR(svn_io_make_dir_recursively(dirpath, scratch_pool));
   svn_error_clear(svn_io_remove_file(dbpath, scratch_pool));
   SVN_ERR(svn_sqlite__open(&sdb, dbpath, svn_sqlite__mode_rwcreate, NULL,
-                           SVN_WC__VERSION, data_loading_sql,
-                           NULL, NULL, scratch_pool, scratch_pool));
+                           format, data_loading_sql,
+                           svn_wc__db_upgrade_func, NULL,
+                           scratch_pool, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -369,7 +375,7 @@ test_getting_info(apr_pool_t *pool)
   svn_wc__db_t *db;
   svn_error_t *err;
 
-  SVN_ERR(create_fake_wc("test_getting_info", pool));
+  SVN_ERR(create_fake_wc("test_getting_info", SVN_WC__VERSION, pool));
   SVN_ERR(svn_dirent_get_absolute(&local_abspath,
                                   "fake-wc/test_getting_info",
                                   pool));
@@ -603,7 +609,7 @@ test_inserting_nodes(apr_pool_t *pool)
   apr_hash_t *props;
   const apr_array_header_t *children;
 
-  SVN_ERR(create_fake_wc("test_inserting_nodes", pool));
+  SVN_ERR(create_fake_wc("test_inserting_nodes", SVN_WC__VERSION, pool));
   SVN_ERR(svn_dirent_get_absolute(&local_abspath,
                                   "fake-wc/test_inserting_nodes",
                                   pool));
@@ -719,7 +725,7 @@ test_children(apr_pool_t *pool)
   const apr_array_header_t *children;
   int i;
 
-  SVN_ERR(create_fake_wc("test_children", pool));
+  SVN_ERR(create_fake_wc("test_children", SVN_WC__VERSION, pool));
   SVN_ERR(svn_dirent_get_absolute(&local_abspath,
                                   "fake-wc/test_children",
                                   pool));
@@ -791,7 +797,7 @@ test_working_info(apr_pool_t *pool)
   const char *tree_conflict_data;
   svn_wc__db_t *db;
 
-  SVN_ERR(create_fake_wc("test_working_info", pool));
+  SVN_ERR(create_fake_wc("test_working_info", SVN_WC__VERSION, pool));
   SVN_ERR(svn_dirent_get_absolute(&local_abspath,
                                   "fake-wc/test_working_info",
                                   pool));
@@ -838,7 +844,7 @@ test_working_info(apr_pool_t *pool)
   SVN_TEST_ASSERT(conflict_working == NULL);
   SVN_TEST_ASSERT(prop_reject_file == NULL);
   SVN_TEST_ASSERT(lock == NULL);
-  SVN_TEST_ASSERT(tree_conflict_data == NULL);
+  SVN_TEST_STRING_ASSERT(tree_conflict_data, I_TC_DATA);
 
 
   /* ### we need a hojillion more tests in here. I just want to get this
@@ -855,7 +861,7 @@ test_pdh(apr_pool_t *pool)
   const char *local_abspath;
   svn_wc__db_t *db;
 
-  SVN_ERR(create_fake_wc("test_pdh", pool));
+  SVN_ERR(create_fake_wc("test_pdh", SVN_WC__VERSION, pool));
   SVN_ERR(svn_dirent_get_absolute(&local_abspath,
                                   "fake-wc/test_pdh",
                                   pool));
@@ -898,7 +904,7 @@ test_scan_addition(apr_pool_t *pool)
   const char *original_uuid;
   svn_revnum_t original_revision;
 
-  SVN_ERR(create_fake_wc("test_scan_addition", pool));
+  SVN_ERR(create_fake_wc("test_scan_addition", SVN_WC__VERSION, pool));
   SVN_ERR(svn_dirent_get_absolute(&local_abspath,
                                   "fake-wc/test_scan_addition",
                                   pool));
@@ -1031,7 +1037,7 @@ test_scan_deletion(apr_pool_t *pool)
   const char *work_del_abspath;
   const char *moved_to_abspath;
 
-  SVN_ERR(create_fake_wc("test_scan_deletion", pool));
+  SVN_ERR(create_fake_wc("test_scan_deletion", SVN_WC__VERSION, pool));
   SVN_ERR(svn_dirent_get_absolute(&local_abspath,
                                   "fake-wc/test_scan_deletion",
                                   pool));
@@ -1217,7 +1223,7 @@ test_global_relocate(apr_pool_t *pool)
   const char *repos_root_url;
   const char *repos_uuid;
   
-  SVN_ERR(create_fake_wc("test_global_relocate", pool));
+  SVN_ERR(create_fake_wc("test_global_relocate", SVN_WC__VERSION, pool));
   SVN_ERR(svn_dirent_get_absolute(&local_abspath,
                                   "fake-wc/test_global_relocate",
                                   pool));
@@ -1276,6 +1282,15 @@ test_global_relocate(apr_pool_t *pool)
 }
 
 
+static svn_error_t *
+test_upgrading_to_f13(apr_pool_t *pool)
+{
+  SVN_ERR(create_fake_wc("test_f13_upgrade", 13, pool));
+
+  return SVN_NO_ERROR;
+}
+
+
 struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
@@ -1295,5 +1310,7 @@ struct svn_test_descriptor_t test_funcs[] =
                    "deletion introspection functions"),
     SVN_TEST_PASS2(test_global_relocate,
                    "relocating a node"),
+    SVN_TEST_PASS2(test_upgrading_to_f13,
+                   "upgrading to fromat 13"),
     SVN_TEST_NULL
   };

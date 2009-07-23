@@ -413,6 +413,17 @@ CREATE TABLE CONFLICT_VICTIM (
 
 CREATE INDEX I_TCPARENT ON CONFLICT_VICTIM (wc_id, parent_relpath);
 
+/* The contents of dav_cache are suspect in format 12, so it is best to just
+   erase anything there.  */
+UPDATE BASE_NODE SET incomplete_children=null, dav_cache=null;
+
+
+/* ------------------------------------------------------------------------- */
+
+/* Format 14 drops all columns not needed due to previous format upgrades.
+   As more formats are added, this number will be bumped, and it will
+   eventually become the final format for 1.7. */
+-- format: 14
 
 /* We cannot directly remove columns, so we use a temporary table instead. */
 /* First create the temporary table without the undesired column(s). */
@@ -488,11 +499,6 @@ FROM BASE_NODE_BACKUP;
 
 /* Drop the temporary table. */
 DROP TABLE BASE_NODE_BACKUP;
-
-/* The contents of dav_cache are suspect in format 12, so it is best to just
-   erase anything there.  */
-UPDATE BASE_NODE SET incomplete_children=null, dav_cache=null;
-
 
 /* Now "drop" the tree_conflict_data column from actual_node. */
 CREATE TABLE ACTUAL_NODE_BACKUP (
