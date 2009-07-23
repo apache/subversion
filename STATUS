@@ -159,11 +159,3 @@ Candidate changes:
 
 Approved changes:
 =================
-
- * r38101, r38102
-   Fix a bug that causes locking to fail over ra-neon if the user provides
-   a lock comment that has XML-special characters in it.
-   Justification:
-     Bugfixes are what maintenance releases are for.  Ya dig?
-   Votes:
-     +1: cmpilato, rhuijben, stylesen
