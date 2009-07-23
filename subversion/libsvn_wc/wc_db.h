@@ -1515,6 +1515,16 @@ svn_wc__db_scan_deletion(const char **base_del_abspath,
 
 /** @} */
 
+
+/** The upgrade function for the wc_db sqlite database.  This is exposed
+    quasi-publicly for testing purposes only. */
+svn_error_t *
+svn_wc__db_upgrade_func(void *baton,
+                        svn_sqlite__db_t *sdb,
+                        int current_schema,
+                        apr_pool_t *scratch_pool);
+
+
 /**
  * @defgroup svn_wc__db_wq  Work queue manipulation. see workqueue.h
  * @{
