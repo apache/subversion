@@ -1841,7 +1841,9 @@ typedef struct {
   /* True if the target had to be skipped for some reason. */
   svn_boolean_t skipped;
 
-  /* True if at least one hunk was applied to the target. */
+  /* True if at least one hunk was applied to the target.
+   * The hunk may have been a no-op, however (e.g. a hunk trying
+   * to delete a line from an empty file). */
   svn_boolean_t modified;
 
   /* True if at least one hunk application resulted in a conflict. */
@@ -1850,6 +1852,14 @@ typedef struct {
   /* True if the target file had local modifications before the
    * patch was applied to it. */
   svn_boolean_t local_mods;
+
+  /* True if the target was added by the patch, which means that it
+   * did not exist on disk before patching and does exist on disk
+   * after patching. */
+  svn_boolean_t added;
+
+  /* True if the target ended up being deleted by the patch. */
+  svn_boolean_t deleted;
 } patch_target_t;
 
 /* Resolve the exact path for a patch TARGET at path PATH_FROM_PATCHFILE,
@@ -2013,6 +2023,19 @@ init_patch_target(patch_target_t **target, const svn_patch_t *patch,
   SVN_ERR(resolve_target_path(new_target, patch->new_filename,
                               svn_wc_adm_access_path(adm_access),
                               result_pool, scratch_pool));
+  if (! new_target->skipped)
+    {
+      const svn_wc_entry_t *entry;
+
+      /* If the target is versioned, we should be able to get an entry. */
+      SVN_ERR(svn_wc_entry(&entry, new_target->abs_path, adm_access,
+                           TRUE /* show_hidden */, scratch_pool));
+      if (entry && entry->schedule == svn_wc_schedule_delete)
+        {
+          /* The target is versioned and scheduled for deletion, so skip it. */
+          new_target->skipped = TRUE;
+        }
+    }
 
   if (new_target->kind == svn_node_file && ! new_target->skipped)
     {
@@ -2053,6 +2076,8 @@ init_patch_target(patch_target_t **target, const svn_patch_t *patch,
   new_target->current_line = 1;
   new_target->modified = FALSE;
   new_target->conflicted = FALSE;
+  new_target->added = FALSE;
+  new_target->deleted = FALSE;
   new_target->eof = FALSE;
   new_target->tempfiles = tempfiles;
 
@@ -2545,7 +2570,9 @@ maybe_send_patch_target_notification(const patch_target_t *target,
 
   if (target->skipped)
     action = svn_wc_notify_skip;
-  else if (target->kind == svn_node_none)
+  else if (target->deleted)
+    action = svn_wc_notify_update_delete;
+  else if (target->added)
     action = svn_wc_notify_update_add;
   else
     action = svn_wc_notify_update_update;
@@ -2646,30 +2673,110 @@ apply_one_patch(svn_patch_t *patch, const char *wc_path,
 
       SVN_ERR(svn_stream_close(target->result));
 
-      if (! dry_run && target->modified)
+      if (target->modified)
         {
-          /* Install the patched temporary file over the working file.
-           * ### Should this rather be done in a loggy fashion? */
-          SVN_ERR(svn_io_file_rename(target->result_path, target->abs_path,
-                                     pool));
+          apr_finfo_t old_file;
+          apr_finfo_t new_file;
 
-          if (target->kind == svn_node_none)
+          /* Get sizes of the patched temporary file (new) and the
+           * working file (old). We'll need those to figure whether
+           * we should add or delete the patched file. */
+          SVN_ERR(svn_io_stat(&new_file, target->result_path, APR_FINFO_SIZE,
+                              pool));
+          if (target->kind == svn_node_file)
+            SVN_ERR(svn_io_stat(&old_file, target->abs_path, APR_FINFO_SIZE,
+                                pool));
+          else
+            old_file.size = 0;
+
+          if (new_file.size >= 0 && old_file.size == 0)
             {
-              /* The target file didn't exist previously, so add it to version
-               * control.  Suppress the notification, we'll do it manually in
-               * a minute (which is a work-around for otherwise not quite pretty
-               * output of the svn CLI client...) */
-              SVN_ERR(svn_wc_add3(target->abs_path, adm_access,
-                                  svn_depth_infinity,
-                                  NULL, SVN_INVALID_REVNUM,
-                                  ctx->cancel_func, ctx->cancel_baton,
-                                  NULL, NULL, pool));
+              /* If the target did not exist we've just added it.
+               * If it did exist the target was empty before patching,
+               * and maybe it is still empty now. */
+              target->added = (target->kind == svn_node_none);
+            }
+          else if (new_file.size == 0 && old_file.size > 0)
+            {
+              /* If a unidiff removes all lines from a file, that usually
+               * means deletion, so we can confidently schedule the target
+               * for deletion. In the rare case where the unidiff was really
+               * meant to replace a file with an empty one, this may not
+               * be desirable. But the deletion can easily be reverted and
+               * creating an empty file manually is not exactly hard either. */
+              target->deleted = (target->kind != svn_node_none);
+            }
+          
+          if (target->deleted)
+            {
+              if (! dry_run)
+                {
+                  svn_wc_adm_access_t *parent_adm_access;
+                  const char *dirname;
+
+                  /* Schedule the target for deletion.  Suppress
+                   * notification, we'll do it manually in a minute. */
+                  dirname = svn_dirent_dirname(target->abs_path, pool);
+                  SVN_ERR(svn_wc_adm_retrieve(&parent_adm_access, adm_access,
+                                              dirname, pool));
+                  SVN_ERR(svn_wc_delete3(target->abs_path, parent_adm_access,
+                                         ctx->cancel_func, ctx->cancel_baton,
+                                         NULL, NULL, FALSE /* keep_local */,
+                                         pool));
+                }
+
+              /* Remove the tempfile, too. */
+              SVN_ERR(svn_io_remove_file2(target->result_path, FALSE,
+                                          pool));
+            }
+          else
+            {
+              if (old_file.size == 0 && new_file.size == 0)
+                {
+                  /* The target was empty or non-existent to begin with
+                   * and nothing has changed by patching. Just remove the
+                   * temporary file and report this as skipped if it didn't
+                   * exist. */
+                  SVN_ERR(svn_io_remove_file2(target->result_path, FALSE,
+                                              pool));
+                  target->added = FALSE;
+                  if (target->kind == svn_node_none)
+                    target->skipped = TRUE;
+                }
+              else
+                {
+                  if (dry_run)
+                    {
+                      /* Just remove the temporary file. */
+                      SVN_ERR(svn_io_remove_file2(target->result_path, FALSE,
+                                                  pool));
+                    }
+                  else
+                    {
+                      /* Install patched temporary file over working file. 
+                       * ### Should this rather be done in a loggy fashion? */
+                      SVN_ERR(svn_io_file_rename(target->result_path,
+                                               target->abs_path, pool));
+
+                      if (target->added)
+                        {
+                          /* The target file didn't exist previously, so add
+                           * it to version control. Suppress notification,
+                           * we'll do it manually in a minute. */
+                          SVN_ERR(svn_wc_add3(target->abs_path, adm_access,
+                                              svn_depth_infinity,
+                                              NULL, SVN_INVALID_REVNUM,
+                                              ctx->cancel_func,
+                                              ctx->cancel_baton,
+                                              NULL, NULL, pool));
+                        }
+                    }
+                }
             }
         }
       else
         {
-          /* Either no hunks were applied or we're doing a dry run.
-           * Just remove the temporary file. */
+          /* No hunks were applied. Just remove the temporary file. */
           SVN_ERR(svn_io_remove_file2(target->result_path, FALSE, pool));
         }
     }
