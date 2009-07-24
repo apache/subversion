@@ -2679,7 +2679,7 @@ apply_one_patch(svn_patch_t *patch, const char *wc_path,
           apr_finfo_t new_file;
 
           /* Get sizes of the patched temporary file (new) and the
-           * working file (old). We'll need those to figure whether
+           * working file (old). We'll need those to figure out whether
            * we should add or delete the patched file. */
           SVN_ERR(svn_io_stat(&new_file, target->result_path, APR_FINFO_SIZE,
                               pool));
