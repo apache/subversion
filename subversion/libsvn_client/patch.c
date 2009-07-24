@@ -2522,7 +2522,7 @@ apply_one_hunk(const svn_hunk_t *hunk, patch_target_t *target, apr_pool_t *pool)
 
   SVN_ERR(merge_hunk(target, hunk, latest_text, pool));
 
-  svn_stream_close(latest_text);
+  SVN_ERR(svn_stream_close(latest_text));
 
   return SVN_NO_ERROR;
 }
