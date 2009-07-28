@@ -32,6 +32,8 @@ if sys.version_info[0] >= 3:
 else:
   # Python <3.0
   from StringIO import StringIO
+from xml.dom.minidom import parseString
+import base64
 
 import svntest
 
@@ -487,6 +489,7 @@ def create_from_path(path, contents=None, props={}, atts={}):
   return root_node
 
 
+eol_re = re.compile(r'(\r\n|\r)')
 
 # helper for build_tree_from_wc()
 def get_props(paths):
@@ -499,46 +502,46 @@ def get_props(paths):
   # respecting the black-box paradigm.
 
   files = {}
-  filename = None
   exit_code, output, errput = svntest.main.run_svn(1,
                                                    "proplist",
                                                    "--verbose",
+                                                   "--xml",
                                                    *paths)
 
-  properties_on_re = re.compile("^Properties on '(.+)':$")
+  output = (line for line in output if not line.startswith('DBG:'))
+  dom = parseString(''.join(output))
+  target_nodes = dom.getElementsByTagName('target')
+  for target_node in target_nodes:
+    filename = target_node.attributes['path'].nodeValue
+    file_props = {}
+    for property_node in target_node.getElementsByTagName('property'):
+      name = property_node.attributes['name'].nodeValue
+      if property_node.hasChildNodes():
+        text_node = property_node.firstChild
+        value = text_node.nodeValue
+      else:
+        value = ''
+      try:
+        encoding = property_node.attributes['encoding'].nodeValue
+        if encoding == 'base64':
+          value = base64.b64decode(value)
+        else:
+          raise Exception("Unknown encoding '%s' for file '%s' property '%s'"
+                          % (encoding, filename, name,))
+      except KeyError:
+        pass
+      # If the property value contained a CR, or if under Windows an
+      # "svn:*" property contains a newline, then the XML output
+      # contains a CR character XML-encoded as '&#13;'.  The XML
+      # parser converts it back into a CR character.  So again convert
+      # all end-of-line variants into a single LF:
+      value = eol_re.sub('\n', value)
+      file_props[name] = value
+    files[filename] = file_props
 
-  # Parse the output
-  for line in output:
-    if line.startswith('DBG:'):
-      continue
-    line = line.rstrip('\r\n')  # ignore stdout's EOL sequence
-
-    match = properties_on_re.match(line)
-    if match:
-      filename = match.group(1)
-
-    elif line.startswith('    '):
-      # It's (part of) the value (strip the indentation)
-      if filename is None:
-        raise Exception("Missing 'Properties on' line: '"+line+"'")
-      files.setdefault(filename, {})[name] += line[4:] + '\n'
-
-    elif line.startswith('  '):
-      # It's the name
-      name = line[2:]  # strip the indentation
-      if filename is None:
-        raise Exception("Missing 'Properties on' line: '"+line+"'")
-      files.setdefault(filename, {})[name] = ''
-
-    else:
-      raise Exception("Malformed line from proplist: '"+line+"'")
-
-  # Strip, from each property value, the final new-line that we added
-  for filename in files:
-    for name in files[filename]:
-      files[filename][name] = files[filename][name][:-1]
-
+  dom.unlink()
   return files
+
 
 ### ridiculous function. callers should do this one line themselves.
 def get_text(path):
