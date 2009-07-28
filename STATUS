@@ -15,12 +15,6 @@ Status of 1.6.4:
 
 Candidate changes:
 
- * r36388
-   Initialize variables which may not get assigned to if user input
-   isn't complete.
-   Votes:
-     +1: glasser (per @dev recommendation to backport), cmpilato
-
  * r36720
    Fix building with Apache 2.4.
    Votes:
@@ -144,13 +138,6 @@ Candidate changes:
     Votes:
       +1: arfrever, stsp
 
-  * r38388
-    Handle incomplete deleted rev report request.
-    Justification:
-      Incomplete request will cause uninitialized variables to be referenced.
-    Votes:
-      +1: glasser (via e-mail), pburba
-
   * r38458
     Make 'svnlook diff' show empty added or deleted files.
     Justification:
@@ -165,3 +152,11 @@ Candidate changes:
 
 Approved changes:
 =================
+
+  * r38388
+    Handle incomplete deleted rev report request.
+    Justification:
+      Incomplete request will cause uninitialized variables to be referenced.
+    Votes:
+      +1: glasser (via e-mail), pburba, cmpilato
+
