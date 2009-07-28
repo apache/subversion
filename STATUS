@@ -15,6 +15,12 @@ Status of 1.6.4:
 
 Candidate changes:
 
+ * r36388
+   Initialize variables which may not get assigned to if user input
+   isn't complete.
+   Votes:
+     +1: glasser (per @dev recommendation to backport), cmpilato
+
  * r36720
    Fix building with Apache 2.4.
    Votes:
