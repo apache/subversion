@@ -248,7 +248,7 @@ svn_repos_dir_delta2(svn_fs_root_t *src_root,
   /* Calculate the fs path implicitly used for editor->open_root, so
      we can do an authz check on that path first. */
   if (*src_entry)
-    authz_root_path = svn_path_dirname(tgt_fullpath, pool);
+    authz_root_path = svn_dirent_dirname(tgt_fullpath, pool);
   else
     authz_root_path = tgt_fullpath;
 

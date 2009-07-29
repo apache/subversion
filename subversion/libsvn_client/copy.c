@@ -186,20 +186,20 @@ get_copy_pair_ancestors(const apr_array_header_t *copy_pairs,
                         apr_pool_t *pool)
 {
   apr_pool_t *subpool = svn_pool_create(pool);
+  const char *first_dst;
   const char *top_dst;
   char *top_src;
   int i;
 
   /* Because all the destinations are in the same directory, we can easily
      determine their common ancestor. */
+  first_dst = APR_ARRAY_IDX(copy_pairs, 0, svn_client__copy_pair_t *)->dst;
   if (copy_pairs->nelts == 1)
-    top_dst = apr_pstrdup(subpool,
-                          APR_ARRAY_IDX(copy_pairs, 0,
-                                        svn_client__copy_pair_t *)->dst);
+    top_dst = apr_pstrdup(subpool, first_dst);
+  else if (svn_path_is_url(first_dst))
+    top_dst = svn_uri_dirname(first_dst, subpool);
   else
-    top_dst = svn_path_dirname(APR_ARRAY_IDX(copy_pairs, 0,
-                                             svn_client__copy_pair_t *)->dst,
-                               subpool);
+    top_dst = svn_dirent_dirname(first_dst, subpool);
 
   /* Sources can came from anywhere, so we have to actually do some
      work for them.  */
