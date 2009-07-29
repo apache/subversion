@@ -3002,14 +3002,25 @@ resolve_found_entry_callback(const char *path,
                                                  baton->db, pool, pool));
       if (conflict)
         {
+          svn_error_t *err;
+
           SVN_ERR(svn_wc__del_tree_conflict(path, parent_adm_access, pool));
 
           /* Sanity check:  see if libsvn_wc *still* thinks this item is in a
              state of conflict that we have asked to resolve. If so,
              don't flag RESOLVED_TREE after all. */
 
-          SVN_ERR(svn_wc_conflicted_p2(NULL, NULL, &tree_conflict, path,
-                                       parent_adm_access, pool));
+          err = svn_wc__internal_conflicted_p(NULL, NULL, &tree_conflict,
+                                              baton->db, local_abspath,
+                                              pool);
+          if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+            {
+              svn_error_clear(err);
+              tree_conflict = FALSE;
+            }
+          else if (err)
+            return err;
+
           if (!tree_conflict)
             resolved = TRUE;
         }
@@ -3039,10 +3050,20 @@ resolve_found_entry_callback(const char *path,
       if (did_resolve)
         {
           svn_boolean_t text_conflict, prop_conflict;
+          svn_error_t *err;
 
-          SVN_ERR(svn_wc_conflicted_p2(&text_conflict, &prop_conflict,
-                                       NULL, path, adm_access,
-                                       pool));
+          err = svn_wc__internal_conflicted_p(&text_conflict, &prop_conflict,
+                                              NULL, baton->db, local_abspath,
+                                              pool);
+
+          if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+            {
+              svn_error_clear(err);
+              text_conflict = FALSE;
+              prop_conflict = FALSE;
+            }
+          else if (err)
+            return err;
 
           if ((baton->resolve_text && text_conflict)
               || (baton->resolve_props && prop_conflict))
