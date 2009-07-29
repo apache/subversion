@@ -287,10 +287,10 @@ create_env(bdb_env_t **bdbp, const char *path, apr_pool_t *pool)
   apr_size_t path_size, path_bdb_size;
 
 #if SVN_BDB_PATH_UTF8
-  path_bdb = svn_path_local_style(path, pool);
+  path_bdb = svn_dirent_local_style(path, pool);
 #else
   SVN_ERR(svn_utf_cstring_from_utf8(&path_bdb,
-                                    svn_path_local_style(path, pool),
+                                    svn_dirent_local_style(path, pool),
                                     pool));
 #endif
 
