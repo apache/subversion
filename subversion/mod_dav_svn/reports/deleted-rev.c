@@ -38,8 +38,9 @@ dav_svn__get_deleted_rev_report(const dav_resource *resource,
 {
   apr_xml_elem *child;
   int ns;
-  const char *rel_path, *abs_path;
-  svn_revnum_t peg_rev, end_rev, deleted_rev;
+  const char *rel_path = NULL, *abs_path;
+  svn_revnum_t peg_rev = SVN_INVALID_REVNUM, end_rev = SVN_INVALID_REVNUM,
+      deleted_rev;
   apr_bucket_brigade *bb;
   svn_error_t *err;
   apr_status_t apr_err;
