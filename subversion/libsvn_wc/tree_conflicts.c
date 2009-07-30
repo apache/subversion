@@ -469,29 +469,6 @@ svn_wc__write_tree_conflicts(const char **conflict_data,
   return SVN_NO_ERROR;
 }
 
-/*
- * This function could be static, but we need to link to it
- * in a unit test in tests/libsvn_wc/, so it isn't.
- */
-svn_boolean_t
-svn_wc__tree_conflict_exists(const apr_array_header_t *conflicts,
-                             const char *victim_basename,
-                             apr_pool_t *pool)
-{
-  const svn_wc_conflict_description_t *conflict;
-  int i;
-
-  for (i = 0; i < conflicts->nelts; i++)
-    {
-      conflict = APR_ARRAY_IDX(conflicts, i,
-                               const svn_wc_conflict_description_t *);
-      if (strcmp(svn_dirent_basename(conflict->path, pool),
-                 victim_basename) == 0)
-        return TRUE;
-    }
-
-  return FALSE;
-}
 
 svn_error_t *
 svn_wc__del_tree_conflict(const char *victim_path,
