@@ -970,6 +970,19 @@ svn_wc__db_op_invalidate_last_mod_time(svn_wc__db_t *db,
                                        apr_pool_t *scratch_pool);
 
 
+/** Get any tree conflict associated with LOCAL_ABSPATH in DB, and put it
+ * in *TREE_CONFLICT, allocated in RESULT_POOL.
+ *
+ * Use SCRATCH_POOL for any temporary allocations.
+ */
+svn_error_t *
+svn_wc__db_op_get_tree_conflict(svn_wc_conflict_description_t **tree_conflict,
+                                svn_wc__db_t *db,
+                                const char *local_abspath,
+                                apr_pool_t *result_pool,
+                                apr_pool_t *scratch_pool);
+
+
 /* ### status */
 
 
