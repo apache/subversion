@@ -192,6 +192,10 @@ svn_client__get_wc_mergeinfo(svn_mergeinfo_t *mergeinfo,
 
   while (TRUE)
     {
+      const char *local_abspath;
+
+      SVN_ERR(svn_dirent_get_absolute(&local_abspath, wcpath, pool));
+
       /* Don't look for explicit mergeinfo on WCPATH if we are only
          interested in inherited mergeinfo. */
       if (inherit == svn_mergeinfo_nearest_ancestor)
@@ -213,7 +217,8 @@ svn_client__get_wc_mergeinfo(svn_mergeinfo_t *mergeinfo,
 
       /* If WCPATH is switched, don't look any higher for inherited
          mergeinfo. */
-      SVN_ERR(svn_wc__path_switched(wcpath, &switched, entry, pool));
+      SVN_ERR(svn_wc__path_switched(&switched, ctx->wc_ctx, local_abspath,
+                                    pool));
       if (switched)
         break;
 
@@ -737,7 +742,7 @@ svn_client__elide_children(apr_array_header_t *children_with_mergeinfo,
           /* Don't try to elide switched children. */
           SVN_ERR(svn_wc__entry_versioned(&child_entry, child->path,
                                           adm_access, FALSE, iterpool));
-          SVN_ERR(svn_wc__path_switched(child->path, &switched, child_entry,
+          SVN_ERR(svn_wc__path_switched(&switched, ctx->wc_ctx, child_abspath,
                                         iterpool));
           if (!switched)
             {

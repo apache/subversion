@@ -584,6 +584,10 @@ apr_status_t apr_file_open_stderr (apr_file_t **out, apr_pool_t *pool);
 */
 typedef int apr_status_t;
 
+/* Make possible to parse the SVN_VER_NUM definition. */
+#define APR_STRINGIFY_HELPER(n) #n
+#define APR_STRINGIFY(n) APR_STRINGIFY_HELPER(n)
+
 /* -----------------------------------------------------------------------
    pool functions renaming since swig doesn't take care of the #define's
 */
@@ -796,10 +800,6 @@ svn_swig_py_initialize();
 #ifdef SWIGRUBY
 %init %{
   svn_swig_rb_initialize();
-
-  rb_define_const(mCore, "SVN_VER_NUM", rb_str_new2(SVN_VER_NUM));
-  rb_define_const(mCore, "SVN_VER_NUMBER", rb_str_new2(SVN_VER_NUMBER));
-  rb_define_const(mCore, "SVN_VERSION", rb_str_new2(SVN_VERSION));
 
   rb_define_const(mCore, "SVN_ALLOCATOR_MAX_FREE_UNLIMITED",
                   UINT2NUM(APR_ALLOCATOR_MAX_FREE_UNLIMITED));

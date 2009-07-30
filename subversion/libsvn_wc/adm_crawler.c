@@ -151,7 +151,7 @@ restore_file(const char *file_path,
                                    NULL, NULL,
                                    NULL, NULL, NULL, NULL,
                                    NULL, NULL, NULL,
-                                   NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, NULL, NULL,
                                    db, local_abspath,
                                    pool, pool));
 
@@ -934,7 +934,7 @@ svn_wc_transmit_text_deltas2(const char **tempfile,
                                    NULL, NULL,
                                    NULL, NULL, NULL, NULL,
                                    NULL, NULL, NULL,
-                                   NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, NULL, NULL,
                                    db, abspath,
                                    pool, pool));
 

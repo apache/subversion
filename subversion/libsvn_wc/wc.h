@@ -407,6 +407,48 @@ svn_wc__walk_entries_and_tc(const char *path,
                             void *cancel_baton,
                             apr_pool_t *pool);
 
+
+/* Similar to svn_wc__path_switched(), but with a wc_db parameter instead of
+ * a wc_context. */
+svn_error_t *
+svn_wc__internal_path_switched(svn_boolean_t *switched,
+                               svn_wc__db_t *wc_db,
+                               const char *local_abspath,
+                               apr_pool_t *scratch_pool);
+
+
+/* Similar to svn_wc_conflicted_p3(), but with a wc_db parameter in place of
+ * a wc_context. */
+svn_error_t *
+svn_wc__internal_conflicted_p(svn_boolean_t *text_conflicted_p,
+                              svn_boolean_t *prop_conflicted_p,
+                              svn_boolean_t *tree_conflicted_p,
+                              svn_wc__db_t *db,
+                              const char *local_abspath,
+                              apr_pool_t *scratch_pool);
+
+
+/* Similar to svn_wc__versioned_file_modcheck(), but with a wc_db parameter
+ * instead of a wc_context. */
+svn_error_t *
+svn_wc__internal_versioned_file_modcheck(svn_boolean_t *modified_p,
+                                         svn_wc__db_t *db,
+                                         const char *versioned_file_abspath,
+                                         const char *base_file_abspath,
+                                         svn_boolean_t compare_textbases,
+                                         apr_pool_t *scratch_pool);
+
+
+/* A convenience function for creating a new-style conflict description from
+   an old one.
+   ### This should probably disappear once all the old-style conflict
+       descriptions are gone. */
+svn_wc_conflict_description2_t *
+svn_wc__conflict_desc2_from_conflict_desc(const svn_wc_conflict_description_t *
+                                                                     conflict,
+                                          apr_pool_t *result_pool);
+
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

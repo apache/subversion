@@ -72,7 +72,7 @@ svn_fs_fs__open_rep_cache(svn_fs_t *fs,
   SVN_ERR(svn_sqlite__open(&ffd->rep_cache_db, db_path,
                            svn_sqlite__mode_rwcreate, statements,
                            REP_CACHE_SCHEMA_FORMAT,
-                           upgrade_sql, fs->pool, pool));
+                           upgrade_sql, NULL, NULL, fs->pool, pool));
 
   return SVN_NO_ERROR;
 }

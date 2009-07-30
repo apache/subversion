@@ -1142,7 +1142,7 @@ diff_prepare_repos_repos(const struct diff_parameters *params,
       svn_uri_split(drr->url2, &drr->anchor2, &drr->target2, pool);
       drr->target2 = svn_path_uri_decode(drr->target2, pool);
       if (drr->base_path)
-        drr->base_path = svn_path_dirname(drr->base_path, pool);
+        drr->base_path = svn_dirent_dirname(drr->base_path, pool);
       SVN_ERR(svn_ra_reparent(ra_session, drr->anchor1, pool));
     }
 

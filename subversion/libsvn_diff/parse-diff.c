@@ -22,6 +22,7 @@
  */
 
 #include <limits.h>  /* for ULONG_MAX */
+#include <string.h>
 
 #include "svn_types.h"
 #include "svn_error.h"
@@ -99,9 +100,9 @@ svn_diff__parse_next_patch(svn_patch_t **patch,
 
           /* If we can find a tab, it separates the filename from
            * the rest of the line which we can discard. */
-          apr_size_t tab = svn_stringbuf_find_char_backward(line, '\t');
-          if (tab < line->len)
-            line->data[tab] = '\0';
+          char *tab = strchr(line->data, '\t');
+          if (tab)
+            *tab = '\0';
 
           /* Grab the filename and encode it in UTF-8. */
           /* TODO: Allow specifying the patch file's encoding.

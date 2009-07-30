@@ -49,18 +49,7 @@
 #include "private/svn_skel.h"
 #include "private/svn_debug.h"
 
-#include "wc-metadata.h"
-#include "wc-checks.h"
-
 #define MAYBE_ALLOC(x,p) ((x) ? (x) : apr_pcalloc((p), sizeof(*(x))))
-
-static const char * const upgrade_sql[] = {
-  NULL, NULL, NULL, NULL, NULL,
-  NULL, NULL, NULL, NULL, NULL,
-  NULL, NULL,
-  WC_METADATA_SQL_12,
-  WC_METADATA_SQL_13
-};
 
 /* This values map to the members of STATEMENTS below, and should be added
    and removed at the same time. */
@@ -69,7 +58,6 @@ enum statement_keys {
   STMT_INSERT_WORKING_NODE,
   STMT_INSERT_ACTUAL_NODE,
   STMT_SELECT_WCROOT_NULL,
-  STMT_SELECT_ACTUAL_NODE,
   STMT_DELETE_ALL_WORKING,
   STMT_DELETE_ALL_BASE,
   STMT_DELETE_ALL_ACTUAL,
@@ -109,13 +97,6 @@ static const char * const statements[] = {
 
   /* STMT_SELECT_WCROOT_NULL */
   "select id from wcroot where local_abspath is null;",
-
-  /* STMT_SELECT_ACTUAL_NODE */
-  "select wc_id, local_relpath, parent_relpath, properties, conflict_old, "
-     "conflict_new, "
-     "conflict_working, prop_reject, changelist, text_mod, "
-     "tree_conflict_data "
-  "from actual_node;",
 
   /* STMT_DELETE_ALL_WORKING */
   "delete from working_node;",
@@ -210,15 +191,6 @@ entries_write(apr_hash_t *entries,
               svn_wc_adm_access_t *adm_access,
               apr_pool_t *pool);
 
-/* Return the location of the sqlite database containing the entry information
-   for PATH in the filesystem.  Allocate in RESULT_POOL. ***/
-static const char *
-db_path(const char *path,
-        apr_pool_t *result_pool)
-{
-  return svn_wc__adm_child(path, "wc.db", result_pool);
-}
-
 
 
 /*** reading and writing the entries file ***/
@@ -287,77 +259,6 @@ take_from_entry(const svn_wc_entry_t *src,
     {
       dst->uuid = src->uuid;
     }
-}
-
-
-/* Select all the rows from actual_node table in WC_DB and put them into
-   *NODES allocated in RESULT_POOL. */
-static svn_error_t *
-fetch_actual_nodes(apr_hash_t **nodes,
-                   svn_sqlite__db_t *wc_db,
-                   apr_pool_t *result_pool,
-                   apr_pool_t *scratch_pool)
-{
-  svn_sqlite__stmt_t *stmt;
-  svn_boolean_t have_row;
-
-  *nodes = apr_hash_make(result_pool);
-
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db, STMT_SELECT_ACTUAL_NODE));
-  SVN_ERR(svn_sqlite__step(&have_row, stmt));
-  while (have_row)
-    {
-      db_actual_node_t *actual_node = apr_pcalloc(result_pool,
-                                                  sizeof(*actual_node));
-
-      actual_node->wc_id = svn_sqlite__column_int(stmt, 0);
-      actual_node->local_relpath = svn_sqlite__column_text(stmt, 1,
-                                                           result_pool);
-      actual_node->parent_relpath = svn_sqlite__column_text(stmt, 2,
-                                                            result_pool);
-
-      if (!svn_sqlite__column_is_null(stmt, 3))
-        {
-          apr_size_t len;
-          const void *val;
-
-          val = svn_sqlite__column_blob(stmt, 3, &len);
-          SVN_ERR(svn_skel__parse_proplist(&actual_node->properties,
-                                           svn_skel__parse(val, len,
-                                                           scratch_pool),
-                                           result_pool));
-        }
-
-      if (!svn_sqlite__column_is_null(stmt, 4))
-        {
-          actual_node->conflict_old = svn_sqlite__column_text(stmt, 4,
-                                                              result_pool);
-          actual_node->conflict_new = svn_sqlite__column_text(stmt, 5,
-                                                              result_pool);
-          actual_node->conflict_working = svn_sqlite__column_text(stmt, 6,
-                                                                  result_pool);
-        }
-
-      if (!svn_sqlite__column_is_null(stmt, 7))
-        actual_node->prop_reject = svn_sqlite__column_text(stmt, 7,
-                                                           result_pool);
-
-      if (!svn_sqlite__column_is_null(stmt, 8))
-        actual_node->changelist = svn_sqlite__column_text(stmt, 8,
-                                                          result_pool);
-
-      /* ### column 9 is text_mod */
-
-      if (!svn_sqlite__column_is_null(stmt, 10))
-        actual_node->tree_conflict_data = svn_sqlite__column_text(stmt, 10,
-                                                                  result_pool);
-
-      apr_hash_set(*nodes, actual_node->local_relpath, APR_HASH_KEY_STRING,
-                   actual_node);
-      SVN_ERR(svn_sqlite__step(&have_row, stmt));
-    }
-
-  return svn_sqlite__reset(stmt);
 }
 
 static svn_error_t *
@@ -696,10 +597,8 @@ read_entries_new(apr_hash_t **result_entries,
                  apr_pool_t *result_pool,
                  apr_pool_t *scratch_pool)
 {
-  apr_hash_t *actual_nodes;
   svn_sqlite__db_t *wc_db;
   apr_hash_t *entries;
-  const char *wc_db_path;
   const apr_array_header_t *children;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   int i;
@@ -709,16 +608,8 @@ read_entries_new(apr_hash_t **result_entries,
   entries = apr_hash_make(result_pool);
 
   /* ### need database to determine: incomplete, keep_local, ACTUAL info.  */
-  wc_db_path = db_path(local_abspath, scratch_pool);
-
-  /* Open the wc.db sqlite database. */
-  SVN_ERR(svn_sqlite__open(&wc_db, wc_db_path, svn_sqlite__mode_readonly,
-                           statements, SVN_WC__VERSION,
-                           upgrade_sql, scratch_pool, scratch_pool));
-
-  /* ### some of the data is not in the wc_db interface. grab it manually.
-     ### trim back the columns fetched?  */
-  SVN_ERR(fetch_actual_nodes(&actual_nodes, wc_db, scratch_pool, scratch_pool));
+  SVN_ERR(svn_wc__db_temp_get_sdb(&wc_db, local_abspath, statements,
+                                  scratch_pool, scratch_pool));
 
   SVN_ERR(svn_wc__db_read_children(&children, db,
                                    local_abspath,
@@ -782,6 +673,7 @@ read_entries_new(apr_hash_t **result_entries,
                 &entry->conflict_wrk,
                 &prop_reject_file,
                 &lock,
+                &entry->tree_conflict_data,
                 db,
                 entry_abspath,
                 result_pool,
@@ -1148,23 +1040,6 @@ read_entries_new(apr_hash_t **result_entries,
          entry->lock_comment = lock->comment;
          entry->lock_creation_date = lock->date;
        }
-
-      /* ### there may be an ACTUAL_NODE to grab info from.  really, this
-         ### should probably only exist for added/copied files, but it
-         ### seems to always be needed. Just do so, for now.  */
-      if (TRUE)
-        {
-          const db_actual_node_t *actual_node;
-
-          actual_node = apr_hash_get(actual_nodes,
-                                     entry->name, APR_HASH_KEY_STRING);
-          if (actual_node)
-            {
-              if (actual_node->tree_conflict_data != NULL)
-                entry->tree_conflict_data =
-                  apr_pstrdup(result_pool, actual_node->tree_conflict_data);
-            }
-        }
 
       /* Let's check for a file external.
          ### right now this is ugly, since we have no good way querying
@@ -2359,8 +2234,8 @@ entries_write_body(svn_wc__db_t *db,
     }
   else if (err)
     return err;
-
-  apr_hash_set(dav_cache, local_abspath, APR_HASH_KEY_STRING, child_cache);
+  else
+    apr_hash_set(dav_cache, local_abspath, APR_HASH_KEY_STRING, child_cache);
 
   SVN_ERR(svn_wc__db_base_get_children(&children, db, local_abspath,
                                        scratch_pool, scratch_pool));
@@ -2459,11 +2334,8 @@ entries_write(apr_hash_t *entries,
   SVN_ERR(svn_wc__adm_write_check(adm_access, pool));
 
   /* Open the wc.db sqlite database. */
-  SVN_ERR(svn_sqlite__open(&wc_db,
-                           db_path(svn_wc_adm_access_path(adm_access), pool),
-                           svn_sqlite__mode_readwrite, statements,
-                           SVN_WC__VERSION,
-                           upgrade_sql, scratch_pool, scratch_pool));
+  SVN_ERR(svn_wc__db_temp_get_sdb(&wc_db, svn_wc_adm_access_path(adm_access),
+                                  statements, scratch_pool, scratch_pool));
 
   /* Write the entries. */
   SVN_ERR(entries_write_body(db, local_abspath, wc_db, entries, scratch_pool));
@@ -3355,7 +3227,7 @@ svn_wc_walk_entries3(const char *path,
                              NULL, NULL,
                              NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL, NULL,
-                             NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL,
                              db, abspath,
                              pool, pool);
   if (err)
@@ -3485,18 +3357,17 @@ visit_tc_too_found_entry(const char *path,
       /* We're supposed to check the children of this directory. However,
        * in case of svn_depth_files, don't visit directories. */
 
-      apr_array_header_t *conflicts;
-      int i;
+      apr_hash_t *conflicts;
+      apr_hash_index_t *hi;
 
       /* Loop through all the tree conflict victims */
       SVN_ERR(svn_wc__read_tree_conflicts(&conflicts,
                                           entry->tree_conflict_data, path,
                                           pool));
-
-      for (i = 0; i < conflicts->nelts; i++)
+      for (hi = apr_hash_first(pool, conflicts); hi; hi = apr_hash_next(hi))
         {
-          const svn_wc_conflict_description_t *conflict
-            = APR_ARRAY_IDX(conflicts, i, svn_wc_conflict_description_t *);
+          const svn_wc_conflict_description_t *conflict =
+              svn_apr_hash_index_val(hi);
           const char *child_abspath;
           svn_boolean_t visit_child = FALSE;
           svn_wc__db_kind_t kind;
@@ -3567,9 +3438,8 @@ visit_tc_too_error_handler(const char *path,
       svn_wc_conflict_description_t *conflict;
 
       /* See if there is any tree conflict on this path. */
-      SVN_ERR(svn_wc__internal_get_tree_conflict(&conflict, local_abspath,
-                                                 baton->db,
-                                                 pool, pool));
+      SVN_ERR(svn_wc__db_op_get_tree_conflict(&conflict, baton->db,
+                                              local_abspath, pool, pool));
 
       /* If so, don't regard it as an error but call the "found entry"
        * callback with a null "entry" parameter. */
@@ -3659,8 +3529,8 @@ svn_wc__walk_entries_and_tc(const char *path,
        * call the "found entry" callback with a null "entry" parameter. */
       svn_wc_conflict_description_t *conflict;
 
-      SVN_ERR(svn_wc__internal_get_tree_conflict(&conflict, local_abspath, db,
-                                                 pool, pool));
+      SVN_ERR(svn_wc__db_op_get_tree_conflict(&conflict, db, local_abspath,
+                                              pool, pool));
       if (conflict)
         SVN_ERR(walk_callbacks->found_entry(path, NULL, walk_baton, pool));
     }
