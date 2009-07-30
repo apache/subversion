@@ -93,7 +93,7 @@ Candidate changes:
    Notes:
      See http://svn.haxx.se/users/archive-2009-06/0536.shtml
    Votes:
-     +1: stsp
+     +1: stsp, rhuijben
 
  * r38222, r38223, r38261
    Fix GNOME Keyring with '--non-interactive' option.
@@ -107,16 +107,6 @@ Candidate changes:
      r38261 is also merged to the backport branch.
    Votes:
      +1: stylesen
-
- * r38229, r38264
-   Fix issue #3438, svnsync fails while syncing a rev that has
-   copy of '/' over ra_neon and ra_serf.
-   Justification:
-     Bugfixes are what maintenance releases are for.
-   Notes:
-     See the issue for details.
-   Votes:
-     +1: kameshj, stylesen
 
  * r38279, r38311
    Fix issue #3442, on ext4 and GPFS filesystems with a fsfs
@@ -148,7 +138,17 @@ Candidate changes:
       it cannot enforce rules on added empty files.
       Granted, this is not a very serious bug, but the fix is trivial.
     Votes:
-      +1: stsp
+      +1: stsp, rhuijben
 
 Approved changes:
 =================
+
+ * r38229, r38264
+   Fix issue #3438, svnsync fails while syncing a rev that has
+   copy of '/' over ra_neon and ra_serf.
+   Justification:
+     Bugfixes are what maintenance releases are for.
+   Notes:
+     See the issue for details.
+   Votes:
+     +1: kameshj, stylesen, rhuijben
