@@ -591,38 +591,8 @@ svn_wc__internal_get_tree_conflict(svn_wc_conflict_description_t **tree_conflict
                                    apr_pool_t *result_pool,
                                    apr_pool_t *scratch_pool)
 {
-  const char *parent_abspath;
-  const char *victim_name;
-  svn_error_t *err;
-  apr_hash_t *conflicts;
-  const svn_wc_entry_t *entry;
-
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(victim_abspath));
-
-  svn_dirent_split(victim_abspath, &parent_abspath, &victim_name,
-                   scratch_pool);
-  err = svn_wc__get_entry(&entry, db, parent_abspath, FALSE,
-                          svn_node_dir, FALSE, scratch_pool, scratch_pool);
-  if (err)
-    {
-      if (err->apr_err != SVN_ERR_WC_MISSING)
-        return svn_error_return(err);
-      svn_error_clear(err);
-
-      /* We walked off the top of a working copy.  */
-      *tree_conflict = NULL;
-      return SVN_NO_ERROR;
-    }
-
-  SVN_ERR(svn_wc__read_tree_conflicts(&conflicts, entry->tree_conflict_data,
-                                      svn_dirent_dirname(victim_abspath,
-                                                         scratch_pool),
-                                      result_pool));
-
-  *tree_conflict = apr_hash_get(conflicts,
-                                svn_dirent_basename(victim_abspath,
-                                                    scratch_pool),
-                                APR_HASH_KEY_STRING);
-
-  return SVN_NO_ERROR;
+  return svn_error_return(svn_wc__db_op_get_tree_conflict(tree_conflict,
+                                                          db, victim_abspath,
+                                                          result_pool,
+                                                          scratch_pool));
 }

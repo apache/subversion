@@ -2963,6 +2963,77 @@ svn_wc__db_op_invalidate_last_mod_time(svn_wc__db_t *db,
 
 
 svn_error_t *
+svn_wc__db_op_get_tree_conflict(svn_wc_conflict_description_t **tree_conflict,
+                                svn_wc__db_t *db,
+                                const char *local_abspath,
+                                apr_pool_t *result_pool,
+                                apr_pool_t *scratch_pool)
+{
+  svn_wc__db_pdh_t *pdh;
+  const char *local_relpath;
+  svn_sqlite__stmt_t *stmt;
+  const char *parent_abspath;
+  svn_boolean_t have_row;
+  const char *tree_conflict_data;
+  apr_hash_t *conflicts;
+  svn_error_t *err;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+  parent_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
+
+  err = parse_local_abspath(&pdh, &local_relpath, db, parent_abspath,
+                            svn_sqlite__mode_readwrite,
+                            scratch_pool, scratch_pool);
+  if (err && err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY)
+    {
+       /* We walked off the top of a working copy.  */
+       svn_error_clear(err);
+       *tree_conflict = NULL;
+       return SVN_NO_ERROR;
+    }
+  else if (err)
+    return err;
+
+  /* ### f13: just remove the row from the CONFLICT_VICTIM table, rather than
+     ### all this parsing, unparsing garbage. */
+
+  /* Get the conflict information for the parent of LOCAL_ABSPATH. */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb, 
+                                    STMT_SELECT_ACTUAL_NODE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id, local_relpath));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+
+  /* No ACTUAL node, no conflict info, no problem. */
+  if (!have_row)
+    {
+      *tree_conflict = NULL;
+      SVN_ERR(svn_sqlite__reset(stmt));
+      return SVN_NO_ERROR;
+    }
+
+  tree_conflict_data = svn_sqlite__column_text(stmt, 5, scratch_pool);
+  SVN_ERR(svn_sqlite__reset(stmt));
+
+  /* No tree conflict data?  no problem. */
+  if (tree_conflict_data == NULL)
+    {
+      *tree_conflict = NULL;
+      return SVN_NO_ERROR;
+    }
+
+  SVN_ERR(svn_wc__read_tree_conflicts(&conflicts, tree_conflict_data,
+                                      parent_abspath, result_pool));
+
+  *tree_conflict = apr_hash_get(conflicts,
+                                svn_dirent_basename(local_abspath,
+                                                    scratch_pool),
+                                APR_HASH_KEY_STRING);
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
 svn_wc__db_read_info(svn_wc__db_status_t *status,
                      svn_wc__db_kind_t *kind,
                      svn_revnum_t *revision,
