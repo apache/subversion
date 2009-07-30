@@ -8,6 +8,7 @@
 #include <apr_tables.h>
 
 #include "svn_pools.h"
+#include "svn_hash.h"
 #include "svn_types.h"
 #include "svn_wc.h"
 #include "private/svn_wc_private.h"
