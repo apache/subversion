@@ -351,84 +351,6 @@ test_write_invalid_tree_conflicts(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
-static svn_error_t *
-test_exists_0(apr_pool_t *pool)
-{
-  apr_array_header_t *conflicts;
-
-  conflicts = apr_array_make(pool, 0,
-      sizeof(svn_wc_conflict_description_t *));
-
-  if (svn_wc__tree_conflict_exists(conflicts, "Foo.c", pool))
-    return fail(pool, "Bogus TRUE result searching for tree conflict");
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-test_exists_1(apr_pool_t *pool)
-{
-  svn_wc_conflict_description_t *conflict;
-  apr_array_header_t *conflicts;
-
-  conflict = svn_wc_conflict_description_create_tree("Foo.c", NULL,
-                                                     svn_node_file,
-                                                     svn_wc_operation_update,
-                                                     NULL, NULL, pool);
-  conflict->action = svn_wc_conflict_action_delete;
-  conflict->reason = svn_wc_conflict_reason_edited;
-
-  conflicts = apr_array_make(pool, 0,
-      sizeof(svn_wc_conflict_description_t *));
-  APR_ARRAY_PUSH(conflicts, svn_wc_conflict_description_t *) = conflict;
-
-  if (! svn_wc__tree_conflict_exists(conflicts, "Foo.c", pool))
-    return fail(pool, "Failed to find tree conflict");
-
-  if (svn_wc__tree_conflict_exists(conflicts, "not there", pool))
-    return fail(pool, "Bogus TRUE result searching for tree conflict");
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-test_exists_2(apr_pool_t *pool)
-{
-  svn_wc_conflict_description_t *conflict1, *conflict2;
-  apr_array_header_t *conflicts;
-
-  conflict1 = svn_wc_conflict_description_create_tree("Foo.c", NULL,
-                                                      svn_node_file,
-                                                      svn_wc_operation_update,
-                                                      NULL, NULL, pool);
-  conflict1->action = svn_wc_conflict_action_delete;
-  conflict1->reason = svn_wc_conflict_reason_edited;
-
-  conflict2 = svn_wc_conflict_description_create_tree("Bar.h", NULL,
-                                                      svn_node_file,
-                                                      svn_wc_operation_update,
-                                                      NULL, NULL, pool);
-  conflict2->action = svn_wc_conflict_action_edit;
-  conflict2->reason = svn_wc_conflict_reason_deleted;
-
-  conflicts = apr_array_make(pool, 0,
-                             sizeof(svn_wc_conflict_description_t *));
-  APR_ARRAY_PUSH(conflicts, svn_wc_conflict_description_t *) = conflict1;
-  APR_ARRAY_PUSH(conflicts, svn_wc_conflict_description_t *) = conflict2;
-
-
-  if (! svn_wc__tree_conflict_exists(conflicts, "Foo.c", pool))
-    return fail(pool, "Failed to find 1st tree conflict");
-
-  if (! svn_wc__tree_conflict_exists(conflicts, "Bar.h", pool))
-    return fail(pool, "Failed to find 2nd tree conflict");
-
-  if (svn_wc__tree_conflict_exists(conflicts, "not there", pool))
-    return fail(pool, "Bogus TRUE result searching for tree conflict");
-
-  return SVN_NO_ERROR;
-}
-
 
 /* The test table.  */
 
@@ -447,12 +369,6 @@ struct svn_test_descriptor_t test_funcs[] =
                    "write 2 tree conflicts"),
     SVN_TEST_PASS2(test_write_invalid_tree_conflicts,
                    "detect broken tree conflict data while writing"),
-    SVN_TEST_PASS2(test_exists_0,
-                   "search for victim in array of 0 conflicts"),
-    SVN_TEST_PASS2(test_exists_1,
-                   "search for victim in array of 1 conflict"),
-    SVN_TEST_PASS2(test_exists_2,
-                   "search for victim in array of 2 conflicts"),
     SVN_TEST_NULL
   };
 

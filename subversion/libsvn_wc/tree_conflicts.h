@@ -112,19 +112,6 @@ svn_wc__write_tree_conflicts(const char **conflict_data,
                              apr_hash_t *conflicts,
                              apr_pool_t *pool);
 
-/*
- * Search in CONFLICTS (an array of svn_wc_conflict_description_t tree
- * conflicts) for a conflict with the given VICTIM_BASENAME.
- *
- * This function is used in a unit test in tests/libsvn_wc.
- *
- * @since New in 1.6.
- */
-svn_boolean_t
-svn_wc__tree_conflict_exists(const apr_array_header_t *conflicts,
-                             const char *victim_basename,
-                             apr_pool_t *pool);
-
 
 /* See svn_wc__get_tree_conflict() in svn_wc_private.h. */
 svn_error_t *
