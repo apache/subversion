@@ -278,7 +278,7 @@ test_write_invalid_tree_conflicts(apr_pool_t *pool)
     return fail(pool,
                 "Failed to detect blank conflict victim path");
   svn_error_clear(err);
-  apr_hash_clear(conflicts);
+  svn_hash__clear(conflicts);
 
   /* node_kind */
   conflict = svn_wc_conflict_description_create_tree("Foo", NULL,
@@ -295,7 +295,7 @@ test_write_invalid_tree_conflicts(apr_pool_t *pool)
     return fail(pool,
                 "Failed to detect invalid conflict node_kind");
   svn_error_clear(err);
-  apr_hash_clear(conflicts);
+  svn_hash__clear(conflicts);
 
   /* operation */
   conflict = svn_wc_conflict_description_create_tree("Foo.c", NULL,
@@ -312,7 +312,7 @@ test_write_invalid_tree_conflicts(apr_pool_t *pool)
     return fail(pool,
                 "Failed to detect invalid conflict operation");
   svn_error_clear(err);
-  apr_hash_clear(conflicts);
+  svn_hash__clear(conflicts);
 
   /* action */
   conflict = svn_wc_conflict_description_create_tree("Foo.c", NULL,
@@ -329,7 +329,7 @@ test_write_invalid_tree_conflicts(apr_pool_t *pool)
     return fail(pool,
                 "Failed to detect invalid conflict action");
   svn_error_clear(err);
-  apr_hash_clear(conflicts);
+  svn_hash__clear(conflicts);
 
   /* reason */
   conflict = svn_wc_conflict_description_create_tree("Foo.c", NULL,
@@ -346,7 +346,7 @@ test_write_invalid_tree_conflicts(apr_pool_t *pool)
     return fail(pool,
                 "Failed to detect invalid conflict reason");
   svn_error_clear(err);
-  apr_hash_clear(conflicts);
+  svn_hash__clear(conflicts);
 
   return SVN_NO_ERROR;
 }
