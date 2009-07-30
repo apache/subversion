@@ -159,7 +159,7 @@ struct log_runner
   svn_boolean_t rerun;
   svn_wc_adm_access_t *adm_access;  /* the dir in which all this happens */
   svn_boolean_t tree_conflicts_added;
-  apr_array_header_t *tree_conflicts; /* array of pointers to
+  apr_hash_t *tree_conflicts;         /* hash of pointers to
                                          svn_wc_conflict_description_t. */
   /* Which top-level log element we're on for this logfile.  Some
      callers care whether a failure happened on the first element or
@@ -1343,30 +1343,31 @@ static svn_error_t *
 log_do_add_tree_conflict(struct log_runner *loggy,
                          const char **atts)
 {
-  apr_array_header_t *new_conflicts;
+  apr_hash_t *new_conflicts;
   const svn_wc_conflict_description_t *new_conflict;
   const char *dir_path = svn_wc_adm_access_path(loggy->adm_access);
+  apr_hash_index_t *hi;
 
   /* Convert the text data to a conflict. */
   SVN_ERR(svn_wc__read_tree_conflicts(&new_conflicts,
                             svn_xml_get_attr_value(SVN_WC__LOG_ATTR_DATA, atts),
                                       dir_path, loggy->pool));
-  new_conflict = APR_ARRAY_IDX(new_conflicts, 0,
-                               svn_wc_conflict_description_t *);
+  hi = apr_hash_first(loggy->pool, new_conflicts);
+  new_conflict = svn_apr_hash_index_val(hi);
 
   /* Ignore any attempt to re-add an existing tree conflict, as loggy
      operations are idempotent. */
-  if (! svn_wc__tree_conflict_exists(loggy->tree_conflicts,
-                                     svn_dirent_basename(new_conflict->path,
-                                                       loggy->pool),
-                                     loggy->pool))
+  if (apr_hash_get(loggy->tree_conflicts, 
+                   svn_dirent_basename(new_conflict->path, loggy->pool),
+                   APR_HASH_KEY_STRING) == NULL)
     {
       /* Copy the new conflict to the result pool.  Add its pointer to
-         the array of existing conflicts. */
-      APR_ARRAY_PUSH(loggy->tree_conflicts,
-                     const svn_wc_conflict_description_t *) =
+         the hash of existing conflicts. */
+      const svn_wc_conflict_description_t *duped_conflict =
                         svn_wc__conflict_description_dup(new_conflict,
                                                          loggy->result_pool);
+      apr_hash_set(loggy->tree_conflicts, duped_conflict->path,
+                   APR_HASH_KEY_STRING, duped_conflict);
 
       loggy->tree_conflicts_added = TRUE;
     }
@@ -2165,12 +2166,11 @@ svn_wc__loggy_add_tree_conflict(svn_stringbuf_t **log_accum,
                                 apr_pool_t *pool)
 {
   const char *conflict_data;
-  apr_array_header_t *conflicts;
+  apr_hash_t *conflicts;
 
   /* ### TODO: implement write_one_tree_conflict(). */
-  conflicts = apr_array_make(pool, 1,
-      sizeof(svn_wc_conflict_description_t *));
-  APR_ARRAY_PUSH(conflicts, const svn_wc_conflict_description_t *) = conflict;
+  conflicts = apr_hash_make(pool);
+  apr_hash_set(conflicts, conflict->path, APR_HASH_KEY_STRING, conflict);
 
   SVN_ERR(svn_wc__write_tree_conflicts(&conflict_data, conflicts, pool));
 

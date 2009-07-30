@@ -606,16 +606,17 @@ migrate_single_tree_conflict_data(svn_sqlite__stmt_t *insert_stmt,
                                   const char *local_relpath,
                                   apr_pool_t *scratch_pool)
 {
-  apr_array_header_t *conflicts;
-  int i;
+  apr_hash_t *conflicts;
+  apr_hash_index_t *hi;
 
   SVN_ERR(svn_wc__read_tree_conflicts(&conflicts, tree_conflict_data,
                                       local_relpath, scratch_pool));
 
-  for (i = 0; i < conflicts->nelts; i++)
+  for (hi = apr_hash_first(scratch_pool, conflicts); hi;
+                                                    hi = apr_hash_next(hi))
     {
-      svn_wc_conflict_description_t *conflict = 
-        APR_ARRAY_IDX(conflicts, i, svn_wc_conflict_description_t *);
+      const svn_wc_conflict_description_t *conflict =
+          svn_apr_hash_index_val(hi);
       const char *conflict_relpath = conflict->path;
       apr_int64_t left_repos_id;
       apr_int64_t right_repos_id;

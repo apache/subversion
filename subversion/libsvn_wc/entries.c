@@ -3357,18 +3357,17 @@ visit_tc_too_found_entry(const char *path,
       /* We're supposed to check the children of this directory. However,
        * in case of svn_depth_files, don't visit directories. */
 
-      apr_array_header_t *conflicts;
-      int i;
+      apr_hash_t *conflicts;
+      apr_hash_index_t *hi;
 
       /* Loop through all the tree conflict victims */
       SVN_ERR(svn_wc__read_tree_conflicts(&conflicts,
                                           entry->tree_conflict_data, path,
                                           pool));
-
-      for (i = 0; i < conflicts->nelts; i++)
+      for (hi = apr_hash_first(pool, conflicts); hi; hi = apr_hash_next(hi))
         {
-          const svn_wc_conflict_description_t *conflict
-            = APR_ARRAY_IDX(conflicts, i, svn_wc_conflict_description_t *);
+          const svn_wc_conflict_description_t *conflict =
+              svn_apr_hash_index_val(hi);
           const char *child_abspath;
           svn_boolean_t visit_child = FALSE;
           svn_wc__db_kind_t kind;

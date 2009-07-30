@@ -97,9 +97,9 @@ svn_wc__loggy_del_tree_conflict(svn_stringbuf_t **log_accum,
  *
  * Set *CONFLICT_DATA to a string, allocated in POOL, that encodes the tree
  * conflicts in CONFLICTS in a form suitable for storage in a single string
- * field in a WC entry. CONFLICTS is an array of zero or more pointers to
- * svn_wc_conflict_description_t objects. All of the conflict victim paths
- * must be siblings.
+ * field in a WC entry. CONFLICTS is a hash of zero or more pointers to
+ * svn_wc_conflict_description_t objects, index by their basenames. All of the
+ * conflict victim paths must be siblings.
  *
  * Do all allocations in POOL.
  *
@@ -109,7 +109,7 @@ svn_wc__loggy_del_tree_conflict(svn_stringbuf_t **log_accum,
  */
 svn_error_t *
 svn_wc__write_tree_conflicts(const char **conflict_data,
-                             apr_array_header_t *conflicts,
+                             apr_hash_t *conflicts,
                              apr_pool_t *pool);
 
 /*

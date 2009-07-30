@@ -234,8 +234,8 @@ bail_on_tree_conflicted_children(const char *path,
                                  apr_hash_t *changelists,
                                  apr_pool_t *pool)
 {
-  apr_array_header_t *conflicts;
-  int i;
+  apr_hash_t *conflicts;
+  apr_hash_index_t *hi;
 
   if ((depth == svn_depth_empty)
       || (entry->kind != svn_node_dir)
@@ -246,12 +246,10 @@ bail_on_tree_conflicted_children(const char *path,
   SVN_ERR(svn_wc__read_tree_conflicts(&conflicts, entry->tree_conflict_data,
                                       path, pool));
 
-  for (i = 0; i < conflicts->nelts; i++)
+  for (hi = apr_hash_first(pool, conflicts); hi; hi = apr_hash_next(hi))
     {
-      const svn_wc_conflict_description_t *conflict;
-
-      conflict = APR_ARRAY_IDX(conflicts, i,
-                               svn_wc_conflict_description_t *);
+      const svn_wc_conflict_description_t *conflict =
+          svn_apr_hash_index_val(hi);
 
       if ((conflict->node_kind == svn_node_dir) &&
           (depth == svn_depth_files))

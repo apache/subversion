@@ -874,8 +874,7 @@ get_dir_status(struct edit_baton *eb,
   apr_hash_t *dirents;
   apr_array_header_t *patterns = NULL;
   apr_pool_t *iterpool, *subpool = svn_pool_create(pool);
-  apr_array_header_t *tree_conflicts;
-  int j;
+  apr_hash_t *tree_conflicts;
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
@@ -1071,15 +1070,13 @@ get_dir_status(struct edit_baton *eb,
                                       dir_entry->tree_conflict_data,
                                       path, subpool));
 
-  for (j = 0; j < tree_conflicts->nelts; j++)
+  for (hi = apr_hash_first(pool, tree_conflicts); hi; hi = apr_hash_next(hi))
     {
-      svn_wc_conflict_description_t *conflict;
+      const svn_wc_conflict_description_t *conflict =
+          svn_apr_hash_index_val(hi);
       char *tree_basename;
 
       svn_pool_clear(iterpool);
-
-      conflict = APR_ARRAY_IDX(tree_conflicts, j,
-                               svn_wc_conflict_description_t *);
 
       /* Skip versioned and non-versioned things. */
       tree_basename = svn_dirent_basename(conflict->path, iterpool);
