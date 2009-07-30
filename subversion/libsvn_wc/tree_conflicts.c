@@ -502,9 +502,8 @@ svn_wc__add_tree_conflict(const svn_wc_conflict_description_t *conflict,
   SVN_ERR(svn_dirent_get_absolute(&conflict_abspath, conflict->path, pool));
 
   /* Re-adding an existing tree conflict victim is an error. */
-  SVN_ERR(svn_wc__internal_get_tree_conflict(&existing_conflict,
-                                             conflict_abspath, db,
-                                             pool, pool));
+  SVN_ERR(svn_wc__db_op_get_tree_conflict(&existing_conflict, db,
+                                          conflict_abspath, pool, pool));
   if (existing_conflict != NULL)
     return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
                          _("Attempt to add tree conflict that already exists"));
@@ -575,24 +574,9 @@ svn_wc__get_tree_conflict(svn_wc_conflict_description_t **tree_conflict,
 {
   SVN_ERR_ASSERT(svn_dirent_is_absolute(victim_abspath));
 
-  return svn_error_return(svn_wc__internal_get_tree_conflict(
-                            tree_conflict,
-                            victim_abspath,
-                            wc_ctx->db,
-                            result_pool,
-                            scratch_pool));
-}
-
-
-svn_error_t *
-svn_wc__internal_get_tree_conflict(svn_wc_conflict_description_t **tree_conflict,
-                                   const char *victim_abspath,
-                                   svn_wc__db_t *db,
-                                   apr_pool_t *result_pool,
-                                   apr_pool_t *scratch_pool)
-{
   return svn_error_return(svn_wc__db_op_get_tree_conflict(tree_conflict,
-                                                          db, victim_abspath,
+                                                          wc_ctx->db,
+                                                          victim_abspath,
                                                           result_pool,
                                                           scratch_pool));
 }

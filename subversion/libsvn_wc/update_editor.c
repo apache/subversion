@@ -1807,8 +1807,8 @@ already_in_a_tree_conflict(const char **victim_path,
 
       svn_pool_clear(iterpool);
       SVN_ERR(svn_dirent_get_absolute(&ancestor_abspath, ancestor, iterpool));
-      SVN_ERR(svn_wc__internal_get_tree_conflict(&conflict, ancestor_abspath,
-                                                 db, pool, iterpool));
+      SVN_ERR(svn_wc__db_op_get_tree_conflict(&conflict, db, ancestor_abspath,
+                                              pool, iterpool));
       if (conflict != NULL)
         {
           *victim_path = ancestor;
