@@ -204,3 +204,18 @@ VII) For the 'Implicit Mergeinfo Query Problem' why not just rely on the
      preferable and this change was implemented in r38417.  This may not be
      the end of the story here, but for now the 'Implicit Mergeinfo Query
      Problem' is solved.
+
+IIX) For the 'Inoperative Editor Drive Problem'
+
+     Use svn_ra_get_log2() to determine if the revisions that appear to be
+     needed for each subtree (though not for the root of the merge) are in
+     fact inoperative.  If a given revision has already been merged to the
+     subtrees it could affect, per those subtrees' mergeinfo, then there is
+     no need to try and merge that revision, potentially avoiding inoperative
+     editor drives.
+
+     Of course this does entail a performance hit for the log call, but we'd
+     only have to make this call once per merge source segment.  Also, we can
+     avoid the call completely if there is no subtree mergeinfo or the root
+     and all the subtrees need the *same* revisions merged (so the feature
+     branch use case would not typically be affected).
