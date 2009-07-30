@@ -314,8 +314,8 @@ assemble_status(svn_wc_status2_t **status,
   /* Find out whether the path is a tree conflict victim.
    * This function will set tree_conflict to NULL if the path
    * is not a victim. */
-  SVN_ERR(svn_wc__internal_get_tree_conflict(&tree_conflict, local_abspath, db,
-                                             pool, pool));
+  SVN_ERR(svn_wc__db_op_get_tree_conflict(&tree_conflict, db, local_abspath,
+                                          pool, pool));
 
   if (! entry)
     {
@@ -987,8 +987,8 @@ get_dir_status(struct edit_baton *eb,
           SVN_ERR(svn_dirent_get_absolute(&abspath,
                                           svn_dirent_join(path, entry, subpool),
                                           subpool));
-          SVN_ERR(svn_wc__internal_get_tree_conflict(&tree_conflict, abspath,
-                                                     db, subpool, subpool));
+          SVN_ERR(svn_wc__db_op_get_tree_conflict(&tree_conflict, db, abspath,
+                                                  subpool, subpool));
           if (tree_conflict)
             {
               /* A tree conflict will block commit, so we'll pass TRUE

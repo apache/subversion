@@ -515,9 +515,8 @@ svn_wc__internal_conflicted_p(svn_boolean_t *text_conflicted_p,
     {
       svn_wc_conflict_description_t *conflict;
 
-      SVN_ERR(svn_wc__internal_get_tree_conflict(&conflict, local_abspath,
-                                                 db, scratch_pool,
-                                                 scratch_pool));
+      SVN_ERR(svn_wc__db_op_get_tree_conflict(&conflict, db, local_abspath,
+                                              scratch_pool, scratch_pool));
       *tree_conflicted_p = (conflict != NULL);
     }
 
