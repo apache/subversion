@@ -7334,7 +7334,12 @@ def merge_away_subtrees_noninheritable_ranges(sbox):
   # Merge all available changes from A to A_COPY at --depth files. Only the
   # mergeinfo on A_COPY and its file children should be affected.
   svntest.actions.run_and_verify_svn(None, None, [], 'revert', '-R', wc_dir)
-  expected_output = expected_merge_output([[2,13],[9,13]],
+  # Revisions 2-13 are already merged to A_COPY and now they will be merged
+  # to A_COPY's file children.  Due to the way we drive the merge editor
+  # r2-3, which are inoperative on A_COPY's file children, do not show up
+  # in the merge notifications, although those revs are included in the
+  # recorded mergeinfo.
+  expected_output = expected_merge_output([[4,13],[9,13]],
                                           ['UU   %s\n' % (mu_COPY_path),
                                            'A    %s\n' % (nu_COPY_path)])
   svntest.actions.run_and_verify_svn(None, expected_output, [],
@@ -14981,28 +14986,6 @@ def reintegrate_with_subtree_mergeinfo(sbox):
   expected_status.add({'A/D/gamma_moved' : Item(status='  ', wc_rev=16)})
 
   # r17 - B) Synch merge from A to A_COPY
-  ### The fractured mergeinfo on A_COPY/mu brought about by the changes on
-  ### the http://svn.collab.net/repos/svn/branches/subtree-mergeinfo branch
-  ### is breaking this synch merge in a previously unseen way.  Instead of
-  ### cleanly deleting  A_COPY/D/gamma we now get a tree conflict
-  ###
-  ### merge_tests-125>svn merge ^^/A A_COPY
-  ### --- Merging r8 into 'A_COPY\D':
-  ### U    A_COPY\D\H\omega
-  ### --- Merging r13 through r16 into 'A_COPY\D':
-  ### A    A_COPY\D\gamma_moved
-  ###    C A_COPY\D\gamma
-  ### Summary of conflicts:
-  ###   Tree conflicts: 1
-  ### 
-  ### merge_tests-125>svn st
-  ###  M      A_COPY
-  ###  M      A_COPY\D
-  ###       C A_COPY\D\gamma
-  ###       >   local edit, incoming delete upon merge
-  ### M       A_COPY\D\H\omega
-  ### A  +    A_COPY\D\gamma_moved
-
   svntest.actions.run_and_verify_svn(
     None,
     expected_merge_output([[8], [13,16]],
@@ -15013,7 +14996,6 @@ def reintegrate_with_subtree_mergeinfo(sbox):
   expected_output = wc.State(
     wc_dir,
     {'A_COPY'               : Item(verb='Sending'), # Mergeinfo update
-     'A_COPY/mu'            : Item(verb='Sending'), # Mergeinfo update
      'A_COPY/D'             : Item(verb='Sending'), # Mergeinfo update
      'A_COPY/D/gamma'       : Item(verb='Deleting'),
      'A_COPY/D/gamma_moved' : Item(verb='Adding'),
@@ -15023,7 +15005,6 @@ def reintegrate_with_subtree_mergeinfo(sbox):
   expected_status.remove('A_COPY/D/gamma')
 
   expected_status.tweak('A_COPY',
-                        'A_COPY/mu',
                         'A_COPY/D',
                         'A_COPY/D/H/omega',
                         wc_rev=17)
@@ -15052,12 +15033,10 @@ def reintegrate_with_subtree_mergeinfo(sbox):
   expected_output = wc.State(
     wc_dir,
     {'A_COPY'               : Item(verb='Sending'), # Mergeinfo update
-     'A_COPY/mu'            : Item(verb='Sending'), # Mergeinfo update
      'A_COPY/D'             : Item(verb='Sending'), # Mergeinfo update
      'A_COPY/D/gamma_moved' : Item(verb='Sending'), # Text change
      })
   expected_status.tweak('A_COPY',
-                        'A_COPY/mu',
                         'A_COPY/D',
                         'A_COPY/D/gamma_moved',
                         wc_rev=19)
