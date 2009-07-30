@@ -2962,6 +2962,7 @@ Additionally clear the psvn-extra-info field in all line-info lists."
         (setq marked-count (+ marked-count 1)))
       (setq overlay (make-overlay start-pos (point)))
       (overlay-put overlay 'svn-info (car st-info))
+      (overlay-put overlay 'evaporate t)
       (setq st-info (cdr st-info)))
     ;; Insert status information at the buffer beginning
     (goto-char (point-min))
@@ -4370,7 +4371,8 @@ static char * data[] = {
 
 (defsubst svn-status-in-vc-mode? ()
   "Is vc-svn active?"
-  (and vc-mode (string-match "^ SVN" (svn-substring-no-properties vc-mode))))
+  (if (and (boundp 'vc-mode) vc-mode)
+      (string-match "^ SVN" (svn-substring-no-properties vc-mode))))
 
 (when svn-status-fancy-file-state-in-modeline
   (defadvice vc-find-file-hook (after svn-status-vc-svn-find-file-hook activate)

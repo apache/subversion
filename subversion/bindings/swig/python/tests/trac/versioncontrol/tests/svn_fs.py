@@ -51,7 +51,7 @@ class SubversionRepositoryTestSetup(TestSetup):
 
     def setUp(self):
         dumpfile = open(os.path.join(os.path.split(__file__)[0],
-                                     'svnrepos.dump'))
+                                     'svnrepos.dump'), 'rb')
 
         # Remove the trac-svnrepos directory, so that we can
         # ensure a fresh start.

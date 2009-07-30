@@ -247,6 +247,12 @@ def patch_unidiff(sbox):
     "-\n",
     "-Again, we wish to congratulate you over your email success in our\n",
     "-computer Balloting.\n",
+    "Index: A/B/E/beta\n",
+    "===================================================================\n",
+    "--- A/B/E/beta	(revision 1)\n",
+    "+++ A/B/E/beta	(working copy)\n",
+    "@@ -1 +0,0 @@\n",
+    "-This is the file 'beta'.\n",
   ]
 
   svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
@@ -286,6 +292,7 @@ def patch_unidiff(sbox):
     'U    %s\n' % os.path.join(wc_dir, 'iota'),
     'A    %s\n' % os.path.join(wc_dir, 'new'),
     'U    %s\n' % os.path.join(wc_dir, 'A', 'mu'),
+    'D    %s\n' % os.path.join(wc_dir, 'A', 'B', 'E', 'beta'),
   ]
 
   expected_disk = svntest.main.greek_state.copy()
@@ -293,12 +300,14 @@ def patch_unidiff(sbox):
   expected_disk.tweak('iota', contents=iota_contents)
   expected_disk.add({'new' : Item(contents=new_contents)})
   expected_disk.tweak('A/mu', contents=''.join(mu_contents))
+  expected_disk.remove('A/B/E/beta')
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/D/gamma', status='M ')
   expected_status.tweak('iota', status='M ')
   expected_status.add({'new' : Item(status='A ', wc_rev=0)})
   expected_status.tweak('A/mu', status='M ', wc_rev=2)
+  expected_status.tweak('A/B/E/beta', status='D ')
 
   expected_skip = wc.State('', { })
 

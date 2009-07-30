@@ -299,6 +299,7 @@ switch_file_external(const char *path,
   apr_pool_t *subpool = svn_pool_create(pool);
   svn_wc_adm_access_t *target_adm_access;
   const char *anchor;
+  const char *anchor_abspath;
   const char *target;
   const svn_wc_entry_t *entry;
   svn_config_t *cfg = ctx->config ? apr_hash_get(ctx->config,
@@ -313,6 +314,7 @@ switch_file_external(const char *path,
 
   /* There must be a working copy to place the file external into. */
   SVN_ERR(svn_wc_get_actual_target(path, &anchor, &target, subpool));
+  SVN_ERR(svn_dirent_get_absolute(&anchor_abspath, anchor, subpool));
 
   /* Try to get a access baton for the anchor using the input access
      baton.  If this fails and returns SVN_ERR_WC_NOT_LOCKED, then try
@@ -394,9 +396,9 @@ switch_file_external(const char *path,
          external to be added when one exists. */
       SVN_ERR(svn_wc__entry_versioned(&anchor_dir_entry, anchor,
                                       target_adm_access, FALSE, subpool));
-      SVN_ERR(svn_wc_conflicted_p2(&text_conflicted, &prop_conflicted,
-                                   &tree_conflicted, anchor, target_adm_access,
-                                   subpool));
+      SVN_ERR(svn_wc_conflicted_p3(&text_conflicted, &prop_conflicted,
+                                   &tree_conflicted, ctx->wc_ctx,
+                                   anchor_abspath, subpool));
       if (text_conflicted || prop_conflicted || tree_conflicted)
         return svn_error_createf
           (SVN_ERR_WC_FOUND_CONFLICT, 0,
