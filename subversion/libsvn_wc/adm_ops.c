@@ -2357,18 +2357,19 @@ revert_internal(svn_wc__db_t *db,
 
       /* Visit any unversioned children that are tree conflict victims. */
       {
-        int i;
-        apr_array_header_t *conflicts;
+        apr_hash_t *conflicts;
+        apr_hash_index_t *hi2;
 
         /* Loop through all the tree conflict victims */
         SVN_ERR(svn_wc__read_tree_conflicts(&conflicts,
                                             entry->tree_conflict_data,
                                             path, pool));
 
-        for (i = 0; i < conflicts->nelts; i++)
+        for (hi2 = apr_hash_first(pool, conflicts); hi2;
+                                                     hi2 = apr_hash_next(hi2))
           {
-            svn_wc_conflict_description_t *conflict
-              = APR_ARRAY_IDX(conflicts, i, svn_wc_conflict_description_t *);
+            const svn_wc_conflict_description_t *conflict =
+            svn_apr_hash_index_val(hi2);
 
             /* If this victim is not in this dir's entries ... */
             if (apr_hash_get(entries,
