@@ -368,7 +368,7 @@ static const char * const statements[] = {
 
   /* STMT_UPDATE_BASE_LAST_MOD_TIME */
   "update base_node set last_mod_time = ?3 "
-  "where repos_id = ?1 and local_relpath = ?2;",
+  "where wc_id = ?1 and local_relpath = ?2;",
 
   NULL
 };
