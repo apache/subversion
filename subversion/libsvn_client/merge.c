@@ -7369,33 +7369,11 @@ do_directory_merge(const char *url1,
                                             source_root_url, TRUE, NULL,
                                             NULL, pool));
 
-#if SVN_DEBUG
-{
-  struct tm *local;
-  time_t t;
-  t = time(NULL);
-  local = localtime(&t);
-  printf("Calling get_mergeinfo_paths\n");
-  printf("Local time and date: %s\n", asctime(local));
-}
-#endif
-
   SVN_ERR(get_mergeinfo_paths(notify_b->children_with_mergeinfo, merge_b,
                               mergeinfo_path, target_entry, source_root_url,
                               url1, url2, revision1, revision2,
                               honor_mergeinfo, ra_session, adm_access,
                               depth, pool));
-
-#if SVN_DEBUG
-{
-  struct tm *local;
-  time_t t;
-  t = time(NULL);
-  local = localtime(&t);
-  printf("Done get(ing)_mergeinfo_paths\n");
-  printf("Local time and date: %s\n", asctime(local));
-}
-#endif
 
   /* The first item from the NOTIFY_B->CHILDREN_WITH_MERGEINFO is always
      the target thanks to depth-first ordering. */
