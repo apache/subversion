@@ -475,16 +475,11 @@ svn_wc__del_tree_conflict(const char *victim_path,
                           svn_wc_adm_access_t *adm_access,
                           apr_pool_t *pool)
 {
-  svn_stringbuf_t *log_accum = NULL;
+  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
+  const char *local_abspath;
 
-  SVN_ERR(svn_wc__loggy_del_tree_conflict(&log_accum, victim_path, adm_access,
-                                          pool));
-
-  if (log_accum != NULL)
-    {
-      SVN_ERR(svn_wc__write_log(adm_access, 0, log_accum, pool));
-      SVN_ERR(svn_wc__run_log(adm_access, NULL, pool));
-    }
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, victim_path, pool));
+  SVN_ERR(svn_wc__db_op_remove_tree_conflict(db, local_abspath, pool));
 
   return SVN_NO_ERROR;
 }
@@ -517,53 +512,6 @@ svn_wc__add_tree_conflict(const svn_wc_conflict_description_t *conflict,
   return SVN_NO_ERROR;
 }
 
-
-svn_error_t *
-svn_wc__loggy_del_tree_conflict(svn_stringbuf_t **log_accum,
-                                const char *victim_path,
-                                svn_wc_adm_access_t *adm_access,
-                                apr_pool_t *pool)
-{
-  const char *dir_path;
-  const svn_wc_entry_t *entry;
-  apr_hash_t *conflicts;
-  svn_wc_entry_t tmp_entry;
-  const char *victim_basename = svn_dirent_basename(victim_path, pool);
-  const svn_wc_conflict_description_t *conflict;
-
-  /* Make sure the node is a directory.
-   * Otherwise we should not have been called. */
-  dir_path = svn_wc_adm_access_path(adm_access);
-  SVN_ERR(svn_wc_entry(&entry, dir_path, adm_access, TRUE, pool));
-  SVN_ERR_ASSERT((entry != NULL) && (entry->kind == svn_node_dir));
-
-  /* Make sure that VICTIM_PATH is a child node of DIR_PATH.
-   * Anything else is a bug. */
-  SVN_ERR_ASSERT(strcmp(dir_path, svn_dirent_dirname(victim_path, pool)) == 0);
-
-  SVN_ERR(svn_wc__read_tree_conflicts(&conflicts, entry->tree_conflict_data,
-                                      dir_path, pool));
-
-  /* If CONFLICTS has a tree conflict with the same victim path as the
-   * new conflict, then remove it. */
-  conflict = apr_hash_get(conflicts, victim_basename, APR_HASH_KEY_STRING);
-  if (conflict)
-    {
-      apr_hash_set(conflicts, victim_basename, APR_HASH_KEY_STRING, NULL);
-
-      /* Rewrite the entry. */
-      SVN_ERR(svn_wc__write_tree_conflicts(&tmp_entry.tree_conflict_data,
-                                           conflicts,
-                                           pool));
-
-      SVN_ERR(svn_wc__loggy_entry_modify(log_accum, adm_access, dir_path,
-                                         &tmp_entry,
-                                         SVN_WC__ENTRY_MODIFY_TREE_CONFLICT_DATA,
-                                         pool));
-    }
-
-  return SVN_NO_ERROR;
-}
 
 svn_error_t *
 svn_wc__get_tree_conflict(svn_wc_conflict_description_t **tree_conflict,

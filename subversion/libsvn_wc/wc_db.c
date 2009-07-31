@@ -38,6 +38,7 @@
 #include "wc-metadata.h"
 #include "entries.h"
 #include "lock.h"
+#include "tree_conflicts.h"
 
 #include "svn_private_config.h"
 #include "private/svn_sqlite.h"
@@ -205,7 +206,8 @@ enum statement_keys {
   STMT_UPDATE_BASE_RECURSIVE_REPO,
   STMT_UPDATE_WORKING_RECURSIVE_COPYFROM_REPO,
   STMT_UPDATE_LOCK_REPOS_ID,
-  STMT_UPDATE_BASE_LAST_MOD_TIME
+  STMT_UPDATE_BASE_LAST_MOD_TIME,
+  STMT_UPDATE_ACTUAL_TREE_CONFLICTS
 };
 
 /* This is a character used to escape itself and the globbing character in
@@ -370,6 +372,9 @@ static const char * const statements[] = {
   "update base_node set last_mod_time = ?3 "
   "where wc_id = ?1 and local_relpath = ?2;",
 
+  /* STMT_UPDATE_ACTUAL_TREE_CONFLICTS */
+  "update actual_node set tree_conflict_data = ?3 "
+  "where wc_id = ?1 and local_relpath = ?2;",
   NULL
 };
 
@@ -2929,6 +2934,103 @@ svn_wc__db_op_mark_resolved(svn_wc__db_t *db,
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
   NOT_IMPLEMENTED();
+}
+
+
+struct remove_tc_baton
+{
+  const char *local_abspath;
+  apr_int64_t wc_id;
+  const char *local_relpath;
+  const char *parent_abspath;
+
+  apr_pool_t *scratch_pool;
+};
+
+
+static svn_error_t *
+remove_tc_txn(void *baton, svn_sqlite__db_t *sdb)
+{
+  struct remove_tc_baton *rtb = baton;
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
+  const char *tree_conflict_data;
+  apr_hash_t *conflicts;
+
+  /* ### f13: just remove the row from the CONFLICT_VICTIM table, rather than
+     ### all this parsing, unparsing garbage. (and we probably won't need a
+     ### transaction, either.)*/
+
+  /* Get the conflict information for the parent of LOCAL_ABSPATH. */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_SELECT_ACTUAL_NODE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", rtb->wc_id, rtb->local_relpath));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+
+  /* No ACTUAL node, no conflict info, no problem. */
+  if (!have_row)
+    {
+      SVN_ERR(svn_sqlite__reset(stmt));
+      return SVN_NO_ERROR;
+    }
+
+  tree_conflict_data = svn_sqlite__column_text(stmt, 5, rtb->scratch_pool);
+  SVN_ERR(svn_sqlite__reset(stmt));
+
+  /* No tree conflict data?  no problem. */
+  if (tree_conflict_data == NULL)
+    return SVN_NO_ERROR;
+
+  /* Parse the conflict data, remove the desired conflict, and then rewrite
+     the conflict data. */
+  SVN_ERR(svn_wc__read_tree_conflicts(&conflicts, tree_conflict_data,
+                                      rtb->parent_abspath, rtb->scratch_pool));
+
+  apr_hash_set(conflicts, svn_dirent_basename(rtb->local_abspath,
+                                              rtb->scratch_pool),
+               APR_HASH_KEY_STRING, NULL);
+
+  if (apr_hash_count(conflicts) > 0)
+    SVN_ERR(svn_wc__write_tree_conflicts(&tree_conflict_data, conflicts,
+                                         rtb->scratch_pool));
+  else
+    tree_conflict_data = NULL;
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
+                                    STMT_UPDATE_ACTUAL_TREE_CONFLICTS));
+  SVN_ERR(svn_sqlite__bindf(stmt, "iss", rtb->wc_id, rtb->local_relpath,
+                            tree_conflict_data));
+
+  SVN_ERR(svn_sqlite__step_done(stmt));
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc__db_op_remove_tree_conflict(svn_wc__db_t *db,
+                                   const char *local_abspath,
+                                   apr_pool_t *scratch_pool)
+{
+  svn_wc__db_pdh_t *pdh;
+  struct remove_tc_baton rtb;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+  rtb.parent_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
+
+  SVN_ERR(parse_local_abspath(&pdh, &rtb.local_relpath, db, rtb.parent_abspath,
+                              svn_sqlite__mode_readwrite,
+                              scratch_pool, scratch_pool));
+
+  rtb.local_abspath = local_abspath;
+  rtb.wc_id = pdh->wcroot->wc_id;
+  rtb.scratch_pool = scratch_pool;
+
+  SVN_ERR(svn_sqlite__with_transaction(pdh->wcroot->sdb, remove_tc_txn, &rtb));
+
+  /* There may be some entries, and the lock info is now out of date.  */
+  flush_entries(pdh);
+
+  return SVN_NO_ERROR;
 }
 
 
