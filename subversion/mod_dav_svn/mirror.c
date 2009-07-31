@@ -135,6 +135,12 @@ apr_status_t dav_svn__location_in_filter(ap_filter_t *f,
         return ap_get_brigade(f->next, bb, mode, block, readbytes);
     }
 
+    /* ### FIXME: While we want to fix up any locations in proxied XML
+       ### requests, we do *not* want to be futzing with versioned (or
+       ### to-be-versioned) data, such as the file contents present in
+       ### PUT requests and properties in PROPPATCH requests.
+       ### See issue #3445 for details. */
+
     if (!f->ctx) {
         ctx = f->ctx = apr_pcalloc(r->pool, sizeof(*ctx));
 
@@ -229,6 +235,12 @@ apr_status_t dav_svn__location_body_filter(ap_filter_t *f,
         ap_remove_output_filter(f);
         return ap_pass_brigade(f->next, bb);
     }
+
+    /* ### FIXME: GET and PROPFIND requests that make it here must be
+       ### referring to data inside commit transactions-in-progress.
+       ### We've got to be careful not to munge the versioned data
+       ### they return in the process of trying to do URI fix-ups.
+       ### See issue #3445 for details. */
 
     if (!f->ctx) {
         ctx = f->ctx = apr_pcalloc(r->pool, sizeof(*ctx));
