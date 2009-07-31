@@ -479,7 +479,7 @@ svn_wc__del_tree_conflict(const char *victim_path,
   const char *local_abspath;
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, victim_path, pool));
-  SVN_ERR(svn_wc__db_op_remove_tree_conflict(db, local_abspath, pool));
+  SVN_ERR(svn_wc__db_op_set_tree_conflict(db, local_abspath, NULL, pool));
 
   return SVN_NO_ERROR;
 }
