@@ -7144,8 +7144,12 @@ log_noop_revs(void *baton,
    RA_SESSION is the session for the younger of URL1@REVISION1 and
    URL2@REVISION2.
 
-   For each subtree in NOTIFY_B->CHILDREN_WITH_MERGEINFO, remove any
-   inoperative ranges from the subtree's REMAINING_RANGES.
+   Find all the ranges required by subtrees in
+   NOTIFY_B->CHILDREN_WITH_MERGEINFO that are *not* required by
+   MERGE_B->TARGET (i.e. NOTIFY_B->CHILDREN_WITH_MERGEINFO[0]).  If such
+   ranges exist, then find any subset of ranges which, if merged, would be
+   inoperative.  Finally, if any inoperative ranges are found then remove
+   these ranges from all of the subtree's REMAINING_RANGES.
 
    This function should only be called when honoring mergeinfo during
    forward merges.
@@ -7230,10 +7234,13 @@ remove_noop_subtree_ranges(const char *url1,
 
           if (subtree_gap_ranges->nelts)
             {
+              /* One or more subtrees need some revisions that the target
+                 doesn't need.  Use log to determine if any of these
+                 revisions are inoperative. */
               log_noop_baton_t log_gap_baton;
-              svn_merge_range_t *r1 =
+              svn_merge_range_t *oldest_gap_rev =
                 APR_ARRAY_IDX(subtree_gap_ranges, 0, svn_merge_range_t *);
-              svn_merge_range_t *r2 =
+              svn_merge_range_t *youngest_gap_rev =
                 APR_ARRAY_IDX(subtree_gap_ranges,
                               subtree_gap_ranges->nelts - 1,
                               svn_merge_range_t *);
@@ -7252,14 +7259,17 @@ remove_noop_subtree_ranges(const char *url1,
 
               APR_ARRAY_PUSH(log_targets, const char *) = "";
 
-              SVN_ERR(svn_ra_get_log2(ra_session, log_targets, r2->end,
-                                      r1->start + 1, 0, TRUE, TRUE, FALSE,
+              SVN_ERR(svn_ra_get_log2(ra_session, log_targets,
+                                      youngest_gap_rev->end,
+                                      oldest_gap_rev->start + 1,
+                                      0, TRUE, TRUE, FALSE,
                                       apr_array_make(scratch_pool, 0,
                                                      sizeof(const char *)),
                                       log_noop_revs, &log_gap_baton,
                                       scratch_pool));
 
-              inoperative_ranges = init_rangelist(r1->start + 1, r2->end,
+              inoperative_ranges = init_rangelist(oldest_gap_rev->start,
+                                                  youngest_gap_rev->end,
                                                   TRUE, scratch_pool);
               SVN_ERR(svn_rangelist_remove(&(inoperative_ranges),
                                            log_gap_baton.operative_ranges,
