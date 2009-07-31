@@ -207,7 +207,8 @@ enum statement_keys {
   STMT_UPDATE_WORKING_RECURSIVE_COPYFROM_REPO,
   STMT_UPDATE_LOCK_REPOS_ID,
   STMT_UPDATE_BASE_LAST_MOD_TIME,
-  STMT_UPDATE_ACTUAL_TREE_CONFLICTS
+  STMT_UPDATE_ACTUAL_TREE_CONFLICTS,
+  STMT_INSERT_ACTUAL_TREE_CONFLICTS
 };
 
 /* This is a character used to escape itself and the globbing character in
@@ -375,6 +376,12 @@ static const char * const statements[] = {
   /* STMT_UPDATE_ACTUAL_TREE_CONFLICTS */
   "update actual_node set tree_conflict_data = ?3 "
   "where wc_id = ?1 and local_relpath = ?2;",
+
+  /* STMT_INSERT_ACTUAL_TREE_CONFLICTS */
+  "insert into actual_node ("
+  "  wc_id, local_relpath, tree_conflict_data) "
+  "values (?1, ?2, ?3);",
+
   NULL
 };
 
@@ -2943,6 +2950,7 @@ struct remove_tc_baton
   apr_int64_t wc_id;
   const char *local_relpath;
   const char *parent_abspath;
+  const svn_wc_conflict_description_t *tree_conflict;
 
   apr_pool_t *scratch_pool;
 };
@@ -2957,9 +2965,9 @@ remove_tc_txn(void *baton, svn_sqlite__db_t *sdb)
   const char *tree_conflict_data;
   apr_hash_t *conflicts;
 
-  /* ### f13: just remove the row from the CONFLICT_VICTIM table, rather than
-     ### all this parsing, unparsing garbage. (and we probably won't need a
-     ### transaction, either.)*/
+  /* ### f13: just insert, remove or replace the row from the CONFLICT_VICTIM
+     ### table, rather than all this parsing, unparsing garbage. (and we
+     ### probably won't need a transaction, either.)*/
 
   /* Get the conflict information for the parent of LOCAL_ABSPATH. */
   SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_SELECT_ACTUAL_NODE));
@@ -2968,48 +2976,60 @@ remove_tc_txn(void *baton, svn_sqlite__db_t *sdb)
 
   /* No ACTUAL node, no conflict info, no problem. */
   if (!have_row)
-    {
-      SVN_ERR(svn_sqlite__reset(stmt));
-      return SVN_NO_ERROR;
-    }
+    tree_conflict_data = NULL;
+  else
+    tree_conflict_data = svn_sqlite__column_text(stmt, 5, rtb->scratch_pool);
 
-  tree_conflict_data = svn_sqlite__column_text(stmt, 5, rtb->scratch_pool);
   SVN_ERR(svn_sqlite__reset(stmt));
 
-  /* No tree conflict data?  no problem. */
-  if (tree_conflict_data == NULL)
-    return SVN_NO_ERROR;
-
-  /* Parse the conflict data, remove the desired conflict, and then rewrite
+  /* Parse the conflict data, set the desired conflict, and then rewrite
      the conflict data. */
   SVN_ERR(svn_wc__read_tree_conflicts(&conflicts, tree_conflict_data,
                                       rtb->parent_abspath, rtb->scratch_pool));
 
   apr_hash_set(conflicts, svn_dirent_basename(rtb->local_abspath,
                                               rtb->scratch_pool),
-               APR_HASH_KEY_STRING, NULL);
+               APR_HASH_KEY_STRING, rtb->tree_conflict);
 
-  if (apr_hash_count(conflicts) > 0)
-    SVN_ERR(svn_wc__write_tree_conflicts(&tree_conflict_data, conflicts,
-                                         rtb->scratch_pool));
+  if (apr_hash_count(conflicts) == 0 && !have_row)
+    {
+      /* We're removing conflict information that doesn't even exist, so
+         don't bother rewriting it, just exit. */
+      return SVN_NO_ERROR;
+    }
   else
-    tree_conflict_data = NULL;
+    {
+      SVN_ERR(svn_wc__write_tree_conflicts(&tree_conflict_data, conflicts,
+                                           rtb->scratch_pool));
 
-  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
-                                    STMT_UPDATE_ACTUAL_TREE_CONFLICTS));
-  SVN_ERR(svn_sqlite__bindf(stmt, "iss", rtb->wc_id, rtb->local_relpath,
-                            tree_conflict_data));
+      if (have_row)
+        {
+          /* There is an existing ACTUAL row, so just update it. */
+          SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
+                                          STMT_UPDATE_ACTUAL_TREE_CONFLICTS));
+        }
+      else
+        {
+          /* We need to insert an ACTUAL row with the tree conflict data. */
+          SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
+                                          STMT_INSERT_ACTUAL_TREE_CONFLICTS));
+        }
 
-  SVN_ERR(svn_sqlite__step_done(stmt));
+      SVN_ERR(svn_sqlite__bindf(stmt, "iss", rtb->wc_id, rtb->local_relpath,
+                                tree_conflict_data));
+
+      SVN_ERR(svn_sqlite__step_done(stmt));
+    }
 
   return SVN_NO_ERROR;
 }
 
 
 svn_error_t *
-svn_wc__db_op_remove_tree_conflict(svn_wc__db_t *db,
-                                   const char *local_abspath,
-                                   apr_pool_t *scratch_pool)
+svn_wc__db_op_set_tree_conflict(svn_wc__db_t *db,
+                                const char *local_abspath,
+                                const svn_wc_conflict_description_t *tree_conflict,
+                                apr_pool_t *scratch_pool)
 {
   svn_wc__db_pdh_t *pdh;
   struct remove_tc_baton rtb;
@@ -3023,6 +3043,7 @@ svn_wc__db_op_remove_tree_conflict(svn_wc__db_t *db,
 
   rtb.local_abspath = local_abspath;
   rtb.wc_id = pdh->wcroot->wc_id;
+  rtb.tree_conflict = tree_conflict;
   rtb.scratch_pool = scratch_pool;
 
   SVN_ERR(svn_sqlite__with_transaction(pdh->wcroot->sdb, remove_tc_txn, &rtb));

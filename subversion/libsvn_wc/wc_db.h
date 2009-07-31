@@ -983,16 +983,16 @@ svn_wc__db_op_get_tree_conflict(svn_wc_conflict_description_t **tree_conflict,
                                 apr_pool_t *scratch_pool);
 
 
-/** Remove the tree conflict on LOCAL_ABSPATH in DB.
+/** Set the tree conflict on LOCAL_ABSPATH in DB to TREE_CONFLICT.  Use
+ * NULL to remove a tree conflict.
  *
  * Use SCRATCH_POOL for any temporary allocations.
- *
- * ### should this be folded into svn_wc__db_op_mark_resolved()?
  */
 svn_error_t *
-svn_wc__db_op_remove_tree_conflict(svn_wc__db_t *db,
-                                   const char *local_abspath,
-                                   apr_pool_t *scratch_pool);
+svn_wc__db_op_set_tree_conflict(svn_wc__db_t *db,
+                                const char *local_abspath,
+                                const svn_wc_conflict_description_t *tree_conflict,
+                                apr_pool_t *scratch_pool);
 
 
 /* ### status */
