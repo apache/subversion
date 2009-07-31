@@ -5,12 +5,10 @@ To build a Windows installer for the Subversion Python bindings:
 
  1. Build the Subversion Python bindings for Windows.
 
- 2. Update the version in setup.py to match your version of Subversion.
- 
- 3. Create "libsvn" and "svn" directories. Copy the necessary Python (*.py)
+ 2. Create "libsvn" and "svn" directories. Copy the necessary Python (*.py)
     and DLL (*.dll, *.pyd) files into these directories.
 
- 4. Run python setup.py bdist_wininst --target-version=2.6 to build an
+ 3. Run python setup.py bdist_wininst --target-version=2.6 to build an
     installer for Python 2.6. If you build your bindings for a different
     version of Python, adjust that command-line appropriately.
 
