@@ -21,10 +21,14 @@
 
 from distutils.core import setup
 
+# Since this script is only used for building the installer,
+# we can assume the modules have already been built.
+from svn.core import SVN_VER_NUMBER
+
 setup (name = "svn-python",
        description = "Subversion Python Bindings",
        maintainer = "Subversion Developers <dev@subversion.tigris.org>",
        url = "http://subversion.tigris.org",
-       version = "1.4.0",
+       version = SVN_VER_NUMBER,
        packages = ["libsvn", "svn"],
        package_data = {"libsvn": ["*.dll", "*.pyd"]})
