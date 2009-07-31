@@ -2291,7 +2291,7 @@ revert_internal(svn_wc__db_t *db,
                                                pool, pool));
       if (conflict)
         {
-          SVN_ERR(svn_wc__del_tree_conflict(path, parent_access, pool));
+          SVN_ERR(svn_wc__db_op_remove_tree_conflict(db, local_abspath, pool));
           reverted = TRUE;
         }
 
@@ -3005,7 +3005,8 @@ resolve_found_entry_callback(const char *path,
         {
           svn_error_t *err;
 
-          SVN_ERR(svn_wc__del_tree_conflict(path, parent_adm_access, pool));
+          SVN_ERR(svn_wc__db_op_remove_tree_conflict(baton->db, local_abspath,
+                                                     pool));
 
           /* Sanity check:  see if libsvn_wc *still* thinks this item is in a
              state of conflict that we have asked to resolve. If so,
