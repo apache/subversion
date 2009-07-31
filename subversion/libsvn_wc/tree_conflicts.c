@@ -490,7 +490,6 @@ svn_wc__add_tree_conflict(const svn_wc_conflict_description_t *conflict,
                           apr_pool_t *pool)
 {
   svn_wc_conflict_description_t *existing_conflict;
-  svn_stringbuf_t *log_accum = NULL;
   svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
   const char *conflict_abspath;
 
@@ -503,11 +502,8 @@ svn_wc__add_tree_conflict(const svn_wc_conflict_description_t *conflict,
     return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
                          _("Attempt to add tree conflict that already exists"));
 
-  SVN_ERR(svn_wc__loggy_add_tree_conflict(&log_accum, conflict, adm_access,
+  SVN_ERR(svn_wc__db_op_set_tree_conflict(db, conflict_abspath, conflict,
                                           pool));
-
-  SVN_ERR(svn_wc__write_log(adm_access, 0, log_accum, pool));
-  SVN_ERR(svn_wc__run_log(adm_access, NULL, pool));
 
   return SVN_NO_ERROR;
 }
