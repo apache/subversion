@@ -14615,17 +14615,16 @@ def merge_range_prior_to_rename_source_existence(sbox):
                                       "Updated to revision 10.\n"],
                                      [], 'up', wc_dir)
 
-  # Now merge all available revisions (i.e. -r1:10) from A to A_COPY.
+  # Now merge -r5:10 from A to A_COPY.
   # A_COPY needs only -r7:10, which amounts only to the rename of nu.
-  # The subtree A_COPY/B needs the entire range -r1:10 because of
-  # the reverse merge we performed in r9; this amounts to the text change
-  # to A_COPY/B/E/beta from r5
+  # The subtree A_COPY/B needs the entire range -r5:10 because of
+  # the reverse merge we performed in r9; but none of these revisions
+  # is operative in A/B so there are no changes to A_COPY/B.
   #
   # This merge currently fails because the delete half of the A_COPY/D/H/nu
   # to A_COPY/D/H/nu_moved move is reported in the notifications, but doesn't
   # actually happen.
   expected_output = wc.State(A_COPY_path, {
-    'B/E/beta'     : Item(status='U '),
     'D/H/nu'       : Item(status='D '),
     'D/H/nu_moved' : Item(status='A '),
     })
@@ -14635,7 +14634,7 @@ def merge_range_prior_to_rename_source_existence(sbox):
     'mu'           : Item(status='  ', wc_rev=10),
     'B/E'          : Item(status='  ', wc_rev=10),
     'B/E/alpha'    : Item(status='  ', wc_rev=10),
-    'B/E/beta'     : Item(status='M ', wc_rev=10),
+    'B/E/beta'     : Item(status='  ', wc_rev=10),
     'B/lambda'     : Item(status='  ', wc_rev=10),
     'B/F'          : Item(status='  ', wc_rev=10),
     'C'            : Item(status='  ', wc_rev=10),
@@ -14655,10 +14654,11 @@ def merge_range_prior_to_rename_source_existence(sbox):
   expected_disk = wc.State('', {
     ''             : Item(props={SVN_PROP_MERGEINFO : '/A:2-10'}),
     'mu'           : Item("This is the file 'mu'.\n"),
-    'B'            : Item(),
+    # A_COPY/B wasn't touched by the merge so keeps its existing mergeinfo.
+    'B'            : Item(props={SVN_PROP_MERGEINFO : ''}),
     'B/E'          : Item(),
     'B/E/alpha'    : Item("This is the file 'alpha'.\n"),
-    'B/E/beta'     : Item("New content"),
+    'B/E/beta'     : Item("This is the file 'beta'.\n"),
     'B/lambda'     : Item("This is the file 'lambda'.\n"),
     'B/F'          : Item(),
     'C'            : Item(),
@@ -14675,7 +14675,7 @@ def merge_range_prior_to_rename_source_existence(sbox):
     'D/H/omega'    : Item("New content"),
     })
   expected_skip = wc.State(A_COPY_path, {})
-  svntest.actions.run_and_verify_merge(A_COPY_path, None, None,
+  svntest.actions.run_and_verify_merge(A_COPY_path, 5, 10,
                                        sbox.repo_url + '/A',
                                        expected_output,
                                        expected_disk,
