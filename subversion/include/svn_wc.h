@@ -6102,7 +6102,8 @@ typedef struct svn_wc_revision_status_t
 
 /** Set @a *result_p to point to a new @c svn_wc_revision_status_t structure
  * containing a summary of the revision range and status of the working copy
- * at @a wc_path (not including "externals").
+ * at @a local_abspath (not including "externals").  @a local_abspath must
+ * be absolute.
  *
  * Set @a (*result_p)->min_rev and @a (*result_p)->max_rev respectively to the
  * lowest and highest revision numbers in the working copy.  If @a committed
@@ -6122,10 +6123,32 @@ typedef struct svn_wc_revision_status_t
  * If @a cancel_func is non-NULL, call it with @a cancel_baton to determine
  * if the client has cancelled the operation.
  *
- * Allocate *result_p in @a pool.
+ * Allocate *result_p in @a result_pool, use @a scratch_pool for temporary
+ * allocations.
  *
- * @since New in 1.4
+ * @a wc_ctx should be a valid working copy context.
+ *
+ * @since New in 1.7
  */
+svn_error_t *
+svn_wc_revision_status2(svn_wc_revision_status_t **result_p,
+                        svn_wc_context_t *wc_ctx,
+                        const char *local_abspath,
+                        const char *trail_url,
+                        svn_boolean_t committed,
+                        svn_cancel_func_t cancel_func,
+                        void *cancel_baton,
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool);
+
+
+/** Similar to svn_wc_revision_status2(), but with a (possibly) local
+ * path and no wc_ctx parameter.
+ *
+ * @since New in 1.4.
+ * @deprecated Provided for backward compatibility with the 1.6 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_revision_status(svn_wc_revision_status_t **result_p,
                        const char *wc_path,
