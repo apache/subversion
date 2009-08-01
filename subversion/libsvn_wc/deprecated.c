@@ -2355,3 +2355,28 @@ svn_wc_conflict_description_create_tree(
   conflict->src_right_version = src_right_version;
   return conflict;
 }
+
+
+/*** From revision_status.c ***/
+
+svn_error_t *
+svn_wc_revision_status(svn_wc_revision_status_t **result_p,
+                       const char *wc_path,
+                       const char *trail_url,
+                       svn_boolean_t committed,
+                       svn_cancel_func_t cancel_func,
+                       void *cancel_baton,
+                       apr_pool_t *pool)
+{
+  svn_wc_context_t *wc_ctx;
+  const char *local_abspath;
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, wc_path, pool));
+  SVN_ERR(svn_wc_context_create(&wc_ctx, NULL /* config */, pool, pool));
+
+  SVN_ERR(svn_wc_revision_status2(result_p, wc_ctx, local_abspath, trail_url,
+                                  committed, cancel_func, cancel_baton, pool,
+                                  pool));
+
+  return svn_error_return(svn_wc_context_destroy(wc_ctx));
+}

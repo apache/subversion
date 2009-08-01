@@ -22,6 +22,7 @@
  */
 
 #include "svn_wc.h"
+#include "svn_dirent_uri.h"
 
 #include "svn_private_config.h"
 
@@ -31,7 +32,7 @@ struct status_baton
 {
   svn_wc_revision_status_t *result;           /* where to put the result */
   svn_boolean_t committed;           /* examine last committed revisions */
-  const char *wc_path;               /* path whose URL we're looking for */
+  const char *local_abspath;         /* path whose URL we're looking for */
   const char *wc_url;    /* URL for the path whose URL we're looking for */
   apr_pool_t *pool;         /* pool in which to store alloc-needy things */
 };
@@ -45,9 +46,12 @@ analyze_status(void *baton,
                apr_pool_t *pool)
 {
   struct status_baton *sb = baton;
+  const char *local_abspath;
 
   if (! status->entry)
     return SVN_NO_ERROR;
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
   /* Added files have a revision of no interest */
   if (status->text_status != svn_wc_status_added)
@@ -71,9 +75,9 @@ analyze_status(void *baton,
                            && status->prop_status != svn_wc_status_none);
   sb->result->sparse_checkout |= (status->entry->depth != svn_depth_infinity);
 
-  if (sb->wc_path
+  if (sb->local_abspath
       && (! sb->wc_url)
-      && (strcmp(path, sb->wc_path) == 0)
+      && (strcmp(local_abspath, sb->local_abspath) == 0)
       && (status->entry))
     sb->wc_url = apr_pstrdup(sb->pool, status->entry->url);
 
@@ -81,13 +85,15 @@ analyze_status(void *baton,
 }
 
 svn_error_t *
-svn_wc_revision_status(svn_wc_revision_status_t **result_p,
-                       const char *wc_path,
-                       const char *trail_url,
-                       svn_boolean_t committed,
-                       svn_cancel_func_t cancel_func,
-                       void *cancel_baton,
-                       apr_pool_t *pool)
+svn_wc_revision_status2(svn_wc_revision_status_t **result_p,
+                        svn_wc_context_t *wc_ctx,
+                        const char *local_abspath,
+                        const char *trail_url,
+                        svn_boolean_t committed,
+                        svn_cancel_func_t cancel_func,
+                        void *cancel_baton,
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool)
 {
   struct status_baton sb;
   const char *target;
@@ -95,8 +101,11 @@ svn_wc_revision_status(svn_wc_revision_status_t **result_p,
   const svn_delta_editor_t *editor;
   void *edit_baton;
   svn_revnum_t edit_revision;
-  svn_wc_revision_status_t *result = apr_palloc(pool, sizeof(**result_p));
+  svn_wc_revision_status_t *result = apr_palloc(result_pool,
+                                                sizeof(**result_p));
   *result_p = result;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
   /* set result as nil */
   result->min_rev  = SVN_INVALID_REVNUM;
@@ -108,14 +117,14 @@ svn_wc_revision_status(svn_wc_revision_status_t **result_p,
   /* initialize walking baton */
   sb.result = result;
   sb.committed = committed;
-  sb.wc_path = wc_path;
+  sb.local_abspath = local_abspath;
   sb.wc_url = NULL;
-  sb.pool = pool;
+  sb.pool = scratch_pool;
 
   SVN_ERR(svn_wc_adm_open_anchor(&anchor_access, &target_access, &target,
-                                 wc_path, FALSE, -1,
+                                 local_abspath, FALSE, -1,
                                  cancel_func, cancel_baton,
-                                 pool));
+                                 scratch_pool));
 
   SVN_ERR(svn_wc_get_status_editor5(&editor, &edit_baton, NULL,
                                     &edit_revision, anchor_access, target,
@@ -126,11 +135,11 @@ svn_wc_revision_status(svn_wc_revision_status_t **result_p,
                                     analyze_status, &sb,
                                     cancel_func, cancel_baton,
                                     NULL  /* traversal_info */,
-                                    pool, pool));
+                                    scratch_pool, scratch_pool));
 
-  SVN_ERR(editor->close_edit(edit_baton, pool));
+  SVN_ERR(editor->close_edit(edit_baton, scratch_pool));
 
-  SVN_ERR(svn_wc_adm_close2(anchor_access, pool));
+  SVN_ERR(svn_wc_adm_close2(anchor_access, scratch_pool));
 
   if ((! result->switched) && (trail_url != NULL))
     {
