@@ -101,8 +101,7 @@ svn_wc_revision_status2(svn_wc_revision_status_t **result_p,
   const svn_delta_editor_t *editor;
   void *edit_baton;
   svn_revnum_t edit_revision;
-  svn_wc_revision_status_t *result = apr_palloc(result_pool,
-                                                sizeof(**result_p));
+  svn_wc_revision_status_t *result = apr_palloc(result_pool, sizeof(*result));
   *result_p = result;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
