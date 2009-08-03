@@ -145,5 +145,21 @@ Candidate changes:
     Votes:
       +1: arfrever
 
+ * r38417, r38424
+   Fix issue #3443 'Obtaining implicit subtree mergeinfo hammers merge
+   performance'
+   Justification:
+     If a merge target has "large" numbers (100's or 1000's) of subtrees
+     with explicit mergeinfo, then this change can result in dramatic
+     performance improvements, see example described in
+     http://subversion.tigris.org/issues/show_bug.cgi?id=3443#desc1
+   Notes:     
+     Also see http://svn.haxx.se/dev/archive-2009-07/0149.shtml for
+     discussion of this change.
+   Branch:
+     ^/branches/1.6.x-issue3443
+   Votes:
+     +1: pburba
+
 Approved changes:
 =================
