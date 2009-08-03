@@ -1002,39 +1002,37 @@ directory_elements_diff(struct dir_baton *dir_baton)
 
 /* Drive @a editor against @a path's content modifications. */
 static svn_error_t *
-transmit_svndiff(const char *path,
-                 svn_wc_adm_access_t *adm_access,
+transmit_svndiff(const char *local_abspath,
                  const svn_delta_editor_t *editor,
                  struct file_baton *file_baton,
-                 apr_pool_t *pool)
+                 apr_pool_t *scratch_pool)
 {
   struct edit_baton *eb = file_baton->edit_baton;
   svn_txdelta_window_handler_t handler;
   svn_txdelta_stream_t *txdelta_stream;
   svn_stream_t *base_stream;
   svn_stream_t *local_stream;
-  const char *local_abspath;
   const char *file_abspath;
   void *wh_baton;
 
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
-  SVN_ERR(svn_dirent_get_absolute(&file_abspath, file_baton->path, pool));
+  SVN_ERR(svn_dirent_get_absolute(&file_abspath, file_baton->path,
+                                  scratch_pool));
 
   /* Initialize window_handler/baton to produce svndiff from txdelta
    * windows. */
-  SVN_ERR(eb->diff_editor->apply_textdelta(file_baton, NULL, pool,
+  SVN_ERR(eb->diff_editor->apply_textdelta(file_baton, NULL, scratch_pool,
                                            &handler, &wh_baton));
 
-  base_stream = svn_stream_empty(pool);
+  base_stream = svn_stream_empty(scratch_pool);
 
   SVN_ERR(svn_wc__internal_translated_stream(&local_stream, eb->db,
                                              local_abspath, file_abspath,
-                                             SVN_WC_TRANSLATE_TO_NF, pool,
-                                             pool));
+                                             SVN_WC_TRANSLATE_TO_NF,
+                                             scratch_pool, scratch_pool));
 
-  svn_txdelta(&txdelta_stream, base_stream, local_stream, pool);
+  svn_txdelta(&txdelta_stream, base_stream, local_stream, scratch_pool);
   SVN_ERR(svn_txdelta_send_txstream(txdelta_stream, handler,
-                                    wh_baton, pool));
+                                    wh_baton, scratch_pool));
   return SVN_NO_ERROR;
 }
 
@@ -2316,6 +2314,7 @@ close_file(void *file_baton,
   const char *localfile;
   /* The path to the temporary copy of the pristine repository version. */
   const char *temp_file_path;
+  const char *temp_file_abspath;
   svn_boolean_t modified;
   /* The working copy properties at the base of the wc->repos
      comparison: either BASE or WORKING. */
@@ -2350,7 +2349,8 @@ close_file(void *file_baton,
   temp_file_path = b->temp_file_path;
   if (!temp_file_path)
     temp_file_path = svn_wc__text_base_path(b->path, FALSE, b->pool);
-
+  SVN_ERR(svn_dirent_get_absolute(&temp_file_abspath, temp_file_path,
+                                  b->pool));
 
   /* If the file isn't in the working copy (either because it was added
      in the BASE->repos diff or because we're diffing against WORKING
@@ -2373,8 +2373,8 @@ close_file(void *file_baton,
                * mime-type, we want our svnpatch to convey the file's
                * content. */
               if (binary_file)
-                  SVN_ERR(transmit_svndiff(temp_file_path, adm_access,
-                                           eb->diff_editor, b, pool));
+                  SVN_ERR(transmit_svndiff(temp_file_abspath, eb->diff_editor,
+                                           b, pool));
 
               /* Last chance to write a close-file command as a return
                * statement follows. */
@@ -2477,10 +2477,12 @@ close_file(void *file_baton,
               svn_checksum_t *tmp_checksum;
               const char *the_right_path = eb->reverse_order ?
                                            temp_file_path : localfile;
+              const char *the_right_abspath;
 
-              SVN_ERR(transmit_svndiff
-                      (the_right_path, adm_access,
-                       eb->diff_editor, b, pool));
+              SVN_ERR(svn_dirent_get_absolute(&the_right_abspath,
+                                              the_right_path, pool));
+              SVN_ERR(transmit_svndiff(the_right_abspath, eb->diff_editor, b,
+                                       pool));
 
               /* Calculate the file's checksum since the one above might
                * be wrong. */
