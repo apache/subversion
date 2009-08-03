@@ -15508,9 +15508,6 @@ def handle_gaps_in_implicit_mergeinfo(sbox):
   #
   # Also, the mergeinfo recorded by the previous merge, i.e. '/A:4', should
   # *not* be removed!  A@4 is not on the same line of history as 'A@9'.
-  #
-  # Currently this  mergeinfo *is* being removed.  This test is marked as
-  # XFail until issue #3432 is fixed. 
   expected_output = wc.State(A_COPY_path, {})
   svntest.actions.run_and_verify_merge(A_COPY_path, 9, 2,
                                        sbox.repo_url + \
@@ -16207,8 +16204,8 @@ test_list = [ None,
                          server_has_mergeinfo),
               SkipUnless(multiple_reintegrates_from_the_same_branch,
                          server_has_mergeinfo),
-              XFail(SkipUnless(handle_gaps_in_implicit_mergeinfo,
-                               server_has_mergeinfo)),
+              SkipUnless(handle_gaps_in_implicit_mergeinfo,
+                         server_has_mergeinfo),
              ]
 
 if __name__ == '__main__':
