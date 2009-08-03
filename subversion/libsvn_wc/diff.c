@@ -445,31 +445,29 @@ get_prop_mimetype(apr_hash_t *props)
 
 
 /* Set *MIMETYPE to the BASE version of the svn:mime-type property of
-   file PATH, using ADM_ACCESS, or to NULL if no such property exists.
+   file LOCAL_ABSPATH, using DB, or to NULL if no such property exists.
    BASEPROPS is optional: if present, use it to cache the BASE properties
    of the file.
 
-   Return the property value and property hash allocated in POOL.
+   Return the property value and property hash allocated in RESULT_POOL,
+   use SCRATCH_POOL for temporary accesses.
 */
 static svn_error_t *
 get_base_mimetype(const char **mimetype,
                   apr_hash_t **baseprops,
-                  svn_wc_adm_access_t *adm_access,
-                  const char *path,
-                  apr_pool_t *pool)
+                  svn_wc__db_t *db,
+                  const char *local_abspath,
+                  apr_pool_t *result_pool,
+                  apr_pool_t *scratch_pool)
 {
   apr_hash_t *props = NULL;
-  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
-  const char *local_abspath;
-
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
   if (baseprops == NULL)
     baseprops = &props;
 
   if (*baseprops == NULL)
     SVN_ERR(svn_wc__internal_propdiff(NULL, baseprops, db, local_abspath,
-                                      pool, pool));
+                                      result_pool, scratch_pool));
 
   *mimetype = get_prop_mimetype(*baseprops);
 
@@ -657,8 +655,8 @@ file_diff(struct dir_baton *dir_baton,
          working-copy version of the deleted file are not wanted. */
 
       /* Get svn:mime-type from BASE props of PATH. */
-      SVN_ERR(get_base_mimetype(&base_mimetype, &baseprops,
-                                adm_access, path, pool));
+      SVN_ERR(get_base_mimetype(&base_mimetype, &baseprops, eb->db,
+                                local_abspath, pool, pool));
 
       SVN_ERR(dir_baton->edit_baton->callbacks->file_deleted
               (NULL, NULL, NULL, path,
@@ -724,8 +722,8 @@ file_diff(struct dir_baton *dir_baton,
           svn_boolean_t mt_binary, mt1_binary, mt2_binary;
 
           /* Get svn:mime-type for both base and working file. */
-          SVN_ERR(get_base_mimetype(&base_mimetype, &baseprops,
-                                    adm_access, path, pool));
+          SVN_ERR(get_base_mimetype(&base_mimetype, &baseprops, eb->db,
+                                    local_abspath, pool, pool));
           SVN_ERR(get_working_mimetype(&working_mimetype, NULL, local_abspath,
                                        eb->db, pool, pool));
 
@@ -1136,8 +1134,8 @@ report_wc_file_as_added(struct dir_baton *dir_baton,
   emptyprops = apr_hash_make(pool);
 
   if (eb->use_text_base)
-    SVN_ERR(get_base_mimetype(&mimetype, &wcprops,
-                              adm_access, path, pool));
+    SVN_ERR(get_base_mimetype(&mimetype, &wcprops, eb->db, local_abspath,
+                              pool, pool));
   else
     SVN_ERR(get_working_mimetype(&mimetype, &wcprops, local_abspath,
                                  eb->db, pool, pool));
@@ -1815,11 +1813,13 @@ delete_entry(const char *path,
   const char *empty_file;
   const char *full_path = svn_dirent_join(pb->edit_baton->anchor_path, path,
                                           pb->pool);
+  const char *local_abspath;
   svn_wc_adm_access_t *adm_access;
 
   SVN_ERR(svn_wc_adm_probe_retrieve(&adm_access, pb->edit_baton->anchor,
                                     full_path, pool));
   SVN_ERR(svn_wc_entry(&entry, full_path, adm_access, FALSE, pool));
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, full_path, pool));
 
   /* So, it turns out that this can be NULL in at least one actual case,
      if you do a nonrecursive checkout and the diff involves the addition
@@ -1857,8 +1857,8 @@ delete_entry(const char *path,
           apr_hash_t *baseprops = NULL;
           const char *base_mimetype;
 
-          SVN_ERR(get_base_mimetype(&base_mimetype, &baseprops,
-                                    adm_access, full_path, pool));
+          SVN_ERR(get_base_mimetype(&base_mimetype, &baseprops, eb->db,
+                                    local_abspath, pool, pool));
 
           SVN_ERR(pb->edit_baton->callbacks->file_deleted
                   (NULL, NULL, NULL, full_path,
