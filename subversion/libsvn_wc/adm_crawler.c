@@ -886,10 +886,16 @@ svn_wc_transmit_text_deltas2(const char **tempfile,
   svn_error_t *err;
   svn_stream_t *base_stream;
   svn_stream_t *local_stream;
+  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
+  const char *local_abspath;
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
   /* Translated input */
-  SVN_ERR(svn_wc_translated_stream(&local_stream, path, path,
-                                   adm_access, SVN_WC_TRANSLATE_TO_NF, pool));
+  SVN_ERR(svn_wc__internal_translated_stream(&local_stream, db,
+                                             local_abspath, local_abspath,
+                                             SVN_WC_TRANSLATE_TO_NF, pool,
+                                             pool));
 
   /* Alert the caller that we have created a temporary file that might
      need to be cleaned up, if he asked for one. */
