@@ -925,13 +925,9 @@ svn_wc_transmit_text_deltas2(const char **tempfile,
 
   if (! fulltext)
     {
-      const char *abspath;
-      svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
-
       /* Compute delta against the pristine contents */
       SVN_ERR(svn_wc_get_pristine_contents(&base_stream, path, pool, pool));
 
-      SVN_ERR(svn_dirent_get_absolute(&abspath, path, pool));
       SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL,
                                    NULL, NULL, NULL,
                                    NULL, NULL, NULL,
@@ -941,7 +937,7 @@ svn_wc_transmit_text_deltas2(const char **tempfile,
                                    NULL, NULL, NULL, NULL,
                                    NULL, NULL, NULL,
                                    NULL, NULL, NULL, NULL, NULL, NULL,
-                                   db, abspath,
+                                   db, local_abspath,
                                    pool, pool));
 
       /* ### We want expected_checksum to ALWAYS be present, but on old
