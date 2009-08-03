@@ -109,7 +109,6 @@ typedef struct locate_ctx_t
 {
     const apr_strmatch_pattern *pattern;
     apr_size_t pattern_len;
-    apr_uri_t uri;
     const char *localpath;
     apr_size_t  localpath_len;
     const char *remotepath;
@@ -126,11 +125,22 @@ apr_status_t dav_svn__location_in_filter(ap_filter_t *f,
     locate_ctx_t *ctx = f->ctx;
     apr_status_t rv;
     apr_bucket *bkt;
-    const char *master_uri;
+    const char *master_uri, *root_dir;
+    apr_uri_t uri;
 
+    /* Don't filter if we're in a subrequest or we aren't setup to
+       proxy anything. */
     master_uri = dav_svn__get_master_uri(r);
-
     if (r->main || !master_uri) {
+        ap_remove_input_filter(f);
+        return ap_get_brigade(f->next, bb, mode, block, readbytes);
+    }
+
+    /* And don't filter if our search-n-replace would be a noop anyway
+       (that is, if our root path matches that of the master server). */
+    apr_uri_parse(r->pool, master_uri, &uri);
+    root_dir = dav_svn__get_root_dir(r);
+    if (strcmp(master_uri, root_dir) == 0) {
         ap_remove_input_filter(f);
         return ap_get_brigade(f->next, bb, mode, block, readbytes);
     }
@@ -143,13 +153,11 @@ apr_status_t dav_svn__location_in_filter(ap_filter_t *f,
 
     if (!f->ctx) {
         ctx = f->ctx = apr_pcalloc(r->pool, sizeof(*ctx));
-
-        apr_uri_parse(r->pool, master_uri, &ctx->uri);
-        ctx->remotepath = ctx->uri.path;
+        ctx->remotepath = uri.path;
         ctx->remotepath_len = strlen(ctx->remotepath);
-        ctx->localpath = dav_svn__get_root_dir(r);
+        ctx->localpath = root_dir;
         ctx->localpath_len = strlen(ctx->localpath);
-        ctx->pattern = apr_strmatch_precompile(r->pool, ctx->localpath, 0);
+        ctx->pattern = apr_strmatch_precompile(r->pool, ctx->localpath, 1);
         ctx->pattern_len = ctx->localpath_len;
     }
 
@@ -196,29 +204,31 @@ apr_status_t dav_svn__location_header_filter(ap_filter_t *f,
 {
     request_rec *r = f->r;
     const char *master_uri;
+    const char *location, *start_foo = NULL;
 
+    /* Don't filter if we're in a subrequest or we aren't setup to
+       proxy anything. */
     master_uri = dav_svn__get_master_uri(r);
-
     if (!r->main && master_uri) {
-        const char *location, *start_foo = NULL;
-
-        location = apr_table_get(r->headers_out, "Location");
-        if (location) {
-            start_foo = ap_strstr_c(location, master_uri);
-        }
-        if (start_foo) {
-            const char *new_uri;
-            start_foo += strlen(master_uri);
-            new_uri = ap_construct_url(r->pool,
-                                       apr_pstrcat(r->pool,
-                                                   dav_svn__get_root_dir(r),
-                                                   start_foo, NULL),
-                                       r);
-            apr_table_set(r->headers_out, "Location", new_uri);
-        }
+        ap_remove_output_filter(f);
+        return ap_pass_brigade(f->next, bb);
     }
-    ap_remove_output_filter(f);
-    return ap_pass_brigade(f->next, bb);
+
+    location = apr_table_get(r->headers_out, "Location");
+    if (location) {
+        start_foo = ap_strstr_c(location, master_uri);
+    }
+    if (start_foo) {
+        const char *new_uri;
+        start_foo += strlen(master_uri);
+        new_uri = ap_construct_url(r->pool,
+                                   apr_pstrcat(r->pool,
+                                               dav_svn__get_root_dir(r),
+                                               start_foo, NULL),
+                                   r);
+        apr_table_set(r->headers_out, "Location", new_uri);
+    }
+    return APR_SUCCESS;
 }
 
 apr_status_t dav_svn__location_body_filter(ap_filter_t *f,
@@ -227,12 +237,23 @@ apr_status_t dav_svn__location_body_filter(ap_filter_t *f,
     request_rec *r = f->r;
     locate_ctx_t *ctx = f->ctx;
     apr_bucket *bkt;
-    const char *master_uri;
+    const char *master_uri, *root_dir;
+    apr_uri_t uri;
 
+    /* Don't filter if we're in a subrequest or we aren't setup to
+       proxy anything. */
     master_uri = dav_svn__get_master_uri(r);
-
     if (r->main || !master_uri) {
         ap_remove_output_filter(f);
+        return ap_pass_brigade(f->next, bb);
+    }
+
+    /* And don't filter if our search-n-replace would be a noop anyway
+       (that is, if our root path matches that of the master server). */
+    apr_uri_parse(r->pool, master_uri, &uri);
+    root_dir = dav_svn__get_root_dir(r);
+    if (strcmp(master_uri, root_dir) == 0) {
+        ap_remove_input_filter(f);
         return ap_pass_brigade(f->next, bb);
     }
 
@@ -244,13 +265,11 @@ apr_status_t dav_svn__location_body_filter(ap_filter_t *f,
 
     if (!f->ctx) {
         ctx = f->ctx = apr_pcalloc(r->pool, sizeof(*ctx));
-
-        apr_uri_parse(r->pool, master_uri, &ctx->uri);
-        ctx->remotepath = ctx->uri.path;
+        ctx->remotepath = uri.path;
         ctx->remotepath_len = strlen(ctx->remotepath);
-        ctx->localpath = dav_svn__get_root_dir(r);
+        ctx->localpath = root_dir;
         ctx->localpath_len = strlen(ctx->localpath);
-        ctx->pattern = apr_strmatch_precompile(r->pool, ctx->remotepath, 0);
+        ctx->pattern = apr_strmatch_precompile(r->pool, ctx->remotepath, 1);
         ctx->pattern_len = ctx->remotepath_len;
     }
 
