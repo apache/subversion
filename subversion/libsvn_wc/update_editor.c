@@ -4251,8 +4251,9 @@ merge_file(svn_wc_notify_state_t *content_state,
   if (fb->copied_working_text)
     is_locally_modified = TRUE;
   else if (! fb->existed)
-    SVN_ERR(svn_wc__text_modified_internal_p(&is_locally_modified, fb->path,
-                                             FALSE, adm_access, FALSE, pool));
+    SVN_ERR(svn_wc__text_modified_internal_p(&is_locally_modified, eb->db,
+                                             local_abspath, FALSE, FALSE,
+                                             pool));
   else if (new_text_base_path)
     {
       const char *new_text_base_abspath;

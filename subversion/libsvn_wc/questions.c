@@ -250,22 +250,21 @@ svn_wc__versioned_file_modcheck(svn_boolean_t *modified_p,
 
 svn_error_t *
 svn_wc__text_modified_internal_p(svn_boolean_t *modified_p,
-                                 const char *filename,
+                                 svn_wc__db_t *db,
+                                 const char *local_abspath,
                                  svn_boolean_t force_comparison,
-                                 svn_wc_adm_access_t *adm_access,
                                  svn_boolean_t compare_textbases,
-                                 apr_pool_t *pool)
+                                 apr_pool_t *scratch_pool)
 {
-  const char *textbase_filename;
+  const char *textbase_abspath;
   svn_node_kind_t kind;
   svn_error_t *err;
   apr_finfo_t finfo;
-  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
 
   /* No matter which way you look at it, the file needs to exist. */
-  err = svn_io_stat(&finfo, filename,
+  err = svn_io_stat(&finfo, local_abspath,
                     APR_FINFO_SIZE | APR_FINFO_MTIME | APR_FINFO_TYPE
-                    | APR_FINFO_LINK, pool);
+                    | APR_FINFO_LINK, scratch_pool);
   if ((err && APR_STATUS_IS_ENOENT(err->apr_err))
       || (!err && !(finfo.filetype == APR_REG ||
                     finfo.filetype == APR_LNK)))
@@ -281,7 +280,8 @@ svn_wc__text_modified_internal_p(svn_boolean_t *modified_p,
 
   if (! force_comparison)
     {
-      const svn_wc_entry_t *entry;
+      svn_filesize_t translated_size;
+      apr_time_t last_mod_time;
 
       /* We're allowed to use a heuristic to determine whether files may
          have changed.  The heuristic has these steps:
@@ -311,21 +311,23 @@ svn_wc__text_modified_internal_p(svn_boolean_t *modified_p,
 
       */
 
-
-      /* Get the entry */
-      err = svn_wc_entry(&entry, filename, adm_access, FALSE, pool);
+      /* Read the relevant info */
+      err = svn_wc__db_read_info(NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                 NULL, NULL, &last_mod_time, NULL, NULL,
+                                 &translated_size , NULL,
+                                 NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                 NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                 db, local_abspath,
+                                 scratch_pool, scratch_pool);
       if (err)
         {
           svn_error_clear(err);
           goto compare_them;
         }
 
-      if (! entry)
-        goto compare_them;
-
       /* Compare the sizes, if applicable */
-      if (entry->working_size != SVN_WC_ENTRY_WORKING_SIZE_UNKNOWN
-          && finfo.size != entry->working_size)
+      if (translated_size != SVN_WC_ENTRY_WORKING_SIZE_UNKNOWN
+          && finfo.size != translated_size)
         goto compare_them;
 
 
@@ -334,7 +336,7 @@ svn_wc__text_modified_internal_p(svn_boolean_t *modified_p,
          Note: text_time == 0 means absent from entries,
                which also means the timestamps won't be equal,
                so there's no need to explicitly check the 'absent' value. */
-      if (entry->text_time != finfo.mtime)
+      if (last_mod_time != finfo.mtime)
         goto compare_them;
 
 
@@ -348,63 +350,33 @@ svn_wc__text_modified_internal_p(svn_boolean_t *modified_p,
      yet committed. */
   /* We used to stat for the working base here, but we just give
      compare_and_verify a try; we'll check for errors afterwards */
-  textbase_filename = svn_wc__text_base_path(filename, FALSE, pool);
+  SVN_ERR(svn_dirent_get_absolute(&textbase_abspath,
+                                  svn_wc__text_base_path(local_abspath, FALSE,
+                                                         scratch_pool),
+                                  scratch_pool));
 
   /* Check all bytes, and verify checksum if requested. */
-  {
-    apr_pool_t *subpool = svn_pool_create(pool);
-    const char *filename_abspath;
-    const char *textbase_filename_abspath;
-
-    SVN_ERR(svn_dirent_get_absolute(&filename_abspath, filename, subpool));
-    SVN_ERR(svn_dirent_get_absolute(&textbase_filename_abspath,
-                                    textbase_filename, subpool));
-
-    err = compare_and_verify(modified_p,
-                             db,
-                             filename_abspath,
-                             textbase_filename_abspath,
-                             compare_textbases,
-                             force_comparison,
-                             subpool);
-    if (err)
-      {
-        svn_error_t *err2;
-
-        err2 = svn_io_check_path(textbase_filename, &kind, pool);
-        if (! err2 && kind != svn_node_file)
-          {
-            svn_error_clear(err);
-            *modified_p = TRUE;
-            return SVN_NO_ERROR;
-          }
-
-        svn_error_clear(err);
-        return err2;
-      }
-
-    svn_pool_destroy(subpool);
-  }
-
-  /* It is quite legitimate for modifications to the working copy to
-     produce a timestamp variation with no text variation. If it turns out
-     that there are no differences then we might be able to "repair" the
-     text-time in the entries file and so avoid the expensive file contents
-     comparison in the future.
-     Though less likely, the same may be true for the size
-     of the working file. */
-  if (! *modified_p && svn_wc_adm_locked(adm_access))
+  err = compare_and_verify(modified_p,
+                           db,
+                           local_abspath,
+                           textbase_abspath,
+                           compare_textbases,
+                           force_comparison,
+                           scratch_pool);
+  if (err)
     {
-      svn_wc_entry_t tmp;
+      svn_error_t *err2;
 
-      tmp.working_size = finfo.size;
-      tmp.text_time = finfo.mtime;
-      SVN_ERR(svn_wc__entry_modify(adm_access,
-                                   svn_dirent_basename(filename, pool),
-                                   &tmp,
-                                   SVN_WC__ENTRY_MODIFY_TEXT_TIME
-                                   | SVN_WC__ENTRY_MODIFY_WORKING_SIZE,
-                                   pool));
+      err2 = svn_io_check_path(textbase_abspath, &kind, scratch_pool);
+      if (! err2 && kind != svn_node_file)
+        {
+          svn_error_clear(err);
+          *modified_p = TRUE;
+          return SVN_NO_ERROR;
+        }
+
+      svn_error_clear(err);
+      return err2;
     }
 
   return SVN_NO_ERROR;
@@ -412,15 +384,15 @@ svn_wc__text_modified_internal_p(svn_boolean_t *modified_p,
 
 
 svn_error_t *
-svn_wc_text_modified_p(svn_boolean_t *modified_p,
-                        const char *filename,
+svn_wc_text_modified_p2(svn_boolean_t *modified_p,
+                        svn_wc_context_t *wc_ctx,
+                        const char *local_abspath,
                         svn_boolean_t force_comparison,
-                        svn_wc_adm_access_t *adm_access,
-                        apr_pool_t *pool)
+                        apr_pool_t *scratch_pool)
 {
-  return svn_wc__text_modified_internal_p(modified_p, filename,
-                                          force_comparison, adm_access,
-                                          TRUE, pool);
+  return svn_wc__text_modified_internal_p(modified_p, wc_ctx->db,
+                                          local_abspath, force_comparison,
+                                          TRUE, scratch_pool);
 }
 
 
