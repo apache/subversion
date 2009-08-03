@@ -1876,9 +1876,9 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
 
           if (! reinstall_working)
             {
-              SVN_ERR(svn_wc__text_modified_internal_p
-                      (&reinstall_working, fullpath, FALSE,
-                       adm_access, FALSE, pool));
+              SVN_ERR(svn_wc__text_modified_internal_p(&reinstall_working,
+                                                       db, local_abspath,
+                                                       FALSE, FALSE, pool));
             }
 
           if (reinstall_working)

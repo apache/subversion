@@ -2292,6 +2292,25 @@ svn_wc_conflicted_p(svn_boolean_t *text_conflicted_p,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_wc_text_modified_p(svn_boolean_t *modified_p,
+                       const char *filename,
+                       svn_boolean_t force_comparison,
+                       svn_wc_adm_access_t *adm_access,
+                       apr_pool_t *pool)
+{
+  svn_wc_context_t *wc_ctx;
+  const char *local_abspath;
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, filename, pool));
+  SVN_ERR(svn_wc_context_create(&wc_ctx, NULL /* config */, pool, pool));
+
+  SVN_ERR(svn_wc_text_modified_p2(modified_p, wc_ctx, local_abspath,
+                                  force_comparison, pool));
+
+  return svn_error_return(svn_wc_context_destroy(wc_ctx));
+}
+
 
 /*** From copy.c ***/
 

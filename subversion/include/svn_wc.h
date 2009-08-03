@@ -2261,10 +2261,9 @@ svn_wc_has_binary_prop(svn_boolean_t *has_binary_prop,
 
 /* Detecting modification. */
 
-/** Set @a *modified_p to non-zero if @a filename's text is modified
+/** Set @a *modified_p to non-zero if @a local_abspath's text is modified
  * with regard to the base revision, else set @a *modified_p to zero.
- * @a filename is a path to the file, not just a basename. @a adm_access
- * must be an access baton for @a filename.
+ * @a local_abspath is the absolute path to the file.
  *
  * If @a force_comparison is @c TRUE, this function will not allow
  * early return mechanisms that avoid actual content comparison.
@@ -2273,14 +2272,25 @@ svn_wc_has_binary_prop(svn_boolean_t *has_binary_prop,
  * that if the text base is much longer than the working file, every
  * byte of the text base will still be examined.)
  *
- * If @a filename does not exist, consider it unmodified.  If it exists
+ * If @a local_abspath does not exist, consider it unmodified.  If it exists
  * but is not under revision control (not even scheduled for
  * addition), return the error @c SVN_ERR_ENTRY_NOT_FOUND.
  *
- * If @a filename is unmodified but has a timestamp variation then this
- * function may "repair" @a filename's text-time by setting it to
- * @a filename's last modification time.
+ * @since New in 1.7.
  */
+svn_error_t *
+svn_wc_text_modified_p2(svn_boolean_t *modified_p,
+                        svn_wc_context_t *wc_ctx,
+                        const char *local_abspath,
+                        svn_boolean_t force_comparison,
+                        apr_pool_t *scratch_pool);
+
+/** Similar to svn_wc_text_modified_p2(), but with a relative path and
+ * adm_access baton?
+ *
+ * @deprecated Provided for backward compatibility with the 1.6 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_text_modified_p(svn_boolean_t *modified_p,
                        const char *filename,
