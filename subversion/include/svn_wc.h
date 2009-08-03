@@ -5918,33 +5918,50 @@ svn_wc_translated_stream(svn_stream_t **stream,
 /* Text/Prop Deltas Using an Editor */
 
 
-/** Send the local modifications for versioned file @a path (with
+/** Send the local modifications for versioned file @a local_abspath (with
  * matching @a file_baton) through @a editor, then close @a file_baton
- * afterwards.  Use @a pool for any temporary allocation and
- * @a adm_access as an access baton for @a path.
+ * afterwards.  Use @a scratch_pool for any temporary allocation.
  *
- * This process creates a copy of @a path with keywords and eol
+ * This process creates a copy of @a local_abspath with keywords and eol
  * untranslated.  If @a tempfile is non-NULL, set @a *tempfile to the
- * path to this copy.  Do not clean up the copy; caller can do that.
- * If @a digest is non-NULL, put the MD5 checksum of the
- * temporary file into @a digest, which must point to @c APR_MD5_DIGESTSIZE
- * bytes of storage.  (The purpose of handing back the tmp copy is that
- * it is usually about to become the new text base anyway, but the
- * installation of the new text base is outside the scope of this
+ * absolute path to this copy, allocated in @a result_pool.  Do not clean
+ * up the copy; caller can do that.  If @a digest is non-NULL, put the MD5
+ * checksum of the temporary file into @a digest, which must point to @c
+ * APR_MD5_DIGESTSIZE bytes of storage.  (The purpose of handing back the
+ * tmp copy is that it is usually about to become the new text base anyway,
+ * but the installation of the new text base is outside the scope of this
  * function.)
  *
- * If @a fulltext, send the untranslated copy of @a path through @a editor
- * as full-text; else send it as svndiff against the current text base.
+ * If @a fulltext, send the untranslated copy of @a local_abspath through
+ * @a editor as full-text; else send it as svndiff against the current text
+ * base.
  *
- * If sending a diff, and the recorded checksum for @a path's text-base
- * does not match the current actual checksum, then remove the tmp
+ * If sending a diff, and the recorded checksum for @a local_abspath's
+ * text-base does not match the current actual checksum, then remove the tmp
  * copy (and set @a *tempfile to NULL if appropriate), and return the
  * error @c SVN_ERR_WC_CORRUPT_TEXT_BASE.
  *
  * @note This is intended for use with both infix and postfix
  * text-delta styled editor drivers.
  *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_wc_transmit_text_deltas3(const char **tempfile,
+                             unsigned char digest[],
+                             svn_wc_context_t *wc_ctx,
+                             const char *local_path,
+                             svn_boolean_t fulltext,
+                             const svn_delta_editor_t *editor,
+                             void *file_baton,
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool);
+
+/** Similar to svn_wc_transmit_text_deltas3(), but with a relative path
+ * and adm_access baton.
+ *
  * @since New in 1.4.
+ * @deprecated Provided for backwards compatibility with the 1.6 API.
  */
 svn_error_t *
 svn_wc_transmit_text_deltas2(const char **tempfile,
