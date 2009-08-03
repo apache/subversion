@@ -1401,6 +1401,10 @@ entry_has_local_mods(svn_boolean_t *modified,
 {
   svn_boolean_t text_modified;
   svn_boolean_t props_modified;
+  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
+  const char *local_abspath;
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, full_path, pool));
 
   /* Check for text modifications */
   if (kind == svn_node_file)
@@ -1410,8 +1414,7 @@ entry_has_local_mods(svn_boolean_t *modified,
     text_modified = FALSE;
 
   /* Check for property modifications */
-  SVN_ERR(svn_wc_props_modified_p(&props_modified, full_path,
-                                  adm_access, pool));
+  SVN_ERR(svn_wc__props_modified(&props_modified, db, local_abspath, pool));
 
   *modified = (text_modified || props_modified);
 

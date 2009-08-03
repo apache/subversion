@@ -1762,8 +1762,7 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
       svn_boolean_t modified;
 
       /* Check for prop changes. */
-      SVN_ERR(svn_wc_props_modified_p(&modified, fullpath, adm_access,
-                                      pool));
+      SVN_ERR(svn_wc__props_modified(&modified, db, local_abspath, pool));
       if (modified)
         {
           apr_array_header_t *propchanges;
