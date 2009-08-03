@@ -868,15 +868,15 @@ copying_stream(svn_stream_t *source,
 }
 
 svn_error_t *
-svn_wc_transmit_text_deltas3(const char **tempfile,
-                             unsigned char digest[],
-                             svn_wc_context_t *wc_ctx,
-                             const char *local_abspath,
-                             svn_boolean_t fulltext,
-                             const svn_delta_editor_t *editor,
-                             void *file_baton,
-                             apr_pool_t *result_pool,
-                             apr_pool_t *scratch_pool)
+svn_wc__internal_transmit_text_deltas(const char **tempfile,
+                                      unsigned char digest[],
+                                      svn_wc__db_t *db,
+                                      const char *local_abspath,
+                                      svn_boolean_t fulltext,
+                                      const svn_delta_editor_t *editor,
+                                      void *file_baton,
+                                      apr_pool_t *result_pool,
+                                      apr_pool_t *scratch_pool)
 {
   svn_txdelta_window_handler_t handler;
   void *wh_baton;
@@ -889,7 +889,7 @@ svn_wc_transmit_text_deltas3(const char **tempfile,
   svn_stream_t *local_stream;
 
   /* Translated input */
-  SVN_ERR(svn_wc__internal_translated_stream(&local_stream, wc_ctx->db,
+  SVN_ERR(svn_wc__internal_translated_stream(&local_stream, db,
                                              local_abspath, local_abspath,
                                              SVN_WC_TRANSLATE_TO_NF,
                                              scratch_pool, scratch_pool));
@@ -938,7 +938,7 @@ svn_wc_transmit_text_deltas3(const char **tempfile,
                                    NULL, NULL, NULL, NULL,
                                    NULL, NULL, NULL,
                                    NULL, NULL, NULL, NULL, NULL, NULL,
-                                   wc_ctx->db, local_abspath,
+                                   db, local_abspath,
                                    scratch_pool, scratch_pool));
 
       /* ### We want expected_checksum to ALWAYS be present, but on old
@@ -1055,6 +1055,23 @@ svn_wc_transmit_text_deltas3(const char **tempfile,
                             svn_checksum_to_cstring(local_checksum,
                                                     scratch_pool),
                             scratch_pool);
+}
+
+svn_error_t *
+svn_wc_transmit_text_deltas3(const char **tempfile,
+                             unsigned char digest[],
+                             svn_wc_context_t *wc_ctx,
+                             const char *local_abspath,
+                             svn_boolean_t fulltext,
+                             const svn_delta_editor_t *editor,
+                             void *file_baton,
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool)
+{
+  return svn_wc__internal_transmit_text_deltas(tempfile, digest, wc_ctx->db,
+                                               local_abspath, fulltext, editor,
+                                               file_baton, result_pool,
+                                               scratch_pool);
 }
 
 svn_error_t *

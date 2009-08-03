@@ -1628,16 +1628,17 @@ svn_client__do_commit(const char *base_url,
       struct file_mod_t *mod = svn_apr_hash_index_val(hi);
       svn_client_commit_item3_t *item;
       void *file_baton;
-      const char *tempfile, *dir_path;
+      const char *tempfile;
       unsigned char digest[APR_MD5_DIGESTSIZE];
       svn_boolean_t fulltext = FALSE;
-      svn_wc_adm_access_t *item_access;
+      const char *item_abspath;
 
       svn_pool_clear(iterpool);
 
       /* Transmit the entry. */
       item = mod->item;
       file_baton = mod->file_baton;
+      SVN_ERR(svn_dirent_get_absolute(&item_abspath, item->path, iterpool));
 
       if (ctx->cancel_func)
         SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
@@ -1656,13 +1657,10 @@ svn_client__do_commit(const char *base_url,
       if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_ADD)
         fulltext = TRUE;
 
-      dir_path = svn_dirent_dirname(item->path, iterpool);
-      SVN_ERR(svn_wc_adm_retrieve(&item_access, adm_access, dir_path,
-                                  iterpool));
-      SVN_ERR(svn_wc_transmit_text_deltas2(tempfiles ? &tempfile : NULL,
-                                           digest, item->path,
-                                           item_access, fulltext, editor,
-                                           file_baton, iterpool));
+      SVN_ERR(svn_wc_transmit_text_deltas3(tempfiles ? &tempfile : NULL,
+                                           digest, ctx->wc_ctx, item_abspath,
+                                           fulltext, editor, file_baton,
+                                           iterpool, iterpool));
       if (tempfiles && tempfile)
         {
           tempfile = apr_pstrdup(pool, tempfile);
