@@ -718,6 +718,24 @@ svn_rangelist_reverse(apr_array_header_t *rangelist, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+void
+svn_rangelist__set_inheritance(apr_array_header_t *rangelist,
+                               svn_boolean_t inheritable)
+{
+  if (rangelist)
+    {
+      int i;
+      svn_merge_range_t *range;
+
+      for (i = 0; i < rangelist->nelts; i++)
+        {
+          range = APR_ARRAY_IDX(rangelist, i, svn_merge_range_t *);
+          range->inheritable = inheritable;
+        }
+    }
+  return;
+}
+
 /* Either remove any overlapping ranges described by ERASER from
    WHITEBOARD (when DO_REMOVE is TRUE), or capture the overlap, and
    place the remaining or overlapping ranges in OUTPUT. */

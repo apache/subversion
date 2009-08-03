@@ -33,6 +33,12 @@ extern "C" {
 #endif /* __cplusplus */
 
 
+/* Set inheritability of all ranges in RANGELIST to INHERITABLE.
+   If RANGELIST is NULL do nothing. */
+void
+svn_rangelist__set_inheritance(apr_array_header_t *rangelist,
+                               svn_boolean_t inheritable);
+
 /* Return whether INFO1 and INFO2 are equal in *IS_EQUAL.
 
    CONSIDER_INERITANCE determines how the rangelists in the two
