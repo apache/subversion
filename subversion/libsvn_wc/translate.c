@@ -63,13 +63,13 @@ write_handler_unsupported(void *baton, const char *buffer, apr_size_t *len)
 }
 
 svn_error_t *
-svn_wc_translated_stream2(svn_stream_t **stream,
-                          svn_wc_context_t *wc_ctx,
-                          const char *local_abspath,
-                          const char *versioned_abspath,
-                          apr_uint32_t flags,
-                          apr_pool_t *result_pool,
-                          apr_pool_t *scratch_pool)
+svn_wc__internal_translated_stream(svn_stream_t **stream,
+                                   svn_wc__db_t *db,
+                                   const char *local_abspath,
+                                   const char *versioned_abspath,
+                                   apr_uint32_t flags,
+                                   apr_pool_t *result_pool,
+                                   apr_pool_t *scratch_pool)
 {
   svn_boolean_t special;
   svn_boolean_t to_nf = flags & SVN_WC_TRANSLATE_TO_NF;
@@ -81,8 +81,7 @@ svn_wc_translated_stream2(svn_stream_t **stream,
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
   SVN_ERR_ASSERT(svn_dirent_is_absolute(versioned_abspath));
 
-  SVN_ERR(svn_wc__get_special(&special, wc_ctx->db, versioned_abspath,
-                              scratch_pool));
+  SVN_ERR(svn_wc__get_special(&special, db, versioned_abspath, scratch_pool));
 
   if (special)
     {
@@ -94,9 +93,9 @@ svn_wc_translated_stream2(svn_stream_t **stream,
                                           scratch_pool);
     }
 
-  SVN_ERR(svn_wc__get_eol_style(&style, &eol, wc_ctx->db, versioned_abspath,
+  SVN_ERR(svn_wc__get_eol_style(&style, &eol, db, versioned_abspath,
                                 scratch_pool, scratch_pool));
-  SVN_ERR(svn_wc__get_keywords(&keywords, wc_ctx->db, versioned_abspath, NULL,
+  SVN_ERR(svn_wc__get_keywords(&keywords, db, versioned_abspath, NULL,
                                scratch_pool, scratch_pool));
 
   if (to_nf)
@@ -147,6 +146,25 @@ svn_wc_translated_stream2(svn_stream_t **stream,
     }
 
   return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc_translated_stream2(svn_stream_t **stream,
+                          svn_wc_context_t *wc_ctx,
+                          const char *local_abspath,
+                          const char *versioned_abspath,
+                          apr_uint32_t flags,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool)
+{
+  return svn_error_return(svn_wc__internal_translated_stream(stream,
+                                                             wc_ctx->db,
+                                                             local_abspath,
+                                                             versioned_abspath,
+                                                             flags,
+                                                             result_pool,
+                                                             scratch_pool));
 }
 
 

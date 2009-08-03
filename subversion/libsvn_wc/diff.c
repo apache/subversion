@@ -62,6 +62,7 @@
 #include "props.h"
 #include "adm_files.h"
 #include "lock.h"
+#include "translate.h"
 
 #include "svn_private_config.h"
 
@@ -1012,7 +1013,12 @@ transmit_svndiff(const char *path,
   svn_txdelta_stream_t *txdelta_stream;
   svn_stream_t *base_stream;
   svn_stream_t *local_stream;
+  const char *local_abspath;
+  const char *file_abspath;
   void *wh_baton;
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+  SVN_ERR(svn_dirent_get_absolute(&file_abspath, file_baton->path, pool));
 
   /* Initialize window_handler/baton to produce svndiff from txdelta
    * windows. */
@@ -1021,9 +1027,10 @@ transmit_svndiff(const char *path,
 
   base_stream = svn_stream_empty(pool);
 
-  SVN_ERR(svn_wc_translated_stream(&local_stream, path, file_baton->path,
-                                   adm_access, SVN_WC_TRANSLATE_TO_NF,
-                                   pool));
+  SVN_ERR(svn_wc__internal_translated_stream(&local_stream, eb->db,
+                                             local_abspath, file_abspath,
+                                             SVN_WC_TRANSLATE_TO_NF, pool,
+                                             pool));
 
   svn_txdelta(&txdelta_stream, base_stream, local_stream, pool);
   SVN_ERR(svn_txdelta_send_txstream(txdelta_stream, handler,
