@@ -5872,9 +5872,9 @@ svn_wc_translated_file(const char **xlated_p,
                        apr_pool_t *pool);
 
 
-/** Returns a @a stream allocated in @a pool with access to the given
- * @a path taking the file properties from @a versioned_file using
- * @a adm_access.
+/** Returns a @a stream allocated in @a result_pool with access to the given
+ * @a local_abspath taking the file properties from @a versioned_abspath
+ * using @a wc_ctx.
  *
  * When translation from normal form is requested
  * (@c SVN_WC_TRANSLATE_FROM_NF is specified in @a flags), @a path
@@ -5886,8 +5886,26 @@ svn_wc_translated_file(const char **xlated_p,
  * The @a flags are the same constants as those used for
  * svn_wc_translated_file().
  *
- * @since New in 1.5.
+ * Use @a scratch_pool for temporary allocations.
+ *
+ * @since New in 1.7.
  */
+svn_error_t *
+svn_wc_translated_stream2(svn_stream_t **stream,
+                          svn_wc_context_t *wc_ctx,
+                          const char *local_abspath,
+                          const char *versioned_abspath,
+                          apr_uint32_t flags,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool);
+
+/** Similar to svn_wc_translated_stream2(), but with an adm_access baton
+ * and relative paths instead of a wc_context and absolute paths.
+ *
+ * @since New in 1.5.
+ * @deprecated Provided for compatibility with the 1.6 API
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_translated_stream(svn_stream_t **stream,
                          const char *path,
