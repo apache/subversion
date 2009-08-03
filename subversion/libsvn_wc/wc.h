@@ -448,6 +448,18 @@ svn_wc__conflict_desc2_from_conflict_desc(const svn_wc_conflict_description_t *
                                                                      conflict,
                                           apr_pool_t *result_pool);
 
+/* Internal version of svn_wc_transmit_text_deltas3(). */
+svn_error_t *
+svn_wc__internal_transmit_text_deltas(const char **tempfile,
+                                      unsigned char digest[],
+                                      svn_wc__db_t *db,
+                                      const char *local_abspath,
+                                      svn_boolean_t fulltext,
+                                      const svn_delta_editor_t *editor,
+                                      void *file_baton,
+                                      apr_pool_t *result_pool,
+                                      apr_pool_t *scratch_pool);
+
 
 #ifdef __cplusplus
 }

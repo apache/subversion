@@ -1181,12 +1181,11 @@ report_wc_file_as_added(struct dir_baton *dir_baton,
 
       if (mimetype && svn_mime_type_is_binary(mimetype))
         {
-          SVN_ERR(svn_wc_transmit_text_deltas2
-                  (NULL,
-                   NULL,/* TODO:digest bin stuff */
-                   path, adm_access, TRUE,
-                   eb->diff_editor, fb, pool));
-          /* svn_wc_transmit_text_deltas2() does the close itself. */
+          SVN_ERR(svn_wc__internal_transmit_text_deltas(NULL,
+                                            NULL,/* TODO:digest bin stuff */
+                                            eb->db, local_abspath, TRUE,
+                                            eb->diff_editor, fb, pool, pool));
+          /* svn_wc__internal_transmit_text_deltas() does the close itself. */
           file_need_close = FALSE; 
         }
 
@@ -1739,12 +1738,12 @@ path_driver_cb_func(void **dir_baton,
             SVN_ERR(svn_wc_text_modified_p(&file_modified, path,
                                            TRUE, adm_access, pool));
             if (file_modified)
-              SVN_ERR(svn_wc_transmit_text_deltas2
-                      (NULL,
-                       NULL,/* TODO:digest bin stuff */
-                       path, adm_access, TRUE,
-                       editor, fb, pool));
-            /* svn_wc_transmit_text_deltas2() does the close itself. */
+              SVN_ERR(svn_wc__internal_transmit_text_deltas(NULL,
+                                            NULL,/* TODO:digest bin stuff */
+                                            eb->db, local_abspath, TRUE,
+                                            editor, fb, pool, pool));
+            /* svn_wc__internal_transmit_text_deltas() does the close
+               itself. */
             file_need_close = FALSE; 
           }
 
