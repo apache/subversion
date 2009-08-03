@@ -632,7 +632,8 @@ file_diff(struct dir_baton *dir_baton,
   /* Get property diffs if this is not schedule delete. */
   if (schedule != svn_wc_schedule_delete)
     {
-      SVN_ERR(svn_wc_props_modified_p(&modified, path, adm_access, pool));
+      SVN_ERR(svn_wc__props_modified(&modified, eb->db, local_abspath,
+                                     pool));
       if (modified)
         SVN_ERR(svn_wc__internal_propdiff(&propchanges, &baseprops, eb->db,
                                           local_abspath, pool, pool));
@@ -872,9 +873,8 @@ directory_elements_diff(struct dir_baton *dir_baton)
     {
       svn_boolean_t modified;
 
-      SVN_ERR(svn_wc_props_modified_p(&modified,
-                                      dir_baton->path, adm_access,
-                                      dir_baton->pool));
+      SVN_ERR(svn_wc__props_modified(&modified, dir_baton->edit_baton->db,
+                                     dir_abspath, dir_baton->pool));
       if (modified)
         {
           apr_array_header_t *propchanges;

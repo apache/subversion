@@ -1087,8 +1087,7 @@ log_do_committed(struct log_runner *loggy,
                                 remove_deleted_entry, loggy, pool));
     }
 
-  SVN_ERR(svn_wc_props_modified_p(&prop_mods, full_path, loggy->adm_access,
-                                  pool));
+  SVN_ERR(svn_wc__props_modified(&prop_mods, loggy->db, local_abspath, pool));
   if (prop_mods)
     {
       if (entry->kind == svn_node_file)
@@ -2243,11 +2242,13 @@ run_existing_logs(svn_wc_adm_access_t *adm_access,
       void *val;
       const svn_wc_entry_t *entry;
       const char *entry_path;
+      const char *entry_abspath;
 
       svn_pool_clear(iterpool);
       apr_hash_this(hi, &key, NULL, &val);
       entry = val;
       entry_path = svn_dirent_join(path, key, iterpool);
+      SVN_ERR(svn_dirent_get_absolute(&entry_abspath, entry_path, iterpool));
 
       if (entry->kind == svn_node_dir
           && strcmp(key, SVN_WC_ENTRY_THIS_DIR) != 0)
@@ -2265,8 +2266,8 @@ run_existing_logs(svn_wc_adm_access_t *adm_access,
              the entries file for each timestamp fixed it has the potential
              to be slow, perhaps we need something more sophisticated? */
           svn_boolean_t modified;
-          SVN_ERR(svn_wc_props_modified_p(&modified, entry_path,
-                                          adm_access, iterpool));
+          SVN_ERR(svn_wc__props_modified(&modified, db, entry_abspath,
+                                         iterpool));
           if (entry->kind == svn_node_file)
             SVN_ERR(svn_wc_text_modified_p(&modified, entry_path, FALSE,
                                            adm_access, iterpool));

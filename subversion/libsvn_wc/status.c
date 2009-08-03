@@ -409,8 +409,8 @@ assemble_status(svn_wc_status2_t **status,
         final_prop_status = svn_wc_status_normal;
 
       /* If the entry has a property file, see if it has local changes. */
-      SVN_ERR(svn_wc_props_modified_p(&prop_modified_p, path, adm_access,
-                                      pool));
+      SVN_ERR(svn_wc__props_modified(&prop_modified_p, db, local_abspath,
+                                     pool));
 
       /* Record actual property status */
       pristine_prop_status = prop_modified_p ? svn_wc_status_modified
