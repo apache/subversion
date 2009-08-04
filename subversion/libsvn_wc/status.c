@@ -430,8 +430,9 @@ assemble_status(svn_wc_status2_t **status,
 #endif /* HAVE_SYMLINK */
           )
         {
-          SVN_ERR(svn_wc_text_modified_p(&text_modified_p, path, FALSE,
-                                         adm_access, pool));
+          SVN_ERR(svn_wc__text_modified_internal_p(&text_modified_p, db,
+                                                   local_abspath, FALSE,
+                                                   TRUE, pool));
 
           /* Record actual text status */
           pristine_text_status = text_modified_p ? svn_wc_status_modified
