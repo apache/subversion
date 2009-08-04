@@ -700,12 +700,13 @@ file_diff(struct dir_baton *dir_baton,
       break;
 
     default:
-      SVN_ERR(svn_wc_text_modified_p(&modified, path, FALSE,
-                                     adm_access, pool));
+      SVN_ERR(svn_wc__text_modified_internal_p(&modified, eb->db,
+                                               local_abspath, FALSE, TRUE,
+                                               pool));
       if (modified)
         {
           /* Note that this might be the _second_ time we translate
-             the file, as svn_wc_text_modified_p() might have used a
+             the file, as svn_wc__text_modified_internal_p() might have used a
              tmp translated copy too.  But what the heck, diff is
              already expensive, translating twice for the sake of code
              modularity is liveable. */
@@ -1735,8 +1736,9 @@ path_driver_cb_func(void **dir_baton,
                                          pool));
         if (file_is_binary)
           {
-            SVN_ERR(svn_wc_text_modified_p(&file_modified, path,
-                                           TRUE, adm_access, pool));
+            SVN_ERR(svn_wc__text_modified_internal_p(&file_modified, db,
+                                                     local_abspath, TRUE,
+                                                     TRUE, pool));
             if (file_modified)
               SVN_ERR(svn_wc__internal_transmit_text_deltas(NULL,
                                             NULL,/* TODO:digest bin stuff */
@@ -2418,8 +2420,8 @@ close_file(void *file_baton,
      (BASE:WORKING) modifications. */
   modified = (b->temp_file_path != NULL);
   if (!modified && !eb->use_text_base)
-    SVN_ERR(svn_wc_text_modified_p(&modified, b->path, FALSE,
-                                   adm_access, pool));
+    SVN_ERR(svn_wc__text_modified_internal_p(&modified, eb->db, local_abspath,
+                                             FALSE, TRUE, pool));
 
   if (modified)
     {
