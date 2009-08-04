@@ -1027,6 +1027,15 @@ print_diff_tree(svn_fs_root_t *root,
               SVN_ERR(svn_stream_close(ostream));
               SVN_ERR(svn_cmdline_printf(pool, "\n"));
             }
+          else if (! node->prop_mod &&
+                  ((! c->no_diff_added && node->action == 'A') ||
+                   (! c->no_diff_deleted && node->action == 'D')))
+            {
+              /* There was an empty file added or deleted in this revision.
+               * We can't print a diff, but we can at least print
+               * a diff header since we know what happened to this file. */
+              SVN_ERR(svn_cmdline_printf(pool, "%s", header->data));
+            }
         }
       SVN_ERR(svn_cmdline_fflush(stdout));
     }
