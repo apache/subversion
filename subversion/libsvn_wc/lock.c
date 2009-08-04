@@ -1656,3 +1656,64 @@ svn_wc__adm_open_in_context(svn_wc_adm_access_t **adm_access,
 
   return SVN_NO_ERROR;
 }
+
+/* The following is largely cribbed from svn_wc_adm_probe_open3(). */
+svn_error_t *
+svn_wc__adm_probe_in_context(svn_wc_adm_access_t **adm_access,
+                             svn_wc_context_t *wc_ctx,
+                             const char *path,
+                             svn_boolean_t write_lock,
+                             int levels_to_lock,
+                             svn_cancel_func_t cancel_func,
+                             void *cancel_baton,
+                             apr_pool_t *pool)
+{
+  const char *dir;
+  svn_error_t *err;
+
+  SVN_ERR_ASSERT(wc_ctx != NULL);
+
+  SVN_ERR(probe(wc_ctx->db, &dir, path, pool));
+
+  /* If we moved up a directory, then the path is not a directory, or it
+     is not under version control. In either case, the notion of
+     levels_to_lock does not apply to the provided path.  Disable it so
+     that we don't end up trying to lock more than we need.  */
+  if (dir != path)
+    levels_to_lock = 0;
+    
+  err = svn_wc__adm_open_in_context(adm_access, wc_ctx, dir, write_lock,
+                                    levels_to_lock, cancel_func, cancel_baton,
+                                    pool);
+
+  if (err)
+    {
+      svn_error_t *err2;
+
+      /* If we got an error on the parent dir, that means we failed to
+         get an access baton for the child in the first place.  And if
+         the reason we couldn't get the child access baton is that the
+         child is not a versioned directory, then return an error
+         about the child, not the parent. */
+      svn_node_kind_t child_kind;
+      if ((err2 = svn_io_check_path(path, &child_kind, pool)))
+        {
+          svn_error_compose(err, err2);
+          return err;
+        }
+
+      if ((dir != path)
+          && (child_kind == svn_node_dir)
+          && (err->apr_err == SVN_ERR_WC_NOT_DIRECTORY))
+        {
+          svn_error_clear(err);
+          return svn_error_createf(SVN_ERR_WC_NOT_DIRECTORY, NULL,
+                                   _("'%s' is not a working copy"),
+                                   svn_dirent_local_style(path, pool));
+        }
+
+      return err;
+    }
+
+  return SVN_NO_ERROR;
+}
