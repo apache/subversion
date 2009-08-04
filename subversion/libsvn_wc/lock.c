@@ -1162,19 +1162,20 @@ child_is_disjoint(svn_boolean_t *disjoint,
 }
 
 
-svn_error_t *
-svn_wc_adm_open_anchor(svn_wc_adm_access_t **anchor_access,
-                       svn_wc_adm_access_t **target_access,
-                       const char **target,
-                       const char *path,
-                       svn_boolean_t write_lock,
-                       int levels_to_lock,
-                       svn_cancel_func_t cancel_func,
-                       void *cancel_baton,
-                       apr_pool_t *pool)
+static svn_error_t *
+open_anchor(svn_wc_adm_access_t **anchor_access,
+            svn_wc_adm_access_t **target_access,
+            const char **target,
+            svn_wc__db_t *db,
+            svn_boolean_t db_provided,
+            const char *path,
+            svn_boolean_t write_lock,
+            int levels_to_lock,
+            svn_cancel_func_t cancel_func,
+            void *cancel_baton,
+            apr_pool_t *pool)
 {
   const char *base_name = svn_dirent_basename(path, pool);
-  svn_wc__db_t *db;
 
   /* Any baton creation is going to need a shared structure for holding
      data across the entire set. The caller isn't providing one, so we
@@ -1182,13 +1183,14 @@ svn_wc_adm_open_anchor(svn_wc_adm_access_t **anchor_access,
   /* ### we could maybe skip the shared struct for levels_to_lock==0, but
      ### given that we need DB for format detection, may as well keep this.
      ### in any case, much of this is going to be simplified soon anyways.  */
-  SVN_ERR(alloc_db(&db, NULL /* ### config. need! */, pool, pool));
+  if (!db_provided)
+    SVN_ERR(alloc_db(&db, NULL /* ### config. need! */, pool, pool));
 
   if (svn_path_is_empty(path)
       || svn_dirent_is_root(path, strlen(path))
       || ! strcmp(base_name, ".."))
     {
-      SVN_ERR(open_all(anchor_access, path, db, FALSE,
+      SVN_ERR(open_all(anchor_access, path, db, db_provided,
                        write_lock, levels_to_lock,
                        cancel_func, cancel_baton, pool));
       *target_access = *anchor_access;
@@ -1203,7 +1205,8 @@ svn_wc_adm_open_anchor(svn_wc_adm_access_t **anchor_access,
       svn_error_t *p_access_err = SVN_NO_ERROR;
 
       /* Try to open parent of PATH to setup P_ACCESS */
-      err = open_single(&p_access, parent, write_lock, db, FALSE, pool, pool);
+      err = open_single(&p_access, parent, write_lock, db, db_provided,
+                        pool, pool);
       if (err)
         {
           const char *abspath;
@@ -1224,7 +1227,7 @@ svn_wc_adm_open_anchor(svn_wc_adm_access_t **anchor_access,
               /* If P_ACCESS isn't to be returned then a read-only baton
                  will do for now, but keep the error in case we need it. */
               svn_error_t *err2 = open_single(&p_access, parent, FALSE,
-                                              db, FALSE, pool, pool);
+                                              db, db_provided, pool, pool);
               if (err2)
                 {
                   svn_error_clear(err2);
@@ -1237,8 +1240,8 @@ svn_wc_adm_open_anchor(svn_wc_adm_access_t **anchor_access,
         }
 
       /* Try to open PATH to setup T_ACCESS */
-      err = open_all(&t_access, path, db, FALSE, write_lock, levels_to_lock,
-                     cancel_func, cancel_baton, pool);
+      err = open_all(&t_access, path, db, db_provided, write_lock,
+                     levels_to_lock, cancel_func, cancel_baton, pool);
       if (err)
         {
           if (p_access == NULL)
@@ -1352,6 +1355,42 @@ svn_wc_adm_open_anchor(svn_wc_adm_access_t **anchor_access,
     }
 
   return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc_adm_open_anchor(svn_wc_adm_access_t **anchor_access,
+                       svn_wc_adm_access_t **target_access,
+                       const char **target,
+                       const char *path,
+                       svn_boolean_t write_lock,
+                       int levels_to_lock,
+                       svn_cancel_func_t cancel_func,
+                       void *cancel_baton,
+                       apr_pool_t *pool)
+{
+  return svn_error_return(open_anchor(anchor_access, target_access, target,
+                                      NULL, FALSE, path, write_lock,
+                                      levels_to_lock, cancel_func,
+                                      cancel_baton, pool));
+}
+
+svn_error_t *
+svn_wc__adm_open_anchor_in_context(svn_wc_adm_access_t **anchor_access,
+                                   svn_wc_adm_access_t **target_access,
+                                   const char **target,
+                                   svn_wc_context_t *wc_ctx,
+                                   const char *path,
+                                   svn_boolean_t write_lock,
+                                   int levels_to_lock,
+                                   svn_cancel_func_t cancel_func,
+                                   void *cancel_baton,
+                                   apr_pool_t *pool)
+{
+  return svn_error_return(open_anchor(anchor_access, target_access, target,
+                                      wc_ctx->db, TRUE, path, write_lock,
+                                      levels_to_lock, cancel_func,
+                                      cancel_baton, pool));
 }
 
 
