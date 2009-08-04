@@ -6656,7 +6656,7 @@ record_mergeinfo_for_dir_merge(const svn_wc_entry_t *target_entry,
   range.inheritable = merged_range->inheritable;
 
   /* Regardless of what subtrees in MERGE_B->TARGET might be missing
-     could this merge ever have operative? */
+     could this merge have been operative? */
   if ((notify_b->merged_paths
        && apr_hash_count(notify_b->merged_paths))
       || (notify_b->skipped_paths
@@ -6704,18 +6704,9 @@ record_mergeinfo_for_dir_merge(const svn_wc_entry_t *target_entry,
       SVN_ERR(svn_wc__entry_versioned(&child_entry, child->path,
                                       adm_access, FALSE, iterpool));
 
-      /* ### subtree-mergeinfo-branch: Our initial simplistic approach:
-         ### Don't record mergeinfo on any subtree not touched by the
-         ### merge.
-         ###
-         ### Why is this simplistic?  Because the paths in
-         ### NOTIFY_B->CHILDREN_WITH_MERGEINFO are there for many
-         ### reasons, not just because they have explicit mergeinfo
-         ### (see the doc string for get_mergeinfo_paths)  Consider a
-         ### path that has a missing child due to a sparse checkout.  We
-         ### don't know that child would not have been modified, so
-         ### not recording non-inheritable mergeinfo on the path
-         ### is incorrect. */
+      /* If CHILD is a subtree, this is not a record only merge, and
+         CHILD was not affected by the merge then we don't need to
+         record mergeinfo. */
       if (i > 0 /* Always record mergeinfo on the merge target. */
           && !merge_b->record_only
           && (!operative_merge
