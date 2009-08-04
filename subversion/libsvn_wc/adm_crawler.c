@@ -1075,37 +1075,43 @@ svn_wc_transmit_text_deltas3(const char **tempfile,
 }
 
 svn_error_t *
-svn_wc_transmit_prop_deltas(const char *path,
-                            svn_wc_adm_access_t *adm_access,
-                            const svn_wc_entry_t *entry,
-                            const svn_delta_editor_t *editor,
-                            void *baton,
-                            const char **tempfile,
-                            apr_pool_t *pool)
+svn_wc__internal_transmit_prop_deltas(svn_wc__db_t *db,
+                                     const char *local_abspath,
+                                     const svn_delta_editor_t *editor,
+                                     void *baton,
+                                     apr_pool_t *scratch_pool)
 {
   int i;
   apr_array_header_t *propmods;
-  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
-  const char *local_abspath;
+  svn_wc__db_kind_t kind;
 
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
-
-  if (tempfile)
-    *tempfile = NULL;
-
+  SVN_ERR(svn_wc__db_check_node(&kind, db, local_abspath, scratch_pool));
   /* Get an array of local changes by comparing the hashes. */
   SVN_ERR(svn_wc__internal_propdiff(&propmods, NULL, db, local_abspath,
-                                    pool, pool));
+                                    scratch_pool, scratch_pool));
 
   /* Apply each local change to the baton */
   for (i = 0; i < propmods->nelts; i++)
     {
       const svn_prop_t *p = &APR_ARRAY_IDX(propmods, i, svn_prop_t);
-      if (entry->kind == svn_node_file)
-        SVN_ERR(editor->change_file_prop(baton, p->name, p->value, pool));
+      if (kind == svn_wc__db_kind_file)
+        SVN_ERR(editor->change_file_prop(baton, p->name, p->value, 
+                                         scratch_pool));
       else
-        SVN_ERR(editor->change_dir_prop(baton, p->name, p->value, pool));
+        SVN_ERR(editor->change_dir_prop(baton, p->name, p->value, 
+                                        scratch_pool));
     }
 
   return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc_transmit_prop_deltas2(svn_wc_context_t *wc_ctx,
+                             const char *local_abspath,
+                             const svn_delta_editor_t *editor,
+                             void *baton,
+                             apr_pool_t *scratch_pool)
+{
+  return svn_wc__internal_transmit_prop_deltas(wc_ctx->db, local_abspath,
+                                               editor, baton, scratch_pool);
 }
