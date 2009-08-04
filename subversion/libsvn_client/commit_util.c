@@ -989,9 +989,10 @@ svn_client__harvest_committables(apr_hash_t **committables,
           if (err && err->apr_err == SVN_ERR_WC_NOT_LOCKED)
             {
               svn_error_clear(err);
-              SVN_ERR(svn_wc_adm_open3(&parent_access, NULL, parent,
-                                       FALSE, 0, ctx->cancel_func,
-                                       ctx->cancel_baton, subpool));
+              SVN_ERR(svn_wc__adm_open_in_context(&parent_access, ctx->wc_ctx,
+                                                  parent, FALSE, 0,
+                                                  ctx->cancel_func,
+                                                  ctx->cancel_baton, subpool));
             }
           else if (err)
             {

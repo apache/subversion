@@ -239,7 +239,11 @@ typedef struct svn_wc_adm_access_t svn_wc_adm_access_t;
  * the root of the hierarchy.
  *
  * @since New in 1.2.
+ * @deprecated Provided for backward compatibility with the 1.6 API.
+ *    Callers should use a @c svn_wc_context_t object to access the working
+ *    copy.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_adm_open3(svn_wc_adm_access_t **adm_access,
                  svn_wc_adm_access_t *associated,
