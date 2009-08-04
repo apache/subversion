@@ -40,7 +40,7 @@ class SubversionMergeinfoTestCase(unittest.TestCase):
        tests 16.  If it needs to be updated (mergeinfo format changes, for
        example), we can go there to get a new version."""
     dumpfile = open(os.path.join(os.path.split(__file__)[0],
-                                 'data', 'mergeinfo.dump'))
+                                 'data', 'mergeinfo.dump'), 'rb')
     # Remove any existing repository to ensure a fresh start
     self.tearDown()
     self.repos = repos.svn_repos_create(REPOS_PATH, '', '', None, None)

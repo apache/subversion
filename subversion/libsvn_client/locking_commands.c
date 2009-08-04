@@ -365,13 +365,10 @@ fetch_tokens(svn_ra_session_t *ra_session, apr_hash_t *path_tokens,
 
   for (hi = apr_hash_first(pool, path_tokens); hi; hi = apr_hash_next(hi))
     {
-      const void *key;
-      const char *path;
+      const char *path = svn_apr_hash_index_key(hi);
       svn_lock_t *lock;
 
       svn_pool_clear(iterpool);
-      apr_hash_this(hi, &key, NULL, NULL);
-      path = key;
 
       SVN_ERR(svn_ra_get_lock(ra_session, &lock, path, iterpool));
 

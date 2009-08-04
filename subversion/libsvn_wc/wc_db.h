@@ -44,6 +44,7 @@
 #include "svn_io.h"
 
 #include "private/svn_skel.h"
+#include "private/svn_sqlite.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -969,6 +970,31 @@ svn_wc__db_op_invalidate_last_mod_time(svn_wc__db_t *db,
                                        apr_pool_t *scratch_pool);
 
 
+/** Get any tree conflict associated with LOCAL_ABSPATH in DB, and put it
+ * in *TREE_CONFLICT, allocated in RESULT_POOL.
+ *
+ * Use SCRATCH_POOL for any temporary allocations.
+ */
+svn_error_t *
+svn_wc__db_op_get_tree_conflict(svn_wc_conflict_description_t **tree_conflict,
+                                svn_wc__db_t *db,
+                                const char *local_abspath,
+                                apr_pool_t *result_pool,
+                                apr_pool_t *scratch_pool);
+
+
+/** Set the tree conflict on LOCAL_ABSPATH in DB to TREE_CONFLICT.  Use
+ * NULL to remove a tree conflict.
+ *
+ * Use SCRATCH_POOL for any temporary allocations.
+ */
+svn_error_t *
+svn_wc__db_op_set_tree_conflict(svn_wc__db_t *db,
+                                const char *local_abspath,
+                                const svn_wc_conflict_description_t *tree_conflict,
+                                apr_pool_t *scratch_pool);
+
+
 /* ### status */
 
 
@@ -1022,8 +1048,12 @@ svn_wc__db_op_invalidate_last_mod_time(svn_wc__db_t *db,
  *   TEXT_MOD                n/a (always available)
  *   PROPS_MOD               n/a (always available)
  *   BASE_SHADOWED           n/a (always available)
+ *   CONFLICT_OLD            NULL
+ *   CONFLICT_NEW            NULL
+ *   CONFLICT_WORKING        NULL
  *   PROP_REJECT_FILE        NULL
  *   LOCK                    NULL
+ *   TREE_CONFLICT_DATA      NULL
  *
  * If DEPTH is requested, and the node is NOT a directory, then
  * the value will be set to svn_depth_unknown.
@@ -1114,9 +1144,18 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,  /* ### derived */
                      svn_boolean_t *base_shadowed,  /* ### WORKING shadows a
                                                        ### deleted BASE? */
 
+                     const char **conflict_old,
+                     const char **conflict_new,
+                     const char **conflict_working,
                      const char **prop_reject_file,  /* ### is this right? */
 
                      svn_wc__db_lock_t **lock,
+
+                     /* ### this should eventually turn into a 
+                        ### svn_wc_conflict_description2_t, but for the time
+                        ### being, we're just going to return the raw text
+                        ### and let the caller deal with it. */
+                     const char **tree_conflict_data,
 
                      svn_wc__db_t *db,
                      const char *local_abspath,
@@ -1501,6 +1540,16 @@ svn_wc__db_scan_deletion(const char **base_del_abspath,
 
 /** @} */
 
+
+/** The upgrade function for the wc_db sqlite database.  This is exposed
+    quasi-publicly for testing purposes only. */
+svn_error_t *
+svn_wc__db_upgrade_func(void *baton,
+                        svn_sqlite__db_t *sdb,
+                        int current_schema,
+                        apr_pool_t *scratch_pool);
+
+
 /**
  * @defgroup svn_wc__db_wq  Work queue manipulation. see workqueue.h
  * @{
@@ -1626,6 +1675,20 @@ svn_wc__db_temp_clear_access(svn_wc__db_t *db,
 apr_hash_t *
 svn_wc__db_temp_get_all_access(svn_wc__db_t *db,
                                apr_pool_t *result_pool);
+
+/* ### temp function to open an sqlite database to the appropriate location.
+   ### The *only* reason for this function is because entries.c still
+   ### manually hacks the sqlite database.
+
+   ### No matter how tempted you may be DO NOT USE THIS FUNCTION!
+   ### (if you do, gstein will hunt you down and burn your knee caps off
+   ### in the middle of the night) */
+svn_error_t *
+svn_wc__db_temp_get_sdb(svn_sqlite__db_t **db,
+                        const char *local_dir_abspath,
+                        const char * const statements_in[],
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool);
 
 /** @} */
 

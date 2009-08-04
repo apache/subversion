@@ -63,12 +63,13 @@ write_handler_unsupported(void *baton, const char *buffer, apr_size_t *len)
 }
 
 svn_error_t *
-svn_wc_translated_stream(svn_stream_t **stream,
-                         const char *path,
-                         const char *versioned_file,
-                         svn_wc_adm_access_t *adm_access,
-                         apr_uint32_t flags,
-                         apr_pool_t *pool)
+svn_wc__internal_translated_stream(svn_stream_t **stream,
+                                   svn_wc__db_t *db,
+                                   const char *local_abspath,
+                                   const char *versioned_abspath,
+                                   apr_uint32_t flags,
+                                   apr_pool_t *result_pool,
+                                   apr_pool_t *scratch_pool)
 {
   svn_boolean_t special;
   svn_boolean_t to_nf = flags & SVN_WC_TRANSLATE_TO_NF;
@@ -76,37 +77,40 @@ svn_wc_translated_stream(svn_stream_t **stream,
   const char *eol;
   apr_hash_t *keywords;
   svn_boolean_t repair_forced = flags & SVN_WC_TRANSLATE_FORCE_EOL_REPAIR;
-  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
-  const char *versioned_abspath;
 
-  SVN_ERR(svn_dirent_get_absolute(&versioned_abspath, versioned_file, pool));
-  SVN_ERR(svn_wc__get_special(&special, db, versioned_abspath, pool));
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(versioned_abspath));
+
+  SVN_ERR(svn_wc__get_special(&special, db, versioned_abspath, scratch_pool));
 
   if (special)
     {
       if (to_nf)
-        return svn_subst_read_specialfile(stream, path, pool, pool);
+        return svn_subst_read_specialfile(stream, local_abspath, result_pool,
+                                          scratch_pool);
 
-      return svn_subst_create_specialfile(stream, path, pool, pool);
+      return svn_subst_create_specialfile(stream, local_abspath, result_pool,
+                                          scratch_pool);
     }
 
   SVN_ERR(svn_wc__get_eol_style(&style, &eol, db, versioned_abspath,
-                                pool, pool));
-  SVN_ERR(svn_wc__get_keywords(&keywords, db, versioned_abspath, NULL, pool,
-                               pool));
+                                scratch_pool, scratch_pool));
+  SVN_ERR(svn_wc__get_keywords(&keywords, db, versioned_abspath, NULL,
+                               scratch_pool, scratch_pool));
 
   if (to_nf)
-    SVN_ERR(svn_stream_open_readonly(stream, path, pool, pool));
+    SVN_ERR(svn_stream_open_readonly(stream, local_abspath, result_pool,
+                                     scratch_pool));
   else
     {
       apr_file_t *file;
 
       /* We don't want the "open-exclusively" feature of the normal
          svn_stream_open_writable interface. Do this manually. */
-      SVN_ERR(svn_io_file_open(&file, path,
+      SVN_ERR(svn_io_file_open(&file, local_abspath,
                                APR_CREATE | APR_WRITE | APR_BUFFERED,
-                               APR_OS_DEFAULT, pool));
-      *stream = svn_stream_from_aprfile2(file, FALSE, pool);
+                               APR_OS_DEFAULT, result_pool));
+      *stream = svn_stream_from_aprfile2(file, FALSE, result_pool);
     }
 
   if (svn_subst_translation_required(style, eol, keywords, special, TRUE))
@@ -126,7 +130,7 @@ svn_wc_translated_stream(svn_stream_t **stream,
                                                 repair_forced,
                                                 keywords,
                                                 FALSE /* expand */,
-                                                pool);
+                                                result_pool);
 
           /* Enforce our contract. TO_NF streams are readonly */
           svn_stream_set_write(*stream, write_handler_unsupported);
@@ -134,7 +138,7 @@ svn_wc_translated_stream(svn_stream_t **stream,
       else
         {
           *stream = svn_subst_stream_translated(*stream, eol, TRUE,
-                                                keywords, TRUE, pool);
+                                                keywords, TRUE, result_pool);
 
           /* Enforce our contract. FROM_NF streams are write-only */
           svn_stream_set_read(*stream, read_handler_unsupported);
@@ -142,6 +146,25 @@ svn_wc_translated_stream(svn_stream_t **stream,
     }
 
   return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc_translated_stream2(svn_stream_t **stream,
+                          svn_wc_context_t *wc_ctx,
+                          const char *local_abspath,
+                          const char *versioned_abspath,
+                          apr_uint32_t flags,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool)
+{
+  return svn_error_return(svn_wc__internal_translated_stream(stream,
+                                                             wc_ctx->db,
+                                                             local_abspath,
+                                                             versioned_abspath,
+                                                             flags,
+                                                             result_pool,
+                                                             scratch_pool));
 }
 
 
@@ -314,6 +337,7 @@ svn_wc__get_keywords(apr_hash_t **keywords,
                                &changed_date, &changed_author, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL,
                                db, local_abspath, scratch_pool, scratch_pool));
 
   if (repos_root_url == NULL)
@@ -405,7 +429,8 @@ svn_wc__maybe_set_read_only(svn_boolean_t *did_set,
   err = svn_wc__db_read_info(NULL, NULL, NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL, NULL, NULL,
-                             NULL, NULL, NULL, NULL, NULL, NULL, &lock,
+                             NULL, NULL, NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL, &lock, NULL,
                              db, local_abspath, scratch_pool, scratch_pool);
 
   if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)

@@ -96,6 +96,7 @@ struct handle_external_item_change_baton
  */
 static svn_error_t *
 relegate_dir_external(const char *path,
+                      svn_wc_context_t *wc_ctx,
                       svn_cancel_func_t cancel_func,
                       void *cancel_baton,
                       apr_pool_t *pool)
@@ -103,8 +104,8 @@ relegate_dir_external(const char *path,
   svn_error_t *err = SVN_NO_ERROR;
   svn_wc_adm_access_t *adm_access;
 
-  SVN_ERR(svn_wc_adm_open3(&adm_access, NULL, path, TRUE, -1, cancel_func,
-                           cancel_baton, pool));
+  SVN_ERR(svn_wc__adm_open_in_context(&adm_access, wc_ctx, path, TRUE, -1,
+                                      cancel_func, cancel_baton, pool));
   err = svn_wc_remove_from_revision_control(adm_access,
                                             SVN_WC_ENTRY_THIS_DIR,
                                             TRUE, FALSE,
@@ -183,8 +184,9 @@ switch_dir_external(const char *path,
       svn_wc_adm_access_t *adm_access;
       const svn_wc_entry_t *entry;
 
-      SVN_ERR(svn_wc_adm_open3(&adm_access, NULL, path, TRUE, 0,
-                               ctx->cancel_func, ctx->cancel_baton, subpool));
+      SVN_ERR(svn_wc__adm_open_in_context(&adm_access, ctx->wc_ctx, path, TRUE,
+                                          0, ctx->cancel_func,
+                                          ctx->cancel_baton, subpool));
       SVN_ERR(svn_wc_entry(&entry, path, adm_access,
                            FALSE, subpool));
       SVN_ERR(svn_wc_adm_close2(adm_access, subpool));
@@ -260,6 +262,7 @@ switch_dir_external(const char *path,
   if (kind == svn_node_dir)
     /* Buh-bye, old and busted ... */
     SVN_ERR(relegate_dir_external(path,
+                                  ctx->wc_ctx,
                                   ctx->cancel_func,
                                   ctx->cancel_baton,
                                   pool));
@@ -299,6 +302,7 @@ switch_file_external(const char *path,
   apr_pool_t *subpool = svn_pool_create(pool);
   svn_wc_adm_access_t *target_adm_access;
   const char *anchor;
+  const char *anchor_abspath;
   const char *target;
   const svn_wc_entry_t *entry;
   svn_config_t *cfg = ctx->config ? apr_hash_get(ctx->config,
@@ -313,6 +317,7 @@ switch_file_external(const char *path,
 
   /* There must be a working copy to place the file external into. */
   SVN_ERR(svn_wc_get_actual_target(path, &anchor, &target, subpool));
+  SVN_ERR(svn_dirent_get_absolute(&anchor_abspath, anchor, subpool));
 
   /* Try to get a access baton for the anchor using the input access
      baton.  If this fails and returns SVN_ERR_WC_NOT_LOCKED, then try
@@ -328,9 +333,10 @@ switch_file_external(const char *path,
 
           svn_error_clear(err);
           close_adm_access = TRUE;
-          SVN_ERR(svn_wc_adm_open3(&target_adm_access, NULL, anchor, TRUE, 1,
-                                   ctx->cancel_func, ctx->cancel_baton,
-                                   subpool));
+          SVN_ERR(svn_wc__adm_open_in_context(&target_adm_access, ctx->wc_ctx,
+                                              anchor, TRUE, 1,
+                                              ctx->cancel_func,
+                                              ctx->cancel_baton, subpool));
 
           /* Check that the repository root URL for the newly opened
              wc is the same as the file external. */
@@ -394,9 +400,9 @@ switch_file_external(const char *path,
          external to be added when one exists. */
       SVN_ERR(svn_wc__entry_versioned(&anchor_dir_entry, anchor,
                                       target_adm_access, FALSE, subpool));
-      SVN_ERR(svn_wc_conflicted_p2(&text_conflicted, &prop_conflicted,
-                                   &tree_conflicted, anchor, target_adm_access,
-                                   subpool));
+      SVN_ERR(svn_wc_conflicted_p3(&text_conflicted, &prop_conflicted,
+                                   &tree_conflicted, ctx->wc_ctx,
+                                   anchor_abspath, subpool));
       if (text_conflicted || prop_conflicted || tree_conflicted)
         return svn_error_createf
           (SVN_ERR_WC_FOUND_CONFLICT, 0,
@@ -891,9 +897,9 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
          directory external.  If that doesn't work, get the access
          baton for the parent directory and remove the entry for the
          external. */
-      err = svn_wc_adm_open3(&adm_access, NULL, path, TRUE, -1,
-                             ib->ctx->cancel_func, ib->ctx->cancel_baton,
-                             ib->iter_pool);
+      err = svn_wc__adm_open_in_context(&adm_access, ib->ctx->wc_ctx, path,
+                                        TRUE, -1, ib->ctx->cancel_func,
+                                        ib->ctx->cancel_baton, ib->iter_pool);
       if (err)
         {
           const char *anchor;
@@ -1299,19 +1305,13 @@ svn_client__do_external_status(svn_wc_traversal_info_t *traversal_info,
        hi = apr_hash_next(hi))
     {
       apr_array_header_t *exts;
-      const void *key;
-      void *val;
-      const char *path;
-      const char *propval;
+      const char *path = svn_apr_hash_index_key(hi);
+      const char *propval = svn_apr_hash_index_val(hi);
       apr_pool_t *iterpool;
       int i;
 
       /* Clear the subpool. */
       svn_pool_clear(subpool);
-
-      apr_hash_this(hi, &key, NULL, &val);
-      path = key;
-      propval = val;
 
       /* Parse the svn:externals property value.  This results in a
          hash mapping subdirectories to externals structures. */

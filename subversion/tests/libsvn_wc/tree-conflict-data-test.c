@@ -8,6 +8,7 @@
 #include <apr_tables.h>
 
 #include "svn_pools.h"
+#include "svn_hash.h"
 #include "svn_types.h"
 #include "svn_wc.h"
 #include "private/svn_wc_private.h"
@@ -32,9 +33,10 @@ static svn_error_t *
 test_read_tree_conflict(apr_pool_t *pool)
 {
   svn_wc_conflict_description_t *conflict;
-  apr_array_header_t *conflicts;
+  apr_hash_t *conflicts;
   svn_wc_conflict_description_t *exp_conflict;
   const char *tree_conflict_data;
+  apr_hash_index_t *hi;
 
   tree_conflict_data = "((conflict Foo.c file update deleted edited "
                          "(version 0  2 -1 0  0 ) (version 0  2 -1 0  0 )))";
@@ -46,12 +48,11 @@ test_read_tree_conflict(apr_pool_t *pool)
   exp_conflict->action = svn_wc_conflict_action_delete;
   exp_conflict->reason = svn_wc_conflict_reason_edited;
 
-  conflicts = apr_array_make(pool, 1, sizeof(svn_wc_conflict_description_t *));
   SVN_ERR(svn_wc__read_tree_conflicts(&conflicts, tree_conflict_data, "",
                                       pool));
 
-  conflict = APR_ARRAY_IDX(conflicts, 0,
-      svn_wc_conflict_description_t *);
+  hi = apr_hash_first(pool, conflicts);
+  conflict = svn_apr_hash_index_val(hi);
 
   if ((conflict->node_kind != exp_conflict->node_kind) ||
       (conflict->action    != exp_conflict->action) ||
@@ -68,8 +69,9 @@ test_read_2_tree_conflicts(apr_pool_t *pool)
 {
   const char *tree_conflict_data;
   svn_wc_conflict_description_t *conflict1, *conflict2;
-  apr_array_header_t *conflicts;
+  apr_hash_t *conflicts;
   svn_wc_conflict_description_t *exp_conflict1, *exp_conflict2;
+  apr_hash_index_t *hi;
 
   tree_conflict_data =
     "((conflict Foo.c file update deleted edited "
@@ -91,11 +93,11 @@ test_read_2_tree_conflicts(apr_pool_t *pool)
   exp_conflict2->action = svn_wc_conflict_action_edit;
   exp_conflict2->reason = svn_wc_conflict_reason_deleted;
 
-  conflicts = apr_array_make(pool, 1, sizeof(svn_wc_conflict_description_t *));
   SVN_ERR(svn_wc__read_tree_conflicts(&conflicts, tree_conflict_data, "",
                                       pool));
 
-  conflict1 = APR_ARRAY_IDX(conflicts, 0, svn_wc_conflict_description_t *);
+  hi = apr_hash_first(pool, conflicts);
+  conflict1 = svn_apr_hash_index_val(hi);
   if ((conflict1->node_kind != exp_conflict1->node_kind) ||
       (conflict1->action    != exp_conflict1->action) ||
       (conflict1->reason    != exp_conflict1->reason) ||
@@ -103,7 +105,8 @@ test_read_2_tree_conflicts(apr_pool_t *pool)
       (strcmp(conflict1->path, exp_conflict1->path) != 0))
     return fail(pool, "Tree conflict struct #1 has bad data");
 
-  conflict2 = APR_ARRAY_IDX(conflicts, 1, svn_wc_conflict_description_t *);
+  hi = apr_hash_next(hi);
+  conflict2 = svn_apr_hash_index_val(hi);
   if ((conflict2->node_kind != exp_conflict2->node_kind) ||
       (conflict2->action    != exp_conflict2->action) ||
       (conflict2->reason    != exp_conflict2->reason) ||
@@ -150,10 +153,9 @@ test_read_invalid_tree_conflicts(apr_pool_t *pool)
 {
   int i;
   const char *tree_conflict_data;
-  apr_array_header_t *conflicts;
+  apr_hash_t *conflicts;
   svn_error_t *err;
 
-  conflicts = apr_array_make(pool, 16, sizeof(svn_wc_conflict_description_t *));
   for (i = 0; broken_tree_conflict_test_data[i] != NULL; i++)
     {
       tree_conflict_data = broken_tree_conflict_test_data[i];
@@ -173,7 +175,7 @@ test_write_tree_conflict(apr_pool_t *pool)
 {
   svn_wc_conflict_description_t *conflict;
   const char *tree_conflict_data;
-  apr_array_header_t *conflicts;
+  apr_hash_t *conflicts;
   const char *expected;
 
   conflict = svn_wc_conflict_description_create_tree("Foo.c", NULL,
@@ -183,9 +185,8 @@ test_write_tree_conflict(apr_pool_t *pool)
   conflict->action = svn_wc_conflict_action_delete;
   conflict->reason = svn_wc_conflict_reason_edited;
 
-  conflicts = apr_array_make(pool, 1,
-      sizeof(svn_wc_conflict_description_t *));
-  APR_ARRAY_PUSH(conflicts, svn_wc_conflict_description_t *) = conflict;
+  conflicts = apr_hash_make(pool);
+  apr_hash_set(conflicts, conflict->path, APR_HASH_KEY_STRING, conflict);
 
   expected = "((conflict Foo.c file update deleted edited "
                "(version 0  2 -1 0  0 ) (version 0  2 -1 0  0 )))";
@@ -204,9 +205,10 @@ static svn_error_t *
 test_write_2_tree_conflicts(apr_pool_t *pool)
 {
   svn_wc_conflict_description_t *conflict1, *conflict2;
-  apr_array_header_t *conflicts;
+  apr_hash_t *conflicts;
   const char *tree_conflict_data;
-  const char *expected;
+  const char *expected1;
+  const char *expected2;
 
   conflict1 = svn_wc_conflict_description_create_tree("Foo.c", NULL,
                                                       svn_node_file,
@@ -222,22 +224,30 @@ test_write_2_tree_conflicts(apr_pool_t *pool)
   conflict2->action = svn_wc_conflict_action_edit;
   conflict2->reason = svn_wc_conflict_reason_deleted;
 
-  conflicts = apr_array_make(pool, 2,
-                             sizeof(svn_wc_conflict_description_t *));
-  APR_ARRAY_PUSH(conflicts, svn_wc_conflict_description_t *) = conflict1;
-  APR_ARRAY_PUSH(conflicts, svn_wc_conflict_description_t *) = conflict2;
+  conflicts = apr_hash_make(pool);
+  apr_hash_set(conflicts, conflict1->path, APR_HASH_KEY_STRING, conflict1);
+  apr_hash_set(conflicts, conflict2->path, APR_HASH_KEY_STRING, conflict2);
 
-  expected = "((conflict Foo.c file update deleted edited "
-                "(version 0  2 -1 0  0 ) (version 0  2 -1 0  0 )) "
-              "(conflict Bar.h file update edited deleted "
-                "(version 0  2 -1 0  0 ) (version 0  2 -1 0  0 )))";
+  /* We don't know the order the hash will spit out the data, so just test
+     for both possibilities. */
+  expected1 = "((conflict Foo.c file update deleted edited "
+                 "(version 0  2 -1 0  0 ) (version 0  2 -1 0  0 )) "
+               "(conflict Bar.h file update edited deleted "
+                 "(version 0  2 -1 0  0 ) (version 0  2 -1 0  0 )))";
+  expected2 = "((conflict Bar.h file update edited deleted "
+                 "(version 0  2 -1 0  0 ) (version 0  2 -1 0  0 )) "
+               "(conflict Foo.c file update deleted edited "
+                 "(version 0  2 -1 0  0 ) (version 0  2 -1 0  0 )))";
 
   SVN_ERR(svn_wc__write_tree_conflicts(&tree_conflict_data, conflicts, pool));
 
-  if (strcmp(expected, tree_conflict_data) != 0)
+  if (strcmp(expected1, tree_conflict_data) != 0
+        && strcmp(expected2, tree_conflict_data) != 0)
     return fail(pool, "Unexpected text from tree conflict\n"
                       "  Expected: %s\n"
-                      "  Actual:   %s\n", expected, tree_conflict_data);
+                      "         OR %s\n"
+                      "  Actual:   %s\n", expected1, expected2,
+                                          tree_conflict_data);
 
   return SVN_NO_ERROR;
 }
@@ -246,7 +256,7 @@ static svn_error_t *
 test_write_invalid_tree_conflicts(apr_pool_t *pool)
 {
   svn_wc_conflict_description_t *conflict;
-  apr_array_header_t *conflicts;
+  apr_hash_t *conflicts;
   const char *tree_conflict_data;
   svn_error_t *err;
 
@@ -261,16 +271,15 @@ test_write_invalid_tree_conflicts(apr_pool_t *pool)
   conflict->action = svn_wc_conflict_action_delete;
   conflict->reason = svn_wc_conflict_reason_edited;
 
-  conflicts = apr_array_make(pool, 1,
-      sizeof(svn_wc_conflict_description_t *));
-  APR_ARRAY_PUSH(conflicts, svn_wc_conflict_description_t *) = conflict;
+  conflicts = apr_hash_make(pool);
+  apr_hash_set(conflicts, conflict->path, APR_HASH_KEY_STRING, conflict);
 
   err = svn_wc__write_tree_conflicts(&tree_conflict_data, conflicts, pool);
   if (err == SVN_NO_ERROR)
     return fail(pool,
                 "Failed to detect blank conflict victim path");
   svn_error_clear(err);
-  apr_array_pop(conflicts);
+  svn_hash__clear(conflicts);
 
   /* node_kind */
   conflict = svn_wc_conflict_description_create_tree("Foo", NULL,
@@ -280,14 +289,14 @@ test_write_invalid_tree_conflicts(apr_pool_t *pool)
   conflict->action = svn_wc_conflict_action_delete;
   conflict->reason = svn_wc_conflict_reason_edited;
 
-  APR_ARRAY_PUSH(conflicts, svn_wc_conflict_description_t *) = conflict;
+  apr_hash_set(conflicts, conflict->path, APR_HASH_KEY_STRING, conflict);
 
   err = svn_wc__write_tree_conflicts(&tree_conflict_data, conflicts, pool);
   if (err == SVN_NO_ERROR)
     return fail(pool,
                 "Failed to detect invalid conflict node_kind");
   svn_error_clear(err);
-  apr_array_pop(conflicts);
+  svn_hash__clear(conflicts);
 
   /* operation */
   conflict = svn_wc_conflict_description_create_tree("Foo.c", NULL,
@@ -297,14 +306,14 @@ test_write_invalid_tree_conflicts(apr_pool_t *pool)
   conflict->action = svn_wc_conflict_action_delete;
   conflict->reason = svn_wc_conflict_reason_edited;
 
-  APR_ARRAY_PUSH(conflicts, svn_wc_conflict_description_t *) = conflict;
+  apr_hash_set(conflicts, conflict->path, APR_HASH_KEY_STRING, conflict);
 
   err = svn_wc__write_tree_conflicts(&tree_conflict_data, conflicts, pool);
   if (err == SVN_NO_ERROR)
     return fail(pool,
                 "Failed to detect invalid conflict operation");
   svn_error_clear(err);
-  apr_array_pop(conflicts);
+  svn_hash__clear(conflicts);
 
   /* action */
   conflict = svn_wc_conflict_description_create_tree("Foo.c", NULL,
@@ -314,14 +323,14 @@ test_write_invalid_tree_conflicts(apr_pool_t *pool)
   conflict->action = 99;
   conflict->reason = svn_wc_conflict_reason_edited;
 
-  APR_ARRAY_PUSH(conflicts, svn_wc_conflict_description_t *) = conflict;
+  apr_hash_set(conflicts, conflict->path, APR_HASH_KEY_STRING, conflict);
 
   err = svn_wc__write_tree_conflicts(&tree_conflict_data, conflicts, pool);
   if (err == SVN_NO_ERROR)
     return fail(pool,
                 "Failed to detect invalid conflict action");
   svn_error_clear(err);
-  apr_array_pop(conflicts);
+  svn_hash__clear(conflicts);
 
   /* reason */
   conflict = svn_wc_conflict_description_create_tree("Foo.c", NULL,
@@ -331,92 +340,14 @@ test_write_invalid_tree_conflicts(apr_pool_t *pool)
   conflict->action = svn_wc_conflict_action_delete;
   conflict->reason = 99;
 
-  APR_ARRAY_PUSH(conflicts, svn_wc_conflict_description_t *) = conflict;
+  apr_hash_set(conflicts, conflict->path, APR_HASH_KEY_STRING, conflict);
 
   err = svn_wc__write_tree_conflicts(&tree_conflict_data, conflicts, pool);
   if (err == SVN_NO_ERROR)
     return fail(pool,
                 "Failed to detect invalid conflict reason");
   svn_error_clear(err);
-  apr_array_pop(conflicts);
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-test_exists_0(apr_pool_t *pool)
-{
-  apr_array_header_t *conflicts;
-
-  conflicts = apr_array_make(pool, 0,
-      sizeof(svn_wc_conflict_description_t *));
-
-  if (svn_wc__tree_conflict_exists(conflicts, "Foo.c", pool))
-    return fail(pool, "Bogus TRUE result searching for tree conflict");
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-test_exists_1(apr_pool_t *pool)
-{
-  svn_wc_conflict_description_t *conflict;
-  apr_array_header_t *conflicts;
-
-  conflict = svn_wc_conflict_description_create_tree("Foo.c", NULL,
-                                                     svn_node_file,
-                                                     svn_wc_operation_update,
-                                                     NULL, NULL, pool);
-  conflict->action = svn_wc_conflict_action_delete;
-  conflict->reason = svn_wc_conflict_reason_edited;
-
-  conflicts = apr_array_make(pool, 0,
-      sizeof(svn_wc_conflict_description_t *));
-  APR_ARRAY_PUSH(conflicts, svn_wc_conflict_description_t *) = conflict;
-
-  if (! svn_wc__tree_conflict_exists(conflicts, "Foo.c", pool))
-    return fail(pool, "Failed to find tree conflict");
-
-  if (svn_wc__tree_conflict_exists(conflicts, "not there", pool))
-    return fail(pool, "Bogus TRUE result searching for tree conflict");
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-test_exists_2(apr_pool_t *pool)
-{
-  svn_wc_conflict_description_t *conflict1, *conflict2;
-  apr_array_header_t *conflicts;
-
-  conflict1 = svn_wc_conflict_description_create_tree("Foo.c", NULL,
-                                                      svn_node_file,
-                                                      svn_wc_operation_update,
-                                                      NULL, NULL, pool);
-  conflict1->action = svn_wc_conflict_action_delete;
-  conflict1->reason = svn_wc_conflict_reason_edited;
-
-  conflict2 = svn_wc_conflict_description_create_tree("Bar.h", NULL,
-                                                      svn_node_file,
-                                                      svn_wc_operation_update,
-                                                      NULL, NULL, pool);
-  conflict2->action = svn_wc_conflict_action_edit;
-  conflict2->reason = svn_wc_conflict_reason_deleted;
-
-  conflicts = apr_array_make(pool, 0,
-                             sizeof(svn_wc_conflict_description_t *));
-  APR_ARRAY_PUSH(conflicts, svn_wc_conflict_description_t *) = conflict1;
-  APR_ARRAY_PUSH(conflicts, svn_wc_conflict_description_t *) = conflict2;
-
-
-  if (! svn_wc__tree_conflict_exists(conflicts, "Foo.c", pool))
-    return fail(pool, "Failed to find 1st tree conflict");
-
-  if (! svn_wc__tree_conflict_exists(conflicts, "Bar.h", pool))
-    return fail(pool, "Failed to find 2nd tree conflict");
-
-  if (svn_wc__tree_conflict_exists(conflicts, "not there", pool))
-    return fail(pool, "Bogus TRUE result searching for tree conflict");
+  svn_hash__clear(conflicts);
 
   return SVN_NO_ERROR;
 }
@@ -439,12 +370,6 @@ struct svn_test_descriptor_t test_funcs[] =
                    "write 2 tree conflicts"),
     SVN_TEST_PASS2(test_write_invalid_tree_conflicts,
                    "detect broken tree conflict data while writing"),
-    SVN_TEST_PASS2(test_exists_0,
-                   "search for victim in array of 0 conflicts"),
-    SVN_TEST_PASS2(test_exists_1,
-                   "search for victim in array of 1 conflict"),
-    SVN_TEST_PASS2(test_exists_2,
-                   "search for victim in array of 2 conflicts"),
     SVN_TEST_NULL
   };
 

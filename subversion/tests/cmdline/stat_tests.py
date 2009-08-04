@@ -605,16 +605,6 @@ def text_time_behaviour(wc_dir, wc_path, status_path, expected_status, cmd):
   if text_time != pre_text_time:
     raise svntest.Failure
 
-  # revert/cleanup change the text-time even though the text doesn't change
-  if cmd == 'cleanup':
-    svntest.actions.run_and_verify_svn(None, None, [], cmd, wc_dir)
-  else:
-    svntest.actions.run_and_verify_svn(None, None, [], cmd, wc_path)
-  svntest.actions.run_and_verify_status(wc_dir, expected_status)
-  text_time = get_text_timestamp(wc_path)
-  if text_time == pre_text_time:
-    raise svntest.Failure
-
 
 # Is this really a status test?  I'm not sure, but I don't know where
 # else to put it.

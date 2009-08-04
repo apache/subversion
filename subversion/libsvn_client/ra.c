@@ -408,8 +408,9 @@ svn_client_uuid_from_path(const char **uuid,
       /* Open the parents administrative area to fetch the uuid.
          Subversion 1.0 and later have the uuid in every checkout root */
 
-      SVN_ERR(svn_wc_adm_open3(&parent_access, NULL, parent, FALSE, 0,
-                               ctx->cancel_func, ctx->cancel_baton, pool));
+      SVN_ERR(svn_wc__adm_open_in_context(&parent_access, ctx->wc_ctx, parent,
+                                          FALSE, 0, ctx->cancel_func,
+                                          ctx->cancel_baton, pool));
 
       err = svn_client_uuid_from_path(uuid, svn_dirent_dirname(path, pool),
                                       parent_access, ctx, pool);
@@ -813,17 +814,12 @@ svn_client__get_youngest_common_ancestor(const char **ancestor_path,
      remembering the youngest matching location. */
   for (hi = apr_hash_first(NULL, history1); hi; hi = apr_hash_next(hi))
     {
-      const void *key;
-      apr_ssize_t klen;
-      void *val;
-      const char *path;
-      apr_array_header_t *ranges1, *ranges2, *common;
+      const char *path = svn_apr_hash_index_key(hi);
+      apr_ssize_t path_len = svn_apr_hash_index_klen(hi);
+      apr_array_header_t *ranges1 = svn_apr_hash_index_val(hi);
+      apr_array_header_t *ranges2, *common;
 
-      apr_hash_this(hi, &key, &klen, &val);
-      path = key;
-      ranges1 = val;
-
-      ranges2 = apr_hash_get(history2, key, klen);
+      ranges2 = apr_hash_get(history2, path, path_len);
       if (ranges2)
         {
           /* We have a path match.  Now, did our two histories share

@@ -314,7 +314,8 @@ assemble_status(svn_wc_status2_t **status,
   /* Find out whether the path is a tree conflict victim.
    * This function will set tree_conflict to NULL if the path
    * is not a victim. */
-  SVN_ERR(svn_wc__get_tree_conflict(&tree_conflict, path, adm_access, pool));
+  SVN_ERR(svn_wc__db_op_get_tree_conflict(&tree_conflict, db, local_abspath,
+                                          pool, pool));
 
   if (! entry)
     {
@@ -408,8 +409,8 @@ assemble_status(svn_wc_status2_t **status,
         final_prop_status = svn_wc_status_normal;
 
       /* If the entry has a property file, see if it has local changes. */
-      SVN_ERR(svn_wc_props_modified_p(&prop_modified_p, path, adm_access,
-                                      pool));
+      SVN_ERR(svn_wc__props_modified(&prop_modified_p, db, local_abspath,
+                                     pool));
 
       /* Record actual property status */
       pristine_prop_status = prop_modified_p ? svn_wc_status_modified
@@ -429,8 +430,9 @@ assemble_status(svn_wc_status2_t **status,
 #endif /* HAVE_SYMLINK */
           )
         {
-          SVN_ERR(svn_wc_text_modified_p(&text_modified_p, path, FALSE,
-                                         adm_access, pool));
+          SVN_ERR(svn_wc__text_modified_internal_p(&text_modified_p, db,
+                                                   local_abspath, FALSE,
+                                                   TRUE, pool));
 
           /* Record actual text status */
           pristine_text_status = text_modified_p ? svn_wc_status_modified
@@ -451,8 +453,9 @@ assemble_status(svn_wc_status2_t **status,
           /* The entry says there was a conflict, but the user might have
              marked it as resolved by deleting the artifact files, so check
              for that. */
-            SVN_ERR(svn_wc_conflicted_p2(&text_conflict_p, &prop_conflict_p,
-                                         NULL, path, adm_access, pool));
+            SVN_ERR(svn_wc__internal_conflicted_p(&text_conflict_p,
+                                                  &prop_conflict_p, NULL, db,
+                                                  local_abspath, pool));
 
           if (text_conflict_p)
             final_text_status = svn_wc_status_conflicted;
@@ -867,12 +870,12 @@ get_dir_status(struct edit_baton *eb,
   apr_hash_index_t *hi;
   const svn_wc_entry_t *dir_entry;
   const char *path = svn_wc_adm_access_path(adm_access);
+  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
   const char *local_abspath;
   apr_hash_t *dirents;
   apr_array_header_t *patterns = NULL;
   apr_pool_t *iterpool, *subpool = svn_pool_create(pool);
-  apr_array_header_t *tree_conflicts;
-  int j;
+  apr_hash_t *tree_conflicts;
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
@@ -980,9 +983,13 @@ get_dir_status(struct edit_baton *eb,
       else
         {
           svn_wc_conflict_description_t *tree_conflict;
-          SVN_ERR(svn_wc__get_tree_conflict(&tree_conflict,
-                                           svn_dirent_join(path, entry, subpool),
-                                           adm_access, subpool));
+          const char *abspath;
+
+          SVN_ERR(svn_dirent_get_absolute(&abspath,
+                                          svn_dirent_join(path, entry, subpool),
+                                          subpool));
+          SVN_ERR(svn_wc__db_op_get_tree_conflict(&tree_conflict, db, abspath,
+                                                  subpool, subpool));
           if (tree_conflict)
             {
               /* A tree conflict will block commit, so we'll pass TRUE
@@ -1064,15 +1071,13 @@ get_dir_status(struct edit_baton *eb,
                                       dir_entry->tree_conflict_data,
                                       path, subpool));
 
-  for (j = 0; j < tree_conflicts->nelts; j++)
+  for (hi = apr_hash_first(pool, tree_conflicts); hi; hi = apr_hash_next(hi))
     {
-      svn_wc_conflict_description_t *conflict;
+      const svn_wc_conflict_description_t *conflict =
+          svn_apr_hash_index_val(hi);
       char *tree_basename;
 
       svn_pool_clear(iterpool);
-
-      conflict = APR_ARRAY_IDX(tree_conflicts, j,
-                               svn_wc_conflict_description_t *);
 
       /* Skip versioned and non-versioned things. */
       tree_basename = svn_dirent_basename(conflict->path, iterpool);

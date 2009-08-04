@@ -183,6 +183,9 @@ merge_file_changed(svn_wc_adm_access_t *adm_access,
   svn_boolean_t merge_required = (mimetype2
                                   && svn_mime_type_is_binary(mimetype2));
   enum svn_wc_merge_outcome_t merge_outcome;
+  const char *mine_abspath;
+
+  SVN_ERR(svn_dirent_get_absolute(&mine_abspath, mine, subpool));
 
   /* Easy out:  no access baton means there ain't no merge target */
   if (adm_access == NULL)
@@ -232,8 +235,8 @@ merge_file_changed(svn_wc_adm_access_t *adm_access,
   /* Now with content modifications */
   {
     svn_boolean_t has_local_mods;
-    SVN_ERR(svn_wc_text_modified_p(&has_local_mods, mine, FALSE,
-                                   adm_access, subpool));
+    SVN_ERR(svn_wc_text_modified_p2(&has_local_mods, patch_b->ctx->wc_ctx,
+                                    mine_abspath, FALSE, subpool));
 
     /* Special case:  if a binary file isn't locally modified, and is
        exactly identical to the file content from the patch, then don't
@@ -525,6 +528,9 @@ merge_file_deleted(svn_wc_adm_access_t *adm_access,
   const char *parent_path;
   svn_error_t *err;
   svn_boolean_t has_local_mods;
+  const char *mine_abspath;
+
+  SVN_ERR(svn_dirent_get_absolute(&mine_abspath, mine, subpool));
 
   /* Easy out:  if we have no adm_access for the parent directory,
      then this portion of the tree-delta "patch" must be inapplicable.
@@ -546,8 +552,8 @@ merge_file_deleted(svn_wc_adm_access_t *adm_access,
       SVN_ERR(svn_wc_adm_retrieve(&parent_access, adm_access, parent_path,
                                   subpool));
 
-      SVN_ERR(svn_wc_text_modified_p(&has_local_mods, mine, TRUE,
-                                     adm_access, subpool));
+      SVN_ERR(svn_wc_text_modified_p2(&has_local_mods, patch_b->ctx->wc_ctx,
+                                      mine_abspath, TRUE, subpool));
       /* Passing NULL for the notify_func and notify_baton because
          delete_entry() will do it for us. */
       err = svn_client__wc_delete(mine, parent_access, patch_b->force,
@@ -1718,13 +1724,14 @@ extract_svnpatch(const char *original_patch_path,
 /* ### forward-declaration */
 static svn_error_t *
 apply_textdiffs(const char *patch_path, const char *wc_path,
-                svn_wc_adm_access_t *adm_access, const svn_client_ctx_t *ctx,
-                apr_pool_t *pool);
+                svn_wc_adm_access_t *adm_access, svn_boolean_t dry_run,
+                const svn_client_ctx_t *ctx, apr_pool_t *pool);
 
 svn_error_t *
 svn_client_patch(const char *patch_path,
                  const char *target,
                  svn_boolean_t force,
+                 svn_boolean_t dry_run,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *pool)
 {
@@ -1733,7 +1740,6 @@ svn_client_patch(const char *patch_path,
   const svn_delta_editor_t *diff_editor;
   svn_wc_adm_access_t *adm_access;
   struct edit_baton *eb;
-  svn_boolean_t dry_run = FALSE; /* disable dry_run for now */
   const char *abs_target;
 
   SVN_ERR(svn_dirent_get_absolute(&abs_target, target, pool));
@@ -1766,7 +1772,7 @@ svn_client_patch(const char *patch_path,
     }
 
   /* Now proceed with the text-diff bytes. */
-  SVN_ERR(apply_textdiffs(patch_path, target, adm_access, ctx, pool));
+  SVN_ERR(apply_textdiffs(patch_path, target, adm_access, dry_run, ctx, pool));
 
   SVN_ERR(svn_wc_adm_close2(adm_access, pool));
 
@@ -1841,7 +1847,9 @@ typedef struct {
   /* True if the target had to be skipped for some reason. */
   svn_boolean_t skipped;
 
-  /* True if at least one hunk was applied to the target. */
+  /* True if at least one hunk was applied to the target.
+   * The hunk may have been a no-op, however (e.g. a hunk trying
+   * to delete a line from an empty file). */
   svn_boolean_t modified;
 
   /* True if at least one hunk application resulted in a conflict. */
@@ -1850,6 +1858,14 @@ typedef struct {
   /* True if the target file had local modifications before the
    * patch was applied to it. */
   svn_boolean_t local_mods;
+
+  /* True if the target was added by the patch, which means that it
+   * did not exist on disk before patching and does exist on disk
+   * after patching. */
+  svn_boolean_t added;
+
+  /* True if the target ended up being deleted by the patch. */
+  svn_boolean_t deleted;
 } patch_target_t;
 
 /* Resolve the exact path for a patch TARGET at path PATH_FROM_PATCHFILE,
@@ -1944,34 +1960,18 @@ resolve_target_path(patch_target_t *target, const char *path_from_patchfile,
   return SVN_NO_ERROR;
 }
 
-/* Indicate in *LOCAL_MODS whether the file at FILE_PATH, located somewhere
- * beneath the directory locked by ADM_ACCESS, has local modifications. */
+/* Indicate in *LOCAL_MODS whether the file at LOCAL_ABSPATH, has local
+   modifications. */
 static svn_error_t *
-check_local_mods(svn_boolean_t *local_mods, const char *file_path,
-                 svn_wc_adm_access_t *adm_access, apr_pool_t *pool)
+check_local_mods(svn_boolean_t *local_mods,
+                 svn_wc_context_t *wc_ctx,
+                 const char *local_abspath,
+                 apr_pool_t *pool)
 {
-  const char *dirname;
-  svn_wc_adm_access_t *file_adm_access;
   svn_error_t *err;
 
-  dirname = svn_dirent_dirname(file_path, pool);
-  err = svn_wc_adm_retrieve(&file_adm_access, adm_access, dirname, pool);
-  if (err)
-    {
-      if (err->apr_err == SVN_ERR_WC_NOT_LOCKED)
-        {
-          /* The containing directory is not versioned. That's OK.
-           * We can treat the target as unmodified. */
-          svn_error_clear(err);
-          *local_mods = FALSE;
-          return SVN_NO_ERROR;
-        }
-      else
-        return svn_error_return(err);
-    }
-
-  err = svn_wc_text_modified_p(local_mods, file_path, FALSE, file_adm_access,
-                               pool);
+  err = svn_wc_text_modified_p2(local_mods, wc_ctx, local_abspath, FALSE,
+                                pool);
   if (err)
     {
       if (err->apr_err == SVN_ERR_ENTRY_NOT_FOUND)
@@ -2013,6 +2013,19 @@ init_patch_target(patch_target_t **target, const svn_patch_t *patch,
   SVN_ERR(resolve_target_path(new_target, patch->new_filename,
                               svn_wc_adm_access_path(adm_access),
                               result_pool, scratch_pool));
+  if (! new_target->skipped)
+    {
+      const svn_wc_entry_t *entry;
+
+      /* If the target is versioned, we should be able to get an entry. */
+      SVN_ERR(svn_wc_entry(&entry, new_target->abs_path, adm_access,
+                           TRUE /* show_hidden */, scratch_pool));
+      if (entry && entry->schedule == svn_wc_schedule_delete)
+        {
+          /* The target is versioned and scheduled for deletion, so skip it. */
+          new_target->skipped = TRUE;
+        }
+    }
 
   if (new_target->kind == svn_node_file && ! new_target->skipped)
     {
@@ -2045,14 +2058,16 @@ init_patch_target(patch_target_t **target, const svn_patch_t *patch,
                                      svn_io_file_del_none,
                                      result_pool, scratch_pool));
 
-      SVN_ERR(check_local_mods(&new_target->local_mods, new_target->abs_path,
-                               adm_access, scratch_pool));
+      SVN_ERR(check_local_mods(&new_target->local_mods, ctx->wc_ctx,
+                               new_target->abs_path, scratch_pool));
      }
 
   new_target->patch = patch;
   new_target->current_line = 1;
   new_target->modified = FALSE;
   new_target->conflicted = FALSE;
+  new_target->added = FALSE;
+  new_target->deleted = FALSE;
   new_target->eof = FALSE;
   new_target->tempfiles = tempfiles;
 
@@ -2522,7 +2537,7 @@ apply_one_hunk(const svn_hunk_t *hunk, patch_target_t *target, apr_pool_t *pool)
 
   SVN_ERR(merge_hunk(target, hunk, latest_text, pool));
 
-  svn_stream_close(latest_text);
+  SVN_ERR(svn_stream_close(latest_text));
 
   return SVN_NO_ERROR;
 }
@@ -2545,7 +2560,9 @@ maybe_send_patch_target_notification(const patch_target_t *target,
 
   if (target->skipped)
     action = svn_wc_notify_skip;
-  else if (target->kind == svn_node_none)
+  else if (target->deleted)
+    action = svn_wc_notify_update_delete;
+  else if (target->added)
     action = svn_wc_notify_update_add;
   else
     action = svn_wc_notify_update_update;
@@ -2592,8 +2609,9 @@ maybe_send_patch_target_notification(const patch_target_t *target,
  * Do all allocations in POOL. */
 static svn_error_t *
 apply_one_patch(svn_patch_t *patch, const char *wc_path,
-                svn_wc_adm_access_t *adm_access, const svn_client_ctx_t *ctx,
-                const hunk_tempfiles_t *tempfiles, apr_pool_t *pool)
+                svn_wc_adm_access_t *adm_access,
+                const hunk_tempfiles_t *tempfiles, svn_boolean_t dry_run,
+                const svn_client_ctx_t *ctx, apr_pool_t *pool)
 {
   patch_target_t *target;
 
@@ -2647,22 +2665,103 @@ apply_one_patch(svn_patch_t *patch, const char *wc_path,
 
       if (target->modified)
         {
-          /* Install the patched temporary file over the working file.
-           * ### Should this rather be done in a loggy fashion? */
-          SVN_ERR(svn_io_file_rename(target->result_path, target->abs_path,
-                                     pool));
+          apr_finfo_t old_file;
+          apr_finfo_t new_file;
 
-          if (target->kind == svn_node_none)
+          /* Get sizes of the patched temporary file (new) and the
+           * working file (old). We'll need those to figure out whether
+           * we should add or delete the patched file. */
+          SVN_ERR(svn_io_stat(&new_file, target->result_path, APR_FINFO_SIZE,
+                              pool));
+          if (target->kind == svn_node_file)
+            SVN_ERR(svn_io_stat(&old_file, target->abs_path, APR_FINFO_SIZE,
+                                pool));
+          else
+            old_file.size = 0;
+
+          if (new_file.size >= 0 && old_file.size == 0)
             {
-              /* The target file didn't exist previously, so add it to version
-               * control.  Suppress the notification, we'll do it manually in
-               * a minute (which is a work-around for otherwise not quite pretty
-               * output of the svn CLI client...) */
-              SVN_ERR(svn_wc_add3(target->abs_path, adm_access,
-                                  svn_depth_infinity,
-                                  NULL, SVN_INVALID_REVNUM,
-                                  ctx->cancel_func, ctx->cancel_baton,
-                                  NULL, NULL, pool));
+              /* If the target did not exist we've just added it.
+               * If it did exist the target was empty before patching,
+               * and maybe it is still empty now. */
+              target->added = (target->kind == svn_node_none);
+            }
+          else if (new_file.size == 0 && old_file.size > 0)
+            {
+              /* If a unidiff removes all lines from a file, that usually
+               * means deletion, so we can confidently schedule the target
+               * for deletion. In the rare case where the unidiff was really
+               * meant to replace a file with an empty one, this may not
+               * be desirable. But the deletion can easily be reverted and
+               * creating an empty file manually is not exactly hard either. */
+              target->deleted = (target->kind != svn_node_none);
+            }
+          
+          if (target->deleted)
+            {
+              if (! dry_run)
+                {
+                  svn_wc_adm_access_t *parent_adm_access;
+                  const char *dirname;
+
+                  /* Schedule the target for deletion.  Suppress
+                   * notification, we'll do it manually in a minute. */
+                  dirname = svn_dirent_dirname(target->abs_path, pool);
+                  SVN_ERR(svn_wc_adm_retrieve(&parent_adm_access, adm_access,
+                                              dirname, pool));
+                  SVN_ERR(svn_wc_delete3(target->abs_path, parent_adm_access,
+                                         ctx->cancel_func, ctx->cancel_baton,
+                                         NULL, NULL, FALSE /* keep_local */,
+                                         pool));
+                }
+
+              /* Remove the tempfile, too. */
+              SVN_ERR(svn_io_remove_file2(target->result_path, FALSE,
+                                          pool));
+            }
+          else
+            {
+              if (old_file.size == 0 && new_file.size == 0)
+                {
+                  /* The target was empty or non-existent to begin with
+                   * and nothing has changed by patching. Just remove the
+                   * temporary file and report this as skipped if it didn't
+                   * exist. */
+                  SVN_ERR(svn_io_remove_file2(target->result_path, FALSE,
+                                              pool));
+                  target->added = FALSE;
+                  if (target->kind == svn_node_none)
+                    target->skipped = TRUE;
+                }
+              else
+                {
+                  if (dry_run)
+                    {
+                      /* Just remove the temporary file. */
+                      SVN_ERR(svn_io_remove_file2(target->result_path, FALSE,
+                                                  pool));
+                    }
+                  else
+                    {
+                      /* Install patched temporary file over working file. 
+                       * ### Should this rather be done in a loggy fashion? */
+                      SVN_ERR(svn_io_file_rename(target->result_path,
+                                               target->abs_path, pool));
+
+                      if (target->added)
+                        {
+                          /* The target file didn't exist previously, so add
+                           * it to version control. Suppress notification,
+                           * we'll do it manually in a minute. */
+                          SVN_ERR(svn_wc_add3(target->abs_path, adm_access,
+                                              svn_depth_infinity,
+                                              NULL, SVN_INVALID_REVNUM,
+                                              ctx->cancel_func,
+                                              ctx->cancel_baton,
+                                              NULL, NULL, pool));
+                        }
+                    }
+                }
             }
         }
       else
@@ -2683,8 +2782,8 @@ apply_one_patch(svn_patch_t *patch, const char *wc_path,
  * Do all allocations in POOL.  */
 static svn_error_t *
 apply_textdiffs(const char *patch_path, const char *wc_path,
-                svn_wc_adm_access_t *adm_access, const svn_client_ctx_t *ctx,
-                apr_pool_t *pool)
+                svn_wc_adm_access_t *adm_access, svn_boolean_t dry_run,
+                const svn_client_ctx_t *ctx, apr_pool_t *pool)
 {
   svn_patch_t *patch;
   apr_pool_t *iterpool;
@@ -2727,8 +2826,8 @@ apply_textdiffs(const char *patch_path, const char *wc_path,
       SVN_ERR(svn_diff__parse_next_patch(&patch, patch_file, patch_eol_str,
                                          iterpool, iterpool));
       if (patch)
-        SVN_ERR(apply_one_patch(patch, wc_path, adm_access, ctx,
-                                tempfiles, iterpool));
+        SVN_ERR(apply_one_patch(patch, wc_path, adm_access, tempfiles,
+                                dry_run, ctx, iterpool));
     }
   while (patch);
   svn_pool_destroy(iterpool);

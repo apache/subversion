@@ -150,7 +150,8 @@ tweak_entries(svn_wc__db_t *db,
       SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL,
                                    NULL, NULL, NULL, NULL, &child_depth, NULL,
                                    NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                   NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, NULL, NULL,
                                    db, child_abspath, iterpool, iterpool));
 
       /* If a file, or deleted, excluded or absent dir, then tweak the
@@ -1761,8 +1762,7 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
       svn_boolean_t modified;
 
       /* Check for prop changes. */
-      SVN_ERR(svn_wc_props_modified_p(&modified, fullpath, adm_access,
-                                      pool));
+      SVN_ERR(svn_wc__props_modified(&modified, db, local_abspath, pool));
       if (modified)
         {
           apr_array_header_t *propchanges;
@@ -1876,9 +1876,9 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
 
           if (! reinstall_working)
             {
-              SVN_ERR(svn_wc__text_modified_internal_p
-                      (&reinstall_working, fullpath, FALSE,
-                       adm_access, FALSE, pool));
+              SVN_ERR(svn_wc__text_modified_internal_p(&reinstall_working,
+                                                       db, local_abspath,
+                                                       FALSE, FALSE, pool));
             }
 
           if (reinstall_working)
@@ -2219,6 +2219,9 @@ revert_internal(svn_wc__db_t *db,
   const svn_wc_entry_t *entry;
   svn_wc_adm_access_t *dir_access;
   svn_wc_conflict_description_t *tree_conflict;
+  const char *local_abspath;
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
   /* Check cancellation here, so recursive calls get checked early. */
   if (cancel_func)
@@ -2230,7 +2233,8 @@ revert_internal(svn_wc__db_t *db,
   /* Safeguard 1: the item must be versioned for any reversion to make sense,
      except that a tree conflict can exist on an unversioned item. */
   SVN_ERR(svn_wc_entry(&entry, path, dir_access, FALSE, pool));
-  SVN_ERR(svn_wc__get_tree_conflict2(&tree_conflict, path, db, pool, pool));
+  SVN_ERR(svn_wc__db_op_get_tree_conflict(&tree_conflict, db, local_abspath,
+                                          pool, pool));
   if (entry == NULL && tree_conflict == NULL)
     return svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
                              _("Cannot revert unversioned item '%s'"), path);
@@ -2282,10 +2286,12 @@ revert_internal(svn_wc__db_t *db,
 
       /* Clear any tree conflict on the path, even if it is not a versioned
          resource. */
-      SVN_ERR(svn_wc__get_tree_conflict2(&conflict, path, db, pool, pool));
+      SVN_ERR(svn_wc__db_op_get_tree_conflict(&conflict, db, local_abspath,
+                                               pool, pool));
       if (conflict)
         {
-          SVN_ERR(svn_wc__del_tree_conflict(path, parent_access, pool));
+          SVN_ERR(svn_wc__db_op_set_tree_conflict(db, local_abspath, NULL,
+                                                  pool));
           reverted = TRUE;
         }
 
@@ -2351,18 +2357,19 @@ revert_internal(svn_wc__db_t *db,
 
       /* Visit any unversioned children that are tree conflict victims. */
       {
-        int i;
-        apr_array_header_t *conflicts;
+        apr_hash_t *conflicts;
+        apr_hash_index_t *hi2;
 
         /* Loop through all the tree conflict victims */
         SVN_ERR(svn_wc__read_tree_conflicts(&conflicts,
                                             entry->tree_conflict_data,
                                             path, pool));
 
-        for (i = 0; i < conflicts->nelts; i++)
+        for (hi2 = apr_hash_first(pool, conflicts); hi2;
+                                                     hi2 = apr_hash_next(hi2))
           {
-            svn_wc_conflict_description_t *conflict
-              = APR_ARRAY_IDX(conflicts, i, svn_wc_conflict_description_t *);
+            const svn_wc_conflict_description_t *conflict =
+            svn_apr_hash_index_val(hi2);
 
             /* If this victim is not in this dir's entries ... */
             if (apr_hash_get(entries,
@@ -2482,8 +2489,9 @@ svn_wc_remove_from_revision_control(svn_wc_adm_access_t *adm_access,
       if (wc_special || ! local_special)
         {
           /* Check for local mods. before removing entry */
-          SVN_ERR(svn_wc_text_modified_p(&text_modified_p, full_path,
-                  FALSE, adm_access, pool));
+          SVN_ERR(svn_wc__text_modified_internal_p(&text_modified_p, db,
+                                                   local_abspath, FALSE,
+                                                   TRUE, pool));
           if (text_modified_p && instant_error)
             return svn_error_createf(SVN_ERR_WC_LEFT_LOCAL_MOD, NULL,
                    _("File '%s' has local modifications"),
@@ -2938,6 +2946,9 @@ resolve_found_entry_callback(const char *path,
   struct resolve_callback_baton *baton = walk_baton;
   svn_boolean_t resolved = FALSE;
   svn_boolean_t wc_root = FALSE;
+  const char *local_abspath;
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
   /* We're going to receive dirents twice;  we want to ignore the
      first one (where it's a child of a parent dir), and only process
@@ -2962,7 +2973,8 @@ resolve_found_entry_callback(const char *path,
            * subtree itself might be a tree conflict victim. */
           svn_boolean_t switched;
           svn_error_t *err;
-          err = svn_wc__path_switched(path, &switched, entry, pool);
+          err = svn_wc__internal_path_switched(&switched, baton->db,
+                                               local_abspath, pool);
           if (err && (err->apr_err == SVN_ERR_ENTRY_MISSING_URL))
             svn_error_clear(err);
           else
@@ -2988,18 +3000,30 @@ resolve_found_entry_callback(const char *path,
       SVN_ERR(svn_wc_adm_probe_retrieve(&parent_adm_access, baton->adm_access,
                                         conflict_dir, pool));
 
-      SVN_ERR(svn_wc__get_tree_conflict2(&conflict, path, baton->db,
-                                         pool, pool));
+      SVN_ERR(svn_wc__db_op_get_tree_conflict(&conflict, baton->db,
+                                              local_abspath, pool, pool));
       if (conflict)
         {
-          SVN_ERR(svn_wc__del_tree_conflict(path, parent_adm_access, pool));
+          svn_error_t *err;
+
+          SVN_ERR(svn_wc__db_op_set_tree_conflict(baton->db, local_abspath,
+                                                  NULL, pool));
 
           /* Sanity check:  see if libsvn_wc *still* thinks this item is in a
              state of conflict that we have asked to resolve. If so,
              don't flag RESOLVED_TREE after all. */
 
-          SVN_ERR(svn_wc_conflicted_p2(NULL, NULL, &tree_conflict, path,
-                                       parent_adm_access, pool));
+          err = svn_wc__internal_conflicted_p(NULL, NULL, &tree_conflict,
+                                              baton->db, local_abspath,
+                                              pool);
+          if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+            {
+              svn_error_clear(err);
+              tree_conflict = FALSE;
+            }
+          else if (err)
+            return err;
+
           if (!tree_conflict)
             resolved = TRUE;
         }
@@ -3029,10 +3053,20 @@ resolve_found_entry_callback(const char *path,
       if (did_resolve)
         {
           svn_boolean_t text_conflict, prop_conflict;
+          svn_error_t *err;
 
-          SVN_ERR(svn_wc_conflicted_p2(&text_conflict, &prop_conflict,
-                                       NULL, path, adm_access,
-                                       pool));
+          err = svn_wc__internal_conflicted_p(&text_conflict, &prop_conflict,
+                                              NULL, baton->db, local_abspath,
+                                              pool);
+
+          if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+            {
+              svn_error_clear(err);
+              text_conflict = FALSE;
+              prop_conflict = FALSE;
+            }
+          else if (err)
+            return err;
 
           if ((baton->resolve_text && text_conflict)
               || (baton->resolve_props && prop_conflict))

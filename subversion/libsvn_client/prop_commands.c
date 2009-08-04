@@ -705,18 +705,12 @@ remote_propget(apr_hash_t *props,
            hi;
            hi = apr_hash_next(hi))
         {
-          const void *key;
-          void *val;
-          const char *this_name;
-          svn_dirent_t *this_ent;
+          const char *this_name = svn_apr_hash_index_key(hi);
+          svn_dirent_t *this_ent = svn_apr_hash_index_val(hi);
           const char *new_target_relative;
           svn_depth_t depth_below_here = depth;
 
           svn_pool_clear(iterpool);
-
-          apr_hash_this(hi, &key, NULL, &val);
-          this_name = key;
-          this_ent = val;
 
           if (depth == svn_depth_files && this_ent->kind == svn_node_dir)
             continue;
@@ -1000,20 +994,17 @@ remote_proplist(const char *target_prefix,
        hi;
        hi = apr_hash_next(hi))
     {
-      const void *key;
-      apr_ssize_t klen;
-      void *val;
+      const char *name = svn_apr_hash_index_key(hi);
+      apr_ssize_t klen = svn_apr_hash_index_klen(hi);
+      svn_string_t *value = svn_apr_hash_index_val(hi);
       svn_prop_kind_t prop_kind;
-      const char *name;
-      svn_string_t *value;
 
-      apr_hash_this(hi, &key, &klen, &val);
-      prop_kind = svn_property_kind(NULL, (const char *) key);
+      prop_kind = svn_property_kind(NULL, name);
 
       if (prop_kind == svn_prop_regular_kind)
         {
-          name = apr_pstrdup(pool, (const char *) key);
-          value = svn_string_dup((svn_string_t *) val, pool);
+          name = apr_pstrdup(pool, name);
+          value = svn_string_dup(value, pool);
           apr_hash_set(final_hash, name, klen, value);
         }
     }
@@ -1032,17 +1023,11 @@ remote_proplist(const char *target_prefix,
            hi;
            hi = apr_hash_next(hi))
         {
-          const void *key;
-          void *val;
-          const char *this_name;
-          svn_dirent_t *this_ent;
+          const char *this_name = svn_apr_hash_index_key(hi);
+          svn_dirent_t *this_ent = svn_apr_hash_index_val(hi);
           const char *new_target_relative;
 
           svn_pool_clear(subpool);
-
-          apr_hash_this(hi, &key, NULL, &val);
-          this_name = key;
-          this_ent = val;
 
           new_target_relative = svn_path_join(target_relative,
                                               this_name, subpool);

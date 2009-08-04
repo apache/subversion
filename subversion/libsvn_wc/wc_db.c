@@ -38,14 +38,22 @@
 #include "wc-metadata.h"
 #include "entries.h"
 #include "lock.h"
+#include "tree_conflicts.h"
 
 #include "svn_private_config.h"
 #include "private/svn_sqlite.h"
 #include "private/svn_skel.h"
+#include "private/svn_wc_private.h"
 
 
 #define NOT_IMPLEMENTED() \
   return svn_error__malfunction(TRUE, __FILE__, __LINE__, "Not implemented.")
+
+
+/*
+ * Some filename constants.
+ */
+#define SDB_FILE  "wc.db"
 
 
 /*
@@ -198,7 +206,9 @@ enum statement_keys {
   STMT_UPDATE_BASE_RECURSIVE_REPO,
   STMT_UPDATE_WORKING_RECURSIVE_COPYFROM_REPO,
   STMT_UPDATE_LOCK_REPOS_ID,
-  STMT_UPDATE_BASE_LAST_MOD_TIME
+  STMT_UPDATE_BASE_LAST_MOD_TIME,
+  STMT_UPDATE_ACTUAL_TREE_CONFLICTS,
+  STMT_INSERT_ACTUAL_TREE_CONFLICTS
 };
 
 /* This is a character used to escape itself and the globbing character in
@@ -234,7 +244,8 @@ static const char * const statements[] = {
   "where wc_id = ?1 and local_relpath = ?2;",
 
   /* STMT_SELECT_ACTUAL_NODE */
-  "select prop_reject, changelist "
+  "select prop_reject, changelist, conflict_old, conflict_new, "
+  "conflict_working, tree_conflict_data "
   "from actual_node "
   "where wc_id = ?1 and local_relpath = ?2;",
 
@@ -360,7 +371,16 @@ static const char * const statements[] = {
 
   /* STMT_UPDATE_BASE_LAST_MOD_TIME */
   "update base_node set last_mod_time = ?3 "
-  "where repos_id = ?1 and local_relpath = ?2;",
+  "where wc_id = ?1 and local_relpath = ?2;",
+
+  /* STMT_UPDATE_ACTUAL_TREE_CONFLICTS */
+  "update actual_node set tree_conflict_data = ?3 "
+  "where wc_id = ?1 and local_relpath = ?2;",
+
+  /* STMT_INSERT_ACTUAL_TREE_CONFLICTS */
+  "insert into actual_node ("
+  "  wc_id, local_relpath, tree_conflict_data) "
+  "values (?1, ?2, ?3);",
 
   NULL
 };
@@ -396,6 +416,14 @@ typedef struct {
   apr_pool_t *scratch_pool;
 
 } insert_base_baton_t;
+
+
+
+static svn_error_t *
+create_repos_id(apr_int64_t *repos_id, const char *repos_root_url,
+                const char *repos_uuid, svn_sqlite__db_t *sdb,
+                svn_sqlite__stmt_t *get_stmt, svn_sqlite__stmt_t *insert_stmt,
+                apr_pool_t *scratch_pool);
 
 
 static svn_wc__db_kind_t
@@ -485,6 +513,306 @@ presence_to_word(svn_wc__db_status_t presence)
     }
 }
 
+
+static const char *
+conflict_kind_to_word(svn_wc_conflict_kind_t conflict_kind)
+{
+  switch (conflict_kind)
+    {
+    case svn_wc_conflict_kind_text:
+      return "text";
+    case svn_wc_conflict_kind_property:
+      return "property";
+    case svn_wc_conflict_kind_tree:
+      return "tree";
+    default:
+      SVN_ERR_MALFUNCTION_NO_RETURN();
+    }
+}
+
+
+static const char *
+conflict_action_to_word(svn_wc_conflict_action_t action)
+{
+  switch (action)
+    {
+    case svn_wc_conflict_action_edit:
+      return "edit";
+    case svn_wc_conflict_action_add:
+      return "add";
+    case svn_wc_conflict_action_delete:
+      return "delete";
+    default:
+      SVN_ERR_MALFUNCTION_NO_RETURN();
+    }
+}
+
+
+static const char *
+conflict_reason_to_word(svn_wc_conflict_reason_t reason)
+{
+  switch (reason)
+    {
+    case svn_wc_conflict_reason_edited:
+      return "edited";
+    case svn_wc_conflict_reason_obstructed:
+      return "obstructed";
+    case svn_wc_conflict_reason_deleted:
+      return "deleted";
+    case svn_wc_conflict_reason_missing:
+      return "missing";
+    case svn_wc_conflict_reason_unversioned:
+      return "unversioned";
+    case svn_wc_conflict_reason_added:
+      return "added";
+    default:
+      SVN_ERR_MALFUNCTION_NO_RETURN();
+    }
+}
+
+
+static const char *
+wc_operation_to_word(svn_wc_operation_t operation)
+{
+  switch (operation)
+    {
+    case svn_wc_operation_none:
+      return "none";
+    case svn_wc_operation_update:
+      return "update";
+    case svn_wc_operation_switch:
+      return "switch";
+    case svn_wc_operation_merge:
+      return "merge";
+    default:
+      SVN_ERR_MALFUNCTION_NO_RETURN();
+    }
+}
+
+
+static svn_wc__db_kind_t
+db_kind_from_node_kind(svn_node_kind_t node_kind)
+{
+  switch (node_kind)
+    {
+    case svn_node_file:
+      return svn_wc__db_kind_file;
+    case svn_node_dir:
+      return svn_wc__db_kind_dir;
+    case svn_node_unknown:
+    case svn_node_none:
+      return svn_wc__db_kind_unknown;
+    default:
+      SVN_ERR_MALFUNCTION_NO_RETURN();
+    }
+}
+
+
+static svn_error_t *
+migrate_single_tree_conflict_data(svn_sqlite__stmt_t *insert_stmt,
+                                  svn_sqlite__stmt_t *repos_select_stmt,
+                                  svn_sqlite__stmt_t *repos_insert_stmt,
+                                  svn_sqlite__db_t *sdb,
+                                  const char *tree_conflict_data,
+                                  apr_uint64_t wc_id,
+                                  const char *local_relpath,
+                                  apr_pool_t *scratch_pool)
+{
+  apr_hash_t *conflicts;
+  apr_hash_index_t *hi;
+
+  SVN_ERR(svn_wc__read_tree_conflicts(&conflicts, tree_conflict_data,
+                                      local_relpath, scratch_pool));
+
+  for (hi = apr_hash_first(scratch_pool, conflicts); hi;
+                                                    hi = apr_hash_next(hi))
+    {
+      const svn_wc_conflict_description_t *conflict =
+          svn_apr_hash_index_val(hi);
+      const char *conflict_relpath = conflict->path;
+      apr_int64_t left_repos_id;
+      apr_int64_t right_repos_id;
+
+      /* Optionally get the right repos ids. */
+      if (conflict->src_left_version)
+        {
+          SVN_ERR(create_repos_id(&left_repos_id,
+                                  conflict->src_left_version->repos_url,
+                                  NULL, sdb, repos_select_stmt,
+                                  repos_insert_stmt, scratch_pool));
+        }
+
+      if (conflict->src_right_version)
+        {
+          SVN_ERR(create_repos_id(&right_repos_id,
+                                  conflict->src_right_version->repos_url,
+                                  NULL, sdb, repos_select_stmt,
+                                  repos_insert_stmt, scratch_pool));
+        }
+
+      SVN_ERR(svn_sqlite__bindf(insert_stmt, "is", wc_id, conflict_relpath));
+
+      SVN_ERR(svn_sqlite__bind_text(insert_stmt, 3,
+                                    svn_dirent_dirname(conflict_relpath,
+                                                       scratch_pool)));
+      SVN_ERR(svn_sqlite__bind_text(insert_stmt, 4,
+                                    kind_to_word(db_kind_from_node_kind(
+                                                        conflict->node_kind))));
+      SVN_ERR(svn_sqlite__bind_text(insert_stmt, 5,
+                                    conflict_kind_to_word(conflict->kind)));
+
+      if (conflict->property_name)
+        SVN_ERR(svn_sqlite__bind_text(insert_stmt, 6,
+                                      conflict->property_name));
+
+      SVN_ERR(svn_sqlite__bind_text(insert_stmt, 7,
+                              conflict_action_to_word(conflict->action)));
+      SVN_ERR(svn_sqlite__bind_text(insert_stmt, 8,
+                              conflict_reason_to_word(conflict->reason)));
+      SVN_ERR(svn_sqlite__bind_text(insert_stmt, 9,
+                              wc_operation_to_word(conflict->operation)));
+
+      if (conflict->src_left_version)
+        {
+          SVN_ERR(svn_sqlite__bind_int64(insert_stmt, 10, left_repos_id));
+          SVN_ERR(svn_sqlite__bind_text(insert_stmt, 11,
+                                   conflict->src_left_version->path_in_repos));
+          SVN_ERR(svn_sqlite__bind_int64(insert_stmt, 12,
+                                       conflict->src_left_version->peg_rev));
+          SVN_ERR(svn_sqlite__bind_text(insert_stmt, 13,
+                                        kind_to_word(db_kind_from_node_kind(
+                                    conflict->src_left_version->node_kind))));
+        }
+
+      if (conflict->src_right_version)
+        {
+          SVN_ERR(svn_sqlite__bind_int64(insert_stmt, 14, right_repos_id));
+          SVN_ERR(svn_sqlite__bind_text(insert_stmt, 15,
+                                 conflict->src_right_version->path_in_repos));
+          SVN_ERR(svn_sqlite__bind_int64(insert_stmt, 16,
+                                       conflict->src_right_version->peg_rev));
+          SVN_ERR(svn_sqlite__bind_text(insert_stmt, 17,
+                                        kind_to_word(db_kind_from_node_kind(
+                                    conflict->src_right_version->node_kind))));
+        }
+
+      SVN_ERR(svn_sqlite__insert(NULL, insert_stmt));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc__db_upgrade_func(void *baton,
+                        svn_sqlite__db_t *sdb,
+                        int current_schema,
+                        apr_pool_t *scratch_pool)
+{
+  static const char * const upgrade_statements[] = 
+    {
+      "select wc_id, local_relpath, tree_conflict_data "
+      "from actual_node "
+      "where tree_conflict_data is not null;",
+
+      "insert into conflict_victim ("
+      "  wc_id, local_relpath, parent_relpath, node_kind, conflict_kind, "
+      "  property_name, conflict_action, conflict_reason, operation, "
+      "  left_repos_id, left_repos_relpath, left_peg_rev, left_kind, "
+      "  right_repos_id, right_repos_relpath, right_peg_rev, right_kind) "
+      "values (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, "
+      "        ?15, ?16, ?17);",
+
+      "update actual_node "
+      "set tree_conflict_data = null "
+      "where wc_id = ?1 and local_relpath = ?2; "
+    };
+
+  switch (current_schema)
+    {
+      case SVN_WC__HAS_WORK_QUEUE:   /* Format 13 */
+        {
+          svn_sqlite__stmt_t *select_stmt;
+          svn_sqlite__stmt_t *update_stmt;
+          svn_sqlite__stmt_t *insert_stmt;
+          svn_sqlite__stmt_t *repos_select_stmt;
+          svn_sqlite__stmt_t *repos_insert_stmt;
+          svn_boolean_t have_row;
+          apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+
+          /* Here's what we're going to do:
+             Since we can't have simultaneous prepared statements executing,
+             such as a select and an insert, we have to select the tree
+             conflict data one at a time.  We do this by simply selecting them
+             all, processing the first one, not iterating over the result set,
+             and then setting the processed one to NULL.  We then re-execute the
+             select, and lather, rinse, repeat.
+
+             Although this may look like it'd be O(n^2) (since we select *all*
+             the tree conflict data rows at once), it's actually not, due to the
+             way that SQLite does on-demand selects.
+           */
+
+          SVN_ERR(svn_sqlite__prepare(&select_stmt, sdb, upgrade_statements[0],
+                                      scratch_pool));
+          SVN_ERR(svn_sqlite__prepare(&insert_stmt, sdb, upgrade_statements[1],
+                                      scratch_pool));
+          SVN_ERR(svn_sqlite__prepare(&update_stmt, sdb, upgrade_statements[2],
+                                      scratch_pool));
+          SVN_ERR(svn_sqlite__prepare(&repos_select_stmt, sdb,
+                                      statements[STMT_SELECT_REPOSITORY],
+                                      scratch_pool));
+          SVN_ERR(svn_sqlite__prepare(&repos_insert_stmt, sdb,
+                                      statements[STMT_INSERT_REPOSITORY],
+                                      scratch_pool));
+
+          /* Get all the existing tree conflict data. */
+          SVN_ERR(svn_sqlite__step(&have_row, select_stmt));
+          while (have_row)
+            {
+              apr_uint64_t wc_id;
+              const char *local_relpath;
+              const char *tree_conflict_data;
+
+              svn_pool_clear(iterpool);
+
+              wc_id = svn_sqlite__column_int64(select_stmt, 0);
+              local_relpath = svn_sqlite__column_text(select_stmt, 1, iterpool);
+              tree_conflict_data = svn_sqlite__column_text(select_stmt, 2,
+                                                           iterpool);
+              SVN_ERR(svn_sqlite__reset(select_stmt));
+
+              SVN_ERR(migrate_single_tree_conflict_data(insert_stmt,
+                                                        repos_select_stmt,
+                                                        repos_insert_stmt, sdb,
+                                                        tree_conflict_data,
+                                                        wc_id, local_relpath,
+                                                        iterpool));
+
+              /* Set the tree conflict data to NULL for this node. */
+              SVN_ERR(svn_sqlite__bindf(update_stmt, "is", wc_id,
+                                        local_relpath));
+              SVN_ERR(svn_sqlite__step_done(update_stmt));
+
+              /* We don't need to do anything but step over the previously
+                 prepared statement. */
+              SVN_ERR(svn_sqlite__step(&have_row, select_stmt));
+            }
+
+          /* Clean stuff up. */
+          SVN_ERR(svn_sqlite__reset(select_stmt));
+          SVN_ERR(svn_sqlite__finalize(select_stmt));
+          SVN_ERR(svn_sqlite__finalize(insert_stmt));
+          SVN_ERR(svn_sqlite__finalize(update_stmt));
+          SVN_ERR(svn_sqlite__finalize(repos_select_stmt));
+          SVN_ERR(svn_sqlite__finalize(repos_insert_stmt));
+
+          svn_pool_destroy(iterpool);
+          return SVN_NO_ERROR;
+        }
+      default:
+        return SVN_NO_ERROR;
+    }
+}
 
 static svn_filesize_t
 get_translated_size(svn_sqlite__stmt_t *stmt, int slot)
@@ -1019,10 +1347,11 @@ parse_local_abspath(svn_wc__db_pdh_t **pdh,
       svn_error_t *err;
 
       err = svn_sqlite__open(&sdb,
-                             svn_wc__adm_child(local_abspath, "wc.db",
+                             svn_wc__adm_child(local_abspath, SDB_FILE,
                                                scratch_pool),
-                             smode, statements, SVN_WC__VERSION,
-                             upgrade_sql, db->state_pool, scratch_pool);
+                             smode, statements, SVN_WC__VERSION, upgrade_sql,
+                             svn_wc__db_upgrade_func, NULL,
+                             db->state_pool, scratch_pool);
       if (err == NULL)
         break;
       if (err->apr_err != SVN_ERR_SQLITE_ERROR
@@ -1166,10 +1495,11 @@ parse_local_abspath(svn_wc__db_pdh_t **pdh,
         {
           svn_error_t *err = svn_sqlite__open(&sdb,
                                               svn_wc__adm_child(parent_dir,
-                                                                "wc.db",
+                                                                SDB_FILE,
                                                                 scratch_pool),
                                               smode, statements,
                                               SVN_WC__VERSION, upgrade_sql,
+                                              svn_wc__db_upgrade_func, NULL,
                                               db->state_pool, scratch_pool);
           if (err)
             {
@@ -1357,21 +1687,22 @@ navigate_to_parent(svn_wc__db_pdh_t **parent_pdh,
 static svn_error_t *
 create_repos_id(apr_int64_t *repos_id, const char *repos_root_url,
                 const char *repos_uuid, svn_sqlite__db_t *sdb,
+                svn_sqlite__stmt_t *get_stmt, svn_sqlite__stmt_t *insert_stmt,
                 apr_pool_t *scratch_pool)
 {
-  svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
 
-  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_SELECT_REPOSITORY));
-  SVN_ERR(svn_sqlite__bindf(stmt, "s", repos_root_url));
-  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  if (!get_stmt)
+    SVN_ERR(svn_sqlite__get_statement(&get_stmt, sdb, STMT_SELECT_REPOSITORY));
+  SVN_ERR(svn_sqlite__bindf(get_stmt, "s", repos_root_url));
+  SVN_ERR(svn_sqlite__step(&have_row, get_stmt));
 
   if (have_row)
     {
-      *repos_id = svn_sqlite__column_int64(stmt, 0);
-      return svn_error_return(svn_sqlite__reset(stmt));
+      *repos_id = svn_sqlite__column_int64(get_stmt, 0);
+      return svn_error_return(svn_sqlite__reset(get_stmt));
     }
-  SVN_ERR(svn_sqlite__reset(stmt));
+  SVN_ERR(svn_sqlite__reset(get_stmt));
 
   /* NOTE: strictly speaking, there is a race condition between the
      above query and the insertion below. We're simply going to ignore
@@ -1382,9 +1713,11 @@ create_repos_id(apr_int64_t *repos_id, const char *repos_root_url,
      database in a consistent state, and the user can just re-run the
      failed operation. */
 
-  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_INSERT_REPOSITORY));
-  SVN_ERR(svn_sqlite__bindf(stmt, "ss", repos_root_url, repos_uuid));
-  return svn_error_return(svn_sqlite__insert(repos_id, stmt));
+  if (!insert_stmt)
+    SVN_ERR(svn_sqlite__get_statement(&insert_stmt, sdb,
+                                      STMT_INSERT_REPOSITORY));
+  SVN_ERR(svn_sqlite__bindf(insert_stmt, "ss", repos_root_url, repos_uuid));
+  return svn_error_return(svn_sqlite__insert(repos_id, insert_stmt));
 }
 
 
@@ -1658,15 +1991,16 @@ svn_wc__db_init(const char *local_abspath,
   insert_base_baton_t ibb;
 
   SVN_ERR(svn_sqlite__open(&sdb,
-                           svn_wc__adm_child(local_abspath, "wc.db",
+                           svn_wc__adm_child(local_abspath, SDB_FILE,
                                              scratch_pool),
                            svn_sqlite__mode_rwcreate, statements,
-                           SVN_WC__VERSION,
-                           upgrade_sql, scratch_pool, scratch_pool));
+                           SVN_WC__VERSION, upgrade_sql,
+                           svn_wc__db_upgrade_func, NULL,
+                           scratch_pool, scratch_pool));
 
   /* Insert the repository. */
   SVN_ERR(create_repos_id(&repos_id, repos_root_url, repos_uuid, sdb,
-                          scratch_pool));
+                          NULL, NULL, scratch_pool));
 
   /* Insert the wcroot. */
   /* ### Right now, this just assumes wc metadata is being stored locally. */
@@ -1734,7 +2068,7 @@ svn_wc__db_base_add_directory(svn_wc__db_t *db,
                               scratch_pool, scratch_pool));
 
   SVN_ERR(create_repos_id(&repos_id, repos_root_url, repos_uuid,
-                          pdh->wcroot->sdb, scratch_pool));
+                          pdh->wcroot->sdb, NULL, NULL, scratch_pool));
 
   ibb.status = svn_wc__db_status_normal;
   ibb.kind = svn_wc__db_kind_dir;
@@ -1797,7 +2131,7 @@ svn_wc__db_base_add_file(svn_wc__db_t *db,
                               scratch_pool, scratch_pool));
 
   SVN_ERR(create_repos_id(&repos_id, repos_root_url, repos_uuid,
-                          pdh->wcroot->sdb, scratch_pool));
+                          pdh->wcroot->sdb, NULL, NULL, scratch_pool));
 
   ibb.status = svn_wc__db_status_normal;
   ibb.kind = svn_wc__db_kind_file;
@@ -1858,7 +2192,7 @@ svn_wc__db_base_add_symlink(svn_wc__db_t *db,
                               scratch_pool, scratch_pool));
 
   SVN_ERR(create_repos_id(&repos_id, repos_root_url, repos_uuid,
-                          pdh->wcroot->sdb, scratch_pool));
+                          pdh->wcroot->sdb, NULL, NULL, scratch_pool));
 
   ibb.status = svn_wc__db_status_normal;
   ibb.kind = svn_wc__db_kind_symlink;
@@ -1915,7 +2249,7 @@ svn_wc__db_base_add_absent_node(svn_wc__db_t *db,
                               scratch_pool, scratch_pool));
 
   SVN_ERR(create_repos_id(&repos_id, repos_root_url, repos_uuid,
-                          pdh->wcroot->sdb, scratch_pool));
+                          pdh->wcroot->sdb, NULL, NULL, scratch_pool));
 
   ibb.status = status;
   ibb.kind = kind;
@@ -1980,7 +2314,7 @@ svn_wc__db_temp_base_add_subdir(svn_wc__db_t *db,
                               scratch_pool, scratch_pool));
 
   SVN_ERR(create_repos_id(&repos_id, repos_root_url, repos_uuid,
-                          pdh->wcroot->sdb, scratch_pool));
+                          pdh->wcroot->sdb, NULL, NULL, scratch_pool));
 
   ibb.status = svn_wc__db_status_normal;
   ibb.kind = svn_wc__db_kind_subdir;
@@ -2454,7 +2788,7 @@ svn_wc__db_repos_ensure(apr_int64_t *repos_id,
 
   return svn_error_return(create_repos_id(repos_id, repos_root_url,
                                           repos_uuid, pdh->wcroot->sdb,
-                                          scratch_pool));
+                                          NULL, NULL, scratch_pool));
 }
 
 
@@ -2610,6 +2944,117 @@ svn_wc__db_op_mark_resolved(svn_wc__db_t *db,
 }
 
 
+struct remove_tc_baton
+{
+  const char *local_abspath;
+  apr_int64_t wc_id;
+  const char *local_relpath;
+  const char *parent_abspath;
+  const svn_wc_conflict_description_t *tree_conflict;
+
+  apr_pool_t *scratch_pool;
+};
+
+
+static svn_error_t *
+remove_tc_txn(void *baton, svn_sqlite__db_t *sdb)
+{
+  struct remove_tc_baton *rtb = baton;
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
+  const char *tree_conflict_data;
+  apr_hash_t *conflicts;
+
+  /* ### f13: just insert, remove or replace the row from the CONFLICT_VICTIM
+     ### table, rather than all this parsing, unparsing garbage. (and we
+     ### probably won't need a transaction, either.)*/
+
+  /* Get the conflict information for the parent of LOCAL_ABSPATH. */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_SELECT_ACTUAL_NODE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", rtb->wc_id, rtb->local_relpath));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+
+  /* No ACTUAL node, no conflict info, no problem. */
+  if (!have_row)
+    tree_conflict_data = NULL;
+  else
+    tree_conflict_data = svn_sqlite__column_text(stmt, 5, rtb->scratch_pool);
+
+  SVN_ERR(svn_sqlite__reset(stmt));
+
+  /* Parse the conflict data, set the desired conflict, and then rewrite
+     the conflict data. */
+  SVN_ERR(svn_wc__read_tree_conflicts(&conflicts, tree_conflict_data,
+                                      rtb->parent_abspath, rtb->scratch_pool));
+
+  apr_hash_set(conflicts, svn_dirent_basename(rtb->local_abspath,
+                                              rtb->scratch_pool),
+               APR_HASH_KEY_STRING, rtb->tree_conflict);
+
+  if (apr_hash_count(conflicts) == 0 && !have_row)
+    {
+      /* We're removing conflict information that doesn't even exist, so
+         don't bother rewriting it, just exit. */
+      return SVN_NO_ERROR;
+    }
+  else
+    {
+      SVN_ERR(svn_wc__write_tree_conflicts(&tree_conflict_data, conflicts,
+                                           rtb->scratch_pool));
+
+      if (have_row)
+        {
+          /* There is an existing ACTUAL row, so just update it. */
+          SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
+                                          STMT_UPDATE_ACTUAL_TREE_CONFLICTS));
+        }
+      else
+        {
+          /* We need to insert an ACTUAL row with the tree conflict data. */
+          SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
+                                          STMT_INSERT_ACTUAL_TREE_CONFLICTS));
+        }
+
+      SVN_ERR(svn_sqlite__bindf(stmt, "iss", rtb->wc_id, rtb->local_relpath,
+                                tree_conflict_data));
+
+      SVN_ERR(svn_sqlite__step_done(stmt));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc__db_op_set_tree_conflict(svn_wc__db_t *db,
+                                const char *local_abspath,
+                                const svn_wc_conflict_description_t *tree_conflict,
+                                apr_pool_t *scratch_pool)
+{
+  svn_wc__db_pdh_t *pdh;
+  struct remove_tc_baton rtb;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+  rtb.parent_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
+
+  SVN_ERR(parse_local_abspath(&pdh, &rtb.local_relpath, db, rtb.parent_abspath,
+                              svn_sqlite__mode_readwrite,
+                              scratch_pool, scratch_pool));
+
+  rtb.local_abspath = local_abspath;
+  rtb.wc_id = pdh->wcroot->wc_id;
+  rtb.tree_conflict = tree_conflict;
+  rtb.scratch_pool = scratch_pool;
+
+  SVN_ERR(svn_sqlite__with_transaction(pdh->wcroot->sdb, remove_tc_txn, &rtb));
+
+  /* There may be some entries, and the lock info is now out of date.  */
+  flush_entries(pdh);
+
+  return SVN_NO_ERROR;
+}
+
+
 svn_error_t *
 svn_wc__db_op_revert(svn_wc__db_t *db,
                      const char *local_abspath,
@@ -2641,6 +3086,77 @@ svn_wc__db_op_invalidate_last_mod_time(svn_wc__db_t *db,
 
 
 svn_error_t *
+svn_wc__db_op_get_tree_conflict(svn_wc_conflict_description_t **tree_conflict,
+                                svn_wc__db_t *db,
+                                const char *local_abspath,
+                                apr_pool_t *result_pool,
+                                apr_pool_t *scratch_pool)
+{
+  svn_wc__db_pdh_t *pdh;
+  const char *local_relpath;
+  svn_sqlite__stmt_t *stmt;
+  const char *parent_abspath;
+  svn_boolean_t have_row;
+  const char *tree_conflict_data;
+  apr_hash_t *conflicts;
+  svn_error_t *err;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+  parent_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
+
+  err = parse_local_abspath(&pdh, &local_relpath, db, parent_abspath,
+                            svn_sqlite__mode_readwrite,
+                            scratch_pool, scratch_pool);
+  if (err && err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY)
+    {
+       /* We walked off the top of a working copy.  */
+       svn_error_clear(err);
+       *tree_conflict = NULL;
+       return SVN_NO_ERROR;
+    }
+  else if (err)
+    return err;
+
+  /* ### f13: just remove the row from the CONFLICT_VICTIM table, rather than
+     ### all this parsing, unparsing garbage. */
+
+  /* Get the conflict information for the parent of LOCAL_ABSPATH. */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb, 
+                                    STMT_SELECT_ACTUAL_NODE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id, local_relpath));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+
+  /* No ACTUAL node, no conflict info, no problem. */
+  if (!have_row)
+    {
+      *tree_conflict = NULL;
+      SVN_ERR(svn_sqlite__reset(stmt));
+      return SVN_NO_ERROR;
+    }
+
+  tree_conflict_data = svn_sqlite__column_text(stmt, 5, scratch_pool);
+  SVN_ERR(svn_sqlite__reset(stmt));
+
+  /* No tree conflict data?  no problem. */
+  if (tree_conflict_data == NULL)
+    {
+      *tree_conflict = NULL;
+      return SVN_NO_ERROR;
+    }
+
+  SVN_ERR(svn_wc__read_tree_conflicts(&conflicts, tree_conflict_data,
+                                      parent_abspath, result_pool));
+
+  *tree_conflict = apr_hash_get(conflicts,
+                                svn_dirent_basename(local_abspath,
+                                                    scratch_pool),
+                                APR_HASH_KEY_STRING);
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
 svn_wc__db_read_info(svn_wc__db_status_t *status,
                      svn_wc__db_kind_t *kind,
                      svn_revnum_t *revision,
@@ -2663,8 +3179,12 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
                      svn_boolean_t *text_mod,
                      svn_boolean_t *props_mod,
                      svn_boolean_t *base_shadowed,
+                     const char **conflict_old,
+                     const char **conflict_new,
+                     const char **conflict_working,
                      const char **prop_reject_file,
                      svn_wc__db_lock_t **lock,
+                     const char **tree_conflict_data,
                      svn_wc__db_t *db,
                      const char *local_abspath,
                      apr_pool_t *result_pool,
@@ -2939,6 +3459,28 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
           else
             *changelist = NULL;
         }
+      if (conflict_old)
+        {
+          if (have_act)
+            *conflict_old = svn_sqlite__column_text(stmt_act, 2, result_pool);
+          else
+            *conflict_old = NULL;
+        }
+      if (conflict_new)
+        {
+          if (have_act)
+            *conflict_new = svn_sqlite__column_text(stmt_act, 3, result_pool);
+          else
+            *conflict_new = NULL;
+        }
+      if (conflict_working)
+        {
+          if (have_act)
+            *conflict_working = svn_sqlite__column_text(stmt_act, 4,
+                                                        result_pool);
+          else
+            *conflict_working = NULL;
+        }
       if (prop_reject_file)
         {
           if (have_act)
@@ -2946,6 +3488,14 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
                                                         result_pool);
           else
             *prop_reject_file = NULL;
+        }
+      if (tree_conflict_data)
+        {
+          if (have_act)
+            *tree_conflict_data = svn_sqlite__column_text(stmt_act, 5,
+                                                          result_pool);
+          else
+            *tree_conflict_data = NULL;
         }
       if (original_repos_relpath)
         {
@@ -3168,7 +3718,7 @@ relocate_txn(void *baton, svn_sqlite__db_t *sdb)
 
   /* Get the repos_id for the new repository. */
   SVN_ERR(create_repos_id(&new_repos_id, rb->repos_root_url, rb->repos_uuid,
-                          sdb, scratch_pool));
+                          sdb, NULL, NULL, scratch_pool));
 
   if (rb->local_relpath[0] == 0)
     like_arg = "%";
@@ -3291,8 +3841,9 @@ svn_wc__db_global_relocate(svn_wc__db_t *db,
                                        NULL, NULL, NULL,
                                        NULL, NULL, NULL,
                                        NULL, NULL, NULL,
+                                       NULL, NULL, NULL,
                                        NULL, NULL, NULL, NULL,
-                                       NULL, NULL, NULL, NULL, NULL,
+                                       NULL, NULL, NULL, NULL, NULL, NULL,
                                        db, child_abspath,
                                        iterpool, iterpool));
           if (kind != svn_wc__db_kind_dir)
@@ -4129,6 +4680,24 @@ svn_wc__db_temp_get_all_access(svn_wc__db_t *db,
 
 
 svn_error_t *
+svn_wc__db_temp_get_sdb(svn_sqlite__db_t **db,
+                        const char *local_dir_abspath,
+                        const char * const statements_in[],
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool)
+{
+  const char *db_path = svn_dirent_join(local_dir_abspath, ".svn/" SDB_FILE,
+                                        scratch_pool);
+  SVN_ERR(svn_sqlite__open(db, db_path, svn_sqlite__mode_readwrite,
+                           statements_in, SVN_WC__VERSION, upgrade_sql,
+                           svn_wc__db_upgrade_func, NULL,
+                           result_pool, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
 svn_wc__db_temp_is_dir_deleted(svn_boolean_t *not_present,
                                svn_revnum_t *base_revision,
                                svn_wc__db_t *db,
@@ -4190,7 +4759,7 @@ svn_wc__db_check_node(svn_wc__db_kind_t *kind,
   err = svn_wc__db_read_info(NULL, kind, NULL, NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                             NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                              db, local_abspath, scratch_pool, scratch_pool);
 
   if (!err)

@@ -114,8 +114,6 @@ display_mergeinfo_diff(const char *old_mergeinfo_val,
 {
   apr_hash_t *old_mergeinfo_hash, *new_mergeinfo_hash, *added, *deleted;
   apr_hash_index_t *hi;
-  const char *from_path;
-  apr_array_header_t *merge_revarray;
 
   if (old_mergeinfo_val)
     SVN_ERR(svn_mergeinfo_parse(&old_mergeinfo_hash, old_mergeinfo_val, pool));
@@ -134,13 +132,9 @@ display_mergeinfo_diff(const char *old_mergeinfo_val,
   for (hi = apr_hash_first(pool, deleted);
        hi; hi = apr_hash_next(hi))
     {
-      const void *key;
-      void *val;
+      const char *from_path = svn_apr_hash_index_key(hi);
+      apr_array_header_t *merge_revarray = svn_apr_hash_index_val(hi);
       svn_string_t *merge_revstr;
-
-      apr_hash_this(hi, &key, NULL, &val);
-      from_path = key;
-      merge_revarray = val;
 
       SVN_ERR(svn_rangelist_to_string(&merge_revstr, merge_revarray, pool));
 
@@ -153,13 +147,9 @@ display_mergeinfo_diff(const char *old_mergeinfo_val,
   for (hi = apr_hash_first(pool, added);
        hi; hi = apr_hash_next(hi))
     {
-      const void *key;
-      void *val;
+      const char *from_path = svn_apr_hash_index_key(hi);
+      apr_array_header_t *merge_revarray = svn_apr_hash_index_val(hi);
       svn_string_t *merge_revstr;
-
-      apr_hash_this(hi, &key, NULL, &val);
-      from_path = key;
-      merge_revarray = val;
 
       SVN_ERR(svn_rangelist_to_string(&merge_revstr, merge_revarray, pool));
 
@@ -1152,7 +1142,7 @@ diff_prepare_repos_repos(const struct diff_parameters *params,
       svn_uri_split(drr->url2, &drr->anchor2, &drr->target2, pool);
       drr->target2 = svn_path_uri_decode(drr->target2, pool);
       if (drr->base_path)
-        drr->base_path = svn_path_dirname(drr->base_path, pool);
+        drr->base_path = svn_dirent_dirname(drr->base_path, pool);
       SVN_ERR(svn_ra_reparent(ra_session, drr->anchor1, pool));
     }
 
@@ -1749,8 +1739,8 @@ svn_client_diff5(const apr_array_header_t *options,
   if (svnpatch_format)
     {
       svn_wc_adm_access_t *adm_access;
-      SVN_ERR(svn_wc_adm_open3(&adm_access, NULL, "", TRUE,
-                               0, NULL, NULL, pool));
+      SVN_ERR(svn_wc__adm_open_in_context(&adm_access, ctx->wc_ctx, "", TRUE,
+                                          0, NULL, NULL, pool));
       SVN_ERR(svn_wc_create_tmp_file2(&(diff_cmd_baton.svnpatch_file), NULL,
                                       svn_wc_adm_access_path(adm_access),
                                       SVNPATCH_DELETE_WHEN, pool));
@@ -1832,8 +1822,8 @@ svn_client_diff_peg5(const apr_array_header_t *options,
   if (svnpatch_format)
     {
       svn_wc_adm_access_t *adm_access;
-      SVN_ERR(svn_wc_adm_open3(&adm_access, NULL, "", TRUE,
-                               0, NULL, NULL, pool));
+      SVN_ERR(svn_wc__adm_open_in_context(&adm_access, ctx->wc_ctx, "", TRUE,
+                                          0, NULL, NULL, pool));
       SVN_ERR(svn_wc_create_tmp_file2(&(diff_cmd_baton.svnpatch_file), NULL,
                                       svn_wc_adm_access_path(adm_access),
                                       SVNPATCH_DELETE_WHEN, pool));

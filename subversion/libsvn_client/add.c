@@ -44,6 +44,8 @@
 #include "svn_sorts.h"
 #include "client.h"
 
+#include "private/svn_wc_private.h"
+
 #include "svn_private_config.h"
 
 
@@ -296,10 +298,9 @@ add_file(const char *path,
       for (hi = apr_hash_first(pool, properties);
            hi != NULL; hi = apr_hash_next(hi))
         {
-          const void *pname;
-          void *pval;
+          const char *pname = svn_apr_hash_index_key(hi);
+          const svn_string_t *pval = svn_apr_hash_index_val(hi);
 
-          apr_hash_this(hi, &pname, NULL, &pval);
           /* It's probably best to pass 0 for force, so that if
              the autoprops say to set some weird combination,
              we just error and let the user sort it out. */
@@ -522,8 +523,8 @@ add_parent_dirs(const char *path,
   svn_wc_adm_access_t *adm_access;
   svn_error_t *err;
 
-  err = svn_wc_adm_open3(&adm_access, NULL, path, TRUE, 0,
-                         ctx->cancel_func, ctx->cancel_baton, pool);
+  err = svn_wc__adm_open_in_context(&adm_access, ctx->wc_ctx, path, TRUE, 0,
+                                    ctx->cancel_func, ctx->cancel_baton, pool);
 
   if (err && err->apr_err == SVN_ERR_WC_NOT_DIRECTORY)
     {
@@ -596,9 +597,9 @@ svn_client_add4(const char *path,
       parent_dir = svn_dirent_dirname(path, pool);
     }
 
-  SVN_ERR(svn_wc_adm_open3(&adm_access, NULL, parent_dir,
-                           TRUE, 0, ctx->cancel_func, ctx->cancel_baton,
-                           pool));
+  SVN_ERR(svn_wc__adm_open_in_context(&adm_access, ctx->wc_ctx, parent_dir,
+                                      TRUE, 0, ctx->cancel_func,
+                                      ctx->cancel_baton, pool));
 
   err = add(path, depth, force, no_ignore, adm_access, ctx, pool);
 

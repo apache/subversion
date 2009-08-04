@@ -1111,7 +1111,7 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
               ctx->done_item->next = *ctx->done_list;
               *ctx->done_list = ctx->done_item;
             }
-          return svn_error_wrap_apr(status, NULL, NULL);
+          return svn_error_wrap_apr(status, NULL);
         }
 
       /* feed me! */

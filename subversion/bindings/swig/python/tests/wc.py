@@ -155,7 +155,7 @@ class SubversionWorkingCopyTestCase(unittest.TestCase):
        target) = wc.adm_open_anchor(self.path, False, -1, None)
       (editor, edit_baton, set_locks_baton,
        edit_revision) = wc.get_status_editor2(anchor_access,
-                                              self.path,
+                                              target,
                                               None,  # SvnConfig
                                               True,  # recursive
                                               False, # get_all

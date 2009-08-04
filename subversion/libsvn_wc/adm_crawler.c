@@ -150,7 +150,8 @@ restore_file(const char *file_path,
                                    NULL, NULL,
                                    NULL, NULL,
                                    NULL, NULL, NULL, NULL,
-                                   NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, NULL, NULL,
                                    db, local_abspath,
                                    pool, pool));
 
@@ -867,14 +868,15 @@ copying_stream(svn_stream_t *source,
 }
 
 svn_error_t *
-svn_wc_transmit_text_deltas2(const char **tempfile,
-                             unsigned char digest[],
-                             const char *path,
-                             svn_wc_adm_access_t *adm_access,
-                             svn_boolean_t fulltext,
-                             const svn_delta_editor_t *editor,
-                             void *file_baton,
-                             apr_pool_t *pool)
+svn_wc__internal_transmit_text_deltas(const char **tempfile,
+                                      unsigned char digest[],
+                                      svn_wc__db_t *db,
+                                      const char *local_abspath,
+                                      svn_boolean_t fulltext,
+                                      const svn_delta_editor_t *editor,
+                                      void *file_baton,
+                                      apr_pool_t *result_pool,
+                                      apr_pool_t *scratch_pool)
 {
   svn_txdelta_window_handler_t handler;
   void *wh_baton;
@@ -887,14 +889,17 @@ svn_wc_transmit_text_deltas2(const char **tempfile,
   svn_stream_t *local_stream;
 
   /* Translated input */
-  SVN_ERR(svn_wc_translated_stream(&local_stream, path, path,
-                                   adm_access, SVN_WC_TRANSLATE_TO_NF, pool));
+  SVN_ERR(svn_wc__internal_translated_stream(&local_stream, db,
+                                             local_abspath, local_abspath,
+                                             SVN_WC_TRANSLATE_TO_NF,
+                                             scratch_pool, scratch_pool));
 
   /* Alert the caller that we have created a temporary file that might
      need to be cleaned up, if he asked for one. */
   if (tempfile)
     {
-      const char *tmp_base = svn_wc__text_base_path(path, TRUE, pool);
+      const char *tmp_base = svn_wc__text_base_path(local_abspath, TRUE,
+                                                    scratch_pool);
       apr_file_t *tempbasefile;
 
       *tempfile = tmp_base;
@@ -904,7 +909,8 @@ svn_wc_transmit_text_deltas2(const char **tempfile,
          and keywords anyway, and b) after the commit, we're going to
          copy the tmp file to become the new text base anyway. */
       SVN_ERR(svn_io_file_open(&tempbasefile, tmp_base,
-                               APR_WRITE | APR_CREATE, APR_OS_DEFAULT, pool));
+                               APR_WRITE | APR_CREATE, APR_OS_DEFAULT,
+                               result_pool));
 
       /* Wrap the translated stream with a new stream that writes the
          translated contents into the new text base file as we read from it.
@@ -912,19 +918,17 @@ svn_wc_transmit_text_deltas2(const char **tempfile,
          is closed. */
       local_stream
         = copying_stream(local_stream,
-                         svn_stream_from_aprfile2(tempbasefile, FALSE, pool),
-                         pool);
+                         svn_stream_from_aprfile2(tempbasefile, FALSE,
+                                                  scratch_pool),
+                         scratch_pool);
     }
 
   if (! fulltext)
     {
-      const char *abspath;
-      svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
-
       /* Compute delta against the pristine contents */
-      SVN_ERR(svn_wc_get_pristine_contents(&base_stream, path, pool, pool));
+      SVN_ERR(svn_wc_get_pristine_contents(&base_stream, local_abspath,
+                                           scratch_pool, scratch_pool));
 
-      SVN_ERR(svn_dirent_get_absolute(&abspath, path, pool));
       SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL,
                                    NULL, NULL, NULL,
                                    NULL, NULL, NULL,
@@ -932,9 +936,10 @@ svn_wc_transmit_text_deltas2(const char **tempfile,
                                    &expected_checksum, NULL,
                                    NULL, NULL,
                                    NULL, NULL, NULL, NULL,
-                                   NULL, NULL, NULL, NULL, NULL,
-                                   db, abspath,
-                                   pool, pool));
+                                   NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, NULL, NULL,
+                                   db, local_abspath,
+                                   scratch_pool, scratch_pool));
 
       /* ### We want expected_checksum to ALWAYS be present, but on old
          ### working copies maybe it won't be (unclear?). If it is there,
@@ -945,17 +950,18 @@ svn_wc_transmit_text_deltas2(const char **tempfile,
           /* Compute a checksum for what is *actually* found */
           base_stream = svn_stream_checksummed2(base_stream, &verify_checksum,
                                                 NULL, svn_checksum_md5, TRUE,
-                                                pool);
+                                                scratch_pool);
         }
       else
         {
           svn_stream_t *p_stream;
 
           /* ### we should ALREADY have the checksum for pristine. */
-          SVN_ERR(svn_wc_get_pristine_contents(&p_stream, path, pool, pool));
+          SVN_ERR(svn_wc_get_pristine_contents(&p_stream, local_abspath,
+                                               scratch_pool, scratch_pool));
           p_stream = svn_stream_checksummed2(p_stream, &expected_checksum,
                                              NULL, svn_checksum_md5, TRUE,
-                                             pool);
+                                             scratch_pool);
 
           /* Closing this will cause a full read/checksum. */
           SVN_ERR(svn_stream_close(p_stream));
@@ -963,18 +969,18 @@ svn_wc_transmit_text_deltas2(const char **tempfile,
 
       /* apply_textdelta() is working against a base with this checksum */
       base_digest_hex = svn_checksum_to_cstring_display(expected_checksum,
-                                                        pool);
+                                                        scratch_pool);
     }
   else
     {
       /* Send a fulltext. */
-      base_stream = svn_stream_empty(pool);
+      base_stream = svn_stream_empty(scratch_pool);
       base_digest_hex = NULL;
     }
 
   /* Tell the editor that we're about to apply a textdelta to the
      file baton; the editor returns to us a window consumer and baton.  */
-  SVN_ERR(editor->apply_textdelta(file_baton, base_digest_hex, pool,
+  SVN_ERR(editor->apply_textdelta(file_baton, base_digest_hex, scratch_pool,
                                   &handler, &wh_baton));
 
   /* Run diff processing, throwing windows at the handler. */
@@ -982,7 +988,7 @@ svn_wc_transmit_text_deltas2(const char **tempfile,
                         handler, wh_baton,
                         svn_checksum_md5, &local_checksum,
                         NULL, NULL,
-                        pool, pool);
+                        scratch_pool, scratch_pool);
 
   /* Close the two streams to force writing the digest,
      if we already have an error, ignore this one. */
@@ -1018,79 +1024,94 @@ svn_wc_transmit_text_deltas2(const char **tempfile,
          checksum mismatch is more important to return. */
       svn_error_clear(err);
       if (tempfile)
-        svn_error_clear(svn_io_remove_file2(*tempfile, TRUE, pool));
+        svn_error_clear(svn_io_remove_file2(*tempfile, TRUE, scratch_pool));
 
       return svn_error_createf(SVN_ERR_WC_CORRUPT_TEXT_BASE, NULL,
                       _("Checksum mismatch for '%s':\n"
                         "   expected:  %s\n"
                         "     actual:  %s\n"),
                       svn_dirent_local_style(svn_wc__text_base_path(
-                                                            path, FALSE, pool),
-                                             pool),
-                      svn_checksum_to_cstring_display(expected_checksum, pool),
-                      svn_checksum_to_cstring_display(verify_checksum, pool));
+                                                       local_abspath, FALSE,
+                                                       scratch_pool),
+                                             scratch_pool),
+                      svn_checksum_to_cstring_display(expected_checksum,
+                                                      scratch_pool),
+                      svn_checksum_to_cstring_display(verify_checksum,
+                                                      scratch_pool));
     }
 
   /* Now, handle that delta transmission error if any, so we can stop
      thinking about it after this point. */
-  SVN_ERR_W(err, apr_psprintf(pool,
+  SVN_ERR_W(err, apr_psprintf(scratch_pool,
                               _("While preparing '%s' for commit"),
-                              svn_dirent_local_style(path, pool)));
+                              svn_dirent_local_style(local_abspath,
+                                                     scratch_pool)));
 
   if (digest)
     memcpy(digest, local_checksum->digest, svn_checksum_size(local_checksum));
 
   /* Close the file baton, and get outta here. */
-  return editor->close_file
-    (file_baton, svn_checksum_to_cstring(local_checksum, pool), pool);
+  return editor->close_file(file_baton,
+                            svn_checksum_to_cstring(local_checksum,
+                                                    scratch_pool),
+                            scratch_pool);
 }
 
 svn_error_t *
-svn_wc_transmit_text_deltas(const char *path,
-                            svn_wc_adm_access_t *adm_access,
-                            svn_boolean_t fulltext,
-                            const svn_delta_editor_t *editor,
-                            void *file_baton,
-                            const char **tempfile,
-                            apr_pool_t *pool)
+svn_wc_transmit_text_deltas3(const char **tempfile,
+                             unsigned char digest[],
+                             svn_wc_context_t *wc_ctx,
+                             const char *local_abspath,
+                             svn_boolean_t fulltext,
+                             const svn_delta_editor_t *editor,
+                             void *file_baton,
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool)
 {
-  return svn_wc_transmit_text_deltas2(tempfile, NULL, path, adm_access,
-                                      fulltext, editor, file_baton, pool);
+  return svn_wc__internal_transmit_text_deltas(tempfile, digest, wc_ctx->db,
+                                               local_abspath, fulltext, editor,
+                                               file_baton, result_pool,
+                                               scratch_pool);
 }
 
-
 svn_error_t *
-svn_wc_transmit_prop_deltas(const char *path,
-                            svn_wc_adm_access_t *adm_access,
-                            const svn_wc_entry_t *entry,
-                            const svn_delta_editor_t *editor,
-                            void *baton,
-                            const char **tempfile,
-                            apr_pool_t *pool)
+svn_wc__internal_transmit_prop_deltas(svn_wc__db_t *db,
+                                     const char *local_abspath,
+                                     const svn_delta_editor_t *editor,
+                                     void *baton,
+                                     apr_pool_t *scratch_pool)
 {
   int i;
   apr_array_header_t *propmods;
-  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
-  const char *local_abspath;
+  svn_wc__db_kind_t kind;
 
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
-
-  if (tempfile)
-    *tempfile = NULL;
-
+  SVN_ERR(svn_wc__db_check_node(&kind, db, local_abspath, scratch_pool));
   /* Get an array of local changes by comparing the hashes. */
   SVN_ERR(svn_wc__internal_propdiff(&propmods, NULL, db, local_abspath,
-                                    pool, pool));
+                                    scratch_pool, scratch_pool));
 
   /* Apply each local change to the baton */
   for (i = 0; i < propmods->nelts; i++)
     {
       const svn_prop_t *p = &APR_ARRAY_IDX(propmods, i, svn_prop_t);
-      if (entry->kind == svn_node_file)
-        SVN_ERR(editor->change_file_prop(baton, p->name, p->value, pool));
+      if (kind == svn_wc__db_kind_file)
+        SVN_ERR(editor->change_file_prop(baton, p->name, p->value, 
+                                         scratch_pool));
       else
-        SVN_ERR(editor->change_dir_prop(baton, p->name, p->value, pool));
+        SVN_ERR(editor->change_dir_prop(baton, p->name, p->value, 
+                                        scratch_pool));
     }
 
   return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc_transmit_prop_deltas2(svn_wc_context_t *wc_ctx,
+                             const char *local_abspath,
+                             const svn_delta_editor_t *editor,
+                             void *baton,
+                             apr_pool_t *scratch_pool)
+{
+  return svn_wc__internal_transmit_prop_deltas(wc_ctx->db, local_abspath,
+                                               editor, baton, scratch_pool);
 }

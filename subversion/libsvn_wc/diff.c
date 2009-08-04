@@ -62,6 +62,7 @@
 #include "props.h"
 #include "adm_files.h"
 #include "lock.h"
+#include "translate.h"
 
 #include "svn_private_config.h"
 
@@ -444,31 +445,29 @@ get_prop_mimetype(apr_hash_t *props)
 
 
 /* Set *MIMETYPE to the BASE version of the svn:mime-type property of
-   file PATH, using ADM_ACCESS, or to NULL if no such property exists.
+   file LOCAL_ABSPATH, using DB, or to NULL if no such property exists.
    BASEPROPS is optional: if present, use it to cache the BASE properties
    of the file.
 
-   Return the property value and property hash allocated in POOL.
+   Return the property value and property hash allocated in RESULT_POOL,
+   use SCRATCH_POOL for temporary accesses.
 */
 static svn_error_t *
 get_base_mimetype(const char **mimetype,
                   apr_hash_t **baseprops,
-                  svn_wc_adm_access_t *adm_access,
-                  const char *path,
-                  apr_pool_t *pool)
+                  svn_wc__db_t *db,
+                  const char *local_abspath,
+                  apr_pool_t *result_pool,
+                  apr_pool_t *scratch_pool)
 {
   apr_hash_t *props = NULL;
-  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
-  const char *local_abspath;
-
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
   if (baseprops == NULL)
     baseprops = &props;
 
   if (*baseprops == NULL)
     SVN_ERR(svn_wc__internal_propdiff(NULL, baseprops, db, local_abspath,
-                                      pool, pool));
+                                      result_pool, scratch_pool));
 
   *mimetype = get_prop_mimetype(*baseprops);
 
@@ -631,7 +630,8 @@ file_diff(struct dir_baton *dir_baton,
   /* Get property diffs if this is not schedule delete. */
   if (schedule != svn_wc_schedule_delete)
     {
-      SVN_ERR(svn_wc_props_modified_p(&modified, path, adm_access, pool));
+      SVN_ERR(svn_wc__props_modified(&modified, eb->db, local_abspath,
+                                     pool));
       if (modified)
         SVN_ERR(svn_wc__internal_propdiff(&propchanges, &baseprops, eb->db,
                                           local_abspath, pool, pool));
@@ -655,8 +655,8 @@ file_diff(struct dir_baton *dir_baton,
          working-copy version of the deleted file are not wanted. */
 
       /* Get svn:mime-type from BASE props of PATH. */
-      SVN_ERR(get_base_mimetype(&base_mimetype, &baseprops,
-                                adm_access, path, pool));
+      SVN_ERR(get_base_mimetype(&base_mimetype, &baseprops, eb->db,
+                                local_abspath, pool, pool));
 
       SVN_ERR(dir_baton->edit_baton->callbacks->file_deleted
               (NULL, NULL, NULL, path,
@@ -700,12 +700,13 @@ file_diff(struct dir_baton *dir_baton,
       break;
 
     default:
-      SVN_ERR(svn_wc_text_modified_p(&modified, path, FALSE,
-                                     adm_access, pool));
+      SVN_ERR(svn_wc__text_modified_internal_p(&modified, eb->db,
+                                               local_abspath, FALSE, TRUE,
+                                               pool));
       if (modified)
         {
           /* Note that this might be the _second_ time we translate
-             the file, as svn_wc_text_modified_p() might have used a
+             the file, as svn_wc__text_modified_internal_p() might have used a
              tmp translated copy too.  But what the heck, diff is
              already expensive, translating twice for the sake of code
              modularity is liveable. */
@@ -722,8 +723,8 @@ file_diff(struct dir_baton *dir_baton,
           svn_boolean_t mt_binary, mt1_binary, mt2_binary;
 
           /* Get svn:mime-type for both base and working file. */
-          SVN_ERR(get_base_mimetype(&base_mimetype, &baseprops,
-                                    adm_access, path, pool));
+          SVN_ERR(get_base_mimetype(&base_mimetype, &baseprops, eb->db,
+                                    local_abspath, pool, pool));
           SVN_ERR(get_working_mimetype(&working_mimetype, NULL, local_abspath,
                                        eb->db, pool, pool));
 
@@ -871,9 +872,8 @@ directory_elements_diff(struct dir_baton *dir_baton)
     {
       svn_boolean_t modified;
 
-      SVN_ERR(svn_wc_props_modified_p(&modified,
-                                      dir_baton->path, adm_access,
-                                      dir_baton->pool));
+      SVN_ERR(svn_wc__props_modified(&modified, dir_baton->edit_baton->db,
+                                     dir_abspath, dir_baton->pool));
       if (modified)
         {
           apr_array_header_t *propchanges;
@@ -1001,33 +1001,37 @@ directory_elements_diff(struct dir_baton *dir_baton)
 
 /* Drive @a editor against @a path's content modifications. */
 static svn_error_t *
-transmit_svndiff(const char *path,
-                 svn_wc_adm_access_t *adm_access,
+transmit_svndiff(const char *local_abspath,
                  const svn_delta_editor_t *editor,
                  struct file_baton *file_baton,
-                 apr_pool_t *pool)
+                 apr_pool_t *scratch_pool)
 {
   struct edit_baton *eb = file_baton->edit_baton;
   svn_txdelta_window_handler_t handler;
   svn_txdelta_stream_t *txdelta_stream;
   svn_stream_t *base_stream;
   svn_stream_t *local_stream;
+  const char *file_abspath;
   void *wh_baton;
+
+  SVN_ERR(svn_dirent_get_absolute(&file_abspath, file_baton->path,
+                                  scratch_pool));
 
   /* Initialize window_handler/baton to produce svndiff from txdelta
    * windows. */
-  SVN_ERR(eb->diff_editor->apply_textdelta(file_baton, NULL, pool,
+  SVN_ERR(eb->diff_editor->apply_textdelta(file_baton, NULL, scratch_pool,
                                            &handler, &wh_baton));
 
-  base_stream = svn_stream_empty(pool);
+  base_stream = svn_stream_empty(scratch_pool);
 
-  SVN_ERR(svn_wc_translated_stream(&local_stream, path, file_baton->path,
-                                   adm_access, SVN_WC_TRANSLATE_TO_NF,
-                                   pool));
+  SVN_ERR(svn_wc__internal_translated_stream(&local_stream, eb->db,
+                                             local_abspath, file_abspath,
+                                             SVN_WC_TRANSLATE_TO_NF,
+                                             scratch_pool, scratch_pool));
 
-  svn_txdelta(&txdelta_stream, base_stream, local_stream, pool);
+  svn_txdelta(&txdelta_stream, base_stream, local_stream, scratch_pool);
   SVN_ERR(svn_txdelta_send_txstream(txdelta_stream, handler,
-                                    wh_baton, pool));
+                                    wh_baton, scratch_pool));
   return SVN_NO_ERROR;
 }
 
@@ -1131,8 +1135,8 @@ report_wc_file_as_added(struct dir_baton *dir_baton,
   emptyprops = apr_hash_make(pool);
 
   if (eb->use_text_base)
-    SVN_ERR(get_base_mimetype(&mimetype, &wcprops,
-                              adm_access, path, pool));
+    SVN_ERR(get_base_mimetype(&mimetype, &wcprops, eb->db, local_abspath,
+                              pool, pool));
   else
     SVN_ERR(get_working_mimetype(&mimetype, &wcprops, local_abspath,
                                  eb->db, pool, pool));
@@ -1178,12 +1182,11 @@ report_wc_file_as_added(struct dir_baton *dir_baton,
 
       if (mimetype && svn_mime_type_is_binary(mimetype))
         {
-          SVN_ERR(svn_wc_transmit_text_deltas2
-                  (NULL,
-                   NULL,/* TODO:digest bin stuff */
-                   path, adm_access, TRUE,
-                   eb->diff_editor, fb, pool));
-          /* svn_wc_transmit_text_deltas2() does the close itself. */
+          SVN_ERR(svn_wc__internal_transmit_text_deltas(NULL,
+                                            NULL,/* TODO:digest bin stuff */
+                                            eb->db, local_abspath, TRUE,
+                                            eb->diff_editor, fb, pool, pool));
+          /* svn_wc__internal_transmit_text_deltas() does the close itself. */
           file_need_close = FALSE; 
         }
 
@@ -1733,15 +1736,16 @@ path_driver_cb_func(void **dir_baton,
                                          pool));
         if (file_is_binary)
           {
-            SVN_ERR(svn_wc_text_modified_p(&file_modified, path,
-                                           TRUE, adm_access, pool));
+            SVN_ERR(svn_wc__text_modified_internal_p(&file_modified, db,
+                                                     local_abspath, TRUE,
+                                                     TRUE, pool));
             if (file_modified)
-              SVN_ERR(svn_wc_transmit_text_deltas2
-                      (NULL,
-                       NULL,/* TODO:digest bin stuff */
-                       path, adm_access, TRUE,
-                       editor, fb, pool));
-            /* svn_wc_transmit_text_deltas2() does the close itself. */
+              SVN_ERR(svn_wc__internal_transmit_text_deltas(NULL,
+                                            NULL,/* TODO:digest bin stuff */
+                                            eb->db, local_abspath, TRUE,
+                                            editor, fb, pool, pool));
+            /* svn_wc__internal_transmit_text_deltas() does the close
+               itself. */
             file_need_close = FALSE; 
           }
 
@@ -1810,11 +1814,13 @@ delete_entry(const char *path,
   const char *empty_file;
   const char *full_path = svn_dirent_join(pb->edit_baton->anchor_path, path,
                                           pb->pool);
+  const char *local_abspath;
   svn_wc_adm_access_t *adm_access;
 
   SVN_ERR(svn_wc_adm_probe_retrieve(&adm_access, pb->edit_baton->anchor,
                                     full_path, pool));
   SVN_ERR(svn_wc_entry(&entry, full_path, adm_access, FALSE, pool));
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, full_path, pool));
 
   /* So, it turns out that this can be NULL in at least one actual case,
      if you do a nonrecursive checkout and the diff involves the addition
@@ -1852,8 +1858,8 @@ delete_entry(const char *path,
           apr_hash_t *baseprops = NULL;
           const char *base_mimetype;
 
-          SVN_ERR(get_base_mimetype(&base_mimetype, &baseprops,
-                                    adm_access, full_path, pool));
+          SVN_ERR(get_base_mimetype(&base_mimetype, &baseprops, eb->db,
+                                    local_abspath, pool, pool));
 
           SVN_ERR(pb->edit_baton->callbacks->file_deleted
                   (NULL, NULL, NULL, full_path,
@@ -2309,6 +2315,7 @@ close_file(void *file_baton,
   const char *localfile;
   /* The path to the temporary copy of the pristine repository version. */
   const char *temp_file_path;
+  const char *temp_file_abspath;
   svn_boolean_t modified;
   /* The working copy properties at the base of the wc->repos
      comparison: either BASE or WORKING. */
@@ -2343,7 +2350,8 @@ close_file(void *file_baton,
   temp_file_path = b->temp_file_path;
   if (!temp_file_path)
     temp_file_path = svn_wc__text_base_path(b->path, FALSE, b->pool);
-
+  SVN_ERR(svn_dirent_get_absolute(&temp_file_abspath, temp_file_path,
+                                  b->pool));
 
   /* If the file isn't in the working copy (either because it was added
      in the BASE->repos diff or because we're diffing against WORKING
@@ -2366,8 +2374,8 @@ close_file(void *file_baton,
                * mime-type, we want our svnpatch to convey the file's
                * content. */
               if (binary_file)
-                  SVN_ERR(transmit_svndiff(temp_file_path, adm_access,
-                                           eb->diff_editor, b, pool));
+                  SVN_ERR(transmit_svndiff(temp_file_abspath, eb->diff_editor,
+                                           b, pool));
 
               /* Last chance to write a close-file command as a return
                * statement follows. */
@@ -2412,8 +2420,8 @@ close_file(void *file_baton,
      (BASE:WORKING) modifications. */
   modified = (b->temp_file_path != NULL);
   if (!modified && !eb->use_text_base)
-    SVN_ERR(svn_wc_text_modified_p(&modified, b->path, FALSE,
-                                   adm_access, pool));
+    SVN_ERR(svn_wc__text_modified_internal_p(&modified, eb->db, local_abspath,
+                                             FALSE, TRUE, pool));
 
   if (modified)
     {
@@ -2470,10 +2478,12 @@ close_file(void *file_baton,
               svn_checksum_t *tmp_checksum;
               const char *the_right_path = eb->reverse_order ?
                                            temp_file_path : localfile;
+              const char *the_right_abspath;
 
-              SVN_ERR(transmit_svndiff
-                      (the_right_path, adm_access,
-                       eb->diff_editor, b, pool));
+              SVN_ERR(svn_dirent_get_absolute(&the_right_abspath,
+                                              the_right_path, pool));
+              SVN_ERR(transmit_svndiff(the_right_abspath, eb->diff_editor, b,
+                                       pool));
 
               /* Calculate the file's checksum since the one above might
                * be wrong. */
