@@ -458,6 +458,14 @@ svn_wc__internal_transmit_text_deltas(const char **tempfile,
                                       apr_pool_t *result_pool,
                                       apr_pool_t *scratch_pool);
 
+/* Internal version of svn_wc_transmit_prop_deltas2(). */
+svn_error_t *
+svn_wc__internal_transmit_prop_deltas(svn_wc__db_t *db,
+                                     const char *local_abspath,
+                                     const svn_delta_editor_t *editor,
+                                     void *baton,
+                                     apr_pool_t *scratch_pool);
+
 
 #ifdef __cplusplus
 }

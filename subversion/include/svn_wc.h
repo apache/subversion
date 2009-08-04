@@ -5998,10 +5998,22 @@ svn_wc_transmit_text_deltas(const char *path,
                             apr_pool_t *pool);
 
 
-/** Given a @a path with its accompanying @a entry, transmit all local
- * property modifications using the appropriate @a editor method (in
- * conjunction with @a baton). @a adm_access is an access baton set
- * that contains @a path.  Use @a pool for all allocations.
+/** Given a @a local_abspath, transmit all local property 
+ * modifications using the appropriate @a editor method (in conjunction 
+ * with @a baton). Use @a scratch_pool for any temporary allocation.
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_wc_transmit_prop_deltas2(svn_wc_context_t *wc_ctx,
+                             const char *local_abspath,
+                             const svn_delta_editor_t *editor,
+                             void *baton,
+                             apr_pool_t *scratch_pool);
+
+
+/** Similar to svn_wc_transmit_prop_deltas2(), but with a relative path,
+ * adm_access baton and tempfile.
  *
  * If a temporary file remains after this function is finished, the
  * path to that file is returned in @a *tempfile (so the caller can
@@ -6009,7 +6021,10 @@ svn_wc_transmit_text_deltas(const char *path,
  *
  * @note Starting version 1.5, no tempfile will ever be returned
  *       anymore.  If @a *tempfile is passed, its value is set to @c NULL.
+ *
+ * @deprecated Provided for backwards compatibility with the 1.6 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_transmit_prop_deltas(const char *path,
                             svn_wc_adm_access_t *adm_access,
