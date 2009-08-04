@@ -183,6 +183,9 @@ merge_file_changed(svn_wc_adm_access_t *adm_access,
   svn_boolean_t merge_required = (mimetype2
                                   && svn_mime_type_is_binary(mimetype2));
   enum svn_wc_merge_outcome_t merge_outcome;
+  const char *mine_abspath;
+
+  SVN_ERR(svn_dirent_get_absolute(&mine_abspath, mine, subpool));
 
   /* Easy out:  no access baton means there ain't no merge target */
   if (adm_access == NULL)
@@ -232,8 +235,8 @@ merge_file_changed(svn_wc_adm_access_t *adm_access,
   /* Now with content modifications */
   {
     svn_boolean_t has_local_mods;
-    SVN_ERR(svn_wc_text_modified_p(&has_local_mods, mine, FALSE,
-                                   adm_access, subpool));
+    SVN_ERR(svn_wc_text_modified_p2(&has_local_mods, patch_b->ctx->wc_ctx,
+                                    mine_abspath, FALSE, subpool));
 
     /* Special case:  if a binary file isn't locally modified, and is
        exactly identical to the file content from the patch, then don't
@@ -525,6 +528,9 @@ merge_file_deleted(svn_wc_adm_access_t *adm_access,
   const char *parent_path;
   svn_error_t *err;
   svn_boolean_t has_local_mods;
+  const char *mine_abspath;
+
+  SVN_ERR(svn_dirent_get_absolute(&mine_abspath, mine, subpool));
 
   /* Easy out:  if we have no adm_access for the parent directory,
      then this portion of the tree-delta "patch" must be inapplicable.
@@ -546,8 +552,8 @@ merge_file_deleted(svn_wc_adm_access_t *adm_access,
       SVN_ERR(svn_wc_adm_retrieve(&parent_access, adm_access, parent_path,
                                   subpool));
 
-      SVN_ERR(svn_wc_text_modified_p(&has_local_mods, mine, TRUE,
-                                     adm_access, subpool));
+      SVN_ERR(svn_wc_text_modified_p2(&has_local_mods, patch_b->ctx->wc_ctx,
+                                      mine_abspath, TRUE, subpool));
       /* Passing NULL for the notify_func and notify_baton because
          delete_entry() will do it for us. */
       err = svn_client__wc_delete(mine, parent_access, patch_b->force,
@@ -1954,34 +1960,18 @@ resolve_target_path(patch_target_t *target, const char *path_from_patchfile,
   return SVN_NO_ERROR;
 }
 
-/* Indicate in *LOCAL_MODS whether the file at FILE_PATH, located somewhere
- * beneath the directory locked by ADM_ACCESS, has local modifications. */
+/* Indicate in *LOCAL_MODS whether the file at LOCAL_ABSPATH, has local
+   modifications. */
 static svn_error_t *
-check_local_mods(svn_boolean_t *local_mods, const char *file_path,
-                 svn_wc_adm_access_t *adm_access, apr_pool_t *pool)
+check_local_mods(svn_boolean_t *local_mods,
+                 svn_wc_context_t *wc_ctx,
+                 const char *local_abspath,
+                 apr_pool_t *pool)
 {
-  const char *dirname;
-  svn_wc_adm_access_t *file_adm_access;
   svn_error_t *err;
 
-  dirname = svn_dirent_dirname(file_path, pool);
-  err = svn_wc_adm_retrieve(&file_adm_access, adm_access, dirname, pool);
-  if (err)
-    {
-      if (err->apr_err == SVN_ERR_WC_NOT_LOCKED)
-        {
-          /* The containing directory is not versioned. That's OK.
-           * We can treat the target as unmodified. */
-          svn_error_clear(err);
-          *local_mods = FALSE;
-          return SVN_NO_ERROR;
-        }
-      else
-        return svn_error_return(err);
-    }
-
-  err = svn_wc_text_modified_p(local_mods, file_path, FALSE, file_adm_access,
-                               pool);
+  err = svn_wc_text_modified_p2(local_mods, wc_ctx, local_abspath, FALSE,
+                                pool);
   if (err)
     {
       if (err->apr_err == SVN_ERR_ENTRY_NOT_FOUND)
@@ -2068,8 +2058,8 @@ init_patch_target(patch_target_t **target, const svn_patch_t *patch,
                                      svn_io_file_del_none,
                                      result_pool, scratch_pool));
 
-      SVN_ERR(check_local_mods(&new_target->local_mods, new_target->abs_path,
-                               adm_access, scratch_pool));
+      SVN_ERR(check_local_mods(&new_target->local_mods, ctx->wc_ctx,
+                               new_target->abs_path, scratch_pool));
      }
 
   new_target->patch = patch;

@@ -1255,6 +1255,9 @@ merge_file_changed(svn_wc_adm_access_t *adm_access,
   apr_pool_t *subpool = svn_pool_create(merge_b->pool);
   svn_boolean_t merge_required = TRUE;
   enum svn_wc_merge_outcome_t merge_outcome;
+  const char *mine_abspath;
+
+  SVN_ERR(svn_dirent_get_absolute(&mine_abspath, mine, merge_b->pool));
 
   if (tree_conflicted)
     *tree_conflicted = FALSE;
@@ -1366,8 +1369,8 @@ merge_file_changed(svn_wc_adm_access_t *adm_access,
   if (older)
     {
       svn_boolean_t has_local_mods;
-      SVN_ERR(svn_wc_text_modified_p(&has_local_mods, mine, FALSE,
-                                     adm_access, subpool));
+      SVN_ERR(svn_wc_text_modified_p2(&has_local_mods, merge_b->ctx->wc_ctx,
+                                      mine_abspath, FALSE, subpool));
 
       /* Special case:  if a binary file's working file is
          exactly identical to the 'left' side of the merge, then don't
