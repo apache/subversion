@@ -177,15 +177,3 @@ Candidate changes:
      
 Approved changes:
 =================
-
-  * r38458
-    Make 'svnlook diff' show empty added or deleted files.
-    Justification:
-      If we don't print any output for empty added or deleted files,
-      hook scripts relying on 'svnlook diff' to gather information about
-      files affected by a revision can get confused.
-      E.g. contrib/hook-scripts/enforcer is known to be affected,
-      it cannot enforce rules on added empty files.
-      Granted, this is not a very serious bug, but the fix is trivial.
-    Votes:
-      +1: stsp, rhuijben, pburba
