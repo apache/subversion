@@ -37,6 +37,8 @@
 #include "svn_path.h"
 #include "client.h"
 
+#include "private/svn_wc_private.h"
+
 #include "svn_private_config.h"
 
 
@@ -278,9 +280,10 @@ svn_client_delete3(svn_commit_info_t **commit_info_p,
             SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
 
           /* Let the working copy library handle the PATH. */
-          SVN_ERR(svn_wc_adm_open3(&adm_access, NULL, parent_path,
-                                   TRUE, 0, ctx->cancel_func,
-                                   ctx->cancel_baton, subpool));
+          SVN_ERR(svn_wc__adm_open_in_context(&adm_access, ctx->wc_ctx,
+                                              parent_path, TRUE, 0,
+                                              ctx->cancel_func,
+                                              ctx->cancel_baton, subpool));
           SVN_ERR(svn_client__wc_delete(path, adm_access, force,
                                         FALSE, keep_local,
                                         ctx->notify_func2,

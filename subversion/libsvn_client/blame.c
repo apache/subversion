@@ -36,6 +36,8 @@
 #include "svn_props.h"
 #include "svn_sorts.h"
 
+#include "private/svn_wc_private.h"
+
 #include "svn_private_config.h"
 
 #include <assert.h>
@@ -677,10 +679,10 @@ svn_client_blame5(const char *target,
 
       SVN_ERR(svn_dirent_get_absolute(&target_abspath, target, pool));
 
-      SVN_ERR(svn_wc_adm_open3(&adm_access, NULL,
-                               svn_dirent_dirname(target, pool), FALSE,
-                               0, ctx->cancel_func, ctx->cancel_baton,
-                               pool));
+      SVN_ERR(svn_wc__adm_open_in_context(&adm_access, ctx->wc_ctx,
+                                          svn_dirent_dirname(target, pool),
+                                          FALSE, 0, ctx->cancel_func,
+                                          ctx->cancel_baton, pool));
 
       SVN_ERR(svn_wc_status2(&status, target, adm_access, pool));
 

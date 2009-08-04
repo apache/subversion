@@ -1739,8 +1739,8 @@ svn_client_diff5(const apr_array_header_t *options,
   if (svnpatch_format)
     {
       svn_wc_adm_access_t *adm_access;
-      SVN_ERR(svn_wc_adm_open3(&adm_access, NULL, "", TRUE,
-                               0, NULL, NULL, pool));
+      SVN_ERR(svn_wc__adm_open_in_context(&adm_access, ctx->wc_ctx, "", TRUE,
+                                          0, NULL, NULL, pool));
       SVN_ERR(svn_wc_create_tmp_file2(&(diff_cmd_baton.svnpatch_file), NULL,
                                       svn_wc_adm_access_path(adm_access),
                                       SVNPATCH_DELETE_WHEN, pool));
@@ -1822,8 +1822,8 @@ svn_client_diff_peg5(const apr_array_header_t *options,
   if (svnpatch_format)
     {
       svn_wc_adm_access_t *adm_access;
-      SVN_ERR(svn_wc_adm_open3(&adm_access, NULL, "", TRUE,
-                               0, NULL, NULL, pool));
+      SVN_ERR(svn_wc__adm_open_in_context(&adm_access, ctx->wc_ctx, "", TRUE,
+                                          0, NULL, NULL, pool));
       SVN_ERR(svn_wc_create_tmp_file2(&(diff_cmd_baton.svnpatch_file), NULL,
                                       svn_wc_adm_access_path(adm_access),
                                       SVNPATCH_DELETE_WHEN, pool));
