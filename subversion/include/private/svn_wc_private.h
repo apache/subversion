@@ -261,6 +261,26 @@ svn_wc__adm_probe_in_context(svn_wc_adm_access_t **adm_access,
                              void *cancel_baton,
                              apr_pool_t *pool);
 
+/** Like svn_wc_adm_open_anchor(), but with a svn_wc_context_t * to use
+ * when opening the access batons.
+ *
+ * NOT FOR NEW DEVELOPMENT!  (See note to svn_wc__adm_open_in_context().)
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_wc__adm_open_anchor_in_context(svn_wc_adm_access_t **anchor_access,
+                                   svn_wc_adm_access_t **target_access,
+                                   const char **target,
+                                   svn_wc_context_t *wc_ctx,
+                                   const char *path,
+                                   svn_boolean_t write_lock,
+                                   int levels_to_lock,
+                                   svn_cancel_func_t cancel_func,
+                                   void *cancel_baton,
+                                   apr_pool_t *pool);
+
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

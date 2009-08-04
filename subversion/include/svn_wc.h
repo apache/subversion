@@ -362,7 +362,11 @@ svn_wc_adm_probe_open(svn_wc_adm_access_t **adm_access,
  * svn_wc_get_actual_target(), with the emphasis on reducing physical IO.
  *
  * @since New in 1.2.
+ * @deprecated Provided for backward compatibility with the 1.6 API.
+ *    Callers should use a @c svn_wc_context_t object to access the working
+ *    copy.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_adm_open_anchor(svn_wc_adm_access_t **anchor_access,
                        svn_wc_adm_access_t **target_access,
