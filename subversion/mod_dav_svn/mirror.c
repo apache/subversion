@@ -253,7 +253,7 @@ apr_status_t dav_svn__location_body_filter(ap_filter_t *f,
     apr_uri_parse(r->pool, master_uri, &uri);
     root_dir = dav_svn__get_root_dir(r);
     if (strcmp(uri.path, root_dir) == 0) {
-        ap_remove_input_filter(f);
+        ap_remove_output_filter(f);
         return ap_pass_brigade(f->next, bb);
     }
 
