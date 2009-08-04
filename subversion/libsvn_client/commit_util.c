@@ -625,9 +625,9 @@ harvest_committables(apr_hash_t *committables,
              prop was changed, we might have to send new text to the
              server to match the new newline style.  */
           if (state_flags & SVN_CLIENT_COMMIT_ITEM_IS_COPY)
-            SVN_ERR(svn_wc_text_modified_p(&text_mod, path,
-                                           eol_prop_changed,
-                                           adm_access, scratch_pool));
+            SVN_ERR(svn_wc_text_modified_p2(&text_mod, ctx->wc_ctx,
+                                            local_abspath, eol_prop_changed,
+                                            scratch_pool));
           else
             text_mod = TRUE;
         }
@@ -651,8 +651,8 @@ harvest_committables(apr_hash_t *committables,
          changed, we might have to send new text to the server to
          match the new newline style.  */
       if (entry->kind == svn_node_file)
-        SVN_ERR(svn_wc_text_modified_p(&text_mod, path, eol_prop_changed,
-                                       adm_access, scratch_pool));
+        SVN_ERR(svn_wc_text_modified_p2(&text_mod, ctx->wc_ctx, local_abspath,
+                                        eol_prop_changed, scratch_pool));
     }
 
   /* Set text/prop modification flags accordingly. */
