@@ -81,7 +81,7 @@ Candidate changes:
    Notes:
      See the issue for (an overwhelming amount of) details.
    Votes:
-     +1: stsp
+     +1: stsp, psamuelson
 
  * r38205
    Allow PLAIN and LOGIN mechanisms with SASL in svnserve.
