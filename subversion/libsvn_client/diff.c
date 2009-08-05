@@ -49,6 +49,7 @@
 #include "svn_time.h"
 #include "svn_sorts.h"
 #include "svn_base64.h"
+#include "svn_subst.h"
 #include "client.h"
 
 #include "private/svn_wc_private.h"
@@ -167,6 +168,35 @@ display_mergeinfo_diff(const char *old_mergeinfo_val,
                           _("Path '%s' must be an immediate child of " \
                             "the directory '%s'"), path, relative_to_dir)
 
+/* A helper function used by display_prop_diffs.
+   TOKEN is a string holding a property value.
+   If TOKEN is empty, or is already terminated by an EOL marker,
+   return TOKEN unmodified. Else, return a new string consisting
+   of the concatenation of TOKEN and the system's default EOL marker.
+   The new string is allocated from POOL. */
+static const svn_string_t *
+maybe_append_eol(const svn_string_t *token, apr_pool_t *pool)
+{
+  const char *curp;
+
+  if (token->len == 0)
+    return token;
+
+  curp = token->data + token->len - 1;
+  if (*curp == '\r')
+    {
+      return token;
+    }
+  else if (*curp != '\n')
+    {
+      return svn_string_createf(pool, "%s%s", token->data, APR_EOL_STR);
+    }
+  else
+    {
+      return token;
+    }
+}
+
 /* A helper func that writes out verbal descriptions of property diffs
    to FILE.   Of course, the apr_file_t will probably be the 'outfile'
    passed to svn_client_diff5, which is probably stdout. */
@@ -242,52 +272,42 @@ display_prop_diffs(const apr_array_header_t *propchanges,
           continue;
         }
 
-      /* For now, we have a rather simple heuristic: if this is an
-         "svn:" property, then assume the value is UTF-8 and must
-         therefore be converted before printing.  Otherwise, just
-         print whatever's there and hope for the best. */
       {
-        svn_boolean_t val_is_utf8 = svn_prop_is_svn_prop(propchange->name);
+        svn_stream_t *os = svn_stream_from_aprfile2(file, TRUE, pool);
+        svn_diff_t *diff;
+        svn_diff_file_options_t options;
+        const svn_string_t *tmp;
+        const svn_string_t *orig;
+        const svn_string_t *val;
 
-        if (original_value != NULL)
-          {
-            if (val_is_utf8)
-              {
-                SVN_ERR(file_printf_from_utf8
-                        (file, encoding,
-                         "   - %s" APR_EOL_STR, original_value->data));
-              }
-            else
-              {
-                /* ### todo: check for error? */
-                apr_file_printf
-                  (file, "   - %s" APR_EOL_STR, original_value->data);
-              }
-          }
+        /* The last character in a property is often not a newline.
+           Since the diff is not useful anyway for patching properties an
+           eol character is appended when needed to remove those pescious
+           ' \ No newline at end of file' lines. */
+        tmp = original_value ? original_value : svn_string_create("", pool);
+        orig = maybe_append_eol(tmp, pool);
 
-        if (propchange->value != NULL)
-          {
-            if (val_is_utf8)
-              {
-                SVN_ERR(file_printf_from_utf8
-                        (file, encoding, "   + %s" APR_EOL_STR,
-                         propchange->value->data));
-              }
-            else
-              {
-                /* ### todo: check for error? */
-                apr_file_printf(file, "   + %s" APR_EOL_STR,
-                                propchange->value->data);
-              }
-          }
+        tmp = propchange->value ? propchange->value :
+                                  svn_string_create("", pool);
+        val = maybe_append_eol(tmp, pool);
+
+        SVN_ERR(svn_diff_mem_string_diff(&diff, orig, val, &options, pool));
+
+        /* UNIX patch will try to apply a diff even if the diff header
+         * is missing. It tries to be helpful by asking the user for a
+         * target filename when it can't determine the target filename
+         * from the diff header. But there usually are no files which
+         * UNIX patch could apply the property diff to, so we use "##"
+         * instead of "@@" as the default hunk delimiter for property diffs.
+         * We also supress the diff header. */
+        SVN_ERR(svn_diff_mem_string_output_unified2(os, diff, FALSE, "##",
+                                           svn_dirent_local_style(path, pool),
+                                           svn_dirent_local_style(path, pool),
+                                           encoding, orig, val, pool));
+        SVN_ERR(svn_stream_close(os));
+
       }
     }
-
-  /* ### todo [issue #1533]: Use file_printf_from_utf8() to convert this
-     to native encoding, at least conditionally?  Or is it better to
-     have under_string always output the same eol, so programs can
-     find it consistently?  Also, what about checking for error? */
-  apr_file_printf(file, APR_EOL_STR);
 
   return SVN_NO_ERROR;
 }
