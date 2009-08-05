@@ -1206,13 +1206,13 @@ lock_dirs_for_commit(void *baton, void *this_item, apr_pool_t *pool)
   struct lock_dirs_baton *btn = baton;
   svn_wc_adm_access_t *adm_access;
 
-  return svn_wc_adm_open3(&adm_access, btn->base_dir_access,
-                          *(const char **)this_item,
-                          TRUE, /* Write lock */
-                          btn->levels_to_lock,
-                          btn->ctx->cancel_func,
-                          btn->ctx->cancel_baton,
-                          pool);
+  return svn_wc__adm_open_in_context(&adm_access, btn->ctx->wc_ctx,
+                                     *(const char **)this_item,
+                                     TRUE, /* Write lock */
+                                     btn->levels_to_lock,
+                                     btn->ctx->cancel_func,
+                                     btn->ctx->cancel_baton,
+                                     pool);
 }
 
 struct check_dir_delete_baton

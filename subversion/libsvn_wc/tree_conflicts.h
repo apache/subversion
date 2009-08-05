@@ -76,22 +76,6 @@ svn_wc__loggy_add_tree_conflict(svn_stringbuf_t **log_accum,
                                 svn_wc_adm_access_t *adm_access,
                                 apr_pool_t *pool);
 
-/* Like svn_wc__del_tree_conflict(), but append to the log accumulator
- * LOG_ACCUM a command to rewrite the entry field, and do not flush the log.
- * This function is meant to be used in the working copy library where
- * log accumulators are usually readily available.
- *
- * If *LOG_ACCUM is NULL then set *LOG_ACCUM to a new stringbug allocated in
- * POOL, else append to the existing stringbuf there.
- *
- * @since New in 1.6.
- */
-svn_error_t *
-svn_wc__loggy_del_tree_conflict(svn_stringbuf_t **log_accum,
-                                const char *victim_path,
-                                svn_wc_adm_access_t *adm_access,
-                                apr_pool_t *pool);
-
 /*
  * Encode tree conflict descriptions into a single string.
  *

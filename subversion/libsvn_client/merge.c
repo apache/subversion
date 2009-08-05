@@ -1255,6 +1255,9 @@ merge_file_changed(svn_wc_adm_access_t *adm_access,
   apr_pool_t *subpool = svn_pool_create(merge_b->pool);
   svn_boolean_t merge_required = TRUE;
   enum svn_wc_merge_outcome_t merge_outcome;
+  const char *mine_abspath;
+
+  SVN_ERR(svn_dirent_get_absolute(&mine_abspath, mine, merge_b->pool));
 
   if (tree_conflicted)
     *tree_conflicted = FALSE;
@@ -1366,8 +1369,8 @@ merge_file_changed(svn_wc_adm_access_t *adm_access,
   if (older)
     {
       svn_boolean_t has_local_mods;
-      SVN_ERR(svn_wc_text_modified_p(&has_local_mods, mine, FALSE,
-                                     adm_access, subpool));
+      SVN_ERR(svn_wc_text_modified_p2(&has_local_mods, merge_b->ctx->wc_ctx,
+                                      mine_abspath, FALSE, subpool));
 
       /* Special case:  if a binary file's working file is
          exactly identical to the 'left' side of the merge, then don't
@@ -8270,15 +8273,16 @@ svn_client_merge3(const char *source1,
    words, a subtree found in a single revision -- raise
    SVN_ERR_CLIENT_NOT_READY_TO_MERGE. */
 static svn_error_t *
-ensure_wc_reflects_repository_subtree(const char *target_wcpath,
+ensure_wc_reflects_repository_subtree(const char *target_abspath,
                                       svn_client_ctx_t *ctx,
-                                      apr_pool_t *pool)
+                                      apr_pool_t *scratch_pool)
 {
   svn_wc_revision_status_t *wc_stat;
 
   /* Get a WC summary with min/max revisions set to the BASE revision. */
-  SVN_ERR(svn_wc_revision_status(&wc_stat, target_wcpath, NULL, FALSE,
-                                 ctx->cancel_func, ctx->cancel_baton, pool));
+  SVN_ERR(svn_wc_revision_status2(&wc_stat, ctx->wc_ctx, target_abspath, NULL,
+                                  FALSE, ctx->cancel_func, ctx->cancel_baton,
+                                  scratch_pool, scratch_pool));
 
   if (wc_stat->switched)
     return svn_error_create(SVN_ERR_CLIENT_NOT_READY_TO_MERGE, NULL,
@@ -8958,6 +8962,9 @@ svn_client_merge_reintegrate(const char *source,
   static const svn_wc_entry_callbacks2_t walk_callbacks =
     { get_subtree_mergeinfo_walk_cb, get_mergeinfo_error_handler };
   struct get_subtree_mergeinfo_walk_baton wb;
+  const char *target_abspath;
+
+  SVN_ERR(svn_dirent_get_absolute(&target_abspath, target_wcpath, pool));
 
   /* Open an admistrative session with the working copy. */
   SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, target_wcpath,
@@ -8994,7 +9001,7 @@ svn_client_merge_reintegrate(const char *source,
                                "'%s'"), svn_dirent_local_style(source, pool),
                              svn_dirent_local_style(target_wcpath, pool));
 
-  SVN_ERR(ensure_wc_reflects_repository_subtree(target_wcpath, ctx, pool));
+  SVN_ERR(ensure_wc_reflects_repository_subtree(target_abspath, ctx, pool));
 
   /* As the WC tree is "pure", use its last-updated-to revision as
      the default revision for the left side of our merge, since that's

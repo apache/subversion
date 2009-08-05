@@ -650,13 +650,14 @@ def diff_only_property_change(sbox):
     "Property changes on: iota\n",
     "___________________________________________________________________\n",
     "Added: svn:eol-style\n",
-    "   + native\n",
-    "\n" ]
+    "## -0,0 +1 ##\n",
+    "+native\n" ]
 
   expected_reverse_output = list(expected_output)
   expected_reverse_output[3] = expected_reverse_output[3].replace("Added",
                                                                   "Deleted")
-  expected_reverse_output[4] = "   - native\n"
+  expected_reverse_output[4] = "## -1 +0,0 ##\n"
+  expected_reverse_output[5] = "-native\n"
 
 
   os.chdir(sbox.wc_dir)
@@ -1375,7 +1376,7 @@ def diff_prop_change_local_edit(sbox):
   for line in out:
     if line.find("+More text.") != -1:
       raise svntest.Failure
-  verify_expected_output(out, "   + pvalue")
+  verify_expected_output(out, "+pvalue")
 
   # diff r1:BASE should show the property change but not the local edit.
   exit_code, out, err = svntest.actions.run_and_verify_svn(None, None, [],
@@ -1384,14 +1385,14 @@ def diff_prop_change_local_edit(sbox):
   for line in out:
     if line.find("+More text.") != -1:
       raise svntest.Failure                   # fails at r7481
-  verify_expected_output(out, "   + pvalue")  # fails at r7481
+  verify_expected_output(out, "+pvalue")  # fails at r7481
 
   # diff r1:WC should show the local edit as well as the property change.
   exit_code, out, err = svntest.actions.run_and_verify_svn(None, None, [],
                                                            'diff', '-r1',
                                                            iota_path)
   verify_expected_output(out, "+More text.")  # fails at r7481
-  verify_expected_output(out, "   + pvalue")
+  verify_expected_output(out, "+pvalue")
 
 #----------------------------------------------------------------------
 def check_for_omitted_prefix_in_path_component(sbox):
@@ -1602,7 +1603,7 @@ def diff_prop_on_named_dir(sbox):
   exit_code, diff_output, err_output = svntest.main.run_svn(None, 'diff',
                                                             '-r2:3', 'A')
   # Check that the result contains a "-" line.
-  verify_expected_output(diff_output, "   - v")
+  verify_expected_output(diff_output, "-v")
 
 #----------------------------------------------------------------------
 def diff_keywords(sbox):
@@ -1842,22 +1843,25 @@ def diff_property_changes_to_base(sbox):
     "Property changes on: A\n",
     "___________________________________________________________________\n",
     "Added: dirprop\n",
-    "   + r2value\n",
-    "\n",
+    "## -0,0 +1 ##\n",
+    "+r2value\n",
     "\n",
     "Property changes on: iota\n",
     "___________________________________________________________________\n",
     "Added: fileprop\n",
-    "   + r2value\n",
-    "\n" ]
+    "## -0,0 +1 ##\n",
+    "+r2value\n"]
+
 
   expected_output_r2_r1 = list(expected_output_r1_r2)
   expected_output_r2_r1[3] = expected_output_r2_r1[3].replace("Added",
                                                               "Deleted")
-  expected_output_r2_r1[4] = "   - r2value\n"
+  expected_output_r2_r1[4] = "## -1 +0,0 ##\n"
+  expected_output_r2_r1[5] = "-r2value\n"
   expected_output_r2_r1[9] = expected_output_r2_r1[9].replace("Added",
                                                               "Deleted")
-  expected_output_r2_r1[10] = "   - r2value\n"
+  expected_output_r2_r1[10] = "## -1 +0,0 ##\n"
+  expected_output_r2_r1[11] = "-r2value\n"
 
 
   os.chdir(sbox.wc_dir)
@@ -2072,20 +2076,22 @@ def diff_prop_change_local_propmod(sbox):
     "Property changes on: A\n",
     "___________________________________________________________________\n",
     "Modified: dirprop\n",
-    "   - r2value\n",
-    "   + workingvalue\n",
+    "## -1 +1 ##\n",
+    "-r2value\n",
+    "+workingvalue\n",
     "Added: newdirprop\n",
-    "   + newworkingvalue\n",
-    "\n",
+    "## -0,0 +1 ##\n",
+    "+newworkingvalue\n",
     "\n",
     "Property changes on: iota\n",
     "___________________________________________________________________\n",
     "Modified: fileprop\n",
-    "   - r2value\n",
-    "   + workingvalue\n",
+    "## -1 +1 ##\n",
+    "-r2value\n",
+    "+workingvalue\n",
     "Added: newfileprop\n",
-    "   + newworkingvalue\n",
-    "\n" ]
+    "## -0,0 +1 ##\n",
+    "+newworkingvalue\n" ]
 
   os.chdir(sbox.wc_dir)
 
@@ -2153,17 +2159,17 @@ def diff_repos_wc_add_with_props(sbox):
     "Property changes on: foo\n",
     "___________________________________________________________________\n",
     "Added: propname\n",
-    "   + propvalue\n",
-    "\n",
+    "## -0,0 +1 ##\n",
+    "+propvalue\n",
     ]
   diff_X_r1_r3 = [
     "\n",
     "Property changes on: X\n",
     "___________________________________________________________________\n",
     "Added: propname\n",
-    "   + propvalue\n",
-    "\n",
-  ]
+    "## -0,0 +1 ##\n",
+    "+propvalue\n",
+    ]
   diff_bar_r1_r3 = make_diff_header("X/bar", "revision 0", "revision 3") + [
     "@@ -0,0 +1 @@\n",
     "+content\n",
@@ -2171,8 +2177,8 @@ def diff_repos_wc_add_with_props(sbox):
     "Property changes on: " + os.path.join('X', 'bar') + "\n",
     "___________________________________________________________________\n",
     "Added: propname\n",
-    "   + propvalue\n",
-    "\n",
+    "## -0,0 +1 ##\n",
+    "+propvalue\n",
     ]
 
   expected_output_r1_r3 = diff_X_r1_r3 + diff_bar_r1_r3 + diff_foo_r1_r3
@@ -2588,31 +2594,32 @@ def diff_with_depth(sbox):
     "Property changes on: .\n",
     "___________________________________________________________________\n",
     "Added: foo1\n",
-    "   + bar1\n",
-    "\n",
+    "## -0,0 +1 ##\n",
+    "+bar1\n",
     "\n",
     "Property changes on: iota\n",
     "___________________________________________________________________\n",
     "Added: foo2\n",
-    "   + bar2\n",
-    "\n",
+    "## -0,0 +1 ##\n",
+    "+bar2\n",
     "\n",
     "Property changes on: A\n",
     "___________________________________________________________________\n",
     "Added: foo3\n",
-    "   + bar3\n",
-    "\n",
+    "## -0,0 +1 ##\n",
+    "+bar3\n",
     "\n",
     "Property changes on: " + os.path.join('A', 'B') + "\n",
     "___________________________________________________________________\n",
     "Added: foo4\n",
-    "   + bar4\n",
-    "\n" ]
+    "## -0,0 +1 ##\n",
+    "+bar4\n"]
 
   expected_empty = svntest.verify.UnorderedOutput(diff[:6])
   expected_files = svntest.verify.UnorderedOutput(diff[:12])
   expected_immediates = svntest.verify.UnorderedOutput(diff[:18])
-  expected_infinity = svntest.verify.UnorderedOutput(diff[:])
+  expected_infinity = svntest.verify.UnorderedOutput(diff[:6]
+                                                     + diff[12:] + diff[6:12])
 
   os.chdir(sbox.wc_dir)
 
@@ -2655,20 +2662,26 @@ def diff_with_depth(sbox):
 
   diff_wc_repos = [
     "\n",
-    "Property changes on: .\n",
+    "Property changes on: " + os.path.join('A', 'B') + "\n",
     "___________________________________________________________________\n",
-    "Modified: foo1\n",
-    "   - bar1\n",
-    "   + baz1\n",
+    "Modified: foo4\n",
+    "## -1 +1 ##\n",
+    "-bar4\n",
+    "+baz4\n",
     "\n",
-    "\n",
-    "Property changes on: iota\n",
+    "Property changes on: A\n",
     "___________________________________________________________________\n",
-    "Modified: foo2\n",
-    "   - bar2\n",
-    "   + baz2\n",
-    "\n",
-    "\n",
+    "Modified: foo3\n",
+    "## -1 +1 ##\n",
+    "-bar3\n",
+    "+baz3\n",
+    "Index: A/mu\n",
+    "===================================================================\n",
+    "--- A/mu\t(revision 1)\n",
+    "+++ A/mu\t(working copy)\n",
+    "@@ -1 +1,2 @@\n",
+    " This is the file 'mu'.\n",
+    "+new text\n",
     "Index: iota\n",
     "===================================================================\n",
     "--- iota\t(revision 2)\n",
@@ -2676,30 +2689,25 @@ def diff_with_depth(sbox):
     "@@ -1 +1,2 @@\n",
     " This is the file 'iota'.\n",
     "+new text\n",
-    "Property changes on: A\n",
+    "\n",
+    "Property changes on: iota\n",
     "___________________________________________________________________\n",
-    "Modified: foo3\n",
-    "   - bar3\n",
-    "   + baz3\n",
+    "Modified: foo2\n",
+    "## -1 +1 ##\n",
+    "-bar2\n",
+    "+baz2\n",
     "\n",
-    "\n",
-    "Property changes on: " + os.path.join('A', 'B') + "\n",
+    "Property changes on: .\n",
     "___________________________________________________________________\n",
-    "Modified: foo4\n",
-    "   - bar4\n",
-    "   + baz4\n",
-    "\n",
-    "Index: A/mu\n",
-    "===================================================================\n",
-    "--- A/mu\t(revision 1)\n",
-    "+++ A/mu\t(working copy)\n",
-    "@@ -1 +1,2 @@\n",
-    " This is the file 'mu'.\n",
-    "+new text\n" ]
+    "Modified: foo1\n",
+    "## -1 +1 ##\n",
+    "-bar1\n",
+    "+baz1\n" ]
 
-  expected_empty = svntest.verify.UnorderedOutput(diff_wc_repos[:7])
-  expected_files = svntest.verify.UnorderedOutput(diff_wc_repos[1:22])
-  expected_immediates = svntest.verify.UnorderedOutput(diff_wc_repos[1:29])
+  expected_empty = svntest.verify.UnorderedOutput(diff_wc_repos[35:])
+  expected_files = svntest.verify.UnorderedOutput(diff_wc_repos[21:])
+  expected_immediates = svntest.verify.UnorderedOutput(diff_wc_repos[7:14]
+                                                       +diff_wc_repos[21:])
   expected_infinity = svntest.verify.UnorderedOutput(diff_wc_repos[:])
 
   svntest.actions.run_and_verify_svn(None, None, [],

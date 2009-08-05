@@ -408,8 +408,9 @@ svn_client_uuid_from_path(const char **uuid,
       /* Open the parents administrative area to fetch the uuid.
          Subversion 1.0 and later have the uuid in every checkout root */
 
-      SVN_ERR(svn_wc_adm_open3(&parent_access, NULL, parent, FALSE, 0,
-                               ctx->cancel_func, ctx->cancel_baton, pool));
+      SVN_ERR(svn_wc__adm_open_in_context(&parent_access, ctx->wc_ctx, parent,
+                                          FALSE, 0, ctx->cancel_func,
+                                          ctx->cancel_baton, pool));
 
       err = svn_client_uuid_from_path(uuid, svn_dirent_dirname(path, pool),
                                       parent_access, ctx, pool);

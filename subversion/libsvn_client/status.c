@@ -253,10 +253,10 @@ svn_client_status5(svn_revnum_t *result_rev,
 
   /* Try to open the target directory. If the target is a file or an
      unversioned directory, open the parent directory instead */
-  err = svn_wc_adm_open3(&anchor_access, NULL, path, FALSE,
-                         SVN_DEPTH_IS_RECURSIVE(depth) ? -1 : 1,
-                         ctx->cancel_func, ctx->cancel_baton,
-                         pool);
+  err = svn_wc__adm_open_in_context(&anchor_access, ctx->wc_ctx, path, FALSE,
+                                    SVN_DEPTH_IS_RECURSIVE(depth) ? -1 : 1,
+                                    ctx->cancel_func, ctx->cancel_baton,
+                                    pool);
   if (err && err->apr_err == SVN_ERR_WC_NOT_DIRECTORY)
     {
       svn_error_clear(err);

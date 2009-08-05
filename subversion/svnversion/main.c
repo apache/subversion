@@ -116,6 +116,7 @@ int
 main(int argc, const char *argv[])
 {
   const char *wc_path, *trail_url;
+  const char *local_abspath;
   apr_allocator_t *allocator;
   apr_pool_t *pool;
   int wc_format;
@@ -124,6 +125,7 @@ main(int argc, const char *argv[])
   svn_error_t *err;
   apr_getopt_t *os;
   svn_node_kind_t kind;
+  svn_wc_context_t *wc_ctx;
   const apr_getopt_option_t options[] =
     {
       {"no-newline", 'n', 0, N_("do not output the trailing newline")},
@@ -212,6 +214,8 @@ main(int argc, const char *argv[])
               (&wc_path, (os->ind < argc) ? os->argv[os->ind] : ".",
                pool));
   wc_path = svn_dirent_internal_style(wc_path, pool);
+  SVN_INT_ERR(svn_dirent_get_absolute(&local_abspath, wc_path, pool));
+  SVN_INT_ERR(svn_wc_context_create(&wc_ctx, NULL, pool, pool));
 
   if (os->ind+1 < argc)
     SVN_INT_ERR(svn_utf_cstring_to_utf8
@@ -230,8 +234,9 @@ main(int argc, const char *argv[])
           svn_pool_destroy(pool);
           return EXIT_SUCCESS;
         }
-      SVN_INT_ERR(svn_wc_revision_status(&res, wc_path, trail_url, committed,
-                                         NULL, NULL, pool));
+      SVN_INT_ERR(svn_wc_revision_status2(&res, wc_ctx, local_abspath,
+                                          trail_url, committed, NULL, NULL,
+                                          pool, pool));
     }
   else if (kind == svn_node_file)
     {
@@ -247,8 +252,9 @@ main(int argc, const char *argv[])
           return EXIT_SUCCESS;
         }
 
-      SVN_INT_ERR(svn_wc_revision_status(&res, wc_path, trail_url, committed,
-                                         NULL, NULL, pool));
+      SVN_INT_ERR(svn_wc_revision_status2(&res, wc_ctx, local_abspath,
+                                          trail_url, committed, NULL, NULL,
+                                          pool, pool));
 
       /* Unversioned file in versioned directory */
       if (res->min_rev == -1)
