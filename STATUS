@@ -172,9 +172,3 @@ Candidate changes:
      
 Approved changes:
 =================
-
- * r36720
-   Fix building with Apache 2.4.
-   Votes:
-     +1: arfrever, stsp, sbutler
-

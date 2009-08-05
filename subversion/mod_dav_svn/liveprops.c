@@ -466,7 +466,7 @@ insert_prop(const dav_resource *resource,
                      && resource->info->r->content_type)
               mime_type = resource->info->r->content_type;
             else
-              mime_type = ap_default_type(resource->info->r);
+              mime_type = "application/octet-stream";
 
             if ((serr = svn_mime_type_validate(mime_type, p)))
               {
