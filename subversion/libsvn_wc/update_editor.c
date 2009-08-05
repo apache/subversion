@@ -1401,17 +1401,20 @@ entry_has_local_mods(svn_boolean_t *modified,
 {
   svn_boolean_t text_modified;
   svn_boolean_t props_modified;
+  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
+  const char *local_abspath;
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, full_path, pool));
 
   /* Check for text modifications */
   if (kind == svn_node_file)
-    SVN_ERR(svn_wc_text_modified_p(&text_modified, full_path, FALSE,
-                                   adm_access, pool));
+    SVN_ERR(svn_wc__text_modified_internal_p(&text_modified, db, local_abspath,
+                                             FALSE, TRUE, pool));
   else
     text_modified = FALSE;
 
   /* Check for property modifications */
-  SVN_ERR(svn_wc_props_modified_p(&props_modified, full_path,
-                                  adm_access, pool));
+  SVN_ERR(svn_wc__props_modified(&props_modified, db, local_abspath, pool));
 
   *modified = (text_modified || props_modified);
 
@@ -3342,6 +3345,8 @@ add_file_with_history(const char *path,
   svn_error_t *err;
   svn_stream_t *copied_stream;
   const char *temp_dir_path;
+  const char *src_local_abspath;
+  svn_wc__db_t *db = svn_wc__adm_get_db(eb->adm_access);
 
   /* The file_pool can stick around for a *long* time, so we want to
      use a subpool for any temporary allocations. */
@@ -3386,8 +3391,6 @@ add_file_with_history(const char *path,
          revert place, depending on scheduling. */
 
       svn_stream_t *source_text_base;
-      const char *src_local_abspath;
-      svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
 
       SVN_ERR(svn_dirent_get_absolute(&src_local_abspath, src_path, subpool));
 
@@ -3446,8 +3449,9 @@ add_file_with_history(const char *path,
          read its working *props* into tfb->copied_working_props.) */
       svn_boolean_t text_changed;
 
-      SVN_ERR(svn_wc_text_modified_p(&text_changed, src_path, FALSE,
-                                     src_access, subpool));
+      SVN_ERR(svn_wc__text_modified_internal_p(&text_changed, eb->db,
+                                               src_local_abspath, FALSE,
+                                               TRUE, subpool));
 
       if (text_changed)
         {
@@ -4248,8 +4252,9 @@ merge_file(svn_wc_notify_state_t *content_state,
   if (fb->copied_working_text)
     is_locally_modified = TRUE;
   else if (! fb->existed)
-    SVN_ERR(svn_wc__text_modified_internal_p(&is_locally_modified, fb->path,
-                                             FALSE, adm_access, FALSE, pool));
+    SVN_ERR(svn_wc__text_modified_internal_p(&is_locally_modified, eb->db,
+                                             local_abspath, FALSE, FALSE,
+                                             pool));
   else if (new_text_base_path)
     {
       const char *new_text_base_abspath;

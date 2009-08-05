@@ -2441,31 +2441,39 @@ svn_wc__has_props(svn_boolean_t *has_props,
 }
 
 
+
 svn_error_t *
-svn_wc_props_modified_p(svn_boolean_t *modified_p,
-                        const char *path,
-                        svn_wc_adm_access_t *adm_access,
-                        apr_pool_t *pool)
+svn_wc__props_modified(svn_boolean_t *modified_p,
+                       svn_wc__db_t *db,
+                       const char *local_abspath,
+                       apr_pool_t *scratch_pool)
 {
-  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
-  const svn_wc_entry_t *entry;
   apr_array_header_t *local_propchanges;
   apr_hash_t *localprops;
   apr_hash_t *baseprops;
-  const char *local_abspath;
+  svn_wc__db_status_t status;
+  svn_error_t *err;
+  svn_boolean_t replaced = FALSE;
 
-  SVN_ERR(svn_wc_entry(&entry, path, adm_access, FALSE, pool));
+  err = svn_wc__db_read_info(&status, NULL, NULL, NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                             db, local_abspath,
+                             scratch_pool, scratch_pool);
 
   /* If we have no entry, we can't have any prop mods. */
-  if (! entry)
+  if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
     {
       *modified_p = FALSE;
+      svn_error_clear(err);
       return SVN_NO_ERROR;
     }
+  else if (err)
+    return err;
 
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
   SVN_ERR(load_props(&localprops, db, local_abspath, svn_wc__props_working,
-                     pool));
+                     scratch_pool));
 
   /* If the WORKING props are not present, then no modifications have
      occurred. */
@@ -2482,7 +2490,19 @@ svn_wc_props_modified_p(svn_boolean_t *modified_p,
      ### base props. hard to know on old WCs tho? (given the above
      ### comment). just declare propmods if the node has any working
      ### properties. */
-  if (entry->schedule == svn_wc_schedule_replace)
+  if (status == svn_wc__db_status_deleted)
+    {
+      const char *base_del_abspath;
+      const char *moved_to_abspath;
+      const char *work_del_abspath;
+
+      SVN_ERR(svn_wc__db_scan_deletion(&base_del_abspath, &replaced,
+                                       &moved_to_abspath, &work_del_abspath,
+                                       db, local_abspath, scratch_pool,
+                                       scratch_pool));
+    }
+
+  if (replaced)
     {
       *modified_p = apr_hash_count(localprops) > 0;
       return SVN_NO_ERROR;
@@ -2491,13 +2511,29 @@ svn_wc_props_modified_p(svn_boolean_t *modified_p,
   /* The WORKING props are present, so let's dig in and see what the
      differences are. On really old WCs, they might be the same. On
      newer WCs, the file would have been removed if there was no delta. */
-  SVN_ERR(load_props(&baseprops, db, local_abspath, svn_wc__props_base, pool));
+  SVN_ERR(load_props(&baseprops, db, local_abspath, svn_wc__props_base,
+                     scratch_pool));
 
-  SVN_ERR(svn_prop_diffs(&local_propchanges, localprops, baseprops, pool));
+  SVN_ERR(svn_prop_diffs(&local_propchanges, localprops, baseprops,
+                         scratch_pool));
 
   *modified_p = (local_propchanges->nelts > 0);
 
   return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc_props_modified_p(svn_boolean_t *modified_p,
+                        const char *path,
+                        svn_wc_adm_access_t *adm_access,
+                        apr_pool_t *pool)
+{
+  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
+  const char *local_abspath;
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+
+  return svn_wc__props_modified(modified_p, db, local_abspath, pool);
 }
 
 svn_error_t *

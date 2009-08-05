@@ -625,9 +625,9 @@ harvest_committables(apr_hash_t *committables,
              prop was changed, we might have to send new text to the
              server to match the new newline style.  */
           if (state_flags & SVN_CLIENT_COMMIT_ITEM_IS_COPY)
-            SVN_ERR(svn_wc_text_modified_p(&text_mod, path,
-                                           eol_prop_changed,
-                                           adm_access, scratch_pool));
+            SVN_ERR(svn_wc_text_modified_p2(&text_mod, ctx->wc_ctx,
+                                            local_abspath, eol_prop_changed,
+                                            scratch_pool));
           else
             text_mod = TRUE;
         }
@@ -651,8 +651,8 @@ harvest_committables(apr_hash_t *committables,
          changed, we might have to send new text to the server to
          match the new newline style.  */
       if (entry->kind == svn_node_file)
-        SVN_ERR(svn_wc_text_modified_p(&text_mod, path, eol_prop_changed,
-                                       adm_access, scratch_pool));
+        SVN_ERR(svn_wc_text_modified_p2(&text_mod, ctx->wc_ctx, local_abspath,
+                                        eol_prop_changed, scratch_pool));
     }
 
   /* Set text/prop modification flags accordingly. */
@@ -989,9 +989,10 @@ svn_client__harvest_committables(apr_hash_t **committables,
           if (err && err->apr_err == SVN_ERR_WC_NOT_LOCKED)
             {
               svn_error_clear(err);
-              SVN_ERR(svn_wc_adm_open3(&parent_access, NULL, parent,
-                                       FALSE, 0, ctx->cancel_func,
-                                       ctx->cancel_baton, subpool));
+              SVN_ERR(svn_wc__adm_open_in_context(&parent_access, ctx->wc_ctx,
+                                                  parent, FALSE, 0,
+                                                  ctx->cancel_func,
+                                                  ctx->cancel_baton, subpool));
             }
           else if (err)
             {
@@ -1628,16 +1629,17 @@ svn_client__do_commit(const char *base_url,
       struct file_mod_t *mod = svn_apr_hash_index_val(hi);
       svn_client_commit_item3_t *item;
       void *file_baton;
-      const char *tempfile, *dir_path;
+      const char *tempfile;
       unsigned char digest[APR_MD5_DIGESTSIZE];
       svn_boolean_t fulltext = FALSE;
-      svn_wc_adm_access_t *item_access;
+      const char *item_abspath;
 
       svn_pool_clear(iterpool);
 
       /* Transmit the entry. */
       item = mod->item;
       file_baton = mod->file_baton;
+      SVN_ERR(svn_dirent_get_absolute(&item_abspath, item->path, iterpool));
 
       if (ctx->cancel_func)
         SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
@@ -1656,13 +1658,10 @@ svn_client__do_commit(const char *base_url,
       if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_ADD)
         fulltext = TRUE;
 
-      dir_path = svn_dirent_dirname(item->path, iterpool);
-      SVN_ERR(svn_wc_adm_retrieve(&item_access, adm_access, dir_path,
-                                  iterpool));
-      SVN_ERR(svn_wc_transmit_text_deltas2(tempfiles ? &tempfile : NULL,
-                                           digest, item->path,
-                                           item_access, fulltext, editor,
-                                           file_baton, iterpool));
+      SVN_ERR(svn_wc_transmit_text_deltas3(tempfiles ? &tempfile : NULL,
+                                           digest, ctx->wc_ctx, item_abspath,
+                                           fulltext, editor, file_baton,
+                                           iterpool, iterpool));
       if (tempfiles && tempfile)
         {
           tempfile = apr_pstrdup(pool, tempfile);
