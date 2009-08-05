@@ -15,11 +15,6 @@ Status of 1.6.4:
 
 Candidate changes:
 
- * r36720
-   Fix building with Apache 2.4.
-   Votes:
-     +1: arfrever, stsp
-
  * r37478, r37543, r37544, r37545, r37547
    Support using `svnversion` on files and improve some messages printed by
    `svnversion`.
@@ -177,3 +172,9 @@ Candidate changes:
      
 Approved changes:
 =================
+
+ * r36720
+   Fix building with Apache 2.4.
+   Votes:
+     +1: arfrever, stsp, sbutler
+
