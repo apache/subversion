@@ -58,8 +58,22 @@ public class SVNAdminTests extends SVNTests
         throws SubversionException, IOException
     {
         OneTest thisTest = new OneTest(false);
+        final String MSG = "Initial repository creation";
         admin.setRevProp(thisTest.getRepositoryPath(), Revision.getInstance(0),
-                         "svn:log", "Initial repository creation", false,
-                         false);
+                         "svn:log", MSG, false, false);
+        PropertyData[] pdata = client.revProperties(
+                                      makeReposUrl(thisTest.getRepository()),
+                                      Revision.getInstance(0));
+        assertNotNull("expect non null rev props");
+        String logMessage = null;
+        for (int i = 0; i < pdata.length; i++)
+        {
+            if ("svn:log".equals(pdata[i].getName()))
+            {
+                logMessage = pdata[i].getValue();
+                break;
+            }
+        }
+        assertEquals("expect rev prop change to take effect", MSG, logMessage);
     }
 }
