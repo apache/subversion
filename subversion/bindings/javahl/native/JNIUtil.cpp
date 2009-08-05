@@ -677,16 +677,18 @@ void JNIUtil::setRequestPool(SVN::Pool *pool)
  */
 jbyteArray JNIUtil::makeJByteArray(const signed char *data, int length)
 {
-  if (data == NULL || length == 0)
-    // a NULL or empty will create no Java array
-    return NULL;
+  if (data == NULL)
+    {
+      // a NULL will create no Java array
+      return NULL;
+    }
 
   JNIEnv *env = getEnv();
 
   // Allocate the Java array.
   jbyteArray ret = env->NewByteArray(length);
-  if (isJavaExceptionThrown())
-    return NULL;
+  if (isJavaExceptionThrown() || ret == NULL)
+      return NULL;
 
   // Access the bytes.
   jbyte *retdata = env->GetByteArrayElements(ret, NULL);
