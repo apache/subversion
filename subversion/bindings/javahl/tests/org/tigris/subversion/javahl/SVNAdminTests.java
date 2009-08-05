@@ -22,7 +22,9 @@
  */
 package org.tigris.subversion.javahl;
 
+import java.io.File;
 import java.io.IOException;
+import java.io.OutputStream;
 
 import org.tigris.subversion.javahl.Revision;
 import org.tigris.subversion.javahl.SubversionException;
@@ -75,5 +77,49 @@ public class SVNAdminTests extends SVNTests
             }
         }
         assertEquals("expect rev prop change to take effect", MSG, logMessage);
+    }
+    public void testLoadRepo() 
+        throws SubversionException, IOException
+    {
+        /* Make sure SVNAdmin.load() works, with a repo dump file known
+         * to provoke bug 2979
+         */
+        // makes repos with nothing in it
+        OneTest thisTest = new OneTest(false,false);
+        // verify zero revisions in new repos
+        String repoUrl = makeReposUrl(thisTest.getRepository());
+        final Info2[] infoHolder = new Info2[1];
+        InfoCallback mycallback = new InfoCallback()
+        {
+            public void singleInfo(Info2 info)
+            {
+                infoHolder[0] = info;
+            }
+        };
+        client.info2(repoUrl, Revision.HEAD, Revision.HEAD,
+                Depth.immediates, null, mycallback);
+        assertNotNull("expect info callback", infoHolder[0]);
+        assertEquals("expect zero revisions in new repository",
+                0L, infoHolder[0].getLastChangedRev());
+        
+        // locate dump file in test environment
+        String testRoot = System.getProperty("test.rootdir",
+                "subversion/bindings/javahl/test-work");
+        File javahlRoot = new File(testRoot).getParentFile();
+        File dump = new File(javahlRoot, "tests/data/issue2979.dump");
+        InputInterface input = new FileInputer(dump);
+        OutputInterface loadLog = new IgnoreOutputer();
+        admin.load(thisTest.getRepositoryPath(),
+                   input, loadLog, true, true, null);
+        // should have two revs after the load
+        infoHolder[0] = null;
+        client.info2(repoUrl, Revision.HEAD, Revision.HEAD,
+                     Depth.immediates, null, mycallback);
+        assertEquals("expect two revisions after load()",
+                     2L, infoHolder[0].getLastChangedRev());
+        // verify that the repos is faithful rep. of the dump file, 
+        // e.g., correct author
+        assertEquals("expect 'svn4ant' as author of r2",
+                     "svn4ant", infoHolder[0].getLastChangedAuthor());
     }
 }
