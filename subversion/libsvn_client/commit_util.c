@@ -321,10 +321,10 @@ bail_on_tree_conflicted_ancestor(svn_wc_context_t *wc_ctx,
 
   while(1)
     {
-      svn_wc__strictly_is_wc_root(&wc_root,
-                                  wc_ctx,
-                                  local_abspath,
-                                  scratch_pool);
+      SVN_ERR(svn_wc__strictly_is_wc_root(&wc_root,
+                                          wc_ctx,
+                                          local_abspath,
+                                          scratch_pool));
 
       if (wc_root)
         break;
@@ -332,9 +332,8 @@ bail_on_tree_conflicted_ancestor(svn_wc_context_t *wc_ctx,
       /* Check the parent directory's entry for tree-conflicts
        * on PATH. */
       parent_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
-      svn_wc_conflicted_p3(NULL, NULL, &tree_conflicted,
-                           wc_ctx, parent_abspath, scratch_pool);
-
+      SVN_ERR(svn_wc_conflicted_p3(NULL, NULL, &tree_conflicted,
+                                   wc_ctx, parent_abspath, scratch_pool));
       if (tree_conflicted)
         return svn_error_createf(
                  SVN_ERR_WC_FOUND_CONFLICT, NULL,
