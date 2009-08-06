@@ -1,3 +1,13 @@
+Version 1.6.4
+(06 Aug 2009, from /branches/1.6.x)
+http://svn.collab.net/repos/svn/tags/1.6.4
+
+ User-visible changes:
+ * fixed: heap overflow vulnerability on server and client
+          See CVE-2009-2411, and descriptive advisory at
+          http://subversion.tigris.org/security/CVE-2009-2411-advisory.txt
+
+
 Version 1.6.3
 (22 Jun 2009, from /branches/1.6.x)
 http://svn.collab.net/repos/svn/tags/1.6.3
