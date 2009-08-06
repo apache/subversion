@@ -170,13 +170,6 @@ Candidate changes:
    Votes:
      +1: pburba
 
- * r38572
-   Plug some error leaks.
-   Branch:
-     ^/branches/1.6.x-r38572
-   Votes:
-     +1: cmpilato, stsp
-     
  * r38585
    Fix r37827, which has already been backported and released in 1.6.3.
    Justification:
@@ -186,3 +179,10 @@ Candidate changes:
 
 Approved changes:
 =================
+
+ * r38572
+   Plug some error leaks.
+   Branch:
+     ^/branches/1.6.x-r38572
+   Votes:
+     +1: cmpilato, stsp, pburba
