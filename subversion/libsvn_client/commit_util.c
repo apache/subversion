@@ -1275,14 +1275,19 @@ do_item_commit(void **dir_baton,
   apr_hash_t *file_mods = cb_baton->file_mods;
   svn_client_ctx_t *ctx = cb_baton->ctx;
   svn_error_t *err = SVN_NO_ERROR;
-  const char *local_abspath;
-
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, item->path, pool));
+  const char *local_abspath = NULL;
 
   /* Do some initializations. */
   *dir_baton = NULL;
   if (item->copyfrom_url)
     copyfrom_url = item->copyfrom_url;
+  if (item->kind != svn_node_none && item->path)
+    {
+      /* We might not always get a local_abspath.
+       * The item might not exist on disk e.g. if the item is a parent
+       * directory being added as part of a WC->URL copy with cp --parents. */
+      SVN_ERR(svn_dirent_get_absolute(&local_abspath, item->path, pool));
+    }
 
   /* If this is a file with textual mods, we'll be keeping its baton
      around until the end of the commit.  So just lump its memory into
@@ -1314,8 +1319,8 @@ do_item_commit(void **dir_baton,
     }
 
   /* If a feedback table was supplied by the application layer,
-     describe what we're about to do to this item.  */
-  if (ctx->notify_func2)
+     describe what we're about to do to this item. */
+  if (ctx->notify_func2 && item->path)
     {
       const char *npath = item->path;
       svn_wc_notify_t *notify;
@@ -1396,7 +1401,7 @@ do_item_commit(void **dir_baton,
                    copyfrom_url ? item->copyfrom_rev : SVN_INVALID_REVNUM,
                    file_pool, &file_baton));
         }
-      else
+      else /* May be svn_node_none when adding parent dirs for a copy. */
         {
           SVN_ERR_ASSERT(parent_baton);
           SVN_ERR(editor->add_directory
