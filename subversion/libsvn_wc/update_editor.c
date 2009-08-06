@@ -2932,7 +2932,7 @@ close_directory(void *dir_baton,
                       apr_hash_set(ti->depths, d_path, APR_HASH_KEY_STRING,
                                    svn_depth_to_word(db->ambient_depth));
 
-                      /* We can't assume that it came pre-loaded with
+                      /* We can't assume that ti came pre-loaded with
                          the old values of the svn:externals property.
                          Yes, most callers will have already
                          initialized ti by sending it through
