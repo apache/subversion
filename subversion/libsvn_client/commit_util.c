@@ -127,15 +127,12 @@ add_committable(apr_hash_t *committables,
 static svn_error_t *
 check_prop_mods(svn_boolean_t *props_changed,
                 svn_boolean_t *eol_prop_changed,
-                const char *path,
+                const char *local_abspath,
                 svn_wc_context_t *wc_ctx,
                 apr_pool_t *pool)
 {
   apr_array_header_t *prop_mods;
-  const char *local_abspath;
   int i;
-
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
   *eol_prop_changed = *props_changed = FALSE;
   SVN_ERR(svn_wc_get_prop_diffs2(&prop_mods, NULL, wc_ctx, local_abspath,
@@ -610,7 +607,7 @@ harvest_committables(apr_hash_t *committables,
         }
 
       /* See if there are property modifications to send. */
-      SVN_ERR(check_prop_mods(&prop_mod, &eol_prop_changed, path,
+      SVN_ERR(check_prop_mods(&prop_mod, &eol_prop_changed, local_abspath,
                               ctx->wc_ctx, scratch_pool));
 
       /* Regular adds of files have text mods, but for copies we have
@@ -640,7 +637,7 @@ harvest_committables(apr_hash_t *committables,
       svn_boolean_t eol_prop_changed;
 
       /* See if there are property modifications to send. */
-      SVN_ERR(check_prop_mods(&prop_mod, &eol_prop_changed, path,
+      SVN_ERR(check_prop_mods(&prop_mod, &eol_prop_changed, local_abspath,
                               ctx->wc_ctx, scratch_pool));
 
       /* Check for text mods on files.  If EOL_PROP_CHANGED is TRUE,
