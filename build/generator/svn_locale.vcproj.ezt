@@ -10,29 +10,18 @@
 			Name="[platforms]"/>
 [end]	</Platforms>
 	<Configurations>
-[for platforms]		<Configuration
-			Name="Debug|[platforms]"
+[for platforms][for configs]		<Configuration
+			Name="[configs]|[platforms]"
 			ConfigurationType="0"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="FALSE">
 			<Tool
 				Name="VCNMakeTool"
-				BuildCommandLine="cmd /c build_locale.bat Debug"
-				ReBuildCommandLine="cmd /c build_locale.bat Debug"
-                        />
-		</Configuration>
-		<Configuration
-			Name="Release|[platforms]"
-			ConfigurationType="0"
-			UseOfMFC="0"
-			ATLMinimizesCRunTimeLibraryUsage="FALSE">
-			<Tool
-				Name="VCNMakeTool"
-				BuildCommandLine="cmd /c build_locale.bat Release"
-				ReBuildCommandLine="cmd /c build_locale.bat Release"
+				BuildCommandLine="cmd /c build_locale.bat [configs]"
+				ReBuildCommandLine="cmd /c build_locale.bat [configs]"
 			/>
 		</Configuration>
-[end]	</Configurations>
+[end][end]	</Configurations>
 	<Files>
 	</Files>
 	<Globals>
