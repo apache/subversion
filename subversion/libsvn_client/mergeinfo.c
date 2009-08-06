@@ -333,7 +333,14 @@ svn_client__get_repos_mergeinfo(svn_ra_session_t *ra_session,
 
   APR_ARRAY_PUSH(rel_paths, const char *) = rel_path;
 
-  /* Temporarily point the session at the root of the repository. */
+  /* Temporarily point the session at the root of the repository.
+
+     ### BH: This is called from 'svn cp URL1 [URL2..] TOURL' and causes issue
+             #3242. As far as I can tell this is the only place in this
+             scenario that really needs access to the repository root instead
+             of the common parent. If there is any way to handle this via the
+             common parent should implement this here and we reduce the
+             problems caused by issue #3242. */
   SVN_ERR(svn_client__ensure_ra_session_url(&old_session_url, ra_session,
                                             NULL, pool));
 
