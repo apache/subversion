@@ -211,6 +211,16 @@ http://svn.collab.net/repos/svn/tags/1.6.0
     * fix building Ruby bindings with Ruby 1.9 (r35852, r35883)
 
 
+Version 1.5.7
+(06 Aug 2009, from /branches/1.5.x)
+http://svn.collab.net/repos/svn/tags/1.5.7
+
+ User-visible changes:
+  * fixed: heap overflow vulnerability on server and client
+           See CVE-2009-2411, and descriptive advisory at
+           http://subversion.tigris.org/security/CVE-2009-2411-advisory.txt
+
+
 Version 1.5.6
 (26 Feb 2009, from /branches/1.5.x)
 http://svn.collab.net/repos/svn/tags/1.5.6
