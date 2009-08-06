@@ -1274,11 +1274,13 @@ do_item_commit(void **dir_baton,
   void *file_baton = NULL;
   const char *copyfrom_url = NULL;
   apr_pool_t *file_pool = NULL;
-  svn_wc_adm_access_t *adm_access = cb_baton->adm_access;
   const svn_delta_editor_t *editor = cb_baton->editor;
   apr_hash_t *file_mods = cb_baton->file_mods;
   svn_client_ctx_t *ctx = cb_baton->ctx;
   svn_error_t *err = SVN_NO_ERROR;
+  const char *local_abspath;
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, item->path, pool));
 
   /* Do some initializations. */
   *dir_baton = NULL;
@@ -1342,10 +1344,7 @@ do_item_commit(void **dir_baton,
           if (item->kind == svn_node_file)
             {
               const svn_string_t *propval;
-              const char *local_abspath;
 
-              SVN_ERR(svn_dirent_get_absolute(&local_abspath, item->path,
-                                              pool));
               SVN_ERR(svn_wc_prop_get2(&propval, ctx->wc_ctx, local_abspath,
                                        SVN_PROP_MIME_TYPE, pool, pool));
             
@@ -1435,8 +1434,6 @@ do_item_commit(void **dir_baton,
   /* Now handle property mods. */
   if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_PROP_MODS)
     {
-      const svn_wc_entry_t *tmp_entry;
-
       if (kind == svn_node_file)
         {
           if (! file_baton)
@@ -1469,26 +1466,20 @@ do_item_commit(void **dir_baton,
             }
         }
 
-      /* Ensured by harvest_committables(), item->path will never be an
-         excluded path. However, will it be deleted/absent items?  I think
-         committing an modification on a deleted/absent item does not make
-         sense. So it's probably safe to turn off the show_hidden flag here.*/
-      SVN_ERR(svn_wc_entry(&tmp_entry, item->path, adm_access, FALSE, pool));
-
       /* When committing a directory that no longer exists in the
          repository, a "not found" error does not occur immediately
          upon opening the directory.  It appears here during the delta
          transmisssion. */
-      err = svn_wc_transmit_prop_deltas
-        (item->path, adm_access, tmp_entry, editor,
-         (kind == svn_node_dir) ? *dir_baton : file_baton, NULL, pool);
+      err = svn_wc_transmit_prop_deltas2(
+              ctx->wc_ctx, local_abspath, editor,
+              (kind == svn_node_dir) ? *dir_baton : file_baton, pool);
 
       if (err)
         return fixup_out_of_date_error(path, kind, err);
 
-      SVN_ERR(svn_wc_transmit_prop_deltas
-              (item->path, adm_access, tmp_entry, editor,
-               (kind == svn_node_dir) ? *dir_baton : file_baton, NULL, pool));
+      SVN_ERR(svn_wc_transmit_prop_deltas2(
+                ctx->wc_ctx, local_abspath, editor,
+                (kind == svn_node_dir) ? *dir_baton : file_baton, pool));
 
       /* Make any additional client -> repository prop changes. */
       if (item->outgoing_prop_changes)
@@ -1562,7 +1553,6 @@ static svn_error_t *get_test_editor(const svn_delta_editor_t **editor,
 svn_error_t *
 svn_client__do_commit(const char *base_url,
                       apr_array_header_t *commit_items,
-                      svn_wc_adm_access_t *adm_access,
                       const svn_delta_editor_t *editor,
                       void *edit_baton,
                       const char *notify_path_prefix,
@@ -1610,7 +1600,6 @@ svn_client__do_commit(const char *base_url,
     }
 
   /* Setup the callback baton. */
-  cb_baton.adm_access = adm_access;
   cb_baton.editor = editor;
   cb_baton.edit_baton = edit_baton;
   cb_baton.file_mods = file_mods;

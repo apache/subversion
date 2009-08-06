@@ -1649,10 +1649,9 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
   notify_prefix = svn_dirent_get_longest_ancestor(current_dir, base_dir, pool);
 
   /* Perform the commit. */
-  cmt_err = svn_client__do_commit(base_url, commit_items, base_dir_access,
-                                  editor, edit_baton,
-                                  notify_prefix,
-                                  &tempfiles, &checksums, ctx, pool);
+  cmt_err = svn_client__do_commit(base_url, commit_items, editor, edit_baton,
+                                  notify_prefix, &tempfiles, &checksums, ctx, 
+                                  pool);
 
   /* Handle a successful commit. */
   if ((! cmt_err)

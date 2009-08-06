@@ -940,7 +940,6 @@ svn_client__condense_commit_items(const char **base_url,
 svn_error_t *
 svn_client__do_commit(const char *base_url,
                       apr_array_header_t *commit_items,
-                      svn_wc_adm_access_t *adm_access,
                       const svn_delta_editor_t *editor,
                       void *edit_baton,
                       const char *notify_path_prefix,
