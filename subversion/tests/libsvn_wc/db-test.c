@@ -1311,6 +1311,6 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS2(test_global_relocate,
                    "relocating a node"),
     SVN_TEST_PASS2(test_upgrading_to_f13,
-                   "upgrading to fromat 13"),
+                   "upgrading to format 13"),
     SVN_TEST_NULL
   };
