@@ -1061,8 +1061,6 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
       SVN_ERR(svn_dirent_get_absolute(&pair->src_abs, pair->src, pool));
     }
 
-  svn_pool_destroy(iterpool);
-
   /* Determine the longest common ancestor for the destinations, and open an RA
      session to that location. */
   /* ### But why start by getting the _parent_ of the first one? */
@@ -1105,8 +1103,6 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
 
   /* Figure out the basename that will result from each copy and check to make
      sure it doesn't exist already. */
-  iterpool = svn_pool_create(pool);
-
   for (i = 0; i < copy_pairs->nelts; i++)
     {
       svn_node_kind_t dst_kind;
@@ -1131,8 +1127,6 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
                                    _("Path '%s' already exists"), pair->dst);
         }
     }
-
-  svn_pool_destroy(iterpool);
 
   if (SVN_CLIENT__HAS_LOG_MSG_FUNC(ctx))
     {
@@ -1170,7 +1164,10 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
       SVN_ERR(svn_client__get_log_msg(&message, &tmp_file, commit_items,
                                       ctx, pool));
       if (! message)
-        return svn_wc_adm_close2(adm_access, pool);
+        {
+          svn_pool_destroy(iterpool);
+          return svn_error_return(svn_wc_adm_close2(adm_access, pool));
+        }
     }
   else
     message = "";
@@ -1236,7 +1233,8 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
         APR_ARRAY_IDX(commit_items, i, svn_client_commit_item3_t *);
       const char *src_abspath;
 
-      SVN_ERR(svn_dirent_get_absolute(&src_abspath, pair->src, pool));
+      svn_pool_clear(iterpool);
+      SVN_ERR(svn_dirent_get_absolute(&src_abspath, pair->src, iterpool));
 
       /* Set the mergeinfo for the destination to the combined merge
          info known to the WC and the repository. */
@@ -1244,12 +1242,12 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
                                                    sizeof(svn_prop_t *));
       SVN_ERR(calculate_target_mergeinfo(ra_session, &mergeinfo, adm_access,
                                          pair->src, pair->src_revnum,
-                                         FALSE, ctx, pool));
+                                         FALSE, ctx, iterpool));
       SVN_ERR(svn_wc_entry(&entry, pair->src, adm_access, FALSE, pool));
       SVN_ERR(svn_client__parse_mergeinfo(&wc_mergeinfo, ctx->wc_ctx,
-                                          src_abspath, pool, pool));
+                                          src_abspath, iterpool, iterpool));
       if (wc_mergeinfo && mergeinfo)
-        SVN_ERR(svn_mergeinfo_merge(mergeinfo, wc_mergeinfo, pool));
+        SVN_ERR(svn_mergeinfo_merge(mergeinfo, wc_mergeinfo, iterpool));
       else if (! mergeinfo)
         mergeinfo = wc_mergeinfo;
       if (mergeinfo)
@@ -1262,7 +1260,8 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
                          sizeof(svn_prop_t));
           svn_string_t *prop_value;
 
-          SVN_ERR(svn_mergeinfo_to_string(&prop_value, mergeinfo, pool));
+          SVN_ERR(svn_mergeinfo_to_string(&prop_value, mergeinfo,
+                                          item->outgoing_prop_changes->pool));
 
           mergeinfo_prop->name = SVN_PROP_MERGEINFO;
           mergeinfo_prop->value = prop_value;
@@ -1298,6 +1297,8 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
 
   /* Sleep to ensure timestamp integrity. */
   svn_io_sleep_for_timestamps(top_src_path, pool);
+
+  svn_pool_destroy(iterpool);
 
   /* It's only a read lock, so unlocking is harmless. */
   return svn_wc_adm_close2(adm_access, pool);
