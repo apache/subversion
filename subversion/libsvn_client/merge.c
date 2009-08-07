@@ -6816,10 +6816,7 @@ record_mergeinfo_for_added_subtrees(svn_merge_range_t *merged_range,
           apr_pool_clear(iterpool);
           SVN_ERR(svn_dirent_get_absolute(&added_abspath, added_path,
                                           iterpool));
-          SVN_ERR(svn_dirent_get_absolute(&dir_abspath,
-                                          svn_dirent_dirname(added_path,
-                                                             iterpool),
-                                          iterpool));
+          dir_abspath = svn_dirent_dirname(added_abspath, iterpool);
 
           /* Rather than using svn_client__get_wc_mergeinfo() and
              analyzing the mergeinfo it returns to determine if
