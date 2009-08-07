@@ -403,9 +403,10 @@ def open_pipe(command, stdin=None, stdout=None, stderr=None):
   if (sys.platform == 'win32') and (command[0].endswith('.py')):
     command.insert(0, sys.executable)
 
+  command_string = ' '.join(command)
+
   # Quote only the arguments on Windows.  Later versions of subprocess,
   # 2.5.2+ confirmed, don't require this quoting, but versions < 2.4.3 do.
-  command_list = command
   if (sys.platform == 'win32'):
     args = command[1:]
     args = ' '.join([_quote_arg(x) for x in args])
@@ -423,7 +424,7 @@ def open_pipe(command, stdin=None, stdout=None, stderr=None):
                        stdout=stdout,
                        stderr=stderr,
                        close_fds=not windows)
-  return p.stdin, p.stdout, p.stderr, (p, command_list)
+  return p.stdin, p.stdout, p.stderr, (p, command_string)
 
 def wait_on_pipe(waiter, binary_mode, stdin=None):
   """Waits for KID (opened with open_pipe) to finish, dying
@@ -433,7 +434,7 @@ def wait_on_pipe(waiter, binary_mode, stdin=None):
   if waiter is None:
     return
 
-  kid, command = waiter
+  kid, command_string = waiter
   stdout, stderr = kid.communicate(stdin)
   exit_code = kid.returncode
 
@@ -455,12 +456,12 @@ def wait_on_pipe(waiter, binary_mode, stdin=None):
     if verbose_mode:
       # show the whole path to make it easier to start a debugger
       sys.stderr.write("CMD: %s terminated by signal %d\n"
-                       % (' '.join(command), exit_signal))
+                       % (command_string, exit_signal))
     raise SVNProcessTerminatedBySignal
   else:
     if exit_code and verbose_mode:
       sys.stderr.write("CMD: %s exited with %d\n"
-                       % (' '.join(command), exit_code))
+                       % (command_string, exit_code))
     return stdout_lines, stderr_lines, exit_code
 
 # Run any binary, supplying input text, logging the command line
