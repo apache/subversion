@@ -762,6 +762,34 @@ generate_label(const char **label,
   return SVN_NO_ERROR;
 }
 
+/* A helper function used by display_prop_diffs.
+   TOKEN is a string holding a property value.
+   If TOKEN is empty, or is already terminated by an EOL marker,
+   return TOKEN unmodified. Else, return a new string consisting
+   of the concatenation of TOKEN and the system's default EOL marker.
+   The new string is allocated from POOL. */
+static const svn_string_t *
+maybe_append_eol(const svn_string_t *token, apr_pool_t *pool)
+{
+  const char *curp;
+
+  if (token->len == 0)
+    return token;
+
+  curp = token->data + token->len - 1;
+  if (*curp == '\r')
+    {
+      return token;
+    }
+  else if (*curp != '\n')
+    {
+      return svn_string_createf(pool, "%s%s", token->data, APR_EOL_STR);
+    }
+  else
+    {
+      return token;
+    }
+}
 
 /*
  * Constant diff output separator strings
@@ -805,39 +833,43 @@ display_prop_diffs(const apr_array_header_t *prop_diffs,
         header_fmt = _("Modified: %s\n");
       SVN_ERR(svn_cmdline_printf(pool, header_fmt, pc->name));
 
-      /* For now, we have a rather simple heuristic: if this is an
-         "svn:" property, then assume the value is UTF-8 and must
-         therefore be converted before printing.  Otherwise, just
-         print whatever's there and hope for the best.
-         ### We don't use svn_cmdline_printf here, since we don't know if the
-         values are UTF-8. */
       {
-        svn_boolean_t val_to_utf8 = svn_prop_is_svn_prop(pc->name);
-        const char *printable_val;
+        svn_stream_t *out;
+        svn_diff_t *diff;
+        svn_diff_file_options_t options;
+        const svn_string_t *tmp;
+        const svn_string_t *orig;
+        const svn_string_t *val;
 
-        if (orig_value != NULL)
-          {
-            if (val_to_utf8)
-              SVN_ERR(svn_cmdline_cstring_from_utf8(&printable_val,
-                                                    orig_value->data, pool));
-            else
-              printable_val = orig_value->data;
-            printf("   - %s\n", printable_val);
-          }
+        SVN_ERR(svn_stream_for_stdout(&out, pool));
 
-        if (pc->value != NULL)
-          {
-            if (val_to_utf8)
-              SVN_ERR(svn_cmdline_cstring_from_utf8
-                      (&printable_val, pc->value->data, pool));
-            else
-              printable_val = pc->value->data;
-            printf("   + %s\n", printable_val);
-          }
+        /* The last character in a property is often not a newline.
+           Since the diff is not useful anyway for patching properties an
+           eol character is appended when needed to remove those pescious
+           ' \ No newline at end of file' lines. */
+        tmp = orig_value ? orig_value : svn_string_create("", pool);
+        orig = maybe_append_eol(tmp, pool);
+
+        tmp = pc->value ? pc->value :
+                                  svn_string_create("", pool);
+        val = maybe_append_eol(tmp, pool);
+
+        SVN_ERR(svn_diff_mem_string_diff(&diff, orig, val, &options, pool));
+
+        /* UNIX patch will try to apply a diff even if the diff header
+         * is missing. It tries to be helpful by asking the user for a
+         * target filename when it can't determine the target filename
+         * from the diff header. But there usually are no files which
+         * UNIX patch could apply the property diff to, so we use "##"
+         * instead of "@@" as the default hunk delimiter for property diffs.
+         * We also supress the diff header. */
+        SVN_ERR(svn_diff_mem_string_output_unified2(out, diff, FALSE, "##",
+                                           svn_dirent_local_style(path, pool),
+                                           svn_dirent_local_style(path, pool),
+                                           svn_cmdline_output_encoding(pool),
+                                           orig, val, pool));
       }
     }
-
-  SVN_ERR(svn_cmdline_printf(pool, "\n"));
   return svn_cmdline_fflush(stdout);
 }
 

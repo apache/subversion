@@ -549,13 +549,13 @@ def diff_binary(sbox):
 test_list = [ None,
               test_misc,
               delete_file_in_moved_dir,
-              XFail(test_print_property_diffs),
+              test_print_property_diffs,
               info_bad_newlines,
               changed_copy_info,
               tree_non_recursive,
               limit_history,
               diff_ignore_whitespace,
-              XFail(diff_ignore_eolstyle),
+              diff_ignore_eolstyle,
               diff_binary,
              ]
 
