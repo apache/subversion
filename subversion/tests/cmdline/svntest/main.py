@@ -405,6 +405,7 @@ def open_pipe(command, stdin=None, stdout=None, stderr=None):
 
   # Quote only the arguments on Windows.  Later versions of subprocess,
   # 2.5.2+ confirmed, don't require this quoting, but versions < 2.4.3 do.
+  command_list = command
   if (sys.platform == 'win32'):
     args = command[1:]
     args = ' '.join([_quote_arg(x) for x in args])
@@ -422,7 +423,7 @@ def open_pipe(command, stdin=None, stdout=None, stderr=None):
                        stdout=stdout,
                        stderr=stderr,
                        close_fds=not windows)
-  return p.stdin, p.stdout, p.stderr, (p, command)
+  return p.stdin, p.stdout, p.stderr, (p, command_list)
 
 def wait_on_pipe(waiter, binary_mode, stdin=None):
   """Waits for KID (opened with open_pipe) to finish, dying
