@@ -10,7 +10,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.6\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2009-06-09 21:46+0200\n"
-"PO-Revision-Date: 2009-06-09 21:49+0200\n"
+"PO-Revision-Date: 2009-08-07 14:05+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: French <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -2006,6 +2006,14 @@ msgstr "Échec de la compression des données de svndiff"
 msgid "Decompression of svndiff data failed"
 msgstr "Échec de la décompression des données de svndiff"
 
+#: ../libsvn_delta/svndiff.c:409
+msgid "Decompression of svndiff data failed: no size"
+msgstr "Échec de la décompression des données de svndiff : pas de taille"
+
+#: ../libsvn_delta/svndiff.c:412
+msgid "Decompression of svndiff data failed: size too large"
+msgstr "Échec de la décompression des données de svndiff : taille trop grande"
+
 #: ../libsvn_delta/svndiff.c:414
 msgid "Size of uncompressed data does not match stored original length"
 msgstr "La taille des données décompressées ne correspond pas à la taille initiale"
@@ -2017,8 +2025,8 @@ msgstr "Flux diff invalide : insn %d ne peut être décodé"
 
 #: ../libsvn_delta/svndiff.c:488
 #, c-format
-msgid "Invalid diff stream: insn %d has non-positive length"
-msgstr "Flux diff invalide : insn %d à une longueur non positive"
+msgid "Invalid diff stream: insn %d has length zero"
+msgstr "Flux diff invalide : insn %d a une longueur nulle"
 
 #: ../libsvn_delta/svndiff.c:492
 #, c-format
@@ -2059,6 +2067,10 @@ msgstr "Svndiff contient une entête de fenêtre corrompue"
 #: ../libsvn_delta/svndiff.c:697
 msgid "Svndiff has backwards-sliding source views"
 msgstr "Svndiff a des vues sources glissant en arrière"
+
+#: ../libsvn_delta/svndiff.c:716 ../libsvn_delta/svndiff.c:880
+msgid "Svndiff contains a too-large window"
+msgstr "Les données de svndiff contiennent une fenêtre trop grande"
 
 #: ../libsvn_delta/svndiff.c:746 ../libsvn_delta/svndiff.c:793
 #: ../libsvn_delta/svndiff.c:866
