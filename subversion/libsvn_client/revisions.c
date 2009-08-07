@@ -75,9 +75,27 @@ svn_client__get_revision_number(svn_revnum_t *revnum,
         }
       break;
 
-    case svn_opt_revision_committed:
     case svn_opt_revision_working:
     case svn_opt_revision_base:
+      {
+        svn_wc_adm_access_t *adm_access;
+        const svn_wc_entry_t *ent;
+
+        /* Sanity check. */
+        if (path == NULL)
+          return svn_error_create(SVN_ERR_CLIENT_VERSIONED_PATH_REQUIRED,
+                                  NULL, NULL);
+
+        SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, path, FALSE,
+                                       0, NULL, NULL, pool));
+        SVN_ERR(svn_wc__entry_versioned(&ent, path, adm_access, FALSE, pool));
+        SVN_ERR(svn_wc_adm_close2(adm_access, pool));
+
+        *revnum = ent->revision;
+      }
+      break;
+
+    case svn_opt_revision_committed:
     case svn_opt_revision_previous:
       {
         svn_wc_adm_access_t *adm_access;
@@ -93,21 +111,13 @@ svn_client__get_revision_number(svn_revnum_t *revnum,
         SVN_ERR(svn_wc__entry_versioned(&ent, path, adm_access, FALSE, pool));
         SVN_ERR(svn_wc_adm_close2(adm_access, pool));
 
-        if ((revision->kind == svn_opt_revision_base)
-            || (revision->kind == svn_opt_revision_working))
-          {
-            *revnum = ent->revision;
-          }
-        else
-          {
-            if (! SVN_IS_VALID_REVNUM(ent->cmt_rev))
-              return svn_error_createf(SVN_ERR_CLIENT_BAD_REVISION, NULL,
-                                       _("Path '%s' has no committed "
-                                         "revision"), path);
-            *revnum = ent->cmt_rev;
-            if (revision->kind == svn_opt_revision_previous)
-              (*revnum)--;
-          }
+        if (! SVN_IS_VALID_REVNUM(ent->cmt_rev))
+          return svn_error_createf(SVN_ERR_CLIENT_BAD_REVISION, NULL,
+                                   _("Path '%s' has no committed "
+                                     "revision"), path);
+        *revnum = ent->cmt_rev;
+        if (revision->kind == svn_opt_revision_previous)
+          (*revnum)--;
       }
       break;
 
