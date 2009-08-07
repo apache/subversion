@@ -702,7 +702,6 @@ svn_client__elide_children(apr_array_header_t *children_with_mergeinfo,
         {
           svn_mergeinfo_t child_mergeinfo;
           svn_boolean_t switched;
-          const svn_wc_entry_t *child_entry;
           const char *child_abspath;
           svn_client__merge_path_t *child =
             APR_ARRAY_IDX(children_with_mergeinfo, i,
@@ -745,8 +744,6 @@ svn_client__elide_children(apr_array_header_t *children_with_mergeinfo,
                                           iterpool));
 
           /* Don't try to elide switched children. */
-          SVN_ERR(svn_wc__entry_versioned(&child_entry, child->path,
-                                          adm_access, FALSE, iterpool));
           SVN_ERR(svn_wc__path_switched(&switched, ctx->wc_ctx, child_abspath,
                                         iterpool));
           if (!switched)
