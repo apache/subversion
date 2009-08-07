@@ -2916,8 +2916,8 @@ close_directory(void *dir_baton,
                   const svn_string_t *old_val_s;
 
                   SVN_ERR(svn_wc__internal_propget(
-                           &old_val_s, SVN_PROP_EXTERNALS, local_abspath,
-                           db->edit_baton->db, db->pool, db->pool));
+                           &old_val_s, db->edit_baton->db, local_abspath,
+                           SVN_PROP_EXTERNALS, db->pool, db->pool));
 
                   if ((new_val_s == NULL) && (old_val_s == NULL))
                     ; /* No value before, no value after... so do nothing. */
@@ -4658,8 +4658,8 @@ close_file(void *file_baton,
       notify->old_revision = fb->old_revision;
 
       /* Fetch the mimetype */
-      SVN_ERR(svn_wc__internal_propget(&mime_type, SVN_PROP_MIME_TYPE,
-                                       local_abspath, eb->db, pool, pool));
+      SVN_ERR(svn_wc__internal_propget(&mime_type, eb->db, local_abspath,
+                                       SVN_PROP_MIME_TYPE, pool, pool));
       notify->mime_type = mime_type == NULL ? NULL : mime_type->data;
 
       (*eb->notify_func)(eb->notify_baton, notify, pool);

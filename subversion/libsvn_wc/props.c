@@ -1813,7 +1813,7 @@ svn_wc_prop_get2(const svn_string_t **value,
                                _("Property '%s' is an entry property"), name);
     }
 
-  SVN_ERR(svn_wc__internal_propget(value, name, local_abspath, wc_ctx->db,
+  SVN_ERR(svn_wc__internal_propget(value, wc_ctx->db, local_abspath, name,
                                    result_pool, scratch_pool));
 
   return SVN_NO_ERROR;
@@ -1821,9 +1821,9 @@ svn_wc_prop_get2(const svn_string_t **value,
 
 svn_error_t *
 svn_wc__internal_propget(const svn_string_t **value,
-                         const char *name,
-                         const char *local_abspath,
                          svn_wc__db_t *db,
+                         const char *local_abspath,
+                         const char *name,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool)
 {
@@ -1977,8 +1977,8 @@ get_file_for_validation(const svn_string_t **mime_type,
   struct getter_baton *gb = baton;
 
   if (mime_type)
-    SVN_ERR(svn_wc__internal_propget(mime_type, SVN_PROP_MIME_TYPE,
-                                     gb->local_abspath, gb->db, pool, pool));
+    SVN_ERR(svn_wc__internal_propget(mime_type, gb->db, gb->local_abspath,
+                                     SVN_PROP_MIME_TYPE, pool, pool));
 
   if (stream)
     {

@@ -278,7 +278,7 @@ report_revisions_and_depths(svn_wc_adm_access_t *adm_access,
   if (traversal_info)
     {
       const svn_string_t *val;
-      SVN_ERR(svn_wc__internal_propget(&val, SVN_PROP_EXTERNALS, abspath, db,
+      SVN_ERR(svn_wc__internal_propget(&val, db, abspath, SVN_PROP_EXTERNALS,
                                        subpool, subpool));
       if (val)
         {

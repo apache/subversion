@@ -67,9 +67,9 @@ svn_wc__internal_propdiff(apr_array_header_t **propchanges,
 /* Internal function for fetching a property.  */
 svn_error_t *
 svn_wc__internal_propget(const svn_string_t **value,
-                         const char *name,
-                         const char *local_abspath,
                          svn_wc__db_t *db,
+                         const char *local_abspath,
+                         const char *name,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool);
 
