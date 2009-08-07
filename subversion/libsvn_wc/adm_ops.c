@@ -3159,8 +3159,8 @@ svn_wc_add_lock2(svn_wc_context_t *wc_ctx,
     }
 
   /* if svn:needs-lock is present, then make the file read-write. */
-  SVN_ERR(svn_wc__internal_propget(&needs_lock, SVN_PROP_NEEDS_LOCK,
-                                   local_abspath, wc_ctx->db, scratch_pool,
+  SVN_ERR(svn_wc__internal_propget(&needs_lock, wc_ctx->db, local_abspath,
+                                   SVN_PROP_NEEDS_LOCK, scratch_pool,
                                    scratch_pool));
   if (needs_lock)
     SVN_ERR(svn_io_set_file_read_write(local_abspath, FALSE, scratch_pool));
@@ -3191,8 +3191,8 @@ svn_wc_remove_lock2(svn_wc_context_t *wc_ctx,
     }
 
   /* if svn:needs-lock is present, then make the file read-only. */
-  SVN_ERR(svn_wc__internal_propget(&needs_lock, SVN_PROP_NEEDS_LOCK,
-                                   local_abspath, wc_ctx->db, scratch_pool,
+  SVN_ERR(svn_wc__internal_propget(&needs_lock, wc_ctx->db, local_abspath,
+                                   SVN_PROP_NEEDS_LOCK, scratch_pool,
                                    scratch_pool));
   if (needs_lock)
     SVN_ERR(svn_io_set_file_read_only(local_abspath, FALSE, scratch_pool));
