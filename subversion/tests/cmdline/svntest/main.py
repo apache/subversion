@@ -793,10 +793,9 @@ def copy_repos(src_path, dst_path, head_revision, ignore_uuid = 1):
   if ignore_uuid:
     load_args = load_args + ['--ignore-uuid']
   if verbose_mode:
-    sys.stdout.write('CMD: %s%s | %s%s\n' % (os.path.basename(svnadmin_binary),
-                                            ' '.join(dump_args),
-                                            os.path.basename(svnadmin_binary),
-                                            ' '.join(load_args)))
+    sys.stdout.write('CMD: %s %s | %s %s\n' %
+                     (os.path.basename(svnadmin_binary), ' '.join(dump_args),
+                      os.path.basename(svnadmin_binary), ' '.join(load_args)))
     sys.stdout.flush()
   start = time.time()
 
