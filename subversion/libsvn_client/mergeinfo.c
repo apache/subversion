@@ -68,25 +68,21 @@ svn_client__merge_path_dup(const svn_client__merge_path_t *old,
 
 svn_error_t *
 svn_client__parse_mergeinfo(svn_mergeinfo_t *mergeinfo,
-                            const svn_wc_entry_t *entry,
-                            const char *wcpath,
-                            svn_boolean_t pristine,
-                            svn_wc_adm_access_t *adm_access,
-                            svn_client_ctx_t *ctx,
-                            apr_pool_t *pool)
+                            svn_wc_context_t *wc_ctx,
+                            const char *local_abspath,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool)
 {
-  apr_hash_t *props = apr_hash_make(pool);
   const svn_string_t *propval;
 
   /* ### Use svn_wc_prop_get() would actually be sufficient for now.
      ### DannyB thinks that later we'll need behavior more like
      ### svn_client__get_prop_from_wc(). */
-  SVN_ERR(svn_client__get_prop_from_wc(props, SVN_PROP_MERGEINFO,
-                                       wcpath, pristine, entry, adm_access,
-                                       svn_depth_empty, NULL, ctx, pool));
-  propval = apr_hash_get(props, wcpath, APR_HASH_KEY_STRING);
+  SVN_ERR(svn_wc_prop_get2(&propval, wc_ctx, local_abspath, SVN_PROP_MERGEINFO,
+                           scratch_pool, scratch_pool));
   if (propval)
-    return svn_mergeinfo_parse(mergeinfo, propval->data, pool);
+    return svn_error_return(
+        svn_mergeinfo_parse(mergeinfo, propval->data, result_pool));
   else
     {
       *mergeinfo = NULL;
@@ -210,9 +206,8 @@ svn_client__get_wc_mergeinfo(svn_mergeinfo_t *mergeinfo,
              encounter either (a) an unversioned directory, or (b) mergeinfo.
              If we encounter (b), use that inherited mergeinfo as our
              baseline. */
-          SVN_ERR(svn_client__parse_mergeinfo(&wc_mergeinfo, entry, wcpath,
-                                              pristine, adm_access, ctx,
-                                              pool));
+          SVN_ERR(svn_client__parse_mergeinfo(&wc_mergeinfo, ctx->wc_ctx,
+                                              local_abspath, pool, pool));
         }
 
       /* If WCPATH is switched, don't look any higher for inherited
@@ -686,6 +681,10 @@ svn_client__elide_children(apr_array_header_t *children_with_mergeinfo,
                            svn_client_ctx_t *ctx,
                            apr_pool_t *pool)
 {
+  const char *target_abspath;
+
+  SVN_ERR(svn_dirent_get_absolute(&target_abspath, target_wcpath, pool));
+
   if (children_with_mergeinfo && children_with_mergeinfo->nelts)
     {
       int i;
@@ -694,9 +693,8 @@ svn_client__elide_children(apr_array_header_t *children_with_mergeinfo,
       apr_pool_t *iterpool = svn_pool_create(pool);
 
       /* Get mergeinfo for the target of the merge. */
-      SVN_ERR(svn_client__parse_mergeinfo(&target_mergeinfo, entry,
-                                          target_wcpath, FALSE,
-                                          adm_access, ctx, pool));
+      SVN_ERR(svn_client__parse_mergeinfo(&target_mergeinfo, ctx->wc_ctx,
+                                          target_abspath, pool, pool));
 
       /* For each immediate child of the merge target check if
          its merginfo elides to the target. */
@@ -758,10 +756,9 @@ svn_client__elide_children(apr_array_header_t *children_with_mergeinfo,
               const char *path_suffix = svn_dirent_basename(child->path,
                                                             iterpool);
 
-              SVN_ERR(svn_client__parse_mergeinfo(&child_mergeinfo, entry,
-                                                  child->path, FALSE,
-                                                  adm_access, ctx,
-                                                  iterpool));
+              SVN_ERR(svn_client__parse_mergeinfo(&child_mergeinfo,
+                                                  ctx->wc_ctx, child_abspath,
+                                                  iterpool, iterpool));
 
               while (strcmp(path_prefix, target_wcpath) != 0)
                 {

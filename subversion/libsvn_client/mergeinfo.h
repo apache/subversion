@@ -197,18 +197,15 @@ svn_client__mergeinfo_from_segments(svn_mergeinfo_t *mergeinfo_p,
                                     apr_array_header_t *segments,
                                     apr_pool_t *pool);
 
-/* Parse any mergeinfo from the WCPATH's ENTRY and store it in
-   MERGEINFO.  If PRISTINE is true parse the pristine mergeinfo,
-   working otherwise. If no record of any mergeinfo exists, set
-   MERGEINFO to NULL.  Does not acount for inherited mergeinfo. */
+/* Parse any mergeinfo from the LOCAL_ABSPATH's ENTRY and store it in
+   MERGEINFO.  If no record of any mergeinfo exists, set MERGEINFO to NULL.
+   Does not acount for inherited mergeinfo. */
 svn_error_t *
 svn_client__parse_mergeinfo(svn_mergeinfo_t *mergeinfo,
-                            const svn_wc_entry_t *entry,
-                            const char *wcpath,
-                            svn_boolean_t pristine,
-                            svn_wc_adm_access_t *adm_access,
-                            svn_client_ctx_t *ctx,
-                            apr_pool_t *pool);
+                            svn_wc_context_t *wc_ctx,
+                            const char *local_abspath,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool);
 
 /* Write MERGEINFO into the WC for LOCAL_ABSPATH.  If MERGEINFO is NULL,
    remove any SVN_PROP_MERGEINFO for LOCAL_ABSPATH.  If MERGEINFO is empty,
