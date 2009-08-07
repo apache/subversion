@@ -4774,3 +4774,100 @@ svn_wc__db_check_node(svn_wc__db_kind_t *kind,
 
   return svn_error_return(err);
 }
+
+
+svn_error_t *
+svn_wc__db_node_hidden(svn_boolean_t *hidden,
+                       svn_wc__db_t *db,
+                       const char *local_abspath,
+                       apr_pool_t *scratch_pool)
+{
+  svn_wc__db_pdh_t *pdh;
+  const char *local_relpath;
+  svn_depth_t depth;
+  svn_wc__db_kind_t base_kind;
+  svn_wc__db_status_t base_status;
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
+
+  /* Check two things: does a WORKING node exist, and what is the BASE
+     status? */
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
+                              svn_sqlite__mode_readwrite,
+                              scratch_pool, scratch_pool));
+
+  /* First check the working node. */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+                                    STMT_SELECT_WORKING_NODE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id, local_relpath));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  SVN_ERR(svn_sqlite__reset(stmt));
+
+  /* If a working node exists, the node will not be hidden. */
+  if (have_row)
+    {
+      *hidden = FALSE;
+      return SVN_NO_ERROR;
+    }
+
+  /* Now check the BASE node's presence and depth. */
+  SVN_ERR(svn_wc__db_base_get_info(&base_status, &base_kind, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, NULL, &depth, NULL,
+                                   NULL, NULL, NULL, db, local_abspath,
+                                   scratch_pool, scratch_pool));
+
+  if (base_kind == svn_wc__db_kind_dir)
+    {
+      /* ### We need to check the parent for exclusion. */
+      const char *parent_abspath;
+      const char *base_name;
+      svn_error_t *err;
+
+      svn_dirent_split(local_abspath, &parent_abspath, &base_name,
+                       scratch_pool);
+
+      err = parse_local_abspath(&pdh, &local_relpath, db, parent_abspath,
+                                svn_sqlite__mode_readonly,
+                                scratch_pool, scratch_pool);
+      if (err && err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY)
+        {
+          /* Ignore this error, we're at the wcroot and don't need to look
+             at the parent. */
+          svn_error_clear(err);
+        }
+      else if (err)
+        {
+          return svn_error_return(err);
+        }
+      else
+        {
+
+          /* Build the local_relpath for the requested directory.  */
+          local_relpath = svn_dirent_join(local_relpath, base_name,
+                                          scratch_pool);
+
+          SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+                                            STMT_SELECT_BASE_NODE));
+          SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id,
+                                    local_relpath));
+          SVN_ERR(svn_sqlite__step(&have_row, stmt));
+          if (have_row)
+            {
+              const char *depth_str = svn_sqlite__column_text(stmt, 12, NULL);
+              if (depth_str
+                    && svn_depth_from_word(depth_str) == svn_depth_exclude)
+                depth = svn_depth_exclude;
+            }
+        }
+
+      SVN_ERR(svn_sqlite__reset(stmt));
+    }
+
+  *hidden = (base_status == svn_wc__db_status_not_present
+               || depth == svn_depth_exclude);
+
+  return SVN_NO_ERROR;
+}
