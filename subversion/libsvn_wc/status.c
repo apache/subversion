@@ -43,6 +43,7 @@
 #include "wc.h"
 #include "lock.h"
 #include "props.h"
+#include "entries.h"
 #include "translate.h"
 #include "tree_conflicts.h"
 
@@ -2327,11 +2328,26 @@ svn_wc_status2(svn_wc_status2_t **status,
                svn_wc_adm_access_t *adm_access,
                apr_pool_t *pool)
 {
+  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
+  const char *local_abspath;
   const svn_wc_entry_t *entry = NULL;
   const svn_wc_entry_t *parent_entry = NULL;
+  svn_error_t *err;
 
   SVN_ERR_ASSERT(adm_access != NULL);
-  SVN_ERR(svn_wc_entry(&entry, path, adm_access, FALSE, pool));
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+
+  err = svn_wc__get_entry(&entry, db, local_abspath, TRUE, svn_node_unknown,
+                          FALSE, pool, pool);
+  if (err && (err->apr_err == SVN_ERR_WC_MISSING
+                || err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND
+                || err->apr_err == SVN_ERR_NODE_UNEXPECTED_KIND))
+    {
+      svn_error_clear(err);
+      entry = NULL;
+    }
+  else if (err)
+    return svn_error_return(err);
 
   if (entry && ! svn_path_is_empty(path))
     {
