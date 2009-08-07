@@ -158,8 +158,8 @@ extend_wc_mergeinfo(const char *target_abspath,
 
   /* Get a fresh copy of the pre-existing state of the WC's mergeinfo
      updating it. */
-  SVN_ERR(svn_client__parse_mergeinfo(&wc_mergeinfo, entry, target_abspath,
-                                      FALSE, adm_access, ctx, pool));
+  SVN_ERR(svn_client__parse_mergeinfo(&wc_mergeinfo, ctx->wc_ctx,
+                                      target_abspath, pool, pool));
 
   /* Combine the provided mergeinfo with any mergeinfo from the WC. */
   if (wc_mergeinfo && mergeinfo)
@@ -1234,6 +1234,9 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
                                                     svn_client__copy_pair_t *);
       svn_client_commit_item3_t *item =
         APR_ARRAY_IDX(commit_items, i, svn_client_commit_item3_t *);
+      const char *src_abspath;
+
+      SVN_ERR(svn_dirent_get_absolute(&src_abspath, pair->src, pool));
 
       /* Set the mergeinfo for the destination to the combined merge
          info known to the WC and the repository. */
@@ -1243,9 +1246,8 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
                                          pair->src, pair->src_revnum,
                                          FALSE, ctx, pool));
       SVN_ERR(svn_wc_entry(&entry, pair->src, adm_access, FALSE, pool));
-      SVN_ERR(svn_client__parse_mergeinfo(&wc_mergeinfo, entry,
-                                          pair->src, FALSE, adm_access, ctx,
-                                          pool));
+      SVN_ERR(svn_client__parse_mergeinfo(&wc_mergeinfo, ctx->wc_ctx,
+                                          src_abspath, pool, pool));
       if (wc_mergeinfo && mergeinfo)
         SVN_ERR(svn_mergeinfo_merge(mergeinfo, wc_mergeinfo, pool));
       else if (! mergeinfo)

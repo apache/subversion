@@ -4003,8 +4003,8 @@ update_wc_mergeinfo(const char *target_wcpath,
 
       /* As some of the merges may've changed the WC's mergeinfo, get
          a fresh copy before using it to update the WC's mergeinfo. */
-      err = svn_client__parse_mergeinfo(&mergeinfo, entry, path, FALSE,
-                                        adm_access, ctx, subpool);
+      err = svn_client__parse_mergeinfo(&mergeinfo, ctx->wc_ctx,
+                                        local_abspath, subpool, subpool);
 
       /* If a directory PATH was skipped because it is missing or was
          obstructed by an unversioned item then there's nothing we can
