@@ -645,7 +645,7 @@ collect_ignore_patterns(apr_array_header_t **patterns,
 
   /* Then add any svn:ignore globs to the PATTERNS array. */
   SVN_ERR(svn_wc__internal_propget(&value, db, local_abspath, SVN_PROP_IGNORE,
-                                   result_pool, scratch_pool));
+                                   scratch_pool, scratch_pool));
   if (value != NULL)
     svn_cstring_split_append(*patterns, value->data, "\n\r", FALSE,
                              result_pool);
@@ -871,13 +871,11 @@ get_dir_status(struct edit_baton *eb,
   const svn_wc_entry_t *dir_entry;
   const char *path = svn_wc_adm_access_path(adm_access);
   svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
-  const char *local_abspath;
+  const char *local_abspath = svn_wc__adm_access_abspath(adm_access);
   apr_hash_t *dirents;
   apr_array_header_t *patterns = NULL;
   apr_pool_t *iterpool, *subpool = svn_pool_create(pool);
   apr_hash_t *tree_conflicts;
-
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
   /* See if someone wants to cancel this operation. */
   if (cancel_func)
