@@ -405,7 +405,7 @@ assemble_status(svn_wc_status2_t **status,
             precedence over M. */
 
       /* Does the entry have props? */
-      SVN_ERR(svn_wc__has_props(&has_props, path, adm_access, pool));
+      SVN_ERR(svn_wc__has_props(&has_props, db, local_abspath, pool));
       if (has_props)
         final_prop_status = svn_wc_status_normal;
 
