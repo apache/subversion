@@ -826,6 +826,9 @@ complete_directory(struct edit_baton *eb,
       else if (current_entry->kind == svn_node_dir)
         {
           const char *child_path = svn_dirent_join(path, name, subpool);
+          const char *child_abspath;
+
+          SVN_ERR(svn_dirent_get_absolute(&child_abspath, child_path, pool));
 
           if (current_entry->depth == svn_depth_exclude)
             {
@@ -833,15 +836,11 @@ complete_directory(struct edit_baton *eb,
               if (eb->depth_is_sticky
                   && eb->requested_depth >= svn_depth_immediates)
                 {
-                  const char *child_abspath;
-
-                  SVN_ERR(svn_dirent_get_absolute(&child_abspath, child_path,
-                                                  pool));
                   SVN_ERR(svn_wc__set_depth(eb->db, child_abspath,
                                             svn_depth_infinity, pool));
                 }
             }
-          else if ((svn_wc__adm_missing(adm_access, child_path))
+          else if ((svn_wc__adm_missing(eb->db, child_abspath, subpool))
                    && (! current_entry->absent)
                    && (current_entry->schedule != svn_wc_schedule_add))
             {
@@ -4682,13 +4681,16 @@ close_edit(void *edit_baton,
 {
   struct edit_baton *eb = edit_baton;
   const char *target_path = svn_dirent_join(eb->anchor, eb->target, pool);
+  const char *target_abspath;
   int log_number = 0;
+
+  SVN_ERR(svn_dirent_get_absolute(&target_abspath, target_path, pool));
 
   /* If there is a target and that target is missing, then it
      apparently wasn't re-added by the update process, so we'll
      pretend that the editor deleted the entry.  The helper function
      do_entry_deletion() will take care of the necessary steps.  */
-  if ((*eb->target) && (svn_wc__adm_missing(eb->adm_access, target_path)))
+  if ((*eb->target) && (svn_wc__adm_missing(eb->db, target_abspath, pool)))
     /* Still passing NULL for THEIR_URL. A case where THEIR_URL
      * is needed in this call is rare or even non-existant.
      * ### TODO: Construct a proper THEIR_URL anyway. See also
