@@ -637,7 +637,7 @@ should_elide_mergeinfo(svn_boolean_t *elides,
   return SVN_NO_ERROR;
 }
 
-/* Helper for svn_client__elide_mergeinfo() and svn_client__elide_children().
+/* Helper for svn_client__elide_mergeinfo().
 
    Given a working copy PATH, its mergeinfo hash CHILD_MERGEINFO, and
    the mergeinfo of PATH's nearest ancestor PARENT_MERGEINFO, use
@@ -683,110 +683,6 @@ elide_mergeinfo(svn_mergeinfo_t parent_mergeinfo,
           ctx->notify_func2(ctx->notify_baton2, notify, scratch_pool);
         }
     }
-
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
-svn_client__elide_children(apr_array_header_t *children_with_mergeinfo,
-                           const char *target_wcpath,
-                           const svn_wc_entry_t *entry,
-                           svn_wc_adm_access_t *adm_access,
-                           svn_client_ctx_t *ctx,
-                           apr_pool_t *pool)
-{
-  const char *target_abspath;
-
-  SVN_ERR(svn_dirent_get_absolute(&target_abspath, target_wcpath, pool));
-
-  if (children_with_mergeinfo && children_with_mergeinfo->nelts)
-    {
-      int i;
-      const char *last_immediate_child;
-      svn_mergeinfo_t target_mergeinfo;
-      apr_pool_t *iterpool = svn_pool_create(pool);
-
-      /* Get mergeinfo for the target of the merge. */
-      SVN_ERR(svn_client__parse_mergeinfo(&target_mergeinfo, ctx->wc_ctx,
-                                          target_abspath, pool, pool));
-
-      /* For each immediate child of the merge target check if
-         its merginfo elides to the target. */
-      for (i = 0; i < children_with_mergeinfo->nelts; i++)
-        {
-          svn_mergeinfo_t child_mergeinfo;
-          svn_boolean_t switched;
-          const char *child_abspath;
-          svn_client__merge_path_t *child =
-            APR_ARRAY_IDX(children_with_mergeinfo, i,
-                          svn_client__merge_path_t *);
-          svn_pool_clear(iterpool);
-
-          if (!child)
-            continue;
-
-          if (child->absent)
-            continue;
-
-          if (i == 0)
-            {
-              /* children_with_mergeinfo is sorted depth
-                 first so first path might be the target of
-                 the merge if the target had mergeinfo prior
-                 to the start of the merge. */
-              if (strcmp(target_wcpath, child->path) == 0)
-                {
-                  last_immediate_child = NULL;
-                  continue;
-                }
-              last_immediate_child = child->path;
-            }
-          else if (last_immediate_child
-                   && svn_path_is_ancestor(last_immediate_child, child->path))
-            {
-              /* Not an immediate child. */
-              continue;
-            }
-          else
-            {
-              /* Found the first (last_immediate_child == NULL)
-                 or another immediate child. */
-              last_immediate_child = child->path;
-            }
-
-          SVN_ERR(svn_dirent_get_absolute(&child_abspath, child->path,
-                                          iterpool));
-
-          /* Don't try to elide switched children. */
-          SVN_ERR(svn_wc__path_switched(&switched, ctx->wc_ctx, child_abspath,
-                                        iterpool));
-          if (!switched)
-            {
-              const char *path_prefix = svn_dirent_dirname(child->path,
-                                                           iterpool);
-              const char *path_suffix = svn_dirent_basename(child->path,
-                                                            iterpool);
-
-              SVN_ERR(svn_client__parse_mergeinfo(&child_mergeinfo,
-                                                  ctx->wc_ctx, child_abspath,
-                                                  iterpool, iterpool));
-
-              while (strcmp(path_prefix, target_wcpath) != 0)
-                {
-                  path_suffix = svn_path_join(svn_dirent_basename(path_prefix,
-                                                                  iterpool),
-                                              path_suffix, iterpool);
-                  path_prefix = svn_dirent_dirname(path_prefix, iterpool);
-                }
-
-              SVN_ERR(elide_mergeinfo(target_mergeinfo, child_mergeinfo,
-                                      child_abspath, path_suffix, ctx,
-                                      iterpool));
-            }
-        }
-    svn_pool_destroy(iterpool);
-  }
 
   return SVN_NO_ERROR;
 }
