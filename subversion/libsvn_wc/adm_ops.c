@@ -176,8 +176,6 @@ tweak_entries(svn_wc__db_t *db,
                && (kind == svn_wc__db_kind_dir))
         {
           svn_depth_t depth_below_here = depth;
-          const svn_wc_adm_access_t *dir_access =
-            svn_wc__adm_retrieve_internal2(db, dir_abspath, iterpool);
 
           if (depth == svn_depth_immediates)
             depth_below_here = svn_depth_empty;
@@ -187,7 +185,7 @@ tweak_entries(svn_wc__db_t *db,
              svn_wc__do_update_cleanup, since the update will already have
              restored any missing items that it didn't want to delete. */
           if (remove_missing_dirs
-              && svn_wc__adm_missing(dir_access, child_abspath))
+              && svn_wc__adm_missing(db, child_abspath, iterpool))
             {
               if ( (status == svn_wc__db_status_added
                     || status == svn_wc__db_status_obstructed_add)
@@ -2027,12 +2025,16 @@ revert_entry(svn_depth_t *depth,
 {
   const char *bname;
   svn_boolean_t is_wc_root = FALSE;
+  const char *local_abspath;
+  svn_wc__db_t *db = svn_wc__adm_get_db(parent_access);
   svn_wc_adm_access_t *dir_access;
 
   /* Initialize this even though revert_admin_things() is guaranteed
      to set it, because we don't know that revert_admin_things() will
      be called. */
   svn_boolean_t reverted = FALSE;
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
   /* Fetch the access baton for this path. */
   SVN_ERR(svn_wc_adm_probe_retrieve(&dir_access, parent_access, path, pool));
@@ -2085,7 +2087,7 @@ revert_entry(svn_depth_t *depth,
             was_deleted = parents_entry->deleted;
 
           if (kind == svn_node_none
-              || svn_wc__adm_missing(parent_access, path))
+              || svn_wc__adm_missing(db, local_abspath, pool))
             {
               /* Schedule add but missing, just remove the entry
                  or it's missing an adm area in which case
@@ -2093,10 +2095,6 @@ revert_entry(svn_depth_t *depth,
                  adm_access, for which we definitely can't use the 'else'
                  code path (as it will remove the parent from version
                  control... (See issue 2425) */
-              svn_wc__db_t *db = svn_wc__adm_get_db(parent_access);
-              const char *local_abspath;
-
-              SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
               SVN_ERR(svn_wc__entry_remove(db, local_abspath, pool));
               apr_hash_set(entries, basey, APR_HASH_KEY_STRING, NULL);
             }
@@ -2601,16 +2599,18 @@ svn_wc_remove_from_revision_control(svn_wc_adm_access_t *adm_access,
                 = svn_dirent_join(svn_wc_adm_access_path(adm_access),
                                   current_entry_name,
                                   subpool);
+              const char *entry_abspath;
 
-              if (svn_wc__adm_missing(adm_access, entrypath)
+              SVN_ERR(svn_dirent_get_absolute(&entry_abspath, entrypath,
+                                              subpool));
+
+              if (svn_wc__adm_missing(db, entry_abspath, subpool)
                   || current_entry->depth == svn_depth_exclude)
                 {
                   /* The directory is either missing or excluded,
                      so don't try to recurse, just delete the
                      entry in the parent directory. */
-                  SVN_ERR(svn_dirent_get_absolute(&local_abspath, entrypath,
-                                                subpool));
-                  SVN_ERR(svn_wc__entry_remove(db, local_abspath, subpool));
+                  SVN_ERR(svn_wc__entry_remove(db, entry_abspath, subpool));
                   apr_hash_set(entries, current_entry_name,
                                APR_HASH_KEY_STRING, NULL);
                 }

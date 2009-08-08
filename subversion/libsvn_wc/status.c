@@ -370,7 +370,7 @@ assemble_status(svn_wc_status2_t **status,
     {
       if (path_kind == svn_node_dir)
         {
-          if (svn_wc__adm_missing(adm_access, path))
+          if (svn_wc__adm_missing(db, local_abspath, pool))
             final_text_status = svn_wc_status_obstructed;
         }
       else if (path_kind != svn_node_none)

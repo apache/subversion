@@ -1610,20 +1610,13 @@ svn_wc__adm_get_db(const svn_wc_adm_access_t *adm_access)
 
 
 svn_boolean_t
-svn_wc__adm_missing(const svn_wc_adm_access_t *adm_access,
-                    const char *path)
+svn_wc__adm_missing(svn_wc__db_t *db,
+                    const char *local_abspath,
+                    apr_pool_t *scratch_pool)
 {
-  apr_pool_t *scratch_pool = adm_access->pool;  /* ### fix this!!  */
-  const char *abspath;
   const svn_wc_adm_access_t *look;
-  svn_error_t *err;
 
-  /* ### fix the error return.  */
-  err = svn_dirent_get_absolute(&abspath, path, scratch_pool);
-  if (err)
-    return FALSE;  /* Just pretend we know nothing about the path.  */
-
-  look = get_from_shared(abspath, adm_access->db, scratch_pool);
+  look = get_from_shared(local_abspath, db, scratch_pool);
   return IS_MISSING(look);
 }
 
