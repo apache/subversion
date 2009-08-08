@@ -206,8 +206,23 @@ svn_client__get_wc_mergeinfo(svn_mergeinfo_t *mergeinfo,
              encounter either (a) an unversioned directory, or (b) mergeinfo.
              If we encounter (b), use that inherited mergeinfo as our
              baseline. */
-          SVN_ERR(svn_client__parse_mergeinfo(&wc_mergeinfo, ctx->wc_ctx,
-                                              local_abspath, pool, pool));
+          apr_hash_t *props = apr_hash_make(pool);
+          const svn_string_t *propval;
+
+          /* ### we could be using svn_client__parse_mergeinfo() here, but
+             ### for that pesky 'pristine' argument which is called with a
+             ### TRUE value in exactly one other place.  we don't know if
+             ### it matters or not yet, but for the sake of correctness,
+             ### fall back to a manual way of getting the mergeinfo. */
+          SVN_ERR(svn_client__get_prop_from_wc(props, SVN_PROP_MERGEINFO,
+                                               wcpath, pristine, entry,
+                                               adm_access, svn_depth_empty,
+                                               NULL, ctx, pool));
+          propval = apr_hash_get(props, wcpath, APR_HASH_KEY_STRING);
+          if (propval)
+            SVN_ERR(svn_mergeinfo_parse(&wc_mergeinfo, propval->data, pool));
+          else
+            wc_mergeinfo = NULL;
         }
 
       /* If WCPATH is switched, don't look any higher for inherited
