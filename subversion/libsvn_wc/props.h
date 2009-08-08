@@ -46,11 +46,10 @@ typedef enum svn_wc__props_kind_t
 } svn_wc__props_kind_t;
 
 
-/* If the working item at PATH has properties attached, set HAS_PROPS.
-   ADM_ACCESS is an access baton set that contains PATH. */
+/* If the working item at PATH has properties attached, set HAS_PROPS. */
 svn_error_t *svn_wc__has_props(svn_boolean_t *has_props,
-                               const char *path,
-                               svn_wc_adm_access_t *adm_access,
+                               svn_wc__db_t *db,
+                               const char *local_abspath,
                                apr_pool_t *pool);
 
 

@@ -85,7 +85,6 @@
        properties should be funneled.
      svn_wc__working_props_committed(): Moves WORKING props to BASE props,
        sync'ing to disk and clearing appropriate caches.
-     empty_props_p(): Used to determine if a path has properties or not.
      svn_wc_props_modified_p(): Used to shortcut property differences by
        checking property filesize differences.
      install_props_file(): Used with loggy.
@@ -2352,90 +2351,19 @@ svn_wc_is_entry_prop(const char *name)
 }
 
 
-/* Helper to optimize svn_wc_props_modified_p().
-
-   If PATH_TO_PROP_FILE is nonexistent, is empty, or is of size 4 bytes
-   ("END\n"), then set EMPTY_P to true.   Otherwise set EMPTY_P to false,
-   which means that the file must contain real properties.  */
-static svn_error_t *
-empty_props_p(svn_boolean_t *empty_p,
-              const char *path,
-              svn_node_kind_t node_kind,
-              svn_wc__props_kind_t props_kind,
-              apr_pool_t *pool)
-{
-  svn_error_t *err;
-  apr_finfo_t finfo;
-  const char *prop_path;
-
-  SVN_ERR(svn_wc__prop_path(&prop_path, path, node_kind, props_kind, pool));
-
-  err = svn_io_stat(&finfo, prop_path, APR_FINFO_MIN | APR_FINFO_TYPE, pool);
-  if (err)
-    {
-      if (! APR_STATUS_IS_ENOENT(err->apr_err)
-          && ! APR_STATUS_IS_ENOTDIR(err->apr_err))
-        return err;
-
-      /* nonexistent */
-      svn_error_clear(err);
-      *empty_p = TRUE;
-      return SVN_NO_ERROR;
-    }
-
-  /* If we remove props from a propfile, eventually the file will
-     be empty, or, for working copies written by pre-1.3 libraries, will
-     contain nothing but "END\n" */
-  if (finfo.filetype == APR_REG && (finfo.size == 4 || finfo.size == 0))
-    *empty_p = TRUE;
-  else
-    *empty_p = FALSE;
-
-  /* If the size is between 1 and 4, then something is corrupt.
-     If the size is between 4 and 16, then something is corrupt,
-     because 16 is the -smallest- the file can possibly be if it
-     contained only one property.  So long as we say it is "not
-     empty", we will discover such corruption later when we try
-     to read the properties from the file. */
-
-  return SVN_NO_ERROR;
-}
-
-
-/* Simple wrapper around empty_props_p, and inversed. */
 svn_error_t *
 svn_wc__has_props(svn_boolean_t *has_props,
-                  const char *path,
-                  svn_wc_adm_access_t *adm_access,
-                  apr_pool_t *pool)
+                  svn_wc__db_t *db,
+                  const char *local_abspath,
+                  apr_pool_t *scratch_pool)
 {
-  svn_boolean_t is_empty;
-  const svn_wc_entry_t *entry;
+  apr_hash_t *base_props;
+  apr_hash_t *working_props;
 
-  SVN_ERR(svn_wc_entry(&entry, path, adm_access, FALSE, pool));
-
-  /*### Maybe assert (entry); calling svn_wc__has_props
-    for an unversioned path is bogus */
-  if (! entry)
-    {
-      *has_props = FALSE;
-      return SVN_NO_ERROR;
-    }
-
-  /* The rest is for compatibility with WCs that don't have propcaching. */
-
-  SVN_ERR(empty_props_p(&is_empty, path, entry->kind, svn_wc__props_working,
-                        pool));
-  if (!is_empty)
-    {
-      *has_props = TRUE;
-      return SVN_NO_ERROR;
-    }
-
-  /* See if there are base props now. */
-  SVN_ERR(empty_props_p(&is_empty, path, entry->kind, svn_wc__props_base,
-                        pool));
-  *has_props = !is_empty;
+  SVN_ERR(svn_wc__load_props(&base_props, &working_props, NULL,
+                             db, local_abspath, scratch_pool, scratch_pool));
+  *has_props =
+        ((apr_hash_count(base_props) + apr_hash_count(working_props)) > 0);
 
   return SVN_NO_ERROR;
 }
