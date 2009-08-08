@@ -34,6 +34,10 @@ Invoke with one or more numeric arguments to run those particular tests:
 
    $ ./basic_tests.py 7 13 17
 
+Invoke with one or more function names to run those particular tests:
+
+   $ ./basic_tests.py basic_mkdir_wc_with_parents basic_switch basic_import
+
 And invoke with the "--list" option to list information about some or
 all tests available in that script:
 
