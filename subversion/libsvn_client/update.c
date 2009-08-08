@@ -213,12 +213,9 @@ svn_client__update_internal(svn_revnum_t *result_rev,
           (&revnum, NULL, ra_session, revision, path, pool));
 
   /* Take the chance to set the repository root on the target.
-     Why do we bother doing this for old working copies?
-     There are two reasons: first, it's nice to get this information into
-     old WCs so they are "ready" when we start depending on it.  (We can
-     never *depend* upon it in a strict sense, however.)
-     Second, if people mix old and new clients, this information will
-     be dropped by the old clients, which might be annoying. */
+     It's nice to get this information into old WCs so they are "ready"
+     when we start depending on it.  (We can never *depend* upon it in
+     a strict sense, however.) */
   SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root, pool));
   SVN_ERR(svn_wc_maybe_set_repos_root(dir_access, path, repos_root, pool));
 
