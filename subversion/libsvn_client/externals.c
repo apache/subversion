@@ -276,8 +276,7 @@ switch_dir_external(const char *path,
 
   /* ... Hello, new hotness. */
   return svn_client__checkout_internal(NULL, url, path, peg_revision,
-                                       revision, NULL,
-                                       SVN_DEPTH_INFINITY_OR_FILES(TRUE),
+                                       revision, NULL, svn_depth_infinity,
                                        FALSE, FALSE, timestamp_sleep,
                                        ctx, pool);
 }
