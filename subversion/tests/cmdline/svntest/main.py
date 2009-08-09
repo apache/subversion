@@ -1085,7 +1085,12 @@ class TestSpawningThread(threading.Thread):
 
     result, stdout_lines, stderr_lines = spawn_process(command, 1, None, *args)
     self.results.append((index, result, stdout_lines, stderr_lines))
-    sys.stdout.write('.')
+
+    if result != 1:
+      sys.stdout.write('.')
+    else:
+      sys.stdout.write('F')
+
     sys.stdout.flush()
 
 class TestRunner:
