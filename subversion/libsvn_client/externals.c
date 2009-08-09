@@ -1016,18 +1016,26 @@ handle_external_item_change_wrapper(const void *key, apr_ssize_t klen,
 {
   struct handle_external_item_change_baton *ib = baton;
   svn_error_t *err = handle_external_item_change(key, klen, status, baton);
-  if (err && ib->ctx->notify_func2)
+
+  if (err && err->apr_err != SVN_ERR_CANCELLED)
     {
-      const char *path = svn_path_join(ib->parent_dir, key, ib->iter_pool);
-      svn_wc_notify_t *notifier =
-        svn_wc_create_notify(path,
-                             svn_wc_notify_failed_external,
-                             ib->pool);
-      notifier->err = err;
-      ib->ctx->notify_func2(ib->ctx->notify_baton2, notifier, ib->pool);
+      if (err && ib->ctx->notify_func2)
+        {
+          const char *path = svn_path_join(ib->parent_dir, key,
+                                           ib->iter_pool);
+          svn_wc_notify_t *notifier =
+          svn_wc_create_notify(path,
+                               svn_wc_notify_failed_external,
+                               ib->iter_pool);
+          notifier->err = err;
+          ib->ctx->notify_func2(ib->ctx->notify_baton2, notifier,
+                                ib->iter_pool);
+        }
+      svn_error_clear(err);
+      return SVN_NO_ERROR;
     }
-  svn_error_clear(err);
-  return SVN_NO_ERROR;
+
+  return svn_error_return(err);
 }
 
 
