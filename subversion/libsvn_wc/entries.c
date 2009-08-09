@@ -2334,7 +2334,8 @@ entries_write(apr_hash_t *entries,
   SVN_ERR(svn_wc__adm_write_check(adm_access, pool));
 
   /* Open the wc.db sqlite database. */
-  SVN_ERR(svn_wc__db_temp_get_sdb(&wc_db, svn_wc_adm_access_path(adm_access),
+  SVN_ERR(svn_wc__db_temp_get_sdb(&wc_db,
+                                  svn_wc__adm_access_abspath(adm_access),
                                   statements, scratch_pool, scratch_pool));
 
   /* Write the entries. */
