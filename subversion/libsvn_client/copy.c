@@ -1324,11 +1324,13 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
 
   if (pair->src_kind == svn_node_dir)
     {
-      SVN_ERR(svn_client__checkout_internal
-              (NULL, pair->src_original, pair->dst, &pair->src_peg_revision,
-               &pair->src_op_revision, NULL,
-               SVN_DEPTH_INFINITY_OR_FILES(TRUE),
-               ignore_externals, FALSE, NULL, ctx, pool));
+      SVN_ERR(svn_client__checkout_internal(NULL, pair->src_original,
+                                            pair->dst,
+                                            &pair->src_peg_revision,
+                                            &pair->src_op_revision, NULL,
+                                            svn_depth_infinity,
+                                            ignore_externals, FALSE, FALSE,
+                                            NULL, ctx, pool));
 
       /* Rewrite URLs recursively, remove wcprops, and mark everything
          as 'copied' -- assuming that the src and dst are from the
