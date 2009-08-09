@@ -1019,7 +1019,7 @@ handle_external_item_change_wrapper(const void *key, apr_ssize_t klen,
 
   if (err && err->apr_err != SVN_ERR_CANCELLED)
     {
-      if (err && ib->ctx->notify_func2)
+      if (ib->ctx->notify_func2)
         {
           const char *path = svn_path_join(ib->parent_dir, key,
                                            ib->iter_pool);
