@@ -202,7 +202,7 @@ switch_dir_external(const char *path,
                                                   svn_depth_unknown, FALSE,
                                                   FALSE, FALSE,
                                                   timestamp_sleep, TRUE,
-                                                  ctx, subpool));
+                                                  TRUE, ctx, subpool));
               svn_pool_destroy(subpool);
               return SVN_NO_ERROR;
             }
@@ -277,7 +277,7 @@ switch_dir_external(const char *path,
   /* ... Hello, new hotness. */
   return svn_client__checkout_internal(NULL, url, path, peg_revision,
                                        revision, NULL, svn_depth_infinity,
-                                       FALSE, FALSE, timestamp_sleep,
+                                       FALSE, FALSE, TRUE, timestamp_sleep,
                                        ctx, pool);
 }
 
@@ -845,7 +845,7 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
                      &(new_item->peg_revision), &(new_item->revision),
                      &ra_cache,
                      SVN_DEPTH_INFINITY_OR_FILES(TRUE),
-                     FALSE, FALSE, ib->timestamp_sleep, ib->ctx,
+                     FALSE, FALSE, TRUE, ib->timestamp_sleep, ib->ctx,
                      ib->iter_pool));
           break;
         case svn_node_file:
