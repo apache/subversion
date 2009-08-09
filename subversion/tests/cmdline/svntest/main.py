@@ -1203,7 +1203,7 @@ class TestRunner:
 # it can be displayed by the 'list' command.)
 
 # Func to run one test in the list.
-def run_one_test(n, test_list, parallel = 0, finished_tests = None):
+def run_one_test(n, test_list, finished_tests = None):
   """Run the Nth client test in TEST_LIST, return the result.
 
   If we're running the tests in parallel spawn the test in a new process.
@@ -1214,13 +1214,8 @@ def run_one_test(n, test_list, parallel = 0, finished_tests = None):
     return 1
 
   # Run the test.
-  if parallel:
-    st = SpawnTest(n, finished_tests)
-    st.start()
-    return 0
-  else:
-    exit_code = TestRunner(test_list[n], n).run()
-    return exit_code
+  exit_code = TestRunner(test_list[n], n).run()
+  return exit_code
 
 def _internal_run_tests(test_list, testnums, parallel):
   """Run the tests from TEST_LIST whose indices are listed in TESTNUMS.
