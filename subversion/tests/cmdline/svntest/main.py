@@ -449,7 +449,11 @@ def wait_on_pipe(waiter, binary_mode, stdin=None):
   stderr_lines = stderr.splitlines(True)
 
   if exit_code < 0:
-    exit_signal = os.WTERMSIG(-exit_code)
+    if not windows:
+      exit_signal = os.WTERMSIG(-exit_code)
+    else:
+      exit_signal = exit_code
+
     if stdout_lines is not None:
       sys.stdout.write("".join(stdout_lines))
     if stderr_lines is not None:
