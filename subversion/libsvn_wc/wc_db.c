@@ -3459,44 +3459,6 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
           else
             *changelist = NULL;
         }
-      if (conflict_old)
-        {
-          if (have_act)
-            *conflict_old = svn_sqlite__column_text(stmt_act, 2, result_pool);
-          else
-            *conflict_old = NULL;
-        }
-      if (conflict_new)
-        {
-          if (have_act)
-            *conflict_new = svn_sqlite__column_text(stmt_act, 3, result_pool);
-          else
-            *conflict_new = NULL;
-        }
-      if (conflict_working)
-        {
-          if (have_act)
-            *conflict_working = svn_sqlite__column_text(stmt_act, 4,
-                                                        result_pool);
-          else
-            *conflict_working = NULL;
-        }
-      if (prop_reject_file)
-        {
-          if (have_act)
-            *prop_reject_file = svn_sqlite__column_text(stmt_act, 0,
-                                                        result_pool);
-          else
-            *prop_reject_file = NULL;
-        }
-      if (tree_conflict_data)
-        {
-          if (have_act)
-            *tree_conflict_data = svn_sqlite__column_text(stmt_act, 5,
-                                                          result_pool);
-          else
-            *tree_conflict_data = NULL;
-        }
       if (original_repos_relpath)
         {
           if (have_work)
@@ -3541,6 +3503,36 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
         {
           *base_shadowed = have_base && have_work;
         }
+      if (conflict_old)
+        {
+          if (have_act)
+            *conflict_old = svn_sqlite__column_text(stmt_act, 2, result_pool);
+          else
+            *conflict_old = NULL;
+        }
+      if (conflict_new)
+        {
+          if (have_act)
+            *conflict_new = svn_sqlite__column_text(stmt_act, 3, result_pool);
+          else
+            *conflict_new = NULL;
+        }
+      if (conflict_working)
+        {
+          if (have_act)
+            *conflict_working = svn_sqlite__column_text(stmt_act, 4,
+                                                        result_pool);
+          else
+            *conflict_working = NULL;
+        }
+      if (prop_reject_file)
+        {
+          if (have_act)
+            *prop_reject_file = svn_sqlite__column_text(stmt_act, 0,
+                                                        result_pool);
+          else
+            *prop_reject_file = NULL;
+        }
       if (lock)
         {
           if (svn_sqlite__column_is_null(stmt_base, 15))
@@ -3559,6 +3551,14 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
               if (!svn_sqlite__column_is_null(stmt_base, 18))
                 (*lock)->date = svn_sqlite__column_int64(stmt_base, 18);
             }
+        }
+      if (tree_conflict_data)
+        {
+          if (have_act)
+            *tree_conflict_data = svn_sqlite__column_text(stmt_act, 5,
+                                                          result_pool);
+          else
+            *tree_conflict_data = NULL;
         }
     }
   else if (have_act)
