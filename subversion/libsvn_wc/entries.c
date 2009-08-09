@@ -1517,21 +1517,27 @@ svn_wc__set_depth(svn_wc__db_t *db,
       SVN_ERR(svn_wc_entries_read(&entries, adm_access, TRUE, scratch_pool));
       entry = apr_hash_get(entries, base_name, APR_HASH_KEY_STRING);
 
-      /* If the parent says we are excluded, but we are now not, mark the
-         parent as 'infinite'.  The new depth state will be recorded in the
-         child. */
-      if (entry->depth == svn_depth_exclude && depth != svn_depth_exclude)
+      /* If we are updating sub-working copies, like externals, we don't
+         find an entry here. Just continue like when we are at the root
+         of a working copy. */
+      if (entry)
         {
-          entry->depth = svn_depth_infinity;
-          SVN_ERR(entries_write(entries, adm_access, scratch_pool));
-        }
+          /* If the parent says we are excluded, but we are now not, mark the
+             parent as 'infinite'.  The new depth state will be recorded in the
+             child. */
+          if (entry->depth == svn_depth_exclude && depth != svn_depth_exclude)
+            {
+              entry->depth = svn_depth_infinity;
+              SVN_ERR(entries_write(entries, adm_access, scratch_pool));
+            }
 
-      /* Excluded directories are marked in the parent.  */
-      if (depth == svn_depth_exclude)
-        {
-          entry->depth = depth;
-          return svn_error_return(entries_write(entries, adm_access,
-                                                scratch_pool));
+          /* Excluded directories are marked in the parent.  */
+          if (depth == svn_depth_exclude)
+            {
+              entry->depth = depth;
+              return svn_error_return(entries_write(entries, adm_access,
+                                                    scratch_pool));
+            }
         }
     }
 
