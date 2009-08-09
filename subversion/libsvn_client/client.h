@@ -629,7 +629,10 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
    children of PATH that obstruct items added from the repos are tolerated;
    if FALSE, these obstructions cause the switch to fail.
 
-   DEPTH and DEPTH_IS_STICKY behave as for svn_client__update_internal(). */
+   DEPTH and DEPTH_IS_STICKY behave as for svn_client__update_internal().
+
+   If INNERSWITCH is true, no anchor check is performed on the target.
+   */
 svn_error_t *
 svn_client__switch_internal(svn_revnum_t *result_rev,
                             const char *path,
@@ -642,6 +645,7 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
                             svn_boolean_t *timestamp_sleep,
                             svn_boolean_t ignore_externals,
                             svn_boolean_t allow_unver_obstructions,
+                            svn_boolean_t innerswitch,
                             svn_client_ctx_t *ctx,
                             apr_pool_t *pool);
 

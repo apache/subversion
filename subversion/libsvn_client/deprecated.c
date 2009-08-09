@@ -1586,7 +1586,8 @@ svn_client_switch(svn_revnum_t *result_rev,
   return svn_client__switch_internal(result_rev, path, switch_url,
                                      &peg_revision, revision, NULL,
                                      SVN_DEPTH_INFINITY_OR_FILES(recurse),
-                                     FALSE, NULL, FALSE, FALSE, ctx, pool);
+                                     FALSE, NULL, FALSE, FALSE, FALSE, ctx,
+                                     pool);
 }
 
 /*** From cat.c ***/

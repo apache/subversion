@@ -243,7 +243,8 @@ switch_dir_external(const char *path,
                                                   peg_revision, revision,
                                                   NULL, svn_depth_infinity,
                                                   TRUE, timestamp_sleep,
-                                                  FALSE, FALSE, ctx, subpool));
+                                                  FALSE, FALSE, TRUE, ctx,
+                                                  subpool));
 
               svn_pool_destroy(subpool);
               return SVN_NO_ERROR;
@@ -445,6 +446,7 @@ switch_file_external(const char *path,
                                     timestamp_sleep,
                                     TRUE, /* ignore_externals */
                                     FALSE, /* allow_unver_obstructions */
+                                    FALSE, /* innerswitch */
                                     ctx,
                                     pool);
   if (err)
