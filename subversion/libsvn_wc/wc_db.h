@@ -1692,7 +1692,9 @@ svn_wc__db_temp_get_all_access(svn_wc__db_t *db,
 
    ### No matter how tempted you may be DO NOT USE THIS FUNCTION!
    ### (if you do, gstein will hunt you down and burn your knee caps off
-   ### in the middle of the night) */
+   ### in the middle of the night)
+   ### "Bet on it." --gstein
+*/
 svn_error_t *
 svn_wc__db_temp_get_sdb(svn_sqlite__db_t **db,
                         const char *local_dir_abspath,
