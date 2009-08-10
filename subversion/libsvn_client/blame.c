@@ -673,18 +673,12 @@ svn_client_blame5(const char *target,
     {
       /* If the local file is modified we have to call the handler on the
          working copy file with keywords unexpanded */
-      svn_wc_adm_access_t *adm_access;
       svn_wc_status2_t *status;
       const char *target_abspath;
 
       SVN_ERR(svn_dirent_get_absolute(&target_abspath, target, pool));
 
-      SVN_ERR(svn_wc__adm_open_in_context(&adm_access, ctx->wc_ctx,
-                                          svn_dirent_dirname(target, pool),
-                                          FALSE, 0, ctx->cancel_func,
-                                          ctx->cancel_baton, pool));
-
-      SVN_ERR(svn_wc_status2(&status, target, adm_access, pool));
+      SVN_ERR(svn_wc_status3(&status, ctx->wc_ctx, target_abspath, pool, pool));
 
       if (status->text_status != svn_wc_status_normal)
         {
@@ -721,8 +715,6 @@ svn_client_blame5(const char *target,
 
           frb.last_filename = temppath;
         }
-
-      SVN_ERR(svn_wc_adm_close2(adm_access, pool));
     }
 
   /* Report the blame to the caller. */

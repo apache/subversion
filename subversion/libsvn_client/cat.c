@@ -96,7 +96,8 @@ cat_local_file(const char *path,
 
       SVN_ERR(svn_wc_prop_list2(&props, wc_ctx, local_abspath, scratch_pool,
                                 scratch_pool));
-      SVN_ERR(svn_wc_status2(&status, path, adm_access, scratch_pool));
+      SVN_ERR(svn_wc_status3(&status, wc_ctx, local_abspath, scratch_pool,
+                             scratch_pool));
       if (status->text_status != svn_wc_status_normal)
         local_mod = TRUE;
     }
