@@ -108,38 +108,6 @@ static svn_error_t *
 add_to_shared(svn_wc_adm_access_t *lock, apr_pool_t *scratch_pool);
 
 
-static svn_error_t *
-check_format(int wc_format, const char *path, apr_pool_t *pool)
-{
-  if (wc_format < 2)
-    {
-      return svn_error_createf
-        (SVN_ERR_WC_UNSUPPORTED_FORMAT, NULL,
-         _("Working copy format of '%s' is too old (%d); "
-           "please check out your working copy again"),
-         svn_dirent_local_style(path, pool), wc_format);
-    }
-  else if (wc_format > SVN_WC__VERSION)
-    {
-      /* This won't do us much good for the 1.4<->1.5 crossgrade,
-         since 1.4.x clients don't refer to this FAQ entry, but at
-         least post-1.5 crossgrades will be somewhat less painful. */
-      return svn_error_createf
-        (SVN_ERR_WC_UNSUPPORTED_FORMAT, NULL,
-         _("This client is too old to work with working copy '%s'.  You need\n"
-           "to get a newer Subversion client, or to downgrade this working "
-           "copy.\n"
-           "See "
-           "http://subversion.tigris.org/faq.html#working-copy-format-change\n"
-           "for details."
-           ),
-         svn_dirent_local_style(path, pool));
-    }
-
-  return SVN_NO_ERROR;
-}
-
-
 svn_error_t *
 svn_wc__internal_check_wc(int *wc_format,
                           svn_wc__db_t *db,
@@ -176,14 +144,9 @@ svn_wc__internal_check_wc(int *wc_format,
                                    svn_dirent_local_style(local_abspath,
                                                           scratch_pool));
         }
-
-      return SVN_NO_ERROR;
     }
 
-  /* If we managed to read the format we assume that we
-     are dealing with a real wc so we can return a nice
-     error. */
-  return check_format(*wc_format, local_abspath, scratch_pool);
+  return SVN_NO_ERROR;
 }
 
 
@@ -208,12 +171,7 @@ svn_wc_check_wc(const char *path,
 }
 
 
-/* Create a physical lock file in the admin directory for ADM_ACCESS.
-
-   Note: most callers of this function determine the wc_format for the
-   lock soon afterwards.  We recommend calling check_format_upgrade()
-   as soon as you have the wc_format for a lock, to ensure you've got
-   a reasonably modern working copy. */
+/* Create a physical lock file in the admin directory for ADM_ACCESS.  */
 static svn_error_t *
 create_lock(const char *path, apr_pool_t *scratch_pool)
 {
@@ -415,30 +373,6 @@ probe(svn_wc__db_t *db,
 }
 
 
-/* Check the format of adm_access, and make sure it's new enough.  If it
-   isn't, throw an error explaining how to upgrade. */
-static svn_error_t *
-check_format_upgrade(const svn_wc_adm_access_t *adm_access,
-                     int wc_format,
-                     apr_pool_t *scratch_pool)
-{
-  SVN_ERR(check_format(wc_format, adm_access->path, scratch_pool));
-
-  if (wc_format != SVN_WC__VERSION)
-    {
-      return svn_error_createf(SVN_ERR_WC_UPGRADE_REQUIRED, NULL,
-                               _("Working copy format of '%s' is too old (%d); "
-                                 "please run 'svn upgrade'"),
-                               svn_dirent_local_style(adm_access->path,
-                                                      scratch_pool),
-                               wc_format);
-    }
-
-  return SVN_NO_ERROR;
-}
-
-
-
 svn_error_t *
 svn_wc__adm_steal_write_lock(svn_wc_adm_access_t **adm_access,
                              svn_wc__db_t *db,
@@ -495,13 +429,27 @@ open_single(svn_wc_adm_access_t **adm_access,
     }
   SVN_ERR(err);
 
+  /* The format version must match exactly. Note that wc_db will perform
+     an auto-upgrade if allowed. If it does *not*, then it has decided a
+     manual upgrade is required.
+
+     Note: if it decided on a manual upgrade, then we "should" never even
+     reach this code. An error should have been raised earlier.  */
+  if (wc_format != SVN_WC__VERSION)
+    {
+      return svn_error_createf(SVN_ERR_WC_UPGRADE_REQUIRED, NULL,
+                               _("Working copy format of '%s' is too old (%d); "
+                                 "please run 'svn upgrade'"),
+                               svn_dirent_local_style(path, scratch_pool),
+                               wc_format);
+    }
+
   /* Need to create a new lock */
   SVN_ERR(adm_access_alloc(&lock,
                            write_lock
                              ? svn_wc__adm_access_write_lock
                              : svn_wc__adm_access_unlocked,
                            path, db, db_provided, result_pool, scratch_pool));
-  SVN_ERR(check_format_upgrade(lock, wc_format, scratch_pool));
 
   /* ### recurse was here */
 
@@ -770,24 +718,6 @@ svn_wc_adm_open3(svn_wc_adm_access_t **adm_access,
                   write_lock, levels_to_lock, cancel_func, cancel_baton, pool);
 }
 
-svn_error_t *
-svn_wc__adm_pre_open(svn_wc_adm_access_t **adm_access,
-                     const char *path,
-                     apr_pool_t *pool)
-{
-  svn_wc__db_t *db;
-
-  /* ### would be nice to *actually* share this... */
-  SVN_ERR(alloc_db(&db, NULL /* ### config. need! */, pool, pool));
-
-  SVN_ERR(adm_access_alloc(adm_access, svn_wc__adm_access_write_lock, path,
-                           db, FALSE, pool, pool));
-
-  apr_pool_cleanup_register((*adm_access)->pool, *adm_access,
-                            pool_cleanup, pool_cleanup_child);
-
-  return SVN_NO_ERROR;
-}
 
 svn_error_t *
 svn_wc_adm_probe_open3(svn_wc_adm_access_t **adm_access,
@@ -1579,16 +1509,6 @@ apr_hash_t *
 svn_wc__adm_access_entries(svn_wc_adm_access_t *adm_access)
 {
   return adm_access->entries_all;
-}
-
-
-svn_error_t *
-svn_wc__adm_wc_format(int *wc_format,
-                      const svn_wc_adm_access_t *adm_access,
-                      apr_pool_t *scratch_pool)
-{
-  return svn_wc__db_temp_get_format(wc_format, adm_access->db,
-                                    adm_access->abspath, scratch_pool);
 }
 
 
