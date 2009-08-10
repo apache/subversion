@@ -870,21 +870,42 @@ create_wcroot(wcroot_t **wcroot,
               apr_pool_t *result_pool,
               apr_pool_t *scratch_pool)
 {
+  if (sdb != NULL)
+    SVN_ERR(svn_sqlite__read_schema_version(&format, sdb, scratch_pool));
+
+  /* If we construct a wcroot, then we better have a format.  */
+  SVN_ERR_ASSERT(format >= 1);
+
+  /* If this working copy is PRE-1.0, then simply bail out.  */
+  if (format < 4)
+    {
+      return svn_error_createf(
+        SVN_ERR_WC_UNSUPPORTED_FORMAT, NULL,
+        _("Working copy format of '%s' is too old (%d); "
+          "please check out your working copy again"),
+        svn_dirent_local_style(wcroot_abspath, scratch_pool), format);
+    }
+
+  /* If this working copy is from a future version, then bail out.  */
+  if (format > SVN_WC__VERSION)
+    {
+      return svn_error_createf(
+        SVN_ERR_WC_UNSUPPORTED_FORMAT, NULL,
+        _("This client is too old to work with the working copy at\n"
+          "'%s' (format %d).\n"
+          "You need to get a newer Subversion client. For more details, see\n"
+          "  http://subversion.tigris.org/faq.html#working-copy-format-change\n"
+          ),
+        svn_dirent_local_style(wcroot_abspath, scratch_pool),
+        format);
+    }
+
   *wcroot = apr_palloc(result_pool, sizeof(**wcroot));
 
   (*wcroot)->abspath = wcroot_abspath;
   (*wcroot)->sdb = sdb;
   (*wcroot)->wc_id = wc_id;
   (*wcroot)->format = format;
-
-  if (sdb != NULL)
-    {
-      SVN_ERR(svn_sqlite__read_schema_version(&(*wcroot)->format,
-                                              sdb, scratch_pool));
-    }
-
-  /* If we construct a wcroot, then we better have a format.  */
-  SVN_ERR_ASSERT((*wcroot)->format >= 1);
 
   return SVN_NO_ERROR;
 }
@@ -1084,14 +1105,15 @@ scan_upwards_for_repos(apr_int64_t *repos_id,
    directory, then it sets VERSION to zero and returns no error.  */
 static svn_error_t *
 get_old_version(int *version,
-                const char *path,
+                const char *abspath,
                 apr_pool_t *scratch_pool)
 {
   svn_error_t *err;
   const char *format_file_path;
 
   /* Try reading the format number from the entries file.  */
-  format_file_path = svn_wc__adm_child(path, SVN_WC__ADM_ENTRIES, scratch_pool);
+  format_file_path = svn_wc__adm_child(abspath, SVN_WC__ADM_ENTRIES,
+                                       scratch_pool);
   err = svn_io_read_version_file(version, format_file_path, scratch_pool);
   if (err == NULL)
     return SVN_NO_ERROR;
@@ -1099,7 +1121,7 @@ get_old_version(int *version,
       && !APR_STATUS_IS_ENOENT(err->apr_err)
       && !APR_STATUS_IS_ENOTDIR(err->apr_err))
     return svn_error_createf(SVN_ERR_WC_MISSING, err, _("'%s' does not exist"),
-                             svn_dirent_local_style(path, scratch_pool));
+                             svn_dirent_local_style(abspath, scratch_pool));
   svn_error_clear(err);
 
   /* This must be a really old working copy!  Fall back to reading the
@@ -1108,7 +1130,8 @@ get_old_version(int *version,
      Note that the format file might not exist in newer working copies
      (format 7 and higher), but in that case, the entries file should
      have contained the format number. */
-  format_file_path = svn_wc__adm_child(path, SVN_WC__ADM_FORMAT, scratch_pool);
+  format_file_path = svn_wc__adm_child(abspath, SVN_WC__ADM_FORMAT,
+                                       scratch_pool);
   err = svn_io_read_version_file(version, format_file_path, scratch_pool);
   if (err == NULL)
     return SVN_NO_ERROR;
@@ -1361,8 +1384,7 @@ parse_local_abspath(svn_wc__db_pdh_t **pdh,
 
       /* If we have not moved upwards, then check for a wc-1 working copy.
          Since wc-1 has a .svn in every directory, and we didn't find one
-         in the original directory, then we don't have to bother looking
-         for more.
+         in the original directory, then we aren't looking at a wc-1.
 
          If the original path is not present, then we have to check on every
          iteration. The content may be the immediate parent, or possibly

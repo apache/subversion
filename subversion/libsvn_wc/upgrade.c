@@ -306,7 +306,8 @@ upgrade_format(svn_wc_adm_access_t *adm_access,
   svn_boolean_t cleanup_required;
   const svn_wc_entry_t *this_dir;
 
-  SVN_ERR(svn_wc__adm_wc_format(&wc_format, adm_access, scratch_pool));
+  SVN_ERR(svn_wc__db_temp_get_format(&wc_format, db, dir_abspath,
+                                     scratch_pool));
 
   if (wc_format > SVN_WC__VERSION)
     {
@@ -367,14 +368,12 @@ upgrade_format(svn_wc_adm_access_t *adm_access,
   /* Migrate the entries over to the new database.
      ### We need to think about atomicity here. */
   SVN_ERR(svn_wc__entries_upgrade(adm_access, SVN_WC__VERSION, scratch_pool));
-  SVN_ERR(svn_io_remove_file2(svn_wc__adm_child(svn_wc_adm_access_path(
-                                                  adm_access),
+  SVN_ERR(svn_io_remove_file2(svn_wc__adm_child(dir_abspath,
                                                 SVN_WC__ADM_FORMAT,
                                                 scratch_pool),
                               TRUE,
                               scratch_pool));
-  SVN_ERR(svn_io_remove_file2(svn_wc__adm_child(svn_wc_adm_access_path(
-                                                  adm_access),
+  SVN_ERR(svn_io_remove_file2(svn_wc__adm_child(dir_abspath,
                                                 SVN_WC__ADM_ENTRIES,
                                                 scratch_pool),
                               FALSE,
@@ -395,32 +394,24 @@ upgrade_format(svn_wc_adm_access_t *adm_access,
          not catastrophic. */
 
       svn_error_clear(svn_io_remove_dir2(
-          svn_wc__adm_child(svn_wc_adm_access_path(adm_access),
-                            SVN_WC__ADM_WCPROPS, scratch_pool),
+          svn_wc__adm_child(dir_abspath, SVN_WC__ADM_WCPROPS, scratch_pool),
           FALSE, NULL, NULL, scratch_pool));
+
       svn_error_clear(svn_io_remove_file2(
-          svn_wc__adm_child(svn_wc_adm_access_path(adm_access),
-                            SVN_WC__ADM_DIR_WCPROPS, scratch_pool),
-          TRUE,
-          scratch_pool));
+          svn_wc__adm_child(dir_abspath, SVN_WC__ADM_DIR_WCPROPS, scratch_pool),
+          TRUE, scratch_pool));
       svn_error_clear(svn_io_remove_file2(
-          svn_wc__adm_child(svn_wc_adm_access_path(adm_access),
-                            SVN_WC__ADM_EMPTY_FILE, scratch_pool),
-          TRUE,
-          scratch_pool));
+          svn_wc__adm_child(dir_abspath, SVN_WC__ADM_EMPTY_FILE, scratch_pool),
+          TRUE, scratch_pool));
       svn_error_clear(svn_io_remove_file2(
-          svn_wc__adm_child(svn_wc_adm_access_path(adm_access),
-                            SVN_WC__ADM_README, scratch_pool),
-          TRUE,
-          scratch_pool));
+          svn_wc__adm_child(dir_abspath, SVN_WC__ADM_README, scratch_pool),
+          TRUE, scratch_pool));
     }
   else
     {
       svn_error_clear(svn_io_remove_file2(
-          svn_wc__adm_child(svn_wc_adm_access_path(adm_access),
-                            SVN_WC__ADM_ALL_WCPROPS, scratch_pool),
-          TRUE,
-          scratch_pool));
+          svn_wc__adm_child(dir_abspath, SVN_WC__ADM_ALL_WCPROPS, scratch_pool),
+          TRUE, scratch_pool));
     }
 
   return SVN_NO_ERROR;
