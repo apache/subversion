@@ -177,14 +177,3 @@ Candidate changes:
 
 Approved changes:
 =================
-
- * r38279, r38311
-   Fix issue #3442, on ext4 and GPFS filesystems with a fsfs
-   repository.  If a crash occurs just after a commit is finished,
-   then it's possible for the rev and current file to be fine but the
-   revprops file to be empty.  Also fixes possible data loss since the
-   old code clobbers the existing revprops file.
-   Justification:
-     Data loss is bad.
-   Votes:
-     +1: blair, hwright, rhuijben
