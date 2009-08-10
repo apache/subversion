@@ -387,7 +387,6 @@ switch_file_external(const char *path,
     }
   else
     {
-      const svn_wc_entry_t *anchor_dir_entry;
       apr_file_t *f;
       svn_boolean_t text_conflicted;
       svn_boolean_t prop_conflicted;
@@ -398,8 +397,6 @@ switch_file_external(const char *path,
          conflict on the directory.  To prevent resolving a conflict
          due to another change on the directory, do not allow a file
          external to be added when one exists. */
-      SVN_ERR(svn_wc__entry_versioned(&anchor_dir_entry, anchor,
-                                      target_adm_access, FALSE, subpool));
       SVN_ERR(svn_wc_conflicted_p3(&text_conflicted, &prop_conflicted,
                                    &tree_conflicted, ctx->wc_ctx,
                                    anchor_abspath, subpool));
