@@ -280,8 +280,8 @@ svn_client_status5(svn_revnum_t *result_rev,
      as the callback pair. */
   SVN_ERR(svn_wc_get_default_ignores(&ignores, ctx->config, pool));
   SVN_ERR(svn_wc_get_status_editor5(&editor, &edit_baton, &set_locks_baton,
-                                    &edit_revision, anchor_access, target,
-                                    depth, get_all, no_ignore, ignores,
+                                    &edit_revision, ctx->wc_ctx, anchor_access,
+                                    target, depth, get_all, no_ignore, ignores,
                                     tweak_status, &sb, ctx->cancel_func,
                                     ctx->cancel_baton, traversal_info,
                                     pool, pool));
