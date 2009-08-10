@@ -2360,13 +2360,19 @@ svn_wc_status2(svn_wc_status2_t **status,
 
   if (entry && ! svn_path_is_empty(path))
     {
-      const char *parent_path = svn_dirent_dirname(path, pool);
-      svn_wc_adm_access_t *parent_access;
-      SVN_ERR(svn_wc__adm_retrieve_internal(&parent_access, adm_access,
-                                            parent_path, pool));
-      if (parent_access)
-        SVN_ERR(svn_wc_entry(&parent_entry, parent_path, parent_access,
-                             FALSE, pool));
+      const char *parent_abspath = svn_dirent_dirname(local_abspath, pool);
+
+      err = svn_wc__get_entry(&parent_entry, db, parent_abspath, TRUE,
+                              svn_node_dir, FALSE, pool, pool);
+      if (err && (err->apr_err == SVN_ERR_WC_MISSING
+                    || err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND
+                    || err->apr_err == SVN_ERR_NODE_UNEXPECTED_KIND))
+        {
+          svn_error_clear(err);
+          parent_entry = NULL;
+        }
+      else if (err)
+        return svn_error_return(err);
     }
 
   return assemble_status(status, db, local_abspath, entry, parent_entry,

@@ -5432,6 +5432,7 @@ def merge_to_switched_path(sbox):
     'rho'      : Item(status='M ', wc_rev=8),
     'tau'      : Item(status='  ', wc_rev=8),
     })
+  expected_status.tweak('', switched='S')
   expected_disk = wc.State('', {
     ''         : Item(props={SVN_PROP_MERGEINFO : '/A/D/G_COPY:8'}),
     'pi'       : Item("This is the file 'pi'.\n"),
