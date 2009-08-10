@@ -4139,11 +4139,16 @@ record_skips(const char *mergeinfo_path,
            hi = apr_hash_next(hi))
         {
           const char *skipped_path = svn_apr_hash_index_key(hi);
+          const char *skipped_abspath;
           svn_wc_status2_t *status;
+
+          SVN_ERR(svn_dirent_get_absolute(&skipped_abspath, skipped_path,
+                                          pool));
 
           /* Before we override, make sure this is a versioned path, it
              might be an unversioned obstruction. */
-          SVN_ERR(svn_wc_status2(&status, skipped_path, adm_access, pool));
+          SVN_ERR(svn_wc_status3(&status, merge_b->ctx->wc_ctx,
+                                 skipped_abspath, pool, pool));
           if (status->text_status == svn_wc_status_none
               || status->text_status == svn_wc_status_unversioned)
             continue;
