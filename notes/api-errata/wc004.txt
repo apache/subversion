@@ -1,0 +1,40 @@
+API ERRATA -- $Id: wc003.txt 36912 2009-03-31 20:39:01Z hwright $
+
+Root Cause of Errata: inconsistency
+ Library(s) Affected: libsvn_wc
+Function(s) Affected: svn_wc_status2
+     New Behavior in: 1.7
+      Related Issues: n/a
+
+
+== Details of Previous Behavior ==
+
+Calling svn_wc_status2() on a switched subdirectory could have varying
+results, depending on the context the call was made in.  If previous
+libsvn_wc calls have populated the associated set of the adm_access
+baton, a switched subdirectory would be reported as switched, even if
+it was the target of the status call.  If called with a clean cache,
+the subdirectory would not be reported as switched.
+
+Additionally, a switched subdirectory is always reported as switched
+when the target is the parent, but follows the inconsistent behavior when
+the target is the switched subdirectory.
+
+
+== Details of New Behavior ==
+
+The switched subdirectory is always reported as switched, even if it
+is the target of the call to svn_wc_status2().
+
+
+== Rationale for Change ==
+
+The previous behavior reports different results, depending upon the
+internal state of the adm_access baton cache, and the working directory
+of the call.  These inconsistencies are undesirable.
+
+
+== Impact on API Users ==
+
+Only API users who routinely call svn_wc_status2() directly on a switched
+subdirectory will be affected.
