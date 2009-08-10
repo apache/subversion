@@ -1,4 +1,4 @@
-API ERRATA -- $Id: wc003.txt 36912 2009-03-31 20:39:01Z hwright $
+API ERRATA -- $Id$
 
 Root Cause of Errata: inconsistency
  Library(s) Affected: libsvn_wc
