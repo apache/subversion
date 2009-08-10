@@ -3260,32 +3260,46 @@ svn_wc_dup_status(const svn_wc_status_t *orig_stat,
 
 
 /**
- * Fill @a *status for @a path, allocating in @a pool.
- * @a adm_access must be an access baton for @a path.
+ * Fill @a *status for @a local_abspath, allocating in @a result_pool.
+ * Use @a scratch_pool for temporary allocations.
  *
  * Here are some things to note about the returned structure.  A quick
  * examination of the @c status->text_status after a successful return of
  * this function can reveal the following things:
  *
- *    - @c svn_wc_status_none : @a path is not versioned, and is either not
- *                              present on disk, or is ignored by svn's
- *                              default ignore regular expressions or the
- *                              svn:ignore property setting for @a path's
- *                              parent directory.
+ *    - @c svn_wc_status_none : @a local_abspath is not versioned, and is
+ *                              either not present on disk, or is ignored
+ *                              by svn's default ignore regular expressions
+ *                              or the svn:ignore property setting for
+ *                              @a local_abspath's parent directory.
  *
- *    - @c svn_wc_status_missing : @a path is versioned, but is missing from
- *                                 the working copy.
+ *    - @c svn_wc_status_missing : @a local_abspath is versioned, but is
+ *                                 missing from the working copy.
  *
- *    - @c svn_wc_status_unversioned : @a path is not versioned, but is
- *                                     present on disk and not being
+ *    - @c svn_wc_status_unversioned : @a local_abspath is not versioned,
+ *                                     but is present on disk and not being
  *                                     ignored (see above).
  *
  * The other available results for the @c text_status field are more
  * straightforward in their meanings.  See the comments on the
  * @c svn_wc_status_kind structure for some hints.
  *
- * @since New in 1.2.
+ * @since New in 1.7.
  */
+svn_error_t *
+svn_wc_status3(svn_wc_status2_t **status,
+               svn_wc_context_t *wc_ctx,
+               const char *local_abspath,
+               apr_pool_t *result_pool,
+               apr_pool_t *scratch_pool);
+
+/** Similar to svn_wc_status3(), but with a adm_access baton and absolute
+ * path.
+ *
+ * @since New in 1.2.
+ * @deprecated Provided for backward compatibility with the 1.6 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_status2(svn_wc_status2_t **status,
                const char *path,
