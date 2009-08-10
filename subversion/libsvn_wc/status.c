@@ -2332,22 +2332,20 @@ svn_wc_get_default_ignores(apr_array_header_t **patterns,
 
 
 svn_error_t *
-svn_wc_status2(svn_wc_status2_t **status,
-               const char *path,
-               svn_wc_adm_access_t *adm_access,
-               apr_pool_t *pool)
+svn_wc_status3(svn_wc_status2_t **status,
+               svn_wc_context_t *wc_ctx,
+               const char *local_abspath,
+               apr_pool_t *result_pool,
+               apr_pool_t *scratch_pool)
 {
-  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
-  const char *local_abspath;
   const svn_wc_entry_t *entry = NULL;
   const svn_wc_entry_t *parent_entry = NULL;
   svn_error_t *err;
 
-  SVN_ERR_ASSERT(adm_access != NULL);
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
-  err = svn_wc__get_entry(&entry, db, local_abspath, TRUE, svn_node_unknown,
-                          FALSE, pool, pool);
+  err = svn_wc__get_entry(&entry, wc_ctx->db, local_abspath, TRUE,
+                          svn_node_unknown, FALSE, scratch_pool, scratch_pool);
   if (err && (err->apr_err == SVN_ERR_WC_MISSING
                 || err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND
                 || err->apr_err == SVN_ERR_NODE_UNEXPECTED_KIND))
@@ -2358,12 +2356,13 @@ svn_wc_status2(svn_wc_status2_t **status,
   else if (err)
     return svn_error_return(err);
 
-  if (entry && ! svn_path_is_empty(path))
+  if (entry && ! svn_path_is_empty(local_abspath))
     {
-      const char *parent_abspath = svn_dirent_dirname(local_abspath, pool);
+      const char *parent_abspath = svn_dirent_dirname(local_abspath,
+                                                      scratch_pool);
 
-      err = svn_wc__get_entry(&parent_entry, db, parent_abspath, TRUE,
-                              svn_node_dir, FALSE, pool, pool);
+      err = svn_wc__get_entry(&parent_entry, wc_ctx->db, parent_abspath, TRUE,
+                              svn_node_dir, FALSE, scratch_pool, scratch_pool);
       if (err && (err->apr_err == SVN_ERR_WC_MISSING
                     || err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND
                     || err->apr_err == SVN_ERR_NODE_UNEXPECTED_KIND))
@@ -2375,9 +2374,9 @@ svn_wc_status2(svn_wc_status2_t **status,
         return svn_error_return(err);
     }
 
-  return assemble_status(status, db, local_abspath, entry, parent_entry,
-                         svn_node_unknown, FALSE, /* bogus */
-                         TRUE, FALSE, NULL, NULL, pool, pool);
+  return assemble_status(status, wc_ctx->db, local_abspath, entry,
+                         parent_entry, svn_node_unknown, FALSE, /* bogus */
+                         TRUE, FALSE, NULL, NULL, result_pool, scratch_pool);
 }
 
 
