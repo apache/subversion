@@ -6674,7 +6674,7 @@ def update_loses_mergeinfo(sbox):
                                         expected_status,
                                         check_props=1)
 
-# Tests part of issue# 2829, marked as XFail until that issue is fixed.
+# Tests part of issue# 2829.
 def merge_loses_mergeinfo(sbox):
   "merge should merge mergeinfo"
 
