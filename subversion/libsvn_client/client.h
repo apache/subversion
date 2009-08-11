@@ -265,45 +265,46 @@ svn_client__ensure_ra_session_url(const char **old_session_url,
                                   const char *session_url,
                                   apr_pool_t *pool);
 
-/* Set REPOS_ROOT to the URL which represents the root of the
-   repository in with PATH_OR_URL (at PEG_REVISION) is versioned.  Use
-   the authentication baton cached in CTX as necessary.
+/* Set REPOS_ROOT, allocated in RESULT_POOL to the URL which represents
+   the root of the repository in with ABSPATH_OR_URL (at PEG_REVISION) is
+   versioned.  Use the authentication baton and working copy context
+   cached in CTX as necessary.
 
-   ADM_ACCESS is a working copy administrative access baton associated
-   with PATH_OR_URL (if PATH_OR_URL is a working copy path), or NULL.
-
-   Use POOL for all allocations. */
+   Use SCRATCH_POOL for temporary allocations. */
 svn_error_t *
 svn_client__get_repos_root(const char **repos_root,
-                           const char *path_or_url,
+                           const char *abspath_or_url,
                            const svn_opt_revision_t *peg_revision,
-                           svn_wc_adm_access_t *adm_access,
                            svn_client_ctx_t *ctx,
-                           apr_pool_t *pool);
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool);
 
-/* Return the path of PATH_OR_URL relative to the repository root
-   (REPOS_ROOT) in REL_PATH (URI-decoded).  If INCLUDE_LEADING_SLASH
-   is set, the returned result will have a leading slash; otherwise,
-   it will not.
+/* Return the path of ABSPATH_OR_URL relative to the repository root
+   (REPOS_ROOT) in REL_PATH (URI-decoded), both allocated in RESULT_POOL.
+   If INCLUDE_LEADING_SLASH is set, the returned result will have a leading
+   slash; otherwise, it will not.
 
    The remaining parameters are used to procure the repository root.
    Either REPOS_ROOT or RA_SESSION -- but not both -- may be NULL.
-   REPOS_ROOT or ADM_ACCESS (which may also be NULL) should be passed
-   when available as an optimization (in that order of preference).
+   REPOS_ROOT should be passed when available as an optimization (in
+   that order of preference).
 
    CAUTION:  While having a leading slash on a so-called relative path
    might work out well for functionality that interacts with
    mergeinfo, it results in a relative path that cannot be naively
    svn_path_join()'d with a repository root URL to provide a full URL.
+
+   Use SCRATCH_POOL for temporary allocations.
 */
 svn_error_t *
 svn_client__path_relative_to_root(const char **rel_path,
-                                  const char *path_or_url,
+                                  svn_wc_context_t *wc_ctx,
+                                  const char *abspath_or_url,
                                   const char *repos_root,
                                   svn_boolean_t include_leading_slash,
                                   svn_ra_session_t *ra_session,
-                                  svn_wc_adm_access_t *adm_access,
-                                  apr_pool_t *pool);
+                                  apr_pool_t *result_pool,
+                                  apr_pool_t *scratch_pool);
 
 /* Return the property value for any PROPNAME set on TARGET in *PROPS,
    with WC paths of char * for keys and property values of

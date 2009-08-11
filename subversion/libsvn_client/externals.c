@@ -342,8 +342,8 @@ switch_file_external(const char *path,
              wc is the same as the file external. */
           peg_rev.kind = svn_opt_revision_base;
           SVN_ERR(svn_client__get_repos_root(&dest_wc_repos_root_url,
-                                             anchor, &peg_rev,
-                                             target_adm_access, ctx, subpool));
+                                             anchor_abspath, &peg_rev,
+                                             ctx, subpool, subpool));
 
           if (0 != strcmp(repos_root_url, dest_wc_repos_root_url))
             return svn_error_createf
