@@ -1697,12 +1697,15 @@ delete_entry(const char *path,
   apr_hash_t *entries;
   const char *name = svn_dirent_basename(path, pool);
   const char *full_path = svn_dirent_join(eb->anchor, path, pool);
+  const char *local_abspath;
   const char *dir_path;
   svn_node_kind_t kind;
   svn_wc_adm_access_t *adm_access;
   const char *hash_key;
   const svn_wc_entry_t *entry;
   svn_error_t *err;
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, full_path, pool));
 
   /* Note:  when something is deleted, it's okay to tweak the
      statushash immediately.  No need to wait until close_file or
@@ -1712,9 +1715,8 @@ delete_entry(const char *path,
   /* Read the parent's entries file.  If the deleted thing is not
      versioned in this working copy, it was probably deleted via this
      working copy.  No need to report such a thing. */
-  /* ### use svn_wc_entry() instead? */
-  SVN_ERR(svn_wc__entry_versioned(&entry, full_path, eb->adm_access,
-                                  FALSE, pool));
+  SVN_ERR(svn_wc__get_entry(&entry, eb->db, local_abspath, TRUE,
+                            svn_node_unknown, FALSE, pool, pool));
   if (entry->kind == svn_node_dir)
     {
       dir_path = full_path;
