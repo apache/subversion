@@ -58,6 +58,15 @@ svn_wc__entry_versioned(const svn_wc_entry_t **entry,
                         apr_pool_t *pool);
 
 
+/** Similar to svn_wc__get_entry_versioned() and svn_wc__entry_versioned().
+ *
+ * This function allows callers in libsvn_client to directly fetch entry data
+ * without having to open up an adm_access baton.  It's error and return
+ * semantics are the same as svn_wc__entry_versioned(), and parameters are the
+ * same as svn_wc__entry_versioned().
+ *
+ * @since New in 1.7. (but it shouldn't make the final release.
+ */
 svn_error_t *
 svn_wc__get_entry_versioned(const svn_wc_entry_t **entry,
                             svn_wc_context_t *wc_ctx,
