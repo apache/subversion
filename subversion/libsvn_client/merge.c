@@ -4025,12 +4025,12 @@ update_wc_mergeinfo(const char *target_wcpath,
         }
 
       /* If we are attempting to set empty revision range override mergeinfo
-         on a path with no explicit mergeinfo, we first need the pristine
+         on a path with no explicit mergeinfo, we first need the
          mergeinfo that path inherits. */
       if (mergeinfo == NULL && ranges->nelts == 0)
         {
           svn_boolean_t inherited;
-          SVN_ERR(svn_client__get_wc_mergeinfo(&mergeinfo, &inherited, TRUE,
+          SVN_ERR(svn_client__get_wc_mergeinfo(&mergeinfo, &inherited,
                                                svn_mergeinfo_nearest_ancestor,
                                                entry, path, NULL, NULL,
                                                adm_access, ctx,
@@ -5490,12 +5490,12 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
                             &child_entry, child_of_noninheritable->path,
                             adm_access, FALSE, iterpool));
 
-                          SVN_ERR(svn_client__get_wc_mergeinfo
-                                  (&mergeinfo, &inherited, FALSE,
-                                   svn_mergeinfo_nearest_ancestor,
-                                   child_entry, child_of_noninheritable->path,
-                                   merge_cmd_baton->target, NULL, adm_access,
-                                   merge_cmd_baton->ctx, iterpool));
+                          SVN_ERR(svn_client__get_wc_mergeinfo(
+                            &mergeinfo, &inherited,
+                            svn_mergeinfo_nearest_ancestor,
+                            child_entry, child_of_noninheritable->path,
+                            merge_cmd_baton->target, NULL, adm_access,
+                            merge_cmd_baton->ctx, iterpool));
 
                           SVN_ERR(svn_client__record_wc_mergeinfo(
                             con_abspath, mergeinfo, merge_cmd_baton->ctx,
@@ -6482,7 +6482,7 @@ process_children_with_new_mergeinfo(merge_cmd_baton_t *merge_b,
 
           /* Get the path's new explicit mergeinfo... */
           SVN_ERR(svn_client__get_wc_mergeinfo(&path_explicit_mergeinfo,
-                                               &indirect, FALSE,
+                                               &indirect,
                                                svn_mergeinfo_explicit,
                                                path_entry,
                                                path_with_new_mergeinfo,
@@ -6895,7 +6895,7 @@ record_mergeinfo_for_added_subtrees(svn_merge_range_t *merged_range,
 
               /* Get any explicit mergeinfo the added path has. */
               SVN_ERR(svn_client__get_wc_mergeinfo(
-                &added_path_mergeinfo, &inherited, FALSE,
+                &added_path_mergeinfo, &inherited,
                 svn_mergeinfo_explicit, entry, added_path,
                 NULL, NULL, adm_access, merge_b->ctx, iterpool));
 
