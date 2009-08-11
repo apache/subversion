@@ -45,16 +45,15 @@
 /*** Code. ***/
 
 /* Helper function to handle copying a potentially translated version of
-   local file PATH to OUTPUT.  REVISION must be one of the following: BASE,
-   COMMITTED, WORKING.  Uses SCRATCH_POOL for temporary allocations. */
+   local file LOCAL_ABSPATH to OUTPUT.  REVISION must be one of the following:
+   BASE, COMMITTED, WORKING.  Uses SCRATCH_POOL for temporary allocations. */
 static svn_error_t *
-cat_local_file(const char *path,
+cat_local_file(svn_wc_context_t *wc_ctx,
+               const char *local_abspath,
                svn_stream_t *output,
-               svn_wc_adm_access_t *adm_access,
                const svn_opt_revision_t *revision,
                svn_cancel_func_t cancel_func,
                void *cancel_baton,
-               svn_wc_context_t *wc_ctx,
                apr_pool_t *scratch_pool)
 {
   const svn_wc_entry_t *entry;
@@ -66,23 +65,22 @@ cat_local_file(const char *path,
   svn_boolean_t local_mod = FALSE;
   apr_time_t tm;
   svn_stream_t *input;
-  const char *local_abspath;
-
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, scratch_pool));
 
   SVN_ERR_ASSERT(SVN_CLIENT__REVKIND_IS_LOCAL_TO_WC(revision->kind));
 
-  SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access, FALSE,
-                                  scratch_pool));
+  SVN_ERR(svn_wc__get_entry_versioned(&entry, wc_ctx, local_abspath,
+                                      svn_node_unknown, FALSE, FALSE,
+                                      scratch_pool, scratch_pool));
 
   if (entry->kind != svn_node_file)
     return svn_error_createf(SVN_ERR_CLIENT_IS_DIRECTORY, NULL,
                              _("'%s' refers to a directory"),
-                             svn_dirent_local_style(path, scratch_pool));
+                             svn_dirent_local_style(local_abspath,
+                                                    scratch_pool));
 
   if (revision->kind != svn_opt_revision_working)
     {
-      SVN_ERR(svn_wc_get_pristine_contents(&input, path, scratch_pool,
+      SVN_ERR(svn_wc_get_pristine_contents(&input, local_abspath, scratch_pool,
                                            scratch_pool));
       SVN_ERR(svn_wc_get_prop_diffs2(NULL, &props, wc_ctx, local_abspath,
                                      scratch_pool, scratch_pool));
@@ -91,7 +89,7 @@ cat_local_file(const char *path,
     {
       svn_wc_status2_t *status;
 
-      SVN_ERR(svn_stream_open_readonly(&input, path, scratch_pool,
+      SVN_ERR(svn_stream_open_readonly(&input, local_abspath, scratch_pool,
                                        scratch_pool));
 
       SVN_ERR(svn_wc_prop_list2(&props, wc_ctx, local_abspath, scratch_pool,
@@ -116,7 +114,7 @@ cat_local_file(const char *path,
     {
       /* Use the modified time from the working copy if
          the file */
-      SVN_ERR(svn_io_file_affected_time(&tm, path, scratch_pool));
+      SVN_ERR(svn_io_file_affected_time(&tm, local_abspath, scratch_pool));
     }
   else
     {
@@ -196,18 +194,12 @@ svn_client_cat2(svn_stream_t *out,
       && SVN_CLIENT__REVKIND_IS_LOCAL_TO_WC(peg_revision->kind)
       && SVN_CLIENT__REVKIND_IS_LOCAL_TO_WC(revision->kind))
     {
-      svn_wc_adm_access_t *adm_access;
+      const char *local_abspath;
 
-      SVN_ERR(svn_wc__adm_open_in_context(&adm_access, ctx->wc_ctx,
-                                          svn_dirent_dirname(path_or_url, pool),
-                                          FALSE, 0, ctx->cancel_func,
-                                          ctx->cancel_baton, pool));
-
-      SVN_ERR(cat_local_file(path_or_url, out, adm_access, revision,
-                             ctx->cancel_func, ctx->cancel_baton, ctx->wc_ctx,
-                             pool));
-
-      return svn_wc_adm_close2(adm_access, pool);
+      SVN_ERR(svn_dirent_get_absolute(&local_abspath, path_or_url, pool));
+      return svn_error_return(
+        cat_local_file(ctx->wc_ctx, local_abspath, out, revision,
+                       ctx->cancel_func, ctx->cancel_baton, pool));
     }
 
   /* Get an RA plugin for this filesystem object. */

@@ -58,6 +58,17 @@ svn_wc__entry_versioned(const svn_wc_entry_t **entry,
                         apr_pool_t *pool);
 
 
+svn_error_t *
+svn_wc__get_entry_versioned(const svn_wc_entry_t **entry,
+                            svn_wc_context_t *wc_ctx,
+                            const char *local_abspath,
+                            svn_node_kind_t kind,
+                            svn_boolean_t show_hidden,
+                            svn_boolean_t need_parent_stub,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool);
+
+
 /** Given a @a local_abspath with a @a wc_ctx, set @a *switched to
  * TRUE if @a local_abspath is switched, otherwise set @a *switched to FALSE.
  * If neither @a local_abspath or its parent have valid URLs, return

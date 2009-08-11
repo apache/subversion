@@ -1373,6 +1373,43 @@ svn_wc__entry_versioned(const svn_wc_entry_t **entry,
 
 
 svn_error_t *
+svn_wc__get_entry_versioned(const svn_wc_entry_t **entry,
+                            svn_wc_context_t *wc_ctx,
+                            const char *local_abspath,
+                            svn_node_kind_t kind,
+                            svn_boolean_t show_hidden,
+                            svn_boolean_t need_parent_stub,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool)
+{
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  /* We call this with allow_unversioned=TRUE, since the error returned is
+     different than our callers currently expect.  We catch the NULL entry
+     below and return the correct error. */
+  SVN_ERR(svn_wc__get_entry(entry, wc_ctx->db, local_abspath, TRUE, kind,
+                            need_parent_stub, result_pool, scratch_pool));
+
+  if (*entry)
+    {
+      svn_boolean_t hidden;
+
+      SVN_ERR(svn_wc__entry_is_hidden(&hidden, *entry));
+      if (hidden)
+        *entry = NULL;
+    }
+
+  if (! *entry)
+    return svn_error_createf(SVN_ERR_ENTRY_NOT_FOUND, NULL,
+                             _("'%s' is not under version control"),
+                             svn_dirent_local_style(local_abspath,
+                                                    scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
 svn_wc__node_is_deleted(svn_boolean_t *deleted,
                         svn_wc__db_t *db,
                         const char *local_abspath,
