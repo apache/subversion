@@ -375,8 +375,13 @@ svn_wc__text_modified_internal_p(svn_boolean_t *modified_p,
           return SVN_NO_ERROR;
         }
 
-      svn_error_clear(err);
-      return err2;
+      if (err2)
+        {
+          svn_error_clear(err);
+          return err2;
+        }
+      
+      return err;
     }
 
   return SVN_NO_ERROR;
