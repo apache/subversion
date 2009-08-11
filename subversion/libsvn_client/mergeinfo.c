@@ -200,14 +200,11 @@ svn_client__get_wc_mergeinfo(svn_mergeinfo_t *mergeinfo,
         }
       else
         {
-          const char *local_abspath;
-
           /* Look for mergeinfo on WCPATH.  If there isn't any and we want
              inherited mergeinfo, walk towards the root of the WC until we
              encounter either (a) an unversioned directory, or (b) mergeinfo.
              If we encounter (b), use that inherited mergeinfo as our
              baseline. */
-          SVN_ERR(svn_dirent_get_absolute(&local_abspath, wcpath, pool));
           SVN_ERR(svn_client__parse_mergeinfo(&wc_mergeinfo, ctx->wc_ctx,
                                               local_abspath, pool, pool));
         }
