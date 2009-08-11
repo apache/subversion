@@ -120,10 +120,11 @@ calculate_target_mergeinfo(svn_ra_session_t *ra_session,
       if (! no_repos_access)
         {
           /* Fetch any existing (explicit) mergeinfo. */
-          SVN_ERR(svn_client__path_relative_to_root(&mergeinfo_path, src_url,
+          SVN_ERR(svn_client__path_relative_to_root(&mergeinfo_path,
+                                                    ctx->wc_ctx, src_url,
                                                     entry ? entry->repos : NULL,
                                                     FALSE, ra_session,
-                                                    adm_access, pool));
+                                                    pool, pool));
           SVN_ERR(svn_client__get_repos_mergeinfo(ra_session, &src_mergeinfo,
                                                   mergeinfo_path, src_revnum,
                                                   svn_mergeinfo_inherited,

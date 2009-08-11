@@ -442,9 +442,10 @@ svn_client__get_wc_or_repos_mergeinfo(svn_mergeinfo_t *target_mergeinfo,
                                                              FALSE, TRUE, ctx,
                                                              pool));
 
-              SVN_ERR(svn_client__path_relative_to_root(&repos_rel_path, url,
+              SVN_ERR(svn_client__path_relative_to_root(&repos_rel_path,
+                                                        ctx->wc_ctx, url,
                                                         entry->repos, FALSE,
-                                                        ra_session, NULL,
+                                                        ra_session, pool,
                                                         pool));
               SVN_ERR(svn_client__get_repos_mergeinfo(ra_session,
                                                       &repos_mergeinfo,
@@ -823,9 +824,8 @@ get_mergeinfo(svn_mergeinfo_t *mergeinfo,
       SVN_ERR(svn_client__get_revision_number(&rev, NULL, ra_session,
                                               peg_revision, "", subpool));
       SVN_ERR(svn_ra_get_repos_root2(ra_session, repos_root, pool));
-      SVN_ERR(svn_client__path_relative_to_root(&repos_rel_path, path_or_url,
-                                                *repos_root, FALSE, NULL,
-                                                NULL, subpool));
+      SVN_ERR(svn_client__path_relative_to_root(&repos_rel_path, ctx->wc_ctx,
+                                                path_or_url, *repos_root, FALSE,                                                NULL, NULL, subpool));
       SVN_ERR(svn_client__get_repos_mergeinfo(ra_session, mergeinfo,
                                               repos_rel_path, rev,
                                               svn_mergeinfo_inherited, FALSE,
@@ -837,6 +837,9 @@ get_mergeinfo(svn_mergeinfo_t *mergeinfo,
       const svn_wc_entry_t *entry;
       const char *url;
       svn_boolean_t indirect;
+      const char *local_abspath;
+
+      SVN_ERR(svn_dirent_get_absolute(&local_abspath, path_or_url, subpool));
 
       SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, path_or_url, FALSE,
                                      0, ctx->cancel_func, ctx->cancel_baton,
@@ -855,8 +858,8 @@ get_mergeinfo(svn_mergeinfo_t *mergeinfo,
                                                       subpool));
 
       /* Acquire return values. */
-      SVN_ERR(svn_client__get_repos_root(repos_root, path_or_url, peg_revision,
-                                         adm_access, ctx, pool));
+      SVN_ERR(svn_client__get_repos_root(repos_root, local_abspath,
+                                         peg_revision, ctx, pool, pool));
       SVN_ERR(svn_client__get_wc_or_repos_mergeinfo(mergeinfo, entry,
                                                     &indirect, FALSE,
                                                     svn_mergeinfo_inherited,
