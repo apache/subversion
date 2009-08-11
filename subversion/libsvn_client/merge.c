@@ -5800,17 +5800,20 @@ normalize_merge_sources(apr_array_header_t **merge_sources_p,
   svn_revnum_t trim_revision = SVN_INVALID_REVNUM;
   svn_opt_revision_t youngest_opt_rev;
   apr_array_header_t *merge_range_ts, *segments;
+  const char *source_abspath;
   apr_pool_t *subpool;
   int i;
   youngest_opt_rev.kind = svn_opt_revision_head;
+
+  SVN_ERR(svn_dirent_get_absolute(&source_abspath, source, pool));
 
   /* Initialize our return variable. */
   *merge_sources_p = apr_array_make(pool, 1, sizeof(merge_source_t *));
 
   /* Resolve our PEG_REVISION to a real number. */
   SVN_ERR(svn_client__get_revision_number(&peg_revnum, &youngest_rev,
-                                          ra_session, peg_revision,
-                                          source, pool));
+                                          ctx->wc_ctx, source_abspath,
+                                          ra_session, peg_revision, pool));
   if (! SVN_IS_VALID_REVNUM(peg_revnum))
     return svn_error_create(SVN_ERR_CLIENT_BAD_REVISION, NULL, NULL);
 
@@ -5837,11 +5840,13 @@ normalize_merge_sources(apr_array_header_t **merge_sources_p,
         return svn_error_create(SVN_ERR_CLIENT_BAD_REVISION, NULL,
                                 _("Not all required revisions are specified"));
       SVN_ERR(svn_client__get_revision_number(&range_start_rev, &youngest_rev,
+                                              ctx->wc_ctx, source_abspath,
                                               ra_session, range_start,
-                                              source, subpool));
+                                              subpool));
       SVN_ERR(svn_client__get_revision_number(&range_end_rev, &youngest_rev,
+                                              ctx->wc_ctx, source_abspath,
                                               ra_session, range_end,
-                                              source, subpool));
+                                              subpool));
 
       /* If this isn't a no-op range... */
       if (range_start_rev != range_end_rev)
@@ -7709,10 +7714,12 @@ svn_client_merge3(const char *source1,
                                                FALSE, TRUE, ctx, sesspool));
 
   /* Resolve revisions to real numbers. */
-  SVN_ERR(svn_client__get_revision_number(&rev1, &youngest_rev, ra_session1,
-                                          revision1, NULL, sesspool));
-  SVN_ERR(svn_client__get_revision_number(&rev2, &youngest_rev, ra_session2,
-                                          revision2, NULL, sesspool));
+  SVN_ERR(svn_client__get_revision_number(&rev1, &youngest_rev, ctx->wc_ctx,
+                                          NULL, ra_session1, revision1,
+                                          sesspool));
+  SVN_ERR(svn_client__get_revision_number(&rev2, &youngest_rev, ctx->wc_ctx,
+                                          NULL, ra_session2, revision2,
+                                          sesspool));
 
   SVN_ERR(svn_ra_get_uuid2(ra_session1, &source_repos_uuid1, pool));
   SVN_ERR(svn_ra_get_uuid2(ra_session2, &source_repos_uuid2, pool));
@@ -8644,9 +8651,9 @@ svn_client_merge_reintegrate(const char *source,
                                &wb, svn_depth_infinity, TRUE,
                                ctx->cancel_func, ctx->cancel_baton, pool));
 
-  SVN_ERR(svn_client__get_revision_number(&rev2, NULL,
-                                          ra_session, peg_revision,
-                                          source_repos_rel_path, pool));
+  SVN_ERR(svn_client__get_revision_number(&rev2, NULL, ctx->wc_ctx,
+                                          source_repos_rel_path,
+                                          ra_session, peg_revision, pool));
 
   SVN_ERR(calculate_left_hand_side(&url1, &rev1,
                                    &unmerged_to_source_mergeinfo_catalog,

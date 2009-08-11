@@ -509,8 +509,8 @@ svn_client__ra_session_from_path(svn_ra_session_t **ra_session_p,
   /* Resolve good_rev into a real revnum. */
   if (good_rev->kind == svn_opt_revision_unspecified)
     good_rev->kind = svn_opt_revision_head;
-  SVN_ERR(svn_client__get_revision_number(&rev, NULL, ra_session,
-                                          good_rev, url, pool));
+  SVN_ERR(svn_client__get_revision_number(&rev, NULL, ctx->wc_ctx, url,
+                                          ra_session, good_rev, pool));
 
   *ra_session_p = ra_session;
   *rev_p = rev;
@@ -633,12 +633,15 @@ svn_client__repos_locations(const char **start_url,
   const char *url;
   const char *start_path = NULL;
   const char *end_path = NULL;
+  const char *local_abspath;
   svn_revnum_t peg_revnum = SVN_INVALID_REVNUM;
   svn_revnum_t start_revnum, end_revnum;
   svn_revnum_t youngest_rev = SVN_INVALID_REVNUM;
   apr_array_header_t *revs;
   apr_hash_t *rev_locs;
   apr_pool_t *subpool = svn_pool_create(pool);
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, subpool));
 
   /* Ensure that we are given some real revision data to work with.
      (It's okay if the END is unspecified -- in that case, we'll just
@@ -698,16 +701,18 @@ svn_client__repos_locations(const char **start_url,
   /* Resolve the opt_revision_ts. */
   if (peg_revnum == SVN_INVALID_REVNUM)
     SVN_ERR(svn_client__get_revision_number(&peg_revnum, &youngest_rev,
-                                            ra_session, revision, path,
-                                            pool));
+                                            ctx->wc_ctx, local_abspath,
+                                            ra_session, revision, pool));
 
   SVN_ERR(svn_client__get_revision_number(&start_revnum, &youngest_rev,
-                                          ra_session, start, path, pool));
+                                          ctx->wc_ctx, local_abspath,
+                                          ra_session, start, pool));
   if (end->kind == svn_opt_revision_unspecified)
     end_revnum = start_revnum;
   else
     SVN_ERR(svn_client__get_revision_number(&end_revnum, &youngest_rev,
-                                            ra_session, end, path, pool));
+                                            ctx->wc_ctx, local_abspath,
+                                            ra_session, end, pool));
 
   /* Set the output revision variables. */
   *start_revision = apr_pcalloc(pool, sizeof(**start_revision));

@@ -40,10 +40,11 @@
 svn_error_t *
 svn_client__get_revision_number(svn_revnum_t *revnum,
                                 svn_revnum_t *youngest_rev,
+                                svn_wc_context_t *wc_ctx,
+                                const char *local_abspath,
                                 svn_ra_session_t *ra_session,
                                 const svn_opt_revision_t *revision,
-                                const char *path,
-                                apr_pool_t *pool)
+                                apr_pool_t *scratch_pool)
 {
   switch (revision->kind)
     {
@@ -69,7 +70,7 @@ svn_client__get_revision_number(svn_revnum_t *revnum,
           if (! ra_session)
             return svn_error_create(SVN_ERR_CLIENT_RA_ACCESS_REQUIRED,
                                     NULL, NULL);
-          SVN_ERR(svn_ra_get_latest_revnum(ra_session, revnum, pool));
+          SVN_ERR(svn_ra_get_latest_revnum(ra_session, revnum, scratch_pool));
           if (youngest_rev)
             *youngest_rev = *revnum;
         }
@@ -78,18 +79,16 @@ svn_client__get_revision_number(svn_revnum_t *revnum,
     case svn_opt_revision_working:
     case svn_opt_revision_base:
       {
-        svn_wc_adm_access_t *adm_access;
         const svn_wc_entry_t *ent;
 
         /* Sanity check. */
-        if (path == NULL)
+        if (local_abspath == NULL)
           return svn_error_create(SVN_ERR_CLIENT_VERSIONED_PATH_REQUIRED,
                                   NULL, NULL);
 
-        SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, path, FALSE,
-                                       0, NULL, NULL, pool));
-        SVN_ERR(svn_wc__entry_versioned(&ent, path, adm_access, FALSE, pool));
-        SVN_ERR(svn_wc_adm_close2(adm_access, pool));
+        SVN_ERR(svn_wc__get_entry_versioned(&ent, wc_ctx, local_abspath,
+                                            svn_node_unknown, FALSE, FALSE,
+                                            scratch_pool, scratch_pool));
 
         *revnum = ent->revision;
       }
@@ -98,23 +97,21 @@ svn_client__get_revision_number(svn_revnum_t *revnum,
     case svn_opt_revision_committed:
     case svn_opt_revision_previous:
       {
-        svn_wc_adm_access_t *adm_access;
         const svn_wc_entry_t *ent;
 
         /* Sanity check. */
-        if (path == NULL)
+        if (local_abspath == NULL)
           return svn_error_create(SVN_ERR_CLIENT_VERSIONED_PATH_REQUIRED,
                                   NULL, NULL);
 
-        SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, path, FALSE,
-                                       0, NULL, NULL, pool));
-        SVN_ERR(svn_wc__entry_versioned(&ent, path, adm_access, FALSE, pool));
-        SVN_ERR(svn_wc_adm_close2(adm_access, pool));
+        SVN_ERR(svn_wc__get_entry_versioned(&ent, wc_ctx, local_abspath,
+                                            svn_node_unknown, FALSE, FALSE,
+                                            scratch_pool, scratch_pool));
 
         if (! SVN_IS_VALID_REVNUM(ent->cmt_rev))
           return svn_error_createf(SVN_ERR_CLIENT_BAD_REVISION, NULL,
                                    _("Path '%s' has no committed "
-                                     "revision"), path);
+                                     "revision"), local_abspath);
         *revnum = ent->cmt_rev;
         if (revision->kind == svn_opt_revision_previous)
           (*revnum)--;
@@ -134,14 +131,15 @@ svn_client__get_revision_number(svn_revnum_t *revnum,
       if (! ra_session)
         return svn_error_create(SVN_ERR_CLIENT_RA_ACCESS_REQUIRED, NULL, NULL);
       SVN_ERR(svn_ra_get_dated_revision(ra_session, revnum,
-                                        revision->value.date, pool));
+                                        revision->value.date, scratch_pool));
       break;
 
     default:
       return svn_error_createf(SVN_ERR_CLIENT_BAD_REVISION, NULL,
                                _("Unrecognized revision type requested for "
                                  "'%s'"),
-                               svn_dirent_local_style(path, pool));
+                               svn_dirent_local_style(local_abspath,
+                                                      scratch_pool));
     }
 
   /* Final check -- if our caller provided a youngest revision, and
