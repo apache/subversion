@@ -4813,17 +4813,27 @@ svn_client_uuid_from_url(const char **uuid,
                          apr_pool_t *pool);
 
 
-/** Return the repository @a uuid for working-copy @a path, allocated
- * in @a pool.  Use @a adm_access to retrieve the uuid from @a path's
- * entry; if not present in the entry, then look in its parents. If not
- * present in the workingcopy call svn_client_uuid_from_url() to
- * retrieve, using the entry's URL.  @a ctx is required for possible
- * repository authentication.
+/** Return the repository @a uuid for working-copy @a local_abspath,
+ * allocated in @a result_pool.  Use @a ctx->wc_ctx to retrieve the
+ * information.
  *
- * @note The only reason this function falls back on
- * svn_client_uuid_from_url() is for compatibility purposes.  Old and
- * detached working copies may not have uuids in the entries file.
+ * Use @a scratch_pool for temporary allocations.
+ *
+ * @since New in 1.7.
  */
+svn_error_t *
+svn_client_uuid_from_path2(const char **uuid,
+                           const char *path,
+                           svn_client_ctx_t *ctx,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool);
+
+/** Similar to svn_client_uuid_from_path2(), but with a relative path and
+ * an access baton.
+ *
+ * @deprecated Provided for backward compatilibity with the 1.6 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_uuid_from_path(const char **uuid,
                           const char *path,

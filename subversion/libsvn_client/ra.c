@@ -374,79 +374,24 @@ svn_client_uuid_from_url(const char **uuid,
 
 
 svn_error_t *
-svn_client_uuid_from_path(const char **uuid,
-                          const char *path,
-                          svn_wc_adm_access_t *adm_access,
-                          svn_client_ctx_t *ctx,
-                          apr_pool_t *pool)
+svn_client_uuid_from_path2(const char **uuid,
+                           const char *local_abspath,
+                           svn_client_ctx_t *ctx,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool)
 {
   const svn_wc_entry_t *entry;
-  svn_boolean_t is_root;
 
-  SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access,
-                                  TRUE,  /* show deleted */ pool));
+  SVN_ERR(svn_wc__get_entry_versioned(&entry, ctx->wc_ctx, local_abspath,
+                                      svn_node_unknown, TRUE, /* show deleted */
+                                      FALSE, scratch_pool, scratch_pool));
 
   if (entry->uuid)
-    {
-      *uuid = entry->uuid;
-      return SVN_NO_ERROR;
-    }
-
-  /* ## Probably never reached after the 1.6/1.7 WC rewrite */
-
-  SVN_ERR(svn_wc_is_wc_root(&is_root, path, adm_access, pool));
-
-  if (!is_root)
-    {
-      /* Working copies have a single uuid, as all contents is from a single
-         repository */
-
-      svn_error_t *err;
-      svn_wc_adm_access_t *parent_access;
-      const char *parent = svn_dirent_dirname(path, pool);
-
-      /* Open the parents administrative area to fetch the uuid.
-         Subversion 1.0 and later have the uuid in every checkout root */
-
-      SVN_ERR(svn_wc__adm_open_in_context(&parent_access, ctx->wc_ctx, parent,
-                                          FALSE, 0, ctx->cancel_func,
-                                          ctx->cancel_baton, pool));
-
-      err = svn_client_uuid_from_path(uuid, svn_dirent_dirname(path, pool),
-                                      parent_access, ctx, pool);
-
-      svn_error_clear(svn_wc_adm_close2(parent_access, pool));
-
-      return svn_error_return(err);
-    }
-
-  /* We may have a working copy without uuid */
-  if (entry->url)
-    {
-      /* You can enter this case by copying a new subdirectory with 1.0-1.5
-       * # svn mkdir newdir
-       * # cp newdir /tmp/new-wc
-       * and then check /tmp/new-wc
-       *
-       * See also:
-       * http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=101831
-       * Message-ID: <877jgjtkus.fsf@debian2.lan> */
-
-      /* fallback to using the network. */
-      SVN_ERR(svn_client_uuid_from_url(uuid, entry->url, ctx, pool));
-    }
-  else
-    {
-      /* Excluded path will fall into this code branch, since the missed
-         fields in the entry for excluded path is not filled. But it is just
-         ok. */
-      return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
-                               _("'%s' has no URL"),
-                               svn_dirent_local_style(path, pool));
-    }
+    *uuid = apr_pstrdup(result_pool, entry->uuid);
 
   return SVN_NO_ERROR;
 }
+
 
 
 

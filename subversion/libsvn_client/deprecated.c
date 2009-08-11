@@ -1678,3 +1678,18 @@ svn_client_revert(const apr_array_header_t *paths,
   return svn_client_revert2(paths, SVN_DEPTH_INFINITY_OR_EMPTY(recursive),
                             NULL, ctx, pool);
 }
+
+/*** From ra.c ***/
+svn_error_t *
+svn_client_uuid_from_path(const char **uuid,
+                          const char *path,
+                          svn_wc_adm_access_t *adm_access,
+                          svn_client_ctx_t *ctx,
+                          apr_pool_t *pool)
+{
+  const char *local_abspath;
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+  return svn_error_return(
+    svn_client_uuid_from_path2(uuid, local_abspath, ctx, pool, pool));
+}
