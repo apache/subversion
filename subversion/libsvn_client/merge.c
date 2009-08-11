@@ -7525,7 +7525,10 @@ merge_cousins_and_supplement_mergeinfo(const char *target_wcpath,
   apr_array_header_t *remove_sources, *add_sources, *ranges;
   svn_opt_revision_t peg_revision;
   const char *old_url;
+  const char *target_abspath;
   svn_boolean_t same_repos;
+
+  SVN_ERR(svn_dirent_get_absolute(&target_abspath, target_wcpath, pool));
 
   if (strcmp(wc_repos_root, source_repos_root) != 0)
     {
@@ -7536,8 +7539,8 @@ merge_cousins_and_supplement_mergeinfo(const char *target_wcpath,
       if (entry)
         wc_repos_uuid = entry->uuid;
       else
-        SVN_ERR(svn_client_uuid_from_path(&wc_repos_uuid, target_wcpath,
-                                          adm_access, ctx, pool));
+        SVN_ERR(svn_client_uuid_from_path2(&wc_repos_uuid, target_abspath,
+                                           ctx, pool, pool));
       same_repos = (strcmp(wc_repos_uuid, source_repos_uuid) == 0);
     }
   else
@@ -7741,8 +7744,8 @@ svn_client_merge3(const char *source1,
       if (entry)
         wc_repos_uuid = entry->uuid;
       else
-        SVN_ERR(svn_client_uuid_from_path(&wc_repos_uuid, target_wcpath,
-                                          adm_access, ctx, pool));
+        SVN_ERR(svn_client_uuid_from_path2(&wc_repos_uuid, target_abspath,
+                                           ctx, pool, pool));
       same_repos = (strcmp(wc_repos_uuid, source_repos_uuid1) == 0);
     }
   else
@@ -8822,8 +8825,8 @@ svn_client_merge_peg3(const char *source,
       if (entry)
         wc_repos_uuid = entry->uuid;
       else
-        SVN_ERR(svn_client_uuid_from_path(&wc_repos_uuid, target_wcpath,
-                                          adm_access, ctx, pool));
+        SVN_ERR(svn_client_uuid_from_path2(&wc_repos_uuid, target_abspath,
+                                           ctx, pool, pool));
       same_repos = (strcmp(wc_repos_uuid, source_repos_uuid) == 0);
     }
   else
