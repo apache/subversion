@@ -1390,7 +1390,7 @@ svn_wc__get_entry_versioned(const svn_wc_entry_t **entry,
   SVN_ERR(svn_wc__get_entry(entry, wc_ctx->db, local_abspath, TRUE, kind,
                             need_parent_stub, result_pool, scratch_pool));
 
-  if (*entry)
+  if (*entry && !show_hidden)
     {
       svn_boolean_t hidden;
 
