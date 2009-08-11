@@ -2253,6 +2253,7 @@ ra_svn_replay_range(svn_ra_session_t *session,
   svn_ra_svn__session_baton_t *sess = session->priv;
   apr_pool_t *iterpool;
   svn_revnum_t rev;
+  svn_boolean_t drive_aborted = FALSE;
 
   SVN_ERR(svn_ra_svn_write_cmd(sess->conn, pool, "replay-range", "rrrb",
                                start_revision, end_revision,
@@ -2288,7 +2289,14 @@ ra_svn_replay_range(svn_ra_session_t *session,
                             iterpool));
       SVN_ERR(svn_ra_svn_drive_editor2(sess->conn, iterpool,
                                        editor, edit_baton,
-                                       NULL, TRUE));
+                                       &drive_aborted, TRUE));
+      /* If drive_editor2() aborted the commit, do NOT try to call
+         revfinish_func and commit the transaction! */
+      if (drive_aborted) {
+        svn_pool_destroy(iterpool);
+        return svn_error_create(SVN_ERR_RA_SVN_EDIT_ABORTED, NULL,
+                                _("Commit error during replay_range()"));
+      }
       SVN_ERR(revfinish_func(rev, replay_baton,
                              editor, edit_baton,
                              rev_props,
