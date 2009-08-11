@@ -929,10 +929,16 @@ SVN_ERROR_START
              SVN_ERR_RA_SVN_CATEGORY_START + 6,
              "Client/server version mismatch")
 
-  /** @since New in 1.5. */
+    /** @since New in 1.5. */
   SVN_ERRDEF(SVN_ERR_RA_SVN_NO_MECHANISMS,
              SVN_ERR_RA_SVN_CATEGORY_START + 7,
              "Cannot negotiate authentication mechanism")
+
+   /** @since New in 1.6.5 / 1.7  */
+  SVN_ERRDEF(SVN_ERR_RA_SVN_EDIT_ABORTED,
+             SVN_ERR_RA_SVN_CATEGORY_START + 8,
+             "Editor drive was aborted")
+
 
   /* libsvn_ra_serf errors */
   /** @since New in 1.5. */
