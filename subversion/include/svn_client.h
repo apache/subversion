@@ -4823,7 +4823,7 @@ svn_client_uuid_from_url(const char **uuid,
  */
 svn_error_t *
 svn_client_uuid_from_path2(const char **uuid,
-                           const char *path,
+                           const char *local_abspath,
                            svn_client_ctx_t *ctx,
                            apr_pool_t *result_pool,
                            apr_pool_t *scratch_pool);
