@@ -2294,8 +2294,8 @@ ra_svn_replay_range(svn_ra_session_t *session,
          revfinish_func and commit the transaction! */
       if (drive_aborted) {
         svn_pool_destroy(iterpool);
-        return svn_error_create(SVN_ERR_RA_SVN_EDIT_ABORTED, NULL,
-                                _("Commit error during replay_range()"));
+        return svn_error_create(SVN_ERR_RA_SVN_IO_ERROR, NULL,
+                                _("Error while replaying commit"));
       }
       SVN_ERR(revfinish_func(rev, replay_baton,
                              editor, edit_baton,
