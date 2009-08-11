@@ -72,20 +72,20 @@ svn_client__entry_location(const char **url,
 /* Set *REVNUM to the revision number identified by REVISION.
 
    If REVISION->kind is svn_opt_revision_number, just use
-   REVISION->value.number, ignoring PATH and RA_SESSION.
+   REVISION->value.number, ignoring LOCAL_ABSPATH and RA_SESSION.
 
    Else if REVISION->kind is svn_opt_revision_committed,
    svn_opt_revision_previous, or svn_opt_revision_base, or
    svn_opt_revision_working, then the revision can be identified
    purely based on the working copy's administrative information for
-   PATH, so RA_SESSION is ignored.  If PATH is not under revision
-   control, return SVN_ERR_UNVERSIONED_RESOURCE, or if PATH is null,
-   return SVN_ERR_CLIENT_VERSIONED_PATH_REQUIRED.
+   LOCAL_ABSPATH, so RA_SESSION is ignored.  If LOCAL_ABSPATH is not
+   under revision control, return SVN_ERR_UNVERSIONED_RESOURCE, or if
+   LOCAL_ABSPATH is null, return SVN_ERR_CLIENT_VERSIONED_PATH_REQUIRED.
 
    Else if REVISION->kind is svn_opt_revision_date or
    svn_opt_revision_head, then RA_SESSION is used to retrieve the
    revision from the repository (using REVISION->value.date in the
-   former case), and PATH is ignored.  If RA_SESSION is null,
+   former case), and LOCAL_ABSPATH is ignored.  If RA_SESSION is null,
    return SVN_ERR_CLIENT_RA_ACCESS_REQUIRED.
 
    Else if REVISION->kind is svn_opt_revision_unspecified, set
@@ -104,14 +104,15 @@ svn_client__entry_location(const char **url,
 
    Else return SVN_ERR_CLIENT_BAD_REVISION.
 
-   Use POOL for any temporary allocation.  */
+   Use SCRATCH_POOL for any temporary allocation.  */
 svn_error_t *
 svn_client__get_revision_number(svn_revnum_t *revnum,
                                 svn_revnum_t *youngest_rev,
+                                svn_wc_context_t *wc_ctx,
+                                const char *local_abspath,
                                 svn_ra_session_t *ra_session,
                                 const svn_opt_revision_t *revision,
-                                const char *path,
-                                apr_pool_t *pool);
+                                apr_pool_t *scratch_pool);
 
 /* Set *COPYFROM_PATH and *COPYFROM_REV to the path (without initial '/')
    and revision that served as the source of the copy from which PATH_OR_URL

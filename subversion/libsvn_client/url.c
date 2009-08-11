@@ -136,8 +136,9 @@ svn_client__derive_location(const char **url,
                                                        NULL, NULL, FALSE,
                                                        TRUE, ctx, sesspool));
         }
-      SVN_ERR(svn_client__get_revision_number(peg_revnum, NULL, ra_session,
-                                              peg_revision, NULL, pool));
+      SVN_ERR(svn_client__get_revision_number(peg_revnum, NULL, ctx->wc_ctx,
+                                              NULL, ra_session, peg_revision,
+                                              pool));
       if (sesspool)
         svn_pool_destroy(sesspool);
     }

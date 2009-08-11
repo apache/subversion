@@ -238,6 +238,7 @@ svn_client_status5(svn_revnum_t *result_rev,
   void *edit_baton, *set_locks_baton;
   const svn_wc_entry_t *entry = NULL;
   struct status_baton sb;
+  const char *target_abspath;
   apr_array_header_t *ignores;
   svn_error_t *err;
   apr_hash_t *changelist_hash = NULL;
@@ -275,6 +276,7 @@ svn_client_status5(svn_revnum_t *result_rev,
     return svn_error_return(err);
 
   anchor = svn_wc_adm_access_path(anchor_access);
+  SVN_ERR(svn_dirent_get_absolute(&target_abspath, target, pool));
 
   /* Get the status edit, and use our wrapping status function/baton
      as the callback pair. */
@@ -345,8 +347,11 @@ svn_client_status5(svn_revnum_t *result_rev,
           else
             {
               /* Get a revision number for our status operation. */
-              SVN_ERR(svn_client__get_revision_number
-                      (&revnum, NULL, ra_session, revision, target, pool));
+              SVN_ERR(svn_client__get_revision_number(&revnum, NULL,
+                                                      ctx->wc_ctx,
+                                                      target_abspath,
+                                                      ra_session, revision,
+                                                      pool));
             }
 
           /* Do the deed.  Let the RA layer drive the status editor. */

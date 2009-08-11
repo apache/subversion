@@ -604,11 +604,14 @@ svn_client_blame5(const char *target,
   apr_pool_t *iterpool;
   svn_stream_t *last_stream;
   svn_stream_t *stream;
+  const char *target_abspath;
 
   if (start->kind == svn_opt_revision_unspecified
       || end->kind == svn_opt_revision_unspecified)
     return svn_error_create
       (SVN_ERR_CLIENT_BAD_REVISION, NULL, NULL);
+
+  SVN_ERR(svn_dirent_get_absolute(&target_abspath, target, pool));
 
   /* Get an RA plugin for this filesystem object. */
   SVN_ERR(svn_client__ra_session_from_path(&ra_session, &end_revnum,
@@ -616,8 +619,9 @@ svn_client_blame5(const char *target,
                                            peg_revision, end,
                                            ctx, pool));
 
-  SVN_ERR(svn_client__get_revision_number(&start_revnum, NULL, ra_session,
-                                          start, target, pool));
+  SVN_ERR(svn_client__get_revision_number(&start_revnum, NULL, ctx->wc_ctx,
+                                          target_abspath, ra_session, start,
+                                          pool));
 
   if (end_revnum < start_revnum)
     return svn_error_create
@@ -674,9 +678,6 @@ svn_client_blame5(const char *target,
       /* If the local file is modified we have to call the handler on the
          working copy file with keywords unexpanded */
       svn_wc_status2_t *status;
-      const char *target_abspath;
-
-      SVN_ERR(svn_dirent_get_absolute(&target_abspath, target, pool));
 
       SVN_ERR(svn_wc_status3(&status, ctx->wc_ctx, target_abspath, pool, pool));
 

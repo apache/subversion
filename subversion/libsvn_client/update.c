@@ -115,6 +115,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
   const char *preserved_exts_str;
   apr_array_header_t *preserved_exts;
   struct ff_baton *ffb;
+  const char *local_abspath;
   svn_boolean_t server_supports_depth;
   svn_config_t *cfg = ctx->config ? apr_hash_get(ctx->config,
                                                  SVN_CONFIG_CATEGORY_CONFIG,
@@ -147,6 +148,8 @@ svn_client__update_internal(svn_revnum_t *result_rev,
     return svn_error_createf(SVN_ERR_WC_NOT_DIRECTORY, NULL,
                              _("Path '%s' is not a directory"),
                              path);
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
   if (!innerupdate)
     {
@@ -226,8 +229,9 @@ svn_client__update_internal(svn_revnum_t *result_rev,
 
   /* ### todo: shouldn't svn_client__get_revision_number be able
      to take a URL as easily as a local path?  */
-  SVN_ERR(svn_client__get_revision_number
-          (&revnum, NULL, ra_session, revision, path, pool));
+  SVN_ERR(svn_client__get_revision_number(&revnum, NULL, ctx->wc_ctx,
+                                          local_abspath, ra_session, revision,
+                                          pool));
 
   /* Take the chance to set the repository root on the target.
      It's nice to get this information into old WCs so they are "ready"

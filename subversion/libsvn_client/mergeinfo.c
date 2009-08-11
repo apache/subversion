@@ -801,12 +801,15 @@ get_mergeinfo(svn_mergeinfo_t *mergeinfo,
   if (svn_path_is_url(path_or_url))
     {
       const char *repos_rel_path;
+      const char *local_abspath;
 
+      SVN_ERR(svn_dirent_get_absolute(&local_abspath, "", subpool));
       SVN_ERR(svn_client__open_ra_session_internal(&ra_session, path_or_url,
                                                    NULL, NULL, NULL, FALSE,
                                                    TRUE, ctx, subpool));
-      SVN_ERR(svn_client__get_revision_number(&rev, NULL, ra_session,
-                                              peg_revision, "", subpool));
+      SVN_ERR(svn_client__get_revision_number(&rev, NULL, ctx->wc_ctx,
+                                              local_abspath, ra_session,
+                                              peg_revision, subpool));
       SVN_ERR(svn_ra_get_repos_root2(ra_session, repos_root, pool));
       SVN_ERR(svn_client__path_relative_to_root(&repos_rel_path, ctx->wc_ctx,
                                                 path_or_url, *repos_root, FALSE,                                                NULL, NULL, subpool));
