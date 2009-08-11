@@ -168,7 +168,6 @@ svn_client__adjust_mergeinfo_source_paths(svn_mergeinfo_t adjusted_mergeinfo,
 svn_error_t *
 svn_client__get_wc_mergeinfo(svn_mergeinfo_t *mergeinfo,
                              svn_boolean_t *inherited,
-                             svn_boolean_t pristine,
                              svn_mergeinfo_inheritance_t inherit,
                              const svn_wc_entry_t *entry,
                              const char *wcpath,
@@ -201,28 +200,16 @@ svn_client__get_wc_mergeinfo(svn_mergeinfo_t *mergeinfo,
         }
       else
         {
+          const char *local_abspath;
+
           /* Look for mergeinfo on WCPATH.  If there isn't any and we want
              inherited mergeinfo, walk towards the root of the WC until we
              encounter either (a) an unversioned directory, or (b) mergeinfo.
              If we encounter (b), use that inherited mergeinfo as our
              baseline. */
-          apr_hash_t *props = apr_hash_make(pool);
-          const svn_string_t *propval;
-
-          /* ### we could be using svn_client__parse_mergeinfo() here, but
-             ### for that pesky 'pristine' argument which is called with a
-             ### TRUE value in exactly one other place.  we don't know if
-             ### it matters or not yet, but for the sake of correctness,
-             ### fall back to a manual way of getting the mergeinfo. */
-          SVN_ERR(svn_client__get_prop_from_wc(props, SVN_PROP_MERGEINFO,
-                                               wcpath, pristine, entry,
-                                               adm_access, svn_depth_empty,
-                                               NULL, ctx, pool));
-          propval = apr_hash_get(props, wcpath, APR_HASH_KEY_STRING);
-          if (propval)
-            SVN_ERR(svn_mergeinfo_parse(&wc_mergeinfo, propval->data, pool));
-          else
-            wc_mergeinfo = NULL;
+          SVN_ERR(svn_dirent_get_absolute(&local_abspath, wcpath, pool));
+          SVN_ERR(svn_client__parse_mergeinfo(&wc_mergeinfo, ctx->wc_ctx,
+                                              local_abspath, pool, pool));
         }
 
       /* If WCPATH is switched, don't look any higher for inherited
@@ -408,7 +395,7 @@ svn_client__get_wc_or_repos_mergeinfo(svn_mergeinfo_t *target_mergeinfo,
   if (repos_only)
     *target_mergeinfo = NULL;
   else
-    SVN_ERR(svn_client__get_wc_mergeinfo(target_mergeinfo, indirect, FALSE,
+    SVN_ERR(svn_client__get_wc_mergeinfo(target_mergeinfo, indirect,
                                          inherit, entry, target_wcpath,
                                          NULL, NULL, adm_access, ctx,
                                          pool));
@@ -712,7 +699,7 @@ svn_client__elide_mergeinfo(const char *target_wcpath,
 
       /* Get the TARGET_WCPATH's explicit mergeinfo. */
       SVN_ERR(svn_client__get_wc_mergeinfo(&target_mergeinfo, &inherited,
-                                           FALSE, svn_mergeinfo_inherited,
+                                           svn_mergeinfo_inherited,
                                            entry, target_wcpath,
                                            wc_elision_limit_path
                                              ? wc_elision_limit_path
@@ -726,7 +713,7 @@ svn_client__elide_mergeinfo(const char *target_wcpath,
         return SVN_NO_ERROR;
 
       /* Get TARGET_WCPATH's inherited mergeinfo from the WC. */
-      SVN_ERR(svn_client__get_wc_mergeinfo(&mergeinfo, &inherited, FALSE,
+      SVN_ERR(svn_client__get_wc_mergeinfo(&mergeinfo, &inherited,
                                            svn_mergeinfo_nearest_ancestor,
                                            entry, target_wcpath,
                                            wc_elision_limit_path

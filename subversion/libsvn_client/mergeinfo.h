@@ -98,7 +98,6 @@ svn_client__merge_path_dup(const svn_client__merge_path_t *old,
 svn_error_t *
 svn_client__get_wc_mergeinfo(svn_mergeinfo_t *mergeinfo,
                              svn_boolean_t *inherited,
-                             svn_boolean_t pristine,
                              svn_mergeinfo_inheritance_t inherit,
                              const svn_wc_entry_t *entry,
                              const char *wcpath,
