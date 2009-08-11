@@ -1715,7 +1715,7 @@ delete_entry(const char *path,
   /* Read the parent's entries file.  If the deleted thing is not
      versioned in this working copy, it was probably deleted via this
      working copy.  No need to report such a thing. */
-  SVN_ERR(svn_wc__get_entry(&entry, eb->db, local_abspath, TRUE,
+  SVN_ERR(svn_wc__get_entry(&entry, eb->db, local_abspath, FALSE,
                             svn_node_unknown, FALSE, pool, pool));
   if (entry->kind == svn_node_dir)
     {
