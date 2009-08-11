@@ -419,6 +419,28 @@ upgrade_format(svn_wc_adm_access_t *adm_access,
 
 
 svn_error_t *
+svn_wc__upgrade_sdb(int *result_format,
+                    const char *wcroot_abspath,
+                    svn_sqlite__db_t *sdb,
+                    int start_format,
+                    apr_pool_t *scratch_pool)
+{
+  /* ### don't do this just yet.  */
+#if 0
+  if (start_format < SVN_WC__WC_NG_VERSION)
+    return svn_error_createf(SVN_ERR_WC_UPGRADE_REQUIRED, NULL,
+                             _("Working copy format of '%s' is too old (%d); "
+                               "please run 'svn upgrade'"),
+                             svn_dirent_local_style(wcroot_abspath,
+                                                    scratch_pool),
+                             start_format);
+#endif
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
 svn_wc_upgrade(svn_wc_context_t *wc_ctx,
                const char *local_abspath,
                svn_cancel_func_t cancel_func,

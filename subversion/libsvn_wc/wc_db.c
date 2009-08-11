@@ -900,6 +900,11 @@ create_wcroot(wcroot_t **wcroot,
         format);
     }
 
+  /* Auto-upgrade the SDB if possible.  */
+  if (format < SVN_WC__VERSION)
+    SVN_ERR(svn_wc__upgrade_sdb(&format, wcroot_abspath, sdb, format,
+                                scratch_pool));
+
   *wcroot = apr_palloc(result_pool, sizeof(**wcroot));
 
   (*wcroot)->abspath = wcroot_abspath;
