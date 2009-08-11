@@ -1628,6 +1628,7 @@ repos_to_wc_copy(const apr_array_header_t *copy_pairs,
   {
     svn_error_t *src_err, *dst_err;
     const char *parent;
+    const char *parent_abspath;
 
     /* Get the repository uuid of SRC_URL */
     src_err = svn_ra_get_uuid2(ra_session, &src_uuid, pool);
@@ -1641,8 +1642,10 @@ repos_to_wc_copy(const apr_array_header_t *copy_pairs,
       parent = svn_dirent_dirname(top_dst_path, pool);
     else
       parent = top_dst_path;
-    dst_err = svn_client_uuid_from_path(&dst_uuid, parent, adm_access,
-                                        ctx, pool);
+
+    SVN_ERR(svn_dirent_get_absolute(&parent_abspath, parent, pool));
+    dst_err = svn_client_uuid_from_path2(&dst_uuid, parent_abspath, ctx, pool,
+                                         pool);
     if (dst_err && dst_err->apr_err != SVN_ERR_RA_NO_REPOS_UUID)
       return dst_err;
 
