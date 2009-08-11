@@ -31,6 +31,7 @@
 #include "svn_types.h"
 #include "svn_error.h"
 #include "svn_wc.h"
+#include "private/svn_sqlite.h"
 
 #include "wc_db.h"
 
@@ -465,6 +466,19 @@ svn_wc__internal_transmit_prop_deltas(svn_wc__db_t *db,
                                      const svn_delta_editor_t *editor,
                                      void *baton,
                                      apr_pool_t *scratch_pool);
+
+
+/* Upgrade the wc sqlite database given in SDB for the wc located at
+   WCROOT_ABSPATH. It's current/starting format is given by START_FORMAT.
+   After the upgrade is complete (to as far as the automatic upgrade will
+   perform), the resulting format is RESULT_FORMAT. All allocations are
+   performed in SCRATCH_POOL.  */
+svn_error_t *
+svn_wc__upgrade_sdb(int *result_format,
+                    const char *wcroot_abspath,
+                    svn_sqlite__db_t *sdb,
+                    int start_format,
+                    apr_pool_t *scratch_pool);
 
 
 #ifdef __cplusplus
