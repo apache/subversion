@@ -104,7 +104,6 @@ svn_client__merge_path_dup(const svn_client__merge_path_t *old,
 svn_error_t *
 svn_client__get_wc_mergeinfo(svn_mergeinfo_t *mergeinfo,
                              svn_boolean_t *inherited,
-                             svn_boolean_t pristine,
                              svn_mergeinfo_inheritance_t inherit,
                              const svn_wc_entry_t *entry,
                              const char *wcpath,
@@ -203,18 +202,15 @@ svn_client__mergeinfo_from_segments(svn_mergeinfo_t *mergeinfo_p,
                                     apr_array_header_t *segments,
                                     apr_pool_t *pool);
 
-/* Parse any mergeinfo from the WCPATH's ENTRY and store it in
-   MERGEINFO.  If PRISTINE is true parse the pristine mergeinfo,
-   working otherwise. If no record of any mergeinfo exists, set
-   MERGEINFO to NULL.  Does not acount for inherited mergeinfo. */
+/* Parse any mergeinfo from the LOCAL_ABSPATH's ENTRY and store it in
+   MERGEINFO.  If no record of any mergeinfo exists, set MERGEINFO to NULL.
+   Does not acount for inherited mergeinfo. */
 svn_error_t *
 svn_client__parse_mergeinfo(svn_mergeinfo_t *mergeinfo,
-                            const svn_wc_entry_t *entry,
-                            const char *wcpath,
-                            svn_boolean_t pristine,
-                            svn_wc_adm_access_t *adm_access,
-                            svn_client_ctx_t *ctx,
-                            apr_pool_t *pool);
+                            svn_wc_context_t *wc_ctx,
+                            const char *local_abspath,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool);
 
 /* Write MERGEINFO into the WC for LOCAL_ABSPATH.  If MERGEINFO is NULL,
    remove any SVN_PROP_MERGEINFO for LOCAL_ABSPATH.  If MERGEINFO is empty,
@@ -264,22 +260,6 @@ svn_client__elide_mergeinfo(const char *target_wcpath,
                             svn_wc_adm_access_t *adm_access,
                             svn_client_ctx_t *ctx,
                             apr_pool_t *pool);
-
-/* For each path in CHILDREN_WITH_MERGEINFO which is an immediate child of
-   TARGET_WCPATH, check if that path's mergeinfo elides to TARGET_WCPATH.
-   If it does elide, clear all mergeinfo from the path.
-
-   CHILDREN_WITH_MERGEINFO is filled with child paths (struct
-   merge_path_t *) of TARGET_WCPATH which have svn:mergeinfo set on
-   them, arranged in depth first order (see
-   discover_and_merge_children). */
-svn_error_t *
-svn_client__elide_children(apr_array_header_t *children_with_mergeinfo,
-                           const char *target_wcpath,
-                           const svn_wc_entry_t *entry,
-                           svn_wc_adm_access_t *adm_access,
-                           svn_client_ctx_t *ctx,
-                           apr_pool_t *pool);
 
 /* A wrapper which calls svn_client__elide_mergeinfo() on each child
    in CHILDREN_WITH_MERGEINFO in depth-first. */

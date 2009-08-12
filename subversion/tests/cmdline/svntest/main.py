@@ -405,10 +405,13 @@ def open_pipe(command, stdin=None, stdout=None, stderr=None):
 
   # Quote only the arguments on Windows.  Later versions of subprocess,
   # 2.5.2+ confirmed, don't require this quoting, but versions < 2.4.3 do.
-  if (sys.platform == 'win32'):
+  if sys.platform == 'win32':
     args = command[1:]
     args = ' '.join([_quote_arg(x) for x in args])
     command = command[0] + ' ' + args
+    command_string = command
+  else:
+    command_string = ' '.join(command)
 
   if not stdin:
     stdin = subprocess.PIPE
@@ -422,7 +425,7 @@ def open_pipe(command, stdin=None, stdout=None, stderr=None):
                        stdout=stdout,
                        stderr=stderr,
                        close_fds=not windows)
-  return p.stdin, p.stdout, p.stderr, (p, command)
+  return p.stdin, p.stdout, p.stderr, (p, command_string)
 
 def wait_on_pipe(waiter, binary_mode, stdin=None):
   """Waits for KID (opened with open_pipe) to finish, dying
@@ -432,7 +435,7 @@ def wait_on_pipe(waiter, binary_mode, stdin=None):
   if waiter is None:
     return
 
-  kid, command = waiter
+  kid, command_string = waiter
   stdout, stderr = kid.communicate(stdin)
   exit_code = kid.returncode
 
@@ -446,7 +449,11 @@ def wait_on_pipe(waiter, binary_mode, stdin=None):
   stderr_lines = stderr.splitlines(True)
 
   if exit_code < 0:
-    exit_signal = os.WTERMSIG(-exit_code)
+    if not windows:
+      exit_signal = os.WTERMSIG(-exit_code)
+    else:
+      exit_signal = exit_code
+
     if stdout_lines is not None:
       sys.stdout.write("".join(stdout_lines))
     if stderr_lines is not None:
@@ -454,12 +461,12 @@ def wait_on_pipe(waiter, binary_mode, stdin=None):
     if verbose_mode:
       # show the whole path to make it easier to start a debugger
       sys.stderr.write("CMD: %s terminated by signal %d\n"
-                       % (' '.join(command), exit_signal))
+                       % (command_string, exit_signal))
     raise SVNProcessTerminatedBySignal
   else:
     if exit_code and verbose_mode:
       sys.stderr.write("CMD: %s exited with %d\n"
-                       % (' '.join(command), exit_code))
+                       % (command_string, exit_code))
     return stdout_lines, stderr_lines, exit_code
 
 # Run any binary, supplying input text, logging the command line
@@ -793,10 +800,9 @@ def copy_repos(src_path, dst_path, head_revision, ignore_uuid = 1):
   if ignore_uuid:
     load_args = load_args + ['--ignore-uuid']
   if verbose_mode:
-    sys.stdout.write('CMD: %s%s | %s%s\n' % (os.path.basename(svnadmin_binary),
-                                            ' '.join(dump_args),
-                                            os.path.basename(svnadmin_binary),
-                                            ' '.join(load_args)))
+    sys.stdout.write('CMD: %s %s | %s %s\n' %
+                     (os.path.basename(svnadmin_binary), ' '.join(dump_args),
+                      os.path.basename(svnadmin_binary), ' '.join(load_args)))
     sys.stdout.flush()
   start = time.time()
 
@@ -1079,7 +1085,12 @@ class TestSpawningThread(threading.Thread):
 
     result, stdout_lines, stderr_lines = spawn_process(command, 1, None, *args)
     self.results.append((index, result, stdout_lines, stderr_lines))
-    sys.stdout.write('.')
+
+    if result != 1:
+      sys.stdout.write('.')
+    else:
+      sys.stdout.write('F')
+
     sys.stdout.flush()
 
 class TestRunner:
@@ -1197,7 +1208,7 @@ class TestRunner:
 # it can be displayed by the 'list' command.)
 
 # Func to run one test in the list.
-def run_one_test(n, test_list, parallel = 0, finished_tests = None):
+def run_one_test(n, test_list, finished_tests = None):
   """Run the Nth client test in TEST_LIST, return the result.
 
   If we're running the tests in parallel spawn the test in a new process.
@@ -1208,13 +1219,8 @@ def run_one_test(n, test_list, parallel = 0, finished_tests = None):
     return 1
 
   # Run the test.
-  if parallel:
-    st = SpawnTest(n, finished_tests)
-    st.start()
-    return 0
-  else:
-    exit_code = TestRunner(test_list[n], n).run()
-    return exit_code
+  exit_code = TestRunner(test_list[n], n).run()
+  return exit_code
 
 def _internal_run_tests(test_list, testnums, parallel):
   """Run the tests from TEST_LIST whose indices are listed in TESTNUMS.

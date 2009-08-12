@@ -72,20 +72,20 @@ svn_client__entry_location(const char **url,
 /* Set *REVNUM to the revision number identified by REVISION.
 
    If REVISION->kind is svn_opt_revision_number, just use
-   REVISION->value.number, ignoring PATH and RA_SESSION.
+   REVISION->value.number, ignoring LOCAL_ABSPATH and RA_SESSION.
 
    Else if REVISION->kind is svn_opt_revision_committed,
    svn_opt_revision_previous, or svn_opt_revision_base, or
    svn_opt_revision_working, then the revision can be identified
    purely based on the working copy's administrative information for
-   PATH, so RA_SESSION is ignored.  If PATH is not under revision
-   control, return SVN_ERR_UNVERSIONED_RESOURCE, or if PATH is null,
-   return SVN_ERR_CLIENT_VERSIONED_PATH_REQUIRED.
+   LOCAL_ABSPATH, so RA_SESSION is ignored.  If LOCAL_ABSPATH is not
+   under revision control, return SVN_ERR_UNVERSIONED_RESOURCE, or if
+   LOCAL_ABSPATH is null, return SVN_ERR_CLIENT_VERSIONED_PATH_REQUIRED.
 
    Else if REVISION->kind is svn_opt_revision_date or
    svn_opt_revision_head, then RA_SESSION is used to retrieve the
    revision from the repository (using REVISION->value.date in the
-   former case), and PATH is ignored.  If RA_SESSION is null,
+   former case), and LOCAL_ABSPATH is ignored.  If RA_SESSION is null,
    return SVN_ERR_CLIENT_RA_ACCESS_REQUIRED.
 
    Else if REVISION->kind is svn_opt_revision_unspecified, set
@@ -104,14 +104,15 @@ svn_client__entry_location(const char **url,
 
    Else return SVN_ERR_CLIENT_BAD_REVISION.
 
-   Use POOL for any temporary allocation.  */
+   Use SCRATCH_POOL for any temporary allocation.  */
 svn_error_t *
 svn_client__get_revision_number(svn_revnum_t *revnum,
                                 svn_revnum_t *youngest_rev,
+                                svn_wc_context_t *wc_ctx,
+                                const char *local_abspath,
                                 svn_ra_session_t *ra_session,
                                 const svn_opt_revision_t *revision,
-                                const char *path,
-                                apr_pool_t *pool);
+                                apr_pool_t *scratch_pool);
 
 /* Set *COPYFROM_PATH and *COPYFROM_REV to the path (without initial '/')
    and revision that served as the source of the copy from which PATH_OR_URL
@@ -265,45 +266,46 @@ svn_client__ensure_ra_session_url(const char **old_session_url,
                                   const char *session_url,
                                   apr_pool_t *pool);
 
-/* Set REPOS_ROOT to the URL which represents the root of the
-   repository in with PATH_OR_URL (at PEG_REVISION) is versioned.  Use
-   the authentication baton cached in CTX as necessary.
+/* Set REPOS_ROOT, allocated in RESULT_POOL to the URL which represents
+   the root of the repository in with ABSPATH_OR_URL (at PEG_REVISION) is
+   versioned.  Use the authentication baton and working copy context
+   cached in CTX as necessary.
 
-   ADM_ACCESS is a working copy administrative access baton associated
-   with PATH_OR_URL (if PATH_OR_URL is a working copy path), or NULL.
-
-   Use POOL for all allocations. */
+   Use SCRATCH_POOL for temporary allocations. */
 svn_error_t *
 svn_client__get_repos_root(const char **repos_root,
-                           const char *path_or_url,
+                           const char *abspath_or_url,
                            const svn_opt_revision_t *peg_revision,
-                           svn_wc_adm_access_t *adm_access,
                            svn_client_ctx_t *ctx,
-                           apr_pool_t *pool);
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool);
 
-/* Return the path of PATH_OR_URL relative to the repository root
-   (REPOS_ROOT) in REL_PATH (URI-decoded).  If INCLUDE_LEADING_SLASH
-   is set, the returned result will have a leading slash; otherwise,
-   it will not.
+/* Return the path of ABSPATH_OR_URL relative to the repository root
+   (REPOS_ROOT) in REL_PATH (URI-decoded), both allocated in RESULT_POOL.
+   If INCLUDE_LEADING_SLASH is set, the returned result will have a leading
+   slash; otherwise, it will not.
 
    The remaining parameters are used to procure the repository root.
    Either REPOS_ROOT or RA_SESSION -- but not both -- may be NULL.
-   REPOS_ROOT or ADM_ACCESS (which may also be NULL) should be passed
-   when available as an optimization (in that order of preference).
+   REPOS_ROOT should be passed when available as an optimization (in
+   that order of preference).
 
    CAUTION:  While having a leading slash on a so-called relative path
    might work out well for functionality that interacts with
    mergeinfo, it results in a relative path that cannot be naively
    svn_path_join()'d with a repository root URL to provide a full URL.
+
+   Use SCRATCH_POOL for temporary allocations.
 */
 svn_error_t *
 svn_client__path_relative_to_root(const char **rel_path,
-                                  const char *path_or_url,
+                                  svn_wc_context_t *wc_ctx,
+                                  const char *abspath_or_url,
                                   const char *repos_root,
                                   svn_boolean_t include_leading_slash,
                                   svn_ra_session_t *ra_session,
-                                  svn_wc_adm_access_t *adm_access,
-                                  apr_pool_t *pool);
+                                  apr_pool_t *result_pool,
+                                  apr_pool_t *scratch_pool);
 
 /* Return the property value for any PROPNAME set on TARGET in *PROPS,
    with WC paths of char * for keys and property values of
@@ -521,6 +523,8 @@ svn_client__make_local_parents(const char *path,
    explicit copying; instead, just send copyfrom-args to add_file(),
    and possibly follow up with an apply_textdelta() against the copied
    file.
+
+   If INNERUPDATE is true, no anchor check is performed on the update target.
 */
 svn_error_t *
 svn_client__update_internal(svn_revnum_t *result_rev,
@@ -532,6 +536,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
                             svn_boolean_t allow_unver_obstructions,
                             svn_boolean_t *timestamp_sleep,
                             svn_boolean_t send_copyfrom_args,
+                            svn_boolean_t innerupdate,
                             svn_client_ctx_t *ctx,
                             apr_pool_t *pool);
 
@@ -594,7 +599,10 @@ typedef struct
    *TIMESTAMP_SLEEP if no sleep is required.  If
    ALLOW_UNVER_OBSTRUCTIONS is TRUE, unversioned children of PATH that
    obstruct items added from the repos are tolerated; if FALSE, these
-   obstructions cause the checkout to fail. */
+   obstructions cause the checkout to fail.
+
+   If INNERCHECKOUT is true, no anchor check is performed on the target.
+   */
 svn_error_t *
 svn_client__checkout_internal(svn_revnum_t *result_rev,
                               const char *URL,
@@ -605,6 +613,7 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
                               svn_depth_t depth,
                               svn_boolean_t ignore_externals,
                               svn_boolean_t allow_unver_obstructions,
+                              svn_boolean_t innercheckout,
                               svn_boolean_t *timestamp_sleep,
                               svn_client_ctx_t *ctx,
                               apr_pool_t *pool);
@@ -622,7 +631,10 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
    children of PATH that obstruct items added from the repos are tolerated;
    if FALSE, these obstructions cause the switch to fail.
 
-   DEPTH and DEPTH_IS_STICKY behave as for svn_client__update_internal(). */
+   DEPTH and DEPTH_IS_STICKY behave as for svn_client__update_internal().
+
+   If INNERSWITCH is true, no anchor check is performed on the target.
+   */
 svn_error_t *
 svn_client__switch_internal(svn_revnum_t *result_rev,
                             const char *path,
@@ -635,6 +647,7 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
                             svn_boolean_t *timestamp_sleep,
                             svn_boolean_t ignore_externals,
                             svn_boolean_t allow_unver_obstructions,
+                            svn_boolean_t innerswitch,
                             svn_client_ctx_t *ctx,
                             apr_pool_t *pool);
 
@@ -940,7 +953,6 @@ svn_client__condense_commit_items(const char **base_url,
 svn_error_t *
 svn_client__do_commit(const char *base_url,
                       apr_array_header_t *commit_items,
-                      svn_wc_adm_access_t *adm_access,
                       const svn_delta_editor_t *editor,
                       void *edit_baton,
                       const char *notify_path_prefix,

@@ -2304,6 +2304,7 @@ def tree_conflicts_on_switch_1_1(sbox):
     'DD/D1/D2/epsilon'  : Item(status='D '),
     'DDD/D1/D2/D3/zeta' : Item(status='D '),
     })
+  expected_status.tweak('', switched='S')
 
   # Update to the target rev.
   expected_status.tweak(wc_rev=3)
@@ -2341,6 +2342,7 @@ def tree_conflicts_on_switch_1_2(sbox):
   expected_status.tweak('F/alpha',
                         'D/D1',
                         status='! ', wc_rev=None)
+  expected_status.tweak('', switched='S')
   # Remove the incoming deletes from status and disk.
   expected_status.remove('DD/D1/D2',
                          'DDD/D1/D2/D3',
@@ -2391,6 +2393,7 @@ def tree_conflicts_on_switch_2_1(sbox):
     'DDF/D1/D2',
     'DDF/D1/D2/gamma',
     copied='+', wc_rev='-')
+  expected_status.tweak('', switched='S')
   svntest.actions.deep_trees_run_tests_scheme_for_switch(sbox,
     [ DeepTreesTestCase("local_leaf_edit_incoming_tree_del",
                         leaf_edit,
@@ -2416,6 +2419,7 @@ def tree_conflicts_on_switch_2_2(sbox):
   expected_status.add({'' : Item(),
                        'F/alpha' : Item()})
   expected_status.tweak(contents=None, status='  ', wc_rev=3)
+  expected_status.tweak('', switched='S')
 
   # Expect the incoming tree deletes and the local leaf deletes to mean
   # that all deleted paths are *really* gone, not simply scheduled for
@@ -2464,6 +2468,7 @@ def tree_conflicts_on_switch_3(sbox):
   expected_disk = disk_empty_dirs.copy()
 
   expected_status = deep_trees_status_local_tree_del.copy()
+  expected_status.tweak('', switched='S')
 
   # Expect the incoming tree deletes and the local tree deletes to mean
   # that all deleted paths are *really* gone, not simply scheduled for

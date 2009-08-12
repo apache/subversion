@@ -75,21 +75,12 @@ void svn_wc__adm_access_set_entries(svn_wc_adm_access_t *adm_access,
 apr_hash_t *svn_wc__adm_access_entries(svn_wc_adm_access_t *adm_access);
 
 
-/* Return an access baton for PATH in *ADM_ACCESS.  This function is used
-   to lock the working copy during construction of the admin area, it
-   necessarily does less checking than svn_wc_adm_open3. */
-svn_error_t *svn_wc__adm_pre_open(svn_wc_adm_access_t **adm_access,
-                                  const char *path,
-                                  apr_pool_t *pool);
-
-/* Returns TRUE if PATH is a working copy directory that is obstructed or
-   missing such that an access baton is not available for PATH.  This means
-   that ADM_ACCESS is an access baton set that contains an access baton for
-   the parent of PATH and when that access baton was opened it must have
-   attempted to open PATH, i.e. it must have been opened with the TREE_LOCK
-   parameter set TRUE. */
-svn_boolean_t svn_wc__adm_missing(const svn_wc_adm_access_t *adm_access,
-                                  const char *path);
+/* Returns TRUE if LOCAL_ABSPATH is a working copy directory that is obstructed
+   or missing such that an access baton is not available for LOCAL_ABSPATH.
+   This means DB must also include the parent of LOCAL_ABSPATH. */
+svn_boolean_t svn_wc__adm_missing(svn_wc__db_t *db,
+                                  const char *local_abspath,
+                                  apr_pool_t *scratch_pool);
 
 /* Sets *ADM_ACCESS to an access baton for PATH from the set ASSOCIATED.
    This function is similar to svn_wc_adm_retrieve except that if the baton
@@ -115,12 +106,6 @@ svn_wc__internal_check_wc(int *wc_format,
                           svn_wc__db_t *db,
                           const char *local_abspath,
                           apr_pool_t *scratch_pool);
-
-/* Return the working copy format version number for ADM_ACCESS. */
-svn_error_t *
-svn_wc__adm_wc_format(int *wc_format,
-                      const svn_wc_adm_access_t *adm_access,
-                      apr_pool_t *scratch_pool);
 
 
 /* Set the WC FORMAT of this access baton. */

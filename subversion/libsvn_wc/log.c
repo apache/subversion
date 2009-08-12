@@ -2269,8 +2269,9 @@ run_existing_logs(svn_wc_adm_access_t *adm_access,
           SVN_ERR(svn_wc__props_modified(&modified, db, entry_abspath,
                                          iterpool));
           if (entry->kind == svn_node_file)
-            SVN_ERR(svn_wc_text_modified_p(&modified, entry_path, FALSE,
-                                           adm_access, iterpool));
+            SVN_ERR(svn_wc__text_modified_internal_p(&modified, db,
+                                        entry_abspath, FALSE, TRUE,
+                                        iterpool));
         }
     }
   svn_pool_destroy(iterpool);

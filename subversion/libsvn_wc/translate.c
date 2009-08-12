@@ -266,8 +266,9 @@ svn_wc__get_eol_style(svn_subst_eol_style_t *style,
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
   /* Get the property value. */
-  SVN_ERR(svn_wc__internal_propget(&propval, SVN_PROP_EOL_STYLE, local_abspath,
-                                   db, result_pool, scratch_pool));
+  SVN_ERR(svn_wc__internal_propget(&propval, db, local_abspath,
+                                   SVN_PROP_EOL_STYLE, result_pool,
+                                   scratch_pool));
 
   /* Convert it. */
   svn_subst_eol_style_from_value(style, eol, propval ? propval->data : NULL);
@@ -316,8 +317,8 @@ svn_wc__get_keywords(apr_hash_t **keywords,
     {
       const svn_string_t *propval;
 
-      SVN_ERR(svn_wc__internal_propget(&propval, SVN_PROP_KEYWORDS,
-                                       local_abspath, db, scratch_pool,
+      SVN_ERR(svn_wc__internal_propget(&propval, db, local_abspath,
+                                       SVN_PROP_KEYWORDS, scratch_pool,
                                        scratch_pool));
 
       /* The easy answer. */
@@ -376,8 +377,9 @@ svn_wc__get_special(svn_boolean_t *special,
 
   /* Get the property value. */
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-  SVN_ERR(svn_wc__internal_propget(&propval, SVN_PROP_SPECIAL, local_abspath,
-                                   db, scratch_pool, scratch_pool));
+  SVN_ERR(svn_wc__internal_propget(&propval, db, local_abspath,
+                                   SVN_PROP_SPECIAL, scratch_pool,
+                                   scratch_pool));
   *special = propval != NULL;
 
   return SVN_NO_ERROR;
@@ -394,8 +396,8 @@ svn_wc__maybe_set_executable(svn_boolean_t *did_set,
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
-  SVN_ERR(svn_wc__internal_propget(&propval, SVN_PROP_EXECUTABLE,
-                                   local_abspath, db, scratch_pool,
+  SVN_ERR(svn_wc__internal_propget(&propval, db, local_abspath,
+                                   SVN_PROP_EXECUTABLE, scratch_pool,
                                    scratch_pool));
   if (propval != NULL)
     {
@@ -443,8 +445,8 @@ svn_wc__maybe_set_read_only(svn_boolean_t *did_set,
   else if (lock)
     return SVN_NO_ERROR;
 
-  SVN_ERR(svn_wc__internal_propget(&needs_lock, SVN_PROP_NEEDS_LOCK,
-                                   local_abspath, db, scratch_pool,
+  SVN_ERR(svn_wc__internal_propget(&needs_lock, db, local_abspath,
+                                   SVN_PROP_NEEDS_LOCK, scratch_pool,
                                    scratch_pool));
   if (needs_lock != NULL)
     {
