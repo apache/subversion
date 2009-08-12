@@ -340,6 +340,9 @@ svn_cl__merge(apr_getopt_t *os,
                               pool);
     }
 
+  if (! opt_state->quiet)
+    SVN_ERR(svn_cl__print_conflict_stats(ctx->notify_baton2, pool));
+
   if (err && (! opt_state->reintegrate))
     return svn_cl__may_need_force(err);
 
