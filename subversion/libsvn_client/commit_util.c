@@ -921,7 +921,6 @@ svn_client__harvest_committables(apr_hash_t **committables,
 
   do
     {
-      svn_wc_adm_access_t *adm_access;
       const svn_wc_entry_t *entry;
       const char *target;
       const char *target_abspath;
@@ -942,11 +941,9 @@ svn_client__harvest_committables(apr_hash_t **committables,
       SVN_ERR(svn_dirent_get_absolute(&target_abspath, target, subpool));
 
       /* No entry?  This TARGET isn't even under version control! */
-      SVN_ERR(svn_wc_adm_probe_retrieve(&adm_access, parent_adm,
-                                        target, subpool));
-
-      err = svn_wc__entry_versioned(&entry, target, adm_access, FALSE,
-                                    subpool);
+      err = svn_wc__get_entry_versioned(&entry, ctx->wc_ctx, target_abspath,
+                                        svn_node_unknown, FALSE, FALSE,
+                                        subpool, subpool);
       /* If a target of the commit is a tree-conflicted node that
        * has no entry (e.g. locally deleted), issue a proper tree-
        * conflicts error instead of a "not under version control". */
