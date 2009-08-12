@@ -177,12 +177,9 @@ svn_client__get_wc_or_repos_mergeinfo(svn_mergeinfo_t *target_mergeinfo,
 /* Set *MERGEINFO_P to a mergeinfo constructed solely from the
    natural history of PATH_OR_URL@PEG_REVISION.  RA_SESSION is an RA
    session whose session URL maps to PATH_OR_URL's URL, or NULL.
-   ADM_ACCESS is a working copy administrative access baton which can
-   be used to fetch information about PATH_OR_URL (if PATH_OR_URL is a
-   working copy path), or NULL.  If RANGE_YOUNGEST and RANGE_OLDEST
-   are valid, use them to bound the revision ranges of returned
-   mergeinfo.  See svn_ra_get_location_segments() for the rules
-   governing PEG_REVISION, START_REVISION, and END_REVISION.*/
+   If RANGE_YOUNGEST and RANGE_OLDEST are valid, use them to bound the
+   revision ranges of returned mergeinfo.  See svn_ra_get_location_segments()
+   for the rules governing PEG_REVISION, START_REVISION, and END_REVISION.*/
 svn_error_t *
 svn_client__get_history_as_mergeinfo(svn_mergeinfo_t *mergeinfo_p,
                                      const char *path_or_url,
@@ -190,7 +187,6 @@ svn_client__get_history_as_mergeinfo(svn_mergeinfo_t *mergeinfo_p,
                                      svn_revnum_t range_youngest,
                                      svn_revnum_t range_oldest,
                                      svn_ra_session_t *ra_session,
-                                     svn_wc_adm_access_t *adm_access,
                                      svn_client_ctx_t *ctx,
                                      apr_pool_t *pool);
 
