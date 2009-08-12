@@ -502,7 +502,6 @@ svn_client__get_history_as_mergeinfo(svn_mergeinfo_t *mergeinfo_p,
                                      svn_revnum_t range_youngest,
                                      svn_revnum_t range_oldest,
                                      svn_ra_session_t *ra_session,
-                                     svn_wc_adm_access_t *adm_access,
                                      svn_client_ctx_t *ctx,
                                      apr_pool_t *pool)
 {
@@ -517,9 +516,10 @@ svn_client__get_history_as_mergeinfo(svn_mergeinfo_t *mergeinfo_p,
      revision.  Note that if the local item is scheduled for addition
      as a copy of something else, we'll use its copyfrom data to query
      its history.  */
+  if (!svn_path_is_url(path_or_url))
+    SVN_ERR(svn_dirent_get_absolute(&path_or_url, path_or_url, pool));
   SVN_ERR(svn_client__derive_location(&url, &peg_revnum, path_or_url,
-                                      peg_revision, session, adm_access,
-                                      ctx, pool));
+                                      peg_revision, session, ctx, pool, pool));
 
   if (session == NULL)
     {
@@ -1201,7 +1201,7 @@ svn_client_mergeinfo_log_merged(const char *path_or_url,
                                                real_src_peg_revision,
                                                SVN_INVALID_REVNUM,
                                                SVN_INVALID_REVNUM,
-                                               NULL, NULL, ctx, pool));
+                                               NULL, ctx, pool));
   SVN_ERR(svn_mergeinfo_intersect2(&mergeinfo, tgt_mergeinfo,
                                    source_history, FALSE, pool, pool));
 
@@ -1325,7 +1325,7 @@ svn_client_mergeinfo_log_eligible(const char *path_or_url,
                                                peg_revision,
                                                SVN_INVALID_REVNUM,
                                                SVN_INVALID_REVNUM,
-                                               NULL, NULL, ctx, pool));
+                                               NULL, ctx, pool));
   if (! mergeinfo)
     mergeinfo = history;
   else
@@ -1342,7 +1342,7 @@ svn_client_mergeinfo_log_eligible(const char *path_or_url,
                                                real_src_peg_revision,
                                                SVN_INVALID_REVNUM,
                                                SVN_INVALID_REVNUM,
-                                               ra_session, NULL, ctx, pool));
+                                               ra_session, ctx, pool));
 
   /* Now, we want to remove from the possible mergeinfo
      (SOURCE_HISTORY) the merges already present in our PATH_OR_URL. */

@@ -752,12 +752,12 @@ svn_client__get_youngest_common_ancestor(const char **ancestor_path,
                                                &revision1,
                                                SVN_INVALID_REVNUM,
                                                SVN_INVALID_REVNUM,
-                                               NULL, NULL, ctx, pool));
+                                               NULL, ctx, pool));
   SVN_ERR(svn_client__get_history_as_mergeinfo(&history2, path_or_url2,
                                                &revision2,
                                                SVN_INVALID_REVNUM,
                                                SVN_INVALID_REVNUM,
-                                               NULL, NULL, ctx, pool));
+                                               NULL, ctx, pool));
 
   /* Loop through the first location's history, check for overlapping
      paths and ranges in the second location's history, and

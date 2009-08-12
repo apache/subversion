@@ -1000,7 +1000,6 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
             target_entry->revision,
             SVN_INVALID_REVNUM,
             merge_b->ra_session2,
-            adm_access,
             merge_b->ctx,
             pool));
 
@@ -2977,6 +2976,10 @@ get_full_mergeinfo(svn_mergeinfo_t *recorded_mergeinfo,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
 {
+  const char *target_abspath;
+
+  SVN_ERR(svn_dirent_get_absolute(&target_abspath, target_wcpath, pool));
+
   /* First, we get the real mergeinfo. */
   if (recorded_mergeinfo)
     {
@@ -3004,9 +3007,9 @@ get_full_mergeinfo(svn_mergeinfo_t *recorded_mergeinfo,
                  && (start > end));
 
       peg_revision.kind = svn_opt_revision_working;
-      SVN_ERR(svn_client__derive_location(&url, &target_rev, target_wcpath,
+      SVN_ERR(svn_client__derive_location(&url, &target_rev, target_abspath,
                                           &peg_revision, ra_session,
-                                          adm_access, ctx, pool));
+                                          ctx, pool, pool));
 
       if (target_rev <= end)
         {
@@ -3061,8 +3064,7 @@ get_full_mergeinfo(svn_mergeinfo_t *recorded_mergeinfo,
       peg_revision.value.number = target_rev;
       SVN_ERR(svn_client__get_history_as_mergeinfo(implicit_mergeinfo, url,
                                                    &peg_revision, start, end,
-                                                   ra_session, NULL, ctx,
-                                                   pool));
+                                                   ra_session, ctx, pool));
 
       /* If we created an RA_SESSION above, destroy it.  Otherwise, if
          reparented an existing session, point it back where it was when
@@ -3675,8 +3677,8 @@ find_gaps_in_merge_source_history(svn_revnum_t *gap_start,
   peg_rev.value.number = young_rev;
   SVN_ERR(svn_client__get_history_as_mergeinfo(&implicit_src_mergeinfo, url,
                                                &peg_rev, young_rev, old_rev,
-                                               ra_session, NULL,
-                                               merge_b->ctx, scratch_pool));
+                                               ra_session, merge_b->ctx,
+                                               result_pool));
 
   rangelist = apr_hash_get(implicit_src_mergeinfo,
                            merge_src_canon_path,
@@ -8887,7 +8889,7 @@ calculate_left_hand_side(const char **url_left,
         svn_path_url_add_component2(source_repos_root,
                                     target_repos_rel_path,
                                     subpool),
-        &peg_revision, ra_session, NULL, ctx, subpool));
+        &peg_revision, ra_session, ctx, subpool, subpool));
       *url_left = apr_pstrdup(pool, youngest_url);
     }
 
