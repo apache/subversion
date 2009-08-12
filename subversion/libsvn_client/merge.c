@@ -6850,7 +6850,7 @@ record_mergeinfo_for_dir_merge(const svn_wc_entry_t *target_entry,
           SVN_ERR(svn_client__elide_mergeinfo(
             child->path,
             in_switched_subtree ? NULL : merge_b->target,
-            child_entry, adm_access, merge_b->ctx, iterpool));
+            child_entry, merge_b->ctx, iterpool));
         }
     } /* (i = 0; i < notify_b->children_with_mergeinfo->nelts; i++) */
 
@@ -7866,7 +7866,7 @@ do_merge(apr_array_header_t *merge_sources,
       /* The final mergeinfo on TARGET_WCPATH may itself elide. */
       if (! dry_run)
         SVN_ERR(svn_client__elide_mergeinfo(target, NULL, target_entry,
-                                            adm_access, ctx, subpool));
+                                            ctx, subpool));
     }
 
   /* Let everyone know we're finished here. */

@@ -676,7 +676,6 @@ svn_error_t *
 svn_client__elide_mergeinfo(const char *target_wcpath,
                             const char *wc_elision_limit_path,
                             const svn_wc_entry_t *entry,
-                            svn_wc_adm_access_t *adm_access,
                             svn_client_ctx_t *ctx,
                             apr_pool_t *pool)
 {
@@ -769,7 +768,7 @@ svn_client__elide_mergeinfo_for_tree(apr_hash_t *children_with_mergeinfo,
                                           FALSE, FALSE,
                                           iterpool, iterpool));
       SVN_ERR(svn_client__elide_mergeinfo(child_wcpath, NULL, child_entry,
-                                          adm_access, ctx, iterpool));
+                                          ctx, iterpool));
     }
 
   svn_pool_destroy(iterpool);
