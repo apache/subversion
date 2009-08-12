@@ -2988,8 +2988,7 @@ get_full_mergeinfo(svn_mergeinfo_t *recorded_mergeinfo,
                                                     &inherited, FALSE,
                                                     inherit, ra_session,
                                                     target_wcpath,
-                                                    adm_access, ctx,
-                                                    pool));
+                                                    ctx, pool));
       if (indirect)
         *indirect = inherited;
     }
@@ -6479,7 +6478,6 @@ process_children_with_new_mergeinfo(merge_cmd_baton_t *merge_b,
                 svn_mergeinfo_nearest_ancestor, /* We only want inherited MI */
                 merge_b->ra_session2,
                 path_with_new_mergeinfo,
-                adm_access,
                 merge_b->ctx,
                 iterpool));
 
