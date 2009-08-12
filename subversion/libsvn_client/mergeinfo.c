@@ -397,27 +397,28 @@ svn_client__get_wc_or_repos_mergeinfo(svn_mergeinfo_t *target_mergeinfo,
                                          NULL, NULL, adm_access, ctx,
                                          pool));
 
-  /* If there is no WC mergeinfo check the repository. */
+  /* If there is no WC mergeinfo check the repository for inherited
+     mergeinfo, unless TARGET_WCPATH is a local addition or has a
+     local modification which has removed all of its pristine mergeinfo. */
   if (*target_mergeinfo == NULL)
     {
-      svn_mergeinfo_t repos_mergeinfo;
-
       /* No need to check the repos if this is a local addition. */
       if (entry->schedule != svn_wc_schedule_add)
         {
-          apr_hash_t *props = apr_hash_make(pool);
+          apr_hash_t *original_props;
+          const char *local_abspath;
 
-          /* Get the pristine SVN_PROP_MERGEINFO.
-             If it exists, then it should have been deleted by the local
-             merges. So don't get the mergeinfo from the repository. Just
-             assume the mergeinfo to be NULL.
-          */
-          SVN_ERR(svn_client__get_prop_from_wc(props, SVN_PROP_MERGEINFO,
-                                               target_wcpath, TRUE, entry,
-                                               adm_access, svn_depth_empty,
-                                               NULL, ctx, pool));
-          if (apr_hash_get(props, target_wcpath, APR_HASH_KEY_STRING) == NULL)
+          /* Check to see if we have local modifications which removed all of
+             TARGET_WCPATH's pristine mergeinfo.  If that is the case then
+             TARGET_WCPATH effetively has no mergeinfo. */
+          SVN_ERR(svn_dirent_get_absolute(&local_abspath, target_wcpath,
+                                          pool));
+          SVN_ERR(svn_wc_get_prop_diffs2(NULL, &original_props, ctx->wc_ctx,
+                                         local_abspath, pool, pool));
+          if (!apr_hash_get(original_props, SVN_PROP_MERGEINFO,
+                            APR_HASH_KEY_STRING))
             {
+              svn_mergeinfo_t repos_mergeinfo;
               const char *repos_rel_path;
 
               if (ra_session == NULL)
