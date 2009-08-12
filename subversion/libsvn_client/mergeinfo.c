@@ -737,44 +737,6 @@ svn_client__elide_mergeinfo(const char *target_wcpath,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_client__elide_mergeinfo_for_tree(apr_hash_t *children_with_mergeinfo,
-                                     svn_wc_adm_access_t *adm_access,
-                                     svn_client_ctx_t *ctx,
-                                     apr_pool_t *pool)
-{
-  int i;
-  apr_pool_t *iterpool = svn_pool_create(pool);
-  apr_array_header_t *sorted_children =
-    svn_sort__hash(children_with_mergeinfo, svn_sort_compare_items_as_paths,
-                   pool);
-
-  /* sorted_children is in depth first order.  To minimize
-     svn_client__elide_mergeinfo()'s crawls up the working copy from
-     each child, run through the array backwards, effectively doing a
-     right-left post-order traversal. */
-  for (i = sorted_children->nelts -1; i >= 0; i--)
-    {
-      const svn_wc_entry_t *child_entry;
-      const char *child_wcpath;
-      const char *child_abspath;
-      svn_sort__item_t *item = &APR_ARRAY_IDX(sorted_children, i,
-                                              svn_sort__item_t);
-      svn_pool_clear(iterpool);
-      child_wcpath = item->key;
-      SVN_ERR(svn_dirent_get_absolute(&child_abspath, child_wcpath, iterpool));
-      SVN_ERR(svn_wc__get_entry_versioned(&child_entry, ctx->wc_ctx,
-                                          child_abspath, svn_node_unknown,
-                                          FALSE, FALSE,
-                                          iterpool, iterpool));
-      SVN_ERR(svn_client__elide_mergeinfo(child_wcpath, NULL, child_entry,
-                                          ctx, iterpool));
-    }
-
-  svn_pool_destroy(iterpool);
-  return SVN_NO_ERROR;
-}
-
 
 /* If the server supports Merge Tracking, set *MERGEINFO to a hash
    mapping const char * root-relative source paths to an
