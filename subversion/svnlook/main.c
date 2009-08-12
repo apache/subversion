@@ -833,6 +833,9 @@ display_prop_diffs(const apr_array_header_t *prop_diffs,
         header_fmt = _("Modified: %s\n");
       SVN_ERR(svn_cmdline_printf(pool, header_fmt, pc->name));
 
+      /* Flush stdout before we open a stream to it below. */
+      SVN_ERR(svn_cmdline_fflush(stdout));
+
       {
         svn_stream_t *out;
         svn_diff_t *diff;
