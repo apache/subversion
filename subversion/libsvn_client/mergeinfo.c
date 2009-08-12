@@ -759,12 +759,16 @@ svn_client__elide_mergeinfo_for_tree(apr_hash_t *children_with_mergeinfo,
     {
       const svn_wc_entry_t *child_entry;
       const char *child_wcpath;
+      const char *child_abspath;
       svn_sort__item_t *item = &APR_ARRAY_IDX(sorted_children, i,
                                               svn_sort__item_t);
       svn_pool_clear(iterpool);
       child_wcpath = item->key;
-      SVN_ERR(svn_wc__entry_versioned(&child_entry, child_wcpath, adm_access,
-                                      FALSE, iterpool));
+      SVN_ERR(svn_dirent_get_absolute(&child_abspath, child_wcpath, iterpool));
+      SVN_ERR(svn_wc__get_entry_versioned(&child_entry, ctx->wc_ctx,
+                                          child_abspath, svn_node_unknown,
+                                          FALSE, FALSE,
+                                          iterpool, iterpool));
       SVN_ERR(svn_client__elide_mergeinfo(child_wcpath, NULL, child_entry,
                                           adm_access, ctx, iterpool));
     }
