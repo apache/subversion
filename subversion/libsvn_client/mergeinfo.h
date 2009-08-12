@@ -109,7 +109,6 @@ svn_client__get_wc_mergeinfo(svn_mergeinfo_t *mergeinfo,
                              const char *wcpath,
                              const char *limit_path,
                              const char **walked_path,
-                             svn_wc_adm_access_t *adm_access,
                              svn_client_ctx_t *ctx,
                              apr_pool_t *pool);
 
