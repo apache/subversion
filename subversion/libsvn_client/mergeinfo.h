@@ -169,7 +169,6 @@ svn_client__get_wc_or_repos_mergeinfo(svn_mergeinfo_t *target_mergeinfo,
                                       svn_mergeinfo_inheritance_t inherit,
                                       svn_ra_session_t *ra_session,
                                       const char *target_wcpath,
-                                      svn_wc_adm_access_t *adm_access,
                                       svn_client_ctx_t *ctx,
                                       apr_pool_t *pool);
 

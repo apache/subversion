@@ -375,7 +375,6 @@ svn_client__get_wc_or_repos_mergeinfo(svn_mergeinfo_t *target_mergeinfo,
                                       svn_mergeinfo_inheritance_t inherit,
                                       svn_ra_session_t *ra_session,
                                       const char *target_wcpath,
-                                      svn_wc_adm_access_t *adm_access,
                                       svn_client_ctx_t *ctx,
                                       apr_pool_t *pool)
 {
@@ -725,7 +724,7 @@ svn_client__elide_mergeinfo(const char *target_wcpath,
           SVN_ERR(svn_client__get_wc_or_repos_mergeinfo
                   (&mergeinfo, entry, &inherited, TRUE,
                    svn_mergeinfo_nearest_ancestor,
-                   NULL, target_wcpath, adm_access, ctx, pool));
+                   NULL, target_wcpath, ctx, pool));
         }
 
       /* If there is nowhere to elide TARGET_WCPATH's mergeinfo to and
@@ -854,7 +853,7 @@ get_mergeinfo(svn_mergeinfo_t *mergeinfo,
                                                     &indirect, FALSE,
                                                     svn_mergeinfo_inherited,
                                                     NULL, path_or_url,
-                                                    adm_access, ctx, pool));
+                                                    ctx, pool));
       SVN_ERR(svn_wc_adm_close2(adm_access, subpool));
     }
 
