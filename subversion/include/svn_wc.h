@@ -5855,10 +5855,10 @@ svn_wc_create_tmp_file(apr_file_t **fp,
 
 /* EOL conversion and keyword expansion. */
 
-/** Set @a xlated_path to a translated copy of @a src
+/** Set @a xlated_abspath to a translated copy of @a src
  * or to @a src itself if no translation is necessary.
- * That is, if @a versioned_file's properties indicate newline conversion or
- * keyword expansion, point @a *xlated_path to a copy of @a src
+ * That is, if @a versioned_abspath's properties indicate newline conversion 
+ * or keyword expansion, point @a *xlated_abspath to a copy of @a src
  * whose newlines and keywords are converted using the translation
  * as requested by @a flags.
  *
@@ -5872,20 +5872,38 @@ svn_wc_create_tmp_file(apr_file_t **fp,
  * @c SVN_WC_TRANSLATE_FORCE_COPY flag in @a flags.
  *
  * This function is generally used to get a file that can be compared
- * meaningfully against @a versioned_file's text base, if
- * @c SVN_WC_TRANSLATE_TO_NF is specified, against @a versioned_file itself
+ * meaningfully against @a versioned_abspath's text base, if
+ * @c SVN_WC_TRANSLATE_TO_NF is specified, against @a versioned_abspath itself
  * if @c SVN_WC_TRANSLATE_FROM_NF is specified.
  *
- * Output files are created in the temp file area belonging to
- * @a versioned_file.  By default they will be deleted at pool cleanup.
+ * The output file is created in the temp file area belonging to
+ * @a versioned_abspath. By default it will be deleted at result_pool
+ * cleanup. If @a flags includes @c SVN_WC_TRANSLATE_NO_OUTPUT_CLEANUP,
+ * the default result_pool cleanup handler to remove @a *xlated_abspath is
+ * not registered.
  *
- * If @c SVN_WC_TRANSLATE_NO_OUTPUT_CLEANUP is specified, the default
- * pool cleanup handler to remove @a *xlated_path is not registered.
+ * If an error is returned, the effect on @a *xlated_abspath is undefined.
  *
- * If an error is returned, the effect on @a *xlated_path is undefined.
+ * @since New in 1.7.
+ */ 
+svn_error_t *
+svn_wc_translated_file3(const char **xlated_abspath,
+                        const char *src,
+                        svn_wc_context_t *wc_ctx,
+                        const char *versioned_abspath,
+                        apr_uint32_t flags,
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool);
+
+
+/** Similar to svn_wc_translated_file3(), but with an adm_access baton
+ * and relative paths instead of a wc_context and absolute paths, and
+ * with a single pool.
  *
- * @since New in 1.4
+ * @since New in 1.4.
+ * @deprecated Provided for compatibility with the 1.6 API
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_translated_file2(const char **xlated_path,
                         const char *src,
