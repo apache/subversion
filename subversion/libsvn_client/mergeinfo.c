@@ -173,7 +173,6 @@ svn_client__get_wc_mergeinfo(svn_mergeinfo_t *mergeinfo,
                              const char *wcpath,
                              const char *limit_path,
                              const char **walked_path,
-                             svn_wc_adm_access_t *adm_access,
                              svn_client_ctx_t *ctx,
                              apr_pool_t *pool)
 {
@@ -230,6 +229,7 @@ svn_client__get_wc_mergeinfo(svn_mergeinfo_t *mergeinfo,
           inherit != svn_mergeinfo_explicit &&
           !svn_dirent_is_root(wcpath, strlen(wcpath)))
         {
+          svn_wc_adm_access_t *adm_access;
           svn_error_t *err;
 
           /* Don't look any higher than the limit path. */
@@ -394,8 +394,7 @@ svn_client__get_wc_or_repos_mergeinfo(svn_mergeinfo_t *target_mergeinfo,
   else
     SVN_ERR(svn_client__get_wc_mergeinfo(target_mergeinfo, indirect,
                                          inherit, entry, target_wcpath,
-                                         NULL, NULL, adm_access, ctx,
-                                         pool));
+                                         NULL, NULL, ctx, pool));
 
   /* If there is no WC mergeinfo check the repository for inherited
      mergeinfo, unless TARGET_WCPATH is a local addition or has a
@@ -702,8 +701,7 @@ svn_client__elide_mergeinfo(const char *target_wcpath,
                                            wc_elision_limit_path
                                              ? wc_elision_limit_path
                                              : NULL,
-                                           &walk_path, adm_access,
-                                           ctx, pool));
+                                           &walk_path, ctx, pool));
 
      /* If TARGET_WCPATH has no explicit mergeinfo, there's nothing to
          elide, we're done. */
@@ -717,8 +715,7 @@ svn_client__elide_mergeinfo(const char *target_wcpath,
                                            wc_elision_limit_path
                                              ? wc_elision_limit_path
                                              : NULL,
-                                           &walk_path, adm_access,
-                                           ctx, pool));
+                                           &walk_path, ctx, pool));
 
       /* If TARGET_WCPATH inherited no mergeinfo from the WC and we are
          not limiting our search to the working copy then check if it

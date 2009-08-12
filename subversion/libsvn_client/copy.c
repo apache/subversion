@@ -136,8 +136,7 @@ calculate_target_mergeinfo(svn_ra_session_t *ra_session,
           SVN_ERR(svn_client__get_wc_mergeinfo(&src_mergeinfo, &inherited,
                                                svn_mergeinfo_inherited,
                                                entry, src_path_or_url, NULL,
-                                               NULL, adm_access, ctx,
-                                               pool));
+                                               NULL, ctx, pool));
         }
     }
 
