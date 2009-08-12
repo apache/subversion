@@ -437,13 +437,29 @@ assemble_status(svn_wc_status2_t **status,
 #endif /* HAVE_SYMLINK */
           )
         {
-          SVN_ERR(svn_wc__text_modified_internal_p(&text_modified_p, db,
-                                                   local_abspath, FALSE,
-                                                   TRUE, scratch_pool));
+          svn_error_t *err = svn_wc__text_modified_internal_p(&text_modified_p,
+                                                              db,
+                                                              local_abspath,
+                                                              FALSE, TRUE,
+                                                              scratch_pool);
 
-          /* Record actual text status */
-          pristine_text_status = text_modified_p ? svn_wc_status_modified
-                                                 : svn_wc_status_normal;
+          if (err)
+            {
+              if (!APR_STATUS_IS_EACCES(err->apr_err))
+                return svn_error_return(err);
+
+              /* An access denied is very common on Windows when another
+                 application has the file open.  Previously we ignored
+                 this error in svn_wc__text_modified_internal_p, where it
+                 should have really errored. */
+              svn_error_clear(err);
+            }
+          else
+            {
+              /* Record actual text status */
+              pristine_text_status = text_modified_p ? svn_wc_status_modified
+                                                     : svn_wc_status_normal;
+            }
         }
 
       if (text_modified_p)
