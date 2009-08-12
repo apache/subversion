@@ -50,6 +50,11 @@ typedef struct svn_client__merge_path_t
   svn_boolean_t absent;              /* PATH is absent from the WC, probably
                                         due to authz restrictions. */
 
+  svn_boolean_t child_of_noninheritable; /* PATH has no explict mergeinfo
+                                            itself but is the child of a
+                                            path with noniheritable
+                                            mergeinfo. */
+
   /* The remaining ranges to be merged to PATH.  When describing a forward
      merge this rangelist adheres to the rules for rangelists described in
      svn_mergeinfo.h.  However, when describing reverse merges this
@@ -60,8 +65,9 @@ typedef struct svn_client__merge_path_t
      may be empty but should never be NULL unless ABSENT is true. */
   apr_array_header_t *remaining_ranges;
 
-  svn_mergeinfo_t pre_merge_mergeinfo;  /* Mergeinfo on PATH prior to a
-                                           merge. May be NULL. */
+  svn_mergeinfo_t pre_merge_mergeinfo;  /* Explicit or inherited mergeinfo
+                                           on PATH prior to a merge.
+                                           May be NULL. */
   svn_mergeinfo_t implicit_mergeinfo;   /* Implicit mergeinfo on PATH prior
                                            to a merge.  May be NULL. */
   svn_boolean_t indirect_mergeinfo;     /* Whether PRE_MERGE_MERGEINFO was
