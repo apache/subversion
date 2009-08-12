@@ -46,9 +46,9 @@ extern "C" {
  *    append to the existing stringbuf there."
  */
 
-/* The svn_wc__loggy_* functions in this section take path arguments
-   with the same base as with which the adm_access was opened.
-
+/* Each path argument to the svn_wc__loggy_* functions in this section can
+   be either absolute or relative to the path with which the adm_access was
+   opened.
 */
 
 /* Extend **LOG_ACCUM with log instructions to append the contents
