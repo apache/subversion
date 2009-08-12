@@ -552,7 +552,7 @@ svn_cl__log(apr_getopt_t *os,
                 return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                                          _("cannot assign with 'with-revprop'"
                                            " option (drop the '=')"));
-              APR_ARRAY_PUSH(revprops, char *) = property;
+              APR_ARRAY_PUSH(revprops, const char *) = property;
             }
         }
       else

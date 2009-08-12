@@ -202,7 +202,7 @@ switch_dir_external(const char *path,
                                                   svn_depth_unknown, FALSE,
                                                   FALSE, FALSE,
                                                   timestamp_sleep, TRUE,
-                                                  ctx, subpool));
+                                                  TRUE, ctx, subpool));
               svn_pool_destroy(subpool);
               return SVN_NO_ERROR;
             }
@@ -243,7 +243,8 @@ switch_dir_external(const char *path,
                                                   peg_revision, revision,
                                                   NULL, svn_depth_infinity,
                                                   TRUE, timestamp_sleep,
-                                                  FALSE, FALSE, ctx, subpool));
+                                                  FALSE, FALSE, TRUE, ctx,
+                                                  subpool));
 
               svn_pool_destroy(subpool);
               return SVN_NO_ERROR;
@@ -276,9 +277,8 @@ switch_dir_external(const char *path,
 
   /* ... Hello, new hotness. */
   return svn_client__checkout_internal(NULL, url, path, peg_revision,
-                                       revision, NULL,
-                                       SVN_DEPTH_INFINITY_OR_FILES(TRUE),
-                                       FALSE, FALSE, timestamp_sleep,
+                                       revision, NULL, svn_depth_infinity,
+                                       FALSE, FALSE, TRUE, timestamp_sleep,
                                        ctx, pool);
 }
 
@@ -342,8 +342,8 @@ switch_file_external(const char *path,
              wc is the same as the file external. */
           peg_rev.kind = svn_opt_revision_base;
           SVN_ERR(svn_client__get_repos_root(&dest_wc_repos_root_url,
-                                             anchor, &peg_rev,
-                                             target_adm_access, ctx, subpool));
+                                             anchor_abspath, &peg_rev,
+                                             ctx, subpool, subpool));
 
           if (0 != strcmp(repos_root_url, dest_wc_repos_root_url))
             return svn_error_createf
@@ -387,7 +387,6 @@ switch_file_external(const char *path,
     }
   else
     {
-      const svn_wc_entry_t *anchor_dir_entry;
       apr_file_t *f;
       svn_boolean_t text_conflicted;
       svn_boolean_t prop_conflicted;
@@ -398,8 +397,6 @@ switch_file_external(const char *path,
          conflict on the directory.  To prevent resolving a conflict
          due to another change on the directory, do not allow a file
          external to be added when one exists. */
-      SVN_ERR(svn_wc__entry_versioned(&anchor_dir_entry, anchor,
-                                      target_adm_access, FALSE, subpool));
       SVN_ERR(svn_wc_conflicted_p3(&text_conflicted, &prop_conflicted,
                                    &tree_conflicted, ctx->wc_ctx,
                                    anchor_abspath, subpool));
@@ -446,6 +443,7 @@ switch_file_external(const char *path,
                                     timestamp_sleep,
                                     TRUE, /* ignore_externals */
                                     FALSE, /* allow_unver_obstructions */
+                                    FALSE, /* innerswitch */
                                     ctx,
                                     pool);
   if (err)
@@ -846,7 +844,7 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
                      &(new_item->peg_revision), &(new_item->revision),
                      &ra_cache,
                      SVN_DEPTH_INFINITY_OR_FILES(TRUE),
-                     FALSE, FALSE, ib->timestamp_sleep, ib->ctx,
+                     FALSE, FALSE, TRUE, ib->timestamp_sleep, ib->ctx,
                      ib->iter_pool));
           break;
         case svn_node_file:
@@ -1017,18 +1015,26 @@ handle_external_item_change_wrapper(const void *key, apr_ssize_t klen,
 {
   struct handle_external_item_change_baton *ib = baton;
   svn_error_t *err = handle_external_item_change(key, klen, status, baton);
-  if (err && ib->ctx->notify_func2)
+
+  if (err && err->apr_err != SVN_ERR_CANCELLED)
     {
-      const char *path = svn_path_join(ib->parent_dir, key, ib->iter_pool);
-      svn_wc_notify_t *notifier =
-        svn_wc_create_notify(path,
-                             svn_wc_notify_failed_external,
-                             ib->pool);
-      notifier->err = err;
-      ib->ctx->notify_func2(ib->ctx->notify_baton2, notifier, ib->pool);
+      if (ib->ctx->notify_func2)
+        {
+          const char *path = svn_path_join(ib->parent_dir, key,
+                                           ib->iter_pool);
+          svn_wc_notify_t *notifier =
+          svn_wc_create_notify(path,
+                               svn_wc_notify_failed_external,
+                               ib->iter_pool);
+          notifier->err = err;
+          ib->ctx->notify_func2(ib->ctx->notify_baton2, notifier,
+                                ib->iter_pool);
+        }
+      svn_error_clear(err);
+      return SVN_NO_ERROR;
     }
-  svn_error_clear(err);
-  return SVN_NO_ERROR;
+
+  return svn_error_return(err);
 }
 
 

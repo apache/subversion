@@ -1285,6 +1285,16 @@ close_edit(void *edit_baton,
   return eb->wrapped_editor->close_edit(eb->wrapped_edit_baton, pool);
 }
 
+static svn_error_t *
+abort_edit(void *edit_baton,
+           apr_pool_t *pool)
+{
+  edit_baton_t *eb = edit_baton;
+  return eb->wrapped_editor->abort_edit(eb->wrapped_edit_baton, pool);
+}
+
+
+
 /*** Editor factory function ***/
 
 /* Set WRAPPED_EDITOR and WRAPPED_EDIT_BATON to an editor/baton pair
@@ -1326,6 +1336,7 @@ get_sync_editor(const svn_delta_editor_t *wrapped_editor,
   tree_editor->close_file = close_file;
   tree_editor->absent_file = absent_file;
   tree_editor->close_edit = close_edit;
+  tree_editor->abort_edit = abort_edit;
 
   eb->wrapped_editor = wrapped_editor;
   eb->wrapped_edit_baton = wrapped_edit_baton;

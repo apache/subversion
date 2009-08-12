@@ -1089,6 +1089,11 @@ diff_prepare_repos_repos(const struct diff_parameters *params,
 {
   svn_ra_session_t *ra_session;
   svn_node_kind_t kind1, kind2;
+  const char *params_path2_abspath;
+  const char *params_path1_abspath;
+
+  SVN_ERR(svn_dirent_get_absolute(&params_path2_abspath, params->path2, pool));
+  SVN_ERR(svn_dirent_get_absolute(&params_path1_abspath, params->path1, pool));
 
   /* Figure out URL1 and URL2. */
   SVN_ERR(convert_to_url(&drr->url1, params->path1, pool));
@@ -1128,9 +1133,9 @@ diff_prepare_repos_repos(const struct diff_parameters *params,
     }
 
   /* Resolve revision and get path kind for the second target. */
-  SVN_ERR(svn_client__get_revision_number
-          (&drr->rev2, NULL, ra_session, params->revision2,
-           (params->path2 == drr->url2) ? NULL : params->path2, pool));
+  SVN_ERR(svn_client__get_revision_number(&drr->rev2, NULL, ctx->wc_ctx,
+           (params->path2 == drr->url2) ? NULL : params_path2_abspath,
+           ra_session, params->revision2, pool));
   SVN_ERR(svn_ra_check_path(ra_session, "", drr->rev2, &kind2, pool));
   if (kind2 == svn_node_none)
     return svn_error_createf
@@ -1140,9 +1145,9 @@ diff_prepare_repos_repos(const struct diff_parameters *params,
 
   /* Do the same for the first target. */
   SVN_ERR(svn_ra_reparent(ra_session, drr->url1, pool));
-  SVN_ERR(svn_client__get_revision_number
-          (&drr->rev1, NULL, ra_session, params->revision1,
-           (params->path1 == drr->url1) ? NULL : params->path1, pool));
+  SVN_ERR(svn_client__get_revision_number(&drr->rev1, NULL, ctx->wc_ctx,
+           (params->path1 == drr->url1) ? NULL : params_path1_abspath,
+           ra_session, params->revision1, pool));
   SVN_ERR(svn_ra_check_path(ra_session, "", drr->rev1, &kind1, pool));
   if (kind1 == svn_node_none)
     return svn_error_createf
@@ -1232,10 +1237,13 @@ diff_wc_wc(const char *path1,
 {
   svn_wc_adm_access_t *adm_access, *target_access;
   const char *target;
+  const char *abspath1;
   int levels_to_lock = SVN_WC__LEVELS_TO_LOCK_FROM_DEPTH(depth);
 
   SVN_ERR_ASSERT(! svn_path_is_url(path1));
   SVN_ERR_ASSERT(! svn_path_is_url(path2));
+
+  SVN_ERR(svn_dirent_get_absolute(&abspath1, path1, pool));
 
   /* Currently we support only the case where path1 and path2 are the
      same path. */
@@ -1254,8 +1262,9 @@ diff_wc_wc(const char *path1,
                                  pool));
 
   /* Resolve named revisions to real numbers. */
-  SVN_ERR(svn_client__get_revision_number
-          (&callback_baton->revnum1, NULL, NULL, revision1, path1, pool));
+  SVN_ERR(svn_client__get_revision_number(&callback_baton->revnum1, NULL,
+                                          ctx->wc_ctx, abspath1, NULL,
+                                          revision1, pool));
   callback_baton->revnum2 = SVN_INVALID_REVNUM;  /* WC */
 
   SVN_ERR(svn_wc_diff6(adm_access, target, callbacks, callback_baton,
@@ -1372,8 +1381,11 @@ diff_repos_wc(const char *path1,
   svn_boolean_t rev2_is_base = (revision2->kind == svn_opt_revision_base);
   int levels_to_lock = SVN_WC__LEVELS_TO_LOCK_FROM_DEPTH(depth);
   svn_boolean_t server_supports_depth;
+  const char *abspath1;
 
   SVN_ERR_ASSERT(! svn_path_is_url(path2));
+
+  SVN_ERR(svn_dirent_get_absolute(&abspath1, path1, pool));
 
   /* Convert path1 to a URL to feed to do_diff. */
   SVN_ERR(convert_to_url(&url1, path1, pool));
@@ -1439,9 +1451,9 @@ diff_repos_wc(const char *path1,
                                   pool));
 
   /* Tell the RA layer we want a delta to change our txn to URL1 */
-  SVN_ERR(svn_client__get_revision_number
-          (&rev, NULL, ra_session, revision1,
-           (path1 == url1) ? NULL : path1, pool));
+  SVN_ERR(svn_client__get_revision_number(&rev, NULL, ctx->wc_ctx,
+                                          (path1 == url1) ? NULL : abspath1,
+                                          ra_session, revision1, pool));
 
   if (!reverse)
     callback_baton->revnum1 = rev;

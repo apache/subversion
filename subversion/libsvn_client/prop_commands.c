@@ -450,8 +450,8 @@ svn_client_revprop_set2(const char *propname,
 
   /* Resolve the revision into something real, and return that to the
      caller as well. */
-  SVN_ERR(svn_client__get_revision_number
-          (set_rev, NULL, ra_session, revision, NULL, pool));
+  SVN_ERR(svn_client__get_revision_number(set_rev, NULL, ctx->wc_ctx, NULL,
+                                          ra_session, revision, pool));
 
   if (original_propval)
     {
@@ -842,7 +842,10 @@ svn_client_propget3(apr_hash_t **props,
       svn_wc_adm_access_t *adm_access;
       const svn_wc_entry_t *node;
       svn_boolean_t pristine;
+      const char *local_abspath;
       int adm_lock_level = SVN_WC__LEVELS_TO_LOCK_FROM_DEPTH(depth);
+
+      SVN_ERR(svn_dirent_get_absolute(&local_abspath, path_or_url, pool));
 
       SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, path_or_url,
                                      FALSE, adm_lock_level,
@@ -851,8 +854,9 @@ svn_client_propget3(apr_hash_t **props,
       SVN_ERR(svn_wc__entry_versioned(&node, path_or_url, adm_access,
                                       FALSE, pool));
 
-      SVN_ERR(svn_client__get_revision_number
-              (&revnum, NULL, NULL, revision, path_or_url, pool));
+      SVN_ERR(svn_client__get_revision_number(&revnum, NULL, ctx->wc_ctx,
+                                              local_abspath, NULL, revision,
+                                              pool));
 
       /* If FALSE, we must want the working revision. */
       pristine = (revision->kind == svn_opt_revision_committed
@@ -907,8 +911,8 @@ svn_client_revprop_get(const char *propname,
 
   /* Resolve the revision into something real, and return that to the
      caller as well. */
-  SVN_ERR(svn_client__get_revision_number
-          (set_rev, NULL, ra_session, revision, NULL, pool));
+  SVN_ERR(svn_client__get_revision_number(set_rev, NULL, ctx->wc_ctx, NULL,
+                                          ra_session, revision, pool));
 
   /* The actual RA call. */
   return svn_ra_rev_prop(ra_session, *set_rev, propname, propval, pool);
@@ -1241,8 +1245,8 @@ svn_client_revprop_list(apr_hash_t **props,
 
   /* Resolve the revision into something real, and return that to the
      caller as well. */
-  SVN_ERR(svn_client__get_revision_number
-          (set_rev, NULL, ra_session, revision, NULL, pool));
+  SVN_ERR(svn_client__get_revision_number(set_rev, NULL, ctx->wc_ctx, NULL,
+                                          ra_session, revision, pool));
 
   /* The actual RA call. */
   SVN_ERR(svn_ra_rev_proplist(ra_session, *set_rev, &proplist, pool));

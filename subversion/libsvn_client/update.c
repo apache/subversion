@@ -90,6 +90,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
                             svn_boolean_t allow_unver_obstructions,
                             svn_boolean_t *timestamp_sleep,
                             svn_boolean_t send_copyfrom_args,
+                            svn_boolean_t innerupdate,
                             svn_client_ctx_t *ctx,
                             apr_pool_t *pool)
 {
@@ -114,6 +115,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
   const char *preserved_exts_str;
   apr_array_header_t *preserved_exts;
   struct ff_baton *ffb;
+  const char *local_abspath;
   svn_boolean_t server_supports_depth;
   svn_config_t *cfg = ctx->config ? apr_hash_get(ctx->config,
                                                  SVN_CONFIG_CATEGORY_CONFIG,
@@ -147,11 +149,29 @@ svn_client__update_internal(svn_revnum_t *result_rev,
                              _("Path '%s' is not a directory"),
                              path);
 
-  /* Use PATH to get the update's anchor and targets and get a write lock */
-  SVN_ERR(svn_wc_adm_open_anchor(&adm_access, &dir_access, &target, path,
-                                 TRUE, levels_to_lock,
-                                 ctx->cancel_func, ctx->cancel_baton,
-                                 pool));
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+
+  if (!innerupdate)
+    {
+      /* Use PATH to get the update's anchor and targets and get a write lock.
+       */
+      SVN_ERR(svn_wc__adm_open_anchor_in_context(&adm_access, &dir_access,
+                                                 &target, ctx->wc_ctx, path,
+                                                 TRUE, levels_to_lock,
+                                                 ctx->cancel_func,
+                                                 ctx->cancel_baton, pool));
+    }
+  else
+    {
+      /* Assume the exact root is specified (required for externals to work,
+         as these would otherwise try to open the parent working copy again) */
+      SVN_ERR(svn_wc__adm_open_in_context(&adm_access, ctx->wc_ctx, path, TRUE,
+                                          levels_to_lock, ctx->cancel_func,
+                                          ctx->cancel_baton, pool));
+      dir_access = adm_access;
+      target = "";
+    }
+
   anchor = svn_wc_adm_access_path(adm_access);
 
   /* Get full URL from the ANCHOR. */
@@ -166,7 +186,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
     {
       const svn_wc_entry_t *target_entry;
       SVN_ERR(svn_wc_entry(&target_entry,
-          svn_dirent_join(svn_wc_adm_access_path(adm_access), target, pool),
+          svn_dirent_join(anchor, target, pool),
           adm_access, TRUE, pool));
 
       if (target_entry && target_entry->kind == svn_node_dir)
@@ -209,16 +229,14 @@ svn_client__update_internal(svn_revnum_t *result_rev,
 
   /* ### todo: shouldn't svn_client__get_revision_number be able
      to take a URL as easily as a local path?  */
-  SVN_ERR(svn_client__get_revision_number
-          (&revnum, NULL, ra_session, revision, path, pool));
+  SVN_ERR(svn_client__get_revision_number(&revnum, NULL, ctx->wc_ctx,
+                                          local_abspath, ra_session, revision,
+                                          pool));
 
   /* Take the chance to set the repository root on the target.
-     Why do we bother doing this for old working copies?
-     There are two reasons: first, it's nice to get this information into
-     old WCs so they are "ready" when we start depending on it.  (We can
-     never *depend* upon it in a strict sense, however.)
-     Second, if people mix old and new clients, this information will
-     be dropped by the old clients, which might be annoying. */
+     It's nice to get this information into old WCs so they are "ready"
+     when we start depending on it.  (We can never *depend* upon it in
+     a strict sense, however.) */
   SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root, pool));
   SVN_ERR(svn_wc_maybe_set_repos_root(dir_access, path, repos_root, pool));
 
@@ -344,7 +362,7 @@ svn_client_update3(apr_array_header_t **result_revs,
       err = svn_client__update_internal(&result_rev, path, revision, depth,
                                         depth_is_sticky, ignore_externals,
                                         allow_unver_obstructions,
-                                        &sleep, TRUE, ctx, subpool);
+                                        &sleep, TRUE, FALSE, ctx, subpool);
       if (err && err->apr_err != SVN_ERR_WC_NOT_DIRECTORY)
         {
           return svn_error_return(err);

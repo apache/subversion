@@ -5458,6 +5458,7 @@ def merge_to_switched_path(sbox):
     'rho'      : Item(status='M ', wc_rev=8),
     'tau'      : Item(status='  ', wc_rev=8),
     })
+  expected_status.tweak('', switched='S')
   expected_disk = wc.State('', {
     ''         : Item(props={SVN_PROP_MERGEINFO : '/A/D/G_COPY:8'}),
     'pi'       : Item("This is the file 'pi'.\n"),
@@ -6640,7 +6641,7 @@ def update_loses_mergeinfo(sbox):
                                         expected_status,
                                         check_props=1)
 
-# Tests part of issue# 2829, marked as XFail until that issue is fixed.
+# Tests part of issue# 2829.
 def merge_loses_mergeinfo(sbox):
   "merge should merge mergeinfo"
 
