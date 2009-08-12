@@ -3,8 +3,8 @@
 BLECH=`pwd`
 
 cd ../../subversion/libsvn_client
-CLIENT_ACCESS=`grep svn_wc_adm_access_t *.[ch] | wc -l`
-CLIENT_ENTRY=`grep svn_wc_entry_t *.[ch] | wc -l`
+CLIENT_ACCESS=`ls *.[ch] | grep -v deprecated | xargs grep svn_wc_adm_access_t | wc -l`
+CLIENT_ENTRY=`ls *.[ch] | grep -v deprecated | xargs grep svn_wc_entry_t | wc -l`
 
 cd ../../subversion/libsvn_wc
 WC_ACCESS=`ls *.[ch] | grep -v deprecated | xargs grep svn_wc_adm_access_t | wc -l`
