@@ -2126,6 +2126,39 @@ svn_wc_translated_stream(svn_stream_t **stream,
   return svn_error_return(svn_wc_context_destroy(wc_ctx));
 }
 
+svn_error_t *
+svn_wc_translated_file2(const char **xlated_path,
+                        const char *src,
+                        const char *versioned_file,
+                        svn_wc_adm_access_t *adm_access,
+                        apr_uint32_t flags,
+                        apr_pool_t *pool)
+{
+  const char *versioned_abspath;
+  const char *root;
+  const char *tmp_root;
+  svn_wc_context_t *wc_ctx;
+
+  SVN_ERR(svn_dirent_get_absolute(&versioned_abspath, versioned_file, pool));
+  SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL,
+                                         svn_wc__adm_get_db(adm_access),
+                                         pool));
+
+  SVN_ERR(svn_wc_translated_file3(xlated_path, src, wc_ctx, versioned_abspath, 
+                                  flags, pool, pool));
+  if (! svn_dirent_is_absolute(versioned_file))
+    {
+      SVN_ERR(svn_io_temp_dir(&tmp_root, pool));
+      if (! svn_dirent_is_child(tmp_root, *xlated_path, pool))
+        {
+          SVN_ERR(svn_dirent_get_absolute(&root, "", pool));
+          *xlated_path = svn_dirent_is_child(root, *xlated_path, pool);
+        }
+    }
+
+  return svn_error_return(svn_wc_context_destroy(wc_ctx));
+}
+
 /*** From relocate.c ***/
 svn_error_t *
 svn_wc_relocate3(const char *path,
