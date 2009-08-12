@@ -1382,13 +1382,25 @@ svn_wc__get_entry_versioned(const svn_wc_entry_t **entry,
                             apr_pool_t *result_pool,
                             apr_pool_t *scratch_pool)
 {
+  svn_error_t *err;
+
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
   /* We call this with allow_unversioned=TRUE, since the error returned is
      different than our callers currently expect.  We catch the NULL entry
      below and return the correct error. */
-  SVN_ERR(svn_wc__get_entry(entry, wc_ctx->db, local_abspath, TRUE, kind,
-                            need_parent_stub, result_pool, scratch_pool));
+  err = svn_wc__get_entry(entry, wc_ctx->db, local_abspath, TRUE, kind,
+                          need_parent_stub, result_pool, scratch_pool);
+  if (err && (err->apr_err == SVN_ERR_WC_MISSING
+                || err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND
+                || err->apr_err == SVN_ERR_NODE_UNEXPECTED_KIND))
+    {
+      svn_error_clear(err);
+      *entry = NULL;
+    }
+  else if (err)
+    return svn_error_return(err);
+
 
   if (*entry && !show_hidden)
     {
