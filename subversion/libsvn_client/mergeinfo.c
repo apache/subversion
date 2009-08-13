@@ -176,19 +176,24 @@ svn_client__get_wc_mergeinfo(svn_mergeinfo_t *mergeinfo,
                              svn_client_ctx_t *ctx,
                              apr_pool_t *pool)
 {
-  const char *walk_path = "";
+  const char *walk_relpath = "";
   svn_mergeinfo_t wc_mergeinfo;
   svn_boolean_t switched;
   svn_revnum_t base_revision = entry->revision;
+  const char *local_abspath;
+  const char *limit_abspath;
+  apr_pool_t *iterpool;
 
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, wcpath, pool));
   if (limit_path)
-    SVN_ERR(svn_dirent_get_absolute(&limit_path, limit_path, pool));
+    SVN_ERR(svn_dirent_get_absolute(&limit_abspath, limit_path, pool));
+  else
+    limit_abspath = NULL;
 
+  iterpool = svn_pool_create(pool);
   while (TRUE)
     {
-      const char *local_abspath;
-
-      SVN_ERR(svn_dirent_get_absolute(&local_abspath, wcpath, pool));
+      svn_pool_clear(iterpool);
 
       /* Don't look for explicit mergeinfo on WCPATH if we are only
          interested in inherited mergeinfo. */
@@ -205,58 +210,46 @@ svn_client__get_wc_mergeinfo(svn_mergeinfo_t *mergeinfo,
              If we encounter (b), use that inherited mergeinfo as our
              baseline. */
           SVN_ERR(svn_client__parse_mergeinfo(&wc_mergeinfo, ctx->wc_ctx,
-                                              local_abspath, pool, pool));
+                                              local_abspath, pool, iterpool));
         }
 
       /* If WCPATH is switched, don't look any higher for inherited
          mergeinfo. */
       SVN_ERR(svn_wc__path_switched(&switched, ctx->wc_ctx, local_abspath,
-                                    pool));
+                                    iterpool));
       if (switched)
         break;
 
-      /* Subsequent svn_wc_adm_access_t need to be opened with
-         an absolute path so we can walk up and out of the WC
-         if necessary.  If we are using LIMIT_PATH it needs to
-         be absolute too. */
-
-      if (! svn_dirent_is_absolute(wcpath))
-        {
-          SVN_ERR(svn_dirent_get_absolute(&wcpath, wcpath, pool));
-        }
-
       if (wc_mergeinfo == NULL &&
           inherit != svn_mergeinfo_explicit &&
-          !svn_dirent_is_root(wcpath, strlen(wcpath)))
+          !svn_dirent_is_root(local_abspath, strlen(local_abspath)))
         {
-          svn_wc_adm_access_t *adm_access;
           svn_error_t *err;
 
           /* Don't look any higher than the limit path. */
-          if (limit_path && strcmp(limit_path, wcpath) == 0)
+          if (limit_abspath && strcmp(limit_abspath, local_abspath) == 0)
             break;
 
           /* No explicit mergeinfo on this path.  Look higher up the
              directory tree while keeping track of what we've walked. */
-          walk_path = svn_path_join(svn_dirent_basename(wcpath, pool),
-                                    walk_path, pool);
-          wcpath = svn_dirent_dirname(wcpath, pool);
+          walk_relpath = svn_path_join(svn_dirent_basename(local_abspath,
+                                                           iterpool),
+                                       walk_relpath, pool);
+          local_abspath = svn_dirent_dirname(local_abspath, pool);
 
-          err = svn_wc_adm_open3(&adm_access, NULL, wcpath,
-                                 FALSE, 0, NULL, NULL, pool);
-          if (err)
+          err = svn_wc__get_entry_versioned(&entry, ctx->wc_ctx,
+                                            local_abspath,
+                                            svn_node_unknown, FALSE, FALSE,
+                                            pool, iterpool);
+          if (err && err->apr_err == SVN_ERR_ENTRY_NOT_FOUND)
             {
-              if (err->apr_err == SVN_ERR_WC_NOT_DIRECTORY)
-                {
-                  svn_error_clear(err);
-                  err = SVN_NO_ERROR;
-                  *inherited = FALSE;
-                  *mergeinfo = wc_mergeinfo;
-                }
-              return svn_error_return(err);
+              svn_error_clear(err);
+              *inherited = FALSE;
+              *mergeinfo = wc_mergeinfo;
+              return SVN_NO_ERROR;
             }
-
-          SVN_ERR(svn_wc_entry(&entry, wcpath, adm_access, FALSE, pool));
+          else if (err)
+            return svn_error_return(err);
 
           /* Look in WCPATH's parents only if the parents share the same
              working revision. */
@@ -264,14 +257,13 @@ svn_client__get_wc_mergeinfo(svn_mergeinfo_t *mergeinfo,
               || entry->revision < base_revision)
             break;
 
-          if (entry)
-            /* We haven't yet risen above the root of the WC. */
-            continue;
+          /* We haven't yet risen above the root of the WC. */
+          continue;
       }
       break;
     }
 
-  if (svn_path_is_empty(walk_path))
+  if (svn_path_is_empty(walk_relpath))
     {
       /* Mergeinfo is explicit. */
       *inherited = FALSE;
@@ -285,7 +277,7 @@ svn_client__get_wc_mergeinfo(svn_mergeinfo_t *mergeinfo,
           *inherited = (wc_mergeinfo != NULL);
           *mergeinfo = apr_hash_make(pool);
           SVN_ERR(svn_client__adjust_mergeinfo_source_paths(*mergeinfo,
-                                                            walk_path,
+                                                            walk_relpath,
                                                             wc_mergeinfo,
                                                             pool));
         }
@@ -297,7 +289,7 @@ svn_client__get_wc_mergeinfo(svn_mergeinfo_t *mergeinfo,
     }
 
   if (walked_path)
-    *walked_path = walk_path;
+    *walked_path = walk_relpath;
 
   /* Remove non-inheritable mergeinfo and paths mapped to empty ranges
      which may occur if WCPATH's mergeinfo is not explicit. */
