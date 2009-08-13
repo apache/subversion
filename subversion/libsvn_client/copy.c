@@ -1058,9 +1058,10 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
                                                     svn_client__copy_pair_t *);
       svn_pool_clear(iterpool);
       /* Sanity check if the source path is versioned. */
-      SVN_ERR(svn_wc__entry_versioned(&entry, pair->src, adm_access, FALSE,
-                                      iterpool));
       SVN_ERR(svn_dirent_get_absolute(&pair->src_abs, pair->src, pool));
+      SVN_ERR(svn_wc__get_entry_versioned(&entry, ctx->wc_ctx, pair->src_abs,
+                                          svn_node_unknown, FALSE, FALSE,
+                                          iterpool, iterpool));
     }
 
   /* Determine the longest common ancestor for the destinations, and open an RA
@@ -1822,18 +1823,17 @@ try_copy(svn_commit_info_t **commit_info_p,
         {
           svn_client__copy_pair_t *pair =
             APR_ARRAY_IDX(copy_pairs, i, svn_client__copy_pair_t *);
+          const char *src_abspath;
 
-          svn_wc_adm_access_t *adm_access;
           const svn_wc_entry_t *entry;
 
           svn_pool_clear(iterpool);
 
-          SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, pair->src, FALSE,
-                                         0, ctx->cancel_func,
-                                         ctx->cancel_baton, iterpool));
-          SVN_ERR(svn_wc__entry_versioned(&entry, pair->src, adm_access, FALSE,
-                                          iterpool));
-          SVN_ERR(svn_wc_adm_close2(adm_access, iterpool));
+          SVN_ERR(svn_dirent_get_absolute(&src_abspath, pair->src, iterpool));
+          SVN_ERR(svn_wc__get_entry_versioned(&entry, ctx->wc_ctx,
+                                              src_abspath, svn_node_unknown,
+                                              FALSE, FALSE,
+                                              iterpool, iterpool));
 
           if (entry->file_external_path)
             return svn_error_createf(SVN_ERR_WC_CANNOT_MOVE_FILE_EXTERNAL,
