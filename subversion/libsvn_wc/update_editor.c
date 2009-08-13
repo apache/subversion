@@ -156,6 +156,10 @@ struct edit_baton
   const char *anchor;
   const char *target;
 
+  /* Absolute variants of ANCHOR and TARGET */
+  const char *anchor_abspath;
+  const char *target_abspath;
+
   /* The DB handle for managing the working copy state.  */
   svn_wc__db_t *db;
 
@@ -336,6 +340,9 @@ struct dir_baton
   /* Basename of this directory. */
   const char *name;
 
+  /* Absolute path of this directory */
+  const char *local_abspath;
+
   /* The repository URL this directory will correspond to. */
   const char *new_URL;
 
@@ -444,32 +451,26 @@ struct handler_baton
 };
 
 
-/* Return the url for NAME in DIR, allocated in POOL, or null if
- * unable to obtain a url.  If NAME is null, get the url for DIR.
+/* Return the url for LOCAL_ABSPATH of type KIND which can be unknown, 
+ * allocated in RESULT_POOL, or null if unable to obtain a url.
  *
  * Use ASSOCIATED_ACCESS to retrieve an access baton for PATH, and do
- * all temporary allocation in POOL.
+ * all temporary allocation in SCRATCH_POOL.
  */
 static const char *
-get_entry_url(svn_wc_adm_access_t *associated_access,
-              const char *dir,
-              const char *name,
-              apr_pool_t *pool)
+get_entry_url(svn_wc__db_t *db,
+              const char *local_abspath,
+              svn_node_kind_t kind,
+              apr_pool_t *result_pool,
+              apr_pool_t *scratch_pool)
 {
   svn_error_t *err;
   const svn_wc_entry_t *entry;
-  svn_wc_adm_access_t *adm_access;
 
-  err = svn_wc_adm_retrieve(&adm_access, associated_access, dir, pool);
+  err = svn_wc__get_entry(&entry, db, local_abspath, FALSE, kind, FALSE,
+                          result_pool, scratch_pool);
 
-  if (! err)
-    {
-      /* Note that `name' itself may be NULL. */
-      name = name ? svn_dirent_join(dir, name, pool) : dir;
-
-      err = svn_wc_entry(&entry, name, adm_access, FALSE, pool);
-    }
-  if (err || (! entry) || (! entry->url))
+  if (err || !entry->url)
     {
       svn_error_clear(err);
       return NULL;
@@ -568,11 +569,13 @@ make_dir_baton(struct dir_baton **d_p,
     {
       d->path = svn_dirent_join(eb->anchor, path, pool);
       d->name = svn_dirent_basename(path, pool);
+      d->local_abspath = svn_dirent_join(pb->local_abspath, d->name, pool);
     }
   else
     {
       d->path = apr_pstrdup(pool, eb->anchor);
       d->name = NULL;
+      d->local_abspath = eb->anchor_abspath;
     }
 
   /* Figure out the new_URL for this directory. */
@@ -608,7 +611,8 @@ make_dir_baton(struct dir_baton **d_p,
       /* updates are the odds ones.  if we're updating a path already
          present on disk, we use its original URL.  otherwise, we'll
          telescope based on its parent's URL. */
-      d->new_URL = get_entry_url(eb->adm_access, d->path, NULL, pool);
+      d->new_URL = get_entry_url(eb->db, d->local_abspath, svn_node_dir,
+                                 pool, pool);
       if ((! d->new_URL) && pb)
         d->new_URL = svn_path_url_add_component2(pb->new_URL, d->name, pool);
     }
@@ -723,7 +727,7 @@ complete_directory(struct edit_baton *eb,
              (and thus get rid of the exclude flag) now. */
 
           target_access = svn_wc__adm_retrieve_internal2(eb->db,
-                                                         target_abspath,
+                                                         eb->target_abspath,
                                                          pool);
           if (!target_access && target_entry->kind == svn_node_dir)
             {
@@ -737,7 +741,7 @@ complete_directory(struct edit_baton *eb,
             }
           else
             {
-              SVN_ERR(svn_wc__set_depth(eb->db, target_abspath,
+              SVN_ERR(svn_wc__set_depth(eb->db, eb->target_abspath,
                                         svn_depth_infinity, pool));
             }
         }
@@ -825,22 +829,17 @@ complete_directory(struct edit_baton *eb,
         }
       else if (current_entry->kind == svn_node_dir)
         {
-          const char *child_path = svn_dirent_join(path, name, subpool);
-          const char *child_abspath;
-
-          SVN_ERR(svn_dirent_get_absolute(&child_abspath, child_path, pool));
-
           if (current_entry->depth == svn_depth_exclude)
             {
               /* Clear the exclude flag if it is pulled in again. */
               if (eb->depth_is_sticky
                   && eb->requested_depth >= svn_depth_immediates)
                 {
-                  SVN_ERR(svn_wc__set_depth(eb->db, child_abspath,
+                  SVN_ERR(svn_wc__set_depth(eb->db, local_abspath,
                                             svn_depth_infinity, pool));
                 }
             }
-          else if ((svn_wc__adm_missing(eb->db, child_abspath, subpool))
+          else if ((svn_wc__adm_missing(eb->db, local_abspath, subpool))
                    && (! current_entry->absent)
                    && (current_entry->schedule != svn_wc_schedule_add))
             {
@@ -850,7 +849,7 @@ complete_directory(struct edit_baton *eb,
               if (eb->notify_func)
                 {
                   svn_wc_notify_t *notify
-                    = svn_wc_create_notify(child_path,
+                    = svn_wc_create_notify(local_abspath,
                                            svn_wc_notify_update_delete,
                                            subpool);
                   notify->kind = current_entry->kind;
@@ -1020,8 +1019,10 @@ make_file_baton(struct file_baton **f_p,
     }
   else
     {
-      f->new_URL = get_entry_url(pb->edit_baton->adm_access,
-                                 pb->path, f->name, pool);
+      f->new_URL = get_entry_url(pb->edit_baton->db,
+                                 svn_dirent_join(pb->local_abspath,
+                                                 f->name, pool),
+                                 svn_node_file, pool, pool);
     }
 
   f->pool              = pool;
@@ -4832,6 +4833,8 @@ make_editor(svn_revnum_t *target_revision,
   eb->adm_access               = adm_access;
   eb->anchor                   = anchor;
   eb->target                   = target;
+  SVN_ERR(svn_dirent_get_absolute(&eb->anchor_abspath, anchor, pool));
+  SVN_ERR(svn_dirent_get_absolute(&eb->target_abspath, target, pool));
   eb->requested_depth          = depth;
   eb->depth_is_sticky          = depth_is_sticky;
   eb->notify_func              = notify_func;
