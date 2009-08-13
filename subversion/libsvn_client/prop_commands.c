@@ -387,8 +387,9 @@ svn_client_propset3(svn_commit_info_t **commit_info_p,
       SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, target, TRUE,
                                      adm_lock_level, ctx->cancel_func,
                                      ctx->cancel_baton, pool));
-      SVN_ERR(svn_wc__entry_versioned(&entry, target, adm_access,
-                                      FALSE, pool));
+      SVN_ERR(svn_wc__get_entry_versioned(&entry, ctx->wc_ctx, target_abspath,
+                                          svn_node_unknown, FALSE, FALSE,
+                                          pool, pool));
 
       if (depth >= svn_depth_files && entry->kind == svn_node_dir)
         {
@@ -851,8 +852,9 @@ svn_client_propget3(apr_hash_t **props,
                                      FALSE, adm_lock_level,
                                      ctx->cancel_func, ctx->cancel_baton,
                                      pool));
-      SVN_ERR(svn_wc__entry_versioned(&node, path_or_url, adm_access,
-                                      FALSE, pool));
+      SVN_ERR(svn_wc__get_entry_versioned(&node, ctx->wc_ctx, local_abspath,
+                                          svn_node_unknown, FALSE, FALSE,
+                                          pool, pool));
 
       SVN_ERR(svn_client__get_revision_number(&revnum, NULL, ctx->wc_ctx,
                                               local_abspath, NULL, revision,
@@ -1155,8 +1157,9 @@ svn_client_proplist3(const char *path_or_url,
                                      FALSE, levels_to_lock,
                                      ctx->cancel_func, ctx->cancel_baton,
                                      pool));
-      SVN_ERR(svn_wc__entry_versioned(&entry, path_or_url, adm_access,
-                                      FALSE, pool));
+      SVN_ERR(svn_wc__get_entry_versioned(&entry, ctx->wc_ctx, local_abspath,
+                                          svn_node_unknown, FALSE, FALSE,
+                                          pool, pool));
 
       if ((revision->kind == svn_opt_revision_committed)
           || (revision->kind == svn_opt_revision_base))
