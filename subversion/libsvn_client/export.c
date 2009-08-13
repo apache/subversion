@@ -96,13 +96,12 @@ get_eol_style(svn_subst_eol_style_t *style,
 }
 
 static svn_error_t *
-copy_one_versioned_file(const char *from,
-                        const char *to,
-                        svn_wc_adm_access_t *adm_access,
+copy_one_versioned_file(const char *from_abspath,
+                        const char *to_abspath,
                         svn_wc_context_t *wc_ctx,
                         const svn_opt_revision_t *revision,
                         const char *native_eol,
-                        apr_pool_t *pool)
+                        apr_pool_t *scratch_pool)
 {
   const svn_wc_entry_t *entry;
   apr_hash_t *kw = NULL;
@@ -116,11 +115,17 @@ copy_one_versioned_file(const char *from,
   svn_stream_t *dst_stream;
   const char *dst_tmp;
   svn_error_t *err;
-  const char *from_abspath;
 
-  SVN_ERR(svn_dirent_get_absolute(&from_abspath, from, pool));
-
-  SVN_ERR(svn_wc_entry(&entry, from, adm_access, FALSE, pool));
+  err = svn_wc__get_entry_versioned(&entry, wc_ctx, from_abspath,
+                                    svn_node_file, FALSE, FALSE,
+                                    scratch_pool, scratch_pool);
+  if (err && err->apr_err == SVN_ERR_ENTRY_NOT_FOUND)
+    {
+      svn_error_clear(err);
+      entry = NULL;
+    }
+  else if (err)
+    return svn_error_return(err);
 
   /* Only export 'added' files when the revision is WORKING.
      Otherwise, skip the 'added' files, since they didn't exist
@@ -137,9 +142,10 @@ copy_one_versioned_file(const char *from,
 
   if (revision->kind != svn_opt_revision_working)
     {
-      SVN_ERR(svn_wc_get_pristine_contents(&source, from, pool, pool));
+      SVN_ERR(svn_wc_get_pristine_contents(&source, from_abspath,
+                                           scratch_pool, scratch_pool));
       SVN_ERR(svn_wc_get_prop_diffs2(NULL, &props, wc_ctx, from_abspath,
-                                     pool, pool));
+                                     scratch_pool, scratch_pool));
     }
   else
     {
@@ -147,10 +153,13 @@ copy_one_versioned_file(const char *from,
 
       /* ### hmm. this isn't always a specialfile. this will simply open
          ### the file readonly if it is a regular file. */
-      SVN_ERR(svn_subst_read_specialfile(&source, from, pool, pool));
+      SVN_ERR(svn_subst_read_specialfile(&source, from_abspath, scratch_pool,
+                                         scratch_pool));
 
-      SVN_ERR(svn_wc_prop_list2(&props, wc_ctx, from_abspath, pool, pool));
-      SVN_ERR(svn_wc_status3(&status, wc_ctx, from_abspath, pool, pool));
+      SVN_ERR(svn_wc_prop_list2(&props, wc_ctx, from_abspath, scratch_pool,
+                                scratch_pool));
+      SVN_ERR(svn_wc_status3(&status, wc_ctx, from_abspath, scratch_pool,
+                             scratch_pool));
       if (status->text_status != svn_wc_status_normal)
         local_mod = TRUE;
     }
@@ -162,8 +171,10 @@ copy_one_versioned_file(const char *from,
     {
       /* Create the destination as a special file, and copy the source
          details into the destination stream. */
-      SVN_ERR(svn_subst_create_specialfile(&dst_stream, to, pool, pool));
-      return svn_stream_copy3(source, dst_stream, NULL, NULL, pool);
+      SVN_ERR(svn_subst_create_specialfile(&dst_stream, to_abspath,
+                                           scratch_pool, scratch_pool));
+      return svn_error_return(
+        svn_stream_copy3(source, dst_stream, NULL, NULL, scratch_pool));
     }
 
 
@@ -181,7 +192,7 @@ copy_one_versioned_file(const char *from,
     {
       /* Use the modified time from the working copy of
          the file */
-      SVN_ERR(svn_io_file_affected_time(&tm, from, pool));
+      SVN_ERR(svn_io_file_affected_time(&tm, from_abspath, scratch_pool));
     }
   else
     {
@@ -210,15 +221,16 @@ copy_one_versioned_file(const char *from,
 
       SVN_ERR(svn_subst_build_keywords2
               (&kw, keywords->data,
-               apr_psprintf(pool, fmt, entry->cmt_rev),
-               entry->url, tm, author, pool));
+               apr_psprintf(scratch_pool, fmt, entry->cmt_rev),
+               entry->url, tm, author, scratch_pool));
     }
 
   /* For atomicity, we translate to a tmp file and then rename the tmp file
      over the real destination. */
   SVN_ERR(svn_stream_open_unique(&dst_stream, &dst_tmp,
-                                 svn_dirent_dirname(to, pool),
-                                 svn_io_file_del_none, pool, pool));
+                                 svn_dirent_dirname(to_abspath, scratch_pool),
+                                 svn_io_file_del_none, scratch_pool,
+                                 scratch_pool));
 
   /* If some translation is needed, then wrap the output stream (this is
      more efficient than wrapping the input). */
@@ -228,23 +240,23 @@ copy_one_versioned_file(const char *from,
                                              FALSE /* repair */,
                                              kw,
                                              TRUE /* expand */,
-                                             pool);
+                                             scratch_pool);
 
   /* ###: use cancel func/baton in place of NULL/NULL below. */
-  err = svn_stream_copy3(source, dst_stream, NULL, NULL, pool);
+  err = svn_stream_copy3(source, dst_stream, NULL, NULL, scratch_pool);
 
   if (!err && executable)
-    err = svn_io_set_file_executable(dst_tmp, TRUE, FALSE, pool);
+    err = svn_io_set_file_executable(dst_tmp, TRUE, FALSE, scratch_pool);
 
   if (!err)
-    err = svn_io_set_file_affected_time(tm, dst_tmp, pool);
+    err = svn_io_set_file_affected_time(tm, dst_tmp, scratch_pool);
 
   if (err)
     return svn_error_compose_create(err, svn_io_remove_file2(dst_tmp, FALSE,
-                                                             pool));
+                                                             scratch_pool));
 
   /* Now that dst_tmp contains the translated data, do the atomic rename. */
-  return svn_io_file_rename(dst_tmp, to, pool);
+  return svn_io_file_rename(dst_tmp, to_abspath, scratch_pool);
 }
 
 static svn_error_t *
@@ -264,12 +276,19 @@ copy_versioned_files(const char *from,
   apr_pool_t *iterpool;
   apr_hash_t *entries;
   apr_hash_index_t *hi;
+  const char *from_abspath;
+  const char *to_abspath;
+
+  SVN_ERR(svn_dirent_get_absolute(&from_abspath, from, pool));
+  SVN_ERR(svn_dirent_get_absolute(&to_abspath, to, pool));
 
   SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, from, FALSE,
                                  0, ctx->cancel_func, ctx->cancel_baton,
                                  pool));
 
-  SVN_ERR(svn_wc__entry_versioned(&entry, from, adm_access, FALSE, pool));
+  SVN_ERR(svn_wc__get_entry_versioned(&entry, ctx->wc_ctx, from_abspath,
+                                      svn_node_unknown, FALSE, FALSE,
+                                      pool, pool));
 
   /* Only export 'added' files when the revision is WORKING.
      Otherwise, skip the 'added' files, since they didn't exist
@@ -352,10 +371,19 @@ copy_versioned_files(const char *from,
             }
           else if (child_entry->kind == svn_node_file)
             {
-              const char *new_from = svn_path_join(from, item, iterpool);
-              const char *new_to = svn_path_join(to, item, iterpool);
+              const char *new_from_abspath;
+              const char *new_to_abspath;
 
-              SVN_ERR(copy_one_versioned_file(new_from, new_to, adm_access,
+              SVN_ERR(svn_dirent_get_absolute(&new_from_abspath,
+                                              svn_path_join(from, item,
+                                                            iterpool),
+                                              iterpool));
+              SVN_ERR(svn_dirent_get_absolute(&new_to_abspath,
+                                              svn_path_join(to, item,
+                                                            iterpool),
+                                              iterpool));
+
+              SVN_ERR(copy_one_versioned_file(new_from_abspath, new_to_abspath,
                                               ctx->wc_ctx, revision,
                                               native_eol, iterpool));
             }
@@ -367,9 +395,6 @@ copy_versioned_files(const char *from,
         {
           apr_array_header_t *ext_items;
           const svn_string_t *prop_val;
-          const char *from_abspath;
-
-          SVN_ERR(svn_dirent_get_absolute(&from_abspath, from, pool));
 
           SVN_ERR(svn_wc_prop_get2(&prop_val, ctx->wc_ctx, from_abspath,
                                    SVN_PROP_EXTERNALS, pool, pool));
@@ -414,7 +439,7 @@ copy_versioned_files(const char *from,
     }
   else if (entry->kind == svn_node_file)
     {
-      SVN_ERR(copy_one_versioned_file(from, to, adm_access, ctx->wc_ctx,
+      SVN_ERR(copy_one_versioned_file(from_abspath, to_abspath, ctx->wc_ctx,
                                       revision, native_eol, pool));
     }
 
