@@ -257,8 +257,7 @@ organize_lock_targets(const char **common_parent,
 
           svn_pool_clear(subpool);
 
-          abs_path = svn_path_join
-            (svn_wc_adm_access_path(*parent_adm_access_p), target, subpool);
+          abs_path = svn_path_join(*common_parent, target, subpool);
 
           SVN_ERR(svn_wc__get_entry_versioned(&entry, ctx->wc_ctx, abs_path,
                                               svn_node_unknown, FALSE, FALSE,
@@ -308,11 +307,11 @@ organize_lock_targets(const char **common_parent,
                        APR_HASH_KEY_STRING,
                        apr_pstrdup(pool, target));
 
-          abs_path = svn_path_join
-            (svn_wc_adm_access_path(*parent_adm_access_p), target, subpool);
+          abs_path = svn_path_join(*common_parent, target, subpool);
 
-          SVN_ERR(svn_wc_entry(&entry, abs_path, *parent_adm_access_p, FALSE,
-                               subpool));
+          SVN_ERR(svn_wc__get_entry_versioned(&entry, ctx->wc_ctx, abs_path,
+                                              svn_node_unknown, FALSE, FALSE,
+                                              subpool, subpool));
 
           if (do_lock) /* Lock. */
             {
