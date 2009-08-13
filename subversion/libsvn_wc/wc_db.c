@@ -870,21 +870,47 @@ create_wcroot(wcroot_t **wcroot,
               apr_pool_t *result_pool,
               apr_pool_t *scratch_pool)
 {
+  if (sdb != NULL)
+    SVN_ERR(svn_sqlite__read_schema_version(&format, sdb, scratch_pool));
+
+  /* If we construct a wcroot, then we better have a format.  */
+  SVN_ERR_ASSERT(format >= 1);
+
+  /* If this working copy is PRE-1.0, then simply bail out.  */
+  if (format < 4)
+    {
+      return svn_error_createf(
+        SVN_ERR_WC_UNSUPPORTED_FORMAT, NULL,
+        _("Working copy format of '%s' is too old (%d); "
+          "please check out your working copy again"),
+        svn_dirent_local_style(wcroot_abspath, scratch_pool), format);
+    }
+
+  /* If this working copy is from a future version, then bail out.  */
+  if (format > SVN_WC__VERSION)
+    {
+      return svn_error_createf(
+        SVN_ERR_WC_UNSUPPORTED_FORMAT, NULL,
+        _("This client is too old to work with the working copy at\n"
+          "'%s' (format %d).\n"
+          "You need to get a newer Subversion client. For more details, see\n"
+          "  http://subversion.tigris.org/faq.html#working-copy-format-change\n"
+          ),
+        svn_dirent_local_style(wcroot_abspath, scratch_pool),
+        format);
+    }
+
+  /* Auto-upgrade the SDB if possible.  */
+  if (format < SVN_WC__VERSION)
+    SVN_ERR(svn_wc__upgrade_sdb(&format, wcroot_abspath, sdb, format,
+                                scratch_pool));
+
   *wcroot = apr_palloc(result_pool, sizeof(**wcroot));
 
   (*wcroot)->abspath = wcroot_abspath;
   (*wcroot)->sdb = sdb;
   (*wcroot)->wc_id = wc_id;
   (*wcroot)->format = format;
-
-  if (sdb != NULL)
-    {
-      SVN_ERR(svn_sqlite__read_schema_version(&(*wcroot)->format,
-                                              sdb, scratch_pool));
-    }
-
-  /* If we construct a wcroot, then we better have a format.  */
-  SVN_ERR_ASSERT((*wcroot)->format >= 1);
 
   return SVN_NO_ERROR;
 }
@@ -1084,14 +1110,15 @@ scan_upwards_for_repos(apr_int64_t *repos_id,
    directory, then it sets VERSION to zero and returns no error.  */
 static svn_error_t *
 get_old_version(int *version,
-                const char *path,
+                const char *abspath,
                 apr_pool_t *scratch_pool)
 {
   svn_error_t *err;
   const char *format_file_path;
 
   /* Try reading the format number from the entries file.  */
-  format_file_path = svn_wc__adm_child(path, SVN_WC__ADM_ENTRIES, scratch_pool);
+  format_file_path = svn_wc__adm_child(abspath, SVN_WC__ADM_ENTRIES,
+                                       scratch_pool);
   err = svn_io_read_version_file(version, format_file_path, scratch_pool);
   if (err == NULL)
     return SVN_NO_ERROR;
@@ -1099,7 +1126,7 @@ get_old_version(int *version,
       && !APR_STATUS_IS_ENOENT(err->apr_err)
       && !APR_STATUS_IS_ENOTDIR(err->apr_err))
     return svn_error_createf(SVN_ERR_WC_MISSING, err, _("'%s' does not exist"),
-                             svn_dirent_local_style(path, scratch_pool));
+                             svn_dirent_local_style(abspath, scratch_pool));
   svn_error_clear(err);
 
   /* This must be a really old working copy!  Fall back to reading the
@@ -1108,7 +1135,8 @@ get_old_version(int *version,
      Note that the format file might not exist in newer working copies
      (format 7 and higher), but in that case, the entries file should
      have contained the format number. */
-  format_file_path = svn_wc__adm_child(path, SVN_WC__ADM_FORMAT, scratch_pool);
+  format_file_path = svn_wc__adm_child(abspath, SVN_WC__ADM_FORMAT,
+                                       scratch_pool);
   err = svn_io_read_version_file(version, format_file_path, scratch_pool);
   if (err == NULL)
     return SVN_NO_ERROR;
@@ -1361,8 +1389,7 @@ parse_local_abspath(svn_wc__db_pdh_t **pdh,
 
       /* If we have not moved upwards, then check for a wc-1 working copy.
          Since wc-1 has a .svn in every directory, and we didn't find one
-         in the original directory, then we don't have to bother looking
-         for more.
+         in the original directory, then we aren't looking at a wc-1.
 
          If the original path is not present, then we have to check on every
          iteration. The content may be the immediate parent, or possibly
@@ -3459,44 +3486,6 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
           else
             *changelist = NULL;
         }
-      if (conflict_old)
-        {
-          if (have_act)
-            *conflict_old = svn_sqlite__column_text(stmt_act, 2, result_pool);
-          else
-            *conflict_old = NULL;
-        }
-      if (conflict_new)
-        {
-          if (have_act)
-            *conflict_new = svn_sqlite__column_text(stmt_act, 3, result_pool);
-          else
-            *conflict_new = NULL;
-        }
-      if (conflict_working)
-        {
-          if (have_act)
-            *conflict_working = svn_sqlite__column_text(stmt_act, 4,
-                                                        result_pool);
-          else
-            *conflict_working = NULL;
-        }
-      if (prop_reject_file)
-        {
-          if (have_act)
-            *prop_reject_file = svn_sqlite__column_text(stmt_act, 0,
-                                                        result_pool);
-          else
-            *prop_reject_file = NULL;
-        }
-      if (tree_conflict_data)
-        {
-          if (have_act)
-            *tree_conflict_data = svn_sqlite__column_text(stmt_act, 5,
-                                                          result_pool);
-          else
-            *tree_conflict_data = NULL;
-        }
       if (original_repos_relpath)
         {
           if (have_work)
@@ -3541,6 +3530,36 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
         {
           *base_shadowed = have_base && have_work;
         }
+      if (conflict_old)
+        {
+          if (have_act)
+            *conflict_old = svn_sqlite__column_text(stmt_act, 2, result_pool);
+          else
+            *conflict_old = NULL;
+        }
+      if (conflict_new)
+        {
+          if (have_act)
+            *conflict_new = svn_sqlite__column_text(stmt_act, 3, result_pool);
+          else
+            *conflict_new = NULL;
+        }
+      if (conflict_working)
+        {
+          if (have_act)
+            *conflict_working = svn_sqlite__column_text(stmt_act, 4,
+                                                        result_pool);
+          else
+            *conflict_working = NULL;
+        }
+      if (prop_reject_file)
+        {
+          if (have_act)
+            *prop_reject_file = svn_sqlite__column_text(stmt_act, 0,
+                                                        result_pool);
+          else
+            *prop_reject_file = NULL;
+        }
       if (lock)
         {
           if (svn_sqlite__column_is_null(stmt_base, 15))
@@ -3559,6 +3578,14 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
               if (!svn_sqlite__column_is_null(stmt_base, 18))
                 (*lock)->date = svn_sqlite__column_int64(stmt_base, 18);
             }
+        }
+      if (tree_conflict_data)
+        {
+          if (have_act)
+            *tree_conflict_data = svn_sqlite__column_text(stmt_act, 5,
+                                                          result_pool);
+          else
+            *tree_conflict_data = NULL;
         }
     }
   else if (have_act)
@@ -4773,4 +4800,101 @@ svn_wc__db_check_node(svn_wc__db_kind_t *kind,
     }
 
   return svn_error_return(err);
+}
+
+
+svn_error_t *
+svn_wc__db_node_hidden(svn_boolean_t *hidden,
+                       svn_wc__db_t *db,
+                       const char *local_abspath,
+                       apr_pool_t *scratch_pool)
+{
+  svn_wc__db_pdh_t *pdh;
+  const char *local_relpath;
+  svn_depth_t depth;
+  svn_wc__db_kind_t base_kind;
+  svn_wc__db_status_t base_status;
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
+
+  /* Check two things: does a WORKING node exist, and what is the BASE
+     status? */
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
+                              svn_sqlite__mode_readwrite,
+                              scratch_pool, scratch_pool));
+
+  /* First check the working node. */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+                                    STMT_SELECT_WORKING_NODE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id, local_relpath));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  SVN_ERR(svn_sqlite__reset(stmt));
+
+  /* If a working node exists, the node will not be hidden. */
+  if (have_row)
+    {
+      *hidden = FALSE;
+      return SVN_NO_ERROR;
+    }
+
+  /* Now check the BASE node's presence and depth. */
+  SVN_ERR(svn_wc__db_base_get_info(&base_status, &base_kind, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, NULL, &depth, NULL,
+                                   NULL, NULL, NULL, db, local_abspath,
+                                   scratch_pool, scratch_pool));
+
+  if (base_kind == svn_wc__db_kind_dir)
+    {
+      /* ### We need to check the parent for exclusion. */
+      const char *parent_abspath;
+      const char *base_name;
+      svn_error_t *err;
+
+      svn_dirent_split(local_abspath, &parent_abspath, &base_name,
+                       scratch_pool);
+
+      err = parse_local_abspath(&pdh, &local_relpath, db, parent_abspath,
+                                svn_sqlite__mode_readonly,
+                                scratch_pool, scratch_pool);
+      if (err && err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY)
+        {
+          /* Ignore this error, we're at the wcroot and don't need to look
+             at the parent. */
+          svn_error_clear(err);
+        }
+      else if (err)
+        {
+          return svn_error_return(err);
+        }
+      else
+        {
+
+          /* Build the local_relpath for the requested directory.  */
+          local_relpath = svn_dirent_join(local_relpath, base_name,
+                                          scratch_pool);
+
+          SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+                                            STMT_SELECT_BASE_NODE));
+          SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id,
+                                    local_relpath));
+          SVN_ERR(svn_sqlite__step(&have_row, stmt));
+          if (have_row)
+            {
+              const char *depth_str = svn_sqlite__column_text(stmt, 12, NULL);
+              if (depth_str
+                    && svn_depth_from_word(depth_str) == svn_depth_exclude)
+                depth = svn_depth_exclude;
+            }
+        }
+
+      SVN_ERR(svn_sqlite__reset(stmt));
+    }
+
+  *hidden = (base_status == svn_wc__db_status_not_present
+               || depth == svn_depth_exclude);
+
+  return SVN_NO_ERROR;
 }

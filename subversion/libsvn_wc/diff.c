@@ -1176,9 +1176,8 @@ report_wc_file_as_added(struct dir_baton *dir_baton,
       SVN_ERR(eb->diff_editor->add_file(path, dir_baton, NULL,
                                         SVN_INVALID_REVNUM, pool, &fb));
       if (propchanges->nelts > 0)
-        SVN_ERR(svn_wc_transmit_prop_deltas
-                (path, adm_access, entry, eb->diff_editor,
-                 fb, NULL, pool));
+        SVN_ERR(svn_wc__internal_transmit_prop_deltas(eb->db, local_abspath,
+                                            eb->diff_editor, fb, pool));
 
       if (mimetype && svn_mime_type_is_binary(mimetype))
         {
@@ -1251,9 +1250,8 @@ report_wc_directory_as_added(struct dir_baton *dir_baton,
                    SVN_INVALID_REVNUM, pool, (void **)&dir_baton));
 
           if (propchanges->nelts > 0)
-            SVN_ERR(svn_wc_transmit_prop_deltas
-                    (dir_baton->path, adm_access, dir_entry, eb->diff_editor,
-                     dir_baton, NULL, pool));
+            SVN_ERR(svn_wc__internal_transmit_prop_deltas(eb->db, dir_abspath,
+                                        eb->diff_editor, dir_baton, pool));
         }
 
       if (propchanges->nelts > 0)
@@ -1725,9 +1723,10 @@ path_driver_cb_func(void **dir_baton,
           }
 
         /* Process property changes. */
-        SVN_ERR(svn_wc_transmit_prop_deltas(path, adm_access, entry, editor,
+        SVN_ERR(svn_wc__internal_transmit_prop_deltas(db, local_abspath,
+                                            editor,
                                             (entry->kind == svn_node_file) ? fb
-                                            : *dir_baton, NULL, pool));
+                                            : *dir_baton, pool));
         if (entry->kind == svn_node_file)
           file_need_close = TRUE;
 

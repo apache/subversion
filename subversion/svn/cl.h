@@ -537,6 +537,12 @@ void svn_cl__get_notifier(svn_wc_notify_func2_t *notify_func_p,
                           svn_boolean_t suppress_final_line,
                           apr_pool_t *pool);
 
+/* Print conflict stats accumulated in NOTIFY_BATON.
+ * Return any error encountered during printing.
+ * Do all allocations in POOL.*/
+svn_error_t *
+svn_cl__print_conflict_stats(void *notify_baton, apr_pool_t *pool);
+
 
 /*** Log message callback stuffs. ***/
 

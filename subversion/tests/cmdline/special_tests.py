@@ -532,8 +532,8 @@ def diff_symlink_to_dir(sbox):
     "Property changes on: link\n",
     "___________________________________________________________________\n",
     "Added: svn:special\n",
-    "   + *\n",
-    "\n" ]
+    "## -0,0 +1 ##\n",
+    "+*\n" ]
   svntest.actions.run_and_verify_svn(None, expected_output, [], 'diff',
                                      '.')
   # We should get the same output if we the diff the symlink itself.

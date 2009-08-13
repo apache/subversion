@@ -1568,7 +1568,7 @@ svn_client_update(svn_revnum_t *result_rev,
   return svn_client__update_internal(result_rev, path, revision,
                                      SVN_DEPTH_INFINITY_OR_FILES(recurse),
                                      FALSE, FALSE, FALSE, NULL,
-                                     TRUE, ctx, pool);
+                                     TRUE, FALSE, ctx, pool);
 }
 
 /*** From switch.c ***/
@@ -1586,7 +1586,8 @@ svn_client_switch(svn_revnum_t *result_rev,
   return svn_client__switch_internal(result_rev, path, switch_url,
                                      &peg_revision, revision, NULL,
                                      SVN_DEPTH_INFINITY_OR_FILES(recurse),
-                                     FALSE, NULL, FALSE, FALSE, ctx, pool);
+                                     FALSE, NULL, FALSE, FALSE, FALSE, ctx,
+                                     pool);
 }
 
 /*** From cat.c ***/
@@ -1616,8 +1617,8 @@ svn_client_checkout2(svn_revnum_t *result_rev,
   return svn_client__checkout_internal(result_rev, URL, path, peg_revision,
                                        revision, NULL,
                                        SVN_DEPTH_INFINITY_OR_FILES(recurse),
-                                       ignore_externals, FALSE, NULL, ctx,
-                                       pool);
+                                       ignore_externals, FALSE, FALSE, NULL,
+                                       ctx, pool);
 }
 
 svn_error_t *
@@ -1636,7 +1637,7 @@ svn_client_checkout(svn_revnum_t *result_rev,
   return svn_client__checkout_internal(result_rev, URL, path, &peg_revision,
                                        revision, NULL,
                                        SVN_DEPTH_INFINITY_OR_FILES(recurse),
-                                       FALSE, FALSE, NULL, ctx, pool);
+                                       FALSE, FALSE, FALSE, NULL, ctx, pool);
 }
 
 /*** From info.c ***/
@@ -1676,4 +1677,19 @@ svn_client_revert(const apr_array_header_t *paths,
 {
   return svn_client_revert2(paths, SVN_DEPTH_INFINITY_OR_EMPTY(recursive),
                             NULL, ctx, pool);
+}
+
+/*** From ra.c ***/
+svn_error_t *
+svn_client_uuid_from_path(const char **uuid,
+                          const char *path,
+                          svn_wc_adm_access_t *adm_access,
+                          svn_client_ctx_t *ctx,
+                          apr_pool_t *pool)
+{
+  const char *local_abspath;
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+  return svn_error_return(
+    svn_client_uuid_from_path2(uuid, local_abspath, ctx, pool, pool));
 }

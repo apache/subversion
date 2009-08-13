@@ -3260,32 +3260,46 @@ svn_wc_dup_status(const svn_wc_status_t *orig_stat,
 
 
 /**
- * Fill @a *status for @a path, allocating in @a pool.
- * @a adm_access must be an access baton for @a path.
+ * Fill @a *status for @a local_abspath, allocating in @a result_pool.
+ * Use @a scratch_pool for temporary allocations.
  *
  * Here are some things to note about the returned structure.  A quick
  * examination of the @c status->text_status after a successful return of
  * this function can reveal the following things:
  *
- *    - @c svn_wc_status_none : @a path is not versioned, and is either not
- *                              present on disk, or is ignored by svn's
- *                              default ignore regular expressions or the
- *                              svn:ignore property setting for @a path's
- *                              parent directory.
+ *    - @c svn_wc_status_none : @a local_abspath is not versioned, and is
+ *                              either not present on disk, or is ignored
+ *                              by svn's default ignore regular expressions
+ *                              or the svn:ignore property setting for
+ *                              @a local_abspath's parent directory.
  *
- *    - @c svn_wc_status_missing : @a path is versioned, but is missing from
- *                                 the working copy.
+ *    - @c svn_wc_status_missing : @a local_abspath is versioned, but is
+ *                                 missing from the working copy.
  *
- *    - @c svn_wc_status_unversioned : @a path is not versioned, but is
- *                                     present on disk and not being
+ *    - @c svn_wc_status_unversioned : @a local_abspath is not versioned,
+ *                                     but is present on disk and not being
  *                                     ignored (see above).
  *
  * The other available results for the @c text_status field are more
  * straightforward in their meanings.  See the comments on the
  * @c svn_wc_status_kind structure for some hints.
  *
- * @since New in 1.2.
+ * @since New in 1.7.
  */
+svn_error_t *
+svn_wc_status3(svn_wc_status2_t **status,
+               svn_wc_context_t *wc_ctx,
+               const char *local_abspath,
+               apr_pool_t *result_pool,
+               apr_pool_t *scratch_pool);
+
+/** Similar to svn_wc_status3(), but with a adm_access baton and absolute
+ * path.
+ *
+ * @since New in 1.2.
+ * @deprecated Provided for backward compatibility with the 1.6 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_status2(svn_wc_status2_t **status,
                const char *path,
@@ -3423,6 +3437,7 @@ svn_wc_get_status_editor5(const svn_delta_editor_t **editor,
                           void **edit_baton,
                           void **set_locks_baton,
                           svn_revnum_t *edit_revision,
+                          svn_wc_context_t *wc_ctx,
                           svn_wc_adm_access_t *anchor,
                           const char *target,
                           svn_depth_t depth,
@@ -5840,10 +5855,10 @@ svn_wc_create_tmp_file(apr_file_t **fp,
 
 /* EOL conversion and keyword expansion. */
 
-/** Set @a xlated_path to a translated copy of @a src
+/** Set @a xlated_abspath to a translated copy of @a src
  * or to @a src itself if no translation is necessary.
- * That is, if @a versioned_file's properties indicate newline conversion or
- * keyword expansion, point @a *xlated_path to a copy of @a src
+ * That is, if @a versioned_abspath's properties indicate newline conversion 
+ * or keyword expansion, point @a *xlated_abspath to a copy of @a src
  * whose newlines and keywords are converted using the translation
  * as requested by @a flags.
  *
@@ -5857,20 +5872,38 @@ svn_wc_create_tmp_file(apr_file_t **fp,
  * @c SVN_WC_TRANSLATE_FORCE_COPY flag in @a flags.
  *
  * This function is generally used to get a file that can be compared
- * meaningfully against @a versioned_file's text base, if
- * @c SVN_WC_TRANSLATE_TO_NF is specified, against @a versioned_file itself
+ * meaningfully against @a versioned_abspath's text base, if
+ * @c SVN_WC_TRANSLATE_TO_NF is specified, against @a versioned_abspath itself
  * if @c SVN_WC_TRANSLATE_FROM_NF is specified.
  *
- * Output files are created in the temp file area belonging to
- * @a versioned_file.  By default they will be deleted at pool cleanup.
+ * The output file is created in the temp file area belonging to
+ * @a versioned_abspath. By default it will be deleted at result_pool
+ * cleanup. If @a flags includes @c SVN_WC_TRANSLATE_NO_OUTPUT_CLEANUP,
+ * the default result_pool cleanup handler to remove @a *xlated_abspath is
+ * not registered.
  *
- * If @c SVN_WC_TRANSLATE_NO_OUTPUT_CLEANUP is specified, the default
- * pool cleanup handler to remove @a *xlated_path is not registered.
+ * If an error is returned, the effect on @a *xlated_abspath is undefined.
  *
- * If an error is returned, the effect on @a *xlated_path is undefined.
+ * @since New in 1.7.
+ */ 
+svn_error_t *
+svn_wc_translated_file3(const char **xlated_abspath,
+                        const char *src,
+                        svn_wc_context_t *wc_ctx,
+                        const char *versioned_abspath,
+                        apr_uint32_t flags,
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool);
+
+
+/** Similar to svn_wc_translated_file3(), but with an adm_access baton
+ * and relative paths instead of a wc_context and absolute paths, and
+ * with a single pool.
  *
- * @since New in 1.4
+ * @since New in 1.4.
+ * @deprecated Provided for compatibility with the 1.6 API
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_translated_file2(const char **xlated_path,
                         const char *src,

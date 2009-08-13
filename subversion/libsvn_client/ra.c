@@ -374,79 +374,24 @@ svn_client_uuid_from_url(const char **uuid,
 
 
 svn_error_t *
-svn_client_uuid_from_path(const char **uuid,
-                          const char *path,
-                          svn_wc_adm_access_t *adm_access,
-                          svn_client_ctx_t *ctx,
-                          apr_pool_t *pool)
+svn_client_uuid_from_path2(const char **uuid,
+                           const char *local_abspath,
+                           svn_client_ctx_t *ctx,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool)
 {
   const svn_wc_entry_t *entry;
-  svn_boolean_t is_root;
 
-  SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access,
-                                  TRUE,  /* show deleted */ pool));
+  SVN_ERR(svn_wc__get_entry_versioned(&entry, ctx->wc_ctx, local_abspath,
+                                      svn_node_unknown, TRUE, /* show deleted */
+                                      FALSE, scratch_pool, scratch_pool));
 
   if (entry->uuid)
-    {
-      *uuid = entry->uuid;
-      return SVN_NO_ERROR;
-    }
-
-  /* ## Probably never reached after the 1.6/1.7 WC rewrite */
-
-  SVN_ERR(svn_wc_is_wc_root(&is_root, path, adm_access, pool));
-
-  if (!is_root)
-    {
-      /* Working copies have a single uuid, as all contents is from a single
-         repository */
-
-      svn_error_t *err;
-      svn_wc_adm_access_t *parent_access;
-      const char *parent = svn_dirent_dirname(path, pool);
-
-      /* Open the parents administrative area to fetch the uuid.
-         Subversion 1.0 and later have the uuid in every checkout root */
-
-      SVN_ERR(svn_wc__adm_open_in_context(&parent_access, ctx->wc_ctx, parent,
-                                          FALSE, 0, ctx->cancel_func,
-                                          ctx->cancel_baton, pool));
-
-      err = svn_client_uuid_from_path(uuid, svn_dirent_dirname(path, pool),
-                                      parent_access, ctx, pool);
-
-      svn_error_clear(svn_wc_adm_close2(parent_access, pool));
-
-      return svn_error_return(err);
-    }
-
-  /* We may have a working copy without uuid */
-  if (entry->url)
-    {
-      /* You can enter this case by copying a new subdirectory with 1.0-1.5
-       * # svn mkdir newdir
-       * # cp newdir /tmp/new-wc
-       * and then check /tmp/new-wc
-       *
-       * See also:
-       * http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=101831
-       * Message-ID: <877jgjtkus.fsf@debian2.lan> */
-
-      /* fallback to using the network. */
-      SVN_ERR(svn_client_uuid_from_url(uuid, entry->url, ctx, pool));
-    }
-  else
-    {
-      /* Excluded path will fall into this code branch, since the missed
-         fields in the entry for excluded path is not filled. But it is just
-         ok. */
-      return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
-                               _("'%s' has no URL"),
-                               svn_dirent_local_style(path, pool));
-    }
+    *uuid = apr_pstrdup(result_pool, entry->uuid);
 
   return SVN_NO_ERROR;
 }
+
 
 
 
@@ -509,8 +454,8 @@ svn_client__ra_session_from_path(svn_ra_session_t **ra_session_p,
   /* Resolve good_rev into a real revnum. */
   if (good_rev->kind == svn_opt_revision_unspecified)
     good_rev->kind = svn_opt_revision_head;
-  SVN_ERR(svn_client__get_revision_number(&rev, NULL, ra_session,
-                                          good_rev, url, pool));
+  SVN_ERR(svn_client__get_revision_number(&rev, NULL, ctx->wc_ctx, url,
+                                          ra_session, good_rev, pool));
 
   *ra_session_p = ra_session;
   *rev_p = rev;
@@ -633,12 +578,15 @@ svn_client__repos_locations(const char **start_url,
   const char *url;
   const char *start_path = NULL;
   const char *end_path = NULL;
+  const char *local_abspath;
   svn_revnum_t peg_revnum = SVN_INVALID_REVNUM;
   svn_revnum_t start_revnum, end_revnum;
   svn_revnum_t youngest_rev = SVN_INVALID_REVNUM;
   apr_array_header_t *revs;
   apr_hash_t *rev_locs;
   apr_pool_t *subpool = svn_pool_create(pool);
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, subpool));
 
   /* Ensure that we are given some real revision data to work with.
      (It's okay if the END is unspecified -- in that case, we'll just
@@ -698,16 +646,18 @@ svn_client__repos_locations(const char **start_url,
   /* Resolve the opt_revision_ts. */
   if (peg_revnum == SVN_INVALID_REVNUM)
     SVN_ERR(svn_client__get_revision_number(&peg_revnum, &youngest_rev,
-                                            ra_session, revision, path,
-                                            pool));
+                                            ctx->wc_ctx, local_abspath,
+                                            ra_session, revision, pool));
 
   SVN_ERR(svn_client__get_revision_number(&start_revnum, &youngest_rev,
-                                          ra_session, start, path, pool));
+                                          ctx->wc_ctx, local_abspath,
+                                          ra_session, start, pool));
   if (end->kind == svn_opt_revision_unspecified)
     end_revnum = start_revnum;
   else
     SVN_ERR(svn_client__get_revision_number(&end_revnum, &youngest_rev,
-                                            ra_session, end, path, pool));
+                                            ctx->wc_ctx, local_abspath,
+                                            ra_session, end, pool));
 
   /* Set the output revision variables. */
   *start_revision = apr_pcalloc(pool, sizeof(**start_revision));
@@ -802,12 +752,12 @@ svn_client__get_youngest_common_ancestor(const char **ancestor_path,
                                                &revision1,
                                                SVN_INVALID_REVNUM,
                                                SVN_INVALID_REVNUM,
-                                               NULL, NULL, ctx, pool));
+                                               NULL, ctx, pool));
   SVN_ERR(svn_client__get_history_as_mergeinfo(&history2, path_or_url2,
                                                &revision2,
                                                SVN_INVALID_REVNUM,
                                                SVN_INVALID_REVNUM,
-                                               NULL, NULL, ctx, pool));
+                                               NULL, ctx, pool));
 
   /* Loop through the first location's history, check for overlapping
      paths and ranges in the second location's history, and

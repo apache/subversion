@@ -53,7 +53,7 @@ for executable in $executables; do
   eval "$executable=\$executable_dependencies"
 done
 
-test_paths="$(find subversion/tests -name '*-test' ! -path '*/.libs/*' | sort)"
+test_paths="$(find subversion/tests -mindepth 2 -maxdepth 2 -name '*-test' ! -path '*/.libs/*' | sort)"
 for test in $test_paths; do
   test_path="$test"
   # Dependencies of tests are based on names of directories containing tests

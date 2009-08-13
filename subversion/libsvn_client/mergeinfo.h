@@ -50,6 +50,11 @@ typedef struct svn_client__merge_path_t
   svn_boolean_t absent;              /* PATH is absent from the WC, probably
                                         due to authz restrictions. */
 
+  svn_boolean_t child_of_noninheritable; /* PATH has no explict mergeinfo
+                                            itself but is the child of a
+                                            path with noniheritable
+                                            mergeinfo. */
+
   /* The remaining ranges to be merged to PATH.  When describing a forward
      merge this rangelist adheres to the rules for rangelists described in
      svn_mergeinfo.h.  However, when describing reverse merges this
@@ -60,8 +65,9 @@ typedef struct svn_client__merge_path_t
      may be empty but should never be NULL unless ABSENT is true. */
   apr_array_header_t *remaining_ranges;
 
-  svn_mergeinfo_t pre_merge_mergeinfo;  /* Mergeinfo on PATH prior to a
-                                           merge. May be NULL. */
+  svn_mergeinfo_t pre_merge_mergeinfo;  /* Explicit or inherited mergeinfo
+                                           on PATH prior to a merge.
+                                           May be NULL. */
   svn_mergeinfo_t implicit_mergeinfo;   /* Implicit mergeinfo on PATH prior
                                            to a merge.  May be NULL. */
   svn_boolean_t indirect_mergeinfo;     /* Whether PRE_MERGE_MERGEINFO was
@@ -98,13 +104,11 @@ svn_client__merge_path_dup(const svn_client__merge_path_t *old,
 svn_error_t *
 svn_client__get_wc_mergeinfo(svn_mergeinfo_t *mergeinfo,
                              svn_boolean_t *inherited,
-                             svn_boolean_t pristine,
                              svn_mergeinfo_inheritance_t inherit,
                              const svn_wc_entry_t *entry,
                              const char *wcpath,
                              const char *limit_path,
                              const char **walked_path,
-                             svn_wc_adm_access_t *adm_access,
                              svn_client_ctx_t *ctx,
                              apr_pool_t *pool);
 
@@ -165,19 +169,15 @@ svn_client__get_wc_or_repos_mergeinfo(svn_mergeinfo_t *target_mergeinfo,
                                       svn_mergeinfo_inheritance_t inherit,
                                       svn_ra_session_t *ra_session,
                                       const char *target_wcpath,
-                                      svn_wc_adm_access_t *adm_access,
                                       svn_client_ctx_t *ctx,
                                       apr_pool_t *pool);
 
 /* Set *MERGEINFO_P to a mergeinfo constructed solely from the
    natural history of PATH_OR_URL@PEG_REVISION.  RA_SESSION is an RA
    session whose session URL maps to PATH_OR_URL's URL, or NULL.
-   ADM_ACCESS is a working copy administrative access baton which can
-   be used to fetch information about PATH_OR_URL (if PATH_OR_URL is a
-   working copy path), or NULL.  If RANGE_YOUNGEST and RANGE_OLDEST
-   are valid, use them to bound the revision ranges of returned
-   mergeinfo.  See svn_ra_get_location_segments() for the rules
-   governing PEG_REVISION, START_REVISION, and END_REVISION.*/
+   If RANGE_YOUNGEST and RANGE_OLDEST are valid, use them to bound the
+   revision ranges of returned mergeinfo.  See svn_ra_get_location_segments()
+   for the rules governing PEG_REVISION, START_REVISION, and END_REVISION.*/
 svn_error_t *
 svn_client__get_history_as_mergeinfo(svn_mergeinfo_t *mergeinfo_p,
                                      const char *path_or_url,
@@ -185,7 +185,6 @@ svn_client__get_history_as_mergeinfo(svn_mergeinfo_t *mergeinfo_p,
                                      svn_revnum_t range_youngest,
                                      svn_revnum_t range_oldest,
                                      svn_ra_session_t *ra_session,
-                                     svn_wc_adm_access_t *adm_access,
                                      svn_client_ctx_t *ctx,
                                      apr_pool_t *pool);
 
@@ -197,18 +196,15 @@ svn_client__mergeinfo_from_segments(svn_mergeinfo_t *mergeinfo_p,
                                     apr_array_header_t *segments,
                                     apr_pool_t *pool);
 
-/* Parse any mergeinfo from the WCPATH's ENTRY and store it in
-   MERGEINFO.  If PRISTINE is true parse the pristine mergeinfo,
-   working otherwise. If no record of any mergeinfo exists, set
-   MERGEINFO to NULL.  Does not acount for inherited mergeinfo. */
+/* Parse any mergeinfo from the LOCAL_ABSPATH's ENTRY and store it in
+   MERGEINFO.  If no record of any mergeinfo exists, set MERGEINFO to NULL.
+   Does not acount for inherited mergeinfo. */
 svn_error_t *
 svn_client__parse_mergeinfo(svn_mergeinfo_t *mergeinfo,
-                            const svn_wc_entry_t *entry,
-                            const char *wcpath,
-                            svn_boolean_t pristine,
-                            svn_wc_adm_access_t *adm_access,
-                            svn_client_ctx_t *ctx,
-                            apr_pool_t *pool);
+                            svn_wc_context_t *wc_ctx,
+                            const char *local_abspath,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool);
 
 /* Write MERGEINFO into the WC for LOCAL_ABSPATH.  If MERGEINFO is NULL,
    remove any SVN_PROP_MERGEINFO for LOCAL_ABSPATH.  If MERGEINFO is empty,
@@ -255,33 +251,8 @@ svn_error_t *
 svn_client__elide_mergeinfo(const char *target_wcpath,
                             const char *wc_elision_limit_path,
                             const svn_wc_entry_t *entry,
-                            svn_wc_adm_access_t *adm_access,
                             svn_client_ctx_t *ctx,
                             apr_pool_t *pool);
-
-/* For each path in CHILDREN_WITH_MERGEINFO which is an immediate child of
-   TARGET_WCPATH, check if that path's mergeinfo elides to TARGET_WCPATH.
-   If it does elide, clear all mergeinfo from the path.
-
-   CHILDREN_WITH_MERGEINFO is filled with child paths (struct
-   merge_path_t *) of TARGET_WCPATH which have svn:mergeinfo set on
-   them, arranged in depth first order (see
-   discover_and_merge_children). */
-svn_error_t *
-svn_client__elide_children(apr_array_header_t *children_with_mergeinfo,
-                           const char *target_wcpath,
-                           const svn_wc_entry_t *entry,
-                           svn_wc_adm_access_t *adm_access,
-                           svn_client_ctx_t *ctx,
-                           apr_pool_t *pool);
-
-/* A wrapper which calls svn_client__elide_mergeinfo() on each child
-   in CHILDREN_WITH_MERGEINFO in depth-first. */
-svn_error_t *
-svn_client__elide_mergeinfo_for_tree(apr_hash_t *children_with_mergeinfo,
-                                     svn_wc_adm_access_t *adm_access,
-                                     svn_client_ctx_t *ctx,
-                                     apr_pool_t *pool);
 
 /* TODO(reint): Document. */
 svn_error_t *

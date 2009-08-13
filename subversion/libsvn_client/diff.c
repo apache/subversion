@@ -49,6 +49,7 @@
 #include "svn_time.h"
 #include "svn_sorts.h"
 #include "svn_base64.h"
+#include "svn_subst.h"
 #include "client.h"
 
 #include "private/svn_wc_private.h"
@@ -167,6 +168,35 @@ display_mergeinfo_diff(const char *old_mergeinfo_val,
                           _("Path '%s' must be an immediate child of " \
                             "the directory '%s'"), path, relative_to_dir)
 
+/* A helper function used by display_prop_diffs.
+   TOKEN is a string holding a property value.
+   If TOKEN is empty, or is already terminated by an EOL marker,
+   return TOKEN unmodified. Else, return a new string consisting
+   of the concatenation of TOKEN and the system's default EOL marker.
+   The new string is allocated from POOL. */
+static const svn_string_t *
+maybe_append_eol(const svn_string_t *token, apr_pool_t *pool)
+{
+  const char *curp;
+
+  if (token->len == 0)
+    return token;
+
+  curp = token->data + token->len - 1;
+  if (*curp == '\r')
+    {
+      return token;
+    }
+  else if (*curp != '\n')
+    {
+      return svn_string_createf(pool, "%s%s", token->data, APR_EOL_STR);
+    }
+  else
+    {
+      return token;
+    }
+}
+
 /* A helper func that writes out verbal descriptions of property diffs
    to FILE.   Of course, the apr_file_t will probably be the 'outfile'
    passed to svn_client_diff5, which is probably stdout. */
@@ -242,52 +272,42 @@ display_prop_diffs(const apr_array_header_t *propchanges,
           continue;
         }
 
-      /* For now, we have a rather simple heuristic: if this is an
-         "svn:" property, then assume the value is UTF-8 and must
-         therefore be converted before printing.  Otherwise, just
-         print whatever's there and hope for the best. */
       {
-        svn_boolean_t val_is_utf8 = svn_prop_is_svn_prop(propchange->name);
+        svn_stream_t *os = svn_stream_from_aprfile2(file, TRUE, pool);
+        svn_diff_t *diff;
+        svn_diff_file_options_t options;
+        const svn_string_t *tmp;
+        const svn_string_t *orig;
+        const svn_string_t *val;
 
-        if (original_value != NULL)
-          {
-            if (val_is_utf8)
-              {
-                SVN_ERR(file_printf_from_utf8
-                        (file, encoding,
-                         "   - %s" APR_EOL_STR, original_value->data));
-              }
-            else
-              {
-                /* ### todo: check for error? */
-                apr_file_printf
-                  (file, "   - %s" APR_EOL_STR, original_value->data);
-              }
-          }
+        /* The last character in a property is often not a newline.
+           Since the diff is not useful anyway for patching properties an
+           eol character is appended when needed to remove those pescious
+           ' \ No newline at end of file' lines. */
+        tmp = original_value ? original_value : svn_string_create("", pool);
+        orig = maybe_append_eol(tmp, pool);
 
-        if (propchange->value != NULL)
-          {
-            if (val_is_utf8)
-              {
-                SVN_ERR(file_printf_from_utf8
-                        (file, encoding, "   + %s" APR_EOL_STR,
-                         propchange->value->data));
-              }
-            else
-              {
-                /* ### todo: check for error? */
-                apr_file_printf(file, "   + %s" APR_EOL_STR,
-                                propchange->value->data);
-              }
-          }
+        tmp = propchange->value ? propchange->value :
+                                  svn_string_create("", pool);
+        val = maybe_append_eol(tmp, pool);
+
+        SVN_ERR(svn_diff_mem_string_diff(&diff, orig, val, &options, pool));
+
+        /* UNIX patch will try to apply a diff even if the diff header
+         * is missing. It tries to be helpful by asking the user for a
+         * target filename when it can't determine the target filename
+         * from the diff header. But there usually are no files which
+         * UNIX patch could apply the property diff to, so we use "##"
+         * instead of "@@" as the default hunk delimiter for property diffs.
+         * We also supress the diff header. */
+        SVN_ERR(svn_diff_mem_string_output_unified2(os, diff, FALSE, "##",
+                                           svn_dirent_local_style(path, pool),
+                                           svn_dirent_local_style(path, pool),
+                                           encoding, orig, val, pool));
+        SVN_ERR(svn_stream_close(os));
+
       }
     }
-
-  /* ### todo [issue #1533]: Use file_printf_from_utf8() to convert this
-     to native encoding, at least conditionally?  Or is it better to
-     have under_string always output the same eol, so programs can
-     find it consistently?  Also, what about checking for error? */
-  apr_file_printf(file, APR_EOL_STR);
 
   return SVN_NO_ERROR;
 }
@@ -1069,6 +1089,11 @@ diff_prepare_repos_repos(const struct diff_parameters *params,
 {
   svn_ra_session_t *ra_session;
   svn_node_kind_t kind1, kind2;
+  const char *params_path2_abspath;
+  const char *params_path1_abspath;
+
+  SVN_ERR(svn_dirent_get_absolute(&params_path2_abspath, params->path2, pool));
+  SVN_ERR(svn_dirent_get_absolute(&params_path1_abspath, params->path1, pool));
 
   /* Figure out URL1 and URL2. */
   SVN_ERR(convert_to_url(&drr->url1, params->path1, pool));
@@ -1108,9 +1133,9 @@ diff_prepare_repos_repos(const struct diff_parameters *params,
     }
 
   /* Resolve revision and get path kind for the second target. */
-  SVN_ERR(svn_client__get_revision_number
-          (&drr->rev2, NULL, ra_session, params->revision2,
-           (params->path2 == drr->url2) ? NULL : params->path2, pool));
+  SVN_ERR(svn_client__get_revision_number(&drr->rev2, NULL, ctx->wc_ctx,
+           (params->path2 == drr->url2) ? NULL : params_path2_abspath,
+           ra_session, params->revision2, pool));
   SVN_ERR(svn_ra_check_path(ra_session, "", drr->rev2, &kind2, pool));
   if (kind2 == svn_node_none)
     return svn_error_createf
@@ -1120,9 +1145,9 @@ diff_prepare_repos_repos(const struct diff_parameters *params,
 
   /* Do the same for the first target. */
   SVN_ERR(svn_ra_reparent(ra_session, drr->url1, pool));
-  SVN_ERR(svn_client__get_revision_number
-          (&drr->rev1, NULL, ra_session, params->revision1,
-           (params->path1 == drr->url1) ? NULL : params->path1, pool));
+  SVN_ERR(svn_client__get_revision_number(&drr->rev1, NULL, ctx->wc_ctx,
+           (params->path1 == drr->url1) ? NULL : params_path1_abspath,
+           ra_session, params->revision1, pool));
   SVN_ERR(svn_ra_check_path(ra_session, "", drr->rev1, &kind1, pool));
   if (kind1 == svn_node_none)
     return svn_error_createf
@@ -1212,10 +1237,13 @@ diff_wc_wc(const char *path1,
 {
   svn_wc_adm_access_t *adm_access, *target_access;
   const char *target;
+  const char *abspath1;
   int levels_to_lock = SVN_WC__LEVELS_TO_LOCK_FROM_DEPTH(depth);
 
   SVN_ERR_ASSERT(! svn_path_is_url(path1));
   SVN_ERR_ASSERT(! svn_path_is_url(path2));
+
+  SVN_ERR(svn_dirent_get_absolute(&abspath1, path1, pool));
 
   /* Currently we support only the case where path1 and path2 are the
      same path. */
@@ -1234,8 +1262,9 @@ diff_wc_wc(const char *path1,
                                  pool));
 
   /* Resolve named revisions to real numbers. */
-  SVN_ERR(svn_client__get_revision_number
-          (&callback_baton->revnum1, NULL, NULL, revision1, path1, pool));
+  SVN_ERR(svn_client__get_revision_number(&callback_baton->revnum1, NULL,
+                                          ctx->wc_ctx, abspath1, NULL,
+                                          revision1, pool));
   callback_baton->revnum2 = SVN_INVALID_REVNUM;  /* WC */
 
   SVN_ERR(svn_wc_diff6(adm_access, target, callbacks, callback_baton,
@@ -1352,8 +1381,11 @@ diff_repos_wc(const char *path1,
   svn_boolean_t rev2_is_base = (revision2->kind == svn_opt_revision_base);
   int levels_to_lock = SVN_WC__LEVELS_TO_LOCK_FROM_DEPTH(depth);
   svn_boolean_t server_supports_depth;
+  const char *abspath1;
 
   SVN_ERR_ASSERT(! svn_path_is_url(path2));
+
+  SVN_ERR(svn_dirent_get_absolute(&abspath1, path1, pool));
 
   /* Convert path1 to a URL to feed to do_diff. */
   SVN_ERR(convert_to_url(&url1, path1, pool));
@@ -1419,9 +1451,9 @@ diff_repos_wc(const char *path1,
                                   pool));
 
   /* Tell the RA layer we want a delta to change our txn to URL1 */
-  SVN_ERR(svn_client__get_revision_number
-          (&rev, NULL, ra_session, revision1,
-           (path1 == url1) ? NULL : path1, pool));
+  SVN_ERR(svn_client__get_revision_number(&rev, NULL, ctx->wc_ctx,
+                                          (path1 == url1) ? NULL : abspath1,
+                                          ra_session, revision1, pool));
 
   if (!reverse)
     callback_baton->revnum1 = rev;

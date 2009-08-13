@@ -210,11 +210,11 @@ def mergeinfo_and_skipped_paths(sbox):
   # access.
   #
   # After the merge the parents of the missing dest paths, A_COPY_2/D and
-  # A_COPY_2/D/H get non-inheritable mergeinfo.  Those parents children that
-  # *are* present, A_COPY_2/D/gamma, A_COPY_2/D/H/chi, and A_COPY_2/D/H/omega
-  # get their own mergeinfo.  Note that A_COPY_2/D/H is both the parent of
-  # a missing child and the sibling of missing child, but the former always
-  # takes precedence in terms of getting *non*-inheritable mergeinfo.
+  # A_COPY_2/D/H get non-inheritable mergeinfo.  Those parents' children that
+  # *are* present and are affected by the merge, only A_COPY_2/D/H/omega in
+  # this case, get their own mergeinfo.  Note that A_COPY_2/D/H is both the
+  # parent of a missing child and the sibling of missing child, but the former
+  # always takes precedence in terms of getting *non*-inheritable mergeinfo.
   expected_output = wc.State(A_COPY_2_path, {
     'D/G'       : Item(status='  ', treeconflict='C'),
     'D/H/omega' : Item(status='U '),
@@ -222,10 +222,10 @@ def mergeinfo_and_skipped_paths(sbox):
   expected_status = wc.State(A_COPY_2_path, {
     ''          : Item(status=' M', wc_rev=8),
     'D/G'       : Item(status='! ', treeconflict='C'),
-    'D/H/chi'   : Item(status=' M', wc_rev=8),
+    'D/H/chi'   : Item(status='  ', wc_rev=8),
     'D/H/omega' : Item(status='MM', wc_rev=8),
     'D/H'       : Item(status=' M', wc_rev=8),
-    'D/gamma'   : Item(status=' M', wc_rev=8),
+    'D/gamma'   : Item(status='  ', wc_rev=8),
     'D'         : Item(status=' M', wc_rev=8),
     'B/lambda'  : Item(status='  ', wc_rev=8),
     'B/E'       : Item(status=' M', wc_rev=8),
@@ -240,11 +240,9 @@ def mergeinfo_and_skipped_paths(sbox):
     ''          : Item(props={SVN_PROP_MERGEINFO : '/A:5-8'}),
     'D/H/omega' : Item("New content",
                        props={SVN_PROP_MERGEINFO : '/A/D/H/omega:5-8'}),
-    'D/H/chi'   : Item("This is the file 'chi'.\n",
-                       props={SVN_PROP_MERGEINFO : '/A/D/H/chi:5-8'}),
+    'D/H/chi'   : Item("This is the file 'chi'.\n"),
     'D/H'       : Item(props={SVN_PROP_MERGEINFO : '/A/D/H:5-8*'}),
-    'D/gamma'   : Item("This is the file 'gamma'.\n",
-                       props={SVN_PROP_MERGEINFO : '/A/D/gamma:5-8'}),
+    'D/gamma'   : Item("This is the file 'gamma'.\n"),
     'D'         : Item(props={SVN_PROP_MERGEINFO : '/A/D:5-8*'}),
     'B/lambda'  : Item("This is the file 'lambda'.\n"),
     'B/E'       : Item(props={SVN_PROP_MERGEINFO : ''}),
@@ -274,8 +272,9 @@ def mergeinfo_and_skipped_paths(sbox):
   #
   # Again A_COPY_3/B/E should be skipped, but because we can't access the
   # source *or* the destination we expect its parent A_COPY_3/B to get
-  # non-inheritable mergeinfo and its two existing siblings, A_COPY_3/B/F
-  # and A_COPY_3/B/lambda to get their own mergeinfo.
+  # non-inheritable mergeinfo.  A_COPY_3B's two existing siblings,
+  # A_COPY_3/B/F and A_COPY_3/B/lambda are untouched by the merge so
+  # neither gets any mergeinfo recorded.
   expected_output = wc.State(A_COPY_3_path, {
     'D/G/rho' : Item(status='U '),
     })
@@ -291,8 +290,8 @@ def mergeinfo_and_skipped_paths(sbox):
     'D/G/pi'    : Item(status='  ', wc_rev=8),
     'D/G/rho'   : Item(status='M ', wc_rev=8),
     'D/G/tau'   : Item(status='  ', wc_rev=8),
-    'B/lambda'  : Item(status=' M', wc_rev=8),
-    'B/F'       : Item(status=' M', wc_rev=8),
+    'B/lambda'  : Item(status='  ', wc_rev=8),
+    'B/F'       : Item(status='  ', wc_rev=8),
     'B'         : Item(status=' M', wc_rev=8),
     'mu'        : Item(status='  ', wc_rev=8),
     'C'         : Item(status='  ', wc_rev=8),
@@ -309,9 +308,8 @@ def mergeinfo_and_skipped_paths(sbox):
     'D/G/pi'    : Item("This is the file 'pi'.\n"),
     'D/G/rho'   : Item("New content"),
     'D/G/tau'   : Item("This is the file 'tau'.\n"),
-    'B/lambda'  : Item("This is the file 'lambda'.\n",
-                       props={SVN_PROP_MERGEINFO : '/A/B/lambda:6-7'}),
-    'B/F'       : Item(props={SVN_PROP_MERGEINFO : '/A/B/F:6-7'}),
+    'B/lambda'  : Item("This is the file 'lambda'.\n"),
+    'B/F'       : Item(),
     'B'         : Item(props={SVN_PROP_MERGEINFO : '/A/B:6-7*'}),
     'mu'        : Item("This is the file 'mu'.\n"),
     'C'         : Item(),
@@ -336,21 +334,20 @@ def mergeinfo_and_skipped_paths(sbox):
   #
   # Merge -c5 -c8 to the restricted WC's A_COPY_2/D/H.  r5 gets merged first
   # but is a no-op, r8 get's merged next and is operative so the mergeinfo
-  # should be updated to reflect both merges.
+  # should be updated on the merge target to reflect both merges.
   expected_output = wc.State(A_COPY_2_H_path, {
     'omega' : Item(status='U '),
     })
   expected_status = wc.State(A_COPY_2_H_path, {
     ''      : Item(status=' M', wc_rev=8),
-    'chi'   : Item(status=' M', wc_rev=8),
+    'chi'   : Item(status='  ', wc_rev=8),
     'omega' : Item(status='MM', wc_rev=8),
     })
   expected_disk = wc.State('', {
     ''      : Item(props={SVN_PROP_MERGEINFO : '/A/D/H:5*,8*'}),
     'omega' : Item("New content",
-                   props={SVN_PROP_MERGEINFO : '/A/D/H/omega:5,8'}),
-    'chi'   : Item("This is the file 'chi'.\n",
-                   props={SVN_PROP_MERGEINFO : '/A/D/H/chi:5,8'}),
+                   props={SVN_PROP_MERGEINFO : '/A/D/H/omega:8'}),
+    'chi'   : Item("This is the file 'chi'.\n"),
     })
   expected_skip = wc.State(A_COPY_2_H_path, {
     'psi'   : Item(),
@@ -392,7 +389,7 @@ def mergeinfo_and_skipped_paths(sbox):
     })
   expected_status = wc.State(A_COPY_2_H_path, {
     ''      : Item(status=' M', wc_rev=8),
-    'chi'   : Item(status=' M', wc_rev=8),
+    'chi'   : Item(status='  ', wc_rev=8),
     'omega' : Item(status='MM', wc_rev=8),
     'zeta'  : Item(status='A ', copied='+', wc_rev='-'),
     })
@@ -400,8 +397,7 @@ def mergeinfo_and_skipped_paths(sbox):
     ''      : Item(props={SVN_PROP_MERGEINFO : '/A/D/H:8-9*'}),
     'omega' : Item("New content",
                    props={SVN_PROP_MERGEINFO : '/A/D/H/omega:8-9'}),
-    'chi'   : Item("This is the file 'chi'.\n",
-                   props={SVN_PROP_MERGEINFO : '/A/D/H/chi:8-9'}),
+    'chi'   : Item("This is the file 'chi'.\n"),
     'zeta'  : Item("This is the file 'zeta'.\n",
                    props={SVN_PROP_MERGEINFO : '/A/D/H/zeta:8-9'}),
     })

@@ -1373,6 +1373,55 @@ svn_wc__entry_versioned(const svn_wc_entry_t **entry,
 
 
 svn_error_t *
+svn_wc__get_entry_versioned(const svn_wc_entry_t **entry,
+                            svn_wc_context_t *wc_ctx,
+                            const char *local_abspath,
+                            svn_node_kind_t kind,
+                            svn_boolean_t show_hidden,
+                            svn_boolean_t need_parent_stub,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool)
+{
+  svn_error_t *err;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  /* We call this with allow_unversioned=TRUE, since the error returned is
+     different than our callers currently expect.  We catch the NULL entry
+     below and return the correct error. */
+  err = svn_wc__get_entry(entry, wc_ctx->db, local_abspath, TRUE, kind,
+                          need_parent_stub, result_pool, scratch_pool);
+  if (err && (err->apr_err == SVN_ERR_WC_MISSING
+                || err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND
+                || err->apr_err == SVN_ERR_NODE_UNEXPECTED_KIND))
+    {
+      svn_error_clear(err);
+      *entry = NULL;
+    }
+  else if (err)
+    return svn_error_return(err);
+
+
+  if (*entry && !show_hidden)
+    {
+      svn_boolean_t hidden;
+
+      SVN_ERR(svn_wc__entry_is_hidden(&hidden, *entry));
+      if (hidden)
+        *entry = NULL;
+    }
+
+  if (! *entry)
+    return svn_error_createf(SVN_ERR_ENTRY_NOT_FOUND, NULL,
+                             _("'%s' is not under version control"),
+                             svn_dirent_local_style(local_abspath,
+                                                    scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
 svn_wc__node_is_deleted(svn_boolean_t *deleted,
                         svn_wc__db_t *db,
                         const char *local_abspath,
@@ -1517,21 +1566,27 @@ svn_wc__set_depth(svn_wc__db_t *db,
       SVN_ERR(svn_wc_entries_read(&entries, adm_access, TRUE, scratch_pool));
       entry = apr_hash_get(entries, base_name, APR_HASH_KEY_STRING);
 
-      /* If the parent says we are excluded, but we are now not, mark the
-         parent as 'infinite'.  The new depth state will be recorded in the
-         child. */
-      if (entry->depth == svn_depth_exclude && depth != svn_depth_exclude)
+      /* If we are updating sub-working copies, like externals, we don't
+         find an entry here. Just continue like when we are at the root
+         of a working copy. */
+      if (entry)
         {
-          entry->depth = svn_depth_infinity;
-          SVN_ERR(entries_write(entries, adm_access, scratch_pool));
-        }
+          /* If the parent says we are excluded, but we are now not, mark the
+             parent as 'infinite'.  The new depth state will be recorded in the
+             child. */
+          if (entry->depth == svn_depth_exclude && depth != svn_depth_exclude)
+            {
+              entry->depth = svn_depth_infinity;
+              SVN_ERR(entries_write(entries, adm_access, scratch_pool));
+            }
 
-      /* Excluded directories are marked in the parent.  */
-      if (depth == svn_depth_exclude)
-        {
-          entry->depth = depth;
-          return svn_error_return(entries_write(entries, adm_access,
-                                                scratch_pool));
+          /* Excluded directories are marked in the parent.  */
+          if (depth == svn_depth_exclude)
+            {
+              entry->depth = depth;
+              return svn_error_return(entries_write(entries, adm_access,
+                                                    scratch_pool));
+            }
         }
     }
 
@@ -2334,7 +2389,8 @@ entries_write(apr_hash_t *entries,
   SVN_ERR(svn_wc__adm_write_check(adm_access, pool));
 
   /* Open the wc.db sqlite database. */
-  SVN_ERR(svn_wc__db_temp_get_sdb(&wc_db, svn_wc_adm_access_path(adm_access),
+  SVN_ERR(svn_wc__db_temp_get_sdb(&wc_db,
+                                  svn_wc__adm_access_abspath(adm_access),
                                   statements, scratch_pool, scratch_pool));
 
   /* Write the entries. */

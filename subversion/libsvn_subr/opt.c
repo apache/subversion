@@ -1039,7 +1039,7 @@ svn_opt_eat_peg_revisions(apr_array_header_t **true_targets_p,
                           apr_array_header_t *targets,
                           apr_pool_t *pool)
 {
-  unsigned int i;
+  int i;
   apr_array_header_t *true_targets;
 
   true_targets = apr_array_make(pool, DEFAULT_ARRAY_SIZE, sizeof(const char *));

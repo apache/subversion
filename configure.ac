@@ -589,10 +589,13 @@ if test "$enable_nls" = "yes"; then
                     enable_nls="no"
                    ])
     if test "$enable_nls" = "no"; then
+      # Destroy the cached result so we can test again
+      unset ac_cv_search_bindtextdomain
       # On some systems, libintl needs libiconv to link properly,
       # so try again with -liconv.
       AC_SEARCH_LIBS(bindtextdomain, [intl],
                      [
+                      enable_nls="yes"
                       # This is here so that -liconv ends up in LIBS
                       # if it worked with -liconv.
                       AC_CHECK_LIB(iconv, libiconv_open)
