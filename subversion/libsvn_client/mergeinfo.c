@@ -783,7 +783,6 @@ get_mergeinfo(svn_mergeinfo_t *mergeinfo,
     }
   else /* ! svn_path_is_url() */
     {
-      svn_wc_adm_access_t *adm_access;
       const svn_wc_entry_t *entry;
       const char *url;
       svn_boolean_t indirect;
@@ -791,11 +790,9 @@ get_mergeinfo(svn_mergeinfo_t *mergeinfo,
 
       SVN_ERR(svn_dirent_get_absolute(&local_abspath, path_or_url, subpool));
 
-      SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, path_or_url, FALSE,
-                                     0, ctx->cancel_func, ctx->cancel_baton,
-                                     subpool));
-      SVN_ERR(svn_wc__entry_versioned(&entry, path_or_url, adm_access, FALSE,
-                                      subpool));
+      SVN_ERR(svn_wc__get_entry_versioned(&entry, ctx->wc_ctx, local_abspath,
+                                          svn_node_unknown, FALSE, FALSE,
+                                          subpool, subpool));
 
       /* Check server Merge Tracking capability. */
       SVN_ERR(svn_client__entry_location(&url, &rev, path_or_url,
@@ -815,7 +812,6 @@ get_mergeinfo(svn_mergeinfo_t *mergeinfo,
                                                     svn_mergeinfo_inherited,
                                                     NULL, path_or_url,
                                                     ctx, pool));
-      SVN_ERR(svn_wc_adm_close2(adm_access, subpool));
     }
 
   svn_pool_destroy(subpool);
