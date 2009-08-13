@@ -5147,19 +5147,21 @@ insert_parent_and_sibs_of_sw_absent_del_entry(
                                    int *curr_index,
                                    svn_client__merge_path_t *child,
                                    svn_depth_t depth,
-                                   svn_wc_adm_access_t *adm_access,
                                    apr_pool_t *pool)
 {
   svn_client__merge_path_t *parent;
   const char *parent_path = svn_dirent_dirname(child->path, pool);
-  apr_hash_t *entries;
-  apr_hash_index_t *hi;
-  svn_wc_adm_access_t *parent_access;
+  const char *parent_abspath;
+  apr_pool_t *iterpool;
+  const apr_array_header_t *children;
+  int i;
 
   if (!(child->absent
           || (child->switched
               && strcmp(merge_cmd_baton->target, child->path) != 0)))
     return SVN_NO_ERROR;
+
+  SVN_ERR(svn_dirent_get_absolute(&parent_abspath, parent_path, pool));
 
   parent = get_child_with_mergeinfo(children_with_mergeinfo, parent_path);
   if (parent)
@@ -5179,21 +5181,25 @@ insert_parent_and_sibs_of_sw_absent_del_entry(
     } /*(parent == NULL) */
 
   /* Add all of PARENT's non-missing children that are not already present.*/
-  SVN_ERR(svn_wc_adm_probe_try3(&parent_access, adm_access, parent->path,
-                                TRUE, -1, merge_cmd_baton->ctx->cancel_func,
-                                merge_cmd_baton->ctx->cancel_baton, pool));
-  SVN_ERR(svn_wc_entries_read(&entries, parent_access, FALSE, pool));
-  for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
+  SVN_ERR(svn_wc__node_get_children(&children, merge_cmd_baton->ctx->wc_ctx,
+                                    parent_abspath, pool, pool));
+  iterpool = svn_pool_create(pool);
+  for (i = 0; i < children->nelts; i++)
     {
-      const char *name = svn_apr_hash_index_key(hi);
+      const char *child_abspath = APR_ARRAY_IDX(children, i, const char *);
       svn_client__merge_path_t *sibling_of_missing;
       const char *child_path;
+      const svn_wc_entry_t *child_entry;
 
-      if (strcmp(name, SVN_WC_ENTRY_THIS_DIR) == 0)
-        continue;
+      svn_pool_clear(iterpool);
+
+      SVN_ERR(svn_wc__get_entry_versioned(&child_entry,
+                                          merge_cmd_baton->ctx->wc_ctx,
+                                          child_abspath, svn_node_unknown,
+                                          FALSE, FALSE, iterpool, iterpool));
 
       /* Does this child already exist in CHILDREN_WITH_MERGEINFO? */
-      child_path = svn_path_join(parent->path, name, pool);
+      child_path = svn_path_join(parent->path, child_entry->name, iterpool);
       sibling_of_missing = get_child_with_mergeinfo(children_with_mergeinfo,
                                                     child_path);
       /* Create the missing child and insert it into CHILDREN_WITH_MERGEINFO.*/
@@ -5202,9 +5208,6 @@ insert_parent_and_sibs_of_sw_absent_del_entry(
           /* Don't add directory children if DEPTH is svn_depth_files. */
           if (depth == svn_depth_files)
             {
-              const svn_wc_entry_t *child_entry;
-              SVN_ERR(svn_wc_entry(&child_entry, child_path,
-                                   adm_access, FALSE, pool));
               if (child_entry->kind != svn_node_file)
                 continue;
             }
@@ -5217,6 +5220,9 @@ insert_parent_and_sibs_of_sw_absent_del_entry(
                                 pool);
         }
     }
+
+  svn_pool_destroy(iterpool);
+
   return SVN_NO_ERROR;
 }
 
@@ -5468,7 +5474,7 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
           /* Case 4 and 5 are handled by the following function. */
           SVN_ERR(insert_parent_and_sibs_of_sw_absent_del_entry(
             children_with_mergeinfo, merge_cmd_baton, &i, child,
-            depth, adm_access, pool));
+            depth, pool));
         } /* i < children_with_mergeinfo->nelts */
       svn_pool_destroy(iterpool);
     } /* honor_mergeinfo */
