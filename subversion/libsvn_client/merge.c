@@ -757,7 +757,6 @@ static svn_error_t*
 filter_self_referential_mergeinfo(apr_array_header_t **props,
                                   const char *path,
                                   merge_cmd_baton_t *merge_b,
-                                  svn_wc_adm_access_t *adm_access,
                                   apr_pool_t *pool)
 {
   svn_boolean_t honor_mergeinfo;
@@ -1108,7 +1107,7 @@ merge_props_changed(svn_wc_adm_access_t *adm_access,
          PATH that is already part of PATH's own history. */
       if (merge_b->merge_source.rev1 < merge_b->merge_source.rev2)
         SVN_ERR(filter_self_referential_mergeinfo(&props, path, merge_b,
-                                                  adm_access, subpool));
+                                                  subpool));
 
       err = svn_wc_merge_props2(state, path, adm_access, original_props, props,
                                 FALSE, merge_b->dry_run, ctx->conflict_func,
@@ -3782,7 +3781,6 @@ populate_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
                           svn_boolean_t honor_mergeinfo,
                           svn_ra_session_t *ra_session,
                           const char *parent_merge_src_canon_path,
-                          svn_wc_adm_access_t *adm_access,
                           merge_cmd_baton_t *merge_b,
                           apr_pool_t *pool)
 {
@@ -6419,7 +6417,6 @@ do_file_merge(const char *url1,
 static svn_error_t *
 process_children_with_new_mergeinfo(merge_cmd_baton_t *merge_b,
                                     notification_receiver_baton_t *notify_b,
-                                    svn_wc_adm_access_t *adm_access,
                                     apr_pool_t *pool)
 {
   if (merge_b->paths_with_new_mergeinfo && !merge_b->dry_run)
@@ -6648,7 +6645,6 @@ record_mergeinfo_for_dir_merge(const svn_wc_entry_t *target_entry,
                                svn_depth_t depth,
                                notification_receiver_baton_t *notify_b,
                                merge_cmd_baton_t *merge_b,
-                               svn_wc_adm_access_t *adm_access,
                                apr_pool_t *pool)
 {
   int i;
@@ -6878,7 +6874,6 @@ record_mergeinfo_for_added_subtrees(svn_merge_range_t *merged_range,
                                     svn_depth_t depth,
                                     notification_receiver_baton_t *notify_b,
                                     merge_cmd_baton_t *merge_b,
-                                    svn_wc_adm_access_t *adm_access,
                                     apr_pool_t *pool)
 {
   /* If no paths were added by the merge then we have nothing to do. */
@@ -7410,7 +7405,7 @@ do_directory_merge(const char *url1,
                                     url1, revision1, url2, revision2,
                                     honor_mergeinfo,
                                     ra_session, mergeinfo_path,
-                                    adm_access, merge_b, pool));
+                                    merge_b, pool));
 
   /* Always start with a range which describes the most inclusive merge
      possible, i.e. REVISION1:REVISION2. */
@@ -7554,7 +7549,7 @@ do_directory_merge(const char *url1,
                  inherited is recorded and then add these paths to
                  MERGE_B->CHILDREN_WITH_MERGEINFO.*/
               SVN_ERR(process_children_with_new_mergeinfo(merge_b, notify_b,
-                                                          adm_access, pool));
+                                                          pool));
 
               /* If any subtrees had their explicit mergeinfo deleted as a
                  result of the merge then remove these paths from
@@ -7616,7 +7611,6 @@ do_directory_merge(const char *url1,
                                              depth,
                                              notify_b,
                                              merge_b,
-                                             adm_access,
                                              pool));
 
       /* If a path has an immediate parent with non-inheritable mergeinfo at
@@ -7638,7 +7632,6 @@ do_directory_merge(const char *url1,
                                                   depth,
                                                   notify_b,
                                                   merge_b,
-                                                  adm_access,
                                                   pool));
     }
 
