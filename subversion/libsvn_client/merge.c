@@ -2972,7 +2972,6 @@ get_full_mergeinfo(svn_mergeinfo_t *recorded_mergeinfo,
                    const char *target_wcpath,
                    svn_revnum_t start,
                    svn_revnum_t end,
-                   svn_wc_adm_access_t *adm_access,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
 {
@@ -3100,7 +3099,6 @@ inherit_implicit_mergeinfo_from_parent(svn_client__merge_path_t *parent,
                                        svn_revnum_t revision1,
                                        svn_revnum_t revision2,
                                        svn_ra_session_t *ra_session,
-                                       svn_wc_adm_access_t *adm_access,
                                        svn_client_ctx_t *ctx,
                                        apr_pool_t *pool)
 {
@@ -3118,7 +3116,7 @@ inherit_implicit_mergeinfo_from_parent(svn_client__merge_path_t *parent,
                                ra_session, child->path,
                                MAX(revision1, revision2),
                                MIN(revision1, revision2),
-                               adm_access, ctx, pool));
+                               ctx, pool));
 
   /* Let CHILD inherit PARENT's implicit mergeinfo. */
   child->implicit_mergeinfo = apr_hash_make(pool);
@@ -3163,7 +3161,6 @@ ensure_implicit_mergeinfo(svn_client__merge_path_t *parent,
                           svn_revnum_t revision1,
                           svn_revnum_t revision2,
                           svn_ra_session_t *ra_session,
-                          svn_wc_adm_access_t *adm_access,
                           svn_client_ctx_t *ctx,
                           apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool)
@@ -3180,7 +3177,6 @@ ensure_implicit_mergeinfo(svn_client__merge_path_t *parent,
                                                    revision1,
                                                    revision2,
                                                    ra_session,
-                                                   adm_access,
                                                    ctx,
                                                    result_pool));
   else
@@ -3191,7 +3187,7 @@ ensure_implicit_mergeinfo(svn_client__merge_path_t *parent,
                                ra_session, child->path,
                                MAX(revision1, revision2),
                                MIN(revision1, revision2),
-                               adm_access, ctx, result_pool));
+                               ctx, result_pool));
 
   return SVN_NO_ERROR;
 }
@@ -3249,7 +3245,6 @@ filter_merged_revisions(svn_client__merge_path_t *parent,
                         svn_revnum_t revision2,
                         svn_boolean_t child_inherits_implicit,
                         svn_ra_session_t *ra_session,
-                        svn_wc_adm_access_t *adm_access,
                         svn_client_ctx_t *ctx,
                         apr_pool_t *pool)
 {
@@ -3341,7 +3336,6 @@ filter_merged_revisions(svn_client__merge_path_t *parent,
                                             revision1,
                                             revision2,
                                             ra_session,
-                                            adm_access,
                                             ctx,
                                             pool,
                                             subpool));
@@ -3431,7 +3425,6 @@ filter_merged_revisions(svn_client__merge_path_t *parent,
                                             revision1,
                                             revision2,
                                             ra_session,
-                                            adm_access,
                                             ctx,
                                             pool,
                                             subpool));
@@ -3508,7 +3501,6 @@ calculate_remaining_ranges(svn_client__merge_path_t *parent,
                            svn_boolean_t child_inherits_implicit,
                            svn_ra_session_t *ra_session,
                            const svn_wc_entry_t *entry,
-                           svn_wc_adm_access_t *adm_access,
                            svn_client_ctx_t *ctx,
                            apr_pool_t *pool)
 {
@@ -3555,7 +3547,7 @@ calculate_remaining_ranges(svn_client__merge_path_t *parent,
                                   adjusted_target_mergeinfo,
                                   revision1, revision2,
                                   child_inherits_implicit,
-                                  ra_session, adm_access, ctx, pool));
+                                  ra_session, ctx, pool));
 
   /* Issue #2973 -- from the continuing series of "Why, since the advent of
      merge tracking, allowing merges into mixed rev and locally modified
@@ -3889,7 +3881,7 @@ populate_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
         child->path,
         MAX(revision1, revision2),
         MIN(revision1, revision2),
-        adm_access, merge_b->ctx, pool));
+        merge_b->ctx, pool));
 
       /* If CHILD isn't the merge target find its parent. */
       if (i > 0)
@@ -3919,8 +3911,7 @@ populate_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
                                          merge_b->implicit_src_gap,
                                          child_inherits_implicit,
                                          ra_session, child_entry,
-                                         adm_access, merge_b->ctx,
-                                         pool));
+                                         merge_b->ctx, pool));
 
       /* Deal with any gap in URL1@REVISION1:URL2@REVISION2's natural history.
 
@@ -4201,7 +4192,6 @@ record_skips(const char *mergeinfo_path,
              const svn_wc_entry_t *target_entry,
              apr_array_header_t *rangelist,
              svn_boolean_t is_rollback,
-             svn_wc_adm_access_t *adm_access,
              notification_receiver_baton_t *notify_b,
              merge_cmd_baton_t *merge_b,
              apr_pool_t *pool)
@@ -6143,7 +6133,7 @@ do_file_merge(const char *url1,
                                  merge_b->ra_session1, target_wcpath,
                                  MAX(revision1, revision2),
                                  MIN(revision1, revision2),
-                                 adm_access, ctx, pool));
+                                 ctx, pool));
 
       SVN_ERR(svn_ra_reparent(merge_b->ra_session1, url1, pool));
 
@@ -6158,7 +6148,7 @@ do_file_merge(const char *url1,
                                              target_mergeinfo,
                                              merge_b->implicit_src_gap, FALSE,
                                              merge_b->ra_session1,
-                                             entry, adm_access, ctx, pool));
+                                             entry, ctx, pool));
           remaining_ranges = merge_target->remaining_ranges;
         }
     }
@@ -6774,8 +6764,7 @@ record_mergeinfo_for_dir_merge(const svn_wc_entry_t *target_entry,
           if (i == 0)
             SVN_ERR(record_skips(mergeinfo_path,
                                  target_entry, child_merge_rangelist,
-                                 is_rollback, adm_access,
-                                 notify_b, merge_b, iterpool));
+                                 is_rollback, notify_b, merge_b, iterpool));
 
           SVN_ERR(calculate_merge_inheritance(child_merge_rangelist,
                                               child->path,
