@@ -1382,6 +1382,7 @@ diff_repos_wc(const char *path1,
   int levels_to_lock = SVN_WC__LEVELS_TO_LOCK_FROM_DEPTH(depth);
   svn_boolean_t server_supports_depth;
   const char *abspath1;
+  const char *anchor_abspath;
 
   SVN_ERR_ASSERT(! svn_path_is_url(path2));
 
@@ -1397,7 +1398,10 @@ diff_repos_wc(const char *path1,
   anchor = svn_wc_adm_access_path(adm_access);
 
   /* Fetch the URL of the anchor directory. */
-  SVN_ERR(svn_wc__entry_versioned(&entry, anchor, adm_access, FALSE, pool));
+  SVN_ERR(svn_dirent_get_absolute(&anchor_abspath, anchor, pool));
+  SVN_ERR(svn_wc__get_entry_versioned(&entry, ctx->wc_ctx, anchor_abspath,
+                                      svn_node_unknown, FALSE, FALSE,
+                                      pool, pool));
   if (! entry->url)
     return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
                              _("Directory '%s' has no URL"),
