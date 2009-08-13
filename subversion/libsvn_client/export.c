@@ -270,21 +270,16 @@ copy_versioned_files(const char *from,
                      svn_client_ctx_t *ctx,
                      apr_pool_t *pool)
 {
-  svn_wc_adm_access_t *adm_access;
   const svn_wc_entry_t *entry;
   svn_error_t *err;
   apr_pool_t *iterpool;
-  apr_hash_t *entries;
-  apr_hash_index_t *hi;
+  const apr_array_header_t *children;
   const char *from_abspath;
   const char *to_abspath;
+  int j;
 
   SVN_ERR(svn_dirent_get_absolute(&from_abspath, from, pool));
   SVN_ERR(svn_dirent_get_absolute(&to_abspath, to, pool));
-
-  SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, from, FALSE,
-                                 0, ctx->cancel_func, ctx->cancel_baton,
-                                 pool));
 
   SVN_ERR(svn_wc__get_entry_versioned(&entry, ctx->wc_ctx, from_abspath,
                                       svn_node_unknown, FALSE, FALSE,
@@ -331,15 +326,18 @@ copy_versioned_files(const char *from,
             svn_error_clear(err);
         }
 
-      SVN_ERR(svn_wc_entries_read(&entries, adm_access, FALSE, pool));
+      SVN_ERR(svn_wc__node_get_children(&children, ctx->wc_ctx, from_abspath,
+                                        pool, pool));
 
       iterpool = svn_pool_create(pool);
-      for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
+      for (j = 0; j < children->nelts; j++)
         {
-          const char *item = svn_apr_hash_index_key(hi);
-          const svn_wc_entry_t *child_entry = svn_apr_hash_index_val(hi);
+          const char *child_abspath = APR_ARRAY_IDX(children, j, const char *);
+          const char *child_basename;
+          const svn_wc_entry_t *child_entry;
 
           svn_pool_clear(iterpool);
+          child_basename = svn_dirent_basename(child_abspath, iterpool);
 
           if (ctx->cancel_func)
             SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
@@ -347,26 +345,33 @@ copy_versioned_files(const char *from,
           /* ### We could also invoke ctx->notify_func somewhere in
              ### here... Is it called for, though?  Not sure. */
 
+          err = svn_wc__get_entry_versioned(&child_entry, ctx->wc_ctx,
+                                            child_abspath, svn_node_unknown,
+                                            FALSE, FALSE, iterpool,
+                                            iterpool);
+          if (err && err->apr_err == SVN_ERR_ENTRY_NOT_FOUND)
+            {
+              /* We don't want "hidden" entries, so just clear the error and
+                 continue on our merry way. */
+              svn_error_clear(err);
+              continue;
+            }
+          else if (err)
+            return svn_error_return(err);
+
           if (child_entry->kind == svn_node_dir)
             {
-              if (strcmp(item, SVN_WC_ENTRY_THIS_DIR) == 0)
+              if (depth == svn_depth_infinity)
                 {
-                  ; /* skip this, it's the current directory that we're
-                       handling now. */
-                }
-              else
-                {
-                  if (depth == svn_depth_infinity)
-                    {
-                      const char *new_from = svn_path_join(from, item,
-                                                           iterpool);
-                      const char *new_to = svn_path_join(to, item, iterpool);
+                  const char *new_from = svn_path_join(from, child_basename,
+                                                       iterpool);
+                  const char *new_to = svn_path_join(to, child_basename,
+                                                     iterpool);
 
-                      SVN_ERR(copy_versioned_files(new_from, new_to,
-                                                   revision, force,
-                                                   ignore_externals, depth,
-                                                   native_eol, ctx, iterpool));
-                    }
+                  SVN_ERR(copy_versioned_files(new_from, new_to,
+                                               revision, force,
+                                               ignore_externals, depth,
+                                               native_eol, ctx, iterpool));
                 }
             }
           else if (child_entry->kind == svn_node_file)
@@ -375,11 +380,13 @@ copy_versioned_files(const char *from,
               const char *new_to_abspath;
 
               SVN_ERR(svn_dirent_get_absolute(&new_from_abspath,
-                                              svn_path_join(from, item,
+                                              svn_path_join(from,
+                                                            child_basename,
                                                             iterpool),
                                               iterpool));
               SVN_ERR(svn_dirent_get_absolute(&new_to_abspath,
-                                              svn_path_join(to, item,
+                                              svn_path_join(to,
+                                                            child_basename,
                                                             iterpool),
                                               iterpool));
 
@@ -443,7 +450,7 @@ copy_versioned_files(const char *from,
                                       revision, native_eol, pool));
     }
 
-  return svn_wc_adm_close2(adm_access, pool);
+  return SVN_NO_ERROR;
 }
 
 
