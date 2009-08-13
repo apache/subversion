@@ -3653,8 +3653,7 @@ find_gaps_in_merge_source_history(svn_revnum_t *gap_start,
                                   svn_revnum_t revision2,
                                   svn_ra_session_t *ra_session,
                                   merge_cmd_baton_t *merge_b,
-                                  apr_pool_t *scratch_pool,
-                                  apr_pool_t *result_pool)
+                                  apr_pool_t *scratch_pool)
 {
   svn_mergeinfo_t implicit_src_mergeinfo;
   svn_opt_revision_t peg_rev;
@@ -3672,7 +3671,7 @@ find_gaps_in_merge_source_history(svn_revnum_t *gap_start,
   SVN_ERR(svn_client__get_history_as_mergeinfo(&implicit_src_mergeinfo, url,
                                                &peg_rev, young_rev, old_rev,
                                                ra_session, merge_b->ctx,
-                                               result_pool));
+                                               scratch_pool));
 
   rangelist = apr_hash_get(implicit_src_mergeinfo,
                            merge_src_canon_path,
@@ -3831,7 +3830,7 @@ populate_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
                                             url1, revision1,
                                             url2, revision2,
                                             ra_session, merge_b,
-                                            iterpool, pool));
+                                            iterpool));
 
   /* Stash any gap in the merge command baton, we'll need it later when
      recording mergeinfo describing this merge. */
