@@ -1561,6 +1561,14 @@ svn_wc__set_depth(svn_wc__db_t *db,
                                               scratch_pool);
 
   /* Ensure we aren't looking at the wcroot. */
+
+  /* ### This check assumes the baton for parent_abspath must be cached. Which
+          is not the case in depth_tests 32. This breaks setting the entry to
+          excluded in the parent directory.
+          
+          This whole function should be rewritten to look at wc-db, instead
+          of the adm_access cache that is going to be empty in most codepaths.
+          */
   if (adm_access != NULL)
     {
       SVN_ERR(svn_wc_entries_read(&entries, adm_access, TRUE, scratch_pool));
