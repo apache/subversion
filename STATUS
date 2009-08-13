@@ -175,5 +175,16 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+* r38686-7
+   Fix serious bugs in libsvn_ra_svn and svnsync.  (If svnsync errors
+   while syncing from svnserve to mod_dav_svn, it commits a
+   half-written transaction rather than aborting it.)
+   Justification:  
+     A potentially large audience of users may unknowingly be creating
+     corrupt repository mirrors!
+   Votes:
+     +1: sussman
+
+
 Approved changes:
 =================
