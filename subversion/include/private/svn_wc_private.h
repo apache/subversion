@@ -300,6 +300,27 @@ svn_wc__adm_open_anchor_in_context(svn_wc_adm_access_t **anchor_access,
                                    void *cancel_baton,
                                    apr_pool_t *pool);
 
+
+/**
+ * The following are temporary APIs to aid in the transition from wc-1 to
+ * wc-ng.  Use them for new development now, but they may be disappearing
+ * before the 1.7 release.
+ */
+
+/**
+ * Fetch the absolute paths of all the working children of @a dir_abspath
+ * into @a *children, allocated in @a result_pool.  Use @a wc_ctx to access
+ * the working copy, and @a scratch_pool for all temporary allocations.
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_wc__node_get_children(const apr_array_header_t **children,
+                          svn_wc_context_t *wc_ctx,
+                          const char *dir_abspath,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool);
+
 
 #ifdef __cplusplus
 }
