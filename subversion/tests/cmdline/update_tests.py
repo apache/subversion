@@ -4787,6 +4787,42 @@ def update_wc_of_dir_to_rev_not_containing_this_dir(sbox):
                                      "svn: Target path '/A' does not exist",
                                      "up", other_wc_dir)
 
+#----------------------------------------------------------------------
+def update_deleted_locked_files(sbox):
+  "verify update of deleted locked files"
+
+  # No tree conflicts expected.
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  iota = os.path.join(wc_dir, 'iota')
+  E = os.path.join(wc_dir, 'A', 'B', 'E')
+  alpha = os.path.join(E, 'alpha')
+
+  svntest.main.run_svn(None, 'lock', iota, alpha)
+  svntest.main.run_svn(None, 'delete', iota, E)
+
+  expected_output = svntest.wc.State(wc_dir, {})
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.remove('iota',
+                       'A/B/E/alpha',
+                       'A/B/E/beta')
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('iota',
+                        'A/B/E/alpha',
+                        writelocked='K')
+  expected_status.tweak('iota',
+                        'A/B/E',
+                        'A/B/E/alpha',
+                        'A/B/E/beta',
+                        status='D ')
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status)  
+
+
 #######################################################################
 # Run the tests
 
@@ -4852,6 +4888,7 @@ test_list = [ None,
               tree_conflict_uc2_schedule_re_add,
               set_deep_depth_on_target_with_shallow_children,
               update_wc_of_dir_to_rev_not_containing_this_dir,
+              XFail(update_deleted_locked_files),
              ]
 
 if __name__ == '__main__':
