@@ -449,7 +449,6 @@ svn_client_log5(const apr_array_header_t *targets,
     }
   else
     {
-      svn_wc_adm_access_t *adm_access;
       apr_array_header_t *target_urls;
       apr_array_header_t *real_targets;
 
@@ -468,13 +467,14 @@ svn_client_log5(const apr_array_header_t *targets,
           const svn_wc_entry_t *entry;
           const char *URL;
           const char *target = APR_ARRAY_IDX(targets, i, const char *);
+          const char *target_abspath;
 
           svn_pool_clear(iterpool);
-          SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, target,
-                                         FALSE, 0, ctx->cancel_func,
-                                         ctx->cancel_baton, iterpool));
-          SVN_ERR(svn_wc__entry_versioned(&entry, target, adm_access, FALSE,
-                                          iterpool));
+          SVN_ERR(svn_dirent_get_absolute(&target_abspath, target, iterpool));
+          SVN_ERR(svn_wc__get_entry_versioned(&entry, ctx->wc_ctx,
+                                              target_abspath, svn_node_unknown,
+                                              FALSE, FALSE,
+                                              iterpool, iterpool));
 
           if (! entry->url)
             return svn_error_createf
@@ -483,7 +483,6 @@ svn_client_log5(const apr_array_header_t *targets,
                svn_dirent_local_style(target, pool));
 
           URL = apr_pstrdup(pool, entry->url);
-          SVN_ERR(svn_wc_adm_close2(adm_access, iterpool));
           APR_ARRAY_PUSH(target_urls, const char *) = URL;
           APR_ARRAY_PUSH(real_targets, const char *) = target;
         }
