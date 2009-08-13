@@ -399,8 +399,11 @@ class PathIdentifier:
                 # we can only cache this by repo-relative path
                 PathIdentifier.locobjs[pathid_str] = pathid
             else:
-                error("Invalid path identifier '%s'" % pathid_str)
-        return PathIdentifier.locobjs[pathid_str]
+                if not opts["ignore-invalid-entries"]:
+                    error("Invalid path identifier '%s'" % pathid_str)
+        if PathIdentifier.locobjs.has_key(pathid_str):
+            return PathIdentifier.locobjs[pathid_str]
+        return None
     from_pathid = staticmethod(from_pathid)
 
     def from_target(target):
@@ -838,9 +841,9 @@ def dict_from_revlist_prop(propvalue):
         pathid = PathIdentifier.from_pathid(pathid_str)
 
         # cache the "external" form we saw
-        pathid.external_form = pathid_str
-
-        prop[pathid] = revs
+        if pathid:
+            pathid.external_form = pathid_str
+            prop[pathid] = revs
     return prop
 
 def get_revlist_prop(url_or_dir, propname, rev=None):
@@ -2027,6 +2030,8 @@ global_opts = [
                 "implies --show-changes"),
     Option("-s", "--show-changes",
            help="show subversion commands that make changes"),
+    Option("-i", "--ignore-invalid-entries",
+           help="ignore invalid svnmerge indexes"),
     Option("-v", "--verbose",
            help="verbose mode: output more information about progress"),
     OptionArg("-u", "--username",
