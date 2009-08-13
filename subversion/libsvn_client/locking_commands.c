@@ -260,8 +260,9 @@ organize_lock_targets(const char **common_parent,
           abs_path = svn_path_join
             (svn_wc_adm_access_path(*parent_adm_access_p), target, subpool);
 
-          SVN_ERR(svn_wc__entry_versioned(&entry, abs_path,
-                                         *parent_adm_access_p, FALSE, subpool));
+          SVN_ERR(svn_wc__get_entry_versioned(&entry, ctx->wc_ctx, abs_path,
+                                              svn_node_unknown, FALSE, FALSE,
+                                              subpool, subpool));
 
           if (! entry->url)
             return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
