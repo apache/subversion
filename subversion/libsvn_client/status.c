@@ -239,6 +239,7 @@ svn_client_status5(svn_revnum_t *result_rev,
   const svn_wc_entry_t *entry = NULL;
   struct status_baton sb;
   const char *target_abspath;
+  const char *anchor_abspath;
   apr_array_header_t *ignores;
   svn_error_t *err;
   apr_hash_t *changelist_hash = NULL;
@@ -277,6 +278,7 @@ svn_client_status5(svn_revnum_t *result_rev,
 
   anchor = svn_wc_adm_access_path(anchor_access);
   SVN_ERR(svn_dirent_get_absolute(&target_abspath, target, pool));
+  SVN_ERR(svn_dirent_get_absolute(&anchor_abspath, anchor, pool));
 
   /* Get the status edit, and use our wrapping status function/baton
      as the callback pair. */
@@ -300,8 +302,9 @@ svn_client_status5(svn_revnum_t *result_rev,
 
       /* Get full URL from the ANCHOR. */
       if (! entry)
-        SVN_ERR(svn_wc__entry_versioned(&entry, anchor, anchor_access, FALSE,
-                                        pool));
+        SVN_ERR(svn_wc__get_entry_versioned(&entry, ctx->wc_ctx, anchor_abspath,
+                                            svn_node_unknown, FALSE, FALSE,
+                                            pool, pool));
       if (! entry->url)
         return svn_error_createf
           (SVN_ERR_ENTRY_MISSING_URL, NULL,
