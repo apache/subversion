@@ -1728,7 +1728,7 @@ loggy_move_copy_internal(svn_stringbuf_t **log_accum,
  * to which ADM_ACCESS belongs, or SVN_WC_ENTRY_THIS_DIR if PATH is that
  * directory. PATH must not be outside that directory. */
 static svn_error_t *
-loggy_path(const char **loggy_path,
+loggy_path(const char **logy_path,
            const char *path,
            svn_wc_adm_access_t *adm_access,
            apr_pool_t *pool)
@@ -1739,10 +1739,10 @@ loggy_path(const char **loggy_path,
 
   SVN_ERR(svn_dirent_get_absolute(&adm_abspath, adm_path, pool));
   SVN_ERR(svn_dirent_get_absolute(&abspath, path, pool));
-  *loggy_path = svn_dirent_is_child(adm_abspath, abspath, NULL);
+  *logy_path = svn_dirent_is_child(adm_abspath, abspath, NULL);
 
-  if (! (*loggy_path) && strcmp(abspath, adm_abspath) == 0)
-    *loggy_path = SVN_WC_ENTRY_THIS_DIR;
+  if (! (*logy_path) && strcmp(abspath, adm_abspath) == 0)
+    *logy_path = SVN_WC_ENTRY_THIS_DIR;
 
   return SVN_NO_ERROR;
 }
