@@ -1019,9 +1019,9 @@ message for any operation that will commit a revision to the repo.
 
 It receives 4 parameters.  The first parameter is a reference to a scalar
 value in which the callback should place the log_msg.  If you wish to cancel
-the commit you can set this scalar to undef.  The 2nd value is a path to a
+the commit you can set this scalar to undef.  The 2nd value is a path to any
 temporary file which might be holding that log message, or undef if no such
-field exists (though, if log_msg is undef, this value is undefined).  The
+file exists (though, if log_msg is undef, this value is undefined).  The
 log message B<MUST> be a UTF8 string with LF line separators.  The 3rd parameter
 is a reference to an array of svn_client_commit_item3_t objects, which may
 be fully or only partially filled-in, depending on the type of commit
@@ -1044,7 +1044,7 @@ sub log_msg {
 
 =item $ctx-E<gt>cancel(\&cancel)
 
-Sets the log_msg callback for the client context to a code reference that you
+Sets the cancellation callback for the client context to a code reference that you
 pass.  It always returns the current codereference set.
 
 The subroutine pointed to by this value will be called to see if the operation
