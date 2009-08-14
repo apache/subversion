@@ -323,11 +323,24 @@ svn_client__open_ra_session_internal(svn_ra_session_t **ra_session,
   cb->commit_items = commit_items;
   cb->ctx = ctx;
 
-  if (base_access)
+  if (base_dir)
     {
+      const char *base_dir_abspath;
       const svn_wc_entry_t *entry;
+      svn_error_t *err;
 
-      SVN_ERR(svn_wc_entry(&entry, base_dir, base_access, FALSE, pool));
+      SVN_ERR(svn_dirent_get_absolute(&base_dir_abspath, base_dir, pool));
+
+      err = svn_wc__get_entry_versioned(&entry, ctx->wc_ctx, base_dir_abspath,
+                                        svn_node_unknown, FALSE, FALSE,
+                                        pool, pool);
+      if (err && err->apr_err == SVN_ERR_ENTRY_NOT_FOUND)
+        {
+          svn_error_clear(err);
+          entry = NULL;
+        }
+      else if (err)
+        return svn_error_return(err);
 
       if (entry && entry->uuid)
         uuid = entry->uuid;
