@@ -474,9 +474,9 @@ immediate_install_props(const char *path,
 
 
 svn_error_t *
-svn_wc__working_props_committed(const char *path,
-                                svn_wc_adm_access_t *adm_access,
-                                apr_pool_t *pool)
+svn_wc__working_props_committed(svn_wc__db_t *db,
+                                const char *local_abspath,
+                                apr_pool_t *scratch_pool)
 {
   const char *working;
   const char *base;
@@ -486,16 +486,18 @@ svn_wc__working_props_committed(const char *path,
   /* The path is ensured not an excluded path. */
   /* TODO(#2843) It seems that there is no need to
      reveal hidden entry here? */
-  SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access, FALSE, pool));
+  SVN_ERR(svn_wc__get_entry(&entry, db, local_abspath,
+                            FALSE, svn_node_unknown, FALSE,
+                            scratch_pool, scratch_pool));
 
-  SVN_ERR(svn_wc__prop_path(&working, path, entry->kind,
-                            svn_wc__props_working, pool));
-  SVN_ERR(svn_wc__prop_path(&base, path, entry->kind,
-                            svn_wc__props_base, pool));
+  SVN_ERR(svn_wc__prop_path(&working, local_abspath, entry->kind,
+                            svn_wc__props_working, scratch_pool));
+  SVN_ERR(svn_wc__prop_path(&base, local_abspath, entry->kind,
+                            svn_wc__props_base, scratch_pool));
 
   /* svn_io_file_rename() retains a read-only bit, so there's no
      need to explicitly set it. */
-  return svn_io_file_rename(working, base, pool);
+  return svn_io_file_rename(working, base, scratch_pool);
 }
 
 
