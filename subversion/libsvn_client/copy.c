@@ -1913,20 +1913,18 @@ try_copy(svn_commit_info_t **commit_info_p,
 
                   /* We can convert the working copy path to a URL based on the
                      entries file. */
-                  svn_wc_adm_access_t *adm_access;  /* ### FIXME local */
                   const svn_wc_entry_t *entry;
+                  const char *src_abspath;
 
                   svn_pool_clear(iterpool);
 
-                  SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL,
-                                                 pair->src, FALSE, 0,
-                                                 ctx->cancel_func,
-                                                 ctx->cancel_baton,
-                                                 iterpool));
-                  SVN_ERR(svn_wc__entry_versioned(&entry, pair->src,
-                                                  adm_access, FALSE,
+                  SVN_ERR(svn_dirent_get_absolute(&src_abspath, pair->src,
                                                   iterpool));
-                  SVN_ERR(svn_wc_adm_close2(adm_access, iterpool));
+                  SVN_ERR(svn_wc__get_entry_versioned(&entry, ctx->wc_ctx,
+                                                      src_abspath,
+                                                      svn_node_unknown,
+                                                      FALSE, FALSE,
+                                                      iterpool, iterpool));
 
                   url = (entry->copied ? entry->copyfrom_url : entry->url);
                   if (url == NULL)
