@@ -5558,22 +5558,35 @@ svn_wc_get_pristine_copy_path(const char *path,
 
 
 /**
- * Recurse from @a path, upgrading to the latest working copy format if
- * @a upgrade_wc is set, and cleaning up unfinished log business.  Perform
- * any temporary allocations in @a scratch_pool.  Any working copy locks
- * under @a path will be taken over and then cleared by this function.  If
- * @a diff3_cmd is non-NULL, then use it as the diff3 command for any
- * merging; otherwise, use the built-in merge code.
+ * Recurse from @a local_abspath, upgrading to the latest working copy format
+ * if @a upgrade_wc is set, and cleaning up unfinished log business.  Perform
+ * any temporary allocations in @a scratch_pool.  Any working copy locks under
+ * @a local_path will be taken over and then cleared by this function.  
  *
- * WARNING: there is no mechanism that will protect locks that are still
- * being used.
+ * WARNING: there is no mechanism that will protect locks that are still being
+ * used.
  *
- * If @a cancel_func is non-NULL, invoke it with @a cancel_baton at
- * various points during the operation.  If it returns an error
- * (typically @c SVN_ERR_CANCELLED), return that error immediately.
+ * If @a cancel_func is non-NULL, invoke it with @a cancel_baton at various
+ * points during the operation.  If it returns an error (typically @c
+ * SVN_ERR_CANCELLED), return that error immediately.
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_wc_cleanup3(svn_wc_context_t *wc_ctx,
+                const char *local_abspath,
+                svn_cancel_func_t cancel_func,
+                void *cancel_baton,
+                apr_pool_t *scratch_pool);
+
+/**
+ * Similar to svn_wc_cleanup3() but uses relative paths and creates its own
+ * swn_wc_context_t.
  *
  * @since New in 1.2.
+ * @deprecated Provided for backward compability with the 1.2 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_cleanup2(const char *path,
                 const char *diff3_cmd,
