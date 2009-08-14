@@ -3140,6 +3140,8 @@ svn_wc_add_lock2(svn_wc_context_t *wc_ctx,
   svn_error_t *err;
   const svn_string_t *needs_lock;
 
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
   db_lock.token = lock->token;
   db_lock.owner = lock->owner;
   db_lock.comment = lock->comment;
@@ -3175,6 +3177,8 @@ svn_wc_remove_lock2(svn_wc_context_t *wc_ctx,
 {
   svn_error_t *err;
   const svn_string_t *needs_lock;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
   err = svn_wc__db_lock_remove(wc_ctx->db, local_abspath, scratch_pool);
   if (err)
