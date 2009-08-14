@@ -2783,6 +2783,20 @@ svn_wc_conflicted_p(svn_boolean_t *text_conflicted_p,
  * corresponding information).
  */
 svn_error_t *
+svn_wc_get_ancestry2(const char **url,
+                     svn_revnum_t *rev,
+                     svn_wc_context_t *wc_ctx,
+                     const char *local_abspath,
+                     apr_pool_t *result_pool,
+                     apr_pool_t *scratch_pool);
+
+/* Similar to svn_wc_get_ancestry2(), but using an adm_access baton / relative
+ * path parameter pair.
+ *
+ * @deprecated Provided for backward compatibility with the 1.7 API.
+ */
+SVN_DEPRECATED
+svn_error_t *
 svn_wc_get_ancestry(char **url,
                     svn_revnum_t *rev,
                     const char *path,

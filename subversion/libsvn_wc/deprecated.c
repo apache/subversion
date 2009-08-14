@@ -635,6 +635,27 @@ svn_wc_remove_lock(const char *path,
   
 }
 
+svn_error_t *
+svn_wc_get_ancestry(char **url,
+                    svn_revnum_t *rev,
+                    const char *path,
+                    svn_wc_adm_access_t *adm_access,
+                    apr_pool_t *pool)
+{
+  const char *local_abspath;
+  svn_wc_context_t *wc_ctx;
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+  SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL /* config */,
+                                         svn_wc__adm_get_db(adm_access),
+                                         pool));
+
+  SVN_ERR(svn_wc_get_ancestry2(url, rev, wc_ctx, local_abspath, pool, pool));
+
+  return svn_error_return(svn_wc_context_destroy(wc_ctx));
+}
+
+
 /*** From diff.c ***/
 /* Used to wrap svn_wc_diff_callbacks_t. */
 struct diff_callbacks_wrapper_baton {
