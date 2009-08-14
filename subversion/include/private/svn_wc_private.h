@@ -322,6 +322,22 @@ svn_wc__node_get_children(const apr_array_header_t **children,
                           apr_pool_t *scratch_pool);
 
 
+/** 
+ * Fetch the repository root URL of the given @a local_abspath into
+ * @a repos_root_url. Use @wc_ctx to access the working copy at
+ * @a local_abspath, @a scratch_pool for all temporary allocations,
+ * @a result_pool for result allocations. Note: the result may be NULL if the
+ * given node has no repository root associated with it (e.g. locally added).
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *svn_wc__node_get_repos_root(const char **repos_root_url,
+                                         svn_wc_context_t *wc_ctx,
+                                         const char *local_abspath,
+                                         apr_pool_t *result_pool,
+                                         apr_pool_t *scratch_pool);
+
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
