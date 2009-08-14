@@ -1050,40 +1050,45 @@ svn_wc_adm_probe_try3(svn_wc_adm_access_t **adm_access,
 
 static svn_error_t *
 child_is_disjoint(svn_boolean_t *disjoint,
-                  const char *parent_path,
-                  const char *child_path,
-                  svn_wc_adm_access_t *parent_access,
-                  svn_wc_adm_access_t *child_access,
+                  svn_wc__db_t *db,
+                  const char *local_abspath,
                   apr_pool_t *scratch_pool)
 {
   const svn_wc_entry_t *t_entry;
   const svn_wc_entry_t *p_entry;
   const svn_wc_entry_t *t_entry_in_p;
+  const char *parent_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
   const char *expected_url;
+  svn_error_t *err;
 
-  SVN_ERR(svn_wc_entry(&t_entry_in_p, child_path, parent_access, FALSE,
-                       scratch_pool));
-  if (t_entry_in_p == NULL)
+  err = svn_wc__get_entry(&t_entry_in_p, db, local_abspath, FALSE,
+                          svn_node_dir, TRUE, scratch_pool, scratch_pool);
+
+  if (err && (err->apr_err == SVN_ERR_WC_MISSING || 
+              (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)))
     {
       /* Parent doesn't know about the child.  */
+      svn_error_clear(err);
       *disjoint = TRUE;
       return SVN_NO_ERROR;
     }
+  else
+    SVN_ERR(err);
 
-  SVN_ERR(svn_wc_entry(&p_entry, parent_path, parent_access, FALSE,
-                       scratch_pool));
+  SVN_ERR(svn_wc__get_entry(&p_entry, db, parent_abspath, FALSE, svn_node_dir,
+                            FALSE, scratch_pool, scratch_pool));
   if (p_entry->url == NULL)
     {
       *disjoint = FALSE;
       return SVN_NO_ERROR;
     }
   expected_url = svn_path_url_add_component2(p_entry->url,
-                                             svn_dirent_basename(child_path,
+                                             svn_dirent_basename(local_abspath,
                                                                  scratch_pool),
                                              scratch_pool);
 
-  SVN_ERR(svn_wc_entry(&t_entry, child_path, child_access, FALSE,
-                       scratch_pool));
+  SVN_ERR(svn_wc__get_entry(&t_entry, db, local_abspath, FALSE, svn_node_dir,
+                            FALSE, scratch_pool, scratch_pool));
 
   /* Is the child switched?  */
   *disjoint = t_entry->url && (strcmp(t_entry->url, expected_url) != 0);
@@ -1132,17 +1137,19 @@ open_anchor(svn_wc_adm_access_t **anchor_access,
       svn_wc_adm_access_t *p_access = NULL;
       svn_wc_adm_access_t *t_access = NULL;
       const char *parent = svn_dirent_dirname(path, pool);
+      const char *local_abspath;
       svn_error_t *p_access_err = SVN_NO_ERROR;
+
+      SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
       /* Try to open parent of PATH to setup P_ACCESS */
       err = open_single(&p_access, parent, write_lock, db, db_provided,
                         pool, pool);
       if (err)
         {
-          const char *abspath;
+          const char *abspath = svn_dirent_dirname(local_abspath, pool);
 
           /* ### make sure the parent is not present in SHARED.  */
-          SVN_ERR(svn_dirent_get_absolute(&abspath, parent, pool));
           /* ### can't really assert prior state  */
           svn_wc__db_temp_clear_access(db, abspath, pool);
 
@@ -1201,19 +1208,7 @@ open_anchor(svn_wc_adm_access_t **anchor_access,
         {
           svn_boolean_t disjoint;
 
-          /* We need to do a little judo around the SHARED set. The disjoint
-             computation requires that the parent and child batons are *not*
-             associated. To accomplish this, we'll temporarily remove the
-             child from the set. The set of batons includes the parent and any
-             of the child's subdir batons (as indicated by LEVELS_TO_LOCK).
-
-             ### maybe this will be easier in the future. possibly a new
-             ### disjoint algorithm?  */
-          SVN_ERR(svn_wc__db_temp_close_access(db, t_access->abspath,
-                                               t_access, pool));
-
-          err = child_is_disjoint(&disjoint, parent, path, p_access, t_access,
-                                  pool);
+          err = child_is_disjoint(&disjoint, db, local_abspath, pool);
           if (err)
             {
               svn_error_clear(p_access_err);
@@ -1221,9 +1216,6 @@ open_anchor(svn_wc_adm_access_t **anchor_access,
               svn_error_clear(svn_wc_adm_close2(t_access, pool));
               return err;
             }
-
-          /* Done with the computation. Put the child back into SHARED.  */
-          SVN_ERR(add_to_shared(t_access, pool));
 
           if (disjoint)
             {
