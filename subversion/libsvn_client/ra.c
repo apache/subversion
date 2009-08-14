@@ -613,13 +613,11 @@ svn_client__repos_locations(const char **start_url,
      the copyfrom information. */
   if (! svn_path_is_url(path))
     {
-      svn_wc_adm_access_t *adm_access;
       const svn_wc_entry_t *entry;
-      SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, path,
-                                     FALSE, 0, ctx->cancel_func,
-                                     ctx->cancel_baton, pool));
-      SVN_ERR(svn_wc_entry(&entry, path, adm_access, FALSE, pool));
-      SVN_ERR(svn_wc_adm_close2(adm_access, pool));
+
+      SVN_ERR(svn_wc__get_entry_versioned(&entry, ctx->wc_ctx, local_abspath,
+                                          svn_node_unknown, FALSE, FALSE,
+                                          pool, pool));
       if (entry->copyfrom_url && revision->kind == svn_opt_revision_working)
         {
           url = entry->copyfrom_url;
