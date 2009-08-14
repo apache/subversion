@@ -154,19 +154,22 @@
 /*** Utilities ***/
 
 /* Return SVN_ERR_UNSUPPORTED_FEATURE if URL's scheme does not
-   match the scheme of the url for ADM_ACCESS's path; return
+   match the scheme of the url for LOCAL_ABSPATH; return
    SVN_ERR_BAD_URL if no scheme can be found for one or both urls;
-   otherwise return SVN_NO_ERROR.  Use ADM_ACCESS's pool for
-   temporary allocation. */
+   otherwise return SVN_NO_ERROR.  Use SCRATCH_POOL for temporary
+   allocation. */
 static svn_error_t *
-check_scheme_match(svn_wc_adm_access_t *adm_access, const char *url)
+check_scheme_match(svn_wc_context_t *wc_ctx,
+                   const char *local_abspath,
+                   const char *url,
+                   apr_pool_t *scratch_pool)
 {
-  const char *path = svn_wc_adm_access_path(adm_access);
-  apr_pool_t *pool = svn_wc_adm_access_pool(adm_access);
   const svn_wc_entry_t *ent;
   const char *idx1, *idx2;
 
-  SVN_ERR(svn_wc_entry(&ent, path, adm_access, FALSE, pool));
+  SVN_ERR(svn_wc__get_entry_versioned(&ent, wc_ctx, local_abspath,
+                                      svn_node_unknown, FALSE, FALSE,
+                                      scratch_pool, scratch_pool));
 
   idx1 = strchr(url, ':');
   idx2 = strchr(ent->url, ':');
@@ -1474,6 +1477,7 @@ merge_file_added(svn_wc_adm_access_t *adm_access,
 {
   merge_cmd_baton_t *merge_b = baton;
   apr_pool_t *subpool = svn_pool_create(merge_b->pool);
+  const char *parent_abspath;
   svn_node_kind_t kind;
   int i;
   apr_hash_t *new_props;
@@ -1553,6 +1557,10 @@ merge_file_added(svn_wc_adm_access_t *adm_access,
       }
   }
 
+  SVN_ERR(svn_dirent_get_absolute(&parent_abspath,
+                                  svn_wc_adm_access_path(adm_access),
+                                  subpool));
+
   SVN_ERR(svn_io_check_path(mine, &kind, subpool));
   switch (kind)
     {
@@ -1578,7 +1586,9 @@ merge_file_added(svn_wc_adm_access_t *adm_access,
                 else
                   copyfrom_url = merge_b->merge_source.url2;
                 copyfrom_rev = rev2;
-                SVN_ERR(check_scheme_match(adm_access, copyfrom_url));
+                SVN_ERR(check_scheme_match(merge_b->ctx->wc_ctx,
+                                           parent_abspath,
+                                           copyfrom_url, subpool));
               }
 
             SVN_ERR(svn_stream_open_readonly(&new_base_contents, yours,
@@ -1875,6 +1885,11 @@ merge_dir_added(svn_wc_adm_access_t *adm_access,
   const svn_wc_entry_t *entry;
   const char *copyfrom_url = NULL, *child;
   svn_revnum_t copyfrom_rev = SVN_INVALID_REVNUM;
+  const char *parent_abspath;
+
+  SVN_ERR(svn_dirent_get_absolute(&parent_abspath,
+                                  svn_wc_adm_access_path(adm_access),
+                                  subpool));
 
   if (tree_conflicted)
     *tree_conflicted = FALSE;
@@ -1912,7 +1927,8 @@ merge_dir_added(svn_wc_adm_access_t *adm_access,
       copyfrom_url = svn_path_url_add_component2(merge_b->merge_source.url2,
                                                  child, subpool);
       copyfrom_rev = rev;
-      SVN_ERR(check_scheme_match(adm_access, copyfrom_url));
+      SVN_ERR(check_scheme_match(merge_b->ctx->wc_ctx, parent_abspath,
+                                 copyfrom_url, subpool));
     }
 
   /* Find the version-control state of this path */
