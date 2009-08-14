@@ -2388,37 +2388,33 @@ cleanup_internal(svn_wc__db_t *db,
   return svn_wc_adm_close2(adm_access, scratch_pool);
 }
 
-
 svn_error_t *
-svn_wc_cleanup2(const char *path,
-                const char *diff3_cmd,  /* ### OBSOLETE  */
+svn_wc_cleanup3(svn_wc_context_t *wc_ctx,
+                const char *local_abspath,
                 svn_cancel_func_t cancel_func,
                 void *cancel_baton,
-                apr_pool_t *scratch_pool)
+                apr_pool_t * scratch_pool)
 {
-  svn_wc__db_t *db;
-  const char *local_abspath;
   int wc_format_version;
 
-  SVN_ERR(svn_wc__db_open(&db, svn_wc__db_openmode_readwrite,
-                          NULL /* ### config */, scratch_pool, scratch_pool));
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, scratch_pool));
-
-  SVN_ERR(svn_wc__internal_check_wc(&wc_format_version, db, local_abspath,
-                                    scratch_pool));
+  SVN_ERR(svn_wc__internal_check_wc(&wc_format_version, wc_ctx->db, 
+                                    local_abspath, scratch_pool));
 
   /* a "version" of 0 means a non-wc directory */
   if (wc_format_version == 0)
     return svn_error_createf(SVN_ERR_WC_NOT_DIRECTORY, NULL,
                              _("'%s' is not a working copy directory"),
-                             svn_dirent_local_style(path, scratch_pool));
+                             svn_dirent_local_style(local_abspath, 
+                                                    scratch_pool));
 
   if (wc_format_version < SVN_WC__VERSION)
     return svn_error_create(SVN_ERR_WC_UNSUPPORTED_FORMAT, NULL,
                             _("Log format too old, please use "
                               "Subversion 1.6 or earlier"));
 
-  return svn_error_return(cleanup_internal(db, path, cancel_func, cancel_baton,
+  return svn_error_return(cleanup_internal(wc_ctx->db, local_abspath, 
+                                           cancel_func, cancel_baton, 
                                            scratch_pool));
 }

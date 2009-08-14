@@ -2268,6 +2268,25 @@ svn_wc_relocate(const char *path,
 /*** From log.c ***/
 
 svn_error_t *
+svn_wc_cleanup2(const char *path,
+                const char *diff3_cmd,
+                svn_cancel_func_t cancel_func,
+                void *cancel_baton,
+                apr_pool_t *pool)
+{
+  svn_wc_context_t *wc_ctx;
+  const char *local_abspath;
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+  SVN_ERR(svn_wc_context_create(&wc_ctx, NULL, pool, pool));
+
+  SVN_ERR(svn_wc_cleanup3(wc_ctx, local_abspath, cancel_func, 
+                          cancel_baton, pool));
+
+  return svn_error_return(svn_wc_context_destroy(wc_ctx));
+}
+
+svn_error_t *
 svn_wc_cleanup(const char *path,
                svn_wc_adm_access_t *optional_adm_access,
                const char *diff3_cmd,
