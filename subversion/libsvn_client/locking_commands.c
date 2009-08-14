@@ -87,17 +87,21 @@ store_locks_callback(void *baton,
     {
       char *path = apr_hash_get(lb->urls_to_paths, rel_url,
                                 APR_HASH_KEY_STRING);
-      const char *abs_path = svn_path_join(lb->base_path, path, lb->pool);
+      const char *local_abspath;
+
+      SVN_ERR(svn_dirent_get_absolute(&local_abspath,
+                                      svn_path_join(lb->base_path, path, pool),
+                                      pool));
 
       /* Notify a valid working copy path */
-      notify->path = abs_path;
+      notify->path = local_abspath;
       notify->path_prefix = lb->base_path;
 
       if (do_lock)
         {
           if (!ra_err)
             {
-              SVN_ERR(svn_wc_add_lock2(lb->ctx->wc_ctx, abs_path, lock,
+              SVN_ERR(svn_wc_add_lock2(lb->ctx->wc_ctx, local_abspath, lock,
                                        lb->pool));
               notify->lock_state = svn_wc_notify_lock_state_locked;
             }
@@ -114,7 +118,8 @@ store_locks_callback(void *baton,
           if (!ra_err ||
               (ra_err && (ra_err->apr_err != SVN_ERR_FS_LOCK_OWNER_MISMATCH)))
             {
-              SVN_ERR(svn_wc_remove_lock2(lb->ctx->wc_ctx, abs_path, lb->pool));
+              SVN_ERR(svn_wc_remove_lock2(lb->ctx->wc_ctx, local_abspath,
+                                          lb->pool));
               notify->lock_state = svn_wc_notify_lock_state_unlocked;
             }
           else

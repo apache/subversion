@@ -611,7 +611,9 @@ svn_wc_add_lock(const char *path,
                                          svn_wc__adm_get_db(adm_access),
                                          pool));
 
-  return svn_error_return(svn_wc_add_lock2(wc_ctx, local_abspath, lock, pool));
+  SVN_ERR(svn_wc_add_lock2(wc_ctx, local_abspath, lock, pool));
+
+  return svn_error_return(svn_wc_context_destroy(wc_ctx));
 }
 
 svn_error_t *
@@ -627,7 +629,10 @@ svn_wc_remove_lock(const char *path,
                                          svn_wc__adm_get_db(adm_access),
                                          pool));
 
-  return svn_error_return(svn_wc_remove_lock2(wc_ctx, local_abspath, pool));
+  SVN_ERR(svn_wc_remove_lock2(wc_ctx, local_abspath, pool));
+
+  return svn_error_return(svn_wc_context_destroy(wc_ctx));
+  
 }
 
 /*** From diff.c ***/
