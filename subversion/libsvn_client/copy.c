@@ -94,8 +94,12 @@ calculate_target_mergeinfo(svn_ra_session_t *ra_session,
      bother checking. */
   if (adm_access)
     {
-      SVN_ERR(svn_wc__entry_versioned(&entry, src_path_or_url, adm_access,
-                                      FALSE, pool));
+      const char *local_abspath;
+
+      SVN_ERR(svn_dirent_get_absolute(&local_abspath, src_path_or_url, pool));
+      SVN_ERR(svn_wc__get_entry_versioned(&entry, ctx->wc_ctx, local_abspath,
+                                          svn_node_unknown, FALSE, FALSE,
+                                          pool, pool));
       if (entry->schedule == svn_wc_schedule_add && (! entry->copied))
         {
           locally_added = TRUE;
