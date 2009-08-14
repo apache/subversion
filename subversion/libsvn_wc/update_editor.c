@@ -147,9 +147,9 @@
 struct edit_baton
 {
   /* For updates, the "destination" of the edit is the ANCHOR (the
-     directory at which the edit is rooted) plus the TARGET (the
-     actual thing we wish to update).  Target may be the empty string,
-     but it is never NULL; for example, for checkouts and for updates
+     directory at which the edit is rooted) plus the TARGET (the entry
+     name of the actual thing we wish to update).  Target may be the empty
+     string, but it is never NULL; for example, for checkouts and for updates
      that do not specify a target path, ANCHOR holds the whole path,
      and TARGET is empty. */
   /* ### ANCHOR is relative to CWD; TARGET is relative to ANCHOR? */
@@ -4834,7 +4834,12 @@ make_editor(svn_revnum_t *target_revision,
   eb->anchor                   = anchor;
   eb->target                   = target;
   SVN_ERR(svn_dirent_get_absolute(&eb->anchor_abspath, anchor, pool));
-  SVN_ERR(svn_dirent_get_absolute(&eb->target_abspath, target, pool));
+
+  if (svn_path_is_empty(target))
+    eb->target_abspath = eb->anchor_abspath;
+  else
+    eb->target_abspath = svn_dirent_join(eb->anchor_abspath, target, pool);
+
   eb->requested_depth          = depth;
   eb->depth_is_sticky          = depth_is_sticky;
   eb->notify_func              = notify_func;
