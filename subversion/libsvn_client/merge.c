@@ -5401,6 +5401,7 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
                   const char *name = svn_apr_hash_index_key(hi);
                   svn_client__merge_path_t *child_of_noninheritable;
                   const char *child_path;
+                  const char *child_abspath;
 
                   if (strcmp(name, SVN_WC_ENTRY_THIS_DIR) == 0)
                     continue;
@@ -5410,6 +5411,8 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
                      CHILDREN_WITH_MERGEINFO and set override mergeinfo on
                      it. */
                   child_path = svn_path_join(child->path, name, iterpool);
+                  SVN_ERR(svn_dirent_get_absolute(&child_abspath, child_path,
+                                                  iterpool));
                   child_of_noninheritable =
                     get_child_with_mergeinfo(children_with_mergeinfo,
                                              child_path);
@@ -5422,8 +5425,10 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
                       if (depth == svn_depth_files)
                         {
                           const svn_wc_entry_t *child_entry;
-                          SVN_ERR(svn_wc_entry(&child_entry, child_path,
-                                               adm_access, FALSE, iterpool));
+                          SVN_ERR(svn_wc__get_entry_versioned(
+                                &child_entry, merge_cmd_baton->ctx->wc_ctx,
+                                child_abspath, svn_node_unknown,
+                                FALSE, FALSE, iterpool, iterpool));
                           if (child_entry->kind != svn_node_file)
                             continue;
                         }
