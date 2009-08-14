@@ -1117,8 +1117,7 @@ log_do_committed(struct log_runner *loggy,
             }
         }
 
-      SVN_ERR(svn_wc__working_props_committed(full_path, loggy->adm_access,
-                                              pool));
+      SVN_ERR(svn_wc__working_props_committed(loggy->db, local_abspath, pool));
   }
 
   if (entry->kind == svn_node_file)
