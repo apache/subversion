@@ -81,3 +81,32 @@ svn_wc__node_get_children(const apr_array_header_t **children,
 
   return SVN_NO_ERROR;
 }
+
+
+svn_error_t *
+svn_wc__node_get_repos_root(const char **repos_root_url,
+                            svn_wc_context_t *wc_ctx,
+                            const char * local_abspath,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool)
+{
+  svn_error_t *err;
+  
+  err = svn_wc__db_read_info(NULL, NULL, NULL, NULL,
+                             repos_root_url,
+                             NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                             wc_ctx->db, local_abspath, result_pool,
+                             scratch_pool);
+
+  if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+    {
+      svn_error_clear(err);
+      err = SVN_NO_ERROR;
+      *repos_root_url = NULL;
+    }
+
+  return err;
+}
+
