@@ -696,18 +696,12 @@ complete_directory(struct edit_baton *eb,
       /* Before we can finish, we may need to clear the exclude flag for
          target. Also give a chance to the target that is explicitly pulled
          in. */
-
-      const char *full_target;
-      const char *target_abspath;
       svn_error_t *err;
       const svn_wc_entry_t *target_entry;
 
       SVN_ERR_ASSERT(strcmp(path, eb->anchor) == 0);
 
-      full_target = svn_dirent_join(eb->anchor, eb->target, pool);
-      SVN_ERR(svn_dirent_get_absolute(&target_abspath, full_target, pool));
-
-      err = svn_wc__get_entry(&target_entry, eb->db, target_abspath, TRUE,
+      err = svn_wc__get_entry(&target_entry, eb->db, eb->target_abspath, TRUE,
                               svn_node_dir, TRUE, pool, pool);
       if (err)
         {
