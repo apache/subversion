@@ -755,7 +755,7 @@ svn__unhandled_exception_filter(PEXCEPTION_POINTERS ptrs)
                   "A crash report and minidump file were saved to disk, you"
                   " can find them here:\n"
                   "%s\n%s\n"
-                  "Please send the log file to %s to help us analyse\nand "
+                  "Please send the log file to %s to help us analyze\nand "
                   "solve this problem.\n\n"
                   "NOTE: The crash report and minidump files can contain some"
                   " sensitive information\n(filenames, partial file content, "
