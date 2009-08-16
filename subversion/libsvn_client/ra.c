@@ -428,7 +428,8 @@ svn_client__ra_session_from_path(svn_ra_session_t **ra_session_p,
   svn_revnum_t rev;
   const char *ignored_url;
 
-  SVN_ERR(svn_client_url_from_path(&initial_url, path_or_url, pool));
+  SVN_ERR(svn_client_url_from_path2(&initial_url, path_or_url, ctx, pool,
+                                    pool));
   if (! initial_url)
     return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
                              _("'%s' has no URL"), path_or_url);

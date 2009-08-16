@@ -41,21 +41,20 @@
 
 
 svn_error_t *
-svn_client_url_from_path(const char **url,
-                         const char *path_or_url,
-                         apr_pool_t *pool)
+svn_client_url_from_path2(const char **url,
+                          const char *path_or_url,
+                          svn_client_ctx_t *ctx,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool)
 {
   svn_opt_revision_t revision;
-  svn_client_ctx_t *ctx;
-  
-  SVN_ERR(svn_client_create_context(&ctx, pool));
 
   if (!svn_path_is_url(path_or_url))
-    SVN_ERR(svn_dirent_get_absolute(&path_or_url, path_or_url, pool));
+    SVN_ERR(svn_dirent_get_absolute(&path_or_url, path_or_url, scratch_pool));
 
   revision.kind = svn_opt_revision_unspecified;
   return svn_client__derive_location(url, NULL, path_or_url, &revision,
-                                     NULL, ctx, pool, pool);
+                                     NULL, ctx, result_pool, scratch_pool);
 }
 
 
