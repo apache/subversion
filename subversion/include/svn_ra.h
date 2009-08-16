@@ -130,6 +130,8 @@ typedef svn_error_t *(*svn_ra_get_latest_revnum_func_t)
  * customizations to the client name string.  This is primarily used
  * by HTTP-based RA layers wishing to extend the string reported to
  * Apache/mod_dav_svn via the User-agent HTTP header.
+ *
+ * @since New in 1.5.
  */
 typedef svn_error_t *(*svn_ra_get_client_string_func_t)(void *baton,
                                                         const char **name,
