@@ -1148,10 +1148,12 @@ open_anchor(svn_wc_adm_access_t **anchor_access,
       if (err)
         {
           const char *abspath = svn_dirent_dirname(local_abspath, pool);
+          svn_wc_adm_access_t *existing_adm = svn_wc__db_temp_get_access(db, abspath, pool);
 
-          /* ### make sure the parent is not present in SHARED.  */
-          /* ### can't really assert prior state  */
-          svn_wc__db_temp_clear_access(db, abspath, pool);
+          if (IS_MISSING(existing_adm))
+            svn_wc__db_temp_clear_access(db, abspath, pool);
+          else
+            SVN_ERR_ASSERT(existing_adm == NULL);
 
           if (err->apr_err == SVN_ERR_WC_NOT_DIRECTORY)
             {
