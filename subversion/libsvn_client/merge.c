@@ -828,7 +828,8 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
       /* Non-empty mergeinfo; filter self-referential mergeinfo out. */
       /* Temporarily reparent our RA session to the merge
          target's URL. */
-      SVN_ERR(svn_client_url_from_path(&target_url, path, pool));
+      SVN_ERR(svn_client_url_from_path2(&target_url, path, merge_b->ctx,
+                                        pool, pool));
       SVN_ERR(svn_client__ensure_ra_session_url(&old_url,
                                                 merge_b->ra_session2,
                                                 target_url, pool));
@@ -8105,13 +8106,13 @@ svn_client_merge3(const char *source1,
      able to figure out some kind of revision specifications, but in
      that case it won't matter, because those ways of specifying a
      revision are meaningless for a url. */
-  SVN_ERR(svn_client_url_from_path(&URL1, source1, pool));
+  SVN_ERR(svn_client_url_from_path2(&URL1, source1, ctx, pool, pool));
   if (! URL1)
     return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
                              _("'%s' has no URL"),
                              svn_dirent_local_style(source1, pool));
 
-  SVN_ERR(svn_client_url_from_path(&URL2, source2, pool));
+  SVN_ERR(svn_client_url_from_path2(&URL2, source2, ctx, pool, pool));
   if (! URL2)
     return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
                              _("'%s' has no URL"),
@@ -9022,7 +9023,7 @@ svn_client_merge_reintegrate(const char *source,
                                       pool, pool));
 
   /* Make sure we're dealing with a real URL. */
-  SVN_ERR(svn_client_url_from_path(&url2, source, pool));
+  SVN_ERR(svn_client_url_from_path2(&url2, source, ctx, pool, pool));
   if (! url2)
     return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
                              _("'%s' has no URL"),
@@ -9219,7 +9220,7 @@ svn_client_merge_peg3(const char *source,
                                       pool, pool));
 
   /* Make sure we're dealing with a real URL. */
-  SVN_ERR(svn_client_url_from_path(&URL, source, pool));
+  SVN_ERR(svn_client_url_from_path2(&URL, source, ctx, pool, pool));
   if (! URL)
     return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
                              _("'%s' has no URL"),
