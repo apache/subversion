@@ -1336,7 +1336,7 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
                                             &pair->src_peg_revision,
                                             &pair->src_op_revision, NULL,
                                             svn_depth_infinity,
-                                            ignore_externals, FALSE, FALSE,
+                                            ignore_externals, FALSE, TRUE,
                                             NULL, ctx, pool));
 
       /* Rewrite URLs recursively, remove wcprops, and mark everything
