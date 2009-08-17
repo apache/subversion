@@ -240,16 +240,19 @@ pool_cleanup_child(void *p)
 
 
 /* Allocate from POOL, initialise and return an access baton. TYPE and PATH
-   are used to initialise the baton.  */
+   are used to initialise the baton.  If STEAL_LOCK, steal the lock if path
+   is already locked */
 static svn_error_t *
 adm_access_alloc(svn_wc_adm_access_t **adm_access,
                  enum svn_wc__adm_access_type type,
                  const char *path,
                  svn_wc__db_t *db,
                  svn_boolean_t db_provided,
+                 svn_boolean_t steal_lock,
                  apr_pool_t *result_pool,
                  apr_pool_t *scratch_pool)
 {
+  svn_error_t *err;
   svn_wc_adm_access_t *lock = apr_palloc(result_pool, sizeof(*lock));
 
   lock->type = type;
@@ -262,17 +265,40 @@ adm_access_alloc(svn_wc_adm_access_t **adm_access,
 
   SVN_ERR(svn_dirent_get_absolute(&lock->abspath, path, result_pool));
 
-  SVN_ERR(add_to_shared(lock, scratch_pool));
-
   *adm_access = lock;
 
   if (type == svn_wc__adm_access_write_lock)
     {
-      SVN_ERR(create_lock(path, scratch_pool));
+      svn_error_t *err = create_lock(path, scratch_pool);
+
+      if (err)
+        {
+          if (err->apr_err != SVN_ERR_WC_LOCKED || !steal_lock)
+            return svn_error_return(err);
+
+          svn_error_clear(err);
+        }
+
       lock->lock_exists = TRUE;
     }
-  else
-    lock->lock_exists = FALSE;
+
+  err = add_to_shared(lock, scratch_pool);
+
+  if (err)
+    return svn_error_compose_create(
+                err,
+                svn_wc__remove_adm_file(lock->abspath, SVN_WC__ADM_LOCK,
+                                        scratch_pool));
+
+  /* ### does this utf8 thing really/still apply??  */
+  /* It's important that the cleanup handler is registered *after* at least
+     one UTF8 conversion has been done, since such a conversion may create
+     the apr_xlate_t object in the pool, and that object must be around
+     when the cleanup handler runs.  If the apr_xlate_t cleanup handler
+     were to run *before* the access baton cleanup handler, then the access
+     baton's handler won't work. */
+  apr_pool_cleanup_register(lock->pool, lock, pool_cleanup,
+                            pool_cleanup_child);
 
   return SVN_NO_ERROR;
 }
@@ -380,23 +406,9 @@ svn_wc__adm_steal_write_lock(svn_wc_adm_access_t **adm_access,
                              apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool)
 {
-  svn_error_t *err;
-
-  err = adm_access_alloc(adm_access, svn_wc__adm_access_write_lock, path,
-                         db, TRUE, result_pool, scratch_pool);
-  if (err)
-    {
-      if (err->apr_err == SVN_ERR_WC_LOCKED)
-        {
-          svn_error_clear(err);
-
-          /* Note the presence of the lock. Effectively, we own it now.  */
-          (*adm_access)->lock_exists = TRUE;
-        }
-      else
-        return err;
-    }
-
+  SVN_ERR(adm_access_alloc(adm_access, svn_wc__adm_access_write_lock, path,
+                           db, TRUE, TRUE, result_pool, scratch_pool));
+  
   /* We used to attempt to upgrade the working copy here, but now we let
      it slide.  Our sole caller is svn_wc_cleanup3(), which will itself
      worry about upgrading.  */
@@ -449,19 +461,10 @@ open_single(svn_wc_adm_access_t **adm_access,
                            write_lock
                              ? svn_wc__adm_access_write_lock
                              : svn_wc__adm_access_unlocked,
-                           path, db, db_provided, result_pool, scratch_pool));
+                           path, db, db_provided, FALSE, result_pool,
+                           scratch_pool));
 
   /* ### recurse was here */
-
-  /* ### does this utf8 thing really/still apply??  */
-  /* It's important that the cleanup handler is registered *after* at least
-     one UTF8 conversion has been done, since such a conversion may create
-     the apr_xlate_t object in the pool, and that object must be around
-     when the cleanup handler runs.  If the apr_xlate_t cleanup handler
-     were to run *before* the access baton cleanup handler, then the access
-     baton's handler won't work. */
-  apr_pool_cleanup_register(lock->pool, lock, pool_cleanup,
-                            pool_cleanup_child);
   *adm_access = lock;
 
   return SVN_NO_ERROR;
