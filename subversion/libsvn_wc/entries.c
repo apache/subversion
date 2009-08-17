@@ -188,8 +188,9 @@ typedef struct {
 
 static svn_error_t *
 entries_write(apr_hash_t *entries,
-              svn_wc_adm_access_t *adm_access,
-              apr_pool_t *pool);
+              svn_wc__db_t *db,
+              const char *adm_abspath,
+              apr_pool_t *scratch_pool);
 
 
 
@@ -1585,14 +1586,16 @@ svn_wc__set_depth(svn_wc__db_t *db,
           if (entry->depth == svn_depth_exclude && depth != svn_depth_exclude)
             {
               entry->depth = svn_depth_infinity;
-              SVN_ERR(entries_write(entries, adm_access, scratch_pool));
+              SVN_ERR(entries_write(entries, db, parent_abspath,
+                                    scratch_pool));
             }
 
           /* Excluded directories are marked in the parent.  */
           if (depth == svn_depth_exclude)
             {
               entry->depth = depth;
-              return svn_error_return(entries_write(entries, adm_access,
+              return svn_error_return(entries_write(entries, db,
+                                                    parent_abspath,
                                                     scratch_pool));
             }
         }
@@ -1608,7 +1611,8 @@ svn_wc__set_depth(svn_wc__db_t *db,
   entry = apr_hash_get(entries, SVN_WC_ENTRY_THIS_DIR, APR_HASH_KEY_STRING);
   entry->depth = depth;
 
-  return svn_error_return(entries_write(entries, adm_access, scratch_pool));
+  return svn_error_return(entries_write(entries, db, local_dir_abspath,
+                                        scratch_pool));
 }
 
 
@@ -2377,21 +2381,23 @@ svn_wc__entries_write_new(svn_wc__db_t *db,
 
 static svn_error_t *
 entries_write(apr_hash_t *entries,
-              svn_wc_adm_access_t *adm_access,
-              apr_pool_t *pool)
+              svn_wc__db_t *db,
+              const char *adm_abspath,
+              apr_pool_t *scratch_pool)
 {
-  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
-  const char *local_abspath = svn_wc__adm_access_abspath(adm_access);
-  apr_pool_t *scratch_pool = svn_pool_create(pool);
+  /* Presumably, if somebody is attempting to write entries, they must have
+     read the entries prior, which requires an open access baton. */
+  svn_wc_adm_access_t *adm_access =
+                svn_wc__adm_retrieve_internal2(db, adm_abspath, scratch_pool);
 
-  SVN_ERR(svn_wc__adm_write_check(adm_access, pool));
+  SVN_ERR_ASSERT(adm_access != NULL);
+  SVN_ERR(svn_wc__adm_write_check(adm_access, scratch_pool));
 
   /* Write the entries. */
-  SVN_ERR(svn_wc__entries_write_new(db, local_abspath, entries, scratch_pool));
+  SVN_ERR(svn_wc__entries_write_new(db, adm_abspath, entries, scratch_pool));
 
   svn_wc__adm_access_set_entries(adm_access, entries);
 
-  svn_pool_destroy(scratch_pool);
   return SVN_NO_ERROR;
 }
 
@@ -2617,7 +2623,9 @@ svn_wc__entry_remove(svn_wc__db_t *db,
 
   SVN_ERR(svn_wc_entries_read(&entries, adm_access, TRUE, scratch_pool));
   apr_hash_set(entries, name, APR_HASH_KEY_STRING, NULL);
-  return svn_error_return(entries_write(entries, adm_access, scratch_pool));
+
+  return svn_error_return(
+    entries_write(entries, db, parent_dir, scratch_pool));
 }
 
 
@@ -2845,6 +2853,7 @@ svn_wc__entry_modify(svn_wc_adm_access_t *adm_access,
 {
   apr_hash_t *entries;
   svn_boolean_t entry_was_deleted_p = FALSE;
+  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
 
   SVN_ERR_ASSERT(entry);
 
@@ -2897,7 +2906,8 @@ svn_wc__entry_modify(svn_wc_adm_access_t *adm_access,
     }
 
   /* Sync changes to disk. */
-  return svn_error_return(entries_write(entries, adm_access, pool));
+  return svn_error_return(
+    entries_write(entries, db, svn_wc__adm_access_abspath(adm_access), pool));
 }
 
 
@@ -2971,7 +2981,10 @@ svn_wc__tweak_entry(svn_wc__db_t *db,
   const char *name;
   svn_wc_adm_access_t *adm_access;
   apr_pool_t *state_pool;
+  const char *parent_dir;
  
+  svn_dirent_split(local_abspath, &parent_dir, &name, scratch_pool);
+
   if (this_dir)
     {
       name = SVN_WC_ENTRY_THIS_DIR;
@@ -2980,9 +2993,6 @@ svn_wc__tweak_entry(svn_wc__db_t *db,
     }
   else
     {
-      const char *parent_dir;
-
-      svn_dirent_split(local_abspath, &parent_dir, &name, scratch_pool);
       adm_access = svn_wc__adm_retrieve_internal2(db, parent_dir,
                                                   scratch_pool);
     }
@@ -3068,7 +3078,9 @@ svn_wc__tweak_entry(svn_wc__db_t *db,
       apr_hash_set(entries, name, APR_HASH_KEY_STRING, NULL);
     }
 
-  return svn_error_return(entries_write(entries, adm_access, scratch_pool));
+  return svn_error_return(
+    entries_write(entries, db, this_dir ? local_abspath : parent_dir,
+                  scratch_pool));
 }
 
 
