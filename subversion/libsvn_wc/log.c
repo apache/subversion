@@ -363,11 +363,10 @@ install_committed_file(svn_boolean_t *overwrote_working,
   {
     const char *tmp = (kind == svn_node_file) ? tmp_text_base : filepath;
 
-    SVN_ERR(svn_wc_translated_file2(&tmp_wfile,
-                                    tmp,
-                                    filepath, adm_access,
-                                    SVN_WC_TRANSLATE_FROM_NF,
-                                    pool));
+    SVN_ERR(svn_wc__internal_translated_file(&tmp_wfile, tmp, db,
+                                             file_abspath,
+                                             SVN_WC_TRANSLATE_FROM_NF,
+                                             pool, pool));
 
     /* If the translation is a no-op, the text base and the working copy
      * file contain the same content, because we use the same props here

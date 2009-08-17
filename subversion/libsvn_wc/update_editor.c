@@ -4452,11 +4452,10 @@ merge_file(svn_wc_notify_state_t *content_state,
 
           /* Copy and DEtranslate the working file to a temp text-base.
              Note that detranslation is done according to the old props. */
-          SVN_ERR(svn_wc_translated_file2(&tmptext, fb->path, fb->path,
-                                          adm_access,
-                                          SVN_WC_TRANSLATE_TO_NF
-                                          | SVN_WC_TRANSLATE_NO_OUTPUT_CLEANUP,
-                                          pool));
+          SVN_ERR(svn_wc__internal_translated_file(
+                   &tmptext, local_abspath, eb->db, local_abspath,
+                   SVN_WC_TRANSLATE_TO_NF | SVN_WC_TRANSLATE_NO_OUTPUT_CLEANUP,
+                   pool, pool));
 
           /* A log command that copies the tmp-text-base and REtranslates
              it back to the working file.

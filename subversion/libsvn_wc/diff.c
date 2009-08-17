@@ -678,11 +678,10 @@ file_diff(struct dir_baton *dir_baton,
       SVN_ERR(get_working_mimetype(&working_mimetype, NULL, local_abspath,
                                    eb->db, pool, pool));
 
-      SVN_ERR(svn_wc_translated_file2
-              (&translated, path, path, adm_access,
-               SVN_WC_TRANSLATE_TO_NF
-               | SVN_WC_TRANSLATE_USE_GLOBAL_TMP,
-               pool));
+      SVN_ERR(svn_wc__internal_translated_file(
+              &translated, local_abspath, eb->db, local_abspath,
+              SVN_WC_TRANSLATE_TO_NF | SVN_WC_TRANSLATE_USE_GLOBAL_TMP,
+              pool, pool));
 
       SVN_ERR(dir_baton->edit_baton->callbacks->file_added
               (NULL, NULL, NULL, NULL, path,
@@ -710,12 +709,10 @@ file_diff(struct dir_baton *dir_baton,
              tmp translated copy too.  But what the heck, diff is
              already expensive, translating twice for the sake of code
              modularity is liveable. */
-          SVN_ERR(svn_wc_translated_file2
-                  (&translated, path,
-                   path, adm_access,
-                   SVN_WC_TRANSLATE_TO_NF
-                   | SVN_WC_TRANSLATE_USE_GLOBAL_TMP,
-                   pool));
+          SVN_ERR(svn_wc__internal_translated_file(
+                   &translated, local_abspath, eb->db, local_abspath,
+                   SVN_WC_TRANSLATE_TO_NF | SVN_WC_TRANSLATE_USE_GLOBAL_TMP,
+                   pool, pool));
         }
 
       if (modified || propchanges->nelts > 0)
@@ -1150,12 +1147,10 @@ report_wc_file_as_added(struct dir_baton *dir_baton,
   else
     source_file = path;
 
-  SVN_ERR(svn_wc_translated_file2
-          (&translated_file,
-           source_file, path, adm_access,
-           SVN_WC_TRANSLATE_TO_NF
-           | SVN_WC_TRANSLATE_USE_GLOBAL_TMP,
-           pool));
+  SVN_ERR(svn_wc__internal_translated_file(
+           &translated_file, source_file, eb->db, local_abspath,
+           SVN_WC_TRANSLATE_TO_NF | SVN_WC_TRANSLATE_USE_GLOBAL_TMP,
+           pool, pool));
 
   SVN_ERR(eb->callbacks->file_added
           (adm_access, NULL, NULL, NULL,
@@ -2428,12 +2423,10 @@ close_file(void *file_baton,
         localfile = svn_wc__text_base_path(b->path, FALSE, b->pool);
       else
         /* a detranslated version of the working file */
-        SVN_ERR(svn_wc_translated_file2
-                (&localfile, b->path,
-                 b->path, adm_access,
-                 SVN_WC_TRANSLATE_TO_NF
-                 | SVN_WC_TRANSLATE_USE_GLOBAL_TMP,
-                 pool));
+        SVN_ERR(svn_wc__internal_translated_file(
+                 &localfile, local_abspath, eb->db, local_abspath,
+                 SVN_WC_TRANSLATE_TO_NF | SVN_WC_TRANSLATE_USE_GLOBAL_TMP,
+                 pool, pool));
     }
   else
     localfile = temp_file_path = NULL;

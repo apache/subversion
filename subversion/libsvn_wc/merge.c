@@ -564,7 +564,11 @@ preserve_pre_merge_files(svn_stringbuf_t **log_accum,
   const char *parent, *target_base;
   svn_wc_adm_access_t *parent_access;
   const char *adm_path = svn_wc_adm_access_path(adm_access);
+  const char *merge_abstarget;
+  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
   svn_wc_entry_t tmp_entry;
+
+  SVN_ERR(svn_dirent_get_absolute(&merge_abstarget, merge_target, pool));
 
   /* I miss Lisp. */
 
@@ -654,13 +658,10 @@ preserve_pre_merge_files(svn_stringbuf_t **log_accum,
 
   /* Back up MERGE_TARGET through detranslation/retranslation:
      the new translation properties may not match the current ones */
-  SVN_ERR(svn_wc_translated_file2(&detranslated_target_copy,
-                                  merge_target,
-                                  merge_target,
-                                  adm_access,
-                                  SVN_WC_TRANSLATE_TO_NF
-                                  | SVN_WC_TRANSLATE_NO_OUTPUT_CLEANUP,
-                                  pool));
+  SVN_ERR(svn_wc__internal_translated_file(
+           &detranslated_target_copy, merge_abstarget, db, merge_abstarget,
+           SVN_WC_TRANSLATE_TO_NF | SVN_WC_TRANSLATE_NO_OUTPUT_CLEANUP,
+           pool, pool));
   SVN_ERR(svn_wc__loggy_translated_file
           (log_accum, adm_access,
            target_copy, detranslated_target_copy, merge_target, pool));
