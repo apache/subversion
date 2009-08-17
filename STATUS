@@ -56,7 +56,7 @@ Candidate changes:
      Doesn't merge cleanly (two tree conflicts) from trunk, and needed an API
      change for backport.
    Votes:
-     +1: stsp
+     +1: stsp, cmpilato
 
  * r38004, r38014, r38028, r38122
    Make KWallet window attached to terminal window.
@@ -68,29 +68,7 @@ Candidate changes:
      -0: psamuelson, stsp (without r38122) (code is ugly and Linux-specific -
                                             would getenv("WINDOWID") work instead?)
 
- * r38166, r38168
-   Fix issue #2580, svn+ssh SIGKILLs ssh processes
-   Justification:
-     Without this fix, svn+ssh:// does not play nicely with ssh
-     connection pooling.
-   Notes:
-     See the issue for (an overwhelming amount of) details.
-   Votes:
-     +1: stsp, psamuelson
-
- * r38205
-   Allow PLAIN and LOGIN mechanisms with SASL in svnserve.
-   Justification:
-     Allows authentication via LDAP to actually work, as advertised
-     by The Book. If plaintext passwords are a concern, users can
-     secure their network links by other means than TLS. We should
-     not be making this decision for them.
-   Notes:
-     See http://svn.haxx.se/users/archive-2009-06/0536.shtml
-   Votes:
-     +1: stsp, rhuijben
-
- * r38222, r38223, r38261
+ * r38222, r38223, r38261, r38410
    Fix GNOME Keyring with '--non-interactive' option.
    Justification:
      This was introduced in 1.6.x
@@ -101,21 +79,12 @@ Candidate changes:
      subversion/libsvn_auth_gnome_keyring/gnome_keyring.c.
      r38261 is also merged to the backport branch.
    Votes:
-     +1: stylesen
-
- * r38290, r38293, r38294 
-   Fix detection of Apache <2.0.56.
-   AP_SERVER_MINORVERSION_NUMBER does not exist in earlier versions.
-   But AP_SERVER_MINORVERSION (which is a string) does exist, so use that.
-   Justification:
-     Some people are stuck with older versions of things.
-   Votes:
-     +1: arfrever, stsp
+     +1: stylesen (!r38410), cmpilato
 
  * r38521
    Fix Issue 3453: Building Subversion 1.6 requires GNU grep 2.5.
    Votes:
-     +1: arfrever
+     +1: arfrever, cmpilato
 
  * r38417, r38424
    Fix issue #3443 'Obtaining implicit subtree mergeinfo hammers merge
@@ -164,7 +133,7 @@ Candidate changes:
    Justification:
      Without this, r37827 doesn't in fact fix anything.
    Votes:
-     +1: stsp
+     +1: stsp, cmpilato
      
  * r38616, r38617, r38619, r38649
    Fix several missing and extra whitespace issues, mostly in the Windows
@@ -174,16 +143,6 @@ Candidate changes:
      Makes diagnosing test errors a lot easier on Windows
    Votes:
      +1: rhuijben
-
-* r38686-7
-   Fix serious bugs in libsvn_ra_svn and svnsync.  (If svnsync errors
-   while syncing from svnserve to mod_dav_svn, it commits a
-   half-written transaction rather than aborting it.)
-   Justification:  
-     A potentially large audience of users may unknowingly be creating
-     corrupt repository mirrors!
-   Votes:
-     +1: sussman, rhuijben
 
 * r38000, r38006, r38099, r38100, r38181
   Don't break the working copy when a tree-conflict features an incoming
@@ -206,3 +165,44 @@ Candidate changes:
 
 Approved changes:
 =================
+
+ * r38166, r38168
+   Fix issue #2580, svn+ssh SIGKILLs ssh processes
+   Justification:
+     Without this fix, svn+ssh:// does not play nicely with ssh
+     connection pooling.
+   Notes:
+     See the issue for (an overwhelming amount of) details.
+   Votes:
+     +1: stsp, psamuelson, cmpilato
+
+ * r38205
+   Allow PLAIN and LOGIN mechanisms with SASL in svnserve.
+   Justification:
+     Allows authentication via LDAP to actually work, as advertised
+     by The Book. If plaintext passwords are a concern, users can
+     secure their network links by other means than TLS. We should
+     not be making this decision for them.
+   Notes:
+     See http://svn.haxx.se/users/archive-2009-06/0536.shtml
+   Votes:
+     +1: stsp, rhuijben, cmpilato
+
+ * r38290, r38293, r38294 
+   Fix detection of Apache <2.0.56.
+   AP_SERVER_MINORVERSION_NUMBER does not exist in earlier versions.
+   But AP_SERVER_MINORVERSION (which is a string) does exist, so use that.
+   Justification:
+     Some people are stuck with older versions of things.
+   Votes:
+     +1: arfrever, stsp, cmpilato
+
+* r38686-7
+   Fix serious bugs in libsvn_ra_svn and svnsync.  (If svnsync errors
+   while syncing from svnserve to mod_dav_svn, it commits a
+   half-written transaction rather than aborting it.)
+   Justification:  
+     A potentially large audience of users may unknowingly be creating
+     corrupt repository mirrors!
+   Votes:
+     +1: sussman, rhuijben, cmpilato
