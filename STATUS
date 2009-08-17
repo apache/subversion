@@ -166,16 +166,6 @@ Candidate changes:
 Approved changes:
 =================
 
- * r38166, r38168
-   Fix issue #2580, svn+ssh SIGKILLs ssh processes
-   Justification:
-     Without this fix, svn+ssh:// does not play nicely with ssh
-     connection pooling.
-   Notes:
-     See the issue for (an overwhelming amount of) details.
-   Votes:
-     +1: stsp, psamuelson, cmpilato
-
  * r38205
    Allow PLAIN and LOGIN mechanisms with SASL in svnserve.
    Justification:

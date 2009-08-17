@@ -1009,7 +1009,7 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "### passed to the tunnel agent as <user>@<hostname>.)  If the"      NL
         "### built-in ssh scheme were not predefined, it could be defined"   NL
         "### as:"                                                            NL
-        "# ssh = $SVN_SSH ssh"                                               NL
+        "# ssh = $SVN_SSH ssh -q"                                            NL
         "### If you wanted to define a new 'rsh' scheme, to be used with"    NL
         "### 'svn+rsh:' URLs, you could do so as follows:"                   NL
         "# rsh = rsh"                                                        NL
