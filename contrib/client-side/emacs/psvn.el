@@ -4138,22 +4138,29 @@ When called with a prefix argument, ask the user for the revision to update to.
 When called with a negative prefix argument, only update the selected files."
   (interactive "P")
   (let* ((selective-update (or (and (numberp arg) (< arg 0)) (eq arg '-)))
+         (update-extra-arg)
          (rev (when arg (svn-status-read-revision-string
                          (if selective-update
                              (format "Selected entries: Run svn update -r ")
                            (format "Directory: %s: Run svn update -r " default-directory))
                          (if selective-update "HEAD" nil)))))
+    (unless svn-client-version
+      (svn-status-version))
+    (if (and (<= (car svn-client-version) 1) (< (cadr svn-client-version) 5))
+        (setq update-extra-arg (list "--non-interactive")) ;; svn version < 1.5
+      (setq update-extra-arg (list "--accept" "postpone"))) ;; svn version >= 1.5
     (if selective-update
         (progn
           (message "Running svn-update for %s" (svn-status-marked-file-names))
           (svn-run t t 'update "update"
                    (when rev (list "-r" rev))
-                   (list "--non-interactive")
+                   update-extra-arg
                    (svn-status-marked-file-names)))
       (message "Running svn-update for %s" default-directory)
       (svn-run t t 'update "update"
                (when rev (list "-r" rev))
-               (list "--non-interactive") (expand-file-name default-directory)))))
+               update-extra-arg
+               (expand-file-name default-directory)))))
 
 (defun svn-status-commit ()
   "Commit selected files.
