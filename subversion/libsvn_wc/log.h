@@ -274,6 +274,16 @@ svn_wc__write_log(svn_wc_adm_access_t *adm_access,
                   apr_pool_t *pool);
 
 
+/* Set PRESENT if there is a log file present for the working copy directory
+   at LOCAL_ABSPATH. If that directory is missing or obstructed by a file or
+   whatever, then (obviously) there is no log file, so PRESENT will be set
+   to FALSE. All (temporary) allocations are performed in SCRATCH_POOL.  */
+svn_error_t *
+svn_wc__logfile_present(svn_boolean_t *present,
+                        const char *local_abspath,
+                        apr_pool_t *scratch_pool);
+
+
 /* Process the instructions in the log file for ADM_ACCESS.
    DIFF3_CMD is the external differ used by the 'SVN_WC__LOG_MERGE'
    log entry.  It is always safe to pass null for this.

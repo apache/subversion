@@ -262,12 +262,12 @@ take_from_entry(const svn_wc_entry_t *src,
 }
 
 static svn_error_t *
-fetch_wc_id(apr_int64_t *wc_id, svn_sqlite__db_t *wc_db)
+fetch_wc_id(apr_int64_t *wc_id, svn_sqlite__db_t *sdb)
 {
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
 
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db, STMT_SELECT_WCROOT_NULL));
+  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_SELECT_WCROOT_NULL));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   if (!have_row)
     return svn_error_create(SVN_ERR_WC_DB_ERROR, NULL, _("No WC table entry"));
@@ -298,13 +298,13 @@ determine_keep_local(svn_boolean_t *keep_local,
    entry.  The entry will be modified in place. */
 static svn_error_t *
 check_file_external(svn_wc_entry_t *entry,
-                    svn_sqlite__db_t *wc_db,
+                    svn_sqlite__db_t *sdb,
                     apr_pool_t *result_pool)
 {
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
 
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db,
+  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
                                     STMT_SELECT_FILE_EXTERNAL));
   SVN_ERR(svn_sqlite__bindf(stmt, "is",
                             (apr_uint64_t)1 /* wc_id */,
@@ -597,7 +597,7 @@ read_entries_new(apr_hash_t **result_entries,
                  apr_pool_t *result_pool,
                  apr_pool_t *scratch_pool)
 {
-  svn_sqlite__db_t *wc_db;
+  svn_sqlite__db_t *sdb;
   apr_hash_t *entries;
   const apr_array_header_t *children;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
@@ -608,7 +608,7 @@ read_entries_new(apr_hash_t **result_entries,
   entries = apr_hash_make(result_pool);
 
   /* ### need database to determine: incomplete, keep_local, ACTUAL info.  */
-  SVN_ERR(svn_wc__db_temp_get_sdb(&wc_db, local_abspath, statements,
+  SVN_ERR(svn_wc__db_temp_get_sdb(&sdb, local_abspath, statements,
                                   scratch_pool, scratch_pool));
 
   SVN_ERR(svn_wc__db_read_children(&children, db,
@@ -693,7 +693,7 @@ read_entries_new(apr_hash_t **result_entries,
             {
                 svn_sqlite__stmt_t *stmt;
 
-                SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db,
+                SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
                                                   STMT_SELECT_NOT_PRESENT));
                 SVN_ERR(svn_sqlite__bindf(stmt, "is", wc_id, entry->name));
                 SVN_ERR(svn_sqlite__step(&have_row, stmt));
@@ -734,7 +734,7 @@ read_entries_new(apr_hash_t **result_entries,
           entry->schedule = svn_wc_schedule_delete;
 
           /* ### keep_local ... ugh. hacky.  */
-          SVN_ERR(determine_keep_local(&entry->keep_local, wc_db,
+          SVN_ERR(determine_keep_local(&entry->keep_local, sdb,
                                        wc_id, entry->name));
         }
       else if (status == svn_wc__db_status_added
@@ -1045,14 +1045,14 @@ read_entries_new(apr_hash_t **result_entries,
          ### right now this is ugly, since we have no good way querying
          ### for a file external OR retrieving properties.  ugh.  */
       if (entry->kind == svn_node_file)
-        SVN_ERR(check_file_external(entry, wc_db, result_pool));
+        SVN_ERR(check_file_external(entry, sdb, result_pool));
 
       entry->working_size = translated_size;
 
       apr_hash_set(entries, entry->name, APR_HASH_KEY_STRING, entry);
     }
 
-  SVN_ERR(svn_sqlite__close(wc_db));
+  SVN_ERR(svn_sqlite__close(sdb));
   svn_pool_destroy(iterpool);
 
   *result_entries = entries;
@@ -1612,27 +1612,14 @@ svn_wc__set_depth(svn_wc__db_t *db,
 }
 
 
-svn_error_t *
-svn_wc__entries_upgrade(svn_wc_adm_access_t *adm_access,
-                        int wc_format,
-                        apr_pool_t *scratch_pool)
-{
-  apr_hash_t *entries;
-
-  SVN_ERR(svn_wc_entries_read(&entries, adm_access, TRUE, scratch_pool));
-  SVN_ERR(svn_wc__adm_set_wc_format(wc_format, adm_access, scratch_pool));
-  return svn_error_return(entries_write(entries, adm_access, scratch_pool));
-}
-
-
 static svn_error_t *
-insert_base_node(svn_sqlite__db_t *wc_db,
+insert_base_node(svn_sqlite__db_t *sdb,
                  const db_base_node_t *base_node,
                  apr_pool_t *scratch_pool)
 {
   svn_sqlite__stmt_t *stmt;
 
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db, STMT_INSERT_BASE_NODE));
+  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_INSERT_BASE_NODE));
 
   SVN_ERR(svn_sqlite__bind_int64(stmt, 1, base_node->wc_id));
   SVN_ERR(svn_sqlite__bind_text(stmt, 2, base_node->local_relpath));
@@ -1708,7 +1695,7 @@ insert_base_node(svn_sqlite__db_t *wc_db,
 }
 
 static svn_error_t *
-insert_working_node(svn_sqlite__db_t *wc_db,
+insert_working_node(svn_sqlite__db_t *sdb,
                     const db_working_node_t *working_node,
                     apr_pool_t *scratch_pool)
 {
@@ -1716,7 +1703,7 @@ insert_working_node(svn_sqlite__db_t *wc_db,
   svn_stringbuf_t *properties;
   svn_skel_t *skel;
 
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db, STMT_INSERT_WORKING_NODE));
+  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_INSERT_WORKING_NODE));
 
   SVN_ERR(svn_sqlite__bind_int64(stmt, 1, working_node->wc_id));
   SVN_ERR(svn_sqlite__bind_text(stmt, 2, working_node->local_relpath));
@@ -1797,13 +1784,13 @@ insert_working_node(svn_sqlite__db_t *wc_db,
 }
 
 static svn_error_t *
-insert_actual_node(svn_sqlite__db_t *wc_db,
+insert_actual_node(svn_sqlite__db_t *sdb,
                    const db_actual_node_t *actual_node,
                    apr_pool_t *scratch_pool)
 {
   svn_sqlite__stmt_t *stmt;
 
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db, STMT_INSERT_ACTUAL_NODE));
+  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_INSERT_ACTUAL_NODE));
 
   SVN_ERR(svn_sqlite__bind_int64(stmt, 1, actual_node->wc_id));
   SVN_ERR(svn_sqlite__bind_text(stmt, 2, actual_node->local_relpath));
@@ -1850,7 +1837,7 @@ insert_actual_node(svn_sqlite__db_t *wc_db,
    ### time being, we'll need both parameters. */
 static svn_error_t *
 write_entry(svn_wc__db_t *db,
-            svn_sqlite__db_t *wc_db,
+            svn_sqlite__db_t *sdb,
             apr_int64_t wc_id,
             apr_int64_t repos_id,
             const char *repos_root,
@@ -2102,7 +2089,7 @@ write_entry(svn_wc__db_t *db,
       base_node->changed_date = entry->cmt_date;
       base_node->changed_author = entry->cmt_author;
 
-      SVN_ERR(insert_base_node(wc_db, base_node, scratch_pool));
+      SVN_ERR(insert_base_node(sdb, base_node, scratch_pool));
 
       /* We have to insert the lock after the base node, because the node
          must exist to lookup various bits of repos related information for
@@ -2132,7 +2119,7 @@ write_entry(svn_wc__db_t *db,
                                                   &entry->file_external_rev,
                                                   scratch_pool));
        
-          SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db,
+          SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
                                             STMT_UPDATE_FILE_EXTERNAL));
           SVN_ERR(svn_sqlite__bindf(stmt, "iss",
                                     (apr_uint64_t)1 /* wc_id */,
@@ -2211,7 +2198,7 @@ write_entry(svn_wc__db_t *db,
       working_node->changed_date = entry->cmt_date;
       working_node->changed_author = entry->cmt_author;
 
-      SVN_ERR(insert_working_node(wc_db, working_node, scratch_pool));
+      SVN_ERR(insert_working_node(sdb, working_node, scratch_pool));
     }
 
   /* Insert the actual node. */
@@ -2224,20 +2211,20 @@ write_entry(svn_wc__db_t *db,
       else
         actual_node->parent_relpath = "";
 
-      SVN_ERR(insert_actual_node(wc_db, actual_node, scratch_pool));
+      SVN_ERR(insert_actual_node(sdb, actual_node, scratch_pool));
     }
 
   return SVN_NO_ERROR;
 }
 
 
-static svn_error_t *
-entries_write_body(svn_wc__db_t *db,
-                   const char *local_abspath,
-                   svn_sqlite__db_t *wc_db,
-                   apr_hash_t *entries,
-                   apr_pool_t *scratch_pool)
+svn_error_t *
+svn_wc__entries_write_new(svn_wc__db_t *db,
+                          const char *local_abspath,
+                          apr_hash_t *entries,
+                          apr_pool_t *scratch_pool)
 {
+  svn_sqlite__db_t *sdb;
   const svn_wc_entry_t *this_dir;
   svn_sqlite__stmt_t *stmt;
   apr_hash_index_t *hi;
@@ -2251,6 +2238,10 @@ entries_write_body(svn_wc__db_t *db,
   svn_error_t *err;
   int i;
 
+  /* Get the SDB, but with *our* statements[]  */
+  SVN_ERR(svn_wc__db_temp_get_sdb(&sdb, local_abspath, statements,
+                                  scratch_pool, iterpool));
+
   /* Get a copy of the "this dir" entry for comparison purposes. */
   this_dir = apr_hash_get(entries, SVN_WC_ENTRY_THIS_DIR,
                           APR_HASH_KEY_STRING);
@@ -2260,7 +2251,7 @@ entries_write_body(svn_wc__db_t *db,
     return svn_error_createf(SVN_ERR_ENTRY_NOT_FOUND, NULL,
                              _("No default entry in directory '%s'"),
                              svn_dirent_local_style(local_abspath,
-                                                    scratch_pool));
+                                                    iterpool));
 
   /* Get the repos ID. */
   if (this_dir->uuid != NULL)
@@ -2272,7 +2263,7 @@ entries_write_body(svn_wc__db_t *db,
          ### any members?  */
       SVN_ERR(svn_wc__db_repos_ensure(&repos_id, db, local_abspath,
                                       this_dir->repos, this_dir->uuid,
-                                      scratch_pool));
+                                      iterpool));
       repos_root = this_dir->repos;
     }
   else
@@ -2288,7 +2279,7 @@ entries_write_body(svn_wc__db_t *db,
          nodes here. */
   dav_cache = apr_hash_make(scratch_pool);
   err = svn_wc__db_base_get_dav_cache(&child_cache, db, local_abspath,
-                                      scratch_pool, scratch_pool);
+                                      scratch_pool, iterpool);
   if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
     {
       /* We could be looking at a newly added node, without a BASE node,
@@ -2301,7 +2292,7 @@ entries_write_body(svn_wc__db_t *db,
     apr_hash_set(dav_cache, local_abspath, APR_HASH_KEY_STRING, child_cache);
 
   SVN_ERR(svn_wc__db_base_get_children(&children, db, local_abspath,
-                                       scratch_pool, scratch_pool));
+                                       scratch_pool, iterpool));
 
   for (i = 0; i < children->nelts; i++)
     {
@@ -2333,16 +2324,16 @@ entries_write_body(svn_wc__db_t *db,
 
   /* Remove all WORKING, BASE and ACTUAL nodes for this directory, as well
      as locks, since we're about to replace 'em. */
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db, STMT_DELETE_ALL_WORKING));
+  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_DELETE_ALL_WORKING));
   SVN_ERR(svn_sqlite__step_done(stmt));
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db, STMT_DELETE_ALL_BASE));
+  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_DELETE_ALL_BASE));
   SVN_ERR(svn_sqlite__step_done(stmt));
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wc_db, STMT_DELETE_ALL_ACTUAL));
+  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_DELETE_ALL_ACTUAL));
   SVN_ERR(svn_sqlite__step_done(stmt));
 
   /* Write out "this dir" */
-  SVN_ERR(fetch_wc_id(&wc_id, wc_db));
-  SVN_ERR(write_entry(db, wc_db, wc_id, repos_id, repos_root, this_dir,
+  SVN_ERR(fetch_wc_id(&wc_id, sdb));
+  SVN_ERR(write_entry(db, sdb, wc_id, repos_id, repos_root, this_dir,
                       SVN_WC_ENTRY_THIS_DIR, local_abspath,
                       this_dir, iterpool));
 
@@ -2366,7 +2357,7 @@ entries_write_body(svn_wc__db_t *db,
 
       /* Write the entry. */
       child_abspath = svn_dirent_join(local_abspath, key, iterpool);
-      SVN_ERR(write_entry(db, wc_db, wc_id, repos_id, repos_root,
+      SVN_ERR(write_entry(db, sdb, wc_id, repos_id, repos_root,
                           this_entry, key, child_abspath, this_dir, iterpool));
 
       /* Write the dav cache.
@@ -2391,18 +2382,12 @@ entries_write(apr_hash_t *entries,
 {
   svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
   const char *local_abspath = svn_wc__adm_access_abspath(adm_access);
-  svn_sqlite__db_t *wc_db;
   apr_pool_t *scratch_pool = svn_pool_create(pool);
 
   SVN_ERR(svn_wc__adm_write_check(adm_access, pool));
 
-  /* Open the wc.db sqlite database. */
-  SVN_ERR(svn_wc__db_temp_get_sdb(&wc_db,
-                                  svn_wc__adm_access_abspath(adm_access),
-                                  statements, scratch_pool, scratch_pool));
-
   /* Write the entries. */
-  SVN_ERR(entries_write_body(db, local_abspath, wc_db, entries, scratch_pool));
+  SVN_ERR(svn_wc__entries_write_new(db, local_abspath, entries, scratch_pool));
 
   svn_wc__adm_access_set_entries(adm_access, entries);
 
