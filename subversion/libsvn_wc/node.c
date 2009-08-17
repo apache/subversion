@@ -64,20 +64,23 @@ svn_wc__node_get_children(const apr_array_header_t **children,
                           apr_pool_t *scratch_pool)
 {
   const apr_array_header_t *rel_children;
+  apr_array_header_t *childs;
   int i;
 
   SVN_ERR(svn_wc__db_read_children(&rel_children, wc_ctx->db, dir_abspath,
                                    scratch_pool, scratch_pool));
 
-  *children = apr_array_make(result_pool, rel_children->nelts,
+  childs = apr_array_make(result_pool, rel_children->nelts,
                              sizeof(const char *));
   for (i = 0; i < rel_children->nelts; i++)
     {
-      APR_ARRAY_PUSH(*children, const char *) =
+      APR_ARRAY_PUSH(childs, const char *) =
                 svn_dirent_join(dir_abspath, APR_ARRAY_IDX(rel_children, i,
                                                            const char *),
                       result_pool);
     }
+
+  *children = childs;
 
   return SVN_NO_ERROR;
 }
