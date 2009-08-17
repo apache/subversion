@@ -2265,6 +2265,23 @@ svn_wc__write_log(svn_wc_adm_access_t *adm_access,
                                   logfile_name, pool);
 }
 
+
+svn_error_t *
+svn_wc__logfile_present(svn_boolean_t *present,
+                        const char *local_abspath,
+                        apr_pool_t *scratch_pool)
+{
+  const char *log_path = svn_wc__adm_child(local_abspath, SVN_WC__ADM_LOG,
+                                           scratch_pool);
+  svn_node_kind_t kind;
+
+  /* Is the (first) log file present?  */
+  SVN_ERR(svn_io_check_path(log_path, &kind, scratch_pool));
+  *present = (kind == svn_node_file);
+
+  return SVN_NO_ERROR;
+}
+
 
 /*** Recursively do log things. ***/
 static svn_error_t *
@@ -2287,7 +2304,6 @@ run_existing_logs(svn_wc_adm_access_t *adm_access,
   apr_hash_t *entries = NULL;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   svn_boolean_t killme, kill_adm_only;
-  svn_boolean_t cleanup;
 
   /* Recurse on versioned elements first, oddly enough. */
   SVN_ERR(svn_wc_entries_read(&entries, adm_access, FALSE, scratch_pool));
@@ -2342,12 +2358,15 @@ run_existing_logs(svn_wc_adm_access_t *adm_access,
     }
   else
     {
+      svn_boolean_t present;
+
       /* In an attempt to maintain consistency between the decisions made in
          this function, and those made in the access baton lock-removal code,
          we use the same test as the lock-removal code. */
-      SVN_ERR(svn_wc__adm_is_cleanup_required(&cleanup, adm_access,
-                                              scratch_pool));
-      if (cleanup)
+      SVN_ERR(svn_wc__logfile_present(&present,
+                                      svn_wc__adm_access_abspath(adm_access),
+                                      scratch_pool));
+      if (present)
         {
           /* ### rerun the log. why? dunno. missing commentary... */
           SVN_ERR(run_log(adm_access, TRUE, scratch_pool));

@@ -51,7 +51,8 @@
    directory is being constructed; calling this on a format 0 working
    copy has no effect and returns no error. */
 static svn_error_t *
-upgrade_format(svn_wc_adm_access_t *adm_access,
+upgrade_format(svn_wc__db_t *db,
+               const char *dir_abspath,
                apr_pool_t *scratch_pool);
 
 
@@ -198,46 +199,80 @@ read_wcprops(apr_hash_t **all_wcprops,
 }
 
 
-/* Convert a WC that has wcprops in files to use the wc-ng database DB.
-   Do this for DIR_ABSPATH and its file children, using SCRATCH_POOL for
-   temporary allocations. */
 static svn_error_t *
-convert_wcprops(svn_wc__db_t *db,
-                const char *dir_abspath,
-                int old_format,
-                apr_pool_t *scratch_pool)
+maybe_add_subdir(apr_array_header_t *subdirs,
+                 const char *dir_abspath,
+                 const char *child_name,
+                 apr_pool_t *result_pool,
+                 apr_pool_t *scratch_pool)
 {
-  apr_pool_t *iterpool;
-  apr_hash_t *all_wcprops;
-  apr_hash_index_t *hi;
+  const char *child_abspath = svn_dirent_join(dir_abspath, child_name,
+                                              scratch_pool);
+  svn_node_kind_t kind;
 
-  /* Ugh. We don't know precisely where the wcprops are. Ignore them.  */
-  if (old_format == SVN_WC__WCPROPS_LOST)
-    return SVN_NO_ERROR;
-
-  iterpool = svn_pool_create(scratch_pool);
-
-  if (old_format <= SVN_WC__WCPROPS_MANY_FILES_VERSION)
-    SVN_ERR(read_many_wcprops(&all_wcprops, dir_abspath,
-                              scratch_pool, iterpool));
-  else
-    SVN_ERR(read_wcprops(&all_wcprops, dir_abspath, scratch_pool, iterpool));
-
-  /* Iterate over all the wcprops, writing each one to the wc_db. */
-  for (hi = apr_hash_first(scratch_pool, all_wcprops);
-       hi;
-       hi = apr_hash_next(hi))
+  SVN_ERR(svn_io_check_path(child_abspath, &kind, scratch_pool));
+  if (kind == svn_node_dir)
     {
-      const void *key;
-      void *val;
-      const char *local_abspath;
+      APR_ARRAY_PUSH(subdirs, const char *) = apr_pstrdup(result_pool,
+                                                          child_abspath);
+    }
 
-      svn_pool_clear(iterpool);
+  return SVN_NO_ERROR;
+}
 
-      apr_hash_this(hi, &key, NULL, &val);
 
-      local_abspath = svn_dirent_join(dir_abspath, key, iterpool);
-      SVN_ERR(svn_wc__db_base_set_dav_cache(db, local_abspath, val, iterpool));
+static svn_error_t *
+get_versioned_subdirs(apr_array_header_t **children,
+                      svn_wc__db_t *db,
+                      const char *dir_abspath,
+                      apr_pool_t *result_pool,
+                      apr_pool_t *scratch_pool)
+{
+  int wc_format;
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+
+  *children = apr_array_make(result_pool, 10, sizeof(const char *));
+
+  SVN_ERR(svn_wc__db_temp_get_format(&wc_format, db, dir_abspath, iterpool));
+  if (wc_format >= SVN_WC__WC_NG_VERSION)
+    {
+      const apr_array_header_t *all_children;
+      int i;
+
+      SVN_ERR(svn_wc__db_read_children(&all_children, db, dir_abspath,
+                                       scratch_pool, scratch_pool));
+      for (i = 0; i < all_children->nelts; ++i)
+        {
+          const char *name = APR_ARRAY_IDX(all_children, i, const char *);
+
+          svn_pool_clear(iterpool);
+
+          SVN_ERR(maybe_add_subdir(*children, dir_abspath, name,
+                                   result_pool, iterpool));
+        }
+    }
+  else
+    {
+      apr_hash_t *entries;
+      apr_hash_index_t *hi;
+
+      SVN_ERR(svn_wc__read_entries_old(&entries, dir_abspath,
+                                       scratch_pool, iterpool));
+      for (hi = apr_hash_first(scratch_pool, entries);
+           hi;
+           hi = apr_hash_next(hi))
+        {
+          const char *name = svn_apr_hash_index_key(hi);
+
+          /* skip "this dir"  */
+          if (*name == '\0')
+            continue;
+
+          svn_pool_clear(iterpool);
+
+          SVN_ERR(maybe_add_subdir(*children, dir_abspath, name,
+                                   result_pool, iterpool));
+        }
     }
 
   svn_pool_destroy(iterpool);
@@ -248,46 +283,38 @@ convert_wcprops(svn_wc__db_t *db,
 
 static svn_error_t *
 upgrade_working_copy(svn_wc__db_t *db,
-                     const char *path,
+                     const char *dir_abspath,
                      svn_cancel_func_t cancel_func,
                      void *cancel_baton,
                      apr_pool_t *scratch_pool)
 {
   svn_wc_adm_access_t *adm_access;
-  apr_hash_index_t *hi;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
-  apr_hash_t *entries = NULL;
+  apr_array_header_t *subdirs;
+  int i;
 
   /* Check cancellation; note that this catches recursive calls too. */
   if (cancel_func)
     SVN_ERR(cancel_func(cancel_baton));
 
   /* Lock this working copy directory, or steal an existing lock */
-  SVN_ERR(svn_wc__adm_steal_write_lock(&adm_access, db, path,
-                                       scratch_pool, scratch_pool));
+  SVN_ERR(svn_wc__adm_steal_write_lock(&adm_access, db, dir_abspath,
+                                       scratch_pool, iterpool));
+
+  SVN_ERR(get_versioned_subdirs(&subdirs, db, dir_abspath,
+                                scratch_pool, iterpool));
 
   /* Upgrade this directory first. */
-  SVN_ERR(upgrade_format(adm_access, scratch_pool));
+  SVN_ERR(upgrade_format(db, dir_abspath, iterpool));
 
   /* Now recurse. */
-  SVN_ERR(svn_wc_entries_read(&entries, adm_access, FALSE, scratch_pool));
-  for (hi = apr_hash_first(scratch_pool, entries); hi; hi = apr_hash_next(hi))
+  for (i = 0; i < subdirs->nelts; ++i)
     {
-      const void *key;
-      void *val;
-      const svn_wc_entry_t *entry;
-      const char *entry_path;
+      const char *child_abspath = APR_ARRAY_IDX(subdirs, i, const char *);
 
       svn_pool_clear(iterpool);
-      apr_hash_this(hi, &key, NULL, &val);
-      entry = val;
-      entry_path = svn_dirent_join(path, key, iterpool);
 
-      if (entry->kind != svn_node_dir
-            || strcmp(key, SVN_WC_ENTRY_THIS_DIR) == 0)
-        continue;
-
-      SVN_ERR(upgrade_working_copy(db, entry_path, cancel_func,
+      SVN_ERR(upgrade_working_copy(db, child_abspath, cancel_func,
                                    cancel_baton, iterpool));
     }
   svn_pool_destroy(iterpool);
@@ -297,42 +324,27 @@ upgrade_working_copy(svn_wc__db_t *db,
 
 
 static svn_error_t *
-upgrade_format(svn_wc_adm_access_t *adm_access,
+upgrade_format(svn_wc__db_t *db,
+               const char *dir_abspath,
                apr_pool_t *scratch_pool)
 {
-  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
-  const char *dir_abspath = svn_wc__adm_access_abspath(adm_access);
   int wc_format;
-  svn_boolean_t cleanup_required;
+  svn_boolean_t present;
+  apr_hash_t *entries;
   const svn_wc_entry_t *this_dir;
+  svn_sqlite__db_t *sdb;
 
   SVN_ERR(svn_wc__db_temp_get_format(&wc_format, db, dir_abspath,
                                      scratch_pool));
 
-  if (wc_format > SVN_WC__VERSION)
-    {
-      return svn_error_createf
-        (SVN_ERR_WC_UNSUPPORTED_FORMAT, NULL,
-         _("This client is too old to work with working copy '%s'.  You need\n"
-           "to get a newer Subversion client, or to downgrade this working "
-           "copy.\n"
-           "See "
-           "http://subversion.tigris.org/faq.html#working-copy-format-change\n"
-           "for details."
-           ),
-         svn_dirent_local_style(svn_wc_adm_access_path(adm_access),
-                                scratch_pool));
-    }
-
   /* Early out of the format is already what we expect it to be.  */
-  if (wc_format == SVN_WC__VERSION)
+  if (wc_format >= SVN_WC__WC_NG_VERSION)
     return SVN_NO_ERROR;
 
   /* Don't try to mess with the WC if there are old log files left. */
-  SVN_ERR(svn_wc__adm_is_cleanup_required(&cleanup_required,
-                                          adm_access, scratch_pool));
+  SVN_ERR(svn_wc__logfile_present(&present, dir_abspath, scratch_pool));
 
-  if (cleanup_required)
+  if (present)
     return svn_error_create(SVN_ERR_WC_UNSUPPORTED_FORMAT, NULL,
                             _("Cannot upgrade with existing logs; please "
                               "run 'svn cleanup' with Subversion 1.6"));
@@ -357,17 +369,22 @@ upgrade_format(svn_wc_adm_access_t *adm_access,
    */
 
   /***** ENTRIES *****/
+  SVN_ERR(svn_wc__read_entries_old(&entries, dir_abspath,
+                                   scratch_pool, scratch_pool));
+
+  this_dir = apr_hash_get(entries, SVN_WC_ENTRY_THIS_DIR, APR_HASH_KEY_STRING);
+
   /* Create an empty sqlite database for this directory. */
-  SVN_ERR(svn_wc_entry(&this_dir, svn_wc_adm_access_path(adm_access),
-                       adm_access, FALSE, scratch_pool));
-  SVN_ERR(svn_wc__entries_init(svn_wc_adm_access_path(adm_access),
-                               this_dir->uuid, this_dir->url,
-                               this_dir->repos, this_dir->revision,
-                               this_dir->depth, scratch_pool));
+  SVN_ERR(svn_wc__db_upgrade_begin(&sdb, dir_abspath,
+                                   this_dir->repos, this_dir->uuid,
+                                   scratch_pool, scratch_pool));
 
   /* Migrate the entries over to the new database.
      ### We need to think about atomicity here. */
-  SVN_ERR(svn_wc__entries_upgrade(adm_access, SVN_WC__VERSION, scratch_pool));
+  SVN_ERR(svn_wc__db_temp_reset_format(wc_format, db, dir_abspath,
+                                       scratch_pool));
+  SVN_ERR(svn_wc__entries_write_new(db, dir_abspath, entries, scratch_pool));
+
   SVN_ERR(svn_io_remove_file2(svn_wc__adm_child(dir_abspath,
                                                 SVN_WC__ADM_FORMAT,
                                                 scratch_pool),
@@ -384,7 +401,22 @@ upgrade_format(svn_wc_adm_access_t *adm_access,
      ### stuff gets migrated to the sqlite format. */
 
   /***** WC PROPS *****/
-  SVN_ERR(convert_wcprops(db, dir_abspath, wc_format, scratch_pool));
+
+  /* Ugh. We don't know precisely where the wcprops are. Ignore them.  */
+  if (wc_format != SVN_WC__WCPROPS_LOST)
+    {
+      apr_hash_t *all_wcprops;
+
+      if (wc_format <= SVN_WC__WCPROPS_MANY_FILES_VERSION)
+        SVN_ERR(read_many_wcprops(&all_wcprops, dir_abspath,
+                                  scratch_pool, scratch_pool));
+      else
+        SVN_ERR(read_wcprops(&all_wcprops, dir_abspath,
+                             scratch_pool, scratch_pool));
+
+      SVN_ERR(svn_wc__db_upgrade_apply_dav_cache(sdb, all_wcprops,
+                                                 scratch_pool));
+    }
 
   if (wc_format <= SVN_WC__WCPROPS_MANY_FILES_VERSION)
     {
@@ -413,6 +445,8 @@ upgrade_format(svn_wc_adm_access_t *adm_access,
           svn_wc__adm_child(dir_abspath, SVN_WC__ADM_ALL_WCPROPS, scratch_pool),
           TRUE, scratch_pool));
     }
+
+  SVN_ERR(svn_wc__db_upgrade_finish(dir_abspath, sdb, scratch_pool));
 
   return SVN_NO_ERROR;
 }

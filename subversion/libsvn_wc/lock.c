@@ -207,15 +207,15 @@ static apr_status_t
 pool_cleanup(void *p)
 {
   svn_wc_adm_access_t *lock = p;
-  svn_boolean_t cleanup;
+  svn_boolean_t present;
   svn_error_t *err;
 
   if (lock->type == svn_wc__adm_access_closed)
     return SVN_NO_ERROR;
 
-  err = svn_wc__adm_is_cleanup_required(&cleanup, lock, lock->pool);
+  err = svn_wc__logfile_present(&present, lock->abspath, lock->pool);
   if (!err)
-    err = do_close(lock, cleanup /* preserve_lock */, lock->pool);
+    err = do_close(lock, present /* preserve_lock */, lock->pool);
 
   /* ### Is this the correct way to handle the error? */
   if (err)
@@ -1469,28 +1469,6 @@ svn_wc_adm_access_pool(const svn_wc_adm_access_t *adm_access)
 }
 
 
-svn_error_t *
-svn_wc__adm_is_cleanup_required(svn_boolean_t *cleanup,
-                                const svn_wc_adm_access_t *adm_access,
-                                apr_pool_t *pool)
-{
-  if (adm_access->type == svn_wc__adm_access_write_lock)
-    {
-      svn_node_kind_t kind;
-      const char *log_path = svn_wc__adm_child(adm_access->path,
-                                               SVN_WC__ADM_LOG, pool);
-
-      /* The presence of a log file demands cleanup */
-      SVN_ERR(svn_io_check_path(log_path, &kind, pool));
-      *cleanup = (kind == svn_node_file);
-    }
-  else
-    *cleanup = FALSE;
-
-  return SVN_NO_ERROR;
-}
-
-
 void
 svn_wc__adm_access_set_entries(svn_wc_adm_access_t *adm_access,
                                apr_hash_t *entries)
@@ -1503,16 +1481,6 @@ apr_hash_t *
 svn_wc__adm_access_entries(svn_wc_adm_access_t *adm_access)
 {
   return adm_access->entries_all;
-}
-
-
-svn_error_t *
-svn_wc__adm_set_wc_format(int wc_format,
-                          const svn_wc_adm_access_t *adm_access,
-                          apr_pool_t *scratch_pool)
-{
-  return svn_wc__db_temp_reset_format(wc_format, adm_access->db,
-                                      adm_access->abspath, scratch_pool);
 }
 
 

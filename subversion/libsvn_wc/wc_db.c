@@ -54,6 +54,7 @@
  * Some filename constants.
  */
 #define SDB_FILE  "wc.db"
+#define SDB_FILE_UPGRADE "wc.db.upgrade"
 
 
 /*
@@ -1238,6 +1239,29 @@ determine_obstructed_file(svn_boolean_t *obstructed_file,
 }
 
 
+static svn_error_t *
+fetch_wc_id(apr_int64_t *wc_id,
+            svn_sqlite__db_t *sdb,
+            apr_pool_t *scratch_pool)
+{
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
+
+  /* ### cheat. we know there is just one WORKING_COPY row, and it has a
+     ### NULL value for local_abspath. */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_SELECT_WCROOT_NULL));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  if (!have_row)
+    return svn_error_createf(SVN_ERR_WC_CORRUPT, NULL,
+                             _("Missing a row in WCROOT."));
+
+  SVN_ERR_ASSERT(!svn_sqlite__column_is_null(stmt, 0));
+  *wc_id = svn_sqlite__column_int64(stmt, 0);
+
+  return svn_error_return(svn_sqlite__reset(stmt));
+}
+
+
 /* For a given LOCAL_ABSPATH, figure out what sqlite database (SDB) to use,
    what WC_ID is implied, and the RELPATH within that wcroot.  If a sqlite
    database needs to be opened, then use SMODE for it. */
@@ -1451,24 +1475,20 @@ parse_local_abspath(svn_wc__db_pdh_t **pdh,
     {
       /* We finally found the database. Construct the PDH record.  */
 
-      svn_sqlite__stmt_t *stmt;
-      svn_boolean_t have_row;
       apr_int64_t wc_id;
+      svn_error_t *err;
 
-      /* ### cheat. we know there is just one WORKING_COPY row, and it has a
-         ### NULL value for local_abspath. */
-      SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_SELECT_WCROOT_NULL));
-      SVN_ERR(svn_sqlite__step(&have_row, stmt));
-      if (!have_row)
-        return svn_error_createf(SVN_ERR_WC_CORRUPT, NULL,
-                                 _("Missing a row in WCROOT for '%s'."),
-                                 svn_dirent_local_style(original_abspath,
-                                                        scratch_pool));
-
-      SVN_ERR_ASSERT(!svn_sqlite__column_is_null(stmt, 0));
-      wc_id = svn_sqlite__column_int64(stmt, 0);
-
-      SVN_ERR(svn_sqlite__reset(stmt));
+      err = fetch_wc_id(&wc_id, sdb, scratch_pool);
+      if (err)
+        {
+          if (err->apr_err == SVN_ERR_WC_CORRUPT)
+            return svn_error_quick_wrap(
+              err, apr_psprintf(scratch_pool,
+                                _("Missing a row in WCROOT for '%s'."),
+                                svn_dirent_local_style(original_abspath,
+                                                       scratch_pool)));
+          return err;
+        }
 
       /* WCROOT.local_abspath may be NULL when the database is stored
          inside the wcroot, but we know the abspath is this directory
@@ -1970,6 +1990,40 @@ close_db_apr(void *data)
 }
 
 
+static svn_error_t *
+create_db(svn_sqlite__db_t **sdb,
+          apr_int64_t *repos_id,
+          apr_int64_t *wc_id,
+          const char *dir_abspath,
+          const char *repos_root_url,
+          const char *repos_uuid,
+          const char *sdb_fname,
+          apr_pool_t *result_pool,
+          apr_pool_t *scratch_pool)
+{
+  svn_sqlite__stmt_t *stmt;
+
+  SVN_ERR(svn_sqlite__open(sdb,
+                           svn_wc__adm_child(dir_abspath, sdb_fname,
+                                             scratch_pool),
+                           svn_sqlite__mode_rwcreate, statements,
+                           SVN_WC__VERSION, upgrade_sql,
+                           svn_wc__db_upgrade_func, NULL,
+                           result_pool, scratch_pool));
+
+  /* Insert the repository. */
+  SVN_ERR(create_repos_id(repos_id, repos_root_url, repos_uuid, *sdb,
+                          NULL, NULL, scratch_pool));
+
+  /* Insert the wcroot. */
+  /* ### Right now, this just assumes wc metadata is being stored locally. */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, *sdb, STMT_INSERT_WCROOT));
+  SVN_ERR(svn_sqlite__insert(wc_id, stmt));
+
+  return SVN_NO_ERROR;
+}
+
+
 svn_error_t *
 svn_wc__db_open(svn_wc__db_t **db,
                 svn_wc__db_openmode_t mode,
@@ -2012,27 +2066,12 @@ svn_wc__db_init(const char *local_abspath,
                 apr_pool_t *scratch_pool)
 {
   svn_sqlite__db_t *sdb;
-  svn_sqlite__stmt_t *stmt;
   apr_int64_t repos_id;
   apr_int64_t wc_id;
   insert_base_baton_t ibb;
 
-  SVN_ERR(svn_sqlite__open(&sdb,
-                           svn_wc__adm_child(local_abspath, SDB_FILE,
-                                             scratch_pool),
-                           svn_sqlite__mode_rwcreate, statements,
-                           SVN_WC__VERSION, upgrade_sql,
-                           svn_wc__db_upgrade_func, NULL,
-                           scratch_pool, scratch_pool));
-
-  /* Insert the repository. */
-  SVN_ERR(create_repos_id(&repos_id, repos_root_url, repos_uuid, sdb,
-                          NULL, NULL, scratch_pool));
-
-  /* Insert the wcroot. */
-  /* ### Right now, this just assumes wc metadata is being stored locally. */
-  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_INSERT_WCROOT));
-  SVN_ERR(svn_sqlite__insert(&wc_id, stmt));
+  SVN_ERR(create_db(&sdb, &repos_id, &wc_id, local_abspath, repos_root_url,
+                    repos_uuid, SDB_FILE, scratch_pool, scratch_pool));
 
   if (initial_rev > 0)
     ibb.status = svn_wc__db_status_incomplete;
@@ -4391,6 +4430,72 @@ svn_wc__db_scan_deletion(const char **base_del_abspath,
       current_relpath = compute_pdh_relpath(pdh, NULL);
     }
 
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc__db_upgrade_begin(svn_sqlite__db_t **sdb,
+                         const char *dir_abspath,
+                         const char *repos_root_url,
+                         const char *repos_uuid,
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool)
+{
+  apr_int64_t repos_id;
+  apr_int64_t wc_id;
+
+  /* ### for now, using SDB_FILE rather than SDB_FILE_UPGRADE. there are
+     ### too many interacting components that want to *read* the normal
+     ### SDB_FILE as we perform the upgrade.  */
+  return svn_error_return(create_db(sdb, &repos_id, &wc_id, dir_abspath,
+                                    repos_root_url, repos_uuid,
+                                    SDB_FILE,
+                                    result_pool, scratch_pool));
+}
+
+
+svn_error_t *
+svn_wc__db_upgrade_apply_dav_cache(svn_sqlite__db_t *sdb,
+                                   apr_hash_t *cache_values,
+                                   apr_pool_t *scratch_pool)
+{
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+  apr_int64_t wc_id;
+  apr_hash_index_t *hi;
+  svn_sqlite__stmt_t *stmt;
+
+  SVN_ERR(fetch_wc_id(&wc_id, sdb, iterpool));
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_UPDATE_BASE_DAV_CACHE));
+
+  /* Iterate over all the wcprops, writing each one to the wc_db. */
+  for (hi = apr_hash_first(scratch_pool, cache_values);
+       hi;
+       hi = apr_hash_next(hi))
+    {
+      const char *local_relpath = svn_apr_hash_index_key(hi);
+      apr_hash_t *props = svn_apr_hash_index_val(hi);
+
+      svn_pool_clear(iterpool);
+
+      SVN_ERR(svn_sqlite__bindf(stmt, "is", wc_id, local_relpath));
+      SVN_ERR(svn_sqlite__bind_properties(stmt, 3, props, iterpool));
+      SVN_ERR(svn_sqlite__step_done(stmt));
+    }
+
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc__db_upgrade_finish(const char *dir_abspath,
+                          svn_sqlite__db_t *sdb,
+                          apr_pool_t *scratch_pool)
+{
+  /* ### eventually rename SDB_FILE_UPGRADE to SDB_FILE.  */
   return SVN_NO_ERROR;
 }
 

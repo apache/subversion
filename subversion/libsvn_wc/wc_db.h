@@ -975,6 +975,7 @@ svn_wc__db_op_invalidate_last_mod_time(svn_wc__db_t *db,
  *
  * Use SCRATCH_POOL for any temporary allocations.
  */
+/* ### should be db_read_tree_conflict()  */
 svn_error_t *
 svn_wc__db_op_get_tree_conflict(svn_wc_conflict_description_t **tree_conflict,
                                 svn_wc__db_t *db,
@@ -988,6 +989,7 @@ svn_wc__db_op_get_tree_conflict(svn_wc_conflict_description_t **tree_conflict,
  *
  * Use SCRATCH_POOL for any temporary allocations.
  */
+/* ### can this also record text/prop conflicts? drop "tree"?  */
 svn_error_t *
 svn_wc__db_op_set_tree_conflict(svn_wc__db_t *db,
                                 const char *local_abspath,
@@ -1551,6 +1553,32 @@ svn_wc__db_scan_deletion(const char **base_del_abspath,
 /** @} */
 
 
+/**
+ * @defgroup svn_wc__db_upgrade  Functions for upgrading a working copy.
+ * @{
+ */
+
+svn_error_t *
+svn_wc__db_upgrade_begin(svn_sqlite__db_t **sdb,
+                         const char *dir_abspath,
+                         const char *repos_root_url,
+                         const char *repos_uuid,
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool);
+
+
+svn_error_t *
+svn_wc__db_upgrade_apply_dav_cache(svn_sqlite__db_t *sdb,
+                                   apr_hash_t *cache_values,
+                                   apr_pool_t *scratch_pool);
+
+
+svn_error_t *
+svn_wc__db_upgrade_finish(const char *dir_abspath,
+                          svn_sqlite__db_t *sdb,
+                          apr_pool_t *scratch_pool);
+
+
 /** The upgrade function for the wc_db sqlite database.  This is exposed
     quasi-publicly for testing purposes only. */
 svn_error_t *
@@ -1558,6 +1586,9 @@ svn_wc__db_upgrade_func(void *baton,
                         svn_sqlite__db_t *sdb,
                         int current_schema,
                         apr_pool_t *scratch_pool);
+                         
+
+/** @} */
 
 
 /**
