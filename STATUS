@@ -183,14 +183,7 @@ Candidate changes:
      A potentially large audience of users may unknowingly be creating
      corrupt repository mirrors!
    Votes:
-     +1: sussman
-
-* r36023
-  Resolve symlinks when checking ~/.subversion
-  Justification:
-    It gives flexibility to users to link different .subversion folders.
-  Votes:
-    +1: stylesen, stsp
+     +1: sussman, rhuijben
 
 * r38000, r38006, r38099, r38100, r38181
   Don't break the working copy when a tree-conflict features an incoming
@@ -213,3 +206,10 @@ Candidate changes:
 
 Approved changes:
 =================
+
+* r36023
+  Resolve symlinks when checking ~/.subversion
+  Justification:
+    It gives flexibility to users to link different .subversion folders.
+  Votes:
+    +1: stylesen, stsp, rhuijben
