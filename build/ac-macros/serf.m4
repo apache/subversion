@@ -17,7 +17,7 @@ AC_DEFUN(SVN_LIB_SERF,
     else
       AC_MSG_NOTICE([serf library configuration])
       serf_prefix=$withval
-      save_cppflags="$CPPFLAGS $SVN_APR_INCLUDES $SVN_APRUTIL_INCLUDES"
+      save_cppflags="$CPPFLAGS"
       CPPFLAGS="$CPPFLAGS $SVN_APR_INCLUDES $SVN_APRUTIL_INCLUDES -I$serf_prefix/include/serf-0"
       AC_CHECK_HEADERS(serf.h,[
         save_ldflags="$LDFLAGS"

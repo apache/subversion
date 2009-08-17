@@ -166,15 +166,6 @@ Candidate changes:
 Approved changes:
 =================
 
- * r38290, r38293, r38294 
-   Fix detection of Apache <2.0.56.
-   AP_SERVER_MINORVERSION_NUMBER does not exist in earlier versions.
-   But AP_SERVER_MINORVERSION (which is a string) does exist, so use that.
-   Justification:
-     Some people are stuck with older versions of things.
-   Votes:
-     +1: arfrever, stsp, cmpilato
-
 * r38686-7
    Fix serious bugs in libsvn_ra_svn and svnsync.  (If svnsync errors
    while syncing from svnserve to mod_dav_svn, it commits a
