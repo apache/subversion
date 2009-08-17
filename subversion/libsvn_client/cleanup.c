@@ -44,17 +44,12 @@ svn_client_cleanup(const char *path,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *scratch_pool)
 {
-  const char *diff3_cmd;
+  const char *local_abspath;
   svn_error_t *err;
-  svn_config_t *cfg = ctx->config
-    ? apr_hash_get(ctx->config, SVN_CONFIG_CATEGORY_CONFIG,
-                   APR_HASH_KEY_STRING)
-    : NULL;
 
-  svn_config_get(cfg, &diff3_cmd, SVN_CONFIG_SECTION_HELPERS,
-                 SVN_CONFIG_OPTION_DIFF3_CMD, NULL);
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, scratch_pool));
 
-  err = svn_wc_cleanup2(path, diff3_cmd, ctx->cancel_func,
+  err = svn_wc_cleanup3(ctx->wc_ctx, local_abspath, ctx->cancel_func,
                         ctx->cancel_baton, scratch_pool);
   svn_io_sleep_for_timestamps(path, scratch_pool);
   return svn_error_return(err);
