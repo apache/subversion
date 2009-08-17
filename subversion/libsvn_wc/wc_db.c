@@ -1650,8 +1650,9 @@ parse_local_abspath(svn_wc__db_pdh_t **pdh,
           parent_pdh->db = db;
           parent_pdh->local_abspath = apr_pstrdup(db->state_pool, parent_dir);
 
-          /* All the PDHs have the same wcroot.  */
-          parent_pdh->wcroot = (*pdh)->wcroot;
+          /* When we have one db for each working copy, all the PDHs will
+             have the same wcroot.  */
+          /*parent_pdh->wcroot = (*pdh)->wcroot;*/
 
           apr_hash_set(db->dir_data,
                        parent_pdh->local_abspath, APR_HASH_KEY_STRING,
@@ -1659,7 +1660,9 @@ parse_local_abspath(svn_wc__db_pdh_t **pdh,
         }
       else if (parent_pdh->wcroot == NULL)
         {
-          parent_pdh->wcroot = (*pdh)->wcroot;
+          /* When we have one db for each working copy, all the PDHs will
+             have the same wcroot.  */
+          /*parent_pdh->wcroot = (*pdh)->wcroot;*/
         }
 
       /* Point the child PDH at this (new) parent PDH. This will allow for
