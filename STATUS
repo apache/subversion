@@ -209,7 +209,7 @@ Candidate changes:
     in merge_tests.py, should become nr. 133.
     (My `make check' with these revisions merged to 1.6.x is clean)
   Votes:
-    +1: neels
+    +1: neels, stsp
 
 Approved changes:
 =================
