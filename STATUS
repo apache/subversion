@@ -69,11 +69,6 @@ Candidate changes:
    Votes:
      +1: stsp, cmpilato
 
- * r38521
-   Fix Issue 3453: Building Subversion 1.6 requires GNU grep 2.5.
-   Votes:
-     +1: arfrever, cmpilato
-
  * r38417, r38424
    Fix issue #3443 'Obtaining implicit subtree mergeinfo hammers merge
    performance'
@@ -168,3 +163,8 @@ Candidate changes:
 
 Approved changes:
 =================
+
+ * r38521
+   Fix Issue 3453: Building Subversion 1.6 requires GNU grep 2.5.
+   Votes:
+     +1: arfrever, cmpilato, stsp
