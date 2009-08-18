@@ -77,7 +77,7 @@ Candidate changes:
    Notes:
      Merging r38221:r38223 from trunk conflicts in 
      subversion/libsvn_auth_gnome_keyring/gnome_keyring.c.
-     r38261 is also merged to the backport branch.
+     r38261, r38410 are merged to the backport branch.
    Votes:
      +1: stylesen, cmpilato
 
