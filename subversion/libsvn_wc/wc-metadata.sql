@@ -328,7 +328,7 @@ CREATE TABLE ACTUAL_NODE (
   text_mod  TEXT,
 
   /* if a directory, serialized data for all of tree conflicts therein.
-     removed in format 13, in favor of the TREE_CONFLICT_VICTIM table*/
+     removed in format 13, in favor of the CONFLICT_VICTIM table*/
   tree_conflict_data  TEXT,
 
   PRIMARY KEY (wc_id, local_relpath)
