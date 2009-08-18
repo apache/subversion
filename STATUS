@@ -163,8 +163,3 @@ Candidate changes:
 
 Approved changes:
 =================
-
- * r38521
-   Fix Issue 3453: Building Subversion 1.6 requires GNU grep 2.5.
-   Votes:
-     +1: arfrever, cmpilato, stsp
