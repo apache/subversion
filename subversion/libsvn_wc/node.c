@@ -113,3 +113,44 @@ svn_wc__node_get_repos_root(const char **repos_root_url,
   return err;
 }
 
+svn_error_t *
+svn_wc__node_get_kind(svn_node_kind_t *kind,
+                      svn_wc_context_t *wc_ctx,
+                      const char *abspath,
+                      svn_boolean_t show_hidden,
+                      apr_pool_t *scratch_pool)
+{
+  svn_wc__db_kind_t db_kind;
+
+  SVN_ERR(svn_wc__db_check_node(&db_kind, wc_ctx->db, abspath,
+                                scratch_pool));
+  switch (db_kind)
+    {
+      case svn_wc__db_kind_file:
+        *kind = svn_node_file;
+        break;
+      case svn_wc__db_kind_dir:
+        *kind = svn_node_dir;
+        break;
+      case svn_wc__db_kind_symlink:
+        *kind = svn_node_file;
+        break;
+      default:
+        *kind = svn_node_unknown;
+    }
+
+  /* If we found a svn_node_file or svn_node_dir, but it is hidden,
+     then consider *KIND to be svn_node_none unless SHOW_HIDDEN is true. */
+  if (! show_hidden
+      && (*kind == svn_node_file || *kind == svn_node_dir))
+    {
+      svn_boolean_t hidden;
+
+      SVN_ERR(svn_wc__db_node_hidden(&hidden, wc_ctx->db, abspath,
+                                     scratch_pool));
+      if (hidden)
+        *kind = svn_node_none;
+    }
+
+  return SVN_NO_ERROR;
+}

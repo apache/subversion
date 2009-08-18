@@ -4017,29 +4017,37 @@ populate_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
 /* Helper for record_mergeinfo_for_dir_merge().
 
    Adjust, in place, the inheritability of the ranges in RANGELIST to
-   describe a merge of RANGELIST into WC_WCPATH at depth DEPTH.  ENTRY
-   is the entry for WC_PATH.
+   describe a merge of RANGELIST into WC_WCPATH at depth DEPTH.
    
    WC_PATH_IS_MERGE_TARGET is true if WC_PATH is the target of the merge,
    otherwise WC_PATH is a subtree.
 
    WC_PATH_HAS_MISSING_CHILD is true if WC_PATH is missing an immediate child
    because the child is switched or absent from the WC, or due to a sparse
-   checkout -- see get_mergeinfo_paths(). */
+   checkout -- see get_mergeinfo_paths().
+
+   Perform any temporary allocations in SCRATCH_POOL. */
 static svn_error_t *
 calculate_merge_inheritance(apr_array_header_t *rangelist,
                             const char *wc_path,
-                            const svn_wc_entry_t *entry,
                             svn_boolean_t wc_path_is_merge_target,
                             svn_boolean_t wc_path_has_missing_child,
-                            svn_depth_t depth)
+                            svn_depth_t depth,
+                            svn_wc_context_t *wc_ctx,
+                            apr_pool_t * scratch_pool)
 {
-  if (entry->kind == svn_node_file)
+  const char * wc_abspath;
+  svn_node_kind_t path_kind;
+
+  SVN_ERR(svn_dirent_get_absolute(&wc_abspath, wc_path, scratch_pool));
+  SVN_ERR(svn_wc__node_get_kind(&path_kind, wc_ctx, wc_abspath,
+                                FALSE, scratch_pool));
+  if (path_kind == svn_node_file)
     {
       /* Files *never* have non-inheritable mergeinfo. */
       svn_rangelist__set_inheritance(rangelist, TRUE);
     }
-  else if (entry->kind == svn_node_dir)
+  else if (path_kind == svn_node_dir)
     {
       if (wc_path_is_merge_target)
         {
@@ -5441,12 +5449,11 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
                          is svn_depth_files. */
                       if (depth == svn_depth_files)
                         {
-                          const svn_wc_entry_t *child_entry;
-                          SVN_ERR(svn_wc__get_entry_versioned(
-                                &child_entry, merge_cmd_baton->ctx->wc_ctx,
-                                child_abspath, svn_node_unknown,
-                                FALSE, FALSE, iterpool, iterpool));
-                          if (child_entry->kind != svn_node_file)
+                          svn_node_kind_t child_kind;
+                          SVN_ERR(svn_wc__node_get_kind(
+                            &child_kind, merge_cmd_baton->ctx->wc_ctx,
+                            child_abspath, FALSE, iterpool));
+                          if (child_kind != svn_node_file)
                             continue;
                         }
                       /* else DEPTH is infinity or immediates so we want both
@@ -6801,9 +6808,11 @@ record_mergeinfo_for_dir_merge(const svn_wc_entry_t *target_entry,
 
           SVN_ERR(calculate_merge_inheritance(child_merge_rangelist,
                                               child->path,
-                                              child_entry, i == 0,
+                                              i == 0,
                                               child->missing_child,
-                                              depth));
+                                              depth,
+                                              merge_b->ctx->wc_ctx,
+                                              iterpool));
 
           /* If CHILD has indirect mergeinfo set it before
              recording the first merge range. */
