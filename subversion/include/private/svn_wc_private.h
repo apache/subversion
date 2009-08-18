@@ -50,8 +50,6 @@ extern "C" {
  * without having to open up an adm_access baton.  Its error and return
  * semantics are the same as svn_wc__entry_versioned(), and parameters are the
  * same as svn_wc__get_entry() (defined in libsvn_wc/entries.h).
- *
- * @since New in 1.7. (but it shouldn't make the final release).
  */
 svn_error_t *
 svn_wc__get_entry_versioned(const svn_wc_entry_t **entry,
@@ -69,8 +67,6 @@ svn_wc__get_entry_versioned(const svn_wc_entry_t **entry,
  * If neither @a local_abspath or its parent have valid URLs, return
  * @c SVN_ERR_ENTRY_MISSING_URL.  All temporaryallocations are done in
  * @a scratch_pool.
- *
- * @since New in 1.7.
  */
 svn_error_t *
 svn_wc__path_switched(svn_boolean_t *switched,
@@ -123,8 +119,6 @@ svn_wc__versioned_file_modcheck(svn_boolean_t *modified_p,
  * Return a boolean answer to the question "Is @a status something that
  * should be reported?".  @a no_ignore and @a get_all are the same as
  * svn_wc_get_status_editor4().
- *
- * @since New in 1.6.
  */
 svn_boolean_t
 svn_wc__is_sendable_status(const svn_wc_status2_t *status,
@@ -138,8 +132,6 @@ svn_wc__is_sendable_status(const svn_wc_status2_t *status,
  * root URL is given in REPOS_ROOT_URL and is used to store a
  * repository root relative path in the entry.  POOL is used for
  * temporary allocations.
- *
- * @since New in 1.6.
  */
 svn_error_t *
 svn_wc__set_file_external_location(svn_wc_adm_access_t *adm_access,
@@ -156,8 +148,6 @@ svn_wc__set_file_external_location(svn_wc_adm_access_t *adm_access,
  * is not in a state of tree conflict. @a wc_ctx is a working copy context
  * used to access @a victim_path.  Allocate @a *tree_conflict in @a result_pool,
  * use @a scratch_pool for temporary allocations.
- *
- * @since New in 1.7.
  */
 svn_error_t *
 svn_wc__get_tree_conflict(svn_wc_conflict_description_t **tree_conflict,
@@ -172,8 +162,6 @@ svn_wc__get_tree_conflict(svn_wc_conflict_description_t **tree_conflict,
  *
  * Warning: This function updates the entry on disk but not the cached entry
  * in @a adm_access.
- *
- * @since New in 1.6.
  */
 svn_error_t *
 svn_wc__add_tree_conflict(const svn_wc_conflict_description_t *conflict,
@@ -184,8 +172,6 @@ svn_wc__add_tree_conflict(const svn_wc_conflict_description_t *conflict,
  * (If there is no such conflict recorded, do nothing and return success.)
  *
  * Do all temporary allocations in @a scratch_pool.
- *
- * @since New in 1.7.
  */
 svn_error_t *
 svn_wc__del_tree_conflict(svn_wc_context_t *wc_ctx,
@@ -199,8 +185,6 @@ svn_wc__del_tree_conflict(svn_wc_context_t *wc_ctx,
  * dir_path is the path to the working copy directory whose conflicts are
  * being read.  The conflicts read are the tree conflicts on the immediate
  * child nodes of @a dir_path.  Do all allocations in @a pool.
- *
- * @since New in 1.6.
  */
 svn_error_t *
 svn_wc__read_tree_conflicts(apr_hash_t **conflicts,
@@ -210,8 +194,6 @@ svn_wc__read_tree_conflicts(apr_hash_t **conflicts,
 
 /** Return a duplicate of @a conflict, allocated in @a pool.
  * A deep copy of all members, except the adm_access member, will be made.
- *
- * @since New in 1.6.
  */
 svn_wc_conflict_description_t *
 svn_wc__conflict_description_dup(const svn_wc_conflict_description_t *conflict,
@@ -219,8 +201,7 @@ svn_wc__conflict_description_dup(const svn_wc_conflict_description_t *conflict,
 
 /** Like svn_wc_is_wc_root(), but it doesn't consider switched subdirs or
  * deleted entries as working copy roots.
- *
- * @since New in 1.7.*/
+ */
 svn_error_t *
 svn_wc__strictly_is_wc_root(svn_boolean_t *wc_root,
                             svn_wc_context_t *wc_ctx,
@@ -233,8 +214,7 @@ svn_wc__strictly_is_wc_root(svn_boolean_t *wc_root,
  * ### BH: This function is not for public consumption. New code should either
  *         use the deprecated access battons or the new wc contexts but not
  *         both. Too bad the WC-NG conversion is not done yet.
- *
- * @since New in 1.7.*/
+ */
 svn_error_t *
 svn_wc__adm_open_in_context(svn_wc_adm_access_t **adm_access,
                             svn_wc_context_t *wc_ctx,
@@ -249,8 +229,6 @@ svn_wc__adm_open_in_context(svn_wc_adm_access_t **adm_access,
  * an associated baton.
  *
  * ### See usage note to svn_wc__adm_open_in_context(), above.
- *
- * @since New in 1.7.
  */
 svn_error_t *
 svn_wc__adm_probe_in_context(svn_wc_adm_access_t **adm_access,
@@ -266,8 +244,6 @@ svn_wc__adm_probe_in_context(svn_wc_adm_access_t **adm_access,
  * when opening the access batons.
  *
  * NOT FOR NEW DEVELOPMENT!  (See note to svn_wc__adm_open_in_context().)
- *
- * @since New in 1.7.
  */
 svn_error_t *
 svn_wc__adm_open_anchor_in_context(svn_wc_adm_access_t **anchor_access,
@@ -292,8 +268,6 @@ svn_wc__adm_open_anchor_in_context(svn_wc_adm_access_t **anchor_access,
  * Fetch the absolute paths of all the working children of @a dir_abspath
  * into @a *children, allocated in @a result_pool.  Use @a wc_ctx to access
  * the working copy, and @a scratch_pool for all temporary allocations.
- *
- * @since New in 1.7.
  */
 svn_error_t *
 svn_wc__node_get_children(const apr_array_header_t **children,
@@ -309,8 +283,6 @@ svn_wc__node_get_children(const apr_array_header_t **children,
  * @a local_abspath, @a scratch_pool for all temporary allocations,
  * @a result_pool for result allocations. Note: the result may be NULL if the
  * given node has no repository root associated with it (e.g. locally added).
- *
- * @since New in 1.7.
  */
 svn_error_t *svn_wc__node_get_repos_root(const char **repos_root_url,
                                          svn_wc_context_t *wc_ctx,
