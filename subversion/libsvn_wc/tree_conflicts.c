@@ -471,15 +471,14 @@ svn_wc__write_tree_conflicts(const char **conflict_data,
 
 
 svn_error_t *
-svn_wc__del_tree_conflict(const char *victim_path,
-                          svn_wc_adm_access_t *adm_access,
-                          apr_pool_t *pool)
+svn_wc__del_tree_conflict(svn_wc_context_t *wc_ctx,
+                          const char *victim_abspath,
+                          apr_pool_t *scratch_pool)
 {
-  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
-  const char *local_abspath;
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(victim_abspath));
 
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, victim_path, pool));
-  SVN_ERR(svn_wc__db_op_set_tree_conflict(db, local_abspath, NULL, pool));
+  SVN_ERR(svn_wc__db_op_set_tree_conflict(wc_ctx->db, victim_abspath,
+                                          NULL, scratch_pool));
 
   return SVN_NO_ERROR;
 }

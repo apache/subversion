@@ -595,8 +595,8 @@ tree_conflict_on_add(merge_cmd_baton_t *merge_b,
               /* Same node kinds, this would be a replace, or, say,
                  an add. We need to remove the existing tree-conflict
                  and add this new one.*/
-              SVN_ERR(svn_wc__del_tree_conflict(conflict->path,
-                                                adm_access,
+              SVN_ERR(svn_wc__del_tree_conflict(merge_b->ctx->wc_ctx,
+                                                conflict_abspath,
                                                 merge_b->pool));
             }
           else

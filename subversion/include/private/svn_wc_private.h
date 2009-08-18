@@ -180,22 +180,17 @@ svn_wc__add_tree_conflict(const svn_wc_conflict_description_t *conflict,
                           svn_wc_adm_access_t *adm_access,
                           apr_pool_t *pool);
 
-/* Remove any tree conflict on victim @a victim_path from the directory entry
- * belonging to @a adm_access. (If there is no such conflict recorded, do
- * nothing and return success.) @a adm_access must be an access baton for the
- * parent directory of @a victim_path.
+/* Remove any tree conflict on victim @a victim_abspath using @a wc_ctx.
+ * (If there is no such conflict recorded, do nothing and return success.)
  *
- * Warning: This function updates the entry on disk but not the cached entry
- * in @a adm_access.
+ * Do all temporary allocations in @a scratch_pool.
  *
- * Do all allocations in @a pool.
- *
- * @since New in 1.6.
+ * @since New in 1.7.
  */
 svn_error_t *
-svn_wc__del_tree_conflict(const char *victim_path,
-                          svn_wc_adm_access_t *adm_access,
-                          apr_pool_t *pool);
+svn_wc__del_tree_conflict(svn_wc_context_t *wc_ctx,
+                          const char *victim_abspath,
+                          apr_pool_t *scratch_pool);
 
 /*
  * Read tree conflict descriptions from @a conflict_data.  Set @a *conflicts
