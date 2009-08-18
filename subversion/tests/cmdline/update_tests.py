@@ -4500,7 +4500,7 @@ def tree_conflict_uc1_update_deleted_tree(sbox):
   expected_status = None
 
   run_and_verify_update(A, expected_output, expected_disk, expected_status)
-  run_and_verify_resolve([A], '--recursive', '--accept=mine-full', A)
+  run_and_verify_resolve([A], '--recursive', '--accept=working', A)
 
   resolved_status = svntest.wc.State('', {
       ''            : Item(status='  ', wc_rev=2),
