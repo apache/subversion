@@ -2037,10 +2037,10 @@ merge_dir_added(svn_wc_adm_access_t *adm_access,
         {
           /* Obstructed: we can't add a dir because there's a file here
            * (whatever the entry says should be here). */
-          SVN_ERR(tree_conflict(merge_b, adm_access, path,
-                                svn_node_dir,
-                                svn_wc_conflict_action_add,
-                                svn_wc_conflict_reason_obstructed));
+          SVN_ERR(tree_conflict_on_add(merge_b, adm_access, path,
+                                       svn_node_dir,
+                                       svn_wc_conflict_action_add,
+                                       svn_wc_conflict_reason_obstructed));
           if (tree_conflicted)
             *tree_conflicted = TRUE;
           if (state)
