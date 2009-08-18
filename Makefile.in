@@ -368,7 +368,7 @@ fast-clean: doc-clean
         done
 	rm -f $(CLEAN_FILES)
 	find $(CTYPES_PYTHON_SRC_DIR) $(SWIG_PY_SRC_DIR) $(SWIG_PY_DIR) \
-		$(abs_srcdir)/build	-name "*.pyc" -exec rm {} ';'
+		$(abs_srcdir)/build -name "*.pyc" -exec rm {} ';'
 	find $(abs_srcdir)/subversion/tests/ -mindepth 2 -maxdepth 3 \
 		-name "*.pyc" -exec rm {} ';'
 
