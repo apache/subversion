@@ -33,6 +33,9 @@
 #include "svn_config.h"
 #include "cl.h"
 
+/* We shouldn't be including a private header here, but it is
+ * necessary for fixing issue #3416 */
+#include "private/svn_opt_private.h"
 
 
 /* This implements the `svn_opt_subcommand_t' interface. */
@@ -68,6 +71,8 @@ svn_cl__commit(apr_getopt_t *os,
 
   /* Add "." if user passed 0 arguments. */
   svn_opt_push_implicit_dot_target(targets, pool);
+
+  SVN_ERR(svn_opt__eat_peg_revisions(&targets, targets, pool));
 
   /* Condense the targets (like commit does)... */
   SVN_ERR(svn_path_condense_targets(&base_dir,

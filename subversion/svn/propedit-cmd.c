@@ -33,6 +33,10 @@
 #include "svn_props.h"
 #include "cl.h"
 
+/* We shouldn't be including a private header here, but it is
+ * necessary for fixing issue #3416 */
+#include "private/svn_opt_private.h"
+
 #include "svn_private_config.h"
 
 
@@ -167,6 +171,8 @@ svn_cl__propedit(apr_getopt_t *os,
             (SVN_ERR_CL_INSUFFICIENT_ARGS, NULL,
              _("Explicit target argument required"));
         }
+
+      SVN_ERR(svn_opt__eat_peg_revisions(&targets, targets, pool));
 
       /* For each target, edit the property PNAME. */
       for (i = 0; i < targets->nelts; i++)

@@ -33,6 +33,10 @@
 #include "svn_cmdline.h"
 #include "cl.h"
 
+/* We shouldn't be including a private header here, but it is
+ * necessary for fixing issue #3416 */
+#include "private/svn_opt_private.h"
+
 #include "svn_private_config.h"
 
 
@@ -217,6 +221,8 @@ svn_cl__status(apr_getopt_t *os,
   sb.xml_mode = opt_state->xml;
   sb.cached_changelists = master_cl_hash;
   sb.cl_pool = pool;
+
+  SVN_ERR(svn_opt__eat_peg_revisions(&targets, targets, pool));
 
   for (i = 0; i < targets->nelts; i++)
     {

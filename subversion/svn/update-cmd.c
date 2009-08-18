@@ -29,6 +29,10 @@
 #include "svn_error.h"
 #include "cl.h"
 
+/* We shouldn't be including a private header here, but it is
+ * necessary for fixing issue #3416 */
+#include "private/svn_opt_private.h"
+
 #include "svn_private_config.h"
 
 
@@ -52,6 +56,8 @@ svn_cl__update(apr_getopt_t *os,
 
   /* Add "." if user passed 0 arguments */
   svn_opt_push_implicit_dot_target(targets, pool);
+
+  SVN_ERR(svn_opt__eat_peg_revisions(&targets, targets, pool));
 
   /* If using changelists, convert targets into a set of paths that
      match the specified changelist(s). */
