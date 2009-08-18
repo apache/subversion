@@ -364,7 +364,10 @@ fast-clean: doc-clean
           fi                                                         \
         done
 	rm -f $(CLEAN_FILES)
-	find $(abs_srcdir) -name "*.pyc" -exec rm {} ';'
+	find $(SWIG_PY_SRC_DIR) $(SWIG_PY_DIR) -name "*.pyc" -exec rm {} ';'
+	find $(abs_srcdir)/subversion/tests/ -mindepth 2 -maxdepth 3 \
+		-name "*.pyc" -exec rm {} ';'
+	find $(abs_srcdir)/build -name "*.pyc" -exec rm {} ';'
 
 # clean all but bulky test output, returning to before './configure' was run.
 SVN_CONFIG_SCRIPT_FILES = @SVN_CONFIG_SCRIPT_FILES@
