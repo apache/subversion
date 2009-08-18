@@ -143,6 +143,9 @@ SWIG_RB_SITE_ARCH_DIR = @SWIG_RB_SITE_ARCH_DIR@
 SWIG_RB_TEST_VERBOSE = @SWIG_RB_TEST_VERBOSE@
 SWIG_RB_RI_DATADIR = $(DESTDIR)$(datadir)/ri/$(RUBY_MAJOR).$(RUBY_MINOR)/site
 
+CTYPESGEN = @CTYPESGEN@
+CTYPES_PYTHON_SRC_DIR = $(abs_srcdir)/subversion/bindings/ctypes-python
+
 JAVAHL_JAR=subversion/bindings/javahl/svn-javahl.jar
 JAVAHL_INCLUDES= @JNI_INCLUDES@ -I$(abs_builddir)/subversion/bindings/javahl/include
 
@@ -364,10 +367,10 @@ fast-clean: doc-clean
           fi                                                         \
         done
 	rm -f $(CLEAN_FILES)
-	find $(SWIG_PY_SRC_DIR) $(SWIG_PY_DIR) -name "*.pyc" -exec rm {} ';'
+	find $(CTYPES_PYTHON_SRC_DIR) $(SWIG_PY_SRC_DIR) $(SWIG_PY_DIR) \
+		$(abs_srcdir)/build	-name "*.pyc" -exec rm {} ';'
 	find $(abs_srcdir)/subversion/tests/ -mindepth 2 -maxdepth 3 \
 		-name "*.pyc" -exec rm {} ';'
-	find $(abs_srcdir)/build -name "*.pyc" -exec rm {} ';'
 
 # clean all but bulky test output, returning to before './configure' was run.
 SVN_CONFIG_SCRIPT_FILES = @SVN_CONFIG_SCRIPT_FILES@
@@ -823,10 +826,7 @@ extraclean-swig-rb: clean-swig-rb
 install-swig-rb-doc:
 	$(RDOC) --all --ri --op "$(SWIG_RB_RI_DATADIR)" "$(SWIG_RB_SRC_DIR)/svn"
 
-# ctypes-python variables and make targets
-CTYPESGEN = @CTYPESGEN@
-CTYPES_PYTHON_SRC_DIR = $(abs_srcdir)/subversion/bindings/ctypes-python
-
+# ctypes-python make targets
 ctypes-python: local-all
 	$(abs_srcdir)/build/run_ctypesgen.sh "$(LT_EXECUTE)" "$(CPPFLAGS)" "$(EXTRA_CTYPES_LDFLAGS)" "$(PYTHON)" "$(CTYPESGEN)" "$(abs_srcdir)" "$(abs_builddir)" "$(libdir)" "$(SVN_APR_PREFIX)" "$(SVN_APRUTIL_PREFIX)"
 
