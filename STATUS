@@ -55,20 +55,6 @@ Candidate changes:
                                             would getenv("WINDOWID") work
                                             instead?)
 
- * r37988
-   Fix issue #3416, "Cannot add or commit 'dir/@file.txt'"
-   Justification:
-     Makes Subversion's behaviour regarding peg-revision parsing
-     consistent with what The Book describes, and makes all subcommands
-     properly deal with filenames starting with the '@' character.
-   Branch:
-     ^/branches/1.6.x-r37988
-   Notes:
-     Doesn't merge cleanly (two tree conflicts) from trunk, and needed an API
-     change for backport.
-   Votes:
-     +1: stsp, cmpilato
-
  * r38417, r38424
    Fix issue #3443 'Obtaining implicit subtree mergeinfo hammers merge
    performance'
@@ -111,13 +97,6 @@ Candidate changes:
    Votes:
      +1: pburba
 
- * r38585
-   Fix r37827, which has already been backported and released in 1.6.3.
-   Justification:
-     Without this, r37827 doesn't in fact fix anything.
-   Votes:
-     +1: stsp, cmpilato
-     
  * r38000, r38006, r38099, r38100, r38181
    Don't break the working copy when a tree-conflict features an incoming
    replace.
@@ -163,3 +142,24 @@ Candidate changes:
 
 Approved changes:
 =================
+
+ * r37988
+   Fix issue #3416, "Cannot add or commit 'dir/@file.txt'"
+   Justification:
+     Makes Subversion's behaviour regarding peg-revision parsing
+     consistent with what The Book describes, and makes all subcommands
+     properly deal with filenames starting with the '@' character.
+   Branch:
+     ^/branches/1.6.x-r37988
+   Notes:
+     Doesn't merge cleanly (two tree conflicts) from trunk, and needed an API
+     change for backport.
+   Votes:
+     +1: stsp, cmpilato, hwright
+
+ * r38585
+   Fix r37827, which has already been backported and released in 1.6.3.
+   Justification:
+     Without this, r37827 doesn't in fact fix anything.
+   Votes:
+     +1: stsp, cmpilato, hwright
