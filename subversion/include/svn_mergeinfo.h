@@ -309,7 +309,8 @@ svn_mergeinfo_intersect(svn_mergeinfo_t *mergeinfo,
  *
  * @a consider_inheritance determines how to account for the inheritability
  * of the two mergeinfo's ranges when calculating the range equivalence,
- * as described for svn_mergeinfo_diff().
+ * as described for svn_mergeinfo_diff().  If @a consider_inheritance is
+ * FALSE then @a *mergeinfo's ranges are always inheritable.
  *
  * @since New in 1.7.
  */
@@ -327,7 +328,8 @@ svn_mergeinfo_intersect2(svn_mergeinfo_t *mergeinfo,
  *
  * @a consider_inheritance determines how to account for the inheritability
  * of the two rangelist's ranges when calculating the intersection,
- * @see svn_mergeinfo_diff().
+ * @see svn_mergeinfo_diff().  If @a consider_inheritance is FALSE then
+ * the ranges in @a *rangelist are always inheritable.
  *
  * Note: @a rangelist1 and @a rangelist2 must be sorted as said by @c
  * svn_sort_compare_ranges(). @a *rangelist is guaranteed to be in sorted
