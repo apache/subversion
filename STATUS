@@ -79,7 +79,7 @@ Candidate changes:
      subversion/libsvn_auth_gnome_keyring/gnome_keyring.c.
      r38261 is also merged to the backport branch.
    Votes:
-     +1: stylesen (!r38410), cmpilato
+     +1: stylesen, cmpilato
 
  * r38521
    Fix Issue 3453: Building Subversion 1.6 requires GNU grep 2.5.
