@@ -114,9 +114,10 @@ Candidate changes:
      in merge_tests.py, should become nr. 133.
      (My `make check' with these revisions merged to 1.6.x is clean)
    Votes:
-     +1: neels, stsp
-     -1: julianfoad (not properly fixed; test passes for wrong reasons; see
-           <http://subversion.tigris.org/ds/viewMessage.do?dsForumId=462&dsMessageId=2384930>)
+     +1: neels
+     -1: stsp, julianfoad
+         (not properly fixed; test passes for wrong reasons; see
+         <http://subversion.tigris.org/ds/viewMessage.do?dsForumId=462&dsMessageId=2384930>)
 
  * r38799, r38801, r38805
    Complain when people try to resolve a tree conflict with any other
