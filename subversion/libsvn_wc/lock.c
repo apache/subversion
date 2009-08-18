@@ -269,7 +269,7 @@ adm_access_alloc(svn_wc_adm_access_t **adm_access,
 
   if (type == svn_wc__adm_access_write_lock)
     {
-      svn_error_t *err = create_lock(path, scratch_pool);
+      err = create_lock(path, scratch_pool);
 
       if (err)
         {
