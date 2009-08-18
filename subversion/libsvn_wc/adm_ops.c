@@ -3010,6 +3010,21 @@ resolve_found_entry_callback(const char *path,
         {
           svn_error_t *err;
 
+          /* For now, we only clear tree conflict information and resolve
+           * to the working state. There is no way to pick theirs-full
+           * or mine-full, etc. Throw an error if the user expects us
+           * to be smarter than we really are. */
+          if (baton->conflict_choice != svn_wc_conflict_choose_merged)
+            {
+              return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE,
+                                       NULL,
+                                       _("Tree conflicts can only be resolved "
+                                         "to 'working' state; "
+                                         "'%s' not resolved"),
+                                       svn_dirent_local_style(local_abspath,
+                                                              pool));
+            }
+
           SVN_ERR(svn_wc__db_op_set_tree_conflict(baton->db, local_abspath,
                                                   NULL, pool));
 
