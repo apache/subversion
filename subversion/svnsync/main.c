@@ -60,7 +60,8 @@ enum svnsync__opt {
   svnsync_opt_config_dir,
   svnsync_opt_config_options,
   svnsync_opt_version,
-  svnsync_opt_trust_server_cert
+  svnsync_opt_trust_server_cert,
+  svnsync_opt_force
 };
 
 #define SVNSYNC_OPTS_DEFAULT svnsync_opt_non_interactive, \
@@ -83,18 +84,24 @@ static const svn_opt_subcommand_desc2_t svnsync_cmd_table[] =
          "Initialize a destination repository for synchronization from\n"
          "another repository.\n"
          "\n"
-         "The destination URL must point to the root of a repository with\n"
-         "no committed revisions.  The destination repository must allow\n"
-         "revision property changes.\n"
-         "\n"
          "If the source URL is not the root of a repository, only the\n"
          "specified part of the repository will be synchronized.\n"
+         "\n"
+         "The destination URL must point to the root of a repository which\n"
+         "has been configured to allow revision property changes.  In\n"
+         "the general case, the destination repository must contain no\n"
+         "committed revisions.  Use --force to override this restriction,\n"
+         "but understand that svnsync will assume that any revisions\n"
+         "already present in the destination repository perfectly mirror\n"
+         "their counterparts in the source repository.  (This is useful\n"
+         "when initializing a repository made from a copy of a repository\n"
+         "as a mirror of that same repository, for example.)\n"
          "\n"
          "You should not commit to, or make revision property changes in,\n"
          "the destination repository by any method other than 'svnsync'.\n"
          "In other words, the destination repository should be a read-only\n"
          "mirror of the source repository.\n"),
-      { SVNSYNC_OPTS_DEFAULT, 'q' } },
+      { SVNSYNC_OPTS_DEFAULT, 'q', svnsync_opt_force } },
     { "synchronize", synchronize_cmd, { "sync" },
       N_("usage: svnsync synchronize DEST_URL\n"
          "\n"
@@ -135,6 +142,8 @@ static const apr_getopt_option_t svnsync_options[] =
   {
     {"quiet",          'q', 0,
                        N_("print as little as possible") },
+    {"force",          svnsync_opt_force, 0,
+                       N_("force operation to run") },
     {"non-interactive", svnsync_opt_non_interactive, 0,
                        N_("do no interactive prompting") },
     {"no-auth-cache",  svnsync_opt_no_auth_cache, 0,
@@ -191,6 +200,7 @@ typedef struct {
   const char *config_dir;
   apr_hash_t *config;
   svn_boolean_t quiet;
+  svn_boolean_t force;
   svn_boolean_t version;
   svn_boolean_t help;
 } opt_baton_t;
@@ -307,6 +317,7 @@ typedef struct {
   svn_ra_callbacks2_t source_callbacks;
   svn_ra_callbacks2_t sync_callbacks;
   svn_boolean_t quiet;
+  svn_boolean_t force;
   const char *to_url;
 
   /* initialize only */
@@ -704,6 +715,7 @@ make_subcommand_baton(opt_baton_t *opt_baton,
   b->sync_callbacks.open_tmp_file = open_tmp_file;
   b->sync_callbacks.auth_baton = opt_baton->sync_auth_baton;
   b->quiet = opt_baton->quiet;
+  b->force = opt_baton->force;
   b->to_url = to_url;
   b->from_url = from_url;
   b->start_rev = start_rev;
@@ -725,26 +737,24 @@ do_initialize(svn_ra_session_t *to_session,
 {
   svn_ra_session_t *from_session;
   svn_string_t *from_url;
-  svn_revnum_t latest;
+  svn_revnum_t latest, from_latest;
   const char *uuid, *root_url;
   int normalized_rev_props_count;
 
-  /* First, sanity check to see that we're copying into a brand new repos. */
-
+  /* First, sanity check to see that we're copying into a brand new
+     repos.  If we aren't, and we aren't being asked to forcibly
+     complete this initialization, that's a bad news.  */
   SVN_ERR(svn_ra_get_latest_revnum(to_session, &latest, pool));
-
-  if (latest != 0)
+  if ((latest != 0) && (! baton->force))
     return svn_error_create
       (APR_EINVAL, NULL,
-       _("Cannot initialize a repository with content in it"));
-
-  /* And check to see if anyone's run initialize on it before...  We
-     may want a --force option to override this check. */
+       _("Destination repository already contains revision history; consider "
+         "using --force if the revisions in the repository are known to be "
+         "a mirror of the respective revisions in the source repository"));
 
   SVN_ERR(svn_ra_rev_prop(to_session, 0, SVNSYNC_PROP_FROM_URL,
                           &from_url, pool));
-
-  if (from_url)
+  if (from_url && (! baton->force))
     return svn_error_createf
       (APR_EINVAL, NULL,
        _("Destination repository is already synchronizing from '%s'"),
@@ -777,25 +787,41 @@ do_initialize(svn_ra_session_t *to_session,
                                 NULL);
     }
 
+  /* If we're initializing a non-empty destination, we'll make sure
+     that it at least doesn't have more revisions than the source. */
+  if (latest != 0)
+    {
+      SVN_ERR(svn_ra_get_latest_revnum(from_session, &from_latest, pool));
+      if (from_latest < latest)
+        return svn_error_create
+          (APR_EINVAL, NULL,
+           _("Destination repository has more revisions than source "
+             "repository"));
+    }
+
   SVN_ERR(svn_ra_change_rev_prop(to_session, 0, SVNSYNC_PROP_FROM_URL,
                                  svn_string_create(baton->from_url, pool),
                                  pool));
 
   SVN_ERR(svn_ra_get_uuid2(from_session, &uuid, pool));
-
   SVN_ERR(svn_ra_change_rev_prop(to_session, 0, SVNSYNC_PROP_FROM_UUID,
                                  svn_string_create(uuid, pool), pool));
 
   SVN_ERR(svn_ra_change_rev_prop(to_session, 0, SVNSYNC_PROP_LAST_MERGED_REV,
-                                 svn_string_create("0", pool), pool));
+                                 svn_string_createf(pool, "%ld", latest),
+                                 pool));
 
-  /* Finally, copy all non-svnsync revprops from rev 0 of the source
-     repos into the dest repos. */
-
-  SVN_ERR(copy_revprops(from_session, to_session, 0, FALSE,
+  /* Copy all non-svnsync revprops from the LATEST rev in the source
+     repository into the destination, notifying about normalized
+     props, if any.  When LATEST is 0, this serves the practical
+     purpose of initializing data that would otherwise be overlooked
+     by the sync process (which is going to begin with r1).  When
+     LATEST is not 0, this really serves merely aesthetic and
+     informational purposes, keeping the output of this command
+     consistent while allowing folks to see what the latest revision is.  */
+  SVN_ERR(copy_revprops(from_session, to_session, latest, FALSE,
                         baton->quiet, &normalized_rev_props_count, pool));
-
-  /* Notify about normalized props, if any. */
+  
   SVN_ERR(log_properties_normalized(normalized_rev_props_count, 0, pool));
 
   /* TODO: It would be nice if we could set the dest repos UUID to be
@@ -2223,6 +2249,10 @@ main(int argc, const char *argv[])
             break;
           case svnsync_opt_version:
             opt_baton.version = TRUE;
+            break;
+
+          case svnsync_opt_force:
+            opt_baton.force = TRUE;
             break;
 
           case 'q':
