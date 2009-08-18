@@ -923,33 +923,35 @@ diff_dir_closed(svn_wc_adm_access_t *adm_access,
 
 
 
-/* Helper function: given a working-copy PATH, return its associated
-   url in *URL, allocated in POOL.  If PATH is *already* a URL, that's
-   fine, just set *URL = PATH. */
+/* Helper function: given a working-copy ABSPATH_OR_URL, return its
+   associated url in *URL, allocated in RESULT_POOL.  If ABSPATH_OR_URL is
+   *already* a URL, that's fine, return ABSPATH_OR_URL allocated in
+   RESULT_POOL.
+   
+   Use SCRATCH_POOL for temporary allocations. */
 static svn_error_t *
 convert_to_url(const char **url,
-               const char *path,
-               apr_pool_t *pool)
+               svn_wc_context_t *wc_ctx,
+               const char *abspath_or_url,
+               apr_pool_t *result_pool,
+               apr_pool_t *scratch_pool)
 {
-  svn_wc_adm_access_t *adm_access;  /* ### FIXME local */
   const svn_wc_entry_t *entry;
 
-  if (svn_path_is_url(path))
+  if (svn_path_is_url(abspath_or_url))
     {
-      *url = path;
+      *url = apr_pstrdup(result_pool, abspath_or_url);
       return SVN_NO_ERROR;
     }
 
-  /* ### This may not be a good idea, see issue 880 */
-  SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, path, FALSE,
-                                 0, NULL, NULL, pool));
-  SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access, FALSE, pool));
-  SVN_ERR(svn_wc_adm_close2(adm_access, pool));
+  SVN_ERR(svn_wc__get_entry_versioned(&entry, wc_ctx, abspath_or_url,
+                                      svn_node_unknown, FALSE, FALSE,
+                                      scratch_pool, scratch_pool));
 
   if (entry->url)
-    *url = apr_pstrdup(pool, entry->url);
+    *url = apr_pstrdup(result_pool, entry->url);
   else
-    *url = apr_pstrdup(pool, entry->copyfrom_url);
+    *url = apr_pstrdup(result_pool, entry->copyfrom_url);
   return SVN_NO_ERROR;
 }
 
@@ -1092,21 +1094,32 @@ diff_prepare_repos_repos(const struct diff_parameters *params,
   const char *params_path2_abspath;
   const char *params_path1_abspath;
 
-  SVN_ERR(svn_dirent_get_absolute(&params_path2_abspath, params->path2, pool));
-  SVN_ERR(svn_dirent_get_absolute(&params_path1_abspath, params->path1, pool));
+  if (!svn_path_is_url(params->path2))
+    SVN_ERR(svn_dirent_get_absolute(&params_path2_abspath, params->path2,
+                                    pool));
+  else
+    params_path2_abspath = params->path2;
+
+  if (!svn_path_is_url(params->path1))
+    SVN_ERR(svn_dirent_get_absolute(&params_path1_abspath, params->path1,
+                                    pool));
+  else
+    params_path1_abspath = params->path1;
 
   /* Figure out URL1 and URL2. */
-  SVN_ERR(convert_to_url(&drr->url1, params->path1, pool));
-  SVN_ERR(convert_to_url(&drr->url2, params->path2, pool));
+  SVN_ERR(convert_to_url(&drr->url1, ctx->wc_ctx, params_path1_abspath,
+                         pool, pool));
+  SVN_ERR(convert_to_url(&drr->url2, ctx->wc_ctx, params_path2_abspath,
+                         pool, pool));
   drr->same_urls = (strcmp(drr->url1, drr->url2) == 0);
 
   /* We need exactly one BASE_PATH, so we'll let the BASE_PATH
      calculated for PATH2 override the one for PATH1 (since the diff
      will be "applied" to URL2 anyway). */
   drr->base_path = NULL;
-  if (drr->url1 != params->path1)
+  if (strcmp(drr->url1, params->path1) != 0)
     drr->base_path = params->path1;
-  if (drr->url2 != params->path2)
+  if (strcmp(drr->url2, params->path2) != 0)
     drr->base_path = params->path2;
 
   SVN_ERR(svn_client__open_ra_session_internal(&ra_session, drr->url2,
@@ -1386,10 +1399,13 @@ diff_repos_wc(const char *path1,
 
   SVN_ERR_ASSERT(! svn_path_is_url(path2));
 
-  SVN_ERR(svn_dirent_get_absolute(&abspath1, path1, pool));
+  if (!svn_path_is_url(path1))
+    SVN_ERR(svn_dirent_get_absolute(&abspath1, path1, pool));
+  else
+    abspath1 = path1;
 
   /* Convert path1 to a URL to feed to do_diff. */
-  SVN_ERR(convert_to_url(&url1, path1, pool));
+  SVN_ERR(convert_to_url(&url1, ctx->wc_ctx, abspath1, pool, pool));
 
   SVN_ERR(svn_wc_adm_open_anchor(&adm_access, &dir_access, &target,
                                  path2, FALSE, levels_to_lock,
