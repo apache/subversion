@@ -334,7 +334,7 @@ copy_versioned_files(const char *from,
         {
           const char *child_abspath = APR_ARRAY_IDX(children, j, const char *);
           const char *child_basename;
-          const svn_wc_entry_t *child_entry;
+          svn_node_kind_t child_kind;
 
           svn_pool_clear(iterpool);
           child_basename = svn_dirent_basename(child_abspath, iterpool);
@@ -345,21 +345,10 @@ copy_versioned_files(const char *from,
           /* ### We could also invoke ctx->notify_func somewhere in
              ### here... Is it called for, though?  Not sure. */
 
-          err = svn_wc__get_entry_versioned(&child_entry, ctx->wc_ctx,
-                                            child_abspath, svn_node_unknown,
-                                            FALSE, FALSE, iterpool,
-                                            iterpool);
-          if (err && err->apr_err == SVN_ERR_ENTRY_NOT_FOUND)
-            {
-              /* We don't want "hidden" entries, so just clear the error and
-                 continue on our merry way. */
-              svn_error_clear(err);
-              continue;
-            }
-          else if (err)
-            return svn_error_return(err);
+          SVN_ERR(svn_wc__node_get_kind(&child_kind, ctx->wc_ctx,
+                                        child_abspath, FALSE, iterpool));
 
-          if (child_entry->kind == svn_node_dir)
+          if (child_kind == svn_node_dir)
             {
               if (depth == svn_depth_infinity)
                 {
@@ -374,7 +363,7 @@ copy_versioned_files(const char *from,
                                                native_eol, ctx, iterpool));
                 }
             }
-          else if (child_entry->kind == svn_node_file)
+          else if (child_kind == svn_node_file)
             {
               const char *new_from_abspath;
               const char *new_to_abspath;

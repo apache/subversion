@@ -188,12 +188,15 @@ svn_client__update_internal(svn_revnum_t *result_rev,
   /* We may need to crop the tree if the depth is sticky */
   if (depth_is_sticky && depth < svn_depth_infinity)
     {
-      const svn_wc_entry_t *target_entry;
-      SVN_ERR(svn_wc_entry(&target_entry,
-          svn_dirent_join(anchor, target, pool),
-          adm_access, TRUE, pool));
+      const char *target_abspath;
+      svn_node_kind_t target_kind;
 
-      if (target_entry && target_entry->kind == svn_node_dir)
+      SVN_ERR(svn_dirent_get_absolute(&target_abspath,
+                                      svn_dirent_join(anchor, target, pool),
+                                      pool));
+      SVN_ERR(svn_wc__node_get_kind(&target_kind, ctx->wc_ctx,
+                                    target_abspath, TRUE, pool));
+      if (target_kind == svn_node_dir)
         {
           SVN_ERR(svn_wc_crop_tree(adm_access, target, depth,
                                    ctx->notify_func2, ctx->notify_baton2,
