@@ -44,6 +44,17 @@ Candidate changes:
      +1: arfrever
      -0: rhuijben, cmpilato (Introduces new features and changes output)
 
+ * r38004, r38014, r38028, r38122
+   Make KWallet window attached to terminal window.
+   Justification:
+     Without this change, KWallet window can appear behind terminal window
+     and is left after killing terminal.
+   Votes:
+     +1: arfrever
+     -0: psamuelson, stsp (without r38122) (code is ugly and Linux-specific -
+                                            would getenv("WINDOWID") work
+                                            instead?)
+
  * r37988
    Fix issue #3416, "Cannot add or commit 'dir/@file.txt'"
    Justification:
@@ -57,16 +68,6 @@ Candidate changes:
      change for backport.
    Votes:
      +1: stsp, cmpilato
-
- * r38004, r38014, r38028, r38122
-   Make KWallet window attached to terminal window.
-   Justification:
-     Without this change, KWallet window can appear behind terminal window
-     and is left after killing terminal.
-   Votes:
-     +1: arfrever
-     -0: psamuelson, stsp (without r38122) (code is ugly and Linux-specific -
-                                            would getenv("WINDOWID") work instead?)
 
  * r38222, r38223, r38261, r38410
    Fix GNOME Keyring with '--non-interactive' option.
