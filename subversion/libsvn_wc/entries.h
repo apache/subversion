@@ -279,6 +279,17 @@ svn_wc__get_entry(const svn_wc_entry_t **entry,
                   apr_pool_t *result_pool,
                   apr_pool_t *scratch_pool);
 
+/** Same as svn_wc_entry() except that the entry returned
+ * is a non @c NULL entry.
+ *
+ * Returns an error when svn_wc_entry() would have returned a @c NULL entry.
+ */
+svn_error_t *
+svn_wc__entry_versioned(const svn_wc_entry_t **entry,
+                        const char *path,
+                        svn_wc_adm_access_t *adm_access,
+                        svn_boolean_t show_hidden,
+                        apr_pool_t *pool);
 
 /* Is ENTRY in a 'hidden' state in the sense of the 'show_hidden'
  * switches on svn_wc_entries_read(), svn_wc_walk_entries*(), etc.? */

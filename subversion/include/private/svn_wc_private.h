@@ -43,20 +43,6 @@
 extern "C" {
 #endif /* __cplusplus */
 
-/** Same as svn_wc_entry() except that the entry returned
- * is a non @c NULL entry.
- *
- * Returns an error when svn_wc_entry() would have returned a @c NULL entry.
- *
- * @since New in 1.5.
- */
-svn_error_t *
-svn_wc__entry_versioned(const svn_wc_entry_t **entry,
-                        const char *path,
-                        svn_wc_adm_access_t *adm_access,
-                        svn_boolean_t show_hidden,
-                        apr_pool_t *pool);
-
 
 /** Similar to svn_wc__get_entry() and svn_wc__entry_versioned().
  *
