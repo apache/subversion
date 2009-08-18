@@ -136,24 +136,24 @@ Candidate changes:
    Votes:
      +1: stsp, cmpilato
      
-* r38000, r38006, r38099, r38100, r38181
-  Don't break the working copy when a tree-conflict features an incoming
-  replace.
-  Justification:
-    My colleagues and some clients are really annoyed by this problem.
-    Although it's been fixed, it is not in 1.6.x yet, which is met with
-    little understanding. Releasing 1.6.5 without this patch would
-    probably be some bad publicity...
-  Notes:
-    If a merge has a delete followed by an add on the same node, and
-    also that node is modified locally, svn tried to create two tree-
-    conflicts on the same node. That hit an assertion and bailed out,
-    breaking the working copy.
-    The cmdline test for this issue is merge_replace_causes_tree_conflict
-    in merge_tests.py, should become nr. 133.
-    (My `make check' with these revisions merged to 1.6.x is clean)
-  Votes:
-    +1: neels, stsp
+ * r38000, r38006, r38099, r38100, r38181
+   Don't break the working copy when a tree-conflict features an incoming
+   replace.
+   Justification:
+     My colleagues and some clients are really annoyed by this problem.
+     Although it's been fixed, it is not in 1.6.x yet, which is met with
+     little understanding. Releasing 1.6.5 without this patch would
+     probably be some bad publicity...
+   Notes:
+     If a merge has a delete followed by an add on the same node, and
+     also that node is modified locally, svn tried to create two tree-
+     conflicts on the same node. That hit an assertion and bailed out,
+     breaking the working copy.
+     The cmdline test for this issue is merge_replace_causes_tree_conflict
+     in merge_tests.py, should become nr. 133.
+     (My `make check' with these revisions merged to 1.6.x is clean)
+   Votes:
+     +1: neels, stsp
 
 Approved changes:
 =================
