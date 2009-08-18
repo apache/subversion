@@ -540,14 +540,6 @@ tree_conflict(merge_cmd_baton_t *merge_b,
 
   SVN_ERR(svn_dirent_get_absolute(&conflict_abspath, conflict->path,
                                   merge_b->pool));
-  SVN_ERR(svn_wc__get_tree_conflict(&existing_conflict, merge_b->ctx->wc_ctx,
-                                    conflict_abspath, merge_b->pool,
-                                    merge_b->pool));
-
-  if (existing_conflict != NULL)
-    /* Re-adding an existing tree conflict victim is an error. */
-    return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
-                       _("Attempt to add tree conflict that already exists"));
 
   SVN_ERR(svn_wc__add_tree_conflict(conflict, adm_access, merge_b->pool));
   return SVN_NO_ERROR;
