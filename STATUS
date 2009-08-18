@@ -157,12 +157,3 @@ Candidate changes:
 
 Approved changes:
 =================
-
- * r38616, r38617, r38619, r38649
-   Fix several missing and extra whitespace issues, mostly in the Windows
-   specific code of the test framework. r38649 makes previously hidden command
-   output visible when a command fails with a segfault.
-   Justification:
-     Makes diagnosing test errors a lot easier on Windows
-   Votes:
-     +1: rhuijben, pburba
