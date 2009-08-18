@@ -4462,7 +4462,7 @@ def tree_conflict_uc1_update_deleted_tree(sbox):
   expected_status = None
 
   run_and_verify_update(A, expected_output, expected_disk, expected_status)
-  run_and_verify_resolve([A], '--recursive', '--accept=mine-full', A)
+  run_and_verify_resolve([A], '--recursive', '--accept=working', A)
 
   resolved_status = svntest.wc.State('', {
       ''            : Item(status='  ', wc_rev=2),
@@ -4588,7 +4588,7 @@ def tree_conflict_uc2_schedule_re_add(sbox):
   expected_disk = None
   expected_status = None
   run_and_verify_update('A', expected_output, expected_disk, expected_status)
-  run_and_verify_resolve([dir], '--recursive', '--accept=mine-full', dir)
+  run_and_verify_resolve([dir], '--recursive', '--accept=working', dir)
 
   os.chdir(saved_cwd)
 
