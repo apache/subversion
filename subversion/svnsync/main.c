@@ -61,7 +61,7 @@ enum svnsync__opt {
   svnsync_opt_config_options,
   svnsync_opt_version,
   svnsync_opt_trust_server_cert,
-  svnsync_opt_force
+  svnsync_opt_allow_non_empty,
 };
 
 #define SVNSYNC_OPTS_DEFAULT svnsync_opt_non_interactive, \
@@ -90,8 +90,8 @@ static const svn_opt_subcommand_desc2_t svnsync_cmd_table[] =
          "The destination URL must point to the root of a repository which\n"
          "has been configured to allow revision property changes.  In\n"
          "the general case, the destination repository must contain no\n"
-         "committed revisions.  Use --force to override this restriction,\n"
-         "but understand that svnsync will assume that any revisions\n"
+         "committed revisions.  Use --allow-non-empty to override this\n"
+         "restriction, which will cause svnsync to assume that any revisions\n"
          "already present in the destination repository perfectly mirror\n"
          "their counterparts in the source repository.  (This is useful\n"
          "when initializing a repository made from a copy of a repository\n"
@@ -101,7 +101,7 @@ static const svn_opt_subcommand_desc2_t svnsync_cmd_table[] =
          "the destination repository by any method other than 'svnsync'.\n"
          "In other words, the destination repository should be a read-only\n"
          "mirror of the source repository.\n"),
-      { SVNSYNC_OPTS_DEFAULT, 'q', svnsync_opt_force } },
+      { SVNSYNC_OPTS_DEFAULT, 'q', svnsync_opt_allow_non_empty } },
     { "synchronize", synchronize_cmd, { "sync" },
       N_("usage: svnsync synchronize DEST_URL\n"
          "\n"
@@ -142,8 +142,8 @@ static const apr_getopt_option_t svnsync_options[] =
   {
     {"quiet",          'q', 0,
                        N_("print as little as possible") },
-    {"force",          svnsync_opt_force, 0,
-                       N_("force operation to run") },
+    {"allow-non-empty", svnsync_opt_allow_non_empty, 0,
+                       N_("allow a non-empty destination repository") },
     {"non-interactive", svnsync_opt_non_interactive, 0,
                        N_("do no interactive prompting") },
     {"no-auth-cache",  svnsync_opt_no_auth_cache, 0,
@@ -200,7 +200,7 @@ typedef struct {
   const char *config_dir;
   apr_hash_t *config;
   svn_boolean_t quiet;
-  svn_boolean_t force;
+  svn_boolean_t allow_non_empty;
   svn_boolean_t version;
   svn_boolean_t help;
 } opt_baton_t;
@@ -317,7 +317,7 @@ typedef struct {
   svn_ra_callbacks2_t source_callbacks;
   svn_ra_callbacks2_t sync_callbacks;
   svn_boolean_t quiet;
-  svn_boolean_t force;
+  svn_boolean_t allow_non_empty;
   const char *to_url;
 
   /* initialize only */
@@ -715,7 +715,7 @@ make_subcommand_baton(opt_baton_t *opt_baton,
   b->sync_callbacks.open_tmp_file = open_tmp_file;
   b->sync_callbacks.auth_baton = opt_baton->sync_auth_baton;
   b->quiet = opt_baton->quiet;
-  b->force = opt_baton->force;
+  b->allow_non_empty = opt_baton->allow_non_empty;
   b->to_url = to_url;
   b->from_url = from_url;
   b->start_rev = start_rev;
@@ -745,16 +745,16 @@ do_initialize(svn_ra_session_t *to_session,
      repos.  If we aren't, and we aren't being asked to forcibly
      complete this initialization, that's a bad news.  */
   SVN_ERR(svn_ra_get_latest_revnum(to_session, &latest, pool));
-  if ((latest != 0) && (! baton->force))
+  if ((latest != 0) && (! baton->allow_non_empty))
     return svn_error_create
       (APR_EINVAL, NULL,
        _("Destination repository already contains revision history; consider "
-         "using --force if the revisions in the repository are known to be "
-         "a mirror of the respective revisions in the source repository"));
+         "using --allow-non-empty if the repository's revisions are known "
+         "to mirror their respective revisions in the source repository"));
 
   SVN_ERR(svn_ra_rev_prop(to_session, 0, SVNSYNC_PROP_FROM_URL,
                           &from_url, pool));
-  if (from_url && (! baton->force))
+  if (from_url && (! baton->allow_non_empty))
     return svn_error_createf
       (APR_EINVAL, NULL,
        _("Destination repository is already synchronizing from '%s'"),
@@ -2251,8 +2251,8 @@ main(int argc, const char *argv[])
             opt_baton.version = TRUE;
             break;
 
-          case svnsync_opt_force:
-            opt_baton.force = TRUE;
+          case svnsync_opt_allow_non_empty:
+            opt_baton.allow_non_empty = TRUE;
             break;
 
           case 'q':
