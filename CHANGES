@@ -5,9 +5,9 @@ http://svn.collab.net/repos/svn/tags/1.6.5
  User-visible changes:
   * fix mod_dav_svn directory view links to preserve peg revisions (r38201)
   * do not error on Windows when ALLUSERPROFILE dir nonexistent (r38053, -5, -7)
-  * properly escape lock comments over ra_neone (r38101, -2)
+  * properly escape lock comments over ra_neon (r38101, -2)
   * allow syncing copies of '/' over ra_neon and ra_serf (issue #3438)
-  * make 'svnlook diff' show empy added or deleted files (r38458)
+  * make 'svnlook diff' show empty added or deleted files (r38458)
   * fix building with Apache 2.4 (r36720)
   * fix possible data loss on ext4 and GPFS filesystems (issue #3442)
   * resolve symlinks when checking for ~/.subversion (r36023)
