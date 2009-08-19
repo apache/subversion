@@ -77,7 +77,7 @@ def mergeinfo(sbox):
   svntest.actions.run_and_verify_svn(None, None, [], "merge", "-c", "1",
                                      "--record-only", sbox.repo_url, wc_dir)
   svntest.actions.run_and_verify_mergeinfo(adjust_error_for_server_version(""),
-                                           [1], sbox.repo_url, wc_dir)
+                                           ['1'], sbox.repo_url, wc_dir)
 
 def explicit_mergeinfo_source(sbox):
   "'mergeinfo' with source selection"
@@ -100,13 +100,13 @@ def explicit_mergeinfo_source(sbox):
 
   # Check using each of our recorded merge sources (as paths and URLs).
   svntest.actions.run_and_verify_mergeinfo(adjust_error_for_server_version(""),
-                                           [1], B_url, H_path)
+                                           ['1'], B_url, H_path)
   svntest.actions.run_and_verify_mergeinfo(adjust_error_for_server_version(""),
-                                           [1], B_path, H_path)
+                                           ['1'], B_path, H_path)
   svntest.actions.run_and_verify_mergeinfo(adjust_error_for_server_version(""),
-                                           [1], G_url, H_path)
+                                           ['1'], G_url, H_path)
   svntest.actions.run_and_verify_mergeinfo(adjust_error_for_server_version(""),
-                                           [1], G_path, H_path)
+                                           ['1'], G_path, H_path)
 
 def mergeinfo_non_source(sbox):
   "'mergeinfo' with uninteresting source selection"
@@ -129,7 +129,7 @@ def mergeinfo_non_source(sbox):
 
   # Check on a source we haven't "merged" from.
   svntest.actions.run_and_verify_mergeinfo(adjust_error_for_server_version(""),
-                                           [2], H2_url, H_path)
+                                           ['2'], H2_url, H_path)
 
 #----------------------------------------------------------------------
 # Issue #3138
@@ -199,22 +199,22 @@ def non_inheritable_mergeinfo(sbox):
   # Despite being non-inheritable, r6 should still show as merged to A_COPY
   # and not eligible for merging.
   svntest.actions.run_and_verify_mergeinfo(adjust_error_for_server_version(""),
-                                           [4,6],
+                                           ['4','6*'],
                                            sbox.repo_url + '/A',
                                            A_COPY_path)
   svntest.actions.run_and_verify_mergeinfo(adjust_error_for_server_version(""),
-                                           [3,5],
+                                           ['3','5','6*'],
                                            sbox.repo_url + '/A',
                                            A_COPY_path,
                                            '--show-revs', 'eligible')
   # But if we drop down to A_COPY/D, r6 should show as eligible because it
   # was only merged into A_COPY, no deeper.
   svntest.actions.run_and_verify_mergeinfo(adjust_error_for_server_version(""),
-                                           [4],
+                                           ['4'],
                                            sbox.repo_url + '/A/D',
                                            D_COPY_path)
   svntest.actions.run_and_verify_mergeinfo(adjust_error_for_server_version(""),
-                                           [3,6],
+                                           ['3','6'],
                                            sbox.repo_url + '/A/D',
                                            D_COPY_path,
                                            '--show-revs', 'eligible')
