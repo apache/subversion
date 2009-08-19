@@ -36,6 +36,7 @@
 #include "svn_pools.h"
 #include "svn_string.h"
 #include "svn_error.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_hash.h"
 #include "svn_wc.h"
@@ -2954,6 +2955,20 @@ resolve_found_entry_callback(const char *path,
                                         pool));
       if (conflict)
         {
+          /* For now, we only clear tree conflict information and resolve
+           * to the working state. There is no way to pick theirs-full
+           * or mine-full, etc. Throw an error if the user expects us
+           * to be smarter than we really are. */
+          if (baton->conflict_choice != svn_wc_conflict_choose_merged)
+            {
+              return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE,
+                                       NULL,
+                                       _("Tree conflicts can only be resolved "
+                                         "to 'working' state; "
+                                         "'%s' not resolved"),
+                                       svn_dirent_local_style(path, pool));
+            }
+
           SVN_ERR(svn_wc__del_tree_conflict(path, parent_adm_access, pool));
 
           /* Sanity check:  see if libsvn_wc *still* thinks this item is in a

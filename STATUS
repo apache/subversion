@@ -136,27 +136,3 @@ Candidate changes:
 
 Approved changes:
 =================
-
- * r38799, r38801, r38805
-   Complain when people try to resolve a tree conflict with any other
-   resolution than '--accept=working'.
-   Justification:
-     It has been brought to my attention that people are actually trying
-     to resolve tree conflicts automatically using the --accept option
-     of 'svn resolve', e.g. 'svn resolve --accept=theirs-full victim'.
-     It doesn't actually work as they expect, because only conflict
-     markers get cleared (which is what --accept=working does).
-     The documentation does not seem to indicate that this doesn't work
-     either. So instead of having those poor folks scratch their heads
-     at Subversion's behaviour, make the client tell them loud and clearly
-     that what they are trying to do won't work.
-     In practice it looks like this (line break added by me for STATUS):
-       $ svn resolve --accept=theirs-full alpha
-       svn: warning: Tree conflicts can only be resolved to 'working' state; \
-         'alpha' not resolved
-       $
-   Notes:
-     There are conflicts during merge. A backport branch is available
-     at ^/branches/1.6.x-r38799.
-   Votes:
-     +1: stsp, sbutler, rhuijben
