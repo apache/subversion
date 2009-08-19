@@ -119,7 +119,7 @@ Candidate changes:
          (not properly fixed; test passes for wrong reasons; see
          <http://subversion.tigris.org/ds/viewMessage.do?dsForumId=462&dsMessageId=2384930>)
 
- * r35958, r36030, r38373, r38836, r38837
+ * r35958, r36030, r38373, r38836, r38837, r38842
    Several fixes to the Win32 exception handler, to make it work on Windows
    Vista and 7.
    Justification:
@@ -127,9 +127,9 @@ Candidate changes:
      have development tools installed. (Most users on Windows).
    Notes:
      Most of these revisions cancel out each other. The real changes are in
-     r38373 (removing version check) and r38836 (fixing formatting specifier).
-     It's probably easier to review the combined patch than the individual
-     revisions.
+     r38373 (removing version check) and r38836,r38842 (fixing formatting
+     specifier). It's probably easier to review the combined patch than the
+     individual revisions.
      A backport branch exists as ^/branches/1.6.x-r38836.
    Votes:
      +1: rhuijben
