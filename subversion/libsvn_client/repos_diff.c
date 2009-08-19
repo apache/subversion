@@ -944,8 +944,13 @@ add_directory(const char *path,
         {
           svn_wc_notify_action_t new_action;
 
-          if (dpn->action == svn_wc_notify_update_delete
-              && action == svn_wc_notify_update_add)
+          /* ### Which combinations of action states constitute a replace?
+           * ### Are there more than the ones we are checking for here?
+           * ### Hurry up with editor v2 and atomic replace, pretty please! */
+          if ((dpn->action == svn_wc_notify_update_delete ||
+               dpn->action == svn_wc_notify_tree_conflict)
+            && (action == svn_wc_notify_update_add ||
+                action == svn_wc_notify_tree_conflict))
             {
               is_replace = TRUE;
               new_action = svn_wc_notify_update_replace;
@@ -954,7 +959,7 @@ add_directory(const char *path,
             new_action = dpn->action;
 
           /* Tree-conflicts during replace were notified about elsewhere. */
-          if (action != svn_wc_notify_tree_conflict)
+          if (! (is_replace && action == svn_wc_notify_tree_conflict))
             {
               notify = svn_wc_create_notify(b->wcpath, new_action, pool);
               notify->kind = dpn->kind;
