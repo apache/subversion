@@ -247,11 +247,12 @@ detranslate_wc_file(const char **detranslated_file,
    correct eol style in NEW_TARGET, if an eol style
    change is contained in PROP_DIFF */
 static svn_error_t *
-maybe_update_target_eols(const char **new_target,
-                         const char *old_target,
-                         svn_wc_adm_access_t *adm_access,
+maybe_update_target_eols(const char **new_target_abspath,
+                         svn_wc__db_t *db,
+                         const char *old_target_abspath,
                          const apr_array_header_t *prop_diff,
-                         apr_pool_t *pool)
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool)
 {
   const svn_prop_t *prop = get_prop(prop_diff, SVN_PROP_EOL_STYLE);
 
@@ -261,23 +262,21 @@ maybe_update_target_eols(const char **new_target,
       const char *tmp_new;
 
       svn_subst_eol_style_from_value(NULL, &eol, prop->value->data);
-      SVN_ERR(svn_wc_create_tmp_file2(NULL, &tmp_new,
-                                      svn_wc_adm_access_path(adm_access),
-                                      svn_io_file_del_none,
-                                      pool));
+      SVN_ERR(svn_io_mktemp(NULL, &tmp_new, NULL, NULL,
+                            svn_io_file_del_none, scratch_pool, scratch_pool));
 
       /* Always 'repair' EOLs here, so that we can apply a diff that
          changes from inconsistent newlines and no 'svn:eol-style' to
          consistent newlines and 'svn:eol-style' set.  */
-      SVN_ERR(svn_subst_copy_and_translate3(old_target,
+      SVN_ERR(svn_subst_copy_and_translate3(old_target_abspath,
                                             tmp_new,
                                             eol, TRUE /* repair EOLs */,
                                             NULL, FALSE,
-                                            FALSE, pool));
-      *new_target = tmp_new;
+                                            FALSE, scratch_pool));
+      *new_target_abspath = apr_pstrdup(result_pool, tmp_new);
     }
   else
-    *new_target = old_target;
+    *new_target_abspath = apr_pstrdup(result_pool, old_target_abspath);
 
   return SVN_NO_ERROR;
 }
@@ -1158,8 +1157,10 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
   svn_boolean_t is_binary = FALSE;
   const svn_wc_entry_t *entry;
   const svn_prop_t *mimeprop;
+  const char *left_abspath;
 
   SVN_ERR(svn_dirent_get_absolute(&merge_abspath, merge_target, pool));
+  SVN_ERR(svn_dirent_get_absolute(&left_abspath, left, pool));
 
   /* Sanity check:  the merge target must be under revision control,
    * unless the merge target is a copyfrom text, which lives in a
@@ -1189,7 +1190,8 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
   /* We cannot depend on the left file to contain the same eols as the
      right file. If the merge target has mods, this will mark the entire
      file as conflicted, so we need to compensate. */
-  SVN_ERR(maybe_update_target_eols(&left, left, adm_access, prop_diff, pool));
+  SVN_ERR(maybe_update_target_eols(&left_abspath, db, left_abspath, prop_diff,
+                                   pool, pool));
 
   if (is_binary)
     {
@@ -1197,7 +1199,7 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
         /* in dry-run mode, binary files always conflict */
         *merge_outcome = svn_wc_merge_conflict;
       else
-        SVN_ERR(merge_binary_file(left,
+        SVN_ERR(merge_binary_file(left_abspath,
                                   right,
                                   merge_target,
                                   adm_access,
@@ -1217,7 +1219,7 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
                                   pool));
     }
   else
-    SVN_ERR(merge_text_file(left,
+    SVN_ERR(merge_text_file(left_abspath,
                             right,
                             merge_target,
                             adm_access,
