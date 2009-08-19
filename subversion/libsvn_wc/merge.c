@@ -1159,10 +1159,13 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
   const svn_wc_entry_t *entry;
   const svn_prop_t *mimeprop;
 
+  SVN_ERR(svn_dirent_get_absolute(&merge_abspath, merge_target, pool));
+
   /* Sanity check:  the merge target must be under revision control,
    * unless the merge target is a copyfrom text, which lives in a
    * temporary file and does not exist in ACTUAL yet. */
-  SVN_ERR(svn_wc_entry(&entry, merge_target, adm_access, FALSE, pool));
+  SVN_ERR(svn_wc__get_entry(&entry, db, merge_abspath, TRUE,
+                            svn_node_unknown, FALSE, pool, pool));
   if (! entry && ! copyfrom_text)
     {
       *merge_outcome = svn_wc_merge_no_merge;
@@ -1170,8 +1173,6 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
     }
 
   svn_dirent_split(merge_target, &merge_dirpath, &merge_filename, pool);
-
-  SVN_ERR(svn_dirent_get_absolute(&merge_abspath, merge_target, pool));
 
   /* Decide if the merge target is a text or binary file. */
   if ((mimeprop = get_prop(prop_diff, SVN_PROP_MIME_TYPE))
