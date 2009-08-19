@@ -69,7 +69,7 @@ Candidate changes:
    Branch:
      ^/branches/1.6.x-issue3443
    Votes:
-     +1: pburba
+     +1: pburba, arfrever
 
  * r38142, r38267, r38269, r36788, r37129, r37521, r37591, r37523, r38195,
    r38247, r38325, r38349, r38352
@@ -133,6 +133,16 @@ Candidate changes:
      A backport branch exists as ^/branches/1.6.x-r38836.
    Votes:
      +1: rhuijben
+
+ * r38850
+   Fix remaining part of Issue 3453: Building Subversion 1.6 requires GNU grep 2.5.
+   Votes:
+     +1: arfrever
+
+ * r38851
+   Fix Issue #3458: Use '$SED' instead of 'sed'.
+   Votes:
+     +1: arfrever
 
 Approved changes:
 =================
