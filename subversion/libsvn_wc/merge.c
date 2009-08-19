@@ -559,8 +559,6 @@ preserve_pre_merge_files(svn_stringbuf_t **log_accum,
 {
   const char *left_copy, *right_copy, *target_copy;
   const char *tmp_left, *tmp_right, *detranslated_target_copy;
-  const char *parent, *target_base;
-  svn_wc_adm_access_t *parent_access;
   const char *adm_path = svn_wc_adm_access_path(adm_access);
   const char *merge_abstarget;
   svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
@@ -603,10 +601,6 @@ preserve_pre_merge_files(svn_stringbuf_t **log_accum,
 
   /* We preserve all the files with keywords expanded and line
      endings in local (working) form. */
-
-  svn_dirent_split(target_copy, &parent, &target_base, pool);
-  SVN_ERR(svn_wc_adm_retrieve(&parent_access, adm_access, parent,
-                              pool));
 
   /* Log files require their paths to be in the subtree
      relative to the adm_access path they are executed in.
@@ -666,7 +660,7 @@ preserve_pre_merge_files(svn_stringbuf_t **log_accum,
 
   tmp_entry.conflict_old = svn_dirent_is_child(adm_path, left_copy, pool);
   tmp_entry.conflict_new = svn_dirent_is_child(adm_path, right_copy, pool);
-  tmp_entry.conflict_wrk = target_base;
+  tmp_entry.conflict_wrk = svn_dirent_basename(target_copy, pool);
 
   /* Mark merge_target's entry as "Conflicted", and start tracking
      the backup files in the entry as well. */
