@@ -133,6 +133,8 @@ Candidate changes:
      A backport branch exists as ^/branches/1.6.x-r38836.
    Votes:
      +1: rhuijben
+     +0: pburba - I don't have a Vista or Win7 box to try this out on, but it
+         works fine on my XP box.
 
  * r38850
    Fix remaining part of Issue 3453: Building Subversion 1.6 requires GNU grep 2.5.
