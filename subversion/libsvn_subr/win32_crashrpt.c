@@ -449,8 +449,8 @@ write_function_detail(STACKFRAME64 stack_frame, void *data)
   if (SymFromAddr_(proc, stack_frame.AddrPC.Offset, &func_disp, pIHS))
     {
       fprintf(log_file,
-                    "#%d  0x%08x in %.200s (",
-                    nr_of_frame, stack_frame.AddrPC.Offset,  pIHS->Name);
+                    "#%d  0x%08I64x in %.200s (",
+                    nr_of_frame, stack_frame.AddrPC.Offset, pIHS->Name);
 
       /* restrict symbol enumeration to this frame only */
       ih_stack_frame.InstructionOffset = stack_frame.AddrPC.Offset;
