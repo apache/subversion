@@ -420,10 +420,10 @@ write_var_values(PSYMBOL_INFO sym_info, ULONG sym_size, void *baton)
 
 /* Write the details of one function to the log file */
 static void
-write_function_detail(STACKFRAME64 stack_frame, void *data)
+write_function_detail(STACKFRAME64 stack_frame, int nr_of_frame, FILE *log_file)
 {
   ULONG64 symbolBuffer[(sizeof(SYMBOL_INFO) +
-    MAX_PATH +
+    MAX_SYM_NAME +
     sizeof(ULONG64) - 1) /
     sizeof(ULONG64)];
   PSYMBOL_INFO pIHS = (PSYMBOL_INFO)symbolBuffer;
@@ -434,21 +434,18 @@ write_function_detail(STACKFRAME64 stack_frame, void *data)
   DWORD line_disp=0;
 
   HANDLE proc = GetCurrentProcess();
-  FILE *log_file = (FILE *)data;
 
   symbols_baton_t ensym;
 
-  static int nr_of_frame = 0;
-
-  nr_of_frame++;
+  nr_of_frame++; /* We need a 1 based index here */
 
   /* log the function name */
   pIHS->SizeOfStruct = sizeof(SYMBOL_INFO);
-  pIHS->MaxNameLen = MAX_PATH;
+  pIHS->MaxNameLen = MAX_SYM_NAME;
   if (SymFromAddr_(proc, stack_frame.AddrPC.Offset, &func_disp, pIHS))
     {
       fprintf(log_file,
-                    "#%d  0x%08I64x in %.200s (",
+                    "#%d  0x%08I64x in %.200s(",
                     nr_of_frame, stack_frame.AddrPC.Offset, pIHS->Name);
 
       /* restrict symbol enumeration to this frame only */
@@ -508,8 +505,12 @@ write_stacktrace(CONTEXT *context, FILE *log_file)
       skip = 1;
 
       ctx.ContextFlags = CONTEXT_FULL;
-      if (GetThreadContext(GetCurrentThread(), &ctx))
-        context = &ctx;
+      if (!GetThreadContext(GetCurrentThread(), &ctx))
+        return;
+    }
+  else
+    {
+      ctx = *context;
     }
 
   if (context == NULL)
@@ -544,7 +545,7 @@ write_stacktrace(CONTEXT *context, FILE *log_file)
   while (1)
     {
       if (! StackWalk64_(machine, proc, GetCurrentThread(),
-                         &stack_frame, context, NULL,
+                         &stack_frame, &ctx, NULL,
                          SymFunctionTableAccess64_, SymGetModuleBase64_, NULL))
         {
           break;
@@ -557,7 +558,7 @@ write_stacktrace(CONTEXT *context, FILE *log_file)
              returns TRUE with a frame of zero. */
           if (stack_frame.AddrPC.Offset != 0)
             {
-              write_function_detail(stack_frame, (void *)log_file);
+              write_function_detail(stack_frame, i, log_file);
             }
         }
       i++;
@@ -747,8 +748,6 @@ svn__unhandled_exception_filter(PEXCEPTION_POINTERS ptrs)
 
   fclose(log_file);
 
-  cleanup_debughlp();
-
   /* inform the user */
   fprintf(stderr, "This application has halted due to an unexpected error.\n"
                   "A crash report and minidump file were saved to disk, you"
@@ -762,6 +761,14 @@ svn__unhandled_exception_filter(PEXCEPTION_POINTERS ptrs)
                   log_filename,
                   dmp_filename,
                   CRASHREPORT_EMAIL);
+
+  if (getenv("SVN_DBG_STACKTRACES_TO_STDERR") != NULL)
+    {
+      fprintf(stderr, "\nStacktrace:\n");
+      write_stacktrace(ptrs ? ptrs->ContextRecord : NULL, stderr);
+    }
+
+  cleanup_debughlp();
 
   /* terminate the application */
   return EXCEPTION_EXECUTE_HANDLER;

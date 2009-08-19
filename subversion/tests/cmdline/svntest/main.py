@@ -108,6 +108,7 @@ if sys.platform == 'win32':
   file_scheme_prefix = 'file:///'
   _exe = '.exe'
   _bat = '.bat'
+  os.environ['SVN_DBG_STACKTRACES_TO_STDERR'] = 'y'
 else:
   windows = False
   file_scheme_prefix = 'file://'
