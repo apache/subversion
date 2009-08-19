@@ -468,7 +468,7 @@ write_function_detail(STACKFRAME64 stack_frame, void *data)
   else
     {
       fprintf(log_file,
-                    "#%d  0x%08x in (unknown function)",
+                    "#%d  0x%08I64x in (unknown function)",
                     nr_of_frame, stack_frame.AddrPC.Offset);
     }
 
