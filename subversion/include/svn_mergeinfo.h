@@ -368,11 +368,26 @@ svn_rangelist_to_string(svn_string_t **output,
                         apr_pool_t *pool);
 
 /** Return a deep copy of @c svn_merge_range_t *'s in @a rangelist excluding
- * all non-inheritable @c svn_merge_range_t.  If @a start and @a end are valid
- * revisions and @a start is less than or equal to @a end, then exclude only the
- * non-inheritable revision ranges that intersect inclusively with the range
- * defined by @a start and @a end.  If @a rangelist contains no elements, return
- * an empty array.  Allocate the copy in @a pool.
+ * all non-inheritable @c svn_merge_range_t if @a inheritable is TRUE or
+ * excluding all inheritable @c svn_merge_range_t otherwise.  If @a start and
+ * @a end are valid revisions and @a start is less than or equal to @a end,
+ * then exclude only the non-inheritable revision ranges that intersect
+ * inclusively with the range defined by @a start and @a end.  If
+ * @a rangelist contains no elements, return an empty array.  Allocate the
+ * copy in @a result_pool, use @a scratch_pool for temporary allocations.
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_rangelist_inheritable2(apr_array_header_t **inheritable_rangelist,
+                           apr_array_header_t *rangelist,
+                           svn_revnum_t start,
+                           svn_revnum_t end,
+                           svn_boolean_t inheritable,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool);
+
+/** Like svn_rangelist_inheritable2, but always finds inheritable ranges.
  *
  * @since New in 1.5.
  */
@@ -384,14 +399,30 @@ svn_rangelist_inheritable(apr_array_header_t **inheritable_rangelist,
                           apr_pool_t *pool);
 
 /** Return a deep copy of @a mergeinfo, excluding all non-inheritable
- * @c svn_merge_range_t.  If @a start and @a end are valid revisions
- * and @a start is less than or equal to @a end, then exclude only the
- * non-inheritable revisions that intersect inclusively with the range
- * defined by @a start and @a end.  If @a path is not NULL remove
- * non-inheritable ranges only for @a path.  If all ranges are removed
- * for a given path then remove that path as well.  If all paths are
- * removed or @a rangelist is empty then set @a *inheritable_rangelist
- * to an empty array.  Allocate the copy in @a pool.
+ * @c svn_merge_range_t if @a inheritable is TRUE or excluding all
+ * inheritable @c svn_merge_range_t otherwise.  If @a start and @a end
+ * are valid revisions and @a start is less than or equal to @a end,
+ * then exclude only the non-inheritable revisions that intersect
+ * inclusively with the range defined by @a start and @a end.  If @a path
+ * is not NULL remove non-inheritable ranges only for @a path.  If all
+ * ranges are removed for a given path then remove that path as well.
+ * If all paths are removed or @a rangelist is empty then set
+ * @a *inheritable_rangelist to an empty array.  Allocate the copy in
+ * @a result_pool, use @a scratch_pool for temporary allocations.
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_mergeinfo_inheritable2(svn_mergeinfo_t *inheritable_mergeinfo,
+                           svn_mergeinfo_t mergeinfo,
+                           const char *path,
+                           svn_revnum_t start,
+                           svn_revnum_t end,
+                           svn_boolean_t inheritable,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool);
+
+/** Like svn_mergeinfo_inheritable2, but always finds inheritable mergeinfo.
  *
  * @since New in 1.5.
  */

@@ -1058,8 +1058,9 @@ def run_and_verify_mergeinfo(error_re_string = None,
                              expected_output = [],
                              *args):
   """Run 'svn mergeinfo ARGS', and compare the result against
-  EXPECTED_OUTPUT, a list of revisions expected in the output.
-  Raise an exception if an unexpected output is encountered."""
+  EXPECTED_OUTPUT, a list of string representations of revisions
+  expected in the output.  Raise an exception if an unexpected
+  output is encountered."""
 
   mergeinfo_command = ["mergeinfo"]
   mergeinfo_command.extend(args)
@@ -1072,9 +1073,8 @@ def run_and_verify_mergeinfo(error_re_string = None,
     verify.verify_outputs(None, None, err, None, expected_err)
     return
 
-  out = sorted([_f for _f in [int(x.rstrip()[1:]) for x in out] if _f])
+  out = sorted([_f for _f in [x.rstrip()[1:] for x in out] if _f])
   expected_output.sort()
-
   extra_out = []
   if out != expected_output:
     exp_hash = dict.fromkeys(expected_output)
