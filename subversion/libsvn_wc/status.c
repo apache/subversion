@@ -923,7 +923,8 @@ get_dir_status(struct edit_baton *eb,
   SVN_ERR(svn_io_get_dirents2(&dirents, path, subpool));
 
   /* Get this directory's entry. */
-  SVN_ERR(svn_wc_entry(&dir_entry, path, adm_access, FALSE, subpool));
+  SVN_ERR(svn_wc__get_entry(&dir_entry, eb->db, local_abspath, FALSE,
+                            svn_node_dir, FALSE, subpool, subpool));
 
   /* If "this dir" has "svn:externals" property set on it, store the
      name and value in traversal_info, along with this directory's depth.
