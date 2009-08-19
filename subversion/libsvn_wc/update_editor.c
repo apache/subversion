@@ -3108,17 +3108,16 @@ absent_directory(const char *path,
    If the file isn't found, set *RETURN_PATH to NULL.
 
    If the file is found, return the absolute path to it in
-   *RETURN_PATH, its entry in *RETURN_ENTRY, and a (read-only)
-   access_t for its parent in *RETURN_ACCESS.
+   *RETURN_PATH, its entry in *RETURN_ENTRY.
 */
 static svn_error_t *
-locate_copyfrom(const char *copyfrom_path,
+locate_copyfrom(svn_wc__db_t *db,
+                const char *copyfrom_path,
                 svn_revnum_t copyfrom_rev,
                 const char *dest_dir,
                 const svn_wc_entry_t *dest_entry,
                 const char **return_path,
                 const svn_wc_entry_t **return_entry,
-                svn_wc_adm_access_t **return_access,
                 apr_pool_t *pool)
 {
   const char *dest_fs_path, *ancestor_fs_path, *ancestor_url, *file_url;
@@ -3128,6 +3127,7 @@ locate_copyfrom(const char *copyfrom_path,
   svn_wc_adm_access_t *ancestor_access;
   apr_size_t levels_up;
   svn_stringbuf_t *cwd, *cwd_parent;
+  const char *cwd_abspath;
   svn_node_kind_t kind;
   svn_error_t *err;
   apr_pool_t *subpool = svn_pool_create(pool);
@@ -3176,10 +3176,9 @@ locate_copyfrom(const char *copyfrom_path,
   SVN_ERR(svn_io_check_path(cwd->data, &kind, subpool));
   if (kind != svn_node_dir)
     return SVN_NO_ERROR;
-  err = svn_wc_adm_open3(&ancestor_access, NULL, cwd->data,
-                         FALSE, /* open read-only, please */
-                         0,     /* open only this directory */
-                         NULL, NULL, subpool);
+  SVN_ERR(svn_dirent_get_absolute(&cwd_abspath, cwd->data, subpool));
+  err = svn_wc__get_entry(&ancestor_entry, db, cwd_abspath, FALSE,
+                          svn_node_dir, FALSE, subpool, subpool);
   if (err && err->apr_err == SVN_ERR_WC_NOT_DIRECTORY)
     {
       /* The common ancestor directory isn't version-controlled. */
@@ -3188,9 +3187,6 @@ locate_copyfrom(const char *copyfrom_path,
     }
   else if (err)
     return svn_error_return(err);
-
-  SVN_ERR(svn_wc_entry(&ancestor_entry, cwd->data, ancestor_access,
-                       FALSE, subpool));
 
   /* If we got this far, we know that the ancestor dir exists, and
      that it's a working copy too.  But is it from the same
@@ -3280,7 +3276,6 @@ locate_copyfrom(const char *copyfrom_path,
   /* Success!  We found the exact file we wanted! */
   *return_path = apr_pstrdup(pool, cwd->data);
   *return_entry = file_entry;
-  *return_access = ancestor_access;
 
   svn_pool_clear(subpool);
   return SVN_NO_ERROR;
@@ -3334,7 +3329,7 @@ add_file_with_history(const char *path,
                       apr_pool_t *pool)
 {
   struct edit_baton *eb = pb->edit_baton;
-  svn_wc_adm_access_t *adm_access, *src_access;
+  svn_wc_adm_access_t *adm_access;
   const char *src_path;
   const svn_wc_entry_t *src_entry;
   apr_hash_t *base_props, *working_props;
@@ -3353,9 +3348,9 @@ add_file_with_history(const char *path,
 
   /* Attempt to locate the copyfrom_path in the working copy first. */
   SVN_ERR(svn_wc_entry(&path_entry, pb->path, eb->adm_access, FALSE, subpool));
-  err = locate_copyfrom(copyfrom_path, copyfrom_rev,
+  err = locate_copyfrom(eb->db, copyfrom_path, copyfrom_rev,
                         pb->path, path_entry,
-                        &src_path, &src_entry, &src_access, subpool);
+                        &src_path, &src_entry, subpool);
   if (err && err->apr_err == SVN_ERR_WC_COPYFROM_PATH_NOT_FOUND)
     svn_error_clear(err);
   else if (err)
