@@ -86,7 +86,7 @@ AC_PATH_PROG(PKG_CONFIG, pkg-config)
 # Either a space-separated list of allowable Neon versions, or "any" to
 # mean allow anything.
 NEON_ALLOWED_LIST="0\.25 0\.26 0\.27\.2 0\.28"
-NEON_RECOMMENDED_VER=0.28.5
+NEON_RECOMMENDED_VER=0.28.6
 NEON_URL="http://www.webdav.org/neon/neon-${NEON_RECOMMENDED_VER}.tar.gz"
 dnl You can skip the neon version check only if you know what you are doing 
 AC_ARG_ENABLE(neon-version-check,
@@ -135,7 +135,7 @@ SVN_FIND_APACHE(20020903)
 
 dnl Search for SQLite
 SQLITE_MINIMUM_VER="3.4.0"
-SQLITE_RECOMMENDED_VER="3.6.15"
+SQLITE_RECOMMENDED_VER="3.6.17"
 SQLITE_URL="http://www.sqlite.org/sqlite-amalgamation-${SQLITE_RECOMMENDED_VER}.tar.gz"
 SVN_LIB_SQLITE(${SQLITE_MINIMUM_VER}, ${SQLITE_RECOMMENDED_VER},
                ${SQLITE_URL})
