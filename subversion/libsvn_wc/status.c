@@ -2156,6 +2156,9 @@ close_edit(void *edit_baton,
     {
       svn_node_kind_t kind;
       const char *full_path = svn_dirent_join(eb->anchor, eb->target, pool);
+      const char *local_abspath;
+
+      SVN_ERR(svn_dirent_get_absolute(&local_abspath, full_path, pool));
 
       err = svn_io_check_path(full_path, &kind, pool);
       if (err) goto cleanup;
@@ -2164,8 +2167,8 @@ close_edit(void *edit_baton,
         {
           const svn_wc_entry_t *tgt_entry;
 
-          err = svn_wc_entry(&tgt_entry, full_path, eb->adm_access,
-                             FALSE, pool);
+          err = svn_wc__get_entry(&tgt_entry, eb->db, local_abspath,
+                                  TRUE, svn_node_unknown, FALSE, pool, pool);
           if (err) goto cleanup;
 
           if (! tgt_entry)
