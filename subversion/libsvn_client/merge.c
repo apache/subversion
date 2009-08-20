@@ -574,35 +574,28 @@ tree_conflict_on_add(merge_cmd_baton_t *merge_b,
                                     conflict_abspath, merge_b->pool,
                                     merge_b->pool));
 
-  if (existing_conflict != NULL)
+  /* A merge may send two separate tree-conflicts if the merge
+     replaces the item. This means merge will first set a tree-conflict
+     with an incoming "delete", and then one with an incoming "add". */
+  if (existing_conflict != NULL
+      && existing_conflict->action == svn_wc_conflict_action_delete
+      && conflict->action == svn_wc_conflict_action_add)
     {
-      /* A merge may send two separate tree-conflicts if the merge
-         replaces the item. This means merge will first set a tree-conflict
-         with an incoming "delete", and then one with an incoming "add". */
-      if (existing_conflict->action == svn_wc_conflict_action_delete
-          && conflict->action == svn_wc_conflict_action_add)
+      if (existing_conflict->node_kind == conflict->node_kind)
         {
-          if (existing_conflict->node_kind == conflict->node_kind)
-            {
-              /* Same node kinds, this would be a replace, or, say,
-                 an add. We need to remove the existing tree-conflict
-                 and add this new one.*/
-              SVN_ERR(svn_wc__del_tree_conflict(merge_b->ctx->wc_ctx,
-                                                conflict_abspath,
-                                                merge_b->pool));
-            }
-          else
-            /* Else, the replace changed the node kind. Let's leave this
-               at the first delete after all. Nothing needs to be changed. */
-            return SVN_NO_ERROR;
+          /* Same node kinds, this would be a replace, or, say,
+             an add. We need to remove the existing tree-conflict
+             and add this new one.*/
+          SVN_ERR(svn_wc__del_tree_conflict(merge_b->ctx->wc_ctx,
+                                            conflict_abspath,
+                                            merge_b->pool));
         }
       else
-        /* Re-adding an existing tree conflict victim is an error in
-           all other cases (that are currently relevant). */
-        return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
-                       _("Attempt to add tree conflict that already exists"));
+        /* Else, the replace changed the node kind. Let's leave this
+           at the first delete after all. Nothing needs to be changed. */
+        return SVN_NO_ERROR;
     }
-
+ 
   SVN_ERR(svn_wc__add_tree_conflict(conflict, adm_access, merge_b->pool));
   return SVN_NO_ERROR;
 }
