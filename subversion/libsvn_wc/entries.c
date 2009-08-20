@@ -3157,6 +3157,7 @@ walker_helper(const char *dirpath,
   apr_hash_index_t *hi;
   svn_wc_entry_t *dot_entry;
   svn_error_t *err;
+  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
 
   err = svn_wc_entries_read(&entries, adm_access, show_hidden, pool);
 
@@ -3194,6 +3195,7 @@ walker_helper(const char *dirpath,
       void *val;
       const svn_wc_entry_t *current_entry;
       const char *entrypath;
+      const char *entry_abspath;
       svn_boolean_t hidden;
 
       svn_pool_clear(subpool);
@@ -3211,6 +3213,7 @@ walker_helper(const char *dirpath,
 
       entrypath = svn_dirent_join(dirpath, key, subpool);
       SVN_ERR(svn_wc__entry_is_hidden(&hidden, current_entry));
+      SVN_ERR(svn_dirent_get_absolute(&entry_abspath, entrypath, subpool));
 
       /* Call the "found entry" callback for this entry. (For a directory,
        * this is the first visit: as a child.) */
@@ -3236,13 +3239,9 @@ walker_helper(const char *dirpath,
           if (depth == svn_depth_immediates)
             depth_below_here = svn_depth_empty;
 
-          err = svn_wc_adm_retrieve(&entry_access, adm_access, entrypath,
-                                    subpool);
+          entry_access = svn_wc__adm_retrieve_internal2(db, entry_abspath,
+                                                        subpool);
           
-          if (err)
-            SVN_ERR(walk_callbacks->handle_error(entrypath, err,
-                                                 walk_baton, pool));
-
           if (entry_access)
             SVN_ERR(walker_helper(entrypath, entry_access,
                                   walk_callbacks, walk_baton,
@@ -3264,7 +3263,7 @@ svn_wc__walker_default_error_handler(const char *path,
 {
   /* Note: don't trace this. We don't want to insert a false "stack frame"
      onto an error generated elsewhere.  */
-  return err;
+  return svn_error_return(err);
 }
 
 
