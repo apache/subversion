@@ -13,8 +13,11 @@ http://svn.collab.net/repos/svn/tags/1.6.5
   * resolve symlinks when checking for ~/.subversion (r36023)
   * don't let svn+ssh SIGKILL ssh processes (issue #2580)
   * allow PLAIN and LOGIN mechanisms with SASL in svnserve (r38205)
+  * fix peg revision parsing in filenames like 'dir/@file.txt' (issue #3416)
   * fix detection of Apache <2.0.56 (r38290, -3, -4)
+  * don't pretend to do tree conflict resolution (r38799, -801, -805)
   * fix data corruption when syncing from svnserve to mod_dav_svn (r38686, -7)
+  * fix GNOME Keyring with '--non-interactive' option (r38222, -3, -61, -410)
   * fixed: false "File '...' already exists" error during commit (issue #3119)
 
  Developer-visible changes:
