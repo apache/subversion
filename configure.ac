@@ -41,11 +41,8 @@ AC_PROG_CXX
 AC_PROG_CPP
 
 # Look for a good sed
-AC_PROG_SED
-# And pick a reasonable default if no sed could be found
-if test -z "$SED"; then
-  export SED="sed"
-fi
+# AC_PROG_SED was introduced in Autoconf 2.59b
+m4_ifdef([AC_PROG_SED], [AC_PROG_SED], [SED="${SED:-sed}"])
 
 # Grab target_cpu, so we can use it in the Solaris pkginfo file
 AC_CANONICAL_TARGET
