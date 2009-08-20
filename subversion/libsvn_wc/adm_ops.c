@@ -1336,16 +1336,16 @@ svn_wc_delete3(const char *path,
 
 
 svn_error_t *
-svn_wc_get_ancestry2(const char **url,
-                     svn_revnum_t *rev,
-                     svn_wc_context_t *wc_ctx,
-                     const char *local_abspath,
-                     apr_pool_t *result_pool,
-                     apr_pool_t *scratch_pool)
+svn_wc__internal_get_ancestry(const char **url,
+                              svn_revnum_t *rev,
+                              svn_wc__db_t *db,
+                              const char *local_abspath,
+                              apr_pool_t *result_pool,
+                              apr_pool_t *scratch_pool)
 {
   const svn_wc_entry_t *ent;
 
-  SVN_ERR(svn_wc__get_entry(&ent, wc_ctx->db, local_abspath, FALSE,
+  SVN_ERR(svn_wc__get_entry(&ent, db, local_abspath, FALSE,
                             svn_node_unknown, FALSE,
                             scratch_pool, scratch_pool));
 
@@ -1356,6 +1356,20 @@ svn_wc_get_ancestry2(const char **url,
     *rev = ent->revision;
 
   return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc_get_ancestry2(const char **url,
+                     svn_revnum_t *rev,
+                     svn_wc_context_t *wc_ctx,
+                     const char *local_abspath,
+                     apr_pool_t *result_pool,
+                     apr_pool_t *scratch_pool)
+{
+  return svn_error_return(
+    svn_wc__internal_get_ancestry(url, rev, wc_ctx->db, local_abspath,
+                                  result_pool, scratch_pool));
 }
 
 
