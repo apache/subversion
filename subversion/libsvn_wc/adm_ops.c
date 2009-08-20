@@ -1099,13 +1099,6 @@ erase_from_wc(const char *path,
                                 cancel_func, cancel_baton, iterpool));
         }
 
-      /* Make sure we close the baton, which is needed to fix wc-ng problems
-         on windows. */
-      SVN_ERR(svn_wc__db_temp_forget_directory(
-                                   svn_wc__adm_get_db(dir_access),
-                                   svn_wc__adm_access_abspath(dir_access),
-                                   pool));
-
       /* Now handle any remaining unversioned items */
       SVN_ERR(svn_io_get_dirents2(&unver, path, pool));
       for (hi = apr_hash_first(pool, unver); hi; hi = apr_hash_next(hi))
