@@ -1,15 +1,43 @@
+Version 1.6.5
+(21 Aug 2009, from /branches/1.6.x)
+http://svn.collab.net/repos/svn/tags/1.6.5
+
+ User-visible changes:
+  * fix mod_dav_svn directory view links to preserve peg revisions (r38201)
+  * do not error on Windows when ALLUSERPROFILE dir nonexistent (r38053, -5, -7)
+  * properly escape lock comments over ra_neon (r38101, -2)
+  * allow syncing copies of '/' over ra_neon and ra_serf (issue #3438)
+  * make 'svnlook diff' show empty added or deleted files (r38458)
+  * fix building with Apache 2.4 (r36720)
+  * fix possible data loss on ext4 and GPFS filesystems (issue #3442)
+  * resolve symlinks when checking for ~/.subversion (r36023)
+  * don't let svn+ssh SIGKILL ssh processes (issue #2580)
+  * allow PLAIN and LOGIN mechanisms with SASL in svnserve (r38205)
+  * fix peg revision parsing in filenames like 'dir/@file.txt' (issue #3416)
+  * fix detection of Apache <2.0.56 (r38290, -3, -4)
+  * don't pretend to do tree conflict resolution (r38799, -801, -805)
+  * fix data corruption when syncing from svnserve to mod_dav_svn (r38686, -7)
+  * fix GNOME Keyring with '--non-interactive' option (r38222, -3, -61, -410)
+  * fixed: false "File '...' already exists" error during commit (issue #3119)
+
+ Developer-visible changes:
+  * avoid referencing uninitialized variables (r38388)
+  * plug a couple of error leaks (r38572)
+  * improve windows test output (r38616, -7, -9, -49)
+
+
 Version 1.6.4
 (06 Aug 2009, from /branches/1.6.x)
 http://svn.collab.net/repos/svn/tags/1.6.4
 
  User-visible changes:
- * fixed: heap overflow vulnerability on server and client
-          See CVE-2009-2411, and descriptive advisory at
-          http://subversion.tigris.org/security/CVE-2009-2411-advisory.txt
+  * fixed: heap overflow vulnerability on server and client
+           See CVE-2009-2411, and descriptive advisory at
+           http://subversion.tigris.org/security/CVE-2009-2411-advisory.txt
 
 
 Version 1.6.3
-(19 Jun 2009, from /branches/1.6.x)
+(22 Jun 2009, from /branches/1.6.x)
 http://svn.collab.net/repos/svn/tags/1.6.3
 
  User-visible changes:
@@ -21,7 +49,6 @@ http://svn.collab.net/repos/svn/tags/1.6.3
   * update dsvn.el for 1.6 (r37774)
   * don't allow setting of props on out-of-date dirs under neon (r37745)
   * improve BASH completion (r36450, -52, -70, -79, -538)
-  * improve some DAV-based error messages (issue #3414)
   * always show tree conflicts with 'svn st' (issue #3382)
   * improve correctness of 'svn mergeinfo' (issue #3126)
   * decrease the amount of memory needed for large commits (r37894, -6)
@@ -30,12 +57,14 @@ http://svn.collab.net/repos/svn/tags/1.6.3
   * improve 'svn merge' perf by reducing server contact (r37491, -593, -618)
   * stop propagating self-referential mergeinfo in reintegrate merges (r37931)
   * fix NLS detection where -liconv is required for bindtextdomain() (r37827)
-  * don't delete unversioned files with 'rm --keel-local' (r38015, -17, -19)
+  * don't delete unversioned files with 'rm --keep-local' (r38015, -17, -19)
   * bump apr and apr-util versions included in deps to latest. (r37941)
   * avoid temp file name collisions with ra_serf, ra_neon (r37972)
   * fixed: potential segfault with noop file merges (r37779)
   * fixed: incorrect output with 'svn blame -g' (r37719, -23, -41)
   * fixed: bindings don't load FS libs when module search enabled (issue #3413)
+  * fixed: DAV RA layers not properly handling update/switch working copy
+    directory to revision/place in which it doesn't exist (issue #3414)
   * fixed: potential abort() in the working copy library (r37857)
   * fixed: memory leak in hash reading functions (r37868, -979)
 
@@ -45,7 +74,7 @@ http://svn.collab.net/repos/svn/tags/1.6.3
 
 
 Version 1.6.2
-(09 May 2009, from /branches/1.6.x)
+(11 May 2009, from /branches/1.6.x)
 http://svn.collab.net/repos/svn/tags/1.6.2
 
  User-visible changes:
@@ -75,7 +104,7 @@ http://svn.collab.net/repos/svn/tags/1.6.2
 
 
 Version 1.6.1
-(10 Apr 2009, from /branches/1.6.x)
+(9 Apr 2009, from /branches/1.6.x)
 http://svn.collab.net/repos/svn/tags/1.6.1
 
  User-visible changes:
@@ -231,7 +260,7 @@ http://svn.collab.net/repos/svn/tags/1.5.7
 
 
 Version 1.5.6
-(27 Feb 2009, from /branches/1.5.x)
+(26 Feb 2009, from /branches/1.5.x)
 http://svn.collab.net/repos/svn/tags/1.5.6
 
  User-visible changes:
