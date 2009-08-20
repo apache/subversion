@@ -948,6 +948,13 @@ mark_tree(svn_wc_adm_access_t *adm_access,
         this_dir_flags |= SVN_WC__ENTRY_MODIFY_KEEP_LOCAL;
       }
   }
+  else
+    {
+      SVN_ERR(svn_wc__db_temp_forget_directory(
+                   db, svn_wc__adm_access_abspath(adm_access), pool));
+
+      return SVN_NO_ERROR;
+    }
 
   /* Modify this_dir entry if requested. */
   if (this_dir_flags)
