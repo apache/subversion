@@ -1,10 +1,13 @@
-*******************************************************
-* FUNCTIONAL SPECIFICATION FOR ISSUE #516: OBLITERATE *
-*******************************************************
+******************************************************************************
+                           FUNCTIONAL SPECIFICATION
+                                     FOR
+                            ISSUE #516: OBLITERATE
+******************************************************************************
+
 
 TABLE OF CONTENTS
 
-    OPEN QUESTIONS
+    OPEN ISSUES
 
      1. INTRODUCTION
         1.1 REQUIREMENTS
