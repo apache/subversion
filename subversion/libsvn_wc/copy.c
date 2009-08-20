@@ -459,11 +459,11 @@ copy_file_administratively(const char *src_path,
   svn_wc__db_t *db = svn_wc__adm_get_db(src_access);
   const char *src_abspath;
 
-  SVN_ERR(svn_dirent_get_absolute(&src_abspath, src_path, pool));
-
   /* The 'dst_path' is simply dst_parent/dst_basename */
   const char *dst_path
     = svn_dirent_join(svn_wc_adm_access_path(dst_parent), dst_basename, pool);
+
+  SVN_ERR(svn_dirent_get_absolute(&src_abspath, src_path, pool));
 
   /* Sanity check:  if dst file exists already, don't allow overwrite. */
   SVN_ERR(svn_io_check_path(dst_path, &dst_kind, pool));
