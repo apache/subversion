@@ -3124,7 +3124,6 @@ locate_copyfrom(svn_wc__db_t *db,
   const char *copyfrom_parent, *copyfrom_file;
   const char *abs_dest_dir, *extra_components;
   const svn_wc_entry_t *ancestor_entry, *file_entry;
-  svn_wc_adm_access_t *ancestor_access;
   apr_size_t levels_up;
   svn_stringbuf_t *cwd, *cwd_parent;
   const char *cwd_abspath;
@@ -3216,10 +3215,9 @@ locate_copyfrom(svn_wc__db_t *db,
     return SVN_NO_ERROR;
 
   /* Next: is the file's parent-dir under version control?   */
-  err = svn_wc_adm_open3(&ancestor_access, NULL, cwd_parent->data,
-                         FALSE, /* open read-only, please */
-                         0,     /* open only the parent dir */
-                         NULL, NULL, pool);
+  SVN_ERR(svn_dirent_get_absolute(&cwd_abspath, cwd->data, pool));
+  err = svn_wc__get_entry(&file_entry, db, cwd_abspath, TRUE, svn_node_file,
+                          FALSE, pool, pool);
   if (err && err->apr_err == SVN_ERR_WC_NOT_DIRECTORY)
     {
       svn_error_clear(err);
@@ -3246,8 +3244,6 @@ locate_copyfrom(svn_wc__db_t *db,
 
   /* The candidate file is under version control;  but is it
      really the file we're looking for?  <wave hand in circle> */
-  SVN_ERR(svn_wc_entry(&file_entry, cwd->data, ancestor_access,
-                       FALSE, pool));
   if (! file_entry)
     /* Parent dir is versioned, but file is not.  Be safe and
        return no results (see large discourse above.) */
