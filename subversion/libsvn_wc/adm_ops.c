@@ -1101,7 +1101,10 @@ erase_from_wc(const char *path,
 
       /* Make sure we close the baton, which is needed to fix wc-ng problems
          on windows. */
-      SVN_ERR(svn_wc_adm_close2(dir_access, pool));
+      SVN_ERR(svn_wc__db_temp_forget_directory(
+                                   svn_wc__adm_get_db(dir_access),
+                                   svn_wc__adm_access_abspath(dir_access),
+                                   pool));
 
       /* Now handle any remaining unversioned items */
       SVN_ERR(svn_io_get_dirents2(&unver, path, pool));
@@ -1309,14 +1312,19 @@ svn_wc_delete3(const char *path,
                    svn_wc_create_notify(path, svn_wc_notify_delete,
                                         pool), pool);
 
-  if (was_schedule == svn_wc_schedule_add && dir_access != adm_access)
+  if (was_schedule == svn_wc_schedule_add && entry &&
+      svn_path_is_empty(entry->name))
     {
-      /* ### We can't be sure that we are the owner of the access baton
-         here, but the baton has to be closed to fix the "update after
-         add/rm of deleted state" test on Windows. In most cases the
-         access baton is opened via svn_wc_adm_probe_try3()
-         at the top of this function, which makes us the owner. */
-      SVN_ERR(svn_wc_adm_close2(dir_access, pool));
+      /* We have to release the WC-DB handles, to allow removing
+         the directory on windows. 
+         
+         A better solution would probably be to call svn_wc__adm_destroy()
+         in the right place, but we can't do that without breaking the API. */
+
+      SVN_ERR(svn_wc__db_temp_forget_directory(
+                               svn_wc__adm_get_db(dir_access),
+                               svn_wc__adm_access_abspath(dir_access),
+                               pool));
     }
 
   /* By the time we get here, anything that was scheduled to be added has

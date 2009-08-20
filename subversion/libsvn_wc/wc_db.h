@@ -1646,6 +1646,24 @@ svn_wc__db_wq_completed(svn_wc__db_t *db,
  * @{
  */
 
+/** Removes all knowledge about @a local_dir_abspath from @a db. closing
+ * file handles and removing cached information from @a db.
+ *
+ * This function should only called right before blowing away
+ * a directory as it removes cached data from the wc_db without releasing
+ * memory.
+ *
+ * After this function is called, a new working copy can be created at
+ * @a local_dir_abspath.
+ *
+ * Perform temporary allocations in @a scratch_pool.
+ */
+svn_error_t *
+svn_wc__db_temp_forget_directory(svn_wc__db_t *db,
+                                 const char *local_dir_abspath,
+                                 apr_pool_t *scratch_pool);
+
+
 /**
  * A temporary API similar to svn_wc__db_base_add_directory() and
  * svn_wc__db_base_add_file(), in that it adds a subdirectory to the given

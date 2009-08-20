@@ -707,7 +707,8 @@ svn_error_t *
 svn_wc__adm_destroy(svn_wc_adm_access_t *adm_access,
                     apr_pool_t *scratch_pool)
 {
-  const char *path;
+  const char *path, *local_abspath;
+  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
 
   SVN_ERR(svn_wc__adm_write_check(adm_access, scratch_pool));
 
@@ -715,7 +716,10 @@ svn_wc__adm_destroy(svn_wc_adm_access_t *adm_access,
      directory, which also removes the lock file */
   path = svn_wc__adm_child(svn_wc_adm_access_path(adm_access), NULL,
                            scratch_pool);
+  local_abspath = svn_wc__adm_access_abspath(adm_access);
+
   SVN_ERR(svn_wc_adm_close2(adm_access, scratch_pool));
+  SVN_ERR(svn_wc__db_temp_forget_directory(db, local_abspath, scratch_pool));
 
   SVN_ERR(svn_io_remove_dir2(path, FALSE, NULL, NULL, scratch_pool));
 
