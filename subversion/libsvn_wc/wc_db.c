@@ -4715,8 +4715,6 @@ svn_wc__db_temp_forget_directory(svn_wc__db_t *db,
       if (!svn_dirent_is_child(local_dir_abspath, pdh->local_abspath, NULL))
         continue;
 
-      SVN_DBG(("Forgetting about %s (via %s)\n", pdh->local_abspath, local_dir_abspath));
-
       apr_hash_set(db->dir_data, pdh->local_abspath, APR_HASH_KEY_STRING, NULL);
 
       if (pdh->wcroot && pdh->wcroot->sdb &&
@@ -4732,7 +4730,6 @@ svn_wc__db_temp_forget_directory(svn_wc__db_t *db,
     {
       wcroot_t *wcroot = svn_apr_hash_index_val(hi);
       SVN_ERR(svn_sqlite__close(wcroot->sdb));
-	  SVN_DBG(("Closing wc.db for %s\n", wcroot->abspath));
     }
 
   return SVN_NO_ERROR;
