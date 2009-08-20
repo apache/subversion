@@ -1731,11 +1731,9 @@ loggy_path(const char **logy_path,
            svn_wc_adm_access_t *adm_access,
            apr_pool_t *pool)
 {
-  const char *adm_abspath;
   const char *abspath;
-  const char *adm_path = svn_wc_adm_access_path(adm_access);
+  const char *adm_abspath = svn_wc__adm_access_abspath(adm_access);
 
-  SVN_ERR(svn_dirent_get_absolute(&adm_abspath, adm_path, pool));
   SVN_ERR(svn_dirent_get_absolute(&abspath, path, pool));
   *logy_path = svn_dirent_is_child(adm_abspath, abspath, NULL);
 
