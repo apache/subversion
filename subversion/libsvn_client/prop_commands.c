@@ -384,9 +384,9 @@ svn_client_propset3(svn_commit_info_t **commit_info_p,
         SVN_ERR(svn_hash_from_cstring_keys(&changelist_hash,
                                            changelists, pool));
 
-      SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, target, TRUE,
-                                     adm_lock_level, ctx->cancel_func,
-                                     ctx->cancel_baton, pool));
+      SVN_ERR(svn_wc__adm_probe_in_context(&adm_access, ctx->wc_ctx, target,
+                                           TRUE, adm_lock_level, ctx->cancel_func,
+                                           ctx->cancel_baton, pool));
       SVN_ERR(svn_wc__get_entry_versioned(&entry, ctx->wc_ctx, target_abspath,
                                           svn_node_unknown, FALSE, FALSE,
                                           pool, pool));
@@ -848,10 +848,10 @@ svn_client_propget3(apr_hash_t **props,
 
       SVN_ERR(svn_dirent_get_absolute(&local_abspath, path_or_url, pool));
 
-      SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, path_or_url,
-                                     FALSE, adm_lock_level,
-                                     ctx->cancel_func, ctx->cancel_baton,
-                                     pool));
+      SVN_ERR(svn_wc__adm_probe_in_context(&adm_access, ctx->wc_ctx,
+                                           path_or_url, FALSE, adm_lock_level,
+                                           ctx->cancel_func,
+                                           ctx->cancel_baton, pool));
       SVN_ERR(svn_wc__get_entry_versioned(&node, ctx->wc_ctx, local_abspath,
                                           svn_node_unknown, FALSE, FALSE,
                                           pool, pool));
@@ -1153,10 +1153,10 @@ svn_client_proplist3(const char *path_or_url,
 
       SVN_ERR(svn_dirent_get_absolute(&local_abspath, path_or_url, pool));
 
-      SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, path_or_url,
-                                     FALSE, levels_to_lock,
-                                     ctx->cancel_func, ctx->cancel_baton,
-                                     pool));
+      SVN_ERR(svn_wc__adm_probe_in_context(&adm_access, ctx->wc_ctx,
+                                           path_or_url, FALSE, levels_to_lock,
+                                           ctx->cancel_func, ctx->cancel_baton,
+                                           pool));
       SVN_ERR(svn_wc__get_entry_versioned(&entry, ctx->wc_ctx, local_abspath,
                                           svn_node_unknown, FALSE, FALSE,
                                           pool, pool));
