@@ -150,5 +150,15 @@ Candidate changes:
                probably needs backport branch, so can't +1 the proposed change
                as is.)
 
+ * r38872
+   Improve "Attempt to add tree conflict that already exists" error message.
+   Justification:
+     This error is being seen in the wild, possibly due to the problem the
+     r38000 group is trying to fix. This change makes it easier to find
+     out which .svn directory is causing the problem by printing its path
+     as part of the error message.
+   Votes:
+     +1: stsp
+
 Approved changes:
 =================
