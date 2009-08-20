@@ -1,10 +1,13 @@
-*********************************************************
-* REQUIREMENTS SPECIFICATION FOR ISSUE #516: OBLITERATE *
-*********************************************************
+******************************************************************************
+                          REQUIREMENTS SPECIFICATION
+                                     FOR
+                            ISSUE #516: OBLITERATE
+******************************************************************************
+
 
 TABLE OF CONTENTS
 
-    OPEN QUESTIONS
+    OPEN ISSUES
 
     1. INTRODUCTION
       1.1 Sources of Requirements
@@ -26,7 +29,7 @@ TABLE OF CONTENTS
       3.8 Time Taken
 
 
-OPEN QUESTIONS
+OPEN ISSUES
 
   (none)
 
