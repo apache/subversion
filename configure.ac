@@ -42,6 +42,10 @@ AC_PROG_CPP
 
 # Look for a good sed
 AC_PROG_SED
+# And pick a reasonable default if no sed could be found
+if test -z "$SED"; then
+  export SED="sed"
+fi
 
 # Grab target_cpu, so we can use it in the Solaris pkginfo file
 AC_CANONICAL_TARGET
