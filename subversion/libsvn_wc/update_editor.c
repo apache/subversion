@@ -1381,34 +1381,32 @@ leftmod_error_chain(svn_error_t *err)
 /* ===================================================================== */
 /* Checking for local modifications. */
 
-/* Set *MODIFIED to true iff the item described by (ADM_ACCESS, FULL_PATH,
- * KIND) has local modifications.
- * For a file, this means text mods or property mods.
+/* Set *MODIFIED to true iff the item described by (LOCAL_ABSPATH, KIND)
+ * has local modifications. For a file, this means text mods or property mods.
  * For a directory, this means property mods.
+ *
+ * Use SCRATCH_POOL for temporary allocations.
  */
 static svn_error_t *
 entry_has_local_mods(svn_boolean_t *modified,
-                     svn_wc_adm_access_t *adm_access,
+                     svn_wc__db_t *db,
+                     const char *local_abspath,
                      svn_node_kind_t kind,
-                     const char *full_path,
-                     apr_pool_t *pool)
+                     apr_pool_t *scratch_pool)
 {
   svn_boolean_t text_modified;
   svn_boolean_t props_modified;
-  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
-  const char *local_abspath;
-
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, full_path, pool));
 
   /* Check for text modifications */
   if (kind == svn_node_file)
     SVN_ERR(svn_wc__text_modified_internal_p(&text_modified, db, local_abspath,
-                                             FALSE, TRUE, pool));
+                                             FALSE, TRUE, scratch_pool));
   else
     text_modified = FALSE;
 
   /* Check for property modifications */
-  SVN_ERR(svn_wc__props_modified(&props_modified, db, local_abspath, pool));
+  SVN_ERR(svn_wc__props_modified(&props_modified, db, local_abspath,
+                                 scratch_pool));
 
   *modified = (text_modified || props_modified);
 
@@ -1417,7 +1415,7 @@ entry_has_local_mods(svn_boolean_t *modified,
 
 /* A baton for use with modcheck_found_entry(). */
 typedef struct modcheck_baton_t {
-  svn_wc_adm_access_t *adm_access;  /* access for the root of the sub-tree */
+  svn_wc__db_t *db;         /* wc_db to access nodes */
   svn_boolean_t found_mod;  /* whether a modification has been found */
   svn_boolean_t all_edits_are_deletes;  /* If all the mods found, if any,
                                           were deletes.  If FOUND_MOD is false
@@ -1432,37 +1430,15 @@ modcheck_found_entry(const char *path,
 {
   modcheck_baton_t *baton = walk_baton;
   svn_boolean_t modified;
+  const char *local_abspath;
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
   if (entry->schedule != svn_wc_schedule_normal)
     modified = TRUE;
   else
-    {
-      svn_error_t *err;
-      svn_wc_adm_access_t *adm_access;
-
-      /* Try to get a WC access baton for this node. */
-      err = svn_wc_adm_probe_retrieve(&adm_access, baton->adm_access, path,
-                                      pool);
-
-      /* If this node is not locked, e.g. because of a shallow update command
-       * such as "svn update --depth=immediates", then acquire a deep lock on
-       * this node. */
-      if (err)
-        {
-          if (err->apr_err != SVN_ERR_WC_NOT_LOCKED)
-            return svn_error_return(err);
-
-          svn_error_clear(err);
-          SVN_ERR(svn_wc_adm_open3(&adm_access, baton->adm_access, path,
-                                   FALSE /* read-only */,
-                                   -1 /* infinite */,
-                                   NULL, NULL /* no cancellation */,
-                                   pool));
-        }
-
-      SVN_ERR(entry_has_local_mods(&modified, adm_access, entry->kind,
-                                   path, pool));
-    }
+    SVN_ERR(entry_has_local_mods(&modified, baton->db, local_abspath,
+                                 entry->kind, pool));
 
   if (modified)
     {
@@ -1493,7 +1469,7 @@ tree_has_local_mods(svn_boolean_t *modified,
     { modcheck_found_entry, svn_wc__walker_default_error_handler };
   modcheck_baton_t modcheck_baton = { NULL, FALSE, TRUE };
 
-  modcheck_baton.adm_access = adm_access;
+  modcheck_baton.db = svn_wc__adm_get_db(adm_access);
 
   /* Walk the WC tree to its full depth, looking for any local modifications.
    * If it's a "sparse" directory, that's OK: there can be no local mods in
@@ -1553,6 +1529,9 @@ check_tree_conflict(svn_wc_conflict_description_t **pconflict,
   svn_boolean_t all_mods_are_deletes = FALSE;
   svn_boolean_t is_subtree_of_locally_deleted =
     in_deleted_tree(eb, full_path, FALSE, pool);
+  const char *local_abspath;
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, full_path, pool));
 
   switch (action)
     {
@@ -1602,8 +1581,8 @@ check_tree_conflict(svn_wc_conflict_description_t **pconflict,
               if (entry->schedule != svn_wc_schedule_normal)
                 modified = TRUE;
               else
-                SVN_ERR(entry_has_local_mods(&modified, parent_adm_access,
-                                             entry->kind, full_path, pool));
+                SVN_ERR(entry_has_local_mods(&modified, eb->db, local_abspath,
+                                             entry->kind, pool));
               if (entry->schedule == svn_wc_schedule_delete)
                 all_mods_are_deletes = TRUE;
             }
