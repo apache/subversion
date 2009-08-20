@@ -518,13 +518,8 @@ copy_file_administratively(const char *src_path,
       }
     else
       {
-        /* Grrr.  Why isn't the first arg to svn_wc_get_ancestry const? */
-        char *tmp;
-
-        SVN_ERR(svn_wc_get_ancestry(&tmp, &copyfrom_rev, src_path, src_access,
-                                    pool));
-
-        copyfrom_url = tmp;
+        SVN_ERR(svn_wc__internal_get_ancestry(&copyfrom_url, &copyfrom_rev,
+                                              db, src_abspath, pool, pool));
       }
 
     /* Load source base and working props. */
@@ -850,13 +845,8 @@ copy_dir_administratively(const char *src_path,
       }
     else
       {
-        /* Grrr.  Why isn't the first arg to svn_wc_get_ancestry const? */
-        char *tmp;
-
-        SVN_ERR(svn_wc_get_ancestry(&tmp, &copyfrom_rev, src_path, src_access,
-                                    pool));
-
-        copyfrom_url = tmp;
+        SVN_ERR(svn_wc__internal_get_ancestry(&copyfrom_url, &copyfrom_rev,
+                                              db, src_abspath, pool, pool));
       }
 
     SVN_ERR(svn_wc_adm_close2(adm_access, pool));
