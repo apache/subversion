@@ -120,8 +120,9 @@ Candidate changes:
          <http://subversion.tigris.org/ds/viewMessage.do?dsForumId=462&dsMessageId=2384930>)
 
  * r35958, r36030, r38373, r38836, r38837, r38842
-   Several fixes to the Win32 exception handler, to make it work on Windows
-   Vista and 7.
+   Several fixes to the Win32 exception handler. This change also makes it
+   available on Windows Vista and 7 where it was previously blocked by a
+   version check.
    Justification:
      This exception handler is a valuable debugging tool for users who don't
      have development tools installed. (Most users on Windows).
