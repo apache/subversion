@@ -1788,6 +1788,8 @@ svn_io_file_name_get(const char **filename,
  * Allocates @a *file and @a *unique_name in @a result_pool. All
  * intermediate allocations will be performed in @a scratch_pool.
  *
+ * If @a file is NULL, the file is closed before returning.
+ *
  * Claim of Historical Inevitability: this function was written
  * because
  *
