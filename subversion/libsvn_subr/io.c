@@ -3670,8 +3670,21 @@ svn_io_mktemp(apr_file_t **file,
 
   if (file)
     *file = tempfile;
-  if (unique_path)
-    SVN_ERR(svn_io_file_name_get(unique_path, tempfile, result_pool));
+
+  if (unique_path || baton)
+    {
+      const char *name;
+      SVN_ERR(svn_io_file_name_get(&name, tempfile, result_pool));
+
+      if (unique_path)
+        *unique_path = name;
+
+      if (baton)
+        baton->name = name;
+    }
+
+  if (!file)
+    SVN_ERR(svn_io_file_close(tempfile, scratch_pool));
     
   return SVN_NO_ERROR;
 }
