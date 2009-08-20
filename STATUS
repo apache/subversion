@@ -142,10 +142,10 @@ Candidate changes:
    Votes:
      +1: arfrever, stsp
 
- * r38851
+ * r38851, r38875
    Fix Issue #3458: Use '$SED' instead of 'sed'.
    Votes:
-     +1: arfrever
+     +1: arfrever (r38851 only)
      +0: stsp (I totally agree with the change, but it doesn't merge cleanly,
                probably needs backport branch, so can't +1 the proposed change
                as is.)
