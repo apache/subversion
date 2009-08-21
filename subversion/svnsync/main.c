@@ -449,7 +449,7 @@ typedef svn_boolean_t (*filter_func_t)(const char *key);
 /* Make a new set of properties, by copying those properties in PROPS for which
  * the filter FILTER returns FALSE.
  *
- * The number of filtered properties will be stored in FILTERED_COUNT.
+ * The number of properties not copied will be stored in FILTERED_COUNT.
  *
  * The returned set of properties is allocated from POOL.
  */
@@ -486,6 +486,9 @@ filter_props(int *filtered_count, apr_hash_t *props,
 
 /* Write the set of revision properties REV_PROPS to revision REV to the
  * repository associated with RA session SESSION.
+ * Omit any properties whose names are in the svnsync property name space,
+ * and set *FILTERED_COUNT to the number of properties thus omitted.
+ * REV_PROPS is a hash mapping (char *)propname to (svn_string_t *)propval.
  *
  * All allocations will be done in a subpool of POOL.
  */
@@ -1483,7 +1486,10 @@ make_replay_baton(svn_ra_session_t *from_session,
   return rb;
 }
 
-/* Filter out svn:date and svn:author properties. */
+/* Return TRUE iff KEY is the name of an svn:date or svn:author or any svnsync
+ * property. Implements filter_func_t. Use with filter_props() to filter out
+ * svn:date and svn:author and svnsync properties.
+ */
 static svn_boolean_t
 filter_exclude_date_author_sync(const char *key)
 {
@@ -1498,7 +1504,10 @@ filter_exclude_date_author_sync(const char *key)
   return FALSE;
 }
 
-/* Filter out all properties except svn:date and svn:author */
+/* Return FALSE iff KEY is the name of an svn:date or svn:author or any svnsync
+ * property. Implements filter_func_t. Use with filter_props() to filter out
+ * all properties except svn:date and svn:author and svnsync properties.
+ */
 static svn_boolean_t
 filter_include_date_author_sync(const char *key)
 {
@@ -1506,7 +1515,9 @@ filter_include_date_author_sync(const char *key)
 }
 
 
-/* Only exclude svn:log .*/
+/* Return TRUE iff KEY is the name of the svn:log property.
+ * Implements filter_func_t. Use with filter_props() to only exclude svn:log.
+ */
 static svn_boolean_t
 filter_exclude_log(const char *key)
 {
@@ -1516,7 +1527,9 @@ filter_exclude_log(const char *key)
     return FALSE;
 }
 
-/* Only include svn:log. */
+/* Return FALSE iff KEY is the name of the svn:log property.
+ * Implements filter_func_t. Use with filter_props() to only include svn:log.
+ */
 static svn_boolean_t
 filter_include_log(const char *key)
 {
