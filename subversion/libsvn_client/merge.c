@@ -6573,9 +6573,7 @@ path_is_subtree(const char *path,
            hi;
            hi = apr_hash_next(hi))
         {
-          const char *path_touched_by_merge;
-
-          apr_hash_this(hi, &path_touched_by_merge, NULL, NULL);
+          const char *path_touched_by_merge = svn_apr_hash_index_key(hi);
           if (svn_path_is_ancestor(path, path_touched_by_merge))
             return TRUE;
         }
