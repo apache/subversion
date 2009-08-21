@@ -1263,8 +1263,9 @@ typedef enum svn_wc_conflict_action_t
 {
   svn_wc_conflict_action_edit,    /* attempting to change text or props */
   svn_wc_conflict_action_add,     /* attempting to add object */
-  svn_wc_conflict_action_delete   /* attempting to delete object */
-
+  svn_wc_conflict_action_delete,  /* attempting to delete object */
+  svn_wc_conflict_action_replace  /* attempting to replace object,
+                                     @since New in 1.7 */
 } svn_wc_conflict_action_t;
 
 
@@ -1285,7 +1286,9 @@ typedef enum svn_wc_conflict_reason_t
   /** Object is unversioned */
   svn_wc_conflict_reason_unversioned,
   /** Object is already added or schedule-add. @since New in 1.6. */
-  svn_wc_conflict_reason_added
+  svn_wc_conflict_reason_added,
+  /** Object is already replaced. @since New in 1.7. */
+  svn_wc_conflict_reason_replaced
 
 } svn_wc_conflict_reason_t;
 
