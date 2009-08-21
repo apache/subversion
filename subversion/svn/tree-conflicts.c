@@ -42,6 +42,8 @@ action_str(const svn_wc_conflict_description_t *conflict)
         return _("add");
       case svn_wc_conflict_action_delete:
         return _("delete");
+      case svn_wc_conflict_action_replace:
+        return _("replace");
     }
   return NULL;
 }
@@ -64,6 +66,8 @@ reason_str(const svn_wc_conflict_description_t *conflict)
         return _("missing");
       case svn_wc_conflict_reason_unversioned:
         return _("unversioned");
+      case svn_wc_conflict_reason_replaced:
+        return _("replace");
     }
   return NULL;
 }
@@ -153,6 +157,9 @@ svn_cl__append_tree_conflict_info_xml(
       case svn_wc_conflict_action_delete:
         tmp = "delete";
         break;
+      case svn_wc_conflict_action_replace:
+        tmp = "replace";
+        break;
       default:
         SVN_ERR_MALFUNCTION();
     }
@@ -178,6 +185,9 @@ svn_cl__append_tree_conflict_info_xml(
         break;
       case svn_wc_conflict_reason_unversioned:
         tmp = "unversioned";
+        break;
+      case svn_wc_conflict_reason_replaced:
+        tmp = "replace";
         break;
       default:
         SVN_ERR_MALFUNCTION();

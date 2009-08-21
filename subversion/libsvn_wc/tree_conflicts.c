@@ -102,6 +102,7 @@ static const enum_mapping_t action_map[] =
   { "edited",  svn_wc_conflict_action_edit },
   { "deleted", svn_wc_conflict_action_delete },
   { "added",   svn_wc_conflict_action_add },
+  { "replace", svn_wc_conflict_action_replace },
   { NULL,      0 }
 };
 
@@ -113,6 +114,7 @@ static const enum_mapping_t reason_map[] =
   { "missing",    svn_wc_conflict_reason_missing },
   { "obstructed", svn_wc_conflict_reason_obstructed },
   { "added",      svn_wc_conflict_reason_added },
+  { "replaced",   svn_wc_conflict_reason_replaced },
   { NULL,         0 }
 };
 
