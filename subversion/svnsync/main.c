@@ -424,7 +424,7 @@ remove_props_not_in_source(svn_ra_session_t *session,
        hi;
        hi = apr_hash_next(hi))
     {
-      const void *propname = svn_apr_hash_index_key(hi);
+      const char *propname = svn_apr_hash_index_key(hi);
 
       svn_pool_clear(subpool);
 
