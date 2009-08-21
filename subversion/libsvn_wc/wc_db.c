@@ -4692,34 +4692,20 @@ svn_wc__db_temp_forget_directory(svn_wc__db_t *db,
 {
   apr_hash_t *roots = apr_hash_make(scratch_pool);
   apr_hash_index_t *hi;
-  svn_wc__db_pdh_t *pdh;
-
-  pdh = apr_hash_get(db->dir_data, local_dir_abspath, APR_HASH_KEY_STRING);
-
-  /* Gather the list of wcroots we have to close by walking the PDHs */
-  if (pdh && pdh->wcroot && pdh->wcroot->sdb &&
-      (svn_dirent_is_child(local_dir_abspath, pdh->wcroot->abspath, NULL)
-       || !strcmp(local_dir_abspath, pdh->wcroot->abspath)))
-    {
-      apr_hash_set(db->dir_data, pdh->local_abspath, APR_HASH_KEY_STRING, NULL);
-      apr_hash_set(roots, pdh->wcroot->abspath, APR_HASH_KEY_STRING,
-                   pdh->wcroot);
-    }
 
   for (hi = apr_hash_first(scratch_pool, db->dir_data);
        hi;
        hi = apr_hash_next(hi))
     {
-      pdh = svn_apr_hash_index_val(hi);
+      svn_wc__db_pdh_t *pdh = svn_apr_hash_index_val(hi);
 
-      if (!svn_dirent_is_child(local_dir_abspath, pdh->local_abspath, NULL))
+      if (!svn_dirent_is_ancestor(local_dir_abspath, pdh->local_abspath))
         continue;
 
       apr_hash_set(db->dir_data, pdh->local_abspath, APR_HASH_KEY_STRING, NULL);
 
       if (pdh->wcroot && pdh->wcroot->sdb &&
-          (svn_dirent_is_child(local_dir_abspath, pdh->wcroot->abspath, NULL) 
-           || !strcmp(local_dir_abspath, pdh->wcroot->abspath)))
+          svn_dirent_is_ancestor(local_dir_abspath, pdh->wcroot->abspath))
         {
           apr_hash_set(roots, pdh->wcroot->abspath, APR_HASH_KEY_STRING,
                        pdh->wcroot);
