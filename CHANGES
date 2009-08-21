@@ -3,7 +3,7 @@ Version 1.6.5
 http://svn.collab.net/repos/svn/tags/1.6.5
 
  User-visible changes:
-  * fix mod_dav_svn directory view links to preserve peg revisions (r38201)
+  * fix mod_dav_svn directory view links to preserve peg revisions (r38021)
   * do not error on Windows when ALLUSERPROFILE dir nonexistent (r38053, -5, -7)
   * properly escape lock comments over ra_neon (r38101, -2)
   * allow syncing copies of '/' over ra_neon and ra_serf (issue #3438)
