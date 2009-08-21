@@ -6543,9 +6543,9 @@ def update_loses_mergeinfo(sbox):
   "update does not merge mergeinfo"
 
   """
-  When a working copy receives a fresh svn:mergeinfo property due to update,
-  and working copy has some local mergeinfo(yet to be added), local mergeinfo
-  is left unchanged.
+  When a working copy path receives a fresh svn:mergeinfo property due to
+  an update, and the path has local mergeinfo changes, then the local
+  mergeinfo should be merged with the incoming mergeinfo.
   """
 
   sbox.build()
