@@ -2268,8 +2268,8 @@ def update_wc_with_replaced_file(sbox):
   expected_status.tweak('iota', status='R ', wc_rev='1')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
-  # Now update the wc.  The delete half of the local replacement
-  # is a tree conflict with the incoming edit on that deleted item.
+  # Now update the wc.  The local replacement is a tree conflict with
+  # the incoming edit on that deleted item.
   expected_output = svntest.wc.State(wc_dir, {
     'iota' : Item(status='  ', treeconflict='C'),
     })
@@ -2310,8 +2310,8 @@ def update_wc_with_replaced_file(sbox):
   expected_status.tweak('iota', status='R ', copied='+', wc_rev='-')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
-  # Now update the wc.  The delete half of the local replacement
-  # is a tree conflict with the incoming edit on that deleted item.
+  # Now update the wc.  The local replacement is a tree conflict with
+  # the incoming edit on that deleted item.
   expected_output = svntest.wc.State(wc_dir, {
     'iota' : Item(status='  ', treeconflict='C'),
     })
