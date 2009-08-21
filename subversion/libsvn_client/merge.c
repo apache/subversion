@@ -528,7 +528,6 @@ tree_conflict(merge_cmd_baton_t *merge_b,
               svn_wc_conflict_reason_t reason)
 {
   svn_wc_conflict_description_t *conflict;
-  svn_wc_conflict_description_t *existing_conflict;
   const char *conflict_abspath;
 
   if (merge_b->record_only || merge_b->dry_run)
