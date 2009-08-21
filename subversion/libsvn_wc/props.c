@@ -670,13 +670,15 @@ static svn_error_t *
 combine_mergeinfo_props(const svn_string_t **output,
                         const svn_string_t *prop_val1,
                         const svn_string_t *prop_val2,
-                        apr_pool_t *pool)
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool)
 {
   svn_mergeinfo_t mergeinfo1, mergeinfo2;
-  SVN_ERR(svn_mergeinfo_parse(&mergeinfo1, prop_val1->data, pool));
-  SVN_ERR(svn_mergeinfo_parse(&mergeinfo2, prop_val2->data, pool));
-  SVN_ERR(svn_mergeinfo_merge(mergeinfo1, mergeinfo2, pool));
-  return svn_mergeinfo_to_string((svn_string_t **)output, mergeinfo1, pool);
+  SVN_ERR(svn_mergeinfo_parse(&mergeinfo1, prop_val1->data, scratch_pool));
+  SVN_ERR(svn_mergeinfo_parse(&mergeinfo2, prop_val2->data, scratch_pool));
+  SVN_ERR(svn_mergeinfo_merge(mergeinfo1, mergeinfo2, scratch_pool));
+  return svn_mergeinfo_to_string((svn_string_t **)output, mergeinfo1,
+                                 result_pool);
 }
 
 /* Perform a 3-way merge operation on mergeinfo.  FROM_PROP_VAL is
@@ -1107,10 +1109,13 @@ apply_single_prop_add(svn_wc_notify_state_t *state,
            We only merge mergeinfo;  other props conflict */
           if (strcmp(propname, SVN_PROP_MERGEINFO) == 0)
             {
-              SVN_ERR(combine_mergeinfo_props(&new_val, working_val,
-                                              new_val, scratch_pool));
+              const svn_string_t *merged_val;
+
+              SVN_ERR(combine_mergeinfo_props(&merged_val, working_val,
+                                              new_val, result_pool,
+                                              scratch_pool));
               apr_hash_set(working_props, propname,
-                           APR_HASH_KEY_STRING, new_val);
+                           APR_HASH_KEY_STRING, merged_val);
               set_prop_merge_state(state, svn_wc_notify_state_merged);
             }
           else
