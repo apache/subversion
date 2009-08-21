@@ -1544,7 +1544,9 @@ check_tree_conflict(svn_wc_conflict_description_t **pconflict,
       if ((entry->schedule == svn_wc_schedule_delete
            || entry->schedule == svn_wc_schedule_replace)
           && !is_subtree_of_locally_deleted)
-        reason = svn_wc_conflict_reason_deleted;
+        reason = entry->schedule == svn_wc_schedule_delete
+                                    ? svn_wc_conflict_reason_deleted
+                                    : svn_wc_conflict_reason_replaced;
       break;
 
     case svn_wc_conflict_action_add:
@@ -1559,6 +1561,7 @@ check_tree_conflict(svn_wc_conflict_description_t **pconflict,
       break;
 
     case svn_wc_conflict_action_delete:
+    case svn_wc_conflict_action_replace:
       /* Use case 3: Deleting a locally-deleted item. */
       if (entry->schedule == svn_wc_schedule_delete
           || entry->schedule == svn_wc_schedule_replace)
@@ -1568,7 +1571,9 @@ check_tree_conflict(svn_wc_conflict_description_t **pconflict,
              conflict on the locally deleted parent tree.  No need
              to record a conflict within the conflict. */
           if (!is_subtree_of_locally_deleted)
-            reason = svn_wc_conflict_reason_deleted;
+            reason = entry->schedule == svn_wc_schedule_delete
+                                        ? svn_wc_conflict_reason_deleted
+                                        : svn_wc_conflict_reason_replaced;
         }
       else
         {
@@ -1859,8 +1864,9 @@ set_copied_callback(const char *path,
 }
 
 
-/* Schedule the WC item PATH, whose entry is ENTRY, for re-addition as a copy
- * with history of (ENTRY->url)@(ENTRY->rev). PATH's parent is PARENT_PATH.
+/* Schedule the WC item PATH, whose entry is ENTRY, for re-addition.
+ * If MODIFY_COPYFROM is TRUE, re-add the item as a copy with history
+ * of (ENTRY->url)@(ENTRY->rev). PATH's parent is PARENT_PATH.
  * PATH and PARENT_PATH are relative to the current working directory.
  * Assume that the item exists locally and is scheduled as still existing with
  * some local modifications relative to its (old) base, but does not exist in
@@ -1884,6 +1890,7 @@ schedule_existing_item_for_re_add(const svn_wc_entry_t *entry,
                                   const char *parent_path,
                                   const char *path,
                                   const char *their_url,
+                                  svn_boolean_t modify_copyfrom,
                                   apr_pool_t *pool)
 {
   const char *base_name = svn_dirent_basename(path, pool);
@@ -1902,12 +1909,15 @@ schedule_existing_item_for_re_add(const svn_wc_entry_t *entry,
   flags |= SVN_WC__ENTRY_MODIFY_SCHEDULE;
   flags |= SVN_WC__ENTRY_MODIFY_FORCE;
 
-  tmp_entry.copyfrom_url = entry->url;
-  flags |= SVN_WC__ENTRY_MODIFY_COPYFROM_URL;
-  tmp_entry.copyfrom_rev = entry->revision;
-  flags |= SVN_WC__ENTRY_MODIFY_COPYFROM_REV;
-  tmp_entry.copied = TRUE;
-  flags |= SVN_WC__ENTRY_MODIFY_COPIED;
+  if (modify_copyfrom)
+    {
+      tmp_entry.copyfrom_url = entry->url;
+      flags |= SVN_WC__ENTRY_MODIFY_COPYFROM_URL;
+      tmp_entry.copyfrom_rev = entry->revision;
+      flags |= SVN_WC__ENTRY_MODIFY_COPYFROM_REV;
+      tmp_entry.copied = TRUE;
+      flags |= SVN_WC__ENTRY_MODIFY_COPIED;
+    }
 
   /* ### Need to change the "base" into a "revert-base" ? */
 
@@ -2069,7 +2079,7 @@ do_entry_deletion(struct edit_baton *eb,
 
           SVN_ERR(schedule_existing_item_for_re_add(entry, eb, parent_path,
                                                     full_path, their_url,
-                                                    pool));
+                                                    TRUE, pool));
           return SVN_NO_ERROR;
         }
       else if (tree_conflict->reason == svn_wc_conflict_reason_deleted)
@@ -2080,6 +2090,28 @@ do_entry_deletion(struct edit_baton *eb,
            * as the only difference from a normal deletion. */
 
           /* Fall through to the normal "delete" code path. */
+        }
+      else if (tree_conflict->reason == svn_wc_conflict_reason_replaced)
+        {
+          /* The item was locally replaced with something else. We should
+           * keep the existing item schedule-replace, but we also need to
+           * update the BASE rev of the item to the revision we are updating
+           * to. Otherwise, the replace cannot be committed because the item
+           * is considered out-of-date, and it cannot be updated either because
+           * we're here to do just that. */
+
+          /* Run the log in the parent dir, to record the tree conflict.
+           * Do this before schedule_existing_item_for_re_add(), in case
+           * that needs to modify the same entries. */
+          SVN_ERR(svn_wc__write_log(parent_adm_access, *log_number, log_item,
+                                    pool));
+          SVN_ERR(svn_wc__run_log(parent_adm_access, NULL, pool));
+          *log_number = 0;
+
+          SVN_ERR(schedule_existing_item_for_re_add(entry, eb, parent_path,
+                                                    full_path, their_url,
+                                                    FALSE, pool));
+          return SVN_NO_ERROR;
         }
       else
         SVN_ERR_MALFUNCTION();  /* other reasons are not expected here */
@@ -2653,7 +2685,8 @@ open_directory(const char *path,
 
   /* Remember the roots of any locally deleted trees. */
   if (tree_conflict
-      && tree_conflict->reason == svn_wc_conflict_reason_deleted
+      && (tree_conflict->reason == svn_wc_conflict_reason_deleted ||
+          tree_conflict->reason == svn_wc_conflict_reason_replaced)
       && !in_deleted_tree(eb, full_path, TRUE, pool))
     remember_deleted_tree(eb, full_path);
 
@@ -2693,7 +2726,8 @@ open_directory(const char *path,
          that. */
       if (prop_conflicted
           || (tree_conflict
-              && tree_conflict->reason != svn_wc_conflict_reason_deleted))
+              && (tree_conflict->reason != svn_wc_conflict_reason_deleted &&
+                  tree_conflict->reason != svn_wc_conflict_reason_replaced)))
         return SVN_NO_ERROR;
     }
 
@@ -3724,7 +3758,8 @@ open_file(const char *path,
   /* Remember any locally deleted files that are not already within
      a locally delete tree. */
   if (tree_conflict
-      && tree_conflict->reason == svn_wc_conflict_reason_deleted
+      && (tree_conflict->reason == svn_wc_conflict_reason_deleted ||
+          tree_conflict->reason == svn_wc_conflict_reason_replaced)
       && !locally_deleted)
     {
       remember_deleted_tree(eb, full_path);

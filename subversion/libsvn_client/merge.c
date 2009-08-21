@@ -573,26 +573,28 @@ tree_conflict_on_add(merge_cmd_baton_t *merge_b,
                                     conflict_abspath, merge_b->pool,
                                     merge_b->pool));
 
-  /* A merge may send two separate tree-conflicts if the merge
-     replaces the item. This means merge will first set a tree-conflict
-     with an incoming "delete", and then one with an incoming "add". */
+  /* If this change is an add, and there is already a tree conflict raised
+   * by a previous incoming change that attempted to delete the item (whether
+   * in this same merge operation or not), then don't try to add a second tree
+   * conflict. Instead, just change the existing conflict to note that the
+   * incoming change is replacement. */
   if (existing_conflict != NULL
       && existing_conflict->action == svn_wc_conflict_action_delete
       && conflict->action == svn_wc_conflict_action_add)
     {
-      if (existing_conflict->node_kind == conflict->node_kind)
-        {
-          /* Same node kinds, this would be a replace, or, say,
-             an add. We need to remove the existing tree-conflict
-             and add this new one.*/
-          SVN_ERR(svn_wc__del_tree_conflict(merge_b->ctx->wc_ctx,
-                                            conflict_abspath,
-                                            merge_b->pool));
-        }
-      else
-        /* Else, the replace changed the node kind. Let's leave this
-           at the first delete after all. Nothing needs to be changed. */
-        return SVN_NO_ERROR;
+      /* Remove the existing tree-conflict so we can add a new one.*/
+      SVN_ERR(svn_wc__del_tree_conflict(merge_b->ctx->wc_ctx,
+                                        conflict_abspath,
+                                        merge_b->pool));
+
+      /* Preserve the reason which caused the first conflict,
+       * re-label the incoming change as 'replacement', and update
+       * version info for the left version of the conflict. */
+      conflict->reason = existing_conflict->reason;
+      conflict->action = svn_wc_conflict_action_replace;
+      conflict->src_left_version = svn_wc_conflict_version_dup(
+                                     existing_conflict->src_left_version,
+                                     merge_b->pool);
     }
  
   SVN_ERR(svn_wc__add_tree_conflict(conflict, adm_access, merge_b->pool));
@@ -1634,6 +1636,33 @@ merge_file_added(svn_wc_adm_access_t *adm_access,
               }
             else
               {
+                const svn_wc_entry_t *entry;
+                svn_wc_conflict_reason_t reason;
+                const char *abs_mine;
+
+                /* Figure out what state the file which is already present
+                 * is in, and set the conflict reason accordingly. */
+                SVN_ERR(svn_dirent_get_absolute(&abs_mine, mine, subpool));
+                SVN_ERR(svn_wc__get_entry_versioned(&entry,
+                                                    merge_b->ctx->wc_ctx,
+                                                    abs_mine, kind, FALSE,
+                                                    FALSE, subpool, subpool));
+                switch (entry->schedule)
+                  {
+                    case svn_wc_schedule_normal:
+                      reason = svn_wc_conflict_reason_obstructed;
+                      break;
+                    case svn_wc_schedule_add:
+                      reason = svn_wc_conflict_reason_added;
+                      break;
+                    case svn_wc_schedule_delete:
+                      reason = svn_wc_conflict_reason_deleted;
+                      break;
+                    case svn_wc_schedule_replace:
+                      reason = svn_wc_conflict_reason_replaced;
+                      break;
+                  }
+
                 /* The file add the merge wants to carry out is obstructed by
                  * a versioned file, so the file the merge wants to add is a
                  * tree conflict victim. See notes about obstructions in
@@ -1641,8 +1670,7 @@ merge_file_added(svn_wc_adm_access_t *adm_access,
                  */
                 SVN_ERR(tree_conflict_on_add(
                           merge_b, adm_access, mine, svn_node_file,
-                          svn_wc_conflict_action_add,
-                          svn_wc_conflict_reason_obstructed));
+                          svn_wc_conflict_action_add, reason));
                 if (tree_conflicted)
                   *tree_conflicted = TRUE;
               }
