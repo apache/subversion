@@ -15891,7 +15891,7 @@ def merge_replace_causes_tree_conflict(sbox):
   #     svn ps propname otherpropval A/B/E
   #     echo modified > A/D/G/pi
   #     svn ps propname propval A/D/H
-  #     svn merge $URL/branch $URL/A A
+  #     svn merge $URL/A $URL/branch A
   #     svn st
   #     """)
 
