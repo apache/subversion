@@ -584,7 +584,7 @@ doc: doc-misc-docs doc-api doc-javahl
 
 # Generate API documentation for the C libraries.
 ### This could also generate POD for swig-perl, etc.
-doc-api:
+doc-api: mkdir-init
 	( cd $(top_srcdir) && \
 	  sed "s,\(OUTPUT_DIRECTORY *= *\),\1$(abs_builddir)/," \
 	  doc/doxygen.conf | doxygen - )
