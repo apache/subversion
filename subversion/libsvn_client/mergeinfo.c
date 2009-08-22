@@ -981,15 +981,25 @@ filter_log_entry_with_rangelist(void *baton,
   range->inheritable = TRUE;
   APR_ARRAY_PUSH(this_rangelist, svn_merge_range_t *) = range;
 
-  /* Don't consider inheritance, we'll deal with non-inheritable
-     mergeinfo in the log_receiver callback. */
+  /* Don't consider inheritance yet, see if LOG_ENTRY->REVISION is
+     fully or partially represented in BATON->RANGELIST. */
   SVN_ERR(svn_rangelist_intersect(&intersection, fleb->rangelist,
                                   this_rangelist, FALSE, pool));
   if (! (intersection && intersection->nelts))
     return SVN_NO_ERROR;
-
+  
   SVN_ERR_ASSERT(intersection->nelts == 1);
-  return fleb->log_receiver(fleb->rangelist, log_entry, pool);
+
+  /* Ok, we know LOG_ENTRY->REVISION is represented in BATON->RANGELIST,
+     but is it partially represented, i.e. is the corresponding range in
+     BATON->RANGELIST non-inheritable?  Ask for the same intersection as
+     above but consider inheritance this time, if the intersection is empty
+     we know the range in BATON->RANGELIST in non-inheritable. */
+  SVN_ERR(svn_rangelist_intersect(&intersection, fleb->rangelist,
+                                  this_rangelist, TRUE, pool));
+  log_entry->non_inheritable = !intersection->nelts;
+
+  return fleb->log_receiver(fleb->log_receiver_baton, log_entry, pool);
 }
 
 static svn_error_t *

@@ -41,34 +41,16 @@
 
 /*** Code. ***/
 
-/* Implements the svn_log_entry_receiver_t interface.  BATON is a
-   pointer to a rangelist which contains LOG_ENTRY->REV. */
+/* Implements the svn_log_entry_receiver_t interface. */
 static svn_error_t *
 print_log_rev(void *baton,
               svn_log_entry_t *log_entry,
               apr_pool_t *pool)
 {
-  apr_array_header_t *intersecting_rangelist;
-  apr_array_header_t *baton_rangelist = baton;
-  apr_array_header_t *rangelist =
-    apr_array_make(pool, 1, sizeof(svn_merge_range_t *));
-  svn_merge_range_t *range = apr_pcalloc(pool, sizeof(*range));
-
-  /* Create a rangelist representing LOG_ENTRY->REV and see if it itersects
-     with BATON when considering inheritance.  If it does then print the
-     range otherwise print the range but with the non-inheritable decorator
-     '*'. */
-  range->start = log_entry->revision - 1;
-  range->end = log_entry->revision;
-  range->inheritable = TRUE;
-  APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) = range;
-  SVN_ERR(svn_rangelist_intersect(&intersecting_rangelist, rangelist,
-                                  baton_rangelist, TRUE, pool));
-
-  if (intersecting_rangelist->nelts)
-    svn_cmdline_printf(pool, "r%ld\n", log_entry->revision);
-  else
+  if (log_entry->non_inheritable)
     svn_cmdline_printf(pool, "r%ld*\n", log_entry->revision);
+  else
+    svn_cmdline_printf(pool, "r%ld\n", log_entry->revision);
 
   return SVN_NO_ERROR;
 }
