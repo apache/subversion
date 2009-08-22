@@ -778,6 +778,14 @@ typedef struct svn_log_entry_t
    */
   apr_hash_t *changed_paths2;
 
+  /**
+   * Whether @a revision should be interpreted as non-inheritable in the
+   * same sense of @c svn_merge_range_t.
+   *
+   * @since New in 1.7.
+   */
+  svn_boolean_t non_inheritable;
+
   /* NOTE: Add new fields at the end to preserve binary compatibility.
      Also, if you add fields here, you have to update
      svn_log_entry_dup(). */
