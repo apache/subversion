@@ -176,19 +176,24 @@ svn_client__get_wc_mergeinfo(svn_mergeinfo_t *mergeinfo,
                              svn_client_ctx_t *ctx,
                              apr_pool_t *pool)
 {
-  const char *walk_path = "";
+  const char *walk_relpath = "";
   svn_mergeinfo_t wc_mergeinfo;
   svn_boolean_t switched;
   svn_revnum_t base_revision = entry->revision;
+  const char *local_abspath;
+  const char *limit_abspath;
+  apr_pool_t *iterpool;
 
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, wcpath, pool));
   if (limit_path)
-    SVN_ERR(svn_dirent_get_absolute(&limit_path, limit_path, pool));
+    SVN_ERR(svn_dirent_get_absolute(&limit_abspath, limit_path, pool));
+  else
+    limit_abspath = NULL;
 
+  iterpool = svn_pool_create(pool);
   while (TRUE)
     {
-      const char *local_abspath;
-
-      SVN_ERR(svn_dirent_get_absolute(&local_abspath, wcpath, pool));
+      svn_pool_clear(iterpool);
 
       /* Don't look for explicit mergeinfo on WCPATH if we are only
          interested in inherited mergeinfo. */
@@ -205,58 +210,46 @@ svn_client__get_wc_mergeinfo(svn_mergeinfo_t *mergeinfo,
              If we encounter (b), use that inherited mergeinfo as our
              baseline. */
           SVN_ERR(svn_client__parse_mergeinfo(&wc_mergeinfo, ctx->wc_ctx,
-                                              local_abspath, pool, pool));
+                                              local_abspath, pool, iterpool));
         }
 
       /* If WCPATH is switched, don't look any higher for inherited
          mergeinfo. */
       SVN_ERR(svn_wc__path_switched(&switched, ctx->wc_ctx, local_abspath,
-                                    pool));
+                                    iterpool));
       if (switched)
         break;
 
-      /* Subsequent svn_wc_adm_access_t need to be opened with
-         an absolute path so we can walk up and out of the WC
-         if necessary.  If we are using LIMIT_PATH it needs to
-         be absolute too. */
-
-      if (! svn_dirent_is_absolute(wcpath))
-        {
-          SVN_ERR(svn_dirent_get_absolute(&wcpath, wcpath, pool));
-        }
-
       if (wc_mergeinfo == NULL &&
           inherit != svn_mergeinfo_explicit &&
-          !svn_dirent_is_root(wcpath, strlen(wcpath)))
+          !svn_dirent_is_root(local_abspath, strlen(local_abspath)))
         {
-          svn_wc_adm_access_t *adm_access;
           svn_error_t *err;
 
           /* Don't look any higher than the limit path. */
-          if (limit_path && strcmp(limit_path, wcpath) == 0)
+          if (limit_abspath && strcmp(limit_abspath, local_abspath) == 0)
             break;
 
           /* No explicit mergeinfo on this path.  Look higher up the
              directory tree while keeping track of what we've walked. */
-          walk_path = svn_path_join(svn_dirent_basename(wcpath, pool),
-                                    walk_path, pool);
-          wcpath = svn_dirent_dirname(wcpath, pool);
+          walk_relpath = svn_path_join(svn_dirent_basename(local_abspath,
+                                                           iterpool),
+                                       walk_relpath, pool);
+          local_abspath = svn_dirent_dirname(local_abspath, pool);
 
-          err = svn_wc_adm_open3(&adm_access, NULL, wcpath,
-                                 FALSE, 0, NULL, NULL, pool);
-          if (err)
+          err = svn_wc__get_entry_versioned(&entry, ctx->wc_ctx,
+                                            local_abspath,
+                                            svn_node_unknown, FALSE, FALSE,
+                                            pool, iterpool);
+          if (err && err->apr_err == SVN_ERR_ENTRY_NOT_FOUND)
             {
-              if (err->apr_err == SVN_ERR_WC_NOT_DIRECTORY)
-                {
-                  svn_error_clear(err);
-                  err = SVN_NO_ERROR;
-                  *inherited = FALSE;
-                  *mergeinfo = wc_mergeinfo;
-                }
-              return svn_error_return(err);
+              svn_error_clear(err);
+              *inherited = FALSE;
+              *mergeinfo = wc_mergeinfo;
+              return SVN_NO_ERROR;
             }
-
-          SVN_ERR(svn_wc_entry(&entry, wcpath, adm_access, FALSE, pool));
+          else if (err)
+            return svn_error_return(err);
 
           /* Look in WCPATH's parents only if the parents share the same
              working revision. */
@@ -264,14 +257,13 @@ svn_client__get_wc_mergeinfo(svn_mergeinfo_t *mergeinfo,
               || entry->revision < base_revision)
             break;
 
-          if (entry)
-            /* We haven't yet risen above the root of the WC. */
-            continue;
+          /* We haven't yet risen above the root of the WC. */
+          continue;
       }
       break;
     }
 
-  if (svn_path_is_empty(walk_path))
+  if (svn_path_is_empty(walk_relpath))
     {
       /* Mergeinfo is explicit. */
       *inherited = FALSE;
@@ -285,7 +277,7 @@ svn_client__get_wc_mergeinfo(svn_mergeinfo_t *mergeinfo,
           *inherited = (wc_mergeinfo != NULL);
           *mergeinfo = apr_hash_make(pool);
           SVN_ERR(svn_client__adjust_mergeinfo_source_paths(*mergeinfo,
-                                                            walk_path,
+                                                            walk_relpath,
                                                             wc_mergeinfo,
                                                             pool));
         }
@@ -297,7 +289,7 @@ svn_client__get_wc_mergeinfo(svn_mergeinfo_t *mergeinfo,
     }
 
   if (walked_path)
-    *walked_path = walk_path;
+    *walked_path = walk_relpath;
 
   /* Remove non-inheritable mergeinfo and paths mapped to empty ranges
      which may occur if WCPATH's mergeinfo is not explicit. */
@@ -783,7 +775,6 @@ get_mergeinfo(svn_mergeinfo_t *mergeinfo,
     }
   else /* ! svn_path_is_url() */
     {
-      svn_wc_adm_access_t *adm_access;
       const svn_wc_entry_t *entry;
       const char *url;
       svn_boolean_t indirect;
@@ -791,11 +782,9 @@ get_mergeinfo(svn_mergeinfo_t *mergeinfo,
 
       SVN_ERR(svn_dirent_get_absolute(&local_abspath, path_or_url, subpool));
 
-      SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, path_or_url, FALSE,
-                                     0, ctx->cancel_func, ctx->cancel_baton,
-                                     subpool));
-      SVN_ERR(svn_wc__entry_versioned(&entry, path_or_url, adm_access, FALSE,
-                                      subpool));
+      SVN_ERR(svn_wc__get_entry_versioned(&entry, ctx->wc_ctx, local_abspath,
+                                          svn_node_unknown, FALSE, FALSE,
+                                          subpool, subpool));
 
       /* Check server Merge Tracking capability. */
       SVN_ERR(svn_client__entry_location(&url, &rev, path_or_url,
@@ -815,7 +804,6 @@ get_mergeinfo(svn_mergeinfo_t *mergeinfo,
                                                     svn_mergeinfo_inherited,
                                                     NULL, path_or_url,
                                                     ctx, pool));
-      SVN_ERR(svn_wc_adm_close2(adm_access, subpool));
     }
 
   svn_pool_destroy(subpool);
@@ -992,12 +980,25 @@ filter_log_entry_with_rangelist(void *baton,
   range->end = log_entry->revision;
   range->inheritable = TRUE;
   APR_ARRAY_PUSH(this_rangelist, svn_merge_range_t *) = range;
+
+  /* Don't consider inheritance yet, see if LOG_ENTRY->REVISION is
+     fully or partially represented in BATON->RANGELIST. */
   SVN_ERR(svn_rangelist_intersect(&intersection, fleb->rangelist,
-                                  this_rangelist, TRUE, pool));
+                                  this_rangelist, FALSE, pool));
   if (! (intersection && intersection->nelts))
     return SVN_NO_ERROR;
-
+  
   SVN_ERR_ASSERT(intersection->nelts == 1);
+
+  /* Ok, we know LOG_ENTRY->REVISION is represented in BATON->RANGELIST,
+     but is it partially represented, i.e. is the corresponding range in
+     BATON->RANGELIST non-inheritable?  Ask for the same intersection as
+     above but consider inheritance this time, if the intersection is empty
+     we know the range in BATON->RANGELIST in non-inheritable. */
+  SVN_ERR(svn_rangelist_intersect(&intersection, fleb->rangelist,
+                                  this_rangelist, TRUE, pool));
+  log_entry->non_inheritable = !intersection->nelts;
+
   return fleb->log_receiver(fleb->log_receiver_baton, log_entry, pool);
 }
 
@@ -1135,7 +1136,12 @@ svn_client_mergeinfo_log_merged(const char *path_or_url,
                                 apr_pool_t *pool)
 {
   const char *repos_root, *log_target = NULL, *merge_source_url;
-  svn_mergeinfo_t tgt_mergeinfo, source_history, mergeinfo;
+  svn_mergeinfo_t tgt_mergeinfo;
+  svn_mergeinfo_t source_history;
+  svn_mergeinfo_t merged;
+  svn_mergeinfo_t mergeinfo_noninheritable;
+  svn_mergeinfo_t tgt_inheritable_mergeinfo;
+  svn_mergeinfo_t tgt_noninheritable_mergeinfo;
   apr_array_header_t *rangelist;
   svn_opt_revision_t *real_src_peg_revision;
   apr_hash_index_t *hi;
@@ -1163,8 +1169,45 @@ svn_client_mergeinfo_log_merged(const char *path_or_url,
                                                SVN_INVALID_REVNUM,
                                                SVN_INVALID_REVNUM,
                                                NULL, ctx, pool));
-  SVN_ERR(svn_mergeinfo_intersect2(&mergeinfo, tgt_mergeinfo,
+
+  /* svn_client__get_history_as_mergeinfo() will give us mergeinfo with all
+     inheritable ranges, since history has no concept of non-inheritability.
+     TGT_MERGEINFO might have non-inheritable ranges however, indicating
+     that a range is only partially merged.  We need to keep track of both! */
+
+  /* Separate TGT_MERGEINFO into its inheritable and non-inheritable
+     parts. */
+  SVN_ERR(svn_mergeinfo_inheritable2(&tgt_inheritable_mergeinfo,
+                                     tgt_mergeinfo, NULL,
+                                     SVN_INVALID_REVNUM,
+                                     SVN_INVALID_REVNUM,
+                                     TRUE, pool, pool));
+  SVN_ERR(svn_mergeinfo_inheritable2(&tgt_noninheritable_mergeinfo,
+                                     tgt_mergeinfo, NULL,
+                                     SVN_INVALID_REVNUM,
+                                     SVN_INVALID_REVNUM,
+                                     FALSE, pool, pool));
+
+  /* Find the intersection of the non-inheritable part of TGT_MERGEINFO
+     and SOURCE_HISTORY.  svn_mergeinfo_intersect2() won't consider
+     non-inheritable and inheritable ranges intersecting unless we ignore
+     inheritance, but in doing so the the resulting intersection has
+     all inheritable ranges.  To get around this we set the inheritance
+     on the result to all non-inheritable. */
+  SVN_ERR(svn_mergeinfo_intersect2(&mergeinfo_noninheritable,
+                                   tgt_noninheritable_mergeinfo,
                                    source_history, FALSE, pool, pool));
+  svn_mergeinfo__set_inheritance(mergeinfo_noninheritable, FALSE, pool);
+
+  /* Find the intersection of the inheritable part of TGT_MERGEINFO
+     and SOURCE_HISTORY. */
+  SVN_ERR(svn_mergeinfo_intersect2(&merged, tgt_inheritable_mergeinfo,
+                                   source_history, FALSE, pool, pool));
+
+  /* Merge the inheritable and non-inheritable intersections back together.
+     This results in mergeinfo that describes both revisions that are fully
+     merged as well as those that are only partially merged to PATH_OR_URL. */
+  SVN_ERR(svn_mergeinfo_merge(merged, mergeinfo_noninheritable, pool));
 
   /* Step 3: Now, we iterate over the eligible paths/rangelists to
      find the youngest revision (and its associated path).  Because
@@ -1175,7 +1218,7 @@ svn_client_mergeinfo_log_merged(const char *path_or_url,
      we can filter out no-op merge revisions.  While here, we'll
      collapse our rangelists into a single one.  */
   rangelist = apr_array_make(pool, 64, sizeof(svn_merge_range_t *));
-  for (hi = apr_hash_first(pool, mergeinfo); hi; hi = apr_hash_next(hi))
+  for (hi = apr_hash_first(pool, merged); hi; hi = apr_hash_next(hi))
     {
       const char *key = svn_apr_hash_index_key(hi);
       apr_array_header_t *list = svn_apr_hash_index_val(hi);
@@ -1260,7 +1303,12 @@ svn_client_mergeinfo_log_eligible(const char *path_or_url,
                                   svn_client_ctx_t *ctx,
                                   apr_pool_t *pool)
 {
-  svn_mergeinfo_t mergeinfo, history, source_history, available;
+  svn_mergeinfo_t mergeinfo;
+  svn_mergeinfo_t mergeinfo_noninheritable;
+  svn_mergeinfo_t history;
+  svn_mergeinfo_t source_history;
+  svn_mergeinfo_t available;
+  svn_mergeinfo_t available_noninheritable;
   apr_hash_index_t *hi;
   svn_ra_session_t *ra_session;
   svn_opt_revision_t *real_src_peg_revision;
@@ -1303,12 +1351,39 @@ svn_client_mergeinfo_log_eligible(const char *path_or_url,
                                                real_src_peg_revision,
                                                SVN_INVALID_REVNUM,
                                                SVN_INVALID_REVNUM,
-                                               ra_session, ctx, pool));
+                                               ra_session, ctx, sesspool));
 
-  /* Now, we want to remove from the possible mergeinfo
-     (SOURCE_HISTORY) the merges already present in our PATH_OR_URL. */
+/* svn_client__get_history_as_mergeinfo() will give us mergeinfo with all
+   inheritable ranges, since history has no concept of non-inheritability.
+   MERGEINFO might have non-inheritable ranges however, indicating
+   that a range is only partially merged.  We need to keep track of both! */
+
+  /* Get the non-inheritable part of MERGEINFO. */
+  SVN_ERR(svn_mergeinfo_inheritable2(&mergeinfo_noninheritable,
+                                     mergeinfo, NULL,
+                                     SVN_INVALID_REVNUM,
+                                     SVN_INVALID_REVNUM,
+                                     FALSE, pool, sesspool));
+
+  /* Find the intersection of the non-inheritable part of MERGEINFO
+     and SOURCE_HISTORY.  svn_mergeinfo_intersect2() won't consider
+     non-inheritable and inheritable ranges intersecting unless we ignore
+     inheritance, but in doing so the the resulting intersection has
+     all inheritable ranges.  To get around this we set the inheritance on
+     the result to all non-inheritable, leaving us with what has been
+     partially merged to PATH_OR_URL*/
+  SVN_ERR(svn_mergeinfo_intersect2(&available_noninheritable,
+                                   mergeinfo_noninheritable,
+                                   source_history,
+                                   FALSE, pool, sesspool));
+  svn_mergeinfo__set_inheritance(available_noninheritable, FALSE, pool);
+
+  /* Find any part of SOURCE_HISTORY which has not been merged *at all*
+     to PATH_OR_URL and then merge in the parts which are partially
+     merged. */
   SVN_ERR(svn_mergeinfo_remove2(&available, mergeinfo, source_history,
                                 FALSE, pool, sesspool));
+  SVN_ERR(svn_mergeinfo_merge(available, available_noninheritable, pool));
 
   svn_pool_destroy(sesspool);
 

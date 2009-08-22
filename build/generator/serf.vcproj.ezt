@@ -15,6 +15,7 @@
             OutputDirectory="Debug"
             IntermediateDirectory="Debug"
             ConfigurationType="0"
+            ManagedExtensions="1"
             UseOfMFC="0"
             ATLMinimizesCRunTimeLibraryUsage="FALSE">
             <Tool
@@ -29,6 +30,7 @@
             OutputDirectory="Release"
             IntermediateDirectory="Release"
             ConfigurationType="0"
+            ManagedExtensions="1"
             UseOfMFC="0"
             ATLMinimizesCRunTimeLibraryUsage="FALSE">
             <Tool

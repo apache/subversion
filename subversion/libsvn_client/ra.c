@@ -323,11 +323,24 @@ svn_client__open_ra_session_internal(svn_ra_session_t **ra_session,
   cb->commit_items = commit_items;
   cb->ctx = ctx;
 
-  if (base_access)
+  if (base_dir)
     {
+      const char *base_dir_abspath;
       const svn_wc_entry_t *entry;
+      svn_error_t *err;
 
-      SVN_ERR(svn_wc_entry(&entry, base_dir, base_access, FALSE, pool));
+      SVN_ERR(svn_dirent_get_absolute(&base_dir_abspath, base_dir, pool));
+
+      err = svn_wc__get_entry_versioned(&entry, ctx->wc_ctx, base_dir_abspath,
+                                        svn_node_unknown, FALSE, FALSE,
+                                        pool, pool);
+      if (err && err->apr_err == SVN_ERR_ENTRY_NOT_FOUND)
+        {
+          svn_error_clear(err);
+          entry = NULL;
+        }
+      else if (err)
+        return svn_error_return(err);
 
       if (entry && entry->uuid)
         uuid = entry->uuid;
@@ -415,7 +428,8 @@ svn_client__ra_session_from_path(svn_ra_session_t **ra_session_p,
   svn_revnum_t rev;
   const char *ignored_url;
 
-  SVN_ERR(svn_client_url_from_path(&initial_url, path_or_url, pool));
+  SVN_ERR(svn_client_url_from_path2(&initial_url, path_or_url, ctx, pool,
+                                    pool));
   if (! initial_url)
     return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
                              _("'%s' has no URL"), path_or_url);
@@ -600,13 +614,11 @@ svn_client__repos_locations(const char **start_url,
      the copyfrom information. */
   if (! svn_path_is_url(path))
     {
-      svn_wc_adm_access_t *adm_access;
       const svn_wc_entry_t *entry;
-      SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, path,
-                                     FALSE, 0, ctx->cancel_func,
-                                     ctx->cancel_baton, pool));
-      SVN_ERR(svn_wc_entry(&entry, path, adm_access, FALSE, pool));
-      SVN_ERR(svn_wc_adm_close2(adm_access, pool));
+
+      SVN_ERR(svn_wc__get_entry_versioned(&entry, ctx->wc_ctx, local_abspath,
+                                          svn_node_unknown, FALSE, FALSE,
+                                          pool, pool));
       if (entry->copyfrom_url && revision->kind == svn_opt_revision_working)
         {
           url = entry->copyfrom_url;

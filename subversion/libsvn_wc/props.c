@@ -474,9 +474,9 @@ immediate_install_props(const char *path,
 
 
 svn_error_t *
-svn_wc__working_props_committed(const char *path,
-                                svn_wc_adm_access_t *adm_access,
-                                apr_pool_t *pool)
+svn_wc__working_props_committed(svn_wc__db_t *db,
+                                const char *local_abspath,
+                                apr_pool_t *scratch_pool)
 {
   const char *working;
   const char *base;
@@ -486,16 +486,18 @@ svn_wc__working_props_committed(const char *path,
   /* The path is ensured not an excluded path. */
   /* TODO(#2843) It seems that there is no need to
      reveal hidden entry here? */
-  SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access, FALSE, pool));
+  SVN_ERR(svn_wc__get_entry(&entry, db, local_abspath,
+                            FALSE, svn_node_unknown, FALSE,
+                            scratch_pool, scratch_pool));
 
-  SVN_ERR(svn_wc__prop_path(&working, path, entry->kind,
-                            svn_wc__props_working, pool));
-  SVN_ERR(svn_wc__prop_path(&base, path, entry->kind,
-                            svn_wc__props_base, pool));
+  SVN_ERR(svn_wc__prop_path(&working, local_abspath, entry->kind,
+                            svn_wc__props_working, scratch_pool));
+  SVN_ERR(svn_wc__prop_path(&base, local_abspath, entry->kind,
+                            svn_wc__props_base, scratch_pool));
 
   /* svn_io_file_rename() retains a read-only bit, so there's no
      need to explicitly set it. */
-  return svn_io_file_rename(working, base, pool);
+  return svn_io_file_rename(working, base, scratch_pool);
 }
 
 
@@ -668,13 +670,15 @@ static svn_error_t *
 combine_mergeinfo_props(const svn_string_t **output,
                         const svn_string_t *prop_val1,
                         const svn_string_t *prop_val2,
-                        apr_pool_t *pool)
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool)
 {
   svn_mergeinfo_t mergeinfo1, mergeinfo2;
-  SVN_ERR(svn_mergeinfo_parse(&mergeinfo1, prop_val1->data, pool));
-  SVN_ERR(svn_mergeinfo_parse(&mergeinfo2, prop_val2->data, pool));
-  SVN_ERR(svn_mergeinfo_merge(mergeinfo1, mergeinfo2, pool));
-  return svn_mergeinfo_to_string((svn_string_t **)output, mergeinfo1, pool);
+  SVN_ERR(svn_mergeinfo_parse(&mergeinfo1, prop_val1->data, scratch_pool));
+  SVN_ERR(svn_mergeinfo_parse(&mergeinfo2, prop_val2->data, scratch_pool));
+  SVN_ERR(svn_mergeinfo_merge(mergeinfo1, mergeinfo2, scratch_pool));
+  return svn_mergeinfo_to_string((svn_string_t **)output, mergeinfo1,
+                                 result_pool);
 }
 
 /* Perform a 3-way merge operation on mergeinfo.  FROM_PROP_VAL is
@@ -1105,10 +1109,13 @@ apply_single_prop_add(svn_wc_notify_state_t *state,
            We only merge mergeinfo;  other props conflict */
           if (strcmp(propname, SVN_PROP_MERGEINFO) == 0)
             {
-              SVN_ERR(combine_mergeinfo_props(&new_val, working_val,
-                                              new_val, scratch_pool));
+              const svn_string_t *merged_val;
+
+              SVN_ERR(combine_mergeinfo_props(&merged_val, working_val,
+                                              new_val, result_pool,
+                                              scratch_pool));
               apr_hash_set(working_props, propname,
-                           APR_HASH_KEY_STRING, new_val);
+                           APR_HASH_KEY_STRING, merged_val);
               set_prop_merge_state(state, svn_wc_notify_state_merged);
             }
           else

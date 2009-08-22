@@ -948,6 +948,13 @@ mark_tree(svn_wc_adm_access_t *adm_access,
         this_dir_flags |= SVN_WC__ENTRY_MODIFY_KEEP_LOCAL;
       }
   }
+  else
+    {
+      SVN_ERR(svn_wc__db_temp_forget_directory(
+                   db, svn_wc__adm_access_abspath(adm_access), pool));
+
+      return SVN_NO_ERROR;
+    }
 
   /* Modify this_dir entry if requested. */
   if (this_dir_flags)
@@ -1098,10 +1105,6 @@ erase_from_wc(const char *path,
           SVN_ERR(erase_from_wc(down_path, adm_access, entry->kind,
                                 cancel_func, cancel_baton, iterpool));
         }
-
-      /* Make sure we close the baton, which is needed to fix wc-ng problems
-         on windows. */
-      SVN_ERR(svn_wc_adm_close2(dir_access, pool));
 
       /* Now handle any remaining unversioned items */
       SVN_ERR(svn_io_get_dirents2(&unver, path, pool));
@@ -1309,14 +1312,19 @@ svn_wc_delete3(const char *path,
                    svn_wc_create_notify(path, svn_wc_notify_delete,
                                         pool), pool);
 
-  if (was_schedule == svn_wc_schedule_add && dir_access != adm_access)
+  if (was_schedule == svn_wc_schedule_add && entry &&
+      svn_path_is_empty(entry->name))
     {
-      /* ### We can't be sure that we are the owner of the access baton
-         here, but the baton has to be closed to fix the "update after
-         add/rm of deleted state" test on Windows. In most cases the
-         access baton is opened via svn_wc_adm_probe_try3()
-         at the top of this function, which makes us the owner. */
-      SVN_ERR(svn_wc_adm_close2(dir_access, pool));
+      /* We have to release the WC-DB handles, to allow removing
+         the directory on windows. 
+         
+         A better solution would probably be to call svn_wc__adm_destroy()
+         in the right place, but we can't do that without breaking the API. */
+
+      SVN_ERR(svn_wc__db_temp_forget_directory(
+                               svn_wc__adm_get_db(dir_access),
+                               svn_wc__adm_access_abspath(dir_access),
+                               pool));
     }
 
   /* By the time we get here, anything that was scheduled to be added has
@@ -1334,24 +1342,42 @@ svn_wc_delete3(const char *path,
   return SVN_NO_ERROR;
 }
 
+
 svn_error_t *
-svn_wc_get_ancestry(char **url,
-                    svn_revnum_t *rev,
-                    const char *path,
-                    svn_wc_adm_access_t *adm_access,
-                    apr_pool_t *pool)
+svn_wc__internal_get_ancestry(const char **url,
+                              svn_revnum_t *rev,
+                              svn_wc__db_t *db,
+                              const char *local_abspath,
+                              apr_pool_t *result_pool,
+                              apr_pool_t *scratch_pool)
 {
   const svn_wc_entry_t *ent;
 
-  SVN_ERR(svn_wc__entry_versioned(&ent, path, adm_access, FALSE, pool));
+  SVN_ERR(svn_wc__get_entry(&ent, db, local_abspath, FALSE,
+                            svn_node_unknown, FALSE,
+                            scratch_pool, scratch_pool));
 
   if (url)
-    *url = apr_pstrdup(pool, ent->url);
+    *url = apr_pstrdup(result_pool, ent->url);
 
   if (rev)
     *rev = ent->revision;
 
   return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc_get_ancestry2(const char **url,
+                     svn_revnum_t *rev,
+                     svn_wc_context_t *wc_ctx,
+                     const char *local_abspath,
+                     apr_pool_t *result_pool,
+                     apr_pool_t *scratch_pool)
+{
+  return svn_error_return(
+    svn_wc__internal_get_ancestry(url, rev, wc_ctx->db, local_abspath,
+                                  result_pool, scratch_pool));
 }
 
 
@@ -3006,6 +3032,21 @@ resolve_found_entry_callback(const char *path,
         {
           svn_error_t *err;
 
+          /* For now, we only clear tree conflict information and resolve
+           * to the working state. There is no way to pick theirs-full
+           * or mine-full, etc. Throw an error if the user expects us
+           * to be smarter than we really are. */
+          if (baton->conflict_choice != svn_wc_conflict_choose_merged)
+            {
+              return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE,
+                                       NULL,
+                                       _("Tree conflicts can only be resolved "
+                                         "to 'working' state; "
+                                         "'%s' not resolved"),
+                                       svn_dirent_local_style(local_abspath,
+                                                              pool));
+            }
+
           SVN_ERR(svn_wc__db_op_set_tree_conflict(baton->db, local_abspath,
                                                   NULL, pool));
 
@@ -3140,6 +3181,8 @@ svn_wc_add_lock2(svn_wc_context_t *wc_ctx,
   svn_error_t *err;
   const svn_string_t *needs_lock;
 
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
   db_lock.token = lock->token;
   db_lock.owner = lock->owner;
   db_lock.comment = lock->comment;
@@ -3175,6 +3218,8 @@ svn_wc_remove_lock2(svn_wc_context_t *wc_ctx,
 {
   svn_error_t *err;
   const svn_string_t *needs_lock;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
   err = svn_wc__db_lock_remove(wc_ctx->db, local_abspath, scratch_pool);
   if (err)

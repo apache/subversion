@@ -6544,9 +6544,9 @@ def update_loses_mergeinfo(sbox):
   "update does not merge mergeinfo"
 
   """
-  When a working copy receives a fresh svn:mergeinfo property due to update,
-  and working copy has some local mergeinfo(yet to be added), local mergeinfo
-  is left unchanged.
+  When a working copy path receives a fresh svn:mergeinfo property due to
+  an update, and the path has local mergeinfo changes, then the local
+  mergeinfo should be merged with the incoming mergeinfo.
   """
 
   sbox.build()
@@ -15892,7 +15892,7 @@ def merge_replace_causes_tree_conflict(sbox):
   #     svn ps propname otherpropval A/B/E
   #     echo modified > A/D/G/pi
   #     svn ps propname propval A/D/H
-  #     svn merge $URL/branch $URL/A A
+  #     svn merge $URL/A $URL/branch A
   #     svn st
   #     """)
 
@@ -16124,7 +16124,7 @@ def merge_replace_causes_tree_conflict(sbox):
   actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'ps',
     'propname', 'propval', A_D_H)
 
-  # svn merge $URL/branch $URL/A A
+  # svn merge $URL/A $URL/branch A
   expected_stdout = verify.UnorderedOutput([
     "--- Merging differences between repository URLs into '" + A + "':\n",
     '   C ' + A_B_E + '\n',
@@ -16136,7 +16136,7 @@ def merge_replace_causes_tree_conflict(sbox):
   ])
 
   actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'merge',
-    url_branch, url_A, A)
+    url_A, url_branch, A)
 
   # svn st
   expected_status.tweak('A', status=' M')
@@ -16361,7 +16361,7 @@ test_list = [ None,
                          server_has_mergeinfo),
               SkipUnless(multiple_reintegrates_from_the_same_branch,
                          server_has_mergeinfo),
-              merge_replace_causes_tree_conflict,
+              XFail(merge_replace_causes_tree_conflict),
               SkipUnless(handle_gaps_in_implicit_mergeinfo,
                          server_has_mergeinfo),
              ]

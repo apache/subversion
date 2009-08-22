@@ -108,6 +108,7 @@ if sys.platform == 'win32':
   file_scheme_prefix = 'file:///'
   _exe = '.exe'
   _bat = '.bat'
+  os.environ['SVN_DBG_STACKTRACES_TO_STDERR'] = 'y'
 else:
   windows = False
   file_scheme_prefix = 'file://'
@@ -468,12 +469,15 @@ def wait_on_pipe(waiter, binary_mode, stdin=None):
 
     if stdout_lines is not None:
       sys.stdout.write("".join(stdout_lines))
+      sys.stdout.flush()
     if stderr_lines is not None:
       sys.stderr.write("".join(stderr_lines))
+      sys.stderr.flush()
     if verbose_mode:
       # show the whole path to make it easier to start a debugger
       sys.stderr.write("CMD: %s terminated by signal %d\n"
                        % (command_string, exit_signal))
+      sys.stderr.flush()
     raise SVNProcessTerminatedBySignal
   else:
     if exit_code and verbose_mode:

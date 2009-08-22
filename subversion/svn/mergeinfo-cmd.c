@@ -41,14 +41,17 @@
 
 /*** Code. ***/
 
-/* Implements the svn_log_entry_receiver_t interface.  BATON is a
-   pointer to a mergeinfo rangelist array. */
+/* Implements the svn_log_entry_receiver_t interface. */
 static svn_error_t *
 print_log_rev(void *baton,
               svn_log_entry_t *log_entry,
               apr_pool_t *pool)
 {
-  svn_cmdline_printf(pool, "r%ld\n", log_entry->revision);
+  if (log_entry->non_inheritable)
+    svn_cmdline_printf(pool, "r%ld*\n", log_entry->revision);
+  else
+    svn_cmdline_printf(pool, "r%ld\n", log_entry->revision);
+
   return SVN_NO_ERROR;
 }
 

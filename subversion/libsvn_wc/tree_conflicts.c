@@ -102,6 +102,7 @@ static const enum_mapping_t action_map[] =
   { "edited",  svn_wc_conflict_action_edit },
   { "deleted", svn_wc_conflict_action_delete },
   { "added",   svn_wc_conflict_action_add },
+  { "replace", svn_wc_conflict_action_replace },
   { NULL,      0 }
 };
 
@@ -113,6 +114,7 @@ static const enum_mapping_t reason_map[] =
   { "missing",    svn_wc_conflict_reason_missing },
   { "obstructed", svn_wc_conflict_reason_obstructed },
   { "added",      svn_wc_conflict_reason_added },
+  { "replaced",   svn_wc_conflict_reason_replaced },
   { NULL,         0 }
 };
 
@@ -471,15 +473,14 @@ svn_wc__write_tree_conflicts(const char **conflict_data,
 
 
 svn_error_t *
-svn_wc__del_tree_conflict(const char *victim_path,
-                          svn_wc_adm_access_t *adm_access,
-                          apr_pool_t *pool)
+svn_wc__del_tree_conflict(svn_wc_context_t *wc_ctx,
+                          const char *victim_abspath,
+                          apr_pool_t *scratch_pool)
 {
-  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
-  const char *local_abspath;
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(victim_abspath));
 
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, victim_path, pool));
-  SVN_ERR(svn_wc__db_op_set_tree_conflict(db, local_abspath, NULL, pool));
+  SVN_ERR(svn_wc__db_op_set_tree_conflict(wc_ctx->db, victim_abspath,
+                                          NULL, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -499,8 +500,10 @@ svn_wc__add_tree_conflict(const svn_wc_conflict_description_t *conflict,
   SVN_ERR(svn_wc__db_op_get_tree_conflict(&existing_conflict, db,
                                           conflict_abspath, pool, pool));
   if (existing_conflict != NULL)
-    return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
-                         _("Attempt to add tree conflict that already exists"));
+    return svn_error_createf(SVN_ERR_WC_CORRUPT, NULL,
+                             _("Attempt to add tree conflict that already "
+                               "exists at '%s'"),
+                             svn_dirent_local_style(conflict_abspath, pool));
 
   SVN_ERR(svn_wc__db_op_set_tree_conflict(db, conflict_abspath, conflict,
                                           pool));

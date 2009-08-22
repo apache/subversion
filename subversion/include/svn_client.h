@@ -4768,14 +4768,32 @@ svn_client_patch(const char *patch_path,
 
 /* Converting paths to URLs. */
 
-/** Set @a *url to the URL for @a path_or_url.
+/** Set @a *url to the URL for @a path_or_url allocated in result_pool.
  *
  * If @a path_or_url is already a URL, set @a *url to @a path_or_url.
  *
  * If @a path_or_url is a versioned item, set @a *url to @a
  * path_or_url's entry URL.  If @a path_or_url is unversioned (has
  * no entry), set @a *url to NULL.
+ *
+ * Use @a ctx->wc_ctx to retrieve the information. Use 
+ ** @a scratch_pool for temporary allocations.
+ *
+ * @since New in 1.7.
  */
+svn_error_t *
+svn_client_url_from_path2(const char **url,
+                          const char *path_or_url,
+                          svn_client_ctx_t *ctx,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool);
+
+/** Simlar to svn_client_url_from_path2(), but without a context argument.
+ *
+ * @since New in 1.5.
+ * @deprecated Provided for backward compatilibity with the 1.6 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_url_from_path(const char **url,
                          const char *path_or_url,

@@ -363,11 +363,10 @@ install_committed_file(svn_boolean_t *overwrote_working,
   {
     const char *tmp = (kind == svn_node_file) ? tmp_text_base : filepath;
 
-    SVN_ERR(svn_wc_translated_file2(&tmp_wfile,
-                                    tmp,
-                                    filepath, adm_access,
-                                    SVN_WC_TRANSLATE_FROM_NF,
-                                    pool));
+    SVN_ERR(svn_wc__internal_translated_file(&tmp_wfile, tmp, db,
+                                             file_abspath,
+                                             SVN_WC_TRANSLATE_FROM_NF,
+                                             pool, pool));
 
     /* If the translation is a no-op, the text base and the working copy
      * file contain the same content, because we use the same props here
@@ -1117,8 +1116,7 @@ log_do_committed(struct log_runner *loggy,
             }
         }
 
-      SVN_ERR(svn_wc__working_props_committed(full_path, loggy->adm_access,
-                                              pool));
+      SVN_ERR(svn_wc__working_props_committed(loggy->db, local_abspath, pool));
   }
 
   if (entry->kind == svn_node_file)
@@ -1728,21 +1726,19 @@ loggy_move_copy_internal(svn_stringbuf_t **log_accum,
  * to which ADM_ACCESS belongs, or SVN_WC_ENTRY_THIS_DIR if PATH is that
  * directory. PATH must not be outside that directory. */
 static svn_error_t *
-loggy_path(const char **loggy_path,
+loggy_path(const char **logy_path,
            const char *path,
            svn_wc_adm_access_t *adm_access,
            apr_pool_t *pool)
 {
-  const char *adm_abspath;
   const char *abspath;
-  const char *adm_path = svn_wc_adm_access_path(adm_access);
+  const char *adm_abspath = svn_wc__adm_access_abspath(adm_access);
 
-  SVN_ERR(svn_dirent_get_absolute(&adm_abspath, adm_path, pool));
   SVN_ERR(svn_dirent_get_absolute(&abspath, path, pool));
-  *loggy_path = svn_dirent_is_child(adm_abspath, abspath, NULL);
+  *logy_path = svn_dirent_is_child(adm_abspath, abspath, NULL);
 
-  if (! (*loggy_path) && strcmp(abspath, adm_abspath) == 0)
-    *loggy_path = SVN_WC_ENTRY_THIS_DIR;
+  if (! (*logy_path) && strcmp(abspath, adm_abspath) == 0)
+    *logy_path = SVN_WC_ENTRY_THIS_DIR;
 
   return SVN_NO_ERROR;
 }
@@ -2266,6 +2262,23 @@ svn_wc__write_log(svn_wc_adm_access_t *adm_access,
                                   logfile_name, pool);
 }
 
+
+svn_error_t *
+svn_wc__logfile_present(svn_boolean_t *present,
+                        const char *local_abspath,
+                        apr_pool_t *scratch_pool)
+{
+  const char *log_path = svn_wc__adm_child(local_abspath, SVN_WC__ADM_LOG,
+                                           scratch_pool);
+  svn_node_kind_t kind;
+
+  /* Is the (first) log file present?  */
+  SVN_ERR(svn_io_check_path(log_path, &kind, scratch_pool));
+  *present = (kind == svn_node_file);
+
+  return SVN_NO_ERROR;
+}
+
 
 /*** Recursively do log things. ***/
 static svn_error_t *
@@ -2288,7 +2301,6 @@ run_existing_logs(svn_wc_adm_access_t *adm_access,
   apr_hash_t *entries = NULL;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   svn_boolean_t killme, kill_adm_only;
-  svn_boolean_t cleanup;
 
   /* Recurse on versioned elements first, oddly enough. */
   SVN_ERR(svn_wc_entries_read(&entries, adm_access, FALSE, scratch_pool));
@@ -2343,12 +2355,15 @@ run_existing_logs(svn_wc_adm_access_t *adm_access,
     }
   else
     {
+      svn_boolean_t present;
+
       /* In an attempt to maintain consistency between the decisions made in
          this function, and those made in the access baton lock-removal code,
          we use the same test as the lock-removal code. */
-      SVN_ERR(svn_wc__adm_is_cleanup_required(&cleanup, adm_access,
-                                              scratch_pool));
-      if (cleanup)
+      SVN_ERR(svn_wc__logfile_present(&present,
+                                      svn_wc__adm_access_abspath(adm_access),
+                                      scratch_pool));
+      if (present)
         {
           /* ### rerun the log. why? dunno. missing commentary... */
           SVN_ERR(run_log(adm_access, TRUE, scratch_pool));
@@ -2388,37 +2403,33 @@ cleanup_internal(svn_wc__db_t *db,
   return svn_wc_adm_close2(adm_access, scratch_pool);
 }
 
-
 svn_error_t *
-svn_wc_cleanup2(const char *path,
-                const char *diff3_cmd,  /* ### OBSOLETE  */
+svn_wc_cleanup3(svn_wc_context_t *wc_ctx,
+                const char *local_abspath,
                 svn_cancel_func_t cancel_func,
                 void *cancel_baton,
-                apr_pool_t *scratch_pool)
+                apr_pool_t * scratch_pool)
 {
-  svn_wc__db_t *db;
-  const char *local_abspath;
   int wc_format_version;
 
-  SVN_ERR(svn_wc__db_open(&db, svn_wc__db_openmode_readwrite,
-                          NULL /* ### config */, scratch_pool, scratch_pool));
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, scratch_pool));
-
-  SVN_ERR(svn_wc__internal_check_wc(&wc_format_version, db, local_abspath,
-                                    scratch_pool));
+  SVN_ERR(svn_wc__internal_check_wc(&wc_format_version, wc_ctx->db, 
+                                    local_abspath, scratch_pool));
 
   /* a "version" of 0 means a non-wc directory */
   if (wc_format_version == 0)
     return svn_error_createf(SVN_ERR_WC_NOT_DIRECTORY, NULL,
                              _("'%s' is not a working copy directory"),
-                             svn_dirent_local_style(path, scratch_pool));
+                             svn_dirent_local_style(local_abspath, 
+                                                    scratch_pool));
 
   if (wc_format_version < SVN_WC__VERSION)
     return svn_error_create(SVN_ERR_WC_UNSUPPORTED_FORMAT, NULL,
                             _("Log format too old, please use "
                               "Subversion 1.6 or earlier"));
 
-  return svn_error_return(cleanup_internal(db, path, cancel_func, cancel_baton,
+  return svn_error_return(cleanup_internal(wc_ctx->db, local_abspath, 
+                                           cancel_func, cancel_baton, 
                                            scratch_pool));
 }

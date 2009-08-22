@@ -645,7 +645,6 @@ svn_wc_ensure_adm3(const char *path,
 {
   svn_wc__db_t *db;
   const char *local_abspath;
-  svn_wc_adm_access_t *adm_access;
   const svn_wc_entry_t *entry;
   int format;
 
@@ -665,10 +664,8 @@ svn_wc_ensure_adm3(const char *path,
     return init_adm(path, uuid, url, repos, revision, depth, pool);
 
   /* Now, get the existing url and repos for PATH. */
-  SVN_ERR(svn_wc_adm_open3(&adm_access, NULL, path, FALSE, 0,
-                           NULL, NULL, pool));
-  SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access, FALSE, pool));
-  SVN_ERR(svn_wc_adm_close2(adm_access, pool));
+  SVN_ERR(svn_wc__get_entry(&entry, db, local_abspath, FALSE, svn_node_unknown,
+                            FALSE, pool, pool));
 
   /* When the directory exists and is scheduled for deletion do not
    * check the revision or the URL.  The revision can be any
@@ -710,7 +707,8 @@ svn_error_t *
 svn_wc__adm_destroy(svn_wc_adm_access_t *adm_access,
                     apr_pool_t *scratch_pool)
 {
-  const char *path;
+  const char *path, *local_abspath;
+  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
 
   SVN_ERR(svn_wc__adm_write_check(adm_access, scratch_pool));
 
@@ -718,7 +716,10 @@ svn_wc__adm_destroy(svn_wc_adm_access_t *adm_access,
      directory, which also removes the lock file */
   path = svn_wc__adm_child(svn_wc_adm_access_path(adm_access), NULL,
                            scratch_pool);
+  local_abspath = svn_wc__adm_access_abspath(adm_access);
+
   SVN_ERR(svn_wc_adm_close2(adm_access, scratch_pool));
+  SVN_ERR(svn_wc__db_temp_forget_directory(db, local_abspath, scratch_pool));
 
   SVN_ERR(svn_io_remove_dir2(path, FALSE, NULL, NULL, scratch_pool));
 

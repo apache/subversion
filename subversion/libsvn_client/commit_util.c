@@ -1072,11 +1072,14 @@ harvest_copy_committables(void *baton, void *item, apr_pool_t *pool)
   const svn_wc_entry_t *entry;
   svn_client__copy_pair_t *pair =
     *(svn_client__copy_pair_t **)item;
+  const char *src_abspath;
   svn_wc_adm_access_t *dir_access;
 
   /* Read the entry for this SRC. */
-  SVN_ERR(svn_wc__entry_versioned(&entry, pair->src, btn->adm_access, FALSE,
-                                  pool));
+  SVN_ERR(svn_dirent_get_absolute(&src_abspath, pair->src, pool));
+  SVN_ERR(svn_wc__get_entry_versioned(&entry, btn->ctx->wc_ctx, src_abspath,
+                                      svn_node_unknown, FALSE, FALSE,
+                                      pool, pool));
 
   /* Get the right access baton for this SRC. */
   if (entry->kind == svn_node_dir)

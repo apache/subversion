@@ -437,16 +437,6 @@ svn_wc__internal_versioned_file_modcheck(svn_boolean_t *modified_p,
                                          svn_boolean_t compare_textbases,
                                          apr_pool_t *scratch_pool);
 
-
-/* A convenience function for creating a new-style conflict description from
-   an old one.
-   ### This should probably disappear once all the old-style conflict
-       descriptions are gone. */
-svn_wc_conflict_description2_t *
-svn_wc__conflict_desc2_from_conflict_desc(const svn_wc_conflict_description_t *
-                                                                     conflict,
-                                          apr_pool_t *result_pool);
-
 /* Internal version of svn_wc_transmit_text_deltas3(). */
 svn_error_t *
 svn_wc__internal_transmit_text_deltas(const char **tempfile,
@@ -467,6 +457,14 @@ svn_wc__internal_transmit_prop_deltas(svn_wc__db_t *db,
                                      void *baton,
                                      apr_pool_t *scratch_pool);
 
+/* Internal version of svn_wc_get_ancestry2(). */
+svn_error_t *
+svn_wc__internal_get_ancestry(const char **url,
+                              svn_revnum_t *rev,
+                              svn_wc__db_t *db,
+                              const char *local_abspath,
+                              apr_pool_t *result_pool,
+                              apr_pool_t *scratch_pool);
 
 /* Upgrade the wc sqlite database given in SDB for the wc located at
    WCROOT_ABSPATH. It's current/starting format is given by START_FORMAT.

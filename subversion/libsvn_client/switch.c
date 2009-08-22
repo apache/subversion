@@ -88,6 +88,7 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
   void *switch_edit_baton;
   svn_wc_traversal_info_t *traversal_info = svn_wc_init_traversal_info(pool);
   const char *preserved_exts_str;
+  const char *anchor_abspath;
   apr_array_header_t *preserved_exts;
   svn_boolean_t server_supports_depth;
   svn_config_t *cfg = ctx->config ? apr_hash_get(ctx->config,
@@ -164,7 +165,10 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
       anchor = svn_wc_adm_access_path(adm_access);
     }
 
-  SVN_ERR(svn_wc__entry_versioned(&entry, anchor, adm_access, FALSE, pool));
+  SVN_ERR(svn_dirent_get_absolute(&anchor_abspath, anchor, pool));
+  SVN_ERR(svn_wc__get_entry_versioned(&entry, ctx->wc_ctx, anchor_abspath,
+                                      svn_node_unknown, FALSE, FALSE,
+                                      pool, pool));
   if (! entry->url)
     return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
                              _("Directory '%s' has no URL"),
@@ -192,20 +196,18 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
   /* We may need to crop the tree if the depth is sticky */
   if (depth_is_sticky && depth < svn_depth_infinity)
     {
-      const svn_wc_entry_t *target_entry;
+      const char *target_abspath;
+      svn_node_kind_t target_kind;
 
-      SVN_ERR(svn_wc_entry(
-          &target_entry,
-          svn_dirent_join(svn_wc_adm_access_path(adm_access), target, pool),
-          adm_access, TRUE, pool));
+      SVN_ERR(svn_dirent_get_absolute(&target_abspath, target, pool));
+      SVN_ERR(svn_wc__node_get_kind(&target_kind, ctx->wc_ctx,
+                                    target_abspath, TRUE, pool));
 
-      if (target_entry && target_entry->kind == svn_node_dir)
-        {
-          SVN_ERR(svn_wc_crop_tree(adm_access, target, depth,
-                                   ctx->notify_func2, ctx->notify_baton2,
-                                   ctx->cancel_func, ctx->cancel_baton,
-                                   pool));
-        }
+      if (target_kind == svn_node_dir)
+        SVN_ERR(svn_wc_crop_tree(adm_access, target, depth,
+                                 ctx->notify_func2, ctx->notify_baton2,
+                                 ctx->cancel_func, ctx->cancel_baton,
+                                 pool));
     }
 
   SVN_ERR(svn_ra_reparent(ra_session, URL, pool));

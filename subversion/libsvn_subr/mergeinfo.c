@@ -741,6 +741,33 @@ svn_rangelist__set_inheritance(apr_array_header_t *rangelist,
   return;
 }
 
+void
+svn_mergeinfo__set_inheritance(svn_mergeinfo_t mergeinfo,
+                               svn_boolean_t inheritable,
+                               apr_pool_t *scratch_pool)
+{
+  if (mergeinfo)
+    {
+      apr_hash_index_t *hi;
+
+      for (hi = apr_hash_first(scratch_pool, mergeinfo);
+           hi;
+           hi = apr_hash_next(hi))
+        {
+          apr_array_header_t *rangelist;
+          const void *path;
+          void *val;
+          apr_hash_this(hi, &path, NULL, &val);
+
+          rangelist = apr_hash_get(mergeinfo, path, APR_HASH_KEY_STRING);
+
+          if (rangelist)
+            svn_rangelist__set_inheritance(rangelist, inheritable);
+        }
+    }
+  return;
+}
+
 /* Either remove any overlapping ranges described by ERASER from
    WHITEBOARD (when DO_REMOVE is TRUE), or capture the overlap, and
    place the remaining or overlapping ranges in OUTPUT. */
@@ -1370,6 +1397,48 @@ svn_mergeinfo_dup(svn_mergeinfo_t mergeinfo, apr_pool_t *pool)
 }
 
 svn_error_t *
+svn_mergeinfo_inheritable2(svn_mergeinfo_t *output,
+                           svn_mergeinfo_t mergeinfo,
+                           const char *path,
+                           svn_revnum_t start,
+                           svn_revnum_t end,
+                           svn_boolean_t inheritable,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool)
+{
+  apr_hash_index_t *hi;
+  const void *key;
+  apr_ssize_t keylen;
+  void *rangelist;
+
+  svn_mergeinfo_t inheritable_mergeinfo = apr_hash_make(result_pool);
+  for (hi = apr_hash_first(scratch_pool, mergeinfo);
+       hi;
+       hi = apr_hash_next(hi))
+    {
+      apr_array_header_t *inheritable_rangelist;
+      apr_hash_this(hi, &key, &keylen, &rangelist);
+      if (!path || svn_path_compare_paths(path, (const char *)key) == 0)
+        SVN_ERR(svn_rangelist_inheritable2(&inheritable_rangelist,
+                                           (apr_array_header_t *) rangelist,
+                                           start, end, inheritable,
+                                           result_pool, scratch_pool));
+      else
+        inheritable_rangelist =
+          svn_rangelist_dup((apr_array_header_t *)rangelist, result_pool);
+
+      /* Only add this rangelist if some ranges remain.  A rangelist with
+         a path mapped to an empty rangelist is not syntactically valid */
+      if (inheritable_rangelist->nelts)
+        apr_hash_set(inheritable_mergeinfo,
+                     apr_pstrmemdup(result_pool, key, keylen), keylen,
+                     inheritable_rangelist);
+    }
+  *output = inheritable_mergeinfo;
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
 svn_mergeinfo_inheritable(svn_mergeinfo_t *output,
                           svn_mergeinfo_t mergeinfo,
                           const char *path,
@@ -1406,14 +1475,17 @@ svn_mergeinfo_inheritable(svn_mergeinfo_t *output,
   return SVN_NO_ERROR;
 }
 
+
 svn_error_t *
-svn_rangelist_inheritable(apr_array_header_t **inheritable_rangelist,
-                          apr_array_header_t *rangelist,
-                          svn_revnum_t start,
-                          svn_revnum_t end,
-                          apr_pool_t *pool)
+svn_rangelist_inheritable2(apr_array_header_t **inheritable_rangelist,
+                           apr_array_header_t *rangelist,
+                           svn_revnum_t start,
+                           svn_revnum_t end,
+                           svn_boolean_t inheritable,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool)
 {
-  *inheritable_rangelist = apr_array_make(pool, 1,
+  *inheritable_rangelist = apr_array_make(result_pool, 1,
                                           sizeof(svn_merge_range_t *));
   if (rangelist->nelts)
     {
@@ -1427,10 +1499,10 @@ svn_rangelist_inheritable(apr_array_header_t **inheritable_rangelist,
             {
               svn_merge_range_t *range = APR_ARRAY_IDX(rangelist, i,
                                                        svn_merge_range_t *);
-              if (range->inheritable)
+              if (range->inheritable == inheritable)
                 {
                   svn_merge_range_t *inheritable_range =
-                    apr_palloc(pool, sizeof(*inheritable_range));
+                    apr_palloc(result_pool, sizeof(*inheritable_range));
                   inheritable_range->start = range->start;
                   inheritable_range->end = range->end;
                   inheritable_range->inheritable = TRUE;
@@ -1444,12 +1516,12 @@ svn_rangelist_inheritable(apr_array_header_t **inheritable_rangelist,
           /* We want only the non-inheritable ranges bound by START
              and END removed. */
           apr_array_header_t *ranges_inheritable =
-            apr_array_make(pool, 0, sizeof(svn_merge_range_t *));
-          svn_merge_range_t *range = apr_palloc(pool, sizeof(*range));
+            apr_array_make(scratch_pool, 0, sizeof(svn_merge_range_t *));
+          svn_merge_range_t *range = apr_palloc(scratch_pool, sizeof(*range));
 
           range->start = start;
           range->end = end;
-          range->inheritable = FALSE;
+          range->inheritable = inheritable;
           APR_ARRAY_PUSH(ranges_inheritable, svn_merge_range_t *) = range;
 
           if (rangelist->nelts)
@@ -1457,10 +1529,21 @@ svn_rangelist_inheritable(apr_array_header_t **inheritable_rangelist,
                                          ranges_inheritable,
                                          rangelist,
                                          TRUE,
-                                         pool));
+                                         result_pool));
         }
     }
   return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_rangelist_inheritable(apr_array_header_t **inheritable_rangelist,
+                          apr_array_header_t *rangelist,
+                          svn_revnum_t start,
+                          svn_revnum_t end,
+                          apr_pool_t *pool)
+{
+  return svn_rangelist_inheritable2(inheritable_rangelist, rangelist,
+                                    start, end, TRUE, pool, pool);
 }
 
 svn_boolean_t

@@ -116,6 +116,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
   apr_array_header_t *preserved_exts;
   struct ff_baton *ffb;
   const char *local_abspath;
+  const char *anchor_abspath;
   svn_boolean_t server_supports_depth;
   svn_config_t *cfg = ctx->config ? apr_hash_get(ctx->config,
                                                  SVN_CONFIG_CATEGORY_CONFIG,
@@ -173,9 +174,12 @@ svn_client__update_internal(svn_revnum_t *result_rev,
     }
 
   anchor = svn_wc_adm_access_path(adm_access);
+  SVN_ERR(svn_dirent_get_absolute(&anchor_abspath, anchor, pool));
 
   /* Get full URL from the ANCHOR. */
-  SVN_ERR(svn_wc__entry_versioned(&entry, anchor, adm_access, FALSE, pool));
+  SVN_ERR(svn_wc__get_entry_versioned(&entry, ctx->wc_ctx, anchor_abspath,
+                                      svn_node_unknown, FALSE, FALSE,
+                                      pool, pool));
   if (! entry->url)
     return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
                              _("Entry '%s' has no URL"),
@@ -184,12 +188,15 @@ svn_client__update_internal(svn_revnum_t *result_rev,
   /* We may need to crop the tree if the depth is sticky */
   if (depth_is_sticky && depth < svn_depth_infinity)
     {
-      const svn_wc_entry_t *target_entry;
-      SVN_ERR(svn_wc_entry(&target_entry,
-          svn_dirent_join(anchor, target, pool),
-          adm_access, TRUE, pool));
+      const char *target_abspath;
+      svn_node_kind_t target_kind;
 
-      if (target_entry && target_entry->kind == svn_node_dir)
+      SVN_ERR(svn_dirent_get_absolute(&target_abspath,
+                                      svn_dirent_join(anchor, target, pool),
+                                      pool));
+      SVN_ERR(svn_wc__node_get_kind(&target_kind, ctx->wc_ctx,
+                                    target_abspath, TRUE, pool));
+      if (target_kind == svn_node_dir)
         {
           SVN_ERR(svn_wc_crop_tree(adm_access, target, depth,
                                    ctx->notify_func2, ctx->notify_baton2,

@@ -936,6 +936,13 @@ add_directory(const char *path,
          this is a tree-conflict case. The path is already marked tree-
          conflicted (either by some previous run altogether, or by this
          replace's delete operation). No need to notify again here. */
+      /* ### Failing test merge_test 132:
+       * ### There is nothing that guarantees that the delete will come
+       * ### before the add. If you trace the merge done in merge_test 132
+       * ### and break at subversion/libsvn_client/merge.c:merge_file_added
+       * ### and subversion/libsvn_client/merge.c:merge_file_deleted, you
+       * ### can see that the add gets called first, then the delete (for
+       * ### the file "mu"). */
       svn_wc_notify_t *notify;
       svn_boolean_t is_replace = FALSE;
       deleted_path_notify_t *dpn = apr_hash_get(eb->deleted_paths, b->wcpath,
@@ -944,8 +951,13 @@ add_directory(const char *path,
         {
           svn_wc_notify_action_t new_action;
 
-          if (dpn->action == svn_wc_notify_update_delete
-              && action == svn_wc_notify_update_add)
+          /* ### Which combinations of action states constitute a replace?
+           * ### Are there more than the ones we are checking for here?
+           * ### Hurry up with editor v2 and atomic replace, pretty please! */
+          if ((dpn->action == svn_wc_notify_update_delete ||
+               dpn->action == svn_wc_notify_tree_conflict)
+            && (action == svn_wc_notify_update_add ||
+                action == svn_wc_notify_tree_conflict))
             {
               is_replace = TRUE;
               new_action = svn_wc_notify_update_replace;
@@ -954,7 +966,7 @@ add_directory(const char *path,
             new_action = dpn->action;
 
           /* Tree-conflicts during replace were notified about elsewhere. */
-          if (action != svn_wc_notify_tree_conflict)
+          if (! (is_replace && action == svn_wc_notify_tree_conflict))
             {
               notify = svn_wc_create_notify(b->wcpath, new_action, pool);
               notify->kind = dpn->kind;

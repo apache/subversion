@@ -66,12 +66,12 @@ svn_wc_context_create(svn_wc_context_t **wc_ctx,
   svn_wc_context_t *ctx = apr_pcalloc(result_pool, sizeof(*ctx));
  
   /* Create the state_pool, and open up a wc_db in it. */
-  ctx->state_pool = svn_pool_create(result_pool);
+  ctx->state_pool = result_pool;
   SVN_ERR(svn_wc__db_open(&ctx->db, svn_wc__db_openmode_readwrite, config,
                           ctx->state_pool, scratch_pool));
   ctx->close_db_on_destroy = TRUE;
 
-  apr_pool_cleanup_register(ctx->state_pool, ctx, close_ctx_apr,
+  apr_pool_cleanup_register(result_pool, ctx, close_ctx_apr,
                             apr_pool_cleanup_null);
 
   *wc_ctx = ctx;
@@ -91,11 +91,11 @@ svn_wc__context_create_with_db(svn_wc_context_t **wc_ctx,
   /* Create the state pool.  We don't put the wc_db in it, because it's
      already open in a separate pool somewhere.  We also won't close the
      wc_db when we destroy the context, since it's not ours to close. */
-  ctx->state_pool = svn_pool_create(result_pool);
+  ctx->state_pool = result_pool;
   ctx->db = db;
   ctx->close_db_on_destroy = FALSE;
 
-  apr_pool_cleanup_register(ctx->state_pool, ctx, close_ctx_apr,
+  apr_pool_cleanup_register(result_pool, ctx, close_ctx_apr,
                             apr_pool_cleanup_null);
 
   *wc_ctx = ctx;
@@ -107,10 +107,8 @@ svn_wc__context_create_with_db(svn_wc_context_t **wc_ctx,
 svn_error_t *
 svn_wc_context_destroy(svn_wc_context_t *wc_ctx)
 {
-  /* Because we added the cleanup handler in svn_wc_context_create(), we
-     can just destory the state pool.  Voilà!  Everything is closed and
-     freed. */
-  svn_pool_destroy(wc_ctx->state_pool);
+  /* We added a cleanup when creating; just run it now to close the context. */
+  apr_pool_cleanup_run(wc_ctx->state_pool, wc_ctx, close_ctx_apr);;
 
   return SVN_NO_ERROR;
 }

@@ -15,6 +15,7 @@
 			OutputDirectory="[zlib_path]\Debug"
 			IntermediateDirectory="[zlib_path]\Debug"
 			ConfigurationType="0"
+			ManagedExtensions="1"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="FALSE">
 			<Tool
@@ -29,6 +30,7 @@
 			OutputDirectory="[zlib_path]\Release"
 			IntermediateDirectory="[zlib_path]\Release"
 			ConfigurationType="0"
+			ManagedExtensions="1"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="FALSE">
 			<Tool

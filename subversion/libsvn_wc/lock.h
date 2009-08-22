@@ -59,13 +59,6 @@ svn_wc__adm_steal_write_lock(svn_wc_adm_access_t **adm_access,
                              apr_pool_t *scratch_pool);
 
 
-/* Set *CLEANUP to TRUE if the directory ADM_ACCESS requires cleanup
-   processing, set *CLEANUP to FALSE otherwise. */
-svn_error_t *
-svn_wc__adm_is_cleanup_required(svn_boolean_t *cleanup,
-                                const svn_wc_adm_access_t *adm_access,
-                                apr_pool_t *pool);
-
 /* Store ENTRIES in the cache in ADM_ACCESS.  ENTRIES may be NULL. */
 void svn_wc__adm_access_set_entries(svn_wc_adm_access_t *adm_access,
                                     apr_hash_t *entries);
@@ -107,12 +100,6 @@ svn_wc__internal_check_wc(int *wc_format,
                           const char *local_abspath,
                           apr_pool_t *scratch_pool);
 
-
-/* Set the WC FORMAT of this access baton. */
-svn_error_t *
-svn_wc__adm_set_wc_format(int wc_format,
-                          const svn_wc_adm_access_t *adm_access,
-                          apr_pool_t *scratch_pool);
 
 /* Ensure ADM_ACCESS has a write lock and that it is still valid.  Returns
  * the error SVN_ERR_WC_NOT_LOCKED if this is not the case.  Compared to

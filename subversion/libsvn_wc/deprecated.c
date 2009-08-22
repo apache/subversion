@@ -611,7 +611,9 @@ svn_wc_add_lock(const char *path,
                                          svn_wc__adm_get_db(adm_access),
                                          pool));
 
-  return svn_error_return(svn_wc_add_lock2(wc_ctx, local_abspath, lock, pool));
+  SVN_ERR(svn_wc_add_lock2(wc_ctx, local_abspath, lock, pool));
+
+  return svn_error_return(svn_wc_context_destroy(wc_ctx));
 }
 
 svn_error_t *
@@ -627,8 +629,32 @@ svn_wc_remove_lock(const char *path,
                                          svn_wc__adm_get_db(adm_access),
                                          pool));
 
-  return svn_error_return(svn_wc_remove_lock2(wc_ctx, local_abspath, pool));
+  SVN_ERR(svn_wc_remove_lock2(wc_ctx, local_abspath, pool));
+
+  return svn_error_return(svn_wc_context_destroy(wc_ctx));
+  
 }
+
+svn_error_t *
+svn_wc_get_ancestry(char **url,
+                    svn_revnum_t *rev,
+                    const char *path,
+                    svn_wc_adm_access_t *adm_access,
+                    apr_pool_t *pool)
+{
+  const char *local_abspath;
+  svn_wc_context_t *wc_ctx;
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+  SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL /* config */,
+                                         svn_wc__adm_get_db(adm_access),
+                                         pool));
+
+  SVN_ERR(svn_wc_get_ancestry2(url, rev, wc_ctx, local_abspath, pool, pool));
+
+  return svn_error_return(svn_wc_context_destroy(wc_ctx));
+}
+
 
 /*** From diff.c ***/
 /* Used to wrap svn_wc_diff_callbacks_t. */
@@ -2266,6 +2292,25 @@ svn_wc_relocate(const char *path,
 
 
 /*** From log.c ***/
+
+svn_error_t *
+svn_wc_cleanup2(const char *path,
+                const char *diff3_cmd,
+                svn_cancel_func_t cancel_func,
+                void *cancel_baton,
+                apr_pool_t *pool)
+{
+  svn_wc_context_t *wc_ctx;
+  const char *local_abspath;
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+  SVN_ERR(svn_wc_context_create(&wc_ctx, NULL, pool, pool));
+
+  SVN_ERR(svn_wc_cleanup3(wc_ctx, local_abspath, cancel_func, 
+                          cancel_baton, pool));
+
+  return svn_error_return(svn_wc_context_destroy(wc_ctx));
+}
 
 svn_error_t *
 svn_wc_cleanup(const char *path,

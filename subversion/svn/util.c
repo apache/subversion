@@ -1256,23 +1256,26 @@ svn_cl__indent_string(const char *str,
 
 const char *
 svn_cl__node_description(const svn_wc_conflict_version_t *node,
+                         const char *wc_repos_root_URL,
                          apr_pool_t *pool)
 {
-  const char *url_str;
+  const char *root_str = "^";
+  const char *path_str = "...";
 
-  /* Construct the whole URL if we can, else use whatever we have. */
-  if (node->repos_url && node->path_in_repos)
-    url_str = svn_path_url_add_component2(node->repos_url,
-                                          node->path_in_repos, pool);
-  else if (node->repos_url)
-    url_str = svn_path_url_add_component2(node->repos_url, "...", pool);
-  else if (node->path_in_repos)
-    url_str = node->path_in_repos;
-  else
-    url_str = "...";
+  /* Construct a "caret notation" ^/URL if NODE matches WC_REPOS_ROOT_URL.
+   * Otherwise show the complete URL, and if we can't, show dots. */
+
+  if (node->repos_url &&
+      (wc_repos_root_URL == NULL || 
+       strcmp(node->repos_url, wc_repos_root_URL) != 0))
+    root_str = node->repos_url;
+
+  if (node->path_in_repos)
+    path_str = node->path_in_repos;
 
   return apr_psprintf(pool, "(%s) %s@%ld",
                       svn_cl__node_kind_str_human_readable(node->node_kind),
-                      url_str, node->peg_rev);
+                      svn_path_url_add_component2(root_str, path_str, pool),
+                      node->peg_rev);
 }
 
