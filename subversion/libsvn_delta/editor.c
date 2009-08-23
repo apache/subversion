@@ -380,7 +380,8 @@ svn_error_t *
 svn_editor_copy(svn_editor_t *editor,
                 const char *src_relpath,
                 svn_revnum_t src_revision,
-                const char *dst_relpath)
+                const char *dst_relpath,
+                svn_revnum_t replaces_rev)
 {
   svn_error_t *err;
 
@@ -390,7 +391,7 @@ svn_editor_copy(svn_editor_t *editor,
     SVN_ERR((*editor->cancel_func)(editor->cancel_baton));
 
   err = (*editor->funcs.cb_copy)(editor->baton, src_relpath, src_revision,
-                                 dst_relpath, editor->scratch_pool);
+                                 dst_relpath, replaces_rev, editor->scratch_pool);
   svn_pool_clear(editor->scratch_pool);
   return err;
 }
@@ -400,7 +401,8 @@ svn_error_t *
 svn_editor_move(svn_editor_t *editor,
                 const char *src_relpath,
                 svn_revnum_t src_revision,
-                const char *dst_relpath)
+                const char *dst_relpath,
+                svn_revnum_t replaces_rev)
 {
   svn_error_t *err;
 
@@ -410,7 +412,7 @@ svn_editor_move(svn_editor_t *editor,
     SVN_ERR((*editor->cancel_func)(editor->cancel_baton));
 
   err = (*editor->funcs.cb_move)(editor->baton, src_relpath, src_revision,
-                                 dst_relpath, editor->scratch_pool);
+                                 dst_relpath, replaces_rev, editor->scratch_pool);
   svn_pool_clear(editor->scratch_pool);
   return err;
 }
