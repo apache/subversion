@@ -108,6 +108,7 @@ typedef svn_error_t *(*svn_editor_cb_copy_t)(
   const char *src_relpath,
   svn_revnum_t src_revision,
   const char *dst_relpath,
+  svn_revnum_t replaces_rev,
   apr_pool_t *scratch_pool);
 
 typedef svn_error_t *(*svn_editor_cb_move_t)(
@@ -115,6 +116,7 @@ typedef svn_error_t *(*svn_editor_cb_move_t)(
   const char *src_relpath,
   svn_revnum_t src_revision,
   const char *dst_relpath,
+  svn_revnum_t replaces_rev,
   apr_pool_t *scratch_pool);
 
 typedef svn_error_t *(*svn_editor_cb_complete_t)(
@@ -276,13 +278,15 @@ svn_error_t *
 svn_editor_copy(svn_editor_t *editor,
                 const char *src_relpath,
                 svn_revnum_t src_revision,
-                const char *dst_relpath);
+                const char *dst_relpath,
+                svn_revnum_t replaces_rev);
 
 svn_error_t *
 svn_editor_move(svn_editor_t *editor,
                 const char *src_relpath,
                 svn_revnum_t src_revision,
-                const char *dst_relpath);
+                const char *dst_relpath,
+                svn_revnum_t replaces_rev);
 
 svn_error_t *
 svn_editor_complete(svn_editor_t *editor);
