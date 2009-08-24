@@ -5061,8 +5061,9 @@ svn_wc__db_node_hidden(svn_boolean_t *hidden,
       SVN_ERR(svn_sqlite__reset(stmt));
     }
 
-  *hidden = (base_status == svn_wc__db_status_not_present
-               || depth == svn_depth_exclude);
+  *hidden = (base_status == svn_wc__db_status_absent
+             || base_status == svn_wc__db_status_not_present
+             || depth == svn_depth_exclude);
 
   return SVN_NO_ERROR;
 }
