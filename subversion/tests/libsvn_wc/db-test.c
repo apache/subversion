@@ -381,7 +381,7 @@ test_getting_info(apr_pool_t *pool)
                                   pool));
 
   SVN_ERR(svn_wc__db_open(&db, svn_wc__db_openmode_readonly,
-                          NULL, pool, pool));
+                          NULL, TRUE, pool, pool));
 
   /* Test: basic fetching of data. */
   SVN_ERR(svn_wc__db_base_get_info(
@@ -615,7 +615,7 @@ test_inserting_nodes(apr_pool_t *pool)
                                   pool));
 
   SVN_ERR(svn_wc__db_open(&db, svn_wc__db_openmode_readwrite,
-                          NULL, pool, pool));
+                          NULL, TRUE, pool, pool));
 
   props = apr_hash_make(pool);
   set_prop(props, "p1", "v1", pool);
@@ -731,7 +731,7 @@ test_children(apr_pool_t *pool)
                                   pool));
 
   SVN_ERR(svn_wc__db_open(&db, svn_wc__db_openmode_readonly,
-                          NULL, pool, pool));
+                          NULL, TRUE, pool, pool));
 
   SVN_ERR(svn_wc__db_base_get_children(&children,
                                        db, local_abspath,
@@ -803,7 +803,7 @@ test_working_info(apr_pool_t *pool)
                                   pool));
 
   SVN_ERR(svn_wc__db_open(&db, svn_wc__db_openmode_readonly,
-                          NULL, pool, pool));
+                          NULL, TRUE, pool, pool));
 
   /* Test: basic fetching of data. */
   SVN_ERR(svn_wc__db_read_info(
@@ -867,7 +867,7 @@ test_pdh(apr_pool_t *pool)
                                   pool));
 
   SVN_ERR(svn_wc__db_open(&db, svn_wc__db_openmode_readwrite,
-                          NULL, pool, pool));
+                          NULL, TRUE, pool, pool));
 
   /* NOTE: this test doesn't do anything apparent -- it simply exercises
      some internal functionality of wc_db.  This is a handy driver for
@@ -909,7 +909,7 @@ test_scan_addition(apr_pool_t *pool)
                                   "fake-wc/test_scan_addition",
                                   pool));
   SVN_ERR(svn_wc__db_open(&db, svn_wc__db_openmode_readonly,
-                          NULL, pool, pool));
+                          NULL, TRUE, pool, pool));
 
   /* Simple addition of a directory. */
   SVN_ERR(svn_wc__db_scan_addition(
@@ -1042,7 +1042,7 @@ test_scan_deletion(apr_pool_t *pool)
                                   "fake-wc/test_scan_deletion",
                                   pool));
   SVN_ERR(svn_wc__db_open(&db, svn_wc__db_openmode_readonly,
-                          NULL, pool, pool));
+                          NULL, TRUE, pool, pool));
 
   /* Node was moved elsewhere. */
   SVN_ERR(svn_wc__db_scan_deletion(
@@ -1228,7 +1228,7 @@ test_global_relocate(apr_pool_t *pool)
                                   "fake-wc/test_global_relocate",
                                   pool));
   SVN_ERR(svn_wc__db_open(&db, svn_wc__db_openmode_readonly,
-                          NULL, pool, pool));
+                          NULL, TRUE, pool, pool));
 
   /* Initial sanity check. */
   SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL,

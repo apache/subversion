@@ -649,7 +649,7 @@ svn_wc_ensure_adm3(const char *path,
   int format;
 
   SVN_ERR(svn_wc__db_open(&db, svn_wc__db_openmode_readwrite,
-                          NULL /* ### config */, pool, pool));
+                          NULL /* ### config */, TRUE, pool, pool));
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 

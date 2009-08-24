@@ -104,6 +104,10 @@ struct svn_wc__db_t {
      to figure out where we should look for the corresponding datastore. */
   svn_config_t *config;
 
+  /* Should we attempt to automatically upgrade the database when it is
+     opened, and found to be not-current?  */
+  svn_boolean_t auto_upgrade;
+
   /* Map a given working copy directory to its relevant data. */
   apr_hash_t *dir_data;
 
@@ -868,6 +872,7 @@ create_wcroot(wcroot_t **wcroot,
               svn_sqlite__db_t *sdb,
               apr_int64_t wc_id,
               int format,
+              svn_boolean_t auto_upgrade,
               apr_pool_t *result_pool,
               apr_pool_t *scratch_pool)
 {
@@ -902,7 +907,7 @@ create_wcroot(wcroot_t **wcroot,
     }
 
   /* Auto-upgrade the SDB if possible.  */
-  if (format < SVN_WC__VERSION)
+  if (format < SVN_WC__VERSION && auto_upgrade)
     SVN_ERR(svn_wc__upgrade_sdb(&format, wcroot_abspath, sdb, format,
                                 scratch_pool));
 
@@ -1496,7 +1501,7 @@ parse_local_abspath(svn_wc__db_pdh_t **pdh,
 
       SVN_ERR(create_wcroot(&(*pdh)->wcroot,
                             apr_pstrdup(db->state_pool, local_abspath),
-                            sdb, wc_id, FORMAT_FROM_SDB,
+                            sdb, wc_id, FORMAT_FROM_SDB, db->auto_upgrade,
                             db->state_pool, scratch_pool));
     }
   else
@@ -1504,7 +1509,7 @@ parse_local_abspath(svn_wc__db_pdh_t **pdh,
       /* We found a wc-1 working copy directory.  */
       SVN_ERR(create_wcroot(&(*pdh)->wcroot,
                             apr_pstrdup(db->state_pool, local_abspath),
-                            NULL, UNKNOWN_WC_ID, wc_format,
+                            NULL, UNKNOWN_WC_ID, wc_format, db->auto_upgrade,
                             db->state_pool, scratch_pool));
 
       /* Don't test for a directory obstructing a versioned file. The wc-1
@@ -1582,7 +1587,7 @@ parse_local_abspath(svn_wc__db_pdh_t **pdh,
                                     parent_pdh->local_abspath,
                                     sdb,
                                     1 /* ### hack.  */,
-                                    FORMAT_FROM_SDB,
+                                    FORMAT_FROM_SDB, db->auto_upgrade,
                                     db->state_pool, scratch_pool));
 
               apr_hash_set(db->dir_data,
@@ -2028,12 +2033,14 @@ svn_error_t *
 svn_wc__db_open(svn_wc__db_t **db,
                 svn_wc__db_openmode_t mode,
                 svn_config_t *config,
+                svn_boolean_t auto_upgrade,
                 apr_pool_t *result_pool,
                 apr_pool_t *scratch_pool)
 {
   *db = apr_pcalloc(result_pool, sizeof(**db));
   (*db)->mode = mode;
   (*db)->config = config;
+  (*db)->auto_upgrade = auto_upgrade;
   (*db)->dir_data = apr_hash_make(result_pool);
   (*db)->state_pool = result_pool;
 

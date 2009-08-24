@@ -37,23 +37,19 @@
 #include "wc_db.h"
 
 #include "svn_private_config.h"
+#include "private/svn_wc_private.h"
 
 
 
-/* Upgrade the working copy directory represented by ADM_ACCESS
-   to the latest 'SVN_WC__VERSION'.  ADM_ACCESS must contain a write
-   lock.  Use SCRATCH_POOL for all temporary allocation.
+/* Upgrade the working copy directory represented by DB/LOCAL_ABSPATH
+   from OLD_FORMAT to the wc-ng format (SVN_WC__WC_NG_VERSION)'.
 
-   Not all upgrade paths are necessarily supported.  For example,
-   upgrading a version 1 working copy results in an error.
-
-   Sometimes the format file can contain "0" while the administrative
-   directory is being constructed; calling this on a format 0 working
-   copy has no effect and returns no error. */
+   Uses SCRATCH_POOL for all temporary allocation.  */
 static svn_error_t *
-upgrade_format(svn_wc__db_t *db,
-               const char *dir_abspath,
-               apr_pool_t *scratch_pool);
+upgrade_to_wcng(svn_wc__db_t *db,
+                const char *dir_abspath,
+                int old_format,
+                apr_pool_t *scratch_pool);
 
 
 
@@ -288,7 +284,7 @@ upgrade_working_copy(svn_wc__db_t *db,
                      void *cancel_baton,
                      apr_pool_t *scratch_pool)
 {
-  svn_wc_adm_access_t *adm_access;
+  int old_format;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   apr_array_header_t *subdirs;
   int i;
@@ -297,15 +293,15 @@ upgrade_working_copy(svn_wc__db_t *db,
   if (cancel_func)
     SVN_ERR(cancel_func(cancel_baton));
 
-  /* Lock this working copy directory, or steal an existing lock */
-  SVN_ERR(svn_wc__adm_steal_write_lock(&adm_access, db, dir_abspath,
-                                       scratch_pool, iterpool));
+  SVN_ERR(svn_wc__db_temp_get_format(&old_format, db, dir_abspath,
+                                     iterpool));
 
   SVN_ERR(get_versioned_subdirs(&subdirs, db, dir_abspath,
                                 scratch_pool, iterpool));
 
   /* Upgrade this directory first. */
-  SVN_ERR(upgrade_format(db, dir_abspath, iterpool));
+  if (old_format < SVN_WC__WC_NG_VERSION)
+    SVN_ERR(upgrade_to_wcng(db, dir_abspath, old_format, iterpool));
 
   /* Now recurse. */
   for (i = 0; i < subdirs->nelts; ++i)
@@ -317,53 +313,51 @@ upgrade_working_copy(svn_wc__db_t *db,
       SVN_ERR(upgrade_working_copy(db, child_abspath, cancel_func,
                                    cancel_baton, iterpool));
     }
+
   svn_pool_destroy(iterpool);
 
-  return svn_wc_adm_close2(adm_access, scratch_pool);
+  return SVN_NO_ERROR;
 }
 
 
 static svn_error_t *
-upgrade_format(svn_wc__db_t *db,
-               const char *dir_abspath,
-               apr_pool_t *scratch_pool)
+upgrade_to_wcng(svn_wc__db_t *db,
+                const char *dir_abspath,
+                int old_format,
+                apr_pool_t *scratch_pool)
 {
-  int wc_format;
   svn_boolean_t present;
+  svn_wc_adm_access_t *adm_access;
   apr_hash_t *entries;
   const svn_wc_entry_t *this_dir;
   svn_sqlite__db_t *sdb;
 
-  SVN_ERR(svn_wc__db_temp_get_format(&wc_format, db, dir_abspath,
-                                     scratch_pool));
-
-  /* Early out of the format is already what we expect it to be.  */
-  if (wc_format >= SVN_WC__WC_NG_VERSION)
-    return SVN_NO_ERROR;
-
   /* Don't try to mess with the WC if there are old log files left. */
   SVN_ERR(svn_wc__logfile_present(&present, dir_abspath, scratch_pool));
-
   if (present)
     return svn_error_create(SVN_ERR_WC_UNSUPPORTED_FORMAT, NULL,
                             _("Cannot upgrade with existing logs; please "
                               "run 'svn cleanup' with Subversion 1.6"));
 
+  /* Lock this working copy directory, or steal an existing lock. Do this
+     BEFORE we read the entries. We don't want another process to modify the
+     entries after we've read them into memory.  */
+  SVN_ERR(svn_wc__adm_steal_write_lock(&adm_access, db, dir_abspath,
+                                       scratch_pool, scratch_pool));
+
   /* What's going on here?
    *
    * We're attempting to upgrade an older working copy to the new wc-ng format.
-   * The sematics and storage mechanisms between the two are vastly different,
+   * The semantics and storage mechanisms between the two are vastly different,
    * so it's going to be a bit painful.  Here's a plan for the operation:
    *
-   * 1) The 'entries' file needs to be moved to the new format.  Ideally, we'd
-   *    read it using svn_wc__entries_read_old(), and then translate the
-   *    current state of the file into a series of wc_db commands to duplicate
-   *    that state in WC-NG.  We're not quite there yet, so we just use
-   *    the same loggy process as we always have, relying on the lower layers
-   *    to take care of the translation, and remembering to remove the old
-   *    entries file when were're done.  ### This isn't a long-term solution.
+   * 1) The 'entries' file needs to be moved to the new format. We read it
+   *    using the old-format reader, and then use our compatibility code
+   *    for writing entries to fill out the (new) wc_db state.
    *
    * 2) Convert wcprop to the wc-ng format
+   *
+   * 3) Trash old, unused files and subdirs
    *
    * ### (fill in other bits as they are implemented)
    */
@@ -380,8 +374,9 @@ upgrade_format(svn_wc__db_t *db,
                                    scratch_pool, scratch_pool));
 
   /* Migrate the entries over to the new database.
-     ### We need to think about atomicity here. */
-  SVN_ERR(svn_wc__db_temp_reset_format(wc_format, db, dir_abspath,
+     ### We need to think about atomicity here.
+     ### should this be SVN_WC__WC_NG_VERSION instead?  */
+  SVN_ERR(svn_wc__db_temp_reset_format(SVN_WC__VERSION, db, dir_abspath,
                                        scratch_pool));
   SVN_ERR(svn_wc__entries_write_new(db, dir_abspath, entries, scratch_pool));
 
@@ -403,11 +398,11 @@ upgrade_format(svn_wc__db_t *db,
   /***** WC PROPS *****/
 
   /* Ugh. We don't know precisely where the wcprops are. Ignore them.  */
-  if (wc_format != SVN_WC__WCPROPS_LOST)
+  if (old_format != SVN_WC__WCPROPS_LOST)
     {
       apr_hash_t *all_wcprops;
 
-      if (wc_format <= SVN_WC__WCPROPS_MANY_FILES_VERSION)
+      if (old_format <= SVN_WC__WCPROPS_MANY_FILES_VERSION)
         SVN_ERR(read_many_wcprops(&all_wcprops, dir_abspath,
                                   scratch_pool, scratch_pool));
       else
@@ -418,7 +413,7 @@ upgrade_format(svn_wc__db_t *db,
                                                  scratch_pool));
     }
 
-  if (wc_format <= SVN_WC__WCPROPS_MANY_FILES_VERSION)
+  if (old_format <= SVN_WC__WCPROPS_MANY_FILES_VERSION)
     {
       /* Remove wcprops directory, dir-props, README.txt and empty-file
          files.
@@ -448,6 +443,13 @@ upgrade_format(svn_wc__db_t *db,
 
   SVN_ERR(svn_wc__db_upgrade_finish(dir_abspath, sdb, scratch_pool));
 
+  /* All subdir access batons (and locks!) will be closed. Of course, they
+     should have been closed/unlocked just after their own upgrade process
+     has run.  */
+  SVN_ERR(svn_wc_adm_close2(adm_access, scratch_pool));
+
+  /* ### need to (eventually) delete the .svn subdir.  */
+
   return SVN_NO_ERROR;
 }
 
@@ -459,8 +461,6 @@ svn_wc__upgrade_sdb(int *result_format,
                     int start_format,
                     apr_pool_t *scratch_pool)
 {
-  /* ### don't do this just yet.  */
-#if 0
   if (start_format < SVN_WC__WC_NG_VERSION)
     return svn_error_createf(SVN_ERR_WC_UPGRADE_REQUIRED, NULL,
                              _("Working copy format of '%s' is too old (%d); "
@@ -468,7 +468,6 @@ svn_wc__upgrade_sdb(int *result_format,
                              svn_dirent_local_style(wcroot_abspath,
                                                     scratch_pool),
                              start_format);
-#endif
 
   return SVN_NO_ERROR;
 }
@@ -481,14 +480,30 @@ svn_wc_upgrade(svn_wc_context_t *wc_ctx,
                void *cancel_baton,
                apr_pool_t *scratch_pool)
 {
-  int wc_format_version;
+  svn_wc__db_t *db;
+  svn_boolean_t is_wcroot;
 
-  SVN_ERR(svn_wc__internal_check_wc(&wc_format_version, wc_ctx->db,
-                                    local_abspath, scratch_pool));
+  /* We need a DB that does not attempt an auto-upgrade. We'll handle
+     everything manually.  */
+  SVN_ERR(svn_wc__db_open(&db, svn_wc__db_openmode_readwrite,
+                          NULL /* ### config */, FALSE,
+                          scratch_pool, scratch_pool));
 
-  if (wc_format_version < SVN_WC__VERSION)
-    SVN_ERR(upgrade_working_copy(wc_ctx->db, local_abspath, cancel_func,
-                                 cancel_baton, scratch_pool));
+  /* ### this expects a wc-ng working copy. sigh. fix up soonish...  */
+#if 0
+  SVN_ERR(svn_wc__strictly_is_wc_root(&is_wcroot, wc_ctx, local_abspath,
+                                      scratch_pool));
+  if (!is_wcroot)
+    return svn_error_create(
+      SVN_ERR_WC_INVALID_OP_ON_CWD, NULL,
+      _("'svn upgrade' can only be run from the root of the working copy."));
+#endif
+
+  /* Upgrade this directory and/or its subdirectories.  */
+  SVN_ERR(upgrade_working_copy(db, local_abspath, cancel_func,
+                               cancel_baton, scratch_pool));
+
+  SVN_ERR(svn_wc__db_close(db));
 
   return SVN_NO_ERROR;
 }

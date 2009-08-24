@@ -5440,7 +5440,7 @@ svn_wc_get_actual_target(const char *path,
 
   /* ### this sucks. somebody should pass us a DB/ABSPATH instead.  */
   SVN_ERR(svn_wc__db_open(&db, svn_wc__db_openmode_readonly,
-                          NULL /* ### config */, pool, pool));
+                          NULL /* ### config */, TRUE, pool, pool));
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
   SVN_ERR(check_wc_root(&is_wc_root, &kind, db, local_abspath, pool));
   SVN_ERR(svn_wc__db_close(db));
