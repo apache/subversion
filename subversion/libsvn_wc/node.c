@@ -60,6 +60,7 @@ svn_error_t *
 svn_wc__node_get_children(const apr_array_header_t **children,
                           svn_wc_context_t *wc_ctx,
                           const char *dir_abspath,
+                          svn_boolean_t show_hidden,
                           apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool)
 {
@@ -74,10 +75,24 @@ svn_wc__node_get_children(const apr_array_header_t **children,
                              sizeof(const char *));
   for (i = 0; i < rel_children->nelts; i++)
     {
-      APR_ARRAY_PUSH(childs, const char *) =
-                svn_dirent_join(dir_abspath, APR_ARRAY_IDX(rel_children, i,
-                                                           const char *),
-                      result_pool);
+      const char *child_abspath = svn_dirent_join(dir_abspath,
+                                                  APR_ARRAY_IDX(rel_children,
+                                                                i,
+                                                                const char *),
+                                                  result_pool);
+
+      /* Don't add hidden nodes to *CHILDREN if we don't want them. */
+      if (!show_hidden)
+        {
+          svn_boolean_t child_is_hidden;
+
+          SVN_ERR(svn_wc__db_node_hidden(&child_is_hidden, wc_ctx->db,
+                                         child_abspath, scratch_pool));
+          if (child_is_hidden)
+            continue;
+        }
+
+      APR_ARRAY_PUSH(childs, const char *) = child_abspath;
     }
 
   *children = childs;

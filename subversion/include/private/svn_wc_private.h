@@ -286,6 +286,7 @@ svn_error_t *
 svn_wc__node_get_children(const apr_array_header_t **children,
                           svn_wc_context_t *wc_ctx,
                           const char *dir_abspath,
+                          svn_boolean_t show_hidden,
                           apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool);
 
