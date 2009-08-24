@@ -191,9 +191,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
       const char *target_abspath;
       svn_node_kind_t target_kind;
 
-      SVN_ERR(svn_dirent_get_absolute(&target_abspath,
-                                      svn_dirent_join(anchor, target, pool),
-                                      pool));
+      SVN_ERR(svn_dirent_get_absolute(&target_abspath, path, pool));
       SVN_ERR(svn_wc__node_get_kind(&target_kind, ctx->wc_ctx,
                                     target_abspath, TRUE, pool));
       if (target_kind == svn_node_dir)
