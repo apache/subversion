@@ -251,6 +251,14 @@ typedef struct {
  * the administrative operation. It should live at least as long as the
  * RESULT_POOL parameter.
  *
+ * When AUTO_UPGRADE is TRUE, then the working copy databases will be
+ * upgraded when possible (when an old database is found/detected during
+ * the operation of a wc_db API). If it is detected that a manual upgrade is
+ * required, then SVN_ERR_WC_UPGRADE_REQUIRED will be returned from that API.
+ * Passing FALSE will allow a bare minimum of APIs to function (most notably,
+ * the temp_get_format() function will always return a value) since most of
+ * these APIs expect a current-format database to be present.
+ *
  * The DB will be closed when RESULT_POOL is cleared. It may also be closed
  * manually using svn_wc__db_close(). In particular, this will close any
  * SQLite databases that have been opened and cached.
@@ -266,6 +274,7 @@ svn_error_t *
 svn_wc__db_open(svn_wc__db_t **db,
                 svn_wc__db_openmode_t mode,
                 svn_config_t *config,
+                svn_boolean_t auto_upgrade,
                 apr_pool_t *result_pool,
                 apr_pool_t *scratch_pool);
 
