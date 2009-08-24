@@ -165,6 +165,13 @@ struct svn_wc__db_pdh_t {
   svn_wc_adm_access_t *adm_access;
 };
 
+/* Assert that the given PDH is usable.
+   NOTE: the expression is multiply-evaluated!!  */
+#define VERIFY_USABLE_PDH(pdh) SVN_ERR_ASSERT(  \
+    (pdh)->wcroot != NULL                       \
+    && (pdh)->wcroot->format == SVN_WC__VERSION)
+
+
 /* ### since we're putting the pristine files per-dir, then we don't need
    ### to create subdirectories in order to keep the directory size down.
    ### when we can aggregate pristine files across dirs/wcs, then we will
@@ -1704,6 +1711,7 @@ get_statement_for_path(svn_sqlite__stmt_t **stmt,
   SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
                               svn_sqlite__mode_readwrite,
                               scratch_pool, scratch_pool));
+  VERIFY_USABLE_PDH(pdh);
 
   SVN_ERR(svn_sqlite__get_statement(stmt, pdh->wcroot->sdb, stmt_idx));
   SVN_ERR(svn_sqlite__bindf(*stmt, "is", pdh->wcroot->wc_id, local_relpath));
@@ -1729,7 +1737,10 @@ navigate_to_parent(svn_wc__db_pdh_t **parent_pdh,
   SVN_ERR(parse_local_abspath(parent_pdh, &local_relpath, child_pdh->db,
                               parent_abspath, smode,
                               scratch_pool, scratch_pool));
+  VERIFY_USABLE_PDH(*parent_pdh);
+
   child_pdh->parent = *parent_pdh;
+
   return SVN_NO_ERROR;
 }
 
@@ -1873,9 +1884,7 @@ gather_children(const apr_array_header_t **children,
   SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
                               svn_sqlite__mode_readonly,
                               scratch_pool, scratch_pool));
-
-  /* We should not have been called, if the wc has an improper version.  */
-  SVN_ERR_ASSERT(pdh->wcroot->format == SVN_WC__VERSION);
+  VERIFY_USABLE_PDH(pdh);
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
                                     base_only
@@ -2139,6 +2148,7 @@ svn_wc__db_base_add_directory(svn_wc__db_t *db,
   SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
                               svn_sqlite__mode_readwrite,
                               scratch_pool, scratch_pool));
+  VERIFY_USABLE_PDH(pdh);
 
   SVN_ERR(create_repos_id(&repos_id, repos_root_url, repos_uuid,
                           pdh->wcroot->sdb, NULL, NULL, scratch_pool));
@@ -2202,6 +2212,7 @@ svn_wc__db_base_add_file(svn_wc__db_t *db,
   SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
                               svn_sqlite__mode_readwrite,
                               scratch_pool, scratch_pool));
+  VERIFY_USABLE_PDH(pdh);
 
   SVN_ERR(create_repos_id(&repos_id, repos_root_url, repos_uuid,
                           pdh->wcroot->sdb, NULL, NULL, scratch_pool));
@@ -2263,6 +2274,7 @@ svn_wc__db_base_add_symlink(svn_wc__db_t *db,
   SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
                               svn_sqlite__mode_readwrite,
                               scratch_pool, scratch_pool));
+  VERIFY_USABLE_PDH(pdh);
 
   SVN_ERR(create_repos_id(&repos_id, repos_root_url, repos_uuid,
                           pdh->wcroot->sdb, NULL, NULL, scratch_pool));
@@ -2320,6 +2332,7 @@ svn_wc__db_base_add_absent_node(svn_wc__db_t *db,
   SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
                               svn_sqlite__mode_readwrite,
                               scratch_pool, scratch_pool));
+  VERIFY_USABLE_PDH(pdh);
 
   SVN_ERR(create_repos_id(&repos_id, repos_root_url, repos_uuid,
                           pdh->wcroot->sdb, NULL, NULL, scratch_pool));
@@ -2385,6 +2398,7 @@ svn_wc__db_temp_base_add_subdir(svn_wc__db_t *db,
   SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
                               svn_sqlite__mode_readwrite,
                               scratch_pool, scratch_pool));
+  VERIFY_USABLE_PDH(pdh);
 
   SVN_ERR(create_repos_id(&repos_id, repos_root_url, repos_uuid,
                           pdh->wcroot->sdb, NULL, NULL, scratch_pool));
@@ -2424,6 +2438,7 @@ svn_wc__db_base_remove(svn_wc__db_t *db,
   SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
                               svn_sqlite__mode_readwrite,
                               scratch_pool, scratch_pool));
+  VERIFY_USABLE_PDH(pdh);
 
   NOT_IMPLEMENTED();
 }
@@ -2461,6 +2476,7 @@ svn_wc__db_base_get_info(svn_wc__db_status_t *status,
   SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
                               svn_sqlite__mode_readonly,
                               scratch_pool, scratch_pool));
+  VERIFY_USABLE_PDH(pdh);
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
                                     lock ? STMT_SELECT_BASE_NODE_WITH_LOCK
@@ -2858,6 +2874,7 @@ svn_wc__db_repos_ensure(apr_int64_t *repos_id,
   SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
                               svn_sqlite__mode_readwrite,
                               scratch_pool, scratch_pool));
+  VERIFY_USABLE_PDH(pdh);
 
   return svn_error_return(create_repos_id(repos_id, repos_root_url,
                                           repos_uuid, pdh->wcroot->sdb,
@@ -3113,6 +3130,7 @@ svn_wc__db_op_set_tree_conflict(svn_wc__db_t *db,
   SVN_ERR(parse_local_abspath(&pdh, &rtb.local_relpath, db, rtb.parent_abspath,
                               svn_sqlite__mode_readwrite,
                               scratch_pool, scratch_pool));
+  VERIFY_USABLE_PDH(pdh);
 
   rtb.local_abspath = local_abspath;
   rtb.wc_id = pdh->wcroot->wc_id;
@@ -3189,6 +3207,8 @@ svn_wc__db_op_get_tree_conflict(svn_wc_conflict_description_t **tree_conflict,
     }
   else if (err)
     return err;
+
+  VERIFY_USABLE_PDH(pdh);
 
   /* ### f13: just remove the row from the CONFLICT_VICTIM table, rather than
      ### all this parsing, unparsing garbage. */
@@ -3278,9 +3298,7 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
   SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
                               svn_sqlite__mode_readonly,
                               scratch_pool, scratch_pool));
-
-  /* We should not have been called, if the wc has an improper version.  */
-  SVN_ERR_ASSERT(pdh->wcroot->format == SVN_WC__VERSION);
+  VERIFY_USABLE_PDH(pdh);
 
   SVN_ERR(svn_sqlite__get_statement(&stmt_base, pdh->wcroot->sdb,
                                     lock ? STMT_SELECT_BASE_NODE_WITH_LOCK
@@ -3854,6 +3872,7 @@ svn_wc__db_global_relocate(svn_wc__db_t *db,
   SVN_ERR(parse_local_abspath(&pdh, &rb.local_relpath, db, local_dir_abspath,
                               svn_sqlite__mode_readonly,
                               scratch_pool, scratch_pool));
+  VERIFY_USABLE_PDH(pdh);
 
   /* Get the existing repos_id of the base node, since we'll need it to
      update a potential lock. */
@@ -3969,6 +3988,7 @@ svn_wc__db_lock_add(svn_wc__db_t *db,
   SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
                               svn_sqlite__mode_readwrite,
                               scratch_pool, scratch_pool));
+  VERIFY_USABLE_PDH(pdh);
 
   SVN_ERR(scan_upwards_for_repos(&repos_id, &repos_relpath,
                                  pdh->wcroot, local_relpath,
@@ -4013,6 +4033,7 @@ svn_wc__db_lock_remove(svn_wc__db_t *db,
   SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
                               svn_sqlite__mode_readwrite,
                               scratch_pool, scratch_pool));
+  VERIFY_USABLE_PDH(pdh);
 
   SVN_ERR(scan_upwards_for_repos(&repos_id, &repos_relpath,
                                  pdh->wcroot, local_relpath,
@@ -4049,6 +4070,7 @@ svn_wc__db_scan_base_repos(const char **repos_relpath,
   SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
                               svn_sqlite__mode_readonly,
                               scratch_pool, scratch_pool));
+  VERIFY_USABLE_PDH(pdh);
 
   SVN_ERR(scan_upwards_for_repos(&repos_id, repos_relpath,
                                  pdh->wcroot, local_relpath,
@@ -4110,6 +4132,7 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
   SVN_ERR(parse_local_abspath(&pdh, &current_relpath, db, current_abspath,
                               svn_sqlite__mode_readonly,
                               scratch_pool, scratch_pool));
+  VERIFY_USABLE_PDH(pdh);
 
   while (TRUE)
     {
@@ -4298,6 +4321,7 @@ svn_wc__db_scan_deletion(const char **base_del_abspath,
   SVN_ERR(parse_local_abspath(&pdh, &current_relpath, db, local_abspath,
                               svn_sqlite__mode_readonly,
                               scratch_pool, scratch_pool));
+  VERIFY_USABLE_PDH(pdh);
 
   while (TRUE)
     {
@@ -4524,6 +4548,7 @@ svn_wc__db_wq_add(svn_wc__db_t *db,
   SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
                               svn_sqlite__mode_readwrite,
                               scratch_pool, scratch_pool));
+  VERIFY_USABLE_PDH(pdh);
 
   NOT_IMPLEMENTED();
 }
@@ -4558,6 +4583,7 @@ svn_wc__db_wq_fetch(apr_uint64_t *id,
   SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
                               svn_sqlite__mode_readonly,
                               scratch_pool, scratch_pool));
+  VERIFY_USABLE_PDH(pdh);
 
   NOT_IMPLEMENTED();
 }
@@ -4583,6 +4609,7 @@ svn_wc__db_wq_completed(svn_wc__db_t *db,
   SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
                               svn_sqlite__mode_readwrite,
                               scratch_pool, scratch_pool));
+  VERIFY_USABLE_PDH(pdh);
 
   NOT_IMPLEMENTED();
 }
@@ -4622,6 +4649,7 @@ svn_wc__db_temp_get_format(int *format,
       err = parse_local_abspath(&pdh, &local_relpath, db, local_dir_abspath,
                                 svn_sqlite__mode_readonly,
                                 scratch_pool, scratch_pool);
+      /* NOTE: pdh does *not* have to have a usable format.  */
 
       /* If we hit an error examining this directory, then declare this
          directory to not be a working copy.  */
@@ -4888,6 +4916,7 @@ svn_wc__db_temp_is_dir_deleted(svn_boolean_t *not_present,
   SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, parent_abspath,
                               svn_sqlite__mode_readonly,
                               scratch_pool, scratch_pool));
+  VERIFY_USABLE_PDH(pdh);
 
   /* Build the local_relpath for the requested directory.  */
   local_relpath = svn_dirent_join(local_relpath, base_name, scratch_pool);
@@ -4962,6 +4991,7 @@ svn_wc__db_node_hidden(svn_boolean_t *hidden,
   SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
                               svn_sqlite__mode_readwrite,
                               scratch_pool, scratch_pool));
+  VERIFY_USABLE_PDH(pdh);
 
   /* First check the working node. */
   SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
@@ -5008,6 +5038,7 @@ svn_wc__db_node_hidden(svn_boolean_t *hidden,
         }
       else
         {
+          VERIFY_USABLE_PDH(pdh);
 
           /* Build the local_relpath for the requested directory.  */
           local_relpath = svn_dirent_join(local_relpath, base_name,
