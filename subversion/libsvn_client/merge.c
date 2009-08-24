@@ -5219,7 +5219,7 @@ insert_parent_and_sibs_of_sw_absent_del_entry(
 
   /* Add all of PARENT's non-missing children that are not already present.*/
   SVN_ERR(svn_wc__node_get_children(&children, merge_cmd_baton->ctx->wc_ctx,
-                                    parent_abspath, pool, pool));
+                                    parent_abspath, FALSE, pool, pool));
   iterpool = svn_pool_create(pool);
   for (i = 0; i < children->nelts; i++)
     {

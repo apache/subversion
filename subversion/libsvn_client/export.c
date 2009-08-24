@@ -327,7 +327,7 @@ copy_versioned_files(const char *from,
         }
 
       SVN_ERR(svn_wc__node_get_children(&children, ctx->wc_ctx, from_abspath,
-                                        pool, pool));
+                                        FALSE, pool, pool));
 
       iterpool = svn_pool_create(pool);
       for (j = 0; j < children->nelts; j++)
