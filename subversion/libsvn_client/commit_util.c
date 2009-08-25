@@ -715,6 +715,64 @@ harvest_committables(apr_hash_t *committables,
           if (this_entry->depth == svn_depth_exclude)
             continue;
 
+          /* Issue #3281.
+           *
+           * Skip schedule-delete children inside of schedule-replace
+           * directories. They cause an out-of-date error upon commit,
+           * and prevent replaced directories from being committed.
+           *
+           * The out-of-date error happens because we recursively delete the
+           * replaced directory in the transaction, then copy the replacing
+           * directory in its place, and then try to delete nodes inside
+           * the directory which existed only in its pre-replaced state.
+           * The attempt to delete non-existent nodes from the transaction
+           * (with node kind "none") is prevented by libsvn_repos/commit.c:
+           * delete_entry() which sends the out-of-date error.
+           *
+           * ### We should not skip deletions which happened post-replace.
+           * ###
+           * ### This is not possible in wc-1 right now, because post-replace
+           * ### deletions are not represented in working copy meta data.
+           * ### Such nodes simply have NO entry at all in wc-1. The entry
+           * ### gets blown away as part of deleting the apparently "locally
+           * ### added" node, instead of changing the entry's schedule to
+           * ### "delete". Note that replaced directories can only happen as
+           * ### part of a set of local changes, either made manually or by a
+           * ### merge. That's why nodes inside of replaced dirs are always
+           * ### considered "locally added". The subtleties of the
+           * ### locally-added-inside-of-a-replaced-parent-directory case are
+           * ### wrongfully ignored during entry deletion.
+           * ###
+           * ### On top of that, libsvn_repos/commit.c:add_directory() will
+           * ### always do server-side copies for directories added with
+           * ### history, instead of copying the directory state verbatim
+           * ### from the WC. This causes nodes which the user meant to delete
+           * ### post-replace to show up in the commit transaction regardless.
+           * ### This is not a problem in itself, but because there is no
+           * ### entry for a post-replace deleted node, we cannot send a
+           * ### separate deletion to remove the post-replace deleted node
+           * ### from the transaction after the directory was copied on the
+           * ### server.
+           * ### Worse, the entry comes back only after an update which
+           * ### explicitly targets the node which is now locally missing
+           * ### but present on the server, in a revision the WC thinks it
+           * ### has the entire state of! By not handling the
+           * ### locally-added-inside-of-a-replaced-parent-directory entry
+           * ### removal case properly, the client corrupts the WC meta data
+           * ### without realising the mess it just made.
+           * ###
+           * ### So our ignorance about post-replace deleted nodes here is
+           * ### just a side-effect of a much bigger problem, which has existed
+           * ### for some time (at least since 1.5.x, probably much longer).
+           * ###
+           * ### WC-NG should fix all of this before 1.7 release.
+           * ### Note that, in trunk, the entry of post-replace deleted nodes
+           * ### does not get blown away, so trunk is one step ahead of 1.6.x
+           * ### already. */
+          if (entry->schedule == svn_wc_schedule_replace &&
+              this_entry->schedule == svn_wc_schedule_delete)
+            continue;
+
           full_path = svn_dirent_join(path, name, iterpool);
           if (this_cf_url)
             this_cf_url = svn_path_url_add_component2(this_cf_url, name, iterpool);
