@@ -173,5 +173,14 @@ Candidate changes:
    Votes:
      +1: stsp, gstein
 
+ * r38886
+   Fix 2 failing tests in ruby bindings.
+   Justification:
+     1.6.5 shipped with these failures by accident. Failing regression tests
+     can confuse packagers or other people who want to verify their freshly
+     compiled binaries using our regression test suite.
+   Votes:
+     +1: stsp
+
 Approved changes:
 =================
