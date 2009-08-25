@@ -27,6 +27,7 @@
 /*** Includes. ***/
 #include <apr.h>
 #include <dbghelp.h>
+#include <direct.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -179,11 +180,16 @@ write_process_info(EXCEPTION_RECORD *exception, CONTEXT *context,
 {
   OSVERSIONINFO oi;
   const char *cmd_line;
+  char workingdir[8192];
 
   /* write the command line */
   cmd_line = GetCommandLine();
   fprintf(log_file,
-                "Cmd line: %.65s\n", cmd_line);
+                "Cmd line: %s\n", cmd_line);
+
+  _getcwd(workingdir, sizeof(workingdir));
+  fprintf(log_file,
+                "Working Dir: %s\n", workingdir);
 
   /* write the svn version number info. */
   fprintf(log_file,
@@ -764,9 +770,16 @@ svn__unhandled_exception_filter(PEXCEPTION_POINTERS ptrs)
 
   if (getenv("SVN_DBG_STACKTRACES_TO_STDERR") != NULL)
     {
+      fprintf(stderr, "\nProcess info:\n");
+      write_process_info(ptrs ? ptrs->ExceptionRecord : NULL,
+                         ptrs ? ptrs->ContextRecord : NULL,
+                         stderr);
       fprintf(stderr, "\nStacktrace:\n");
       write_stacktrace(ptrs ? ptrs->ContextRecord : NULL, stderr);
     }
+
+  fflush(stderr);
+  fflush(stdout);
 
   cleanup_debughlp();
 
