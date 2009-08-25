@@ -224,7 +224,7 @@ enum statement_keys {
 };
 
 /* This is a character used to escape itself and the globbing character in
-   globbing sql expressions below.  See escape_sqlite_glob(). */
+   globbing sql expressions below.  See escape_sqlite_like(). */
 #define LIKE_ESCAPE_CHAR     "#"
 
 static const char * const statements[] = {
