@@ -149,10 +149,7 @@ Candidate changes:
      detection code) should be resolved with 'mc'. The second (with AC_PROG_SED)
      should be resolved with 'tc'.
    Votes:
-     +1: arfrever
-     +0: stsp (I totally agree with the change, but it doesn't merge cleanly,
-               probably needs backport branch, so can't +1 the proposed change
-               as is.)
+     +1: arfrever, stsp
 
  * r38872
    Improve "Attempt to add tree conflict that already exists" error message.
