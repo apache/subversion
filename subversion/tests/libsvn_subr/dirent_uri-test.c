@@ -64,6 +64,8 @@ test_dirent_is_root(apr_pool_t *pool)
     { "X:",            TRUE },
     { "//srv/shr",     TRUE },
     { "//srv/shr/fld", FALSE },
+    { "//srv/s r",     TRUE },
+    { "//srv/s r/fld", FALSE },
 #else /* WIN32 or Cygwin */
     { "/",             TRUE },
     { "/X:foo",        FALSE },
@@ -151,6 +153,8 @@ test_dirent_is_absolute(apr_pool_t *pool)
     { "X:/",           TRUE },
     { "//srv/shr",     TRUE },
     { "//srv/shr/fld", TRUE },
+    { "//srv/s r",     TRUE },
+    { "//srv/s r/fld", TRUE },
 #else/* WIN32 or Cygwin */
     { "/foo/bar",      TRUE },
     { "/foo",          TRUE },
@@ -262,6 +266,7 @@ test_dirent_join(apr_pool_t *pool)
     { "//srv/shr",     "fld",     "//srv/shr/fld" },
     { "//srv/shr/fld", "subfld",  "//srv/shr/fld/subfld" },
     { "//srv/shr/fld", "//srv/shr", "//srv/shr" },
+    { "//srv/s r",     "fld",     "//srv/s r/fld" },
     { "aa", "/dir", "/dir"} ,
     { "aa", "A:", "A:" },
     { "aa", "A:file", "A:file"},
@@ -356,6 +361,7 @@ test_dirent_join(apr_pool_t *pool)
   TEST_MANY((pool, "//srv/shr", "def", "ghi", NULL), "//srv/shr/def/ghi");
   TEST_MANY((pool, "//srv/shr/fld", "def", "ghi", NULL), "//srv/shr/fld/def/ghi");
   TEST_MANY((pool, "//srv/shr/fld", "def", "//srv/shr", NULL), "//srv/shr");
+  TEST_MANY((pool, "//srv/s r/fld", "def", "//srv/s r", NULL), "//srv/s r");
   TEST_MANY((pool, SVN_EMPTY_PATH, "//srv/shr/fld", "def", "ghi", NULL), "//srv/shr/fld/def/ghi");
   TEST_MANY((pool, SVN_EMPTY_PATH, "//srv/shr/fld", "def", "//srv/shr", NULL), "//srv/shr");
 
@@ -458,6 +464,7 @@ test_dirent_basename(apr_pool_t *pool)
     { "//srv/shr", "" },
     { "//srv/shr/fld", "fld" },
     { "//srv/shr/fld/subfld", "subfld" },
+    { "//srv/s r/fld", "fld" },
 #else /* WIN32 or Cygwin */
     { "X:", "X:" },
     { "X:abc", "X:abc" },
@@ -544,6 +551,7 @@ test_dirent_dirname(apr_pool_t *pool)
     { "//srv/shr",      "//srv/shr" },
     { "//srv/shr/fld",  "//srv/shr" },
     { "//srv/shr/fld/subfld", "//srv/shr/fld" },
+    { "//srv/s r/fld",  "//srv/s r" },
 #else  /* WIN32 or Cygwin */
     /* on non-Windows platforms, ':' is allowed in pathnames */
     { "X:", "" },
@@ -655,6 +663,8 @@ test_dirent_canonicalize(apr_pool_t *pool)
     { "//server/share/",      "//server/share" },
     { "//server/SHare/",      "//server/SHare" },
     { "//SERVER/SHare/",      "//server/SHare" },
+    { "//srv/s r",            "//srv/s r" },
+    { "//srv/s r/qq",         "//srv/s r/qq" },
 #endif /* WIN32 or Cygwin */
   };
   int i;
@@ -820,6 +830,7 @@ test_dirent_is_canonical(apr_pool_t *pool)
     { "//server/share",        TRUE },
     { "//server/SHare",        TRUE },
     { "//SERVER/SHare",        FALSE },
+    { "//srv/SH RE",           TRUE },
 #else /* WIN32 or Cygwin */
     { "X:/",                   FALSE },
     /* Some people use colons in their filenames. */
@@ -995,6 +1006,7 @@ test_dirent_split(apr_pool_t *pool)
     { "X:foo",           "X:",            "foo" },
     { "//srv/shr",       "//srv/shr",     "" },
     { "//srv/shr/fld",   "//srv/shr",     "fld" },
+    { "//srv/s r",       "//srv/s r",     "" },
 #else /* WIN32 or Cygwin */
     { "X:foo",           SVN_EMPTY_PATH,  "X:foo" },
 #endif /* non-WIN32 */
@@ -1092,6 +1104,7 @@ test_dirent_is_ancestor(apr_pool_t *pool)
 #if defined(WIN32) || defined(__CYGWIN__)
     { "//srv/shr",       "//srv",         FALSE},
     { "//srv/shr",       "//srv/shr/fld", TRUE },
+    { "//srv/s r",       "//srv/s r/fld", TRUE },
     { "//srv",           "//srv/shr/fld", TRUE },
     { "//srv/shr/fld",   "//srv/shr",     FALSE },
     { "//srv/shr/fld",   "//srv2/shr/fld", FALSE },
@@ -1688,6 +1701,7 @@ test_dirent_local_style(apr_pool_t *pool)
     { "dir/file",            "dir\\file" },
     { "/",                   "\\" },
     { "//server/share/dir",  "\\\\server\\share\\dir" },
+    { "//server/sh re/dir",  "\\\\server\\sh re\\dir" },
 #else
     { "a:/",                 "a:" }, /* Wrong but expected for svn_path_*() */
     { "a:/file",             "a:/file" },
@@ -1771,7 +1785,10 @@ test_dirent_internal_style(apr_pool_t *pool)
     { "dir\\file",           "dir/file" },
     { "\\\\srv\\shr\\dir",   "//srv/shr/dir" },
     { "\\\\srv\\shr\\",      "//srv/shr" },
+    { "\\\\srv\\s r\\",      "//srv/s r" },
     { "//srv/shr",           "//srv/shr" },
+    { "//srv/s r",           "//srv/s r" },
+    { "//srv/s r",           "//srv/s r" },
 #else
     { "a:/",                 "a:" }, /* Wrong but expected for svn_path_*() */
     { "a:/file",             "a:/file" },
