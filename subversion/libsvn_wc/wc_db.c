@@ -1420,7 +1420,7 @@ parse_local_abspath(svn_wc__db_pdh_t **pdh,
         break;
       if (err->apr_err != SVN_ERR_SQLITE_ERROR
           && !APR_STATUS_IS_ENOENT(err->apr_err))
-        return err;
+        return svn_error_return(err);
       svn_error_clear(err);
 
       /* If we have not moved upwards, then check for a wc-1 working copy.
@@ -1499,7 +1499,7 @@ parse_local_abspath(svn_wc__db_pdh_t **pdh,
                                 _("Missing a row in WCROOT for '%s'."),
                                 svn_dirent_local_style(original_abspath,
                                                        scratch_pool)));
-          return err;
+          return svn_error_return(err);
         }
 
       /* WCROOT.local_abspath may be NULL when the database is stored
@@ -1564,7 +1564,7 @@ parse_local_abspath(svn_wc__db_pdh_t **pdh,
             {
               if (err->apr_err != SVN_ERR_SQLITE_ERROR
                   && !APR_STATUS_IS_ENOENT(err->apr_err))
-                return err;
+                return svn_error_return(err);
               svn_error_clear(err);
 
               /* No parent, so we're at a wcroot apparently. An obstruction
@@ -3206,7 +3206,7 @@ svn_wc__db_op_get_tree_conflict(svn_wc_conflict_description_t **tree_conflict,
        return SVN_NO_ERROR;
     }
   else if (err)
-    return err;
+    return svn_error_return(err);
 
   VERIFY_USABLE_PDH(pdh);
 
@@ -4659,7 +4659,7 @@ svn_wc__db_temp_get_format(int *format,
       if (err || *local_relpath != '\0')
         {
           if (err && err->apr_err != SVN_ERR_WC_NOT_WORKING_COPY)
-            return err;
+            return svn_error_return(err);
           svn_error_clear(err);
 
           /* We might turn this directory into a wcroot later, so let's
