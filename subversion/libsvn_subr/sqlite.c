@@ -26,7 +26,7 @@
 #include "svn_error.h"
 #include "svn_pools.h"
 #include "svn_io.h"
-#include "svn_path.h"
+#include "svn_dirent_uri.h"
 #include "svn_checksum.h"
 
 #include "private/svn_sqlite.h"
@@ -50,7 +50,7 @@ static void
 sqlite_tracer(void *data, const char *sql)
 {
   /*  sqlite3 *db3 = data; */
-  fprintf(stderr, "SQLITE SQL is \"%s\"\n", sql);
+  SVN_DBG(("sql=\"%s\"\n", sql));
 }
 #endif
 
@@ -265,7 +265,7 @@ svn_sqlite__bindf(svn_sqlite__stmt_t *stmt, const char *fmt, ...)
   va_start(ap, fmt);
   err = vbindf(stmt, fmt, ap);
   va_end(ap);
-  return err;
+  return svn_error_return(err);
 }
 
 svn_error_t *
@@ -722,7 +722,7 @@ internal_open(sqlite3 **db3, const char *path, svn_sqlite__mode_t mode,
       if (kind != svn_node_file) {
           return svn_error_createf(APR_ENOENT, NULL,
                                    _("Expected SQLite database not found: %s"),
-                                   svn_path_local_style(path, scratch_pool));
+                                   svn_dirent_local_style(path, scratch_pool));
       }
     }
   else if (mode == svn_sqlite__mode_rwcreate)
@@ -896,8 +896,8 @@ svn_sqlite__with_transaction(svn_sqlite__db_t *db,
   if (err)
     {
       svn_error_clear(svn_sqlite__transaction_rollback(db));
-      return err;
+      return svn_error_return(err);
     }
-  else
-    return svn_sqlite__transaction_commit(db);
+
+  return svn_error_return(svn_sqlite__transaction_commit(db));
 }
