@@ -1206,6 +1206,13 @@ If there is no .svn directory, examine if there is CVS and run
 (defun svn-had-user-input-since-asynch-run ()
   (not (equal (recent-keys) svn-pre-run-asynch-recent-keys)))
 
+(defun svn-expand-filename-for-remote-access (file-name)
+  "Convert the given local part of a filename to a full file name to allow accessing remote files"
+  ;; when running svn on a remote host: expand local file names to get full names to access the file on the remote host via emacs
+  (if (file-remote-p default-directory)
+      (concat (file-remote-p default-directory) file-name)
+    file-name))
+
 (defun svn-process-environment ()
   "Construct the environment for the svn process.
 It is a combination of `svn-status-svn-environment-var-list' and
@@ -1652,6 +1659,8 @@ the usual parsing functionality in `svn-parse-status-result'."
   "Helper function to handle tramp connections stopping with an exit output.
 Add this function to the `svn-pre-parse-status-hook'."
   (goto-char (point-max))
+  (when (eq (svn-point-at-bol) (svn-point-at-eol))
+    (forward-line -1))
   (beginning-of-line)
   (when (looking-at "exit")
     (delete-region (point) (svn-point-at-eol))))
@@ -3590,6 +3599,10 @@ if no files have been marked."
 
 
 (defun svn-status-create-arg-file (file-name prefix file-info-list postfix)
+  "Create an svn client argument file"
+  ;; create the arg file on the remote host when we will run svn on this host!
+  (setq file-name (svn-expand-filename-for-remote-access file-name))
+  ;; (message "svn-status-create-arg-file %s: %s" default-directory file-name)
   (with-temp-file file-name
     (insert prefix)
     (let ((st-info file-info-list))
@@ -5001,22 +5014,22 @@ Commands:
     (set-buffer (get-buffer "*svn-property-edit*"))
     (when (fboundp 'set-buffer-file-coding-system)
       (set-buffer-file-coding-system svn-status-svn-file-coding-system nil))
-    (setq svn-status-temp-file-to-remove
-          (concat svn-status-temp-dir "svn-prop-edit.txt" svn-temp-suffix))
-    (write-region (point-min) (point-max) svn-status-temp-file-to-remove nil 1))
-  (when svn-status-propedit-file-list ; there are files to change properties
-    (svn-status-create-arg-file svn-status-temp-arg-file ""
-                                svn-status-propedit-file-list "")
-    (setq svn-status-propedit-file-list nil)
-    (svn-run async t 'propset "propset"
-             svn-status-propedit-property-name
-             "--targets" svn-status-temp-arg-file
-             (when (eq svn-status-svn-file-coding-system 'utf-8)
-               '("--encoding" "UTF-8"))
-             "-F" (concat svn-status-temp-dir "svn-prop-edit.txt" svn-temp-suffix))
-    (unless async (svn-status-remove-temp-file-maybe)))
-  (when svn-status-pre-propedit-window-configuration
-    (set-window-configuration svn-status-pre-propedit-window-configuration)))
+    (let ((svn-propedit-file-name (concat svn-status-temp-dir "svn-prop-edit.txt" svn-temp-suffix)))
+      (setq svn-status-temp-file-to-remove (svn-expand-filename-for-remote-access svn-propedit-file-name))
+      (write-region (point-min) (point-max) svn-status-temp-file-to-remove nil 1)
+      (when svn-status-propedit-file-list ; there are files to change properties
+        (svn-status-create-arg-file svn-status-temp-arg-file ""
+                                    svn-status-propedit-file-list "")
+        (setq svn-status-propedit-file-list nil)
+        (svn-run async t 'propset "propset"
+                 svn-status-propedit-property-name
+                 "--targets" svn-status-temp-arg-file
+                 (when (eq svn-status-svn-file-coding-system 'utf-8)
+                   '("--encoding" "UTF-8"))
+                 "-F" svn-propedit-file-name)
+        (unless async (svn-status-remove-temp-file-maybe)))
+      (when svn-status-pre-propedit-window-configuration
+        (set-window-configuration svn-status-pre-propedit-window-configuration)))))
 
 (defun svn-prop-edit-svn-diff (arg)
   (interactive "P")
