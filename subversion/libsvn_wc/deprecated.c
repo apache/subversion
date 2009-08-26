@@ -357,8 +357,8 @@ svn_wc_ensure_adm3(const char *path,
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
   SVN_ERR(svn_wc_context_create(&wc_ctx, NULL /* config */, pool, pool));
 
-  SVN_ERR(svn_wc_ensure_adm4(wc_ctx, path, uuid, url, repos, revision, depth,
-                             pool));
+  SVN_ERR(svn_wc_ensure_adm4(wc_ctx, local_abspath, uuid, url, repos, revision,
+                             depth, pool));
 
   return svn_error_return(svn_wc_context_destroy(wc_ctx));
 }
