@@ -466,6 +466,17 @@ svn_wc__internal_get_ancestry(const char **url,
                               apr_pool_t *result_pool,
                               apr_pool_t *scratch_pool);
 
+/* Library-internal version of svn_wc_ensure_adm4(). */
+svn_error_t *
+svn_wc__internal_ensure_adm(svn_wc__db_t *db,
+                            const char *local_abspath,
+                            const char *uuid,
+                            const char *url,
+                            const char *repos,
+                            svn_revnum_t revision,
+                            svn_depth_t depth,
+                            apr_pool_t *scratch_pool);
+
 /* Upgrade the wc sqlite database given in SDB for the wc located at
    WCROOT_ABSPATH. It's current/starting format is given by START_FORMAT.
    After the upgrade is complete (to as far as the automatic upgrade will

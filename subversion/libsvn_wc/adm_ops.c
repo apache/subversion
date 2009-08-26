@@ -1585,8 +1585,9 @@ svn_wc_add3(const char *path,
 
           /* Make sure this new directory has an admistrative subdirectory
              created inside of it */
-          SVN_ERR(svn_wc_ensure_adm3(path, p_entry->uuid, new_url,
-                                     p_entry->repos, 0, depth, pool));
+          SVN_ERR(svn_wc__internal_ensure_adm(db, local_abspath, p_entry->uuid,
+                                              new_url, p_entry->repos, 0,
+                                              depth, pool));
         }
       else
         {
@@ -1594,9 +1595,10 @@ svn_wc_add3(const char *path,
              the admin directory already in existence, then the dir will
              contain the copyfrom settings.  So we need to pass the
              copyfrom arguments to the ensure call. */
-          SVN_ERR(svn_wc_ensure_adm3(path, parent_entry->uuid, copyfrom_url,
-                                     parent_entry->repos, copyfrom_rev,
-                                     depth, pool));
+          SVN_ERR(svn_wc__internal_ensure_adm(db, local_abspath,
+                                              parent_entry->uuid, copyfrom_url,
+                                              parent_entry->repos,
+                                              copyfrom_rev, depth, pool));
         }
 
       /* We want the locks to persist, so use the access baton's pool */
@@ -1611,7 +1613,8 @@ svn_wc_add3(const char *path,
 
       /* We're making the same mods we made above, but this time we'll
          force the scheduling.  Also make sure to undo the
-         'incomplete' flag which svn_wc_ensure_adm3 sets by default. */
+         'incomplete' flag which svn_wc__internal_ensure_adm() sets by
+         default. */
       modify_flags |= SVN_WC__ENTRY_MODIFY_FORCE;
       modify_flags |= SVN_WC__ENTRY_MODIFY_INCOMPLETE;
       tmp_entry.schedule = is_replace

@@ -635,22 +635,21 @@ init_adm(const char *path,
 }
 
 svn_error_t *
-svn_wc_ensure_adm4(svn_wc_context_t *wc_ctx,
-                   const char *local_abspath,
-                   const char *uuid,
-                   const char *url,
-                   const char *repos,
-                   svn_revnum_t revision,
-                   svn_depth_t depth,
-                   apr_pool_t *scratch_pool)
+svn_wc__internal_ensure_adm(svn_wc__db_t *db,
+                            const char *local_abspath,
+                            const char *uuid,
+                            const char *url,
+                            const char *repos,
+                            svn_revnum_t revision,
+                            svn_depth_t depth,
+                            apr_pool_t *scratch_pool)
 {
   const svn_wc_entry_t *entry;
   int format;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
-  SVN_ERR(svn_wc__internal_check_wc(&format, wc_ctx->db, local_abspath,
-                                    scratch_pool));
+  SVN_ERR(svn_wc__internal_check_wc(&format, db, local_abspath, scratch_pool));
 
   /* Early out: we know we're not dealing with an existing wc, so
      just create one. */
@@ -659,9 +658,8 @@ svn_wc_ensure_adm4(svn_wc_context_t *wc_ctx,
                     scratch_pool);
 
   /* Now, get the existing url and repos for PATH. */
-  SVN_ERR(svn_wc__get_entry(&entry, wc_ctx->db, local_abspath, FALSE,
-                            svn_node_unknown, FALSE, scratch_pool,
-                            scratch_pool));
+  SVN_ERR(svn_wc__get_entry(&entry, db, local_abspath, FALSE, svn_node_unknown,
+                            FALSE, scratch_pool, scratch_pool));
 
   /* When the directory exists and is scheduled for deletion do not
    * check the revision or the URL.  The revision can be any
@@ -697,6 +695,21 @@ svn_wc_ensure_adm4(svn_wc_context_t *wc_ctx,
     }
 
   return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc_ensure_adm4(svn_wc_context_t *wc_ctx,
+                   const char *local_abspath,
+                   const char *uuid,
+                   const char *url,
+                   const char *repos,
+                   svn_revnum_t revision,
+                   svn_depth_t depth,
+                   apr_pool_t *scratch_pool)
+{
+  return svn_error_return(
+    svn_wc__internal_ensure_adm(wc_ctx->db, local_abspath, uuid, url, repos,
+                                revision, depth, scratch_pool));
 }
 
 svn_error_t *
