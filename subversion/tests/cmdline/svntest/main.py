@@ -1115,6 +1115,7 @@ class TestRunner:
       print(" %2d     %-5s  %s" % (self.index,
                                    self.pred.list_mode(),
                                    self.pred.description))
+    sys.stdout.flush()
 
   def get_function_name(self):
     return self.pred.get_function_name()
@@ -1131,6 +1132,7 @@ class TestRunner:
                               os.path.basename(sys.argv[0]),
                               str(self.index),
                               self.pred.description))
+    sys.stdout.flush()
 
   def run(self):
     """Run self.pred and return the result.  The return value is
@@ -1182,6 +1184,7 @@ class TestRunner:
         else:
           print('EXCEPTION: %s' % ex.__class__.__name__)
       traceback.print_exc(file=sys.stdout)
+      sys.stdout.flush()
     except KeyboardInterrupt:
       print('Interrupted')
       sys.exit(0)
@@ -1193,6 +1196,7 @@ class TestRunner:
       result = svntest.testcase.RESULT_FAIL
       print('UNEXPECTED EXCEPTION:')
       traceback.print_exc(file=sys.stdout)
+      sys.stdout.flush()
 
     os.chdir(saved_dir)
     exit_code, result_text, result_benignity = self.pred.results(result)
