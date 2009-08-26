@@ -1111,6 +1111,9 @@ prep_directory(struct dir_baton *db,
                apr_pool_t *pool)
 {
   const char *repos;
+  const char *dir_abspath;
+
+  SVN_ERR(svn_dirent_get_absolute(&dir_abspath, db->path, pool));
 
   /* Make sure the directory exists. */
   SVN_ERR(svn_wc__ensure_directory(db->path, pool));
@@ -1125,9 +1128,10 @@ prep_directory(struct dir_baton *db,
 
   /* Make sure it's the right working copy, either by creating it so,
      or by checking that it is so already. */
-  SVN_ERR(svn_wc_ensure_adm3(db->path, db->edit_baton->uuid,
-                             ancestor_url, repos,
-                             ancestor_revision, db->ambient_depth, pool));
+  SVN_ERR(svn_wc__internal_ensure_adm(db->edit_baton->db, dir_abspath,
+                                      db->edit_baton->uuid, ancestor_url,
+                                      repos, ancestor_revision,
+                                      db->ambient_depth, pool));
 
   if (! db->edit_baton->adm_access
       || strcmp(svn_wc_adm_access_path(db->edit_baton->adm_access),
