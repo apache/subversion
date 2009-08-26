@@ -558,10 +558,9 @@ svn_opt_resolve_revisions(svn_opt_revision_t *peg_rev,
   return SVN_NO_ERROR;
 }
 
-#ifdef SVN_DEBUG
 const char *
-svn_opt_revision_to_string(const svn_opt_revision_t *revision,
-                           apr_pool_t *result_pool)
+svn_opt__revision_to_string(const svn_opt_revision_t *revision,
+                            apr_pool_t *result_pool)
 {
   switch (revision->kind)
     {
@@ -586,7 +585,6 @@ svn_opt_revision_to_string(const svn_opt_revision_t *revision,
         return NULL;
     }
 }
-#endif
 
 
 
