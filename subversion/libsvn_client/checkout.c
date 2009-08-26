@@ -174,7 +174,7 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
             depth = svn_depth_infinity;
 
           /* Make the unversioned directory into a versioned one.  */
-          SVN_ERR(svn_wc_ensure_adm3(path, uuid, session_url,
+          SVN_ERR(svn_wc_ensure_adm4(ctx->wc_ctx, path, uuid, session_url,
                                      repos_root, revnum, depth, pool));
           /* Have update fix the incompleteness. */
           err = svn_client__update_internal(result_rev, path, revision,
