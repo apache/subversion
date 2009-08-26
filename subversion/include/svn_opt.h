@@ -365,6 +365,8 @@ enum svn_opt_revision_kind {
 
   /** repository youngest */
   svn_opt_revision_head
+
+  /* please update svn_opt_revision_to_string() when extending this enum */
 };
 
 /**
@@ -484,6 +486,18 @@ svn_opt_resolve_revisions(svn_opt_revision_t *peg_rev,
                           svn_boolean_t is_url,
                           svn_boolean_t notice_local_mods,
                           apr_pool_t *pool);
+
+#ifdef SVN_DEBUG
+/**
+ * Return a human-readable description of @a revision.  The result
+ * will be allocated statically or from @a result_pool.
+ * 
+ * @since New in 1.7.
+ */
+const char *
+svn_opt_revision_to_string(const svn_opt_revision_t *revision,
+                           apr_pool_t *result_pool);
+#endif
 
 
 /* Parsing arguments. */
