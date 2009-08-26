@@ -2573,11 +2573,13 @@ svn_fs_fs__rev_get_root(svn_fs_id_t **root_id_p,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_fs_fs__set_revision_proplist(svn_fs_t *fs,
-                                 svn_revnum_t rev,
-                                 apr_hash_t *proplist,
-                                 apr_pool_t *pool)
+/* Set the revision property list of revision REV in filesystem FS to
+   PROPLIST.  Use POOL for temporary allocations. */
+static svn_error_t *
+set_revision_proplist(svn_fs_t *fs,
+                      svn_revnum_t rev,
+                      apr_hash_t *proplist,
+                      apr_pool_t *pool)
 {
   const char *final_path = path_revprops(fs, rev, pool);
   const char *tmp_path;
@@ -5894,7 +5896,7 @@ write_revision_zero(svn_fs_t *fs)
   date.len = strlen(date.data);
   proplist = apr_hash_make(fs->pool);
   apr_hash_set(proplist, SVN_PROP_REVISION_DATE, APR_HASH_KEY_STRING, &date);
-  return svn_fs_fs__set_revision_proplist(fs, 0, proplist, fs->pool);
+  return set_revision_proplist(fs, 0, proplist, fs->pool);
 }
 
 svn_error_t *
@@ -6745,7 +6747,7 @@ change_rev_prop_body(void *baton, apr_pool_t *pool)
 
   apr_hash_set(table, cb->name, APR_HASH_KEY_STRING, cb->value);
 
-  return svn_fs_fs__set_revision_proplist(cb->fs, cb->rev, table, pool);
+  return set_revision_proplist(cb->fs, cb->rev, table, pool);
 }
 
 svn_error_t *
