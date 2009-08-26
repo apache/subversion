@@ -151,23 +151,13 @@ svn_wc__internal_check_wc(int *wc_format,
 
 
 svn_error_t *
-svn_wc_check_wc(const char *path,
-                int *wc_format,
-                apr_pool_t *pool)
+svn_wc_check_wc2(int *wc_format,
+                 svn_wc_context_t *wc_ctx,
+                 const char *local_abspath,
+                 apr_pool_t *pool)
 {
-  const char *local_abspath;
-  svn_wc__db_t *db;
-  svn_error_t *err;
-
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
-
-  /* Ugh. Too bad about having to open a DB.  */
-  SVN_ERR(svn_wc__db_open(&db, svn_wc__db_openmode_readonly,
-                          NULL /* ### config */, TRUE, pool, pool));
-  err = svn_wc__internal_check_wc(wc_format, db, local_abspath, pool);
-  svn_error_clear(svn_wc__db_close(db));
-
-  return svn_error_return(err);
+  return svn_error_return(
+    svn_wc__internal_check_wc(wc_format, wc_ctx->db, local_abspath, pool));
 }
 
 

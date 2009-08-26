@@ -2131,6 +2131,22 @@ svn_wc_adm_close(svn_wc_adm_access_t *adm_access)
   return svn_wc_adm_close2(adm_access, scratch_pool);
 }
 
+svn_error_t *
+svn_wc_check_wc(const char *path,
+                int *wc_format,
+                apr_pool_t *pool)
+{
+  svn_wc_context_t *wc_ctx;
+  const char *local_abspath;
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+  SVN_ERR(svn_wc_context_create(&wc_ctx, NULL, pool, pool));
+
+  SVN_ERR(svn_wc_check_wc2(wc_format, wc_ctx, local_abspath, pool));
+
+  return svn_error_return(svn_wc_context_destroy(wc_ctx));
+}
+
 
 /*** From translate.c ***/
 
