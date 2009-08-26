@@ -54,25 +54,34 @@
 
 /* Helper for report_revisions_and_depths().
 
-   Perform an atomic restoration of the file FILE_PATH; that is, copy
+   Perform an atomic restoration of the file LOCAL_ABSPATH; that is, copy
    the file's text-base to the administrative tmp area, and then move
-   that file to FILE_PATH with possible translations/expansions.  If
+   that file to LOCAL_ABSPATH with possible translations/expansions.  If
    USE_COMMIT_TIMES is set, then set working file's timestamp to
    last-commit-time.  Either way, set entry-timestamp to match that of
-   the working file when all is finished. */
+   the working file when all is finished. 
+   
+   Not that a valid access baton with a write lock to the directory of
+   LOCAL_ABSPATH must be available in DB.*/
 static svn_error_t *
-restore_file(const char *file_path,
-             svn_wc_adm_access_t *adm_access,
+restore_file(svn_wc__db_t *db,
+             const char *local_abspath,
              svn_boolean_t use_commit_times,
              apr_pool_t *pool)
 {
   svn_stream_t *src_stream;
   svn_boolean_t special;
   svn_wc_entry_t newentry;
-  const char *local_abspath;
-  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
+  const char *adm_dir, *file_path;
+  svn_wc_adm_access_t *adm_access;
 
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, file_path, pool));
+  svn_dirent_split(local_abspath, &adm_dir, &file_path, pool);
+
+  adm_access = svn_wc__adm_retrieve_internal2(db, adm_dir, pool);
+  SVN_ERR_ASSERT(adm_access != NULL);
+
+  file_path = svn_dirent_join(svn_wc_adm_access_path(adm_access), file_path,
+                              pool);
 
   SVN_ERR(svn_wc_get_pristine_contents(&src_stream, file_path, pool, pool));
 
@@ -244,10 +253,7 @@ report_revisions_and_depths(svn_wc_adm_access_t *adm_access,
   const apr_array_header_t *children;
   apr_hash_t *dirents;
   apr_pool_t *subpool = svn_pool_create(pool), *iterpool;
-  const svn_wc_entry_t *dot_entry;
-  const char *this_url;
-  const char *this_path;
-  const char *this_full_path;
+  const svn_wc_entry_t *dot_entry;  
   svn_wc_adm_access_t *dir_access;
   svn_wc_notify_t *notify;
   int i;
@@ -307,6 +313,10 @@ report_revisions_and_depths(svn_wc_adm_access_t *adm_access,
       svn_io_dirent_t *dirent;
       svn_node_kind_t dirent_kind;
       svn_boolean_t missing = FALSE;
+      const char *this_url;
+      const char *this_path;
+      const char *this_full_path;
+      const char *this_abspath;
 
       /* Clear the iteration subpool here because the loop has a bunch
          of 'continue' jump statements. */
@@ -319,6 +329,7 @@ report_revisions_and_depths(svn_wc_adm_access_t *adm_access,
       this_url = svn_path_url_add_component2(dot_entry->url, key, iterpool);
       this_path = svn_dirent_join(dir_path, key, iterpool);
       this_full_path = svn_dirent_join(full_path, key, iterpool);
+      this_abspath = svn_dirent_join(abspath, key, iterpool);
 
       SVN_ERR(svn_wc_entry(&current_entry, this_full_path, dir_access, TRUE,
                            iterpool));
@@ -409,8 +420,8 @@ report_revisions_and_depths(svn_wc_adm_access_t *adm_access,
               && (current_entry->schedule != svn_wc_schedule_replace))
             {
               /* ... recreate file from text-base, and ... */
-              SVN_ERR(restore_file(this_full_path, dir_access,
-                                   use_commit_times, iterpool));
+              SVN_ERR(restore_file(db, this_abspath, use_commit_times,
+                                   iterpool));
 
               /* ... report the restoration to the caller.  */
               if (notify_func != NULL)
@@ -615,6 +626,10 @@ svn_wc_crawl_revisions4(const char *path,
   const svn_wc_entry_t *parent_entry = NULL;
   svn_wc_notify_t *notify;
   svn_boolean_t start_empty;
+  const char *local_abspath;
+  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
   /* The first thing we do is get the base_rev from the working copy's
      ROOT_DIRECTORY.  This is the first revnum that entries will be
@@ -733,7 +748,7 @@ svn_wc_crawl_revisions4(const char *path,
       if (missing && restore_files)
         {
           /* Recreate file from text-base. */
-          err = restore_file(path, adm_access, use_commit_times, pool);
+          err = restore_file(db, local_abspath, use_commit_times, pool);
           if (err)
             goto abort_report;
 
