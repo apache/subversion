@@ -2951,8 +2951,25 @@ svn_wc_mark_missing_deleted(const char *path,
  * Do not ensure existence of @a path itself; if @a path does not
  * exist, return error.
  *
- * @since New in 1.5.
+ * @since New in 1.7.
  */
+svn_error_t *
+svn_wc_ensure_adm4(svn_wc_context_t *wc_ctx,
+                   const char *path,
+                   const char *uuid,
+                   const char *url,
+                   const char *repos,
+                   svn_revnum_t revision,
+                   svn_depth_t depth,
+                   apr_pool_t *pool);
+
+/**
+ * Similar to svn_wc_ensure_adm4(), but without the wc context parameter.
+ *
+ * @since New in 1.5.
+ * @deprecated Provided for backwards compatibility with the 1.6 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_ensure_adm3(const char *path,
                    const char *uuid,
