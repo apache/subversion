@@ -462,6 +462,20 @@ svn_sqlite__reset(svn_sqlite__stmt_t *stmt)
   return SVN_NO_ERROR;
 }
 
+
+svn_error_t *
+svn_sqlite__set_schema_version(svn_sqlite__db_t *db,
+                               int version,
+                               apr_pool_t *scratch_pool)
+{
+  const char *pragma_cmd = apr_psprintf(scratch_pool,
+                                        "PRAGMA user_version = %d;",
+                                        version);
+
+  return svn_error_return(exec_sql(db, pragma_cmd));
+}
+
+
 /* Time (in milliseconds) to wait for sqlite locks before giving up. */
 #define BUSY_TIMEOUT 10000
 
@@ -525,6 +539,7 @@ struct upgrade_baton
   apr_pool_t *scratch_pool;
 };
 
+
 /* This implements svn_sqlite__transaction_callback_t */
 static svn_error_t *
 upgrade_format(void *baton,
@@ -536,8 +551,6 @@ upgrade_format(void *baton,
 
   while (current_schema < ub->latest_schema)
     {
-      const char *pragma_cmd;
-
       svn_pool_clear(iterpool);
 
       /* Go to the next schema */
@@ -553,10 +566,7 @@ upgrade_format(void *baton,
                                  iterpool));
 
       /* Update the user version pragma */
-      pragma_cmd = apr_psprintf(iterpool,
-                                "PRAGMA user_version = %d;",
-                                current_schema);
-      SVN_ERR(exec_sql(db, pragma_cmd));
+      SVN_ERR(svn_sqlite__set_schema_version(db, current_schema, iterpool));
     }
 
   svn_pool_destroy(iterpool);
