@@ -2139,12 +2139,12 @@ match_hunk(svn_boolean_t *matched, patch_target_t *target,
   *matched = FALSE;
 
   pos = 0;
-  iterpool = svn_pool_create(pool);
-  SVN_ERR(svn_io_file_seek(target->file, APR_CUR, &pos, iterpool));
+  SVN_ERR(svn_io_file_seek(target->file, APR_CUR, &pos, pool));
 
   svn_stream_reset(hunk->original_text);
 
   lines_matched = FALSE;
+  iterpool = svn_pool_create(pool);
   do
     {
       svn_pool_clear(iterpool);
@@ -2206,7 +2206,7 @@ scan_for_match(svn_boolean_t *match, svn_linenum_t *matched_line,
 
       svn_pool_clear(iterpool);
 
-      SVN_ERR(match_hunk(&matched, target, hunk, pool));
+      SVN_ERR(match_hunk(&matched, target, hunk, iterpool));
       if (matched)
         {
           *match = TRUE;
