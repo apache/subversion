@@ -119,6 +119,16 @@ svn_opt__args_to_target_array(apr_array_header_t **targets_p,
                               apr_array_header_t *known_targets,
                               apr_pool_t *pool);
 
+/**
+ * Return a human-readable description of @a revision.  The result
+ * will be allocated statically or from @a result_pool.
+ * 
+ * @since New in 1.7.
+ */
+const char *
+svn_opt__revision_to_string(const svn_opt_revision_t *revision,
+                            apr_pool_t *result_pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
