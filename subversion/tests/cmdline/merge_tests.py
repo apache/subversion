@@ -16140,6 +16140,87 @@ def merge_replace_causes_tree_conflict(sbox):
 
   actions.run_and_verify_status(wc_dir, expected_status)
 
+#----------------------------------------------------------------------
+
+def copy_then_replace_via_merge(sbox):
+  "copy then replace via merge"
+  # Testing issue #2690 with deleted/added/replaced files and subdirs.
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  j = os.path.join
+
+  A = j(wc_dir, 'A')
+  AJ = j(wc_dir, 'A', 'J')
+  AJK = j(AJ, 'K')
+  AJL = j(AJ, 'L')
+  AJM = j(AJ, 'M')
+  AJ_sigma = j(AJ, 'sigma')
+  AJ_theta = j(AJ, 'theta')
+  AJ_omega = j(AJ, 'omega')
+  AJK_zeta = j(AJK, 'zeta')
+  AJL_zeta = j(AJL, 'zeta')
+  AJM_zeta = j(AJM, 'zeta')
+  branch = j(wc_dir, 'branch')
+  branch_J = j(wc_dir, 'branch', 'J')
+  url_A = sbox.repo_url + '/A'
+  url_branch = sbox.repo_url + '/branch'
+  
+  # Create a branch.
+  main.run_svn(None, 'cp', url_A, url_branch, '-m', 'create branch') # r2
+  
+  # Create a tree J in A.
+  os.makedirs(AJK)
+  os.makedirs(AJL)
+  main.file_append(AJ_sigma, 'new text')
+  main.file_append(AJ_theta, 'new text')
+  main.file_append(AJK_zeta, 'new text')
+  main.file_append(AJL_zeta, 'new text')
+  main.run_svn(None, 'add', AJ)
+  main.run_svn(None, 'ci', wc_dir, '-m', 'create tree J') # r3
+  main.run_svn(None, 'up', wc_dir)
+
+  # Copy J to the branch via merge
+  main.run_svn(None, 'merge', url_A, branch)
+  main.run_svn(None, 'ci', wc_dir, '-m', 'merge to branch') # r4
+  main.run_svn(None, 'up', wc_dir)
+
+  # In A, replace J with a slightly different tree
+  main.run_svn(None, 'rm', AJ)
+  main.run_svn(None, 'ci', wc_dir, '-m', 'rm AJ') # r5
+  main.run_svn(None, 'up', wc_dir)
+
+  os.makedirs(AJL)
+  os.makedirs(AJM)
+  main.file_append(AJ_theta, 'really new text')
+  main.file_append(AJ_omega, 'really new text')
+  main.file_append(AJL_zeta, 'really new text')
+  main.file_append(AJM_zeta, 'really new text')
+  main.run_svn(None, 'add', AJ)
+  main.run_svn(None, 'ci', wc_dir, '-m', 'create tree J again') # r6
+  main.run_svn(None, 'up', wc_dir)
+
+  # Run merge to replace /branch/J in one swell foop.
+  main.run_svn(None, 'merge', url_A, branch)
+
+  # Check status:
+  #   sigma and K from r4 were deleted
+  #   theta and L from r4 were replaced by r6
+  #   omega and M were added (from r6)
+  expected_status = wc.State(branch_J, {
+    ''          : Item(status='R ', copied='+', wc_rev='-'),
+    'sigma'     : Item(status='D ', copied='+', wc_rev='-'),
+    'K'         : Item(status='D ', copied='+', wc_rev='-'),
+    'K/zeta'    : Item(status='D ', copied='+', wc_rev='-'),
+    'theta'     : Item(status='  ', copied='+', wc_rev='-'),
+    'L'         : Item(status='  ', copied='+', wc_rev='-'),
+    'L/zeta'    : Item(status='  ', copied='+', wc_rev='-'),
+    'omega'     : Item(status='  ', copied='+', wc_rev='-'),
+    'M'         : Item(status='  ', copied='+', wc_rev='-'),
+    'M/zeta'    : Item(status='  ', copied='+', wc_rev='-'),
+    })
+  actions.run_and_verify_status(branch_J, expected_status)
+
 
 ########################################################################
 # Run the tests
@@ -16359,6 +16440,7 @@ test_list = [ None,
               XFail(merge_replace_causes_tree_conflict),
               SkipUnless(handle_gaps_in_implicit_mergeinfo,
                          server_has_mergeinfo),
+              XFail(copy_then_replace_via_merge),
              ]
 
 if __name__ == '__main__':
