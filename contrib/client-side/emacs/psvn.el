@@ -1290,7 +1290,7 @@ The hook svn-pre-run-hook allows to monitor/modify the ARGLIST."
             (setq svn-status-last-commit-author nil)
             (setq svn-status-mode-line-process-status (format " running %s" cmdtype))
             (svn-status-update-mode-line)
-            (sit-for 0.1)
+            (save-excursion (sit-for 0.1))
             (ring-insert svn-last-cmd-ring (list (current-time-string) arglist default-directory))
             (if run-asynchron
                 (progn
@@ -2190,7 +2190,7 @@ PREFIX is passed to `popup-menu'."
         (progn
           (setq o (make-overlay begin end))
           (overlay-put o 'face face)
-          (sit-for 0)
+          (save-excursion (sit-for 0))
           (popup-menu menu prefix))
       (delete-overlay o))))
 
@@ -5431,7 +5431,8 @@ Commands:
   "Mark the revision at point to be used as diff against revision."
   (interactive)
   (let ((start-pos)
-        (point-at-partner-rev))
+        (point-at-partner-rev)
+        (overlay))
     (dolist (ov (overlays-in (point-min) (point-max)))
       (when (overlay-get ov 'svn-log-partner-revision)
         (setq point-at-partner-rev (and (>= (point) (overlay-start ov))
