@@ -159,7 +159,7 @@ Candidate changes:
      out which .svn directory is causing the problem by printing its path
      as part of the error message.
    Votes:
-     +1: stsp
+     +1: stsp, danielsh
 
  * r38927
    Fix issue #3281, "Merge a replacement of a directory".
@@ -181,6 +181,13 @@ Candidate changes:
      compiled binaries using our regression test suite.
    Votes:
      +1: stsp
+
+ * r38959
+   Fix 'svn export -r 1000000' (issue #3400).
+   Justification:
+     Don't silently do the opposite of what the user asked for.
+   Votes:
+     +1: danielsh
 
 Approved changes:
 =================
