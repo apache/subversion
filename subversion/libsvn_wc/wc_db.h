@@ -1582,6 +1582,21 @@ svn_wc__db_upgrade_apply_dav_cache(svn_sqlite__db_t *sdb,
                                    apr_pool_t *scratch_pool);
 
 
+/* Get the repository identifier corresponding to REPOS_ROOT_URL from the
+   database in SDB. The value is returned in *REPOS_ID. All allocations
+   are allocated in SCRATCH_POOL.
+
+   NOTE: the row in REPOSITORY must exist. If not, then SVN_ERR_WC_DB_ERROR
+   is returned.
+
+   ### unclear on whether/how this interface will stay/evolve.  */
+svn_error_t *
+svn_wc__db_upgrade_get_repos_id(apr_int64_t *repos_id,
+                                svn_sqlite__db_t *sdb,
+                                const char *repos_root_url,
+                                apr_pool_t *scratch_pool);
+
+
 svn_error_t *
 svn_wc__db_upgrade_finish(const char *dir_abspath,
                           svn_sqlite__db_t *sdb,
