@@ -165,7 +165,7 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
       int wc_format;
       const svn_wc_entry_t *entry;
 
-      SVN_ERR(svn_wc_check_wc(path, &wc_format, pool));
+      SVN_ERR(svn_wc_check_wc2(&wc_format, ctx->wc_ctx, local_abspath, pool));
       if (! wc_format)
         {
         initialize_area:
