@@ -1515,17 +1515,17 @@ When this function resets `svn-process-handle-error-msg' to nil, the default err
     (insert str)
     (save-excursion
       (goto-char (svn-point-at-bol))
-      (when (looking-at "Password for '\\(.+\\)': ")
+      (when (looking-at "Password for '\\(.*\\)': ")
         ;(svn-status-show-process-buffer)
         (let ((passwd (read-passwd
                        (format "Enter svn password for %s: " (match-string 1)))))
           (svn-process-send-string-and-newline passwd t)))
       (when (looking-at "Username: ")
-        (let ((user-name (read-string "Username for svn operation: ")))
+        (let ((user-name (with-local-quit (read-string "Username for svn operation: "))))
           (svn-process-send-string-and-newline user-name)))
       (when (looking-at "(R)eject, accept (t)emporarily or accept (p)ermanently")
         (svn-status-show-process-buffer)
-        (let ((answer (read-string "(R)eject, accept (t)emporarily or accept (p)ermanently? ")))
+        (let ((answer (with-local-quit (read-string "(R)eject, accept (t)emporarily or accept (p)ermanently? "))))
           (svn-process-send-string (substring answer 0 1)))))))
 
 (defun svn-revert-some-buffers (&optional tree)
