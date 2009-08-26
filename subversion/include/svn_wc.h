@@ -2250,7 +2250,22 @@ typedef struct svn_wc_diff_callbacks_t
 /** Set @a *wc_format to @a path's working copy format version number if
  * @a path is a valid working copy directory, else set it to 0.
  * Return error @c APR_ENOENT if @a path does not exist at all.
+ *
+ * @since New in 1.7.
  */
+svn_error_t *
+svn_wc_check_wc2(int *wc_format,
+                 svn_wc_context_t *wc_ctx,
+                 const char *local_path,
+                 apr_pool_t *scratch_pool);
+
+/**
+ * Similar to svn_wc_check_wc2(), but with a relative path and no supplied
+ * working copy context.
+ *
+ * @deprecated Provided for backward compatibility with the 1.6 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_check_wc(const char *path,
                 int *wc_format,
