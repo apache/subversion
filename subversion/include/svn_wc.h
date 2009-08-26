@@ -2930,10 +2930,10 @@ svn_wc_mark_missing_deleted(const char *path,
                             apr_pool_t *pool);
 
 
-/** Ensure that an administrative area exists for @a path, so that @a
- * path is a working copy subdir based on @a url at @a revision, with
- * depth @a depth, and with repository UUID @a uuid and repository
- * root URL @a repos.
+/** Ensure that an administrative area exists for @a local_abspath, so
+ * that @a local_abspath is a working copy subdir based on @a url at @a
+ * revision, with depth @a depth, and with repository UUID @a uuid and
+ * repository root URL @a repos.
  *
  * @a depth must be a definite depth, it cannot be @c svn_depth_unknown.
  * @a uuid and @a repos may be @c NULL.  If non-@c NULL, @a repos must
@@ -2948,20 +2948,22 @@ svn_wc_mark_missing_deleted(const char *path,
  * the admin directory is scheduled for deletion or the
  * SVN_ERR_WC_OBSTRUCTED_UPDATE error will be returned.
  *
- * Do not ensure existence of @a path itself; if @a path does not
- * exist, return error.
+ * Do not ensure existence of @a local_abspath itself; if @a local_abspath
+ * does not exist, return error.
+ *
+ * Use @a scratch_pool for temporary allocations.
  *
  * @since New in 1.7.
  */
 svn_error_t *
 svn_wc_ensure_adm4(svn_wc_context_t *wc_ctx,
-                   const char *path,
+                   const char *local_abspath,
                    const char *uuid,
                    const char *url,
                    const char *repos,
                    svn_revnum_t revision,
                    svn_depth_t depth,
-                   apr_pool_t *pool);
+                   apr_pool_t *scratch_pool);
 
 /**
  * Similar to svn_wc_ensure_adm4(), but without the wc context parameter.
