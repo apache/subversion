@@ -37,6 +37,7 @@
 #include "private/svn_cmdline_private.h"
 
 #include "sync.h"
+#include "obliterate.h"
 
 #include "svn_private_config.h"
 
@@ -64,6 +65,7 @@ enum svnsync__opt {
   svnsync_opt_version,
   svnsync_opt_trust_server_cert,
   svnsync_opt_allow_non_empty,
+  svnsync_opt_obliterate,
 };
 
 #define SVNSYNC_OPTS_DEFAULT svnsync_opt_non_interactive, \
@@ -109,7 +111,7 @@ static const svn_opt_subcommand_desc2_t svnsync_cmd_table[] =
          "\n"
          "Transfer all pending revisions to the destination from the source\n"
          "with which it was initialized.\n"),
-      { SVNSYNC_OPTS_DEFAULT, 'q' } },
+      { SVNSYNC_OPTS_DEFAULT, 'q', svnsync_opt_obliterate } },
     { "copy-revprops", copy_revprops_cmd, { 0 },
       N_("usage: svnsync copy-revprops DEST_URL [REV[:REV2]]\n"
          "\n"
@@ -142,6 +144,9 @@ static const svn_opt_subcommand_desc2_t svnsync_cmd_table[] =
 
 static const apr_getopt_option_t svnsync_options[] =
   {
+    {"obliterate",     svnsync_opt_obliterate, 1,
+                       N_("omit text and property changes in each node "
+                          "whose PATH@REV string starts with ARG") },
     {"quiet",          'q', 0,
                        N_("print as little as possible") },
     {"allow-non-empty", svnsync_opt_allow_non_empty, 0,
@@ -190,6 +195,7 @@ static const apr_getopt_option_t svnsync_options[] =
   };
 
 typedef struct {
+  svnsync_obliteration_set_t *obliteration_set;  /* node-revs to omit, or NULL if none */
   svn_boolean_t non_interactive;
   svn_boolean_t trust_server_cert;
   svn_boolean_t no_auth_cache;
@@ -331,6 +337,9 @@ typedef struct {
   /* copy-revprops only */
   svn_revnum_t start_rev;
   svn_revnum_t end_rev;
+
+  /* node-revs to omit, or NULL if none */
+  svnsync_obliteration_set_t *obliteration_set;
 
 } subcommand_baton_t;
 
@@ -648,6 +657,7 @@ make_subcommand_baton(opt_baton_t *opt_baton,
   b->from_url = from_url;
   b->start_rev = start_rev;
   b->end_rev = end_rev;
+  b->obliteration_set = opt_baton->obliteration_set;
   return b;
 }
 
@@ -1016,6 +1026,18 @@ replay_rev_started(svn_revnum_t revision,
                                   rb->sb->to_url, rb->sb->quiet,
                                   &sync_editor, &sync_baton,
                                   &(rb->normalized_node_props_count), pool));
+
+  /* Do obliteration if required */
+  if (rb->sb->obliteration_set)
+    {
+      /* Wrap the sync editor in an obliteration editor, so that it
+       * receives a modified view of the source repository. */
+      SVN_ERR(svnsync_get_obliterate_editor(sync_editor, sync_baton,
+                                            revision - 1,
+                                            rb->sb->obliteration_set,
+                                            rb->sb->quiet,
+                                            &sync_editor, &sync_baton, pool));
+    }
 
   SVN_ERR(svn_delta_get_cancellation_editor(check_cancel, NULL,
                                             sync_editor, sync_baton,
@@ -1604,6 +1626,18 @@ main(int argc, const char *argv[])
 
       switch (opt_id)
         {
+          case svnsync_opt_obliterate:
+            {
+              const char *arg_utf8;
+
+              /* Add the given argument string to the obliteration set. */
+              opt_err = svn_utf_cstring_to_utf8(&arg_utf8, opt_arg, pool);
+              if (!opt_err)
+                svnsync_add_obliteration_spec(&opt_baton.obliteration_set,
+                                              arg_utf8, pool);
+            }
+            break;
+
           case svnsync_opt_non_interactive:
             opt_baton.non_interactive = TRUE;
             break;
