@@ -558,6 +558,37 @@ svn_opt_resolve_revisions(svn_opt_revision_t *peg_rev,
   return SVN_NO_ERROR;
 }
 
+#ifdef SVN_DEBUG
+const char *
+svn_opt_revision_to_string(const svn_opt_revision_t *revision,
+                           apr_pool_t *result_pool)
+{
+  switch (revision->kind)
+    {
+      case svn_opt_revision_unspecified:
+        return "unspecified";
+      case svn_opt_revision_number:
+        return apr_psprintf(result_pool, "%ld", revision->value.number);
+      case svn_opt_revision_date:
+        /* ### svn_time_to_human_cstring()? */
+        return svn_time_to_cstring(revision->value.date, result_pool);
+      case svn_opt_revision_committed:
+        return "committed";
+      case svn_opt_revision_previous:
+        return "previous";
+      case svn_opt_revision_base:
+        return "base";
+      case svn_opt_revision_working:
+        return "working";
+      case svn_opt_revision_head:
+        return "head";
+      default:
+        return NULL;
+    }
+}
+#endif
+
+
 
 /*** Parsing arguments. ***/
 #define DEFAULT_ARRAY_SIZE 5
