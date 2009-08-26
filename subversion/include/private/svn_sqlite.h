@@ -94,6 +94,14 @@ svn_sqlite__read_schema_version(int *version,
                                 svn_sqlite__db_t *db,
                                 apr_pool_t *scratch_pool);
 
+/* Set DB's schema version to VERSION. Use SCRATCH_POOL for all temporary
+   allocations.  */
+svn_error_t *
+svn_sqlite__set_schema_version(svn_sqlite__db_t *db,
+                               int version,
+                               apr_pool_t *scratch_pool);
+
+
 /* Open a connection in *DB to the database at PATH. Validate the schema,
    creating/upgrading to LATEST_SCHEMA if needed using the instructions
    in UPGRADE_SQL. The resulting DB is allocated in RESULT_POOL, and any
