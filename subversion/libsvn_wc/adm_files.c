@@ -635,7 +635,8 @@ init_adm(const char *path,
 }
 
 svn_error_t *
-svn_wc_ensure_adm3(const char *path,
+svn_wc_ensure_adm4(svn_wc_context_t *wc_ctx,
+                   const char *path,
                    const char *uuid,
                    const char *url,
                    const char *repos,
@@ -643,20 +644,13 @@ svn_wc_ensure_adm3(const char *path,
                    svn_depth_t depth,
                    apr_pool_t *pool)
 {
-  svn_wc__db_t *db;
   const char *local_abspath;
   const svn_wc_entry_t *entry;
   int format;
 
-  SVN_ERR(svn_wc__db_open(&db, svn_wc__db_openmode_readwrite,
-                          NULL /* ### config */, TRUE, pool, pool));
-
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
-  SVN_ERR(svn_wc__internal_check_wc(&format, db, local_abspath, pool));
-
-  /* ### we just created a DB. we should pass that into the other
-     ### functions below.  */
+  SVN_ERR(svn_wc__internal_check_wc(&format, wc_ctx->db, local_abspath, pool));
 
   /* Early out: we know we're not dealing with an existing wc, so
      just create one. */
@@ -664,8 +658,8 @@ svn_wc_ensure_adm3(const char *path,
     return init_adm(path, uuid, url, repos, revision, depth, pool);
 
   /* Now, get the existing url and repos for PATH. */
-  SVN_ERR(svn_wc__get_entry(&entry, db, local_abspath, FALSE, svn_node_unknown,
-                            FALSE, pool, pool));
+  SVN_ERR(svn_wc__get_entry(&entry, wc_ctx->db, local_abspath, FALSE,
+                            svn_node_unknown, FALSE, pool, pool));
 
   /* When the directory exists and is scheduled for deletion do not
    * check the revision or the URL.  The revision can be any
