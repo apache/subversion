@@ -278,6 +278,16 @@ svn_wc__adm_open_anchor_in_context(svn_wc_adm_access_t **anchor_access,
  */
 
 /**
+ * Retrieve an @a adm_access for @a path from the @a wc_ctx.
+ * If the @a adm_access for @a local_abspath is not found, this
+ * function sets @a *adm_acess to NULL and does not return an error.
+ */
+svn_error_t *
+svn_wc__adm_retrieve_from_context(svn_wc_adm_access_t **adm_access,
+                                  svn_wc_context_t *wc_ctx,
+                                  const char *local_abspath,
+                                  apr_pool_t *pool);
+/**
  * Fetch the absolute paths of all the working children of @a dir_abspath
  * into @a *children, allocated in @a result_pool.  Use @a wc_ctx to access
  * the working copy, and @a scratch_pool for all temporary allocations.

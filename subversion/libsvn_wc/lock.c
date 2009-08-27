@@ -1310,6 +1310,20 @@ svn_wc__adm_open_anchor_in_context(svn_wc_adm_access_t **anchor_access,
                                       cancel_baton, pool));
 }
 
+svn_error_t *
+svn_wc__adm_retrieve_from_context(svn_wc_adm_access_t **adm_access,
+                                  svn_wc_context_t *wc_ctx,
+                                  const char *local_abspath,
+                                  apr_pool_t *pool)
+{
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  *adm_access = svn_wc__adm_retrieve_internal2(wc_ctx->db, 
+                                               local_abspath, 
+                                               pool);
+
+  return SVN_NO_ERROR;
+}
 
 /* Does the work of closing the access baton ADM_ACCESS.  Any physical
    locks are removed from the working copy if PRESERVE_LOCK is FALSE, or
