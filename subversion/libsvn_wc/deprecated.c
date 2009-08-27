@@ -2057,6 +2057,20 @@ svn_wc_add_repos_file(const char *dst_path,
                                 pool);
 }
 
+svn_error_t *
+svn_wc_get_actual_target(const char *path,
+                         const char **anchor,
+                         const char **target,
+                         apr_pool_t *pool)
+{
+  svn_wc_context_t *wc_ctx;
+
+  SVN_ERR(svn_wc_context_create(&wc_ctx, NULL, pool, pool));
+  SVN_ERR(svn_wc_get_actual_target2(anchor, target, wc_ctx, path, pool, pool));
+
+  return svn_error_return(svn_wc_context_destroy(wc_ctx));
+}
+
 /*** From lock.c ***/
 
 /* To preserve API compatibility with Subversion 1.0.0 */

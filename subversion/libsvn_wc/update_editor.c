@@ -5128,7 +5128,7 @@ svn_wc_traversed_depths(apr_hash_t **depths,
 }
 
 
-/* ABOUT ANCHOR AND TARGET, AND svn_wc_get_actual_target()
+/* ABOUT ANCHOR AND TARGET, AND svn_wc_get_actual_target2()
 
    THE GOAL
 
@@ -5203,7 +5203,7 @@ svn_wc_traversed_depths(apr_hash_t **depths,
    this directory in mind), and the "target" is the actual intended
    subject of the update.
 
-   svn_wc_get_actual_target() is that function.
+   svn_wc_get_actual_target2() is that function.
 
    So, what are the conditions?
 
@@ -5432,32 +5432,31 @@ svn_wc__strictly_is_wc_root(svn_boolean_t *wc_root,
 
 
 svn_error_t *
-svn_wc_get_actual_target(const char *path,
-                         const char **anchor,
-                         const char **target,
-                         apr_pool_t *pool)
+svn_wc_get_actual_target2(const char **anchor,
+                          const char **target,
+                          svn_wc_context_t *wc_ctx,
+                          const char *path,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool)
 {
-  svn_wc__db_t *db;
   svn_boolean_t is_wc_root;
   svn_node_kind_t kind;
   const char *local_abspath;
 
-  /* ### this sucks. somebody should pass us a DB/ABSPATH instead.  */
-  SVN_ERR(svn_wc__db_open(&db, svn_wc__db_openmode_readonly,
-                          NULL /* ### config */, TRUE, pool, pool));
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
-  SVN_ERR(check_wc_root(&is_wc_root, &kind, db, local_abspath, pool));
-  SVN_ERR(svn_wc__db_close(db));
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, scratch_pool));
+
+  SVN_ERR(check_wc_root(&is_wc_root, &kind, wc_ctx->db, local_abspath,
+                        scratch_pool));
 
   /* If PATH is not a WC root, or if it is a file, lop off a basename. */
   if ((! is_wc_root) || (kind == svn_node_file))
     {
-      svn_dirent_split(path, anchor, target, pool);
+      svn_dirent_split(path, anchor, target, result_pool);
     }
   else
     {
-      *anchor = apr_pstrdup(pool, path);
-      *target = "";
+      *anchor = apr_pstrdup(result_pool, path);
+      *target = apr_pstrdup(result_pool, "");
     }
 
   return SVN_NO_ERROR;
