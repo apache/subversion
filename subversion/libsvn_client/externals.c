@@ -316,7 +316,8 @@ switch_file_external(const char *path,
   svn_error_t *err = NULL;
 
   /* There must be a working copy to place the file external into. */
-  SVN_ERR(svn_wc_get_actual_target(path, &anchor, &target, subpool));
+  SVN_ERR(svn_wc_get_actual_target2(&anchor, &target, ctx->wc_ctx, path,
+                                    subpool, subpool));
   SVN_ERR(svn_dirent_get_absolute(&anchor_abspath, anchor, subpool));
 
   /* Try to get a access baton for the anchor using the input access
@@ -904,8 +905,9 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
           const char *target;
           svn_error_t *err2;
 
-          SVN_ERR(svn_wc_get_actual_target(path, &anchor, &target,
-                                           ib->iter_pool));
+          SVN_ERR(svn_wc_get_actual_target2(&anchor, &target, ib->ctx->wc_ctx,
+                                            path, ib->iter_pool,
+                                            ib->iter_pool));
 
           err2 = svn_wc_adm_retrieve(&adm_access, ib->adm_access, anchor,
                                      ib->iter_pool);

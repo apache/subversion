@@ -1026,6 +1026,7 @@ remove_redundancies(apr_array_header_t **punique_targets,
 static svn_error_t *
 adjust_rel_targets(const char **pbase_dir,
                    apr_array_header_t **prel_targets,
+                   svn_wc_context_t *wc_ctx,
                    const char *base_dir,
                    apr_array_header_t *rel_targets,
                    apr_pool_t *pool)
@@ -1053,7 +1054,8 @@ adjust_rel_targets(const char **pbase_dir,
     {
       const char *parent_dir, *name;
 
-      SVN_ERR(svn_wc_get_actual_target(base_dir, &parent_dir, &name, pool));
+      SVN_ERR(svn_wc_get_actual_target2(&parent_dir, &name, wc_ctx, base_dir,
+                                        pool, pool));
 
       if (*name)
         {
@@ -1408,7 +1410,8 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
     {
       const char *parent_dir, *name;
 
-      SVN_ERR(svn_wc_get_actual_target(base_dir, &parent_dir, &name, pool));
+      SVN_ERR(svn_wc_get_actual_target2(&parent_dir, &name, ctx->wc_ctx,
+                                        base_dir, pool, pool));
       if (*name)
         {
           svn_node_kind_t kind;
@@ -1447,9 +1450,8 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
     {
       apr_pool_t *subpool = svn_pool_create(pool);
 
-      SVN_ERR(adjust_rel_targets(&base_dir, &rel_targets,
-                                 base_dir, rel_targets,
-                                 pool));
+      SVN_ERR(adjust_rel_targets(&base_dir, &rel_targets, ctx->wc_ctx,
+                                 base_dir, rel_targets, pool));
 
       for (i = 0; i < rel_targets->nelts; i++)
         {
