@@ -217,7 +217,7 @@ line_filter(svn_stream_t *stream, svn_boolean_t *filtered, const char *line,
   return SVN_NO_ERROR;
 }
 
-/* Run the line transforter callback of STREAM with LINE as input,
+/* Run the line transformer callback of STREAM with LINE as input,
  * and expect the transformation result to be returned in BUF,
  * allocated in POOL. */
 static svn_error_t *
