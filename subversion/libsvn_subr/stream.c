@@ -51,6 +51,7 @@ struct svn_stream_t {
   svn_close_fn_t close_fn;
   svn_io_reset_fn_t reset_fn;
   svn_io_line_filter_cb_t line_filter_cb;
+  svn_io_line_transformer_cb_t line_transformer_cb;
 };
 
 
@@ -69,6 +70,7 @@ svn_stream_create(void *baton, apr_pool_t *pool)
   stream->reset_fn = NULL;
   stream->close_fn = NULL;
   stream->line_filter_cb = NULL;
+  stream->line_transformer_cb = NULL;
   return stream;
 }
 
@@ -110,6 +112,14 @@ svn_stream_set_line_filter_callback(svn_stream_t *stream,
                                     svn_io_line_filter_cb_t line_filter_cb)
 {
   stream->line_filter_cb = line_filter_cb;
+}
+
+void
+svn_stream_set_line_transformer_callback(
+  svn_stream_t *stream,
+  svn_io_line_transformer_cb_t line_transformer_cb)
+{
+  stream->line_transformer_cb = line_transformer_cb;
 }
 
 svn_error_t *
@@ -207,6 +217,25 @@ line_filter(svn_stream_t *stream, svn_boolean_t *filtered, const char *line,
   return SVN_NO_ERROR;
 }
 
+/* Run the line transforter callback of STREAM with LINE as input,
+ * and expect the transformation result to be returned in BUF,
+ * allocated in POOL. */
+static svn_error_t *
+line_transformer(svn_stream_t *stream, svn_stringbuf_t **buf,
+                 const char *line, apr_pool_t *pool)
+{
+  apr_pool_t *scratch_pool;
+
+  scratch_pool = svn_pool_create(pool);
+  SVN_ERR(stream->line_transformer_cb(buf, line, pool, scratch_pool));
+  svn_pool_destroy(scratch_pool);
+
+  /* Die if the line transformer didn't provide any output. */
+  SVN_ERR_ASSERT(*buf);
+
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_stream_readline(svn_stream_t *stream,
                     svn_stringbuf_t **stringbuf,
@@ -244,8 +273,11 @@ svn_stream_readline(svn_stream_t *stream,
               *eof = TRUE;
 
               SVN_ERR(line_filter(stream, &filtered, str->data, iterpool));
+
               if (filtered)
                 *stringbuf = svn_stringbuf_create_ensure(0, pool);
+              else if (stream->line_transformer_cb)
+                SVN_ERR(line_transformer(stream, stringbuf, str->data, pool));
               else
                 *stringbuf = svn_stringbuf_dup(str, pool);
 
@@ -266,9 +298,17 @@ svn_stream_readline(svn_stream_t *stream,
       SVN_ERR(line_filter(stream, &filtered, str->data, iterpool));
     }
   while (filtered);
-  *stringbuf = svn_stringbuf_dup(str, pool);
+  /* Not destroying the iterpool just yet since we still need STR
+   * which is allocated in it. */
 
-  svn_pool_destroy(iterpool);
+  if (stream->line_transformer_cb)
+    SVN_ERR(line_transformer(stream, stringbuf, str->data, pool));
+  else
+    *stringbuf = svn_stringbuf_dup(str, pool);
+
+  /* Done. RIP iterpool. */
+  svn_pool_destroy(iterpool); 
+
   return SVN_NO_ERROR;
 }
 

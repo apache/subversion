@@ -345,6 +345,105 @@ test_stream_line_filter(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+/* An implementation of svn_io_line_transformer_cb_t */
+static svn_error_t *
+line_transformer(svn_stringbuf_t **buf, const char *line,
+                 apr_pool_t *result_pool, apr_pool_t *scratch_pool)
+{
+  int i, len = strlen(line);
+  char *temp = apr_palloc(scratch_pool, len + 1 );
+
+  for (i = 0; i < len; i++)
+    {
+      temp[i] = line[len - 1 - i];
+    }
+
+  temp[len] = '\0';
+
+  *buf = svn_stringbuf_create(temp, result_pool);
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_stream_line_transformer(apr_pool_t *pool)
+{
+  static const char *lines[4] = {"gamma", "",
+                                 "iota", "!"};
+
+  static const char *inv_lines[4] = {"ammag", "",
+                                 "atoi", "!"};
+  svn_string_t *string;
+  svn_stream_t *stream;
+  svn_stringbuf_t *line;
+  svn_boolean_t eof;
+
+  string = svn_string_createf(pool, "%s\n%s\n%s\n%s", lines[0], lines[1],
+                              lines[2], lines[3]);
+
+  stream = svn_stream_from_string(string, pool);
+
+  svn_stream_set_line_transformer_callback(stream, line_transformer);
+  
+  svn_stream_readline(stream, &line, "\n", &eof, pool);
+  SVN_ERR_ASSERT(strcmp(line->data, inv_lines[0]) == 0);
+
+  svn_stream_readline(stream, &line, "\n", &eof, pool);
+  SVN_ERR_ASSERT(strcmp(line->data, inv_lines[1]) == 0);
+
+  svn_stream_readline(stream, &line, "\n", &eof, pool);
+  SVN_ERR_ASSERT(strcmp(line->data, inv_lines[2]) == 0);
+
+  svn_stream_readline(stream, &line, "\n", &eof, pool);
+  SVN_ERR_ASSERT(strcmp(line->data, inv_lines[3]) == 0);
+
+  /* We should have reached eof and the stringbuf should be emtpy. */
+  svn_stream_readline(stream, &line, "\n", &eof, pool);
+  SVN_ERR_ASSERT(eof && svn_stringbuf_isempty(line));
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_stream_line_filter_and_transformer(apr_pool_t *pool)
+{
+  static const char *lines[4] = {"!gamma", "",
+                                 "iota", "!"};
+
+  static const char *inv_lines[4] = {"ammag", "",
+                                 "atoi", "!"};
+  svn_string_t *string;
+  svn_stream_t *stream;
+  svn_stringbuf_t *line;
+  svn_boolean_t eof;
+
+  string = svn_string_createf(pool, "%s\n%s\n%s\n%s", lines[0], lines[1],
+                              lines[2], lines[3]);
+
+  stream = svn_stream_from_string(string, pool);
+
+  svn_stream_set_line_filter_callback(stream, line_filter);
+
+  svn_stream_set_line_transformer_callback(stream, line_transformer);
+  
+  /* Line one should be filtered. */
+  svn_stream_readline(stream, &line, "\n", &eof, pool);
+  SVN_ERR_ASSERT(strcmp(line->data, inv_lines[1]) == 0);
+
+  svn_stream_readline(stream, &line, "\n", &eof, pool);
+  SVN_ERR_ASSERT(strcmp(line->data, inv_lines[2]) == 0);
+
+  /* The last line should also be filtered, and the resulting
+   * stringbuf should be empty. */
+  svn_stream_readline(stream, &line, "\n", &eof, pool);
+  SVN_ERR_ASSERT(eof && svn_stringbuf_isempty(line));
+
+  return SVN_NO_ERROR;
+
+}
+
+
+
 
 /* The test table.  */
 
@@ -359,5 +458,9 @@ struct svn_test_descriptor_t test_funcs[] =
                    "test streams reading from range of file"),
     SVN_TEST_PASS2(test_stream_line_filter,
                    "test stream line filtering"),
+    SVN_TEST_PASS2(test_stream_line_transformer,
+                   "test stream line transforming"),
+    SVN_TEST_PASS2(test_stream_line_filter_and_transformer,
+                   "test stream line filtering and transforming"),
     SVN_TEST_NULL
   };
