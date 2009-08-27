@@ -765,9 +765,9 @@ svn_stream_set_line_filter_callback(svn_stream_t *stream,
  * @a line_transformer_cb.
  * @since New in 1.7. */
 void
-svn_stream_set_line_transformer_callback(svn_stream_t *stream,
-                                         svn_io_line_transformer_cb_t 
-                                         line_transformer_cb);
+svn_stream_set_line_transformer_callback
+  (svn_stream_t *stream,
+   svn_io_line_transformer_cb_t line_transformer_cb);
 
 /** Create a stream that is empty for reading and infinite for writing. */
 svn_stream_t *
