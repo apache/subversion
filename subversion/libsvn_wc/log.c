@@ -1686,20 +1686,19 @@ svn_wc__run_log(svn_wc_adm_access_t *adm_access,
 /* Extend LOG_ACCUM with log operations to do MOVE_COPY_OP to SRC_PATH and
  * DST_PATH.
  *
- * SRC_PATH and DST_PATH are relative to ADM_ACCESS.
+ * SRC_PATH and DST_PATH are relative to ADM_ABSPATH.
  */
 static svn_error_t *
 loggy_move_copy_internal(svn_stringbuf_t **log_accum,
                          svn_boolean_t is_move,
-                         svn_wc_adm_access_t *adm_access,
+                         const char *adm_abspath,
                          const char *src_path, const char *dst_path,
                          apr_pool_t *pool)
 {
   svn_node_kind_t kind;
-  const char *full_src = svn_dirent_join(svn_wc_adm_access_path(adm_access),
-                                         src_path, pool);
+  const char *src_abspath = svn_dirent_join(adm_abspath, src_path, pool);
 
-  SVN_ERR(svn_io_check_path(full_src, &kind, pool));
+  SVN_ERR(svn_io_check_path(src_abspath, &kind, pool));
 
   /* Does this file exist? */
   if (kind != svn_node_none)
@@ -1798,7 +1797,8 @@ svn_wc__loggy_copy(svn_stringbuf_t **log_accum,
                      svn_wc__adm_access_abspath(adm_access), pool));
   SVN_ERR(loggy_path(&loggy_path2, dst_path,
                      svn_wc__adm_access_abspath(adm_access), pool));
-  return loggy_move_copy_internal(log_accum, FALSE, adm_access,
+  return loggy_move_copy_internal(log_accum, FALSE,
+                                  svn_wc__adm_access_abspath(adm_access),
                                   loggy_path1, loggy_path2, pool);
 }
 
@@ -2073,7 +2073,8 @@ svn_wc__loggy_move(svn_stringbuf_t **log_accum,
                      svn_wc__adm_access_abspath(adm_access), pool));
   SVN_ERR(loggy_path(&loggy_path2, dst_path,
                      svn_wc__adm_access_abspath(adm_access), pool));
-  return loggy_move_copy_internal(log_accum, TRUE, adm_access,
+  return loggy_move_copy_internal(log_accum, TRUE,
+                                  svn_wc__adm_access_abspath(adm_access),
                                   loggy_path1, loggy_path2, pool);
 }
 
