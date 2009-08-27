@@ -87,8 +87,8 @@ svn_cl__commit(apr_getopt_t *os,
     {
       const char *parent_dir, *base_name;
 
-      SVN_ERR(svn_wc_get_actual_target(base_dir, &parent_dir,
-                                       &base_name, pool));
+      SVN_ERR(svn_wc_get_actual_target2(&parent_dir, &base_name, ctx->wc_ctx,
+                                        base_dir, pool, pool));
       if (*base_name)
         base_dir = apr_pstrdup(pool, parent_dir);
     }
