@@ -99,11 +99,11 @@ static const enum_mapping_t operation_map[] =
 /* A map for svn_wc_conflict_action_t values. */
 static const enum_mapping_t action_map[] =
 {
-  { "edited",  svn_wc_conflict_action_edit },
-  { "deleted", svn_wc_conflict_action_delete },
-  { "added",   svn_wc_conflict_action_add },
-  { "replace", svn_wc_conflict_action_replace },
-  { NULL,      0 }
+  { "edited",   svn_wc_conflict_action_edit },
+  { "deleted",  svn_wc_conflict_action_delete },
+  { "added",    svn_wc_conflict_action_add },
+  { "replaced", svn_wc_conflict_action_replace },
+  { NULL,       0 }
 };
 
 /* A map for svn_wc_conflict_reason_t values. */
