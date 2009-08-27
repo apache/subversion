@@ -4482,8 +4482,35 @@ svn_wc_is_wc_root(svn_boolean_t *wc_root,
  * @a target is the actual subject (relative to the @a anchor) of the
  * update/commit, or "" if the @a anchor itself is the subject.
  *
- * Allocate @a anchor and @a target in @a pool.
+ * Allocate @a anchor and @a target in @a result_pool; @a scratch_pool
+ * is used for temporary allocations.
+ *
+ * @note Even though this API uses a @c svn_wc_context_t, it accepts a
+ * (possibly) relative path and returns a (possibly) relative path in
+ * @a *anchor.  The reason being that the outputs are generally used to
+ * open access batons, and such opening currently requires relative paths.
+ * In the long-run, I expect this API to be removed from 1.7, due to the
+ * remove of access batons, but for the time being, the @c svn_wc_context_t
+ * parameter allows us to avoid opening a duplicate database, just for this
+ * function.
+ *
+ * @since New in 1.7.
  */
+svn_error_t *
+svn_wc_get_actual_target2(const char **anchor,
+                          const char **target,
+                          svn_wc_context_t *wc_ctx,
+                          const char *path,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool);
+
+
+/** Similar to svn_wc_get_actual_target2(), but without the wc context, and
+ * with a absolute path.
+ * 
+ * @deprecated Provided for backward compatibility with the 1.6 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_get_actual_target(const char *path,
                          const char **anchor,
