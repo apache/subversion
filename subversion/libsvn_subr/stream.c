@@ -199,6 +199,10 @@ svn_stream_printf_from_utf8(svn_stream_t *stream,
   return svn_stream_write(stream, translated, &len);
 }
 
+/* If a line filter callback was set on STREAM, invoke it on LINE,
+ * and indicate in *FILTERED whether the line should be filtered.
+ * If no line filter callback was set on STREAM, just set *FILTERED to FALSE.
+ */
 static svn_error_t *
 line_filter(svn_stream_t *stream, svn_boolean_t *filtered, const char *line,
             apr_pool_t *pool)
