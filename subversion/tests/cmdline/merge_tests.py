@@ -2793,6 +2793,19 @@ def merge_dir_and_file_replace(sbox):
                                        0) # don't do a dry-run
                                           # the output differs
 
+  # This test is failing, after this merge, in 'svn status' with
+  # the following error:
+  # subversion/svn/status-cmd.c:256: (apr_err=160013)
+  # subversion/svn/util.c:958: (apr_err=160013)
+  # subversion/libsvn_client/status.c:382: (apr_err=160013)
+  # subversion/libsvn_repos/reporter.c:1263: (apr_err=160013)
+  # subversion/libsvn_repos/reporter.c:1194: (apr_err=160013)
+  # subversion/libsvn_repos/reporter.c:1029: (apr_err=160013)
+  # subversion/libsvn_repos/reporter.c:851: (apr_err=160013)
+  # subversion/libsvn_repos/reporter.c:1029: (apr_err=160013)
+  # subversion/libsvn_repos/reporter.c:790: (apr_err=160013)
+  # svn: Working copy path 'foo/bar' does not exist in repository
+
   # Commit merge of foo onto C
   expected_output = svntest.wc.State(wc_dir, {
     'A/C/foo'                : Item(verb='Replacing'),
