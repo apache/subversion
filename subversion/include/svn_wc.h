@@ -1792,12 +1792,12 @@ svn_wc_create_conflict_result(svn_wc_conflict_choice_t choice,
  *
  * @since New in 1.7.
  */
-typedef svn_error_t *(*svn_wc_conflict_resolver_func2_t)
-    (svn_wc_conflict_result_t **result,
-     const svn_wc_conflict_description2_t *description,
-     void *baton,
-     apr_pool_t *result_pool,
-     apr_pool_t *scratch_pool);
+typedef svn_error_t *(*svn_wc_conflict_resolver_func2_t)(
+  svn_wc_conflict_result_t **result,
+  const svn_wc_conflict_description2_t *description,
+  void *baton,
+  apr_pool_t *result_pool,
+  apr_pool_t *scratch_pool);
 
 
 /** Similar to @c svn_wc_conflict_resolver_func2_t, but using
@@ -1807,11 +1807,11 @@ typedef svn_error_t *(*svn_wc_conflict_resolver_func2_t)
  * @since New in 1.5.
  * @deprecated Provided for backward compatibility with the 1.6 API.
  */
-typedef svn_error_t *(*svn_wc_conflict_resolver_func_t)
-    (svn_wc_conflict_result_t **result,
-     const svn_wc_conflict_description_t *description,
-     void *baton,
-     apr_pool_t *pool);
+typedef svn_error_t *(*svn_wc_conflict_resolver_func_t)(
+  svn_wc_conflict_result_t **result,
+  const svn_wc_conflict_description_t *description,
+  void *baton,
+  apr_pool_t *pool);
 
 /** @} */
 
@@ -4993,11 +4993,11 @@ svn_wc_is_entry_prop(const char *name);
  * SVN_PROP_EOL_STYLE property, to make sure that the value matches
  * the mime type and contents.)
  */
-typedef svn_error_t *(*svn_wc_canonicalize_svn_prop_get_file_t)
-  (const svn_string_t **mime_type,
-   svn_stream_t *stream,
-   void *baton,
-   apr_pool_t *pool);
+typedef svn_error_t *(*svn_wc_canonicalize_svn_prop_get_file_t)(
+  const svn_string_t **mime_type,
+  svn_stream_t *stream,
+  void *baton,
+  apr_pool_t *pool);
 
 
 /** Canonicalize the value of an svn:* property @a propname with

@@ -59,8 +59,8 @@ extern "C" {
  * unless the instance is explicitly documented to allocate from a
  * pool in @a baton.
  */
-typedef svn_error_t *(svn_opt_subcommand_t)
-       (apr_getopt_t *os, void *baton, apr_pool_t *pool);
+typedef svn_error_t *(svn_opt_subcommand_t)(
+  apr_getopt_t *os, void *baton, apr_pool_t *pool);
 
 
 /** The maximum number of aliases a subcommand can have. */
