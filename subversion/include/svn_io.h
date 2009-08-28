@@ -694,13 +694,15 @@ typedef svn_error_t *(*svn_close_fn_t)(void *baton);
 /** Reset handler function for a generic stream. @see svn_stream_t and
  * svn_stream_reset().
  *
- * @since New in 1.7. */
+ * @since New in 1.7.
+ */
 typedef svn_error_t *(*svn_io_reset_fn_t)(void *baton);
 
 /** Line-filtering callback function for a generic stream.
  * @see svn_stream_t and svn_stream_readline().
  *
- * @since New in 1.7. */
+ * @since New in 1.7.
+ */
 typedef svn_error_t *(*svn_io_line_filter_cb_t)(svn_boolean_t *filtered,
                                                 const char *line,
                                                 apr_pool_t *scratch_pool);
@@ -718,7 +720,8 @@ typedef svn_error_t *(*svn_io_line_filter_cb_t)(svn_boolean_t *filtered,
  *
  * @see svn_stream_t, svn_io_line_filter_cb_t and svn_stream_readline().
  * 
- * @since New in 1.7. */
+ * @since New in 1.7.
+ */
 typedef svn_error_t *(*svn_io_line_transformer_cb_t)(svn_stringbuf_t **buf,
                                                      const char *line,
                                                      apr_pool_t *result_pool,
@@ -750,24 +753,30 @@ svn_stream_set_close(svn_stream_t *stream,
                      svn_close_fn_t close_fn);
 
 /** Set @a stream's reset function to @a reset_fn
- * @since New in 1.7. */
+ *
+ * @since New in 1.7.
+ */
 void
 svn_stream_set_reset(svn_stream_t *stream,
                      svn_io_reset_fn_t reset_fn);
 
 /** Set @a stream's line-filtering callback function to @a line_filter_cb
- * @since New in 1.7. */
+ *
+ * @since New in 1.7.
+ */
 void
 svn_stream_set_line_filter_callback(svn_stream_t *stream,
                                     svn_io_line_filter_cb_t line_filter_cb);
 
 /** Set @a streams's line-transforming callback function to
  * @a line_transformer_cb.
- * @since New in 1.7. */
+ *
+ * @since New in 1.7.
+ */
 void
-svn_stream_set_line_transformer_callback
-  (svn_stream_t *stream,
-   svn_io_line_transformer_cb_t line_transformer_cb);
+svn_stream_set_line_transformer_callback(
+  svn_stream_t *stream,
+  svn_io_line_transformer_cb_t line_transformer_cb);
 
 /** Create a stream that is empty for reading and infinite for writing. */
 svn_stream_t *
@@ -1012,7 +1021,8 @@ svn_stream_close(svn_stream_t *stream);
  * @a SVN_ERR_STREAM_RESET_NOT_SUPPORTED error when the stream doesn't
  * implement resetting.
  *
- * @since New in 1.7. */
+ * @since New in 1.7.
+ */
 svn_error_t *
 svn_stream_reset(svn_stream_t *stream);
 
