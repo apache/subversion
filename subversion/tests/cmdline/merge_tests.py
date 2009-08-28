@@ -3518,15 +3518,9 @@ def merge_file_replace_to_mixed_rev_wc(sbox):
                                        expected_status,
                                        expected_skip)
 
-  # At this point WC is broken, because file rho has invalid revision
-  # Try to update
-  expected_output = svntest.wc.State(wc_dir, {})
-  expected_status.tweak(wc_rev='3')
-  expected_status.tweak('A/D/G/rho', status='R ', copied='+', wc_rev='-')
-  svntest.actions.run_and_verify_update(wc_dir,
-                                        expected_output,
-                                        expected_disk,
-                                        expected_status)
+  # When issue #2522 was filed, svn used to break the WC if we didn't
+  # update here. But nowadays, this no longer happens, so the separate
+  # update step which was done here originally has been removed.
 
   # Now commit merged wc
   expected_output = svntest.wc.State(wc_dir, {
