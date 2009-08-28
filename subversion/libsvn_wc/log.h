@@ -47,13 +47,12 @@ extern "C" {
  */
 
 /* Each path argument to the svn_wc__loggy_* functions in this section can
-   be either absolute or relative to the path with which the adm_access was
-   opened.
+   be either absolute or relative to the adm_abspath.
 */
 
 /* Extend **LOG_ACCUM with log instructions to append the contents
    of SRC to DST.
-   SRC and DST are relative to ADM_ACCESS.
+   SRC and DST are relative to ADM_ABSPATH.
 
    This command fails to be idempotent or atomic: there's no way to
    tell if you should re-run this!  This function is deprecated; new
@@ -64,7 +63,7 @@ extern "C" {
 SVN_DEPRECATED
 svn_error_t *
 svn_wc__loggy_append(svn_stringbuf_t **log_accum,
-                     svn_wc_adm_access_t *adm_access,
+                     const char *adm_abspath,
                      const char *src, const char *dst,
                      apr_pool_t *pool);
 

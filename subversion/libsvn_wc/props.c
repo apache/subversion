@@ -1715,7 +1715,8 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
       /* We've now guaranteed that some kind of .prej file exists
          above the .svn/ dir.  We write log entries to append our
          conflicts to it. */
-      SVN_ERR(svn_wc__loggy_append(entry_accum, adm_access,
+      SVN_ERR(svn_wc__loggy_append(entry_accum,
+                                   svn_wc__adm_access_abspath(adm_access),
                                    reject_tmp_path, reject_path, pool));
 
       /* And of course, delete the temporary reject file. */
