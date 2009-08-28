@@ -80,20 +80,21 @@
   retry loop cannot completely solve this problem either, but can
   help mitigate it.
 */
-#ifdef WIN32
+#ifndef WIN32_RETRY_LOOP
+#if defined(WIN32) && !defined(SVN_NO_WIN32_RETRY_LOOP)
 #define WIN32_RETRY_LOOP(err, expr)                                        \
   do                                                                       \
     {                                                                      \
-      apr_status_t os_err = APR_TO_OS_ERROR(err);                       \
+      apr_status_t os_err = APR_TO_OS_ERROR(err);                          \
       int sleep_count = 1000;                                              \
       int retries;                                                         \
       for (retries = 0;                                                    \
            retries < 100 && (os_err == ERROR_ACCESS_DENIED                 \
                              || os_err == ERROR_SHARING_VIOLATION          \
                              || os_err == ERROR_DIR_NOT_EMPTY);            \
-           ++retries, os_err = APR_TO_OS_ERROR(err))                    \
+           ++retries, os_err = APR_TO_OS_ERROR(err))                       \
         {                                                                  \
-          apr_sleep(sleep_count);                                       \
+          apr_sleep(sleep_count);                                          \
           if (sleep_count < 128000)                                        \
             sleep_count *= 2;                                              \
           (err) = (expr);                                                  \
@@ -102,6 +103,7 @@
   while (0)
 #else
 #define WIN32_RETRY_LOOP(err, expr) ((void)0)
+#endif
 #endif
 
 /* Local wrapper of svn_path_cstring_to_utf8() that does no copying on
