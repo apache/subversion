@@ -238,8 +238,8 @@ svn_txdelta_apply_instructions(svn_txdelta_window_t *window,
  * somewhere.  At the end of the delta window stream, you must call
  * this function passing zero for the @a window argument.
  */
-typedef svn_error_t *(*svn_txdelta_window_handler_t)
-  (svn_txdelta_window_t *window, void *baton);
+typedef svn_error_t *(*svn_txdelta_window_handler_t)(
+  svn_txdelta_window_t *window, void *baton);
 
 
 /** This function will generate delta windows that turn @a source into
@@ -1115,12 +1115,12 @@ svn_delta_depth_filter_editor(const svn_delta_editor_t **editor,
  * handler of this callback must call the editor's open_root()
  * function and return the top-level root dir baton in @a *dir_baton.
  */
-typedef svn_error_t *(*svn_delta_path_driver_cb_func_t)
-  (void **dir_baton,
-   void *parent_baton,
-   void *callback_baton,
-   const char *path,
-   apr_pool_t *pool);
+typedef svn_error_t *(*svn_delta_path_driver_cb_func_t)(
+  void **dir_baton,
+  void *parent_baton,
+  void *callback_baton,
+  const char *path,
+  apr_pool_t *pool);
 
 
 /** Drive @a editor (with its @a edit_baton) in such a way that
@@ -1173,16 +1173,16 @@ svn_delta_path_driver(const svn_delta_editor_t *editor,
  *
  * @since New in 1.5.
  */
-typedef svn_error_t *(*svn_file_rev_handler_t)
-  (void *baton,
-   const char *path,
-   svn_revnum_t rev,
-   apr_hash_t *rev_props,
-   svn_boolean_t result_of_merge,
-   svn_txdelta_window_handler_t *delta_handler,
-   void **delta_baton,
-   apr_array_header_t *prop_diffs,
-   apr_pool_t *pool);
+typedef svn_error_t *(*svn_file_rev_handler_t)(
+  void *baton,
+  const char *path,
+  svn_revnum_t rev,
+  apr_hash_t *rev_props,
+  svn_boolean_t result_of_merge,
+  svn_txdelta_window_handler_t *delta_handler,
+  void **delta_baton,
+  apr_array_header_t *prop_diffs,
+  apr_pool_t *pool);
 
 /**
  * The old file rev handler interface.
@@ -1195,15 +1195,15 @@ typedef svn_error_t *(*svn_file_rev_handler_t)
  * compatibilty wrapper, and should not be used for new development.
  * @since New in 1.5.
  */
-typedef svn_error_t *(*svn_file_rev_handler_old_t)
-  (void *baton,
-   const char *path,
-   svn_revnum_t rev,
-   apr_hash_t *rev_props,
-   svn_txdelta_window_handler_t *delta_handler,
-   void **delta_baton,
-   apr_array_header_t *prop_diffs,
-   apr_pool_t *pool);
+typedef svn_error_t *(*svn_file_rev_handler_old_t)(
+  void *baton,
+  const char *path,
+  svn_revnum_t rev,
+  apr_hash_t *rev_props,
+  svn_txdelta_window_handler_t *delta_handler,
+  void **delta_baton,
+  apr_array_header_t *prop_diffs,
+  apr_pool_t *pool);
 
 /** Return, in @a *handler2 and @a *handler2_baton a function/baton that
  * will call @a handler/@a handler_baton, allocating the @a *handler2_baton

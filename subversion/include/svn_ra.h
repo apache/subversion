@@ -122,9 +122,9 @@ typedef svn_error_t *(*svn_ra_invalidate_wc_props_func_t)(void *baton,
 
 
 /** A function type for retrieving the youngest revision from a repos. */
-typedef svn_error_t *(*svn_ra_get_latest_revnum_func_t)
-  (void *session_baton,
-   svn_revnum_t *latest_revnum);
+typedef svn_error_t *(*svn_ra_get_latest_revnum_func_t)(
+  void *session_baton,
+  svn_revnum_t *latest_revnum);
 
 /** A function type which allows the RA layer to ask about any
  * customizations to the client name string.  This is primarily used
@@ -154,15 +154,15 @@ typedef svn_error_t *(*svn_ra_get_client_string_func_t)(void *baton,
  *
  * @since New in 1.1.
  */
-typedef svn_error_t *(*svn_ra_file_rev_handler_t)
-  (void *baton,
-   const char *path,
-   svn_revnum_t rev,
-   apr_hash_t *rev_props,
-   svn_txdelta_window_handler_t *delta_handler,
-   void **delta_baton,
-   apr_array_header_t *prop_diffs,
-   apr_pool_t *pool);
+typedef svn_error_t *(*svn_ra_file_rev_handler_t)(
+  void *baton,
+  const char *path,
+  svn_revnum_t rev,
+  apr_hash_t *rev_props,
+  svn_txdelta_window_handler_t *delta_handler,
+  void **delta_baton,
+  apr_array_header_t *prop_diffs,
+  apr_pool_t *pool);
 
 /**
  * Callback function type for locking and unlocking actions.
@@ -221,13 +221,13 @@ typedef void (*svn_ra_progress_notify_func_t)(apr_off_t progress,
  *
  * @since New in 1.5.
  */
-typedef svn_error_t *(*svn_ra_replay_revstart_callback_t)
-  (svn_revnum_t revision,
-   void *replay_baton,
-   const svn_delta_editor_t **editor,
-   void **edit_baton,
-   apr_hash_t *rev_props,
-   apr_pool_t *pool);
+typedef svn_error_t *(*svn_ra_replay_revstart_callback_t)(
+  svn_revnum_t revision,
+  void *replay_baton,
+  const svn_delta_editor_t **editor,
+  void **edit_baton,
+  apr_hash_t *rev_props,
+  apr_pool_t *pool);
 
 /**
  * Callback function type for replay_range actions.
@@ -245,13 +245,13 @@ typedef svn_error_t *(*svn_ra_replay_revstart_callback_t)
  *
  * @since New in 1.5.
  */
-typedef svn_error_t *(*svn_ra_replay_revfinish_callback_t)
-  (svn_revnum_t revision,
-   void *replay_baton,
-   const svn_delta_editor_t *editor,
-   void *edit_baton,
-   apr_hash_t *rev_props,
-   apr_pool_t *pool);
+typedef svn_error_t *(*svn_ra_replay_revfinish_callback_t)(
+  svn_revnum_t revision,
+  void *replay_baton,
+  const svn_delta_editor_t *editor,
+  void *edit_baton,
+  apr_hash_t *rev_props,
+  apr_pool_t *pool);
 
 
 /**
