@@ -1,4 +1,4 @@
-/* subst-test.c --- tests for the subst functions
+/* eol-test.c --- tests for the eol functions
  *
  * ====================================================================
  *    Licensed to the Subversion Corporation (SVN Corp.) under one
@@ -28,6 +28,7 @@
 #include "svn_subst.h"
 
 #include "../svn_test.h"
+#include "private/svn_eol_private.h"
 
 
 
@@ -65,7 +66,7 @@ test_detect_file_eol(apr_pool_t *pool)
       pos = 0;
       SVN_ERR(svn_io_file_seek(file, APR_SET, &pos, pool));
 
-      SVN_ERR(svn_subst_detect_file_eol(&eol, file, pool));
+      SVN_ERR(svn_eol_detect_file_eol(&eol, file, pool));
       if (eol && expected_eol[i])
         SVN_ERR_ASSERT(strcmp(eol, expected_eol[i]) == 0);
       else
