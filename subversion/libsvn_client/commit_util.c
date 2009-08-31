@@ -556,7 +556,8 @@ harvest_committables(apr_hash_t *committables,
 
       /* If this is not a WC root then its parent's revision is
          admissible for comparative purposes. */
-      SVN_ERR(svn_wc_is_wc_root(&wc_root, path, adm_access, scratch_pool));
+      SVN_ERR(svn_wc_is_wc_root2(&wc_root, ctx->wc_ctx, local_abspath,
+                                 scratch_pool));
       if (! wc_root)
         {
           if (parent_entry)
