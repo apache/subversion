@@ -151,7 +151,7 @@
 struct log_runner
 {
   svn_wc__db_t *db;
-  const char *dir_abspath;
+  const char *adm_abspath;
 
   apr_pool_t *pool; /* cleared before processing each log element */
   apr_pool_t *result_pool;
@@ -198,7 +198,8 @@ enum svn_wc__xfer_action {
                                        or, if that's NULL, those of DEST.
 */
 static svn_error_t *
-file_xfer_under_path(svn_wc_adm_access_t *adm_access,
+file_xfer_under_path(svn_wc__db_t *db,
+                     const char *adm_abspath,
                      const char *name,
                      const char *dest,
                      const char *versioned,
@@ -209,16 +210,12 @@ file_xfer_under_path(svn_wc_adm_access_t *adm_access,
   svn_error_t *err;
   const char *full_from_path, *full_dest_path, *full_versioned_path;
   const char *dest_abspath;
-  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
 
-  full_from_path = svn_dirent_join(svn_wc_adm_access_path(adm_access), name,
-                                   pool);
-  full_dest_path = svn_dirent_join(svn_wc_adm_access_path(adm_access), dest,
-                                   pool);
+  full_from_path = svn_dirent_join(adm_abspath, name, pool);
+  full_dest_path = svn_dirent_join(adm_abspath, dest, pool);
   SVN_ERR(svn_dirent_get_absolute(&dest_abspath, full_dest_path, pool));
   if (versioned)
-    full_versioned_path = svn_dirent_join(svn_wc_adm_access_path(adm_access),
-                                          versioned, pool);
+    full_versioned_path = svn_dirent_join(adm_abspath, versioned, pool);
   else
     full_versioned_path = NULL; /* Silence GCC uninitialised warning */
 
@@ -481,8 +478,8 @@ log_do_file_xfer(struct log_runner *loggy,
                              (svn_wc_adm_access_path(loggy->adm_access),
                               loggy->pool));
 
-  err = file_xfer_under_path(loggy->adm_access, name, dest, versioned,
-                             action, loggy->rerun, loggy->pool);
+  err = file_xfer_under_path(loggy->db, loggy->adm_abspath, name, dest,
+                             versioned, action, loggy->rerun, loggy->pool);
   if (err)
     SIGNAL_ERROR(loggy, err);
 
@@ -738,7 +735,7 @@ log_do_delete_lock(struct log_runner *loggy,
   const char *local_abspath;
   svn_error_t *err;
 
-  local_abspath = svn_dirent_join(loggy->dir_abspath, name, loggy->pool);
+  local_abspath = svn_dirent_join(loggy->adm_abspath, name, loggy->pool);
 
   err = svn_wc__db_lock_remove(loggy->db, local_abspath, loggy->pool);
   if (err)
@@ -1567,7 +1564,7 @@ run_log(svn_wc_adm_access_t *adm_access,
   parser = svn_xml_make_parser(loggy, start_handler, NULL, NULL, pool);
 
   loggy->db = svn_wc__adm_get_db(adm_access);
-  loggy->dir_abspath = svn_wc__adm_access_abspath(adm_access);
+  loggy->adm_abspath = svn_wc__adm_access_abspath(adm_access);
   loggy->adm_access = adm_access;
   loggy->pool = svn_pool_create(pool);
   loggy->result_pool = svn_pool_create(pool);
