@@ -1890,7 +1890,8 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
 
       if (revert_base_path)
         {
-          SVN_ERR(svn_wc__loggy_copy(&log_accum, adm_access,
+          SVN_ERR(svn_wc__loggy_copy(&log_accum,
+                                     svn_wc__adm_access_abspath(adm_access),
                                      revert_base_path, fullpath,
                                      pool));
           SVN_ERR(svn_wc__loggy_move(&log_accum, adm_access,
@@ -1911,9 +1912,10 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
 
           if (reinstall_working)
             {
-              SVN_ERR(svn_wc__loggy_copy(&log_accum, adm_access,
-                                         regular_base_path, fullpath,
-                                         pool));
+              SVN_ERR(svn_wc__loggy_copy(&log_accum,
+                                      svn_wc__adm_access_abspath(adm_access),
+                                      regular_base_path, fullpath,
+                                      pool));
               *reverted = TRUE;
             }
         }
