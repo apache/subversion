@@ -588,7 +588,7 @@ def delete_file_and_dir(sbox):
     'E/alpha' : Item(status='  '),
     'E/beta'  : Item(status='  '),
     'F'       : Item(status='  '),
-    'lambda'  : Item(status=' M'), ### Should be tree-conflicted
+    'lambda'  : Item(status=' M', treeconflict='C'),
     })
   expected_status2.tweak(wc_rev=2)
   expected_skip = wc.State(B2_path, {
