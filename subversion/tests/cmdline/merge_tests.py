@@ -16141,7 +16141,9 @@ def merge_replace_causes_tree_conflict(sbox):
   # svn st
   expected_status.tweak('A', status=' M')
   expected_status.tweak('A/D/G/pi', 'A/mu', status='M ', treeconflict='C')
-  expected_status.tweak('A/D/H', 'A/B/E', status=' M', treeconflict='C')
+  expected_status.tweak('A/D/H', status=' M', treeconflict='C')
+  ### A/B/E gets both a property and tree conflict flagged. Is this OK?
+  expected_status.tweak('A/B/E', status=' C', treeconflict='C')
 
   actions.run_and_verify_status(wc_dir, expected_status)
 
@@ -16442,7 +16444,7 @@ test_list = [ None,
                          server_has_mergeinfo),
               SkipUnless(multiple_reintegrates_from_the_same_branch,
                          server_has_mergeinfo),
-              XFail(merge_replace_causes_tree_conflict),
+              merge_replace_causes_tree_conflict,
               SkipUnless(handle_gaps_in_implicit_mergeinfo,
                          server_has_mergeinfo),
               XFail(copy_then_replace_via_merge),
