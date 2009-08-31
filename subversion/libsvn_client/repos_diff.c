@@ -930,43 +930,22 @@ add_directory(const char *path,
 
   if (eb->notify_func)
     {
-      /* If a path was replaced, we issue a separate 'D' notification
-         here, followed by the 'A' notification in the usual way.
-         However, if the path was replaced on top of a conflicting mod,
-         this is a tree-conflict case. The path is already marked tree-
-         conflicted (either by some previous run altogether, or by this
-         replace's delete operation). No need to notify again here. */
       svn_wc_notify_t *notify;
-      svn_boolean_t is_replace = FALSE;
+      svn_node_kind_t kind = svn_node_dir;
       deleted_path_notify_t *dpn = apr_hash_get(eb->deleted_paths, b->wcpath,
-                                              APR_HASH_KEY_STRING);
+                                                APR_HASH_KEY_STRING);
       if (dpn)
         {
-          svn_wc_notify_action_t new_action;
-
           /* ### Which combinations of action states constitute a replace?
-           * ### Are there more than the ones we are checking for here?
-           * ### Hurry up with editor v2 and atomic replace, pretty please! */
-          if ((dpn->action == svn_wc_notify_update_delete ||
-               dpn->action == svn_wc_notify_tree_conflict)
-            && (action == svn_wc_notify_update_add ||
-                action == svn_wc_notify_tree_conflict))
-            {
-              is_replace = TRUE;
-              new_action = svn_wc_notify_update_replace;
-            }
+           * ### Are there more than the ones we are checking for here? */
+          if (dpn->action == svn_wc_notify_update_delete &&
+              action == svn_wc_notify_update_add) 
+            action = svn_wc_notify_update_replace;
           else
-            new_action = dpn->action;
+            action = dpn->action;
 
-          /* Tree-conflicts during replace were notified about elsewhere. */
-          if (! (is_replace && action == svn_wc_notify_tree_conflict))
-            {
-              notify = svn_wc_create_notify(b->wcpath, new_action, pool);
-              notify->kind = dpn->kind;
-              notify->content_state = notify->prop_state = dpn->state;
-              notify->lock_state = svn_wc_notify_lock_state_inapplicable;
-              (*eb->notify_func)(eb->notify_baton, notify, pool);
-            }
+          kind = dpn->kind;
+          state = dpn->state;
 
           /* Remove from the list of deleted paths. We don't want to
              notify about this path any more than we did already. */
@@ -974,12 +953,10 @@ add_directory(const char *path,
                        APR_HASH_KEY_STRING, NULL);
         }
 
-      if (!is_replace)
-        {
-          notify = svn_wc_create_notify(b->wcpath, action, pool);
-          notify->kind = svn_node_dir;
-          (*eb->notify_func)(eb->notify_baton, notify, pool);
-        }
+      notify = svn_wc_create_notify(b->wcpath, action, pool);
+      notify->kind = kind;
+      notify->content_state = notify->prop_state = state;
+      (*eb->notify_func)(eb->notify_baton, notify, pool);
     }
 
   if (eb->svnpatch_stream)
