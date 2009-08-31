@@ -4465,7 +4465,22 @@ svn_wc_crawl_revisions(const char *path,
  *
  * @note Due to the way in which "WC-root-ness" is calculated, passing
  * a @a path of `.' to this function will always return @c TRUE.
+ *
+ * @since New in 1.7.
  */
+svn_error_t *
+svn_wc_is_wc_root2(svn_boolean_t *wc_root,
+                   svn_wc_context_t *wc_ctx,
+                   const char *local_abspath,
+                   apr_pool_t *scratch_pool);
+
+/**
+ * Similar to svn_wc_is_wc_root2(), but with an access baton and relative
+ * path.
+ *
+ * @deprecated Provided for backward compatibility with the 1.6 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_is_wc_root(svn_boolean_t *wc_root,
                   const char *path,
