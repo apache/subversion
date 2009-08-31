@@ -2073,7 +2073,7 @@ revert_entry(svn_depth_t *depth,
      tell if it is safe to split PATH into a parent directory and
      basename.  For files, we always do this split.  */
   if (kind == svn_node_dir)
-    SVN_ERR(svn_wc_is_wc_root(&is_wc_root, path, dir_access, pool));
+    SVN_ERR(svn_wc__check_wc_root(&is_wc_root, NULL, db, local_abspath, pool));
   bname = is_wc_root ? NULL : svn_dirent_basename(path, pool);
 
   /* Additions. */
@@ -2679,7 +2679,8 @@ svn_wc_remove_from_revision_control(svn_wc_adm_access_t *adm_access,
       {
         svn_boolean_t is_root;
 
-        SVN_ERR(svn_wc_is_wc_root(&is_root, full_path, adm_access, pool));
+        SVN_ERR(svn_wc__check_wc_root(&is_root, NULL, db, local_abspath,
+                                      pool));
 
         /* If full_path is not the top of a wc, then its parent
            directory is also a working copy and has an entry for
@@ -2993,12 +2994,13 @@ resolve_found_entry_callback(const char *path,
 
   if (entry && (entry->kind == svn_node_dir))
     {
-      SVN_ERR(svn_wc_is_wc_root(&wc_root, path, baton->adm_access, pool));
+      SVN_ERR(svn_wc__check_wc_root(&wc_root, NULL, baton->db, local_abspath,
+                                    pool));
 
       if (wc_root)
         {
           /* Switched subtrees are considered working copy roots by
-           * svn_wc_is_wc_root(). But it's OK to check for tree conflict
+           * svn_wc__check_wc_root(). But it's OK to check for tree conflict
            * info in the parent of a switched subtree, because the
            * subtree itself might be a tree conflict victim. */
           svn_boolean_t switched;
