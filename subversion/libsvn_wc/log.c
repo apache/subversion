@@ -315,26 +315,24 @@ file_xfer_under_path(svn_wc__db_t *db,
  */
 static svn_error_t *
 install_committed_file(svn_boolean_t *overwrote_working,
-                       svn_wc_adm_access_t *adm_access,
+                       svn_wc__db_t *db,
+                       const char *adm_abspath,
                        const char *name,
                        svn_boolean_t remove_executable,
                        svn_boolean_t remove_read_only,
                        apr_pool_t *pool)
 {
-  const char *filepath;
   const char *tmp_text_base;
   svn_node_kind_t kind;
   svn_boolean_t same, did_set;
   const char *tmp_wfile;
   svn_boolean_t special;
   const char *file_abspath;
-  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
 
   /* start off assuming that the working file isn't touched. */
   *overwrote_working = FALSE;
 
-  filepath = svn_dirent_join(svn_wc_adm_access_path(adm_access), name, pool);
-  SVN_ERR(svn_dirent_get_absolute(&file_abspath, filepath, pool));
+  file_abspath = svn_dirent_join(adm_abspath, name, pool);
 
   /* In the commit, newlines and keywords may have been
    * canonicalized and/or contracted... Or they may not have
@@ -354,11 +352,11 @@ install_committed_file(svn_boolean_t *overwrote_working,
    */
 
   /* Is there a tmp_text_base that needs to be installed?  */
-  tmp_text_base = svn_wc__text_base_path(filepath, 1, pool);
+  tmp_text_base = svn_wc__text_base_path(file_abspath, 1, pool);
   SVN_ERR(svn_io_check_path(tmp_text_base, &kind, pool));
 
   {
-    const char *tmp = (kind == svn_node_file) ? tmp_text_base : filepath;
+    const char *tmp = (kind == svn_node_file) ? tmp_text_base : file_abspath;
 
     SVN_ERR(svn_wc__internal_translated_file(&tmp_wfile, tmp, db,
                                              file_abspath,
@@ -376,14 +374,14 @@ install_committed_file(svn_boolean_t *overwrote_working,
     SVN_ERR(svn_wc__get_special(&special, db, file_abspath, pool));
     if (! special && tmp != tmp_wfile)
       SVN_ERR(svn_io_files_contents_same_p(&same, tmp_wfile,
-                                           filepath, pool));
+                                           file_abspath, pool));
     else
       same = TRUE;
   }
 
   if (! same)
     {
-      SVN_ERR(svn_io_file_rename(tmp_wfile, filepath, pool));
+      SVN_ERR(svn_io_file_rename(tmp_wfile, file_abspath, pool));
       *overwrote_working = TRUE;
     }
 
@@ -391,7 +389,7 @@ install_committed_file(svn_boolean_t *overwrote_working,
     {
       /* No need to chmod -x on a new file: new files don't have it. */
       if (same)
-        SVN_ERR(svn_io_set_file_executable(filepath,
+        SVN_ERR(svn_io_set_file_executable(file_abspath,
                                            FALSE, /* chmod -x */
                                            FALSE, pool));
       *overwrote_working = TRUE; /* entry needs wc-file's timestamp  */
@@ -410,7 +408,7 @@ install_committed_file(svn_boolean_t *overwrote_working,
     {
       /* No need to make a new file read_write: new files already are. */
       if (same)
-        SVN_ERR(svn_io_set_file_read_write(filepath, FALSE, pool));
+        SVN_ERR(svn_io_set_file_read_write(file_abspath, FALSE, pool));
       *overwrote_working = TRUE; /* entry needs wc-file's timestamp  */
     }
   else
@@ -424,7 +422,7 @@ install_committed_file(svn_boolean_t *overwrote_working,
 
   /* Install the new text base if one is waiting. */
   if (kind == svn_node_file)  /* tmp_text_base exists */
-    SVN_ERR(svn_wc__sync_text_base(filepath, pool));
+    SVN_ERR(svn_wc__sync_text_base(file_abspath, pool));
 
   return SVN_NO_ERROR;
 }
@@ -1131,9 +1129,10 @@ log_do_committed(struct log_runner *loggy,
          timestamp of the copy of this file in `tmp/text-base' (which
          by then will have moved to `text-base'. */
 
-      if ((err = install_committed_file
-           (&overwrote_working, loggy->adm_access, name,
-            remove_executable, set_read_write, pool)))
+      if ((err = install_committed_file(&overwrote_working, loggy->db,
+                                        loggy->adm_abspath, name,
+                                        remove_executable, set_read_write,
+                                        pool)))
         return svn_error_createf
           (pick_error_code(loggy), err,
            _("Error replacing text-base of '%s'"), name);
