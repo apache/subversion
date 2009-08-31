@@ -4097,7 +4097,7 @@ update_wc_mergeinfo(const char *target_wcpath,
 {
   apr_pool_t *subpool = svn_pool_create(pool);
   const char *rel_path;
-  svn_mergeinfo_catalog_t mergeinfo;
+  svn_mergeinfo_t mergeinfo;
   apr_hash_index_t *hi;
 
   /* Combine the mergeinfo for the revision range just merged into
