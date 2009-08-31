@@ -241,10 +241,10 @@ organize_lock_targets(const char **common_parent,
       for (i = 0; i < rel_targets->nelts; ++i)
         {
           const char *target = APR_ARRAY_IDX(rel_targets, i, const char *);
-          int n = svn_path_component_count(target);
+          apr_size_t n = svn_path_component_count(target);
 
           if (n > max_levels_to_lock)
-            max_levels_to_lock = n;
+            max_levels_to_lock = (int) n;
         }
 
       SVN_ERR(svn_wc_adm_probe_open3(parent_adm_access_p, NULL,

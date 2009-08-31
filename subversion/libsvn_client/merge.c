@@ -2945,7 +2945,7 @@ fix_deleted_subtree_ranges(const char *url1,
          case, see the 'Note' in drive_merge_report_editor's docstring. */
       if (deleted_rangelist->nelts || added_rangelist->nelts)
         {
-          int merge_target_len = strlen(merge_b->target);
+          size_t merge_target_len = strlen(merge_b->target);
           const char *child_mergeinfo_path;
           const char *child_repos_src_path = child->path +
             (merge_target_len ? merge_target_len + 1 : 0);
@@ -3813,7 +3813,7 @@ populate_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
                           apr_pool_t *pool)
 {
   apr_pool_t *iterpool;
-  int merge_target_len = strlen(merge_b->target);
+  size_t merge_target_len = strlen(merge_b->target);
   int i;
   svn_revnum_t gap_start, gap_end;
 
@@ -6692,7 +6692,7 @@ record_mergeinfo_for_dir_merge(const svn_wc_entry_t *target_entry,
                                apr_pool_t *pool)
 {
   int i;
-  int merge_target_len = strlen(merge_b->target);
+  size_t merge_target_len = strlen(merge_b->target);
   svn_boolean_t is_rollback = (merged_range->start > merged_range->end);
   svn_boolean_t operative_merge = FALSE;
 

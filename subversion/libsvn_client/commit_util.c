@@ -1252,8 +1252,8 @@ svn_client__condense_commit_items(const char **base_url,
     {
       svn_client_commit_item3_t *this_item
         = APR_ARRAY_IDX(ci, i, svn_client_commit_item3_t *);
-      int url_len = strlen(this_item->url);
-      int base_url_len = strlen(*base_url);
+      size_t url_len = strlen(this_item->url);
+      size_t base_url_len = strlen(*base_url);
 
       if (url_len > base_url_len)
         this_item->url = apr_pstrdup(pool, this_item->url + base_url_len + 1);

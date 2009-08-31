@@ -820,7 +820,7 @@ svn_cl__get_log_message(const char **log_msg,
         {
           /* We did get message, now check if it is anything more than just
              white space as we will consider white space only as empty */
-          int len;
+          apr_size_t len;
 
           for (len = message->len - 1; len >= 0; len--)
             {
