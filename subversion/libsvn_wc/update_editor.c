@@ -5341,18 +5341,16 @@ svn_wc__check_wc_root(svn_boolean_t *wc_root,
 
 
 svn_error_t *
-svn_wc_is_wc_root(svn_boolean_t *wc_root,
-                  const char *path,
-                  svn_wc_adm_access_t *adm_access,
-                  apr_pool_t *pool)
+svn_wc_is_wc_root2(svn_boolean_t *wc_root,
+                   svn_wc_context_t *wc_ctx,
+                   const char *local_abspath,
+                   apr_pool_t *scratch_pool)
 {
-  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
-  const char *local_abspath;
-
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
   return svn_error_return(
-    svn_wc__check_wc_root(wc_root, NULL, db, local_abspath, pool));
+    svn_wc__check_wc_root(wc_root, NULL, wc_ctx->db, local_abspath,
+                          scratch_pool));
 }
 
 
