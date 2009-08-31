@@ -564,18 +564,18 @@ def delete_file_and_dir(sbox):
   # Merge rev 3 into B2
 
   # The local mods to the paths modified in r3 cause the paths to be
-  # skipped (without --force), resulting in only mergeinfo changes.  The
-  # target of the merge 'B2' gets mergeinfo for r3 and B2's two skipped
+  # tree-conflicted upon deletion, resulting in only mergeinfo changes.
+  # The target of the merge 'B2' gets mergeinfo for r3 and B2's two skipped
   # children, 'E' and 'lambda', get override mergeinfo reflecting their
-  # mergeinfo prior to the merge (in this case empty mergeinfo).
+  # mergeinfo prior to the merge (in this case no mergeinfo at all).
   expected_output = wc.State(B2_path, {
     ''        : Item(),
     'lambda'  : Item(status='  ', treeconflict='C'),
+    'E'       : Item(status='  ', treeconflict='C'),
     })
   expected_disk = wc.State('', {
     ''        : Item(props={SVN_PROP_MERGEINFO : '/A/B:3'}),
-    'E'       : Item(props={SVN_PROP_MERGEINFO : '',
-                            'foo' : 'foo_val'}),
+    'E'       : Item(props={'foo' : 'foo_val'}),
     'E/alpha' : Item("This is the file 'alpha'.\n"),
     'E/beta'  : Item("This is the file 'beta'.\n"),
     'F'       : Item(),
@@ -584,16 +584,14 @@ def delete_file_and_dir(sbox):
     })
   expected_status2 = wc.State(B2_path, {
     ''        : Item(status=' M'),
-    'E'       : Item(status=' M'),
+    'E'       : Item(status=' M', treeconflict='C'),
     'E/alpha' : Item(status='  '),
     'E/beta'  : Item(status='  '),
     'F'       : Item(status='  '),
     'lambda'  : Item(status=' M', treeconflict='C'),
     })
   expected_status2.tweak(wc_rev=2)
-  expected_skip = wc.State(B2_path, {
-    'E'       : Item(),
-    })
+  expected_skip = wc.State('', { })
   svntest.actions.run_and_verify_merge(B2_path, '2', '3', B_url,
                                        expected_output,
                                        expected_disk,

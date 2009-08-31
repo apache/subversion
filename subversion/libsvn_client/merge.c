@@ -2149,9 +2149,19 @@ merge_dir_deleted(svn_wc_adm_access_t *adm_access,
                                         merge_b->ctx, subpool);
             if (err)
               {
-                if (state)
-                  *state = svn_wc_notify_state_obstructed;
                 svn_error_clear(err);
+
+                /* If the attempt to delete an existing directory failed,
+                 * the directory has local modifications (e.g. locally added
+                 * files, or property changes). Flag a tree conflict. */
+                SVN_ERR(tree_conflict(merge_b, adm_access, path,
+                                      svn_node_dir,
+                                      svn_wc_conflict_action_delete,
+                                      svn_wc_conflict_reason_edited));
+                if (tree_conflicted)
+                  *tree_conflicted = TRUE;
+                if (state)
+                  *state = svn_wc_notify_state_conflicted;
               }
             else
               {
