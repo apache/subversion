@@ -2079,7 +2079,7 @@ init_patch_target(patch_target_t **target, const svn_patch_t *patch,
       SVN_ERR(svn_io_file_open(&new_target->file, new_target->abs_path,
                                APR_READ | APR_BINARY | APR_BUFFERED,
                                APR_OS_DEFAULT, result_pool));
-      SVN_ERR(svn_eol_detect_file_eol(&new_target->eol_str, new_target->file,
+      SVN_ERR(svn_eol__detect_file_eol(&new_target->eol_str, new_target->file,
                                         scratch_pool));
       new_target->stream = svn_stream_from_aprfile2(new_target->file, FALSE,
                                                     result_pool);
@@ -2841,7 +2841,7 @@ apply_textdiffs(const char *patch_path, const char *wc_path,
   SVN_ERR(svn_io_file_open(&patch_file, patch_path,
                            APR_READ | APR_BINARY, 0, pool));
 
-  SVN_ERR(svn_eol_detect_file_eol(&patch_eol_str, patch_file, pool));
+  SVN_ERR(svn_eol__detect_file_eol(&patch_eol_str, patch_file, pool));
   if (patch_eol_str == NULL)
     {
       /* If we can't figure out the EOL scheme, just assume native.

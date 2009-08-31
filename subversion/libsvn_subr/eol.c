@@ -30,7 +30,7 @@
 #include "private/svn_eol_private.h"
 
 char *
-svn_eol_find_eol_start(char *buf, apr_size_t len)
+svn_eol__find_eol_start(char *buf, apr_size_t len)
 {
   for (; len > 0; ++buf, --len)
     {
@@ -41,12 +41,12 @@ svn_eol_find_eol_start(char *buf, apr_size_t len)
 }
 
 const char *
-svn_eol_detect_eol(char *buf, char *endp)
+svn_eol__detect_eol(char *buf, char *endp)
 {
   const char *eol;
   
   SVN_ERR_ASSERT_NO_RETURN(buf <= endp);
-  eol = svn_eol_find_eol_start(buf, endp - buf);
+  eol = svn_eol__find_eol_start(buf, endp - buf);
   if (eol)
     {
       if (*eol == '\n')
@@ -63,7 +63,7 @@ svn_eol_detect_eol(char *buf, char *endp)
 }
 
 svn_error_t *
-svn_eol_detect_file_eol(const char **eol, apr_file_t *file, apr_pool_t *pool)
+svn_eol__detect_file_eol(const char **eol, apr_file_t *file, apr_pool_t *pool)
 {
   char buf[512];
   apr_size_t nbytes;
@@ -108,7 +108,7 @@ svn_eol_detect_file_eol(const char **eol, apr_file_t *file, apr_pool_t *pool)
       /* Try to detect the EOL style of the file by searching the
        * current chunk. */
       SVN_ERR_ASSERT(nbytes <= sizeof(buf));
-      *eol = svn_eol_detect_eol(buf, buf + nbytes);
+      *eol = svn_eol__detect_eol(buf, buf + nbytes);
     }
   while (*eol == NULL);
 

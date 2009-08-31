@@ -46,7 +46,7 @@ extern "C" {
  * @since New in 1.7
  */
 char *
-svn_eol_find_eol_start(char *buf, apr_size_t len);
+svn_eol__find_eol_start(char *buf, apr_size_t len);
 
 /* Return the first eol marker found in [@a buf, @a endp) as a
  * NUL-terminated string, or NULL if no eol marker is found.
@@ -61,7 +61,7 @@ svn_eol_find_eol_start(char *buf, apr_size_t len);
  * @since New in 1.7
  */
 const char *
-svn_eol_detect_eol(char *buf, char *endp);
+svn_eol__detect_eol(char *buf, char *endp);
 
 /* Detect the EOL marker used in @a file and return it in @a *eol.
  * If it cannot be detected, set @a *eol to NULL.
@@ -77,7 +77,7 @@ svn_eol_detect_eol(char *buf, char *endp);
  *
  * @since New in 1.7 */
 svn_error_t *
-svn_eol_detect_file_eol(const char **eol, apr_file_t *file, apr_pool_t *pool);
+svn_eol__detect_file_eol(const char **eol, apr_file_t *file, apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

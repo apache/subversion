@@ -296,7 +296,7 @@ datasource_get_next_token(apr_uint32_t *hash, void **token, void *baton,
 
   while (1)
     {
-      eol = svn_eol_find_eol_start(curp, endp - curp);
+      eol = svn_eol__find_eol_start(curp, endp - curp);
       if (eol)
         {
           had_cr = (*eol == '\r');
@@ -826,7 +826,7 @@ output_unified_line(svn_diff__file_output_baton_t *baton,
                 }
             }
 
-          eol = svn_eol_find_eol_start(curp, length);
+          eol = svn_eol__find_eol_start(curp, length);
 
           if (eol != NULL)
             {
@@ -1427,7 +1427,7 @@ output_line(svn_diff3__file_output_baton_t *baton,
   if (curp == endp)
     return SVN_NO_ERROR;
 
-  eol = svn_eol_find_eol_start(curp, endp - curp);
+  eol = svn_eol__find_eol_start(curp, endp - curp);
   if (!eol)
     eol = endp;
   else
@@ -1725,7 +1725,7 @@ svn_diff_file_output_merge2(svn_stream_t *output_stream,
   /* Check what eol marker we should use for conflict markers.
      We use the eol marker of the modified file and fall back on the
      platform's eol marker if that file doesn't contain any newlines. */
-  eol = svn_eol_detect_eol(baton.buffer[1], baton.endp[1]);
+  eol = svn_eol__detect_eol(baton.buffer[1], baton.endp[1]);
   if (! eol)
     eol = APR_EOL_STR;
   baton.marker_eol = eol;
