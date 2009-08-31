@@ -519,7 +519,7 @@ cleanup_dir_baton(void *dir_baton)
 
       if (! err)
         {
-          err = svn_wc__run_log(adm_access, NULL, pool);
+          err = svn_wc__run_log(adm_access, pool);
 
           if (! err)
             return APR_SUCCESS;
@@ -2078,7 +2078,7 @@ do_entry_deletion(struct edit_baton *eb,
            * that needs to modify the same entries. */
           SVN_ERR(svn_wc__write_log(parent_adm_access, *log_number, log_item,
                                     pool));
-          SVN_ERR(svn_wc__run_log(parent_adm_access, NULL, pool));
+          SVN_ERR(svn_wc__run_log(parent_adm_access, pool));
           *log_number = 0;
 
           SVN_ERR(schedule_existing_item_for_re_add(entry, eb, parent_path,
@@ -2109,7 +2109,7 @@ do_entry_deletion(struct edit_baton *eb,
            * that needs to modify the same entries. */
           SVN_ERR(svn_wc__write_log(parent_adm_access, *log_number, log_item,
                                     pool));
-          SVN_ERR(svn_wc__run_log(parent_adm_access, NULL, pool));
+          SVN_ERR(svn_wc__run_log(parent_adm_access, pool));
           *log_number = 0;
 
           SVN_ERR(schedule_existing_item_for_re_add(entry, eb, parent_path,
@@ -2191,7 +2191,7 @@ do_entry_deletion(struct edit_baton *eb,
 
   /* Note: these two lines are duplicated in the tree-conflicts bail out
    * above. */
-  SVN_ERR(svn_wc__run_log(parent_adm_access, NULL, pool));
+  SVN_ERR(svn_wc__run_log(parent_adm_access, pool));
   *log_number = 0;
 
   /* Notify. (If tree_conflict, we've already notified.) */
@@ -3002,7 +3002,7 @@ close_directory(void *dir_baton,
 
   /* Flush and run the log. */
   SVN_ERR(flush_log(db, pool));
-  SVN_ERR(svn_wc__run_log(adm_access, db->edit_baton->diff3_cmd, db->pool));
+  SVN_ERR(svn_wc__run_log(adm_access, db->pool));
   db->log_number = 0;
 
   /* We're done with this directory, so remove one reference from the
@@ -5701,5 +5701,5 @@ svn_wc_add_repos_file3(const char *dst_path,
   /* Write our accumulation of log entries into a log file */
   SVN_ERR(svn_wc__write_log(adm_access, 0, log_accum, pool));
 
-  return svn_wc__run_log(adm_access, NULL, pool);
+  return svn_wc__run_log(adm_access, pool);
 }

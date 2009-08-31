@@ -584,7 +584,7 @@ process_committed_internal(int *log_number,
                                                  NULL, FALSE /* remove_lock */,
                                                  remove_changelist, NULL,
                                                  queue, subpool));
-              SVN_ERR(svn_wc__run_log(child_access, NULL, pool));
+              SVN_ERR(svn_wc__run_log(child_access, pool));
             }
           else
             {
@@ -789,7 +789,7 @@ svn_wc_process_committed_queue(svn_wc_committed_queue_t *queue,
       apr_hash_this(hi, NULL, NULL, &val);
       this_adm = val;
 
-      SVN_ERR(svn_wc__run_log(this_adm->adm_access, NULL, iterpool));
+      SVN_ERR(svn_wc__run_log(this_adm->adm_access, iterpool));
     }
 
   queue->queue->nelts = 0;
@@ -827,7 +827,7 @@ svn_wc_process_committed4(const char *path,
                                      remove_changelist, checksum, NULL, pool));
 
   /* Run the log file(s) we just created. */
-  return svn_wc__run_log(adm_access, NULL, pool);
+  return svn_wc__run_log(adm_access, pool);
 }
 
 
@@ -1302,7 +1302,7 @@ svn_wc_delete3(const char *path,
 
       SVN_ERR(svn_wc__write_log(adm_access, 0, log_accum, pool));
 
-      SVN_ERR(svn_wc__run_log(adm_access, NULL, pool));
+      SVN_ERR(svn_wc__run_log(adm_access, pool));
 
     }
 
@@ -1564,7 +1564,7 @@ svn_wc_add3(const char *path,
       SVN_ERR(svn_wc__loggy_revert_props_create(&log_accum, path,
                                                 adm_access, TRUE, pool));
       SVN_ERR(svn_wc__write_log(adm_access, 0, log_accum, pool));
-      SVN_ERR(svn_wc__run_log(adm_access, NULL, pool));
+      SVN_ERR(svn_wc__run_log(adm_access, pool));
     }
 
   if (kind == svn_node_dir) /* scheduling a directory for addition */
@@ -2021,7 +2021,7 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
   if (! svn_stringbuf_isempty(log_accum))
     {
       SVN_ERR(svn_wc__write_log(adm_access, 0, log_accum, pool));
-      SVN_ERR(svn_wc__run_log(adm_access, NULL, pool));
+      SVN_ERR(svn_wc__run_log(adm_access, pool));
     }
 
   return SVN_NO_ERROR;

@@ -1669,7 +1669,6 @@ run_log(svn_wc_adm_access_t *adm_access,
 
 svn_error_t *
 svn_wc__run_log(svn_wc_adm_access_t *adm_access,
-                const char *diff3_cmd,  /* ### OBSOLETE  */
                 apr_pool_t *pool)
 {
   return run_log(adm_access, FALSE, pool);
