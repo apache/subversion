@@ -928,6 +928,12 @@ add_directory(const char *path,
   else
     action = svn_wc_notify_update_add;
 
+  /* Notifications for directories are done at close_directory time.
+   * But for paths at which the editor drive adds directories, we make an
+   * exception to this rule, so that the path appears in the output before
+   * any children of the newly added directory. Since a deletion at this path
+   * must have happened before this addition, we can safely notify about
+   * replaced directories here, too. */
   if (eb->notify_func)
     {
       svn_wc_notify_t *notify;
@@ -1361,8 +1367,10 @@ close_directory(void *dir_baton,
   if (err && err->apr_err == SVN_ERR_WC_NOT_LOCKED)
     {
       /* ### maybe try to stat the local b->wcpath? */
-      /* If the path doesn't exist, then send a 'skipped' notification. */
-      if (eb->notify_func)
+      /* If the path doesn't exist, then send a 'skipped' notification. 
+         Don't notify added directories as they triggered notification
+         in add_directory. */
+      if (! b->added && eb->notify_func)
         {
           svn_wc_notify_t *notify
             = svn_wc_create_notify(b->wcpath,
@@ -1400,9 +1408,8 @@ close_directory(void *dir_baton,
           (adm_access, NULL, NULL, NULL,
            b->wcpath, b->edit_baton->diff_cmd_baton));
 
-  /* ### Don't notify added directories as they triggered notification
-     in add_directory.  Does this mean that directory notification
-     isn't getting all the information? */
+  /* Don't notify added directories as they triggered notification
+     in add_directory. */
   if (!b->added && eb->notify_func)
     {
       svn_wc_notify_t *notify;
