@@ -22,7 +22,7 @@ import time
 
 # Our testing module
 import svntest
-from svntest import wc
+from svntest import main, wc, verify, actions
 from svntest.tree import SVNTreeUnequal
 
 # (abbreviation)
@@ -15832,6 +15832,377 @@ def multiple_reintegrates_from_the_same_branch(sbox):
                                      'merge', sbox.repo_url + '/A',
                                      A_COPY_path)
 
+#----------------------------------------------------------------------
+
+def merge_replace_causes_tree_conflict(sbox):
+  "replace that causes a tree-conflict"
+
+  # svntest.factory.make(sbox,r"""
+  #     # make a branch of A
+  #     svn cp $URL/A $URL/branch
+  #     svn up
+  #     # ACTIONS ON THE MERGE SOURCE (branch)
+  #     # various deletes of files and dirs
+  #     svn delete branch/mu branch/B/E branch/D/G/pi branch/D/H
+  #     svn ci
+  #     svn up
+  #
+  #     # replacements.
+  #     # file-with-file
+  #     echo "replacement for mu" > branch/mu
+  #     svn add branch/mu
+  #     # dir-with-dir
+  #     svn mkdir branch/B/E
+  #     svn ps propname propval branch/B/E
+  #     # file-with-dir
+  #     svn mkdir branch/D/G/pi
+  #     svn ps propname propval branch/D/G/pi
+  #     # dir-with-file
+  #     echo "replacement for H" > branch/D/H
+  #     svn add branch/D/H
+  #     svn ci
+  #    
+  #     # ACTIONS ON THE MERGE TARGET (A)
+  #     # local mods to conflict with merge source
+  #     echo modified > A/mu
+  #     svn ps propname otherpropval A/B/E
+  #     echo modified > A/D/G/pi
+  #     svn ps propname propval A/D/H
+  #     svn merge $URL/branch $URL/A A
+  #     svn st
+  #     """)
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  url = sbox.repo_url
+
+  A = os.path.join(wc_dir, 'A')
+  A_B_E = os.path.join(wc_dir, 'A', 'B', 'E')
+  A_D_G_pi = os.path.join(wc_dir, 'A', 'D', 'G', 'pi')
+  A_D_H = os.path.join(wc_dir, 'A', 'D', 'H')
+  A_mu = os.path.join(wc_dir, 'A', 'mu')
+  branch_B_E = os.path.join(wc_dir, 'branch', 'B', 'E')
+  branch_D_G_pi = os.path.join(wc_dir, 'branch', 'D', 'G', 'pi')
+  branch_D_H = os.path.join(wc_dir, 'branch', 'D', 'H')
+  branch_mu = os.path.join(wc_dir, 'branch', 'mu')
+  url_A = url + '/A'
+  url_branch = url + '/branch'
+
+  # make a branch of A
+  # svn cp $URL/A $URL/branch
+  expected_stdout = verify.UnorderedOutput([
+    '\n',
+    'Committed revision 2.\n',
+  ])
+
+  actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'cp', url_A,
+    url_branch, '-m', 'copy log')
+
+  # svn up
+  expected_output = svntest.wc.State(wc_dir, {
+    'branch'            : Item(status='A '),
+    'branch/B'          : Item(status='A '),
+    'branch/B/F'        : Item(status='A '),
+    'branch/B/E'        : Item(status='A '),
+    'branch/B/E/beta'   : Item(status='A '),
+    'branch/B/E/alpha'  : Item(status='A '),
+    'branch/B/lambda'   : Item(status='A '),
+    'branch/D'          : Item(status='A '),
+    'branch/D/H'        : Item(status='A '),
+    'branch/D/H/psi'    : Item(status='A '),
+    'branch/D/H/chi'    : Item(status='A '),
+    'branch/D/H/omega'  : Item(status='A '),
+    'branch/D/G'        : Item(status='A '),
+    'branch/D/G/tau'    : Item(status='A '),
+    'branch/D/G/pi'     : Item(status='A '),
+    'branch/D/G/rho'    : Item(status='A '),
+    'branch/D/gamma'    : Item(status='A '),
+    'branch/C'          : Item(status='A '),
+    'branch/mu'         : Item(status='A '),
+  })
+
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({
+    'branch'            : Item(),
+    'branch/D'          : Item(),
+    'branch/D/G'        : Item(),
+    'branch/D/G/rho'    : Item(contents="This is the file 'rho'.\n"),
+    'branch/D/G/tau'    : Item(contents="This is the file 'tau'.\n"),
+    'branch/D/G/pi'     : Item(contents="This is the file 'pi'.\n"),
+    'branch/D/H'        : Item(),
+    'branch/D/H/omega'  : Item(contents="This is the file 'omega'.\n"),
+    'branch/D/H/chi'    : Item(contents="This is the file 'chi'.\n"),
+    'branch/D/H/psi'    : Item(contents="This is the file 'psi'.\n"),
+    'branch/D/gamma'    : Item(contents="This is the file 'gamma'.\n"),
+    'branch/B'          : Item(),
+    'branch/B/E'        : Item(),
+    'branch/B/E/alpha'  : Item(contents="This is the file 'alpha'.\n"),
+    'branch/B/E/beta'   : Item(contents="This is the file 'beta'.\n"),
+    'branch/B/F'        : Item(),
+    'branch/B/lambda'   : Item(contents="This is the file 'lambda'.\n"),
+    'branch/mu'         : Item(contents="This is the file 'mu'.\n"),
+    'branch/C'          : Item(),
+  })
+
+  expected_status = actions.get_virginal_state(wc_dir, 2)
+  expected_status.add({
+    'branch'            : Item(status='  ', wc_rev='2'),
+    'branch/D'          : Item(status='  ', wc_rev='2'),
+    'branch/D/gamma'    : Item(status='  ', wc_rev='2'),
+    'branch/D/H'        : Item(status='  ', wc_rev='2'),
+    'branch/D/H/omega'  : Item(status='  ', wc_rev='2'),
+    'branch/D/H/chi'    : Item(status='  ', wc_rev='2'),
+    'branch/D/H/psi'    : Item(status='  ', wc_rev='2'),
+    'branch/D/G'        : Item(status='  ', wc_rev='2'),
+    'branch/D/G/tau'    : Item(status='  ', wc_rev='2'),
+    'branch/D/G/pi'     : Item(status='  ', wc_rev='2'),
+    'branch/D/G/rho'    : Item(status='  ', wc_rev='2'),
+    'branch/B'          : Item(status='  ', wc_rev='2'),
+    'branch/B/F'        : Item(status='  ', wc_rev='2'),
+    'branch/B/E'        : Item(status='  ', wc_rev='2'),
+    'branch/B/E/beta'   : Item(status='  ', wc_rev='2'),
+    'branch/B/E/alpha'  : Item(status='  ', wc_rev='2'),
+    'branch/B/lambda'   : Item(status='  ', wc_rev='2'),
+    'branch/C'          : Item(status='  ', wc_rev='2'),
+    'branch/mu'         : Item(status='  ', wc_rev='2'),
+  })
+
+  actions.run_and_verify_update(wc_dir, expected_output, expected_disk,
+    expected_status, None, None, None, None, None, False, wc_dir)
+
+  # ACTIONS ON THE MERGE SOURCE (branch)
+  # various deletes of files and dirs
+  # svn delete branch/mu branch/B/E branch/D/G/pi branch/D/H
+  expected_stdout = verify.UnorderedOutput([
+    'D         ' + branch_mu + '\n',
+    'D         ' + branch_B_E + '/alpha\n',
+    'D         ' + branch_B_E + '/beta\n',
+    'D         ' + branch_B_E + '\n',
+    'D         ' + branch_D_G_pi + '\n',
+    'D         ' + branch_D_H + '/chi\n',
+    'D         ' + branch_D_H + '/omega\n',
+    'D         ' + branch_D_H + '/psi\n',
+    'D         ' + branch_D_H + '\n',
+  ])
+
+  actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'delete',
+    branch_mu, branch_B_E, branch_D_G_pi, branch_D_H)
+
+  # svn ci
+  expected_output = svntest.wc.State(wc_dir, {
+    'branch/D/G/pi'     : Item(verb='Deleting'),
+    'branch/D/H'        : Item(verb='Deleting'),
+    'branch/mu'         : Item(verb='Deleting'),
+    'branch/B/E'        : Item(verb='Deleting'),
+  })
+
+  expected_status.remove('branch/mu', 'branch/D/H', 'branch/D/H/omega',
+    'branch/D/H/chi', 'branch/D/H/psi', 'branch/D/G/pi', 'branch/B/E',
+    'branch/B/E/beta', 'branch/B/E/alpha')
+
+  actions.run_and_verify_commit(wc_dir, expected_output, expected_status,
+    None, wc_dir)
+
+  # svn up
+  expected_output = svntest.wc.State(wc_dir, {})
+
+  expected_disk.remove('branch/mu', 'branch/D/H', 'branch/D/H/omega',
+    'branch/D/H/chi', 'branch/D/H/psi', 'branch/D/G/pi', 'branch/B/E',
+    'branch/B/E/alpha', 'branch/B/E/beta')
+
+  expected_status.tweak(wc_rev='3')
+
+  actions.run_and_verify_update(wc_dir, expected_output, expected_disk,
+    expected_status, None, None, None, None, None, False, wc_dir)
+
+  # replacements.
+  # file-with-file
+  # echo "replacement for mu" > branch/mu
+  main.file_write(branch_mu, 'replacement for mu')
+
+  # svn add branch/mu
+  expected_stdout = ['A         ' + branch_mu + '\n']
+
+  actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'add',
+    branch_mu)
+
+  # dir-with-dir
+  # svn mkdir branch/B/E
+  expected_stdout = ['A         ' + branch_B_E + '\n']
+
+  actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'mkdir',
+    branch_B_E)
+
+  # svn ps propname propval branch/B/E
+  expected_stdout = ["property 'propname' set on '" + branch_B_E + "'\n"]
+
+  actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'ps',
+    'propname', 'propval', branch_B_E)
+
+  # file-with-dir
+  # svn mkdir branch/D/G/pi
+  expected_stdout = ['A         ' + branch_D_G_pi + '\n']
+
+  actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'mkdir',
+    branch_D_G_pi)
+
+  # svn ps propname propval branch/D/G/pi
+  expected_stdout = ["property 'propname' set on '" + branch_D_G_pi + "'\n"]
+
+  actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'ps',
+    'propname', 'propval', branch_D_G_pi)
+
+  # dir-with-file
+  # echo "replacement for H" > branch/D/H
+  main.file_write(branch_D_H, 'replacement for H')
+
+  # svn add branch/D/H
+  expected_stdout = ['A         ' + branch_D_H + '\n']
+
+  actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'add',
+    branch_D_H)
+
+  # svn ci
+  expected_output = svntest.wc.State(wc_dir, {
+    'branch/D/G/pi'     : Item(verb='Adding'),
+    'branch/D/H'        : Item(verb='Adding'),
+    'branch/mu'         : Item(verb='Adding'),
+    'branch/B/E'        : Item(verb='Adding'),
+  })
+
+  expected_status.add({
+    'branch/D/G/pi'     : Item(status='  ', wc_rev='4'),
+    'branch/D/H'        : Item(status='  ', wc_rev='4'),
+    'branch/B/E'        : Item(status='  ', wc_rev='4'),
+    'branch/mu'         : Item(status='  ', wc_rev='4'),
+  })
+
+  actions.run_and_verify_commit(wc_dir, expected_output, expected_status,
+    None, wc_dir)
+
+  # ACTIONS ON THE MERGE TARGET (A)
+  # local mods to conflict with merge source
+  # echo modified > A/mu
+  main.file_write(A_mu, 'modified')
+
+  # svn ps propname otherpropval A/B/E
+  expected_stdout = ["property 'propname' set on '" + A_B_E + "'\n"]
+
+  actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'ps',
+    'propname', 'otherpropval', A_B_E)
+
+  # echo modified > A/D/G/pi
+  main.file_write(A_D_G_pi, 'modified')
+
+  # svn ps propname propval A/D/H
+  expected_stdout = ["property 'propname' set on '" + A_D_H + "'\n"]
+
+  actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'ps',
+    'propname', 'propval', A_D_H)
+
+  # svn merge $URL/A $URL/branch A
+  expected_stdout = verify.UnorderedOutput([
+    "--- Merging differences between repository URLs into '" + A + "':\n",
+    '   C ' + A_B_E + '\n',
+    '   C ' + A_mu + '\n',
+    '   C ' + A_D_G_pi + '\n',
+    '   C ' + A_D_H + '\n',
+    'Summary of conflicts:\n',
+    '  Tree conflicts: 4\n',
+  ])
+
+  actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'merge',
+    url_A, url_branch, A)
+
+  # svn st
+  expected_status.tweak('A', status=' M')
+  expected_status.tweak('A/D/G/pi', 'A/mu', status='M ', treeconflict='C')
+  expected_status.tweak('A/D/H', 'A/B/E', status=' M', treeconflict='C')
+
+  actions.run_and_verify_status(wc_dir, expected_status)
+
+#----------------------------------------------------------------------
+
+def copy_then_replace_via_merge(sbox):
+  "copy then replace via merge"
+  # Testing issue #2690 with deleted/added/replaced files and subdirs.
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  j = os.path.join
+
+  A = j(wc_dir, 'A')
+  AJ = j(wc_dir, 'A', 'J')
+  AJK = j(AJ, 'K')
+  AJL = j(AJ, 'L')
+  AJM = j(AJ, 'M')
+  AJ_sigma = j(AJ, 'sigma')
+  AJ_theta = j(AJ, 'theta')
+  AJ_omega = j(AJ, 'omega')
+  AJK_zeta = j(AJK, 'zeta')
+  AJL_zeta = j(AJL, 'zeta')
+  AJM_zeta = j(AJM, 'zeta')
+  branch = j(wc_dir, 'branch')
+  branch_J = j(wc_dir, 'branch', 'J')
+  url_A = sbox.repo_url + '/A'
+  url_branch = sbox.repo_url + '/branch'
+  
+  # Create a branch.
+  main.run_svn(None, 'cp', url_A, url_branch, '-m', 'create branch') # r2
+  
+  # Create a tree J in A.
+  os.makedirs(AJK)
+  os.makedirs(AJL)
+  main.file_append(AJ_sigma, 'new text')
+  main.file_append(AJ_theta, 'new text')
+  main.file_append(AJK_zeta, 'new text')
+  main.file_append(AJL_zeta, 'new text')
+  main.run_svn(None, 'add', AJ)
+  main.run_svn(None, 'ci', wc_dir, '-m', 'create tree J') # r3
+  main.run_svn(None, 'up', wc_dir)
+
+  # Copy J to the branch via merge
+  main.run_svn(None, 'merge', url_A, branch)
+  main.run_svn(None, 'ci', wc_dir, '-m', 'merge to branch') # r4
+  main.run_svn(None, 'up', wc_dir)
+
+  # In A, replace J with a slightly different tree
+  main.run_svn(None, 'rm', AJ)
+  main.run_svn(None, 'ci', wc_dir, '-m', 'rm AJ') # r5
+  main.run_svn(None, 'up', wc_dir)
+
+  os.makedirs(AJL)
+  os.makedirs(AJM)
+  main.file_append(AJ_theta, 'really new text')
+  main.file_append(AJ_omega, 'really new text')
+  main.file_append(AJL_zeta, 'really new text')
+  main.file_append(AJM_zeta, 'really new text')
+  main.run_svn(None, 'add', AJ)
+  main.run_svn(None, 'ci', wc_dir, '-m', 'create tree J again') # r6
+  main.run_svn(None, 'up', wc_dir)
+
+  # Run merge to replace /branch/J in one swell foop.
+  main.run_svn(None, 'merge', url_A, branch)
+
+  # Check status:
+  #   sigma and K from r4 were deleted
+  #   theta and L from r4 were replaced by r6
+  #   omega and M were added (from r6)
+  expected_status = wc.State(branch_J, {
+    ''          : Item(status='R ', copied='+', wc_rev='-'),
+    'sigma'     : Item(status='D ', copied='+', wc_rev='-'),
+    'K'         : Item(status='D ', copied='+', wc_rev='-'),
+    'K/zeta'    : Item(status='D ', copied='+', wc_rev='-'),
+    'theta'     : Item(status='R ', copied='+', wc_rev='-'),
+    'L'         : Item(status='R ', copied='+', wc_rev='-'),
+    'L/zeta'    : Item(status='R ', copied='+', wc_rev='-'),
+    'omega'     : Item(status='A ', copied='+', wc_rev='-'),
+    'M'         : Item(status='A ', copied='+', wc_rev='-'),
+    'M/zeta'    : Item(status='A ', copied='+', wc_rev='-'),
+    })
+  actions.run_and_verify_status(branch_J, expected_status)
+
+
 ########################################################################
 # Run the tests
 
@@ -16049,6 +16420,8 @@ test_list = [ None,
                          server_has_mergeinfo),
               SkipUnless(multiple_reintegrates_from_the_same_branch,
                          server_has_mergeinfo),
+              XFail(merge_replace_causes_tree_conflict),
+              copy_then_replace_via_merge,
              ]
 
 if __name__ == '__main__':
