@@ -1761,14 +1761,16 @@ svn_wc__loggy_append(svn_stringbuf_t **log_accum,
 
 svn_error_t *
 svn_wc__loggy_committed(svn_stringbuf_t **log_accum,
-                        svn_wc_adm_access_t *adm_access,
-                        const char *path, svn_revnum_t revnum,
+                        const char *adm_abspath,
+                        const char *path,
+                        svn_revnum_t revnum,
                         apr_pool_t *pool)
 {
   const char *loggy_path1;
 
-  SVN_ERR(loggy_path(&loggy_path1, path,
-                     svn_wc__adm_access_abspath(adm_access), pool));
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(adm_abspath));
+
+  SVN_ERR(loggy_path(&loggy_path1, path, adm_abspath, pool));
   svn_xml_make_open_tag(log_accum, pool, svn_xml_self_closing,
                         SVN_WC__LOG_COMMITTED,
                         SVN_WC__LOG_ATTR_NAME, loggy_path1,
