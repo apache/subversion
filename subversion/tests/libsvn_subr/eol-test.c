@@ -66,7 +66,7 @@ test_detect_file_eol(apr_pool_t *pool)
       pos = 0;
       SVN_ERR(svn_io_file_seek(file, APR_SET, &pos, pool));
 
-      SVN_ERR(svn_eol_detect_file_eol(&eol, file, pool));
+      SVN_ERR(svn_eol__detect_file_eol(&eol, file, pool));
       if (eol && expected_eol[i])
         SVN_ERR_ASSERT(strcmp(eol, expected_eol[i]) == 0);
       else
