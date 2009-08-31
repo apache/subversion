@@ -70,11 +70,11 @@ svn_wc__loggy_append(svn_stringbuf_t **log_accum,
 
 /* Extend **LOG_ACCUM with log instructions to mark PATH as committed
    with revision REVNUM.
-   ADM_ACCESS is the access baton for PATH.
+   ADM_ABSPATH is the absolute path for the admin directory for PATH.
 */
 svn_error_t *
 svn_wc__loggy_committed(svn_stringbuf_t **log_accum,
-                        svn_wc_adm_access_t *adm_access,
+                        const char *adm_abspath,
                         const char *path, svn_revnum_t revnum,
                         apr_pool_t *pool);
 

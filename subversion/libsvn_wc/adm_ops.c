@@ -474,7 +474,8 @@ process_committed_leaf(int log_number,
   /* Regardless of whether it's a file or dir, the "main" logfile
      contains a command to bump the revision attribute (and
      timestamp). */
-  SVN_ERR(svn_wc__loggy_committed(&logtags, adm_access,
+  SVN_ERR(svn_wc__loggy_committed(&logtags,
+                                  svn_wc__adm_access_abspath(adm_access),
                                   path, new_revnum, pool));
 
 
