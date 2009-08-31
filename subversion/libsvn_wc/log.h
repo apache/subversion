@@ -85,11 +85,11 @@ svn_wc__loggy_committed(svn_stringbuf_t **log_accum,
 
    The test for existence is made during this call, not at log running time.
 
-   SRC_PATH and DST_PATH are relative to ADM_ACCESS.
+   SRC_PATH and DST_PATH are relative to ADM_ABSPATH.
 */
 svn_error_t *
 svn_wc__loggy_copy(svn_stringbuf_t **log_accum,
-                   svn_wc_adm_access_t *adm_access,
+                   const char *adm_abspath,
                    const char *src_path, const char *dst_path,
                    apr_pool_t *pool);
 
