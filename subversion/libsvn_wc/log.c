@@ -1253,10 +1253,8 @@ log_do_committed(struct log_runner *loggy,
      entry for this directory, unless the current directory is a `WC
      root' (meaning, our parent directory on disk is not our parent in
      Version Control Land), in which case we're all finished here. */
-  SVN_ERR(svn_wc_is_wc_root(&wc_root,
-                            svn_wc_adm_access_path(loggy->adm_access),
-                            loggy->adm_access,
-                            pool));
+  SVN_ERR(svn_wc__check_wc_root(&wc_root, NULL, loggy->db, loggy->adm_abspath,
+                                pool));
   if (wc_root)
     return SVN_NO_ERROR;
 

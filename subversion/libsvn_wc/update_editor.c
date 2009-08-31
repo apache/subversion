@@ -250,15 +250,6 @@ struct edit_baton
 };
 
 
-/* ### rather than churn the file with a move... just forward-declare.  */
-static svn_error_t *
-check_wc_root(svn_boolean_t *wc_root,
-              svn_node_kind_t *kind,
-              svn_wc__db_t *db,
-              const char *local_abspath,
-              apr_pool_t *scratch_pool);
-
-
 /* Record in the edit baton EB that PATH's base version is not being updated.
  *
  * Add to EB->skipped_trees a copy (allocated in EB->pool) of the string
@@ -1770,8 +1761,8 @@ already_in_a_tree_conflict(svn_boolean_t *conflicted,
       svn_boolean_t is_wc_root;
 
       svn_pool_clear(iterpool);
-      SVN_ERR(check_wc_root(&is_wc_root, NULL, db, ancestor_abspath,
-                            iterpool));
+      SVN_ERR(svn_wc__check_wc_root(&is_wc_root, NULL, db, ancestor_abspath,
+                                    iterpool));
       if (is_wc_root)
         break;
 
@@ -5232,16 +5223,12 @@ svn_wc_traversed_depths(apr_hash_t **depths,
 */
 
 
-/* Like svn_wc_is_wc_root(), but also, if KIND is not null, set *KIND to
- * the versioned node kind of PATH, or to svn_node_file if PATH is
- * unversioned.
- */
-static svn_error_t *
-check_wc_root(svn_boolean_t *wc_root,
-              svn_node_kind_t *kind,
-              svn_wc__db_t *db,
-              const char *local_abspath,
-              apr_pool_t *scratch_pool)
+svn_error_t *
+svn_wc__check_wc_root(svn_boolean_t *wc_root,
+                      svn_node_kind_t *kind,
+                      svn_wc__db_t *db,
+                      const char *local_abspath,
+                      apr_pool_t *scratch_pool)
 {
   const char *parent, *base_name;
   const svn_wc_entry_t *p_entry, *entry;
@@ -5364,7 +5351,8 @@ svn_wc_is_wc_root(svn_boolean_t *wc_root,
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
-  return check_wc_root(wc_root, NULL, db, local_abspath, pool);
+  return svn_error_return(
+    svn_wc__check_wc_root(wc_root, NULL, db, local_abspath, pool));
 }
 
 
@@ -5374,8 +5362,8 @@ svn_wc__strictly_is_wc_root(svn_boolean_t *wc_root,
                             const char *local_abspath,
                             apr_pool_t *scratch_pool)
 {
-  SVN_ERR(check_wc_root(wc_root, NULL, wc_ctx->db, local_abspath,
-                        scratch_pool));
+  SVN_ERR(svn_wc__check_wc_root(wc_root, NULL, wc_ctx->db, local_abspath,
+                                scratch_pool));
 
   if (*wc_root)
     {
@@ -5445,8 +5433,8 @@ svn_wc_get_actual_target2(const char **anchor,
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, scratch_pool));
 
-  SVN_ERR(check_wc_root(&is_wc_root, &kind, wc_ctx->db, local_abspath,
-                        scratch_pool));
+  SVN_ERR(svn_wc__check_wc_root(&is_wc_root, &kind, wc_ctx->db, local_abspath,
+                                scratch_pool));
 
   /* If PATH is not a WC root, or if it is a file, lop off a basename. */
   if ((! is_wc_root) || (kind == svn_node_file))
