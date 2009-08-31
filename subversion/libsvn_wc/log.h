@@ -284,14 +284,11 @@ svn_wc__logfile_present(svn_boolean_t *present,
 
 
 /* Process the instructions in the log file for ADM_ACCESS.
-   DIFF3_CMD is the external differ used by the 'SVN_WC__LOG_MERGE'
-   log entry.  It is always safe to pass null for this.
 
    If the log fails on its first command, return the error
    SVN_ERR_WC_BAD_ADM_LOG_START.  If it fails on some subsequent
    command, return SVN_ERR_WC_BAD_ADM_LOG. */
 svn_error_t *svn_wc__run_log(svn_wc_adm_access_t *adm_access,
-                             const char *diff3_cmd,
                              apr_pool_t *pool);
 
 
