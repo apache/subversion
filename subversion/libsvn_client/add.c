@@ -78,7 +78,7 @@ static void
 trim_string(char **pstr)
 {
   char *str = *pstr;
-  int i;
+  size_t i;
 
   while (apr_isspace(*str))
     str++;
@@ -160,7 +160,7 @@ auto_props_enumerator(const char *name,
 
   for (i = 0; i < props->nelts; i++)
     {
-      int len;
+      size_t len;
       const char *this_value;
       char *property = APR_ARRAY_IDX(props, i, char *);
       char *equal_sign = strchr(property, '=');
