@@ -179,7 +179,7 @@ restore_file(svn_wc__db_t *db,
                               &newentry, SVN_WC__ENTRY_MODIFY_TEXT_TIME, pool);
 }
 
-/* Try to restore LOCAL_ABSPATH of node TYPE kind and if successfull,
+/* Try to restore LOCAL_ABSPATH of node type KIND and if successfull,
    notify that the node is restored.  Use DB for accessing the working copy.
    If USE_COMMIT_TIMES is set, then set working file's timestamp to 
    last-commit-time.
@@ -187,12 +187,13 @@ restore_file(svn_wc__db_t *db,
    Set RESTORED to TRUE if the node is successfull restored. RESTORED will
    be FALSE if restoring this node is not supported.
 
-   This function does all temporary allocations in SCRATCH_POOL */
+   This function does all temporary allocations in SCRATCH_POOL 
+ */
 static svn_error_t *
 restore_node(svn_boolean_t *restored,
              svn_wc__db_t *db,
              const char *local_abspath,
-             svn_wc__db_kind_t kind,
+             svn_node_kind_t kind,
              svn_boolean_t use_commit_times,
              svn_wc_notify_func2_t notify_func,
              void *notify_baton,
@@ -202,8 +203,7 @@ restore_node(svn_boolean_t *restored,
 
   /* Currently we can only restore files, but we will be able to restore
      directories after we move to a single database and pristine store. */
-  if (kind == svn_wc__db_kind_file ||
-      kind == svn_wc__db_kind_symlink)
+  if (kind == svn_wc__db_kind_file)
     {
       /* ... recreate file from text-base, and ... */
       SVN_ERR(restore_file(db, local_abspath, use_commit_times,
@@ -529,10 +529,13 @@ report_revisions_and_depths(svn_wc__db_t *db,
               if (dirent_kind == svn_node_none)
                 {
                   svn_boolean_t restored;
-                  SVN_ERR(restore_node(&restored, db, this_abspath, this_kind,
+                  svn_node_kind_t kind = (kind == svn_wc__db_kind_dir)
+                                                ? svn_node_dir
+                                                : svn_node_file;
+
+                  SVN_ERR(restore_node(&restored, db, this_abspath, kind,
                                        use_commit_times, notify_func,
                                        notify_baton, iterpool));
-
 
                   if (!restored)
                     missing = TRUE;
@@ -742,8 +745,9 @@ report_revisions_and_depths(svn_wc__db_t *db,
 
 
 svn_error_t *
-svn_wc_crawl_revisions4(const char *path,
-                        svn_wc_adm_access_t *adm_access,
+svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
+                        const char *dir_abspath,
+                        const char *target_abspath,
                         const svn_ra_reporter3_t *reporter,
                         void *report_baton,
                         svn_boolean_t restore_files,
@@ -756,27 +760,36 @@ svn_wc_crawl_revisions4(const char *path,
                         svn_wc_traversal_info_t *traversal_info,
                         apr_pool_t *pool)
 {
-  svn_error_t *fserr, *err = SVN_NO_ERROR;
+  svn_error_t *fserr, *err;
   const svn_wc_entry_t *entry;
   svn_revnum_t base_rev = SVN_INVALID_REVNUM;
   svn_boolean_t missing = FALSE;
   const svn_wc_entry_t *parent_entry = NULL;
-  svn_wc_notify_t *notify;
   svn_boolean_t start_empty;
-  const char *local_abspath;
-  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
 
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(dir_abspath));
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(target_abspath));
 
   /* The first thing we do is get the base_rev from the working copy's
      ROOT_DIRECTORY.  This is the first revnum that entries will be
      compared to. */
-  SVN_ERR(svn_wc_entry(&entry, path, adm_access, FALSE, pool));
+  err = svn_wc__get_entry(&entry, wc_ctx->db, target_abspath, TRUE,
+                          svn_node_unknown, FALSE, pool, pool);
 
-  if ((! entry) || ((entry->schedule == svn_wc_schedule_add)
-                    && (entry->kind == svn_node_dir)))
+  if (err && err->apr_err != SVN_ERR_NODE_UNEXPECTED_KIND)
+    return svn_error_return(err);
+
+  if (err)
     {
-      /* Don't check the exclude flag for the target.
+      entry = NULL;
+      svn_error_clear(err);
+      err = NULL;
+    }
+
+  if ((! entry) || entry->deleted || ((entry->schedule == svn_wc_schedule_add)
+                                      && (entry->kind == svn_node_dir)))
+    {
+        /* Don't check the exclude flag for the target.
 
          If we report the target itself as excluded, the server will
          send us nothing about the target -- but we want to permit
@@ -788,9 +801,9 @@ svn_wc_crawl_revisions4(const char *path,
 
       /* There aren't any versioned paths to crawl which are known to
          the repository. */
-      SVN_ERR(svn_wc__entry_versioned(&parent_entry,
-                                      svn_dirent_dirname(path, pool),
-                                      adm_access, FALSE, pool));
+      SVN_ERR(svn_wc__get_entry(&parent_entry, wc_ctx->db,
+                                svn_dirent_dirname(target_abspath, pool),
+                                FALSE, svn_node_dir, FALSE, pool, pool));
 
       base_rev = parent_entry->revision;
 
@@ -802,7 +815,7 @@ svn_wc_crawl_revisions4(const char *path,
 
       SVN_ERR(reporter->set_path(report_baton, "", base_rev, depth,
                                  entry ? entry->incomplete : TRUE,
-                                 NULL, pool));
+                                 entry ? entry->lock_token : NULL, pool));
       SVN_ERR(reporter->delete_path(report_baton, "", pool));
 
       /* Finish the report, which causes the update editor to be
@@ -822,9 +835,9 @@ svn_wc_crawl_revisions4(const char *path,
 
   if (base_rev == SVN_INVALID_REVNUM)
     {
-      const char *dirname = svn_dirent_dirname(path, pool);
-      SVN_ERR(svn_wc__entry_versioned(&parent_entry, dirname, adm_access,
-                                      FALSE, pool));
+      SVN_ERR(svn_wc__get_entry(&parent_entry, wc_ctx->db,
+                                svn_dirent_dirname(target_abspath, pool),
+                                FALSE, svn_node_dir, FALSE, pool, pool));
       base_rev = parent_entry->revision;
     }
 
@@ -837,7 +850,7 @@ svn_wc_crawl_revisions4(const char *path,
   if (entry->schedule != svn_wc_schedule_delete)
     {
       apr_finfo_t info;
-      err = svn_io_stat(&info, path, APR_FINFO_MIN, pool);
+      err = svn_io_stat(&info, target_abspath, APR_FINFO_MIN, pool);
       if (err)
         {
           if (APR_STATUS_IS_ENOENT(err->apr_err))
@@ -847,12 +860,31 @@ svn_wc_crawl_revisions4(const char *path,
         }
     }
 
+  if (missing && restore_files)
+    {
+      svn_boolean_t restored;
+
+      err = restore_node(&restored, wc_ctx->db, target_abspath,
+                         entry->kind, use_commit_times,
+                         notify_func, notify_baton,
+                         pool);
+
+      if (err)
+        {
+          SVN_ERR_ASSERT(0 && "Restore failed");
+          goto abort_report;
+        }
+
+      if (restored)
+        missing = FALSE;
+    }
+
   if (entry->kind == svn_node_dir)
     {
       if (missing)
         {
-          /* Always report directories as missing;  we can't recreate
-             them locally. */
+          /* Report missing directories as deleted to retrieve them
+             from the repository. */
           err = reporter->delete_path(report_baton, "", pool);
           if (err)
             goto abort_report;
@@ -861,8 +893,8 @@ svn_wc_crawl_revisions4(const char *path,
         {
           /* Recursively crawl ROOT_DIRECTORY and report differing
              revisions. */
-          err = report_revisions_and_depths(db,
-                                            svn_wc__adm_access_abspath(adm_access),
+          err = report_revisions_and_depths(wc_ctx->db,
+                                            dir_abspath,
                                             "",
                                             base_rev,
                                             reporter, report_baton,
@@ -883,28 +915,12 @@ svn_wc_crawl_revisions4(const char *path,
     {
       const char *pdir, *bname;
 
-      if (missing && restore_files)
-        {
-          /* Recreate file from text-base. */
-          err = restore_file(db, local_abspath, use_commit_times, pool);
-          if (err)
-            goto abort_report;
-
-          /* Report the restoration to the caller. */
-          if (notify_func != NULL)
-            {
-              notify = svn_wc_create_notify(path, svn_wc_notify_restore,
-                                            pool);
-              notify->kind = svn_node_file;
-              (*notify_func)(notify_baton, notify, pool);
-            }
-        }
-
       /* Split PATH into parent PDIR and basename BNAME. */
-      svn_dirent_split(path, &pdir, &bname, pool);
+      svn_dirent_split(target_abspath, &pdir, &bname, pool);
       if (! parent_entry)
         {
-          err = svn_wc_entry(&parent_entry, pdir, adm_access, FALSE, pool);
+          err = svn_wc__get_entry(&parent_entry, wc_ctx->db, pdir,
+                                  FALSE, svn_node_dir, FALSE, pool, pool);
           if (err)
             goto abort_report;
         }
