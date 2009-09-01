@@ -109,8 +109,8 @@ Candidate changes:
      The cmdline test for this issue is merge_replace_causes_tree_conflict
      in merge_tests.py.
      Some revisions depend on API and working copy meta data changes made
-     on trunk in those revisions and don't merge cleanly. The backport branch
-     omits any API and working copy metadata changes.
+     on trunk and don't merge cleanly. The backport branch omits any API
+     and working copy metadata changes.
      Since some of these revisions revert or change edits from earlier
      ones, it makes more sense to review the diff of the branch rather
      than all the individual changes:
