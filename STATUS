@@ -98,7 +98,7 @@ Candidate changes:
      +1: pburba
 
  * r38000, r38006, r38099, r38100, r38181, r38803, r38841, r38896,
-   r38907, r39000, r39002, r39007, r39008
+   r38907, r39000, r39002, r39007, r39008, r39052
    Properly handle tree conflicts during replace.
    Justification:
      If a merge has a delete followed by an add on the same node, and
