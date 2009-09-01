@@ -2054,19 +2054,16 @@ svn_wc__loggy_modify_wcprop(svn_stringbuf_t **log_accum,
 
 svn_error_t *
 svn_wc__loggy_move(svn_stringbuf_t **log_accum,
-                   svn_wc_adm_access_t *adm_access,
+                   const char *adm_abspath,
                    const char *src_path, const char *dst_path,
                    apr_pool_t *pool)
 {
   const char *loggy_path1;
   const char *loggy_path2;
 
-  SVN_ERR(loggy_path(&loggy_path1, src_path,
-                     svn_wc__adm_access_abspath(adm_access), pool));
-  SVN_ERR(loggy_path(&loggy_path2, dst_path,
-                     svn_wc__adm_access_abspath(adm_access), pool));
-  return loggy_move_copy_internal(log_accum, TRUE,
-                                  svn_wc__adm_access_abspath(adm_access),
+  SVN_ERR(loggy_path(&loggy_path1, src_path, adm_abspath, pool));
+  SVN_ERR(loggy_path(&loggy_path2, dst_path, adm_abspath, pool));
+  return loggy_move_copy_internal(log_accum, TRUE, adm_abspath,
                                   loggy_path1, loggy_path2, pool);
 }
 

@@ -4479,7 +4479,8 @@ merge_file(svn_wc_notify_state_t *content_state,
   if (new_text_base_path)
     {
       SVN_ERR(svn_wc__loggy_move(&log_accum,
-                                 adm_access, new_text_base_path,
+                                 svn_wc__adm_access_abspath(adm_access),
+                                 new_text_base_path,
                                  fb->text_base_path, pool));
       SVN_ERR(svn_wc__loggy_set_readonly(&log_accum, adm_access,
                                          fb->text_base_path, pool));
@@ -5568,8 +5569,8 @@ svn_wc_add_repos_file3(const char *dst_path,
       const char *dst_txtb = svn_wc__text_base_path(dst_path, FALSE, pool);
 
       SVN_ERR(svn_wc__loggy_move(&log_accum,
-                                 adm_access, dst_txtb, dst_rtext,
-                                 pool));
+                                 svn_wc__adm_access_abspath(adm_access),
+                                 dst_txtb, dst_rtext, pool));
       SVN_ERR(svn_wc__loggy_revert_props_create(&log_accum,
                                                 dst_path, adm_access,
                                                 TRUE, pool));
@@ -5677,8 +5678,8 @@ svn_wc_add_repos_file3(const char *dst_path,
     /* Write out log commands to set up the new text base and its
        checksum. */
     SVN_ERR(svn_wc__loggy_move(&log_accum,
-                               adm_access, tmp_text_base_path,
-                               text_base_path, pool));
+                               svn_wc__adm_access_abspath(adm_access),
+                               tmp_text_base_path, text_base_path, pool));
     SVN_ERR(svn_wc__loggy_set_readonly(&log_accum, adm_access,
                                        text_base_path, pool));
 

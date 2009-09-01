@@ -1289,7 +1289,8 @@ svn_wc_delete3(const char *path,
 
           if (was_kind != svn_node_dir) /* Dirs don't have text-bases */
             /* Restore the original text-base */
-            SVN_ERR(svn_wc__loggy_move(&log_accum, adm_access,
+            SVN_ERR(svn_wc__loggy_move(&log_accum,
+                                       svn_wc__adm_access_abspath(adm_access),
                                        text_revert, text_base,
                                        pool));
 
@@ -1559,7 +1560,8 @@ svn_wc_add3(const char *path,
         {
           const char *textb = svn_wc__text_base_path(path, FALSE, pool);
           const char *rtextb = svn_wc__text_revert_path(path, pool);
-          SVN_ERR(svn_wc__loggy_move(&log_accum, adm_access,
+          SVN_ERR(svn_wc__loggy_move(&log_accum,
+                                     svn_wc__adm_access_abspath(adm_access),
                                      textb, rtextb, pool));
         }
       SVN_ERR(svn_wc__loggy_revert_props_create(&log_accum, path,
@@ -1894,7 +1896,8 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
                                      svn_wc__adm_access_abspath(adm_access),
                                      revert_base_path, fullpath,
                                      pool));
-          SVN_ERR(svn_wc__loggy_move(&log_accum, adm_access,
+          SVN_ERR(svn_wc__loggy_move(&log_accum,
+                                     svn_wc__adm_access_abspath(adm_access),
                                      revert_base_path, regular_base_path,
                                      pool));
           *reverted = TRUE;

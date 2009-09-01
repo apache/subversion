@@ -1096,7 +1096,7 @@ merge_binary_file(const char *left,
                                          svn_io_file_del_none,
                                          pool, pool));
       SVN_ERR(svn_wc__loggy_move(log_accum,
-                                 adm_access,
+                                 svn_wc__adm_access_abspath(adm_access),
                                  detranslated_target_abspath,
                                  mine_copy,
                                  pool));

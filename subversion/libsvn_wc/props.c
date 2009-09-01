@@ -358,7 +358,7 @@ install_props_file(svn_stringbuf_t **log_accum,
                              FALSE, pool));
 
   /* Write a log entry to move tmp file to real file. */
-  SVN_ERR(svn_wc__loggy_move(log_accum, adm_access,
+  SVN_ERR(svn_wc__loggy_move(log_accum, svn_wc__adm_access_abspath(adm_access),
                              propfile_tmp_path,
                              propfile_path,
                              pool));
@@ -582,12 +582,13 @@ svn_wc__loggy_revert_props_create(svn_stringbuf_t **log_accum,
     {
       if (destroy_baseprops)
         SVN_ERR(svn_wc__loggy_move(log_accum,
-                                   adm_access, dst_bprop, dst_rprop,
-                                   pool));
+                                   svn_wc__adm_access_abspath(adm_access),
+                                   dst_bprop, dst_rprop, pool));
       else
         {
           SVN_ERR(svn_io_copy_file(dst_bprop, tmp_rprop, TRUE, pool));
-          SVN_ERR(svn_wc__loggy_move(log_accum, adm_access,
+          SVN_ERR(svn_wc__loggy_move(log_accum,
+                                     svn_wc__adm_access_abspath(adm_access),
                                      tmp_rprop, dst_rprop, pool));
         }
     }
@@ -603,8 +604,8 @@ svn_wc__loggy_revert_props_create(svn_stringbuf_t **log_accum,
                                  TRUE, pool));
 
       SVN_ERR(svn_wc__loggy_move(log_accum,
-                                 adm_access, dst_bprop, dst_rprop,
-                                 pool));
+                                 svn_wc__adm_access_abspath(adm_access),
+                                 dst_bprop, dst_rprop, pool));
     }
 
   return SVN_NO_ERROR;
@@ -628,7 +629,7 @@ svn_wc__loggy_revert_props_restore(svn_stringbuf_t **log_accum,
   SVN_ERR(svn_wc__prop_path(&revert_file, path, entry->kind,
                             svn_wc__props_revert, pool));
 
-  return svn_wc__loggy_move(log_accum, adm_access,
+  return svn_wc__loggy_move(log_accum, svn_wc__adm_access_abspath(adm_access),
                             revert_file, base_file, pool);
 }
 
