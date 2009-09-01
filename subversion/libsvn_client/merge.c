@@ -2899,6 +2899,7 @@ fix_deleted_subtree_ranges(const char *url1,
   int i;
   const char *source_root_url;
   apr_pool_t *iterpool = svn_pool_create(pool);
+  svn_boolean_t is_rollback = revision2 < revision1;
 
   SVN_ERR(svn_ra_get_repos_root2(ra_session, &source_root_url, pool));
 
@@ -2930,10 +2931,24 @@ fix_deleted_subtree_ranges(const char *url1,
          'THE CHILDREN_WITH_MERGEINFO ARRAY'. */
       SVN_ERR_ASSERT(parent);
 
+      /* If this is a reverse merge reorder CHILD->REMAINING_RANGES
+         so it will work with the svn_rangelist_diff API. */
+      if (is_rollback)
+        {
+          SVN_ERR(svn_rangelist_reverse(child->remaining_ranges, iterpool));
+          SVN_ERR(svn_rangelist_reverse(parent->remaining_ranges, iterpool));
+        }
+
       SVN_ERR(svn_rangelist_diff(&deleted_rangelist, &added_rangelist,
                                  child->remaining_ranges,
                                  parent->remaining_ranges,
                                  TRUE, iterpool));
+
+      if (is_rollback)
+        {
+          SVN_ERR(svn_rangelist_reverse(child->remaining_ranges, iterpool));
+          SVN_ERR(svn_rangelist_reverse(parent->remaining_ranges, iterpool));
+        }
 
       /* If CHILD is the merge target we then know that URL1, URL2,
          REVISION1, and REVISION2 are provided by normalize_merge_sources()
