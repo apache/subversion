@@ -590,7 +590,7 @@ svn_path_is_single_path_component(const char *name)
 svn_boolean_t
 svn_path_is_dotpath_present(const char *path)
 {
-  int len;
+  size_t len;
 
   /* The empty string does not have a dotpath */
   if (path[0] == '\0')
@@ -616,7 +616,7 @@ svn_path_is_dotpath_present(const char *path)
 svn_boolean_t
 svn_path_is_backpath_present(const char *path)
 {
-  int len;
+  size_t len;
 
   /* 0 and 1-length paths do not have a backpath */
   if (path[0] == '\0' || path[1] == '\0')

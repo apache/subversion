@@ -114,7 +114,6 @@ cstring_to_utf8(const char **path_utf8,
                 apr_pool_t *pool)
 {
 #if defined(WIN32) || defined(DARWIN)
-  pool; /* Unused */
   *path_utf8 = path_apr;
   return SVN_NO_ERROR;
 #else
@@ -130,7 +129,6 @@ cstring_from_utf8(const char **path_apr,
                   apr_pool_t *pool)
 {
 #if defined(WIN32) || defined(DARWIN)
-  pool; /* Unused */
   *path_apr = path_utf8;
   return SVN_NO_ERROR;
 #else
@@ -582,7 +580,7 @@ svn_io_read_link(svn_string_t **dest,
   svn_string_t dest_apr;
   const char *path_apr;
   char buf[1025];
-  int rv;
+  ssize_t rv;
 
   SVN_ERR(cstring_from_utf8(&path_apr, path, pool));
   do {
@@ -2698,7 +2696,7 @@ svn_io_detect_mimetype2(const char **mimetype,
   if (amt_read > 0)
     {
       apr_size_t i;
-      int binary_count = 0;
+      apr_size_t binary_count = 0;
 
       /* Run through the data we've read, counting the 'binary-ish'
          bytes.  HINT: If we see a 0x00 byte, we'll set our count to its

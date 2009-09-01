@@ -142,7 +142,7 @@ static svn_error_t *
 zlib_encode(const char *data, apr_size_t len, svn_stringbuf_t *out)
 {
   unsigned long endlen;
-  unsigned int intlen;
+  apr_size_t intlen;
 
   append_encoded_int(out, len);
   intlen = out->len;

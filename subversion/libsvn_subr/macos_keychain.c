@@ -80,25 +80,25 @@ keychain_password_set(apr_hash_t *creds,
   if (non_interactive)
     SecKeychainSetUserInteractionAllowed(FALSE);
 
-  status = SecKeychainFindGenericPassword(NULL, strlen(realmstring),
+  status = SecKeychainFindGenericPassword(NULL, (int) strlen(realmstring),
                                           realmstring, username == NULL
                                             ? 0
-                                            : strlen(username),
+                                            : (int) strlen(username),
                                           username, 0, NULL, &item);
   if (status)
     {
       if (status == errSecItemNotFound)
-        status = SecKeychainAddGenericPassword(NULL, strlen(realmstring),
+        status = SecKeychainAddGenericPassword(NULL, (int) strlen(realmstring),
                                                realmstring, username == NULL
                                                  ? 0
-                                                 : strlen(username),
+                                                 : (int) strlen(username),
                                                username, strlen(password),
                                                password, NULL);
     }
   else
     {
       status = SecKeychainItemModifyAttributesAndData(item, NULL,
-                                                      strlen(password),
+                                                      (int) strlen(password),
                                                       password);
       CFRelease(item);
     }
@@ -127,10 +127,10 @@ keychain_password_get(const char **password,
   if (non_interactive)
     SecKeychainSetUserInteractionAllowed(FALSE);
 
-  status = SecKeychainFindGenericPassword(NULL, strlen(realmstring),
+  status = SecKeychainFindGenericPassword(NULL, (int) strlen(realmstring),
                                           realmstring, username == NULL
                                             ? 0
-                                            : strlen(username),
+                                            : (int) strlen(username),
                                           username, &length, &data, NULL);
 
   if (non_interactive)
