@@ -25,9 +25,9 @@ except AttributeError:
 
 class TextColors:
   '''Some ANSI terminal constants for output color'''
-  ENDC = '\033[0m'
-  FAILURE = '\033[91m'
-  SUCCESS = '\033[92m'
+  ENDC = '\033[0;m'
+  FAILURE = '\033[1;31m'
+  SUCCESS = '\033[1;32m'
 
   @classmethod
   def disable(cls):
