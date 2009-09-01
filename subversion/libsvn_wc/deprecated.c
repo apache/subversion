@@ -712,7 +712,8 @@ svn_wc_get_ancestry(char **url,
                                          svn_wc__adm_get_db(adm_access),
                                          pool));
 
-  SVN_ERR(svn_wc_get_ancestry2(url, rev, wc_ctx, local_abspath, pool, pool));
+  SVN_ERR(svn_wc_get_ancestry2((const char **)url, rev, wc_ctx, local_abspath,
+                               pool, pool));
 
   return svn_error_return(svn_wc_context_destroy(wc_ctx));
 }
