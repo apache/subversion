@@ -109,14 +109,15 @@ Candidate changes:
      The cmdline test for this issue is merge_replace_causes_tree_conflict
      in merge_tests.py.
      Some revisions depend on API and working copy meta data changes made
-     on trunk in those revisions and don't merge cleanly. A backport branch,
-     omiting any API and working copy meta data changes, is at
-       ^/branches/1.6.x-r38000
+     on trunk in those revisions and don't merge cleanly. The backport branch
+     omits any API and working copy metadata changes.
      Since some of these revisions revert or change edits from earlier
      ones, it makes more sense to review the diff of the branch rather
      than all the individual changes:
        svn diff -x-p ^/branches/1.6.x@39009 ^/branches/1.6.x-r38000
      See the log messages on the branch as well as those on trunk.
+   Branch:
+     ^/branches/1.6.x-r38000
    Votes:
      +1: stsp
      +1: neels (r38000, r38006, r38099, r38100, r38181 only)
@@ -134,7 +135,8 @@ Candidate changes:
      r38373 (removing version check) and r38836,r38842 (fixing formatting
      specifier). It's probably easier to review the combined patch than the
      individual revisions.
-     A backport branch exists as ^/branches/1.6.x-r38836.
+   Branch:
+     ^/branches/1.6.x-r38836.
    Votes:
      +1: rhuijben
      +0: pburba - I don't have a Vista or Win7 box to try this out on, but it
@@ -170,9 +172,10 @@ Candidate changes:
      The result of a merge replacing a directory cannot be committed
      without this fix.
    Notes:
-     There is a backport branch at ^/branches/1.6.x-r38927.
      See issue #3281, the issues linked from there, and the huge commment
      added in r38927 on trunk for more information.
+   Branch:
+     ^/branches/1.6.x-r38927
    Votes:
      +1: stsp, gstein
 
