@@ -1078,29 +1078,23 @@ struct proplist_walk_baton
 
 /* An entries-walk callback for svn_client_proplist.
  *
- * For the path given by PATH and ENTRY,
- * populate wb->PROPS with a svn_client_proplist_item_t for each path,
- * where "wb" is the WALK_BATON of type "struct proplist_walk_baton *".
- * If wb->PRISTINE is true, use the base values, else use the working values.
+ * For the path given by LOCAL_ABSPATH, populate wb->PROPS with a
+ * svn_client_proplist_item_t for each path, where "wb" is the WALK_BATON of
+ * type "struct proplist_walk_baton *".  If wb->PRISTINE is true, use the base
+ * values, else use the working values.
  */
 static svn_error_t *
-proplist_walk_cb(const char *path,
-                 const svn_wc_entry_t *entry,
+proplist_walk_cb(const char *local_abspath,
                  void *walk_baton,
-                 apr_pool_t *pool)
+                 apr_pool_t *scratch_pool)
 {
   struct proplist_walk_baton *wb = walk_baton;
-  const char *local_abspath;
+  const svn_wc_entry_t *entry;
   apr_hash_t *hash;
 
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
-
-  /* We're going to receive dirents twice;  we want to ignore the
-     first one (where it's a child of a parent dir), and only use
-     the second one (where we're looking at THIS_DIR).  */
-  if ((entry->kind == svn_node_dir)
-      && (strcmp(entry->name, SVN_WC_ENTRY_THIS_DIR) != 0))
-    return SVN_NO_ERROR;
+  SVN_ERR(svn_wc__get_entry_versioned(&entry, wb->wc_ctx, local_abspath,
+                                      svn_node_unknown, FALSE, FALSE,
+                                      scratch_pool, scratch_pool));
 
   /* Ignore the entry if it does not exist at the time of interest. */
   if (entry->schedule
@@ -1111,11 +1105,10 @@ proplist_walk_cb(const char *path,
   if (! SVN_WC__CL_MATCH(wb->changelist_hash, entry))
     return SVN_NO_ERROR;
 
-  path = apr_pstrdup(pool, path);
-
   SVN_ERR(pristine_or_working_props(&hash, wb->wc_ctx, local_abspath,
-                                    wb->pristine, pool, pool));
-  return call_receiver(path, hash, wb->receiver, wb->receiver_baton, pool);
+                                    wb->pristine, scratch_pool, scratch_pool));
+  return call_receiver(local_abspath, hash, wb->receiver, wb->receiver_baton,
+                       scratch_pool);
 }
 
 
@@ -1131,7 +1124,6 @@ svn_client_proplist3(const char *path_or_url,
                      svn_client_ctx_t *ctx,
                      apr_pool_t *pool)
 {
-  svn_wc_adm_access_t *adm_access;
   const char *url;
 
   peg_revision = svn_cl__rev_default_to_head_or_working(peg_revision,
@@ -1146,17 +1138,12 @@ svn_client_proplist3(const char *path_or_url,
       && SVN_CLIENT__REVKIND_IS_LOCAL_TO_WC(revision->kind))
     {
       svn_boolean_t pristine;
-      int levels_to_lock = SVN_WC__LEVELS_TO_LOCK_FROM_DEPTH(depth);
       const svn_wc_entry_t *entry;
       apr_hash_t *changelist_hash = NULL;
       const char *local_abspath;
 
       SVN_ERR(svn_dirent_get_absolute(&local_abspath, path_or_url, pool));
 
-      SVN_ERR(svn_wc__adm_probe_in_context(&adm_access, ctx->wc_ctx,
-                                           path_or_url, FALSE, levels_to_lock,
-                                           ctx->cancel_func, ctx->cancel_baton,
-                                           pool));
       SVN_ERR(svn_wc__get_entry_versioned(&entry, ctx->wc_ctx, local_abspath,
                                           svn_node_unknown, FALSE, FALSE,
                                           pool, pool));
@@ -1178,7 +1165,7 @@ svn_client_proplist3(const char *path_or_url,
       /* Fetch, recursively or not. */
       if (depth >= svn_depth_files && (entry->kind == svn_node_dir))
         {
-          static const svn_wc_entry_callbacks2_t walk_callbacks
+          static const svn_wc__node_walk_callbacks_t walk_callbacks
             = { proplist_walk_cb, svn_client__default_walker_error_handler };
           struct proplist_walk_baton wb;
 
@@ -1188,10 +1175,10 @@ svn_client_proplist3(const char *path_or_url,
           wb.receiver = receiver;
           wb.receiver_baton = receiver_baton;
 
-          SVN_ERR(svn_wc_walk_entries3(path_or_url, adm_access,
-                                       &walk_callbacks, &wb, depth, FALSE,
-                                       ctx->cancel_func, ctx->cancel_baton,
-                                       pool));
+          SVN_ERR(svn_wc__node_walk_children(ctx->wc_ctx, local_abspath,
+                                             &walk_callbacks, &wb, depth,
+                                             ctx->cancel_func,
+                                             ctx->cancel_baton, pool));
         }
       else if (SVN_WC__CL_MATCH(changelist_hash, entry))
         {
@@ -1203,8 +1190,6 @@ svn_client_proplist3(const char *path_or_url,
                                 receiver, receiver_baton, pool));
 
         }
-
-      SVN_ERR(svn_wc_adm_close2(adm_access, pool));
     }
   else /* remote target */
     {
