@@ -29,10 +29,11 @@ class TextColors:
   FAILURE = '\033[91m'
   SUCCESS = '\033[92m'
 
-  def disable(self):
-    ENDC = ''
-    FAILURE = ''
-    SUCCESS = ''
+  @staticmethod
+  def disable():
+    TextColors.ENDC = ''
+    TextColors.FAILURE = ''
+    TextColors.SUCCESS = ''
 
 
 class TestHarness:
@@ -78,7 +79,7 @@ class TestHarness:
     self.list_tests = list_tests
     self.svn_bin = svn_bin
     self.log = None
-    if not sys.stdout.isatty or sys.platform == 'win32':
+    if not sys.stdout.isatty() or sys.platform == 'win32':
       TextColors.disable()
 
   def run(self, list):
