@@ -170,8 +170,9 @@ class TestHarness:
     progdir, progbase = os.path.split(prog)
     if self.log:
       # Using write here because we don't want even a trailing space
-      sys.stdout.write('Running all tests in %s [%d/%d]...' % (
-        progbase, test_nr + 1, total_tests))
+      test_info = '%s [%d/%d]' % (progbase, test_nr + 1, total_tests)
+      sys.stdout.write('Running all tests in %s' % (test_info, ))
+      sys.stdout.write('.'*(35 - len(test_info)))
       self.log.write('START: %s\n' % progbase)
       self.log.flush()
     else:
