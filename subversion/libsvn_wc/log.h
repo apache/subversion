@@ -138,7 +138,7 @@ svn_wc__loggy_delete_changelist(svn_stringbuf_t **log_accum,
                                 apr_pool_t *pool);
 
 /* Extend **LOG_ACCUM with commands to modify the entry associated with PATH
-   in ADM_ACCESS according to the flags specified in MODIFY_FLAGS, based on
+   in ADM_ABSPATH according to the flags specified in MODIFY_FLAGS, based on
    the values supplied in *ENTRY.
 
    The flags in MODIFY_FLAGS are to be taken from the svn_wc__entry_modify()
@@ -146,7 +146,7 @@ svn_wc__loggy_delete_changelist(svn_stringbuf_t **log_accum,
 */
 svn_error_t *
 svn_wc__loggy_entry_modify(svn_stringbuf_t **log_accum,
-                           svn_wc_adm_access_t *adm_access,
+                           const char *adm_abspath,
                            const char *path,
                            const svn_wc_entry_t *entry,
                            apr_uint64_t modify_flags,
@@ -154,11 +154,11 @@ svn_wc__loggy_entry_modify(svn_stringbuf_t **log_accum,
 
 /* Extend **LOG_ACCUM with log instructions to modify wcprop PROPNAME
    for PATH, setting it to PROPVAL (which may be NULL to delete the property).
-   ADM_ACCESS is the access baton for PATH.
+   ADM_ABSPATH is the absolute path for the access baton for PATH.
 */
 svn_error_t *
 svn_wc__loggy_modify_wcprop(svn_stringbuf_t **log_accum,
-                            svn_wc_adm_access_t *adm_access,
+                            const char *adm_abspath,
                             const char *path,
                             const char *propname,
                             const char *propval,

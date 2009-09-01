@@ -462,7 +462,8 @@ process_committed_leaf(int log_number,
     }
 
   if (modify_flags)
-    SVN_ERR(svn_wc__loggy_entry_modify(&logtags, adm_access,
+    SVN_ERR(svn_wc__loggy_entry_modify(&logtags,
+                                       svn_wc__adm_access_abspath(adm_access),
                                        path, &tmp_entry, modify_flags, pool));
 
   if (remove_lock)
@@ -492,11 +493,11 @@ process_committed_leaf(int log_number,
         {
           svn_prop_t *prop = APR_ARRAY_IDX(wcprop_changes, i, svn_prop_t *);
 
-          SVN_ERR(svn_wc__loggy_modify_wcprop
-                  (&logtags, adm_access,
-                   path, prop->name,
-                   prop->value ? prop->value->data : NULL,
-                   pool));
+          SVN_ERR(svn_wc__loggy_modify_wcprop(&logtags,
+                                       svn_wc__adm_access_abspath(adm_access),
+                                       path, prop->name,
+                                       prop->value ? prop->value->data : NULL,
+                                       pool));
         }
     }
 
@@ -1278,7 +1279,8 @@ svn_wc_delete3(const char *path,
          entries.c:fold_entry() clears the values of copied, copyfrom_rev
          and copyfrom_url. */
       tmp_entry.schedule = svn_wc_schedule_delete;
-      SVN_ERR(svn_wc__loggy_entry_modify(&log_accum, adm_access,
+      SVN_ERR(svn_wc__loggy_entry_modify(&log_accum,
+                                         svn_wc__adm_access_abspath(adm_access),
                                          path, &tmp_entry,
                                          SVN_WC__ENTRY_MODIFY_SCHEDULE,
                                          pool));
@@ -2024,8 +2026,9 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
     }
 
   /* Modify the entry, loggily. */
-  SVN_ERR(svn_wc__loggy_entry_modify(&log_accum, adm_access, fullpath,
-                                     &tmp_entry, flags, pool));
+  SVN_ERR(svn_wc__loggy_entry_modify(&log_accum,
+                                     svn_wc__adm_access_abspath(adm_access),
+                                     fullpath, &tmp_entry, flags, pool));
 
   /* Don't run log if nothing to change. */
   if (! svn_stringbuf_isempty(log_accum))

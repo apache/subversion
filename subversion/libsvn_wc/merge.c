@@ -662,7 +662,7 @@ preserve_pre_merge_files(svn_stringbuf_t **log_accum,
   /* Mark merge_target's entry as "Conflicted", and start tracking
      the backup files in the entry as well. */
   SVN_ERR(svn_wc__loggy_entry_modify(
-            log_accum, adm_access,
+            log_accum, svn_wc__adm_access_abspath(adm_access),
             merge_target, &tmp_entry,
             SVN_WC__ENTRY_MODIFY_CONFLICT_OLD
               | SVN_WC__ENTRY_MODIFY_CONFLICT_NEW
@@ -1108,7 +1108,7 @@ merge_binary_file(const char *left,
   tmp_entry.conflict_new = right_base;
   SVN_ERR(svn_wc__loggy_entry_modify(
             log_accum,
-            adm_access, merge_target,
+            svn_wc__adm_access_abspath(adm_access), merge_target,
             &tmp_entry,
             SVN_WC__ENTRY_MODIFY_CONFLICT_OLD
               | SVN_WC__ENTRY_MODIFY_CONFLICT_NEW

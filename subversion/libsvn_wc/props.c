@@ -1731,11 +1731,10 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
         entry.prejfile = svn_dirent_is_child(svn_wc_adm_access_path(adm_access),
                                              reject_path, NULL);
         SVN_ERR(svn_wc__loggy_entry_modify(entry_accum,
-                                           adm_access,
-                                           path,
-                                           &entry,
-                                           SVN_WC__ENTRY_MODIFY_PREJFILE,
-                                           pool));
+                                      svn_wc__adm_access_abspath(adm_access),
+                                      path, &entry,
+                                      SVN_WC__ENTRY_MODIFY_PREJFILE,
+                                      pool));
       }
 
     } /* if (reject_tmp_fp) */

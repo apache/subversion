@@ -1228,8 +1228,9 @@ accumulate_entry_props(svn_stringbuf_t *log_accum,
     }
 
   if (flags)
-    SVN_ERR(svn_wc__loggy_entry_modify(&log_accum, adm_access, path,
-                                       &tmp_entry, flags, pool));
+    SVN_ERR(svn_wc__loggy_entry_modify(&log_accum,
+                                       svn_wc__adm_access_abspath(adm_access),
+                                       path, &tmp_entry, flags, pool));
 
   return SVN_NO_ERROR;
 }
@@ -2133,12 +2134,13 @@ do_entry_deletion(struct edit_baton *eb,
       tmp_entry.kind = entry->kind;
       tmp_entry.deleted = TRUE;
 
-      SVN_ERR(svn_wc__loggy_entry_modify(&log_item, parent_adm_access,
-                                         full_path, &tmp_entry,
-                                         SVN_WC__ENTRY_MODIFY_REVISION
-                                         | SVN_WC__ENTRY_MODIFY_KIND
-                                         | SVN_WC__ENTRY_MODIFY_DELETED,
-                                         pool));
+      SVN_ERR(svn_wc__loggy_entry_modify(&log_item,
+                               svn_wc__adm_access_abspath(parent_adm_access),
+                               full_path, &tmp_entry,
+                               SVN_WC__ENTRY_MODIFY_REVISION
+                               | SVN_WC__ENTRY_MODIFY_KIND
+                               | SVN_WC__ENTRY_MODIFY_DELETED,
+                               pool));
 
       eb->target_deleted = TRUE;
     }
@@ -4135,7 +4137,8 @@ loggy_tweak_entry(svn_stringbuf_t *log_accum,
       modify_flags |= SVN_WC__ENTRY_MODIFY_URL;
     }
 
-  return svn_wc__loggy_entry_modify(&log_accum, adm_access,
+  return svn_wc__loggy_entry_modify(&log_accum,
+                                    svn_wc__adm_access_abspath(adm_access),
                                     path, &tmp_entry, modify_flags,
                                     pool);
 }
@@ -4499,7 +4502,8 @@ merge_file(svn_wc_notify_state_t *content_state,
     }
 
   /* Do the entry modifications we've accumulated. */
-  SVN_ERR(svn_wc__loggy_entry_modify(&log_accum, adm_access,
+  SVN_ERR(svn_wc__loggy_entry_modify(&log_accum,
+                                     svn_wc__adm_access_abspath(adm_access),
                                      fb->path, &tmp_entry, flags, pool));
 
   /* Log commands to handle text-timestamp and working-size,
@@ -5601,7 +5605,8 @@ svn_wc_add_repos_file3(const char *dst_path,
           | SVN_WC__ENTRY_MODIFY_COPIED;
       }
 
-    SVN_ERR(svn_wc__loggy_entry_modify(&log_accum, adm_access,
+    SVN_ERR(svn_wc__loggy_entry_modify(&log_accum,
+                                       svn_wc__adm_access_abspath(adm_access),
                                        dst_path, &tmp_entry,
                                        modify_flags, pool));
   }
@@ -5686,7 +5691,8 @@ svn_wc_add_repos_file3(const char *dst_path,
                                        text_base_path, pool));
 
     tmp_entry.checksum = svn_checksum_to_cstring(base_checksum, pool);
-    SVN_ERR(svn_wc__loggy_entry_modify(&log_accum, adm_access,
+    SVN_ERR(svn_wc__loggy_entry_modify(&log_accum,
+                                       svn_wc__adm_access_abspath(adm_access),
                                        dst_path, &tmp_entry,
                                        SVN_WC__ENTRY_MODIFY_CHECKSUM,
                                        pool));
