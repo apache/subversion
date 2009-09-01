@@ -4310,15 +4310,17 @@ svn_wc_process_committed(const char *path,
 
 
 /**
- * Do a depth-first crawl in a working copy, beginning at @a path.
+ * Do a depth-first crawl in a working copy, beginning at @a target_abspath,
+ * below @a dir_abspath. @a target can be a file in @a dir_abspath,
+ * or @a dir_abspath itself.
  *
  * Communicate the `state' of the working copy's revisions and depths
- * to @a reporter/@a report_baton.  Obviously, if @a path is a file
- * instead of a directory, this depth-first crawl will be a short one.
+ * to @a reporter/@a report_baton.  Obviously, if @a local_abspath is a
+ * file instead of a directory, this depth-first crawl will be a short one.
  *
  * No locks or logs are created, nor are any animals harmed in the
- * process.  No cleanup is necessary.  @a adm_access must be an access
- * baton for the @a path hierarchy, it does not require a write lock.
+ * process unless @a restore_files is TRUE.  No cleanup is necessary.
+ * The working copy is accessed using @a wc_ctx.
  *
  * After all revisions are reported, @a reporter->finish_report() is
  * called, which immediately causes the RA layer to update the working
@@ -4370,9 +4372,32 @@ svn_wc_process_committed(const char *path,
  * state in it.  (Caller should obtain @a traversal_info from
  * svn_wc_init_traversal_info().)
  *
- * @since New in 1.6.
+ * @since New in 1.7.
  */
 svn_error_t *
+svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
+                        const char *dir_abspath,
+                        const char *target_abspath,
+                        const svn_ra_reporter3_t *reporter,
+                        void *report_baton,
+                        svn_boolean_t restore_files,
+                        svn_depth_t depth,
+                        svn_boolean_t honor_depth_exclude,
+                        svn_boolean_t depth_compatibility_trick,
+                        svn_boolean_t use_commit_times,
+                        svn_wc_notify_func2_t notify_func,
+                        void *notify_baton,
+                        svn_wc_traversal_info_t *traversal_info,
+                        apr_pool_t *scratch_pool);
+
+/**
+ * Similar to svn_wc_crawl_revisions5, but with a relative path and
+ * access baton instead of an absolute path and wc_ctx.
+ *
+ * @since New in 1.6.
+ * @deprecated Provided for compatibility with the 1.6 API.
+ */
+SVN_DEPRECATED svn_error_t *
 svn_wc_crawl_revisions4(const char *path,
                         svn_wc_adm_access_t *adm_access,
                         const svn_ra_reporter3_t *reporter,
@@ -4386,6 +4411,7 @@ svn_wc_crawl_revisions4(const char *path,
                         void *notify_baton,
                         svn_wc_traversal_info_t *traversal_info,
                         apr_pool_t *pool);
+
 
 /**
  * Similar to svn_wc_crawl_revisions4, but with @a honor_depth_exclude always

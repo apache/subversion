@@ -43,6 +43,45 @@
 
 /*** From adm_crawler.c ***/
 
+svn_error_t *
+svn_wc_crawl_revisions4(const char *path,
+                        svn_wc_adm_access_t *adm_access,
+                        const svn_ra_reporter3_t *reporter,
+                        void *report_baton,
+                        svn_boolean_t restore_files,
+                        svn_depth_t depth,
+                        svn_boolean_t honor_depth_exclude,
+                        svn_boolean_t depth_compatibility_trick,
+                        svn_boolean_t use_commit_times,
+                        svn_wc_notify_func2_t notify_func,
+                        void *notify_baton,
+                        svn_wc_traversal_info_t *traversal_info,
+                        apr_pool_t *pool)
+{
+  svn_wc_context_t *wc_ctx;
+
+  SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL,
+                                         svn_wc__adm_get_db(adm_access),
+                                         pool));
+
+  SVN_ERR(svn_dirent_get_absolute(&path, path, pool));
+
+  return svn_wc_crawl_revisions5(wc_ctx,
+                                 svn_wc__adm_access_abspath(adm_access),
+                                 path,
+                                 reporter,
+                                 report_baton,
+                                 restore_files,
+                                 depth,
+                                 honor_depth_exclude,
+                                 depth_compatibility_trick,
+                                 use_commit_times,
+                                 notify_func,
+                                 notify_baton,
+                                 traversal_info,
+                                 pool);
+}
+
 /*** Compatibility wrapper: turns an svn_ra_reporter2_t into an
      svn_ra_reporter3_t.
 
