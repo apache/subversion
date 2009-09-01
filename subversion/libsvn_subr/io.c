@@ -3188,7 +3188,13 @@ svn_io_dir_remove_nonrecursive(const char *dirname, apr_pool_t *pool)
   SVN_ERR(cstring_from_utf8(&dirname_apr, dirname, pool));
 
   status = apr_dir_remove(dirname_apr, pool);
-  WIN32_RETRY_LOOP(status, apr_dir_remove(dirname_apr, pool));
+
+#ifdef WIN32
+  if (APR_TO_OS_ERROR(status) != ERROR_DIR_NOT_EMPTY)
+    {
+      WIN32_RETRY_LOOP(status, apr_dir_remove(dirname_apr, pool));
+    }
+#endif
   if (status)
     return svn_error_wrap_apr(status, _("Can't remove directory '%s'"),
                               svn_dirent_local_style(dirname, pool));
