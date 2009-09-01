@@ -2793,31 +2793,27 @@ remove_tc_txn(void *baton, svn_sqlite__db_t *sdb)
          don't bother rewriting it, just exit. */
       return SVN_NO_ERROR;
     }
+
+  SVN_ERR(svn_wc__write_tree_conflicts(&tree_conflict_data, conflicts,
+                                       rtb->scratch_pool));
+
+  if (have_row)
+    {
+      /* There is an existing ACTUAL row, so just update it. */
+      SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
+                                        STMT_UPDATE_ACTUAL_TREE_CONFLICTS));
+    }
   else
     {
-      SVN_ERR(svn_wc__write_tree_conflicts(&tree_conflict_data, conflicts,
-                                           rtb->scratch_pool));
-
-      if (have_row)
-        {
-          /* There is an existing ACTUAL row, so just update it. */
-          SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
-                                          STMT_UPDATE_ACTUAL_TREE_CONFLICTS));
-        }
-      else
-        {
-          /* We need to insert an ACTUAL row with the tree conflict data. */
-          SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
-                                          STMT_INSERT_ACTUAL_TREE_CONFLICTS));
-        }
-
-      SVN_ERR(svn_sqlite__bindf(stmt, "iss", rtb->wc_id, rtb->local_relpath,
-                                tree_conflict_data));
-
-      SVN_ERR(svn_sqlite__step_done(stmt));
+      /* We need to insert an ACTUAL row with the tree conflict data. */
+      SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
+                                        STMT_INSERT_ACTUAL_TREE_CONFLICTS));
     }
 
-  return SVN_NO_ERROR;
+  SVN_ERR(svn_sqlite__bindf(stmt, "iss", rtb->wc_id, rtb->local_relpath,
+                            tree_conflict_data));
+
+  return svn_error_return(svn_sqlite__step_done(stmt));
 }
 
 
