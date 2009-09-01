@@ -171,7 +171,7 @@ svn_wc__loggy_modify_wcprop(svn_stringbuf_t **log_accum,
 
    The test for existence is made now, not at log run time.
 
-   SRC_PATH and DST_PATH are relative to ADM_ACCESS.
+   SRC_PATH and DST_PATH are relative to ADM_ABSPATH.
 
    Set *DST_MODIFIED (if DST_MODIFIED isn't NULL) to indicate whether the
    destination path will have been modified after running the log: if either
@@ -179,7 +179,7 @@ svn_wc__loggy_modify_wcprop(svn_stringbuf_t **log_accum,
 */
 svn_error_t *
 svn_wc__loggy_move(svn_stringbuf_t **log_accum,
-                   svn_wc_adm_access_t *adm_access,
+                   const char *adm_abspath,
                    const char *src_path, const char *dst_path,
                    apr_pool_t *pool);
 
