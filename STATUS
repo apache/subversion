@@ -203,5 +203,14 @@ Candidate changes:
    Votes:
      +1: stsp
 
+ * r39031
+   Fix (again) issue #3425: Add p=REV CGI query bits (when needed) to
+   updir links in mod_dav_svn GET directory listing output.
+   Justification:
+     Without this, our claims to have fixed this issue are "juuuuuust a bit
+     outside."
+   Votes:
+     +1: cmpilato
+
 Approved changes:
 =================
