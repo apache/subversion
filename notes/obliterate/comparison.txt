@@ -13,6 +13,10 @@ TABLE OF CONTENTS
 
     3. CVS
 
+    4. MERCURIAL
+
+    5. GIT
+
 
 1. INTRODUCTION
 
@@ -34,12 +38,18 @@ TABLE OF CONTENTS
   repository.
 
   Repository transformation: The file becomes nonexistent at the specified
-  revision. At all other revisions it is unchanged.
+  revision. At all other revisions it is unchanged. If the head revision of
+  that file was obliterated, the head file-revision number of that file will
+  go back to the highest remaining revision, and the next revision to be
+  committed will have a file-revision number that has been used before. The
+  repository-scope "changelist" numbers are not affected.
 
   Client (WC) issues: If a file is obliterated at all revisions, this file
-  becomes unversioned in WCs. (Perforce does not maintain client-side state
-  for the WCs so the new state is immediately seen when any Perforce operation
-  is attempted.) If a file is obliterated at only specified revisions, ### ?
+  becomes unversioned in WCs and/or is removed from WCs by a "sync" command
+  (that's not clear). If a file is obliterated at only specified revisions,
+  according to the manual: "Syncing to an obliterated revision will remove the
+  file from your client workspace, syncing to the head revision will [...]
+  provide you with the most recent non-obliterated revision of the file."
 
   Backups, Mirrors: ### ?
 
@@ -47,7 +57,12 @@ TABLE OF CONTENTS
   files are versioned, and files are tracked primarily by their path (with
   some support for renaming, moving and replacing). Perforce maintains both a
   file-revision number and a repository-scope "changeset" number (which is
-  similar to Subversion's revision number).
+  similar to Subversion's revision number). Perforce does not maintain
+  client-side state for the WCs so the new state is immediately seen when any
+  Perforce operation is attempted.
+
+  Reference manual:
+  <http://www.perforce.com/perforce/doc.current/manuals/cmdref/obliterate.html>
 
 
 3. CVS
@@ -70,5 +85,19 @@ TABLE OF CONTENTS
   Client (WC) issues: ###
 
   Backups, Mirrors: ### ?
+
+
+4. MERCURIAL
+
+  Mercurial has no Obliterate command. This email describes how one might
+  achieve obliteration:
+  <http://www.selenic.com/pipermail/mercurial/2008-March/017859.html>.
+
+
+5. GIT
+
+  Git has a "git-filter-branch" command which can be used to achieve
+  obliteration. See the manual page
+  <http://www.kernel.org/pub/software/scm/git/docs/git-filter-branch.html>.
 
 
