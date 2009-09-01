@@ -196,7 +196,6 @@ walker_helper(svn_wc__db_t *db,
   for (i = 0; i < rel_children->nelts; i++)
     {
       const char *child_abspath;
-      svn_boolean_t hidden;
       svn_wc__db_kind_t child_kind;
       
       svn_pool_clear(iterpool);
@@ -217,8 +216,6 @@ walker_helper(svn_wc__db_t *db,
                                    NULL, NULL, NULL, NULL,
                                    db, child_abspath, iterpool, iterpool));
 
-      SVN_ERR(svn_wc__db_node_hidden(&hidden, db, child_abspath, iterpool));
-
       /* Return the child, if appropriate.  (For a directory,
        * this is the first visit: as a child.) */
       if (child_kind == svn_wc__db_kind_file
@@ -232,7 +229,6 @@ walker_helper(svn_wc__db_t *db,
 
       /* Recurse into this directory, if appropriate. */
       if (child_kind == svn_wc__db_kind_dir
-            && !hidden
             && depth >= svn_depth_immediates)
         {
           svn_depth_t depth_below_here = depth;
