@@ -5452,7 +5452,7 @@ svn_wc_get_actual_target2(const char **anchor,
   else
     {
       *anchor = apr_pstrdup(result_pool, path);
-      *target = apr_pstrdup(result_pool, "");
+      *target = "";
     }
 
   return SVN_NO_ERROR;
