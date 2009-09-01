@@ -1188,8 +1188,9 @@ accumulate_entry_props(svn_stringbuf_t *log_accum,
          defunct. */
       if (! strcmp(prop->name, SVN_PROP_ENTRY_LOCK_TOKEN))
         {
-          SVN_ERR(svn_wc__loggy_delete_lock(
-                  &log_accum, adm_access, path, pool));
+          SVN_ERR(svn_wc__loggy_delete_lock(&log_accum,
+                                   svn_wc__adm_access_abspath(adm_access),
+                                   path, pool));
 
           if (lock_state)
             *lock_state = svn_wc_notify_lock_state_unlocked;
@@ -2115,8 +2116,9 @@ do_entry_deletion(struct edit_baton *eb,
   /* Issue a loggy command to delete the entry from version control and to
    * delete it from disk if unmodified, but leave any modified files on disk
    * unversioned. */
-  SVN_ERR(svn_wc__loggy_delete_entry(&log_item, parent_adm_access, full_path,
-                                     pool));
+  SVN_ERR(svn_wc__loggy_delete_entry(&log_item,
+                             svn_wc__adm_access_abspath(parent_adm_access),
+                             full_path, pool));
 
   /* If the thing being deleted is the *target* of this update, then
      we need to recreate a 'deleted' entry, so that the parent can give
