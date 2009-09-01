@@ -696,7 +696,7 @@ svn_opt_parse_path(svn_opt_revision_t *rev,
             {
               /* URLs are URI-encoded, so we look for dates with
                  URI-encoded delimeters.  */
-              int rev_len = strlen(rev_str);
+              size_t rev_len = strlen(rev_str);
               if (rev_len > 6
                   && rev_str[0] == '%'
                   && rev_str[1] == '7'
@@ -889,7 +889,7 @@ svn_opt__split_arg_at_peg_revision(const char **true_target,
                                    apr_pool_t *pool)
 {
   const char *peg_start = NULL; /* pointer to the peg revision, if any */
-  int j;
+  size_t j;
 
   for (j = (strlen(utf8_target) - 1); j >= 0; --j)
     {

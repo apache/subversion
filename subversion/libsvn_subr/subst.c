@@ -149,7 +149,7 @@ keyword_printf(const char *fmt,
 {
   svn_stringbuf_t *value = svn_stringbuf_ncreate("", 0, pool);
   const char *cur;
-  int n;
+  size_t n;
 
   for (;;)
     {

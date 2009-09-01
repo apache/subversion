@@ -302,7 +302,8 @@ svn_sqlite__bind_blob(svn_sqlite__stmt_t *stmt,
                       const void *val,
                       apr_size_t len)
 {
-  SQLITE_ERR(sqlite3_bind_blob(stmt->s3stmt, slot, val, len, SQLITE_TRANSIENT),
+  SQLITE_ERR(sqlite3_bind_blob(stmt->s3stmt, slot, val, (int) len,
+                               SQLITE_TRANSIENT),
              stmt->db);
   return SVN_NO_ERROR;
 }

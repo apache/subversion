@@ -1661,7 +1661,7 @@ svn_mergeinfo__remove_prefix_from_catalog(svn_mergeinfo_catalog_t *out_catalog,
                                           apr_pool_t *pool)
 {
   apr_hash_index_t *hi;
-  int prefix_len = strlen(prefix);
+  size_t prefix_len = strlen(prefix);
 
   *out_catalog = apr_hash_make(pool);
 
