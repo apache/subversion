@@ -169,3 +169,141 @@ svn_wc__node_get_kind(svn_node_kind_t *kind,
 
   return SVN_NO_ERROR;
 }
+
+/* A recursive node-walker, helper for svn_wc__node_walk_children(). */
+static svn_error_t *
+walker_helper(svn_wc__db_t *db,
+              const char *dir_abspath,
+              const svn_wc__node_walk_callbacks_t *callbacks,
+              void *walk_baton,
+              svn_depth_t depth,
+              svn_cancel_func_t cancel_func,
+              void *cancel_baton,
+              apr_pool_t *scratch_pool)
+{
+  svn_error_t *err;
+  const apr_array_header_t *rel_children;
+  apr_pool_t *iterpool;
+  int i;
+
+  if (depth == svn_depth_empty)
+    return SVN_NO_ERROR;
+
+  SVN_ERR(svn_wc__db_read_children(&rel_children, db, dir_abspath,
+                                   scratch_pool, scratch_pool));
+
+  iterpool = svn_pool_create(scratch_pool);
+  for (i = 0; i < rel_children->nelts; i++)
+    {
+      const char *child_abspath;
+      svn_boolean_t hidden;
+      svn_wc__db_kind_t child_kind;
+      
+      svn_pool_clear(iterpool);
+
+      /* See if someone wants to cancel this operation. */
+      if (cancel_func)
+        SVN_ERR(cancel_func(cancel_baton));
+
+      child_abspath = svn_dirent_join(dir_abspath,
+                                      APR_ARRAY_IDX(rel_children, i,
+                                                    const char *),
+                                      iterpool);
+
+      SVN_ERR(svn_wc__db_read_info(NULL, &child_kind, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL,
+                                   db, child_abspath, iterpool, iterpool));
+
+      SVN_ERR(svn_wc__db_node_hidden(&hidden, db, child_abspath, iterpool));
+
+      /* Return the child, if appropriate.  (For a directory,
+       * this is the first visit: as a child.) */
+      if (child_kind == svn_wc__db_kind_file
+            || depth >= svn_depth_immediates)
+        {
+          err = callbacks->found_node(child_abspath, walk_baton, iterpool);
+          if (err)
+            SVN_ERR(callbacks->handle_error(child_abspath, err, walk_baton,
+                                            iterpool));
+        }
+
+      /* Recurse into this directory, if appropriate. */
+      if (child_kind == svn_wc__db_kind_dir
+            && !hidden
+            && depth >= svn_depth_immediates)
+        {
+          svn_depth_t depth_below_here = depth;
+
+          if (depth == svn_depth_immediates)
+            depth_below_here = svn_depth_empty;
+
+          SVN_ERR(walker_helper(db, child_abspath, callbacks, walk_baton,
+                                depth_below_here, cancel_func, cancel_baton,
+                                iterpool));
+        }
+    }
+
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc__node_walk_children(svn_wc_context_t *wc_ctx,
+                           const char *local_abspath,
+                           const svn_wc__node_walk_callbacks_t *callbacks,
+                           void *walk_baton,
+                           svn_depth_t walk_depth,
+                           svn_cancel_func_t cancel_func,
+                           void *cancel_baton,
+                           apr_pool_t *scratch_pool)
+{
+  svn_error_t *err;
+  svn_wc__db_kind_t kind;
+  svn_depth_t depth;
+
+  SVN_ERR(svn_wc__db_read_info(NULL, &kind, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, &depth, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL,
+                               wc_ctx->db, local_abspath,
+                               scratch_pool, scratch_pool));
+
+  if (kind == svn_wc__db_kind_file || depth == svn_depth_exclude)
+    {
+      err = callbacks->found_node(local_abspath, walk_baton, scratch_pool);
+      if (err)
+        return svn_error_return(
+          callbacks->handle_error(local_abspath, err, walk_baton,
+                                  scratch_pool));
+
+      return SVN_NO_ERROR;
+    }
+
+  if (kind == svn_wc__db_kind_dir)
+    {
+      /* Return the directory first, before starting recursion, since it
+         won't get returned as part of the recursion. */
+      err = callbacks->found_node(local_abspath, walk_baton, scratch_pool);
+      if (err)
+        SVN_ERR(callbacks->handle_error(local_abspath, err, walk_baton,
+                                        scratch_pool));
+
+      return svn_error_return(
+        walker_helper(wc_ctx->db, local_abspath, callbacks, walk_baton,
+                      walk_depth, cancel_func, cancel_baton, scratch_pool));
+    }
+
+  return svn_error_return(
+    callbacks->handle_error(local_abspath,
+                            svn_error_createf(SVN_ERR_NODE_UNKNOWN_KIND, NULL,
+                                  _("'%s' has an unrecognized node kind"),
+                                  svn_dirent_local_style(local_abspath,
+                                                         scratch_pool)),
+                            walk_baton, scratch_pool));
+}
