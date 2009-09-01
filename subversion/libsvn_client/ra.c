@@ -187,10 +187,11 @@ set_wc_prop(void *baton,
             apr_pool_t *pool)
 {
   callback_baton_t *cb = baton;
-  const char *full_path = svn_dirent_join(cb->base_dir, path, pool);
   const char *local_abspath;
 
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, full_path, pool));
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath,
+                                  svn_dirent_join(cb->base_dir, path, pool),
+                                  pool));
 
   /* We pass 1 for the 'force' parameter here.  Since the property is
      coming from the repository, we definitely want to accept it.
