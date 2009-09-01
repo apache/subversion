@@ -2978,9 +2978,23 @@ deliver(const dav_resource *resource, ap_filter_t *output)
           && (resource->info->restype != DAV_SVN_RESTYPE_PARENTPATH_COLLECTION))
         {
           if (gen_html)
-            ap_fprintf(output, bb, "  <li><a href=\"../\">..</a></li>\n");
+            {
+              if (resource->info->pegged)
+                {
+                  ap_fprintf(output, bb,
+                             "  <li><a href=\"../?p=%ld\">..</a></li>\n",
+                             resource->info->root.rev);
+                }
+              else
+                {
+                  ap_fprintf(output, bb,
+                             "  <li><a href=\"../\">..</a></li>\n");
+                }
+            }
           else
-            ap_fprintf(output, bb, "    <updir />\n");
+            {
+              ap_fprintf(output, bb, "    <updir />\n");
+            }
         }
 
       /* get a sorted list of the entries */
