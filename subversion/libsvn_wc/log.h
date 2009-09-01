@@ -108,32 +108,32 @@ svn_wc__loggy_translated_file(svn_stringbuf_t **log_accum,
 
 /* Extend **LOG_ACCUM with log instructions to delete the entry
    associated with PATH from the entries file.
-   ADM_ACCESS is the access baton for PATH.
+   ADM_ABSPATH is the absolute path for the access baton for PATH.
 */
 svn_error_t *
 svn_wc__loggy_delete_entry(svn_stringbuf_t **log_accum,
-                           svn_wc_adm_access_t *adm_access,
+                           const char *adm_abspath,
                            const char *path,
                            apr_pool_t *pool);
 
 
 /* Extend **LOG_ACCUM with log instructions to delete lock related
    fields from the entry belonging to PATH.
-   ADM_ACCESS is the access baton for PATH.
+   ADM_ABSPATH is the absolute path for the access baton for PATH.
 */
 svn_error_t *
 svn_wc__loggy_delete_lock(svn_stringbuf_t **log_accum,
-                          svn_wc_adm_access_t *adm_access,
+                          const char *adm_abspath,
                           const char *path,
                           apr_pool_t *pool);
 
 /* Extend **LOG_ACCUM with log instructions to delete changelist
    from the entry belonging to PATH.
-   ADM_ACCESS is the access baton for PATH.
+   ADM_ABSPATH is the absolute path for the access baton for PATH.
 */
 svn_error_t *
 svn_wc__loggy_delete_changelist(svn_stringbuf_t **log_accum,
-                                svn_wc_adm_access_t *adm_access,
+                                const char *adm_abspath,
                                 const char *path,
                                 apr_pool_t *pool);
 
