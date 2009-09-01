@@ -1,0 +1,74 @@
+******************************************************************************
+                          COMPARISON WITH OTHER VCS
+                                     FOR
+                            ISSUE #516: OBLITERATE
+******************************************************************************
+
+
+TABLE OF CONTENTS
+
+    1. INTRODUCTION
+
+    2. PERFORCE
+
+    3. CVS
+
+
+1. INTRODUCTION
+
+  This document describes how obliteration works in some other Version Control
+  Systems.
+
+
+2. PERFORCE
+
+  Perforce has a client-side command for obliterating file-revs from the
+  repository.
+
+  Invocation: Client side.
+
+    p4 obliterate [-y] file[rev-range] ...
+
+  Authz: Restricted by the "admin" priviledge which, like other privilege
+  levels in Perforce, can be granted per user on arbitrary paths in the
+  repository.
+
+  Repository transformation: The file becomes nonexistent at the specified
+  revision. At all other revisions it is unchanged.
+
+  Client (WC) issues: If a file is obliterated at all revisions, this file
+  becomes unversioned in WCs. (Perforce does not maintain client-side state
+  for the WCs so the new state is immediately seen when any Perforce operation
+  is attempted.) If a file is obliterated at only specified revisions, ### ?
+
+  Backups, Mirrors: ### ?
+
+  Relevant differences between Subversion and Perforce: In Perforce, only
+  files are versioned, and files are tracked primarily by their path (with
+  some support for renaming, moving and replacing). Perforce maintains both a
+  file-revision number and a repository-scope "changeset" number (which is
+  similar to Subversion's revision number).
+
+
+3. CVS
+
+  CVS has no special support for obliterating, but it is established
+  practice for administrators to obliterate the whole history of a file by
+  deleting the corresponding archive file from the repository.
+
+  CVS has little repository-side metadata outside the per-file RCS archive
+  files, so deleting one of these achieves total obliteration of the
+  corresponding file through all its revisions.
+
+  Invocation: Server side, native operating system commands.
+
+  Authz: Implicit (requires server file-system privileges).
+
+  Repository transformation: The file's existence and its history is deleted,
+  including its change logs.
+
+  Client (WC) issues: ###
+
+  Backups, Mirrors: ### ?
+
+
