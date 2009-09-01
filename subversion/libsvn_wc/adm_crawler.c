@@ -203,7 +203,7 @@ restore_node(svn_boolean_t *restored,
 
   /* Currently we can only restore files, but we will be able to restore
      directories after we move to a single database and pristine store. */
-  if (kind == svn_wc__db_kind_file)
+  if (kind == svn_node_file)
     {
       /* ... recreate file from text-base, and ... */
       SVN_ERR(restore_file(db, local_abspath, use_commit_times,
@@ -529,9 +529,9 @@ report_revisions_and_depths(svn_wc__db_t *db,
               if (dirent_kind == svn_node_none)
                 {
                   svn_boolean_t restored;
-                  svn_node_kind_t kind = (kind == svn_wc__db_kind_dir)
-                                                ? svn_node_dir
-                                                : svn_node_file;
+                  svn_node_kind_t kind = (this_kind == svn_wc__db_kind_dir)
+                                                     ? svn_node_dir
+                                                     : svn_node_file;
 
                   SVN_ERR(restore_node(&restored, db, this_abspath, kind,
                                        use_commit_times, notify_func,
