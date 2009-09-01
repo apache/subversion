@@ -97,27 +97,30 @@ Candidate changes:
    Votes:
      +1: pburba
 
- * r38000, r38006, r38099, r38100, r38181
-   Don't break the working copy when a tree-conflict features an incoming
-   replace.
+ * r38000, r38006, r38099, r38100, r38181, r38803, r38841, r38896,
+   r38907, r39000, r39002, r39007, r39008
+   Properly handle tree conflicts during replace.
    Justification:
-     My colleagues and some clients are really annoyed by this problem.
-     Although it's been fixed, it is not in 1.6.x yet, which is met with
-     little understanding. Releasing 1.6.5 without this patch would
-     probably be some bad publicity...
-   Notes:
      If a merge has a delete followed by an add on the same node, and
      also that node is modified locally, svn tried to create two tree-
      conflicts on the same node. That hit an assertion and bailed out,
      breaking the working copy.
+   Notes:
      The cmdline test for this issue is merge_replace_causes_tree_conflict
-     in merge_tests.py, should become nr. 133.
-     (My `make check' with these revisions merged to 1.6.x is clean)
+     in merge_tests.py.
+     Some revisions depend on API and working copy meta data changes made
+     on trunk in those revisions and don't merge cleanly. A backport branch,
+     omiting any API and working copy meta data changes, is at
+       ^/branches/1.6.x-r38000
+     Since some of these revisions revert or change edits from earlier
+     ones, it makes more sense to review the diff of the branch rather
+     than all the individual changes:
+       svn diff -x-p ^/branches/1.6.x@39009 ^/branches/1.6.x-r38000
+     See the log messages on the branch as well as those on trunk.
    Votes:
-     +1: neels
-     -1: stsp, julianfoad
-         (not properly fixed; test passes for wrong reasons; see
-         <http://subversion.tigris.org/ds/viewMessage.do?dsForumId=462&dsMessageId=2384930>)
+     +1: stsp
+     +1: neels (r38000, r38006, r38099, r38100, r38181 only)
+     -1: julianfoad (r38000, r38006, r38099, r38100, r38181 only)
 
  * r35958, r36030, r38373, r38836, r38837, r38842
    Several fixes to the Win32 exception handler. This change also makes it
