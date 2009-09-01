@@ -16342,7 +16342,9 @@ test_list = [ None,
                          server_has_mergeinfo),
               SkipUnless(multiple_reintegrates_from_the_same_branch,
                          server_has_mergeinfo),
-              merge_replace_causes_tree_conflict,
+              # ra_serf causes duplicate notifications with this test:
+              Skip(merge_replace_causes_tree_conflict,
+                   svntest.main.is_ra_type_dav_serf),
              ]
 
 if __name__ == '__main__':
