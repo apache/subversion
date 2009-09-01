@@ -646,11 +646,11 @@ preserve_pre_merge_files(svn_stringbuf_t **log_accum,
      We use merge_target's current properties to do the translation. */
   /* Derive the basenames of the 3 backup files. */
   SVN_ERR(svn_wc__loggy_translated_file(log_accum,
-                                        adm_access,
+                                        svn_wc__adm_access_abspath(adm_access),
                                         left_copy, tmp_left,
                                         merge_target, pool));
   SVN_ERR(svn_wc__loggy_translated_file(log_accum,
-                                        adm_access,
+                                        svn_wc__adm_access_abspath(adm_access),
                                         right_copy, tmp_right,
                                         merge_target, pool));
 
@@ -660,9 +660,10 @@ preserve_pre_merge_files(svn_stringbuf_t **log_accum,
            &detranslated_target_copy, merge_abstarget, db, merge_abstarget,
            SVN_WC_TRANSLATE_TO_NF | SVN_WC_TRANSLATE_NO_OUTPUT_CLEANUP,
            pool, pool));
-  SVN_ERR(svn_wc__loggy_translated_file
-          (log_accum, adm_access,
-           target_copy, detranslated_target_copy, merge_target, pool));
+  SVN_ERR(svn_wc__loggy_translated_file(log_accum,
+                                        svn_wc__adm_access_abspath(adm_access),
+                                        target_copy, detranslated_target_copy,
+                                        merge_target, pool));
 
   tmp_entry.conflict_old = svn_dirent_is_child(adm_path, left_copy, pool);
   tmp_entry.conflict_new = svn_dirent_is_child(adm_path, right_copy, pool);

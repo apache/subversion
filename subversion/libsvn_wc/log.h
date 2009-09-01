@@ -96,11 +96,11 @@ svn_wc__loggy_copy(svn_stringbuf_t **log_accum,
 
 /* Extend **LOG_ACCUM with log instructions to generate a translated
    file from SRC to DST with translation settings from VERSIONED.
-   DST and SRC and VERSIONED are relative to ADM_ACCESS.
+   DST and SRC and VERSIONED are relative to ADM_ABSPATH.
 */
 svn_error_t *
 svn_wc__loggy_translated_file(svn_stringbuf_t **log_accum,
-                              svn_wc_adm_access_t *adm_access,
+                              const char *adm_abspath,
                               const char *dst,
                               const char *src,
                               const char *versioned,

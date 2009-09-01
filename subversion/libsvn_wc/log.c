@@ -1796,7 +1796,7 @@ svn_wc__loggy_copy(svn_stringbuf_t **log_accum,
 
 svn_error_t *
 svn_wc__loggy_translated_file(svn_stringbuf_t **log_accum,
-                              svn_wc_adm_access_t *adm_access,
+                              const char *adm_abspath,
                               const char *dst,
                               const char *src,
                               const char *versioned,
@@ -1806,12 +1806,9 @@ svn_wc__loggy_translated_file(svn_stringbuf_t **log_accum,
   const char *loggy_path2;
   const char *loggy_path3;
 
-  SVN_ERR(loggy_path(&loggy_path1, src, svn_wc__adm_access_abspath(adm_access),
-                     pool));
-  SVN_ERR(loggy_path(&loggy_path2, dst, svn_wc__adm_access_abspath(adm_access),
-                     pool));
-  SVN_ERR(loggy_path(&loggy_path3, versioned,
-                     svn_wc__adm_access_abspath(adm_access), pool));
+  SVN_ERR(loggy_path(&loggy_path1, src, adm_abspath, pool));
+  SVN_ERR(loggy_path(&loggy_path2, dst, adm_abspath, pool));
+  SVN_ERR(loggy_path(&loggy_path3, versioned, adm_abspath, pool));
   svn_xml_make_open_tag
     (log_accum, pool, svn_xml_self_closing,
      SVN_WC__LOG_CP_AND_TRANSLATE,
