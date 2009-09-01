@@ -23,6 +23,13 @@ try:
 except AttributeError:
   my_getopt = getopt.getopt
 
+class TextColors:
+  '''Some ANSI terminal constants for output color'''
+  ENDC = '\033[0m'
+  FAILURE = '\033[91m'
+  SUCCESS = '\033[92m'
+
+
 class TestHarness:
   '''Test harness for Subversion tests.
   '''
@@ -233,13 +240,13 @@ class TestHarness:
     # probably means the test didn't run at all and probably didn't
     # output any failure info.
     if failed == 1:
-      print('FAILURE')
+      print(TextColors.FAILURE + 'FAILURE' + TextColors.ENDC)
     elif failed and self.log:
       self.log.write('FAIL:  %s: Unknown test failure see tests.log.\n\n' % progbase)
       self.log.flush()
-      print('FAILURE')
+      print(TextColors.FAILURE + 'FAILURE' + TextColors.ENDC)
     else:
-      print('success')
+      print(TextColors.SUCCESS + 'success' + TextColors.ENDC)
     if self.log:
       self.log.write('END: %s\n\n' % progbase)
     else:
