@@ -29,11 +29,11 @@ class TextColors:
   FAILURE = '\033[91m'
   SUCCESS = '\033[92m'
 
-  @staticmethod
-  def disable():
-    TextColors.ENDC = ''
-    TextColors.FAILURE = ''
-    TextColors.SUCCESS = ''
+  @classmethod
+  def disable(cls):
+    cls.ENDC = ''
+    cls.FAILURE = ''
+    cls.SUCCESS = ''
 
 
 class TestHarness:
