@@ -29,6 +29,11 @@ class TextColors:
   FAILURE = '\033[91m'
   SUCCESS = '\033[92m'
 
+  def disable(self):
+    ENDC = ''
+    FAILURE = ''
+    SUCCESS = ''
+
 
 class TestHarness:
   '''Test harness for Subversion tests.
@@ -73,6 +78,8 @@ class TestHarness:
     self.list_tests = list_tests
     self.svn_bin = svn_bin
     self.log = None
+    if not sys.stdout.isatty or sys.platform == 'win32':
+      TextColors.disable()
 
   def run(self, list):
     'Run all test programs given in LIST.'
