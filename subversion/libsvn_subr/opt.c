@@ -889,18 +889,19 @@ svn_opt__split_arg_at_peg_revision(const char **true_target,
                                    apr_pool_t *pool)
 {
   const char *peg_start = NULL; /* pointer to the peg revision, if any */
-  size_t j;
+  const char *ptr;
 
-  for (j = (strlen(utf8_target) - 1); j >= 0; --j)
+  for (ptr = (utf8_target + strlen(utf8_target) - 1); ptr >= utf8_target;
+        --ptr)
     {
       /* If we hit a path separator, stop looking.  This is OK
           only because our revision specifiers can't contain '/'. */
-      if (utf8_target[j] == '/')
+      if (*ptr == '/')
         break;
 
-      if (utf8_target[j] == '@')
+      if (*ptr == '@')
         {
-          peg_start = &utf8_target[j];
+          peg_start = ptr;
           break;
         }
     }
@@ -908,13 +909,13 @@ svn_opt__split_arg_at_peg_revision(const char **true_target,
   if (peg_start)
     {
       /* Error out if target is the empty string. */
-      if (j == 0)
+      if (ptr == utf8_target)
         return svn_error_createf(SVN_ERR_BAD_FILENAME, NULL,
                                  _("'%s' is just a peg revision. "
                                    "Maybe try '%s@' instead?"),
                                  utf8_target, utf8_target);
 
-      *true_target = apr_pstrmemdup(pool, utf8_target, j);
+      *true_target = apr_pstrmemdup(pool, utf8_target, ptr - utf8_target);
       if (peg_revision)
         *peg_revision = apr_pstrdup(pool, peg_start);
     }
