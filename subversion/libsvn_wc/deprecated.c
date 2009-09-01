@@ -66,20 +66,22 @@ svn_wc_crawl_revisions4(const char *path,
 
   SVN_ERR(svn_dirent_get_absolute(&path, path, pool));
 
-  return svn_wc_crawl_revisions5(wc_ctx,
-                                 svn_wc__adm_access_abspath(adm_access),
-                                 path,
-                                 reporter,
-                                 report_baton,
-                                 restore_files,
-                                 depth,
-                                 honor_depth_exclude,
-                                 depth_compatibility_trick,
-                                 use_commit_times,
-                                 notify_func,
-                                 notify_baton,
-                                 traversal_info,
-                                 pool);
+  SVN_ERR(svn_wc_crawl_revisions5(wc_ctx,
+                                  svn_wc__adm_access_abspath(adm_access),
+                                  path,
+                                  reporter,
+                                  report_baton,
+                                  restore_files,
+                                  depth,
+                                  honor_depth_exclude,
+                                  depth_compatibility_trick,
+                                  use_commit_times,
+                                  notify_func,
+                                  notify_baton,
+                                  traversal_info,
+                                  pool));
+
+  return svn_error_return(svn_wc_context_destroy(wc_ctx));
 }
 
 /*** Compatibility wrapper: turns an svn_ra_reporter2_t into an
