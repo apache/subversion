@@ -621,13 +621,10 @@ svn_client__get_wc_or_repos_mergeinfo_catalog(
       if (entry->schedule != svn_wc_schedule_add)
         {
           apr_hash_t *original_props;
-          const char *local_abspath;
 
           /* Check to see if we have local modifications which removed all of
              TARGET_WCPATH's pristine mergeinfo.  If that is the case then
              TARGET_WCPATH effetively has no mergeinfo. */
-          SVN_ERR(svn_dirent_get_absolute(&local_abspath, target_wcpath,
-                                          scratch_pool));
           SVN_ERR(svn_wc_get_prop_diffs2(NULL, &original_props, ctx->wc_ctx,
                                          local_abspath, result_pool,
                                          scratch_pool));
