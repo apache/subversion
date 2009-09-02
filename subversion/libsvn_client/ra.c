@@ -262,7 +262,7 @@ invalidate_wc_props(void *baton,
                                   pool));
 
   return svn_error_return(
-    svn_wc__node_walk_children(cb->ctx->wc_ctx, local_abspath,
+    svn_wc__node_walk_children(cb->ctx->wc_ctx, local_abspath, FALSE,
                               &walk_callbacks, &wb,
                               svn_depth_infinity,
                               cb->ctx->cancel_func, cb->ctx->cancel_baton,

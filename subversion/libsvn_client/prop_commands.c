@@ -1173,7 +1173,7 @@ svn_client_proplist3(const char *path_or_url,
           wb.receiver = receiver;
           wb.receiver_baton = receiver_baton;
 
-          SVN_ERR(svn_wc__node_walk_children(ctx->wc_ctx, local_abspath,
+          SVN_ERR(svn_wc__node_walk_children(ctx->wc_ctx, local_abspath, FALSE,
                                              &walk_callbacks, &wb, depth,
                                              ctx->cancel_func,
                                              ctx->cancel_baton, pool));
