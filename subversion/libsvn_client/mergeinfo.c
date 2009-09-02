@@ -413,7 +413,7 @@ svn_client__get_wc_or_repos_mergeinfo(svn_mergeinfo_t *target_mergeinfo,
 
               if (ra_session == NULL)
                 SVN_ERR(svn_client__open_ra_session_internal(&ra_session, url,
-                                                             NULL, NULL, NULL,
+                                                             NULL, NULL,
                                                              FALSE, TRUE, ctx,
                                                              pool));
 
@@ -515,7 +515,7 @@ svn_client__get_history_as_mergeinfo(svn_mergeinfo_t *mergeinfo_p,
     {
       sesspool = svn_pool_create(pool);
       SVN_ERR(svn_client__open_ra_session_internal(&session, url, NULL, NULL,
-                                                   NULL, FALSE, TRUE, ctx,
+                                                   FALSE, TRUE, ctx,
                                                    sesspool));
     }
 
@@ -759,7 +759,7 @@ get_mergeinfo(svn_mergeinfo_t *mergeinfo,
 
       SVN_ERR(svn_dirent_get_absolute(&local_abspath, "", subpool));
       SVN_ERR(svn_client__open_ra_session_internal(&ra_session, path_or_url,
-                                                   NULL, NULL, NULL, FALSE,
+                                                   NULL, NULL, FALSE,
                                                    TRUE, ctx, subpool));
       SVN_ERR(svn_client__get_revision_number(&rev, NULL, ctx->wc_ctx,
                                               local_abspath, ra_session,
@@ -791,7 +791,7 @@ get_mergeinfo(svn_mergeinfo_t *mergeinfo,
                                          svn_opt_revision_working, entry,
                                          subpool));
       SVN_ERR(svn_client__open_ra_session_internal(&ra_session, url,
-                                                   NULL, NULL, NULL, FALSE,
+                                                   NULL, NULL, FALSE,
                                                    TRUE, ctx, subpool));
       SVN_ERR(svn_ra__assert_mergeinfo_capable_server(ra_session, path_or_url,
                                                       subpool));
@@ -1344,7 +1344,7 @@ svn_client_mergeinfo_log_eligible(const char *path_or_url,
      MERGE_SOURCE_URL. */
   sesspool = svn_pool_create(pool);
   SVN_ERR(svn_client__open_ra_session_internal(&ra_session, merge_source_url,
-                                               NULL, NULL, NULL, FALSE,
+                                               NULL, NULL, FALSE,
                                                TRUE, ctx, sesspool));
   SVN_ERR(svn_client__get_history_as_mergeinfo(&source_history,
                                                merge_source_url,

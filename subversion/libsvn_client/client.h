@@ -364,7 +364,6 @@ svn_client__default_walker_error_handler(const char *path,
 /* Open an RA session, returning it in *RA_SESSION.
 
    The root of the session is specified by BASE_URL and BASE_DIR.
-   BASE_ACCESS is an access baton for BASE_DIR administrative data.
 
    Additional control parameters:
 
@@ -379,8 +378,7 @@ svn_client__default_walker_error_handler(const char *path,
         modify the WC props directly.
 
    BASE_DIR may be NULL if the RA operation does not correspond to a
-   working copy (in which case, USE_ADMIN should be FALSE, and
-   BASE_ACCESS should be null).
+   working copy (in which case, USE_ADMIN should be FALSE).
 
    The calling application's authentication baton is provided in CTX,
    and allocations related to this session are performed in POOL.
@@ -391,7 +389,6 @@ svn_error_t *
 svn_client__open_ra_session_internal(svn_ra_session_t **ra_session,
                                      const char *base_url,
                                      const char *base_dir,
-                                     svn_wc_adm_access_t *base_access,
                                      apr_array_header_t *commit_items,
                                      svn_boolean_t use_admin,
                                      svn_boolean_t read_only_wc,

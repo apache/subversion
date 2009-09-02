@@ -217,7 +217,7 @@ switch_dir_external(const char *path,
 
                   /* Get the repos root of the new URL. */
                   SVN_ERR(svn_client__open_ra_session_internal
-                          (&ra_session, url, NULL, NULL, NULL, FALSE, TRUE,
+                          (&ra_session, url, NULL, NULL, FALSE, TRUE,
                            ctx, subpool));
                   SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root,
                                                  subpool));

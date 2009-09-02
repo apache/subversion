@@ -292,7 +292,6 @@ svn_error_t *
 svn_client__open_ra_session_internal(svn_ra_session_t **ra_session,
                                      const char *base_url,
                                      const char *base_dir,
-                                     svn_wc_adm_access_t *base_access,
                                      apr_array_header_t *commit_items,
                                      svn_boolean_t use_admin,
                                      svn_boolean_t read_only_wc,
@@ -354,7 +353,7 @@ svn_client_open_ra_session(svn_ra_session_t **session,
                            apr_pool_t *pool)
 {
   return svn_error_return(svn_client__open_ra_session_internal(session, url,
-                                              NULL, NULL, NULL,
+                                              NULL, NULL,
                                               FALSE, TRUE, ctx, pool));
 }
 
@@ -371,7 +370,7 @@ svn_client_uuid_from_url(const char **uuid,
   /* use subpool to create a temporary RA session */
   SVN_ERR(svn_client__open_ra_session_internal(&ra_session, url,
                                                NULL, /* no base dir */
-                                               NULL, NULL, FALSE, TRUE,
+                                               NULL, FALSE, TRUE,
                                                ctx, subpool));
 
   SVN_ERR(svn_ra_get_uuid2(ra_session, uuid, pool));
@@ -442,7 +441,7 @@ svn_client__ra_session_from_path(svn_ra_session_t **ra_session_p,
     base_dir = svn_wc_adm_access_path(base_access);
 
   SVN_ERR(svn_client__open_ra_session_internal(&ra_session, initial_url,
-                                               base_dir, base_access, NULL,
+                                               base_dir, NULL,
                                                base_access != NULL,
                                                FALSE, ctx, pool));
 
@@ -649,7 +648,7 @@ svn_client__repos_locations(const char **start_url,
   /* Open a RA session to this URL if we don't have one already. */
   if (! ra_session)
     SVN_ERR(svn_client__open_ra_session_internal(&ra_session, url, NULL,
-                                                 NULL, NULL, FALSE, TRUE,
+                                                 NULL, FALSE, TRUE,
                                                  ctx, subpool));
 
   /* Resolve the opt_revision_ts. */

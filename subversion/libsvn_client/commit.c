@@ -616,7 +616,7 @@ get_ra_editor(svn_ra_session_t **ra_session,
   /* Open an RA session to URL. */
   SVN_ERR(svn_client__open_ra_session_internal(ra_session,
                                                base_url, base_dir,
-                                               base_access, commit_items,
+                                               commit_items,
                                                is_commit, !is_commit,
                                                ctx, pool));
 
