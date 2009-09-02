@@ -477,6 +477,33 @@ svn_boolean_t
 svn_uri_is_ancestor(const char *path1,
                     const char *path2);
 
+
+/** Returns the relative path part of @a dirent2 that is below @a dirent1,
+ * or just "" iif @a dirent1 is equal to @a dirent2. If @a dirent2 is not
+ * below @a path1, return @a dirent2 completely.
+ *
+ * This function assumes @a dirent1 and @a dirent2 are both absolute or
+ * relative in the same way.
+ *
+ * @since New in 1.7.
+ */
+const char *
+svn_dirent_skip_ancestor(const char *dirent1,
+                         const char *dirent2);
+
+/** Returns the relative path part of @a uri2 that is below @a uri1, or just
+ * "" iif @a uri1 is equal to @a path2. If @a path2 is not below @a path1,
+ * return @a path2.
+ *
+ * This function assumes @a uri1 and @a uri2 are both absolute or relative
+ * in the same way.
+ *
+ * @since New in 1.7.
+ */
+const char *
+svn_uri_skip_ancestor(const char *uri1,
+                      const char *uri2);
+
 /** Find the common prefix of the canonicalized dirents in @a targets
  * (an array of <tt>const char *</tt>'s), and remove redundant dirents if @a
  * remove_redundancies is TRUE.
