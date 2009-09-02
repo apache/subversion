@@ -1077,16 +1077,16 @@ svn_dirent_dirname(const char *dirent, apr_pool_t *pool)
     return apr_pstrmemdup(pool, dirent, dirent_previous_segment(dirent, len));
 }
 
-char *
+const char *
 svn_dirent_basename(const char *dirent, apr_pool_t *pool)
 {
   apr_size_t len = strlen(dirent);
   apr_size_t start;
 
-  assert(svn_dirent_is_canonical(dirent, pool));
+  assert(!pool || svn_dirent_is_canonical(dirent, pool));
 
   if (svn_dirent_is_root(dirent, len))
-    return apr_pstrmemdup(pool, "", 0);
+    return "";
   else
     {
       start = len;
@@ -1098,7 +1098,10 @@ svn_dirent_basename(const char *dirent, apr_pool_t *pool)
         --start;
     }
 
-  return apr_pstrmemdup(pool, dirent + start, len - start);
+  if (pool)
+    return apr_pstrmemdup(pool, dirent + start, len - start);
+  else
+    return dirent + start;
 }
 
 void
@@ -1129,16 +1132,16 @@ svn_uri_dirname(const char *uri, apr_pool_t *pool)
     return apr_pstrmemdup(pool, uri, uri_previous_segment(uri, len));
 }
 
-char *
+const char *
 svn_uri_basename(const char *uri, apr_pool_t *pool)
 {
   apr_size_t len = strlen(uri);
   apr_size_t start;
 
-  assert(svn_uri_is_canonical(uri, pool));
+  assert(svn_uri_is_canonical(uri, NULL));
 
   if (svn_uri_is_root(uri, len))
-    return apr_pstrmemdup(pool, "", 0);
+    return "";
   else
     {
       start = len;
@@ -1146,7 +1149,10 @@ svn_uri_basename(const char *uri, apr_pool_t *pool)
         --start;
     }
 
-  return apr_pstrmemdup(pool, uri + start, len - start);
+  if (pool)
+    return apr_pstrmemdup(pool, uri + start, len - start);
+  else
+    return uri + start;
 }
 
 void
