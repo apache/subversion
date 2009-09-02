@@ -54,6 +54,8 @@ struct status_baton
   apr_hash_t *changelist_hash;             /* keys are changelist names */
   svn_wc_status_func4_t real_status_func;  /* real status function */
   void *real_status_baton;                 /* real status baton */
+  const char *anchor_abspath;              /* Absolute path of anchor */
+  const char *anchor_relpath;              /* Relative path of anchor */
 };
 
 /* A status callback function which wraps the *real* status
@@ -79,6 +81,11 @@ tweak_status(void *baton,
       new_status->repos_text_status = svn_wc_status_deleted;
       status = new_status;
     }
+
+  if (sb->anchor_abspath && svn_dirent_is_absolute(path))
+    path = svn_dirent_join(sb->anchor_relpath,
+                           svn_dirent_skip_ancestor(sb->anchor_abspath, path),
+                           scratch_pool);
 
   /* If the status item has an entry, but doesn't belong to one of the
      changelists our caller is interested in, we filter our this status
@@ -279,6 +286,17 @@ svn_client_status5(svn_revnum_t *result_rev,
   anchor = svn_wc_adm_access_path(anchor_access);
   SVN_ERR(svn_dirent_get_absolute(&target_abspath, target, pool));
   SVN_ERR(svn_dirent_get_absolute(&anchor_abspath, anchor, pool));
+
+  if (svn_dirent_is_absolute(anchor))
+    {
+      sb.anchor_abspath = NULL;
+      sb.anchor_relpath = NULL;
+    }
+  else
+    {
+      sb.anchor_abspath = anchor_abspath;
+      sb.anchor_relpath = anchor;
+    }
 
   /* Get the status edit, and use our wrapping status function/baton
      as the callback pair. */
