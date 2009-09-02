@@ -1123,7 +1123,7 @@ diff_prepare_repos_repos(const struct diff_parameters *params,
     drr->base_path = params->path2;
 
   SVN_ERR(svn_client__open_ra_session_internal(&ra_session, drr->url2,
-                                               NULL, NULL, NULL, FALSE,
+                                               NULL, NULL, FALSE,
                                                TRUE, ctx, pool));
 
   /* If we are performing a pegged diff, we need to find out what our
@@ -1327,9 +1327,9 @@ diff_repos_repos(const struct diff_parameters *diff_param,
   /* Now, we open an extra RA session to the correct anchor
      location for URL1.  This is used during the editor calls to fetch file
      contents.  */
-  SVN_ERR(svn_client__open_ra_session_internal
-          (&extra_ra_session, drr.anchor1, NULL, NULL, NULL, FALSE, TRUE, ctx,
-           pool));
+  SVN_ERR(svn_client__open_ra_session_internal(&extra_ra_session, drr.anchor1,
+                                               NULL, NULL, FALSE, TRUE, ctx,
+                                               pool));
 
   /* Set up the repos_diff editor on BASE_PATH, if available.
      Otherwise, we just use "". */
@@ -1455,7 +1455,7 @@ diff_repos_wc(const char *path1,
 
   /* Establish RA session to path2's anchor */
   SVN_ERR(svn_client__open_ra_session_internal(&ra_session, anchor_url,
-                                               NULL, NULL, NULL, FALSE, TRUE,
+                                               NULL, NULL, FALSE, TRUE,
                                                ctx, pool));
 
   SVN_ERR(svn_wc_get_diff_editor6(adm_access, target,
@@ -1589,9 +1589,9 @@ diff_summarize_repos_repos(const struct diff_parameters *diff_param,
 
   /* Now, we open an extra RA session to the correct anchor
      location for URL1.  This is used to get the kind of deleted paths.  */
-  SVN_ERR(svn_client__open_ra_session_internal
-          (&extra_ra_session, drr.anchor1, NULL, NULL, NULL, FALSE, TRUE,
-           ctx, pool));
+  SVN_ERR(svn_client__open_ra_session_internal(&extra_ra_session, drr.anchor1,
+                                               NULL, NULL, FALSE, TRUE,
+                                               ctx, pool));
 
   /* Set up the repos_diff editor. */
   SVN_ERR(svn_client__get_diff_summarize_editor

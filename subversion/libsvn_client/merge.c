@@ -3085,7 +3085,7 @@ get_full_mergeinfo(svn_mergeinfo_t *recorded_mergeinfo,
         {
           sesspool = svn_pool_create(pool);
           SVN_ERR(svn_client__open_ra_session_internal(&ra_session, url,
-                                                       NULL, NULL, NULL,
+                                                       NULL, NULL,
                                                        FALSE, TRUE,
                                                        ctx, sesspool));
         }
@@ -7739,7 +7739,7 @@ ensure_ra_session_url(svn_ra_session_t **ra_session,
     {
       svn_error_clear(err);
       err = svn_client__open_ra_session_internal(ra_session, url,
-                                                 NULL, NULL, NULL,
+                                                 NULL, NULL,
                                                  FALSE, TRUE, ctx, pool);
     }
   SVN_ERR(err);
@@ -8180,10 +8180,10 @@ svn_client_merge3(const char *source1,
   /* Open some RA sessions to our merge source sides. */
   sesspool = svn_pool_create(pool);
   SVN_ERR(svn_client__open_ra_session_internal(&ra_session1,
-                                               URL1, NULL, NULL, NULL,
+                                               URL1, NULL, NULL,
                                                FALSE, TRUE, ctx, sesspool));
   SVN_ERR(svn_client__open_ra_session_internal(&ra_session2,
-                                               URL2, NULL, NULL, NULL,
+                                               URL2, NULL, NULL,
                                                FALSE, TRUE, ctx, sesspool));
 
   /* Resolve revisions to real numbers. */
@@ -9080,7 +9080,7 @@ svn_client_merge_reintegrate(const char *source,
 
   /* Open an RA session to our source URL, and determine its root URL. */
   SVN_ERR(svn_client__open_ra_session_internal(&ra_session, wc_repos_root,
-                                               NULL, NULL, NULL,
+                                               NULL, NULL,
                                                FALSE, FALSE, ctx, pool));
   SVN_ERR(svn_ra_get_repos_root2(ra_session, &source_repos_root, pool));
 
@@ -9277,8 +9277,7 @@ svn_client_merge_peg3(const char *source,
 
   /* Open an RA session to our source URL, and determine its root URL. */
   sesspool = svn_pool_create(pool);
-  SVN_ERR(svn_client__open_ra_session_internal(&ra_session,
-                                               URL, NULL, NULL, NULL,
+  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, URL, NULL, NULL,
                                                FALSE, TRUE, ctx, sesspool));
   SVN_ERR(svn_ra_get_repos_root2(ra_session, &source_repos_root, pool));
 

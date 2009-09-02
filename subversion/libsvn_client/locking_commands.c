@@ -421,10 +421,9 @@ svn_client_lock(const apr_array_header_t *targets,
                                 steal_lock, ctx, pool));
 
   /* Open an RA session to the common parent of TARGETS. */
-  SVN_ERR(svn_client__open_ra_session_internal
-          (&ra_session, common_parent,
-           adm_access ? svn_wc_adm_access_path(adm_access) : NULL,
-           adm_access, NULL, FALSE, FALSE, ctx, pool));
+  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, common_parent,
+                        adm_access ? svn_wc_adm_access_path(adm_access) : NULL,
+                        NULL, FALSE, FALSE, ctx, pool));
 
   if (adm_access)
     {
@@ -466,10 +465,9 @@ svn_client_unlock(const apr_array_header_t *targets,
                                 FALSE, break_lock, ctx, pool));
 
   /* Open an RA session. */
-  SVN_ERR(svn_client__open_ra_session_internal
-          (&ra_session, common_parent,
-           adm_access ? svn_wc_adm_access_path(adm_access) : NULL,
-           adm_access, NULL, FALSE, FALSE, ctx, pool));
+  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, common_parent,
+                        adm_access ? svn_wc_adm_access_path(adm_access) : NULL,
+                        NULL, FALSE, FALSE, ctx, pool));
 
   /* If break_lock is not set, lock tokens are required by the server.
      If the targets were all URLs, ensure that we provide lock tokens,
