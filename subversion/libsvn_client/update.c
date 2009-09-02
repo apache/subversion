@@ -377,10 +377,26 @@ svn_client_update3(apr_array_header_t **result_revs,
           err = SVN_NO_ERROR;
           result_rev = SVN_INVALID_REVNUM;
           if (ctx->notify_func2)
-            (*ctx->notify_func2)(ctx->notify_baton2,
-                                 svn_wc_create_notify(path,
-                                                      svn_wc_notify_skip,
-                                                      subpool), subpool);
+            {
+              svn_wc_notify_t *notify;
+
+              if (svn_path_is_url(path))
+                {
+                  /* For some historic reason this user error is supported,
+                     and must provide correct notifications. */
+                  notify = svn_wc_create_notify_url(path,
+                                                    svn_wc_notify_skip,
+                                                    subpool);
+                }
+              else
+                {
+                  notify = svn_wc_create_notify(path,
+                                                svn_wc_notify_skip,
+                                                subpool);
+                }
+
+              (*ctx->notify_func2)(ctx->notify_baton2, notify, subpool);
+            }
         }
       if (result_revs)
         APR_ARRAY_PUSH(*result_revs, svn_revnum_t) = result_rev;
