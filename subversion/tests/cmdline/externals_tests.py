@@ -750,7 +750,7 @@ def export_with_externals(sbox):
 def export_wc_with_externals(sbox):
   "test exports from working copies with externals"
 
-  externals_test_setup(sbox)
+  paths_dict = externals_test_setup(sbox)
 
   wc_dir         = sbox.wc_dir
   repo_url       = sbox.repo_url
@@ -764,6 +764,11 @@ def export_wc_with_externals(sbox):
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'export', wc_dir, export_target)
 
+  ### We should be able to check exactly the paths that externals_test_setup()
+  ### set up; however, --ignore-externals fails to ignore 'A/B/gamma' so this
+  ### doesn't work:
+  # paths = [ os.path.join(export_target, path) for path in paths_dict.keys() ]
+  ### Therefore currently we check only a particular selection of paths.
   paths = [
     os.path.join(export_target, "A", "C", "exdir_G"),
     os.path.join(export_target, "A", "C", "exdir_G", "pi"),
