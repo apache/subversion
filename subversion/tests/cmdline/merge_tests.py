@@ -16211,14 +16211,14 @@ def copy_then_replace_via_merge(sbox):
   main.run_svn(None, 'merge', url_A, branch)
 
   # Check status:
-  #   sigma and K from r4 were deleted
-  #   theta and L from r4 were replaced by r6
-  #   omega and M were added (from r6)
+  #   sigma and K are deleted (not copied!)
+  #   theta and L are replaced (deleted then copied-here)
+  #   omega and M are copied-here
   expected_status = wc.State(branch_J, {
     ''          : Item(status='R ', copied='+', wc_rev='-'),
-    'sigma'     : Item(status='D ', copied='+', wc_rev='-'),
-    'K'         : Item(status='D ', copied='+', wc_rev='-'),
-    'K/zeta'    : Item(status='D ', copied='+', wc_rev='-'),
+    'sigma'     : Item(status='D ', wc_rev=6),
+    'K'         : Item(status='D ', wc_rev=6),
+    'K/zeta'    : Item(status='D ', wc_rev=6),
     'theta'     : Item(status='  ', copied='+', wc_rev='-'),
     'L'         : Item(status='  ', copied='+', wc_rev='-'),
     'L/zeta'    : Item(status='  ', copied='+', wc_rev='-'),
@@ -16227,6 +16227,25 @@ def copy_then_replace_via_merge(sbox):
     'M/zeta'    : Item(status='  ', copied='+', wc_rev='-'),
     })
   actions.run_and_verify_status(branch_J, expected_status)
+
+  # Update and commit, just to make sure the WC isn't busted.
+  main.run_svn(None, 'up', branch_J)
+  expected_output = wc.State(branch_J, {
+    ''          : Item(verb='Replacing'),
+    })
+  expected_status = wc.State(branch_J, {
+    ''          : Item(status='  ', wc_rev=7),
+    'theta'     : Item(status='  ', wc_rev=7),
+    'L'         : Item(status='  ', wc_rev=7),
+    'L/zeta'    : Item(status='  ', wc_rev=7),
+    'omega'     : Item(status='  ', wc_rev=7),
+    'M'         : Item(status='  ', wc_rev=7),
+    'M/zeta'    : Item(status='  ', wc_rev=7),
+    })
+  actions.run_and_verify_commit(branch_J,
+                                expected_output,
+                                expected_status,
+                                None, branch_J)
 
 #----------------------------------------------------------------------
 
@@ -16880,7 +16899,7 @@ test_list = [ None,
                    svntest.main.is_ra_type_dav_serf),
               SkipUnless(handle_gaps_in_implicit_mergeinfo,
                          server_has_mergeinfo),
-              XFail(copy_then_replace_via_merge),
+              copy_then_replace_via_merge,
               XFail(merge_replace_causes_tree_conflict2),
               XFail(merge_replace_causes_tree_conflict3),
              ]

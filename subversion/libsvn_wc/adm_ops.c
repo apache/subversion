@@ -421,8 +421,7 @@ process_committed_leaf(int log_number,
                   /* If we copy a deleted file, then it will become scheduled
                      for deletion, but there is no base text for it. So we
                      cannot get/compute a checksum for this file. */
-                  SVN_ERR_ASSERT(entry->copied
-                                 && entry->schedule == svn_wc_schedule_delete);
+                  SVN_ERR_ASSERT(entry->schedule == svn_wc_schedule_delete);
 
                   /* checksum will remain NULL in this one case. */
                 }
@@ -841,7 +840,8 @@ svn_wc_process_committed4(const char *path,
 /* Recursively mark a tree ADM_ACCESS with a SCHEDULE, COPIED and/or KEEP_LOCAL
    flag, depending on the state of MODIFY_FLAGS (which may contain only a
    subset of the possible modification flags, namely, those indicating a change
-   to one of the three flags mentioned above). */
+   to one of the three flags mentioned above).  If setting the COPIED
+   flag, skip items scheduled for deletion. */
 static svn_error_t *
 mark_tree(svn_wc_adm_access_t *adm_access,
           apr_uint64_t modify_flags,
@@ -885,6 +885,10 @@ mark_tree(svn_wc_adm_access_t *adm_access,
       if (! strcmp((const char *)key, SVN_WC_ENTRY_THIS_DIR))
         continue;
 
+      /* If setting the COPIED flag, skip deleted items. */
+      if (copied && entry->schedule == svn_wc_schedule_delete)
+        continue;
+  
       base_name = key;
       fullpath = svn_dirent_join(svn_wc_adm_access_path(adm_access), base_name,
                                  subpool);
@@ -941,7 +945,9 @@ mark_tree(svn_wc_adm_access_t *adm_access,
         this_dir_flags |= SVN_WC__ENTRY_MODIFY_SCHEDULE;
       }
 
-    if (modify_flags & SVN_WC__ENTRY_MODIFY_COPIED)
+    /* If setting the COPIED flag, skip deleted items. */
+    if (modify_flags & SVN_WC__ENTRY_MODIFY_COPIED
+        && entry->schedule != svn_wc_schedule_delete)
       {
         tmp_entry.copied = copied;
         this_dir_flags |= SVN_WC__ENTRY_MODIFY_COPIED;
