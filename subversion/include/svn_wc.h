@@ -6399,11 +6399,10 @@ svn_wc_revision_status(svn_wc_revision_status_t **result_p,
 
 
 /**
- * Set @a path's entry's 'changelist' attribute to @a changelist iff
+ * Set @a local_abspath's 'changelist' attribute to @a changelist iff
  * @a changelist is not @c NULL; otherwise, remove any current
- * changelist assignment from @a path.  @a changelist may not be the
- * empty string.  @a adm_access is an access baton set that contains
- * @a path.
+ * changelist assignment from @a local_abspath.  @a changelist may not
+ * be the empty string.
  *
  * If @a cancel_func is not @c NULL, call it with @a cancel_baton to
  * determine if the client has cancelled the operation.
@@ -6412,16 +6411,35 @@ svn_wc_revision_status(svn_wc_revision_status_t **result_p,
  * report the change (using notification types @c
  * svn_wc_notify_changelist_set and @c svn_wc_notify_changelist_clear).
  *
+ * Use @a scratch_pool for temporary allocations.
+ *
  * @note For now, directories are NOT allowed to be associated with
  * changelists; there is confusion about whether they should behave
- * as depth-0 or depth-infinity objects.  If @a path is a directory,
+ * as depth-0 or depth-infinity objects.  If @a local_abspath is a directory,
  * return @c SVN_ERR_UNSUPPORTED_FEATURE.
  *
  * @note This metadata is purely a client-side "bookkeeping"
  * convenience, and is entirely managed by the working copy.
  *
- * @since New in 1.5.
+ * @since New in 1.7.
  */
+svn_error_t *
+svn_wc_set_changelist2(svn_wc_context_t *wc_ctx,
+                       const char *local_abspath,
+                       const char *changelist,
+                       svn_cancel_func_t cancel_func,
+                       void *cancel_baton,
+                       svn_wc_notify_func2_t notify_func,
+                       void *notify_baton,
+                       apr_pool_t *scratch_pool);
+
+/** Similar to svn_wc_set_changelist2(), but with an access baton and
+ * relative path.
+ *
+ * @since New in 1.5.
+ * @deprecated Provided for backward compatibility with the 1.6 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_set_changelist(const char *path,
                       const char *changelist,

@@ -3264,38 +3264,37 @@ svn_wc_remove_lock2(svn_wc_context_t *wc_ctx,
 }
 
 svn_error_t *
-svn_wc_set_changelist(const char *path,
-                      const char *changelist,
-                      svn_wc_adm_access_t *adm_access,
-                      svn_cancel_func_t cancel_func,
-                      void *cancel_baton,
-                      svn_wc_notify_func2_t notify_func,
-                      void *notify_baton,
-                      apr_pool_t *pool)
+svn_wc_set_changelist2(svn_wc_context_t *wc_ctx,
+                       const char *local_abspath,
+                       const char *changelist,
+                       svn_cancel_func_t cancel_func,
+                       void *cancel_baton,
+                       svn_wc_notify_func2_t notify_func,
+                       void *notify_baton,
+                       apr_pool_t *scratch_pool)
 {
   svn_wc_notify_t *notify;
-  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
-  const char *local_abspath;
   const char *existing_changelist;
   svn_wc__db_kind_t kind;
 
   /* Assert that we aren't being asked to set an empty changelist. */
   SVN_ERR_ASSERT(! (changelist && changelist[0] == '\0'));
 
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
   SVN_ERR(svn_wc__db_read_info(NULL, &kind, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                &existing_changelist,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL,
-                               db, local_abspath, pool, pool));
+                               wc_ctx->db, local_abspath, scratch_pool,
+                               scratch_pool));
 
   /* We can't do changelists on directories. */
   if (kind == svn_wc__db_kind_dir)
     return svn_error_createf(SVN_ERR_CLIENT_IS_DIRECTORY, NULL,
                              _("'%s' is a directory, and thus cannot"
-                               " be a member of a changelist"), path);
+                               " be a member of a changelist"), local_abspath);
 
   /* If the path has no changelist and we're removing changelist, skip it.
      ### the db actually does this check, too, but for notification's sake,
@@ -3319,27 +3318,29 @@ svn_wc_set_changelist(const char *path,
       svn_error_t *reassign_err =
         svn_error_createf(SVN_ERR_WC_CHANGELIST_MOVE, NULL,
                           _("Removing '%s' from changelist '%s'."),
-                          path, existing_changelist);
-      notify = svn_wc_create_notify(path, svn_wc_notify_changelist_moved,
-                                    pool);
+                          local_abspath, existing_changelist);
+      notify = svn_wc_create_notify(local_abspath,
+                                    svn_wc_notify_changelist_moved,
+                                    scratch_pool);
       notify->err = reassign_err;
-      notify_func(notify_baton, notify, pool);
+      notify_func(notify_baton, notify, scratch_pool);
       svn_error_clear(notify->err);
     }
 
   /* Set the changelist. */
-  SVN_ERR(svn_wc__db_op_set_changelist(db, local_abspath, changelist, pool));
+  SVN_ERR(svn_wc__db_op_set_changelist(wc_ctx->db, local_abspath, changelist,
+                                       scratch_pool));
 
   /* And tell someone what we've done. */
   if (notify_func)
     {
-      notify = svn_wc_create_notify(path,
+      notify = svn_wc_create_notify(local_abspath,
                                     changelist
                                     ? svn_wc_notify_changelist_set
                                     : svn_wc_notify_changelist_clear,
-                                    pool);
+                                    scratch_pool);
       notify->changelist_name = changelist;
-      notify_func(notify_baton, notify, pool);
+      notify_func(notify_baton, notify, scratch_pool);
     }
 
   return SVN_NO_ERROR;

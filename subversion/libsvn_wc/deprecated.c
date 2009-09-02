@@ -718,6 +718,31 @@ svn_wc_get_ancestry(char **url,
   return svn_error_return(svn_wc_context_destroy(wc_ctx));
 }
 
+svn_error_t *
+svn_wc_set_changelist(const char *path,
+                      const char *changelist,
+                      svn_wc_adm_access_t *adm_access,
+                      svn_cancel_func_t cancel_func,
+                      void *cancel_baton,
+                      svn_wc_notify_func2_t notify_func,
+                      void *notify_baton,
+                      apr_pool_t *pool)
+{
+  const char *local_abspath;
+  svn_wc_context_t *wc_ctx;
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+  SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL /* config */,
+                                         svn_wc__adm_get_db(adm_access),
+                                         pool));
+
+  SVN_ERR(svn_wc_set_changelist2(wc_ctx, local_abspath, changelist,
+                                 cancel_func, cancel_baton, notify_func,
+                                 notify_baton, pool));
+
+  return svn_error_return(svn_wc_context_destroy(wc_ctx));
+}
+
 
 /*** From diff.c ***/
 /* Used to wrap svn_wc_diff_callbacks_t. */
