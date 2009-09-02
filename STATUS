@@ -120,7 +120,6 @@ Candidate changes:
      ^/branches/1.6.x-r38000
    Votes:
      +1: stsp
-     +1: neels (r38000, r38006, r38099, r38100, r38181 only)
      -1: julianfoad (r38000, r38006, r38099, r38100, r38181 only)
 
  * r35958, r36030, r38373, r38836, r38837, r38842
@@ -165,19 +164,6 @@ Candidate changes:
      as part of the error message.
    Votes:
      +1: stsp, danielsh
-
- * r38927
-   Fix issue #3281, "Merge a replacement of a directory".
-   Justification:
-     The result of a merge replacing a directory cannot be committed
-     without this fix.
-   Notes:
-     See issue #3281, the issues linked from there, and the huge commment
-     added in r38927 on trunk for more information.
-   Branch:
-     ^/branches/1.6.x-r38927
-   Votes:
-     +1: stsp, gstein
 
  * r38886
    Fix 2 failing tests in ruby bindings.
@@ -231,3 +217,17 @@ Candidate changes:
 
 Approved changes:
 =================
+
+ * r38927
+   Fix issue #3281, "Merge a replacement of a directory".
+   Justification:
+     The result of a merge replacing a directory cannot be committed
+     without this fix.
+   Notes:
+     See issue #3281, the issues linked from there, and the huge commment
+     added in r38927 on trunk for more information.
+   Branch:
+     ^/branches/1.6.x-r38927
+   Votes:
+     +1: stsp, gstein, neels
+
