@@ -107,6 +107,15 @@ svn_wc__path_switched(svn_boolean_t *switched,
               && apr_hash_get(clhash, entry->changelist, \
                               APR_HASH_KEY_STRING))) ? TRUE : FALSE)
 
+/* Return TRUE iff CLHASH (a hash whose keys are const char *
+   changelist names) is NULL or if LOCAL_ABSPATH is part of a changelist in
+   CLHASH. */
+svn_boolean_t
+svn_wc__changelist_match(svn_wc_context_t *wc_ctx,
+                         const char *local_abspath,
+                         const apr_hash_t *clhash,
+                         apr_pool_t *scratch_pool);
+
 
 /* Set *MODIFIED_P to true if VERSIONED_FILE_ABSPATH is modified with respect
  * to BASE_FILE_ABSPATH, or false if it is not.  The comparison compensates
