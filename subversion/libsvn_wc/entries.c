@@ -3048,7 +3048,7 @@ svn_wc__tweak_entry(svn_wc__db_t *db,
   if (repos != NULL
       && (! entry->repos || strcmp(repos, entry->repos))
       && entry->url
-      && svn_path_is_ancestor(repos, entry->url))
+      && svn_uri_is_ancestor(repos, entry->url))
     {
       svn_boolean_t set_repos = TRUE;
 
@@ -3069,7 +3069,7 @@ svn_wc__tweak_entry(svn_wc__db_t *db,
               child_entry = value;
 
               if (! child_entry->repos && child_entry->url
-                  && ! svn_path_is_ancestor(repos, child_entry->url))
+                  && ! svn_uri_is_ancestor(repos, child_entry->url))
                 {
                   set_repos = FALSE;
                   break;
@@ -3134,7 +3134,7 @@ svn_wc__entries_init(const char *path,
   const char *abspath;
   const char *repos_relpath;
 
-  SVN_ERR_ASSERT(! repos_root || svn_path_is_ancestor(repos_root, url));
+  SVN_ERR_ASSERT(! repos_root || svn_uri_is_ancestor(repos_root, url));
   SVN_ERR_ASSERT(depth == svn_depth_empty
                  || depth == svn_depth_files
                  || depth == svn_depth_immediates
