@@ -27,26 +27,16 @@
 
 /*** Includes. ***/
 
-#include "svn_time.h"
-#include "svn_wc.h"
 #include "svn_client.h"
-#include "svn_config.h"
-#include "client.h"
-#include "svn_io.h"
 #include "svn_dirent_uri.h"
-#include "svn_path.h"
+#include "svn_io.h"
 #include "svn_pools.h"
-#include "svn_base64.h"
-#include "svn_props.h"
-#include "svn_string.h"
-#include "svn_subst.h"
-#include "svn_hash.h"
-#include <assert.h>
+#include "svn_wc.h"
 
 #include "svn_private_config.h"
 #include "private/svn_diff_private.h"
-#include "private/svn_wc_private.h"
 #include "private/svn_eol_private.h"
+#include "private/svn_wc_private.h"
 
 /* ### forward-declaration */
 static svn_error_t *
