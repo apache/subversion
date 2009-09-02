@@ -218,5 +218,16 @@ Candidate changes:
    Votes:
      +1: pburba
 
+ * r39074
+   This is *effectively* a reversion of r36720 in that it causes most Apache
+   servers to use "text/plain" as the default MIME type when no other can
+   be determined.
+   Justification:
+     The switch to "application/octet-stream" significantly degraded 
+     Subversion's usability in terms of serving files directly from the
+     repository to a browser client.  This change restores that usability.
+   Votes:
+     +1: cmpilato
+
 Approved changes:
 =================
