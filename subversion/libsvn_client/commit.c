@@ -600,7 +600,6 @@ get_ra_editor(svn_ra_session_t **ra_session,
               svn_client_ctx_t *ctx,
               const char *base_url,
               const char *base_dir,
-              svn_wc_adm_access_t *base_access,
               const char *log_msg,
               apr_array_header_t *commit_items,
               const apr_hash_t *revprop_table,
@@ -736,7 +735,7 @@ svn_client_import3(svn_commit_info_t **commit_info_p,
     }
   while ((err = get_ra_editor(&ra_session,
                               &editor, &edit_baton, ctx, url, base_dir,
-                              NULL, log_msg, NULL, revprop_table,
+                              log_msg, NULL, revprop_table,
                               commit_info_p, FALSE, NULL, TRUE, subpool)));
 
   /* Reverse the order of the components we added to our NEW_ENTRIES array. */
@@ -1639,7 +1638,7 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
 
   if ((cmt_err = get_ra_editor(&ra_session,
                                &editor, &edit_baton, ctx,
-                               base_url, base_dir, base_dir_access, log_msg,
+                               base_url, base_dir, log_msg,
                                commit_items, revprop_table, commit_info_p,
                                TRUE, lock_tokens, keep_locks, pool)))
     goto cleanup;
