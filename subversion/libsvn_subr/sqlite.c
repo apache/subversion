@@ -637,11 +637,13 @@ static volatile svn_atomic_t sqlite_init_state;
 static svn_error_t *
 init_sqlite(apr_pool_t *pool)
 {
-  if (sqlite3_libversion_number() < SQLITE_VERSION_NUMBER) {
-    return svn_error_createf(SVN_ERR_SQLITE_ERROR, NULL,
-                             _("SQLite compiled for %s, but running with %s"),
-                             SQLITE_VERSION, sqlite3_libversion());
-  }
+  if (sqlite3_libversion_number() < SQLITE_VERSION_NUMBER)
+    {
+      return svn_error_createf(
+                    SVN_ERR_SQLITE_ERROR, NULL,
+                    _("SQLite compiled for %s, but running with %s"),
+                    SQLITE_VERSION, sqlite3_libversion());
+    }
 
 #if SQLITE_VERSION_AT_LEAST(3,5,0)
   /* SQLite 3.5 allows verification of its thread-safety at runtime.
@@ -660,9 +662,16 @@ init_sqlite(apr_pool_t *pool)
     int err = sqlite3_config(SQLITE_CONFIG_MULTITHREAD);
     if (err != SQLITE_OK && err != SQLITE_MISUSE)
       return svn_error_create(SQLITE_ERROR_CODE(err), NULL,
-                              "Could not configure SQLite");
+                              _("Could not configure SQLite"));
   }
-  SQLITE_ERR_MSG(sqlite3_initialize(), "Could not initialize SQLite");
+  SQLITE_ERR_MSG(sqlite3_initialize(), _("Could not initialize SQLite"));
+#endif
+#if SQLITE_VERSION_AT_LEAST(3,5,0)
+  /* SQLite 3.5 allows sharing cache instances in a multithreaded environment.
+     This allows sharing cached data when we open a database more than once
+     (Very common in the current pre-single-database state) */
+  SQLITE_ERR_MSG(sqlite3_enable_shared_cache(TRUE),
+                 _("Could not initialize SQLite shared cache"));
 #endif
 
   return SVN_NO_ERROR;
