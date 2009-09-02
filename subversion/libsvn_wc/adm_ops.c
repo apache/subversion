@@ -3381,3 +3381,34 @@ svn_wc__set_file_external_location(svn_wc_adm_access_t *adm_access,
 
   return SVN_NO_ERROR;
 }
+
+
+svn_boolean_t
+svn_wc__changelist_match(svn_wc_context_t *wc_ctx,
+                         const char *local_abspath,
+                         const apr_hash_t *clhash,
+                         apr_pool_t *scratch_pool)
+{
+  svn_error_t *err;
+  const char *changelist;
+
+  if (clhash == NULL)
+    return TRUE;
+
+  err = svn_wc__db_read_info(NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                             &changelist,
+                             NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL, NULL, NULL,
+                             wc_ctx->db, local_abspath, scratch_pool,
+                             scratch_pool);
+
+  if (err)
+    {
+      svn_error_clear(err);
+      return FALSE;
+    }
+
+  return (changelist
+            && apr_hash_get(clhash, changelist, APR_HASH_KEY_STRING) != NULL);
+}
