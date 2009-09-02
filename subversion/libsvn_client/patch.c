@@ -38,36 +38,6 @@
 #include "private/svn_eol_private.h"
 #include "private/svn_wc_private.h"
 
-/* ### forward-declaration */
-static svn_error_t *
-apply_textdiffs(const char *patch_path, const char *wc_path,
-                svn_wc_adm_access_t *adm_access, svn_boolean_t dry_run,
-                const svn_client_ctx_t *ctx, apr_pool_t *pool);
-
-svn_error_t *
-svn_client_patch(const char *patch_path,
-                 const char *target,
-                 svn_boolean_t dry_run,
-                 svn_client_ctx_t *ctx,
-                 apr_pool_t *pool)
-{
-  svn_wc_adm_access_t *adm_access;
-  const char *abs_target;
-
-  SVN_ERR(svn_dirent_get_absolute(&abs_target, target, pool));
-  SVN_ERR(svn_wc_adm_open3(&adm_access, NULL, abs_target,
-                           TRUE, -1, ctx->cancel_func, ctx->cancel_baton,
-                           pool));
-
-  SVN_ERR(apply_textdiffs(patch_path, target, adm_access, dry_run, ctx, pool));
-
-  SVN_ERR(svn_wc_adm_close2(adm_access, pool));
-
-  return SVN_NO_ERROR;
-}
-
-/* --- Text-diff application routines --- */
-
 typedef struct {
   /* ### Ideally, the diff API would allow us to diff the original,
    * modified and latest streams directly. But this is currently
@@ -1128,6 +1098,28 @@ apply_textdiffs(const char *patch_path, const char *wc_path,
   SVN_ERR(svn_io_file_close(tempfiles->orig_file, pool));
   SVN_ERR(svn_io_file_close(tempfiles->mod_file, pool));
   SVN_ERR(svn_io_file_close(tempfiles->latest_file, pool));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_client_patch(const char *patch_path,
+                 const char *target,
+                 svn_boolean_t dry_run,
+                 svn_client_ctx_t *ctx,
+                 apr_pool_t *pool)
+{
+  svn_wc_adm_access_t *adm_access;
+  const char *abs_target;
+
+  SVN_ERR(svn_dirent_get_absolute(&abs_target, target, pool));
+  SVN_ERR(svn_wc_adm_open3(&adm_access, NULL, abs_target,
+                           TRUE, -1, ctx->cancel_func, ctx->cancel_baton,
+                           pool));
+
+  SVN_ERR(apply_textdiffs(patch_path, target, adm_access, dry_run, ctx, pool));
+
+  SVN_ERR(svn_wc_adm_close2(adm_access, pool));
 
   return SVN_NO_ERROR;
 }
