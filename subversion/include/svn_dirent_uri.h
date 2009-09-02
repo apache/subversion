@@ -164,13 +164,14 @@ svn_uri_join(const char *base,
  *
  * Example: svn_dirent_basename("/foo/bar") -> "bar"
  *
- * The returned basename will be allocated in @a pool.
+ * The returned basename will be allocated in @a pool. If @a pool is NULL
+ * a pointer to the basename in @a dirent is returned
  *
  * @note If an empty string is passed, then an empty string will be returned.
  *
  * @since New in 1.7.
  */
-char *
+const char *
 svn_dirent_basename(const char *dirent,
                     apr_pool_t *pool);
 
@@ -252,13 +253,14 @@ svn_uri_split(const char *dirent,
  *
  * Example: svn_dirent_basename("http://server/foo/bar") -> "bar"
  *
- * The returned basename will be allocated in @a pool.
+  * The returned basename will be allocated in @a pool. If @a pool is NULL
+ * a pointer to the basename in @a uri is returned
  *
  * @note If an empty string is passed, then an empty string will be returned.
  *
  * @since New in 1.7.
  */
-char *
+const char *
 svn_uri_basename(const char *uri,
                  apr_pool_t *pool);
 
