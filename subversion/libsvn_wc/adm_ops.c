@@ -3273,43 +3273,53 @@ svn_wc_set_changelist(const char *path,
                       void *notify_baton,
                       apr_pool_t *pool)
 {
-  const svn_wc_entry_t *entry;
-  svn_wc_entry_t newentry;
   svn_wc_notify_t *notify;
+  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
+  const char *local_abspath;
+  const char *existing_changelist;
+  svn_wc__db_kind_t kind;
 
   /* Assert that we aren't being asked to set an empty changelist. */
   SVN_ERR_ASSERT(! (changelist && changelist[0] == '\0'));
 
-  SVN_ERR(svn_wc_entry(&entry, path, adm_access, FALSE, pool));
-  if (! entry)
-    return svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-                             _("'%s' is not under version control"), path);
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+
+  SVN_ERR(svn_wc__db_read_info(NULL, &kind, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               &existing_changelist,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL,
+                               db, local_abspath, pool, pool));
 
   /* We can't do changelists on directories. */
-  if (entry->kind == svn_node_dir)
+  if (kind == svn_wc__db_kind_dir)
     return svn_error_createf(SVN_ERR_CLIENT_IS_DIRECTORY, NULL,
                              _("'%s' is a directory, and thus cannot"
                                " be a member of a changelist"), path);
 
-  /* If the path has no changelist and we're removing changelist, skip it. */
-  if (! (changelist || entry->changelist))
+  /* If the path has no changelist and we're removing changelist, skip it.
+     ### the db actually does this check, too, but for notification's sake,
+     ### we add it here as well. */
+  if (! (changelist || existing_changelist))
     return SVN_NO_ERROR;
 
   /* If the path is already assigned to the changelist we're
-     trying to assign, skip it. */
-  if (entry->changelist
+     trying to assign, skip it.
+     ### the db actually does this check, too, but for notification's sake,
+     ### we add it here as well. */
+  if (existing_changelist
       && changelist
-      && strcmp(entry->changelist, changelist) == 0)
+      && strcmp(existing_changelist, changelist) == 0)
     return SVN_NO_ERROR;
 
   /* If the path is already a member of a changelist, warn the
      user about this, but still allow the reassignment to happen. */
-  if (entry->changelist && changelist && notify_func)
+  if (existing_changelist && changelist && notify_func)
     {
       svn_error_t *reassign_err =
         svn_error_createf(SVN_ERR_WC_CHANGELIST_MOVE, NULL,
                           _("Removing '%s' from changelist '%s'."),
-                          path, entry->changelist);
+                          path, existing_changelist);
       notify = svn_wc_create_notify(path, svn_wc_notify_changelist_moved,
                                     pool);
       notify->err = reassign_err;
@@ -3317,10 +3327,8 @@ svn_wc_set_changelist(const char *path,
       svn_error_clear(notify->err);
     }
 
-  /* Tweak the entry. */
-  newentry.changelist = changelist;
-  SVN_ERR(svn_wc__entry_modify(adm_access, entry->name, &newentry,
-                               SVN_WC__ENTRY_MODIFY_CHANGELIST, pool));
+  /* Set the changelist. */
+  SVN_ERR(svn_wc__db_op_set_changelist(db, local_abspath, changelist, pool));
 
   /* And tell someone what we've done. */
   if (notify_func)
