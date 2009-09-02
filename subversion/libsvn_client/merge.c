@@ -4584,7 +4584,6 @@ drive_merge_report_editor(const char *target_wcpath,
                                       merge_b->ctx->cancel_func,
                                       merge_b->ctx->cancel_baton,
                                       &diff_editor, &diff_edit_baton,
-                                      NULL, /* disable svnpatch */
                                       pool));
   SVN_ERR(svn_ra_do_diff3(merge_b->ra_session1,
                           &reporter, &report_baton, revision2,
@@ -6360,7 +6359,7 @@ do_file_merge(const char *url1,
                                        r->start,
                                        r->end,
                                        mimetype1, mimetype2,
-                                       NULL, SVN_INVALID_REVNUM, /* XXX API */
+                                       NULL, SVN_INVALID_REVNUM,
                                        propchanges, props1,
                                        merge_b));
               single_file_merge_notify(notify_b, target_wcpath,

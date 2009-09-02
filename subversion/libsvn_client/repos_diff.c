@@ -40,11 +40,7 @@
 #include "svn_io.h"
 #include "svn_props.h"
 
-#include "private/svn_patch.h"
-
 #include "client.h"
-
-#define SAVEPOINT_RELEASED -1
 
 /* Overall crawler editor baton.  */
 struct edit_baton {
@@ -90,26 +86,6 @@ struct edit_baton {
   svn_wc_notify_func2_t notify_func;
   void *notify_baton;
 
-  /* Hold the temporary svnpatch file. */
-  apr_file_t *svnpatch_file;
-
-  /* The stream attached to the @c svnpatch_file. */
-  svn_stream_t *svnpatch_stream;
-
-  /* @c edit_baton's @c savepoint is set to 0 when initialized.  When
-   * @c savepoint is equal to 0 at the time we write the close-edit
-   * command, no changes svnpatch wants happened and svnpatch_file is
-   * completely erased. Conversely, when @c savepoint equals to
-   * SAVEPOINT_RELEASED, there are changes of svnpatch-interest and we
-   * need the open-root/close-edit pair commands. */
-  apr_off_t savepoint;
-
-  /* Diff editor baton */
-  svn_delta_editor_t *svnpatch_editor;
-
-  /* A token holder, helps to build the svnpatch. */
-  int next_token;
-
   apr_pool_t *pool;
 };
 
@@ -154,14 +130,6 @@ struct dir_baton {
 
   /* The pristine-property list attached to this directory. */
   apr_hash_t *pristine_props;
-
-  /* Set when dealing with svnpatch diff. */
-  const char *token;
-
-  /* @c savepoint is set to the position of svnpatch_file's cursor at
-   * the time before writing the open-dir command to the svnpatch_file.
-   * See svnpatch_savepoint(). */
-  apr_off_t savepoint;
 
   /* The pool passed in by add_dir, open_dir, or open_root.
      Also, the pool this dir baton is allocated in. */
@@ -210,32 +178,13 @@ struct file_baton {
   /* The overall crawler editor baton. */
   struct edit_baton *edit_baton;
 
-  /* The directory that contains the file. */
-  struct dir_baton *dir_baton;
-
   /* A cache of any property changes (svn_prop_t) received for this file. */
   apr_array_header_t *propchanges;
-
-  /* Set when dealing with svnpatch diff. */
-  const char *token;
-
-  /* @c savepoint is set to the position of svnpatch_file's cursor at
-   * the time before writing the open-file command to the svnpatch_file.
-   * See svnpatch_savepoint(). */
-  apr_off_t savepoint;
 
   /* The pool passed in by add_file or open_file.
      Also, the pool this file_baton is allocated in. */
   apr_pool_t *pool;
 };
-
-static const char *
-make_token(char type,
-           struct edit_baton *eb,
-           apr_pool_t *pool)
-{
-  return apr_psprintf(pool, "%c%d", type, eb->next_token++);
-}
 
 /* Create a new directory baton for PATH in POOL.  ADDED is set if
  * this directory is being added rather than replaced. PARENT_BATON is
@@ -249,7 +198,6 @@ make_dir_baton(const char *path,
                struct dir_baton *parent_baton,
                struct edit_baton *edit_baton,
                svn_boolean_t added,
-               const char *token,
                apr_pool_t *pool)
 {
   struct dir_baton *dir_baton = apr_pcalloc(pool, sizeof(*dir_baton));
@@ -263,7 +211,6 @@ make_dir_baton(const char *path,
   dir_baton->path = apr_pstrdup(pool, path);
   dir_baton->wcpath = svn_path_join(edit_baton->target, path, pool);
   dir_baton->propchanges  = apr_array_make(pool, 1, sizeof(svn_prop_t));
-  dir_baton->token = token;
 
   return dir_baton;
 }
@@ -277,8 +224,6 @@ static struct file_baton *
 make_file_baton(const char *path,
                 svn_boolean_t added,
                 void *edit_baton,
-                struct dir_baton *parent_baton,
-                const char *token,
                 apr_pool_t *pool)
 {
   struct file_baton *file_baton = apr_pcalloc(pool, sizeof(*file_baton));
@@ -292,287 +237,9 @@ make_file_baton(const char *path,
   file_baton->path = apr_pstrdup(pool, path);
   file_baton->wcpath = svn_path_join(eb->target, path, pool);
   file_baton->propchanges  = apr_array_make(pool, 1, sizeof(svn_prop_t));
-  file_baton->token = token;
-  file_baton->dir_baton = parent_baton;
 
   return file_baton;
 }
-
-
-/* Here is a trio of functions to play with svnpatch generation at will.
- * In a repos-repos diff, there are cases when, while being driven and
- * dumping Editor Commands, we need to rollback because we realize we've
- * been misled.  The main reason why we need this trick is because
- * svnpatch doesn't want to hear about textual-modifications, which
- * Unidiff holds.  Suppose a changeset to be a simple textual
- * modification to A/D/H/psi.  In an svnpatch context, we don't know
- * this is a change we don't want until we face with psi, i.e. until
- * we've actually opened/consumed the whole stack of directories plus
- * the file and thus blindly dumped the associated commands wave.
- * Additionally, we're able to decide whether or not it was useless to
- * open an entry at the time of close.  So here we are with a mechanism
- * to set savepoints when opening, and to rollback when closing.  By
- * convention, we decide we need a rollback if the savepoint is still
- * there (positive value).  Thus we also have another function to
- * release a savepoint (i.e. set it to a negative value,
- * SAVEPOINT_RELEASED, that is) when we face a change we want (e.g. a
- * change-file-prop) so that no rollback is performed when closing.
- *
- * This is implemented with the help of seek and truncate functions
- * since we're dumping Editor Commands to a temporary file.  In this
- * semantic, it's easy to think of a savepoint as an offset, and a
- * rollback as a truncate back to the offset.
- */
-
-/* Create a savepoint.  Basically, @a *savepoint is set to the current
- * cursor position of @a eb->svnpatch_file. */
-static svn_error_t *
-svnpatch_savepoint(struct edit_baton *eb, apr_off_t *savepoint)
-{
-  apr_off_t current_position = 0;
-
-  /* No flush-to-disk here as apr_file_seek() is APR_BUFFERED-safe. */
-  SVN_ERR(svn_io_file_seek(eb->svnpatch_file, APR_CUR,
-                           &current_position, eb->pool));
-  *savepoint = current_position;
-  return SVN_NO_ERROR;
-}
-
-/* Release a savepoint.  Set @a baton's and ascendant directories'
- * savepoints to SAVEPOINT_RELEASED.  This can't be 0 since edit_baton's
- * savepoint is set to 0, nor positive integers as offsets hold down
- * this range. */
-static void
-svnpatch_release_savepoint(void *baton,
-                           svn_node_kind_t kind)
-{
-  struct dir_baton *pb;
-
-  if (kind == svn_node_dir)
-    {
-      struct dir_baton *b = baton;
-
-      b->savepoint = SAVEPOINT_RELEASED;
-      b->edit_baton->savepoint = SAVEPOINT_RELEASED;
-      pb = b->dir_baton;
-    }
-  else
-    {
-      struct file_baton *b = baton;
-
-      b->savepoint = SAVEPOINT_RELEASED;
-      b->edit_baton->savepoint = SAVEPOINT_RELEASED;
-      pb = b->dir_baton;
-    }
-
-  while (pb)
-    {
-      pb->savepoint = SAVEPOINT_RELEASED;
-      pb = pb->dir_baton;
-    }
-}
-
-/* Rollback to a savepoint.  This truncates @a eb->svnpatch_file back to
- * @a savepoint offset. */
-static svn_error_t *
-svnpatch_rollback(struct edit_baton *eb, apr_off_t savepoint)
-{
-  apr_status_t status;
-
-  SVN_ERR(svn_io_file_flush_to_disk(eb->svnpatch_file, eb->pool));
-  status = apr_file_trunc(eb->svnpatch_file, savepoint);
-  if (status != APR_SUCCESS)
-    return svn_error_create
-            (status, NULL,
-             "There was an error when truncating the file.");
-
-  eb->next_token--; /* This isn't perfectionism, is it? */
-  return SVN_NO_ERROR;
-}
-
-/* svnpatch-specific editor functions follow */
-static svn_error_t *
-svnpatch_close_directory(void *dir_baton,
-                         apr_pool_t *pool)
-{
-  struct dir_baton *b = dir_baton;
-  struct edit_baton *eb = b->edit_baton;
-
-  if (b->savepoint == SAVEPOINT_RELEASED || b->added)
-    SVN_ERR(svn_patch__write_cmd(eb->svnpatch_stream, eb->pool,
-                                 "close-dir", "c", b->token));
-  else
-    svnpatch_rollback(eb, b->savepoint);
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-svnpatch_change_dir_prop(void *dir_baton,
-                         const char *name,
-                         const svn_string_t *value,
-                         apr_pool_t *pool)
-{
-  struct dir_baton *pb = dir_baton;
-  struct edit_baton *eb = pb->edit_baton;
-
-  svnpatch_release_savepoint(pb, svn_node_dir);
-  SVN_ERR(svn_patch__write_cmd(eb->svnpatch_stream, eb->pool,
-                               "change-dir-prop", "cc(?s)", pb->token,
-                               name, value));
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-svnpatch_close_file(void *file_baton,
-                    const char *text_checksum,
-                    apr_pool_t *pool)
-{
-  struct file_baton *b = file_baton;
-  struct edit_baton *eb = b->edit_baton;
-
-  if (b->savepoint == SAVEPOINT_RELEASED || b->added)
-    SVN_ERR(svn_patch__write_cmd(eb->svnpatch_stream, eb->pool,
-                                 "close-file", "c(?c)",
-                                 b->token, text_checksum));
-  else
-    svnpatch_rollback(eb, b->savepoint);
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-svnpatch_change_file_prop(void *file_baton,
-                          const char *name,
-                          const svn_string_t *value,
-                          apr_pool_t *pool)
-{
-  struct file_baton *b = file_baton;
-  struct edit_baton *eb = b->edit_baton;
-
-  svnpatch_release_savepoint(b, svn_node_file);
-  SVN_ERR(svn_patch__write_cmd(eb->svnpatch_stream, eb->pool,
-                               "change-file-prop", "cc(?s)",
-                               b->token, name, value));
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-svnpatch_delete_entry(const char *path,
-                      svn_revnum_t base_revision,
-                      void *parent_baton,
-                      apr_pool_t *pool)
-{
-  struct dir_baton *pb = parent_baton;
-  struct edit_baton *eb = pb->edit_baton;
-
-  svnpatch_release_savepoint(pb, svn_node_dir);
-  SVN_ERR(svn_patch__write_cmd(eb->svnpatch_stream, eb->pool,
-                               "delete-entry", "cc",
-                               path, pb->token));
-
-  return SVN_NO_ERROR;
-}
-
-/* Used in svnpatch_apply_textdelta() to set up the diff_stream. */
-static svn_error_t *
-svndiff_write_handler(void *baton,
-                      const char *data,
-                      apr_size_t *len)
-{
-  struct file_baton *f = baton;
-  struct edit_baton *eb = f->edit_baton;
-  svn_string_t str;
-
-  str.data = data;
-  str.len = *len;
-  SVN_ERR(svn_patch__write_cmd(eb->svnpatch_stream, eb->pool,
-                               "textdelta-chunk", "cs", f->token, &str));
-  return SVN_NO_ERROR;
-}
-
-/* Used in svnpatch_apply_textdelta() to set up the diff_stream. */
-static svn_error_t *
-svndiff_close_handler(void *baton)
-{
-  struct file_baton *f = baton;
-  struct edit_baton *eb = f->edit_baton;
-
-  SVN_ERR(svn_patch__write_cmd(eb->svnpatch_stream, eb->pool,
-                               "textdelta-end", "c", f->token));
-  return SVN_NO_ERROR;
-  
-}
-
-static svn_error_t *
-svnpatch_apply_textdelta(void *file_baton,
-                         const char *base_checksum,
-                         apr_pool_t *pool,
-                         svn_txdelta_window_handler_t *handler,
-                         void **handler_baton)
-{
-  struct file_baton *f = file_baton;
-  struct edit_baton *eb = f->edit_baton;
-  svn_stream_t *diff_stream;
-
-  SVN_ERR(svn_patch__write_cmd(eb->svnpatch_stream, eb->pool,
-                               "apply-textdelta", "c(?c)", f->token,
-                               base_checksum));
-  diff_stream = svn_stream_create(f, pool);
-  svn_stream_set_write(diff_stream, svndiff_write_handler);
-  svn_stream_set_close(diff_stream, svndiff_close_handler);
-  svn_txdelta_to_svndiff2(handler, handler_baton, diff_stream, 1, pool);
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-svnpatch_close_edit(void *edit_baton,
-                    apr_pool_t *pool)
-{
-  struct edit_baton *eb = edit_baton;
-  
-  if (eb->savepoint == SAVEPOINT_RELEASED)
-    SVN_ERR(svn_patch__write_cmd(eb->svnpatch_stream, eb->pool,
-                                 "close-edit", ""));
-  else
-    svnpatch_rollback(eb, 0); /* Empty svnpatch */
-
-  return SVN_NO_ERROR;
-}
-
-/* Drive @a editor against @a path's content modifications. */
-static svn_error_t *
-transmit_svndiff(const char *path,
-                 const svn_delta_editor_t *editor,
-                 void *file_baton,
-                 apr_pool_t *pool)
-{
-  svn_txdelta_window_handler_t handler;
-  svn_txdelta_stream_t *txdelta_stream;
-  apr_file_t *file;
-  svn_stream_t *base_stream;
-  svn_stream_t *local_stream;
-  void *wh_baton;
-
-  /* Initialize window_handler/baton to produce svndiff from txdelta
-   * windows. */
-  SVN_ERR(editor->apply_textdelta(file_baton, NULL, pool,
-                                  &handler, &wh_baton));
-
-  base_stream = svn_stream_empty(pool);
-
-  SVN_ERR(svn_io_file_open(&file, path, APR_READ | APR_BUFFERED,
-                           APR_OS_DEFAULT, pool));
-  local_stream = svn_stream_from_aprfile2(file, FALSE, pool);
-
-  svn_txdelta(&txdelta_stream, base_stream, local_stream, pool);
-  SVN_ERR(svn_txdelta_send_txstream(txdelta_stream, handler,
-                                    wh_baton, pool));
-  return SVN_NO_ERROR;
-}
-
 
 /* Helper function: return up to two svn:mime-type values buried
  * within a file baton.  Set *MIMETYPE1 to the value within the file's
@@ -765,17 +432,12 @@ open_root(void *edit_baton,
           void **root_baton)
 {
   struct edit_baton *eb = edit_baton;
-  const char *token = make_token('d', eb, pool);
-  struct dir_baton *b = make_dir_baton("", NULL, eb, FALSE, token, pool);
+  struct dir_baton *b = make_dir_baton("", NULL, eb, FALSE, pool);
 
   /* Override the wcpath in our baton. */
   b->wcpath = apr_pstrdup(pool, eb->target);
 
   SVN_ERR(get_dirprops_from_ra(b, base_revision));
-
-  if (eb->svnpatch_stream)
-    SVN_ERR(svn_patch__write_cmd(eb->svnpatch_stream, eb->pool,
-                                 "open-root", "c", token));
 
   *root_baton = b;
   return SVN_NO_ERROR;
@@ -814,7 +476,7 @@ delete_entry(const char *path,
             struct file_baton *b;
 
             /* Compare a file being deleted against an empty file */
-            b = make_file_baton(path, FALSE, eb, pb, NULL, pool);
+            b = make_file_baton(path, FALSE, eb, pool);
             SVN_ERR(get_file_from_ra(b, eb->revision));
             SVN_ERR(get_empty_file(b->edit_baton, &(b->path_end_revision)));
 
@@ -873,10 +535,6 @@ delete_entry(const char *path,
       apr_hash_set(eb->deleted_paths, deleted_path, APR_HASH_KEY_STRING, dpn);
     }
 
-  if (eb->svnpatch_stream)
-    SVN_ERR(eb->svnpatch_editor->delete_entry
-            (path, SVN_INVALID_REVNUM, pb, pool));
-
   return SVN_NO_ERROR;
 }
 
@@ -895,11 +553,10 @@ add_directory(const char *path,
   svn_wc_adm_access_t *adm_access;
   svn_wc_notify_state_t state;
   svn_wc_notify_action_t action;
-  const char *token = make_token('d', eb, pool);
 
   /* ### TODO: support copyfrom? */
 
-  b = make_dir_baton(path, pb, eb, TRUE, token, pool);
+  b = make_dir_baton(path, pb, eb, TRUE, pool);
   b->pristine_props = eb->empty_hash;
   *child_baton = b;
 
@@ -965,19 +622,6 @@ add_directory(const char *path,
       (*eb->notify_func)(eb->notify_baton, notify, pool);
     }
 
-  if (eb->svnpatch_stream)
-    {
-      /* Calling svnpatch_savepoint() would be pure overhead since we
-       * know we want this directory be included in svnpatch.  So let's
-       * release parents' savepoints instead, which means no rollback
-       * can/will be attempted on this path -- Editor Commands to
-       * traverse from root to this directory. */
-      svnpatch_release_savepoint(pb, svn_node_dir);
-      SVN_ERR(svn_patch__write_cmd(eb->svnpatch_stream, eb->pool,
-                                   "add-dir", "ccc(?c)", path, pb->token,
-                                   token, copyfrom_path));
-    }
-
   return SVN_NO_ERROR;
 }
 
@@ -992,10 +636,9 @@ open_directory(const char *path,
   struct dir_baton *pb = parent_baton;
   struct edit_baton *eb = pb->edit_baton;
   struct dir_baton *b;
-  const char *token = make_token('d', eb, pool);
   svn_wc_adm_access_t *adm_access;
 
-  b = make_dir_baton(path, pb, pb->edit_baton, FALSE, token, pool);
+  b = make_dir_baton(path, pb, pb->edit_baton, FALSE, pool);
   *child_baton = b;
 
   /* Skip *everything* within a newly tree-conflicted directory. */
@@ -1014,13 +657,6 @@ open_directory(const char *path,
           (adm_access, &b->tree_conflicted, b->wcpath, base_revision,
            b->edit_baton->diff_cmd_baton));
 
-  if (eb->svnpatch_stream)
-    {
-      SVN_ERR(svnpatch_savepoint(eb, &b->savepoint));
-      SVN_ERR(svn_patch__write_cmd(eb->svnpatch_stream, eb->pool,
-                                   "open-dir", "ccc", path, pb->token, token));
-    }
-
   return SVN_NO_ERROR;
 }
 
@@ -1035,13 +671,11 @@ add_file(const char *path,
          void **file_baton)
 {
   struct dir_baton *pb = parent_baton;
-  struct edit_baton *eb = pb->edit_baton;
   struct file_baton *b;
-  const char *token = make_token('c', eb, pool);
 
   /* ### TODO: support copyfrom? */
 
-  b = make_file_baton(path, TRUE, pb->edit_baton, pb, token, pool);
+  b = make_file_baton(path, TRUE, pb->edit_baton, pool);
   *file_baton = b;
 
   /* Skip *everything* within a newly tree-conflicted directory. */
@@ -1049,16 +683,6 @@ add_file(const char *path,
     {
       b->skip = TRUE;
       return SVN_NO_ERROR;
-    }
-
-  if (eb->svnpatch_stream)
-    {
-      /* Release right away, we want this path all the way up to root as
-       * this is an addition, which we always include in svnpatch. */
-      svnpatch_release_savepoint(b, svn_node_file);
-      SVN_ERR(svn_patch__write_cmd(eb->svnpatch_stream, eb->pool,
-                                   "add-file", "ccc(?c)", path, pb->token,
-                                   token, copyfrom_path));
     }
 
   SVN_ERR(get_empty_file(b->edit_baton, &(b->path_start_revision)));
@@ -1077,10 +701,7 @@ open_file(const char *path,
 {
   struct dir_baton *pb = parent_baton;
   struct file_baton *b;
-  struct edit_baton *eb = pb->edit_baton;
-  const char *token = make_token('c', eb, pool);
-
-  b = make_file_baton(path, FALSE, pb->edit_baton, pb, token, pool);
+  b = make_file_baton(path, FALSE, pb->edit_baton, pool);
   *file_baton = b;
 
   /* Skip *everything* within a newly tree-conflicted directory. */
@@ -1091,14 +712,6 @@ open_file(const char *path,
     }
 
   SVN_ERR(get_file_from_ra(b, base_revision));
-
-  if (eb->svnpatch_stream)
-    {
-      SVN_ERR(svnpatch_savepoint(eb, &b->savepoint));
-      SVN_ERR(svn_patch__write_cmd(eb->svnpatch_stream, eb->pool,
-                                   "open-file", "ccc", path,
-                                   pb->token, token));
-    }
 
   return SVN_NO_ERROR;
 }
@@ -1204,7 +817,6 @@ close_file(void *file_baton,
   svn_wc_notify_action_t action;
   svn_wc_notify_state_t content_state = svn_wc_notify_state_unknown;
   svn_wc_notify_state_t prop_state = svn_wc_notify_state_unknown;
-  svn_boolean_t binary_file = FALSE;
 
   /* Skip *everything* within a newly tree-conflicted directory. */
   if (b->skip)
@@ -1244,9 +856,6 @@ close_file(void *file_baton,
     {
       const char *mimetype1, *mimetype2;
       get_file_mime_types(&mimetype1, &mimetype2, b);
-      if (( mimetype1 && svn_mime_type_is_binary(mimetype1))
-          || (mimetype2 && svn_mime_type_is_binary(mimetype2)))
-        binary_file = TRUE;
 
       if (b->added)
         SVN_ERR(eb->diff_callbacks->file_added
@@ -1271,10 +880,6 @@ close_file(void *file_baton,
                  mimetype1, mimetype2,
                  b->propchanges, b->pristine_props,
                  b->edit_baton->diff_cmd_baton));
-
-      if (binary_file && eb->svnpatch_stream)
-        SVN_ERR(transmit_svndiff(b->path_end_revision,
-                                 eb->svnpatch_editor, b, pool));
     }
 
 
@@ -1326,17 +931,6 @@ close_file(void *file_baton,
           notify->prop_state = prop_state;
           (*eb->notify_func)(eb->notify_baton, notify, pool);
         }
-    }
-
-  if (eb->svnpatch_stream)
-    {
-      /* In case this file is an addition, we've already released
-       * savepoints when writing add-file command. */
-      if (binary_file && !b->added)
-          svnpatch_release_savepoint(b, svn_node_file);
-
-      SVN_ERR(eb->svnpatch_editor->close_file
-              (b, binary_file ? text_checksum : NULL, b->pool));
     }
 
   return SVN_NO_ERROR;
@@ -1447,9 +1041,6 @@ close_directory(void *dir_baton,
       (*eb->notify_func)(eb->notify_baton, notify, pool);
     }
 
-  if (eb->svnpatch_stream)
-    eb->svnpatch_editor->close_directory(b, pool);
-
   return SVN_NO_ERROR;
 }
 
@@ -1462,7 +1053,6 @@ change_file_prop(void *file_baton,
                  apr_pool_t *pool)
 {
   struct file_baton *b = file_baton;
-  struct edit_baton *eb = b->edit_baton;
   svn_prop_t *propchange;
 
   /* Skip *everything* within a newly tree-conflicted directory. */
@@ -1472,12 +1062,6 @@ change_file_prop(void *file_baton,
   propchange = apr_array_push(b->propchanges);
   propchange->name = apr_pstrdup(b->pool, name);
   propchange->value = value ? svn_string_dup(value, b->pool) : NULL;
-
-  /* Restrict to Regular Properties. */
-  if (eb->svnpatch_stream
-      && svn_property_kind(NULL, name) == svn_prop_regular_kind)
-    SVN_ERR(eb->svnpatch_editor->change_file_prop
-            (b, name, value, pool));
 
   return SVN_NO_ERROR;
 }
@@ -1490,7 +1074,6 @@ change_dir_prop(void *dir_baton,
                 apr_pool_t *pool)
 {
   struct dir_baton *db = dir_baton;
-  struct edit_baton *eb = db->edit_baton;
   svn_prop_t *propchange;
 
   /* Skip *everything* within a newly tree-conflicted directory. */
@@ -1500,12 +1083,6 @@ change_dir_prop(void *dir_baton,
   propchange = apr_array_push(db->propchanges);
   propchange->name = apr_pstrdup(db->pool, name);
   propchange->value = value ? svn_string_dup(value, db->pool) : NULL;
-
-  /* Restrict to Regular Properties. */
-  if (eb->svnpatch_stream
-      && svn_property_kind(NULL, name) == svn_prop_regular_kind)
-    SVN_ERR(eb->svnpatch_editor->change_dir_prop
-            (dir_baton, name, value, pool));
 
   return SVN_NO_ERROR;
 }
@@ -1517,9 +1094,6 @@ close_edit(void *edit_baton,
            apr_pool_t *pool)
 {
   struct edit_baton *eb = edit_baton;
-
-  if (eb->svnpatch_stream)
-      SVN_ERR(eb->svnpatch_editor->close_edit(eb, pool));
 
   svn_pool_destroy(eb->pool);
 
@@ -1581,35 +1155,6 @@ absent_file(const char *path,
   return SVN_NO_ERROR;
 }
 
-/* Create an svnpatch-specific editor.  As svnpatch is revisionless, no
- * need for @c set_target_revision callback.  A few other functions are
- * missing too as we replace them with inline code in the real editor's
- * functions (see svn_client__get_diff_editor). 
- * Note: although we're creating a true delta editor, we're indeed not
- * using @a *editor as it ought to be, in a sense that we will not drive
- * it as expected.  We're just using the delta editor interface that
- * turns out to fit very well with the use we're making here.  A small
- * drive is being performed by transmit_svndiff() against binary files
- * to generate svndiffs and txdelta Editor Commands though. */
-static void
-get_svnpatch_editor(svn_delta_editor_t **editor,
-                       apr_pool_t *pool)
-{
-  svn_delta_editor_t *ed;
-
-  ed = svn_delta_default_editor(pool);
-   
-  ed->delete_entry = svnpatch_delete_entry;
-  ed->close_directory = svnpatch_close_directory;
-  ed->apply_textdelta = svnpatch_apply_textdelta;
-  ed->change_file_prop = svnpatch_change_file_prop;
-  ed->change_dir_prop = svnpatch_change_dir_prop;
-  ed->close_file = svnpatch_close_file;
-  ed->close_edit = svnpatch_close_edit;
-
-  *editor = ed;
-}
-
 /* Create a repository diff editor and baton.  */
 svn_error_t *
 svn_client__get_diff_editor(const char *target,
@@ -1626,7 +1171,6 @@ svn_client__get_diff_editor(const char *target,
                             void *cancel_baton,
                             const svn_delta_editor_t **editor,
                             void **edit_baton,
-                            apr_file_t *svnpatch_file,
                             apr_pool_t *pool)
 {
   apr_pool_t *subpool = svn_pool_create(pool);
@@ -1646,19 +1190,6 @@ svn_client__get_diff_editor(const char *target,
   eb->pool = subpool;
   eb->notify_func = notify_func;
   eb->notify_baton = notify_baton;
-  eb->next_token = 0;
-  eb->savepoint = 0;
-  eb->svnpatch_editor = NULL;
-  eb->svnpatch_stream = NULL;
-  eb->svnpatch_file = svnpatch_file;
-
-  if (eb->svnpatch_file)
-    {
-      eb->svnpatch_stream =
-        svn_stream_from_aprfile2(eb->svnpatch_file,
-                                 FALSE, eb->pool);
-      get_svnpatch_editor(&eb->svnpatch_editor, eb->pool);
-    }
 
   tree_editor->set_target_revision = set_target_revision;
   tree_editor->open_root = open_root;
