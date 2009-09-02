@@ -395,7 +395,7 @@ svn_dirent_get_longest_ancestor(const char *dirent1,
  * @a uri1 and @a uri2.  If there's no common ancestor, return the
  * empty path.
  *
- * @a path1 and @a path2 may be URLs.  In order for two URLs to have
+ * @a uri1 and @a uri2 may be URLs.  In order for two URLs to have
  * a common ancestor, they must (a) have the same protocol (since two URLs
  * with the same path but different protocols may point at completely
  * different resources), and (b) share a common ancestor in their path
@@ -404,8 +404,8 @@ svn_dirent_get_longest_ancestor(const char *dirent1,
  * @since New in 1.7.
  */
 char *
-svn_uri_get_longest_ancestor(const char *path1,
-                             const char *path2,
+svn_uri_get_longest_ancestor(const char *uri1,
+                             const char *uri2,
                              apr_pool_t *pool);
 
 /** Convert @a relative canonicalized dirent to an absolute dirent and
@@ -474,8 +474,8 @@ svn_dirent_is_ancestor(const char *path1,
  * @since New in 1.7.
  */
 svn_boolean_t
-svn_uri_is_ancestor(const char *path1,
-                    const char *path2);
+svn_uri_is_ancestor(const char *uri1,
+                    const char *uri2);
 
 
 /** Returns the relative path part of @a dirent2 that is below @a dirent1,
