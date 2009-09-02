@@ -39,8 +39,6 @@
 extern "C" {
 #endif /* __cplusplus */
 
-#define SVN_CLIENT_SVNPATCH_VERSION   1
-
 
 /* Set *URL, allocated in RESULT_POOL, and *PEG_REVNUM (the latter is
    ignored if NULL) to the repository URL of ABSPATH_OR_URL.  If
@@ -679,13 +677,7 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
    If NOTIFY_FUNC is non-null, invoke it with NOTIFY_BATON for each
    file and directory operated on during the edit.
 
-   EDITOR/EDIT_BATON return the newly created editor and baton/
-  
-   SVNPATCH_FILE is the temporary file to which the library dumps
-   serialized ra_svn protocol Editor Commands.  It somehow determines
-   whether or not to utilize svnpatch format in the diff output when
-   checked against NULL.  The caller must allocate the file handler,
-   open and close the file respectively before and after the call. */
+   EDITOR/EDIT_BATON return the newly created editor and baton. */
 svn_error_t *
 svn_client__get_diff_editor(const char *target,
                             svn_wc_adm_access_t *adm_access,
@@ -701,7 +693,6 @@ svn_client__get_diff_editor(const char *target,
                             void *cancel_baton,
                             const svn_delta_editor_t **editor,
                             void **edit_baton,
-                            apr_file_t *svnpatch_file,
                             apr_pool_t *pool);
 
 

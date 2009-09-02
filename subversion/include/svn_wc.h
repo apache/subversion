@@ -5109,12 +5109,6 @@ svn_wc_canonicalize_svn_prop(const svn_string_t **propval_p,
  * If @a cancel_func is non-NULL, it will be used along with @a cancel_baton
  * to periodically check if the client has canceled the operation.
  *
- * @a svnpatch_file is the temporary file to which the function dumps
- * serialized ra_svn protocol editor commands.  It somehow determines whether
- * or not to utilize svnpatch format in the diff output when checked against @c
- * NULL.  The caller must allocate the file handler, open and close the file
- * respectively before and after the call.
- *
  * @a changelists is an array of <tt>const char *</tt> changelist
  * names, used as a restrictive filter on items whose differences are
  * reported; that is, don't generate diffs about any item unless
@@ -5137,13 +5131,11 @@ svn_wc_get_diff_editor6(svn_wc_adm_access_t *anchor,
                         const apr_array_header_t *changelists,
                         const svn_delta_editor_t **editor,
                         void **edit_baton,
-                        apr_file_t *svnpatch_file,
                         apr_pool_t *pool);
 
 /**
  * Similar to svn_wc_get_diff_editor6(), but with an
- * @c svn_wc_diff_callbacks3_t instead of @c svn_wc_diff_callbacks4_t,
- * and @a svnpatch_file set to @c NULL.
+ * @c svn_wc_diff_callbacks3_t instead of @c svn_wc_diff_callbacks4_t.
  *
  * @since New in 1.6.
  *
@@ -5281,12 +5273,6 @@ svn_wc_get_diff_editor(svn_wc_adm_access_t *anchor,
  * @a ignore_ancestry is @c FALSE, then any discontinuous node ancestry will
  * result in the diff given as a full delete followed by an add.
  *
- * @a svnpatch_file is the temporary file to which the function dumps
- * serialized ra_svn protocol editor commands.  It somehow determines whether
- * or not to utilize svnpatch format in the diff output when checked against @c
- * NULL.  The caller must allocate the file handler, open and close the file
- * respectively before and after the call.
- *
  * @a changelists is an array of <tt>const char *</tt> changelist
  * names, used as a restrictive filter on items whose differences are
  * reported; that is, don't generate diffs about any item unless
@@ -5303,14 +5289,11 @@ svn_wc_diff6(svn_wc_adm_access_t *anchor,
              svn_depth_t depth,
              svn_boolean_t ignore_ancestry,
              const apr_array_header_t *changelists,
-             apr_file_t *svnpatch_file,
              apr_pool_t *pool);
 
 /**
  * Similar to svn_wc_diff6(), but with a @c svn_wc_diff_callbacks3_t argument
  * instead of @c svn_wc_diff_callbacks4_t.
- *
- * @a svnpatch_file is always set to @c NULL.
  *
  * @since New in 1.6.
  *
@@ -6491,26 +6474,6 @@ svn_wc_crop_tree(svn_wc_adm_access_t *anchor,
                  apr_pool_t *pool);
 
 
-/**
- *
- * @defgroup svn_wc_svnpatch svnpatch related functions
- *
- * @{
- *
- */
-
-
-/**
- * Drive @a diff_editor against @a patch_file's clear-text Editor Commands.
- *
- * @since New in 1.7
- */
-svn_error_t *
-svn_wc_apply_svnpatch(svn_stream_t *patch_file,
-                      const svn_delta_editor_t *diff_editor,
-                      void *diff_edit_baton,
-                      apr_pool_t *pool);
-
 /** @} */
 
 /** @} */

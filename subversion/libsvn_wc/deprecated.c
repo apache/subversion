@@ -1311,7 +1311,6 @@ svn_wc_get_diff_editor5(svn_wc_adm_access_t *anchor,
                                  changelists,
                                  editor,
                                  edit_baton,
-                                 NULL,
                                  pool);
 }
 
@@ -1441,7 +1440,7 @@ svn_wc_diff5(svn_wc_adm_access_t *anchor,
   b->baton = callback_baton;
 
   return svn_wc_diff6(anchor, target, &diff_callbacks3_wrapper, b,
-                      depth, ignore_ancestry, changelists, NULL, pool);
+                      depth, ignore_ancestry, changelists, pool);
 }
 
 svn_error_t *

@@ -110,8 +110,6 @@ typedef enum {
   opt_with_no_revprops,
   opt_parents,
   opt_accept,
-  opt_svnpatch_format,
-  opt_from_source,
   opt_show_revs,
   opt_reintegrate,
   opt_trust_server_cert
@@ -217,10 +215,6 @@ const apr_getopt_option_t svn_cl__options[] =
                     N_("try operation but make no changes")},
   {"no-diff-deleted", opt_no_diff_deleted, 0,
                     N_("do not print differences for deleted files")},
-  {"svnpatch",      opt_svnpatch_format, 0,
-                    N_("output in svnpatch format, implies the\n"
-                       "                             "
-                       "--no-diff-deleted option")},
   {"notice-ancestry", opt_notice_ancestry, 0,
                     N_("notice ancestry when calculating differences")},
   {"ignore-ancestry", opt_ignore_ancestry, 0,
@@ -479,8 +473,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  Use just 'svn diff' to display local modifications in a working copy.\n"),
     {'r', 'c', opt_old_cmd, opt_new_cmd, 'N', opt_depth, opt_diff_cmd, 'x',
      opt_no_diff_deleted, opt_notice_ancestry, opt_summarize, opt_changelist,
-     opt_force, opt_xml, opt_svnpatch_format} },
-
+     opt_force, opt_xml} },
   { "export", svn_cl__export, {0}, N_
     ("Create an unversioned copy of a tree.\n"
      "usage: 1. export [-r REV] URL[@PEGREV] [PATH]\n"
@@ -684,20 +677,16 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
     {'r', 'q', opt_force, opt_parents, SVN_CL__LOG_MSG_OPTIONS} },
 
   { "patch", svn_cl__patch, {0}, N_
-    ("Apply a patch to a working copy path.\n"
+    ("Apply a patch to a working copy.\n"
      "usage: patch PATCHFILE [WCPATH]\n"
      "\n"
-     "  PATCHFILE is an input file which, when applied, turns the working\n"
-     "  copy WCPATH into a modified tree that reflects all the changes the\n"
-     "  patch carries along.  When WCPATH is omitted '.' is assumed.\n"
-     "\n"
-     "  The content embedded in the patch file can be of two types:\n"
-     "  Unified diff and/or svnpatch diff (see 'svn diff --svnpatch').\n"
-     "  Any other content of the patch file is ignored.\n"
-     "\n"
-     "  This command allows some amount of fuzzing as Unidiff is contextual\n"
-     "  and an svnpatch is revisionless.\n"),
-    {'q', opt_force, opt_dry_run} },
+     "  Apply unidiff content in PATCHFILE to the working copy WCPATH.\n"
+     "  If WCPATH is omitted, '.' is assumed.\n"
+     "  A unidiff file suitable for application to a working copy can be\n"
+     "  produced with the 'svn diff' command or third-party diffing tools.\n"
+     "  Any non-unidiff content of PATCHFILE is ignored.\n"
+     ),
+    {'q', opt_dry_run} },
 
   { "propdel", svn_cl__propdel, {"pdel", "pd"}, N_
     ("Remove a property from files, dirs, or revisions.\n"
@@ -1524,9 +1513,6 @@ main(int argc, const char *argv[])
         break;
       case opt_summarize:
         opt_state.summarize = TRUE;
-        break;
-      case opt_svnpatch_format:
-        opt_state.svnpatch = TRUE;
         break;
       case opt_remove:
         opt_state.remove = TRUE;
