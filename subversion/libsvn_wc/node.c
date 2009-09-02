@@ -174,6 +174,7 @@ svn_wc__node_get_kind(svn_node_kind_t *kind,
 static svn_error_t *
 walker_helper(svn_wc__db_t *db,
               const char *dir_abspath,
+              svn_boolean_t show_hidden,
               const svn_wc__node_walk_callbacks_t *callbacks,
               void *walk_baton,
               svn_depth_t depth,
@@ -209,6 +210,15 @@ walker_helper(svn_wc__db_t *db,
                                                     const char *),
                                       iterpool);
 
+      if (!show_hidden)
+        {
+          svn_boolean_t hidden;
+
+          SVN_ERR(svn_wc__db_node_hidden(&hidden, db, child_abspath, iterpool));
+          if (hidden)
+            continue;
+        }
+
       SVN_ERR(svn_wc__db_read_info(NULL, &child_kind, NULL, NULL, NULL, NULL,
                                    NULL, NULL, NULL, NULL, NULL, NULL,
                                    NULL, NULL, NULL, NULL, NULL, NULL, NULL,
@@ -236,7 +246,8 @@ walker_helper(svn_wc__db_t *db,
           if (depth == svn_depth_immediates)
             depth_below_here = svn_depth_empty;
 
-          SVN_ERR(walker_helper(db, child_abspath, callbacks, walk_baton,
+          SVN_ERR(walker_helper(db, child_abspath, show_hidden,
+                                callbacks, walk_baton,
                                 depth_below_here, cancel_func, cancel_baton,
                                 iterpool));
         }
@@ -251,6 +262,7 @@ walker_helper(svn_wc__db_t *db,
 svn_error_t *
 svn_wc__node_walk_children(svn_wc_context_t *wc_ctx,
                            const char *local_abspath,
+                           svn_boolean_t show_hidden,
                            const svn_wc__node_walk_callbacks_t *callbacks,
                            void *walk_baton,
                            svn_depth_t walk_depth,
@@ -291,7 +303,8 @@ svn_wc__node_walk_children(svn_wc_context_t *wc_ctx,
                                         scratch_pool));
 
       return svn_error_return(
-        walker_helper(wc_ctx->db, local_abspath, callbacks, walk_baton,
+        walker_helper(wc_ctx->db, local_abspath, show_hidden,
+                      callbacks, walk_baton,
                       walk_depth, cancel_func, cancel_baton, scratch_pool));
     }
 

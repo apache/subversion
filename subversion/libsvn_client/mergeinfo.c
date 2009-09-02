@@ -430,7 +430,7 @@ svn_client__get_wc_mergeinfo_catalog(svn_mergeinfo_catalog_t *mergeinfo_cat,
       wb.mergeinfo_catalog = *mergeinfo_cat;
       wb.wc_ctx = ctx->wc_ctx;
       wb.result_pool = result_pool;
-      SVN_ERR(svn_wc__node_walk_children(ctx->wc_ctx, local_abspath,
+      SVN_ERR(svn_wc__node_walk_children(ctx->wc_ctx, local_abspath, FALSE,
                                          &walk_callbacks, &wb,
                                          svn_depth_infinity, ctx->cancel_func,
                                          ctx->cancel_baton, scratch_pool));

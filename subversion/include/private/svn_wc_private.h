@@ -366,6 +366,7 @@ svn_wc__node_get_kind(svn_node_kind_t *kind,
 svn_error_t *
 svn_wc__node_walk_children(svn_wc_context_t *wc_ctx,
                            const char *local_abspath,
+                           svn_boolean_t show_hidden,
                            const svn_wc__node_walk_callbacks_t *callbacks,
                            void *walk_baton,
                            svn_depth_t walk_depth,
