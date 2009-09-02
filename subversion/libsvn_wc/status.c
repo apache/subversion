@@ -1105,7 +1105,7 @@ get_dir_status(struct edit_baton *eb,
     {
       const svn_wc_conflict_description_t *conflict =
           svn_apr_hash_index_val(hi);
-      char *tree_basename;
+      const char *tree_basename;
 
       svn_pool_clear(iterpool);
 

@@ -137,14 +137,16 @@ read_str(const char **result,
 
 /* This is wrapper around read_str() (which see for details); it
    simply asks svn_path_is_canonical() of the string it reads,
-   returning an error if the test fails. */
+   returning an error if the test fails. 
+   ### It seems this is only called for entrynames now
+   */
 static svn_error_t *
 read_path(const char **result,
           char **buf, const char *end,
           apr_pool_t *pool)
 {
   SVN_ERR(read_str(result, buf, end, pool));
-  if (*result && **result && (! svn_path_is_canonical(*result, pool)))
+  if (*result && **result && (! svn_uri_is_canonical(*result, pool)))
     return svn_error_createf(SVN_ERR_WC_CORRUPT, NULL,
                              _("Entry contains non-canonical path '%s'"),
                              *result);
@@ -167,9 +169,9 @@ read_url(const char **result,
   if (*result && **result)
     {
       if (wc_format < SVN_WC__CHANGED_CANONICAL_URLS)
-        *result = svn_path_canonicalize(*result, pool);
+        *result = svn_uri_canonicalize(*result, pool);
       else
-        if (! svn_path_is_canonical(*result, pool))
+        if (! svn_uri_is_canonical(*result, pool))
           return svn_error_createf(SVN_ERR_WC_CORRUPT, NULL,
                                    _("Entry contains non-canonical path '%s'"),
                                    *result);
@@ -457,7 +459,7 @@ read_entry(svn_wc_entry_t **new_entry,
   /* Set up repository root.  Make sure it is a prefix of url. */
   SVN_ERR(read_url(&entry->repos, buf, end, entries_format, pool));
   if (entry->repos && entry->url
-      && ! svn_path_is_ancestor(entry->repos, entry->url))
+      && ! svn_uri_is_ancestor(entry->repos, entry->url))
     return svn_error_createf(SVN_ERR_WC_CORRUPT, NULL,
                              _("Entry for '%s' has invalid repository "
                                "root"),
@@ -759,7 +761,7 @@ svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
                                 SVN_WC__ENTRY_MODIFY_REPOS,
                                 FALSE, pool);
   if (entry->url && entry->repos
-      && !svn_path_is_ancestor(entry->repos, entry->url))
+      && !svn_uri_is_ancestor(entry->repos, entry->url))
     return svn_error_createf(SVN_ERR_WC_CORRUPT, NULL,
                              _("Entry for '%s' has invalid repository "
                                "root"),
