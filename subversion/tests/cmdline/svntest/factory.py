@@ -1297,10 +1297,12 @@ class TestFactory:
             name = mod[0]
             if name == 'contents':
               value = node.contents
-            if name in node.props:
+            elif name in node.props:
               value = node.props[name]
-            else:
+            elif name in node.atts:
               value = node.atts[name]
+            else:
+              continue
             changes += [ ['Change',
                           [self.get_node_path(node, wc)],
                           [[name, value]]
