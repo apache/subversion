@@ -220,7 +220,9 @@ enum statement_keys {
   STMT_UPDATE_LOCK_REPOS_ID,
   STMT_UPDATE_BASE_LAST_MOD_TIME,
   STMT_UPDATE_ACTUAL_TREE_CONFLICTS,
-  STMT_INSERT_ACTUAL_TREE_CONFLICTS
+  STMT_INSERT_ACTUAL_TREE_CONFLICTS,
+  STMT_UPDATE_ACTUAL_CHANGELIST,
+  STMT_INSERT_ACTUAL_CHANGELIST
 };
 
 /* This is a character used to escape itself and the globbing character in
@@ -392,6 +394,15 @@ static const char * const statements[] = {
   /* STMT_INSERT_ACTUAL_TREE_CONFLICTS */
   "insert into actual_node ("
   "  wc_id, local_relpath, tree_conflict_data) "
+  "values (?1, ?2, ?3);",
+
+  /* STMT_UPDATE_ACTUAL_CHANGELIST */
+  "update actual_node set changelist = ?3 "
+  "where wc_id = ?1 and local_relpath = ?2;",
+
+  /* STMT_INSERT_ACTUAL_CHANGELIST */
+  "insert into actual_node ("
+  "  wc_id, local_relpath, changelist) "
   "values (?1, ?2, ?3);",
 
   NULL
@@ -2706,15 +2717,86 @@ svn_wc__db_op_modified(svn_wc__db_t *db,
 }
 
 
+struct set_changelist_baton
+{
+  const char *local_relpath;
+  apr_int64_t wc_id;
+  const char *changelist;
+
+  apr_pool_t *scratch_pool;
+};
+
+static svn_error_t *
+set_changelist_txn(void *baton, svn_sqlite__db_t *sdb)
+{
+  struct set_changelist_baton *scb = baton;
+  const char *existing_changelist;
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
+  
+  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_SELECT_ACTUAL_NODE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", scb->wc_id, scb->local_relpath));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  if (have_row)
+    existing_changelist = svn_sqlite__column_text(stmt, 0, scb->scratch_pool);
+  SVN_ERR(svn_sqlite__reset(stmt));
+
+  if (!have_row)
+    {
+      /* We need to insert an ACTUAL node, but only if we're not attempting
+         to remove a (non-existent) changelist. */
+      if (scb->changelist == NULL)
+        return SVN_NO_ERROR;
+
+      SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
+                                        STMT_INSERT_ACTUAL_CHANGELIST));
+    }
+  else
+    {
+      /* We have an existing row, and it simply needs to be updated, if
+         it's different. */
+      if (existing_changelist
+            && scb->changelist
+            && strcmp(existing_changelist, scb->changelist) == 0)
+        return SVN_NO_ERROR;
+
+      SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
+                                        STMT_UPDATE_ACTUAL_CHANGELIST));
+    }
+
+  SVN_ERR(svn_sqlite__bindf(stmt, "iss", scb->wc_id, scb->local_relpath,
+                            scb->changelist));
+
+  return svn_error_return(svn_sqlite__step_done(stmt));
+}
+
 svn_error_t *
 svn_wc__db_op_set_changelist(svn_wc__db_t *db,
                              const char *local_abspath,
                              const char *changelist,
                              apr_pool_t *scratch_pool)
 {
+  svn_wc__db_pdh_t *pdh;
+  struct set_changelist_baton scb;
+
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
-  NOT_IMPLEMENTED();
+  SVN_ERR(parse_local_abspath(&pdh, &scb.local_relpath, db, local_abspath,
+                              svn_sqlite__mode_readwrite,
+                              scratch_pool, scratch_pool));
+
+  VERIFY_USABLE_PDH(pdh);
+
+  scb.wc_id = pdh->wcroot->wc_id;
+  scb.changelist = changelist;
+  scb.scratch_pool = scratch_pool;
+
+  SVN_ERR(svn_sqlite__with_transaction(pdh->wcroot->sdb, set_changelist_txn,
+                                       &scb));
+
+  flush_entries(pdh);
+
+  return SVN_NO_ERROR;
 }
 
 
