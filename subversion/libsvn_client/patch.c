@@ -1,5 +1,5 @@
 /*
- * patch.c:  wrapper around wc patch functionality.
+ * patch.c: patch application support
  *
  * ====================================================================
  *    Licensed to the Subversion Corporation (SVN Corp.) under one
