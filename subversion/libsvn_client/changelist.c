@@ -42,7 +42,6 @@
    svn_client_remove_from_changelist() below. */
 struct set_cl_fe_baton
 {
-  svn_wc_adm_access_t *adm_access;
   const char *changelist; /* NULL if removing changelists */
   apr_hash_t *changelist_hash;
   svn_client_ctx_t *ctx;
@@ -61,7 +60,9 @@ set_entry_changelist(const char *path,
                      apr_pool_t *pool)
 {
   struct set_cl_fe_baton *b = (struct set_cl_fe_baton *)baton;
-  svn_wc_adm_access_t *adm_access;
+  const char *local_abspath;
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
   /* See if this entry passes our changelist filtering. */
   if (! SVN_WC__CL_MATCH(b->changelist_hash, entry))
@@ -80,14 +81,10 @@ set_entry_changelist(const char *path,
       return SVN_NO_ERROR;
     }
 
-  /* Get the ADM_ACCESS for our file's parent directory,
-     specifically. */
-  SVN_ERR(svn_wc_adm_retrieve(&adm_access, b->adm_access,
-                              svn_dirent_dirname(path, pool), pool));
-  return svn_wc_set_changelist(path, b->changelist, adm_access,
-                               b->ctx->cancel_func, b->ctx->cancel_baton,
-                               b->ctx->notify_func2, b->ctx->notify_baton2,
-                               pool);
+  return svn_wc_set_changelist2(b->ctx->wc_ctx, local_abspath, b->changelist,
+                                b->ctx->cancel_func, b->ctx->cancel_baton,
+                                b->ctx->notify_func2, b->ctx->notify_baton2,
+                                pool);
 }
 
 
@@ -126,7 +123,6 @@ svn_client_add_to_changelist(const apr_array_header_t *paths,
                                            ctx->cancel_func, ctx->cancel_baton,
                                            subpool));
 
-      seb.adm_access = adm_access;
       seb.changelist = changelist;
       seb.changelist_hash = changelist_hash;
       seb.ctx = ctx;
@@ -175,7 +171,6 @@ svn_client_remove_from_changelists(const apr_array_header_t *paths,
                                            ctx->cancel_func, ctx->cancel_baton,
                                            subpool));
 
-      seb.adm_access = adm_access;
       seb.changelist = NULL;
       seb.changelist_hash = changelist_hash;
       seb.ctx = ctx;
