@@ -2773,12 +2773,12 @@ def merge_dir_and_file_replace(sbox):
     'foo/bar/new file 3' : Item("Initial text in new file 3.\n"),
     })
   expected_status = wc.State(C_path, {
-    ''    : Item(status=' M', wc_rev=3),
-    'foo' : Item(status='R ', wc_rev='-', copied='+'),
-    'foo/new file 2'     : Item(status='R ', wc_rev='-', copied='+'),
-    'foo/bar'            : Item(status='A ', wc_rev='-', copied='+'),
-    'foo/bar/new file 3' : Item(status='A ', wc_rev='-', copied='+'),
-    'foo/new file'       : Item(status='D ', wc_rev='-', copied='+'),
+    ''                   : Item(status=' M', wc_rev=3),
+    'foo'                : Item(status='R ', wc_rev='-', copied='+'),
+    'foo/new file 2'     : Item(status='  ', wc_rev='-', copied='+'),
+    'foo/bar'            : Item(status='  ', wc_rev='-', copied='+'),
+    'foo/bar/new file 3' : Item(status='  ', wc_rev='-', copied='+'),
+    'foo/new file'       : Item(status='D ', wc_rev=3),
     })
   expected_skip = wc.State(C_path, { })
   svntest.actions.run_and_verify_merge(C_path, '2', '5', F_url,
@@ -2791,26 +2791,12 @@ def merge_dir_and_file_replace(sbox):
                                        0) # don't do a dry-run
                                           # the output differs
 
-  # This test is failing, after this merge, in 'svn status' with
-  # the following error:
-  # subversion/svn/status-cmd.c:256: (apr_err=160013)
-  # subversion/svn/util.c:958: (apr_err=160013)
-  # subversion/libsvn_client/status.c:382: (apr_err=160013)
-  # subversion/libsvn_repos/reporter.c:1263: (apr_err=160013)
-  # subversion/libsvn_repos/reporter.c:1194: (apr_err=160013)
-  # subversion/libsvn_repos/reporter.c:1029: (apr_err=160013)
-  # subversion/libsvn_repos/reporter.c:851: (apr_err=160013)
-  # subversion/libsvn_repos/reporter.c:1029: (apr_err=160013)
-  # subversion/libsvn_repos/reporter.c:790: (apr_err=160013)
-  # svn: Working copy path 'foo/bar' does not exist in repository
-
   # Commit merge of foo onto C
   expected_output = svntest.wc.State(wc_dir, {
+    'A/C'                    : Item(verb='Sending'),
     'A/C/foo'                : Item(verb='Replacing'),
-    'A/C/foo/new file 2'     : Item(verb='Replacing'),
-    'A/C/foo/new file'       : Item(verb='Deleting'),
+    'A/C/foo/new file 2'     : Item(verb='Adding'),
     'A/C/foo/bar'            : Item(verb='Adding'),
-    'A/C/foo/bar/new file 3' : Item(verb='Adding'),
 
     })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
@@ -2819,26 +2805,12 @@ def merge_dir_and_file_replace(sbox):
     'A/B/F/foo/new file 2'     : Item(status='  ', wc_rev=5),
     'A/B/F/foo/bar'            : Item(status='  ', wc_rev=5),
     'A/B/F/foo/bar/new file 3' : Item(status='  ', wc_rev=5),
+    'A/C'                      : Item(status='  ', wc_rev=6),
     'A/C/foo'                  : Item(status='  ', wc_rev=6),
     'A/C/foo/new file 2'       : Item(status='  ', wc_rev=6),
     'A/C/foo/bar'              : Item(status='  ', wc_rev=6),
     'A/C/foo/bar/new file 3'   : Item(status='  ', wc_rev=6),
     })
-
-  # This test is failing on the following commit with this error:
-  #
-  #   >svn ci -m "" svn-test-work\working_copies\merge_tests-34
-  #   Sending        svn-test-work\working_copies\merge_tests-34\A\C
-  #   Replacing      svn-test-work\working_copies\merge_tests-34\A\C\foo
-  #   Adding         svn-test-work\working_copies\merge_tests-34\A\C\foo\bar
-  #   Adding         svn-test-work\working_copies\merge_tests-34\A\C\foo\bar\
-  #                  new file 3
-  #   Deleting       svn-test-work\working_copies\merge_tests-34\A\C\foo\
-  #                  new file
-  #   svn: Commit failed (details follow):
-  #   svn: '/A/C/foo/new file' is out of date
-  #
-  # Test marked as XFail until issue #2690 is fixed.
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
                                         expected_status,
@@ -16739,7 +16711,7 @@ test_list = [ None,
               merge_file_replace,
               XFail(SkipUnless(merge_dir_replace,
                                server_has_mergeinfo)),
-              XFail(merge_dir_and_file_replace),
+              merge_dir_and_file_replace,
               merge_file_replace_to_mixed_rev_wc,
               merge_added_dir_to_deleted_in_target,
               SkipUnless(merge_ignore_whitespace,
