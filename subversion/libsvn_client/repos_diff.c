@@ -896,7 +896,7 @@ close_file(void *file_baton,
   if (eb->notify_func)
     {
       svn_wc_notify_t *notify;
-      svn_boolean_t is_replace = FALSE;
+      svn_boolean_t notified = FALSE;
       deleted_path_notify_t *dpn = apr_hash_get(eb->deleted_paths, b->wcpath,
                                               APR_HASH_KEY_STRING);
       if (dpn)
@@ -904,26 +904,24 @@ close_file(void *file_baton,
           svn_wc_notify_action_t new_action;
           if (dpn->action == svn_wc_notify_update_delete
               && action == svn_wc_notify_update_add)
-            {
-              is_replace = TRUE;
-              new_action = svn_wc_notify_update_replace;
-            }
+            new_action = svn_wc_notify_update_replace;
           else
             new_action = dpn->action;
 
           if (action != svn_wc_notify_tree_conflict)
             {
-              notify  = svn_wc_create_notify(b->wcpath, new_action, pool);
+              notify = svn_wc_create_notify(b->wcpath, new_action, pool);
               notify->kind = dpn->kind;
               notify->content_state = notify->prop_state = dpn->state;
               notify->lock_state = svn_wc_notify_lock_state_inapplicable;
               (*eb->notify_func)(eb->notify_baton, notify, pool);
+              notified = TRUE;
             }
           apr_hash_set(eb->deleted_paths, b->wcpath,
                        APR_HASH_KEY_STRING, NULL);
         }
 
-      if (!is_replace)
+      if (!notified)
         {
           notify = svn_wc_create_notify(b->wcpath, action, pool);
           notify->kind = svn_node_file;
