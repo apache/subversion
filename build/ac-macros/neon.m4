@@ -141,7 +141,7 @@ AC_DEFUN(SVN_NEON_CONFIG,
       if test "$NEON_PKG_CONFIG" = "yes" ; then
         NEON_VERSION=`$PKG_CONFIG neon --modversion`
       else
-        NEON_VERSION=`$neon_config --version | sed -e 's/^neon //'`
+        NEON_VERSION=`$neon_config --version | $SED -e 's/^neon //'`
       fi
       AC_MSG_RESULT([$NEON_VERSION])
 
@@ -165,8 +165,8 @@ AC_DEFUN(SVN_NEON_CONFIG,
            test "$svn_allowed_neon" = "any"; then
             svn_allowed_neon_on_system="yes"
             if test "$NEON_PKG_CONFIG" = "yes"; then
-              SVN_NEON_INCLUDES=[`$PKG_CONFIG neon --cflags | sed -e 's/-D[^ ]*//g'`]
-              CFLAGS=["$CFLAGS `$PKG_CONFIG neon --cflags | sed -e 's/-I[^ ]*//g'`"]
+              SVN_NEON_INCLUDES=[`$PKG_CONFIG neon --cflags | $SED -e 's/-D[^ ]*//g'`]
+              CFLAGS=["$CFLAGS `$PKG_CONFIG neon --cflags | $SED -e 's/-I[^ ]*//g'`"]
               old_CFLAGS="$CFLAGS"
               old_LIBS="$LIBS"
               NEON_LIBS=`$PKG_CONFIG neon --libs`
@@ -186,8 +186,8 @@ int main()
               CFLAGS="$old_CFLAGS"
               LIBS="$old_LIBS"
             else
-              SVN_NEON_INCLUDES=[`$neon_config --cflags | sed -e 's/-D[^ ]*//g'`]
-              CFLAGS=["$CFLAGS `$neon_config --cflags | sed -e 's/-I[^ ]*//g'`"]
+              SVN_NEON_INCLUDES=[`$neon_config --cflags | $SED -e 's/-D[^ ]*//g'`]
+              CFLAGS=["$CFLAGS `$neon_config --cflags | $SED -e 's/-I[^ ]*//g'`"]
               NEON_LIBS=`$neon_config --libs`
             fi
             svn_lib_neon="yes"

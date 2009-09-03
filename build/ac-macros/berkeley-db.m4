@@ -63,17 +63,17 @@ AC_DEFUN(SVN_LIB_BERKELEY_DB,
       fi
     else
       if echo "$withval" | $EGREP ":.*:.*:" > /dev/null; then
-        svn_berkeley_db_header=["`echo "$withval" | sed -e "s/\([^:]*\):.*/\1/"`"]
+        svn_berkeley_db_header=["`echo "$withval" | $SED -e "s/\([^:]*\):.*/\1/"`"]
         SVN_DB_INCLUDES=""
-        for i in [`echo "$withval" | sed -e "s/.*:\([^:]*\):[^:]*:.*/\1/"`]; do
+        for i in [`echo "$withval" | $SED -e "s/.*:\([^:]*\):[^:]*:.*/\1/"`]; do
           SVN_DB_INCLUDES="$SVN_DB_INCLUDES -I$i"
         done
         SVN_DB_INCLUDES="${SVN_DB_INCLUDES## }"
-        for l in [`echo "$withval" | sed -e "s/.*:[^:]*:\([^:]*\):.*/\1/"`]; do
+        for l in [`echo "$withval" | $SED -e "s/.*:[^:]*:\([^:]*\):.*/\1/"`]; do
           LDFLAGS="$LDFLAGS -L$l"
         done
         SVN_DB_LIBS=""
-        for l in [`echo "$withval" | sed -e "s/.*:\([^:]*\)/\1/"`]; do
+        for l in [`echo "$withval" | $SED -e "s/.*:\([^:]*\)/\1/"`]; do
           SVN_DB_LIBS="$SVN_DB_LIBS -l$l"
         done
         SVN_DB_LIBS="${SVN_DB_LIBS## }"
@@ -161,7 +161,7 @@ AC_DEFUN(SVN_LIB_BERKELEY_DB_TRY,
     # Or that it resides in a non-standard location which we would have
     # to compensate with using something like -R`$apu_config --prefix`/lib.
     #
-    SVN_DB_LIBS=["${SVN_DB_LIBS-`$apu_config --libs | sed -e 's/.*\(-ldb[^[:space:]]*\).*/\1/' | $EGREP -- '-ldb[^[:space:]]*'`}"]
+    SVN_DB_LIBS=["${SVN_DB_LIBS-`$apu_config --libs | $SED -e 's/.*\(-ldb[^[:space:]]*\).*/\1/' | $EGREP -- '-ldb[^[:space:]]*'`}"]
 
     CPPFLAGS="$SVN_DB_INCLUDES $SVN_APRUTIL_INCLUDES $CPPFLAGS" 
     LIBS="`$apu_config --ldflags` $SVN_DB_LIBS $LIBS"

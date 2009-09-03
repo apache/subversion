@@ -183,15 +183,6 @@ Candidate changes:
 Approved changes:
 =================
 
- * r38851, r38875, r38881
-   Fix Issue #3458: Use '$SED' instead of 'sed'.
-   Notes:
-     There are 2 trivial merge conflicts in configure.ac. The first (in Expat
-     detection code) should be resolved with 'mc'. The second (with AC_PROG_SED)
-     should be resolved with 'tc'.
-   Votes:
-     +1: arfrever, stsp, hwright
-
  * r38850
    Fix remaining part of Issue 3453: Building Subversion 1.6 requires GNU grep 2.5.
    Votes:
