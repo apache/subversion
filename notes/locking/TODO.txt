@@ -5,8 +5,6 @@ TODO for locking
 NICE TO HAVE
 ------------
 
-* put quotes around user names as well as around lock names when we error.
-
 * support cancellation during lock/unlock.
 
 -----------------------------------------------

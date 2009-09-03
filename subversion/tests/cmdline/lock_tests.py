@@ -68,7 +68,7 @@ def lock_file(sbox):
                                      '-m', '', file_path)
 
   # --- Meanwhile, in our other working copy... ---
-  err_re = "((.*User jconstant does not own lock on path.*)|(.*423 Locked.*))"
+  err_re = "((.*User 'jconstant' does not own lock on path.*)|(.*423 Locked.*))"
 
   svntest.main.run_svn(None, 'update', wc_b)
   # -- Try to change a file --
@@ -88,7 +88,7 @@ def lock_file(sbox):
   # change the locked file's properties
   svntest.main.run_svn(None, 'propset', 'sneakyuser', 'Sally', file_path_b)
 
-  err_re = "((.*User jconstant does not own lock on path.*)" + \
+  err_re = "((.*User 'jconstant' does not own lock on path.*)" + \
              "|(.*At least one property change failed.*))"
 
   # attempt (and fail) to commit as user Sally
