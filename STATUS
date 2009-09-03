@@ -190,7 +190,7 @@ Approved changes:
      detection code) should be resolved with 'mc'. The second (with AC_PROG_SED)
      should be resolved with 'tc'.
    Votes:
-     +1: arfrever, stsp
+     +1: arfrever, stsp, hwright
 
  * r38850
    Fix remaining part of Issue 3453: Building Subversion 1.6 requires GNU grep 2.5.
