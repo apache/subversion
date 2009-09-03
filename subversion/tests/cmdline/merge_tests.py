@@ -2698,8 +2698,6 @@ def merge_dir_replace(sbox):
     'A/C/foo/file foo'       : Item(verb='Adding'),
     'A/C/foo/bar'            : Item(verb='Adding'),
     'A/C/foo/bar/new file 3' : Item(verb='Adding'),
-    'A/C/foo/new file'       : Item(verb='Deleting'),
-    'A/C/foo/new file 2'     : Item(verb='Deleting'),
     })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
@@ -15892,8 +15890,7 @@ test_list = [ None,
               SkipUnless(cherry_pick_text_conflict,
                          server_has_mergeinfo),
               merge_file_replace,
-              XFail(SkipUnless(merge_dir_replace,
-                               server_has_mergeinfo)),
+              SkipUnless(merge_dir_replace, server_has_mergeinfo),
               XFail(merge_dir_and_file_replace),
               merge_file_replace_to_mixed_rev_wc,
               merge_added_dir_to_deleted_in_target,

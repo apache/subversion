@@ -723,6 +723,14 @@ harvest_committables(apr_hash_t *committables,
           if (this_entry->depth == svn_depth_exclude)
             continue;
 
+          /* Skip schedule-delete children inside of schedule-replace
+           * directories which were deleted pre-replace.
+           * Attempting to commit such nodes causes an out-of-date error.
+           * See issue #3281. */
+          if (entry->schedule == svn_wc_schedule_replace &&
+              this_entry->schedule == svn_wc_schedule_delete)
+            continue;
+
           name_uri = svn_path_uri_encode(name, iterpool);
 
           full_path = svn_path_join(path, name, iterpool);

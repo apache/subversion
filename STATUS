@@ -217,16 +217,3 @@ Candidate changes:
 
 Approved changes:
 =================
-
- * r38927
-   Fix issue #3281, "Merge a replacement of a directory".
-   Justification:
-     The result of a merge replacing a directory cannot be committed
-     without this fix.
-   Notes:
-     See issue #3281, the issues linked from there, and the huge commment
-     added in r38927 on trunk for more information.
-   Branch:
-     ^/branches/1.6.x-r38927
-   Votes:
-     +1: stsp, gstein, neels
