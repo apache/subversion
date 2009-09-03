@@ -11,7 +11,7 @@ TABLE OF CONTENTS
 
     1. INTRODUCTION
 
-    2. HIGH LEVEL DESIGN
+    2. HIGH LEVEL DESIGN ISSUES
       2.1 Invocation
       2.2 Repository Transformation
       2.3 Propagation (to Clients, Mirrors, Backups)
@@ -30,7 +30,7 @@ OPEN ISSUES
   feature.
 
 
-2. HIGH LEVEL DESIGN
+2. HIGH LEVEL DESIGN ISSUES
 
   The design of the Obliterate feature, if taken at its widest potential
   scope, can be divided into the following areas. In each area, suggestions
