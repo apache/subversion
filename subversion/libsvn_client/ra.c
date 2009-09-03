@@ -322,24 +322,10 @@ svn_client__open_ra_session_internal(svn_ra_session_t **ra_session,
   if (base_dir)
     {
       const char *base_dir_abspath;
-      const svn_wc_entry_t *entry;
-      svn_error_t *err;
 
       SVN_ERR(svn_dirent_get_absolute(&base_dir_abspath, base_dir, pool));
-
-      err = svn_wc__get_entry_versioned(&entry, ctx->wc_ctx, base_dir_abspath,
-                                        svn_node_unknown, FALSE, FALSE,
-                                        pool, pool);
-      if (err && err->apr_err == SVN_ERR_ENTRY_NOT_FOUND)
-        {
-          svn_error_clear(err);
-          entry = NULL;
-        }
-      else if (err)
-        return svn_error_return(err);
-
-      if (entry && entry->uuid)
-        uuid = entry->uuid;
+      SVN_ERR(svn_wc__node_get_repos_info(NULL, &uuid, ctx->wc_ctx,
+                                          base_dir_abspath, pool, pool));
     }
 
   return svn_error_return(svn_ra_open3(ra_session, base_url, uuid, cbtable, cb,
@@ -389,16 +375,9 @@ svn_client_uuid_from_path2(const char **uuid,
                            apr_pool_t *result_pool,
                            apr_pool_t *scratch_pool)
 {
-  const svn_wc_entry_t *entry;
-
-  SVN_ERR(svn_wc__get_entry_versioned(&entry, ctx->wc_ctx, local_abspath,
-                                      svn_node_unknown, TRUE, /* show deleted */
-                                      FALSE, scratch_pool, scratch_pool));
-
-  if (entry->uuid)
-    *uuid = apr_pstrdup(result_pool, entry->uuid);
-
-  return SVN_NO_ERROR;
+  return svn_error_return(
+    svn_wc__node_get_repos_info(NULL, uuid, ctx->wc_ctx, local_abspath,
+                                result_pool, scratch_pool));
 }
 
 
