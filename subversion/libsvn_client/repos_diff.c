@@ -857,8 +857,8 @@ close_file(void *file_baton,
       dpn = apr_hash_get(eb->deleted_paths, b->wcpath, APR_HASH_KEY_STRING);
       if (dpn)
         {
-          /* If any was found, we will handle the pending 'delete'
-           * notification (DPN) here. Remove it from the list. */
+          /* If any was found, we will handle the pending 'deleted path
+           * notification' (DPN) here. Remove it from the list. */
           apr_hash_set(eb->deleted_paths, b->wcpath,
                        APR_HASH_KEY_STRING, NULL);
 
