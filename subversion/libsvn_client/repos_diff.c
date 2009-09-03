@@ -319,28 +319,6 @@ get_dirprops_from_ra(struct dir_baton *b, svn_revnum_t base_revision)
 }
 
 
-/* Create an empty file, the path to the file is returned in
-   EMPTY_FILE_PATH.  If ADM_ACCESS is not NULL and a lock is held,
-   create the file in the adm tmp/ area, otherwise use a system temp
-   directory.
-
-   If FILE is non-NULL, an open file is returned in *FILE. */
-static svn_error_t *
-create_empty_file(apr_file_t **file,
-                  const char **empty_file_path,
-                  svn_wc_adm_access_t *adm_access,
-                  svn_io_file_del_t delete_when,
-                  apr_pool_t *pool)
-{
-  if (adm_access && svn_wc_adm_locked(adm_access))
-    return svn_wc_create_tmp_file2(file, empty_file_path,
-                                   svn_wc_adm_access_path(adm_access),
-                                   delete_when, pool);
-
-  return svn_io_open_unique_file3(file, empty_file_path, NULL,
-                                  delete_when, pool, pool);
-}
-
 /* Return in *PATH_ACCESS the access baton for the directory PATH by
    searching the access baton set of ADM_ACCESS.  If ADM_ACCESS is NULL
    then *PATH_ACCESS will be NULL.  If LENIENT is TRUE then failure to find
@@ -403,9 +381,9 @@ get_empty_file(struct edit_baton *eb,
   /* Note that we tried to use /dev/null in r17220, but
      that won't work on Windows: it's impossible to stat NUL */
   if (!eb->empty_file)
-    SVN_ERR(create_empty_file(NULL, &(eb->empty_file), eb->adm_access,
-                              svn_io_file_del_on_pool_cleanup, eb->pool));
-
+    SVN_ERR(svn_io_open_unique_file3(NULL, &(eb->empty_file), NULL,
+                                     svn_io_file_del_on_pool_cleanup,
+                                     eb->pool, eb->pool));
 
   *empty_file_path = eb->empty_file;
 
@@ -747,7 +725,6 @@ apply_textdelta(void *file_baton,
                 void **handler_baton)
 {
   struct file_baton *b = file_baton;
-  svn_wc_adm_access_t *adm_access;
 
   /* Skip *everything* within a newly tree-conflicted directory. */
   if (b->skip)
@@ -764,23 +741,10 @@ apply_textdelta(void *file_baton,
 
   /* Open the file that will become the second revision after applying the
      text delta, it starts empty */
-  if (b->edit_baton->adm_access)
-    {
-      svn_error_t *err;
-
-      err = svn_wc_adm_probe_retrieve(&adm_access, b->edit_baton->adm_access,
-                                      b->wcpath, pool);
-      if (err)
-        {
-          svn_error_clear(err);
-          adm_access = NULL;
-        }
-    }
-  else
-    adm_access = NULL;
-  SVN_ERR(create_empty_file(&(b->file_end_revision),
-                            &(b->path_end_revision), adm_access,
-                            svn_io_file_del_on_pool_cleanup, b->pool));
+  SVN_ERR(svn_io_open_unique_file3(&(b->file_end_revision),
+                                   &(b->path_end_revision), NULL,
+                                   svn_io_file_del_on_pool_cleanup,
+                                   b->pool, pool));
 
   svn_txdelta_apply(svn_stream_from_aprfile2(b->file_start_revision, TRUE,
                                              b->pool),
