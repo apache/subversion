@@ -179,7 +179,7 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
   /* Open an RA session to 'source' URL */
   SVN_ERR(svn_client__ra_session_from_path(&ra_session, &revnum,
                                            &switch_rev_url,
-                                           switch_url, adm_access,
+                                           switch_url, anchor,
                                            peg_revision, revision,
                                            ctx, pool));
   SVN_ERR(svn_ra_get_repos_root2(ra_session, &source_root, pool));

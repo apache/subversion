@@ -217,7 +217,7 @@ svn_client__get_youngest_common_ancestor(const char **ancestor_path,
    that it is the same node in both PEG_REVISION and REVISION.  If it
    is not, then @c SVN_ERR_CLIENT_UNRELATED_RESOURCES is returned.
 
-   BASE_ACCESS is the working copy the ra_session corresponds to, should
+   BASE_DIR is the working copy path the ra_session corresponds to, should
    only be used if PATH_OR_URL is a url.
 
    If PEG_REVISION's kind is svn_opt_revision_unspecified, it is
@@ -236,7 +236,7 @@ svn_client__ra_session_from_path(svn_ra_session_t **ra_session_p,
                                  svn_revnum_t *rev_p,
                                  const char **url_p,
                                  const char *path_or_url,
-                                 svn_wc_adm_access_t *base_access,
+                                 const char *base_dir,
                                  const svn_opt_revision_t *peg_revision,
                                  const svn_opt_revision_t *revision,
                                  svn_client_ctx_t *ctx,
