@@ -331,17 +331,21 @@ svn_wc__node_get_children(const apr_array_header_t **children,
 
 
 /** 
- * Fetch the repository root URL of the given @a local_abspath into
- * @a repos_root_url. Use @wc_ctx to access the working copy at
- * @a local_abspath, @a scratch_pool for all temporary allocations,
+ * Fetch the repository root information for a given @a local_abspath into
+ * @a *repos_root_url and @a repos_uuid. Use @wc_ctx to access the working copy
+ * for @a local_abspath, @a scratch_pool for all temporary allocations,
  * @a result_pool for result allocations. Note: the result may be NULL if the
  * given node has no repository root associated with it (e.g. locally added).
+ *
+ * Either input value may be NULL, indicating no interest.
  */
-svn_error_t *svn_wc__node_get_repos_root(const char **repos_root_url,
-                                         svn_wc_context_t *wc_ctx,
-                                         const char *local_abspath,
-                                         apr_pool_t *result_pool,
-                                         apr_pool_t *scratch_pool);
+svn_error_t *
+svn_wc__node_get_repos_info(const char **repos_root_url,
+                            const char **repos_uuid,
+                            svn_wc_context_t *wc_ctx,
+                            const char *local_abspath,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool);
 
 /* A convenience function for creating a new-style conflict description from
    an old one.
