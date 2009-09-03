@@ -183,11 +183,6 @@ Candidate changes:
 Approved changes:
 =================
 
- * r38850
-   Fix remaining part of Issue 3453: Building Subversion 1.6 requires GNU grep 2.5.
-   Votes:
-     +1: arfrever, stsp, hwright
-
  * r38872
    Improve "Attempt to add tree conflict that already exists" error message.
    Justification:
