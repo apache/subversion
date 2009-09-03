@@ -512,8 +512,10 @@ svn_wc__add_tree_conflict(const svn_wc_conflict_description_t *conflict,
   SVN_ERR(svn_wc__get_tree_conflict(&existing_conflict, conflict->path,
                                     adm_access, pool));
   if (existing_conflict != NULL)
-    return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
-                         _("Attempt to add tree conflict that already exists"));
+    return svn_error_createf(SVN_ERR_WC_CORRUPT, NULL,
+                             _("Attempt to add tree conflict that already "
+                               "exists at '%s'"),
+                             svn_path_local_style(conflict->path, pool));
 
   SVN_ERR(svn_wc__loggy_add_tree_conflict(&log_accum, conflict, adm_access,
                                           pool));
