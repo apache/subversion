@@ -556,9 +556,8 @@ add_directory(const char *path,
 
   if (b->tree_conflicted)
     action = svn_wc_notify_tree_conflict;
-  else
-  if ((state == svn_wc_notify_state_missing)
-      || (state == svn_wc_notify_state_obstructed))
+  else if (state == svn_wc_notify_state_missing ||
+           state == svn_wc_notify_state_obstructed)
     action = svn_wc_notify_skip;
   else
     action = svn_wc_notify_update_add;
