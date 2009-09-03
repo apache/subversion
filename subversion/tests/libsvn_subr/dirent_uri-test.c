@@ -437,7 +437,7 @@ static svn_error_t *
 test_dirent_basename(apr_pool_t *pool)
 {
   int i;
-  char *result;
+  const char *result;
 
   struct {
     const char *path;
@@ -491,7 +491,7 @@ static svn_error_t *
 test_uri_basename(apr_pool_t *pool)
 {
   int i;
-  char *result;
+  const char *result;
 
   struct {
     const char *path;
@@ -1184,6 +1184,99 @@ test_uri_is_ancestor(apr_pool_t *pool)
            "svn_uri_is_ancestor (%s, %s) returned %s instead of %s",
            tests[i].path1, tests[i].path2, retval ? "TRUE" : "FALSE",
            tests[i].result ? "TRUE" : "FALSE");
+    }
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_dirent_skip_ancestor(apr_pool_t *pool)
+{
+  apr_size_t i;
+
+  /* Dirents to test and their expected results. */
+  struct {
+    const char *path1;
+    const char *path2;
+    const char *result;
+  } tests[] = {
+    { "/foo",            "/foo/bar",        "bar"},
+    { "/foo/bar",        "/foot/bar",       "/foot/bar"},
+    { "/foo",            "/foo",            ""},
+    { "/foo",            "/foot",           "/foot"},
+    { "/foot",           "/foo",            "/foo"},
+    { "",                "foo",             "foo"},
+    { "",                "/foo",            "/foo"},
+    { "/",               "/foo",            "foo"},
+    { "/foo/bar/bla",    "/foo/bar",        "/foo/bar"},
+    { "/foo/bar",        "/foo/bar/bla",    "bla"},
+    { "foo/bar",         "foo",             "foo"},
+    { "/foo/bar",        "foo",             "foo"},
+    { "/",               "bar/bla",         "bar/bla"},
+#ifdef WIN32
+    { "A:/foo",          "A:/foo/bar",      "bar"},
+    { "A:/foo",          "A:/foot",         "A:/foot"},
+    { "A:/",             "A:/foo",          "foo"},
+    { "A:",              "A:foo",           "foo"},
+    { "A:",              "A:/",             "A:/"},
+    { "//srv/share",     "//vrs/share",     "//vrs/share"},
+    { "//srv",           "//srv/share",     "//srv/share"},
+    { "//srv/share",     "//srv/share/foo", "foo"},
+    { "/",               "//srv/share",     "//srv/share"},
+#endif
+  };
+
+  for (i = 0; i < COUNT_OF(tests); i++)
+    {
+      const char* retval;
+
+      retval = svn_dirent_skip_ancestor(tests[i].path1, tests[i].path2);
+      if (strcmp(tests[i].result, retval))
+        return svn_error_createf(
+             SVN_ERR_TEST_FAILED, NULL,
+             "test_dirent_skip_ancestor (%s, %s) returned %s instead of %s",
+             tests[i].path1, tests[i].path2, retval, tests[i].result);
+    }
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_uri_skip_ancestor(apr_pool_t *pool)
+{
+  apr_size_t i;
+
+  /* Dirents to test and their expected results. */
+  struct {
+    const char *path1;
+    const char *path2;
+    const char *result;
+  } tests[] = {
+    { "/foo",            "/foo/bar",        "bar"},
+    { "/foo/bar",        "/foot/bar",       "/foot/bar"},
+    { "/foo",            "/foo",            ""},
+    { "/foo",            "/foot",           "/foot"},
+    { "/foot",           "/foo",            "/foo"},
+    { "",                "foo",             "foo"},
+    { "",                "/foo",            "/foo"},
+    { "/",               "/foo",            "foo"},
+    { "/foo/bar/bla",    "/foo/bar",        "/foo/bar"},
+    { "/foo/bar",        "/foo/bar/bla",    "bla"},
+    { "foo/bar",         "foo",             "foo"},
+    { "/foo/bar",        "foo",             "foo"},
+    { "/",               "bar/bla",         "bar/bla"},
+    { "http://server",   "http://server/q", "q" },
+    { "svn://server",   "http://server/q",  "http://server/q" },
+  };
+
+  for (i = 0; i < COUNT_OF(tests); i++)
+    {
+      const char* retval;
+
+      retval = svn_uri_skip_ancestor(tests[i].path1, tests[i].path2);
+      if (strcmp(tests[i].result, retval))
+        return svn_error_createf(
+             SVN_ERR_TEST_FAILED, NULL,
+             "svn_uri_skip_ancestor (%s, %s) returned %s instead of %s",
+             tests[i].path1, tests[i].path2, retval, tests[i].result);
     }
   return SVN_NO_ERROR;
 }
@@ -1907,6 +2000,10 @@ struct svn_test_descriptor_t test_funcs[] =
                    "test svn_dirent_is_ancestor"),
     SVN_TEST_PASS2(test_uri_is_ancestor,
                    "test svn_uri_is_ancestor"),
+    SVN_TEST_PASS2(test_dirent_skip_ancestor,
+                   "test test_dirent_skip_ancestor"),
+    SVN_TEST_PASS2(test_uri_skip_ancestor,
+                   "test test_uri_skip_ancestor"),
     SVN_TEST_PASS2(test_dirent_get_absolute,
                    "test svn_dirent_get_absolute"),
     SVN_TEST_PASS2(test_dirent_condense_targets,

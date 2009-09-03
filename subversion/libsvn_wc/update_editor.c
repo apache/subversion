@@ -1112,7 +1112,7 @@ prep_directory(struct dir_baton *db,
   /* Use the repository root of the anchor, but only if it actually is an
      ancestor of the URL of this directory. */
   if (db->edit_baton->repos
-      && svn_path_is_ancestor(db->edit_baton->repos, ancestor_url))
+      && svn_uri_is_ancestor(db->edit_baton->repos, ancestor_url))
     repos = db->edit_baton->repos;
   else
     repos = NULL;
@@ -1328,7 +1328,7 @@ open_root(void *edit_baton,
       tmp_entry.revision = *(eb->target_revision);
       tmp_entry.url = d->new_URL;
       /* See open_directory() for why this check is necessary. */
-      if (eb->repos && svn_path_is_ancestor(eb->repos, d->new_URL))
+      if (eb->repos && svn_uri_is_ancestor(eb->repos, d->new_URL))
         {
           tmp_entry.repos = eb->repos;
           flags |= SVN_WC__ENTRY_MODIFY_REPOS;
@@ -2737,7 +2737,7 @@ open_directory(const char *path,
      repository root as the anchor of the update; we can't just blindly
      use the that repository root here, so make sure it is really an
      ancestor. */
-  if (eb->repos && svn_path_is_ancestor(eb->repos, db->new_URL))
+  if (eb->repos && svn_uri_is_ancestor(eb->repos, db->new_URL))
     {
       tmp_entry.repos = eb->repos;
       flags |= SVN_WC__ENTRY_MODIFY_REPOS;
@@ -4817,7 +4817,7 @@ make_editor(svn_revnum_t *target_revision,
   /* Disallow a switch operation to change the repository root of the target,
      if that is known. */
   if (switch_url && entry && entry->repos &&
-      ! svn_path_is_ancestor(entry->repos, switch_url))
+      ! svn_uri_is_ancestor(entry->repos, switch_url))
     return svn_error_createf(
        SVN_ERR_WC_INVALID_SWITCH, NULL,
        _("'%s'\n"
@@ -5023,7 +5023,7 @@ svn_wc_get_switch_editor3(svn_revnum_t *target_revision,
                           svn_wc_traversal_info_t *traversal_info,
                           apr_pool_t *pool)
 {
-  SVN_ERR_ASSERT(switch_url && svn_path_is_canonical(switch_url, pool));
+  SVN_ERR_ASSERT(switch_url && svn_uri_is_canonical(switch_url, pool));
 
   /* ### rev this to allow the caller to provide a context. */
   return make_editor(target_revision, anchor, svn_wc_adm_access_path(anchor),
@@ -5554,7 +5554,7 @@ svn_wc_add_repos_file3(const char *dst_path,
     new_URL = svn_path_url_add_component2(ent->url, base_name, pool);
 
     if (copyfrom_url && ent->repos &&
-        ! svn_path_is_ancestor(ent->repos, copyfrom_url))
+        ! svn_uri_is_ancestor(ent->repos, copyfrom_url))
       return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
                                _("Copyfrom-url '%s' has different repository"
                                  " root than '%s'"),

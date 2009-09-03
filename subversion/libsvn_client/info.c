@@ -259,7 +259,6 @@ struct found_entry_baton
   svn_info_receiver_t receiver;
   void *receiver_baton;
   svn_wc_context_t *wc_ctx;
-  svn_wc_adm_access_t *adm_access;  /* adm access baton for root of walk */
 };
 
 /* An svn_wc_entry_callbacks2_t callback function. */
@@ -368,7 +367,6 @@ crawl_entries(const char *wcpath,
   fe_baton.changelist_hash = changelist_hash;
   fe_baton.receiver = receiver;
   fe_baton.receiver_baton = receiver_baton;
-  fe_baton.adm_access = adm_access;
   fe_baton.wc_ctx = ctx->wc_ctx;
   return svn_wc_walk_entries3(wcpath, adm_access,
                               &entry_walk_callbacks, &fe_baton,

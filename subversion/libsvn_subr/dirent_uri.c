@@ -1077,16 +1077,16 @@ svn_dirent_dirname(const char *dirent, apr_pool_t *pool)
     return apr_pstrmemdup(pool, dirent, dirent_previous_segment(dirent, len));
 }
 
-char *
+const char *
 svn_dirent_basename(const char *dirent, apr_pool_t *pool)
 {
   apr_size_t len = strlen(dirent);
   apr_size_t start;
 
-  assert(svn_dirent_is_canonical(dirent, pool));
+  assert(!pool || svn_dirent_is_canonical(dirent, pool));
 
   if (svn_dirent_is_root(dirent, len))
-    return apr_pstrmemdup(pool, "", 0);
+    return "";
   else
     {
       start = len;
@@ -1098,7 +1098,10 @@ svn_dirent_basename(const char *dirent, apr_pool_t *pool)
         --start;
     }
 
-  return apr_pstrmemdup(pool, dirent + start, len - start);
+  if (pool)
+    return apr_pstrmemdup(pool, dirent + start, len - start);
+  else
+    return dirent + start;
 }
 
 void
@@ -1129,16 +1132,16 @@ svn_uri_dirname(const char *uri, apr_pool_t *pool)
     return apr_pstrmemdup(pool, uri, uri_previous_segment(uri, len));
 }
 
-char *
+const char *
 svn_uri_basename(const char *uri, apr_pool_t *pool)
 {
   apr_size_t len = strlen(uri);
   apr_size_t start;
 
-  assert(svn_uri_is_canonical(uri, pool));
+  assert(svn_uri_is_canonical(uri, NULL));
 
   if (svn_uri_is_root(uri, len))
-    return apr_pstrmemdup(pool, "", 0);
+    return "";
   else
     {
       start = len;
@@ -1146,7 +1149,10 @@ svn_uri_basename(const char *uri, apr_pool_t *pool)
         --start;
     }
 
-  return apr_pstrmemdup(pool, uri + start, len - start);
+  if (pool)
+    return apr_pstrmemdup(pool, uri + start, len - start);
+  else
+    return uri + start;
 }
 
 void
@@ -1258,6 +1264,70 @@ svn_uri_is_ancestor(const char *uri1, const char *uri2)
 {
   return is_ancestor(type_uri, uri1, uri2);
 }
+
+const char *
+svn_dirent_skip_ancestor(const char *dirent1,
+                         const char *dirent2)
+{
+  apr_size_t len = strlen(dirent1);
+  apr_size_t root_len;
+
+  if (0 != memcmp(dirent1, dirent2, len))
+    return dirent2; /* dirent1 is no ancestor of dirent2 */
+
+  if (dirent2[len] == 0)
+    return ""; /* dirent1 == dirent2 */
+
+  root_len = dirent_root_length(dirent2, strlen(dirent2));
+  if (root_len > len)
+    return dirent2; /* Different root */
+
+  if (len == 1 && dirent2[0] == '/')
+    return dirent2 + 1;
+
+  if (dirent2[len] == '/')
+    return dirent2 + len + 1;
+
+#ifdef WIN32
+  if (root_len == len && len > 0 && dirent2[len-1])
+    return dirent2 + len;
+#endif
+
+  return dirent2;
+}
+
+const char *
+svn_uri_skip_ancestor(const char *uri1,
+                      const char *uri2)
+{
+  apr_size_t len = strlen(uri1);
+
+  if (0 != memcmp(uri1, uri2, len))
+    return uri2; /* dirent1 is no ancestor of dirent2 */
+
+  if (uri2[len] == 0)
+    return ""; /* dirent1 == dirent2 */
+
+  if (len == 1 && uri2[0] == '/')
+    return uri2 + 1;
+
+  if (len > 0 && uri2[len] == '/')
+    return uri2 + len + 1;
+
+  return uri2;
+}
+
+/** Returns the part of @a path2 that is below @a path1, or "" iif @a path1
+ * is equal to @a path2. If @a path2 is not below @a path1, return @a path2.
+ *
+ * This function assumes @a path1 and @a path2 are both absolute or relative
+ * in the same way.
+ *
+ * @since New in 1.7.
+ */
+const char *
+svn_uri_skip_ancestor(const char *path1,
+                      const char *path2);
 
 svn_boolean_t
 svn_dirent_is_absolute(const char *dirent)

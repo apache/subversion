@@ -1898,10 +1898,12 @@ write_entry(svn_wc__db_t *db,
 
       case svn_wc_schedule_delete:
         working_node = MAYBE_ALLOC(working_node, scratch_pool);
-        if (!this_dir->copied)
+        /* If the entry is part of a REPLACED (not COPIED) subtree,
+           then it needs a BASE node. */
+       if (! (entry->copied
+               || (this_dir->copied
+                   && this_dir->schedule == svn_wc_schedule_add)))
           base_node = MAYBE_ALLOC(base_node, scratch_pool);
-        /* ### what about a deleted BASE tree, with a copy over the top,
-           ### followed by a delete? there should be a base node then...  */
         break;
 
       case svn_wc_schedule_replace:
@@ -2195,9 +2197,12 @@ write_entry(svn_wc__db_t *db,
             }
           else
             {
-              /* If we are part of a COPIED subtree, then the deletion is
-                 referring to the WORKING tree, not the BASE tree.  */
-              if (entry->copied || this_dir->copied)
+              /* If the entry is part of a COPIED (not REPLACED) subtree,
+                 then the deletion is referring to the WORKING node, not
+                 the BASE node. */
+              if (entry->copied 
+                  || (this_dir->copied
+                      && this_dir->schedule == svn_wc_schedule_add))
                 working_node->presence = svn_wc__db_status_not_present;
               else
                 working_node->presence = svn_wc__db_status_base_deleted;
@@ -3048,7 +3053,7 @@ svn_wc__tweak_entry(svn_wc__db_t *db,
   if (repos != NULL
       && (! entry->repos || strcmp(repos, entry->repos))
       && entry->url
-      && svn_path_is_ancestor(repos, entry->url))
+      && svn_uri_is_ancestor(repos, entry->url))
     {
       svn_boolean_t set_repos = TRUE;
 
@@ -3069,7 +3074,7 @@ svn_wc__tweak_entry(svn_wc__db_t *db,
               child_entry = value;
 
               if (! child_entry->repos && child_entry->url
-                  && ! svn_path_is_ancestor(repos, child_entry->url))
+                  && ! svn_uri_is_ancestor(repos, child_entry->url))
                 {
                   set_repos = FALSE;
                   break;
@@ -3134,7 +3139,7 @@ svn_wc__entries_init(const char *path,
   const char *abspath;
   const char *repos_relpath;
 
-  SVN_ERR_ASSERT(! repos_root || svn_path_is_ancestor(repos_root, url));
+  SVN_ERR_ASSERT(! repos_root || svn_uri_is_ancestor(repos_root, url));
   SVN_ERR_ASSERT(depth == svn_depth_empty
                  || depth == svn_depth_files
                  || depth == svn_depth_immediates

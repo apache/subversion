@@ -2764,8 +2764,7 @@ svn_wc_parse_externals_description3(apr_array_header_t **externals_p,
                                         &item->revision, TRUE, FALSE,
                                         pool));
 
-      item->target_dir = svn_path_canonicalize
-        (svn_dirent_internal_style(item->target_dir, pool), pool);
+      item->target_dir = svn_dirent_internal_style(item->target_dir, pool);
 
       if (item->target_dir[0] == '\0' || item->target_dir[0] == '/'
           || svn_path_is_backpath_present(item->target_dir))
@@ -2778,7 +2777,7 @@ svn_wc_parse_externals_description3(apr_array_header_t **externals_p,
            item->target_dir);
 
       if (canonicalize_url)
-          item->url = svn_path_canonicalize(item->url, pool);
+          item->url = svn_uri_canonicalize(item->url, pool);
 
       if (externals_p)
         APR_ARRAY_PUSH(*externals_p, svn_wc_external_item2_t *) = item;

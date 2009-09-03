@@ -5109,12 +5109,6 @@ svn_wc_canonicalize_svn_prop(const svn_string_t **propval_p,
  * If @a cancel_func is non-NULL, it will be used along with @a cancel_baton
  * to periodically check if the client has canceled the operation.
  *
- * @a svnpatch_file is the temporary file to which the function dumps
- * serialized ra_svn protocol editor commands.  It somehow determines whether
- * or not to utilize svnpatch format in the diff output when checked against @c
- * NULL.  The caller must allocate the file handler, open and close the file
- * respectively before and after the call.
- *
  * @a changelists is an array of <tt>const char *</tt> changelist
  * names, used as a restrictive filter on items whose differences are
  * reported; that is, don't generate diffs about any item unless
@@ -5137,13 +5131,11 @@ svn_wc_get_diff_editor6(svn_wc_adm_access_t *anchor,
                         const apr_array_header_t *changelists,
                         const svn_delta_editor_t **editor,
                         void **edit_baton,
-                        apr_file_t *svnpatch_file,
                         apr_pool_t *pool);
 
 /**
  * Similar to svn_wc_get_diff_editor6(), but with an
- * @c svn_wc_diff_callbacks3_t instead of @c svn_wc_diff_callbacks4_t,
- * and @a svnpatch_file set to @c NULL.
+ * @c svn_wc_diff_callbacks3_t instead of @c svn_wc_diff_callbacks4_t.
  *
  * @since New in 1.6.
  *
@@ -5281,12 +5273,6 @@ svn_wc_get_diff_editor(svn_wc_adm_access_t *anchor,
  * @a ignore_ancestry is @c FALSE, then any discontinuous node ancestry will
  * result in the diff given as a full delete followed by an add.
  *
- * @a svnpatch_file is the temporary file to which the function dumps
- * serialized ra_svn protocol editor commands.  It somehow determines whether
- * or not to utilize svnpatch format in the diff output when checked against @c
- * NULL.  The caller must allocate the file handler, open and close the file
- * respectively before and after the call.
- *
  * @a changelists is an array of <tt>const char *</tt> changelist
  * names, used as a restrictive filter on items whose differences are
  * reported; that is, don't generate diffs about any item unless
@@ -5303,14 +5289,11 @@ svn_wc_diff6(svn_wc_adm_access_t *anchor,
              svn_depth_t depth,
              svn_boolean_t ignore_ancestry,
              const apr_array_header_t *changelists,
-             apr_file_t *svnpatch_file,
              apr_pool_t *pool);
 
 /**
  * Similar to svn_wc_diff6(), but with a @c svn_wc_diff_callbacks3_t argument
  * instead of @c svn_wc_diff_callbacks4_t.
- *
- * @a svnpatch_file is always set to @c NULL.
  *
  * @since New in 1.6.
  *
@@ -6399,11 +6382,10 @@ svn_wc_revision_status(svn_wc_revision_status_t **result_p,
 
 
 /**
- * Set @a path's entry's 'changelist' attribute to @a changelist iff
+ * Set @a local_abspath's 'changelist' attribute to @a changelist iff
  * @a changelist is not @c NULL; otherwise, remove any current
- * changelist assignment from @a path.  @a changelist may not be the
- * empty string.  @a adm_access is an access baton set that contains
- * @a path.
+ * changelist assignment from @a local_abspath.  @a changelist may not
+ * be the empty string.
  *
  * If @a cancel_func is not @c NULL, call it with @a cancel_baton to
  * determine if the client has cancelled the operation.
@@ -6412,16 +6394,35 @@ svn_wc_revision_status(svn_wc_revision_status_t **result_p,
  * report the change (using notification types @c
  * svn_wc_notify_changelist_set and @c svn_wc_notify_changelist_clear).
  *
+ * Use @a scratch_pool for temporary allocations.
+ *
  * @note For now, directories are NOT allowed to be associated with
  * changelists; there is confusion about whether they should behave
- * as depth-0 or depth-infinity objects.  If @a path is a directory,
+ * as depth-0 or depth-infinity objects.  If @a local_abspath is a directory,
  * return @c SVN_ERR_UNSUPPORTED_FEATURE.
  *
  * @note This metadata is purely a client-side "bookkeeping"
  * convenience, and is entirely managed by the working copy.
  *
- * @since New in 1.5.
+ * @since New in 1.7.
  */
+svn_error_t *
+svn_wc_set_changelist2(svn_wc_context_t *wc_ctx,
+                       const char *local_abspath,
+                       const char *changelist,
+                       svn_cancel_func_t cancel_func,
+                       void *cancel_baton,
+                       svn_wc_notify_func2_t notify_func,
+                       void *notify_baton,
+                       apr_pool_t *scratch_pool);
+
+/** Similar to svn_wc_set_changelist2(), but with an access baton and
+ * relative path.
+ *
+ * @since New in 1.5.
+ * @deprecated Provided for backward compatibility with the 1.6 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_set_changelist(const char *path,
                       const char *changelist,
@@ -6473,26 +6474,6 @@ svn_wc_crop_tree(svn_wc_adm_access_t *anchor,
                  apr_pool_t *pool);
 
 
-/**
- *
- * @defgroup svn_wc_svnpatch svnpatch related functions
- *
- * @{
- *
- */
-
-
-/**
- * Drive @a diff_editor against @a patch_file's clear-text Editor Commands.
- *
- * @since New in 1.7
- */
-svn_error_t *
-svn_wc_apply_svnpatch(svn_stream_t *patch_file,
-                      const svn_delta_editor_t *diff_editor,
-                      void *diff_edit_baton,
-                      apr_pool_t *pool);
-
 /** @} */
 
 /** @} */

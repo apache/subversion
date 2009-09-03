@@ -164,13 +164,14 @@ svn_uri_join(const char *base,
  *
  * Example: svn_dirent_basename("/foo/bar") -> "bar"
  *
- * The returned basename will be allocated in @a pool.
+ * The returned basename will be allocated in @a pool. If @a pool is NULL
+ * a pointer to the basename in @a dirent is returned
  *
  * @note If an empty string is passed, then an empty string will be returned.
  *
  * @since New in 1.7.
  */
-char *
+const char *
 svn_dirent_basename(const char *dirent,
                     apr_pool_t *pool);
 
@@ -252,13 +253,14 @@ svn_uri_split(const char *dirent,
  *
  * Example: svn_dirent_basename("http://server/foo/bar") -> "bar"
  *
- * The returned basename will be allocated in @a pool.
+  * The returned basename will be allocated in @a pool. If @a pool is NULL
+ * a pointer to the basename in @a uri is returned
  *
  * @note If an empty string is passed, then an empty string will be returned.
  *
  * @since New in 1.7.
  */
-char *
+const char *
 svn_uri_basename(const char *uri,
                  apr_pool_t *pool);
 
@@ -393,7 +395,7 @@ svn_dirent_get_longest_ancestor(const char *dirent1,
  * @a uri1 and @a uri2.  If there's no common ancestor, return the
  * empty path.
  *
- * @a path1 and @a path2 may be URLs.  In order for two URLs to have
+ * @a uri1 and @a uri2 may be URLs.  In order for two URLs to have
  * a common ancestor, they must (a) have the same protocol (since two URLs
  * with the same path but different protocols may point at completely
  * different resources), and (b) share a common ancestor in their path
@@ -402,8 +404,8 @@ svn_dirent_get_longest_ancestor(const char *dirent1,
  * @since New in 1.7.
  */
 char *
-svn_uri_get_longest_ancestor(const char *path1,
-                             const char *path2,
+svn_uri_get_longest_ancestor(const char *uri1,
+                             const char *uri2,
                              apr_pool_t *pool);
 
 /** Convert @a relative canonicalized dirent to an absolute dirent and
@@ -472,8 +474,35 @@ svn_dirent_is_ancestor(const char *path1,
  * @since New in 1.7.
  */
 svn_boolean_t
-svn_uri_is_ancestor(const char *path1,
-                    const char *path2);
+svn_uri_is_ancestor(const char *uri1,
+                    const char *uri2);
+
+
+/** Returns the relative path part of @a dirent2 that is below @a dirent1,
+ * or just "" iif @a dirent1 is equal to @a dirent2. If @a dirent2 is not
+ * below @a path1, return @a dirent2 completely.
+ *
+ * This function assumes @a dirent1 and @a dirent2 are both absolute or
+ * relative in the same way.
+ *
+ * @since New in 1.7.
+ */
+const char *
+svn_dirent_skip_ancestor(const char *dirent1,
+                         const char *dirent2);
+
+/** Returns the relative path part of @a uri2 that is below @a uri1, or just
+ * "" iif @a uri1 is equal to @a path2. If @a path2 is not below @a path1,
+ * return @a path2.
+ *
+ * This function assumes @a uri1 and @a uri2 are both absolute or relative
+ * in the same way.
+ *
+ * @since New in 1.7.
+ */
+const char *
+svn_uri_skip_ancestor(const char *uri1,
+                      const char *uri2);
 
 /** Find the common prefix of the canonicalized dirents in @a targets
  * (an array of <tt>const char *</tt>'s), and remove redundant dirents if @a

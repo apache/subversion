@@ -157,37 +157,37 @@ is_packed_rev(svn_fs_t *fs, svn_revnum_t rev)
 static const char *
 path_format(svn_fs_t *fs, apr_pool_t *pool)
 {
-  return svn_path_join(fs->path, PATH_FORMAT, pool);
+  return svn_dirent_join(fs->path, PATH_FORMAT, pool);
 }
 
 static APR_INLINE const char *
 path_uuid(svn_fs_t *fs, apr_pool_t *pool)
 {
-  return svn_path_join(fs->path, PATH_UUID, pool);
+  return svn_dirent_join(fs->path, PATH_UUID, pool);
 }
 
 const char *
 svn_fs_fs__path_current(svn_fs_t *fs, apr_pool_t *pool)
 {
-  return svn_path_join(fs->path, PATH_CURRENT, pool);
+  return svn_dirent_join(fs->path, PATH_CURRENT, pool);
 }
 
 static APR_INLINE const char *
 path_txn_current(svn_fs_t *fs, apr_pool_t *pool)
 {
-  return svn_path_join(fs->path, PATH_TXN_CURRENT, pool);
+  return svn_dirent_join(fs->path, PATH_TXN_CURRENT, pool);
 }
 
 static APR_INLINE const char *
 path_txn_current_lock(svn_fs_t *fs, apr_pool_t *pool)
 {
-  return svn_path_join(fs->path, PATH_TXN_CURRENT_LOCK, pool);
+  return svn_dirent_join(fs->path, PATH_TXN_CURRENT_LOCK, pool);
 }
 
 static APR_INLINE const char *
 path_lock(svn_fs_t *fs, apr_pool_t *pool)
 {
-  return svn_path_join(fs->path, PATH_LOCK_FILE, pool);
+  return svn_dirent_join(fs->path, PATH_LOCK_FILE, pool);
 }
 
 static const char *
@@ -199,10 +199,10 @@ path_rev_packed(svn_fs_t *fs, svn_revnum_t rev, const char *kind,
   assert(ffd->max_files_per_dir);
   assert(is_packed_rev(fs, rev));
 
-  return svn_path_join_many(pool, fs->path, PATH_REVS_DIR,
-                            apr_psprintf(pool, "%ld.pack",
-                                         rev / ffd->max_files_per_dir),
-                            kind, NULL);
+  return svn_dirent_join_many(pool, fs->path, PATH_REVS_DIR,
+                              apr_psprintf(pool, "%ld.pack",
+                                           rev / ffd->max_files_per_dir),
+                              kind, NULL);
 }
 
 static const char *
@@ -211,10 +211,10 @@ path_rev_shard(svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool)
   fs_fs_data_t *ffd = fs->fsap_data;
 
   assert(ffd->max_files_per_dir);
-  return svn_path_join_many(pool, fs->path, PATH_REVS_DIR,
-                            apr_psprintf(pool, "%ld",
-                                               rev / ffd->max_files_per_dir),
-                            NULL);
+  return svn_dirent_join_many(pool, fs->path, PATH_REVS_DIR,
+                              apr_psprintf(pool, "%ld",
+                                                 rev / ffd->max_files_per_dir),
+                              NULL);
 }
 
 static const char *
@@ -226,13 +226,13 @@ path_rev(svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool)
 
   if (ffd->max_files_per_dir)
     {
-      return svn_path_join(path_rev_shard(fs, rev, pool),
-                           apr_psprintf(pool, "%ld", rev),
-                           pool);
+      return svn_dirent_join(path_rev_shard(fs, rev, pool),
+                             apr_psprintf(pool, "%ld", rev),
+                             pool);
     }
 
-  return svn_path_join_many(pool, fs->path, PATH_REVS_DIR,
-                            apr_psprintf(pool, "%ld", rev), NULL);
+  return svn_dirent_join_many(pool, fs->path, PATH_REVS_DIR,
+                              apr_psprintf(pool, "%ld", rev), NULL);
 }
 
 /* Returns the path of REV in FS, whether in a pack file or not.
@@ -285,10 +285,10 @@ path_revprops_shard(svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool)
   fs_fs_data_t *ffd = fs->fsap_data;
 
   assert(ffd->max_files_per_dir);
-  return svn_path_join_many(pool, fs->path, PATH_REVPROPS_DIR,
-                            apr_psprintf(pool, "%ld",
-                                               rev / ffd->max_files_per_dir),
-                            NULL);
+  return svn_dirent_join_many(pool, fs->path, PATH_REVPROPS_DIR,
+                              apr_psprintf(pool, "%ld",
+                                           rev / ffd->max_files_per_dir),
+                              NULL);
 }
 
 static const char *
@@ -298,45 +298,45 @@ path_revprops(svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool)
 
   if (ffd->max_files_per_dir)
     {
-      return svn_path_join(path_revprops_shard(fs, rev, pool),
-                           apr_psprintf(pool, "%ld", rev),
-                           pool);
+      return svn_dirent_join(path_revprops_shard(fs, rev, pool),
+                             apr_psprintf(pool, "%ld", rev),
+                             pool);
     }
 
-  return svn_path_join_many(pool, fs->path, PATH_REVPROPS_DIR,
-                            apr_psprintf(pool, "%ld", rev), NULL);
+  return svn_dirent_join_many(pool, fs->path, PATH_REVPROPS_DIR,
+                              apr_psprintf(pool, "%ld", rev), NULL);
 }
 
 static APR_INLINE const char *
 path_txn_dir(svn_fs_t *fs, const char *txn_id, apr_pool_t *pool)
 {
-  return svn_path_join_many(pool, fs->path, PATH_TXNS_DIR,
-                            apr_pstrcat(pool, txn_id, PATH_EXT_TXN, NULL),
-                            NULL);
+  return svn_dirent_join_many(pool, fs->path, PATH_TXNS_DIR,
+                              apr_pstrcat(pool, txn_id, PATH_EXT_TXN, NULL),
+                              NULL);
 }
 
 static APR_INLINE const char *
 path_txn_changes(svn_fs_t *fs, const char *txn_id, apr_pool_t *pool)
 {
-  return svn_path_join(path_txn_dir(fs, txn_id, pool), PATH_CHANGES, pool);
+  return svn_dirent_join(path_txn_dir(fs, txn_id, pool), PATH_CHANGES, pool);
 }
 
 static APR_INLINE const char *
 path_txn_props(svn_fs_t *fs, const char *txn_id, apr_pool_t *pool)
 {
-  return svn_path_join(path_txn_dir(fs, txn_id, pool), PATH_TXN_PROPS, pool);
+  return svn_dirent_join(path_txn_dir(fs, txn_id, pool), PATH_TXN_PROPS, pool);
 }
 
 static APR_INLINE const char *
 path_txn_next_ids(svn_fs_t *fs, const char *txn_id, apr_pool_t *pool)
 {
-  return svn_path_join(path_txn_dir(fs, txn_id, pool), PATH_NEXT_IDS, pool);
+  return svn_dirent_join(path_txn_dir(fs, txn_id, pool), PATH_NEXT_IDS, pool);
 }
 
 static APR_INLINE const char *
 path_min_unpacked_rev(svn_fs_t *fs, apr_pool_t *pool)
 {
-  return svn_path_join(fs->path, PATH_MIN_UNPACKED_REV, pool);
+  return svn_dirent_join(fs->path, PATH_MIN_UNPACKED_REV, pool);
 }
 
 static APR_INLINE const char *
@@ -344,11 +344,11 @@ path_txn_proto_rev(svn_fs_t *fs, const char *txn_id, apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
   if (ffd->format >= SVN_FS_FS__MIN_PROTOREVS_DIR_FORMAT)
-    return svn_path_join_many(pool, fs->path, PATH_TXN_PROTOS_DIR,
-                              apr_pstrcat(pool, txn_id, PATH_EXT_REV, NULL),
-                              NULL);
+    return svn_dirent_join_many(pool, fs->path, PATH_TXN_PROTOS_DIR,
+                                apr_pstrcat(pool, txn_id, PATH_EXT_REV, NULL),
+                                NULL);
   else
-    return svn_path_join(path_txn_dir(fs, txn_id, pool), PATH_REV, pool);
+    return svn_dirent_join(path_txn_dir(fs, txn_id, pool), PATH_REV, pool);
 }
 
 static APR_INLINE const char *
@@ -356,12 +356,13 @@ path_txn_proto_rev_lock(svn_fs_t *fs, const char *txn_id, apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
   if (ffd->format >= SVN_FS_FS__MIN_PROTOREVS_DIR_FORMAT)
-    return svn_path_join_many(pool, fs->path, PATH_TXN_PROTOS_DIR,
-                              apr_pstrcat(pool, txn_id, PATH_EXT_REV_LOCK,
-                                          NULL),
-                              NULL);
+    return svn_dirent_join_many(pool, fs->path, PATH_TXN_PROTOS_DIR,
+                                apr_pstrcat(pool, txn_id, PATH_EXT_REV_LOCK,
+                                            NULL),
+                                NULL);
   else
-    return svn_path_join(path_txn_dir(fs, txn_id, pool), PATH_REV_LOCK, pool);
+    return svn_dirent_join(path_txn_dir(fs, txn_id, pool), PATH_REV_LOCK,
+                           pool);
 }
 
 static const char *
@@ -373,7 +374,7 @@ path_txn_node_rev(svn_fs_t *fs, const svn_fs_id_t *id, apr_pool_t *pool)
   const char *name = apr_psprintf(pool, PATH_PREFIX_NODE "%s.%s",
                                   node_id, copy_id);
 
-  return svn_path_join(path_txn_dir(fs, txn_id, pool), name, pool);
+  return svn_dirent_join(path_txn_dir(fs, txn_id, pool), name, pool);
 }
 
 static APR_INLINE const char *
@@ -396,8 +397,8 @@ path_node_origin(svn_fs_t *fs, const char *node_id, apr_pool_t *pool)
   int len = strlen(node_id);
   const char *node_id_minus_last_char =
     (len == 1) ? "0" : apr_pstrmemdup(pool, node_id, len - 1);
-  return svn_path_join_many(pool, fs->path, PATH_NODE_ORIGINS_DIR,
-                            node_id_minus_last_char, NULL);
+  return svn_dirent_join_many(pool, fs->path, PATH_NODE_ORIGINS_DIR,
+                              node_id_minus_last_char, NULL);
 }
 
 
@@ -1109,7 +1110,7 @@ write_config(svn_fs_t *fs,
 
 ;
 #undef NL
-  return svn_io_file_create(svn_path_join(fs->path, PATH_CONFIG, pool),
+  return svn_io_file_create(svn_dirent_join(fs->path, PATH_CONFIG, pool),
                             fsfs_conf_contents, pool);
 }
 
@@ -1182,7 +1183,7 @@ svn_fs_fs__open(svn_fs_t *fs, const char *path, apr_pool_t *pool)
 
   /* Read the configuration file. */
   SVN_ERR(svn_config_read(&ffd->config,
-                          svn_path_join(fs->path, PATH_CONFIG, pool),
+                          svn_dirent_join(fs->path, PATH_CONFIG, pool),
                           FALSE, fs->pool));
   SVN_ERR(svn_config_get_bool(ffd->config, &rep_sharing_allowed,
                               CONFIG_SECTION_REP_SHARING,
@@ -1241,8 +1242,8 @@ upgrade_body(void *baton, apr_pool_t *pool)
     {
       /* We don't use path_txn_proto_rev() here because it expects
          we've already bumped our format. */
-      SVN_ERR(svn_io_make_dir_recursively
-              (svn_path_join(fs->path, PATH_TXN_PROTOS_DIR, pool), pool));
+      SVN_ERR(svn_io_make_dir_recursively(
+          svn_dirent_join(fs->path, PATH_TXN_PROTOS_DIR, pool), pool));
     }
 
   /* If our filesystem is new enough, write the min unpacked rev file. */
@@ -1394,7 +1395,7 @@ get_youngest(svn_revnum_t *youngest_p,
 {
   char *buf;
 
-  SVN_ERR(read_current(svn_path_join(fs_path, PATH_CURRENT, pool),
+  SVN_ERR(read_current(svn_dirent_join(fs_path, PATH_CURRENT, pool),
                        &buf, pool));
 
   *youngest_p = SVN_STR_TO_REV(buf);
@@ -1415,7 +1416,7 @@ svn_fs_fs__hotcopy(const char *src_path,
 
   /* Check format to be sure we know how to hotcopy this FS. */
   SVN_ERR(read_format(&format, &max_files_per_dir,
-                      svn_path_join(src_path, PATH_FORMAT, pool),
+                      svn_dirent_join(src_path, PATH_FORMAT, pool),
                       pool));
   SVN_ERR(check_format(format));
 
@@ -1429,8 +1430,8 @@ svn_fs_fs__hotcopy(const char *src_path,
   if (format >= SVN_FS_FS__MIN_PACKED_FORMAT)
     {
       const char *min_unpacked_rev_path;
-      min_unpacked_rev_path = svn_path_join(src_path, PATH_MIN_UNPACKED_REV,
-                                            pool);
+      min_unpacked_rev_path = svn_dirent_join(src_path, PATH_MIN_UNPACKED_REV,
+                                              pool);
 
       SVN_ERR(svn_io_dir_file_copy(src_path, dst_path, PATH_MIN_UNPACKED_REV,
                                    pool));
@@ -1446,8 +1447,8 @@ svn_fs_fs__hotcopy(const char *src_path,
   SVN_ERR(get_youngest(&youngest, dst_path, pool));
 
   /* Copy the necessary rev files. */
-  src_subdir = svn_path_join(src_path, PATH_REVS_DIR, pool);
-  dst_subdir = svn_path_join(dst_path, PATH_REVS_DIR, pool);
+  src_subdir = svn_dirent_join(src_path, PATH_REVS_DIR, pool);
+  dst_subdir = svn_dirent_join(dst_path, PATH_REVS_DIR, pool);
 
   SVN_ERR(svn_io_make_dir_recursively(dst_subdir, pool));
 
@@ -1458,8 +1459,8 @@ svn_fs_fs__hotcopy(const char *src_path,
       const char *packed_shard = apr_psprintf(iterpool, "%ld.pack",
                                               rev / max_files_per_dir);
       const char *src_subdir_packed_shard;
-      src_subdir_packed_shard = svn_path_join(src_subdir, packed_shard,
-                                              iterpool);
+      src_subdir_packed_shard = svn_dirent_join(src_subdir, packed_shard,
+                                                iterpool);
 
       SVN_ERR(svn_io_copy_dir_recursively(src_subdir_packed_shard,
                                           dst_subdir, packed_shard,
@@ -1480,8 +1481,8 @@ svn_fs_fs__hotcopy(const char *src_path,
         {
           const char *shard = apr_psprintf(iterpool, "%ld",
                                            rev / max_files_per_dir);
-          src_subdir_shard = svn_path_join(src_subdir, shard, iterpool);
-          dst_subdir_shard = svn_path_join(dst_subdir, shard, iterpool);
+          src_subdir_shard = svn_dirent_join(src_subdir, shard, iterpool);
+          dst_subdir_shard = svn_dirent_join(dst_subdir, shard, iterpool);
 
           if (rev % max_files_per_dir == 0)
             {
@@ -1499,8 +1500,8 @@ svn_fs_fs__hotcopy(const char *src_path,
     }
 
   /* Copy the necessary revprop files. */
-  src_subdir = svn_path_join(src_path, PATH_REVPROPS_DIR, pool);
-  dst_subdir = svn_path_join(dst_path, PATH_REVPROPS_DIR, pool);
+  src_subdir = svn_dirent_join(src_path, PATH_REVPROPS_DIR, pool);
+  dst_subdir = svn_dirent_join(dst_path, PATH_REVPROPS_DIR, pool);
 
   SVN_ERR(svn_io_make_dir_recursively(dst_subdir, pool));
 
@@ -1515,8 +1516,8 @@ svn_fs_fs__hotcopy(const char *src_path,
         {
           const char *shard = apr_psprintf(iterpool, "%ld",
                                            rev / max_files_per_dir);
-          src_subdir_shard = svn_path_join(src_subdir, shard, iterpool);
-          dst_subdir_shard = svn_path_join(dst_subdir, shard, iterpool);
+          src_subdir_shard = svn_dirent_join(src_subdir, shard, iterpool);
+          dst_subdir_shard = svn_dirent_join(dst_subdir, shard, iterpool);
 
           if (rev % max_files_per_dir == 0)
             {
@@ -1537,16 +1538,16 @@ svn_fs_fs__hotcopy(const char *src_path,
   /* Make an empty transactions directory for now.  Eventually some
      method of copying in progress transactions will need to be
      developed.*/
-  dst_subdir = svn_path_join(dst_path, PATH_TXNS_DIR, pool);
+  dst_subdir = svn_dirent_join(dst_path, PATH_TXNS_DIR, pool);
   SVN_ERR(svn_io_make_dir_recursively(dst_subdir, pool));
   if (format >= SVN_FS_FS__MIN_PROTOREVS_DIR_FORMAT)
     {
-      dst_subdir = svn_path_join(dst_path, PATH_TXN_PROTOS_DIR, pool);
+      dst_subdir = svn_dirent_join(dst_path, PATH_TXN_PROTOS_DIR, pool);
       SVN_ERR(svn_io_make_dir_recursively(dst_subdir, pool));
     }
 
   /* Now copy the locks tree. */
-  src_subdir = svn_path_join(src_path, PATH_LOCKS_DIR, pool);
+  src_subdir = svn_dirent_join(src_path, PATH_LOCKS_DIR, pool);
   SVN_ERR(svn_io_check_path(src_subdir, &kind, pool));
   if (kind == svn_node_dir)
     SVN_ERR(svn_io_copy_dir_recursively(src_subdir, dst_path,
@@ -1554,7 +1555,7 @@ svn_fs_fs__hotcopy(const char *src_path,
                                         NULL, pool));
 
   /* Now copy the node-origins cache tree. */
-  src_subdir = svn_path_join(src_path, PATH_NODE_ORIGINS_DIR, pool);
+  src_subdir = svn_dirent_join(src_path, PATH_NODE_ORIGINS_DIR, pool);
   SVN_ERR(svn_io_check_path(src_subdir, &kind, pool));
   if (kind == svn_node_dir)
     SVN_ERR(svn_io_copy_dir_recursively(src_subdir, dst_path,
@@ -1562,7 +1563,7 @@ svn_fs_fs__hotcopy(const char *src_path,
                                         NULL, pool));
 
   /* Now copy the rep cache. */
-  src_subdir = svn_path_join(src_path, REP_CACHE_DB_NAME, pool);
+  src_subdir = svn_dirent_join(src_path, REP_CACHE_DB_NAME, pool);
   SVN_ERR(svn_io_check_path(src_subdir, &kind, pool));
   if (kind == svn_node_file)
     SVN_ERR(svn_io_dir_file_copy(src_path, dst_path, REP_CACHE_DB_NAME, pool));
@@ -1572,7 +1573,7 @@ svn_fs_fs__hotcopy(const char *src_path,
     SVN_ERR(svn_io_dir_file_copy(src_path, dst_path, PATH_TXN_CURRENT, pool));
 
   /* Hotcopied FS is complete. Stamp it with a format file. */
-  return write_format(svn_path_join(dst_path, PATH_FORMAT, pool),
+  return write_format(svn_dirent_join(dst_path, PATH_FORMAT, pool),
                       format, max_files_per_dir, FALSE, pool);
 }
 
@@ -4243,11 +4244,11 @@ create_txn_dir(const char **id_p, svn_fs_t *fs, svn_revnum_t rev,
                                 pool));
   *id_p = apr_psprintf(pool, "%ld-%s", rev, cb.txn_id);
 
-  txn_dir = svn_path_join_many(pool,
-                               fs->path,
-                               PATH_TXNS_DIR,
-                               apr_pstrcat(pool, *id_p, PATH_EXT_TXN, NULL),
-                               NULL);
+  txn_dir = svn_dirent_join_many(pool,
+                                 fs->path,
+                                 PATH_TXNS_DIR,
+                                 apr_pstrcat(pool, *id_p, PATH_EXT_TXN, NULL),
+                                 NULL);
 
   return svn_io_dir_make(txn_dir, APR_OS_DEFAULT, pool);
 }
@@ -4267,8 +4268,8 @@ create_txn_dir_pre_1_5(const char **id_p, svn_fs_t *fs, svn_revnum_t rev,
   const char *unique_path, *prefix;
 
   /* Try to create directories named "<txndir>/<rev>-<uniqueifier>.txn". */
-  prefix = svn_path_join_many(pool, fs->path, PATH_TXNS_DIR,
-                              apr_psprintf(pool, "%ld", rev), NULL);
+  prefix = svn_dirent_join_many(pool, fs->path, PATH_TXNS_DIR,
+                                apr_psprintf(pool, "%ld", rev), NULL);
 
   subpool = svn_pool_create(pool);
   for (i = 1; i <= 99999; i++)
@@ -5742,9 +5743,9 @@ commit_body(void *baton, apr_pool_t *pool)
         SVN_ERR(err);
       svn_error_clear(err);
       SVN_ERR(svn_fs_fs__dup_perms(new_dir,
-                                   svn_path_join(cb->fs->path,
-                                                 PATH_REVS_DIR,
-                                                 pool),
+                                   svn_dirent_join(cb->fs->path,
+                                                   PATH_REVS_DIR,
+                                                   pool),
                                    pool));
 
       new_dir = path_revprops_shard(cb->fs, new_rev, pool);
@@ -5753,9 +5754,9 @@ commit_body(void *baton, apr_pool_t *pool)
         SVN_ERR(err);
       svn_error_clear(err);
       SVN_ERR(svn_fs_fs__dup_perms(new_dir,
-                                   svn_path_join(cb->fs->path,
-                                                 PATH_REVPROPS_DIR,
-                                                 pool),
+                                   svn_dirent_join(cb->fs->path,
+                                                   PATH_REVPROPS_DIR,
+                                                   pool),
                                    pool));
     }
 
@@ -5932,7 +5933,7 @@ svn_fs_fs__create(svn_fs_t *fs,
   if (ffd->max_files_per_dir)
     SVN_ERR(svn_io_make_dir_recursively(path_rev_shard(fs, 0, pool), pool));
   else
-    SVN_ERR(svn_io_make_dir_recursively(svn_path_join(path, PATH_REVS_DIR,
+    SVN_ERR(svn_io_make_dir_recursively(svn_dirent_join(path, PATH_REVS_DIR,
                                                         pool),
                                         pool));
 
@@ -5941,19 +5942,19 @@ svn_fs_fs__create(svn_fs_t *fs,
     SVN_ERR(svn_io_make_dir_recursively(path_revprops_shard(fs, 0, pool),
                                         pool));
   else
-    SVN_ERR(svn_io_make_dir_recursively(svn_path_join(path,
-                                                      PATH_REVPROPS_DIR,
-                                                      pool),
+    SVN_ERR(svn_io_make_dir_recursively(svn_dirent_join(path,
+                                                        PATH_REVPROPS_DIR,
+                                                        pool),
                                         pool));
 
   /* Create the transaction directory. */
-  SVN_ERR(svn_io_make_dir_recursively(svn_path_join(path, PATH_TXNS_DIR,
-                                                    pool),
+  SVN_ERR(svn_io_make_dir_recursively(svn_dirent_join(path, PATH_TXNS_DIR,
+                                                      pool),
                                       pool));
 
   /* Create the protorevs directory. */
   if (format >= SVN_FS_FS__MIN_PROTOREVS_DIR_FORMAT)
-    SVN_ERR(svn_io_make_dir_recursively(svn_path_join(path, PATH_TXN_PROTOS_DIR,
+    SVN_ERR(svn_io_make_dir_recursively(svn_dirent_join(path, PATH_TXN_PROTOS_DIR,
                                                       pool),
                                         pool));
 
@@ -5971,7 +5972,7 @@ svn_fs_fs__create(svn_fs_t *fs,
 
   /* Read the configuration file. */
   SVN_ERR(svn_config_read(&ffd->config,
-                          svn_path_join(fs->path, PATH_CONFIG, pool),
+                          svn_dirent_join(fs->path, PATH_CONFIG, pool),
                           FALSE, fs->pool));
   SVN_ERR(svn_config_get_bool(ffd->config, &rep_sharing_allowed,
                               CONFIG_SECTION_REP_SHARING,
@@ -6525,9 +6526,9 @@ set_node_origins_for_file(svn_fs_t *fs,
   apr_hash_t *origins_hash;
   svn_string_t *old_node_rev_id;
 
-  SVN_ERR(svn_fs_fs__ensure_dir_exists(svn_path_join(fs->path,
-                                                     PATH_NODE_ORIGINS_DIR,
-                                                     pool),
+  SVN_ERR(svn_fs_fs__ensure_dir_exists(svn_dirent_join(fs->path,
+                                                       PATH_NODE_ORIGINS_DIR,
+                                                       pool),
                                        fs, pool));
 
   /* Read the previously existing origins (if any), and merge our
@@ -6604,7 +6605,7 @@ svn_fs_fs__list_transactions(apr_array_header_t **names_p,
   names = apr_array_make(pool, 1, sizeof(const char *));
 
   /* Get the transactions directory. */
-  txn_dir = svn_path_join(fs->path, PATH_TXNS_DIR, pool);
+  txn_dir = svn_dirent_join(fs->path, PATH_TXNS_DIR, pool);
 
   /* Now find a listing of this directory. */
   SVN_ERR(svn_io_get_dirents2(&dirents, txn_dir, pool));
@@ -6881,12 +6882,12 @@ pack_shard(const char *revs_dir,
   apr_pool_t *iterpool;
 
   /* Some useful paths. */
-  pack_file_dir = svn_path_join(revs_dir,
+  pack_file_dir = svn_dirent_join(revs_dir,
                         apr_psprintf(pool, "%" APR_INT64_T_FMT ".pack", shard),
                         pool);
-  pack_file_path = svn_path_join(pack_file_dir, "pack", pool);
-  manifest_file_path = svn_path_join(pack_file_dir, "manifest", pool);
-  shard_path = svn_path_join(revs_dir,
+  pack_file_path = svn_dirent_join(pack_file_dir, "pack", pool);
+  manifest_file_path = svn_dirent_join(pack_file_dir, "manifest", pool);
+  shard_path = svn_dirent_join(revs_dir,
                              apr_psprintf(pool, "%" APR_INT64_T_FMT, shard),
                              pool);
 
@@ -6921,8 +6922,8 @@ pack_shard(const char *revs_dir,
       svn_pool_clear(iterpool);
 
       /* Get the size of the file. */
-      path = svn_path_join(shard_path, apr_psprintf(iterpool, "%ld", rev),
-                           iterpool);
+      path = svn_dirent_join(shard_path, apr_psprintf(iterpool, "%ld", rev),
+                             iterpool);
       SVN_ERR(svn_io_stat(&finfo, path, APR_FINFO_SIZE, iterpool));
 
       /* Update the manifest. */
@@ -6944,7 +6945,7 @@ pack_shard(const char *revs_dir,
   /* Update the min-unpacked-rev file to reflect our newly packed shard.
    * (ffd->min_unpacked_rev will be updated by open_pack_or_rev_file().)
    */
-  final_path = svn_path_join(fs_path, PATH_MIN_UNPACKED_REV, iterpool);
+  final_path = svn_dirent_join(fs_path, PATH_MIN_UNPACKED_REV, iterpool);
   SVN_ERR(svn_stream_open_unique(&tmp_stream, &tmp_path, fs_path,
                                    svn_io_file_del_none, iterpool, iterpool));
   SVN_ERR(svn_stream_printf(tmp_stream, iterpool, "%ld\n",
@@ -6988,7 +6989,7 @@ pack_body(void *baton,
   svn_revnum_t min_unpacked_rev;
 
   SVN_ERR(read_format(&format, &max_files_per_dir,
-                      svn_path_join(pb->fs->path, PATH_FORMAT, pool),
+                      svn_dirent_join(pb->fs->path, PATH_FORMAT, pool),
                       pool));
 
   /* If the repository isn't a new enough format, we don't support packing.
@@ -7002,8 +7003,8 @@ pack_body(void *baton,
     return SVN_NO_ERROR;
 
   SVN_ERR(read_min_unpacked_rev(&min_unpacked_rev,
-                                svn_path_join(pb->fs->path,
-                                              PATH_MIN_UNPACKED_REV, pool),
+                                svn_dirent_join(pb->fs->path,
+                                                PATH_MIN_UNPACKED_REV, pool),
                                 pool));
 
   SVN_ERR(get_youngest(&youngest, pb->fs->path, pool));
@@ -7013,7 +7014,7 @@ pack_body(void *baton,
   if (min_unpacked_rev == (completed_shards * max_files_per_dir))
     return SVN_NO_ERROR;
 
-  data_path = svn_path_join(pb->fs->path, PATH_REVS_DIR, pool);
+  data_path = svn_dirent_join(pb->fs->path, PATH_REVS_DIR, pool);
 
   iterpool = svn_pool_create(pool);
   for (i = min_unpacked_rev / max_files_per_dir; i < completed_shards; i++)

@@ -39,8 +39,6 @@
 extern "C" {
 #endif /* __cplusplus */
 
-#define SVN_CLIENT_SVNPATCH_VERSION   1
-
 
 /* Set *URL, allocated in RESULT_POOL, and *PEG_REVNUM (the latter is
    ignored if NULL) to the repository URL of ABSPATH_OR_URL.  If
@@ -219,7 +217,7 @@ svn_client__get_youngest_common_ancestor(const char **ancestor_path,
    that it is the same node in both PEG_REVISION and REVISION.  If it
    is not, then @c SVN_ERR_CLIENT_UNRELATED_RESOURCES is returned.
 
-   BASE_ACCESS is the working copy the ra_session corresponds to, should
+   BASE_DIR is the working copy path the ra_session corresponds to, should
    only be used if PATH_OR_URL is a url.
 
    If PEG_REVISION's kind is svn_opt_revision_unspecified, it is
@@ -238,7 +236,7 @@ svn_client__ra_session_from_path(svn_ra_session_t **ra_session_p,
                                  svn_revnum_t *rev_p,
                                  const char **url_p,
                                  const char *path_or_url,
-                                 svn_wc_adm_access_t *base_access,
+                                 const char *base_dir,
                                  const svn_opt_revision_t *peg_revision,
                                  const svn_opt_revision_t *revision,
                                  svn_client_ctx_t *ctx,
@@ -307,30 +305,6 @@ svn_client__path_relative_to_root(const char **rel_path,
                                   svn_ra_session_t *ra_session,
                                   apr_pool_t *result_pool,
                                   apr_pool_t *scratch_pool);
-
-/* Return the property value for any PROPNAME set on TARGET in *PROPS,
-   with WC paths of char * for keys and property values of
-   svn_string_t * for values.  Assumes that PROPS is non-NULL.
-
-   CHANGELISTS is an array of const char * changelist names, used as a
-   restrictive filter on items whose properties are set; that is,
-   don't set properties on any item unless it's a member of one of
-   those changelists.  If CHANGELISTS is empty (or altogether NULL),
-   no changelist filtering occurs.
-
-   Treat DEPTH as in svn_client_propget3().
-*/
-svn_error_t *
-svn_client__get_prop_from_wc(apr_hash_t *props,
-                             const char *propname,
-                             const char *target,
-                             svn_boolean_t pristine,
-                             const svn_wc_entry_t *entry,
-                             svn_wc_adm_access_t *adm_access,
-                             svn_depth_t depth,
-                             const apr_array_header_t *changelists,
-                             svn_client_ctx_t *ctx,
-                             apr_pool_t *pool);
 
 /* Retrieve the oldest revision of the node at REL_PATH at REV since
    it was last copied (if applicable), and store it in OLDEST_REV.  If
@@ -679,13 +653,7 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
    If NOTIFY_FUNC is non-null, invoke it with NOTIFY_BATON for each
    file and directory operated on during the edit.
 
-   EDITOR/EDIT_BATON return the newly created editor and baton/
-  
-   SVNPATCH_FILE is the temporary file to which the library dumps
-   serialized ra_svn protocol Editor Commands.  It somehow determines
-   whether or not to utilize svnpatch format in the diff output when
-   checked against NULL.  The caller must allocate the file handler,
-   open and close the file respectively before and after the call. */
+   EDITOR/EDIT_BATON return the newly created editor and baton. */
 svn_error_t *
 svn_client__get_diff_editor(const char *target,
                             svn_wc_adm_access_t *adm_access,
@@ -701,7 +669,6 @@ svn_client__get_diff_editor(const char *target,
                             void *cancel_baton,
                             const svn_delta_editor_t **editor,
                             void **edit_baton,
-                            apr_file_t *svnpatch_file,
                             apr_pool_t *pool);
 
 

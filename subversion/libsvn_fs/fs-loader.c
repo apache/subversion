@@ -233,7 +233,7 @@ svn_fs_type(const char **fs_type, const char *path, apr_pool_t *pool)
 
   /* Read the fsap-name file to get the FSAP name, or assume the (old)
      default. */
-  filename = svn_path_join(path, FS_TYPE_FILENAME, pool);
+  filename = svn_dirent_join(path, FS_TYPE_FILENAME, pool);
   err = svn_io_file_open(&file, filename, APR_READ|APR_BUFFERED, 0, pool);
   if (err && APR_STATUS_IS_ENOENT(err->apr_err))
     {
@@ -271,7 +271,7 @@ write_fs_type(const char *path, const char *fs_type, apr_pool_t *pool)
   const char *filename;
   apr_file_t *file;
 
-  filename = svn_path_join(path, FS_TYPE_FILENAME, pool);
+  filename = svn_dirent_join(path, FS_TYPE_FILENAME, pool);
   SVN_ERR(svn_io_file_open(&file, filename,
                            APR_WRITE|APR_CREATE|APR_TRUNCATE|APR_BUFFERED,
                            APR_OS_DEFAULT, pool));

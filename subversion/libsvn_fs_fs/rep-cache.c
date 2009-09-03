@@ -68,7 +68,7 @@ svn_fs_fs__open_rep_cache(svn_fs_t *fs,
 
   /* Open (or create) the sqlite database.  It will be automatically
      closed when fs->pool is destoyed. */
-  db_path = svn_path_join(fs->path, REP_CACHE_DB_NAME, pool);
+  db_path = svn_dirent_join(fs->path, REP_CACHE_DB_NAME, pool);
   SVN_ERR(svn_sqlite__open(&ffd->rep_cache_db, db_path,
                            svn_sqlite__mode_rwcreate, statements,
                            REP_CACHE_SCHEMA_FORMAT,

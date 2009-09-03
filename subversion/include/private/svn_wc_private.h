@@ -107,6 +107,15 @@ svn_wc__path_switched(svn_boolean_t *switched,
               && apr_hash_get(clhash, entry->changelist, \
                               APR_HASH_KEY_STRING))) ? TRUE : FALSE)
 
+/* Return TRUE iff CLHASH (a hash whose keys are const char *
+   changelist names) is NULL or if LOCAL_ABSPATH is part of a changelist in
+   CLHASH. */
+svn_boolean_t
+svn_wc__changelist_match(svn_wc_context_t *wc_ctx,
+                         const char *local_abspath,
+                         const apr_hash_t *clhash,
+                         apr_pool_t *scratch_pool);
+
 
 /* Set *MODIFIED_P to true if VERSIONED_FILE_ABSPATH is modified with respect
  * to BASE_FILE_ABSPATH, or false if it is not.  The comparison compensates
@@ -360,12 +369,26 @@ svn_wc__node_get_kind(svn_node_kind_t *kind,
 
 
 /**
+ * Set @a *changelist to the changelist to which @a local_abspath belongs.
+ * Allocate the result in @a result_pool and use @a scratch_pool for temporary
+ * allocations.
+ */
+svn_error_t *
+svn_wc__node_get_changelist(const char **changelist,
+                            svn_wc_context_t *wc_ctx,
+                            const char *local_abspath,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool);
+
+
+/**
  * Recursively call @a callbacks->found_node for all nodes underneath
  * @a local_abspath.
  */
 svn_error_t *
 svn_wc__node_walk_children(svn_wc_context_t *wc_ctx,
                            const char *local_abspath,
+                           svn_boolean_t show_hidden,
                            const svn_wc__node_walk_callbacks_t *callbacks,
                            void *walk_baton,
                            svn_depth_t walk_depth,

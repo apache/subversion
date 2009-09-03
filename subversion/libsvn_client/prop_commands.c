@@ -97,49 +97,34 @@ struct propset_walk_baton
   void *notify_baton;
 };
 
-/* An entries-walk callback for svn_client_propset3.
+/* An node-walk callback for svn_client_propset3.
  *
- * For the path given by PATH and ENTRY,
- * set the property named wb->PROPNAME to the value wb->PROPVAL,
- * where "wb" is the WALK_BATON of type "struct propset_walk_baton *".
+ * For LOCAL_ABSPATH, set the property named wb->PROPNAME to the value
+ * wb->PROPVAL, where "wb" is the WALK_BATON of type "struct
+ * propset_walk_baton *".
  */
 static svn_error_t *
-propset_walk_cb(const char *path,
-                const svn_wc_entry_t *entry,
+propset_walk_cb(const char *local_abspath,
                 void *walk_baton,
                 apr_pool_t *pool)
 {
   struct propset_walk_baton *wb = walk_baton;
-  const char *local_abspath;
   svn_error_t *err;
 
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
-
-  /* We're going to receive dirents twice;  we want to ignore the
-     first one (where it's a child of a parent dir), and only use
-     the second one (where we're looking at THIS_DIR).  */
-  if ((entry->kind == svn_node_dir)
-      && (strcmp(entry->name, SVN_WC_ENTRY_THIS_DIR) != 0))
-    return SVN_NO_ERROR;
-
-  /* Ignore the entry if it does not exist at the time of interest. */
-  if (entry->schedule == svn_wc_schedule_delete)
-    return SVN_NO_ERROR;
-
   /* If our entry doesn't pass changelist filtering, get outta here. */
-  if (! SVN_WC__CL_MATCH(wb->changelist_hash, entry))
+  if (! svn_wc__changelist_match(wb->wc_ctx, local_abspath,
+                                 wb->changelist_hash, pool))
     return SVN_NO_ERROR;
 
   err = svn_wc_prop_set4(wb->wc_ctx, local_abspath, wb->propname, wb->propval,
                          wb->force, wb->notify_func, wb->notify_baton, pool);
-  if (err)
+  if (err && err->apr_err == SVN_ERR_ILLEGAL_TARGET)
     {
-      if (err->apr_err != SVN_ERR_ILLEGAL_TARGET)
-        return svn_error_return(err);
       svn_error_clear(err);
+      err = SVN_NO_ERROR;
     }
 
-  return SVN_NO_ERROR;
+  return svn_error_return(err);
 }
 
 
@@ -372,8 +357,6 @@ svn_client_propset3(svn_commit_info_t **commit_info_p,
     }
   else
     {
-      svn_wc_adm_access_t *adm_access;
-      int adm_lock_level = SVN_WC__LEVELS_TO_LOCK_FROM_DEPTH(depth);
       const svn_wc_entry_t *entry;
       apr_hash_t *changelist_hash = NULL;
       const char *target_abspath;
@@ -384,16 +367,13 @@ svn_client_propset3(svn_commit_info_t **commit_info_p,
         SVN_ERR(svn_hash_from_cstring_keys(&changelist_hash,
                                            changelists, pool));
 
-      SVN_ERR(svn_wc__adm_probe_in_context(&adm_access, ctx->wc_ctx, target,
-                                           TRUE, adm_lock_level, ctx->cancel_func,
-                                           ctx->cancel_baton, pool));
       SVN_ERR(svn_wc__get_entry_versioned(&entry, ctx->wc_ctx, target_abspath,
                                           svn_node_unknown, FALSE, FALSE,
                                           pool, pool));
 
       if (depth >= svn_depth_files && entry->kind == svn_node_dir)
         {
-          static const svn_wc_entry_callbacks2_t walk_callbacks
+          static const svn_wc__node_walk_callbacks_t walk_callbacks
             = { propset_walk_cb, svn_client__default_walker_error_handler };
           struct propset_walk_baton wb;
 
@@ -404,9 +384,10 @@ svn_client_propset3(svn_commit_info_t **commit_info_p,
           wb.changelist_hash = changelist_hash;
           wb.notify_func = ctx->notify_func2;
           wb.notify_baton = ctx->notify_baton2;
-          SVN_ERR(svn_wc_walk_entries3(target, adm_access, &walk_callbacks,
-                                       &wb, depth, FALSE, ctx->cancel_func,
-                                       ctx->cancel_baton, pool));
+          SVN_ERR(svn_wc__node_walk_children(ctx->wc_ctx, target_abspath,
+                                             FALSE, &walk_callbacks, &wb,
+                                             depth, ctx->cancel_func,
+                                             ctx->cancel_baton, pool));
         }
       else if (SVN_WC__CL_MATCH(changelist_hash, entry))
         {
@@ -415,7 +396,7 @@ svn_client_propset3(svn_commit_info_t **commit_info_p,
                                    ctx->notify_baton2, pool));
         }
 
-      return svn_wc_adm_close2(adm_access, pool);
+      return SVN_NO_ERROR;
     }
 }
 
@@ -762,17 +743,29 @@ wc_walker_error_handler(const char *path,
     }
 }
 
-svn_error_t *
-svn_client__get_prop_from_wc(apr_hash_t *props,
-                             const char *propname,
-                             const char *target,
-                             svn_boolean_t pristine,
-                             const svn_wc_entry_t *entry,
-                             svn_wc_adm_access_t *adm_access,
-                             svn_depth_t depth,
-                             const apr_array_header_t *changelists,
-                             svn_client_ctx_t *ctx,
-                             apr_pool_t *pool)
+/* Return the property value for any PROPNAME set on TARGET in *PROPS,
+   with WC paths of char * for keys and property values of
+   svn_string_t * for values.  Assumes that PROPS is non-NULL.
+
+   CHANGELISTS is an array of const char * changelist names, used as a
+   restrictive filter on items whose properties are set; that is,
+   don't set properties on any item unless it's a member of one of
+   those changelists.  If CHANGELISTS is empty (or altogether NULL),
+   no changelist filtering occurs.
+
+   Treat DEPTH as in svn_client_propget3().
+*/
+static svn_error_t *
+get_prop_from_wc(apr_hash_t *props,
+                 const char *propname,
+                 const char *target,
+                 svn_boolean_t pristine,
+                 const svn_wc_entry_t *entry,
+                 svn_wc_adm_access_t *adm_access,
+                 svn_depth_t depth,
+                 const apr_array_header_t *changelists,
+                 svn_client_ctx_t *ctx,
+                 apr_pool_t *pool)
 {
   apr_hash_t *changelist_hash = NULL;
   static const svn_wc_entry_callbacks2_t walk_callbacks =
@@ -863,9 +856,8 @@ svn_client_propget3(apr_hash_t **props,
       pristine = (revision->kind == svn_opt_revision_committed
                   || revision->kind == svn_opt_revision_base);
 
-      SVN_ERR(svn_client__get_prop_from_wc(*props, propname, path_or_url,
-                                           pristine, node, adm_access,
-                                           depth, changelists, ctx, pool));
+      SVN_ERR(get_prop_from_wc(*props, propname, path_or_url, pristine, node,
+                               adm_access, depth, changelists, ctx, pool));
 
       SVN_ERR(svn_wc_adm_close2(adm_access, pool));
     }
@@ -1173,7 +1165,7 @@ svn_client_proplist3(const char *path_or_url,
           wb.receiver = receiver;
           wb.receiver_baton = receiver_baton;
 
-          SVN_ERR(svn_wc__node_walk_children(ctx->wc_ctx, local_abspath,
+          SVN_ERR(svn_wc__node_walk_children(ctx->wc_ctx, local_abspath, FALSE,
                                              &walk_callbacks, &wb, depth,
                                              ctx->cancel_func,
                                              ctx->cancel_baton, pool));

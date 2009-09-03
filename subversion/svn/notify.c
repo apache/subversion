@@ -127,33 +127,21 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
   struct notify_baton *nb = baton;
   char statchar_buf[5] = "    ";
   const char *path_local;
-  const char *path_prefix;
   svn_error_t *err;
 
-  if (n->path_prefix)
-    path_prefix = n->path_prefix;
-  else
-    path_prefix = nb->path_prefix;
-
   if (n->url)
-    path_local = n->url;
+    path_local = svn_uri_local_style(n->url, pool);
   else
-    path_local = n->path;
-
-  path_local = svn_path_is_child(path_prefix, path_local, pool);
-
-  if (!path_local)
     {
-      if (strcmp(n->path, path_prefix) == 0)
-        path_local = ".";
+      if (n->path_prefix)
+        path_local = svn_dirent_skip_ancestor(n->path_prefix, n->path);
+      else if (nb->path_prefix)
+        path_local = svn_dirent_skip_ancestor(nb->path_prefix, n->path);
       else
         path_local = n->path;
-    }
 
-  if (svn_path_is_url(path_local))
-    path_local = svn_uri_local_style(path_local, pool);
-  else
-    path_local = svn_dirent_local_style(path_local, pool);
+      path_local = svn_dirent_local_style(path_local, pool);
+    }
 
   switch (n->action)
     {
