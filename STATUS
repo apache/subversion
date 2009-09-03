@@ -213,7 +213,7 @@ Candidate changes:
      Subversion's usability in terms of serving files directly from the
      repository to a browser client.  This change restores that usability.
    Votes:
-     +1: cmpilato
+     +1: cmpilato, hwright
 
 Approved changes:
 =================
