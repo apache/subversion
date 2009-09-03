@@ -141,30 +141,6 @@ Candidate changes:
      +0: pburba - I don't have a Vista or Win7 box to try this out on, but it
          works fine on my XP box.
 
- * r38850
-   Fix remaining part of Issue 3453: Building Subversion 1.6 requires GNU grep 2.5.
-   Votes:
-     +1: arfrever, stsp
-
- * r38851, r38875, r38881
-   Fix Issue #3458: Use '$SED' instead of 'sed'.
-   Notes:
-     There are 2 trivial merge conflicts in configure.ac. The first (in Expat
-     detection code) should be resolved with 'mc'. The second (with AC_PROG_SED)
-     should be resolved with 'tc'.
-   Votes:
-     +1: arfrever, stsp
-
- * r38872
-   Improve "Attempt to add tree conflict that already exists" error message.
-   Justification:
-     This error is being seen in the wild, possibly due to the problem the
-     r38000 group is trying to fix. This change makes it easier to find
-     out which .svn directory is causing the problem by printing its path
-     as part of the error message.
-   Votes:
-     +1: stsp, danielsh
-
  * r38886
    Fix 2 failing tests in ruby bindings.
    Justification:
@@ -172,7 +148,7 @@ Candidate changes:
      can confuse packagers or other people who want to verify their freshly
      compiled binaries using our regression test suite.
    Votes:
-     +1: stsp
+     +1: stsp, hwright
 
  * r38959
    Fix 'svn export -r 1000000' (issue #3400).
@@ -187,7 +163,7 @@ Candidate changes:
      It wasn't intentional that the first line of dashes of this prompt
      appears on the same line as "Transmitting file data ..." during commit.
    Votes:
-     +1: stsp
+     +1: stsp, hwright
 
  * r39019
    Fix bug where svn_[rangelist|mergeinfo]_[merge|intersect|remove|diff]
@@ -204,6 +180,33 @@ Candidate changes:
    Votes:
      +1: pburba
 
+Approved changes:
+=================
+
+ * r38851, r38875, r38881
+   Fix Issue #3458: Use '$SED' instead of 'sed'.
+   Notes:
+     There are 2 trivial merge conflicts in configure.ac. The first (in Expat
+     detection code) should be resolved with 'mc'. The second (with AC_PROG_SED)
+     should be resolved with 'tc'.
+   Votes:
+     +1: arfrever, stsp
+
+ * r38850
+   Fix remaining part of Issue 3453: Building Subversion 1.6 requires GNU grep 2.5.
+   Votes:
+     +1: arfrever, stsp, hwright
+
+ * r38872
+   Improve "Attempt to add tree conflict that already exists" error message.
+   Justification:
+     This error is being seen in the wild, possibly due to the problem the
+     r38000 group is trying to fix. This change makes it easier to find
+     out which .svn directory is causing the problem by printing its path
+     as part of the error message.
+   Votes:
+     +1: stsp, danielsh, hwright
+
  * r39074
    This is *effectively* a reversion of r36720 in that it causes most Apache
    servers to use "text/plain" as the default MIME type when no other can
@@ -213,7 +216,4 @@ Candidate changes:
      Subversion's usability in terms of serving files directly from the
      repository to a browser client.  This change restores that usability.
    Votes:
-     +1: cmpilato, hwright
-
-Approved changes:
-=================
+     +1: cmpilato, hwright, rhuijben
