@@ -369,6 +369,19 @@ svn_wc__node_get_kind(svn_node_kind_t *kind,
 
 
 /**
+ * Set @a *changelist to the changelist to which @a local_abspath belongs.
+ * Allocate the result in @a result_pool and use @a scratch_pool for temporary
+ * allocations.
+ */
+svn_error_t *
+svn_wc__node_get_changelist(const char **changelist,
+                            svn_wc_context_t *wc_ctx,
+                            const char *local_abspath,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool);
+
+
+/**
  * Recursively call @a callbacks->found_node for all nodes underneath
  * @a local_abspath.
  */
