@@ -16476,7 +16476,7 @@ def merge_replace_causes_tree_conflict2(sbox):
 
   # svn st
   expected_status.tweak('A', status=' M')
-  expected_status.tweak('A/mu', 'A/B/E', 'A/D/H', status='D ',
+  expected_status.tweak('A/mu', 'A/B/E', 'A/D/H', status='R ',
     treeconflict='C')
   expected_status.tweak('A/D/H/chi', 'A/D/H/omega', 'A/D/H/psi', status='D ')
   expected_status.tweak('A/B/E/alpha', 'A/B/E/beta', status='D ')
