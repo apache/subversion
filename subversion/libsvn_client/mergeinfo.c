@@ -1308,23 +1308,15 @@ location_from_path_and_rev(const char **url,
                            svn_client_ctx_t *ctx,
                            apr_pool_t *pool)
 {
-  svn_wc_adm_access_t *adm_access = NULL;
   svn_ra_session_t *ra_session;
   apr_pool_t *subpool = svn_pool_create(pool);
   svn_revnum_t rev;
 
-  if (! svn_path_is_url(path_or_url)
-      && (SVN_CLIENT__REVKIND_IS_LOCAL_TO_WC(peg_revision->kind)
-          || peg_revision->kind == svn_opt_revision_unspecified))
-    {
-      int adm_lock_level = SVN_WC__LEVELS_TO_LOCK_FROM_DEPTH(svn_depth_empty);
-      SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, path_or_url,
-                                     FALSE, adm_lock_level,
-                                     ctx->cancel_func, ctx->cancel_baton,
-                                     subpool));
-    }
   SVN_ERR(svn_client__ra_session_from_path(&ra_session, &rev, url,
-                                           path_or_url, adm_access,
+                                           path_or_url,
+                                           !svn_path_is_url(path_or_url)
+                                             ? path_or_url
+                                             : NULL,
                                            peg_revision, peg_revision,
                                            ctx, subpool));
   *url = apr_pstrdup(pool, *url);
@@ -1334,10 +1326,7 @@ location_from_path_and_rev(const char **url,
 
   svn_pool_destroy(subpool);
 
-  if (adm_access)
-    return svn_wc_adm_close2(adm_access, pool);
-  else
-    return SVN_NO_ERROR;
+  return SVN_NO_ERROR;
 }
 
 
