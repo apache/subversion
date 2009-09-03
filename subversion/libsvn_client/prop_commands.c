@@ -762,17 +762,29 @@ wc_walker_error_handler(const char *path,
     }
 }
 
-svn_error_t *
-svn_client__get_prop_from_wc(apr_hash_t *props,
-                             const char *propname,
-                             const char *target,
-                             svn_boolean_t pristine,
-                             const svn_wc_entry_t *entry,
-                             svn_wc_adm_access_t *adm_access,
-                             svn_depth_t depth,
-                             const apr_array_header_t *changelists,
-                             svn_client_ctx_t *ctx,
-                             apr_pool_t *pool)
+/* Return the property value for any PROPNAME set on TARGET in *PROPS,
+   with WC paths of char * for keys and property values of
+   svn_string_t * for values.  Assumes that PROPS is non-NULL.
+
+   CHANGELISTS is an array of const char * changelist names, used as a
+   restrictive filter on items whose properties are set; that is,
+   don't set properties on any item unless it's a member of one of
+   those changelists.  If CHANGELISTS is empty (or altogether NULL),
+   no changelist filtering occurs.
+
+   Treat DEPTH as in svn_client_propget3().
+*/
+static svn_error_t *
+get_prop_from_wc(apr_hash_t *props,
+                 const char *propname,
+                 const char *target,
+                 svn_boolean_t pristine,
+                 const svn_wc_entry_t *entry,
+                 svn_wc_adm_access_t *adm_access,
+                 svn_depth_t depth,
+                 const apr_array_header_t *changelists,
+                 svn_client_ctx_t *ctx,
+                 apr_pool_t *pool)
 {
   apr_hash_t *changelist_hash = NULL;
   static const svn_wc_entry_callbacks2_t walk_callbacks =
@@ -863,9 +875,8 @@ svn_client_propget3(apr_hash_t **props,
       pristine = (revision->kind == svn_opt_revision_committed
                   || revision->kind == svn_opt_revision_base);
 
-      SVN_ERR(svn_client__get_prop_from_wc(*props, propname, path_or_url,
-                                           pristine, node, adm_access,
-                                           depth, changelists, ctx, pool));
+      SVN_ERR(get_prop_from_wc(*props, propname, path_or_url, pristine, node,
+                               adm_access, depth, changelists, ctx, pool));
 
       SVN_ERR(svn_wc_adm_close2(adm_access, pool));
     }
