@@ -277,6 +277,36 @@ svn_wc__adm_open_anchor_in_context(svn_wc_adm_access_t **anchor_access,
  * before the 1.7 release.
  */
 
+/** A callback vtable invoked by the generic node-walker function.
+ */
+typedef struct svn_wc__node_walk_callbacks_t
+{
+  /** A node was found at @a local_abspath. */
+  svn_error_t *(*found_node)(const char *local_abspath,
+                             void *walk_baton,
+                             apr_pool_t *scratch_pool);
+
+  /** Handle the error @a err encountered while processing @a local_abspath.
+   * Wrap or squelch @a err as desired, and return an @c svn_error_t
+   * *, or @c SVN_NO_ERROR.
+   */
+  svn_error_t *(*handle_error)(const char *local_abspath,
+                               svn_error_t *err,
+                               void *walk_baton,
+                               apr_pool_t *scratch_pool);
+
+} svn_wc__node_walk_callbacks_t;
+
+/**
+ * Retrieve an @a adm_access for @a path from the @a wc_ctx.
+ * If the @a adm_access for @a local_abspath is not found, this
+ * function sets @a *adm_acess to NULL and does not return an error.
+ */
+svn_error_t *
+svn_wc__adm_retrieve_from_context(svn_wc_adm_access_t **adm_access,
+                                  svn_wc_context_t *wc_ctx,
+                                  const char *local_abspath,
+                                  apr_pool_t *pool);
 /**
  * Fetch the absolute paths of all the working children of @a dir_abspath
  * into @a *children, allocated in @a result_pool.  Use @a wc_ctx to access
@@ -286,6 +316,7 @@ svn_error_t *
 svn_wc__node_get_children(const apr_array_header_t **children,
                           svn_wc_context_t *wc_ctx,
                           const char *dir_abspath,
+                          svn_boolean_t show_hidden,
                           apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool);
 
@@ -326,6 +357,21 @@ svn_wc__node_get_kind(svn_node_kind_t *kind,
                       const char *abspath,
                       svn_boolean_t show_hidden,
                       apr_pool_t *scratch_pool);
+
+
+/**
+ * Recursively call @a callbacks->found_node for all nodes underneath
+ * @a local_abspath.
+ */
+svn_error_t *
+svn_wc__node_walk_children(svn_wc_context_t *wc_ctx,
+                           const char *local_abspath,
+                           const svn_wc__node_walk_callbacks_t *callbacks,
+                           void *walk_baton,
+                           svn_depth_t walk_depth,
+                           svn_cancel_func_t cancel_func,
+                           void *cancel_baton,
+                           apr_pool_t *scratch_pool);
 
 #ifdef __cplusplus
 }

@@ -146,13 +146,6 @@ svn_error_t *svn_fs_fs__get_proplist(apr_hash_t **proplist,
                                      node_revision_t *noderev,
                                      apr_pool_t *pool);
 
-/* Set the revision property list of revision REV in filesystem FS to
-   PROPLIST.  Use POOL for temporary allocations. */
-svn_error_t *svn_fs_fs__set_revision_proplist(svn_fs_t *fs,
-                                              svn_revnum_t rev,
-                                              apr_hash_t *proplist,
-                                              apr_pool_t *pool);
-
 /* Set *PROPLIST to be an apr_hash_t containing the property list of
    revision REV as seen in filesystem FS.  Use POOL for temporary
    allocations. */

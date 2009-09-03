@@ -558,6 +558,35 @@ svn_opt_resolve_revisions(svn_opt_revision_t *peg_rev,
   return SVN_NO_ERROR;
 }
 
+const char *
+svn_opt__revision_to_string(const svn_opt_revision_t *revision,
+                            apr_pool_t *result_pool)
+{
+  switch (revision->kind)
+    {
+      case svn_opt_revision_unspecified:
+        return "unspecified";
+      case svn_opt_revision_number:
+        return apr_psprintf(result_pool, "%ld", revision->value.number);
+      case svn_opt_revision_date:
+        /* ### svn_time_to_human_cstring()? */
+        return svn_time_to_cstring(revision->value.date, result_pool);
+      case svn_opt_revision_committed:
+        return "committed";
+      case svn_opt_revision_previous:
+        return "previous";
+      case svn_opt_revision_base:
+        return "base";
+      case svn_opt_revision_working:
+        return "working";
+      case svn_opt_revision_head:
+        return "head";
+      default:
+        return NULL;
+    }
+}
+
+
 
 /*** Parsing arguments. ***/
 #define DEFAULT_ARRAY_SIZE 5
@@ -667,7 +696,7 @@ svn_opt_parse_path(svn_opt_revision_t *rev,
             {
               /* URLs are URI-encoded, so we look for dates with
                  URI-encoded delimeters.  */
-              int rev_len = strlen(rev_str);
+              size_t rev_len = strlen(rev_str);
               if (rev_len > 6
                   && rev_str[0] == '%'
                   && rev_str[1] == '7'
@@ -860,18 +889,19 @@ svn_opt__split_arg_at_peg_revision(const char **true_target,
                                    apr_pool_t *pool)
 {
   const char *peg_start = NULL; /* pointer to the peg revision, if any */
-  int j;
+  const char *ptr;
 
-  for (j = (strlen(utf8_target) - 1); j >= 0; --j)
+  for (ptr = (utf8_target + strlen(utf8_target) - 1); ptr >= utf8_target;
+        --ptr)
     {
       /* If we hit a path separator, stop looking.  This is OK
           only because our revision specifiers can't contain '/'. */
-      if (utf8_target[j] == '/')
+      if (*ptr == '/')
         break;
 
-      if (utf8_target[j] == '@')
+      if (*ptr == '@')
         {
-          peg_start = &utf8_target[j];
+          peg_start = ptr;
           break;
         }
     }
@@ -879,13 +909,13 @@ svn_opt__split_arg_at_peg_revision(const char **true_target,
   if (peg_start)
     {
       /* Error out if target is the empty string. */
-      if (j == 0)
+      if (ptr == utf8_target)
         return svn_error_createf(SVN_ERR_BAD_FILENAME, NULL,
                                  _("'%s' is just a peg revision. "
                                    "Maybe try '%s@' instead?"),
                                  utf8_target, utf8_target);
 
-      *true_target = apr_pstrmemdup(pool, utf8_target, j);
+      *true_target = apr_pstrmemdup(pool, utf8_target, ptr - utf8_target);
       if (peg_revision)
         *peg_revision = apr_pstrdup(pool, peg_start);
     }

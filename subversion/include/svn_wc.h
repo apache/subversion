@@ -1792,12 +1792,12 @@ svn_wc_create_conflict_result(svn_wc_conflict_choice_t choice,
  *
  * @since New in 1.7.
  */
-typedef svn_error_t *(*svn_wc_conflict_resolver_func2_t)
-    (svn_wc_conflict_result_t **result,
-     const svn_wc_conflict_description2_t *description,
-     void *baton,
-     apr_pool_t *result_pool,
-     apr_pool_t *scratch_pool);
+typedef svn_error_t *(*svn_wc_conflict_resolver_func2_t)(
+  svn_wc_conflict_result_t **result,
+  const svn_wc_conflict_description2_t *description,
+  void *baton,
+  apr_pool_t *result_pool,
+  apr_pool_t *scratch_pool);
 
 
 /** Similar to @c svn_wc_conflict_resolver_func2_t, but using
@@ -1807,11 +1807,11 @@ typedef svn_error_t *(*svn_wc_conflict_resolver_func2_t)
  * @since New in 1.5.
  * @deprecated Provided for backward compatibility with the 1.6 API.
  */
-typedef svn_error_t *(*svn_wc_conflict_resolver_func_t)
-    (svn_wc_conflict_result_t **result,
-     const svn_wc_conflict_description_t *description,
-     void *baton,
-     apr_pool_t *pool);
+typedef svn_error_t *(*svn_wc_conflict_resolver_func_t)(
+  svn_wc_conflict_result_t **result,
+  const svn_wc_conflict_description_t *description,
+  void *baton,
+  apr_pool_t *pool);
 
 /** @} */
 
@@ -2250,7 +2250,22 @@ typedef struct svn_wc_diff_callbacks_t
 /** Set @a *wc_format to @a path's working copy format version number if
  * @a path is a valid working copy directory, else set it to 0.
  * Return error @c APR_ENOENT if @a path does not exist at all.
+ *
+ * @since New in 1.7.
  */
+svn_error_t *
+svn_wc_check_wc2(int *wc_format,
+                 svn_wc_context_t *wc_ctx,
+                 const char *local_path,
+                 apr_pool_t *scratch_pool);
+
+/**
+ * Similar to svn_wc_check_wc2(), but with a relative path and no supplied
+ * working copy context.
+ *
+ * @deprecated Provided for backward compatibility with the 1.6 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_check_wc(const char *path,
                 int *wc_format,
@@ -2875,7 +2890,9 @@ typedef struct svn_wc_entry_callbacks_t
  * field of the entry.
  *
  * @since New in 1.5.
+ * @deprecated Provided for backward compatibility with the 1.6 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_walk_entries3(const char *path,
                      svn_wc_adm_access_t *adm_access,
@@ -2930,10 +2947,10 @@ svn_wc_mark_missing_deleted(const char *path,
                             apr_pool_t *pool);
 
 
-/** Ensure that an administrative area exists for @a path, so that @a
- * path is a working copy subdir based on @a url at @a revision, with
- * depth @a depth, and with repository UUID @a uuid and repository
- * root URL @a repos.
+/** Ensure that an administrative area exists for @a local_abspath, so
+ * that @a local_abspath is a working copy subdir based on @a url at @a
+ * revision, with depth @a depth, and with repository UUID @a uuid and
+ * repository root URL @a repos.
  *
  * @a depth must be a definite depth, it cannot be @c svn_depth_unknown.
  * @a uuid and @a repos may be @c NULL.  If non-@c NULL, @a repos must
@@ -2948,11 +2965,30 @@ svn_wc_mark_missing_deleted(const char *path,
  * the admin directory is scheduled for deletion or the
  * SVN_ERR_WC_OBSTRUCTED_UPDATE error will be returned.
  *
- * Do not ensure existence of @a path itself; if @a path does not
- * exist, return error.
+ * Do not ensure existence of @a local_abspath itself; if @a local_abspath
+ * does not exist, return error.
+ *
+ * Use @a scratch_pool for temporary allocations.
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_wc_ensure_adm4(svn_wc_context_t *wc_ctx,
+                   const char *local_abspath,
+                   const char *uuid,
+                   const char *url,
+                   const char *repos,
+                   svn_revnum_t revision,
+                   svn_depth_t depth,
+                   apr_pool_t *scratch_pool);
+
+/**
+ * Similar to svn_wc_ensure_adm4(), but without the wc context parameter.
  *
  * @since New in 1.5.
+ * @deprecated Provided for backwards compatibility with the 1.6 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_ensure_adm3(const char *path,
                    const char *uuid,
@@ -4276,15 +4312,17 @@ svn_wc_process_committed(const char *path,
 
 
 /**
- * Do a depth-first crawl in a working copy, beginning at @a path.
+ * Do a depth-first crawl in a working copy, beginning at @a target_abspath,
+ * below @a dir_abspath. @a target can be a file in @a dir_abspath,
+ * or @a dir_abspath itself.
  *
  * Communicate the `state' of the working copy's revisions and depths
- * to @a reporter/@a report_baton.  Obviously, if @a path is a file
- * instead of a directory, this depth-first crawl will be a short one.
+ * to @a reporter/@a report_baton.  Obviously, if @a local_abspath is a
+ * file instead of a directory, this depth-first crawl will be a short one.
  *
  * No locks or logs are created, nor are any animals harmed in the
- * process.  No cleanup is necessary.  @a adm_access must be an access
- * baton for the @a path hierarchy, it does not require a write lock.
+ * process unless @a restore_files is TRUE.  No cleanup is necessary.
+ * The working copy is accessed using @a wc_ctx.
  *
  * After all revisions are reported, @a reporter->finish_report() is
  * called, which immediately causes the RA layer to update the working
@@ -4336,9 +4374,32 @@ svn_wc_process_committed(const char *path,
  * state in it.  (Caller should obtain @a traversal_info from
  * svn_wc_init_traversal_info().)
  *
- * @since New in 1.6.
+ * @since New in 1.7.
  */
 svn_error_t *
+svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
+                        const char *dir_abspath,
+                        const char *target_abspath,
+                        const svn_ra_reporter3_t *reporter,
+                        void *report_baton,
+                        svn_boolean_t restore_files,
+                        svn_depth_t depth,
+                        svn_boolean_t honor_depth_exclude,
+                        svn_boolean_t depth_compatibility_trick,
+                        svn_boolean_t use_commit_times,
+                        svn_wc_notify_func2_t notify_func,
+                        void *notify_baton,
+                        svn_wc_traversal_info_t *traversal_info,
+                        apr_pool_t *scratch_pool);
+
+/**
+ * Similar to svn_wc_crawl_revisions5, but with a relative path and
+ * access baton instead of an absolute path and wc_ctx.
+ *
+ * @since New in 1.6.
+ * @deprecated Provided for compatibility with the 1.6 API.
+ */
+SVN_DEPRECATED svn_error_t *
 svn_wc_crawl_revisions4(const char *path,
                         svn_wc_adm_access_t *adm_access,
                         const svn_ra_reporter3_t *reporter,
@@ -4352,6 +4413,7 @@ svn_wc_crawl_revisions4(const char *path,
                         void *notify_baton,
                         svn_wc_traversal_info_t *traversal_info,
                         apr_pool_t *pool);
+
 
 /**
  * Similar to svn_wc_crawl_revisions4, but with @a honor_depth_exclude always
@@ -4431,7 +4493,22 @@ svn_wc_crawl_revisions(const char *path,
  *
  * @note Due to the way in which "WC-root-ness" is calculated, passing
  * a @a path of `.' to this function will always return @c TRUE.
+ *
+ * @since New in 1.7.
  */
+svn_error_t *
+svn_wc_is_wc_root2(svn_boolean_t *wc_root,
+                   svn_wc_context_t *wc_ctx,
+                   const char *local_abspath,
+                   apr_pool_t *scratch_pool);
+
+/**
+ * Similar to svn_wc_is_wc_root2(), but with an access baton and relative
+ * path.
+ *
+ * @deprecated Provided for backward compatibility with the 1.6 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_is_wc_root(svn_boolean_t *wc_root,
                   const char *path,
@@ -4448,8 +4525,35 @@ svn_wc_is_wc_root(svn_boolean_t *wc_root,
  * @a target is the actual subject (relative to the @a anchor) of the
  * update/commit, or "" if the @a anchor itself is the subject.
  *
- * Allocate @a anchor and @a target in @a pool.
+ * Allocate @a anchor and @a target in @a result_pool; @a scratch_pool
+ * is used for temporary allocations.
+ *
+ * @note Even though this API uses a @c svn_wc_context_t, it accepts a
+ * (possibly) relative path and returns a (possibly) relative path in
+ * @a *anchor.  The reason being that the outputs are generally used to
+ * open access batons, and such opening currently requires relative paths.
+ * In the long-run, I expect this API to be removed from 1.7, due to the
+ * remove of access batons, but for the time being, the @c svn_wc_context_t
+ * parameter allows us to avoid opening a duplicate database, just for this
+ * function.
+ *
+ * @since New in 1.7.
  */
+svn_error_t *
+svn_wc_get_actual_target2(const char **anchor,
+                          const char **target,
+                          svn_wc_context_t *wc_ctx,
+                          const char *path,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool);
+
+
+/** Similar to svn_wc_get_actual_target2(), but without the wc context, and
+ * with a absolute path.
+ * 
+ * @deprecated Provided for backward compatibility with the 1.6 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_get_actual_target(const char *path,
                          const char **anchor,
@@ -4932,11 +5036,11 @@ svn_wc_is_entry_prop(const char *name);
  * SVN_PROP_EOL_STYLE property, to make sure that the value matches
  * the mime type and contents.)
  */
-typedef svn_error_t *(*svn_wc_canonicalize_svn_prop_get_file_t)
-  (const svn_string_t **mime_type,
-   svn_stream_t *stream,
-   void *baton,
-   apr_pool_t *pool);
+typedef svn_error_t *(*svn_wc_canonicalize_svn_prop_get_file_t)(
+  const svn_string_t **mime_type,
+  svn_stream_t *stream,
+  void *baton,
+  apr_pool_t *pool);
 
 
 /** Canonicalize the value of an svn:* property @a propname with

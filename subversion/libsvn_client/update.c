@@ -72,8 +72,7 @@ file_fetcher(void *baton,
   if (! ffb->session)
     SVN_ERR(svn_client__open_ra_session_internal(&(ffb->session),
                                                  ffb->repos_root,
-                                                 NULL, NULL, NULL,
-                                                 FALSE, TRUE,
+                                                 NULL, NULL, FALSE, TRUE,
                                                  ffb->ctx, ffb->pool));
   return svn_ra_get_file(ffb->session, path, revision, stream,
                          fetched_rev, props, pool);
@@ -191,9 +190,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
       const char *target_abspath;
       svn_node_kind_t target_kind;
 
-      SVN_ERR(svn_dirent_get_absolute(&target_abspath,
-                                      svn_dirent_join(anchor, target, pool),
-                                      pool));
+      SVN_ERR(svn_dirent_get_absolute(&target_abspath, path, pool));
       SVN_ERR(svn_wc__node_get_kind(&target_kind, ctx->wc_ctx,
                                     target_abspath, TRUE, pool));
       if (target_kind == svn_node_dir)
@@ -230,8 +227,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
 
   /* Open an RA session for the URL */
   SVN_ERR(svn_client__open_ra_session_internal(&ra_session, entry->url,
-                                               anchor, adm_access,
-                                               NULL, TRUE, TRUE,
+                                               anchor, NULL, TRUE, TRUE,
                                                ctx, pool));
 
   /* ### todo: shouldn't svn_client__get_revision_number be able

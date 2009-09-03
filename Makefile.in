@@ -430,7 +430,7 @@ clean-javahl:
 
 check-javahl: javahl
 	@FIX_JAVAHL_LIB@
-	$(JAVA) "-Dtest.rootdir=$(javahl_test_rootdir)" "-Dtest.fstype=$(FS_TYPE)" -Djava.library.path=@JAVAHL_OBJDIR@:$(libdir) -classpath $(javahl_tests_PATH):$(javahl_tests_CLASSPATH) "-Dtest.tests=$(JAVAHL_TESTS)" org.tigris.subversion.javahl.RunTests
+	$(JAVA) "-Dtest.rootdir=$(javahl_test_rootdir)" "-Dtest.rooturl=$(BASE_URL)" "-Dtest.fstype=$(FS_TYPE)" -Djava.library.path=@JAVAHL_OBJDIR@:$(libdir) -classpath $(javahl_tests_PATH):$(javahl_tests_CLASSPATH) "-Dtest.tests=$(JAVAHL_TESTS)" org.tigris.subversion.javahl.RunTests
 
 # "make check CLEANUP=true" will clean up directories for successful tests.
 # "make check TESTS=subversion/tests/cmdline/basic_tests.py"
@@ -584,7 +584,7 @@ doc: doc-misc-docs doc-api doc-javahl
 
 # Generate API documentation for the C libraries.
 ### This could also generate POD for swig-perl, etc.
-doc-api:
+doc-api: mkdir-init
 	( cd $(top_srcdir) && \
 	  sed "s,\(OUTPUT_DIRECTORY *= *\),\1$(abs_builddir)/," \
 	  doc/doxygen.conf | doxygen - )

@@ -54,25 +54,34 @@
 
 /* Helper for report_revisions_and_depths().
 
-   Perform an atomic restoration of the file FILE_PATH; that is, copy
+   Perform an atomic restoration of the file LOCAL_ABSPATH; that is, copy
    the file's text-base to the administrative tmp area, and then move
-   that file to FILE_PATH with possible translations/expansions.  If
+   that file to LOCAL_ABSPATH with possible translations/expansions.  If
    USE_COMMIT_TIMES is set, then set working file's timestamp to
    last-commit-time.  Either way, set entry-timestamp to match that of
-   the working file when all is finished. */
+   the working file when all is finished. 
+   
+   Not that a valid access baton with a write lock to the directory of
+   LOCAL_ABSPATH must be available in DB.*/
 static svn_error_t *
-restore_file(const char *file_path,
-             svn_wc_adm_access_t *adm_access,
+restore_file(svn_wc__db_t *db,
+             const char *local_abspath,
              svn_boolean_t use_commit_times,
              apr_pool_t *pool)
 {
   svn_stream_t *src_stream;
   svn_boolean_t special;
   svn_wc_entry_t newentry;
-  const char *local_abspath;
-  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
+  const char *adm_dir, *file_path;
+  svn_wc_adm_access_t *adm_access;
 
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, file_path, pool));
+  svn_dirent_split(local_abspath, &adm_dir, &file_path, pool);
+
+  adm_access = svn_wc__adm_retrieve_internal2(db, adm_dir, pool);
+  SVN_ERR_ASSERT(adm_access != NULL);
+
+  file_path = svn_dirent_join(svn_wc_adm_access_path(adm_access), file_path,
+                              pool);
 
   SVN_ERR(svn_wc_get_pristine_contents(&src_stream, file_path, pool, pool));
 
@@ -170,13 +179,99 @@ restore_file(const char *file_path,
                               &newentry, SVN_WC__ENTRY_MODIFY_TEXT_TIME, pool);
 }
 
+/* Try to restore LOCAL_ABSPATH of node type KIND and if successfull,
+   notify that the node is restored.  Use DB for accessing the working copy.
+   If USE_COMMIT_TIMES is set, then set working file's timestamp to 
+   last-commit-time.
+
+   Set RESTORED to TRUE if the node is successfull restored. RESTORED will
+   be FALSE if restoring this node is not supported.
+
+   This function does all temporary allocations in SCRATCH_POOL 
+ */
+static svn_error_t *
+restore_node(svn_boolean_t *restored,
+             svn_wc__db_t *db,
+             const char *local_abspath,
+             svn_node_kind_t kind,
+             svn_boolean_t use_commit_times,
+             svn_wc_notify_func2_t notify_func,
+             void *notify_baton,
+             apr_pool_t *scratch_pool)
+{
+  *restored = FALSE;
+
+  /* Currently we can only restore files, but we will be able to restore
+     directories after we move to a single database and pristine store. */
+  if (kind == svn_node_file)
+    {
+      /* ... recreate file from text-base, and ... */
+      SVN_ERR(restore_file(db, local_abspath, use_commit_times,
+                           scratch_pool));
+
+      *restored = TRUE;
+      /* ... report the restoration to the caller.  */
+      if (notify_func != NULL)
+        {
+          svn_wc_notify_t *notify = svn_wc_create_notify(
+                                            local_abspath,
+                                            svn_wc_notify_restore,
+                                            scratch_pool);
+          notify->kind = svn_node_file;
+          (*notify_func)(notify_baton, notify, scratch_pool);
+        }
+
+      /* Keep missing = FALSE */
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/* Check if there is an externals definition stored on LOCAL_ABSPATH
+   using DB.  In that case store the externals definition and DEPTH in
+   TRAVERSAL_INFO.  Use SCRATCH_POOL for temporary allocations. */
+static svn_error_t *
+read_traversal_info(svn_wc__db_t *db,
+                    const char *local_abspath,
+                    svn_wc_traversal_info_t *traversal_info,
+                    svn_depth_t depth,
+                    apr_pool_t *scratch_pool)
+{
+  const svn_string_t *val;
+
+  SVN_ERR_ASSERT(traversal_info != NULL);
+
+  SVN_ERR(svn_wc__internal_propget(&val, db, local_abspath,
+                                   SVN_PROP_EXTERNALS,
+                                   scratch_pool, scratch_pool));
+
+  if (val)
+    {
+      svn_wc_adm_access_t *adm_access = 
+             svn_wc__adm_retrieve_internal2(db, local_abspath, scratch_pool);
+      apr_pool_t *dup_pool = traversal_info->pool;
+      const char *dup_path = apr_pstrdup(dup_pool,
+                                         svn_wc_adm_access_path(adm_access));
+      const char *dup_val = apr_pstrmemdup(dup_pool, val->data, val->len);
+
+      apr_hash_set(traversal_info->externals_old,
+                   dup_path, APR_HASH_KEY_STRING, dup_val);
+      apr_hash_set(traversal_info->externals_new,
+                   dup_path, APR_HASH_KEY_STRING, dup_val);
+      apr_hash_set(traversal_info->depths,
+                   dup_path, APR_HASH_KEY_STRING,
+                   svn_depth_to_word(depth));
+    }
+
+  return SVN_NO_ERROR;
+}
 
 /* The recursive crawler that describes a mixed-revision working
    copy to an RA layer.  Used to initiate updates.
 
-   This is a depth-first recursive walk of DIR_PATH under ADM_ACCESS.
-   Look at each entry and check if its revision is different than
-   DIR_REV.  If so, report this fact to REPORTER.  If an entry is
+   This is a depth-first recursive walk of DIR_PATH under ANCHOR_ABSPATH,
+   using DB.  Look at each entry and check if its revision is different
+   than DIR_REV.  If so, report this fact to REPORTER.  If an entry is
    missing from disk, report its absence to REPORTER.  If an entry has
    a different URL than expected, report that to REPORTER.  If an
    entry has a different depth than its parent, report that to
@@ -222,7 +317,8 @@ restore_file(const char *file_path,
    will be called to report the restoration.  USE_COMMIT_TIMES is
    passed to restore_file() helper. */
 static svn_error_t *
-report_revisions_and_depths(svn_wc_adm_access_t *adm_access,
+report_revisions_and_depths(svn_wc__db_t *db,
+                            const char *anchor_abspath,
                             const char *dir_path,
                             svn_revnum_t dir_rev,
                             const svn_ra_reporter3_t *reporter,
@@ -238,61 +334,50 @@ report_revisions_and_depths(svn_wc_adm_access_t *adm_access,
                             svn_wc_traversal_info_t *traversal_info,
                             apr_pool_t *pool)
 {
-  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
-  const char *full_path;
-  const char *abspath;
+  const char *dir_abspath;
   const apr_array_header_t *children;
   apr_hash_t *dirents;
   apr_pool_t *subpool = svn_pool_create(pool), *iterpool;
-  const svn_wc_entry_t *dot_entry;
-  const char *this_url;
-  const char *this_path;
-  const char *this_full_path;
-  svn_wc_adm_access_t *dir_access;
-  svn_wc_notify_t *notify;
   int i;
+  const char *dir_repos_root, *dir_repos_relpath, *dir_url;
+  svn_depth_t dir_depth;
+
 
   /* Get both the SVN Entries and the actual on-disk entries.   Also
      notice that we're picking up hidden entries too (read_children never
      hides children). */
-  full_path = svn_dirent_join(svn_wc_adm_access_path(adm_access),
-                              dir_path, subpool);
-  SVN_ERR(svn_dirent_get_absolute(&abspath, full_path, pool));
-  SVN_ERR(svn_wc__db_read_children(&children, db, abspath,
+  dir_abspath = svn_dirent_join(anchor_abspath, dir_path, subpool);
+  SVN_ERR(svn_wc__db_read_children(&children, db, dir_abspath,
                                    subpool, subpool));
-  
-  SVN_ERR(svn_wc_adm_retrieve(&dir_access, adm_access, full_path, subpool));
-  SVN_ERR(svn_io_get_dir_filenames(&dirents, full_path, subpool));
+  SVN_ERR(svn_io_get_dir_filenames(&dirents, dir_abspath, subpool));
 
   /*** Do the real reporting and recursing. ***/
 
-  /* First, look at "this dir" to see what its URL is. */
-  SVN_ERR(svn_wc_entry(&dot_entry, full_path, dir_access, TRUE, subpool));
-  /* ### need: depth, url  */
+  /* First, look at "this dir" to see what its URL and depth are. */
+  SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL, &dir_repos_relpath,
+                               &dir_repos_root, NULL, NULL, NULL, NULL, NULL,
+                               &dir_depth, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL,
+                               db, dir_abspath,
+                               subpool, subpool));
 
-  /* Should be the real entry, not a parent stub.  */
-  SVN_ERR_ASSERT(dot_entry != NULL && *dot_entry->name == '\0');
+  /* If the directory has no url, search its parents */
+  if (dir_repos_relpath == NULL)
+    SVN_ERR(svn_wc__db_scan_base_repos(&dir_repos_relpath, &dir_repos_root,
+                                       NULL, db, dir_abspath,
+                                       subpool, subpool));
+
+  /* ### The entries based code still uses full urls */
+  dir_url = svn_path_url_add_component2(dir_repos_root, dir_repos_relpath,
+                                        subpool);
 
   /* If "this dir" has "svn:externals" property set on it, store its name
      and depth in traversal_info. */
   if (traversal_info)
     {
-      const svn_string_t *val;
-      SVN_ERR(svn_wc__internal_propget(&val, db, abspath, SVN_PROP_EXTERNALS,
-                                       subpool, subpool));
-      if (val)
-        {
-          apr_pool_t *dup_pool = traversal_info->pool;
-          const char *dup_path = apr_pstrdup(dup_pool, full_path);
-          const char *dup_val = apr_pstrmemdup(dup_pool, val->data, val->len);
-          apr_hash_set(traversal_info->externals_old,
-                       dup_path, APR_HASH_KEY_STRING, dup_val);
-          apr_hash_set(traversal_info->externals_new,
-                       dup_path, APR_HASH_KEY_STRING, dup_val);
-          apr_hash_set(traversal_info->depths,
-                       dup_path, APR_HASH_KEY_STRING,
-                       svn_depth_to_word(dot_entry->depth));
-        }
+      SVN_ERR(read_traversal_info(db, dir_abspath, traversal_info,
+                                  dir_depth, subpool));
     }
 
   /* Looping over current directory's SVN entries: */
@@ -301,53 +386,37 @@ report_revisions_and_depths(svn_wc_adm_access_t *adm_access,
   for (i = 0; i < children->nelts; ++i)
     {
       const char *child = APR_ARRAY_IDX(children, i, const char *);
-      const void *key;
-      apr_ssize_t klen;
-      const svn_wc_entry_t *current_entry;
-      svn_io_dirent_t *dirent;
-      svn_node_kind_t dirent_kind;
-      svn_boolean_t missing = FALSE;
+      const char *this_path, *this_abspath;
+      const char *this_repos_root_url, *this_repos_relpath;
+      const char *this_original_repos_relpath;
+      svn_wc__db_status_t this_status;
+      svn_wc__db_kind_t this_kind;
+      svn_revnum_t this_rev, this_base_rev;
+      svn_depth_t this_depth;
+      svn_wc__db_lock_t *this_lock;
+      svn_boolean_t this_shadows_base, this_switched, replaced = FALSE;
+      
 
       /* Clear the iteration subpool here because the loop has a bunch
          of 'continue' jump statements. */
       svn_pool_clear(iterpool);
 
-      key = child;
-      klen = strlen(key);
-
       /* Compute the paths and URLs we need. */
-      this_url = svn_path_url_add_component2(dot_entry->url, key, iterpool);
-      this_path = svn_dirent_join(dir_path, key, iterpool);
-      this_full_path = svn_dirent_join(full_path, key, iterpool);
+      this_path = svn_dirent_join(dir_path, child, iterpool);
+      this_abspath = svn_dirent_join(dir_abspath, child, iterpool);
 
-      SVN_ERR(svn_wc_entry(&current_entry, this_full_path, dir_access, TRUE,
-                           iterpool));
+      SVN_ERR(svn_wc__db_read_info(&this_status, &this_kind, &this_rev,
+                                   &this_repos_relpath, &this_repos_root_url,
+                                   NULL, NULL, NULL, NULL, NULL, &this_depth,
+                                   NULL, NULL, NULL, NULL,
+                                   &this_original_repos_relpath,
+                                   NULL, NULL, NULL, NULL, NULL,
+                                   &this_shadows_base, NULL, NULL, NULL,
+                                   NULL, &this_lock, NULL,
+                                   db, this_abspath, iterpool, iterpool));
 
-      /* ### ugh. for directories, we need the entry from the parent.
-         ### below, we're testing the DELETED flag, and that is only
-         ### present in the parent dir's entry for CHILD.  */
-      if (current_entry->kind == svn_node_dir)
-        {
-          apr_hash_t *entries;
-          SVN_ERR(svn_wc_entries_read(&entries, dir_access, TRUE, subpool));
-          current_entry = apr_hash_get(entries, child, APR_HASH_KEY_STRING);
-          SVN_ERR_ASSERT(current_entry != NULL);
-        }
-
-      /*** The Big Tests: ***/
-
-      /* If the entry is 'deleted' or 'absent', make sure the server
-         knows it's gone... */
-      if (current_entry->deleted || current_entry->absent)
-        {
-          /* ...unless we're reporting everything, in which case we're
-             going to report it missing later anyway. */
-          if (! report_everything)
-            SVN_ERR(reporter->delete_path(report_baton, this_path, iterpool));
-          continue;
-        }
-
-      if (current_entry->depth == svn_depth_exclude)
+      /* First check the depth */
+      if (this_depth == svn_depth_exclude)
         {
           if (honor_depth_exclude)
             {
@@ -376,141 +445,219 @@ report_revisions_and_depths(svn_wc_adm_access_t *adm_access,
                 SVN_ERR(reporter->delete_path(report_baton,
                                               this_path, iterpool));
             }
-
           continue;
         }
 
-      /* Is the entry on disk?  Set a flag if not. */
-      dirent = apr_hash_get(dirents, key, klen);
-      if (! dirent)
+      if (this_kind == svn_wc__db_kind_dir)
         {
-          /* It is possible on a case insensitive system that the
-             entry is not really missing, so we call our trusty but
-             expensive friend svn_io_check_path to be sure. */
-          SVN_ERR(svn_io_check_path(this_full_path, &dirent_kind,
-                                    iterpool));
-          if (dirent_kind == svn_node_none)
-            missing = TRUE;
+          svn_revnum_t del_rev;
+          SVN_ERR(svn_wc__db_temp_is_dir_deleted(&replaced, &del_rev,
+                                                 db, this_abspath,
+                                                 iterpool));
         }
 
-      /* From here on out, ignore any entry scheduled for addition */
-      if (current_entry->schedule == svn_wc_schedule_add)
-        continue;
+      /*** The Big Tests: ***/
 
-      /*** Files ***/
-      if (current_entry->kind == svn_node_file)
+      if (this_shadows_base)
         {
-          /* If the item is missing from disk, and we're supposed to
-             restore missing things, and it isn't missing as a result
-             of a scheduling operation, then ... */
-          if (missing
-              && restore_files
-              && (current_entry->schedule != svn_wc_schedule_delete)
-              && (current_entry->schedule != svn_wc_schedule_replace))
-            {
-              /* ... recreate file from text-base, and ... */
-              SVN_ERR(restore_file(this_full_path, dir_access,
-                                   use_commit_times, iterpool));
+          svn_wc__db_status_t this_base_status;
+          SVN_ERR(svn_wc__db_base_get_info(&this_base_status, NULL,
+                                           &this_base_rev,
+                                           NULL, NULL, NULL, NULL, NULL,
+                                           NULL, NULL, NULL, NULL, NULL,
+                                           NULL, NULL,
+                                           db, this_abspath,
+                                           iterpool, iterpool));
 
-              /* ... report the restoration to the caller.  */
-              if (notify_func != NULL)
+          if (!replaced)
+            replaced = (this_base_status == svn_wc__db_status_not_present);
+        }
+
+      {
+        svn_boolean_t this_absent;
+
+        if (replaced ||
+            this_status == svn_wc__db_status_absent ||
+            this_status == svn_wc__db_status_excluded ||
+            this_status == svn_wc__db_status_not_present)
+          {
+            this_absent = TRUE;
+          }
+        else if (this_status == svn_wc__db_status_deleted && !this_shadows_base)
+          this_absent = TRUE;
+        else
+          this_absent = FALSE;
+
+        /* If the entry is 'deleted' or 'absent', make sure the server
+           knows it's gone... */
+        if (this_absent)
+          {
+            /* ...unless we're reporting everything, in which case we're
+               going to report it missing later anyway. */
+            if (! report_everything)
+              SVN_ERR(reporter->delete_path(report_baton, this_path, iterpool));
+            continue;
+          }
+      }
+
+      /* From here on out, ignore any entry scheduled for addition */
+      if ((this_status == svn_wc__db_status_added) ||
+          (this_status == svn_wc__db_status_obstructed_add))
+      {
+        if (!replaced)
+          continue;
+
+        if (!this_shadows_base && this_original_repos_relpath)
+          continue; /* ### Skip copy roots? */
+      }
+
+      /* Is the entry on disk? */
+      if (apr_hash_get(dirents, child, APR_HASH_KEY_STRING) == NULL)
+        {
+          svn_boolean_t missing = FALSE; 
+          if (restore_files && this_status != svn_wc__db_status_deleted
+                            && !replaced)
+            {
+              svn_node_kind_t dirent_kind;
+
+              /* It is possible on a case insensitive system that the
+                 entry is not really missing, but just cased incorrectly.
+                 In this case we can't overwrite it with the pristine
+                 version */
+              SVN_ERR(svn_io_check_path(this_abspath, &dirent_kind, iterpool));
+
+              if (dirent_kind == svn_node_none)
                 {
-                  notify = svn_wc_create_notify(this_full_path,
-                                                svn_wc_notify_restore,
-                                                iterpool);
-                  notify->kind = svn_node_file;
-                  (*notify_func)(notify_baton, notify, iterpool);
+                  svn_boolean_t restored;
+                  svn_node_kind_t kind = (this_kind == svn_wc__db_kind_dir)
+                                                     ? svn_node_dir
+                                                     : svn_node_file;
+
+                  SVN_ERR(restore_node(&restored, db, this_abspath, kind,
+                                       use_commit_times, notify_func,
+                                       notify_baton, iterpool));
+
+                  if (!restored)
+                    missing = TRUE;
                 }
             }
-
-          if (report_everything)
-            {
-              /* Report the file unconditionally, one way or another. */
-              if (strcmp(current_entry->url, this_url) != 0)
-                SVN_ERR(reporter->link_path(report_baton, this_path,
-                                            current_entry->url,
-                                            current_entry->revision,
-                                            current_entry->depth,
-                                            FALSE, current_entry->lock_token,
-                                            iterpool));
-              else
-                SVN_ERR(reporter->set_path(report_baton, this_path,
-                                           current_entry->revision,
-                                           current_entry->depth,
-                                           FALSE, current_entry->lock_token,
-                                           iterpool));
-            }
-
-          /* Possibly report a disjoint URL ... */
-          else if ((current_entry->schedule != svn_wc_schedule_add)
-                   && (current_entry->schedule != svn_wc_schedule_replace)
-                   && (strcmp(current_entry->url, this_url) != 0))
-            SVN_ERR(reporter->link_path(report_baton,
-                                        this_path,
-                                        current_entry->url,
-                                        current_entry->revision,
-                                        current_entry->depth,
-                                        FALSE,
-                                        current_entry->lock_token,
-                                        iterpool));
-          /* ... or perhaps just a differing revision or lock token,
-             or the mere presence of the file in a depth-empty dir. */
-          else if (current_entry->revision != dir_rev
-                   || current_entry->lock_token
-                   || dot_entry->depth == svn_depth_empty)
-            SVN_ERR(reporter->set_path(report_baton,
-                                       this_path,
-                                       current_entry->revision,
-                                       current_entry->depth,
-                                       FALSE,
-                                       current_entry->lock_token,
-                                       iterpool));
-        } /* end file case */
-
-      /*** Directories (in recursive mode) ***/
-      else if (current_entry->kind == svn_node_dir
-               && (depth > svn_depth_files
-                   || depth == svn_depth_unknown))
-        {
-          const char *subdir_abspath;
-          svn_error_t *err;
-          const svn_wc_entry_t *subdir_entry;
-          svn_boolean_t start_empty;
+          else
+            missing = TRUE;
 
           /* If a directory is missing from disk, we have no way to
              recreate it locally, so report as missing and move
              along.  Again, don't bother if we're reporting
              everything, because the dir is already missing on the server. */
-          if (missing)
+          if (missing && this_kind == svn_wc__db_kind_dir
+               && (depth > svn_depth_files || depth == svn_depth_unknown))
             {
               if (! report_everything)
                 SVN_ERR(reporter->delete_path(report_baton, this_path,
                                               iterpool));
               continue;
             }
+        }
 
-          /* We need to read the full entry of the directory from its
-             own "this dir", if available. */
-          subdir_abspath = svn_dirent_join(abspath, key, iterpool);
-          err = svn_wc__get_entry(&subdir_entry, db, subdir_abspath, FALSE,
-                                  svn_node_dir, FALSE, iterpool, iterpool);
-          if (err)
+      /* And finally prepare for reporting */
+      if (!this_repos_relpath)
+        {
+          this_switched = FALSE;
+          this_repos_relpath = svn_uri_join(dir_repos_relpath, child,
+                                            iterpool);
+        }
+      else
+        {
+          const char *childname = svn_uri_is_child(dir_repos_relpath,
+                                                   this_repos_relpath, NULL);
+
+          if (!childname || strcmp(childname, child) != 0)
+            this_switched = TRUE;
+          else
+            this_switched = FALSE;
+        }
+
+      if (this_depth == svn_depth_unknown)
+        this_depth = svn_depth_infinity;
+
+      if (this_rev == SVN_INVALID_REVNUM)
+        {
+          /* For added and replaced nodes use their base revision
+             in reports */
+          this_rev = this_shadows_base ? this_base_rev : dir_rev;
+        }
+
+      /*** Files ***/
+      if (this_kind == svn_wc__db_kind_file ||
+          this_kind == svn_wc__db_kind_symlink)
+        {
+          const char *url = NULL;
+
+          if (this_switched)
+            url = svn_path_url_add_component2(dir_repos_root, this_repos_relpath, iterpool);
+
+          if (report_everything)
             {
-              if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND
-                  && err->apr_err != SVN_ERR_WC_MISSING)
-                return svn_error_return(err);
-              svn_error_clear(err);
-
-              /* We found the directory in the parent, but now it is "not
-                 found" in its own subdirectory. This indicates the damned
-                 thing is missing in some way. So... skip the subdir.  */
-              continue;
+              /* Report the file unconditionally, one way or another. */
+              if (this_switched)
+                SVN_ERR(reporter->link_path(report_baton,
+                                            this_path,
+                                            url,
+                                            this_rev,
+                                            this_depth,
+                                            FALSE,
+                                            this_lock ? this_lock->token : NULL,
+                                            iterpool));
+              else
+                SVN_ERR(reporter->set_path(report_baton,
+                                           this_path,
+                                           this_rev,
+                                           this_depth,
+                                           FALSE,
+                                           this_lock ? this_lock->token : NULL,
+                                           iterpool));
             }
 
-          start_empty = subdir_entry->incomplete;
+          /* Possibly report a disjoint URL ... */
+          else if (this_switched && !this_shadows_base)
+            SVN_ERR(reporter->link_path(report_baton,
+                                        this_path,
+                                        url,
+                                        this_rev,
+                                        this_depth,
+                                        FALSE,
+                                        this_lock ? this_lock->token : NULL,
+                                        iterpool));
+          /* ... or perhaps just a differing revision or lock token,
+             or the mere presence of the file in a depth-empty dir. */
+          else if (this_rev != dir_rev
+                   || this_lock
+                   || dir_depth == svn_depth_empty)
+            SVN_ERR(reporter->set_path(report_baton,
+                                       this_path,
+                                       this_rev,
+                                       this_depth,
+                                       FALSE,
+                                       this_lock ? this_lock->token : NULL,
+                                       iterpool));
+        } /* end file case */
+
+      /*** Directories (in recursive mode) ***/
+      else if (this_kind == svn_wc__db_kind_dir
+               && (depth > svn_depth_files
+                   || depth == svn_depth_unknown))
+        {
+          const char *url = NULL;
+          svn_boolean_t start_empty;
+          svn_boolean_t is_incomplete = (this_status == svn_wc__db_status_incomplete);
+
+          if (this_switched)
+            url = svn_path_url_add_component2(dir_repos_root, this_repos_relpath, iterpool);
+
+          start_empty = is_incomplete;
+
           if (depth_compatibility_trick
-              && subdir_entry->depth <= svn_depth_files
-              && depth > subdir_entry->depth)
+              && this_depth <= svn_depth_files
+              && depth > this_depth)
             {
               start_empty = TRUE;
             }
@@ -518,58 +665,62 @@ report_revisions_and_depths(svn_wc_adm_access_t *adm_access,
           if (report_everything)
             {
               /* Report the dir unconditionally, one way or another. */
-              if (strcmp(subdir_entry->url, this_url) != 0)
-                SVN_ERR(reporter->link_path(report_baton, this_path,
-                                            subdir_entry->url,
-                                            subdir_entry->revision,
-                                            subdir_entry->depth,
+              if (this_switched)
+                SVN_ERR(reporter->link_path(report_baton,
+                                            this_path,
+                                            url,
+                                            this_rev,
+                                            this_depth,
                                             start_empty,
-                                            subdir_entry->lock_token,
+                                            this_lock ? this_lock->token : NULL,
                                             iterpool));
               else
-                SVN_ERR(reporter->set_path(report_baton, this_path,
-                                           subdir_entry->revision,
-                                           subdir_entry->depth,
+                SVN_ERR(reporter->set_path(report_baton,
+                                           this_path,
+                                           this_rev,
+                                           this_depth,
                                            start_empty,
-                                           subdir_entry->lock_token,
+                                           this_lock ? this_lock->token : NULL,
                                            iterpool));
             }
 
           /* Possibly report a disjoint URL ... */
-          else if (strcmp(subdir_entry->url, this_url) != 0)
+          else if (this_switched)
             SVN_ERR(reporter->link_path(report_baton,
                                         this_path,
-                                        subdir_entry->url,
-                                        subdir_entry->revision,
-                                        subdir_entry->depth,
+                                        url,
+                                        this_rev,
+                                        this_depth,
                                         start_empty,
-                                        subdir_entry->lock_token,
+                                        this_lock ? this_lock->token : NULL,
                                         iterpool));
           /* ... or perhaps just a differing revision, lock token, incomplete
              subdir, the mere presence of the directory in a depth-empty or
              depth-files dir, or if the parent dir is at depth-immediates but
              the child is not at depth-empty.  Also describe shallow subdirs
              if we are trying to set depth to infinity. */
-          else if (subdir_entry->revision != dir_rev
-                   || subdir_entry->lock_token
-                   || subdir_entry->incomplete
-                   || dot_entry->depth == svn_depth_empty
-                   || dot_entry->depth == svn_depth_files
-                   || (dot_entry->depth == svn_depth_immediates
-                       && subdir_entry->depth != svn_depth_empty)
-                   || (subdir_entry->depth < svn_depth_infinity
+          else if (this_rev != dir_rev
+                   || this_lock
+                   || is_incomplete
+                   || dir_depth == svn_depth_empty
+                   || dir_depth == svn_depth_files
+                   || (dir_depth == svn_depth_immediates
+                       && this_depth != svn_depth_empty)
+                   || (this_depth < svn_depth_infinity
                        && depth == svn_depth_infinity))
             SVN_ERR(reporter->set_path(report_baton,
                                        this_path,
-                                       subdir_entry->revision,
-                                       subdir_entry->depth,
+                                       this_rev,
+                                       this_depth,
                                        start_empty,
-                                       subdir_entry->lock_token,
+                                       this_lock ? this_lock->token : NULL,
                                        iterpool));
 
           if (SVN_DEPTH_IS_RECURSIVE(depth))
-            SVN_ERR(report_revisions_and_depths(adm_access, this_path,
-                                                subdir_entry->revision,
+             SVN_ERR(report_revisions_and_depths(db,
+                                                anchor_abspath,
+                                                this_path,
+                                                this_rev,
                                                 reporter, report_baton,
                                                 notify_func, notify_baton,
                                                 restore_files, depth,
@@ -594,8 +745,9 @@ report_revisions_and_depths(svn_wc_adm_access_t *adm_access,
 
 
 svn_error_t *
-svn_wc_crawl_revisions4(const char *path,
-                        svn_wc_adm_access_t *adm_access,
+svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
+                        const char *dir_abspath,
+                        const char *target_abspath,
                         const svn_ra_reporter3_t *reporter,
                         void *report_baton,
                         svn_boolean_t restore_files,
@@ -608,23 +760,36 @@ svn_wc_crawl_revisions4(const char *path,
                         svn_wc_traversal_info_t *traversal_info,
                         apr_pool_t *pool)
 {
-  svn_error_t *fserr, *err = SVN_NO_ERROR;
+  svn_error_t *fserr, *err;
   const svn_wc_entry_t *entry;
   svn_revnum_t base_rev = SVN_INVALID_REVNUM;
   svn_boolean_t missing = FALSE;
   const svn_wc_entry_t *parent_entry = NULL;
-  svn_wc_notify_t *notify;
   svn_boolean_t start_empty;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(dir_abspath));
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(target_abspath));
 
   /* The first thing we do is get the base_rev from the working copy's
      ROOT_DIRECTORY.  This is the first revnum that entries will be
      compared to. */
-  SVN_ERR(svn_wc_entry(&entry, path, adm_access, FALSE, pool));
+  err = svn_wc__get_entry(&entry, wc_ctx->db, target_abspath, TRUE,
+                          svn_node_unknown, FALSE, pool, pool);
 
-  if ((! entry) || ((entry->schedule == svn_wc_schedule_add)
-                    && (entry->kind == svn_node_dir)))
+  if (err && err->apr_err != SVN_ERR_NODE_UNEXPECTED_KIND)
+    return svn_error_return(err);
+
+  if (err)
     {
-      /* Don't check the exclude flag for the target.
+      entry = NULL;
+      svn_error_clear(err);
+      err = NULL;
+    }
+
+  if ((! entry) || entry->deleted || ((entry->schedule == svn_wc_schedule_add)
+                                      && (entry->kind == svn_node_dir)))
+    {
+        /* Don't check the exclude flag for the target.
 
          If we report the target itself as excluded, the server will
          send us nothing about the target -- but we want to permit
@@ -636,9 +801,9 @@ svn_wc_crawl_revisions4(const char *path,
 
       /* There aren't any versioned paths to crawl which are known to
          the repository. */
-      SVN_ERR(svn_wc__entry_versioned(&parent_entry,
-                                      svn_dirent_dirname(path, pool),
-                                      adm_access, FALSE, pool));
+      SVN_ERR(svn_wc__get_entry(&parent_entry, wc_ctx->db,
+                                svn_dirent_dirname(target_abspath, pool),
+                                FALSE, svn_node_dir, FALSE, pool, pool));
 
       base_rev = parent_entry->revision;
 
@@ -650,7 +815,7 @@ svn_wc_crawl_revisions4(const char *path,
 
       SVN_ERR(reporter->set_path(report_baton, "", base_rev, depth,
                                  entry ? entry->incomplete : TRUE,
-                                 NULL, pool));
+                                 entry ? entry->lock_token : NULL, pool));
       SVN_ERR(reporter->delete_path(report_baton, "", pool));
 
       /* Finish the report, which causes the update editor to be
@@ -670,9 +835,9 @@ svn_wc_crawl_revisions4(const char *path,
 
   if (base_rev == SVN_INVALID_REVNUM)
     {
-      const char *dirname = svn_dirent_dirname(path, pool);
-      SVN_ERR(svn_wc__entry_versioned(&parent_entry, dirname, adm_access,
-                                      FALSE, pool));
+      SVN_ERR(svn_wc__get_entry(&parent_entry, wc_ctx->db,
+                                svn_dirent_dirname(target_abspath, pool),
+                                FALSE, svn_node_dir, FALSE, pool, pool));
       base_rev = parent_entry->revision;
     }
 
@@ -685,7 +850,7 @@ svn_wc_crawl_revisions4(const char *path,
   if (entry->schedule != svn_wc_schedule_delete)
     {
       apr_finfo_t info;
-      err = svn_io_stat(&info, path, APR_FINFO_MIN, pool);
+      err = svn_io_stat(&info, target_abspath, APR_FINFO_MIN, pool);
       if (err)
         {
           if (APR_STATUS_IS_ENOENT(err->apr_err))
@@ -695,12 +860,31 @@ svn_wc_crawl_revisions4(const char *path,
         }
     }
 
+  if (missing && restore_files)
+    {
+      svn_boolean_t restored;
+
+      err = restore_node(&restored, wc_ctx->db, target_abspath,
+                         entry->kind, use_commit_times,
+                         notify_func, notify_baton,
+                         pool);
+
+      if (err)
+        {
+          SVN_ERR_ASSERT(0 && "Restore failed");
+          goto abort_report;
+        }
+
+      if (restored)
+        missing = FALSE;
+    }
+
   if (entry->kind == svn_node_dir)
     {
       if (missing)
         {
-          /* Always report directories as missing;  we can't recreate
-             them locally. */
+          /* Report missing directories as deleted to retrieve them
+             from the repository. */
           err = reporter->delete_path(report_baton, "", pool);
           if (err)
             goto abort_report;
@@ -709,7 +893,8 @@ svn_wc_crawl_revisions4(const char *path,
         {
           /* Recursively crawl ROOT_DIRECTORY and report differing
              revisions. */
-          err = report_revisions_and_depths(adm_access,
+          err = report_revisions_and_depths(wc_ctx->db,
+                                            dir_abspath,
                                             "",
                                             base_rev,
                                             reporter, report_baton,
@@ -730,28 +915,12 @@ svn_wc_crawl_revisions4(const char *path,
     {
       const char *pdir, *bname;
 
-      if (missing && restore_files)
-        {
-          /* Recreate file from text-base. */
-          err = restore_file(path, adm_access, use_commit_times, pool);
-          if (err)
-            goto abort_report;
-
-          /* Report the restoration to the caller. */
-          if (notify_func != NULL)
-            {
-              notify = svn_wc_create_notify(path, svn_wc_notify_restore,
-                                            pool);
-              notify->kind = svn_node_file;
-              (*notify_func)(notify_baton, notify, pool);
-            }
-        }
-
       /* Split PATH into parent PDIR and basename BNAME. */
-      svn_dirent_split(path, &pdir, &bname, pool);
+      svn_dirent_split(target_abspath, &pdir, &bname, pool);
       if (! parent_entry)
         {
-          err = svn_wc_entry(&parent_entry, pdir, adm_access, FALSE, pool);
+          err = svn_wc__get_entry(&parent_entry, wc_ctx->db, pdir,
+                                  FALSE, svn_node_dir, FALSE, pool, pool);
           if (err)
             goto abort_report;
         }

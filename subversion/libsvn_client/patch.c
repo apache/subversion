@@ -46,6 +46,7 @@
 #include "svn_private_config.h"
 #include "private/svn_diff_private.h"
 #include "private/svn_wc_private.h"
+#include "private/svn_eol_private.h"
 
 
 /*** Code. ***/
@@ -2078,7 +2079,7 @@ init_patch_target(patch_target_t **target, const svn_patch_t *patch,
       SVN_ERR(svn_io_file_open(&new_target->file, new_target->abs_path,
                                APR_READ | APR_BINARY | APR_BUFFERED,
                                APR_OS_DEFAULT, result_pool));
-      SVN_ERR(svn_subst_detect_file_eol(&new_target->eol_str, new_target->file,
+      SVN_ERR(svn_eol__detect_file_eol(&new_target->eol_str, new_target->file,
                                         scratch_pool));
       new_target->stream = svn_stream_from_aprfile2(new_target->file, FALSE,
                                                     result_pool);
@@ -2139,12 +2140,12 @@ match_hunk(svn_boolean_t *matched, patch_target_t *target,
   *matched = FALSE;
 
   pos = 0;
-  iterpool = svn_pool_create(pool);
-  SVN_ERR(svn_io_file_seek(target->file, APR_CUR, &pos, iterpool));
+  SVN_ERR(svn_io_file_seek(target->file, APR_CUR, &pos, pool));
 
   svn_stream_reset(hunk->original_text);
 
   lines_matched = FALSE;
+  iterpool = svn_pool_create(pool);
   do
     {
       svn_pool_clear(iterpool);
@@ -2206,7 +2207,7 @@ scan_for_match(svn_boolean_t *match, svn_linenum_t *matched_line,
 
       svn_pool_clear(iterpool);
 
-      SVN_ERR(match_hunk(&matched, target, hunk, pool));
+      SVN_ERR(match_hunk(&matched, target, hunk, iterpool));
       if (matched)
         {
           *match = TRUE;
@@ -2840,7 +2841,7 @@ apply_textdiffs(const char *patch_path, const char *wc_path,
   SVN_ERR(svn_io_file_open(&patch_file, patch_path,
                            APR_READ | APR_BINARY, 0, pool));
 
-  SVN_ERR(svn_subst_detect_file_eol(&patch_eol_str, patch_file, pool));
+  SVN_ERR(svn_eol__detect_file_eol(&patch_eol_str, patch_file, pool));
   if (patch_eol_str == NULL)
     {
       /* If we can't figure out the EOL scheme, just assume native.

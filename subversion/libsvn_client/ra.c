@@ -50,7 +50,6 @@ typedef struct
      time. When callbacks specify a relative path, they are joined with
      this base directory. */
   const char *base_dir;
-  svn_wc_adm_access_t *base_access;
 
   /* When true, makes sure temporary files are created
      outside the working copy. */
@@ -187,10 +186,11 @@ set_wc_prop(void *baton,
             apr_pool_t *pool)
 {
   callback_baton_t *cb = baton;
-  const char *full_path = svn_dirent_join(cb->base_dir, path, pool);
   const char *local_abspath;
 
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, full_path, pool));
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath,
+                                  svn_dirent_join(cb->base_dir, path, pool),
+                                  pool));
 
   /* We pass 1 for the 'force' parameter here.  Since the property is
      coming from the repository, we definitely want to accept it.
@@ -218,16 +218,12 @@ struct invalidate_wcprop_walk_baton
 /* This implements the `found_entry' prototype in
    `svn_wc_entry_callbacks_t'. */
 static svn_error_t *
-invalidate_wcprop_for_entry(const char *path,
-                            const svn_wc_entry_t *entry,
-                            void *walk_baton,
-                            apr_pool_t *pool)
+invalidate_wcprop_for_node(const char *local_abspath,
+                           void *walk_baton,
+                           apr_pool_t *pool)
 {
   struct invalidate_wcprop_walk_baton *wb = walk_baton;
-  const char *local_abspath;
   svn_error_t *err;
-
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
   /* It doesn't matter if we pass 0 or 1 for force here, since
      property deletion is always permitted. */
@@ -253,20 +249,22 @@ invalidate_wc_props(void *baton,
                     apr_pool_t *pool)
 {
   callback_baton_t *cb = baton;
-  svn_wc_entry_callbacks2_t walk_callbacks = { invalidate_wcprop_for_entry,
+  svn_wc__node_walk_callbacks_t walk_callbacks = { invalidate_wcprop_for_node,
                               svn_client__default_walker_error_handler };
   struct invalidate_wcprop_walk_baton wb;
-  svn_wc_adm_access_t *adm_access;
+  const char *local_abspath;
 
   wb.prop_name = prop_name;
   wb.wc_ctx = cb->ctx->wc_ctx;
 
-  path = svn_path_join(cb->base_dir, path, pool);
-  SVN_ERR(svn_wc_adm_probe_retrieve(&adm_access, cb->base_access, path,
-                                    pool));
-  return svn_error_return(svn_wc_walk_entries3(path, adm_access,
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath,
+                                  svn_path_join(cb->base_dir, path, pool),
+                                  pool));
+
+  return svn_error_return(
+    svn_wc__node_walk_children(cb->ctx->wc_ctx, local_abspath,
                               &walk_callbacks, &wb,
-                              svn_depth_infinity, FALSE,
+                              svn_depth_infinity,
                               cb->ctx->cancel_func, cb->ctx->cancel_baton,
                               pool));
 }
@@ -294,7 +292,6 @@ svn_error_t *
 svn_client__open_ra_session_internal(svn_ra_session_t **ra_session,
                                      const char *base_url,
                                      const char *base_dir,
-                                     svn_wc_adm_access_t *base_access,
                                      apr_array_header_t *commit_items,
                                      svn_boolean_t use_admin,
                                      svn_boolean_t read_only_wc,
@@ -317,7 +314,6 @@ svn_client__open_ra_session_internal(svn_ra_session_t **ra_session,
   cbtable->get_client_string = get_client_string;
 
   cb->base_dir = base_dir;
-  cb->base_access = base_access;
   cb->read_only_wc = read_only_wc;
   cb->pool = pool;
   cb->commit_items = commit_items;
@@ -357,7 +353,7 @@ svn_client_open_ra_session(svn_ra_session_t **session,
                            apr_pool_t *pool)
 {
   return svn_error_return(svn_client__open_ra_session_internal(session, url,
-                                              NULL, NULL, NULL,
+                                              NULL, NULL,
                                               FALSE, TRUE, ctx, pool));
 }
 
@@ -374,7 +370,7 @@ svn_client_uuid_from_url(const char **uuid,
   /* use subpool to create a temporary RA session */
   SVN_ERR(svn_client__open_ra_session_internal(&ra_session, url,
                                                NULL, /* no base dir */
-                                               NULL, NULL, FALSE, TRUE,
+                                               NULL, FALSE, TRUE,
                                                ctx, subpool));
 
   SVN_ERR(svn_ra_get_uuid2(ra_session, uuid, pool));
@@ -445,7 +441,7 @@ svn_client__ra_session_from_path(svn_ra_session_t **ra_session_p,
     base_dir = svn_wc_adm_access_path(base_access);
 
   SVN_ERR(svn_client__open_ra_session_internal(&ra_session, initial_url,
-                                               base_dir, base_access, NULL,
+                                               base_dir, NULL,
                                                base_access != NULL,
                                                FALSE, ctx, pool));
 
@@ -652,7 +648,7 @@ svn_client__repos_locations(const char **start_url,
   /* Open a RA session to this URL if we don't have one already. */
   if (! ra_session)
     SVN_ERR(svn_client__open_ra_session_internal(&ra_session, url, NULL,
-                                                 NULL, NULL, FALSE, TRUE,
+                                                 NULL, FALSE, TRUE,
                                                  ctx, subpool));
 
   /* Resolve the opt_revision_ts. */

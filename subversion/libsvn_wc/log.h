@@ -47,13 +47,12 @@ extern "C" {
  */
 
 /* Each path argument to the svn_wc__loggy_* functions in this section can
-   be either absolute or relative to the path with which the adm_access was
-   opened.
+   be either absolute or relative to the adm_abspath.
 */
 
 /* Extend **LOG_ACCUM with log instructions to append the contents
    of SRC to DST.
-   SRC and DST are relative to ADM_ACCESS.
+   SRC and DST are relative to ADM_ABSPATH.
 
    This command fails to be idempotent or atomic: there's no way to
    tell if you should re-run this!  This function is deprecated; new
@@ -64,18 +63,18 @@ extern "C" {
 SVN_DEPRECATED
 svn_error_t *
 svn_wc__loggy_append(svn_stringbuf_t **log_accum,
-                     svn_wc_adm_access_t *adm_access,
+                     const char *adm_abspath,
                      const char *src, const char *dst,
                      apr_pool_t *pool);
 
 
 /* Extend **LOG_ACCUM with log instructions to mark PATH as committed
    with revision REVNUM.
-   ADM_ACCESS is the access baton for PATH.
+   ADM_ABSPATH is the absolute path for the admin directory for PATH.
 */
 svn_error_t *
 svn_wc__loggy_committed(svn_stringbuf_t **log_accum,
-                        svn_wc_adm_access_t *adm_access,
+                        const char *adm_abspath,
                         const char *path, svn_revnum_t revnum,
                         apr_pool_t *pool);
 
@@ -86,22 +85,22 @@ svn_wc__loggy_committed(svn_stringbuf_t **log_accum,
 
    The test for existence is made during this call, not at log running time.
 
-   SRC_PATH and DST_PATH are relative to ADM_ACCESS.
+   SRC_PATH and DST_PATH are relative to ADM_ABSPATH.
 */
 svn_error_t *
 svn_wc__loggy_copy(svn_stringbuf_t **log_accum,
-                   svn_wc_adm_access_t *adm_access,
+                   const char *adm_abspath,
                    const char *src_path, const char *dst_path,
                    apr_pool_t *pool);
 
 
 /* Extend **LOG_ACCUM with log instructions to generate a translated
    file from SRC to DST with translation settings from VERSIONED.
-   DST and SRC and VERSIONED are relative to ADM_ACCESS.
+   DST and SRC and VERSIONED are relative to ADM_ABSPATH.
 */
 svn_error_t *
 svn_wc__loggy_translated_file(svn_stringbuf_t **log_accum,
-                              svn_wc_adm_access_t *adm_access,
+                              const char *adm_abspath,
                               const char *dst,
                               const char *src,
                               const char *versioned,
@@ -109,37 +108,37 @@ svn_wc__loggy_translated_file(svn_stringbuf_t **log_accum,
 
 /* Extend **LOG_ACCUM with log instructions to delete the entry
    associated with PATH from the entries file.
-   ADM_ACCESS is the access baton for PATH.
+   ADM_ABSPATH is the absolute path for the access baton for PATH.
 */
 svn_error_t *
 svn_wc__loggy_delete_entry(svn_stringbuf_t **log_accum,
-                           svn_wc_adm_access_t *adm_access,
+                           const char *adm_abspath,
                            const char *path,
                            apr_pool_t *pool);
 
 
 /* Extend **LOG_ACCUM with log instructions to delete lock related
    fields from the entry belonging to PATH.
-   ADM_ACCESS is the access baton for PATH.
+   ADM_ABSPATH is the absolute path for the access baton for PATH.
 */
 svn_error_t *
 svn_wc__loggy_delete_lock(svn_stringbuf_t **log_accum,
-                          svn_wc_adm_access_t *adm_access,
+                          const char *adm_abspath,
                           const char *path,
                           apr_pool_t *pool);
 
 /* Extend **LOG_ACCUM with log instructions to delete changelist
    from the entry belonging to PATH.
-   ADM_ACCESS is the access baton for PATH.
+   ADM_ABSPATH is the absolute path for the access baton for PATH.
 */
 svn_error_t *
 svn_wc__loggy_delete_changelist(svn_stringbuf_t **log_accum,
-                                svn_wc_adm_access_t *adm_access,
+                                const char *adm_abspath,
                                 const char *path,
                                 apr_pool_t *pool);
 
 /* Extend **LOG_ACCUM with commands to modify the entry associated with PATH
-   in ADM_ACCESS according to the flags specified in MODIFY_FLAGS, based on
+   in ADM_ABSPATH according to the flags specified in MODIFY_FLAGS, based on
    the values supplied in *ENTRY.
 
    The flags in MODIFY_FLAGS are to be taken from the svn_wc__entry_modify()
@@ -147,7 +146,7 @@ svn_wc__loggy_delete_changelist(svn_stringbuf_t **log_accum,
 */
 svn_error_t *
 svn_wc__loggy_entry_modify(svn_stringbuf_t **log_accum,
-                           svn_wc_adm_access_t *adm_access,
+                           const char *adm_abspath,
                            const char *path,
                            const svn_wc_entry_t *entry,
                            apr_uint64_t modify_flags,
@@ -155,11 +154,11 @@ svn_wc__loggy_entry_modify(svn_stringbuf_t **log_accum,
 
 /* Extend **LOG_ACCUM with log instructions to modify wcprop PROPNAME
    for PATH, setting it to PROPVAL (which may be NULL to delete the property).
-   ADM_ACCESS is the access baton for PATH.
+   ADM_ABSPATH is the absolute path for the access baton for PATH.
 */
 svn_error_t *
 svn_wc__loggy_modify_wcprop(svn_stringbuf_t **log_accum,
-                            svn_wc_adm_access_t *adm_access,
+                            const char *adm_abspath,
                             const char *path,
                             const char *propname,
                             const char *propval,
@@ -172,7 +171,7 @@ svn_wc__loggy_modify_wcprop(svn_stringbuf_t **log_accum,
 
    The test for existence is made now, not at log run time.
 
-   SRC_PATH and DST_PATH are relative to ADM_ACCESS.
+   SRC_PATH and DST_PATH are relative to ADM_ABSPATH.
 
    Set *DST_MODIFIED (if DST_MODIFIED isn't NULL) to indicate whether the
    destination path will have been modified after running the log: if either
@@ -180,7 +179,7 @@ svn_wc__loggy_modify_wcprop(svn_stringbuf_t **log_accum,
 */
 svn_error_t *
 svn_wc__loggy_move(svn_stringbuf_t **log_accum,
-                   svn_wc_adm_access_t *adm_access,
+                   const char *adm_abspath,
                    const char *src_path, const char *dst_path,
                    apr_pool_t *pool);
 
@@ -285,14 +284,11 @@ svn_wc__logfile_present(svn_boolean_t *present,
 
 
 /* Process the instructions in the log file for ADM_ACCESS.
-   DIFF3_CMD is the external differ used by the 'SVN_WC__LOG_MERGE'
-   log entry.  It is always safe to pass null for this.
 
    If the log fails on its first command, return the error
    SVN_ERR_WC_BAD_ADM_LOG_START.  If it fails on some subsequent
    command, return SVN_ERR_WC_BAD_ADM_LOG. */
 svn_error_t *svn_wc__run_log(svn_wc_adm_access_t *adm_access,
-                             const char *diff3_cmd,
                              apr_pool_t *pool);
 
 

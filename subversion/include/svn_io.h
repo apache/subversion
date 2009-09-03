@@ -694,16 +694,38 @@ typedef svn_error_t *(*svn_close_fn_t)(void *baton);
 /** Reset handler function for a generic stream. @see svn_stream_t and
  * svn_stream_reset().
  *
- * @since New in 1.7. */
+ * @since New in 1.7.
+ */
 typedef svn_error_t *(*svn_io_reset_fn_t)(void *baton);
 
 /** Line-filtering callback function for a generic stream.
  * @see svn_stream_t and svn_stream_readline().
  *
- * @since New in 1.7. */
+ * @since New in 1.7.
+ */
 typedef svn_error_t *(*svn_io_line_filter_cb_t)(svn_boolean_t *filtered,
                                                 const char *line,
                                                 apr_pool_t *scratch_pool);
+
+/** A callback function, invoked by svn_stream_readline(), which can perform
+ * arbitary transformations on the line before it is passed back to the caller
+ * of svn_stream_readline().
+ *
+ * Returns a transformed stringbuf in @a buf, allocated in @a result_pool.
+ * This callback gets invoked on lines which were not filtered by the
+ * line-filtering callback function.
+ *
+ * Implementations should always at least return an empty stringbuf.
+ * It is a fatal error if an implementation returns @a *buf as NULL.
+ *
+ * @see svn_stream_t, svn_io_line_filter_cb_t and svn_stream_readline().
+ * 
+ * @since New in 1.7.
+ */
+typedef svn_error_t *(*svn_io_line_transformer_cb_t)(svn_stringbuf_t **buf,
+                                                     const char *line,
+                                                     apr_pool_t *result_pool,
+                                                     apr_pool_t *scratch_pool);
 
 /** Create a generic stream.  @see svn_stream_t. */
 svn_stream_t *
@@ -731,16 +753,30 @@ svn_stream_set_close(svn_stream_t *stream,
                      svn_close_fn_t close_fn);
 
 /** Set @a stream's reset function to @a reset_fn
- * @since New in 1.7. */
+ *
+ * @since New in 1.7.
+ */
 void
 svn_stream_set_reset(svn_stream_t *stream,
                      svn_io_reset_fn_t reset_fn);
 
 /** Set @a stream's line-filtering callback function to @a line_filter_cb
- * @since New in 1.7. */
+ *
+ * @since New in 1.7.
+ */
 void
 svn_stream_set_line_filter_callback(svn_stream_t *stream,
                                     svn_io_line_filter_cb_t line_filter_cb);
+
+/** Set @a streams's line-transforming callback function to
+ * @a line_transformer_cb.
+ *
+ * @since New in 1.7.
+ */
+void
+svn_stream_set_line_transformer_callback(
+  svn_stream_t *stream,
+  svn_io_line_transformer_cb_t line_transformer_cb);
 
 /** Create a stream that is empty for reading and infinite for writing. */
 svn_stream_t *
@@ -985,7 +1021,8 @@ svn_stream_close(svn_stream_t *stream);
  * @a SVN_ERR_STREAM_RESET_NOT_SUPPORTED error when the stream doesn't
  * implement resetting.
  *
- * @since New in 1.7. */
+ * @since New in 1.7.
+ */
 svn_error_t *
 svn_stream_reset(svn_stream_t *stream);
 
@@ -1030,6 +1067,13 @@ svn_stream_printf_from_utf8(svn_stream_t *stream,
  * if they pass the filtering decision of the callback function.
  * If end-of-file is encountered while reading the line and the line
  * is filtered, @a *stringbuf will be empty.
+ *
+ * If a line-transformer callback function was set on the stream using
+ * svn_stream_set_line_transformer_callback(), lines will be returned
+ * transformed, in a way determined by the callback.
+ *
+ * Note that the line-transformer callback gets called after the line-filter
+ * callback, not before.
  */
 svn_error_t *
 svn_stream_readline(svn_stream_t *stream,

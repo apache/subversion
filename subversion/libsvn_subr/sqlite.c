@@ -26,7 +26,7 @@
 #include "svn_error.h"
 #include "svn_pools.h"
 #include "svn_io.h"
-#include "svn_path.h"
+#include "svn_dirent_uri.h"
 #include "svn_checksum.h"
 
 #include "private/svn_sqlite.h"
@@ -50,7 +50,7 @@ static void
 sqlite_tracer(void *data, const char *sql)
 {
   /*  sqlite3 *db3 = data; */
-  fprintf(stderr, "SQLITE SQL is \"%s\"\n", sql);
+  SVN_DBG(("sql=\"%s\"\n", sql));
 }
 #endif
 
@@ -265,7 +265,7 @@ svn_sqlite__bindf(svn_sqlite__stmt_t *stmt, const char *fmt, ...)
   va_start(ap, fmt);
   err = vbindf(stmt, fmt, ap);
   va_end(ap);
-  return err;
+  return svn_error_return(err);
 }
 
 svn_error_t *
@@ -302,7 +302,8 @@ svn_sqlite__bind_blob(svn_sqlite__stmt_t *stmt,
                       const void *val,
                       apr_size_t len)
 {
-  SQLITE_ERR(sqlite3_bind_blob(stmt->s3stmt, slot, val, len, SQLITE_TRANSIENT),
+  SQLITE_ERR(sqlite3_bind_blob(stmt->s3stmt, slot, val, (int) len,
+                               SQLITE_TRANSIENT),
              stmt->db);
   return SVN_NO_ERROR;
 }
@@ -462,6 +463,20 @@ svn_sqlite__reset(svn_sqlite__stmt_t *stmt)
   return SVN_NO_ERROR;
 }
 
+
+svn_error_t *
+svn_sqlite__set_schema_version(svn_sqlite__db_t *db,
+                               int version,
+                               apr_pool_t *scratch_pool)
+{
+  const char *pragma_cmd = apr_psprintf(scratch_pool,
+                                        "PRAGMA user_version = %d;",
+                                        version);
+
+  return svn_error_return(exec_sql(db, pragma_cmd));
+}
+
+
 /* Time (in milliseconds) to wait for sqlite locks before giving up. */
 #define BUSY_TIMEOUT 10000
 
@@ -525,6 +540,7 @@ struct upgrade_baton
   apr_pool_t *scratch_pool;
 };
 
+
 /* This implements svn_sqlite__transaction_callback_t */
 static svn_error_t *
 upgrade_format(void *baton,
@@ -536,8 +552,6 @@ upgrade_format(void *baton,
 
   while (current_schema < ub->latest_schema)
     {
-      const char *pragma_cmd;
-
       svn_pool_clear(iterpool);
 
       /* Go to the next schema */
@@ -553,10 +567,7 @@ upgrade_format(void *baton,
                                  iterpool));
 
       /* Update the user version pragma */
-      pragma_cmd = apr_psprintf(iterpool,
-                                "PRAGMA user_version = %d;",
-                                current_schema);
-      SVN_ERR(exec_sql(db, pragma_cmd));
+      SVN_ERR(svn_sqlite__set_schema_version(db, current_schema, iterpool));
     }
 
   svn_pool_destroy(iterpool);
@@ -626,11 +637,13 @@ static volatile svn_atomic_t sqlite_init_state;
 static svn_error_t *
 init_sqlite(apr_pool_t *pool)
 {
-  if (sqlite3_libversion_number() < SQLITE_VERSION_NUMBER) {
-    return svn_error_createf(SVN_ERR_SQLITE_ERROR, NULL,
-                             _("SQLite compiled for %s, but running with %s"),
-                             SQLITE_VERSION, sqlite3_libversion());
-  }
+  if (sqlite3_libversion_number() < SQLITE_VERSION_NUMBER)
+    {
+      return svn_error_createf(
+                    SVN_ERR_SQLITE_ERROR, NULL,
+                    _("SQLite compiled for %s, but running with %s"),
+                    SQLITE_VERSION, sqlite3_libversion());
+    }
 
 #if SQLITE_VERSION_AT_LEAST(3,5,0)
   /* SQLite 3.5 allows verification of its thread-safety at runtime.
@@ -649,9 +662,16 @@ init_sqlite(apr_pool_t *pool)
     int err = sqlite3_config(SQLITE_CONFIG_MULTITHREAD);
     if (err != SQLITE_OK && err != SQLITE_MISUSE)
       return svn_error_create(SQLITE_ERROR_CODE(err), NULL,
-                              "Could not configure SQLite");
+                              _("Could not configure SQLite"));
   }
-  SQLITE_ERR_MSG(sqlite3_initialize(), "Could not initialize SQLite");
+  SQLITE_ERR_MSG(sqlite3_initialize(), _("Could not initialize SQLite"));
+#endif
+#if SQLITE_VERSION_AT_LEAST(3,5,0)
+  /* SQLite 3.5 allows sharing cache instances in a multithreaded environment.
+     This allows sharing cached data when we open a database more than once
+     (Very common in the current pre-single-database state) */
+  SQLITE_ERR_MSG(sqlite3_enable_shared_cache(TRUE),
+                 _("Could not initialize SQLite shared cache"));
 #endif
 
   return SVN_NO_ERROR;
@@ -722,7 +742,7 @@ internal_open(sqlite3 **db3, const char *path, svn_sqlite__mode_t mode,
       if (kind != svn_node_file) {
           return svn_error_createf(APR_ENOENT, NULL,
                                    _("Expected SQLite database not found: %s"),
-                                   svn_path_local_style(path, scratch_pool));
+                                   svn_dirent_local_style(path, scratch_pool));
       }
     }
   else if (mode == svn_sqlite__mode_rwcreate)
@@ -896,8 +916,8 @@ svn_sqlite__with_transaction(svn_sqlite__db_t *db,
   if (err)
     {
       svn_error_clear(svn_sqlite__transaction_rollback(db));
-      return err;
+      return svn_error_return(err);
     }
-  else
-    return svn_sqlite__transaction_commit(db);
+
+  return svn_error_return(svn_sqlite__transaction_commit(db));
 }

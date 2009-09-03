@@ -23,6 +23,19 @@ try:
 except AttributeError:
   my_getopt = getopt.getopt
 
+class TextColors:
+  '''Some ANSI terminal constants for output color'''
+  ENDC = '\033[0;m'
+  FAILURE = '\033[1;31m'
+  SUCCESS = '\033[1;32m'
+
+  @classmethod
+  def disable(cls):
+    cls.ENDC = ''
+    cls.FAILURE = ''
+    cls.SUCCESS = ''
+
+
 class TestHarness:
   '''Test harness for Subversion tests.
   '''
@@ -66,6 +79,8 @@ class TestHarness:
     self.list_tests = list_tests
     self.svn_bin = svn_bin
     self.log = None
+    if not sys.stdout.isatty() or sys.platform == 'win32':
+      TextColors.disable()
 
   def run(self, list):
     'Run all test programs given in LIST.'
@@ -170,8 +185,9 @@ class TestHarness:
     progdir, progbase = os.path.split(prog)
     if self.log:
       # Using write here because we don't want even a trailing space
-      sys.stdout.write('Running all tests in %s [%d/%d]...' % (
-        progbase, test_nr + 1, total_tests))
+      test_info = '%s [%d/%d]' % (progbase, test_nr + 1, total_tests)
+      sys.stdout.write('Running all tests in %s' % (test_info, ))
+      sys.stdout.write('.'*(35 - len(test_info)))
       self.log.write('START: %s\n' % progbase)
       self.log.flush()
     else:
@@ -232,13 +248,13 @@ class TestHarness:
     # probably means the test didn't run at all and probably didn't
     # output any failure info.
     if failed == 1:
-      print('FAILURE')
+      print(TextColors.FAILURE + 'FAILURE' + TextColors.ENDC)
     elif failed and self.log:
       self.log.write('FAIL:  %s: Unknown test failure see tests.log.\n\n' % progbase)
       self.log.flush()
-      print('FAILURE')
+      print(TextColors.FAILURE + 'FAILURE' + TextColors.ENDC)
     else:
-      print('success')
+      print(TextColors.SUCCESS + 'success' + TextColors.ENDC)
     if self.log:
       self.log.write('END: %s\n\n' % progbase)
     else:

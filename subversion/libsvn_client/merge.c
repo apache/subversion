@@ -2149,9 +2149,19 @@ merge_dir_deleted(svn_wc_adm_access_t *adm_access,
                                         merge_b->ctx, subpool);
             if (err)
               {
-                if (state)
-                  *state = svn_wc_notify_state_obstructed;
                 svn_error_clear(err);
+
+                /* If the attempt to delete an existing directory failed,
+                 * the directory has local modifications (e.g. locally added
+                 * files, or property changes). Flag a tree conflict. */
+                SVN_ERR(tree_conflict(merge_b, adm_access, path,
+                                      svn_node_dir,
+                                      svn_wc_conflict_action_delete,
+                                      svn_wc_conflict_reason_edited));
+                if (tree_conflicted)
+                  *tree_conflicted = TRUE;
+                if (state)
+                  *state = svn_wc_notify_state_conflicted;
               }
             else
               {
@@ -2889,6 +2899,7 @@ fix_deleted_subtree_ranges(const char *url1,
   int i;
   const char *source_root_url;
   apr_pool_t *iterpool = svn_pool_create(pool);
+  svn_boolean_t is_rollback = revision2 < revision1;
 
   SVN_ERR(svn_ra_get_repos_root2(ra_session, &source_root_url, pool));
 
@@ -2920,10 +2931,24 @@ fix_deleted_subtree_ranges(const char *url1,
          'THE CHILDREN_WITH_MERGEINFO ARRAY'. */
       SVN_ERR_ASSERT(parent);
 
+      /* If this is a reverse merge reorder CHILD->REMAINING_RANGES
+         so it will work with the svn_rangelist_diff API. */
+      if (is_rollback)
+        {
+          SVN_ERR(svn_rangelist_reverse(child->remaining_ranges, iterpool));
+          SVN_ERR(svn_rangelist_reverse(parent->remaining_ranges, iterpool));
+        }
+
       SVN_ERR(svn_rangelist_diff(&deleted_rangelist, &added_rangelist,
                                  child->remaining_ranges,
                                  parent->remaining_ranges,
                                  TRUE, iterpool));
+
+      if (is_rollback)
+        {
+          SVN_ERR(svn_rangelist_reverse(child->remaining_ranges, iterpool));
+          SVN_ERR(svn_rangelist_reverse(parent->remaining_ranges, iterpool));
+        }
 
       /* If CHILD is the merge target we then know that URL1, URL2,
          REVISION1, and REVISION2 are provided by normalize_merge_sources()
@@ -2945,7 +2970,7 @@ fix_deleted_subtree_ranges(const char *url1,
          case, see the 'Note' in drive_merge_report_editor's docstring. */
       if (deleted_rangelist->nelts || added_rangelist->nelts)
         {
-          int merge_target_len = strlen(merge_b->target);
+          size_t merge_target_len = strlen(merge_b->target);
           const char *child_mergeinfo_path;
           const char *child_repos_src_path = child->path +
             (merge_target_len ? merge_target_len + 1 : 0);
@@ -3060,7 +3085,7 @@ get_full_mergeinfo(svn_mergeinfo_t *recorded_mergeinfo,
         {
           sesspool = svn_pool_create(pool);
           SVN_ERR(svn_client__open_ra_session_internal(&ra_session, url,
-                                                       NULL, NULL, NULL,
+                                                       NULL, NULL,
                                                        FALSE, TRUE,
                                                        ctx, sesspool));
         }
@@ -3813,7 +3838,7 @@ populate_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
                           apr_pool_t *pool)
 {
   apr_pool_t *iterpool;
-  int merge_target_len = strlen(merge_b->target);
+  size_t merge_target_len = strlen(merge_b->target);
   int i;
   svn_revnum_t gap_start, gap_end;
 
@@ -4097,7 +4122,7 @@ update_wc_mergeinfo(const char *target_wcpath,
 {
   apr_pool_t *subpool = svn_pool_create(pool);
   const char *rel_path;
-  svn_mergeinfo_catalog_t mergeinfo;
+  svn_mergeinfo_t mergeinfo;
   apr_hash_index_t *hi;
 
   /* Combine the mergeinfo for the revision range just merged into
@@ -5219,7 +5244,7 @@ insert_parent_and_sibs_of_sw_absent_del_entry(
 
   /* Add all of PARENT's non-missing children that are not already present.*/
   SVN_ERR(svn_wc__node_get_children(&children, merge_cmd_baton->ctx->wc_ctx,
-                                    parent_abspath, pool, pool));
+                                    parent_abspath, FALSE, pool, pool));
   iterpool = svn_pool_create(pool);
   for (i = 0; i < children->nelts; i++)
     {
@@ -6692,7 +6717,7 @@ record_mergeinfo_for_dir_merge(const svn_wc_entry_t *target_entry,
                                apr_pool_t *pool)
 {
   int i;
-  int merge_target_len = strlen(merge_b->target);
+  size_t merge_target_len = strlen(merge_b->target);
   svn_boolean_t is_rollback = (merged_range->start > merged_range->end);
   svn_boolean_t operative_merge = FALSE;
 
@@ -7714,7 +7739,7 @@ ensure_ra_session_url(svn_ra_session_t **ra_session,
     {
       svn_error_clear(err);
       err = svn_client__open_ra_session_internal(ra_session, url,
-                                                 NULL, NULL, NULL,
+                                                 NULL, NULL,
                                                  FALSE, TRUE, ctx, pool);
     }
   SVN_ERR(err);
@@ -8155,10 +8180,10 @@ svn_client_merge3(const char *source1,
   /* Open some RA sessions to our merge source sides. */
   sesspool = svn_pool_create(pool);
   SVN_ERR(svn_client__open_ra_session_internal(&ra_session1,
-                                               URL1, NULL, NULL, NULL,
+                                               URL1, NULL, NULL,
                                                FALSE, TRUE, ctx, sesspool));
   SVN_ERR(svn_client__open_ra_session_internal(&ra_session2,
-                                               URL2, NULL, NULL, NULL,
+                                               URL2, NULL, NULL,
                                                FALSE, TRUE, ctx, sesspool));
 
   /* Resolve revisions to real numbers. */
@@ -9055,7 +9080,7 @@ svn_client_merge_reintegrate(const char *source,
 
   /* Open an RA session to our source URL, and determine its root URL. */
   SVN_ERR(svn_client__open_ra_session_internal(&ra_session, wc_repos_root,
-                                               NULL, NULL, NULL,
+                                               NULL, NULL,
                                                FALSE, FALSE, ctx, pool));
   SVN_ERR(svn_ra_get_repos_root2(ra_session, &source_repos_root, pool));
 
@@ -9252,8 +9277,7 @@ svn_client_merge_peg3(const char *source,
 
   /* Open an RA session to our source URL, and determine its root URL. */
   sesspool = svn_pool_create(pool);
-  SVN_ERR(svn_client__open_ra_session_internal(&ra_session,
-                                               URL, NULL, NULL, NULL,
+  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, URL, NULL, NULL,
                                                FALSE, TRUE, ctx, sesspool));
   SVN_ERR(svn_ra_get_repos_root2(ra_session, &source_repos_root, pool));
 

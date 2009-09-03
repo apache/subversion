@@ -564,18 +564,18 @@ def delete_file_and_dir(sbox):
   # Merge rev 3 into B2
 
   # The local mods to the paths modified in r3 cause the paths to be
-  # skipped (without --force), resulting in only mergeinfo changes.  The
-  # target of the merge 'B2' gets mergeinfo for r3 and B2's two skipped
+  # tree-conflicted upon deletion, resulting in only mergeinfo changes.
+  # The target of the merge 'B2' gets mergeinfo for r3 and B2's two skipped
   # children, 'E' and 'lambda', get override mergeinfo reflecting their
-  # mergeinfo prior to the merge (in this case empty mergeinfo).
+  # mergeinfo prior to the merge (in this case no mergeinfo at all).
   expected_output = wc.State(B2_path, {
     ''        : Item(),
     'lambda'  : Item(status='  ', treeconflict='C'),
+    'E'       : Item(status='  ', treeconflict='C'),
     })
   expected_disk = wc.State('', {
     ''        : Item(props={SVN_PROP_MERGEINFO : '/A/B:3'}),
-    'E'       : Item(props={SVN_PROP_MERGEINFO : '',
-                            'foo' : 'foo_val'}),
+    'E'       : Item(props={'foo' : 'foo_val'}),
     'E/alpha' : Item("This is the file 'alpha'.\n"),
     'E/beta'  : Item("This is the file 'beta'.\n"),
     'F'       : Item(),
@@ -584,16 +584,14 @@ def delete_file_and_dir(sbox):
     })
   expected_status2 = wc.State(B2_path, {
     ''        : Item(status=' M'),
-    'E'       : Item(status=' M'),
+    'E'       : Item(status=' M', treeconflict='C'),
     'E/alpha' : Item(status='  '),
     'E/beta'  : Item(status='  '),
     'F'       : Item(status='  '),
-    'lambda'  : Item(status=' M'), ### Should be tree-conflicted
+    'lambda'  : Item(status=' M', treeconflict='C'),
     })
   expected_status2.tweak(wc_rev=2)
-  expected_skip = wc.State(B2_path, {
-    'E'       : Item(),
-    })
+  expected_skip = wc.State('', { })
   svntest.actions.run_and_verify_merge(B2_path, '2', '3', B_url,
                                        expected_output,
                                        expected_disk,
@@ -2556,8 +2554,8 @@ def set_up_dir_replace(sbox):
   expected_status = wc.State(C_path, {
     ''    : Item(status=' M', wc_rev=1),
     'foo' : Item(status='A ', wc_rev='-', copied='+'),
-    'foo/new file'   : Item(status='A ', wc_rev='-', copied='+'),
-    'foo/new file 2' : Item(status='A ', wc_rev='-', copied='+'),
+    'foo/new file'   : Item(status='  ', wc_rev='-', copied='+'),
+    'foo/new file 2' : Item(status='  ', wc_rev='-', copied='+'),
     })
   expected_skip = wc.State(C_path, { })
   svntest.actions.run_and_verify_merge(C_path, '1', '2', F_url,
@@ -2570,8 +2568,6 @@ def set_up_dir_replace(sbox):
   expected_output = svntest.wc.State(wc_dir, {
     'A/C'        : Item(verb='Sending'),
     'A/C/foo'    : Item(verb='Adding'),
-    'A/C/foo/new file'      : Item(verb='Adding'),
-    'A/C/foo/new file 2'    : Item(verb='Adding'),
     })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
@@ -2698,8 +2694,6 @@ def merge_dir_replace(sbox):
     'A/C/foo/file foo'       : Item(verb='Adding'),
     'A/C/foo/bar'            : Item(verb='Adding'),
     'A/C/foo/bar/new file 3' : Item(verb='Adding'),
-    'A/C/foo/new file'       : Item(verb='Deleting'),
-    'A/C/foo/new file 2'     : Item(verb='Deleting'),
     })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
@@ -2797,6 +2791,19 @@ def merge_dir_and_file_replace(sbox):
                                        1,
                                        0) # don't do a dry-run
                                           # the output differs
+
+  # This test is failing, after this merge, in 'svn status' with
+  # the following error:
+  # subversion/svn/status-cmd.c:256: (apr_err=160013)
+  # subversion/svn/util.c:958: (apr_err=160013)
+  # subversion/libsvn_client/status.c:382: (apr_err=160013)
+  # subversion/libsvn_repos/reporter.c:1263: (apr_err=160013)
+  # subversion/libsvn_repos/reporter.c:1194: (apr_err=160013)
+  # subversion/libsvn_repos/reporter.c:1029: (apr_err=160013)
+  # subversion/libsvn_repos/reporter.c:851: (apr_err=160013)
+  # subversion/libsvn_repos/reporter.c:1029: (apr_err=160013)
+  # subversion/libsvn_repos/reporter.c:790: (apr_err=160013)
+  # svn: Working copy path 'foo/bar' does not exist in repository
 
   # Commit merge of foo onto C
   expected_output = svntest.wc.State(wc_dir, {
@@ -3510,15 +3517,9 @@ def merge_file_replace_to_mixed_rev_wc(sbox):
                                        expected_status,
                                        expected_skip)
 
-  # At this point WC is broken, because file rho has invalid revision
-  # Try to update
-  expected_output = svntest.wc.State(wc_dir, {})
-  expected_status.tweak(wc_rev='3')
-  expected_status.tweak('A/D/G/rho', status='R ', copied='+', wc_rev='-')
-  svntest.actions.run_and_verify_update(wc_dir,
-                                        expected_output,
-                                        expected_disk,
-                                        expected_status)
+  # When issue #2522 was filed, svn used to break the WC if we didn't
+  # update here. But nowadays, this no longer happens, so the separate
+  # update step which was done here originally has been removed.
 
   # Now commit merged wc
   expected_output = svntest.wc.State(wc_dir, {
@@ -16141,9 +16142,92 @@ def merge_replace_causes_tree_conflict(sbox):
   # svn st
   expected_status.tweak('A', status=' M')
   expected_status.tweak('A/D/G/pi', 'A/mu', status='M ', treeconflict='C')
-  expected_status.tweak('A/D/H', 'A/B/E', status=' M', treeconflict='C')
+  expected_status.tweak('A/D/H', status=' M', treeconflict='C')
+  ### A/B/E gets both a property and tree conflict flagged. Is this OK?
+  expected_status.tweak('A/B/E', status=' C', treeconflict='C')
 
   actions.run_and_verify_status(wc_dir, expected_status)
+
+#----------------------------------------------------------------------
+
+def copy_then_replace_via_merge(sbox):
+  "copy then replace via merge"
+  # Testing issue #2690 with deleted/added/replaced files and subdirs.
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  j = os.path.join
+
+  A = j(wc_dir, 'A')
+  AJ = j(wc_dir, 'A', 'J')
+  AJK = j(AJ, 'K')
+  AJL = j(AJ, 'L')
+  AJM = j(AJ, 'M')
+  AJ_sigma = j(AJ, 'sigma')
+  AJ_theta = j(AJ, 'theta')
+  AJ_omega = j(AJ, 'omega')
+  AJK_zeta = j(AJK, 'zeta')
+  AJL_zeta = j(AJL, 'zeta')
+  AJM_zeta = j(AJM, 'zeta')
+  branch = j(wc_dir, 'branch')
+  branch_J = j(wc_dir, 'branch', 'J')
+  url_A = sbox.repo_url + '/A'
+  url_branch = sbox.repo_url + '/branch'
+  
+  # Create a branch.
+  main.run_svn(None, 'cp', url_A, url_branch, '-m', 'create branch') # r2
+  
+  # Create a tree J in A.
+  os.makedirs(AJK)
+  os.makedirs(AJL)
+  main.file_append(AJ_sigma, 'new text')
+  main.file_append(AJ_theta, 'new text')
+  main.file_append(AJK_zeta, 'new text')
+  main.file_append(AJL_zeta, 'new text')
+  main.run_svn(None, 'add', AJ)
+  main.run_svn(None, 'ci', wc_dir, '-m', 'create tree J') # r3
+  main.run_svn(None, 'up', wc_dir)
+
+  # Copy J to the branch via merge
+  main.run_svn(None, 'merge', url_A, branch)
+  main.run_svn(None, 'ci', wc_dir, '-m', 'merge to branch') # r4
+  main.run_svn(None, 'up', wc_dir)
+
+  # In A, replace J with a slightly different tree
+  main.run_svn(None, 'rm', AJ)
+  main.run_svn(None, 'ci', wc_dir, '-m', 'rm AJ') # r5
+  main.run_svn(None, 'up', wc_dir)
+
+  os.makedirs(AJL)
+  os.makedirs(AJM)
+  main.file_append(AJ_theta, 'really new text')
+  main.file_append(AJ_omega, 'really new text')
+  main.file_append(AJL_zeta, 'really new text')
+  main.file_append(AJM_zeta, 'really new text')
+  main.run_svn(None, 'add', AJ)
+  main.run_svn(None, 'ci', wc_dir, '-m', 'create tree J again') # r6
+  main.run_svn(None, 'up', wc_dir)
+
+  # Run merge to replace /branch/J in one swell foop.
+  main.run_svn(None, 'merge', url_A, branch)
+
+  # Check status:
+  #   sigma and K from r4 were deleted
+  #   theta and L from r4 were replaced by r6
+  #   omega and M were added (from r6)
+  expected_status = wc.State(branch_J, {
+    ''          : Item(status='R ', copied='+', wc_rev='-'),
+    'sigma'     : Item(status='D ', copied='+', wc_rev='-'),
+    'K'         : Item(status='D ', copied='+', wc_rev='-'),
+    'K/zeta'    : Item(status='D ', copied='+', wc_rev='-'),
+    'theta'     : Item(status='  ', copied='+', wc_rev='-'),
+    'L'         : Item(status='  ', copied='+', wc_rev='-'),
+    'L/zeta'    : Item(status='  ', copied='+', wc_rev='-'),
+    'omega'     : Item(status='  ', copied='+', wc_rev='-'),
+    'M'         : Item(status='  ', copied='+', wc_rev='-'),
+    'M/zeta'    : Item(status='  ', copied='+', wc_rev='-'),
+    })
+  actions.run_and_verify_status(branch_J, expected_status)
 
 
 ########################################################################
@@ -16361,9 +16445,12 @@ test_list = [ None,
                          server_has_mergeinfo),
               SkipUnless(multiple_reintegrates_from_the_same_branch,
                          server_has_mergeinfo),
-              XFail(merge_replace_causes_tree_conflict),
+              # ra_serf causes duplicate notifications with this test:
+              Skip(merge_replace_causes_tree_conflict,
+                   svntest.main.is_ra_type_dav_serf),
               SkipUnless(handle_gaps_in_implicit_mergeinfo,
                          server_has_mergeinfo),
+              XFail(copy_then_replace_via_merge),
              ]
 
 if __name__ == '__main__':

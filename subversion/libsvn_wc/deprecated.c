@@ -43,6 +43,47 @@
 
 /*** From adm_crawler.c ***/
 
+svn_error_t *
+svn_wc_crawl_revisions4(const char *path,
+                        svn_wc_adm_access_t *adm_access,
+                        const svn_ra_reporter3_t *reporter,
+                        void *report_baton,
+                        svn_boolean_t restore_files,
+                        svn_depth_t depth,
+                        svn_boolean_t honor_depth_exclude,
+                        svn_boolean_t depth_compatibility_trick,
+                        svn_boolean_t use_commit_times,
+                        svn_wc_notify_func2_t notify_func,
+                        void *notify_baton,
+                        svn_wc_traversal_info_t *traversal_info,
+                        apr_pool_t *pool)
+{
+  svn_wc_context_t *wc_ctx;
+
+  SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL,
+                                         svn_wc__adm_get_db(adm_access),
+                                         pool));
+
+  SVN_ERR(svn_dirent_get_absolute(&path, path, pool));
+
+  SVN_ERR(svn_wc_crawl_revisions5(wc_ctx,
+                                  svn_wc__adm_access_abspath(adm_access),
+                                  path,
+                                  reporter,
+                                  report_baton,
+                                  restore_files,
+                                  depth,
+                                  honor_depth_exclude,
+                                  depth_compatibility_trick,
+                                  use_commit_times,
+                                  notify_func,
+                                  notify_baton,
+                                  traversal_info,
+                                  pool));
+
+  return svn_error_return(svn_wc_context_destroy(wc_ctx));
+}
+
 /*** Compatibility wrapper: turns an svn_ra_reporter2_t into an
      svn_ra_reporter3_t.
 
@@ -342,6 +383,27 @@ svn_wc_transmit_prop_deltas(const char *path,
 }
 
 /*** From adm_files.c ***/
+svn_error_t *
+svn_wc_ensure_adm3(const char *path,
+                   const char *uuid,
+                   const char *url,
+                   const char *repos,
+                   svn_revnum_t revision,
+                   svn_depth_t depth,
+                   apr_pool_t *pool)
+{
+  const char *local_abspath;
+  svn_wc_context_t *wc_ctx;
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+  SVN_ERR(svn_wc_context_create(&wc_ctx, NULL /* config */, pool, pool));
+
+  SVN_ERR(svn_wc_ensure_adm4(wc_ctx, local_abspath, uuid, url, repos, revision,
+                             depth, pool));
+
+  return svn_error_return(svn_wc_context_destroy(wc_ctx));
+}
+
 svn_error_t *
 svn_wc_ensure_adm2(const char *path,
                    const char *uuid,
@@ -650,7 +712,8 @@ svn_wc_get_ancestry(char **url,
                                          svn_wc__adm_get_db(adm_access),
                                          pool));
 
-  SVN_ERR(svn_wc_get_ancestry2(url, rev, wc_ctx, local_abspath, pool, pool));
+  SVN_ERR(svn_wc_get_ancestry2((const char **)url, rev, wc_ctx, local_abspath,
+                               pool, pool));
 
   return svn_error_return(svn_wc_context_destroy(wc_ctx));
 }
@@ -2036,6 +2099,39 @@ svn_wc_add_repos_file(const char *dst_path,
                                 pool);
 }
 
+svn_error_t *
+svn_wc_get_actual_target(const char *path,
+                         const char **anchor,
+                         const char **target,
+                         apr_pool_t *pool)
+{
+  svn_wc_context_t *wc_ctx;
+
+  SVN_ERR(svn_wc_context_create(&wc_ctx, NULL, pool, pool));
+  SVN_ERR(svn_wc_get_actual_target2(anchor, target, wc_ctx, path, pool, pool));
+
+  return svn_error_return(svn_wc_context_destroy(wc_ctx));
+}
+
+svn_error_t *
+svn_wc_is_wc_root(svn_boolean_t *wc_root,
+                  const char *path,
+                  svn_wc_adm_access_t *adm_access,
+                  apr_pool_t *pool)
+{
+  svn_wc_context_t *wc_ctx;
+  const char *local_abspath;
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+  SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL /* config */,
+                                         svn_wc__adm_get_db(adm_access),
+                                         pool));
+
+  SVN_ERR(svn_wc_is_wc_root2(wc_root, wc_ctx, local_abspath, pool));
+
+  return svn_error_return(svn_wc_context_destroy(wc_ctx));
+}
+
 /*** From lock.c ***/
 
 /* To preserve API compatibility with Subversion 1.0.0 */
@@ -2108,6 +2204,22 @@ svn_wc_adm_close(svn_wc_adm_access_t *adm_access)
   apr_pool_t *scratch_pool = svn_wc_adm_access_pool(adm_access);
 
   return svn_wc_adm_close2(adm_access, scratch_pool);
+}
+
+svn_error_t *
+svn_wc_check_wc(const char *path,
+                int *wc_format,
+                apr_pool_t *pool)
+{
+  svn_wc_context_t *wc_ctx;
+  const char *local_abspath;
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+  SVN_ERR(svn_wc_context_create(&wc_ctx, NULL, pool, pool));
+
+  SVN_ERR(svn_wc_check_wc2(wc_format, wc_ctx, local_abspath, pool));
+
+  return svn_error_return(svn_wc_context_destroy(wc_ctx));
 }
 
 

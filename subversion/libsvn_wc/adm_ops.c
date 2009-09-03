@@ -462,19 +462,25 @@ process_committed_leaf(int log_number,
     }
 
   if (modify_flags)
-    SVN_ERR(svn_wc__loggy_entry_modify(&logtags, adm_access,
+    SVN_ERR(svn_wc__loggy_entry_modify(&logtags,
+                                       svn_wc__adm_access_abspath(adm_access),
                                        path, &tmp_entry, modify_flags, pool));
 
   if (remove_lock)
-    SVN_ERR(svn_wc__loggy_delete_lock(&logtags, adm_access, path, pool));
+    SVN_ERR(svn_wc__loggy_delete_lock(&logtags,
+                                      svn_wc__adm_access_abspath(adm_access),
+                                      path, pool));
 
   if (remove_changelist)
-    SVN_ERR(svn_wc__loggy_delete_changelist(&logtags, adm_access, path, pool));
+    SVN_ERR(svn_wc__loggy_delete_changelist(&logtags,
+                                      svn_wc__adm_access_abspath(adm_access),
+                                      path, pool));
 
   /* Regardless of whether it's a file or dir, the "main" logfile
      contains a command to bump the revision attribute (and
      timestamp). */
-  SVN_ERR(svn_wc__loggy_committed(&logtags, adm_access,
+  SVN_ERR(svn_wc__loggy_committed(&logtags,
+                                  svn_wc__adm_access_abspath(adm_access),
                                   path, new_revnum, pool));
 
 
@@ -487,11 +493,11 @@ process_committed_leaf(int log_number,
         {
           svn_prop_t *prop = APR_ARRAY_IDX(wcprop_changes, i, svn_prop_t *);
 
-          SVN_ERR(svn_wc__loggy_modify_wcprop
-                  (&logtags, adm_access,
-                   path, prop->name,
-                   prop->value ? prop->value->data : NULL,
-                   pool));
+          SVN_ERR(svn_wc__loggy_modify_wcprop(&logtags,
+                                       svn_wc__adm_access_abspath(adm_access),
+                                       path, prop->name,
+                                       prop->value ? prop->value->data : NULL,
+                                       pool));
         }
     }
 
@@ -584,7 +590,7 @@ process_committed_internal(int *log_number,
                                                  NULL, FALSE /* remove_lock */,
                                                  remove_changelist, NULL,
                                                  queue, subpool));
-              SVN_ERR(svn_wc__run_log(child_access, NULL, pool));
+              SVN_ERR(svn_wc__run_log(child_access, pool));
             }
           else
             {
@@ -789,7 +795,7 @@ svn_wc_process_committed_queue(svn_wc_committed_queue_t *queue,
       apr_hash_this(hi, NULL, NULL, &val);
       this_adm = val;
 
-      SVN_ERR(svn_wc__run_log(this_adm->adm_access, NULL, iterpool));
+      SVN_ERR(svn_wc__run_log(this_adm->adm_access, iterpool));
     }
 
   queue->queue->nelts = 0;
@@ -827,7 +833,7 @@ svn_wc_process_committed4(const char *path,
                                      remove_changelist, checksum, NULL, pool));
 
   /* Run the log file(s) we just created. */
-  return svn_wc__run_log(adm_access, NULL, pool);
+  return svn_wc__run_log(adm_access, pool);
 }
 
 
@@ -1273,7 +1279,8 @@ svn_wc_delete3(const char *path,
          entries.c:fold_entry() clears the values of copied, copyfrom_rev
          and copyfrom_url. */
       tmp_entry.schedule = svn_wc_schedule_delete;
-      SVN_ERR(svn_wc__loggy_entry_modify(&log_accum, adm_access,
+      SVN_ERR(svn_wc__loggy_entry_modify(&log_accum,
+                                         svn_wc__adm_access_abspath(adm_access),
                                          path, &tmp_entry,
                                          SVN_WC__ENTRY_MODIFY_SCHEDULE,
                                          pool));
@@ -1288,7 +1295,8 @@ svn_wc_delete3(const char *path,
 
           if (was_kind != svn_node_dir) /* Dirs don't have text-bases */
             /* Restore the original text-base */
-            SVN_ERR(svn_wc__loggy_move(&log_accum, adm_access,
+            SVN_ERR(svn_wc__loggy_move(&log_accum,
+                                       svn_wc__adm_access_abspath(adm_access),
                                        text_revert, text_base,
                                        pool));
 
@@ -1302,7 +1310,7 @@ svn_wc_delete3(const char *path,
 
       SVN_ERR(svn_wc__write_log(adm_access, 0, log_accum, pool));
 
-      SVN_ERR(svn_wc__run_log(adm_access, NULL, pool));
+      SVN_ERR(svn_wc__run_log(adm_access, pool));
 
     }
 
@@ -1558,13 +1566,14 @@ svn_wc_add3(const char *path,
         {
           const char *textb = svn_wc__text_base_path(path, FALSE, pool);
           const char *rtextb = svn_wc__text_revert_path(path, pool);
-          SVN_ERR(svn_wc__loggy_move(&log_accum, adm_access,
+          SVN_ERR(svn_wc__loggy_move(&log_accum,
+                                     svn_wc__adm_access_abspath(adm_access),
                                      textb, rtextb, pool));
         }
       SVN_ERR(svn_wc__loggy_revert_props_create(&log_accum, path,
                                                 adm_access, TRUE, pool));
       SVN_ERR(svn_wc__write_log(adm_access, 0, log_accum, pool));
-      SVN_ERR(svn_wc__run_log(adm_access, NULL, pool));
+      SVN_ERR(svn_wc__run_log(adm_access, pool));
     }
 
   if (kind == svn_node_dir) /* scheduling a directory for addition */
@@ -1585,8 +1594,9 @@ svn_wc_add3(const char *path,
 
           /* Make sure this new directory has an admistrative subdirectory
              created inside of it */
-          SVN_ERR(svn_wc_ensure_adm3(path, p_entry->uuid, new_url,
-                                     p_entry->repos, 0, depth, pool));
+          SVN_ERR(svn_wc__internal_ensure_adm(db, local_abspath, p_entry->uuid,
+                                              new_url, p_entry->repos, 0,
+                                              depth, pool));
         }
       else
         {
@@ -1594,9 +1604,10 @@ svn_wc_add3(const char *path,
              the admin directory already in existence, then the dir will
              contain the copyfrom settings.  So we need to pass the
              copyfrom arguments to the ensure call. */
-          SVN_ERR(svn_wc_ensure_adm3(path, parent_entry->uuid, copyfrom_url,
-                                     parent_entry->repos, copyfrom_rev,
-                                     depth, pool));
+          SVN_ERR(svn_wc__internal_ensure_adm(db, local_abspath,
+                                              parent_entry->uuid, copyfrom_url,
+                                              parent_entry->repos,
+                                              copyfrom_rev, depth, pool));
         }
 
       /* We want the locks to persist, so use the access baton's pool */
@@ -1611,7 +1622,8 @@ svn_wc_add3(const char *path,
 
       /* We're making the same mods we made above, but this time we'll
          force the scheduling.  Also make sure to undo the
-         'incomplete' flag which svn_wc_ensure_adm3 sets by default. */
+         'incomplete' flag which svn_wc__internal_ensure_adm() sets by
+         default. */
       modify_flags |= SVN_WC__ENTRY_MODIFY_FORCE;
       modify_flags |= SVN_WC__ENTRY_MODIFY_INCOMPLETE;
       tmp_entry.schedule = is_replace
@@ -1886,10 +1898,12 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
 
       if (revert_base_path)
         {
-          SVN_ERR(svn_wc__loggy_copy(&log_accum, adm_access,
+          SVN_ERR(svn_wc__loggy_copy(&log_accum,
+                                     svn_wc__adm_access_abspath(adm_access),
                                      revert_base_path, fullpath,
                                      pool));
-          SVN_ERR(svn_wc__loggy_move(&log_accum, adm_access,
+          SVN_ERR(svn_wc__loggy_move(&log_accum,
+                                     svn_wc__adm_access_abspath(adm_access),
                                      revert_base_path, regular_base_path,
                                      pool));
           *reverted = TRUE;
@@ -1907,9 +1921,10 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
 
           if (reinstall_working)
             {
-              SVN_ERR(svn_wc__loggy_copy(&log_accum, adm_access,
-                                         regular_base_path, fullpath,
-                                         pool));
+              SVN_ERR(svn_wc__loggy_copy(&log_accum,
+                                      svn_wc__adm_access_abspath(adm_access),
+                                      regular_base_path, fullpath,
+                                      pool));
               *reverted = TRUE;
             }
         }
@@ -2011,14 +2026,15 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
     }
 
   /* Modify the entry, loggily. */
-  SVN_ERR(svn_wc__loggy_entry_modify(&log_accum, adm_access, fullpath,
-                                     &tmp_entry, flags, pool));
+  SVN_ERR(svn_wc__loggy_entry_modify(&log_accum,
+                                     svn_wc__adm_access_abspath(adm_access),
+                                     fullpath, &tmp_entry, flags, pool));
 
   /* Don't run log if nothing to change. */
   if (! svn_stringbuf_isempty(log_accum))
     {
       SVN_ERR(svn_wc__write_log(adm_access, 0, log_accum, pool));
-      SVN_ERR(svn_wc__run_log(adm_access, NULL, pool));
+      SVN_ERR(svn_wc__run_log(adm_access, pool));
     }
 
   return SVN_NO_ERROR;
@@ -2069,7 +2085,7 @@ revert_entry(svn_depth_t *depth,
      tell if it is safe to split PATH into a parent directory and
      basename.  For files, we always do this split.  */
   if (kind == svn_node_dir)
-    SVN_ERR(svn_wc_is_wc_root(&is_wc_root, path, dir_access, pool));
+    SVN_ERR(svn_wc__check_wc_root(&is_wc_root, NULL, db, local_abspath, pool));
   bname = is_wc_root ? NULL : svn_dirent_basename(path, pool);
 
   /* Additions. */
@@ -2675,7 +2691,8 @@ svn_wc_remove_from_revision_control(svn_wc_adm_access_t *adm_access,
       {
         svn_boolean_t is_root;
 
-        SVN_ERR(svn_wc_is_wc_root(&is_root, full_path, adm_access, pool));
+        SVN_ERR(svn_wc__check_wc_root(&is_root, NULL, db, local_abspath,
+                                      pool));
 
         /* If full_path is not the top of a wc, then its parent
            directory is also a working copy and has an entry for
@@ -2989,12 +3006,13 @@ resolve_found_entry_callback(const char *path,
 
   if (entry && (entry->kind == svn_node_dir))
     {
-      SVN_ERR(svn_wc_is_wc_root(&wc_root, path, baton->adm_access, pool));
+      SVN_ERR(svn_wc__check_wc_root(&wc_root, NULL, baton->db, local_abspath,
+                                    pool));
 
       if (wc_root)
         {
           /* Switched subtrees are considered working copy roots by
-           * svn_wc_is_wc_root(). But it's OK to check for tree conflict
+           * svn_wc__check_wc_root(). But it's OK to check for tree conflict
            * info in the parent of a switched subtree, because the
            * subtree itself might be a tree conflict victim. */
           svn_boolean_t switched;
@@ -3255,43 +3273,53 @@ svn_wc_set_changelist(const char *path,
                       void *notify_baton,
                       apr_pool_t *pool)
 {
-  const svn_wc_entry_t *entry;
-  svn_wc_entry_t newentry;
   svn_wc_notify_t *notify;
+  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
+  const char *local_abspath;
+  const char *existing_changelist;
+  svn_wc__db_kind_t kind;
 
   /* Assert that we aren't being asked to set an empty changelist. */
   SVN_ERR_ASSERT(! (changelist && changelist[0] == '\0'));
 
-  SVN_ERR(svn_wc_entry(&entry, path, adm_access, FALSE, pool));
-  if (! entry)
-    return svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-                             _("'%s' is not under version control"), path);
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+
+  SVN_ERR(svn_wc__db_read_info(NULL, &kind, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               &existing_changelist,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL,
+                               db, local_abspath, pool, pool));
 
   /* We can't do changelists on directories. */
-  if (entry->kind == svn_node_dir)
+  if (kind == svn_wc__db_kind_dir)
     return svn_error_createf(SVN_ERR_CLIENT_IS_DIRECTORY, NULL,
                              _("'%s' is a directory, and thus cannot"
                                " be a member of a changelist"), path);
 
-  /* If the path has no changelist and we're removing changelist, skip it. */
-  if (! (changelist || entry->changelist))
+  /* If the path has no changelist and we're removing changelist, skip it.
+     ### the db actually does this check, too, but for notification's sake,
+     ### we add it here as well. */
+  if (! (changelist || existing_changelist))
     return SVN_NO_ERROR;
 
   /* If the path is already assigned to the changelist we're
-     trying to assign, skip it. */
-  if (entry->changelist
+     trying to assign, skip it.
+     ### the db actually does this check, too, but for notification's sake,
+     ### we add it here as well. */
+  if (existing_changelist
       && changelist
-      && strcmp(entry->changelist, changelist) == 0)
+      && strcmp(existing_changelist, changelist) == 0)
     return SVN_NO_ERROR;
 
   /* If the path is already a member of a changelist, warn the
      user about this, but still allow the reassignment to happen. */
-  if (entry->changelist && changelist && notify_func)
+  if (existing_changelist && changelist && notify_func)
     {
       svn_error_t *reassign_err =
         svn_error_createf(SVN_ERR_WC_CHANGELIST_MOVE, NULL,
                           _("Removing '%s' from changelist '%s'."),
-                          path, entry->changelist);
+                          path, existing_changelist);
       notify = svn_wc_create_notify(path, svn_wc_notify_changelist_moved,
                                     pool);
       notify->err = reassign_err;
@@ -3299,10 +3327,8 @@ svn_wc_set_changelist(const char *path,
       svn_error_clear(notify->err);
     }
 
-  /* Tweak the entry. */
-  newentry.changelist = changelist;
-  SVN_ERR(svn_wc__entry_modify(adm_access, entry->name, &newentry,
-                               SVN_WC__ENTRY_MODIFY_CHANGELIST, pool));
+  /* Set the changelist. */
+  SVN_ERR(svn_wc__db_op_set_changelist(db, local_abspath, changelist, pool));
 
   /* And tell someone what we've done. */
   if (notify_func)

@@ -261,7 +261,7 @@ svn_wc_crop_tree(svn_wc_adm_access_t *anchor,
 
       SVN_ERR(svn_dirent_get_absolute(&local_dir_abspath, full_path, pool));
 
-      /* This simulates the logic of svn_wc_is_wc_root(). */
+      /* This simulates the logic of svn_wc__check_wc_root(). */
         {
           const char *parent_abspath;
           const char *bname;

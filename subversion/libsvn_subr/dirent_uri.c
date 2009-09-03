@@ -1039,7 +1039,7 @@ svn_uri_join(const char *base, const char *component, apr_pool_t *pool)
       else
         {
           /* The uri is not absolute enough; use only the root from base */
-          int n = uri_schema_root_length(base, blen);
+          apr_size_t n = uri_schema_root_length(base, blen);
 
           path = apr_palloc(pool, n + clen + 1);
 
@@ -1440,7 +1440,7 @@ svn_uri_is_canonical(const char *uri, apr_pool_t *pool)
   /* Now validate the rest of the URI. */
   while(1)
     {
-      int seglen = ptr - seg;
+      apr_size_t seglen = ptr - seg;
 
       if (seglen == 1 && *seg == '.')
         return FALSE;  /*  /./   */
@@ -1476,7 +1476,7 @@ svn_dirent_condense_targets(const char **pcommon,
   int i, j, num_condensed = targets->nelts;
   svn_boolean_t *removed;
   apr_array_header_t *abs_targets;
-  int basedir_len;
+  size_t basedir_len;
 
   /* Early exit when there's no data to work on. */
   if (targets->nelts <= 0)

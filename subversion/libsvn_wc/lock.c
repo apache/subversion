@@ -151,23 +151,13 @@ svn_wc__internal_check_wc(int *wc_format,
 
 
 svn_error_t *
-svn_wc_check_wc(const char *path,
-                int *wc_format,
-                apr_pool_t *pool)
+svn_wc_check_wc2(int *wc_format,
+                 svn_wc_context_t *wc_ctx,
+                 const char *local_abspath,
+                 apr_pool_t *pool)
 {
-  const char *local_abspath;
-  svn_wc__db_t *db;
-  svn_error_t *err;
-
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
-
-  /* Ugh. Too bad about having to open a DB.  */
-  SVN_ERR(svn_wc__db_open(&db, svn_wc__db_openmode_readonly,
-                          NULL /* ### config */, pool, pool));
-  err = svn_wc__internal_check_wc(wc_format, db, local_abspath, pool);
-  svn_error_clear(svn_wc__db_close(db));
-
-  return svn_error_return(err);
+  return svn_error_return(
+    svn_wc__internal_check_wc(wc_format, wc_ctx->db, local_abspath, pool));
 }
 
 
@@ -314,7 +304,7 @@ alloc_db(svn_wc__db_t **db,
 
   /* ### need to determine MODE based on callers' needs.  */
   mode = svn_wc__db_openmode_default;
-  SVN_ERR(svn_wc__db_open(db, mode, config, result_pool, scratch_pool));
+  SVN_ERR(svn_wc__db_open(db, mode, config, TRUE, result_pool, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -741,7 +731,7 @@ svn_wc_adm_probe_open3(svn_wc_adm_access_t **adm_access,
 
       /* Ugh. Too bad about having to open a DB.  */
       SVN_ERR(svn_wc__db_open(&db, svn_wc__db_openmode_readonly,
-                              NULL /* ### config */, pool, pool));
+                              NULL /* ### config */, TRUE, pool, pool));
       err = probe(db, &dir, path, pool);
       svn_error_clear(svn_wc__db_close(db));
       SVN_ERR(err);
@@ -1320,6 +1310,20 @@ svn_wc__adm_open_anchor_in_context(svn_wc_adm_access_t **anchor_access,
                                       cancel_baton, pool));
 }
 
+svn_error_t *
+svn_wc__adm_retrieve_from_context(svn_wc_adm_access_t **adm_access,
+                                  svn_wc_context_t *wc_ctx,
+                                  const char *local_abspath,
+                                  apr_pool_t *pool)
+{
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  *adm_access = svn_wc__adm_retrieve_internal2(wc_ctx->db, 
+                                               local_abspath, 
+                                               pool);
+
+  return SVN_NO_ERROR;
+}
 
 /* Does the work of closing the access baton ADM_ACCESS.  Any physical
    locks are removed from the working copy if PRESERVE_LOCK is FALSE, or

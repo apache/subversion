@@ -564,7 +564,7 @@ These link handlers must be registered via `svn-log-register-link-handler'")
 ;; (put 'svn-log-edit-done-hook 'risky-local-variable t)
 ;; already implied by "-hook" suffix
 
-(defvar svn-post-process-svn-output-hook nil "Hook that can be used to preprocess the output from svn.
+(defvar svn-post-process-svn-output-hook 'svn-fixup-tramp-output-maybe "Hook that can be used to preprocess the output from svn.
 The function `svn-status-remove-control-M' can be useful for that hook")
 
 (when (eq system-type 'windows-nt)
@@ -1020,7 +1020,8 @@ To bind this to a different key, customize `svn-status-prefix-key'.")
   (define-key svn-global-keymap (kbd "f r") 'svn-file-revert)
   (define-key svn-global-keymap (kbd "c") 'svn-status-commit)
   (define-key svn-global-keymap (kbd "S") 'svn-status-switch-to-status-buffer)
-  (define-key svn-global-keymap (kbd "o") 'svn-status-pop-to-status-buffer))
+  (define-key svn-global-keymap (kbd "o") 'svn-status-pop-to-status-buffer)
+  (define-key svn-global-keymap (kbd "C-k") 'svn-process-kill))
 
 (defvar svn-status-diff-mode-map ()
   "Keymap used in `svn-status-diff-mode' for additional commands that are not defined in diff-mode.")
@@ -1206,6 +1207,19 @@ If there is no .svn directory, examine if there is CVS and run
 (defun svn-had-user-input-since-asynch-run ()
   (not (equal (recent-keys) svn-pre-run-asynch-recent-keys)))
 
+(defun svn-expand-filename-for-remote-access (file-name)
+  "Convert the given local part of a filename to a full file name to allow accessing remote files"
+  ;; when running svn on a remote host: expand local file names to get full names to access the file on the remote host via emacs
+  (if (file-remote-p default-directory)
+      (concat (file-remote-p default-directory) file-name)
+    file-name))
+
+(defun svn-local-filename-for-remote-access (file-name)
+  "Convert a full file name to a local file name that can be used for a local svn invocation."
+  (if (file-remote-p file-name)
+      (tramp-file-name-localname (tramp-dissect-file-name file-name))
+    file-name))
+
 (defun svn-process-environment ()
   "Construct the environment for the svn process.
 It is a combination of `svn-status-svn-environment-var-list' and
@@ -1282,7 +1296,7 @@ The hook svn-pre-run-hook allows to monitor/modify the ARGLIST."
             (setq svn-status-last-commit-author nil)
             (setq svn-status-mode-line-process-status (format " running %s" cmdtype))
             (svn-status-update-mode-line)
-            (sit-for 0.1)
+            (save-excursion (sit-for 0.1))
             (ring-insert svn-last-cmd-ring (list (current-time-string) arglist default-directory))
             (if run-asynchron
                 (progn
@@ -1330,8 +1344,8 @@ The hook svn-pre-run-hook allows to monitor/modify the ARGLIST."
           (replace-match "/")))))
 
 (defun svn-process-sentinel (process event)
+  "Called after a svn process has finished."
   ;;(princ (format "Process: %s had the event `%s'" process event)))
-  ;;(save-excursion
   (let ((act-buf (current-buffer)))
     (when svn-pre-run-mode-line-process
       (with-current-buffer svn-status-pre-run-svn-buffer
@@ -1508,17 +1522,17 @@ When this function resets `svn-process-handle-error-msg' to nil, the default err
     (insert str)
     (save-excursion
       (goto-char (svn-point-at-bol))
-      (when (looking-at "Password for '\\(.+\\)': ")
+      (when (looking-at "Password for '\\(.*\\)': ")
         ;(svn-status-show-process-buffer)
         (let ((passwd (read-passwd
                        (format "Enter svn password for %s: " (match-string 1)))))
           (svn-process-send-string-and-newline passwd t)))
       (when (looking-at "Username: ")
-        (let ((user-name (read-string "Username for svn operation: ")))
+        (let ((user-name (with-local-quit (read-string "Username for svn operation: "))))
           (svn-process-send-string-and-newline user-name)))
       (when (looking-at "(R)eject, accept (t)emporarily or accept (p)ermanently")
         (svn-status-show-process-buffer)
-        (let ((answer (read-string "(R)eject, accept (t)emporarily or accept (p)ermanently? ")))
+        (let ((answer (with-local-quit (read-string "(R)eject, accept (t)emporarily or accept (p)ermanently? "))))
           (svn-process-send-string (substring answer 0 1)))))))
 
 (defun svn-revert-some-buffers (&optional tree)
@@ -1647,15 +1661,6 @@ the usual parsing functionality in `svn-parse-status-result'."
         (save-excursion
           (while (re-search-forward search-string (point-max) t)
             (replace-match (replace-regexp-in-string " " "-" (match-string 1)) nil nil nil 1)))))))
-
-(defun svn-status-parse-fixup-tramp-exit ()
-  "Helper function to handle tramp connections stopping with an exit output.
-Add this function to the `svn-pre-parse-status-hook'."
-  (goto-char (point-max))
-  (beginning-of-line)
-  (when (looking-at "exit")
-    (delete-region (point) (svn-point-at-eol))))
-;;(add-hook 'svn-pre-parse-status-hook 'svn-status-parse-fixup-tramp-exit)
 
 (defun svn-parse-status-result ()
   "Parse the `svn-process-buffer-name' buffer.
@@ -1840,6 +1845,20 @@ A and B must be line-info's."
         (goto-char (point-min))
         (while (re-search-forward "\r$" (point-max) t)
           (replace-match "" nil nil))))))
+
+(defun svn-fixup-tramp-exit ()
+  "Helper function to handle tramp connections stopping with an exit output."
+  (goto-char (point-max))
+  (when (eq (svn-point-at-bol) (svn-point-at-eol))
+    (forward-line -1))
+  (beginning-of-line)
+  (when (looking-at "exit")
+    (delete-region (point) (svn-point-at-eol))))
+
+(defun svn-fixup-tramp-output-maybe ()
+  "Fixup leftover output when running via tramp"
+  (when (file-remote-p default-directory)
+    (svn-fixup-tramp-exit)))
 
 (condition-case nil
     ;;(easy-menu-add-item nil '("tools") ["SVN Status" svn-status t] "PCL-CVS")
@@ -2180,7 +2199,7 @@ PREFIX is passed to `popup-menu'."
         (progn
           (setq o (make-overlay begin end))
           (overlay-put o 'face face)
-          (sit-for 0)
+          (save-excursion (sit-for 0))
           (popup-menu menu prefix))
       (delete-overlay o))))
 
@@ -3590,6 +3609,10 @@ if no files have been marked."
 
 
 (defun svn-status-create-arg-file (file-name prefix file-info-list postfix)
+  "Create an svn client argument file"
+  ;; create the arg file on the remote host when we will run svn on this host!
+  (setq file-name (svn-expand-filename-for-remote-access file-name))
+  ;; (message "svn-status-create-arg-file %s: %s" default-directory file-name)
   (with-temp-file file-name
     (insert prefix)
     (let ((st-info file-info-list))
@@ -4160,7 +4183,7 @@ When called with a negative prefix argument, only update the selected files."
       (svn-run t t 'update "update"
                (when rev (list "-r" rev))
                update-extra-arg
-               (expand-file-name default-directory)))))
+               (svn-local-filename-for-remote-access (expand-file-name default-directory))))))
 
 (defun svn-status-commit ()
   "Commit selected files.
@@ -5001,22 +5024,22 @@ Commands:
     (set-buffer (get-buffer "*svn-property-edit*"))
     (when (fboundp 'set-buffer-file-coding-system)
       (set-buffer-file-coding-system svn-status-svn-file-coding-system nil))
-    (setq svn-status-temp-file-to-remove
-          (concat svn-status-temp-dir "svn-prop-edit.txt" svn-temp-suffix))
-    (write-region (point-min) (point-max) svn-status-temp-file-to-remove nil 1))
-  (when svn-status-propedit-file-list ; there are files to change properties
-    (svn-status-create-arg-file svn-status-temp-arg-file ""
-                                svn-status-propedit-file-list "")
-    (setq svn-status-propedit-file-list nil)
-    (svn-run async t 'propset "propset"
-             svn-status-propedit-property-name
-             "--targets" svn-status-temp-arg-file
-             (when (eq svn-status-svn-file-coding-system 'utf-8)
-               '("--encoding" "UTF-8"))
-             "-F" (concat svn-status-temp-dir "svn-prop-edit.txt" svn-temp-suffix))
-    (unless async (svn-status-remove-temp-file-maybe)))
-  (when svn-status-pre-propedit-window-configuration
-    (set-window-configuration svn-status-pre-propedit-window-configuration)))
+    (let ((svn-propedit-file-name (concat svn-status-temp-dir "svn-prop-edit.txt" svn-temp-suffix)))
+      (setq svn-status-temp-file-to-remove (svn-expand-filename-for-remote-access svn-propedit-file-name))
+      (write-region (point-min) (point-max) svn-status-temp-file-to-remove nil 1)
+      (when svn-status-propedit-file-list ; there are files to change properties
+        (svn-status-create-arg-file svn-status-temp-arg-file ""
+                                    svn-status-propedit-file-list "")
+        (setq svn-status-propedit-file-list nil)
+        (svn-run async t 'propset "propset"
+                 svn-status-propedit-property-name
+                 "--targets" svn-status-temp-arg-file
+                 (when (eq svn-status-svn-file-coding-system 'utf-8)
+                   '("--encoding" "UTF-8"))
+                 "-F" svn-propedit-file-name)
+        (unless async (svn-status-remove-temp-file-maybe)))
+      (when svn-status-pre-propedit-window-configuration
+        (set-window-configuration svn-status-pre-propedit-window-configuration)))))
 
 (defun svn-prop-edit-svn-diff (arg)
   (interactive "P")
@@ -5108,41 +5131,41 @@ Commands:
   "Finish editing the log message and run svn commit."
   (interactive)
   (svn-status-save-some-buffers)
-  (save-excursion
-    (set-buffer (get-buffer svn-log-edit-buffer-name))
-    (when svn-log-edit-insert-files-to-commit
-      (svn-log-edit-remove-comment-lines))
-    (when (fboundp 'set-buffer-file-coding-system)
-      (set-buffer-file-coding-system svn-status-svn-file-coding-system nil))
-    (when (or svn-log-edit-update-log-entry svn-status-files-to-commit)
-      (setq svn-status-temp-file-to-remove
-            (concat svn-status-temp-dir "svn-log-edit.txt" svn-temp-suffix))
-      (write-region (point-min) (point-max) svn-status-temp-file-to-remove nil 1))
-    (bury-buffer))
-  (if svn-log-edit-update-log-entry
-      (when (y-or-n-p "Update the log entry? ")
-        ;;   svn propset svn:log --revprop -r11672 -F file
-        (svn-run nil t 'propset "propset" "svn:log" "--revprop"
-                     (concat "-r" svn-log-edit-update-log-entry)
-                     "-F" svn-status-temp-file-to-remove)
-        (save-excursion
-          (set-buffer svn-process-buffer-name)
-          (message "%s" (buffer-substring (point-min) (- (point-max) 1)))))
-    (when svn-status-files-to-commit ; there are files to commit
-      (setq svn-status-operated-on-dot
-            (and (= 1 (length svn-status-files-to-commit))
-                 (string= "." (svn-status-line-info->filename (car svn-status-files-to-commit)))))
-      (svn-status-create-arg-file svn-status-temp-arg-file ""
-                                  svn-status-files-to-commit "")
-      (svn-run t t 'commit "commit"
-                   (unless svn-status-recursive-commit "--non-recursive")
-                   "--targets" svn-status-temp-arg-file
-                   "-F" svn-status-temp-file-to-remove
-                   (when (eq svn-status-svn-file-coding-system 'utf-8)
-                     '("--encoding" "UTF-8"))
-                   svn-status-default-commit-arguments))
-    (set-window-configuration svn-status-pre-commit-window-configuration)
-    (message "svn-log editing done")))
+  (let ((svn-logedit-file-name))
+    (save-excursion
+      (set-buffer (get-buffer svn-log-edit-buffer-name))
+      (when svn-log-edit-insert-files-to-commit
+        (svn-log-edit-remove-comment-lines))
+      (when (fboundp 'set-buffer-file-coding-system)
+        (set-buffer-file-coding-system svn-status-svn-file-coding-system nil))
+      (when (or svn-log-edit-update-log-entry svn-status-files-to-commit)
+        (setq svn-log-edit-file-name (concat svn-status-temp-dir "svn-log-edit.txt" svn-temp-suffix))
+        (setq svn-status-temp-file-to-remove (svn-expand-filename-for-remote-access svn-log-edit-file-name))
+        (write-region (point-min) (point-max) svn-status-temp-file-to-remove nil 1))
+      (bury-buffer))
+    (if svn-log-edit-update-log-entry
+        (when (y-or-n-p "Update the log entry? ")
+          ;;   svn propset svn:log --revprop -r11672 -F file
+          (svn-run nil t 'propset "propset" "svn:log" "--revprop"
+                   (concat "-r" svn-log-edit-update-log-entry)
+                   "-F" svn-log-edit-file-name)
+          (save-excursion
+            (set-buffer svn-process-buffer-name)
+            (message "%s" (buffer-substring (point-min) (- (point-max) 1)))))
+      (when svn-status-files-to-commit ; there are files to commit
+        (setq svn-status-operated-on-dot
+              (and (= 1 (length svn-status-files-to-commit))
+                   (string= "." (svn-status-line-info->filename (car svn-status-files-to-commit)))))
+        (svn-status-create-arg-file svn-status-temp-arg-file "" svn-status-files-to-commit "")
+        (svn-run t t 'commit "commit"
+                 (unless svn-status-recursive-commit "--non-recursive")
+                 "--targets" svn-status-temp-arg-file
+                 "-F" svn-log-edit-file-name
+                 (when (eq svn-status-svn-file-coding-system 'utf-8)
+                   '("--encoding" "UTF-8"))
+                 svn-status-default-commit-arguments))
+      (set-window-configuration svn-status-pre-commit-window-configuration)
+      (message "svn-log editing done"))))
 
 (defun svn-log-edit-svn-diff (arg)
   "Show the diff we are about to commit.
@@ -5417,7 +5440,8 @@ Commands:
   "Mark the revision at point to be used as diff against revision."
   (interactive)
   (let ((start-pos)
-        (point-at-partner-rev))
+        (point-at-partner-rev)
+        (overlay))
     (dolist (ov (overlays-in (point-min) (point-max)))
       (when (overlay-get ov 'svn-log-partner-revision)
         (setq point-at-partner-rev (and (>= (point) (overlay-start ov))

@@ -918,7 +918,7 @@ read_entries_new(apr_hash_t **result_entries,
               if (err)
                 {
                   if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
-                    return err;
+                    return svn_error_return(err);
                   svn_error_clear(err);
                 }
               else if (parent_root_url != NULL
@@ -1195,7 +1195,7 @@ svn_wc__get_entry(const svn_wc_entry_t **entry,
         {
           if (err->apr_err != SVN_ERR_WC_MISSING || kind != svn_node_unknown
               || *entry_name != '\0')
-            return err;
+            return svn_error_return(err);
           svn_error_clear(err);
 
           /* The caller didn't know the node type, we saw a directory there,
@@ -1220,7 +1220,7 @@ svn_wc__get_entry(const svn_wc_entry_t **entry,
           if (err == SVN_NO_ERROR)
             return SVN_NO_ERROR;
           if (err->apr_err != SVN_ERR_NODE_UNEXPECTED_KIND)
-            return err;
+            return svn_error_return(err);
           svn_error_clear(err);
 
           /* We asked for a FILE, but the node found is a DIR. Thus, we
@@ -2319,7 +2319,7 @@ svn_wc__entries_write_new(svn_wc__db_t *db,
       svn_error_clear(err);
     }
   else if (err)
-    return err;
+    return svn_error_return(err);
   else
     apr_hash_set(dav_cache, local_abspath, APR_HASH_KEY_STRING, child_cache);
 
@@ -2349,7 +2349,7 @@ svn_wc__entries_write_new(svn_wc__db_t *db,
           continue;
         }
       else if (err)
-        return err;
+        return svn_error_return(err);
 
       apr_hash_set(dav_cache, child_abspath, APR_HASH_KEY_STRING, child_cache);
     }
@@ -3328,7 +3328,7 @@ svn_wc_walk_entries3(const char *path,
   if (err)
     {
       if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
-        return err;
+        return svn_error_return(err);
       /* Remap into SVN_ERR_UNVERSIONED_RESOURCE.  */
       svn_error_clear(err);
       return walk_callbacks->handle_error(
@@ -3589,7 +3589,7 @@ svn_wc__walk_entries_and_tc(const char *path,
       return SVN_NO_ERROR;
     }
   else if (err)
-    return err;
+    return svn_error_return(err);
   /* If we can get the item's entry then it is versioned. */
   err = svn_wc_entry(&entry, path, path_adm_access, TRUE, pool);
   if (err)

@@ -51,6 +51,7 @@ struct svn_stream_t {
   svn_close_fn_t close_fn;
   svn_io_reset_fn_t reset_fn;
   svn_io_line_filter_cb_t line_filter_cb;
+  svn_io_line_transformer_cb_t line_transformer_cb;
 };
 
 
@@ -69,6 +70,7 @@ svn_stream_create(void *baton, apr_pool_t *pool)
   stream->reset_fn = NULL;
   stream->close_fn = NULL;
   stream->line_filter_cb = NULL;
+  stream->line_transformer_cb = NULL;
   return stream;
 }
 
@@ -110,6 +112,14 @@ svn_stream_set_line_filter_callback(svn_stream_t *stream,
                                     svn_io_line_filter_cb_t line_filter_cb)
 {
   stream->line_filter_cb = line_filter_cb;
+}
+
+void
+svn_stream_set_line_transformer_callback(
+  svn_stream_t *stream,
+  svn_io_line_transformer_cb_t line_transformer_cb)
+{
+  stream->line_transformer_cb = line_transformer_cb;
 }
 
 svn_error_t *
@@ -189,6 +199,10 @@ svn_stream_printf_from_utf8(svn_stream_t *stream,
   return svn_stream_write(stream, translated, &len);
 }
 
+/* If a line filter callback was set on STREAM, invoke it on LINE,
+ * and indicate in *FILTERED whether the line should be filtered.
+ * If no line filter callback was set on STREAM, just set *FILTERED to FALSE.
+ */
 static svn_error_t *
 line_filter(svn_stream_t *stream, svn_boolean_t *filtered, const char *line,
             apr_pool_t *pool)
@@ -207,6 +221,22 @@ line_filter(svn_stream_t *stream, svn_boolean_t *filtered, const char *line,
   return SVN_NO_ERROR;
 }
 
+/* Run the line transformer callback of STREAM with LINE as input,
+ * and expect the transformation result to be returned in BUF,
+ * allocated in POOL. */
+static svn_error_t *
+line_transformer(svn_stream_t *stream, svn_stringbuf_t **buf,
+                 const char *line, apr_pool_t *pool, apr_pool_t *scratch_pool)
+{
+  *buf = NULL;  /* so we can assert that the callback has set it non-null */
+  SVN_ERR(stream->line_transformer_cb(buf, line, pool, scratch_pool));
+
+  /* Die if the line transformer didn't provide any output. */
+  SVN_ERR_ASSERT(*buf);
+
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_stream_readline(svn_stream_t *stream,
                     svn_stringbuf_t **stringbuf,
@@ -217,6 +247,8 @@ svn_stream_readline(svn_stream_t *stream,
   svn_stringbuf_t *str;
   apr_pool_t *iterpool;
   svn_boolean_t filtered;
+
+  *eof = FALSE;
 
   iterpool = svn_pool_create(pool);
   do
@@ -233,6 +265,7 @@ svn_stream_readline(svn_stream_t *stream,
          80 chars.  */
       str = svn_stringbuf_create_ensure(80, iterpool);
 
+      /* Read into STR up to and including the next EOL sequence. */
       match = eol;
       while (*match)
         {
@@ -242,14 +275,12 @@ svn_stream_readline(svn_stream_t *stream,
             {
               /* a 'short' read means the stream has run out. */
               *eof = TRUE;
-
-              SVN_ERR(line_filter(stream, &filtered, str->data, iterpool));
-              if (filtered)
-                *stringbuf = svn_stringbuf_create_ensure(0, pool);
-              else
-                *stringbuf = svn_stringbuf_dup(str, pool);
-
-              return SVN_NO_ERROR;
+              /* We know we don't have a whole EOL sequence, but ensure we
+               * don't chop off any partial EOL sequence that we may have. */
+              match = eol;
+              /* Process this short (or empty) line just like any other
+               * except with *EOF set. */
+              break;
             }
 
           if (c == *match)
@@ -260,15 +291,24 @@ svn_stream_readline(svn_stream_t *stream,
           svn_stringbuf_appendbytes(str, &c, 1);
         }
 
-      *eof = FALSE;
       svn_stringbuf_chop(str, match - eol);
 
       SVN_ERR(line_filter(stream, &filtered, str->data, iterpool));
     }
-  while (filtered);
-  *stringbuf = svn_stringbuf_dup(str, pool);
+  while (filtered && ! *eof);
+  /* Not destroying the iterpool just yet since we still need STR
+   * which is allocated in it. */
 
-  svn_pool_destroy(iterpool);
+  if (filtered)
+    *stringbuf = svn_stringbuf_create_ensure(0, pool);
+  else if (stream->line_transformer_cb)
+    SVN_ERR(line_transformer(stream, stringbuf, str->data, pool, iterpool));
+  else
+    *stringbuf = svn_stringbuf_dup(str, pool);
+
+  /* Done. RIP iterpool. */
+  svn_pool_destroy(iterpool); 
+
   return SVN_NO_ERROR;
 }
 
