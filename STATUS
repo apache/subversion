@@ -198,7 +198,7 @@ Candidate changes:
      typically only care about the output arguments.  The new C tests added
      to mergeinfo-test.c clearly demonstrate the bug.
    Branch:
-     Resovles a minor conflict in libsvn_client/merge.c where the code
+     Resolves a minor conflict in libsvn_client/merge.c where the code
      changed was refactored on trunk.
      ^/branches/1.6.x-r39109
    Votes:
@@ -230,4 +230,3 @@ Approved changes:
      ^/branches/1.6.x-r38927
    Votes:
      +1: stsp, gstein, neels
-
