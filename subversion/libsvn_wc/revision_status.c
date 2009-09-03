@@ -24,8 +24,9 @@
 #include "svn_wc.h"
 #include "svn_dirent_uri.h"
 
-#include "svn_private_config.h"
+#include "private/svn_wc_private.h"
 
+#include "svn_private_config.h"
 
 /* A baton for analyze_status(). */
 struct status_baton
@@ -120,10 +121,10 @@ svn_wc_revision_status2(svn_wc_revision_status_t **result_p,
   sb.wc_url = NULL;
   sb.pool = scratch_pool;
 
-  SVN_ERR(svn_wc_adm_open_anchor(&anchor_access, &target_access, &target,
-                                 local_abspath, FALSE, -1,
-                                 cancel_func, cancel_baton,
-                                 scratch_pool));
+  SVN_ERR(svn_wc__adm_open_anchor_in_context(&anchor_access, &target_access,
+                                             &target, wc_ctx, local_abspath,
+                                             FALSE, -1, cancel_func,
+                                             cancel_baton, scratch_pool));
 
   SVN_ERR(svn_wc_get_status_editor5(&editor, &edit_baton, NULL,
                                     &edit_revision, wc_ctx, anchor_access,
