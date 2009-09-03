@@ -251,6 +251,7 @@ svn_client_status5(svn_revnum_t *result_rev,
   svn_error_t *err;
   apr_hash_t *changelist_hash = NULL;
   svn_revnum_t edit_revision = SVN_INVALID_REVNUM;
+  svn_wc_context_t *wc_ctx = ctx->wc_ctx;
 
   if (changelists && changelists->nelts)
     SVN_ERR(svn_hash_from_cstring_keys(&changelist_hash, changelists, pool));
@@ -262,15 +263,24 @@ svn_client_status5(svn_revnum_t *result_rev,
 
   /* Try to open the target directory. If the target is a file or an
      unversioned directory, open the parent directory instead */
-  err = svn_wc__adm_open_in_context(&anchor_access, ctx->wc_ctx, path, FALSE,
+  err = svn_wc__adm_open_in_context(&anchor_access, wc_ctx, path, FALSE,
                                     SVN_DEPTH_IS_RECURSIVE(depth) ? -1 : 1,
                                     ctx->cancel_func, ctx->cancel_baton,
                                     pool);
   if (err && err->apr_err == SVN_ERR_WC_NOT_DIRECTORY)
     {
       svn_error_clear(err);
-      SVN_ERR(svn_wc_adm_open_anchor(&anchor_access, &target_access, &target,
-                                     path, FALSE,
+
+      /* svn_client_status() is called from other operations that sometimes
+         have existing access batons. Run status in a new wc_ctx until we
+         get the status running without access batons. We can't pass a
+         context and an unrelated access baton to other functions */
+
+      SVN_ERR(svn_wc_context_create(&wc_ctx, NULL, pool, pool));
+
+      SVN_ERR(svn_wc__adm_open_anchor_in_context(
+                                     &anchor_access, &target_access, &target,
+                                     wc_ctx, path, FALSE,
                                      SVN_DEPTH_IS_RECURSIVE(depth) ? -1 : 1,
                                      ctx->cancel_func, ctx->cancel_baton,
                                      pool));
@@ -302,7 +312,7 @@ svn_client_status5(svn_revnum_t *result_rev,
      as the callback pair. */
   SVN_ERR(svn_wc_get_default_ignores(&ignores, ctx->config, pool));
   SVN_ERR(svn_wc_get_status_editor5(&editor, &edit_baton, &set_locks_baton,
-                                    &edit_revision, ctx->wc_ctx, anchor_access,
+                                    &edit_revision, wc_ctx, anchor_access,
                                     target, depth, get_all, no_ignore, ignores,
                                     tweak_status, &sb, ctx->cancel_func,
                                     ctx->cancel_baton, traversal_info,
@@ -320,7 +330,7 @@ svn_client_status5(svn_revnum_t *result_rev,
 
       /* Get full URL from the ANCHOR. */
       if (! entry)
-        SVN_ERR(svn_wc__get_entry_versioned(&entry, ctx->wc_ctx, anchor_abspath,
+        SVN_ERR(svn_wc__get_entry_versioned(&entry, wc_ctx, anchor_abspath,
                                             svn_node_unknown, FALSE, FALSE,
                                             pool, pool));
       if (! entry->url)
@@ -368,7 +378,7 @@ svn_client_status5(svn_revnum_t *result_rev,
             {
               /* Get a revision number for our status operation. */
               SVN_ERR(svn_client__get_revision_number(&revnum, NULL,
-                                                      ctx->wc_ctx,
+                                                      wc_ctx,
                                                       target_abspath,
                                                       ra_session, revision,
                                                       pool));

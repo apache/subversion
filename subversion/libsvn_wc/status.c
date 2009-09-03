@@ -2283,6 +2283,10 @@ svn_wc_get_status_editor5(const svn_delta_editor_t **editor,
   svn_delta_editor_t *tree_editor = svn_delta_default_editor(result_pool);
   const char *anchor_abspath;
 
+  /* ### Anchor must be in wc_ctx or retrieving access batons via their path
+   * fails. The final version of this api will not receive access batons. */
+  SVN_ERR_ASSERT(svn_wc__adm_get_db(anchor) == wc_ctx->db);
+
   /* Construct an edit baton. */
   eb = apr_palloc(result_pool, sizeof(*eb));
   eb->default_depth     = depth;
