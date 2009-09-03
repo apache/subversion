@@ -777,7 +777,6 @@ close_file(void *file_baton,
   struct edit_baton *eb = b->edit_baton;
   svn_wc_adm_access_t *adm_access;
   svn_error_t *err;
-  svn_wc_notify_action_t action;
   svn_wc_notify_state_t content_state = svn_wc_notify_state_unknown;
   svn_wc_notify_state_t prop_state = svn_wc_notify_state_unknown;
 
@@ -846,52 +845,53 @@ close_file(void *file_baton,
     }
 
 
-  if (b->tree_conflicted)
-    action = svn_wc_notify_tree_conflict;
-  else if ((content_state == svn_wc_notify_state_missing)
-            || (content_state == svn_wc_notify_state_obstructed))
-    action = svn_wc_notify_skip;
-  else if (b->added)
-    action = svn_wc_notify_update_add;
-  else
-    action = svn_wc_notify_update_update;
-
   if (eb->notify_func)
     {
+      deleted_path_notify_t *dpn;
       svn_wc_notify_t *notify;
-      svn_boolean_t notified = FALSE;
-      deleted_path_notify_t *dpn = apr_hash_get(eb->deleted_paths, b->wcpath,
-                                              APR_HASH_KEY_STRING);
+      svn_wc_notify_action_t action;
+      svn_node_kind_t kind = svn_node_file;
+      
+      /* Find out if a pending delete notification for this path is
+       * still around. */
+      dpn = apr_hash_get(eb->deleted_paths, b->wcpath, APR_HASH_KEY_STRING);
       if (dpn)
         {
-          svn_wc_notify_action_t new_action;
-          if (dpn->action == svn_wc_notify_update_delete
-              && action == svn_wc_notify_update_add)
-            new_action = svn_wc_notify_update_replace;
-          else
-            new_action = dpn->action;
-
-          if (action != svn_wc_notify_tree_conflict)
-            {
-              notify = svn_wc_create_notify(b->wcpath, new_action, pool);
-              notify->kind = dpn->kind;
-              notify->content_state = notify->prop_state = dpn->state;
-              notify->lock_state = svn_wc_notify_lock_state_inapplicable;
-              (*eb->notify_func)(eb->notify_baton, notify, pool);
-              notified = TRUE;
-            }
+          /* If any was found, we will handle the pending 'delete'
+           * notification (DPN) here. Remove it from the list. */
           apr_hash_set(eb->deleted_paths, b->wcpath,
                        APR_HASH_KEY_STRING, NULL);
+
+          /* the pending delete might be on a different node kind. */
+          kind = dpn->kind;
+          content_state = prop_state = dpn->state;
         }
 
-      if (!notified)
+      /* Determine what the notification (ACTION) should be.
+       * In case of a pending 'delete', this might become a 'replace'. */
+      if (b->tree_conflicted)
+        action = svn_wc_notify_tree_conflict;
+      else if (dpn)
         {
-          notify = svn_wc_create_notify(b->wcpath, action, pool);
-          notify->kind = svn_node_file;
-          notify->content_state = content_state;
-          notify->prop_state = prop_state;
-          (*eb->notify_func)(eb->notify_baton, notify, pool);
+          if (dpn->action == svn_wc_notify_update_delete
+              && b->added)
+            action = svn_wc_notify_update_replace;
+          else
+            action = dpn->action;
         }
+      else if ((content_state == svn_wc_notify_state_missing)
+                || (content_state == svn_wc_notify_state_obstructed))
+        action = svn_wc_notify_skip;
+      else if (b->added)
+        action = svn_wc_notify_update_add;
+      else
+        action = svn_wc_notify_update_update;
+
+      notify = svn_wc_create_notify(b->wcpath, action, pool);
+      notify->kind = kind;
+      notify->content_state = content_state;
+      notify->prop_state = prop_state;
+      (*eb->notify_func)(eb->notify_baton, notify, pool);
     }
 
   return SVN_NO_ERROR;
