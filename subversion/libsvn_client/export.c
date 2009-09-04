@@ -276,6 +276,7 @@ copy_versioned_files(const char *from,
   const apr_array_header_t *children;
   const char *from_abspath;
   const char *to_abspath;
+  svn_node_kind_t from_kind;
   int j;
 
   SVN_ERR(svn_dirent_get_absolute(&from_abspath, from, pool));
@@ -298,7 +299,10 @@ copy_versioned_files(const char *from,
        entry->schedule == svn_wc_schedule_delete))
     return SVN_NO_ERROR;
 
-  if (entry->kind == svn_node_dir)
+  SVN_ERR(svn_wc__node_get_kind(&from_kind, ctx->wc_ctx, from_abspath,
+                                FALSE, pool));
+
+  if (from_kind == svn_node_dir)
     {
       /* Try to make the new directory.  If this fails because the
          directory already exists, check our FORCE flag to see if we
@@ -433,7 +437,7 @@ copy_versioned_files(const char *from,
 
       svn_pool_destroy(iterpool);
     }
-  else if (entry->kind == svn_node_file)
+  else if (from_kind == svn_node_file)
     {
       SVN_ERR(copy_one_versioned_file(from_abspath, to_abspath, ctx->wc_ctx,
                                       revision, native_eol, pool));

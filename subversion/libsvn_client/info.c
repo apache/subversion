@@ -83,11 +83,18 @@ build_info_from_dirent(svn_info_t **info,
    PATH is the path of the WC node that ENTRY represents. */
 static svn_error_t *
 build_info_from_entry(svn_info_t **info,
+                      svn_wc_context_t *wc_ctx,
                       const svn_wc_entry_t *entry,
                       const char *path,
                       apr_pool_t *pool)
 {
+  const char *local_abspath;
   svn_info_t *tmpinfo = apr_pcalloc(pool, sizeof(*tmpinfo));
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+
+  SVN_ERR(svn_wc__node_get_kind(&tmpinfo->kind, wc_ctx, local_abspath, TRUE,
+                                pool));
 
   tmpinfo->URL                  = entry->url;
   tmpinfo->rev                  = entry->revision;
@@ -284,7 +291,8 @@ info_found_entry_callback(const char *path,
     {
       svn_info_t *info;
 
-      SVN_ERR(build_info_from_entry(&info, entry, path, pool));
+      SVN_ERR(build_info_from_entry(&info, fe_baton->wc_ctx, entry, path,
+                                    pool));
       SVN_ERR(svn_wc__get_tree_conflict(&info->tree_conflict, fe_baton->wc_ctx,
                                         local_abspath, pool, pool));
       SVN_ERR(fe_baton->receiver(fe_baton->receiver_baton, path, info, pool));
