@@ -300,21 +300,11 @@ svn_wc__load_props(apr_hash_t **base_props_p,
 
   if (revert_props_p)
     {
-      svn_wc__db_status_t status;
-      svn_boolean_t base_shadowed;
+      svn_boolean_t replaced;
 
-      SVN_ERR(svn_wc__db_read_info(&status, NULL, NULL, NULL, NULL, NULL,
-                                   NULL, NULL, NULL, NULL,
-                                   NULL, NULL, NULL, NULL,
-                                   NULL, NULL, NULL, NULL, NULL,
-                                   NULL, NULL, &base_shadowed, NULL, NULL,
-                                   NULL, NULL, NULL, NULL,
-                                   db, local_abspath,
-                                   scratch_pool, scratch_pool));
-
-      if ((status == svn_wc__db_status_added
-                || status == svn_wc__db_status_obstructed_add)
-            && base_shadowed)
+      SVN_ERR(svn_wc__internal_is_replaced(&replaced, db, local_abspath,
+                                           scratch_pool));
+      if (replaced)
         SVN_ERR(load_props(revert_props_p, db, local_abspath,
                            svn_wc__props_revert, result_pool));
       else
@@ -2389,7 +2379,7 @@ svn_wc__props_modified(svn_boolean_t *modified_p,
   apr_hash_t *baseprops;
   svn_wc__db_status_t status;
   svn_error_t *err;
-  svn_boolean_t replaced = FALSE;
+  svn_boolean_t replaced;
 
   err = svn_wc__db_read_info(&status, NULL, NULL, NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL, NULL, NULL, NULL,
@@ -2426,18 +2416,8 @@ svn_wc__props_modified(svn_boolean_t *modified_p,
      ### base props. hard to know on old WCs tho? (given the above
      ### comment). just declare propmods if the node has any working
      ### properties. */
-  if (status == svn_wc__db_status_deleted)
-    {
-      const char *base_del_abspath;
-      const char *moved_to_abspath;
-      const char *work_del_abspath;
-
-      SVN_ERR(svn_wc__db_scan_deletion(&base_del_abspath, &replaced,
-                                       &moved_to_abspath, &work_del_abspath,
-                                       db, local_abspath, scratch_pool,
+  SVN_ERR(svn_wc__internal_is_replaced(&replaced, db, local_abspath,
                                        scratch_pool));
-    }
-
   if (replaced)
     {
       *modified_p = apr_hash_count(localprops) > 0;
