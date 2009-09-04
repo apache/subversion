@@ -65,14 +65,19 @@ cat_local_file(svn_wc_context_t *wc_ctx,
   svn_boolean_t local_mod = FALSE;
   apr_time_t tm;
   svn_stream_t *input;
+  svn_node_kind_t kind;
 
   SVN_ERR_ASSERT(SVN_CLIENT__REVKIND_IS_LOCAL_TO_WC(revision->kind));
 
-  SVN_ERR(svn_wc__get_entry_versioned(&entry, wc_ctx, local_abspath,
-                                      svn_node_unknown, FALSE, FALSE,
-                                      scratch_pool, scratch_pool));
+  SVN_ERR(svn_wc__node_get_kind(&kind, wc_ctx, local_abspath, FALSE,
+                                scratch_pool));
 
-  if (entry->kind != svn_node_file)
+  if (kind == svn_node_unknown)
+    return svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
+                             _("'%s' is not under version control"),
+                             svn_dirent_local_style(local_abspath,
+                                                    scratch_pool));
+  if (kind != svn_node_file)
     return svn_error_createf(SVN_ERR_CLIENT_IS_DIRECTORY, NULL,
                              _("'%s' refers to a directory"),
                              svn_dirent_local_style(local_abspath,
@@ -106,6 +111,10 @@ cat_local_file(svn_wc_context_t *wc_ctx,
                           APR_HASH_KEY_STRING);
   special = apr_hash_get(props, SVN_PROP_SPECIAL,
                          APR_HASH_KEY_STRING);
+
+  SVN_ERR(svn_wc__get_entry_versioned(&entry, wc_ctx, local_abspath,
+                                      svn_node_unknown, FALSE, FALSE,
+                                      scratch_pool, scratch_pool));
 
   if (eol_style)
     svn_subst_eol_style_from_value(&style, &eol, eol_style->data);
