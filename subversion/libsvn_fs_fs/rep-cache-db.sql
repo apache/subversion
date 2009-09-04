@@ -29,3 +29,14 @@ create table rep_cache (hash text not null primary key,
                         offset integer not null,
                         size integer not null,
                         expanded_size integer not null);
+
+
+-- STMT_GET_REP
+select revision, offset, size, expanded_size
+from rep_cache
+where hash = ?1;
+
+
+-- STMT_SET_REP
+insert into rep_cache (hash, revision, offset, size, expanded_size)
+values (?1, ?2, ?3, ?4, ?5);

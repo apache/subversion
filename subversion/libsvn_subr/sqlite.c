@@ -113,24 +113,6 @@ exec_sql(svn_sqlite__db_t *db, const char *sql)
 }
 
 svn_error_t *
-svn_sqlite__transaction_begin(svn_sqlite__db_t *db)
-{
-  return exec_sql(db, "BEGIN TRANSACTION;");
-}
-
-svn_error_t *
-svn_sqlite__transaction_commit(svn_sqlite__db_t *db)
-{
-  return exec_sql(db, "COMMIT TRANSACTION;");
-}
-
-svn_error_t *
-svn_sqlite__transaction_rollback(svn_sqlite__db_t *db)
-{
-  return exec_sql(db, "ROLLBACK TRANSACTION;");
-}
-
-svn_error_t *
 svn_sqlite__get_statement(svn_sqlite__stmt_t **stmt, svn_sqlite__db_t *db,
                           int stmt_idx)
 {
@@ -534,9 +516,6 @@ struct upgrade_baton
   int latest_schema;
   const char * const *upgrade_sql;
 
-  svn_sqlite__upgrade_func_t upgrade_func;
-  void *upgrade_baton;
-
   apr_pool_t *scratch_pool;
 };
 
@@ -560,11 +539,6 @@ upgrade_format(void *baton,
       /* Run the upgrade SQL */
       if (ub->upgrade_sql[current_schema])
         SVN_ERR(exec_sql(db, ub->upgrade_sql[current_schema]));
-
-      /* Run the upgrade callback. */
-      if (ub->upgrade_func)
-        SVN_ERR(ub->upgrade_func(ub->upgrade_baton, db, current_schema,
-                                 iterpool));
 
       /* Update the user version pragma */
       SVN_ERR(svn_sqlite__set_schema_version(db, current_schema, iterpool));
@@ -596,9 +570,9 @@ svn_sqlite__read_schema_version(int *version,
    or SVN_ERR_SQLITE_ERROR if an sqlite error occurs during validation.
    Return SVN_NO_ERROR if everything is okay. */
 static svn_error_t *
-check_format(svn_sqlite__db_t *db, int latest_schema,
+check_format(svn_sqlite__db_t *db,
+             int latest_schema,
              const char * const *upgrade_sql, 
-             svn_sqlite__upgrade_func_t upgrade_func, void *upgrade_baton,
              apr_pool_t *scratch_pool)
 {
   int current_schema;
@@ -617,9 +591,6 @@ check_format(svn_sqlite__db_t *db, int latest_schema,
       ub.latest_schema = latest_schema;
       ub.upgrade_sql = upgrade_sql;
       ub.scratch_pool = scratch_pool;
-
-      ub.upgrade_func = upgrade_func;
-      ub.upgrade_baton = upgrade_baton;
 
       return svn_sqlite__with_transaction(db, upgrade_format, &ub);
     }
@@ -836,7 +807,6 @@ svn_error_t *
 svn_sqlite__open(svn_sqlite__db_t **db, const char *path,
                  svn_sqlite__mode_t mode, const char * const statements[],
                  int latest_schema, const char * const *upgrade_sql,
-                 svn_sqlite__upgrade_func_t upgrade_func, void *upgrade_baton,
                  apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
   SVN_ERR(svn_atomic__init_once(&sqlite_init_state, init_sqlite, scratch_pool));
@@ -866,8 +836,7 @@ svn_sqlite__open(svn_sqlite__db_t **db, const char *path,
               "PRAGMA synchronous=OFF;"));
 
   /* Validate the schema, upgrading if necessary. */
-  SVN_ERR(check_format(*db, latest_schema, upgrade_sql, upgrade_func,
-                       upgrade_baton, scratch_pool));
+  SVN_ERR(check_format(*db, latest_schema, upgrade_sql, scratch_pool));
 
   /* Store the provided statements. */
   if (statements)
@@ -909,15 +878,15 @@ svn_sqlite__with_transaction(svn_sqlite__db_t *db,
 {
   svn_error_t *err;
 
-  SVN_ERR(svn_sqlite__transaction_begin(db));
+  SVN_ERR(exec_sql(db, "BEGIN TRANSACTION;"));
   err = cb_func(cb_baton, db);
 
   /* Commit or rollback the sqlite transaction. */
   if (err)
     {
-      svn_error_clear(svn_sqlite__transaction_rollback(db));
+      svn_error_clear(exec_sql(db, "ROLLBACK TRANSACTION;"));
       return svn_error_return(err);
     }
 
-  return svn_error_return(svn_sqlite__transaction_commit(db));
+  return svn_error_return(exec_sql(db, "COMMIT TRANSACTION;"));
 }

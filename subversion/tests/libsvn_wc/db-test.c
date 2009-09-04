@@ -303,6 +303,7 @@ static const char * const data_loading_sql[] = {
    "  1, 'I', '', null, null, null, null, null, 'changelist', null, "
    "'" I_TC_DATA "');"
    ),
+
   WC_METADATA_SQL_13
 };
 
@@ -319,7 +320,6 @@ create_fake_wc(const char *subdir, int format, apr_pool_t *scratch_pool)
   svn_error_clear(svn_io_remove_file(dbpath, scratch_pool));
   SVN_ERR(svn_sqlite__open(&sdb, dbpath, svn_sqlite__mode_rwcreate, NULL,
                            format, data_loading_sql,
-                           svn_wc__db_upgrade_func, NULL,
                            scratch_pool, scratch_pool));
 
   return SVN_NO_ERROR;
