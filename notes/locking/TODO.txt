@@ -8,7 +8,7 @@ NICE TO HAVE
 * support cancellation during lock/unlock.
 
 * "svn rm file" should error if file has "svn:needs-lock" and is not
-  locked (is read-only) in WC. On Linux, at least, neither Svn not the OS
+  locked (is read-only) in WC. On Linux, at least, neither Svn nor the OS
   prevents "svn rm file" from completing. Same for "svn mv" of course.
 
 
@@ -16,7 +16,7 @@ NICE TO HAVE
 
 * Questions:
 
-   * Should propedit and propset reject to set a property an a file with
+   * Should propedit and propset reject to set a property on a file with
      svn:needs-lock set?
 
    * how do locks relate to dump/load?  file as an enhancement? 
