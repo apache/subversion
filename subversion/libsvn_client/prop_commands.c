@@ -389,7 +389,8 @@ svn_client_propset3(svn_commit_info_t **commit_info_p,
                                              depth, ctx->cancel_func,
                                              ctx->cancel_baton, pool));
         }
-      else if (SVN_WC__CL_MATCH(changelist_hash, entry))
+      else if (svn_wc__changelist_match(ctx->wc_ctx, target_abspath,
+                                        changelist_hash, pool))
         {
           SVN_ERR(svn_wc_prop_set4(ctx->wc_ctx, target_abspath, propname,
                                    propval, skip_checks, ctx->notify_func2,
@@ -590,7 +591,8 @@ propget_walk_cb(const char *path,
     return SVN_NO_ERROR;
 
   /* If our entry doesn't pass changelist filtering, get outta here. */
-  if (! SVN_WC__CL_MATCH(wb->changelist_hash, entry))
+  if (! svn_wc__changelist_match(wb->wc_ctx, local_abspath,
+                                 wb->changelist_hash, pool))
     return SVN_NO_ERROR;
 
   SVN_ERR(pristine_or_working_propval(&propval, wb->wc_ctx, local_abspath,
@@ -771,6 +773,9 @@ get_prop_from_wc(apr_hash_t *props,
   static const svn_wc_entry_callbacks2_t walk_callbacks =
     { propget_walk_cb, wc_walker_error_handler };
   struct propget_walk_baton wb;
+  const char *target_abspath;
+
+  SVN_ERR(svn_dirent_get_absolute(&target_abspath, target, pool));
 
   if (changelists && changelists->nelts)
     SVN_ERR(svn_hash_from_cstring_keys(&changelist_hash, changelists, pool));
@@ -797,7 +802,8 @@ get_prop_from_wc(apr_hash_t *props,
                                    ctx->cancel_func, ctx->cancel_baton,
                                    pool));
     }
-  else if (SVN_WC__CL_MATCH(changelist_hash, entry))
+  else if (svn_wc__changelist_match(ctx->wc_ctx, target_abspath,
+                                    changelist_hash, pool))
     {
       SVN_ERR(propget_walk_cb(target, entry, &wb, pool));
     }
@@ -1092,7 +1098,8 @@ proplist_walk_cb(const char *local_abspath,
     return SVN_NO_ERROR;
 
   /* If our entry doesn't pass changelist filtering, get outta here. */
-  if (! SVN_WC__CL_MATCH(wb->changelist_hash, entry))
+  if (! svn_wc__changelist_match(wb->wc_ctx, local_abspath,
+                                 wb->changelist_hash, scratch_pool))
     return SVN_NO_ERROR;
 
   SVN_ERR(pristine_or_working_props(&hash, wb->wc_ctx, local_abspath,
@@ -1170,7 +1177,8 @@ svn_client_proplist3(const char *path_or_url,
                                              ctx->cancel_func,
                                              ctx->cancel_baton, pool));
         }
-      else if (SVN_WC__CL_MATCH(changelist_hash, entry))
+      else if (svn_wc__changelist_match(ctx->wc_ctx, local_abspath,
+                                        changelist_hash, pool))
         {
           apr_hash_t *hash;
 

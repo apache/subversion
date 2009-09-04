@@ -279,7 +279,8 @@ info_found_entry_callback(const char *path,
     return SVN_NO_ERROR;
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
-  if (SVN_WC__CL_MATCH(fe_baton->changelist_hash, entry))
+  if (svn_wc__changelist_match(fe_baton->wc_ctx, local_abspath,
+                               fe_baton->changelist_hash, pool))
     {
       svn_info_t *info;
 
