@@ -449,7 +449,8 @@ harvest_committables(apr_hash_t *committables,
 
   /* If ENTRY is in our changelist, then examine it for conflicts. We
      need to bail out if any conflicts exist.  */
-  if (SVN_WC__CL_MATCH(changelists, entry))
+  if (svn_wc__changelist_match(ctx->wc_ctx, local_abspath, changelists,
+                               scratch_pool))
     {
       svn_boolean_t tc, pc, treec;
 
@@ -639,7 +640,8 @@ harvest_committables(apr_hash_t *committables,
   /* Now, if this is something to commit, add it to our list. */
   if (state_flags)
     {
-      if (SVN_WC__CL_MATCH(changelists, entry))
+      if (svn_wc__changelist_match(ctx->wc_ctx, local_abspath, changelists,
+                                   scratch_pool))
         {
           /* Finally, add the committable item. */
           add_committable(committables, path, entry->kind, url,
@@ -676,6 +678,7 @@ harvest_committables(apr_hash_t *committables,
           const char *used_url = NULL;
           const char *this_cf_url = cf_url ? cf_url : copyfrom_url;
           svn_wc_adm_access_t *dir_access = adm_access;
+          const char *entry_abspath;
 
           svn_pool_clear(iterpool);
 
@@ -746,6 +749,8 @@ harvest_committables(apr_hash_t *committables,
             continue;
 
           full_path = svn_dirent_join(path, name, iterpool);
+          SVN_ERR(svn_dirent_get_absolute(&entry_abspath, full_path,
+                                          iterpool));
           if (this_cf_url)
             this_cf_url = svn_path_url_add_component2(this_cf_url, name, iterpool);
 
@@ -790,7 +795,10 @@ harvest_committables(apr_hash_t *committables,
                               && (this_entry->schedule
                                   == svn_wc_schedule_delete))
                             {
-                              if (SVN_WC__CL_MATCH(changelists, entry))
+                              if (svn_wc__changelist_match(ctx->wc_ctx,
+                                                           entry_abspath,
+                                                           changelists,
+                                                           iterpool))
                                 {
                                   add_committable(
                                     committables, full_path,
