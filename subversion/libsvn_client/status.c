@@ -56,6 +56,7 @@ struct status_baton
   void *real_status_baton;                 /* real status baton */
   const char *anchor_abspath;              /* Absolute path of anchor */
   const char *anchor_relpath;              /* Relative path of anchor */
+  svn_wc_context_t *wc_ctx;                /* A working copy context. */
 };
 
 /* A status callback function which wraps the *real* status
@@ -71,6 +72,9 @@ tweak_status(void *baton,
              apr_pool_t *scratch_pool)
 {
   struct status_baton *sb = baton;
+  const char *local_abspath;
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, scratch_pool));
 
   /* If we know that the target was deleted in HEAD of the repository,
      we need to note that fact in all the status structures that come
@@ -90,7 +94,8 @@ tweak_status(void *baton,
   /* If the status item has an entry, but doesn't belong to one of the
      changelists our caller is interested in, we filter our this status
      transmission.  */
-  if (! SVN_WC__CL_MATCH(sb->changelist_hash, status->entry))
+  if (! svn_wc__changelist_match(sb->wc_ctx, local_abspath,
+                                 sb->changelist_hash, scratch_pool))
     return SVN_NO_ERROR;
 
   /* Call the real status function/baton. */
@@ -260,6 +265,7 @@ svn_client_status5(svn_revnum_t *result_rev,
   sb.real_status_baton = status_baton;
   sb.deleted_in_repos = FALSE;
   sb.changelist_hash = changelist_hash;
+  sb.wc_ctx = ctx->wc_ctx;
 
   /* Try to open the target directory. If the target is a file or an
      unversioned directory, open the parent directory instead */
