@@ -210,7 +210,7 @@ switch_dir_external(const char *path,
             {
               /* URLs don't match.  Try to relocate (if necessary) and then
                  switch. */
-              if (! svn_path_is_ancestor(entry->repos, url))
+              if (! svn_uri_is_ancestor(entry->repos, url))
                 {
                   const char *repos_root;
                   svn_ra_session_t *ra_session;

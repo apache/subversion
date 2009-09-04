@@ -2384,7 +2384,7 @@ find_nearest_ancestor(apr_array_header_t *children_with_mergeinfo,
     {
       svn_client__merge_path_t *child =
         APR_ARRAY_IDX(children_with_mergeinfo, i, svn_client__merge_path_t *);
-      if (svn_path_is_ancestor(child->path, path)
+      if (svn_dirent_is_ancestor(child->path, path)
           && (path_is_own_ancestor
               || svn_path_compare_paths(child->path, path) != 0))
         ancestor_index = i;
@@ -4381,7 +4381,7 @@ remove_absent_children(const char *target_wcpath,
         APR_ARRAY_IDX(children_with_mergeinfo,
                       i, svn_client__merge_path_t *);
       if ((child->absent || child->scheduled_for_deletion)
-          && svn_path_is_ancestor(target_wcpath, child->path))
+          && svn_dirent_is_ancestor(target_wcpath, child->path))
         {
           remove_element_from_array(children_with_mergeinfo, i--);
         }
@@ -6626,7 +6626,7 @@ path_is_subtree(const char *path,
            hi = apr_hash_next(hi))
         {
           const char *path_touched_by_merge = svn_apr_hash_index_key(hi);
-          if (svn_path_is_ancestor(path, path_touched_by_merge))
+          if (svn_dirent_is_ancestor(path, path_touched_by_merge))
             return TRUE;
         }
     }
@@ -6900,7 +6900,7 @@ record_mergeinfo_for_dir_merge(const svn_wc_entry_t *target_entry,
                                          j, svn_client__merge_path_t *);
                   if (parent
                       && parent->switched
-                      && svn_path_is_ancestor(parent->path, child->path))
+                      && svn_dirent_is_ancestor(parent->path, child->path))
                     {
                       in_switched_subtree = TRUE;
                       break;

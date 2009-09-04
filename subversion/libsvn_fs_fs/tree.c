@@ -228,7 +228,7 @@ find_descendents_in_cache(void *baton,
   struct fdic_baton *b = baton;
   const char *item_path = key;
 
-  if (svn_path_is_ancestor(b->path, item_path))
+  if (svn_dirent_is_ancestor(b->path, item_path))
     APR_ARRAY_PUSH(b->list, const char *) = apr_pstrdup(b->pool, item_path);
 
   return SVN_NO_ERROR;

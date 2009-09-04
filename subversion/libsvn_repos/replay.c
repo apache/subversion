@@ -336,10 +336,10 @@ path_driver_cb_func(void **dir_baton,
 
   /* First, flush the copies stack so it only contains ancestors of path. */
   while (cb->copies->nelts > 0
-         && ! svn_path_is_ancestor(APR_ARRAY_IDX(cb->copies,
-                                               cb->copies->nelts - 1,
-                                               struct copy_info).path,
-                                 path))
+         && ! svn_dirent_is_ancestor(APR_ARRAY_IDX(cb->copies,
+                                                   cb->copies->nelts - 1,
+                                                   struct copy_info).path,
+                                     path))
     cb->copies->nelts--;
 
   change = apr_hash_get(cb->changed_paths, path, APR_HASH_KEY_STRING);
