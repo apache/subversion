@@ -2325,7 +2325,8 @@ revert_internal(svn_wc__db_t *db,
        svn_dirent_local_style(path, pool));
 
   /* If the entry passes changelist filtering, revert it!  */
-  if (SVN_WC__CL_MATCH(changelist_hash, entry))
+  if (svn_wc__internal_changelist_match(db, local_abspath, changelist_hash,
+                                        pool))
     {
       svn_boolean_t reverted = FALSE;
       svn_wc_conflict_description_t *conflict;
@@ -3390,10 +3391,10 @@ svn_wc__set_file_external_location(svn_wc_adm_access_t *adm_access,
 
 
 svn_boolean_t
-svn_wc__changelist_match(svn_wc_context_t *wc_ctx,
-                         const char *local_abspath,
-                         const apr_hash_t *clhash,
-                         apr_pool_t *scratch_pool)
+svn_wc__internal_changelist_match(svn_wc__db_t *db,
+                                  const char *local_abspath,
+                                  const apr_hash_t *clhash,
+                                  apr_pool_t *scratch_pool)
 {
   svn_error_t *err;
   const char *changelist;
@@ -3406,8 +3407,7 @@ svn_wc__changelist_match(svn_wc_context_t *wc_ctx,
                              &changelist,
                              NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL, NULL, NULL,
-                             wc_ctx->db, local_abspath, scratch_pool,
-                             scratch_pool);
+                             db, local_abspath, scratch_pool, scratch_pool);
 
   if (err)
     {
@@ -3417,4 +3417,14 @@ svn_wc__changelist_match(svn_wc_context_t *wc_ctx,
 
   return (changelist
             && apr_hash_get(clhash, changelist, APR_HASH_KEY_STRING) != NULL);
+}
+
+svn_boolean_t
+svn_wc__changelist_match(svn_wc_context_t *wc_ctx,
+                         const char *local_abspath,
+                         const apr_hash_t *clhash,
+                         apr_pool_t *scratch_pool)
+{
+  return svn_wc__internal_changelist_match(wc_ctx->db, local_abspath, clhash,
+                                           scratch_pool);
 }

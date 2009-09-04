@@ -478,6 +478,14 @@ svn_wc__internal_ensure_adm(svn_wc__db_t *db,
                             apr_pool_t *scratch_pool);
 
 
+/* Library-internal version of svn_wc__changelist_match(). */
+svn_boolean_t
+svn_wc__internal_changelist_match(svn_wc__db_t *db,
+                                  const char *local_abspath,
+                                  const apr_hash_t *clhash,
+                                  apr_pool_t *scratch_pool);
+
+
 svn_error_t *
 svn_wc__internal_is_replaced(svn_boolean_t *replaced,
                              svn_wc__db_t *db,
@@ -508,19 +516,6 @@ svn_wc__check_wc_root(svn_boolean_t *wc_root,
                       svn_wc__db_t *db,
                       const char *local_abspath,
                       apr_pool_t *scratch_pool);
-
-/* Return TRUE iff CLHASH (a hash whose keys are const char *
-   changelist names) is NULL or if ENTRY->changelist (which may be
-   NULL) is a key in CLHASH.
-   ### this should go away in favor of an internal version of
-   ### svn_wc__changelist_match(). */
-#define SVN_WC__CL_MATCH(clhash, entry) \
-        (((clhash == NULL) \
-          || (entry \
-              && entry->changelist \
-              && apr_hash_get(clhash, entry->changelist, \
-                              APR_HASH_KEY_STRING))) ? TRUE : FALSE)
-
 
 
 #ifdef __cplusplus
