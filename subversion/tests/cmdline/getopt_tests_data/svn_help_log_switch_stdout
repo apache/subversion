@@ -130,6 +130,7 @@ Valid options:
   --diff3-cmd ARG          : use ARG as merge command
   --relocate               : relocate via URL-rewriting
   --ignore-externals       : ignore externals definitions
+                             [aliases: --ie]
   --force                  : force operation to run
   --accept ARG             : specify automatic conflict resolution action
                             ('postpone', 'base', 'mine-conflict',

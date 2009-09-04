@@ -220,7 +220,9 @@ const apr_getopt_option_t svn_cl__options[] =
   {"ignore-ancestry", opt_ignore_ancestry, 0,
                     N_("ignore ancestry when calculating merges")},
   {"ignore-externals", opt_ignore_externals, 0,
-                    N_("ignore externals definitions")},
+                    N_("ignore externals definitions\n"
+                       "                             "
+                       "[aliases: --ie]")},
   {"diff-cmd",      opt_diff_cmd, 1, N_("use ARG as diff command")},
   {"diff3-cmd",     opt_merge_cmd, 1, N_("use ARG as merge command")},
   {"editor-cmd",    opt_editor_cmd, 1, N_("use ARG as external editor")},
@@ -297,6 +299,7 @@ const apr_getopt_option_t svn_cl__options[] =
   */
 
   {"cl",            opt_changelist, 1, NULL},
+  {"ie",            opt_ignore_externals, 0, NULL},
 
   {0,               0, 0, 0},
 };
