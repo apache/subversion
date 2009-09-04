@@ -98,16 +98,6 @@ svn_wc__path_switched(svn_boolean_t *switched,
 
 
 /* Return TRUE iff CLHASH (a hash whose keys are const char *
-   changelist names) is NULL or if ENTRY->changelist (which may be
-   NULL) is a key in CLHASH.  */
-#define SVN_WC__CL_MATCH(clhash, entry) \
-        (((clhash == NULL) \
-          || (entry \
-              && entry->changelist \
-              && apr_hash_get(clhash, entry->changelist, \
-                              APR_HASH_KEY_STRING))) ? TRUE : FALSE)
-
-/* Return TRUE iff CLHASH (a hash whose keys are const char *
    changelist names) is NULL or if LOCAL_ABSPATH is part of a changelist in
    CLHASH. */
 svn_boolean_t
