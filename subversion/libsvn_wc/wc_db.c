@@ -187,226 +187,15 @@ static const char * const upgrade_sql[] = {
   WC_METADATA_SQL_13
 };
 
-/* These values map to the members of STATEMENTS below, and should be added
-   and removed at the same time. */
-enum statement_keys {
-  STMT_SELECT_BASE_NODE,
-  STMT_SELECT_BASE_NODE_WITH_LOCK,
-  STMT_SELECT_WORKING_NODE,
-  STMT_SELECT_ACTUAL_NODE,
-  STMT_SELECT_REPOSITORY_BY_ID,
-  STMT_SELECT_WCROOT_NULL,
-  STMT_SELECT_REPOSITORY,
-  STMT_INSERT_REPOSITORY,
-  STMT_INSERT_BASE_NODE,
-  STMT_INSERT_BASE_NODE_INCOMPLETE,
-  STMT_SELECT_BASE_NODE_CHILDREN,
-  STMT_SELECT_WORKING_CHILDREN,
-  STMT_SELECT_WORKING_IS_FILE,
-  STMT_SELECT_BASE_IS_FILE,
-  STMT_SELECT_BASE_PROPS,
-  STMT_UPDATE_ACTUAL_PROPS,
-  STMT_SELECT_ALL_PROPS,
-  STMT_SELECT_PRISTINE_PROPS,
-  STMT_INSERT_LOCK,
-  STMT_INSERT_WCROOT,
-  STMT_UPDATE_BASE_DAV_CACHE,
-  STMT_SELECT_BASE_DAV_CACHE,
-  STMT_SELECT_DELETION_INFO,
-  STMT_SELECT_PARENT_STUB_INFO,
-  STMT_DELETE_LOCK,
-  STMT_UPDATE_BASE_RECURSIVE_REPO,
-  STMT_UPDATE_WORKING_RECURSIVE_COPYFROM_REPO,
-  STMT_UPDATE_LOCK_REPOS_ID,
-  STMT_UPDATE_BASE_LAST_MOD_TIME,
-  STMT_UPDATE_ACTUAL_TREE_CONFLICTS,
-  STMT_INSERT_ACTUAL_TREE_CONFLICTS,
-  STMT_UPDATE_ACTUAL_CHANGELIST,
-  STMT_INSERT_ACTUAL_CHANGELIST
-};
+WC_METADATA_SQL_DECLARE_STATEMENTS(statements);
+
 
 /* This is a character used to escape itself and the globbing character in
-   globbing sql expressions below.  See escape_sqlite_like(). */
+   globbing sql expressions below.  See escape_sqlite_like().
+
+   NOTE: this should match the character used within wc-metadata.sql  */
 #define LIKE_ESCAPE_CHAR     "#"
 
-static const char * const statements[] = {
-  /* STMT_SELECT_BASE_NODE */
-  "select wc_id, local_relpath, repos_id, repos_relpath, "
-  "  presence, kind, revnum, checksum, translated_size, "
-  "  changed_rev, changed_date, changed_author, depth, symlink_target, "
-  "  last_mod_time "
-  "from base_node "
-  "where wc_id = ?1 and local_relpath = ?2;",
-
-  /* STMT_SELECT_BASE_NODE_WITH_LOCK */
-  "select wc_id, local_relpath, base_node.repos_id, base_node.repos_relpath, "
-  "  presence, kind, revnum, checksum, translated_size, "
-  "  changed_rev, changed_date, changed_author, depth, symlink_target, "
-  "  last_mod_time, "
-  "  lock_token, lock_owner, lock_comment, lock_date "
-  "from base_node "
-  "left outer join lock on base_node.repos_id = lock.repos_id "
-  "  and base_node.repos_relpath = lock.repos_relpath "
-  "where wc_id = ?1 and local_relpath = ?2;",
-
-  /* STMT_SELECT_WORKING_NODE */
-  "select presence, kind, checksum, translated_size, "
-  "  changed_rev, changed_date, changed_author, depth, symlink_target, "
-  "  copyfrom_repos_id, copyfrom_repos_path, copyfrom_revnum, "
-  "  moved_here, moved_to, last_mod_time "
-  "from working_node "
-  "where wc_id = ?1 and local_relpath = ?2;",
-
-  /* STMT_SELECT_ACTUAL_NODE */
-  "select prop_reject, changelist, conflict_old, conflict_new, "
-  "conflict_working, tree_conflict_data "
-  "from actual_node "
-  "where wc_id = ?1 and local_relpath = ?2;",
-
-  /* STMT_SELECT_REPOSITORY_BY_ID */
-  "select root, uuid from repository where id = ?1;",
-
-  /* STMT_SELECT_WCROOT_NULL */
-  "select id from wcroot where local_abspath is null;",
-
-  /* STMT_SELECT_REPOSITORY */
-  "select id from repository where root = ?1;",
-
-  /* STMT_INSERT_REPOSITORY */
-  "insert into repository (root, uuid) values (?1, ?2);",
-
-  /* STMT_INSERT_BASE_NODE */
-  "insert or replace into base_node ("
-  "  wc_id, local_relpath, repos_id, repos_relpath, parent_relpath, presence, "
-  "  kind, revnum, properties, changed_rev, changed_date, changed_author, "
-  "  depth, checksum, translated_size, symlink_target) "
-  "values (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, "
-  "        ?15, ?16);",
-
-  /* STMT_INSERT_BASE_NODE_INCOMPLETE */
-  "insert or ignore into base_node ("
-  "  wc_id, local_relpath, parent_relpath, presence, kind, revnum) "
-  "values (?1, ?2, ?3, 'incomplete', 'unknown', ?5);",
-
-  /* STMT_SELECT_BASE_NODE_CHILDREN */
-  "select local_relpath from base_node "
-  "where wc_id = ?1 and parent_relpath = ?2;",
-
-  /* STMT_SELECT_WORKING_CHILDREN */
-  "select local_relpath from base_node "
-  "where wc_id = ?1 and parent_relpath = ?2 "
-  "union "
-  "select local_relpath from working_node "
-  "where wc_id = ?1 and parent_relpath = ?2;",
-
-  /* STMT_SELECT_WORKING_IS_FILE */
-  "select kind == 'file' from working_node "
-  "where wc_id = ?1 and local_relpath = ?2;",
-
-  /* STMT_SELECT_BASE_IS_FILE */
-  "select kind == 'file' from base_node "
-  "where wc_id = ?1 and local_relpath = ?2;",
-
-  /* STMT_SELECT_BASE_PROPS */
-  "select properties from base_node "
-  "where wc_id = ?1 and local_relpath = ?2;",
-
-  /* STMT_UPDATE_ACTUAL_PROPS */
-  "update actual_node set properties = ?3 "
-  "where wc_id = ?1 and local_relpath = ?2;",
-
-  /* STMT_SELECT_ALL_PROPS */
-  "select actual_node.properties, working_node.properties, "
-  "  base_node.properties "
-  "from base_node "
-  "left outer join working_node on base_node.wc_id = working_node.wc_id "
-  "  and base_node.local_relpath = working_node.local_relpath "
-  "left outer join actual_node on base_node.wc_id = actual_node.wc_id "
-  "  and base_node.local_relpath = actual_node.local_relpath "
-  "where base_node.wc_id = ?1 and base_node.local_relpath = ?2;",
-
-  /* STMT_SELECT_PRISTINE_PROPS */
-  "select working_node.properties, base_node.properties "
-  "from base_node "
-  "left outer join working_node on base_node.wc_id = working_node.wc_id "
-  "  and base_node.local_relpath = working_node.local_relpath "
-  "where base_node.wc_id = ?1 and base_node.local_relpath = ?2;",
-
-  /* STMT_INSERT_LOCK */
-  "insert or replace into lock "
-    "(repos_id, repos_relpath, lock_token, lock_owner, lock_comment, "
-    " lock_date)"
-  "values (?1, ?2, ?3, ?4, ?5, ?6);",
-
-  /* STMT_INSERT_WCROOT */
-  "insert into wcroot (local_abspath) "
-  "values (?1);",
-
-  /* STMT_UPDATE_BASE_DAV_CACHE */
-  "update base_node set dav_cache = ?3 "
-  "where wc_id = ?1 and local_relpath = ?2;",
-
-  /* STMT_SELECT_BASE_DAV_CACHE */
-  "select dav_cache from base_node "
-  "where wc_id = ?1 and local_relpath = ?2;",
-
-  /* STMT_SELECT_DELETION_INFO */
-  "select base_node.presence, working_node.presence, moved_to "
-  "from working_node "
-  "left outer join base_node on base_node.wc_id = working_node.wc_id "
-  "  and base_node.local_relpath = working_node.local_relpath "
-  "where working_node.wc_id = ?1 and working_node.local_relpath = ?2;",
-
-  /* STMT_SELECT_PARENT_STUB_INFO */
-  "select presence = 'not-present', revnum from base_node "
-  "where wc_id = ?1 and local_relpath = ?2;",
-
-  /* STMT_DELETE_LOCK */
-  "delete from lock "
-  "where repos_id = ?1 and repos_relpath = ?2;",
-
-  /* STMT_UPDATE_BASE_RECURSIVE_REPO */
-  "update base_node set repos_id = ?4 "
-  "where repos_id is not null and wc_id = ?1 and "
-  "  (local_relpath = ?2 or "
-  "   local_relpath like ?3 escape '" LIKE_ESCAPE_CHAR "');",
-
-  /* STMT_UPDATE_WORKING_RECURSIVE_COPYFROM_REPO */
-  "update working_node set copyfrom_repos_id = ?4 "
-  "where copyfrom_repos_id is not null and wc_id = ?1 and "
-  "  (local_relpath = ?2 or "
-  "   local_relpath like ?3 escape '" LIKE_ESCAPE_CHAR "');",
-
-  /* STMT_UPDATE_LOCK_REPOS_ID */
-  "update lock set repos_id = ?4 "
-  "where repos_id = ?1 and "
-  "  (repos_relpath = ?2 or "
-  "   repos_relpath like ?3 escape '" LIKE_ESCAPE_CHAR "');",
-
-  /* STMT_UPDATE_BASE_LAST_MOD_TIME */
-  "update base_node set last_mod_time = ?3 "
-  "where wc_id = ?1 and local_relpath = ?2;",
-
-  /* STMT_UPDATE_ACTUAL_TREE_CONFLICTS */
-  "update actual_node set tree_conflict_data = ?3 "
-  "where wc_id = ?1 and local_relpath = ?2;",
-
-  /* STMT_INSERT_ACTUAL_TREE_CONFLICTS */
-  "insert into actual_node ("
-  "  wc_id, local_relpath, tree_conflict_data) "
-  "values (?1, ?2, ?3);",
-
-  /* STMT_UPDATE_ACTUAL_CHANGELIST */
-  "update actual_node set changelist = ?3 "
-  "where wc_id = ?1 and local_relpath = ?2;",
-
-  /* STMT_INSERT_ACTUAL_CHANGELIST */
-  "insert into actual_node ("
-  "  wc_id, local_relpath, changelist) "
-  "values (?1, ?2, ?3);",
-
-  NULL
-};
 
 typedef struct {
   /* common to all insertions into BASE */
@@ -528,16 +317,6 @@ presence_to_word(svn_wc__db_status_t presence)
     default:
       SVN_ERR_MALFUNCTION_NO_RETURN();
     }
-}
-
-
-svn_error_t *
-svn_wc__db_upgrade_func(void *baton,
-                        svn_sqlite__db_t *sdb,
-                        int current_schema,
-                        apr_pool_t *scratch_pool)
-{
-  return SVN_NO_ERROR;
 }
 
 
@@ -990,6 +769,24 @@ fetch_wc_id(apr_int64_t *wc_id,
 }
 
 
+static svn_error_t *
+open_db(svn_sqlite__db_t **sdb,
+        const char *dir_abspath,
+        const char *sdb_fname,
+        svn_sqlite__mode_t smode,
+        apr_pool_t *result_pool,
+        apr_pool_t *scratch_pool)
+{
+  const char *sdb_abspath = svn_wc__adm_child(dir_abspath, sdb_fname,
+                                              scratch_pool);
+
+  return svn_error_return(svn_sqlite__open(sdb, sdb_abspath,
+                                           smode, statements,
+                                           SVN_WC__VERSION, upgrade_sql,
+                                           result_pool, scratch_pool));
+}
+
+
 /* For a given LOCAL_ABSPATH, figure out what sqlite database (SDB) to use,
    what WC_ID is implied, and the RELPATH within that wcroot.  If a sqlite
    database needs to be opened, then use SMODE for it. */
@@ -1126,12 +923,8 @@ parse_local_abspath(svn_wc__db_pdh_t **pdh,
     {
       svn_error_t *err;
 
-      err = svn_sqlite__open(&sdb,
-                             svn_wc__adm_child(local_abspath, SDB_FILE,
-                                               scratch_pool),
-                             smode, statements, SVN_WC__VERSION, upgrade_sql,
-                             svn_wc__db_upgrade_func, NULL,
-                             db->state_pool, scratch_pool);
+      err = open_db(&sdb, local_abspath, SDB_FILE, smode,
+                    db->state_pool, scratch_pool);
       if (err == NULL)
         break;
       if (err->apr_err != SVN_ERR_SQLITE_ERROR
@@ -1268,14 +1061,8 @@ parse_local_abspath(svn_wc__db_pdh_t **pdh,
       parent_pdh = apr_hash_get(db->dir_data, parent_dir, APR_HASH_KEY_STRING);
       if (parent_pdh == NULL || parent_pdh->wcroot == NULL)
         {
-          svn_error_t *err = svn_sqlite__open(&sdb,
-                                              svn_wc__adm_child(parent_dir,
-                                                                SDB_FILE,
-                                                                scratch_pool),
-                                              smode, statements,
-                                              SVN_WC__VERSION, upgrade_sql,
-                                              svn_wc__db_upgrade_func, NULL,
-                                              db->state_pool, scratch_pool);
+          svn_error_t *err = open_db(&sdb, parent_dir, SDB_FILE, smode,
+                                     db->state_pool, scratch_pool);
           if (err)
             {
               if (err->apr_err != SVN_ERR_SQLITE_ERROR
@@ -1416,7 +1203,7 @@ static svn_error_t *
 get_statement_for_path(svn_sqlite__stmt_t **stmt,
                        svn_wc__db_t *db,
                        const char *local_abspath,
-                       enum statement_keys stmt_idx,
+                       int stmt_idx,
                        apr_pool_t *scratch_pool)
 {
   svn_wc__db_pdh_t *pdh;
@@ -1734,13 +1521,9 @@ create_db(svn_sqlite__db_t **sdb,
 {
   svn_sqlite__stmt_t *stmt;
 
-  SVN_ERR(svn_sqlite__open(sdb,
-                           svn_wc__adm_child(dir_abspath, sdb_fname,
-                                             scratch_pool),
-                           svn_sqlite__mode_rwcreate, statements,
-                           SVN_WC__VERSION, upgrade_sql,
-                           svn_wc__db_upgrade_func, NULL,
-                           result_pool, scratch_pool));
+  SVN_ERR(open_db(sdb, dir_abspath, sdb_fname,
+                  svn_sqlite__mode_rwcreate,
+                  result_pool, scratch_pool));
 
   /* Insert the repository. */
   SVN_ERR(create_repos_id(repos_id, repos_root_url, repos_uuid, *sdb,
@@ -4679,20 +4462,14 @@ svn_wc__db_temp_get_all_access(svn_wc__db_t *db,
 
 
 svn_error_t *
-svn_wc__db_temp_get_sdb(svn_sqlite__db_t **db,
-                        const char *local_dir_abspath,
-                        const char * const statements_in[],
+svn_wc__db_temp_get_sdb(svn_sqlite__db_t **sdb,
+                        const char *dir_abspath,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool)
 {
-  const char *db_path = svn_dirent_join(local_dir_abspath, ".svn/" SDB_FILE,
-                                        scratch_pool);
-  SVN_ERR(svn_sqlite__open(db, db_path, svn_sqlite__mode_readwrite,
-                           statements_in, SVN_WC__VERSION, upgrade_sql,
-                           svn_wc__db_upgrade_func, NULL,
-                           result_pool, scratch_pool));
-
-  return SVN_NO_ERROR;
+  return svn_error_return(open_db(sdb, dir_abspath, SDB_FILE,
+                                  svn_sqlite__mode_readwrite,
+                                  result_pool, scratch_pool));
 }
 
 

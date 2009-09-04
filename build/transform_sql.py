@@ -10,6 +10,9 @@ import re
 import sys
 
 
+DEFINE_END = '  ""\n'
+
+
 def usage_and_exit(msg):
   if msg:
     sys.stderr.write('%s\n\n' % msg)
@@ -33,12 +36,15 @@ def main(input, output, filename):
     % (filename,))
 
   var_printed = False
+  stmt_count = 0
 
   # only used once, but we need the flags. so re.compile it is!
   re_comments = re.compile(r'/\*.*?\*/', re.MULTILINE|re.DOTALL)
   input = re_comments.sub('', input)
 
+  # a couple SQL comments that act as directives for this transform system
   re_format = re.compile('-- *format: *([0-9]+)')
+  re_statement = re.compile('-- *STMT_([A-Z_]+)')
 
   for line in input.split('\n'):
     line = line.replace('"', '\\"')
@@ -49,11 +55,26 @@ def main(input, output, filename):
         vsn = match.group(1)
         if var_printed:
           # end the previous #define
-          output.write('  ""\n')
+          output.write(DEFINE_END)
         output.write('#define %s_%s \\\n' % (var_name, match.group(1)))
         var_printed = True
 
-        # no need to put the comment into the file. skip this line.
+        # no need to put the directive into the file. skip this line.
+        continue
+
+      match = re_statement.match(line)
+      if match:
+        name = match.group(1)
+        if var_printed:
+          # end the previous #define
+          output.write(DEFINE_END)
+        output.write('#define STMT_%s %d\n' % (match.group(1), stmt_count))
+        output.write('#define STMT_%d \\\n' % (stmt_count,))
+        var_printed = True
+
+        stmt_count += 1
+
+        # no need to put the directive into the file. skip this line.
         continue
 
       if not var_printed:
@@ -66,7 +87,18 @@ def main(input, output, filename):
       output.write('  "%s " \\\n' % line)
 
   # previous line had a continuation. end the madness.
-  output.write('  ""\n')
+  assert var_printed
+  output.write(DEFINE_END)
+
+  ### the STMT_%d naming precludes *multiple* transform_sql headers from
+  ### being used within the same .c file. for now, that's more than fine.
+  ### in the future, we can always add a var_name discriminator or use
+  ### the statement name itself (which should hopefully be unique across
+  ### all names in use; or can easily be made so)
+  output.write('#define %s_DECLARE_STATEMENTS(varname) \\\n' % (var_name,)
+               + '  static const char * const varname[] = { \\\n'
+               + ', \\\n'.join('    STMT_%d' % (i,) for i in range(stmt_count))
+               + ' \\\n  }\n')
 
 
 if __name__ == '__main__':

@@ -35,6 +35,7 @@
 #include "log.h"
 #include "entries.h"
 #include "wc_db.h"
+#include "wc-metadata.h"  /* for STMT_*  */
 
 #include "svn_private_config.h"
 #include "private/svn_wc_private.h"
@@ -184,6 +185,8 @@ read_wcprops(apr_hash_t **all_wcprops,
 }
 
 
+/* If the versioned child (which should be a directory) exists on disk as
+   an actual directory, then add it to the array of subdirs.  */
 static svn_error_t *
 maybe_add_subdir(apr_array_header_t *subdirs,
                  const char *dir_abspath,
@@ -206,6 +209,8 @@ maybe_add_subdir(apr_array_header_t *subdirs,
 }
 
 
+/* Return in CHILDREN, the list of all versioned subdirectories which also
+   exist on disk as directories.  */
 static svn_error_t *
 get_versioned_subdirs(apr_array_header_t **children,
                       svn_wc__db_t *db,
@@ -325,7 +330,9 @@ upgrade_to_wcng(svn_wc__db_t *db,
 
   /* Migrate the entries over to the new database.
      ### We need to think about atomicity here.
-     ### should this be SVN_WC__WC_NG_VERSION instead?  */
+
+     entries_write_new() writes in current format rather than f12. Thus, this
+     function bumps a working copy all the way to current.  */
   SVN_ERR(svn_wc__db_temp_reset_format(SVN_WC__VERSION, db, dir_abspath,
                                        scratch_pool));
   SVN_ERR(svn_wc__entries_write_new(db, dir_abspath, entries, scratch_pool));
@@ -521,15 +528,18 @@ db_kind_from_node_kind(svn_node_kind_t node_kind)
 
 
 static svn_error_t *
-migrate_single_tree_conflict_data(svn_sqlite__stmt_t *insert_stmt,
-                                  svn_sqlite__db_t *sdb,
+migrate_single_tree_conflict_data(svn_sqlite__db_t *sdb,
                                   const char *tree_conflict_data,
                                   apr_uint64_t wc_id,
                                   const char *local_relpath,
                                   apr_pool_t *scratch_pool)
 {
+  svn_sqlite__stmt_t *insert_stmt;
   apr_hash_t *conflicts;
   apr_hash_index_t *hi;
+
+  SVN_ERR(svn_sqlite__get_statement(&insert_stmt, sdb,
+                                    STMT_INSERT_NEW_CONFLICT));
 
   SVN_ERR(svn_wc__read_tree_conflicts(&conflicts, tree_conflict_data,
                                       local_relpath, scratch_pool));
@@ -620,49 +630,16 @@ static svn_error_t *
 migrate_tree_conflicts(svn_sqlite__db_t *sdb,
                        apr_pool_t *scratch_pool)
 {
-  static const char * const upgrade_statements[] = 
-    {
-      "select wc_id, local_relpath, tree_conflict_data "
-      "from actual_node "
-      "where tree_conflict_data is not null;",
-
-      "insert into conflict_victim ("
-      "  wc_id, local_relpath, parent_relpath, node_kind, conflict_kind, "
-      "  property_name, conflict_action, conflict_reason, operation, "
-      "  left_repos_id, left_repos_relpath, left_peg_rev, left_kind, "
-      "  right_repos_id, right_repos_relpath, right_peg_rev, right_kind) "
-      "values (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, "
-      "        ?15, ?16, ?17);",
-
-      "update actual_node "
-      "set tree_conflict_data = null "
-      "where wc_id = ?1 and local_relpath = ?2; "
-    };
   svn_sqlite__stmt_t *select_stmt;
-  svn_sqlite__stmt_t *update_stmt;
-  svn_sqlite__stmt_t *insert_stmt;
+  svn_sqlite__stmt_t *erase_stmt;
   svn_boolean_t have_row;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
-  /* Here's what we're going to do:
-     Since we can't have simultaneous prepared statements executing,
-     such as a select and an insert, we have to select the tree
-     conflict data one at a time.  We do this by simply selecting them
-     all, processing the first one, not iterating over the result set,
-     and then setting the processed one to NULL.  We then re-execute the
-     select, and lather, rinse, repeat.
+  /* Iterate over each node which has a set of tree conflicts, then insert
+     all of them into the new schema.  */
 
-     Although this may look like it'd be O(n^2) (since we select *all*
-     the tree conflict data rows at once), it's actually not, due to the
-     way that SQLite does on-demand selects.
-  */
-
-  SVN_ERR(svn_sqlite__prepare(&select_stmt, sdb, upgrade_statements[0],
-                              scratch_pool));
-  SVN_ERR(svn_sqlite__prepare(&insert_stmt, sdb, upgrade_statements[1],
-                              scratch_pool));
-  SVN_ERR(svn_sqlite__prepare(&update_stmt, sdb, upgrade_statements[2],
-                              scratch_pool));
+  SVN_ERR(svn_sqlite__get_statement(&select_stmt, sdb,
+                                    STMT_SELECT_OLD_TREE_CONFLICT));
 
   /* Get all the existing tree conflict data. */
   SVN_ERR(svn_sqlite__step(&have_row, select_stmt));
@@ -678,28 +655,22 @@ migrate_tree_conflicts(svn_sqlite__db_t *sdb,
       local_relpath = svn_sqlite__column_text(select_stmt, 1, iterpool);
       tree_conflict_data = svn_sqlite__column_text(select_stmt, 2,
                                                    iterpool);
-      SVN_ERR(svn_sqlite__reset(select_stmt));
 
-      SVN_ERR(migrate_single_tree_conflict_data(insert_stmt, sdb,
+      SVN_ERR(migrate_single_tree_conflict_data(sdb,
                                                 tree_conflict_data,
                                                 wc_id, local_relpath,
                                                 iterpool));
-
-      /* Set the tree conflict data to NULL for this node. */
-      SVN_ERR(svn_sqlite__bindf(update_stmt, "is", wc_id,
-                                local_relpath));
-      SVN_ERR(svn_sqlite__step_done(update_stmt));
 
       /* We don't need to do anything but step over the previously
          prepared statement. */
       SVN_ERR(svn_sqlite__step(&have_row, select_stmt));
     }
-
-  /* Clean stuff up. */
   SVN_ERR(svn_sqlite__reset(select_stmt));
-  SVN_ERR(svn_sqlite__finalize(select_stmt));
-  SVN_ERR(svn_sqlite__finalize(insert_stmt));
-  SVN_ERR(svn_sqlite__finalize(update_stmt));
+
+  /* Erase all the old tree conflict data.  */
+  SVN_ERR(svn_sqlite__get_statement(&erase_stmt, sdb,
+                                    STMT_ERASE_OLD_CONFLICTS));
+  SVN_ERR(svn_sqlite__step_done(erase_stmt));
 
   svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;

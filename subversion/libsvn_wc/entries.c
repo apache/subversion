@@ -42,6 +42,7 @@
 #include "lock.h"
 #include "tree_conflicts.h"
 #include "wc_db.h"
+#include "wc-metadata.h"  /* for STMT_*  */
 
 #include "svn_private_config.h"
 #include "private/svn_wc_private.h"
@@ -51,80 +52,6 @@
 
 #define MAYBE_ALLOC(x,p) ((x) ? (x) : apr_pcalloc((p), sizeof(*(x))))
 
-/* This values map to the members of STATEMENTS below, and should be added
-   and removed at the same time. */
-enum statement_keys {
-  STMT_INSERT_BASE_NODE,
-  STMT_INSERT_WORKING_NODE,
-  STMT_INSERT_ACTUAL_NODE,
-  STMT_SELECT_WCROOT_NULL,
-  STMT_DELETE_ALL_WORKING,
-  STMT_DELETE_ALL_BASE,
-  STMT_DELETE_ALL_ACTUAL,
-  STMT_SELECT_KEEP_LOCAL_FLAG,
-  STMT_SELECT_NOT_PRESENT,
-  STMT_SELECT_FILE_EXTERNAL,
-  STMT_UPDATE_FILE_EXTERNAL
-};
-
-static const char * const statements[] = {
-  /* STMT_INSERT_BASE_NODE */
-  "insert or replace into base_node "
-    "(wc_id, local_relpath, repos_id, repos_relpath, parent_relpath, "
-     "presence, "
-     "revnum, kind, checksum, translated_size, changed_rev, changed_date, "
-     "changed_author, depth, last_mod_time, properties)"
-  "values (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, "
-          "?15, ?16);",
-
-  /* STMT_INSERT_WORKING_NODE */
-  "insert or replace into working_node "
-    "(wc_id, local_relpath, parent_relpath, presence, kind, "
-     "copyfrom_repos_id, "
-     "copyfrom_repos_path, copyfrom_revnum, moved_here, moved_to, checksum, "
-     "translated_size, changed_rev, changed_date, changed_author, depth, "
-     "last_mod_time, properties, keep_local) "
-  "values (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, "
-          "?15, ?16, ?17, ?18, ?19);",
-
-  /* STMT_INSERT_ACTUAL_NODE */
-  "insert or replace into actual_node "
-    "(wc_id, local_relpath, parent_relpath, properties, conflict_old, "
-     "conflict_new, "
-     "conflict_working, prop_reject, changelist, text_mod, "
-     "tree_conflict_data) "
-  "values (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11);",
-
-  /* STMT_SELECT_WCROOT_NULL */
-  "select id from wcroot where local_abspath is null;",
-
-  /* STMT_DELETE_ALL_WORKING */
-  "delete from working_node;",
-
-  /* STMT_DELETE_ALL_BASE */
-  "delete from base_node;",
-
-  /* STMT_DELETE_ALL_ACTUAL */
-  "delete from actual_node;",
-
-  /* STMT_SELECT_KEEP_LOCAL_FLAG */
-  "select keep_local from working_node "
-  "where wc_id = ?1 and local_relpath = ?2;",
-
-  /* STMT_SELECT_NOT_PRESENT */
-  "select 1 from base_node "
-  "where wc_id = ?1 and local_relpath = ?2 and presence = 'not-present';",
-
-  /* STMT_SELECT_FILE_EXTERNAL */
-  "select file_external from base_node "
-  "where wc_id = ?1 and local_relpath = ?2;",
-
-  /* STMT_UPDATE_FILE_EXTERNAL */
-  "update base_node set file_external = ?3 "
-  "where wc_id = ?1 and local_relpath = ?2;",
-
-  NULL
-  };
 
 /* Temporary structures which mirror the tables in wc-metadata.sql.
    For detailed descriptions of each field, see that file. */
@@ -609,7 +536,7 @@ read_entries_new(apr_hash_t **result_entries,
   entries = apr_hash_make(result_pool);
 
   /* ### need database to determine: incomplete, keep_local, ACTUAL info.  */
-  SVN_ERR(svn_wc__db_temp_get_sdb(&sdb, local_abspath, statements,
+  SVN_ERR(svn_wc__db_temp_get_sdb(&sdb, local_abspath,
                                   scratch_pool, scratch_pool));
 
   SVN_ERR(svn_wc__db_read_children(&children, db,
@@ -1651,7 +1578,8 @@ insert_base_node(svn_sqlite__db_t *sdb,
 {
   svn_sqlite__stmt_t *stmt;
 
-  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_INSERT_BASE_NODE));
+  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
+                                    STMT_INSERT_BASE_NODE_FOR_ENTRY));
 
   SVN_ERR(svn_sqlite__bind_int64(stmt, 1, base_node->wc_id));
   SVN_ERR(svn_sqlite__bind_text(stmt, 2, base_node->local_relpath));
@@ -2275,8 +2203,8 @@ svn_wc__entries_write_new(svn_wc__db_t *db,
   svn_error_t *err;
   int i;
 
-  /* Get the SDB, but with *our* statements[]  */
-  SVN_ERR(svn_wc__db_temp_get_sdb(&sdb, local_abspath, statements,
+  /* ### need the SDB so we can jam rows directly into it.  */
+  SVN_ERR(svn_wc__db_temp_get_sdb(&sdb, local_abspath,
                                   scratch_pool, iterpool));
 
   /* Get a copy of the "this dir" entry for comparison purposes. */
