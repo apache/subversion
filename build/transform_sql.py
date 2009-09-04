@@ -10,7 +10,7 @@ import re
 import sys
 
 
-DEFINE_END = '  ""\n'
+DEFINE_END = '  ""\n\n'
 
 
 def usage_and_exit(msg):
