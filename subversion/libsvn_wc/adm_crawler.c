@@ -508,7 +508,7 @@ report_revisions_and_depths(svn_wc__db_t *db,
           continue;
 
         if (!this_shadows_base && this_original_repos_relpath)
-          continue; /* ### Skip copy roots? */
+          continue; /* Skip copy roots (and all children) */
       }
 
       /* Is the entry on disk? */
