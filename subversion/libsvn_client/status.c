@@ -267,6 +267,13 @@ svn_client_status5(svn_revnum_t *result_rev,
   sb.changelist_hash = changelist_hash;
   sb.wc_ctx = ctx->wc_ctx;
 
+/* svn_client_status() is called from other operations that sometimes
+         have existing access batons. Run status in a new wc_ctx until we
+         get the status running without access batons. We can't pass a
+         context and an unrelated access baton to other functions */
+
+  SVN_ERR(svn_wc_context_create(&wc_ctx, NULL, pool, pool));
+
   /* Try to open the target directory. If the target is a file or an
      unversioned directory, open the parent directory instead */
   err = svn_wc__adm_open_in_context(&anchor_access, wc_ctx, path, FALSE,
@@ -276,13 +283,6 @@ svn_client_status5(svn_revnum_t *result_rev,
   if (err && err->apr_err == SVN_ERR_WC_NOT_DIRECTORY)
     {
       svn_error_clear(err);
-
-      /* svn_client_status() is called from other operations that sometimes
-         have existing access batons. Run status in a new wc_ctx until we
-         get the status running without access batons. We can't pass a
-         context and an unrelated access baton to other functions */
-
-      SVN_ERR(svn_wc_context_create(&wc_ctx, NULL, pool, pool));
 
       SVN_ERR(svn_wc__adm_open_anchor_in_context(
                                      &anchor_access, &target_access, &target,
