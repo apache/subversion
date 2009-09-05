@@ -427,12 +427,14 @@ svn_cl__print_xml_commit(svn_stringbuf_t **outstr,
    properties.  Ensure that REVISION is specified explicitly and is not
    relative to a working-copy item.  Ensure that exactly one target is
    specified in TARGETS.  Set *URL to the URL of the target.  Return an
-   appropriate error if any of those checks or operations fail.
+   appropriate error if any of those checks or operations fail. Use CTX for
+   accessing the working copy
  */
 svn_error_t *
 svn_cl__revprop_prepare(const svn_opt_revision_t *revision,
                         apr_array_header_t *targets,
                         const char **URL,
+                        svn_client_ctx_t *ctx,
                         apr_pool_t *pool);
 
 /* Search for a text editor command in standard environment variables,

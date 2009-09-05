@@ -53,6 +53,7 @@
 #include "svn_hash.h"
 #include "cl.h"
 
+#include "private/svn_wc_private.h"
 #include "private/svn_cmdline_private.h"
 
 #include "svn_private_config.h"
@@ -1791,6 +1792,12 @@ main(int argc, const char *argv[])
   opt_state.end_revision = APR_ARRAY_IDX(opt_state.revision_ranges, 0,
                                          svn_opt_revision_range_t *)->end;
 
+  /* Create a client context object. */
+  command_baton.opt_state = &opt_state;
+  if ((err = svn_client_create_context(&ctx, pool)))
+    return svn_cmdline_handle_exit_error(err, pool, "svn: ");
+  command_baton.ctx = ctx;
+
   /* If we're running a command that could result in a commit, verify
      that any log message we were given on the command line makes
      sense (unless we've also been instructed not to care). */
@@ -1808,30 +1815,35 @@ main(int argc, const char *argv[])
          that's probably not what the user intended. */
       if (dash_F_arg)
         {
-          svn_wc_adm_access_t *adm_access;
-          const svn_wc_entry_t *e;
+          svn_node_kind_t kind;
+          const char *local_abspath;
           const char *fname_utf8 = svn_dirent_internal_style(dash_F_arg, pool);
-          err = svn_wc_adm_probe_open3(&adm_access, NULL, fname_utf8,
-                                       FALSE, 0, NULL, NULL, pool);
-          if (! err)
-            err = svn_wc_entry(&e, fname_utf8, adm_access, FALSE, pool);
-          if ((err == SVN_NO_ERROR) && e)
+
+          err = svn_dirent_get_absolute(&local_abspath, fname_utf8, pool);
+
+          if (!err)
             {
-              if (subcommand->cmd_func != svn_cl__lock)
+              err = svn_wc__node_get_kind(&kind, ctx->wc_ctx, local_abspath,
+                                          FALSE, pool);
+
+              if (!err && kind != svn_node_none && kind != svn_node_unknown)
                 {
-                  err = svn_error_create
-                    (SVN_ERR_CL_LOG_MESSAGE_IS_VERSIONED_FILE, NULL,
-                     _("Log message file is a versioned file; "
-                       "use '--force-log' to override"));
+                  if (subcommand->cmd_func != svn_cl__lock)
+                    {
+                      err = svn_error_create(
+                         SVN_ERR_CL_LOG_MESSAGE_IS_VERSIONED_FILE, NULL,
+                         _("Log message file is a versioned file; "
+                           "use '--force-log' to override"));
+                    }
+                  else
+                    {
+                      err = svn_error_create(
+                         SVN_ERR_CL_LOG_MESSAGE_IS_VERSIONED_FILE, NULL,
+                         _("Lock comment file is a versioned file; "
+                           "use '--force-log' to override"));
+                    }
+                  return svn_cmdline_handle_exit_error(err, pool, "svn: ");
                 }
-              else
-                {
-                  err = svn_error_create
-                    (SVN_ERR_CL_LOG_MESSAGE_IS_VERSIONED_FILE, NULL,
-                     _("Lock comment file is a versioned file; "
-                       "use '--force-log' to override"));
-                }
-              return svn_cmdline_handle_exit_error(err, pool, "svn: ");
             }
           svn_error_clear(err);
         }
@@ -1907,11 +1919,6 @@ main(int argc, const char *argv[])
           opt_state.depth = SVN_DEPTH_INFINITY_OR_FILES(FALSE);
         }
     }
-  /* Create a client context object. */
-  command_baton.opt_state = &opt_state;
-  if ((err = svn_client_create_context(&ctx, pool)))
-    return svn_cmdline_handle_exit_error(err, pool, "svn: ");
-  command_baton.ctx = ctx;
 
   err = svn_config_get_config(&(ctx->config),
                               opt_state.config_dir, pool);

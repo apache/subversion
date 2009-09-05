@@ -49,6 +49,7 @@ svn_error_t *
 svn_cl__revprop_prepare(const svn_opt_revision_t *revision,
                         apr_array_header_t *targets,
                         const char **URL,
+                        svn_client_ctx_t *ctx,
                         apr_pool_t *pool)
 {
   const char *target;
@@ -70,7 +71,7 @@ svn_cl__revprop_prepare(const svn_opt_revision_t *revision,
   /* (The docs say the target must be either a URL or implicit '.', but
      explicit WC targets are also accepted.) */
   target = APR_ARRAY_IDX(targets, 0, const char *);
-  SVN_ERR(svn_client_url_from_path(URL, target, pool));
+  SVN_ERR(svn_client_url_from_path2(URL, target, ctx, pool, pool));
   if (*URL == NULL)
     return svn_error_create
       (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
