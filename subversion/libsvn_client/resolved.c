@@ -67,20 +67,22 @@ svn_client_resolve(const char *path,
        * extend at least onto the immediate children. */
       if (adm_lock_level >= 0)
         adm_lock_level++;
-      SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL,
-                                     svn_dirent_dirname(path, pool),
-                                     TRUE, adm_lock_level,
-                                     ctx->cancel_func, ctx->cancel_baton,
-                                     pool));
+      SVN_ERR(svn_wc__adm_probe_in_context(&adm_access, ctx->wc_ctx,
+                                           svn_dirent_dirname(path, pool),
+                                           TRUE, adm_lock_level,
+                                           ctx->cancel_func,
+                                           ctx->cancel_baton,
+                                           pool));
     }
   else
     {
-      SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL,
-                                     path,
-                                     TRUE,
-                                     adm_lock_level,
-                                     ctx->cancel_func, ctx->cancel_baton,
-                                     pool));
+      SVN_ERR(svn_wc__adm_probe_in_context(&adm_access, ctx->wc_ctx,
+                                           path,
+                                           TRUE,
+                                           adm_lock_level,
+                                           ctx->cancel_func,
+                                           ctx->cancel_baton,
+                                           pool));
     }
 
   SVN_ERR(svn_wc_resolved_conflict4(path, adm_access, TRUE, TRUE, TRUE,

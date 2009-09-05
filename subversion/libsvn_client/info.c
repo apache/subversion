@@ -370,9 +370,9 @@ crawl_entries(const char *wcpath,
   int adm_lock_level = SVN_WC__LEVELS_TO_LOCK_FROM_DEPTH(depth);
   struct found_entry_baton fe_baton;
 
-  SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, wcpath, FALSE,
-                                 adm_lock_level, ctx->cancel_func,
-                                 ctx->cancel_baton, pool));
+  SVN_ERR(svn_wc__adm_probe_in_context(&adm_access, ctx->wc_ctx, wcpath, FALSE,
+                                       adm_lock_level, ctx->cancel_func,
+                                       ctx->cancel_baton, pool));
 
   fe_baton.changelist_hash = changelist_hash;
   fe_baton.receiver = receiver;

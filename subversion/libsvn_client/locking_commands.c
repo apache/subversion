@@ -247,11 +247,11 @@ organize_lock_targets(const char **common_parent,
             max_levels_to_lock = (int) n;
         }
 
-      SVN_ERR(svn_wc_adm_probe_open3(parent_adm_access_p, NULL,
-                                     *common_parent,
-                                     TRUE, max_levels_to_lock,
-                                     ctx->cancel_func, ctx->cancel_baton,
-                                     pool));
+      SVN_ERR(svn_wc__adm_probe_in_context(parent_adm_access_p, ctx->wc_ctx,
+                                           *common_parent,
+                                           TRUE, max_levels_to_lock,
+                                           ctx->cancel_func, ctx->cancel_baton,
+                                           pool));
 
       /* Get the url for each target and verify all paths. */
       for (i = 0; i < rel_targets->nelts; i++)
