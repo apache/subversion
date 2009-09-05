@@ -8159,9 +8159,9 @@ svn_client_merge3(const char *source1,
                              svn_dirent_local_style(source2, pool));
 
   /* Open an admistrative session with the working copy. */
-  SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, target_wcpath,
-                                 ! dry_run, -1, ctx->cancel_func,
-                                 ctx->cancel_baton, pool));
+  SVN_ERR(svn_wc__adm_probe_in_context(&adm_access, ctx->wc_ctx, target_wcpath,
+                                       !dry_run, -1, ctx->cancel_func,
+                                       ctx->cancel_baton, pool));
 
   /* Fetch the target's entry. */
   SVN_ERR(svn_wc__get_entry_versioned(&entry, ctx->wc_ctx, target_abspath,
@@ -8360,11 +8360,16 @@ ensure_wc_reflects_repository_subtree(const char *target_abspath,
                                       apr_pool_t *scratch_pool)
 {
   svn_wc_revision_status_t *wc_stat;
+  svn_wc_context_t *wc_ctx;
+
+  SVN_ERR(svn_wc_context_create(&wc_ctx, NULL, scratch_pool, scratch_pool));
 
   /* Get a WC summary with min/max revisions set to the BASE revision. */
-  SVN_ERR(svn_wc_revision_status2(&wc_stat, ctx->wc_ctx, target_abspath, NULL,
+  SVN_ERR(svn_wc_revision_status2(&wc_stat, wc_ctx, target_abspath, NULL,
                                   FALSE, ctx->cancel_func, ctx->cancel_baton,
                                   scratch_pool, scratch_pool));
+
+  SVN_ERR(svn_wc_context_destroy(wc_ctx));
 
   if (wc_stat->switched)
     return svn_error_create(SVN_ERR_CLIENT_NOT_READY_TO_MERGE, NULL,
@@ -9050,9 +9055,9 @@ svn_client_merge_reintegrate(const char *source,
   SVN_ERR(svn_dirent_get_absolute(&target_abspath, target_wcpath, pool));
 
   /* Open an admistrative session with the working copy. */
-  SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, target_wcpath,
-                                 (! dry_run), -1, ctx->cancel_func,
-                                 ctx->cancel_baton, pool));
+  SVN_ERR(svn_wc__adm_probe_in_context(&adm_access, ctx->wc_ctx, target_wcpath,
+                                       (! dry_run), -1, ctx->cancel_func,
+                                       ctx->cancel_baton, pool));
 
   /* Fetch the target's entry. */
   SVN_ERR(svn_wc__get_entry_versioned(&entry, ctx->wc_ctx, target_abspath,
@@ -9247,9 +9252,9 @@ svn_client_merge_peg3(const char *source,
   SVN_ERR(svn_dirent_get_absolute(&target_abspath, target_wcpath, pool));
 
   /* Open an admistrative session with the working copy. */
-  SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, target_wcpath,
-                                 (! dry_run), -1, ctx->cancel_func,
-                                 ctx->cancel_baton, pool));
+  SVN_ERR(svn_wc__adm_probe_in_context(&adm_access, ctx->wc_ctx, target_wcpath,
+                                       (! dry_run), -1, ctx->cancel_func,
+                                       ctx->cancel_baton, pool));
 
   /* Fetch the target's entry. */
   SVN_ERR(svn_wc__get_entry_versioned(&entry, ctx->wc_ctx, target_abspath,
