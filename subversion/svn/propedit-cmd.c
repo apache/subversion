@@ -39,6 +39,8 @@
 #include "svn_props.h"
 #include "cl.h"
 
+#include "private/svn_wc_private.h"
+
 #include "svn_private_config.h"
 
 
@@ -89,7 +91,7 @@ svn_cl__propedit(apr_getopt_t *os,
       svn_opt_push_implicit_dot_target(targets, pool);
 
       SVN_ERR(svn_cl__revprop_prepare(&opt_state->start_revision, targets,
-                                      &URL, pool));
+                                      &URL, ctx, pool));
 
       /* Fetch the current property. */
       SVN_ERR(svn_client_revprop_get(pname_utf8, &propval,
@@ -184,8 +186,8 @@ svn_cl__propedit(apr_getopt_t *os,
           svn_string_t *propval, *edited_propval;
           const char *base_dir = target;
           const char *target_local;
-          svn_wc_adm_access_t *adm_access;
-          const svn_wc_entry_t *entry;
+          const char *local_abspath;
+          svn_node_kind_t kind;
           svn_opt_revision_t peg_revision;
           svn_revnum_t base_rev = SVN_INVALID_REVNUM;
 
@@ -225,15 +227,16 @@ svn_cl__propedit(apr_getopt_t *os,
                 }
 
               /* Split the path if it is a file path. */
-              SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, target,
-                                             FALSE, 0, ctx->cancel_func,
-                                             ctx->cancel_baton, subpool));
-              SVN_ERR(svn_wc_entry(&entry, target, adm_access, FALSE, subpool));
-              if (! entry)
-                return svn_error_createf
-                  (SVN_ERR_ENTRY_NOT_FOUND, NULL,
+              SVN_ERR(svn_dirent_get_absolute(&local_abspath, target, subpool));
+
+              SVN_ERR(svn_wc__node_get_kind(&kind, ctx->wc_ctx, local_abspath,
+                                            FALSE, subpool));
+
+              if (kind == svn_node_none)
+                return svn_error_createf(
+                   SVN_ERR_ENTRY_NOT_FOUND, NULL,
                    _("'%s' does not appear to be a working copy path"), target);
-              if (entry->kind == svn_node_file)
+              if (kind == svn_node_file)
                 base_dir = svn_dirent_dirname(target, subpool);
             }
 

@@ -105,7 +105,7 @@ svn_cl__propdel(apr_getopt_t *os,
       const char *URL;
 
       SVN_ERR(svn_cl__revprop_prepare(&opt_state->start_revision, targets,
-                                      &URL, pool));
+                                      &URL, ctx, pool));
 
       /* Let libsvn_client do the real work. */
       SVN_ERR(svn_client_revprop_set2(pname_utf8, NULL, NULL,

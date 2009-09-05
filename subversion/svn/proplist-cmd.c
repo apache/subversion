@@ -128,7 +128,7 @@ svn_cl__proplist(apr_getopt_t *os,
 
 
       SVN_ERR(svn_cl__revprop_prepare(&opt_state->start_revision, targets,
-                                      &URL, pool));
+                                      &URL, ctx, pool));
 
       /* Let libsvn_client do the real work. */
       SVN_ERR(svn_client_revprop_list(&proplist,
