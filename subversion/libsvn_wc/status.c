@@ -38,6 +38,7 @@
 #include "svn_io.h"
 #include "svn_config.h"
 #include "svn_time.h"
+
 #include "svn_private_config.h"
 
 #include "wc.h"
@@ -822,36 +823,10 @@ handle_dir_entry(struct edit_baton *eb,
 {
   if (kind == svn_node_dir)
     {
-      /* Directory entries are incomplete.  We must get their full
-         entry from their own THIS_DIR entry.  svn_wc_entry does this
-         for us if it can.
-
-         Of course, if there has been a kind-changing replacement (for
-         example, there is an entry for a file 'foo', but 'foo' exists
-         as a *directory* on disk), we don't want to reach down into
-         that subdir to try to flesh out a "complete entry".  */
-      const svn_wc_entry_t *full_entry = NULL;
-
-      if (entry->kind == kind)
-        {
-          svn_error_t *err = svn_wc__get_entry(&full_entry, eb->db,
-                                               local_abspath, TRUE,
-                                               svn_node_dir, FALSE,
-                                               pool, pool);
-
-          if (err && ((err->apr_err == SVN_ERR_NODE_UNEXPECTED_KIND) ||
-                      (err->apr_err == SVN_ERR_WC_MISSING)))
-            {
-              svn_error_clear(err);
-            }
-          else
-            SVN_ERR(err);
-        }
-
       /* Descend only if the subdirectory is a working copy directory (which
          we've discovered because we got a THIS_DIR entry. And only descend
          if DEPTH permits it, of course.  */
-      if (full_entry
+      if (!*entry->name
           && (depth == svn_depth_unknown
               || depth == svn_depth_immediates
               || depth == svn_depth_infinity))
@@ -974,14 +949,11 @@ get_dir_status(struct edit_baton *eb,
                void *cancel_baton,
                apr_pool_t *pool)
 {
-  apr_hash_t *entries;
   apr_hash_index_t *hi;
   const svn_wc_entry_t *dir_entry;
-  const char *path_for_tc;
-  apr_hash_t *dirents;
+  apr_hash_t *dirents, *nodes, *tree_conflicts, *all_children;
   apr_array_header_t *patterns = NULL;
   apr_pool_t *iterpool, *subpool = svn_pool_create(pool);
-  apr_hash_t *tree_conflicts;
 
   /* See if someone wants to cancel this operation. */
   if (cancel_func)
@@ -990,21 +962,58 @@ get_dir_status(struct edit_baton *eb,
   if (depth == svn_depth_unknown)
     depth = svn_depth_infinity;
 
-  /* Load entries file for the directory into the requested pool. */
-  { /* ### TODO: Replace with node walker */
-    svn_wc_adm_access_t *adm_access;
-    adm_access = svn_wc__adm_retrieve_internal2(eb->db, local_abspath, subpool);
-    SVN_ERR_ASSERT(adm_access != NULL);
-    SVN_ERR(svn_wc_entries_read(&entries, adm_access, FALSE, subpool));
+  /* Load list of childnodes. */
+  {
+    apr_array_header_t *child_nodes;
+    int i;
 
-    path_for_tc = svn_wc_adm_access_path(adm_access);
+    SVN_ERR(svn_wc__db_read_children(&child_nodes, eb->db, local_abspath, subpool, subpool));
+
+    nodes = apr_hash_make(subpool);
+    for (i = 0; i < child_nodes->nelts; i++)
+      {
+        const char *key = APR_ARRAY_IDX(child_nodes, i, const char*);
+        apr_hash_set(nodes, key, APR_HASH_KEY_STRING, key);
+      }
   }
 
-  /* Read PATH's dirents. */
   SVN_ERR(svn_io_get_dirents2(&dirents, local_abspath, subpool));
-
   /* Get this directory's entry. */
-  dir_entry = apr_hash_get(entries, "", APR_HASH_KEY_STRING);
+  SVN_ERR(svn_wc__get_entry(&dir_entry, eb->db, local_abspath, FALSE,
+                            svn_node_dir, FALSE, subpool, subpool));
+
+  if (selected == NULL)
+    {
+      /* Create a hash containing all children */
+      all_children = apr_hash_overlay(subpool, nodes, dirents);
+
+      /* ### This creates the tree conflicts with only their name as path.
+             We can't just push these in the status result! */
+      SVN_ERR(svn_wc__read_tree_conflicts(&tree_conflicts,
+                                          dir_entry->tree_conflict_data,
+                                          "" /* Used for path */, subpool));
+
+      /* Optimize for the no-tree-conflict case */
+      if (apr_hash_count(tree_conflicts) > 0)
+        all_children = apr_hash_overlay(subpool, tree_conflicts, all_children);
+    }
+  else
+    {
+      svn_wc_conflict_description_t *tc;
+      const char *selected_abspath ;
+      tree_conflicts = apr_hash_make(subpool);
+      all_children = apr_hash_make(subpool);
+      
+      apr_hash_set(all_children, selected, APR_HASH_KEY_STRING, selected);
+
+      selected_abspath = svn_dirent_join(local_abspath, selected, subpool);
+
+      SVN_ERR(svn_wc__db_op_get_tree_conflict(&tc, eb->db, selected_abspath,
+                                              subpool, subpool));
+
+      if (tc != NULL)
+        apr_hash_set(tree_conflicts, selected, APR_HASH_KEY_STRING, tc);
+    }
 
   /* If "this dir" has "svn:externals" property set on it, store the
      name and value in traversal_info, along with this directory's depth.
@@ -1013,82 +1022,22 @@ get_dir_status(struct edit_baton *eb,
   SVN_ERR(handle_externals(eb, local_abspath, dir_entry->depth, pool,
                            subpool));
 
-  /* Early out -- our caller only cares about a single entry in this
-     directory.  */
-  if (selected)
-    {
-      const svn_wc_entry_t *entry_entry;
-      const char *selected_abspath = svn_dirent_join(local_abspath, selected,
-                                                     subpool);
-      svn_io_dirent_t* dirent_p = apr_hash_get(dirents, selected,
-                                               APR_HASH_KEY_STRING);
-      entry_entry = apr_hash_get(entries, selected, APR_HASH_KEY_STRING);
-
-      /* If SELECTED is versioned, send its versioned status. */
-      if (entry_entry)
-        {
-          SVN_ERR(handle_dir_entry(eb, selected_abspath,
-                                   dir_entry, entry_entry,
-                                   dirent_p ? dirent_p->kind : svn_node_none,
-                                   dirent_p ? dirent_p->special : FALSE,
-                                   ignore_patterns, depth, get_all,
-                                   no_ignore, status_func, status_baton,
-                                   cancel_func, cancel_baton, subpool));
-        }
-      /* Otherwise, if it exists, send its unversioned status. */
-      else if (dirent_p)
-        {
-          if (ignore_patterns && ! patterns)
-            SVN_ERR(collect_ignore_patterns(&patterns, eb->db, local_abspath,
-                                            ignore_patterns, subpool,
-                                            subpool));
-          SVN_ERR(send_unversioned_item(eb, selected_abspath,
-                                        dirent_p->kind, dirent_p->special,
-                                        patterns, no_ignore,
-                                        status_func, status_baton, subpool));
-        }
-      /* Otherwise, if it doesn't exist, but is a tree conflict victim,
-         send its unversioned status. */
-      else
-        {
-          svn_wc_conflict_description_t *tree_conflict;
-
-          SVN_ERR(svn_wc__db_op_get_tree_conflict(&tree_conflict, eb->db,
-                                                  selected_abspath, subpool, subpool));
-          if (tree_conflict)
-            {
-              /* A tree conflict will block commit, so we'll pass TRUE
-                 instead of the user's no_ignore arg. */
-              if (ignore_patterns && ! patterns)
-                SVN_ERR(collect_ignore_patterns(&patterns, eb->db,
-                                                local_abspath,
-                                                ignore_patterns, subpool,
-                                                subpool));
-              SVN_ERR(send_unversioned_item(eb, selected_abspath,
-                                            svn_node_none, FALSE,
-                                            patterns, TRUE,
-                                            status_func, status_baton,
-                                            subpool));
-            }
-        }
-
-      /* Regardless, we're done here.  Let's go home. */
-      return SVN_NO_ERROR;
-    }
-
   /** If we get here, ENTRY is NULL and we are handling all the
       directory entries (depending on specified depth). */
 
-  /* Handle "this-dir" first. */
-  if (! skip_this_dir)
-    SVN_ERR(send_status_structure(eb, local_abspath,
-                                  dir_entry, parent_entry, svn_node_dir, FALSE,
-                                  get_all, FALSE, status_func,
-                                  status_baton, subpool));
+  if (!selected)
+    {
+      /* Handle "this-dir" first. */
+      if (! skip_this_dir)
+        SVN_ERR(send_status_structure(eb, local_abspath,
+                                      dir_entry, parent_entry, svn_node_dir,
+                                      FALSE, get_all, FALSE, status_func,
+                                      status_baton, subpool));
 
-  /* If the requested depth is empty, we only need status on this-dir. */
-  if (depth == svn_depth_empty)
-    return SVN_NO_ERROR;
+      /* If the requested depth is empty, we only need status on this-dir. */
+      if (depth == svn_depth_empty)
+        return SVN_NO_ERROR;
+    }
 
   /* Make our iteration pool. */
   iterpool = svn_pool_create(subpool);
@@ -1096,111 +1045,131 @@ get_dir_status(struct edit_baton *eb,
   /* Add empty status structures for each of the unversioned things.
      This also catches externals; not sure whether that's good or bad,
      but it's what's happening right now. */
-  for (hi = apr_hash_first(subpool, dirents); hi; hi = apr_hash_next(hi))
+  for (hi = apr_hash_first(subpool, all_children); hi; hi = apr_hash_next(hi))
     {
       const void *key;
       apr_ssize_t klen;
-      void *val;
+      const char *node_abspath;
       svn_io_dirent_t *dirent_p;
+
+      apr_hash_this(hi, &key, &klen, NULL);
+
+      dirent_p = apr_hash_get(dirents, key, klen);
 
       svn_pool_clear(iterpool);
 
-      apr_hash_this(hi, &key, &klen, &val);
+      if (apr_hash_get(nodes, key, klen))
+        { /* Versioned node */
+          svn_error_t *err;
+          svn_wc_entry_t *entry;
 
-      /* Skip versioned, non-external things, and skip the
-         administrative directory. */
-      if (apr_hash_get(entries, key, klen)
-          || svn_wc_is_adm_dir(key, iterpool))
-        continue;
+          svn_boolean_t hidden;
+          node_abspath = svn_dirent_join(local_abspath, key, iterpool);
 
-      dirent_p = val;
+          SVN_ERR(svn_wc__db_node_hidden(&hidden, eb->db, node_abspath,
+                                         iterpool));
+
+          if (!hidden)
+            {
+              err = svn_wc__get_entry(&entry, eb->db, node_abspath, FALSE,
+                                      dirent_p ? dirent_p->kind
+                                               : svn_node_unknown,
+                                      FALSE, iterpool,
+                                      iterpool);
+
+              if (err)
+                {
+                  if (err->apr_err == SVN_ERR_NODE_UNEXPECTED_KIND)
+                    svn_error_clear(err);
+                  else if (err && err->apr_err == SVN_ERR_WC_MISSING)
+                    {
+                      svn_error_clear(err);
+
+                      /* Most likely the parent refers to a missing child; 
+                       * retrieve the stub stored in the parent */
+
+                      err = svn_wc__get_entry(&entry, eb->db, node_abspath,
+                                              FALSE, svn_node_dir, TRUE,
+                                              iterpool, iterpool);
+
+                      if (err && err->apr_err == SVN_ERR_NODE_UNEXPECTED_KIND)
+                        svn_error_clear(err);
+                      else
+                        SVN_ERR(err);
+                    }
+                  else
+                    return svn_error_return(err);
+                }
+
+              if (depth == svn_depth_files && entry->kind == svn_node_dir)
+                continue;
+
+              /* Handle this directory entry (possibly recursing). */
+              SVN_ERR(handle_dir_entry(eb,
+                                       node_abspath,
+                                       dir_entry,
+                                       entry,
+                                       dirent_p ? dirent_p->kind
+                                                : svn_node_none,
+                                       dirent_p ? dirent_p->special : FALSE,
+                                       ignore_patterns,
+                                       depth == svn_depth_infinity 
+                                                           ? depth
+                                                           : svn_depth_empty,
+                                       get_all,
+                                       no_ignore,
+                                       status_func, status_baton,
+                                       cancel_func, cancel_baton, iterpool));
+              continue;
+            }
+        }
+      
+      if (apr_hash_get(tree_conflicts, key, klen))
+        { /* Tree conflict */
+          if (ignore_patterns && ! patterns)
+            SVN_ERR(collect_ignore_patterns(&patterns, eb->db, local_abspath,
+                                            ignore_patterns, subpool,
+                                            iterpool));
+
+          SVN_ERR(send_unversioned_item(eb,
+                                        svn_dirent_join(local_abspath, key,
+                                                        iterpool),
+                                        dirent_p ? dirent_p->kind
+                                                 : svn_node_none,
+                                        dirent_p ? dirent_p->special : FALSE,
+                                        patterns,
+                                        no_ignore,
+                                        status_func,
+                                        status_baton,
+                                        iterpool));
+
+          continue;
+        }
+
+      /* Unversioned node */
+      if (dirent_p == NULL)
+        continue; /* Selected node, but not found */
 
       if (depth == svn_depth_files && dirent_p->kind == svn_node_dir)
         continue;
 
-      if (ignore_patterns && ! patterns)
-        SVN_ERR(collect_ignore_patterns(&patterns, eb->db, local_abspath,
-                                        ignore_patterns, subpool, subpool));
-
-      SVN_ERR(send_unversioned_item(eb, svn_dirent_join(local_abspath, key,
-                                                        iterpool),
-                                    dirent_p->kind, dirent_p->special,
-                                    patterns, no_ignore,
-                                    status_func, status_baton, iterpool));
-    }
-
-  /* Add empty status structures for nonexistent tree conflict victims. */
-  SVN_ERR(svn_wc__read_tree_conflicts(&tree_conflicts,
-                                      dir_entry->tree_conflict_data,
-                                      path_for_tc, subpool));
-
-  for (hi = apr_hash_first(pool, tree_conflicts); hi; hi = apr_hash_next(hi))
-    {
-      const svn_wc_conflict_description_t *conflict =
-          svn_apr_hash_index_val(hi);
-      const char *tree_basename;
-
-      svn_pool_clear(iterpool);
-
-      /* Skip versioned and non-versioned things. */
-      tree_basename = svn_dirent_basename(conflict->path, iterpool);
-      if (apr_hash_get(entries, tree_basename, APR_HASH_KEY_STRING)
-          || apr_hash_get(dirents, tree_basename, APR_HASH_KEY_STRING))
+      if (svn_wc_is_adm_dir(key, iterpool))
         continue;
 
       if (ignore_patterns && ! patterns)
         SVN_ERR(collect_ignore_patterns(&patterns, eb->db, local_abspath,
-                                        ignore_patterns, subpool, subpool));
+                                        ignore_patterns, subpool,
+                                        iterpool));
 
       SVN_ERR(send_unversioned_item(eb,
-                                    svn_dirent_join(local_abspath,
-                                                    tree_basename,
+                                    svn_dirent_join(local_abspath, key,
                                                     iterpool),
-                                    svn_node_none, FALSE,
-                                    patterns, no_ignore,
-                                    status_func, status_baton, iterpool));
-    }
-
-
-
-  /* Loop over entries hash */
-  for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
-    {
-      const void *key;
-      void *val;
-      svn_io_dirent_t *dirent_p;
-
-      /* Get the next entry */
-      apr_hash_this(hi, &key, NULL, &val);
-
-      dirent_p = apr_hash_get(dirents, key, APR_HASH_KEY_STRING);
-
-      /* ### todo: What if the subdir is from another repository? */
-
-      /* Skip "this-dir". */
-      if (strcmp(key, SVN_WC_ENTRY_THIS_DIR) == 0)
-        continue;
-
-      /* Skip directories if user is only interested in files */
-      if (depth == svn_depth_files
-          && dirent_p && dirent_p->kind == svn_node_dir)
-        continue;
-
-      /* Clear the iteration subpool. */
-      svn_pool_clear(iterpool);
-
-      /* Handle this directory entry (possibly recursing). */
-      SVN_ERR(handle_dir_entry(eb,
-                               svn_dirent_join(local_abspath, key, iterpool),
-                               dir_entry, val,
-                               dirent_p ? dirent_p->kind : svn_node_none,
-                               dirent_p ? dirent_p->special : FALSE,
-                               ignore_patterns,
-                               depth == svn_depth_infinity ? depth
-                                                           : svn_depth_empty,
-                               get_all, no_ignore,
-                               status_func, status_baton, cancel_func,
-                               cancel_baton, iterpool));
+                                    dirent_p->kind,
+                                    dirent_p->special,
+                                    patterns,
+                                    no_ignore,
+                                    status_func, status_baton,
+                                    iterpool));
     }
 
   /* Destroy our subpools. */
