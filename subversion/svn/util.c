@@ -456,7 +456,7 @@ svn_cl__edit_string_externally(svn_string_t **edited_contents /* UTF-8! */,
      of the file we used, and make a note not to destroy it.  */
   if (tmpfile_left)
     {
-      *tmpfile_left = svn_path_join(base_dir, tmpfile_name, pool);
+      *tmpfile_left = svn_dirent_join(base_dir, tmpfile_name, pool);
       remove_file = FALSE;
     }
 
@@ -737,7 +737,7 @@ svn_cl__get_log_message(const char **log_msg,
             path = ".";
 
           if (! svn_path_is_url(path) && lmb->base_dir)
-            path = svn_path_is_child(lmb->base_dir, path, pool);
+            path = svn_dirent_is_child(lmb->base_dir, path, pool);
 
           /* If still no path, then just use current directory. */
           if (! path)
