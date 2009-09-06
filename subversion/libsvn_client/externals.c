@@ -1288,7 +1288,7 @@ svn_client__fetch_externals(apr_hash_t *externals,
 
 
 svn_error_t *
-svn_client__do_external_status(svn_wc_traversal_info_t *traversal_info,
+svn_client__do_external_status(apr_hash_t *externals_new,
                                svn_wc_status_func4_t status_func,
                                void *status_baton,
                                svn_depth_t depth,
@@ -1298,12 +1298,8 @@ svn_client__do_external_status(svn_wc_traversal_info_t *traversal_info,
                                svn_client_ctx_t *ctx,
                                apr_pool_t *pool)
 {
-  apr_hash_t *externals_old, *externals_new;
   apr_hash_index_t *hi;
   apr_pool_t *subpool = svn_pool_create(pool);
-
-  /* Get the values of the svn:externals properties. */
-  svn_wc_edited_externals(&externals_old, &externals_new, traversal_info);
 
   /* Loop over the hash of new values (we don't care about the old
      ones).  This is a mapping of versioned directories to property
@@ -1365,6 +1361,38 @@ svn_client__do_external_status(svn_wc_traversal_info_t *traversal_info,
 
   /* Destroy SUBPOOL and (implicitly) ITERPOOL. */
   svn_pool_destroy(subpool);
+
+  return SVN_NO_ERROR;
+}
+
+/* Implements svn_wc_externals_update_t */
+svn_error_t *
+svn_cl__store_externals(void *baton,
+                        const char *local_abspath,
+                        const svn_string_t *old_value,
+                        const svn_string_t *new_value,
+                        svn_depth_t depth,
+                        apr_pool_t *scratch_pool)
+{
+  struct svn_cl__externals_store *eb = baton;
+  apr_pool_t *dup_pool = eb->pool;
+
+  local_abspath = apr_pstrdup(dup_pool, local_abspath);
+
+  if (eb->externals_old != NULL && old_value != NULL)
+    apr_hash_set(eb->externals_new,
+                 local_abspath, APR_HASH_KEY_STRING,
+                 apr_pstrndup(dup_pool, old_value->data, old_value->len));
+
+  if (eb->externals_new != NULL && new_value != NULL)
+    apr_hash_set(eb->externals_new,
+                 local_abspath, APR_HASH_KEY_STRING,
+                 apr_pstrndup(dup_pool, new_value->data, new_value->len));
+
+  if (eb->depths != NULL)
+    apr_hash_set(eb->depths,
+                 local_abspath, APR_HASH_KEY_STRING,
+                 svn_depth_to_word(depth));
 
   return SVN_NO_ERROR;
 }

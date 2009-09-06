@@ -244,7 +244,6 @@ svn_client_status5(svn_revnum_t *result_rev,
                    apr_pool_t *pool)  /* ### aka scratch_pool */
 {
   svn_wc_adm_access_t *anchor_access, *target_access;
-  svn_wc_traversal_info_t *traversal_info = svn_wc_init_traversal_info(pool);
   const char *anchor, *target;
   const svn_delta_editor_t *editor;
   void *edit_baton, *set_locks_baton;
@@ -257,6 +256,7 @@ svn_client_status5(svn_revnum_t *result_rev,
   apr_hash_t *changelist_hash = NULL;
   svn_revnum_t edit_revision = SVN_INVALID_REVNUM;
   svn_wc_context_t *wc_ctx = ctx->wc_ctx;
+  struct svn_cl__externals_store externals_store = { NULL };
 
   if (changelists && changelists->nelts)
     SVN_ERR(svn_hash_from_cstring_keys(&changelist_hash, changelists, pool));
@@ -300,8 +300,8 @@ svn_client_status5(svn_revnum_t *result_rev,
     return svn_error_return(err);
 
   anchor = svn_wc_adm_access_path(anchor_access);
-  SVN_ERR(svn_dirent_get_absolute(&target_abspath, target, pool));
   SVN_ERR(svn_dirent_get_absolute(&anchor_abspath, anchor, pool));
+  target_abspath = svn_dirent_join(anchor_abspath, target, pool);
 
   if (svn_dirent_is_absolute(anchor))
     {
@@ -314,14 +314,24 @@ svn_client_status5(svn_revnum_t *result_rev,
       sb.anchor_relpath = anchor;
     }
 
+  if (!ignore_externals)
+    {
+      externals_store.pool = pool;
+      externals_store.externals_new = apr_hash_make(pool);
+    }
+
   /* Get the status edit, and use our wrapping status function/baton
      as the callback pair. */
   SVN_ERR(svn_wc_get_default_ignores(&ignores, ctx->config, pool));
   SVN_ERR(svn_wc_get_status_editor5(&editor, &edit_baton, &set_locks_baton,
                                     &edit_revision, wc_ctx, anchor_access,
-                                    target, depth, get_all, no_ignore, ignores,
-                                    tweak_status, &sb, ctx->cancel_func,
-                                    ctx->cancel_baton, traversal_info,
+                                    target, depth, get_all, no_ignore,
+                                    ignores, tweak_status, &sb,
+                                    ctx->cancel_func, ctx->cancel_baton,
+                                    ignore_externals ? svn_cl__store_externals
+                                                     : NULL,
+                                    ignore_externals ? &externals_store
+                                                     : NULL,
                                     pool, pool));
 
   /* If we want to know about out-of-dateness, we crawl the working copy and
@@ -409,10 +419,10 @@ svn_client_status5(svn_revnum_t *result_rev,
              within PATH.  When we call reporter->finish_report,
              EDITOR will be driven to describe differences between our
              working copy and HEAD. */
-          SVN_ERR(svn_wc_crawl_revisions4(path, target_access,
+          SVN_ERR(svn_wc_crawl_revisions5(wc_ctx, anchor_abspath, target_abspath,
                                           &lock_fetch_reporter, &rb, FALSE,
                                           depth, TRUE, (! server_supports_depth),
-                                          FALSE, NULL, NULL, NULL, pool));
+                                          FALSE, NULL, NULL, NULL, NULL, pool));
         }
     }
   else
@@ -451,8 +461,9 @@ svn_client_status5(svn_revnum_t *result_rev,
      in the future.
   */
   if (SVN_DEPTH_IS_RECURSIVE(depth) && (! ignore_externals))
-    SVN_ERR(svn_client__do_external_status(traversal_info, status_func,
-                                           status_baton, depth, get_all,
+    SVN_ERR(svn_client__do_external_status(externals_store.externals_new,
+                                           status_func, status_baton,
+                                           depth, get_all,
                                            update, no_ignore, ctx, pool));
 
   return SVN_NO_ERROR;
