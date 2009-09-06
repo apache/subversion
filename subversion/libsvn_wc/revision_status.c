@@ -135,7 +135,7 @@ svn_wc_revision_status2(svn_wc_revision_status_t **result_p,
                                     NULL  /* ignore_patterns */,
                                     analyze_status, &sb,
                                     cancel_func, cancel_baton,
-                                    NULL  /* traversal_info */,
+                                    NULL, NULL, /* external updates */
                                     scratch_pool, scratch_pool));
 
   SVN_ERR(editor->close_edit(edit_baton, scratch_pool));

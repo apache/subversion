@@ -228,18 +228,19 @@ restore_node(svn_boolean_t *restored,
 }
 
 /* Check if there is an externals definition stored on LOCAL_ABSPATH
-   using DB.  In that case store the externals definition and DEPTH in
-   TRAVERSAL_INFO.  Use SCRATCH_POOL for temporary allocations. */
+   using DB.  In that case send the externals definition and DEPTH to
+   EXTERNAL_FUNC.  Use SCRATCH_POOL for temporary allocations. */
 static svn_error_t *
 read_traversal_info(svn_wc__db_t *db,
                     const char *local_abspath,
-                    svn_wc_traversal_info_t *traversal_info,
+                    svn_wc_external_update_t external_func,
+                    void *external_baton,
                     svn_depth_t depth,
                     apr_pool_t *scratch_pool)
 {
   const svn_string_t *val;
 
-  SVN_ERR_ASSERT(traversal_info != NULL);
+  SVN_ERR_ASSERT(external_func != NULL);
 
   SVN_ERR(svn_wc__internal_propget(&val, db, local_abspath,
                                    SVN_PROP_EXTERNALS,
@@ -247,20 +248,8 @@ read_traversal_info(svn_wc__db_t *db,
 
   if (val)
     {
-      svn_wc_adm_access_t *adm_access = 
-             svn_wc__adm_retrieve_internal2(db, local_abspath, scratch_pool);
-      apr_pool_t *dup_pool = traversal_info->pool;
-      const char *dup_path = apr_pstrdup(dup_pool,
-                                         svn_wc_adm_access_path(adm_access));
-      const char *dup_val = apr_pstrmemdup(dup_pool, val->data, val->len);
-
-      apr_hash_set(traversal_info->externals_old,
-                   dup_path, APR_HASH_KEY_STRING, dup_val);
-      apr_hash_set(traversal_info->externals_new,
-                   dup_path, APR_HASH_KEY_STRING, dup_val);
-      apr_hash_set(traversal_info->depths,
-                   dup_path, APR_HASH_KEY_STRING,
-                   svn_depth_to_word(depth));
+      SVN_ERR((external_func)(external_baton, local_abspath, val, val, depth,
+                              scratch_pool));
     }
 
   return SVN_NO_ERROR;
@@ -323,6 +312,8 @@ report_revisions_and_depths(svn_wc__db_t *db,
                             svn_revnum_t dir_rev,
                             const svn_ra_reporter3_t *reporter,
                             void *report_baton,
+                            svn_wc_external_update_t external_func,
+                            void *external_baton,
                             svn_wc_notify_func2_t notify_func,
                             void *notify_baton,
                             svn_boolean_t restore_files,
@@ -331,7 +322,6 @@ report_revisions_and_depths(svn_wc__db_t *db,
                             svn_boolean_t depth_compatibility_trick,
                             svn_boolean_t report_everything,
                             svn_boolean_t use_commit_times,
-                            svn_wc_traversal_info_t *traversal_info,
                             apr_pool_t *pool)
 {
   const char *dir_abspath;
@@ -374,10 +364,10 @@ report_revisions_and_depths(svn_wc__db_t *db,
 
   /* If "this dir" has "svn:externals" property set on it, store its name
      and depth in traversal_info. */
-  if (traversal_info)
+  if (external_func)
     {
-      SVN_ERR(read_traversal_info(db, dir_abspath, traversal_info,
-                                  dir_depth, subpool));
+      SVN_ERR(read_traversal_info(db, dir_abspath, external_func,
+                                  external_baton, dir_depth, subpool));
     }
 
   /* Looping over current directory's SVN entries: */
@@ -722,13 +712,13 @@ report_revisions_and_depths(svn_wc__db_t *db,
                                                 this_path,
                                                 this_rev,
                                                 reporter, report_baton,
+                                                external_func, external_baton,
                                                 notify_func, notify_baton,
                                                 restore_files, depth,
                                                 honor_depth_exclude,
                                                 depth_compatibility_trick,
                                                 start_empty,
                                                 use_commit_times,
-                                                traversal_info,
                                                 iterpool));
         } /* end directory case */
     } /* end main entries loop */
@@ -755,9 +745,10 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
                         svn_boolean_t honor_depth_exclude,
                         svn_boolean_t depth_compatibility_trick,
                         svn_boolean_t use_commit_times,
+                        svn_wc_external_update_t external_func,
+                        void *external_baton,
                         svn_wc_notify_func2_t notify_func,
                         void *notify_baton,
-                        svn_wc_traversal_info_t *traversal_info,
                         apr_pool_t *pool)
 {
   svn_error_t *fserr, *err;
@@ -898,13 +889,13 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
                                             "",
                                             base_rev,
                                             reporter, report_baton,
+                                            external_func, external_baton,
                                             notify_func, notify_baton,
                                             restore_files, depth,
                                             honor_depth_exclude,
                                             depth_compatibility_trick,
                                             start_empty,
                                             use_commit_times,
-                                            traversal_info,
                                             pool);
           if (err)
             goto abort_report;

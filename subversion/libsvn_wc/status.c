@@ -97,8 +97,11 @@ struct edit_baton
   /* The configured set of default ignores. */
   const apr_array_header_t *ignores;
 
+  /* Externals function/baton */
+  svn_wc_external_update_t external_func;
+  void *external_baton;
+
   /* Externals info harvested during the status run. */
-  svn_wc_traversal_info_t *traversal_info;
   apr_hash_t *externals;
 
   /* Status item for the path represented by the anchor of the edit. */
@@ -877,27 +880,12 @@ handle_externals(struct edit_baton *eb,
       apr_array_header_t *ext_items;
       int i;
 
-      if (eb->traversal_info && 
+      if (eb->external_func && 
           svn_dirent_is_ancestor(eb->target_abspath, local_abspath))
         {
-          apr_pool_t *dup_pool = eb->traversal_info->pool;          
-          const char *dup_val = apr_pstrmemdup(dup_pool, prop_val->data,
-                                               prop_val->len);
-          const char *dup_path = 
-                  svn_dirent_join(eb->anchor,
-                                  svn_dirent_skip_ancestor(eb->anchor_abspath,
-                                                           local_abspath),
-                                  dup_pool);
-
-          /* First things first -- we put the externals information
-             into the "global" traversal info structure. */
-          apr_hash_set(eb->traversal_info->externals_old,
-                       dup_path, APR_HASH_KEY_STRING, dup_val);
-          apr_hash_set(eb->traversal_info->externals_new,
-                       dup_path, APR_HASH_KEY_STRING, dup_val);
-          apr_hash_set(eb->traversal_info->depths,
-                       dup_path, APR_HASH_KEY_STRING,
-                       svn_depth_to_word(depth));
+          SVN_ERR((eb->external_func)(eb->external_baton, local_abspath,
+                                      prop_val, prop_val, depth,
+                                      scratch_pool));
         }
 
       /* Now, parse the thing, and copy the parsed results into
@@ -2192,7 +2180,8 @@ svn_wc_get_status_editor5(const svn_delta_editor_t **editor,
                           void *status_baton,
                           svn_cancel_func_t cancel_func,
                           void *cancel_baton,
-                          svn_wc_traversal_info_t *traversal_info,
+                          svn_wc_external_update_t external_func,
+                          void *external_baton,
                           apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool)
 {
@@ -2215,7 +2204,8 @@ svn_wc_get_status_editor5(const svn_delta_editor_t **editor,
   eb->status_baton      = status_baton;
   eb->cancel_func       = cancel_func;
   eb->cancel_baton      = cancel_baton;
-  eb->traversal_info    = traversal_info;
+  eb->external_func     = external_func;
+  eb->external_baton    = external_baton;
   eb->externals         = apr_hash_make(result_pool);
   eb->anchor            = svn_wc_adm_access_path(anchor);
   eb->anchor_abspath    = svn_wc__adm_access_abspath(anchor);

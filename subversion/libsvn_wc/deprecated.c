@@ -38,7 +38,62 @@
 
 #include "svn_private_config.h"
 
+/* baton for traversal_info_update */
+struct traversal_info_update_baton
+{
+  struct svn_wc_traversal_info_t *traversal;
+  svn_wc__db_t *db;
+};
 
+/* Helper for updating svn_wc_traversal_info_t structures
+ * Implements svn_wc_external_update_t */
+svn_error_t *
+traversal_info_update(void *baton,
+                      const char *local_abspath,
+                      const svn_string_t *old_val,
+                      const svn_string_t *new_val,
+                      svn_depth_t depth,
+                      apr_pool_t *scratch_pool)
+{
+  const char *dup_path;
+  svn_wc_adm_access_t *adm_access;
+  struct traversal_info_update_baton *ub = baton;
+  apr_pool_t *dup_pool = ub->traversal->pool;
+  const char *dup_val = NULL;
+
+  /* We make the abspath relative by retrieving the access baton
+     for the specific directory */
+  adm_access = svn_wc__adm_retrieve_internal2(ub->db, local_abspath,
+                                              scratch_pool);
+
+  if (adm_access)
+    dup_path = apr_pstrdup(dup_pool, svn_wc_adm_access_path(adm_access));
+  else
+    dup_path = apr_pstrdup(dup_pool, local_abspath);
+
+  if (old_val)
+    {
+      dup_val = apr_pstrmemdup(dup_pool, old_val->data, old_val->len);
+
+      apr_hash_set(ub->traversal->externals_old, dup_path, APR_HASH_KEY_STRING,
+                   dup_val);
+    }
+
+  if (new_val)
+    {
+      /* In most cases the value is identical */
+      if (old_val != new_val)
+        dup_val = apr_pstrmemdup(dup_pool, new_val->data, new_val->len);
+
+      apr_hash_set(ub->traversal->externals_new, dup_path, APR_HASH_KEY_STRING,
+                   dup_val);
+    }
+
+  apr_hash_set(ub->traversal->depths, dup_path, APR_HASH_KEY_STRING,
+               svn_depth_to_word(depth));
+
+  return SVN_NO_ERROR;
+}
 
 
 /*** From adm_crawler.c ***/
@@ -59,12 +114,21 @@ svn_wc_crawl_revisions4(const char *path,
                         apr_pool_t *pool)
 {
   svn_wc_context_t *wc_ctx;
+  svn_wc__db_t *wc_db = svn_wc__adm_get_db(adm_access);
+  svn_wc_external_update_t external_func = NULL;
+  struct traversal_info_update_baton *eb = NULL;
 
-  SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL,
-                                         svn_wc__adm_get_db(adm_access),
-                                         pool));
-
+  SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL, wc_db, pool));
   SVN_ERR(svn_dirent_get_absolute(&path, path, pool));
+
+  if (traversal_info)
+    {
+      eb = apr_palloc(pool, sizeof(*eb));
+      eb->traversal = traversal_info;
+      eb->db = wc_db;
+
+      external_func = traversal_info_update;
+    }
 
   SVN_ERR(svn_wc_crawl_revisions5(wc_ctx,
                                   svn_wc__adm_access_abspath(adm_access),
@@ -76,9 +140,10 @@ svn_wc_crawl_revisions4(const char *path,
                                   honor_depth_exclude,
                                   depth_compatibility_trick,
                                   use_commit_times,
+                                  external_func,
+                                  eb,
                                   notify_func,
                                   notify_baton,
-                                  traversal_info,
                                   pool));
 
   return svn_error_return(svn_wc_context_destroy(wc_ctx));
@@ -1779,27 +1844,39 @@ svn_wc_get_status_editor4(const svn_delta_editor_t **editor,
                           apr_pool_t *pool)
 {
   struct status4_wrapper_baton *swb = apr_palloc(pool, sizeof(*swb));
+  svn_wc__db_t *wc_db;
   svn_wc_context_t *wc_ctx;
-  apr_pool_t *scratch_pool = svn_pool_create(pool);
-  svn_error_t *err;
+  svn_wc_external_update_t external_func = NULL;
+  struct traversal_info_update_baton *eb = NULL;
 
   swb->old_func = status_func;
   swb->old_baton = status_baton;
 
+  wc_db = svn_wc__adm_get_db(anchor);
+
   SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL /* config */,
-                                         svn_wc__adm_get_db(anchor),
-                                         scratch_pool));
+                                         wc_db, pool));
 
-  err = svn_wc_get_status_editor5(editor, edit_baton, set_locks_baton,
-                                  edit_revision, wc_ctx, anchor, target,
-                                  depth, get_all, no_ignore, ignore_patterns,
-                                  status4_wrapper_func, swb,
-                                  cancel_func, cancel_baton, traversal_info,
-                                  pool, scratch_pool);
+  if (traversal_info)
+    {
+      eb = apr_palloc(pool, sizeof(*eb));
+      eb->traversal = traversal_info;
+      eb->db = wc_db;
 
-  /* This destroys the context also. */
-  svn_pool_destroy(scratch_pool);
-  return err;
+      external_func = traversal_info_update;
+    }
+
+  SVN_ERR(svn_wc_get_status_editor5(editor, edit_baton, set_locks_baton,
+                                    edit_revision, wc_ctx, anchor, target,
+                                    depth, get_all, no_ignore, ignore_patterns,
+                                    status4_wrapper_func, swb,
+                                    cancel_func, cancel_baton,
+                                    external_func, eb,
+                                    pool, pool));
+
+  /* We can't destroy wc_ctx here, because the editor needs it while it's
+     driven. */
+  return SVN_NO_ERROR;
 }
 
 struct status_editor3_compat_baton
@@ -2155,6 +2232,273 @@ svn_wc_is_wc_root(svn_boolean_t *wc_root,
 
   return svn_error_return(svn_wc_context_destroy(wc_ctx));
 }
+
+svn_error_t *
+svn_wc_get_update_editor3(svn_revnum_t *target_revision,
+                          svn_wc_adm_access_t *anchor,
+                          const char *target,
+                          svn_boolean_t use_commit_times,
+                          svn_depth_t depth,
+                          svn_boolean_t depth_is_sticky,
+                          svn_boolean_t allow_unver_obstructions,
+                          svn_wc_notify_func2_t notify_func,
+                          void *notify_baton,
+                          svn_cancel_func_t cancel_func,
+                          void *cancel_baton,
+                          svn_wc_conflict_resolver_func_t conflict_func,
+                          void *conflict_baton,
+                          svn_wc_get_file_t fetch_func,
+                          void *fetch_baton,
+                          const char *diff3_cmd,
+                          apr_array_header_t *preserved_exts,
+                          const svn_delta_editor_t **editor,
+                          void **edit_baton,
+                          svn_wc_traversal_info_t *traversal_info,
+                          apr_pool_t *pool)
+{
+  svn_wc_context_t *wc_ctx;
+  svn_wc__db_t *db = svn_wc__adm_get_db(anchor);
+  svn_wc_external_update_t external_func = NULL;
+  struct traversal_info_update_baton *eb = NULL;
+
+  SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL, db, pool));
+
+  if (traversal_info)
+    {
+      eb = apr_palloc(pool, sizeof(*eb));
+      eb->db = db;
+      eb->traversal = traversal_info;
+      external_func = traversal_info_update;
+    }
+
+  SVN_ERR(svn_wc_get_update_editor4(editor, edit_baton,
+                                    target_revision,
+                                    wc_ctx,
+                                    anchor, target,
+                                    use_commit_times,
+                                    depth, depth_is_sticky,
+                                    allow_unver_obstructions,
+                                    notify_func, notify_baton,
+                                    cancel_func, cancel_baton,
+                                    conflict_func, conflict_baton,
+                                    external_func, eb,
+                                    fetch_func, fetch_baton,
+                                    diff3_cmd,
+                                    preserved_exts,
+                                    pool, pool));
+
+  /* We can't destroy wc_ctx here, because the editor needs it while it's
+     driven. */
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc_get_update_editor2(svn_revnum_t *target_revision,
+                          svn_wc_adm_access_t *anchor,
+                          const char *target,
+                          svn_boolean_t use_commit_times,
+                          svn_boolean_t recurse,
+                          svn_wc_notify_func2_t notify_func,
+                          void *notify_baton,
+                          svn_cancel_func_t cancel_func,
+                          void *cancel_baton,
+                          const char *diff3_cmd,
+                          const svn_delta_editor_t **editor,
+                          void **edit_baton,
+                          svn_wc_traversal_info_t *traversal_info,
+                          apr_pool_t *pool)
+{
+  return svn_wc_get_update_editor3(target_revision, anchor, target,
+                                   use_commit_times,
+                                   SVN_DEPTH_INFINITY_OR_FILES(recurse), FALSE,
+                                   FALSE, notify_func, notify_baton,
+                                   cancel_func, cancel_baton, NULL, NULL,
+                                   NULL, NULL,
+                                   diff3_cmd, NULL, editor, edit_baton,
+                                   traversal_info, pool);
+}
+
+svn_error_t *
+svn_wc_get_update_editor(svn_revnum_t *target_revision,
+                         svn_wc_adm_access_t *anchor,
+                         const char *target,
+                         svn_boolean_t use_commit_times,
+                         svn_boolean_t recurse,
+                         svn_wc_notify_func_t notify_func,
+                         void *notify_baton,
+                         svn_cancel_func_t cancel_func,
+                         void *cancel_baton,
+                         const char *diff3_cmd,
+                         const svn_delta_editor_t **editor,
+                         void **edit_baton,
+                         svn_wc_traversal_info_t *traversal_info,
+                         apr_pool_t *pool)
+{
+  svn_wc__compat_notify_baton_t *nb = apr_palloc(pool, sizeof(*nb));
+  nb->func = notify_func;
+  nb->baton = notify_baton;
+
+  return svn_wc_get_update_editor3(target_revision, anchor, target,
+                                   use_commit_times,
+                                   SVN_DEPTH_INFINITY_OR_FILES(recurse), FALSE,
+                                   FALSE, svn_wc__compat_call_notify_func, nb,
+                                   cancel_func, cancel_baton, NULL, NULL,
+                                   NULL, NULL,
+                                   diff3_cmd, NULL, editor, edit_baton,
+                                   traversal_info, pool);
+}
+
+svn_error_t *
+svn_wc_get_switch_editor3(svn_revnum_t *target_revision,
+                          svn_wc_adm_access_t *anchor,
+                          const char *target,
+                          const char *switch_url,
+                          svn_boolean_t use_commit_times,
+                          svn_depth_t depth,
+                          svn_boolean_t depth_is_sticky,
+                          svn_boolean_t allow_unver_obstructions,
+                          svn_wc_notify_func2_t notify_func,
+                          void *notify_baton,
+                          svn_cancel_func_t cancel_func,
+                          void *cancel_baton,
+                          svn_wc_conflict_resolver_func_t conflict_func,
+                          void *conflict_baton,
+                          const char *diff3_cmd,
+                          apr_array_header_t *preserved_exts,
+                          const svn_delta_editor_t **editor,
+                          void **edit_baton,
+                          svn_wc_traversal_info_t *traversal_info,
+                          apr_pool_t *pool)
+{
+  svn_wc_context_t *wc_ctx;
+  svn_wc__db_t *db = svn_wc__adm_get_db(anchor);
+  svn_wc_external_update_t external_func = NULL;
+  struct traversal_info_update_baton *eb = NULL;
+
+  SVN_ERR_ASSERT(switch_url && svn_uri_is_canonical(switch_url, pool));
+
+  SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL, db, pool));
+
+  if (traversal_info)
+    {
+      eb = apr_palloc(pool, sizeof(*eb));
+      eb->db = db;
+      eb->traversal = traversal_info;
+      external_func = traversal_info_update;
+    }
+
+  SVN_ERR(svn_wc_get_switch_editor4(editor, edit_baton,
+                                    target_revision,
+                                    wc_ctx,
+                                    anchor, target, switch_url,
+                                    use_commit_times,
+                                    depth, depth_is_sticky,
+                                    allow_unver_obstructions,
+                                    notify_func, notify_baton,
+                                    cancel_func, cancel_baton,
+                                    conflict_func, conflict_baton,
+                                    external_func, eb,
+                                    NULL, NULL, 
+                                    diff3_cmd,
+                                    preserved_exts,
+                                    pool, pool));
+
+  /* We can't destroy wc_ctx here, because the editor needs it while it's
+     driven. */
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc_get_switch_editor2(svn_revnum_t *target_revision,
+                          svn_wc_adm_access_t *anchor,
+                          const char *target,
+                          const char *switch_url,
+                          svn_boolean_t use_commit_times,
+                          svn_boolean_t recurse,
+                          svn_wc_notify_func2_t notify_func,
+                          void *notify_baton,
+                          svn_cancel_func_t cancel_func,
+                          void *cancel_baton,
+                          const char *diff3_cmd,
+                          const svn_delta_editor_t **editor,
+                          void **edit_baton,
+                          svn_wc_traversal_info_t *traversal_info,
+                          apr_pool_t *pool)
+{
+  SVN_ERR_ASSERT(switch_url);
+
+  return svn_wc_get_switch_editor3(target_revision, anchor, target,
+                                   switch_url, use_commit_times,
+                                   SVN_DEPTH_INFINITY_OR_FILES(recurse), FALSE,
+                                   FALSE, notify_func, notify_baton,
+                                   cancel_func, cancel_baton,
+                                   NULL, NULL, diff3_cmd,
+                                   NULL, editor, edit_baton, traversal_info,
+                                   pool);
+}
+
+svn_error_t *
+svn_wc_get_switch_editor(svn_revnum_t *target_revision,
+                         svn_wc_adm_access_t *anchor,
+                         const char *target,
+                         const char *switch_url,
+                         svn_boolean_t use_commit_times,
+                         svn_boolean_t recurse,
+                         svn_wc_notify_func_t notify_func,
+                         void *notify_baton,
+                         svn_cancel_func_t cancel_func,
+                         void *cancel_baton,
+                         const char *diff3_cmd,
+                         const svn_delta_editor_t **editor,
+                         void **edit_baton,
+                         svn_wc_traversal_info_t *traversal_info,
+                         apr_pool_t *pool)
+{
+  svn_wc__compat_notify_baton_t *nb = apr_palloc(pool, sizeof(*nb));
+  nb->func = notify_func;
+  nb->baton = notify_baton;
+
+  return svn_wc_get_switch_editor3(target_revision, anchor, target,
+                                   switch_url, use_commit_times,
+                                   SVN_DEPTH_INFINITY_OR_FILES(recurse), FALSE,
+                                   FALSE, svn_wc__compat_call_notify_func, nb,
+                                   cancel_func, cancel_baton,
+                                   NULL, NULL, diff3_cmd,
+                                   NULL, editor, edit_baton, traversal_info,
+                                   pool);
+}
+
+svn_wc_traversal_info_t *
+svn_wc_init_traversal_info(apr_pool_t *pool)
+{
+  svn_wc_traversal_info_t *ti = apr_palloc(pool, sizeof(*ti));
+
+  ti->pool           = pool;
+  ti->externals_old  = apr_hash_make(pool);
+  ti->externals_new  = apr_hash_make(pool);
+  ti->depths         = apr_hash_make(pool);
+
+  return ti;
+}
+
+
+void
+svn_wc_edited_externals(apr_hash_t **externals_old,
+                        apr_hash_t **externals_new,
+                        svn_wc_traversal_info_t *traversal_info)
+{
+  *externals_old = traversal_info->externals_old;
+  *externals_new = traversal_info->externals_new;
+}
+
+
+void
+svn_wc_traversed_depths(apr_hash_t **depths,
+                        svn_wc_traversal_info_t *traversal_info)
+{
+  *depths = traversal_info->depths;
+}
+
 
 /*** From lock.c ***/
 

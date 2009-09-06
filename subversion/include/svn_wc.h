@@ -560,6 +560,17 @@ svn_wc_set_adm_dir(const char *name,
 
 
 
+
+/** Callback for external definitions updates
+ *
+ * @since New in 1.7. */
+typedef svn_error_t *(*svn_wc_external_update_t)(void *baton,
+                                                 const char *local_abspath,
+                                                 const svn_string_t *old_val,
+                                                 const svn_string_t *new_val,
+                                                 svn_depth_t depth,
+                                                 apr_pool_t *scratch_pool);
+
 /** Traversal information is information gathered by a working copy
  * crawl or update.  For example, the before and after values of the
  * svn:externals property are important after an update, and since
@@ -567,14 +578,23 @@ svn_wc_set_adm_dir(const char *name,
  * during the initial crawl, and a traversal of changed paths during
  * the checkout/update/switch), it makes sense to gather the
  * property's values then instead of making a second pass.
+ *
+ * New code should use the svn_wc_external_update_t callback instead.
+ *
+ * @deprecated Provided for backward compatibility with the 1.6 API.
  */
 typedef struct svn_wc_traversal_info_t svn_wc_traversal_info_t;
 
 
-/** Return a new, empty traversal info object, allocated in @a pool. */
+/** Return a new, empty traversal info object, allocated in @a pool.
+ *
+ * New code should use the svn_wc_external_update_t callback instead.
+ *
+ * @deprecated Provided for backward compatibility with the 1.6 API.
+ */
+SVN_DEPRECATED
 svn_wc_traversal_info_t *
 svn_wc_init_traversal_info(apr_pool_t *pool);
-
 
 /** Set @a *externals_old and @a *externals_new to hash tables representing
  * changes to values of the svn:externals property on directories
@@ -594,7 +614,12 @@ svn_wc_init_traversal_info(apr_pool_t *pool);
  * of the property did not change show the same value in each hash.
  *
  * The hashes, keys, and values have the same lifetime as @a traversal_info.
+ *
+ * New code should use the svn_wc_external_update_t callback instead.
+ *
+ * @deprecated Provided for backward compatibility with the 1.6 API.
  */
+SVN_DEPRECATED
 void
 svn_wc_edited_externals(apr_hash_t **externals_old,
                         apr_hash_t **externals_new,
@@ -619,8 +644,12 @@ svn_wc_edited_externals(apr_hash_t **externals_old,
  *
  * The hashes and keys have the same lifetime as @a traversal_info.
  *
+ * New code should use the svn_wc_external_update_t callback instead.
+ *
  * @since New in 1.5.
+ * @deprecated Provided for backward compatibility with the 1.6 API.
  */
+SVN_DEPRECATED
 void
 svn_wc_traversed_depths(apr_hash_t **depths,
                         svn_wc_traversal_info_t *traversal_info);
@@ -3501,7 +3530,8 @@ svn_wc_get_status_editor5(const svn_delta_editor_t **editor,
                           void *status_baton,
                           svn_cancel_func_t cancel_func,
                           void *cancel_baton,
-                          svn_wc_traversal_info_t *traversal_info,
+                          svn_wc_external_update_t external_update,
+                          void *external_baton,
                           apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool);
 
@@ -4387,9 +4417,10 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
                         svn_boolean_t honor_depth_exclude,
                         svn_boolean_t depth_compatibility_trick,
                         svn_boolean_t use_commit_times,
+                        svn_wc_external_update_t external_func,
+                        void *external_baton,
                         svn_wc_notify_func2_t notify_func,
                         void *notify_baton,
-                        svn_wc_traversal_info_t *traversal_info,
                         apr_pool_t *scratch_pool);
 
 /**
@@ -4631,8 +4662,41 @@ svn_wc_get_actual_target(const char *path,
  * svn_depth_unknown, then in addition to updating PATHS, also set
  * their sticky ambient depth value to @a depth.
  *
- * @since New in 1.5.
+ * @since New in 1.7.
  */
+svn_error_t *
+svn_wc_get_update_editor4(const svn_delta_editor_t **editor,
+                          void **edit_baton,
+                          svn_revnum_t *target_revision,
+                          svn_wc_context_t *wc_ctx,
+                          svn_wc_adm_access_t *anchor,
+                          const char *target,
+                          svn_boolean_t use_commit_times,
+                          svn_depth_t depth,
+                          svn_boolean_t depth_is_sticky,
+                          svn_boolean_t allow_unver_obstructions,
+                          svn_wc_notify_func2_t notify_func,
+                          void *notify_baton,
+                          svn_cancel_func_t cancel_func,
+                          void *cancel_baton,
+                          svn_wc_conflict_resolver_func_t conflict_func,
+                          void *conflict_baton,
+                          svn_wc_external_update_t external_func,
+                          void *external_baton,
+                          svn_wc_get_file_t fetch_func,
+                          void *fetch_baton,
+                          const char *diff3_cmd,
+                          apr_array_header_t *preserved_exts,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool);
+
+/** Similar to svn_wc_get_update_editor4, but uses svn_wc_traversal_info_t
+ * instead of a callback.
+ *
+ * @since New in 1.5.
+ * @deprecated Provided for backward compatibility with the 1.6 API. 
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_get_update_editor3(svn_revnum_t *target_revision,
                           svn_wc_adm_access_t *anchor,
@@ -4766,6 +4830,36 @@ svn_wc_get_update_editor(svn_revnum_t *target_revision,
  *
  * @since New in 1.5.
  */
+svn_error_t *
+svn_wc_get_switch_editor4(const svn_delta_editor_t **editor,
+                          void **edit_baton,
+                          svn_revnum_t *target_revision,
+                          svn_wc_context_t *wc_ctx,
+                          svn_wc_adm_access_t *anchor,
+                          const char *target,
+                          const char *switch_url,
+                          svn_boolean_t use_commit_times,
+                          svn_depth_t depth,
+                          svn_boolean_t depth_is_sticky,
+                          svn_boolean_t allow_unver_obstructions,
+                          svn_wc_notify_func2_t notify_func,
+                          void *notify_baton,
+                          svn_cancel_func_t cancel_func,
+                          void *cancel_baton,
+                          svn_wc_conflict_resolver_func_t conflict_func,
+                          void *conflict_baton,
+                          svn_wc_external_update_t external_func,
+                          void *external_baton,
+                          svn_wc_get_file_t fetch_func,
+                          void *fetch_baton,
+                          const char *diff3_cmd,
+                          apr_array_header_t *preserved_exts,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool);
+
+/**
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_get_switch_editor3(svn_revnum_t *target_revision,
                           svn_wc_adm_access_t *anchor,
