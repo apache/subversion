@@ -85,7 +85,7 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
     return svn_error_create(SVN_ERR_CLIENT_BAD_REVISION, NULL, NULL);
 
   /* Canonicalize the URL. */
-  url = svn_path_canonicalize(url, pool);
+  url = svn_uri_canonicalize(url, pool);
 
   {
     svn_boolean_t have_repos_root_url;
