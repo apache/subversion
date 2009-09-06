@@ -2052,7 +2052,7 @@ class SvnClientTest < Test::Unit::TestCase
     assert_simple_provider(:add_simple_provider)
   end
 
-  if Svn::Core.respond_to?(:auth_get_windows_simple_provider)
+  if Svn::Client::Context.method_defined?(:add_windows_simple_provider)
     def test_windows_simple_provider
       assert_simple_provider(:add_windows_simple_provider)
     end
