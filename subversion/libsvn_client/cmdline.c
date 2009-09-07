@@ -242,7 +242,7 @@ svn_client_args_to_target_array(apr_array_header_t **targets_p,
             }
           else  /* not a url, so treat as a path */
             {
-              char *base_name;
+              const char *base_name;
 
               SVN_ERR(svn_opt__arg_canonicalize_path(&true_target,
                                                      true_target, pool));
