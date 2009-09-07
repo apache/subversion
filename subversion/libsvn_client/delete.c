@@ -132,8 +132,7 @@ delete_urls(svn_commit_info_t **commit_info_p,
   apr_pool_t *subpool = svn_pool_create(pool);
 
   /* Condense our list of deletion targets. */
-  SVN_ERR(svn_dirent_condense_targets(&common, &targets, paths, TRUE, pool,
-                                      pool));
+  SVN_ERR(svn_path_condense_targets(&common, &targets, paths, TRUE, pool));
   if (! targets->nelts)
     {
       const char *bname;
