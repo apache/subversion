@@ -42,17 +42,14 @@ struct status_baton
    structures. */
 static svn_error_t *
 analyze_status(void *baton,
-               const char *path,
+               const char *local_abspath,
                const svn_wc_status2_t *status,
                apr_pool_t *pool)
 {
   struct status_baton *sb = baton;
-  const char *local_abspath;
 
   if (! status->entry)
     return SVN_NO_ERROR;
-
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
   /* Added files have a revision of no interest */
   if (status->text_status != svn_wc_status_added)

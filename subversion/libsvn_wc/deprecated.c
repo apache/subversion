@@ -1811,16 +1811,27 @@ struct status4_wrapper_baton
 {
   svn_wc_status_func3_t old_func;
   void *old_baton;
+  const char *anchor_abspath;
+  const char *anchor_relpath;
 };
 
 static svn_error_t *
 status4_wrapper_func(void *baton,
-                     const char *path,
+                     const char *local_abspath,
                      const svn_wc_status2_t *status,
                      apr_pool_t *scratch_pool)
 {
   struct status4_wrapper_baton *swb = baton;
   svn_wc_status2_t *dup = svn_wc_dup_status2(status, scratch_pool);
+  const char *path = local_abspath;
+
+  if (swb->anchor_abspath != NULL)
+    {
+      path = svn_dirent_join(
+                swb->anchor_relpath,
+                svn_dirent_skip_ancestor(swb->anchor_abspath, local_abspath),
+                scratch_pool);
+    }
 
   return (*swb->old_func)(swb->old_baton, path, dup, scratch_pool);
 }
@@ -1848,6 +1859,7 @@ svn_wc_get_status_editor4(const svn_delta_editor_t **editor,
   svn_wc_context_t *wc_ctx;
   svn_wc_external_update_t external_func = NULL;
   struct traversal_info_update_baton *eb = NULL;
+  const char *anchor_abspath;
 
   swb->old_func = status_func;
   swb->old_baton = status_baton;
@@ -1856,6 +1868,19 @@ svn_wc_get_status_editor4(const svn_delta_editor_t **editor,
 
   SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL /* config */,
                                          wc_db, pool));
+
+  anchor_abspath = svn_wc__adm_access_abspath(anchor);
+
+  if (!svn_dirent_is_absolute(svn_wc_adm_access_path(anchor)))
+    {
+      swb->anchor_abspath = anchor_abspath;
+      swb->anchor_relpath = svn_wc_adm_access_path(anchor);
+    }
+  else
+    {
+      swb->anchor_abspath = NULL;
+      swb->anchor_relpath = NULL;
+    }
 
   if (traversal_info)
     {
@@ -1867,9 +1892,9 @@ svn_wc_get_status_editor4(const svn_delta_editor_t **editor,
     }
 
   SVN_ERR(svn_wc_get_status_editor5(editor, edit_baton, set_locks_baton,
-                                    edit_revision, wc_ctx, 
-                                    svn_wc__adm_access_abspath(anchor), target,
-                                    depth, get_all, no_ignore, ignore_patterns,
+                                    edit_revision, wc_ctx, anchor_abspath,
+                                    target, depth, get_all,
+                                    no_ignore, ignore_patterns,
                                     status4_wrapper_func, swb,
                                     cancel_func, cancel_baton,
                                     external_func, eb,

@@ -67,14 +67,12 @@ struct status_baton
    This implements the 'svn_wc_status_func4_t' function type.  */
 static svn_error_t *
 tweak_status(void *baton,
-             const char *path,
+             const char *local_abspath,
              const svn_wc_status2_t *status,
              apr_pool_t *scratch_pool)
 {
   struct status_baton *sb = baton;
-  const char *local_abspath;
-
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, scratch_pool));
+  const char *path = local_abspath;
 
   /* If we know that the target was deleted in HEAD of the repository,
      we need to note that fact in all the status structures that come
@@ -86,7 +84,7 @@ tweak_status(void *baton,
       status = new_status;
     }
 
-  if (sb->anchor_abspath && svn_dirent_is_absolute(path))
+  if (sb->anchor_abspath)
     path = svn_dirent_join(sb->anchor_relpath,
                            svn_dirent_skip_ancestor(sb->anchor_abspath, path),
                            scratch_pool);
@@ -433,7 +431,7 @@ svn_client_status5(svn_revnum_t *result_rev,
                                     edit_baton, pool));
 
           /* Init the report baton. */
-          rb.ancestor = apr_pstrdup(pool, URL);
+          rb.ancestor = apr_pstrdup(pool, URL); /* Edited later */
           rb.set_locks_baton = set_locks_baton;
           rb.ctx = ctx;
           rb.pool = pool;
