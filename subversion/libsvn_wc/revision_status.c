@@ -97,8 +97,7 @@ svn_wc_revision_status2(svn_wc_revision_status_t **result_p,
                         apr_pool_t *scratch_pool)
 {
   struct status_baton sb;
-  const char *target;
-  svn_wc_adm_access_t *anchor_access, *target_access;
+  const char *anchor_abspath, *target_basename;
   const svn_delta_editor_t *editor;
   void *edit_baton;
   svn_revnum_t edit_revision;
@@ -121,14 +120,13 @@ svn_wc_revision_status2(svn_wc_revision_status_t **result_p,
   sb.wc_url = NULL;
   sb.pool = scratch_pool;
 
-  SVN_ERR(svn_wc__adm_open_anchor_in_context(&anchor_access, &target_access,
-                                             &target, wc_ctx, local_abspath,
-                                             FALSE, -1, cancel_func,
-                                             cancel_baton, scratch_pool));
-
+  SVN_ERR(svn_wc_get_actual_target2(&anchor_abspath, &target_basename, wc_ctx,
+                                    local_abspath, scratch_pool,
+                                    scratch_pool));
+  
   SVN_ERR(svn_wc_get_status_editor5(&editor, &edit_baton, NULL,
-                                    &edit_revision, wc_ctx, anchor_access,
-                                    target,
+                                    &edit_revision, wc_ctx,
+                                    anchor_abspath, target_basename,
                                     svn_depth_infinity,
                                     TRUE  /* get_all */,
                                     FALSE /* no_ignore */,
@@ -139,8 +137,6 @@ svn_wc_revision_status2(svn_wc_revision_status_t **result_p,
                                     scratch_pool, scratch_pool));
 
   SVN_ERR(editor->close_edit(edit_baton, scratch_pool));
-
-  SVN_ERR(svn_wc_adm_close2(anchor_access, scratch_pool));
 
   if ((! result->switched) && (trail_url != NULL))
     {

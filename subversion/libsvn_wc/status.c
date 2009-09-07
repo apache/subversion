@@ -2170,8 +2170,8 @@ svn_wc_get_status_editor5(const svn_delta_editor_t **editor,
                           void **set_locks_baton,
                           svn_revnum_t *edit_revision,
                           svn_wc_context_t *wc_ctx,
-                          svn_wc_adm_access_t *anchor,
-                          const char *target,
+                          const char *anchor_abspath,
+                          const char *target_basename,
                           svn_depth_t depth,
                           svn_boolean_t get_all,
                           svn_boolean_t no_ignore,
@@ -2186,12 +2186,19 @@ svn_wc_get_status_editor5(const svn_delta_editor_t **editor,
                           apr_pool_t *scratch_pool)
 {
   struct edit_baton *eb;
+  const char *anchor;
   svn_delta_editor_t *tree_editor = svn_delta_default_editor(result_pool);
-  const char *anchor_abspath;
 
-  /* ### Anchor must be in wc_ctx or retrieving access batons via their path
-   * fails. The final version of this api will not receive access batons. */
-  SVN_ERR_ASSERT(svn_wc__adm_get_db(anchor) == wc_ctx->db);
+  { /* ### While we try to send relative paths */
+    svn_wc_adm_access_t *adm_access = 
+          svn_wc__adm_retrieve_internal2(wc_ctx->db, anchor_abspath,
+                                         scratch_pool);
+
+    if (adm_access != NULL)
+      anchor = svn_wc_adm_access_path(adm_access);
+    else
+      anchor = anchor_abspath;
+  }
 
   /* Construct an edit baton. */
   eb = apr_palloc(result_pool, sizeof(*eb));
@@ -2207,10 +2214,11 @@ svn_wc_get_status_editor5(const svn_delta_editor_t **editor,
   eb->external_func     = external_func;
   eb->external_baton    = external_baton;
   eb->externals         = apr_hash_make(result_pool);
-  eb->anchor            = svn_wc_adm_access_path(anchor);
-  eb->anchor_abspath    = svn_wc__adm_access_abspath(anchor);
-  eb->target_abspath    = svn_dirent_join(eb->anchor_abspath, target, result_pool);
-  eb->target            = target;
+  eb->anchor            = anchor;
+  eb->anchor_abspath    = apr_pstrdup(result_pool, anchor_abspath);
+  eb->target_abspath    = svn_dirent_join(anchor_abspath, target_basename,
+                                          result_pool);
+  eb->target            = apr_pstrdup(result_pool, target_basename);
   eb->root_opened       = FALSE;
   eb->repos_locks       = NULL;
   eb->repos_root        = NULL;

@@ -4762,9 +4762,8 @@ close_edit(void *edit_baton,
 static svn_error_t *
 make_editor(svn_revnum_t *target_revision,
             svn_wc_context_t *wc_ctx,
-            svn_wc_adm_access_t *adm_access,
-            const char *anchor,
-            const char *target,
+            const char *anchor_abspath,
+            const char *target_basename,
             svn_boolean_t use_commit_times,
             const char *switch_url,
             svn_depth_t depth,
@@ -4792,24 +4791,31 @@ make_editor(svn_revnum_t *target_revision,
   apr_pool_t *subpool = svn_pool_create(pool);
   svn_delta_editor_t *tree_editor = svn_delta_default_editor(subpool);
   const svn_delta_editor_t *inner_editor;
-  const svn_wc_entry_t *entry;
+  const char *repos_root, *repos_uuid;
+  svn_wc_adm_access_t *adm_access;
+  const char *anchor;
+
+  adm_access = svn_wc__adm_retrieve_internal2(wc_ctx->db, anchor_abspath,
+                                              scratch_pool);
+  anchor = svn_wc_adm_access_path(adm_access);
 
   /* An unknown depth can't be sticky. */
   if (depth == svn_depth_unknown)
     depth_is_sticky = FALSE;
 
   /* Get the anchor entry, so we can fetch the repository root. */
-  SVN_ERR(svn_wc_entry(&entry, anchor, adm_access, FALSE, pool));
+  SVN_ERR(svn_wc__node_get_repos_info(&repos_root, &repos_uuid, wc_ctx,
+                                      anchor_abspath, pool, scratch_pool));
 
   /* Disallow a switch operation to change the repository root of the target,
      if that is known. */
-  if (switch_url && entry && entry->repos &&
-      ! svn_uri_is_ancestor(entry->repos, switch_url))
+  if (switch_url && repos_root &&
+      ! svn_uri_is_ancestor(repos_root, switch_url))
     return svn_error_createf(
        SVN_ERR_WC_INVALID_SWITCH, NULL,
        _("'%s'\n"
          "is not the same repository as\n"
-         "'%s'"), switch_url, entry->repos);
+         "'%s'"), switch_url, repos_root);
 
   /* Construct an edit baton. */
   eb = apr_pcalloc(subpool, sizeof(*eb));
@@ -4817,18 +4823,19 @@ make_editor(svn_revnum_t *target_revision,
   eb->use_commit_times         = use_commit_times;
   eb->target_revision          = target_revision;
   eb->switch_url               = switch_url;
-  eb->repos                    = entry ? entry->repos : NULL;
-  eb->uuid                     = entry ? entry->uuid : NULL;
-  eb->db                       = svn_wc__adm_get_db(adm_access);
+  eb->repos                    = repos_root;
+  eb->uuid                     = repos_uuid;
+  eb->db                       = wc_ctx->db;
   eb->adm_access               = adm_access;
   eb->anchor                   = anchor;
-  eb->target                   = target;
-  SVN_ERR(svn_dirent_get_absolute(&eb->anchor_abspath, anchor, pool));
+  eb->target                   = target_basename;
+  eb->anchor_abspath           = anchor_abspath;
 
-  if (svn_path_is_empty(target))
+  if (svn_path_is_empty(target_basename))
     eb->target_abspath = eb->anchor_abspath;
   else
-    eb->target_abspath = svn_dirent_join(eb->anchor_abspath, target, pool);
+    eb->target_abspath = svn_dirent_join(eb->anchor_abspath, target_basename,
+                                         pool);
 
   eb->requested_depth          = depth;
   eb->depth_is_sticky          = depth_is_sticky;
@@ -4885,7 +4892,7 @@ make_editor(svn_revnum_t *target_revision,
                                                 inner_editor,
                                                 inner_baton,
                                                 anchor,
-                                                target,
+                                                target_basename,
                                                 adm_access,
                                                 pool));
 
@@ -4904,8 +4911,8 @@ svn_wc_get_update_editor4(const svn_delta_editor_t **editor,
                           void **edit_baton,
                           svn_revnum_t *target_revision,
                           svn_wc_context_t *wc_ctx,
-                          svn_wc_adm_access_t *anchor,
-                          const char *target,
+                          const char *anchor_abspath,
+                          const char *target_basename,
                           svn_boolean_t use_commit_times,
                           svn_depth_t depth,
                           svn_boolean_t depth_is_sticky,
@@ -4925,9 +4932,8 @@ svn_wc_get_update_editor4(const svn_delta_editor_t **editor,
                           apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool)
 {
-  /* ### rev this to allow the caller to provide a context. */
-  return make_editor(target_revision, wc_ctx, anchor,
-                     svn_wc_adm_access_path(anchor), target, use_commit_times,
+  return make_editor(target_revision, wc_ctx, anchor_abspath,
+                     target_basename, use_commit_times,
                      NULL, depth, depth_is_sticky, allow_unver_obstructions,
                      notify_func, notify_baton,
                      cancel_func, cancel_baton,
@@ -4943,8 +4949,8 @@ svn_wc_get_switch_editor4(const svn_delta_editor_t **editor,
                           void **edit_baton,
                           svn_revnum_t *target_revision,
                           svn_wc_context_t *wc_ctx,
-                          svn_wc_adm_access_t *anchor,
-                          const char *target,
+                          const char *anchor_abspath,
+                          const char *target_basename,
                           const char *switch_url,
                           svn_boolean_t use_commit_times,
                           svn_depth_t depth,
@@ -4967,9 +4973,8 @@ svn_wc_get_switch_editor4(const svn_delta_editor_t **editor,
 {
   SVN_ERR_ASSERT(switch_url && svn_uri_is_canonical(switch_url, scratch_pool));
 
-  /* ### rev this to allow the caller to provide a context. */
-  return make_editor(target_revision, wc_ctx, anchor,
-                     svn_wc_adm_access_path(anchor), target, use_commit_times,
+  return make_editor(target_revision, wc_ctx, anchor_abspath,
+                     target_basename, use_commit_times,
                      switch_url,
                      depth, depth_is_sticky, allow_unver_obstructions,
                      notify_func, notify_baton,

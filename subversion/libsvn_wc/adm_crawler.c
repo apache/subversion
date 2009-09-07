@@ -736,8 +736,7 @@ report_revisions_and_depths(svn_wc__db_t *db,
 
 svn_error_t *
 svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
-                        const char *dir_abspath,
-                        const char *target_abspath,
+                        const char *local_abspath,
                         const svn_ra_reporter3_t *reporter,
                         void *report_baton,
                         svn_boolean_t restore_files,
@@ -758,13 +757,12 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
   const svn_wc_entry_t *parent_entry = NULL;
   svn_boolean_t start_empty;
 
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(dir_abspath));
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(target_abspath));
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
   /* The first thing we do is get the base_rev from the working copy's
      ROOT_DIRECTORY.  This is the first revnum that entries will be
      compared to. */
-  err = svn_wc__get_entry(&entry, wc_ctx->db, target_abspath, TRUE,
+  err = svn_wc__get_entry(&entry, wc_ctx->db, local_abspath, TRUE,
                           svn_node_unknown, FALSE, pool, pool);
 
   if (err && err->apr_err != SVN_ERR_NODE_UNEXPECTED_KIND)
@@ -793,7 +791,7 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
       /* There aren't any versioned paths to crawl which are known to
          the repository. */
       SVN_ERR(svn_wc__get_entry(&parent_entry, wc_ctx->db,
-                                svn_dirent_dirname(target_abspath, pool),
+                                svn_dirent_dirname(local_abspath, pool),
                                 FALSE, svn_node_dir, FALSE, pool, pool));
 
       base_rev = parent_entry->revision;
@@ -827,7 +825,7 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
   if (base_rev == SVN_INVALID_REVNUM)
     {
       SVN_ERR(svn_wc__get_entry(&parent_entry, wc_ctx->db,
-                                svn_dirent_dirname(target_abspath, pool),
+                                svn_dirent_dirname(local_abspath, pool),
                                 FALSE, svn_node_dir, FALSE, pool, pool));
       base_rev = parent_entry->revision;
     }
@@ -841,7 +839,7 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
   if (entry->schedule != svn_wc_schedule_delete)
     {
       apr_finfo_t info;
-      err = svn_io_stat(&info, target_abspath, APR_FINFO_MIN, pool);
+      err = svn_io_stat(&info, local_abspath, APR_FINFO_MIN, pool);
       if (err)
         {
           if (APR_STATUS_IS_ENOENT(err->apr_err))
@@ -855,7 +853,7 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
     {
       svn_boolean_t restored;
 
-      err = restore_node(&restored, wc_ctx->db, target_abspath,
+      err = restore_node(&restored, wc_ctx->db, local_abspath,
                          entry->kind, use_commit_times,
                          notify_func, notify_baton,
                          pool);
@@ -885,7 +883,7 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
           /* Recursively crawl ROOT_DIRECTORY and report differing
              revisions. */
           err = report_revisions_and_depths(wc_ctx->db,
-                                            dir_abspath,
+                                            local_abspath,
                                             "",
                                             base_rev,
                                             reporter, report_baton,
@@ -907,7 +905,7 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
       const char *pdir, *bname;
 
       /* Split PATH into parent PDIR and basename BNAME. */
-      svn_dirent_split(target_abspath, &pdir, &bname, pool);
+      svn_dirent_split(local_abspath, &pdir, &bname, pool);
       if (! parent_entry)
         {
           err = svn_wc__get_entry(&parent_entry, wc_ctx->db, pdir,
