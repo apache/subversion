@@ -40,6 +40,10 @@ AC_PROG_CXX
 # Look for a C pre-processor
 AC_PROG_CPP
 
+# Look for a good sed
+# AC_PROG_SED was introduced in Autoconf 2.59b
+m4_ifdef([AC_PROG_SED], [AC_PROG_SED], [SED="${SED:-sed}"])
+
 # Grab target_cpu, so we can use it in the Solaris pkginfo file
 AC_CANONICAL_TARGET
 
@@ -532,7 +536,7 @@ BUILD_RULES="fsmod-lib ramod-lib lib bin test $BUILD_APACHE_RULE"
 
 if test "$svn_lib_berkeley_db" = "yes"; then
   BUILD_RULES="$BUILD_RULES bdb-lib bdb-test"
-  INSTALL_RULES="`echo $INSTALL_RULES | sed 's/install-fsmod-lib/install-fsmod-lib install-bdb-lib/'`"
+  INSTALL_RULES="`echo $INSTALL_RULES | $SED 's/install-fsmod-lib/install-fsmod-lib install-bdb-lib/'`"
   INSTALL_STATIC_RULES="$INSTALL_STATIC_RULES install-bdb-lib"
   BDB_TEST_DEPS="\$(BDB_TEST_DEPS)"
   BDB_TEST_PROGRAMS="\$(BDB_TEST_PROGRAMS)"
@@ -540,25 +544,25 @@ fi
   
 if test "$svn_lib_neon" = "yes"; then
   BUILD_RULES="$BUILD_RULES neon-lib"
-  INSTALL_RULES="`echo $INSTALL_RULES | sed 's/install-ramod-lib/install-ramod-lib install-neon-lib/'`"
+  INSTALL_RULES="`echo $INSTALL_RULES | $SED 's/install-ramod-lib/install-ramod-lib install-neon-lib/'`"
   INSTALL_STATIC_RULES="$INSTALL_STATIC_RULES install-neon-lib"
 fi
 
 if test "$svn_lib_serf" = "yes"; then
   BUILD_RULES="$BUILD_RULES serf-lib"
-  INSTALL_RULES="`echo $INSTALL_RULES | sed 's/install-ramod-lib/install-ramod-lib install-serf-lib/'`"
+  INSTALL_RULES="`echo $INSTALL_RULES | $SED 's/install-ramod-lib/install-ramod-lib install-serf-lib/'`"
   INSTALL_STATIC_RULES="$INSTALL_STATIC_RULES install-serf-lib"
 fi
 
 if test "$svn_lib_kwallet" = "yes"; then
   BUILD_RULES="$BUILD_RULES kwallet-lib"
-  INSTALL_RULES="`echo $INSTALL_RULES | sed 's/install-lib/install-lib install-kwallet-lib/'`"
+  INSTALL_RULES="`echo $INSTALL_RULES | $SED 's/install-lib/install-lib install-kwallet-lib/'`"
   INSTALL_STATIC_RULES="$INSTALL_STATIC_RULES install-kwallet-lib"
 fi
 
 if test "$with_gnome_keyring" = "yes"; then
   BUILD_RULES="$BUILD_RULES gnome-keyring-lib"
-  INSTALL_RULES="`echo $INSTALL_RULES | sed 's/install-lib/install-lib install-gnome-keyring-lib/'`"
+  INSTALL_RULES="`echo $INSTALL_RULES | $SED 's/install-lib/install-lib install-gnome-keyring-lib/'`"
   INSTALL_STATIC_RULES="$INSTALL_STATIC_RULES install-gnome-keyring-lib"
 fi
 
@@ -683,15 +687,15 @@ AS_HELP_STRING([--enable-maintainer-mode],
 if test "$enable_debugging" = "yes" ; then
   dnl At the moment, we don't want optimization, because we're
   dnl debugging.
-  CFLAGS=["`echo $CFLAGS' ' | sed -e 's/-O[^ ]* //g'`"]
-  CXXFLAGS=["`echo $CXXFLAGS' ' | sed -e 's/-O[^ ]* //g'`"]
+  CFLAGS=["`echo $CFLAGS' ' | $SED -e 's/-O[^ ]* //g'`"]
+  CXXFLAGS=["`echo $CXXFLAGS' ' | $SED -e 's/-O[^ ]* //g'`"]
   dnl SVN_DEBUG enables specific features for developer builds
   dnl AP_DEBUG enables specific (Apache) features for developer builds
   CFLAGS="$CFLAGS -DSVN_DEBUG -DAP_DEBUG"
   CXXFLAGS="$CXXFLAGS -DSVN_DEBUG -DAP_DEBUG"
 elif test "$enable_debugging" = "no" ; then
-    CFLAGS=["`echo $CFLAGS' ' | sed -e 's/-g[0-9] //g' | sed -e 's/-g//g'`"]
-    CXXFLAGS=["`echo $CXXFLAGS' ' | sed -e 's/-g[0-9] //g' | sed -e 's/-g//g'`"]
+    CFLAGS=["`echo $CFLAGS' ' | $SED -e 's/-g[0-9] //g' | $SED -e 's/-g//g'`"]
+    CXXFLAGS=["`echo $CXXFLAGS' ' | $SED -e 's/-g[0-9] //g' | $SED -e 's/-g//g'`"]
     dnl Compile with NDEBUG to get rid of assertions
     CFLAGS="$CFLAGS -DNDEBUG"
     CXXFLAGS="$CXXFLAGS -DNDEBUG"
@@ -989,9 +993,10 @@ AC_SUBST(INCLUDE_OUTPUTS)
 
 AC_CONFIG_HEADERS(subversion/svn_private_config.h)
 AC_CONFIG_COMMANDS([svn_private_config.h],
-                   [sed -e "s/@SVN_DB_HEADER@/$SVN_DB_HEADER/" subversion/svn_private_config.h > subversion/svn_private_config.h.new
+                   [$SED -e "s/@SVN_DB_HEADER@/$SVN_DB_HEADER/" subversion/svn_private_config.h > subversion/svn_private_config.h.new
                     mv -f subversion/svn_private_config.h.new subversion/svn_private_config.h],
-                   [SVN_DB_HEADER="$SVN_DB_HEADER"])
+                   [SED="$SED"
+                    SVN_DB_HEADER="$SVN_DB_HEADER"])
 AC_CONFIG_FILES([Makefile])
 
 SVN_CONFIG_SCRIPT(tools/backup/hot-backup.py)

@@ -53,7 +53,7 @@ AC_DEFUN(SVN_FIND_SWIG,
   if test "$SWIG" != "none"; then
     AC_MSG_CHECKING([swig version])
     SWIG_VERSION_RAW="`$SWIG -version 2>&1 | \
-                       sed -ne 's/^.*Version \(.*\)$/\1/p'`"
+                       $SED -ne 's/^.*Version \(.*\)$/\1/p'`"
     # We want the version as an integer so we can test against
     # which version we're using.  SWIG doesn't provide this
     # to us so we have to come up with it on our own. 
@@ -62,7 +62,7 @@ AC_DEFUN(SVN_FIND_SWIG,
     # and the patch level is zero padded to three places.
     # e.g. 1.3.24 becomes 103024
     SWIG_VERSION="`echo \"$SWIG_VERSION_RAW\" | \
-                  sed -e 's/[[^0-9\.]].*$//' \
+                  $SED -e 's/[[^0-9\.]].*$//' \
                       -e 's/\.\([[0-9]]\)$/.0\1/' \
                       -e 's/\.\([[0-9]][[0-9]]\)$/.0\1/' \
                       -e 's/\.\([[0-9]]\)\./0\1/; s/\.//g;'`"
@@ -190,7 +190,7 @@ AC_DEFUN(SVN_FIND_SWIG,
 
     AC_CACHE_CHECK([how to compile Ruby extensions], [svn_cv_ruby_compile],[
       # Ruby doesn't like '-ansi', so strip that out of CFLAGS
-      svn_cv_ruby_compile="$rbconfig_CC `echo $CFLAGS | sed -e "s/ -ansi//g"`"
+      svn_cv_ruby_compile="$rbconfig_CC `echo $CFLAGS | $SED -e "s/ -ansi//g"`"
     ])
     SWIG_RB_COMPILE="$svn_cv_ruby_compile"
 
@@ -210,7 +210,7 @@ AC_DEFUN(SVN_FIND_SWIG,
     AC_MSG_CHECKING([for rb_errinfo])
     old_CFLAGS="$CFLAGS"
     old_LIBS="$LIBS"
-    CFLAGS="`echo $CFLAGS | sed -e "s/ -ansi//g"` $svn_cv_ruby_includes"
+    CFLAGS="`echo $CFLAGS | $SED -e "s/ -ansi//g"` $svn_cv_ruby_includes"
     LIBS="$SWIG_RB_LIBS"
     AC_LINK_IFELSE([
 #include <ruby.h>
@@ -239,7 +239,7 @@ int main()
     AC_MSG_CHECKING([where to install Ruby scripts])
     AC_CACHE_VAL([svn_cv_ruby_sitedir_libsuffix],[
       svn_cv_ruby_sitedir_libsuffix="`echo "$rbconfig_sitelibdir" | \
-                                        sed -e "s,^$rbconfig_sitedir,,"`"
+                                        $SED -e "s,^$rbconfig_sitedir,,"`"
     ])
     SWIG_RB_SITE_LIB_DIR="${svn_ruby_installdir}${svn_cv_ruby_sitedir_libsuffix}"
     AC_MSG_RESULT([$SWIG_RB_SITE_LIB_DIR])
@@ -247,7 +247,7 @@ int main()
     AC_MSG_CHECKING([where to install Ruby extensions])
     AC_CACHE_VAL([svn_cv_ruby_sitedir_archsuffix],[
       svn_cv_ruby_sitedir_archsuffix="`echo "$rbconfig_sitearchdir" | \
-                                        sed -e "s,^$rbconfig_sitedir,,"`"
+                                        $SED -e "s,^$rbconfig_sitedir,,"`"
     ])
     SWIG_RB_SITE_ARCH_DIR="${svn_ruby_installdir}${svn_cv_ruby_sitedir_archsuffix}"
     AC_MSG_RESULT([$SWIG_RB_SITE_ARCH_DIR])
