@@ -4254,8 +4254,11 @@ svn_wc__db_temp_get_format(int *format,
 
           /* We might turn this directory into a wcroot later, so let's
              just forget what we (didn't) find. The wcroot is still
-             hanging off a parent though.  */
-          pdh->wcroot = NULL;
+             hanging off a parent though.
+             Don't clear the wcroot of a parent if we just found a
+             relative path here or we get multiple wcroot issues. */
+          if (err)
+            pdh->wcroot = NULL;
 
           /* Remap the returned error.  */
           *format = 0;
