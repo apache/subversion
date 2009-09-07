@@ -275,7 +275,7 @@ Problems in wc-1.0
  * No strict separation between public and internal APIs: many public
    APIs also used internally, growing arguments which *should* only
    matter for internal use
- * The lock strategy requires writing a file in every directory of a working,
+ * The lock strategy requires writing a file in every directory of a working copy,
    which severely reduces our performance in several environments. (Windows, 
    NFS). Testing showed that in some cases we used more than 50 seconds on
    writing 8000 lockfiles before we even started looking what to update. A new

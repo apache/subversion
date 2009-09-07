@@ -578,7 +578,7 @@ typedef struct
    DEPTH must be a definite depth, not (e.g.) svn_depth_unknown.
 
    RA_CACHE is a pointer to a cache of information for the URL at
-   REVISION based of the PEG_REVISION.  Any information not in
+   REVISION based on the PEG_REVISION.  Any information not in
    *RA_CACHE is retrieved by a round-trip to the repository.  RA_CACHE
    may be NULL which indicates that no cache information is available.
 
