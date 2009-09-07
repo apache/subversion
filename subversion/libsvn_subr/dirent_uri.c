@@ -1317,18 +1317,6 @@ svn_uri_skip_ancestor(const char *uri1,
   return uri2;
 }
 
-/** Returns the part of @a path2 that is below @a path1, or "" iif @a path1
- * is equal to @a path2. If @a path2 is not below @a path1, return @a path2.
- *
- * This function assumes @a path1 and @a path2 are both absolute or relative
- * in the same way.
- *
- * @since New in 1.7.
- */
-const char *
-svn_uri_skip_ancestor(const char *path1,
-                      const char *path2);
-
 svn_boolean_t
 svn_dirent_is_absolute(const char *dirent)
 {
