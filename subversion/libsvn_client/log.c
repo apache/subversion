@@ -493,8 +493,8 @@ svn_client_log5(const apr_array_header_t *targets,
         return SVN_NO_ERROR;
 
       /* Find the base URL and condensed targets relative to it. */
-      SVN_ERR(svn_dirent_condense_targets(&url_or_path, &condensed_targets,
-                                          target_urls, TRUE, pool, pool));
+      SVN_ERR(svn_path_condense_targets(&url_or_path, &condensed_targets,
+                                        target_urls, TRUE, pool));
 
       if (condensed_targets->nelts == 0)
         APR_ARRAY_PUSH(condensed_targets, const char *) = "";
@@ -510,8 +510,7 @@ svn_client_log5(const apr_array_header_t *targets,
      * we use our initial target path to figure out where to root the RA
      * session, otherwise we use our URL. */
     if (SVN_CLIENT__REVKIND_NEEDS_WC(peg_revision->kind))
-      SVN_ERR(svn_dirent_condense_targets(&ra_target, NULL, targets, TRUE,
-                                          pool, pool));
+      SVN_ERR(svn_path_condense_targets(&ra_target, NULL, targets, TRUE, pool));
     else
       ra_target = url_or_path;
 

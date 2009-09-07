@@ -77,8 +77,11 @@ svn_cl__commit(apr_getopt_t *os,
   SVN_ERR(svn_opt_eat_peg_revisions(&targets, targets, pool));
 
   /* Condense the targets (like commit does)... */
-  SVN_ERR(svn_dirent_condense_targets(&base_dir, &condensed_targets,
-                                      targets, TRUE, pool, pool));
+  SVN_ERR(svn_path_condense_targets(&base_dir,
+                                    &condensed_targets,
+                                    targets,
+                                    TRUE,
+                                    pool));
 
   if ((! condensed_targets) || (! condensed_targets->nelts))
     {
