@@ -243,19 +243,16 @@ svn_client_status5(svn_revnum_t *result_rev,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool)  /* ### aka scratch_pool */
 {
-  svn_wc_adm_access_t *anchor_access, *target_access;
-  const char *anchor, *target;
   const svn_delta_editor_t *editor;
   void *edit_baton, *set_locks_baton;
-  const svn_wc_entry_t *entry = NULL;
   struct status_baton sb;
+  const char *dir, *dir_abspath;
   const char *target_abspath;
-  const char *anchor_abspath;
+  const char *target_basename;
   apr_array_header_t *ignores;
   svn_error_t *err;
   apr_hash_t *changelist_hash = NULL;
   svn_revnum_t edit_revision = SVN_INVALID_REVNUM;
-  svn_wc_context_t *wc_ctx = ctx->wc_ctx;
   struct svn_cl__externals_store externals_store = { NULL };
 
   if (changelists && changelists->nelts)
@@ -267,51 +264,74 @@ svn_client_status5(svn_revnum_t *result_rev,
   sb.changelist_hash = changelist_hash;
   sb.wc_ctx = ctx->wc_ctx;
 
-/* svn_client_status() is called from other operations that sometimes
-         have existing access batons. Run status in a new wc_ctx until we
-         get the status running without access batons. We can't pass a
-         context and an unrelated access baton to other functions */
+  SVN_ERR(svn_dirent_get_absolute(&target_abspath, path, pool));
+  {
+    svn_node_kind_t kind, disk_kind;
 
-  SVN_ERR(svn_wc_context_create(&wc_ctx, NULL, pool, pool));
+    SVN_ERR(svn_io_check_path(target_abspath, &disk_kind, pool));
+    err = svn_wc__node_get_kind(&kind, ctx->wc_ctx, target_abspath, FALSE,
+                                pool);
 
-  /* Try to open the target directory. If the target is a file or an
-     unversioned directory, open the parent directory instead */
-  err = svn_wc__adm_open_in_context(&anchor_access, wc_ctx, path, FALSE,
-                                    SVN_DEPTH_IS_RECURSIVE(depth) ? -1 : 1,
-                                    ctx->cancel_func, ctx->cancel_baton,
-                                    pool);
-  if (err && err->apr_err == SVN_ERR_WC_NOT_DIRECTORY)
+    if (err && ((err->apr_err == SVN_ERR_WC_MISSING) ||
+                (err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY)))
     {
+      /* This error code is checked for in svn to continue after an error */
       svn_error_clear(err);
-
-      SVN_ERR(svn_wc__adm_open_anchor_in_context(
-                                     &anchor_access, &target_access, &target,
-                                     wc_ctx, path, FALSE,
-                                     SVN_DEPTH_IS_RECURSIVE(depth) ? -1 : 1,
-                                     ctx->cancel_func, ctx->cancel_baton,
-                                     pool));
+      return svn_error_createf(SVN_ERR_WC_NOT_DIRECTORY, NULL,
+                               _("'%s' is not a working copy"),
+                               svn_dirent_local_style(path, pool));
     }
-  else if (!err)
-    {
-      target = "";
-      target_access = anchor_access;
-    }
-  else
-    return svn_error_return(err);
 
-  anchor = svn_wc_adm_access_path(anchor_access);
-  SVN_ERR(svn_dirent_get_absolute(&anchor_abspath, anchor, pool));
-  target_abspath = svn_dirent_join(anchor_abspath, target, pool);
+    SVN_ERR(err);
 
-  if (svn_dirent_is_absolute(anchor))
+    /* Dir must be an existing directory or the status editor fails */
+    if (kind == svn_node_dir && disk_kind == svn_node_dir)
+      {
+        dir_abspath = target_abspath;
+        target_basename = "";
+        dir = path;
+      }
+    else
+      {
+        dir_abspath = svn_dirent_dirname(target_abspath, pool);
+        target_basename = svn_dirent_basename(target_abspath, NULL);
+        dir = svn_dirent_dirname(path, pool);
+
+        if (kind != svn_node_file)
+          {
+            err = svn_wc__node_get_kind(&kind, ctx->wc_ctx, dir_abspath,
+                                        FALSE, pool);
+
+            svn_error_clear(err);
+
+            if (err || kind != svn_node_dir)
+              {
+                return svn_error_createf(SVN_ERR_WC_NOT_DIRECTORY, NULL,
+                                         _("'%s' is not a working copy"),
+                                         svn_dirent_local_style(path, pool));
+              }
+
+            /* Check for issue #1617 and stat_tests.py 14
+               "status on '..' where '..' is not versioned". */
+            if (strcmp(path, "..") == 0)
+              {
+                return svn_error_createf(SVN_ERR_WC_NOT_DIRECTORY, NULL,
+                                         _("'%s' is not a working copy"),
+                                         svn_dirent_local_style(path, pool));
+              }
+          }
+      }
+  }
+
+  if (svn_dirent_is_absolute(dir))
     {
       sb.anchor_abspath = NULL;
       sb.anchor_relpath = NULL;
     }
   else
     {
-      sb.anchor_abspath = anchor_abspath;
-      sb.anchor_relpath = anchor;
+      sb.anchor_abspath = dir_abspath;
+      sb.anchor_relpath = dir;
     }
 
   if (!ignore_externals)
@@ -324,9 +344,10 @@ svn_client_status5(svn_revnum_t *result_rev,
      as the callback pair. */
   SVN_ERR(svn_wc_get_default_ignores(&ignores, ctx->config, pool));
   SVN_ERR(svn_wc_get_status_editor5(&editor, &edit_baton, &set_locks_baton,
-                                    &edit_revision, wc_ctx, anchor_access,
-                                    target, depth, get_all, no_ignore,
-                                    ignores, tweak_status, &sb,
+                                    &edit_revision, ctx->wc_ctx,
+                                    dir_abspath, target_basename,
+                                    depth, get_all,
+                                    no_ignore, ignores, tweak_status, &sb,
                                     ctx->cancel_func, ctx->cancel_baton,
                                     ignore_externals ? svn_cl__store_externals
                                                      : NULL,
@@ -345,19 +366,18 @@ svn_client_status5(svn_revnum_t *result_rev,
       svn_boolean_t server_supports_depth;
 
       /* Get full URL from the ANCHOR. */
-      if (! entry)
-        SVN_ERR(svn_wc__get_entry_versioned(&entry, wc_ctx, anchor_abspath,
-                                            svn_node_unknown, FALSE, FALSE,
-                                            pool, pool));
-      if (! entry->url)
+      SVN_ERR(svn_client_url_from_path2(&URL, dir_abspath, ctx,
+                                        pool, pool));
+
+      if (!URL)
         return svn_error_createf
           (SVN_ERR_ENTRY_MISSING_URL, NULL,
            _("Entry '%s' has no URL"),
-           svn_dirent_local_style(anchor, pool));
-      URL = apr_pstrdup(pool, entry->url);
+           svn_dirent_local_style(dir, pool));
 
       /* Open a repository session to the URL. */
-      SVN_ERR(svn_client__open_ra_session_internal(&ra_session, URL, anchor,
+      SVN_ERR(svn_client__open_ra_session_internal(&ra_session, URL,
+                                                   dir_abspath,
                                                    NULL, FALSE, TRUE,
                                                    ctx, pool));
 
@@ -369,6 +389,12 @@ svn_client_status5(svn_revnum_t *result_rev,
                                 &kind, pool));
       if (kind == svn_node_none)
         {
+          const svn_wc_entry_t *entry;
+          SVN_ERR(svn_wc__get_entry_versioned(&entry, ctx->wc_ctx,
+                                              dir_abspath, svn_node_dir,
+                                              FALSE, FALSE,
+                                              pool, pool));
+
           /* Our status target does not exist in HEAD of the
              repository.  If we're just adding this thing, that's
              fine.  But if it was previously versioned, then it must
@@ -394,7 +420,7 @@ svn_client_status5(svn_revnum_t *result_rev,
             {
               /* Get a revision number for our status operation. */
               SVN_ERR(svn_client__get_revision_number(&revnum, NULL,
-                                                      wc_ctx,
+                                                      ctx->wc_ctx,
                                                       target_abspath,
                                                       ra_session, revision,
                                                       pool));
@@ -403,7 +429,7 @@ svn_client_status5(svn_revnum_t *result_rev,
           /* Do the deed.  Let the RA layer drive the status editor. */
           SVN_ERR(svn_ra_do_status2(ra_session, &rb.wrapped_reporter,
                                     &rb.wrapped_report_baton,
-                                    target, revnum, depth, editor,
+                                    target_basename, revnum, depth, editor,
                                     edit_baton, pool));
 
           /* Init the report baton. */
@@ -419,7 +445,8 @@ svn_client_status5(svn_revnum_t *result_rev,
              within PATH.  When we call reporter->finish_report,
              EDITOR will be driven to describe differences between our
              working copy and HEAD. */
-          SVN_ERR(svn_wc_crawl_revisions5(wc_ctx, anchor_abspath, target_abspath,
+          SVN_ERR(svn_wc_crawl_revisions5(ctx->wc_ctx,
+                                          target_abspath,
                                           &lock_fetch_reporter, &rb, FALSE,
                                           depth, TRUE, (! server_supports_depth),
                                           FALSE, NULL, NULL, NULL, NULL, pool));
@@ -427,13 +454,25 @@ svn_client_status5(svn_revnum_t *result_rev,
     }
   else
     {
-      SVN_ERR(editor->close_edit(edit_baton, pool));
+      err = editor->close_edit(edit_baton, pool);
+
+      if (err && err->apr_err == SVN_ERR_WC_MISSING)
+        {
+          /* This error code is checked for in svn to continue after
+             this error */
+          svn_error_clear(err);
+          return svn_error_createf(SVN_ERR_WC_NOT_DIRECTORY, NULL,
+                               _("'%s' is not a working copy"),
+                               svn_dirent_local_style(path, pool));
+        }
+
+      SVN_ERR(err);
     }
 
   if (ctx->notify_func2 && update)
     {
       svn_wc_notify_t *notify
-        = svn_wc_create_notify(path, svn_wc_notify_status_completed, pool);
+        = svn_wc_create_notify(target_abspath, svn_wc_notify_status_completed, pool);
       notify->revision = edit_revision;
       (ctx->notify_func2)(ctx->notify_baton2, notify, pool);
     }
@@ -441,11 +480,6 @@ svn_client_status5(svn_revnum_t *result_rev,
   /* If the caller wants the result revision, give it to them. */
   if (result_rev)
     *result_rev = edit_revision;
-
-  /* Close the access baton here, as svn_client__do_external_status()
-     calls back into this function and thus will be re-opening the
-     working copy. */
-  SVN_ERR(svn_wc_adm_close2(anchor_access, pool));
 
   /* If there are svn:externals set, we don't want those to show up as
      unversioned or unrecognized, so patch up the hash.  If caller wants

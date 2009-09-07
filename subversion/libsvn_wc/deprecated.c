@@ -115,11 +115,12 @@ svn_wc_crawl_revisions4(const char *path,
 {
   svn_wc_context_t *wc_ctx;
   svn_wc__db_t *wc_db = svn_wc__adm_get_db(adm_access);
+  const char *local_abspath;
   svn_wc_external_update_t external_func = NULL;
   struct traversal_info_update_baton *eb = NULL;
 
   SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL, wc_db, pool));
-  SVN_ERR(svn_dirent_get_absolute(&path, path, pool));
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
   if (traversal_info)
     {
@@ -131,8 +132,7 @@ svn_wc_crawl_revisions4(const char *path,
     }
 
   SVN_ERR(svn_wc_crawl_revisions5(wc_ctx,
-                                  svn_wc__adm_access_abspath(adm_access),
-                                  path,
+                                  local_abspath,
                                   reporter,
                                   report_baton,
                                   restore_files,
@@ -1867,7 +1867,8 @@ svn_wc_get_status_editor4(const svn_delta_editor_t **editor,
     }
 
   SVN_ERR(svn_wc_get_status_editor5(editor, edit_baton, set_locks_baton,
-                                    edit_revision, wc_ctx, anchor, target,
+                                    edit_revision, wc_ctx, 
+                                    svn_wc__adm_access_abspath(anchor), target,
                                     depth, get_all, no_ignore, ignore_patterns,
                                     status4_wrapper_func, swb,
                                     cancel_func, cancel_baton,
@@ -2274,7 +2275,8 @@ svn_wc_get_update_editor3(svn_revnum_t *target_revision,
   SVN_ERR(svn_wc_get_update_editor4(editor, edit_baton,
                                     target_revision,
                                     wc_ctx,
-                                    anchor, target,
+                                    svn_wc__adm_access_abspath(anchor),
+                                    target,
                                     use_commit_times,
                                     depth, depth_is_sticky,
                                     allow_unver_obstructions,
@@ -2390,7 +2392,8 @@ svn_wc_get_switch_editor3(svn_revnum_t *target_revision,
   SVN_ERR(svn_wc_get_switch_editor4(editor, edit_baton,
                                     target_revision,
                                     wc_ctx,
-                                    anchor, target, switch_url,
+                                    svn_wc__adm_access_abspath(anchor),
+                                    target, switch_url,
                                     use_commit_times,
                                     depth, depth_is_sticky,
                                     allow_unver_obstructions,
