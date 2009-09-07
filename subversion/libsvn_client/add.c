@@ -711,7 +711,8 @@ mkdir_urls(svn_commit_info_t **commit_info_p,
     }
 
   /* Condense our list of mkdir targets. */
-  SVN_ERR(svn_path_condense_targets(&common, &targets, urls, FALSE, pool));
+  SVN_ERR(svn_dirent_condense_targets(&common, &targets, urls, FALSE, pool,
+                                      pool));
   SVN_ERR(svn_hash_from_cstring_keys(&targets_hash, targets, pool));
   SVN_ERR(svn_hash_keys(&targets, targets_hash, pool));
 

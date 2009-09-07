@@ -192,10 +192,10 @@ organize_lock_targets(const char **common_parent,
   apr_pool_t *subpool = svn_pool_create(pool);
 
   /* Get the common parent and all relative paths */
-  SVN_ERR(svn_path_condense_targets(common_parent, &rel_targets, targets,
-                                    FALSE, pool));
+  SVN_ERR(svn_dirent_condense_targets(common_parent, &rel_targets, targets,
+                                      FALSE, pool, pool));
 
-  /* svn_path_condense_targets leaves paths empty if TARGETS only had
+  /* svn_dirent_condense_targets() leaves paths empty if TARGETS only had
      1 member, so we special case that. */
   if (apr_is_empty_array(rel_targets))
     {
@@ -278,10 +278,10 @@ organize_lock_targets(const char **common_parent,
         }
 
       /* Condense our absolute urls and get the relative urls. */
-      SVN_ERR(svn_path_condense_targets(&common_url, &rel_urls, urls,
-                                        FALSE, pool));
+      SVN_ERR(svn_dirent_condense_targets(&common_url, &rel_urls, urls,
+                                          FALSE, pool, pool));
 
-      /* svn_path_condense_targets leaves paths empty if TARGETS only had
+      /* svn_dirent_condense_targets() leaves paths empty if TARGETS only had
          1 member, so we special case that (again). */
       if (apr_is_empty_array(rel_urls))
         {
