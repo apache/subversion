@@ -1041,15 +1041,15 @@ EOE
     Svn::Wc::AdmAccess.open(nil, @wc_path) do |access|
       access.set_changelist(path, "123", nil, notify_collector)
     end
-    assert_equal([[path, nil]],
+    assert_equal([[File.expand_path(path), nil]],
                  notifies.collect {|notify| [notify.path, notify.err]})
 
     notifies = []
     Svn::Wc::AdmAccess.open(nil, @wc_path) do |access|
       access.set_changelist(path, "456", nil, notify_collector)
     end
-    assert_equal([[path, Svn::Error::WcChangelistMove],
-                  [path, NilClass]],
+    assert_equal([[File.expand_path(path), Svn::Error::WcChangelistMove],
+                  [File.expand_path(path), NilClass]],
                  notifies.collect {|notify| [notify.path, notify.err.class]})
 
     notifies = []
