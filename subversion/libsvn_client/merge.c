@@ -8363,16 +8363,11 @@ ensure_wc_reflects_repository_subtree(const char *target_abspath,
                                       apr_pool_t *scratch_pool)
 {
   svn_wc_revision_status_t *wc_stat;
-  svn_wc_context_t *wc_ctx;
-
-  SVN_ERR(svn_wc_context_create(&wc_ctx, NULL, scratch_pool, scratch_pool));
 
   /* Get a WC summary with min/max revisions set to the BASE revision. */
-  SVN_ERR(svn_wc_revision_status2(&wc_stat, wc_ctx, target_abspath, NULL,
+  SVN_ERR(svn_wc_revision_status2(&wc_stat, ctx->wc_ctx, target_abspath, NULL,
                                   FALSE, ctx->cancel_func, ctx->cancel_baton,
                                   scratch_pool, scratch_pool));
-
-  SVN_ERR(svn_wc_context_destroy(wc_ctx));
 
   if (wc_stat->switched)
     return svn_error_create(SVN_ERR_CLIENT_NOT_READY_TO_MERGE, NULL,
