@@ -422,14 +422,6 @@ open_single(svn_wc_adm_access_t **adm_access,
   svn_wc_adm_access_t *lock;
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, scratch_pool));
-
-  /* Let's just check for the off chance that we've already locked this
-     thing, and return it if we did. */
-  *adm_access = svn_wc__adm_retrieve_internal2(db, local_abspath,
-                                               scratch_pool);
-  if (*adm_access)
-    return SVN_NO_ERROR;
-
   err = svn_wc__internal_check_wc(&wc_format, db, local_abspath, scratch_pool);
   if (wc_format == 0 || (err && APR_STATUS_IS_ENOENT(err->apr_err)))
     {
@@ -546,10 +538,6 @@ do_open(svn_wc_adm_access_t **adm_access,
   svn_error_t *err;
   apr_pool_t *subpool = svn_pool_create(pool);
 
-  /* ### lock everything recursively.  this becomes the default
-     ### (and only thus far) mode of operation in wc-ng. */
-  levels_to_lock = -1;
-
   SVN_ERR(open_single(&lock, path, write_lock, db, db_provided,
                       pool, subpool));
 
@@ -615,16 +603,13 @@ do_open(svn_wc_adm_access_t **adm_access,
                   return err;
                 }
 
-              /* It's missing or obstructed, so store a placeholder, but only
-                 if the placeholder isn't already there. */
+              /* It's missing or obstructed, so store a placeholder */
               svn_error_clear(err);
-
-              SVN_ERR(svn_dirent_get_absolute(&abspath, entry_path, subpool));
               
-              if (!IS_MISSING(get_from_shared(abspath, db, subpool)))
-                svn_wc__db_temp_set_access(lock->db, abspath,
-                                           (svn_wc_adm_access_t *)&missing,
-                                           subpool);
+              SVN_ERR(svn_dirent_get_absolute(&abspath, entry_path, subpool));
+              svn_wc__db_temp_set_access(lock->db, abspath,
+                                         (svn_wc_adm_access_t *)&missing,
+                                         subpool);
             }
 
           /* ### what is the comment below all about? */
