@@ -1389,7 +1389,10 @@ merge_file_changed(svn_wc_adm_access_t *adm_access,
           if (same_contents)
             {
               if (older_revision_exists && !merge_b->dry_run)
-                SVN_ERR(svn_io_file_rename(yours, mine, subpool));
+                {
+                  SVN_ERR(svn_io_copy_file(yours, mine, FALSE, subpool));
+                  SVN_ERR(svn_io_remove_file2(yours, TRUE, subpool));
+                }
               merge_outcome = svn_wc_merge_merged;
               merge_required = FALSE;
             }
