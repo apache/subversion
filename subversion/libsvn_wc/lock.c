@@ -1504,9 +1504,28 @@ svn_wc__adm_missing(svn_wc__db_t *db,
                     apr_pool_t *scratch_pool)
 {
   const svn_wc_adm_access_t *look;
+  svn_wc__db_status_t status;
+  svn_error_t *err;
 
   look = get_from_shared(local_abspath, db, scratch_pool);
-  return IS_MISSING(look);
+
+  if (look != NULL)
+    return IS_MISSING(look);
+
+
+  err = svn_wc__db_read_info(&status, NULL, NULL, NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                             db, local_abspath, scratch_pool, scratch_pool);
+
+  if (err)
+    {
+      svn_error_clear(err);
+      return FALSE;
+    }
+  else
+    return (status == svn_wc__db_status_obstructed);
 }
 
 

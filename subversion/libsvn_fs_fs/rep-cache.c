@@ -39,24 +39,7 @@ static const char * const upgrade_sql[] = { NULL,
   REP_CACHE_DB_SQL
   };
 
-/* These values are directly related to the statements contained in STATEMENTS
-   below.  If you add something to that array, you'd better do the same here.
-*/
-enum statement_keys {
-  STMT_GET_REP,
-  STMT_SET_REP
-};
-
-static const char * const statements[] = {
-  "select revision, offset, size, expanded_size "
-  "from rep_cache "
-  "where hash = ?1",
-
-  "insert into rep_cache (hash, revision, offset, size, expanded_size) "
-  "values (?1, ?2, ?3, ?4, ?5);",
-
-  NULL
-  };
+REP_CACHE_DB_SQL_DECLARE_STATEMENTS(statements);
 
 
 svn_error_t *
@@ -71,8 +54,8 @@ svn_fs_fs__open_rep_cache(svn_fs_t *fs,
   db_path = svn_dirent_join(fs->path, REP_CACHE_DB_NAME, pool);
   SVN_ERR(svn_sqlite__open(&ffd->rep_cache_db, db_path,
                            svn_sqlite__mode_rwcreate, statements,
-                           REP_CACHE_SCHEMA_FORMAT,
-                           upgrade_sql, NULL, NULL, fs->pool, pool));
+                           REP_CACHE_SCHEMA_FORMAT, upgrade_sql,
+                           fs->pool, pool));
 
   return SVN_NO_ERROR;
 }

@@ -1603,15 +1603,6 @@ svn_wc__db_upgrade_finish(const char *dir_abspath,
                           apr_pool_t *scratch_pool);
 
 
-/** The upgrade function for the wc_db sqlite database.  This is exposed
-    quasi-publicly for testing purposes only. */
-svn_error_t *
-svn_wc__db_upgrade_func(void *baton,
-                        svn_sqlite__db_t *sdb,
-                        int current_schema,
-                        apr_pool_t *scratch_pool);
-                         
-
 /** @} */
 
 
@@ -1771,7 +1762,6 @@ svn_wc__db_temp_get_all_access(svn_wc__db_t *db,
 svn_error_t *
 svn_wc__db_temp_get_sdb(svn_sqlite__db_t **db,
                         const char *local_dir_abspath,
-                        const char * const statements_in[],
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool);
 

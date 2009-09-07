@@ -98,16 +98,6 @@ svn_wc__path_switched(svn_boolean_t *switched,
 
 
 /* Return TRUE iff CLHASH (a hash whose keys are const char *
-   changelist names) is NULL or if ENTRY->changelist (which may be
-   NULL) is a key in CLHASH.  */
-#define SVN_WC__CL_MATCH(clhash, entry) \
-        (((clhash == NULL) \
-          || (entry \
-              && entry->changelist \
-              && apr_hash_get(clhash, entry->changelist, \
-                              APR_HASH_KEY_STRING))) ? TRUE : FALSE)
-
-/* Return TRUE iff CLHASH (a hash whose keys are const char *
    changelist names) is NULL or if LOCAL_ABSPATH is part of a changelist in
    CLHASH. */
 svn_boolean_t
@@ -331,17 +321,21 @@ svn_wc__node_get_children(const apr_array_header_t **children,
 
 
 /** 
- * Fetch the repository root URL of the given @a local_abspath into
- * @a repos_root_url. Use @wc_ctx to access the working copy at
- * @a local_abspath, @a scratch_pool for all temporary allocations,
+ * Fetch the repository root information for a given @a local_abspath into
+ * @a *repos_root_url and @a repos_uuid. Use @wc_ctx to access the working copy
+ * for @a local_abspath, @a scratch_pool for all temporary allocations,
  * @a result_pool for result allocations. Note: the result may be NULL if the
  * given node has no repository root associated with it (e.g. locally added).
+ *
+ * Either input value may be NULL, indicating no interest.
  */
-svn_error_t *svn_wc__node_get_repos_root(const char **repos_root_url,
-                                         svn_wc_context_t *wc_ctx,
-                                         const char *local_abspath,
-                                         apr_pool_t *result_pool,
-                                         apr_pool_t *scratch_pool);
+svn_error_t *
+svn_wc__node_get_repos_info(const char **repos_root_url,
+                            const char **repos_uuid,
+                            svn_wc_context_t *wc_ctx,
+                            const char *local_abspath,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool);
 
 /* A convenience function for creating a new-style conflict description from
    an old one.

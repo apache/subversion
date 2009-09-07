@@ -186,7 +186,7 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
 
   /* Disallow a switch operation to change the repository root of the
      target. */
-  if (! svn_path_is_ancestor(source_root, URL))
+  if (! svn_uri_is_ancestor(source_root, URL))
     return svn_error_createf
       (SVN_ERR_WC_INVALID_SWITCH, NULL,
        _("'%s'\n"

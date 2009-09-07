@@ -297,7 +297,7 @@ end_merge(svn_ra_serf__xml_parser_t *parser,
           const char *href;
 
           href = apr_hash_get(info->props, "href", APR_HASH_KEY_STRING);
-          if (! svn_path_is_ancestor(ctx->merge_url, href))
+          if (! svn_uri_is_ancestor(ctx->merge_url, href))
             {
               /* ### need something better than APR_EGENERAL */
               return svn_error_createf(APR_EGENERAL, NULL,
@@ -452,7 +452,7 @@ svn_ra_serf__merge_lock_token_list(apr_hash_t *lock_tokens,
       path.data = key;
       path.len = klen;
 
-      if (parent && !svn_path_is_ancestor(parent, key))
+      if (parent && !svn_uri_is_ancestor(parent, key))
         continue;
 
       svn_ra_serf__add_open_tag_buckets(body, alloc, "S:lock", NULL);

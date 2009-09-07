@@ -1389,7 +1389,10 @@ merge_file_changed(svn_wc_adm_access_t *adm_access,
           if (same_contents)
             {
               if (older_revision_exists && !merge_b->dry_run)
-                SVN_ERR(svn_io_file_rename(yours, mine, subpool));
+                {
+                  SVN_ERR(svn_io_copy_file(yours, mine, FALSE, subpool));
+                  SVN_ERR(svn_io_remove_file2(yours, TRUE, subpool));
+                }
               merge_outcome = svn_wc_merge_merged;
               merge_required = FALSE;
             }
@@ -2384,7 +2387,7 @@ find_nearest_ancestor(apr_array_header_t *children_with_mergeinfo,
     {
       svn_client__merge_path_t *child =
         APR_ARRAY_IDX(children_with_mergeinfo, i, svn_client__merge_path_t *);
-      if (svn_path_is_ancestor(child->path, path)
+      if (svn_dirent_is_ancestor(child->path, path)
           && (path_is_own_ancestor
               || svn_path_compare_paths(child->path, path) != 0))
         ancestor_index = i;
@@ -4381,7 +4384,7 @@ remove_absent_children(const char *target_wcpath,
         APR_ARRAY_IDX(children_with_mergeinfo,
                       i, svn_client__merge_path_t *);
       if ((child->absent || child->scheduled_for_deletion)
-          && svn_path_is_ancestor(target_wcpath, child->path))
+          && svn_dirent_is_ancestor(target_wcpath, child->path))
         {
           remove_element_from_array(children_with_mergeinfo, i--);
         }
@@ -6626,7 +6629,7 @@ path_is_subtree(const char *path,
            hi = apr_hash_next(hi))
         {
           const char *path_touched_by_merge = svn_apr_hash_index_key(hi);
-          if (svn_path_is_ancestor(path, path_touched_by_merge))
+          if (svn_dirent_is_ancestor(path, path_touched_by_merge))
             return TRUE;
         }
     }
@@ -6900,7 +6903,7 @@ record_mergeinfo_for_dir_merge(const svn_wc_entry_t *target_entry,
                                          j, svn_client__merge_path_t *);
                   if (parent
                       && parent->switched
-                      && svn_path_is_ancestor(parent->path, child->path))
+                      && svn_dirent_is_ancestor(parent->path, child->path))
                     {
                       in_switched_subtree = TRUE;
                       break;
@@ -8004,11 +8007,8 @@ merge_cousins_and_supplement_mergeinfo(const char *target_wcpath,
       const char *wc_repos_uuid;
 
       SVN_ERR(svn_ra_get_uuid2(ra_session, &source_repos_uuid, pool));
-      if (entry)
-        wc_repos_uuid = entry->uuid;
-      else
-        SVN_ERR(svn_client_uuid_from_path2(&wc_repos_uuid, target_abspath,
-                                           ctx, pool, pool));
+      SVN_ERR(svn_client_uuid_from_path2(&wc_repos_uuid, target_abspath,
+                                         ctx, pool, pool));
       same_repos = (strcmp(wc_repos_uuid, source_repos_uuid) == 0);
     }
   else
@@ -8162,9 +8162,9 @@ svn_client_merge3(const char *source1,
                              svn_dirent_local_style(source2, pool));
 
   /* Open an admistrative session with the working copy. */
-  SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, target_wcpath,
-                                 ! dry_run, -1, ctx->cancel_func,
-                                 ctx->cancel_baton, pool));
+  SVN_ERR(svn_wc__adm_probe_in_context(&adm_access, ctx->wc_ctx, target_wcpath,
+                                       !dry_run, -1, ctx->cancel_func,
+                                       ctx->cancel_baton, pool));
 
   /* Fetch the target's entry. */
   SVN_ERR(svn_wc__get_entry_versioned(&entry, ctx->wc_ctx, target_abspath,
@@ -8210,11 +8210,8 @@ svn_client_merge3(const char *source1,
     {
       const char *wc_repos_uuid;
 
-      if (entry)
-        wc_repos_uuid = entry->uuid;
-      else
-        SVN_ERR(svn_client_uuid_from_path2(&wc_repos_uuid, target_abspath,
-                                           ctx, pool, pool));
+      SVN_ERR(svn_client_uuid_from_path2(&wc_repos_uuid, target_abspath,
+                                         ctx, pool, pool));
       same_repos = (strcmp(wc_repos_uuid, source_repos_uuid1) == 0);
     }
   else
@@ -8366,11 +8363,16 @@ ensure_wc_reflects_repository_subtree(const char *target_abspath,
                                       apr_pool_t *scratch_pool)
 {
   svn_wc_revision_status_t *wc_stat;
+  svn_wc_context_t *wc_ctx;
+
+  SVN_ERR(svn_wc_context_create(&wc_ctx, NULL, scratch_pool, scratch_pool));
 
   /* Get a WC summary with min/max revisions set to the BASE revision. */
-  SVN_ERR(svn_wc_revision_status2(&wc_stat, ctx->wc_ctx, target_abspath, NULL,
+  SVN_ERR(svn_wc_revision_status2(&wc_stat, wc_ctx, target_abspath, NULL,
                                   FALSE, ctx->cancel_func, ctx->cancel_baton,
                                   scratch_pool, scratch_pool));
+
+  SVN_ERR(svn_wc_context_destroy(wc_ctx));
 
   if (wc_stat->switched)
     return svn_error_create(SVN_ERR_CLIENT_NOT_READY_TO_MERGE, NULL,
@@ -9056,9 +9058,9 @@ svn_client_merge_reintegrate(const char *source,
   SVN_ERR(svn_dirent_get_absolute(&target_abspath, target_wcpath, pool));
 
   /* Open an admistrative session with the working copy. */
-  SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, target_wcpath,
-                                 (! dry_run), -1, ctx->cancel_func,
-                                 ctx->cancel_baton, pool));
+  SVN_ERR(svn_wc__adm_probe_in_context(&adm_access, ctx->wc_ctx, target_wcpath,
+                                       (! dry_run), -1, ctx->cancel_func,
+                                       ctx->cancel_baton, pool));
 
   /* Fetch the target's entry. */
   SVN_ERR(svn_wc__get_entry_versioned(&entry, ctx->wc_ctx, target_abspath,
@@ -9253,9 +9255,9 @@ svn_client_merge_peg3(const char *source,
   SVN_ERR(svn_dirent_get_absolute(&target_abspath, target_wcpath, pool));
 
   /* Open an admistrative session with the working copy. */
-  SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, target_wcpath,
-                                 (! dry_run), -1, ctx->cancel_func,
-                                 ctx->cancel_baton, pool));
+  SVN_ERR(svn_wc__adm_probe_in_context(&adm_access, ctx->wc_ctx, target_wcpath,
+                                       (! dry_run), -1, ctx->cancel_func,
+                                       ctx->cancel_baton, pool));
 
   /* Fetch the target's entry. */
   SVN_ERR(svn_wc__get_entry_versioned(&entry, ctx->wc_ctx, target_abspath,
@@ -9292,11 +9294,8 @@ svn_client_merge_peg3(const char *source,
       const char *wc_repos_uuid;
 
       SVN_ERR(svn_ra_get_uuid2(ra_session, &source_repos_uuid, pool));
-      if (entry)
-        wc_repos_uuid = entry->uuid;
-      else
-        SVN_ERR(svn_client_uuid_from_path2(&wc_repos_uuid, target_abspath,
-                                           ctx, pool, pool));
+      SVN_ERR(svn_client_uuid_from_path2(&wc_repos_uuid, target_abspath,
+                                         ctx, pool, pool));
       same_repos = (strcmp(wc_repos_uuid, source_repos_uuid) == 0);
     }
   else

@@ -74,7 +74,7 @@ validator_func(void *baton,
     {
       struct url_uuid_t *uu = &APR_ARRAY_IDX(uuids, i,
                                              struct url_uuid_t);
-      if (svn_path_is_ancestor(uu->root, url))
+      if (svn_uri_is_ancestor(uu->root, url))
         {
           url_uuid = uu;
           break;

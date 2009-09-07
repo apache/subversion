@@ -1113,9 +1113,9 @@ svn_client_patch(const char *patch_path,
   const char *abs_target;
 
   SVN_ERR(svn_dirent_get_absolute(&abs_target, target, pool));
-  SVN_ERR(svn_wc_adm_open3(&adm_access, NULL, abs_target,
-                           TRUE, -1, ctx->cancel_func, ctx->cancel_baton,
-                           pool));
+  SVN_ERR(svn_wc__adm_open_in_context(&adm_access, ctx->wc_ctx, abs_target,
+                                      TRUE, -1, ctx->cancel_func,
+                                      ctx->cancel_baton, pool));
 
   SVN_ERR(apply_textdiffs(patch_path, target, adm_access, dry_run, ctx, pool));
 

@@ -510,7 +510,6 @@ file_diff(struct dir_baton *dir_baton,
   svn_boolean_t modified;
   enum svn_wc_schedule_t schedule = entry->schedule;
   svn_boolean_t copied = entry->copied;
-  svn_wc_adm_access_t *adm_access;
   const char *base_mimetype, *working_mimetype;
   const char *translated = NULL;
   apr_array_header_t *propchanges = NULL;
@@ -521,12 +520,12 @@ file_diff(struct dir_baton *dir_baton,
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
-  SVN_ERR(svn_wc_adm_retrieve(&adm_access, dir_baton->edit_baton->anchor,
-                              dir_baton->path, pool));
-
   /* If the item is not a member of a specified changelist (and there are
      some specified changelists), skip it. */
-  if (! SVN_WC__CL_MATCH(dir_baton->edit_baton->changelist_hash, entry))
+  if (! svn_wc__internal_changelist_match(dir_baton->edit_baton->db,
+                                      local_abspath,
+                                      dir_baton->edit_baton->changelist_hash,
+                                      pool))
     return SVN_NO_ERROR;
 
   /* If the item is schedule-add *with history*, then we don't want to
@@ -692,7 +691,6 @@ directory_elements_diff(struct dir_baton *dir_baton)
 {
   apr_hash_t *entries;
   apr_hash_index_t *hi;
-  const svn_wc_entry_t *this_dir_entry;
   svn_boolean_t in_anchor_not_target;
   apr_pool_t *subpool;
   svn_wc_adm_access_t *adm_access;
@@ -725,12 +723,16 @@ directory_elements_diff(struct dir_baton *dir_baton)
                               dir_baton->path, dir_baton->pool));
 
   SVN_ERR(svn_wc_entries_read(&entries, adm_access, FALSE, dir_baton->pool));
-  this_dir_entry = apr_hash_get(entries, SVN_WC_ENTRY_THIS_DIR,
-                                APR_HASH_KEY_STRING);
 
   /* Check for local property mods on this directory, if we haven't
-     already reported them and we aren't changelist-filted. */
-  if (SVN_WC__CL_MATCH(dir_baton->edit_baton->changelist_hash, this_dir_entry)
+     already reported them and we aren't changelist-filted.
+     ### it should be noted that we do not currently allow directories
+     ### to be part of changelists, so if a changelist is provided, the
+     ### changelist check will always fail. */
+  if (svn_wc__internal_changelist_match(dir_baton->edit_baton->db,
+                                        dir_abspath,
+                                        dir_baton->edit_baton->changelist_hash,
+                                        dir_baton->pool)
       && (! in_anchor_not_target)
       && (! apr_hash_get(dir_baton->compared, "", 0)))
     {
@@ -867,11 +869,14 @@ report_wc_file_as_added(struct dir_baton *dir_baton,
   const char *translated_file;
   const char *local_abspath;
 
-  /* If this entry is filtered by changelist specification, do nothing. */
-  if (! SVN_WC__CL_MATCH(dir_baton->edit_baton->changelist_hash, entry))
-    return SVN_NO_ERROR;
-
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+
+  /* If this entry is filtered by changelist specification, do nothing. */
+  if (! svn_wc__internal_changelist_match(dir_baton->edit_baton->db,
+                                       local_abspath,
+                                       dir_baton->edit_baton->changelist_hash,
+                                       pool))
+    return SVN_NO_ERROR;
 
   SVN_ERR(get_empty_file(eb, &empty_file));
 
@@ -944,7 +949,6 @@ report_wc_directory_as_added(struct dir_baton *dir_baton,
   struct edit_baton *eb = dir_baton->edit_baton;
   svn_wc_adm_access_t *adm_access;
   apr_hash_t *emptyprops = apr_hash_make(pool), *wcprops = NULL;
-  const svn_wc_entry_t *this_dir_entry;
   apr_array_header_t *propchanges;
   apr_hash_t *entries;
   apr_hash_index_t *hi;
@@ -957,13 +961,16 @@ report_wc_directory_as_added(struct dir_baton *dir_baton,
                               dir_baton->path, pool));
 
   SVN_ERR(svn_wc_entries_read(&entries, adm_access, FALSE, pool));
-  this_dir_entry = apr_hash_get(entries, SVN_WC_ENTRY_THIS_DIR,
-                                APR_HASH_KEY_STRING);
 
   /* If this directory passes changelist filtering, get its BASE or
      WORKING properties, as appropriate, and simulate their
-     addition. */
-  if (SVN_WC__CL_MATCH(dir_baton->edit_baton->changelist_hash, this_dir_entry))
+     addition.
+     ### it should be noted that we do not currently allow directories
+     ### to be part of changelists, so if a changelist is provided, this
+     ### check will always fail. */
+  if (svn_wc__internal_changelist_match(eb->db, dir_abspath,
+                                        dir_baton->edit_baton->changelist_hash,
+                                        pool))
     {
       if (eb->use_text_base)
         SVN_ERR(svn_wc__internal_propdiff(NULL, &wcprops, eb->db, dir_abspath,

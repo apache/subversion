@@ -919,6 +919,11 @@ def status_missing_dir(sbox):
   svntest.actions.run_and_verify_svn(None, expected, [],
                                      "status", "-u", wc_dir)
 
+  # Finally run an explicit status request directly on the missing directory.
+  svntest.actions.run_and_verify_svn(None,
+                                     ["!       " + a_d_g + "\n"],
+                                     [], "status", a_d_g)
+
 def status_add_plus_conflict(sbox):
   "status on conflicted added file"
   sbox.build()

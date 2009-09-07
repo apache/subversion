@@ -1,4 +1,4 @@
-/* id.h : interface to node ID functions, private to libsvn_fs_fs
+/* rep-cache.h : interface to rep cache db functions
  *
  * ====================================================================
  *    Licensed to the Subversion Corporation (SVN Corp.) under one

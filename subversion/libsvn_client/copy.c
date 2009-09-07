@@ -1047,9 +1047,9 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
 
   /* Find the common root of all the source paths, and probe the wc. */
   get_copy_pair_ancestors(copy_pairs, &top_src_path, NULL, NULL, pool);
-  SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, top_src_path,
-                                 FALSE, -1, ctx->cancel_func,
-                                 ctx->cancel_baton, pool));
+  SVN_ERR(svn_wc__adm_probe_in_context(&adm_access, ctx->wc_ctx, top_src_path,
+                                       FALSE, -1, ctx->cancel_func,
+                                       ctx->cancel_baton, pool));
 
   /* The commit process uses absolute paths, so we need to open the access
      baton using absolute paths, and so we really need to use absolute
@@ -1588,9 +1588,9 @@ repos_to_wc_copy(const apr_array_header_t *copy_pairs,
     }
 
   /* Probe the wc at the longest common dst ancestor. */
-  SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, top_dst_path, TRUE,
-                                 0, ctx->cancel_func, ctx->cancel_baton,
-                                 pool));
+  SVN_ERR(svn_wc__adm_probe_in_context(&adm_access, ctx->wc_ctx, top_dst_path,
+                                       TRUE, 0, ctx->cancel_func,
+                                       ctx->cancel_baton, pool));
 
   /* We've already checked for physical obstruction by a working file.
      But there could also be logical obstruction by an entry whose

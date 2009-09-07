@@ -560,6 +560,17 @@ svn_wc_set_adm_dir(const char *name,
 
 
 
+
+/** Callback for external definitions updates
+ *
+ * @since New in 1.7. */
+typedef svn_error_t *(*svn_wc_external_update_t)(void *baton,
+                                                 const char *local_abspath,
+                                                 const svn_string_t *old_val,
+                                                 const svn_string_t *new_val,
+                                                 svn_depth_t depth,
+                                                 apr_pool_t *scratch_pool);
+
 /** Traversal information is information gathered by a working copy
  * crawl or update.  For example, the before and after values of the
  * svn:externals property are important after an update, and since
@@ -567,14 +578,23 @@ svn_wc_set_adm_dir(const char *name,
  * during the initial crawl, and a traversal of changed paths during
  * the checkout/update/switch), it makes sense to gather the
  * property's values then instead of making a second pass.
+ *
+ * New code should use the svn_wc_external_update_t callback instead.
+ *
+ * @deprecated Provided for backward compatibility with the 1.6 API.
  */
 typedef struct svn_wc_traversal_info_t svn_wc_traversal_info_t;
 
 
-/** Return a new, empty traversal info object, allocated in @a pool. */
+/** Return a new, empty traversal info object, allocated in @a pool.
+ *
+ * New code should use the svn_wc_external_update_t callback instead.
+ *
+ * @deprecated Provided for backward compatibility with the 1.6 API.
+ */
+SVN_DEPRECATED
 svn_wc_traversal_info_t *
 svn_wc_init_traversal_info(apr_pool_t *pool);
-
 
 /** Set @a *externals_old and @a *externals_new to hash tables representing
  * changes to values of the svn:externals property on directories
@@ -594,7 +614,12 @@ svn_wc_init_traversal_info(apr_pool_t *pool);
  * of the property did not change show the same value in each hash.
  *
  * The hashes, keys, and values have the same lifetime as @a traversal_info.
+ *
+ * New code should use the svn_wc_external_update_t callback instead.
+ *
+ * @deprecated Provided for backward compatibility with the 1.6 API.
  */
+SVN_DEPRECATED
 void
 svn_wc_edited_externals(apr_hash_t **externals_old,
                         apr_hash_t **externals_new,
@@ -619,8 +644,12 @@ svn_wc_edited_externals(apr_hash_t **externals_old,
  *
  * The hashes and keys have the same lifetime as @a traversal_info.
  *
+ * New code should use the svn_wc_external_update_t callback instead.
+ *
  * @since New in 1.5.
+ * @deprecated Provided for backward compatibility with the 1.6 API.
  */
+SVN_DEPRECATED
 void
 svn_wc_traversed_depths(apr_hash_t **depths,
                         svn_wc_traversal_info_t *traversal_info);
@@ -3430,11 +3459,11 @@ typedef void (*svn_wc_status_func_t)(void *baton,
 /**
  * Set @a *editor and @a *edit_baton to an editor that generates @c
  * svn_wc_status2_t structures and sends them through @a status_func /
- * @a status_baton.  @a anchor is an access baton, with a tree lock,
- * for the local path to the working copy which will be used as the
- * root of our editor.  If @a target is not empty, it represents an
- * entry in the @a anchor path which is the subject of the editor
- * drive (otherwise, the @a anchor is the subject).
+ * @a status_baton.  @a anchor_abspath is a working copy directory
+ * directory which will be used as the root of our editor.  If @a
+ * target_basename is not "", it represents a node in the @a anchor_abspath
+ * which is the subject of the editor drive (otherwise, the @a
+ * anchor_abspath is the subject).
  *
  * If @a set_locks_baton is non-@c NULL, it will be set to a baton that can
  * be used in a call to the svn_wc_status_set_repos_locks() function.
@@ -3491,8 +3520,8 @@ svn_wc_get_status_editor5(const svn_delta_editor_t **editor,
                           void **set_locks_baton,
                           svn_revnum_t *edit_revision,
                           svn_wc_context_t *wc_ctx,
-                          svn_wc_adm_access_t *anchor,
-                          const char *target,
+                          const char *anchor_abspath,
+                          const char *target_basename,
                           svn_depth_t depth,
                           svn_boolean_t get_all,
                           svn_boolean_t no_ignore,
@@ -3501,7 +3530,8 @@ svn_wc_get_status_editor5(const svn_delta_editor_t **editor,
                           void *status_baton,
                           svn_cancel_func_t cancel_func,
                           void *cancel_baton,
-                          svn_wc_traversal_info_t *traversal_info,
+                          svn_wc_external_update_t external_update,
+                          void *external_baton,
                           apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool);
 
@@ -4312,9 +4342,8 @@ svn_wc_process_committed(const char *path,
 
 
 /**
- * Do a depth-first crawl in a working copy, beginning at @a target_abspath,
- * below @a dir_abspath. @a target can be a file in @a dir_abspath,
- * or @a dir_abspath itself.
+ * Do a depth-first crawl in a working copy, beginning at @a local_abspath,
+ * using @a wc_ctx for accessing the working copy.
  *
  * Communicate the `state' of the working copy's revisions and depths
  * to @a reporter/@a report_baton.  Obviously, if @a local_abspath is a
@@ -4378,8 +4407,7 @@ svn_wc_process_committed(const char *path,
  */
 svn_error_t *
 svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
-                        const char *dir_abspath,
-                        const char *target_abspath,
+                        const char *local_abspath,
                         const svn_ra_reporter3_t *reporter,
                         void *report_baton,
                         svn_boolean_t restore_files,
@@ -4387,9 +4415,10 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
                         svn_boolean_t honor_depth_exclude,
                         svn_boolean_t depth_compatibility_trick,
                         svn_boolean_t use_commit_times,
+                        svn_wc_external_update_t external_func,
+                        void *external_baton,
                         svn_wc_notify_func2_t notify_func,
                         void *notify_baton,
-                        svn_wc_traversal_info_t *traversal_info,
                         apr_pool_t *scratch_pool);
 
 /**
@@ -4568,17 +4597,11 @@ svn_wc_get_actual_target(const char *path,
  * Set @a *editor and @a *edit_baton to an editor and baton for updating a
  * working copy.
  *
- * If @a ti is non-NULL, record traversal info in @a ti, for use by
- * post-traversal accessors such as svn_wc_edited_externals().
+ * @a anchor_abspath is a local working copy directory, with a fully recursive
+ * write lock in @a wc_ctx, which will be used as the root of our editor.
  *
- * @a anchor is an access baton, with a write lock, for the local path to the
- * working copy which will be used as the root of our editor.  Further
- * locks will be acquired if the update creates new directories.  All
- * locks, both those in @a anchor and newly acquired ones, will be released
- * when the editor driver calls @c close_edit.
- *
- * @a target is the entry in @a anchor that will actually be updated, or
- * the empty string if all of @a anchor should be updated.
+ * @a target_basename is the entry in @a anchor_abspath that will actually be
+ * updated, or the empty string if all of @a anchor_abspath should be updated.
  *
  * The editor invokes @a notify_func with @a notify_baton as the update
  * progresses, if @a notify_func is non-NULL.
@@ -4591,6 +4614,10 @@ svn_wc_get_actual_target(const char *path,
  * callback a chance to resolve the conflict before the editor takes
  * more drastic measures (such as marking a file conflicted, or
  * bailing out of the update).
+ *
+ * If @a external_func is non-NULL, then invoke it with @a external_baton
+ * whenever external changes are encountered, giving the callback a chance
+ * to store the external information for processing.
  *
  * If @a fetch_func is non-NULL, then use it (with @a fetch_baton) as
  * a fallback for retrieving repository files whenever 'copyfrom' args
@@ -4631,8 +4658,48 @@ svn_wc_get_actual_target(const char *path,
  * svn_depth_unknown, then in addition to updating PATHS, also set
  * their sticky ambient depth value to @a depth.
  *
- * @since New in 1.5.
+ * @since New in 1.7.
  */
+svn_error_t *
+svn_wc_get_update_editor4(const svn_delta_editor_t **editor,
+                          void **edit_baton,
+                          svn_revnum_t *target_revision,
+                          svn_wc_context_t *wc_ctx,
+                          const char *local_abspath,
+                          const char *target_basename,
+                          svn_boolean_t use_commit_times,
+                          svn_depth_t depth,
+                          svn_boolean_t depth_is_sticky,
+                          svn_boolean_t allow_unver_obstructions,
+                          svn_wc_notify_func2_t notify_func,
+                          void *notify_baton,
+                          svn_cancel_func_t cancel_func,
+                          void *cancel_baton,
+                          svn_wc_conflict_resolver_func_t conflict_func,
+                          void *conflict_baton,
+                          svn_wc_external_update_t external_func,
+                          void *external_baton,
+                          svn_wc_get_file_t fetch_func,
+                          void *fetch_baton,
+                          const char *diff3_cmd,
+                          apr_array_header_t *preserved_exts,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool);
+
+/** Similar to svn_wc_get_update_editor4, but uses access batons and relative
+ * path instead of a working copy context-abspath pair and 
+ * svn_wc_traversal_info_t instead of an externals callback.
+ *
+ * If @a ti is non-NULL, record traversal info in @a ti, for use by
+ * post-traversal accessors such as svn_wc_edited_externals().
+ *
+ * All locks, both those in @a anchor and newly acquired ones, will be
+ * released when the editor driver calls @c close_edit.
+ *
+ * @since New in 1.5.
+ * @deprecated Provided for backward compatibility with the 1.6 API. 
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_get_update_editor3(svn_revnum_t *target_revision,
                           svn_wc_adm_access_t *anchor,
@@ -4716,14 +4783,11 @@ svn_wc_get_update_editor(svn_revnum_t *target_revision,
  * within the same repository that the working copy already comes
  * from.)  @a switch_url must not be @c NULL.
  *
- * If @a ti is non-NULL, record traversal info in @a ti, for use by
- * post-traversal accessors such as svn_wc_edited_externals().
+ * @a anchor_abspath is a local working copy directory, with a fully recursive
+ * write lock in @a wc_ctx, which will be used as the root of our editor.
  *
- * @a anchor is an access baton, with a write lock, for the local path to the
- * working copy which will be used as the root of our editor.  Further
- * locks will be acquired if the switch creates new directories.  All
- * locks, both those in @a anchor and newly acquired ones, will be released
- * when the editor driver calls @c close_edit.
+ * @a target_basename is the entry in @a anchor_abspath that will actually be
+ * updated, or the empty string if all of @a anchor_abspath should be updated.
  *
  * @a target is the entry in @a anchor that will actually be updated, or
  * empty if all of @a anchor should be updated.
@@ -4739,6 +4803,14 @@ svn_wc_get_update_editor(svn_revnum_t *target_revision,
  * callback a chance to resolve the conflict before the editor takes
  * more drastic measures (such as marking a file conflicted, or
  * bailing out of the switch).
+ *
+ * If @a external_func is non-NULL, then invoke it with @a external_baton
+ * whenever external changes are encountered, giving the callback a chance
+ * to store the external information for processing.
+ *
+ * If @a fetch_func is non-NULL, then use it (with @a fetch_baton) as
+ * a fallback for retrieving repository files whenever 'copyfrom' args
+ * are sent into editor->add_file().
  *
  * If @a diff3_cmd is non-NULL, then use it as the diff3 command for
  * any merging; otherwise, use the built-in merge code.
@@ -4764,8 +4836,50 @@ svn_wc_get_update_editor(svn_revnum_t *target_revision,
  * If @a allow_unver_obstructions is TRUE, then allow unversioned
  * obstructions when adding a path.
  *
- * @since New in 1.5.
+ * @since New in 1.7.
  */
+svn_error_t *
+svn_wc_get_switch_editor4(const svn_delta_editor_t **editor,
+                          void **edit_baton,
+                          svn_revnum_t *target_revision,
+                          svn_wc_context_t *wc_ctx,
+                          const char *anchor_abspath,
+                          const char *target_basename,
+                          const char *switch_url,
+                          svn_boolean_t use_commit_times,
+                          svn_depth_t depth,
+                          svn_boolean_t depth_is_sticky,
+                          svn_boolean_t allow_unver_obstructions,
+                          svn_wc_notify_func2_t notify_func,
+                          void *notify_baton,
+                          svn_cancel_func_t cancel_func,
+                          void *cancel_baton,
+                          svn_wc_conflict_resolver_func_t conflict_func,
+                          void *conflict_baton,
+                          svn_wc_external_update_t external_func,
+                          void *external_baton,
+                          svn_wc_get_file_t fetch_func,
+                          void *fetch_baton,
+                          const char *diff3_cmd,
+                          apr_array_header_t *preserved_exts,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool);
+
+/** Similar to svn_wc_get_switch_editor4, but uses access batons and relative
+ * path instead of a working copy context and svn_wc_traversal_info_t instead
+ * of an externals callback. This function doesn't support an external file
+ * fetcher.
+ *
+ * If @a ti is non-NULL, record traversal info in @a ti, for use by
+ * post-traversal accessors such as svn_wc_edited_externals().
+ *
+ * All locks, both those in @a anchor and newly acquired ones, will be
+ * released when the editor driver calls @c close_edit.
+ *
+ * @since New in 1.5.
+ * @deprecated Provided for backward compatibility with the 1.6 API. 
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_get_switch_editor3(svn_revnum_t *target_revision,
                           svn_wc_adm_access_t *anchor,

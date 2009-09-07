@@ -199,10 +199,10 @@ organize_lock_targets(const char **common_parent,
      1 member, so we special case that. */
   if (apr_is_empty_array(rel_targets))
     {
-      char *base_name = svn_uri_basename(*common_parent, pool);
+      const char *base_name = svn_uri_basename(*common_parent, pool);
       *common_parent = svn_uri_dirname(*common_parent, pool);
 
-      APR_ARRAY_PUSH(rel_targets, char *) = base_name;
+      APR_ARRAY_PUSH(rel_targets, const char *) = base_name;
     }
 
   if (*common_parent == NULL || (*common_parent)[0] == '\0')
@@ -247,11 +247,11 @@ organize_lock_targets(const char **common_parent,
             max_levels_to_lock = (int) n;
         }
 
-      SVN_ERR(svn_wc_adm_probe_open3(parent_adm_access_p, NULL,
-                                     *common_parent,
-                                     TRUE, max_levels_to_lock,
-                                     ctx->cancel_func, ctx->cancel_baton,
-                                     pool));
+      SVN_ERR(svn_wc__adm_probe_in_context(parent_adm_access_p, ctx->wc_ctx,
+                                           *common_parent,
+                                           TRUE, max_levels_to_lock,
+                                           ctx->cancel_func, ctx->cancel_baton,
+                                           pool));
 
       /* Get the url for each target and verify all paths. */
       for (i = 0; i < rel_targets->nelts; i++)
@@ -285,9 +285,9 @@ organize_lock_targets(const char **common_parent,
          1 member, so we special case that (again). */
       if (apr_is_empty_array(rel_urls))
         {
-          char *base_name = svn_uri_basename(common_url, pool);
+          const char *base_name = svn_uri_basename(common_url, pool);
           common_url = svn_uri_dirname(common_url, pool);
-          APR_ARRAY_PUSH(rel_urls, char *) = base_name;
+          APR_ARRAY_PUSH(rel_urls, const char *) = base_name;
         }
 
       /* If we have no common URL parent, bail (cross-repos lock attempt) */
