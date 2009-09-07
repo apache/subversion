@@ -3405,7 +3405,7 @@ svn_wc_status(svn_wc_status_t **status,
 
 
 /**
- * A callback for reporting a @a status about @a path.
+ * A callback for reporting a @a status about @a local_abspath.
  *
  * @a baton is a closure object; it should be provided by the
  * implementation, and passed by the caller.
@@ -3420,12 +3420,13 @@ svn_wc_status(svn_wc_status_t **status,
  * @since New in 1.7.
  */
 typedef svn_error_t *(*svn_wc_status_func4_t)(void *baton,
-                                              const char *path,
+                                              const char *local_abspath,
                                               const svn_wc_status2_t *status,
                                               apr_pool_t *scratch_pool);
 
 /**
- * Same as svn_wc_status_func4_t, but with a non-const status.
+ * Same as svn_wc_status_func4_t, but with a non-const status and a relative
+ * path.
  *
  * @since New in 1.6.
  * @deprecated Provided for backward compatibility with the 1.6 API.
