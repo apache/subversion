@@ -3742,10 +3742,10 @@ svn_wc_copy(const char *src,
             apr_pool_t *pool);
 
 /**
- * Schedule @a path for deletion, it will be deleted from the repository on
- * the next commit.  If @a path refers to a directory, then a recursive
- * deletion will occur.  @a adm_access must hold a write lock for the parent
- * of @a path.
+ * Schedule @a local_abspath for deletion, it will be deleted from the
+ * repository on the next commit.  If @a local_abspath refers to a
+ * directory, then a recursive deletion will occur. @a wc_ctx must hold
+ * a write lock for the parent of @a local_abspath.
  *
  * If @a keep_local is FALSE, this function immediately deletes all files,
  * modified and unmodified, versioned and unversioned from the working copy.
@@ -3764,8 +3764,29 @@ svn_wc_copy(const char *src,
  * the @a notify_baton and that path. The @a notify_func callback may be
  * @c NULL if notification is not needed.
  *
- * @since New in 1.5.
+ * Use @a scratch_pool for temporary allocations.  It may be cleared
+ * immediately upon returning from this function.
+ *
+ * @since New in 1.7.
  */
+svn_error_t *
+svn_wc_delete4(svn_wc_context_t *wc_ctx,
+               const char *local_abspath,
+               svn_boolean_t keep_local,
+               svn_cancel_func_t cancel_func,
+               void *cancel_baton,
+               svn_wc_notify_func2_t notify_func,
+               void *notify_baton,
+               apr_pool_t *scratch_pool);
+
+/**
+ * Similar to svn_wc_delete4, but uses an access baton and relative path
+ * instead of a working copy context and absolute path.
+ *
+ * @since New in 1.5.
+ * @deprecated Provided for backward compatibility with the 1.6 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_delete3(const char *path,
                svn_wc_adm_access_t *adm_access,
