@@ -168,17 +168,14 @@ svn_wc__get_tree_conflict(svn_wc_conflict_description_t **tree_conflict,
                           apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool);
 
-/** Record the tree conflict described by @a conflict in the WC.
- * @a adm_access must be a write-access baton for the parent directory of
- * @a victim->path. Use @a pool for all allocations.
- *
- * Warning: This function updates the entry on disk but not the cached entry
- * in @a adm_access.
+/** Record the tree conflict described by @a conflict in the WC for
+ * @a victim_abspath.  Use @a scratch_pool for all temporary allocations.
  */
 svn_error_t *
-svn_wc__add_tree_conflict(const svn_wc_conflict_description_t *conflict,
-                          svn_wc_adm_access_t *adm_access,
-                          apr_pool_t *pool);
+svn_wc__add_tree_conflict(svn_wc_context_t *wc_ctx,
+                          const char *victim_abspath,
+                          const svn_wc_conflict_description_t *conflict,
+                          apr_pool_t *scratch_pool);
 
 /* Remove any tree conflict on victim @a victim_abspath using @a wc_ctx.
  * (If there is no such conflict recorded, do nothing and return success.)

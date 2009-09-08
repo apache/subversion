@@ -487,27 +487,26 @@ svn_wc__del_tree_conflict(svn_wc_context_t *wc_ctx,
 }
 
 svn_error_t *
-svn_wc__add_tree_conflict(const svn_wc_conflict_description_t *conflict,
-                          svn_wc_adm_access_t *adm_access,
-                          apr_pool_t *pool)
+svn_wc__add_tree_conflict(svn_wc_context_t *wc_ctx,
+                          const char *victim_abspath,
+                          const svn_wc_conflict_description_t *conflict,
+                          apr_pool_t *scratch_pool)
 {
   svn_wc_conflict_description_t *existing_conflict;
-  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
-  const char *conflict_abspath;
-
-  SVN_ERR(svn_dirent_get_absolute(&conflict_abspath, conflict->path, pool));
 
   /* Re-adding an existing tree conflict victim is an error. */
-  SVN_ERR(svn_wc__db_op_get_tree_conflict(&existing_conflict, db,
-                                          conflict_abspath, pool, pool));
+  SVN_ERR(svn_wc__db_op_get_tree_conflict(&existing_conflict, wc_ctx->db,
+                                          victim_abspath, scratch_pool,
+                                          scratch_pool));
   if (existing_conflict != NULL)
     return svn_error_createf(SVN_ERR_WC_CORRUPT, NULL,
                              _("Attempt to add tree conflict that already "
                                "exists at '%s'"),
-                             svn_dirent_local_style(conflict_abspath, pool));
+                             svn_dirent_local_style(victim_abspath,
+                                                    scratch_pool));
 
-  SVN_ERR(svn_wc__db_op_set_tree_conflict(db, conflict_abspath, conflict,
-                                          pool));
+  SVN_ERR(svn_wc__db_op_set_tree_conflict(wc_ctx->db, victim_abspath, conflict,
+                                          scratch_pool));
 
   return SVN_NO_ERROR;
 }

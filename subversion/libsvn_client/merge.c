@@ -540,7 +540,8 @@ tree_conflict(merge_cmd_baton_t *merge_b,
   SVN_ERR(svn_dirent_get_absolute(&conflict_abspath, conflict->path,
                                   merge_b->pool));
 
-  SVN_ERR(svn_wc__add_tree_conflict(conflict, adm_access, merge_b->pool));
+  SVN_ERR(svn_wc__add_tree_conflict(merge_b->ctx->wc_ctx, conflict_abspath,
+                                    conflict, merge_b->pool));
   return SVN_NO_ERROR;
 }
 
@@ -597,7 +598,8 @@ tree_conflict_on_add(merge_cmd_baton_t *merge_b,
                                      merge_b->pool);
     }
  
-  SVN_ERR(svn_wc__add_tree_conflict(conflict, adm_access, merge_b->pool));
+  SVN_ERR(svn_wc__add_tree_conflict(merge_b->ctx->wc_ctx, conflict_abspath,
+                                    conflict, merge_b->pool));
   return SVN_NO_ERROR;
 }
 
