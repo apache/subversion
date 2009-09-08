@@ -972,7 +972,11 @@ typedef enum svn_wc_notify_action_t
   svn_wc_notify_update_obstruction,
 
   /* The mergeinfo on path was updated.  @since New in 1.7. */
-  svn_wc_notify_merge_record_info
+  svn_wc_notify_merge_record_info,
+
+  /** An update operation removed an external working copy.
+   * @since New in 1.7. */
+  svn_wc_notify_update_external_removed,
 
 } svn_wc_notify_action_t;
 
