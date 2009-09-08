@@ -4460,8 +4460,9 @@ merge_file(svn_wc_notify_state_t *content_state,
       if (*lock_state == svn_wc_notify_lock_state_unlocked)
         /* If a lock was removed and we didn't update the text contents, we
            might need to set the file read-only. */
-        SVN_ERR(svn_wc__loggy_maybe_set_readonly(&log_accum, adm_access,
-                                                 fb->path, pool));
+        SVN_ERR(svn_wc__loggy_maybe_set_readonly(&log_accum,
+                                    svn_wc__adm_access_abspath(adm_access),
+                                    fb->path, pool));
     }
 
   /* Deal with installation of the new textbase, if appropriate. */
