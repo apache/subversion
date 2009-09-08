@@ -185,9 +185,9 @@ svn_wc__node_get_changelist(const char **changelist,
   svn_error_t *err;
 
   err = svn_wc__db_read_info(NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                             NULL, NULL, NULL, NULL, NULL, NULL,
-                             changelist,
                              NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                             changelist,
+                             NULL, NULL, NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                              wc_ctx->db, local_abspath, result_pool,
                              scratch_pool);
