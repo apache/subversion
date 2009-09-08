@@ -99,8 +99,9 @@ Candidate changes:
 
  * r38000, r38006, r38099, r38100, r38181, r38803, r38841, r38896,
    r38907, r39000, r39002, r39007, r39008, r39052, r39096, r39124,
-   r39235, r39127
+   r39125, r39127
    Properly handle tree conflicts during replace.
+   (See issue #3281 "Merge a replacement of a directory")
    Justification:
      If a merge has a delete followed by an add on the same node, and
      also that node is modified locally, svn tried to create two tree-
@@ -117,10 +118,18 @@ Candidate changes:
      than all the individual changes:
        svn diff -x-p ^/branches/1.6.x ^/branches/1.6.x-r38000
      See the log messages on the branch as well as those on trunk.
+     Here is a summary of the revisions, grouped by purpose:
+       Fix the "tree conflict that already exists" error:
+         r38000, r38006, r38181, r38841
+       Add and tweak new merge tests:
+         r38099, r38100, r38803, r39000, r39002, r39007, r39052
+       Eliminate duplicate notifications and improve error messages:
+         r38896, r38907, r39008, r39096, r39124, r39125, r39127
    Branch:
      ^/branches/1.6.x-r38000
    Votes:
-     +1: stsp, sbutler
+     +1: stsp (except r39124, r39125, r39127)
+     +1: sbutler
      -1: julianfoad (r38000, r38006, r38099, r38100, r38181 only)
 
  * r35958, r36030, r38373, r38836, r38837, r38842
