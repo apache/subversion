@@ -935,10 +935,11 @@ get_dir_status(struct edit_baton *eb,
 
   /* Load list of childnodes. */
   {
-    apr_array_header_t *child_nodes;
+    const apr_array_header_t *child_nodes;
     int i;
 
-    SVN_ERR(svn_wc__db_read_children(&child_nodes, eb->db, local_abspath, subpool, subpool));
+    SVN_ERR(svn_wc__db_read_children(&child_nodes, eb->db, local_abspath,
+                                     subpool, subpool));
 
     nodes = apr_hash_make(subpool);
     for (i = 0; i < child_nodes->nelts; i++)
@@ -1032,7 +1033,7 @@ get_dir_status(struct edit_baton *eb,
       if (apr_hash_get(nodes, key, klen))
         { /* Versioned node */
           svn_error_t *err;
-          svn_wc_entry_t *entry;
+          const svn_wc_entry_t *entry;
 
           svn_boolean_t hidden;
           node_abspath = svn_dirent_join(local_abspath, key, iterpool);
