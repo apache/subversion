@@ -1430,7 +1430,9 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
   SVN_ERR_ASSERT(p_access != NULL);
 
   path = svn_dirent_join(svn_wc_adm_access_path(p_access),
-                         svn_dirent_dirname(local_abspath, NULL),
+                         svn_dirent_skip_ancestor(
+                                     svn_wc__adm_access_abspath(p_access),
+                                     local_abspath),
                          pool);
 
   SVN_ERR(svn_path_check_valid(local_abspath, pool));
