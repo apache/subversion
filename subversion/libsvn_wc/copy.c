@@ -756,31 +756,27 @@ post_copy_cleanup(svn_wc__db_t *db,
      - dst_basename will be the 'new' name of the copied dir in dst_parent
  */
 static svn_error_t *
-copy_dir_administratively(const char *src_path,
-                          svn_wc_adm_access_t *src_access,
+copy_dir_administratively(svn_wc__db_t *db,
+                          const char *src_abspath,
                           svn_wc_adm_access_t *dst_parent,
                           const char *dst_basename,
                           svn_cancel_func_t cancel_func,
                           void *cancel_baton,
                           svn_wc_notify_func2_t notify_copied,
                           void *notify_baton,
-                          apr_pool_t *pool)
+                          apr_pool_t *scratch_pool)
 {
   const svn_wc_entry_t *src_entry;
-  svn_wc__db_t *db = svn_wc__adm_get_db(src_access);
   svn_wc_adm_access_t *adm_access;
-  const char *src_abspath;
 
   /* The 'dst_path' is simply dst_parent/dst_basename */
   const char *dst_path = svn_dirent_join(svn_wc_adm_access_path(dst_parent),
-                                         dst_basename, pool);
-
-  SVN_ERR(svn_dirent_get_absolute(&src_abspath, src_path, pool));
+                                         dst_basename, scratch_pool);
 
   /* Sanity check 1: You cannot make a copy of something that's not
      under version control. */
-  SVN_ERR(svn_wc__entry_versioned(&src_entry, src_path, src_access, FALSE,
-                                 pool));
+  SVN_ERR(svn_wc__get_entry(&src_entry, db, src_abspath, FALSE,
+                            svn_node_dir, FALSE, scratch_pool, scratch_pool));
 
   /* Sanity check 2: You cannot make a copy of something that's not
      in the repository unless it's a copy of an uncommitted copy. */
@@ -790,33 +786,34 @@ copy_dir_administratively(const char *src_path,
       (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
        _("Cannot copy or move '%s': it is not in the repository yet; "
          "try committing first"),
-       svn_dirent_local_style(src_path, pool));
+       svn_dirent_local_style(src_abspath, scratch_pool));
 
   /* Recursively copy the whole directory over.  This gets us all
      text-base, props, base-props, as well as entries, local mods,
      schedulings, existences, etc.
 
       ### Should we be copying unversioned items within the directory? */
-  SVN_ERR(svn_io_copy_dir_recursively(src_path,
+  SVN_ERR(svn_io_copy_dir_recursively(src_abspath,
                                       svn_wc_adm_access_path(dst_parent),
                                       dst_basename,
                                       TRUE,
                                       cancel_func, cancel_baton,
-                                      pool));
+                                      scratch_pool));
 
   /* If this is part of a move, the copied directory will be locked,
      because the source directory was locked.  Running cleanup will remove
      the locks, even though this directory has not yet been added to the
      parent. */
-  SVN_ERR(svn_wc_cleanup2(dst_path, NULL, cancel_func, cancel_baton, pool));
+  SVN_ERR(svn_wc_cleanup2(dst_path, NULL, cancel_func, cancel_baton,
+                          scratch_pool));
 
   /* We've got some post-copy cleanup to do now. */
   /* ### we should do this open using our existing DB.  */
   SVN_ERR(svn_wc_adm_open3(&adm_access, NULL, dst_path, TRUE, -1,
-                           cancel_func, cancel_baton, pool));
+                           cancel_func, cancel_baton, scratch_pool));
   SVN_ERR(post_copy_cleanup(svn_wc__adm_get_db(adm_access),
                             svn_wc__adm_access_abspath(adm_access),
-                            pool));
+                            scratch_pool));
 
   /* Schedule the directory for addition in both its parent and itself
      (this_dir) -- WITH HISTORY.  This function should leave the
@@ -830,31 +827,33 @@ copy_dir_administratively(const char *src_path,
     if (src_entry->copied)
       {
         const svn_wc_entry_t *dst_entry;
-        SVN_ERR(svn_wc_entry(&dst_entry, dst_path, dst_parent, FALSE, pool));
+        SVN_ERR(svn_wc_entry(&dst_entry, dst_path, dst_parent, FALSE,
+                             scratch_pool));
         SVN_ERR(determine_copyfrom_info(&copyfrom_url, &copyfrom_rev, db,
                                         src_abspath, src_entry, dst_entry,
-                                        pool, pool));
+                                        scratch_pool, scratch_pool));
 
         /* The URL for a copied dir won't exist in the repository, which
            will cause  svn_wc_add2() below to fail.  Set the URL to the
            URL of the first copy for now to prevent this. */
-        tmp_entry.url = apr_pstrdup(pool, copyfrom_url);
+        tmp_entry.url = apr_pstrdup(scratch_pool, copyfrom_url);
         SVN_ERR(svn_wc__entry_modify(adm_access, NULL, /* This Dir */
                                      &tmp_entry,
-                                     SVN_WC__ENTRY_MODIFY_URL, pool));
+                                     SVN_WC__ENTRY_MODIFY_URL, scratch_pool));
       }
     else
       {
         SVN_ERR(svn_wc__internal_get_ancestry(&copyfrom_url, &copyfrom_rev,
-                                              db, src_abspath, pool, pool));
+                                              db, src_abspath, scratch_pool,
+                                              scratch_pool));
       }
 
-    SVN_ERR(svn_wc_adm_close2(adm_access, pool));
+    SVN_ERR(svn_wc_adm_close2(adm_access, scratch_pool));
 
     return svn_wc_add3(dst_path, dst_parent, svn_depth_infinity,
                        copyfrom_url, copyfrom_rev,
                        cancel_func, cancel_baton,
-                       notify_copied, notify_baton, pool);
+                       notify_copied, notify_baton, scratch_pool);
   }
 }
 
@@ -875,7 +874,11 @@ svn_wc_copy2(const char *src_path,
   svn_wc_adm_access_t *adm_access;
   svn_node_kind_t src_kind;
   const char *dst_path, *target_path;
+  const char *src_abspath;
+  svn_wc__db_t *db = svn_wc__adm_get_db(dst_parent);
   const svn_wc_entry_t *dst_entry, *src_entry, *target_entry;
+
+  SVN_ERR(svn_dirent_get_absolute(&src_abspath, src_path, pool));
 
   SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, src_path, FALSE, -1,
                                  cancel_func, cancel_baton, pool));
@@ -956,7 +959,7 @@ svn_wc_copy2(const char *src_path,
         }
       else
         {
-          SVN_ERR(copy_dir_administratively(src_path, adm_access,
+          SVN_ERR(copy_dir_administratively(db, src_abspath,
                                             dst_parent, dst_basename,
                                             cancel_func, cancel_baton,
                                             notify_func, notify_baton, pool));
