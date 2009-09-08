@@ -3671,16 +3671,17 @@ svn_wc_status_set_repos_locks(void *set_locks_baton,
 
 
 /**
- * Copy @a src to @a dst_basename in @a dst_parent, and schedule
- * @a dst_basename for addition to the repository, remembering the copy
- * history.
+ * Copy @a src_abspath to @a dst_abspath, and schedule @a dst_abspath
+ * for addition to the repository, remembering the copy history. @a wc_ctx
+ * is used for accessing the working copy and must contain a write lock for
+ * the parent directory of @a dst_abspath,
  *
- * @a src must be a file or directory under version control; @a dst_parent
- * must be a directory under version control in the same working copy;
- * @a dst_basename will be the name of the copied item, and it must not
- * exist already.  Note that when @a src points to a versioned file, the
- * working file doesn't necessarily exist in which case its text-base is
- * used instead.
+ * @a src_abspath must be a file or directory under version control;
+ * the parent of @a dst_abspath must be a directory under version control
+ * in the same working copy; @a dst_abspath will be the name of the copied
+ * item, and it must not exist already.  Note that when @a src points to a
+ * versioned file, the working file doesn't necessarily exist in which case
+ * its text-base is used instead.
  *
  * If @a cancel_func is non-NULL, call it with @a cancel_baton at
  * various points during the operation.  If it returns an error
@@ -3691,12 +3692,29 @@ svn_wc_status_set_repos_locks(void *set_locks_baton,
  * if you are not interested in this information.
  *
  * @par Important:
- * This is a variant of svn_wc_add().  No changes will happen
+ * This is a variant of svn_wc_add4().  No changes will happen
  * to the repository until a commit occurs.  This scheduling can be
  * removed with svn_client_revert2().
  *
- * @since New in 1.2.
+ * @since New in 1.7.
  */
+svn_error_t *
+svn_wc_copy3(svn_wc_context_t *wc_ctx,
+             const char *src_abspath,
+             const char *dst_abspath,
+             svn_cancel_func_t cancel_func,
+             void *cancel_baton,
+             svn_wc_notify_func2_t notify_func,
+             void *notify_baton,
+             apr_pool_t *pool);
+
+/* Similar to svn_wc_copy3(), but takes access batons and a relative path
+ * and a basename instead of absolute paths and a working copy context.
+ *
+ * @since New in 1.2.
+ * @deprecated Provided for backward compatibility with the 1.6 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_copy2(const char *src,
              svn_wc_adm_access_t *dst_parent,
@@ -3916,10 +3934,11 @@ svn_wc_add(const char *path,
            void *notify_baton,
            apr_pool_t *pool);
 
-/** Add a file to a working copy at @a dst_path, obtaining the text-base's
- * contents from @a new_base_contents, the wc file's content from
- * @a new_contents, its base properties from @a new_base_props and
- * wc properties from @a new_props.
+/** Add a file to a working copy at @a local_abspath, obtaining the
+ *text-base's contents from @a new_base_contents, the wc file's
+ * content from @a new_contents, its base properties from @a 
+ * new_base_props and wc properties from @a new_props. Use @a wc_ctx
+ * for accessing the working copy.
  *
  * The base text and props normally come from the repository file
  * represented by the copyfrom args, see below.  The new file will
@@ -3960,8 +3979,30 @@ svn_wc_add(const char *path,
  * etc, etc.  So another part of the Ideal Plan is that that
  * functionality of svn_wc_add() would move into a separate function.
  *
- * @since New in 1.6
+ * @since New in 1.7.
  */
+svn_error_t *
+svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
+                       const char *local_abspath,
+                       svn_stream_t *new_base_contents,
+                       svn_stream_t *new_contents,
+                       apr_hash_t *new_base_props,
+                       apr_hash_t *new_props,
+                       const char *copyfrom_url,
+                       svn_revnum_t copyfrom_rev,
+                       svn_cancel_func_t cancel_func,
+                       void *cancel_baton,
+                       svn_wc_notify_func2_t notify_func,
+                       void *notify_baton,
+                       apr_pool_t *scratch_pool);
+
+/* Similar to svn_wc_add_repos_file4, but uses access batons and a
+ * relative path instead of a working copy context and absolute path.
+ *
+ * @since New in 1.6.
+ * @deprecated Provided for compatibility with the 1.6 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_add_repos_file3(const char *dst_path,
                        svn_wc_adm_access_t *adm_access,

@@ -5376,8 +5376,8 @@ install_added_props(svn_stringbuf_t *log_accum,
 }
 
 svn_error_t *
-svn_wc_add_repos_file3(const char *dst_path,
-                       svn_wc_adm_access_t *adm_access,
+svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
+                       const char *local_abspath,
                        svn_stream_t *new_base_contents,
                        svn_stream_t *new_contents,
                        apr_hash_t *new_base_props,
@@ -5391,25 +5391,34 @@ svn_wc_add_repos_file3(const char *dst_path,
                        apr_pool_t *pool)
 {
   const char *new_URL;
-  const char *adm_path = svn_wc_adm_access_path(adm_access);
+  const char *dir_abspath = svn_dirent_dirname(local_abspath, pool);
   apr_file_t *base_file;
   const char *tmp_text_base_path;
   svn_checksum_t *base_checksum;
   svn_stream_t *tmp_base_contents;
-  const char *text_base_path = svn_wc__text_base_path(dst_path, FALSE, pool);
+  const char *dst_path;
+  const char *text_base_path = svn_wc__text_base_path(local_abspath, FALSE,
+                                                      pool);
   const svn_wc_entry_t *ent;
   const svn_wc_entry_t *dst_entry;
   svn_stringbuf_t *log_accum;
-  const char *dir_name, *base_name;
+  svn_wc_adm_access_t *adm_access = 
+      svn_wc__adm_retrieve_internal2(wc_ctx->db, dir_abspath, pool);
 
-  svn_dirent_split(dst_path, &dir_name, &base_name, pool);
+  /* Calculate a valid relative path for the loggy code below */
+  SVN_ERR(svn_wc__temp_get_relpath(&dst_path, wc_ctx->db, local_abspath,
+                                   pool, pool));
 
   /* Fabricate the anticipated new URL of the target and check the
      copyfrom URL to be in the same repository. */
   {
-    SVN_ERR(svn_wc__entry_versioned(&ent, dir_name, adm_access, FALSE, pool));
+    SVN_ERR(svn_wc__get_entry(&ent, wc_ctx->db, dir_abspath, FALSE,
+                              svn_node_dir, FALSE, pool, pool));
 
-    new_URL = svn_path_url_add_component2(ent->url, base_name, pool);
+    new_URL = svn_path_url_add_component2(ent->url,
+                                          svn_dirent_basename(local_abspath,
+                                                              NULL),
+                                          pool);
 
     if (copyfrom_url && ent->repos &&
         ! svn_uri_is_ancestor(ent->repos, copyfrom_url))
@@ -5426,7 +5435,8 @@ svn_wc_add_repos_file3(const char *dst_path,
   /* If we're replacing the file then we need to save the destination files
      text base and prop base before replacing it. This allows us to revert
      the entire change. */
-  SVN_ERR(svn_wc_entry(&dst_entry, dst_path, adm_access, FALSE, pool));
+  SVN_ERR(svn_wc__get_entry(&dst_entry, wc_ctx->db, local_abspath, TRUE,
+                           svn_node_unknown, FALSE, pool, pool));
   if (dst_entry && dst_entry->schedule == svn_wc_schedule_delete)
     {
       const char *dst_rtext = svn_wc__text_revert_path(dst_path, pool);
@@ -5483,7 +5493,7 @@ svn_wc_add_repos_file3(const char *dst_path,
 
   /* Copy the text base contents into a temporary file so our log
      can refer to it. Compute its checksum as we copy. */
-  SVN_ERR(svn_wc_create_tmp_file2(&base_file, &tmp_text_base_path, adm_path,
+  SVN_ERR(svn_wc_create_tmp_file2(&base_file, &tmp_text_base_path, dir_abspath,
                                   svn_io_file_del_none, pool));
   new_base_contents = svn_stream_checksummed2(new_base_contents,
                                               &base_checksum, NULL,
@@ -5501,8 +5511,9 @@ svn_wc_add_repos_file3(const char *dst_path,
       svn_stream_t *tmp_contents;
       const char *tmp_text_path;
 
-      SVN_ERR(svn_wc_create_tmp_file2(&contents_file, &tmp_text_path, adm_path,
-                                      svn_io_file_del_none, pool));
+      SVN_ERR(svn_wc_create_tmp_file2(&contents_file, &tmp_text_path,
+                                      dir_abspath, svn_io_file_del_none,
+                                      pool));
       tmp_contents = svn_stream_from_aprfile2(contents_file, FALSE, pool);
       SVN_ERR(svn_stream_copy3(new_contents,
                                tmp_contents,
