@@ -32,6 +32,8 @@
 #include "svn_props.h"
 #include "svn_dirent_uri.h"
 
+#include "private/svn_wc_private.h"
+
 #include "wc.h"
 #include "lock.h"
 #include "props.h"
@@ -585,6 +587,54 @@ svn_wc_delete(const char *path,
   return svn_wc_delete2(path, adm_access, cancel_func, cancel_baton,
                         svn_wc__compat_call_notify_func, &nb, pool);
 }
+
+svn_error_t *
+svn_wc_add3(const char *path,
+            svn_wc_adm_access_t *parent_access,
+            svn_depth_t depth,
+            const char *copyfrom_url,
+            svn_revnum_t copyfrom_rev,
+            svn_cancel_func_t cancel_func,
+            void *cancel_baton,
+            svn_wc_notify_func2_t notify_func,
+            void *notify_baton,
+            apr_pool_t *pool)
+{
+  svn_wc_context_t *wc_ctx;
+  svn_wc__db_t *wc_db = svn_wc__adm_get_db(parent_access);
+  const char *local_abspath;
+
+  SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL, wc_db, pool));
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+
+  SVN_ERR(svn_wc_add4(wc_ctx, local_abspath,
+                      depth, copyfrom_url,
+                      copyfrom_rev,
+                      cancel_func, cancel_baton,
+                      notify_func, notify_baton, pool));
+
+  /* Make sure the caller gets the new access baton in the set. */
+  if (svn_wc__adm_retrieve_internal2(wc_db, local_abspath, pool) == NULL)
+    {
+      svn_node_kind_t kind;
+      svn_wc_adm_access_t *adm_access;
+
+      SVN_ERR(svn_wc__node_get_kind(&kind, wc_ctx, local_abspath, FALSE, pool));
+
+      if (kind == svn_node_dir)
+        {
+          /* Open the access baton in adm_access' pool to give it the same
+             lifetime */
+          SVN_ERR(svn_wc_adm_open3(&adm_access, parent_access, path, TRUE,
+                                   copyfrom_url ? -1 : 0,
+                                   cancel_func, cancel_baton,
+                                   svn_wc_adm_access_pool(parent_access)));
+        }
+    }
+
+  return SVN_NO_ERROR;
+}
+
 
 svn_error_t *
 svn_wc_add2(const char *path,

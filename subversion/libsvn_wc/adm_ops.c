@@ -1396,8 +1396,8 @@ svn_wc_get_ancestry2(const char **url,
 
 
 svn_error_t *
-svn_wc_add3(const char *path,
-            svn_wc_adm_access_t *parent_access,
+svn_wc_add4(svn_wc_context_t *wc_ctx,
+            const char *local_abspath,
             svn_depth_t depth,
             const char *copyfrom_url,
             svn_revnum_t copyfrom_rev,
@@ -1413,15 +1413,30 @@ svn_wc_add3(const char *path,
   svn_boolean_t is_replace = FALSE;
   svn_node_kind_t kind;
   apr_uint64_t modify_flags = 0;
-  svn_wc_adm_access_t *adm_access;
-  const char *local_abspath;
-  svn_wc__db_t *db = svn_wc__adm_get_db(parent_access);
+  svn_wc_adm_access_t *p_access, *adm_access;
+  svn_wc__db_t *db = wc_ctx->db;
+  const char *path;
 
-  SVN_ERR(svn_path_check_valid(path, pool));
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+  p_access = svn_wc__adm_retrieve_internal2(db,
+                                            svn_dirent_dirname(local_abspath,
+                                                               pool),
+                                            pool);
+
+  /* Check if we are not adding the working copy root
+     'svn wc add --force .' */
+  if (p_access == NULL)
+    p_access = svn_wc__adm_retrieve_internal2(db, local_abspath, pool);
+
+  SVN_ERR_ASSERT(p_access != NULL);
+
+  path = svn_dirent_join(svn_wc_adm_access_path(p_access),
+                         svn_dirent_dirname(local_abspath, NULL),
+                         pool);
+
+  SVN_ERR(svn_path_check_valid(local_abspath, pool));
 
   /* Make sure something's there. */
-  SVN_ERR(svn_io_check_path(path, &kind, pool));
+  SVN_ERR(svn_io_check_path(local_abspath, &kind, pool));
   if (kind == svn_node_none)
     return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
                              _("'%s' not found"),
@@ -1437,7 +1452,7 @@ svn_wc_add3(const char *path,
      Note that this is one of the few functions that is allowed to see
      'deleted' entries;  it's totally fine to have an entry that is
      scheduled for addition and still previously 'deleted'.  */
-  SVN_ERR(svn_wc_adm_probe_try3(&adm_access, parent_access, path,
+  SVN_ERR(svn_wc_adm_probe_try3(&adm_access, p_access, path,
                                 TRUE, copyfrom_url != NULL ? -1 : 0,
                                 cancel_func, cancel_baton, pool));
   if (adm_access)
@@ -1485,7 +1500,7 @@ svn_wc_add3(const char *path,
 
   /* Split off the base_name from the parent directory. */
   svn_dirent_split(path, &parent_dir, &base_name, pool);
-  SVN_ERR(svn_wc_entry(&parent_entry, parent_dir, parent_access, FALSE,
+  SVN_ERR(svn_wc_entry(&parent_entry, parent_dir, p_access, FALSE,
                        pool));
   if (! parent_entry)
     return svn_error_createf
@@ -1540,7 +1555,7 @@ svn_wc_add3(const char *path,
 
   /* Now, add the entry for this item to the parent_dir's
      entries file, marking it for addition. */
-  SVN_ERR(svn_wc__entry_modify(parent_access, base_name, &tmp_entry,
+  SVN_ERR(svn_wc__entry_modify(p_access, base_name, &tmp_entry,
                                modify_flags, pool));
 
 
@@ -1592,7 +1607,7 @@ svn_wc_add3(const char *path,
 
           /* Get the entry for this directory's parent.  We need to snatch
              the ancestor path out of there. */
-          SVN_ERR(svn_wc_entry(&p_entry, parent_dir, parent_access, FALSE,
+          SVN_ERR(svn_wc_entry(&p_entry, parent_dir, p_access, FALSE,
                                pool));
 
           /* Derive the parent path for our new addition here. */
@@ -1619,8 +1634,8 @@ svn_wc_add3(const char *path,
       /* We want the locks to persist, so use the access baton's pool */
       if (! orig_entry || orig_entry->deleted)
         {
-          apr_pool_t* access_pool = svn_wc_adm_access_pool(parent_access);
-          SVN_ERR(svn_wc_adm_open3(&adm_access, parent_access, path,
+          apr_pool_t* access_pool = svn_wc_adm_access_pool(p_access);
+          SVN_ERR(svn_wc_adm_open3(&adm_access, p_access, path,
                                    TRUE, copyfrom_url != NULL ? -1 : 0,
                                    cancel_func, cancel_baton,
                                    access_pool));
