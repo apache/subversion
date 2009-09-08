@@ -469,8 +469,8 @@ make_tree_conflict(svn_wc_conflict_description_t **conflict,
 
   /* Construct the source URLs of the victim. */
   {
-    const char *child = svn_path_is_child(merge_b->target,
-                                          victim_path, merge_b->pool);
+    const char *child = svn_dirent_is_child(merge_b->target,
+                                            victim_path, merge_b->pool);
     if (child != NULL)
       {
         left_url = svn_path_url_add_component2(merge_b->merge_source.url1,
@@ -487,12 +487,12 @@ make_tree_conflict(svn_wc_conflict_description_t **conflict,
 
   left = svn_wc_conflict_version_create(
            src_repos_url,
-           svn_path_is_child(src_repos_url, left_url, merge_b->pool),
+           svn_uri_is_child(src_repos_url, left_url, merge_b->pool),
            merge_b->merge_source.rev1, node_kind, merge_b->pool);
 
   right = svn_wc_conflict_version_create(
             src_repos_url,
-            svn_path_is_child(src_repos_url, right_url, merge_b->pool),
+            svn_uri_is_child(src_repos_url, right_url, merge_b->pool),
             merge_b->merge_source.rev2, node_kind, merge_b->pool);
 
   *conflict = svn_wc_conflict_description_create_tree(
@@ -1518,7 +1518,7 @@ merge_file_added(svn_wc_adm_access_t *adm_access,
   if (! adm_access)
     {
       if (merge_b->dry_run && merge_b->added_path
-          && svn_path_is_child(merge_b->added_path, mine, subpool))
+          && svn_dirent_is_child(merge_b->added_path, mine, subpool))
         {
           if (content_state)
             *content_state = svn_wc_notify_state_changed;
@@ -1569,8 +1569,8 @@ merge_file_added(svn_wc_adm_access_t *adm_access,
                add. */
             if (merge_b->same_repos)
               {
-                const char *child = svn_path_is_child(merge_b->target,
-                                                      mine, subpool);
+                const char *child = svn_dirent_is_child(merge_b->target,
+                                                        mine, subpool);
                 if (child != NULL)
                   copyfrom_url = svn_path_url_add_component2(
                                                merge_b->merge_source.url2,
@@ -1921,7 +1921,7 @@ merge_dir_added(svn_wc_adm_access_t *adm_access,
       if (state)
         {
           if (merge_b->dry_run && merge_b->added_path
-              && svn_path_is_child(merge_b->added_path, path, subpool))
+              && svn_dirent_is_child(merge_b->added_path, path, subpool))
             *state = svn_wc_notify_state_changed;
           else
             *state = svn_wc_notify_state_missing;
@@ -1934,7 +1934,7 @@ merge_dir_added(svn_wc_adm_access_t *adm_access,
       return SVN_NO_ERROR;
     }
 
-  child = svn_path_is_child(merge_b->target, path, subpool);
+  child = svn_dirent_is_child(merge_b->target, path, subpool);
   SVN_ERR_ASSERT(child != NULL);
 
   /* If this is a merge from the same repository as our working copy,
@@ -5265,7 +5265,7 @@ insert_parent_and_sibs_of_sw_absent_del_entry(
                                           FALSE, FALSE, iterpool, iterpool));
 
       /* Does this child already exist in CHILDREN_WITH_MERGEINFO? */
-      child_path = svn_path_join(parent->path, child_entry->name, iterpool);
+      child_path = svn_dirent_join(parent->path, child_entry->name, iterpool);
       sibling_of_missing = get_child_with_mergeinfo(children_with_mergeinfo,
                                                     child_path);
       /* Create the missing child and insert it into CHILDREN_WITH_MERGEINFO.*/
@@ -5476,7 +5476,7 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
                      If not, create it and insert it into
                      CHILDREN_WITH_MERGEINFO and set override mergeinfo on
                      it. */
-                  child_path = svn_path_join(child->path, name, iterpool);
+                  child_path = svn_dirent_join(child->path, name, iterpool);
                   SVN_ERR(svn_dirent_get_absolute(&child_abspath, child_path,
                                                   iterpool));
                   child_of_noninheritable =
@@ -7029,13 +7029,13 @@ record_mergeinfo_for_added_subtrees(svn_merge_range_t *merged_range,
               /* abs_added_path had better be a child of abs_target_path
                  or something is *really* wrong. */
 
-              rel_added_path = svn_path_is_child(abs_target_path,
-                                                 abs_added_path,
-                                                 iterpool);
+              rel_added_path = svn_dirent_is_child(abs_target_path,
+                                                   abs_added_path,
+                                                   iterpool);
               SVN_ERR_ASSERT(rel_added_path);
-              added_path_mergeinfo_path = svn_path_join(mergeinfo_path,
-                                                        rel_added_path,
-                                                        iterpool);
+              added_path_mergeinfo_path = svn_dirent_join(mergeinfo_path,
+                                                          rel_added_path,
+                                                          iterpool);
               apr_hash_set(merge_mergeinfo,
                            added_path_mergeinfo_path,
                            APR_HASH_KEY_STRING, rangelist);
