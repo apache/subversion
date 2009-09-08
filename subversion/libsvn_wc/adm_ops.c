@@ -1151,21 +1151,32 @@ erase_from_wc(const char *path,
 
 
 svn_error_t *
-svn_wc_delete3(const char *path,
-               svn_wc_adm_access_t *adm_access,
+svn_wc_delete4(svn_wc_context_t *wc_ctx,
+               const char *local_abspath,
+               svn_boolean_t keep_local,
                svn_cancel_func_t cancel_func,
                void *cancel_baton,
                svn_wc_notify_func2_t notify_func,
                void *notify_baton,
-               svn_boolean_t keep_local,
                apr_pool_t *pool)
 {
+  const char *path;
+  svn_wc_adm_access_t *adm_access;
   svn_wc_adm_access_t *dir_access;
   const svn_wc_entry_t *entry;
   svn_boolean_t was_schedule;
   svn_node_kind_t was_kind;
   svn_boolean_t was_copied;
   svn_boolean_t was_deleted = FALSE; /* Silence a gcc uninitialized warning */
+
+  SVN_ERR(svn_wc__temp_get_relpath(&path, wc_ctx->db, local_abspath,
+                                   pool, pool));
+
+  adm_access = svn_wc__adm_retrieve_internal2(wc_ctx->db,
+                                              svn_dirent_dirname(local_abspath,
+                                                                 pool),
+                                              pool);
+  SVN_ERR_ASSERT(adm_access != NULL);
 
   SVN_ERR(svn_wc_adm_probe_try3(&dir_access, adm_access, path,
                                 TRUE, -1, cancel_func, cancel_baton, pool));
