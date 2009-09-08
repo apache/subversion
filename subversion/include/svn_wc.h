@@ -3786,31 +3786,33 @@ svn_wc_delete(const char *path,
 
 
 /**
- * Put @a path under version control by adding an entry in its parent,
- * and, if @a path is a directory, adding an administrative area.  The
- * new entry and anything under it is scheduled for addition to the
- * repository.  @a parent_access should hold a write lock for the parent
- * directory of @a path.  If @a path is a directory then an access baton
- * for @a path will be added to the set containing @a parent_access.
+ * Put @a local_abspath under version control by adding an entry in its
+ * parent, and if @a local_abspath is a directory, adding an 
+ * administrative area.  The new node and anything under it is scheduled
+ * for addition to the repository.  @a wc_ctx should hold a write lock
+ * for the parent directory of @a local_abspath.  If @a local_abspath is
+ * a directory then an access baton for @a local_abspath will be added
+ * to the set containing @a parent_access.
  *
- * If @a path does not exist, return @c SVN_ERR_WC_PATH_NOT_FOUND.
+ * If @a local_abspath does not exist, return @c SVN_ERR_WC_PATH_NOT_FOUND.
  *
- * If @a path is a directory, add it at @a depth; otherwise, ignore
+ * If @a local_abspath is a directory, add it at @a depth; otherwise, ignore
  * @a depth.
  *
  * If @a copyfrom_url is non-NULL, it and @a copyfrom_rev are used as
  * `copyfrom' args.  This is for copy operations, where one wants
- * to schedule @a path for addition with a particular history.
+ * to schedule @a local_abspath for addition with a particular history.
  *
  * If @a cancel_func is non-NULL, call it with @a cancel_baton at
  * various points during the operation.  If it returns an error
  * (typically @c SVN_ERR_CANCELLED), return that error immediately.
  *
- * When the @a path has been added, then @a notify_func will be called
- * (if it is not @c NULL) with the @a notify_baton and the path.
+ * When the @a local_abspath has been added, then @a notify_func will be
+ * called (if it is not @c NULL) with the @a notify_baton and the path.
  *
- * Return @c SVN_ERR_WC_NODE_KIND_CHANGE if @a path is both an unversioned
- * directory and a file that is scheduled for deletion or in state deleted.
+ * Return @c SVN_ERR_WC_NODE_KIND_CHANGE if @a local_abspath is both an
+ * unversioned directory and a file that is scheduled for deletion or in
+ * state deleted.
  *
  *<pre> ### This function currently does double duty -- it is also
  * ### responsible for "switching" a working copy directory over to a
@@ -3841,8 +3843,27 @@ svn_wc_delete(const char *path,
  * ### Update: see "###" comment in svn_wc_add_repos_file3()'s doc
  * string about this.
  *
- * @since New in 1.6.
+ * @since New in 1.7.
  */
+svn_error_t *
+svn_wc_add4(svn_wc_context_t *wc_ctx,
+            const char *local_abspath,
+            svn_depth_t depth,
+            const char *copyfrom_url,
+            svn_revnum_t copyfrom_rev,
+            svn_cancel_func_t cancel_func,
+            void *cancel_baton,
+            svn_wc_notify_func2_t notify_func,
+            void *notify_baton,
+            apr_pool_t *scratch_pool);
+
+/**
+ * Similar to svn_wc_add4(), but with an access baton
+ * and relative path instead of a context and absolute path.
+ * @since New in 1.6.
+ * @deprecated Provided for backward compatibility with the 1.6 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_add3(const char *path,
             svn_wc_adm_access_t *parent_access,
