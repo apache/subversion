@@ -171,12 +171,6 @@ svn_error_t *svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
    NAME can be NULL to specify that the caller wishes to modify the
    "this dir" entry in ADM_ACCESS.
 
-   If DO_SYNC is FALSE then the modification will be entirely local to the
-   access baton, if DO_SYNC is TRUE the modification will be written to
-   the entries file.  Be careful when setting DO_SYNC to FALSE: if there
-   is no subsequent svn_wc__entries_write call the modifications will be
-   lost when the access baton is closed.
-
    "Folding in" a change means, in most cases, simply replacing the field
    with the new value. However, for the "schedule" field, unless
    MODIFY_FLAGS includes SVN_WC__ENTRY_MODIFY_FORCE (in which case just take
@@ -186,15 +180,25 @@ svn_error_t *svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
      ### base / working / base and working version(s) ?
    of the node.
 
-   Perform all allocations in POOL.
+   Perform all allocations in POOL.  */
+svn_error_t *
+svn_wc__entry_modify(svn_wc_adm_access_t *adm_access,
+                     const char *name,
+                     svn_wc_entry_t *entry,
+                     apr_uint64_t modify_flags,
+                     apr_pool_t *pool);
 
-   NOTE: when you call this function, the entries file will be read,
-   tweaked and finally, if DO_SYNC is TRUE, written back out.  */
-svn_error_t *svn_wc__entry_modify(svn_wc_adm_access_t *adm_access,
-                                  const char *name,
-                                  svn_wc_entry_t *entry,
-                                  apr_uint64_t modify_flags,
-                                  apr_pool_t *pool);
+
+/* A cross between svn_wc__get_entry() and svn_wc__entry_modify(). */
+svn_error_t *
+svn_wc__entry_modify2(svn_wc__db_t *db,
+                      const char *local_abspath,
+                      svn_node_kind_t kind,
+                      svn_boolean_t parent_stub,
+                      svn_wc_entry_t *entry,
+                      apr_uint64_t modify_flags,
+                      apr_pool_t *scratch_pool);
+
 
 /* Remove LOCAL_ABSPATH from DB, unconditionally.
 
