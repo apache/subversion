@@ -3362,10 +3362,7 @@ svn_wc__set_file_external_location(svn_wc_adm_access_t *adm_access,
                                    const char *repos_root_url,
                                    apr_pool_t *pool)
 {
-  apr_hash_t *entries;
   svn_wc_entry_t entry = { 0 };
-
-  SVN_ERR(svn_wc_entries_read(&entries, adm_access, FALSE, pool));
 
   if (url)
     {
