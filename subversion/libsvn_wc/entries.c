@@ -1010,24 +1010,28 @@ read_entries(apr_hash_t **entries,
 }
 
 
-svn_error_t *
-svn_wc__get_entry(const svn_wc_entry_t **entry,
-                  svn_wc__db_t *db,
-                  const char *local_abspath,
-                  svn_boolean_t allow_unversioned,
-                  svn_node_kind_t kind,
-                  svn_boolean_t need_parent_stub,
-                  apr_pool_t *result_pool,
-                  apr_pool_t *scratch_pool)
+/* For a given LOCAL_ABSPATH, using DB, return the directory in which the
+   entry information is located, and the entry name to access that entry.
+
+   KIND and PARENT_STUB are as in svn_wc__get_entry().
+
+   Return the results in RESULT_POOL and use SCRATCH_POOL for temporary
+   allocations. */
+static svn_error_t *
+get_entry_access_info(const char **adm_abspath,
+                      const char **entry_name,
+                      svn_wc__db_t *db,
+                      const char *local_abspath,
+                      svn_node_kind_t kind,
+                      svn_boolean_t parent_stub,
+                      apr_pool_t *result_pool,
+                      apr_pool_t *scratch_pool)
 {
-  svn_boolean_t read_from_subdir = FALSE;
-  const char *dir_abspath;
-  const char *entry_name;
   svn_wc_adm_access_t *adm_access;
-  apr_hash_t *entries;
+  svn_boolean_t read_from_subdir = FALSE;
 
   /* Can't ask for the parent stub if the node is a file.  */
-  SVN_ERR_ASSERT(!need_parent_stub || kind != svn_node_file);
+  SVN_ERR_ASSERT(!parent_stub || kind != svn_node_file);
 
   /* If the caller didn't know the node kind, then stat the path. Maybe
      it is really there, and we can speed up the steps below.  */
@@ -1072,10 +1076,10 @@ svn_wc__get_entry(const svn_wc_entry_t **entry,
         {
           /* We found a directory for this UNKNOWN node. Determine whether
              we need to read inside it.  */
-          read_from_subdir = !need_parent_stub;
+          read_from_subdir = !parent_stub;
         }
     }
-  else if (kind == svn_node_dir && !need_parent_stub)
+  else if (kind == svn_node_dir && !parent_stub)
     {
       read_from_subdir = TRUE;
     }
@@ -1084,16 +1088,42 @@ svn_wc__get_entry(const svn_wc_entry_t **entry,
     {
       /* KIND must be a DIR or UNKNOWN (and we found a subdir). We want
          the "real" data, so treat LOCAL_ABSPATH as a versioned directory.  */
-      dir_abspath = local_abspath;
-      entry_name = "";
+      *adm_abspath = apr_pstrdup(result_pool, local_abspath);
+      *entry_name = "";
     }
   else
     {
       /* FILE node needs to read the parent directory. Or a DIR node
          needs to read from the parent to get at the stub entry. Or this
          is an UNKNOWN node, and we need to examine the parent.  */
-      svn_dirent_split(local_abspath, &dir_abspath, &entry_name, scratch_pool);
+      svn_dirent_split(local_abspath, adm_abspath, entry_name, result_pool);
     }
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc__get_entry(const svn_wc_entry_t **entry,
+                  svn_wc__db_t *db,
+                  const char *local_abspath,
+                  svn_boolean_t allow_unversioned,
+                  svn_node_kind_t kind,
+                  svn_boolean_t need_parent_stub,
+                  apr_pool_t *result_pool,
+                  apr_pool_t *scratch_pool)
+{
+  const char *dir_abspath;
+  const char *entry_name;
+  svn_wc_adm_access_t *adm_access;
+  apr_hash_t *entries;
+
+  /* Can't ask for the parent stub if the node is a file.  */
+  SVN_ERR_ASSERT(!need_parent_stub || kind != svn_node_file);
+
+  SVN_ERR(get_entry_access_info(&dir_abspath, &entry_name, db, local_abspath,
+                                kind, need_parent_stub, scratch_pool,
+                                scratch_pool));
 
   /* Is there an existing access baton for this path?  */
   adm_access = svn_wc__adm_retrieve_internal2(db, dir_abspath, scratch_pool);
@@ -2813,6 +2843,93 @@ fold_scheduling(svn_boolean_t *skip_schedule_change,
 
 
 svn_error_t *
+svn_wc__entry_modify2(svn_wc__db_t *db,
+                      const char *local_abspath,
+                      svn_node_kind_t kind,
+                      svn_boolean_t parent_stub,
+                      svn_wc_entry_t *entry,
+                      apr_uint64_t modify_flags,
+                      apr_pool_t *scratch_pool)
+{
+  apr_hash_t *entries;
+  svn_boolean_t entry_was_deleted_p = FALSE;
+  svn_wc_adm_access_t *adm_access;
+  const char *adm_abspath;
+  const char *name;
+
+  SVN_ERR_ASSERT(entry);
+
+  SVN_ERR(get_entry_access_info(&adm_abspath, &name, db, local_abspath,
+                                kind, parent_stub, scratch_pool,
+                                scratch_pool));
+
+  /* Load ADM_ACCESS's whole entries file:
+     Is there an existing access baton for this path?  */
+  adm_access = svn_wc__adm_retrieve_internal2(db, adm_abspath, scratch_pool);
+  if (adm_access == NULL)
+    {
+      /* Don't bother caching entries; we've got no place to store 'em. */
+      SVN_ERR(read_entries(&entries, db, adm_abspath, scratch_pool,
+                           scratch_pool));
+    }
+  else
+    SVN_ERR(svn_wc_entries_read(&entries, adm_access, TRUE, scratch_pool));
+
+  /* Ensure that NAME is valid. */
+  if (name == NULL)
+    name = SVN_WC_ENTRY_THIS_DIR;
+
+  if (modify_flags & SVN_WC__ENTRY_MODIFY_SCHEDULE)
+    {
+      const svn_wc_entry_t *entry_before;
+      const svn_wc_entry_t *entry_after;
+
+      /* Keep a copy of the unmodified entry on hand. */
+      entry_before = apr_hash_get(entries, name, APR_HASH_KEY_STRING);
+
+      /* We may just want to force the scheduling change in. Otherwise,
+         call our special function to fold the change in.  */
+      if (!(modify_flags & SVN_WC__ENTRY_MODIFY_FORCE))
+        {
+          svn_boolean_t skip_schedule_change;
+
+          /* If scheduling changes were made, we have a special routine to
+             manage those modifications. */
+          SVN_ERR(fold_scheduling(&skip_schedule_change, entries, name,
+                                  &entry->schedule, scratch_pool));
+          if (skip_schedule_change)
+            modify_flags &= ~SVN_WC__ENTRY_MODIFY_SCHEDULE;
+        }
+
+      /* Special case:  fold_state_changes() may have actually REMOVED
+         the entry in question!  If so, don't try to fold_entry, as
+         this will just recreate the entry again. */
+      entry_after = apr_hash_get(entries, name, APR_HASH_KEY_STRING);
+
+      /* Note if this entry was deleted above so we don't accidentally
+         re-add it in the following steps. */
+      if (entry_before && (! entry_after))
+        entry_was_deleted_p = TRUE;
+    }
+
+  /* If the entry wasn't just removed from the entries hash, fold the
+     changes into the entry. */
+  if (! entry_was_deleted_p)
+    {
+      SVN_ERR(fold_entry(entries, name, modify_flags, entry,
+                         adm_access
+                           ? svn_wc_adm_access_pool(adm_access)
+                           : scratch_pool));
+    }
+
+  /* Sync changes to disk. */
+  return svn_error_return(
+    entries_write(entries, db, svn_wc__adm_access_abspath(adm_access),
+                  scratch_pool));
+}
+
+
+svn_error_t *
 svn_wc__entry_modify(svn_wc_adm_access_t *adm_access,
                      const char *name,
                      svn_wc_entry_t *entry,
@@ -3573,26 +3690,27 @@ svn_wc_mark_missing_deleted(const char *path,
                             apr_pool_t *pool)
 {
   svn_node_kind_t pkind;
+  const char *local_abspath;
+  svn_wc__db_t *db = svn_wc__adm_get_db(parent);
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
   SVN_ERR(svn_io_check_path(path, &pkind, pool));
 
   if (pkind == svn_node_none)
     {
-      const char *parent_path, *bname;
-      svn_wc_adm_access_t *adm_access;
       svn_wc_entry_t newent;
 
       newent.deleted = TRUE;
       newent.schedule = svn_wc_schedule_normal;
 
-      svn_dirent_split(path, &parent_path, &bname, pool);
-
-      SVN_ERR(svn_wc_adm_retrieve(&adm_access, parent, parent_path, pool));
-      return svn_wc__entry_modify(adm_access, bname, &newent,
-                                   (SVN_WC__ENTRY_MODIFY_DELETED
-                                    | SVN_WC__ENTRY_MODIFY_SCHEDULE
-                                    | SVN_WC__ENTRY_MODIFY_FORCE),
-                                   pool);
+      return svn_error_return(
+        svn_wc__entry_modify2(db, local_abspath, svn_node_unknown, FALSE,
+                              &newent,
+                              (SVN_WC__ENTRY_MODIFY_DELETED
+                               | SVN_WC__ENTRY_MODIFY_SCHEDULE
+                               | SVN_WC__ENTRY_MODIFY_FORCE),
+                              pool));
     }
   else
     return svn_error_createf(SVN_ERR_WC_PATH_FOUND, NULL,
