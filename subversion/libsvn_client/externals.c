@@ -937,6 +937,21 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
         (adm_access, what_to_remove, TRUE, FALSE,
          ib->ctx->cancel_func, ib->ctx->cancel_baton, ib->iter_pool);
 
+      if (ib->ctx->notify_func2)
+        {
+          svn_wc_notify_t *notify = 
+              svn_wc_create_notify(
+                        svn_dirent_join(svn_wc_adm_access_path(adm_access),
+                                        what_to_remove, ib->iter_pool),
+                        svn_wc_notify_update_external_removed, ib->iter_pool);
+
+          notify->kind = svn_node_dir;
+          notify->err = err;
+
+          (ib->ctx->notify_func2)(ib->ctx->notify_baton2,
+                                  notify, ib->iter_pool);
+        }
+
       /* ### Ugly. Unlock only if not going to return an error. Revisit */
       if (close_access_baton_when_done &&
           (!err || err->apr_err == SVN_ERR_WC_LEFT_LOCAL_MOD))
