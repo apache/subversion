@@ -1247,11 +1247,7 @@ svn_wc_delete4(svn_wc_context_t *wc_ctx,
                  with!  this means we're dealing with a missing item
                  that's scheduled for addition.  Easiest to just
                  remove the entry.  */
-              svn_wc__db_t *db = svn_wc__adm_get_db(parent_access);
-              const char *local_abspath;
-
-              SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
-              SVN_ERR(svn_wc__entry_remove(db, local_abspath, pool));
+              SVN_ERR(svn_wc__entry_remove(wc_ctx->db, local_abspath, pool));
               apr_hash_set(entries, base_name, APR_HASH_KEY_STRING, NULL);
             }
         }
