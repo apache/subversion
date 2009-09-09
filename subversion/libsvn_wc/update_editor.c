@@ -2321,7 +2321,7 @@ add_directory(const char *path,
                                           db->path, FALSE, 0,
                                           NULL, NULL, pool);
 
-      if (err && err->apr_err != SVN_ERR_WC_NOT_DIRECTORY)
+      if (err && err->apr_err != SVN_ERR_WC_NOT_WORKING_COPY)
         {
           /* Something quite unexpected has happened. */
           return err;
@@ -3174,7 +3174,7 @@ locate_copyfrom(svn_wc__db_t *db,
   SVN_ERR(svn_dirent_get_absolute(&cwd_abspath, cwd->data, subpool));
   err = svn_wc__get_entry(&ancestor_entry, db, cwd_abspath, FALSE,
                           svn_node_dir, FALSE, subpool, subpool);
-  if (err && err->apr_err == SVN_ERR_WC_NOT_DIRECTORY)
+  if (err && err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY)
     {
       /* The common ancestor directory isn't version-controlled. */
       svn_error_clear(err);
@@ -3214,7 +3214,7 @@ locate_copyfrom(svn_wc__db_t *db,
   SVN_ERR(svn_dirent_get_absolute(&cwd_abspath, cwd->data, pool));
   err = svn_wc__get_entry(&file_entry, db, cwd_abspath, TRUE, svn_node_file,
                           FALSE, pool, pool);
-  if (err && err->apr_err == SVN_ERR_WC_NOT_DIRECTORY)
+  if (err && err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY)
     {
       svn_error_clear(err);
 

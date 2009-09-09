@@ -275,7 +275,7 @@ svn_client_status5(svn_revnum_t *result_rev,
     {
       /* This error code is checked for in svn to continue after an error */
       svn_error_clear(err);
-      return svn_error_createf(SVN_ERR_WC_NOT_DIRECTORY, NULL,
+      return svn_error_createf(SVN_ERR_WC_NOT_WORKING_COPY, NULL,
                                _("'%s' is not a working copy"),
                                svn_dirent_local_style(path, pool));
     }
@@ -304,7 +304,7 @@ svn_client_status5(svn_revnum_t *result_rev,
 
             if (err || kind != svn_node_dir)
               {
-                return svn_error_createf(SVN_ERR_WC_NOT_DIRECTORY, NULL,
+                return svn_error_createf(SVN_ERR_WC_NOT_WORKING_COPY, NULL,
                                          _("'%s' is not a working copy"),
                                          svn_dirent_local_style(path, pool));
               }
@@ -313,7 +313,7 @@ svn_client_status5(svn_revnum_t *result_rev,
                "status on '..' where '..' is not versioned". */
             if (strcmp(path, "..") == 0)
               {
-                return svn_error_createf(SVN_ERR_WC_NOT_DIRECTORY, NULL,
+                return svn_error_createf(SVN_ERR_WC_NOT_WORKING_COPY, NULL,
                                          _("'%s' is not a working copy"),
                                          svn_dirent_local_style(path, pool));
               }
@@ -459,7 +459,7 @@ svn_client_status5(svn_revnum_t *result_rev,
           /* This error code is checked for in svn to continue after
              this error */
           svn_error_clear(err);
-          return svn_error_createf(SVN_ERR_WC_NOT_DIRECTORY, NULL,
+          return svn_error_createf(SVN_ERR_WC_NOT_WORKING_COPY, NULL,
                                _("'%s' is not a working copy"),
                                svn_dirent_local_style(path, pool));
         }

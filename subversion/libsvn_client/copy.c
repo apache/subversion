@@ -433,7 +433,7 @@ wc_to_wc_copy(const apr_array_header_t *copy_pairs,
         }
       else if (dst_parent_kind != svn_node_dir)
         {
-          return svn_error_createf(SVN_ERR_WC_NOT_DIRECTORY, NULL,
+          return svn_error_createf(SVN_ERR_WC_NOT_WORKING_COPY, NULL,
                                    _("Path '%s' is not a directory"),
                                    svn_dirent_local_style(pair->dst_parent,
                                                         pool));
@@ -1581,7 +1581,7 @@ repos_to_wc_copy(const apr_array_header_t *copy_pairs,
         }
       else if (dst_parent_kind != svn_node_dir)
         {
-          return svn_error_createf(SVN_ERR_WC_NOT_DIRECTORY, NULL,
+          return svn_error_createf(SVN_ERR_WC_NOT_WORKING_COPY, NULL,
                                    _("Path '%s' is not a directory"),
                                    svn_dirent_local_style(dst_parent, pool));
         }
