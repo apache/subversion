@@ -4,7 +4,7 @@
 
 ;; Author: David Kågedal <david@virtutech.com>
 ;;	Mattias Engdegård <mattias@virtutech.com>
-;; Maintainer: David Kågedal <david@virtutech.com>
+;; Maintainer: Mattias Engdegård <mattias@virtutech.com>
 ;; Created: 27 Jan 2006
 ;; Version: 1.8
 ;; Keywords: docs
