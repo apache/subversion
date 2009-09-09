@@ -651,12 +651,20 @@ def disallow_dot_or_dotdot_directory_reference(sbox):
 
   external_url_for = externals_test_setup(sbox)
   wc_dir         = sbox.wc_dir
+  repo_url       = sbox.repo_url
+
+  # Checkout a working copy
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'checkout',
+                                     repo_url, wc_dir)
 
   # Try to set illegal externals in the original WC.
   def set_externals_for_path_expect_error(path, val):
     (fd, tmp_f) = tempfile.mkstemp()
     svntest.main.file_append(tmp_f, val)
-    svntest.actions.run_and_verify_svn(None, None, svntest.verify.AnyOutput,
+    expected_err = ".*Invalid svn:externals property on '.*': target " + \
+                   "'.*' is an absolute path or involves '..'.*"
+    svntest.actions.run_and_verify_svn(None, None, expected_err,
                                        'pset', '-F', tmp_f,
                                        'svn:externals', path)
     os.close(fd)
