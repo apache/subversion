@@ -1726,13 +1726,18 @@ test_dirent_condense_targets(apr_pool_t *pool)
     const char *common;
     const char *results[8]; /* must be same size as paths */
   } tests[] = {
+    { { "/dir", "/dir/file", NULL },         NULL,     { "", "file" } },
+    { { "/dir1", "/dir2", NULL },            NULL,     { "dir1", "dir2" } },
+    { { "dir1", "dir2", NULL },              NULL,     { "dir1", "dir2" } },
 #if defined(WIN32) || defined(__CYGWIN__)
     { {"C:/", "C:/zeta", NULL},              "C:/",    {"", "zeta"} },
     { {"C:/dir", "C:/dir/zeta", NULL},       "C:/dir", {"", "zeta"} },
     { {"C:/dir/omega", "C:/dir/zeta", NULL}, "C:/dir", {"omega", "zeta" } },
+    { {"C:/dir", "D:/dir", NULL},            "",       {"C:/dir", "D:/dir"} },
+    { {"C:A", "C:dir/b", NULL},              NULL,     {"A", "dir/b"} },
 #else
-    { { "/dir", "/dir/file", NULL }, "/dir", { "", "file" } },
-    { { "/dir1", "/dir2", NULL },    "/",     { "dir1", "dir2" } },
+    { { "/dir", "/dir/file", NULL },        "/dir",    { "", "file" } },
+    { { "/dir1", "/dir2", NULL },           "/",       { "dir1", "dir2" } },
 #endif
   };
 
@@ -1754,9 +1759,9 @@ test_dirent_condense_targets(apr_pool_t *pool)
       SVN_ERR(svn_dirent_condense_targets(&common, &condensed, hdr, 
                                           FALSE, pool, pool));
 
-      if (strcmp(common, tests[i].common))
+      if (tests[i].common != NULL && strcmp(common, tests[i].common))
         return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
-                                 "svn_dirent_condense_targets returned common"
+                                 "svn_dirent_condense_targets returned common "
                                  "\"%s\". expected \"%s\"",
                                  common, tests[i].common);
 
@@ -1769,6 +1774,71 @@ test_dirent_condense_targets(apr_pool_t *pool)
                      tests[i].results[j]))
             return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                            "svn_dirent_condense_targets returned first"
+                           "\"%s\". expected \"%s\"",
+                           APR_ARRAY_IDX(condensed, j, const char*),
+                           tests[i].results[j]);
+        }
+    }
+
+  
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_uri_condense_targets(apr_pool_t *pool)
+{
+  int i;
+  struct {
+    const char *paths[8];
+    const char *common;
+    const char *results[8]; /* must be same size as paths */
+  } tests[] = {
+    { { "/dir", "/dir/file", NULL },         "/dir",     { "", "file" } },
+    { { "dir", "dir/file", NULL },           "dir",      { "", "file" } },
+    { { "/dir1", "/dir2", NULL },            "/",        { "dir1", "dir2" } },
+    { { "dir1", "dir2", NULL },              "",         { "dir1", "dir2" } },
+    { { "/dir", "/dir/file", NULL },         "/dir",     { "", "file" } },
+    { { "/dir1", "/dir2", NULL },            "/",        { "dir1", "dir2" } },
+    { { "/dir1", "dir2", NULL },             "",         { "/dir1", "dir2" } },
+    { { "sc://s/A", "sc://s/B", "sc://s" },  "sc://s",   { "A", "B", "" } },
+    { { "sc://S/A", "sc://S/B", "sc://S" },  "sc://s",   { "A", "B", "" } },
+    { { "sc://A/A", "sc://B/B", "sc://s" },  "",         { "sc://a/A", "sc://b/B", "sc://s"} },
+    { { "sc://A/A", "sc://A/a/B", "sc://a/Q" }, "sc://a",{ "A", "a/B", "Q"} },
+  };
+
+  for (i = 0; i < COUNT_OF(tests); i++)
+    {
+      int j;
+      const char* common;
+      apr_array_header_t *hdr = apr_array_make(pool, 8, sizeof(const char*));
+      apr_array_header_t *condensed;
+
+      for (j = 0; j < COUNT_OF(tests[i].paths); j++)
+        {
+          if (tests[i].paths[j] != NULL)
+            APR_ARRAY_PUSH(hdr, const char*) = tests[i].paths[j];
+          else
+            break;
+        }
+
+      SVN_ERR(svn_uri_condense_targets(&common, &condensed, hdr, 
+                                       FALSE, pool, pool));
+
+      if (tests[i].common != NULL && strcmp(common, tests[i].common))
+        return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                                 "svn_uri_condense_targets returned common "
+                                 "\"%s\". expected \"%s\"",
+                                 common, tests[i].common);
+
+      for (j = 0; j < COUNT_OF(tests[i].paths); j++)
+        {
+          if (tests[i].paths[j] == NULL || tests[i].results[j] == NULL)
+            break;
+
+          if (strcmp(APR_ARRAY_IDX(condensed, j, const char*), 
+                     tests[i].results[j]))
+            return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                           "svn_uri_condense_targets returned first"
                            "\"%s\". expected \"%s\"",
                            APR_ARRAY_IDX(condensed, j, const char*),
                            tests[i].results[j]);
@@ -2008,6 +2078,8 @@ struct svn_test_descriptor_t test_funcs[] =
                    "test svn_dirent_get_absolute"),
     SVN_TEST_PASS2(test_dirent_condense_targets,
                    "test svn_dirent_condense_targets"),
+    SVN_TEST_PASS2(test_uri_condense_targets,
+                   "test svn_uri_condense_targets"),
     SVN_TEST_PASS2(test_dirent_local_style,
                    "test svn_dirent_local_style"),
     SVN_TEST_PASS2(test_uri_local_style,
