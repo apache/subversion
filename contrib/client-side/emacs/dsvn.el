@@ -1036,6 +1036,12 @@ outside."
           (svn-update-status-msg (point) "")
           (forward-line))))))
 
+;; Translate backslashes to forward slashes, because that is what
+;; Emacs uses internally even on Windows and it permits us to compare
+;; file name strings.
+(defun svn-normalise-path (path)
+  (replace-regexp-in-string "\\\\" "/" path t t))
+
 (defun svn-status-filter (proc str)
   (save-excursion
     (set-buffer (process-buffer proc))
@@ -1046,7 +1052,7 @@ outside."
       (while (cond ((looking-at
                      "\\([ ACDGIMRX?!~][ CM][ L][ +][ S][ KOTB]\\)[ C]? \\([^ ].*\\)\n")
                     (let ((status (match-string 1))
-                          (filename (match-string 2)))
+                          (filename (svn-normalise-path (match-string 2))))
                       (delete-region (match-beginning 0)
                                      (match-end 0))
                       (svn-insert-file filename status))
@@ -1073,7 +1079,7 @@ outside."
       (while (looking-at
               "\\([ ACDGIMRX?!~][ CM][ L][ +][ S][ KOTB]\\)[ C]? \\([* ]\\) \\(........\\) \\(........\\) \\(............\\) \\([^ ].*\\)\n")
         (let ((status (match-string 1))
-              (filename (match-string 6)))
+              (filename (svn-normalise-path (match-string 6))))
           (delete-region (match-beginning 0)
                          (match-end 0))
 	  (when (or (not svn-file-filter)
@@ -1172,7 +1178,7 @@ With prefix arg, prompt for REVISION."
                (let* ((status (match-string 1))
                       (file-status (elt status 0))
                       (prop-status (elt status 1))
-                      (filename (match-string 2)))
+                      (filename (svn-normalise-path (match-string 2))))
                  (delete-region (match-beginning 0)
                                 (match-end 0))
                  (svn-insert-file
@@ -1650,7 +1656,7 @@ argument."
               ;; What format is this, really?
               "\\([AD]  \\).....  \\(.*\\)\n")
         (let ((status (concat (match-string 1) "   "))
-              (filename (match-string 2)))
+              (filename (svn-normalise-path (match-string 2))))
           (delete-region (match-beginning 0)
                          (match-end 0))
           (svn-insert-file filename status))))))
@@ -1796,7 +1802,7 @@ argument."
       (while (looking-at
               "\\([AD]     \\)    \\(.*\\)\n")
         (let ((status (match-string 1))
-              (filename (match-string 2)))
+              (filename (svn-normalise-path (match-string 2))))
           (if (string= status "A     ")
               (setq status "A  +  "))
           (delete-region (match-beginning 0)
