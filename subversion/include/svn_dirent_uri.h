@@ -545,6 +545,47 @@ svn_dirent_condense_targets(const char **pcommon,
                             apr_pool_t *result_pool,
                             apr_pool_t *scratch_pool);
 
+/** Find the common prefix of the canonicalized uris in @a targets
+ * (an array of <tt>const char *</tt>'s), and remove redundant uris if @a
+ * remove_redundancies is TRUE.
+ *
+ *   - Set @a *pcommon to the common base uri of all of the targets. 
+ *     If the targets have no common prefix (e.g. "http://srv1/file" 
+ *     and "http://srv2/file"), set @a *pcommon to the empty
+ *     string.
+ *
+ *   - If @a pcondensed_targets is non-NULL, set @a *pcondensed_targets
+ *     to an array of targets relative to @a *pcommon, and if @a
+ *     remove_redundancies is TRUE, omit any uris that are descendants of 
+ *     another uri in @a targets.  If *pcommon is empty, @a 
+ *     *pcondensed_targets will contain absolute dirents; redundancies
+ *     can still be removed.  If @a pcondensed_targets is NULL, leave it
+ *     alone.
+ *
+ * Else if there is exactly one target, then
+ *
+ *   - Set @a *pcommon to that target, and
+ *
+ *   - If @a pcondensed_targets is non-NULL, set @a *pcondensed_targets
+ *     to an array containing zero elements.  Else if
+ *     @a pcondensed_targets is NULL, leave it alone.
+ *
+ * If there are no items in @a targets, set @a *pcommon and (if
+ * applicable) @a *pcondensed_targets to @c NULL.
+ *
+ * Allocates @a *pcommon and @a *targets in @a result_pool. Temporary
+ * allocations will be performed in @a scratch_pool.
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_uri_condense_targets(const char **pcommon,
+                         apr_array_header_t **pcondensed_targets,
+                         const apr_array_header_t *targets,
+                         svn_boolean_t remove_redundancies,
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool);
+
 /* Check that when @a path is joined to @a base_path, the resulting path
  * is still under BASE_PATH in the local filesystem. If not, return @c FALSE.
  * If @c TRUE is returned, @a *full_path will be set to the absolute path

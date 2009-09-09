@@ -1548,7 +1548,7 @@ svn_dirent_condense_targets(const char **pcommon,
   /* Get the absolute path of the first target. */
   SVN_ERR(svn_dirent_get_absolute(pcommon,
                                   APR_ARRAY_IDX(targets, 0, const char *),
-                                  result_pool));
+                                  scratch_pool));
 
   /* Early exit when there's only one dirent to work on. */
   if (targets->nelts == 1)
@@ -1677,6 +1677,170 @@ svn_dirent_condense_targets(const char **pcommon,
               if (rel_item[0] &&
                   ! svn_dirent_is_root(*pcommon, basedir_len))
                 rel_item++;
+            }
+
+          APR_ARRAY_PUSH(*pcondensed_targets, const char *)
+            = apr_pstrdup(result_pool, rel_item);
+        }
+    }
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_uri_condense_targets(const char **pcommon,
+                         apr_array_header_t **pcondensed_targets,
+                         const apr_array_header_t *targets,
+                         svn_boolean_t remove_redundancies,
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool)
+{
+  int i, j, num_condensed = targets->nelts;
+  apr_array_header_t *uri_targets;
+  svn_boolean_t *removed;
+  size_t basedir_len;
+
+  /* Early exit when there's no data to work on. */
+  if (targets->nelts <= 0)
+    {
+      *pcommon = NULL;
+      if (pcondensed_targets)
+        *pcondensed_targets = NULL;
+      return SVN_NO_ERROR;
+    }
+
+  *pcommon = svn_uri_canonicalize(APR_ARRAY_IDX(targets, 0, const char *),
+                                  scratch_pool);
+
+  /* Early exit when there's only one uri to work on. */
+  if (targets->nelts == 1)
+    {
+      if (pcondensed_targets)
+        *pcondensed_targets = apr_array_make(result_pool, 0,
+                                             sizeof(const char *));
+      return SVN_NO_ERROR;
+    }
+
+  /* Find the pcommon argument by finding what is common in all of the
+     uris. NOTE: This is not as efficient as it could be.  The calculation
+     of the basedir could be done in the loop below, which would 
+     save some calls to svn_uri_get_longest_ancestor.  I decided to do it
+     this way because I thought it would be simpler, since this way, we don't
+     even do the loop if we don't need to condense the targets. */
+
+  removed = apr_pcalloc(scratch_pool, (targets->nelts *
+                                          sizeof(svn_boolean_t)));
+  uri_targets = apr_array_make(scratch_pool, targets->nelts,
+                               sizeof(const char *));
+
+  APR_ARRAY_PUSH(uri_targets, const char *) = *pcommon;
+
+  for (i = 1; i < targets->nelts; ++i)
+    {
+      const char *uri = svn_uri_canonicalize(
+                           APR_ARRAY_IDX(targets, i, const char *), 
+                           scratch_pool);
+      APR_ARRAY_PUSH(uri_targets, const char *) = uri;
+
+      *pcommon = svn_uri_get_longest_ancestor(*pcommon, uri,
+                                              scratch_pool);
+    }
+
+  *pcommon = apr_pstrdup(result_pool, *pcommon);
+
+  if (pcondensed_targets != NULL)
+    {
+      if (remove_redundancies)
+        {
+          /* Find the common part of each pair of targets.  If
+             common part is equal to one of the dirents, the other
+             is a child of it, and can be removed.  If a target is
+             equal to *pcommon, it can also be removed. */
+
+          /* First pass: when one non-removed target is a child of
+             another non-removed target, remove the child. */
+          for (i = 0; i < uri_targets->nelts; ++i)
+            {
+              if (removed[i])
+                continue;
+
+              for (j = i + 1; j < uri_targets->nelts; ++j)
+                {
+                  const char *uri_i;
+                  const char *uri_j;
+                  const char *ancestor;
+
+                  if (removed[j])
+                    continue;
+
+                  uri_i = APR_ARRAY_IDX(uri_targets, i, const char *);
+                  uri_j = APR_ARRAY_IDX(uri_targets, j, const char *);
+
+                  ancestor = svn_uri_get_longest_ancestor(uri_i,
+                                                          uri_j,
+                                                          scratch_pool);
+
+                  if (*ancestor == '\0')
+                    continue;
+
+                  if (strcmp(ancestor, uri_i) == 0)
+                    {
+                      removed[j] = TRUE;
+                      num_condensed--;
+                    }
+                  else if (strcmp(ancestor, uri_j) == 0)
+                    {
+                      removed[i] = TRUE;
+                      num_condensed--;
+                    }
+                }
+            }
+
+          /* Second pass: when a target is the same as *pcommon,
+             remove the target. */
+          for (i = 0; i < uri_targets->nelts; ++i)
+            {
+              const char *uri_targets_i = APR_ARRAY_IDX(uri_targets, i,
+                                                        const char *);
+
+              if ((strcmp(uri_targets_i, *pcommon) == 0) && (! removed[i]))
+                {
+                  removed[i] = TRUE;
+                  num_condensed--;
+                }
+            }
+        }
+
+      /* Now create the return array, and copy the non-removed items */
+      basedir_len = strlen(*pcommon);
+      *pcondensed_targets = apr_array_make(result_pool, num_condensed,
+                                           sizeof(const char *));
+
+      for (i = 0; i < uri_targets->nelts; ++i)
+        {
+          const char *rel_item = APR_ARRAY_IDX(uri_targets, i, const char *);
+
+          /* Skip this if it's been removed. */
+          if (removed[i])
+            continue;
+
+          /* If a common prefix was found, condensed_targets are given
+             relative to that prefix.  */
+          if (basedir_len > 0)
+            {
+              /* Only advance our pointer past a dirent separator if
+                 REL_ITEM isn't the same as *PCOMMON.
+
+                 If *PCOMMON is a root dirent, basedir_len will already
+                 include the closing '/', so never advance the pointer
+                 here.
+                 */
+              rel_item += basedir_len;
+              if ((rel_item[0] == '/') ||
+                  (rel_item[0] && !svn_uri_is_root(*pcommon, basedir_len)))
+                {
+                  rel_item++;
+                }
             }
 
           APR_ARRAY_PUSH(*pcondensed_targets, const char *)
