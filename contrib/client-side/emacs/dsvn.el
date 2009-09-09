@@ -333,10 +333,13 @@ Argument ARG are the command line arguments."
   (save-some-buffers)
   (let ((status-buf (current-buffer))
         (commit-buf (get-buffer-create "*svn commit*"))
-        (window-conf (and svn-restore-windows (current-window-configuration))))
+        (window-conf (and svn-restore-windows (current-window-configuration)))
+        (listfun (lambda () (with-current-buffer log-edit-parent-buffer
+                              (svn-action-files)))))
     (log-edit 'svn-confirm-commit t
-              (lambda () (with-current-buffer log-edit-parent-buffer
-                           (svn-action-files)))
+              (if (< emacs-major-version 23)
+                  listfun
+                (list (cons 'log-edit-listfun listfun)))
               commit-buf)
     (set (make-local-variable 'saved-window-configuration) window-conf)))
 
@@ -2120,15 +2123,20 @@ where the file information is."
 
 (add-hook 'vc-checkin-hook 'svn-after-commit)
 
-(defun svn-after-vc-command (command file flags)
+(defun svn-after-vc-command (command file-or-files flags)
   (when (and (string= command "svn")
              ;; Ignore command that do not modify file
              (not (member (car flags) '("ann" "annotate" "blame"
                                         "diff" "praise" "status"))))
-    (svn-foreach-svn-buffer
-     file
-     (lambda (local-file-name file-pos)
-       (svn-refresh-item local-file-name t)))))
+    (mapc (lambda (file)
+	    (svn-foreach-svn-buffer
+	     file
+	     (lambda (local-file-name file-pos)
+	       (svn-refresh-item local-file-name t))))
+	  ;; In emacs versions prior to 23, the argument is a single file.
+	  (if (listp file-or-files)
+	      file-or-files
+	    (list file-or-files)))))
 
 (add-hook 'vc-post-command-functions 'svn-after-vc-command)
 
