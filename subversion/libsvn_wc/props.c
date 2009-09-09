@@ -1777,18 +1777,9 @@ svn_wc_prop_list2(apr_hash_t **props,
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
-  /* if there is no entry, 'path' is not under version control and
-     therefore has no props. */
-  SVN_ERR(svn_wc__db_check_node(&kind, wc_ctx->db, local_abspath,
-                                scratch_pool));
-  if (kind == svn_wc__db_kind_unknown)
-    {
-      *props = apr_hash_make(result_pool);
-      return SVN_NO_ERROR;
-    }
-
-  return svn_wc__load_props(NULL, props, NULL, wc_ctx->db, local_abspath,
-                            result_pool, scratch_pool);
+  return svn_error_return(
+    svn_wc__load_props(NULL, props, NULL, wc_ctx->db, local_abspath,
+                       result_pool, scratch_pool));
 }
 
 svn_error_t *
