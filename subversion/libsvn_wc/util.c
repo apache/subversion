@@ -274,7 +274,7 @@ svn_wc__internal_path_switched(svn_boolean_t *switched,
   err = svn_wc__get_entry(&parent_entry, db, parent_abspath, FALSE,
                           svn_node_dir, FALSE, scratch_pool, scratch_pool);
 
-  if (err && (err->apr_err == SVN_ERR_WC_NOT_DIRECTORY
+  if (err && (err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY
         || err->apr_err == SVN_ERR_WC_MISSING))
     {
       svn_error_clear(err);

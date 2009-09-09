@@ -425,7 +425,7 @@ open_single(svn_wc_adm_access_t **adm_access,
   err = svn_wc__internal_check_wc(&wc_format, db, local_abspath, scratch_pool);
   if (wc_format == 0 || (err && APR_STATUS_IS_ENOENT(err->apr_err)))
     {
-      return svn_error_createf(SVN_ERR_WC_NOT_DIRECTORY, err,
+      return svn_error_createf(SVN_ERR_WC_NOT_WORKING_COPY, err,
                                _("'%s' is not a working copy"),
                                svn_dirent_local_style(path, scratch_pool));
     }
@@ -596,7 +596,7 @@ do_open(svn_wc_adm_access_t **adm_access,
             {
               const char *abspath;
 
-              if (err->apr_err != SVN_ERR_WC_NOT_DIRECTORY)
+              if (err->apr_err != SVN_ERR_WC_NOT_WORKING_COPY)
                 {
                   svn_error_clear(svn_wc_adm_close2(lock, subpool));
                   svn_pool_destroy(subpool);
@@ -768,10 +768,10 @@ svn_wc_adm_probe_open3(svn_wc_adm_access_t **adm_access,
 
       if ((dir != path)
           && (child_kind == svn_node_dir)
-          && (err->apr_err == SVN_ERR_WC_NOT_DIRECTORY))
+          && (err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY))
         {
           svn_error_clear(err);
-          return svn_error_createf(SVN_ERR_WC_NOT_DIRECTORY, NULL,
+          return svn_error_createf(SVN_ERR_WC_NOT_WORKING_COPY, NULL,
                                    _("'%s' is not a working copy"),
                                    svn_dirent_local_style(path, pool));
         }
@@ -885,8 +885,8 @@ svn_wc_adm_retrieve(svn_wc_adm_access_t **adm_access,
                 (pool, _("Expected '%s' to be a directory but found a file"),
                  svn_dirent_local_style(path, pool));
               return svn_error_create(SVN_ERR_WC_NOT_LOCKED,
-                                      svn_error_create
-                                        (SVN_ERR_WC_NOT_DIRECTORY, NULL,
+                                      svn_error_create(
+                                         SVN_ERR_WC_NOT_WORKING_COPY, NULL,
                                          err_msg),
                                       err_msg);
             }
@@ -1029,7 +1029,7 @@ svn_wc_adm_probe_try3(svn_wc_adm_access_t **adm_access,
          SVN_ERR_WC_LOCKED.  That error would mean that someone else
          has this area locked, and we definitely want to bail in that
          case. */
-      if (err && (err->apr_err == SVN_ERR_WC_NOT_DIRECTORY))
+      if (err && (err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY))
         {
           svn_error_clear(err);
           *adm_access = NULL;
@@ -1148,7 +1148,7 @@ open_anchor(svn_wc_adm_access_t **anchor_access,
           else
             SVN_ERR_ASSERT(existing_adm == NULL);
 
-          if (err->apr_err == SVN_ERR_WC_NOT_DIRECTORY)
+          if (err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY)
             {
               svn_error_clear(err);
               p_access = NULL;
@@ -1183,7 +1183,7 @@ open_anchor(svn_wc_adm_access_t **anchor_access,
               return err;
             }
 
-          if (err->apr_err != SVN_ERR_WC_NOT_DIRECTORY)
+          if (err->apr_err != SVN_ERR_WC_NOT_WORKING_COPY)
             {
               if (p_access)
                 svn_error_clear(svn_wc_adm_close2(p_access, pool));
@@ -1644,10 +1644,10 @@ svn_wc__adm_probe_in_context(svn_wc_adm_access_t **adm_access,
 
       if ((dir != path)
           && (child_kind == svn_node_dir)
-          && (err->apr_err == SVN_ERR_WC_NOT_DIRECTORY))
+          && (err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY))
         {
           svn_error_clear(err);
-          return svn_error_createf(SVN_ERR_WC_NOT_DIRECTORY, NULL,
+          return svn_error_createf(SVN_ERR_WC_NOT_WORKING_COPY, NULL,
                                    _("'%s' is not a working copy"),
                                    svn_dirent_local_style(path, pool));
         }

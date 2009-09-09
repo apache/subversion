@@ -471,7 +471,7 @@ open_root_internal(const char *path,
   if (kind == svn_node_none)
     SVN_ERR(svn_io_make_dir_recursively(path, pool));
   else if (kind == svn_node_file)
-    return svn_error_createf(SVN_ERR_WC_NOT_DIRECTORY, NULL,
+    return svn_error_createf(SVN_ERR_WC_NOT_WORKING_COPY, NULL,
                              _("'%s' exists and is not a directory"),
                              svn_dirent_local_style(path, pool));
   else if ((kind != svn_node_dir) || (! force))
@@ -614,7 +614,7 @@ add_directory(const char *path,
   if (kind == svn_node_none)
     SVN_ERR(svn_io_dir_make(full_path, APR_OS_DEFAULT, pool));
   else if (kind == svn_node_file)
-    return svn_error_createf(SVN_ERR_WC_NOT_DIRECTORY, NULL,
+    return svn_error_createf(SVN_ERR_WC_NOT_WORKING_COPY, NULL,
                              _("'%s' exists and is not a directory"),
                              svn_dirent_local_style(full_path, pool));
   else if (! (kind == svn_node_dir && eb->force))

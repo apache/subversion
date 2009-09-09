@@ -2420,7 +2420,7 @@ svn_wc_cleanup3(svn_wc_context_t *wc_ctx,
 
   /* a "version" of 0 means a non-wc directory */
   if (wc_format_version == 0)
-    return svn_error_createf(SVN_ERR_WC_NOT_DIRECTORY, NULL,
+    return svn_error_createf(SVN_ERR_WC_NOT_WORKING_COPY, NULL,
                              _("'%s' is not a working copy directory"),
                              svn_dirent_local_style(local_abspath, 
                                                     scratch_pool));
