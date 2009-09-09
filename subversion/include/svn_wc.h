@@ -5064,9 +5064,11 @@ svn_wc_get_switch_editor(svn_revnum_t *target_revision,
 /** Set @a *props to a hash table mapping <tt>char *</tt> names onto
  * <tt>svn_string_t *</tt> values for all the regular properties of
  * @a local_abspath.  Allocate the table, names, and values in
- * @a result_pool.  If the node has no properties, or does not exist in
- * the working copy, then an empty hash is returned.  Use @a wc_ctx to
- * access the working copy, and @a scratch_pool for temporary allocations.
+ * @a result_pool.  If the node has no properties, then an empty hash
+ * is returned.  Use @a wc_ctx to access the working copy, and @a
+ * scratch_pool for temporary allocations.
+ *
+ * If the node does not exist, @c SVN_ERR_WC_PATH_NOT_FOUND is returned.
  *
  * @since New in 1.7.
  */

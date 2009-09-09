@@ -1800,12 +1800,20 @@ svn_wc_prop_list(apr_hash_t **props,
 {
   svn_wc_context_t *wc_ctx;
   const char *local_abspath;
+  svn_error_t *err;
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
   SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL /* config */,
                                          svn_wc__adm_get_db(adm_access), pool));
 
-  SVN_ERR(svn_wc_prop_list2(props, wc_ctx, local_abspath, pool, pool));
+  err = svn_wc_prop_list2(props, wc_ctx, local_abspath, pool, pool);
+  if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+    {
+      *props = apr_hash_make(pool);
+      svn_error_clear(err);
+    }
+  else if (err)
+    return svn_error_return(err);
 
   return svn_error_return(svn_wc_context_destroy(wc_ctx));
 }
