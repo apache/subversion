@@ -453,10 +453,10 @@ been copied (duplicate the metadata for the wcroot) or moved (tweak
 the path stored in the metadata and in the linkage file). Subversion
 is unable to programmatically determine which operation was used.
 
-Note that we use "svn cleanup" as the trigger to *perform* the
-upgrade. The amount of file opens, parsing, moving, deleting, etc is
-expected to consume significant amounts of I/O and (thus) cannot
-simply be done on-the-fly without the user's knowledge and consent.
+Note that we use "svn upgrade" as the trigger to *perform* the upgrade.
+The amount of file opens, parsing, moving, deleting, etc is expected
+to consume significant amounts of I/O and (thus) cannot simply be done
+on-the-fly without the user's knowledge and consent.
 
 
 Transaction duration / memory management
