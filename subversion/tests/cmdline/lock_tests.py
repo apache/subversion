@@ -1400,7 +1400,7 @@ def lock_twice_in_one_wc(sbox):
   wc_dir = sbox.wc_dir
   
   mu_path = os.path.join(wc_dir, 'A', 'mu')
-  mu2_path = os.path.join(wc_dir, 'B', 'mu')
+  mu2_path = os.path.join(wc_dir, 'A', 'B', 'mu')
   
   # Create a needs-lock file
   svntest.actions.set_prop('svn:needs-lock', '*', mu_path)
@@ -1413,7 +1413,8 @@ def lock_twice_in_one_wc(sbox):
   
   # Switch a second location for the same file in the same working copy
   svntest.actions.run_and_verify_svn(None, None, [],
-                                     'switch', sbox.repo_url + '/A', os.path.join(wc_dir, 'B'))
+                                     'switch', sbox.repo_url + '/A',
+                                     os.path.join(wc_dir, 'A', 'B'))
   
   # Lock location 1
   svntest.actions.run_and_verify_svn(None, None, [],
