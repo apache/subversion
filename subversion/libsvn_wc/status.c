@@ -622,7 +622,7 @@ assemble_status(svn_wc_status2_t **status,
    and pass it off to the STATUS_FUNC/STATUS_BATON.  All other
    arguments are the same as those passed to assemble_status().  */
 static svn_error_t *
-send_status_structure(struct walk_status_baton *eb,
+send_status_structure(struct walk_status_baton *wb,
                       const char *local_abspath,
                       const svn_wc_entry_t *entry,
                       const svn_wc_entry_t *parent_entry,
@@ -636,9 +636,9 @@ send_status_structure(struct walk_status_baton *eb,
 {
   svn_wc_status2_t *statstruct;
 
-  SVN_ERR(assemble_status(&statstruct, eb->db, local_abspath, entry,
+  SVN_ERR(assemble_status(&statstruct, wb->db, local_abspath, entry,
                           parent_entry, path_kind, path_special, get_all,
-                          is_ignored, eb->repos_locks, eb->repos_root,
+                          is_ignored, wb->repos_locks, wb->repos_root,
                           pool, pool));
 
   if (statstruct && status_func)
@@ -704,7 +704,7 @@ collect_ignore_patterns(apr_array_header_t **patterns,
    location for, an externals definition.  Use POOL for
    scratchwork. */
 static svn_boolean_t
-is_external_path(struct walk_status_baton *eb,
+is_external_path(struct walk_status_baton *wb,
                  const char *path,
                  apr_pool_t *pool)
 {
@@ -712,12 +712,12 @@ is_external_path(struct walk_status_baton *eb,
 
 
   /* First try: does the path exist as a key in the hash? */
-  if (apr_hash_get(eb->externals, path, APR_HASH_KEY_STRING))
+  if (apr_hash_get(wb->externals, path, APR_HASH_KEY_STRING))
     return TRUE;
 
   /* Failing that, we need to check if any external is a child of
      PATH. */
-  for (hi = apr_hash_first(pool, eb->externals); hi; hi = apr_hash_next(hi))
+  for (hi = apr_hash_first(pool, wb->externals); hi; hi = apr_hash_next(hi))
     {
       const void *key;
       apr_hash_this(hi, &key, NULL, NULL);
@@ -748,7 +748,7 @@ is_external_path(struct walk_status_baton *eb,
    Allocate everything in POOL.
 */
 static svn_error_t *
-send_unversioned_item(struct walk_status_baton *eb,
+send_unversioned_item(struct walk_status_baton *wb,
                       const char *local_abspath,
                       svn_node_kind_t path_kind,
                       svn_boolean_t path_special,
@@ -764,11 +764,11 @@ send_unversioned_item(struct walk_status_baton *eb,
   ignore = svn_wc_match_ignore_list(svn_dirent_basename(local_abspath, NULL),
                                     patterns, pool);
 
-  is_external = is_external_path(eb, local_abspath, pool);
+  is_external = is_external_path(wb, local_abspath, pool);
 
-  SVN_ERR(assemble_status(&status, eb->db, local_abspath, NULL, NULL,
+  SVN_ERR(assemble_status(&status, wb->db, local_abspath, NULL, NULL,
                           path_kind, path_special, FALSE, ignore,
-                          eb->repos_locks, eb->repos_root, pool, pool));
+                          wb->repos_locks, wb->repos_root, pool, pool));
 
   if (is_external)
     status->text_status = svn_wc_status_external;
@@ -788,7 +788,7 @@ send_unversioned_item(struct walk_status_baton *eb,
 
 /* Prototype for untangling a tango-ing two-some. */
 static svn_error_t *
-get_dir_status(struct walk_status_baton *eb,
+get_dir_status(struct walk_status_baton *wb,
                const char *local_abspath,
                const svn_wc_entry_t *parent_entry,
                const char *selected,
@@ -808,7 +808,7 @@ get_dir_status(struct walk_status_baton *eb,
    are the same as those passed to get_dir_status(), the function
    for which this one is a helper.  */
 static svn_error_t *
-handle_dir_entry(struct walk_status_baton *eb,
+handle_dir_entry(struct walk_status_baton *wb,
                  const char *local_abspath,
                  const svn_wc_entry_t *dir_entry,
                  const svn_wc_entry_t *entry,
@@ -834,7 +834,7 @@ handle_dir_entry(struct walk_status_baton *eb,
               || depth == svn_depth_immediates
               || depth == svn_depth_infinity))
         {
-          SVN_ERR(get_dir_status(eb, local_abspath, dir_entry, NULL, ignores,
+          SVN_ERR(get_dir_status(wb, local_abspath, dir_entry, NULL, ignores,
                                  depth, get_all, no_ignore, FALSE,
                                  status_func, status_baton, cancel_func,
                                  cancel_baton, pool));
@@ -843,7 +843,7 @@ handle_dir_entry(struct walk_status_baton *eb,
         {
           /* FULL_ENTRY is still a stub (an obstructed subdir), or DEPTH
              is limiting us. Send just this directory.  */
-          SVN_ERR(send_status_structure(eb, local_abspath, entry,
+          SVN_ERR(send_status_structure(wb, local_abspath, entry,
                                         dir_entry, kind, special, get_all,
                                         FALSE,
                                         status_func, status_baton, pool));
@@ -852,7 +852,7 @@ handle_dir_entry(struct walk_status_baton *eb,
   else
     {
       /* File entries are ... just fine! */
-      SVN_ERR(send_status_structure(eb, local_abspath, entry,
+      SVN_ERR(send_status_structure(wb, local_abspath, entry,
                                     dir_entry, kind, special, get_all, FALSE,
                                     status_func, status_baton, pool));
     }
@@ -860,19 +860,19 @@ handle_dir_entry(struct walk_status_baton *eb,
 }
 
 /* Helper for get_dir_status. If LOCAL_ABSPATH has "svn:externals" property
-   set on it, store the name and value in EB->traversal_info, along with
-   this directory's depth, but skip this step if local_abspath is the anchor
+   set on it, send the name and value to WB->external_func, along with
+   this directory's depth, but skip this step if LOCAL_ABSPATH is the anchor
    of a specific target.  (Also, we want to track the externals internally
    so we can report status more accurately.) */
 static svn_error_t *
-handle_externals(struct walk_status_baton *eb,
+handle_externals(struct walk_status_baton *wb,
                  const char *local_abspath,
                  svn_depth_t depth,
                  apr_pool_t *result_pool,
                  apr_pool_t *scratch_pool)
 {
   const svn_string_t *prop_val;
-  SVN_ERR(svn_wc__internal_propget(&prop_val, eb->db, local_abspath,
+  SVN_ERR(svn_wc__internal_propget(&prop_val, wb->db, local_abspath,
                                    SVN_PROP_EXTERNALS, scratch_pool,
                                    scratch_pool));
   if (prop_val)
@@ -880,10 +880,10 @@ handle_externals(struct walk_status_baton *eb,
       apr_array_header_t *ext_items;
       int i;
 
-      if (eb->external_func && 
-          svn_dirent_is_ancestor(eb->target_abspath, local_abspath))
+      if (wb->external_func && 
+          svn_dirent_is_ancestor(wb->target_abspath, local_abspath))
         {
-          SVN_ERR((eb->external_func)(eb->external_baton, local_abspath,
+          SVN_ERR((wb->external_func)(wb->external_baton, local_abspath,
                                       prop_val, prop_val, depth,
                                       scratch_pool));
         }
@@ -898,7 +898,7 @@ handle_externals(struct walk_status_baton *eb,
           svn_wc_external_item2_t *item;
 
           item = APR_ARRAY_IDX(ext_items, i, svn_wc_external_item2_t *);
-          apr_hash_set(eb->externals, svn_dirent_join(local_abspath,
+          apr_hash_set(wb->externals, svn_dirent_join(local_abspath,
                                                       item->target_dir,
                                                       result_pool),
                        APR_HASH_KEY_STRING, item);
@@ -922,7 +922,7 @@ handle_externals(struct walk_status_baton *eb,
    Other arguments are the same as those passed to
    svn_wc_get_status_editor5().  */
 static svn_error_t *
-get_dir_status(struct walk_status_baton *eb,
+get_dir_status(struct walk_status_baton *wb,
                const char *local_abspath,
                const svn_wc_entry_t *parent_entry,
                const char *selected,
@@ -955,7 +955,7 @@ get_dir_status(struct walk_status_baton *eb,
     const apr_array_header_t *child_nodes;
     int i;
 
-    SVN_ERR(svn_wc__db_read_children(&child_nodes, eb->db, local_abspath,
+    SVN_ERR(svn_wc__db_read_children(&child_nodes, wb->db, local_abspath,
                                      subpool, subpool));
 
     nodes = apr_hash_make(subpool);
@@ -968,7 +968,7 @@ get_dir_status(struct walk_status_baton *eb,
 
   SVN_ERR(svn_io_get_dirents2(&dirents, local_abspath, subpool));
   /* Get this directory's entry. */
-  SVN_ERR(svn_wc__get_entry(&dir_entry, eb->db, local_abspath, FALSE,
+  SVN_ERR(svn_wc__get_entry(&dir_entry, wb->db, local_abspath, FALSE,
                             svn_node_dir, FALSE, subpool, subpool));
 
   if (selected == NULL)
@@ -997,7 +997,7 @@ get_dir_status(struct walk_status_baton *eb,
 
       selected_abspath = svn_dirent_join(local_abspath, selected, subpool);
 
-      SVN_ERR(svn_wc__db_op_get_tree_conflict(&tc, eb->db, selected_abspath,
+      SVN_ERR(svn_wc__db_op_get_tree_conflict(&tc, wb->db, selected_abspath,
                                               subpool, subpool));
 
       if (tc != NULL)
@@ -1008,7 +1008,7 @@ get_dir_status(struct walk_status_baton *eb,
      name and value in traversal_info, along with this directory's depth.
      (Also, we want to track the externals internally so we can report
      status more accurately.) */
-  SVN_ERR(handle_externals(eb, local_abspath, dir_entry->depth, pool,
+  SVN_ERR(handle_externals(wb, local_abspath, dir_entry->depth, pool,
                            subpool));
 
   /** If we get here, ENTRY is NULL and we are handling all the
@@ -1018,7 +1018,7 @@ get_dir_status(struct walk_status_baton *eb,
     {
       /* Handle "this-dir" first. */
       if (! skip_this_dir)
-        SVN_ERR(send_status_structure(eb, local_abspath,
+        SVN_ERR(send_status_structure(wb, local_abspath,
                                       dir_entry, parent_entry, svn_node_dir,
                                       FALSE, get_all, FALSE, status_func,
                                       status_baton, subpool));
@@ -1055,12 +1055,12 @@ get_dir_status(struct walk_status_baton *eb,
           svn_boolean_t hidden;
           node_abspath = svn_dirent_join(local_abspath, key, iterpool);
 
-          SVN_ERR(svn_wc__db_node_hidden(&hidden, eb->db, node_abspath,
+          SVN_ERR(svn_wc__db_node_hidden(&hidden, wb->db, node_abspath,
                                          iterpool));
 
           if (!hidden)
             {
-              err = svn_wc__get_entry(&entry, eb->db, node_abspath, FALSE,
+              err = svn_wc__get_entry(&entry, wb->db, node_abspath, FALSE,
                                       dirent_p ? dirent_p->kind
                                                : svn_node_unknown,
                                       FALSE, iterpool,
@@ -1077,7 +1077,7 @@ get_dir_status(struct walk_status_baton *eb,
                       /* Most likely the parent refers to a missing child; 
                        * retrieve the stub stored in the parent */
 
-                      err = svn_wc__get_entry(&entry, eb->db, node_abspath,
+                      err = svn_wc__get_entry(&entry, wb->db, node_abspath,
                                               FALSE, svn_node_dir, TRUE,
                                               iterpool, iterpool);
 
@@ -1094,7 +1094,7 @@ get_dir_status(struct walk_status_baton *eb,
                 continue;
 
               /* Handle this directory entry (possibly recursing). */
-              SVN_ERR(handle_dir_entry(eb,
+              SVN_ERR(handle_dir_entry(wb,
                                        node_abspath,
                                        dir_entry,
                                        entry,
@@ -1116,11 +1116,11 @@ get_dir_status(struct walk_status_baton *eb,
       if (apr_hash_get(tree_conflicts, key, klen))
         { /* Tree conflict */
           if (ignore_patterns && ! patterns)
-            SVN_ERR(collect_ignore_patterns(&patterns, eb->db, local_abspath,
+            SVN_ERR(collect_ignore_patterns(&patterns, wb->db, local_abspath,
                                             ignore_patterns, subpool,
                                             iterpool));
 
-          SVN_ERR(send_unversioned_item(eb,
+          SVN_ERR(send_unversioned_item(wb,
                                         svn_dirent_join(local_abspath, key,
                                                         iterpool),
                                         dirent_p ? dirent_p->kind
@@ -1146,11 +1146,11 @@ get_dir_status(struct walk_status_baton *eb,
         continue;
 
       if (ignore_patterns && ! patterns)
-        SVN_ERR(collect_ignore_patterns(&patterns, eb->db, local_abspath,
+        SVN_ERR(collect_ignore_patterns(&patterns, wb->db, local_abspath,
                                         ignore_patterns, subpool,
                                         iterpool));
 
-      SVN_ERR(send_unversioned_item(eb,
+      SVN_ERR(send_unversioned_item(wb,
                                     svn_dirent_join(local_abspath, key,
                                                     iterpool),
                                     dirent_p->kind,
