@@ -3460,6 +3460,58 @@ typedef void (*svn_wc_status_func_t)(void *baton,
                                      const char *path,
                                      svn_wc_status_t *status);
 
+/**
+ * Walk the working copy status of @a local_abspath using @a wc_ctx, by
+ * creating @c svn_wc_status2_t structures and sending these through
+ * @a status_func / @a status_baton. 
+ *
+ *  * Assuming the target is a directory, then:
+ *
+ *   - If @a get_all is FALSE, then only locally-modified entries will be
+ *     returned.  If TRUE, then all entries will be returned.
+ *
+ *   - If @a depth is @c svn_depth_empty, a status structure will
+ *     be returned for the target only; if @c svn_depth_files, for the
+ *     target and its immediate file children; if
+ *     @c svn_depth_immediates, for the target and its immediate
+ *     children; if @c svn_depth_infinity, for the target and
+ *     everything underneath it, fully recursively.
+ *
+ *     If @a depth is @c svn_depth_unknown, take depths from the
+ *     working copy and behave as above in each directory's case.
+ *
+ *     If the given @a depth is incompatible with the depth found in a
+ *     working copy directory, the found depth always governs.
+ *
+ * If @a no_ignore is set, statuses that would typically be ignored
+ * will instead be reported.
+ *
+ * @a ignore_patterns is an array of file patterns matching
+ * unversioned files to ignore for the purposes of status reporting,
+ * or @c NULL if the default set of ignorable file patterns should be used.
+ *
+ * If @a cancel_func is non-NULL, call it with @a cancel_baton while walking
+ * to determine if the client has cancelled the operation.
+ *
+ * If @a external_func is non-NULL, call it with @a external_baton if an
+ * external definition is found while walking @a local_abspath.
+ *
+ * This function uses @a scratch_pool for temporary allocations.
+ */
+svn_error_t *
+svn_wc_walk_status(svn_wc_context_t *wc_ctx,
+                   const char *local_abspath,
+                   svn_depth_t depth,
+                   svn_boolean_t get_all,
+                   svn_boolean_t no_ignore,
+                   const apr_array_header_t *ignore_patterns,
+                   svn_wc_status_func4_t status_func,
+                   void *status_baton,
+                   svn_cancel_func_t cancel_func,
+                   void *cancel_baton,
+                   svn_wc_external_update_t external_func,
+                   void *external_baton,
+                   apr_pool_t *scratch_pool);
 
 /**
  * Set @a *editor and @a *edit_baton to an editor that generates @c
@@ -5840,12 +5892,25 @@ svn_wc_merge_prop_diffs(svn_wc_notify_state_t *state,
 
 
 /** Given a @a path to a wc file, return a stream to the @a contents of
- * the pristine copy of the file.  This is needed so clients can do
- * diffs.  If the WC has no text-base, return a @c NULL instead of a
- * stream.
+ * the pristine copy of the file.  Use @a wc_ctx to access the working
+ * copy.This is needed so clients can do diffs.  If the WC has no 
+ * text-base, return a @c NULL instead of a stream.
+ *
+ * @since New in 1.7. */
+svn_error_t *
+svn_wc_get_pristine_contents2(svn_stream_t **contents,
+                              svn_wc_context_t *wc_ctx,
+                              const char *local_abspath,
+                              apr_pool_t *result_pool,
+                              apr_pool_t *scratch_pool);
+
+/** Similar to svn_wc_get_pristine_contents2, but takes no working copy
+ * context and a path that can be relative
  *
  * @since New in 1.6.
+ * @deprecated Provided for backward compatibility with the 1.2 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_get_pristine_contents(svn_stream_t **contents,
                              const char *path,
