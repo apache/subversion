@@ -52,6 +52,32 @@
 #include "private/svn_debug.h"
 
 
+
+/*** Baton used for walking the local status */
+struct walk_status_baton
+{
+  /* The DB handle for managing the working copy state. */
+  svn_wc__db_t *db;
+
+  /*** External handling ***/
+  /* Target of the status */
+  const char *target_abspath;
+
+  /* Externals info harvested during the status run. */
+  apr_hash_t *externals;
+
+  /* Externals function/baton */
+  svn_wc_external_update_t external_func;
+  void *external_baton;
+
+  /*** Repository lock handling ***/
+  /* The repository root URL, if set. */
+  const char *repos_root;
+
+  /* Repository locks, if set. */
+  apr_hash_t *repos_locks;
+};
+
 /*** Editor batons ***/
 
 struct edit_baton
@@ -63,6 +89,7 @@ struct edit_baton
 
   /* The DB handle for managing the working copy state.  */
   svn_wc__db_t *db;
+  svn_wc_context_t *wc_ctx;
 
   /* The overall depth of this edit (a dir baton may override this).
    *
@@ -96,24 +123,14 @@ struct edit_baton
   /* The configured set of default ignores. */
   const apr_array_header_t *ignores;
 
-  /* Externals function/baton */
-  svn_wc_external_update_t external_func;
-  void *external_baton;
-
-  /* Externals info harvested during the status run. */
-  apr_hash_t *externals;
-
   /* Status item for the path represented by the anchor of the edit. */
   svn_wc_status2_t *anchor_status;
 
   /* Was open_root() called for this edit drive? */
   svn_boolean_t root_opened;
 
-  /* The repository root URL, if set. */
-  const char *repos_root;
-
-  /* Repository locks, if set. */
-  apr_hash_t *repos_locks;
+  /* The local status baton */
+  struct walk_status_baton wb;
 };
 
 
@@ -605,7 +622,7 @@ assemble_status(svn_wc_status2_t **status,
    and pass it off to the STATUS_FUNC/STATUS_BATON.  All other
    arguments are the same as those passed to assemble_status().  */
 static svn_error_t *
-send_status_structure(struct edit_baton *eb,
+send_status_structure(struct walk_status_baton *eb,
                       const char *local_abspath,
                       const svn_wc_entry_t *entry,
                       const svn_wc_entry_t *parent_entry,
@@ -687,7 +704,7 @@ collect_ignore_patterns(apr_array_header_t **patterns,
    location for, an externals definition.  Use POOL for
    scratchwork. */
 static svn_boolean_t
-is_external_path(struct edit_baton *eb,
+is_external_path(struct walk_status_baton *eb,
                  const char *path,
                  apr_pool_t *pool)
 {
@@ -731,7 +748,7 @@ is_external_path(struct edit_baton *eb,
    Allocate everything in POOL.
 */
 static svn_error_t *
-send_unversioned_item(struct edit_baton *eb,
+send_unversioned_item(struct walk_status_baton *eb,
                       const char *local_abspath,
                       svn_node_kind_t path_kind,
                       svn_boolean_t path_special,
@@ -771,7 +788,7 @@ send_unversioned_item(struct edit_baton *eb,
 
 /* Prototype for untangling a tango-ing two-some. */
 static svn_error_t *
-get_dir_status(struct edit_baton *eb,
+get_dir_status(struct walk_status_baton *eb,
                const char *local_abspath,
                const svn_wc_entry_t *parent_entry,
                const char *selected,
@@ -791,7 +808,7 @@ get_dir_status(struct edit_baton *eb,
    are the same as those passed to get_dir_status(), the function
    for which this one is a helper.  */
 static svn_error_t *
-handle_dir_entry(struct edit_baton *eb,
+handle_dir_entry(struct walk_status_baton *eb,
                  const char *local_abspath,
                  const svn_wc_entry_t *dir_entry,
                  const svn_wc_entry_t *entry,
@@ -848,7 +865,7 @@ handle_dir_entry(struct edit_baton *eb,
    of a specific target.  (Also, we want to track the externals internally
    so we can report status more accurately.) */
 static svn_error_t *
-handle_externals(struct edit_baton *eb,
+handle_externals(struct walk_status_baton *eb,
                  const char *local_abspath,
                  svn_depth_t depth,
                  apr_pool_t *result_pool,
@@ -905,7 +922,7 @@ handle_externals(struct edit_baton *eb,
    Other arguments are the same as those passed to
    svn_wc_get_status_editor5().  */
 static svn_error_t *
-get_dir_status(struct edit_baton *eb,
+get_dir_status(struct walk_status_baton *eb,
                const char *local_abspath,
                const svn_wc_entry_t *parent_entry,
                const char *selected,
@@ -1441,7 +1458,7 @@ make_dir_baton(void **dir_baton,
     {
       const svn_wc_status2_t *this_dir_status;
       const apr_array_header_t *ignores = eb->ignores;
-      SVN_ERR(get_dir_status(eb, local_abspath,
+      SVN_ERR(get_dir_status(&eb->wb, local_abspath,
                              status_in_parent->entry, NULL,
                              ignores, d->depth == svn_depth_files ?
                              svn_depth_files : svn_depth_immediates,
@@ -1630,7 +1647,7 @@ handle_statii(struct edit_baton *eb,
 
           SVN_ERR(svn_dirent_get_absolute(&local_abspath, key, subpool));
 
-          SVN_ERR(get_dir_status(eb,
+          SVN_ERR(get_dir_status(&eb->wb,
                                  local_abspath,
                                  dir_entry, NULL,
                                  ignores, depth, eb->get_all,
@@ -1886,7 +1903,7 @@ close_directory(void *dir_baton,
               if (tgt_status->entry
                   && tgt_status->entry->kind == svn_node_dir)
                 {
-                  SVN_ERR(get_dir_status(eb, eb->target_abspath,
+                  SVN_ERR(get_dir_status(&eb->wb, eb->target_abspath,
                                          tgt_status->entry, NULL,
                                          eb->ignores, eb->default_depth,
                                          eb->get_all, eb->no_ignore, TRUE,
@@ -2028,16 +2045,16 @@ close_file(void *file_baton,
       repos_text_status = svn_wc_status_added;
       repos_prop_status = fb->prop_changed ? svn_wc_status_added : 0;
 
-      if (fb->edit_baton->repos_locks)
+      if (fb->edit_baton->wb.repos_locks)
         {
           url = find_dir_url(fb->dir_baton, pool);
           if (url)
             {
               url = svn_path_url_add_component2(url, fb->name, pool);
               repos_lock = apr_hash_get
-                (fb->edit_baton->repos_locks,
+                (fb->edit_baton->wb.repos_locks,
                  svn_path_uri_decode(url +
-                                     strlen(fb->edit_baton->repos_root),
+                                     strlen(fb->edit_baton->wb.repos_root),
                                      pool), APR_HASH_KEY_STRING);
             }
         }
@@ -2054,13 +2071,11 @@ close_file(void *file_baton,
                           pool);
 }
 
-
 static svn_error_t *
 close_edit(void *edit_baton,
            apr_pool_t *pool)
 {
   struct edit_baton *eb = edit_baton;
-  const apr_array_header_t *ignores = eb->ignores;
 
   /* If we get here and the root was not opened as part of the edit,
      we need to transmit statuses for everything.  Otherwise, we
@@ -2068,58 +2083,19 @@ close_edit(void *edit_baton,
   if (eb->root_opened)
     return SVN_NO_ERROR;
 
-  /* If we have a target, that's the thing we're sending, otherwise
-     we're sending the anchor. */
-
-  if (*eb->target_basename)
-    {
-      svn_node_kind_t kind;
-      SVN_ERR(svn_io_check_path(eb->target_abspath, &kind, pool));
-
-      if (kind == svn_node_dir)
-        {
-          const svn_wc_entry_t *tgt_entry;
-
-          SVN_ERR(svn_wc__get_entry(&tgt_entry, eb->db, eb->target_abspath,
-                                    TRUE, svn_node_unknown, FALSE, pool, pool));
-
-          if (! tgt_entry)
-            {
-              SVN_ERR(get_dir_status(eb, eb->anchor_abspath, NULL,
-                                     eb->target_basename, ignores,
-                                     svn_depth_empty, eb->get_all, TRUE, TRUE,
-                                     eb->status_func, eb->status_baton,
-                                     eb->cancel_func, eb->cancel_baton,
-                                     pool));
-            }
-          else
-            {
-              SVN_ERR(get_dir_status(eb, eb->target_abspath, NULL,
-                                     NULL, ignores,
-                                     eb->default_depth, eb->get_all,
-                                     eb->no_ignore, FALSE,
-                                     eb->status_func, eb->status_baton,
-                                     eb->cancel_func, eb->cancel_baton,
-                                     pool));
-            }
-        }
-      else
-        {
-          SVN_ERR(get_dir_status(eb,eb->anchor_abspath, NULL,
-                                 eb->target_basename, ignores,
-                                 svn_depth_empty, eb->get_all,
-                                 TRUE, TRUE, eb->status_func,
-                                 eb->status_baton,
-                                 eb->cancel_func, eb->cancel_baton, pool));
-        }
-    }
-  else
-    {
-      SVN_ERR(get_dir_status(eb, eb->anchor_abspath, NULL, NULL, ignores,
-                             eb->default_depth, eb->get_all, eb->no_ignore,
-                             FALSE, eb->status_func, eb->status_baton,
-                             eb->cancel_func, eb->cancel_baton, pool));
-    }
+  SVN_ERR(svn_wc_walk_status(eb->wc_ctx,
+                             eb->target_abspath,
+                             eb->default_depth,
+                             eb->get_all,
+                             eb->no_ignore,
+                             eb->ignores,
+                             eb->status_func,
+                             eb->status_baton,
+                             eb->cancel_func,
+                             eb->cancel_baton,
+                             eb->wb.external_func,
+                             eb->wb.external_baton,
+                             pool));
 
   return SVN_NO_ERROR;
 }
@@ -2157,22 +2133,29 @@ svn_wc_get_status_editor5(const svn_delta_editor_t **editor,
   eb->default_depth     = depth;
   eb->target_revision   = edit_revision;
   eb->db                = wc_ctx->db;
+  eb->wc_ctx            = wc_ctx;
   eb->get_all           = get_all;
   eb->no_ignore         = no_ignore;
   eb->status_func       = status_func;
   eb->status_baton      = status_baton;
   eb->cancel_func       = cancel_func;
   eb->cancel_baton      = cancel_baton;
-  eb->external_func     = external_func;
-  eb->external_baton    = external_baton;
-  eb->externals         = apr_hash_make(result_pool);
   eb->anchor_abspath    = apr_pstrdup(result_pool, anchor_abspath);
   eb->target_abspath    = svn_dirent_join(anchor_abspath, target_basename,
                                           result_pool);
+
+  
+  
   eb->target_basename   = apr_pstrdup(result_pool, target_basename);
   eb->root_opened       = FALSE;
-  eb->repos_locks       = NULL;
-  eb->repos_root        = NULL;
+
+  eb->wb.db             = wc_ctx->db;
+  eb->wb.target_abspath = eb->target_abspath;
+  eb->wb.external_func  = external_func;
+  eb->wb.external_baton = external_baton;
+  eb->wb.externals      = apr_hash_make(result_pool);
+  eb->wb.repos_locks    = NULL;
+  eb->wb.repos_root     = NULL;
 
   /* Use the caller-provided ignore patterns if provided; the build-time
      configured defaults otherwise. */
@@ -2182,10 +2165,9 @@ svn_wc_get_status_editor5(const svn_delta_editor_t **editor,
     }
   else
     {
-      apr_array_header_t *ignores = apr_array_make(result_pool, 16,
-                                                   sizeof(const char *));
-      svn_cstring_split_append(ignores, SVN_CONFIG_DEFAULT_GLOBAL_IGNORES,
-                               "\n\r\t\v ", FALSE, result_pool);
+      apr_array_header_t *ignores;
+
+      svn_wc_get_default_ignores(&ignores, NULL, result_pool);
       eb->ignores = ignores;
     }
 
@@ -2220,6 +2202,104 @@ svn_wc_get_status_editor5(const svn_delta_editor_t **editor,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_wc_walk_status(svn_wc_context_t *wc_ctx,
+                   const char *local_abspath,
+                   svn_depth_t depth,
+                   svn_boolean_t get_all,
+                   svn_boolean_t no_ignore,
+                   const apr_array_header_t *ignore_patterns,
+                   svn_wc_status_func4_t status_func,
+                   void *status_baton,
+                   svn_cancel_func_t cancel_func,
+                   void *cancel_baton,
+                   svn_wc_external_update_t external_func,
+                   void *external_baton,
+                   apr_pool_t *scratch_pool)
+{
+  svn_node_kind_t kind;
+  struct walk_status_baton wb;
+
+  wb.db = wc_ctx->db;
+  wb.target_abspath = local_abspath;
+  wb.externals = apr_hash_make(scratch_pool);
+  wb.external_func = external_func;
+  wb.external_baton = external_baton;
+  wb.repos_root = NULL;
+  wb.repos_locks = NULL;
+
+  /* Use the caller-provided ignore patterns if provided; the build-time
+     configured defaults otherwise. */
+  if (!ignore_patterns)
+    {
+      apr_array_header_t *ignores;
+
+      svn_wc_get_default_ignores(&ignores, NULL, scratch_pool);
+      ignore_patterns = ignores;
+    }
+
+  SVN_ERR(svn_wc__node_get_kind(&kind, wc_ctx, local_abspath, FALSE, scratch_pool));
+
+  if (kind == svn_node_dir)
+    {
+      SVN_ERR(svn_io_check_path(local_abspath, &kind, scratch_pool));
+
+      if (kind != svn_node_dir)
+        {
+          SVN_ERR(get_dir_status(&wb,
+                                 svn_dirent_dirname(local_abspath, scratch_pool),
+                                 NULL,
+                                 svn_dirent_basename(local_abspath, NULL),
+                                 ignore_patterns,
+                                 depth,
+                                 get_all,
+                                 no_ignore,
+                                 TRUE,
+                                 status_func,
+                                 status_baton,
+                                 cancel_func,
+                                 cancel_baton,
+                                 scratch_pool));
+        }
+      else
+        {
+          SVN_ERR(get_dir_status(&wb,
+                                 local_abspath,
+                                 NULL,
+                                 NULL,
+                                 ignore_patterns,
+                                 depth,
+                                 get_all,
+                                 no_ignore,
+                                 FALSE,
+                                 status_func,
+                                 status_baton,
+                                 cancel_func,
+                                 cancel_baton,
+                                 scratch_pool));
+        }
+    }
+  else
+    {
+      SVN_ERR(get_dir_status(&wb,
+                             local_abspath,
+                             NULL,
+                             NULL,
+                             ignore_patterns,
+                             depth,
+                             get_all,
+                             no_ignore,
+                             FALSE,
+                             status_func,
+                             status_baton,
+                             cancel_func,
+                             cancel_baton,
+                             scratch_pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+
 
 svn_error_t *
 svn_wc_status_set_repos_locks(void *edit_baton,
@@ -2229,8 +2309,8 @@ svn_wc_status_set_repos_locks(void *edit_baton,
 {
   struct edit_baton *eb = edit_baton;
 
-  eb->repos_locks = locks;
-  eb->repos_root = apr_pstrdup(pool, repos_root);
+  eb->wb.repos_locks = locks;
+  eb->wb.repos_root = apr_pstrdup(pool, repos_root);
 
   return SVN_NO_ERROR;
 }
