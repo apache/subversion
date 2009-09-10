@@ -109,6 +109,9 @@ CREATE TABLE BASE_NODE (
      (given the properties on this file) are specified by the following
      two fields. translated_size may be NULL if the size has not (yet)
      been computed. */
+  /* ### BH: Is CHECKSUM used to refer to the PRISTINE table? 
+             If yes, than that should be documented here. */
+  /* ### BH: SHA-1, MD5? repository determined or PRISTINE determined? */
   checksum  TEXT,
   translated_size  INTEGER,
 
@@ -162,7 +165,10 @@ CREATE INDEX I_PARENT ON BASE_NODE (wc_id, parent_relpath);
 
 
 /* ------------------------------------------------------------------------- */
-
+/* ### BH: Will CHECKSUM be the same key as used for indexing a file in the
+           Pristine store? If that key is SHA-1 we might need an alternative
+           MD5 checksum column on this table to use with the current delta
+           editors that don't understand SHA-1. */
 CREATE TABLE PRISTINE (
   /* ### the hash algorithm (MD5 or SHA-1) is encoded in this value */
   checksum  TEXT NOT NULL PRIMARY KEY,
