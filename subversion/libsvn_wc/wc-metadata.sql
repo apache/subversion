@@ -310,10 +310,17 @@ CREATE TABLE ACTUAL_NODE (
      the properties, relative to WORKING/BASE as appropriate. */
   properties  BLOB,
 
-  /* ### do we want to record the revnums which caused this? */
-  /* ### also, shouldn't these be absolute paths?
+  /* basenames of the conflict files. */
+  /* ### do we want to record the revnums which caused this?  
+     ### BH: Yes, probably urls too if it is caused by a merge. Preferably
+     ###     the same info as currently passed to the interactive conflict
+     ###     handler. I would like url@rev for left, right and original, but
+     ###     some of those are available in other ways. Refer to repository
+     ###     table instead of full urls? .*/
+  /* ### also, shouldn't these be local_relpaths too?
      ### they aren't currently, but that would be more consistent with other
-     ### columns. (though it would require a format bump) */
+     ### columns. (though it would require a format bump). */
+  /* ### BH: Shouldn't we move all these into the new CONFLICT_VICTIM table */
   conflict_old  TEXT,
   conflict_new  TEXT,
   conflict_working  TEXT,
@@ -344,6 +351,9 @@ CREATE TABLE LOCK (
   /* what repository location is locked */
   repos_id  INTEGER NOT NULL,
   repos_relpath  TEXT NOT NULL,
+  /* ### BH: Shouldn't this refer to an working copy location? You can have a
+         single relpath checked out multiple times in one (switch) or more
+         working copies. */
 
   /* Information about the lock. Note: these values are just caches from
      the server, and are not authoritative. */
