@@ -351,7 +351,8 @@ install_committed_file(svn_boolean_t *overwrote_working,
    */
 
   /* Is there a tmp_text_base that needs to be installed?  */
-  tmp_text_base = svn_wc__text_base_path(file_abspath, 1, pool);
+  SVN_ERR(svn_wc__text_base_path(&tmp_text_base, db, file_abspath, TRUE,
+                                 pool));
   SVN_ERR(svn_io_check_path(tmp_text_base, &kind, pool));
 
   {
@@ -1161,7 +1162,9 @@ log_do_committed(struct log_runner *loggy,
           /* If the working file was overwritten (due to re-translation)
              or touched (due to +x / -x), then use *that* textual
              timestamp instead. */
-          basef = svn_wc__text_base_path(full_path, 0, pool);
+          SVN_ERR(svn_wc__text_base_path(&basef,
+                                         svn_wc__adm_get_db(loggy->adm_access),
+                                         local_abspath, FALSE, pool));
           err = svn_io_stat(&basef_finfo, basef, APR_FINFO_MIN | APR_FINFO_LINK,
                             pool);
           if (err)

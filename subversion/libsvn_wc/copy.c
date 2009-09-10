@@ -528,9 +528,10 @@ copy_file_administratively(svn_wc_context_t *wc_ctx,
               if (APR_STATUS_IS_ENOENT(err->apr_err))
                 {
                   svn_error_clear(err);
-                  err = svn_stream_open_readonly(&contents,
-                    svn_wc__text_base_path(src_abspath, FALSE, pool),
-                    pool, pool);
+
+                  err = svn_wc__get_pristine_contents(&contents, db,
+                                                      src_abspath, pool, pool);
+
                   if (err && APR_STATUS_IS_ENOENT(err->apr_err))
                     return svn_error_create(SVN_ERR_WC_COPYFROM_PATH_NOT_FOUND,
                                             err, NULL);
@@ -560,8 +561,8 @@ copy_file_administratively(svn_wc_context_t *wc_ctx,
         }
     }
 
-    SVN_ERR(svn_wc_get_pristine_contents(&base_contents, src_abspath,
-                                         pool, pool));
+    SVN_ERR(svn_wc_get_pristine_contents2(&base_contents, wc_ctx, src_abspath,
+                                          pool, pool));
 
     SVN_ERR(svn_wc_add_repos_file4(wc_ctx, dst_abspath,
                                    base_contents, contents,

@@ -522,7 +522,7 @@ file_diff(struct dir_baton *dir_baton,
 
   /* If the item is not a member of a specified changelist (and there are
      some specified changelists), skip it. */
-  if (! svn_wc__internal_changelist_match(dir_baton->edit_baton->db,
+  if (! svn_wc__internal_changelist_match(eb->db,
                                       local_abspath,
                                       dir_baton->edit_baton->changelist_hash,
                                       pool))
@@ -540,7 +540,8 @@ file_diff(struct dir_baton *dir_baton,
     schedule = svn_wc_schedule_normal;
 
   /* Prep these two paths early. */
-  textbase = svn_wc__text_base_path(path, FALSE, pool);
+  SVN_ERR(svn_wc__text_base_path(&textbase, eb->db, local_abspath, FALSE,
+                                 pool));
 
   /* If the regular text base is not there, we fall back to the revert
      text base (if that's not present either, we'll error later).  But
@@ -565,7 +566,8 @@ file_diff(struct dir_baton *dir_baton,
     svn_node_kind_t kind;
     SVN_ERR(svn_io_check_path(textbase, &kind, pool));
     if (kind == svn_node_none)
-      textbase = svn_wc__text_revert_path(path, pool);
+      SVN_ERR(svn_wc__text_revert_path(&textbase, eb->db, local_abspath,
+                                       pool));
   }
 
   SVN_ERR(get_empty_file(eb, &empty_file));
@@ -912,7 +914,8 @@ report_wc_file_as_added(struct dir_baton *dir_baton,
 
 
   if (eb->use_text_base)
-    source_file = svn_wc__text_base_path(path, FALSE, pool);
+    SVN_ERR(svn_wc__text_base_path(&source_file, eb->db, local_abspath, FALSE,
+                                   pool));
   else
     source_file = path;
 
@@ -1135,10 +1138,13 @@ delete_entry(const char *path,
         {
           /* Whenever showing a deletion, we show the text-base vanishing. */
           /* ### This is wrong if we're diffing WORKING->repos. */
-          const char *textbase = svn_wc__text_base_path(full_path, FALSE,
-                                                        pool);
+          const char *textbase;
+
           apr_hash_t *baseprops = NULL;
           const char *base_mimetype;
+
+          SVN_ERR(svn_wc__text_base_path(&textbase, eb->db, local_abspath,
+                                         FALSE, pool));
 
           SVN_ERR(get_base_mimetype(&base_mimetype, &baseprops, eb->db,
                                     local_abspath, pool, pool));
@@ -1384,11 +1390,12 @@ apply_textdelta(void *file_baton,
   struct file_baton *b = file_baton;
   struct edit_baton *eb = b->edit_baton;
   const svn_wc_entry_t *entry;
-  const char *parent, *base_name;
+  const char *parent, *base_name, *local_abspath;
   svn_stream_t *source;
   apr_file_t *temp_file;
 
   SVN_ERR(svn_wc_entry(&entry, b->wc_path, eb->anchor, FALSE, b->pool));
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, b->path, pool));
 
   svn_dirent_split(b->wc_path, &parent, &base_name, b->pool);
 
@@ -1405,7 +1412,8 @@ apply_textdelta(void *file_baton,
   else
     {
       /* The current text-base is the starting point if replacing */
-      SVN_ERR(svn_wc_get_pristine_contents(&source, b->path, b->pool, b->pool));
+      SVN_ERR(svn_wc__get_pristine_contents(&source, eb->db, local_abspath,
+                                            b->pool, b->pool));
     }
 
   /* This is the file that will contain the pristine repository version. It
@@ -1486,7 +1494,8 @@ close_file(void *file_baton,
      the same as BASE. */
   temp_file_path = b->temp_file_path;
   if (!temp_file_path)
-    temp_file_path = svn_wc__text_base_path(b->path, FALSE, b->pool);
+    SVN_ERR(svn_wc__text_base_path(&temp_file_path, eb->db, local_abspath,
+                                   FALSE, b->pool));
   SVN_ERR(svn_dirent_get_absolute(&temp_file_abspath, temp_file_path,
                                   b->pool));
 
@@ -1534,7 +1543,8 @@ close_file(void *file_baton,
   if (modified)
     {
       if (eb->use_text_base)
-        localfile = svn_wc__text_base_path(b->path, FALSE, b->pool);
+        SVN_ERR(svn_wc__text_base_path(&localfile, eb->db, local_abspath,
+                                       FALSE, b->pool));
       else
         /* a detranslated version of the working file */
         SVN_ERR(svn_wc__internal_translated_file(

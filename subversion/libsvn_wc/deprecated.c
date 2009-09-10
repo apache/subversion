@@ -510,6 +510,28 @@ svn_wc_create_tmp_file(apr_file_t **fp,
 
 /*** From adm_ops.c ***/
 svn_error_t *
+svn_wc_get_pristine_contents(svn_stream_t **contents,
+                             const char *path,
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool)
+{
+  svn_wc_context_t *wc_ctx;
+  const char *local_abspath;
+
+  SVN_ERR(svn_wc_context_create(&wc_ctx, NULL, scratch_pool, scratch_pool));
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, scratch_pool));
+
+  SVN_ERR(svn_wc_get_pristine_contents2(contents,
+                                        wc_ctx,
+                                        local_abspath,
+                                        result_pool,
+                                        scratch_pool));
+
+  return svn_error_return(svn_wc_context_destroy(wc_ctx));
+}
+
+
+svn_error_t *
 svn_wc_process_committed3(const char *path,
                           svn_wc_adm_access_t *adm_access,
                           svn_boolean_t recurse,

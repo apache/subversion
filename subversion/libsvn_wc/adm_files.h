@@ -76,27 +76,41 @@ svn_error_t *
 svn_wc__sync_text_base(const char *path, apr_pool_t *pool);
 
 
-/* Return a path to PATH's text-base file.
+/* Return an absolute path to LOCAL_ABSPATH's text-base file.
    If TMP is set, return a path to the tmp text-base file. */
-const char *svn_wc__text_base_path(const char *path,
-                                   svn_boolean_t tmp,
-                                   apr_pool_t *pool);
+svn_error_t *
+svn_wc__text_base_path(const char **result_path,
+                       svn_wc__db_t *db,
+                       const char *local_abspath,
+                       svn_boolean_t tmp,
+                       apr_pool_t *pool);
+
+/* Return a readonly stream on the LOCAL_ABSPATH's base file. */
+svn_error_t *
+svn_wc__get_pristine_contents(svn_stream_t **contents,
+                              svn_wc__db_t *db,
+                              const char *local_abspath,
+                              apr_pool_t *result_pool,
+                              apr_pool_t *scratch_pool);
 
 
-/* Return a readonly stream on the PATH's revert file. */
+
+/* Return a readonly stream on the LOCAL_ABSPATH's revert file. */
 svn_error_t *
 svn_wc__get_revert_contents(svn_stream_t **contents,
-                            const char *path,
+                            svn_wc__db_t *db,
+                            const char *local_abspath,
                             apr_pool_t *result_pool,
                             apr_pool_t *scratch_pool);
 
 
-/* Return a path to PATH's revert file.
+/* Retrieve an absolute path to LOCAL_ABSPATH's revert file.
    If TMP is set, return a path to the tmp revert file. */
-const char *
-svn_wc__text_revert_path(const char *path,
+svn_error_t *
+svn_wc__text_revert_path(const char **result_abspath,
+                         svn_wc__db_t *db,
+                         const char *local_abspath,
                          apr_pool_t *pool);
-
 
 /* Set *PROP_PATH to PATH's PROPS_KIND properties file.
    PATH can be a directory or file, and even have changed w.r.t. the
