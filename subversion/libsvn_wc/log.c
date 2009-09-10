@@ -158,7 +158,6 @@ struct log_runner
   svn_xml_parser_t *parser;
   svn_boolean_t rerun;
   svn_wc_adm_access_t *adm_access;  /* the dir in which all this happens */
-  svn_boolean_t tree_conflicts_added;
   apr_hash_t *tree_conflicts;         /* hash of pointers to
                                          svn_wc_conflict_description_t. */
   /* Which top-level log element we're on for this logfile.  Some
@@ -1359,8 +1358,6 @@ log_do_add_tree_conflict(struct log_runner *loggy,
                                                          loggy->result_pool);
       apr_hash_set(loggy->tree_conflicts, duped_conflict->path,
                    APR_HASH_KEY_STRING, duped_conflict);
-
-      loggy->tree_conflicts_added = TRUE;
     }
 
   return SVN_NO_ERROR;
@@ -1554,7 +1551,6 @@ run_log(svn_wc_adm_access_t *adm_access,
   int log_number;
   apr_pool_t *iterpool = svn_pool_create(pool);
   svn_boolean_t killme, kill_adm_only;
-  const svn_wc_entry_t *entry;
 
   loggy = apr_pcalloc(pool, sizeof(*loggy));
 
@@ -1568,15 +1564,7 @@ run_log(svn_wc_adm_access_t *adm_access,
   loggy->parser = parser;
   loggy->rerun = rerun;
   loggy->count = 0;
-  loggy->tree_conflicts_added = FALSE;
-
-  /* Populate the tree conflict array with the existing tree conflicts. */
-  SVN_ERR(svn_wc_entry(&entry, svn_wc_adm_access_path(adm_access), adm_access,
-                       TRUE, pool));
-  SVN_ERR(svn_wc__read_tree_conflicts(&(loggy->tree_conflicts),
-                                      entry->tree_conflict_data,
-                                      svn_wc_adm_access_path(adm_access),
-                                      pool));
+  loggy->tree_conflicts = apr_hash_make(pool);
 
   /* Expat wants everything wrapped in a top-level form, so start with
      a ghost open tag. */
@@ -1622,22 +1610,30 @@ run_log(svn_wc_adm_access_t *adm_access,
   svn_xml_free_parser(parser);
 
   /* If the logs included tree conflicts, write them to the entry. */
-  if (loggy->tree_conflicts_added)
+  if (apr_hash_count(loggy->tree_conflicts) > 0)
     {
-      svn_wc_entry_t tmp_entry;
-      svn_error_t *err;
+      apr_hash_index_t *hi;
 
-      SVN_ERR(svn_wc__write_tree_conflicts(&tmp_entry.tree_conflict_data,
-                                           loggy->tree_conflicts, pool));
+      for (hi = apr_hash_first(pool, loggy->tree_conflicts); hi;
+            hi = apr_hash_next(hi))
+        {
+          svn_error_t *err;
+          const char *conflict_path = svn_apr_hash_index_key(hi);
+          const char *conflict_abspath;
+          const svn_wc_conflict_description_t *conflict = 
+                                                 svn_apr_hash_index_val(hi);
 
-      err = svn_wc__entry_modify(adm_access, SVN_WC_ENTRY_THIS_DIR,
-                                 &tmp_entry,
-                                 SVN_WC__ENTRY_MODIFY_TREE_CONFLICT_DATA,
-                                 pool);
-      if (err)
-        return svn_error_createf(pick_error_code(loggy), err,
-                                 _("Error recording tree conflicts in '%s'"),
-                                 dir_abspath);
+          SVN_ERR(svn_dirent_get_absolute(&conflict_abspath, conflict_path,
+                                          iterpool));
+
+          err = svn_wc__db_op_set_tree_conflict(loggy->db, conflict_abspath,
+                                                conflict, iterpool);
+         
+          if (err)
+            return svn_error_createf(pick_error_code(loggy), err,
+                                 _("Error recording tree conflict on '%s'"),
+                                 conflict_abspath);
+        }
     }
 
   /* Check for a 'killme' file in the administrative area. */
