@@ -121,7 +121,7 @@ Candidate changes for 1.5.8:
    Votes:
      +1: stylesen
 
-* r38686-7
+ * r38686-7
    Fix serious bugs in libsvn_ra_svn and svnsync.  (If svnsync errors
    while syncing from svnserve to mod_dav_svn, it commits a
    half-written transaction rather than aborting it.)
@@ -135,17 +135,25 @@ Candidate changes for 1.5.8:
    Votes:
      +1: sussman
 
-* r36023
-  Resolve symlinks when checking ~/.subversion
-  Justification:
-    It gives flexibility to users to link different .subversion folders.
-  Votes:
-    +1: stylesen, stsp
+ * r36023
+   Resolve symlinks when checking ~/.subversion
+   Justification:
+     It gives flexibility to users to link different .subversion folders.
+   Votes:
+     +1: stylesen, stsp
+
+ * r39219
+   Perform MIME type matching case-insensitively.  (Issue #3479)
+   Justification:
+     The broken behavior is inconsistent with the way MIME mapping
+     files are used everywhere else in the world.
+   Votes:
+     +1: cmpilato
 
 Approved changes:
 =================
 
-* r36851, r36857
+ * r36851, r36857
    'svnadmin upgrade'-ing pre-1.2 repositories fails for lack of
    'db/format' file.
    Justification:
