@@ -1776,13 +1776,13 @@ already_in_a_tree_conflict(svn_boolean_t *conflicted,
   /* From the root end, check the conflict status of each ancestor. */
   for (i = ancestors->nelts - 1; i >= 0; i--)
     {
-      svn_wc_conflict_description_t *conflict;
+      svn_wc_conflict_description2_t *conflict;
 
       ancestor_abspath = APR_ARRAY_IDX(ancestors, i, const char *);
 
       svn_pool_clear(iterpool);
-      SVN_ERR(svn_wc__db_op_get_tree_conflict(&conflict, db, ancestor_abspath,
-                                              scratch_pool, iterpool));
+      SVN_ERR(svn_wc__db_op_read_tree_conflict(&conflict, db, ancestor_abspath,
+                                               scratch_pool, iterpool));
       if (conflict != NULL)
         {
           *conflicted = TRUE;

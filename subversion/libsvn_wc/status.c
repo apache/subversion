@@ -296,7 +296,7 @@ assemble_status(svn_wc_status2_t **status,
   svn_boolean_t prop_modified_p = FALSE;
   svn_boolean_t locked_p = FALSE;
   svn_boolean_t switched_p = FALSE;
-  svn_wc_conflict_description_t *tree_conflict;
+  svn_wc_conflict_description2_t *tree_conflict;
   svn_boolean_t file_external_p = FALSE;
 #ifdef HAVE_SYMLINK
   svn_boolean_t wc_special;
@@ -339,8 +339,8 @@ assemble_status(svn_wc_status2_t **status,
   /* Find out whether the path is a tree conflict victim.
    * This function will set tree_conflict to NULL if the path
    * is not a victim. */
-  SVN_ERR(svn_wc__db_op_get_tree_conflict(&tree_conflict, db, local_abspath,
-                                          scratch_pool, scratch_pool));
+  SVN_ERR(svn_wc__db_op_read_tree_conflict(&tree_conflict, db, local_abspath,
+                                           scratch_pool, scratch_pool));
 
   if (! entry)
     {
@@ -354,7 +354,7 @@ assemble_status(svn_wc_status2_t **status,
       stat->locked = FALSE;
       stat->copied = FALSE;
       stat->switched = FALSE;
-      stat->tree_conflict = tree_conflict;
+      stat->tree_conflict = svn_wc__cd2_to_cd(tree_conflict, result_pool);
       stat->file_external = FALSE;
 
       /* If this path has no entry, but IS present on disk, it's
@@ -606,7 +606,7 @@ assemble_status(svn_wc_status2_t **status,
   stat->ood_last_cmt_date = 0;
   stat->ood_kind = svn_node_none;
   stat->ood_last_cmt_author = NULL;
-  stat->tree_conflict = tree_conflict;
+  stat->tree_conflict = svn_wc__cd2_to_cd(tree_conflict, result_pool);
   stat->pristine_text_status = pristine_text_status;
   stat->pristine_prop_status = pristine_prop_status;
 
@@ -988,7 +988,7 @@ get_dir_status(struct walk_status_baton *wb,
     }
   else
     {
-      svn_wc_conflict_description_t *tc;
+      svn_wc_conflict_description2_t *tc;
       const char *selected_abspath ;
       tree_conflicts = apr_hash_make(subpool);
       all_children = apr_hash_make(subpool);
@@ -997,11 +997,12 @@ get_dir_status(struct walk_status_baton *wb,
 
       selected_abspath = svn_dirent_join(local_abspath, selected, subpool);
 
-      SVN_ERR(svn_wc__db_op_get_tree_conflict(&tc, wb->db, selected_abspath,
-                                              subpool, subpool));
+      SVN_ERR(svn_wc__db_op_read_tree_conflict(&tc, wb->db, selected_abspath,
+                                               subpool, subpool));
 
       if (tc != NULL)
-        apr_hash_set(tree_conflicts, selected, APR_HASH_KEY_STRING, tc);
+        apr_hash_set(tree_conflicts, selected, APR_HASH_KEY_STRING,
+                     svn_wc__cd2_to_cd(tc, subpool));
     }
 
   /* If "this dir" has "svn:externals" property set on it, store the

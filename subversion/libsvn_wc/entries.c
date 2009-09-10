@@ -3580,11 +3580,11 @@ visit_tc_too_error_handler(const char *path,
    * to reach such a node by recursion. */
   if (err && (err->apr_err == SVN_ERR_UNVERSIONED_RESOURCE))
     {
-      svn_wc_conflict_description_t *conflict;
+      svn_wc_conflict_description2_t *conflict;
 
       /* See if there is any tree conflict on this path. */
-      SVN_ERR(svn_wc__db_op_get_tree_conflict(&conflict, baton->db,
-                                              local_abspath, pool, pool));
+      SVN_ERR(svn_wc__db_op_read_tree_conflict(&conflict, baton->db,
+                                               local_abspath, pool, pool));
 
       /* If so, don't regard it as an error but call the "found entry"
        * callback with a null "entry" parameter. */
@@ -3593,7 +3593,7 @@ visit_tc_too_error_handler(const char *path,
           svn_error_clear(err);
           err = NULL;
 
-          SVN_ERR(baton->callbacks->found_entry(conflict->path, NULL,
+          SVN_ERR(baton->callbacks->found_entry(conflict->local_abspath, NULL,
                                                 baton->baton, pool));
         }
     }
@@ -3672,10 +3672,10 @@ svn_wc__walk_entries_and_tc(const char *path,
     {
       /* Not locked, so assume unversioned. If it is a tree conflict victim,
        * call the "found entry" callback with a null "entry" parameter. */
-      svn_wc_conflict_description_t *conflict;
+      svn_wc_conflict_description2_t *conflict;
 
-      SVN_ERR(svn_wc__db_op_get_tree_conflict(&conflict, db, local_abspath,
-                                              pool, pool));
+      SVN_ERR(svn_wc__db_op_read_tree_conflict(&conflict, db, local_abspath,
+                                               pool, pool));
       if (conflict)
         SVN_ERR(walk_callbacks->found_entry(path, NULL, walk_baton, pool));
     }

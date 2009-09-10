@@ -2611,7 +2611,7 @@ struct remove_tc_baton
   apr_int64_t wc_id;
   const char *local_relpath;
   const char *parent_abspath;
-  const svn_wc_conflict_description_t *tree_conflict;
+  const svn_wc_conflict_description2_t *tree_conflict;
 
   apr_pool_t *scratch_pool;
 };
@@ -2650,7 +2650,8 @@ remove_tc_txn(void *baton, svn_sqlite__db_t *sdb)
 
   apr_hash_set(conflicts, svn_dirent_basename(rtb->local_abspath,
                                               rtb->scratch_pool),
-               APR_HASH_KEY_STRING, rtb->tree_conflict);
+               APR_HASH_KEY_STRING, svn_wc__cd2_to_cd(rtb->tree_conflict,
+                                                      rtb->scratch_pool));
 
   if (apr_hash_count(conflicts) == 0 && !have_row)
     {
@@ -2685,7 +2686,7 @@ remove_tc_txn(void *baton, svn_sqlite__db_t *sdb)
 svn_error_t *
 svn_wc__db_op_set_tree_conflict(svn_wc__db_t *db,
                                 const char *local_abspath,
-                                const svn_wc_conflict_description_t *tree_conflict,
+                                const svn_wc_conflict_description2_t *tree_conflict,
                                 apr_pool_t *scratch_pool)
 {
   svn_wc__db_pdh_t *pdh;
@@ -2744,11 +2745,11 @@ svn_wc__db_op_invalidate_last_mod_time(svn_wc__db_t *db,
 
 
 svn_error_t *
-svn_wc__db_op_get_tree_conflict(svn_wc_conflict_description_t **tree_conflict,
-                                svn_wc__db_t *db,
-                                const char *local_abspath,
-                                apr_pool_t *result_pool,
-                                apr_pool_t *scratch_pool)
+svn_wc__db_op_read_tree_conflict(svn_wc_conflict_description2_t **tree_conflict,
+                                 svn_wc__db_t *db,
+                                 const char *local_abspath,
+                                 apr_pool_t *result_pool,
+                                 apr_pool_t *scratch_pool)
 {
   svn_wc__db_pdh_t *pdh;
   const char *local_relpath;
@@ -2777,7 +2778,7 @@ svn_wc__db_op_get_tree_conflict(svn_wc_conflict_description_t **tree_conflict,
 
   VERIFY_USABLE_PDH(pdh);
 
-  /* ### f13: just remove the row from the CONFLICT_VICTIM table, rather than
+  /* ### f13: just read the row from the CONFLICT_VICTIM table, rather than
      ### all this parsing, unparsing garbage. */
 
   /* Get the conflict information for the parent of LOCAL_ABSPATH. */
@@ -2807,10 +2808,12 @@ svn_wc__db_op_get_tree_conflict(svn_wc_conflict_description_t **tree_conflict,
   SVN_ERR(svn_wc__read_tree_conflicts(&conflicts, tree_conflict_data,
                                       parent_abspath, result_pool));
 
-  *tree_conflict = apr_hash_get(conflicts,
-                                svn_dirent_basename(local_abspath,
-                                                    scratch_pool),
-                                APR_HASH_KEY_STRING);
+  *tree_conflict = svn_wc__cd_to_cd2(
+                        apr_hash_get(conflicts,
+                                     svn_dirent_basename(local_abspath,
+                                                         scratch_pool),
+                                     APR_HASH_KEY_STRING),
+                        result_pool);
 
   return SVN_NO_ERROR;
 }
