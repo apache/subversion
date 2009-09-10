@@ -1773,8 +1773,6 @@ svn_wc_prop_list2(apr_hash_t **props,
                   apr_pool_t *result_pool,
                   apr_pool_t *scratch_pool)
 {
-  svn_wc__db_kind_t kind;
-
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
   return svn_error_return(
