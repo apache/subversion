@@ -326,7 +326,11 @@ CREATE TABLE ACTUAL_NODE (
   /* ### also, shouldn't these be local_relpaths too?
      ### they aren't currently, but that would be more consistent with other
      ### columns. (though it would require a format bump). */
-  /* ### BH: Shouldn't we move all these into the new CONFLICT_VICTIM table */
+  /* ### BH: Shouldn't we move all these into the new CONFLICT_VICTIM table? */
+  /* ### HKW: I think so.  These columns pre-date that table, and are just
+     ###      a mapping from svn_wc_entry_t.  I haven't thought about how the
+     ###      CONFLICT_VICTIM table would need to be extended for this, though.
+     ###      (may want do to that before the f13 bump, if possible) */
   conflict_old  TEXT,
   conflict_new  TEXT,
   conflict_working  TEXT,
@@ -360,6 +364,8 @@ CREATE TABLE LOCK (
   /* ### BH: Shouldn't this refer to an working copy location? You can have a
          single relpath checked out multiple times in one (switch) or more
          working copies. */
+  /* ### HKW: No, afaik.  This table is just a cache of what's in the
+         repository, so these should be repos_relpaths. */
 
   /* Information about the lock. Note: these values are just caches from
      the server, and are not authoritative. */
