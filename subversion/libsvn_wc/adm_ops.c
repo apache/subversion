@@ -2282,7 +2282,7 @@ revert_internal(svn_wc__db_t *db,
   svn_node_kind_t kind;
   const svn_wc_entry_t *entry;
   svn_wc_adm_access_t *dir_access;
-  svn_wc_conflict_description_t *tree_conflict;
+  svn_wc_conflict_description2_t *tree_conflict;
   const char *local_abspath;
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
@@ -2297,8 +2297,8 @@ revert_internal(svn_wc__db_t *db,
   /* Safeguard 1: the item must be versioned for any reversion to make sense,
      except that a tree conflict can exist on an unversioned item. */
   SVN_ERR(svn_wc_entry(&entry, path, dir_access, FALSE, pool));
-  SVN_ERR(svn_wc__db_op_get_tree_conflict(&tree_conflict, db, local_abspath,
-                                          pool, pool));
+  SVN_ERR(svn_wc__db_op_read_tree_conflict(&tree_conflict, db, local_abspath,
+                                           pool, pool));
   if (entry == NULL && tree_conflict == NULL)
     return svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
                              _("Cannot revert unversioned item '%s'"), path);
@@ -2347,11 +2347,11 @@ revert_internal(svn_wc__db_t *db,
                                         pool))
     {
       svn_boolean_t reverted = FALSE;
-      svn_wc_conflict_description_t *conflict;
+      svn_wc_conflict_description2_t *conflict;
 
       /* Clear any tree conflict on the path, even if it is not a versioned
          resource. */
-      SVN_ERR(svn_wc__db_op_get_tree_conflict(&conflict, db, local_abspath,
+      SVN_ERR(svn_wc__db_op_read_tree_conflict(&conflict, db, local_abspath,
                                                pool, pool));
       if (conflict)
         {
@@ -3060,7 +3060,7 @@ resolve_found_entry_callback(const char *path,
     {
       const char *conflict_dir;
       svn_wc_adm_access_t *parent_adm_access;
-      svn_wc_conflict_description_t *conflict;
+      svn_wc_conflict_description2_t *conflict;
       svn_boolean_t tree_conflict;
 
       /* For tree-conflicts, we want the *parent* directory's adm_access,
@@ -3069,8 +3069,8 @@ resolve_found_entry_callback(const char *path,
       SVN_ERR(svn_wc_adm_probe_retrieve(&parent_adm_access, baton->adm_access,
                                         conflict_dir, pool));
 
-      SVN_ERR(svn_wc__db_op_get_tree_conflict(&conflict, baton->db,
-                                              local_abspath, pool, pool));
+      SVN_ERR(svn_wc__db_op_read_tree_conflict(&conflict, baton->db,
+                                               local_abspath, pool, pool));
       if (conflict)
         {
           svn_error_t *err;

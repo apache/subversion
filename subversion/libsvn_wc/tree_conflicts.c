@@ -492,12 +492,12 @@ svn_wc__add_tree_conflict(svn_wc_context_t *wc_ctx,
                           const svn_wc_conflict_description_t *conflict,
                           apr_pool_t *scratch_pool)
 {
-  svn_wc_conflict_description_t *existing_conflict;
+  svn_wc_conflict_description2_t *existing_conflict;
 
   /* Re-adding an existing tree conflict victim is an error. */
-  SVN_ERR(svn_wc__db_op_get_tree_conflict(&existing_conflict, wc_ctx->db,
-                                          victim_abspath, scratch_pool,
-                                          scratch_pool));
+  SVN_ERR(svn_wc__db_op_read_tree_conflict(&existing_conflict, wc_ctx->db,
+                                           victim_abspath, scratch_pool,
+                                           scratch_pool));
   if (existing_conflict != NULL)
     return svn_error_createf(SVN_ERR_WC_CORRUPT, NULL,
                              _("Attempt to add tree conflict that already "
@@ -505,7 +505,9 @@ svn_wc__add_tree_conflict(svn_wc_context_t *wc_ctx,
                              svn_dirent_local_style(victim_abspath,
                                                     scratch_pool));
 
-  SVN_ERR(svn_wc__db_op_set_tree_conflict(wc_ctx->db, victim_abspath, conflict,
+  SVN_ERR(svn_wc__db_op_set_tree_conflict(wc_ctx->db, victim_abspath,
+                                          svn_wc__cd_to_cd2(conflict,
+                                                            scratch_pool),
                                           scratch_pool));
 
   return SVN_NO_ERROR;
@@ -519,11 +521,125 @@ svn_wc__get_tree_conflict(svn_wc_conflict_description_t **tree_conflict,
                           apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool)
 {
+  svn_wc_conflict_description2_t *tmp_conflict;
+
   SVN_ERR_ASSERT(svn_dirent_is_absolute(victim_abspath));
 
-  return svn_error_return(svn_wc__db_op_get_tree_conflict(tree_conflict,
-                                                          wc_ctx->db,
-                                                          victim_abspath,
-                                                          result_pool,
-                                                          scratch_pool));
+  SVN_ERR(svn_wc__db_op_read_tree_conflict(&tmp_conflict, wc_ctx->db,
+                                           victim_abspath, scratch_pool,
+                                           scratch_pool));
+  *tree_conflict = svn_wc__cd2_to_cd(tmp_conflict, result_pool);
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_wc_conflict_description_t *
+svn_wc__cd2_to_cd(const svn_wc_conflict_description2_t *conflict,
+                  apr_pool_t *result_pool)
+{
+  svn_wc_conflict_description_t *new_conflict;
+ 
+  if (conflict == NULL)
+    return NULL;
+
+  new_conflict = apr_pcalloc(result_pool, sizeof(*new_conflict));
+
+  new_conflict->path = apr_pstrdup(result_pool, conflict->local_abspath);
+  new_conflict->node_kind = conflict->node_kind;
+  new_conflict->kind = conflict->kind;
+  new_conflict->action = conflict->action;
+  new_conflict->reason = conflict->reason;
+  if (conflict->src_left_version)
+    new_conflict->src_left_version =
+          svn_wc_conflict_version_dup(conflict->src_left_version, result_pool);
+  if (conflict->src_right_version)
+    new_conflict->src_right_version =
+          svn_wc_conflict_version_dup(conflict->src_right_version, result_pool);
+
+  switch (conflict->kind)
+    {
+      case svn_wc_conflict_kind_property:
+        new_conflict->property_name = apr_pstrdup(result_pool,
+                                                  conflict->property_name);
+        break;
+
+      case svn_wc_conflict_kind_text:
+        new_conflict->is_binary = conflict->is_binary;
+        new_conflict->mime_type = apr_pstrdup(result_pool,
+                                              conflict->mime_type);
+        new_conflict->base_file = apr_pstrdup(result_pool,
+                                              conflict->base_file);
+        new_conflict->their_file = apr_pstrdup(result_pool,
+                                               conflict->their_file);
+        new_conflict->my_file = apr_pstrdup(result_pool,
+                                            conflict->my_file);
+        new_conflict->merged_file = apr_pstrdup(result_pool,
+                                                conflict->merged_file);
+        break;
+
+      case svn_wc_conflict_kind_tree:
+        new_conflict->operation = conflict->operation;
+        break;
+    }
+
+  /* A NULL access baton is allowable by the API. */
+  new_conflict->access = NULL;
+
+  return new_conflict;
+}
+
+
+svn_wc_conflict_description2_t *
+svn_wc__cd_to_cd2(const svn_wc_conflict_description_t *conflict,
+                  apr_pool_t *result_pool)
+{
+  svn_wc_conflict_description2_t *new_conflict;
+ 
+  if (conflict == NULL)
+    return NULL;
+
+  new_conflict = apr_pcalloc(result_pool, sizeof(*new_conflict));
+
+  svn_error_clear(
+    svn_dirent_get_absolute(&new_conflict->local_abspath, conflict->path,
+                            result_pool));
+  new_conflict->node_kind = conflict->node_kind;
+  new_conflict->kind = conflict->kind;
+  new_conflict->action = conflict->action;
+  new_conflict->reason = conflict->reason;
+  if (conflict->src_left_version)
+    new_conflict->src_left_version =
+          svn_wc_conflict_version_dup(conflict->src_left_version, result_pool);
+  if (conflict->src_right_version)
+    new_conflict->src_right_version =
+          svn_wc_conflict_version_dup(conflict->src_right_version, result_pool);
+
+  switch (conflict->kind)
+    {
+      case svn_wc_conflict_kind_property:
+        new_conflict->property_name = apr_pstrdup(result_pool,
+                                                  conflict->property_name);
+        break;
+
+      case svn_wc_conflict_kind_text:
+        new_conflict->is_binary = conflict->is_binary;
+        new_conflict->mime_type = apr_pstrdup(result_pool,
+                                              conflict->mime_type);
+        new_conflict->base_file = apr_pstrdup(result_pool,
+                                              conflict->base_file);
+        new_conflict->their_file = apr_pstrdup(result_pool,
+                                               conflict->their_file);
+        new_conflict->my_file = apr_pstrdup(result_pool,
+                                            conflict->my_file);
+        new_conflict->merged_file = apr_pstrdup(result_pool,
+                                                conflict->merged_file);
+        break;
+
+      case svn_wc_conflict_kind_tree:
+        new_conflict->operation = conflict->operation;
+        break;
+    }
+
+  return new_conflict;
 }

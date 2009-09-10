@@ -1627,7 +1627,9 @@ run_log(svn_wc_adm_access_t *adm_access,
                                           iterpool));
 
           err = svn_wc__db_op_set_tree_conflict(loggy->db, conflict_abspath,
-                                                conflict, iterpool);
+                                                svn_wc__cd_to_cd2(conflict,
+                                                                  iterpool),
+                                                iterpool);
          
           if (err)
             return svn_error_createf(pick_error_code(loggy), err,

@@ -984,13 +984,12 @@ svn_wc__db_op_invalidate_last_mod_time(svn_wc__db_t *db,
  *
  * Use SCRATCH_POOL for any temporary allocations.
  */
-/* ### should be db_read_tree_conflict()  */
 svn_error_t *
-svn_wc__db_op_get_tree_conflict(svn_wc_conflict_description_t **tree_conflict,
-                                svn_wc__db_t *db,
-                                const char *local_abspath,
-                                apr_pool_t *result_pool,
-                                apr_pool_t *scratch_pool);
+svn_wc__db_op_read_tree_conflict(svn_wc_conflict_description2_t **tree_conflict,
+                                 svn_wc__db_t *db,
+                                 const char *local_abspath,
+                                 apr_pool_t *result_pool,
+                                 apr_pool_t *scratch_pool);
 
 
 /** Set the tree conflict on LOCAL_ABSPATH in DB to TREE_CONFLICT.  Use
@@ -998,11 +997,12 @@ svn_wc__db_op_get_tree_conflict(svn_wc_conflict_description_t **tree_conflict,
  *
  * Use SCRATCH_POOL for any temporary allocations.
  */
-/* ### can this also record text/prop conflicts? drop "tree"?  */
+/* ### can this also record text/prop conflicts? drop "tree"? */
+/* ### dunno if it can, but it definately should be able to. */
 svn_error_t *
 svn_wc__db_op_set_tree_conflict(svn_wc__db_t *db,
                                 const char *local_abspath,
-                                const svn_wc_conflict_description_t *tree_conflict,
+                                const svn_wc_conflict_description2_t *tree_conflict,
                                 apr_pool_t *scratch_pool);
 
 

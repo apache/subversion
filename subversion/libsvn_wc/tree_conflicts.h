@@ -67,8 +67,6 @@ extern "C" {
  *
  * If *LOG_ACCUM is NULL then set *LOG_ACCUM to a new stringbug allocated in
  * POOL, else append to the existing stringbuf there.
- *
- * @since New in 1.6.
  */
 svn_error_t *
 svn_wc__loggy_add_tree_conflict(svn_stringbuf_t **log_accum,
@@ -88,13 +86,29 @@ svn_wc__loggy_add_tree_conflict(svn_stringbuf_t **log_accum,
  * Do all allocations in POOL.
  *
  * @see svn_wc__read_tree_conflicts()
- *
- * @since New in 1.6.
  */
 svn_error_t *
 svn_wc__write_tree_conflicts(const char **conflict_data,
                              apr_hash_t *conflicts,
                              apr_pool_t *pool);
+
+
+/*
+ * Convert from svn_wc_conflict_description2_t to svn_wc_conflict_description_t.
+ * Allocate the result in RESULT_POOL.
+ */
+svn_wc_conflict_description_t *
+svn_wc__cd2_to_cd(const svn_wc_conflict_description2_t *conflict,
+                  apr_pool_t *result_pool);
+
+
+/*
+ * Convert from svn_wc_conflict_description_t to svn_wc_conflict_description2_t.
+ * Allocate the result in RESULT_POOL.
+ */
+svn_wc_conflict_description2_t *
+svn_wc__cd_to_cd2(const svn_wc_conflict_description_t *conflict,
+                  apr_pool_t *result_pool);
 
 #ifdef __cplusplus
 }

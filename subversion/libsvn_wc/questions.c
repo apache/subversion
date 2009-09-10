@@ -490,10 +490,10 @@ svn_wc__internal_conflicted_p(svn_boolean_t *text_conflicted_p,
   /* Find out whether it's a tree conflict victim. */
   if (tree_conflicted_p)
     {
-      svn_wc_conflict_description_t *conflict;
+      svn_wc_conflict_description2_t *conflict;
 
-      SVN_ERR(svn_wc__db_op_get_tree_conflict(&conflict, db, local_abspath,
-                                              scratch_pool, scratch_pool));
+      SVN_ERR(svn_wc__db_op_read_tree_conflict(&conflict, db, local_abspath,
+                                               scratch_pool, scratch_pool));
       *tree_conflicted_p = (conflict != NULL);
     }
 
