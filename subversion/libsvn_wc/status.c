@@ -2217,7 +2217,7 @@ svn_wc_walk_status(svn_wc_context_t *wc_ctx,
                    void *external_baton,
                    apr_pool_t *scratch_pool)
 {
-  svn_node_kind_t kind;
+  svn_node_kind_t kind, local_kind;
   struct walk_status_baton wb;
 
   wb.db = wc_ctx->db;
@@ -2239,47 +2239,9 @@ svn_wc_walk_status(svn_wc_context_t *wc_ctx,
     }
 
   SVN_ERR(svn_wc__node_get_kind(&kind, wc_ctx, local_abspath, FALSE, scratch_pool));
+  SVN_ERR(svn_io_check_path(local_abspath, &kind, scratch_pool));
 
-  if (kind == svn_node_dir)
-    {
-      SVN_ERR(svn_io_check_path(local_abspath, &kind, scratch_pool));
-
-      if (kind != svn_node_dir)
-        {
-          SVN_ERR(get_dir_status(&wb,
-                                 svn_dirent_dirname(local_abspath, scratch_pool),
-                                 NULL,
-                                 svn_dirent_basename(local_abspath, NULL),
-                                 ignore_patterns,
-                                 depth,
-                                 get_all,
-                                 no_ignore,
-                                 TRUE,
-                                 status_func,
-                                 status_baton,
-                                 cancel_func,
-                                 cancel_baton,
-                                 scratch_pool));
-        }
-      else
-        {
-          SVN_ERR(get_dir_status(&wb,
-                                 local_abspath,
-                                 NULL,
-                                 NULL,
-                                 ignore_patterns,
-                                 depth,
-                                 get_all,
-                                 no_ignore,
-                                 FALSE,
-                                 status_func,
-                                 status_baton,
-                                 cancel_func,
-                                 cancel_baton,
-                                 scratch_pool));
-        }
-    }
-  else
+  if (kind == svn_node_file && local_kind == svn_node_file)
     {
       SVN_ERR(get_dir_status(&wb,
                              local_abspath,
@@ -2290,6 +2252,40 @@ svn_wc_walk_status(svn_wc_context_t *wc_ctx,
                              get_all,
                              no_ignore,
                              FALSE,
+                             status_func,
+                             status_baton,
+                             cancel_func,
+                             cancel_baton,
+                             scratch_pool));
+    }
+  else if (kind == svn_node_dir && local_kind == svn_node_dir)
+    {
+      SVN_ERR(get_dir_status(&wb,
+                             local_abspath,
+                             NULL,
+                             NULL,
+                             ignore_patterns,
+                             depth,
+                             get_all,
+                             no_ignore,
+                             FALSE,
+                             status_func,
+                             status_baton,
+                             cancel_func,
+                             cancel_baton,
+                             scratch_pool));
+    }
+  else
+    {
+      SVN_ERR(get_dir_status(&wb,
+                             svn_dirent_dirname(local_abspath, scratch_pool),
+                             NULL,
+                             svn_dirent_basename(local_abspath, NULL),
+                             ignore_patterns,
+                             depth,
+                             get_all,
+                             no_ignore,
+                             TRUE,
                              status_func,
                              status_baton,
                              cancel_func,
