@@ -1390,6 +1390,46 @@ def lock_funky_comment_chars(sbox):
   svntest.actions.run_and_verify_svn(None, ".*locked by user", [], 'lock',
                                      '-m', 'lock & load', file_path)
 
+#----------------------------------------------------------------------
+# Check that the svn:needs-lock usage applies to a specific location
+# in a working copy, not to the working copy overall.
+def lock_twice_in_one_wc(sbox):
+  "try to lock a file twice in one working copy"
+  
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+  mu2_path = os.path.join(wc_dir, 'B', 'mu')
+  
+  # Create a needs-lock file
+  svntest.actions.set_prop('svn:needs-lock', '*', mu_path)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'commit', wc_dir, '-m', '')
+  
+  # Mark the file readonly
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'update', wc_dir)
+  
+  # Switch a second location for the same file in the same working copy
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'switch', sbox.repo_url + '/A', os.path.join(wc_dir, 'B'))
+  
+  # Lock location 1
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'lock', mu_path, '-m', 'Locked here')
+  
+  # Locking in location 2 should fail ### Currently returns exitcode 0
+  svntest.actions.run_and_verify_svn2(None, None, ".*is already locked.*", 0,
+                                      'lock', '-m', '', mu2_path)
+
+  # Change the file anyway
+  os.chmod(mu2_path, 0700)
+  svntest.main.file_append(mu2_path, "Updated text")
+  
+  # Commit should fail because it is locked in the other location
+  svntest.actions.run_and_verify_svn(None, None, '.*[Nn]o.*lock.*',
+                                     'commit', mu2_path, '-m', '')
 
 ########################################################################
 # Run the tests
@@ -1432,6 +1472,7 @@ test_list = [ None,
               XFail(unlocked_lock_of_other_user,
                     svntest.main.is_ra_type_dav),
               lock_funky_comment_chars,
+              lock_twice_in_one_wc,
             ]
 
 if __name__ == '__main__':
