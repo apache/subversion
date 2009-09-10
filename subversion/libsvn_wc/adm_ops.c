@@ -236,10 +236,17 @@ remove_revert_files(svn_stringbuf_t **logtags,
                     const char *path,
                     apr_pool_t * pool)
 {
-  const char *revert_file;
+  const char *revert_file, *local_abspath;
   svn_node_kind_t kind;
 
-  revert_file = svn_wc__text_revert_path(path, pool);
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+
+
+  SVN_ERR(svn_wc__text_revert_path(&revert_file,
+                                   svn_wc__adm_get_db(adm_access),
+                                   local_abspath,
+                                   pool));
+
   SVN_ERR(svn_io_check_path(revert_file, &kind, pool));
   if (kind == svn_node_file)
     SVN_ERR(svn_wc__loggy_remove(logtags, adm_access, revert_file, pool));
@@ -1294,10 +1301,13 @@ svn_wc_delete4(svn_wc_context_t *wc_ctx,
       /* is it a replacement with history? */
       if (was_schedule == svn_wc_schedule_replace && was_copied)
         {
-          const char *text_base =
-            svn_wc__text_base_path(path, FALSE, pool);
-          const char *text_revert =
-            svn_wc__text_revert_path(path, pool);
+          const char *text_base, *text_revert;
+
+          SVN_ERR(svn_wc__text_base_path(&text_base, wc_ctx->db, local_abspath,
+                                         FALSE, pool));
+
+          SVN_ERR(svn_wc__text_revert_path(&text_revert, wc_ctx->db,
+                                           local_abspath, pool));
 
           if (was_kind != svn_node_dir) /* Dirs don't have text-bases */
             /* Restore the original text-base */
@@ -1587,11 +1597,17 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
 
       if (orig_entry->kind == svn_node_file)
         {
-          const char *textb = svn_wc__text_base_path(path, FALSE, pool);
-          const char *rtextb = svn_wc__text_revert_path(path, pool);
+          const char *text_base, *text_revert;
+
+          SVN_ERR(svn_wc__text_base_path(&text_base, wc_ctx->db, local_abspath,
+                                         FALSE, pool));
+
+          SVN_ERR(svn_wc__text_revert_path(&text_revert, wc_ctx->db,
+                                           local_abspath, pool));
+
           SVN_ERR(svn_wc__loggy_move(&log_accum,
                                      svn_wc__adm_access_abspath(adm_access),
-                                     textb, rtextb, pool));
+                                     text_base, text_revert, pool));
         }
       SVN_ERR(svn_wc__loggy_revert_props_create(&log_accum, path,
                                                 adm_access, TRUE, pool));
@@ -1852,14 +1868,15 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
 
   if (entry->kind == svn_node_file)
     {
+      const char *text_base, *text_revert;
       svn_node_kind_t kind;
 
-      const char *regular_base_path
-        = svn_wc__text_base_path(fullpath, FALSE, pool);
+      SVN_ERR(svn_wc__text_base_path(&text_base, db, local_abspath, FALSE,
+                                     pool));
 
       /* This becomes NULL if there is no revert-base. */
-      const char *revert_base_path
-        = svn_wc__text_revert_path(fullpath, pool);
+      SVN_ERR(svn_wc__text_revert_path(&text_revert, db, local_abspath,
+                                       pool));
 
       if (! reinstall_working)
         {
@@ -1875,14 +1892,14 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
          speaking, the working file could be unmodified w.r.t. the
          revert-base, but discovering that would be costly and chances
          are it's not the case anyway.  So we just assume. */
-      SVN_ERR(svn_io_check_path(revert_base_path, &kind, pool));
+      SVN_ERR(svn_io_check_path(text_revert, &kind, pool));
       if (kind == svn_node_file)
         {
           reinstall_working = TRUE;
         }
       else if (kind == svn_node_none)
         {
-          SVN_ERR(svn_io_check_path(regular_base_path, &kind, pool));
+          SVN_ERR(svn_io_check_path(text_base, &kind, pool));
           if (kind != svn_node_file)
             {
               /* A real file must have either a regular or a revert
@@ -1895,7 +1912,7 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
             }
           else
             {
-              revert_base_path = NULL;
+              text_revert = NULL;
             }
         }
       else
@@ -1903,7 +1920,7 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
           return svn_error_createf
             (SVN_ERR_NODE_UNKNOWN_KIND, NULL,
              _("unexpected kind for revert-base '%s'"),
-             svn_dirent_local_style(revert_base_path, pool));
+             svn_dirent_local_style(text_revert, pool));
         }
 
       /* You'd think we could just write out one log command to move
@@ -1920,15 +1937,15 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
          command to move the revert text-base to the regular
          text-base. */
 
-      if (revert_base_path)
+      if (text_revert)
         {
           SVN_ERR(svn_wc__loggy_copy(&log_accum,
                                      svn_wc__adm_access_abspath(adm_access),
-                                     revert_base_path, fullpath,
+                                     text_revert, fullpath,
                                      pool));
           SVN_ERR(svn_wc__loggy_move(&log_accum,
                                      svn_wc__adm_access_abspath(adm_access),
-                                     revert_base_path, regular_base_path,
+                                     text_revert, text_base,
                                      pool));
           *reverted = TRUE;
         }
@@ -1947,7 +1964,7 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
             {
               SVN_ERR(svn_wc__loggy_copy(&log_accum,
                                       svn_wc__adm_access_abspath(adm_access),
-                                      regular_base_path, fullpath,
+                                      text_base, fullpath,
                                       pool));
               *reverted = TRUE;
             }
@@ -2025,11 +2042,12 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
       /* Reset the checksum if this is a replace-with-history. */
       if (entry->kind == svn_node_file && entry->copyfrom_url)
         {
-          const char *base_path;
+          const char *revert_path;
           svn_checksum_t *checksum;
 
-          base_path = svn_wc__text_revert_path(fullpath, pool);
-          SVN_ERR(svn_io_file_checksum2(&checksum, base_path,
+          SVN_ERR(svn_wc__text_revert_path(&revert_path, db, local_abspath,
+                                           pool));
+          SVN_ERR(svn_io_file_checksum2(&checksum, revert_path,
                                         svn_checksum_md5, pool));
           tmp_entry.checksum = svn_checksum_to_cstring(checksum, pool);
           flags |= SVN_WC__ENTRY_MODIFY_CHECKSUM;
@@ -2488,17 +2506,42 @@ svn_wc_get_pristine_copy_path(const char *path,
                               const char **pristine_path,
                               apr_pool_t *pool)
 {
-  *pristine_path = svn_wc__text_base_path(path, FALSE, pool);
+  svn_wc_context_t *wc_ctx;
+  const char *local_abspath;
+
+  SVN_ERR(svn_wc_context_create(&wc_ctx, NULL, pool, pool));
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+
+  SVN_ERR(svn_wc__text_base_path(pristine_path, wc_ctx->db, local_abspath,
+                                          FALSE, pool));
   return SVN_NO_ERROR;
 }
 
 svn_error_t *
-svn_wc_get_pristine_contents(svn_stream_t **contents,
-                             const char *path,
-                             apr_pool_t *result_pool,
-                             apr_pool_t *scratch_pool)
+svn_wc_get_pristine_contents2(svn_stream_t **contents,
+                              svn_wc_context_t *wc_ctx,
+                              const char *local_abspath,
+                              apr_pool_t *result_pool,
+                              apr_pool_t *scratch_pool)
 {
-  const char *text_base = svn_wc__text_base_path(path, FALSE, scratch_pool);
+  return svn_error_return(svn_wc__get_pristine_contents(contents,
+                                                        wc_ctx->db,
+                                                        local_abspath,
+                                                        result_pool,
+                                                        scratch_pool));
+}
+
+svn_error_t *
+svn_wc__get_pristine_contents(svn_stream_t **contents,
+                              svn_wc__db_t *db,
+                              const char *local_abspath,
+                              apr_pool_t *result_pool,
+                              apr_pool_t *scratch_pool)
+{
+  const char *text_base;
+  
+  SVN_ERR(svn_wc__text_base_path(&text_base, db, local_abspath, FALSE,
+                                 scratch_pool));
 
   if (text_base == NULL)
     {
@@ -2542,6 +2585,7 @@ svn_wc_remove_from_revision_control(svn_wc_adm_access_t *adm_access,
       svn_node_kind_t kind;
       svn_boolean_t wc_special, local_special;
       svn_boolean_t text_modified_p;
+      const char *text_base_file;
 
       full_path = svn_dirent_join(full_path, name, pool);
       SVN_ERR(svn_dirent_get_absolute(&local_abspath, full_path, pool));
@@ -2563,6 +2607,9 @@ svn_wc_remove_from_revision_control(svn_wc_adm_access_t *adm_access,
                    svn_dirent_local_style(full_path, pool));
         }
 
+      SVN_ERR(svn_wc__text_base_path(&text_base_file, db, local_abspath,
+                                     FALSE, pool));
+
       /* Remove the wcprops. */
       SVN_ERR(svn_wc__props_delete(db, local_abspath, svn_wc__props_wcprop,
                                    pool));
@@ -2576,8 +2623,7 @@ svn_wc_remove_from_revision_control(svn_wc_adm_access_t *adm_access,
       SVN_ERR(svn_wc__entry_remove(db, local_abspath, pool));
 
       /* Remove text-base/NAME.svn-base */
-      SVN_ERR(svn_io_remove_file2(svn_wc__text_base_path(full_path, FALSE,
-                                                         pool),
+      SVN_ERR(svn_io_remove_file2(text_base_file,
                                   TRUE, pool));
 
       /* If we were asked to destroy the working file, do so unless

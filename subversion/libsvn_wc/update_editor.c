@@ -3381,8 +3381,10 @@ add_file_with_history(const char *path,
       if (src_entry->schedule == svn_wc_schedule_replace
           && src_entry->copyfrom_url)
         {
-          SVN_ERR(svn_wc__get_revert_contents(&source_text_base, src_path,
-                                              subpool, subpool));
+          SVN_ERR(svn_wc__get_revert_contents(&source_text_base, db,
+                                              src_local_abspath, subpool,
+                                              subpool));
+
           SVN_ERR(svn_wc__load_props(NULL, NULL, &base_props, db,
                                      src_local_abspath, pool, subpool));
           /* The old working props are lost, just like the old
@@ -3391,8 +3393,9 @@ add_file_with_history(const char *path,
         }
       else
         {
-          SVN_ERR(svn_wc_get_pristine_contents(&source_text_base, src_path,
-                                               subpool, subpool));
+          SVN_ERR(svn_wc__get_pristine_contents(&source_text_base, db,
+                                                src_local_abspath,
+                                                subpool, subpool));
           SVN_ERR(svn_wc__load_props(&base_props, &working_props, NULL, db,
                                      src_local_abspath, pool, subpool));
         }
@@ -3808,7 +3811,10 @@ choose_base_paths(const char **old_text_base,
 {
   svn_wc_adm_access_t *adm_access;
   const svn_wc_entry_t *entry;
+  const char *local_abspath;
   svn_boolean_t replaced;
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, scratch_pool));
 
   SVN_ERR(svn_wc_adm_retrieve(&adm_access, root_access,
                               svn_dirent_dirname(path, scratch_pool),
@@ -3817,9 +3823,13 @@ choose_base_paths(const char **old_text_base,
 
   replaced = entry && entry->schedule == svn_wc_schedule_replace;
   if (replaced)
-    *old_text_base = svn_wc__text_revert_path(path, result_pool);
+    SVN_ERR(svn_wc__text_revert_path(old_text_base,
+                                     svn_wc__adm_get_db(root_access),
+                                     local_abspath, result_pool));
   else
-    *old_text_base = svn_wc__text_base_path(path, FALSE, result_pool);
+    SVN_ERR(svn_wc__text_base_path(old_text_base,
+                                   svn_wc__adm_get_db(root_access),
+                                   local_abspath, FALSE, result_pool));
 
   if (checksum_p)
     {
@@ -3850,6 +3860,9 @@ apply_textdelta(void *file_baton,
   svn_boolean_t replaced;
   svn_stream_t *source;
   svn_stream_t *target;
+  const char *local_abspath;
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, fb->path, fb->pool));
 
   if (fb->skipped)
     {
@@ -3901,10 +3914,12 @@ apply_textdelta(void *file_baton,
   if (! fb->added)
     {
       if (replaced)
-        SVN_ERR(svn_wc__get_revert_contents(&source, fb->path,
+        SVN_ERR(svn_wc__get_revert_contents(&source, fb->edit_baton->db,
+                                            local_abspath,
                                             handler_pool, handler_pool));
       else
-        SVN_ERR(svn_wc_get_pristine_contents(&source, fb->path,
+        SVN_ERR(svn_wc__get_pristine_contents(&source, fb->edit_baton->db,
+                                             local_abspath,
                                              handler_pool, handler_pool));
     }
   else
@@ -5398,13 +5413,15 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
   svn_checksum_t *base_checksum;
   svn_stream_t *tmp_base_contents;
   const char *dst_path;
-  const char *text_base_path = svn_wc__text_base_path(local_abspath, FALSE,
-                                                      pool);
+  const char *text_base_path;
   const svn_wc_entry_t *ent;
   const svn_wc_entry_t *dst_entry;
   svn_stringbuf_t *log_accum;
   svn_wc_adm_access_t *adm_access = 
       svn_wc__adm_retrieve_internal2(wc_ctx->db, dir_abspath, pool);
+
+  SVN_ERR(svn_wc__text_base_path(&text_base_path, wc_ctx->db, local_abspath,
+                                 FALSE, pool));
 
   /* Calculate a valid relative path for the loggy code below */
   SVN_ERR(svn_wc__temp_get_relpath(&dst_path, wc_ctx->db, local_abspath,
@@ -5440,8 +5457,13 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
                            svn_node_unknown, FALSE, pool, pool));
   if (dst_entry && dst_entry->schedule == svn_wc_schedule_delete)
     {
-      const char *dst_rtext = svn_wc__text_revert_path(dst_path, pool);
-      const char *dst_txtb = svn_wc__text_base_path(dst_path, FALSE, pool);
+      const char *dst_rtext;
+      const char *dst_txtb;
+
+      SVN_ERR(svn_wc__text_revert_path(&dst_rtext, wc_ctx->db, local_abspath,
+                                       pool));
+      SVN_ERR(svn_wc__text_base_path(&dst_txtb, wc_ctx->db, local_abspath,
+                                     FALSE, pool));
 
       SVN_ERR(svn_wc__loggy_move(&log_accum,
                                  svn_wc__adm_access_abspath(adm_access),

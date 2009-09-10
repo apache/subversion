@@ -2951,7 +2951,7 @@ def diff_external_diffcmd(sbox):
     "iota\t(revision 1)\n",
     "-L\n",
     "iota\t(working copy)\n",
-    os.path.join('.svn', 'text-base', 'iota.svn-base') + "\n",
+    os.path.abspath(os.path.join('.svn', 'text-base', 'iota.svn-base')) + "\n",
     os.path.abspath("iota") + "\n"])
 
   # Check that the output of diff corresponds with the expected arguments,

@@ -5914,7 +5914,7 @@ svn_wc_get_pristine_contents2(svn_stream_t **contents,
  * context and a path that can be relative
  *
  * @since New in 1.6.
- * @deprecated Provided for backward compatibility with the 1.2 API.
+ * @deprecated Provided for backward compatibility with the 1.6 API.
  */
 SVN_DEPRECATED
 svn_error_t *

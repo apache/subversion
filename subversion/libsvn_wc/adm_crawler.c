@@ -83,7 +83,8 @@ restore_file(svn_wc__db_t *db,
   file_path = svn_dirent_join(svn_wc_adm_access_path(adm_access), file_path,
                               pool);
 
-  SVN_ERR(svn_wc_get_pristine_contents(&src_stream, file_path, pool, pool));
+  SVN_ERR(svn_wc__get_pristine_contents(&src_stream, db, local_abspath, pool,
+                                        pool));
 
   SVN_ERR(svn_wc__get_special(&special, db, local_abspath, pool));
   if (special)
@@ -1056,9 +1057,11 @@ svn_wc__internal_transmit_text_deltas(const char **tempfile,
      need to be cleaned up, if he asked for one. */
   if (tempfile)
     {
-      const char *tmp_base = svn_wc__text_base_path(local_abspath, TRUE,
-                                                    scratch_pool);
+      const char *tmp_base;
       apr_file_t *tempbasefile;
+
+      SVN_ERR(svn_wc__text_base_path(&tmp_base, db, local_abspath, TRUE,
+                                     scratch_pool));
 
       *tempfile = tmp_base;
 
@@ -1084,8 +1087,8 @@ svn_wc__internal_transmit_text_deltas(const char **tempfile,
   if (! fulltext)
     {
       /* Compute delta against the pristine contents */
-      SVN_ERR(svn_wc_get_pristine_contents(&base_stream, local_abspath,
-                                           scratch_pool, scratch_pool));
+      SVN_ERR(svn_wc__get_pristine_contents(&base_stream, db, local_abspath,
+                                            scratch_pool, scratch_pool));
 
       SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL,
                                    NULL, NULL, NULL,
@@ -1115,7 +1118,7 @@ svn_wc__internal_transmit_text_deltas(const char **tempfile,
           svn_stream_t *p_stream;
 
           /* ### we should ALREADY have the checksum for pristine. */
-          SVN_ERR(svn_wc_get_pristine_contents(&p_stream, local_abspath,
+          SVN_ERR(svn_wc__get_pristine_contents(&p_stream, db, local_abspath,
                                                scratch_pool, scratch_pool));
           p_stream = svn_stream_checksummed2(p_stream, &expected_checksum,
                                              NULL, svn_checksum_md5, TRUE,
@@ -1184,18 +1187,22 @@ svn_wc__internal_transmit_text_deltas(const char **tempfile,
       if (tempfile)
         svn_error_clear(svn_io_remove_file2(*tempfile, TRUE, scratch_pool));
 
-      return svn_error_createf(SVN_ERR_WC_CORRUPT_TEXT_BASE, NULL,
+      {
+        const char *text_base;
+        
+        SVN_ERR(svn_wc__text_base_path(&text_base, db, local_abspath, FALSE,
+                                       scratch_pool));
+
+        return svn_error_createf(SVN_ERR_WC_CORRUPT_TEXT_BASE, NULL,
                       _("Checksum mismatch for '%s':\n"
                         "   expected:  %s\n"
                         "     actual:  %s\n"),
-                      svn_dirent_local_style(svn_wc__text_base_path(
-                                                       local_abspath, FALSE,
-                                                       scratch_pool),
-                                             scratch_pool),
+                      svn_dirent_local_style(text_base, scratch_pool),
                       svn_checksum_to_cstring_display(expected_checksum,
                                                       scratch_pool),
                       svn_checksum_to_cstring_display(verify_checksum,
                                                       scratch_pool));
+      }
     }
 
   /* Now, handle that delta transmission error if any, so we can stop
