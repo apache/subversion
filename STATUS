@@ -190,5 +190,13 @@ Candidate changes:
    Votes:
      +1: pburba
 
+ * r39219
+   Perform MIME type matching case-insensitively.  (Issue #3479)
+   Justification:
+     The broken behavior is inconsistent with the way MIME mapping
+     files are used everywhere else in the world.
+   Votes:
+     +1: cmpilato
+   
 Approved changes:
 =================
