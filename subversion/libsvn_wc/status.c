@@ -1011,9 +1011,6 @@ get_dir_status(struct walk_status_baton *wb,
   SVN_ERR(handle_externals(wb, local_abspath, dir_entry->depth, pool,
                            subpool));
 
-  /** If we get here, ENTRY is NULL and we are handling all the
-      directory entries (depending on specified depth). */
-
   if (!selected)
     {
       /* Handle "this-dir" first. */
@@ -1156,7 +1153,7 @@ get_dir_status(struct walk_status_baton *wb,
                                     dirent_p->kind,
                                     dirent_p->special,
                                     patterns,
-                                    no_ignore,
+                                    no_ignore || selected,
                                     status_func, status_baton,
                                     iterpool));
     }
@@ -2244,14 +2241,14 @@ svn_wc_walk_status(svn_wc_context_t *wc_ctx,
   if (kind == svn_node_file && local_kind == svn_node_file)
     {
       SVN_ERR(get_dir_status(&wb,
-                             local_abspath,
+                             svn_dirent_dirname(local_abspath, scratch_pool),
                              NULL,
-                             NULL,
+                             svn_dirent_basename(local_abspath, NULL),
                              ignore_patterns,
                              depth,
                              get_all,
-                             no_ignore,
-                             FALSE,
+                             TRUE,
+                             TRUE,
                              status_func,
                              status_baton,
                              cancel_func,
