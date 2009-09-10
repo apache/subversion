@@ -1723,6 +1723,16 @@ svn_wc_conflict_description_create_tree(const char *path,
                                         apr_pool_t *pool);
 
 
+/** Return a duplicate of @a conflict, allocated in @a result_pool.
+ * A deep copy of all members will be made.
+ *
+ * @since New in 1.7.
+ */
+svn_wc_conflict_description2_t *
+svn_wc__conflict_description2_dup(const svn_wc_conflict_description2_t *conflict,
+                                  apr_pool_t *result_pool);
+
+
 /** The way in which the conflict callback chooses a course of action.
  *
  * @since New in 1.5.
