@@ -1526,7 +1526,7 @@ tree_has_local_mods(svn_boolean_t *modified,
  * notest/tree-conflicts/detection.txt.
  */
 static svn_error_t *
-check_tree_conflict(svn_wc_conflict_description_t **pconflict,
+check_tree_conflict(svn_wc_conflict_description2_t **pconflict,
                     struct edit_baton *eb,
                     svn_stringbuf_t *log_accum,
                     const char *full_path,
@@ -1642,7 +1642,7 @@ check_tree_conflict(svn_wc_conflict_description_t **pconflict,
    * to record it. */
   if (reason != (svn_wc_conflict_reason_t)(-1))
     {
-      svn_wc_conflict_description_t *conflict;
+      svn_wc_conflict_description2_t *conflict;
       svn_wc_conflict_version_t *src_left_version;
       svn_wc_conflict_version_t *src_right_version;
       const char *repos_url = NULL;
@@ -1702,8 +1702,8 @@ check_tree_conflict(svn_wc_conflict_description_t **pconflict,
                                                          their_node_kind,
                                                          pool);
 
-      conflict = svn_wc_conflict_description_create_tree(
-        full_path, parent_adm_access, entry->kind,
+      conflict = svn_wc_conflict_description_create_tree2(
+        local_abspath, entry->kind,
         eb->switch_url ? svn_wc_operation_switch : svn_wc_operation_update,
         src_left_version, src_right_version, pool);
       conflict->action = action;
@@ -2007,7 +2007,7 @@ do_entry_deletion(struct edit_baton *eb,
   const char *full_path = svn_dirent_join(eb->anchor, path, pool);
   svn_boolean_t already_conflicted;
   svn_stringbuf_t *log_item = svn_stringbuf_create("", pool);
-  svn_wc_conflict_description_t *tree_conflict;
+  svn_wc_conflict_description2_t *tree_conflict;
   const char *local_abspath;
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, full_path, pool));
@@ -2444,7 +2444,7 @@ add_directory(const char *path,
             }
           else
             {
-              svn_wc_conflict_description_t *tree_conflict;
+              svn_wc_conflict_description2_t *tree_conflict;
 
               /* Raise a tree conflict. */
               SVN_ERR(check_tree_conflict(&tree_conflict, eb,
@@ -2652,7 +2652,7 @@ open_directory(const char *path,
   svn_boolean_t already_conflicted;
   const char *full_path = svn_dirent_join(eb->anchor, path, pool);
   const char *local_abspath;
-  svn_wc_conflict_description_t *tree_conflict;
+  svn_wc_conflict_description2_t *tree_conflict;
   svn_boolean_t prop_conflicted;
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, full_path, pool));
@@ -3646,7 +3646,7 @@ add_file(const char *path,
         fb->add_existed = TRUE;
       else
         {
-          svn_wc_conflict_description_t *tree_conflict;
+          svn_wc_conflict_description2_t *tree_conflict;
 
           SVN_ERR(check_tree_conflict(&tree_conflict, eb,
                                       pb->log_accum, full_path, entry,
@@ -3707,7 +3707,7 @@ open_file(const char *path,
   const char *full_path = svn_dirent_join(eb->anchor, path, pool);
   const char *local_abspath;
   svn_boolean_t already_conflicted;
-  svn_wc_conflict_description_t *tree_conflict;
+  svn_wc_conflict_description2_t *tree_conflict;
 
   /* the file_pool can stick around for a *long* time, so we want to use
      a subpool for any temporary allocations. */
