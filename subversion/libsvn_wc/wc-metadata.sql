@@ -108,10 +108,8 @@ CREATE TABLE BASE_NODE (
   /* if this node is a file, then the checksum and its translated size
      (given the properties on this file) are specified by the following
      two fields. translated_size may be NULL if the size has not (yet)
-     been computed. */
-  /* ### BH: Is CHECKSUM used to refer to the PRISTINE table? 
-             If yes, than that should be documented here. */
-  /* ### BH: SHA-1, MD5? repository determined or PRISTINE determined? */
+     been computed. The kind of checksum (e.g. SHA-1, MD5) is stored in the
+     value */
   checksum  TEXT,
   translated_size  INTEGER,
 
