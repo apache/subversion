@@ -85,8 +85,8 @@ cat_local_file(svn_wc_context_t *wc_ctx,
 
   if (revision->kind != svn_opt_revision_working)
     {
-      SVN_ERR(svn_wc_get_pristine_contents(&input, local_abspath, scratch_pool,
-                                           scratch_pool));
+      SVN_ERR(svn_wc_get_pristine_contents2(&input, wc_ctx, local_abspath,
+                                            scratch_pool, scratch_pool));
       SVN_ERR(svn_wc_get_prop_diffs2(NULL, &props, wc_ctx, local_abspath,
                                      scratch_pool, scratch_pool));
     }
