@@ -325,6 +325,8 @@ svn_wc_conflict_description_create_text2(const char *local_abspath,
 {
   svn_wc_conflict_description2_t *conflict;
 
+  SVN_ERR_ASSERT_NO_RETURN(svn_dirent_is_absolute(local_abspath));
+
   conflict = apr_pcalloc(result_pool, sizeof(*conflict));
   conflict->local_abspath = apr_pstrdup(result_pool, local_abspath);
   conflict->node_kind = svn_node_file;
@@ -341,6 +343,8 @@ svn_wc_conflict_description_create_prop2(const char *local_abspath,
                                          apr_pool_t *result_pool)
 {
   svn_wc_conflict_description2_t *conflict;
+
+  SVN_ERR_ASSERT_NO_RETURN(svn_dirent_is_absolute(local_abspath));
 
   conflict = apr_pcalloc(result_pool, sizeof(*conflict));
   conflict->local_abspath = apr_pstrdup(result_pool, local_abspath);
@@ -360,6 +364,8 @@ svn_wc_conflict_description_create_tree2(
                             apr_pool_t *result_pool)
 {
   svn_wc_conflict_description2_t *conflict;
+
+  SVN_ERR_ASSERT_NO_RETURN(svn_dirent_is_absolute(local_abspath));
 
   conflict = apr_pcalloc(result_pool, sizeof(*conflict));
   conflict->local_abspath = apr_pstrdup(result_pool, local_abspath);
@@ -470,6 +476,9 @@ svn_wc_conflict_version_dup(const svn_wc_conflict_version_t *version,
 {
 
   svn_wc_conflict_version_t *new_version;
+
+  if (version == NULL)
+    return NULL;
 
   new_version = apr_pcalloc(pool, sizeof(*new_version));
 
