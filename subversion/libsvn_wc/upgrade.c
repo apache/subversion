@@ -537,6 +537,7 @@ migrate_single_tree_conflict_data(svn_sqlite__db_t *sdb,
   svn_sqlite__stmt_t *insert_stmt;
   apr_hash_t *conflicts;
   apr_hash_index_t *hi;
+  apr_pool_t *iterpool;
 
   SVN_ERR(svn_sqlite__get_statement(&insert_stmt, sdb,
                                     STMT_INSERT_NEW_CONFLICT));
@@ -544,6 +545,7 @@ migrate_single_tree_conflict_data(svn_sqlite__db_t *sdb,
   SVN_ERR(svn_wc__read_tree_conflicts(&conflicts, tree_conflict_data,
                                       local_relpath, scratch_pool));
 
+  iterpool = svn_pool_create(scratch_pool);
   for (hi = apr_hash_first(scratch_pool, conflicts);
        hi;
        hi = apr_hash_next(hi))
@@ -554,6 +556,8 @@ migrate_single_tree_conflict_data(svn_sqlite__db_t *sdb,
       apr_int64_t left_repos_id;
       apr_int64_t right_repos_id;
 
+      svn_pool_clear(iterpool);
+
       /* Optionally get the right repos ids. */
       if (conflict->src_left_version)
         {
@@ -561,7 +565,7 @@ migrate_single_tree_conflict_data(svn_sqlite__db_t *sdb,
                     &left_repos_id,
                     sdb,
                     conflict->src_left_version->repos_url,
-                    scratch_pool));
+                    iterpool));
         }
 
       if (conflict->src_right_version)
@@ -570,14 +574,14 @@ migrate_single_tree_conflict_data(svn_sqlite__db_t *sdb,
                     &right_repos_id,
                     sdb,
                     conflict->src_right_version->repos_url,
-                    scratch_pool));
+                    iterpool));
         }
 
       SVN_ERR(svn_sqlite__bindf(insert_stmt, "is", wc_id, conflict_relpath));
 
       SVN_ERR(svn_sqlite__bind_text(insert_stmt, 3,
                                     svn_dirent_dirname(conflict_relpath,
-                                                       scratch_pool)));
+                                                       iterpool)));
       SVN_ERR(svn_sqlite__bind_text(insert_stmt, 4,
                                     kind_to_word(db_kind_from_node_kind(
                                                         conflict->node_kind))));
@@ -621,6 +625,8 @@ migrate_single_tree_conflict_data(svn_sqlite__db_t *sdb,
 
       SVN_ERR(svn_sqlite__insert(NULL, insert_stmt));
     }
+
+  svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
 }
