@@ -32,6 +32,7 @@
 #include "svn_error.h"
 #include "svn_wc.h"
 #include "private/svn_sqlite.h"
+#include "private/svn_wc_private.h"
 
 #include "wc_db.h"
 
@@ -484,6 +485,19 @@ svn_wc__internal_changelist_match(svn_wc__db_t *db,
                                   const char *local_abspath,
                                   const apr_hash_t *clhash,
                                   apr_pool_t *scratch_pool);
+
+
+/* Library-internal version of svn_wc__node_walk_children(), which see. */
+svn_error_t *
+svn_wc__internal_walk_children(svn_wc__db_t *db,
+                               const char *local_abspath,
+                               svn_boolean_t show_hidden,
+                               const svn_wc__node_walk_callbacks_t *callbacks,
+                               void *walk_baton,
+                               svn_depth_t walk_depth,
+                               svn_cancel_func_t cancel_func,
+                               void *cancel_baton,
+                               apr_pool_t *scratch_pool);
 
 
 svn_error_t *
