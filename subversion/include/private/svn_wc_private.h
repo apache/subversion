@@ -162,19 +162,19 @@ svn_wc__set_file_external_location(svn_wc_adm_access_t *adm_access,
  * use @a scratch_pool for temporary allocations.
  */
 svn_error_t *
-svn_wc__get_tree_conflict(svn_wc_conflict_description_t **tree_conflict,
+svn_wc__get_tree_conflict(svn_wc_conflict_description2_t **tree_conflict,
                           svn_wc_context_t *wc_ctx,
                           const char *victim_abspath,
                           apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool);
 
 /** Record the tree conflict described by @a conflict in the WC for
- * @a victim_abspath.  Use @a scratch_pool for all temporary allocations.
+ * @a conflict->local_abspath.  Use @a scratch_pool for all temporary
+ * allocations.
  */
 svn_error_t *
 svn_wc__add_tree_conflict(svn_wc_context_t *wc_ctx,
-                          const char *victim_abspath,
-                          const svn_wc_conflict_description_t *conflict,
+                          const svn_wc_conflict_description2_t *conflict,
                           apr_pool_t *scratch_pool);
 
 /* Remove any tree conflict on victim @a victim_abspath using @a wc_ctx.
@@ -303,6 +303,26 @@ svn_wc__adm_retrieve_from_context(svn_wc_adm_access_t **adm_access,
                                   svn_wc_context_t *wc_ctx,
                                   const char *local_abspath,
                                   apr_pool_t *pool);
+
+
+/*
+ * Convert from svn_wc_conflict_description2_t to svn_wc_conflict_description_t.
+ * Allocate the result in RESULT_POOL.
+ */
+svn_wc_conflict_description_t *
+svn_wc__cd2_to_cd(const svn_wc_conflict_description2_t *conflict,
+                  apr_pool_t *result_pool);
+
+
+/*
+ * Convert from svn_wc_conflict_description_t to svn_wc_conflict_description2_t.
+ * Allocate the result in RESULT_POOL.
+ */
+svn_wc_conflict_description2_t *
+svn_wc__cd_to_cd2(const svn_wc_conflict_description_t *conflict,
+                  apr_pool_t *result_pool);
+
+
 /**
  * Fetch the absolute paths of all the working children of @a dir_abspath
  * into @a *children, allocated in @a result_pool.  Use @a wc_ctx to access
