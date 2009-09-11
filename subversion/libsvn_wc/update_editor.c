@@ -2333,7 +2333,7 @@ add_directory(const char *path,
 
   if (kind == svn_node_dir)
     {
-      svn_wc_entry_t *entry;
+      const svn_wc_entry_t *entry;
 
       /* Test the obstructing dir to see if it's versioned. */
       svn_error_t *err = svn_wc__get_entry(&entry, eb->db, db->local_abspath,
