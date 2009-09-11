@@ -495,34 +495,30 @@ svn_wc__del_tree_conflict(svn_wc_context_t *wc_ctx,
 
 svn_error_t *
 svn_wc__add_tree_conflict(svn_wc_context_t *wc_ctx,
-                          const char *victim_abspath,
-                          const svn_wc_conflict_description_t *conflict,
+                          const svn_wc_conflict_description2_t *conflict,
                           apr_pool_t *scratch_pool)
 {
   svn_wc_conflict_description2_t *existing_conflict;
 
   /* Re-adding an existing tree conflict victim is an error. */
   SVN_ERR(svn_wc__db_op_read_tree_conflict(&existing_conflict, wc_ctx->db,
-                                           victim_abspath, scratch_pool,
-                                           scratch_pool));
+                                           conflict->local_abspath,
+                                           scratch_pool, scratch_pool));
   if (existing_conflict != NULL)
     return svn_error_createf(SVN_ERR_WC_CORRUPT, NULL,
                              _("Attempt to add tree conflict that already "
                                "exists at '%s'"),
-                             svn_dirent_local_style(victim_abspath,
+                             svn_dirent_local_style(conflict->local_abspath,
                                                     scratch_pool));
 
-  SVN_ERR(svn_wc__db_op_set_tree_conflict(wc_ctx->db, victim_abspath,
-                                          svn_wc__cd_to_cd2(conflict,
-                                                            scratch_pool),
-                                          scratch_pool));
-
-  return SVN_NO_ERROR;
+  return svn_error_return(
+    svn_wc__db_op_set_tree_conflict(wc_ctx->db, conflict->local_abspath,
+                                          conflict, scratch_pool));
 }
 
 
 svn_error_t *
-svn_wc__get_tree_conflict(svn_wc_conflict_description_t **tree_conflict,
+svn_wc__get_tree_conflict(svn_wc_conflict_description2_t **tree_conflict,
                           svn_wc_context_t *wc_ctx,
                           const char *victim_abspath,
                           apr_pool_t *result_pool,
@@ -532,12 +528,9 @@ svn_wc__get_tree_conflict(svn_wc_conflict_description_t **tree_conflict,
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(victim_abspath));
 
-  SVN_ERR(svn_wc__db_op_read_tree_conflict(&tmp_conflict, wc_ctx->db,
-                                           victim_abspath, scratch_pool,
-                                           scratch_pool));
-  *tree_conflict = svn_wc__cd2_to_cd(tmp_conflict, result_pool);
-
-  return SVN_NO_ERROR;
+  return svn_error_return(
+    svn_wc__db_op_read_tree_conflict(tree_conflict, wc_ctx->db, victim_abspath,
+                                     scratch_pool, scratch_pool));
 }
 
 
