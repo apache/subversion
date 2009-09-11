@@ -8947,7 +8947,7 @@ calculate_left_hand_side(const char **url_left,
 struct get_subtree_mergeinfo_walk_baton
 {
   /* Merge target and target relative to repository root. */
-  const char *target_path;
+  const char *target_abspath;
   const char *target_repos_root;
 
   /* Hash of paths (const char *) that have explicit mergeinfo. */
@@ -8956,36 +8956,25 @@ struct get_subtree_mergeinfo_walk_baton
   svn_client_ctx_t *ctx;
 };
 
-/* svn_wc_entry_callbacks2_t found_entry() callback for get_mergeinfo_paths.
+/* svn_wc__node_walk_callbacks_t found_node() callback for
+   get_mergeinfo_paths().
 
-   Given the working copy path PATH, its corresponding ENTRY, and WALK_BATON,
+   Given the working copy path LOCAL_ABSPATH, and WALK_BATON,
    where WALK_BATON is of type get_subtree_mergeinfo_walk_baton *:
 
-   If PATH has explicit mergeinfo or is the same as WALK_BATON->TARGET_PATH,
-   then store a copy of PATH in WALK_BATON->SUBTREES_WITH_MERGEINFO.  The copy
-   is allocated in WALK_BATON->SUBTREES_WITH_MERGEINFO's pool.
+   If LOCAL_ABSPATH has explicit mergeinfo or is the same as
+   WALK_BATON->TARGET_PATH, then store a copy of LOCAL_ABSPATH in
+   WALK_BATON->SUBTREES_WITH_MERGEINFO.  The copy is allocated in
+   WALK_BATON->SUBTREES_WITH_MERGEINFO's pool.
 
    POOL is used only for temporary allocations. */
 static svn_error_t *
-get_subtree_mergeinfo_walk_cb(const char *path,
-                              const svn_wc_entry_t *entry,
+get_subtree_mergeinfo_walk_cb(const char *local_abspath,
                               void *walk_baton,
                               apr_pool_t *pool)
 {
   struct get_subtree_mergeinfo_walk_baton *wb = walk_baton;
   const svn_string_t *propval;
-  const char *local_abspath;
-
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
-
-  /* We're going to receive dirents twice;  we want to ignore the
-     first one (where it's a child of a parent dir), and only use
-     the second one (where we're looking at THIS_DIR).  The exception
-     is absent dirs, these only come through once, so continue. */
-  if ((entry->kind == svn_node_dir)
-      && (strcmp(entry->name, SVN_WC_ENTRY_THIS_DIR) != 0)
-      && !entry->absent)
-    return SVN_NO_ERROR;
 
   SVN_ERR(svn_wc_prop_get2(&propval, wb->ctx->wc_ctx, local_abspath,
                            SVN_PROP_MERGEINFO, pool, pool));
@@ -8993,7 +8982,7 @@ get_subtree_mergeinfo_walk_cb(const char *path,
   /* We always want to include the reintegrate target even if it has
      no explicit mergeinfo.  It still has natural history we'll need
      to consider. */
-  if (propval || strcmp(path, wb->target_path) == 0)
+  if (propval || strcmp(local_abspath, wb->target_abspath) == 0)
     {
       const char *stored_path;
 
@@ -9032,7 +9021,7 @@ svn_client_merge_reintegrate(const char *source,
   svn_mergeinfo_t unmerged_to_source_mergeinfo_catalog;
   svn_boolean_t use_sleep = FALSE;
   svn_error_t *err;
-  static const svn_wc_entry_callbacks2_t walk_callbacks =
+  static const svn_wc__node_walk_callbacks_t walk_callbacks =
     { get_subtree_mergeinfo_walk_cb, get_mergeinfo_error_handler };
   struct get_subtree_mergeinfo_walk_baton wb;
   const char *target_abspath;
@@ -9099,13 +9088,14 @@ svn_client_merge_reintegrate(const char *source,
                                "can be the root of the repository"));
 
   /* Find all the subtree's in TARGET_WCPATH that have explicit mergeinfo. */
-  wb.target_path = target_wcpath;
+  SVN_ERR(svn_dirent_get_absolute(&wb.target_abspath, target_wcpath, pool));
   wb.target_repos_root = wc_repos_root;
   wb.subtrees_with_mergeinfo = apr_hash_make(pool);
   wb.ctx = ctx;
-  SVN_ERR(svn_wc_walk_entries3(target_wcpath, adm_access, &walk_callbacks,
-                               &wb, svn_depth_infinity, TRUE,
-                               ctx->cancel_func, ctx->cancel_baton, pool));
+  SVN_ERR(svn_wc__node_walk_children(ctx->wc_ctx, target_abspath, TRUE,
+                                     &walk_callbacks, &wb, svn_depth_infinity,
+                                     ctx->cancel_func, ctx->cancel_baton,
+                                     pool));
 
   SVN_ERR(svn_client__get_revision_number(&rev2, NULL, ctx->wc_ctx,
                                           source_repos_rel_path,
