@@ -2211,19 +2211,17 @@ svn_wc__loggy_remove(svn_stringbuf_t **log_accum,
 
 svn_error_t *
 svn_wc__loggy_add_tree_conflict(svn_stringbuf_t **log_accum,
-                                const svn_wc_conflict_description_t *conflict,
+                                const svn_wc_conflict_description2_t *conflict,
                                 svn_wc_adm_access_t *adm_access,
                                 apr_pool_t *pool)
 {
   const char *conflict_data;
   apr_hash_t *conflicts;
-  svn_wc_conflict_description2_t *new_conflict =
-    svn_wc__cd_to_cd2(conflict, pool);
 
   /* ### TODO: implement write_one_tree_conflict(). */
   conflicts = apr_hash_make(pool);
-  apr_hash_set(conflicts, new_conflict->local_abspath, APR_HASH_KEY_STRING,
-               new_conflict);
+  apr_hash_set(conflicts, conflict->local_abspath, APR_HASH_KEY_STRING,
+               conflict);
 
   SVN_ERR(svn_wc__write_tree_conflicts(&conflict_data, conflicts, pool));
 
