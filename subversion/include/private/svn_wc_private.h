@@ -189,10 +189,10 @@ svn_wc__del_tree_conflict(svn_wc_context_t *wc_ctx,
 
 /*
  * Read tree conflict descriptions from @a conflict_data.  Set @a *conflicts
- * to a hash of pointers to svn_wc_conflict_description_t objects indexed by
- * svn_wc_conflict_description_t.path, all newly allocated in @a pool.  @a
- * dir_path is the path to the working copy directory whose conflicts are
- * being read.  The conflicts read are the tree conflicts on the immediate
+ * to a hash of pointers to svn_wc_conflict_description2_t objects indexed by
+ * svn_wc_conflict_description2_t.local_abspath, all newly allocated in @a
+ * pool.  @a dir_path is the path to the working copy directory whose conflicts
+ * are being read.  The conflicts read are the tree conflicts on the immediate
  * child nodes of @a dir_path.  Do all allocations in @a pool.
  */
 svn_error_t *

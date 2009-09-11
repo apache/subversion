@@ -550,13 +550,18 @@ migrate_single_tree_conflict_data(svn_sqlite__db_t *sdb,
        hi;
        hi = apr_hash_next(hi))
     {
-      const svn_wc_conflict_description_t *conflict =
+      const svn_wc_conflict_description2_t *conflict =
           svn_apr_hash_index_val(hi);
-      const char *conflict_relpath = conflict->path;
+      const char *conflict_relpath;
       apr_int64_t left_repos_id;
       apr_int64_t right_repos_id;
 
       svn_pool_clear(iterpool);
+
+      conflict_relpath = svn_dirent_join(local_relpath,
+                                         svn_dirent_basename(
+                                           conflict->local_abspath, iterpool),
+                                         iterpool);
 
       /* Optionally get the right repos ids. */
       if (conflict->src_left_version)

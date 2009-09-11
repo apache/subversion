@@ -976,7 +976,7 @@ get_dir_status(struct walk_status_baton *wb,
       /* Create a hash containing all children */
       all_children = apr_hash_overlay(subpool, nodes, dirents);
 
-      /* ### This creates the tree conflicts with only their name as path.
+      /* ### This creates the tree conflicts with bogus paths.
              We can't just push these in the status result! */
       SVN_ERR(svn_wc__read_tree_conflicts(&tree_conflicts,
                                           dir_entry->tree_conflict_data,

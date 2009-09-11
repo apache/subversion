@@ -2650,8 +2650,7 @@ remove_tc_txn(void *baton, svn_sqlite__db_t *sdb)
 
   apr_hash_set(conflicts, svn_dirent_basename(rtb->local_abspath,
                                               rtb->scratch_pool),
-               APR_HASH_KEY_STRING, svn_wc__cd2_to_cd(rtb->tree_conflict,
-                                                      rtb->scratch_pool));
+               APR_HASH_KEY_STRING, rtb->tree_conflict);
 
   if (apr_hash_count(conflicts) == 0 && !have_row)
     {
@@ -2808,12 +2807,10 @@ svn_wc__db_op_read_tree_conflict(svn_wc_conflict_description2_t **tree_conflict,
   SVN_ERR(svn_wc__read_tree_conflicts(&conflicts, tree_conflict_data,
                                       parent_abspath, result_pool));
 
-  *tree_conflict = svn_wc__cd_to_cd2(
-                        apr_hash_get(conflicts,
-                                     svn_dirent_basename(local_abspath,
-                                                         scratch_pool),
-                                     APR_HASH_KEY_STRING),
-                        result_pool);
+  *tree_conflict = apr_hash_get(conflicts,
+                                svn_dirent_basename(local_abspath,
+                                                    scratch_pool),
+                                APR_HASH_KEY_STRING);
 
   return SVN_NO_ERROR;
 }

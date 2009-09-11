@@ -220,7 +220,7 @@ read_node_version_info(svn_wc_conflict_version_t *version_info,
   return SVN_NO_ERROR;
 }
 
-/* Parse a newly allocated svn_wc_conflict_description_t object from the
+/* Parse a newly allocated svn_wc_conflict_description2_t object from the
  * character string pointed to by *START. Return the result in *CONFLICT.
  * Don't read further than END. Set *START to point to the next character
  * after the description that was read.
@@ -228,13 +228,14 @@ read_node_version_info(svn_wc_conflict_version_t *version_info,
  * Do all allocations in pool.
  */
 static svn_error_t *
-read_one_tree_conflict(svn_wc_conflict_description_t **conflict,
+read_one_tree_conflict(svn_wc_conflict_description2_t **conflict,
                        const svn_skel_t *skel,
                        const char *dir_path,
                        apr_pool_t *result_pool,
                        apr_pool_t *scratch_pool)
 {
   const char *victim_basename;
+  const char *victim_abspath;
   svn_node_kind_t node_kind;
   svn_wc_operation_t operation;
   svn_wc_conflict_version_t *src_left_version;
@@ -276,9 +277,13 @@ read_one_tree_conflict(svn_wc_conflict_description_t **conflict,
                                                      SVN_INVALID_REVNUM,
                                                      svn_node_none,
                                                      result_pool);
-  *conflict = svn_wc_conflict_description_create_tree(
-    svn_dirent_join(dir_path, victim_basename, result_pool),
-    NULL, node_kind, operation, src_left_version, src_right_version,
+
+  SVN_ERR(svn_dirent_get_absolute(&victim_abspath,
+                    svn_dirent_join(dir_path, victim_basename, scratch_pool),
+                    scratch_pool));
+
+  *conflict = svn_wc_conflict_description_create_tree2(victim_abspath,
+    node_kind, operation, src_left_version, src_right_version,
     result_pool);
 
   /* action */
@@ -332,13 +337,14 @@ svn_wc__read_tree_conflicts(apr_hash_t **conflicts,
   iterpool = svn_pool_create(pool);
   for (skel = skel->children; skel != NULL; skel = skel->next)
     {
-      svn_wc_conflict_description_t *conflict;
+      svn_wc_conflict_description2_t *conflict;
 
       svn_pool_clear(iterpool);
       SVN_ERR(read_one_tree_conflict(&conflict, skel, dir_path,
                                      pool, iterpool));
       if (conflict != NULL)
-        apr_hash_set(*conflicts, svn_dirent_basename(conflict->path, pool),
+        apr_hash_set(*conflicts, svn_dirent_basename(conflict->local_abspath,
+                                                     pool),
                      APR_HASH_KEY_STRING, conflict);
     }
   svn_pool_destroy(iterpool);
@@ -406,6 +412,7 @@ prepend_version_info_skel(svn_skel_t *parent_skel,
 /*
  * This function could be static, but we need to link to it
  * in a unit test in tests/libsvn_wc/, so it isn't.
+ * (and we use it to serialize tree conflicts in log.c :( )
  */
 svn_error_t *
 svn_wc__write_tree_conflicts(const char **conflict_data,
@@ -421,7 +428,7 @@ svn_wc__write_tree_conflicts(const char **conflict_data,
   for (hi = apr_hash_first(pool, conflicts); hi; hi = apr_hash_next(hi))
     {
       const char *path;
-      const svn_wc_conflict_description_t *conflict =
+      const svn_wc_conflict_description2_t *conflict =
           svn_apr_hash_index_val(hi);
       svn_skel_t *c_skel = svn_skel__make_empty_list(pool);
 
@@ -456,7 +463,7 @@ svn_wc__write_tree_conflicts(const char **conflict_data,
                                 pool));
 
       /* Victim path (escaping separator chars). */
-      path = svn_dirent_basename(conflict->path, pool);
+      path = svn_dirent_basename(conflict->local_abspath, pool);
       SVN_ERR_ASSERT(strlen(path) > 0);
       svn_skel__prepend(svn_skel__str_atom(path, pool), c_skel);
 

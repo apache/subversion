@@ -2451,19 +2451,28 @@ revert_internal(svn_wc__db_t *db,
         for (hi2 = apr_hash_first(pool, conflicts); hi2;
                                                      hi2 = apr_hash_next(hi2))
           {
-            const svn_wc_conflict_description_t *conflict =
-            svn_apr_hash_index_val(hi2);
+            const svn_wc_conflict_description2_t *conflict =
+                                                svn_apr_hash_index_val(hi2);
 
             /* If this victim is not in this dir's entries ... */
             if (apr_hash_get(entries,
-                             svn_dirent_basename(conflict->path, pool),
+                             svn_dirent_basename(conflict->local_abspath,
+                                                 pool),
                              APR_HASH_KEY_STRING) == NULL)
               {
                 /* Found an unversioned tree conflict victim */
+                const char *conflict_relpath;
+
+                /* ### we have to do this little dance until revert_internal()
+                   ### no longer requires a cwd-relative path (for fetching
+                   ### an access baton). */
+                conflict_relpath = conflict->local_abspath
+                       + (strlen(local_abspath) - strlen(path));
+
                 /* Revert the entry. */
-                SVN_ERR(revert_internal(db, conflict->path, dir_access,
-                                        svn_depth_empty, use_commit_times,
-                                        changelist_hash,
+                SVN_ERR(revert_internal(db, conflict_relpath,
+                                        dir_access, svn_depth_empty,
+                                        use_commit_times, changelist_hash,
                                         cancel_func, cancel_baton,
                                         notify_func, notify_baton, subpool));
               }
