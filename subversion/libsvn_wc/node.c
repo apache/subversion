@@ -191,6 +191,25 @@ svn_wc__node_get_depth(svn_depth_t *depth,
 }
 
 svn_error_t *
+svn_wc__node_get_changed_info(svn_revnum_t *changed_rev,
+                              apr_time_t *changed_date,
+                              const char **changed_author,
+                              svn_wc_context_t *wc_ctx,
+                              const char *local_abspath,
+                              apr_pool_t *result_pool,
+                              apr_pool_t *scratch_pool)
+{
+  return svn_error_return(
+    svn_wc__db_read_info(NULL, NULL, NULL, NULL, NULL, NULL, changed_rev,
+                         changed_date, changed_author, NULL, NULL, NULL,
+                         NULL, NULL,
+                         NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                         NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                         wc_ctx->db, local_abspath, result_pool,
+                         scratch_pool));
+}
+
+svn_error_t *
 svn_wc__node_get_changelist(const char **changelist,
                             svn_wc_context_t *wc_ctx,
                             const char *local_abspath,

@@ -388,6 +388,24 @@ svn_wc__node_get_depth(svn_depth_t *depth,
                        apr_pool_t *scratch_pool);
 
 /**
+ * Get the changed revision, date and author for @a local_abspath using @a
+ * wc_ctx.  Allocate the return values in @a result_pool; use @a scratch_pool
+ * for temporary allocations.  Any of the return pointers may be @c NULL, in
+ * which case they are not set.
+ *
+ * If @a local_abspath is not in the working copy, return
+ * @c SVN_ERR_WC_PATH_NOT_FOUND.
+ */
+svn_error_t *
+svn_wc__node_get_changed_info(svn_revnum_t *changed_rev,
+                              apr_time_t *changed_date,
+                              const char **changed_author,
+                              svn_wc_context_t *wc_ctx,
+                              const char *local_abspath,
+                              apr_pool_t *result_pool,
+                              apr_pool_t *scratch_pool);
+
+/**
  * Set @a *changelist to the changelist to which @a local_abspath belongs.
  * Allocate the result in @a result_pool and use @a scratch_pool for temporary
  * allocations.
