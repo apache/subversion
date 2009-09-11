@@ -368,8 +368,6 @@ svn_wc__conflict_desc2_from_conflict_desc(const svn_wc_conflict_description_t *
  * to access the working copy, and @a scratch_pool for all temporary
  * allocations.  If @a abspath is not present in the working copy and
  * @a show_hidden is FALSE then set @a kind to @c svn_node_none.
- *
- * @since New in 1.7.
  */
 svn_error_t *
 svn_wc__node_get_kind(svn_node_kind_t *kind,
@@ -378,6 +376,16 @@ svn_wc__node_get_kind(svn_node_kind_t *kind,
                       svn_boolean_t show_hidden,
                       apr_pool_t *scratch_pool);
 
+
+/**
+ * Get the depth of @a local_abspath using @a wc_ctx.  If @a local_abspath is
+ * not in the working copy, return @c SVN_ERR_WC_PATH_NOT_FOUND.
+ */
+svn_error_t *
+svn_wc__node_get_depth(svn_depth_t *depth,
+                       svn_wc_context_t *wc_ctx,
+                       const char *local_abspath,
+                       apr_pool_t *scratch_pool);
 
 /**
  * Set @a *changelist to the changelist to which @a local_abspath belongs.

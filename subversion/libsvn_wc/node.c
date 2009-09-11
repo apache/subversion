@@ -176,6 +176,21 @@ svn_wc__node_get_kind(svn_node_kind_t *kind,
 }
 
 svn_error_t *
+svn_wc__node_get_depth(svn_depth_t *depth,
+                       svn_wc_context_t *wc_ctx,
+                       const char *local_abspath,
+                       apr_pool_t *scratch_pool)
+{
+  return svn_error_return(
+    svn_wc__db_read_info(NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                         NULL, NULL, NULL, depth, NULL, NULL, NULL,
+                         NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                         NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                         wc_ctx->db, local_abspath, scratch_pool,
+                         scratch_pool));
+}
+
+svn_error_t *
 svn_wc__node_get_changelist(const char **changelist,
                             svn_wc_context_t *wc_ctx,
                             const char *local_abspath,
