@@ -56,7 +56,6 @@ cat_local_file(svn_wc_context_t *wc_ctx,
                void *cancel_baton,
                apr_pool_t *scratch_pool)
 {
-  const svn_wc_entry_t *entry;
   apr_hash_t *kw = NULL;
   svn_subst_eol_style_t style;
   apr_hash_t *props;
@@ -112,10 +111,6 @@ cat_local_file(svn_wc_context_t *wc_ctx,
   special = apr_hash_get(props, SVN_PROP_SPECIAL,
                          APR_HASH_KEY_STRING);
 
-  SVN_ERR(svn_wc__get_entry_versioned(&entry, wc_ctx, local_abspath,
-                                      svn_node_unknown, FALSE, FALSE,
-                                      scratch_pool, scratch_pool));
-
   if (eol_style)
     svn_subst_eol_style_from_value(&style, &eol, eol_style->data);
 
@@ -127,13 +122,25 @@ cat_local_file(svn_wc_context_t *wc_ctx,
     }
   else
     {
-      tm = entry->cmt_date;
+      SVN_ERR(svn_wc__node_get_changed_info(NULL, &tm, NULL, wc_ctx,
+                                            local_abspath, scratch_pool,
+                                            scratch_pool));
     }
 
   if (keywords)
     {
+      svn_revnum_t changed_rev;
       const char *rev_str;
       const char *author;
+      const svn_wc_entry_t *entry;
+
+      SVN_ERR(svn_wc__get_entry_versioned(&entry, wc_ctx, local_abspath,
+                                          svn_node_unknown, FALSE, FALSE,
+                                          scratch_pool, scratch_pool));
+
+      SVN_ERR(svn_wc__node_get_changed_info(&changed_rev, NULL, &author, wc_ctx,
+                                            local_abspath, scratch_pool,
+                                            scratch_pool));
 
       if (local_mod)
         {
@@ -141,13 +148,12 @@ cat_local_file(svn_wc_context_t *wc_ctx,
              to the revision number, and set the author to
              "(local)" since we can't always determine the
              current user's username */
-          rev_str = apr_psprintf(scratch_pool, "%ldM", entry->cmt_rev);
+          rev_str = apr_psprintf(scratch_pool, "%ldM", changed_rev);
           author = _("(local)");
         }
       else
         {
-          rev_str = apr_psprintf(scratch_pool, "%ld", entry->cmt_rev);
-          author = entry->cmt_author;
+          rev_str = apr_psprintf(scratch_pool, "%ld", changed_rev);
         }
 
       SVN_ERR(svn_subst_build_keywords2(&kw, keywords->data, rev_str,

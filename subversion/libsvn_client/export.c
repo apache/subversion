@@ -196,13 +196,20 @@ copy_one_versioned_file(const char *from_abspath,
     }
   else
     {
-      tm = entry->cmt_date;
+      SVN_ERR(svn_wc__node_get_changed_info(NULL, &tm, NULL, wc_ctx,
+                                            from_abspath, scratch_pool,
+                                            scratch_pool));
     }
 
   if (keywords)
     {
+      svn_revnum_t changed_rev;
       const char *fmt;
       const char *author;
+
+      SVN_ERR(svn_wc__node_get_changed_info(&changed_rev, NULL, &author,
+                                            wc_ctx, from_abspath, scratch_pool,
+                                            scratch_pool));
 
       if (local_mod)
         {
@@ -216,12 +223,11 @@ copy_one_versioned_file(const char *from_abspath,
       else
         {
           fmt = "%ld";
-          author = entry->cmt_author;
         }
 
       SVN_ERR(svn_subst_build_keywords2
               (&kw, keywords->data,
-               apr_psprintf(scratch_pool, fmt, entry->cmt_rev),
+               apr_psprintf(scratch_pool, fmt, changed_rev),
                entry->url, tm, author, scratch_pool));
     }
 
