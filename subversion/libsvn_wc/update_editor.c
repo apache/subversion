@@ -908,6 +908,9 @@ struct file_baton
   /* Path to this file, either abs or relative to the change-root. */
   const char *path;
 
+  /* Absolute path to this file */
+  const char *local_abspath;
+
   /* The repository URL this file will correspond to. */
   const char *new_URL;
 
@@ -1007,6 +1010,7 @@ make_file_baton(struct file_baton **f_p,
   f->path = svn_dirent_join(pb->edit_baton->anchor, path, pool);
   f->name = svn_dirent_basename(path, pool);
   f->old_revision = SVN_INVALID_REVNUM;
+  f->local_abspath = svn_dirent_join(pb->local_abspath, f->name, pool);
 
   /* Figure out the new_URL for this file. */
   if (pb->edit_baton->switch_url)
@@ -1115,10 +1119,10 @@ prep_directory(struct dir_baton *db,
   const char *repos;
   const char *dir_abspath;
 
-  SVN_ERR(svn_dirent_get_absolute(&dir_abspath, db->path, pool));
+  dir_abspath = db->local_abspath;
 
   /* Make sure the directory exists. */
-  SVN_ERR(svn_wc__ensure_directory(db->path, pool));
+  SVN_ERR(svn_wc__ensure_directory(dir_abspath, pool));
 
   /* Use the repository root of the anchor, but only if it actually is an
      ancestor of the URL of this directory. */
@@ -2229,7 +2233,7 @@ delete_entry(const char *path,
   const char *their_url = svn_path_url_add_component2(pb->new_URL,
                                                       path_basename, pool);
 
-  SVN_ERR(check_path_under_root(pb->path, path_basename, pool));
+  SVN_ERR(check_path_under_root(pb->local_abspath, path_basename, pool));
   return do_entry_deletion(pb->edit_baton, pb->path, path, their_url,
                            &pb->log_number, pool);
 }
@@ -2289,8 +2293,8 @@ add_directory(const char *path,
                  || (!copyfrom_path &&
                      !SVN_IS_VALID_REVNUM(copyfrom_revision)));
 
-  SVN_ERR(check_path_under_root(pb->path, db->name, pool));
-  SVN_ERR(svn_io_check_path(db->path, &kind, db->pool));
+  SVN_ERR(check_path_under_root(pb->local_abspath, db->name, pool));
+  SVN_ERR(svn_io_check_path(db->local_abspath, &kind, db->pool));
 
   /* Is an ancestor-dir (already visited by this edit) a tree conflict
      victim?  If so, skip without notification. */
@@ -2659,7 +2663,7 @@ open_directory(const char *path,
   /* Flush the log for the parent directory before going into this subtree. */
   SVN_ERR(flush_log(pb, pool));
 
-  SVN_ERR(check_path_under_root(pb->path, db->name, pool));
+  SVN_ERR(check_path_under_root(pb->local_abspath, db->name, pool));
 
   SVN_ERR(svn_wc_adm_retrieve(&adm_access, eb->adm_access,
                               db->path, pool));
@@ -2871,7 +2875,7 @@ close_directory(void *dir_baton,
       return SVN_NO_ERROR;
     }
 
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, db->path, pool));
+  local_abspath = db->local_abspath;
   SVN_ERR(svn_categorize_props(db->propchanges, &entry_props, &wc_props,
                                &regular_props, pool));
 
@@ -3527,9 +3531,10 @@ add_file(const char *path,
      use a subpool for any temporary allocations. */
   subpool = svn_pool_create(pool);
 
-  SVN_ERR(check_path_under_root(fb->dir_baton->path, fb->name, subpool));
+  SVN_ERR(check_path_under_root(fb->dir_baton->local_abspath, fb->name,
+                                subpool));
 
-  SVN_ERR(svn_io_check_path(fb->path, &kind, subpool));
+  SVN_ERR(svn_io_check_path(fb->local_abspath, &kind, subpool));
   SVN_ERR(svn_wc_adm_retrieve(&adm_access, eb->adm_access,
                               pb->path, subpool));
   SVN_ERR(svn_wc_entry(&entry, fb->path, adm_access, FALSE, subpool));
@@ -3713,10 +3718,11 @@ open_file(const char *path,
   SVN_ERR(make_file_baton(&fb, pb, path, FALSE, pool));
   *file_baton = fb;
 
-  SVN_ERR(check_path_under_root(fb->dir_baton->path, fb->name, subpool));
+  SVN_ERR(check_path_under_root(fb->dir_baton->local_abspath, fb->name,
+                                subpool));
 
 
-  SVN_ERR(svn_io_check_path(fb->path, &kind, subpool));
+  SVN_ERR(svn_io_check_path(fb->local_abspath, &kind, subpool));
   SVN_ERR(svn_wc_adm_retrieve(&adm_access, eb->adm_access,
                               pb->path, subpool));
   SVN_ERR(svn_wc_entry(&entry, fb->path, adm_access, FALSE, subpool));
@@ -3880,7 +3886,7 @@ apply_textdelta(void *file_baton,
   svn_stream_t *target;
   const char *local_abspath;
 
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, fb->path, fb->pool));
+  local_abspath = fb->local_abspath;
 
   if (fb->skipped)
     {
@@ -4216,7 +4222,7 @@ merge_file(svn_wc_notify_state_t *content_state,
   svn_wc_entry_t tmp_entry;
   apr_uint64_t flags = 0;
 
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, fb->path, pool));
+  local_abspath = fb->local_abspath;
 
   /*
      When this function is called on file F, we assume the following
@@ -4357,7 +4363,7 @@ merge_file(svn_wc_notify_state_t *content_state,
         {
           svn_node_kind_t wfile_kind = svn_node_unknown;
 
-          SVN_ERR(svn_io_check_path(fb->path, &wfile_kind, pool));
+          SVN_ERR(svn_io_check_path(fb->local_abspath, &wfile_kind, pool));
           if (wfile_kind == svn_node_none && ! fb->added_with_history)
             {
               /* working file is missing?!
@@ -4385,7 +4391,7 @@ merge_file(svn_wc_notify_state_t *content_state,
                  pretend it doesn't have an extension at all. */
               if (eb->ext_patterns && eb->ext_patterns->nelts)
                 {
-                  svn_path_splitext(NULL, &path_ext, fb->path, pool);
+                  svn_path_splitext(NULL, &path_ext, fb->local_abspath, pool);
                   if (! (*path_ext
                          && svn_cstring_match_glob_list(path_ext,
                                                         eb->ext_patterns)))
@@ -4602,7 +4608,7 @@ close_file(void *file_baton,
   const char *new_base_path;
   const char *local_abspath;
 
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, fb->path, pool));
+  local_abspath = fb->local_abspath;
 
   if (fb->skipped)
     return maybe_bump_dir_info(eb, fb->bump_info, pool);
