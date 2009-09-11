@@ -4959,8 +4959,6 @@ single_file_merge_notify(void *notify_baton,
 /* A baton for get_mergeinfo_walk_cb. */
 struct get_mergeinfo_walk_baton
 {
-  /* Access for the tree being walked. */
-  svn_wc_adm_access_t *base_access;
   /* Array of paths that have explicit mergeinfo and/or are switched. */
   apr_array_header_t *children_with_mergeinfo;
   /* Merge source canonical path. */
@@ -5365,7 +5363,6 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
     { get_mergeinfo_walk_cb, get_mergeinfo_error_handler };
   struct get_mergeinfo_walk_baton wb = { 0 };
 
-  wb.base_access = adm_access;
   wb.children_with_mergeinfo = children_with_mergeinfo;
   wb.merge_src_canon_path = merge_src_canon_path;
   wb.merge_target_path = merge_cmd_baton->target;
@@ -8966,8 +8963,6 @@ struct get_subtree_mergeinfo_walk_baton
   /* Hash of paths (const char *) that have explicit mergeinfo. */
   apr_hash_t *subtrees_with_mergeinfo;
 
-  /* Access for the tree being walked. */
-  svn_wc_adm_access_t *base_access;
   svn_client_ctx_t *ctx;
 };
 
@@ -9116,7 +9111,6 @@ svn_client_merge_reintegrate(const char *source,
   /* Find all the subtree's in TARGET_WCPATH that have explicit mergeinfo. */
   wb.target_path = target_wcpath;
   wb.target_repos_root = wc_repos_root;
-  wb.base_access = adm_access;
   wb.subtrees_with_mergeinfo = apr_hash_make(pool);
   wb.ctx = ctx;
   SVN_ERR(svn_wc_walk_entries3(target_wcpath, adm_access, &walk_callbacks,
