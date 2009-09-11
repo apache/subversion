@@ -1512,7 +1512,14 @@ svn_wc__adm_missing(svn_wc__db_t *db,
   if (look != NULL)
     return IS_MISSING(look);
 
+  /* When we switch to a single database an access baton can't be
+     missing, but until then it can. But if there are no access batons we
+     would always return FALSE.
 
+     For this case we check if the db status is svn_wc__db_status_obstructed,
+     as this describes that the managed working copy is obstructed by
+     something. (E.g. file, or an unversioned directory). This is exactly,
+     what we used to call a missing access baton. */
   err = svn_wc__db_read_info(&status, NULL, NULL, NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL, NULL, NULL, NULL,
@@ -1521,6 +1528,8 @@ svn_wc__adm_missing(svn_wc__db_t *db,
 
   if (err)
     {
+      /* We can't return an error. Fall back to the old behavior or returning
+         FALSE.*/
       svn_error_clear(err);
       return FALSE;
     }
