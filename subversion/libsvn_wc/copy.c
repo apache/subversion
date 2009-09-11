@@ -514,8 +514,7 @@ copy_file_administratively(svn_wc_context_t *wc_ctx,
           svn_subst_eol_style_t eol_style;
           const char *eol_str;
           apr_hash_t *keywords;
-          svn_error_t *err = SVN_NO_ERROR;
-
+          
           SVN_ERR(svn_wc__get_keywords(&keywords, db, src_abspath, NULL,
                                        pool, pool));
           SVN_ERR(svn_wc__get_eol_style(&eol_style, &eol_str, db,
@@ -523,20 +522,21 @@ copy_file_administratively(svn_wc_context_t *wc_ctx,
 
           /* Try with the working file and fallback on its text-base. */
           err = svn_stream_open_readonly(&contents, src_abspath, pool, pool);
-          if (err)
+          if (err && APR_STATUS_IS_ENOENT(err->apr_err))
             {
-              if (APR_STATUS_IS_ENOENT(err->apr_err))
-                {
-                  svn_error_clear(err);
+              svn_error_clear(err);
 
-                  err = svn_wc__get_pristine_contents(&contents, db,
-                                                      src_abspath, pool, pool);
+              err = svn_wc__get_pristine_contents(&contents, db,
+                                                  src_abspath, pool, pool);
 
-                  if (err && APR_STATUS_IS_ENOENT(err->apr_err))
-                    return svn_error_create(SVN_ERR_WC_COPYFROM_PATH_NOT_FOUND,
-                                            err, NULL);
-                }
+              if (err && APR_STATUS_IS_ENOENT(err->apr_err))
+                return svn_error_create(SVN_ERR_WC_COPYFROM_PATH_NOT_FOUND,
+                                        err, NULL);
+              else if (err)
+                return svn_error_return(err);
             }
+          else if (err)
+            return svn_error_return(err);
 
           if (svn_subst_translation_required(eol_style, eol_str, keywords,
                                              FALSE, FALSE))
