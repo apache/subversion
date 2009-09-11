@@ -1429,7 +1429,8 @@ def lock_twice_in_one_wc(sbox):
   svntest.main.file_append(mu2_path, "Updated text")
   
   # Commit should fail because it is locked in the other location
-  svntest.actions.run_and_verify_svn(None, None, '.*[Nn]o.*lock.*',
+  svntest.actions.run_and_verify_svn(None, None,
+                                     '.*(([Nn]o)|(Server)).*[lL]ock.*',
                                      'commit', mu2_path, '-m', '')
 
 ########################################################################
