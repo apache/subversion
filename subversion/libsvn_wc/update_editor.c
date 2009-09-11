@@ -2329,19 +2329,15 @@ add_directory(const char *path,
 
   if (kind == svn_node_dir)
     {
-      svn_wc_adm_access_t *adm_access;
+      svn_wc_entry_t *entry;
 
       /* Test the obstructing dir to see if it's versioned. */
-      svn_error_t *err = svn_wc_adm_open3(&adm_access, NULL,
-                                          db->path, FALSE, 0,
-                                          NULL, NULL, pool);
+      svn_error_t *err = svn_wc__get_entry(&entry, eb->db, db->local_abspath,
+                                           TRUE, svn_node_dir, FALSE,
+                                           pool, pool);
 
-      if (err && err->apr_err != SVN_ERR_WC_NOT_WORKING_COPY)
-        {
-          /* Something quite unexpected has happened. */
-          return err;
-        }
-      else if (err) /* Not a versioned dir. */
+      if (err && ((err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY) ||
+                  (err->apr_err == SVN_ERR_WC_MISSING)))
         {
           svn_error_clear(err);
           if (eb->allow_unver_obstructions)
@@ -2370,30 +2366,22 @@ add_directory(const char *path,
                  svn_dirent_local_style(db->path, pool));
             }
         }
-      else /* Obstructing dir *is* versioned or scheduled for addition. */
+      else if ((entry != NULL) && 
+               ((err == NULL) ||
+                (err->apr_err == SVN_ERR_NODE_UNEXPECTED_KIND)))
         {
-          const svn_wc_entry_t *entry;
+          /* Obstructing dir *is* versioned or scheduled for addition. */
+
           const svn_wc_entry_t *parent_entry;
           const svn_wc_entry_t *entry_in_parent;
-          svn_wc_adm_access_t *parent_adm_access;
-          apr_hash_t *entries;
 
-          SVN_ERR(svn_wc_entry(&entry, db->path, adm_access, FALSE, pool));
-          SVN_ERR_ASSERT(entry);
+          svn_error_clear(err);
 
-          /* Only needed for this entry */
-          SVN_ERR(svn_wc_adm_close2(adm_access, pool));
+          /* Check the parent directory */
+          SVN_ERR(svn_wc__get_entry(&parent_entry, eb->db,
+                                    svn_dirent_dirname(db->local_abspath, pool),
+                                    FALSE, svn_node_dir, FALSE, pool, pool));
 
-          SVN_ERR(svn_wc_adm_retrieve(&parent_adm_access, eb->adm_access,
-                                      pb->path, pool));
-          SVN_ERR(svn_wc_entry(&parent_entry, pb->path, parent_adm_access,
-                               FALSE, pool));
-          SVN_ERR_ASSERT(parent_entry);
-
-          SVN_ERR(svn_wc_entries_read(&entries, parent_adm_access, FALSE,
-                                      pool));
-          entry_in_parent = apr_hash_get(entries, db->name,
-                                         APR_HASH_KEY_STRING);
 
           /* What to do with a versioned or schedule-add dir:
 
@@ -2420,7 +2408,9 @@ add_directory(const char *path,
                   svn_dirent_local_style(db->path, pool));
             }
 
-          if (!eb->switch_url
+          SVN_ERR_ASSERT(db->new_URL != NULL);
+
+          if (!eb->switch_url && entry->url
               && strcmp(db->new_URL, entry->url) != 0)
             return svn_error_createf(
                SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
@@ -2429,12 +2419,18 @@ add_directory(const char *path,
                entry->url, svn_dirent_local_style(db->path, pool),
                db->new_URL);
 
-          if (! entry_in_parent)
+          err = svn_wc__get_entry(&entry_in_parent, eb->db, db->local_abspath,
+                                  FALSE, svn_node_dir, TRUE, pool, pool);
+
+          if (err || ! entry_in_parent)
+            {
+              svn_error_clear(err);
               return svn_error_createf(
                  SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
                  _("Failed to add directory '%s': a versioned "
                    "directory of the same name already exists"),
                  svn_dirent_local_style(db->path, pool));
+            }
 
           if ((entry->schedule == svn_wc_schedule_add
                || entry->schedule == svn_wc_schedule_replace)
@@ -2449,7 +2445,10 @@ add_directory(const char *path,
               /* Raise a tree conflict. */
               SVN_ERR(check_tree_conflict(&tree_conflict, eb,
                                           pb->log_accum, db->path, entry,
-                                          parent_adm_access,
+                                          svn_wc__adm_retrieve_internal2(
+                                                            eb->db,
+                                                            db->local_abspath,
+                                                            pool),
                                           svn_wc_conflict_action_add,
                                           svn_node_dir, db->new_URL,
                                           pool));
@@ -2472,6 +2471,8 @@ add_directory(const char *path,
                 }
             }
         }
+      else
+        SVN_ERR(err);
     }
 
   /* It may not be named the same as the administrative directory. */
