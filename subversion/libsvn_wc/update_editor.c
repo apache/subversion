@@ -1435,27 +1435,34 @@ typedef struct modcheck_baton_t {
 } modcheck_baton_t;
 
 static svn_error_t *
-modcheck_found_entry(const char *path,
-                     const svn_wc_entry_t *entry,
-                     void *walk_baton,
-                     apr_pool_t *pool)
+modcheck_found_node(const char *local_abspath,
+                    void *walk_baton,
+                    apr_pool_t *scratch_pool)
 {
   modcheck_baton_t *baton = walk_baton;
+  svn_wc__db_kind_t kind;
+  svn_wc__db_status_t status;
   svn_boolean_t modified;
-  const char *local_abspath;
 
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+  SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               baton->db, local_abspath, scratch_pool,
+                               scratch_pool));
 
-  if (entry->schedule != svn_wc_schedule_normal)
+  if (status != svn_wc__db_status_normal)
     modified = TRUE;
   else
     SVN_ERR(entry_has_local_mods(&modified, baton->db, local_abspath,
-                                 entry->kind, pool));
+                                 kind == svn_wc__db_kind_file
+                                   ? svn_node_file : svn_node_dir,
+                                 scratch_pool));
 
   if (modified)
     {
       baton->found_mod = TRUE;
-      if (entry->schedule != svn_wc_schedule_delete)
+      if (status != svn_wc__db_status_deleted)
         baton->all_edits_are_deletes = FALSE;
     }
 
@@ -1471,27 +1478,27 @@ modcheck_found_entry(const char *path,
 static svn_error_t *
 tree_has_local_mods(svn_boolean_t *modified,
                     svn_boolean_t *all_edits_are_deletes,
-                    const char *path,
-                    svn_wc_adm_access_t *adm_access,
+                    svn_wc__db_t *db,
+                    const char *local_abspath,
                     svn_cancel_func_t cancel_func,
                     void *cancel_baton,
                     apr_pool_t *pool)
 {
-  static const svn_wc_entry_callbacks2_t modcheck_callbacks =
-    { modcheck_found_entry, svn_wc__walker_default_error_handler };
+  static const svn_wc__node_walk_callbacks_t modcheck_callbacks =
+    { modcheck_found_node, svn_wc__walker_default_error_handler };
   modcheck_baton_t modcheck_baton = { NULL, FALSE, TRUE };
 
-  modcheck_baton.db = svn_wc__adm_get_db(adm_access);
+  modcheck_baton.db = db;
 
   /* Walk the WC tree to its full depth, looking for any local modifications.
    * If it's a "sparse" directory, that's OK: there can be no local mods in
    * the pieces that aren't present in the WC. */
 
-  SVN_ERR(svn_wc_walk_entries3(path, adm_access,
-                               &modcheck_callbacks, &modcheck_baton,
-                               svn_depth_infinity, FALSE /* show_hidden */,
-                               cancel_func, cancel_baton,
-                               pool));
+  SVN_ERR(svn_wc__internal_walk_children(db, local_abspath,
+                                         FALSE /* show_hidden */,
+                                         &modcheck_callbacks, &modcheck_baton,
+                                         svn_depth_infinity, cancel_func,
+                                         cancel_baton, pool));
 
   *modified = modcheck_baton.found_mod;
   *all_edits_are_deletes = modcheck_baton.all_edits_are_deletes;
@@ -1618,7 +1625,7 @@ check_tree_conflict(svn_wc_conflict_description2_t **pconflict,
                * otherwise the crawl will start at the parent. */
               if (strcmp(svn_wc_adm_access_path(adm_access), full_path) == 0)
                 SVN_ERR(tree_has_local_mods(&modified, &all_mods_are_deletes,
-                                            full_path, adm_access,
+                                            eb->db, local_abspath,
                                             eb->cancel_func, eb->cancel_baton,
                                             pool));
             }

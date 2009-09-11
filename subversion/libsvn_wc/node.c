@@ -326,15 +326,15 @@ walker_helper(svn_wc__db_t *db,
 
 
 svn_error_t *
-svn_wc__node_walk_children(svn_wc_context_t *wc_ctx,
-                           const char *local_abspath,
-                           svn_boolean_t show_hidden,
-                           const svn_wc__node_walk_callbacks_t *callbacks,
-                           void *walk_baton,
-                           svn_depth_t walk_depth,
-                           svn_cancel_func_t cancel_func,
-                           void *cancel_baton,
-                           apr_pool_t *scratch_pool)
+svn_wc__internal_walk_children(svn_wc__db_t *db,
+                               const char *local_abspath,
+                               svn_boolean_t show_hidden,
+                               const svn_wc__node_walk_callbacks_t *callbacks,
+                               void *walk_baton,
+                               svn_depth_t walk_depth,
+                               svn_cancel_func_t cancel_func,
+                               void *cancel_baton,
+                               apr_pool_t *scratch_pool)
 {
   svn_error_t *err;
   svn_wc__db_kind_t kind;
@@ -345,8 +345,7 @@ svn_wc__node_walk_children(svn_wc_context_t *wc_ctx,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL,
-                               wc_ctx->db, local_abspath,
-                               scratch_pool, scratch_pool));
+                               db, local_abspath, scratch_pool, scratch_pool));
 
   if (kind == svn_wc__db_kind_file || depth == svn_depth_exclude)
     {
@@ -369,7 +368,7 @@ svn_wc__node_walk_children(svn_wc_context_t *wc_ctx,
                                         scratch_pool));
 
       return svn_error_return(
-        walker_helper(wc_ctx->db, local_abspath, show_hidden,
+        walker_helper(db, local_abspath, show_hidden,
                       callbacks, walk_baton,
                       walk_depth, cancel_func, cancel_baton, scratch_pool));
     }
@@ -381,4 +380,21 @@ svn_wc__node_walk_children(svn_wc_context_t *wc_ctx,
                                   svn_dirent_local_style(local_abspath,
                                                          scratch_pool)),
                             walk_baton, scratch_pool));
+}
+
+svn_error_t *
+svn_wc__node_walk_children(svn_wc_context_t *wc_ctx,
+                           const char *local_abspath,
+                           svn_boolean_t show_hidden,
+                           const svn_wc__node_walk_callbacks_t *callbacks,
+                           void *walk_baton,
+                           svn_depth_t walk_depth,
+                           svn_cancel_func_t cancel_func,
+                           void *cancel_baton,
+                           apr_pool_t *scratch_pool)
+{
+  return svn_error_return(
+    svn_wc__internal_walk_children(wc_ctx->db, local_abspath, show_hidden,
+                                   callbacks, walk_baton, walk_depth,
+                                   cancel_func, cancel_baton, scratch_pool));
 }
