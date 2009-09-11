@@ -3511,9 +3511,8 @@ visit_tc_too_found_entry(const char *path,
                                           pool));
       for (hi = apr_hash_first(pool, conflicts); hi; hi = apr_hash_next(hi))
         {
-          const svn_wc_conflict_description_t *conflict =
+          const svn_wc_conflict_description2_t *conflict =
               svn_apr_hash_index_val(hi);
-          const char *child_abspath;
           svn_boolean_t visit_child = FALSE;
           svn_wc__db_kind_t kind;
 
@@ -3521,10 +3520,8 @@ visit_tc_too_found_entry(const char *path,
               && (baton->depth == svn_depth_files))
             continue;
 
-          SVN_ERR(svn_dirent_get_absolute(&child_abspath, conflict->path,
-                                          pool));
-          SVN_ERR(svn_wc__db_check_node(&kind, baton->db, child_abspath,
-                                        pool));
+          SVN_ERR(svn_wc__db_check_node(&kind, baton->db,
+                                        conflict->local_abspath, pool));
 
           /* If the kind is UNKNOWN, then this node is unversioned, or
              it is absent/excluded/etc. The regular walk will not visit
@@ -3539,15 +3536,19 @@ visit_tc_too_found_entry(const char *path,
               /* ### this is pretty bogus. the callback should accept
                  ### the child node. a bit harder to change right now.  */
               SVN_ERR(svn_wc__node_is_deleted(&visit_child, baton->db,
-                                              child_abspath, pool));
+                                              conflict->local_abspath, pool));
             }
 
           if (visit_child)
             {
               /* Found an unversioned tree conflict victim. Call the "found
                * entry" callback with a null "entry" parameter. */
-              SVN_ERR(baton->callbacks->found_entry(conflict->path, NULL,
-                                                    baton->baton, pool));
+              SVN_ERR(baton->callbacks->found_entry(
+                        svn_dirent_join(path,
+                                svn_dirent_basename(conflict->local_abspath,
+                                                    pool),
+                                pool),
+                        NULL, baton->baton, pool));
             }
         }
     }

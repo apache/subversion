@@ -80,7 +80,7 @@ svn_wc__loggy_add_tree_conflict(svn_stringbuf_t **log_accum,
  * Set *CONFLICT_DATA to a string, allocated in POOL, that encodes the tree
  * conflicts in CONFLICTS in a form suitable for storage in a single string
  * field in a WC entry. CONFLICTS is a hash of zero or more pointers to
- * svn_wc_conflict_description_t objects, index by their basenames. All of the
+ * svn_wc_conflict_description2_t objects, index by their basenames. All of the
  * conflict victim paths must be siblings.
  *
  * Do all allocations in POOL.

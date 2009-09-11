@@ -159,7 +159,7 @@ struct log_runner
   svn_boolean_t rerun;
   svn_wc_adm_access_t *adm_access;  /* the dir in which all this happens */
   apr_hash_t *tree_conflicts;         /* hash of pointers to
-                                         svn_wc_conflict_description_t. */
+                                         svn_wc_conflict_description2_t. */
   /* Which top-level log element we're on for this logfile.  Some
      callers care whether a failure happened on the first element or
      on some later element (e.g., 'svn cleanup').
@@ -1337,7 +1337,7 @@ log_do_add_tree_conflict(struct log_runner *loggy,
                          const char **atts)
 {
   apr_hash_t *new_conflicts;
-  const svn_wc_conflict_description_t *new_conflict;
+  const svn_wc_conflict_description2_t *new_conflict;
   const char *dir_path = svn_wc_adm_access_path(loggy->adm_access);
   apr_hash_index_t *hi;
 
@@ -1351,15 +1351,18 @@ log_do_add_tree_conflict(struct log_runner *loggy,
   /* Ignore any attempt to re-add an existing tree conflict, as loggy
      operations are idempotent. */
   if (apr_hash_get(loggy->tree_conflicts, 
-                   svn_dirent_basename(new_conflict->path, loggy->pool),
+                   svn_dirent_basename(new_conflict->local_abspath,
+                                       loggy->pool),
                    APR_HASH_KEY_STRING) == NULL)
     {
       /* Copy the new conflict to the result pool.  Add its pointer to
          the hash of existing conflicts. */
-      const svn_wc_conflict_description_t *duped_conflict =
-                        svn_wc__conflict_description_dup(new_conflict,
-                                                         loggy->result_pool);
-      apr_hash_set(loggy->tree_conflicts, duped_conflict->path,
+      const svn_wc_conflict_description2_t *duped_conflict =
+                        svn_wc__conflict_description2_dup(new_conflict,
+                                                          loggy->result_pool);
+      apr_hash_set(loggy->tree_conflicts,
+                   svn_dirent_basename(duped_conflict->local_abspath,
+                                       loggy->pool),
                    APR_HASH_KEY_STRING, duped_conflict);
     }
 
@@ -1621,23 +1624,17 @@ run_log(svn_wc_adm_access_t *adm_access,
             hi = apr_hash_next(hi))
         {
           svn_error_t *err;
-          const char *conflict_path = svn_apr_hash_index_key(hi);
-          const char *conflict_abspath;
-          const svn_wc_conflict_description_t *conflict = 
+          const svn_wc_conflict_description2_t *conflict = 
                                                  svn_apr_hash_index_val(hi);
 
-          SVN_ERR(svn_dirent_get_absolute(&conflict_abspath, conflict_path,
-                                          iterpool));
-
-          err = svn_wc__db_op_set_tree_conflict(loggy->db, conflict_abspath,
-                                                svn_wc__cd_to_cd2(conflict,
-                                                                  iterpool),
-                                                iterpool);
+          err = svn_wc__db_op_set_tree_conflict(loggy->db,
+                                                conflict->local_abspath,
+                                                conflict, iterpool);
          
           if (err)
             return svn_error_createf(pick_error_code(loggy), err,
                                  _("Error recording tree conflict on '%s'"),
-                                 conflict_abspath);
+                                 conflict->local_abspath);
         }
     }
 
@@ -2220,10 +2217,13 @@ svn_wc__loggy_add_tree_conflict(svn_stringbuf_t **log_accum,
 {
   const char *conflict_data;
   apr_hash_t *conflicts;
+  svn_wc_conflict_description2_t *new_conflict =
+    svn_wc__cd_to_cd2(conflict, pool);
 
   /* ### TODO: implement write_one_tree_conflict(). */
   conflicts = apr_hash_make(pool);
-  apr_hash_set(conflicts, conflict->path, APR_HASH_KEY_STRING, conflict);
+  apr_hash_set(conflicts, new_conflict->local_abspath, APR_HASH_KEY_STRING,
+               new_conflict);
 
   SVN_ERR(svn_wc__write_tree_conflicts(&conflict_data, conflicts, pool));
 
