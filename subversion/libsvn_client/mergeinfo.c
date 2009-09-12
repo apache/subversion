@@ -377,9 +377,6 @@ svn_client__get_wc_mergeinfo_catalog(svn_mergeinfo_catalog_t *mergeinfo_cat,
   const char *target_repos_rel_path;
   const char *local_abspath;
   svn_mergeinfo_t mergeinfo;
-  static const svn_wc__node_walk_callbacks_t walk_callbacks =
-    { get_subtree_mergeinfo_walk_cb,
-      svn_client__default_walker_error_handler };
   struct get_mergeinfo_catalog_walk_baton wb;
   const char *repos_root;
   svn_node_kind_t kind;
@@ -431,7 +428,7 @@ svn_client__get_wc_mergeinfo_catalog(svn_mergeinfo_catalog_t *mergeinfo_cat,
       wb.wc_ctx = ctx->wc_ctx;
       wb.result_pool = result_pool;
       SVN_ERR(svn_wc__node_walk_children(ctx->wc_ctx, local_abspath, FALSE,
-                                         &walk_callbacks, &wb,
+                                         get_subtree_mergeinfo_walk_cb, &wb,
                                          svn_depth_infinity, ctx->cancel_func,
                                          ctx->cancel_baton, scratch_pool));
     }

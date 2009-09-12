@@ -1484,8 +1484,6 @@ tree_has_local_mods(svn_boolean_t *modified,
                     void *cancel_baton,
                     apr_pool_t *pool)
 {
-  static const svn_wc__node_walk_callbacks_t modcheck_callbacks =
-    { modcheck_found_node, svn_wc__walker_default_error_handler };
   modcheck_baton_t modcheck_baton = { NULL, FALSE, TRUE };
 
   modcheck_baton.db = db;
@@ -1496,7 +1494,7 @@ tree_has_local_mods(svn_boolean_t *modified,
 
   SVN_ERR(svn_wc__internal_walk_children(db, local_abspath,
                                          FALSE /* show_hidden */,
-                                         &modcheck_callbacks, &modcheck_baton,
+                                         &modcheck_found_node, &modcheck_baton,
                                          svn_depth_infinity, cancel_func,
                                          cancel_baton, pool));
 

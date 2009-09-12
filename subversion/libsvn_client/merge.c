@@ -9021,8 +9021,6 @@ svn_client_merge_reintegrate(const char *source,
   svn_mergeinfo_t unmerged_to_source_mergeinfo_catalog;
   svn_boolean_t use_sleep = FALSE;
   svn_error_t *err;
-  static const svn_wc__node_walk_callbacks_t walk_callbacks =
-    { get_subtree_mergeinfo_walk_cb, get_mergeinfo_error_handler };
   struct get_subtree_mergeinfo_walk_baton wb;
   const char *target_abspath;
 
@@ -9093,7 +9091,8 @@ svn_client_merge_reintegrate(const char *source,
   wb.subtrees_with_mergeinfo = apr_hash_make(pool);
   wb.ctx = ctx;
   SVN_ERR(svn_wc__node_walk_children(ctx->wc_ctx, target_abspath, TRUE,
-                                     &walk_callbacks, &wb, svn_depth_infinity,
+                                     get_subtree_mergeinfo_walk_cb, &wb,
+                                     svn_depth_infinity,
                                      ctx->cancel_func, ctx->cancel_baton,
                                      pool));
 

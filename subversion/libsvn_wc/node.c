@@ -241,14 +241,13 @@ static svn_error_t *
 walker_helper(svn_wc__db_t *db,
               const char *dir_abspath,
               svn_boolean_t show_hidden,
-              const svn_wc__node_walk_callbacks_t *callbacks,
+              const svn_wc__node_found_func_t walk_callback,
               void *walk_baton,
               svn_depth_t depth,
               svn_cancel_func_t cancel_func,
               void *cancel_baton,
               apr_pool_t *scratch_pool)
 {
-  svn_error_t *err;
   const apr_array_header_t *rel_children;
   apr_pool_t *iterpool;
   int i;
@@ -297,10 +296,7 @@ walker_helper(svn_wc__db_t *db,
       if (child_kind == svn_wc__db_kind_file
             || depth >= svn_depth_immediates)
         {
-          err = callbacks->found_node(child_abspath, walk_baton, iterpool);
-          if (err)
-            SVN_ERR(callbacks->handle_error(child_abspath, err, walk_baton,
-                                            iterpool));
+          SVN_ERR(walk_callback(child_abspath, walk_baton, iterpool));
         }
 
       /* Recurse into this directory, if appropriate. */
@@ -313,7 +309,7 @@ walker_helper(svn_wc__db_t *db,
             depth_below_here = svn_depth_empty;
 
           SVN_ERR(walker_helper(db, child_abspath, show_hidden,
-                                callbacks, walk_baton,
+                                walk_callback, walk_baton,
                                 depth_below_here, cancel_func, cancel_baton,
                                 iterpool));
         }
@@ -329,14 +325,13 @@ svn_error_t *
 svn_wc__internal_walk_children(svn_wc__db_t *db,
                                const char *local_abspath,
                                svn_boolean_t show_hidden,
-                               const svn_wc__node_walk_callbacks_t *callbacks,
+                               const svn_wc__node_found_func_t walk_callback,
                                void *walk_baton,
                                svn_depth_t walk_depth,
                                svn_cancel_func_t cancel_func,
                                void *cancel_baton,
                                apr_pool_t *scratch_pool)
 {
-  svn_error_t *err;
   svn_wc__db_kind_t kind;
   svn_depth_t depth;
 
@@ -349,44 +344,32 @@ svn_wc__internal_walk_children(svn_wc__db_t *db,
 
   if (kind == svn_wc__db_kind_file || depth == svn_depth_exclude)
     {
-      err = callbacks->found_node(local_abspath, walk_baton, scratch_pool);
-      if (err)
-        return svn_error_return(
-          callbacks->handle_error(local_abspath, err, walk_baton,
-                                  scratch_pool));
-
-      return SVN_NO_ERROR;
+      return svn_error_return(
+        walk_callback(local_abspath, walk_baton, scratch_pool));
     }
 
   if (kind == svn_wc__db_kind_dir)
     {
       /* Return the directory first, before starting recursion, since it
          won't get returned as part of the recursion. */
-      err = callbacks->found_node(local_abspath, walk_baton, scratch_pool);
-      if (err)
-        SVN_ERR(callbacks->handle_error(local_abspath, err, walk_baton,
-                                        scratch_pool));
+      SVN_ERR(walk_callback(local_abspath, walk_baton, scratch_pool));
 
       return svn_error_return(
-        walker_helper(db, local_abspath, show_hidden,
-                      callbacks, walk_baton,
+        walker_helper(db, local_abspath, show_hidden, walk_callback, walk_baton,
                       walk_depth, cancel_func, cancel_baton, scratch_pool));
     }
 
-  return svn_error_return(
-    callbacks->handle_error(local_abspath,
-                            svn_error_createf(SVN_ERR_NODE_UNKNOWN_KIND, NULL,
-                                  _("'%s' has an unrecognized node kind"),
-                                  svn_dirent_local_style(local_abspath,
-                                                         scratch_pool)),
-                            walk_baton, scratch_pool));
+  return svn_error_createf(SVN_ERR_NODE_UNKNOWN_KIND, NULL,
+                           _("'%s' has an unrecognized node kind"),
+                           svn_dirent_local_style(local_abspath,
+                                                  scratch_pool));
 }
 
 svn_error_t *
 svn_wc__node_walk_children(svn_wc_context_t *wc_ctx,
                            const char *local_abspath,
                            svn_boolean_t show_hidden,
-                           const svn_wc__node_walk_callbacks_t *callbacks,
+                           const svn_wc__node_found_func_t walk_callback,
                            void *walk_baton,
                            svn_depth_t walk_depth,
                            svn_cancel_func_t cancel_func,
@@ -395,6 +378,6 @@ svn_wc__node_walk_children(svn_wc_context_t *wc_ctx,
 {
   return svn_error_return(
     svn_wc__internal_walk_children(wc_ctx->db, local_abspath, show_hidden,
-                                   callbacks, walk_baton, walk_depth,
+                                   walk_callback, walk_baton, walk_depth,
                                    cancel_func, cancel_baton, scratch_pool));
 }
