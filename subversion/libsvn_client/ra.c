@@ -249,8 +249,6 @@ invalidate_wc_props(void *baton,
                     apr_pool_t *pool)
 {
   callback_baton_t *cb = baton;
-  svn_wc__node_walk_callbacks_t walk_callbacks = { invalidate_wcprop_for_node,
-                              svn_client__default_walker_error_handler };
   struct invalidate_wcprop_walk_baton wb;
   const char *local_abspath;
 
@@ -263,7 +261,7 @@ invalidate_wc_props(void *baton,
 
   return svn_error_return(
     svn_wc__node_walk_children(cb->ctx->wc_ctx, local_abspath, FALSE,
-                              &walk_callbacks, &wb,
+                              invalidate_wcprop_for_node, &wb,
                               svn_depth_infinity,
                               cb->ctx->cancel_func, cb->ctx->cancel_baton,
                               pool));

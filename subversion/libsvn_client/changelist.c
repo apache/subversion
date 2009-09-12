@@ -88,10 +88,6 @@ set_node_changelist(const char *local_abspath,
 }
 
 
-static const svn_wc__node_walk_callbacks_t set_cl_node_callbacks =
-  { set_node_changelist, svn_client__default_walker_error_handler };
-
-
 svn_error_t *
 svn_client_add_to_changelist(const apr_array_header_t *paths,
                              const char *changelist,
@@ -124,7 +120,7 @@ svn_client_add_to_changelist(const apr_array_header_t *paths,
       snb.ctx = ctx;
       snb.pool = iterpool;
       SVN_ERR(svn_wc__node_walk_children(ctx->wc_ctx, local_abspath, FALSE,
-                                         &set_cl_node_callbacks, &snb,
+                                         set_node_changelist, &snb,
                                          depth,
                                          ctx->cancel_func, ctx->cancel_baton,
                                          iterpool));
@@ -166,7 +162,7 @@ svn_client_remove_from_changelists(const apr_array_header_t *paths,
       snb.ctx = ctx;
       snb.pool = iterpool;
       SVN_ERR(svn_wc__node_walk_children(ctx->wc_ctx, local_abspath, FALSE,
-                                         &set_cl_node_callbacks, &snb,
+                                         set_node_changelist, &snb,
                                          depth,
                                          ctx->cancel_func, ctx->cancel_baton,
                                          iterpool));
@@ -219,10 +215,6 @@ get_node_changelist(const char *local_abspath,
 }
 
 
-static const svn_wc__node_walk_callbacks_t get_cl_node_callbacks =
-  { get_node_changelist, svn_client__default_walker_error_handler };
-
-
 svn_error_t *
 svn_client_get_changelists(const char *path,
                            const apr_array_header_t *changelists,
@@ -248,6 +240,6 @@ svn_client_get_changelists(const char *path,
 
   return svn_error_return(
     svn_wc__node_walk_children(ctx->wc_ctx, local_abspath, FALSE,
-                               &get_cl_node_callbacks, &gnb, depth,
+                               get_node_changelist, &gnb, depth,
                                ctx->cancel_func, ctx->cancel_baton, pool));
 }

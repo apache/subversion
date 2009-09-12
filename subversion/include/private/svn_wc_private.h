@@ -273,25 +273,10 @@ svn_wc__adm_open_anchor_in_context(svn_wc_adm_access_t **anchor_access,
  * before the 1.7 release.
  */
 
-/** A callback vtable invoked by the generic node-walker function.
- */
-typedef struct svn_wc__node_walk_callbacks_t
-{
-  /** A node was found at @a local_abspath. */
-  svn_error_t *(*found_node)(const char *local_abspath,
-                             void *walk_baton,
-                             apr_pool_t *scratch_pool);
-
-  /** Handle the error @a err encountered while processing @a local_abspath.
-   * Wrap or squelch @a err as desired, and return an @c svn_error_t
-   * *, or @c SVN_NO_ERROR.
-   */
-  svn_error_t *(*handle_error)(const char *local_abspath,
-                               svn_error_t *err,
-                               void *walk_baton,
-                               apr_pool_t *scratch_pool);
-
-} svn_wc__node_walk_callbacks_t;
+/** A callback invoked by the generic node-walker function.  */
+typedef svn_error_t *(*svn_wc__node_found_func_t)(const char *local_abspath,
+                                                  void *walk_baton,
+                                                  apr_pool_t *scratch_pool);
 
 /**
  * Retrieve an @a adm_access for @a path from the @a wc_ctx.
@@ -426,7 +411,7 @@ svn_error_t *
 svn_wc__node_walk_children(svn_wc_context_t *wc_ctx,
                            const char *local_abspath,
                            svn_boolean_t show_hidden,
-                           const svn_wc__node_walk_callbacks_t *callbacks,
+                           svn_wc__node_found_func_t walk_callback,
                            void *walk_baton,
                            svn_depth_t walk_depth,
                            svn_cancel_func_t cancel_func,
