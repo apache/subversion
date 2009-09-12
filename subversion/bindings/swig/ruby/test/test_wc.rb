@@ -120,12 +120,14 @@ class SvnWcTest < Test::Unit::TestCase
       assert(!Svn::Wc.default_ignores({}).empty?)
       assert_equal(Svn::Wc.default_ignores({}), access.ignores({}))
       assert(access.wc_root?(@wc_path))
+      access.close
 
       access = Svn::Wc::AdmAccess.probe_open(nil, @wc_path, false, 5)
       assert_equal(@wc_path, access.path)
       assert_equal(dir_path, access.retrieve(dir_path).path)
       assert_equal(dir_path, access.probe_retrieve(dir_path).path)
       assert_equal(dir_path, access.probe_try(dir_path, false, 5).path)
+      access.close
 
       Svn::Wc::AdmAccess.probe_open(nil, @wc_path, false, 5) do |access|
         assert(!access.locked?)
