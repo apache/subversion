@@ -1227,29 +1227,30 @@ handle_response(serf_request_t *request,
     {
       /* 401 Authorization or 407 Proxy-Authentication required */
       svn_error_t *err;
+      status = svn_ra_serf__response_discard_handler(request, response, NULL, pool);
 
-      err = svn_ra_serf__handle_auth(sl.code, ctx,
-                                     request, response, pool);
-      if (err)
+      /* Don't bother handling the authentication request if the response
+         wasn't received completely yet. Serf will call handle_response
+         again when more data is received. */
+      if (! APR_STATUS_IS_EAGAIN(status))
         {
-          ctx->session->pending_error = svn_error_compose_create(
-                                                err,
-                                                ctx->session->pending_error);
-          svn_ra_serf__response_discard_handler(request, response, NULL, pool);
-          status = ctx->session->pending_error->apr_err;
-          goto cleanup;
+          err = svn_ra_serf__handle_auth(sl.code, ctx,
+                                         request, response, pool);
+          if (err)
+            {
+              ctx->session->pending_error = svn_error_compose_create(
+                                                  err,
+                                                  ctx->session->pending_error);
+              status = ctx->session->pending_error->apr_err;
+              goto cleanup;
+            }
+
+          svn_ra_serf__priority_request_create(ctx);
+          return status;
         }
       else
         {
-          status = svn_ra_serf__response_discard_handler(request, response, NULL, pool);
-          /* At this time we might not have received the whole response from
-             the server. If that's the case, don't setup a new request now
-             but wait till we retry the request later. */
-          if (! APR_STATUS_IS_EAGAIN(status))
-            {
-              svn_ra_serf__priority_request_create(ctx);
-              return status;
-            }
+          return status;
         }
     }
   else if (sl.code == 409 || sl.code >= 500)
