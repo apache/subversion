@@ -1599,7 +1599,6 @@ check_tree_conflict(svn_wc_conflict_description2_t **pconflict,
       else
         {
           svn_boolean_t modified = FALSE;
-          svn_wc_adm_access_t *adm_access;
 
           /* Use case 2: Deleting a locally-modified item. */
           if (entry->kind == svn_node_file)
@@ -1618,12 +1617,8 @@ check_tree_conflict(svn_wc_conflict_description2_t **pconflict,
                * but the update editor will not visit the subdirectories
                * of a directory that it wants to delete.  Therefore, we
                * need to start a separate crawl here. */
-              SVN_ERR(svn_wc_adm_probe_retrieve(&adm_access, parent_adm_access,
-                                                full_path, pool));
 
-              /* Ensure that the access baton is specific to FULL_PATH,
-               * otherwise the crawl will start at the parent. */
-              if (strcmp(svn_wc_adm_access_path(adm_access), full_path) == 0)
+              if (!svn_wc__adm_missing(eb->db, local_abspath, pool))
                 SVN_ERR(tree_has_local_mods(&modified, &all_mods_are_deletes,
                                             eb->db, local_abspath,
                                             eb->cancel_func, eb->cancel_baton,
