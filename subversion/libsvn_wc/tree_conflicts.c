@@ -524,8 +524,6 @@ svn_wc__get_tree_conflict(svn_wc_conflict_description2_t **tree_conflict,
                           apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool)
 {
-  svn_wc_conflict_description2_t *tmp_conflict;
-
   SVN_ERR_ASSERT(svn_dirent_is_absolute(victim_abspath));
 
   return svn_error_return(
