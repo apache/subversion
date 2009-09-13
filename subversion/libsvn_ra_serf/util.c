@@ -1521,8 +1521,8 @@ svn_ra_serf__discover_vcc(const char **vcc_url,
               svn_error_clear(err);
 
               /* Okay, strip off. */
-              present_path = svn_path_join(svn_uri_basename(path, pool),
-                                           present_path, pool);
+              present_path = svn_uri_join(svn_uri_basename(path, pool),
+                                          present_path, pool);
               path = svn_uri_dirname(path, pool);
             }
         }
@@ -1557,9 +1557,9 @@ svn_ra_serf__discover_vcc(const char **vcc_url,
       session->repos_root = session->repos_url;
       session->repos_root.path = apr_pstrdup(session->pool, url_buf->data);
       session->repos_root_str =
-        svn_path_canonicalize(apr_uri_unparse(session->pool,
-                                              &session->repos_root, 0),
-                              session->pool);
+        svn_uri_canonicalize(apr_uri_unparse(session->pool,
+                                             &session->repos_root, 0),
+                             session->pool);
     }
 
   /* Store the repository UUID in the cache. */
@@ -1604,7 +1604,7 @@ svn_ra_serf__get_relative_path(const char **rel_path,
     }
   else
     {
-      *rel_path = svn_path_is_child(decoded_root, decoded_orig, pool);
+      *rel_path = svn_uri_is_child(decoded_root, decoded_orig, pool);
       SVN_ERR_ASSERT(*rel_path != NULL);
     }
   return SVN_NO_ERROR;
