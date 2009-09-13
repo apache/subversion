@@ -54,6 +54,9 @@ svn_token__to_word(const svn_token_map_t *map,
                    int value);
 
 
+/* NOTE: in the following functions, if WORD is NULL, then SVN_TOKEN_UNKNOWN
+   will be returned, or will cause the appropriate MALFUNCTION or ERROR.  */
+
 /* Return the integer value of the given token WORD, as found in MAP. If the
    string is not recognized, then a MALFUNCTION will occur.
 
