@@ -1955,7 +1955,6 @@ schedule_existing_item_for_re_add(const svn_wc_entry_t *entry,
         = { set_copied_callback, svn_wc__walker_default_error_handler };
       struct set_copied_baton_t set_copied_baton;
       svn_wc_adm_access_t *parent_adm_access;
-      const svn_wc_entry_t *parent_entry;
 
       /* Set the 'copied' flag recursively, to support the
        * cases where this is a directory. */
@@ -1971,8 +1970,6 @@ schedule_existing_item_for_re_add(const svn_wc_entry_t *entry,
       flags &= ~SVN_WC__ENTRY_MODIFY_URL;
       SVN_ERR(svn_wc_adm_retrieve(&parent_adm_access, eb->adm_access,
                                   parent_path, pool));
-      SVN_ERR(svn_wc__entry_versioned(&parent_entry, parent_path,
-                                      parent_adm_access, TRUE, pool));
       SVN_ERR(svn_wc__entry_modify(parent_adm_access, base_name,
                                    &tmp_entry, flags, pool));
 
