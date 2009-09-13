@@ -411,7 +411,7 @@ svn_error_t *
 svn_wc__node_walk_children(svn_wc_context_t *wc_ctx,
                            const char *local_abspath,
                            svn_boolean_t show_hidden,
-                           svn_wc__node_found_func_t walk_callback,
+                           const svn_wc__node_found_func_t walk_callback,
                            void *walk_baton,
                            svn_depth_t walk_depth,
                            svn_cancel_func_t cancel_func,
