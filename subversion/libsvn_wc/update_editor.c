@@ -718,16 +718,12 @@ complete_directory(struct edit_baton *eb,
         }
       if (target_entry && target_entry->depth == svn_depth_exclude)
         {
-          svn_wc_adm_access_t *target_access;
-
           /* There is a small chance that the target is gone in the
              repository.  If so, we should get rid of the entry
              (and thus get rid of the exclude flag) now. */
 
-          target_access = svn_wc__adm_retrieve_internal2(eb->db,
-                                                         eb->target_abspath,
-                                                         pool);
-          if (!target_access && target_entry->kind == svn_node_dir)
+          if (target_entry->kind == svn_node_dir &&
+              svn_wc__adm_missing(eb->db, eb->target_abspath, pool))
             {
               int log_number = 0;
               /* Still passing NULL for THEIR_URL. A case where THEIR_URL
@@ -1503,16 +1499,15 @@ tree_has_local_mods(svn_boolean_t *modified,
 }
 
 /* Check whether the incoming change ACTION on FULL_PATH would conflict with
- * FULL_PATH's scheduled change. If so, then raise a tree conflict with
- * FULL_PATH as the victim, by appending log actions to LOG_ACCUM.
+ * LOCAL_ABSPATH's scheduled change. If so, then raise a tree conflict with
+ * LOCAL_ABSPATH as the victim, by appending log actions to LOG_ACCUM.
  *
  * The edit baton EB gives information including whether the operation is
  * an update or a switch.
  *
- * ENTRY is the wc-entry for FULL_PATH, if there is one (even if
- * schedule-delete etc.), or NULL if FULL_PATH is unversioned or does
- * not exist.  PARENT_ADM_ACCESS is the admin access baton of
- * FULL_PATH's parent directory.
+ * ENTRY is the wc-entry for LOCAL_ABSPATH, if there is one (even if
+ * schedule-delete etc.), or NULL if LOCAL_ABSPATH is unversioned or does
+ * not exist.
  *
  * If PCONFLICT is not null, set *PCONFLICT to the conflict description if
  * there is one or else to null.
@@ -1532,8 +1527,8 @@ tree_has_local_mods(svn_boolean_t *modified,
 static svn_error_t *
 check_tree_conflict(svn_wc_conflict_description2_t **pconflict,
                     struct edit_baton *eb,
+                    const char *local_abspath,
                     svn_stringbuf_t *log_accum,
-                    const char *full_path,
                     const svn_wc_entry_t *entry,
                     svn_wc_conflict_action_t action,
                     svn_node_kind_t their_node_kind,
@@ -1543,9 +1538,6 @@ check_tree_conflict(svn_wc_conflict_description2_t **pconflict,
   svn_wc_conflict_reason_t reason = (svn_wc_conflict_reason_t)(-1);
   svn_boolean_t all_mods_are_deletes = FALSE;
   svn_boolean_t is_subtree_of_locally_deleted;
-  const char *local_abspath;
-
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, full_path, pool));
 
   is_subtree_of_locally_deleted = in_deleted_tree(eb, local_abspath, FALSE,
                                                   pool);
@@ -1554,7 +1546,7 @@ check_tree_conflict(svn_wc_conflict_description2_t **pconflict,
     {
     case svn_wc_conflict_action_edit:
       /* Use case 1: Modifying a locally-deleted item.
-         If FULL_PATH is an incoming leaf edit within a local
+         If LOCAL_ABSPATH is an incoming leaf edit within a local
          tree deletion then we will already have recorded a tree
          conflict on the locally deleted parent tree.  No need
          to record a conflict within the conflict. */
@@ -1583,7 +1575,7 @@ check_tree_conflict(svn_wc_conflict_description2_t **pconflict,
       if (entry->schedule == svn_wc_schedule_delete
           || entry->schedule == svn_wc_schedule_replace)
         {
-          /* If FULL_PATH is an incoming leaf deletion within a local
+          /* If LOCAL_ABSPATH is an incoming leaf deletion within a local
              tree deletion then we will already have recorded a tree
              conflict on the locally deleted parent tree.  No need
              to record a conflict within the conflict. */
@@ -2050,8 +2042,8 @@ do_entry_deletion(struct edit_baton *eb,
    * modified), re-schedule the node to be added back again, as a (modified)
    * copy of the previous base version.
    */
-  SVN_ERR(check_tree_conflict(&tree_conflict, eb, log_item, full_path, entry,
-                              svn_wc_conflict_action_delete,
+  SVN_ERR(check_tree_conflict(&tree_conflict, eb, local_abspath, log_item,
+                              entry, svn_wc_conflict_action_delete,
                               svn_node_none, their_url, pool));
   if (tree_conflict != NULL)
     {
@@ -2442,8 +2434,8 @@ add_directory(const char *path,
 
               /* Raise a tree conflict. */
               SVN_ERR(check_tree_conflict(&tree_conflict, eb,
-                                          pb->log_accum, db->path, entry,
-                                          svn_wc_conflict_action_add,
+                                          db->local_abspath, pb->log_accum,
+                                          entry, svn_wc_conflict_action_add,
                                           svn_node_dir, db->new_URL,
                                           pool));
 
@@ -2687,8 +2679,9 @@ open_directory(const char *path,
   else
     /* Is this path a fresh tree conflict victim?  If so, skip the tree
        with one notification. */
-    SVN_ERR(check_tree_conflict(&tree_conflict, eb, pb->log_accum,
-                                full_path, entry, svn_wc_conflict_action_edit,
+    SVN_ERR(check_tree_conflict(&tree_conflict, eb, local_abspath,
+                                pb->log_accum, entry,
+                                svn_wc_conflict_action_edit,
                                 svn_node_dir, db->new_URL, pool));
 
   /* Remember the roots of any locally deleted trees. */
@@ -3637,8 +3630,8 @@ add_file(const char *path,
         {
           svn_wc_conflict_description2_t *tree_conflict;
 
-          SVN_ERR(check_tree_conflict(&tree_conflict, eb,
-                                      pb->log_accum, full_path, entry,
+          SVN_ERR(check_tree_conflict(&tree_conflict, eb, fb->local_abspath,
+                                      pb->log_accum, entry,
                                       svn_wc_conflict_action_add,
                                       svn_node_file, fb->new_URL, subpool));
 
@@ -3744,8 +3737,9 @@ open_file(const char *path,
   /* Is this path the victim of a newly-discovered tree conflict? */
   tree_conflict = NULL;
   if (!already_conflicted)
-    SVN_ERR(check_tree_conflict(&tree_conflict, eb, pb->log_accum, full_path,
-                                entry, svn_wc_conflict_action_edit,
+    SVN_ERR(check_tree_conflict(&tree_conflict, eb, local_abspath,
+                                pb->log_accum, entry,
+                                svn_wc_conflict_action_edit,
                                 svn_node_file, fb->new_URL, pool));
 
   /* Does the file already have text or property conflicts? */
