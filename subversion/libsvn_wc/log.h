@@ -211,11 +211,10 @@ svn_wc__loggy_maybe_set_readonly(svn_stringbuf_t **log_accum,
    in the entry field with name TIME_PROP.
 
    Use one of the SVN_WC__ENTRY_ATTR_* values for TIME_PROP.
-   ADM_ACCESS is the access baton for PATH.
 */
 svn_error_t *
 svn_wc__loggy_set_entry_timestamp_from_wc(svn_stringbuf_t **log_accum,
-                                          svn_wc_adm_access_t *adm_access,
+                                          const char *adm_abspath,
                                           const char *path,
                                           apr_pool_t *pool);
 
@@ -226,7 +225,7 @@ svn_wc__loggy_set_entry_timestamp_from_wc(svn_stringbuf_t **log_accum,
 */
 svn_error_t *
 svn_wc__loggy_set_entry_working_size_from_wc(svn_stringbuf_t **log_accum,
-                                             svn_wc_adm_access_t *adm_access,
+                                             const char *adm_abspath,
                                              const char *path,
                                              apr_pool_t *pool);
 
