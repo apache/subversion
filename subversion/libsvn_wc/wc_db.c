@@ -44,6 +44,7 @@
 #include "private/svn_sqlite.h"
 #include "private/svn_skel.h"
 #include "private/svn_wc_private.h"
+#include "private/svn_token.h"
 
 
 #define NOT_IMPLEMENTED() \
@@ -230,93 +231,54 @@ typedef struct {
 } insert_base_baton_t;
 
 
+static const svn_token_map_t kind_map[] = {
+  { "file", svn_wc__db_kind_file },
+  { "dir", svn_wc__db_kind_dir },
+  { "symlink", svn_wc__db_kind_symlink },
+  { "subdir", svn_wc__db_kind_subdir },
+  { "unknown", svn_wc__db_kind_unknown },
+  { NULL }
+};
+
+/* Note: we only decode presence values from the database. These are a subset
+   of all the status values. */
+static const svn_token_map_t presence_map[] = {
+  { "normal", svn_wc__db_status_normal },
+  { "absent", svn_wc__db_status_absent },
+  { "excluded", svn_wc__db_status_excluded },
+  { "not-present", svn_wc__db_status_not_present },
+  { "incomplete", svn_wc__db_status_incomplete },
+  { "base-deleted", svn_wc__db_status_base_deleted },
+  { NULL }
+};
+
 
 
 static svn_wc__db_kind_t
 word_to_kind(const char *kind)
 {
-  /* Let's be lazy and fast */
-  switch (kind[0])
-    {
-    case 'f':
-      return svn_wc__db_kind_file;
-    case 'd':
-      return svn_wc__db_kind_dir;
-    case 's':
-      return kind[1] == 'y' ? svn_wc__db_kind_symlink : svn_wc__db_kind_subdir;
-    default:
-      /* Given our laziness, do not MALFUNCTION here. */
-      return svn_wc__db_kind_unknown;
-    }
+  return svn_token__from_word(kind_map, kind);
 }
 
 
 static const char *
 kind_to_word(svn_wc__db_kind_t kind)
 {
-  switch (kind)
-    {
-    case svn_wc__db_kind_dir:
-      return "dir";
-    case svn_wc__db_kind_file:
-      return "file";
-    case svn_wc__db_kind_symlink:
-      return "symlink";
-    case svn_wc__db_kind_unknown:
-      return "unknown";
-    case svn_wc__db_kind_subdir:
-      return "subdir";
-    default:
-      SVN_ERR_MALFUNCTION_NO_RETURN();
-    }
+  return svn_token__to_word(kind_map, kind);
 }
 
 
-/* Note: we only decode presence values from the databse. These are a subset
-   of all the status values. */
 static svn_wc__db_status_t
 word_to_presence(const char *presence)
 {
-  /* Be lazy and fast. */
-  switch (presence[0])
-    {
-    case 'a':
-      return svn_wc__db_status_absent;
-    case 'e':
-      return svn_wc__db_status_excluded;
-    case 'i':
-      return svn_wc__db_status_incomplete;
-    case 'b':
-      return svn_wc__db_status_base_deleted;
-    default:
-      if (strcmp(presence, "not-present") == 0)
-        return svn_wc__db_status_not_present;
-      /* Do not MALFUNCTION here if presence is not "normal". */
-      return svn_wc__db_status_normal;
-    }
+  return svn_token__from_word_strict(presence_map, presence);
 }
 
 
 static const char *
 presence_to_word(svn_wc__db_status_t presence)
 {
-  switch (presence)
-    {
-    case svn_wc__db_status_normal:
-      return "normal";
-    case svn_wc__db_status_absent:
-      return "absent";
-    case svn_wc__db_status_excluded:
-      return "excluded";
-    case svn_wc__db_status_not_present:
-      return "not-present";
-    case svn_wc__db_status_incomplete:
-      return "incomplete";
-    case svn_wc__db_status_base_deleted:
-      return "base-delete";
-    default:
-      SVN_ERR_MALFUNCTION_NO_RETURN();
-    }
+  return svn_token__to_word(presence_map, presence);
 }
 
 
