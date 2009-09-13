@@ -2539,11 +2539,7 @@ fold_entry(apr_hash_t *entries,
   /* Note that we don't bother to fold entry->depth, because it is
      only meaningful on the this-dir entry anyway. */
 
-  /* Tree conflict data. */
-  if (modify_flags & SVN_WC__ENTRY_MODIFY_TREE_CONFLICT_DATA)
-    cur_entry->tree_conflict_data = entry->tree_conflict_data
-      ? apr_pstrdup(pool, entry->tree_conflict_data)
-                              : NULL;
+  /* tree_conflict_data is never modified via entry_t.  */
 
   /* Absorb defaults from the parent dir, if any, unless this is a
      subdir entry. */

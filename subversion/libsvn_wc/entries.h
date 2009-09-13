@@ -37,9 +37,6 @@ extern "C" {
 #endif /* __cplusplus */
 
 
-#define SVN_WC__ENTRIES_TOPLEVEL       "wc-entries"
-#define SVN_WC__ENTRIES_ENTRY          "entry"
-
 /* String representations for svn_node_kind.  This maybe should be
    abstracted farther out? */
 #define SVN_WC__ENTRIES_ATTR_FILE_STR   "file"
@@ -55,7 +52,6 @@ extern "C" {
 #define SVN_WC__ENTRY_ATTR_NAME               "name"
 #define SVN_WC__ENTRY_ATTR_REVISION           "revision"
 #define SVN_WC__ENTRY_ATTR_URL                "url"
-#define SVN_WC__ENTRY_ATTR_REPOS              "repos"
 #define SVN_WC__ENTRY_ATTR_KIND               "kind"
 #define SVN_WC__ENTRY_ATTR_TEXT_TIME          "text-time"
 #define SVN_WC__ENTRY_ATTR_CHECKSUM           "checksum"
@@ -73,16 +69,7 @@ extern "C" {
 #define SVN_WC__ENTRY_ATTR_CMT_DATE           "committed-date"
 #define SVN_WC__ENTRY_ATTR_CMT_AUTHOR         "last-author"
 #define SVN_WC__ENTRY_ATTR_UUID               "uuid"
-#define SVN_WC__ENTRY_ATTR_INCOMPLETE         "incomplete"
-#define SVN_WC__ENTRY_ATTR_LOCK_TOKEN         "lock-token"
-#define SVN_WC__ENTRY_ATTR_LOCK_OWNER         "lock-owner"
-#define SVN_WC__ENTRY_ATTR_LOCK_COMMENT       "lock-comment"
-#define SVN_WC__ENTRY_ATTR_LOCK_CREATION_DATE "lock-creation-date"
-#define SVN_WC__ENTRY_ATTR_CHANGELIST         "changelist"
-#define SVN_WC__ENTRY_ATTR_KEEP_LOCAL         "keep-local"
 #define SVN_WC__ENTRY_ATTR_WORKING_SIZE       "working-size"
-#define SVN_WC__ENTRY_ATTR_TREE_CONFLICT_DATA "tree-conflicts"
-#define SVN_WC__ENTRY_ATTR_FILE_EXTERNAL      "file-external"
 
 /* Attribute values for 'schedule' */
 #define SVN_WC__ENTRY_VALUE_ADD        "add"
@@ -151,7 +138,7 @@ svn_error_t *svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
 #define SVN_WC__ENTRY_MODIFY_CHANGELIST         APR_INT64_C(0x0000000040000000)
 #define SVN_WC__ENTRY_MODIFY_KEEP_LOCAL         APR_INT64_C(0x0000000080000000)
 #define SVN_WC__ENTRY_MODIFY_WORKING_SIZE       APR_INT64_C(0x0000000100000000)
-#define SVN_WC__ENTRY_MODIFY_TREE_CONFLICT_DATA APR_INT64_C(0x0000000200000000)
+/* OPEN */
 #define SVN_WC__ENTRY_MODIFY_FILE_EXTERNAL      APR_INT64_C(0x0000000400000000)
 /* No #define for DEPTH, because it's only meaningful on this-dir anyway. */
 

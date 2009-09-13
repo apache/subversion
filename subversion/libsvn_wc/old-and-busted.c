@@ -38,6 +38,27 @@
 #include "svn_private_config.h"
 
 
+/* Within the (old) entries file, boolean values have a specific string
+   value (thus, TRUE), or they are missing (for FALSE). Below are the
+   values for each of the booleans stored.  */
+#define ENTRIES_BOOL_COPIED     "copied"
+#define ENTRIES_BOOL_DELETED    "deleted"
+#define ENTRIES_BOOL_ABSENT     "absent"
+#define ENTRIES_BOOL_INCOMPLETE "incomplete"
+#define ENTRIES_BOOL_KEEP_LOCAL "keep-local"
+
+/* Tag names used in our old XML entries file.  */
+#define ENTRIES_TAG_ENTRY "entry"
+
+/* Attribute names used in our old XML entries file.  */
+#define ENTRIES_ATTR_REPOS              "repos"
+#define ENTRIES_ATTR_INCOMPLETE         "incomplete"
+#define ENTRIES_ATTR_LOCK_TOKEN         "lock-token"
+#define ENTRIES_ATTR_LOCK_OWNER         "lock-owner"
+#define ENTRIES_ATTR_LOCK_COMMENT       "lock-comment"
+#define ENTRIES_ATTR_LOCK_CREATION_DATE "lock-creation-date"
+
+
 static svn_wc_entry_t *
 alloc_entry(apr_pool_t *pool)
 {
@@ -480,11 +501,10 @@ read_entry(svn_wc_entry_t **new_entry,
         else if (strcmp(schedulestr, SVN_WC__ENTRY_VALUE_REPLACE) == 0)
           entry->schedule = svn_wc_schedule_replace;
         else
-          return svn_error_createf
-            (SVN_ERR_ENTRY_ATTRIBUTE_INVALID, NULL,
-             _("Entry '%s' has invalid '%s' value"),
-             (name ? name : SVN_WC_ENTRY_THIS_DIR),
-             SVN_WC__ENTRY_ATTR_SCHEDULE);
+          return svn_error_createf(
+            SVN_ERR_ENTRY_ATTRIBUTE_INVALID, NULL,
+            _("Entry '%s' has invalid 'schedule' value"),
+            name ? name : SVN_WC_ENTRY_THIS_DIR);
       }
   }
   MAYBE_DONE;
@@ -551,7 +571,7 @@ read_entry(svn_wc_entry_t **new_entry,
   }
 
   /* Is this entry copied? */
-  SVN_ERR(read_bool(&entry->copied, SVN_WC__ENTRY_ATTR_COPIED, buf, end));
+  SVN_ERR(read_bool(&entry->copied, ENTRIES_BOOL_COPIED, buf, end));
   MAYBE_DONE;
 
   SVN_ERR(read_url(&entry->copyfrom_url, buf, end, entries_format, pool));
@@ -560,16 +580,15 @@ read_entry(svn_wc_entry_t **new_entry,
   MAYBE_DONE;
 
   /* Is this entry deleted? */
-  SVN_ERR(read_bool(&entry->deleted, SVN_WC__ENTRY_ATTR_DELETED, buf, end));
+  SVN_ERR(read_bool(&entry->deleted, ENTRIES_BOOL_DELETED, buf, end));
   MAYBE_DONE;
 
   /* Is this entry absent? */
-  SVN_ERR(read_bool(&entry->absent, SVN_WC__ENTRY_ATTR_ABSENT, buf, end));
+  SVN_ERR(read_bool(&entry->absent, ENTRIES_BOOL_ABSENT, buf, end));
   MAYBE_DONE;
 
   /* Is this entry incomplete? */
-  SVN_ERR(read_bool(&entry->incomplete, SVN_WC__ENTRY_ATTR_INCOMPLETE,
-                    buf, end));
+  SVN_ERR(read_bool(&entry->incomplete, ENTRIES_BOOL_INCOMPLETE, buf, end));
   MAYBE_DONE;
 
   /* UUID. */
@@ -597,8 +616,7 @@ read_entry(svn_wc_entry_t **new_entry,
   MAYBE_DONE;
 
   /* Keep entry in working copy after deletion? */
-  SVN_ERR(read_bool(&entry->keep_local, SVN_WC__ENTRY_ATTR_KEEP_LOCAL,
-                    buf, end));
+  SVN_ERR(read_bool(&entry->keep_local, ENTRIES_BOOL_KEEP_LOCAL, buf, end));
   MAYBE_DONE;
 
   /* Translated size */
@@ -633,10 +651,10 @@ read_entry(svn_wc_entry_t **new_entry,
         /* '!=': XOR */
         invalid = is_this_dir != (entry->depth != svn_depth_exclude);
         if (entry->depth != svn_depth_infinity && invalid)
-          return svn_error_createf
-            (SVN_ERR_ENTRY_ATTRIBUTE_INVALID, NULL,
-             _("Entry '%s' has invalid depth"),
-             (name ? name : SVN_WC_ENTRY_THIS_DIR));
+          return svn_error_createf(
+            SVN_ERR_ENTRY_ATTRIBUTE_INVALID, NULL,
+            _("Entry '%s' has invalid 'depth' value"),
+            name ? name : SVN_WC_ENTRY_THIS_DIR);
       }
     else
       entry->depth = svn_depth_infinity;
@@ -755,10 +773,12 @@ svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
                               SVN_WC__ENTRY_MODIFY_URL,
                               FALSE, pool);
 
-  /* Set up repository root.  Make sure it is a prefix of url. */
+  /* Set up repository root.  Make sure it is a prefix of url.
+
+     NOTE: we do not set a modify_flags value since this attribute only
+     occurs in old XML entries files.  */
   entry->repos = extract_string(modify_flags, atts,
-                                SVN_WC__ENTRY_ATTR_REPOS,
-                                SVN_WC__ENTRY_MODIFY_REPOS,
+                                ENTRIES_ATTR_REPOS, 0,
                                 FALSE, pool);
   if (entry->url && entry->repos
       && !svn_uri_is_ancestor(entry->repos, entry->url))
@@ -832,11 +852,6 @@ svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
                                        SVN_WC__ENTRY_ATTR_CONFLICT_WRK,
                                        SVN_WC__ENTRY_MODIFY_CONFLICT_WRK,
                                        TRUE, pool);
-  entry->tree_conflict_data = extract_string(
-    modify_flags, atts,
-    SVN_WC__ENTRY_ATTR_TREE_CONFLICT_DATA,
-    SVN_WC__ENTRY_MODIFY_TREE_CONFLICT_DATA,
-    TRUE, pool);
 
   /* Is this entry copied? */
   SVN_ERR(do_bool_attr(&entry->copied,
@@ -870,15 +885,13 @@ svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
                        modify_flags, SVN_WC__ENTRY_MODIFY_ABSENT,
                        atts, SVN_WC__ENTRY_ATTR_ABSENT, name));
 
-  /* Is this entry incomplete? */
-  SVN_ERR(do_bool_attr(&entry->incomplete,
-                       modify_flags, SVN_WC__ENTRY_MODIFY_INCOMPLETE,
-                       atts, SVN_WC__ENTRY_ATTR_INCOMPLETE, name));
+  /* Is this entry incomplete?
 
-  /* Should this item be kept in the working copy after deletion? */
-  SVN_ERR(do_bool_attr(&entry->keep_local,
-                       modify_flags, SVN_WC__ENTRY_MODIFY_KEEP_LOCAL,
-                       atts, SVN_WC__ENTRY_ATTR_KEEP_LOCAL, name));
+     NOTE: we do not set a modify_flags value since this attribute only
+     occurs in old XML entries files.  */
+  SVN_ERR(do_bool_attr(&entry->incomplete,
+                       modify_flags, 0,
+                       atts, ENTRIES_ATTR_INCOMPLETE, name));
 
   /* Attempt to set up timestamps. */
   {
@@ -950,25 +963,20 @@ svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
                                        FALSE, pool);
   }
 
-  /* NOTE: for the lock values, we do not bother to set MODIFY values. Those
-     are only used by the loggy process, and it no longer recognizes changes
-     to the lock data. Since loggy does not create entries with lock mods,
-     this could only occur with stale log data. Since our lock data is merely
-     a cache, it is "deemed acceptable" to forget lock data from old logs.
-     We *DO* want these values from old XML entries files, however.  */
+  /* NOTE: we do not set modify_flags values since the lock attributes only
+     occur in old XML entries files.  */
   entry->lock_token = extract_string(modify_flags, atts,
-                                     SVN_WC__ENTRY_ATTR_LOCK_TOKEN,
+                                     ENTRIES_ATTR_LOCK_TOKEN,
                                      0, FALSE, pool);
   entry->lock_owner = extract_string(modify_flags, atts,
-                                     SVN_WC__ENTRY_ATTR_LOCK_OWNER,
+                                     ENTRIES_ATTR_LOCK_OWNER,
                                      0, FALSE, pool);
   entry->lock_comment = extract_string(modify_flags, atts,
-                                       SVN_WC__ENTRY_ATTR_LOCK_COMMENT,
+                                       ENTRIES_ATTR_LOCK_COMMENT,
                                        0, FALSE, pool);
   {
     const char *cdate_str =
-      apr_hash_get(atts, SVN_WC__ENTRY_ATTR_LOCK_CREATION_DATE,
-                   APR_HASH_KEY_STRING);
+      apr_hash_get(atts, ENTRIES_ATTR_LOCK_CREATION_DATE, APR_HASH_KEY_STRING);
     if (cdate_str)
       {
         SVN_ERR(svn_time_from_cstring(&entry->lock_creation_date,
@@ -1036,7 +1044,7 @@ handle_start_tag(void *userData, const char *tagname, const char **atts)
 
   /* We only care about the `entry' tag; all other tags, such as `xml'
      and `wc-entries', are ignored. */
-  if (strcmp(tagname, SVN_WC__ENTRIES_ENTRY))
+  if (strcmp(tagname, ENTRIES_TAG_ENTRY))
     return;
 
   svn_pool_clear(accum->scratch_pool);
