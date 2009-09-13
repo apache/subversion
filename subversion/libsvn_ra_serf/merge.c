@@ -36,7 +36,7 @@
 #include "svn_config.h"
 #include "svn_delta.h"
 #include "svn_version.h"
-#include "svn_path.h"
+#include "svn_dirent_uri.h"
 #include "svn_props.h"
 
 #include "private/svn_dav_protocol.h"
@@ -319,7 +319,7 @@ end_merge(svn_ra_serf__xml_parser_t *parser,
                  an ancestor of HREF.  All that remains is to
                  determine of HREF is the same as CTX->MERGE_URL, or --
                  if not -- is relative value as a child thereof. */
-              href = svn_path_is_child(ctx->merge_url, href, NULL);
+              href = svn_uri_is_child(ctx->merge_url, href, NULL);
               if (! href)
                 href = "";
 
@@ -364,7 +364,7 @@ end_merge(svn_ra_serf__xml_parser_t *parser,
       info->prop_val = apr_pstrmemdup(info->pool, info->prop_val,
                                       info->prop_val_len);
       if (strcmp(info->prop_name, "href") == 0)
-        info->prop_val = svn_path_canonicalize(info->prop_val, info->pool);
+        info->prop_val = svn_uri_canonicalize(info->prop_val, info->pool);
 
       /* Set our property. */
       apr_hash_set(info->props, info->prop_name, APR_HASH_KEY_STRING,
