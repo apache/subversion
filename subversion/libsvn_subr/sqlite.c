@@ -34,6 +34,7 @@
 #include "private/svn_dep_compat.h"
 #include "private/svn_atomic.h"
 #include "private/svn_skel.h"
+#include "private/svn_token.h"
 
 
 #ifdef SVN_SQLITE_INLINE
@@ -211,6 +212,7 @@ vbindf(svn_sqlite__stmt_t *stmt, const char *fmt, va_list ap)
     {
       const void *blob;
       apr_size_t blob_size;
+      const svn_token_map_t *map;
 
       switch (*fmt)
         {
@@ -228,6 +230,11 @@ vbindf(svn_sqlite__stmt_t *stmt, const char *fmt, va_list ap)
             blob = va_arg(ap, const void *);
             blob_size = va_arg(ap, apr_size_t);
             SVN_ERR(svn_sqlite__bind_blob(stmt, count, blob, blob_size));
+            break;
+
+          case 't':
+            map = va_arg(ap, const svn_token_map_t *);
+            SVN_ERR(svn_sqlite__bind_token(stmt, count, map, va_arg(ap, int)));
             break;
 
           default:
@@ -291,6 +298,19 @@ svn_sqlite__bind_blob(svn_sqlite__stmt_t *stmt,
 }
 
 svn_error_t *
+svn_sqlite__bind_token(svn_sqlite__stmt_t *stmt,
+                       int slot,
+                       const svn_token_map_t *map,
+                       int value)
+{
+  const char *word = svn_token__to_word(map, value);
+
+  SQLITE_ERR(sqlite3_bind_text(stmt->s3stmt, slot, word, -1, SQLITE_STATIC),
+             stmt->db);
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
 svn_sqlite__bind_properties(svn_sqlite__stmt_t *stmt,
                             int slot,
                             const apr_hash_t *props,
@@ -343,7 +363,8 @@ const char *
 svn_sqlite__column_text(svn_sqlite__stmt_t *stmt, int column,
                         apr_pool_t *result_pool)
 {
-  const char *result = (const char *) sqlite3_column_text(stmt->s3stmt, column);
+  /* cast from 'unsigned char' to regular 'char'  */
+  const char *result = (const char *)sqlite3_column_text(stmt->s3stmt, column);
 
   if (result_pool && result != NULL)
     result = apr_pstrdup(result_pool, result);
@@ -375,6 +396,17 @@ apr_int64_t
 svn_sqlite__column_int64(svn_sqlite__stmt_t *stmt, int column)
 {
   return sqlite3_column_int64(stmt->s3stmt, column);
+}
+
+int
+svn_sqlite__column_token(svn_sqlite__stmt_t *stmt,
+                         int column,
+                         const svn_token_map_t *map)
+{
+  /* cast from 'unsigned char' to regular 'char'  */
+  const char *word = (const char *)sqlite3_column_text(stmt->s3stmt, column);
+
+  return svn_token__from_word_strict(map, word);
 }
 
 svn_error_t *

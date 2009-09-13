@@ -29,6 +29,8 @@
 #include "svn_types.h"
 #include "svn_error.h"
 
+#include "private/svn_token.h"  /* for svn_token_map_t  */
+
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
@@ -132,17 +134,19 @@ svn_sqlite__prepare(svn_sqlite__stmt_t **stmt, svn_sqlite__db_t *db,
 
 */
 
-/* Bind values to arguments in STMT, according to FMT.  FMT may contain:
+/* Bind values to SQL parameters in STMT, according to FMT.  FMT may contain:
 
    Spec  Argument type       Item type
    ----  -----------------   ---------
    i     apr_int64_t         Number
    s     const char **       String
-   b     const void *        Blob (must be followed by an additional argument
-                                   of type apr_size_t with the number of bytes
-                                   in the object)
+   b     const void *        Blob data
+         apr_size_t          Blob length
+   t     const svn_token_t * Token mapping table
+         int value           Token value
 
-  Each character in FMT maps to one argument, in the order they appear.
+  Each character in FMT maps to one SQL parameter, and one or two function
+  parameters, in the order they appear.
 */
 svn_error_t *
 svn_sqlite__bindf(svn_sqlite__stmt_t *stmt, const char *fmt, ...);
@@ -168,6 +172,13 @@ svn_sqlite__bind_blob(svn_sqlite__stmt_t *stmt,
                       int slot,
                       const void *val,
                       apr_size_t len);
+
+/* Look up VALUE in MAP, and bind the resulting token word at SLOT.  */
+svn_error_t *
+svn_sqlite__bind_token(svn_sqlite__stmt_t *stmt,
+                       int slot,
+                       const svn_token_map_t *map,
+                       int value);
 
 /* Bind a set of properties to the given slot. If PROPS is NULL, then no
    binding will occur. PROPS will be stored as a serialized skel. */
@@ -224,6 +235,13 @@ svn_sqlite__column_int(svn_sqlite__stmt_t *stmt, int column);
    return value will be 0. */
 apr_int64_t
 svn_sqlite__column_int64(svn_sqlite__stmt_t *stmt, int column);
+
+/* Fetch the word at COLUMN, look it up in the MAP, and return its value.
+   MALFUNCTION is thrown if the column is null or contains an unknown word.  */
+int
+svn_sqlite__column_token(svn_sqlite__stmt_t *stmt,
+                         int column,
+                         const svn_token_map_t *map);
 
 /* Return the column as a hash of const char * => const svn_string_t *.
    If the column is null, then NULL will be stored into *PROPS. The
