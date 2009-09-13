@@ -1536,7 +1536,6 @@ check_tree_conflict(svn_wc_conflict_description2_t **pconflict,
                     svn_stringbuf_t *log_accum,
                     const char *full_path,
                     const svn_wc_entry_t *entry,
-                    svn_wc_adm_access_t *parent_adm_access,
                     svn_wc_conflict_action_t action,
                     svn_node_kind_t their_node_kind,
                     const char *their_url,
@@ -1714,8 +1713,7 @@ check_tree_conflict(svn_wc_conflict_description2_t **pconflict,
        * but we have no way to propagate that back to our caller. */
       SVN_ERR_ASSERT(log_accum != NULL);
 
-      SVN_ERR(svn_wc__loggy_add_tree_conflict(&log_accum, conflict,
-                                              parent_adm_access, pool));
+      SVN_ERR(svn_wc__loggy_add_tree_conflict(&log_accum, conflict, pool));
 
       if (pconflict)
         *pconflict = conflict;
@@ -2054,7 +2052,7 @@ do_entry_deletion(struct edit_baton *eb,
    * copy of the previous base version.
    */
   SVN_ERR(check_tree_conflict(&tree_conflict, eb, log_item, full_path, entry,
-                              parent_adm_access, svn_wc_conflict_action_delete,
+                              svn_wc_conflict_action_delete,
                               svn_node_none, their_url, pool));
   if (tree_conflict != NULL)
     {
@@ -2446,10 +2444,6 @@ add_directory(const char *path,
               /* Raise a tree conflict. */
               SVN_ERR(check_tree_conflict(&tree_conflict, eb,
                                           pb->log_accum, db->path, entry,
-                                          svn_wc__adm_retrieve_internal2(
-                                                            eb->db,
-                                                            db->local_abspath,
-                                                            pool),
                                           svn_wc_conflict_action_add,
                                           svn_node_dir, db->new_URL,
                                           pool));
@@ -2695,8 +2689,7 @@ open_directory(const char *path,
     /* Is this path a fresh tree conflict victim?  If so, skip the tree
        with one notification. */
     SVN_ERR(check_tree_conflict(&tree_conflict, eb, pb->log_accum,
-                                full_path, entry, parent_adm_access,
-                                svn_wc_conflict_action_edit,
+                                full_path, entry, svn_wc_conflict_action_edit,
                                 svn_node_dir, db->new_URL, pool));
 
   /* Remember the roots of any locally deleted trees. */
@@ -3647,7 +3640,6 @@ add_file(const char *path,
 
           SVN_ERR(check_tree_conflict(&tree_conflict, eb,
                                       pb->log_accum, full_path, entry,
-                                      adm_access,
                                       svn_wc_conflict_action_add,
                                       svn_node_file, fb->new_URL, subpool));
 
@@ -3754,8 +3746,7 @@ open_file(const char *path,
   tree_conflict = NULL;
   if (!already_conflicted)
     SVN_ERR(check_tree_conflict(&tree_conflict, eb, pb->log_accum, full_path,
-                                entry, adm_access,
-                                svn_wc_conflict_action_edit,
+                                entry, svn_wc_conflict_action_edit,
                                 svn_node_file, fb->new_URL, pool));
 
   /* Does the file already have text or property conflicts? */
