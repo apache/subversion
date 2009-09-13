@@ -89,7 +89,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.7\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2009-09-12 13:46+0200\n"
-"PO-Revision-Date: 2008-09-24 18:34+0200\n"
+"PO-Revision-Date: 2009-09-13 22:34+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Norwegian <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -326,7 +326,7 @@ msgstr "Posten har et ugyldig kjennetegn"
 
 #: ../include/svn_error_codes.h:327
 msgid "Can't create an entry for a forbidden name"
-msgstr ""
+msgstr "Kan ikke opprette post for et forbudt navn"
 
 #: ../include/svn_error_codes.h:333
 msgid "Obstructed update"
@@ -463,23 +463,20 @@ msgid "Something's amiss with the wc sqlite database"
 msgstr ""
 
 #: ../include/svn_error_codes.h:486
-#, fuzzy
 msgid "The working copy is missing"
-msgstr "Arbeidskopien er ødelagt"
+msgstr "Arbeidskopien mangler"
 
 #: ../include/svn_error_codes.h:491
-#, fuzzy
 msgid "The specified node is not a symlink"
-msgstr "Transaksjonen kan ikke endres"
+msgstr "Den spesifiserte noden er ikke en symbolsk lenke"
 
 #: ../include/svn_error_codes.h:496
-#, fuzzy
 msgid "The specified path has an unexpected status"
-msgstr "Det angitte diff-valget er ikke støttet"
+msgstr "Den spesifiserte stien har uventet status"
 
 #: ../include/svn_error_codes.h:501
 msgid "The working copy needs to be upgraded"
-msgstr ""
+msgstr "Arbeidskopien må oppgraderes"
 
 #: ../include/svn_error_codes.h:507
 msgid "General filesystem error"
@@ -809,11 +806,11 @@ msgstr "Depotet er flyttet"
 #: ../include/svn_error_codes.h:890 ../libsvn_ra_serf/replay.c:808
 #: ../libsvn_ra_serf/update.c:2235 ../libsvn_ra_serf/util.c:555
 msgid "Connection timed out"
-msgstr ""
+msgstr "Tidsavbrudd for forbindelsen"
 
 #: ../include/svn_error_codes.h:895
 msgid "URL access forbidden for unknown reason"
-msgstr ""
+msgstr "URL-tilgang nektes, ukjent grunn"
 
 #: ../include/svn_error_codes.h:901 ../include/svn_error_codes.h:930
 msgid "Couldn't find a repository"
@@ -1145,19 +1142,16 @@ msgid "Couldn't perform atomic initialization"
 msgstr "Klarte ikke å utføre atomisk initialisering"
 
 #: ../include/svn_error_codes.h:1282
-#, fuzzy
 msgid "SQLite error"
-msgstr "Feil ved skriving"
+msgstr "SQLite-feil"
 
 #: ../include/svn_error_codes.h:1287
-#, fuzzy
 msgid "Attempted to write to readonly SQLite db"
-msgstr "Forsøk på å skrive til en ikke-transaksjon"
+msgstr "Forsøkte å skrive til skrivebeskyttet SQLite-database"
 
 #: ../include/svn_error_codes.h:1292
-#, fuzzy
 msgid "Unsupported schema found in SQLite db"
-msgstr "Kontrollsumtypen støttes ikke"
+msgstr "Fant skjema som ikke er støttet i SQLite-database"
 
 #: ../include/svn_error_codes.h:1298
 msgid "Error parsing arguments"
@@ -1387,9 +1381,9 @@ msgid "Aborting commit: '%s' remains in conflict"
 msgstr "Avbryter innsending: «%s» er fortsatt i konflikt"
 
 #: ../libsvn_client/commit_util.c:307
-#, fuzzy, c-format
+#, c-format
 msgid "Aborting commit: '%s' remains in tree-conflict"
-msgstr "Avbryter innsending: «%s» er fortsatt i konflikt"
+msgstr "Avbryter innsending: «%s» har fortsatt tre-konflikt"
 
 #: ../libsvn_client/commit_util.c:396 ../libsvn_client/commit_util.c:407
 #: ../libsvn_wc/crop.c:188
@@ -1466,9 +1460,9 @@ msgid "Path '%s' is not a directory"
 msgstr "Stien «%s» er ikke en katalog"
 
 #: ../libsvn_client/copy.c:610 ../libsvn_client/copy.c:650
-#, fuzzy, c-format
+#, c-format
 msgid "Path '%s' already exists, but is not a directory"
-msgstr "«%s» finnes allerede og er ikke en katalog"
+msgstr "«%s» finnes allerede, men er ikke en katalog"
 
 #: ../libsvn_client/copy.c:755
 #, c-format
@@ -1550,9 +1544,9 @@ msgid "'%s' is in the way of the resource actually under version control"
 msgstr "«%s» er i veien for den versjonshåndterte ressursen"
 
 #: ../libsvn_client/delete.c:74
-#, fuzzy, c-format
+#, c-format
 msgid "'%s' has local modifications -- commit or revert them first"
-msgstr "«%s» er endret lokalt"
+msgstr "«%s» er endret lokalt, send inn eller fjern forandringene først"
 
 #: ../libsvn_client/deprecated.c:583 ../svn/move-cmd.c:66
 msgid "Cannot specify revisions (except HEAD) with move operations"
@@ -1628,9 +1622,8 @@ msgid "'%s' was not found in the repository at revision %ld"
 msgstr "«%s» ble ikke funnet i depotet ved revisjon %ld"
 
 #: ../libsvn_client/diff.c:1159
-#, fuzzy
 msgid "Sorry, svn_client_diff5 was called in a way that is not yet supported"
-msgstr "svn_client_diff4 ble kalt på en måte som foreløpig ikke er støttet enda"
+msgstr "svn_client_diff5 ble kalt på en måte som foreløpig ikke er støttet"
 
 #: ../libsvn_client/diff.c:1201
 msgid "Only diffs between a path's text-base and its working files are supported at this time"
@@ -1666,13 +1659,13 @@ msgstr "«%s» finnes allerede"
 
 #: ../libsvn_client/export.c:806 ../libsvn_wc/adm_crawler.c:1197
 #: ../libsvn_wc/update_editor.c:4654
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "Checksum mismatch for '%s':\n"
 "   expected:  %s\n"
 "     actual:  %s\n"
 msgstr ""
-"Kontrollsummer samsvarer ikke i representasjon «%s»:\n"
+"Kontrollsummer samsvarer ikke for «%s»:\n"
 "   forventet:  %s\n"
 "     faktisk:  %s\n"
 
@@ -1717,14 +1710,14 @@ msgid "Unrecognized format for the relative external URL '%s'"
 msgstr "Ukjent format for den relative eksterne URL-en «%s»"
 
 #: ../libsvn_client/externals.c:786
-#, fuzzy, c-format
+#, c-format
 msgid "URL '%s' at revision %ld doesn't exist"
-msgstr "URL-en «%s» finnes ikke"
+msgstr "URL-en «%s» i revisjon %ld finnes ikke"
 
 #: ../libsvn_client/externals.c:792
-#, fuzzy, c-format
+#, c-format
 msgid "URL '%s' at revision %ld is not a file or a directory"
-msgstr "«%s» er ikke en fil eller katalog"
+msgstr "URL-en «%s» i revisjon %ld er ikke en fil eller katalog"
 
 #: ../libsvn_client/externals.c:1120
 #, c-format
@@ -2018,7 +2011,7 @@ msgstr "«%s» er ikke en arbeidskopi"
 #: ../libsvn_client/switch.c:106
 #, c-format
 msgid "Cannot both exclude and switch a path"
-msgstr ""
+msgstr "Kan ikke både ekskludere og bytte ut en sti"
 
 #: ../libsvn_client/switch.c:192 ../libsvn_ra_local/ra_plugin.c:198
 #: ../libsvn_ra_local/ra_plugin.c:273 ../libsvn_wc/update_editor.c:4863
@@ -2042,14 +2035,12 @@ msgid "Compression of svndiff data failed"
 msgstr "Komprimering av svndiff-data feilet"
 
 #: ../libsvn_delta/svndiff.c:414
-#, fuzzy
 msgid "Decompression of svndiff data failed: no size"
-msgstr "Dekomprimering av svndiff-data feilet"
+msgstr "Dekomprimering av svndiff-data feilet: ingen størrelse"
 
 #: ../libsvn_delta/svndiff.c:417
-#, fuzzy
 msgid "Decompression of svndiff data failed: size too large"
-msgstr "Dekomprimering av svndiff-data feilet"
+msgstr "Dekomprimering av svndiff-data feilet: størrelsen er for stor"
 
 #: ../libsvn_delta/svndiff.c:438
 msgid "Decompression of svndiff data failed"
@@ -2065,9 +2056,9 @@ msgid "Invalid diff stream: insn %d cannot be decoded"
 msgstr "Ugyldig diff-strøm: Instruksjon %d kan ikke dekodes"
 
 #: ../libsvn_delta/svndiff.c:519
-#, fuzzy, c-format
+#, c-format
 msgid "Invalid diff stream: insn %d has length zero"
-msgstr "Ugyldig diff-strøm: Instruksjon %d har ikke-positiv lengde"
+msgstr "Ugyldig diff-strøm: Instruksjon %d har lengde null"
 
 #: ../libsvn_delta/svndiff.c:523
 #, c-format
@@ -2102,9 +2093,8 @@ msgid "Svndiff has invalid header"
 msgstr "Svndiff har ugyldig header"
 
 #: ../libsvn_delta/svndiff.c:721 ../libsvn_delta/svndiff.c:885
-#, fuzzy
 msgid "Svndiff contains a too-large window"
-msgstr "Svndiff-data inneholder ødelagt vindu"
+msgstr "Svndiff inneholder et vindu som er for stort"
 
 #: ../libsvn_delta/svndiff.c:728 ../libsvn_delta/svndiff.c:892
 msgid "Svndiff contains corrupt window header"
@@ -2139,9 +2129,8 @@ msgstr "Ugyldig argument «%s» i diff-valg"
 # distros.
 #. Order of date components can be different in different languages
 #: ../libsvn_diff/diff_file.c:1134
-#, fuzzy
 msgid "%a %b %e %H:%M:%S %Y"
-msgstr "%Y-%m-%d %H:%M"
+msgstr "%a %Y-%m-%d %H:%M:%S"
 
 #: ../libsvn_diff/diff_file.c:1744
 #, c-format
@@ -2185,14 +2174,14 @@ msgid "Can't allocate FS mutex"
 msgstr "Kan ikke reservere filsystem-mutex"
 
 #: ../libsvn_fs/fs-loader.c:347
-#, fuzzy, c-format
+#, c-format
 msgid "Path '%s' is not in UTF-8"
-msgstr "Filstien «%s» er ikke en URL"
+msgstr "Filstien «%s» er ikke i UTF-8"
 
 #: ../libsvn_fs/fs-loader.c:355
-#, fuzzy, c-format
+#, c-format
 msgid "Path '%s' contains '.' or '..' element"
-msgstr "URLen «%s» inneholder et «..»-element"
+msgstr "Stien «%s» inneholder et «.»- eller «..»-element"
 
 #: ../libsvn_fs/fs-loader.c:1183
 #, c-format
@@ -2256,9 +2245,9 @@ msgid "Only SHA1 checksums can be used as keys in the checksum-reps table.\n"
 msgstr ""
 
 #: ../libsvn_fs_base/bdb/checksum-reps-table.c:135
-#, fuzzy, c-format
+#, c-format
 msgid "Representation key for checksum '%s' exists in filesystem '%s'."
-msgstr "Ingen nøkkel gitt for stien «%s» i filsystem «%s»"
+msgstr "Representasjonsnøkkel for kontrollsum «%s» finnes i filsystem «%s»."
 
 #: ../libsvn_fs_base/bdb/checksum-reps-table.c:142
 #, fuzzy
@@ -2490,9 +2479,9 @@ msgstr "Representasjon ikke funnet: «%s»"
 #: ../libsvn_fs_fs/fs_fs.c:3160 ../libsvn_fs_fs/tree.c:2452
 #: ../libsvn_ra_neon/fetch.c:763 ../libsvn_ra_svn/client.c:1005
 #: ../libsvn_repos/commit.c:607 ../libsvn_repos/load.c:1051
-#, fuzzy, c-format
+#, c-format
 msgid "   expected:  %s"
-msgstr "Slettet: %s\n"
+msgstr "   forventet:  %s"
 
 #: ../libsvn_fs_base/dag.c:1287 ../libsvn_fs_base/reps-strings.c:831
 #: ../libsvn_fs_base/reps-strings.c:927 ../libsvn_fs_base/reps-strings.c:942
@@ -2502,7 +2491,7 @@ msgstr "Slettet: %s\n"
 #: ../libsvn_repos/commit.c:608 ../libsvn_repos/load.c:1052
 #, c-format
 msgid "     actual:  %s"
-msgstr ""
+msgstr "     faktisk:  %s"
 
 #: ../libsvn_fs_base/dag.c:1383
 #, c-format
@@ -2667,9 +2656,9 @@ msgid "Cannot verify lock on path '%s'; no username available"
 msgstr "Kan ikke kontrollere lås på stien «%s»; ingen brukernavn tilgjengelig"
 
 #: ../libsvn_fs_base/lock.c:452 ../libsvn_fs_fs/lock.c:596
-#, fuzzy, c-format
+#, c-format
 msgid "User '%s' does not own lock on path '%s' (currently locked by '%s')"
-msgstr "Bruker %s eier ikke egen lås på stien «%s» (for øyeblikket låst av %s)"
+msgstr "Bruker «%s» eier ikke egen lås på stien «%s» (for øyeblikket låst av «%s»)"
 
 #: ../libsvn_fs_base/lock.c:459 ../libsvn_fs_fs/lock.c:603
 #, c-format
@@ -2707,19 +2696,19 @@ msgid "Rep contents are too large: got %s, limit is %s"
 msgstr "Representasjonsinnhold er for stort: Fikk %s, grensen er %s"
 
 #: ../libsvn_fs_base/reps-strings.c:813
-#, fuzzy, c-format
+#, c-format
 msgid "Failure reading representation '%s'"
 msgstr "Feil ved lesing av representasjon «%s»"
 
 #: ../libsvn_fs_base/reps-strings.c:925
-#, fuzzy, c-format
+#, c-format
 msgid "MD5 checksum mismatch on representation '%s'"
-msgstr "Representasjon ikke funnet: «%s»"
+msgstr "Feil i MD5-kontrollsum for representasjon «%s»"
 
 #: ../libsvn_fs_base/reps-strings.c:940
-#, fuzzy, c-format
+#, c-format
 msgid "SHA1 checksum mismatch on representation '%s'"
-msgstr "Representasjon ikke funnet: «%s»"
+msgstr "Feil i SHA1-kontrollsum for representasjon «%s»"
 
 #: ../libsvn_fs_base/reps-strings.c:956
 msgid "Null rep, but offset past zero already"
@@ -2865,9 +2854,9 @@ msgstr "Kan ikke øke teller for fletteinformasjon på *fil*-noderevisjon %%s ti
 
 #: ../libsvn_fs_fs/dag.c:1025 ../libsvn_ra_neon/fetch.c:762
 #: ../libsvn_ra_svn/client.c:1004
-#, fuzzy, c-format
+#, c-format
 msgid "Checksum mismatch for '%s'"
-msgstr "Kontrollsummene stemmer ikke"
+msgstr "Kontrollsum stemmer ikke for «%s»"
 
 #: ../libsvn_fs_fs/dag.c:1128
 msgid "Empty noderev in cache"
