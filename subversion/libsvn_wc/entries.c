@@ -1013,7 +1013,7 @@ read_entries(apr_hash_t **entries,
 /* For a given LOCAL_ABSPATH, using DB, return the directory in which the
    entry information is located, and the entry name to access that entry.
 
-   KIND and PARENT_STUB are as in svn_wc__get_entry().
+   KIND and NEED_PARENT_STUB are as in svn_wc__get_entry().
 
    Return the results in RESULT_POOL and use SCRATCH_POOL for temporary
    allocations. */
@@ -1023,7 +1023,7 @@ get_entry_access_info(const char **adm_abspath,
                       svn_wc__db_t *db,
                       const char *local_abspath,
                       svn_node_kind_t kind,
-                      svn_boolean_t parent_stub,
+                      svn_boolean_t need_parent_stub,
                       apr_pool_t *result_pool,
                       apr_pool_t *scratch_pool)
 {
@@ -1031,7 +1031,7 @@ get_entry_access_info(const char **adm_abspath,
   svn_boolean_t read_from_subdir = FALSE;
 
   /* Can't ask for the parent stub if the node is a file.  */
-  SVN_ERR_ASSERT(!parent_stub || kind != svn_node_file);
+  SVN_ERR_ASSERT(!need_parent_stub || kind != svn_node_file);
 
   /* If the caller didn't know the node kind, then stat the path. Maybe
      it is really there, and we can speed up the steps below.  */
@@ -1076,10 +1076,10 @@ get_entry_access_info(const char **adm_abspath,
         {
           /* We found a directory for this UNKNOWN node. Determine whether
              we need to read inside it.  */
-          read_from_subdir = !parent_stub;
+          read_from_subdir = !need_parent_stub;
         }
     }
-  else if (kind == svn_node_dir && !parent_stub)
+  else if (kind == svn_node_dir && !need_parent_stub)
     {
       read_from_subdir = TRUE;
     }
@@ -3696,22 +3696,22 @@ svn_wc_mark_missing_deleted(const char *path,
 
   if (pkind == svn_node_none)
     {
-      svn_wc_entry_t newent;
+      svn_wc_entry_t tmp_entry;
 
-      newent.deleted = TRUE;
-      newent.schedule = svn_wc_schedule_normal;
+      tmp_entry.deleted = TRUE;
+      tmp_entry.schedule = svn_wc_schedule_normal;
 
       return svn_error_return(
         svn_wc__entry_modify2(db, local_abspath, svn_node_unknown, FALSE,
-                              &newent,
+                              &tmp_entry,
                               (SVN_WC__ENTRY_MODIFY_DELETED
                                | SVN_WC__ENTRY_MODIFY_SCHEDULE
                                | SVN_WC__ENTRY_MODIFY_FORCE),
                               pool));
     }
-  else
-    return svn_error_createf(SVN_ERR_WC_PATH_FOUND, NULL,
-                             _("Unexpectedly found '%s': "
-                               "path is marked 'missing'"),
-                             svn_dirent_local_style(path, pool));
+
+  return svn_error_createf(SVN_ERR_WC_PATH_FOUND, NULL,
+                           _("Unexpectedly found '%s': "
+                             "path is marked 'missing'"),
+                           svn_dirent_local_style(path, pool));
 }
