@@ -486,7 +486,12 @@ svn_error_t *
 svn_wc_adm_close2(svn_wc_adm_access_t *adm_access,
                   apr_pool_t *scratch_pool);
 
-/* @deprecated Provided for backward compabibility with the 1.5 API. */
+/** 
+ * Similar to svn_wc_adm_close2(), but with the internal pool of @a adm_access
+ * used for temporary allocations.
+ *
+ * @deprecated Provided for backward compabibility with the 1.5 API.
+ */
 SVN_DEPRECATED
 svn_error_t *
 svn_wc_adm_close(svn_wc_adm_access_t *adm_access);
