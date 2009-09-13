@@ -74,6 +74,9 @@ int
 svn_token__from_word(const svn_token_map_t *map,
                      const char *word)
 {
+  if (word == NULL)
+    return SVN_TOKEN_UNKNOWN;
+
   for (; map->str != NULL; ++map)
     if (strcmp(map->str, word) == 0)
       return map->val;
