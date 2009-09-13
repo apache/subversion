@@ -221,7 +221,6 @@ svn_wc__loggy_set_entry_timestamp_from_wc(svn_stringbuf_t **log_accum,
 
 /* Extend **LOG_ACCUM with log instructions to set the file size of PATH
    in the entries' WORKING_SIZE field.
-   ADM_ACCESS is the access baton for PATH.
 */
 svn_error_t *
 svn_wc__loggy_set_entry_working_size_from_wc(svn_stringbuf_t **log_accum,
@@ -232,32 +231,29 @@ svn_wc__loggy_set_entry_working_size_from_wc(svn_stringbuf_t **log_accum,
 
 /* Extend **LOG_ACCUM with log instructions to set permissions of PATH
    to 'readonly'.
-   ADM_ACCESS is the access baton for PATH.
 */
 svn_error_t *
 svn_wc__loggy_set_readonly(svn_stringbuf_t **log_accum,
-                           svn_wc_adm_access_t *adm_access,
+                           const char *adm_abspath,
                            const char *path,
                            apr_pool_t *pool);
 
 /* Extend **LOG_ACCUM with log instructions to set the timestamp of PATH to
    the time TIMESTR.
-   ADM_ACCESS is the access baton for PATH.
 */
 svn_error_t *
 svn_wc__loggy_set_timestamp(svn_stringbuf_t **log_accum,
-                            svn_wc_adm_access_t *adm_access,
+                            const char *adm_abspath,
                             const char *path,
                             const char *timestr,
                             apr_pool_t *pool);
 
 /* Extend **LOG_ACCUM with log instructions to remove the file
    PATH, if it exists.
-   ADM_ACCESS is the access baton for PATH.
 */
 svn_error_t *
 svn_wc__loggy_remove(svn_stringbuf_t **log_accum,
-                     svn_wc_adm_access_t *adm_access,
+                     const char *adm_abspath,
                      const char *path,
                      apr_pool_t *pool);
 

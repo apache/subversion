@@ -249,7 +249,9 @@ remove_revert_files(svn_stringbuf_t **logtags,
 
   SVN_ERR(svn_io_check_path(revert_file, &kind, pool));
   if (kind == svn_node_file)
-    SVN_ERR(svn_wc__loggy_remove(logtags, adm_access, revert_file, pool));
+    SVN_ERR(svn_wc__loggy_remove(logtags,
+                                 svn_wc__adm_access_abspath(adm_access),
+                                 revert_file, pool));
 
   return svn_wc__loggy_props_delete(logtags, path, svn_wc__props_revert,
                                     adm_access, pool);
@@ -1977,10 +1979,10 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
           /* Possibly set the timestamp to last-commit-time, rather
              than the 'now' time that already exists. */
           if (use_commit_times && entry->cmt_date)
-            SVN_ERR(svn_wc__loggy_set_timestamp
-                    (&log_accum, adm_access, fullpath,
-                     svn_time_to_cstring(entry->cmt_date, pool),
-                     pool));
+            SVN_ERR(svn_wc__loggy_set_timestamp(
+                        &log_accum, svn_wc__adm_access_abspath(adm_access),
+                        fullpath,
+                        svn_time_to_cstring(entry->cmt_date, pool), pool));
 
           SVN_ERR(svn_wc__loggy_set_entry_timestamp_from_wc(
                     &log_accum, svn_wc__adm_access_abspath(adm_access),
@@ -1997,28 +1999,28 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
     {
       flags |= SVN_WC__ENTRY_MODIFY_CONFLICT_OLD;
       tmp_entry.conflict_old = NULL;
-      SVN_ERR(svn_wc__loggy_remove
-              (&log_accum, adm_access,
-               svn_dirent_join(svn_wc_adm_access_path(adm_access),
-                               entry->conflict_old, pool), pool));
+      SVN_ERR(svn_wc__loggy_remove(
+                    &log_accum, svn_wc__adm_access_abspath(adm_access),
+                    svn_dirent_join(svn_wc_adm_access_path(adm_access),
+                                    entry->conflict_old, pool), pool));
     }
   if (entry->conflict_new)
     {
       flags |= SVN_WC__ENTRY_MODIFY_CONFLICT_NEW;
       tmp_entry.conflict_new = NULL;
-      SVN_ERR(svn_wc__loggy_remove
-              (&log_accum, adm_access,
-               svn_dirent_join(svn_wc_adm_access_path(adm_access),
-                               entry->conflict_new, pool), pool));
+      SVN_ERR(svn_wc__loggy_remove(
+                    &log_accum, svn_wc__adm_access_abspath(adm_access),
+                    svn_dirent_join(svn_wc_adm_access_path(adm_access),
+                                    entry->conflict_new, pool), pool));
     }
   if (entry->conflict_wrk)
     {
       flags |= SVN_WC__ENTRY_MODIFY_CONFLICT_WRK;
       tmp_entry.conflict_wrk = NULL;
-      SVN_ERR(svn_wc__loggy_remove
-              (&log_accum, adm_access,
-               svn_dirent_join(svn_wc_adm_access_path(adm_access),
-                               entry->conflict_wrk, pool), pool));
+      SVN_ERR(svn_wc__loggy_remove(
+                    &log_accum, svn_wc__adm_access_abspath(adm_access),
+                    svn_dirent_join(svn_wc_adm_access_path(adm_access),
+                                    entry->conflict_wrk, pool), pool));
     }
 
   /* Remove the property conflict file if the entry lists one (and it
@@ -2027,10 +2029,10 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
     {
       flags |= SVN_WC__ENTRY_MODIFY_PREJFILE;
       tmp_entry.prejfile = NULL;
-      SVN_ERR(svn_wc__loggy_remove
-              (&log_accum, adm_access,
-               svn_dirent_join(svn_wc_adm_access_path(adm_access),
-                               entry->prejfile, pool), pool));
+      SVN_ERR(svn_wc__loggy_remove(&log_accum,
+                    svn_wc__adm_access_abspath(adm_access),
+                    svn_dirent_join(svn_wc_adm_access_path(adm_access),
+                                    entry->prejfile, pool), pool));
     }
 
   /* Clean up the copied state if this is a replacement. */
