@@ -2207,7 +2207,6 @@ svn_wc__loggy_remove(svn_stringbuf_t **log_accum,
 svn_error_t *
 svn_wc__loggy_add_tree_conflict(svn_stringbuf_t **log_accum,
                                 const svn_wc_conflict_description2_t *conflict,
-                                svn_wc_adm_access_t *adm_access,
                                 apr_pool_t *pool)
 {
   const char *conflict_data;
