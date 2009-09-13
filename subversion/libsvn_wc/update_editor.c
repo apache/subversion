@@ -804,10 +804,9 @@ complete_directory(struct edit_baton *eb,
             }
           else
             {
-              svn_wc_entry_t tmpentry;
-              tmpentry.deleted = FALSE;
+              tmp_entry.deleted = FALSE;
               SVN_ERR(svn_wc__entry_modify(adm_access, current_entry->name,
-                                           &tmpentry,
+                                           &tmp_entry,
                                            SVN_WC__ENTRY_MODIFY_DELETED,
                                            subpool));
             }
@@ -1838,8 +1837,6 @@ set_copied_callback(const char *path,
   if (svn_path_compare_paths(path, b->added_subtree_root_path) != 0)
     {
       svn_wc_adm_access_t *entry_adm_access;
-      svn_wc_entry_t tmp_entry;
-      apr_uint64_t flags = 0;
 
       /* Determine which adm dir holds this entry */
       /* ### This will fail if the operation holds only a shallow lock. */
@@ -1865,11 +1862,13 @@ set_copied_callback(const char *path,
          schedule normal do we need to mark it as copied. */
       if (entry->schedule == svn_wc_schedule_normal)
         {
+          svn_wc_entry_t tmp_entry;
+
           /* Set the 'copied' flag and write the entry out to disk. */
           tmp_entry.copied = TRUE;
-          flags |= SVN_WC__ENTRY_MODIFY_COPIED;
           SVN_ERR(svn_wc__entry_modify(entry_adm_access, entry->name,
-                                       &tmp_entry, flags, pool));
+                                       &tmp_entry,
+                                       SVN_WC__ENTRY_MODIFY_COPIED, pool));
         }
     }
   return SVN_NO_ERROR;
