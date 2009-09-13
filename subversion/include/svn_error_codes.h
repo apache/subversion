@@ -214,6 +214,11 @@ SVN_ERROR_START
              SVN_ERR_BAD_CATEGORY_START + 12,
              "Invalid character in hex checksum")
 
+  /** @since New in 1.7. */
+  SVN_ERRDEF(SVN_ERR_BAD_TOKEN,
+             SVN_ERR_BAD_CATEGORY_START + 13,
+             "Unknown string token value")
+
   /* xml errors */
 
   SVN_ERRDEF(SVN_ERR_XML_ATTRIB_NOT_FOUND,
