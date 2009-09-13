@@ -1982,10 +1982,12 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
                      svn_time_to_cstring(entry->cmt_date, pool),
                      pool));
 
-          SVN_ERR(svn_wc__loggy_set_entry_timestamp_from_wc
-                  (&log_accum, adm_access, fullpath, pool));
-          SVN_ERR(svn_wc__loggy_set_entry_working_size_from_wc
-                  (&log_accum, adm_access, fullpath, pool));
+          SVN_ERR(svn_wc__loggy_set_entry_timestamp_from_wc(
+                    &log_accum, svn_wc__adm_access_abspath(adm_access),
+                    fullpath, pool));
+          SVN_ERR(svn_wc__loggy_set_entry_working_size_from_wc(
+                    &log_accum, svn_wc__adm_access_abspath(adm_access),
+                    fullpath, pool));
         }
     }
 

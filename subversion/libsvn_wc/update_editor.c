@@ -4546,13 +4546,13 @@ merge_file(svn_wc_notify_state_t *content_state,
           && !fb->deleted)
         {
           /* Adjust entries file to match working file */
-          SVN_ERR(svn_wc__loggy_set_entry_timestamp_from_wc(&log_accum,
-                                                            adm_access,
-                                                            fb->path, pool));
+          SVN_ERR(svn_wc__loggy_set_entry_timestamp_from_wc(
+                        &log_accum, svn_wc__adm_access_abspath(adm_access),
+                        fb->path, pool));
         }
-      SVN_ERR(svn_wc__loggy_set_entry_working_size_from_wc(&log_accum,
-                                                           adm_access,
-                                                           fb->path, pool));
+      SVN_ERR(svn_wc__loggy_set_entry_working_size_from_wc(
+                        &log_accum, svn_wc__adm_access_abspath(adm_access),
+                        fb->path, pool));
     }
 
   /* Clean up add-with-history temp file. */
@@ -5582,16 +5582,15 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
     {
       /* No working file provided by the caller, copy and translate the
          text base. */
-      SVN_ERR(svn_wc__loggy_copy(&log_accum,
-                                 svn_wc__adm_access_abspath(adm_access),
-                                 tmp_text_base_path, dst_path,
-                                 pool));
-      SVN_ERR(svn_wc__loggy_set_entry_timestamp_from_wc(&log_accum,
-                                                        adm_access,
-                                                        dst_path, pool));
-      SVN_ERR(svn_wc__loggy_set_entry_working_size_from_wc(&log_accum,
-                                                           adm_access,
-                                                           dst_path, pool));
+      SVN_ERR(svn_wc__loggy_copy(
+                        &log_accum, svn_wc__adm_access_abspath(adm_access),
+                        tmp_text_base_path, dst_path, pool));
+      SVN_ERR(svn_wc__loggy_set_entry_timestamp_from_wc(
+                        &log_accum, svn_wc__adm_access_abspath(adm_access),
+                        dst_path, pool));
+      SVN_ERR(svn_wc__loggy_set_entry_working_size_from_wc(
+                        &log_accum, svn_wc__adm_access_abspath(adm_access),
+                        dst_path, pool));
     }
 
   /* Install new text base. */
