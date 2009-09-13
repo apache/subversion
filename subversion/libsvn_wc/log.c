@@ -1909,10 +1909,6 @@ svn_wc__loggy_entry_modify(svn_stringbuf_t **log_accum,
                  SVN_WC__ENTRY_ATTR_URL,
                  entry->url);
 
-  ADD_ENTRY_ATTR(SVN_WC__ENTRY_MODIFY_REPOS,
-                 SVN_WC__ENTRY_ATTR_REPOS,
-                 entry->repos);
-
   ADD_ENTRY_ATTR(SVN_WC__ENTRY_MODIFY_UUID,
                  SVN_WC__ENTRY_ATTR_UUID,
                  entry->uuid);
@@ -1936,10 +1932,6 @@ svn_wc__loggy_entry_modify(svn_stringbuf_t **log_accum,
   ADD_ENTRY_ATTR(SVN_WC__ENTRY_MODIFY_ABSENT,
                  SVN_WC__ENTRY_ATTR_ABSENT,
                  entry->absent ? "true" : "false");
-
-  ADD_ENTRY_ATTR(SVN_WC__ENTRY_MODIFY_INCOMPLETE,
-                 SVN_WC__ENTRY_ATTR_INCOMPLETE,
-                 entry->incomplete ? "true" : "false");
 
   ADD_ENTRY_ATTR(SVN_WC__ENTRY_MODIFY_COPYFROM_URL,
                  SVN_WC__ENTRY_ATTR_COPYFROM_URL,
@@ -1998,10 +1990,6 @@ svn_wc__loggy_entry_modify(svn_stringbuf_t **log_accum,
   ADD_ENTRY_ATTR(SVN_WC__ENTRY_MODIFY_FORCE,
                  SVN_WC__LOG_ATTR_FORCE,
                  "true");
-
-  ADD_ENTRY_ATTR(SVN_WC__ENTRY_MODIFY_TREE_CONFLICT_DATA,
-                 SVN_WC__ENTRY_ATTR_TREE_CONFLICT_DATA,
-                 entry->tree_conflict_data ? entry->tree_conflict_data : "");
 
 #undef ADD_ENTRY_ATTR
 
