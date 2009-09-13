@@ -4450,13 +4450,15 @@ merge_file(svn_wc_notify_state_t *content_state,
 
               /* If we created a temporary left merge file, get rid of it. */
               if (delete_left)
-                SVN_ERR(svn_wc__loggy_remove(&log_accum, adm_access,
-                                             merge_left, pool));
+                SVN_ERR(svn_wc__loggy_remove(
+                            &log_accum, svn_wc__adm_access_abspath(adm_access),
+                            merge_left, pool));
 
               /* And clean up add-with-history-related temp file too. */
               if (fb->copied_working_text)
-                SVN_ERR(svn_wc__loggy_remove(&log_accum, adm_access,
-                                             fb->copied_working_text, pool));
+                SVN_ERR(svn_wc__loggy_remove(
+                            &log_accum, svn_wc__adm_access_abspath(adm_access),
+                            fb->copied_working_text, pool));
 
             } /* end: working file exists and has mods */
         } /* end: working file has mods */
@@ -4511,8 +4513,9 @@ merge_file(svn_wc_notify_state_t *content_state,
                                  svn_wc__adm_access_abspath(adm_access),
                                  new_text_base_path,
                                  fb->text_base_path, pool));
-      SVN_ERR(svn_wc__loggy_set_readonly(&log_accum, adm_access,
-                                         fb->text_base_path, pool));
+      SVN_ERR(svn_wc__loggy_set_readonly(
+                        &log_accum, svn_wc__adm_access_abspath(adm_access),
+                        fb->text_base_path, pool));
       tmp_entry.checksum = svn_checksum_to_cstring(actual_checksum, pool);
       flags |= SVN_WC__ENTRY_MODIFY_CHECKSUM;
     }
@@ -4538,9 +4541,9 @@ merge_file(svn_wc_notify_state_t *content_state,
       /* Adjust working copy file unless this file is an allowed
          obstruction. */
       if (fb->last_changed_date && !fb->existed)
-        SVN_ERR(svn_wc__loggy_set_timestamp(&log_accum, adm_access,
-                                            fb->path, fb->last_changed_date,
-                                            pool));
+        SVN_ERR(svn_wc__loggy_set_timestamp(
+                        &log_accum, svn_wc__adm_access_abspath(adm_access),
+                        fb->path, fb->last_changed_date, pool));
 
       if ((new_text_base_path || magic_props_changed)
           && !fb->deleted)
@@ -4557,9 +4560,9 @@ merge_file(svn_wc_notify_state_t *content_state,
 
   /* Clean up add-with-history temp file. */
   if (fb->copied_text_base)
-    SVN_ERR(svn_wc__loggy_remove(&log_accum, adm_access,
-                                 fb->copied_text_base,
-                                 pool));
+    SVN_ERR(svn_wc__loggy_remove(&log_accum,
+                                 svn_wc__adm_access_abspath(adm_access),
+                                 fb->copied_text_base, pool));
 
 
   /* Set the returned content state. */
@@ -5574,9 +5577,9 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
                                  pool));
 
       /* After copying to the working directory, lose the temp file. */
-      SVN_ERR(svn_wc__loggy_remove(&log_accum, adm_access,
-                                   tmp_text_path,
-                                   pool));
+      SVN_ERR(svn_wc__loggy_remove(&log_accum,
+                                   svn_wc__adm_access_abspath(adm_access),
+                                   tmp_text_path, pool));
     }
   else
     {
@@ -5602,7 +5605,8 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
     SVN_ERR(svn_wc__loggy_move(&log_accum,
                                svn_wc__adm_access_abspath(adm_access),
                                tmp_text_base_path, text_base_path, pool));
-    SVN_ERR(svn_wc__loggy_set_readonly(&log_accum, adm_access,
+    SVN_ERR(svn_wc__loggy_set_readonly(&log_accum,
+                                       svn_wc__adm_access_abspath(adm_access),
                                        text_base_path, pool));
 
     tmp_entry.checksum = svn_checksum_to_cstring(base_checksum, pool);

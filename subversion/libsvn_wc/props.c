@@ -354,7 +354,8 @@ install_props_file(svn_stringbuf_t **log_accum,
                              pool));
 
   /* Make the props file read-only */
-  return svn_wc__loggy_set_readonly(log_accum, adm_access,
+  return svn_wc__loggy_set_readonly(log_accum,
+                                    svn_wc__adm_access_abspath(adm_access),
                                     propfile_path, pool);
 }
 
@@ -392,7 +393,8 @@ svn_wc__install_props(svn_stringbuf_t **log_accum,
       SVN_ERR(svn_wc__prop_path(&working_propfile_path, path,
                                 kind, svn_wc__props_working, pool));
 
-      SVN_ERR(svn_wc__loggy_remove(log_accum, adm_access,
+      SVN_ERR(svn_wc__loggy_remove(log_accum,
+                                   svn_wc__adm_access_abspath(adm_access),
                                    working_propfile_path, pool));
     }
 
@@ -411,7 +413,8 @@ svn_wc__install_props(svn_stringbuf_t **log_accum,
           SVN_ERR(svn_wc__prop_path(&base_propfile_path, path,
                                     kind, svn_wc__props_base, pool));
 
-          SVN_ERR(svn_wc__loggy_remove(log_accum, adm_access,
+          SVN_ERR(svn_wc__loggy_remove(log_accum,
+                                       svn_wc__adm_access_abspath(adm_access),
                                        base_propfile_path, pool));
         }
     }
@@ -505,7 +508,9 @@ svn_wc__loggy_props_delete(svn_stringbuf_t **log_accum,
 
   SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access, TRUE, pool));
   SVN_ERR(svn_wc__prop_path(&props_file, path, entry->kind, props_kind, pool));
-  SVN_ERR(svn_wc__loggy_remove(log_accum, adm_access, props_file, pool));
+  SVN_ERR(svn_wc__loggy_remove(log_accum,
+                               svn_wc__adm_access_abspath(adm_access),
+                               props_file, pool));
 
   return SVN_NO_ERROR;
 }
@@ -1711,7 +1716,8 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
                                    reject_tmp_path, reject_path, pool));
 
       /* And of course, delete the temporary reject file. */
-      SVN_ERR(svn_wc__loggy_remove(entry_accum, adm_access,
+      SVN_ERR(svn_wc__loggy_remove(entry_accum,
+                                   svn_wc__adm_access_abspath(adm_access),
                                    reject_tmp_path, pool));
 
       /* Mark entry as "conflicted" with a particular .prej file. */
