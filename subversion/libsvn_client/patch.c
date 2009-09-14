@@ -372,10 +372,8 @@ match_hunk(svn_boolean_t *matched, patch_target_t *target,
                                   &target->eof, iterpool));
       if (! hunk_eof && hunk_line->len > 0)
         {
-          char c = hunk_line->data[0];
-          SVN_ERR_ASSERT(c == ' ' || c == '-');
-          lines_matched = (hunk_line->len == target_line->len + 1 &&
-                           ! strcmp(hunk_line->data + 1, target_line->data));
+          lines_matched = (hunk_line->len == target_line->len &&
+                           ! strcmp(hunk_line->data, target_line->data));
         }
     }
   while (lines_matched && ! (hunk_eof || target->eof));
@@ -648,13 +646,9 @@ copy_hunk_text(svn_stream_t *hunk_text, apr_file_t *file,
         {
           if (line->len >= 1)
             {
-              char c = line->data[0];
-
-              SVN_ERR_ASSERT(c == ' ' || c == '+' || c == '-');
-              len = line->len - 1;
-              SVN_ERR(svn_io_file_write_full(file, line->data + 1, len, &len,
+              SVN_ERR(svn_io_file_write_full(file, line->data, line->len, &len,
                                              iterpool));
-              SVN_ERR_ASSERT(len == line->len - 1);
+              SVN_ERR_ASSERT(len == line->len);
             }
 
           /* Add newline. */
