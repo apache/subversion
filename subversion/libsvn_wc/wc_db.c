@@ -252,35 +252,6 @@ static const svn_token_map_t presence_map[] = {
   { NULL }
 };
 
-
-
-static svn_wc__db_kind_t
-word_to_kind(const char *kind)
-{
-  return svn_token__from_word_strict(kind_map, kind);
-}
-
-
-static const char *
-kind_to_word(svn_wc__db_kind_t kind)
-{
-  return svn_token__to_word(kind_map, kind);
-}
-
-
-static svn_wc__db_status_t
-word_to_presence(const char *presence)
-{
-  return svn_token__from_word_strict(presence_map, presence);
-}
-
-
-static const char *
-presence_to_word(svn_wc__db_status_t presence)
-{
-  return svn_token__to_word(presence_map, presence);
-}
-
 
 static svn_filesize_t
 get_translated_size(svn_sqlite__stmt_t *stmt, int slot)
@@ -1273,8 +1244,8 @@ insert_base_node(void *baton, svn_sqlite__db_t *sdb)
                                   svn_dirent_dirname(pibb->local_relpath,
                                                      scratch_pool)));
 
-  SVN_ERR(svn_sqlite__bind_text(stmt, 6, presence_to_word(pibb->status)));
-  SVN_ERR(svn_sqlite__bind_text(stmt, 7, kind_to_word(pibb->kind)));
+  SVN_ERR(svn_sqlite__bind_token(stmt, 6, presence_map, pibb->status));
+  SVN_ERR(svn_sqlite__bind_token(stmt, 7, kind_map, pibb->kind));
   SVN_ERR(svn_sqlite__bind_int64(stmt, 8, pibb->revision));
 
   SVN_ERR(svn_sqlite__bind_properties(stmt, 9, pibb->props, scratch_pool));
@@ -1948,11 +1919,8 @@ svn_wc__db_base_get_info(svn_wc__db_status_t *status,
 
   if (have_row)
     {
-      const char *kind_str = svn_sqlite__column_text(stmt, 5, NULL);
-      svn_wc__db_kind_t node_kind;
-
-      SVN_ERR_ASSERT(kind_str != NULL);
-      node_kind = word_to_kind(kind_str);
+      svn_wc__db_kind_t node_kind = svn_sqlite__column_token(stmt, 5,
+                                                             kind_map);
 
       if (kind)
         {
@@ -1963,10 +1931,7 @@ svn_wc__db_base_get_info(svn_wc__db_status_t *status,
         }
       if (status)
         {
-          const char *presence = svn_sqlite__column_text(stmt, 4, NULL);
-
-          SVN_ERR_ASSERT(presence != NULL);
-          *status = word_to_presence(presence);
+          *status = svn_sqlite__column_token(stmt, 4, presence_map);
 
           if (node_kind == svn_wc__db_kind_subdir
               && *status == svn_wc__db_status_normal)
@@ -2850,25 +2815,18 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
 
   if (have_base || have_work)
     {
-      const char *kind_str;
       svn_wc__db_kind_t node_kind;
 
       if (have_work)
-        kind_str = svn_sqlite__column_text(stmt_work, 1, NULL);
+        node_kind = svn_sqlite__column_token(stmt_work, 1, kind_map);
       else
-        kind_str = svn_sqlite__column_text(stmt_base, 5, NULL);
-
-      SVN_ERR_ASSERT(kind_str != NULL);
-      node_kind = word_to_kind(kind_str);
+        node_kind = svn_sqlite__column_token(stmt_base, 5, kind_map);
 
       if (status)
         {
-          const char *presence_str;
-
           if (have_base)
             {
-              presence_str = svn_sqlite__column_text(stmt_base, 4, NULL);
-              *status = word_to_presence(presence_str);
+              *status = svn_sqlite__column_token(stmt_base, 4, presence_map);
 
               /* We have a presence that allows a WORKING_NODE override
                  (normal or not-present), or we don't have an override.  */
@@ -2893,8 +2851,8 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
             {
               svn_wc__db_status_t work_status;
 
-              presence_str = svn_sqlite__column_text(stmt_work, 0, NULL);
-              work_status = word_to_presence(presence_str);
+              work_status = svn_sqlite__column_token(stmt_work, 0,
+                                                     presence_map);
               SVN_ERR_ASSERT(work_status == svn_wc__db_status_normal
                              || work_status == svn_wc__db_status_not_present
                              || work_status == svn_wc__db_status_base_deleted
@@ -3711,7 +3669,7 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
       if (current_abspath == local_abspath)
         {
           svn_wc__db_status_t presence
-            = word_to_presence(svn_sqlite__column_text(stmt, 0, NULL));
+            = svn_sqlite__column_token(stmt, 0, presence_map);
 
           /* The starting node should exist normally.  */
           if (presence != svn_wc__db_status_normal)
@@ -3910,7 +3868,7 @@ svn_wc__db_scan_deletion(const char **base_del_abspath,
 
       /* We need the presence of the WORKING node. Note that legal values
          are: normal, not-present, base-deleted.  */
-      work_presence = word_to_presence(svn_sqlite__column_text(stmt, 1, NULL));
+      work_presence = svn_sqlite__column_token(stmt, 1, presence_map);
 
       /* The starting node should be deleted.  */
       if (current_abspath == local_abspath
@@ -3929,7 +3887,7 @@ svn_wc__db_scan_deletion(const char **base_del_abspath,
       if (have_base)
         {
           svn_wc__db_status_t base_presence
-            = word_to_presence(svn_sqlite__column_text(stmt, 0, NULL));
+            = svn_sqlite__column_token(stmt, 0, presence_map);
 
           /* Only "normal" and "not-present" are allowed.  */
           SVN_ERR_ASSERT(base_presence == svn_wc__db_status_normal
