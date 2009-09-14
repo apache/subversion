@@ -438,8 +438,8 @@ svn_cmdline_auth_plaintext_prompt(svn_boolean_t *may_save_plaintext,
 {
   const char *prompt_string = _("Store password unencrypted (yes/no)? ");
   const char *prompt_text =
-  _("-----------------------------------------------------------------------\n"
-    "ATTENTION!  Your password for authentication realm:\n"
+  _("\n-----------------------------------------------------------------------"
+    "\nATTENTION!  Your password for authentication realm:\n"
     "\n"
     "   %s\n"
     "\n"

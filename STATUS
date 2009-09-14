@@ -183,11 +183,3 @@ Candidate changes:
    
 Approved changes:
 =================
-
- * r38982
-   Print a newline before the plaintext password prompt.
-   Justification:
-     It wasn't intentional that the first line of dashes of this prompt
-     appears on the same line as "Transmitting file data ..." during commit.
-   Votes:
-     +1: stsp, hwright, rhuijben
