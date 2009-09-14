@@ -18,11 +18,13 @@
 #    under the License.
 #
 # Dictionary:
-#
+
 # '' - «»
+# API - programmeringsgrensesnitt
+# URL - URL
+# WC (“working copy”) - AK («arbeidskopi»)
 # allocate - reservere
 # ancestor - opprinnelse
-# API - programmeringsgrensesnitt
 # argument - argument
 # authentication realm - autentiseringsområde
 # bump - øke
@@ -76,20 +78,20 @@
 # switched - byttet
 # target - mål
 # token - nøkkel (i lock-sammenheng)
+# truncate - avkorte
 # unsupported x - x ikke støttet
 # unversioned - uversjonert
-# URL - URL
 # usage - bruk
 # uuid - uuid
-# WC (“working copy”) - AK («arbeidskopi»)
 # working copy - arbeidskopi
+
 #
 msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.7\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2009-09-12 13:46+0200\n"
-"PO-Revision-Date: 2009-09-13 22:34+0200\n"
+"PO-Revision-Date: 2009-09-14 19:43+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Norwegian <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -3103,12 +3105,9 @@ msgid "svndiff window length is corrupt"
 msgstr "svndiff-vinduslengde er ødelagt"
 
 #: ../libsvn_fs_fs/fs_fs.c:3159
-#, fuzzy
 msgid "Checksum mismatch while reading representation"
 msgstr ""
-"Usamsvarende kontrollsum under lesing av representasjon:\n"
-"   forventet:  %s\n"
-"   gjeldende:  %s\n"
+"Kontrollsum samsvarer ikke under lesing av representasjon"
 
 #: ../libsvn_fs_fs/fs_fs.c:3461 ../libsvn_fs_fs/fs_fs.c:3474
 #: ../libsvn_fs_fs/fs_fs.c:3480 ../libsvn_fs_fs/fs_fs.c:6204
@@ -3214,7 +3213,7 @@ msgstr "Transaksjon ikke funnet"
 
 #: ../libsvn_fs_fs/fs_fs.c:6999
 msgid "FS format too old to pack, please upgrade."
-msgstr ""
+msgstr "FS-format er for gammelt til å bli pakket, vennligst oppgrader."
 
 #: ../libsvn_fs_fs/lock.c:210
 #, c-format
@@ -3238,12 +3237,12 @@ msgstr "Låsing feilet: En nyere versjon av «%s» finnes"
 
 #: ../libsvn_fs_fs/rep-cache.c:82 ../libsvn_fs_fs/rep-cache.c:121
 msgid "Only SHA1 checksums can be used as keys in the rep_cache table.\n"
-msgstr ""
+msgstr "Kun SHA1-kontrollsummer kan brukes som nøkler i rep_cache-tabellen.\n"
 
 #: ../libsvn_fs_fs/rep-cache.c:138
-#, fuzzy, c-format
+#, c-format
 msgid "Representation key for checksum '%%s' exists in filesystem '%%s' with a different value (%%ld,%%%s,%%%s,%%%s) than what we were about to store (%%ld,%%%s,%%%s,%%%s)"
-msgstr "Nodeopprinnelsen for «%s» finnes i filsystem «%s» med en annen verdi (%s) enn det vi var på vei til å lagre (%s)"
+msgstr "Representasjonsnøkkel for kontrollsum «%%s» finnes i filsystem «%%s» med en annen verdi (%%ld,%%%s,%%%s,%%%s) enn det vi var på vei til å lagre (%%ld,%%%s,%%%s,%%%s)"
 
 #: ../libsvn_fs_fs/tree.c:3430
 #, c-format
@@ -3284,9 +3283,9 @@ msgid "'%s' in revision %ld is an unrelated object"
 msgstr "«%s» i revisjon %ld er et urelatert objekt"
 
 #: ../libsvn_ra/compat.c:848 ../libsvn_ra/ra_loader.c:1064
-#, fuzzy, c-format
+#, c-format
 msgid "Invalid peg revision %ld"
-msgstr "Ugyldig sluttrevisjon %ld"
+msgstr "Ugyldig knaggrevisjon %ld"
 
 #: ../libsvn_ra/compat.c:851 ../libsvn_ra/ra_loader.c:1067
 #: ../libsvn_repos/rev_hunt.c:208 ../libsvn_repos/rev_hunt.c:323
@@ -3295,9 +3294,8 @@ msgid "Invalid end revision %ld"
 msgstr "Ugyldig sluttrevisjon %ld"
 
 #: ../libsvn_ra/compat.c:854 ../libsvn_ra/ra_loader.c:1070
-#, fuzzy
 msgid "Peg revision must precede end revision"
-msgstr "Startrevisjonen må angis før sluttrevisjonen"
+msgstr "Knaggrevisjon må være før sluttrevisjon"
 
 #: ../libsvn_ra/ra_loader.c:234
 #, c-format
@@ -3533,9 +3531,9 @@ msgstr "Feil under skriving av hele datamengden til strøm"
 #: ../libsvn_ra_neon/get_location_segments.c:211
 #: ../libsvn_ra_neon/get_locations.c:194
 #: ../libsvn_ra_serf/get_deleted_rev.c:238
-#, fuzzy, c-format
+#, c-format
 msgid "'%s' REPORT not implemented"
-msgstr "«get-file-revs» REPORT ikke implementert"
+msgstr "«%s» REPORT ikke implementert"
 
 #: ../libsvn_ra_neon/file_revs.c:383
 msgid "The file-revs report didn't contain any revisions"
@@ -3654,9 +3652,9 @@ msgid "Failed to find label '%s' for URL '%s'"
 msgstr "Kunne ikke finne etiketten «%s» for adressen «%s»"
 
 #: ../libsvn_ra_neon/props.c:633
-#, fuzzy, c-format
+#, c-format
 msgid "'%s' was not present on the resource '%s'"
-msgstr "«%s» var ikke tilstede i ressursen"
+msgstr "«%s» var ikke tilstede i ressursen «%s»"
 
 #: ../libsvn_ra_neon/props.c:700
 #, c-format
@@ -3811,7 +3809,7 @@ msgstr "stien «%s» ble ikke funnet"
 #: ../libsvn_ra_neon/util.c:556
 #, c-format
 msgid "access to '%s' forbidden"
-msgstr ""
+msgstr "tilgang til «%s» nektes"
 
 #: ../libsvn_ra_neon/util.c:565 ../libsvn_ra_serf/util.c:1639
 #, c-format
@@ -3898,9 +3896,9 @@ msgid "%s of '%s': %d %s (%s://%s)"
 msgstr "%s av «%s»: %d %s (%s://%s)"
 
 #: ../libsvn_ra_serf/commit.c:1103
-#, fuzzy, c-format
+#, c-format
 msgid "POST request did not return transaction information"
-msgstr "Objektet er ikke en transaksjonsrot"
+msgstr "POST-forespørsel returnerte ikke transaksjonsinformasjon"
 
 #: ../libsvn_ra_serf/commit.c:1145
 msgid "The OPTIONS response did not include the requested activity-collection-set value"
@@ -3912,9 +3910,9 @@ msgid "The OPTIONS response did not include the requested checked-in value"
 msgstr "OPTIONS-responsen manglet den forespurte innlagte verdien"
 
 #: ../libsvn_ra_serf/commit.c:1459
-#, fuzzy, c-format
+#, c-format
 msgid "Adding a directory failed: %s on %s (%d %s)"
-msgstr "Tillegging av katalog feilet: %s på %s (%d)"
+msgstr "Tillegging av katalog feilet: %s på %s (%d %s)"
 
 #: ../libsvn_ra_serf/getlocationsegments.c:209
 #, fuzzy, c-format
@@ -3936,9 +3934,8 @@ msgid "Unlock request failed: %d %s"
 msgstr "«Lås opp»-forespørsel feilet: %d %s"
 
 #: ../libsvn_ra_serf/property.c:984
-#, fuzzy
 msgid "The OPTIONS response did not include the youngest revision"
-msgstr "OPTIONS-responsen manglet den forespurte «version-name»-verdien"
+msgstr "OPTIONS-responsen inneholdt ikke den yngste revisjonen"
 
 #: ../libsvn_ra_serf/property.c:1030
 msgid "The OPTIONS response did not include the requested baseline-collection value"
@@ -4229,9 +4226,8 @@ msgid "Error while replaying commit"
 msgstr "Under klargjøring av «%s» for innlegging"
 
 #: ../libsvn_ra_svn/client.c:2359
-#, fuzzy
 msgid "'get-deleted-rev' not implemented"
-msgstr "«get-file-revs» ikke implementert"
+msgstr "«get-deleted-rev» ikke implementert"
 
 #: ../libsvn_ra_svn/client.c:2423
 #, c-format
@@ -4340,9 +4336,9 @@ msgid "Can't get socket timeout"
 msgstr "Kan ikke motta tidsavbrudd for sokkel"
 
 #: ../libsvn_repos/commit.c:135
-#, fuzzy, c-format
+#, c-format
 msgid "'%s' is out of date"
-msgstr "Filen «%s» er utdatert"
+msgstr "«%s» er utdatert"
 
 #: ../libsvn_repos/commit.c:302 ../libsvn_repos/commit.c:447
 #, c-format
@@ -4427,9 +4423,9 @@ msgid "Storage of non-regular property '%s' is disallowed through the repository
 msgstr "Lagring av ikke-regulær egenskap «%s» er forbudt gjennom depotgrensesnittet, og kan tyde på en feil i klienten din"
 
 #: ../libsvn_repos/fs-wrap.c:186
-#, fuzzy, c-format
+#, c-format
 msgid "Cannot accept '%s' property because it is not encoded in UTF-8"
-msgstr "Kan ikke godta loggmelding fordi den ikke er kodet i UTF-8"
+msgstr "Kan ikke godta «%s»-egenskap fordi den ikke er kodet i UTF-8"
 
 #: ../libsvn_repos/fs-wrap.c:196
 #, fuzzy, c-format
@@ -4582,9 +4578,9 @@ msgid "Incomplete or unterminated property block"
 msgstr "Ukomplett eller uavsluttet egenskapsblokk"
 
 #: ../libsvn_repos/load.c:406
-#, fuzzy, c-format
+#, c-format
 msgid " removing '\\r' from %s ..."
-msgstr "Fjerner «%s» fra forandringsliste «%s»."
+msgstr " fjerner «\\r» fra %s ..."
 
 #: ../libsvn_repos/load.c:515
 msgid "Unexpected EOF writing contents"
@@ -4713,9 +4709,9 @@ msgid "Not authorized to open root of edit operation"
 msgstr "Ikke autorisert til å åpne roten for redigeringsoperasjonen"
 
 #: ../libsvn_repos/reporter.c:1176
-#, fuzzy, c-format
+#, c-format
 msgid "Target path '%s' does not exist"
-msgstr "Målstien finnes ikke"
+msgstr "Målstien «%s» finnes ikke"
 
 #: ../libsvn_repos/reporter.c:1184
 msgid "Cannot replace a directory from within"
@@ -4925,9 +4921,9 @@ msgid "Invalid syntax of argument of --config-option"
 msgstr "Ugyldig argument «%s» i diff-valg"
 
 #: ../libsvn_subr/cmdline.c:686
-#, fuzzy, c-format
+#, c-format
 msgid "Unrecognized file in argument of %s"
-msgstr "Ukjent loggfilelement «%s» i «%s»"
+msgstr "Ukjent fil i argument til %s"
 
 #: ../libsvn_subr/config.c:656
 #, c-format
@@ -5048,9 +5044,9 @@ msgid "In file '%s' line %d: internal malfunction"
 msgstr "I filen «%s», linje %d: Intern funksjonsfeil"
 
 #: ../libsvn_subr/io.c:168
-#, fuzzy, c-format
+#, c-format
 msgid "Error converting entry in directory '%s' to UTF-8"
-msgstr "Feil under konvertering av dybde fra lokalt tegnsett til UTF-8"
+msgstr "Feil under konvertering av post i katalog «%s» til UTF-8"
 
 #: ../libsvn_subr/io.c:232
 #, c-format
@@ -5368,14 +5364,14 @@ msgid "Can't write to stream"
 msgstr "Kan ikke skrive til strøm"
 
 #: ../libsvn_subr/io.c:2937
-#, fuzzy, c-format
+#, c-format
 msgid "Can't truncate file '%s'"
-msgstr "Kan ikke lese filen «%s»"
+msgstr "Kan ikke avkorte filen «%s»"
 
 #: ../libsvn_subr/io.c:2938
-#, fuzzy, c-format
+#, c-format
 msgid "Can't truncate stream"
-msgstr "Kan ikke lese strøm"
+msgstr "Kan ikke avkorte strøm"
 
 #: ../libsvn_subr/io.c:2978
 #, c-format
@@ -5432,9 +5428,9 @@ msgid "First line of '%s' contains non-digit"
 msgstr "Første linje av «%s» inneholder ikke-siffer"
 
 #: ../libsvn_subr/io.c:3611
-#, fuzzy, c-format
+#, c-format
 msgid "Can't create temporary file from template '%s'"
-msgstr "Kan ikke opprette rør for påhakning «%s»"
+msgstr "Kan ikke opprette midlertidig fil fra malen «%s»"
 
 #: ../libsvn_subr/kitchensink.c:46
 #, c-format
@@ -5559,7 +5555,7 @@ msgstr "«%s» er ikke et gyldig Subversion-egenskapsnavn"
 #: ../libsvn_subr/opt.c:914
 #, c-format
 msgid "'%s' is just a peg revision. Maybe try '%s@' instead?"
-msgstr ""
+msgstr "«%s» er bare en knaggrevisjon. Prøv «%s@» istedenfor."
 
 #: ../libsvn_subr/opt.c:946
 #, c-format
@@ -5595,6 +5591,11 @@ msgid ""
 "Subversion is open source software, see http://subversion.tigris.org/\n"
 "\n"
 msgstr ""
+"Opphavsrett (C) 2009 The Subversion Corporation.\n"
+"Denne programvaren inneholder bidrag fra mange personer,\n"
+"se filen NOTICE for mer informasjon.\n"
+"Subversion er åpen kildekode, se http://subversion.tigris.org/\n"
+"\n"
 
 #: ../libsvn_subr/path.c:996
 #, c-format
@@ -5703,7 +5704,7 @@ msgid "Store password unencrypted (yes/no)? "
 msgstr "Lagre passord ukryptert (ja/nei)?"
 
 #: ../libsvn_subr/prompt.c:446
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "\n"
 "-----------------------------------------------------------------------\n"
@@ -5720,6 +5721,7 @@ msgid ""
 "'%s'.\n"
 "-----------------------------------------------------------------------\n"
 msgstr ""
+"\n"
 "-----------------------------------------------------------------------\n"
 "OBS! Passordet ditt for autentiseringsområde:\n"
 "\n"
@@ -5732,6 +5734,7 @@ msgstr ""
 "Hvis du vil forhindre at denne advarselen vises i framtiden, kan du sette\n"
 "verdien for «store-plaintext-passwords»-valget til enten «yes» eller\n"
 "«no» i «%s».\n"
+"-----------------------------------------------------------------------\n"
 
 #: ../libsvn_subr/prompt.c:473
 msgid "Store passphrase unencrypted (yes/no)? "
@@ -5768,9 +5771,9 @@ msgstr ""
 "eller «no» i «%s».\n"
 
 #: ../libsvn_subr/prompt.c:521
-#, fuzzy, c-format
+#, c-format
 msgid "Password for '%s' GNOME keyring: "
-msgstr "Passord for «%s»: "
+msgstr "Passord for GNOME-nøkkelringen «%s»: "
 
 #: ../libsvn_subr/simple_providers.c:446
 #: ../libsvn_subr/ssl_client_cert_pw_providers.c:296
@@ -5780,35 +5783,33 @@ msgstr "Feil i oppsettet: Ugyldig verdi «%s» for valget «%s»"
 
 #: ../libsvn_subr/sqlite.c:154
 msgid "Expected database row missing"
-msgstr ""
+msgstr "Forventet databaserad mangler"
 
 #: ../libsvn_subr/sqlite.c:155
 msgid "Extra database row found"
-msgstr ""
+msgstr "Ekstra databaserad funnet"
 
 #: ../libsvn_subr/sqlite.c:599
 #, c-format
 msgid "Schema format %d not recognized"
-msgstr ""
+msgstr "Skjemaformat %d gjenkjennes ikke"
 
 #: ../libsvn_subr/sqlite.c:615
 #, c-format
 msgid "SQLite compiled for %s, but running with %s"
-msgstr ""
+msgstr "SQLite er kompilert for %s, men kjører med %s"
 
 #: ../libsvn_subr/sqlite.c:626
 msgid "SQLite is required to be compiled and run in thread-safe mode"
 msgstr ""
 
 #: ../libsvn_subr/sqlite.c:636
-#, fuzzy
 msgid "Could not configure SQLite"
-msgstr "Kunne ikke lagre filen"
+msgstr "Klarte ikke å sette opp SQLite"
 
 #: ../libsvn_subr/sqlite.c:638
-#, fuzzy
 msgid "Could not initialize SQLite"
-msgstr "Klarte ikke å initialisere SASL-biblioteket"
+msgstr "Klarte ikke å initialisere SQLite"
 
 #: ../libsvn_subr/sqlite.c:645
 #, fuzzy
@@ -5818,7 +5819,7 @@ msgstr "Klarte ikke å initialisere SASL-biblioteket"
 #: ../libsvn_subr/sqlite.c:715
 #, c-format
 msgid "Expected SQLite database not found: %s"
-msgstr ""
+msgstr "Fant ikke forventet SQLite-database: %s"
 
 #: ../libsvn_subr/subst.c:1428 ../libsvn_wc/props.c:2024
 #, c-format
@@ -5975,9 +5976,9 @@ msgid "Can't find parent directory's entry while trying to add '%s'"
 msgstr "Kan ikke finne foreldrekatalogens oppføring under forsøk på å legge til «%s»"
 
 #: ../libsvn_wc/adm_ops.c:1525
-#, fuzzy, c-format
+#, c-format
 msgid "Can't create an entry with a reserved name while trying to add '%s'"
-msgstr "Kan ikke finne foreldrekatalogens oppføring under forsøk på å legge til «%s»"
+msgstr "Kan ikke opprette en post med et reservert navn og samtidig prøve å legge til «%s»"
 
 #: ../libsvn_wc/adm_ops.c:1530
 #, c-format
@@ -6009,9 +6010,9 @@ msgid "Unknown or unexpected kind for path '%s'"
 msgstr "Ukjent eller uventet type av filstien «%s»:"
 
 #: ../libsvn_wc/adm_ops.c:2322
-#, fuzzy, c-format
+#, c-format
 msgid "Cannot revert unversioned item '%s'"
-msgstr "Ukjent eller ikke-versjonabel type for «%s»"
+msgstr "Kan ikke sette tilbake uversjonert element «%s»"
 
 #: ../libsvn_wc/adm_ops.c:2349
 #, c-format
@@ -6098,14 +6099,14 @@ msgid "Cannot crop '%s': it is going to be removed from repository. Try commit i
 msgstr "Kan ikke kopiere eller flytte «%s»: Den er foreløpig ikke i depotet. Prøv innsending først"
 
 #: ../libsvn_wc/crop.c:255
-#, fuzzy, c-format
+#, c-format
 msgid "Cannot exclude current directory"
-msgstr "Kan ikke lese katalog"
+msgstr "Kan ikke ekskludere gjeldende katalog"
 
 #: ../libsvn_wc/crop.c:260
-#, fuzzy, c-format
+#, c-format
 msgid "Cannot exclude root directory"
-msgstr "Kan ikke lese katalog"
+msgstr "Kan ikke ekskludere rotkatalog"
 
 #: ../libsvn_wc/crop.c:291
 #, fuzzy, c-format
@@ -6117,15 +6118,15 @@ msgid "No WC table entry"
 msgstr ""
 
 #: ../libsvn_wc/entries.c:1190
-#, fuzzy, c-format
+#, c-format
 msgid "Admin area of '%s' is missing"
-msgstr "Katalogen «%s» mangler"
+msgstr "Administrasjonsområde for «%s» mangler"
 
 #: ../libsvn_wc/entries.c:1228 ../libsvn_wc/entries.c:1237
 #: ../libsvn_wc/entries.c:1246
-#, fuzzy, c-format
+#, c-format
 msgid "'%s' is not of the right kind"
-msgstr "«%s» er ikke roten i depotet"
+msgstr "«%s» er ikke riktig type"
 
 #: ../libsvn_wc/entries.c:2247
 #, c-format
