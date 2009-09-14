@@ -3083,179 +3083,184 @@ absent_directory(const char *path,
 }
 
 
-/* Beginning at DEST_DIR (and its associated entry DEST_ENTRY) within
-   a working copy, search the working copy for an pre-existing
-   versioned file which is exactly equal to COPYFROM_PATH@COPYFROM_REV.
+/* Beginning at DIR_ABSPATH (from repository with uuid DIR_REPOS_UUID and
+   with repos_relpath dir_repos_relpath) within a working copy, search the
+   working copy for an pre-existing versioned file which is exactly equal
+   to COPYFROM_PATH@COPYFROM_REV.
 
-   If the file isn't found, set *RETURN_PATH to NULL.
+   If the file isn't found, set *RETURN_ABSPATH to NULL.
 
    If the file is found, return the absolute path to it in
-   *RETURN_PATH, its entry in *RETURN_ENTRY.
+   *RETURN_ABSPATH.
+
+   ### With a centralized datastore this becomes much easier. For now we
+   ### keep the old algorithm because the result is also used for copying
+   ### local changes. This support can probably be removed once we have real
+   ### local file moves.
 */
 static svn_error_t *
 locate_copyfrom(svn_wc__db_t *db,
                 const char *copyfrom_path,
                 svn_revnum_t copyfrom_rev,
-                const char *dest_dir,
-                const svn_wc_entry_t *dest_entry,
-                const char **return_path,
-                const svn_wc_entry_t **return_entry,
-                apr_pool_t *pool)
+                const char *dir_abspath,
+                const char *dir_repos_uuid,
+                const char *dir_repos_relpath,
+                const char **return_abspath,
+                apr_pool_t *result_pool,
+                apr_pool_t *scratch_pool)
 {
-  const char *dest_fs_path, *ancestor_fs_path, *ancestor_url, *file_url;
-  const char *copyfrom_parent, *copyfrom_file;
-  const char *abs_dest_dir, *extra_components;
-  const svn_wc_entry_t *ancestor_entry, *file_entry;
+  const char *ancestor_abspath, *ancestor_relpath;
+  const char *copyfrom_relpath, *copyfrom_dir, *copyfrom_basename;
   apr_size_t levels_up;
-  svn_stringbuf_t *cwd, *cwd_parent;
-  const char *cwd_abspath;
-  svn_node_kind_t kind;
+  const char *file_abspath;
   svn_error_t *err;
-  apr_pool_t *subpool = svn_pool_create(pool);
+
+  SVN_ERR_ASSERT(dir_repos_relpath && dir_repos_uuid);
+  SVN_ERR_ASSERT(copyfrom_path[0] == '/');
 
   /* Be pessimistic.  This function is basically a series of tests
      that gives dozens of ways to fail our search, returning
      SVN_NO_ERROR in each case.  If we make it all the way to the
      bottom, we have a real discovery to return. */
-  *return_path = NULL;
+  *return_abspath = NULL;
 
-  if ((! dest_entry->repos) || (! dest_entry->url))
-    return svn_error_create(SVN_ERR_WC_COPYFROM_PATH_NOT_FOUND, NULL,
-                            _("Destination directory of add-with-history "
-                              "is missing a URL"));
-
-  svn_dirent_split(copyfrom_path, &copyfrom_parent, &copyfrom_file, pool);
-  SVN_ERR(svn_dirent_get_absolute(&abs_dest_dir, dest_dir, pool));
+  copyfrom_relpath = copyfrom_path+1; /* Skip the initial '/' */
+  svn_uri_split(copyfrom_relpath, &copyfrom_dir, &copyfrom_basename,
+                scratch_pool);
 
   /* Subtract the dest_dir's URL from the repository "root" URL to get
      the absolute FS path represented by dest_dir. */
-  dest_fs_path = svn_uri_is_child(dest_entry->repos, dest_entry->url, pool);
-  if (! dest_fs_path)
-    {
-      if (strcmp(dest_entry->repos, dest_entry->url) == 0)
-        dest_fs_path = "";  /* the urls are identical; that's ok. */
-      else
-        return svn_error_create(SVN_ERR_WC_COPYFROM_PATH_NOT_FOUND, NULL,
-                                _("Destination URLs are broken"));
-    }
-  dest_fs_path = apr_pstrcat(pool, "/", dest_fs_path, NULL);
-  dest_fs_path = svn_path_canonicalize(dest_fs_path, pool);
 
   /* Find nearest FS ancestor dir of current FS path and copyfrom_parent */
-  ancestor_fs_path = svn_path_get_longest_ancestor(dest_fs_path,
-                                                   copyfrom_parent, pool);
-  if (strlen(ancestor_fs_path) == 0)
+  ancestor_relpath = svn_uri_get_longest_ancestor(dir_repos_relpath,
+                                                  copyfrom_relpath,
+                                                  scratch_pool);
+  if (strlen(ancestor_relpath) == 0)
     return SVN_NO_ERROR;
 
   /* Move 'up' the working copy to what ought to be the common ancestor dir. */
-  levels_up = svn_path_component_count(dest_fs_path)
-              - svn_path_component_count(ancestor_fs_path);
-  cwd = svn_stringbuf_create(dest_dir, pool);
-  svn_path_remove_components(cwd, levels_up);
+  levels_up = svn_path_component_count(dir_repos_relpath)
+              - svn_path_component_count(ancestor_relpath);
 
-  /* Open up this hypothetical common ancestor directory. */
-  SVN_ERR(svn_io_check_path(cwd->data, &kind, subpool));
-  if (kind != svn_node_dir)
-    return SVN_NO_ERROR;
-  SVN_ERR(svn_dirent_get_absolute(&cwd_abspath, cwd->data, subpool));
-  err = svn_wc__get_entry(&ancestor_entry, db, cwd_abspath, FALSE,
-                          svn_node_dir, FALSE, subpool, subpool);
-  if (err && err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY)
-    {
-      /* The common ancestor directory isn't version-controlled. */
-      svn_error_clear(err);
+  /* Walk up the path dirent safe */
+  ancestor_abspath = dir_abspath;
+  while (levels_up-- > 0)
+    ancestor_abspath = svn_dirent_dirname(ancestor_abspath, scratch_pool);
+
+  /* Verify hypothetical ancestor */
+  {
+    const char *repos_relpath, *repos_uuid;
+
+    err = svn_wc__db_scan_base_repos(&repos_relpath, NULL, &repos_uuid,
+                                     db, ancestor_abspath,
+                                     scratch_pool, scratch_pool);
+
+    if (err && ((err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY) ||
+                (err->apr_err == SVN_ERR_WC_PATH_FOUND)))
+      {
+        svn_error_clear(err);
+        return SVN_NO_ERROR;
+      }
+    else
+      SVN_ERR(err);
+
+    /* If we got this far, we know that the ancestor dir exists, and
+       that it's a working copy too.  But is it from the same
+       repository?  And does it represent the URL we expect it to? */
+    if (strcmp(dir_repos_uuid, repos_uuid) != 0)
       return SVN_NO_ERROR;
-    }
-  else if (err)
-    return svn_error_return(err);
 
-  /* If we got this far, we know that the ancestor dir exists, and
-     that it's a working copy too.  But is it from the same
-     repository?  And does it represent the URL we expect it to? */
-  if (dest_entry->uuid && ancestor_entry->uuid
-      && (strcmp(dest_entry->uuid, ancestor_entry->uuid) != 0))
-    return SVN_NO_ERROR;
-
-  ancestor_url = apr_pstrcat(subpool,
-                             dest_entry->repos, ancestor_fs_path, NULL);
-  if (strcmp(ancestor_url, ancestor_entry->url) != 0)
-    return SVN_NO_ERROR;
-
-  svn_pool_clear(subpool);  /* clean up adm_access junk. */
-
-  /* Add the remaining components to cwd, then 'drill down' to where
-     we hope the copyfrom_path file exists. */
-  extra_components = svn_path_is_child(ancestor_fs_path,
-                                       copyfrom_path, pool);
-  svn_path_add_component(cwd, extra_components);
-  cwd_parent = svn_stringbuf_create(cwd->data, pool);
-  svn_path_remove_component(cwd_parent);
-
-  /* First: does the proposed file path even exist? */
-  SVN_ERR(svn_io_check_path(cwd->data, &kind, subpool));
-  if (kind != svn_node_file)
-    return SVN_NO_ERROR;
-
-  /* Next: is the file's parent-dir under version control?   */
-  SVN_ERR(svn_dirent_get_absolute(&cwd_abspath, cwd->data, pool));
-  err = svn_wc__get_entry(&file_entry, db, cwd_abspath, TRUE, svn_node_file,
-                          FALSE, pool, pool);
-  if (err && err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY)
-    {
-      svn_error_clear(err);
-
-      /* There's an unversioned directory (and file) in the exact
-         correct place in the working copy.  Chances are high that
-         this file (or some parent) was deleted by 'svn update' --
-         perhaps as part of a move operation -- and this file was left
-         behind becouse it had local edits.  If that's true, we may
-         want this thing copied over to the new place.
-
-         Unfortunately, we have no way of knowing if this file is the
-         one we're looking for.  Guessing incorrectly can be really
-         hazardous, breaking the entire update.: we might find out
-         when the server fails to apply a subsequent txdelta against
-         it.  Or, if the server doesn't try to do that now, what if a
-         future update fails to apply?  For now, the only safe thing
-         to do is return no results. :-/
-      */
+    if (strcmp(ancestor_relpath, repos_relpath) != 0)
       return SVN_NO_ERROR;
-    }
-  else if (err)
-    return svn_error_return(err);
+  }
 
-  /* The candidate file is under version control;  but is it
-     really the file we're looking for?  <wave hand in circle> */
-  if (! file_entry)
-    /* Parent dir is versioned, but file is not.  Be safe and
-       return no results (see large discourse above.) */
-    return SVN_NO_ERROR;
+  /* Add the remaining components to cwd, then add the remaining relpath to
+     where we hope the copyfrom_relpath file exists. */
+  file_abspath = svn_dirent_join(ancestor_abspath,
+                                 svn_dirent_skip_ancestor(ancestor_relpath,
+                                                          copyfrom_relpath),
+                                 scratch_pool);
 
-  /* Is the repos UUID and file's URL what we expect it to be? */
-  if (file_entry->uuid && dest_entry->uuid
-      && (strcmp(file_entry->uuid, dest_entry->uuid) != 0))
-    return SVN_NO_ERROR;
+  /* Verify file in expected location */
+  {
+    svn_node_kind_t kind;
+    svn_revnum_t addition_rev = SVN_INVALID_REVNUM;
+    const char *repos_relpath, *repos_uuid;
 
-  file_url = apr_pstrcat(subpool, file_entry->repos, copyfrom_path, NULL);
-  if (strcmp(file_url, file_entry->url) != 0)
-    return SVN_NO_ERROR;
+    /* First: does the proposed file path even exist? */
+    SVN_ERR(svn_io_check_path(file_abspath, &kind, scratch_pool));
+    if (kind != svn_node_file)
+      return SVN_NO_ERROR;
+
+    /* Next: is the file under version control?   */
+    err = svn_wc__db_scan_base_repos(&repos_relpath, NULL, &repos_uuid,
+                                     db, file_abspath,
+                                     scratch_pool, scratch_pool);
+
+    if (err && ((err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY ||
+              (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND))))
+      {
+        svn_revnum_t rev;
+        svn_error_clear(err);
+        
+        /* ### Our entries handling made us handle the following
+               scenario: An older version of a file was copied at
+               exactly the expected location. Reproduced this behavior
+               until we can really querry the entire workingcopy. */
+
+        err = svn_wc__db_scan_addition(NULL, NULL, NULL, NULL, NULL,
+                                       &repos_relpath, NULL, &repos_uuid,
+                                       &addition_rev, db, file_abspath,
+                                       scratch_pool, scratch_pool);
+
+        if (err && ((err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY ||
+              (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND))))
+          {
+            svn_error_clear(err);
+
+            return SVN_NO_ERROR;
+          }
+        else
+          SVN_ERR(err);
+      }
+    else
+      SVN_ERR(err);
+
+    if (strcmp(dir_repos_uuid, repos_uuid))
+      return SVN_NO_ERROR;
+
+    if (strcmp(copyfrom_relpath, repos_relpath))
+      return SVN_NO_ERROR;
+
+    if (SVN_IS_VALID_REVNUM(addition_rev) && addition_rev == copyfrom_rev)
+      {
+        /* We found the right file as copy source */
+        *return_abspath = apr_pstrdup(result_pool, file_abspath);
+        return SVN_NO_ERROR;
+      }
+  }
 
   /* Do we actually have valid revisions for the file?  (See Issue
      #2977.) */
-  if (! (SVN_IS_VALID_REVNUM(file_entry->cmt_rev)
-         && SVN_IS_VALID_REVNUM(file_entry->revision)))
-    return SVN_NO_ERROR;
+  {
+    svn_revnum_t wc_rev, change_rev;
 
-  /* Do we have the the right *version* of the file? */
-  if (! ((file_entry->cmt_rev <= copyfrom_rev)
-         && (copyfrom_rev <= file_entry->revision)))
-    return SVN_NO_ERROR;
+    SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, &wc_rev, NULL, NULL, NULL,
+                                     &change_rev, NULL, NULL, NULL, NULL, NULL,
+                                 NULL, NULL, NULL, db, file_abspath,
+                                 scratch_pool, scratch_pool));
+
+    if (!SVN_IS_VALID_REVNUM(wc_rev) || !SVN_IS_VALID_REVNUM(change_rev))
+      return SVN_NO_ERROR;
+  
+    /* Do we have the the right *version* of the file? */
+    if (! ((change_rev <= copyfrom_rev) && (copyfrom_rev <= wc_rev)))
+      return SVN_NO_ERROR;
+  }
 
   /* Success!  We found the exact file we wanted! */
-  *return_path = apr_pstrdup(pool, cwd->data);
-  *return_entry = file_entry;
+  *return_abspath = apr_pstrdup(result_pool, file_abspath);
 
-  svn_pool_clear(subpool);
   return SVN_NO_ERROR;
 }
 
@@ -3308,15 +3313,13 @@ add_file_with_history(const char *path,
 {
   struct edit_baton *eb = pb->edit_baton;
   svn_wc_adm_access_t *adm_access;
-  const char *src_path;
-  const svn_wc_entry_t *src_entry;
   apr_hash_t *base_props, *working_props;
-  const svn_wc_entry_t *path_entry;
   svn_error_t *err;
   svn_stream_t *copied_stream;
   const char *temp_dir_path;
   const char *src_local_abspath;
-  svn_wc__db_t *db = svn_wc__adm_get_db(eb->adm_access);
+  svn_wc__db_t *db = eb->db;
+  const char *dir_repos_relpath, *dir_repos_root, *dir_repos_uuid;
 
   /* The file_pool can stick around for a *long* time, so we want to
      use a subpool for any temporary allocations. */
@@ -3325,14 +3328,19 @@ add_file_with_history(const char *path,
   tfb->added_with_history = TRUE;
 
   /* Attempt to locate the copyfrom_path in the working copy first. */
-  SVN_ERR(svn_wc_entry(&path_entry, pb->path, eb->adm_access, FALSE, subpool));
-  err = locate_copyfrom(eb->db, copyfrom_path, copyfrom_rev,
-                        pb->path, path_entry,
-                        &src_path, &src_entry, subpool);
+
+  SVN_ERR(svn_wc__db_scan_base_repos(&dir_repos_relpath, &dir_repos_root,
+                                     &dir_repos_uuid, db, pb->local_abspath,
+                                     subpool, subpool));
+
+  err = locate_copyfrom(eb->db, copyfrom_path, copyfrom_rev, pb->local_abspath,
+                        dir_repos_uuid, dir_repos_relpath,
+                        &src_local_abspath, subpool, subpool);
+
   if (err && err->apr_err == SVN_ERR_WC_COPYFROM_PATH_NOT_FOUND)
     svn_error_clear(err);
-  else if (err)
-    return err;
+  else
+    SVN_ERR(err);
 
   SVN_ERR(svn_wc_adm_retrieve(&adm_access, pb->edit_baton->adm_access,
                               pb->path, subpool));
@@ -3353,16 +3361,17 @@ add_file_with_history(const char *path,
                                           svn_checksum_md5,
                                           FALSE, pool);
 
-  if (src_path != NULL) /* Found a file to copy */
+  if (src_local_abspath != NULL) /* Found a file to copy */
     {
       /* Copy the existing file's text-base over to the (temporary)
          new text-base, where the file baton expects it to be.  Get
          the text base and props from the usual place or from the
          revert place, depending on scheduling. */
-
       svn_stream_t *source_text_base;
+      const svn_wc_entry_t *src_entry;
 
-      SVN_ERR(svn_dirent_get_absolute(&src_local_abspath, src_path, subpool));
+      SVN_ERR(svn_wc__get_entry(&src_entry, db, src_local_abspath, FALSE,
+                            svn_node_file, FALSE, subpool, subpool));
 
       if (src_entry->schedule == svn_wc_schedule_replace
           && src_entry->copyfrom_url)
@@ -3415,7 +3424,7 @@ add_file_with_history(const char *path,
   tfb->copied_base_props = copy_regular_props(base_props, pool);
   tfb->copied_working_props = copy_regular_props(working_props, pool);
 
-  if (src_path != NULL)
+  if (src_local_abspath != NULL)
     {
       /* If we copied an existing file over, we need to copy its
          working text too, to preserve any local mods.  (We already
@@ -3434,7 +3443,7 @@ add_file_with_history(const char *path,
                                           svn_io_file_del_none,
                                           pool));
 
-          SVN_ERR(svn_io_copy_file(src_path, tfb->copied_working_text, TRUE,
+          SVN_ERR(svn_io_copy_file(src_local_abspath, tfb->copied_working_text, TRUE,
                                    subpool));
         }
     }
