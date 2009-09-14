@@ -1340,9 +1340,9 @@ class WinGeneratorBase(GeneratorBase):
     if maj_match:
       ver_maj = int(maj_match.group(1))
     if min_match:
-      ver_min = int(ver_min_re.group(1))
+      ver_min = int(min_match.group(1))
     if patch_match:
-      ver_patch = int(ver_patch_re.group(1))
+      ver_patch = int(patch_match.group(1))
 
     return ver_maj, ver_min, ver_patch
 
