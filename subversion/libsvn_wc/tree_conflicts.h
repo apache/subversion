@@ -32,6 +32,8 @@
 
 #include "wc_db.h"
 
+#include "private/svn_token.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
@@ -90,6 +92,12 @@ svn_error_t *
 svn_wc__write_tree_conflicts(const char **conflict_data,
                              apr_hash_t *conflicts,
                              apr_pool_t *pool);
+
+
+/* Token mapping tables.  */
+extern const svn_token_map_t svn_wc__operation_map[];
+extern const svn_token_map_t svn_wc__conflict_action_map[];
+extern const svn_token_map_t svn_wc__conflict_reason_map[];
 
 
 #ifdef __cplusplus

@@ -673,23 +673,21 @@ preserve_pre_merge_files(svn_stringbuf_t **log_accum,
 }
 
 /* Helper for maybe_resolve_conflicts() below. */
-static svn_wc_conflict_description_t *
+static const svn_wc_conflict_description_t *
 setup_text_conflict_desc(const char *left,
                          const char *right,
-                         const char *merge_target,
-                         svn_wc_adm_access_t *adm_access,
-                         svn_wc_conflict_version_t *left_version,
-                         svn_wc_conflict_version_t *right_version,
+                         const char *merge_abspath,
+                         const svn_wc_conflict_version_t *left_version,
+                         const svn_wc_conflict_version_t *right_version,
                          const char *result_target,
                          const char *detranslated_target,
                          const svn_prop_t *mimeprop,
+                         svn_boolean_t is_binary,
                          apr_pool_t *pool)
 {
-  svn_wc_conflict_description_t *cdesc;
+  svn_wc_conflict_description2_t *cdesc;
 
-  cdesc = svn_wc_conflict_description_create_text(merge_target,
-                                                  adm_access,
-                                                  pool);
+  cdesc = svn_wc_conflict_description_create_text2(merge_abspath, pool);
   cdesc->is_binary = FALSE;
   cdesc->mime_type = (mimeprop && mimeprop->value)
                      ? mimeprop->value->data : NULL,
@@ -701,7 +699,7 @@ setup_text_conflict_desc(const char *left,
   cdesc->src_left_version = left_version;
   cdesc->src_right_version = right_version;
 
-  return cdesc;
+  return svn_wc__cd2_to_cd(cdesc, pool);
 }
 
 /* XXX Insane amount of parameters... */
@@ -718,8 +716,8 @@ maybe_resolve_conflicts(svn_stringbuf_t **log_accum,
                         svn_wc_conflict_resolver_func_t conflict_func,
                         void *conflict_baton,
                         enum svn_wc_merge_outcome_t *merge_outcome,
-                        svn_wc_conflict_version_t *left_version,
-                        svn_wc_conflict_version_t *right_version,
+                        const svn_wc_conflict_version_t *left_version,
+                        const svn_wc_conflict_version_t *right_version,
                         const char *result_target,
                         const char *detranslated_target,
                         const svn_prop_t *mimeprop,
@@ -741,18 +739,21 @@ maybe_resolve_conflicts(svn_stringbuf_t **log_accum,
     }
   else
     {
-      svn_wc_conflict_description_t *cdesc;
+      const char *merge_abspath;
+      const svn_wc_conflict_description_t *cdesc;
+
+      SVN_ERR(svn_dirent_get_absolute(&merge_abspath, merge_target, pool));
 
       cdesc = setup_text_conflict_desc(left,
-                                      right,
-                                      merge_target,
-                                      adm_access,
-                                      left_version,
-                                      right_version,
-                                      result_target,
-                                      detranslated_target,
-                                      mimeprop,
-                                      pool);
+                                       right,
+                                       merge_abspath,
+                                       left_version,
+                                       right_version,
+                                       result_target,
+                                       detranslated_target,
+                                       mimeprop,
+                                       FALSE,
+                                       pool);
 
       SVN_ERR(conflict_func(&result, cdesc, conflict_baton, pool));
       if (result == NULL)
@@ -824,8 +825,8 @@ merge_text_file(const char *left,
                 void *conflict_baton,
                 svn_stringbuf_t **log_accum,
                 enum svn_wc_merge_outcome_t *merge_outcome,
-                svn_wc_conflict_version_t *left_version,
-                svn_wc_conflict_version_t *right_version,
+                const svn_wc_conflict_version_t *left_version,
+                const svn_wc_conflict_version_t *right_version,
                 const char *copyfrom_text,
                 const char *detranslated_target_abspath,
                 const svn_prop_t *mimeprop,
@@ -957,8 +958,8 @@ merge_binary_file(const char *left,
                   void *conflict_baton,
                   svn_stringbuf_t **log_accum,
                   enum svn_wc_merge_outcome_t *merge_outcome,
-                  svn_wc_conflict_version_t *left_version,
-                  svn_wc_conflict_version_t *right_version,
+                  const svn_wc_conflict_version_t *left_version,
+                  const svn_wc_conflict_version_t *right_version,
                   const char *detranslated_target_abspath,
                   const svn_prop_t *mimeprop,
                   const char *merge_dirpath,
@@ -979,14 +980,13 @@ merge_binary_file(const char *left,
   if (conflict_func)
     {
       svn_wc_conflict_result_t *result = NULL;
-      svn_wc_conflict_description_t *cdesc;
+      const svn_wc_conflict_description_t *cdesc;
 
-      cdesc = setup_text_conflict_desc(left, right, merge_target, adm_access,
+      cdesc = setup_text_conflict_desc(left, right, merge_abspath,
                                        left_version, right_version,
                                        NULL /* result_target */,
                                        detranslated_target_abspath,
-                                       mimeprop, pool);
-      cdesc->is_binary = TRUE;
+                                       mimeprop, TRUE, pool);
 
       SVN_ERR(conflict_func(&result, cdesc, conflict_baton, pool));
       if (result == NULL)
@@ -1125,9 +1125,9 @@ svn_error_t *
 svn_wc__merge_internal(svn_stringbuf_t **log_accum,
                        enum svn_wc_merge_outcome_t *merge_outcome,
                        const char *left,
-                       svn_wc_conflict_version_t *left_version,
+                       const svn_wc_conflict_version_t *left_version,
                        const char *right,
-                       svn_wc_conflict_version_t *right_version,
+                       const svn_wc_conflict_version_t *right_version,
                        const char *merge_target,
                        const char *copyfrom_text,
                        svn_wc_adm_access_t *adm_access,
