@@ -34,6 +34,7 @@
 
 #include "private/svn_skel.h"
 #include "private/svn_wc_private.h"
+#include "private/svn_token.h"
 
 #include "svn_private_config.h"
 
@@ -69,45 +70,38 @@
  */
 
 
-/* A mapping between a string STR and an enumeration value VAL. */
-typedef struct enum_mapping_t
-{
-  const char *str;
-  int val;
-} enum_mapping_t;
-
 /* A map for svn_node_kind_t values. */
-static const enum_mapping_t node_kind_map[] =
+static const svn_token_map_t node_kind_map[] =
 {
   { "none", svn_node_none },
   { "file", svn_node_file },
   { "dir",  svn_node_dir },
   { "",     svn_node_unknown },
-  { NULL,   0 }
+  { NULL }
 };
 
 /* A map for svn_wc_operation_t values. */
-static const enum_mapping_t operation_map[] =
+static const svn_token_map_t operation_map[] =
 {
   { "none",   svn_wc_operation_none },
   { "update", svn_wc_operation_update },
   { "switch", svn_wc_operation_switch },
   { "merge",  svn_wc_operation_merge },
-  { NULL,     0 }
+  { NULL }
 };
 
 /* A map for svn_wc_conflict_action_t values. */
-static const enum_mapping_t action_map[] =
+static const svn_token_map_t action_map[] =
 {
   { "edited",   svn_wc_conflict_action_edit },
   { "deleted",  svn_wc_conflict_action_delete },
   { "added",    svn_wc_conflict_action_add },
   { "replaced", svn_wc_conflict_action_replace },
-  { NULL,       0 }
+  { NULL }
 };
 
 /* A map for svn_wc_conflict_reason_t values. */
-static const enum_mapping_t reason_map[] =
+static const svn_token_map_t reason_map[] =
 {
   { "edited",      svn_wc_conflict_reason_edited },
   { "deleted",     svn_wc_conflict_reason_deleted },
@@ -116,7 +110,7 @@ static const enum_mapping_t reason_map[] =
   { "added",       svn_wc_conflict_reason_added },
   { "replaced",    svn_wc_conflict_reason_replaced },
   { "unversioned", svn_wc_conflict_reason_unversioned },
-  { NULL,          0 }
+  { NULL }
 };
 
 
@@ -158,26 +152,17 @@ is_valid_conflict_skel(const svn_skel_t *skel)
  */
 static svn_error_t *
 read_enum_field(int *result,
-                const enum_mapping_t *map,
+                const svn_token_map_t *map,
                 const svn_skel_t *skel)
 {
-  int i;
+  int value = svn_token__from_mem(map, skel->data, skel->len);
 
-  /* Find STR in MAP; error if not found. */
-  for (i = 0; ; i++)
-    {
-      if (map[i].str == NULL)
-        return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
-                                _("Unknown enumeration value in tree conflict "
-                                  "description"));
-      /* ### note: theoretically, a corrupt skel could have a long value
-         ### whose prefix is one of our enumerated values, and so we'll
-         ### choose that enum. fine. we'll accept these "corrupt" values. */
-      if (strncmp(skel->data, map[i].str, skel->len) == 0)
-        break;
-    }
+  if (value == SVN_TOKEN_UNKNOWN)
+    return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
+                            _("Unknown enumeration value in tree conflict "
+                              "description"));
 
-  *result = map[i].val;
+  *result = value;
   return SVN_NO_ERROR;
 }
 
@@ -356,20 +341,12 @@ svn_wc__read_tree_conflicts(apr_hash_t **conflicts,
  * in MAP. */
 static svn_error_t *
 skel_prepend_enum(svn_skel_t *skel,
-                  const enum_mapping_t *map,
+                  const svn_token_map_t *map,
                   int n,
                   apr_pool_t *result_pool)
 {
-  int i;
-
-  for (i = 0; ; i++)
-    {
-      SVN_ERR_ASSERT(map[i].str != NULL);
-      if (map[i].val == n)
-        break;
-    }
-
-  svn_skel__prepend(svn_skel__str_atom(map[i].str, result_pool), skel);
+  svn_skel__prepend(svn_skel__str_atom(svn_token__to_word(map, n),
+                                       result_pool), skel);
   return SVN_NO_ERROR;
 }
 
