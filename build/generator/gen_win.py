@@ -1362,8 +1362,8 @@ class WinGeneratorBase(GeneratorBase):
           self.serf_ver = '.'.join(str(v) for v in version)
           if version < minimal_serf_version:
             self.serf_lib = None
-            msg = ('Found serf %s, but >= 0.3.0 is required. '
-                   'ra_serf will not be built.\n' % self.serf_ver)
+            msg = 'Found serf %s, but >= %s is required. ra_serf will not be built.\n' % \
+                  (self.serf_ver, '.'.join(str(v) for v in minimal_serf_version))
           else:
             msg = 'Found serf version %s\n' % self.serf_ver
         sys.stderr.write(msg)
