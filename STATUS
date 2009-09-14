@@ -191,5 +191,22 @@ Candidate changes:
    Votes:
      +1: stsp
 
+ * r39301
+   Allow non-threadsafe sqlite if APR has been compiled without threads.
+   Justification:
+     Subversion itself does not require threads, so it should be possible
+     to compile it against non-threaded libraries. This change follows
+     common practice in our code base by wrapping threading-related code
+     in #if APR_HAS_THREADS.
+   Notes:
+     There is a trivial text conflict during merge, in the second hunk.
+     To resolve it, choose 'edit', and keep only the line which reads
+     "#endif /* APR_HAS_THREADS */" from the ".merge-right.r39301" part.
+     Changes below that line do not apply to 1.6.x.
+     The correct merge result adds only two lines, "#if APR_HAS_THREADS"
+     and the corresponding #endif.
+   Votes:
+     +1: stsp
+
 Approved changes:
 =================
