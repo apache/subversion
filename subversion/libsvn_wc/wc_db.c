@@ -257,7 +257,7 @@ static const svn_token_map_t presence_map[] = {
 static svn_wc__db_kind_t
 word_to_kind(const char *kind)
 {
-  return svn_token__from_word(kind_map, kind);
+  return svn_token__from_word_strict(kind_map, kind);
 }
 
 
