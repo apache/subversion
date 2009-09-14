@@ -404,6 +404,21 @@ svn_wc__node_get_changelist(const char **changelist,
 
 
 /**
+ * Set @a *url to the corresponding url for @a local_abspath, using @a wc_ctx.
+ * If the node is added, return the url it will have in the repository.
+ *
+ * If @a local_abspath is not in the working copy, return
+ * @c SVN_ERR_WC_PATH_NOT_FOUND.
+ */
+svn_error_t *
+svn_wc__node_get_url(const char **url,
+                     svn_wc_context_t *wc_ctx,
+                     const char *local_abspath,
+                     apr_pool_t *result_pool,
+                     apr_pool_t *scratch_pool);
+
+
+/**
  * Recursively call @a callbacks->found_node for all nodes underneath
  * @a local_abspath.
  */
