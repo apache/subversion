@@ -271,6 +271,8 @@ svn_client__get_wc_mergeinfo(svn_mergeinfo_t *mergeinfo,
       break;
     }
 
+  svn_pool_destroy(iterpool);
+
   if (svn_path_is_empty(walk_relpath))
     {
       /* Mergeinfo is explicit. */
