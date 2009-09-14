@@ -1538,17 +1538,7 @@ svn_client_mergeinfo_log_eligible(const char *path_or_url,
   SVN_ERR(location_from_path_and_rev(&merge_source_url, &real_src_peg_revision,
                                      merge_source_path_or_url,
                                      src_peg_revision, ctx, pool));
-//{
-//apr_array_header_t *suggestions;
-//svn_opt_revision_t pegrev;
-//svn_error_t *err;
-//
-//pegrev.kind = svn_opt_revision_base;
-//
-//err = svn_client_suggest_merge_sources(&suggestions, "C:/SVN/src-branch-1.6.x/working_copies/basic_test1",//path_or_url,
-//                                         &pegrev, ctx, pool);
-//SVN_ERR(err);
-//}
+
   /* Step 2: Across the set of possible merges, see what's already
      been merged into PATH_OR_URL@PEG_REVISION (or what's already part
      of the history it shares with that of MERGE_SOURCE_URL.  */
