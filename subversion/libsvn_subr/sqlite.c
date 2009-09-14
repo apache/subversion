@@ -648,6 +648,7 @@ init_sqlite(apr_pool_t *pool)
                     SQLITE_VERSION, sqlite3_libversion());
     }
 
+#if APR_HAS_THREADS
 #if SQLITE_VERSION_AT_LEAST(3,5,0)
   /* SQLite 3.5 allows verification of its thread-safety at runtime.
      Older versions are simply expected to have been configured with
@@ -669,10 +670,12 @@ init_sqlite(apr_pool_t *pool)
   }
   SQLITE_ERR_MSG(sqlite3_initialize(), _("Could not initialize SQLite"));
 #endif
+#endif /* APR_HAS_THRADS */
+
 #if SQLITE_VERSION_AT_LEAST(3,5,0)
-  /* SQLite 3.5 allows sharing cache instances in a multithreaded environment.
-     This allows sharing cached data when we open a database more than once
-     (Very common in the current pre-single-database state) */
+  /* SQLite 3.5 allows sharing cache instances, even in a multithreaded
+   * environment. This allows sharing cached data when we open a database
+   * more than once (Very common in the current pre-single-database state) */
   SQLITE_ERR_MSG(sqlite3_enable_shared_cache(TRUE),
                  _("Could not initialize SQLite shared cache"));
 #endif
