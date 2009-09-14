@@ -365,8 +365,10 @@ struct svn_test_descriptor_t test_funcs[] =
                    "write 1 tree conflict"),
     SVN_TEST_PASS2(test_write_2_tree_conflicts,
                    "write 2 tree conflicts"),
+#ifdef THIS_TEST_RAISES_MALFUNCTION
     SVN_TEST_PASS2(test_write_invalid_tree_conflicts,
                    "detect broken tree conflict data while writing"),
+#endif
     SVN_TEST_NULL
   };
 
