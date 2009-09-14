@@ -230,25 +230,23 @@ organize_lock_targets(const char **common_parent_url,
       /* Get the url for each target and verify all paths. */
       for (i = 0; i < rel_targets->nelts; i++)
         {
-          const svn_wc_entry_t *entry;
           const char *target = APR_ARRAY_IDX(rel_targets, i, const char *);
           const char *abs_path;
+          const char *url;
 
           svn_pool_clear(subpool);
 
           abs_path = svn_path_join(*common_parent_url, target, subpool);
 
-          SVN_ERR(svn_wc__get_entry_versioned(&entry, ctx->wc_ctx, abs_path,
-                                              svn_node_unknown, FALSE, FALSE,
-                                              subpool, subpool));
+          SVN_ERR(svn_wc__node_get_url(&url, ctx->wc_ctx, abs_path, pool,
+                                       subpool));
 
-          if (! entry->url)
+          if (! url)
             return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
                                      _("'%s' has no URL"),
                                      svn_dirent_local_style(target, pool));
 
-          APR_ARRAY_PUSH(urls, const char *) = apr_pstrdup(pool,
-                                                           entry->url);
+          APR_ARRAY_PUSH(urls, const char *) = url;
         }
 
       /* Condense our absolute urls and get the relative urls. */

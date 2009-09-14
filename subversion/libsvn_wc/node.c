@@ -236,6 +236,56 @@ svn_wc__node_get_changelist(const char **changelist,
   return svn_error_return(err);
 }
 
+svn_error_t *
+svn_wc__node_get_url(const char **url,
+                     svn_wc_context_t *wc_ctx,
+                     const char *local_abspath,
+                     apr_pool_t *result_pool,
+                     apr_pool_t *scratch_pool)
+{
+  svn_wc__db_status_t status;
+  const char *repos_relpath;
+  const char *repos_root_url;
+
+  SVN_ERR(svn_wc__db_read_info(&status, NULL, NULL, &repos_relpath,
+                               &repos_root_url,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               wc_ctx->db, local_abspath, scratch_pool,
+                               scratch_pool));
+
+  if (repos_relpath == NULL)
+    {
+      if (status == svn_wc__db_status_normal
+            || status == svn_wc__db_status_incomplete)
+        {
+          SVN_ERR(svn_wc__db_scan_base_repos(&repos_relpath, &repos_root_url,
+                                             NULL, wc_ctx->db, local_abspath,
+                                             scratch_pool, scratch_pool));
+        }
+      else if (status == svn_wc__db_status_added
+                || status == svn_wc__db_status_obstructed_add)
+        {
+          SVN_ERR(svn_wc__db_scan_addition(NULL, NULL, &repos_relpath,
+                                           &repos_root_url, NULL, NULL, NULL,
+                                           NULL, NULL, wc_ctx->db,
+                                           local_abspath, scratch_pool,
+                                           scratch_pool));
+        }
+      else
+        {
+          *url = NULL;
+          return SVN_NO_ERROR;
+        }
+    }
+
+  SVN_ERR_ASSERT(repos_root_url != NULL && repos_relpath != NULL);
+  *url = svn_uri_join(repos_root_url, repos_relpath, result_pool);
+
+  return SVN_NO_ERROR;
+}
+
 /* A recursive node-walker, helper for svn_wc__node_walk_children(). */
 static svn_error_t *
 walker_helper(svn_wc__db_t *db,

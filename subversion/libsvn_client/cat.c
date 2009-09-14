@@ -132,15 +132,13 @@ cat_local_file(svn_wc_context_t *wc_ctx,
       svn_revnum_t changed_rev;
       const char *rev_str;
       const char *author;
-      const svn_wc_entry_t *entry;
-
-      SVN_ERR(svn_wc__get_entry_versioned(&entry, wc_ctx, local_abspath,
-                                          svn_node_unknown, FALSE, FALSE,
-                                          scratch_pool, scratch_pool));
+      const char *url;
 
       SVN_ERR(svn_wc__node_get_changed_info(&changed_rev, NULL, &author, wc_ctx,
                                             local_abspath, scratch_pool,
                                             scratch_pool));
+      SVN_ERR(svn_wc__node_get_url(&url, wc_ctx, local_abspath, scratch_pool,
+                                   scratch_pool));
 
       if (local_mod)
         {
@@ -156,8 +154,8 @@ cat_local_file(svn_wc_context_t *wc_ctx,
           rev_str = apr_psprintf(scratch_pool, "%ld", changed_rev);
         }
 
-      SVN_ERR(svn_subst_build_keywords2(&kw, keywords->data, rev_str,
-                                        entry->url, tm, author, scratch_pool));
+      SVN_ERR(svn_subst_build_keywords2(&kw, keywords->data, rev_str, url, tm,
+                                        author, scratch_pool));
     }
 
   /* Our API contract says that OUTPUT will not be closed. The two paths
