@@ -403,7 +403,8 @@ CREATE TABLE CONFLICT_VICTIM (
   /* what kind of node is this? may be "unknown" if the node is not present */
   node_kind  TEXT NOT NULL,
 
-  /* what sort of conflict are we describing? */
+  /* what sort of conflict are we describing?
+     "text", "property" or "tree" */
   conflict_kind  TEXT NOT NULL,
 
   /* the name of the property in conflict, or NULL */
@@ -415,19 +416,37 @@ CREATE TABLE CONFLICT_VICTIM (
 
   /* operation which exposed the conflict, if kind is 'tree' */
   operation  TEXT,
+  
+  /* ### BH: Add original/base version? */
+  /* ### BH: Add relpath for conflict files? Or just basename */
+  /* ### BH: Add checksum to allow referring to pristine? */
+  /* ### BH: How to handle the .prej file? (Multiple property conflicts?) */
+  /* the 'base' version of the incoming change. */
+/*base_repos_id  INTEGER,
+  base_repos_relpath  TEXT,
+  base_peg_rev  INTEGER,
+  base_kind  TEXT,
+  base_local_relpath  TEXT,
+  base_checksum  TEXT */
 
   /* the 'merge-left' source, or 'older' version of the incoming change. */
   left_repos_id  INTEGER,
   left_repos_relpath  TEXT,
   left_peg_rev  INTEGER,
   left_kind  TEXT,
+/*left_local_relpath  TEXT,
+  left_checksum  TEXT, */
 
   /* the 'merge-right' source, or 'their' version of the incoming change. */
   right_repos_id  INTEGER,
   right_repos_relpath  TEXT,
   right_peg_rev  INTEGER,
   right_kind  TEXT,
+/*right_local_relpath  TEXT,
+  right_checksum  TEXT, */
 
+  /* ### BH: Add conflict kind? Add property name? Primary key should be
+         unique */
   PRIMARY KEY (wc_id, local_relpath)
   );
 
