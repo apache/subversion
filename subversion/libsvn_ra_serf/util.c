@@ -1264,7 +1264,7 @@ handle_response(serf_request_t *request,
       if (!ctx->session->pending_error)
         {
           ctx->session->pending_error =
-              svn_error_create(APR_EGENERAL, NULL,
+              svn_error_createf(APR_EGENERAL, NULL,
               _("Unspecified error message: %d %s"), sl.code, sl.reason);
         }
       status = ctx->session->pending_error->apr_err;
