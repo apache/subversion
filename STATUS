@@ -128,7 +128,7 @@ Candidate changes:
    Branch:
      ^/branches/1.6.x-r38000
    Votes:
-     +1: stsp (except r39124, r39125, r39127)
+     +1: stsp (except r39096, r39124, r39125, r39127)
      +1: sbutler
      -1: julianfoad (r38000, r38006, r38099, r38100, r38181 only)
 
