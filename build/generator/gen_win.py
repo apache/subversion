@@ -1318,13 +1318,55 @@ class WinGeneratorBase(GeneratorBase):
 
     sys.stderr.write(msg)
 
+  def _get_serf_version(self):
+    "Retrieves the serf version from serf.h"
+
+    # shouldn't be called unless serf is there
+    assert self.serf_path and os.path.exists(self.serf_path)
+
+    # serf.h should be present
+    if not os.path.exists(os.path.join(self.serf_path, 'serf.h')):
+      return None, None, None
+
+    ver_maj = None
+    ver_min = None
+    ver_patch = None
+
+    txt = open(os.path.join(self.serf_path, 'serf.h')).read()
+
+    maj_match = re.search(r'SERF_MAJOR_VERSION\s+(\d+)', txt)
+    min_match = re.search(r'SERF_MINOR_VERSION\s+(\d+)', txt)
+    patch_match = re.search(r'SERF_PATCH_VERSION\s+(\d+)', txt)
+    if maj_match:
+      ver_maj = int(maj_match.group(1))
+    if min_match:
+      ver_min = int(ver_min_re.group(1))
+    if patch_match:
+      ver_patch = int(ver_patch_re.group(1))
+
+    return ver_maj, ver_min, ver_patch
+
   def _find_serf(self):
     "Check if serf and its dependencies are available"
 
+    minimal_serf_version = (0, 3, 0)
     self.serf_lib = None
     if self.serf_path and os.path.exists(self.serf_path):
       if self.openssl_path and os.path.exists(self.openssl_path):
         self.serf_lib = 'serf'
+        version = self._get_serf_version()
+        if None in version:
+          msg = 'Unknown serf version found; but, will try to build ' \
+                'ra_serf.\n'
+        else:
+          self.serf_ver = '.'.join(str(v) for v in version)
+          if version < minimal_serf_version:
+            self.serf_lib = None
+            msg = ('Found serf %s, but >= 0.3.0 is required. '
+                   'ra_serf will not be built.\n' % self.serf_ver)
+          else:
+            msg = 'Found serf version %s\n' % self.serf_ver
+        sys.stderr.write(msg)
       else:
         sys.stderr.write('openssl not found, ra_serf will not be built\n')
     else:
