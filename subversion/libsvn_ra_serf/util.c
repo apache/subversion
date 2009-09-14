@@ -1265,7 +1265,7 @@ handle_response(serf_request_t *request,
         {
           ctx->session->pending_error =
               svn_error_create(APR_EGENERAL, NULL,
-                               _("Unspecified error message"));
+              _("Unspecified error message: %d %s"), sl.code, sl.reason);
         }
       status = ctx->session->pending_error->apr_err;
       goto cleanup;
@@ -1644,6 +1644,9 @@ svn_ra_serf__error_on_status(int status_code, const char *path)
       case 404:
         return svn_error_createf(SVN_ERR_FS_NOT_FOUND, NULL,
                                  _("'%s' path not found"), path);
+      case 423:
+        return svn_error_createf(SVN_ERR_FS_NO_LOCK_TOKEN, NULL,
+                                 _("'%s': no lock token available"), path);
     }
 
   return SVN_NO_ERROR;
