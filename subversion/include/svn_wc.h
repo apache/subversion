@@ -2712,7 +2712,10 @@ typedef struct svn_wc_entry_t
  * be present, but not under revision control.
  *
  * Use @a pool only for local processing.
+ *
+ * @deprecated Provided for backward compatibility with the 1.6 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_entry(const svn_wc_entry_t **entry,
              const char *path,
@@ -2751,7 +2754,10 @@ svn_wc_entry(const svn_wc_entry_t **entry,
  * fields filled in.  If you want info on a subdir, you must use this
  * routine to open its @a path and read the @c SVN_WC_ENTRY_THIS_DIR
  * structure, or call svn_wc_entry() on its @a path.
+ *
+ * @deprecated Provided for backward compatibility with the 1.6 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_entries_read(apr_hash_t **entries,
                     svn_wc_adm_access_t *adm_access,
