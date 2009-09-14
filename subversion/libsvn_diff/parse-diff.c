@@ -291,6 +291,21 @@ modified_line_filter(svn_boolean_t *filtered, const char *line,
   return SVN_NO_ERROR;
 }
 
+/** line-transformer callback to shave leading diff symbols. */
+static svn_error_t *
+remove_leading_char_transformer(svn_stringbuf_t **buf,
+                                const char *line,
+                                apr_pool_t *result_pool,
+                                apr_pool_t *scratch_pool)
+{
+  if (line[0] == '+' || line[0] == '-' || line[0] == ' ')
+    *buf = svn_stringbuf_create(line + 1, result_pool);
+  else
+    *buf = svn_stringbuf_create(line, result_pool);
+
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_diff__parse_next_hunk(svn_hunk_t **hunk,
                           svn_patch_t *patch,
@@ -305,6 +320,7 @@ svn_diff__parse_next_hunk(svn_hunk_t **hunk,
   svn_stream_t *diff_text;
   svn_stream_t *original_text;
   svn_stream_t *modified_text;
+  svn_linenum_t original_lines;
   svn_stream_t *s;
   apr_pool_t *iterpool;
 
@@ -358,8 +374,21 @@ svn_diff__parse_next_hunk(svn_hunk_t **hunk,
             }
           
           c = line->data[0];
-          if (c == ' ' || c == '-' || c == '+')
-            hunk_seen = TRUE;
+          if (original_lines > 0 && (c == ' ' || c == '-'))
+            {
+              hunk_seen = TRUE;
+              original_lines--;
+            }
+          else if (c == '+')
+            {
+              hunk_seen = TRUE;
+            }
+          /* Tolerate chopped leading spaces on empty lines. */
+          else if (original_lines > 0 && ! eof && line->len == 0)
+            {
+              hunk_seen = TRUE;
+              original_lines--;
+            }
           else
             {
               in_hunk = FALSE;
@@ -374,8 +403,12 @@ svn_diff__parse_next_hunk(svn_hunk_t **hunk,
       else
         { 
           if (starts_with(line->data, atat))
-            /* Looks like we have a hunk header, let's try to rip it apart. */
-            in_hunk = parse_hunk_header(line->data, *hunk, iterpool);
+            {
+              /* Looks like we have a hunk header, let's try to rip it apart. */
+              in_hunk = parse_hunk_header(line->data, *hunk, iterpool);
+              if (in_hunk)
+                original_lines = (*hunk)->original_length;
+            }
           else if (starts_with(line->data, minus))
             /* This could be a header of another patch. Bail out. */
             break;
@@ -411,6 +444,8 @@ svn_diff__parse_next_hunk(svn_hunk_t **hunk,
                                                              start, end,
                                                              result_pool);
       svn_stream_set_line_filter_callback(original_text, original_line_filter);
+      svn_stream_set_line_transformer_callback(original_text, 
+                                               remove_leading_char_transformer);
 
       /* Create a stream which returns the modified hunk text. */
       SVN_ERR(svn_io_file_open(&f, patch->path, flags, APR_OS_DEFAULT,
@@ -419,7 +454,8 @@ svn_diff__parse_next_hunk(svn_hunk_t **hunk,
                                                              start, end,
                                                              result_pool);
       svn_stream_set_line_filter_callback(modified_text, modified_line_filter);
-
+      svn_stream_set_line_transformer_callback(modified_text, 
+                                               remove_leading_char_transformer);
       /* Set the hunk's texts. */
       (*hunk)->diff_text = diff_text;
       (*hunk)->original_text = original_text;
