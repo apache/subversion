@@ -180,7 +180,7 @@ Candidate changes:
    Votes:
      +1: cmpilato, rhuijben
    
- * r38982
+ * r39303
    Print a newline before the plaintext passphrase prompt.
    Justification:
      It wasn't intentional that the first line of dashes of this prompt
