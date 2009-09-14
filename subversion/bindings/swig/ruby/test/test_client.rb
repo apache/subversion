@@ -1013,7 +1013,7 @@ class SvnClientTest < Test::Unit::TestCase
       yield(ctx, branch, rev3, rev4, trunk)
       ctx.revert(trunk, false)
       ctx.resolve(:path=>trunk_path,
-                  :conflict_choice=>Svn::Wc::CONFLICT_CHOOSE_MINE_FULL)
+                  :conflict_choice=>Svn::Wc::CONFLICT_CHOOSE_MERGED)
       rev5 = ctx.commit(@wc_path).revision
       assert(File.exist?(trunk_path))
       ctx.up(@wc_path)

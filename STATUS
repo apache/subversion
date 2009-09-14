@@ -184,15 +184,6 @@ Candidate changes:
 Approved changes:
 =================
 
-* r38886
-   Fix 2 failing tests in ruby bindings.
-   Justification:
-     1.6.5 shipped with these failures by accident. Failing regression tests
-     can confuse packagers or other people who want to verify their freshly
-     compiled binaries using our regression test suite.
-   Votes:
-     +1: stsp, hwright
-
  * r38982
    Print a newline before the plaintext password prompt.
    Justification:
@@ -200,4 +191,3 @@ Approved changes:
      appears on the same line as "Transmitting file data ..." during commit.
    Votes:
      +1: stsp, hwright, rhuijben
-
