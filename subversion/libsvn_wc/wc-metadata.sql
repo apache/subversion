@@ -255,6 +255,8 @@ CREATE TABLE WORKING_NODE (
   /* Where this node was copied/moved from. Set only on the root of the
      operation, and implied for all children. */
   copyfrom_repos_id  INTEGER,
+  /* ### BH: Should we call this copyfrom_repos_relpath and skip the initial '/'
+         to match the othe repository paths? */
   copyfrom_repos_path  TEXT,
   copyfrom_revnum  INTEGER,
 
@@ -429,7 +431,7 @@ CREATE TABLE CONFLICT_VICTIM (
   base_local_relpath  TEXT,
   base_checksum  TEXT */
 
-  /* the 'merge-left' source, or 'older' version of the incoming change. */
+  /* the 'merge-left' source, 'older' version of the incoming change. */
   left_repos_id  INTEGER,
   left_repos_relpath  TEXT,
   left_peg_rev  INTEGER,
