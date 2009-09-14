@@ -49,7 +49,7 @@ struct traversal_info_update_baton
 
 /* Helper for updating svn_wc_traversal_info_t structures
  * Implements svn_wc_external_update_t */
-svn_error_t *
+static svn_error_t *
 traversal_info_update(void *baton,
                       const char *local_abspath,
                       const svn_string_t *old_val,
