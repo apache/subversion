@@ -256,7 +256,8 @@ CREATE TABLE WORKING_NODE (
      operation, and implied for all children. */
   copyfrom_repos_id  INTEGER,
   /* ### BH: Should we call this copyfrom_repos_relpath and skip the initial '/'
-         to match the othe repository paths? */
+     ### to match the other repository paths used in sqlite and to make it easier
+     ### to join these paths? */
   copyfrom_repos_path  TEXT,
   copyfrom_revnum  INTEGER,
 
