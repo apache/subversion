@@ -416,8 +416,8 @@ struct bump_dir_info
   /* how many entries are referring to this bump information? */
   int ref_count;
 
-  /* the path of the directory to bump */
-  const char *path;
+  /* the absolute path of the directory to bump */
+  const char *local_abspath;
 
   /* Set if this directory is skipped due to prop or tree conflicts.
      This does NOT mean that children are skipped. */
@@ -624,7 +624,7 @@ make_dir_baton(struct dir_baton **d_p,
   bdi = apr_palloc(eb->pool, sizeof(*bdi));
   bdi->parent = pb ? pb->bump_info : NULL;
   bdi->ref_count = 1;
-  bdi->path = apr_pstrdup(eb->pool, d->path);
+  bdi->local_abspath = apr_pstrdup(eb->pool, d->local_abspath);
   bdi->skipped = FALSE;
 
   /* the parent's bump info has one more referer */
@@ -673,7 +673,7 @@ do_entry_deletion(struct edit_baton *eb,
    flag. */
 static svn_error_t *
 complete_directory(struct edit_baton *eb,
-                   const char *path,
+                   const char *local_abspath,
                    svn_boolean_t is_root_dir,
                    apr_pool_t *pool)
 {
@@ -684,13 +684,10 @@ complete_directory(struct edit_baton *eb,
   apr_pool_t *subpool;
   svn_wc_entry_t tmp_entry;
   const char *name;
-  const char *local_dir_abspath;
-
-  SVN_ERR(svn_dirent_get_absolute(&local_dir_abspath, path, pool));
 
   /* If inside a tree conflict, do nothing. */
-  if (in_skipped_tree(eb, local_dir_abspath, pool)
-      && !in_deleted_tree(eb, local_dir_abspath, TRUE, pool))
+  if (in_skipped_tree(eb, local_abspath, pool)
+      && !in_deleted_tree(eb, local_abspath, TRUE, pool))
     return SVN_NO_ERROR;
 
   /* If this is the root directory and there is a target, we can't
@@ -703,7 +700,7 @@ complete_directory(struct edit_baton *eb,
       svn_error_t *err;
       const svn_wc_entry_t *target_entry;
 
-      SVN_ERR_ASSERT(strcmp(path, eb->anchor) == 0);
+      SVN_ERR_ASSERT(strcmp(local_abspath, eb->anchor_abspath) == 0);
 
       err = svn_wc__get_entry(&target_entry, eb->db, eb->target_abspath, TRUE,
                               svn_node_dir, TRUE, pool, pool);
@@ -744,7 +741,7 @@ complete_directory(struct edit_baton *eb,
     }
 
   /* All operations are on the in-memory entries hash. */
-  SVN_ERR(svn_wc_adm_retrieve(&adm_access, eb->adm_access, path, pool));
+  adm_access = svn_wc__adm_retrieve_internal2(eb->db, local_abspath, pool);
   SVN_ERR(svn_wc_entries_read(&entries, adm_access, TRUE, pool));
 
   /* Mark THIS_DIR complete. */
@@ -752,7 +749,7 @@ complete_directory(struct edit_baton *eb,
   if (! entry)
     return svn_error_createf(SVN_ERR_ENTRY_NOT_FOUND, NULL,
                              _("No '.' entry in: '%s'"),
-                             svn_dirent_local_style(path, pool));
+                             svn_dirent_local_style(local_abspath, pool));
   tmp_entry.incomplete = FALSE;
   SVN_ERR(svn_wc__entry_modify(adm_access, NULL /* THIS_DIR */,
                                &tmp_entry, SVN_WC__ENTRY_MODIFY_INCOMPLETE,
@@ -763,10 +760,10 @@ complete_directory(struct edit_baton *eb,
      upgrading to something else only changes the target. */
   if (eb->depth_is_sticky &&
       (eb->requested_depth == svn_depth_infinity
-       || (strcmp(path, svn_dirent_join(eb->anchor, eb->target, pool)) == 0
+       || (strcmp(local_abspath, eb->target_abspath) == 0
            && eb->requested_depth > entry->depth)))
     {
-      SVN_ERR(svn_wc__set_depth(eb->db, local_dir_abspath, eb->requested_depth,
+      SVN_ERR(svn_wc__set_depth(eb->db, local_abspath, eb->requested_depth,
                                 pool));
     }
 
@@ -777,14 +774,14 @@ complete_directory(struct edit_baton *eb,
       const void *key;
       void *val;
       const svn_wc_entry_t *current_entry;
-      const char *local_abspath;
+      const char *node_abspath;
 
       svn_pool_clear(subpool);
       apr_hash_this(hi, &key, NULL, &val);
       name = key;
       current_entry = val;
 
-      local_abspath = svn_dirent_join(local_dir_abspath, name, subpool);
+      node_abspath = svn_dirent_join(local_abspath, name, subpool);
 
       /* Any entry still marked as deleted (and not schedule add) can now
          be removed -- if it wasn't undeleted by the update, then it
@@ -795,7 +792,7 @@ complete_directory(struct edit_baton *eb,
         {
           if (current_entry->schedule != svn_wc_schedule_add)
             {
-              SVN_ERR(svn_wc__entry_remove(eb->db, local_abspath, subpool));
+              SVN_ERR(svn_wc__entry_remove(eb->db, node_abspath, subpool));
               apr_hash_set(entries, name, APR_HASH_KEY_STRING, NULL);
             }
           else
@@ -815,7 +812,7 @@ complete_directory(struct edit_baton *eb,
       else if (current_entry->absent
                && (current_entry->revision != *(eb->target_revision)))
         {
-          SVN_ERR(svn_wc__entry_remove(eb->db, local_abspath, subpool));
+          SVN_ERR(svn_wc__entry_remove(eb->db, node_abspath, subpool));
           apr_hash_set(entries, name, APR_HASH_KEY_STRING, NULL);
         }
       else if (current_entry->kind == svn_node_dir)
@@ -826,21 +823,21 @@ complete_directory(struct edit_baton *eb,
               if (eb->depth_is_sticky
                   && eb->requested_depth >= svn_depth_immediates)
                 {
-                  SVN_ERR(svn_wc__set_depth(eb->db, local_abspath,
+                  SVN_ERR(svn_wc__set_depth(eb->db, node_abspath,
                                             svn_depth_infinity, pool));
                 }
             }
-          else if ((svn_wc__adm_missing(eb->db, local_abspath, subpool))
+          else if ((svn_wc__adm_missing(eb->db, node_abspath, subpool))
                    && (! current_entry->absent)
                    && (current_entry->schedule != svn_wc_schedule_add))
             {
-              SVN_ERR(svn_wc__entry_remove(eb->db, local_abspath, subpool));
+              SVN_ERR(svn_wc__entry_remove(eb->db, node_abspath, subpool));
               apr_hash_set(entries, name, APR_HASH_KEY_STRING, NULL);
 
               if (eb->notify_func)
                 {
                   svn_wc_notify_t *notify
-                    = svn_wc_create_notify(local_abspath,
+                    = svn_wc_create_notify(node_abspath,
                                            svn_wc_notify_update_delete,
                                            subpool);
                   notify->kind = current_entry->kind;
@@ -878,7 +875,7 @@ maybe_bump_dir_info(struct edit_baton *eb,
       /* The refcount is zero, so we remove any 'dead' entries from
          the directory and mark it 'complete'.  */
       if (! bdi->skipped)
-        SVN_ERR(complete_directory(eb, bdi->path,
+        SVN_ERR(complete_directory(eb, bdi->local_abspath,
                                    bdi->parent == NULL, pool));
     }
   /* we exited the for loop because there are no more parents */
@@ -4715,7 +4712,7 @@ close_edit(void *edit_baton,
   if (! eb->root_opened)
     {
       /* We need to "un-incomplete" the root directory. */
-      SVN_ERR(complete_directory(eb, eb->anchor, TRUE, pool));
+      SVN_ERR(complete_directory(eb, eb->anchor_abspath, TRUE, pool));
     }
 
 
