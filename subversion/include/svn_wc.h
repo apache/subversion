@@ -1514,10 +1514,10 @@ typedef struct svn_wc_conflict_description2_t
   svn_wc_operation_t operation;
 
   /** Info on the "merge-left source" or "older" version of incoming change. */
-  svn_wc_conflict_version_t *src_left_version;
+  const svn_wc_conflict_version_t *src_left_version;
 
   /** Info on the "merge-right source" or "their" version of incoming change. */
-  svn_wc_conflict_version_t *src_right_version;
+  const svn_wc_conflict_version_t *src_right_version;
 
   /* Remember to adjust svn_wc__conflict_description_dup()
    * if you add new fields to this struct. */
