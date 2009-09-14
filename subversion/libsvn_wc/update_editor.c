@@ -1131,34 +1131,21 @@ prep_directory(struct dir_baton *db,
                                       repos, ancestor_revision,
                                       db->ambient_depth, pool));
 
-  if (! db->edit_baton->adm_access
-      || strcmp(svn_wc_adm_access_path(db->edit_baton->adm_access),
-                db->path))
+  if (NULL == svn_wc__adm_retrieve_internal2(db->edit_baton->db, dir_abspath,
+                                             pool))
     {
       svn_wc_adm_access_t *adm_access;
-      apr_pool_t *adm_access_pool
-        = db->edit_baton->adm_access
-        ? svn_wc_adm_access_pool(db->edit_baton->adm_access)
-        : db->edit_baton->pool;
-      svn_error_t *err = svn_wc_adm_open3(&adm_access,
-                                          db->edit_baton->adm_access,
-                                          db->path, TRUE, 0, NULL, NULL,
-                                          adm_access_pool);
+      apr_pool_t *adm_access_pool;
+      const char *rel_path;
 
-      /* db->path may be scheduled for addition without history.
-         In that case db->edit_baton->adm_access already has it locked. */
-      if (err && err->apr_err == SVN_ERR_WC_LOCKED)
-        {
-           svn_error_clear(err);
-           err = svn_wc_adm_retrieve(&adm_access,
-                                     db->edit_baton->adm_access,
-                                     db->path, adm_access_pool);
-        }
+      SVN_ERR(svn_wc__temp_get_relpath(&rel_path, db->edit_baton->db,
+                                       dir_abspath, pool, pool));
 
-      SVN_ERR(err);
+      adm_access_pool = svn_wc_adm_access_pool(db->edit_baton->adm_access);
 
-      if (!db->edit_baton->adm_access)
-        db->edit_baton->adm_access = adm_access;
+      SVN_ERR(svn_wc_adm_open3(&adm_access, db->edit_baton->adm_access,
+                               rel_path, TRUE, 0, db->edit_baton->cancel_func,
+                               db->edit_baton->cancel_baton, adm_access_pool));
     }
 
   return SVN_NO_ERROR;
