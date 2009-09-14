@@ -151,29 +151,12 @@ Candidate changes:
      +0: pburba - I don't have a Vista or Win7 box to try this out on, but it
          works fine on my XP box.
 
- * r38886
-   Fix 2 failing tests in ruby bindings.
-   Justification:
-     1.6.5 shipped with these failures by accident. Failing regression tests
-     can confuse packagers or other people who want to verify their freshly
-     compiled binaries using our regression test suite.
-   Votes:
-     +1: stsp, hwright
-
- * r38959
+  * r38959
    Fix 'svn export -r 1000000' (issue #3400).
    Justification:
      Don't silently do the opposite of what the user asked for.
    Votes:
-     +1: danielsh
-
- * r38982
-   Print a newline before the plaintext password prompt.
-   Justification:
-     It wasn't intentional that the first line of dashes of this prompt
-     appears on the same line as "Transmitting file data ..." during commit.
-   Votes:
-     +1: stsp, hwright
+     +1: danielsh, rhuijben
 
  * r39019
    Fix bug where svn_[rangelist|mergeinfo]_[merge|intersect|remove|diff]
@@ -196,7 +179,25 @@ Candidate changes:
      The broken behavior is inconsistent with the way MIME mapping
      files are used everywhere else in the world.
    Votes:
-     +1: cmpilato
+     +1: cmpilato, rhuijben
    
 Approved changes:
 =================
+
+* r38886
+   Fix 2 failing tests in ruby bindings.
+   Justification:
+     1.6.5 shipped with these failures by accident. Failing regression tests
+     can confuse packagers or other people who want to verify their freshly
+     compiled binaries using our regression test suite.
+   Votes:
+     +1: stsp, hwright
+
+ * r38982
+   Print a newline before the plaintext password prompt.
+   Justification:
+     It wasn't intentional that the first line of dashes of this prompt
+     appears on the same line as "Transmitting file data ..." during commit.
+   Votes:
+     +1: stsp, hwright, rhuijben
+
