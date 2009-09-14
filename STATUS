@@ -180,5 +180,16 @@ Candidate changes:
    Votes:
      +1: cmpilato, rhuijben
    
+ * r38982
+   Print a newline before the plaintext passphrase prompt.
+   Justification:
+     It wasn't intentional that the first line of dashes of this prompt
+     appears on the same line as "Transmitting file data ..." during commit.
+   Notes:
+     Yes, this is almost the same as r38982, but this time it's about
+     the passPHRASE prompt, not the passWORD prompt.
+   Votes:
+     +1: stsp
+
 Approved changes:
 =================
