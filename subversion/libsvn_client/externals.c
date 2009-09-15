@@ -175,21 +175,20 @@ switch_dir_external(const char *path,
   svn_node_kind_t kind;
   svn_error_t *err;
   apr_pool_t *subpool = svn_pool_create(pool);
+  const char *local_abspath;
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
   /* If path is a directory, try to update/switch to the correct URL
      and revision. */
   SVN_ERR(svn_io_check_path(path, &kind, pool));
   if (kind == svn_node_dir)
     {
-      svn_wc_adm_access_t *adm_access;
       const svn_wc_entry_t *entry;
 
-      SVN_ERR(svn_wc__adm_open_in_context(&adm_access, ctx->wc_ctx, path, TRUE,
-                                          0, ctx->cancel_func,
-                                          ctx->cancel_baton, subpool));
-      SVN_ERR(svn_wc_entry(&entry, path, adm_access,
-                           FALSE, subpool));
-      SVN_ERR(svn_wc_adm_close2(adm_access, subpool));
+      SVN_ERR(svn_wc__maybe_get_entry(&entry, ctx->wc_ctx, local_abspath,
+                                      svn_node_dir, FALSE, FALSE, subpool,
+                                      subpool));
 
       if (entry && entry->url)
         {
@@ -303,6 +302,7 @@ switch_file_external(const char *path,
   svn_wc_adm_access_t *target_adm_access;
   const char *anchor;
   const char *anchor_abspath;
+  const char *local_abspath;
   const char *target;
   const svn_wc_entry_t *entry;
   svn_config_t *cfg = ctx->config ? apr_hash_get(ctx->config,
@@ -319,6 +319,7 @@ switch_file_external(const char *path,
   SVN_ERR(svn_wc_get_actual_target2(&anchor, &target, ctx->wc_ctx, path,
                                     subpool, subpool));
   SVN_ERR(svn_dirent_get_absolute(&anchor_abspath, anchor, subpool));
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, subpool));
 
   /* Try to get a access baton for the anchor using the input access
      baton.  If this fails and returns SVN_ERR_WC_NOT_LOCKED, then try
@@ -357,7 +358,9 @@ switch_file_external(const char *path,
         return svn_error_return(err);
     }
 
-  SVN_ERR(svn_wc_entry(&entry, path, target_adm_access, FALSE, subpool));
+  SVN_ERR(svn_wc__maybe_get_entry(&entry, ctx->wc_ctx, local_abspath,
+                                  svn_node_unknown, FALSE, FALSE, subpool,
+                                  subpool));
 
   /* Only one notification is done for the external, so don't notify
      for any following steps.  Use the following trick to add the file
