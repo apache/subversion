@@ -152,9 +152,7 @@ calculate_target_mergeinfo(svn_ra_session_t *ra_session,
    MERGEINFO to any mergeinfo pre-existing in the WC. */
 static svn_error_t *
 extend_wc_mergeinfo(const char *target_abspath,
-                    const svn_wc_entry_t *entry,
                     apr_hash_t *mergeinfo,
-                    svn_wc_adm_access_t *adm_access,
                     svn_client_ctx_t *ctx,
                     apr_pool_t *pool)
 {
@@ -1118,7 +1116,9 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
 
       svn_pool_clear(iterpool);
 
-      SVN_ERR(svn_wc_entry(&entry, pair->src, adm_access, FALSE, iterpool));
+      SVN_ERR(svn_wc__get_entry_versioned(&entry, ctx->wc_ctx, pair->src_abs,
+                                          svn_node_unknown, FALSE, FALSE,
+                                          iterpool, iterpool));
       pair->src_revnum = entry->revision;
 
       dst_rel = svn_path_uri_decode(svn_uri_is_child(top_dst_url,
@@ -1249,7 +1249,9 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
       SVN_ERR(calculate_target_mergeinfo(ra_session, &mergeinfo, adm_access,
                                          pair->src, pair->src_revnum,
                                          FALSE, ctx, iterpool));
-      SVN_ERR(svn_wc_entry(&entry, pair->src, adm_access, FALSE, pool));
+      SVN_ERR(svn_wc__get_entry_versioned(&entry, ctx->wc_ctx, pair->src_abs,
+                                          svn_node_unknown, FALSE, FALSE,
+                                          pool, pool));
       SVN_ERR(svn_client__parse_mergeinfo(&wc_mergeinfo, ctx->wc_ctx,
                                           src_abspath, iterpool, iterpool));
       if (wc_mergeinfo && mergeinfo)
@@ -1344,12 +1346,9 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
          way to do this; see its doc for more about the controversy.) */
       if (same_repositories)
         {
-          svn_wc_adm_access_t *dst_access;
-          SVN_ERR(svn_wc_adm_open3(&dst_access, adm_access, pair->dst, TRUE,
-                                   -1, ctx->cancel_func, ctx->cancel_baton,
-                                   pool));
-          SVN_ERR(svn_wc_entry(&dst_entry, pair->dst, dst_access, FALSE,
-                               pool));
+          SVN_ERR(svn_wc__get_entry_versioned(&dst_entry, ctx->wc_ctx,
+                                              dst_abspath, svn_node_unknown,
+                                              FALSE, FALSE, pool, pool));
 
           if (pair->src_op_revision.kind == svn_opt_revision_head)
             {
@@ -1388,8 +1387,7 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
           SVN_ERR(calculate_target_mergeinfo(ra_session, &src_mergeinfo, NULL,
                                              pair->src, src_revnum,
                                              FALSE, ctx, pool));
-          SVN_ERR(extend_wc_mergeinfo(dst_abspath, dst_entry, src_mergeinfo,
-                                      dst_access, ctx, pool));
+          SVN_ERR(extend_wc_mergeinfo(dst_abspath, src_mergeinfo, ctx, pool));
         }
       else  /* different repositories */
         {
@@ -1444,12 +1442,10 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
          ctx->notify_func2, ctx->notify_baton2,
          pool));
 
-      SVN_ERR(svn_wc_entry(&dst_entry, pair->dst, adm_access, FALSE, pool));
       SVN_ERR(calculate_target_mergeinfo(ra_session, &src_mergeinfo,
                                          NULL, pair->src, src_revnum,
                                          FALSE, ctx, pool));
-      SVN_ERR(extend_wc_mergeinfo(dst_abspath, dst_entry, src_mergeinfo,
-                                  adm_access, ctx, pool));
+      SVN_ERR(extend_wc_mergeinfo(dst_abspath, src_mergeinfo, ctx, pool));
 
       /* Ideally, svn_wc_add_repos_file3() would take a notify function
          and baton, and we wouldn't have to make this call here.
