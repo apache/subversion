@@ -106,7 +106,7 @@ extern "C" {
  * Please document any further format changes here.
  */
 
-#define SVN_WC__VERSION 12
+#define SVN_WC__VERSION 13
 
 
 /* A version <= this doesn't have property caching in the entries file. */
