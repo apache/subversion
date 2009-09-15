@@ -1473,7 +1473,7 @@ tree_has_local_mods(svn_boolean_t *modified,
 
   SVN_ERR(svn_wc__internal_walk_children(db, local_abspath,
                                          FALSE /* show_hidden */,
-                                         &modcheck_found_node, &modcheck_baton,
+                                         modcheck_found_node, &modcheck_baton,
                                          svn_depth_infinity, cancel_func,
                                          cancel_baton, pool));
 
