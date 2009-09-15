@@ -35,11 +35,13 @@
 #include "log.h"
 #include "entries.h"
 #include "wc_db.h"
+#include "tree_conflicts.h"
 #include "wc-metadata.h"  /* for STMT_*  */
 
 #include "svn_private_config.h"
 #include "private/svn_wc_private.h"
 #include "private/svn_sqlite.h"
+#include "private/svn_token.h"
 
 
 
@@ -453,59 +455,21 @@ conflict_kind_to_word(svn_wc_conflict_kind_t conflict_kind)
 static const char *
 conflict_action_to_word(svn_wc_conflict_action_t action)
 {
-  switch (action)
-    {
-    case svn_wc_conflict_action_edit:
-      return "edit";
-    case svn_wc_conflict_action_add:
-      return "add";
-    case svn_wc_conflict_action_delete:
-      return "delete";
-    default:
-      SVN_ERR_MALFUNCTION_NO_RETURN();
-    }
+  return svn_token__to_word(svn_wc__conflict_action_map, action);
 }
 
 
 static const char *
 conflict_reason_to_word(svn_wc_conflict_reason_t reason)
 {
-  switch (reason)
-    {
-    case svn_wc_conflict_reason_edited:
-      return "edited";
-    case svn_wc_conflict_reason_obstructed:
-      return "obstructed";
-    case svn_wc_conflict_reason_deleted:
-      return "deleted";
-    case svn_wc_conflict_reason_missing:
-      return "missing";
-    case svn_wc_conflict_reason_unversioned:
-      return "unversioned";
-    case svn_wc_conflict_reason_added:
-      return "added";
-    default:
-      SVN_ERR_MALFUNCTION_NO_RETURN();
-    }
+  return svn_token__to_word(svn_wc__conflict_reason_map, reason);
 }
 
 
 static const char *
 wc_operation_to_word(svn_wc_operation_t operation)
 {
-  switch (operation)
-    {
-    case svn_wc_operation_none:
-      return "none";
-    case svn_wc_operation_update:
-      return "update";
-    case svn_wc_operation_switch:
-      return "switch";
-    case svn_wc_operation_merge:
-      return "merge";
-    default:
-      SVN_ERR_MALFUNCTION_NO_RETURN();
-    }
+  return svn_token__to_word(svn_wc__operation_map, operation);
 }
 
 
@@ -688,40 +652,40 @@ migrate_tree_conflicts(svn_sqlite__db_t *sdb,
 }
 
 
-struct bump13_baton {
+struct bump14_baton {
   apr_pool_t *scratch_pool;
 };
 
 
 /* This implements svn_sqlite__transaction_callback_t */
 static svn_error_t *
-bump_database_to_13(void *baton,
+bump_database_to_14(void *baton,
                     svn_sqlite__db_t *sdb)
 {
-  struct bump13_baton *bb = baton;
+  struct bump14_baton *bb = baton;
 
   SVN_ERR(migrate_tree_conflicts(sdb, bb->scratch_pool));
 
   /* NOTE: this *is* transactional, so the version will not be bumped
      unless our overall transaction is committed.  */
-  SVN_ERR(svn_sqlite__set_schema_version(sdb, 13, bb->scratch_pool));
+  SVN_ERR(svn_sqlite__set_schema_version(sdb, 14, bb->scratch_pool));
 
   return SVN_NO_ERROR;
 }
 
 
 static svn_error_t *
-bump_to_13(const char *wcroot_abspath,
+bump_to_14(const char *wcroot_abspath,
            svn_sqlite__db_t *sdb,
            apr_pool_t *scratch_pool)
 {
-  struct bump13_baton bb = { scratch_pool };
+  struct bump14_baton bb = { scratch_pool };
 
   /* ### migrate disk bits here.  */
 
   /* Perform the database upgrade. The last thing this does is to bump
-     the recorded version to 13.  */
-  SVN_ERR(svn_sqlite__with_transaction(sdb, bump_database_to_13, &bb));
+     the recorded version to 14.  */
+  SVN_ERR(svn_sqlite__with_transaction(sdb, bump_database_to_14, &bb));
 
   return SVN_NO_ERROR;
 }
@@ -744,9 +708,17 @@ svn_wc__upgrade_sdb(int *result_format,
 
   if (start_format == 12)
     {
-      SVN_ERR(bump_to_13(wcroot_abspath, sdb, scratch_pool));
+      /* Nothing to do for the 12->13 bump.  */
       ++start_format;
     }
+
+#if 0
+  if (start_format == 13)
+    {
+      SVN_ERR(bump_to_14(wcroot_abspath, sdb, scratch_pool));
+      ++start_format;
+    }
+#endif
 
   /* ### future bumps go here.  */
 

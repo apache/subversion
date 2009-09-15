@@ -393,6 +393,16 @@ CREATE TABLE WORK_QUEUE (
   work  BLOB NOT NULL
   );
 
+/* The contents of dav_cache are suspect in format 12, so it is best to just
+   erase anything there.  */
+UPDATE BASE_NODE SET incomplete_children=null, dav_cache=null;
+
+
+/* ------------------------------------------------------------------------- */
+
+/* Format 14 introduces new handling for conflict information.  */
+-- format: 14
+
 CREATE TABLE CONFLICT_VICTIM (
   /* specifies the location of this node in the local filesystem */
   wc_id  INTEGER NOT NULL,
@@ -453,19 +463,16 @@ CREATE TABLE CONFLICT_VICTIM (
   PRIMARY KEY (wc_id, local_relpath)
   );
 
-CREATE INDEX I_TCPARENT ON CONFLICT_VICTIM (wc_id, parent_relpath);
-
-/* The contents of dav_cache are suspect in format 12, so it is best to just
-   erase anything there.  */
-UPDATE BASE_NODE SET incomplete_children=null, dav_cache=null;
+CREATE INDEX I_CVPARENT ON CONFLICT_VICTIM (wc_id, parent_relpath);
 
 
 /* ------------------------------------------------------------------------- */
 
-/* Format 14 drops all columns not needed due to previous format upgrades.
-   As more formats are added, this number will be bumped, and it will
-   eventually become the final format for 1.7. */
--- format: 14
+/* Format 99 drops all columns not needed due to previous format upgrades.
+   Before we release 1.7, these statements will be pulled into a format bump
+   and all the tables will be cleaned up. We don't know what that format
+   number will be, however, so we're just marking it as 99 for now.  */
+-- format: 99
 
 /* We cannot directly remove columns, so we use a temporary table instead. */
 /* First create the temporary table without the undesired column(s). */
