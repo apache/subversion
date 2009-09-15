@@ -73,8 +73,7 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
 {
   const svn_ra_reporter3_t *reporter;
   void *report_baton;
-  const svn_wc_entry_t *entry;
-  const char *URL, *anchor, *target, *source_root, *switch_rev_url;
+  const char *url, *anchor, *target, *source_root, *switch_rev_url;
   svn_ra_session_t *ra_session;
   svn_revnum_t revnum;
   svn_error_t *err = SVN_NO_ERROR;
@@ -169,15 +168,11 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
     }
 
   SVN_ERR(svn_dirent_get_absolute(&anchor_abspath, anchor, pool));
-  SVN_ERR(svn_wc__get_entry_versioned(&entry, ctx->wc_ctx, anchor_abspath,
-                                      svn_node_unknown, FALSE, FALSE,
-                                      pool, pool));
-  if (! entry->url)
+  SVN_ERR(svn_wc__node_get_url(&url, ctx->wc_ctx, anchor_abspath, pool, pool));
+  if (! url)
     return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
                              _("Directory '%s' has no URL"),
                              svn_dirent_local_style(anchor, pool));
-
-  URL = apr_pstrdup(pool, entry->url);
 
   /* Open an RA session to 'source' URL */
   SVN_ERR(svn_client__ra_session_from_path(&ra_session, &revnum,
@@ -189,12 +184,12 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
 
   /* Disallow a switch operation to change the repository root of the
      target. */
-  if (! svn_uri_is_ancestor(source_root, URL))
+  if (! svn_uri_is_ancestor(source_root, url))
     return svn_error_createf
       (SVN_ERR_WC_INVALID_SWITCH, NULL,
        _("'%s'\n"
          "is not the same repository as\n"
-         "'%s'"), URL, source_root);
+         "'%s'"), url, source_root);
 
   /* We may need to crop the tree if the depth is sticky */
   if (depth_is_sticky && depth < svn_depth_infinity)
@@ -213,7 +208,7 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
                                  pool));
     }
 
-  SVN_ERR(svn_ra_reparent(ra_session, URL, pool));
+  SVN_ERR(svn_ra_reparent(ra_session, url, pool));
 
   /* Fetch the switch (update) editor.  If REVISION is invalid, that's
      okay; the RA driver will call editor->set_target_revision() later on. */
