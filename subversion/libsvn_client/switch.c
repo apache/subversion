@@ -91,10 +91,13 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
   const char *anchor_abspath;
   apr_array_header_t *preserved_exts;
   svn_boolean_t server_supports_depth;
+  const char *local_abspath;
   svn_config_t *cfg = ctx->config ? apr_hash_get(ctx->config,
                                                  SVN_CONFIG_CATEGORY_CONFIG,
                                                  APR_HASH_KEY_STRING)
                                   : NULL;
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
   /* An unknown depth can't be sticky. */
   if (depth == svn_depth_unknown)
@@ -240,13 +243,11 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
      We pass NULL for traversal_info because this is a switch, not an
      update, and therefore we don't want to handle any externals
      except the ones directly affected by the switch. */
-  err = svn_wc_crawl_revisions4(path, dir_access, reporter, report_baton,
-                                TRUE, depth, (! depth_is_sticky),
+  err = svn_wc_crawl_revisions5(ctx->wc_ctx, local_abspath, reporter,
+                                report_baton, TRUE, depth, (! depth_is_sticky),
                                 (! server_supports_depth),
-                                use_commit_times,
-                                ctx->notify_func2, ctx->notify_baton2,
-                                NULL, /* no traversal info */
-                                pool);
+                                use_commit_times, NULL, NULL,
+                                ctx->notify_func2, ctx->notify_baton2, pool);
 
   if (err)
     {
