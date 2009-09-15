@@ -996,16 +996,11 @@ get_mergeinfo(svn_mergeinfo_t *mergeinfo,
     }
   else /* ! svn_path_is_url() */
     {
-      const svn_wc_entry_t *entry;
       const char *url;
       svn_boolean_t indirect;
       const char *local_abspath;
 
       SVN_ERR(svn_dirent_get_absolute(&local_abspath, path_or_url, subpool));
-
-      SVN_ERR(svn_wc__get_entry_versioned(&entry, ctx->wc_ctx, local_abspath,
-                                          svn_node_unknown, FALSE, FALSE,
-                                          subpool, subpool));
 
       /* Check server Merge Tracking capability. */
       SVN_ERR(svn_client__entry_location(&url, &rev, ctx->wc_ctx,
@@ -1114,8 +1109,8 @@ elide_mergeinfo_catalog_cb(void **dir_baton,
       || strcmp(path, "/") == 0)
     return SVN_NO_ERROR;
 
-  path_suffix = svn_path_is_child(pb->inherited_mergeinfo_path,
-                                  path, NULL);
+  path_suffix = svn_dirent_is_child(pb->inherited_mergeinfo_path,
+                                    path, NULL);
   SVN_ERR_ASSERT(path_suffix != NULL);
 
   SVN_ERR(should_elide_mergeinfo(&elides,

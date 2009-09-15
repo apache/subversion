@@ -209,8 +209,8 @@ svn_client__path_relative_to_root(const char **rel_path,
          back from this, the two URLs have no commonality (which
          should only happen if our caller provided us a REPOS_ROOT and
          a PATH_OR_URL of something not in that repository).  */
-      const char *rel_url = svn_path_is_child(repos_root, abspath_or_url,
-                                              scratch_pool);
+      const char *rel_url = svn_uri_is_child(repos_root, abspath_or_url,
+                                             scratch_pool);
       if (! rel_url)
         {
           return svn_error_createf(SVN_ERR_CLIENT_UNRELATED_RESOURCES, NULL,
