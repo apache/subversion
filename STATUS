@@ -129,7 +129,6 @@ Candidate changes:
      ^/branches/1.6.x-r38000
    Votes:
      +1: stsp, sbutler
-     -1: julianfoad (r38000, r38006, r38099, r38100, r38181 only)
 
  * r35958, r36030, r38373, r38836, r38837, r38842
    Several fixes to the Win32 exception handler. This change also makes it
