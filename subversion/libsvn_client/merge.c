@@ -1276,17 +1276,18 @@ merge_file_changed(svn_wc_adm_access_t *adm_access,
      control, or is just missing from disk, fogettaboutit.  There's no
      way svn_wc_merge3() can do the merge. */
   {
-    const svn_wc_entry_t *entry;
     svn_node_kind_t kind;
+    svn_node_kind_t wc_kind;
 
-    SVN_ERR(svn_wc_entry(&entry, mine, adm_access, FALSE, subpool));
+    SVN_ERR(svn_wc__node_get_kind(&wc_kind, merge_b->ctx->wc_ctx, mine_abspath,
+                                  FALSE, subpool));
     SVN_ERR(svn_io_check_path(mine, &kind, subpool));
 
     /* ### a future thought:  if the file is under version control,
        but the working file is missing, maybe we can 'restore' the
        working file from the text-base, and then allow the merge to run?  */
 
-    if ((! entry) || (kind != svn_node_file))
+    if ((wc_kind == svn_node_none) || (kind != svn_node_file))
       {
         /* This is use case 4 described in the paper attached to issue
          * #2282.  See also notes/tree-conflicts/detection.txt
@@ -1610,10 +1611,11 @@ merge_file_added(svn_wc_adm_access_t *adm_access,
       if (content_state)
         {
           /* directory already exists, is it under version control? */
-          const svn_wc_entry_t *entry;
-          SVN_ERR(svn_wc_entry(&entry, mine, adm_access, FALSE, subpool));
+          svn_node_kind_t wc_kind;
+          SVN_ERR(svn_wc__node_get_kind(&wc_kind, merge_b->ctx->wc_ctx,
+                                        mine_abspath, FALSE, subpool));
 
-          if (entry && dry_run_deleted_p(merge_b, mine))
+          if ((wc_kind != svn_node_none) && dry_run_deleted_p(merge_b, mine))
             *content_state = svn_wc_notify_state_changed;
           else
             /* this will make the repos_editor send a 'skipped' message */
