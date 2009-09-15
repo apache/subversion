@@ -98,8 +98,10 @@ Candidate changes:
      +1: pburba
 
  * r38000, r38006, r38099, r38100, r38181, r38803, r38841, r38896,
-   r38907, r39000, r39002, r39007, r39008, r39052
+   r38907, r39000, r39002, r39007, r39008, r39052, r39096, r39124,
+   r39125, r39127
    Properly handle tree conflicts during replace.
+   (See issue #3281 "Merge a replacement of a directory")
    Justification:
      If a merge has a delete followed by an add on the same node, and
      also that node is modified locally, svn tried to create two tree-
@@ -114,12 +116,20 @@ Candidate changes:
      Since some of these revisions revert or change edits from earlier
      ones, it makes more sense to review the diff of the branch rather
      than all the individual changes:
-       svn diff -x-p ^/branches/1.6.x@39009 ^/branches/1.6.x-r38000
+       svn diff -x-p ^/branches/1.6.x ^/branches/1.6.x-r38000
      See the log messages on the branch as well as those on trunk.
+     Here is a summary of the revisions, grouped by purpose:
+       Fix the "tree conflict that already exists" error:
+         r38000, r38006, r38181, r38841
+       Add and tweak new merge tests:
+         r38099, r38100, r38803, r39000, r39002, r39007, r39052
+       Eliminate duplicate notifications and improve error messages:
+         r38896, r38907, r39008, r39096, r39124, r39125, r39127
    Branch:
      ^/branches/1.6.x-r38000
    Votes:
-     +1: stsp
+     +1: stsp, sbutler
+     -0: neels (I genr'ly approve but want to check sth first - please wait.)
 
  * r35958, r36030, r38373, r38836, r38837, r38842
    Several fixes to the Win32 exception handler. This change also makes it
@@ -140,29 +150,12 @@ Candidate changes:
      +0: pburba - I don't have a Vista or Win7 box to try this out on, but it
          works fine on my XP box.
 
- * r38886
-   Fix 2 failing tests in ruby bindings.
-   Justification:
-     1.6.5 shipped with these failures by accident. Failing regression tests
-     can confuse packagers or other people who want to verify their freshly
-     compiled binaries using our regression test suite.
-   Votes:
-     +1: stsp, hwright
-
- * r38959
+  * r38959
    Fix 'svn export -r 1000000' (issue #3400).
    Justification:
      Don't silently do the opposite of what the user asked for.
    Votes:
-     +1: danielsh
-
- * r38982
-   Print a newline before the plaintext password prompt.
-   Justification:
-     It wasn't intentional that the first line of dashes of this prompt
-     appears on the same line as "Transmitting file data ..." during commit.
-   Votes:
-     +1: stsp, hwright
+     +1: danielsh, rhuijben
 
  * r39019
    Fix bug where svn_[rangelist|mergeinfo]_[merge|intersect|remove|diff]
@@ -178,6 +171,51 @@ Candidate changes:
      ^/branches/1.6.x-r39109
    Votes:
      +1: pburba
+
+ * r39219
+   Perform MIME type matching case-insensitively.  (Issue #3479)
+   Justification:
+     The broken behavior is inconsistent with the way MIME mapping
+     files are used everywhere else in the world.
+   Votes:
+     +1: cmpilato, rhuijben
+   
+ * r39303
+   Print a newline before the plaintext passphrase prompt.
+   Justification:
+     It wasn't intentional that the first line of dashes of this prompt
+     appears on the same line as "Transmitting file data ..." during commit.
+   Notes:
+     Yes, this is almost the same as r38982, but this time it's about
+     the passPHRASE prompt, not the passWORD prompt.
+   Votes:
+     +1: stsp
+
+ * r39301
+   Allow non-threadsafe sqlite if APR has been compiled without threads.
+   Justification:
+     Subversion itself does not require threads, so it should be possible
+     to compile it against non-threaded libraries. This change follows
+     common practice in our code base by wrapping threading-related code
+     in #if APR_HAS_THREADS.
+   Notes:
+     There is a trivial text conflict during merge, in the second hunk.
+     To resolve it, choose 'edit', and keep only the line which reads
+     "#endif /* APR_HAS_THREADS */" from the ".merge-right.r39301" part.
+     Changes below that line do not apply to 1.6.x.
+     The correct merge result adds only two lines, "#if APR_HAS_THREADS"
+     and the corresponding #endif.
+   Votes:
+     +1: stsp
+
+ * r36831, r39329
+   Fix issue #3368, 'single file externals not working for binary files'.
+   Justification:
+     We have single file externals, it should work with binary files too.
+   Notes:
+     r36831 is the test case for issue #3368 and r39329 is the actual fix.
+   Votes:
+     +1: stylesen
 
 Approved changes:
 =================
