@@ -156,9 +156,9 @@ wc_path_to_repos_urls(const char **url,
                                       svn_node_unknown, FALSE, FALSE,
                                       scratch_pool, scratch_pool));
 
-  SVN_ERR(svn_client__entry_location(url, NULL, local_abspath,
-                                     svn_opt_revision_unspecified, entry,
-                                     result_pool));
+  SVN_ERR(svn_client__entry_location(url, NULL, wc_ctx, local_abspath,
+                                     svn_opt_revision_unspecified,
+                                     result_pool, scratch_pool));
 
   /* If we weren't provided a REPOS_ROOT, we'll try to read one from
      the entry.  The entry might not hold a URL -- in that case, we'll

@@ -107,9 +107,9 @@ calculate_target_mergeinfo(svn_ra_session_t *ra_session,
       else
         {
           SVN_ERR(svn_client__entry_location(&src_url, &src_revnum,
-                                             src_path_or_url,
-                                             svn_opt_revision_working, entry,
-                                             pool));
+                                             ctx->wc_ctx, local_abspath,
+                                             svn_opt_revision_working,
+                                             pool, pool));
         }
     }
   else
