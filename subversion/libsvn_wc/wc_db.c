@@ -190,7 +190,7 @@ static const char * const upgrade_sql[] = {
   WC_METADATA_SQL_13
 };
 
-WC_METADATA_SQL_DECLARE_STATEMENTS(statements);
+WC_QUERIES_SQL_DECLARE_STATEMENTS(statements);
 
 
 /* This is a character used to escape itself and the globbing character in
