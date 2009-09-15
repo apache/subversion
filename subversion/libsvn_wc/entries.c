@@ -2608,18 +2608,24 @@ svn_wc__entry_remove(svn_wc__db_t *db,
                      apr_pool_t *scratch_pool)
 {
   svn_wc_adm_access_t *adm_access;
-  apr_hash_t *entries;
   const char *name;
   const char *parent_dir;
 
+/* First: Update the entry cache */
   svn_dirent_split(local_abspath, &parent_dir, &name, scratch_pool);
   adm_access = svn_wc__adm_retrieve_internal2(db, parent_dir, scratch_pool);
 
-  SVN_ERR(svn_wc_entries_read(&entries, adm_access, TRUE, scratch_pool));
-  apr_hash_set(entries, name, APR_HASH_KEY_STRING, NULL);
+  if (adm_access != NULL)
+    {
+      apr_hash_t *entries = svn_wc__adm_access_entries(adm_access);
 
-  return svn_error_return(
-    entries_write(entries, db, parent_dir, scratch_pool));
+      if (entries != NULL)
+        apr_hash_set(entries, name, APR_HASH_KEY_STRING, NULL);
+    }
+
+  /* And then remove it from the database */
+  return svn_error_return(svn_wc__db_temp_op_remove_entry(db, local_abspath,
+                                                          scratch_pool));
 }
 
 
