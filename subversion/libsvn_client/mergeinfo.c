@@ -536,7 +536,6 @@ svn_client__get_repos_mergeinfo_catalog(
 
 svn_error_t *
 svn_client__get_wc_or_repos_mergeinfo(svn_mergeinfo_t *target_mergeinfo,
-                                      const svn_wc_entry_t *entry,
                                       svn_boolean_t *indirect,
                                       svn_boolean_t repos_only,
                                       svn_mergeinfo_inheritance_t inherit,
@@ -935,7 +934,7 @@ svn_client__elide_mergeinfo(const char *target_wcpath,
       if (!mergeinfo && !wc_elision_limit_path)
         {
           SVN_ERR(svn_client__get_wc_or_repos_mergeinfo
-                  (&mergeinfo, entry, &inherited, TRUE,
+                  (&mergeinfo, &inherited, TRUE,
                    svn_mergeinfo_nearest_ancestor,
                    NULL, target_wcpath, ctx, pool));
         }
@@ -1021,7 +1020,7 @@ get_mergeinfo(svn_mergeinfo_t *mergeinfo,
       /* Acquire return values. */
       SVN_ERR(svn_client__get_repos_root(repos_root, local_abspath,
                                          peg_revision, ctx, pool, pool));
-      SVN_ERR(svn_client__get_wc_or_repos_mergeinfo(mergeinfo, entry,
+      SVN_ERR(svn_client__get_wc_or_repos_mergeinfo(mergeinfo,
                                                     &indirect, FALSE,
                                                     svn_mergeinfo_inherited,
                                                     NULL, path_or_url,
