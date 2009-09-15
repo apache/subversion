@@ -41,6 +41,11 @@ wc_is_too_old_regex = (".*Working copy format of '.*' is too old \(\d+\); " +
                     "please run 'svn upgrade'")
 
 
+def get_current_format():
+  ### parse this from libsvn_wc/wc.h
+  return 12
+
+
 def replace_sbox_with_tarfile(sbox, tar_filename):
   try:
     svntest.main.safe_rmtree(sbox.wc_dir)
@@ -126,7 +131,7 @@ def basic_upgrade(sbox):
                                      'upgrade', sbox.wc_dir)
 
   # Actually check the format number of the upgraded working copy
-  check_format(sbox, 12)
+  check_format(sbox, get_current_format())
 
   # Now check the contents of the working copy
   expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
@@ -147,7 +152,7 @@ def upgrade_1_5_body(sbox, subcommand):
                                      'upgrade', sbox.wc_dir)
 
   # Check the format of the working copy
-  check_format(sbox, 12)
+  check_format(sbox, get_current_format())
 
   # Now check the contents of the working copy
   expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
