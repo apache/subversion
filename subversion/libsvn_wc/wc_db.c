@@ -28,6 +28,7 @@
 #include "svn_types.h"
 #include "svn_error.h"
 #include "svn_dirent_uri.h"
+#include "svn_path.h"
 #include "svn_wc.h"
 #include "svn_checksum.h"
 #include "svn_pools.h"
@@ -2740,6 +2741,57 @@ svn_wc__db_op_read_tree_conflict(svn_wc_conflict_description2_t **tree_conflict,
                                 APR_HASH_KEY_STRING);
 
   return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc__db_temp_op_remove_entry(svn_wc__db_t *db,
+                                const char *local_abspath,
+                                apr_pool_t *scratch_pool)
+{
+  svn_wc__db_pdh_t *pdh;
+  svn_sqlite__stmt_t *stmt;
+  svn_sqlite__db_t *sdb;
+  wcroot_t *wcroot;
+  const char *current_relpath;
+  
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  SVN_ERR(parse_local_abspath(&pdh, &current_relpath, db, local_abspath,
+                              svn_sqlite__mode_readwrite,
+                              scratch_pool, scratch_pool));
+  VERIFY_USABLE_PDH(pdh);
+
+  /* Check if we should remove it from the parent db instead */
+  if (svn_path_is_empty(current_relpath))
+    {
+      SVN_ERR(parse_local_abspath(&pdh, &current_relpath, db,
+                                  svn_dirent_dirname(local_abspath,
+                                                     scratch_pool),
+                                  svn_sqlite__mode_readwrite,
+                                  scratch_pool, scratch_pool));
+
+      VERIFY_USABLE_PDH(pdh);
+      current_relpath = svn_dirent_join(current_relpath,
+                                        svn_dirent_basename(local_abspath,
+                                                            NULL),
+                                        scratch_pool);
+    }
+
+  wcroot = pdh->wcroot;
+  sdb = wcroot->sdb;
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_DELETE_BASE_NODE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, current_relpath));
+  SVN_ERR(svn_sqlite__step_done(stmt));
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_DELETE_WORKING_NODE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, current_relpath));
+  SVN_ERR(svn_sqlite__step_done(stmt));
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_DELETE_ACTUAL_NODE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, current_relpath));
+  
+  return svn_error_return(svn_sqlite__step_done(stmt));
 }
 
 

@@ -775,6 +775,17 @@ insert into actual_node (
   wc_id, local_relpath, changelist)
 values (?1, ?2, ?3);
 
+-- STMT_DELETE_BASE_NODE
+delete from base_node
+where wc_id = ?1 and local_relpath = ?2;
+
+-- STMT_DELETE_WORKING_NODE
+delete from working_node
+where wc_id = ?1 and local_relpath = ?2;
+
+-- STMT_DELETE_ACTUAL_NODE
+delete from actual_node
+where wc_id = ?1 and local_relpath = ?2;
 
 /* ------------------------------------------------------------------------- */
 
