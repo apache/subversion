@@ -1011,27 +1011,13 @@ svn_client__harvest_committables(apr_hash_t **committables,
       if ((entry->schedule == svn_wc_schedule_add)
           || (entry->schedule == svn_wc_schedule_replace))
         {
-          const char *parent = svn_dirent_dirname(target, subpool);
-          svn_wc_adm_access_t *parent_access;
-          const svn_wc_entry_t *p_entry = NULL;
+          const char *parent_abspath = svn_dirent_dirname(target_abspath,
+                                                          subpool);
+          const svn_wc_entry_t *p_entry;
 
-          err = svn_wc_adm_retrieve(&parent_access, parent_adm,
-                                    parent, subpool);
-          if (err && err->apr_err == SVN_ERR_WC_NOT_LOCKED)
-            {
-              svn_error_clear(err);
-              SVN_ERR(svn_wc__adm_open_in_context(&parent_access, ctx->wc_ctx,
-                                                  parent, FALSE, 0,
-                                                  ctx->cancel_func,
-                                                  ctx->cancel_baton, subpool));
-            }
-          else if (err)
-            {
-              return err;
-            }
-
-          SVN_ERR(svn_wc_entry(&p_entry, parent, parent_access,
-                               FALSE, subpool));
+          SVN_ERR(svn_wc__maybe_get_entry(&p_entry, ctx->wc_ctx,
+                                          parent_abspath, svn_node_dir,
+                                          FALSE, FALSE, subpool, subpool));
           if (! p_entry)
             return svn_error_createf
               (SVN_ERR_WC_CORRUPT, NULL,
@@ -1043,7 +1029,7 @@ svn_client__harvest_committables(apr_hash_t **committables,
               /* Copy the parent and target into pool; subpool
                  lasts only for this loop iteration, and we check
                  danglers after the loop is over. */
-              apr_hash_set(danglers, apr_pstrdup(pool, parent),
+              apr_hash_set(danglers, svn_dirent_dirname(target, pool),
                            APR_HASH_KEY_STRING,
                            apr_pstrdup(pool, target));
             }
