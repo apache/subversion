@@ -281,7 +281,9 @@ svn_wc__node_get_url(const char **url,
     }
 
   SVN_ERR_ASSERT(repos_root_url != NULL && repos_relpath != NULL);
-  *url = svn_uri_join(repos_root_url, repos_relpath, result_pool);
+  *url = svn_uri_join(repos_root_url,
+                      svn_path_uri_encode(repos_relpath, scratch_pool),
+                      result_pool);
 
   return SVN_NO_ERROR;
 }
