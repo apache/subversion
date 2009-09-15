@@ -459,7 +459,7 @@ svn_client__path_relative_to_session(const char **rel_path,
   if (strcmp(session_url, url) == 0)
     *rel_path = "";
   else
-    *rel_path = svn_path_uri_decode(svn_path_is_child(session_url, url, pool),
+    *rel_path = svn_path_uri_decode(svn_uri_is_child(session_url, url, pool),
                                     pool);
   return SVN_NO_ERROR;
 }

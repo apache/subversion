@@ -207,7 +207,8 @@ display_prop_diffs(const apr_array_header_t *propchanges,
   if (relative_to_dir)
     {
       /* Possibly adjust the path shown in the output (see issue #2723). */
-      const char *child_path = svn_path_is_child(relative_to_dir, path, pool);
+      const char *child_path = svn_dirent_is_child(relative_to_dir, path,
+                                                   pool);
 
       if (child_path)
         path = child_path;
@@ -487,7 +488,7 @@ diff_content_changed(const char *path,
   if (diff_cmd_baton->relative_to_dir)
     {
       /* Possibly adjust the paths shown in the output (see issue #2723). */
-      const char *child_path = svn_path_is_child(rel_to_dir, path, subpool);
+      const char *child_path = svn_dirent_is_child(rel_to_dir, path, subpool);
 
       if (child_path)
         path = child_path;
@@ -496,7 +497,7 @@ diff_content_changed(const char *path,
       else
         return MAKE_ERR_BAD_RELATIVE_PATH(path, rel_to_dir);
 
-      child_path = svn_path_is_child(rel_to_dir, path1, subpool);
+      child_path = svn_dirent_is_child(rel_to_dir, path1, subpool);
 
       if (child_path)
         path1 = child_path;
@@ -505,7 +506,7 @@ diff_content_changed(const char *path,
       else
         return MAKE_ERR_BAD_RELATIVE_PATH(path1, rel_to_dir);
 
-      child_path = svn_path_is_child(rel_to_dir, path2, subpool);
+      child_path = svn_dirent_is_child(rel_to_dir, path2, subpool);
 
       if (child_path)
         path2 = child_path;

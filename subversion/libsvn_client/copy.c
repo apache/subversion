@@ -344,8 +344,8 @@ do_wc_to_wc_moves(const apr_array_header_t *copy_pairs,
                                           iterpool));
 
           if ((pair->src_kind == svn_node_dir)
-              && (svn_path_is_child(src_parent_abs, dst_parent_abs,
-                                    iterpool)))
+              && (svn_dirent_is_child(src_parent_abs, dst_parent_abs,
+                                      iterpool)))
             {
               SVN_ERR(svn_wc_adm_retrieve(&dst_access, src_access,
                                           pair->dst_parent, iterpool));
@@ -772,8 +772,8 @@ repos_to_repos_copy(svn_commit_info_t **commit_info_p,
       const char *dir;
 
       new_dirs = apr_array_make(pool, 0, sizeof(const char *));
-      dir = svn_path_is_child(top_url, svn_uri_dirname(pair->dst, pool),
-                              pool);
+      dir = svn_uri_is_child(top_url, svn_uri_dirname(pair->dst, pool),
+                             pool);
 
       /* Imagine a situation where the user tries to copy an existing source
          directory to nonexistent directory with --parents options specified:
@@ -782,7 +782,7 @@ repos_to_repos_copy(svn_commit_info_t **commit_info_p,
 
          where src exists and dst does not.  The svn_uri_dirname() call above
          will produce a string equivalent to top_url, which means
-         svn_path_is_child() will return NULL.  In this case, do not try to add
+         svn_uri_is_child() will return NULL.  In this case, do not try to add
          dst to the new_dirs list since it will be added to the commit items
          array later in this function. */
 
@@ -807,7 +807,7 @@ repos_to_repos_copy(svn_commit_info_t **commit_info_p,
                                                path_driver_info_t *);
 
       if (strcmp(pair->dst, repos_root) != 0
-          && svn_path_is_child(pair->dst, pair->src, pool) != NULL)
+          && svn_uri_is_child(pair->dst, pair->src, pool) != NULL)
         {
           info->resurrection = TRUE;
           top_url = svn_uri_dirname(top_url, pool);
@@ -852,13 +852,13 @@ repos_to_repos_copy(svn_commit_info_t **commit_info_p,
 
       /* Get the portions of the SRC and DST URLs that are relative to
          TOP_URL, and URI-decode those sections. */
-      src_rel = svn_path_is_child(top_url, pair->src, pool);
+      src_rel = svn_uri_is_child(top_url, pair->src, pool);
       if (src_rel)
         src_rel = svn_path_uri_decode(src_rel, pool);
       else
         src_rel = "";
 
-      dst_rel = svn_path_is_child(top_url, pair->dst, pool);
+      dst_rel = svn_uri_is_child(top_url, pair->dst, pool);
       if (dst_rel)
         dst_rel = svn_path_uri_decode(dst_rel, pool);
       else
@@ -1121,9 +1121,9 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
       SVN_ERR(svn_wc_entry(&entry, pair->src, adm_access, FALSE, iterpool));
       pair->src_revnum = entry->revision;
 
-      dst_rel = svn_path_uri_decode(svn_path_is_child(top_dst_url,
-                                                      pair->dst,
-                                                      iterpool),
+      dst_rel = svn_path_uri_decode(svn_uri_is_child(top_dst_url,
+                                                     pair->dst,
+                                                     iterpool),
                                     iterpool);
       SVN_ERR(svn_ra_check_path(ra_session, dst_rel, SVN_INVALID_REVNUM,
                                 &dst_kind, iterpool));
@@ -1802,7 +1802,7 @@ try_copy(svn_commit_info_t **commit_info_p,
 
           svn_pool_clear(iterpool);
 
-          if (svn_path_is_child(pair->src, pair->dst, iterpool))
+          if (svn_dirent_is_child(pair->src, pair->dst, iterpool))
             return svn_error_createf
               (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
                _("Cannot copy path '%s' into its own child '%s'"),
