@@ -598,9 +598,9 @@ svn_client__get_wc_or_repos_mergeinfo_catalog(
      parent if TARGET_WCPATH is missing.  These limited entries do not have
      a URL and without that we cannot get accurate mergeinfo for
      TARGET_WCPATH. */
-  SVN_ERR(svn_client__entry_location(&url, &target_rev, local_abspath,
-                                     svn_opt_revision_working, entry,
-                                     scratch_pool));
+  SVN_ERR(svn_client__entry_location(&url, &target_rev, ctx->wc_ctx,
+                                     local_abspath, svn_opt_revision_working,
+                                     scratch_pool, scratch_pool));
 
   if (repos_only)
     *target_mergeinfo_catalog = NULL;
@@ -1008,8 +1008,9 @@ get_mergeinfo(svn_mergeinfo_t *mergeinfo,
                                           subpool, subpool));
 
       /* Check server Merge Tracking capability. */
-      SVN_ERR(svn_client__entry_location(&url, &rev, path_or_url,
-                                         svn_opt_revision_working, entry,
+      SVN_ERR(svn_client__entry_location(&url, &rev, ctx->wc_ctx,
+                                         local_abspath,
+                                         svn_opt_revision_working, subpool,
                                          subpool));
       SVN_ERR(svn_client__open_ra_session_internal(&ra_session, url,
                                                    NULL, NULL, FALSE,
