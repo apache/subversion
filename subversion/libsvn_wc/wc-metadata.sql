@@ -787,6 +787,14 @@ where wc_id = ?1 and local_relpath = ?2;
 delete from actual_node
 where wc_id = ?1 and local_relpath = ?2;
 
+-- STMT_UPDATE_BASE_DEPTH
+update base_node set depth = ?3
+where wc_id = ?1 and local_relpath = ?2;
+
+-- STMT_UPDATE_WORKING_DEPTH
+update working_node set depth = ?3
+where wc_id = ?1 and local_relpath = ?2;
+
 /* ------------------------------------------------------------------------- */
 
 /* these are used in entries.c  */

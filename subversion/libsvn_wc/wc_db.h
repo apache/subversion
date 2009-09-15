@@ -1716,6 +1716,14 @@ svn_wc__db_temp_op_remove_entry(svn_wc__db_t *db,
                                 const char *local_abspath,
                                 apr_pool_t *scratch_pool);
 
+/* Sets the depth of LOCAL_ABSPATH in its working copy to DEPTH
+   using DB */
+svn_error_t *
+svn_wc__db_temp_op_set_dir_depth(svn_wc__db_t *db,
+                                 const char *local_abspath,
+                                 svn_depth_t depth,
+                                 apr_pool_t *scratch_pool);
+
 
 /* ### temp function. return the FORMAT for the directory LOCAL_ABSPATH.  */
 svn_error_t *
