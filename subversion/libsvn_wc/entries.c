@@ -1543,63 +1543,46 @@ svn_wc__set_depth(svn_wc__db_t *db,
   svn_dirent_split(local_dir_abspath, &parent_abspath, &base_name,
                    scratch_pool);
 
+  /* Update the entry cache */
   adm_access = svn_wc__adm_retrieve_internal2(db, parent_abspath,
                                               scratch_pool);
 
-  /* Ensure we aren't looking at the wcroot. */
-
-  /* ### This check assumes the baton for parent_abspath must be cached. Which
-          is not the case in depth_tests 32. This breaks setting the entry to
-          excluded in the parent directory.
-          
-          This whole function should be rewritten to look at wc-db, instead
-          of the adm_access cache that is going to be empty in most codepaths.
-          */
+  /* Update parent? */
   if (adm_access != NULL)
     {
-      SVN_ERR(svn_wc_entries_read(&entries, adm_access, TRUE, scratch_pool));
+      apr_hash_t *entries = svn_wc__adm_access_entries(adm_access);
       entry = apr_hash_get(entries, base_name, APR_HASH_KEY_STRING);
 
-      /* If we are updating sub-working copies, like externals, we don't
-         find an entry here. Just continue like when we are at the root
-         of a working copy. */
-      if (entry)
+      if (entry != NULL)
         {
-          /* If the parent says we are excluded, but we are now not, mark the
-             parent as 'infinite'.  The new depth state will be recorded in the
-             child. */
-          if (entry->depth == svn_depth_exclude && depth != svn_depth_exclude)
-            {
-              entry->depth = svn_depth_infinity;
-              SVN_ERR(entries_write(entries, db, parent_abspath,
-                                    scratch_pool));
-            }
-
-          /* Excluded directories are marked in the parent.  */
-          if (depth == svn_depth_exclude)
-            {
-              entry->depth = depth;
-              return svn_error_return(entries_write(entries, db,
-                                                    parent_abspath,
-                                                    scratch_pool));
-            }
+          entry->depth = (depth == svn_depth_exclude) ? svn_depth_exclude
+                                                      : svn_depth_infinity;
         }
     }
 
-  /* We aren't excluded, so fetch the entries for the directory, and write
-     our depth there. */
-  adm_access = svn_wc__adm_retrieve_internal2(db, local_dir_abspath,
-                                              scratch_pool);
-  SVN_ERR_ASSERT(adm_access != NULL);
-  SVN_ERR(svn_wc_entries_read(&entries, adm_access, TRUE, scratch_pool));
+  /* ### setting depth exclude on a wcroot breaks svn_wc_crop() */
+  if (depth != svn_depth_exclude)
+    {
+       /* We aren't excluded, so fetch the entries for the directory, and write
+        our depth there. */
+      adm_access = svn_wc__adm_retrieve_internal2(db, local_dir_abspath,
+                                                  scratch_pool);
+      if (adm_access != NULL)
+        {
+          apr_hash_t *entries = svn_wc__adm_access_entries(adm_access);
+          entry = apr_hash_get(entries, SVN_WC_ENTRY_THIS_DIR,
+                                        APR_HASH_KEY_STRING);
 
-  entry = apr_hash_get(entries, SVN_WC_ENTRY_THIS_DIR, APR_HASH_KEY_STRING);
-  entry->depth = depth;
+          if (entry != NULL)
+            entry->depth = depth;
+        }
+    }
 
-  return svn_error_return(entries_write(entries, db, local_dir_abspath,
-                                        scratch_pool));
+  return svn_error_return(svn_wc__db_temp_op_set_dir_depth(db,
+                                                           local_dir_abspath,
+                                                           depth,
+                                                           scratch_pool));
 }
-
 
 static svn_error_t *
 insert_base_node(svn_sqlite__db_t *sdb,

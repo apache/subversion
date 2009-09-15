@@ -2796,6 +2796,92 @@ svn_wc__db_temp_op_remove_entry(svn_wc__db_t *db,
 
 
 svn_error_t *
+svn_wc__db_temp_op_set_dir_depth(svn_wc__db_t *db,
+                                 const char *local_abspath,
+                                 svn_depth_t depth,
+                                 apr_pool_t *scratch_pool)
+{
+  svn_wc__db_pdh_t *pdh;
+  svn_sqlite__stmt_t *stmt;
+  svn_sqlite__db_t *sdb;
+  wcroot_t *wcroot;
+  const char *current_relpath;
+  
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  SVN_ERR(parse_local_abspath(&pdh, &current_relpath, db, local_abspath,
+                              svn_sqlite__mode_readwrite,
+                              scratch_pool, scratch_pool));
+  VERIFY_USABLE_PDH(pdh);
+
+  wcroot = pdh->wcroot;
+  sdb = wcroot->sdb;
+
+  /* ### We set depth on working and base to match entry behavior.
+         Maybe these should be separated later? */
+
+  /* ### setting depth exclude on a wcroot breaks svn_wc_crop() */
+  if (!svn_path_is_empty(current_relpath) || depth != svn_depth_exclude)
+    {
+      SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_UPDATE_BASE_DEPTH));
+      SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, current_relpath));
+      SVN_ERR(svn_sqlite__bind_text(stmt, 3, svn_depth_to_word(depth)));
+      SVN_ERR(svn_sqlite__step_done(stmt));
+
+      SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_UPDATE_WORKING_DEPTH));
+      SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, current_relpath));
+      SVN_ERR(svn_sqlite__bind_text(stmt, 3, svn_depth_to_word(depth)));
+      SVN_ERR(svn_sqlite__step_done(stmt));
+    }
+
+  /* Check if we should also set depth in the parent db */
+  if (svn_path_is_empty(current_relpath))
+    {
+      svn_error_t *err;
+      
+      err = parse_local_abspath(&pdh, &current_relpath, db,
+                                svn_dirent_dirname(local_abspath,
+                                                     scratch_pool),
+                                svn_sqlite__mode_readwrite,
+                                scratch_pool, scratch_pool);
+
+      if (err && err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY)
+        {
+          /* No parent to update */
+          svn_error_clear(err);
+          return SVN_NO_ERROR;
+        }
+      else
+        SVN_ERR(err);
+
+      depth = (depth == svn_depth_exclude) ? svn_depth_exclude
+                                           : svn_depth_infinity;
+
+      VERIFY_USABLE_PDH(pdh);
+      wcroot = pdh->wcroot;
+      sdb = wcroot->sdb;
+      current_relpath = svn_dirent_join(current_relpath,
+                                        svn_dirent_basename(local_abspath,
+                                                            NULL),
+                                        scratch_pool);
+
+      SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_UPDATE_BASE_DEPTH));
+      SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, current_relpath));
+      SVN_ERR(svn_sqlite__bind_text(stmt, 3, svn_depth_to_word(depth)));
+      SVN_ERR(svn_sqlite__step_done(stmt));
+
+      SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_UPDATE_WORKING_DEPTH));
+      SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, current_relpath));
+      SVN_ERR(svn_sqlite__bind_text(stmt, 3, svn_depth_to_word(depth)));
+      SVN_ERR(svn_sqlite__step_done(stmt));
+
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
 svn_wc__db_read_info(svn_wc__db_status_t *status,
                      svn_wc__db_kind_t *kind,
                      svn_revnum_t *revision,
