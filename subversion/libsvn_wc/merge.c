@@ -118,8 +118,8 @@ static svn_error_t *
 detranslate_wc_file(const char **detranslated_abspath,
                     svn_wc__db_t *db,
                     const char *merge_abspath,
-                     svn_boolean_t force_copy,
-                     const apr_array_header_t *prop_diff,
+                    svn_boolean_t force_copy,
+                    const apr_array_header_t *prop_diff,
                     const char *source_abspath,
                     apr_pool_t *result_pool,
                     apr_pool_t *scratch_pool)
