@@ -162,6 +162,7 @@ struct edit_baton
 
   /* The DB handle for managing the working copy state.  */
   svn_wc__db_t *db;
+  svn_wc_context_t *wc_ctx;
 
   /* ADM_ACCESS is an access baton that includes the ANCHOR directory */
   svn_wc_adm_access_t *adm_access;
@@ -457,29 +458,28 @@ struct handler_baton
 /* Return the url for LOCAL_ABSPATH of type KIND which can be unknown, 
  * allocated in RESULT_POOL, or null if unable to obtain a url.
  *
- * Use ASSOCIATED_ACCESS to retrieve an access baton for PATH, and do
+ * Use WC_CTX to retrieve information on LOCAL_ABSPATH, and do
  * all temporary allocation in SCRATCH_POOL.
  */
 static const char *
-get_entry_url(svn_wc__db_t *db,
+get_entry_url(svn_wc_context_t *wc_ctx,
               const char *local_abspath,
-              svn_node_kind_t kind,
               apr_pool_t *result_pool,
               apr_pool_t *scratch_pool)
 {
   svn_error_t *err;
-  const svn_wc_entry_t *entry;
+  const char *url;
 
-  err = svn_wc__get_entry(&entry, db, local_abspath, FALSE, kind, FALSE,
-                          result_pool, scratch_pool);
+  err = svn_wc__node_get_url(&url, wc_ctx, local_abspath, result_pool,
+                                                          scratch_pool);
 
-  if (err || !entry->url)
+  if (err || !url)
     {
       svn_error_clear(err);
       return NULL;
     }
 
-  return entry->url;
+  return url;
 }
 
 /* Flush accumulated log entries to a log file on disk for DIR_BATON and
@@ -614,8 +614,7 @@ make_dir_baton(struct dir_baton **d_p,
       /* updates are the odds ones.  if we're updating a path already
          present on disk, we use its original URL.  otherwise, we'll
          telescope based on its parent's URL. */
-      d->new_URL = get_entry_url(eb->db, d->local_abspath, svn_node_dir,
-                                 pool, pool);
+      d->new_URL = get_entry_url(eb->wc_ctx, d->local_abspath, pool, pool);
       if ((! d->new_URL) && pb)
         d->new_URL = svn_path_url_add_component2(pb->new_URL, d->name, pool);
     }
@@ -1011,10 +1010,10 @@ make_file_baton(struct file_baton **f_p,
     }
   else
     {
-      f->new_URL = get_entry_url(pb->edit_baton->db,
+      f->new_URL = get_entry_url(pb->edit_baton->wc_ctx,
                                  svn_dirent_join(pb->local_abspath,
                                                  f->name, pool),
-                                 svn_node_file, pool, pool);
+                                 pool, pool);
     }
 
   f->pool              = pool;
@@ -1143,9 +1142,11 @@ prep_directory(struct dir_baton *db,
 
       adm_access_pool = svn_wc_adm_access_pool(db->edit_baton->adm_access);
 
-      SVN_ERR(svn_wc_adm_open3(&adm_access, db->edit_baton->adm_access,
-                               rel_path, TRUE, 0, db->edit_baton->cancel_func,
-                               db->edit_baton->cancel_baton, adm_access_pool));
+      SVN_ERR(svn_wc__adm_open_in_context(&adm_access, db->edit_baton->wc_ctx,
+                                          rel_path, TRUE, 0,
+                                          db->edit_baton->cancel_func,
+                                          db->edit_baton->cancel_baton,
+                                          adm_access_pool));
     }
 
   return SVN_NO_ERROR;
@@ -4843,6 +4844,7 @@ make_editor(svn_revnum_t *target_revision,
   eb->repos                    = repos_root;
   eb->uuid                     = repos_uuid;
   eb->db                       = wc_ctx->db;
+  eb->wc_ctx                   = wc_ctx;
   eb->adm_access               = adm_access;
   eb->anchor                   = anchor;
   eb->target                   = target_basename;
