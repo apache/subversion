@@ -1327,6 +1327,7 @@ diff_repos_wc(const char *path1,
   int levels_to_lock = SVN_WC__LEVELS_TO_LOCK_FROM_DEPTH(depth);
   svn_boolean_t server_supports_depth;
   const char *abspath1;
+  const char *abspath2;
   const char *anchor_abspath;
 
   SVN_ERR_ASSERT(! svn_path_is_url(path2));
@@ -1335,6 +1336,8 @@ diff_repos_wc(const char *path1,
     SVN_ERR(svn_dirent_get_absolute(&abspath1, path1, pool));
   else
     abspath1 = path1;
+
+  SVN_ERR(svn_dirent_get_absolute(&abspath2, path2, pool));
 
   /* Convert path1 to a URL to feed to do_diff. */
   SVN_ERR(convert_to_url(&url1, ctx->wc_ctx, abspath1, pool, pool));
@@ -1428,11 +1431,11 @@ diff_repos_wc(const char *path1,
 
   /* Create a txn mirror of path2;  the diff editor will print
      diffs in reverse.  :-)  */
-  SVN_ERR(svn_wc_crawl_revisions4(path2, dir_access,
+  SVN_ERR(svn_wc_crawl_revisions5(ctx->wc_ctx, abspath2,
                                   reporter, reporter_baton,
                                   FALSE, depth, TRUE, (! server_supports_depth),
                                   FALSE, NULL, NULL, /* notification is N/A */
-                                  NULL, pool));
+                                  NULL, NULL, pool));
 
   return svn_wc_adm_close2(adm_access, pool);
 }
