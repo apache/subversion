@@ -36,7 +36,7 @@
 #include "entries.h"
 #include "wc_db.h"
 #include "tree_conflicts.h"
-#include "wc-metadata.h"  /* for STMT_*  */
+#include "wc-queries.h"  /* for STMT_*  */
 
 #include "svn_private_config.h"
 #include "private/svn_wc_private.h"

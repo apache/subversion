@@ -37,6 +37,7 @@
 #include "wc_db.h"
 #include "adm_files.h"
 #include "wc-metadata.h"
+#include "wc-queries.h"
 #include "entries.h"
 #include "lock.h"
 #include "tree_conflicts.h"
