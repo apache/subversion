@@ -335,11 +335,6 @@ get_subtree_mergeinfo_walk_cb(const char *local_abspath,
 {
   struct get_mergeinfo_catalog_walk_baton *wb = walk_baton;
   const svn_string_t *propval;
-  const svn_wc_entry_t *entry;
-
-  SVN_ERR(svn_wc__get_entry_versioned(&entry, wb->wc_ctx, local_abspath,
-                                      svn_node_unknown, FALSE, FALSE,
-                                      scratch_pool, scratch_pool));
 
   SVN_ERR(svn_wc_prop_get2(&propval, wb->wc_ctx, local_abspath,
                            SVN_PROP_MERGEINFO, scratch_pool, scratch_pool));
