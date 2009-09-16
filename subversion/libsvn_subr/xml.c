@@ -401,7 +401,7 @@ svn_xml_parse(svn_xml_parser_t *svn_parser,
   int success;
 
   /* Parse some xml data */
-  success = XML_Parse(svn_parser->parser, buf, len, is_final);
+  success = XML_Parse(svn_parser->parser, buf, (int) len, is_final);
 
   /* If expat choked internally, return its error. */
   if (! success)

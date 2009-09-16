@@ -394,7 +394,7 @@ path_txn_node_children(svn_fs_t *fs, const svn_fs_id_t *id, apr_pool_t *pool)
 static APR_INLINE const char *
 path_node_origin(svn_fs_t *fs, const char *node_id, apr_pool_t *pool)
 {
-  int len = strlen(node_id);
+  size_t len = strlen(node_id);
   const char *node_id_minus_last_char =
     (len == 1) ? "0" : apr_pstrmemdup(pool, node_id, len - 1);
   return svn_dirent_join_many(pool, fs->path, PATH_NODE_ORIGINS_DIR,
@@ -1722,7 +1722,7 @@ get_packed_offset(apr_off_t *rev_offset,
   fs_fs_data_t *ffd = fs->fsap_data;
   svn_stream_t *manifest_stream;
   svn_boolean_t is_cached;
-  int shard;
+  apr_int64_t shard;
   apr_array_header_t *manifest;
   apr_pool_t *iterpool;
 
@@ -6981,7 +6981,7 @@ pack_body(void *baton,
 {
   struct pack_baton *pb = baton;
   int format, max_files_per_dir;
-  int completed_shards;
+  apr_int64_t completed_shards;
   apr_int64_t i;
   svn_revnum_t youngest;
   apr_pool_t *iterpool;

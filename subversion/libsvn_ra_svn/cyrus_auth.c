@@ -275,7 +275,7 @@ get_credentials(cred_baton_t *baton)
 
 /* The username callback. Implements the sasl_getsimple_t interface. */
 static int
-get_username_cb(void *b, int id, const char **username, unsigned *len)
+get_username_cb(void *b, int id, const char **username, size_t *len)
 {
   cred_baton_t *baton = b;
 
@@ -301,7 +301,7 @@ get_password_cb(sasl_conn_t *conn, void *b, int id, sasl_secret_t **psecret)
   if (baton->password || get_credentials(baton))
     {
       sasl_secret_t *secret;
-      int len = strlen(baton->password);
+      size_t len = strlen(baton->password);
 
       /* sasl_secret_t is a struct with a variable-sized array as a final
          member, which means we need to allocate len-1 supplementary bytes
@@ -601,7 +601,7 @@ sasl_write_cb(void *baton, const char *buffer, apr_size_t *len)
         *len = 0;
         return SVN_NO_ERROR;
       }
-      sasl_baton->write_len -= tmplen;
+      sasl_baton->write_len -= (unsigned int) tmplen;
       sasl_baton->write_buf += tmplen;
     }
   while (sasl_baton->write_len > 0);
