@@ -48,6 +48,19 @@ class SubversionClientTestCase(unittest.TestCase):
 
     self.client_ctx.auth_baton = core.svn_auth_open(providers)
 
+    self.cleanup_dirs = []
+
+  def tearDown(self):
+    # We have to free client_ctx first, since it may be holding handles
+    # to WC DBs
+    del self.client_ctx
+    map(core.svn_io_remove_dir, self.cleanup_dirs)
+
+  def allocate_temp_dir(self, suffix = ""):
+    temp_dir_name = core.svn_path_internal_style(tempfile.mkdtemp(suffix))
+    self.cleanup_dirs.append(temp_dir_name)
+    return temp_dir_name
+
   def testBatonPlay(self):
     """Test playing with C batons"""
     baton = lambda: 1
@@ -129,7 +142,7 @@ class SubversionClientTestCase(unittest.TestCase):
     rev = core.svn_opt_revision_t()
     rev.kind = core.svn_opt_revision_head
 
-    path = tempfile.mktemp('-checkout')
+    path = self.allocate_temp_dir('-checkout')
 
     self.assertRaises(ValueError, client.checkout2,
                       REPOS_URL, path, None, None, True, True,
@@ -200,7 +213,7 @@ class SubversionClientTestCase(unittest.TestCase):
     rev = core.svn_opt_revision_t()
     rev.kind = core.svn_opt_revision_head
 
-    path = tempfile.mktemp('-url_from_path')
+    path = self.allocate_temp_dir('-url_from_path')
 
     client.checkout2(REPOS_URL, path, rev, rev, True, True,
                      self.client_ctx)
@@ -212,7 +225,7 @@ class SubversionClientTestCase(unittest.TestCase):
     rev = core.svn_opt_revision_t()
     rev.kind = core.svn_opt_revision_head
 
-    path = tempfile.mktemp('uuid_from_path')
+    path = self.allocate_temp_dir('-uuid_from_path')
 
     client.checkout2(REPOS_URL, path, rev, rev, True, True,
                      self.client_ctx)
@@ -237,7 +250,7 @@ class SubversionClientTestCase(unittest.TestCase):
     # in the repository.
     rev = core.svn_opt_revision_t()
     rev.kind = core.svn_opt_revision_head
-    wc_path = core.svn_path_canonicalize(tempfile.mktemp())
+    wc_path = self.allocate_temp_dir('-info_file')
 
     client.checkout2(REPOS_URL, wc_path, rev, rev, True, True,
                      self.client_ctx)
@@ -282,7 +295,6 @@ class SubversionClientTestCase(unittest.TestCase):
       self.assertEqual(self.info.size, 8)
     finally:
       wc.adm_close(adm_access)
-      core.svn_io_remove_dir(wc_path)
 
 def suite():
     return unittest.makeSuite(SubversionClientTestCase, 'test',
