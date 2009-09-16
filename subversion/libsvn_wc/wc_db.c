@@ -28,7 +28,6 @@
 #include "svn_types.h"
 #include "svn_error.h"
 #include "svn_dirent_uri.h"
-#include "svn_path.h"
 #include "svn_wc.h"
 #include "svn_checksum.h"
 #include "svn_pools.h"
@@ -2747,6 +2746,7 @@ svn_wc__db_op_read_tree_conflict(svn_wc_conflict_description2_t **tree_conflict,
 svn_error_t *
 svn_wc__db_temp_op_remove_entry(svn_wc__db_t *db,
                                 const char *local_abspath,
+                                svn_boolean_t flush_entry_cache,
                                 apr_pool_t *scratch_pool)
 {
   svn_wc__db_pdh_t *pdh;
@@ -2762,20 +2762,20 @@ svn_wc__db_temp_op_remove_entry(svn_wc__db_t *db,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(pdh);
 
+  if (flush_entry_cache)
+    flush_entries(pdh);
+
   /* Check if we should remove it from the parent db instead */
-  if (svn_path_is_empty(current_relpath))
+  if (strcmp(current_relpath, "") == 0)
     {
-      SVN_ERR(parse_local_abspath(&pdh, &current_relpath, db,
-                                  svn_dirent_dirname(local_abspath,
-                                                     scratch_pool),
-                                  svn_sqlite__mode_readwrite,
-                                  scratch_pool, scratch_pool));
+      SVN_ERR(navigate_to_parent(&pdh, pdh, svn_sqlite__mode_readwrite,
+                                 scratch_pool));
 
       VERIFY_USABLE_PDH(pdh);
-      current_relpath = svn_dirent_join(current_relpath,
-                                        svn_dirent_basename(local_abspath,
-                                                            NULL),
-                                        scratch_pool);
+      current_relpath = svn_dirent_basename(local_abspath, NULL);
+
+      if (flush_entry_cache)
+        flush_entries(pdh);
     }
 
   wcroot = pdh->wcroot;
@@ -2800,6 +2800,7 @@ svn_error_t *
 svn_wc__db_temp_op_set_dir_depth(svn_wc__db_t *db,
                                  const char *local_abspath,
                                  svn_depth_t depth,
+                                 svn_boolean_t flush_entry_cache,
                                  apr_pool_t *scratch_pool)
 {
   svn_wc__db_pdh_t *pdh;
@@ -2821,8 +2822,12 @@ svn_wc__db_temp_op_set_dir_depth(svn_wc__db_t *db,
   /* ### We set depth on working and base to match entry behavior.
          Maybe these should be separated later? */
 
+  if (flush_entry_cache)
+    flush_entries(pdh);
+
+
   /* ### setting depth exclude on a wcroot breaks svn_wc_crop() */
-  if (!svn_path_is_empty(current_relpath) || depth != svn_depth_exclude)
+  if (strcmp(current_relpath, "") != 0 || depth != svn_depth_exclude)
     {
       SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_UPDATE_BASE_DEPTH));
       SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, current_relpath));
@@ -2836,15 +2841,12 @@ svn_wc__db_temp_op_set_dir_depth(svn_wc__db_t *db,
     }
 
   /* Check if we should also set depth in the parent db */
-  if (svn_path_is_empty(current_relpath))
+  if (strcmp(current_relpath, "") == 0)
     {
       svn_error_t *err;
-      
-      err = parse_local_abspath(&pdh, &current_relpath, db,
-                                svn_dirent_dirname(local_abspath,
-                                                     scratch_pool),
-                                svn_sqlite__mode_readwrite,
-                                scratch_pool, scratch_pool);
+
+      err = navigate_to_parent(&pdh, pdh, svn_sqlite__mode_readwrite,
+                               scratch_pool);
 
       if (err && err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY)
         {
@@ -2855,16 +2857,16 @@ svn_wc__db_temp_op_set_dir_depth(svn_wc__db_t *db,
       else
         SVN_ERR(err);
 
+      if (flush_entry_cache)
+        flush_entries(pdh);
+
       depth = (depth == svn_depth_exclude) ? svn_depth_exclude
                                            : svn_depth_infinity;
 
       VERIFY_USABLE_PDH(pdh);
       wcroot = pdh->wcroot;
       sdb = wcroot->sdb;
-      current_relpath = svn_dirent_join(current_relpath,
-                                        svn_dirent_basename(local_abspath,
-                                                            NULL),
-                                        scratch_pool);
+      current_relpath = svn_dirent_basename(local_abspath, NULL);
 
       SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_UPDATE_BASE_DEPTH));
       SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, current_relpath));
@@ -2875,7 +2877,6 @@ svn_wc__db_temp_op_set_dir_depth(svn_wc__db_t *db,
       SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, current_relpath));
       SVN_ERR(svn_sqlite__bind_text(stmt, 3, svn_depth_to_word(depth)));
       SVN_ERR(svn_sqlite__step_done(stmt));
-
     }
 
   return SVN_NO_ERROR;

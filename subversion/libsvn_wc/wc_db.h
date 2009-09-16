@@ -1710,18 +1710,22 @@ svn_wc__db_temp_is_dir_deleted(svn_boolean_t *not_present,
                                apr_pool_t *scratch_pool);
 
 /* Removes all references of LOCAL_ABSPATH from its working copy
-   using DB. */
+   using DB. When FLUSH_ENTRIES is set to TRUE, flush the related
+   entries caches. */
 svn_error_t *
 svn_wc__db_temp_op_remove_entry(svn_wc__db_t *db,
                                 const char *local_abspath,
+                                svn_boolean_t flush_entry_cache,
                                 apr_pool_t *scratch_pool);
 
 /* Sets the depth of LOCAL_ABSPATH in its working copy to DEPTH
-   using DB */
+   using DB. When FLUSH_ENTRIES is set to TRUE, flush the related
+   entries caches. */
 svn_error_t *
 svn_wc__db_temp_op_set_dir_depth(svn_wc__db_t *db,
                                  const char *local_abspath,
                                  svn_depth_t depth,
+                                 svn_boolean_t flush_entry_cache,
                                  apr_pool_t *scratch_pool);
 
 

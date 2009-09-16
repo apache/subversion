@@ -1581,6 +1581,7 @@ svn_wc__set_depth(svn_wc__db_t *db,
   return svn_error_return(svn_wc__db_temp_op_set_dir_depth(db,
                                                            local_dir_abspath,
                                                            depth,
+                                                           FALSE,
                                                            scratch_pool));
 }
 
@@ -2608,6 +2609,7 @@ svn_wc__entry_remove(svn_wc__db_t *db,
 
   /* And then remove it from the database */
   return svn_error_return(svn_wc__db_temp_op_remove_entry(db, local_abspath,
+                                                          FALSE,
                                                           scratch_pool));
 }
 
