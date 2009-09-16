@@ -1081,15 +1081,11 @@ class SvnClientTest < Test::Unit::TestCase
       end
 
       ctx.set_cancel_func(nil)
-      access = Svn::Wc::AdmAccess.open(nil, @wc_path, true, -1)
       assert_nothing_raised do
         ctx.cleanup(@wc_path)
       end
       assert_nothing_raised do
         ctx.commit(@wc_path)
-      end
-      assert_raises(Svn::Error::SvnError) do
-        access.close
       end
     end
   end
