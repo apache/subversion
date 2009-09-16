@@ -662,7 +662,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  is not provided, display revisions which have been merged from\n"
      "  SOURCE to TARGET; otherwise, display the type of information\n"
      "  specified by the --show-revs option.\n"),
-    {'r', opt_show_revs} },
+    {'r', 'R', opt_depth, opt_show_revs} },
 
   { "mkdir", svn_cl__mkdir, {0}, N_
     ("Create a new directory under version control.\n"
