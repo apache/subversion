@@ -165,14 +165,6 @@ Candidate changes:
    Votes:
      +1: pburba
 
- * r39219
-   Perform MIME type matching case-insensitively.  (Issue #3479)
-   Justification:
-     The broken behavior is inconsistent with the way MIME mapping
-     files are used everywhere else in the world.
-   Votes:
-     +1: cmpilato, rhuijben
-   
  * r39303
    Print a newline before the plaintext passphrase prompt.
    Justification:
@@ -219,3 +211,17 @@ Candidate changes:
 
 Approved changes:
 =================
+
+ * r39219
+   Perform MIME type matching case-insensitively.  (Issue #3479)
+   Justification:
+     The broken behavior is inconsistent with the way MIME mapping
+     files are used everywhere else in the world.
+   Notes: There is a text conflict during merge. Resolve with 'tc',
+     and then replace svn_dirent_local_style() in libsvn_subr/io.c
+     with svn_path_local_style() to avoid a compiler warning (implicit
+     declaration). Alternatively, include svn_dirent_uri.h at the
+     top of libsvn_subr/io.c.
+   Votes:
+     +1: cmpilato, rhuijben, stsp
+   
