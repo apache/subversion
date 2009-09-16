@@ -35,9 +35,9 @@
 /* A map for svn_wc_conflict_action_t values to human-readable strings */
 static const svn_token_map_t map_conflict_action_human[] =
 {
-  { N_("edited"),       svn_wc_conflict_action_edit },
-  { N_("deleted"),      svn_wc_conflict_action_delete },
-  { N_("added"),        svn_wc_conflict_action_add },
+  { N_("edit"),         svn_wc_conflict_action_edit },
+  { N_("delete"),       svn_wc_conflict_action_delete },
+  { N_("add"),          svn_wc_conflict_action_add },
   { N_("replace"),      svn_wc_conflict_action_replace },
   { NULL,               0 }
 };
@@ -55,12 +55,12 @@ static const svn_token_map_t map_conflict_action_xml[] =
 /* A map for svn_wc_conflict_reason_t values to human-readable strings */
 static const svn_token_map_t map_conflict_reason_human[] =
 {
-  { N_("edited"),       svn_wc_conflict_reason_edited },
-  { N_("deleted"),      svn_wc_conflict_reason_deleted },
+  { N_("edit"),         svn_wc_conflict_reason_edited },
+  { N_("delete"),       svn_wc_conflict_reason_deleted },
   { N_("missing"),      svn_wc_conflict_reason_missing },
-  { N_("obstructed"),   svn_wc_conflict_reason_obstructed },
-  { N_("added"),        svn_wc_conflict_reason_added },
-  { N_("replaced"),     svn_wc_conflict_reason_replaced },
+  { N_("obstruction"),  svn_wc_conflict_reason_obstructed },
+  { N_("add"),          svn_wc_conflict_reason_added },
+  { N_("replace"),      svn_wc_conflict_reason_replaced },
   { N_("unversioned"),  svn_wc_conflict_reason_unversioned },
   { NULL,               0 }
 };
