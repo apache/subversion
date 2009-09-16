@@ -1596,10 +1596,14 @@ repos_to_wc_copy(const apr_array_header_t *copy_pairs,
       svn_client__copy_pair_t *pair = APR_ARRAY_IDX(copy_pairs, i,
                                                     svn_client__copy_pair_t *);
       const svn_wc_entry_t *ent;
+      const char *dst_abspath;
 
       svn_pool_clear(iterpool);
+      SVN_ERR(svn_dirent_get_absolute(&dst_abspath, pair->dst, iterpool));
 
-      SVN_ERR(svn_wc_entry(&ent, pair->dst, adm_access, TRUE, iterpool));
+      SVN_ERR(svn_wc__maybe_get_entry(&ent, ctx->wc_ctx, dst_abspath,
+                                      svn_node_unknown, TRUE, FALSE,
+                                      iterpool, iterpool));
       if (ent)
         {
           /* TODO(#2843): Rework the error report. Maybe we can simplify the
