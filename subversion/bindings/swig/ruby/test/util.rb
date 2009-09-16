@@ -1,5 +1,6 @@
 require "fileutils"
 require "pathname"
+require "svn/util"
 
 require "my-assertions"
 
@@ -190,7 +191,7 @@ realm = #{@realm}
   end
 
   def normalize_line_break(str)
-    if windows?
+    if Svn::Util.windows?
       str.gsub(/\n/, "\r\n")
     else
       str
@@ -199,11 +200,6 @@ realm = #{@realm}
 
   def setup_greek_tree
     make_context("setup greek tree") { |ctx| @greek.setup(ctx) }
-  end
-
-  module_function
-  def windows?
-    /cygwin|mingw|mswin32|bccwin32/.match(RUBY_PLATFORM)
   end
 
   module Svnserve
@@ -281,7 +277,7 @@ exit 1
     end
   end
 
-  if windows?
+  if Svn::Util.windows?
     require 'windows_util'
     include Windows::Svnserve
     extend Windows::SetupEnvironment
