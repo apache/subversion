@@ -1667,7 +1667,7 @@ svn_client_mergeinfo_log(const char *path_or_url,
   if (depth != svn_depth_infinity && depth != svn_depth_empty)
     return svn_error_create(
       SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-      _("Only depth 'infinity' and 'empty' are currently supported"));
+      _("Only depths 'infinity' and 'empty' are currently supported"));
 
   /* Step 1: Ensure that we have a merge source URL to work with. */
   SVN_ERR(location_from_path_and_rev(&merge_source_url, &real_src_peg_revision,
