@@ -56,12 +56,12 @@ DBT *svn_fs_base__nodata_dbt(DBT *dbt)
 
 
 DBT *
-svn_fs_base__set_dbt(DBT *dbt, const void *data, u_int32_t size)
+svn_fs_base__set_dbt(DBT *dbt, const void *data, apr_size_t size)
 {
   svn_fs_base__clear_dbt(dbt);
 
   dbt->data = (void *) data;
-  dbt->size = size;
+  dbt->size = (u_int32_t) size;
 
   return dbt;
 }

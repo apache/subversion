@@ -188,7 +188,7 @@ reporter_link_path(void *reporter_baton,
   reporter_baton_t *rbaton = reporter_baton;
   const char *fs_path = NULL;
   const char *repos_url_decoded;
-  int repos_url_len;
+  size_t repos_url_len;
 
   url = svn_path_uri_decode(url, pool);
   repos_url_decoded = svn_path_uri_decode(rbaton->sess->repos_url, pool);
@@ -249,7 +249,7 @@ make_reporter(svn_ra_session_t *session,
 {
   svn_ra_local__session_baton_t *sess = session->priv;
   void *rbaton;
-  int repos_url_len;
+  size_t repos_url_len;
   const char *other_fs_path = NULL;
   const char *repos_url_decoded;
 

@@ -1130,7 +1130,7 @@ svn_fs_fs__dag_deserialize(void **out,
   if (*data == 'M')
     {
       const char *newline;
-      int id_len;
+      size_t id_len;
 
       data++; data_len--;
       if (data_len == 0)

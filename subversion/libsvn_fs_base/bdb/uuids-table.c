@@ -140,7 +140,7 @@ svn_error_t *svn_fs_bdb__set_uuid(svn_fs_t *fs,
   key.size = sizeof(idx);
 
   svn_fs_base__clear_dbt(&value);
-  value.size = strlen(uuid);
+  value.size = (u_int32_t) strlen(uuid);
   value.data = apr_pstrmemdup(pool, uuid, value.size + 1);
 
   svn_fs_base__trail_debug(trail, "uuids", "put");

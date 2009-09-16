@@ -1657,7 +1657,7 @@ svn_repos_get_logs4(svn_repos_t *repos,
                   || (strcmp(APR_ARRAY_IDX(paths, 0, const char *),
                              "/") == 0)))))
     {
-      int send_count = 0;
+      apr_uint64_t send_count = 0;
       int i;
       apr_pool_t *iterpool = svn_pool_create(pool);
 

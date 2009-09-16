@@ -298,7 +298,8 @@ add_subdir(svn_fs_root_t *source_root,
 }
 
 static svn_boolean_t
-is_within_base_path(const char *path, const char *base_path, int base_len)
+is_within_base_path(const char *path, const char *base_path,
+                    apr_ssize_t base_len)
 {
   if (base_path[0] == '\0')
     return TRUE;
@@ -667,7 +668,7 @@ svn_repos_replay2(svn_fs_root_t *root,
   apr_hash_index_t *hi;
   apr_array_header_t *paths;
   struct path_driver_cb_baton cb_baton;
-  int base_path_len;
+  size_t base_path_len;
 
   /* Fetch the paths changed under ROOT. */
   SVN_ERR(svn_fs_paths_changed2(&fs_changes, root, pool));
