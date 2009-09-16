@@ -91,12 +91,13 @@ msgstr ""
 "Project-Id-Version: subversion 1.7\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2009-09-12 13:46+0200\n"
-"PO-Revision-Date: 2009-09-14 19:43+0200\n"
+"PO-Revision-Date: 2009-09-16 19:00+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Norwegian <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
 #. Constructing nice error messages for roots.
 #. Build an SVN_ERR_FS_NOT_FOUND error, with a detailed error text,
@@ -2811,9 +2812,9 @@ msgid "Copy from mutable tree not currently supported"
 msgstr "Kopi fra foranderlig tre er foreløpig ikke støttet"
 
 #: ../libsvn_fs_base/tree.c:3749 ../libsvn_fs_fs/tree.c:2451
-#, fuzzy, c-format
+#, c-format
 msgid "Base checksum mismatch on '%s'"
-msgstr "Kontrollsummene stemmer ikke"
+msgstr "Basekontrollsum stemmer ikke på «%s»"
 
 #: ../libsvn_fs_base/tree.c:3998 ../libsvn_fs_fs/tree.c:2683
 msgid "Cannot compare file contents between two different filesystems"
@@ -2931,9 +2932,9 @@ msgid "Unsupported FS loader version (%d) for fsfs"
 msgstr "Versjonen av filsystemlaster (%d) for fsfs er ikke støttet"
 
 #: ../libsvn_fs_fs/fs_fs.c:269
-#, fuzzy, c-format
+#, c-format
 msgid "Revision file '%s' does not exist, and r%ld is not packed"
-msgstr "«%s» finnes ikke i revisjon %ld"
+msgstr "Revisjonsfil «%s» finnes ikke, og r%ld er ikke pakket"
 
 #: ../libsvn_fs_fs/fs_fs.c:506
 #, c-format
@@ -4428,9 +4429,9 @@ msgid "Cannot accept '%s' property because it is not encoded in UTF-8"
 msgstr "Kan ikke godta «%s»-egenskap fordi den ikke er kodet i UTF-8"
 
 #: ../libsvn_repos/fs-wrap.c:196
-#, fuzzy, c-format
+#, c-format
 msgid "Cannot accept non-LF line endings in '%s' property"
-msgstr "Kan ikke godta loggmelding med linjeslutt som ikke er LF"
+msgstr "Kan ikke godta linjeslutt som ikke er LF i «%s»-egenskap"
 
 #: ../libsvn_repos/fs-wrap.c:311
 #, c-format
@@ -6423,9 +6424,9 @@ msgid "Entry '%s' has invalid '%s' value"
 msgstr "Oppføringen «%s» har ugyldig «%s»-verdi"
 
 #: ../libsvn_wc/old-and-busted.c:638
-#, fuzzy, c-format
+#, c-format
 msgid "Entry '%s' has invalid depth"
-msgstr "Posten «%s» har ugyldig nodetype"
+msgstr "Posten «%s» har ugyldig dybde"
 
 #: ../libsvn_wc/old-and-busted.c:1091
 #, c-format
@@ -6525,7 +6526,7 @@ msgstr ""
 "men egenskapen finnes allerede med verdien «%s»."
 
 #: ../libsvn_wc/props.c:1412
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "Trying to change property '%s' from '%s' to '%s',\n"
 "but the property has been locally changed from '%s' to '%s'."
@@ -6634,12 +6635,12 @@ msgstr "Kan ikke skrive lås/post-hashfil «%s»"
 
 #: ../libsvn_wc/relocate.c:107
 msgid "Given source URL invalid"
-msgstr ""
+msgstr "Angitt kilde-URL er ugyldig"
 
 #: ../libsvn_wc/relocate.c:112
 #, c-format
 msgid "Given destination URL invalid: '%s'"
-msgstr ""
+msgstr "Angitt mål-URL er ugyldig: «%s»"
 
 #: ../libsvn_wc/tree_conflicts.c:171
 msgid "Unknown enumeration value in tree conflict description"
@@ -6678,13 +6679,13 @@ msgid "No '.' entry in: '%s'"
 msgstr "Ingen «.»-oppføring i: «%s»"
 
 #: ../libsvn_wc/update_editor.c:1073
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "Checksum mismatch while updating '%s':\n"
 "   expected:  %s\n"
 "     actual:  %s\n"
 msgstr ""
-"Feil i kontrollsum, fil «%s»:\n"
+"Feil i kontrollsum under oppdatering av «%s»:\n"
 "   forventet:  %s\n"
 "     faktisk:  %s\n"
 
@@ -6706,12 +6707,12 @@ msgstr "Klarte ikke å legge til katalogen «%s»: En uversjonert katalog med de
 #: ../libsvn_wc/update_editor.c:2417
 #, c-format
 msgid "UUID mismatch: existing directory '%s' was checked out from a different repository"
-msgstr ""
+msgstr "UUID samsvarer ikke: Eksisterende katalog «%s» er hentet ut fra et annet depot"
 
 #: ../libsvn_wc/update_editor.c:2428
-#, fuzzy, c-format
+#, c-format
 msgid "URL '%s' of existing directory '%s' does not match expected URL '%s'"
-msgstr "Depotets UUID «%s» samsvarer ikke med forventet UUID «%s»"
+msgstr "URL-en «%s» for eksisterende katalog «%s» samsvarer ikke med forventet URL «%s»"
 
 #: ../libsvn_wc/update_editor.c:2441
 #, c-format
@@ -6759,9 +6760,9 @@ msgid "Failed to add file '%s': a non-file object of the same name already exist
 msgstr "Klarte ikke å legge til filen «%s»: Et objekt som ikke er en fil finnes allerede med det samme navnet"
 
 #: ../libsvn_wc/update_editor.c:3597
-#, fuzzy, c-format
+#, c-format
 msgid "Failed to add file '%s': an unversioned file of the same name already exists"
-msgstr "Klarte ikke å legge til katalogen «%s»: En uversjonert katalog med det samme navnet finnes allerede"
+msgstr "Klarte ikke å legge til filen «%s»: En uversjonert fil med det samme navnet finnes allerede"
 
 #: ../libsvn_wc/update_editor.c:3634
 #, fuzzy, c-format
@@ -6769,9 +6770,9 @@ msgid "UUID mismatch: existing file '%s' was checked out from a different reposi
 msgstr "Kilde-URL «%s» er fra et forskjellig depot"
 
 #: ../libsvn_wc/update_editor.c:3642
-#, fuzzy, c-format
+#, c-format
 msgid "URL '%s' of existing file '%s' does not match expected URL '%s'"
-msgstr "Depotets UUID «%s» samsvarer ikke med forventet UUID «%s»"
+msgstr "URL-en «%s» for eksisterende fil «%s» samsvarer ikke med forventet URL «%s»"
 
 #: ../libsvn_wc/update_editor.c:3742
 #, c-format
@@ -6779,15 +6780,15 @@ msgid "File '%s' in directory '%s' is not a versioned resource"
 msgstr "Filen «%s» i katalogen «%s» er ikke en versjonert ressurs"
 
 #: ../libsvn_wc/update_editor.c:3923
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "Checksum mismatch for '%s':\n"
 "   expected:  %s\n"
 "   recorded:  %s\n"
 msgstr ""
-"Kontrollsummer samsvarer ikke i representasjon «%s»:\n"
+"Feil i kontrollsum for «%s»:\n"
 "   forventet:  %s\n"
-"     faktisk:  %s\n"
+"      lagret:  %s\n"
 
 #: ../libsvn_wc/update_editor.c:5224
 #, c-format
@@ -6809,9 +6810,8 @@ msgid "Cannot upgrade with existing logs; please run 'svn cleanup' with Subversi
 msgstr ""
 
 #: ../libsvn_wc/upgrade.c:827
-#, fuzzy
 msgid "'svn upgrade' can only be run from the root of the working copy."
-msgstr "Tjeneren kan bare spille av fra roten av et depot"
+msgstr "«svn upgrade» kan bare kjøres fra roten av arbeidskopien."
 
 #: ../libsvn_wc/util.c:58
 #, c-format
@@ -6833,18 +6833,17 @@ msgid "Working copy format of '%s' is too old (%d); please check out your workin
 msgstr "Formatet til arbeidskopien «%s» er for gammelt (%d). Sjekk arbeidskopien igjen"
 
 #: ../libsvn_wc/wc_db.c:402
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "This client is too old to work with the working copy at\n"
 "'%s' (format %d).\n"
 "You need to get a newer Subversion client. For more details, see\n"
 "  http://subversion.tigris.org/faq.html#working-copy-format-change\n"
 msgstr ""
-"Denne klienten er for gammel til å virke med arbeidskopien «%s». Du må\n"
-"enten hente en nyere Subversionklient, eller nedgradere denne\n"
-"arbeidskopien.\n"
-"Se http://subversion.tigris.org/faq.html#working-copy-format-change\n"
-"for detaljer."
+"Denne klienten er for gammel til å virke med arbeidskopien på\n"
+"«%s» (format %d).\n"
+"Du må hente en nyere Subversionklient. For flere detaljer, se\n"
+"  http://subversion.tigris.org/faq.html#working-copy-format-change\n"
 
 #: ../libsvn_wc/wc_db.c:502
 #, c-format
@@ -6861,49 +6860,49 @@ msgstr ""
 #: ../libsvn_wc/wc_db.c:3234 ../libsvn_wc/wc_db.c:3286
 #: ../libsvn_wc/wc_db.c:3320 ../libsvn_wc/wc_db.c:3724
 #: ../libsvn_wc/wc_db.c:3914
-#, fuzzy, c-format
+#, c-format
 msgid "The node '%s' was not found."
-msgstr "stien «%s» ble ikke funnet"
+msgstr "Fant ikke noden «%s»."
 
 #: ../libsvn_wc/wc_db.c:596
-#, fuzzy, c-format
+#, c-format
 msgid "Parent(s) of '%s' should have repository information."
-msgstr "«%s» mangler informasjon om opprinnelse"
+msgstr "Foreldre til «%s» skulle hatt depotinformasjon."
 
 #: ../libsvn_wc/wc_db.c:763
 #, c-format
 msgid "Missing a row in WCROOT."
-msgstr ""
+msgstr "Mangler en rad i WCROOT."
 
 #: ../libsvn_wc/wc_db.c:1008
-#, fuzzy, c-format
+#, c-format
 msgid "Missing a row in WCROOT for '%s'."
-msgstr "Mangler «revisjon»-attributt for «%s»"
+msgstr "Mangler en rad i WCROOT for «%s»."
 
 #: ../libsvn_wc/wc_db.c:2111 ../libsvn_wc/wc_db.c:3093
 #, c-format
 msgid "The node '%s' has a corrupt checksum value."
-msgstr ""
+msgstr "Noden «%s» har en ødelagt sjekksumverdi."
 
 #: ../libsvn_wc/wc_db.c:3227
-#, fuzzy, c-format
+#, c-format
 msgid "Corrupt data for '%s'"
-msgstr "Finner ikke noen URL for «%s»"
+msgstr "Ødelagte data for «%s»"
 
 #: ../libsvn_wc/wc_db.c:3759
-#, fuzzy, c-format
+#, c-format
 msgid "Expected node '%s' to be added."
-msgstr "Forventet at «%s» skulle være en katalog, men fant en fil"
+msgstr "Forventet at noden «%s» skulle bli lagt til."
 
 #: ../libsvn_wc/wc_db.c:3958
 #, c-format
 msgid "Expected node '%s' to be deleted."
-msgstr ""
+msgstr "Forventet at noden «%s» skulle bli slettet."
 
 #: ../libsvn_wc/wc_db.c:4106
-#, fuzzy, c-format
+#, c-format
 msgid "Repository '%s' not found in the database"
-msgstr "Filstien «%s» ble ikke funnet i hode-revisjonen"
+msgstr "Fant ikke depotet «%s» i databasen"
 
 #: ../libsvn_wc/workqueue.c:110
 #, fuzzy, c-format
@@ -6925,9 +6924,8 @@ msgid "Skipping binary file: '%s'\n"
 msgstr "Hopper over binær fil: «%s»\n"
 
 #: ../svn/changelist-cmd.c:58 ../svn/main.c:1548
-#, fuzzy
 msgid "Changelist names must not be empty"
-msgstr "Forandringslisten samsvarer ikke"
+msgstr "Navn på forandringslister kan ikke være tomme"
 
 #: ../svn/checkout-cmd.c:136 ../svn/switch-cmd.c:142
 #, c-format
@@ -7259,9 +7257,8 @@ msgid "Invalid URL '%s'"
 msgstr "Ugyldig URL «%s»"
 
 #: ../svn/info-cmd.c:94
-#, fuzzy
 msgid "Resource is not under version control."
-msgstr "«%s» er ikke under versjonskontroll"
+msgstr "Ressursen er ikke under versjonskontroll"
 
 #: ../svn/info-cmd.c:241 ../svnadmin/main.c:1263
 #, c-format
@@ -7426,7 +7423,7 @@ msgid "Lock Expires"
 msgstr "Låsen utgår"
 
 #: ../svn/info-cmd.c:417
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "Lock Comment (%i line):\n"
 "%s\n"
@@ -7437,7 +7434,7 @@ msgstr[0] ""
 "Låsekommentar (%i linje):\n"
 "%s\n"
 msgstr[1] ""
-"Låsekommentar (%i linje):\n"
+"Låsekommentar (%i linjer):\n"
 "%s\n"
 
 #: ../svn/info-cmd.c:426
@@ -7447,7 +7444,7 @@ msgstr "Forandringsliste: %s\n"
 
 #: ../svn/info-cmd.c:444
 msgid "Tree conflict"
-msgstr ""
+msgstr "Trekonflikt"
 
 #: ../svn/info-cmd.c:450
 msgid "Source  left"
@@ -7526,18 +7523,16 @@ msgid "'with-all-revprops' option only valid in XML mode"
 msgstr "«with-all-revprops»-valget er bare gyldig i XML-modus"
 
 #: ../svn/log-cmd.c:459
-#, fuzzy
 msgid "'with-no-revprops' option only valid in XML mode"
-msgstr "«with-revprop»-valget er bare gyldig i XML-modus"
+msgstr "«with-no-revprops»-valget er bare gyldig i XML-modus"
 
 #: ../svn/log-cmd.c:463
 msgid "'with-revprop' option only valid in XML mode"
 msgstr "«with-revprop»-valget er bare gyldig i XML-modus"
 
 #: ../svn/log-cmd.c:483
-#, fuzzy
 msgid "-c and -r are mutually exclusive"
-msgstr "--relocate og --depth utelukker hverandre gjensidig"
+msgstr "-c og -r utelukker hverandre"
 
 #: ../svn/log-cmd.c:509
 msgid "Only relative paths can be specified after a URL"
@@ -7697,13 +7692,12 @@ msgstr ""
 "                             «files», «immediates» eller «infinity»)"
 
 #: ../svn/main.c:198
-#, fuzzy
 msgid ""
 "set new working copy depth to ARG ('exclude',\n"
 "                            'empty', 'files', 'immediates', or 'infinity')"
 msgstr ""
-"sett ny arbeidskopidybde til ARG («empty»,\n"
-"                             «files», «immediates» eller «infinity»)"
+"sett ny arbeidskopidybde til ARG («exclude»,\n"
+"                            «empty», «files», «immediates» eller «infinity»)"
 
 #: ../svn/main.c:201 ../svnlook/main.c:147
 msgid "output in XML"
@@ -7867,9 +7861,8 @@ msgid "retrieve all revision properties"
 msgstr "hent alle revisjonsegenskaper"
 
 #: ../svn/main.c:271
-#, fuzzy
 msgid "retrieve no revision properties"
-msgstr "hent alle revisjonsegenskaper"
+msgstr "hent ingen revisjonsegenskaper"
 
 #: ../svn/main.c:273
 msgid ""
@@ -7896,15 +7889,18 @@ msgid ""
 "                             'theirs-conflict', 'mine-full', 'theirs-full',\n"
 "                             'edit', 'launch')"
 msgstr ""
+"spesifiser måte for automatisk løsing av konflikter\n"
+"                            («postpone», «base», «mine-conflict»,\n"
+"                             «theirs-conflict», «mine-full», «theirs-full»,\n"
+"                             «edit», «launch»)"
 
 #: ../svn/main.c:290
-#, fuzzy
 msgid ""
 "specify which collection of revisions to display\n"
 "                             ('merged', 'eligible')"
 msgstr ""
-"bruk format som er kompatibelt med Subversionversjoner\n"
-"                             tidligere enn 1.4"
+"spesifiser hvilken samling av revisjoner som skal vises\n"
+"                             («merged», «eligible»)"
 
 #: ../svn/main.c:294
 msgid "lump-merge all of source URL's unmerged changes"
@@ -9218,7 +9214,7 @@ msgid "Syntax error in revision argument '%s'"
 msgstr "Syntaksfeil i revisjonsargumentet «%s»"
 
 #: ../svn/main.c:1378 ../svn/main.c:1397
-#, fuzzy, c-format
+#, c-format
 msgid "Error converting depth from locale to UTF-8"
 msgstr "Feil under konvertering av dybde fra lokalt tegnsett til UTF-8"
 
@@ -9228,9 +9224,9 @@ msgid "'%s' is not a valid depth; try 'empty', 'files', 'immediates', or 'infini
 msgstr "«%s» er ikke en gyldig dybde; prøv «empty», «files», «immediates» eller «infinity»"
 
 #: ../svn/main.c:1405
-#, fuzzy, c-format
+#, c-format
 msgid "'%s' is not a valid depth; try 'exclude', 'empty', 'files', 'immediates', or 'infinity'"
-msgstr "«%s» er ikke en gyldig dybde; prøv «empty», «files», «immediates» eller «infinity»"
+msgstr "«%s» er ikke en gyldig dybde; prøv «exclude», «empty», «files», «immediates» eller «infinity»"
 
 #: ../svn/main.c:1529
 #, c-format
@@ -9280,14 +9276,12 @@ msgid "--depth and --set-depth are mutually exclusive"
 msgstr "--depth og --set-depth utelukker hverandre gjensidig"
 
 #: ../svn/main.c:1756
-#, fuzzy
 msgid "--with-all-revprops and --with-no-revprops are mutually exclusive"
-msgstr "--auto-props og --no-auto-props utelukker hverandre gjensidig"
+msgstr "--with-all-revprops og --with-no-revprops utelukker hverandre"
 
 #: ../svn/main.c:1766
-#, fuzzy
 msgid "--with-revprop and --with-no-revprops are mutually exclusive"
-msgstr "--auto-props og --no-auto-props utelukker hverandre gjensidig"
+msgstr "--with-revprop og --with-no-revprops utelukker hverandre"
 
 #: ../svn/main.c:1775 ../svnsync/main.c:1730
 msgid "--trust-server-cert requires --non-interactive"
