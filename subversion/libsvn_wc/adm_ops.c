@@ -1215,19 +1215,17 @@ svn_wc_delete4(svn_wc_context_t *wc_ctx,
   if (was_kind == svn_node_dir)
     {
       const char *parent, *base_name;
-      svn_wc_adm_access_t *parent_access;
-      apr_hash_t *entries;
       const svn_wc_entry_t *entry_in_parent;
 
       svn_dirent_split(path, &parent, &base_name, pool);
 
       /* The deleted state is only available in the entry in parent's
          entries file */
-      SVN_ERR(svn_wc_adm_retrieve(&parent_access, adm_access, parent, pool));
       /* We don't need to check for excluded item, since we won't fall into
          this code path in that case. */
-      SVN_ERR(svn_wc_entries_read(&entries, parent_access, TRUE, pool));
-      entry_in_parent = apr_hash_get(entries, base_name, APR_HASH_KEY_STRING);
+      SVN_ERR(svn_wc__get_entry(&entry_in_parent, wc_ctx->db, local_abspath,
+                                FALSE, svn_node_dir, TRUE, pool, pool));
+
       was_deleted = entry_in_parent ? entry_in_parent->deleted : FALSE;
 
       if (was_schedule == svn_wc_schedule_add && !was_deleted)
@@ -1249,7 +1247,6 @@ svn_wc_delete4(svn_wc_context_t *wc_ctx,
                  that's scheduled for addition.  Easiest to just
                  remove the entry.  */
               SVN_ERR(svn_wc__entry_remove(wc_ctx->db, local_abspath, pool));
-              apr_hash_set(entries, base_name, APR_HASH_KEY_STRING, NULL);
             }
         }
       else if (was_schedule != svn_wc_schedule_add)
@@ -2169,8 +2166,9 @@ revert_entry(svn_depth_t *depth,
 
           /* We don't need to check for excluded item, since we won't fall
              into this code path in that case. */
-          SVN_ERR(svn_wc_entries_read(&entries, parent_access, TRUE, pool));
-          parents_entry = apr_hash_get(entries, basey, APR_HASH_KEY_STRING);
+          SVN_ERR(svn_wc__get_entry(&parents_entry, db, local_abspath, FALSE,
+                                    svn_node_dir, TRUE, pool, pool));
+
           if (parents_entry)
             was_deleted = parents_entry->deleted;
 
@@ -2184,7 +2182,6 @@ revert_entry(svn_depth_t *depth,
                  code path (as it will remove the parent from version
                  control... (See issue 2425) */
               SVN_ERR(svn_wc__entry_remove(db, local_abspath, pool));
-              apr_hash_set(entries, basey, APR_HASH_KEY_STRING, NULL);
             }
           else
             {
@@ -2252,14 +2249,13 @@ revert_entry(svn_depth_t *depth,
             {
               svn_boolean_t dummy_reverted;
               const svn_wc_entry_t *entry_in_parent;
-              apr_hash_t *entries;
 
               /* The entry to revert will not be an excluded item. Don't
                  bother check for it. */
-              SVN_ERR(svn_wc_entries_read(&entries, parent_access, TRUE,
-                                          pool));
-              entry_in_parent = apr_hash_get(entries, bname,
-                                             APR_HASH_KEY_STRING);
+              SVN_ERR(svn_wc__get_entry(&entry_in_parent, db, local_abspath,
+                                        FALSE, svn_node_dir, TRUE,
+                                        pool, pool));
+
               SVN_ERR(revert_admin_things(parent_access, bname,
                                           entry_in_parent, &dummy_reverted,
                                           use_commit_times, pool));
