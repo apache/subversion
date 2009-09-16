@@ -2844,11 +2844,14 @@ svn_wc_conflicted_p(svn_boolean_t *text_conflicted_p,
                     const svn_wc_entry_t *entry,
                     apr_pool_t *pool);
 
-/** Set @a *url and @a *rev to the ancestor URL and revision for @a path,
- * allocating in @a pool.  @a adm_access must be an access baton for @a path.
+/** Set @a *url and @a *rev to the ancestor URL and revision for
+ * @a local_abspath, allocating in @a result_pool.  Any temporary
+ * allocations are performed using @a scratch_pool.
  *
  * If @a url or @a rev is NULL, then ignore it (just don't return the
  * corresponding information).
+ *
+ * @since New in 1.7.
  */
 svn_error_t *
 svn_wc_get_ancestry2(const char **url,
@@ -2861,7 +2864,7 @@ svn_wc_get_ancestry2(const char **url,
 /* Similar to svn_wc_get_ancestry2(), but using an adm_access baton / relative
  * path parameter pair.
  *
- * @deprecated Provided for backward compatibility with the 1.7 API.
+ * @deprecated Provided for backward compatibility with the 1.6 API.
  */
 SVN_DEPRECATED
 svn_error_t *
