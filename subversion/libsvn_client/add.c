@@ -593,7 +593,7 @@ svn_client_add4(const char *path,
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
-  err = add(path, depth, force, no_ignore, adm_access, ctx, pool);
+  err = add(local_abspath, depth, force, no_ignore, adm_access, ctx, pool);
 
   /* ### Currently we rely on the fact that this close (like all other access
          baton close operations), closes all batons opened by svn_wc_add4(). */
