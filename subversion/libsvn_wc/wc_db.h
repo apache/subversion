@@ -746,7 +746,8 @@ svn_wc__db_pristine_write(svn_stream_t **contents,
 
 
 /* ### get a tempdir to drop files for later installation. */
-/* ### dlr: Why is a less specific temp dir insufficient? */
+/* ### dlr: Why is a less specific temp dir insufficient? 
+   ###  bh: See svn_wc__db_pristine_install() */
 svn_error_t *
 svn_wc__db_pristine_get_tempdir(const char **temp_dir,
                                 svn_wc__db_pdh_t *pdh,
@@ -1219,16 +1220,18 @@ svn_wc__db_read_pristine_props(apr_hash_t **props,
                                apr_pool_t *result_pool,
                                apr_pool_t *scratch_pool);
 
+/* Read into CHILDREN the basenames of the immediate children of
+   LOCAL_ABSPATH in DB.
+   
+   Allocate *CHILDREN in RESULT_POOL and do temporary allocations in
+   SCRATCH_POOL.
 
-/* ### return some basic info for each child? e.g. kind.
+   ### return some basic info for each child? e.g. kind.
  * ### maybe the data in _read_get_info should be a structure, and this
  * ### can return a struct for each one.
  * ### however: _read_get_info can say "not interested", which isn't the
  * ###   case with a struct. thus, a struct requires fetching and/or
  * ###   computing all info.
- *
- * ### KFF: see earlier comment on svn_wc__db_base_get_children().
- * ### dlr: The doc string should include the wording "immediate children".
  */
 svn_error_t *
 svn_wc__db_read_children(const apr_array_header_t **children,
@@ -1710,7 +1713,7 @@ svn_wc__db_temp_is_dir_deleted(svn_boolean_t *not_present,
                                apr_pool_t *scratch_pool);
 
 /* Removes all references of LOCAL_ABSPATH from its working copy
-   using DB. When FLUSH_ENTRIES is set to TRUE, flush the related
+   using DB. When FLUSH_ENTRY_CACHE is set to TRUE, flush the related
    entries caches. */
 svn_error_t *
 svn_wc__db_temp_op_remove_entry(svn_wc__db_t *db,
@@ -1719,7 +1722,7 @@ svn_wc__db_temp_op_remove_entry(svn_wc__db_t *db,
                                 apr_pool_t *scratch_pool);
 
 /* Sets the depth of LOCAL_ABSPATH in its working copy to DEPTH
-   using DB. When FLUSH_ENTRIES is set to TRUE, flush the related
+   using DB. When FLUSH_ENTRY_CACHE is set to TRUE, flush the related
    entries caches. */
 svn_error_t *
 svn_wc__db_temp_op_set_dir_depth(svn_wc__db_t *db,
