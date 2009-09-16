@@ -255,9 +255,8 @@ svn_client__get_auto_props(apr_hash_t **properties,
 }
 
 static svn_error_t *
-add_file(const char *path,
+add_file(const char *local_abspath,
          svn_client_ctx_t *ctx,
-         svn_wc_adm_access_t *adm_access,
          apr_pool_t *pool)
 {
   apr_hash_t* properties;
@@ -265,12 +264,9 @@ add_file(const char *path,
   const char *mimetype;
   svn_node_kind_t kind;
   svn_boolean_t is_special;
-  const char *local_abspath;
-
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
   /* Check to see if this is a special file. */
-  SVN_ERR(svn_io_check_special_path(path, &kind, &is_special, pool));
+  SVN_ERR(svn_io_check_special_path(local_abspath, &kind, &is_special, pool));
 
   if (is_special)
     mimetype = NULL;
@@ -279,11 +275,11 @@ add_file(const char *path,
     /* This may fail on write-only files:
        we open them to estimate file type.
        That's why we postpone the add until after this step. */
-    SVN_ERR(svn_client__get_auto_props(&properties, &mimetype, path, ctx,
-                                       pool));
+    SVN_ERR(svn_client__get_auto_props(&properties, &mimetype, local_abspath,
+                                       ctx, pool));
 
   /* Add the file */
-  SVN_ERR(svn_wc_add3(path, adm_access, svn_depth_infinity, NULL,
+  SVN_ERR(svn_wc_add4(ctx->wc_ctx, local_abspath, svn_depth_infinity, NULL,
                       SVN_INVALID_REVNUM, ctx->cancel_func, ctx->cancel_baton,
                       NULL, NULL, pool));
 
@@ -312,8 +308,8 @@ add_file(const char *path,
   /* Report the addition to the caller. */
   if (ctx->notify_func2 != NULL)
     {
-      svn_wc_notify_t *notify = svn_wc_create_notify(path, svn_wc_notify_add,
-                                                     pool);
+      svn_wc_notify_t *notify = svn_wc_create_notify(local_abspath,
+                                                     svn_wc_notify_add, pool);
       notify->kind = svn_node_file;
       notify->mime_type = mimetype;
       (*ctx->notify_func2)(ctx->notify_baton2, notify, pool);
@@ -336,8 +332,7 @@ add_file(const char *path,
  * the user to cancel the operation
  */
 static svn_error_t *
-add_dir_recursive(const char *dirname,
-                  svn_wc_adm_access_t *adm_access,
+add_dir_recursive(const char *dir_abspath,
                   svn_depth_t depth,
                   svn_boolean_t force,
                   svn_boolean_t no_ignore,
@@ -349,7 +344,6 @@ add_dir_recursive(const char *dirname,
   svn_error_t *err;
   apr_pool_t *subpool;
   apr_int32_t flags = APR_FINFO_TYPE | APR_FINFO_NAME;
-  svn_wc_adm_access_t *dir_access;
   apr_array_header_t *ignores;
 
   /* Check cancellation; note that this catches recursive calls too. */
@@ -357,7 +351,7 @@ add_dir_recursive(const char *dirname,
     SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
 
   /* Add this directory to revision control. */
-  err = svn_wc_add3(dirname, adm_access, svn_depth_infinity, NULL,
+  err = svn_wc_add4(ctx->wc_ctx, dir_abspath, svn_depth_infinity, NULL,
                     SVN_INVALID_REVNUM, ctx->cancel_func, ctx->cancel_baton,
                     ctx->notify_func2, ctx->notify_baton2, pool);
   if (err && err->apr_err == SVN_ERR_ENTRY_EXISTS && force)
@@ -365,28 +359,21 @@ add_dir_recursive(const char *dirname,
   else if (err)
     return svn_error_return(err);
 
-  SVN_ERR(svn_wc_adm_retrieve(&dir_access, adm_access, dirname, pool));
-
   subpool = svn_pool_create(pool);
 
   if (!no_ignore)
     {
-      const char *dir_abspath;
-
-      SVN_ERR(svn_dirent_get_absolute(&dir_abspath,
-                                      svn_wc_adm_access_path(dir_access),
-                                      subpool));
       SVN_ERR(svn_wc_get_ignores2(&ignores, ctx->wc_ctx, dir_abspath,
                                   ctx->config, pool, subpool));
     }
 
-  SVN_ERR(svn_io_dir_open(&dir, dirname, pool));
+  SVN_ERR(svn_io_dir_open(&dir, dir_abspath, pool));
 
   /* Read the directory entries one by one and add those things to
      version control. */
   while (1)
     {
-      const char *fullpath;
+      const char *abspath;
 
       svn_pool_clear(subpool);
 
@@ -402,17 +389,18 @@ add_dir_recursive(const char *dirname,
               svn_error_clear(err);
               apr_err = apr_dir_close(dir);
               if (apr_err)
-                return svn_error_wrap_apr
-                  (apr_err, _("Can't close directory '%s'"),
-                   svn_dirent_local_style(dirname, subpool));
+                return svn_error_wrap_apr(apr_err,
+                                          _("Can't close directory '%s'"),
+                                          svn_dirent_local_style(dir_abspath,
+                                                                 subpool));
               break;
             }
           else
             {
-              return svn_error_createf
-                (err->apr_err, err,
-                 _("Error during add of '%s'"),
-                 svn_dirent_local_style(dirname, subpool));
+              return svn_error_createf(err->apr_err, err,
+                                       _("Error during add of '%s'"),
+                                       svn_dirent_local_style(dir_abspath,
+                                                              subpool));
             }
         }
 
@@ -436,7 +424,7 @@ add_dir_recursive(const char *dirname,
         continue;
 
       /* Construct the full path of the entry. */
-      fullpath = svn_dirent_join(dirname, this_entry.name, subpool);
+      abspath = svn_dirent_join(dir_abspath, this_entry.name, subpool);
 
       /* Recurse on directories; add files; ignore the rest. */
       if (this_entry.filetype == APR_DIR && depth >= svn_depth_immediates)
@@ -445,23 +433,20 @@ add_dir_recursive(const char *dirname,
           if (depth == svn_depth_immediates)
             depth_below_here = svn_depth_empty;
 
-          SVN_ERR(add_dir_recursive(fullpath, dir_access, depth_below_here,
+          SVN_ERR(add_dir_recursive(abspath, depth_below_here,
                                     force, no_ignore, ctx, subpool));
         }
       else if (this_entry.filetype != APR_UNKFILE
                && this_entry.filetype != APR_DIR
                && depth >= svn_depth_files)
         {
-          err = add_file(fullpath, ctx, dir_access, subpool);
+          err = add_file(abspath, ctx, subpool);
           if (err && err->apr_err == SVN_ERR_ENTRY_EXISTS && force)
             svn_error_clear(err);
           else if (err)
             return svn_error_return(err);
         }
     }
-
-  /* Opened by svn_wc_add */
-  SVN_ERR(svn_wc_adm_close2(dir_access, subpool));
 
   /* Destroy the per-iteration pool. */
   svn_pool_destroy(subpool);
@@ -474,7 +459,7 @@ add_dir_recursive(const char *dirname,
    is that this function uses an existing access baton.
    (svn_client_add4 just generates an access baton and calls this func.) */
 static svn_error_t *
-add(const char *path,
+add(const char *local_abspath,
     svn_depth_t depth,
     svn_boolean_t force,
     svn_boolean_t no_ignore,
@@ -485,19 +470,20 @@ add(const char *path,
   svn_node_kind_t kind;
   svn_error_t *err;
 
-  SVN_ERR(svn_io_check_path(path, &kind, pool));
+  SVN_ERR(svn_io_check_path(local_abspath, &kind, pool));
   if (kind == svn_node_dir)
     {
       /* We use add_dir_recursive for all directory targets
          and pass depth along no matter what it is, so that the
          target's depth will be set correctly. */
-      err = add_dir_recursive(path, adm_access, depth,
+      err = add_dir_recursive(local_abspath, depth,
                               force, no_ignore, ctx, pool);
     }
   else if (kind == svn_node_file)
-    err = add_file(path, ctx, adm_access, pool);
+    err = add_file(local_abspath, ctx, pool);
   else
-    err = svn_wc_add3(path, adm_access, depth, NULL, SVN_INVALID_REVNUM,
+    err = svn_wc_add4(ctx->wc_ctx, local_abspath, depth, NULL,
+                      SVN_INVALID_REVNUM,
                       ctx->cancel_func, ctx->cancel_baton,
                       ctx->notify_func2, ctx->notify_baton2, pool);
 
@@ -521,7 +507,10 @@ add_parent_dirs(const char *path,
                 apr_pool_t *pool)
 {
   svn_wc_adm_access_t *adm_access;
-  svn_error_t *err;
+  svn_error_t *err = NULL;
+  const char *local_abspath;
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
   err = svn_wc__adm_open_in_context(&adm_access, ctx->wc_ctx, path, TRUE, 0,
                                     ctx->cancel_func, ctx->cancel_baton, pool);
@@ -548,7 +537,7 @@ add_parent_dirs(const char *path,
           SVN_ERR(add_parent_dirs(parent_path, &adm_access, ctx, pool));
           SVN_ERR(svn_wc_adm_retrieve(&adm_access, adm_access, parent_path,
                                       pool));
-          SVN_ERR(svn_wc_add3(path, adm_access, svn_depth_infinity,
+          SVN_ERR(svn_wc_add4(ctx->wc_ctx, local_abspath, svn_depth_infinity,
                               NULL, SVN_INVALID_REVNUM,
                               ctx->cancel_func, ctx->cancel_baton,
                               ctx->notify_func2, ctx->notify_baton2, pool));
@@ -576,9 +565,10 @@ svn_client_add4(const char *path,
                 svn_client_ctx_t *ctx,
                 apr_pool_t *pool)
 {
-  svn_error_t *err, *err2;
+  svn_error_t *err;
   svn_wc_adm_access_t *adm_access;
   const char *parent_dir;
+  const char *local_abspath;
 
   if (add_parents)
     {
@@ -601,18 +591,16 @@ svn_client_add4(const char *path,
                                       TRUE, 0, ctx->cancel_func,
                                       ctx->cancel_baton, pool));
 
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+
   err = add(path, depth, force, no_ignore, adm_access, ctx, pool);
 
-  err2 = svn_wc_adm_close2(adm_access, pool);
-  if (err2)
-    {
-      if (err)
-        svn_error_clear(err2);
-      else
-        err = err2;
-    }
-
-  return svn_error_return(err);
+  /* ### Currently we rely on the fact that this close (like all other access
+         baton close operations), closes all batons opened by svn_wc_add4(). */
+  return svn_error_return(
+            svn_error_compose_create(
+                 err,
+                 svn_wc_adm_close2(adm_access, pool)));
 }
 
 
@@ -711,7 +699,12 @@ mkdir_urls(svn_commit_info_t **commit_info_p,
     }
 
   /* Condense our list of mkdir targets. */
-  SVN_ERR(svn_path_condense_targets(&common, &targets, urls, FALSE, pool));
+  SVN_ERR(svn_uri_condense_targets(&common, &targets, urls, FALSE,
+                                   pool, pool));
+
+  /* ### BH: This looks unnecessary, because the hash is not used and
+         you can't rely on hash ordering but it fails our tests if I 
+         remove it. The qsort() below determines the final ordering. */
   SVN_ERR(svn_hash_from_cstring_keys(&targets_hash, targets, pool));
   SVN_ERR(svn_hash_keys(&targets, targets_hash, pool));
 
