@@ -25,52 +25,73 @@
 #include "svn_xml.h"
 #include "svn_dirent_uri.h"
 #include "svn_path.h"
+#include "private/svn_token.h"
 
 #include "cl.h"
 
 #include "svn_private_config.h"
 
+
+/* A map for svn_wc_conflict_action_t values to human-readable strings */
+static const svn_token_map_t map_conflict_action_human[] =
+{
+  { N_("edited"),       svn_wc_conflict_action_edit },
+  { N_("deleted"),      svn_wc_conflict_action_delete },
+  { N_("added"),        svn_wc_conflict_action_add },
+  { N_("replace"),      svn_wc_conflict_action_replace },
+  { NULL,               0 }
+};
+
+/* A map for svn_wc_conflict_action_t values to XML strings */
+static const svn_token_map_t map_conflict_action_xml[] =
+{
+  { "edit",             svn_wc_conflict_action_edit },
+  { "delete",           svn_wc_conflict_action_delete },
+  { "add",              svn_wc_conflict_action_add },
+  { "replace",          svn_wc_conflict_action_replace },
+  { NULL,               0 }
+};
+
+/* A map for svn_wc_conflict_reason_t values to human-readable strings */
+static const svn_token_map_t map_conflict_reason_human[] =
+{
+  { N_("edited"),       svn_wc_conflict_reason_edited },
+  { N_("deleted"),      svn_wc_conflict_reason_deleted },
+  { N_("missing"),      svn_wc_conflict_reason_missing },
+  { N_("obstructed"),   svn_wc_conflict_reason_obstructed },
+  { N_("added"),        svn_wc_conflict_reason_added },
+  { N_("replaced"),     svn_wc_conflict_reason_replaced },
+  { N_("unversioned"),  svn_wc_conflict_reason_unversioned },
+  { NULL,               0 }
+};
+
+/* A map for svn_wc_conflict_reason_t values to XML strings */
+static const svn_token_map_t map_conflict_reason_xml[] =
+{
+  { "edit",             svn_wc_conflict_reason_edited },
+  { "delete",           svn_wc_conflict_reason_deleted },
+  { "missing",          svn_wc_conflict_reason_missing },
+  { "obstruction",      svn_wc_conflict_reason_obstructed },
+  { "add",              svn_wc_conflict_reason_added },
+  { "replace",          svn_wc_conflict_reason_replaced },
+  { "unversioned",      svn_wc_conflict_reason_unversioned },
+  { NULL,               0 }
+};
+
+/* Return a localized string representation of CONFLICT->action. */
 static const char *
 action_str(const svn_wc_conflict_description_t *conflict)
 {
-  switch (conflict->action)
-    {
-      /* Order of cases follows definition of svn_wc_conflict_action_t. */
-      case svn_wc_conflict_action_edit:
-        return _("edit");
-      case svn_wc_conflict_action_add:
-        return _("add");
-      case svn_wc_conflict_action_delete:
-        return _("delete");
-      case svn_wc_conflict_action_replace:
-        return _("replace");
-    }
-  return NULL;
+  return _(svn_token__to_word(map_conflict_action_human, conflict->action));
 }
 
+/* Return a localized string representation of CONFLICT->reason. */
 static const char *
 reason_str(const svn_wc_conflict_description_t *conflict)
 {
-  switch (conflict->reason)
-    {
-      /* Order of cases follows definition of svn_wc_conflict_reason_t. */
-      case svn_wc_conflict_reason_edited:
-        return _("edit");
-      case svn_wc_conflict_reason_obstructed:
-        return _("obstruction");
-      case svn_wc_conflict_reason_deleted:
-        return _("delete");
-      case svn_wc_conflict_reason_added:
-        return _("add");
-      case svn_wc_conflict_reason_missing:
-        return _("missing");
-      case svn_wc_conflict_reason_unversioned:
-        return _("unversioned");
-      case svn_wc_conflict_reason_replaced:
-        return _("replace");
-    }
-  return NULL;
+  return _(svn_token__to_word(map_conflict_reason_human, conflict->reason));
 }
+
 
 svn_error_t *
 svn_cl__get_human_readable_tree_conflict_description(
@@ -145,53 +166,10 @@ svn_cl__append_tree_conflict_info_xml(
   apr_hash_set(att_hash, "operation", APR_HASH_KEY_STRING,
                svn_cl__operation_str_xml(conflict->operation, pool));
 
-  switch (conflict->action)
-    {
-      /* Order of cases follows definition of svn_wc_conflict_action_t. */
-      case svn_wc_conflict_action_edit:
-        tmp = "edit";
-        break;
-      case svn_wc_conflict_action_add:
-        tmp = "add";
-        break;
-      case svn_wc_conflict_action_delete:
-        tmp = "delete";
-        break;
-      case svn_wc_conflict_action_replace:
-        tmp = "replace";
-        break;
-      default:
-        SVN_ERR_MALFUNCTION();
-    }
+  tmp = svn_token__to_word(map_conflict_action_xml, conflict->action);
   apr_hash_set(att_hash, "action", APR_HASH_KEY_STRING, tmp);
 
-  switch (conflict->reason)
-    {
-      /* Order of cases follows definition of svn_wc_conflict_reason_t. */
-      case svn_wc_conflict_reason_edited:
-        tmp = "edit";
-        break;
-      case svn_wc_conflict_reason_obstructed:
-        tmp = "obstruction";
-        break;
-      case svn_wc_conflict_reason_deleted:
-        tmp = "delete";
-        break;
-      case svn_wc_conflict_reason_added:
-        tmp = "add";
-        break;
-      case svn_wc_conflict_reason_missing:
-        tmp = "missing";
-        break;
-      case svn_wc_conflict_reason_unversioned:
-        tmp = "unversioned";
-        break;
-      case svn_wc_conflict_reason_replaced:
-        tmp = "replace";
-        break;
-      default:
-        SVN_ERR_MALFUNCTION();
-    }
+  tmp = svn_token__to_word(map_conflict_reason_xml, conflict->reason);
   apr_hash_set(att_hash, "reason", APR_HASH_KEY_STRING, tmp);
 
   /* Open the tree-conflict tag. */
