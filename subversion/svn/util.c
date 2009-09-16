@@ -59,6 +59,8 @@
 #include "svn_private_config.h"
 #include "cl.h"
 
+#include "private/svn_token.h"
+
 
 
 
@@ -1028,70 +1030,70 @@ svn_cl__xml_print_footer(const char *tagname,
 }
 
 
+/* A map for svn_node_kind_t values to XML strings */
+static const svn_token_map_t map_node_kind_xml[] =
+{
+  { "none", svn_node_none },
+  { "file", svn_node_file },
+  { "dir",  svn_node_dir },
+  { "",     svn_node_unknown },
+  { NULL,   0 }
+};
+
+/* A map for svn_node_kind_t values to human-readable strings */
+static const svn_token_map_t map_node_kind_human[] =
+{
+  { N_("none"), svn_node_none },
+  { N_("file"), svn_node_file },
+  { N_("dir"),  svn_node_dir },
+  { N_(""),     svn_node_unknown },
+  { NULL,       0 }
+};
+
 const char *
 svn_cl__node_kind_str_xml(svn_node_kind_t kind)
 {
-  switch (kind)
-    {
-    case svn_node_none:
-      return "none";
-    case svn_node_dir:
-      return "dir";
-    case svn_node_file:
-      return "file";
-    default:
-      return "";
-    }
+  return svn_token__to_word(map_node_kind_xml, kind);
 }
 
 const char *
 svn_cl__node_kind_str_human_readable(svn_node_kind_t kind)
 {
-  switch (kind)
-    {
-    case svn_node_none:
-      return _("none");
-    case svn_node_dir:
-      return _("dir");
-    case svn_node_file:
-      return _("file");
-    default:
-      return "";
-    }
+  return _(svn_token__to_word(map_node_kind_human, kind));
 }
 
+
+/* A map for svn_wc_operation_t values to XML strings */
+static const svn_token_map_t map_wc_operation_xml[] =
+{
+  { "none",   svn_wc_operation_none },
+  { "update", svn_wc_operation_update },
+  { "switch", svn_wc_operation_switch },
+  { "merge",  svn_wc_operation_merge },
+  { NULL,     0 }
+};
+
+/* A map for svn_wc_operation_t values to human-readable strings */
+static const svn_token_map_t map_wc_operation_human[] =
+{
+  { N_("none"),   svn_wc_operation_none },
+  { N_("update"), svn_wc_operation_update },
+  { N_("switch"), svn_wc_operation_switch },
+  { N_("merge"),  svn_wc_operation_merge },
+  { NULL,         0 }
+};
 
 const char *
 svn_cl__operation_str_xml(svn_wc_operation_t operation, apr_pool_t *pool)
 {
-  switch(operation){
-	case svn_wc_operation_none:
-      return "none";
-    case svn_wc_operation_update:
-      return "update";
-    case svn_wc_operation_switch:
-      return "switch";
-    case svn_wc_operation_merge:
-      return "merge";
-  }
-  return "unknown_operation";
+  return svn_token__to_word(map_wc_operation_xml, operation);
 }
 
 const char *
 svn_cl__operation_str_human_readable(svn_wc_operation_t operation,
                                      apr_pool_t *pool)
 {
-  switch(operation){
-	case svn_wc_operation_none:
-      return _("none");
-    case svn_wc_operation_update:
-      return _("update");
-    case svn_wc_operation_switch:
-      return _("switch");
-    case svn_wc_operation_merge:
-      return _("merge");
-  }
-  return _("unknown operation");
+  return _(svn_token__to_word(map_wc_operation_human, operation));
 }
 
 
