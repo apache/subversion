@@ -2522,6 +2522,18 @@ svn_io_run_diff3_3(int *exitcode,
   return SVN_NO_ERROR;
 }
 
+
+/* Canonicalize a string for hashing.  Modifies KEY in place. */
+static APR_INLINE char *
+fileext_tolower(char *key)
+{
+  register char *p;
+  for (p = key; *p != 0; ++p)
+    *p = apr_tolower(*p);
+  return key;
+}
+
+
 svn_error_t *
 svn_io_parse_mimetypes_file(apr_hash_t **type_map,
                             const char *mimetypes_file,
@@ -2570,6 +2582,7 @@ svn_io_parse_mimetypes_file(apr_hash_t **type_map,
           for (i = 1; i < tokens->nelts; i++)
             {
               const char *ext = APR_ARRAY_IDX(tokens, i, const char *);
+              fileext_tolower((char *)ext);
               apr_hash_set(types, ext, APR_HASH_KEY_STRING, type);
             }
         }
@@ -2611,13 +2624,6 @@ svn_io_detect_mimetype2(const char **mimetype,
   /* Default return value is NULL. */
   *mimetype = NULL;
 
-  /* See if this file even exists, and make sure it really is a file. */
-  SVN_ERR(svn_io_check_path(file, &kind, pool));
-  if (kind != svn_node_file)
-    return svn_error_createf(SVN_ERR_BAD_FILENAME, NULL,
-                             _("Can't detect MIME type of non-file '%s'"),
-                             svn_path_local_style(file, pool));
-
   /* If there is a mimetype_map provided, we'll first try to look up
      our file's extension in the map.  Failing that, we'll run the
      heuristic. */
@@ -2625,6 +2631,7 @@ svn_io_detect_mimetype2(const char **mimetype,
     {
       const char *type_from_map, *path_ext;
       svn_path_splitext(NULL, &path_ext, file, pool);
+      fileext_tolower((char *)path_ext);
       if ((type_from_map = apr_hash_get(mimetype_map, path_ext,
                                         APR_HASH_KEY_STRING)))
         {
@@ -2632,6 +2639,13 @@ svn_io_detect_mimetype2(const char **mimetype,
           return SVN_NO_ERROR;
         }
     }
+
+  /* See if this file even exists, and make sure it really is a file. */
+  SVN_ERR(svn_io_check_path(file, &kind, pool));
+  if (kind != svn_node_file)
+    return svn_error_createf(SVN_ERR_BAD_FILENAME, NULL,
+                             _("Can't detect MIME type of non-file '%s'"),
+                             svn_path_local_style(file, pool));
 
   SVN_ERR(svn_io_file_open(&fh, file, APR_READ, 0, pool));
 
