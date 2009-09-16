@@ -1537,7 +1537,6 @@ svn_wc__set_depth(svn_wc__db_t *db,
   const char *parent_abspath;
   const char *base_name;
   svn_wc_adm_access_t *adm_access;
-  apr_hash_t *entries;
   svn_wc_entry_t *entry;
 
   svn_dirent_split(local_dir_abspath, &parent_abspath, &base_name,
