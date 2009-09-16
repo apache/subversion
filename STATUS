@@ -150,13 +150,6 @@ Candidate changes:
      +0: pburba - I don't have a Vista or Win7 box to try this out on, but it
          works fine on my XP box.
 
-  * r38959
-   Fix 'svn export -r 1000000' (issue #3400).
-   Justification:
-     Don't silently do the opposite of what the user asked for.
-   Votes:
-     +1: danielsh, rhuijben
-
  * r39019
    Fix bug where svn_[rangelist|mergeinfo]_[merge|intersect|remove|diff]
    APIs can modify their *non*-output arguments.
@@ -226,3 +219,10 @@ Candidate changes:
 
 Approved changes:
 =================
+
+  * r38959
+   Fix 'svn export -r 1000000' (issue #3400).
+   Justification:
+     Don't silently do the opposite of what the user asked for.
+   Votes:
+     +1: danielsh, rhuijben, stsp
