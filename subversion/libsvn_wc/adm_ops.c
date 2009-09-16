@@ -2153,7 +2153,6 @@ revert_entry(svn_depth_t *depth,
         }
       else if (entry->kind == svn_node_dir)
         {
-          apr_hash_t *entries;
           const svn_wc_entry_t *parents_entry;
 
           /* We are trying to revert the current directory which is
