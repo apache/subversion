@@ -2987,7 +2987,7 @@ svn_client_mergeinfo_log_merged(const char *path_or_url,
  * Similar to svn_client_mergeinfo_log(), but finds only eligible revisions
  * and always operates at @a depth @c svn_depth_empty.
  *
- * @deprecated Provided for backwards compatibility with the 1.5 API.
+ * @deprecated Provided for backwards compatibility with the 1.6 API.
  *
  * @since New in 1.5.
  */
