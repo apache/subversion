@@ -215,7 +215,7 @@ Candidate changes:
    Notes:
      r36831 is the test case for issue #3368 and r39329 is the actual fix.
    Votes:
-     +1: stylesen
+     +1: stylesen, stsp
 
  * r39197
    Fix issue #3485 "libsvn_ra_svn/marshal.c assertion failed (opt || cstr)"
