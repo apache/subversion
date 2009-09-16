@@ -217,5 +217,12 @@ Candidate changes:
    Votes:
      +1: stylesen
 
+ * r39197
+   Fix issue #3485 "libsvn_ra_svn/marshal.c assertion failed (opt || cstr)"
+   Justification:
+     We should not ship releases with failing assertions.
+   Votes:
+     +1: stsp, rhuijben
+
 Approved changes:
 =================
