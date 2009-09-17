@@ -50,7 +50,8 @@
 /* Path type definition. Used only by internal functions. */
 typedef enum {
   type_uri,
-  type_dirent
+  type_dirent,
+  type_relpath
 } path_type_t;
 
 
@@ -78,8 +79,16 @@ internal_style(path_type_t type, const char *path, apr_pool_t *pool)
     }
 #endif
 
-  return type == type_uri ? svn_uri_canonicalize(path, pool)
-                          : svn_dirent_canonicalize(path, pool);
+  switch (type)
+    {
+      case type_dirent:
+        return svn_dirent_canonicalize(path, pool);
+      case type_relpath:
+        return svn_relpath_canonicalize(path, pool);
+      case type_uri:
+      default:
+        return svn_uri_canonicalize(path, pool);
+    }
   /* FIXME: Should also remove trailing /.'s, if the style says so. */
 }
 
@@ -269,6 +278,25 @@ dirent_is_rooted(const char *dirent)
 }
 
 /* Return the length of substring necessary to encompass the entire
+ * previous relpath segment in RELPATH, which should be a LEN byte string.
+ *
+ * A trailing slash will not be included in the returned length.
+ */
+static apr_size_t
+relpath_previous_segment(const char *relpath,
+                         apr_size_t len)
+{
+  if (len == 0)
+    return 0;
+
+  --len;
+  while (len > 0 && relpath[len] != '/')
+    --len;
+
+  return len;
+}
+
+/* Return the length of substring necessary to encompass the entire
  * previous uri segment in URI, which should be a LEN byte string.
  *
  * A trailing slash will not be included in the returned length except
@@ -377,7 +405,7 @@ canonicalize(path_type_t type, const char *path, apr_pool_t *pool)
         }
     }
 
-  if (! url)
+  if (! url && type != type_relpath)
     {
       src = path;
       /* If this is an absolute path, then just copy over the initial
@@ -702,10 +730,16 @@ is_ancestor(path_type_t type, const char *path1, const char *path2)
 
   /* If path1 is empty and path2 is not absolute, then path1 is an ancestor. */
   if (SVN_PATH_IS_EMPTY(path1))
-    {
-      return type == type_uri ? ! svn_uri_is_absolute(path2)
-                              : ! dirent_is_rooted(path2);
-    }
+    switch (type)
+     {
+       case type_dirent:
+         return !dirent_is_rooted(path2);
+       case type_relpath:
+         return TRUE;
+       case type_uri:
+       default:
+         return !svn_uri_is_absolute(path2);
+     }
 
   /* If path1 is a prefix of path2, then:
      - If path1 ends in a path separator,
@@ -737,6 +771,20 @@ const char *
 svn_dirent_local_style(const char *dirent, apr_pool_t *pool)
 {
   return local_style(type_dirent, dirent, pool);
+}
+
+const char *
+svn_relpath_internal_style(const char *dirent,
+                           apr_pool_t *pool)
+{
+  return internal_style(type_relpath, dirent, pool);
+}
+
+const char *
+svn_relpath_local_style(const char *dirent,
+                        apr_pool_t *pool)
+{
+  return local_style(type_relpath, dirent, pool);
 }
 
 const char *
@@ -1016,6 +1064,32 @@ char *svn_dirent_join_many(apr_pool_t *pool, const char *base, ...)
 }
 
 char *
+svn_relpath_join(const char *base,
+                 const char *component,
+                 apr_pool_t *pool)
+{
+  apr_size_t blen = strlen(base);
+  apr_size_t clen = strlen(component);
+  char *path;
+
+  assert(svn_relpath_is_canonical(base, pool));
+  assert(svn_relpath_is_canonical(component, pool));
+
+  /* If either is empty return the other */
+  if (blen == 0)
+    return apr_pmemdup(pool, component, clen + 1);
+  if (clen == 0)
+    return apr_pmemdup(pool, base, blen + 1);
+
+  path = apr_palloc(pool, blen + 1 + clen + 1);
+  memcpy(path, base, blen);
+  path[blen] = '/';
+  memcpy(path + blen + 1, component, clen + 1);
+
+  return path;
+}
+
+char *
 svn_uri_join(const char *base, const char *component, apr_pool_t *pool)
 {
   apr_size_t blen = strlen(base);
@@ -1120,6 +1194,52 @@ svn_dirent_split(const char *dirent,
 }
 
 char *
+svn_relpath_dirname(const char *relpath,
+                    apr_pool_t *pool)
+{
+  apr_size_t len = strlen(relpath);
+
+  assert(svn_relpath_is_canonical(relpath, pool));
+
+  return apr_pstrmemdup(pool, relpath,
+                        relpath_previous_segment(relpath, len));
+}
+
+const char *
+svn_relpath_basename(const char *relpath,
+                     apr_pool_t *pool)
+{
+  apr_size_t len = strlen(relpath);
+  apr_size_t start;
+
+  assert(!pool || svn_relpath_is_canonical(relpath, pool));
+
+  start = len;
+  while (start > 0 && relpath[start - 1] != '/')
+    --start;
+
+  if (pool)
+    return apr_pstrmemdup(pool, relpath + start, len - start);
+  else
+    return relpath + start;
+}
+
+void
+svn_relpath_split(const char *relpath,
+                  const char **dirpath,
+                  const char **base_name,
+                  apr_pool_t *pool)
+{
+  assert(dirpath != base_name);
+
+  if (dirpath)
+    *dirpath = svn_relpath_dirname(relpath, pool);
+
+  if (base_name)
+    *base_name = svn_relpath_basename(relpath, pool);
+}
+
+char *
 svn_uri_dirname(const char *uri, apr_pool_t *pool)
 {
   apr_size_t len = strlen(uri);
@@ -1178,6 +1298,16 @@ svn_dirent_get_longest_ancestor(const char *dirent1,
   return apr_pstrndup(pool, dirent1,
                       get_longest_ancestor_length(type_dirent, dirent1,
                                                   dirent2, pool));
+}
+
+char *
+svn_relpath_get_longest_ancestor(const char *relpath1,
+                                 const char *relpath2,
+                                 apr_pool_t *pool)
+{
+  return apr_pstrndup(pool, relpath1,
+                      get_longest_ancestor_length(type_relpath, relpath1,
+                                                  relpath2, pool));
 }
 
 char *
@@ -1246,6 +1376,14 @@ svn_dirent_is_child(const char *dirent1,
 }
 
 const char *
+svn_relpath_is_child(const char *relpath1,
+                     const char *relpath2,
+                     apr_pool_t *pool)
+{
+  return is_child(type_relpath, relpath1, relpath2, pool);
+}
+
+const char *
 svn_uri_is_child(const char *uri1,
                  const char *uri2,
                  apr_pool_t *pool)
@@ -1257,6 +1395,12 @@ svn_boolean_t
 svn_dirent_is_ancestor(const char *dirent1, const char *dirent2)
 {
   return is_ancestor(type_dirent, dirent1, dirent2);
+}
+
+svn_boolean_t
+svn_relpath_is_ancestor(const char *relpath1, const char *relpath2)
+{
+  return is_ancestor(type_relpath, relpath1, relpath2);
 }
 
 svn_boolean_t
@@ -1295,6 +1439,28 @@ svn_dirent_skip_ancestor(const char *dirent1,
 
   return dirent2;
 }
+
+const char *
+svn_relpath_skip_ancestor(const char *relpath1,
+                         const char *relpath2)
+{
+  apr_size_t len = strlen(relpath1);
+
+  if (0 != memcmp(relpath1, relpath2, len))
+    return relpath2; /* relpath1 is no ancestor of relpath2 */
+
+  if (relpath2[len] == 0)
+    return ""; /* relpath1 == relpath2 */
+
+  if (len == 1 && relpath2[0] == '/')
+    return relpath2 + 1;
+
+  if (relpath2[len] == '/')
+    return relpath2 + len + 1;
+
+  return relpath2;
+}
+
 
 const char *
 svn_uri_skip_ancestor(const char *uri1,
@@ -1388,6 +1554,12 @@ svn_uri_canonicalize(const char *uri, apr_pool_t *pool)
 }
 
 const char *
+svn_relpath_canonicalize(const char *relpath, apr_pool_t *pool)
+{
+  return canonicalize(type_relpath, relpath, pool);;
+}
+
+const char *
 svn_dirent_canonicalize(const char *dirent, apr_pool_t *pool)
 {
   const char *dst = canonicalize(type_dirent, dirent, pool);;
@@ -1417,6 +1589,52 @@ svn_boolean_t
 svn_dirent_is_canonical(const char *dirent, apr_pool_t *pool)
 {
   return (strcmp(dirent, svn_dirent_canonicalize(dirent, pool)) == 0);
+}
+
+svn_boolean_t
+svn_relpath_is_canonical(const char *relpath,
+                         apr_pool_t *pool)
+{
+  const char *ptr = relpath, *seg = relpath;
+
+  /* URI is canonical if it has:
+   *  - no '.' segments
+   *  - no start and closing '/'
+   *  - no '//'
+   */
+
+  if (*relpath == '\0')
+    return TRUE;
+
+  if (*ptr == '/')
+    return FALSE;
+
+  /* Now validate the rest of the path. */
+  while(1)
+    {
+      apr_size_t seglen = ptr - seg;
+
+      if (seglen == 1 && *seg == '.')
+        return FALSE;  /*  /./   */
+
+      if (*ptr == '/' && *(ptr+1) == '/')
+        return FALSE;  /*  //    */
+
+      if (! *ptr && *(ptr - 1) == '/')
+        return FALSE;  /* foo/  */
+
+      if (! *ptr)
+        break;
+
+      if (*ptr == '/')
+        ptr++;
+      seg = ptr;
+
+      while (*ptr && (*ptr != '/'))
+        ptr++;
+    }
+
+  return TRUE;
 }
 
 svn_boolean_t

@@ -381,6 +381,43 @@ test_dirent_join(apr_pool_t *pool)
 }
 
 static svn_error_t *
+test_relpath_join(apr_pool_t *pool)
+{
+  int i;
+  char *result;
+
+  static const char * const joins[][3] = {
+    { "abc", "def", "abc/def" },
+    { "a", "def", "a/def" },
+    { "a", "d", "a/d" },
+    { SVN_EMPTY_PATH, "abc", "abc" },
+  };
+
+  for (i = 0; i < COUNT_OF(joins); i++)
+    {
+      const char *base = joins[i][0];
+      const char *comp = joins[i][1];
+      const char *expect = joins[i][2];
+
+      result = svn_relpath_join(base, comp, pool);
+      if (strcmp(result, expect))
+        return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                                 "svn_relpath_join(\"%s\", \"%s\") returned "
+                                 "\"%s\". expected \"%s\"",
+                                 base, comp, result, expect);
+
+      /*result = svn_relpath_join_many(pool, base, comp, NULL);
+      if (strcmp(result, expect))
+        return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                                 "svn_relpath_join_many(\"%s\", \"%s\") "
+                                 "returned \"%s\". expected \"%s\"",
+                                 base, comp, result, expect);*/
+    }
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
 test_uri_join(apr_pool_t *pool)
 {
   int i;
@@ -488,6 +525,38 @@ test_dirent_basename(apr_pool_t *pool)
 }
 
 static svn_error_t *
+test_relpath_basename(apr_pool_t *pool)
+{
+  int i;
+  const char *result;
+
+  struct {
+    const char *path;
+    const char *result;
+  } tests[] = {
+    { "", "" },
+    { " ", " " },
+    { "foo/bar", "bar" },
+    { "foo/bar/bad", "bad" },
+  };
+
+  for (i = 0; i < COUNT_OF(tests); i++)
+    {
+      const char *path = tests[i].path;
+      const char *expect = tests[i].result;
+
+      result = svn_relpath_basename(path, pool);
+      if (strcmp(result, expect))
+        return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                                 "svn_relpath_basename(\"%s\") returned "
+                                 "\"%s\". expected \"%s\"",
+                                 path, result, expect);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
 test_uri_basename(apr_pool_t *pool)
 {
   int i;
@@ -568,6 +637,39 @@ test_dirent_dirname(apr_pool_t *pool)
       if (strcmp(result, expect))
         return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                                  "svn_dirent_dirname(\"%s\") returned "
+                                 "\"%s\". expected \"%s\"",
+                                 path, result, expect);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_relpath_dirname(apr_pool_t *pool)
+{
+  int i;
+  char *result;
+
+  struct {
+    const char *path;
+    const char *result;
+  } tests[] = {
+    { "", "" },
+    { " ", "" },
+    { "foo", "" },
+    { "foo/bar", "foo" },
+    { "foo/bar/bad", "foo/bar" },
+  };
+
+  for (i = 0; i < COUNT_OF(tests); i++)
+    {
+      const char *path = tests[i].path;
+      const char *expect = tests[i].result;
+
+      result = svn_relpath_dirname(path, pool);
+      if (strcmp(result, expect))
+        return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                                 "svn_relpath_dirname(\"%s\") returned "
                                  "\"%s\". expected \"%s\"",
                                  path, result, expect);
     }
@@ -676,6 +778,90 @@ test_dirent_canonicalize(apr_pool_t *pool)
       if (strcmp(canonical, tests[i].result))
         return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                                  "svn_dirent_canonicalize(\"%s\") returned "
+                                 "\"%s\" expected \"%s\"",
+                                 tests[i].path, canonical, tests[i].result);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_relpath_canonicalize(apr_pool_t *pool)
+{
+  struct {
+    const char *path;
+    const char *result;
+  } tests[] = {
+    { "",                     "" },
+    { ".",                    "" },
+    { "/",                    "" },
+    { "/.",                   "" },
+    { "./",                   "" },
+    { "./.",                  "" },
+    { "//",                   "" },
+    { "/////",                "" },
+    { "./././.",              "" },
+    { "////././.",            "" },
+    { "foo",                  "foo" },
+    { ".foo",                 ".foo" },
+    { "foo.",                 "foo." },
+    { "/foo",                 "foo" },
+    { "foo/",                 "foo" },
+    { "foo./",                "foo." },
+    { "foo./.",               "foo." },
+    { "foo././/.",            "foo." },
+    { "/foo/bar",             "foo/bar" },
+    { "foo/..",               "foo/.." },
+    { "foo/../",              "foo/.." },
+    { "foo/../.",             "foo/.." },
+    { "foo//.//bar",          "foo/bar" },
+    { "///foo",               "foo" },
+    { "/.//./.foo",           ".foo" },
+    { ".///.foo",             ".foo" },
+    { "../foo",               "../foo" },
+    { "../../foo/",           "../../foo" },
+    { "../../foo/..",         "../../foo/.." },
+    { "/../../",              "../.." },
+    { "X:/foo",               "X:/foo" },
+    { "X:",                   "X:" },
+    { "X:foo",                "X:foo" },
+    { "C:/folder/subfolder/file", "C:/folder/subfolder/file" },
+    { "http://hst",           "http:/hst" },
+    { "http://hst/foo/../bar","http:/hst/foo/../bar" },
+    { "http://hst/",          "http:/hst" },
+    { "http:///",             "http:" },
+    { "https://",             "https:" },
+    { "file:///",             "file:" },
+    { "file://",              "file:" },
+    { "svn:///",              "svn:" },
+    { "svn+ssh:///",          "svn+ssh:" },
+    { "http://HST/",          "http:/HST" },
+    { "http://HST/FOO/BaR",   "http:/HST/FOO/BaR" },
+    { "svn+ssh://j.raNDom@HST/BaR", "svn+ssh:/j.raNDom@HST/BaR" },
+    { "svn+SSH://j.random:jRaY@HST/BaR", "svn+SSH:/j.random:jRaY@HST/BaR" },
+    { "SVN+ssh://j.raNDom:jray@HST/BaR", "SVN+ssh:/j.raNDom:jray@HST/BaR" },
+    { "fILe:///Users/jrandom/wc", "fILe:/Users/jrandom/wc" },
+    { "fiLE:///",             "fiLE:" },
+    { "fiLE://",              "fiLE:" },
+    { "file://SRV/shr/repos",  "file:/SRV/shr/repos" },
+    { "file://SRV/SHR/REPOS",  "file:/SRV/SHR/REPOS" },
+    { "http://server////",     "http:/server" },
+    { "http://server/file//",  "http:/server/file" },
+    { "http://server//.//f//", "http:/server/f" },
+    { "file:///c:/temp/repos", "file:/c:/temp/repos" },
+    { "file:///c:/temp/REPOS", "file:/c:/temp/REPOS" },
+    { "file:///C:/temp/REPOS", "file:/C:/temp/REPOS" },
+  };
+  int i;
+
+  for (i = 0; i < COUNT_OF(tests); i++)
+
+    {
+      const char *canonical = svn_relpath_canonicalize(tests[i].path, pool);
+
+      if (strcmp(canonical, tests[i].result))
+        return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                                 "svn_relpath_canonicalize(\"%s\") returned "
                                  "\"%s\" expected \"%s\"",
                                  tests[i].path, canonical, tests[i].result);
     }
@@ -869,6 +1055,100 @@ test_dirent_is_canonical(apr_pool_t *pool)
 }
 
 static svn_error_t *
+test_relpath_is_canonical(apr_pool_t *pool)
+{
+  struct {
+    const char *path;
+    svn_boolean_t canonical;
+  } tests[] = {
+    { "",                      TRUE },
+    { ".",                     FALSE },
+    { "/",                     FALSE },
+    { "/.",                    FALSE },
+    { "./",                    FALSE },
+    { "./.",                   FALSE },
+    { "//",                    FALSE },
+    { "/////",                 FALSE },
+    { "./././.",               FALSE },
+    { "////././.",             FALSE },
+    { "foo",                   TRUE },
+    { ".foo",                  TRUE },
+    { "foo.",                  TRUE },
+    { "/foo",                  FALSE },
+    { "foo/",                  FALSE },
+    { "foo./",                 FALSE },
+    { "foo./.",                FALSE },
+    { "foo././/.",             FALSE },
+    { "/foo/bar",              FALSE },
+    { "foo/..",                TRUE },
+    { "foo/../",               FALSE },
+    { "foo/../.",              FALSE },
+    { "foo//.//bar",           FALSE },
+    { "///foo",                FALSE },
+    { "/.//./.foo",            FALSE },
+    { ".///.foo",              FALSE },
+    { "../foo",                TRUE },
+    { "../../foo/",            FALSE },
+    { "../../foo/..",          TRUE },
+    { "/../../",               FALSE },
+    { "dirA",                  TRUE },
+    { "foo/dirA",              TRUE },
+    { "foo/./bar",             FALSE },
+    { "http://hst",            FALSE },
+    { "http://hst/foo/../bar", FALSE },
+    { "http://HST/",           FALSE },
+    { "http://HST/FOO/BaR",    FALSE },
+    { "svn+ssh://jens@10.0.1.1", FALSE },
+    { "svn+ssh:/jens@10.0.1.1", TRUE },
+    { "fILe:///Users/jrandom/wc", FALSE },
+    { "fILe:/Users/jrandom/wc", TRUE },
+    { "X:/foo",                TRUE },
+    { "X:",                    TRUE },
+    { "X:foo",                 TRUE },
+    { "X:foo/",                FALSE },
+    /* Some people use colons in their filenames. */
+    { ":", TRUE },
+    { ".:", TRUE },
+    { "foo/.:", TRUE },
+    { "//server/share",         FALSE }, /* Only valid as dirent */
+    { "//server",               FALSE },
+    { "//",                     FALSE },
+    { "file:///c:/temp/repos", FALSE },
+    { "file:///c:/temp/REPOS", FALSE },
+    { "file:///C:/temp/REPOS", FALSE },
+  };
+  int i;
+
+  for (i = 0; i < COUNT_OF(tests); i++)
+    {
+      svn_boolean_t canonical;
+      const char* canonicalized;
+
+      canonical = svn_relpath_is_canonical(tests[i].path, pool);
+      if (tests[i].canonical != canonical)
+        return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                                 "svn_relpath_is_canonical(\"%s\") returned "
+                                 "\"%s\" expected \"%s\"",
+                                 tests[i].path,
+                                 canonical ? "TRUE" : "FALSE",
+                                 tests[i].canonical ? "TRUE" : "FALSE");
+
+      canonicalized = svn_relpath_canonicalize(tests[i].path, pool);
+
+      if (canonical && (strcmp(tests[i].path, canonicalized) != 0))
+        return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                                 "svn_relpath_canonicalize(\"%s\") returned "
+                                 "\"%s\"  while svn_relpath_is_canonical "
+                                 "returned %s",
+                                 tests[i].path,
+                                 canonicalized,
+                                 canonical ? "TRUE" : "FALSE");
+    }
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
 test_uri_is_canonical(apr_pool_t *pool)
 {
   struct {
@@ -1036,6 +1316,42 @@ test_dirent_split(apr_pool_t *pool)
 }
 
 static svn_error_t *
+test_relpath_split(apr_pool_t *pool)
+{
+  apr_size_t i;
+
+  static const char * const paths[][3] = {
+    { "", "", "" },
+    { "bar", "", "bar" },
+    { "foo/bar", "foo", "bar" },
+    { "a/b/c", "a/b", "c" },
+  };
+
+  for (i = 0; i < COUNT_OF(paths); i++)
+    {
+      const char *dir, *base_name;
+
+      svn_relpath_split(paths[i][0], &dir, &base_name, pool);
+      if (strcmp(dir, paths[i][1]))
+        {
+          return svn_error_createf
+            (SVN_ERR_TEST_FAILED, NULL,
+             "svn_relpath_split (%s) returned dirname '%s' instead of '%s'",
+             paths[i][0], dir, paths[i][1]);
+        }
+      if (strcmp(base_name, paths[i][2]))
+        {
+          return svn_error_createf
+            (SVN_ERR_TEST_FAILED, NULL,
+             "svn_relpath_split (%s) returned basename '%s' instead of '%s'",
+             paths[i][0], base_name, paths[i][2]);
+        }
+    }
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
 test_uri_split(apr_pool_t *pool)
 {
   apr_size_t i;
@@ -1128,6 +1444,46 @@ test_dirent_is_ancestor(apr_pool_t *pool)
         return svn_error_createf
           (SVN_ERR_TEST_FAILED, NULL,
            "svn_dirent_is_ancestor (%s, %s) returned %s instead of %s",
+           tests[i].path1, tests[i].path2, retval ? "TRUE" : "FALSE",
+           tests[i].result ? "TRUE" : "FALSE");
+    }
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_relpath_is_ancestor(apr_pool_t *pool)
+{
+  apr_size_t i;
+
+  /* Dirents to test and their expected results. */
+  struct {
+    const char *path1;
+    const char *path2;
+    svn_boolean_t result;
+  } tests[] = {
+    { "foo",            "foo/bar",        TRUE},
+    { "food/bar",       "foo/bar",        FALSE},
+    { "/",               "/foo",          TRUE},
+    { "",                "foo",           TRUE},
+    { "",                ".bar",          TRUE},
+    { "foo/bar",         "foo",           FALSE},
+    { "foo",             "foo/bar",       TRUE},
+    { "foo.",            "foo./.bar",     TRUE},
+    { "",                "",              TRUE},
+    { "X:foo",           "X:bar",         FALSE},
+    { "X:",              "X:foo",         FALSE},
+    { "",                "C:",            TRUE},
+  };
+
+  for (i = 0; i < COUNT_OF(tests); i++)
+    {
+      svn_boolean_t retval;
+
+      retval = svn_relpath_is_ancestor(tests[i].path1, tests[i].path2);
+      if (tests[i].result != retval)
+        return svn_error_createf
+          (SVN_ERR_TEST_FAILED, NULL,
+           "svn_relpath_is_ancestor (%s, %s) returned %s instead of %s",
            tests[i].path1, tests[i].path2, retval ? "TRUE" : "FALSE",
            tests[i].result ? "TRUE" : "FALSE");
     }
@@ -1234,6 +1590,48 @@ test_dirent_skip_ancestor(apr_pool_t *pool)
         return svn_error_createf(
              SVN_ERR_TEST_FAILED, NULL,
              "test_dirent_skip_ancestor (%s, %s) returned %s instead of %s",
+             tests[i].path1, tests[i].path2, retval, tests[i].result);
+    }
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_relpath_skip_ancestor(apr_pool_t *pool)
+{
+  apr_size_t i;
+
+  /* Dirents to test and their expected results. */
+  struct {
+    const char *path1;
+    const char *path2;
+    const char *result;
+  } tests[] = {
+    { "foo",             "foo/bar",        "bar"},
+    { "foo/bar",         "foot/bar",       "foot/bar"},
+    { "foo",             "foo",            ""},
+    { "foo",             "foot",           "foot"},
+    { "foot",            "foo",            "foo"},
+    { "",                "foo",            "foo"},
+    { "",                "foo",            "foo"},
+    { "",                "foo",            "foo"},
+    { "foo/bar/bla",     "foo/bar",        "foo/bar"},
+    { "foo/bar",         "foo/bar/bla",    "bla"},
+    { "foo/bar",         "foo",            "foo"},
+    { "foo/bar",         "foo",            "foo"},
+    { "",                "bar/bla",        "bar/bla"},
+    { "http:/server",    "http:/server/q", "q" },
+    { "svn:/server",     "http:/server/q", "http:/server/q" },
+  };
+
+  for (i = 0; i < COUNT_OF(tests); i++)
+    {
+      const char* retval;
+
+      retval = svn_relpath_skip_ancestor(tests[i].path1, tests[i].path2);
+      if (strcmp(tests[i].result, retval))
+        return svn_error_createf(
+             SVN_ERR_TEST_FAILED, NULL,
+             "svn_relpath_skip_ancestor (%s, %s) returned %s instead of %s",
              tests[i].path1, tests[i].path2, retval, tests[i].result);
     }
   return SVN_NO_ERROR;
@@ -1351,6 +1749,71 @@ test_dirent_get_longest_ancestor(apr_pool_t *pool)
         return svn_error_createf
           (SVN_ERR_TEST_FAILED, NULL,
            "svn_dirent_get_longest_ancestor (%s, %s) returned %s instead of %s",
+           tests[i].path2, tests[i].path1, retval, tests[i].result);
+    }
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_relpath_get_longest_ancestor(apr_pool_t *pool)
+{
+  apr_size_t i;
+
+  /* Paths to test and their expected results. */
+  struct {
+    const char *path1;
+    const char *path2;
+    const char *result;
+  } tests[] = {
+    { "foo",            "foo/bar",         "foo"},
+    { "foo/bar",        "foo/bar",         "foo/bar"},
+    { "",               "foo",             ""},
+    { "",               "foo",             ""},
+    { "",               ".bar",            ""},
+    { ".bar",           "",                ""},
+    { "foo/bar",        "foo",             "foo"},
+    { "foo/bar",        "foo",             "foo"},
+    { "rif",            "raf",             ""},
+    { "foo",            "bar",             ""},
+    { "foo",            "foo/bar",         "foo"},
+    { "foo.",           "foo./.bar",       "foo."},
+    { "",               "",                ""},
+    { "http:/test",     "http:/test",      "http:/test"},
+    { "http:/test",     "http:/taste",     "http:"},
+    { "http:/test",     "http:/test/foo",  "http:/test"},
+    { "http:/test",     "file:/test/foo",  ""},
+    { "http:/test",     "http:/testF",     "http:"},
+    { "file:/A/C",      "file:/B/D",       "file:"},
+    { "file:/A/C",      "file:/A/D",       "file:/A"},
+    { "X:/foo",         "X:",              "X:"},
+    { "X:/folder1",     "X:/folder2",      "X:"},
+    { "X:",             "X:foo",           ""},
+    { "X:foo",          "X:bar",           ""},
+  };
+
+  for (i = 0; i < COUNT_OF(tests); i++)
+    {
+      const char *retval;
+
+      retval = svn_uri_get_longest_ancestor(tests[i].path1, tests[i].path2,
+                                             pool);
+
+      if (strcmp(tests[i].result, retval))
+        return svn_error_createf
+          (SVN_ERR_TEST_FAILED, NULL,
+           "svn_relpath_get_longest_ancestor (%s, %s) returned "
+           "%s instead of %s",
+           tests[i].path1, tests[i].path2, retval, tests[i].result);
+
+      /* changing the order of the paths should return the same results */
+      retval = svn_relpath_get_longest_ancestor(tests[i].path2, tests[i].path1,
+                                                pool);
+
+      if (strcmp(tests[i].result, retval))
+        return svn_error_createf
+          (SVN_ERR_TEST_FAILED, NULL,
+           "svn_relpath_get_longest_ancestor (%s, %s) returned "
+           "%s instead of %s",
            tests[i].path2, tests[i].path1, retval, tests[i].result);
     }
   return SVN_NO_ERROR;
@@ -1543,6 +2006,83 @@ test_dirent_is_child(apr_pool_t *pool)
 #undef NUM_TEST_PATHS
   return SVN_NO_ERROR;
 }
+
+static svn_error_t *
+test_relpath_is_child(apr_pool_t *pool)
+{
+  int i, j;
+
+  static const char * const paths[] = {
+    "",
+    "foo",
+    "foo/bar",
+    "foo/bars",
+    "foo/baz",
+    "foo/bar/baz",
+    "flu/blar/blaz",
+    "foo/bar/baz/bing/boom",
+    ".foo",
+    ":",
+    "foo2",
+    "food",
+    "bar",
+    "baz",
+    "ba",
+    "bad"
+    };
+
+  /* Maximum number of path[] items for all platforms */
+#define MAX_PATHS 32
+
+  static const char * const
+    remainders[COUNT_OF(paths)][MAX_PATHS] = {
+    { 0, "foo", "foo/bar", "foo/bars", "foo/baz", "foo/bar/baz",
+      "flu/blar/blaz", "foo/bar/baz/bing/boom", ".foo", ":", "foo2", "food",
+      "bar", "baz", "ba", "bad" },
+    { 0, 0, "bar", "bars", "baz", "bar/baz", 0, "bar/baz/bing/boom", 0, 0, 0,
+      0, 0, 0, 0, 0 },
+    { 0, 0, 0, 0, 0, "baz", 0, "baz/bing/boom", 0, 0, 0, 0, 0, 0, 0, 0 },
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    { 0, 0, 0, 0, 0, 0, 0, "bing/boom", 0, 0, 0, 0, 0, 0, 0, 0 },
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+  };
+
+  for (i = 0; i < COUNT_OF(paths); i++)
+    {
+      for (j = 0; j < COUNT_OF(paths); j++)
+        {
+          const char *remainder;
+
+          remainder = svn_dirent_is_child(paths[i], paths[j], pool);
+
+          if (strcmp(paths[j], "foodbar") == 0)
+            SVN_ERR_MALFUNCTION();
+
+          if (((remainder) && (! remainders[i][j]))
+              || ((! remainder) && (remainders[i][j]))
+              || (remainder && strcmp(remainder, remainders[i][j])))
+            return svn_error_createf
+              (SVN_ERR_TEST_FAILED, NULL,
+               "svn_relpath_is_child(%s, %s) returned '%s' instead of '%s'",
+               paths[i], paths[j],
+               remainder ? remainder : "(null)",
+               remainders[i][j] ? remainders[i][j] : "(null)" );
+        }
+    }
+
+#undef NUM_TEST_PATHS
+  return SVN_NO_ERROR;
+}
+
 
 static svn_error_t *
 test_uri_is_child(apr_pool_t *pool)
@@ -1900,6 +2440,40 @@ test_dirent_local_style(apr_pool_t *pool)
 }
 
 static svn_error_t *
+test_relpath_local_style(apr_pool_t *pool)
+{
+  struct {
+    const char *path;
+    const char *result;
+  } tests[] = {
+    { "",                     "." },
+    { ".",                    "." },
+    { "c:hi",                 "c:hi" },
+#if defined(WIN32) || defined(__CYGWIN__)
+    { "dir/file",             "dir\\file" },
+    { "a:/file",              "a:\\file" },
+#else
+    { "dir/file",             "dir/file" },
+    { "a:/file",              "a:/file" },
+#endif
+  };
+  int i;
+
+  for (i = 0; i < COUNT_OF(tests); i++)
+    {
+      const char *local = svn_relpath_local_style(tests[i].path, pool);
+
+      if (strcmp(local, tests[i].result))
+        return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                                 "svn_relpath_local_style(\"%s\") returned "
+                                 "\"%s\" expected \"%s\"",
+                                 tests[i].path, local, tests[i].result);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
 test_uri_local_style(apr_pool_t *pool)
 {
   struct {
@@ -1987,6 +2561,40 @@ test_dirent_internal_style(apr_pool_t *pool)
 }
 
 static svn_error_t *
+test_relpath_internal_style(apr_pool_t *pool)
+{
+  struct {
+    const char *path;
+    const char *result;
+  } tests[] = {
+    { "",                    "" },
+    { ".",                   "" },
+    { "/",                   "" },
+    { "file",                "file" },
+    { "dir/file",            "dir/file" },
+    { "a:/",                 "a:" },
+    { "a:/file",             "a:/file" },
+    { "dir/file",            "dir/file" },
+    { "//server/share/dir",  "server/share/dir" },
+  };
+  int i;
+
+  for (i = 0; i < COUNT_OF(tests); i++)
+    {
+      const char *internal = svn_relpath_internal_style(tests[i].path, pool);
+
+      if (strcmp(internal, tests[i].result))
+        return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                                 "svn_relpath_internal_style(\"%s\") returned "
+                                 "\"%s\" expected \"%s\"",
+                                 tests[i].path, internal, tests[i].result);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
 test_uri_internal_style(apr_pool_t *pool)
 {
   struct {
@@ -2046,42 +2654,62 @@ struct svn_test_descriptor_t test_funcs[] =
                    "test svn_uri_is_absolute"),
     SVN_TEST_PASS2(test_dirent_join,
                    "test svn_dirent_join(_many)"),
+    SVN_TEST_PASS2(test_relpath_join,
+                   "test svn_relpath_join"),
     SVN_TEST_PASS2(test_uri_join,
                    "test svn_uri_join"),
     SVN_TEST_PASS2(test_dirent_basename,
                    "test svn_dirent_basename"),
+    SVN_TEST_PASS2(test_relpath_basename,
+                   "test svn_relpath_basename"),
     SVN_TEST_PASS2(test_uri_basename,
                    "test svn_uri_basename"),
+    SVN_TEST_PASS2(test_relpath_dirname,
+                   "test svn_relpath_dirname"),
     SVN_TEST_PASS2(test_dirent_dirname,
                    "test svn_dirent_dirname"),
     SVN_TEST_PASS2(test_uri_dirname,
                    "test svn_dirent_dirname"),
     SVN_TEST_PASS2(test_dirent_canonicalize,
                    "test svn_dirent_canonicalize"),
+    SVN_TEST_PASS2(test_relpath_canonicalize,
+                   "test svn_relpath_canonicalize"),
     SVN_TEST_PASS2(test_uri_canonicalize,
                    "test svn_uri_canonicalize"),
     SVN_TEST_PASS2(test_dirent_is_canonical,
                    "test svn_dirent_is_canonical"),
+    SVN_TEST_PASS2(test_relpath_is_canonical,
+                   "test svn_relpath_is_canonical"),
     SVN_TEST_PASS2(test_uri_is_canonical,
                    "test svn_uri_is_canonical"),
     SVN_TEST_PASS2(test_dirent_split,
                    "test svn_dirent_split"),
+    SVN_TEST_PASS2(test_relpath_split,
+                   "test test_relpath_split"),
     SVN_TEST_PASS2(test_uri_split,
                    "test test_uri_split"),
     SVN_TEST_PASS2(test_dirent_get_longest_ancestor,
                    "test svn_dirent_get_longest_ancestor"),
+    SVN_TEST_PASS2(test_relpath_get_longest_ancestor,
+                   "test svn_relpath_get_longest_ancestor"),
     SVN_TEST_PASS2(test_uri_get_longest_ancestor,
                    "test svn_uri_get_longest_ancestor"),
     SVN_TEST_PASS2(test_dirent_is_child,
                    "test svn_dirent_is_child"),
+    SVN_TEST_PASS2(test_relpath_is_child,
+                   "test svn_relpath_is_child"),
     SVN_TEST_PASS2(test_uri_is_child,
                    "test svn_uri_is_child"),
     SVN_TEST_PASS2(test_dirent_is_ancestor,
                    "test svn_dirent_is_ancestor"),
+    SVN_TEST_PASS2(test_relpath_is_ancestor,
+                   "test svn_relpath_is_ancestor"),
     SVN_TEST_PASS2(test_uri_is_ancestor,
                    "test svn_uri_is_ancestor"),
     SVN_TEST_PASS2(test_dirent_skip_ancestor,
                    "test test_dirent_skip_ancestor"),
+    SVN_TEST_PASS2(test_relpath_skip_ancestor,
+                   "test test_relpath_skip_ancestor"),
     SVN_TEST_PASS2(test_uri_skip_ancestor,
                    "test test_uri_skip_ancestor"),
     SVN_TEST_PASS2(test_dirent_get_absolute,
@@ -2092,10 +2720,14 @@ struct svn_test_descriptor_t test_funcs[] =
                    "test svn_uri_condense_targets"),
     SVN_TEST_PASS2(test_dirent_local_style,
                    "test svn_dirent_local_style"),
+    SVN_TEST_PASS2(test_relpath_local_style,
+                   "test svn_relpath_local_style"),
     SVN_TEST_PASS2(test_uri_local_style,
                    "test svn_uri_local_style"),
     SVN_TEST_PASS2(test_dirent_internal_style,
                    "test svn_dirent_internal_style"),
+    SVN_TEST_PASS2(test_relpath_internal_style,
+                   "test svn_relpath_internal_style"),
     SVN_TEST_PASS2(test_uri_internal_style,
                    "test svn_uri_internal_style"),
     SVN_TEST_NULL
