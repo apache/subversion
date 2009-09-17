@@ -180,13 +180,6 @@ Candidate changes:
 Approved changes:
 =================
 
- * r39197
-   Fix issue #3485 "libsvn_ra_svn/marshal.c assertion failed (opt || cstr)"
-   Justification:
-     We should not ship releases with failing assertions.
-   Votes:
-     +1: stsp, rhuijben, arfrever
-
  * r38417, r38424
    Fix issue #3443 'Obtaining implicit subtree mergeinfo hammers merge
    performance'
