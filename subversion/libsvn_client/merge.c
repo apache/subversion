@@ -5433,35 +5433,30 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
 
           if (child->has_noninheritable)
             {
-              apr_hash_t *entries;
-              apr_hash_index_t *hi;
-              svn_wc_adm_access_t *child_access;
-              SVN_ERR(svn_wc_adm_probe_try3(
-                &child_access, adm_access,
-                child->path, TRUE, -1,
-                merge_cmd_baton->ctx->cancel_func,
-                merge_cmd_baton->ctx->cancel_baton,
-                iterpool));
-              SVN_ERR(svn_wc_entries_read(&entries, child_access, FALSE,
-                                          iterpool));
-              for (hi = apr_hash_first(iterpool, entries); hi;
-                   hi = apr_hash_next(hi))
+              const apr_array_header_t *children;
+              const char *child_abspath;
+              int j;
+
+              SVN_ERR(svn_dirent_get_absolute(&child_abspath, child->path, iterpool));
+
+              SVN_ERR(svn_wc__node_get_children(&children,
+                                                merge_cmd_baton->ctx->wc_ctx,
+                                                child_abspath, TRUE, iterpool,
+                                                iterpool));
+              for (j = 0; j < children->nelts; j++)
                 {
-                  const char *name = svn_apr_hash_index_key(hi);
+                  const char *child_abspath = APR_ARRAY_IDX(children, j,
+                                                            const char*);
+                  const char *name = svn_dirent_basename(child_abspath, NULL);
                   svn_client__merge_path_t *child_of_noninheritable;
                   const char *child_path;
-                  const char *child_abspath;
 
-                  if (strcmp(name, SVN_WC_ENTRY_THIS_DIR) == 0)
-                    continue;
 
                   /* Does this child already exist in CHILDREN_WITH_MERGEINFO?
                      If not, create it and insert it into
                      CHILDREN_WITH_MERGEINFO and set override mergeinfo on
                      it. */
                   child_path = svn_dirent_join(child->path, name, iterpool);
-                  SVN_ERR(svn_dirent_get_absolute(&child_abspath, child_path,
-                                                  iterpool));
                   child_of_noninheritable =
                     get_child_with_mergeinfo(children_with_mergeinfo,
                                              child_path);
