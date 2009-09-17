@@ -2891,15 +2891,14 @@ attempt_deletion(const char *parent_dir,
    ### attempt at resolving.
 */
 static svn_error_t *
-resolve_conflict_on_entry(const char *path,
-                          const svn_wc_entry_t *orig_entry,
-                          svn_wc_adm_access_t *conflict_dir,
-                          const char *base_name,
-                          svn_boolean_t resolve_text,
-                          svn_boolean_t resolve_props,
-                          svn_wc_conflict_choice_t conflict_choice,
-                          svn_boolean_t *did_resolve,
-                          apr_pool_t *pool)
+resolve_conflict_on_node(const char *path,
+                         svn_wc_adm_access_t *conflict_dir,
+                         const char *base_name,
+                         svn_boolean_t resolve_text,
+                         svn_boolean_t resolve_props,
+                         svn_wc_conflict_choice_t conflict_choice,
+                         svn_boolean_t *did_resolve,
+                         apr_pool_t *pool)
 {
   svn_boolean_t was_present, need_feedback = FALSE;
   apr_uint64_t modify_flags = 0;
@@ -3030,10 +3029,8 @@ resolve_conflict_on_entry(const char *path,
       /* Although removing the files is sufficient to indicate that the
          conflict is resolved, if we update the entry as well future checks
          for conflict state will be more efficient. */
-      SVN_ERR(svn_wc__entry_modify
-              (conflict_dir,
-               (orig_entry->kind == svn_node_dir ? NULL : base_name),
-               &tmp_entry, modify_flags, pool));
+      SVN_ERR(svn_wc__entry_modify2(db, local_abspath, svn_node_unknown,
+                                    FALSE, &tmp_entry, modify_flags, pool));
 
       /* No feedback if no files were deleted and all we did was change the
          entry, such a file did not appear as a conflict */
@@ -3186,12 +3183,11 @@ resolve_found_entry_callback(const char *path,
       SVN_ERR(svn_wc_adm_probe_retrieve(&adm_access, baton->adm_access,
                                         path, pool));
 
-      SVN_ERR(resolve_conflict_on_entry(path, entry, adm_access, base_name,
-                                        baton->resolve_text,
-                                        baton->resolve_props,
-                                        baton->conflict_choice,
-                                        &did_resolve,
-                                        pool));
+      SVN_ERR(resolve_conflict_on_node(path, adm_access, base_name,
+                                       baton->resolve_text,
+                                       baton->resolve_props,
+                                       baton->conflict_choice,
+                                       &did_resolve, pool));
 
       /* Sanity check: see if libsvn_wc *still* thinks this item is in a
          state of conflict that we have asked to resolve. If so,
