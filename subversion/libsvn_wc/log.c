@@ -447,9 +447,8 @@ pick_error_code(struct log_runner *loggy)
   svn_xml_signal_bailout                                           \
     (svn_error_createf(pick_error_code(loggy), err,                \
                        _("In directory '%s'"),                     \
-                       svn_dirent_local_style(svn_wc_adm_access_path \
-                                              (loggy->adm_access),   \
-                                              loggy->pool)),         \
+                       svn_dirent_local_style(loggy->adm_abspath,  \
+                                              loggy->pool)),       \
      loggy->parser)
 
 
@@ -473,9 +472,8 @@ log_do_file_xfer(struct log_runner *loggy,
   if (! dest)
     return svn_error_createf(pick_error_code(loggy), NULL,
                              _("Missing 'dest' attribute in '%s'"),
-                             svn_dirent_local_style
-                             (svn_wc_adm_access_path(loggy->adm_access),
-                              loggy->pool));
+                             svn_dirent_local_style(loggy->adm_abspath,
+                                                    loggy->pool));
 
   err = file_xfer_under_path(loggy->db, loggy->adm_abspath, name, dest,
                              versioned, action, loggy->rerun, loggy->pool);
@@ -491,11 +489,10 @@ log_do_file_readonly(struct log_runner *loggy,
                      const char *name)
 {
   svn_error_t *err;
-  const char *full_path
-    = svn_dirent_join(svn_wc_adm_access_path(loggy->adm_access), name,
-                      loggy->pool);
+  const char *local_abspath
+    = svn_dirent_join(loggy->adm_abspath, name, loggy->pool);
 
-  err = svn_io_set_file_read_only(full_path, FALSE, loggy->pool);
+  err = svn_io_set_file_read_only(local_abspath, FALSE, loggy->pool);
   if (err && loggy->rerun && APR_STATUS_IS_ENOENT(err->apr_err))
     {
       svn_error_clear(err);
@@ -510,12 +507,8 @@ static svn_error_t *
 log_do_file_maybe_executable(struct log_runner *loggy,
                              const char *name)
 {
-  const char *full_path
-    = svn_dirent_join(svn_wc_adm_access_path(loggy->adm_access), name,
-                      loggy->pool);
-  const char *full_abspath;
-
-  SVN_ERR(svn_dirent_get_absolute(&full_abspath, full_path, loggy->pool));
+  const char *full_abspath
+    = svn_dirent_join(loggy->adm_abspath, name, loggy->pool);
 
   return svn_error_return(svn_wc__maybe_set_executable(
                                 NULL, loggy->db, full_abspath, loggy->pool));
@@ -526,12 +519,8 @@ static svn_error_t *
 log_do_file_maybe_readonly(struct log_runner *loggy,
                            const char *name)
 {
-  const char *full_path
-    = svn_dirent_join(svn_wc_adm_access_path(loggy->adm_access), name,
-                      loggy->pool);
-  const char *full_abspath;
-
-  SVN_ERR(svn_dirent_get_absolute(&full_abspath, full_path, loggy->pool));
+  const char *full_abspath
+    = svn_dirent_join(loggy->adm_abspath, name, loggy->pool);
 
   return svn_wc__maybe_set_read_only(NULL, loggy->db, full_abspath,
                                      loggy->pool);
@@ -545,9 +534,8 @@ log_do_file_timestamp(struct log_runner *loggy,
 {
   apr_time_t timestamp;
   svn_node_kind_t kind;
-  const char *full_path
-    = svn_dirent_join(svn_wc_adm_access_path(loggy->adm_access), name,
-                      loggy->pool);
+  const char *local_abspath
+    = svn_dirent_join(loggy->adm_abspath, name, loggy->pool);
 
   const char *timestamp_string
     = svn_xml_get_attr_value(SVN_WC__LOG_ATTR_TIMESTAMP, atts);
@@ -556,12 +544,11 @@ log_do_file_timestamp(struct log_runner *loggy,
   if (! timestamp_string)
     return svn_error_createf(pick_error_code(loggy), NULL,
                              _("Missing 'timestamp' attribute in '%s'"),
-                             svn_dirent_local_style
-                             (svn_wc_adm_access_path(loggy->adm_access),
-                              loggy->pool));
+                             svn_dirent_local_style(loggy->adm_abspath,
+                                                    loggy->pool));
 
   /* Do not set the timestamp on special files. */
-  SVN_ERR(svn_io_check_special_path(full_path, &kind, &is_special,
+  SVN_ERR(svn_io_check_special_path(local_abspath, &kind, &is_special,
                                     loggy->pool));
 
   if (! is_special)
@@ -569,7 +556,7 @@ log_do_file_timestamp(struct log_runner *loggy,
       SVN_ERR(svn_time_from_cstring(&timestamp, timestamp_string,
                                     loggy->pool));
 
-      SVN_ERR(svn_io_set_file_affected_time(timestamp, full_path,
+      SVN_ERR(svn_io_set_file_affected_time(timestamp, local_abspath,
                                             loggy->pool));
     }
 
@@ -581,11 +568,11 @@ log_do_file_timestamp(struct log_runner *loggy,
 static svn_error_t *
 log_do_rm(struct log_runner *loggy, const char *name)
 {
-  const char *full_path
-    = svn_dirent_join(svn_wc_adm_access_path(loggy->adm_access),
-                      name, loggy->pool);
+  const char *local_abspath
+    = svn_dirent_join(loggy->adm_abspath, name, loggy->pool);
 
-  return svn_error_return(svn_io_remove_file2(full_path, TRUE, loggy->pool));
+  return svn_error_return(
+    svn_io_remove_file2(local_abspath, TRUE, loggy->pool));
 }
 
 
@@ -1308,14 +1295,13 @@ log_do_modify_wcprop(struct log_runner *loggy,
                      const char **atts)
 {
   svn_string_t value;
-  const char *propname, *propval, *path;
+  const char *propname, *propval;
   const char *local_abspath;
 
   if (strcmp(name, SVN_WC_ENTRY_THIS_DIR) == 0)
-    path = svn_wc_adm_access_path(loggy->adm_access);
+    local_abspath = loggy->adm_abspath;
   else
-    path = svn_dirent_join(svn_wc_adm_access_path(loggy->adm_access),
-                           name, loggy->pool);
+    local_abspath = svn_dirent_join(loggy->adm_abspath, name, loggy->pool);
 
   propname = svn_xml_get_attr_value(SVN_WC__LOG_ATTR_PROPNAME, atts);
   propval = svn_xml_get_attr_value(SVN_WC__LOG_ATTR_PROPVAL, atts);
@@ -1326,7 +1312,6 @@ log_do_modify_wcprop(struct log_runner *loggy,
       value.len = strlen(propval);
     }
 
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, loggy->pool));
   SVN_ERR(svn_wc__wcprop_set(loggy->db, local_abspath,
                              propname, propval ? &value : NULL, loggy->pool));
 
@@ -1392,8 +1377,7 @@ start_handler(void *userData, const char *eltname, const char **atts)
           _("Log entry missing 'name' attribute (entry '%s' "
             "for directory '%s')"),
           eltname,
-          svn_dirent_local_style(svn_wc_adm_access_path(loggy->adm_access),
-                                 loggy->pool)));
+          svn_dirent_local_style(loggy->adm_abspath, loggy->pool)));
       return;
     }
 
@@ -1453,8 +1437,7 @@ start_handler(void *userData, const char *eltname, const char **atts)
          (pick_error_code(loggy), NULL,
           _("Unrecognized logfile element '%s' in '%s'"),
           eltname,
-          svn_dirent_local_style(svn_wc_adm_access_path(loggy->adm_access),
-                                 loggy->pool)));
+          svn_dirent_local_style(loggy->adm_abspath, loggy->pool)));
       return;
     }
 
@@ -1464,8 +1447,7 @@ start_handler(void *userData, const char *eltname, const char **atts)
        (pick_error_code(loggy), err,
         _("Error processing command '%s' in '%s'"),
         eltname,
-        svn_dirent_local_style(svn_wc_adm_access_path(loggy->adm_access),
-                               loggy->pool)));
+        svn_dirent_local_style(loggy->adm_abspath, loggy->pool)));
 
   return;
 }
