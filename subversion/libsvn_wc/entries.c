@@ -2361,14 +2361,11 @@ entries_write(apr_hash_t *entries,
 {
   apr_pool_t *subpool = svn_pool_create(scratch_pool);
   svn_error_t *err;
-
-  /* Presumably, if somebody is attempting to write entries, they must have
-     read the entries prior, which requires an open access baton. */
   svn_wc_adm_access_t *adm_access =
                 svn_wc__adm_retrieve_internal2(db, adm_abspath, subpool);
 
-  SVN_ERR_ASSERT(adm_access != NULL);
-  SVN_ERR(svn_wc__adm_write_check(adm_access, subpool));
+  if (adm_access)
+    SVN_ERR(svn_wc__adm_write_check(adm_access, subpool));
 
   /* Write the entries. */
   err = svn_wc__entries_write_new(db, adm_abspath, entries, subpool);
@@ -2377,7 +2374,8 @@ entries_write(apr_hash_t *entries,
 
   SVN_ERR(err);
 
-  svn_wc__adm_access_set_entries(adm_access, entries);
+  if (adm_access)
+    svn_wc__adm_access_set_entries(adm_access, entries);
 
   return SVN_NO_ERROR;
 }
@@ -2910,8 +2908,7 @@ svn_wc__entry_modify2(svn_wc__db_t *db,
 
   /* Sync changes to disk. */
   return svn_error_return(
-    entries_write(entries, db, svn_wc__adm_access_abspath(adm_access),
-                  scratch_pool));
+    entries_write(entries, db, adm_abspath, scratch_pool));
 }
 
 
