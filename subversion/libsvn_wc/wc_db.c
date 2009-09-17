@@ -4223,6 +4223,8 @@ svn_wc__db_wq_add(svn_wc__db_t *db,
 {
   svn_wc__db_pdh_t *pdh;
   const char *local_relpath;
+  svn_stringbuf_t *serialized;
+  svn_sqlite__stmt_t *stmt;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
   SVN_ERR_ASSERT(work_item != NULL);
@@ -4232,7 +4234,12 @@ svn_wc__db_wq_add(svn_wc__db_t *db,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(pdh);
 
-  NOT_IMPLEMENTED();
+  serialized = svn_skel__unparse(work_item, scratch_pool);
+ 
+  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+                                    STMT_INSERT_WORK_ITEM));
+  SVN_ERR(svn_sqlite__bind_blob(stmt, 1, serialized->data, serialized->len));
+  return svn_error_return(svn_sqlite__insert(NULL, stmt));
 }
 
 
@@ -4257,6 +4264,8 @@ svn_wc__db_wq_fetch(apr_uint64_t *id,
 {
   svn_wc__db_pdh_t *pdh;
   const char *local_relpath;
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
 
   SVN_ERR_ASSERT(id != NULL);
   SVN_ERR_ASSERT(work_item != NULL);
@@ -4267,7 +4276,27 @@ svn_wc__db_wq_fetch(apr_uint64_t *id,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(pdh);
 
-  NOT_IMPLEMENTED();
+  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+                                    STMT_SELECT_WORK_ITEM));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+
+  if (!have_row)
+    {
+      *id = 0;
+      *work_item = NULL;
+    }
+  else
+    {
+      apr_size_t len;
+      const void *val;
+
+      *id = svn_sqlite__column_int64(stmt, 0);
+
+      val = svn_sqlite__column_blob(stmt, 1, &len);
+      *work_item = svn_skel__parse(val, len, result_pool);
+    }
+
+  return svn_error_return(svn_sqlite__reset(stmt));
 }
 
 
@@ -4284,6 +4313,7 @@ svn_wc__db_wq_completed(svn_wc__db_t *db,
 {
   svn_wc__db_pdh_t *pdh;
   const char *local_relpath;
+  svn_sqlite__stmt_t *stmt;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
   SVN_ERR_ASSERT(id != 0);
@@ -4293,7 +4323,10 @@ svn_wc__db_wq_completed(svn_wc__db_t *db,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(pdh);
 
-  NOT_IMPLEMENTED();
+  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+                                    STMT_DELETE_WORK_ITEM));
+  SVN_ERR(svn_sqlite__bind_int64(stmt, 1, id));
+  return svn_error_return(svn_sqlite__step_done(stmt));
 }
 
 
