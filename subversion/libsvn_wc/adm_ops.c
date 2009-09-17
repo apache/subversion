@@ -2903,7 +2903,22 @@ resolve_conflict_on_entry(const char *path,
 {
   svn_boolean_t was_present, need_feedback = FALSE;
   apr_uint64_t modify_flags = 0;
-  svn_wc_entry_t *entry = svn_wc_entry_dup(orig_entry, pool);
+  svn_wc_entry_t tmp_entry;
+  svn_wc__db_t *db = svn_wc__adm_get_db(conflict_dir);
+  const char *local_abspath;
+  const char *conflict_old;
+  const char *conflict_new;
+  const char *conflict_working;
+  const char *prop_reject_file;
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+  SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, &conflict_old, &conflict_new,
+                               &conflict_working, &prop_reject_file,
+                               NULL, NULL,
+                               db, local_abspath, pool, pool));
 
   if (resolve_text)
     {
@@ -2914,13 +2929,13 @@ resolve_conflict_on_entry(const char *path,
       switch (conflict_choice)
         {
         case svn_wc_conflict_choose_base:
-          auto_resolve_src = entry->conflict_old;
+          auto_resolve_src = conflict_old;
           break;
         case svn_wc_conflict_choose_mine_full:
-          auto_resolve_src = entry->conflict_wrk;
+          auto_resolve_src = conflict_working;
           break;
         case svn_wc_conflict_choose_theirs_full:
-          auto_resolve_src = entry->conflict_new;
+          auto_resolve_src = conflict_new;
           break;
         case svn_wc_conflict_choose_merged:
           auto_resolve_src = NULL;
@@ -2928,8 +2943,7 @@ resolve_conflict_on_entry(const char *path,
         case svn_wc_conflict_choose_theirs_conflict:
         case svn_wc_conflict_choose_mine_conflict:
           {
-            if (entry->conflict_old && entry->conflict_wrk &&
-                entry->conflict_new)
+            if (conflict_old && conflict_working && conflict_new)
               {
                 apr_file_t *tmp_f;
                 svn_stream_t *tmp_stream;
@@ -2946,15 +2960,15 @@ resolve_conflict_on_entry(const char *path,
                                                 pool));
                 tmp_stream = svn_stream_from_aprfile2(tmp_f, FALSE, pool);
                 SVN_ERR(svn_diff_file_diff3_2(&diff,
-                                              entry->conflict_old,
-                                              entry->conflict_wrk,
-                                              entry->conflict_new,
+                                              conflict_old,
+                                              conflict_working,
+                                              conflict_new,
                                               svn_diff_file_options_create(pool),
                                               pool));
                 SVN_ERR(svn_diff_file_output_merge2(tmp_stream, diff,
-                                                    entry->conflict_old,
-                                                    entry->conflict_wrk,
-                                                    entry->conflict_new,
+                                                    conflict_old,
+                                                    conflict_working,
+                                                    conflict_new,
                                                     /* markers ignored */
                                                     NULL, NULL, NULL, NULL,
                                                     style,
@@ -2978,36 +2992,36 @@ resolve_conflict_on_entry(const char *path,
     }
 
   /* Yes indeed, being able to map a function over a list would be nice. */
-  if (resolve_text && entry->conflict_old)
+  if (resolve_text && conflict_old)
     {
       SVN_ERR(attempt_deletion(svn_wc_adm_access_path(conflict_dir),
-                               entry->conflict_old, &was_present, pool));
+                               conflict_old, &was_present, pool));
       modify_flags |= SVN_WC__ENTRY_MODIFY_CONFLICT_OLD;
-      entry->conflict_old = NULL;
+      tmp_entry.conflict_old = NULL;
       need_feedback |= was_present;
     }
-  if (resolve_text && entry->conflict_new)
+  if (resolve_text && conflict_new)
     {
       SVN_ERR(attempt_deletion(svn_wc_adm_access_path(conflict_dir),
-                               entry->conflict_new, &was_present, pool));
+                               conflict_new, &was_present, pool));
       modify_flags |= SVN_WC__ENTRY_MODIFY_CONFLICT_NEW;
-      entry->conflict_new = NULL;
+      tmp_entry.conflict_new = NULL;
       need_feedback |= was_present;
     }
-  if (resolve_text && entry->conflict_wrk)
+  if (resolve_text && conflict_working)
     {
       SVN_ERR(attempt_deletion(svn_wc_adm_access_path(conflict_dir),
-                               entry->conflict_wrk, &was_present, pool));
+                               conflict_working, &was_present, pool));
       modify_flags |= SVN_WC__ENTRY_MODIFY_CONFLICT_WRK;
-      entry->conflict_wrk = NULL;
+      tmp_entry.conflict_wrk = NULL;
       need_feedback |= was_present;
     }
-  if (resolve_props && entry->prejfile)
+  if (resolve_props && prop_reject_file)
     {
       SVN_ERR(attempt_deletion(svn_wc_adm_access_path(conflict_dir),
-                               entry->prejfile, &was_present, pool));
+                               prop_reject_file, &was_present, pool));
       modify_flags |= SVN_WC__ENTRY_MODIFY_PREJFILE;
-      entry->prejfile = NULL;
+      tmp_entry.prejfile = NULL;
       need_feedback |= was_present;
     }
 
@@ -3018,8 +3032,8 @@ resolve_conflict_on_entry(const char *path,
          for conflict state will be more efficient. */
       SVN_ERR(svn_wc__entry_modify
               (conflict_dir,
-               (entry->kind == svn_node_dir ? NULL : base_name),
-               entry, modify_flags, pool));
+               (orig_entry->kind == svn_node_dir ? NULL : base_name),
+               &tmp_entry, modify_flags, pool));
 
       /* No feedback if no files were deleted and all we did was change the
          entry, such a file did not appear as a conflict */
