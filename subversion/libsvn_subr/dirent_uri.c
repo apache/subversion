@@ -89,7 +89,6 @@ internal_style(path_type_t type, const char *path, apr_pool_t *pool)
       default:
         return svn_uri_canonicalize(path, pool);
     }
-  /* FIXME: Should also remove trailing /.'s, if the style says so. */
 }
 
 /* Return a local-style new path based on PATH, allocated in POOL.
