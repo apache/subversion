@@ -733,7 +733,6 @@ copy_dir_administratively(svn_wc_context_t *wc_ctx,
                           apr_pool_t *scratch_pool)
 {
   const svn_wc_entry_t *src_entry;
-  svn_wc_adm_access_t *adm_access;
   svn_wc__db_t *db = wc_ctx->db;
 
   /* Sanity check 1: You cannot make a copy of something that's not
@@ -772,9 +771,6 @@ copy_dir_administratively(svn_wc_context_t *wc_ctx,
                           scratch_pool));
 
   /* We've got some post-copy cleanup to do now. */
-  SVN_ERR(svn_wc__adm_open_in_context(&adm_access, wc_ctx, dst_abspath, TRUE,
-                                      -1, cancel_func, cancel_baton,
-                                      scratch_pool));
   SVN_ERR(post_copy_cleanup(db,
                             dst_abspath,
                             scratch_pool));
@@ -802,9 +798,9 @@ copy_dir_administratively(svn_wc_context_t *wc_ctx,
            will cause  svn_wc_add4() below to fail.  Set the URL to the
            URL of the first copy for now to prevent this. */
         tmp_entry.url = apr_pstrdup(scratch_pool, copyfrom_url);
-        SVN_ERR(svn_wc__entry_modify(adm_access, NULL, /* This Dir */
-                                     &tmp_entry,
-                                     SVN_WC__ENTRY_MODIFY_URL, scratch_pool));
+        SVN_ERR(svn_wc__entry_modify2(db, dst_abspath, svn_node_dir, FALSE,
+                                      &tmp_entry, SVN_WC__ENTRY_MODIFY_URL,
+                                      scratch_pool));
       }
     else
       {
@@ -812,8 +808,6 @@ copy_dir_administratively(svn_wc_context_t *wc_ctx,
                                               db, src_abspath, scratch_pool,
                                               scratch_pool));
       }
-
-    SVN_ERR(svn_wc_adm_close2(adm_access, scratch_pool));
 
     return svn_wc_add4(wc_ctx, dst_abspath, svn_depth_infinity,
                        copyfrom_url, copyfrom_rev,
