@@ -530,6 +530,10 @@ process_committed_internal(int *log_number,
                            apr_pool_t *pool)
 {
   const svn_wc_entry_t *entry;
+  const char *local_abspath;
+  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
   SVN_ERR(svn_wc_entry(&entry, path, adm_access, FALSE, pool));
   if (entry == NULL)
@@ -543,31 +547,33 @@ process_committed_internal(int *log_number,
 
   if (recurse && entry->kind == svn_node_dir)
     {
-      apr_hash_t *entries;
-      apr_hash_index_t *hi;
+      const apr_array_header_t *children;
       apr_pool_t *subpool = svn_pool_create(pool);
+      int i;
 
       /* Read PATH's entries;  this is the absolute path. */
-      SVN_ERR(svn_wc_entries_read(&entries, adm_access, TRUE, pool));
+      svn_wc__db_read_children(&children, db, local_abspath, pool, subpool);
 
       /* Recursively loop over all children. */
-      for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
+      for (i = 0; i < children->nelts; i++)
         {
-          const void *key;
-          void *val;
-          const char *name;
+          const char *name = APR_ARRAY_IDX(children, i, const char *);
           const svn_wc_entry_t *current_entry;
           const char *this_path;
+          const char *this_abspath;
+          svn_error_t *err;
 
           svn_pool_clear(subpool);
 
-          apr_hash_this(hi, &key, NULL, &val);
-          name = key;
-          current_entry = val;
+          this_abspath = svn_dirent_join(local_abspath, name, subpool);
 
-          /* Ignore the "this dir" entry. */
-          if (! strcmp(name, SVN_WC_ENTRY_THIS_DIR))
-            continue;
+          err = svn_wc__get_entry(&current_entry, db, this_abspath, FALSE,
+                                  svn_node_unknown, FALSE, subpool, subpool);
+
+          if (err && err->apr_err == SVN_ERR_NODE_UNEXPECTED_KIND)
+            svn_error_clear(err);
+          else
+            SVN_ERR(err);
 
           /* We come to this branch since we have committed a copied tree.
              svn_depth_exclude is possible in this situation. So check and
@@ -609,11 +615,7 @@ process_committed_internal(int *log_number,
                  created at the start of this function). */
               if (current_entry->schedule == svn_wc_schedule_delete)
                 {
-                  const svn_wc_entry_t *parent_entry;
-
-                  parent_entry = apr_hash_get(entries, SVN_WC_ENTRY_THIS_DIR,
-                                              APR_HASH_KEY_STRING);
-                  if (parent_entry->schedule == svn_wc_schedule_replace)
+                  if (entry->schedule == svn_wc_schedule_replace)
                     continue;
                 }
               SVN_ERR(process_committed_leaf
