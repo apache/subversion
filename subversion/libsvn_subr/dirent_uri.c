@@ -1596,7 +1596,7 @@ svn_relpath_is_canonical(const char *relpath,
 {
   const char *ptr = relpath, *seg = relpath;
 
-  /* URI is canonical if it has:
+  /* RELPATH is canonical if it has:
    *  - no '.' segments
    *  - no start and closing '/'
    *  - no '//'
