@@ -4289,11 +4289,18 @@ svn_wc__db_wq_fetch(apr_uint64_t *id,
     {
       apr_size_t len;
       const void *val;
+      char *buffer;
 
       *id = svn_sqlite__column_int64(stmt, 0);
 
       val = svn_sqlite__column_blob(stmt, 1, &len);
-      *work_item = svn_skel__parse(val, len, result_pool);
+
+      /* VAL lives until the svn_sqlite__reset(), make a copy
+         to allow the skels to reference values in the blob. */
+      buffer = apr_palloc(result_pool, len);
+      memcpy(buffer, val, len);
+
+      *work_item = svn_skel__parse(buffer, len, result_pool);
     }
 
   return svn_error_return(svn_sqlite__reset(stmt));
