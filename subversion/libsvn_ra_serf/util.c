@@ -86,6 +86,31 @@ ssl_convert_serf_failures(int failures)
   return svn_failures;
 }
 
+/* Construct the realmstring, e.g. https://svn.collab.net:443. */
+static const char *
+construct_realm(svn_ra_serf__session_t *session,
+                apr_pool_t *pool)
+{
+  const char *realm;
+  apr_port_t port;
+
+  if (session->repos_url.port_str)
+    {
+      port = session->repos_url.port;
+    }
+  else
+    {
+      port = apr_uri_port_of_scheme(session->repos_url.scheme);
+    }
+  
+  realm = apr_psprintf(pool, "%s://%s:%d",
+                       session->repos_url.scheme,
+                       session->repos_url.hostname,
+                       port);
+
+  return realm;
+}
+
 /* Convert a hash table containing the fields (as documented in X.509) of an
    organisation to a string ORG, allocated in POOL. ORG is as returned by
    serf_ssl_cert_issuer() and serf_ssl_cert_subject(). */
@@ -171,9 +196,7 @@ ssl_server_cert(void *baton, int failures,
                          SVN_AUTH_PARAM_SSL_SERVER_CERT_INFO,
                          &cert_info);
 
-  /* Construct the realmstring, e.g. https://svn.collab.net:443 */
-  realmstring = apr_uri_unparse(subpool, &conn->session->repos_url,
-                                APR_URI_UNP_OMITPATHINFO);
+  realmstring = construct_realm(conn->session, conn->session->pool);
 
   err = svn_auth_first_credentials(&creds, &state,
                                    SVN_AUTH_CRED_SSL_SERVER_TRUST,
@@ -357,25 +380,12 @@ apr_status_t svn_ra_serf__handle_client_cert(void *data,
     svn_ra_serf__connection_t *conn = data;
     svn_ra_serf__session_t *session = conn->session;
     const char *realm;
-    apr_port_t port;
     svn_error_t *err;
     void *creds;
 
     *cert_path = NULL;
 
-    if (session->repos_url.port_str)
-      {
-        port = session->repos_url.port;
-      }
-    else
-      {
-        port = apr_uri_port_of_scheme(session->repos_url.scheme);
-      }
-
-    realm = apr_psprintf(session->pool, "%s://%s:%d",
-                         session->repos_url.scheme,
-                         session->repos_url.hostname,
-                         port);
+    realm = construct_realm(session, session->pool);
 
     if (!conn->ssl_client_auth_state)
       {
