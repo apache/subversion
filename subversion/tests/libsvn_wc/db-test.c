@@ -326,6 +326,25 @@ create_fake_wc(const char *subdir, int format, apr_pool_t *scratch_pool)
 }
 
 
+static svn_error_t *
+create_open(svn_wc__db_t **db,
+            const char **local_abspath,
+            const char *subdir,
+            int format,
+            svn_wc__db_openmode_t smode,
+            apr_pool_t *pool)
+{
+  SVN_ERR(create_fake_wc(subdir, format, pool));
+
+  SVN_ERR(svn_dirent_get_absolute(local_abspath,
+                                  svn_dirent_join("fake-wc", subdir, pool),
+                                  pool));
+  SVN_ERR(svn_wc__db_open(db, smode, NULL, TRUE, TRUE, pool, pool));
+
+  return SVN_NO_ERROR;
+}
+
+
 /* Convert VALUE to a const svn_string_t *, and create a mapping from
    NAME to the converted data type in PROPS. */
 static void
@@ -375,13 +394,9 @@ test_getting_info(apr_pool_t *pool)
   svn_wc__db_t *db;
   svn_error_t *err;
 
-  SVN_ERR(create_fake_wc("test_getting_info", SVN_WC__VERSION, pool));
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath,
-                                  "fake-wc/test_getting_info",
-                                  pool));
-
-  SVN_ERR(svn_wc__db_open(&db, svn_wc__db_openmode_readonly,
-                          NULL, TRUE, TRUE, pool, pool));
+  SVN_ERR(create_open(&db, &local_abspath,
+                      "test_getting_info", SVN_WC__VERSION,
+                      svn_wc__db_openmode_readonly, pool));
 
   /* Test: basic fetching of data. */
   SVN_ERR(svn_wc__db_base_get_info(
@@ -609,13 +624,9 @@ test_inserting_nodes(apr_pool_t *pool)
   apr_hash_t *props;
   const apr_array_header_t *children;
 
-  SVN_ERR(create_fake_wc("test_inserting_nodes", SVN_WC__VERSION, pool));
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath,
-                                  "fake-wc/test_inserting_nodes",
-                                  pool));
-
-  SVN_ERR(svn_wc__db_open(&db, svn_wc__db_openmode_readwrite,
-                          NULL, TRUE, TRUE, pool, pool));
+  SVN_ERR(create_open(&db, &local_abspath,
+                      "test_insert_nodes", SVN_WC__VERSION,
+                      svn_wc__db_openmode_readwrite, pool));
 
   props = apr_hash_make(pool);
   set_prop(props, "p1", "v1", pool);
@@ -725,13 +736,9 @@ test_children(apr_pool_t *pool)
   const apr_array_header_t *children;
   int i;
 
-  SVN_ERR(create_fake_wc("test_children", SVN_WC__VERSION, pool));
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath,
-                                  "fake-wc/test_children",
-                                  pool));
-
-  SVN_ERR(svn_wc__db_open(&db, svn_wc__db_openmode_readonly,
-                          NULL, TRUE, TRUE, pool, pool));
+  SVN_ERR(create_open(&db, &local_abspath,
+                      "test_children", SVN_WC__VERSION,
+                      svn_wc__db_openmode_readonly, pool));
 
   SVN_ERR(svn_wc__db_base_get_children(&children,
                                        db, local_abspath,
@@ -797,13 +804,9 @@ test_working_info(apr_pool_t *pool)
   const char *tree_conflict_data;
   svn_wc__db_t *db;
 
-  SVN_ERR(create_fake_wc("test_working_info", SVN_WC__VERSION, pool));
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath,
-                                  "fake-wc/test_working_info",
-                                  pool));
-
-  SVN_ERR(svn_wc__db_open(&db, svn_wc__db_openmode_readonly,
-                          NULL, TRUE, TRUE, pool, pool));
+  SVN_ERR(create_open(&db, &local_abspath,
+                      "test_working_info", SVN_WC__VERSION,
+                      svn_wc__db_openmode_readonly, pool));
 
   /* Test: basic fetching of data. */
   SVN_ERR(svn_wc__db_read_info(
@@ -861,13 +864,9 @@ test_pdh(apr_pool_t *pool)
   const char *local_abspath;
   svn_wc__db_t *db;
 
-  SVN_ERR(create_fake_wc("test_pdh", SVN_WC__VERSION, pool));
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath,
-                                  "fake-wc/test_pdh",
-                                  pool));
-
-  SVN_ERR(svn_wc__db_open(&db, svn_wc__db_openmode_readwrite,
-                          NULL, TRUE, TRUE, pool, pool));
+  SVN_ERR(create_open(&db, &local_abspath,
+                      "test_pdh", SVN_WC__VERSION,
+                      svn_wc__db_openmode_readwrite, pool));
 
   /* NOTE: this test doesn't do anything apparent -- it simply exercises
      some internal functionality of wc_db.  This is a handy driver for
@@ -904,12 +903,9 @@ test_scan_addition(apr_pool_t *pool)
   const char *original_uuid;
   svn_revnum_t original_revision;
 
-  SVN_ERR(create_fake_wc("test_scan_addition", SVN_WC__VERSION, pool));
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath,
-                                  "fake-wc/test_scan_addition",
-                                  pool));
-  SVN_ERR(svn_wc__db_open(&db, svn_wc__db_openmode_readonly,
-                          NULL, TRUE, TRUE, pool, pool));
+  SVN_ERR(create_open(&db, &local_abspath,
+                      "test_scan_addition", SVN_WC__VERSION,
+                      svn_wc__db_openmode_readonly, pool));
 
   /* Simple addition of a directory. */
   SVN_ERR(svn_wc__db_scan_addition(
@@ -1037,12 +1033,9 @@ test_scan_deletion(apr_pool_t *pool)
   const char *work_del_abspath;
   const char *moved_to_abspath;
 
-  SVN_ERR(create_fake_wc("test_scan_deletion", SVN_WC__VERSION, pool));
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath,
-                                  "fake-wc/test_scan_deletion",
-                                  pool));
-  SVN_ERR(svn_wc__db_open(&db, svn_wc__db_openmode_readonly,
-                          NULL, TRUE, TRUE, pool, pool));
+  SVN_ERR(create_open(&db, &local_abspath,
+                      "test_scan_deletion", SVN_WC__VERSION,
+                      svn_wc__db_openmode_readonly, pool));
 
   /* Node was moved elsewhere. */
   SVN_ERR(svn_wc__db_scan_deletion(
@@ -1223,12 +1216,9 @@ test_global_relocate(apr_pool_t *pool)
   const char *repos_root_url;
   const char *repos_uuid;
   
-  SVN_ERR(create_fake_wc("test_global_relocate", SVN_WC__VERSION, pool));
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath,
-                                  "fake-wc/test_global_relocate",
-                                  pool));
-  SVN_ERR(svn_wc__db_open(&db, svn_wc__db_openmode_readonly,
-                          NULL, TRUE, TRUE, pool, pool));
+  SVN_ERR(create_open(&db, &local_abspath,
+                      "test_global_relocate", SVN_WC__VERSION,
+                      svn_wc__db_openmode_readonly, pool));
 
   /* Initial sanity check. */
   SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL,
@@ -1291,6 +1281,76 @@ test_upgrading_to_f13(apr_pool_t *pool)
 }
 
 
+static int
+detect_work_item(const svn_skel_t *work_item)
+{
+  if (!work_item->is_atom || work_item->len != 1)
+    return -1;
+  return work_item->data[0] - '0';
+}
+
+
+static svn_error_t *
+test_work_queue(apr_pool_t *pool)
+{
+  svn_wc__db_t *db;
+  const char *local_abspath;
+  svn_skel_t *work_item;
+  int run_count[3] = { 4, 7, 2 };  /* run the work 13 times, total.  */
+  int fetches = 0;
+
+  SVN_ERR(create_open(&db, &local_abspath, "test_work_queue", SVN_WC__VERSION,
+                      svn_wc__db_openmode_readwrite, pool));
+
+  /* Create three work items.  */
+  work_item = svn_skel__str_atom("0", pool);
+  SVN_ERR(svn_wc__db_wq_add(db, local_abspath, work_item, pool));
+
+  work_item = svn_skel__str_atom("1", pool);
+  SVN_ERR(svn_wc__db_wq_add(db, local_abspath, work_item, pool));
+
+  work_item = svn_skel__str_atom("2", pool);
+  SVN_ERR(svn_wc__db_wq_add(db, local_abspath, work_item, pool));
+
+  while (TRUE)
+    {
+      apr_uint64_t id;
+      int which;
+
+      /* Fetch the next work item, or break when the work queue is empty.  */
+      SVN_ERR(svn_wc__db_wq_fetch(&id, &work_item, db, local_abspath,
+                                  pool, pool));
+      if (work_item == NULL)
+        break;
+
+      /* Got one. We should never fetch work more than 13 times.  */
+      ++fetches;
+      SVN_TEST_ASSERT(fetches <= 13);
+
+      /* Parse the work item to see which of the three we found.  */
+      which = detect_work_item(work_item);
+      SVN_TEST_ASSERT(which >= 0 && which <= 2);
+
+      /* We should not see an item after we've run it enough times.
+
+         Note: strictly speaking, "in the wild" a work item could remain
+         after a call to wq_completed (ie. crash while that function was
+         processing), but we don't really have a way to test that here.  */
+      SVN_TEST_ASSERT(run_count[which] > 0);
+
+      /* If we have run this particular item enough times, then go ahead
+         and remove it from the work queue.  */
+      if (--run_count[which] == 0)
+        SVN_ERR(svn_wc__db_wq_completed(db, local_abspath, id, pool));
+    }
+
+  /* Should have run precisely 13 work items.  */
+  SVN_TEST_ASSERT(fetches == 13);
+
+  return SVN_NO_ERROR;
+}
+
+
 struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
@@ -1312,5 +1372,7 @@ struct svn_test_descriptor_t test_funcs[] =
                    "relocating a node"),
     SVN_TEST_PASS2(test_upgrading_to_f13,
                    "upgrading to format 13"),
+    SVN_TEST_PASS2(test_work_queue,
+                   "work queue processing"),
     SVN_TEST_NULL
   };

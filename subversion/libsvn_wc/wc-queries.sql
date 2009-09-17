@@ -224,6 +224,15 @@ where wc_id = ?1 and local_relpath = ?2;
 -- STMT_LOOK_FOR_WORK
 SELECT id FROM WORK_QUEUE LIMIT 1;
 
+-- STMT_INSERT_WORK_ITEM
+INSERT INTO WORK_QUEUE (work) values (?1);
+
+-- STMT_SELECT_WORK_ITEM
+SELECT id, work FROM WORK_QUEUE LIMIT 1;
+
+-- STMT_DELETE_WORK_ITEM
+DELETE FROM WORK_QUEUE WHERE id = ?1;
+
 
 /* ------------------------------------------------------------------------- */
 
