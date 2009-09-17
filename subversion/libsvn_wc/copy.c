@@ -598,49 +598,50 @@ post_copy_cleanup(svn_wc__db_t *db,
                   const char *local_abspath,
                   apr_pool_t *pool)
 {
-  apr_pool_t *subpool = svn_pool_create(pool);
-  apr_hash_t *entries;
-  apr_hash_index_t *hi;
-  svn_wc_adm_access_t *adm_access;
+  apr_pool_t *iterpool = svn_pool_create(pool);
+  const apr_array_header_t *children;
+  int i;
 
   /* Clear the DAV cache.  */
-  SVN_ERR(svn_wc__db_base_set_dav_cache(db, local_abspath, NULL, subpool));
+  SVN_ERR(svn_wc__db_base_set_dav_cache(db, local_abspath, NULL, pool));
 
   /* Because svn_io_copy_dir_recursively() doesn't copy directory
      permissions, we'll patch up our tree's .svn subdirs to be
      hidden. */
 #ifdef APR_FILE_ATTR_HIDDEN
   {
-    const char *adm_dir = svn_wc__adm_child(local_abspath, NULL, subpool);
+    const char *adm_dir = svn_wc__adm_child(local_abspath, NULL, pool);
     const char *path_apr;
     apr_status_t status;
 
-    SVN_ERR(svn_path_cstring_from_utf8(&path_apr, adm_dir, subpool));
+    SVN_ERR(svn_path_cstring_from_utf8(&path_apr, adm_dir, pool));
     status = apr_file_attrs_set(path_apr,
                                 APR_FILE_ATTR_HIDDEN,
                                 APR_FILE_ATTR_HIDDEN,
-                                subpool);
+                                pool);
     if (status)
       return svn_error_wrap_apr(status, _("Can't hide directory '%s'"),
-                                svn_dirent_local_style(adm_dir, subpool));
+                                svn_dirent_local_style(adm_dir, pool));
   }
 #endif
 
-  adm_access = svn_wc__adm_retrieve_internal2(db, local_abspath, subpool);
-
   /* Loop over all children, removing lock tokens and recursing into
      directories. */
-  SVN_ERR(svn_wc_entries_read(&entries, adm_access, TRUE, pool));
-  for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
+  SVN_ERR(svn_wc__db_read_children(&children, db, local_abspath, pool, pool));
+  for (i = 0; i < children->nelts; i++)
     {
-      const void *key;
-      void *val;
+      const char *child_basename = APR_ARRAY_IDX(children, i, const char *);
+      const char *child_abspath;
       const svn_wc_entry_t *entry;
+      svn_wc__db_kind_t kind;
 
-      svn_pool_clear(subpool);
+      svn_pool_clear(iterpool);
+      child_abspath = svn_dirent_join(local_abspath, child_basename, iterpool);
 
-      apr_hash_this(hi, &key, NULL, &val);
-      entry = val;
+      SVN_ERR(svn_wc__db_check_node(&kind, db, child_abspath, iterpool));
+      SVN_ERR(svn_wc__get_entry(&entry, db, child_abspath, TRUE,
+                                svn_node_unknown, (kind == svn_wc__db_kind_dir),
+                                iterpool, iterpool));
 
       if (entry->depth == svn_depth_exclude)
         continue;
@@ -691,28 +692,21 @@ post_copy_cleanup(svn_wc__db_t *db,
               flags |= SVN_WC__ENTRY_MODIFY_KIND;
             }
 
-          SVN_ERR(svn_wc__entry_modify(adm_access, key, &tmp_entry,
-                                       flags, subpool));
+          SVN_ERR(svn_wc__entry_modify2(db, child_abspath, svn_node_unknown,
+                                        FALSE, &tmp_entry, flags, iterpool));
         }
 
       /* Remove lock stuffs. */
       if (entry->lock_token)
-        SVN_ERR(svn_wc__db_lock_remove(db, local_abspath, subpool));
+        SVN_ERR(svn_wc__db_lock_remove(db, local_abspath, iterpool));
 
       /* If a dir, not deleted, and not "this dir", recurse. */
-      if (!entry->deleted
-          && entry->kind == svn_node_dir
-          && strcmp(key, SVN_WC_ENTRY_THIS_DIR) != 0)
-        {
-          const char *child_abspath;
-
-          child_abspath = svn_dirent_join(local_abspath, key, subpool);
-          SVN_ERR(post_copy_cleanup(db, child_abspath, subpool));
-        }
+      if (!entry->deleted)
+        SVN_ERR(post_copy_cleanup(db, child_abspath, iterpool));
     }
 
   /* Cleanup */
-  svn_pool_destroy(subpool);
+  svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
 }
