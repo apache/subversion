@@ -4130,9 +4130,17 @@ merge_file(svn_wc_notify_state_t *content_state,
      different from fb->old_text_base_path if we have a replaced-with-history
      file.  However, in the case we had an obstruction, we check against the
      new text base. (And if we're doing an add-with-history and we've already
-     saved a copy of a locally-modified file, then there certainly are mods.) */
+     saved a copy of a locally-modified file, then there certainly are mods.)
+
+     Special case: The working file is referring to a file external? If so
+                   then we must mark it as unmodified in order to avoid bogus
+                   conflicts, since this file was added as a place holder to
+                   merge externals item from the repository. */
   if (fb->copied_working_text)
     is_locally_modified = TRUE;
+  else if (entry && entry->file_external_path
+           && entry->schedule == svn_wc_schedule_add)
+    is_locally_modified = FALSE;
   else if (! fb->existed)
     SVN_ERR(svn_wc__text_modified_internal_p(&is_locally_modified, fb->path,
                                              FALSE, adm_access, FALSE, pool));
