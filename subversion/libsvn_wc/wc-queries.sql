@@ -221,6 +221,10 @@ where wc_id = ?1 and local_relpath = ?2;
 update working_node set depth = ?3
 where wc_id = ?1 and local_relpath = ?2;
 
+-- STMT_LOOK_FOR_WORK
+SELECT id FROM WORK_QUEUE LIMIT 1;
+
+
 /* ------------------------------------------------------------------------- */
 
 /* these are used in entries.c  */

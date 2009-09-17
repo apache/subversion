@@ -505,6 +505,11 @@ SVN_ERROR_START
              SVN_ERR_WC_CATEGORY_START + 36,
              "The working copy needs to be upgraded")
 
+  /** @since New in 1.7. */
+  SVN_ERRDEF(SVN_ERR_WC_CLEANUP_REQUIRED,
+             SVN_ERR_WC_CATEGORY_START + 37,
+             "Previous operation was interrupted; run 'svn cleanup'")
+
   /* fs errors */
 
   SVN_ERRDEF(SVN_ERR_FS_GENERAL,
