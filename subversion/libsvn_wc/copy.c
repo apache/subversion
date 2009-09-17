@@ -700,8 +700,8 @@ post_copy_cleanup(svn_wc__db_t *db,
       if (entry->lock_token)
         SVN_ERR(svn_wc__db_lock_remove(db, local_abspath, iterpool));
 
-      /* If a dir, not deleted, and not "this dir", recurse. */
-      if (!entry->deleted)
+      /* If a dir and not deleted, recurse. */
+      if (!entry->deleted && entry->kind == svn_node_dir)
         SVN_ERR(post_copy_cleanup(db, child_abspath, iterpool));
     }
 
