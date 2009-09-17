@@ -42,7 +42,6 @@
 struct work_item_dispatch {
   const char *name;
   svn_error_t *(*func)(svn_wc__db_t *db,
-                       const char *local_abspath,
                        const svn_skel_t *work_item,
                        apr_pool_t *scratch_pool);
 };
@@ -50,7 +49,6 @@ struct work_item_dispatch {
 
 static svn_error_t *
 run_revert(svn_wc__db_t *db,
-           const char *local_abspath,
            const svn_skel_t *work_item,
            apr_pool_t *scratch_pool)
 {
@@ -67,6 +65,8 @@ static const struct work_item_dispatch dispatch_table[] = {
 svn_error_t *
 svn_wc__wq_run(svn_wc__db_t *db,
                const char *local_abspath,
+               svn_cancel_func_t cancel_func,
+               void *cancel_baton,
                apr_pool_t *scratch_pool)
 {
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
@@ -76,6 +76,11 @@ svn_wc__wq_run(svn_wc__db_t *db,
       apr_uint64_t id;
       svn_skel_t *work_item;
       const struct work_item_dispatch *scan;
+
+      /* Stop work queue processing, if requested. A future 'svn cleanup'
+         should be able to continue the processing.  */
+      if (cancel_func)
+        SVN_ERR(cancel_func(cancel_baton));
 
       svn_pool_clear(iterpool);
 
@@ -92,7 +97,7 @@ svn_wc__wq_run(svn_wc__db_t *db,
         {
           if (svn_skel__matches_atom(work_item, scan->name))
             {
-              SVN_ERR((*scan->func)(db, local_abspath, work_item, iterpool));
+              SVN_ERR((*scan->func)(db, work_item, iterpool));
               break;
             }
         }

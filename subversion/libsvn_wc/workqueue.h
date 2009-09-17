@@ -41,6 +41,8 @@ extern "C" {
 svn_error_t *
 svn_wc__wq_run(svn_wc__db_t *db,
                const char *local_abspath,
+               svn_cancel_func_t cancel_func,
+               void *cancel_baton,
                apr_pool_t *scratch_pool);
 
 
