@@ -847,10 +847,10 @@ svn_log_entry_dup(svn_log_entry_t *log_entry, apr_pool_t *pool);
  * @since New in 1.5.
  */
 
-typedef svn_error_t *(*svn_log_entry_receiver_t)
-  (void *baton,
-   svn_log_entry_t *log_entry,
-   apr_pool_t *pool);
+typedef svn_error_t *(*svn_log_entry_receiver_t)(
+  void *baton,
+  svn_log_entry_t *log_entry,
+  apr_pool_t *pool);
 
 /**
  * Similar to @c svn_log_entry_receiver_t, except this uses separate
@@ -858,14 +858,14 @@ typedef svn_error_t *(*svn_log_entry_receiver_t)
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */
-typedef svn_error_t *(*svn_log_message_receiver_t)
-  (void *baton,
-   apr_hash_t *changed_paths,
-   svn_revnum_t revision,
-   const char *author,
-   const char *date,  /* use svn_time_from_cstring() if need apr_time_t */
-   const char *message,
-   apr_pool_t *pool);
+typedef svn_error_t *(*svn_log_message_receiver_t)(
+  void *baton,
+  apr_hash_t *changed_paths,
+  svn_revnum_t revision,
+  const char *author,
+  const char *date,  /* use svn_time_from_cstring() if need apr_time_t */
+  const char *message,
+  apr_pool_t *pool);
 
 
 /** Callback function type for commits.
@@ -876,21 +876,21 @@ typedef svn_error_t *(*svn_log_message_receiver_t)
  *
  * @since New in 1.4.
  */
-typedef svn_error_t *(*svn_commit_callback2_t)
-  (const svn_commit_info_t *commit_info,
-   void *baton,
-   apr_pool_t *pool);
+typedef svn_error_t *(*svn_commit_callback2_t)(
+  const svn_commit_info_t *commit_info,
+  void *baton,
+  apr_pool_t *pool);
 
 /** Same as @c svn_commit_callback2_t, but uses individual
  * data elements instead of the @c svn_commit_info_t structure
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
  */
-typedef svn_error_t *(*svn_commit_callback_t)
-  (svn_revnum_t new_revision,
-   const char *date,
-   const char *author,
-   void *baton);
+typedef svn_error_t *(*svn_commit_callback_t)(
+  svn_revnum_t new_revision,
+  const char *date,
+  const char *author,
+  void *baton);
 
 
 /** A buffer size that may be used when processing a stream of data.
@@ -1095,10 +1095,10 @@ typedef struct svn_location_segment_t
  * history in terms of its location in the repository filesystem over
  * time.
  */
-typedef svn_error_t *(*svn_location_segment_receiver_t)
-  (svn_location_segment_t *segment,
-   void *baton,
-   apr_pool_t *pool);
+typedef svn_error_t *(*svn_location_segment_receiver_t)(
+  svn_location_segment_t *segment,
+  void *baton,
+  apr_pool_t *pool);
 
 
 /**

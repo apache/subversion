@@ -490,6 +490,18 @@ svn_wc__upgrade_sdb(int *result_format,
                     apr_pool_t *scratch_pool);
 
 
+/* Like svn_wc_is_wc_root(), but also, if KIND is not null, set *KIND to
+ * the versioned node kind of PATH, or to svn_node_file if PATH is
+ * unversioned.
+ */
+svn_error_t *
+svn_wc__check_wc_root(svn_boolean_t *wc_root,
+                      svn_node_kind_t *kind,
+                      svn_wc__db_t *db,
+                      const char *local_abspath,
+                      apr_pool_t *scratch_pool);
+
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

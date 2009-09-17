@@ -179,7 +179,7 @@ svn_client_list2(const char *path_or_url,
 
               SVN_ERR(svn_client__open_ra_session_internal(&parent_session,
                                                            parent_url, NULL,
-                                                           NULL, NULL, FALSE,
+                                                           NULL, FALSE,
                                                            TRUE, ctx, pool));
 
               /* Get all parent's entries, no props. */

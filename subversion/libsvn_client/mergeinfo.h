@@ -112,6 +112,25 @@ svn_client__get_wc_mergeinfo(svn_mergeinfo_t *mergeinfo,
                              svn_client_ctx_t *ctx,
                              apr_pool_t *pool);
 
+/* If INCLUDE_DESCENDANTS is false then behaves exactly like
+   svn_client__get_wc_mergeinfo except the mergeinfo for WCPATH is put in the
+   mergeinfo catalog MERGEINFO_CAT, mapped from WC_PATH's repository root-
+   relative path.  If INCLUDE_DESCENDANTS is true, then any subtrees under
+   WCPATH with explicit mergeinfo are also included in MERGEINFO_CAT and
+   again the keys are the repository root-relative paths of the subtrees.
+   If no mergeinfo is found, then *MERGEINFO_CAT is set to NULL. */
+svn_error_t *
+svn_client__get_wc_mergeinfo_catalog(svn_mergeinfo_catalog_t *mergeinfo_cat,
+                                     svn_boolean_t *inherited,
+                                     svn_boolean_t include_descendants,
+                                     svn_mergeinfo_inheritance_t inherit,
+                                     const char *wcpath,
+                                     const char *limit_path,
+                                     const char **walked_path,
+                                     svn_client_ctx_t *ctx,
+                                     apr_pool_t *result_pool,
+                                     apr_pool_t *scratch_pool);
+
 /* Obtain any mergeinfo for the root-relative repository filesystem path
    REL_PATH from the repository, and set it in *TARGET_MERGEINFO.
    RA_SESSION should be an open RA session pointing at the URL that REL_PATH
@@ -136,6 +155,26 @@ svn_client__get_repos_mergeinfo(svn_ra_session_t *ra_session,
                                 svn_mergeinfo_inheritance_t inherit,
                                 svn_boolean_t squelch_incapable,
                                 apr_pool_t *pool);
+
+/* If INCLUDE_DESCENDANTS is false then behaves exactly like
+   svn_client__get_repos_mergeinfo except the mergeinfo for REL_PATH is put
+   in the mergeinfo catalog TARGET_MERGEINFO_CAT, with the key being REL_PATH
+   itself.  If INCLUDE_DESCENDANTS is true, then any subtrees under
+   REL_PATH with explicit mergeinfo are also included in MERGEINFO_CAT.  The
+   keys for the subtree mergeinfo are the repository root-relative paths of
+   the subtrees.  If no mergeinfo is found, then *TARGET_MERGEINFO_CAT is set
+   to NULL. */
+svn_error_t *
+svn_client__get_repos_mergeinfo_catalog(
+  svn_mergeinfo_catalog_t *target_mergeinfo_cat,
+  svn_ra_session_t *ra_session,
+  const char *rel_path,
+  svn_revnum_t rev,
+  svn_mergeinfo_inheritance_t inherit,
+  svn_boolean_t squelch_incapable,
+  svn_boolean_t include_descendants,
+  apr_pool_t *result_pool,
+  apr_pool_t *scratch_pool);
 
 /* Retrieve the direct mergeinfo for the TARGET_WCPATH from the WC's
    mergeinfo prop, or that inherited from its nearest ancestor if the
@@ -171,6 +210,27 @@ svn_client__get_wc_or_repos_mergeinfo(svn_mergeinfo_t *target_mergeinfo,
                                       const char *target_wcpath,
                                       svn_client_ctx_t *ctx,
                                       apr_pool_t *pool);
+
+/* If INCLUDE_DESCENDANTS is false then behaves exactly like
+   svn_client__get_wc_or_repos_mergeinfo except the mergeinfo for
+   TARGET_WCPATH is put in the mergeinfo catalog TARGET_MERGEINFO_CATALOG,
+   mapped from TARGET_WCPATH's repository root-relative path.  If
+   INCLUDE_DESCENDANTS is true, then any subtrees under TARGET_WCPATH with
+   explicit mergeinfo are also included in TARGET_MERGEINFO_CATALOG and
+   again the keys are the repository root-relative paths of the subtrees.
+   If no mergeinfo is found, then  *TARGET_MERGEINFO_CAT is set to NULL. */
+svn_error_t *
+svn_client__get_wc_or_repos_mergeinfo_catalog(
+  svn_mergeinfo_catalog_t *target_mergeinfo_catalog,
+  svn_boolean_t *indirect,
+  svn_boolean_t include_descendants,
+  svn_boolean_t repos_only,
+  svn_mergeinfo_inheritance_t inherit,
+  svn_ra_session_t *ra_session,
+  const char *target_wcpath,
+  svn_client_ctx_t *ctx,
+  apr_pool_t *result_pool,
+  apr_pool_t *scratch_pool);
 
 /* Set *MERGEINFO_P to a mergeinfo constructed solely from the
    natural history of PATH_OR_URL@PEG_REVISION.  RA_SESSION is an RA

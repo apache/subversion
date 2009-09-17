@@ -600,7 +600,6 @@ get_ra_editor(svn_ra_session_t **ra_session,
               svn_client_ctx_t *ctx,
               const char *base_url,
               const char *base_dir,
-              svn_wc_adm_access_t *base_access,
               const char *log_msg,
               apr_array_header_t *commit_items,
               const apr_hash_t *revprop_table,
@@ -616,7 +615,7 @@ get_ra_editor(svn_ra_session_t **ra_session,
   /* Open an RA session to URL. */
   SVN_ERR(svn_client__open_ra_session_internal(ra_session,
                                                base_url, base_dir,
-                                               base_access, commit_items,
+                                               commit_items,
                                                is_commit, !is_commit,
                                                ctx, pool));
 
@@ -736,7 +735,7 @@ svn_client_import3(svn_commit_info_t **commit_info_p,
     }
   while ((err = get_ra_editor(&ra_session,
                               &editor, &edit_baton, ctx, url, base_dir,
-                              NULL, log_msg, NULL, revprop_table,
+                              log_msg, NULL, revprop_table,
                               commit_info_p, FALSE, NULL, TRUE, subpool)));
 
   /* Reverse the order of the components we added to our NEW_ENTRIES array. */
@@ -1026,6 +1025,7 @@ remove_redundancies(apr_array_header_t **punique_targets,
 static svn_error_t *
 adjust_rel_targets(const char **pbase_dir,
                    apr_array_header_t **prel_targets,
+                   svn_wc_context_t *wc_ctx,
                    const char *base_dir,
                    apr_array_header_t *rel_targets,
                    apr_pool_t *pool)
@@ -1053,7 +1053,8 @@ adjust_rel_targets(const char **pbase_dir,
     {
       const char *parent_dir, *name;
 
-      SVN_ERR(svn_wc_get_actual_target(base_dir, &parent_dir, &name, pool));
+      SVN_ERR(svn_wc_get_actual_target2(&parent_dir, &name, wc_ctx, base_dir,
+                                        pool, pool));
 
       if (*name)
         {
@@ -1408,7 +1409,8 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
     {
       const char *parent_dir, *name;
 
-      SVN_ERR(svn_wc_get_actual_target(base_dir, &parent_dir, &name, pool));
+      SVN_ERR(svn_wc_get_actual_target2(&parent_dir, &name, ctx->wc_ctx,
+                                        base_dir, pool, pool));
       if (*name)
         {
           svn_node_kind_t kind;
@@ -1447,9 +1449,8 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
     {
       apr_pool_t *subpool = svn_pool_create(pool);
 
-      SVN_ERR(adjust_rel_targets(&base_dir, &rel_targets,
-                                 base_dir, rel_targets,
-                                 pool));
+      SVN_ERR(adjust_rel_targets(&base_dir, &rel_targets, ctx->wc_ctx,
+                                 base_dir, rel_targets, pool));
 
       for (i = 0; i < rel_targets->nelts; i++)
         {
@@ -1637,7 +1638,7 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
 
   if ((cmt_err = get_ra_editor(&ra_session,
                                &editor, &edit_baton, ctx,
-                               base_url, base_dir, base_dir_access, log_msg,
+                               base_url, base_dir, log_msg,
                                commit_items, revprop_table, commit_info_p,
                                TRUE, lock_tokens, keep_locks, pool)))
     goto cleanup;

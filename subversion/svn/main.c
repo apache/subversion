@@ -1193,7 +1193,7 @@ main(int argc, const char *argv[])
       case 'l':
         {
           char *end;
-          opt_state.limit = strtol(opt_arg, &end, 10);
+          opt_state.limit = (int) strtol(opt_arg, &end, 10);
           if (end == opt_arg || *end != '\0')
             {
               err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,

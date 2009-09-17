@@ -166,7 +166,7 @@ reporter_finish_report(void *report_baton, apr_pool_t *pool)
   /* Open an RA session to our common ancestor and grab the locks under it.
    */
   SVN_ERR(svn_client__open_ra_session_internal(&ras, rb->ancestor, NULL,
-                                               NULL, NULL, FALSE, TRUE,
+                                               NULL, FALSE, TRUE,
                                                rb->ctx, subpool));
 
   /* The locks need to live throughout the edit.  Note that if the
@@ -314,8 +314,7 @@ svn_client_status5(svn_revnum_t *result_rev,
 
       /* Open a repository session to the URL. */
       SVN_ERR(svn_client__open_ra_session_internal(&ra_session, URL, anchor,
-                                                   anchor_access, NULL,
-                                                   FALSE, TRUE,
+                                                   NULL, FALSE, TRUE,
                                                    ctx, pool));
 
       /* Verify that URL exists in HEAD.  If it doesn't, this can save

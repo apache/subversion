@@ -722,7 +722,7 @@ repos_to_repos_copy(svn_commit_info_t **commit_info_p,
   /* Open an RA session for the URL. Note that we don't have a local
      directory, nor a place to put temp files. */
   err = svn_client__open_ra_session_internal(&ra_session, top_url,
-                                             NULL, NULL, NULL, FALSE, TRUE,
+                                             NULL, NULL, FALSE, TRUE,
                                              ctx, pool);
 
   /* If the two URLs appear not to be in the same repository, then
@@ -1089,10 +1089,9 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
     }
 
   SVN_ERR(svn_client__open_ra_session_internal(&ra_session, top_dst_url,
-                                               svn_wc_adm_access_path
-                                               (adm_access),
-                                               adm_access, NULL, TRUE, TRUE,
-                                               ctx, pool));
+                                               svn_wc_adm_access_path(
+                                                                 adm_access),
+                                               NULL, TRUE, TRUE, ctx, pool));
 
   /* If requested, determine the nearest existing parent of the destination,
      and reparent the ra session there. */
@@ -1283,7 +1282,7 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
 
   /* Open an RA session to DST_URL. */
   SVN_ERR(svn_client__open_ra_session_internal(&ra_session, top_dst_url,
-                                               NULL, NULL, commit_items,
+                                               NULL, commit_items,
                                                FALSE, FALSE, ctx, pool));
 
   /* Fetch RA commit editor. */
@@ -1518,8 +1517,7 @@ repos_to_wc_copy(const apr_array_header_t *copy_pairs,
      (yet) have a working copy, so we don't have a corresponding path and
      tempfiles cannot go into the admin area. */
   SVN_ERR(svn_client__open_ra_session_internal(&ra_session, top_src_url, NULL,
-                                               NULL, NULL, FALSE, TRUE,
-                                               ctx, pool));
+                                               NULL, FALSE, TRUE, ctx, pool));
 
   /* Pass null for the path, to ensure error if trying to get a
      revision based on the working copy.  */

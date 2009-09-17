@@ -40,18 +40,6 @@
 #include "private/svn_wc_private.h"
 #include "private/svn_sqlite.h"
 
-
-
-/* Upgrade the working copy directory represented by DB/LOCAL_ABSPATH
-   from OLD_FORMAT to the wc-ng format (SVN_WC__WC_NG_VERSION)'.
-
-   Uses SCRATCH_POOL for all temporary allocation.  */
-static svn_error_t *
-upgrade_to_wcng(svn_wc__db_t *db,
-                const char *dir_abspath,
-                int old_format,
-                apr_pool_t *scratch_pool);
-
 
 
 
@@ -278,49 +266,10 @@ get_versioned_subdirs(apr_array_header_t **children,
 }
 
 
-static svn_error_t *
-upgrade_working_copy(svn_wc__db_t *db,
-                     const char *dir_abspath,
-                     svn_cancel_func_t cancel_func,
-                     void *cancel_baton,
-                     apr_pool_t *scratch_pool)
-{
-  int old_format;
-  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
-  apr_array_header_t *subdirs;
-  int i;
+/* Upgrade the working copy directory represented by DB/DIR_ABSPATH
+   from OLD_FORMAT to the wc-ng format (SVN_WC__WC_NG_VERSION)'.
 
-  /* Check cancellation; note that this catches recursive calls too. */
-  if (cancel_func)
-    SVN_ERR(cancel_func(cancel_baton));
-
-  SVN_ERR(svn_wc__db_temp_get_format(&old_format, db, dir_abspath,
-                                     iterpool));
-
-  SVN_ERR(get_versioned_subdirs(&subdirs, db, dir_abspath,
-                                scratch_pool, iterpool));
-
-  /* Upgrade this directory first. */
-  if (old_format < SVN_WC__WC_NG_VERSION)
-    SVN_ERR(upgrade_to_wcng(db, dir_abspath, old_format, iterpool));
-
-  /* Now recurse. */
-  for (i = 0; i < subdirs->nelts; ++i)
-    {
-      const char *child_abspath = APR_ARRAY_IDX(subdirs, i, const char *);
-
-      svn_pool_clear(iterpool);
-
-      SVN_ERR(upgrade_working_copy(db, child_abspath, cancel_func,
-                                   cancel_baton, iterpool));
-    }
-
-  svn_pool_destroy(iterpool);
-
-  return SVN_NO_ERROR;
-}
-
-
+   Uses SCRATCH_POOL for all temporary allocation.  */
 static svn_error_t *
 upgrade_to_wcng(svn_wc__db_t *db,
                 const char *dir_abspath,
@@ -820,6 +769,49 @@ svn_wc__upgrade_sdb(int *result_format,
   /* ### future bumps go here.  */
 
   *result_format = start_format;
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+upgrade_working_copy(svn_wc__db_t *db,
+                     const char *dir_abspath,
+                     svn_cancel_func_t cancel_func,
+                     void *cancel_baton,
+                     apr_pool_t *scratch_pool)
+{
+  int old_format;
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+  apr_array_header_t *subdirs;
+  int i;
+
+  /* Check cancellation; note that this catches recursive calls too. */
+  if (cancel_func)
+    SVN_ERR(cancel_func(cancel_baton));
+
+  SVN_ERR(svn_wc__db_temp_get_format(&old_format, db, dir_abspath,
+                                     iterpool));
+
+  SVN_ERR(get_versioned_subdirs(&subdirs, db, dir_abspath,
+                                scratch_pool, iterpool));
+
+  /* Upgrade this directory first. */
+  if (old_format < SVN_WC__WC_NG_VERSION)
+    SVN_ERR(upgrade_to_wcng(db, dir_abspath, old_format, iterpool));
+
+  /* Now recurse. */
+  for (i = 0; i < subdirs->nelts; ++i)
+    {
+      const char *child_abspath = APR_ARRAY_IDX(subdirs, i, const char *);
+
+      svn_pool_clear(iterpool);
+
+      SVN_ERR(upgrade_working_copy(db, child_abspath, cancel_func,
+                                   cancel_baton, iterpool));
+    }
+
+  svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
 }

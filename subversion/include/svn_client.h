@@ -113,12 +113,12 @@ svn_client_version(void);
  */
 SVN_DEPRECATED
 void
-svn_client_get_simple_prompt_provider
-  (svn_auth_provider_object_t **provider,
-   svn_auth_simple_prompt_func_t prompt_func,
-   void *prompt_baton,
-   int retry_limit,
-   apr_pool_t *pool);
+svn_client_get_simple_prompt_provider(
+  svn_auth_provider_object_t **provider,
+  svn_auth_simple_prompt_func_t prompt_func,
+  void *prompt_baton,
+  int retry_limit,
+  apr_pool_t *pool);
 
 
 /** Create and return @a *provider, an authentication provider of type @c
@@ -138,12 +138,12 @@ svn_client_get_simple_prompt_provider
  */
 SVN_DEPRECATED
 void
-svn_client_get_username_prompt_provider
-  (svn_auth_provider_object_t **provider,
-   svn_auth_username_prompt_func_t prompt_func,
-   void *prompt_baton,
-   int retry_limit,
-   apr_pool_t *pool);
+svn_client_get_username_prompt_provider(
+  svn_auth_provider_object_t **provider,
+  svn_auth_username_prompt_func_t prompt_func,
+  void *prompt_baton,
+  int retry_limit,
+  apr_pool_t *pool);
 
 
 /** Create and return @a *provider, an authentication provider of type @c
@@ -225,9 +225,9 @@ svn_client_get_username_provider(svn_auth_provider_object_t **provider,
  */
 SVN_DEPRECATED
 void
-svn_client_get_ssl_server_trust_file_provider
-  (svn_auth_provider_object_t **provider,
-   apr_pool_t *pool);
+svn_client_get_ssl_server_trust_file_provider(
+  svn_auth_provider_object_t **provider,
+  apr_pool_t *pool);
 
 
 /** Create and return @a *provider, an authentication provider of type @c
@@ -242,9 +242,9 @@ svn_client_get_ssl_server_trust_file_provider
  */
 SVN_DEPRECATED
 void
-svn_client_get_ssl_client_cert_file_provider
-  (svn_auth_provider_object_t **provider,
-   apr_pool_t *pool);
+svn_client_get_ssl_client_cert_file_provider(
+  svn_auth_provider_object_t **provider,
+  apr_pool_t *pool);
 
 
 /** Create and return @a *provider, an authentication provider of type @c
@@ -259,9 +259,9 @@ svn_client_get_ssl_client_cert_file_provider
  */
 SVN_DEPRECATED
 void
-svn_client_get_ssl_client_cert_pw_file_provider
-  (svn_auth_provider_object_t **provider,
-   apr_pool_t *pool);
+svn_client_get_ssl_client_cert_pw_file_provider(
+  svn_auth_provider_object_t **provider,
+  apr_pool_t *pool);
 
 
 /** Create and return @a *provider, an authentication provider of type @c
@@ -276,11 +276,11 @@ svn_client_get_ssl_client_cert_pw_file_provider
  */
 SVN_DEPRECATED
 void
-svn_client_get_ssl_server_trust_prompt_provider
-  (svn_auth_provider_object_t **provider,
-   svn_auth_ssl_server_trust_prompt_func_t prompt_func,
-   void *prompt_baton,
-   apr_pool_t *pool);
+svn_client_get_ssl_server_trust_prompt_provider(
+  svn_auth_provider_object_t **provider,
+  svn_auth_ssl_server_trust_prompt_func_t prompt_func,
+  void *prompt_baton,
+  apr_pool_t *pool);
 
 
 /** Create and return @a *provider, an authentication provider of type @c
@@ -297,12 +297,12 @@ svn_client_get_ssl_server_trust_prompt_provider
  */
 SVN_DEPRECATED
 void
-svn_client_get_ssl_client_cert_prompt_provider
-  (svn_auth_provider_object_t **provider,
-   svn_auth_ssl_client_cert_prompt_func_t prompt_func,
-   void *prompt_baton,
-   int retry_limit,
-   apr_pool_t *pool);
+svn_client_get_ssl_client_cert_prompt_provider(
+  svn_auth_provider_object_t **provider,
+  svn_auth_ssl_client_cert_prompt_func_t prompt_func,
+  void *prompt_baton,
+  int retry_limit,
+  apr_pool_t *pool);
 
 
 /** Create and return @a *provider, an authentication provider of type @c
@@ -319,12 +319,12 @@ svn_client_get_ssl_client_cert_prompt_provider
  */
 SVN_DEPRECATED
 void
-svn_client_get_ssl_client_cert_pw_prompt_provider
-  (svn_auth_provider_object_t **provider,
-   svn_auth_ssl_client_cert_pw_prompt_func_t prompt_func,
-   void *prompt_baton,
-   int retry_limit,
-   apr_pool_t *pool);
+svn_client_get_ssl_client_cert_pw_prompt_provider(
+  svn_auth_provider_object_t **provider,
+  svn_auth_ssl_client_cert_pw_prompt_func_t prompt_func,
+  void *prompt_baton,
+  int retry_limit,
+  apr_pool_t *pool);
 
 /** @} */
 
@@ -359,11 +359,11 @@ typedef struct svn_client_proplist_item_t
  *
  * @since New in 1.5.
  */
-typedef svn_error_t *(*svn_proplist_receiver_t)
-  (void *baton,
-   const char *path,
-   apr_hash_t *prop_hash,
-   apr_pool_t *pool);
+typedef svn_error_t *(*svn_proplist_receiver_t)(
+  void *baton,
+  const char *path,
+  apr_hash_t *prop_hash,
+  apr_pool_t *pool);
 
 /**
  * Return a duplicate of @a item, allocated in @a pool. No part of the new
@@ -606,12 +606,12 @@ svn_client_commit_item2_dup(const svn_client_commit_item2_t *item,
  *
  * @since New in 1.5.
  */
-typedef svn_error_t *(*svn_client_get_commit_log3_t)
-  (const char **log_msg,
-   const char **tmp_file,
-   const apr_array_header_t *commit_items,
-   void *baton,
-   apr_pool_t *pool);
+typedef svn_error_t *(*svn_client_get_commit_log3_t)(
+  const char **log_msg,
+  const char **tmp_file,
+  const apr_array_header_t *commit_items,
+  void *baton,
+  apr_pool_t *pool);
 
 /** Callback type used by commit-y operations to get a commit log message
  * from the caller.
@@ -633,12 +633,12 @@ typedef svn_error_t *(*svn_client_get_commit_log3_t)
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
  */
-typedef svn_error_t *(*svn_client_get_commit_log2_t)
-  (const char **log_msg,
-   const char **tmp_file,
-   const apr_array_header_t *commit_items,
-   void *baton,
-   apr_pool_t *pool);
+typedef svn_error_t *(*svn_client_get_commit_log2_t)(
+  const char **log_msg,
+  const char **tmp_file,
+  const apr_array_header_t *commit_items,
+  void *baton,
+  apr_pool_t *pool);
 
 /** Callback type used by commit-y operations to get a commit log message
  * from the caller.
@@ -660,12 +660,12 @@ typedef svn_error_t *(*svn_client_get_commit_log2_t)
  *
  * @deprecated Provided for backward compatibility with the 1.2 API.
  */
-typedef svn_error_t *(*svn_client_get_commit_log_t)
-  (const char **log_msg,
-   const char **tmp_file,
-   apr_array_header_t *commit_items,
-   void *baton,
-   apr_pool_t *pool);
+typedef svn_error_t *(*svn_client_get_commit_log_t)(
+  const char **log_msg,
+  const char **tmp_file,
+  apr_array_header_t *commit_items,
+  void *baton,
+  apr_pool_t *pool);
 
 /** @} */
 
@@ -696,17 +696,17 @@ typedef svn_error_t *(*svn_client_get_commit_log_t)
  *
  * @since New in 1.7.
  */
-typedef svn_error_t *(*svn_client_blame_receiver3_t)
-  (void *baton,
-   apr_int64_t line_no,
-   svn_revnum_t revision,
-   apr_hash_t *rev_props,
-   svn_revnum_t merged_revision,
-   apr_hash_t *merged_rev_props,
-   const char *merged_path,
-   const char *line,
-   svn_boolean_t local_change,
-   apr_pool_t *pool);
+typedef svn_error_t *(*svn_client_blame_receiver3_t)(
+  void *baton,
+  apr_int64_t line_no,
+  svn_revnum_t revision,
+  apr_hash_t *rev_props,
+  svn_revnum_t merged_revision,
+  apr_hash_t *merged_rev_props,
+  const char *merged_path,
+  const char *line,
+  svn_boolean_t local_change,
+  apr_pool_t *pool);
 
 /**
  * Similar to @c svn_client_blame_receiver3_t, but with separate revision
@@ -716,18 +716,18 @@ typedef svn_error_t *(*svn_client_blame_receiver3_t)
  *
  * @since New in 1.5.
  */
-typedef svn_error_t *(*svn_client_blame_receiver2_t)
-  (void *baton,
-   apr_int64_t line_no,
-   svn_revnum_t revision,
-   const char *author,
-   const char *date,
-   svn_revnum_t merged_revision,
-   const char *merged_author,
-   const char *merged_date,
-   const char *merged_path,
-   const char *line,
-   apr_pool_t *pool);
+typedef svn_error_t *(*svn_client_blame_receiver2_t)(
+  void *baton,
+  apr_int64_t line_no,
+  svn_revnum_t revision,
+  const char *author,
+  const char *date,
+  svn_revnum_t merged_revision,
+  const char *merged_author,
+  const char *merged_date,
+  const char *merged_path,
+  const char *line,
+  apr_pool_t *pool);
 
 /**
  * Similar to @c svn_client_blame_receiver2_t, but without @a merged_revision,
@@ -740,14 +740,14 @@ typedef svn_error_t *(*svn_client_blame_receiver2_t)
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */
-typedef svn_error_t *(*svn_client_blame_receiver_t)
-  (void *baton,
-   apr_int64_t line_no,
-   svn_revnum_t revision,
-   const char *author,
-   const char *date,
-   const char *line,
-   apr_pool_t *pool);
+typedef svn_error_t *(*svn_client_blame_receiver_t)(
+  void *baton,
+  apr_int64_t line_no,
+  svn_revnum_t revision,
+  const char *author,
+  const char *date,
+  const char *line,
+  apr_pool_t *pool);
 
 
 /** @} */
@@ -825,10 +825,10 @@ svn_client_diff_summarize_dup(const svn_client_diff_summarize_t *diff,
  *
  * @since New in 1.4.
  */
-typedef svn_error_t *(*svn_client_diff_summarize_func_t)
-  (const svn_client_diff_summarize_t *diff,
-   void *baton,
-   apr_pool_t *pool);
+typedef svn_error_t *(*svn_client_diff_summarize_func_t)(
+  const svn_client_diff_summarize_t *diff,
+  void *baton,
+  apr_pool_t *pool);
 
 
 
@@ -4633,11 +4633,11 @@ typedef struct svn_info_t
  *
  * @since New in 1.2.
  */
-typedef svn_error_t *(*svn_info_receiver_t)
-  (void *baton,
-   const char *path,
-   const svn_info_t *info,
-   apr_pool_t *pool);
+typedef svn_error_t *(*svn_info_receiver_t)(
+  void *baton,
+  const char *path,
+  const svn_info_t *info,
+  apr_pool_t *pool);
 
 /**
  * Return a duplicate of @a info, allocated in @a pool. No part of the new
