@@ -47,6 +47,7 @@
 #include "lock.h"
 #include "translate.h"
 #include "tree_conflicts.h"
+#include "workqueue.h"
 
 #include "private/svn_wc_private.h"
 #include "svn_private_config.h"
@@ -2385,6 +2386,10 @@ cleanup_internal(svn_wc__db_t *db,
   return svn_wc_adm_close2(adm_access, scratch_pool);
 }
 
+
+/* ### possibly eliminate the WC_CTX parameter? callers really shouldn't
+   ### be doing anything *but* running a cleanup, and we need a special
+   ### DB anyway. ... *shrug* ... consider later.  */
 svn_error_t *
 svn_wc_cleanup3(svn_wc_context_t *wc_ctx,
                 const char *local_abspath,
@@ -2392,11 +2397,18 @@ svn_wc_cleanup3(svn_wc_context_t *wc_ctx,
                 void *cancel_baton,
                 apr_pool_t * scratch_pool)
 {
+  svn_wc__db_t *db;
   int wc_format_version;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
-  SVN_ERR(svn_wc__internal_check_wc(&wc_format_version, wc_ctx->db, 
+  /* We need a DB that allows a non-empty work queue (though it *will*
+     auto-upgrade). We'll handle everything manually.  */
+  SVN_ERR(svn_wc__db_open(&db, svn_wc__db_openmode_readwrite,
+                          NULL /* ### config */, TRUE, FALSE,
+                          scratch_pool, scratch_pool));
+
+  SVN_ERR(svn_wc__internal_check_wc(&wc_format_version, db, 
                                     local_abspath, scratch_pool));
 
   /* a "version" of 0 means a non-wc directory */
@@ -2406,10 +2418,21 @@ svn_wc_cleanup3(svn_wc_context_t *wc_ctx,
                              svn_dirent_local_style(local_abspath, 
                                                     scratch_pool));
 
-  if (wc_format_version < SVN_WC__VERSION)
+  if (wc_format_version < SVN_WC__WC_NG_VERSION)
     return svn_error_create(SVN_ERR_WC_UNSUPPORTED_FORMAT, NULL,
                             _("Log format too old, please use "
                               "Subversion 1.6 or earlier"));
+
+  /* ### we really should be running these logs recursively. bleah.
+     ### for now, just run them in "this" directory. when we reach the
+     ### one-dir layout, then this will work just fine.  */
+  if (wc_format_version >= SVN_WC__HAS_WORK_QUEUE)
+    SVN_ERR(svn_wc__wq_run(db, local_abspath, cancel_func, cancel_baton,
+                           scratch_pool));
+
+  /* We're done with this DB. We can go back to the DB provided in the
+     WC_CTX for the old-style log processing.  */
+  SVN_ERR(svn_wc__db_close(db));
 
   return svn_error_return(cleanup_internal(wc_ctx->db, local_abspath, 
                                            cancel_func, cancel_baton, 
