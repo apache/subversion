@@ -3114,16 +3114,8 @@ resolve_found_entry_callback(const char *path,
    * If the target is a working copy root, don't check on the target itself.*/
   if (baton->resolve_tree && ! wc_root) /* but possibly a switched subdir */
     {
-      const char *conflict_dir;
-      svn_wc_adm_access_t *parent_adm_access;
       svn_wc_conflict_description2_t *conflict;
       svn_boolean_t tree_conflict;
-
-      /* For tree-conflicts, we want the *parent* directory's adm_access,
-       * even for directories. */
-      conflict_dir = svn_dirent_dirname(path, pool);
-      SVN_ERR(svn_wc_adm_probe_retrieve(&parent_adm_access, baton->adm_access,
-                                        conflict_dir, pool));
 
       SVN_ERR(svn_wc__db_op_read_tree_conflict(&conflict, baton->db,
                                                local_abspath, pool, pool));
