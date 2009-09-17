@@ -3017,20 +3017,25 @@ absent_file_or_dir(const char *path,
                    apr_pool_t *pool)
 {
   const char *name = svn_dirent_basename(path, pool);
+  const char *local_abspath;
   struct dir_baton *pb = parent_baton;
   struct edit_baton *eb = pb->edit_baton;
-  svn_wc_adm_access_t *adm_access;
-  apr_hash_t *entries;
-  const svn_wc_entry_t *ent;
+  const svn_wc_entry_t *entry;
   svn_wc_entry_t tmp_entry;
+  svn_boolean_t in_parent;
 
+  local_abspath = svn_dirent_join(pb->local_abspath, name, pool);
   /* Extra check: an item by this name may not exist, but there may
      still be one scheduled for addition.  That's a genuine
      tree-conflict.  */
-  SVN_ERR(svn_wc_adm_retrieve(&adm_access, eb->adm_access, pb->path, pool));
-  SVN_ERR(svn_wc_entries_read(&entries, adm_access, FALSE, pool));
-  ent = apr_hash_get(entries, name, APR_HASH_KEY_STRING);
-  if (ent && (ent->schedule == svn_wc_schedule_add))
+
+  in_parent = (kind == svn_node_dir);
+
+  SVN_ERR(svn_wc__get_entry(&entry, eb->db, local_abspath, TRUE, kind,
+                            in_parent, pool, pool));
+                            
+
+  if (entry && (entry->schedule == svn_wc_schedule_add))
     return svn_error_createf(
        SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
        _("Failed to mark '%s' absent: item of the same name is already "
@@ -3055,12 +3060,13 @@ absent_file_or_dir(const char *path,
   /* And, of course, marking as absent is the whole point. */
   tmp_entry.absent = TRUE;
 
-  return svn_wc__entry_modify(adm_access, name, &tmp_entry,
-                              (SVN_WC__ENTRY_MODIFY_KIND    |
-                               SVN_WC__ENTRY_MODIFY_REVISION |
-                               SVN_WC__ENTRY_MODIFY_DELETED |
-                               SVN_WC__ENTRY_MODIFY_ABSENT),
-                              pool);
+  return svn_wc__entry_modify2(eb->db, local_abspath, kind, in_parent,
+                               &tmp_entry,
+                               (SVN_WC__ENTRY_MODIFY_KIND    |
+                                SVN_WC__ENTRY_MODIFY_REVISION |
+                                SVN_WC__ENTRY_MODIFY_DELETED |
+                                SVN_WC__ENTRY_MODIFY_ABSENT),
+                               pool);
 }
 
 
