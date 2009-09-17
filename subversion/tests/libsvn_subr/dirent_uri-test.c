@@ -2525,6 +2525,7 @@ test_dirent_internal_style(apr_pool_t *pool)
     { "/",                   "/" },
     { "file",                "file" },
     { "dir/file",            "dir/file" },
+    { "dir/file/./.",        "dir/file" },
 #if defined(WIN32) || defined(__CYGWIN__)
     { "a:\\",                "a:/" },
     { "a:\\file",            "a:/file" },
@@ -2576,6 +2577,7 @@ test_relpath_internal_style(apr_pool_t *pool)
     { "a:/file",             "a:/file" },
     { "dir/file",            "dir/file" },
     { "//server/share/dir",  "server/share/dir" },
+    { "a/./.",               "a" },
   };
   int i;
 
@@ -2606,6 +2608,7 @@ test_uri_internal_style(apr_pool_t *pool)
     { "/",                   "/" },
     { "file",                "file" },
     { "dir/file",            "dir/file" },
+    { "dir/file/./.",        "dir/file" },
 #if defined(WIN32) || defined(__CYGWIN__)
     /* Rules are as uri, but paths are shown with internal separator */
     { "a:\\",                "a:" },
