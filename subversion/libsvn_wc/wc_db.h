@@ -259,6 +259,12 @@ typedef struct {
  * the temp_get_format() function will always return a value) since most of
  * these APIs expect a current-format database to be present.
  *
+ * If ENFORCE_EMPTY_WQ is TRUE, then any databases with stale work items in
+ * their work queue will raise an error when they are opened. The operation
+ * will raise SVN_ERR_WC_CLEANUP_REQUIRED. Passing FALSE for this routine
+ * means that the work queue is being processed (via 'svn cleanup') and all
+ * operations should be allowed.
+ *
  * The DB will be closed when RESULT_POOL is cleared. It may also be closed
  * manually using svn_wc__db_close(). In particular, this will close any
  * SQLite databases that have been opened and cached.
@@ -275,6 +281,7 @@ svn_wc__db_open(svn_wc__db_t **db,
                 svn_wc__db_openmode_t mode,
                 svn_config_t *config,
                 svn_boolean_t auto_upgrade,
+                svn_boolean_t enforce_empty_wq,
                 apr_pool_t *result_pool,
                 apr_pool_t *scratch_pool);
 

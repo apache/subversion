@@ -110,6 +110,9 @@ struct svn_wc__db_t {
      opened, and found to be not-current?  */
   svn_boolean_t auto_upgrade;
 
+  /* Should we ensure the WORK_QUEUE is empty when a WCROOT is opened?  */
+  svn_boolean_t enforce_empty_wq;
+
   /* Map a given working copy directory to its relevant data. */
   apr_hash_t *dir_data;
 
@@ -300,6 +303,24 @@ escape_sqlite_like(const char * const str, apr_pool_t *result_pool)
 }
 
 
+static svn_error_t *
+verify_no_work(svn_sqlite__db_t *sdb)
+{
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_LOOK_FOR_WORK));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  SVN_ERR(svn_sqlite__reset(stmt));
+
+  if (have_row)
+    return svn_error_create(SVN_ERR_WC_CLEANUP_REQUIRED, NULL,
+                            NULL /* nothing to add.  */);
+
+  return SVN_NO_ERROR;
+}
+
+
 /* Construct a new wcroot_t. The WCROOT_ABSPATH and SDB parameters must
    have lifetime of at least RESULT_POOL.  */
 static svn_error_t *
@@ -309,6 +330,7 @@ create_wcroot(wcroot_t **wcroot,
               apr_int64_t wc_id,
               int format,
               svn_boolean_t auto_upgrade,
+              svn_boolean_t enforce_empty_wq,
               apr_pool_t *result_pool,
               apr_pool_t *scratch_pool)
 {
@@ -346,6 +368,11 @@ create_wcroot(wcroot_t **wcroot,
   if (format < SVN_WC__VERSION && auto_upgrade)
     SVN_ERR(svn_wc__upgrade_sdb(&format, wcroot_abspath, sdb, format,
                                 scratch_pool));
+
+  /* Verify that no work items exists. If they do, then our integrity is
+     suspect and, thus, we cannot use this database.  */
+  if (format >= SVN_WC__HAS_WORK_QUEUE && enforce_empty_wq)
+    SVN_ERR(verify_no_work(sdb));
 
   *wcroot = apr_palloc(result_pool, sizeof(**wcroot));
 
@@ -441,7 +468,7 @@ fetch_repos_info(const char **repos_root_url,
   if (repos_uuid)
     *repos_uuid = svn_sqlite__column_text(stmt, 1, result_pool);
 
-  return svn_sqlite__reset(stmt);
+  return svn_error_return(svn_sqlite__reset(stmt));
 }
 
 
@@ -951,7 +978,8 @@ parse_local_abspath(svn_wc__db_pdh_t **pdh,
 
       SVN_ERR(create_wcroot(&(*pdh)->wcroot,
                             apr_pstrdup(db->state_pool, local_abspath),
-                            sdb, wc_id, FORMAT_FROM_SDB, db->auto_upgrade,
+                            sdb, wc_id, FORMAT_FROM_SDB,
+                            db->auto_upgrade, db->enforce_empty_wq,
                             db->state_pool, scratch_pool));
     }
   else
@@ -959,7 +987,8 @@ parse_local_abspath(svn_wc__db_pdh_t **pdh,
       /* We found a wc-1 working copy directory.  */
       SVN_ERR(create_wcroot(&(*pdh)->wcroot,
                             apr_pstrdup(db->state_pool, local_abspath),
-                            NULL, UNKNOWN_WC_ID, wc_format, db->auto_upgrade,
+                            NULL, UNKNOWN_WC_ID, wc_format,
+                            db->auto_upgrade, db->enforce_empty_wq,
                             db->state_pool, scratch_pool));
 
       /* Don't test for a directory obstructing a versioned file. The wc-1
@@ -1031,7 +1060,8 @@ parse_local_abspath(svn_wc__db_pdh_t **pdh,
                                     parent_pdh->local_abspath,
                                     sdb,
                                     1 /* ### hack.  */,
-                                    FORMAT_FROM_SDB, db->auto_upgrade,
+                                    FORMAT_FROM_SDB,
+                                    db->auto_upgrade, db->enforce_empty_wq,
                                     db->state_pool, scratch_pool));
 
               apr_hash_set(db->dir_data,
@@ -1477,6 +1507,7 @@ svn_wc__db_open(svn_wc__db_t **db,
                 svn_wc__db_openmode_t mode,
                 svn_config_t *config,
                 svn_boolean_t auto_upgrade,
+                svn_boolean_t enforce_empty_wq,
                 apr_pool_t *result_pool,
                 apr_pool_t *scratch_pool)
 {
@@ -1484,6 +1515,7 @@ svn_wc__db_open(svn_wc__db_t **db,
   (*db)->mode = mode;
   (*db)->config = config;
   (*db)->auto_upgrade = auto_upgrade;
+  (*db)->enforce_empty_wq = enforce_empty_wq;
   (*db)->dir_data = apr_hash_make(result_pool);
   (*db)->state_pool = result_pool;
 

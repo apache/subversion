@@ -783,10 +783,10 @@ svn_wc_upgrade(svn_wc_context_t *wc_ctx,
   svn_boolean_t is_wcroot;
 #endif
 
-  /* We need a DB that does not attempt an auto-upgrade. We'll handle
-     everything manually.  */
+  /* We need a DB that does not attempt an auto-upgrade, nor require
+     running a stale work queue. We'll handle everything manually.  */
   SVN_ERR(svn_wc__db_open(&db, svn_wc__db_openmode_readwrite,
-                          NULL /* ### config */, FALSE,
+                          NULL /* ### config */, FALSE, FALSE,
                           scratch_pool, scratch_pool));
 
   /* ### this expects a wc-ng working copy. sigh. fix up soonish...  */
