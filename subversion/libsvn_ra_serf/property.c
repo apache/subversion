@@ -29,7 +29,6 @@
 #include "svn_xml.h"
 #include "svn_props.h"
 #include "svn_dirent_uri.h"
-#include "svn_path.h"
 
 #include "private/svn_dav_protocol.h"
 #include "svn_private_config.h"
@@ -333,7 +332,7 @@ end_propfind(svn_ra_serf__xml_parser_t *parser,
         {
           if (strcmp(ctx->depth, "1") == 0)
             {
-              ctx->current_path = svn_path_canonicalize(info->val, ctx->pool);
+              ctx->current_path = svn_uri_canonicalize(info->val, ctx->pool);
             }
           else
             {

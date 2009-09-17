@@ -39,7 +39,25 @@
 extern "C" {
 #endif /* __cplusplus */
 
-#define SVN_CLIENT_SVNPATCH_VERSION   1
+struct svn_cl__externals_store
+{
+  apr_pool_t *pool;
+  apr_hash_t *externals_old;
+  apr_hash_t *externals_new;
+  apr_hash_t *depths;
+};
+
+/* svn_wc_external_update_t handler, storing the received data in a
+ * svn_cl__externals_store instance, which must be passed as baton.
+ * When one of the hashes is NULL, these values are not stored */
+svn_error_t *
+svn_cl__store_externals(void *baton,
+                        const char *local_abspath,
+                        const svn_string_t *old_value,
+                        const svn_string_t *new_value,
+                        svn_depth_t depth,
+                        apr_pool_t *scratch_pool);
+
 
 
 /* Set *URL, allocated in RESULT_POOL, and *PEG_REVNUM (the latter is
@@ -59,16 +77,17 @@ svn_client__derive_location(const char **url,
                             apr_pool_t *result_pool,
                             apr_pool_t *scratch_pool);
 
-/* Get the repository URL and revision number for WC entry ENTRY,
-   which is sometimes the entry's copyfrom info rather than its actual
+/* Get the repository URL and revision number for LOCAL_ABSPATH,
+   which is sometimes the path's copyfrom info rather than its actual
    URL and revision. */
 svn_error_t *
 svn_client__entry_location(const char **url,
                            svn_revnum_t *revnum,
-                           const char *path_or_url,
+                           svn_wc_context_t *wc_ctx,
+                           const char *local_abspath,
                            enum svn_opt_revision_kind peg_rev_kind,
-                           const svn_wc_entry_t *entry,
-                           apr_pool_t *pool);
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool);
 
 /* Set *REVNUM to the revision number identified by REVISION.
 
@@ -219,7 +238,7 @@ svn_client__get_youngest_common_ancestor(const char **ancestor_path,
    that it is the same node in both PEG_REVISION and REVISION.  If it
    is not, then @c SVN_ERR_CLIENT_UNRELATED_RESOURCES is returned.
 
-   BASE_ACCESS is the working copy the ra_session corresponds to, should
+   BASE_DIR is the working copy path the ra_session corresponds to, should
    only be used if PATH_OR_URL is a url.
 
    If PEG_REVISION's kind is svn_opt_revision_unspecified, it is
@@ -238,7 +257,7 @@ svn_client__ra_session_from_path(svn_ra_session_t **ra_session_p,
                                  svn_revnum_t *rev_p,
                                  const char **url_p,
                                  const char *path_or_url,
-                                 svn_wc_adm_access_t *base_access,
+                                 const char *base_dir,
                                  const svn_opt_revision_t *peg_revision,
                                  const svn_opt_revision_t *revision,
                                  svn_client_ctx_t *ctx,
@@ -307,30 +326,6 @@ svn_client__path_relative_to_root(const char **rel_path,
                                   svn_ra_session_t *ra_session,
                                   apr_pool_t *result_pool,
                                   apr_pool_t *scratch_pool);
-
-/* Return the property value for any PROPNAME set on TARGET in *PROPS,
-   with WC paths of char * for keys and property values of
-   svn_string_t * for values.  Assumes that PROPS is non-NULL.
-
-   CHANGELISTS is an array of const char * changelist names, used as a
-   restrictive filter on items whose properties are set; that is,
-   don't set properties on any item unless it's a member of one of
-   those changelists.  If CHANGELISTS is empty (or altogether NULL),
-   no changelist filtering occurs.
-
-   Treat DEPTH as in svn_client_propget3().
-*/
-svn_error_t *
-svn_client__get_prop_from_wc(apr_hash_t *props,
-                             const char *propname,
-                             const char *target,
-                             svn_boolean_t pristine,
-                             const svn_wc_entry_t *entry,
-                             svn_wc_adm_access_t *adm_access,
-                             svn_depth_t depth,
-                             const apr_array_header_t *changelists,
-                             svn_client_ctx_t *ctx,
-                             apr_pool_t *pool);
 
 /* Retrieve the oldest revision of the node at REL_PATH at REV since
    it was last copied (if applicable), and store it in OLDEST_REV.  If
@@ -584,7 +579,7 @@ typedef struct
    DEPTH must be a definite depth, not (e.g.) svn_depth_unknown.
 
    RA_CACHE is a pointer to a cache of information for the URL at
-   REVISION based of the PEG_REVISION.  Any information not in
+   REVISION based on the PEG_REVISION.  Any information not in
    *RA_CACHE is retrieved by a round-trip to the repository.  RA_CACHE
    may be NULL which indicates that no cache information is available.
 
@@ -679,13 +674,7 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
    If NOTIFY_FUNC is non-null, invoke it with NOTIFY_BATON for each
    file and directory operated on during the edit.
 
-   EDITOR/EDIT_BATON return the newly created editor and baton/
-  
-   SVNPATCH_FILE is the temporary file to which the library dumps
-   serialized ra_svn protocol Editor Commands.  It somehow determines
-   whether or not to utilize svnpatch format in the diff output when
-   checked against NULL.  The caller must allocate the file handler,
-   open and close the file respectively before and after the call. */
+   EDITOR/EDIT_BATON return the newly created editor and baton. */
 svn_error_t *
 svn_client__get_diff_editor(const char *target,
                             svn_wc_adm_access_t *adm_access,
@@ -701,7 +690,6 @@ svn_client__get_diff_editor(const char *target,
                             void *cancel_baton,
                             const svn_delta_editor_t **editor,
                             void **edit_baton,
-                            apr_file_t *svnpatch_file,
                             apr_pool_t *pool);
 
 
@@ -1042,7 +1030,7 @@ svn_client__fetch_externals(apr_hash_t *externals,
 /* Perform status operations on each external in TRAVERSAL_INFO.  All
    other options are the same as those passed to svn_client_status(). */
 svn_error_t *
-svn_client__do_external_status(svn_wc_traversal_info_t *traversal_info,
+svn_client__do_external_status(apr_hash_t *external_defs,
                                svn_wc_status_func4_t status_func,
                                void *status_baton,
                                svn_depth_t depth,

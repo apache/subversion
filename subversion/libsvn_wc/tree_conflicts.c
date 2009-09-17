@@ -34,6 +34,7 @@
 
 #include "private/svn_skel.h"
 #include "private/svn_wc_private.h"
+#include "private/svn_token.h"
 
 #include "svn_private_config.h"
 
@@ -69,45 +70,39 @@
  */
 
 
-/* A mapping between a string STR and an enumeration value VAL. */
-typedef struct enum_mapping_t
-{
-  const char *str;
-  int val;
-} enum_mapping_t;
-
+/* ### this should move to a more general location...  */
 /* A map for svn_node_kind_t values. */
-static const enum_mapping_t node_kind_map[] =
+static const svn_token_map_t node_kind_map[] =
 {
   { "none", svn_node_none },
   { "file", svn_node_file },
   { "dir",  svn_node_dir },
   { "",     svn_node_unknown },
-  { NULL,   0 }
+  { NULL }
 };
 
 /* A map for svn_wc_operation_t values. */
-static const enum_mapping_t operation_map[] =
+const svn_token_map_t svn_wc__operation_map[] =
 {
   { "none",   svn_wc_operation_none },
   { "update", svn_wc_operation_update },
   { "switch", svn_wc_operation_switch },
   { "merge",  svn_wc_operation_merge },
-  { NULL,     0 }
+  { NULL }
 };
 
 /* A map for svn_wc_conflict_action_t values. */
-static const enum_mapping_t action_map[] =
+const svn_token_map_t svn_wc__conflict_action_map[] =
 {
   { "edited",   svn_wc_conflict_action_edit },
   { "deleted",  svn_wc_conflict_action_delete },
   { "added",    svn_wc_conflict_action_add },
   { "replaced", svn_wc_conflict_action_replace },
-  { NULL,       0 }
+  { NULL }
 };
 
 /* A map for svn_wc_conflict_reason_t values. */
-static const enum_mapping_t reason_map[] =
+const svn_token_map_t svn_wc__conflict_reason_map[] =
 {
   { "edited",      svn_wc_conflict_reason_edited },
   { "deleted",     svn_wc_conflict_reason_deleted },
@@ -116,7 +111,7 @@ static const enum_mapping_t reason_map[] =
   { "added",       svn_wc_conflict_reason_added },
   { "replaced",    svn_wc_conflict_reason_replaced },
   { "unversioned", svn_wc_conflict_reason_unversioned },
-  { NULL,          0 }
+  { NULL }
 };
 
 
@@ -158,26 +153,17 @@ is_valid_conflict_skel(const svn_skel_t *skel)
  */
 static svn_error_t *
 read_enum_field(int *result,
-                const enum_mapping_t *map,
+                const svn_token_map_t *map,
                 const svn_skel_t *skel)
 {
-  int i;
+  int value = svn_token__from_mem(map, skel->data, skel->len);
 
-  /* Find STR in MAP; error if not found. */
-  for (i = 0; ; i++)
-    {
-      if (map[i].str == NULL)
-        return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
-                                _("Unknown enumeration value in tree conflict "
-                                  "description"));
-      /* ### note: theoretically, a corrupt skel could have a long value
-         ### whose prefix is one of our enumerated values, and so we'll
-         ### choose that enum. fine. we'll accept these "corrupt" values. */
-      if (strncmp(skel->data, map[i].str, skel->len) == 0)
-        break;
-    }
+  if (value == SVN_TOKEN_UNKNOWN)
+    return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
+                            _("Unknown enumeration value in tree conflict "
+                              "description"));
 
-  *result = map[i].val;
+  *result = value;
   return SVN_NO_ERROR;
 }
 
@@ -220,7 +206,7 @@ read_node_version_info(svn_wc_conflict_version_t *version_info,
   return SVN_NO_ERROR;
 }
 
-/* Parse a newly allocated svn_wc_conflict_description_t object from the
+/* Parse a newly allocated svn_wc_conflict_description2_t object from the
  * character string pointed to by *START. Return the result in *CONFLICT.
  * Don't read further than END. Set *START to point to the next character
  * after the description that was read.
@@ -228,15 +214,18 @@ read_node_version_info(svn_wc_conflict_version_t *version_info,
  * Do all allocations in pool.
  */
 static svn_error_t *
-read_one_tree_conflict(svn_wc_conflict_description_t **conflict,
+read_one_tree_conflict(svn_wc_conflict_description2_t **conflict,
                        const svn_skel_t *skel,
                        const char *dir_path,
                        apr_pool_t *result_pool,
                        apr_pool_t *scratch_pool)
 {
   const char *victim_basename;
+  const char *victim_abspath;
   svn_node_kind_t node_kind;
   svn_wc_operation_t operation;
+  svn_wc_conflict_action_t action;
+  svn_wc_conflict_reason_t reason;
   svn_wc_conflict_version_t *src_left_version;
   svn_wc_conflict_version_t *src_right_version;
   int n;
@@ -263,7 +252,7 @@ read_one_tree_conflict(svn_wc_conflict_description_t **conflict,
              _("Invalid 'node_kind' field in tree conflict description"));
 
   /* operation */
-  SVN_ERR(read_enum_field(&n, operation_map,
+  SVN_ERR(read_enum_field(&n, svn_wc__operation_map,
                           skel->children->next->next->next));
   operation = (svn_wc_operation_t)n;
 
@@ -276,31 +265,37 @@ read_one_tree_conflict(svn_wc_conflict_description_t **conflict,
                                                      SVN_INVALID_REVNUM,
                                                      svn_node_none,
                                                      result_pool);
-  *conflict = svn_wc_conflict_description_create_tree(
-    svn_dirent_join(dir_path, victim_basename, result_pool),
-    NULL, node_kind, operation, src_left_version, src_right_version,
-    result_pool);
+
+  SVN_ERR(svn_dirent_get_absolute(&victim_abspath,
+                    svn_dirent_join(dir_path, victim_basename, scratch_pool),
+                    scratch_pool));
 
   /* action */
-  SVN_ERR(read_enum_field(&n, action_map,
+  SVN_ERR(read_enum_field(&n, svn_wc__conflict_action_map,
                           skel->children->next->next->next->next));
-  (*conflict)->action = (svn_wc_conflict_action_t)n;
+  action = n;
 
   /* reason */
-  SVN_ERR(read_enum_field(&n, reason_map,
+  SVN_ERR(read_enum_field(&n, svn_wc__conflict_reason_map,
                           skel->children->next->next->next->next->next));
-  (*conflict)->reason = (svn_wc_conflict_reason_t)n;
+  reason = n;
 
   /* Let's just make it a bit easier on ourself here... */
   skel = skel->children->next->next->next->next->next->next;
 
   /* src_left_version */
-  SVN_ERR(read_node_version_info((*conflict)->src_left_version, skel,
+  SVN_ERR(read_node_version_info(src_left_version, skel,
                                  result_pool, scratch_pool));
 
   /* src_right_version */
-  SVN_ERR(read_node_version_info((*conflict)->src_right_version, skel->next,
+  SVN_ERR(read_node_version_info(src_right_version, skel->next,
                                  result_pool, scratch_pool));
+
+  *conflict = svn_wc_conflict_description_create_tree2(victim_abspath,
+    node_kind, operation, src_left_version, src_right_version,
+    result_pool);
+  (*conflict)->action = action;
+  (*conflict)->reason = reason;
 
   return SVN_NO_ERROR;
 }
@@ -332,13 +327,14 @@ svn_wc__read_tree_conflicts(apr_hash_t **conflicts,
   iterpool = svn_pool_create(pool);
   for (skel = skel->children; skel != NULL; skel = skel->next)
     {
-      svn_wc_conflict_description_t *conflict;
+      svn_wc_conflict_description2_t *conflict;
 
       svn_pool_clear(iterpool);
       SVN_ERR(read_one_tree_conflict(&conflict, skel, dir_path,
                                      pool, iterpool));
       if (conflict != NULL)
-        apr_hash_set(*conflicts, svn_dirent_basename(conflict->path, pool),
+        apr_hash_set(*conflicts, svn_dirent_basename(conflict->local_abspath,
+                                                     pool),
                      APR_HASH_KEY_STRING, conflict);
     }
   svn_pool_destroy(iterpool);
@@ -350,20 +346,12 @@ svn_wc__read_tree_conflicts(apr_hash_t **conflicts,
  * in MAP. */
 static svn_error_t *
 skel_prepend_enum(svn_skel_t *skel,
-                  const enum_mapping_t *map,
+                  const svn_token_map_t *map,
                   int n,
                   apr_pool_t *result_pool)
 {
-  int i;
-
-  for (i = 0; ; i++)
-    {
-      SVN_ERR_ASSERT(map[i].str != NULL);
-      if (map[i].val == n)
-        break;
-    }
-
-  svn_skel__prepend(svn_skel__str_atom(map[i].str, result_pool), skel);
+  svn_skel__prepend(svn_skel__str_atom(svn_token__to_word(map, n),
+                                       result_pool), skel);
   return SVN_NO_ERROR;
 }
 
@@ -406,6 +394,7 @@ prepend_version_info_skel(svn_skel_t *parent_skel,
 /*
  * This function could be static, but we need to link to it
  * in a unit test in tests/libsvn_wc/, so it isn't.
+ * (and we use it to serialize tree conflicts in log.c :( )
  */
 svn_error_t *
 svn_wc__write_tree_conflicts(const char **conflict_data,
@@ -421,7 +410,7 @@ svn_wc__write_tree_conflicts(const char **conflict_data,
   for (hi = apr_hash_first(pool, conflicts); hi; hi = apr_hash_next(hi))
     {
       const char *path;
-      const svn_wc_conflict_description_t *conflict =
+      const svn_wc_conflict_description2_t *conflict =
           svn_apr_hash_index_val(hi);
       svn_skel_t *c_skel = svn_skel__make_empty_list(pool);
 
@@ -440,14 +429,16 @@ svn_wc__write_tree_conflicts(const char **conflict_data,
         SVN_ERR(prepend_version_info_skel(c_skel, &null_version, pool));
 
       /* reason */
-      SVN_ERR(skel_prepend_enum(c_skel, reason_map, conflict->reason, pool));
+      SVN_ERR(skel_prepend_enum(c_skel, svn_wc__conflict_reason_map,
+                                conflict->reason, pool));
 
       /* action */
-      SVN_ERR(skel_prepend_enum(c_skel, action_map, conflict->action, pool));
+      SVN_ERR(skel_prepend_enum(c_skel, svn_wc__conflict_action_map,
+                                conflict->action, pool));
 
       /* operation */
-      SVN_ERR(skel_prepend_enum(c_skel, operation_map, conflict->operation,
-                                pool));
+      SVN_ERR(skel_prepend_enum(c_skel, svn_wc__operation_map,
+                                conflict->operation, pool));
 
       /* node_kind */
       SVN_ERR_ASSERT(conflict->node_kind == svn_node_dir
@@ -456,7 +447,7 @@ svn_wc__write_tree_conflicts(const char **conflict_data,
                                 pool));
 
       /* Victim path (escaping separator chars). */
-      path = svn_dirent_basename(conflict->path, pool);
+      path = svn_dirent_basename(conflict->local_abspath, pool);
       SVN_ERR_ASSERT(strlen(path) > 0);
       svn_skel__prepend(svn_skel__str_atom(path, pool), c_skel);
 
@@ -487,34 +478,31 @@ svn_wc__del_tree_conflict(svn_wc_context_t *wc_ctx,
 }
 
 svn_error_t *
-svn_wc__add_tree_conflict(const svn_wc_conflict_description_t *conflict,
-                          svn_wc_adm_access_t *adm_access,
-                          apr_pool_t *pool)
+svn_wc__add_tree_conflict(svn_wc_context_t *wc_ctx,
+                          const svn_wc_conflict_description2_t *conflict,
+                          apr_pool_t *scratch_pool)
 {
-  svn_wc_conflict_description_t *existing_conflict;
-  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
-  const char *conflict_abspath;
-
-  SVN_ERR(svn_dirent_get_absolute(&conflict_abspath, conflict->path, pool));
+  svn_wc_conflict_description2_t *existing_conflict;
 
   /* Re-adding an existing tree conflict victim is an error. */
-  SVN_ERR(svn_wc__db_op_get_tree_conflict(&existing_conflict, db,
-                                          conflict_abspath, pool, pool));
+  SVN_ERR(svn_wc__db_op_read_tree_conflict(&existing_conflict, wc_ctx->db,
+                                           conflict->local_abspath,
+                                           scratch_pool, scratch_pool));
   if (existing_conflict != NULL)
     return svn_error_createf(SVN_ERR_WC_CORRUPT, NULL,
                              _("Attempt to add tree conflict that already "
                                "exists at '%s'"),
-                             svn_dirent_local_style(conflict_abspath, pool));
+                             svn_dirent_local_style(conflict->local_abspath,
+                                                    scratch_pool));
 
-  SVN_ERR(svn_wc__db_op_set_tree_conflict(db, conflict_abspath, conflict,
-                                          pool));
-
-  return SVN_NO_ERROR;
+  return svn_error_return(
+    svn_wc__db_op_set_tree_conflict(wc_ctx->db, conflict->local_abspath,
+                                          conflict, scratch_pool));
 }
 
 
 svn_error_t *
-svn_wc__get_tree_conflict(svn_wc_conflict_description_t **tree_conflict,
+svn_wc__get_tree_conflict(svn_wc_conflict_description2_t **tree_conflict,
                           svn_wc_context_t *wc_ctx,
                           const char *victim_abspath,
                           apr_pool_t *result_pool,
@@ -522,9 +510,118 @@ svn_wc__get_tree_conflict(svn_wc_conflict_description_t **tree_conflict,
 {
   SVN_ERR_ASSERT(svn_dirent_is_absolute(victim_abspath));
 
-  return svn_error_return(svn_wc__db_op_get_tree_conflict(tree_conflict,
-                                                          wc_ctx->db,
-                                                          victim_abspath,
-                                                          result_pool,
-                                                          scratch_pool));
+  return svn_error_return(
+    svn_wc__db_op_read_tree_conflict(tree_conflict, wc_ctx->db, victim_abspath,
+                                     scratch_pool, scratch_pool));
+}
+
+
+svn_wc_conflict_description_t *
+svn_wc__cd2_to_cd(const svn_wc_conflict_description2_t *conflict,
+                  apr_pool_t *result_pool)
+{
+  svn_wc_conflict_description_t *new_conflict;
+ 
+  if (conflict == NULL)
+    return NULL;
+
+  new_conflict = apr_pcalloc(result_pool, sizeof(*new_conflict));
+
+  new_conflict->path = apr_pstrdup(result_pool, conflict->local_abspath);
+  new_conflict->node_kind = conflict->node_kind;
+  new_conflict->kind = conflict->kind;
+  new_conflict->action = conflict->action;
+  new_conflict->reason = conflict->reason;
+  if (conflict->src_left_version)
+    new_conflict->src_left_version =
+          svn_wc_conflict_version_dup(conflict->src_left_version, result_pool);
+  if (conflict->src_right_version)
+    new_conflict->src_right_version =
+          svn_wc_conflict_version_dup(conflict->src_right_version, result_pool);
+
+  switch (conflict->kind)
+    {
+      case svn_wc_conflict_kind_property:
+        new_conflict->property_name = apr_pstrdup(result_pool,
+                                                  conflict->property_name);
+        break;
+
+      case svn_wc_conflict_kind_text:
+        new_conflict->is_binary = conflict->is_binary;
+        new_conflict->mime_type = apr_pstrdup(result_pool,
+                                              conflict->mime_type);
+        new_conflict->base_file = apr_pstrdup(result_pool,
+                                              conflict->base_file);
+        new_conflict->their_file = apr_pstrdup(result_pool,
+                                               conflict->their_file);
+        new_conflict->my_file = apr_pstrdup(result_pool,
+                                            conflict->my_file);
+        new_conflict->merged_file = apr_pstrdup(result_pool,
+                                                conflict->merged_file);
+        break;
+
+      case svn_wc_conflict_kind_tree:
+        new_conflict->operation = conflict->operation;
+        break;
+    }
+
+  /* A NULL access baton is allowable by the API. */
+  new_conflict->access = NULL;
+
+  return new_conflict;
+}
+
+
+svn_wc_conflict_description2_t *
+svn_wc__cd_to_cd2(const svn_wc_conflict_description_t *conflict,
+                  apr_pool_t *result_pool)
+{
+  svn_wc_conflict_description2_t *new_conflict;
+ 
+  if (conflict == NULL)
+    return NULL;
+
+  new_conflict = apr_pcalloc(result_pool, sizeof(*new_conflict));
+
+  svn_error_clear(
+    svn_dirent_get_absolute(&new_conflict->local_abspath, conflict->path,
+                            result_pool));
+  new_conflict->node_kind = conflict->node_kind;
+  new_conflict->kind = conflict->kind;
+  new_conflict->action = conflict->action;
+  new_conflict->reason = conflict->reason;
+  if (conflict->src_left_version)
+    new_conflict->src_left_version =
+          svn_wc_conflict_version_dup(conflict->src_left_version, result_pool);
+  if (conflict->src_right_version)
+    new_conflict->src_right_version =
+          svn_wc_conflict_version_dup(conflict->src_right_version, result_pool);
+
+  switch (conflict->kind)
+    {
+      case svn_wc_conflict_kind_property:
+        new_conflict->property_name = apr_pstrdup(result_pool,
+                                                  conflict->property_name);
+        break;
+
+      case svn_wc_conflict_kind_text:
+        new_conflict->is_binary = conflict->is_binary;
+        new_conflict->mime_type = apr_pstrdup(result_pool,
+                                              conflict->mime_type);
+        new_conflict->base_file = apr_pstrdup(result_pool,
+                                              conflict->base_file);
+        new_conflict->their_file = apr_pstrdup(result_pool,
+                                               conflict->their_file);
+        new_conflict->my_file = apr_pstrdup(result_pool,
+                                            conflict->my_file);
+        new_conflict->merged_file = apr_pstrdup(result_pool,
+                                                conflict->merged_file);
+        break;
+
+      case svn_wc_conflict_kind_tree:
+        new_conflict->operation = conflict->operation;
+        break;
+    }
+
+  return new_conflict;
 }

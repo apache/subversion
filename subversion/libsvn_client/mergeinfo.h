@@ -186,9 +186,8 @@ svn_client__get_repos_mergeinfo_catalog(
    its own temporary session.
 
    (opening a new RA session if RA_SESSION
-   is NULL).  Store any mergeinfo obtained for TARGET_WCPATH -- which
-   is reflected by ENTRY -- in *TARGET_MERGEINFO, if no mergeinfo is
-   found *TARGET_MERGEINFO is NULL.
+   is NULL).  Store any mergeinfo obtained for TARGET_WCPATH in
+   *TARGET_MERGEINFO, if no mergeinfo is found *TARGET_MERGEINFO is NULL.
 
    Like svn_client__get_wc_mergeinfo, this function considers no inherited
    mergeinfo to be found in the WC when trying to crawl into a parent path
@@ -202,7 +201,6 @@ svn_client__get_repos_mergeinfo_catalog(
    to FALSE *otherwise. */
 svn_error_t *
 svn_client__get_wc_or_repos_mergeinfo(svn_mergeinfo_t *target_mergeinfo,
-                                      const svn_wc_entry_t *entry,
                                       svn_boolean_t *indirect,
                                       svn_boolean_t repos_only,
                                       svn_mergeinfo_inheritance_t inherit,

@@ -41,6 +41,11 @@ wc_is_too_old_regex = (".*Working copy format of '.*' is too old \(\d+\); " +
                     "please run 'svn upgrade'")
 
 
+def get_current_format():
+  ### parse this from libsvn_wc/wc.h
+  return 13
+
+
 def replace_sbox_with_tarfile(sbox, tar_filename):
   try:
     svntest.main.safe_rmtree(sbox.wc_dir)
@@ -126,7 +131,28 @@ def basic_upgrade(sbox):
                                      'upgrade', sbox.wc_dir)
 
   # Actually check the format number of the upgraded working copy
-  check_format(sbox, 12)
+  check_format(sbox, get_current_format())
+
+  # Now check the contents of the working copy
+  expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
+  run_and_verify_status_no_server(sbox.wc_dir, expected_status)
+
+
+def upgrade_1_5_body(sbox, subcommand):
+  replace_sbox_with_tarfile(sbox, 'upgrade_1_5.tar.bz2')
+
+  # Attempt to use the working copy, this should give an error
+  expected_stderr = wc_is_too_old_regex
+  svntest.actions.run_and_verify_svn(None, None, expected_stderr,
+                                     subcommand, sbox.wc_dir)
+
+
+  # Now upgrade the working copy
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'upgrade', sbox.wc_dir)
+
+  # Check the format of the working copy
+  check_format(sbox, get_current_format())
 
   # Now check the contents of the working copy
   expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
@@ -135,25 +161,17 @@ def basic_upgrade(sbox):
 
 def upgrade_1_5(sbox):
   "test upgrading from a 1.5-era working copy"
-
-  replace_sbox_with_tarfile(sbox, 'upgrade_1_5.tar.bz2')
-
-  # Attempt to use the working copy, this should give an error
-  expected_stderr = wc_is_too_old_regex
-  svntest.actions.run_and_verify_svn(None, None, expected_stderr,
-                                     'info', sbox.wc_dir)
+  return upgrade_1_5_body(sbox, 'info')
 
 
-  # Now upgrade the working copy
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                     'upgrade', sbox.wc_dir)
+def update_1_5(sbox):
+  "test updating a 1.5-era working copy"
 
-  # Check the format of the working copy
-  check_format(sbox, 12)
-
-  # Now check the contents of the working copy
-  expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
-  run_and_verify_status_no_server(sbox.wc_dir, expected_status)
+  # The 'update' printed:
+  #    Skipped 'svn-test-work\working_copies\upgrade_tests-3'
+  #    Summary of conflicts:
+  #      Skipped paths: 1
+  return upgrade_1_5_body(sbox, 'update')
 
 
 def logs_left_1_5(sbox):
@@ -204,6 +222,7 @@ def has_sqlite():
 test_list = [ None,
               SkipUnless(basic_upgrade, has_sqlite),
               SkipUnless(upgrade_1_5, has_sqlite),
+              XFail(SkipUnless(update_1_5, has_sqlite)),
               logs_left_1_5,
               SkipUnless(upgrade_wcprops, has_sqlite),
              ]

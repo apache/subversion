@@ -1627,7 +1627,7 @@ svn_error_t *svn_repos_db_logfiles(apr_array_header_t **logfiles,
  */
 struct hotcopy_ctx_t {
   const char *dest;     /* target location to construct */
-  unsigned int src_len; /* len of the source path*/
+  size_t src_len; /* len of the source path*/
 };
 
 /** Called by (svn_io_dir_walk).

@@ -196,13 +196,20 @@ copy_one_versioned_file(const char *from_abspath,
     }
   else
     {
-      tm = entry->cmt_date;
+      SVN_ERR(svn_wc__node_get_changed_info(NULL, &tm, NULL, wc_ctx,
+                                            from_abspath, scratch_pool,
+                                            scratch_pool));
     }
 
   if (keywords)
     {
+      svn_revnum_t changed_rev;
       const char *fmt;
       const char *author;
+
+      SVN_ERR(svn_wc__node_get_changed_info(&changed_rev, NULL, &author,
+                                            wc_ctx, from_abspath, scratch_pool,
+                                            scratch_pool));
 
       if (local_mod)
         {
@@ -216,12 +223,11 @@ copy_one_versioned_file(const char *from_abspath,
       else
         {
           fmt = "%ld";
-          author = entry->cmt_author;
         }
 
       SVN_ERR(svn_subst_build_keywords2
               (&kw, keywords->data,
-               apr_psprintf(scratch_pool, fmt, entry->cmt_rev),
+               apr_psprintf(scratch_pool, fmt, changed_rev),
                entry->url, tm, author, scratch_pool));
     }
 
@@ -276,6 +282,7 @@ copy_versioned_files(const char *from,
   const apr_array_header_t *children;
   const char *from_abspath;
   const char *to_abspath;
+  svn_node_kind_t from_kind;
   int j;
 
   SVN_ERR(svn_dirent_get_absolute(&from_abspath, from, pool));
@@ -298,7 +305,10 @@ copy_versioned_files(const char *from,
        entry->schedule == svn_wc_schedule_delete))
     return SVN_NO_ERROR;
 
-  if (entry->kind == svn_node_dir)
+  SVN_ERR(svn_wc__node_get_kind(&from_kind, ctx->wc_ctx, from_abspath,
+                                FALSE, pool));
+
+  if (from_kind == svn_node_dir)
     {
       /* Try to make the new directory.  If this fails because the
          directory already exists, check our FORCE flag to see if we
@@ -433,7 +443,7 @@ copy_versioned_files(const char *from,
 
       svn_pool_destroy(iterpool);
     }
-  else if (entry->kind == svn_node_file)
+  else if (from_kind == svn_node_file)
     {
       SVN_ERR(copy_one_versioned_file(from_abspath, to_abspath, ctx->wc_ctx,
                                       revision, native_eol, pool));
@@ -467,7 +477,7 @@ open_root_internal(const char *path,
   if (kind == svn_node_none)
     SVN_ERR(svn_io_make_dir_recursively(path, pool));
   else if (kind == svn_node_file)
-    return svn_error_createf(SVN_ERR_WC_NOT_DIRECTORY, NULL,
+    return svn_error_createf(SVN_ERR_WC_NOT_WORKING_COPY, NULL,
                              _("'%s' exists and is not a directory"),
                              svn_dirent_local_style(path, pool));
   else if ((kind != svn_node_dir) || (! force))
@@ -610,7 +620,7 @@ add_directory(const char *path,
   if (kind == svn_node_none)
     SVN_ERR(svn_io_dir_make(full_path, APR_OS_DEFAULT, pool));
   else if (kind == svn_node_file)
-    return svn_error_createf(SVN_ERR_WC_NOT_DIRECTORY, NULL,
+    return svn_error_createf(SVN_ERR_WC_NOT_WORKING_COPY, NULL,
                              _("'%s' exists and is not a directory"),
                              svn_dirent_local_style(full_path, pool));
   else if (! (kind == svn_node_dir && eb->force))

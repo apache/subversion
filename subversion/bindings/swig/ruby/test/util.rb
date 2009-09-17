@@ -1,5 +1,6 @@
 require "fileutils"
 require "pathname"
+require "svn/util"
 
 require "my-assertions"
 
@@ -115,7 +116,7 @@ module SvnTestUtil
 
   def setup_wc
     teardown_wc
-    make_context("").checkout(@repos_uri, @wc_path)
+    make_context("") { |ctx| ctx.checkout(@repos_uri, @wc_path) }
   end
 
   def teardown_wc
@@ -190,7 +191,7 @@ realm = #{@realm}
   end
 
   def normalize_line_break(str)
-    if windows?
+    if Svn::Util.windows?
       str.gsub(/\n/, "\r\n")
     else
       str
@@ -198,12 +199,7 @@ realm = #{@realm}
   end
 
   def setup_greek_tree
-    @greek.setup(make_context("setup greek tree"))
-  end
-
-  module_function
-  def windows?
-    /cygwin|mingw|mswin32|bccwin32/.match(RUBY_PLATFORM)
+    make_context("setup greek tree") { |ctx| @greek.setup(ctx) }
   end
 
   module Svnserve
@@ -281,7 +277,7 @@ exit 1
     end
   end
 
-  if windows?
+  if Svn::Util.windows?
     require 'windows_util'
     include Windows::Svnserve
     extend Windows::SetupEnvironment

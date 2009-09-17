@@ -259,6 +259,12 @@ typedef struct {
  * the temp_get_format() function will always return a value) since most of
  * these APIs expect a current-format database to be present.
  *
+ * If ENFORCE_EMPTY_WQ is TRUE, then any databases with stale work items in
+ * their work queue will raise an error when they are opened. The operation
+ * will raise SVN_ERR_WC_CLEANUP_REQUIRED. Passing FALSE for this routine
+ * means that the work queue is being processed (via 'svn cleanup') and all
+ * operations should be allowed.
+ *
  * The DB will be closed when RESULT_POOL is cleared. It may also be closed
  * manually using svn_wc__db_close(). In particular, this will close any
  * SQLite databases that have been opened and cached.
@@ -275,6 +281,7 @@ svn_wc__db_open(svn_wc__db_t **db,
                 svn_wc__db_openmode_t mode,
                 svn_config_t *config,
                 svn_boolean_t auto_upgrade,
+                svn_boolean_t enforce_empty_wq,
                 apr_pool_t *result_pool,
                 apr_pool_t *scratch_pool);
 
@@ -746,7 +753,8 @@ svn_wc__db_pristine_write(svn_stream_t **contents,
 
 
 /* ### get a tempdir to drop files for later installation. */
-/* ### dlr: Why is a less specific temp dir insufficient? */
+/* ### dlr: Why is a less specific temp dir insufficient? 
+   ###  bh: See svn_wc__db_pristine_install() */
 svn_error_t *
 svn_wc__db_pristine_get_tempdir(const char **temp_dir,
                                 svn_wc__db_pdh_t *pdh,
@@ -984,13 +992,12 @@ svn_wc__db_op_invalidate_last_mod_time(svn_wc__db_t *db,
  *
  * Use SCRATCH_POOL for any temporary allocations.
  */
-/* ### should be db_read_tree_conflict()  */
 svn_error_t *
-svn_wc__db_op_get_tree_conflict(svn_wc_conflict_description_t **tree_conflict,
-                                svn_wc__db_t *db,
-                                const char *local_abspath,
-                                apr_pool_t *result_pool,
-                                apr_pool_t *scratch_pool);
+svn_wc__db_op_read_tree_conflict(svn_wc_conflict_description2_t **tree_conflict,
+                                 svn_wc__db_t *db,
+                                 const char *local_abspath,
+                                 apr_pool_t *result_pool,
+                                 apr_pool_t *scratch_pool);
 
 
 /** Set the tree conflict on LOCAL_ABSPATH in DB to TREE_CONFLICT.  Use
@@ -998,11 +1005,12 @@ svn_wc__db_op_get_tree_conflict(svn_wc_conflict_description_t **tree_conflict,
  *
  * Use SCRATCH_POOL for any temporary allocations.
  */
-/* ### can this also record text/prop conflicts? drop "tree"?  */
+/* ### can this also record text/prop conflicts? drop "tree"? */
+/* ### dunno if it can, but it definately should be able to. */
 svn_error_t *
 svn_wc__db_op_set_tree_conflict(svn_wc__db_t *db,
                                 const char *local_abspath,
-                                const svn_wc_conflict_description_t *tree_conflict,
+                                const svn_wc_conflict_description2_t *tree_conflict,
                                 apr_pool_t *scratch_pool);
 
 
@@ -1219,16 +1227,18 @@ svn_wc__db_read_pristine_props(apr_hash_t **props,
                                apr_pool_t *result_pool,
                                apr_pool_t *scratch_pool);
 
+/* Read into CHILDREN the basenames of the immediate children of
+   LOCAL_ABSPATH in DB.
+   
+   Allocate *CHILDREN in RESULT_POOL and do temporary allocations in
+   SCRATCH_POOL.
 
-/* ### return some basic info for each child? e.g. kind.
+   ### return some basic info for each child? e.g. kind.
  * ### maybe the data in _read_get_info should be a structure, and this
  * ### can return a struct for each one.
  * ### however: _read_get_info can say "not interested", which isn't the
  * ###   case with a struct. thus, a struct requires fetching and/or
  * ###   computing all info.
- *
- * ### KFF: see earlier comment on svn_wc__db_base_get_children().
- * ### dlr: The doc string should include the wording "immediate children".
  */
 svn_error_t *
 svn_wc__db_read_children(const apr_array_header_t **children,
@@ -1603,15 +1613,6 @@ svn_wc__db_upgrade_finish(const char *dir_abspath,
                           apr_pool_t *scratch_pool);
 
 
-/** The upgrade function for the wc_db sqlite database.  This is exposed
-    quasi-publicly for testing purposes only. */
-svn_error_t *
-svn_wc__db_upgrade_func(void *baton,
-                        svn_sqlite__db_t *sdb,
-                        int current_schema,
-                        apr_pool_t *scratch_pool);
-                         
-
 /** @} */
 
 
@@ -1718,6 +1719,25 @@ svn_wc__db_temp_is_dir_deleted(svn_boolean_t *not_present,
                                const char *local_abspath,
                                apr_pool_t *scratch_pool);
 
+/* Removes all references of LOCAL_ABSPATH from its working copy
+   using DB. When FLUSH_ENTRY_CACHE is set to TRUE, flush the related
+   entries caches. */
+svn_error_t *
+svn_wc__db_temp_op_remove_entry(svn_wc__db_t *db,
+                                const char *local_abspath,
+                                svn_boolean_t flush_entry_cache,
+                                apr_pool_t *scratch_pool);
+
+/* Sets the depth of LOCAL_ABSPATH in its working copy to DEPTH
+   using DB. When FLUSH_ENTRY_CACHE is set to TRUE, flush the related
+   entries caches. */
+svn_error_t *
+svn_wc__db_temp_op_set_dir_depth(svn_wc__db_t *db,
+                                 const char *local_abspath,
+                                 svn_depth_t depth,
+                                 svn_boolean_t flush_entry_cache,
+                                 apr_pool_t *scratch_pool);
+
 
 /* ### temp function. return the FORMAT for the directory LOCAL_ABSPATH.  */
 svn_error_t *
@@ -1771,7 +1791,6 @@ svn_wc__db_temp_get_all_access(svn_wc__db_t *db,
 svn_error_t *
 svn_wc__db_temp_get_sdb(svn_sqlite__db_t **db,
                         const char *local_dir_abspath,
-                        const char * const statements_in[],
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool);
 

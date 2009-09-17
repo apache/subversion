@@ -864,7 +864,7 @@ get_combined_mergeinfo_changes(svn_mergeinfo_t *combined_mergeinfo,
       for (i = 0; i < paths->nelts; i++)
         {
           const char *path = APR_ARRAY_IDX(paths, i, const char *);
-          if (! svn_path_is_ancestor(path, changed_path))
+          if (! svn_dirent_is_ancestor(path, changed_path))
             continue;
           deleted_mergeinfo =
             apr_hash_get(deleted_mergeinfo_catalog, key, klen);
@@ -1657,7 +1657,7 @@ svn_repos_get_logs4(svn_repos_t *repos,
                   || (strcmp(APR_ARRAY_IDX(paths, 0, const char *),
                              "/") == 0)))))
     {
-      int send_count = 0;
+      apr_uint64_t send_count = 0;
       int i;
       apr_pool_t *iterpool = svn_pool_create(pool);
 

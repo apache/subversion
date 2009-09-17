@@ -37,58 +37,85 @@
 extern "C" {
 #endif /* __cplusplus */
 
-/** Communicating tree deltas.
+/** Transforming trees ("editing").
  *
- * In Subversion, we've got various producers and consumers of tree deltas.
+ * In Subversion, we have a number of occasions where we transform a tree
+ * from one state into another. This process is called "editing" a tree.
  *
  * In processing a `commit' command:
- * - The client examines its working copy data, and produces a tree
- *   delta describing the changes to be committed.
- * - The client networking library consumes that delta, and sends them
+ * - The client examines its working copy data to determine the set of
+ *   changes necessary to transform its base tree into the desired target.
+ * - The client networking library delivers that set of changes/operations
  *   across the wire as an equivalent series of network requests (for
  *   example, to svnserve as an ra_svn protocol stream, or to an
  *   Apache httpd server as WebDAV commands)
- * - The server receives those requests and produces a tree delta ---
- *   hopefully equivalent to the one the client produced above.
- * - The Subversion server module consumes that delta and commits an
- *   appropriate transaction to the filesystem.
+ * - The server receives those requests and applies the sequence of
+ *   operations on a revision, producing a transaction representing the
+ *   desired target.
+ * - The Subversion server then commits the transaction to the filesystem.
  *
  * In processing an `update' command, the process is reversed:
- * - The Subversion server module talks to the filesystem and produces
- *   a tree delta describing the changes necessary to bring the
- *   client's working copy up to date.
- * - The server consumes this delta, and assembles a reply
- *   representing the appropriate changes.
- * - The client networking library receives that reply, and produces a
- *   tree delta --- hopefully equivalent to the one the Subversion
- *   server produced above.
- * - The working copy library consumes that delta, and makes the
- *   appropriate changes to the working copy.
+ * - The Subversion server module talks to the filesystem and computes a
+ *   set of changes necessary to bring the client's working copy up to date.
+ * - The server serializes this description of changes, and delivers it to
+ *   the client.
+ * - The client networking library receives that reply, producing a set
+ *   of changes/operations to alter the working copy into the revision
+ *   requested by the update command.
+ * - The working copy library applies those operations to the working copy
+ *   to align it with the requested update target.
  *
- * The simplest approach would be to represent tree deltas using the obvious
- * data structure.  To do an update, the server would construct a delta
- * structure, and the working copy library would apply that structure to the
- * working copy; the network layer's job would simply be to get the
- * structure across the net intact.
+ * The series of changes (or operations) necessary to transform a tree from
+ * one state into another is passed between subsystems using this "editor"
+ * interface. The "receiver" edits its tree according to the operations
+ * described by the "driver".
  *
- * However, we expect that these deltas will occasionally be too large to
- * fit in a typical workstation's swap area.  For example, in checking out a
- * 20Gb source tree, the entire source tree is represented by a single tree
- * delta.  It is thus necessary to break down a tree delta into smaller
- * pieces which can be processed more or less independently.
+ * Note that the driver must have a perfect understanding of the tree which
+ * the receiver will be applying edits upon. There is no room for error here,
+ * and the interface embodies assumptions/requirements that the driver has
+ * about the targeted tree. As a result, this interface is a standardized
+ * mechanism of *describing* those change operations, but the intimate
+ * knowledge between the driver and the receiver implies some level of
+ * coupling between those subsystems.
  *
- * So instead of representing the tree delta explicitly, we define a
- * standard way for a consumer to process each piece of a tree delta as soon
- * as the producer creates it.  The @c svn_editor_t structure holds, among
- * other things, a set of callback functions to be defined by a delta
- * consumer, and invoked by a delta producer.  Each invocation of a callback
- * function describes a piece of the delta --- a file's contents changing,
- * something being renamed, etc.
+ * The set of changes, and the data necessary to describe it entirely, is
+ * completely unbounded. An addition of one simple 20Gb file would be well
+ * past the available memory of any machine processing these operations.
+ * As a result, the API to describe the changes is designed to be applied
+ * in a sequential (and relatively random-access) model. The operations
+ * can be streamed from the driver to the receiver, resulting in the
+ * receiver editing its tree to the target state defined by the driver.
  *
  *
- * History: This editor API is sometimes referred to as "editor v2", since it
- * is the successor of @c svn_delta_editor_t and its associated API, which
- * it will gradually replace/has replaced completely.
+ * HISTORY
+ *
+ * Classicaly, Subversion had a notion of a "tree delta" which could be
+ * passed around as an independent entity. Theory implied this delta was an
+ * entity in its own right, to be used when and where necessary.
+ * Unfortunately, this theory did not work well in practice. The producer
+ * and consumer of these tree deltas were (and are) tightly coupled. As noted
+ * above, the tree delta producer needed to be *totally* aware of the tree
+ * that it needed to edit. So rather than telling the delta consumer how to
+ * edit its tree, the classic "@c svn_delta_editor_t" interface focused
+ * entirely on the tree delta, an intermediate (logical) data structure
+ * which was unusable outside of the particular, coupled pairing of producer
+ * and consumer. This generation of the API forgoes the logical tree delta
+ * entity and directly passes the necessary edits/changes/operations from
+ * the producer to the consumer. In our new parlance, one subsystem "drives"
+ * a set of operations describing the change, and a "receiver" accepts and
+ * applies them to its tree.
+ *
+ * The classic interace was named "@c svn_delta_editor_t" and was described
+ * idiomatically as the "editor interface". This generation of the interface
+ * retains the "editor" name for that reason. All notions of a "tree delta"
+ * structure are no longer part of this interface.
+ *
+ * The old interface was purely vtable-based and used a number of special
+ * editors which could be interposed between the driver and receiver. Those
+ * editors provided cancellation, debugging, and other various operations.
+ * While the "interposition" pattern is still possible with this interface,
+ * the most common functionality (cancellation and debugging) have been
+ * integrated directly into this new editor system.
  *
  * @defgroup svn_editor The editor interface
  * @{
@@ -99,17 +126,17 @@ extern "C" {
  * \n
  * <h3>Life-Cycle</h3>
  *
- * - @b Create: A tree delta consumer uses svn_editor_create() to create an
+ * - @b Create: A receiver uses svn_editor_create() to create an
  *    "empty" svn_editor_t.  It cannot be used yet, since it still lacks
  *    actual callback functions.  svn_editor_create() sets the @c
  *    svn_editor_t's callback baton and scratch pool that the callback
  *    functions receive, as well as a cancellation callback and baton
  *    (see "Cancellation" below).
  * 
- * - @b Set callbacks: The consumer calls svn_editor_setcb_many() or a
+ * - @b Set callbacks: The receiver calls svn_editor_setcb_many() or a
  *    succession of the other svn_editor_setcb_*() functions to tell @c
- *    svn_editor_t which functions to call when receiving the various delta
- *    bits.  Callback functions are implemented by the consumer and must
+ *    svn_editor_t which functions to call when driven by the various
+ *    operations.  Callback functions are implemented by the receiver and must
  *    adhere to the @c svn_editor_cb_*_t function types as expected by the
  *    svn_editor_setcb_*() functions. See: \n
  *      svn_editor_cb_many_t \n
@@ -128,13 +155,14 @@ extern "C" {
  *      svn_editor_setcb_complete() \n
  *      svn_editor_setcb_abort()
  *
- * - @b Drive: A tree delta producer is provided with the completed @c
- *    svn_editor_t instance. (It is typically passed to a generic driving
+ * - @b Drive: The driver is provided with the completed @c svn_editor_t
+ *    instance. (It is typically passed to a generic driving
  *    API, which could receive the driving editor calls over the network
  *    by providing a proxy @c svn_editor_t on the remote side.)
- *    The producer invokes the @c svn_editor_t instance's callback functions
- *    according to the restrictions defined below, in order to send an
- *    entire tree delta bit by bit.  The callbacks can be invoked using the
+ *    The driver invokes the @c svn_editor_t instance's callback functions
+ *    according to the restrictions defined below, in order to describe the
+ *    entire set of operations necessary to transform the receiver's tree
+ *    into the desired target. The callbacks can be invoked using the
  *    svn_editor_*() functions, i.e.: \n
  *      svn_editor_add_directory() \n
  *      svn_editor_add_file() \n
@@ -149,26 +177,26 @@ extern "C" {
  *    \n\n
  *    Just before each callback invocation is carried out, the @a cancel_func
  *    that was passed to svn_editor_create() is invoked to poll any
- *    external reasons to cancel the delta transmission.  If it decides
- *    to cancel, the producer aborts the transmission by invoking the 
- *    svn_editor_abort() callback.  Exceptions to this are calls to 
- *    svn_editor_complete() and svn_editor_abort(), which cannot be
- *    canceled externally.
+ *    external reasons to cancel the sequence of operations.  Unless it
+ *    overrides the cancellation (denoted by SVN_ERR_CANCELLED), the driver
+ *    aborts the transmission by invoking the svn_editor_abort() callback.
+ *    Exceptions to this are calls to svn_editor_complete() and
+ *    svn_editor_abort(), which cannot be canceled externally.
  *
- * - @b Receive: While the producer drives the editor, the consumer finds its
- *    callback functions called with information conveying the bits of the
- *    tree delta. Each actual callback function receives those arguments
- *    that the producer passed to the "driving" functions, plus these:
+ * - @b Receive: While the driver invokes operations upon the editor, the
+ *    receiver finds its callback functions called with the information
+ *    to operate on its tree. Each actual callback function receives those
+ *    arguments that the driver passed to the "driving" functions, plus these:
  *    -  @a baton: This is the @a editor_baton pointer originally passed to
  *       svn_editor_create().  It may be freely used by the callback
  *       implementation to store information across all callbacks.
  *    -  @a scratch_pool: This temporary pool is cleared directly after
  *       each callback returns.  See "Pool Usage".
  *    \n\n
- *    If the consumer encounters an error within a callback, it returns an
- *    @c svn_error_t*. The producer receives this and aborts transmission.
+ *    If the receiver encounters an error within a callback, it returns an
+ *    @c svn_error_t*. The driver receives this and aborts transmission.
  *
- * - @b Complete/Abort: The producer will end transmission by calling \n
+ * - @b Complete/Abort: The driver will end transmission by calling \n
  *    svn_editor_complete() if successful, or \n
  *    svn_editor_abort() if an error or cancellation occured.
  * \n\n
@@ -216,14 +244,14 @@ extern "C" {
  *   svn_editor_copy() call. Instead, svn_editor_move() must be used.
  *
  * - One of svn_editor_complete() or svn_editor_abort() must be called
- *   exactly once, which must be the final call the producer invokes.
- *   Invoking svn_editor_complete() must imply that the tree delta was
- *   transmitted completely and without errors, and invoking 
- *   svn_editor_abort() must imply that the tree delta was not completed
+ *   exactly once, which must be the final call the driver invokes.
+ *   Invoking svn_editor_complete() must imply that the set of changes has
+ *   been transmitted completely and without errors, and invoking 
+ *   svn_editor_abort() must imply that the transformation was not completed
  *   successfully.
  *
- * - If any callback invocation returns with an error, the producer must
- *   invoke svn_editor_abort() and stop transmitting the tree delta.
+ * - If any callback invocation returns with an error, the driver must
+ *   invoke svn_editor_abort() and stop transmitting operations.
  * \n\n
  *
  * <h3>Receiving Restrictions</h3>
@@ -244,32 +272,32 @@ extern "C" {
  * and will complete any client notification for the directory itself.
  * The immediate children of the added directory, given in @a children,
  * will be recorded in the WC as 'incomplete' and will be completed in the
- * course of the same tree delta, when the corresponding callbacks for
- * these items are invoked.
+ * course of the same operation sequence, when the corresponding callbacks
+ * for these items are invoked.
  * \n\n
  *
  * <h3>Paths</h3>
- * Each producer/consumer implementation of this editor interface must
+ * Each driver/receiver implementation of this editor interface must
  * establish the expected root path for the paths sent and received via the
  * callbacks' @a relpath arguments.
  *
- * For example, during an "update", the consumer has a working copy checked
- * out at a specific repository URL. The producer sees the repository as a
- * whole. Here, the consumer could tell the producer which repository
- * URL the working copy refers to, and thus the producer could send
- * @a relpath arguments that are relative to the consumer's working copy.
+ * For example, during an "update", the driver has a working copy checked
+ * out at a specific repository URL. The receiver sees the repository as a
+ * whole. Here, the receiver could tell the driver which repository
+ * URL the working copy refers to, and thus the driver could send
+ * @a relpath arguments that are relative to the receiver's working copy.
  * \n\n
  *
  * <h3>Pool Usage</h3>
  * The @a result_pool passed to svn_editor_create() is used to allocate
  * the @c svn_editor_t instance, and thus it must not be cleared before the
- * producer has finished driving the editor.
+ * driver has finished driving the editor.
  *
  * The @a scratch_pool passed to each callback invocation is derived from
  * the @a result_pool that was passed to svn_editor_create(). It is
  * cleared directly after each single callback invocation.
  * To allocate memory with a longer lifetime from within a callback
- * function, you may use an own pool kept in the @a editor_baton.
+ * function, you may use your own pool kept in the @a editor_baton.
  *
  * The @a scratch_pool passed to svn_editor_create() may be used to help
  * during construction of the @c svn_editor_t instance, but it is assumed to
@@ -279,14 +307,13 @@ extern "C" {
  * <h3>Cancellation</h3> 
  * To allow graceful interruption by external events (like a user abort),
  * svn_editor_create() can be passed an @c svn_cancel_func_t that is
- * polled every time the producer drives a callback, just before the
+ * polled every time the driver invokes a callback, just before the
  * actual editor callback implementation is invoked.  If this function
- * decides to return with an error, the producer will receive this error
+ * decides to return with an error, the driver will receive this error
  * as if the callback function had returned it, i.e. as the result from
- * calling any of the driving functions (e.g. 
- * svn_editor_add_directory()). As with any other error, the producer must
- * then invoke svn_editor_abort() and abort the delta transmission.
- * See @c svn_cancel_func_t.
+ * calling any of the driving functions (e.g. svn_editor_add_directory()).
+ * As with any other error, the driver must then invoke svn_editor_abort()
+ * and abort the transformation sequence. See @c svn_cancel_func_t.
  *
  * The @a cancel_baton argument to svn_editor_create() is passed
  * unchanged to each poll of @a cancel_func.
@@ -300,6 +327,7 @@ extern "C" {
  * set_props/set_text/set_target/copy/move/delete in a merge source is
  * applied to a different branch, which side will REVISION arguments reflect
  * and is there still a problem?
+ *
  * @since New in 1.7.
  */
 typedef struct svn_editor_t svn_editor_t;
@@ -642,9 +670,10 @@ svn_editor_setcb_many(svn_editor_t *editor,
 /** @} */
 
 
-/** These functions are called by the tree delta producer to drive the
- * editor.
+/** These functions are called by the tree delta driver to edit the target.
+ *
  * @see svn_editor_t.
+ *
  * @defgroup svn_editor_drive Driving the editor
  * @{
  */

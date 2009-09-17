@@ -252,7 +252,7 @@ svn_cl__status(apr_getopt_t *os,
                                              ctx, subpool),
                           NULL, opt_state->quiet,
                           /* not versioned: */
-                          SVN_ERR_WC_NOT_DIRECTORY,
+                          SVN_ERR_WC_NOT_WORKING_COPY,
                           SVN_NO_ERROR));
 
       if (opt_state->xml)

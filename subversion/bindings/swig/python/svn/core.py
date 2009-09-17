@@ -26,8 +26,18 @@
 from libsvn.core import *
 import libsvn.core as _libsvncore
 import atexit as _atexit
+import sys
 
 class SubversionException(Exception):
+
+  # Python 2.6 deprecated BaseException.message, which we inadvertently use.
+  # We override it here, so the users of this class are spared from
+  # DeprecationWarnings.
+  # Note that BaseException.message is not deprecated in Python 2.5, and
+  # isn't present in all other versions.
+  if sys.version_info[0:2] == (2, 6):
+    message = None
+
   def __init__(self, message=None, apr_err=None, child=None,
                file=None, line=None):
     """Initialize a new Subversion exception object.

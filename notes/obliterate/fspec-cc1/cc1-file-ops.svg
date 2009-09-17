@@ -13,8 +13,8 @@
    id="svg2"
    sodipodi:version="0.32"
    inkscape:version="0.45.1"
-   sodipodi:docbase="/home/julianfoad/src/subversion-trunk/notes/obliterate"
-   sodipodi:docname="cc1-file-ops-4.svg"
+   sodipodi:docbase="/home/julianfoad/src/subversion-trunk/notes/obliterate/fspec-cc1"
+   sodipodi:docname="cc1-file-ops-5.svg"
    inkscape:output_extension="org.inkscape.output.svg.inkscape"
    version="1.0"
    inkscape:export-filename="/home/julianfoad/src/subversion-trunk/notes/obliterate/cc-file-ops-2.png"
@@ -57,10 +57,10 @@
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
      inkscape:zoom="2.8284271"
-     inkscape:cx="134.74553"
-     inkscape:cy="918.8638"
+     inkscape:cx="146.11571"
+     inkscape:cy="131.38942"
      inkscape:document-units="px"
-     inkscape:current-layer="layer4"
+     inkscape:current-layer="layer2"
      inkscape:window-width="768"
      inkscape:window-height="850"
      inkscape:window-x="50"
@@ -177,10 +177,10 @@
          sodipodi:role="line"
          id="tspan6617"
          x="40.000053"
-         y="97.361633">File was Modified (simple)</tspan></text>
+         y="97.361633">Example 1</tspan></text>
     <text
        xml:space="preserve"
-       style="font-size:2.4000001px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans"
+       style="font-size:6;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans"
        x="75.000053"
        y="237.36224"
        id="text2424"
@@ -194,7 +194,7 @@
        id="text2432"
        y="237.36224"
        x="165.00006"
-       style="font-size:2.4000001px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans"
+       style="font-size:6;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans"
        xml:space="preserve"
        inkscape:transform-center-x="138.74181"
        inkscape:transform-center-y="-1054.6663"><tspan
@@ -291,7 +291,7 @@
          y="162.36169"
          x="40.000053"
          id="tspan2473"
-         sodipodi:role="line">File was Modified (complex)</tspan></text>
+         sodipodi:role="line">Example 2</tspan></text>
     <g
        id="g2811"
        transform="matrix(0.2,0,0,0.2,59.900024,206.8892)"
@@ -381,12 +381,12 @@
          y="282.36157"
          x="40.000053"
          id="tspan2843"
-         sodipodi:role="line">File was Added (simple)</tspan></text>
+         sodipodi:role="line">Example 1</tspan></text>
     <text
        id="text2845"
        y="422.36212"
        x="75.000053"
-       style="font-size:2.4000001px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans"
+       style="font-size:6;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans"
        xml:space="preserve"
        inkscape:transform-center-x="583.19591"
        inkscape:transform-center-y="-354.6663"><tspan
@@ -396,7 +396,7 @@
          sodipodi:role="line">Before Obliterating</tspan></text>
     <text
        xml:space="preserve"
-       style="font-size:2.4000001px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans"
+       style="font-size:6;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans"
        x="165.00006"
        y="422.36212"
        id="text2849"
@@ -495,7 +495,7 @@
          sodipodi:role="line"
          id="tspan2885"
          x="40.000053"
-         y="347.36218">File was Added (complex)</tspan></text>
+         y="347.36218">Example 2</tspan></text>
     <text
        xml:space="preserve"
        style="font-size:4;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans"
@@ -806,12 +806,12 @@
          y="467.36163"
          x="40"
          id="tspan7567"
-         sodipodi:role="line">File was Deleted (simple)</tspan></text>
+         sodipodi:role="line">Example 1</tspan></text>
     <text
        id="text7569"
        y="607.36224"
        x="75"
-       style="font-size:2.4000001px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans"
+       style="font-size:6;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans"
        xml:space="preserve"
        inkscape:transform-center-x="-491.80408"
        inkscape:transform-center-y="-1054.6663"><tspan
@@ -821,7 +821,7 @@
          sodipodi:role="line">Before Obliterating</tspan></text>
     <text
        xml:space="preserve"
-       style="font-size:2.4000001px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans"
+       style="font-size:6;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans"
        x="165"
        y="607.36224"
        id="text7573"
@@ -920,7 +920,7 @@
          sodipodi:role="line"
          id="tspan7609"
          x="40"
-         y="532.36169">File was Deleted (complex)</tspan></text>
+         y="532.36169">Example 2</tspan></text>
     <g
        transform="matrix(0.2,0,0,0.2,59.89999,576.8892)"
        id="g7611"
@@ -1010,10 +1010,10 @@
          sodipodi:role="line"
          id="tspan7643"
          x="40"
-         y="652.36157">File was Replaced (simple)</tspan></text>
+         y="652.36157">Example 1</tspan></text>
     <text
        xml:space="preserve"
-       style="font-size:2.4000001px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans"
+       style="font-size:6;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans"
        x="75"
        y="792.36212"
        id="text7645"
@@ -1027,7 +1027,7 @@
        id="text7649"
        y="792.36212"
        x="165"
-       style="font-size:2.4000001px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans"
+       style="font-size:6;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans"
        xml:space="preserve"
        inkscape:transform-center-x="-936.25818"
        inkscape:transform-center-y="-354.6663"><tspan
@@ -1124,7 +1124,7 @@
          y="717.36218"
          x="40"
          id="tspan7685"
-         sodipodi:role="line">File was Replaced (complex)</tspan></text>
+         sodipodi:role="line">Example 2</tspan></text>
     <text
        id="text7687"
        y="467.36218"
@@ -1435,10 +1435,10 @@
          sodipodi:role="line"
          id="tspan4993"
          x="40.000061"
-         y="837.36157">File was Moved (simple)</tspan></text>
+         y="837.36157">Example 1</tspan></text>
     <text
        xml:space="preserve"
-       style="font-size:2.4000001px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans"
+       style="font-size:6;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans"
        x="75.000061"
        y="977.36212"
        id="text4995"
@@ -1452,7 +1452,7 @@
        id="text4999"
        y="977.36212"
        x="165.00006"
-       style="font-size:2.4000001px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans"
+       style="font-size:6;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans"
        xml:space="preserve"
        inkscape:transform-center-x="138.74181"
        inkscape:transform-center-y="345.33364"><tspan
@@ -1549,7 +1549,7 @@
          y="902.36218"
          x="40.000061"
          id="tspan5035"
-         sodipodi:role="line">File was Moved (complex)</tspan></text>
+         sodipodi:role="line">Example 2</tspan></text>
     <text
        xml:space="preserve"
        style="font-size:4;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans"
@@ -1781,6 +1781,28 @@
          id="tspan3384"
          x="20.000055"
          y="27.362183">Svn Obliterate - &quot;Combine Changes&quot; Model v1</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:6px;font-style:normal;font-weight:bold;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans"
+       x="109.95511"
+       y="817.24921"
+       id="text7554"><tspan
+         sodipodi:role="line"
+         id="tspan7556"
+         x="109.95511"
+         y="817.24921"></tspan></text>
+    <text
+       inkscape:transform-center-y="345.33364"
+       inkscape:transform-center-x="583.19591"
+       id="text7558"
+       y="817.36218"
+       x="110"
+       style="font-size:6px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans"
+       xml:space="preserve"><tspan
+         id="tspan7560"
+         y="817.36218"
+         x="110"
+         sodipodi:role="line">(assuming both source &amp; dest obliterated)</tspan></text>
   </g>
   <g
      inkscape:label="Dirs"

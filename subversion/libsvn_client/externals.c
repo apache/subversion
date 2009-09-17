@@ -175,21 +175,20 @@ switch_dir_external(const char *path,
   svn_node_kind_t kind;
   svn_error_t *err;
   apr_pool_t *subpool = svn_pool_create(pool);
+  const char *local_abspath;
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
   /* If path is a directory, try to update/switch to the correct URL
      and revision. */
   SVN_ERR(svn_io_check_path(path, &kind, pool));
   if (kind == svn_node_dir)
     {
-      svn_wc_adm_access_t *adm_access;
       const svn_wc_entry_t *entry;
 
-      SVN_ERR(svn_wc__adm_open_in_context(&adm_access, ctx->wc_ctx, path, TRUE,
-                                          0, ctx->cancel_func,
-                                          ctx->cancel_baton, subpool));
-      SVN_ERR(svn_wc_entry(&entry, path, adm_access,
-                           FALSE, subpool));
-      SVN_ERR(svn_wc_adm_close2(adm_access, subpool));
+      SVN_ERR(svn_wc__maybe_get_entry(&entry, ctx->wc_ctx, local_abspath,
+                                      svn_node_dir, FALSE, FALSE, subpool,
+                                      subpool));
 
       if (entry && entry->url)
         {
@@ -210,7 +209,7 @@ switch_dir_external(const char *path,
             {
               /* URLs don't match.  Try to relocate (if necessary) and then
                  switch. */
-              if (! svn_path_is_ancestor(entry->repos, url))
+              if (! svn_uri_is_ancestor(entry->repos, url))
                 {
                   const char *repos_root;
                   svn_ra_session_t *ra_session;
@@ -303,6 +302,7 @@ switch_file_external(const char *path,
   svn_wc_adm_access_t *target_adm_access;
   const char *anchor;
   const char *anchor_abspath;
+  const char *local_abspath;
   const char *target;
   const svn_wc_entry_t *entry;
   svn_config_t *cfg = ctx->config ? apr_hash_get(ctx->config,
@@ -319,6 +319,7 @@ switch_file_external(const char *path,
   SVN_ERR(svn_wc_get_actual_target2(&anchor, &target, ctx->wc_ctx, path,
                                     subpool, subpool));
   SVN_ERR(svn_dirent_get_absolute(&anchor_abspath, anchor, subpool));
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, subpool));
 
   /* Try to get a access baton for the anchor using the input access
      baton.  If this fails and returns SVN_ERR_WC_NOT_LOCKED, then try
@@ -357,7 +358,9 @@ switch_file_external(const char *path,
         return svn_error_return(err);
     }
 
-  SVN_ERR(svn_wc_entry(&entry, path, target_adm_access, FALSE, subpool));
+  SVN_ERR(svn_wc__maybe_get_entry(&entry, ctx->wc_ctx, local_abspath,
+                                  svn_node_unknown, FALSE, FALSE, subpool,
+                                  subpool));
 
   /* Only one notification is done for the external, so don't notify
      for any following steps.  Use the following trick to add the file
@@ -937,6 +940,21 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
         (adm_access, what_to_remove, TRUE, FALSE,
          ib->ctx->cancel_func, ib->ctx->cancel_baton, ib->iter_pool);
 
+      if (ib->ctx->notify_func2)
+        {
+          svn_wc_notify_t *notify = 
+              svn_wc_create_notify(
+                        svn_dirent_join(svn_wc_adm_access_path(adm_access),
+                                        what_to_remove, ib->iter_pool),
+                        svn_wc_notify_update_external_removed, ib->iter_pool);
+
+          notify->kind = svn_node_dir;
+          notify->err = err;
+
+          (ib->ctx->notify_func2)(ib->ctx->notify_baton2,
+                                  notify, ib->iter_pool);
+        }
+
       /* ### Ugly. Unlock only if not going to return an error. Revisit */
       if (close_access_baton_when_done &&
           (!err || err->apr_err == SVN_ERR_WC_LEFT_LOCAL_MOD))
@@ -1288,7 +1306,7 @@ svn_client__fetch_externals(apr_hash_t *externals,
 
 
 svn_error_t *
-svn_client__do_external_status(svn_wc_traversal_info_t *traversal_info,
+svn_client__do_external_status(apr_hash_t *externals_new,
                                svn_wc_status_func4_t status_func,
                                void *status_baton,
                                svn_depth_t depth,
@@ -1298,12 +1316,8 @@ svn_client__do_external_status(svn_wc_traversal_info_t *traversal_info,
                                svn_client_ctx_t *ctx,
                                apr_pool_t *pool)
 {
-  apr_hash_t *externals_old, *externals_new;
   apr_hash_index_t *hi;
   apr_pool_t *subpool = svn_pool_create(pool);
-
-  /* Get the values of the svn:externals properties. */
-  svn_wc_edited_externals(&externals_old, &externals_new, traversal_info);
 
   /* Loop over the hash of new values (we don't care about the old
      ones).  This is a mapping of versioned directories to property
@@ -1365,6 +1379,38 @@ svn_client__do_external_status(svn_wc_traversal_info_t *traversal_info,
 
   /* Destroy SUBPOOL and (implicitly) ITERPOOL. */
   svn_pool_destroy(subpool);
+
+  return SVN_NO_ERROR;
+}
+
+/* Implements svn_wc_externals_update_t */
+svn_error_t *
+svn_cl__store_externals(void *baton,
+                        const char *local_abspath,
+                        const svn_string_t *old_value,
+                        const svn_string_t *new_value,
+                        svn_depth_t depth,
+                        apr_pool_t *scratch_pool)
+{
+  struct svn_cl__externals_store *eb = baton;
+  apr_pool_t *dup_pool = eb->pool;
+
+  local_abspath = apr_pstrdup(dup_pool, local_abspath);
+
+  if (eb->externals_old != NULL && old_value != NULL)
+    apr_hash_set(eb->externals_new,
+                 local_abspath, APR_HASH_KEY_STRING,
+                 apr_pstrndup(dup_pool, old_value->data, old_value->len));
+
+  if (eb->externals_new != NULL && new_value != NULL)
+    apr_hash_set(eb->externals_new,
+                 local_abspath, APR_HASH_KEY_STRING,
+                 apr_pstrndup(dup_pool, new_value->data, new_value->len));
+
+  if (eb->depths != NULL)
+    apr_hash_set(eb->depths,
+                 local_abspath, APR_HASH_KEY_STRING,
+                 svn_depth_to_word(depth));
 
   return SVN_NO_ERROR;
 }

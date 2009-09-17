@@ -778,8 +778,6 @@ def status_of_missing_dir_after_revert_replaced_with_history_dir(sbox):
   svntest.main.run_svn(None, 'up', wc_dir)
 
   # now rollback to r1, thereby reinstating the old 'G'
-  ### Eventually, expected output for 'A/D/G' should be 'R '
-  ### (replaced) instead of 'A ' (added).  See issue #571 for details.
   expected_output = svntest.wc.State(wc_dir, {
     'A/D/G': Item(status='R '),
     'A/D/G/rho': Item(status='A '),
@@ -796,9 +794,6 @@ def status_of_missing_dir_after_revert_replaced_with_history_dir(sbox):
     'A/D/G/alpha' : Item(status='D ', wc_rev='3'),
     'A/D/G/beta' : Item(status='D ', wc_rev='3'),
     })
-  ### these nodes are incorrectly reported as COPIED in wc-1. we probably
-  ### have to keep the extra COPIED markers in wc-ng.
-  expected_status.tweak('A/D/G/alpha', 'A/D/G/beta', copied='+', wc_rev='-')
 
   expected_skip = wc.State(wc_dir, { })
   expected_disk   = svntest.main.greek_state.copy()
@@ -821,11 +816,10 @@ def status_of_missing_dir_after_revert_replaced_with_history_dir(sbox):
   svntest.actions.run_and_verify_svn(None, expected_output, [], "revert", "-R",
                                      G_path)
 
+  ### Is it a bug that we'd need to run revert twice to finish the job?
   expected_output = svntest.verify.UnorderedOutput(
     ["A       " + os.path.join(G_path, "pi") + "\n",
      "A       " + os.path.join(G_path, "rho") + "\n",
-     "A       " + os.path.join(G_path, "alpha") + "\n",
-     "A       " + os.path.join(G_path, "beta") + "\n",
      "A       " + os.path.join(G_path, "tau") + "\n"])
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      "status", wc_dir)

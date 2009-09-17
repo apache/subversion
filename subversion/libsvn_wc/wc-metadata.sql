@@ -108,7 +108,8 @@ CREATE TABLE BASE_NODE (
   /* if this node is a file, then the checksum and its translated size
      (given the properties on this file) are specified by the following
      two fields. translated_size may be NULL if the size has not (yet)
-     been computed. */
+     been computed. The kind of checksum (e.g. SHA-1, MD5) is stored in the
+     value */
   checksum  TEXT,
   translated_size  INTEGER,
 
@@ -162,7 +163,10 @@ CREATE INDEX I_PARENT ON BASE_NODE (wc_id, parent_relpath);
 
 
 /* ------------------------------------------------------------------------- */
-
+/* ### BH: Will CHECKSUM be the same key as used for indexing a file in the
+           Pristine store? If that key is SHA-1 we might need an alternative
+           MD5 checksum column on this table to use with the current delta
+           editors that don't understand SHA-1. */
 CREATE TABLE PRISTINE (
   /* ### the hash algorithm (MD5 or SHA-1) is encoded in this value */
   checksum  TEXT NOT NULL PRIMARY KEY,
@@ -251,6 +255,9 @@ CREATE TABLE WORKING_NODE (
   /* Where this node was copied/moved from. Set only on the root of the
      operation, and implied for all children. */
   copyfrom_repos_id  INTEGER,
+  /* ### BH: Should we call this copyfrom_repos_relpath and skip the initial '/'
+     ### to match the other repository paths used in sqlite and to make it easier
+     ### to join these paths? */
   copyfrom_repos_path  TEXT,
   copyfrom_revnum  INTEGER,
 
@@ -310,10 +317,21 @@ CREATE TABLE ACTUAL_NODE (
      the properties, relative to WORKING/BASE as appropriate. */
   properties  BLOB,
 
-  /* ### do we want to record the revnums which caused this? */
-  /* ### also, shouldn't these be absolute paths?
+  /* basenames of the conflict files. */
+  /* ### do we want to record the revnums which caused this?  
+     ### BH: Yes, probably urls too if it is caused by a merge. Preferably
+     ###     the same info as currently passed to the interactive conflict
+     ###     handler. I would like url@rev for left, right and original, but
+     ###     some of those are available in other ways. Refer to repository
+     ###     table instead of full urls? .*/
+  /* ### also, shouldn't these be local_relpaths too?
      ### they aren't currently, but that would be more consistent with other
-     ### columns. (though it would require a format bump) */
+     ### columns. (though it would require a format bump). */
+  /* ### BH: Shouldn't we move all these into the new CONFLICT_VICTIM table? */
+  /* ### HKW: I think so.  These columns pre-date that table, and are just
+     ###      a mapping from svn_wc_entry_t.  I haven't thought about how the
+     ###      CONFLICT_VICTIM table would need to be extended for this, though.
+     ###      (may want do to that before the f13 bump, if possible) */
   conflict_old  TEXT,
   conflict_new  TEXT,
   conflict_working  TEXT,
@@ -344,6 +362,11 @@ CREATE TABLE LOCK (
   /* what repository location is locked */
   repos_id  INTEGER NOT NULL,
   repos_relpath  TEXT NOT NULL,
+  /* ### BH: Shouldn't this refer to an working copy location? You can have a
+         single relpath checked out multiple times in one (switch) or more
+         working copies. */
+  /* ### HKW: No, afaik.  This table is just a cache of what's in the
+         repository, so these should be repos_relpaths. */
 
   /* Information about the lock. Note: these values are just caches from
      the server, and are not authoritative. */
@@ -370,6 +393,16 @@ CREATE TABLE WORK_QUEUE (
   work  BLOB NOT NULL
   );
 
+/* The contents of dav_cache are suspect in format 12, so it is best to just
+   erase anything there.  */
+UPDATE BASE_NODE SET incomplete_children=null, dav_cache=null;
+
+
+/* ------------------------------------------------------------------------- */
+
+/* Format 14 introduces new handling for conflict information.  */
+-- format: 14
+
 CREATE TABLE CONFLICT_VICTIM (
   /* specifies the location of this node in the local filesystem */
   wc_id  INTEGER NOT NULL,
@@ -383,7 +416,8 @@ CREATE TABLE CONFLICT_VICTIM (
   /* what kind of node is this? may be "unknown" if the node is not present */
   node_kind  TEXT NOT NULL,
 
-  /* what sort of conflict are we describing? */
+  /* what sort of conflict are we describing?
+     "text", "property" or "tree" */
   conflict_kind  TEXT NOT NULL,
 
   /* the name of the property in conflict, or NULL */
@@ -395,35 +429,50 @@ CREATE TABLE CONFLICT_VICTIM (
 
   /* operation which exposed the conflict, if kind is 'tree' */
   operation  TEXT,
+  
+  /* ### BH: Add original/base version? */
+  /* ### BH: Add relpath for conflict files? Or just basename */
+  /* ### BH: Add checksum to allow referring to pristine? */
+  /* ### BH: How to handle the .prej file? (Multiple property conflicts?) */
+  /* the 'base' version of the incoming change. */
+/*base_repos_id  INTEGER,
+  base_repos_relpath  TEXT,
+  base_peg_rev  INTEGER,
+  base_kind  TEXT,
+  base_local_relpath  TEXT,
+  base_checksum  TEXT */
 
-  /* the 'merge-left' source, or 'older' version of the incoming change. */
+  /* the 'merge-left' source, 'older' version of the incoming change. */
   left_repos_id  INTEGER,
   left_repos_relpath  TEXT,
   left_peg_rev  INTEGER,
   left_kind  TEXT,
+/*left_local_relpath  TEXT,
+  left_checksum  TEXT, */
 
   /* the 'merge-right' source, or 'their' version of the incoming change. */
   right_repos_id  INTEGER,
   right_repos_relpath  TEXT,
   right_peg_rev  INTEGER,
   right_kind  TEXT,
+/*right_local_relpath  TEXT,
+  right_checksum  TEXT, */
 
+  /* ### BH: Add conflict kind? Add property name? Primary key should be
+         unique */
   PRIMARY KEY (wc_id, local_relpath)
   );
 
-CREATE INDEX I_TCPARENT ON CONFLICT_VICTIM (wc_id, parent_relpath);
-
-/* The contents of dav_cache are suspect in format 12, so it is best to just
-   erase anything there.  */
-UPDATE BASE_NODE SET incomplete_children=null, dav_cache=null;
+CREATE INDEX I_CVPARENT ON CONFLICT_VICTIM (wc_id, parent_relpath);
 
 
 /* ------------------------------------------------------------------------- */
 
-/* Format 14 drops all columns not needed due to previous format upgrades.
-   As more formats are added, this number will be bumped, and it will
-   eventually become the final format for 1.7. */
--- format: 14
+/* Format 99 drops all columns not needed due to previous format upgrades.
+   Before we release 1.7, these statements will be pulled into a format bump
+   and all the tables will be cleaned up. We don't know what that format
+   number will be, however, so we're just marking it as 99 for now.  */
+-- format: 99
 
 /* We cannot directly remove columns, so we use a temporary table instead. */
 /* First create the temporary table without the undesired column(s). */

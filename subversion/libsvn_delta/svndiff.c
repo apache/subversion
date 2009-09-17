@@ -338,7 +338,7 @@ struct decode_baton
 
   /* We have to discard four bytes at the beginning for the header.
      This field keeps track of how many of those bytes we have read.  */
-  int header_bytes;
+  apr_size_t header_bytes;
 
   /* Do we want an error to occur when we close the stream that
      indicates we didn't send the whole svndiff data?  If you plan to
