@@ -486,7 +486,12 @@ svn_error_t *
 svn_wc_adm_close2(svn_wc_adm_access_t *adm_access,
                   apr_pool_t *scratch_pool);
 
-/* @deprecated Provided for backward compabibility with the 1.5 API. */
+/** 
+ * Similar to svn_wc_adm_close2(), but with the internal pool of @a adm_access
+ * used for temporary allocations.
+ *
+ * @deprecated Provided for backward compabibility with the 1.5 API.
+ */
 SVN_DEPRECATED
 svn_error_t *
 svn_wc_adm_close(svn_wc_adm_access_t *adm_access);
@@ -972,7 +977,11 @@ typedef enum svn_wc_notify_action_t
   svn_wc_notify_update_obstruction,
 
   /* The mergeinfo on path was updated.  @since New in 1.7. */
-  svn_wc_notify_merge_record_info
+  svn_wc_notify_merge_record_info,
+
+  /** An update operation removed an external working copy.
+   * @since New in 1.7. */
+  svn_wc_notify_update_external_removed,
 
 } svn_wc_notify_action_t;
 
@@ -1501,18 +1510,14 @@ typedef struct svn_wc_conflict_description2_t
 
   /** The operation that exposed the conflict.
    * Used only for tree conflicts.
-   *
-   * @since New in 1.6.
    */
   svn_wc_operation_t operation;
 
-  /** Info on the "merge-left source" or "older" version of incoming change.
-   * @since New in 1.6. */
-  svn_wc_conflict_version_t *src_left_version;
+  /** Info on the "merge-left source" or "older" version of incoming change. */
+  const svn_wc_conflict_version_t *src_left_version;
 
-  /** Info on the "merge-right source" or "their" version of incoming change.
-   * @since New in 1.6. */
-  svn_wc_conflict_version_t *src_right_version;
+  /** Info on the "merge-right source" or "their" version of incoming change. */
+  const svn_wc_conflict_version_t *src_right_version;
 
   /* Remember to adjust svn_wc__conflict_description_dup()
    * if you add new fields to this struct. */
@@ -1721,6 +1726,16 @@ svn_wc_conflict_description_create_tree(const char *path,
                                         svn_wc_conflict_version_t
                                           *src_right_version,
                                         apr_pool_t *pool);
+
+
+/** Return a duplicate of @a conflict, allocated in @a result_pool.
+ * A deep copy of all members will be made.
+ *
+ * @since New in 1.7.
+ */
+svn_wc_conflict_description2_t *
+svn_wc__conflict_description2_dup(const svn_wc_conflict_description2_t *conflict,
+                                  apr_pool_t *result_pool);
 
 
 /** The way in which the conflict callback chooses a course of action.
@@ -2697,7 +2712,10 @@ typedef struct svn_wc_entry_t
  * be present, but not under revision control.
  *
  * Use @a pool only for local processing.
+ *
+ * @deprecated Provided for backward compatibility with the 1.6 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_entry(const svn_wc_entry_t **entry,
              const char *path,
@@ -2736,7 +2754,10 @@ svn_wc_entry(const svn_wc_entry_t **entry,
  * fields filled in.  If you want info on a subdir, you must use this
  * routine to open its @a path and read the @c SVN_WC_ENTRY_THIS_DIR
  * structure, or call svn_wc_entry() on its @a path.
+ *
+ * @deprecated Provided for backward compatibility with the 1.6 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_entries_read(apr_hash_t **entries,
                     svn_wc_adm_access_t *adm_access,
@@ -2823,11 +2844,14 @@ svn_wc_conflicted_p(svn_boolean_t *text_conflicted_p,
                     const svn_wc_entry_t *entry,
                     apr_pool_t *pool);
 
-/** Set @a *url and @a *rev to the ancestor URL and revision for @a path,
- * allocating in @a pool.  @a adm_access must be an access baton for @a path.
+/** Set @a *url and @a *rev to the ancestor URL and revision for
+ * @a local_abspath, allocating in @a result_pool.  Any temporary
+ * allocations are performed using @a scratch_pool.
  *
  * If @a url or @a rev is NULL, then ignore it (just don't return the
  * corresponding information).
+ *
+ * @since New in 1.7.
  */
 svn_error_t *
 svn_wc_get_ancestry2(const char **url,
@@ -2840,7 +2864,7 @@ svn_wc_get_ancestry2(const char **url,
 /* Similar to svn_wc_get_ancestry2(), but using an adm_access baton / relative
  * path parameter pair.
  *
- * @deprecated Provided for backward compatibility with the 1.7 API.
+ * @deprecated Provided for backward compatibility with the 1.6 API.
  */
 SVN_DEPRECATED
 svn_error_t *
@@ -3405,7 +3429,7 @@ svn_wc_status(svn_wc_status_t **status,
 
 
 /**
- * A callback for reporting a @a status about @a path.
+ * A callback for reporting a @a status about @a local_abspath.
  *
  * @a baton is a closure object; it should be provided by the
  * implementation, and passed by the caller.
@@ -3420,12 +3444,13 @@ svn_wc_status(svn_wc_status_t **status,
  * @since New in 1.7.
  */
 typedef svn_error_t *(*svn_wc_status_func4_t)(void *baton,
-                                              const char *path,
+                                              const char *local_abspath,
                                               const svn_wc_status2_t *status,
                                               apr_pool_t *scratch_pool);
 
 /**
- * Same as svn_wc_status_func4_t, but with a non-const status.
+ * Same as svn_wc_status_func4_t, but with a non-const status and a relative
+ * path.
  *
  * @since New in 1.6.
  * @deprecated Provided for backward compatibility with the 1.6 API.
@@ -3455,6 +3480,58 @@ typedef void (*svn_wc_status_func_t)(void *baton,
                                      const char *path,
                                      svn_wc_status_t *status);
 
+/**
+ * Walk the working copy status of @a local_abspath using @a wc_ctx, by
+ * creating @c svn_wc_status2_t structures and sending these through
+ * @a status_func / @a status_baton. 
+ *
+ *  * Assuming the target is a directory, then:
+ *
+ *   - If @a get_all is FALSE, then only locally-modified entries will be
+ *     returned.  If TRUE, then all entries will be returned.
+ *
+ *   - If @a depth is @c svn_depth_empty, a status structure will
+ *     be returned for the target only; if @c svn_depth_files, for the
+ *     target and its immediate file children; if
+ *     @c svn_depth_immediates, for the target and its immediate
+ *     children; if @c svn_depth_infinity, for the target and
+ *     everything underneath it, fully recursively.
+ *
+ *     If @a depth is @c svn_depth_unknown, take depths from the
+ *     working copy and behave as above in each directory's case.
+ *
+ *     If the given @a depth is incompatible with the depth found in a
+ *     working copy directory, the found depth always governs.
+ *
+ * If @a no_ignore is set, statuses that would typically be ignored
+ * will instead be reported.
+ *
+ * @a ignore_patterns is an array of file patterns matching
+ * unversioned files to ignore for the purposes of status reporting,
+ * or @c NULL if the default set of ignorable file patterns should be used.
+ *
+ * If @a cancel_func is non-NULL, call it with @a cancel_baton while walking
+ * to determine if the client has cancelled the operation.
+ *
+ * If @a external_func is non-NULL, call it with @a external_baton if an
+ * external definition is found while walking @a local_abspath.
+ *
+ * This function uses @a scratch_pool for temporary allocations.
+ */
+svn_error_t *
+svn_wc_walk_status(svn_wc_context_t *wc_ctx,
+                   const char *local_abspath,
+                   svn_depth_t depth,
+                   svn_boolean_t get_all,
+                   svn_boolean_t no_ignore,
+                   const apr_array_header_t *ignore_patterns,
+                   svn_wc_status_func4_t status_func,
+                   void *status_baton,
+                   svn_cancel_func_t cancel_func,
+                   void *cancel_baton,
+                   svn_wc_external_update_t external_func,
+                   void *external_baton,
+                   apr_pool_t *scratch_pool);
 
 /**
  * Set @a *editor and @a *edit_baton to an editor that generates @c
@@ -3666,16 +3743,17 @@ svn_wc_status_set_repos_locks(void *set_locks_baton,
 
 
 /**
- * Copy @a src to @a dst_basename in @a dst_parent, and schedule
- * @a dst_basename for addition to the repository, remembering the copy
- * history.
+ * Copy @a src_abspath to @a dst_abspath, and schedule @a dst_abspath
+ * for addition to the repository, remembering the copy history. @a wc_ctx
+ * is used for accessing the working copy and must contain a write lock for
+ * the parent directory of @a dst_abspath,
  *
- * @a src must be a file or directory under version control; @a dst_parent
- * must be a directory under version control in the same working copy;
- * @a dst_basename will be the name of the copied item, and it must not
- * exist already.  Note that when @a src points to a versioned file, the
- * working file doesn't necessarily exist in which case its text-base is
- * used instead.
+ * @a src_abspath must be a file or directory under version control;
+ * the parent of @a dst_abspath must be a directory under version control
+ * in the same working copy; @a dst_abspath will be the name of the copied
+ * item, and it must not exist already.  Note that when @a src points to a
+ * versioned file, the working file doesn't necessarily exist in which case
+ * its text-base is used instead.
  *
  * If @a cancel_func is non-NULL, call it with @a cancel_baton at
  * various points during the operation.  If it returns an error
@@ -3686,12 +3764,29 @@ svn_wc_status_set_repos_locks(void *set_locks_baton,
  * if you are not interested in this information.
  *
  * @par Important:
- * This is a variant of svn_wc_add().  No changes will happen
+ * This is a variant of svn_wc_add4().  No changes will happen
  * to the repository until a commit occurs.  This scheduling can be
  * removed with svn_client_revert2().
  *
- * @since New in 1.2.
+ * @since New in 1.7.
  */
+svn_error_t *
+svn_wc_copy3(svn_wc_context_t *wc_ctx,
+             const char *src_abspath,
+             const char *dst_abspath,
+             svn_cancel_func_t cancel_func,
+             void *cancel_baton,
+             svn_wc_notify_func2_t notify_func,
+             void *notify_baton,
+             apr_pool_t *pool);
+
+/* Similar to svn_wc_copy3(), but takes access batons and a relative path
+ * and a basename instead of absolute paths and a working copy context.
+ *
+ * @since New in 1.2.
+ * @deprecated Provided for backward compatibility with the 1.6 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_copy2(const char *src,
              svn_wc_adm_access_t *dst_parent,
@@ -3719,10 +3814,10 @@ svn_wc_copy(const char *src,
             apr_pool_t *pool);
 
 /**
- * Schedule @a path for deletion, it will be deleted from the repository on
- * the next commit.  If @a path refers to a directory, then a recursive
- * deletion will occur.  @a adm_access must hold a write lock for the parent
- * of @a path.
+ * Schedule @a local_abspath for deletion, it will be deleted from the
+ * repository on the next commit.  If @a local_abspath refers to a
+ * directory, then a recursive deletion will occur. @a wc_ctx must hold
+ * a write lock for the parent of @a local_abspath.
  *
  * If @a keep_local is FALSE, this function immediately deletes all files,
  * modified and unmodified, versioned and unversioned from the working copy.
@@ -3741,8 +3836,29 @@ svn_wc_copy(const char *src,
  * the @a notify_baton and that path. The @a notify_func callback may be
  * @c NULL if notification is not needed.
  *
- * @since New in 1.5.
+ * Use @a scratch_pool for temporary allocations.  It may be cleared
+ * immediately upon returning from this function.
+ *
+ * @since New in 1.7.
  */
+svn_error_t *
+svn_wc_delete4(svn_wc_context_t *wc_ctx,
+               const char *local_abspath,
+               svn_boolean_t keep_local,
+               svn_cancel_func_t cancel_func,
+               void *cancel_baton,
+               svn_wc_notify_func2_t notify_func,
+               void *notify_baton,
+               apr_pool_t *scratch_pool);
+
+/**
+ * Similar to svn_wc_delete4, but uses an access baton and relative path
+ * instead of a working copy context and absolute path.
+ *
+ * @since New in 1.5.
+ * @deprecated Provided for backward compatibility with the 1.6 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_delete3(const char *path,
                svn_wc_adm_access_t *adm_access,
@@ -3785,31 +3901,33 @@ svn_wc_delete(const char *path,
 
 
 /**
- * Put @a path under version control by adding an entry in its parent,
- * and, if @a path is a directory, adding an administrative area.  The
- * new entry and anything under it is scheduled for addition to the
- * repository.  @a parent_access should hold a write lock for the parent
- * directory of @a path.  If @a path is a directory then an access baton
- * for @a path will be added to the set containing @a parent_access.
+ * Put @a local_abspath under version control by adding an entry in its
+ * parent, and if @a local_abspath is a directory, adding an 
+ * administrative area.  The new node and anything under it is scheduled
+ * for addition to the repository.  @a wc_ctx should hold a write lock
+ * for the parent directory of @a local_abspath.  If @a local_abspath is
+ * a directory then an access baton for @a local_abspath will be added
+ * to the set containing @a parent_access.
  *
- * If @a path does not exist, return @c SVN_ERR_WC_PATH_NOT_FOUND.
+ * If @a local_abspath does not exist, return @c SVN_ERR_WC_PATH_NOT_FOUND.
  *
- * If @a path is a directory, add it at @a depth; otherwise, ignore
+ * If @a local_abspath is a directory, add it at @a depth; otherwise, ignore
  * @a depth.
  *
  * If @a copyfrom_url is non-NULL, it and @a copyfrom_rev are used as
  * `copyfrom' args.  This is for copy operations, where one wants
- * to schedule @a path for addition with a particular history.
+ * to schedule @a local_abspath for addition with a particular history.
  *
  * If @a cancel_func is non-NULL, call it with @a cancel_baton at
  * various points during the operation.  If it returns an error
  * (typically @c SVN_ERR_CANCELLED), return that error immediately.
  *
- * When the @a path has been added, then @a notify_func will be called
- * (if it is not @c NULL) with the @a notify_baton and the path.
+ * When the @a local_abspath has been added, then @a notify_func will be
+ * called (if it is not @c NULL) with the @a notify_baton and the path.
  *
- * Return @c SVN_ERR_WC_NODE_KIND_CHANGE if @a path is both an unversioned
- * directory and a file that is scheduled for deletion or in state deleted.
+ * Return @c SVN_ERR_WC_NODE_KIND_CHANGE if @a local_abspath is both an
+ * unversioned directory and a file that is scheduled for deletion or in
+ * state deleted.
  *
  *<pre> ### This function currently does double duty -- it is also
  * ### responsible for "switching" a working copy directory over to a
@@ -3840,8 +3958,27 @@ svn_wc_delete(const char *path,
  * ### Update: see "###" comment in svn_wc_add_repos_file3()'s doc
  * string about this.
  *
- * @since New in 1.6.
+ * @since New in 1.7.
  */
+svn_error_t *
+svn_wc_add4(svn_wc_context_t *wc_ctx,
+            const char *local_abspath,
+            svn_depth_t depth,
+            const char *copyfrom_url,
+            svn_revnum_t copyfrom_rev,
+            svn_cancel_func_t cancel_func,
+            void *cancel_baton,
+            svn_wc_notify_func2_t notify_func,
+            void *notify_baton,
+            apr_pool_t *scratch_pool);
+
+/**
+ * Similar to svn_wc_add4(), but with an access baton
+ * and relative path instead of a context and absolute path.
+ * @since New in 1.6.
+ * @deprecated Provided for backward compatibility with the 1.6 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_add3(const char *path,
             svn_wc_adm_access_t *parent_access,
@@ -3890,10 +4027,11 @@ svn_wc_add(const char *path,
            void *notify_baton,
            apr_pool_t *pool);
 
-/** Add a file to a working copy at @a dst_path, obtaining the text-base's
- * contents from @a new_base_contents, the wc file's content from
- * @a new_contents, its base properties from @a new_base_props and
- * wc properties from @a new_props.
+/** Add a file to a working copy at @a local_abspath, obtaining the
+ *text-base's contents from @a new_base_contents, the wc file's
+ * content from @a new_contents, its base properties from @a 
+ * new_base_props and wc properties from @a new_props. Use @a wc_ctx
+ * for accessing the working copy.
  *
  * The base text and props normally come from the repository file
  * represented by the copyfrom args, see below.  The new file will
@@ -3934,8 +4072,30 @@ svn_wc_add(const char *path,
  * etc, etc.  So another part of the Ideal Plan is that that
  * functionality of svn_wc_add() would move into a separate function.
  *
- * @since New in 1.6
+ * @since New in 1.7.
  */
+svn_error_t *
+svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
+                       const char *local_abspath,
+                       svn_stream_t *new_base_contents,
+                       svn_stream_t *new_contents,
+                       apr_hash_t *new_base_props,
+                       apr_hash_t *new_props,
+                       const char *copyfrom_url,
+                       svn_revnum_t copyfrom_rev,
+                       svn_cancel_func_t cancel_func,
+                       void *cancel_baton,
+                       svn_wc_notify_func2_t notify_func,
+                       void *notify_baton,
+                       apr_pool_t *scratch_pool);
+
+/* Similar to svn_wc_add_repos_file4, but uses access batons and a
+ * relative path instead of a working copy context and absolute path.
+ *
+ * @since New in 1.6.
+ * @deprecated Provided for compatibility with the 1.6 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_add_repos_file3(const char *dst_path,
                        svn_wc_adm_access_t *adm_access,
@@ -4976,9 +5136,11 @@ svn_wc_get_switch_editor(svn_revnum_t *target_revision,
 /** Set @a *props to a hash table mapping <tt>char *</tt> names onto
  * <tt>svn_string_t *</tt> values for all the regular properties of
  * @a local_abspath.  Allocate the table, names, and values in
- * @a result_pool.  If the node has no properties, or does not exist in
- * the working copy, then an empty hash is returned.  Use @a wc_ctx to
- * access the working copy, and @a scratch_pool for temporary allocations.
+ * @a result_pool.  If the node has no properties, then an empty hash
+ * is returned.  Use @a wc_ctx to access the working copy, and @a
+ * scratch_pool for temporary allocations.
+ *
+ * If the node does not exist, @c SVN_ERR_WC_PATH_NOT_FOUND is returned.
  *
  * @since New in 1.7.
  */
@@ -5750,12 +5912,25 @@ svn_wc_merge_prop_diffs(svn_wc_notify_state_t *state,
 
 
 /** Given a @a path to a wc file, return a stream to the @a contents of
- * the pristine copy of the file.  This is needed so clients can do
- * diffs.  If the WC has no text-base, return a @c NULL instead of a
- * stream.
+ * the pristine copy of the file.  Use @a wc_ctx to access the working
+ * copy.This is needed so clients can do diffs.  If the WC has no 
+ * text-base, return a @c NULL instead of a stream.
+ *
+ * @since New in 1.7. */
+svn_error_t *
+svn_wc_get_pristine_contents2(svn_stream_t **contents,
+                              svn_wc_context_t *wc_ctx,
+                              const char *local_abspath,
+                              apr_pool_t *result_pool,
+                              apr_pool_t *scratch_pool);
+
+/** Similar to svn_wc_get_pristine_contents2, but takes no working copy
+ * context and a path that can be relative
  *
  * @since New in 1.6.
+ * @deprecated Provided for backward compatibility with the 1.6 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_get_pristine_contents(svn_stream_t **contents,
                              const char *path,

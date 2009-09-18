@@ -274,7 +274,7 @@ svn_wc__internal_path_switched(svn_boolean_t *switched,
   err = svn_wc__get_entry(&parent_entry, db, parent_abspath, FALSE,
                           svn_node_dir, FALSE, scratch_pool, scratch_pool);
 
-  if (err && (err->apr_err == SVN_ERR_WC_NOT_DIRECTORY
+  if (err && (err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY
         || err->apr_err == SVN_ERR_WC_MISSING))
     {
       svn_error_clear(err);
@@ -325,6 +325,8 @@ svn_wc_conflict_description_create_text2(const char *local_abspath,
 {
   svn_wc_conflict_description2_t *conflict;
 
+  SVN_ERR_ASSERT_NO_RETURN(svn_dirent_is_absolute(local_abspath));
+
   conflict = apr_pcalloc(result_pool, sizeof(*conflict));
   conflict->local_abspath = apr_pstrdup(result_pool, local_abspath);
   conflict->node_kind = svn_node_file;
@@ -341,6 +343,8 @@ svn_wc_conflict_description_create_prop2(const char *local_abspath,
                                          apr_pool_t *result_pool)
 {
   svn_wc_conflict_description2_t *conflict;
+
+  SVN_ERR_ASSERT_NO_RETURN(svn_dirent_is_absolute(local_abspath));
 
   conflict = apr_pcalloc(result_pool, sizeof(*conflict));
   conflict->local_abspath = apr_pstrdup(result_pool, local_abspath);
@@ -360,6 +364,8 @@ svn_wc_conflict_description_create_tree2(
                             apr_pool_t *result_pool)
 {
   svn_wc_conflict_description2_t *conflict;
+
+  SVN_ERR_ASSERT_NO_RETURN(svn_dirent_is_absolute(local_abspath));
 
   conflict = apr_pcalloc(result_pool, sizeof(*conflict));
   conflict->local_abspath = apr_pstrdup(result_pool, local_abspath);
@@ -409,6 +415,41 @@ svn_wc__conflict_description_dup(const svn_wc_conflict_description_t *conflict,
   return new_conflict;
 }
 
+svn_wc_conflict_description2_t *
+svn_wc__conflict_description2_dup(const svn_wc_conflict_description2_t *conflict,
+                                  apr_pool_t *pool)
+{
+  svn_wc_conflict_description2_t *new_conflict;
+
+  new_conflict = apr_pcalloc(pool, sizeof(*new_conflict));
+
+  /* Shallow copy all members. */
+  *new_conflict = *conflict;
+
+  if (conflict->local_abspath)
+    new_conflict->local_abspath = apr_pstrdup(pool, conflict->local_abspath);
+  if (conflict->property_name)
+    new_conflict->property_name = apr_pstrdup(pool, conflict->property_name);
+  if (conflict->mime_type)
+    new_conflict->mime_type = apr_pstrdup(pool, conflict->mime_type);
+  if (conflict->base_file)
+    new_conflict->base_file = apr_pstrdup(pool, conflict->base_file);
+  if (conflict->their_file)
+    new_conflict->their_file = apr_pstrdup(pool, conflict->their_file);
+  if (conflict->my_file)
+    new_conflict->my_file = apr_pstrdup(pool, conflict->my_file);
+  if (conflict->merged_file)
+    new_conflict->merged_file = apr_pstrdup(pool, conflict->merged_file);
+  if (conflict->src_left_version)
+    new_conflict->src_left_version =
+      svn_wc_conflict_version_dup(conflict->src_left_version, pool);
+  if (conflict->src_right_version)
+    new_conflict->src_right_version =
+      svn_wc_conflict_version_dup(conflict->src_right_version, pool);
+
+  return new_conflict;
+}
+
 svn_wc_conflict_version_t *
 svn_wc_conflict_version_create(const char *repos_url,
                                const char* path_in_repos,
@@ -435,6 +476,9 @@ svn_wc_conflict_version_dup(const svn_wc_conflict_version_t *version,
 {
 
   svn_wc_conflict_version_t *new_version;
+
+  if (version == NULL)
+    return NULL;
 
   new_version = apr_pcalloc(pool, sizeof(*new_version));
 

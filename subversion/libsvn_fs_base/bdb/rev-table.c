@@ -77,7 +77,7 @@ svn_fs_bdb__get_rev(revision_t **revision_p,
   /* Turn the revision number into a Berkeley DB record number.
      Revisions are numbered starting with zero; Berkeley DB record
      numbers begin with one.  */
-  db_recno_t recno = rev + 1;
+  db_recno_t recno = (db_recno_t) rev + 1;
 
   svn_fs_base__trail_debug(trail, "revisions", "get");
   db_err = bfd->revisions->get(bfd->revisions, trail->db_txn,
@@ -132,7 +132,7 @@ svn_fs_bdb__put_rev(svn_revnum_t *rev,
       DBT query, result;
 
       /* Update the filesystem revision with the new skel. */
-      recno = *rev + 1;
+      recno = (db_recno_t) *rev + 1;
       svn_fs_base__trail_debug(trail, "revisions", "put");
       db_err = bfd->revisions->put
         (bfd->revisions, trail->db_txn,

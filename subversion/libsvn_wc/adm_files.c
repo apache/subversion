@@ -299,47 +299,63 @@ svn_wc__sync_text_base(const char *path, apr_pool_t *pool)
   return svn_io_set_file_read_only(base_path, FALSE, pool);
 }
 
-const char *
-svn_wc__text_base_path(const char *path,
+svn_error_t *
+svn_wc__text_base_path(const char **result_path,
+                       svn_wc__db_t *db,
+                       const char *local_abspath,
                        svn_boolean_t tmp,
                        apr_pool_t *pool)
 {
   const char *newpath, *base_name;
 
-  svn_dirent_split(path, &newpath, &base_name, pool);
-  return extend_with_adm_name(newpath,
-                              SVN_WC__BASE_EXT,
-                              tmp,
-                              pool,
-                              SVN_WC__ADM_TEXT_BASE,
-                              base_name,
-                              NULL);
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  svn_dirent_split(local_abspath, &newpath, &base_name, pool);
+  *result_path = extend_with_adm_name(newpath,
+                                      SVN_WC__BASE_EXT,
+                                      tmp,
+                                      pool,
+                                      SVN_WC__ADM_TEXT_BASE,
+                                      base_name,
+                                      NULL);
+
+  return SVN_NO_ERROR;
 }
 
-const char *
-svn_wc__text_revert_path(const char *path,
+svn_error_t *
+svn_wc__text_revert_path(const char **result_path,
+                         svn_wc__db_t *db,
+                         const char *local_abspath,
                          apr_pool_t *pool)
 {
   const char *newpath, *base_name;
 
-  svn_dirent_split(path, &newpath, &base_name, pool);
-  return extend_with_adm_name(newpath,
-                              SVN_WC__REVERT_EXT,
-                              FALSE,
-                              pool,
-                              SVN_WC__ADM_TEXT_BASE,
-                              base_name,
-                              NULL);
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  svn_dirent_split(local_abspath, &newpath, &base_name, pool);
+  *result_path = extend_with_adm_name(newpath,
+                                      SVN_WC__REVERT_EXT,
+                                      FALSE,
+                                      pool,
+                                      SVN_WC__ADM_TEXT_BASE,
+                                      base_name,
+                                      NULL);
+
+  return SVN_NO_ERROR;
 }
 
 
 svn_error_t *
 svn_wc__get_revert_contents(svn_stream_t **contents,
-                            const char *path,
+                            svn_wc__db_t *db,
+                            const char *local_abspath,
                             apr_pool_t *result_pool,
                             apr_pool_t *scratch_pool)
 {
-  const char *revert_base = svn_wc__text_revert_path(path, scratch_pool);
+  const char *revert_base;
+  
+  SVN_ERR(svn_wc__text_revert_path(&revert_base, db, local_abspath,
+                                   scratch_pool));
 
   if (revert_base == NULL)
     {

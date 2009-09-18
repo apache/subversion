@@ -304,7 +304,8 @@ alloc_db(svn_wc__db_t **db,
 
   /* ### need to determine MODE based on callers' needs.  */
   mode = svn_wc__db_openmode_default;
-  SVN_ERR(svn_wc__db_open(db, mode, config, TRUE, result_pool, scratch_pool));
+  SVN_ERR(svn_wc__db_open(db, mode, config, TRUE, TRUE,
+                          result_pool, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -425,7 +426,7 @@ open_single(svn_wc_adm_access_t **adm_access,
   err = svn_wc__internal_check_wc(&wc_format, db, local_abspath, scratch_pool);
   if (wc_format == 0 || (err && APR_STATUS_IS_ENOENT(err->apr_err)))
     {
-      return svn_error_createf(SVN_ERR_WC_NOT_DIRECTORY, err,
+      return svn_error_createf(SVN_ERR_WC_NOT_WORKING_COPY, err,
                                _("'%s' is not a working copy"),
                                svn_dirent_local_style(path, scratch_pool));
     }
@@ -596,7 +597,7 @@ do_open(svn_wc_adm_access_t **adm_access,
             {
               const char *abspath;
 
-              if (err->apr_err != SVN_ERR_WC_NOT_DIRECTORY)
+              if (err->apr_err != SVN_ERR_WC_NOT_WORKING_COPY)
                 {
                   svn_error_clear(svn_wc_adm_close2(lock, subpool));
                   svn_pool_destroy(subpool);
@@ -731,7 +732,7 @@ svn_wc_adm_probe_open3(svn_wc_adm_access_t **adm_access,
 
       /* Ugh. Too bad about having to open a DB.  */
       SVN_ERR(svn_wc__db_open(&db, svn_wc__db_openmode_readonly,
-                              NULL /* ### config */, TRUE, pool, pool));
+                              NULL /* ### config */, TRUE, TRUE, pool, pool));
       err = probe(db, &dir, path, pool);
       svn_error_clear(svn_wc__db_close(db));
       SVN_ERR(err);
@@ -768,10 +769,10 @@ svn_wc_adm_probe_open3(svn_wc_adm_access_t **adm_access,
 
       if ((dir != path)
           && (child_kind == svn_node_dir)
-          && (err->apr_err == SVN_ERR_WC_NOT_DIRECTORY))
+          && (err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY))
         {
           svn_error_clear(err);
-          return svn_error_createf(SVN_ERR_WC_NOT_DIRECTORY, NULL,
+          return svn_error_createf(SVN_ERR_WC_NOT_WORKING_COPY, NULL,
                                    _("'%s' is not a working copy"),
                                    svn_dirent_local_style(path, pool));
         }
@@ -885,8 +886,8 @@ svn_wc_adm_retrieve(svn_wc_adm_access_t **adm_access,
                 (pool, _("Expected '%s' to be a directory but found a file"),
                  svn_dirent_local_style(path, pool));
               return svn_error_create(SVN_ERR_WC_NOT_LOCKED,
-                                      svn_error_create
-                                        (SVN_ERR_WC_NOT_DIRECTORY, NULL,
+                                      svn_error_create(
+                                         SVN_ERR_WC_NOT_WORKING_COPY, NULL,
                                          err_msg),
                                       err_msg);
             }
@@ -1029,7 +1030,7 @@ svn_wc_adm_probe_try3(svn_wc_adm_access_t **adm_access,
          SVN_ERR_WC_LOCKED.  That error would mean that someone else
          has this area locked, and we definitely want to bail in that
          case. */
-      if (err && (err->apr_err == SVN_ERR_WC_NOT_DIRECTORY))
+      if (err && (err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY))
         {
           svn_error_clear(err);
           *adm_access = NULL;
@@ -1148,7 +1149,7 @@ open_anchor(svn_wc_adm_access_t **anchor_access,
           else
             SVN_ERR_ASSERT(existing_adm == NULL);
 
-          if (err->apr_err == SVN_ERR_WC_NOT_DIRECTORY)
+          if (err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY)
             {
               svn_error_clear(err);
               p_access = NULL;
@@ -1183,7 +1184,7 @@ open_anchor(svn_wc_adm_access_t **anchor_access,
               return err;
             }
 
-          if (err->apr_err != SVN_ERR_WC_NOT_DIRECTORY)
+          if (err->apr_err != SVN_ERR_WC_NOT_WORKING_COPY)
             {
               if (p_access)
                 svn_error_clear(svn_wc_adm_close2(p_access, pool));
@@ -1512,7 +1513,14 @@ svn_wc__adm_missing(svn_wc__db_t *db,
   if (look != NULL)
     return IS_MISSING(look);
 
+  /* When we switch to a single database an access baton can't be
+     missing, but until then it can. But if there are no access batons we
+     would always return FALSE.
 
+     For this case we check if the db status is svn_wc__db_status_obstructed,
+     as this describes that the managed working copy is obstructed by
+     something. (E.g. file, or an unversioned directory). This is exactly,
+     what we used to call a missing access baton. */
   err = svn_wc__db_read_info(&status, NULL, NULL, NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL, NULL, NULL, NULL,
@@ -1521,6 +1529,8 @@ svn_wc__adm_missing(svn_wc__db_t *db,
 
   if (err)
     {
+      /* We can't return an error. Fall back to the old behavior or returning
+         FALSE.*/
       svn_error_clear(err);
       return FALSE;
     }
@@ -1644,10 +1654,10 @@ svn_wc__adm_probe_in_context(svn_wc_adm_access_t **adm_access,
 
       if ((dir != path)
           && (child_kind == svn_node_dir)
-          && (err->apr_err == SVN_ERR_WC_NOT_DIRECTORY))
+          && (err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY))
         {
           svn_error_clear(err);
-          return svn_error_createf(SVN_ERR_WC_NOT_DIRECTORY, NULL,
+          return svn_error_createf(SVN_ERR_WC_NOT_WORKING_COPY, NULL,
                                    _("'%s' is not a working copy"),
                                    svn_dirent_local_style(path, pool));
         }
@@ -1657,3 +1667,39 @@ svn_wc__adm_probe_in_context(svn_wc_adm_access_t **adm_access,
 
   return SVN_NO_ERROR;
 }
+
+svn_error_t *
+svn_wc__temp_get_relpath(const char **rel_path,
+                         svn_wc__db_t *db,
+                         const char *local_abspath,
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool)
+{
+  const char *suffix = "";
+  const char *abspath = local_abspath;
+
+  while (TRUE)
+  {
+    svn_wc_adm_access_t *adm_access =
+        svn_wc__adm_retrieve_internal2(db, abspath, scratch_pool);
+
+    if (adm_access != NULL)
+      {
+        *rel_path = svn_dirent_join(svn_wc_adm_access_path(adm_access),
+                                    suffix, result_pool);
+        return SVN_NO_ERROR;
+      }
+
+    if (svn_dirent_is_root(abspath, strlen(abspath)))
+      {
+        /* Not found, so no problem calling it abspath */
+        *rel_path = apr_pstrdup(result_pool, local_abspath);
+        return SVN_NO_ERROR;
+      }
+
+    suffix = svn_dirent_join(suffix, svn_dirent_basename(local_abspath, NULL),
+                             scratch_pool);
+    abspath = svn_dirent_dirname(local_abspath, scratch_pool);
+  }
+}
+

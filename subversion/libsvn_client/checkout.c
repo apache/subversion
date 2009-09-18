@@ -164,6 +164,7 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
     {
       int wc_format;
       const svn_wc_entry_t *entry;
+      const char *entry_url;
 
       SVN_ERR(svn_wc_check_wc2(&wc_format, ctx->wc_ctx, local_abspath, pool));
       if (! wc_format)
@@ -190,11 +191,13 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
       SVN_ERR(svn_wc__get_entry_versioned(&entry, ctx->wc_ctx, local_abspath,
                                           svn_node_unknown, FALSE, FALSE,
                                           pool, pool));
+      SVN_ERR(svn_wc__node_get_url(&entry_url, ctx->wc_ctx, local_abspath,
+                                   pool, pool));
 
       /* If PATH's existing URL matches the incoming one, then
          just update.  This allows 'svn co' to restart an
          interrupted checkout. */
-      if (entry->url && (strcmp(entry->url, session_url) == 0))
+      if (entry_url && (strcmp(entry_url, session_url) == 0))
         {
           err = svn_client__update_internal(result_rev, path, revision,
                                             depth, TRUE, ignore_externals,

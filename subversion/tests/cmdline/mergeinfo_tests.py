@@ -219,6 +219,132 @@ def non_inheritable_mergeinfo(sbox):
                                            D_COPY_path,
                                            '--show-revs', 'eligible')
 
+def recursive_mergeinfo(sbox):
+  "test svn mergeinfo -R"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  expected_disk, expected_status = set_up_branch(sbox)
+
+  # Some paths we'll care about
+  A_path          = os.path.join(wc_dir, "A")
+  A_COPY_path     = os.path.join(wc_dir, "A_COPY")
+  C_COPY_path     = os.path.join(wc_dir, "A_COPY", "C")
+  rho_COPY_path   = os.path.join(wc_dir, "A_COPY", "D", "G", "rho")
+  H_COPY_path     = os.path.join(wc_dir, "A_COPY", "D", "H")
+  F_COPY_path     = os.path.join(wc_dir, "A_COPY", "B", "F")
+  omega_COPY_path = os.path.join(wc_dir, "A_COPY", "D", "H", "omega")
+  beta_COPY_path  = os.path.join(wc_dir, "A_COPY", "B", "E", "beta")
+  A2_path         = os.path.join(wc_dir, "A2")
+  nu_path         = os.path.join(wc_dir, "A2", "B", "F", "nu")
+  nu_COPY_path    = os.path.join(wc_dir, "A_COPY", "B", "F", "nu")
+  nu2_path        = os.path.join(wc_dir, "A2", "C", "nu2") 
+  
+  # Rename A to A2 in r7.
+  svntest.actions.run_and_verify_svn(None, ["At revision 6.\n"], [], 'up', wc_dir)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'ren', A_path, A2_path)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'ci', wc_dir, '-m', 'rename A to A2')
+
+  # Add the files A/B/F/nu and A/C/nu2 and commit them as r8.
+  svntest.main.file_write(nu_path, "A new file.\n")
+  svntest.main.file_write(nu2_path, "Another new file.\n")
+  svntest.main.run_svn(None, "add", nu_path, nu2_path)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'ci', wc_dir, '-m', 'Add 2 new files')
+
+  # Do several merges to create varied subtree mergeinfo
+
+  # Merge r4 from A2 to A_COPY at depth empty
+  svntest.actions.run_and_verify_svn(None, ["At revision 8.\n"], [], 'up',
+                                     wc_dir)
+  svntest.actions.run_and_verify_svn(None,
+                                     #expected_merge_output([[4]], 'U    ' +
+                                     #                      rho_COPY_path +
+                                     #                      '\n'),
+                                     [], [], 'merge', '-c4', '--depth', 'empty',
+                                     sbox.repo_url + '/A2',
+                                     A_COPY_path)
+  
+  # Merge r6 from A2/D/H to A_COPY/D/H
+  svntest.actions.run_and_verify_svn(None,
+                                     expected_merge_output([[6]], 'U    ' +
+                                                           omega_COPY_path +
+                                                           '\n'),
+                                     [], 'merge', '-c6',
+                                     sbox.repo_url + '/A2/D/H',
+                                     H_COPY_path)
+
+  # Merge r5 from A2 to A_COPY
+  svntest.actions.run_and_verify_svn(None,
+                                     expected_merge_output([[5]], 'U    ' +
+                                                           beta_COPY_path +
+                                                           '\n'),
+                                     [], 'merge', '-c5',
+                                     sbox.repo_url + '/A2',
+                                     A_COPY_path)
+ 
+  # Reverse merge -r5 from A2/C to A_COPY/C leaving empty mergeinfo on
+  # A_COPY/C.
+  svntest.actions.run_and_verify_svn(None, [], [], 'merge', '-c-5',
+                                     sbox.repo_url + '/A2/C', C_COPY_path)
+  
+  # Merge r8 from A2/B/F to A_COPY/B/F
+  svntest.actions.run_and_verify_svn(None,
+                                     expected_merge_output([[8]], 'A    ' +
+                                                           nu_COPY_path +
+                                                           '\n'),
+                                     [], 'merge', '-c8',
+                                     sbox.repo_url + '/A2/B/F',
+                                     F_COPY_path)
+
+  # Commit everything this far as r9  
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'ci', wc_dir, '-m', 'Many merges')
+  svntest.actions.run_and_verify_svn(None, ["At revision 9.\n"], [], 'up',
+                                     wc_dir)
+
+  # Test svn mergeinfo -R / --depth infinity.
+
+  # Asking for eligible revisions from A2 to A_COPY should show:
+  #
+  #  r3  - Was never merged.
+  #
+  #  r4 - Was merged at depth empty, so while there is mergeinfo for the
+  #       revision, the actual text change to A_COPY/D/G/rho hasn't yet
+  #       happened.
+  #
+  #  r8* - Was only partially merged to the subtree at A_COPY/B/F.  The
+  #        addition of A_COPY/C/nu2 is still outstanding.
+  svntest.actions.run_and_verify_mergeinfo(adjust_error_for_server_version(""),
+                                           ['3', '4*', '8*'],
+                                           sbox.repo_url + '/A2',
+                                           sbox.repo_url + '/A_COPY',
+                                           '--show-revs', 'eligible', '-R')
+
+  # Asking for merged revisions from A2 to A_COPY should show:
+  #
+  #  r4* - Was merged at depth empty, so while there is mergeinfo for the
+  #        revision, the actual text change to A_COPY/D/G/rho hasn't yet
+  #        happened.
+  #
+  #  r5  - Was merged at depth infinity to the root of the 'branch', so it
+  #        should show as fully merged.
+  #
+  #  r6  - This was a subtree merge, but since the subtree A_COPY/D/H was
+  #        the ancestor of the only change made in r6 it is considered
+  #        fully merged.
+  #
+  #  r8* - Was only partially merged to the subtree at A_COPY/B/F.  The
+  #        addition of A_COPY/C/nu2 is still outstanding.
+  svntest.actions.run_and_verify_mergeinfo(adjust_error_for_server_version(""),
+                                           ['4*', '5', '6', '8*'],
+                                           A2_path,
+                                           A_COPY_path,
+                                           '--show-revs', 'merged',
+                                           '--depth', 'infinity')
+  
 ########################################################################
 # Run the tests
 
@@ -231,6 +357,7 @@ test_list = [ None,
               XFail(mergeinfo_non_source, server_has_mergeinfo),
               mergeinfo_on_unknown_url,
               non_inheritable_mergeinfo,
+              SkipUnless(recursive_mergeinfo, server_has_mergeinfo),
              ]
 
 if __name__ == '__main__':

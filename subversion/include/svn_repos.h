@@ -542,8 +542,9 @@ svn_repos_post_unlock_hook(svn_repos_t *repos,
  * arguments to the editor's add_file() and add_directory() methods,
  * whenever it deems feasible.
  *
- * The @a authz_read_func and @a authz_read_baton are passed along to
- * svn_repos_dir_delta2(); see that function for how they are used.
+ * Use @a authz_read_func and @a authz_read_baton (if not @c NULL) to
+ * avoid sending data through @a editor/@a edit_baton which is not
+ * authorized for transmission.
  *
  * All allocation for the context and collected state will occur in
  * @a pool.

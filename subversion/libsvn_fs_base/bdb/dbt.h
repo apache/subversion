@@ -47,7 +47,7 @@ DBT *svn_fs_base__nodata_dbt(DBT *dbt);
 
 
 /* Set DBT to refer to the SIZE bytes at DATA.  Return DBT.  */
-DBT *svn_fs_base__set_dbt(DBT *dbt, const void *data, u_int32_t size);
+DBT *svn_fs_base__set_dbt(DBT *dbt, const void *data, apr_size_t size);
 
 
 /* Prepare DBT to hold data returned from Berkeley DB.  Return DBT.

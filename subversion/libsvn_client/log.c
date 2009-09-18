@@ -464,26 +464,22 @@ svn_client_log5(const apr_array_header_t *targets,
       iterpool = svn_pool_create(pool);
       for (i = 0; i < targets->nelts; i++)
         {
-          const svn_wc_entry_t *entry;
-          const char *URL;
+          const char *url;
           const char *target = APR_ARRAY_IDX(targets, i, const char *);
           const char *target_abspath;
 
           svn_pool_clear(iterpool);
           SVN_ERR(svn_dirent_get_absolute(&target_abspath, target, iterpool));
-          SVN_ERR(svn_wc__get_entry_versioned(&entry, ctx->wc_ctx,
-                                              target_abspath, svn_node_unknown,
-                                              FALSE, FALSE,
-                                              iterpool, iterpool));
+          SVN_ERR(svn_wc__node_get_url(&url, ctx->wc_ctx, target_abspath,
+                                       pool, iterpool));
 
-          if (! entry->url)
+          if (! url)
             return svn_error_createf
               (SVN_ERR_ENTRY_MISSING_URL, NULL,
                _("Entry '%s' has no URL"),
                svn_dirent_local_style(target, pool));
 
-          URL = apr_pstrdup(pool, entry->url);
-          APR_ARRAY_PUSH(target_urls, const char *) = URL;
+          APR_ARRAY_PUSH(target_urls, const char *) = url;
           APR_ARRAY_PUSH(real_targets, const char *) = target;
         }
       svn_pool_destroy(iterpool);

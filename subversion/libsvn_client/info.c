@@ -101,9 +101,10 @@ build_info_from_entry(svn_info_t **info,
   tmpinfo->kind                 = entry->kind;
   tmpinfo->repos_UUID           = entry->uuid;
   tmpinfo->repos_root_URL       = entry->repos;
-  tmpinfo->last_changed_rev     = entry->cmt_rev;
-  tmpinfo->last_changed_date    = entry->cmt_date;
-  tmpinfo->last_changed_author  = entry->cmt_author;
+  SVN_ERR(svn_wc__node_get_changed_info(&tmpinfo->last_changed_rev,
+                                        &tmpinfo->last_changed_date,
+                                        &tmpinfo->last_changed_author,
+                                        wc_ctx, local_abspath, pool, pool));
 
   /* entry-specific stuff */
   tmpinfo->has_wc_info          = TRUE;
@@ -228,7 +229,7 @@ push_dir_info(svn_ra_session_t *ra_session,
       path = svn_path_join(dir, name, subpool);
       URL  = svn_path_url_add_component2(session_URL, name, subpool);
 
-      fs_path = svn_path_is_child(repos_root, URL, subpool);
+      fs_path = svn_uri_is_child(repos_root, URL, subpool);
       fs_path = apr_pstrcat(subpool, "/", fs_path, NULL);
       fs_path = svn_path_uri_decode(fs_path, subpool);
 
@@ -290,11 +291,14 @@ info_found_entry_callback(const char *path,
                                fe_baton->changelist_hash, pool))
     {
       svn_info_t *info;
+      svn_wc_conflict_description2_t *tmp_conflict;
 
       SVN_ERR(build_info_from_entry(&info, fe_baton->wc_ctx, entry, path,
                                     pool));
-      SVN_ERR(svn_wc__get_tree_conflict(&info->tree_conflict, fe_baton->wc_ctx,
+      SVN_ERR(svn_wc__get_tree_conflict(&tmp_conflict, fe_baton->wc_ctx,
                                         local_abspath, pool, pool));
+      if (tmp_conflict)
+        info->tree_conflict = svn_wc__cd2_to_cd(tmp_conflict, pool);
       SVN_ERR(fe_baton->receiver(fe_baton->receiver_baton, path, info, pool));
     }
   return SVN_NO_ERROR;
@@ -316,7 +320,7 @@ info_error_handler(const char *path,
   if (err && (err->apr_err == SVN_ERR_UNVERSIONED_RESOURCE))
     {
       struct found_entry_baton *fe_baton = walk_baton;
-      svn_wc_conflict_description_t *tree_conflict;
+      svn_wc_conflict_description2_t *tree_conflict;
       const char *local_abspath;
 
       SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
@@ -330,7 +334,7 @@ info_error_handler(const char *path,
           svn_error_clear(err);
 
           SVN_ERR(build_info_for_unversioned(&info, pool));
-          info->tree_conflict = tree_conflict;
+          info->tree_conflict = svn_wc__cd2_to_cd(tree_conflict, pool);
 
           SVN_ERR(svn_wc__node_get_repos_info(&(info->repos_root_URL),
                                               NULL,

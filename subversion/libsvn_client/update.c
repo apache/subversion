@@ -145,7 +145,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
   SVN_ERR_ASSERT(path);
 
   if (svn_path_is_url(path))
-    return svn_error_createf(SVN_ERR_WC_NOT_DIRECTORY, NULL,
+    return svn_error_createf(SVN_ERR_WC_NOT_WORKING_COPY, NULL,
                              _("Path '%s' is not a directory"),
                              path);
 
@@ -366,7 +366,7 @@ svn_client_update3(apr_array_header_t **result_revs,
                                         depth_is_sticky, ignore_externals,
                                         allow_unver_obstructions,
                                         &sleep, TRUE, FALSE, ctx, subpool);
-      if (err && err->apr_err != SVN_ERR_WC_NOT_DIRECTORY)
+      if (err && err->apr_err != SVN_ERR_WC_NOT_WORKING_COPY)
         {
           return svn_error_return(err);
         }

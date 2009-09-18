@@ -306,7 +306,7 @@ add_directory(const char *path,
       const char *fs_path;
       svn_fs_root_t *copy_root;
       svn_node_kind_t kind;
-      int repos_url_len;
+      size_t repos_url_len;
 
       /* Copy requires recursive write access to the destination path
          and write access to the parent path. */
@@ -451,7 +451,7 @@ add_file(const char *path,
       const char *fs_path;
       svn_fs_root_t *copy_root;
       svn_node_kind_t kind;
-      int repos_url_len;
+      size_t repos_url_len;
 
       /* Copy requires recursive write to the destination path and
          parent path. */

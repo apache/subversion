@@ -32,6 +32,8 @@
 #include "svn_props.h"
 #include "svn_dirent_uri.h"
 
+#include "private/svn_wc_private.h"
+
 #include "wc.h"
 #include "lock.h"
 #include "props.h"
@@ -47,7 +49,7 @@ struct traversal_info_update_baton
 
 /* Helper for updating svn_wc_traversal_info_t structures
  * Implements svn_wc_external_update_t */
-svn_error_t *
+static svn_error_t *
 traversal_info_update(void *baton,
                       const char *local_abspath,
                       const svn_string_t *old_val,
@@ -508,6 +510,28 @@ svn_wc_create_tmp_file(apr_file_t **fp,
 
 /*** From adm_ops.c ***/
 svn_error_t *
+svn_wc_get_pristine_contents(svn_stream_t **contents,
+                             const char *path,
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool)
+{
+  svn_wc_context_t *wc_ctx;
+  const char *local_abspath;
+
+  SVN_ERR(svn_wc_context_create(&wc_ctx, NULL, scratch_pool, scratch_pool));
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, scratch_pool));
+
+  SVN_ERR(svn_wc_get_pristine_contents2(contents,
+                                        wc_ctx,
+                                        local_abspath,
+                                        result_pool,
+                                        scratch_pool));
+
+  return svn_error_return(svn_wc_context_destroy(wc_ctx));
+}
+
+
+svn_error_t *
 svn_wc_process_committed3(const char *path,
                           svn_wc_adm_access_t *adm_access,
                           svn_boolean_t recurse,
@@ -556,6 +580,33 @@ svn_wc_process_committed(const char *path,
 }
 
 svn_error_t *
+svn_wc_delete3(const char *path,
+               svn_wc_adm_access_t *adm_access,
+               svn_cancel_func_t cancel_func,
+               void *cancel_baton,
+               svn_wc_notify_func2_t notify_func,
+               void *notify_baton,
+               svn_boolean_t keep_local,
+               apr_pool_t *pool)
+{
+  svn_wc_context_t *wc_ctx;
+  svn_wc__db_t *wc_db = svn_wc__adm_get_db(adm_access);
+  const char *local_abspath;
+
+  SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL, wc_db, pool));
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+
+  SVN_ERR(svn_wc_delete4(wc_ctx,
+                         local_abspath,
+                         keep_local,
+                         cancel_func, cancel_baton,
+                         notify_func, notify_baton,
+                         pool));
+
+  return svn_error_return(svn_wc_context_destroy(wc_ctx));
+}
+
+svn_error_t *
 svn_wc_delete2(const char *path,
                svn_wc_adm_access_t *adm_access,
                svn_cancel_func_t cancel_func,
@@ -585,6 +636,54 @@ svn_wc_delete(const char *path,
   return svn_wc_delete2(path, adm_access, cancel_func, cancel_baton,
                         svn_wc__compat_call_notify_func, &nb, pool);
 }
+
+svn_error_t *
+svn_wc_add3(const char *path,
+            svn_wc_adm_access_t *parent_access,
+            svn_depth_t depth,
+            const char *copyfrom_url,
+            svn_revnum_t copyfrom_rev,
+            svn_cancel_func_t cancel_func,
+            void *cancel_baton,
+            svn_wc_notify_func2_t notify_func,
+            void *notify_baton,
+            apr_pool_t *pool)
+{
+  svn_wc_context_t *wc_ctx;
+  svn_wc__db_t *wc_db = svn_wc__adm_get_db(parent_access);
+  const char *local_abspath;
+
+  SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL, wc_db, pool));
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+
+  SVN_ERR(svn_wc_add4(wc_ctx, local_abspath,
+                      depth, copyfrom_url,
+                      copyfrom_rev,
+                      cancel_func, cancel_baton,
+                      notify_func, notify_baton, pool));
+
+  /* Make sure the caller gets the new access baton in the set. */
+  if (svn_wc__adm_retrieve_internal2(wc_db, local_abspath, pool) == NULL)
+    {
+      svn_node_kind_t kind;
+      svn_wc_adm_access_t *adm_access;
+
+      SVN_ERR(svn_wc__node_get_kind(&kind, wc_ctx, local_abspath, FALSE, pool));
+
+      if (kind == svn_node_dir)
+        {
+          /* Open the access baton in adm_access' pool to give it the same
+             lifetime */
+          SVN_ERR(svn_wc_adm_open3(&adm_access, parent_access, path, TRUE,
+                                   copyfrom_url ? -1 : 0,
+                                   cancel_func, cancel_baton,
+                                   svn_wc_adm_access_pool(parent_access)));
+        }
+    }
+
+  return svn_error_return(svn_wc_context_destroy(wc_ctx));
+}
+
 
 svn_error_t *
 svn_wc_add2(const char *path,
@@ -1723,12 +1822,20 @@ svn_wc_prop_list(apr_hash_t **props,
 {
   svn_wc_context_t *wc_ctx;
   const char *local_abspath;
+  svn_error_t *err;
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
   SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL /* config */,
                                          svn_wc__adm_get_db(adm_access), pool));
 
-  SVN_ERR(svn_wc_prop_list2(props, wc_ctx, local_abspath, pool, pool));
+  err = svn_wc_prop_list2(props, wc_ctx, local_abspath, pool, pool);
+  if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+    {
+      *props = apr_hash_make(pool);
+      svn_error_clear(err);
+    }
+  else if (err)
+    return svn_error_return(err);
 
   return svn_error_return(svn_wc_context_destroy(wc_ctx));
 }
@@ -1811,16 +1918,27 @@ struct status4_wrapper_baton
 {
   svn_wc_status_func3_t old_func;
   void *old_baton;
+  const char *anchor_abspath;
+  const char *anchor_relpath;
 };
 
 static svn_error_t *
 status4_wrapper_func(void *baton,
-                     const char *path,
+                     const char *local_abspath,
                      const svn_wc_status2_t *status,
                      apr_pool_t *scratch_pool)
 {
   struct status4_wrapper_baton *swb = baton;
   svn_wc_status2_t *dup = svn_wc_dup_status2(status, scratch_pool);
+  const char *path = local_abspath;
+
+  if (swb->anchor_abspath != NULL)
+    {
+      path = svn_dirent_join(
+                swb->anchor_relpath,
+                svn_dirent_skip_ancestor(swb->anchor_abspath, local_abspath),
+                scratch_pool);
+    }
 
   return (*swb->old_func)(swb->old_baton, path, dup, scratch_pool);
 }
@@ -1848,6 +1966,7 @@ svn_wc_get_status_editor4(const svn_delta_editor_t **editor,
   svn_wc_context_t *wc_ctx;
   svn_wc_external_update_t external_func = NULL;
   struct traversal_info_update_baton *eb = NULL;
+  const char *anchor_abspath;
 
   swb->old_func = status_func;
   swb->old_baton = status_baton;
@@ -1856,6 +1975,19 @@ svn_wc_get_status_editor4(const svn_delta_editor_t **editor,
 
   SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL /* config */,
                                          wc_db, pool));
+
+  anchor_abspath = svn_wc__adm_access_abspath(anchor);
+
+  if (!svn_dirent_is_absolute(svn_wc_adm_access_path(anchor)))
+    {
+      swb->anchor_abspath = anchor_abspath;
+      swb->anchor_relpath = svn_wc_adm_access_path(anchor);
+    }
+  else
+    {
+      swb->anchor_abspath = NULL;
+      swb->anchor_relpath = NULL;
+    }
 
   if (traversal_info)
     {
@@ -1867,9 +1999,9 @@ svn_wc_get_status_editor4(const svn_delta_editor_t **editor,
     }
 
   SVN_ERR(svn_wc_get_status_editor5(editor, edit_baton, set_locks_baton,
-                                    edit_revision, wc_ctx, 
-                                    svn_wc__adm_access_abspath(anchor), target,
-                                    depth, get_all, no_ignore, ignore_patterns,
+                                    edit_revision, wc_ctx, anchor_abspath,
+                                    target, depth, get_all,
+                                    no_ignore, ignore_patterns,
                                     status4_wrapper_func, swb,
                                     cancel_func, cancel_baton,
                                     external_func, eb,
@@ -2089,6 +2221,45 @@ svn_wc_status2(svn_wc_status2_t **status,
 
 
 /*** From update_editor.c ***/
+
+svn_error_t *
+svn_wc_add_repos_file3(const char *dst_path,
+                       svn_wc_adm_access_t *adm_access,
+                       svn_stream_t *new_base_contents,
+                       svn_stream_t *new_contents,
+                       apr_hash_t *new_base_props,
+                       apr_hash_t *new_props,
+                       const char *copyfrom_url,
+                       svn_revnum_t copyfrom_rev,
+                       svn_cancel_func_t cancel_func,
+                       void *cancel_baton,
+                       svn_wc_notify_func2_t notify_func,
+                       void *notify_baton,
+                       apr_pool_t *pool)
+{
+  const char *local_abspath;
+  svn_wc_context_t *wc_ctx;
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, dst_path, pool));
+  SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL /* config */,
+                                         svn_wc__adm_get_db(adm_access),
+                                         pool));
+
+  SVN_ERR(svn_wc_add_repos_file4(wc_ctx,
+                                 local_abspath,
+                                 new_base_contents,
+                                 new_contents,
+                                 new_base_props,
+                                 new_props,
+                                 copyfrom_url,
+                                 copyfrom_rev,
+                                 cancel_func, cancel_baton,
+                                 notify_func, notify_baton,
+                                 pool));
+
+  return svn_error_return(svn_wc_context_destroy(wc_ctx));
+}
+
 svn_error_t *
 svn_wc_add_repos_file2(const char *dst_path,
                        svn_wc_adm_access_t *adm_access,
@@ -2925,6 +3096,36 @@ svn_wc_text_modified_p(svn_boolean_t *modified_p,
 
 
 /*** From copy.c ***/
+svn_error_t *
+svn_wc_copy2(const char *src,
+             svn_wc_adm_access_t *dst_parent,
+             const char *dst_basename,
+             svn_cancel_func_t cancel_func,
+             void *cancel_baton,
+             svn_wc_notify_func2_t notify_func,
+             void *notify_baton,
+             apr_pool_t *pool)
+{
+  svn_wc_context_t *wc_ctx;
+  svn_wc__db_t *wc_db = svn_wc__adm_get_db(dst_parent);
+  const char *src_abspath;
+  const char *dst_abspath;
+
+  SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL, wc_db, pool));
+  SVN_ERR(svn_dirent_get_absolute(&src_abspath, src, pool));
+
+  dst_abspath = svn_dirent_join(svn_wc__adm_access_abspath(dst_parent),
+                                dst_basename, pool);
+
+  SVN_ERR(svn_wc_copy3(wc_ctx,
+                       src_abspath,
+                       dst_abspath,
+                       cancel_func, cancel_baton,
+                       notify_func, notify_baton,
+                       pool));
+
+  return svn_error_return(svn_wc_context_destroy(wc_ctx));
+}
 
 svn_error_t *
 svn_wc_copy(const char *src_path,

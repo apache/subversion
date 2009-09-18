@@ -162,23 +162,20 @@ svn_wc__set_file_external_location(svn_wc_adm_access_t *adm_access,
  * use @a scratch_pool for temporary allocations.
  */
 svn_error_t *
-svn_wc__get_tree_conflict(svn_wc_conflict_description_t **tree_conflict,
+svn_wc__get_tree_conflict(svn_wc_conflict_description2_t **tree_conflict,
                           svn_wc_context_t *wc_ctx,
                           const char *victim_abspath,
                           apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool);
 
-/** Record the tree conflict described by @a conflict in the WC.
- * @a adm_access must be a write-access baton for the parent directory of
- * @a victim->path. Use @a pool for all allocations.
- *
- * Warning: This function updates the entry on disk but not the cached entry
- * in @a adm_access.
+/** Record the tree conflict described by @a conflict in the WC for
+ * @a conflict->local_abspath.  Use @a scratch_pool for all temporary
+ * allocations.
  */
 svn_error_t *
-svn_wc__add_tree_conflict(const svn_wc_conflict_description_t *conflict,
-                          svn_wc_adm_access_t *adm_access,
-                          apr_pool_t *pool);
+svn_wc__add_tree_conflict(svn_wc_context_t *wc_ctx,
+                          const svn_wc_conflict_description2_t *conflict,
+                          apr_pool_t *scratch_pool);
 
 /* Remove any tree conflict on victim @a victim_abspath using @a wc_ctx.
  * (If there is no such conflict recorded, do nothing and return success.)
@@ -192,10 +189,10 @@ svn_wc__del_tree_conflict(svn_wc_context_t *wc_ctx,
 
 /*
  * Read tree conflict descriptions from @a conflict_data.  Set @a *conflicts
- * to a hash of pointers to svn_wc_conflict_description_t objects indexed by
- * svn_wc_conflict_description_t.path, all newly allocated in @a pool.  @a
- * dir_path is the path to the working copy directory whose conflicts are
- * being read.  The conflicts read are the tree conflicts on the immediate
+ * to a hash of pointers to svn_wc_conflict_description2_t objects indexed by
+ * svn_wc_conflict_description2_t.local_abspath, all newly allocated in @a
+ * pool.  @a dir_path is the path to the working copy directory whose conflicts
+ * are being read.  The conflicts read are the tree conflicts on the immediate
  * child nodes of @a dir_path.  Do all allocations in @a pool.
  */
 svn_error_t *
@@ -276,25 +273,10 @@ svn_wc__adm_open_anchor_in_context(svn_wc_adm_access_t **anchor_access,
  * before the 1.7 release.
  */
 
-/** A callback vtable invoked by the generic node-walker function.
- */
-typedef struct svn_wc__node_walk_callbacks_t
-{
-  /** A node was found at @a local_abspath. */
-  svn_error_t *(*found_node)(const char *local_abspath,
-                             void *walk_baton,
-                             apr_pool_t *scratch_pool);
-
-  /** Handle the error @a err encountered while processing @a local_abspath.
-   * Wrap or squelch @a err as desired, and return an @c svn_error_t
-   * *, or @c SVN_NO_ERROR.
-   */
-  svn_error_t *(*handle_error)(const char *local_abspath,
-                               svn_error_t *err,
-                               void *walk_baton,
-                               apr_pool_t *scratch_pool);
-
-} svn_wc__node_walk_callbacks_t;
+/** A callback invoked by the generic node-walker function.  */
+typedef svn_error_t *(*svn_wc__node_found_func_t)(const char *local_abspath,
+                                                  void *walk_baton,
+                                                  apr_pool_t *scratch_pool);
 
 /**
  * Retrieve an @a adm_access for @a path from the @a wc_ctx.
@@ -306,6 +288,26 @@ svn_wc__adm_retrieve_from_context(svn_wc_adm_access_t **adm_access,
                                   svn_wc_context_t *wc_ctx,
                                   const char *local_abspath,
                                   apr_pool_t *pool);
+
+
+/*
+ * Convert from svn_wc_conflict_description2_t to svn_wc_conflict_description_t.
+ * Allocate the result in RESULT_POOL.
+ */
+svn_wc_conflict_description_t *
+svn_wc__cd2_to_cd(const svn_wc_conflict_description2_t *conflict,
+                  apr_pool_t *result_pool);
+
+
+/*
+ * Convert from svn_wc_conflict_description_t to svn_wc_conflict_description2_t.
+ * Allocate the result in RESULT_POOL.
+ */
+svn_wc_conflict_description2_t *
+svn_wc__cd_to_cd2(const svn_wc_conflict_description_t *conflict,
+                  apr_pool_t *result_pool);
+
+
 /**
  * Fetch the absolute paths of all the working children of @a dir_abspath
  * into @a *children, allocated in @a result_pool.  Use @a wc_ctx to access
@@ -351,8 +353,6 @@ svn_wc__conflict_desc2_from_conflict_desc(const svn_wc_conflict_description_t *
  * to access the working copy, and @a scratch_pool for all temporary
  * allocations.  If @a abspath is not present in the working copy and
  * @a show_hidden is FALSE then set @a kind to @c svn_node_none.
- *
- * @since New in 1.7.
  */
 svn_error_t *
 svn_wc__node_get_kind(svn_node_kind_t *kind,
@@ -361,6 +361,34 @@ svn_wc__node_get_kind(svn_node_kind_t *kind,
                       svn_boolean_t show_hidden,
                       apr_pool_t *scratch_pool);
 
+
+/**
+ * Get the depth of @a local_abspath using @a wc_ctx.  If @a local_abspath is
+ * not in the working copy, return @c SVN_ERR_WC_PATH_NOT_FOUND.
+ */
+svn_error_t *
+svn_wc__node_get_depth(svn_depth_t *depth,
+                       svn_wc_context_t *wc_ctx,
+                       const char *local_abspath,
+                       apr_pool_t *scratch_pool);
+
+/**
+ * Get the changed revision, date and author for @a local_abspath using @a
+ * wc_ctx.  Allocate the return values in @a result_pool; use @a scratch_pool
+ * for temporary allocations.  Any of the return pointers may be @c NULL, in
+ * which case they are not set.
+ *
+ * If @a local_abspath is not in the working copy, return
+ * @c SVN_ERR_WC_PATH_NOT_FOUND.
+ */
+svn_error_t *
+svn_wc__node_get_changed_info(svn_revnum_t *changed_rev,
+                              apr_time_t *changed_date,
+                              const char **changed_author,
+                              svn_wc_context_t *wc_ctx,
+                              const char *local_abspath,
+                              apr_pool_t *result_pool,
+                              apr_pool_t *scratch_pool);
 
 /**
  * Set @a *changelist to the changelist to which @a local_abspath belongs.
@@ -376,6 +404,21 @@ svn_wc__node_get_changelist(const char **changelist,
 
 
 /**
+ * Set @a *url to the corresponding url for @a local_abspath, using @a wc_ctx.
+ * If the node is added, return the url it will have in the repository.
+ *
+ * If @a local_abspath is not in the working copy, return
+ * @c SVN_ERR_WC_PATH_NOT_FOUND.
+ */
+svn_error_t *
+svn_wc__node_get_url(const char **url,
+                     svn_wc_context_t *wc_ctx,
+                     const char *local_abspath,
+                     apr_pool_t *result_pool,
+                     apr_pool_t *scratch_pool);
+
+
+/**
  * Recursively call @a callbacks->found_node for all nodes underneath
  * @a local_abspath.
  */
@@ -383,7 +426,7 @@ svn_error_t *
 svn_wc__node_walk_children(svn_wc_context_t *wc_ctx,
                            const char *local_abspath,
                            svn_boolean_t show_hidden,
-                           const svn_wc__node_walk_callbacks_t *callbacks,
+                           svn_wc__node_found_func_t walk_callback,
                            void *walk_baton,
                            svn_depth_t walk_depth,
                            svn_cancel_func_t cancel_func,

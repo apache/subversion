@@ -207,7 +207,8 @@ display_prop_diffs(const apr_array_header_t *propchanges,
   if (relative_to_dir)
     {
       /* Possibly adjust the path shown in the output (see issue #2723). */
-      const char *child_path = svn_path_is_child(relative_to_dir, path, pool);
+      const char *child_path = svn_dirent_is_child(relative_to_dir, path,
+                                                   pool);
 
       if (child_path)
         path = child_path;
@@ -487,7 +488,7 @@ diff_content_changed(const char *path,
   if (diff_cmd_baton->relative_to_dir)
     {
       /* Possibly adjust the paths shown in the output (see issue #2723). */
-      const char *child_path = svn_path_is_child(rel_to_dir, path, subpool);
+      const char *child_path = svn_dirent_is_child(rel_to_dir, path, subpool);
 
       if (child_path)
         path = child_path;
@@ -496,7 +497,7 @@ diff_content_changed(const char *path,
       else
         return MAKE_ERR_BAD_RELATIVE_PATH(path, rel_to_dir);
 
-      child_path = svn_path_is_child(rel_to_dir, path1, subpool);
+      child_path = svn_dirent_is_child(rel_to_dir, path1, subpool);
 
       if (child_path)
         path1 = child_path;
@@ -505,7 +506,7 @@ diff_content_changed(const char *path,
       else
         return MAKE_ERR_BAD_RELATIVE_PATH(path1, rel_to_dir);
 
-      child_path = svn_path_is_child(rel_to_dir, path2, subpool);
+      child_path = svn_dirent_is_child(rel_to_dir, path2, subpool);
 
       if (child_path)
         path2 = child_path;
@@ -1316,7 +1317,6 @@ diff_repos_wc(const char *path1,
 {
   const char *url1, *anchor, *anchor_url, *target;
   svn_wc_adm_access_t *adm_access, *dir_access;
-  const svn_wc_entry_t *entry;
   svn_revnum_t rev;
   svn_ra_session_t *ra_session;
   const svn_ra_reporter3_t *reporter;
@@ -1327,6 +1327,7 @@ diff_repos_wc(const char *path1,
   int levels_to_lock = SVN_WC__LEVELS_TO_LOCK_FROM_DEPTH(depth);
   svn_boolean_t server_supports_depth;
   const char *abspath1;
+  const char *abspath2;
   const char *anchor_abspath;
 
   SVN_ERR_ASSERT(! svn_path_is_url(path2));
@@ -1335,6 +1336,8 @@ diff_repos_wc(const char *path1,
     SVN_ERR(svn_dirent_get_absolute(&abspath1, path1, pool));
   else
     abspath1 = path1;
+
+  SVN_ERR(svn_dirent_get_absolute(&abspath2, path2, pool));
 
   /* Convert path1 to a URL to feed to do_diff. */
   SVN_ERR(convert_to_url(&url1, ctx->wc_ctx, abspath1, pool, pool));
@@ -1349,14 +1352,12 @@ diff_repos_wc(const char *path1,
 
   /* Fetch the URL of the anchor directory. */
   SVN_ERR(svn_dirent_get_absolute(&anchor_abspath, anchor, pool));
-  SVN_ERR(svn_wc__get_entry_versioned(&entry, ctx->wc_ctx, anchor_abspath,
-                                      svn_node_unknown, FALSE, FALSE,
-                                      pool, pool));
-  if (! entry->url)
+  SVN_ERR(svn_wc__node_get_url(&anchor_url, ctx->wc_ctx, anchor_abspath,
+                               pool, pool));
+  if (! anchor_url)
     return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
                              _("Directory '%s' has no URL"),
                              svn_dirent_local_style(anchor, pool));
-  anchor_url = apr_pstrdup(pool, entry->url);
 
   /* If we are performing a pegged diff, we need to find out what our
      actual URLs will be. */
@@ -1428,11 +1429,11 @@ diff_repos_wc(const char *path1,
 
   /* Create a txn mirror of path2;  the diff editor will print
      diffs in reverse.  :-)  */
-  SVN_ERR(svn_wc_crawl_revisions4(path2, dir_access,
+  SVN_ERR(svn_wc_crawl_revisions5(ctx->wc_ctx, abspath2,
                                   reporter, reporter_baton,
                                   FALSE, depth, TRUE, (! server_supports_depth),
                                   FALSE, NULL, NULL, /* notification is N/A */
-                                  NULL, pool));
+                                  NULL, NULL, pool));
 
   return svn_wc_adm_close2(adm_access, pool);
 }

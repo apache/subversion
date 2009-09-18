@@ -350,10 +350,8 @@ svn_wc__text_modified_internal_p(svn_boolean_t *modified_p,
      yet committed. */
   /* We used to stat for the working base here, but we just give
      compare_and_verify a try; we'll check for errors afterwards */
-  SVN_ERR(svn_dirent_get_absolute(&textbase_abspath,
-                                  svn_wc__text_base_path(local_abspath, FALSE,
-                                                         scratch_pool),
-                                  scratch_pool));
+  SVN_ERR(svn_wc__text_base_path(&textbase_abspath, db, local_abspath, FALSE,
+                                 scratch_pool));
 
   /* Check all bytes, and verify checksum if requested. */
   err = compare_and_verify(modified_p,
@@ -490,10 +488,10 @@ svn_wc__internal_conflicted_p(svn_boolean_t *text_conflicted_p,
   /* Find out whether it's a tree conflict victim. */
   if (tree_conflicted_p)
     {
-      svn_wc_conflict_description_t *conflict;
+      svn_wc_conflict_description2_t *conflict;
 
-      SVN_ERR(svn_wc__db_op_get_tree_conflict(&conflict, db, local_abspath,
-                                              scratch_pool, scratch_pool));
+      SVN_ERR(svn_wc__db_op_read_tree_conflict(&conflict, db, local_abspath,
+                                               scratch_pool, scratch_pool));
       *tree_conflicted_p = (conflict != NULL);
     }
 

@@ -662,7 +662,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  is not provided, display revisions which have been merged from\n"
      "  SOURCE to TARGET; otherwise, display the type of information\n"
      "  specified by the --show-revs option.\n"),
-    {'r', opt_show_revs} },
+    {'r', 'R', opt_depth, opt_show_revs} },
 
   { "mkdir", svn_cl__mkdir, {0}, N_
     ("Create a new directory under version control.\n"
@@ -706,8 +706,28 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  A unidiff file suitable for application to a working copy can be\n"
      "  produced with the 'svn diff' command or third-party diffing tools.\n"
      "  Any non-unidiff content of PATCHFILE is ignored.\n"
+     "\n"
+     "  If a change does not match at its exact line offset, it may be applied\n"
+     "  earlier or later in the file if a match is found elsewhere for the\n"
+     "  surrounding lines of context provided in the unidiff.\n"
+     "  If no matching context can be found for a change, the change will\n"
+     "  produce a text conflict at its exact line offset.\n"
+     "\n"
+     "  For each patched file a line will be printed with characters reporting\n"
+     "  the action taken. These characters have the following meaning:\n"
+     "\n"
+     "    A  Added\n"
+     "    D  Deleted\n"
+     "    U  Updated\n"
+     "    C  Conflict\n"
+     "    G  Merged\n"
+     "\n"
+     "  If a unidiff removes all content from a file, that file is scheduled\n"
+     "  for deletion. If a unidiff creates a new file, that file is scheduled\n"
+     "  for addition. Use 'svn revert' to undo deletions and additions you\n"
+     "  do not agree with.\n"
      ),
-    {'q', opt_dry_run} },
+    {'q', opt_dry_run, opt_accept, opt_merge_cmd} },
 
   { "propdel", svn_cl__propdel, {"pdel", "pd"}, N_
     ("Remove a property from files, dirs, or revisions.\n"

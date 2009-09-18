@@ -357,7 +357,7 @@ svn_client_propset3(svn_commit_info_t **commit_info_p,
     }
   else
     {
-      const svn_wc_entry_t *entry;
+      svn_node_kind_t kind;
       apr_hash_t *changelist_hash = NULL;
       const char *target_abspath;
 
@@ -367,14 +367,11 @@ svn_client_propset3(svn_commit_info_t **commit_info_p,
         SVN_ERR(svn_hash_from_cstring_keys(&changelist_hash,
                                            changelists, pool));
 
-      SVN_ERR(svn_wc__get_entry_versioned(&entry, ctx->wc_ctx, target_abspath,
-                                          svn_node_unknown, FALSE, FALSE,
-                                          pool, pool));
+      SVN_ERR(svn_wc__node_get_kind(&kind, ctx->wc_ctx, target_abspath, FALSE,
+                                    pool));
 
-      if (depth >= svn_depth_files && entry->kind == svn_node_dir)
+      if (depth >= svn_depth_files && kind == svn_node_dir)
         {
-          static const svn_wc__node_walk_callbacks_t walk_callbacks
-            = { propset_walk_cb, svn_client__default_walker_error_handler };
           struct propset_walk_baton wb;
 
           wb.wc_ctx = ctx->wc_ctx;
@@ -385,7 +382,7 @@ svn_client_propset3(svn_commit_info_t **commit_info_p,
           wb.notify_func = ctx->notify_func2;
           wb.notify_baton = ctx->notify_baton2;
           SVN_ERR(svn_wc__node_walk_children(ctx->wc_ctx, target_abspath,
-                                             FALSE, &walk_callbacks, &wb,
+                                             FALSE, propset_walk_cb, &wb,
                                              depth, ctx->cancel_func,
                                              ctx->cancel_baton, pool));
         }
@@ -1162,8 +1159,6 @@ svn_client_proplist3(const char *path_or_url,
       /* Fetch, recursively or not. */
       if (depth >= svn_depth_files && (entry->kind == svn_node_dir))
         {
-          static const svn_wc__node_walk_callbacks_t walk_callbacks
-            = { proplist_walk_cb, svn_client__default_walker_error_handler };
           struct proplist_walk_baton wb;
 
           wb.wc_ctx = ctx->wc_ctx;
@@ -1173,7 +1168,7 @@ svn_client_proplist3(const char *path_or_url,
           wb.receiver_baton = receiver_baton;
 
           SVN_ERR(svn_wc__node_walk_children(ctx->wc_ctx, local_abspath, FALSE,
-                                             &walk_callbacks, &wb, depth,
+                                             proplist_walk_cb, &wb, depth,
                                              ctx->cancel_func,
                                              ctx->cancel_baton, pool));
         }

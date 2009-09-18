@@ -651,12 +651,20 @@ def disallow_dot_or_dotdot_directory_reference(sbox):
 
   external_url_for = externals_test_setup(sbox)
   wc_dir         = sbox.wc_dir
+  repo_url       = sbox.repo_url
+
+  # Checkout a working copy
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'checkout',
+                                     repo_url, wc_dir)
 
   # Try to set illegal externals in the original WC.
   def set_externals_for_path_expect_error(path, val):
     (fd, tmp_f) = tempfile.mkstemp()
     svntest.main.file_append(tmp_f, val)
-    svntest.actions.run_and_verify_svn(None, None, svntest.verify.AnyOutput,
+    expected_err = ".*Invalid svn:externals property on '.*': target " + \
+                   "'.*' is an absolute path or involves '..'.*"
+    svntest.actions.run_and_verify_svn(None, None, expected_err,
                                        'pset', '-F', tmp_f,
                                        'svn:externals', path)
     os.close(fd)
@@ -666,25 +674,29 @@ def disallow_dot_or_dotdot_directory_reference(sbox):
   G_path = os.path.join(wc_dir, 'A', 'D', 'G')
   H_path = os.path.join(wc_dir, 'A', 'D', 'H')
   C_path = os.path.join(wc_dir, 'A', 'C')
-  F_path = os.path.join(wc_dir, 'A', 'C', 'F')
+  F_path = os.path.join(wc_dir, 'A', 'B', 'F')
 
   external_urls = list(external_url_for.values())
 
-  externals_value_1 = "../foo"         + " " + external_urls.pop() + "\n"
+  # The external_urls contains some examples of relative urls that are
+  # ambiguous with these local test paths, so we have to use the 
+  # <url> <path> ordering here to check the local path validator.
+  
+  externals_value_1 = external_urls.pop() + " ../foo\n"
   if not external_urls: external_urls = list(external_url_for.values())
-  externals_value_2 = "foo/bar/../baz" + " " + external_urls.pop() + "\n"
+  externals_value_2 = external_urls.pop() + " foo/bar/../baz\n"
   if not external_urls: external_urls = list(external_url_for.values())
-  externals_value_3 = "foo/.."         + " " + external_urls.pop() + "\n"
+  externals_value_3 = external_urls.pop() + " foo/..\n"
   if not external_urls: external_urls = list(external_url_for.values())
-  externals_value_4 = "."              + " " + external_urls.pop() + "\n"
+  externals_value_4 = external_urls.pop() + " .\n"
   if not external_urls: external_urls = list(external_url_for.values())
-  externals_value_5 = "./"             + " " + external_urls.pop() + "\n"
+  externals_value_5 = external_urls.pop() + " ./\n"
   if not external_urls: external_urls = list(external_url_for.values())
-  externals_value_6 = ".."             + " " + external_urls.pop() + "\n"
+  externals_value_6 = external_urls.pop() + " ..\n"
   if not external_urls: external_urls = list(external_url_for.values())
-  externals_value_7 = "././/.///."     + " " + external_urls.pop() + "\n"
+  externals_value_7 = external_urls.pop() + " ././/.///. \n"
   if not external_urls: external_urls = list(external_url_for.values())
-  externals_value_8 = "/foo"           + " " + external_urls.pop() + "\n"
+  externals_value_8 = external_urls.pop() + " /foo \n"
   if not external_urls: external_urls = list(external_url_for.values())
 
   set_externals_for_path_expect_error(B_path, externals_value_1)
@@ -1407,7 +1419,7 @@ test_list = [ None,
               cannot_move_or_remove_file_externals,
               can_place_file_external_into_dir_external,
               external_into_path_with_spaces,
-              XFail(binary_file_externals),
+              binary_file_externals,
               XFail(update_lose_file_external),
               XFail(switch_relative_external),
               export_sparse_wc_with_externals,

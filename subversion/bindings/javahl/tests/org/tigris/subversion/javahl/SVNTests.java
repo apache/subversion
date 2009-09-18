@@ -162,10 +162,10 @@ class SVNTests extends TestCase
             rootDirectoryName = System.getProperty("user.dir");
         rootDir = new File(rootDirectoryName);
 
-        // if not alread set, get a usefull value for root url
+        // if not already set, get a useful value for root url
         if (rootUrl == null)
             rootUrl = System.getProperty("test.rooturl");
-        if (rootUrl == null)
+        if (rootUrl == null || rootUrl.trim().length() == 0)
         {
             // if no root url, set build a file url
             rootUrl = rootDir.toURI().toString();

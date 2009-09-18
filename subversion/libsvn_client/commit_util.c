@@ -360,7 +360,6 @@ harvest_committables(apr_hash_t *committables,
                      svn_client_ctx_t *ctx,
                      apr_pool_t *scratch_pool)
 {
-  apr_hash_t *entries = NULL;
   svn_boolean_t text_mod = FALSE, prop_mod = FALSE;
   apr_byte_t state_flags = 0;
   svn_node_kind_t kind;
@@ -430,21 +429,18 @@ harvest_committables(apr_hash_t *committables,
       /* Read the dir's own entries for use when recursing. */
       svn_error_t *err;
       const svn_wc_entry_t *e = NULL;
-      err = svn_wc_entries_read(&entries, adm_access, copy_mode, scratch_pool);
+
+      err = svn_wc__maybe_get_entry(&e, ctx->wc_ctx,
+                                    local_abspath, svn_node_dir,
+                                    FALSE, FALSE,
+                                    scratch_pool, scratch_pool);
 
       /* If we failed to get an entries hash for the directory, no
          sweat.  Cleanup and move along.  */
       if (err)
-        {
-          svn_error_clear(err);
-          entries = NULL;
-        }
-
-      /* If we got an entries hash, and the "this dir" entry is
-         present, try to override our current ENTRY with it. */
-      if ((entries) && ((e = apr_hash_get(entries, SVN_WC_ENTRY_THIS_DIR,
-                                          APR_HASH_KEY_STRING))))
-          entry = e;
+        svn_error_clear(err);
+      else if (e != NULL)
+        entry = e;
     }
 
   /* If ENTRY is in our changelist, then examine it for conflicts. We
@@ -659,32 +655,47 @@ harvest_committables(apr_hash_t *committables,
   /* For directories, recursively handle each entry according to depth
      (except when the directory is being deleted, unless the deletion
      is part of a replacement ... how confusing).  */
-  if (entries && (depth > svn_depth_empty)
+  if ((entry->kind == svn_node_dir) && (depth > svn_depth_empty)
       && ((! (state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE))
           || (state_flags & SVN_CLIENT_COMMIT_ITEM_ADD)))
     {
-      apr_hash_index_t *hi;
+      const apr_array_header_t *children;
       apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+      int i;
+
+      SVN_ERR(svn_wc__node_get_children(&children, ctx->wc_ctx, local_abspath,
+                                        copy_mode, scratch_pool, iterpool));
 
       /* Loop over all other entries in this directory, skipping the
          "this dir" entry. */
-      for (hi = apr_hash_first(scratch_pool, entries);
-           hi;
-           hi = apr_hash_next(hi))
+      for (i = 0; i < children->nelts; i++)
         {
-          const char *name = svn_apr_hash_index_key(hi);
-          const svn_wc_entry_t *this_entry = svn_apr_hash_index_val(hi);
+          const char *this_abspath = APR_ARRAY_IDX(children, i, const char *);
+          const char *name = svn_dirent_basename(this_abspath, NULL);
+          const svn_wc_entry_t *this_entry;
           const char *full_path;
           const char *used_url = NULL;
           const char *this_cf_url = cf_url ? cf_url : copyfrom_url;
           svn_wc_adm_access_t *dir_access = adm_access;
-          const char *entry_abspath;
+          svn_error_t *err;
 
           svn_pool_clear(iterpool);
 
-          /* Skip "this dir" */
-          if (! strcmp(name, SVN_WC_ENTRY_THIS_DIR))
-            continue;
+          err = svn_wc__get_entry_versioned(&this_entry, ctx->wc_ctx,
+                                            this_abspath, svn_node_unknown,
+                                            copy_mode, FALSE,
+                                            iterpool, iterpool);
+
+          if (err && err->apr_err == SVN_ERR_ENTRY_NOT_FOUND)
+            {
+              svn_error_clear(err);
+              SVN_ERR(svn_wc__get_entry_versioned(&this_entry, ctx->wc_ctx,
+                                                  this_abspath, svn_node_dir,
+                                                  copy_mode, TRUE,
+                                                  iterpool, iterpool));
+            }
+          else
+            SVN_ERR(err);
 
           /* Skip the excluded item. */
           if (this_entry->depth == svn_depth_exclude)
@@ -749,8 +760,6 @@ harvest_committables(apr_hash_t *committables,
             continue;
 
           full_path = svn_dirent_join(path, name, iterpool);
-          SVN_ERR(svn_dirent_get_absolute(&entry_abspath, full_path,
-                                          iterpool));
           if (this_cf_url)
             this_cf_url = svn_path_url_add_component2(this_cf_url, name, iterpool);
 
@@ -796,7 +805,7 @@ harvest_committables(apr_hash_t *committables,
                                   == svn_wc_schedule_delete))
                             {
                               if (svn_wc__changelist_match(ctx->wc_ctx,
-                                                           entry_abspath,
+                                                           this_abspath,
                                                            changelists,
                                                            iterpool))
                                 {
@@ -987,7 +996,7 @@ svn_client__harvest_committables(apr_hash_t **committables,
        * conflicts error instead of a "not under version control". */
       if (err && (err->apr_err == SVN_ERR_ENTRY_NOT_FOUND))
         {
-          svn_wc_conflict_description_t *conflict = NULL;
+          svn_wc_conflict_description2_t *conflict;
           svn_wc__get_tree_conflict(&conflict, ctx->wc_ctx, target_abspath,
                                     pool, subpool);
           if (conflict != NULL)
@@ -996,7 +1005,7 @@ svn_client__harvest_committables(apr_hash_t **committables,
               return svn_error_createf(
                        SVN_ERR_WC_FOUND_CONFLICT, NULL,
                        _("Aborting commit: '%s' remains in conflict"),
-                       svn_dirent_local_style(conflict->path, pool));
+                       svn_dirent_local_style(conflict->local_abspath, pool));
             }
         }
       SVN_ERR(err);
@@ -1011,27 +1020,13 @@ svn_client__harvest_committables(apr_hash_t **committables,
       if ((entry->schedule == svn_wc_schedule_add)
           || (entry->schedule == svn_wc_schedule_replace))
         {
-          const char *parent = svn_dirent_dirname(target, subpool);
-          svn_wc_adm_access_t *parent_access;
-          const svn_wc_entry_t *p_entry = NULL;
+          const char *parent_abspath = svn_dirent_dirname(target_abspath,
+                                                          subpool);
+          const svn_wc_entry_t *p_entry;
 
-          err = svn_wc_adm_retrieve(&parent_access, parent_adm,
-                                    parent, subpool);
-          if (err && err->apr_err == SVN_ERR_WC_NOT_LOCKED)
-            {
-              svn_error_clear(err);
-              SVN_ERR(svn_wc__adm_open_in_context(&parent_access, ctx->wc_ctx,
-                                                  parent, FALSE, 0,
-                                                  ctx->cancel_func,
-                                                  ctx->cancel_baton, subpool));
-            }
-          else if (err)
-            {
-              return err;
-            }
-
-          SVN_ERR(svn_wc_entry(&p_entry, parent, parent_access,
-                               FALSE, subpool));
+          SVN_ERR(svn_wc__maybe_get_entry(&p_entry, ctx->wc_ctx,
+                                          parent_abspath, svn_node_dir,
+                                          FALSE, FALSE, subpool, subpool));
           if (! p_entry)
             return svn_error_createf
               (SVN_ERR_WC_CORRUPT, NULL,
@@ -1043,7 +1038,7 @@ svn_client__harvest_committables(apr_hash_t **committables,
               /* Copy the parent and target into pool; subpool
                  lasts only for this loop iteration, and we check
                  danglers after the loop is over. */
-              apr_hash_set(danglers, apr_pstrdup(pool, parent),
+              apr_hash_set(danglers, svn_dirent_dirname(target, pool),
                            APR_HASH_KEY_STRING,
                            apr_pstrdup(pool, target));
             }

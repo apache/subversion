@@ -46,7 +46,7 @@ static const char *unidiff =
   "===================================================================" NL
   "--- A/D/gamma.orig"                                                  NL
   "+++ A/D/gamma"                                                       NL
-  "@@ -1 +1,2 @@"                                                       NL
+  "@@ -1,2 +1 @@"                                                       NL
   " This is the file 'gamma'."                                          NL
   "-some less bytes to 'gamma'"                                         NL
   ""                                                                    NL
@@ -99,7 +99,7 @@ test_parse_unidiff(apr_pool_t *pool)
   /* Make sure original text was parsed correctly. */
   SVN_ERR(svn_stream_readline(hunk->original_text, &buf, NL, &eof, pool));
   SVN_ERR_ASSERT(! eof);
-  SVN_ERR_ASSERT(! strcmp(buf->data, " This is the file 'gamma'."));
+  SVN_ERR_ASSERT(! strcmp(buf->data, "This is the file 'gamma'."));
   /* Now we should get EOF. */
   SVN_ERR(svn_stream_readline(hunk->original_text, &buf, NL, &eof, pool));
   SVN_ERR_ASSERT(eof);
@@ -108,10 +108,10 @@ test_parse_unidiff(apr_pool_t *pool)
   /* Make sure modified text was parsed correctly. */
   SVN_ERR(svn_stream_readline(hunk->modified_text, &buf, NL, &eof, pool));
   SVN_ERR_ASSERT(! eof);
-  SVN_ERR_ASSERT(! strcmp(buf->data, " This is the file 'gamma'."));
+  SVN_ERR_ASSERT(! strcmp(buf->data, "This is the file 'gamma'."));
   SVN_ERR(svn_stream_readline(hunk->modified_text, &buf, NL, &eof, pool));
   SVN_ERR_ASSERT(! eof);
-  SVN_ERR_ASSERT(! strcmp(buf->data, "+some more bytes to 'gamma'"));
+  SVN_ERR_ASSERT(! strcmp(buf->data, "some more bytes to 'gamma'"));
   /* Now we should get EOF. */
   SVN_ERR(svn_stream_readline(hunk->modified_text, &buf, NL, &eof, pool));
   SVN_ERR_ASSERT(eof);
@@ -128,10 +128,10 @@ test_parse_unidiff(apr_pool_t *pool)
   /* Make sure original text was parsed correctly. */
   SVN_ERR(svn_stream_readline(hunk->original_text, &buf, NL, &eof, pool));
   SVN_ERR_ASSERT(! eof);
-  SVN_ERR_ASSERT(! strcmp(buf->data, " This is the file 'gamma'."));
+  SVN_ERR_ASSERT(! strcmp(buf->data, "This is the file 'gamma'."));
   SVN_ERR(svn_stream_readline(hunk->original_text, &buf, NL, &eof, pool));
   SVN_ERR_ASSERT(! eof);
-  SVN_ERR_ASSERT(! strcmp(buf->data, "-some less bytes to 'gamma'"));
+  SVN_ERR_ASSERT(! strcmp(buf->data, "some less bytes to 'gamma'"));
   /* Now we should get EOF. */
   SVN_ERR(svn_stream_readline(hunk->original_text, &buf, NL, &eof, pool));
   SVN_ERR_ASSERT(eof);
@@ -140,7 +140,7 @@ test_parse_unidiff(apr_pool_t *pool)
   /* Make sure modified text was parsed correctly. */
   SVN_ERR(svn_stream_readline(hunk->modified_text, &buf, NL, &eof, pool));
   SVN_ERR_ASSERT(! eof);
-  SVN_ERR_ASSERT(! strcmp(buf->data, " This is the file 'gamma'."));
+  SVN_ERR_ASSERT(! strcmp(buf->data, "This is the file 'gamma'."));
   /* Now we should get EOF. */
   SVN_ERR(svn_stream_readline(hunk->modified_text, &buf, NL, &eof, pool));
   SVN_ERR_ASSERT(eof);

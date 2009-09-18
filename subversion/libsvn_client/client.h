@@ -77,16 +77,17 @@ svn_client__derive_location(const char **url,
                             apr_pool_t *result_pool,
                             apr_pool_t *scratch_pool);
 
-/* Get the repository URL and revision number for WC entry ENTRY,
-   which is sometimes the entry's copyfrom info rather than its actual
+/* Get the repository URL and revision number for LOCAL_ABSPATH,
+   which is sometimes the path's copyfrom info rather than its actual
    URL and revision. */
 svn_error_t *
 svn_client__entry_location(const char **url,
                            svn_revnum_t *revnum,
-                           const char *path_or_url,
+                           svn_wc_context_t *wc_ctx,
+                           const char *local_abspath,
                            enum svn_opt_revision_kind peg_rev_kind,
-                           const svn_wc_entry_t *entry,
-                           apr_pool_t *pool);
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool);
 
 /* Set *REVNUM to the revision number identified by REVISION.
 

@@ -50,7 +50,8 @@
 /* Path type definition. Used only by internal functions. */
 typedef enum {
   type_uri,
-  type_dirent
+  type_dirent,
+  type_relpath
 } path_type_t;
 
 
@@ -78,9 +79,16 @@ internal_style(path_type_t type, const char *path, apr_pool_t *pool)
     }
 #endif
 
-  return type == type_uri ? svn_uri_canonicalize(path, pool)
-                          : svn_dirent_canonicalize(path, pool);
-  /* FIXME: Should also remove trailing /.'s, if the style says so. */
+  switch (type)
+    {
+      case type_dirent:
+        return svn_dirent_canonicalize(path, pool);
+      case type_relpath:
+        return svn_relpath_canonicalize(path, pool);
+      case type_uri:
+      default:
+        return svn_uri_canonicalize(path, pool);
+    }
 }
 
 /* Return a local-style new path based on PATH, allocated in POOL.
@@ -269,6 +277,25 @@ dirent_is_rooted(const char *dirent)
 }
 
 /* Return the length of substring necessary to encompass the entire
+ * previous relpath segment in RELPATH, which should be a LEN byte string.
+ *
+ * A trailing slash will not be included in the returned length.
+ */
+static apr_size_t
+relpath_previous_segment(const char *relpath,
+                         apr_size_t len)
+{
+  if (len == 0)
+    return 0;
+
+  --len;
+  while (len > 0 && relpath[len] != '/')
+    --len;
+
+  return len;
+}
+
+/* Return the length of substring necessary to encompass the entire
  * previous uri segment in URI, which should be a LEN byte string.
  *
  * A trailing slash will not be included in the returned length except
@@ -377,7 +404,7 @@ canonicalize(path_type_t type, const char *path, apr_pool_t *pool)
         }
     }
 
-  if (! url)
+  if (! url && type != type_relpath)
     {
       src = path;
       /* If this is an absolute path, then just copy over the initial
@@ -702,10 +729,16 @@ is_ancestor(path_type_t type, const char *path1, const char *path2)
 
   /* If path1 is empty and path2 is not absolute, then path1 is an ancestor. */
   if (SVN_PATH_IS_EMPTY(path1))
-    {
-      return type == type_uri ? ! svn_uri_is_absolute(path2)
-                              : ! dirent_is_rooted(path2);
-    }
+    switch (type)
+     {
+       case type_dirent:
+         return !dirent_is_rooted(path2);
+       case type_relpath:
+         return TRUE;
+       case type_uri:
+       default:
+         return !svn_uri_is_absolute(path2);
+     }
 
   /* If path1 is a prefix of path2, then:
      - If path1 ends in a path separator,
@@ -737,6 +770,20 @@ const char *
 svn_dirent_local_style(const char *dirent, apr_pool_t *pool)
 {
   return local_style(type_dirent, dirent, pool);
+}
+
+const char *
+svn_relpath_internal_style(const char *dirent,
+                           apr_pool_t *pool)
+{
+  return internal_style(type_relpath, dirent, pool);
+}
+
+const char *
+svn_relpath_local_style(const char *dirent,
+                        apr_pool_t *pool)
+{
+  return local_style(type_relpath, dirent, pool);
 }
 
 const char *
@@ -1016,6 +1063,32 @@ char *svn_dirent_join_many(apr_pool_t *pool, const char *base, ...)
 }
 
 char *
+svn_relpath_join(const char *base,
+                 const char *component,
+                 apr_pool_t *pool)
+{
+  apr_size_t blen = strlen(base);
+  apr_size_t clen = strlen(component);
+  char *path;
+
+  assert(svn_relpath_is_canonical(base, pool));
+  assert(svn_relpath_is_canonical(component, pool));
+
+  /* If either is empty return the other */
+  if (blen == 0)
+    return apr_pmemdup(pool, component, clen + 1);
+  if (clen == 0)
+    return apr_pmemdup(pool, base, blen + 1);
+
+  path = apr_palloc(pool, blen + 1 + clen + 1);
+  memcpy(path, base, blen);
+  path[blen] = '/';
+  memcpy(path + blen + 1, component, clen + 1);
+
+  return path;
+}
+
+char *
 svn_uri_join(const char *base, const char *component, apr_pool_t *pool)
 {
   apr_size_t blen = strlen(base);
@@ -1120,6 +1193,52 @@ svn_dirent_split(const char *dirent,
 }
 
 char *
+svn_relpath_dirname(const char *relpath,
+                    apr_pool_t *pool)
+{
+  apr_size_t len = strlen(relpath);
+
+  assert(svn_relpath_is_canonical(relpath, pool));
+
+  return apr_pstrmemdup(pool, relpath,
+                        relpath_previous_segment(relpath, len));
+}
+
+const char *
+svn_relpath_basename(const char *relpath,
+                     apr_pool_t *pool)
+{
+  apr_size_t len = strlen(relpath);
+  apr_size_t start;
+
+  assert(!pool || svn_relpath_is_canonical(relpath, pool));
+
+  start = len;
+  while (start > 0 && relpath[start - 1] != '/')
+    --start;
+
+  if (pool)
+    return apr_pstrmemdup(pool, relpath + start, len - start);
+  else
+    return relpath + start;
+}
+
+void
+svn_relpath_split(const char *relpath,
+                  const char **dirpath,
+                  const char **base_name,
+                  apr_pool_t *pool)
+{
+  assert(dirpath != base_name);
+
+  if (dirpath)
+    *dirpath = svn_relpath_dirname(relpath, pool);
+
+  if (base_name)
+    *base_name = svn_relpath_basename(relpath, pool);
+}
+
+char *
 svn_uri_dirname(const char *uri, apr_pool_t *pool)
 {
   apr_size_t len = strlen(uri);
@@ -1178,6 +1297,16 @@ svn_dirent_get_longest_ancestor(const char *dirent1,
   return apr_pstrndup(pool, dirent1,
                       get_longest_ancestor_length(type_dirent, dirent1,
                                                   dirent2, pool));
+}
+
+char *
+svn_relpath_get_longest_ancestor(const char *relpath1,
+                                 const char *relpath2,
+                                 apr_pool_t *pool)
+{
+  return apr_pstrndup(pool, relpath1,
+                      get_longest_ancestor_length(type_relpath, relpath1,
+                                                  relpath2, pool));
 }
 
 char *
@@ -1246,6 +1375,14 @@ svn_dirent_is_child(const char *dirent1,
 }
 
 const char *
+svn_relpath_is_child(const char *relpath1,
+                     const char *relpath2,
+                     apr_pool_t *pool)
+{
+  return is_child(type_relpath, relpath1, relpath2, pool);
+}
+
+const char *
 svn_uri_is_child(const char *uri1,
                  const char *uri2,
                  apr_pool_t *pool)
@@ -1257,6 +1394,12 @@ svn_boolean_t
 svn_dirent_is_ancestor(const char *dirent1, const char *dirent2)
 {
   return is_ancestor(type_dirent, dirent1, dirent2);
+}
+
+svn_boolean_t
+svn_relpath_is_ancestor(const char *relpath1, const char *relpath2)
+{
+  return is_ancestor(type_relpath, relpath1, relpath2);
 }
 
 svn_boolean_t
@@ -1297,6 +1440,28 @@ svn_dirent_skip_ancestor(const char *dirent1,
 }
 
 const char *
+svn_relpath_skip_ancestor(const char *relpath1,
+                         const char *relpath2)
+{
+  apr_size_t len = strlen(relpath1);
+
+  if (0 != memcmp(relpath1, relpath2, len))
+    return relpath2; /* relpath1 is no ancestor of relpath2 */
+
+  if (relpath2[len] == 0)
+    return ""; /* relpath1 == relpath2 */
+
+  if (len == 1 && relpath2[0] == '/')
+    return relpath2 + 1;
+
+  if (relpath2[len] == '/')
+    return relpath2 + len + 1;
+
+  return relpath2;
+}
+
+
+const char *
 svn_uri_skip_ancestor(const char *uri1,
                       const char *uri2)
 {
@@ -1316,18 +1481,6 @@ svn_uri_skip_ancestor(const char *uri1,
 
   return uri2;
 }
-
-/** Returns the part of @a path2 that is below @a path1, or "" iif @a path1
- * is equal to @a path2. If @a path2 is not below @a path1, return @a path2.
- *
- * This function assumes @a path1 and @a path2 are both absolute or relative
- * in the same way.
- *
- * @since New in 1.7.
- */
-const char *
-svn_uri_skip_ancestor(const char *path1,
-                      const char *path2);
 
 svn_boolean_t
 svn_dirent_is_absolute(const char *dirent)
@@ -1400,6 +1553,12 @@ svn_uri_canonicalize(const char *uri, apr_pool_t *pool)
 }
 
 const char *
+svn_relpath_canonicalize(const char *relpath, apr_pool_t *pool)
+{
+  return canonicalize(type_relpath, relpath, pool);;
+}
+
+const char *
 svn_dirent_canonicalize(const char *dirent, apr_pool_t *pool)
 {
   const char *dst = canonicalize(type_dirent, dirent, pool);;
@@ -1429,6 +1588,52 @@ svn_boolean_t
 svn_dirent_is_canonical(const char *dirent, apr_pool_t *pool)
 {
   return (strcmp(dirent, svn_dirent_canonicalize(dirent, pool)) == 0);
+}
+
+svn_boolean_t
+svn_relpath_is_canonical(const char *relpath,
+                         apr_pool_t *pool)
+{
+  const char *ptr = relpath, *seg = relpath;
+
+  /* RELPATH is canonical if it has:
+   *  - no '.' segments
+   *  - no start and closing '/'
+   *  - no '//'
+   */
+
+  if (*relpath == '\0')
+    return TRUE;
+
+  if (*ptr == '/')
+    return FALSE;
+
+  /* Now validate the rest of the path. */
+  while(1)
+    {
+      apr_size_t seglen = ptr - seg;
+
+      if (seglen == 1 && *seg == '.')
+        return FALSE;  /*  /./   */
+
+      if (*ptr == '/' && *(ptr+1) == '/')
+        return FALSE;  /*  //    */
+
+      if (! *ptr && *(ptr - 1) == '/')
+        return FALSE;  /* foo/  */
+
+      if (! *ptr)
+        break;
+
+      if (*ptr == '/')
+        ptr++;
+      seg = ptr;
+
+      while (*ptr && (*ptr != '/'))
+        ptr++;
+    }
+
+  return TRUE;
 }
 
 svn_boolean_t
@@ -1560,7 +1765,7 @@ svn_dirent_condense_targets(const char **pcommon,
   /* Get the absolute path of the first target. */
   SVN_ERR(svn_dirent_get_absolute(pcommon,
                                   APR_ARRAY_IDX(targets, 0, const char *),
-                                  result_pool));
+                                  scratch_pool));
 
   /* Early exit when there's only one dirent to work on. */
   if (targets->nelts == 1)
@@ -1689,6 +1894,170 @@ svn_dirent_condense_targets(const char **pcommon,
               if (rel_item[0] &&
                   ! svn_dirent_is_root(*pcommon, basedir_len))
                 rel_item++;
+            }
+
+          APR_ARRAY_PUSH(*pcondensed_targets, const char *)
+            = apr_pstrdup(result_pool, rel_item);
+        }
+    }
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_uri_condense_targets(const char **pcommon,
+                         apr_array_header_t **pcondensed_targets,
+                         const apr_array_header_t *targets,
+                         svn_boolean_t remove_redundancies,
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool)
+{
+  int i, j, num_condensed = targets->nelts;
+  apr_array_header_t *uri_targets;
+  svn_boolean_t *removed;
+  size_t basedir_len;
+
+  /* Early exit when there's no data to work on. */
+  if (targets->nelts <= 0)
+    {
+      *pcommon = NULL;
+      if (pcondensed_targets)
+        *pcondensed_targets = NULL;
+      return SVN_NO_ERROR;
+    }
+
+  *pcommon = svn_uri_canonicalize(APR_ARRAY_IDX(targets, 0, const char *),
+                                  scratch_pool);
+
+  /* Early exit when there's only one uri to work on. */
+  if (targets->nelts == 1)
+    {
+      if (pcondensed_targets)
+        *pcondensed_targets = apr_array_make(result_pool, 0,
+                                             sizeof(const char *));
+      return SVN_NO_ERROR;
+    }
+
+  /* Find the pcommon argument by finding what is common in all of the
+     uris. NOTE: This is not as efficient as it could be.  The calculation
+     of the basedir could be done in the loop below, which would 
+     save some calls to svn_uri_get_longest_ancestor.  I decided to do it
+     this way because I thought it would be simpler, since this way, we don't
+     even do the loop if we don't need to condense the targets. */
+
+  removed = apr_pcalloc(scratch_pool, (targets->nelts *
+                                          sizeof(svn_boolean_t)));
+  uri_targets = apr_array_make(scratch_pool, targets->nelts,
+                               sizeof(const char *));
+
+  APR_ARRAY_PUSH(uri_targets, const char *) = *pcommon;
+
+  for (i = 1; i < targets->nelts; ++i)
+    {
+      const char *uri = svn_uri_canonicalize(
+                           APR_ARRAY_IDX(targets, i, const char *), 
+                           scratch_pool);
+      APR_ARRAY_PUSH(uri_targets, const char *) = uri;
+
+      *pcommon = svn_uri_get_longest_ancestor(*pcommon, uri,
+                                              scratch_pool);
+    }
+
+  *pcommon = apr_pstrdup(result_pool, *pcommon);
+
+  if (pcondensed_targets != NULL)
+    {
+      if (remove_redundancies)
+        {
+          /* Find the common part of each pair of targets.  If
+             common part is equal to one of the dirents, the other
+             is a child of it, and can be removed.  If a target is
+             equal to *pcommon, it can also be removed. */
+
+          /* First pass: when one non-removed target is a child of
+             another non-removed target, remove the child. */
+          for (i = 0; i < uri_targets->nelts; ++i)
+            {
+              if (removed[i])
+                continue;
+
+              for (j = i + 1; j < uri_targets->nelts; ++j)
+                {
+                  const char *uri_i;
+                  const char *uri_j;
+                  const char *ancestor;
+
+                  if (removed[j])
+                    continue;
+
+                  uri_i = APR_ARRAY_IDX(uri_targets, i, const char *);
+                  uri_j = APR_ARRAY_IDX(uri_targets, j, const char *);
+
+                  ancestor = svn_uri_get_longest_ancestor(uri_i,
+                                                          uri_j,
+                                                          scratch_pool);
+
+                  if (*ancestor == '\0')
+                    continue;
+
+                  if (strcmp(ancestor, uri_i) == 0)
+                    {
+                      removed[j] = TRUE;
+                      num_condensed--;
+                    }
+                  else if (strcmp(ancestor, uri_j) == 0)
+                    {
+                      removed[i] = TRUE;
+                      num_condensed--;
+                    }
+                }
+            }
+
+          /* Second pass: when a target is the same as *pcommon,
+             remove the target. */
+          for (i = 0; i < uri_targets->nelts; ++i)
+            {
+              const char *uri_targets_i = APR_ARRAY_IDX(uri_targets, i,
+                                                        const char *);
+
+              if ((strcmp(uri_targets_i, *pcommon) == 0) && (! removed[i]))
+                {
+                  removed[i] = TRUE;
+                  num_condensed--;
+                }
+            }
+        }
+
+      /* Now create the return array, and copy the non-removed items */
+      basedir_len = strlen(*pcommon);
+      *pcondensed_targets = apr_array_make(result_pool, num_condensed,
+                                           sizeof(const char *));
+
+      for (i = 0; i < uri_targets->nelts; ++i)
+        {
+          const char *rel_item = APR_ARRAY_IDX(uri_targets, i, const char *);
+
+          /* Skip this if it's been removed. */
+          if (removed[i])
+            continue;
+
+          /* If a common prefix was found, condensed_targets are given
+             relative to that prefix.  */
+          if (basedir_len > 0)
+            {
+              /* Only advance our pointer past a dirent separator if
+                 REL_ITEM isn't the same as *PCOMMON.
+
+                 If *PCOMMON is a root dirent, basedir_len will already
+                 include the closing '/', so never advance the pointer
+                 here.
+                 */
+              rel_item += basedir_len;
+              if ((rel_item[0] == '/') ||
+                  (rel_item[0] && !svn_uri_is_root(*pcommon, basedir_len)))
+                {
+                  rel_item++;
+                }
             }
 
           APR_ARRAY_PUSH(*pcondensed_targets, const char *)

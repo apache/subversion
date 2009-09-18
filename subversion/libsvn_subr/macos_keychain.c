@@ -92,7 +92,7 @@ keychain_password_set(apr_hash_t *creds,
                                                realmstring, username == NULL
                                                  ? 0
                                                  : (int) strlen(username),
-                                               username, strlen(password),
+                                               username, (int) strlen(password),
                                                password, NULL);
     }
   else
