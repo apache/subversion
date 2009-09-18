@@ -194,7 +194,7 @@ svn_delta_path_driver(const svn_delta_editor_t *editor,
            current one.  For the first iteration, this is just the
            empty string. ***/
       if (i > 0)
-        common = svn_path_get_longest_ancestor(last_path, path, iterpool);
+        common = svn_relpath_get_longest_ancestor(last_path, path, iterpool);
       common_len = strlen(common);
 
       /*** Step B - Close any directories between the last path and
