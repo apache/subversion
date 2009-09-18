@@ -176,8 +176,9 @@ restore_file(svn_wc__db_t *db,
     }
 
   /* Modify our entry's text-timestamp to match the working file. */
-  return svn_wc__entry_modify(adm_access, svn_dirent_basename(file_path, pool),
-                              &newentry, SVN_WC__ENTRY_MODIFY_TEXT_TIME, pool);
+  return svn_error_return(
+    svn_wc__entry_modify2(db, local_abspath, svn_node_file, FALSE,
+                          &newentry, SVN_WC__ENTRY_MODIFY_TEXT_TIME, pool));
 }
 
 /* Try to restore LOCAL_ABSPATH of node type KIND and if successfull,
