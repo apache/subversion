@@ -68,7 +68,6 @@ extern "C" {
 #define SVN_WC__ENTRY_ATTR_CMT_REV            "committed-rev"
 #define SVN_WC__ENTRY_ATTR_CMT_DATE           "committed-date"
 #define SVN_WC__ENTRY_ATTR_CMT_AUTHOR         "last-author"
-#define SVN_WC__ENTRY_ATTR_UUID               "uuid"
 #define SVN_WC__ENTRY_ATTR_WORKING_SIZE       "working-size"
 
 /* Attribute values for 'schedule' */
