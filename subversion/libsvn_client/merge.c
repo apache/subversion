@@ -5441,7 +5441,7 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
 
               SVN_ERR(svn_wc__node_get_children(&children,
                                                 merge_cmd_baton->ctx->wc_ctx,
-                                                child_abspath, TRUE, iterpool,
+                                                child_abspath, FALSE, iterpool,
                                                 iterpool));
               for (j = 0; j < children->nelts; j++)
                 {
