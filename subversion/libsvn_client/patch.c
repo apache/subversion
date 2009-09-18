@@ -1010,10 +1010,24 @@ apply_one_patch(svn_patch_t *patch, const char *wc_path,
                     }
                   else
                     {
+                      svn_error_t *err;
+
                       /* Install patched temporary file over working file. 
                        * ### Should this rather be done in a loggy fashion? */
-                      SVN_ERR(svn_io_file_rename(target->result_path,
-                                                 target->abs_path, pool));
+                      err = svn_io_file_rename(target->result_path,
+                                               target->abs_path, pool);
+                      if (err)
+                        {
+                          /* Renaming failed, try to copy+delete instead.
+                           * We may have attempted a cross-device rename. */
+                          svn_error_clear(err);
+                          SVN_ERR(svn_io_copy_file(target->result_path,
+                                                   target->abs_path, FALSE,
+                                                   pool));
+                          SVN_ERR(svn_io_remove_file2(target->result_path,
+                                                      FALSE, pool));
+                        }
+
                       if (target->executable)
                         SVN_ERR(svn_io_set_file_executable(target->abs_path,
                                                            TRUE, FALSE, pool));
