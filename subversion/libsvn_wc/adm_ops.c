@@ -2891,9 +2891,8 @@ attempt_deletion(const char *parent_dir,
    ### attempt at resolving.
 */
 static svn_error_t *
-resolve_conflict_on_node(const char *path,
-                         svn_wc_adm_access_t *conflict_dir,
-                         const char *base_name,
+resolve_conflict_on_node(svn_wc__db_t *db,
+                         const char *local_abspath,
                          svn_boolean_t resolve_text,
                          svn_boolean_t resolve_props,
                          svn_wc_conflict_choice_t conflict_choice,
@@ -2903,21 +2902,25 @@ resolve_conflict_on_node(const char *path,
   svn_boolean_t was_present, need_feedback = FALSE;
   apr_uint64_t modify_flags = 0;
   svn_wc_entry_t tmp_entry;
-  svn_wc__db_t *db = svn_wc__adm_get_db(conflict_dir);
-  const char *local_abspath;
   const char *conflict_old;
   const char *conflict_new;
   const char *conflict_working;
   const char *prop_reject_file;
+  svn_wc__db_kind_t kind;
+  const char *conflict_dir_abspath;
 
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
-  SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+  SVN_ERR(svn_wc__db_read_info(NULL, &kind, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, &conflict_old, &conflict_new,
                                &conflict_working, &prop_reject_file,
                                NULL, NULL,
                                db, local_abspath, pool, pool));
+
+  if (kind == svn_wc__db_kind_dir)
+    conflict_dir_abspath = local_abspath;
+  else
+    conflict_dir_abspath = svn_dirent_dirname(local_abspath, pool);
 
   if (resolve_text)
     {
@@ -2954,7 +2957,7 @@ resolve_conflict_on_node(const char *path,
 
                 SVN_ERR(svn_wc_create_tmp_file2(&tmp_f,
                                                 &auto_resolve_src,
-                                                svn_wc_adm_access_path(conflict_dir),
+                                                conflict_dir_abspath,
                                                 svn_io_file_del_none,
                                                 pool));
                 tmp_stream = svn_stream_from_aprfile2(tmp_f, FALSE, pool);
@@ -2985,40 +2988,39 @@ resolve_conflict_on_node(const char *path,
 
       if (auto_resolve_src)
         SVN_ERR(svn_io_copy_file(
-          svn_dirent_join(svn_wc_adm_access_path(conflict_dir),
-                          auto_resolve_src, pool),
-          path, TRUE, pool));
+          svn_dirent_join(conflict_dir_abspath, auto_resolve_src, pool),
+          local_abspath, TRUE, pool));
     }
 
   /* Yes indeed, being able to map a function over a list would be nice. */
   if (resolve_text && conflict_old)
     {
-      SVN_ERR(attempt_deletion(svn_wc_adm_access_path(conflict_dir),
-                               conflict_old, &was_present, pool));
+      SVN_ERR(attempt_deletion(conflict_dir_abspath, conflict_old,
+                               &was_present, pool));
       modify_flags |= SVN_WC__ENTRY_MODIFY_CONFLICT_OLD;
       tmp_entry.conflict_old = NULL;
       need_feedback |= was_present;
     }
   if (resolve_text && conflict_new)
     {
-      SVN_ERR(attempt_deletion(svn_wc_adm_access_path(conflict_dir),
-                               conflict_new, &was_present, pool));
+      SVN_ERR(attempt_deletion(conflict_dir_abspath, conflict_new,
+                               &was_present, pool));
       modify_flags |= SVN_WC__ENTRY_MODIFY_CONFLICT_NEW;
       tmp_entry.conflict_new = NULL;
       need_feedback |= was_present;
     }
   if (resolve_text && conflict_working)
     {
-      SVN_ERR(attempt_deletion(svn_wc_adm_access_path(conflict_dir),
-                               conflict_working, &was_present, pool));
+      SVN_ERR(attempt_deletion(conflict_dir_abspath, conflict_working,
+                               &was_present, pool));
       modify_flags |= SVN_WC__ENTRY_MODIFY_CONFLICT_WRK;
       tmp_entry.conflict_wrk = NULL;
       need_feedback |= was_present;
     }
   if (resolve_props && prop_reject_file)
     {
-      SVN_ERR(attempt_deletion(svn_wc_adm_access_path(conflict_dir),
-                               prop_reject_file, &was_present, pool));
+      SVN_ERR(attempt_deletion(conflict_dir_abspath, prop_reject_file,
+                               &was_present, pool));
       modify_flags |= SVN_WC__ENTRY_MODIFY_PREJFILE;
       tmp_entry.prejfile = NULL;
       need_feedback |= was_present;
@@ -3176,14 +3178,9 @@ resolve_found_entry_callback(const char *path,
   /* If this is a versioned entry, resolve its other conflicts, if any. */
   if (entry && (baton->resolve_text || baton->resolve_props))
     {
-      const char *base_name = svn_dirent_basename(path, pool);
-      svn_wc_adm_access_t *adm_access;
       svn_boolean_t did_resolve = FALSE;
 
-      SVN_ERR(svn_wc_adm_probe_retrieve(&adm_access, baton->adm_access,
-                                        path, pool));
-
-      SVN_ERR(resolve_conflict_on_node(path, adm_access, base_name,
+      SVN_ERR(resolve_conflict_on_node(baton->db, local_abspath,
                                        baton->resolve_text,
                                        baton->resolve_props,
                                        baton->conflict_choice,
