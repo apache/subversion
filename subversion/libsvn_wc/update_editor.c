@@ -676,13 +676,10 @@ complete_directory(struct edit_baton *eb,
                    svn_boolean_t is_root_dir,
                    apr_pool_t *pool)
 {
-  svn_wc_adm_access_t *adm_access;
-  apr_hash_t *entries;
-  const svn_wc_entry_t *entry;
-  apr_hash_index_t *hi;
-  apr_pool_t *subpool;
+  const apr_array_header_t *children;
+  int i;
+  apr_pool_t *iterpool;
   svn_wc_entry_t tmp_entry;
-  const char *name;
 
   /* If inside a tree conflict, do nothing. */
   if (in_skipped_tree(eb, local_abspath, pool)
@@ -739,68 +736,90 @@ complete_directory(struct edit_baton *eb,
       return SVN_NO_ERROR;
     }
 
-  /* All operations are on the in-memory entries hash. */
-  adm_access = svn_wc__adm_retrieve_internal2(eb->db, local_abspath, pool);
-  SVN_ERR(svn_wc_entries_read(&entries, adm_access, TRUE, pool));
-
   /* Mark THIS_DIR complete. */
-  entry = apr_hash_get(entries, SVN_WC_ENTRY_THIS_DIR, APR_HASH_KEY_STRING);
-  if (! entry)
-    return svn_error_createf(SVN_ERR_ENTRY_NOT_FOUND, NULL,
-                             _("No '.' entry in: '%s'"),
-                             svn_dirent_local_style(local_abspath, pool));
   tmp_entry.incomplete = FALSE;
-  SVN_ERR(svn_wc__entry_modify(adm_access, NULL /* THIS_DIR */,
-                               &tmp_entry, SVN_WC__ENTRY_MODIFY_INCOMPLETE,
-                               pool));
-
-  /* After a depth upgrade the entry must reflect the new depth.
-     Upgrading to infinity changes the depth of *all* directories,
-     upgrading to something else only changes the target. */
-  if (eb->depth_is_sticky &&
-      (eb->requested_depth == svn_depth_infinity
-       || (strcmp(local_abspath, eb->target_abspath) == 0
-           && eb->requested_depth > entry->depth)))
-    {
-      SVN_ERR(svn_wc__set_depth(eb->db, local_abspath, eb->requested_depth,
+  SVN_ERR(svn_wc__entry_modify2(eb->db, local_abspath, svn_node_dir, FALSE,
+                                &tmp_entry, SVN_WC__ENTRY_MODIFY_INCOMPLETE,
                                 pool));
+
+  if (eb->depth_is_sticky)
+    {
+      svn_depth_t depth;
+
+      SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, &depth, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                   eb->db, local_abspath, pool, pool));
+
+
+      if (depth != eb->requested_depth)
+      {
+        /* After a depth upgrade the entry must reflect the new depth.
+           Upgrading to infinity changes the depth of *all* directories,
+           upgrading to something else only changes the target. */
+
+        if ((eb->requested_depth == svn_depth_infinity)
+             || ((strcmp(local_abspath, eb->target_abspath) == 0)
+                 && eb->requested_depth > depth))
+          {
+            SVN_ERR(svn_wc__set_depth(eb->db, local_abspath,
+                                      eb->requested_depth, pool));
+          }
+      }
     }
 
   /* Remove any deleted or missing entries. */
-  subpool = svn_pool_create(pool);
-  for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
+  iterpool = svn_pool_create(pool);
+
+  SVN_ERR(svn_wc__db_read_children(&children, eb->db, local_abspath, pool,
+                                   iterpool));
+  for (i = 0; i < children->nelts; i++)
     {
-      const void *key;
-      void *val;
-      const svn_wc_entry_t *current_entry;
+      const svn_wc_entry_t *this_entry;
+      const char *name = APR_ARRAY_IDX(children, i, const char *);
       const char *node_abspath;
+      svn_error_t *err;
 
-      svn_pool_clear(subpool);
-      apr_hash_this(hi, &key, NULL, &val);
-      name = key;
-      current_entry = val;
+      svn_pool_clear(iterpool);
 
-      node_abspath = svn_dirent_join(local_abspath, name, subpool);
+      node_abspath = svn_dirent_join(local_abspath, name, iterpool);
+
+      /* Try to read the entry of a file */
+      err = svn_wc__get_entry(&this_entry, eb->db, node_abspath, FALSE,
+                              svn_node_file, FALSE, iterpool, iterpool);
+
+      /* Or the parent entry of a directory */
+      if (err && ((err->apr_err == SVN_ERR_NODE_UNEXPECTED_KIND) ||
+                  (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)))
+        {
+          svn_error_clear(err);
+          SVN_ERR(svn_wc__get_entry(&this_entry, eb->db, node_abspath,
+                                    FALSE, svn_node_dir, TRUE, iterpool,
+                                    iterpool));
+        }
+      else
+        SVN_ERR(err);
 
       /* Any entry still marked as deleted (and not schedule add) can now
          be removed -- if it wasn't undeleted by the update, then it
          shouldn't stay in the updated working set.  Schedule add items
          should remain.
       */
-      if (current_entry->deleted)
+      if (this_entry->deleted)
         {
-          if (current_entry->schedule != svn_wc_schedule_add)
-            {
-              SVN_ERR(svn_wc__entry_remove(eb->db, node_abspath, subpool));
-              apr_hash_set(entries, name, APR_HASH_KEY_STRING, NULL);
-            }
+          if (this_entry->schedule != svn_wc_schedule_add)
+              SVN_ERR(svn_wc__entry_remove(eb->db, node_abspath, iterpool));
           else
             {
               tmp_entry.deleted = FALSE;
-              SVN_ERR(svn_wc__entry_modify(adm_access, current_entry->name,
-                                           &tmp_entry,
-                                           SVN_WC__ENTRY_MODIFY_DELETED,
-                                           subpool));
+
+              SVN_ERR(svn_wc__entry_modify2(eb->db, node_abspath,
+                                            this_entry->kind,
+                                            (this_entry->kind == svn_node_dir),
+                                            &tmp_entry,
+                                            SVN_WC__ENTRY_MODIFY_DELETED,
+                                            iterpool));
             }
         }
       /* An absent entry might have been reconfirmed as absent, and the way
@@ -808,45 +827,43 @@ complete_directory(struct edit_baton *eb,
          number different from the target revision of the update means the
          update never mentioned the item, so the entry should be
          removed. */
-      else if (current_entry->absent
-               && (current_entry->revision != *(eb->target_revision)))
+      else if (this_entry->absent
+               && (this_entry->revision != *(eb->target_revision)))
         {
-          SVN_ERR(svn_wc__entry_remove(eb->db, node_abspath, subpool));
-          apr_hash_set(entries, name, APR_HASH_KEY_STRING, NULL);
+          SVN_ERR(svn_wc__entry_remove(eb->db, node_abspath, iterpool));
         }
-      else if (current_entry->kind == svn_node_dir)
+      else if (this_entry->kind == svn_node_dir)
         {
-          if (current_entry->depth == svn_depth_exclude)
+          if (this_entry->depth == svn_depth_exclude)
             {
               /* Clear the exclude flag if it is pulled in again. */
               if (eb->depth_is_sticky
                   && eb->requested_depth >= svn_depth_immediates)
                 {
                   SVN_ERR(svn_wc__set_depth(eb->db, node_abspath,
-                                            svn_depth_infinity, pool));
+                                            svn_depth_infinity, iterpool));
                 }
             }
-          else if ((svn_wc__adm_missing(eb->db, node_abspath, subpool))
-                   && (! current_entry->absent)
-                   && (current_entry->schedule != svn_wc_schedule_add))
+          else if ((svn_wc__adm_missing(eb->db, node_abspath, iterpool))
+                   && (!this_entry->absent)
+                   && (this_entry->schedule != svn_wc_schedule_add))
             {
-              SVN_ERR(svn_wc__entry_remove(eb->db, node_abspath, subpool));
-              apr_hash_set(entries, name, APR_HASH_KEY_STRING, NULL);
+              SVN_ERR(svn_wc__entry_remove(eb->db, node_abspath, iterpool));
 
               if (eb->notify_func)
                 {
                   svn_wc_notify_t *notify
                     = svn_wc_create_notify(node_abspath,
                                            svn_wc_notify_update_delete,
-                                           subpool);
-                  notify->kind = current_entry->kind;
-                  (* eb->notify_func)(eb->notify_baton, notify, subpool);
+                                           iterpool);
+                  notify->kind = this_entry->kind;
+                  (* eb->notify_func)(eb->notify_baton, notify, iterpool);
                 }
             }
         }
     }
 
-  svn_pool_destroy(subpool);
+  svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
 }
 
