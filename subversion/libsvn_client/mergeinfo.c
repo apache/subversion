@@ -1598,9 +1598,24 @@ svn_client_mergeinfo_get_merged(apr_hash_t **mergeinfo_p,
   SVN_ERR(get_mergeinfo(&mergeinfo_cat, &repos_root, path_or_url,
                         peg_revision, FALSE, ctx, pool, pool));
   if (mergeinfo_cat)
-    mergeinfo = apr_hash_get(mergeinfo_cat, path_or_url, APR_HASH_KEY_STRING);
+    {
+      const char *path_or_url_repos_rel;
+
+      if (! svn_path_is_url(path_or_url)
+          && ! svn_dirent_is_absolute(path_or_url))
+        SVN_ERR(svn_dirent_get_absolute(&path_or_url, path_or_url, pool));
+
+      SVN_ERR(svn_client__path_relative_to_root(&path_or_url_repos_rel,
+                                                ctx->wc_ctx, path_or_url,
+                                                repos_root, FALSE, NULL,
+                                                pool, pool));
+      mergeinfo = apr_hash_get(mergeinfo_cat, path_or_url_repos_rel,
+                               APR_HASH_KEY_STRING);
+    }
   else
-    mergeinfo = NULL;
+    {
+      mergeinfo = NULL;
+    }
 
   /* Copy the MERGEINFO hash items into another hash, but change
      the relative paths into full URLs. */
