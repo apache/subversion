@@ -974,6 +974,9 @@ apply_one_patch(svn_patch_t *patch, const char *wc_path,
                         target->conflicted = TRUE;
                         break;
                       case svn_wc_merge_no_merge:
+                        /* Unversioned obstruction.
+                         * ### Should we patch them or leave them alone? */
+                        break;
                       default:
                         SVN_ERR_MALFUNCTION();
                     }
