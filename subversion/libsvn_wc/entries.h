@@ -114,7 +114,7 @@ svn_error_t *svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
 /* Note: we use APR_INT64_C because APR 0.9 lacks APR_UINT64_C */
 #define SVN_WC__ENTRY_MODIFY_REVISION           APR_INT64_C(0x0000000000000001)
 #define SVN_WC__ENTRY_MODIFY_URL                APR_INT64_C(0x0000000000000002)
-#define SVN_WC__ENTRY_MODIFY_REPOS              APR_INT64_C(0x0000000000000004)
+/* OPEN */
 #define SVN_WC__ENTRY_MODIFY_KIND               APR_INT64_C(0x0000000000000008)
 #define SVN_WC__ENTRY_MODIFY_TEXT_TIME          APR_INT64_C(0x0000000000000010)
 /* OPEN */

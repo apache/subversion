@@ -2419,10 +2419,6 @@ fold_entry(apr_hash_t *entries,
   if (modify_flags & SVN_WC__ENTRY_MODIFY_URL)
     cur_entry->url = entry->url ? apr_pstrdup(pool, entry->url) : NULL;
 
-  /* Repository root */
-  if (modify_flags & SVN_WC__ENTRY_MODIFY_REPOS)
-    cur_entry->repos = entry->repos ? apr_pstrdup(pool, entry->repos) : NULL;
-
   /* Kind */
   if (modify_flags & SVN_WC__ENTRY_MODIFY_KIND)
     cur_entry->kind = entry->kind;
