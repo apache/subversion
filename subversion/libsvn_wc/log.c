@@ -1709,8 +1709,16 @@ loggy_path(const char **logy_path,
   SVN_ERR(svn_dirent_get_absolute(&abspath, path, pool));
   *logy_path = svn_dirent_is_child(adm_abspath, abspath, NULL);
 
-  if (! (*logy_path) && strcmp(abspath, adm_abspath) == 0)
-    *logy_path = SVN_WC_ENTRY_THIS_DIR;
+  if (! (*logy_path))
+    {
+      if (strcmp(abspath, adm_abspath) == 0) /* same path */
+        *logy_path = SVN_WC_ENTRY_THIS_DIR;
+      else /* not a child path */
+        return svn_error_createf(SVN_ERR_BAD_RELATIVE_PATH, NULL,
+                                 "path '%s' not a child of '%s'\n",
+                                 svn_dirent_local_style(path, pool),
+                                 svn_dirent_local_style(adm_abspath, pool));
+    }
 
   return SVN_NO_ERROR;
 }
