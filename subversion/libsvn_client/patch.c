@@ -123,9 +123,6 @@ typedef struct {
 
   /* True if the target ended up being deleted by the patch. */
   svn_boolean_t deleted;
-
-  /* True if the target has the executable bit set. */
-  svn_boolean_t executable;
 } patch_target_t;
 
 /* Resolve the exact path for a patch TARGET at path PATH_FROM_PATCHFILE,
@@ -335,9 +332,6 @@ init_patch_target(patch_target_t **target, const svn_patch_t *patch,
   new_target->deleted = FALSE;
   new_target->eof = FALSE;
   new_target->tempfiles = tempfiles;
-  SVN_ERR(svn_io_is_file_executable(&new_target->executable,
-                                    new_target->abs_path,
-                                    scratch_pool));
 
   *target = new_target;
   return SVN_NO_ERROR;
@@ -1008,10 +1002,7 @@ apply_one_patch(svn_patch_t *patch, const char *wc_path,
                       /* Install patched temporary file over working file. 
                        * ### Should this rather be done in a loggy fashion? */
                       SVN_ERR(svn_io_file_rename(target->result_path,
-                                                 target->abs_path, pool));
-                      if (target->executable)
-                        SVN_ERR(svn_io_set_file_executable(target->abs_path,
-                                                           TRUE, FALSE, pool));
+                                               target->abs_path, pool));
 
                       if (target->added)
                         {
