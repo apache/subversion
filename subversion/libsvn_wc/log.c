@@ -1702,7 +1702,7 @@ loggy_path(const char **logy_path,
         *logy_path = SVN_WC_ENTRY_THIS_DIR;
       else /* not a child path */
         return svn_error_createf(SVN_ERR_BAD_RELATIVE_PATH, NULL,
-                                 "path '%s' not a child of '%s'\n",
+                                 _("Path '%s' is not a child of '%s'"),
                                  svn_dirent_local_style(path, pool),
                                  svn_dirent_local_style(adm_abspath, pool));
     }
