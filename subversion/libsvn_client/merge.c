@@ -5377,13 +5377,12 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
                                merge_cmd_baton->ctx->cancel_baton,
                                pool));
 
-  /* CHILDREN_WITH_MERGEINFO must be in depth first order, but
-     svn_wc_walk_entries3() relies on svn_wc_entries_read() which means the
-     paths at a given directory level are not in any particular order.  Also,
-     we may need to add elements to the array to cover case 3) through 5) from
-     the docstring.  If so, it is more efficient to find and insert these
-     paths if the sibling paths are in a guaranteed depth-first order.  For
-     the first reason we sort the array, for the second reason we do it now
+  /* CHILDREN_WITH_MERGEINFO must be in depth first order, but the node
+     walk code returns nodes in a non particular order.  Also, we may need
+     to add elements to the array to cover case 3) through 5) from the
+     docstring.  If so, it is more efficient to find and insert these paths
+     if the sibling paths are in a guaranteed depth-first order.  For the
+     first reason we sort the array, for the second reason we do it now
      rather than at the end of this function. */
   qsort(children_with_mergeinfo->elts,
         children_with_mergeinfo->nelts,
