@@ -1093,6 +1093,9 @@ apply_textdiffs(const char *patch_path, const char *wc_path,
     {
       svn_pool_clear(iterpool);
 
+      if (ctx->cancel_func)
+        SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
+
       SVN_ERR(svn_diff__parse_next_patch(&patch, patch_file, patch_eol_str,
                                          iterpool, iterpool));
       if (patch)
