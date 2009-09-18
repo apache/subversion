@@ -927,6 +927,14 @@ svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
                                    SVN_WC__ENTRY_MODIFY_CHECKSUM,
                                    FALSE, pool);
 
+  /* UUID.
+
+     NOTE: we do not set a modify_flags value since this attribute only
+     occurs in old XML entries files. */
+  entry->uuid = extract_string(modify_flags, atts,
+                               SVN_WC__ENTRY_ATTR_UUID,
+                               0, FALSE, pool);
+
   /* Setup last-committed values. */
   {
     const char *cmt_datestr, *cmt_revstr;
