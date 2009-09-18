@@ -1232,11 +1232,8 @@ accumulate_entry_props(svn_stringbuf_t *log_accum,
           flags |= SVN_WC__ENTRY_MODIFY_CMT_DATE;
           SVN_ERR(svn_time_from_cstring(&tmp_entry.cmt_date, val, pool));
         }
-      else if (! strcmp(prop->name, SVN_PROP_ENTRY_UUID))
-        {
-          flags |= SVN_WC__ENTRY_MODIFY_UUID;
-          tmp_entry.uuid = val;
-        }
+      /* Starting with Subversion 1.7 we ignore the SVN_PROP_ENTRY_UUID
+         property here. */
     }
 
   if (flags)
