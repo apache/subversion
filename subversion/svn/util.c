@@ -1046,7 +1046,7 @@ static const svn_token_map_t map_node_kind_human[] =
   { N_("none"), svn_node_none },
   { N_("file"), svn_node_file },
   { N_("dir"),  svn_node_dir },
-  { N_(""),     svn_node_unknown },
+  { "",         svn_node_unknown },
   { NULL,       0 }
 };
 
