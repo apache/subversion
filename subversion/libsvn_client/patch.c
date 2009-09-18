@@ -1079,13 +1079,13 @@ apply_textdiffs(const char *patch_path, const char *wc_path,
   /* Create temporary files for hunk-merging. */
   SVN_ERR(svn_io_mktemp(&tempfiles->orig_file,
                         &tempfiles->orig_path, NULL, "svnpatch-orig",
-                        svn_io_file_del_on_close, pool, pool));
+                        svn_io_file_del_on_pool_cleanup, pool, pool));
   SVN_ERR(svn_io_mktemp(&tempfiles->mod_file,
                         &tempfiles->mod_path, NULL, "svnpatch-mod",
-                        svn_io_file_del_on_close, pool, pool));
+                        svn_io_file_del_on_pool_cleanup, pool, pool));
   SVN_ERR(svn_io_mktemp(&tempfiles->latest_file,
                         &tempfiles->latest_path, NULL, "svnpatch-latest",
-                        svn_io_file_del_on_close, pool, pool));
+                        svn_io_file_del_on_pool_cleanup, pool, pool));
 
   /* Apply patches. */
   iterpool = svn_pool_create(pool);
@@ -1101,11 +1101,6 @@ apply_textdiffs(const char *patch_path, const char *wc_path,
     }
   while (patch);
   svn_pool_destroy(iterpool);
-
-  /* Clean up temporary files. */
-  SVN_ERR(svn_io_file_close(tempfiles->orig_file, pool));
-  SVN_ERR(svn_io_file_close(tempfiles->mod_file, pool));
-  SVN_ERR(svn_io_file_close(tempfiles->latest_file, pool));
 
   return SVN_NO_ERROR;
 }
