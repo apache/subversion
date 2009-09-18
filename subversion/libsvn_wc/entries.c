@@ -2498,11 +2498,6 @@ fold_entry(apr_hash_t *entries,
       ? apr_pstrdup(pool, entry->cmt_author)
                             : NULL;
 
-  if (modify_flags & SVN_WC__ENTRY_MODIFY_UUID)
-    cur_entry->uuid = entry->uuid
-      ? apr_pstrdup(pool, entry->uuid)
-                            : NULL;
-
   /* LOCK flags are no longer passed to entry_modify().  */
 
   /* Changelist */

@@ -927,12 +927,6 @@ svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
                                    SVN_WC__ENTRY_MODIFY_CHECKSUM,
                                    FALSE, pool);
 
-  /* UUID. */
-  entry->uuid = extract_string(modify_flags, atts,
-                               SVN_WC__ENTRY_ATTR_UUID,
-                               SVN_WC__ENTRY_MODIFY_UUID,
-                               FALSE, pool);
-
   /* Setup last-committed values. */
   {
     const char *cmt_datestr, *cmt_revstr;

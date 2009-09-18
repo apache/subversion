@@ -697,8 +697,7 @@ log_do_modify_entry(struct log_runner *loggy,
      so it is safe to clear the value.  */
   if (modify_flags & (SVN_WC__ENTRY_MODIFY_CMT_REV
                       | SVN_WC__ENTRY_MODIFY_CMT_DATE
-                      | SVN_WC__ENTRY_MODIFY_CMT_AUTHOR
-                      | SVN_WC__ENTRY_MODIFY_UUID))
+                      | SVN_WC__ENTRY_MODIFY_CMT_AUTHOR))
     {
       entry->deleted = FALSE;
       modify_flags |= SVN_WC__ENTRY_MODIFY_DELETED;
@@ -1899,10 +1898,6 @@ svn_wc__loggy_entry_modify(svn_stringbuf_t **log_accum,
   ADD_ENTRY_ATTR(SVN_WC__ENTRY_MODIFY_URL,
                  SVN_WC__ENTRY_ATTR_URL,
                  entry->url);
-
-  ADD_ENTRY_ATTR(SVN_WC__ENTRY_MODIFY_UUID,
-                 SVN_WC__ENTRY_ATTR_UUID,
-                 entry->uuid);
 
   ADD_ENTRY_ATTR(SVN_WC__ENTRY_MODIFY_KIND,
                  SVN_WC__ENTRY_ATTR_KIND,
