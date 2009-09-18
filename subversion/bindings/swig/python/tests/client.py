@@ -54,7 +54,8 @@ class SubversionClientTestCase(unittest.TestCase):
     # We have to free client_ctx first, since it may be holding handles
     # to WC DBs
     del self.client_ctx
-    map(core.svn_io_remove_dir, self.cleanup_dirs)
+    for dir in self.cleanup_dirs:
+      core.svn_io_remove_dir(dir)
 
   def allocate_temp_dir(self, suffix = ""):
     temp_dir_name = core.svn_path_internal_style(tempfile.mkdtemp(suffix))
