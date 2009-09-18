@@ -3057,8 +3057,6 @@ struct resolve_callback_baton
   svn_boolean_t resolve_tree;
   /* The type of automatic conflict resolution to perform */
   svn_wc_conflict_choice_t conflict_choice;
-  /* An access baton for the tree, with write access */
-  svn_wc_adm_access_t *adm_access;
   /* Notification function and baton */
   svn_wc_notify_func2_t notify_func;
   void *notify_baton;
@@ -3260,7 +3258,6 @@ svn_wc_resolved_conflict4(const char *path,
   rcb.resolve_props = resolve_props;
   rcb.resolve_tree = resolve_tree;
   rcb.conflict_choice = conflict_choice;
-  rcb.adm_access = adm_access;
   rcb.notify_func = notify_func;
   rcb.notify_baton = notify_baton;
 
