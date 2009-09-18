@@ -1336,12 +1336,6 @@ open_root(void *edit_baton,
       /* Mark directory as being at target_revision, but incomplete. */
       tmp_entry.revision = *(eb->target_revision);
       tmp_entry.url = d->new_URL;
-      /* See open_directory() for why this check is necessary. */
-      if (eb->repos && svn_uri_is_ancestor(eb->repos, d->new_URL))
-        {
-          tmp_entry.repos = eb->repos;
-          flags |= SVN_WC__ENTRY_MODIFY_REPOS;
-        }
       tmp_entry.incomplete = TRUE;
       SVN_ERR(svn_wc_adm_retrieve(&adm_access, eb->adm_access,
                                   d->path, pool));
@@ -2734,15 +2728,6 @@ open_directory(const char *path,
   /* Mark directory as being at target_revision and URL, but incomplete. */
   tmp_entry.revision = *(eb->target_revision);
   tmp_entry.url = db->new_URL;
-  /* In some situations, the URL of this directory does not have the same
-     repository root as the anchor of the update; we can't just blindly
-     use the that repository root here, so make sure it is really an
-     ancestor. */
-  if (eb->repos && svn_uri_is_ancestor(eb->repos, db->new_URL))
-    {
-      tmp_entry.repos = eb->repos;
-      flags |= SVN_WC__ENTRY_MODIFY_REPOS;
-    }
   tmp_entry.incomplete = TRUE;
 
   return svn_wc__entry_modify(adm_access, NULL /* THIS_DIR */,
