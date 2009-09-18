@@ -3035,7 +3035,6 @@ absent_file_or_dir(const char *path,
   struct dir_baton *pb = parent_baton;
   struct edit_baton *eb = pb->edit_baton;
   svn_wc_entry_t tmp_entry;
-  svn_boolean_t hidden;
   svn_boolean_t in_parent = (kind == svn_node_dir);
 
   local_abspath = svn_dirent_join(pb->local_abspath, name, pool);
@@ -3043,22 +3042,23 @@ absent_file_or_dir(const char *path,
      still be one scheduled for addition.  That's a genuine
      tree-conflict.  */
 
-  SVN_ERR(svn_wc__db_node_hidden(&hidden, eb->db, local_abspath, pool));
+  {
+    const svn_wc_entry_t *entry;
+    svn_boolean_t hidden;
+    SVN_ERR(svn_wc__get_entry(&entry, eb->db, local_abspath, TRUE, kind,
+                              in_parent, pool, pool));
 
-  if (!hidden)
-    {
-      const svn_wc_entry_t *entry;
-      SVN_ERR(svn_wc__get_entry(&entry, eb->db, local_abspath, TRUE, kind,
-                                in_parent, pool, pool));
+    if (entry)
+      SVN_ERR(svn_wc__entry_is_hidden(&hidden, entry));
 
-      /* ### BH: With WC-NG we should probably also check for replaced? */
-      if (entry && (entry->schedule == svn_wc_schedule_add))
-        return svn_error_createf(
-           SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-           _("Failed to mark '%s' absent: item of the same name is already "
-             "scheduled for addition"),
-           svn_dirent_local_style(path, pool));
-    }
+    /* ### BH: With WC-NG we should probably also check for replaced? */
+    if (entry && !hidden && (entry->schedule == svn_wc_schedule_add))
+      return svn_error_createf(
+         SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
+         _("Failed to mark '%s' absent: item of the same name is already "
+           "scheduled for addition"),
+         svn_dirent_local_style(path, pool));
+  }
 
   /* Immediately create an entry for the new item in the parent.  Note
      that the parent must already be either added or opened, and thus
