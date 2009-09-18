@@ -727,7 +727,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  for addition. Use 'svn revert' to undo deletions and additions you\n"
      "  do not agree with.\n"
      ),
-    {'q', opt_dry_run} },
+    {'q', opt_dry_run, opt_accept} },
 
   { "propdel", svn_cl__propdel, {"pdel", "pd"}, N_
     ("Remove a property from files, dirs, or revisions.\n"
