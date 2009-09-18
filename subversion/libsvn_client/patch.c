@@ -140,8 +140,10 @@ typedef struct {
  * Indicate in TARGET->SKIPPED whether the target should be skipped.
  * Use RESULT_POOL for allocations of fields in TARGET. */
 static svn_error_t *
-resolve_target_path(patch_target_t *target, const char *path_from_patchfile,
-                    const char *wc_path, apr_pool_t *result_pool,
+resolve_target_path(patch_target_t *target,
+                    const char *path_from_patchfile,
+                    const char *wc_path,
+                    apr_pool_t *result_pool,
                     apr_pool_t *scratch_pool)
 {
   const char *abs_wc_path;
@@ -254,15 +256,14 @@ check_local_mods(svn_boolean_t *local_mods,
 
 /* Attempt to initialize a patch TARGET structure for a target file
  * described by PATCH.
- * ADM_ACCESS should hold a write lock to the working copy
- * the patch is being applied to.
  * Use client context CTX to send notifiations.
  * Upon success, allocate the patch target structure in RESULT_POOL.
  * Else, set *target to NULL.
  * Use SCRATCH_POOL for all other allocations. */
 static svn_error_t *
-init_patch_target(patch_target_t **target, const svn_patch_t *patch,
-                  svn_wc_adm_access_t *adm_access,
+init_patch_target(patch_target_t **target,
+                  const svn_patch_t *patch,
+                  const char *base_dir,
                   const svn_client_ctx_t *ctx,
                   apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
@@ -272,8 +273,7 @@ init_patch_target(patch_target_t **target, const svn_patch_t *patch,
   new_target = apr_pcalloc(result_pool, sizeof(*new_target));
 
   SVN_ERR(resolve_target_path(new_target, patch->new_filename,
-                              svn_wc_adm_access_path(adm_access),
-                              result_pool, scratch_pool));
+                              base_dir, result_pool, scratch_pool));
   if (! new_target->skipped)
     {
       const svn_wc_entry_t *entry;
@@ -804,7 +804,9 @@ apply_one_patch(svn_patch_t *patch, const char *wc_path,
 {
   patch_target_t *target;
 
-  SVN_ERR(init_patch_target(&target, patch, adm_access, ctx, pool, pool));
+  SVN_ERR(init_patch_target(&target, patch,
+                            svn_wc_adm_access_path(adm_access), ctx,
+                            pool, pool));
   if (target == NULL)
     /* Can't apply the patch. */
     return SVN_NO_ERROR;
