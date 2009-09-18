@@ -27,30 +27,18 @@
 
 /*** Includes. ***/
 
+#include <apr_hash.h>
 #include "svn_client.h"
 #include "svn_dirent_uri.h"
 #include "svn_io.h"
 #include "svn_pools.h"
+#include "svn_subst.h"
 #include "svn_wc.h"
 
 #include "svn_private_config.h"
 #include "private/svn_diff_private.h"
 #include "private/svn_eol_private.h"
 #include "private/svn_wc_private.h"
-
-typedef struct {
-  /* ### Ideally, the diff API would allow us to diff the original,
-   * modified and latest streams directly. But this is currently
-   * not possible, so instead we're dumping the streams into temporary
-   * files for diffing and merging. */
-  apr_file_t *orig_file;
-  apr_file_t *mod_file;
-  apr_file_t *latest_file;
-  /* On top of that, the diff API also wants filenames... */
-  const char *orig_path;
-  const char *mod_path;
-  const char *latest_path;
-} hunk_tempfiles_t;
 
 typedef struct {
   /* The patch being applied. */
@@ -78,21 +66,37 @@ typedef struct {
    * the target file did not exist prior to patch application. */
   svn_stream_t *stream;
 
-  /* The result stream, write-only, not seekable.
-   * This is where we write the patched result to. */
-  svn_stream_t *result;
+  /* The patched stream, write-only, not seekable.
+   * This stream is equivalent to the target, except that in appropriate
+   * places it contains the modified text as it appears in the patch file.
+   * The data in the underlying file needs to be in repository-normal form,
+   * so EOL transformation and keyword contraction is done transparently. */
+  svn_stream_t *patched;
+
+  /* The patched stream, without EOL transformation and keyword contraction. */
+  svn_stream_t *patched_raw;
 
   /* Path to the temporary file underlying the result stream. */
-  const char *result_path;
+  const char *patched_path;
+
+  /* The original stream, write-only, not seekable.
+   * This stream is equivalent to the target, except that in appropriate
+   * places it contains the original text as it appears in the patch file.
+   * The data in the underlying file needs to be in repository-normal form,
+   * so EOL transformation and keyword contraction is done transparently. */
+  svn_stream_t *original;
+
+  /* The original stream, without EOL transformation and keyword contraction. */
+  svn_stream_t *original_raw;
+
+  /* Path to the temporary file underlying the original stream. */
+  const char *original_path;
 
   /* The line last read from the target file. */
   svn_linenum_t current_line;
 
   /* EOL-marker used by target file. */
   const char *eol_str;
-
-  /* Temporary files for hunk merging. */
-  const hunk_tempfiles_t *tempfiles;
 
   /* The node kind of the target as found on disk prior
    * to patch application. */
@@ -253,7 +257,6 @@ check_local_mods(svn_boolean_t *local_mods,
  * ADM_ACCESS should hold a write lock to the working copy
  * the patch is being applied to.
  * Use client context CTX to send notifiations.
- * TEMPFILES is a set of tempfiles to use for merging hunks.
  * Upon success, allocate the patch target structure in RESULT_POOL.
  * Else, set *target to NULL.
  * Use SCRATCH_POOL for all other allocations. */
@@ -261,11 +264,9 @@ static svn_error_t *
 init_patch_target(patch_target_t **target, const svn_patch_t *patch,
                   svn_wc_adm_access_t *adm_access,
                   const svn_client_ctx_t *ctx,
-                  const hunk_tempfiles_t *tempfiles,
                   apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
   patch_target_t *new_target;
-  const char *dirname;
 
   *target = NULL;
   new_target = apr_pcalloc(result_pool, sizeof(*new_target));
@@ -316,15 +317,21 @@ init_patch_target(patch_target_t **target, const svn_patch_t *patch,
 
   if (! new_target->skipped)
     {
-      /* Create a temporary file to write the patched result to,
-       * in the same directory as the target file.
-       * We want them to be on the same filesystem so we can rename
-       * the temporary file to the target file later. */
-      dirname = svn_dirent_dirname(new_target->abs_path, scratch_pool);
-      SVN_ERR(svn_stream_open_unique(&new_target->result,
-                                     &new_target->result_path, dirname,
-                                     svn_io_file_del_none,
+      apr_hash_t *keywords;
+
+      /* TODO: Get keywords from patch target. How?
+       * Can't call svn_wc__get_keywords() here? */
+      keywords = apr_hash_make(result_pool);
+
+      /* Create a temporary file to write the patched result to. */
+      SVN_ERR(svn_stream_open_unique(&new_target->patched_raw,
+                                     &new_target->patched_path, NULL,
+                                     svn_io_file_del_on_pool_cleanup,
                                      result_pool, scratch_pool));
+      new_target->patched = svn_subst_stream_translated(new_target->patched_raw,
+                                                        "\n", TRUE,
+                                                        keywords, FALSE,
+                                                        result_pool);
 
       SVN_ERR(check_local_mods(&new_target->local_mods, ctx->wc_ctx,
                                new_target->abs_path, scratch_pool));
@@ -333,6 +340,15 @@ init_patch_target(patch_target_t **target, const svn_patch_t *patch,
         SVN_ERR(svn_io_is_file_executable(&new_target->executable,
                                           new_target->abs_path,
                                           scratch_pool));
+
+      /* We also need a stream to write the original text to. */
+      SVN_ERR(svn_stream_open_unique(&new_target->original_raw,
+                                     &new_target->original_path, NULL,
+                                     svn_io_file_del_on_pool_cleanup,
+                                     result_pool, scratch_pool));
+      new_target->original = svn_subst_stream_translated(
+                               new_target->original_raw, "\n",
+                               TRUE, keywords, FALSE, result_pool);
     }
 
   new_target->patch = patch;
@@ -342,7 +358,6 @@ init_patch_target(patch_target_t **target, const svn_patch_t *patch,
   new_target->added = FALSE;
   new_target->deleted = FALSE;
   new_target->eof = FALSE;
-  new_target->tempfiles = tempfiles;
 
   *target = new_target;
   return SVN_NO_ERROR;
@@ -550,9 +565,27 @@ determine_hunk_line(svn_linenum_t *line, patch_target_t *target,
   return SVN_NO_ERROR;
 }
 
-/* Copy lines to the result stream of TARGET until the specified
- * LINE has been reached. Indicate in *EOF whether end-of-file was
- * encountered while reading from the target.
+/* Attempt to write LEN bytes of DATA to STREAM, the underlying file
+ * of which is at ABSPATH. Fail if not all bytes could be written to
+ * the stream. Do temporary allocations in POOL. */
+static svn_error_t *
+try_stream_write(svn_stream_t *stream, const char *abspath,
+                 const char *data, apr_size_t len, apr_pool_t *pool)
+{
+  apr_size_t written;
+
+  written = len;
+  SVN_ERR(svn_stream_write(stream, data, &written));
+  if (written != len)
+    return svn_error_createf(SVN_ERR_IO_WRITE_ERROR, NULL,
+                             _("Error writing to '%s'"),
+                             svn_dirent_local_style(abspath, pool));
+  return SVN_NO_ERROR;
+}
+
+/* Copy lines to the result and original streams of TARGET until the
+ * specified LINE has been reached. Indicate in *EOF whether end-of-file
+ * was encountered while reading from the target.
  * If LINE is zero, copy lines until end-of-file has been reached.
  * Do all allocations in POOL. */
 static svn_error_t *
@@ -565,7 +598,6 @@ copy_lines_to_target(patch_target_t *target, svn_linenum_t line,
   while ((target->current_line < line || line == 0) && ! target->eof)
     {
       svn_stringbuf_t *buf;
-      apr_size_t len;
 
       svn_pool_clear(iterpool);
 
@@ -577,32 +609,26 @@ copy_lines_to_target(patch_target_t *target, svn_linenum_t line,
           target->current_line++;
         }
 
-      len = buf->len;
-      SVN_ERR(svn_stream_write(target->result, buf->data, &len));
+      SVN_ERR(try_stream_write(target->patched, target->patched_path,
+                               buf->data, buf->len, pool));
+      SVN_ERR(try_stream_write(target->original, target->original_path,
+                               buf->data, buf->len, pool));
     }
   svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
 }
 
-/* Read at most NLINES from the TARGET file, returning lines read in *LINES,
- * separated by the EOL sequence specified in TARGET->patch_eol_str.
- * Allocate *LINES in RESULT_POOL.
+/* Read at most NLINES from the TARGET file, separated by the EOL sequence
+ * specified in TARGET->eol_str, and discard any lines read.
  * The caller is responsible for closing *LINES.
  * Use SCRATCH_POOL for all other allocations. */
 static svn_error_t *
-read_lines_from_target(svn_stream_t **lines, svn_linenum_t nlines,
-                       patch_target_t *target, apr_pool_t *result_pool,
+skip_lines_from_target(patch_target_t *target, svn_linenum_t nlines,
                        apr_pool_t *scratch_pool)
 {
-  apr_file_t *file;
   apr_pool_t *iterpool;
   svn_linenum_t i;
-  apr_off_t start, end;
-  apr_int32_t flags = APR_READ | APR_BUFFERED;
-
-  start = 0;
-  SVN_ERR(svn_io_file_seek(target->file, APR_CUR, &start, scratch_pool));
 
   iterpool = svn_pool_create(scratch_pool);
   for (i = 0; i < nlines; i++)
@@ -620,141 +646,42 @@ read_lines_from_target(svn_stream_t **lines, svn_linenum_t nlines,
     }
   svn_pool_destroy(iterpool);
 
-  end = 0;
-  SVN_ERR(svn_io_file_seek(target->file, APR_CUR, &end, scratch_pool));
-
-  SVN_ERR(svn_io_file_open(&file, target->abs_path, flags, APR_OS_DEFAULT,
-                           result_pool));
-  *lines = svn_stream_from_aprfile_range_readonly(file, FALSE, start, end,
-                                                  result_pool);
   return SVN_NO_ERROR;
 }
 
+/* Copy HUNK_TEXT into TARGET, line by line, such that the line filter
+ * and transformation callbacks set on HUNK_TEXT by the diff parsing
+ * code in libsvn_diff will trigger. ABSPATH is the absolute path to the
+ * file underlying TARGET. Use EOL_STR as EOL indicator when
+ * reading from HUNK_TEXT and when writing to TARGET. */
 static svn_error_t *
-copy_hunk_text(svn_stream_t *hunk_text, apr_file_t *file,
-               const char *target_eol_str, const char *patch_eol_str,
+copy_hunk_text(svn_stream_t *hunk_text, svn_stream_t *target,
+               const char *abspath, const char *eol_str,
                apr_pool_t *scratch_pool)
 {
   svn_boolean_t eof;
   apr_pool_t *iterpool;
-  apr_off_t pos;
-
-  /* Rewind temp file. */
-  pos = 0;
-  SVN_ERR(svn_io_file_seek(file, APR_SET, &pos, scratch_pool));
 
   iterpool = svn_pool_create(scratch_pool);
   do
     {
       svn_stringbuf_t *line;
-      apr_size_t len;
 
       svn_pool_clear(iterpool);
 
-      SVN_ERR(svn_stream_readline(hunk_text, &line, patch_eol_str,
-                                  &eof, iterpool));
+      SVN_ERR(svn_stream_readline(hunk_text, &line, eol_str, &eof, iterpool));
       if (! eof)
         {
           if (line->len >= 1)
-            {
-              SVN_ERR(svn_io_file_write_full(file, line->data, line->len, &len,
-                                             iterpool));
-              SVN_ERR_ASSERT(len == line->len);
-            }
-
+            SVN_ERR(try_stream_write(target, abspath, line->data, line->len,
+                                     iterpool));
           /* Add newline. */
-          len = strlen(target_eol_str);
-          SVN_ERR(svn_io_file_write_full(file, target_eol_str, len, &len,
-                                         iterpool));
-          SVN_ERR_ASSERT(len == strlen(target_eol_str));
+          SVN_ERR(try_stream_write(target, abspath, eol_str, strlen(eol_str),
+                                   iterpool));
         }
     }
   while (! eof);
   svn_pool_destroy(iterpool);
-
-  /* Truncate and flush temporary file. */
-  SVN_ERR(svn_io_file_seek(file, APR_CUR, &pos, scratch_pool));
-  SVN_ERR(svn_io_file_trunc(file, pos, scratch_pool));
-  SVN_ERR(svn_io_file_flush_to_disk(file, scratch_pool));
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-copy_latest_text(svn_stream_t *latest_text, apr_file_t *file,
-                 const char *target_eol_str, const char *patch_eol_str,
-                 apr_pool_t *scratch_pool)
-{
-  svn_stream_t *disowned_stream;
-  svn_stream_t *disowned_latest_text;
-  apr_off_t pos;
-
-  /* Since we use the latest text verbatim, we can do a direct stream copy. */
-  pos = 0;
-  SVN_ERR(svn_io_file_seek(file, APR_SET, &pos, scratch_pool));
-  /* Make sure to disown the streams, we don't want underlying
-   * files to be closed. */
-  disowned_stream = svn_stream_from_aprfile2(file, TRUE, scratch_pool);
-  disowned_latest_text = svn_stream_disown(latest_text, scratch_pool);
-  SVN_ERR(svn_stream_copy3(disowned_latest_text, disowned_stream, NULL, NULL,
-                           scratch_pool));
-  SVN_ERR(svn_stream_close(disowned_stream));
-  SVN_ERR(svn_stream_close(disowned_latest_text));
-
-  /* Truncate and flush temporary file. */
-  SVN_ERR(svn_io_file_seek(file, APR_CUR, &pos, scratch_pool));
-  SVN_ERR(svn_io_file_trunc(file, pos, scratch_pool));
-  SVN_ERR(svn_io_file_flush_to_disk(file, scratch_pool));
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-merge_hunk(patch_target_t *target, const svn_hunk_t *hunk,
-           svn_stream_t *latest_text, apr_pool_t *pool)
-{
-  svn_diff_t *diff;
-  svn_diff_file_options_t *opts;
-
-  /* Copy original hunk text into temporary file. */
-  SVN_ERR(copy_hunk_text(hunk->original_text, target->tempfiles->orig_file,
-                         target->eol_str, target->patch->eol_str,
-                         pool));
-
-  /* Copy modified hunk text into temporary file. */
-  SVN_ERR(copy_hunk_text(hunk->modified_text, target->tempfiles->mod_file,
-                         target->eol_str, target->patch->eol_str,
-                         pool));
-
-  /* Copy latest text as it appeared in target into temporary file. */
-  SVN_ERR(copy_latest_text(latest_text, target->tempfiles->latest_file,
-                           target->eol_str, target->patch->eol_str,
-                           pool));
-
-  /* Diff the hunks. */
-  opts = svn_diff_file_options_create(pool);
-  SVN_ERR(svn_diff_file_diff3_2(&diff, target->tempfiles->orig_path,
-                                target->tempfiles->mod_path,
-                                target->tempfiles->latest_path,
-                                opts, pool));
-  if (svn_diff_contains_diffs(diff))
-    {
-      svn_diff_conflict_display_style_t conflict_style;
-
-      /* TODO: Make conflict style configurable? */
-      conflict_style = svn_diff_conflict_display_modified_original_latest;
-
-      /* Merge the hunks. */
-      SVN_ERR(svn_diff_file_output_merge2(target->result, diff,
-                                          target->tempfiles->orig_path,
-                                          target->tempfiles->mod_path,
-                                          target->tempfiles->latest_path,
-                                          NULL, NULL, NULL, NULL,
-                                          conflict_style, pool));
-      target->modified = TRUE;
-      if (! target->conflicted)
-        target->conflicted = svn_diff_contains_conflicts(diff);
-    }
 
   return SVN_NO_ERROR;
 }
@@ -764,7 +691,6 @@ static svn_error_t *
 apply_one_hunk(const svn_hunk_t *hunk, patch_target_t *target, apr_pool_t *pool)
 {
   svn_linenum_t hunk_line;
-  svn_stream_t *latest_text;
 
   if (target->kind == svn_node_file)
     {
@@ -788,23 +714,21 @@ apply_one_hunk(const svn_hunk_t *hunk, patch_target_t *target, apr_pool_t *pool)
           /* TODO: Warn, create reject file? */
           return SVN_NO_ERROR;
         }
-
-      /* Target file is at the hunk's line.
-       * Read the target's version of the hunk.
-       * We assume the target hunk has the same length as the original hunk.
-       * If that's not the case, we'll get merge conflicts. */
-      SVN_ERR(read_lines_from_target(&latest_text, hunk->original_length,
-                                     target, pool, pool));
-    }
-  else
-    {
-      /* We're creating a new file, so the latest text is simply empty. */
-      latest_text = svn_stream_empty(pool);
     }
 
-  SVN_ERR(merge_hunk(target, hunk, latest_text, pool));
+  /* Target file is at the hunk's line.
+   * Skip the target's version of the hunk.
+   * We assume the target hunk has the same length as the original hunk.
+   * If that's not the case, we'll get merge conflicts later. */
+  SVN_ERR(skip_lines_from_target(target, hunk->original_length, pool));
 
-  SVN_ERR(svn_stream_close(latest_text));
+  /* Copy the original hunk text into the original stream. */
+  SVN_ERR(copy_hunk_text(hunk->original_text, target->original,
+                         target->original_path, target->patch->eol_str, pool));
+
+  /* Copy the patched hunk text into the patched stream. */
+  SVN_ERR(copy_hunk_text(hunk->modified_text, target->patched,
+                         target->patched_path, target->patch->eol_str, pool));
 
   return SVN_NO_ERROR;
 }
@@ -872,18 +796,15 @@ maybe_send_patch_target_notification(const patch_target_t *target,
 /* Apply a PATCH to a working copy at WC_PATH.
  * Use client context CTX to send notifiations.
  * ADM_ACCESS should hold a write lock to the WC_PATH.
- * TEMPFILES is a set of tempfiles to use for merging hunks.
  * Do all allocations in POOL. */
 static svn_error_t *
 apply_one_patch(svn_patch_t *patch, const char *wc_path,
-                svn_wc_adm_access_t *adm_access,
-                const hunk_tempfiles_t *tempfiles, svn_boolean_t dry_run,
+                svn_wc_adm_access_t *adm_access, svn_boolean_t dry_run,
                 const svn_client_ctx_t *ctx, apr_pool_t *pool)
 {
   patch_target_t *target;
 
-  SVN_ERR(init_patch_target(&target, patch, adm_access, ctx,
-                            tempfiles, pool, pool));
+  SVN_ERR(init_patch_target(&target, patch, adm_access, ctx, pool, pool));
   if (target == NULL)
     /* Can't apply the patch. */
     return SVN_NO_ERROR;
@@ -892,6 +813,8 @@ apply_one_patch(svn_patch_t *patch, const char *wc_path,
     {
       svn_hunk_t *hunk;
       apr_pool_t *iterpool;
+      apr_finfo_t working_file;
+      apr_finfo_t patched_file;
 
       /* Apply hunks. */
       iterpool = svn_pool_create(pool);
@@ -928,130 +851,134 @@ apply_one_patch(svn_patch_t *patch, const char *wc_path,
           SVN_ERR(svn_stream_close(target->stream));
         }
 
-      SVN_ERR(svn_stream_close(target->result));
+      /* Close the orignal and patched streams so that their content
+       * is flushed to disk. This will also close the raw streams. */
+      SVN_ERR(svn_stream_close(target->original));
+      SVN_ERR(svn_stream_close(target->patched));
 
-      if (target->modified)
+      /* Get sizes of the patched temporary file and the working file.
+       * We'll need those to figure out whether we should add or delete
+       * the patched file. */
+      SVN_ERR(svn_io_stat(&patched_file, target->patched_path, APR_FINFO_SIZE,
+                          pool));
+      if (target->kind == svn_node_file)
+        SVN_ERR(svn_io_stat(&working_file, target->abs_path, APR_FINFO_SIZE,
+                            pool));
+      else
+        working_file.size = 0;
+
+      if (patched_file.size >= 0 && working_file.size == 0)
         {
-          apr_finfo_t old_file;
-          apr_finfo_t new_file;
-
-          /* Get sizes of the patched temporary file (new) and the
-           * working file (old). We'll need those to figure out whether
-           * we should add or delete the patched file. */
-          SVN_ERR(svn_io_stat(&new_file, target->result_path, APR_FINFO_SIZE,
-                              pool));
-          if (target->kind == svn_node_file)
-            SVN_ERR(svn_io_stat(&old_file, target->abs_path, APR_FINFO_SIZE,
-                                pool));
-          else
-            old_file.size = 0;
-
-          if (new_file.size >= 0 && old_file.size == 0)
+          /* If the target did not exist we've just added it.
+           * If it did exist the target was empty before patching,
+           * and maybe it is still empty now. */
+          target->added = (target->kind == svn_node_none);
+        }
+      else if (patched_file.size == 0 && working_file.size > 0)
+        {
+          /* If a unidiff removes all lines from a file, that usually
+           * means deletion, so we can confidently schedule the target
+           * for deletion. In the rare case where the unidiff was really
+           * meant to replace a file with an empty one, this may not
+           * be desirable. But the deletion can easily be reverted and
+           * creating an empty file manually is not exactly hard either. */
+          target->deleted = (target->kind != svn_node_none);
+        }
+      
+      if (target->deleted)
+        {
+          if (! dry_run)
             {
-              /* If the target did not exist we've just added it.
-               * If it did exist the target was empty before patching,
-               * and maybe it is still empty now. */
-              target->added = (target->kind == svn_node_none);
-            }
-          else if (new_file.size == 0 && old_file.size > 0)
-            {
-              /* If a unidiff removes all lines from a file, that usually
-               * means deletion, so we can confidently schedule the target
-               * for deletion. In the rare case where the unidiff was really
-               * meant to replace a file with an empty one, this may not
-               * be desirable. But the deletion can easily be reverted and
-               * creating an empty file manually is not exactly hard either. */
-              target->deleted = (target->kind != svn_node_none);
-            }
-          
-          if (target->deleted)
-            {
-              if (! dry_run)
-                {
-                  svn_wc_adm_access_t *parent_adm_access;
-                  const char *dirname;
+              svn_wc_adm_access_t *parent_adm_access;
+              const char *dirname;
 
-                  /* Schedule the target for deletion.  Suppress
-                   * notification, we'll do it manually in a minute. */
-                  dirname = svn_dirent_dirname(target->abs_path, pool);
-                  SVN_ERR(svn_wc_adm_retrieve(&parent_adm_access, adm_access,
-                                              dirname, pool));
-                  SVN_ERR(svn_wc_delete3(target->abs_path, parent_adm_access,
-                                         ctx->cancel_func, ctx->cancel_baton,
-                                         NULL, NULL, FALSE /* keep_local */,
-                                         pool));
-                }
-
-              /* Remove the tempfile, too. */
-              SVN_ERR(svn_io_remove_file2(target->result_path, FALSE,
-                                          pool));
-            }
-          else
-            {
-              if (old_file.size == 0 && new_file.size == 0)
-                {
-                  /* The target was empty or non-existent to begin with
-                   * and nothing has changed by patching. Just remove the
-                   * temporary file and report this as skipped if it didn't
-                   * exist. */
-                  SVN_ERR(svn_io_remove_file2(target->result_path, FALSE,
-                                              pool));
-                  target->added = FALSE;
-                  if (target->kind == svn_node_none)
-                    target->skipped = TRUE;
-                }
-              else
-                {
-                  if (dry_run)
-                    {
-                      /* Just remove the temporary file. */
-                      SVN_ERR(svn_io_remove_file2(target->result_path, FALSE,
-                                                  pool));
-                    }
-                  else
-                    {
-                      svn_error_t *err;
-
-                      /* Install patched temporary file over working file. 
-                       * ### Should this rather be done in a loggy fashion? */
-                      err = svn_io_file_rename(target->result_path,
-                                               target->abs_path, pool);
-                      if (err)
-                        {
-                          /* Renaming failed, try to copy+delete instead.
-                           * We may have attempted a cross-device rename. */
-                          svn_error_clear(err);
-                          SVN_ERR(svn_io_copy_file(target->result_path,
-                                                   target->abs_path, FALSE,
-                                                   pool));
-                          SVN_ERR(svn_io_remove_file2(target->result_path,
-                                                      FALSE, pool));
-                        }
-
-                      if (target->executable)
-                        SVN_ERR(svn_io_set_file_executable(target->abs_path,
-                                                           TRUE, FALSE, pool));
-
-                      if (target->added)
-                        {
-                          /* The target file didn't exist previously, so add
-                           * it to version control. Suppress notification,
-                           * we'll do it manually in a minute. */
-                          SVN_ERR(svn_wc_add3(target->abs_path, adm_access,
-                                              svn_depth_infinity,
-                                              NULL, SVN_INVALID_REVNUM,
-                                              ctx->cancel_func,
-                                              ctx->cancel_baton,
-                                              NULL, NULL, pool));
-                        }
-                    }
-                }
+              /* Schedule the target for deletion.  Suppress
+               * notification, we'll do it manually in a minute. */
+              dirname = svn_dirent_dirname(target->abs_path, pool);
+              SVN_ERR(svn_wc_adm_retrieve(&parent_adm_access, adm_access,
+                                          dirname, pool));
+              SVN_ERR(svn_wc_delete3(target->abs_path, parent_adm_access,
+                                     ctx->cancel_func, ctx->cancel_baton,
+                                     NULL, NULL, FALSE /* keep_local */,
+                                     pool));
             }
         }
       else
         {
-          /* No hunks were applied. Just remove the temporary file. */
-          SVN_ERR(svn_io_remove_file2(target->result_path, FALSE, pool));
+          if (working_file.size == 0 && patched_file.size == 0)
+            {
+              /* The target was empty or non-existent to begin with
+               * and nothing has changed by patching.
+               * Report this as skipped if it didn't exist. */
+              target->added = FALSE;
+              if (target->kind == svn_node_none)
+                target->skipped = TRUE;
+            }
+          else
+            {
+              svn_config_t *cfg;
+              const char *diff3_cmd;
+              enum svn_wc_merge_outcome_t outcome;
+
+              if (target->added)
+                {
+                  if (! dry_run)
+                    {
+                      /* The target file didn't exist previously, so copy
+                       * it in place and add it to version control.
+                       * Suppress notification, we'll do that later.
+                       * Also suppress cancellation. */
+                      SVN_ERR(svn_io_copy_file(target->patched_path,
+                                               target->abs_path, FALSE, pool)); 
+                      SVN_ERR(svn_wc_add3(target->abs_path, adm_access,
+                                          svn_depth_infinity,
+                                          NULL, SVN_INVALID_REVNUM,
+                                          NULL, NULL, NULL, NULL, pool));
+                    }
+                }
+              else
+                {
+                  /* If the user has specified a merge tool, use it. */
+                  cfg = ctx->config ? apr_hash_get(ctx->config,
+                                                   SVN_CONFIG_CATEGORY_CONFIG,
+                                                   APR_HASH_KEY_STRING) : NULL;
+                  svn_config_get(cfg, &diff3_cmd, SVN_CONFIG_SECTION_HELPERS,
+                                 SVN_CONFIG_OPTION_DIFF3_CMD, NULL);
+
+                  /* Merge the patch into the working file. */
+                  SVN_ERR(svn_wc_merge3(&outcome,
+                                        target->original_path,
+                                        target->patched_path,
+                                        target->abs_path,
+                                        adm_access,
+                                        _(".svnpatch.original"),
+                                        _(".svnpatch.modified"),
+                                        _(".svnpatch.working"),
+                                        dry_run,
+                                        diff3_cmd,
+                                        NULL, /* TODO mergeoptions */
+                                        NULL, /* property diffs */
+                                        ctx->conflict_func,
+                                        ctx->conflict_baton,
+                                        pool));
+                  switch (outcome)
+                    {
+                      case svn_wc_merge_unchanged:
+                        target->modified = FALSE;
+                        break;
+                      case svn_wc_merge_merged:
+                        target->modified = TRUE;
+                        break;
+                      case svn_wc_merge_conflict:
+                        target->modified = TRUE;
+                        target->conflicted = TRUE;
+                        break;
+                      case svn_wc_merge_no_merge:
+                      default:
+                        SVN_ERR_MALFUNCTION();
+                    }
+                }
+            }
         }
     }
 
@@ -1073,7 +1000,6 @@ apply_textdiffs(const char *patch_path, const char *wc_path,
   apr_pool_t *iterpool;
   const char *patch_eol_str;
   apr_file_t *patch_file;
-  hunk_tempfiles_t *tempfiles;
 
   /* Try to open the patch file. */
   SVN_ERR(svn_io_file_open(&patch_file, patch_path,
@@ -1088,19 +1014,6 @@ apply_textdiffs(const char *patch_path, const char *wc_path,
       patch_eol_str = APR_EOL_STR;
     }
 
-  tempfiles = apr_pcalloc(pool, sizeof(tempfiles));
-
-  /* Create temporary files for hunk-merging. */
-  SVN_ERR(svn_io_mktemp(&tempfiles->orig_file,
-                        &tempfiles->orig_path, NULL, "svnpatch-orig",
-                        svn_io_file_del_on_pool_cleanup, pool, pool));
-  SVN_ERR(svn_io_mktemp(&tempfiles->mod_file,
-                        &tempfiles->mod_path, NULL, "svnpatch-mod",
-                        svn_io_file_del_on_pool_cleanup, pool, pool));
-  SVN_ERR(svn_io_mktemp(&tempfiles->latest_file,
-                        &tempfiles->latest_path, NULL, "svnpatch-latest",
-                        svn_io_file_del_on_pool_cleanup, pool, pool));
-
   /* Apply patches. */
   iterpool = svn_pool_create(pool);
   do
@@ -1113,8 +1026,8 @@ apply_textdiffs(const char *patch_path, const char *wc_path,
       SVN_ERR(svn_diff__parse_next_patch(&patch, patch_file, patch_eol_str,
                                          iterpool, iterpool));
       if (patch)
-        SVN_ERR(apply_one_patch(patch, wc_path, adm_access, tempfiles,
-                                dry_run, ctx, iterpool));
+        SVN_ERR(apply_one_patch(patch, wc_path, adm_access, dry_run, ctx, 
+                                iterpool));
     }
   while (patch);
   svn_pool_destroy(iterpool);
