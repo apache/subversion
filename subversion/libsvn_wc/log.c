@@ -908,7 +908,6 @@ log_do_committed(struct log_runner *loggy,
   svn_boolean_t set_read_write = FALSE;
   const char *full_path;
   const char *local_abspath;
-  const char *pdir, *base_name;
   apr_hash_t *entries;
   const svn_wc_entry_t *orig_entry;
   svn_wc_entry_t *entry;
@@ -1249,38 +1248,27 @@ log_do_committed(struct log_runner *loggy,
 
   /* Make sure our entry exists in the parent. */
   {
-    svn_wc_adm_access_t *paccess;
-    svn_boolean_t unassociated = FALSE;
+    const svn_wc_entry_t *dir_entry;
 
-    svn_dirent_split(svn_wc_adm_access_path(loggy->adm_access), &pdir,
-                     &base_name, pool);
+    /* Check if we have a valid record in our parent */
+    SVN_ERR(svn_wc__get_entry(&dir_entry, loggy->db, local_abspath,
+                              FALSE, svn_node_dir, TRUE, pool, pool));
 
-    err = svn_wc_adm_retrieve(&paccess, loggy->adm_access, pdir, pool);
-    if (err && (err->apr_err == SVN_ERR_WC_NOT_LOCKED))
-      {
-        svn_error_clear(err);
-        SVN_ERR(svn_wc_adm_open3(&paccess, NULL, pdir, TRUE, 0,
-                                 NULL, NULL, pool));
-        unassociated = TRUE;
-      }
-    else if (err)
-      return err;
+    /* ### We assume we have the right lock to modify the parent record.
 
-    SVN_ERR(svn_wc_entries_read(&entries, paccess, FALSE, pool));
-    if (apr_hash_get(entries, base_name, APR_HASH_KEY_STRING))
-      {
-        if ((err = svn_wc__entry_modify(paccess, base_name, entry,
-                                        (SVN_WC__ENTRY_MODIFY_SCHEDULE
-                                         | SVN_WC__ENTRY_MODIFY_COPIED
-                                         | SVN_WC__ENTRY_MODIFY_DELETED
-                                         | SVN_WC__ENTRY_MODIFY_FORCE),
-                                        pool)))
-          return svn_error_createf(pick_error_code(loggy), err,
-                                   _("Error modifying entry of '%s'"), name);
-      }
+           If this fails for you in the transition to one DB phase, please
+           run svn cleanup one level higher. */
+    err = svn_wc__entry_modify2(loggy->db, local_abspath, svn_node_dir,
+                                TRUE, entry,
+                                (SVN_WC__ENTRY_MODIFY_SCHEDULE
+                                 | SVN_WC__ENTRY_MODIFY_COPIED
+                                 | SVN_WC__ENTRY_MODIFY_DELETED
+                                 | SVN_WC__ENTRY_MODIFY_FORCE),
+                                pool);
 
-    if (unassociated)
-      SVN_ERR(svn_wc_adm_close2(paccess, pool));
+    if (err != NULL)
+      return svn_error_createf(pick_error_code(loggy), err,
+                               _("Error modifying entry of '%s'"), name);
   }
 
   return SVN_NO_ERROR;
