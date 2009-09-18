@@ -52,6 +52,7 @@
 
 /* Attribute names used in our old XML entries file.  */
 #define ENTRIES_ATTR_REPOS              "repos"
+#define ENTRIES_ATTR_UUID               "uuid"
 #define ENTRIES_ATTR_INCOMPLETE         "incomplete"
 #define ENTRIES_ATTR_LOCK_TOKEN         "lock-token"
 #define ENTRIES_ATTR_LOCK_OWNER         "lock-owner"
@@ -932,7 +933,7 @@ svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
      NOTE: we do not set a modify_flags value since this attribute only
      occurs in old XML entries files. */
   entry->uuid = extract_string(modify_flags, atts,
-                               SVN_WC__ENTRY_ATTR_UUID,
+                               ENTRIES_ATTR_UUID,
                                0, FALSE, pool);
 
   /* Setup last-committed values. */
