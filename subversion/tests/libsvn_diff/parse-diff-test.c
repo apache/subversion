@@ -93,10 +93,10 @@ test_parse_unidiff(apr_pool_t *pool)
   SVN_ERR_ASSERT(patch);
   SVN_ERR_ASSERT(! strcmp(patch->old_filename, "A/C/gamma"));
   SVN_ERR_ASSERT(! strcmp(patch->new_filename, "A/C/gamma"));
-  SVN_ERR(svn_diff__parse_next_hunk(&hunk, patch, pool, pool));
-  SVN_ERR_ASSERT(hunk);
+  SVN_ERR_ASSERT(patch->hunks->nelts == 1);
 
   /* Make sure original text was parsed correctly. */
+  hunk = APR_ARRAY_IDX(patch->hunks, 0, svn_hunk_t *);
   SVN_ERR(svn_stream_readline(hunk->original_text, &buf, NL, &eof, pool));
   SVN_ERR_ASSERT(! eof);
   SVN_ERR_ASSERT(! strcmp(buf->data, "This is the file 'gamma'."));
@@ -122,10 +122,10 @@ test_parse_unidiff(apr_pool_t *pool)
   SVN_ERR_ASSERT(patch);
   SVN_ERR_ASSERT(! strcmp(patch->old_filename, "A/D/gamma.orig"));
   SVN_ERR_ASSERT(! strcmp(patch->new_filename, "A/D/gamma"));
-  SVN_ERR(svn_diff__parse_next_hunk(&hunk, patch, pool, pool));
-  SVN_ERR_ASSERT(hunk);
+  SVN_ERR_ASSERT(patch->hunks->nelts == 1);
 
   /* Make sure original text was parsed correctly. */
+  hunk = APR_ARRAY_IDX(patch->hunks, 0, svn_hunk_t *);
   SVN_ERR(svn_stream_readline(hunk->original_text, &buf, NL, &eof, pool));
   SVN_ERR_ASSERT(! eof);
   SVN_ERR_ASSERT(! strcmp(buf->data, "This is the file 'gamma'."));

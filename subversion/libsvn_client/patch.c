@@ -861,26 +861,22 @@ apply_one_patch(svn_patch_t *patch, const char *wc_path,
 
   if (! target->skipped)
     {
-      svn_hunk_t *hunk;
       apr_pool_t *iterpool;
       apr_finfo_t working_file;
       apr_finfo_t patched_file;
+      int i;
 
       /* Apply hunks. */
       iterpool = svn_pool_create(pool);
-      do
+      for (i = 0; i < patch->hunks->nelts; i++)
         {
+          svn_hunk_t *hunk;
+
           svn_pool_clear(iterpool);
 
-          SVN_ERR(svn_diff__parse_next_hunk(&hunk, patch, iterpool, iterpool));
-          if (hunk)
-            {
-              SVN_ERR(apply_one_hunk(hunk, target, iterpool));
-              SVN_ERR(svn_diff__destroy_hunk(hunk));
-            }
-
+          hunk = APR_ARRAY_IDX(patch->hunks, i, svn_hunk_t *);
+          SVN_ERR(apply_one_hunk(hunk, target, iterpool));
         }
-      while (hunk);
       svn_pool_destroy(iterpool);
 
       if (target->kind == svn_node_file)
@@ -1080,8 +1076,11 @@ apply_textdiffs(const char *patch_path, const char *wc_path,
       SVN_ERR(svn_diff__parse_next_patch(&patch, patch_file, patch_eol_str,
                                          iterpool, iterpool));
       if (patch)
-        SVN_ERR(apply_one_patch(patch, wc_path, adm_access, dry_run, ctx, 
-                                strip_count, iterpool));
+        {
+          SVN_ERR(apply_one_patch(patch, wc_path, adm_access, dry_run, ctx, 
+                                  strip_count, iterpool));
+          SVN_ERR(svn_diff__close_patch(patch));
+        }
     }
   while (patch);
   svn_pool_destroy(iterpool);
