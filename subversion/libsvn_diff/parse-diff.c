@@ -477,9 +477,9 @@ svn_diff__parse_next_patch(svn_patch_t **patch,
             APR_ARRAY_PUSH((*patch)->hunks, svn_hunk_t *) = hunk;
         }
       while (hunk);
-      svn_pool_destroy(iterpool);
     }
 
+  svn_pool_destroy(iterpool);
   SVN_ERR(svn_stream_close(stream));
 
   return SVN_NO_ERROR;
