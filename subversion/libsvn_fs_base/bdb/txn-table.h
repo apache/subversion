@@ -75,7 +75,7 @@ svn_error_t *svn_fs_bdb__get_txn(transaction_t **txn_p,
                                  apr_pool_t *pool);
 
 
-/* Store the Suversion transaction TXN in FS with an ID of TXN_NAME as
+/* Store the Subversion transaction TXN in FS with an ID of TXN_NAME as
    part of TRAIL. */
 svn_error_t *svn_fs_bdb__put_txn(svn_fs_t *fs,
                                  const transaction_t *txn,

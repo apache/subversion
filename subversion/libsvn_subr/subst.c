@@ -385,7 +385,7 @@ translate_write(svn_stream_t *stream,
 }
 
 
-/* Perform the substition of VALUE into keyword string BUF (with len
+/* Perform the substitution of VALUE into keyword string BUF (with len
    *LEN), given a pre-parsed KEYWORD (and KEYWORD_LEN), and updating
    *LEN to the new size of the substituted result.  Return TRUE if all
    goes well, FALSE otherwise.  If VALUE is NULL, keyword will be
