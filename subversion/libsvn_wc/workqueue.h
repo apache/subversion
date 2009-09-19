@@ -48,9 +48,10 @@ svn_wc__wq_run(svn_wc__db_t *db,
 
 /* Record a work item to revert LOCAL_ABSPATH.  */
 svn_error_t *
-svn_wc__wq_add_revert(svn_wc__db_t *db,
+svn_wc__wq_add_revert(svn_boolean_t *will_revert,
+                      svn_wc__db_t *db,
                       const char *local_abspath,
-                      svn_wc_schedule_t orig_schedule,
+                      svn_boolean_t use_commit_times,
                       apr_pool_t *scratch_pool);
 
 
