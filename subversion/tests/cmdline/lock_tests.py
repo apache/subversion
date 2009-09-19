@@ -1425,7 +1425,7 @@ def lock_twice_in_one_wc(sbox):
                                       'lock', '-m', '', mu2_path)
 
   # Change the file anyway
-  os.chmod(mu2_path, 0700)
+  os.chmod(mu2_path, 0o700)
   svntest.main.file_append(mu2_path, "Updated text")
   
   # Commit should fail because it is locked in the other location
