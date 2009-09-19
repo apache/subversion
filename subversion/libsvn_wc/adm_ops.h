@@ -37,9 +37,8 @@ extern "C" {
 #endif /* __cplusplus */
 
 
-/* Modify the entry of working copy PATH, presumably after an update
-   completes.   If PATH doesn't exist, this routine does nothing.
-   ADM_ACCESS must be an access baton for PATH (assuming it existed).
+/* Modify the entry of working copy LOCAL_ABSPATH, presumably after an update
+   completes.   If LOCAL_ABSPATH doesn't exist, this routine does nothing.
 
    Set the entry's 'url' and 'working revision' fields to BASE_URL and
    NEW_REVISION.  If BASE_URL is null, the url field is untouched; if
@@ -48,17 +47,17 @@ extern "C" {
 
    If REPOS is non-NULL, set the repository root of the entry to REPOS, but
    only if REPOS is an ancestor of the entries URL (after possibly modifying
-   it).  IN addition to that requirement, if the PATH refers to a directory,
-   the repository root is only set if REPOS is an ancestor of the URLs all
-   file entries which don't already have a repository root set.  This prevents
-   the entries file from being corrupted by this operation.
+   it).  In addition to that requirement, if the LOCAL_ABSPATH refers to a
+   directory, the repository root is only set if REPOS is an ancestor of the
+   URLs all file entries which don't already have a repository root set.  This
+   prevents the entries file from being corrupted by this operation.
 
-   If PATH is a directory, then, walk entries below PATH according to
-   DEPTH thusly:
+   If LOCAL_ABSPATH is a directory, then, walk entries below LOCAL_ABSPATH
+   according to DEPTH thusly:
 
    If DEPTH is svn_depth_infinity, perform the following actions on
    every entry below PATH; if svn_depth_immediates, svn_depth_files,
-   or svn_depth_empty, perform them only on PATH.
+   or svn_depth_empty, perform them only on LOCAL_ABSPATH.
 
    If NEW_REVISION is valid, then tweak every entry to have this new
    working revision (excluding files that are scheduled for addition
@@ -73,8 +72,8 @@ extern "C" {
    for pathnames contained in EXCLUDE_PATHS are not touched by this
    function.  These pathnames should be absolute paths.
 */
-svn_error_t *svn_wc__do_update_cleanup(const char *path,
-                                       svn_wc_adm_access_t *adm_access,
+svn_error_t *svn_wc__do_update_cleanup(svn_wc__db_t *db,
+                                       const char *local_abspath,
                                        svn_depth_t depth,
                                        const char *base_url,
                                        const char *repos,

@@ -4765,8 +4765,7 @@ close_edit(void *edit_baton,
                        APR_HASH_KEY_STRING, NULL);
         }
 
-      SVN_ERR(svn_wc__do_update_cleanup(target_path,
-                                        eb->adm_access,
+      SVN_ERR(svn_wc__do_update_cleanup(eb->db, target_abspath,
                                         eb->requested_depth,
                                         eb->switch_url,
                                         eb->repos,
