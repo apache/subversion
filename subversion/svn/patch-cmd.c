@@ -76,7 +76,7 @@ svn_cl__patch(apr_getopt_t *os,
 
   /* OK we're good. */
   SVN_ERR(svn_client_patch(patch_path, target_path, opt_state->dry_run,
-                           ctx, pool));
+                           opt_state->strip_count, ctx, pool));
 
   return SVN_NO_ERROR;
 }

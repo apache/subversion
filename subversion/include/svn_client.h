@@ -4699,11 +4699,21 @@ svn_client_info(const char *path_or_url,
  */
 
 /**
- * Apply a patch that's located at @a patch_path against a working copy
- * pointed to by @a target.
+ * Apply a unidiff patch that's located at @a patch_path against a
+ * working copy pointed to by @a target.
  *
  * If @a dry_run is TRUE, the patching process is carried out, and full
  * notification feedback is provided, but the working copy is not modified.
+ * 
+ * @a strip_count specifies how many leading path components should be
+ * stripped from paths obtained from the patch. It is an error is a
+ * negative strip count is passed.
+ *
+ * If @a ctx->notify_func2 is non-NULL, invoke @a ctx->notify_func2 with
+ * @a ctx->notify_baton2 as patching progresses.
+ *
+ * If @a ctx->cancel_func is non-NULL, invoke it passing @a
+ * ctx->cancel_baton at various places during the operation.
  *
  * @since New in 1.7.
  */
@@ -4711,6 +4721,7 @@ svn_error_t *
 svn_client_patch(const char *patch_path,
                  const char *target,
                  svn_boolean_t dry_run,
+                 int strip_count,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *pool);
 
