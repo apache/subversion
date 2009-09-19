@@ -251,7 +251,7 @@ remove_revert_files(svn_stringbuf_t **logtags,
   if (kind == svn_node_file)
     SVN_ERR(svn_wc__loggy_remove(logtags,
                                  svn_wc__adm_access_abspath(adm_access),
-                                 revert_file, pool));
+                                 revert_file, pool, pool));
 
   return svn_wc__loggy_props_delete(logtags, path, svn_wc__props_revert,
                                     adm_access, pool);
@@ -475,24 +475,25 @@ process_committed_leaf(int log_number,
   if (modify_flags)
     SVN_ERR(svn_wc__loggy_entry_modify(&logtags,
                                        svn_wc__adm_access_abspath(adm_access),
-                                       path, &tmp_entry, modify_flags, pool));
+                                       path, &tmp_entry, modify_flags,
+                                       pool, pool));
 
   if (remove_lock)
     SVN_ERR(svn_wc__loggy_delete_lock(&logtags,
                                       svn_wc__adm_access_abspath(adm_access),
-                                      path, pool));
+                                      path, pool, pool));
 
   if (remove_changelist)
     SVN_ERR(svn_wc__loggy_delete_changelist(&logtags,
                                       svn_wc__adm_access_abspath(adm_access),
-                                      path, pool));
+                                      path, pool, pool));
 
   /* Regardless of whether it's a file or dir, the "main" logfile
      contains a command to bump the revision attribute (and
      timestamp). */
   SVN_ERR(svn_wc__loggy_committed(&logtags,
                                   svn_wc__adm_access_abspath(adm_access),
-                                  path, new_revnum, pool));
+                                  path, new_revnum, pool, pool));
 
 
   /* Do wcprops in the same log txn as revision, etc. */
@@ -508,7 +509,7 @@ process_committed_leaf(int log_number,
                                        svn_wc__adm_access_abspath(adm_access),
                                        path, prop->name,
                                        prop->value ? prop->value->data : NULL,
-                                       pool));
+                                       pool, pool));
         }
     }
 
@@ -1291,7 +1292,7 @@ svn_wc_delete4(svn_wc_context_t *wc_ctx,
                                          svn_wc__adm_access_abspath(adm_access),
                                          path, &tmp_entry,
                                          SVN_WC__ENTRY_MODIFY_SCHEDULE,
-                                         pool));
+                                         pool, pool));
 
       /* is it a replacement with history? */
       if (was_schedule == svn_wc_schedule_replace && was_copied)
@@ -1309,7 +1310,7 @@ svn_wc_delete4(svn_wc_context_t *wc_ctx,
             SVN_ERR(svn_wc__loggy_move(&log_accum,
                                        svn_wc__adm_access_abspath(adm_access),
                                        text_revert, text_base,
-                                       pool));
+                                       pool, pool));
 
           SVN_ERR(svn_wc__loggy_revert_props_restore(&log_accum,
                                                      path, adm_access, pool));
@@ -1602,7 +1603,7 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
 
           SVN_ERR(svn_wc__loggy_move(&log_accum,
                                      svn_wc__adm_access_abspath(adm_access),
-                                     text_base, text_revert, pool));
+                                     text_base, text_revert, pool, pool));
         }
       SVN_ERR(svn_wc__loggy_revert_props_create(&log_accum, path,
                                                 adm_access, TRUE, pool));
@@ -1937,11 +1938,11 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
           SVN_ERR(svn_wc__loggy_copy(&log_accum,
                                      svn_wc__adm_access_abspath(adm_access),
                                      text_revert, fullpath,
-                                     pool));
+                                     pool, pool));
           SVN_ERR(svn_wc__loggy_move(&log_accum,
                                      svn_wc__adm_access_abspath(adm_access),
                                      text_revert, text_base,
-                                     pool));
+                                     pool, pool));
           *reverted = TRUE;
         }
       else
@@ -1960,7 +1961,7 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
               SVN_ERR(svn_wc__loggy_copy(&log_accum,
                                       svn_wc__adm_access_abspath(adm_access),
                                       text_base, fullpath,
-                                      pool));
+                                      pool, pool));
               *reverted = TRUE;
             }
         }
@@ -1975,14 +1976,15 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
             SVN_ERR(svn_wc__loggy_set_timestamp(
                         &log_accum, svn_wc__adm_access_abspath(adm_access),
                         fullpath,
-                        svn_time_to_cstring(entry->cmt_date, pool), pool));
+                        svn_time_to_cstring(entry->cmt_date, pool),
+                        pool, pool));
 
           SVN_ERR(svn_wc__loggy_set_entry_timestamp_from_wc(
                     &log_accum, svn_wc__adm_access_abspath(adm_access),
-                    fullpath, pool));
+                    fullpath, pool, pool));
           SVN_ERR(svn_wc__loggy_set_entry_working_size_from_wc(
                     &log_accum, svn_wc__adm_access_abspath(adm_access),
-                    fullpath, pool));
+                    fullpath, pool, pool));
         }
     }
 
@@ -1995,7 +1997,7 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
       SVN_ERR(svn_wc__loggy_remove(
                     &log_accum, svn_wc__adm_access_abspath(adm_access),
                     svn_dirent_join(svn_wc_adm_access_path(adm_access),
-                                    entry->conflict_old, pool), pool));
+                                    entry->conflict_old, pool), pool, pool));
     }
   if (entry->conflict_new)
     {
@@ -2004,7 +2006,7 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
       SVN_ERR(svn_wc__loggy_remove(
                     &log_accum, svn_wc__adm_access_abspath(adm_access),
                     svn_dirent_join(svn_wc_adm_access_path(adm_access),
-                                    entry->conflict_new, pool), pool));
+                                    entry->conflict_new, pool), pool, pool));
     }
   if (entry->conflict_wrk)
     {
@@ -2013,7 +2015,7 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
       SVN_ERR(svn_wc__loggy_remove(
                     &log_accum, svn_wc__adm_access_abspath(adm_access),
                     svn_dirent_join(svn_wc_adm_access_path(adm_access),
-                                    entry->conflict_wrk, pool), pool));
+                                    entry->conflict_wrk, pool), pool, pool));
     }
 
   /* Remove the property conflict file if the entry lists one (and it
@@ -2025,7 +2027,7 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
       SVN_ERR(svn_wc__loggy_remove(&log_accum,
                     svn_wc__adm_access_abspath(adm_access),
                     svn_dirent_join(svn_wc_adm_access_path(adm_access),
-                                    entry->prejfile, pool), pool));
+                                    entry->prejfile, pool), pool, pool));
     }
 
   /* Clean up the copied state if this is a replacement. */
@@ -2067,7 +2069,8 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
   /* Modify the entry, loggily. */
   SVN_ERR(svn_wc__loggy_entry_modify(&log_accum,
                                      svn_wc__adm_access_abspath(adm_access),
-                                     fullpath, &tmp_entry, flags, pool));
+                                     fullpath, &tmp_entry, flags,
+                                     pool, pool));
 
   /* Don't run log if nothing to change. */
   if (! svn_stringbuf_isempty(log_accum))
