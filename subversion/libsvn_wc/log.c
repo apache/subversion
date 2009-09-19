@@ -208,21 +208,16 @@ file_xfer_under_path(svn_wc__db_t *db,
                      apr_pool_t *pool)
 {
   svn_error_t *err;
-  const char *full_from_path, *full_dest_path, *full_versioned_path;
+  const char *from_abspath;
   const char *dest_abspath;
 
-  full_from_path = svn_dirent_join(adm_abspath, name, pool);
-  full_dest_path = svn_dirent_join(adm_abspath, dest, pool);
-  SVN_ERR(svn_dirent_get_absolute(&dest_abspath, full_dest_path, pool));
-  if (versioned)
-    full_versioned_path = svn_dirent_join(adm_abspath, versioned, pool);
-  else
-    full_versioned_path = NULL; /* Silence GCC uninitialised warning */
+  from_abspath = svn_dirent_join(adm_abspath, name, pool);
+  dest_abspath = svn_dirent_join(adm_abspath, dest, pool);
 
   switch (action)
     {
     case svn_wc__xfer_append:
-      err = svn_io_append_file(full_from_path, full_dest_path, pool);
+      err = svn_io_append_file(from_abspath, dest_abspath, pool);
       if (err)
         {
           if (! rerun || ! APR_STATUS_IS_ENOENT(err->apr_err))
@@ -233,21 +228,19 @@ file_xfer_under_path(svn_wc__db_t *db,
 
     case svn_wc__xfer_cp_and_translate:
       {
+        const char *versioned_abspath;
         svn_subst_eol_style_t style;
         const char *eol;
         apr_hash_t *keywords;
         svn_boolean_t special;
-        const char *versioned_abspath;
 
-        if (! full_versioned_path)
-          full_versioned_path = full_dest_path;
+        if (versioned)
+          versioned_abspath = svn_dirent_join(adm_abspath, versioned, pool);
+        else
+          versioned_abspath = dest_abspath;
 
-        err = svn_dirent_get_absolute(&versioned_abspath, full_versioned_path,
-                                      pool);
-
-        if (! err)
-          err = svn_wc__get_eol_style(&style, &eol, db, versioned_abspath,
-                                      pool, pool);
+        err = svn_wc__get_eol_style(&style, &eol, db, versioned_abspath,
+                                    pool, pool);
         if (! err)
           err = svn_wc__get_keywords(&keywords, db, versioned_abspath, NULL,
                                      pool, pool);
@@ -256,7 +249,7 @@ file_xfer_under_path(svn_wc__db_t *db,
 
         if (! err)
           err = svn_subst_copy_and_translate3
-                (full_from_path, full_dest_path,
+                (from_abspath, dest_abspath,
                  eol, TRUE,
                  keywords, TRUE,
                  special,
@@ -276,8 +269,7 @@ file_xfer_under_path(svn_wc__db_t *db,
       }
 
     case svn_wc__xfer_mv:
-      err = svn_io_file_rename(full_from_path,
-                               full_dest_path, pool);
+      err = svn_io_file_rename(from_abspath, dest_abspath, pool);
 
       /* If we got an ENOENT, that's ok;  the move has probably
          already completed in an earlier run of this log.  */
