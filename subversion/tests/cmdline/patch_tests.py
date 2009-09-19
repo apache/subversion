@@ -215,7 +215,7 @@ def patch_unidiff(sbox):
                                        expected_skip,
                                        None, # expected err
                                        1, # check-props
-                                       0) # dry-run
+                                       1) # dry-run
 
 
 def patch_unidiff_absolute_paths(sbox):
@@ -278,7 +278,7 @@ def patch_unidiff_absolute_paths(sbox):
                                        expected_skip,
                                        None, # expected err
                                        1, # check-props
-                                       0) # dry-run
+                                       1) # dry-run
 
 def patch_unidiff_offset(sbox):
   "apply a unidiff patch with offset searching"
@@ -488,7 +488,7 @@ def patch_unidiff_offset(sbox):
                                        expected_skip,
                                        None, # expected err
                                        1, # check-props
-                                       0) # dry-run
+                                       1) # dry-run
 
 def patch_chopped_leading_spaces(sbox):
   "apply a unidiff patch with chopped leading spaces"
@@ -657,7 +657,7 @@ def patch_chopped_leading_spaces(sbox):
                                        expected_skip,
                                        None, # expected err
                                        1, # check-props
-                                       0) # dry-run
+                                       1) # dry-run
 
 
 def patch_unidiff_strip1(sbox):
