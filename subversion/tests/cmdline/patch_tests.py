@@ -44,6 +44,7 @@ from svntest.main import SVN_PROP_MERGEINFO, is_os_windows
 Skip = svntest.testcase.Skip
 SkipUnless = svntest.testcase.SkipUnless
 Item = svntest.wc.StateItem
+XFail = svntest.testcase.XFail
 
 ########################################################################
 #Tests
@@ -836,11 +837,11 @@ def patch_unidiff_strip1(sbox):
 
 # list all tests here, starting with None:
 test_list = [ None,
-              patch_unidiff,
+              XFail(patch_unidiff, is_os_windows),
               patch_unidiff_absolute_paths,
-              patch_unidiff_offset,
-              patch_chopped_leading_spaces,
-              patch_unidiff_strip1,
+              XFail(patch_unidiff_offset, is_os_windows),
+              XFail(patch_chopped_leading_spaces, is_os_windows),
+              XFail(patch_unidiff_strip1, is_os_windows),
             ]
 
 if __name__ == '__main__':
