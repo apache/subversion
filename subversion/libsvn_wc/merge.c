@@ -412,7 +412,7 @@ save_merge_result(svn_stringbuf_t **log_accum,
                                      svn_io_file_del_none,
                                      pool, pool));
   SVN_ERR(svn_wc__loggy_copy(log_accum, adm_abspath,
-                             result_target, edited_copy, pool));
+                             result_target, edited_copy, pool, pool));
   return SVN_NO_ERROR;
 }
 
@@ -446,14 +446,14 @@ eval_conflict_func_result(enum svn_wc_merge_outcome_t *merge_outcome,
       case svn_wc_conflict_choose_base:
         {
           SVN_ERR(svn_wc__loggy_copy(log_accum, adm_abspath,
-                                     left, merge_target, pool));
+                                     left, merge_target, pool, pool));
           *merge_outcome = svn_wc_merge_merged;
           return SVN_NO_ERROR;
         }
       case svn_wc_conflict_choose_theirs_full:
         {
           SVN_ERR(svn_wc__loggy_copy(log_accum, adm_abspath,
-                                     right, merge_target, pool));
+                                     right, merge_target, pool, pool));
           *merge_outcome = svn_wc_merge_merged;
           return SVN_NO_ERROR;
         }
@@ -496,7 +496,7 @@ eval_conflict_func_result(enum svn_wc_merge_outcome_t *merge_outcome,
                                               pool));
           SVN_ERR(svn_stream_close(chosen_stream));
           SVN_ERR(svn_wc__loggy_copy(log_accum, adm_abspath,
-                                     chosen_path, merge_target, pool));
+                                     chosen_path, merge_target, pool, pool));
           *merge_outcome = svn_wc_merge_merged;
           return SVN_NO_ERROR;
         }
@@ -516,7 +516,7 @@ eval_conflict_func_result(enum svn_wc_merge_outcome_t *merge_outcome,
                                        ? result->merged_file
                                        : result_target,
                                      merge_target,
-                                     pool));
+                                     pool, pool));
           *merge_outcome = svn_wc_merge_merged;
           return SVN_NO_ERROR;
         }
@@ -529,7 +529,8 @@ eval_conflict_func_result(enum svn_wc_merge_outcome_t *merge_outcome,
           if (copyfrom_text)
             {
               SVN_ERR(svn_wc__loggy_copy(log_accum, adm_abspath,
-                                     copyfrom_text, merge_target, pool));
+                                     copyfrom_text, merge_target,
+                                     pool, pool));
             }
 
           /* Assume conflict remains. */
@@ -638,11 +639,11 @@ preserve_pre_merge_files(svn_stringbuf_t **log_accum,
   SVN_ERR(svn_wc__loggy_translated_file(log_accum,
                                         svn_wc__adm_access_abspath(adm_access),
                                         left_copy, tmp_left,
-                                        merge_target, pool));
+                                        merge_target, pool, pool));
   SVN_ERR(svn_wc__loggy_translated_file(log_accum,
                                         svn_wc__adm_access_abspath(adm_access),
                                         right_copy, tmp_right,
-                                        merge_target, pool));
+                                        merge_target, pool, pool));
 
   /* Back up MERGE_TARGET through detranslation/retranslation:
      the new translation properties may not match the current ones */
@@ -653,7 +654,7 @@ preserve_pre_merge_files(svn_stringbuf_t **log_accum,
   SVN_ERR(svn_wc__loggy_translated_file(log_accum,
                                         svn_wc__adm_access_abspath(adm_access),
                                         target_copy, detranslated_target_copy,
-                                        merge_target, pool));
+                                        merge_target, pool, pool));
 
   tmp_entry.conflict_old = svn_dirent_is_child(adm_path, left_copy, pool);
   tmp_entry.conflict_new = svn_dirent_is_child(adm_path, right_copy, pool);
@@ -667,7 +668,7 @@ preserve_pre_merge_files(svn_stringbuf_t **log_accum,
             SVN_WC__ENTRY_MODIFY_CONFLICT_OLD
               | SVN_WC__ENTRY_MODIFY_CONFLICT_NEW
               | SVN_WC__ENTRY_MODIFY_CONFLICT_WRK,
-            pool));
+            pool, pool));
 
   return SVN_NO_ERROR;
 }
@@ -940,7 +941,7 @@ merge_text_file(const char *left,
     /* replace MERGE_TARGET with the new merged file, expanding. */
     SVN_ERR(svn_wc__loggy_copy(log_accum,
                                svn_wc__adm_access_abspath(adm_access),
-                               result_target, merge_target, pool));
+                               result_target, merge_target, pool, pool));
   return SVN_NO_ERROR;
 }
 
@@ -1002,7 +1003,7 @@ merge_binary_file(const char *left,
             {
               SVN_ERR(svn_wc__loggy_copy(log_accum,
                                      svn_wc__adm_access_abspath(adm_access),
-                                     left, merge_target, pool));
+                                     left, merge_target, pool, pool));
               *merge_outcome = svn_wc_merge_merged;
               return SVN_NO_ERROR;
             }
@@ -1010,7 +1011,7 @@ merge_binary_file(const char *left,
             {
               SVN_ERR(svn_wc__loggy_copy(log_accum,
                                      svn_wc__adm_access_abspath(adm_access),
-                                     right, merge_target, pool));
+                                     right, merge_target, pool, pool));
               *merge_outcome = svn_wc_merge_merged;
               return SVN_NO_ERROR;
             }
@@ -1039,7 +1040,7 @@ merge_binary_file(const char *left,
                   SVN_ERR(svn_wc__loggy_copy(log_accum,
                                      svn_wc__adm_access_abspath(adm_access),
                                      result->merged_file, merge_target,
-                                     pool));
+                                     pool, pool));
                   *merge_outcome = svn_wc_merge_merged;
                   return SVN_NO_ERROR;
                 }
@@ -1090,7 +1091,7 @@ merge_binary_file(const char *left,
                                  svn_wc__adm_access_abspath(adm_access),
                                  detranslated_target_abspath,
                                  mine_copy,
-                                 pool));
+                                 pool, pool));
       mine_copy = svn_dirent_is_child(svn_wc_adm_access_path(adm_access),
                                       mine_copy, pool);
       tmp_entry.conflict_wrk = mine_copy;
@@ -1113,7 +1114,7 @@ merge_binary_file(const char *left,
             SVN_WC__ENTRY_MODIFY_CONFLICT_OLD
               | SVN_WC__ENTRY_MODIFY_CONFLICT_NEW
               | SVN_WC__ENTRY_MODIFY_CONFLICT_WRK,
-            pool));
+            pool, pool));
 
   *merge_outcome = svn_wc_merge_conflict; /* a conflict happened */
 
@@ -1244,10 +1245,10 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
     {
       SVN_ERR(svn_wc__loggy_maybe_set_executable(log_accum,
                                       svn_wc__adm_access_abspath(adm_access),
-                                      merge_target, pool));
+                                      merge_target, pool, pool));
       SVN_ERR(svn_wc__loggy_maybe_set_readonly(log_accum,
                                       svn_wc__adm_access_abspath(adm_access),
-                                      merge_target, pool));
+                                      merge_target, pool, pool));
     }
 
   return SVN_NO_ERROR;

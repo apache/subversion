@@ -351,12 +351,12 @@ install_props_file(svn_stringbuf_t **log_accum,
   SVN_ERR(svn_wc__loggy_move(log_accum, svn_wc__adm_access_abspath(adm_access),
                              propfile_tmp_path,
                              propfile_path,
-                             pool));
+                             pool, pool));
 
   /* Make the props file read-only */
   return svn_wc__loggy_set_readonly(log_accum,
                                     svn_wc__adm_access_abspath(adm_access),
-                                    propfile_path, pool);
+                                    propfile_path, pool, pool);
 }
 
 svn_error_t *
@@ -395,7 +395,7 @@ svn_wc__install_props(svn_stringbuf_t **log_accum,
 
       SVN_ERR(svn_wc__loggy_remove(log_accum,
                                    svn_wc__adm_access_abspath(adm_access),
-                                   working_propfile_path, pool));
+                                   working_propfile_path, pool, pool));
     }
 
   /* Repeat the above steps for the base properties if required. */
@@ -415,7 +415,7 @@ svn_wc__install_props(svn_stringbuf_t **log_accum,
 
           SVN_ERR(svn_wc__loggy_remove(log_accum,
                                        svn_wc__adm_access_abspath(adm_access),
-                                       base_propfile_path, pool));
+                                       base_propfile_path, pool, pool));
         }
     }
 
@@ -510,8 +510,7 @@ svn_wc__loggy_props_delete(svn_stringbuf_t **log_accum,
   SVN_ERR(svn_wc__prop_path(&props_file, path, entry->kind, props_kind, pool));
   SVN_ERR(svn_wc__loggy_remove(log_accum,
                                svn_wc__adm_access_abspath(adm_access),
-                               props_file, pool));
-
+                               props_file, pool, pool));
   return SVN_NO_ERROR;
 }
 
@@ -578,13 +577,13 @@ svn_wc__loggy_revert_props_create(svn_stringbuf_t **log_accum,
       if (destroy_baseprops)
         SVN_ERR(svn_wc__loggy_move(log_accum,
                                    svn_wc__adm_access_abspath(adm_access),
-                                   dst_bprop, dst_rprop, pool));
+                                   dst_bprop, dst_rprop, pool, pool));
       else
         {
           SVN_ERR(svn_io_copy_file(dst_bprop, tmp_rprop, TRUE, pool));
           SVN_ERR(svn_wc__loggy_move(log_accum,
                                      svn_wc__adm_access_abspath(adm_access),
-                                     tmp_rprop, dst_rprop, pool));
+                                     tmp_rprop, dst_rprop, pool, pool));
         }
     }
   else if (kind == svn_node_none)
@@ -600,7 +599,7 @@ svn_wc__loggy_revert_props_create(svn_stringbuf_t **log_accum,
 
       SVN_ERR(svn_wc__loggy_move(log_accum,
                                  svn_wc__adm_access_abspath(adm_access),
-                                 dst_bprop, dst_rprop, pool));
+                                 dst_bprop, dst_rprop, pool, pool));
     }
 
   return SVN_NO_ERROR;
@@ -625,7 +624,7 @@ svn_wc__loggy_revert_props_restore(svn_stringbuf_t **log_accum,
                             svn_wc__props_revert, pool));
 
   return svn_wc__loggy_move(log_accum, svn_wc__adm_access_abspath(adm_access),
-                            revert_file, base_file, pool);
+                            revert_file, base_file, pool, pool);
 }
 
 
@@ -1718,7 +1717,7 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
       /* And of course, delete the temporary reject file. */
       SVN_ERR(svn_wc__loggy_remove(entry_accum,
                                    svn_wc__adm_access_abspath(adm_access),
-                                   reject_tmp_path, pool));
+                                   reject_tmp_path, pool, pool));
 
       /* Mark entry as "conflicted" with a particular .prej file. */
       {
@@ -1730,7 +1729,7 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
                                       svn_wc__adm_access_abspath(adm_access),
                                       path, &entry,
                                       SVN_WC__ENTRY_MODIFY_PREJFILE,
-                                      pool));
+                                      pool, pool));
       }
 
     } /* if (reject_tmp_fp) */
