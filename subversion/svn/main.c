@@ -292,6 +292,20 @@ const apr_getopt_option_t svn_cl__options[] =
                        "('merged', 'eligible')")},
   {"reintegrate",   opt_reintegrate, 0,
                     N_("lump-merge all of source URL's unmerged changes")},
+  {"strip",         'p', 1,
+                    N_("number of leading path components to strip\n"
+                       "                             "
+                       "from pathnames. Specifying -p0 gives the entire\n"
+                       "                             "
+                       "path unmodified. Specifying -p1 causes the path\n"
+                       "                             "
+                       "    doc/fudge/crunchy.html\n"
+                       "                             "
+                       "to be interpreted as\n"
+                       "                             "
+                       "    fudge/crunchy.html\n"
+                       "                             "
+                       "while -p2 would give just crunchy.html\n")},
 
   /* Long-opt Aliases
    *
@@ -727,7 +741,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  for addition. Use 'svn revert' to undo deletions and additions you\n"
      "  do not agree with.\n"
      ),
-    {'q', opt_dry_run, opt_accept, opt_merge_cmd} },
+    {'q', opt_dry_run, opt_accept, opt_merge_cmd, 'p'} },
 
   { "propdel", svn_cl__propdel, {"pdel", "pd"}, N_
     ("Remove a property from files, dirs, or revisions.\n"
@@ -1616,6 +1630,24 @@ main(int argc, const char *argv[])
         break;
       case opt_reintegrate:
         opt_state.reintegrate = TRUE;
+        break;
+      case 'p':
+        {
+          char *end;
+          opt_state.strip_count = (int) strtol(opt_arg, &end, 10);
+          if (end == opt_arg || *end != '\0')
+            {
+              err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                     _("Non-numeric strip argument given"));
+              return svn_cmdline_handle_exit_error(err, pool, "svn: ");
+            }
+          if (opt_state.strip_count < 0)
+            {
+              err = svn_error_create(SVN_ERR_INCORRECT_PARAMS, NULL,
+                                    _("Argument to --strip must be positive"));
+              return svn_cmdline_handle_exit_error(err, pool, "svn: ");
+            }
+        }
         break;
       default:
         /* Hmmm. Perhaps this would be a good place to squirrel away

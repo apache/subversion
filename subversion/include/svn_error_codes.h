@@ -1153,6 +1153,11 @@ SVN_ERROR_START
              SVN_ERR_CLIENT_CATEGORY_START + 17,
              "A file external cannot overwrite an existing versioned item")
 
+  /** @since New in 1.7. */
+  SVN_ERRDEF(SVN_ERR_CLIENT_PATCH_BAD_STRIP_COUNT,
+             SVN_ERR_CLIENT_CATEGORY_START + 18,
+             "Invalid path component strip count specified")
+
   /* misc errors */
 
   SVN_ERRDEF(SVN_ERR_BASE,

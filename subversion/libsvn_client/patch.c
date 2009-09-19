@@ -31,6 +31,7 @@
 #include "svn_client.h"
 #include "svn_dirent_uri.h"
 #include "svn_io.h"
+#include "svn_path.h"
 #include "svn_pools.h"
 #include "svn_subst.h"
 #include "svn_wc.h"
@@ -50,7 +51,7 @@ typedef struct {
 
   /* The target path, relative to the working copy directory the
    * patch is being applied to. A patch strip count applies to this
-   * and only this path. Is not always known, so may be NULL. */
+   * and only this path. This is never NULL. */
   const char *wc_path;
 
   /* The absolute path of the target on the filesystem.
@@ -132,21 +133,59 @@ typedef struct {
   svn_boolean_t executable;
 } patch_target_t;
 
+
+/* Strip STRIP_COUNT components from the front of PATH, returning
+ * the result in *RESULT, allocated in RESULT_POOL.
+ * Do temporary allocations in SCRATCH_POOL. */
+static svn_error_t *
+strip_path(const char **result, const char *path, int strip_count,
+           apr_pool_t *result_pool, apr_pool_t *scratch_pool)
+{
+  int i;
+  apr_array_header_t *components;
+  apr_array_header_t *stripped;
+  
+  components = svn_path_decompose(path, scratch_pool);
+  if (strip_count >= components->nelts)
+    return svn_error_createf(SVN_ERR_CLIENT_PATCH_BAD_STRIP_COUNT, NULL,
+                             _("Cannot strip %u components from '%s'"),
+                             strip_count,
+                             svn_dirent_local_style(path, scratch_pool));
+
+  stripped = apr_array_make(scratch_pool, components->nelts - strip_count,
+                            sizeof(const char *));
+  for (i = strip_count; i < components->nelts; i++)
+    {
+      const char *component;
+
+      component = APR_ARRAY_IDX(components, i, const char *);
+      APR_ARRAY_PUSH(stripped, const char *) = component;
+    }
+
+  *result = svn_path_compose(stripped, result_pool);
+
+  return SVN_NO_ERROR;
+}
+
 /* Resolve the exact path for a patch TARGET at path PATH_FROM_PATCHFILE,
  * which is the path of the target as it appeared in the patch file.
  * Put a canonicalized version of PATH_FROM_PATCHFILE into
  * TARGET->CANON_PATH_FROM_PATCHFILE.
  * If possible, determine TARGET->WC_PATH, TARGET->ABS_PATH, and TARGET->KIND.
  * Indicate in TARGET->SKIPPED whether the target should be skipped.
+ * STRIP_COUNT specifies the number of leading path components
+ * which should be stripped from target paths in the patch.
  * Use RESULT_POOL for allocations of fields in TARGET. */
 static svn_error_t *
 resolve_target_path(patch_target_t *target,
                     const char *path_from_patchfile,
                     const char *wc_path,
+                    int strip_count,
                     apr_pool_t *result_pool,
                     apr_pool_t *scratch_pool)
 {
   const char *abs_wc_path;
+  const char *stripped_path;
 
   target->canon_path_from_patchfile = svn_dirent_canonicalize(
                                         path_from_patchfile, result_pool);
@@ -156,18 +195,22 @@ resolve_target_path(patch_target_t *target,
       target->skipped = TRUE;
       target->kind = svn_node_file;
       target->abs_path = NULL;
-      target->wc_path = NULL;
+      target->wc_path = "";
       return SVN_NO_ERROR;
     }
 
   SVN_ERR(svn_dirent_get_absolute(&abs_wc_path, wc_path, scratch_pool));
 
-  if (svn_dirent_is_absolute(target->canon_path_from_patchfile))
+  if (strip_count > 0)
+    SVN_ERR(strip_path(&stripped_path, target->canon_path_from_patchfile,
+                       strip_count, result_pool, scratch_pool));
+  else
+    stripped_path = target->canon_path_from_patchfile;
+
+  if (svn_dirent_is_absolute(stripped_path))
     {
-      /* TODO: strip count */
-      target->wc_path = svn_dirent_is_child(abs_wc_path,
-                                            target->canon_path_from_patchfile,
-                                            scratch_pool);
+      target->wc_path = svn_dirent_is_child(abs_wc_path, stripped_path,
+                                            result_pool);
       if (! target->wc_path)
         {
           /* The target path is either outside of the working copy
@@ -175,14 +218,13 @@ resolve_target_path(patch_target_t *target,
           target->skipped = TRUE;
           target->kind = svn_node_file;
           target->abs_path = NULL;
-          target->wc_path = NULL;
+          target->wc_path = stripped_path;
           return SVN_NO_ERROR;
         }
     }
   else
     {
-      /* TODO: strip count */
-      target->wc_path = target->canon_path_from_patchfile;
+      target->wc_path = stripped_path;
     }
 
   /* Make sure the path is secure to use. We want the target to be inside
@@ -257,6 +299,8 @@ check_local_mods(svn_boolean_t *local_mods,
 /* Attempt to initialize a patch TARGET structure for a target file
  * described by PATCH.
  * Use client context CTX to send notifiations.
+ * STRIP_COUNT specifies the number of leading path components
+ * which should be stripped from target paths in the patch.
  * Upon success, allocate the patch target structure in RESULT_POOL.
  * Else, set *target to NULL.
  * Use SCRATCH_POOL for all other allocations. */
@@ -264,7 +308,7 @@ static svn_error_t *
 init_patch_target(patch_target_t **target,
                   const svn_patch_t *patch,
                   const char *base_dir,
-                  const svn_client_ctx_t *ctx,
+                  const svn_client_ctx_t *ctx, int strip_count,
                   apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
   patch_target_t *new_target;
@@ -273,7 +317,8 @@ init_patch_target(patch_target_t **target,
   new_target = apr_pcalloc(result_pool, sizeof(*new_target));
 
   SVN_ERR(resolve_target_path(new_target, patch->new_filename,
-                              base_dir, result_pool, scratch_pool));
+                              base_dir, strip_count, result_pool,
+                              scratch_pool));
   if (! new_target->skipped)
     {
       const svn_wc_entry_t *entry;
@@ -759,10 +804,10 @@ maybe_send_patch_target_notification(const patch_target_t *target,
     action = svn_wc_notify_update_update;
 
   /* Figure out which path to report for the patch target. */
-  if (! target->skipped && target->wc_path)
+  if (! target->skipped)
     path = svn_dirent_join(wc_path, target->wc_path, pool);
   else
-    path = target->canon_path_from_patchfile;
+    path = target->wc_path;
 
   notify = svn_wc_create_notify(path, action, pool);
   notify->kind = svn_node_file;
@@ -796,17 +841,20 @@ maybe_send_patch_target_notification(const patch_target_t *target,
 /* Apply a PATCH to a working copy at WC_PATH.
  * Use client context CTX to send notifiations.
  * ADM_ACCESS should hold a write lock to the WC_PATH.
+ * STRIP_COUNT specifies the number of leading path components
+ * which should be stripped from target paths in the patch.
  * Do all allocations in POOL. */
 static svn_error_t *
 apply_one_patch(svn_patch_t *patch, const char *wc_path,
                 svn_wc_adm_access_t *adm_access, svn_boolean_t dry_run,
-                const svn_client_ctx_t *ctx, apr_pool_t *pool)
+                const svn_client_ctx_t *ctx, int strip_count,
+                apr_pool_t *pool)
 {
   patch_target_t *target;
 
   SVN_ERR(init_patch_target(&target, patch,
                             svn_wc_adm_access_path(adm_access), ctx,
-                            pool, pool));
+                            strip_count, pool, pool));
   if (target == NULL)
     /* Can't apply the patch. */
     return SVN_NO_ERROR;
@@ -999,7 +1047,8 @@ apply_one_patch(svn_patch_t *patch, const char *wc_path,
 static svn_error_t *
 apply_textdiffs(const char *patch_path, const char *wc_path,
                 svn_wc_adm_access_t *adm_access, svn_boolean_t dry_run,
-                const svn_client_ctx_t *ctx, apr_pool_t *pool)
+                const svn_client_ctx_t *ctx, int strip_count,
+                apr_pool_t *pool)
 {
   svn_patch_t *patch;
   apr_pool_t *iterpool;
@@ -1032,7 +1081,7 @@ apply_textdiffs(const char *patch_path, const char *wc_path,
                                          iterpool, iterpool));
       if (patch)
         SVN_ERR(apply_one_patch(patch, wc_path, adm_access, dry_run, ctx, 
-                                iterpool));
+                                strip_count, iterpool));
     }
   while (patch);
   svn_pool_destroy(iterpool);
@@ -1044,18 +1093,24 @@ svn_error_t *
 svn_client_patch(const char *patch_path,
                  const char *target,
                  svn_boolean_t dry_run,
+                 int strip_count,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *pool)
 {
   svn_wc_adm_access_t *adm_access;
   const char *abs_target;
 
+  if (strip_count < 0)
+    return svn_error_create(SVN_ERR_INCORRECT_PARAMS, NULL,
+                            _("strip count must be positive"));
+
   SVN_ERR(svn_dirent_get_absolute(&abs_target, target, pool));
   SVN_ERR(svn_wc__adm_open_in_context(&adm_access, ctx->wc_ctx, abs_target,
                                       TRUE, -1, ctx->cancel_func,
                                       ctx->cancel_baton, pool));
 
-  SVN_ERR(apply_textdiffs(patch_path, target, adm_access, dry_run, ctx, pool));
+  SVN_ERR(apply_textdiffs(patch_path, target, adm_access, dry_run, ctx,
+                          strip_count, pool));
 
   SVN_ERR(svn_wc_adm_close2(adm_access, pool));
 
