@@ -41,11 +41,31 @@ typedef struct svn_hunk_t {
   svn_stream_t *diff_text;
 
   /* The original and modified texts in the hunk range.
-   * Derived from the diff text. The lines are read verbatim
-   * from the patch file, so the first character of each line
-   * read from these streams is a space or a '-' in case of
-   * the original text, or a space and a '+' in case of the
-   * modified text. */
+   * Derived from the diff text.
+   *
+   * For example, consider a hunk such as:
+   *   @@ -1,5 +1,5 @@
+   *    #include <stdio.h>
+   *    int main(int argc, char *argv[])
+   *    {
+   *   -        printf("Hello World!\n");
+   *   +        printf("I like Subversion!\n");
+   *    }
+   *
+   * Then, the "original" text described by the hunk is:
+   *   #include <stdio.h>
+   *   int main(int argc, char *argv[])
+   *   {
+   *           printf("Hello World!\n");
+   *   }
+   *
+   * And the modified text described by the hunk is:
+   *   #include <stdio.h>
+   *   int main(int argc, char *argv[])
+   *   {
+   *           printf("I like Subversion!\n");
+   *   }
+   */
   svn_stream_t *original_text;
   svn_stream_t *modified_text;
 
