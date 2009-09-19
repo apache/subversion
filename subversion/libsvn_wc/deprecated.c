@@ -762,6 +762,36 @@ svn_wc_revert(const char *path,
 }
 
 svn_error_t *
+svn_wc_remove_from_revision_control(svn_wc_adm_access_t *adm_access,
+                                    const char *name,
+                                    svn_boolean_t destroy_wf,
+                                    svn_boolean_t instant_error,
+                                    svn_cancel_func_t cancel_func,
+                                    void *cancel_baton,
+                                    apr_pool_t *pool)
+{
+  svn_wc_context_t *wc_ctx;
+  svn_wc__db_t *wc_db = svn_wc__adm_get_db(adm_access);
+  const char *local_abspath = svn_dirent_join(
+                                    svn_wc__adm_access_abspath(adm_access),
+                                    name,
+                                    pool);
+
+  /* name must be an entry in adm_access, fail if not */
+  SVN_ERR_ASSERT(strcmp(svn_dirent_basename(name, NULL), name) == 0);
+  SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL, wc_db, pool));
+
+  SVN_ERR(svn_wc_remove_from_revision_control2(wc_ctx,
+                                               local_abspath,
+                                               destroy_wf,
+                                               instant_error,
+                                               cancel_func, cancel_baton,
+                                               pool));
+
+  return svn_error_return(svn_wc_context_destroy(wc_ctx));
+}
+
+svn_error_t *
 svn_wc_resolved_conflict(const char *path,
                          svn_wc_adm_access_t *adm_access,
                          svn_boolean_t resolve_text,

@@ -499,7 +499,16 @@ svn_wc__internal_walk_children(svn_wc__db_t *db,
                                void *cancel_baton,
                                apr_pool_t *scratch_pool);
 
-
+/* Library-internal version of svn_wc_remove_from_revision_control2,
+   which see.*/
+svn_error_t *
+svn_wc__remove_from_revision_control_internal(svn_wc__db_t *db,
+                                              const char *local_abspath,
+                                              svn_boolean_t destroy_wf,
+                                              svn_boolean_t instant_error,
+                                              svn_cancel_func_t cancel_func,
+                                              void *cancel_baton,
+                                              apr_pool_t *scratch_pool);
 svn_error_t *
 svn_wc__internal_is_replaced(svn_boolean_t *replaced,
                              svn_wc__db_t *db,
