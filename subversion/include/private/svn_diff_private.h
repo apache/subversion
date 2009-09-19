@@ -95,6 +95,10 @@ typedef struct svn_patch_t {
 
   /* EOL string used in patch file. */
   const char *eol_str;
+
+  /* An array containing an svn_hunk_t object for each hunk parsed
+   * from the patch. */
+  apr_array_header_t *hunks;
 } svn_patch_t;
 
 /* Return the next *PATCH in PATCH_FILE. The patch file is assumed to
@@ -109,24 +113,9 @@ svn_diff__parse_next_patch(svn_patch_t **patch,
                            apr_pool_t *result_pool,
                            apr_pool_t *scratch_pool);
 
-/* Return the next *HUNK from a PATCH.
- * If no hunk can be found, set *HUNK to NULL.
- * Allocate results in RESULT_POOL.
- * Use SCRATCH_POOL for all other allocations. */
+/* Dispose of PATCH, closing any streams used by it. */
 svn_error_t *
-svn_diff__parse_next_hunk(svn_hunk_t **hunk,
-                          svn_patch_t *patch,
-                          apr_pool_t *result_pool,
-                          apr_pool_t *scratch_pool);
-
-/* 
- * This function should be called before clearing or destroying the pool
- * HUNK was allocated in (i.e. the result pool passed to
- * svn_diff__parse_next_hunk()).
- * It ensures that all streams which were opened for the hunk are closed.
- **/
-svn_error_t *
-svn_diff__destroy_hunk(svn_hunk_t *hunk);
+svn_diff__close_patch(svn_patch_t *patch);
 
 #ifdef __cplusplus
 }
