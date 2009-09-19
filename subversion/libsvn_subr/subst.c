@@ -1112,6 +1112,30 @@ translated_stream_close(void *baton)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+translated_stream_reset(void *baton)
+{
+  struct translated_stream_baton *b = baton;
+  svn_error_t *err;
+
+  err = svn_stream_reset(b->stream);
+  if (err == NULL)
+    {
+      b->in_baton->newline_off = 0;
+      b->in_baton->keyword_off = 0;
+      b->in_baton->src_format_len = 0;
+      b->out_baton->newline_off = 0;
+      b->out_baton->keyword_off = 0;
+      b->out_baton->src_format_len = 0;
+
+      b->written = FALSE;
+      svn_stringbuf_setempty(b->readbuf);
+      b->readbuf_off = 0;
+    }
+
+  return svn_error_return(err);
+}
+
 
 svn_error_t *
 svn_subst_read_specialfile(svn_stream_t **stream,
@@ -1210,6 +1234,7 @@ svn_subst_stream_translated(svn_stream_t *stream,
   svn_stream_set_read(s, translated_stream_read);
   svn_stream_set_write(s, translated_stream_write);
   svn_stream_set_close(s, translated_stream_close);
+  svn_stream_set_reset(s, translated_stream_reset);
 
   return s;
 }
