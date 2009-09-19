@@ -36,10 +36,6 @@ extern "C" {
 
 /* A single hunk inside a patch */
 typedef struct svn_hunk_t {
-  /* The hunk's unidiff text as it appeared in the patch file,
-   * without range information. */
-  svn_stream_t *diff_text;
-
   /* The original and modified texts in the hunk range.
    * Derived from the diff text.
    *
