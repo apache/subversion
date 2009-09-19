@@ -258,8 +258,8 @@ remove_revert_files(svn_stringbuf_t **logtags,
 }
 
 svn_error_t *
-svn_wc__do_update_cleanup(const char *path,
-                          svn_wc_adm_access_t *adm_access,
+svn_wc__do_update_cleanup(svn_wc__db_t *db,
+                          const char *local_abspath,
                           svn_depth_t depth,
                           const char *base_url,
                           const char *repos,
@@ -271,14 +271,17 @@ svn_wc__do_update_cleanup(const char *path,
                           apr_pool_t *pool)
 {
   const svn_wc_entry_t *entry;
-  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
-  const char *local_abspath;
+  svn_error_t *err;
 
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
-
-  SVN_ERR(svn_wc_entry(&entry, path, adm_access, TRUE, pool));
-  if (entry == NULL)
-    return SVN_NO_ERROR;
+  err = svn_wc__get_entry(&entry, db, local_abspath, TRUE, svn_node_unknown,
+                          FALSE, pool, pool);
+  if ((err && err->apr_err == SVN_ERR_NODE_UNEXPECTED_KIND) || (entry == NULL))
+    {
+      svn_error_clear(err);
+      return SVN_NO_ERROR;
+    }
+  else if (err)
+    return svn_error_return(err);
 
   if (entry->kind == svn_node_file
       || (entry->kind == svn_node_dir
@@ -305,7 +308,7 @@ svn_wc__do_update_cleanup(const char *path,
   else
     return svn_error_createf(SVN_ERR_NODE_UNKNOWN_KIND, NULL,
                              _("Unrecognized node kind: '%s'"),
-                             svn_dirent_local_style(path, pool));
+                             svn_dirent_local_style(local_abspath, pool));
 
   return SVN_NO_ERROR;
 }
@@ -1682,7 +1685,7 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
             svn_path_url_add_component2(parent_entry->url, base_name, pool);
 
           /* Change the entry urls recursively (but not the working rev). */
-          SVN_ERR(svn_wc__do_update_cleanup(path, adm_access,
+          SVN_ERR(svn_wc__do_update_cleanup(wc_ctx->db, local_abspath,
                                             depth, new_url,
                                             parent_entry->repos,
                                             SVN_INVALID_REVNUM, NULL,
