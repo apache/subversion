@@ -2636,7 +2636,14 @@ svn_wc__remove_from_revision_control_internal(svn_wc__db_t *db,
         }
 
     }  /* done with file case */
-
+  else if (svn_wc__adm_missing(db, local_abspath, scratch_pool))
+    {
+      /* The directory is missing  so don't try to recurse,
+         just delete the entry in the parent directory. 
+         
+         ### This case disappears after we move to one DB. */
+      SVN_ERR(svn_wc__entry_remove(db, local_abspath, scratch_pool));
+    }
   else /* looking at THIS_DIR */
     {
       apr_pool_t *iterpool = svn_pool_create(scratch_pool);
@@ -2710,34 +2717,25 @@ svn_wc__remove_from_revision_control_internal(svn_wc__db_t *db,
             }
           else if (kind == svn_wc__db_kind_dir)
             {
-              if (svn_wc__adm_missing(db, entry_abspath, iterpool))
-                {
-                  /* The directory is missing  so don't try to recurse,
-                     just delete the entry in the parent directory. */
-                  SVN_ERR(svn_wc__entry_remove(db, entry_abspath, iterpool));
-                }
-              else
-                {
-                  err = svn_wc__remove_from_revision_control_internal(
-                                           db, entry_abspath,
-                                           destroy_wf,
-                                           instant_error,
-                                           cancel_func, cancel_baton,
-                                           iterpool);
+              err = svn_wc__remove_from_revision_control_internal(
+                                       db, entry_abspath,
+                                       destroy_wf,
+                                       instant_error,
+                                       cancel_func, cancel_baton,
+                                       iterpool);
 
-                  if (err && (err->apr_err == SVN_ERR_WC_LEFT_LOCAL_MOD))
+              if (err && (err->apr_err == SVN_ERR_WC_LEFT_LOCAL_MOD))
+                {
+                  if (instant_error)
+                      return svn_error_return(err);
+                  else
                     {
-                      if (instant_error)
-                          return svn_error_return(err);
-                      else
-                        {
-                          svn_error_clear(err);
-                          left_something = TRUE;
-                        }
+                      svn_error_clear(err);
+                      left_something = TRUE;
                     }
-                  else if (err)
-                    return err;
                 }
+              else if (err)
+                return err;
             }
         }
 

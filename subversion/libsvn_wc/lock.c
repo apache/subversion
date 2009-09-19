@@ -1535,7 +1535,9 @@ svn_wc__adm_missing(svn_wc__db_t *db,
       return FALSE;
     }
   else
-    return (status == svn_wc__db_status_obstructed);
+    return (status == svn_wc__db_status_obstructed) ||
+           (status == svn_wc__db_status_obstructed_add) ||
+           (status == svn_wc__db_status_obstructed_delete);
 }
 
 
