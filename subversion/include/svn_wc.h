@@ -4146,14 +4146,13 @@ svn_wc_add_repos_file(const char *dst_path,
                       apr_pool_t *pool);
 
 
-/** Remove entry @a name in @a adm_access from revision control.  @a name
- * must be either a file or @c SVN_WC_ENTRY_THIS_DIR.  @a adm_access must
+/** Remove @a local_abspath from revision control.  @a wc_ctx must
  * hold a write lock.
  *
- * If @a name is a file, all its info will be removed from @a adm_access's
- * administrative directory.  If @a name is @c SVN_WC_ENTRY_THIS_DIR, then
- * @a adm_access's entire administrative area will be deleted, along with
- * *all* the administrative areas anywhere in the tree below @a adm_access.
+ * If @a local_abspath is a file, all its info will be removed from the
+ * administrative area.  If @a name is a directory, then the administrative
+ * area will be deleted, along with *all* the administrative areas anywhere
+ * in the tree below @a adm_access.
  *
  * Normally, only administrative data is removed.  However, if
  * @a destroy_wf is TRUE, then all working file(s) and dirs are deleted
@@ -4174,6 +4173,27 @@ svn_wc_add_repos_file(const char *dst_path,
  * WARNING:  This routine is exported for careful, measured use by
  * libsvn_client.  Do *not* call this routine unless you really
  * understand what the heck you're doing.
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_wc_remove_from_revision_control2(svn_wc_context_t *wc_ctx,
+                                     const char *local_abspath,
+                                     svn_boolean_t destroy_wf,
+                                     svn_boolean_t instant_error,
+                                     svn_cancel_func_t cancel_func,
+                                     void *cancel_baton,
+                                     apr_pool_t *pool);
+
+/**
+ * Similar to svn_wc_remove_from_revision_control2() but with a name
+ * and access baton.
+ *
+ * WARNING:  This routine was exported for careful, measured use by
+ * libsvn_client.  Do *not* call this routine unless you really
+ * understand what the heck you're doing.
+ *
+ * @deprecated Provided for compatibility with the 1.5 API
  */
 svn_error_t *
 svn_wc_remove_from_revision_control(svn_wc_adm_access_t *adm_access,
@@ -6131,12 +6151,11 @@ svn_wc_relocate(const char *path,
 
 
 /**
- * Revert changes to @a path.  Perform necessary allocations in @a pool.
+ * Revert changes to @a local_abspath.  Perform necessary allocations in
+ * @a scratch_pool.
  *
- * @a parent_access is an access baton for the directory containing @a
- * path, unless @a path is a working copy root (as determined by @c
- * svn_wc_is_wc_root), in which case @a parent_access refers to @a
- * path itself.
+ * @a wc_ctx contains the necessary locks required for performing the
+ * operation.
  *
  * If @a depth is @c svn_depth_empty, revert just @a path (if a
  * directory, then revert just the properties on that directory).
