@@ -781,12 +781,13 @@ copy_dir_administratively(svn_wc_context_t *wc_ctx,
   {
     const char *copyfrom_url;
     svn_revnum_t copyfrom_rev;
-    svn_wc_entry_t tmp_entry;
 
     /* Are we copying a dir that is already copied but not committed? */
     if (src_entry->copied)
       {
         const svn_wc_entry_t *dst_entry;
+        svn_wc_entry_t tmp_entry;
+
         SVN_ERR(svn_wc__get_entry(&dst_entry, db, dst_abspath, TRUE,
                                   svn_node_dir, TRUE,
                                   scratch_pool, scratch_pool));
