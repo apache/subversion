@@ -48,7 +48,7 @@ typedef struct svn_hunk_t {
    *   +        printf("I like Subversion!\n");
    *    }
    *
-   * Then, the "original" text described by the hunk is:
+   * Then, the original text described by the hunk is:
    *   #include <stdio.h>
    *   int main(int argc, char *argv[])
    *   {
@@ -61,6 +61,12 @@ typedef struct svn_hunk_t {
    *   {
    *           printf("I like Subversion!\n");
    *   }
+   *
+   * Because these streams make use of line filtering and transformation,
+   * they should only be read line-by-line with svn_stream_readline().
+   * Reading them with svn_stream_read() will not yield the expected result,
+   * because it will return the unidiff text from the patch file unmodified.
+   * The streams support resetting.
    */
   svn_stream_t *original_text;
   svn_stream_t *modified_text;
