@@ -623,7 +623,7 @@ do_open(svn_wc_adm_access_t **adm_access,
               if (err)
                 {
                   return svn_error_compose_create(err,
-                              svn_wc_adm_close2(node_access, iterpool));
+                              svn_wc_adm_close2(lock, iterpool));
                 }
             }
         }
