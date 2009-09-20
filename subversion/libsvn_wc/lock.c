@@ -533,36 +533,42 @@ do_open(svn_wc_adm_access_t **adm_access,
         int levels_to_lock,
         svn_cancel_func_t cancel_func,
         void *cancel_baton,
-        apr_pool_t *pool)
+        apr_pool_t *result_pool,
+        apr_pool_t *scratch_pool)
 {
   svn_wc_adm_access_t *lock;
   svn_error_t *err;
-  apr_pool_t *subpool = svn_pool_create(pool);
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
   SVN_ERR(open_single(&lock, path, write_lock, db, db_provided,
-                      pool, subpool));
+                      result_pool, iter_pool));
 
   /* Add self to the rollback list in case of error.  */
   APR_ARRAY_PUSH(rollback, svn_wc_adm_access_t *) = lock;
 
   if (levels_to_lock != 0)
     {
-      apr_hash_t *entries;
-      apr_hash_index_t *hi;
+      const apr_array_header_t *children;
+      const char *local_abspath = svn_wc__adm_access_abspath(lock);
+      int i;
 
       /* Reduce levels_to_lock since we are about to recurse */
       if (levels_to_lock > 0)
         levels_to_lock--;
 
-      SVN_ERR(svn_wc_entries_read(&entries, lock, FALSE, subpool));
+      SVN_ERR(svn_wc__db_read_children(&children, db, local_abspath,
+                                       scratch_pool, scratch_pool));
 
       /* Open the tree */
-      for (hi = apr_hash_first(subpool, entries); hi; hi = apr_hash_next(hi))
+      for (i = 0; i < children->nelts; i++)
         {
-          void *val;
-          const svn_wc_entry_t *entry;
-          svn_wc_adm_access_t *entry_access;
-          const char *entry_path;
+          const char *node_abspath;
+          svn_wc__db_status_t status;
+          svn_wc__db_kind_t kind;
+          svn_depth_t depth;
+          const char *name = APR_ARRAY_IDX(children, i, const char *);
+
+          svn_pool_clear(iterpool);
 
           /* See if someone wants to cancel this operation. */
           if (cancel_func)
@@ -570,58 +576,61 @@ do_open(svn_wc_adm_access_t **adm_access,
               err = cancel_func(cancel_baton);
               if (err)
                 {
-                  svn_error_clear(svn_wc_adm_close2(lock, subpool));
-                  svn_pool_destroy(subpool);
+                  svn_error_clear(svn_wc_adm_close2(lock, iterpool));
+                  svn_pool_destroy(iterpool);
                   return err;
                 }
             }
 
-          apr_hash_this(hi, NULL, NULL, &val);
-          entry = val;
-          if (entry->kind != svn_node_dir
-              || ! strcmp(entry->name, SVN_WC_ENTRY_THIS_DIR))
+          node_abspath = svn_dirent_join(local_abspath, name, iterpool);
+
+          SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL,
+                                       NULL, NULL, NULL, NULL, &depth, NULL,
+                                       NULL, NULL, NULL, NULL, NULL, NULL,
+                                       NULL, NULL, NULL, NULL, NULL, NULL,
+                                       NULL, NULL, NULL, NULL,
+                                       db, node_abspath, iterpool, iterpool));
+
+          if (kind != svn_wc__db_kind_dir)
             continue;
 
-          /* Also skip the excluded subdir. */
-          if (entry->depth == svn_depth_exclude)
+          if (depth == svn_depth_exclude)
             continue;
 
-          entry_path = svn_dirent_join(path, entry->name, subpool);
+          if (status == svn_wc__db_status_absent ||
+              status == svn_wc__db_status_not_present)
+            continue;
 
-          /* Don't use the subpool pool here, the lock needs to persist */
-          err = do_open(&entry_access, entry_path, db, db_provided, rollback,
-                        write_lock, levels_to_lock, cancel_func, cancel_baton,
-                        lock->pool);
-
-          if (err)
+          if (status == svn_wc__db_status_obstructed ||
+              status == svn_wc__db_status_obstructed_add ||
+              status == svn_wc__db_status_obstructed_delete)
             {
-              const char *abspath;
-
-              if (err->apr_err != SVN_ERR_WC_NOT_WORKING_COPY)
-                {
-                  svn_error_clear(svn_wc_adm_close2(lock, subpool));
-                  svn_pool_destroy(subpool);
-                  return err;
-                }
-
-              /* It's missing or obstructed, so store a placeholder */
-              svn_error_clear(err);
-              
-              SVN_ERR(svn_dirent_get_absolute(&abspath, entry_path, subpool));
-              svn_wc__db_temp_set_access(lock->db, abspath,
+              svn_wc__db_temp_set_access(lock->db, node_abspath,
                                          (svn_wc_adm_access_t *)&missing,
-                                         subpool);
+                                         iterpool);
             }
+          else
+            {
+              const char *node_path = svn_dirent_join(path, name, iterpool);
+              svn_wc_adm_access_t *node_access;
+              svn_error_t *err;
 
-          /* ### what is the comment below all about? */
-          /* ### Perhaps we should verify that the parent and child agree
-             ### about the URL of the child? */
+              err = do_open(&node_access, node_path, db, db_provided,
+                            rollback, write_lock, levels_to_lock,
+                            cancel_func, cancel_baton,
+                            lock->pool, iterpool);
+
+              if (err)
+                {
+                  return svn_error_compose_create(err,
+                              svn_wc_adm_close2(adm_access, iterpool));
+                }
+            }
         }
     }
+  svn_pool_destroy(iterpool);
 
   *adm_access = lock;
-
-  svn_pool_destroy(subpool);
 
   return SVN_NO_ERROR;
 }
@@ -645,7 +654,7 @@ open_all(svn_wc_adm_access_t **adm_access,
 
   err = do_open(adm_access, path, db, db_provided, rollback,
                 write_lock, levels_to_lock,
-                cancel_func, cancel_baton, pool);
+                cancel_func, cancel_baton, pool, pool);
   if (err)
     {
       int i;
