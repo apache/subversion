@@ -155,28 +155,48 @@ load_props(apr_hash_t **hash,
 }
 
 
-
-/* Given a HASH full of property name/values, write them to a file
-   located at PROPFILE_PATH.  If WRITE_EMPTY is TRUE then writing
-   an emtpy property hash will result in an actual empty property
-   file on disk, otherwise an empty hash will result in no file
-   being written at all. */
-static svn_error_t *
-save_prop_tmp_file(const char **tmp_file_path,
-                   apr_hash_t *hash,
-                   const char *tmp_base_dir,
-                   svn_boolean_t write_empty,
-                   apr_pool_t *pool)
+svn_error_t *
+svn_wc__write_properties(apr_hash_t *properties,
+                         const char *dest_abspath,
+                         svn_stringbuf_t **log_accum,
+                         const char *adm_abspath,
+                         apr_pool_t *scratch_pool)
 {
+  const char *prop_tmp_abspath;
   svn_stream_t *stream;
 
-  SVN_ERR(svn_stream_open_unique(&stream, tmp_file_path, tmp_base_dir,
-                                 svn_io_file_del_none, pool, pool));
+  /* Write the property hash into a temporary file. */
+  SVN_ERR(svn_stream_open_unique(&stream, &prop_tmp_abspath,
+                                 svn_dirent_dirname(dest_abspath,
+                                                    scratch_pool),
+                                 svn_io_file_del_none,
+                                 scratch_pool, scratch_pool));
+  if (apr_hash_count(properties) != 0)
+    SVN_ERR(svn_hash_write2(properties, stream, SVN_HASH_TERMINATOR,
+                            scratch_pool));
+  SVN_ERR(svn_stream_close(stream));
 
-  if (apr_hash_count(hash) != 0 || write_empty)
-    SVN_ERR(svn_hash_write2(hash, stream, SVN_HASH_TERMINATOR, pool));
+  if (log_accum)
+    {
+      /* Write a log entry to move tmp file to the destination.  */
+      SVN_ERR(svn_wc__loggy_move(log_accum, adm_abspath,
+                                 prop_tmp_abspath, dest_abspath,
+                                 scratch_pool, scratch_pool));
 
-  return svn_stream_close(stream);
+      /* And make the destination read-only.  */
+      SVN_ERR(svn_wc__loggy_set_readonly(log_accum, adm_abspath,
+                                         dest_abspath,
+                                         scratch_pool, scratch_pool));
+    }
+  else
+    {
+      /* And move the sucker into place as a read-only file.  */
+      SVN_ERR(svn_io_file_rename(prop_tmp_abspath, dest_abspath,
+                                 scratch_pool));
+      SVN_ERR(svn_io_set_file_read_only(dest_abspath, FALSE, scratch_pool));
+    }
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -328,31 +348,23 @@ install_props_file(svn_stringbuf_t **log_accum,
                    apr_pool_t *pool)
 {
   svn_wc__db_kind_t kind;
-  const char *propfile_path;
-  const char *propfile_tmp_path;
+  const char *local_abspath;
+  const char *propfile_abspath;
 
   if (! svn_dirent_is_child(svn_wc_adm_access_path(adm_access), path, NULL))
     kind = svn_wc__db_kind_dir;
   else
     kind = svn_wc__db_kind_file;
 
-  SVN_ERR(svn_wc__prop_path(&propfile_path, path, kind, wc_prop_kind, pool));
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+  SVN_ERR(svn_wc__prop_path(&propfile_abspath, local_abspath, kind,
+                            wc_prop_kind, pool));
 
-  /* Write the property hash into a temporary file. */
-  SVN_ERR(save_prop_tmp_file(&propfile_tmp_path, props,
-                             svn_dirent_dirname(propfile_path, pool),
-                             FALSE, pool));
-
-  /* Write a log entry to move tmp file to real file. */
-  SVN_ERR(svn_wc__loggy_move(log_accum, svn_wc__adm_access_abspath(adm_access),
-                             propfile_tmp_path,
-                             propfile_path,
-                             pool, pool));
-
-  /* Make the props file read-only */
-  return svn_wc__loggy_set_readonly(log_accum,
-                                    svn_wc__adm_access_abspath(adm_access),
-                                    propfile_path, pool, pool);
+  /* Loggily write the properties to the destination file.  */
+  return svn_error_return(svn_wc__write_properties(
+                            props, propfile_abspath,
+                            log_accum,
+                            svn_wc__adm_access_abspath(adm_access), pool));
 }
 
 svn_error_t *
@@ -426,10 +438,12 @@ immediate_install_props(const char *path,
                         apr_hash_t *working_props,
                         apr_pool_t *scratch_pool)
 {
-  const char *propfile_path;
+  const char *local_abspath;
+  const char *propfile_abspath;
   apr_array_header_t *prop_diffs;
 
-  SVN_ERR(svn_wc__prop_path(&propfile_path, path, kind,
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, scratch_pool));
+  SVN_ERR(svn_wc__prop_path(&propfile_abspath, local_abspath, kind,
                             svn_wc__props_working, scratch_pool));
 
   /* Check if the props are modified. */
@@ -439,23 +453,14 @@ immediate_install_props(const char *path,
   /* Save the working properties file if it differs from base. */
   if (prop_diffs->nelts > 0)
     {
-      const char *propfile_tmp_path;
-
-      /* Write the property hash into a temporary file. */
-      SVN_ERR(save_prop_tmp_file(&propfile_tmp_path, working_props,
-                                 svn_dirent_dirname(propfile_path,
-                                                    scratch_pool),
-                                 FALSE, scratch_pool));
-
-      /* And move the sucker into place as a read-only file.  */
-      SVN_ERR(svn_io_file_rename(propfile_tmp_path, propfile_path,
-                                 scratch_pool));
-      SVN_ERR(svn_io_set_file_read_only(propfile_path, FALSE, scratch_pool));
+      /* Write out the properties (synchronously).  */
+      SVN_ERR(svn_wc__write_properties(working_props, propfile_abspath,
+                                       NULL, NULL, scratch_pool));
     }
   else
     {
       /* No property modifications, remove the file instead. */
-      SVN_ERR(svn_io_remove_file2(propfile_path, TRUE, scratch_pool));
+      SVN_ERR(svn_io_remove_file2(propfile_abspath, TRUE, scratch_pool));
     }
 
   return SVN_NO_ERROR;
@@ -544,8 +549,8 @@ svn_wc__loggy_revert_props_create(svn_stringbuf_t **log_accum,
   svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
   const char *local_abspath;
   svn_wc__db_kind_t kind;
-  const char *dst_rprop;
-  const char *dst_bprop;
+  const char *revert_prop_abspath;
+  const char *base_prop_abspath;
   svn_node_kind_t on_disk;
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
@@ -555,33 +560,31 @@ svn_wc__loggy_revert_props_create(svn_stringbuf_t **log_accum,
   /* TODO(#2843) The current caller ensures that PATH will not be an excluded
      item. But do we really need show_hidden = TRUE here? */
 
-  SVN_ERR(svn_wc__prop_path(&dst_rprop, path, kind, svn_wc__props_revert,
-                            pool));
-  SVN_ERR(svn_wc__prop_path(&dst_bprop, path, kind, svn_wc__props_base,
-                            pool));
+  SVN_ERR(svn_wc__prop_path(&revert_prop_abspath, local_abspath, kind,
+                            svn_wc__props_revert, pool));
+  SVN_ERR(svn_wc__prop_path(&base_prop_abspath, local_abspath, kind,
+                            svn_wc__props_base, pool));
 
   /* If prop base exist, copy it to revert base. */
-  SVN_ERR(svn_io_check_path(dst_bprop, &on_disk, pool));
+  SVN_ERR(svn_io_check_path(base_prop_abspath, &on_disk, pool));
   if (on_disk == svn_node_file)
     {
       SVN_ERR(svn_wc__loggy_move(log_accum,
                                  svn_wc__adm_access_abspath(adm_access),
-                                 dst_bprop, dst_rprop, pool, pool));
+                                 base_prop_abspath, revert_prop_abspath,
+                                 pool, pool));
     }
   else if (on_disk == svn_node_none)
     {
       /* If there wasn't any prop base we still need an empty revert
          propfile, otherwise a revert won't know that a change to the
          props needs to be made (it'll just see no file, and do nothing).
-         So manufacture an empty propfile and force it to be written out. */
+         So (loggily) write out an empty revert propfile.  */
 
-      SVN_ERR(save_prop_tmp_file(&dst_bprop, apr_hash_make(pool),
-                                 svn_dirent_dirname(dst_bprop, pool),
-                                 TRUE, pool));
-
-      SVN_ERR(svn_wc__loggy_move(log_accum,
-                                 svn_wc__adm_access_abspath(adm_access),
-                                 dst_bprop, dst_rprop, pool, pool));
+      SVN_ERR(svn_wc__write_properties(
+                apr_hash_make(pool), revert_prop_abspath,
+                log_accum, svn_wc__adm_access_abspath(adm_access),
+                pool));
     }
 
   return SVN_NO_ERROR;
