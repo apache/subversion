@@ -115,11 +115,8 @@ load_props(apr_hash_t **hash,
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
   SVN_ERR(svn_wc__db_check_node(&kind, db, local_abspath, pool));
-  SVN_ERR(svn_wc__prop_path(&prop_path, local_abspath,
-                            kind == svn_wc__db_kind_dir
-                                ? svn_node_dir
-                                : svn_node_file,
-                            props_kind, pool));
+  SVN_ERR(svn_wc__prop_path(&prop_path, local_abspath, kind, props_kind,
+                            pool));
 
   /* We shouldn't be calling load_prop_file() with an empty file, but
      we do.  This check makes sure that we don't call svn_hash_read2()
@@ -330,17 +327,16 @@ install_props_file(svn_stringbuf_t **log_accum,
                    svn_wc__props_kind_t wc_prop_kind,
                    apr_pool_t *pool)
 {
-  svn_node_kind_t node_kind;
+  svn_wc__db_kind_t kind;
   const char *propfile_path;
   const char *propfile_tmp_path;
 
   if (! svn_dirent_is_child(svn_wc_adm_access_path(adm_access), path, NULL))
-    node_kind = svn_node_dir;
+    kind = svn_wc__db_kind_dir;
   else
-    node_kind = svn_node_file;
+    kind = svn_wc__db_kind_file;
 
-  SVN_ERR(svn_wc__prop_path(&propfile_path, path,
-                            node_kind, wc_prop_kind, pool));
+  SVN_ERR(svn_wc__prop_path(&propfile_path, path, kind, wc_prop_kind, pool));
 
   /* Write the property hash into a temporary file. */
   SVN_ERR(save_prop_tmp_file(&propfile_tmp_path, props,
@@ -368,13 +364,13 @@ svn_wc__install_props(svn_stringbuf_t **log_accum,
                       svn_boolean_t write_base_props,
                       apr_pool_t *pool)
 {
+  svn_wc__db_kind_t kind;
   apr_array_header_t *prop_diffs;
-  svn_node_kind_t kind;
 
   if (! svn_dirent_is_child(svn_wc_adm_access_path(adm_access), path, NULL))
-    kind = svn_node_dir;
+    kind = svn_wc__db_kind_dir;
   else
-    kind = svn_node_file;
+    kind = svn_wc__db_kind_file;
 
   /* Check if the props are modified. */
   SVN_ERR(svn_prop_diffs(&prop_diffs, working_props, base_props, pool));
@@ -425,7 +421,7 @@ svn_wc__install_props(svn_stringbuf_t **log_accum,
 
 static svn_error_t *
 immediate_install_props(const char *path,
-                        svn_node_kind_t kind,
+                        svn_wc__db_kind_t kind,
                         apr_hash_t *base_props,
                         apr_hash_t *working_props,
                         apr_pool_t *scratch_pool)
@@ -471,26 +467,24 @@ svn_wc__working_props_committed(svn_wc__db_t *db,
                                 const char *local_abspath,
                                 apr_pool_t *scratch_pool)
 {
+  svn_wc__db_kind_t kind;
   const char *working;
   const char *base;
-  const svn_wc_entry_t *entry;
 
+  SVN_ERR(svn_wc__db_check_node(&kind, db, local_abspath, scratch_pool));
 
   /* The path is ensured not an excluded path. */
   /* TODO(#2843) It seems that there is no need to
      reveal hidden entry here? */
-  SVN_ERR(svn_wc__get_entry(&entry, db, local_abspath,
-                            FALSE, svn_node_unknown, FALSE,
-                            scratch_pool, scratch_pool));
 
-  SVN_ERR(svn_wc__prop_path(&working, local_abspath, entry->kind,
+  SVN_ERR(svn_wc__prop_path(&working, local_abspath, kind,
                             svn_wc__props_working, scratch_pool));
-  SVN_ERR(svn_wc__prop_path(&base, local_abspath, entry->kind,
+  SVN_ERR(svn_wc__prop_path(&base, local_abspath, kind,
                             svn_wc__props_base, scratch_pool));
 
   /* svn_io_file_rename() retains a read-only bit, so there's no
      need to explicitly set it. */
-  return svn_io_file_rename(working, base, scratch_pool);
+  return svn_error_return(svn_io_file_rename(working, base, scratch_pool));
 }
 
 
@@ -501,13 +495,16 @@ svn_wc__loggy_props_delete(svn_stringbuf_t **log_accum,
                            svn_wc_adm_access_t *adm_access,
                            apr_pool_t *pool)
 {
-  const svn_wc_entry_t *entry;
+  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
+  const char *local_abspath;
+  svn_wc__db_kind_t kind;
   const char *props_file;
 
   SVN_ERR_ASSERT(props_kind != svn_wc__props_wcprop);
 
-  SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access, TRUE, pool));
-  SVN_ERR(svn_wc__prop_path(&props_file, path, entry->kind, props_kind, pool));
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+  SVN_ERR(svn_wc__db_check_node(&kind, db, local_abspath, pool));
+  SVN_ERR(svn_wc__prop_path(&props_file, path, kind, props_kind, pool));
   SVN_ERR(svn_wc__loggy_remove(log_accum,
                                svn_wc__adm_access_abspath(adm_access),
                                props_file, pool, pool));
@@ -533,11 +530,8 @@ svn_wc__props_delete(svn_wc__db_t *db,
     }
 
   SVN_ERR(svn_wc__db_check_node(&kind, db, local_abspath, pool));
-  SVN_ERR(svn_wc__prop_path(&props_file, local_abspath,
-                            kind == svn_wc__db_kind_dir
-                              ? svn_node_dir
-                              : svn_node_file,
-                            props_kind, pool));
+  SVN_ERR(svn_wc__prop_path(&props_file, local_abspath, kind, props_kind,
+                            pool));
   return svn_error_return(svn_io_remove_file2(props_file, TRUE, pool));
 }
 
@@ -545,48 +539,36 @@ svn_error_t *
 svn_wc__loggy_revert_props_create(svn_stringbuf_t **log_accum,
                                   const char *path,
                                   svn_wc_adm_access_t *adm_access,
-                                  svn_boolean_t destroy_baseprops,
                                   apr_pool_t *pool)
 {
-  const svn_wc_entry_t *entry;
+  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
+  const char *local_abspath;
+  svn_wc__db_kind_t kind;
   const char *dst_rprop;
   const char *dst_bprop;
-  const char *tmp_rprop;
-  svn_node_kind_t kind;
+  svn_node_kind_t on_disk;
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+
+  SVN_ERR(svn_wc__db_check_node(&kind, db, local_abspath, pool));
 
   /* TODO(#2843) The current caller ensures that PATH will not be an excluded
      item. But do we really need show_hidden = TRUE here? */
-  SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access, FALSE, pool));
 
-  SVN_ERR(svn_wc__prop_path(&dst_rprop, path, entry->kind, svn_wc__props_revert,
+  SVN_ERR(svn_wc__prop_path(&dst_rprop, path, kind, svn_wc__props_revert,
                             pool));
-  if (entry->kind == svn_node_dir)
-    SVN_ERR(svn_wc_create_tmp_file2(NULL, &tmp_rprop, path,
-                                    svn_io_file_del_none, pool));
-  else
-    SVN_ERR(svn_wc_create_tmp_file2(NULL, &tmp_rprop,
-                                    svn_dirent_dirname(path, pool),
-                                    svn_io_file_del_none, pool));
-  SVN_ERR(svn_wc__prop_path(&dst_bprop, path, entry->kind, svn_wc__props_base,
+  SVN_ERR(svn_wc__prop_path(&dst_bprop, path, kind, svn_wc__props_base,
                             pool));
 
   /* If prop base exist, copy it to revert base. */
-  SVN_ERR(svn_io_check_path(dst_bprop, &kind, pool));
-  if (kind == svn_node_file)
+  SVN_ERR(svn_io_check_path(dst_bprop, &on_disk, pool));
+  if (on_disk == svn_node_file)
     {
-      if (destroy_baseprops)
-        SVN_ERR(svn_wc__loggy_move(log_accum,
-                                   svn_wc__adm_access_abspath(adm_access),
-                                   dst_bprop, dst_rprop, pool, pool));
-      else
-        {
-          SVN_ERR(svn_io_copy_file(dst_bprop, tmp_rprop, TRUE, pool));
-          SVN_ERR(svn_wc__loggy_move(log_accum,
-                                     svn_wc__adm_access_abspath(adm_access),
-                                     tmp_rprop, dst_rprop, pool, pool));
-        }
+      SVN_ERR(svn_wc__loggy_move(log_accum,
+                                 svn_wc__adm_access_abspath(adm_access),
+                                 dst_bprop, dst_rprop, pool, pool));
     }
-  else if (kind == svn_node_none)
+  else if (on_disk == svn_node_none)
     {
       /* If there wasn't any prop base we still need an empty revert
          propfile, otherwise a revert won't know that a change to the
@@ -611,20 +593,26 @@ svn_wc__loggy_revert_props_restore(svn_stringbuf_t **log_accum,
                                    svn_wc_adm_access_t *adm_access,
                                    apr_pool_t *pool)
 {
-  const svn_wc_entry_t *entry;
-  const char *revert_file, *base_file;
+  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
+  const char *local_abspath;
+  svn_wc__db_kind_t kind;
+  const char *revert_file;
+  const char *base_file;
 
   /* TODO(#2843) The current caller ensures that PATH will not be an excluded
      item. But do we really need show_hidden = TRUE here? */
-  SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access, FALSE, pool));
 
-  SVN_ERR(svn_wc__prop_path(&base_file, path, entry->kind, svn_wc__props_base,
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+  SVN_ERR(svn_wc__db_check_node(&kind, db, local_abspath, pool));
+
+  SVN_ERR(svn_wc__prop_path(&base_file, path, kind, svn_wc__props_base, pool));
+  SVN_ERR(svn_wc__prop_path(&revert_file, path, kind, svn_wc__props_revert,
                             pool));
-  SVN_ERR(svn_wc__prop_path(&revert_file, path, entry->kind,
-                            svn_wc__props_revert, pool));
 
-  return svn_wc__loggy_move(log_accum, svn_wc__adm_access_abspath(adm_access),
-                            revert_file, base_file, pool, pool);
+  return svn_error_return(svn_wc__loggy_move(
+                            log_accum,
+                            svn_wc__adm_access_abspath(adm_access),
+                            revert_file, base_file, pool, pool));
 }
 
 
@@ -2187,10 +2175,7 @@ svn_wc__internal_propset(svn_wc__db_t *db,
 
   /* Drop it right onto the disk. We don't need loggy since we aren't
      coordinating this change with anything else.  */
-  SVN_ERR(immediate_install_props(local_abspath,
-                                  kind == svn_wc__db_kind_dir ?
-                                           svn_node_dir :
-                                           svn_node_file,
+  SVN_ERR(immediate_install_props(local_abspath, kind,
                                   base_prophash, prophash, scratch_pool));
 
   if (notify_func)

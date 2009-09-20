@@ -158,7 +158,6 @@ svn_error_t *
 svn_wc__loggy_revert_props_create(svn_stringbuf_t **log_accum,
                                   const char *path,
                                   svn_wc_adm_access_t *adm_access,
-                                  svn_boolean_t destroy_baseprops,
                                   apr_pool_t *pool);
 
 /* Extends LOG_ACCUM to make the revert props back into base props,

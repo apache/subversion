@@ -5479,6 +5479,8 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
       const char *dst_rtext;
       const char *dst_txtb;
 
+      /* ### replace this block with: svn_wc__wq_prepare_revert_files()  */
+
       SVN_ERR(svn_wc__text_revert_path(&dst_rtext, wc_ctx->db, local_abspath,
                                        pool));
       SVN_ERR(svn_wc__text_base_path(&dst_txtb, wc_ctx->db, local_abspath,
@@ -5489,7 +5491,7 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
                                  dst_txtb, dst_rtext, pool, pool));
       SVN_ERR(svn_wc__loggy_revert_props_create(&log_accum,
                                                 dst_path, adm_access,
-                                                TRUE, pool));
+                                                pool));
     }
 
   /* Schedule this for addition first, before the entry exists.
