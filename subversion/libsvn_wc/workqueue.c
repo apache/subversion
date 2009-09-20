@@ -126,6 +126,11 @@ move_if_present(const char *source_abspath,
 }
 
 
+/* ------------------------------------------------------------------------ */
+
+/* OP_REVERT  */
+
+
 static svn_error_t *
 run_revert(svn_wc__db_t *db,
            const svn_skel_t *work_item,
@@ -429,135 +434,6 @@ run_revert(svn_wc__db_t *db,
 }
 
 
-static svn_error_t *
-run_prepare_revert_files(svn_wc__db_t *db,
-                         const svn_skel_t *work_item,
-                         apr_pool_t *scratch_pool)
-{
-  const char *local_abspath;
-  svn_wc__db_kind_t kind;
-  const char *revert_prop_abspath;
-  const char *base_prop_abspath;
-  svn_node_kind_t on_disk;
-
-  /* We need a NUL-terminated path, so copy it out of the skel.  */
-  local_abspath = apr_pstrmemdup(scratch_pool,
-                                 work_item->children->next->data,
-                                 work_item->children->next->len);
-
-  /* Rename the original text base over to the revert text base.  */
-  SVN_ERR(svn_wc__db_check_node(&kind, db, local_abspath, scratch_pool));
-  if (kind == svn_wc__db_kind_file)
-    {
-      const char *text_base;
-      const char *text_revert;
-
-      SVN_ERR(svn_wc__text_base_path(&text_base, db, local_abspath, FALSE,
-                                     scratch_pool));
-      SVN_ERR(svn_wc__text_revert_path(&text_revert, db, local_abspath,
-                                       scratch_pool));
-
-      SVN_ERR(move_if_present(text_base, text_revert, scratch_pool));
-    }
-
-  /* Set up the revert props.  */
-
-  SVN_ERR(svn_wc__prop_path(&revert_prop_abspath, local_abspath, kind,
-                            svn_wc__props_revert, scratch_pool));
-  SVN_ERR(svn_wc__prop_path(&base_prop_abspath, local_abspath, kind,
-                            svn_wc__props_base, scratch_pool));
-
-  /* First: try to move any base properties to the revert location.  */
-  SVN_ERR(move_if_present(base_prop_abspath, revert_prop_abspath,
-                          scratch_pool));
-
-  /* If no props exist at the revert location, then drop a set of empty
-     props there. They are expected to be present.  */
-  SVN_ERR(svn_io_check_path(revert_prop_abspath, &on_disk, scratch_pool));
-  if (on_disk == svn_node_none)
-    {
-      SVN_ERR(svn_wc__write_properties(
-                apr_hash_make(scratch_pool), revert_prop_abspath,
-                NULL, NULL,
-                scratch_pool));
-    }
-
-  return SVN_NO_ERROR;
-}
-
-
-static const struct work_item_dispatch dispatch_table[] = {
-  { OP_REVERT, run_revert },
-  { OP_PREPARE_REVERT_FILES, run_prepare_revert_files },
-
-  /* Sentinel.  */
-  { NULL }
-};
-
-
-svn_error_t *
-svn_wc__wq_run(svn_wc__db_t *db,
-               const char *local_abspath,
-               svn_cancel_func_t cancel_func,
-               void *cancel_baton,
-               apr_pool_t *scratch_pool)
-{
-  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
-
-  while (TRUE)
-    {
-      apr_uint64_t id;
-      svn_skel_t *work_item;
-      const struct work_item_dispatch *scan;
-
-      /* Stop work queue processing, if requested. A future 'svn cleanup'
-         should be able to continue the processing.  */
-      if (cancel_func)
-        SVN_ERR(cancel_func(cancel_baton));
-
-      svn_pool_clear(iterpool);
-
-      SVN_ERR(svn_wc__db_wq_fetch(&id, &work_item, db, local_abspath,
-                                  iterpool, iterpool));
-      if (work_item == NULL)
-        {
-          svn_pool_destroy(iterpool);
-          return SVN_NO_ERROR;
-        }
-
-      /* Scan the dispatch table for a function to handle this work item.  */
-      for (scan = &dispatch_table[0]; scan->name != NULL; ++scan)
-        {
-          if (svn_skel__matches_atom(work_item->children, scan->name))
-            {
-              SVN_ERR((*scan->func)(db, work_item, iterpool));
-              break;
-            }
-        }
-
-      if (scan->name == NULL)
-        {
-          /* We should know about ALL possible work items here. If we do not,
-             then something is wrong. Most likely, some kind of format/code
-             skew. There is nothing more we can do. Erasing or ignoring this
-             work item could leave the WC in an even more broken state.
-
-             Contrary to issue #1581, we cannot simply remove work items and
-             continue, so bail out with an error.  */
-          return svn_error_createf(SVN_ERR_WC_BAD_ADM_LOG, NULL,
-                                   _("Unrecognized work item in the queue "
-                                     "associated with '%s'"),
-                                   svn_dirent_local_style(local_abspath,
-                                                          iterpool));
-        }
-
-      SVN_ERR(svn_wc__db_wq_completed(db, local_abspath, id, iterpool));
-    }
-
-  /* NOTREACHED */
-}
-
-
 /* For issue #2101, we need to deliver this error. When the wc-ng pristine
    handling comes into play, the issue should be fixed, and this code can
    go away.  */
@@ -720,6 +596,68 @@ svn_wc__wq_add_revert(svn_boolean_t *will_revert,
 }
 
 
+/* ------------------------------------------------------------------------ */
+
+/* OP_PREPARE_REVERT_FILES  */
+
+
+static svn_error_t *
+run_prepare_revert_files(svn_wc__db_t *db,
+                         const svn_skel_t *work_item,
+                         apr_pool_t *scratch_pool)
+{
+  const char *local_abspath;
+  svn_wc__db_kind_t kind;
+  const char *revert_prop_abspath;
+  const char *base_prop_abspath;
+  svn_node_kind_t on_disk;
+
+  /* We need a NUL-terminated path, so copy it out of the skel.  */
+  local_abspath = apr_pstrmemdup(scratch_pool,
+                                 work_item->children->next->data,
+                                 work_item->children->next->len);
+
+  /* Rename the original text base over to the revert text base.  */
+  SVN_ERR(svn_wc__db_check_node(&kind, db, local_abspath, scratch_pool));
+  if (kind == svn_wc__db_kind_file)
+    {
+      const char *text_base;
+      const char *text_revert;
+
+      SVN_ERR(svn_wc__text_base_path(&text_base, db, local_abspath, FALSE,
+                                     scratch_pool));
+      SVN_ERR(svn_wc__text_revert_path(&text_revert, db, local_abspath,
+                                       scratch_pool));
+
+      SVN_ERR(move_if_present(text_base, text_revert, scratch_pool));
+    }
+
+  /* Set up the revert props.  */
+
+  SVN_ERR(svn_wc__prop_path(&revert_prop_abspath, local_abspath, kind,
+                            svn_wc__props_revert, scratch_pool));
+  SVN_ERR(svn_wc__prop_path(&base_prop_abspath, local_abspath, kind,
+                            svn_wc__props_base, scratch_pool));
+
+  /* First: try to move any base properties to the revert location.  */
+  SVN_ERR(move_if_present(base_prop_abspath, revert_prop_abspath,
+                          scratch_pool));
+
+  /* If no props exist at the revert location, then drop a set of empty
+     props there. They are expected to be present.  */
+  SVN_ERR(svn_io_check_path(revert_prop_abspath, &on_disk, scratch_pool));
+  if (on_disk == svn_node_none)
+    {
+      SVN_ERR(svn_wc__write_properties(
+                apr_hash_make(scratch_pool), revert_prop_abspath,
+                NULL, NULL,
+                scratch_pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
 svn_error_t *
 svn_wc__wq_prepare_revert_files(svn_wc__db_t *db,
                                 const char *local_abspath,
@@ -737,4 +675,78 @@ svn_wc__wq_prepare_revert_files(svn_wc__db_t *db,
   SVN_ERR(svn_wc__db_wq_add(db, local_abspath, work_item, scratch_pool));
 
   return SVN_NO_ERROR;
+}
+
+
+/* ------------------------------------------------------------------------ */
+
+static const struct work_item_dispatch dispatch_table[] = {
+  { OP_REVERT, run_revert },
+  { OP_PREPARE_REVERT_FILES, run_prepare_revert_files },
+
+  /* Sentinel.  */
+  { NULL }
+};
+
+
+svn_error_t *
+svn_wc__wq_run(svn_wc__db_t *db,
+               const char *local_abspath,
+               svn_cancel_func_t cancel_func,
+               void *cancel_baton,
+               apr_pool_t *scratch_pool)
+{
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+
+  while (TRUE)
+    {
+      apr_uint64_t id;
+      svn_skel_t *work_item;
+      const struct work_item_dispatch *scan;
+
+      /* Stop work queue processing, if requested. A future 'svn cleanup'
+         should be able to continue the processing.  */
+      if (cancel_func)
+        SVN_ERR(cancel_func(cancel_baton));
+
+      svn_pool_clear(iterpool);
+
+      SVN_ERR(svn_wc__db_wq_fetch(&id, &work_item, db, local_abspath,
+                                  iterpool, iterpool));
+      if (work_item == NULL)
+        {
+          svn_pool_destroy(iterpool);
+          return SVN_NO_ERROR;
+        }
+
+      /* Scan the dispatch table for a function to handle this work item.  */
+      for (scan = &dispatch_table[0]; scan->name != NULL; ++scan)
+        {
+          if (svn_skel__matches_atom(work_item->children, scan->name))
+            {
+              SVN_ERR((*scan->func)(db, work_item, iterpool));
+              break;
+            }
+        }
+
+      if (scan->name == NULL)
+        {
+          /* We should know about ALL possible work items here. If we do not,
+             then something is wrong. Most likely, some kind of format/code
+             skew. There is nothing more we can do. Erasing or ignoring this
+             work item could leave the WC in an even more broken state.
+
+             Contrary to issue #1581, we cannot simply remove work items and
+             continue, so bail out with an error.  */
+          return svn_error_createf(SVN_ERR_WC_BAD_ADM_LOG, NULL,
+                                   _("Unrecognized work item in the queue "
+                                     "associated with '%s'"),
+                                   svn_dirent_local_style(local_abspath,
+                                                          iterpool));
+        }
+
+      SVN_ERR(svn_wc__db_wq_completed(db, local_abspath, id, iterpool));
+    }
+
+  /* NOTREACHED */
 }
