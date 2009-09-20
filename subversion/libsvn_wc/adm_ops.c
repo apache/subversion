@@ -1590,26 +1590,9 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
        * ### I'm leaving it be, though we set up the revert base(s)
        * ### loggily because that's Just How It's Done.
        */
-      svn_stringbuf_t *log_accum = svn_stringbuf_create("", pool);
-
-      if (orig_entry->kind == svn_node_file)
-        {
-          const char *text_base, *text_revert;
-
-          SVN_ERR(svn_wc__text_base_path(&text_base, wc_ctx->db, local_abspath,
-                                         FALSE, pool));
-
-          SVN_ERR(svn_wc__text_revert_path(&text_revert, wc_ctx->db,
-                                           local_abspath, pool));
-
-          SVN_ERR(svn_wc__loggy_move(&log_accum,
-                                     svn_wc__adm_access_abspath(adm_access),
-                                     text_base, text_revert, pool, pool));
-        }
-      SVN_ERR(svn_wc__loggy_revert_props_create(&log_accum, path, adm_access,
-                                                pool));
-      SVN_ERR(svn_wc__write_log(adm_access, 0, log_accum, pool));
-      SVN_ERR(svn_wc__run_log(adm_access, pool));
+      SVN_ERR(svn_wc__wq_prepare_revert_files(db, local_abspath, pool));
+      SVN_ERR(svn_wc__wq_run(db, local_abspath,
+                             cancel_func, cancel_baton, pool));
     }
 
   if (kind == svn_node_dir) /* scheduling a directory for addition */
@@ -1687,7 +1670,7 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
             svn_path_url_add_component2(parent_entry->url, base_name, pool);
 
           /* Change the entry urls recursively (but not the working rev). */
-          SVN_ERR(svn_wc__do_update_cleanup(wc_ctx->db, local_abspath,
+          SVN_ERR(svn_wc__do_update_cleanup(db, local_abspath,
                                             depth, new_url,
                                             parent_entry->repos,
                                             SVN_INVALID_REVNUM, NULL,
@@ -1695,7 +1678,7 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
                                             pool));
 
           /* Recursively add the 'copied' existence flag as well!  */
-          SVN_ERR(mark_tree(wc_ctx->db, svn_wc__adm_access_abspath(adm_access),
+          SVN_ERR(mark_tree(db, svn_wc__adm_access_abspath(adm_access),
                             SVN_WC__ENTRY_MODIFY_COPIED,
                             svn_wc_schedule_normal, TRUE, FALSE,
                             cancel_func,
