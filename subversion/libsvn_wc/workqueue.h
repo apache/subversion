@@ -55,6 +55,14 @@ svn_wc__wq_add_revert(svn_boolean_t *will_revert,
                       apr_pool_t *scratch_pool);
 
 
+/* Record a work item to prepare the "revert props" and "revert text base"
+   for LOCAL_ABSPATH.  */
+svn_error_t *
+svn_wc__wq_prepare_revert_files(svn_wc__db_t *db,
+                                const char *local_abspath,
+                                apr_pool_t *scratch_pool);
+
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

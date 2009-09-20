@@ -46,6 +46,7 @@
 
 /* Workqueue operation names.  */
 #define OP_REVERT "revert"
+#define OP_PREPARE_REVERT_FILES "prep-rev-files"
 
 
 struct work_item_dispatch {
@@ -105,6 +106,27 @@ copy_and_translate(svn_wc__db_t *db,
 
 
 static svn_error_t *
+move_if_present(const char *source_abspath,
+                const char *dest_abspath,
+                apr_pool_t *scratch_pool)
+{
+  svn_error_t *err;
+
+  err = svn_io_file_rename(source_abspath, dest_abspath, scratch_pool);
+  if (err)
+    {
+      if (!APR_STATUS_IS_ENOENT(err->apr_err))
+        return svn_error_return(err);
+
+      /* Not there. Maybe the node was moved in a prior run.  */
+      svn_error_clear(err);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
 run_revert(svn_wc__db_t *db,
            const svn_skel_t *work_item,
            apr_pool_t *scratch_pool)
@@ -151,23 +173,14 @@ run_revert(svn_wc__db_t *db,
     {
       const char *revert_props_path;
       const char *base_props_path;
-      svn_error_t *err;
 
       SVN_ERR(svn_wc__prop_path(&revert_props_path, local_abspath,
                                 kind, svn_wc__props_revert, scratch_pool));
       SVN_ERR(svn_wc__prop_path(&base_props_path, local_abspath,
                                 kind, svn_wc__props_base, scratch_pool));
 
-      err = svn_io_file_rename(revert_props_path, base_props_path,
-                               scratch_pool);
-      if (err)
-        {
-          if (!APR_STATUS_IS_ENOENT(err->apr_err))
-            return svn_error_return(err);
-
-          /* Not there. Maybe they've been renamed on a prior run.  */
-          svn_error_clear(err);
-        }
+      SVN_ERR(move_if_present(revert_props_path, base_props_path,
+                              scratch_pool));
     }
 
   /* The "working" props contain changes. Nuke 'em from orbit.  */
@@ -181,7 +194,6 @@ run_revert(svn_wc__db_t *db,
       svn_boolean_t magic_changed;
       svn_boolean_t reinstall_working;
       const char *text_base_path;
-      svn_node_kind_t check_kind;
 
       SVN_ERR(svn_wc__text_base_path(&text_base_path, db, local_abspath,
                                      FALSE, scratch_pool));
@@ -201,18 +213,8 @@ run_revert(svn_wc__db_t *db,
 
           SVN_ERR(svn_wc__text_revert_path(&revert_base_path, db,
                                            local_abspath, scratch_pool));
-          SVN_ERR(svn_io_check_path(revert_base_path, &check_kind,
-                                    scratch_pool));
-          if (check_kind == svn_node_file)
-            {
-              /* Move the revert base to the normal base.  */
-              SVN_ERR(svn_io_file_rename(revert_base_path, text_base_path,
-                                         scratch_pool));
-            }
-          else if (check_kind == svn_node_none)
-            {
-              /* The revert base may have already been moved.  */
-            }
+          SVN_ERR(move_if_present(revert_base_path, text_base_path,
+                                  scratch_pool));
 
           /* At this point, the regular text base has been restored (just
              now, or on a prior run). We need to recompute the checksum
@@ -229,8 +231,11 @@ run_revert(svn_wc__db_t *db,
         }
       else if (!reinstall_working)
         {
+          svn_node_kind_t check_kind;
+
           /* If the working file is missing, we need to reinstall it.  */
-          SVN_ERR(svn_io_check_path(local_abspath, &check_kind, scratch_pool));
+          SVN_ERR(svn_io_check_path(local_abspath, &check_kind,
+                                    scratch_pool));
           reinstall_working = (check_kind == svn_node_none);
 
           if (!reinstall_working)
@@ -424,8 +429,66 @@ run_revert(svn_wc__db_t *db,
 }
 
 
+static svn_error_t *
+run_prepare_revert_files(svn_wc__db_t *db,
+                         const svn_skel_t *work_item,
+                         apr_pool_t *scratch_pool)
+{
+  const char *local_abspath;
+  svn_wc__db_kind_t kind;
+  const char *revert_prop_abspath;
+  const char *base_prop_abspath;
+  svn_node_kind_t on_disk;
+
+  /* We need a NUL-terminated path, so copy it out of the skel.  */
+  local_abspath = apr_pstrmemdup(scratch_pool,
+                                 work_item->children->next->data,
+                                 work_item->children->next->len);
+
+  /* Rename the original text base over to the revert text base.  */
+  SVN_ERR(svn_wc__db_check_node(&kind, db, local_abspath, scratch_pool));
+  if (kind == svn_wc__db_kind_file)
+    {
+      const char *text_base;
+      const char *text_revert;
+
+      SVN_ERR(svn_wc__text_base_path(&text_base, db, local_abspath, FALSE,
+                                     scratch_pool));
+      SVN_ERR(svn_wc__text_revert_path(&text_revert, db, local_abspath,
+                                       scratch_pool));
+
+      SVN_ERR(move_if_present(text_base, text_revert, scratch_pool));
+    }
+
+  /* Set up the revert props.  */
+
+  SVN_ERR(svn_wc__prop_path(&revert_prop_abspath, local_abspath, kind,
+                            svn_wc__props_revert, scratch_pool));
+  SVN_ERR(svn_wc__prop_path(&base_prop_abspath, local_abspath, kind,
+                            svn_wc__props_base, scratch_pool));
+
+  /* First: try to move any base properties to the revert location.  */
+  SVN_ERR(move_if_present(base_prop_abspath, revert_prop_abspath,
+                          scratch_pool));
+
+  /* If no props exist at the revert location, then drop a set of empty
+     props there. They are expected to be present.  */
+  SVN_ERR(svn_io_check_path(revert_prop_abspath, &on_disk, scratch_pool));
+  if (on_disk == svn_node_none)
+    {
+      SVN_ERR(svn_wc__write_properties(
+                apr_hash_make(scratch_pool), revert_prop_abspath,
+                NULL, NULL,
+                scratch_pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
 static const struct work_item_dispatch dispatch_table[] = {
   { OP_REVERT, run_revert },
+  { OP_PREPARE_REVERT_FILES, run_prepare_revert_files },
 
   /* Sentinel.  */
   { NULL }
@@ -652,6 +715,26 @@ svn_wc__wq_add_revert(svn_boolean_t *will_revert,
 
       SVN_ERR(svn_wc__db_wq_add(db, local_abspath, work_item, scratch_pool));
     }
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc__wq_prepare_revert_files(svn_wc__db_t *db,
+                                const char *local_abspath,
+                                apr_pool_t *scratch_pool)
+{
+  svn_skel_t *work_item = svn_skel__make_empty_list(scratch_pool);
+
+  /* These skel atoms hold references to very transitory state, but
+     we only need the work_item to survive for the duration of wq_add.  */
+  svn_skel__prepend(svn_skel__str_atom(local_abspath, scratch_pool),
+                    work_item);
+  svn_skel__prepend(svn_skel__str_atom(OP_PREPARE_REVERT_FILES, scratch_pool),
+                    work_item);
+
+  SVN_ERR(svn_wc__db_wq_add(db, local_abspath, work_item, scratch_pool));
 
   return SVN_NO_ERROR;
 }
