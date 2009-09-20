@@ -122,6 +122,7 @@ run_revert(svn_wc__db_t *db,
   apr_uint64_t modify_flags = 0;
   svn_wc_entry_t tmp_entry;
 
+  /* We need a NUL-terminated path, so copy it out of the skel.  */
   local_abspath = apr_pstrmemdup(scratch_pool,
                                  work_item->children->next->data,
                                  work_item->children->next->len);
@@ -145,18 +146,6 @@ run_revert(svn_wc__db_t *db,
             db, local_abspath,
             scratch_pool, scratch_pool));
 
-  /* We need the old school KIND for a few operations...  */
-  if (kind == svn_wc__db_kind_dir)
-    {
-      node_kind = svn_node_dir;
-    }
-  else
-    {
-      SVN_ERR_ASSERT(kind == svn_wc__db_kind_file
-                     || kind == svn_wc__db_kind_symlink);
-      node_kind = svn_node_file;
-    }
-
   /* Move the "revert" props over/on the "base" props.  */
   if (replaced)
     {
@@ -165,11 +154,9 @@ run_revert(svn_wc__db_t *db,
       svn_error_t *err;
 
       SVN_ERR(svn_wc__prop_path(&revert_props_path, local_abspath,
-                                node_kind, svn_wc__props_revert,
-                                scratch_pool));
+                                kind, svn_wc__props_revert, scratch_pool));
       SVN_ERR(svn_wc__prop_path(&base_props_path, local_abspath,
-                                node_kind, svn_wc__props_base,
-                                scratch_pool));
+                                kind, svn_wc__props_base, scratch_pool));
 
       err = svn_io_file_rename(revert_props_path, base_props_path,
                                scratch_pool);
@@ -185,8 +172,7 @@ run_revert(svn_wc__db_t *db,
 
   /* The "working" props contain changes. Nuke 'em from orbit.  */
   SVN_ERR(svn_wc__prop_path(&working_props_path, local_abspath,
-                            node_kind, svn_wc__props_working,
-                            scratch_pool));
+                            kind, svn_wc__props_working, scratch_pool));
   SVN_ERR(svn_io_remove_file2(working_props_path, TRUE, scratch_pool));
 
   /* Deal with the working file, as needed.  */
@@ -393,6 +379,18 @@ run_revert(svn_wc__db_t *db,
      "normal", but no biggy if this is a no-op.  */
   modify_flags |= SVN_WC__ENTRY_MODIFY_SCHEDULE;
   tmp_entry.schedule = svn_wc_schedule_normal;
+
+  /* We need the old school KIND...  */
+  if (kind == svn_wc__db_kind_dir)
+    {
+      node_kind = svn_node_dir;
+    }
+  else
+    {
+      SVN_ERR_ASSERT(kind == svn_wc__db_kind_file
+                     || kind == svn_wc__db_kind_symlink);
+      node_kind = svn_node_file;
+    }
 
   SVN_ERR(svn_wc__entry_modify2(db, local_abspath, node_kind, FALSE,
                                 &tmp_entry, modify_flags,

@@ -1606,8 +1606,8 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
                                      svn_wc__adm_access_abspath(adm_access),
                                      text_base, text_revert, pool, pool));
         }
-      SVN_ERR(svn_wc__loggy_revert_props_create(&log_accum, path,
-                                                adm_access, TRUE, pool));
+      SVN_ERR(svn_wc__loggy_revert_props_create(&log_accum, path, adm_access,
+                                                pool));
       SVN_ERR(svn_wc__write_log(adm_access, 0, log_accum, pool));
       SVN_ERR(svn_wc__run_log(adm_access, pool));
     }
@@ -2271,7 +2271,7 @@ svn_wc__remove_from_revision_control_internal(svn_wc__db_t *db,
 
   if (kind == svn_wc__db_kind_file || kind == svn_wc__db_kind_symlink)
     {
-      svn_node_kind_t kind;
+      svn_node_kind_t on_disk;
       svn_boolean_t wc_special, local_special;
       svn_boolean_t text_modified_p;
       const char *text_base_file;
@@ -2280,8 +2280,8 @@ svn_wc__remove_from_revision_control_internal(svn_wc__db_t *db,
          special file */
       SVN_ERR(svn_wc__get_special(&wc_special, db, local_abspath,
                                   scratch_pool));
-      SVN_ERR(svn_io_check_special_path(local_abspath, &kind, &local_special,
-                                        scratch_pool));
+      SVN_ERR(svn_io_check_special_path(local_abspath, &on_disk,
+                                        &local_special, scratch_pool));
       if (wc_special || ! local_special)
         {
           /* Check for local mods. before removing entry */
@@ -2370,62 +2370,36 @@ svn_wc__remove_from_revision_control_internal(svn_wc__db_t *db,
           const char *entry_name = APR_ARRAY_IDX(children, i, const char*);
           const char *entry_abspath;
           svn_boolean_t hidden;
-          svn_wc__db_kind_t kind;
 
           svn_pool_clear(iterpool);
 
           entry_abspath = svn_dirent_join(local_abspath, entry_name, iterpool);
 
-          SVN_ERR(svn_wc__db_node_hidden(&hidden, db, entry_abspath, iterpool));
+          /* ### where did the adm_missing and depth_exclude test go?!?  */
 
+          SVN_ERR(svn_wc__db_node_hidden(&hidden, db, entry_abspath,
+                                         iterpool));
           if (hidden)
             continue;
 
-          SVN_ERR(svn_wc__db_check_node(&kind, db, entry_abspath, iterpool));
+          err = svn_wc__remove_from_revision_control_internal(
+            db, entry_abspath,
+            destroy_wf, instant_error,
+            cancel_func, cancel_baton,
+            iterpool);
 
-          if (kind == svn_wc__db_kind_file)
+          if (err && (err->apr_err == SVN_ERR_WC_LEFT_LOCAL_MOD))
             {
-              err = svn_wc__remove_from_revision_control_internal(
-                                                   db, entry_abspath,
-                                                   destroy_wf, instant_error,
-                                                   cancel_func, cancel_baton,
-                                                   iterpool);
-
-              if (err && (err->apr_err == SVN_ERR_WC_LEFT_LOCAL_MOD))
-                {
-                  if (instant_error)
-                      return svn_error_return(err);
-                  else
-                    {
-                      svn_error_clear(err);
-                      left_something = TRUE;
-                    }
-                }
-              else if (err)
+              if (instant_error)
                 return svn_error_return(err);
-            }
-          else if (kind == svn_wc__db_kind_dir)
-            {
-              err = svn_wc__remove_from_revision_control_internal(
-                                       db, entry_abspath,
-                                       destroy_wf,
-                                       instant_error,
-                                       cancel_func, cancel_baton,
-                                       iterpool);
-
-              if (err && (err->apr_err == SVN_ERR_WC_LEFT_LOCAL_MOD))
+              else
                 {
-                  if (instant_error)
-                      return svn_error_return(err);
-                  else
-                    {
-                      svn_error_clear(err);
-                      left_something = TRUE;
-                    }
+                  svn_error_clear(err);
+                  left_something = TRUE;
                 }
-              else if (err)
-                return err;
             }
+          else if (err)
+            return svn_error_return(err);
         }
 
       /* At this point, every directory below this one has been
