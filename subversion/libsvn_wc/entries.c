@@ -1550,7 +1550,10 @@ svn_wc__set_depth(svn_wc__db_t *db,
   if (adm_access != NULL)
     {
       apr_hash_t *entries = svn_wc__adm_access_entries(adm_access);
-      entry = apr_hash_get(entries, base_name, APR_HASH_KEY_STRING);
+
+      entry = (entries != NULL)
+                       ? apr_hash_get(entries, base_name, APR_HASH_KEY_STRING)
+                       : NULL;
 
       if (entry != NULL)
         {
@@ -1569,8 +1572,10 @@ svn_wc__set_depth(svn_wc__db_t *db,
       if (adm_access != NULL)
         {
           apr_hash_t *entries = svn_wc__adm_access_entries(adm_access);
-          entry = apr_hash_get(entries, SVN_WC_ENTRY_THIS_DIR,
-                                        APR_HASH_KEY_STRING);
+
+          entry = (entries != NULL)
+                           ? apr_hash_get(entries, "", APR_HASH_KEY_STRING)
+                           : NULL;
 
           if (entry != NULL)
             entry->depth = depth;
