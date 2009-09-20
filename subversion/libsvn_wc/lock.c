@@ -541,7 +541,7 @@ do_open(svn_wc_adm_access_t **adm_access,
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
   SVN_ERR(open_single(&lock, path, write_lock, db, db_provided,
-                      result_pool, iter_pool));
+                      result_pool, iterpool));
 
   /* Add self to the rollback list in case of error.  */
   APR_ARRAY_PUSH(rollback, svn_wc_adm_access_t *) = lock;
@@ -623,7 +623,7 @@ do_open(svn_wc_adm_access_t **adm_access,
               if (err)
                 {
                   return svn_error_compose_create(err,
-                              svn_wc_adm_close2(adm_access, iterpool));
+                              svn_wc_adm_close2(node_access, iterpool));
                 }
             }
         }
