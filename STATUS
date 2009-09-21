@@ -55,22 +55,6 @@ Candidate changes:
                                             would getenv("WINDOWID") work
                                             instead?)
 
- * r38417, r38424
-   Fix issue #3443 'Obtaining implicit subtree mergeinfo hammers merge
-   performance'
-   Justification:
-     If a merge target has "large" numbers (100's or 1000's) of subtrees
-     with explicit mergeinfo, then this change can result in dramatic
-     performance improvements, see example described in
-     http://subversion.tigris.org/issues/show_bug.cgi?id=3443#desc1
-   Notes:     
-     Also see http://svn.haxx.se/dev/archive-2009-07/0149.shtml for
-     discussion of this change.
-   Branch:
-     ^/branches/1.6.x-issue3443
-   Votes:
-     +1: pburba, arfrever
-
  * r38142, r38267, r38269, r36788, r37129, r37521, r37591, r37523, r38195,
    r38247, r38325, r38349, r38352
    Fix issue #3432 'Merge can record mergeinfo from natural history gaps'
@@ -150,13 +134,6 @@ Candidate changes:
      +0: pburba - I don't have a Vista or Win7 box to try this out on, but it
          works fine on my XP box.
 
-  * r38959
-   Fix 'svn export -r 1000000' (issue #3400).
-   Justification:
-     Don't silently do the opposite of what the user asked for.
-   Votes:
-     +1: danielsh, rhuijben
-
  * r39019
    Fix bug where svn_[rangelist|mergeinfo]_[merge|intersect|remove|diff]
    APIs can modify their *non*-output arguments.
@@ -172,15 +149,7 @@ Candidate changes:
    Votes:
      +1: pburba
 
- * r39219
-   Perform MIME type matching case-insensitively.  (Issue #3479)
-   Justification:
-     The broken behavior is inconsistent with the way MIME mapping
-     files are used everywhere else in the world.
-   Votes:
-     +1: cmpilato, rhuijben
-   
- * r39303
+ * r39302
    Print a newline before the plaintext passphrase prompt.
    Justification:
      It wasn't intentional that the first line of dashes of this prompt
@@ -189,7 +158,7 @@ Candidate changes:
      Yes, this is almost the same as r38982, but this time it's about
      the passPHRASE prompt, not the passWORD prompt.
    Votes:
-     +1: stsp
+     +1: stsp, arfrever
 
  * r39301
    Allow non-threadsafe sqlite if APR has been compiled without threads.
@@ -207,15 +176,6 @@ Candidate changes:
      and the corresponding #endif.
    Votes:
      +1: stsp
-
- * r36831, r39329
-   Fix issue #3368, 'single file externals not working for binary files'.
-   Justification:
-     We have single file externals, it should work with binary files too.
-   Notes:
-     r36831 is the test case for issue #3368 and r39329 is the actual fix.
-   Votes:
-     +1: stylesen
 
 Approved changes:
 =================
