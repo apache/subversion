@@ -1248,13 +1248,19 @@ svn_wc__db_read_children(const apr_array_header_t **children,
                          apr_pool_t *scratch_pool);
 
 
-/* Return the kind of the node in DB at LOCAL_ABSPATH.  If it doesn't exist,
-   return svn_wc__db_unknown.  Use SCRATCH_POOL for temporary allocations. */
+/* Return the kind of the node in DB at LOCAL_ABSPATH. The WORKING tree will
+   be examined first, then the BASE tree. If the node is not present in either
+   tree and ALLOW_MISSING is TRUE, then svn_wc__db_kind_unknown is returned.
+   If the node is missing and ALLOW_MISSING is FALSE, then it will return
+   SVN_ERR_WC_PATH_NOT_FOUND.
+
+   Uses SCRATCH_POOL for temporary allocations.  */
 svn_error_t *
-svn_wc__db_check_node(svn_wc__db_kind_t *kind,
-                      svn_wc__db_t *db,
-                      const char *local_abspath,
-                      apr_pool_t *scratch_pool);
+svn_wc__db_read_kind(svn_wc__db_kind_t *kind,
+                     svn_wc__db_t *db,
+                     const char *local_abspath,
+                     svn_boolean_t allow_missing,
+                     apr_pool_t *scratch_pool);
 
 
 /* An analog to svn_wc__entry_is_hidden().  Set *HIDDEN to TRUE if

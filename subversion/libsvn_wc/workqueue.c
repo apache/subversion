@@ -618,7 +618,7 @@ run_prepare_revert_files(svn_wc__db_t *db,
                                  work_item->children->next->len);
 
   /* Rename the original text base over to the revert text base.  */
-  SVN_ERR(svn_wc__db_check_node(&kind, db, local_abspath, scratch_pool));
+  SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath, FALSE, scratch_pool));
   if (kind == svn_wc__db_kind_file)
     {
       const char *text_base;

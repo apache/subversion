@@ -638,7 +638,7 @@ post_copy_cleanup(svn_wc__db_t *db,
       svn_pool_clear(iterpool);
       child_abspath = svn_dirent_join(local_abspath, child_basename, iterpool);
 
-      SVN_ERR(svn_wc__db_check_node(&kind, db, child_abspath, iterpool));
+      SVN_ERR(svn_wc__db_read_kind(&kind, db, child_abspath, FALSE, iterpool));
       SVN_ERR(svn_wc__get_entry(&entry, db, child_abspath, TRUE,
                                 svn_node_unknown, (kind == svn_wc__db_kind_dir),
                                 iterpool, iterpool));

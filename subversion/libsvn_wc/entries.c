@@ -3499,8 +3499,8 @@ visit_tc_too_found_entry(const char *path,
               && (baton->depth == svn_depth_files))
             continue;
 
-          SVN_ERR(svn_wc__db_check_node(&kind, baton->db,
-                                        conflict->local_abspath, pool));
+          SVN_ERR(svn_wc__db_read_kind(&kind, baton->db,
+                                       conflict->local_abspath, TRUE, pool));
 
           /* If the kind is UNKNOWN, then this node is unversioned, or
              it is absent/excluded/etc. The regular walk will not visit
