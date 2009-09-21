@@ -3086,20 +3086,16 @@ svn_wc_ensure_adm(const char *path,
 
 /** Set the repository root URL of @a path to @a repos, if possible.
  *
- * @a adm_access must contain @a path and be write-locked, if @a path
- * is versioned.  Return no error if path is missing or unversioned.
- * Use @a pool for temporary allocations.
+ * Before Subversion 1.7 there could be working copy directories that
+ * didn't have a stored repository root in some specific circumstances.
+ * This function allowed setting this root later.
  *
- * @note In some circumstances, the repository root can't be set
- * without making the working copy corrupt.  In such cases, this
- * function just returns no error, without modifying the @a path entry.
- *
- * @note This function exists to make it possible to try to set the repository
- * root in old working copies; new working copies normally get this set at
- * creation time.
+ * Since Subversion 1.7 this function just returns SVN_NO_ERROR.
  *
  * @since New in 1.3.
+ * @deprecated Provided for backwards compatibility with the 1.6 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_maybe_set_repos_root(svn_wc_adm_access_t *adm_access,
                             const char *path,

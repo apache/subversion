@@ -3034,7 +3034,6 @@ svn_error_t *
 svn_wc__tweak_entry(svn_wc__db_t *db,
                     const char *local_abspath,
                     const char *new_url,
-                    const char *repos,
                     svn_revnum_t new_rev,
                     svn_boolean_t this_dir,
                     svn_boolean_t allow_removal,
@@ -3072,44 +3071,6 @@ svn_wc__tweak_entry(svn_wc__db_t *db,
       && (! entry->url || strcmp(new_url, entry->url)))
     {
       entry->url = apr_pstrdup(state_pool, new_url);
-    }
-
-  if (repos != NULL
-      && (! entry->repos || strcmp(repos, entry->repos))
-      && entry->url
-      && svn_uri_is_ancestor(repos, entry->url))
-    {
-      svn_boolean_t set_repos = TRUE;
-
-      /* Setting the repository root on THIS_DIR will make files in this
-         directory inherit that property.  So to not make the WC corrupt,
-         we have to make sure that the repos root is valid for such entries as
-         well.  Note that this shouldn't happen in normal circumstances. */
-      if (strcmp(entry->name, SVN_WC_ENTRY_THIS_DIR) == 0)
-        {
-          apr_hash_index_t *hi;
-          for (hi = apr_hash_first(scratch_pool, entries); hi;
-               hi = apr_hash_next(hi))
-            {
-              void *value;
-              const svn_wc_entry_t *child_entry;
-
-              apr_hash_this(hi, NULL, NULL, &value);
-              child_entry = value;
-
-              if (! child_entry->repos && child_entry->url
-                  && ! svn_uri_is_ancestor(repos, child_entry->url))
-                {
-                  set_repos = FALSE;
-                  break;
-                }
-            }
-        }
-
-      if (set_repos)
-        {
-          entry->repos = apr_pstrdup(state_pool, repos);
-        }
     }
 
   if ((SVN_IS_VALID_REVNUM(new_rev))

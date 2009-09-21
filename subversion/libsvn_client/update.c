@@ -241,7 +241,6 @@ svn_client__update_internal(svn_revnum_t *result_rev,
      when we start depending on it.  (We can never *depend* upon it in
      a strict sense, however.) */
   SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root, pool));
-  SVN_ERR(svn_wc_maybe_set_repos_root(dir_access, path, repos_root, pool));
 
   /* Build a baton for the file-fetching callback. */
   ffb = apr_pcalloc(pool, sizeof(*ffb));
