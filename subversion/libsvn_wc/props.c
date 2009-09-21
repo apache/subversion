@@ -332,39 +332,6 @@ svn_wc__load_props(apr_hash_t **base_props_p,
 }
 
 
-/*---------------------------------------------------------------------*/
-
-/*** Installing new properties. ***/
-
-/* Extend LOG_ACCUM with log commands to write the properties PROPS into
- * the admin file specified by WC_PROP_KIND. ADM_ACCESS and PATH specify
- * the WC item with which this file should be associated. */
-static svn_error_t *
-install_props_file(svn_stringbuf_t **log_accum,
-                   const char *adm_abspath,
-                   const char *local_abspath,
-                   apr_hash_t *props,
-                   svn_wc__props_kind_t wc_prop_kind,
-                   apr_pool_t *pool)
-{
-  svn_wc__db_kind_t kind;
-  const char *propfile_abspath;
-
-  if (strcmp(local_abspath, adm_abspath) == 0)
-    kind = svn_wc__db_kind_dir;
-  else
-    kind = svn_wc__db_kind_file;
-
-  SVN_ERR(svn_wc__prop_path(&propfile_abspath, local_abspath, kind,
-                            wc_prop_kind, pool));
-
-  /* Loggily write the properties to the destination file.  */
-  return svn_error_return(svn_wc__write_properties(
-                            props, propfile_abspath,
-                            log_accum,
-                            adm_abspath, pool));
-}
-
 svn_error_t *
 svn_wc__install_props(svn_stringbuf_t **log_accum,
                       const char *adm_abspath,
@@ -375,6 +342,7 @@ svn_wc__install_props(svn_stringbuf_t **log_accum,
                       apr_pool_t *pool)
 {
   svn_wc__db_kind_t kind;
+  const char *working_propfile_path;
   apr_array_header_t *prop_diffs;
 
   if (strcmp(local_abspath, adm_abspath) == 0)
@@ -382,24 +350,22 @@ svn_wc__install_props(svn_stringbuf_t **log_accum,
   else
     kind = svn_wc__db_kind_file;
 
+  SVN_ERR(svn_wc__prop_path(&working_propfile_path, local_abspath,
+                            kind, svn_wc__props_working, pool));
+
   /* Check if the props are modified. */
   SVN_ERR(svn_prop_diffs(&prop_diffs, working_props, base_props, pool));
 
   /* Save the working properties file if it differs from base. */
   if (prop_diffs->nelts > 0)
     {
-      SVN_ERR(install_props_file(log_accum, adm_abspath, local_abspath,
-                                 working_props,
-                                 svn_wc__props_working, pool));
+      /* Loggily write the properties to the destination file.  */
+      SVN_ERR(svn_wc__write_properties(working_props, working_propfile_path,
+                                       log_accum, adm_abspath, pool));
     }
   else
     {
       /* No property modifications, remove the file instead. */
-      const char *working_propfile_path;
-
-      SVN_ERR(svn_wc__prop_path(&working_propfile_path, local_abspath,
-                                kind, svn_wc__props_working, pool));
-
       SVN_ERR(svn_wc__loggy_remove(log_accum, adm_abspath,
                                    working_propfile_path, pool, pool));
     }
@@ -407,18 +373,18 @@ svn_wc__install_props(svn_stringbuf_t **log_accum,
   /* Repeat the above steps for the base properties if required. */
   if (write_base_props)
     {
+      const char *base_propfile_path;
+
+      SVN_ERR(svn_wc__prop_path(&base_propfile_path, local_abspath,
+                                kind, svn_wc__props_base, pool));
+
       if (apr_hash_count(base_props) > 0)
         {
-          SVN_ERR(install_props_file(log_accum, adm_abspath, local_abspath,
-                                     base_props, svn_wc__props_base, pool));
+          SVN_ERR(svn_wc__write_properties(base_props, base_propfile_path,
+                                           log_accum, adm_abspath, pool));
         }
       else
         {
-          const char *base_propfile_path;
-
-          SVN_ERR(svn_wc__prop_path(&base_propfile_path, local_abspath,
-                                    kind, svn_wc__props_base, pool));
-
           SVN_ERR(svn_wc__loggy_remove(log_accum, adm_abspath,
                                        base_propfile_path, pool, pool));
         }
@@ -579,6 +545,7 @@ svn_wc__loggy_revert_props_create(svn_stringbuf_t **log_accum,
 
   return SVN_NO_ERROR;
 }
+
 
 svn_error_t *
 svn_wc__loggy_revert_props_restore(svn_stringbuf_t **log_accum,
