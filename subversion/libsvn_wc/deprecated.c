@@ -730,6 +730,37 @@ svn_wc_add(const char *path,
 }
 
 svn_error_t *
+svn_wc_revert3(const char *path,
+               svn_wc_adm_access_t *parent_access,
+               svn_depth_t depth,
+               svn_boolean_t use_commit_times,
+               const apr_array_header_t *changelists,
+               svn_cancel_func_t cancel_func,
+               void *cancel_baton,
+               svn_wc_notify_func2_t notify_func,
+               void *notify_baton,
+               apr_pool_t *pool)
+{
+  svn_wc_context_t *wc_ctx;
+  svn_wc__db_t *wc_db = svn_wc__adm_get_db(parent_access);
+  const char *local_abspath;
+
+  SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL, wc_db, pool));
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+
+  SVN_ERR(svn_wc_revert4(wc_ctx,
+                         local_abspath,
+                         depth,
+                         use_commit_times,
+                         changelists,
+                         cancel_func, cancel_baton,
+                         notify_func, notify_baton,
+                         pool));
+
+  return svn_error_return(svn_wc_context_destroy(wc_ctx));
+}
+
+svn_error_t *
 svn_wc_revert2(const char *path,
                svn_wc_adm_access_t *parent_access,
                svn_boolean_t recursive,
