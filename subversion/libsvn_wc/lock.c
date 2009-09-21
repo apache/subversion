@@ -537,7 +537,6 @@ do_open(svn_wc_adm_access_t **adm_access,
         apr_pool_t *scratch_pool)
 {
   svn_wc_adm_access_t *lock;
-  svn_error_t *err;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
   SVN_ERR(open_single(&lock, path, write_lock, db, db_provided,
@@ -557,7 +556,7 @@ do_open(svn_wc_adm_access_t **adm_access,
         levels_to_lock--;
 
       SVN_ERR(svn_wc__db_read_children(&children, db, local_abspath,
-                                       scratch_pool, scratch_pool));
+                                       scratch_pool, iterpool));
 
       /* Open the tree */
       for (i = 0; i < children->nelts; i++)
@@ -572,15 +571,7 @@ do_open(svn_wc_adm_access_t **adm_access,
 
           /* See if someone wants to cancel this operation. */
           if (cancel_func)
-            {
-              err = cancel_func(cancel_baton);
-              if (err)
-                {
-                  svn_error_clear(svn_wc_adm_close2(lock, iterpool));
-                  svn_pool_destroy(iterpool);
-                  return err;
-                }
-            }
+            SVN_ERR(cancel_func(cancel_baton));
 
           node_abspath = svn_dirent_join(local_abspath, name, iterpool);
 
@@ -613,18 +604,13 @@ do_open(svn_wc_adm_access_t **adm_access,
             {
               const char *node_path = svn_dirent_join(path, name, iterpool);
               svn_wc_adm_access_t *node_access;
-              svn_error_t *err;
 
-              err = do_open(&node_access, node_path, db, db_provided,
-                            rollback, write_lock, levels_to_lock,
-                            cancel_func, cancel_baton,
-                            lock->pool, iterpool);
-
-              if (err)
-                {
-                  return svn_error_compose_create(err,
-                              svn_wc_adm_close2(lock, iterpool));
-                }
+              SVN_ERR(do_open(&node_access, node_path, db, db_provided,
+                              rollback, write_lock, levels_to_lock,
+                              cancel_func, cancel_baton,
+                              lock->pool, iterpool));
+              /* node_access has been registered in DB, so we don't need
+                 to do anything with it.  */
             }
         }
     }
