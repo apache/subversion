@@ -127,9 +127,6 @@ svn_error_t *svn_wc__wcprop_set(svn_wc__db_t *db,
                                 const svn_string_t *value,
                                 apr_pool_t *scratch_pool);
 
-/* Returns TRUE if PROPS contains the svn:special property */
-svn_boolean_t svn_wc__has_special_property(apr_hash_t *props);
-
 /* Given PROPERTIES is array of @c svn_prop_t structures. Returns TRUE if any
    of the PROPERTIES are the known "magic" ones that might require
    changing the working file. */
@@ -140,8 +137,8 @@ svn_boolean_t svn_wc__has_magic_property(const apr_array_header_t *properties);
    to reflect the changes.  BASE_PROPS must be supplied even if
    WRITE_BASE_PROPS is false.  Use POOL for temporary allocations. */
 svn_error_t *svn_wc__install_props(svn_stringbuf_t **log_accum,
-                                   svn_wc_adm_access_t *adm_access,
-                                   const char *path,
+                                   const char *adm_abspath,
+                                   const char *local_abspath,
                                    apr_hash_t *base_props,
                                    apr_hash_t *props,
                                    svn_boolean_t write_base_props,

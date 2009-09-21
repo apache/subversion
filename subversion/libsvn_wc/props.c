@@ -341,22 +341,20 @@ svn_wc__load_props(apr_hash_t **base_props_p,
  * the WC item with which this file should be associated. */
 static svn_error_t *
 install_props_file(svn_stringbuf_t **log_accum,
-                   svn_wc_adm_access_t *adm_access,
-                   const char *path,
+                   const char *adm_abspath,
+                   const char *local_abspath,
                    apr_hash_t *props,
                    svn_wc__props_kind_t wc_prop_kind,
                    apr_pool_t *pool)
 {
   svn_wc__db_kind_t kind;
-  const char *local_abspath;
   const char *propfile_abspath;
 
-  if (! svn_dirent_is_child(svn_wc_adm_access_path(adm_access), path, NULL))
+  if (strcmp(local_abspath, adm_abspath) == 0)
     kind = svn_wc__db_kind_dir;
   else
     kind = svn_wc__db_kind_file;
 
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
   SVN_ERR(svn_wc__prop_path(&propfile_abspath, local_abspath, kind,
                             wc_prop_kind, pool));
 
@@ -364,13 +362,13 @@ install_props_file(svn_stringbuf_t **log_accum,
   return svn_error_return(svn_wc__write_properties(
                             props, propfile_abspath,
                             log_accum,
-                            svn_wc__adm_access_abspath(adm_access), pool));
+                            adm_abspath, pool));
 }
 
 svn_error_t *
 svn_wc__install_props(svn_stringbuf_t **log_accum,
-                      svn_wc_adm_access_t *adm_access,
-                      const char *path,
+                      const char *adm_abspath,
+                      const char *local_abspath,
                       apr_hash_t *base_props,
                       apr_hash_t *working_props,
                       svn_boolean_t write_base_props,
@@ -379,7 +377,7 @@ svn_wc__install_props(svn_stringbuf_t **log_accum,
   svn_wc__db_kind_t kind;
   apr_array_header_t *prop_diffs;
 
-  if (! svn_dirent_is_child(svn_wc_adm_access_path(adm_access), path, NULL))
+  if (strcmp(local_abspath, adm_abspath) == 0)
     kind = svn_wc__db_kind_dir;
   else
     kind = svn_wc__db_kind_file;
@@ -390,7 +388,8 @@ svn_wc__install_props(svn_stringbuf_t **log_accum,
   /* Save the working properties file if it differs from base. */
   if (prop_diffs->nelts > 0)
     {
-      SVN_ERR(install_props_file(log_accum, adm_access, path, working_props,
+      SVN_ERR(install_props_file(log_accum, adm_abspath, local_abspath,
+                                 working_props,
                                  svn_wc__props_working, pool));
     }
   else
@@ -398,11 +397,10 @@ svn_wc__install_props(svn_stringbuf_t **log_accum,
       /* No property modifications, remove the file instead. */
       const char *working_propfile_path;
 
-      SVN_ERR(svn_wc__prop_path(&working_propfile_path, path,
+      SVN_ERR(svn_wc__prop_path(&working_propfile_path, local_abspath,
                                 kind, svn_wc__props_working, pool));
 
-      SVN_ERR(svn_wc__loggy_remove(log_accum,
-                                   svn_wc__adm_access_abspath(adm_access),
+      SVN_ERR(svn_wc__loggy_remove(log_accum, adm_abspath,
                                    working_propfile_path, pool, pool));
     }
 
@@ -411,18 +409,17 @@ svn_wc__install_props(svn_stringbuf_t **log_accum,
     {
       if (apr_hash_count(base_props) > 0)
         {
-          SVN_ERR(install_props_file(log_accum, adm_access, path, base_props,
-                                     svn_wc__props_base, pool));
+          SVN_ERR(install_props_file(log_accum, adm_abspath, local_abspath,
+                                     base_props, svn_wc__props_base, pool));
         }
       else
         {
           const char *base_propfile_path;
 
-          SVN_ERR(svn_wc__prop_path(&base_propfile_path, path,
+          SVN_ERR(svn_wc__prop_path(&base_propfile_path, local_abspath,
                                     kind, svn_wc__props_base, pool));
 
-          SVN_ERR(svn_wc__loggy_remove(log_accum,
-                                       svn_wc__adm_access_abspath(adm_access),
+          SVN_ERR(svn_wc__loggy_remove(log_accum, adm_abspath,
                                        base_propfile_path, pool, pool));
         }
     }
@@ -1648,7 +1645,9 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
   if (dry_run)
     return SVN_NO_ERROR;
 
-  SVN_ERR(svn_wc__install_props(entry_accum, adm_access, path,
+  SVN_ERR(svn_wc__install_props(entry_accum,
+                                svn_wc__adm_access_abspath(adm_access),
+                                local_abspath,
                                 base_props, working_props, base_merge,
                                 pool));
 
@@ -2737,11 +2736,6 @@ svn_wc_parse_externals_description3(apr_array_header_t **externals_p,
   return SVN_NO_ERROR;
 }
 
-svn_boolean_t
-svn_wc__has_special_property(apr_hash_t *props)
-{
-  return apr_hash_get(props, SVN_PROP_SPECIAL, APR_HASH_KEY_STRING) != NULL;
-}
 
 svn_boolean_t
 svn_wc__has_magic_property(const apr_array_header_t *properties)
