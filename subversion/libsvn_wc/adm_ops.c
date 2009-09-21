@@ -1041,7 +1041,7 @@ erase_unversioned_from_wc(const char *path,
   return SVN_NO_ERROR;
 }
 
-/* Remove/erase PATH from the working copy. For files this involves
+/* Remove/erase LOCAL_ABSPATH from the working copy. For files this involves
  * deletion from the physical filesystem.  For directories it involves the
  * deletion from the filesystem of all unversioned children, and all
  * versioned children that are files. By the time we get here, added but
@@ -1057,84 +1057,95 @@ erase_unversioned_from_wc(const char *path,
  * KIND is the node kind appropriate for PATH
  */
 static svn_error_t *
-erase_from_wc(const char *path,
-              svn_wc_adm_access_t *adm_access,
+erase_from_wc(svn_wc__db_t *db,
+              const char *local_abspath,
               svn_node_kind_t kind,
               svn_cancel_func_t cancel_func,
               void *cancel_baton,
-              apr_pool_t *pool)
+              apr_pool_t *scratch_pool)
 {
-  const svn_wc_entry_t *entry;
-
   if (cancel_func)
     SVN_ERR(cancel_func(cancel_baton));
 
   if (kind == svn_node_file)
-    SVN_ERR(svn_io_remove_file2(path, TRUE, pool));
+    SVN_ERR(svn_io_remove_file2(local_abspath, TRUE, scratch_pool));
 
   else if (kind == svn_node_dir)
     /* This must be a directory or absent */
     {
-      apr_hash_t *ver, *unver;
-      apr_hash_index_t *hi;
-      svn_wc_adm_access_t *dir_access;
+      const apr_array_header_t *children;
+      svn_wc__db_kind_t wc_kind;
       apr_pool_t *iterpool;
+      apr_hash_t *versioned_dirs = apr_hash_make(scratch_pool);
+      apr_hash_t *unversioned;
+      apr_hash_index_t *hi;
       svn_error_t *err;
+      int i;
 
-      /* First handle the versioned items, this is better (probably) than
-         simply using svn_io_get_dirents2 for everything as it avoids the
-         need to do svn_io_check_path on each versioned item */
-      err = svn_wc_adm_retrieve(&dir_access, adm_access, path, pool);
+      SVN_ERR(svn_wc__db_read_kind(&wc_kind, db, local_abspath, TRUE,
+                                   scratch_pool));
 
-      /* If there's no on-disk item, be sure to exit early and
-         not to return an error */
-      if (err)
+      if (wc_kind != svn_wc__db_kind_dir)
+        return SVN_NO_ERROR;
+
+      iterpool = svn_pool_create(scratch_pool);
+
+      SVN_ERR(svn_wc__db_read_children(&children, db, local_abspath,
+                                       scratch_pool, iterpool));
+      for (i = 0; i < children->nelts; i++)
         {
-          svn_node_kind_t wc_kind;
-          svn_error_t *err2 = svn_io_check_path(path, &wc_kind, pool);
+          const char *name = APR_ARRAY_IDX(children, i, const char *);
+          svn_wc__db_status_t status;
+          svn_depth_t depth;
+          const char *node_abspath;
 
-          if (err2)
-            {
-              svn_error_clear(err);
-              return err2;
-            }
+          svn_pool_clear(iterpool);
 
-          if (wc_kind != svn_node_none)
-            return err;
+          node_abspath = svn_dirent_join(local_abspath, name, iterpool);
 
+          SVN_ERR(svn_wc__db_read_info(&status, &wc_kind, NULL, NULL, NULL,
+                                       NULL, NULL, NULL, NULL, NULL, &depth,
+                                       NULL, NULL, NULL, NULL, NULL, NULL,
+                                       NULL, NULL, NULL, NULL, NULL, NULL,
+                                       NULL, NULL, NULL, NULL, NULL,
+                                       db, node_abspath, iterpool, iterpool));
+
+          if (status == svn_wc__db_status_absent ||
+              status == svn_wc__db_status_not_present ||
+              status == svn_wc__db_status_obstructed ||
+              status == svn_wc__db_status_obstructed_add ||
+              status == svn_wc__db_status_obstructed_delete ||
+              status == svn_wc__db_status_excluded ||
+              depth == svn_depth_exclude)
+            continue; /* Not here */
+
+          /* ### We don't have to record dirs once we have a single database */
+          if (wc_kind == svn_wc__db_kind_dir)
+            apr_hash_set(versioned_dirs, name, APR_HASH_KEY_STRING, name);
+
+          SVN_ERR(erase_from_wc(db, node_abspath,
+                                (wc_kind == svn_wc__db_kind_dir)
+                                         ? svn_node_dir
+                                         : svn_node_file,
+                                cancel_func, cancel_baton,
+                                iterpool));
+        }
+
+      /* Now handle any remaining unversioned items */
+      err = svn_io_get_dirents2(&unversioned, local_abspath, scratch_pool);
+
+      if (err && APR_STATUS_IS_ENOTDIR(err->apr_err))
+        {
           svn_error_clear(err);
           return SVN_NO_ERROR;
         }
 
-      SVN_ERR(svn_wc_entries_read(&ver, dir_access, FALSE, pool));
-      iterpool = svn_pool_create(pool);
-      for (hi = apr_hash_first(pool, ver); hi; hi = apr_hash_next(hi))
-        {
-          const void *key;
-          void *val;
-          const char *name;
-          const char *down_path;
-
-          apr_hash_this(hi, &key, NULL, &val);
-          name = key;
-          entry = val;
-
-          if (!strcmp(name, SVN_WC_ENTRY_THIS_DIR))
-            continue;
-
-          svn_pool_clear(iterpool);
-          down_path = svn_dirent_join(path, name, iterpool);
-          SVN_ERR(erase_from_wc(down_path, adm_access, entry->kind,
-                                cancel_func, cancel_baton, iterpool));
-        }
-
-      /* Now handle any remaining unversioned items */
-      SVN_ERR(svn_io_get_dirents2(&unver, path, pool));
-      for (hi = apr_hash_first(pool, unver); hi; hi = apr_hash_next(hi))
+      for (hi = apr_hash_first(scratch_pool, unversioned);
+           hi;
+           hi = apr_hash_next(hi))
         {
           const void *key;
           const char *name;
-          const char *down_path;
 
           apr_hash_this(hi, &key, NULL, NULL);
           name = key;
@@ -1145,12 +1156,13 @@ erase_from_wc(const char *path,
             continue;
 
           /* Versioned directories will show up, don't delete those either */
-          if (apr_hash_get(ver, name, APR_HASH_KEY_STRING))
+          if (apr_hash_get(versioned_dirs, name, APR_HASH_KEY_STRING))
             continue;
 
-          down_path = svn_dirent_join(path, name, iterpool);
-          SVN_ERR(erase_unversioned_from_wc
-                  (down_path, cancel_func, cancel_baton, iterpool));
+          SVN_ERR(erase_unversioned_from_wc(svn_dirent_join(local_abspath,
+                                                            name, iterpool),
+                                            cancel_func, cancel_baton,
+                                            iterpool));
         }
 
       svn_pool_destroy(iterpool);
@@ -1358,7 +1370,7 @@ svn_wc_delete4(svn_wc_context_t *wc_ctx,
         SVN_ERR(erase_unversioned_from_wc
                 (path, cancel_func, cancel_baton, pool));
       else
-        SVN_ERR(erase_from_wc(path, adm_access, was_kind,
+        SVN_ERR(erase_from_wc(wc_ctx->db, local_abspath, was_kind,
                               cancel_func, cancel_baton, pool));
     }
 
