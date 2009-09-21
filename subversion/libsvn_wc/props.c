@@ -114,7 +114,7 @@ load_props(apr_hash_t **hash,
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
-  SVN_ERR(svn_wc__db_check_node(&kind, db, local_abspath, pool));
+  SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath, FALSE, pool));
   SVN_ERR(svn_wc__prop_path(&prop_path, local_abspath, kind, props_kind,
                             pool));
 
@@ -476,7 +476,8 @@ svn_wc__working_props_committed(svn_wc__db_t *db,
   const char *working;
   const char *base;
 
-  SVN_ERR(svn_wc__db_check_node(&kind, db, local_abspath, scratch_pool));
+  SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath, FALSE,
+                               scratch_pool));
 
   /* The path is ensured not an excluded path. */
   /* TODO(#2843) It seems that there is no need to
@@ -508,7 +509,7 @@ svn_wc__loggy_props_delete(svn_stringbuf_t **log_accum,
   SVN_ERR_ASSERT(props_kind != svn_wc__props_wcprop);
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
-  SVN_ERR(svn_wc__db_check_node(&kind, db, local_abspath, pool));
+  SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath, FALSE, pool));
   SVN_ERR(svn_wc__prop_path(&props_file, path, kind, props_kind, pool));
   SVN_ERR(svn_wc__loggy_remove(log_accum,
                                svn_wc__adm_access_abspath(adm_access),
@@ -534,7 +535,7 @@ svn_wc__props_delete(svn_wc__db_t *db,
                                                             NULL, pool));
     }
 
-  SVN_ERR(svn_wc__db_check_node(&kind, db, local_abspath, pool));
+  SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath, FALSE, pool));
   SVN_ERR(svn_wc__prop_path(&props_file, local_abspath, kind, props_kind,
                             pool));
   return svn_error_return(svn_io_remove_file2(props_file, TRUE, pool));
@@ -555,7 +556,7 @@ svn_wc__loggy_revert_props_create(svn_stringbuf_t **log_accum,
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
-  SVN_ERR(svn_wc__db_check_node(&kind, db, local_abspath, pool));
+  SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath, FALSE, pool));
 
   /* TODO(#2843) The current caller ensures that PATH will not be an excluded
      item. But do we really need show_hidden = TRUE here? */
@@ -606,7 +607,7 @@ svn_wc__loggy_revert_props_restore(svn_stringbuf_t **log_accum,
      item. But do we really need show_hidden = TRUE here? */
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
-  SVN_ERR(svn_wc__db_check_node(&kind, db, local_abspath, pool));
+  SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath, FALSE, pool));
 
   SVN_ERR(svn_wc__prop_path(&base_file, path, kind, svn_wc__props_base, pool));
   SVN_ERR(svn_wc__prop_path(&revert_file, path, kind, svn_wc__props_revert,
@@ -1541,7 +1542,9 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
     {
       svn_wc__db_kind_t kind;
 
-      SVN_ERR(svn_wc__db_check_node(&kind, db, local_abspath, pool));
+      /* ### shouldn't ALLOW_MISSING be FALSE? how can we merge props into
+         ### a node that doesn't exist?!  */
+      SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath, TRUE, pool));
       if (kind == svn_wc__db_kind_unknown)
         {
           /* No entry... no props.  */
@@ -2447,13 +2450,7 @@ svn_wc__internal_propdiff(apr_array_header_t **propchanges,
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
-  SVN_ERR(svn_wc__db_check_node(&kind, db, local_abspath, scratch_pool));
-
-  if (kind == svn_wc__db_kind_unknown)
-    return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
-                             _("'%s' is not under version control"),
-                             svn_dirent_local_style(local_abspath,
-                                                    scratch_pool));
+  SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath, FALSE, scratch_pool));
 
   SVN_ERR(svn_wc__load_props(&baseprops, propchanges ? &props : NULL, NULL,
                              db, local_abspath, result_pool, scratch_pool));

@@ -1251,7 +1251,8 @@ svn_wc__internal_transmit_prop_deltas(svn_wc__db_t *db,
   apr_array_header_t *propmods;
   svn_wc__db_kind_t kind;
 
-  SVN_ERR(svn_wc__db_check_node(&kind, db, local_abspath, scratch_pool));
+  SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath, FALSE, scratch_pool));
+
   /* Get an array of local changes by comparing the hashes. */
   SVN_ERR(svn_wc__internal_propdiff(&propmods, NULL, db, local_abspath,
                                     scratch_pool, scratch_pool));

@@ -142,8 +142,8 @@ svn_wc__node_get_kind(svn_node_kind_t *kind,
 {
   svn_wc__db_kind_t db_kind;
 
-  SVN_ERR(svn_wc__db_check_node(&db_kind, wc_ctx->db, abspath,
-                                scratch_pool));
+  SVN_ERR(svn_wc__db_read_kind(&db_kind, wc_ctx->db, abspath, TRUE,
+                               scratch_pool));
   switch (db_kind)
     {
       case svn_wc__db_kind_file:
@@ -155,8 +155,11 @@ svn_wc__node_get_kind(svn_node_kind_t *kind,
       case svn_wc__db_kind_symlink:
         *kind = svn_node_file;
         break;
+      case svn_wc__db_kind_unknown:
+        *kind = svn_node_unknown;  /* ### should probably be svn_node_none  */
+        break;
       default:
-        *kind = svn_node_unknown;
+        SVN_ERR_MALFUNCTION();
     }
 
   /* If we found a svn_node_file or svn_node_dir, but it is hidden,
