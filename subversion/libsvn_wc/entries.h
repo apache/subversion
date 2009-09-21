@@ -197,9 +197,7 @@ svn_wc__entry_remove(svn_wc__db_t *db,
 
 /* Tweak the information for LOCAL_ABSPATH in DB.  If NEW_URL is non-null,
  * make this the entry's new url.  If NEW_REV is valid, make this the
- * entry's working revision. If REPOS is non-NULL, set the repository root
- * on the entry to REPOS, provided it is a prefix of the entry's URL (and
- * if it is the THIS_DIR entry, all child URLs also match.)
+ * entry's working revision.
  *
  * If ALLOW_REMOVAL is TRUE the tweaks might cause the entry NAME to
  * be removed from the hash, if ALLOW_REMOVAL is FALSE this will not
@@ -214,7 +212,6 @@ svn_error_t *
 svn_wc__tweak_entry(svn_wc__db_t *db,
                     const char *local_abspath,
                     const char *new_url,
-                    const char *repos,
                     svn_revnum_t new_rev,
                     svn_boolean_t this_dir,
                     svn_boolean_t allow_removal,

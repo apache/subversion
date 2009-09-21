@@ -580,6 +580,15 @@ svn_wc_process_committed(const char *path,
 }
 
 svn_error_t *
+svn_wc_maybe_set_repos_root(svn_wc_adm_access_t *adm_access,
+                            const char *path,
+                            const char *repos,
+                            apr_pool_t *pool)
+{
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
 svn_wc_delete3(const char *path,
                svn_wc_adm_access_t *adm_access,
                svn_cancel_func_t cancel_func,
