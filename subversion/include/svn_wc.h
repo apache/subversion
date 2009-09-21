@@ -3817,7 +3817,8 @@ svn_wc_copy(const char *src,
  * Schedule @a local_abspath for deletion, it will be deleted from the
  * repository on the next commit.  If @a local_abspath refers to a
  * directory, then a recursive deletion will occur. @a wc_ctx must hold
- * a write lock for the parent of @a local_abspath.
+ * a write lock for the parent of @a local_abspath, @a local_abspath itself
+ * and everything below @ local_abspath.
  *
  * If @a keep_local is FALSE, this function immediately deletes all files,
  * modified and unmodified, versioned and unversioned from the working copy.
@@ -3853,7 +3854,8 @@ svn_wc_delete4(svn_wc_context_t *wc_ctx,
 
 /**
  * Similar to svn_wc_delete4, but uses an access baton and relative path
- * instead of a working copy context and absolute path.
+ * instead of a working copy context and absolute path. @a adm_access
+ * must hold a write lock for the parent of @a local_abspath.
  *
  * @since New in 1.5.
  * @deprecated Provided for backward compatibility with the 1.6 API.

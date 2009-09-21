@@ -1184,28 +1184,29 @@ svn_wc_delete4(svn_wc_context_t *wc_ctx,
 {
   const char *path;
   svn_wc_adm_access_t *adm_access;
-  svn_wc_adm_access_t *dir_access;
+
   const svn_wc_entry_t *entry;
   svn_boolean_t was_schedule;
   svn_node_kind_t was_kind;
   svn_boolean_t was_copied;
   svn_boolean_t was_deleted = FALSE; /* Silence a gcc uninitialized warning */
+  svn_error_t *err;
+  const char *parent_abspath = svn_dirent_dirname(local_abspath, pool);
 
   SVN_ERR(svn_wc__temp_get_relpath(&path, wc_ctx->db, local_abspath,
                                    pool, pool));
 
-  adm_access = svn_wc__adm_retrieve_internal2(wc_ctx->db,
-                                              svn_dirent_dirname(local_abspath,
-                                                                 pool),
+  adm_access = svn_wc__adm_retrieve_internal2(wc_ctx->db, parent_abspath,
                                               pool);
-  SVN_ERR_ASSERT(adm_access != NULL);
 
-  SVN_ERR(svn_wc_adm_probe_try3(&dir_access, adm_access, path,
-                                TRUE, -1, cancel_func, cancel_baton, pool));
-  if (dir_access)
-    SVN_ERR(svn_wc_entry(&entry, path, dir_access, FALSE, pool));
+  SVN_ERR_ASSERT(adm_access != NULL);
+  err = svn_wc__get_entry(&entry, wc_ctx->db, local_abspath, TRUE,
+                          svn_node_unknown, FALSE, pool, pool);
+
+  if (err && err->apr_err == SVN_ERR_NODE_UNEXPECTED_KIND)
+    svn_error_clear(err);
   else
-    entry = NULL;
+    SVN_ERR(err);
 
   if (!entry)
     {
@@ -1235,10 +1236,7 @@ svn_wc_delete4(svn_wc_context_t *wc_ctx,
 
   if (was_kind == svn_node_dir)
     {
-      const char *parent, *base_name;
       const svn_wc_entry_t *entry_in_parent;
-
-      svn_dirent_split(path, &parent, &base_name, pool);
 
       /* The deleted state is only available in the entry in parent's
          entries file */
@@ -1263,17 +1261,19 @@ svn_wc_delete4(svn_wc_context_t *wc_ctx,
         }
       else if (was_schedule != svn_wc_schedule_add)
         {
-          /* if adm_probe_retrieve returned the parent access baton,
-             (which is the same access baton that we came in here
-             with), this means we're dealing with a missing directory.
-             So there's no tree to mark for deletion.  Instead, the
-             next phase of code will simply schedule the directory for
-             deletion in its parent. */
-          if (dir_access != adm_access)
+          svn_boolean_t available;
+
+          /* If the working copy in the subdirectory is not available,
+             we can't mark its tree as deleted. */
+          SVN_ERR(svn_wc__adm_available(&available, NULL,
+                                        wc_ctx->db, local_abspath,
+                                        pool));
+
+          if (available)
             {
               /* Recursively mark a whole tree for deletion. */
               SVN_ERR(mark_tree(wc_ctx->db,
-                                svn_wc__adm_access_abspath(dir_access),
+                                local_abspath,
                                 SVN_WC__ENTRY_MODIFY_SCHEDULE
                                 | SVN_WC__ENTRY_MODIFY_KEEP_LOCAL,
                                 svn_wc_schedule_delete, FALSE, keep_local,
@@ -1304,7 +1304,7 @@ svn_wc_delete4(svn_wc_context_t *wc_ctx,
          and copyfrom_url. */
       tmp_entry.schedule = svn_wc_schedule_delete;
       SVN_ERR(svn_wc__loggy_entry_modify(&log_accum,
-                                         svn_wc__adm_access_abspath(adm_access),
+                                         parent_abspath,
                                          path, &tmp_entry,
                                          SVN_WC__ENTRY_MODIFY_SCHEDULE,
                                          pool, pool));
@@ -1323,7 +1323,7 @@ svn_wc_delete4(svn_wc_context_t *wc_ctx,
           if (was_kind != svn_node_dir) /* Dirs don't have text-bases */
             /* Restore the original text-base */
             SVN_ERR(svn_wc__loggy_move(&log_accum,
-                                       svn_wc__adm_access_abspath(adm_access),
+                                       parent_abspath,
                                        text_revert, text_base,
                                        pool, pool));
 
@@ -1357,8 +1357,8 @@ svn_wc_delete4(svn_wc_context_t *wc_ctx,
          in the right place, but we can't do that without breaking the API. */
 
       SVN_ERR(svn_wc__db_temp_forget_directory(
-                               svn_wc__adm_get_db(dir_access),
-                               svn_wc__adm_access_abspath(dir_access),
+                               wc_ctx->db,
+                               local_abspath,
                                pool));
     }
 
@@ -1367,8 +1367,9 @@ svn_wc_delete4(svn_wc_context_t *wc_ctx,
   if (!keep_local)
     {
       if (was_schedule == svn_wc_schedule_add)
-        SVN_ERR(erase_unversioned_from_wc
-                (path, cancel_func, cancel_baton, pool));
+        SVN_ERR(erase_unversioned_from_wc(local_abspath,
+                                          cancel_func, cancel_baton,
+                                          pool));
       else
         SVN_ERR(erase_from_wc(wc_ctx->db, local_abspath, was_kind,
                               cancel_func, cancel_baton, pool));
