@@ -78,16 +78,16 @@ svn_boolean_t svn_wc__adm_missing(svn_wc__db_t *db,
                                   const char *local_abspath,
                                   apr_pool_t *scratch_pool);
 
-/* Retrieves a boolean AVAILABLE indicating whether LOCAL_ABSPATH is available
-   in a way that an access baton for it can be opened in LOCAL_ABSPATH is
-   a directory. If KIND is not NULL it is set to the kind of LOCAL_ABSPATH
-   as stored in DB. 
-   
-   The value of AVAILABLE will match the value obtained by
-   svn_wc__db_node_hidden, once we have a central DB. */
+/* Retrieves the KIND of LOCAL_ABSPATH and whether its administrative data is
+   available in the working copy. *AVAILABLE is set to TRUE when the node is
+   available, otherwise to FALSE and *OBSTRUCTED is set to TRUE when the node
+   is not available because it is obstructed/missing, otherwise to FALSE.
+
+   KIND and OBSTRUCTED can be NULL. */
 svn_error_t *
 svn_wc__adm_available(svn_boolean_t *available,
                       svn_wc__db_kind_t *kind,
+                      svn_boolean_t *obstructed,
                       svn_wc__db_t *db,
                       const char *local_abspath,
                       apr_pool_t *scratch_pool);
