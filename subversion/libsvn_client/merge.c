@@ -1601,20 +1601,24 @@ merge_file_added(svn_wc_adm_access_t *adm_access,
 
                 /* Figure out what state the file which is already present
                  * is in, and set the conflict reason accordingly. */
+                reason = svn_wc_conflict_reason_obstructed;
                 SVN_ERR(svn_dirent_get_absolute(&abs_mine, mine, subpool));
                 SVN_ERR(svn_wc_entry(&entry, mine, adm_access, FALSE, subpool));
-                switch (entry->schedule)
+                if (entry)
                   {
-                    case svn_wc_schedule_normal:
-                      reason = svn_wc_conflict_reason_obstructed;
-                      break;
-                    case svn_wc_schedule_add:
-                      reason = svn_wc_conflict_reason_added;
-                      break;
-                    case svn_wc_schedule_delete:
-                    case svn_wc_schedule_replace:
-                      reason = svn_wc_conflict_reason_deleted;
-                      break;
+                    switch (entry->schedule)
+                      {
+                        case svn_wc_schedule_normal:
+                          reason = svn_wc_conflict_reason_obstructed;
+                          break;
+                        case svn_wc_schedule_add:
+                          reason = svn_wc_conflict_reason_added;
+                          break;
+                        case svn_wc_schedule_delete:
+                        case svn_wc_schedule_replace:
+                          reason = svn_wc_conflict_reason_deleted;
+                          break;
+                      }
                   }
 
                 /* The file add the merge wants to carry out is obstructed by
