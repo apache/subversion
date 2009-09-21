@@ -211,12 +211,16 @@ determine_keep_local(svn_boolean_t *keep_local,
                      const char *local_relpath)
 {
   svn_sqlite__stmt_t *stmt;
+  svn_boolean_t got_row;
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_SELECT_KEEP_LOCAL_FLAG));
   SVN_ERR(svn_sqlite__bindf(stmt, "is", wc_id, local_relpath));
-  SVN_ERR(svn_sqlite__step_row(stmt));
+  SVN_ERR(svn_sqlite__step(&got_row, stmt));
 
-  *keep_local = svn_sqlite__column_boolean(stmt, 0);
+  if (got_row)
+    *keep_local = svn_sqlite__column_boolean(stmt, 0);
+  else
+    *keep_local = FALSE;
 
   return svn_sqlite__reset(stmt);
 }
