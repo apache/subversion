@@ -517,7 +517,35 @@ close_single(svn_wc_adm_access_t *adm_access,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_wc__adm_available(svn_boolean_t *available,
+                      svn_wc__db_kind_t *kind,
+                      svn_wc__db_t *db,
+                      const char *local_abspath,
+                      apr_pool_t *scratch_pool)
+{
+  svn_wc__db_status_t status;
+  svn_depth_t depth;
 
+  SVN_ERR(svn_wc__db_read_info(&status, kind, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, &depth, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               db, local_abspath, scratch_pool, scratch_pool));
+
+  if (status == svn_wc__db_status_absent ||
+      status == svn_wc__db_status_not_present ||
+      status == svn_wc__db_status_obstructed ||
+      status == svn_wc__db_status_obstructed_add ||
+      status == svn_wc__db_status_obstructed_delete ||
+      status == svn_wc__db_status_excluded ||
+      (depth == svn_depth_exclude))
+    *available = FALSE;
+  else
+    *available = TRUE;
+
+  return SVN_NO_ERROR;
+}
 /* This is essentially the guts of svn_wc_adm_open3.
  *
  * If the working copy is already locked, return SVN_ERR_WC_LOCKED; if
@@ -562,9 +590,8 @@ do_open(svn_wc_adm_access_t **adm_access,
       for (i = 0; i < children->nelts; i++)
         {
           const char *node_abspath;
-          svn_wc__db_status_t status;
           svn_wc__db_kind_t kind;
-          svn_depth_t depth;
+          svn_boolean_t available;
           const char *name = APR_ARRAY_IDX(children, i, const char *);
 
           svn_pool_clear(iterpool);
@@ -575,26 +602,16 @@ do_open(svn_wc_adm_access_t **adm_access,
 
           node_abspath = svn_dirent_join(local_abspath, name, iterpool);
 
-          SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL,
-                                       NULL, NULL, NULL, NULL, &depth, NULL,
-                                       NULL, NULL, NULL, NULL, NULL, NULL,
-                                       NULL, NULL, NULL, NULL, NULL, NULL,
-                                       NULL, NULL, NULL, NULL,
-                                       db, node_abspath, iterpool, iterpool));
+          SVN_ERR(svn_wc__adm_available(&available,
+                                        &kind,
+                                        db,
+                                        node_abspath,
+                                        scratch_pool));
 
           if (kind != svn_wc__db_kind_dir)
             continue;
 
-          if (depth == svn_depth_exclude)
-            continue;
-
-          if (status == svn_wc__db_status_absent ||
-              status == svn_wc__db_status_not_present)
-            continue;
-
-          if (status == svn_wc__db_status_obstructed ||
-              status == svn_wc__db_status_obstructed_add ||
-              status == svn_wc__db_status_obstructed_delete)
+          if (!available)
             {
               svn_wc__db_temp_set_access(lock->db, node_abspath,
                                          (svn_wc_adm_access_t *)&missing,
@@ -1500,8 +1517,7 @@ svn_wc__adm_missing(svn_wc__db_t *db,
                     apr_pool_t *scratch_pool)
 {
   const svn_wc_adm_access_t *look;
-  svn_wc__db_status_t status;
-  svn_error_t *err;
+  svn_boolean_t available;
 
   look = get_from_shared(local_abspath, db, scratch_pool);
 
@@ -1510,29 +1526,18 @@ svn_wc__adm_missing(svn_wc__db_t *db,
 
   /* When we switch to a single database an access baton can't be
      missing, but until then it can. But if there are no access batons we
-     would always return FALSE.
+     would always return FALSE. 
+     For this case we check if an access baton could be opened
 
-     For this case we check if the db status is svn_wc__db_status_obstructed,
-     as this describes that the managed working copy is obstructed by
-     something. (E.g. file, or an unversioned directory). This is exactly,
-     what we used to call a missing access baton. */
-  err = svn_wc__db_read_info(&status, NULL, NULL, NULL, NULL, NULL, NULL,
-                             NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                             NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                             NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                             db, local_abspath, scratch_pool, scratch_pool);
+*/
 
-  if (err)
-    {
-      /* We can't return an error. Fall back to the old behavior or returning
-         FALSE.*/
-      svn_error_clear(err);
-      return FALSE;
-    }
-  else
-    return (status == svn_wc__db_status_obstructed) ||
-           (status == svn_wc__db_status_obstructed_add) ||
-           (status == svn_wc__db_status_obstructed_delete);
+  /* This check must match the check in do_open() */
+  available = TRUE;
+  svn_error_clear(svn_wc__adm_available(&available, NULL,
+                                        db, local_abspath,
+                                        scratch_pool));
+
+  return !available;
 }
 
 

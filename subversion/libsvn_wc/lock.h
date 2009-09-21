@@ -70,10 +70,27 @@ apr_hash_t *svn_wc__adm_access_entries(svn_wc_adm_access_t *adm_access);
 
 /* Returns TRUE if LOCAL_ABSPATH is a working copy directory that is obstructed
    or missing such that an access baton is not available for LOCAL_ABSPATH.
-   This means DB must also include the parent of LOCAL_ABSPATH. */
+   This means DB must also include the parent of LOCAL_ABSPATH. 
+   
+   This function falls back to using svn_wc__adm_available() if no access batons
+   for LOCAL_ABSPATH are stored in DB. */
 svn_boolean_t svn_wc__adm_missing(svn_wc__db_t *db,
                                   const char *local_abspath,
                                   apr_pool_t *scratch_pool);
+
+/* Retrieves a boolean AVAILABLE indicating whether LOCAL_ABSPATH is available
+   in a way that an access baton for it can be opened in LOCAL_ABSPATH is
+   a directory. If KIND is not NULL it is set to the kind of LOCAL_ABSPATH
+   as stored in DB. 
+   
+   The value of AVAILABLE will match the value obtained by
+   svn_wc__db_node_hidden, once we have a central DB. */
+svn_error_t *
+svn_wc__adm_available(svn_boolean_t *available,
+                      svn_wc__db_kind_t *kind,
+                      svn_wc__db_t *db,
+                      const char *local_abspath,
+                      apr_pool_t *scratch_pool);
 
 /* Sets *ADM_ACCESS to an access baton for PATH from the set ASSOCIATED.
    This function is similar to svn_wc_adm_retrieve except that if the baton
