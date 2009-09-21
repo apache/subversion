@@ -2201,8 +2201,7 @@ public class BasicTests extends SVNTests
         MyChangelistCallback clCallback = new MyChangelistCallback();
 
         String[] paths = new String[]
-            {thisTest.getWCPath() + "/iota"};
-
+          {fileToSVNPath(new File(thisTest.getWCPath(), "iota"), true)};
         // Add a path to a changelist, and check to see if it got added
         client.addToChangelist(paths, changelistName, Depth.infinity, null);
         String[] cl = new String[1];
