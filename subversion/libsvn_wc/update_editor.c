@@ -1170,7 +1170,8 @@ prep_directory(struct dir_baton *db,
 }
 
 
-/* Accumulate tags in LOG_ACCUM to set ENTRY_PROPS for PATH.
+/* Accumulate tags in LOG_ACCUM (associated with ADM_ABSPATH) to set
+   ENTRY_PROPS for PATH.
    ENTRY_PROPS is an array of svn_prop_t* entry props.
    If ENTRY_PROPS contains the removal of a lock token, all entryprops
    related to a lock will be removed and LOCK_STATE, if non-NULL, will be
@@ -1178,8 +1179,8 @@ prep_directory(struct dir_baton *db,
    will be set to svn_wc_lock_state_unchanged. */
 static svn_error_t *
 accumulate_entry_props(svn_stringbuf_t *log_accum,
+                       const char *adm_abspath,
                        svn_wc_notify_lock_state_t *lock_state,
-                       svn_wc_adm_access_t *adm_access,
                        const char *path,
                        apr_array_header_t *entry_props,
                        apr_pool_t *pool)
@@ -1200,9 +1201,8 @@ accumulate_entry_props(svn_stringbuf_t *log_accum,
          defunct. */
       if (! strcmp(prop->name, SVN_PROP_ENTRY_LOCK_TOKEN))
         {
-          SVN_ERR(svn_wc__loggy_delete_lock(&log_accum,
-                                   svn_wc__adm_access_abspath(adm_access),
-                                   path, pool, pool));
+          SVN_ERR(svn_wc__loggy_delete_lock(&log_accum, adm_abspath,
+                                            path, pool, pool));
 
           if (lock_state)
             *lock_state = svn_wc_notify_lock_state_unlocked;
@@ -1237,8 +1237,7 @@ accumulate_entry_props(svn_stringbuf_t *log_accum,
     }
 
   if (flags)
-    SVN_ERR(svn_wc__loggy_entry_modify(&log_accum,
-                                       svn_wc__adm_access_abspath(adm_access),
+    SVN_ERR(svn_wc__loggy_entry_modify(&log_accum, adm_abspath,
                                        path, &tmp_entry, flags, pool, pool));
 
   return SVN_NO_ERROR;
@@ -2804,7 +2803,7 @@ add_prop_deletion(void *baton, const void *key,
 
 /* Create in POOL a name->value hash from PROP_LIST, and return it. */
 static apr_hash_t *
-prop_hash_from_array(apr_array_header_t *prop_list,
+prop_hash_from_array(const apr_array_header_t *prop_list,
                      apr_pool_t *pool)
 {
   int i;
@@ -2945,9 +2944,9 @@ close_directory(void *dir_baton,
                     _("Couldn't do property merge"));
         }
 
-      SVN_ERR(accumulate_entry_props(dirprop_log, NULL,
-                                     adm_access, db->path,
-                                     entry_props, pool));
+      SVN_ERR(accumulate_entry_props(dirprop_log,
+                                     svn_wc__adm_access_abspath(adm_access),
+                                     NULL, db->path, entry_props, pool));
 
       /* Handle the wcprops. */
       if (wc_props && wc_props->nelts > 0)
@@ -4076,9 +4075,9 @@ merge_props(svn_stringbuf_t *log_accum,
      Note that no merging needs to happen; these kinds of props aren't
      versioned, so if the property is present, we overwrite the value. */
   if (entry_props)
-    SVN_ERR(accumulate_entry_props(log_accum, lock_state,
-                                   adm_access, file_path,
-                                   entry_props, pool));
+    SVN_ERR(accumulate_entry_props(log_accum,
+                                   svn_wc__adm_access_abspath(adm_access),
+                                   lock_state, file_path, entry_props, pool));
   else
     *lock_state = svn_wc_notify_lock_state_unchanged;
 
@@ -5368,11 +5367,13 @@ install_added_props(svn_stringbuf_t *log_accum,
     *entry_props = NULL;
   const char *local_abspath;
   svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
+  const char *adm_abspath = svn_wc__adm_access_abspath(adm_access);
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, dst_path, pool));
 
   /* Categorize the base properties. */
   {
     apr_array_header_t *prop_array;
-    int i;
 
     /* Diff an empty prop has against the new base props gives us an array
        of all props. */
@@ -5383,28 +5384,19 @@ install_added_props(svn_stringbuf_t *log_accum,
                                  pool));
 
     /* Put regular props back into a hash table. */
-    new_base_props = apr_hash_make(pool);
-    for (i = 0; i < regular_props->nelts; ++i)
-      {
-        const svn_prop_t *prop = &APR_ARRAY_IDX(regular_props, i, svn_prop_t);
-
-        apr_hash_set(new_base_props, prop->name, APR_HASH_KEY_STRING,
-                     prop->value);
-      }
+    new_base_props = prop_hash_from_array(regular_props, pool);
   }
 
   /* Install base and working props. */
-  SVN_ERR(svn_wc__install_props(&log_accum, adm_access, dst_path,
+  SVN_ERR(svn_wc__install_props(&log_accum, adm_abspath, local_abspath,
                                 new_base_props,
                                 new_props ? new_props : new_base_props,
                                 TRUE, pool));
 
   /* Install the entry props. */
-  SVN_ERR(accumulate_entry_props(log_accum, NULL,
-                                 adm_access, dst_path,
-                                 entry_props, pool));
+  SVN_ERR(accumulate_entry_props(log_accum, adm_abspath,
+                                 NULL, dst_path, entry_props, pool));
 
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, dst_path, pool));
   return svn_error_return(svn_wc__db_base_set_dav_cache(db, local_abspath,
                                         prop_hash_from_array(wc_props, pool),
                                         pool));
@@ -5438,6 +5430,9 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
   svn_stringbuf_t *log_accum;
   svn_wc_adm_access_t *adm_access = 
       svn_wc__adm_retrieve_internal2(wc_ctx->db, dir_abspath, pool);
+
+  SVN_ERR_ASSERT(strcmp(dir_abspath,
+                        svn_wc__adm_access_abspath(adm_access)) == 0);
 
   SVN_ERR(svn_wc__text_base_path(&text_base_path, wc_ctx->db, local_abspath,
                                  FALSE, pool));
@@ -5486,8 +5481,7 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
       SVN_ERR(svn_wc__text_base_path(&dst_txtb, wc_ctx->db, local_abspath,
                                      FALSE, pool));
 
-      SVN_ERR(svn_wc__loggy_move(&log_accum,
-                                 svn_wc__adm_access_abspath(adm_access),
+      SVN_ERR(svn_wc__loggy_move(&log_accum, dir_abspath,
                                  dst_txtb, dst_rtext, pool, pool));
       SVN_ERR(svn_wc__loggy_revert_props_create(&log_accum,
                                                 dst_path, adm_access,
@@ -5517,8 +5511,7 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
           | SVN_WC__ENTRY_MODIFY_COPIED;
       }
 
-    SVN_ERR(svn_wc__loggy_entry_modify(&log_accum,
-                                       svn_wc__adm_access_abspath(adm_access),
+    SVN_ERR(svn_wc__loggy_entry_modify(&log_accum, dir_abspath,
                                        dst_path, &tmp_entry,
                                        modify_flags, pool, pool));
   }
@@ -5565,14 +5558,12 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
                                pool));
 
       /* Translate new temporary text file to working text. */
-      SVN_ERR(svn_wc__loggy_copy(&log_accum,
-                                 svn_wc__adm_access_abspath(adm_access),
+      SVN_ERR(svn_wc__loggy_copy(&log_accum, dir_abspath,
                                  tmp_text_path, dst_path,
                                  pool, pool));
 
       /* After copying to the working directory, lose the temp file. */
-      SVN_ERR(svn_wc__loggy_remove(&log_accum,
-                                   svn_wc__adm_access_abspath(adm_access),
+      SVN_ERR(svn_wc__loggy_remove(&log_accum, dir_abspath,
                                    tmp_text_path, pool, pool));
     }
   else
@@ -5580,14 +5571,12 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
       /* No working file provided by the caller, copy and translate the
          text base. */
       SVN_ERR(svn_wc__loggy_copy(
-                        &log_accum, svn_wc__adm_access_abspath(adm_access),
-                        tmp_text_base_path, dst_path, pool, pool));
+                &log_accum, dir_abspath, tmp_text_base_path, dst_path,
+                pool, pool));
       SVN_ERR(svn_wc__loggy_set_entry_timestamp_from_wc(
-                        &log_accum, svn_wc__adm_access_abspath(adm_access),
-                        dst_path, pool, pool));
+                &log_accum, dir_abspath, dst_path, pool, pool));
       SVN_ERR(svn_wc__loggy_set_entry_working_size_from_wc(
-                        &log_accum, svn_wc__adm_access_abspath(adm_access),
-                        dst_path, pool, pool));
+                &log_accum, dir_abspath, dst_path, pool, pool));
     }
 
   /* Install new text base. */
@@ -5596,17 +5585,14 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
 
     /* Write out log commands to set up the new text base and its
        checksum. */
-    SVN_ERR(svn_wc__loggy_move(&log_accum,
-                               svn_wc__adm_access_abspath(adm_access),
+    SVN_ERR(svn_wc__loggy_move(&log_accum, dir_abspath,
                                tmp_text_base_path, text_base_path,
                                pool, pool));
-    SVN_ERR(svn_wc__loggy_set_readonly(&log_accum,
-                                       svn_wc__adm_access_abspath(adm_access),
+    SVN_ERR(svn_wc__loggy_set_readonly(&log_accum, dir_abspath,
                                        text_base_path, pool, pool));
 
     tmp_entry.checksum = svn_checksum_to_cstring(base_checksum, pool);
-    SVN_ERR(svn_wc__loggy_entry_modify(&log_accum,
-                                       svn_wc__adm_access_abspath(adm_access),
+    SVN_ERR(svn_wc__loggy_entry_modify(&log_accum, dir_abspath,
                                        dst_path, &tmp_entry,
                                        SVN_WC__ENTRY_MODIFY_CHECKSUM,
                                        pool, pool));
