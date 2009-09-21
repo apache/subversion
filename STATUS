@@ -81,7 +81,7 @@ Candidate changes:
    Votes:
      +1: pburba
 
- * r38000, r38006, r38099, r38100, r38181, r38803, r38841, r38896,
+ * r38000, r38006, r38099, r38100, r38181, r38803, r38831, r38841, r38896,
    r38907, r39000, r39002, r39007, r39008, r39052, r39096, r39124,
    r39125, r39127
    Properly handle tree conflicts during replace.
@@ -112,7 +112,8 @@ Candidate changes:
    Branch:
      ^/branches/1.6.x-r38000
    Votes:
-     +1: stsp, sbutler
+     +1: stsp
+     +1: sbutler (without r38831)
      -0: neels (I genr'ly approve but want to check sth first - please wait.)
 
  * r35958, r36030, r38373, r38836, r38837, r38842
