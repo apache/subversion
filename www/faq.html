@@ -3764,18 +3764,25 @@ universally beneficial.</p>
 When you commit, only the files/directories that are actually changed by
 the commit get their base revisions bumped to HEAD in the working copy.
 The other files/directories (possibly including the directory you committed
-from) don't get their base revisions bumped, which means Subversion still
+from!) don't get their base revisions bumped, which means Subversion still
 considers them to be based on outdated revisions.
 See also <a href="#hidden-log">this question</a>.
 </p>
 
 <p>
 This can be confusing, in particular because of tree conflicts
-you can inflict upon yourself. But Subversion has currently no way of
-knowing that you yourself just comitted the change which caused the directory
-to be out-of-date during the second commit. And allowing an out-of-date
-directory to be committed may cause certain tree conflicts not to be
-detected, so svn can't allow you to do this. 
+you can inflict upon yourself.
+E.g. if you add a file to a directory and commit, and then locally move
+that directory somewhere else, and then try to commit, this second commit
+will fail with an out-of-date error since the directory itself is still
+based on an out-of-date revision.
+When updating, a tree conflict will be flagged.</p>
+
+<p>Subversion has currently no way of knowing that you yourself just comitted
+the change which caused the directory to be out-of-date during the second
+commit. And allowing an out-of-date directory to be committed may cause
+certain tree conflicts not to be detected, so Subversion can't allow you
+to do this. 
 </p>
 
 <p>To avoid this problem, make sure to update your entire working copy
