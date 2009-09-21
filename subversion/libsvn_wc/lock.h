@@ -79,11 +79,19 @@ svn_boolean_t svn_wc__adm_missing(svn_wc__db_t *db,
                                   apr_pool_t *scratch_pool);
 
 /* Retrieves the KIND of LOCAL_ABSPATH and whether its administrative data is
-   available in the working copy. *AVAILABLE is set to TRUE when the node is
-   available, otherwise to FALSE and *OBSTRUCTED is set to TRUE when the node
-   is not available because it is obstructed/missing, otherwise to FALSE.
+   available in the working copy.
 
-   KIND and OBSTRUCTED can be NULL. */
+   *AVAILABLE is set to TRUE when the node and its metadata are available,
+   otherwise to FALSE (due to obstruction, missing, absence, exclusion,
+   or a "not-present" child).
+
+   *OBSTRUCTED is set to TRUE when the node is not available because
+   it is obstructed/missing, otherwise to FALSE.
+
+   KIND and OBSTRUCTED can be NULL.
+
+   ### note: this function should go away when we move to a single
+   ### adminstrative area.  */
 svn_error_t *
 svn_wc__adm_available(svn_boolean_t *available,
                       svn_wc__db_kind_t *kind,
