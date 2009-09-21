@@ -1900,23 +1900,6 @@ revert_entry(svn_depth_t *depth,
             }
           else
             {
-#if 0
-              const char *bname;
-              svn_boolean_t is_wc_root = FALSE;
-
-              /* ### not sure the wcroot detection makes sense, or is needed.
-                 ### we have a file node, but on-disk it is a directory.
-                 ### possible?  */
-
-              /* For directories, determine if PATH is a WC root so that we
-                 can tell if it is safe to split PATH into a parent directory
-                 and basename.  For files, we always do this split.  */
-              if (kind == svn_node_dir)
-                SVN_ERR(svn_wc__check_wc_root(&is_wc_root, NULL, db,
-                                              local_abspath, pool));
-              bname = is_wc_root ? NULL : svn_dirent_basename(path, pool);
-#endif
-
               SVN_ERR(svn_wc__entry_modify2(db, local_abspath,
                                             svn_node_file, FALSE, &tmp_entry,
                                             SVN_WC__ENTRY_MODIFY_KIND
