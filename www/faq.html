@@ -258,6 +258,8 @@ a <tt>file:</tt> URL?</a></li>
 <li><a href="#secure-connection-truncated">Why am I getting an error
     saying "Could not read response body: Secure connection truncated"
     when doing a checkout from Apache?</a></li>
+<li><a href="#self-tree-conflict">Why am I getting a tree conflict upon
+    update even though no one else has committed conflicting changes?</a></li>
 </ul>
 
 <h4>Developer questions:</h4>
@@ -3752,6 +3754,33 @@ into a few subdirectories with smaller file counts, this could prove
 universally beneficial.</p>
 
 </div>
+
+<div class="h3"
+     id="self-tree-conflict"
+     title="self-tree-conflict">
+<h3>Why am I getting a tree conflict upon update even though no one else
+    has committed conflicting changes?</h3>
+<p>
+When you commit, only the files/directories that are actually changed by
+the commit get their base revisions bumped to HEAD in the working copy.
+The other files/directories (possibly including the directory you committed
+from) don't get their base revisions bumped, which means Subversion still
+considers them to be based on outdated revisions.
+See also <a href="#hidden-log">this question</a>.
+</p>
+
+<p>
+This can be confusing, in particular because of tree conflicts
+you can inflict upon yourself. But Subversion has currently no way of
+knowing that you yourself just comitted the change which caused the directory
+to be out-of-date during the second commit. And allowing an out-of-date
+directory to be committed may cause certain tree conflicts not to be
+detected, so svn can't allow you to do this. 
+</p>
+
+<p>To avoid this problem, make sure to update your entire working copy
+before making structural changes such as deleting, adding, or moving files
+or directories.</p>
 
 </div>
 
