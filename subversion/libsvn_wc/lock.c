@@ -520,6 +520,7 @@ close_single(svn_wc_adm_access_t *adm_access,
 svn_error_t *
 svn_wc__adm_available(svn_boolean_t *available,
                       svn_wc__db_kind_t *kind,
+                      svn_boolean_t *obstructed,
                       svn_wc__db_t *db,
                       const char *local_abspath,
                       apr_pool_t *scratch_pool)
@@ -527,22 +528,33 @@ svn_wc__adm_available(svn_boolean_t *available,
   svn_wc__db_status_t status;
   svn_depth_t depth;
 
+  *available = TRUE;
+  if (obstructed)
+    *obstructed = FALSE;
+  if (kind)
+    *kind = svn_wc__db_kind_unknown;
+
   SVN_ERR(svn_wc__db_read_info(&status, kind, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, &depth, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                db, local_abspath, scratch_pool, scratch_pool));
 
-  if (status == svn_wc__db_status_absent ||
-      status == svn_wc__db_status_not_present ||
-      status == svn_wc__db_status_obstructed ||
+  if (status == svn_wc__db_status_obstructed ||
       status == svn_wc__db_status_obstructed_add ||
-      status == svn_wc__db_status_obstructed_delete ||
-      status == svn_wc__db_status_excluded ||
-      (depth == svn_depth_exclude))
-    *available = FALSE;
-  else
-    *available = TRUE;
+      status == svn_wc__db_status_obstructed_delete)
+    {
+      *available = FALSE;
+      if (obstructed)
+        *obstructed = TRUE;
+    }
+  else if (status == svn_wc__db_status_absent ||
+           status == svn_wc__db_status_excluded ||
+           status == svn_wc__db_status_not_present ||
+           depth == svn_depth_exclude)
+    {
+      *available = FALSE;
+    }
 
   return SVN_NO_ERROR;
 }
@@ -591,7 +603,7 @@ do_open(svn_wc_adm_access_t **adm_access,
         {
           const char *node_abspath;
           svn_wc__db_kind_t kind;
-          svn_boolean_t available;
+          svn_boolean_t available, obstructed;
           const char *name = APR_ARRAY_IDX(children, i, const char *);
 
           svn_pool_clear(iterpool);
@@ -604,6 +616,7 @@ do_open(svn_wc_adm_access_t **adm_access,
 
           SVN_ERR(svn_wc__adm_available(&available,
                                         &kind,
+                                        &obstructed,
                                         db,
                                         node_abspath,
                                         scratch_pool));
@@ -611,13 +624,7 @@ do_open(svn_wc_adm_access_t **adm_access,
           if (kind != svn_wc__db_kind_dir)
             continue;
 
-          if (!available)
-            {
-              svn_wc__db_temp_set_access(lock->db, node_abspath,
-                                         (svn_wc_adm_access_t *)&missing,
-                                         iterpool);
-            }
-          else
+          if (available)
             {
               const char *node_path = svn_dirent_join(path, name, iterpool);
               svn_wc_adm_access_t *node_access;
@@ -628,6 +635,12 @@ do_open(svn_wc_adm_access_t **adm_access,
                               lock->pool, iterpool));
               /* node_access has been registered in DB, so we don't need
                  to do anything with it.  */
+            }
+          else if (obstructed)
+            {
+              svn_wc__db_temp_set_access(lock->db, node_abspath,
+                                         (svn_wc_adm_access_t *)&missing,
+                                         iterpool);
             }
         }
     }
@@ -1517,7 +1530,8 @@ svn_wc__adm_missing(svn_wc__db_t *db,
                     apr_pool_t *scratch_pool)
 {
   const svn_wc_adm_access_t *look;
-  svn_boolean_t available;
+  svn_boolean_t available, obstructed;
+  svn_wc__db_kind_t kind;
 
   look = get_from_shared(local_abspath, db, scratch_pool);
 
@@ -1532,12 +1546,11 @@ svn_wc__adm_missing(svn_wc__db_t *db,
 */
 
   /* This check must match the check in do_open() */
-  available = TRUE;
-  svn_error_clear(svn_wc__adm_available(&available, NULL,
+  svn_error_clear(svn_wc__adm_available(&available, &kind, &obstructed,
                                         db, local_abspath,
                                         scratch_pool));
 
-  return !available;
+  return (kind == svn_wc__db_kind_dir) && !available && obstructed;
 }
 
 

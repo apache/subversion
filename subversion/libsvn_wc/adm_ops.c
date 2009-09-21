@@ -1265,7 +1265,7 @@ svn_wc_delete4(svn_wc_context_t *wc_ctx,
 
           /* If the working copy in the subdirectory is not available,
              we can't mark its tree as deleted. */
-          SVN_ERR(svn_wc__adm_available(&available, NULL,
+          SVN_ERR(svn_wc__adm_available(&available, NULL, NULL,
                                         wc_ctx->db, local_abspath,
                                         pool));
 
