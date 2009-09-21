@@ -132,7 +132,8 @@ delete_urls(svn_commit_info_t **commit_info_p,
   apr_pool_t *subpool = svn_pool_create(pool);
 
   /* Condense our list of deletion targets. */
-  SVN_ERR(svn_path_condense_targets(&common, &targets, paths, TRUE, pool));
+  SVN_ERR(svn_uri_condense_targets(&common, &targets, paths, TRUE,
+                                   pool, pool));
   if (! targets->nelts)
     {
       const char *bname;
@@ -153,7 +154,7 @@ delete_urls(svn_commit_info_t **commit_info_p,
           const char *path = APR_ARRAY_IDX(targets, i, const char *);
 
           item = svn_client_commit_item3_create(pool);
-          item->url = svn_path_join(common, path, pool);
+          item->url = svn_uri_join(common, path, pool);
           item->state_flags = SVN_CLIENT_COMMIT_ITEM_DELETE;
           APR_ARRAY_PUSH(commit_items, svn_client_commit_item3_t *) = item;
         }
@@ -229,16 +230,19 @@ svn_client__wc_delete(const char *path,
                       svn_client_ctx_t *ctx,
                       apr_pool_t *pool)
 {
+  const char *local_abspath;
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
   if (!force && !keep_local)
     /* Verify that there are no "awkward" files */
-    SVN_ERR(svn_client__can_delete(path, ctx, pool));
+    SVN_ERR(svn_client__can_delete(local_abspath, ctx, pool));
 
   if (!dry_run)
     /* Mark the entry for commit deletion and perform wc deletion */
-    return svn_wc_delete3(path, adm_access,
+    return svn_wc_delete4(ctx->wc_ctx, local_abspath, keep_local,
                           ctx->cancel_func, ctx->cancel_baton,
-                          notify_func, notify_baton, keep_local, pool);
+                          notify_func, notify_baton, pool);
   else
     return SVN_NO_ERROR;
 }
@@ -280,7 +284,7 @@ svn_client_delete3(svn_commit_info_t **commit_info_p,
 
           /* Let the working copy library handle the PATH. */
           SVN_ERR(svn_wc__adm_open_in_context(&adm_access, ctx->wc_ctx,
-                                              parent_path, TRUE, 0,
+                                              parent_path, TRUE, -1,
                                               ctx->cancel_func,
                                               ctx->cancel_baton, subpool));
           SVN_ERR(svn_client__wc_delete(path, adm_access, force,
