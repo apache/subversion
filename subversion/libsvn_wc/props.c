@@ -506,8 +506,6 @@ svn_wc__loggy_props_delete(svn_stringbuf_t **log_accum,
   svn_wc__db_kind_t kind;
   const char *props_file;
 
-  SVN_ERR_ASSERT(props_kind != svn_wc__props_wcprop);
-
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
   SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath, FALSE, pool));
   SVN_ERR(svn_wc__prop_path(&props_file, path, kind, props_kind, pool));
@@ -528,12 +526,6 @@ svn_wc__props_delete(svn_wc__db_t *db,
   svn_wc__db_kind_t kind;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-
-  if (props_kind == svn_wc__props_wcprop)
-    {
-      return svn_error_return(svn_wc__db_base_set_dav_cache(db, local_abspath,
-                                                            NULL, pool));
-    }
 
   SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath, FALSE, pool));
   SVN_ERR(svn_wc__prop_path(&props_file, local_abspath, kind, props_kind,
