@@ -44,7 +44,15 @@
 #include "private/svn_token.h"
 
 
-
+/* Old locations for storing "wcprops" (aka "dav cache").  */
+#define WCPROPS_SUBDIR_FOR_FILES "wcprops"
+#define WCPROPS_FNAME_FOR_DIR "dir-wcprops"
+#define WCPROPS_ALL_DATA "all-wcprops"
+
+/* Old data files that we no longer need/use.  */
+#define ADM_README "README.txt"
+#define ADM_EMPTY_FILE "empty-file"
+
 
 /* Read one proplist (allocated from RESULT_POOL) from STREAM, and place it
    into ALL_WCPROPS at NAME.  */
@@ -84,8 +92,7 @@ read_many_wcprops(apr_hash_t **all_wcprops,
   *all_wcprops = apr_hash_make(result_pool);
 
   /* First, look at dir-wcprops. */
-  err = svn_wc__open_adm_stream(&stream, dir_abspath,
-                                SVN_WC__ADM_DIR_WCPROPS,
+  err = svn_wc__open_adm_stream(&stream, dir_abspath, WCPROPS_FNAME_FOR_DIR,
                                 iterpool, iterpool);
   if (err)
     {
@@ -102,7 +109,7 @@ read_many_wcprops(apr_hash_t **all_wcprops,
       SVN_ERR(svn_stream_close(stream));
     }
 
-  props_dir_abspath = svn_wc__adm_child(dir_abspath, SVN_WC__ADM_WCPROPS,
+  props_dir_abspath = svn_wc__adm_child(dir_abspath, WCPROPS_SUBDIR_FOR_FILES,
                                         scratch_pool);
 
   /* Now walk the wcprops directory. */
@@ -148,7 +155,7 @@ read_wcprops(apr_hash_t **all_wcprops,
   *all_wcprops = apr_hash_make(result_pool);
 
   err = svn_wc__open_adm_stream(&stream, dir_abspath,
-                                SVN_WC__ADM_ALL_WCPROPS,
+                                WCPROPS_ALL_DATA,
                                 scratch_pool, scratch_pool);
 
   /* A non-existent file means there are no props. */
@@ -380,23 +387,24 @@ upgrade_to_wcng(svn_wc__db_t *db,
          not catastrophic. */
 
       svn_error_clear(svn_io_remove_dir2(
-          svn_wc__adm_child(dir_abspath, SVN_WC__ADM_WCPROPS, scratch_pool),
+          svn_wc__adm_child(dir_abspath, WCPROPS_SUBDIR_FOR_FILES,
+                            scratch_pool),
           FALSE, NULL, NULL, scratch_pool));
 
       svn_error_clear(svn_io_remove_file2(
-          svn_wc__adm_child(dir_abspath, SVN_WC__ADM_DIR_WCPROPS, scratch_pool),
+          svn_wc__adm_child(dir_abspath, WCPROPS_FNAME_FOR_DIR, scratch_pool),
           TRUE, scratch_pool));
       svn_error_clear(svn_io_remove_file2(
-          svn_wc__adm_child(dir_abspath, SVN_WC__ADM_EMPTY_FILE, scratch_pool),
+          svn_wc__adm_child(dir_abspath, ADM_EMPTY_FILE, scratch_pool),
           TRUE, scratch_pool));
       svn_error_clear(svn_io_remove_file2(
-          svn_wc__adm_child(dir_abspath, SVN_WC__ADM_README, scratch_pool),
+          svn_wc__adm_child(dir_abspath, ADM_README, scratch_pool),
           TRUE, scratch_pool));
     }
   else
     {
       svn_error_clear(svn_io_remove_file2(
-          svn_wc__adm_child(dir_abspath, SVN_WC__ADM_ALL_WCPROPS, scratch_pool),
+          svn_wc__adm_child(dir_abspath, WCPROPS_ALL_DATA, scratch_pool),
           TRUE, scratch_pool));
     }
 

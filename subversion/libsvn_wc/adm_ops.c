@@ -924,9 +924,11 @@ mark_tree(svn_wc__db_t *db,
                             iterpool));
 
       if (copied)
-        /* Remove now obsolete wcprops */
-        SVN_ERR(svn_wc__props_delete(db, child_abspath, svn_wc__props_wcprop,
-                                     iterpool));
+        {
+          /* Remove now obsolete dav cache values.  */
+          SVN_ERR(svn_wc__db_base_set_dav_cache(db, child_abspath, NULL,
+                                                iterpool));
+        }
 
       /* Tell someone what we've done. */
       if (schedule == svn_wc_schedule_delete && notify_func != NULL)
@@ -1686,9 +1688,9 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
                             NULL, NULL, /* N/A cuz we aren't deleting */
                             pool));
 
-          /* Clean out the now-obsolete wcprops. */
-          SVN_ERR(svn_wc__props_delete(db, local_abspath, svn_wc__props_wcprop,
-                                       pool));
+          /* Clean out the now-obsolete dav cache values.  */
+          SVN_ERR(svn_wc__db_base_set_dav_cache(db, local_abspath, NULL,
+                                                pool));
         }
     }
 
@@ -2280,9 +2282,12 @@ svn_wc__remove_from_revision_control_internal(svn_wc__db_t *db,
       SVN_ERR(svn_wc__text_base_path(&text_base_file, db, local_abspath,
                                      FALSE, scratch_pool));
 
-      /* Remove the wcprops. */
-      SVN_ERR(svn_wc__props_delete(db, local_abspath, svn_wc__props_wcprop,
-                                   scratch_pool));
+      /* Clear the dav cache.  */
+      /* ### one day... (now?) this will simply be part of removing the
+         ### BASE_NODE row.  */
+      SVN_ERR(svn_wc__db_base_set_dav_cache(db, local_abspath, NULL,
+                                            scratch_pool));
+
       /* Remove prop/NAME, prop-base/NAME.svn-base. */
       SVN_ERR(svn_wc__props_delete(db, local_abspath, svn_wc__props_working,
                                    scratch_pool));
@@ -2338,11 +2343,9 @@ svn_wc__remove_from_revision_control_internal(svn_wc__db_t *db,
                                     SVN_WC__ENTRY_MODIFY_INCOMPLETE,
                                     iterpool));
 
-      /* Get rid of all the wcprops in this directory.  This avoids rewriting
-         the wcprops file over and over (meaning O(n^2) complexity)
-         below. */
-      SVN_ERR(svn_wc__props_delete(db, local_abspath, svn_wc__props_wcprop,
-                                   iterpool));
+      /* Get rid of the dav cache for this directory.  */
+      SVN_ERR(svn_wc__db_base_set_dav_cache(db, local_abspath, NULL,
+                                            iterpool));
 
       /* Walk over every entry. */
       SVN_ERR(svn_wc__db_read_children(&children, db, local_abspath,

@@ -380,7 +380,6 @@ svn_wc__prop_path(const char **prop_path,
       static const char * names[] = {
         SVN_WC__ADM_DIR_PROP_BASE,    /* svn_wc__props_base */
         SVN_WC__ADM_DIR_PROP_REVERT,  /* svn_wc__props_revert */
-        SVN_WC__ADM_DIR_WCPROPS,      /* svn_wc__props_wcprop */
         SVN_WC__ADM_DIR_PROPS         /* svn_wc__props_working */
       };
 
@@ -397,14 +396,12 @@ svn_wc__prop_path(const char **prop_path,
       static const char * extensions[] = {
         SVN_WC__BASE_EXT,     /* svn_wc__props_base */
         SVN_WC__REVERT_EXT,   /* svn_wc__props_revert */
-        SVN_WC__WORK_EXT,     /* svn_wc__props_wcprop */
         SVN_WC__WORK_EXT      /* svn_wc__props_working */
       };
 
       static const char * dirs[] = {
         SVN_WC__ADM_PROP_BASE,  /* svn_wc__props_base */
         SVN_WC__ADM_PROP_BASE,  /* svn_wc__props_revert */
-        SVN_WC__ADM_WCPROPS,    /* svn_wc__props_wcprop */
         SVN_WC__ADM_PROPS       /* svn_wc__props_working */
       };
 

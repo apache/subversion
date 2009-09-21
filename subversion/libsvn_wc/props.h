@@ -41,7 +41,6 @@ typedef enum svn_wc__props_kind_t
 {
   svn_wc__props_base = 0,
   svn_wc__props_revert,
-  svn_wc__props_wcprop,
   svn_wc__props_working
 } svn_wc__props_kind_t;
 
