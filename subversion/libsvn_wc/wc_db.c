@@ -385,6 +385,8 @@ create_wcroot(wcroot_t **wcroot,
 }
 
 
+/* ### this is not (yet) needed... the pristine storage is in flux.  */
+#if 0
 static svn_error_t *
 get_pristine_fname(const char **path,
                    svn_wc__db_pdh_t *pdh,
@@ -442,6 +444,7 @@ get_pristine_fname(const char **path,
                                NULL);
   return SVN_NO_ERROR;
 }
+#endif
 
 
 static svn_error_t *
@@ -2205,44 +2208,41 @@ svn_wc__db_base_get_dav_cache(apr_hash_t **props,
 
 
 svn_error_t *
-svn_wc__db_pristine_get_handle(svn_wc__db_pdh_t **pdh,
-                               svn_wc__db_t *db,
-                               const char *local_dir_abspath,
-                               apr_pool_t *result_pool,
-                               apr_pool_t *scratch_pool)
-{
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_dir_abspath));
-  /* ### assert that we were passed a directory?  */
-
-  *pdh = get_or_create_pdh(db, local_dir_abspath, TRUE, scratch_pool);
-
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
 svn_wc__db_pristine_read(svn_stream_t **contents,
-                         svn_wc__db_pdh_t *pdh,
+                         svn_wc__db_t *db,
+                         const char *wri_abspath,
                          const svn_checksum_t *checksum,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool)
 {
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(wri_abspath));
+
+  NOT_IMPLEMENTED();
+
+#if 0
   const char *path;
 
   SVN_ERR(get_pristine_fname(&path, pdh, checksum, FALSE /* create_subdir */,
                              scratch_pool, scratch_pool));
 
   return svn_stream_open_readonly(contents, path, result_pool, scratch_pool);
+#endif
 }
 
 
 svn_error_t *
 svn_wc__db_pristine_write(svn_stream_t **contents,
-                          svn_wc__db_pdh_t *pdh,
+                          svn_wc__db_t *db,
+                          const char *wri_abspath,
                           const svn_checksum_t *checksum,
                           apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool)
 {
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(wri_abspath));
+
+  NOT_IMPLEMENTED();
+
+#if 0
   const char *path;
 
   SVN_ERR(get_pristine_fname(&path, pdh, checksum, TRUE /* create_subdir */,
@@ -2254,22 +2254,26 @@ svn_wc__db_pristine_write(svn_stream_t **contents,
      ### should write the count into the sqlite database. */
 
   return SVN_NO_ERROR;
+#endif
 }
 
 
 svn_error_t *
 svn_wc__db_pristine_get_tempdir(const char **temp_dir,
-                                svn_wc__db_pdh_t *pdh,
+                                svn_wc__db_t *db,
+                                const char *wri_abspath,
                                 apr_pool_t *result_pool,
                                 apr_pool_t *scratch_pool)
 {
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(wri_abspath));
+
   NOT_IMPLEMENTED();
 }
 
 
 svn_error_t *
-svn_wc__db_pristine_install(svn_wc__db_pdh_t *pdh,
-                            const char *local_abspath,
+svn_wc__db_pristine_install(svn_wc__db_t *db,
+                            const char *tempfile_abspath,
                             const svn_checksum_t *checksum,
                             apr_pool_t *scratch_pool)
 {
@@ -2281,41 +2285,26 @@ svn_wc__db_pristine_install(svn_wc__db_pdh_t *pdh,
 
 svn_error_t *
 svn_wc__db_pristine_check(svn_boolean_t *present,
-                          int *refcount,
-                          svn_wc__db_pdh_t *pdh,
+                          svn_wc__db_t *db,
+                          const char *wri_abspath,
                           const svn_checksum_t *checksum,
                           svn_wc__db_checkmode_t mode,
                           apr_pool_t *scratch_pool)
 {
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(wri_abspath));
+
   NOT_IMPLEMENTED();
 }
 
 
 svn_error_t *
-svn_wc__db_pristine_repair(svn_wc__db_pdh_t *pdh,
+svn_wc__db_pristine_repair(svn_wc__db_t *db,
+                           const char *wri_abspath,
                            const svn_checksum_t *checksum,
                            apr_pool_t *scratch_pool)
 {
-  NOT_IMPLEMENTED();
-}
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(wri_abspath));
 
-
-svn_error_t *
-svn_wc__db_pristine_incref(int *new_refcount,
-                           svn_wc__db_pdh_t *pdh,
-                           const svn_checksum_t *checksum,
-                           apr_pool_t *scratch_pool)
-{
-  NOT_IMPLEMENTED();
-}
-
-
-svn_error_t *
-svn_wc__db_pristine_decref(int *new_refcount,
-                           svn_wc__db_pdh_t *pdh,
-                           const svn_checksum_t *checksum,
-                           apr_pool_t *scratch_pool)
-{
   NOT_IMPLEMENTED();
 }
 

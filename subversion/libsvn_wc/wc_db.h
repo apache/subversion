@@ -50,6 +50,58 @@
 extern "C" {
 #endif /* __cplusplus */
 
+/* INTERFACE CONVENTIONS
+
+   "OUT" PARAMETERS
+
+   There are numerous functions within this API which take a (large) number
+   of "out" parameters. These are listed individually, rather than combined
+   into a struct, so that a caller can be fine-grained about the which
+   pieces of information are being requested. In many cases, only a subset
+   is required, so the implementation can perform various optimizations
+   to fulfill the limited request for information.
+
+
+   POOLS
+
+   wc_db uses the dual-pool paradigm for all of its functions. Any OUT
+   parameter will be allocated within the result pool, and all temporary
+   allocations will be performed within the scratch pool.
+
+   The pool that DB is allocated within (the "state" pool) is only used
+   for a few, limited allocations to track each of the working copy roots
+   that the DB is asked to operate upon. The memory usage on this pool
+   os O(# wcroots), which should normally be one or a few. Custom clients
+   which hold open structures over a significant period of time should
+   pay particular attention to the number of roots touched, and the
+   resulting impact on memory consumption (which should still be minimal).
+
+
+   PARAMETER NAMING
+
+   * DB
+     This parameter is the primary context for all operations on the
+     metadata for working copies. This parameter is passed to almost every
+     function, and maintains information and state about every working
+     copy "touched" by any of the APIs in this interface.
+
+   * LOCAL_ABSPATH
+     This parameter specifies a particular *versioned* node in the local
+     filesystem. From this node, a working copy root is implied, and will
+     be used for the given API operation.
+
+   * LOCAL_DIR_ABSPATH
+     This parameter is similar to LOCAL_ABSPATH, but the semantics of the
+     parameter and operation require the node to be a directory within
+     the working copy.
+
+   * WRI_ABSPATH
+     This is a "Working copy Root Indicator" path. It does not refer to a
+     specific versioned node, but rather to an implied location in the
+     local filesystem, which further implies a working copy root. The
+     given operation will be performed within the context of that root.
+*/
+
 /** Context data structure for interacting with the administrative data. */
 typedef struct svn_wc__db_t svn_wc__db_t;
 
@@ -671,15 +723,16 @@ svn_wc__db_base_get_dav_cache(apr_hash_t **props,
  * @{
  */
 
-/* ### ASSUMPTION: we always have a pristine file's checksum before it is
-   ### ever presented to us. thus, we never need to compute it as we store
-   ### the pristine file into our storage area. */
-
 /**
  * Enumerated constants for how hard svn_wc__db_pristine_check() should
  * work on checking for the pristine file.
  */
 typedef enum {
+
+  /* ### bah. this is bogus. we open the sqlite database "all the time",
+     ### and don't worry about optimizing that. so: given the db is always
+     ### open, then the following modes are overengineered, premature
+     ### optimizations. ... will clean up in a future rev.  */
 
   /* The caller wants to be sure the pristine file is present and usable.
      This is the typical mode to use.
@@ -718,23 +771,11 @@ typedef enum {
 } svn_wc__db_checkmode_t;
 
 
-/* ### checksums have no path component, so we need to get the pristine
-   ### database associated with a specific directory (the smallest granularity
-   ### that a particular configuration can allow). this directory handle
-   ### can then be used for further operations on pristine files associated
-   ### with the BASE/WORKING/ACTUAL contents in that directory. */
-svn_error_t *
-svn_wc__db_pristine_get_handle(svn_wc__db_pdh_t **pdh,
-                               svn_wc__db_t *db,
-                               const char *local_dir_abspath,
-                               apr_pool_t *result_pool,
-                               apr_pool_t *scratch_pool);
-
-
 /* ### @a contents may NOT be NULL. */
 svn_error_t *
 svn_wc__db_pristine_read(svn_stream_t **contents,
-                         svn_wc__db_pdh_t *pdh,
+                         svn_wc__db_t *db,
+                         const char *wri_abspath,
                          const svn_checksum_t *checksum,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool);
@@ -746,7 +787,8 @@ svn_wc__db_pristine_read(svn_stream_t **contents,
 /* ### @a contents may NOT be NULL. */
 svn_error_t *
 svn_wc__db_pristine_write(svn_stream_t **contents,
-                          svn_wc__db_pdh_t *pdh,
+                          svn_wc__db_t *db,
+                          const char *wri_abspath,
                           const svn_checksum_t *checksum,
                           apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool);
@@ -757,32 +799,32 @@ svn_wc__db_pristine_write(svn_stream_t **contents,
    ###  bh: See svn_wc__db_pristine_install() */
 svn_error_t *
 svn_wc__db_pristine_get_tempdir(const char **temp_dir,
-                                svn_wc__db_pdh_t *pdh,
+                                svn_wc__db_t *db,
+                                const char *wri_abspath,
                                 apr_pool_t *result_pool,
                                 apr_pool_t *scratch_pool);
 
 
-/* ### Given a file sitting in a tempdir (specified by _get_tempdir),
+/* ### Given file LOCAL_ABSPATH sitting in a tempdir (specified by
+   ### _get_tempdir),
    ### install the sucker into the pristine datastore for the given checksum.
    ### This is used for files where we don't know the checksum ahead of
    ### time, so we drop it into a temp area first, computing the checksum
    ### as we write it there. */
 svn_error_t *
-svn_wc__db_pristine_install(svn_wc__db_pdh_t *pdh,
-                            const char *local_abspath,
+svn_wc__db_pristine_install(svn_wc__db_t *db,
+                            const char *tempfile_abspath,
                             const svn_checksum_t *checksum,
                             apr_pool_t *scratch_pool);
 
 
 /* ### check for presence, according to the given mode (on how hard we
    ### should examine things)
-
-   ### NULL may be provided for @a refcount (NOT for @a present).
 */
 svn_error_t *
 svn_wc__db_pristine_check(svn_boolean_t *present,
-                          int *refcount,
-                          svn_wc__db_pdh_t *pdh,
+                          svn_wc__db_t *db,
+                          const char *wri_abspath,
                           const svn_checksum_t *checksum,
                           svn_wc__db_checkmode_t mode,
                           apr_pool_t *scratch_pool);
@@ -795,31 +837,11 @@ svn_wc__db_pristine_check(svn_boolean_t *present,
    ### then it will return SOME_ERROR. */
 /* ### dlr: What is this the checksum of? */
 svn_error_t *
-svn_wc__db_pristine_repair(svn_wc__db_pdh_t *pdh,
+svn_wc__db_pristine_repair(svn_wc__db_t *db,
+                           const char *wri_abspath,
                            const svn_checksum_t *checksum,
                            apr_pool_t *scratch_pool);
 
-
-
-/* ### we may not need incref/decref. these are placeholders... */
-/* ### dlr: Do we offer some other form of locking? Assuming so, these
-   ###   could be used to implement pinning for read-locks, but otherwise
-   ###   seem unnecesary to my uninformed first glance. */
-
-/* ### @a new_refcount may be NULL */
-svn_error_t *
-svn_wc__db_pristine_incref(int *new_refcount,
-                           svn_wc__db_pdh_t *pdh,
-                           const svn_checksum_t *checksum,
-                           apr_pool_t *scratch_pool);
-
-
-/* ### @a new_refcount may be NULL */
-svn_error_t *
-svn_wc__db_pristine_decref(int *new_refcount,
-                           svn_wc__db_pdh_t *pdh,
-                           const svn_checksum_t *checksum,
-                           apr_pool_t *scratch_pool);
 
 /** @} */
 
@@ -1131,8 +1153,6 @@ svn_wc__db_op_set_tree_conflict(svn_wc__db_t *db,
    ### note that @a base_shadowed can be derived. if the status specifies
    ### an add/copy/move *and* there is a corresponding node in BASE, then
    ### the BASE has been deleted to open the way for this node.
-
-   ### dlr: Yikes! How about a simple struct encapsulating this parameter list?
 */
 svn_error_t *
 svn_wc__db_read_info(svn_wc__db_status_t *status,  /* ### derived */
@@ -1442,7 +1462,6 @@ svn_wc__db_scan_base_repos(const char **repos_relpath,
  * All returned data will be allocated in RESULT_POOL. All temporary
  * allocations will be made in SCRATCH_POOL.
  */
-/* ### dlr: Again, this is a lot of parameters. Struct? */
 svn_error_t *
 svn_wc__db_scan_addition(svn_wc__db_status_t *status,
                          const char **op_root_abspath,
@@ -1585,7 +1604,7 @@ svn_wc__db_scan_deletion(const char **base_del_abspath,
 
 svn_error_t *
 svn_wc__db_upgrade_begin(svn_sqlite__db_t **sdb,
-                         const char *dir_abspath,
+                         const char *local_dir_abspath,
                          const char *repos_root_url,
                          const char *repos_uuid,
                          apr_pool_t *result_pool,
@@ -1614,7 +1633,7 @@ svn_wc__db_upgrade_get_repos_id(apr_int64_t *repos_id,
 
 
 svn_error_t *
-svn_wc__db_upgrade_finish(const char *dir_abspath,
+svn_wc__db_upgrade_finish(const char *local_dir_abspath,
                           svn_sqlite__db_t *sdb,
                           apr_pool_t *scratch_pool);
 
