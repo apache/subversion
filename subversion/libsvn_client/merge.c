@@ -5444,7 +5444,7 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
                                                 iterpool));
               for (j = 0; j < children->nelts; j++)
                 {
-                  const char *child_abspath = APR_ARRAY_IDX(children, j,
+                  child_abspath = APR_ARRAY_IDX(children, j,
                                                             const char*);
                   const char *name = svn_dirent_basename(child_abspath, NULL);
                   svn_client__merge_path_t *child_of_noninheritable;
