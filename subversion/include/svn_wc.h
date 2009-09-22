@@ -6188,7 +6188,7 @@ svn_wc_relocate(const char *path,
  * @since New in 1.7.
  */
 svn_error_t *
-svn_wc_revert4(svn_wc_context_t *svn_wc_context_t,
+svn_wc_revert4(svn_wc_context_t *wc_ctx,
                const char *local_abspath,
                svn_depth_t depth,
                svn_boolean_t use_commit_times,
