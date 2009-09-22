@@ -796,7 +796,6 @@ harvest_committables(apr_hash_t *committables,
                           /* A missing, schedule-delete child dir is
                              allowable.  Just don't try to recurse. */
                           svn_node_kind_t childkind;
-                          svn_error_clear(err);
                           err = svn_io_check_path(full_path,
                                                   &childkind,
                                                   iterpool);
