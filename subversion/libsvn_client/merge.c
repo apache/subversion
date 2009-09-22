@@ -446,22 +446,20 @@ obstructed_or_missing(const char *path,
     return svn_wc_notify_state_obstructed;
 }
 
-/* Create a tree-conflict description in *CONFLICT.
- * See tree_conflict() for function parameters.
- */
-static svn_error_t*
-make_tree_conflict(svn_wc_conflict_description2_t **conflict,
-                   merge_cmd_baton_t *merge_b,
-                   const char *victim_abspath,
-                   svn_node_kind_t node_kind,
-                   svn_wc_conflict_action_t action,
-                   svn_wc_conflict_reason_t reason)
+/* Create *LEFT and *RIGHT conflict versions for conflict victim
+ * at VICTIM_ABSPATH, with kind NODE_KIND, using information obtained
+ * from MERGE_B.
+ * Allocate returned conflict versions in MERGE_B->POOL. */
+static svn_error_t *
+make_conflict_versions(svn_wc_conflict_version_t **left,
+                       svn_wc_conflict_version_t **right,
+                       const char *victim_abspath,
+                       svn_node_kind_t node_kind,
+                       merge_cmd_baton_t *merge_b)
 {
   const char *src_repos_url;  /* root URL of source repository */
   const char *left_url;
   const char *right_url;
-  svn_wc_conflict_version_t *left;
-  svn_wc_conflict_version_t *right;
   const char *target_abspath;
 
   SVN_ERR(svn_dirent_get_absolute(&target_abspath, merge_b->target,
@@ -488,15 +486,35 @@ make_tree_conflict(svn_wc_conflict_description2_t **conflict,
       }
   }
 
-  left = svn_wc_conflict_version_create(
-           src_repos_url,
-           svn_uri_is_child(src_repos_url, left_url, merge_b->pool),
-           merge_b->merge_source.rev1, node_kind, merge_b->pool);
-
-  right = svn_wc_conflict_version_create(
+  *left = svn_wc_conflict_version_create(
             src_repos_url,
-            svn_uri_is_child(src_repos_url, right_url, merge_b->pool),
-            merge_b->merge_source.rev2, node_kind, merge_b->pool);
+            svn_uri_is_child(src_repos_url, left_url, merge_b->pool),
+            merge_b->merge_source.rev1, node_kind, merge_b->pool);
+
+  *right = svn_wc_conflict_version_create(
+             src_repos_url,
+             svn_uri_is_child(src_repos_url, right_url, merge_b->pool),
+             merge_b->merge_source.rev2, node_kind, merge_b->pool);
+
+  return SVN_NO_ERROR;
+}
+
+/* Create a tree-conflict description in *CONFLICT.
+ * See tree_conflict() for function parameters.
+ */
+static svn_error_t*
+make_tree_conflict(svn_wc_conflict_description2_t **conflict,
+                   merge_cmd_baton_t *merge_b,
+                   const char *victim_abspath,
+                   svn_node_kind_t node_kind,
+                   svn_wc_conflict_action_t action,
+                   svn_wc_conflict_reason_t reason)
+{
+  svn_wc_conflict_version_t *left;
+  svn_wc_conflict_version_t *right;
+
+  SVN_ERR(make_conflict_versions(&left, &right, victim_abspath, node_kind,
+                                 merge_b));
 
   *conflict = svn_wc_conflict_description_create_tree2(
                     victim_abspath, node_kind, svn_wc_operation_merge,
@@ -1236,8 +1254,18 @@ merge_file_changed(svn_wc_adm_access_t *adm_access,
   apr_pool_t *subpool = svn_pool_create(merge_b->pool);
   svn_boolean_t merge_required = TRUE;
   enum svn_wc_merge_outcome_t merge_outcome;
+  const char *older_abspath;
+  const char *yours_abspath;
   const char *mine_abspath;
 
+  if (older)
+    SVN_ERR(svn_dirent_get_absolute(&older_abspath, older, merge_b->pool));
+  else
+    older_abspath = NULL;
+  if (yours)
+    SVN_ERR(svn_dirent_get_absolute(&yours_abspath, yours, merge_b->pool));
+  else
+    yours_abspath = NULL;
   SVN_ERR(svn_dirent_get_absolute(&mine_abspath, mine, merge_b->pool));
 
   if (tree_conflicted)
@@ -1274,7 +1302,7 @@ merge_file_changed(svn_wc_adm_access_t *adm_access,
 
   /* Other easy outs:  if the merge target isn't under version
      control, or is just missing from disk, fogettaboutit.  There's no
-     way svn_wc_merge3() can do the merge. */
+     way svn_wc_merge4() can do the merge. */
   {
     svn_node_kind_t kind;
     svn_node_kind_t wc_kind;
@@ -1320,7 +1348,7 @@ merge_file_changed(svn_wc_adm_access_t *adm_access,
   */
 
   /* This callback is essentially no more than a wrapper around
-     svn_wc_merge3().  Thank goodness that all the
+     svn_wc_merge4().  Thank goodness that all the
      diff-editor-mechanisms are doing the hard work of getting the
      fulltexts! */
 
@@ -1400,18 +1428,25 @@ merge_file_changed(svn_wc_adm_access_t *adm_access,
                                                  _(".merge-right.r%ld"),
                                                  yours_rev);
           conflict_resolver_baton_t conflict_baton = { 0 };
+          svn_wc_conflict_version_t *left;
+          svn_wc_conflict_version_t *right;
 
           conflict_baton.wrapped_func = merge_b->ctx->conflict_func;
           conflict_baton.wrapped_baton = merge_b->ctx->conflict_baton;
           conflict_baton.conflicted_paths = &merge_b->conflicted_paths;
           conflict_baton.pool = merge_b->pool;
 
-          SVN_ERR(svn_wc_merge3(&merge_outcome,
-                                older, yours, mine, adm_access,
+          SVN_ERR(make_conflict_versions(&left, &right, mine_abspath,
+                                         svn_node_file, merge_b));
+          SVN_ERR(svn_wc_merge4(&merge_outcome, merge_b->ctx->wc_ctx,
+                                older_abspath, yours_abspath, mine_abspath, 
                                 left_label, right_label, target_label,
+                                left, right,
                                 merge_b->dry_run, merge_b->diff3_cmd,
                                 merge_b->merge_options, prop_changes,
                                 conflict_resolver, &conflict_baton,
+                                merge_b->ctx->cancel_func,
+                                merge_b->ctx->cancel_baton,
                                 subpool));
         }
 
