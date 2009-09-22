@@ -2294,7 +2294,6 @@ svn_wc__remove_from_revision_control_internal(svn_wc__db_t *db,
     {
       apr_pool_t *iterpool = svn_pool_create(scratch_pool);
       const apr_array_header_t *children;
-      svn_wc_entry_t incomplete_entry;
       int i;
 
       /* ### sanity check:  check 2 places for DELETED flag? */
