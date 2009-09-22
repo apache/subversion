@@ -510,7 +510,8 @@ process_committed_internal(int *log_number,
       int i;
 
       /* Read PATH's entries;  this is the absolute path. */
-      svn_wc__db_read_children(&children, db, local_abspath, pool, subpool);
+      SVN_ERR(svn_wc__db_read_children(&children, db, local_abspath, pool,
+                                       subpool));
 
       /* Recursively loop over all children. */
       for (i = 0; i < children->nelts; i++)
