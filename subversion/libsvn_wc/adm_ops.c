@@ -1086,11 +1086,16 @@ erase_from_wc(svn_wc__db_t *db,
 
       /* Now handle any remaining unversioned items */
       err = svn_io_get_dirents2(&unversioned, local_abspath, scratch_pool);
-
-      if (err && APR_STATUS_IS_ENOTDIR(err->apr_err))
+      if (err)
         {
-          svn_error_clear(err);
-          return SVN_NO_ERROR;
+          if (APR_STATUS_IS_ENOTDIR(err->apr_err) ||
+              APR_STATUS_IS_ENOENT(err->apr_err))
+            {
+              svn_error_clear(err);
+              return SVN_NO_ERROR;
+            }
+          else
+            SVN_ERR(err);
         }
 
       for (hi = apr_hash_first(scratch_pool, unversioned);
