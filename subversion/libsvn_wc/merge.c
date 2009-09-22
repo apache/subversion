@@ -395,6 +395,7 @@ do_text_merge_external(svn_boolean_t *contains_conflicts,
  */
 static svn_error_t*
 save_merge_result(svn_stringbuf_t **log_accum,
+                  svn_wc__db_t *db,
                   const char *adm_abspath,
                   const char *result_target,
                   const char *merge_dirpath,
@@ -429,6 +430,7 @@ static svn_error_t*
 eval_conflict_func_result(enum svn_wc_merge_outcome_t *merge_outcome,
                           svn_wc_conflict_result_t *result,
                           svn_stringbuf_t **log_accum,
+                          svn_wc__db_t *db,
                           const char *left,
                           const char *right,
                           const char *merge_target,
@@ -543,6 +545,7 @@ eval_conflict_func_result(enum svn_wc_merge_outcome_t *merge_outcome,
    entry (mark as conflicted, track the preserved files). */
 static svn_error_t*
 preserve_pre_merge_files(svn_stringbuf_t **log_accum,
+                         svn_wc__db_t *db,
                          const char *left,
                          const char *right,
                          const char *merge_target,
@@ -558,7 +561,6 @@ preserve_pre_merge_files(svn_stringbuf_t **log_accum,
   const char *tmp_left, *tmp_right, *detranslated_target_copy;
   const char *adm_path = svn_wc_adm_access_path(adm_access);
   const char *merge_abstarget;
-  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
   svn_wc_entry_t tmp_entry;
 
   SVN_ERR(svn_dirent_get_absolute(&merge_abstarget, merge_target, pool));
@@ -706,6 +708,7 @@ setup_text_conflict_desc(const char *left,
 /* XXX Insane amount of parameters... */
 static svn_error_t*
 maybe_resolve_conflicts(svn_stringbuf_t **log_accum,
+                        svn_wc__db_t *db,
                         const char *left,
                         const char *right,
                         const char *merge_target,
@@ -714,8 +717,6 @@ maybe_resolve_conflicts(svn_stringbuf_t **log_accum,
                         const char *left_label,
                         const char *right_label,
                         const char *target_label,
-                        svn_wc_conflict_resolver_func_t conflict_func,
-                        void *conflict_baton,
                         enum svn_wc_merge_outcome_t *merge_outcome,
                         const svn_wc_conflict_version_t *left_version,
                         const svn_wc_conflict_version_t *right_version,
@@ -725,6 +726,10 @@ maybe_resolve_conflicts(svn_stringbuf_t **log_accum,
                         const char *merge_dirpath,
                         const char *merge_filename,
                         svn_diff_file_options_t *options,
+                        svn_wc_conflict_resolver_func_t conflict_func,
+                        void *conflict_baton,
+                        svn_cancel_func_t cancel_func,
+                        void *canel_baton,
                         apr_pool_t *pool)
 {
   svn_wc_conflict_result_t *result = NULL;
@@ -763,6 +768,7 @@ maybe_resolve_conflicts(svn_stringbuf_t **log_accum,
                                         " returned no results"));
       if (result->save_merged)
         SVN_ERR(save_merge_result(log_accum,
+                                  db,
                                   svn_wc__adm_access_abspath(adm_access),
                                   /* Look for callback's own
                                      merged-file first: */
@@ -777,6 +783,7 @@ maybe_resolve_conflicts(svn_stringbuf_t **log_accum,
   SVN_ERR(eval_conflict_func_result(merge_outcome,
                                     result,
                                     log_accum,
+                                    db,
                                     left,
                                     right,
                                     merge_target,
@@ -794,6 +801,7 @@ maybe_resolve_conflicts(svn_stringbuf_t **log_accum,
 
   /* The conflicts have not been dealt with. */
   SVN_ERR(preserve_pre_merge_files(log_accum,
+                                   db,
                                    left,
                                    right,
                                    merge_target,
@@ -812,7 +820,10 @@ maybe_resolve_conflicts(svn_stringbuf_t **log_accum,
 
 /* XXX Insane amount of parameters... */
 static svn_error_t*
-merge_text_file(const char *left,
+merge_text_file(svn_stringbuf_t **log_accum,
+                enum svn_wc_merge_outcome_t *merge_outcome,
+                svn_wc__db_t *db,
+                const char *left,
                 const char *right,
                 const char *merge_target,
                 svn_wc_adm_access_t *adm_access,
@@ -822,10 +833,6 @@ merge_text_file(const char *left,
                 svn_boolean_t dry_run,
                 const char *diff3_cmd,
                 const apr_array_header_t *merge_options,
-                svn_wc_conflict_resolver_func_t conflict_func,
-                void *conflict_baton,
-                svn_stringbuf_t **log_accum,
-                enum svn_wc_merge_outcome_t *merge_outcome,
                 const svn_wc_conflict_version_t *left_version,
                 const svn_wc_conflict_version_t *right_version,
                 const char *copyfrom_text,
@@ -833,6 +840,10 @@ merge_text_file(const char *left,
                 const svn_prop_t *mimeprop,
                 const char *merge_dirpath,
                 const char *merge_filename,
+                svn_wc_conflict_resolver_func_t conflict_func,
+                void *conflict_baton,
+                svn_cancel_func_t cancel_func,
+                void *cancel_baton,
                 apr_pool_t *pool)
 {
   svn_diff_file_options_t *options;
@@ -888,6 +899,7 @@ merge_text_file(const char *left,
   if (contains_conflicts && ! dry_run)
     {
       SVN_ERR(maybe_resolve_conflicts(log_accum,
+                                      db,
                                       left,
                                       right,
                                       merge_target,
@@ -896,8 +908,6 @@ merge_text_file(const char *left,
                                       left_label,
                                       right_label,
                                       target_label,
-                                      conflict_func,
-                                      conflict_baton,
                                       merge_outcome,
                                       left_version,
                                       right_version,
@@ -907,6 +917,8 @@ merge_text_file(const char *left,
                                       merge_dirpath,
                                       merge_filename,
                                       options,
+                                      conflict_func, conflict_baton,
+                                      cancel_func, cancel_baton,
                                       pool));
       if (*merge_outcome == svn_wc_merge_merged)
         return SVN_NO_ERROR;
@@ -948,23 +960,26 @@ merge_text_file(const char *left,
 
 /* XXX Insane amount of parameters... */
 static svn_error_t*
-merge_binary_file(const char *left,
+merge_binary_file(svn_stringbuf_t **log_accum,
+                  enum svn_wc_merge_outcome_t *merge_outcome,
+                  svn_wc__db_t *db,
+                  const char *left,
                   const char *right,
                   const char *merge_target,
                   svn_wc_adm_access_t *adm_access,
                   const char *left_label,
                   const char *right_label,
                   const char *target_label,
-                  svn_wc_conflict_resolver_func_t conflict_func,
-                  void *conflict_baton,
-                  svn_stringbuf_t **log_accum,
-                  enum svn_wc_merge_outcome_t *merge_outcome,
                   const svn_wc_conflict_version_t *left_version,
                   const svn_wc_conflict_version_t *right_version,
                   const char *detranslated_target_abspath,
                   const svn_prop_t *mimeprop,
                   const char *merge_dirpath,
                   const char *merge_filename,
+                  svn_wc_conflict_resolver_func_t conflict_func,
+                  void *conflict_baton,
+                  svn_cancel_func_t cancel_func,
+                  void *cancel_baton,
                   apr_pool_t *pool)
 {
   /* ### when making the binary-file backups, should we be honoring
@@ -1125,13 +1140,13 @@ merge_binary_file(const char *left,
 svn_error_t *
 svn_wc__merge_internal(svn_stringbuf_t **log_accum,
                        enum svn_wc_merge_outcome_t *merge_outcome,
+                       svn_wc__db_t *db,
                        const char *left,
                        const svn_wc_conflict_version_t *left_version,
                        const char *right,
                        const svn_wc_conflict_version_t *right_version,
                        const char *merge_target,
                        const char *copyfrom_text,
-                       svn_wc_adm_access_t *adm_access,
                        const char *left_label,
                        const char *right_label,
                        const char *target_label,
@@ -1141,9 +1156,10 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
                        const apr_array_header_t *prop_diff,
                        svn_wc_conflict_resolver_func_t conflict_func,
                        void *conflict_baton,
+                       svn_cancel_func_t cancel_func,
+                       void *cancel_baton,
                        apr_pool_t *pool)
 {
-  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
   const char *merge_dirpath;
   const char *merge_filename;
   const char *merge_abspath;
@@ -1153,9 +1169,17 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
   const svn_wc_entry_t *entry;
   const svn_prop_t *mimeprop;
   const char *left_abspath;
+  svn_wc_adm_access_t *adm_access;
 
   SVN_ERR(svn_dirent_get_absolute(&merge_abspath, merge_target, pool));
   SVN_ERR(svn_dirent_get_absolute(&left_abspath, left, pool));
+
+  adm_access = 
+      svn_wc__adm_retrieve_internal2(db,
+                                     svn_dirent_dirname(merge_abspath, pool),
+                                     pool);
+
+  SVN_ERR_ASSERT(adm_access != NULL);
 
   /* Sanity check:  the merge target must be under revision control,
    * unless the merge target is a copyfrom text, which lives in a
@@ -1195,27 +1219,33 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
         /* in dry-run mode, binary files always conflict */
         *merge_outcome = svn_wc_merge_conflict;
       else
-        SVN_ERR(merge_binary_file(left_abspath,
+        SVN_ERR(merge_binary_file(log_accum,
+                                  merge_outcome,
+                                  db,
+                                  left_abspath,
                                   right,
                                   merge_target,
                                   adm_access,
                                   left_label,
                                   right_label,
                                   target_label,
-                                  conflict_func,
-                                  conflict_baton,
-                                  log_accum,
-                                  merge_outcome,
                                   left_version,
                                   right_version,
                                   detranslated_target_abspath,
                                   mimeprop,
                                   merge_dirpath,
                                   merge_filename,
+                                  conflict_func,
+                                  conflict_baton,
+                                  cancel_func,
+                                  cancel_baton,
                                   pool));
     }
   else
-    SVN_ERR(merge_text_file(left_abspath,
+    SVN_ERR(merge_text_file(log_accum,
+                            merge_outcome,
+                            db,
+                            left_abspath,
                             right,
                             merge_target,
                             adm_access,
@@ -1225,10 +1255,6 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
                             dry_run,
                             diff3_cmd,
                             merge_options,
-                            conflict_func,
-                            conflict_baton,
-                            log_accum,
-                            merge_outcome,
                             left_version,
                             right_version,
                             copyfrom_text,
@@ -1236,6 +1262,10 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
                             mimeprop,
                             merge_dirpath,
                             merge_filename,
+                            conflict_func,
+                            conflict_baton,
+                            cancel_func,
+                            cancel_baton,
                             pool));
 
   /* Merging is complete.  Regardless of text or binariness, we might
@@ -1299,17 +1329,18 @@ svn_wc_merge4(enum svn_wc_merge_outcome_t *merge_outcome,
   SVN_ERR_ASSERT(adm_access != NULL);
 
   SVN_ERR(svn_wc__merge_internal(&log_accum, merge_outcome,
+                                 wc_ctx->db,
                                  left, left_version,
                                  right, right_version,
                                  merge_target,
                                  NULL,
-                                 adm_access,
                                  left_label, right_label, target_label,
                                  dry_run,
                                  diff3_cmd,
                                  merge_options,
                                  prop_diff,
                                  conflict_func, conflict_baton,
+                                 cancel_func, cancel_baton,
                                  scratch_pool));
 
   /* Write our accumulation of log entries into a log file */
