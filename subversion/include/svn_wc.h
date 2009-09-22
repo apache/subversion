@@ -5829,7 +5829,7 @@ svn_wc_merge4(enum svn_wc_merge_outcome_t *merge_outcome,
  * information.
  *
  * @since New in 1.5.
- * @deprecated Provided for backwards compatibility with the 1.4 API.
+ * @deprecated Provided for backwards compatibility with the 1.5 API.
  */
 svn_error_t *
 svn_wc_merge3(enum svn_wc_merge_outcome_t *merge_outcome,
