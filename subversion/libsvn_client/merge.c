@@ -5444,11 +5444,11 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
                                                 iterpool));
               for (j = 0; j < children->nelts; j++)
                 {
-                  child_abspath = APR_ARRAY_IDX(children, j,
-                                                            const char*);
-                  const char *name = svn_dirent_basename(child_abspath, NULL);
+                  const char *name;
                   svn_client__merge_path_t *child_of_noninheritable;
                   const char *child_path;
+                  child_abspath = APR_ARRAY_IDX(children, j, const char*);
+                  name = svn_dirent_basename(child_abspath, NULL);
 
 
                   /* Does this child already exist in CHILDREN_WITH_MERGEINFO?
