@@ -298,7 +298,7 @@ check_local_mods(svn_boolean_t *local_mods,
 
 /* Attempt to initialize a patch TARGET structure for a target file
  * described by PATCH.
- * Use client context CTX to send notifiations.
+ * Use client context CTX to send notifiations and retrieve WC_CTX. 
  * STRIP_COUNT specifies the number of leading path components
  * which should be stripped from target paths in the patch.
  * Upon success, allocate the patch target structure in RESULT_POOL.
@@ -839,22 +839,19 @@ maybe_send_patch_target_notification(const patch_target_t *target,
 }
 
 /* Apply a PATCH to a working copy at WC_PATH.
- * Use client context CTX to send notifiations.
- * ADM_ACCESS should hold a write lock to the WC_PATH.
+ * Use client context CTX to send notifiations and retrieve WC_CTX.
  * STRIP_COUNT specifies the number of leading path components
  * which should be stripped from target paths in the patch.
  * Do all allocations in POOL. */
 static svn_error_t *
 apply_one_patch(svn_patch_t *patch, const char *wc_path,
-                svn_wc_adm_access_t *adm_access, svn_boolean_t dry_run,
-                const svn_client_ctx_t *ctx, int strip_count,
-                apr_pool_t *pool)
+                svn_boolean_t dry_run, const svn_client_ctx_t *ctx,
+                int strip_count, apr_pool_t *pool)
 {
   patch_target_t *target;
 
-  SVN_ERR(init_patch_target(&target, patch,
-                            svn_wc_adm_access_path(adm_access), ctx,
-                            strip_count, pool, pool));
+  SVN_ERR(init_patch_target(&target, patch, wc_path, ctx, strip_count,
+                            pool, pool));
   if (target == NULL)
     /* Can't apply the patch. */
     return SVN_NO_ERROR;
@@ -935,18 +932,12 @@ apply_one_patch(svn_patch_t *patch, const char *wc_path,
         {
           if (! dry_run)
             {
-              svn_wc_adm_access_t *parent_adm_access;
-              const char *dirname;
-
               /* Schedule the target for deletion.  Suppress
                * notification, we'll do it manually in a minute. */
-              dirname = svn_dirent_dirname(target->abs_path, pool);
-              SVN_ERR(svn_wc_adm_retrieve(&parent_adm_access, adm_access,
-                                          dirname, pool));
-              SVN_ERR(svn_wc_delete3(target->abs_path, parent_adm_access,
+              SVN_ERR(svn_wc_delete4(ctx->wc_ctx, target->abs_path,
+                                     FALSE /* keep_local */,
                                      ctx->cancel_func, ctx->cancel_baton,
-                                     NULL, NULL, FALSE /* keep_local */,
-                                     pool));
+                                     NULL, NULL, pool));
             }
         }
       else
@@ -976,7 +967,7 @@ apply_one_patch(svn_patch_t *patch, const char *wc_path,
                        * Also suppress cancellation. */
                       SVN_ERR(svn_io_copy_file(target->patched_path,
                                                target->abs_path, FALSE, pool)); 
-                      SVN_ERR(svn_wc_add3(target->abs_path, adm_access,
+                      SVN_ERR(svn_wc_add4(ctx->wc_ctx, target->abs_path,
                                           svn_depth_infinity,
                                           NULL, SVN_INVALID_REVNUM,
                                           NULL, NULL, NULL, NULL, pool));
@@ -984,12 +975,22 @@ apply_one_patch(svn_patch_t *patch, const char *wc_path,
                 }
               else
                 {
+                  svn_wc_adm_access_t *adm_access;
+                  const char *dir_abspath;
+
                   /* If the user has specified a merge tool, use it. */
                   cfg = ctx->config ? apr_hash_get(ctx->config,
                                                    SVN_CONFIG_CATEGORY_CONFIG,
                                                    APR_HASH_KEY_STRING) : NULL;
                   svn_config_get(cfg, &diff3_cmd, SVN_CONFIG_SECTION_HELPERS,
                                  SVN_CONFIG_OPTION_DIFF3_CMD, NULL);
+
+
+                  svn_dirent_split(target->abs_path, &dir_abspath, NULL, pool);
+
+                  SVN_ERR(svn_wc__adm_retrieve_from_context(&adm_access, 
+                                                            ctx->wc_ctx, 
+                                                            dir_abspath, pool));
 
                   /* Merge the patch into the working file. */
                   SVN_ERR(svn_wc_merge3(&outcome,
@@ -1042,9 +1043,8 @@ apply_one_patch(svn_patch_t *patch, const char *wc_path,
  * Do all allocations in POOL.  */
 static svn_error_t *
 apply_textdiffs(const char *patch_path, const char *wc_path,
-                svn_wc_adm_access_t *adm_access, svn_boolean_t dry_run,
-                const svn_client_ctx_t *ctx, int strip_count,
-                apr_pool_t *pool)
+                svn_boolean_t dry_run, const svn_client_ctx_t *ctx,
+                int strip_count, apr_pool_t *pool)
 {
   svn_patch_t *patch;
   apr_pool_t *iterpool;
@@ -1077,8 +1077,8 @@ apply_textdiffs(const char *patch_path, const char *wc_path,
                                          iterpool, iterpool));
       if (patch)
         {
-          SVN_ERR(apply_one_patch(patch, wc_path, adm_access, dry_run, ctx, 
-                                  strip_count, iterpool));
+          SVN_ERR(apply_one_patch(patch, wc_path, dry_run, ctx, strip_count,
+                                  iterpool));
           SVN_ERR(svn_diff__close_patch(patch));
         }
     }
@@ -1103,13 +1103,18 @@ svn_client_patch(const char *patch_path,
     return svn_error_create(SVN_ERR_INCORRECT_PARAMS, NULL,
                             _("strip count must be positive"));
 
+  /* svn_wc_add4() and svn_wc_delete4() internally obtain an adm_access
+   * write lock, so lock the entire working copy, the old way, for now.
+   * <Bert> You need some kind of write lock to make sure another
+   *        concurrent client can't also update the WC via its entries cache
+   *        at the same time.. And currently access batons are the only write
+   *        locks we have */
   SVN_ERR(svn_dirent_get_absolute(&abs_target, target, pool));
   SVN_ERR(svn_wc__adm_open_in_context(&adm_access, ctx->wc_ctx, abs_target,
                                       TRUE, -1, ctx->cancel_func,
                                       ctx->cancel_baton, pool));
 
-  SVN_ERR(apply_textdiffs(patch_path, target, adm_access, dry_run, ctx,
-                          strip_count, pool));
+  SVN_ERR(apply_textdiffs(patch_path, target, dry_run, ctx, strip_count, pool));
 
   SVN_ERR(svn_wc_adm_close2(adm_access, pool));
 
