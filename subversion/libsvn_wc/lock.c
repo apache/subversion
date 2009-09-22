@@ -1693,6 +1693,8 @@ svn_wc__temp_get_relpath(const char **rel_path,
   const char *suffix = "";
   const char *abspath = local_abspath;
 
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
   while (TRUE)
   {
     svn_wc_adm_access_t *adm_access =
@@ -1714,7 +1716,7 @@ svn_wc__temp_get_relpath(const char **rel_path,
 
     suffix = svn_dirent_join(suffix, svn_dirent_basename(local_abspath, NULL),
                              scratch_pool);
-    abspath = svn_dirent_dirname(local_abspath, scratch_pool);
+    abspath = svn_dirent_dirname(abspath, scratch_pool);
   }
 }
 
