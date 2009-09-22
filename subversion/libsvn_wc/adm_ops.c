@@ -1095,8 +1095,8 @@ erase_from_wc(svn_wc__db_t *db,
               svn_error_clear(err);
               return SVN_NO_ERROR;
             }
-          else
-            SVN_ERR(err);
+
+          return svn_error_return(err);
         }
 
       for (hi = apr_hash_first(scratch_pool, unversioned);
