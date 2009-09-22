@@ -6756,24 +6756,22 @@ svn_wc_set_changelist(const char *path,
                       void *notify_baton,
                       apr_pool_t *pool);
 
-/** Crop @a target according to @a depth.
+/** Crop @a local_abspath according to @a depth.
  *
  * Remove any item that exceeds the boundary of @a depth (relative to
- * @a target) from revision control.  Leave modified items behind
+ * @a local_abspath) from revision control.  Leave modified items behind
  * (unversioned), while removing unmodified ones completely.
  *
- * If @a target starts out with a shallower depth than @a depth, do not
- * upgrade it to @a depth (that would not be cropping); however, do
+ * If @a local_abspath starts out with a shallower depth than @a depth,
+ * do not upgrade it to @a depth (that would not be cropping); however, do
  * check children and crop them appropriately according to @a depth.
  *
- * Returns immediately with no error if @a target is not a directory,
- * or if @a depth is not restrictive (e.g., @c svn_depth_infinity).
+ * Returns immediately with an SVN_ERR_UNSUPPORTED_FEATURE error if @a
+ * target is not a directory, or if @a depth is not restrictive 
+ * (e.g., @c svn_depth_infinity).
  *
- * @a anchor is an access baton, with a tree lock, for the local path to the
- * working copy which will be used as the root of this operation.  If
- * @a target is not empty, it represents an entry in the @a anchor path;
- * otherwise, the @a anchor path is the target.  @a target may not be
- * @c NULL.
+ * @a wc_ctx contains a tree lock, for the local path to the working copy
+ *  which will be used as the root of this operation.  If
  *
  * If @a cancel_func is not @c NULL, call it with @a cancel_baton at
  * various points to determine if the client has cancelled the operation.
@@ -6781,11 +6779,26 @@ svn_wc_set_changelist(const char *path,
  * If @a notify_func is not @c NULL, call it with @a notify_baton to
  * report changes as they are made.
  *
- * @note: svn_depth_exclude currently does nothing; passing it results
- * in immediate success with no side effects.
+ * @since New in 1.7
+ */
+svn_error_t *
+svn_wc_crop_tree2(svn_wc_context_t *wc_ctx,
+                  const char *local_abspath,
+                  svn_depth_t depth,
+                  svn_wc_notify_func2_t notify_func,
+                  void *notify_baton,
+                  svn_cancel_func_t cancel_func,
+                  void *cancel_baton,
+                  apr_pool_t *scratch_pool);
+
+/** Similar to svn_wc_crop_tree2(), but uses an access baton and target.
+ *
+ * @a target is a basename in @a anchor or "" for @a anchor itself.
  *
  * @since New in 1.6
+ * @deprecated Provided for backward compatibility with the 1.6 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_crop_tree(svn_wc_adm_access_t *anchor,
                  const char *target,
