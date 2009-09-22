@@ -2199,6 +2199,16 @@ svn_wc__remove_from_revision_control_internal(svn_wc__db_t *db,
   svn_boolean_t left_something = FALSE;
   svn_wc__db_kind_t kind;
 
+  /* ### This whole function should be rewritten to run inside a transaction,
+     ### to allow a stable cancel behavior.
+     ###
+     ### Subversion < 1.7 marked the directory as incomplete to allow updating
+     ### it from a canceled state. But this would not work because update
+     ### doesn't retrieve deleted items.
+     ###
+     ### WC-NG doesn't support a delete+incomplete state, but we can't build
+     ### transactions over multiple databases yet. */
+
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
   /* Check cancellation here, so recursive calls get checked early. */
@@ -2283,19 +2293,6 @@ svn_wc__remove_from_revision_control_internal(svn_wc__db_t *db,
 
       /* ### sanity check:  check 2 places for DELETED flag? */
 
-      /* Before we start removing entries from this dir's entries
-         file, mark this directory as "incomplete".  This allows this
-         function to be interruptible and the wc recoverable by 'svn
-         up' later on. */
-      incomplete_entry.incomplete = TRUE;
-      SVN_ERR(svn_wc__entry_modify2(db,
-                                    local_abspath,
-                                    svn_node_dir,
-                                    FALSE,
-                                    &incomplete_entry,
-                                    SVN_WC__ENTRY_MODIFY_INCOMPLETE,
-                                    iterpool));
-
       /* Get rid of the dav cache for this directory.  */
       SVN_ERR(svn_wc__db_base_set_dav_cache(db, local_abspath, NULL,
                                             iterpool));
@@ -2319,7 +2316,10 @@ svn_wc__remove_from_revision_control_internal(svn_wc__db_t *db,
           SVN_ERR(svn_wc__db_node_hidden(&hidden, db, entry_abspath,
                                          iterpool));
           if (hidden)
-            continue;
+            {
+              SVN_ERR(svn_wc__entry_remove(db, entry_abspath, iterpool));
+              continue;
+            }
 
           err = svn_wc__remove_from_revision_control_internal(
             db, entry_abspath,
