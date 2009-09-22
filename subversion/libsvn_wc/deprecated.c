@@ -3352,3 +3352,32 @@ svn_wc_revision_status(svn_wc_revision_status_t **result_p,
 
   return svn_error_return(svn_wc_context_destroy(wc_ctx));
 }
+
+/*** From crop.c ***/
+svn_error_t *
+svn_wc_crop_tree(svn_wc_adm_access_t *anchor,
+                 const char *target,
+                 svn_depth_t depth,
+                 svn_wc_notify_func2_t notify_func,
+                 void *notify_baton,
+                 svn_cancel_func_t cancel_func,
+                 void *cancel_baton,
+                 apr_pool_t *pool)
+{
+  svn_wc_context_t *wc_ctx;
+  const char *local_abspath;
+
+  local_abspath = svn_dirent_join(svn_wc__adm_access_abspath(anchor),
+                                  target, pool);
+
+  SVN_ERR(svn_wc_context_create(&wc_ctx, NULL /* config */, pool, pool));
+
+  SVN_ERR(svn_wc_crop_tree2(wc_ctx,
+                            local_abspath,
+                            depth,
+                            notify_func, notify_baton,
+                            cancel_func, cancel_baton,
+                            pool));
+
+  return svn_error_return(svn_wc_context_destroy(wc_ctx));
+}

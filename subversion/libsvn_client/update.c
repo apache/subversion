@@ -195,10 +195,10 @@ svn_client__update_internal(svn_revnum_t *result_rev,
                                     target_abspath, TRUE, pool));
       if (target_kind == svn_node_dir)
         {
-          SVN_ERR(svn_wc_crop_tree(adm_access, target, depth,
-                                   ctx->notify_func2, ctx->notify_baton2,
-                                   ctx->cancel_func, ctx->cancel_baton,
-                                   pool));
+          SVN_ERR(svn_wc_crop_tree2(ctx->wc_ctx, target_abspath, depth,
+                                    ctx->notify_func2, ctx->notify_baton2,
+                                    ctx->cancel_func, ctx->cancel_baton,
+                                    pool));
           /* If we are asked to exclude a target, we can just stop now. */
           if (depth == svn_depth_exclude)
             {
