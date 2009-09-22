@@ -4429,14 +4429,16 @@ merge_file(svn_wc_notify_state_t *content_state,
               /* ### TODO: Pass version info here. */
               SVN_ERR(svn_wc__merge_internal(
                        &log_accum, &merge_outcome,
+                       eb->db,
                        merge_left, NULL,
                        new_text_base_path, NULL,
                        fb->path,
                        fb->copied_working_text,
-                       adm_access,
                        oldrev_str, newrev_str, mine_str,
                        FALSE, eb->diff3_cmd, NULL, fb->propchanges,
-                       eb->conflict_func, eb->conflict_baton, pool));
+                       eb->conflict_func, eb->conflict_baton, 
+                       eb->cancel_func, eb->cancel_baton,
+                       pool));
 
               /* If we created a temporary left merge file, get rid of it. */
               if (delete_left)
