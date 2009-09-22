@@ -3054,7 +3054,7 @@ svn_wc__set_file_external_location(svn_wc_adm_access_t *adm_access,
 svn_boolean_t
 svn_wc__internal_changelist_match(svn_wc__db_t *db,
                                   const char *local_abspath,
-                                  const apr_hash_t *clhash,
+                                  apr_hash_t *clhash,
                                   apr_pool_t *scratch_pool)
 {
   svn_error_t *err;
@@ -3083,7 +3083,7 @@ svn_wc__internal_changelist_match(svn_wc__db_t *db,
 svn_boolean_t
 svn_wc__changelist_match(svn_wc_context_t *wc_ctx,
                          const char *local_abspath,
-                         const apr_hash_t *clhash,
+                         apr_hash_t *clhash,
                          apr_pool_t *scratch_pool)
 {
   return svn_wc__internal_changelist_match(wc_ctx->db, local_abspath, clhash,

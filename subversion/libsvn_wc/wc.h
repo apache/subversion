@@ -480,7 +480,7 @@ svn_wc__internal_ensure_adm(svn_wc__db_t *db,
 svn_boolean_t
 svn_wc__internal_changelist_match(svn_wc__db_t *db,
                                   const char *local_abspath,
-                                  const apr_hash_t *clhash,
+                                  apr_hash_t *clhash,
                                   apr_pool_t *scratch_pool);
 
 
