@@ -467,8 +467,7 @@ switch_file_external(const char *path,
   if (close_adm_access)
     SVN_ERR(svn_wc_adm_close2(target_adm_access, subpool));
 
-  /* ### should destroy the subpool... */
-
+  svn_pool_destroy(subpool);
   return SVN_NO_ERROR;
 
  cleanup:
@@ -505,8 +504,7 @@ switch_file_external(const char *path,
   if (close_adm_access)
     SVN_ERR(svn_wc_adm_close2(target_adm_access, subpool));
 
-  /* ### should destroy the subpool */
-
+  svn_pool_destroy(subpool);
   return svn_error_return(err);
 }
 
