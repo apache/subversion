@@ -150,17 +150,6 @@ Candidate changes:
    Votes:
      +1: pburba
 
- * r39302
-   Print a newline before the plaintext passphrase prompt.
-   Justification:
-     It wasn't intentional that the first line of dashes of this prompt
-     appears on the same line as "Transmitting file data ..." during commit.
-   Notes:
-     Yes, this is almost the same as r38982, but this time it's about
-     the passPHRASE prompt, not the passWORD prompt.
-   Votes:
-     +1: stsp, arfrever
-
  * r39301
    Allow non-threadsafe sqlite if APR has been compiled without threads.
    Justification:
@@ -180,3 +169,14 @@ Candidate changes:
 
 Approved changes:
 =================
+
+ * r39302
+   Print a newline before the plaintext passphrase prompt.
+   Justification:
+     It wasn't intentional that the first line of dashes of this prompt
+     appears on the same line as "Transmitting file data ..." during commit.
+   Notes:
+     Yes, this is almost the same as r38982, but this time it's about
+     the passPHRASE prompt, not the passWORD prompt.
+   Votes:
+     +1: stsp, arfrever, stylesen
