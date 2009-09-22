@@ -3159,10 +3159,11 @@ svn_wc_text_modified_p(svn_boolean_t *modified_p,
                        apr_pool_t *pool)
 {
   svn_wc_context_t *wc_ctx;
+  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
   const char *local_abspath;
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, filename, pool));
-  SVN_ERR(svn_wc_context_create(&wc_ctx, NULL /* config */, pool, pool));
+  SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL, db, pool));
 
   SVN_ERR(svn_wc_text_modified_p2(modified_p, wc_ctx, local_abspath,
                                   force_comparison, pool));
@@ -3365,13 +3366,13 @@ svn_wc_crop_tree(svn_wc_adm_access_t *anchor,
                  apr_pool_t *pool)
 {
   svn_wc_context_t *wc_ctx;
+  svn_wc__db_t *db = svn_wc__adm_get_db(anchor);
   const char *local_abspath;
 
   local_abspath = svn_dirent_join(svn_wc__adm_access_abspath(anchor),
                                   target, pool);
 
-  SVN_ERR(svn_wc_context_create(&wc_ctx, NULL /* config */, pool, pool));
-
+  SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL, db, pool));
   SVN_ERR(svn_wc_crop_tree2(wc_ctx,
                             local_abspath,
                             depth,
