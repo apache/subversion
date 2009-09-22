@@ -1257,28 +1257,50 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
 
 
 svn_error_t *
-svn_wc_merge3(enum svn_wc_merge_outcome_t *merge_outcome,
-              const char *left,
-              const char *right,
-              const char *merge_target,
-              svn_wc_adm_access_t *adm_access,
+svn_wc_merge4(enum svn_wc_merge_outcome_t *merge_outcome,
+              svn_wc_context_t *wc_ctx,
+              const char *left_abspath,
+              const char *right_abspath,
+              const char *target_abspath,
               const char *left_label,
               const char *right_label,
               const char *target_label,
+              svn_wc_conflict_version_t *left_version,
+              svn_wc_conflict_version_t *right_version,
               svn_boolean_t dry_run,
               const char *diff3_cmd,
               const apr_array_header_t *merge_options,
               const apr_array_header_t *prop_diff,
               svn_wc_conflict_resolver_func_t conflict_func,
               void *conflict_baton,
-              apr_pool_t *pool)
+              svn_cancel_func_t cancel_func,
+              void *cancel_baton,
+              apr_pool_t *scratch_pool)
 {
-  svn_stringbuf_t *log_accum = svn_stringbuf_create("", pool);
+  const char *left, *right, *merge_target;
+  svn_stringbuf_t *log_accum = svn_stringbuf_create("", scratch_pool);
+  svn_wc_adm_access_t *adm_access;
+  const char *dirname;
 
-  /* ### TODO: Pass version info here. */
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(left_abspath));
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(right_abspath));
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(target_abspath));
+
+  SVN_ERR(svn_wc__temp_get_relpath(&left, wc_ctx->db, left_abspath,
+                                   scratch_pool, scratch_pool));
+  SVN_ERR(svn_wc__temp_get_relpath(&right, wc_ctx->db, right_abspath,
+                                   scratch_pool, scratch_pool));
+  SVN_ERR(svn_wc__temp_get_relpath(&merge_target, wc_ctx->db, target_abspath,
+                                   scratch_pool, scratch_pool));
+
+  dirname = svn_dirent_dirname(target_abspath, scratch_pool);
+  adm_access = svn_wc__adm_retrieve_internal2(wc_ctx->db, dirname,
+                                              scratch_pool);
+  SVN_ERR_ASSERT(adm_access != NULL);
+
   SVN_ERR(svn_wc__merge_internal(&log_accum, merge_outcome,
-                                 left, NULL,
-                                 right, NULL,
+                                 left, left_version,
+                                 right, right_version,
                                  merge_target,
                                  NULL,
                                  adm_access,
@@ -1288,12 +1310,12 @@ svn_wc_merge3(enum svn_wc_merge_outcome_t *merge_outcome,
                                  merge_options,
                                  prop_diff,
                                  conflict_func, conflict_baton,
-                                 pool));
+                                 scratch_pool));
 
   /* Write our accumulation of log entries into a log file */
-  SVN_ERR(svn_wc__write_log(adm_access, 0, log_accum, pool));
+  SVN_ERR(svn_wc__write_log(adm_access, 0, log_accum, scratch_pool));
 
-  return svn_wc__run_log(adm_access, pool);
+  return svn_wc__run_log(adm_access, scratch_pool);
 }
 
 

@@ -3228,6 +3228,54 @@ svn_wc_copy(const char *src_path,
 /*** From merge.c ***/
 
 svn_error_t *
+svn_wc_merge3(enum svn_wc_merge_outcome_t *merge_outcome,
+              const char *left,
+              const char *right,
+              const char *merge_target,
+              svn_wc_adm_access_t *adm_access,
+              const char *left_label,
+              const char *right_label,
+              const char *target_label,
+              svn_boolean_t dry_run,
+              const char *diff3_cmd,
+              const apr_array_header_t *merge_options,
+              const apr_array_header_t *prop_diff,
+              svn_wc_conflict_resolver_func_t conflict_func,
+              void *conflict_baton,
+              apr_pool_t *pool)
+{
+  svn_wc_context_t *wc_ctx;
+  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
+  const char *left_abspath, *right_abspath, *target_abspath;
+
+  SVN_ERR(svn_dirent_get_absolute(&left_abspath, left, pool));
+  SVN_ERR(svn_dirent_get_absolute(&right_abspath, right, pool));
+  SVN_ERR(svn_dirent_get_absolute(&target_abspath, merge_target, pool));
+
+  SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL /* config */, db, pool));
+
+  SVN_ERR(svn_wc_merge4(merge_outcome,
+                        wc_ctx,
+                        left_abspath,
+                        right_abspath,
+                        target_abspath,
+                        left_label,
+                        right_label,
+                        target_label,
+                        NULL,
+                        NULL,
+                        dry_run,
+                        diff3_cmd,
+                        merge_options,
+                        prop_diff,
+                        conflict_func, conflict_baton,
+                        NULL, NULL,
+                        pool));
+
+  return svn_error_return(svn_wc_context_destroy(wc_ctx));
+}
+
+svn_error_t *
 svn_wc_merge2(enum svn_wc_merge_outcome_t *merge_outcome,
               const char *left,
               const char *right,

@@ -5734,30 +5734,31 @@ typedef enum svn_wc_merge_outcome_t
 
 } svn_wc_merge_outcome_t;
 
-/** Given paths to three fulltexts, merge the differences between @a left
- * and @a right into @a merge_target.  (It may help to know that @a left,
- * @a right, and @a merge_target correspond to "OLDER", "YOURS", and "MINE",
- * respectively, in the diff3 documentation.)  Use @a pool for any
+/** Given absolute paths to three fulltexts, merge the differences between
+ * @a left_abspath and @a right_abspath into @a target_abspath. 
+ * It may help to know that @a left_abspath, @a right_abspath and @a
+ * target_abspath correspond to "OLDER", "YOURS", and "MINE",
+ * respectively, in the diff3 documentation.)  Use @a scratch_pool for any
  * temporary allocation.
  *
- * @a adm_access is an access baton with a write lock for the directory
- * containing @a merge_target.
+ * @a wc_ctx should contain a write lock for the directory containing @a 
+ * merge_target.
  *
- * This function assumes that @a left and @a right are in repository-normal
- * form (linefeeds, with keywords contracted); if necessary,
- * @a merge_target is temporarily converted to this form to receive the
- * changes, then translated back again.
+ * This function assumes that @a left_abspath and @a right_abspath are
+ * in repository-normal form (linefeeds, with keywords contracted); if
+ * necessary, @a target_abspath is temporarily converted to this form to
+ * receive the changes, then translated back again.
  *
- * If @a merge_target is absent, or present but not under version
+ * If @a target_abspath is absent, or present but not under version
  * control, then set @a *merge_outcome to @c svn_wc_merge_no_merge and
  * return success without merging anything.  (The reasoning is that if
  * the file is not versioned, then it is probably unrelated to the
  * changes being considered, so they should not be merged into it.)
  *
  * @a dry_run determines whether the working copy is modified.  When it
- * is @c FALSE the merge will cause @a merge_target to be modified, when it
- * is @c TRUE the merge will be carried out to determine the result but
- * @a merge_target will not be modified.
+ * is @c FALSE the merge will cause @a target_abspath to be modified, when
+ * it is @c TRUE the merge will be carried out to determine the result but
+ * @a target_abspath will not be modified.
  *
  * If @a diff3_cmd is non-NULL, then use it as the diff3 command for
  * any merging; otherwise, use the built-in merge code.  If @a
@@ -5772,29 +5773,63 @@ typedef enum svn_wc_merge_outcome_t
  * conflict callback cannot resolve the conflict, then:
  *
  *   * Put conflict markers around the conflicting regions in
- *     @a merge_target, labeled with @a left_label, @a right_label, and
+ *     @a target_abspath, labeled with @a left_label, @a right_label, and
  *     @a target_label.  (If any of these labels are @c NULL, default
  *     values will be used.)
  *
- *   * Copy @a left, @a right, and the original @a merge_target to unique
- *     names in the same directory as @a merge_target, ending with the
- *     suffixes ".LEFT_LABEL", ".RIGHT_LABEL", and ".TARGET_LABEL"
- *     respectively.
+ *   * Copy @a left_abspath, @a right_abspath, and the original @a
+ *     target_abspath to unique names in the same directory as @a 
+ *     merge_target, ending with the suffixes ".LEFT_LABEL", ".RIGHT_LABEL",
+ *     and ".TARGET_LABEL" respectively.
  *
- *   * Mark the entry for @a merge_target as "conflicted", and track the
- *     above mentioned backup files in the entry as well.
+ *   * Mark @a target_abspath as "text-conflicted", and track the above
+ *     mentioned backup files as well.
+ *
+ *   * If @a left_version and/or @a right_version are not NULL, provide
+ *     these values to the conflict handler and track these while the conflict
+ *     exists.
  *
  * Binary case:
  *
- *  If @a merge_target is a binary file, then no merging is attempted,
+ *  If @a target_abspath is a binary file, then no merging is attempted,
  *  the merge is deemed to be a conflict.  If @a dry_run is @c FALSE the
- *  working @a merge_target is untouched, and copies of @a left and
- *  @a right are created next to it using @a left_label and @a right_label.
- *  @a merge_target's entry is marked as "conflicted", and begins
- *  tracking the two backup files.  If @a dry_run is @c TRUE no files are
- *  changed.  The outcome of the merge is returned in @a *merge_outcome.
+ *  working @a target_abspath is untouched, and copies of @a left_abspath and
+ *  @a right_abspath are created next to it using @a left_label and
+ *  @a right_label. @a target_abspath is marked as "text-conflicted", and
+ *  begins tracking the two backup files and the version information.
+ *
+ * If @a dry_run is @c TRUE no files are changed.  The outcome of the merge
+ * is returned in @a *merge_outcome.
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_wc_merge4(enum svn_wc_merge_outcome_t *merge_outcome,
+              svn_wc_context_t *wc_ctx,
+              const char *left_abspath,
+              const char *right_abspath,
+              const char *target_abspath,
+              const char *left_label,
+              const char *right_label,
+              const char *target_label,
+              svn_wc_conflict_version_t *left_version,
+              svn_wc_conflict_version_t *right_version,
+              svn_boolean_t dry_run,
+              const char *diff3_cmd,
+              const apr_array_header_t *merge_options,
+              const apr_array_header_t *prop_diff,
+              svn_wc_conflict_resolver_func_t conflict_func,
+              void *conflict_baton,
+              svn_cancel_func_t cancel_func,
+              void *cancel_baton,
+              apr_pool_t *scratch_pool);
+
+/** Similar to svn_wc_merge4() but takes relative paths and an access
+ * baton. It doesn't support a cancel function or tracking origin version
+ * information.
  *
  * @since New in 1.5.
+ * @deprecated Provided for backwards compatibility with the 1.4 API.
  */
 svn_error_t *
 svn_wc_merge3(enum svn_wc_merge_outcome_t *merge_outcome,
@@ -5812,6 +5847,7 @@ svn_wc_merge3(enum svn_wc_merge_outcome_t *merge_outcome,
               svn_wc_conflict_resolver_func_t conflict_func,
               void *conflict_baton,
               apr_pool_t *pool);
+
 
 /** Similar to svn_wc_merge3(), but with @a prop_diff, @a
  * conflict_func, @a conflict_baton set to NULL.
