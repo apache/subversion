@@ -975,9 +975,6 @@ apply_one_patch(svn_patch_t *patch, const char *wc_path,
                 }
               else
                 {
-                  svn_wc_adm_access_t *adm_access;
-                  const char *dir_abspath;
-
                   /* If the user has specified a merge tool, use it. */
                   cfg = ctx->config ? apr_hash_get(ctx->config,
                                                    SVN_CONFIG_CATEGORY_CONFIG,
@@ -985,28 +982,23 @@ apply_one_patch(svn_patch_t *patch, const char *wc_path,
                   svn_config_get(cfg, &diff3_cmd, SVN_CONFIG_SECTION_HELPERS,
                                  SVN_CONFIG_OPTION_DIFF3_CMD, NULL);
 
-
-                  svn_dirent_split(target->abs_path, &dir_abspath, NULL, pool);
-
-                  SVN_ERR(svn_wc__adm_retrieve_from_context(&adm_access, 
-                                                            ctx->wc_ctx, 
-                                                            dir_abspath, pool));
-
                   /* Merge the patch into the working file. */
-                  SVN_ERR(svn_wc_merge3(&outcome,
+                  SVN_ERR(svn_wc_merge4(&outcome,
+                                        ctx->wc_ctx,
                                         target->original_path,
                                         target->patched_path,
                                         target->abs_path,
-                                        adm_access,
                                         _(".svnpatch.original"),
                                         _(".svnpatch.modified"),
                                         _(".svnpatch.working"),
+                                        NULL, NULL,  /* left/right versions */
                                         dry_run,
                                         diff3_cmd,
                                         NULL, /* TODO mergeoptions */
                                         NULL, /* property diffs */
                                         ctx->conflict_func,
                                         ctx->conflict_baton,
+                                        NULL, NULL, /* cancellation */
                                         pool));
                   switch (outcome)
                     {
