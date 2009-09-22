@@ -2277,7 +2277,7 @@ svn_wc__db_pristine_install(svn_wc__db_t *db,
                             const svn_checksum_t *checksum,
                             apr_pool_t *scratch_pool)
 {
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(tempfile_abspath));
 
   NOT_IMPLEMENTED();
 }
