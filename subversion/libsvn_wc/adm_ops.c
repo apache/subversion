@@ -112,8 +112,9 @@ tweak_entries(svn_wc__db_t *db,
     return SVN_NO_ERROR;
 
   /* Tweak "this_dir" */
-  SVN_ERR(svn_wc__tweak_entry(db, dir_abspath, base_url, new_rev,
-                              TRUE, FALSE /* allow_removal */, pool));
+  SVN_ERR(svn_wc__tweak_entry(db, dir_abspath, FALSE, svn_node_dir,
+                              base_url, new_rev,
+                              FALSE /* allow_removal */, pool));
 
   if (depth == svn_depth_unknown)
     depth = svn_depth_infinity;
@@ -163,10 +164,18 @@ tweak_entries(svn_wc__db_t *db,
             || status == svn_wc__db_status_absent
             || child_depth == svn_depth_exclude)
         {
-          if (! excluded)
-            SVN_ERR(svn_wc__tweak_entry(db, child_abspath,
-                                        child_url, new_rev,
-                                        FALSE, TRUE /* allow_removal */,
+          if (excluded)
+            continue;
+
+          if (kind == svn_wc__db_kind_dir)
+            SVN_ERR(svn_wc__tweak_entry(db, child_abspath, TRUE,
+                                        svn_node_dir, child_url, new_rev,
+                                        TRUE /* allow_removal */,
+                                        pool));
+          else
+            SVN_ERR(svn_wc__tweak_entry(db, child_abspath, FALSE,
+                                        svn_node_file, child_url, new_rev,
+                                        TRUE /* allow_removal */,
                                         pool));
         }
 
@@ -275,26 +284,36 @@ svn_wc__do_update_cleanup(svn_wc__db_t *db,
 
   err = svn_wc__get_entry(&entry, db, local_abspath, TRUE, svn_node_unknown,
                           FALSE, pool, pool);
-  if ((err && err->apr_err == SVN_ERR_NODE_UNEXPECTED_KIND) || (entry == NULL))
+  if (err)
     {
+      if (err->apr_err != SVN_ERR_NODE_UNEXPECTED_KIND)
+        return svn_error_return(err);
+
+      /* We got the parent stub instead. That's fine... just tweak it
+         and avoid directory recursion.  */
       svn_error_clear(err);
+
+      if (apr_hash_get(exclude_paths, local_abspath, APR_HASH_KEY_STRING))
+        return SVN_NO_ERROR;
+
+      SVN_ERR(svn_wc__tweak_entry(db, local_abspath, TRUE, svn_node_dir,
+                                  base_url, new_revision,
+                                  FALSE /* allow_removal */,
+                                  pool));
       return SVN_NO_ERROR;
     }
-  else if (err)
-    return svn_error_return(err);
+  if (entry == NULL)
+    return SVN_NO_ERROR;
 
-  if (entry->kind == svn_node_file
-      || (entry->kind == svn_node_dir
-          && (entry->deleted || entry->absent
-              || entry->depth == svn_depth_exclude)))
+  if (entry->kind == svn_node_file)
     {
       if (apr_hash_get(exclude_paths, local_abspath, APR_HASH_KEY_STRING))
         return SVN_NO_ERROR;
 
       /* Parent not updated so don't remove PATH entry.  */
-      SVN_ERR(svn_wc__tweak_entry(db, local_abspath,
+      SVN_ERR(svn_wc__tweak_entry(db, local_abspath, FALSE, svn_node_file,
                                   base_url, new_revision,
-                                  FALSE, FALSE /* allow_removal */,
+                                  FALSE /* allow_removal */,
                                   pool));
     }
 

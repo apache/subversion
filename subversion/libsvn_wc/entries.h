@@ -211,9 +211,10 @@ svn_wc__entry_remove(svn_wc__db_t *db,
 svn_error_t *
 svn_wc__tweak_entry(svn_wc__db_t *db,
                     const char *local_abspath,
+                    svn_boolean_t tweak_stub,
+                    svn_node_kind_t kind,
                     const char *new_url,
                     svn_revnum_t new_rev,
-                    svn_boolean_t this_dir,
                     svn_boolean_t allow_removal,
                     apr_pool_t *scratch_pool);
 

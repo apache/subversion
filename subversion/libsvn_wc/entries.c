@@ -112,15 +112,6 @@ typedef struct {
 
 
 
-
-static svn_error_t *
-entries_write(apr_hash_t *entries,
-              svn_wc__db_t *db,
-              const char *adm_abspath,
-              apr_pool_t *scratch_pool);
-
-
-
 /*** reading and writing the entries file ***/
 
 
@@ -3023,44 +3014,25 @@ svn_wc_entry_dup(const svn_wc_entry_t *entry, apr_pool_t *pool)
 svn_error_t *
 svn_wc__tweak_entry(svn_wc__db_t *db,
                     const char *local_abspath,
+                    svn_boolean_t tweak_stub,
+                    svn_node_kind_t kind,
                     const char *new_url,
                     svn_revnum_t new_rev,
-                    svn_boolean_t this_dir,
                     svn_boolean_t allow_removal,
                     apr_pool_t *scratch_pool)
 {
-  apr_hash_t *entries;
-  svn_wc_entry_t *entry;
-  const char *name;
-  svn_wc_adm_access_t *adm_access;
-  apr_pool_t *state_pool;
-  const char *parent_dir;
+  const svn_wc_entry_t *entry;
+  svn_wc_entry_t tmp_entry;
+  apr_uint64_t modify_flags = 0;
  
-  svn_dirent_split(local_abspath, &parent_dir, &name, scratch_pool);
-
-  if (this_dir)
-    {
-      name = SVN_WC_ENTRY_THIS_DIR;
-      adm_access = svn_wc__adm_retrieve_internal2(db, local_abspath,
-                                                  scratch_pool);
-    }
-  else
-    {
-      adm_access = svn_wc__adm_retrieve_internal2(db, parent_dir,
-                                                  scratch_pool);
-    }
-
-  state_pool = svn_wc_adm_access_pool(adm_access);
-  SVN_ERR(svn_wc_entries_read(&entries, adm_access, TRUE, scratch_pool));
-  entry = apr_hash_get(entries, name, APR_HASH_KEY_STRING);
-  if (! entry)
-    return svn_error_createf(SVN_ERR_ENTRY_NOT_FOUND, NULL,
-                             _("No such entry: '%s'"), name);
+  SVN_ERR(svn_wc__get_entry(&entry, db, local_abspath, FALSE, kind, tweak_stub,
+                            scratch_pool, scratch_pool));
 
   if (new_url != NULL
       && (! entry->url || strcmp(new_url, entry->url)))
     {
-      entry->url = apr_pstrdup(state_pool, new_url);
+      modify_flags |= SVN_WC__ENTRY_MODIFY_URL;
+      tmp_entry.url = new_url;
     }
 
   if ((SVN_IS_VALID_REVNUM(new_rev))
@@ -3069,7 +3041,8 @@ svn_wc__tweak_entry(svn_wc__db_t *db,
       && (entry->copied != TRUE)
       && (entry->revision != new_rev))
     {
-      entry->revision = new_rev;
+      modify_flags |= SVN_WC__ENTRY_MODIFY_REVISION;
+      tmp_entry.revision = new_rev;
     }
 
   /* As long as this function is only called as a helper to
@@ -3090,12 +3063,15 @@ svn_wc__tweak_entry(svn_wc__db_t *db,
   if (allow_removal
       && (entry->deleted || (entry->absent && entry->revision != new_rev)))
     {
-      apr_hash_set(entries, name, APR_HASH_KEY_STRING, NULL);
+      SVN_ERR(svn_wc__entry_remove(db, local_abspath, scratch_pool));
+    }
+  else if (modify_flags)
+    {
+      SVN_ERR(svn_wc__entry_modify2(db, local_abspath, entry->kind, tweak_stub,
+                                    &tmp_entry, modify_flags, scratch_pool));
     }
 
-  return svn_error_return(
-    entries_write(entries, db, this_dir ? local_abspath : parent_dir,
-                  scratch_pool));
+  return SVN_NO_ERROR;
 }
 
 
