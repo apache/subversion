@@ -1633,13 +1633,8 @@ insert_base_node(svn_sqlite__db_t *sdb,
                                   svn_node_kind_to_word(base_node->kind)));
 
   if (base_node->checksum)
-    {
-      const char *kind_str = (base_node->checksum->kind == svn_checksum_md5
-                              ? "$md5 $" : "$sha1$");
-      SVN_ERR(svn_sqlite__bind_text(stmt, 9, apr_pstrcat(scratch_pool,
-                    kind_str, svn_checksum_to_cstring(base_node->checksum,
-                                                      scratch_pool), NULL)));
-    }
+    SVN_ERR(svn_sqlite__bind_checksum(stmt, 9, base_node->checksum,
+                                      scratch_pool));
 
   if (base_node->translated_size != SVN_INVALID_FILESIZE)
     SVN_ERR(svn_sqlite__bind_int64(stmt, 10, base_node->translated_size));
@@ -1723,13 +1718,8 @@ insert_working_node(svn_sqlite__db_t *sdb,
     SVN_ERR(svn_sqlite__bind_text(stmt, 10, working_node->moved_to));
 
   if (working_node->checksum)
-    {
-      const char *kind_str = (working_node->checksum->kind == svn_checksum_md5
-                              ? "$md5 $" : "$sha1$");
-      SVN_ERR(svn_sqlite__bind_text(stmt, 11, apr_pstrcat(scratch_pool,
-                    kind_str, svn_checksum_to_cstring(working_node->checksum,
-                                                      scratch_pool), NULL)));
-    }
+    SVN_ERR(svn_sqlite__bind_checksum(stmt, 11, working_node->checksum,
+                                      scratch_pool));
 
   if (working_node->translated_size != SVN_INVALID_FILESIZE)
     SVN_ERR(svn_sqlite__bind_int64(stmt, 12, working_node->translated_size));
