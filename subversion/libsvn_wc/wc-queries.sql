@@ -237,6 +237,22 @@ DELETE FROM WORK_QUEUE WHERE id = ?1;
 INSERT OR IGNORE INTO PRISTINE (checksum, size, refcount)
 VALUES (?1, ?2, 1);
 
+-- STMT_SELECT_ACTUAL_CONFLICT_VICTIMS
+SELECT local_relpath
+FROM actual_node
+WHERE wc_id = ?1 AND parent_relpath = ?2 AND
+NOT((prop_reject IS NULL) AND (conflict_old IS NULL)
+    AND (conflict_new IS NULL) AND (conflict_working IS NULL))
+
+-- STMT_SELECT_ACTUAL_TREE_CONFLICT
+SELECT tree_conflict_data
+FROM actual_node
+WHERE wc_id = ?1 AND local_relpath = ?2;
+
+-- STMT_SELECT_CONFLICT_DETAILS
+SELECT prop_reject, conflict_old, conflict_new, conflict_working
+FROM actual_node
+WHERE wc_id = ?1 AND local_relpath = ?2;
 
 /* ------------------------------------------------------------------------- */
 

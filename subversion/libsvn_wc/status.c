@@ -945,7 +945,7 @@ get_dir_status(const struct walk_status_baton *wb,
 {
   apr_hash_index_t *hi;
   const svn_wc_entry_t *dir_entry;
-  apr_hash_t *dirents, *nodes, *tree_conflicts, *all_children;
+  apr_hash_t *dirents, *nodes, *conflicts, *all_children;
   apr_array_header_t *patterns = NULL;
   apr_pool_t *iterpool, *subpool = svn_pool_create(scratch_pool);
 
@@ -978,22 +978,20 @@ get_dir_status(const struct walk_status_baton *wb,
       /* Create a hash containing all children */
       all_children = apr_hash_overlay(subpool, nodes, dirents);
 
-      /* ### This creates the tree conflicts with bogus paths.
-             We can't just push these in the status result! */
-      SVN_ERR(svn_wc__read_tree_conflicts(&tree_conflicts,
-                                          dir_entry->tree_conflict_data,
-                                          "" /* Used for path */, subpool));
+      SVN_ERR(svn_wc__db_read_conflict_victims(&conflicts,
+                                               wb->db, local_abspath,
+                                               subpool, iterpool));
 
       /* Optimize for the no-tree-conflict case */
-      if (apr_hash_count(tree_conflicts) > 0)
-        all_children = apr_hash_overlay(subpool, tree_conflicts, all_children);
+      if (apr_hash_count(conflicts) > 0)
+        all_children = apr_hash_overlay(subpool, conflicts, all_children);
     }
   else
     {
       svn_wc_conflict_description2_t *tc;
       const char *selected_abspath;
 
-      tree_conflicts = apr_hash_make(subpool);
+      conflicts = apr_hash_make(subpool);
       all_children = apr_hash_make(subpool);
       
       apr_hash_set(all_children, selected, APR_HASH_KEY_STRING, selected);
@@ -1005,7 +1003,7 @@ get_dir_status(const struct walk_status_baton *wb,
 
       /* Note this path if a tree conflict is present.  */
       if (tc != NULL)
-        apr_hash_set(tree_conflicts, selected, APR_HASH_KEY_STRING, "");
+        apr_hash_set(conflicts, selected, APR_HASH_KEY_STRING, "");
     }
 
   /* If "this dir" has "svn:externals" property set on it, store the
@@ -1109,7 +1107,7 @@ get_dir_status(const struct walk_status_baton *wb,
             }
         }
       
-      if (apr_hash_get(tree_conflicts, key, klen))
+      if (apr_hash_get(conflicts, key, klen))
         {
           /* Tree conflict */
 

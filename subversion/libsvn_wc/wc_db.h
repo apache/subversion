@@ -1267,6 +1267,38 @@ svn_wc__db_read_children(const apr_array_header_t **children,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool);
 
+/* Read into *VICTIMS the basenames of the immediate children of
+   LOCAL_ABSPATH in DB that are conflicted.
+
+   In case of tree conflicts a victim doesn't have to be in the
+   working copy.
+
+   Allocate *VICTIMS in RESULT_POOL and do temporary allocations in
+   SCRATCH_POOL */
+/* ### Use apr_array_header_t? */
+svn_error_t *
+svn_wc__db_read_conflict_victims(apr_hash_t **victims,
+                                 svn_wc__db_t *db,
+                                 const char *local_abspath,
+                                 apr_pool_t *result_pool,
+                                 apr_pool_t *scratch_pool);
+
+/* Read into CONFLICTS svn_wc_conflict_description2_t* structs
+   for all conflicts that have LOCAL_ABSPATH as victim.
+
+   Victim must be versioned or be part of a tree conflict.
+
+   Allocate *VICTIMS in RESULT_POOL and do temporary allocations in
+   SCRATCH_POOL */
+/* ### Currently there can be just one property conflict recorded
+       per victim */
+svn_error_t *
+svn_wc__db_read_conflicts(const apr_array_header_t **conflicts,
+                          svn_wc__db_t *db,
+                          const char *local_abspath,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool);
+
 
 /* Return the kind of the node in DB at LOCAL_ABSPATH. The WORKING tree will
    be examined first, then the BASE tree. If the node is not present in either
