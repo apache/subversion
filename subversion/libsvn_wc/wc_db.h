@@ -798,14 +798,14 @@ svn_wc__db_pristine_write(svn_stream_t **contents,
 /* ### dlr: Why is a less specific temp dir insufficient? 
    ###  bh: See svn_wc__db_pristine_install() */
 svn_error_t *
-svn_wc__db_pristine_get_tempdir(const char **temp_dir,
+svn_wc__db_pristine_get_tempdir(const char **temp_dir_abspath,
                                 svn_wc__db_t *db,
                                 const char *wri_abspath,
                                 apr_pool_t *result_pool,
                                 apr_pool_t *scratch_pool);
 
 
-/* ### Given file LOCAL_ABSPATH sitting in a tempdir (specified by
+/* ### Given file TEMPFILE_ABSPATH sitting in a tempdir (specified by
    ### _get_tempdir),
    ### install the sucker into the pristine datastore for the given checksum.
    ### This is used for files where we don't know the checksum ahead of
