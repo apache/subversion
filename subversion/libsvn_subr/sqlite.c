@@ -320,7 +320,7 @@ svn_sqlite__bind_properties(svn_sqlite__stmt_t *stmt,
   svn_stringbuf_t *properties;
 
   if (props == NULL)
-    return SVN_NO_ERROR;
+    return svn_sqlite__bind_blob(stmt, slot, NULL, 0);
 
   SVN_ERR(svn_skel__unparse_proplist(&skel, (apr_hash_t *)props,
                                      scratch_pool));
@@ -335,17 +335,22 @@ svn_sqlite__bind_checksum(svn_sqlite__stmt_t *stmt,
                           const svn_checksum_t *checksum,
                           apr_pool_t *scratch_pool)
 {
-  const char *ckind_str;
   const char *csum_str;
 
   if (checksum == NULL)
-    return SVN_NO_ERROR;
+    {
+      csum_str = NULL;
+    }
+  else
+    {
+      const char *ckind_str;
 
-  ckind_str = (checksum->kind == svn_checksum_md5 ? "$md5 $" : "$sha1$");
-  csum_str = apr_pstrcat(scratch_pool,
-                         ckind_str,
-                         svn_checksum_to_cstring(checksum, scratch_pool),
-                         NULL);
+      ckind_str = (checksum->kind == svn_checksum_md5 ? "$md5 $" : "$sha1$");
+      csum_str = apr_pstrcat(scratch_pool,
+                             ckind_str,
+                             svn_checksum_to_cstring(checksum, scratch_pool),
+                             NULL);
+    }
 
   return svn_sqlite__bind_text(stmt, slot, csum_str);
 }
