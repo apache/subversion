@@ -58,6 +58,9 @@
 #define SDB_FILE  "wc.db"
 #define SDB_FILE_UPGRADE "wc.db.upgrade"
 
+#define PRISTINE_STORAGE_RELPATH ".svn/pristine"
+#define PRISTINE_TEMPDIR_RELPATH ".svn"
+
 
 /*
  * PARAMETER ASSERTIONS
@@ -175,6 +178,19 @@ struct svn_wc__db_pdh_t {
 #define VERIFY_USABLE_PDH(pdh) SVN_ERR_ASSERT(  \
     (pdh)->wcroot != NULL                       \
     && (pdh)->wcroot->format == SVN_WC__VERSION)
+
+
+/* Verify the checksum kind for pristine storage.  */
+#define VERIFY_CHECKSUM_KIND(checksum)                                     \
+  do {                                                                     \
+    if ((checksum)->kind != svn_checksum_sha1)                             \
+      return svn_error_create(SVN_ERR_BAD_CHECKSUM_KIND, NULL,             \
+                              _("Only SHA1 checksums can be used as keys " \
+                                "in the pristine file storage.\n"));       \
+  } while (0)
+/* ### not ready to enforce SHA1 yet. disable the check.  */
+#undef VERIFY_CHECKSUM_KIND
+#define VERIFY_CHECKSUM_KIND(checksum) ((void)0)
 
 
 /* ### since we're putting the pristine files per-dir, then we don't need
@@ -385,20 +401,18 @@ create_wcroot(wcroot_t **wcroot,
 }
 
 
-/* ### this is not (yet) needed... the pristine storage is in flux.  */
-#if 0
 static svn_error_t *
-get_pristine_fname(const char **path,
+get_pristine_fname(const char **pristine_abspath,
                    svn_wc__db_pdh_t *pdh,
                    const svn_checksum_t *checksum,
                    svn_boolean_t create_subdir,
                    apr_pool_t *result_pool,
                    apr_pool_t *scratch_pool)
 {
-  const char *base_dir;
+  const char *base_dir_abspath;
   const char *hexdigest = svn_checksum_to_cstring(checksum, scratch_pool);
 #ifndef SVN__SKIP_SUBDIR
-  char subdir[3] = { 0 };
+  char subdir[3];
 #endif
 
   /* ### code is in transition. make sure we have the proper data.  */
@@ -407,8 +421,9 @@ get_pristine_fname(const char **path,
   /* ### need to fix this to use a symbol for ".svn". we don't need
      ### to use join_many since we know "/" is the separator for
      ### internal canonical paths */
-  base_dir = svn_dirent_join(pdh->wcroot->abspath, ".svn/pristine",
-                             scratch_pool);
+  base_dir_abspath = svn_dirent_join(pdh->wcroot->abspath,
+                                     PRISTINE_STORAGE_RELPATH,
+                                     scratch_pool);
 
   /* We should have a valid checksum and (thus) a valid digest. */
   SVN_ERR_ASSERT(hexdigest != NULL);
@@ -417,14 +432,15 @@ get_pristine_fname(const char **path,
   /* Get the first two characters of the digest, for the subdir. */
   subdir[0] = hexdigest[0];
   subdir[1] = hexdigest[1];
+  subdir[2] = '\0';
 
   if (create_subdir)
     {
-      const char *subdir_path = svn_dirent_join(base_dir, subdir,
-                                                scratch_pool);
+      const char *subdir_abspath = svn_dirent_join(base_dir_abspath, subdir,
+                                                   scratch_pool);
       svn_error_t *err;
 
-      err = svn_io_dir_make(subdir_path, APR_OS_DEFAULT, scratch_pool);
+      err = svn_io_dir_make(subdir_abspath, APR_OS_DEFAULT, scratch_pool);
 
       /* Whatever error may have occurred... ignore it. Typically, this
          will be "directory already exists", but if it is something
@@ -435,16 +451,15 @@ get_pristine_fname(const char **path,
 #endif
 
   /* The file is located at DIR/.svn/pristine/XX/XXYYZZ... */
-  *path = svn_dirent_join_many(result_pool,
-                               base_dir,
+  *pristine_abspath = svn_dirent_join_many(result_pool,
+                                           base_dir_abspath,
 #ifndef SVN__SKIP_SUBDIR
-                               subdir,
+                                           subdir,
 #endif
-                               hexdigest,
-                               NULL);
+                                           hexdigest,
+                                           NULL);
   return SVN_NO_ERROR;
 }
-#endif
 
 
 static svn_error_t *
@@ -2215,18 +2230,30 @@ svn_wc__db_pristine_read(svn_stream_t **contents,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool)
 {
+  svn_wc__db_pdh_t *pdh;
+  const char *local_relpath;
+  const char *pristine_abspath;
+
+  SVN_ERR_ASSERT(contents != NULL);
   SVN_ERR_ASSERT(svn_dirent_is_absolute(wri_abspath));
+  SVN_ERR_ASSERT(checksum != NULL);
 
-  NOT_IMPLEMENTED();
+  VERIFY_CHECKSUM_KIND(checksum);
 
-#if 0
-  const char *path;
+  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, wri_abspath,
+                              svn_sqlite__mode_readonly,
+                              scratch_pool, scratch_pool));
+  VERIFY_USABLE_PDH(pdh);
 
-  SVN_ERR(get_pristine_fname(&path, pdh, checksum, FALSE /* create_subdir */,
+  /* ### should we look in the PRISTINE table for anything?  */
+
+  SVN_ERR(get_pristine_fname(&pristine_abspath, pdh, checksum,
+                             FALSE /* create_subdir */,
                              scratch_pool, scratch_pool));
 
-  return svn_stream_open_readonly(contents, path, result_pool, scratch_pool);
-#endif
+  return svn_error_return(svn_stream_open_readonly(
+                            contents, pristine_abspath,
+                            result_pool, scratch_pool));
 }
 
 
@@ -2238,7 +2265,11 @@ svn_wc__db_pristine_write(svn_stream_t **contents,
                           apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool)
 {
+  SVN_ERR_ASSERT(contents != NULL);
   SVN_ERR_ASSERT(svn_dirent_is_absolute(wri_abspath));
+  SVN_ERR_ASSERT(checksum != NULL);
+
+  VERIFY_CHECKSUM_KIND(checksum);
 
   NOT_IMPLEMENTED();
 
@@ -2252,6 +2283,8 @@ svn_wc__db_pristine_write(svn_stream_t **contents,
 
   /* ### we should wrap the stream. count the bytes. at close, then we
      ### should write the count into the sqlite database. */
+  /* ### euh... no. stream closure could happen after an error, so there
+     ### isn't enough information here.  */
 
   return SVN_NO_ERROR;
 #endif
@@ -2259,15 +2292,27 @@ svn_wc__db_pristine_write(svn_stream_t **contents,
 
 
 svn_error_t *
-svn_wc__db_pristine_get_tempdir(const char **temp_dir,
+svn_wc__db_pristine_get_tempdir(const char **temp_dir_abspath,
                                 svn_wc__db_t *db,
                                 const char *wri_abspath,
                                 apr_pool_t *result_pool,
                                 apr_pool_t *scratch_pool)
 {
+  svn_wc__db_pdh_t *pdh;
+  const char *local_relpath;
+
+  SVN_ERR_ASSERT(temp_dir_abspath != NULL);
   SVN_ERR_ASSERT(svn_dirent_is_absolute(wri_abspath));
 
-  NOT_IMPLEMENTED();
+  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, wri_abspath,
+                              svn_sqlite__mode_readonly,
+                              scratch_pool, scratch_pool));
+  VERIFY_USABLE_PDH(pdh);
+
+  *temp_dir_abspath = svn_dirent_join(pdh->wcroot->abspath,
+                                      PRISTINE_TEMPDIR_RELPATH,
+                                      result_pool);
+  return SVN_NO_ERROR;
 }
 
 
@@ -2277,9 +2322,49 @@ svn_wc__db_pristine_install(svn_wc__db_t *db,
                             const svn_checksum_t *checksum,
                             apr_pool_t *scratch_pool)
 {
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(tempfile_abspath));
+  svn_wc__db_pdh_t *pdh;
+  const char *local_relpath;
+  const char *wri_abspath;
+  const char *pristine_abspath;
+  apr_finfo_t finfo;
+  svn_sqlite__stmt_t *stmt;
 
-  NOT_IMPLEMENTED();
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(tempfile_abspath));
+  SVN_ERR_ASSERT(checksum != NULL);
+
+  VERIFY_CHECKSUM_KIND(checksum);
+
+  /* ### this logic assumes that TEMPFILE_ABSPATH follows this pattern:
+     ###   WCROOT_ABSPATH/COMPONENT/TEMPFNAME
+     ### if we change this (see PRISTINE_TEMPDIR_RELPATH), then this
+     ### logic should change.  */
+  wri_abspath = svn_dirent_dirname(svn_dirent_dirname(tempfile_abspath,
+                                                      scratch_pool),
+                                   scratch_pool);
+
+  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, wri_abspath,
+                              svn_sqlite__mode_readonly,
+                              scratch_pool, scratch_pool));
+  VERIFY_USABLE_PDH(pdh);
+
+  SVN_ERR(get_pristine_fname(&pristine_abspath, pdh, checksum,
+                             TRUE /* create_subdir */,
+                             scratch_pool, scratch_pool));
+
+  /* Put the file into its target location.  */
+  SVN_ERR(svn_io_file_rename(tempfile_abspath, pristine_abspath,
+                             scratch_pool));
+
+  SVN_ERR(svn_io_stat(&finfo, pristine_abspath, APR_FINFO_SIZE,
+                      scratch_pool));
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+                                    STMT_INSERT_PRISTINE));
+  SVN_ERR(svn_sqlite__bind_checksum(stmt, 1, checksum, scratch_pool));
+  SVN_ERR(svn_sqlite__bind_int64(stmt, 2, finfo.size));
+  SVN_ERR(svn_sqlite__insert(NULL, stmt));
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -2291,7 +2376,11 @@ svn_wc__db_pristine_check(svn_boolean_t *present,
                           svn_wc__db_checkmode_t mode,
                           apr_pool_t *scratch_pool)
 {
+  SVN_ERR_ASSERT(present != NULL);
   SVN_ERR_ASSERT(svn_dirent_is_absolute(wri_abspath));
+  SVN_ERR_ASSERT(checksum != NULL);
+
+  VERIFY_CHECKSUM_KIND(checksum);
 
   NOT_IMPLEMENTED();
 }
@@ -2304,6 +2393,9 @@ svn_wc__db_pristine_repair(svn_wc__db_t *db,
                            apr_pool_t *scratch_pool)
 {
   SVN_ERR_ASSERT(svn_dirent_is_absolute(wri_abspath));
+  SVN_ERR_ASSERT(checksum != NULL);
+
+  VERIFY_CHECKSUM_KIND(checksum);
 
   NOT_IMPLEMENTED();
 }

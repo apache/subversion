@@ -233,6 +233,10 @@ SELECT id, work FROM WORK_QUEUE LIMIT 1;
 -- STMT_DELETE_WORK_ITEM
 DELETE FROM WORK_QUEUE WHERE id = ?1;
 
+-- STMT_INSERT_PRISTINE
+INSERT OR IGNORE INTO PRISTINE (checksum, size, refcount)
+VALUES (?1, ?2, 1);
+
 
 /* ------------------------------------------------------------------------- */
 
