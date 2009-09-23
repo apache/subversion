@@ -691,10 +691,10 @@ file_diff(struct dir_baton *dir_baton,
 static svn_error_t *
 directory_elements_diff(struct dir_baton *dir_baton)
 {
-  apr_hash_t *entries;
-  apr_hash_index_t *hi;
+  const apr_array_header_t *children;
+  int i;
   svn_boolean_t in_anchor_not_target;
-  apr_pool_t *subpool;
+  apr_pool_t *iterpool;
   svn_wc_adm_access_t *adm_access;
   struct edit_baton *eb = dir_baton->edit_baton;
   const char *dir_abspath;
@@ -723,8 +723,6 @@ directory_elements_diff(struct dir_baton *dir_baton)
 
   SVN_ERR(svn_wc_adm_retrieve(&adm_access, dir_baton->edit_baton->anchor,
                               dir_baton->path, dir_baton->pool));
-
-  SVN_ERR(svn_wc_entries_read(&entries, adm_access, FALSE, dir_baton->pool));
 
   /* Check for local property mods on this directory, if we haven't
      already reported them and we aren't changelist-filted.
@@ -762,25 +760,26 @@ directory_elements_diff(struct dir_baton *dir_baton)
   if (dir_baton->depth == svn_depth_empty && !in_anchor_not_target)
     return SVN_NO_ERROR;
 
-  subpool = svn_pool_create(dir_baton->pool);
+  iterpool = svn_pool_create(dir_baton->pool);
 
-  for (hi = apr_hash_first(dir_baton->pool, entries); hi;
-       hi = apr_hash_next(hi))
+  SVN_ERR(svn_wc__db_read_children(&children, eb->db,
+                                   dir_abspath, dir_baton->pool, iterpool));
+
+  for (i = 0; i < children->nelts; i++)
     {
-      const void *key;
-      void *val;
+      const char *name = APR_ARRAY_IDX(children, i, const char*);
       const svn_wc_entry_t *entry;
       struct dir_baton *subdir_baton;
-      const char *name, *path;
+      const char *child_abpath, *path;
+      svn_boolean_t hidden;
 
-      svn_pool_clear(subpool);
+      svn_pool_clear(iterpool);
 
-      apr_hash_this(hi, &key, NULL, &val);
-      name = key;
-      entry = val;
+      child_abpath = svn_dirent_join(dir_abspath, name, iterpool);
 
-      /* Skip entry for the directory itself. */
-      if (strcmp(key, SVN_WC_ENTRY_THIS_DIR) == 0)
+      SVN_ERR(svn_wc__db_node_hidden(&hidden, eb->db, child_abpath, iterpool));
+
+      if (hidden)
         continue;
 
       /* In the anchor directory, if the anchor is not the target then all
@@ -791,16 +790,19 @@ directory_elements_diff(struct dir_baton *dir_baton)
           && strcmp(dir_baton->edit_baton->target, name))
         continue;
 
-      path = svn_dirent_join(dir_baton->path, name, subpool);
+      path = svn_dirent_join(dir_baton->path, name, iterpool);
 
       /* Skip entry if it is in the list of entries already diff'd. */
       if (apr_hash_get(dir_baton->compared, path, APR_HASH_KEY_STRING))
         continue;
 
+      SVN_ERR(svn_wc__get_entry(&entry, eb->db, child_abpath, FALSE,
+                                svn_node_unknown, FALSE, iterpool, iterpool));
+
       switch (entry->kind)
         {
         case svn_node_file:
-          SVN_ERR(file_diff(dir_baton, path, entry, subpool));
+          SVN_ERR(file_diff(dir_baton, path, entry, iterpool));
           break;
 
         case svn_node_dir:
@@ -829,7 +831,7 @@ directory_elements_diff(struct dir_baton *dir_baton)
                                             dir_baton->edit_baton,
                                             FALSE,
                                             depth_below_here,
-                                            subpool);
+                                            iterpool);
 
               SVN_ERR(directory_elements_diff(subdir_baton));
             }
@@ -840,7 +842,7 @@ directory_elements_diff(struct dir_baton *dir_baton)
         }
     }
 
-  svn_pool_destroy(subpool);
+  svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
 }
@@ -953,17 +955,15 @@ report_wc_directory_as_added(struct dir_baton *dir_baton,
   svn_wc_adm_access_t *adm_access;
   apr_hash_t *emptyprops = apr_hash_make(pool), *wcprops = NULL;
   apr_array_header_t *propchanges;
-  apr_hash_t *entries;
-  apr_hash_index_t *hi;
-  apr_pool_t *subpool;
+  const apr_array_header_t *children;
+  int i;
+  apr_pool_t *iterpool;
   const char *dir_abspath;
 
   SVN_ERR(svn_dirent_get_absolute(&dir_abspath, dir_baton->path, pool));
 
   SVN_ERR(svn_wc_adm_retrieve(&adm_access, eb->anchor,
                               dir_baton->path, pool));
-
-  SVN_ERR(svn_wc_entries_read(&entries, adm_access, FALSE, pool));
 
   /* If this directory passes changelist filtering, get its BASE or
      WORKING properties, as appropriate, and simulate their
@@ -993,38 +993,43 @@ report_wc_directory_as_added(struct dir_baton *dir_baton,
     }
 
   /* Report the addition of the directory's contents. */
-  subpool = svn_pool_create(pool);
+  iterpool = svn_pool_create(pool);
 
-  for (hi = apr_hash_first(pool, entries); hi;
-       hi = apr_hash_next(hi))
+  SVN_ERR(svn_wc__db_read_children(&children, eb->db, dir_abspath,
+                                   pool, iterpool));
+
+  for (i = 0; i < children->nelts; i++)
     {
-      const void *key;
-      void *val;
-      const char *name, *path;
+      const char *name = APR_ARRAY_IDX(children, i, const char *);
+      const char *child_abspath, *path;
       const svn_wc_entry_t *entry;
+      svn_boolean_t hidden;
 
-      svn_pool_clear(subpool);
+      svn_pool_clear(iterpool);
 
-      apr_hash_this(hi, &key, NULL, &val);
-      name = key;
-      entry = val;
+      child_abspath = svn_dirent_join(dir_abspath, name, iterpool);
 
-      /* Skip entry for the directory itself. */
-      if (strcmp(key, SVN_WC_ENTRY_THIS_DIR) == 0)
+      SVN_ERR(svn_wc__db_node_hidden(&hidden, eb->db, child_abspath,
+                                     iterpool));
+
+      if (hidden)
         continue;
+
+      SVN_ERR(svn_wc__get_entry(&entry, eb->db, child_abspath, FALSE,
+                                svn_node_unknown, FALSE, iterpool, iterpool));
 
       /* If comparing against WORKING, skip entries that are
          schedule-deleted - they don't really exist. */
       if (!eb->use_text_base && entry->schedule == svn_wc_schedule_delete)
         continue;
 
-      path = svn_dirent_join(dir_baton->path, name, subpool);
+      path = svn_dirent_join(dir_baton->path, name, iterpool);
 
       switch (entry->kind)
         {
         case svn_node_file:
           SVN_ERR(report_wc_file_as_added(dir_baton,
-                                          adm_access, path, entry, subpool));
+                                          adm_access, path, entry, iterpool));
           break;
 
         case svn_node_dir:
@@ -1039,9 +1044,9 @@ report_wc_directory_as_added(struct dir_baton *dir_baton,
 
               subdir_baton = make_dir_baton(path, dir_baton, eb, FALSE,
                                             depth_below_here,
-                                            subpool);
+                                            iterpool);
 
-              SVN_ERR(report_wc_directory_as_added(subdir_baton, subpool));
+              SVN_ERR(report_wc_directory_as_added(subdir_baton, iterpool));
             }
           break;
 
@@ -1050,7 +1055,7 @@ report_wc_directory_as_added(struct dir_baton *dir_baton,
         }
     }
   
-  svn_pool_destroy(subpool);
+  svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
 }
