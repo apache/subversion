@@ -848,49 +848,6 @@ log_do_delete_entry(struct log_runner *loggy, const char *name)
     }
 }
 
-static svn_error_t *
-remove_deleted_entry(void *baton, const void *key,
-                     apr_ssize_t klen, void *val, apr_pool_t *pool)
-{
-  struct log_runner *loggy = baton;
-  const char *base_name;
-  const char *pdir;
-  const svn_wc_entry_t *cur_entry = val;
-  svn_wc_adm_access_t *entry_access;
-
-  /* Skip each entry that isn't scheduled for deletion. This gracefully
-     includes excluded item. */
-  if (cur_entry->schedule != svn_wc_schedule_delete)
-    return SVN_NO_ERROR;
-
-  /* Determine what arguments to hand to our removal function,
-     and let BASE_NAME double as an "ok" flag to run that function. */
-  base_name = NULL;
-  if (cur_entry->kind == svn_node_file)
-    {
-      pdir = svn_wc_adm_access_path(loggy->adm_access);
-      base_name = apr_pstrdup(pool, key);
-      entry_access = loggy->adm_access;
-    }
-  else if (cur_entry->kind == svn_node_dir)
-    {
-      pdir = svn_dirent_join(svn_wc_adm_access_path(loggy->adm_access),
-                             key, pool);
-      base_name = SVN_WC_ENTRY_THIS_DIR;
-      SVN_ERR(svn_wc_adm_retrieve(&entry_access, loggy->adm_access,
-                                  pdir, pool));
-    }
-
-  /* ### We pass NULL, NULL for cancel_func and cancel_baton below.
-     ### If they were available, it would be nice to use them. */
-  if (base_name)
-    SVN_ERR(svn_wc_remove_from_revision_control
-            (entry_access, base_name, FALSE, FALSE,
-             NULL, NULL, pool));
-
-  return SVN_NO_ERROR;
-}
-
 /* Note:  assuming that svn_wc__log_commit() is what created all of
    the <committed...> commands, the `name' attribute will either be a
    file or SVN_WC_ENTRY_THIS_DIR. */
@@ -907,7 +864,6 @@ log_do_committed(struct log_runner *loggy,
   svn_boolean_t set_read_write = FALSE;
   const char *full_path;
   const char *local_abspath;
-  apr_hash_t *entries;
   const svn_wc_entry_t *orig_entry;
   svn_wc_entry_t *entry;
   svn_wc_adm_access_t *adm_access;
@@ -1061,9 +1017,44 @@ log_do_committed(struct log_runner *loggy,
     {
       /* Loop over all children entries, look for items scheduled for
          deletion. */
-      SVN_ERR(svn_wc_entries_read(&entries, loggy->adm_access, TRUE, pool));
-      SVN_ERR(svn_iter_apr_hash(NULL, entries,
-                                remove_deleted_entry, loggy, pool));
+      const apr_array_header_t *children;
+      int i;
+      apr_pool_t *iterpool = svn_pool_create(pool);
+
+      SVN_ERR(svn_wc__db_read_children(&children, loggy->db,
+                                       loggy->adm_abspath, pool, pool));
+
+      for(i = 0; i < children->nelts; i++)
+        {
+          const char *name = APR_ARRAY_IDX(children, i, const char*);
+          const char *child_abspath;
+          svn_wc__db_kind_t kind;
+          svn_boolean_t is_file;
+          const svn_wc_entry_t *entry;
+
+          apr_pool_clear(iterpool);
+          child_abspath = svn_dirent_join(loggy->adm_abspath, name, iterpool);
+
+          SVN_ERR(svn_wc__db_read_kind(&kind, loggy->db, child_abspath, TRUE,
+                                       iterpool));
+
+          is_file = (kind == svn_wc__db_kind_file ||
+                     kind == svn_wc__db_kind_symlink);
+
+          SVN_ERR(svn_wc__get_entry(&entry, loggy->db, child_abspath, FALSE,
+                                    is_file ? svn_node_file : svn_node_dir,
+                                    !is_file, iterpool, iterpool));
+
+          if (entry->schedule != svn_wc_schedule_delete)
+            continue;
+
+          /* ### We pass NULL, NULL for cancel_func and cancel_baton below.
+             ### If they were available, it would be nice to use them. */
+          SVN_ERR(svn_wc__remove_from_revision_control_internal(
+                                    loggy->db, child_abspath,
+                                    FALSE, FALSE,
+                                    NULL, NULL, iterpool));
+        }
     }
 
   SVN_ERR(svn_wc__props_modified(&prop_mods, loggy->db, local_abspath, pool));
@@ -2272,42 +2263,48 @@ cleanup_internal(svn_wc__db_t *db,
 
 static svn_error_t *
 run_existing_logs(svn_wc_adm_access_t *adm_access,
-                  const char *path,
                   svn_cancel_func_t cancel_func,
                   void *cancel_baton,
                   apr_pool_t *scratch_pool)
 {
   svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
-  apr_hash_index_t *hi;
-  svn_node_kind_t kind;
-  apr_hash_t *entries = NULL;
+  const apr_array_header_t *children;
+  int i;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   svn_boolean_t killme, kill_adm_only;
+  const char *adm_abspath = svn_wc__adm_access_abspath(adm_access);
 
   /* Recurse on versioned elements first, oddly enough. */
-  SVN_ERR(svn_wc_entries_read(&entries, adm_access, FALSE, scratch_pool));
-  for (hi = apr_hash_first(scratch_pool, entries); hi; hi = apr_hash_next(hi))
+  SVN_ERR(svn_wc__db_read_children(&children, db, adm_abspath,
+                                   scratch_pool, iterpool));
+  for (i = 0; i < children->nelts; i++)
     {
-      const void *key;
-      void *val;
-      const svn_wc_entry_t *entry;
-      const char *entry_path;
+      const char *name = APR_ARRAY_IDX(children, i, const char *);
       const char *entry_abspath;
+      svn_boolean_t hidden;
+      svn_wc__db_kind_t kind;
 
       svn_pool_clear(iterpool);
-      apr_hash_this(hi, &key, NULL, &val);
-      entry = val;
-      entry_path = svn_dirent_join(path, key, iterpool);
-      SVN_ERR(svn_dirent_get_absolute(&entry_abspath, entry_path, iterpool));
+      entry_abspath = svn_dirent_join(adm_abspath, name, iterpool);
 
-      if (entry->kind == svn_node_dir
-          && strcmp(key, SVN_WC_ENTRY_THIS_DIR) != 0)
+      SVN_ERR(svn_wc__db_node_hidden(&hidden, db, entry_abspath, iterpool));
+
+      if (hidden)
+        continue;
+
+      SVN_ERR(svn_wc__db_read_kind(&kind, db, entry_abspath, FALSE, iterpool));
+
+      if (kind == svn_wc__db_kind_dir)
         {
+          svn_node_kind_t disk_kind;
           /* Sub-directories */
-          SVN_ERR(svn_io_check_path(entry_path, &kind, iterpool));
-          if (kind == svn_node_dir)
-            SVN_ERR(cleanup_internal(db, entry_path,
-                                     cancel_func, cancel_baton, iterpool));
+          SVN_ERR(svn_io_check_path(entry_abspath, &disk_kind, iterpool));
+          if (disk_kind == svn_node_dir)
+            SVN_ERR(cleanup_internal(db, svn_dirent_join(
+                                            svn_wc_adm_access_path(adm_access),
+                                            name, iterpool),
+                                     cancel_func, cancel_baton,
+                                     iterpool));
         }
       else
         {
@@ -2318,7 +2315,7 @@ run_existing_logs(svn_wc_adm_access_t *adm_access,
           svn_boolean_t modified;
           SVN_ERR(svn_wc__props_modified(&modified, db, entry_abspath,
                                          iterpool));
-          if (entry->kind == svn_node_file)
+          if (kind == svn_wc__db_kind_file || kind == svn_wc__db_kind_symlink)
             SVN_ERR(svn_wc__text_modified_internal_p(&modified, db,
                                         entry_abspath, FALSE, TRUE,
                                         iterpool));
@@ -2374,7 +2371,7 @@ cleanup_internal(svn_wc__db_t *db,
                                        scratch_pool, scratch_pool));
 
   /* Recurse and run any existing logs. */
-  SVN_ERR(run_existing_logs(adm_access, path,
+  SVN_ERR(run_existing_logs(adm_access,
                             cancel_func, cancel_baton, scratch_pool));
 
   /* Cleanup the tmp area of the admin subdir, if running the log has not
