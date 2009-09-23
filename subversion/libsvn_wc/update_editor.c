@@ -3833,11 +3833,13 @@ choose_base_paths(const char **old_text_base,
                   apr_pool_t *result_pool,
                   apr_pool_t *scratch_pool)
 {
+  const svn_wc_entry_t *entry;
   svn_boolean_t replaced;
 
-  SVN_ERR(svn_wc__internal_is_replaced(&replaced, db, local_abspath,
-                                       scratch_pool));
+  SVN_ERR(svn_wc__get_entry(&entry, db, local_abspath, TRUE, svn_node_file,
+                            FALSE, scratch_pool, scratch_pool));
 
+  replaced = entry && entry->schedule == svn_wc_schedule_replace;
   /* ### Should use pristine api here */
   if (replaced)
     SVN_ERR(svn_wc__text_revert_path(old_text_base,
@@ -3848,9 +3850,6 @@ choose_base_paths(const char **old_text_base,
 
   if (checksum_p)
     {
-      const svn_wc_entry_t *entry;
-      SVN_ERR(svn_wc__get_entry(&entry, db, local_abspath, TRUE, svn_node_file,
-                            FALSE, scratch_pool, scratch_pool));
       *checksum_p = NULL;
       if (entry)
         *checksum_p = entry->checksum;
