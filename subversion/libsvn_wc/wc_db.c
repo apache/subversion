@@ -4740,6 +4740,172 @@ svn_wc__db_temp_is_dir_deleted(svn_boolean_t *not_present,
   return svn_error_return(svn_sqlite__reset(stmt));
 }
 
+svn_error_t *
+svn_wc__db_read_conflict_victims(apr_hash_t **victims,
+                                 svn_wc__db_t *db,
+                                 const char *local_abspath,
+                                 apr_pool_t *result_pool,
+                                 apr_pool_t *scratch_pool)
+{
+  svn_wc__db_pdh_t *pdh;
+  const char *local_relpath;
+  svn_sqlite__stmt_t *stmt;
+  const char *tree_conflict_data;
+  svn_boolean_t have_row;
+
+  /* The parent should be a working copy directory. */
+  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
+                              svn_sqlite__mode_readonly,
+                              scratch_pool, scratch_pool));
+  VERIFY_USABLE_PDH(pdh);
+
+  /* ### This will be much easier once we have all conflicts in one
+         field of actual*/
+
+  /* First look for text and property conflicts in ACTUAL */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+                                    STMT_SELECT_ACTUAL_CONFLICT_VICTIMS));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id, local_relpath));
+
+  *victims = apr_hash_make(result_pool);
+
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  while (have_row)
+    {
+      const char *child_relpath = svn_sqlite__column_text(stmt, 0, NULL);
+      const char *child_name = svn_dirent_basename(child_relpath, result_pool);
+
+      apr_hash_set(*victims, child_name, APR_HASH_KEY_STRING, child_name);
+
+      SVN_ERR(svn_sqlite__step(&have_row, stmt));
+    }
+
+  SVN_ERR(svn_sqlite__reset(stmt));
+
+  /* And add tree conflicts */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+                                    STMT_SELECT_ACTUAL_TREE_CONFLICT));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id, local_relpath));
+
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  if (have_row)
+    tree_conflict_data = svn_sqlite__column_text(stmt, 0, scratch_pool);
+  else
+    tree_conflict_data = NULL;
+
+  SVN_ERR(svn_sqlite__reset(stmt));
+
+  if (tree_conflict_data)
+    {
+      apr_hash_t *conflict_items;
+      apr_hash_index_t *hi;
+      SVN_ERR(svn_wc__read_tree_conflicts(&conflict_items, tree_conflict_data,
+                                          local_abspath, scratch_pool));
+
+      for(hi = apr_hash_first(scratch_pool, conflict_items);
+          hi;
+          hi = apr_hash_next(hi))
+        {
+          const char *child_name =
+              svn_dirent_basename(svn_apr_hash_index_key(hi), result_pool);
+
+          /* Using a hash avoids duplicates */
+          apr_hash_set(*victims, child_name, APR_HASH_KEY_STRING, child_name);
+        }
+    }
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc__db_read_conflicts(const apr_array_header_t **conflicts,
+                          svn_wc__db_t *db,
+                          const char *local_abspath,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool)
+{
+  svn_wc__db_pdh_t *pdh;
+  const char *local_relpath;
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
+  apr_array_header_t *cflcts;
+
+  /* The parent should be a working copy directory. */
+  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
+                              svn_sqlite__mode_readonly,
+                              scratch_pool, scratch_pool));
+  VERIFY_USABLE_PDH(pdh);
+
+  /* ### This will be much easier once we have all conflicts in one
+         field of actual.*/
+
+  /* First look for text and property conflicts in ACTUAL */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+                                    STMT_SELECT_CONFLICT_DETAILS));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id, local_relpath));
+
+  cflcts = apr_array_make(result_pool, 4,
+                           sizeof(svn_wc_conflict_description2_t*));
+
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+
+  if (have_row)
+    {
+      const char *prop_reject;
+      const char *conflict_old;
+      const char *conflict_new;
+      const char *conflict_working;
+      
+      /* ### Store in description! */
+      prop_reject = svn_sqlite__column_text(stmt, 0, result_pool);
+      if (prop_reject)
+        {
+          svn_wc_conflict_description2_t *desc;
+
+          desc  = svn_wc_conflict_description_create_prop2(local_abspath,
+                                                           svn_node_unknown,
+                                                       "svn:pre-WC-NG-Compat",
+                                                           result_pool);
+
+          APR_ARRAY_PUSH(cflcts, svn_wc_conflict_description2_t*) = desc;
+        }
+
+      conflict_old = svn_sqlite__column_text(stmt, 1, result_pool);
+      conflict_new = svn_sqlite__column_text(stmt, 2, result_pool);
+      conflict_working = svn_sqlite__column_text(stmt, 3, result_pool);
+
+      if (conflict_old || conflict_new || conflict_working)
+        {
+          svn_wc_conflict_description2_t *desc
+              = svn_wc_conflict_description_create_text2(local_abspath,
+                                                         result_pool);
+
+          desc->base_file = conflict_old;
+          desc->their_file = conflict_new;
+          desc->my_file = conflict_working;
+          desc->merged_file = svn_dirent_basename(local_abspath, result_pool);
+        
+          APR_ARRAY_PUSH(cflcts, svn_wc_conflict_description2_t*) = desc;
+        }
+    }
+
+  /* ### Tree conflicts are still stored on the directory */
+  {
+    svn_wc_conflict_description2_t *desc;
+
+    SVN_ERR(svn_wc__db_op_read_tree_conflict(&desc,
+                                             db, local_abspath,
+                                             result_pool, scratch_pool));
+
+    if (desc)
+      APR_ARRAY_PUSH(cflcts, svn_wc_conflict_description2_t*) = desc;
+  }
+
+  *conflicts = cflcts;
+
+  return SVN_NO_ERROR;
+}
+
 
 svn_error_t *
 svn_wc__db_read_kind(svn_wc__db_kind_t *kind,
