@@ -1820,38 +1820,32 @@ struct set_copied_baton_t
   const char *added_subtree_root_path;
 };
 
-/* An svn_wc_entry_callbacks2_t found_entry callback function.
+/* An svn_wc__node_found_func_t callback function.
  * Set the 'copied' flag on the given ENTRY for every PATH
  * under ((set_copied_baton_t *)WALK_BATON)->ADDED_SUBTREE_ROOT_PATH
  * which has a normal schedule. */
 static svn_error_t *
-set_copied_callback(const char *path,
-                    const svn_wc_entry_t *entry,
+set_copied_callback(const char *local_abspath,
                     void *walk_baton,
-                    apr_pool_t *pool)
+                    apr_pool_t *scratch_pool)
 {
   struct set_copied_baton_t *b = walk_baton;
+  const svn_wc_entry_t *entry;
 
-  if (svn_path_compare_paths(path, b->added_subtree_root_path) != 0)
+  if (strcmp(local_abspath, b->added_subtree_root_path) == 0)
+    return SVN_NO_ERROR; /* Don't touch the root */
+
+  SVN_ERR(svn_wc__get_entry(&entry, b->eb->db, local_abspath, FALSE,
+                            svn_node_unknown, FALSE,
+                            scratch_pool, scratch_pool));
+
+  if (entry->kind == svn_node_dir)
     {
-      svn_wc_adm_access_t *entry_adm_access;
+      const svn_wc_entry_t *parent_entry;
 
-      /* Determine which adm dir holds this entry */
-      /* ### This will fail if the operation holds only a shallow lock. */
-      /* Directories have two 'copied' flags, one in "this dir", and
-       * one in its entry in its parent dir. Handle both. */
-      if (strcmp(entry->name, SVN_WC_ENTRY_THIS_DIR) == 0)
-        {
-          /* It's the "this dir" entry in its own adm dir. */
-          SVN_ERR(svn_wc_adm_retrieve(&entry_adm_access, b->eb->adm_access,
-                                     path, pool));
-        }
-      else
-        {
-          /* It's an entry in its parent dir */
-          SVN_ERR(svn_wc_adm_retrieve(&entry_adm_access, b->eb->adm_access,
-                                      svn_dirent_dirname(path, pool), pool));
-        }
+      SVN_ERR(svn_wc__get_entry(&parent_entry, b->eb->db, local_abspath,
+                                FALSE, svn_node_unknown, TRUE,
+                                scratch_pool, scratch_pool));
 
       /* We don't want to mark a deleted PATH as copied.  If PATH
          is added without history we don't want to make it look like
@@ -1864,19 +1858,41 @@ set_copied_callback(const char *path,
 
           /* Set the 'copied' flag and write the entry out to disk. */
           tmp_entry.copied = TRUE;
-          SVN_ERR(svn_wc__entry_modify(entry_adm_access, entry->name,
+          SVN_ERR(svn_wc__entry_modify2(b->eb->db,
+                                        local_abspath,
+                                        svn_node_dir,
+                                        TRUE,
                                        &tmp_entry,
-                                       SVN_WC__ENTRY_MODIFY_COPIED, pool));
+                                       SVN_WC__ENTRY_MODIFY_COPIED,
+                                       scratch_pool));
         }
+    }
+
+  /* We don't want to mark a deleted PATH as copied.  If PATH
+     is added without history we don't want to make it look like
+     it has history.  If PATH is replaced we don't want to make
+     it look like it has history if it doesn't.  Only if PATH is
+     schedule normal do we need to mark it as copied. */
+  if (entry->schedule == svn_wc_schedule_normal)
+    {
+      svn_wc_entry_t tmp_entry;
+
+      /* Set the 'copied' flag and write the entry out to disk. */
+      tmp_entry.copied = TRUE;
+      SVN_ERR(svn_wc__entry_modify2(b->eb->db,
+                                    local_abspath,
+                                    entry->kind,
+                                    FALSE,
+                                    &tmp_entry,
+                                    SVN_WC__ENTRY_MODIFY_COPIED,
+                                    scratch_pool));
     }
   return SVN_NO_ERROR;
 }
 
-
-/* Schedule the WC item PATH, whose entry is ENTRY, for re-addition.
+/* Schedule the WC item LOCAL_ABSPATH, whose entry is ENTRY, for re-addition.
  * If MODIFY_COPYFROM is TRUE, re-add the item as a copy with history
- * of (ENTRY->url)@(ENTRY->rev). PATH's parent is PARENT_PATH.
- * PATH and PARENT_PATH are relative to the current working directory.
+ * of (ENTRY->url)@(ENTRY->rev). 
  * Assume that the item exists locally and is scheduled as still existing with
  * some local modifications relative to its (old) base, but does not exist in
  * the repository at the target revision.
@@ -1896,16 +1912,13 @@ set_copied_callback(const char *path,
 static svn_error_t *
 schedule_existing_item_for_re_add(const svn_wc_entry_t *entry,
                                   struct edit_baton *eb,
-                                  const char *parent_path,
-                                  const char *path,
+                                  const char *local_abspath,
                                   const char *their_url,
                                   svn_boolean_t modify_copyfrom,
                                   apr_pool_t *pool)
 {
-  const char *base_name = svn_dirent_basename(path, pool);
   svn_wc_entry_t tmp_entry;
   apr_uint64_t flags = 0;
-  svn_wc_adm_access_t *entry_adm_access;
 
   /* Update the details of the base rev/url to reflect the incoming
    * delete, while leaving the working version as it is, scheduling it
@@ -1932,40 +1945,36 @@ schedule_existing_item_for_re_add(const svn_wc_entry_t *entry,
 
   /* Determine which adm dir holds this node's entry */
   /* ### But this will fail if eb->adm_access holds only a shallow lock. */
-  SVN_ERR(svn_wc_adm_retrieve(&entry_adm_access, eb->adm_access,
-                              (entry->kind == svn_node_dir)
-                              ? path : parent_path, pool));
-
-  SVN_ERR(svn_wc__entry_modify(entry_adm_access,
-                               (entry->kind == svn_node_dir)
-                               ? SVN_WC_ENTRY_THIS_DIR : base_name,
-                               &tmp_entry, flags, pool));
+  SVN_ERR(svn_wc__entry_modify2(eb->db,
+                                local_abspath,
+                                entry->kind,
+                                FALSE,
+                                &tmp_entry,
+                                flags, pool));
 
   /* If it's a directory, set the 'copied' flag recursively. The rest of the
    * directory tree's state can stay exactly as it was before being
    * scheduled for re-add. */
+  /* ### BH: I don't think this code handles switched subpaths, excluded
+         and absent items in any usefull way. Needs carefull redesign */
   if (entry->kind == svn_node_dir)
     {
-      static const svn_wc_entry_callbacks2_t set_copied_callbacks
-        = { set_copied_callback, svn_wc__walker_default_error_handler };
       struct set_copied_baton_t set_copied_baton;
-      svn_wc_adm_access_t *parent_adm_access;
 
       /* Set the 'copied' flag recursively, to support the
        * cases where this is a directory. */
       set_copied_baton.eb = eb;
-      set_copied_baton.added_subtree_root_path = path;
-      SVN_ERR(svn_wc_walk_entries3(path, entry_adm_access,
-                                   &set_copied_callbacks, &set_copied_baton,
-                                   svn_depth_infinity, FALSE /* show_hidden */,
-                                   NULL, NULL, pool));
+      set_copied_baton.added_subtree_root_path = local_abspath;
+      SVN_ERR(svn_wc__internal_walk_children(eb->db, local_abspath, FALSE,
+                                             set_copied_callback,
+                                             &set_copied_baton,
+                                             svn_depth_infinity,
+                                             NULL, NULL, pool));
 
       /* If PATH is a directory then we must also record in PARENT_PATH's
          entry that we are re-adding PATH. */
       flags &= ~SVN_WC__ENTRY_MODIFY_URL;
-      SVN_ERR(svn_wc_adm_retrieve(&parent_adm_access, eb->adm_access,
-                                  parent_path, pool));
-      SVN_ERR(svn_wc__entry_modify(parent_adm_access, base_name,
+      SVN_ERR(svn_wc__entry_modify2(eb->db, local_abspath, svn_node_dir, TRUE,
                                    &tmp_entry, flags, pool));
 
       /* ### Need to do something more, such as change 'base' into 'revert-base'? */
@@ -2083,8 +2092,8 @@ do_entry_deletion(struct edit_baton *eb,
           SVN_ERR(svn_wc__run_log(parent_adm_access, pool));
           *log_number = 0;
 
-          SVN_ERR(schedule_existing_item_for_re_add(entry, eb, parent_path,
-                                                    full_path, their_url,
+          SVN_ERR(schedule_existing_item_for_re_add(entry, eb,
+                                                    local_abspath, their_url,
                                                     TRUE, pool));
           return SVN_NO_ERROR;
         }
@@ -2114,8 +2123,8 @@ do_entry_deletion(struct edit_baton *eb,
           SVN_ERR(svn_wc__run_log(parent_adm_access, pool));
           *log_number = 0;
 
-          SVN_ERR(schedule_existing_item_for_re_add(entry, eb, parent_path,
-                                                    full_path, their_url,
+          SVN_ERR(schedule_existing_item_for_re_add(entry, eb,
+                                                    local_abspath, their_url,
                                                     FALSE, pool));
           return SVN_NO_ERROR;
         }
