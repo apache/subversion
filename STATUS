@@ -114,7 +114,6 @@ Candidate changes:
    Votes:
      +1: stsp
      +1: sbutler (without r38831)
-     -0: neels (I genr'ly approve but want to check sth first - please wait.)
 
  * r35958, r36030, r38373, r38836, r38837, r38842
    Several fixes to the Win32 exception handler. This change also makes it
