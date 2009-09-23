@@ -5831,6 +5831,7 @@ svn_wc_merge4(enum svn_wc_merge_outcome_t *merge_outcome,
  * @since New in 1.5.
  * @deprecated Provided for backwards compatibility with the 1.6 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_merge3(enum svn_wc_merge_outcome_t *merge_outcome,
               const char *left,
@@ -5889,12 +5890,11 @@ svn_wc_merge(const char *left,
              apr_pool_t *pool);
 
 
-/** Given a @a path under version control, merge an array of @a
+/** Given a @a local_abspath under version control, merge an array of @a
  * propchanges into the path's existing properties.  @a propchanges is
  * an array of @c svn_prop_t objects, and @a baseprops is a hash
  * representing the original set of properties that @a propchanges is
- * working against.  @a adm_access is an access baton for the directory
- * containing @a path.
+ * working against.  @a wc_ctx contains a lock for @a local_abspath.
  *
  * If @a base_merge is @c FALSE only the working properties will be changed,
  * if it is @c TRUE both the base and working properties will be changed.
@@ -5908,11 +5908,38 @@ svn_wc_merge(const char *left,
  * are changed unconditionally, if @a base_merge is @c TRUE, they never result
  * in a conflict.
  *
- * If @a path is not under version control, return the error
+ * If @a cancel_func is non-NULL, invoke it with @a cancel_baton at various
+ * points during the operation.  If it returns an error (typically @c
+ * SVN_ERR_CANCELLED), return that error immediately.
+ *
+ * If @a local_abspath is not under version control, return the error
  * SVN_ERR_UNVERSIONED_RESOURCE and don't touch anyone's properties.
  *
- * @since New in 1.5.
+ * @since New in 1.7.
  */
+svn_error_t *
+svn_wc_merge_props3(svn_wc_notify_state_t *state,
+                    svn_wc_context_t *wc_ctx,
+                    const char *local_abspath,
+                    const svn_wc_conflict_version_t *left_version,
+                    const svn_wc_conflict_version_t *right_version,
+                    apr_hash_t *baseprops,
+                    const apr_array_header_t *propchanges,
+                    svn_boolean_t base_merge,
+                    svn_boolean_t dry_run,
+                    svn_wc_conflict_resolver_func_t conflict_func,
+                    void *conflict_baton,
+                    svn_cancel_func_t cancel_func,
+                    void *cancel_baton,
+                    apr_pool_t *scratch_pool);
+
+/** Similar to svn_wc_merge_props3, but takes an access baton and relative
+ * path, no cancel_function and no left and right version.
+ *
+ * @since New in 1.5.
+ * @deprecated Provided for backward compatibility with the 1.6 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_merge_props2(svn_wc_notify_state_t *state,
                     const char *path,

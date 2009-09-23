@@ -2933,14 +2933,21 @@ close_directory(void *dir_baton,
 
           /* Merge pending properties into temporary files (ignoring
              conflicts). */
-          SVN_ERR_W(svn_wc__merge_props(&prop_state,
-                                        adm_access, db->path,
+          SVN_ERR_W(svn_wc__merge_props(&dirprop_log,
+                                        &prop_state,
+                                        db->edit_baton->db,
+                                        adm_access, 
+                                        db->path,
+                                        NULL, /* left_version */
+                                        NULL, /* right_version */
                                         NULL /* use baseprops */,
                                         base_props, working_props,
                                         regular_props, TRUE, FALSE,
                                         db->edit_baton->conflict_func,
                                         db->edit_baton->conflict_baton,
-                                        db->pool, &dirprop_log),
+                                        db->edit_baton->cancel_func,
+                                        db->edit_baton->cancel_baton,
+                                        db->pool),
                     _("Couldn't do property merge"));
         }
 
@@ -4035,11 +4042,15 @@ merge_props(svn_stringbuf_t *log_accum,
             svn_wc_notify_lock_state_t *lock_state,
             svn_wc_adm_access_t *adm_access,
             const char *file_path,
+            const svn_wc_conflict_version_t *left_version,
+            const svn_wc_conflict_version_t *right_version,
             const apr_array_header_t *prop_changes,
             apr_hash_t *base_props,
             apr_hash_t *working_props,
             svn_wc_conflict_resolver_func_t conflict_func,
             void *conflict_baton,
+            svn_cancel_func_t cancel_func,
+            void *cancel_baton,
             apr_pool_t *pool)
 {
   apr_array_header_t *regular_props = NULL, *wc_props = NULL,
@@ -4059,14 +4070,19 @@ merge_props(svn_stringbuf_t *log_accum,
       /* This will merge the old and new props into a new prop db, and
          write <cp> commands to the logfile to install the merged
          props.  */
-      SVN_ERR(svn_wc__merge_props(prop_state,
+      SVN_ERR(svn_wc__merge_props(&log_accum,
+                                  prop_state,
+                                  svn_wc__adm_get_db(adm_access),
                                   adm_access, file_path,
+                                  left_version,
+                                  right_version,
                                   NULL /* update, not merge */,
                                   base_props,
                                   working_props,
                                   regular_props, TRUE, FALSE,
                                   conflict_func, conflict_baton,
-                                  pool, &log_accum));
+                                  cancel_func, cancel_baton,
+                                  pool));
     }
 
   /* If there are any ENTRY PROPS, make sure those get appended to the
@@ -4199,6 +4215,8 @@ merge_file(svn_wc_notify_state_t *content_state,
   enum svn_wc_merge_outcome_t merge_outcome = svn_wc_merge_unchanged;
   const svn_wc_entry_t *entry;
   const char *local_abspath;
+  svn_wc_conflict_version_t *left_version = NULL; /* ### Fill */
+  svn_wc_conflict_version_t *right_version = NULL; /* ### Fill */
 
   /* Accumulated entry modifications. */
   svn_wc_entry_t tmp_entry;
@@ -4250,9 +4268,12 @@ merge_file(svn_wc_notify_state_t *content_state,
      any file content merging, since that process might expand keywords, in
      which case we want the new entryprops to be in place. */
   SVN_ERR(merge_props(log_accum, prop_state, lock_state, adm_access,
-                      fb->path, fb->propchanges,
+                      fb->path,
+                      left_version, right_version,
+                      fb->propchanges,
                       fb->copied_base_props, fb->copied_working_props,
-                      eb->conflict_func, eb->conflict_baton, pool));
+                      eb->conflict_func, eb->conflict_baton,
+                      eb->cancel_func, eb->cancel_baton, pool));
 
   /* Has the user made local mods to the working file?
      Note that this compares to the current pristine file, which is
@@ -4430,8 +4451,8 @@ merge_file(svn_wc_notify_state_t *content_state,
               SVN_ERR(svn_wc__merge_internal(
                        &log_accum, &merge_outcome,
                        eb->db,
-                       merge_left, NULL,
-                       new_text_base_path, NULL,
+                       merge_left, left_version,
+                       new_text_base_path, right_version,
                        fb->path,
                        fb->copied_working_text,
                        oldrev_str, newrev_str, mine_str,

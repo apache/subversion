@@ -84,7 +84,7 @@ svn_wc__internal_propset(svn_wc__db_t *db,
                          apr_pool_t *scratch_pool);
 
 
-/* Given ADM_ACCESS/PATH and an array of PROPCHANGES based on
+/* Given ADM_ACCESS/PATH/DB and an array of PROPCHANGES based on
    SERVER_BASEPROPS, merge the changes into the working copy.
    Append all necessary log entries to ENTRY_ACCUM.
 
@@ -105,19 +105,25 @@ svn_wc__internal_propset(svn_wc__db_t *db,
 
    If STATE is non-null, set *STATE to the state of the local properties
    after the merge.  */
-svn_error_t *svn_wc__merge_props(svn_wc_notify_state_t *state,
-                                 svn_wc_adm_access_t *adm_access,
-                                 const char *path,
-                                 apr_hash_t *server_baseprops,
-                                 apr_hash_t *base_props,
-                                 apr_hash_t *working_props,
-                                 const apr_array_header_t *propchanges,
-                                 svn_boolean_t base_merge,
-                                 svn_boolean_t dry_run,
-                                 svn_wc_conflict_resolver_func_t conflict_func,
-                                 void *conflict_baton,
-                                 apr_pool_t *pool,
-                                 svn_stringbuf_t **entry_accum);
+svn_error_t *
+svn_wc__merge_props(svn_stringbuf_t **entry_accum,
+                    svn_wc_notify_state_t *state,
+                    svn_wc__db_t *db,
+                    svn_wc_adm_access_t *adm_access,
+                    const char *path,
+                    const svn_wc_conflict_version_t *left_version,
+                    const svn_wc_conflict_version_t *right_version,
+                    apr_hash_t *server_baseprops,
+                    apr_hash_t *base_props,
+                    apr_hash_t *working_props,
+                    const apr_array_header_t *propchanges,
+                    svn_boolean_t base_merge,
+                    svn_boolean_t dry_run,
+                    svn_wc_conflict_resolver_func_t conflict_func,
+                    void *conflict_baton,
+                    svn_cancel_func_t cancel_func,
+                    void *cancel_baton,
+                    apr_pool_t *pool);
 
 /* Set a single 'wcprop' NAME to VALUE for versioned object LOCAL_ABSPATH.
    If VALUE is null, remove property NAME.  */

@@ -656,24 +656,35 @@ combine_forked_mergeinfo_props(const svn_string_t **output,
 
 
 svn_error_t *
-svn_wc_merge_props2(svn_wc_notify_state_t *state,
-                    const char *path,
-                    svn_wc_adm_access_t *adm_access,
+svn_wc_merge_props3(svn_wc_notify_state_t *state,
+                    svn_wc_context_t *wc_ctx,
+                    const char *local_abspath,
+                    const svn_wc_conflict_version_t *left_version,
+                    const svn_wc_conflict_version_t *right_version,
                     apr_hash_t *baseprops,
                     const apr_array_header_t *propchanges,
                     svn_boolean_t base_merge,
                     svn_boolean_t dry_run,
                     svn_wc_conflict_resolver_func_t conflict_func,
                     void *conflict_baton,
-                    apr_pool_t *pool)
+                    svn_cancel_func_t cancel_func,
+                    void *cancel_baton,
+                    apr_pool_t *pool /* scratch_pool */)
 {
   const svn_wc_entry_t *entry;
   svn_stringbuf_t *log_accum;
+  svn_wc_adm_access_t *adm_access;
+  const char *path;
+
+  SVN_ERR(svn_wc__temp_get_relpath(&path, wc_ctx->db, local_abspath,
+                                   pool, pool));
 
   /* IMPORTANT: svn_wc_merge_prop_diffs relies on the fact that baseprops
      may be NULL. */
 
-  SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access, FALSE, pool));
+  SVN_ERR(svn_wc__get_entry_versioned(&entry, wc_ctx, local_abspath,
+                                      svn_node_unknown, FALSE, FALSE,
+                                      pool, pool));
 
   /* Notice that we're not using svn_path_split_if_file(), because
      that looks at the actual working file.  Its existence shouldn't
@@ -681,20 +692,35 @@ svn_wc_merge_props2(svn_wc_notify_state_t *state,
   switch (entry->kind)
     {
     case svn_node_dir:
+      adm_access = svn_wc__adm_retrieve_internal2(wc_ctx->db, local_abspath,
+                                                  pool);
+      break;
     case svn_node_file:
+      adm_access = svn_wc__adm_retrieve_internal2(wc_ctx->db,
+                                                  svn_dirent_dirname(
+                                                             local_abspath,
+                                                             pool),
+                                                  pool);
       break;
     default:
       return SVN_NO_ERROR; /* ### svn_node_none or svn_node_unknown */
     }
+
+  SVN_ERR_ASSERT(adm_access != NULL);
 
   if (! dry_run)
     log_accum = svn_stringbuf_create("", pool);
 
   /* Note that while this routine does the "real" work, it's only
      prepping tempfiles and writing log commands.  */
-  SVN_ERR(svn_wc__merge_props(state, adm_access, path, baseprops, NULL, NULL,
+  SVN_ERR(svn_wc__merge_props(&log_accum, state, 
+                              wc_ctx->db, adm_access, path,
+                              NULL, NULL,
+                              baseprops, NULL, NULL,
                               propchanges, base_merge, dry_run,
-                              conflict_func, conflict_baton, pool, &log_accum));
+                              conflict_func, conflict_baton,
+                              cancel_func, cancel_baton,
+                              pool));
 
   if (! dry_run)
     {
@@ -786,6 +812,8 @@ static svn_error_t *
 maybe_generate_propconflict(svn_boolean_t *conflict_remains,
                             svn_wc__db_t *db,
                             const char *local_abspath,
+                            const svn_wc_conflict_version_t *left_version,
+                            const svn_wc_conflict_version_t *right_version,
                             svn_boolean_t is_dir,
                             const char *propname,
                             apr_hash_t *working_props,
@@ -795,14 +823,19 @@ maybe_generate_propconflict(svn_boolean_t *conflict_remains,
                             const svn_string_t *working_val,
                             svn_wc_conflict_resolver_func_t conflict_func,
                             void *conflict_baton,
+                            svn_cancel_func_t cancel_func,
+                            void *cancel_baton,
                             apr_pool_t *scratch_pool)
 {
   svn_wc_conflict_result_t *result = NULL;
   svn_string_t *mime_propval = NULL;
   apr_pool_t *filepool = svn_pool_create(scratch_pool);
-  svn_wc_conflict_description_t *cdesc;
+  svn_wc_conflict_description2_t *cdesc;
   const char *dirpath = svn_dirent_dirname(local_abspath, filepool);
   svn_wc_adm_access_t *adm_access;
+
+  if (cancel_func)
+    SVN_ERR(cancel_func(cancel_baton));
 
   if (! conflict_func)
     {
@@ -813,9 +846,12 @@ maybe_generate_propconflict(svn_boolean_t *conflict_remains,
 
   adm_access = svn_wc__db_temp_get_access(db, local_abspath, scratch_pool);
 
-  cdesc = svn_wc_conflict_description_create_prop(
-    local_abspath, adm_access,
+  cdesc = svn_wc_conflict_description_create_prop2(
+    local_abspath,
     is_dir ? svn_node_dir : svn_node_file, propname, scratch_pool);
+
+  cdesc->src_left_version = left_version;
+  cdesc->src_right_version = right_version;
 
   /* Create a tmpfile for each of the string_t's we've got.  */
   if (working_val)
@@ -929,7 +965,10 @@ maybe_generate_propconflict(svn_boolean_t *conflict_remains,
     cdesc->reason = svn_wc_conflict_reason_edited;
 
   /* Invoke the interactive conflict callback. */
-  SVN_ERR(conflict_func(&result, cdesc, conflict_baton, scratch_pool));
+  {
+    svn_wc_conflict_description_t *cd = svn_wc__cd2_to_cd(cdesc, scratch_pool);
+    SVN_ERR(conflict_func(&result, cd, conflict_baton, scratch_pool));
+  }
   if (result == NULL)
     {
       *conflict_remains = TRUE;
@@ -1023,6 +1062,8 @@ apply_single_prop_add(svn_wc_notify_state_t *state,
                       svn_string_t **conflict,
                       svn_wc__db_t *db,
                       const char *local_abspath,
+                      const svn_wc_conflict_version_t *left_version,
+                      const svn_wc_conflict_version_t *right_version,
                       svn_boolean_t is_dir,
                       apr_hash_t *working_props,
                       const char *propname,
@@ -1030,6 +1071,8 @@ apply_single_prop_add(svn_wc_notify_state_t *state,
                       const svn_string_t *new_val,
                       svn_wc_conflict_resolver_func_t conflict_func,
                       void *conflict_baton,
+                      svn_cancel_func_t cancel_func,
+                      void *cancel_baton,
                       apr_pool_t *result_pool,
                       apr_pool_t *scratch_pool)
 
@@ -1064,11 +1107,14 @@ apply_single_prop_add(svn_wc_notify_state_t *state,
           else
             {
               SVN_ERR(maybe_generate_propconflict(&got_conflict, db,
-                                                  local_abspath, is_dir,
+                                                  local_abspath,
+                                                  left_version, right_version,
+                                                  is_dir,
                                                   propname, working_props,
                                                   NULL, new_val,
                                                   base_val, working_val,
                                                   conflict_func, conflict_baton,
+                                                  cancel_func, cancel_baton,
                                                   scratch_pool));
               if (got_conflict)
                 *conflict = svn_string_createf
@@ -1082,10 +1128,12 @@ apply_single_prop_add(svn_wc_notify_state_t *state,
   else if (base_val)
     {
       SVN_ERR(maybe_generate_propconflict(&got_conflict, db, local_abspath,
+                                          left_version, right_version,
                                           is_dir, propname,
                                           working_props, NULL, new_val,
                                           base_val, NULL,
                                           conflict_func, conflict_baton,
+                                          cancel_func, cancel_baton,
                                           scratch_pool));
       if (got_conflict)
         *conflict = svn_string_createf
@@ -1124,6 +1172,8 @@ apply_single_prop_delete(svn_wc_notify_state_t *state,
                          svn_string_t **conflict,
                          svn_wc__db_t *db,
                          const char *local_abspath,
+                         const svn_wc_conflict_version_t *left_version,
+                         const svn_wc_conflict_version_t *right_version,
                          svn_boolean_t is_dir,
                          apr_hash_t *working_props,
                          const char *propname,
@@ -1131,6 +1181,8 @@ apply_single_prop_delete(svn_wc_notify_state_t *state,
                          const svn_string_t *old_val,
                          svn_wc_conflict_resolver_func_t conflict_func,
                          void *conflict_baton,
+                         svn_cancel_func_t cancel_func,
+                         void *cancel_baton,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool)
 {
@@ -1156,11 +1208,14 @@ apply_single_prop_delete(svn_wc_notify_state_t *state,
            else
              {
                SVN_ERR(maybe_generate_propconflict(&got_conflict, db,
-                                                   local_abspath, is_dir,
+                                                   local_abspath,
+                                                   left_version, right_version,
+                                                   is_dir,
                                                    propname, working_props,
                                                    old_val, NULL,
                                                    base_val, working_val,
                                                    conflict_func, conflict_baton,
+                                                   cancel_func, cancel_baton,
                                                    scratch_pool));
                if (got_conflict)
                  *conflict = svn_string_createf
@@ -1179,10 +1234,12 @@ apply_single_prop_delete(svn_wc_notify_state_t *state,
   else
     {
       SVN_ERR(maybe_generate_propconflict(&got_conflict, db, local_abspath,
+                                          left_version, right_version,
                                           is_dir, propname,
                                           working_props, old_val, NULL,
                                           base_val, working_val,
                                           conflict_func, conflict_baton,
+                                          cancel_func, cancel_baton,
                                           scratch_pool));
       if (got_conflict)
         *conflict = svn_string_createf
@@ -1208,6 +1265,8 @@ apply_single_mergeinfo_prop_change(svn_wc_notify_state_t *state,
                                    svn_string_t **conflict,
                                    svn_wc__db_t *db,
                                    const char *local_abspath,
+                                   const svn_wc_conflict_version_t *left_version,
+                                   const svn_wc_conflict_version_t *right_version,
                                    svn_boolean_t is_dir,
                                    apr_hash_t *working_props,
                                    const char *propname,
@@ -1216,6 +1275,8 @@ apply_single_mergeinfo_prop_change(svn_wc_notify_state_t *state,
                                    const svn_string_t *new_val,
                                    svn_wc_conflict_resolver_func_t conflict_func,
                                    void *conflict_baton,
+                                   svn_cancel_func_t cancel_func,
+                                   void *cancel_baton,
                                    apr_pool_t *result_pool,
                                    apr_pool_t *scratch_pool)
 {
@@ -1253,10 +1314,12 @@ apply_single_mergeinfo_prop_change(svn_wc_notify_state_t *state,
         {
           /* There is a base_val but no working_val */
           SVN_ERR(maybe_generate_propconflict(&got_conflict, db, local_abspath,
+                                              left_version, right_version,
                                               is_dir, propname, working_props,
                                               old_val, new_val,
                                               base_val, working_val,
                                               conflict_func, conflict_baton,
+                                              cancel_func, cancel_baton,
                                               scratch_pool));
           if (got_conflict)
             *conflict = svn_string_createf
@@ -1315,6 +1378,8 @@ apply_single_generic_prop_change(svn_wc_notify_state_t *state,
                                  svn_string_t **conflict,
                                  svn_wc__db_t *db,
                                  const char *local_abspath,
+                                 const svn_wc_conflict_version_t *left_version,
+                                 const svn_wc_conflict_version_t *right_version,
                                  svn_boolean_t is_dir,
                                  apr_hash_t *working_props,
                                  const char *propname,
@@ -1323,6 +1388,8 @@ apply_single_generic_prop_change(svn_wc_notify_state_t *state,
                                  const svn_string_t *new_val,
                                  svn_wc_conflict_resolver_func_t conflict_func,
                                  void *conflict_baton,
+                                 svn_cancel_func_t cancel_func,
+                                 void *cancel_baton,
                                  apr_pool_t *result_pool,
                                  apr_pool_t *scratch_pool)
 {
@@ -1342,10 +1409,12 @@ apply_single_generic_prop_change(svn_wc_notify_state_t *state,
     {
       /* Merge the change. */
       SVN_ERR(maybe_generate_propconflict(&got_conflict, db, local_abspath,
+                                          left_version, right_version,
                                           is_dir, propname, working_props,
                                           old_val, new_val,
                                           base_val, working_val,
                                           conflict_func, conflict_baton,
+                                          cancel_func, cancel_baton,
                                           scratch_pool));
       if (got_conflict)
         {
@@ -1414,6 +1483,8 @@ apply_single_prop_change(svn_wc_notify_state_t *state,
                          svn_string_t **conflict,
                          svn_wc__db_t *db,
                          const char *local_abspath,
+                         const svn_wc_conflict_version_t *left_version,
+                         const svn_wc_conflict_version_t *right_version,
                          svn_boolean_t is_dir,
                          apr_hash_t *working_props,
                          const char *propname,
@@ -1422,6 +1493,8 @@ apply_single_prop_change(svn_wc_notify_state_t *state,
                          const svn_string_t *new_val,
                          svn_wc_conflict_resolver_func_t conflict_func,
                          void *conflict_baton,
+                         svn_cancel_func_t cancel_func,
+                         void *cancel_baton,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool)
 {
@@ -1437,11 +1510,14 @@ apply_single_prop_change(svn_wc_notify_state_t *state,
       /* We know how to merge any mergeinfo property change. */
 
       SVN_ERR(apply_single_mergeinfo_prop_change(state, conflict, db,
-                                                 local_abspath, is_dir,
+                                                 local_abspath,
+                                                 left_version, right_version,
+                                                 is_dir,
                                                  working_props,
                                                  propname, base_val, old_val,
-                                                 new_val, conflict_func,
-                                                 conflict_baton,
+                                                 new_val,
+                                                 conflict_func, conflict_baton,
+                                                 cancel_func, cancel_baton,
                                                  result_pool, scratch_pool));
     }
   else
@@ -1450,11 +1526,14 @@ apply_single_prop_change(svn_wc_notify_state_t *state,
          pass any other kind of merge to maybe_generate_propconflict(). */
 
       SVN_ERR(apply_single_generic_prop_change(state, conflict, db,
-                                               local_abspath, is_dir,
+                                               local_abspath,
+                                               left_version, right_version,
+                                               is_dir,
                                                working_props,
                                                propname, base_val, old_val,
-                                               new_val, conflict_func,
-                                               conflict_baton,
+                                               new_val,
+                                               conflict_func, conflict_baton,
+                                               cancel_func, cancel_baton,
                                                result_pool, scratch_pool));
     }
 
@@ -1463,9 +1542,13 @@ apply_single_prop_change(svn_wc_notify_state_t *state,
 
 
 svn_error_t *
-svn_wc__merge_props(svn_wc_notify_state_t *state,
+svn_wc__merge_props(svn_stringbuf_t **entry_accum,
+                    svn_wc_notify_state_t *state,
+                    svn_wc__db_t *db,
                     svn_wc_adm_access_t *adm_access,
                     const char *path,
+                    const svn_wc_conflict_version_t *left_version,
+                    const svn_wc_conflict_version_t *right_version,
                     apr_hash_t *server_baseprops,
                     apr_hash_t *base_props,
                     apr_hash_t *working_props,
@@ -1474,10 +1557,10 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
                     svn_boolean_t dry_run,
                     svn_wc_conflict_resolver_func_t conflict_func,
                     void *conflict_baton,
-                    apr_pool_t *pool,
-                    svn_stringbuf_t **entry_accum)
+                    svn_cancel_func_t cancel_func,
+                    void *cancel_baton,
+                    apr_pool_t *pool)
 {
-  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
   apr_pool_t *iterpool;
   int i;
   svn_boolean_t is_dir;
@@ -1562,25 +1645,34 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
 
       if (! from_val)  /* adding a new property */
         SVN_ERR(apply_single_prop_add(is_normal ? state : NULL, &conflict,
-                                      db, local_abspath, is_dir, working_props,
+                                      db, local_abspath,
+                                      left_version, right_version,
+                                      is_dir, working_props,
                                       propname, base_val, to_val,
                                       conflict_func, conflict_baton,
+                                      cancel_func, cancel_baton,
                                       pool, iterpool));
 
       else if (! to_val) /* delete an existing property */
         SVN_ERR(apply_single_prop_delete(is_normal ? state : NULL, &conflict,
-                                         db, local_abspath, is_dir,
+                                         db, local_abspath, 
+                                         left_version, right_version,
+                                         is_dir,
                                          working_props,
                                          propname, base_val, from_val,
                                          conflict_func, conflict_baton,
+                                         cancel_func, cancel_baton,
                                          pool, iterpool));
 
       else  /* changing an existing property */
         SVN_ERR(apply_single_prop_change(is_normal ? state : NULL, &conflict,
-                                         db, local_abspath, is_dir,
+                                         db, local_abspath,
+                                         left_version, right_version,
+                                         is_dir,
                                          working_props,
                                          propname, base_val, from_val, to_val,
                                          conflict_func, conflict_baton,
+                                         cancel_func, cancel_baton,
                                          pool, iterpool));
 
 
