@@ -597,7 +597,7 @@ read_entries_new(apr_hash_t **result_entries,
                 result_pool,
                 iterpool));
 
-      if (kind == svn_wc__db_kind_dir)
+      if (strcmp(entry->name, SVN_WC_ENTRY_THIS_DIR) == 0)
         {
           /* get the tree conflict data. */
           apr_hash_t *tree_conflicts = NULL;
