@@ -1026,14 +1026,15 @@ log_do_committed(struct log_runner *loggy,
 
       for(i = 0; i < children->nelts; i++)
         {
-          const char *name = APR_ARRAY_IDX(children, i, const char*);
+          const char *child_name = APR_ARRAY_IDX(children, i, const char*);
           const char *child_abspath;
           svn_wc__db_kind_t kind;
           svn_boolean_t is_file;
           const svn_wc_entry_t *entry;
 
           apr_pool_clear(iterpool);
-          child_abspath = svn_dirent_join(loggy->adm_abspath, name, iterpool);
+          child_abspath = svn_dirent_join(loggy->adm_abspath, child_name,
+                                          iterpool);
 
           SVN_ERR(svn_wc__db_read_kind(&kind, loggy->db, child_abspath, TRUE,
                                        iterpool));
