@@ -1030,7 +1030,7 @@ log_do_committed(struct log_runner *loggy,
           const char *child_abspath;
           svn_wc__db_kind_t kind;
           svn_boolean_t is_file;
-          const svn_wc_entry_t *entry;
+          const svn_wc_entry_t *child_entry;
 
           apr_pool_clear(iterpool);
           child_abspath = svn_dirent_join(loggy->adm_abspath, child_name,
@@ -1042,11 +1042,12 @@ log_do_committed(struct log_runner *loggy,
           is_file = (kind == svn_wc__db_kind_file ||
                      kind == svn_wc__db_kind_symlink);
 
-          SVN_ERR(svn_wc__get_entry(&entry, loggy->db, child_abspath, FALSE,
+          SVN_ERR(svn_wc__get_entry(&child_entry, loggy->db, child_abspath,
+                                    FALSE,
                                     is_file ? svn_node_file : svn_node_dir,
                                     !is_file, iterpool, iterpool));
 
-          if (entry->schedule != svn_wc_schedule_delete)
+          if (child_entry->schedule != svn_wc_schedule_delete)
             continue;
 
           /* ### We pass NULL, NULL for cancel_func and cancel_baton below.
