@@ -111,10 +111,12 @@ tweak_entries(svn_wc__db_t *db,
   if (apr_hash_get(exclude_paths, dir_abspath, APR_HASH_KEY_STRING))
     return SVN_NO_ERROR;
 
+  iterpool = svn_pool_create(pool);
+
   /* Tweak "this_dir" */
   SVN_ERR(svn_wc__tweak_entry(db, dir_abspath, FALSE, svn_node_dir,
                               base_url, new_rev,
-                              FALSE /* allow_removal */, pool));
+                              FALSE /* allow_removal */, iterpool));
 
   if (depth == svn_depth_unknown)
     depth = svn_depth_infinity;
@@ -123,9 +125,8 @@ tweak_entries(svn_wc__db_t *db,
   if (depth <= svn_depth_empty)
     return SVN_NO_ERROR;
 
-  SVN_ERR(svn_wc__db_read_children(&children, db, dir_abspath, pool, pool));
-
-  iterpool = svn_pool_create(pool);
+  SVN_ERR(svn_wc__db_base_get_children(&children, db, dir_abspath,
+                                       pool, iterpool));
   for (i = 0; i < children->nelts; i++)
     {
       const char *child_basename = APR_ARRAY_IDX(children, i, const char *);
