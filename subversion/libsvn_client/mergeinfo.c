@@ -1304,9 +1304,9 @@ filter_log_entry_with_rangelist(void *baton,
       svn_boolean_t all_subtrees_have_this_rev = TRUE;
       apr_array_header_t *this_rev_rangelist =
         apr_array_make(pool, 1, sizeof(svn_merge_range_t *));
-      svn_merge_range_t *range = apr_pcalloc(pool, sizeof(*range));
       apr_pool_t *iterpool = svn_pool_create(pool);
  
+      range = apr_pcalloc(pool, sizeof(*range));
       range->start = log_entry->revision - 1;
       range->end = log_entry->revision;
       range->inheritable = TRUE;
@@ -1323,7 +1323,6 @@ filter_log_entry_with_rangelist(void *baton,
           apr_size_t tgt_root_dir_len;
           svn_mergeinfo_t nearest_ancestor_mergeinfo;
           apr_hash_index_t *hi2;
-          apr_array_header_t *intersection;
           svn_boolean_t found_this_revision = FALSE;
 
           svn_pool_clear(iterpool);
