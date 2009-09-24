@@ -109,8 +109,6 @@ Candidate changes:
          r38099, r38100, r38803, r39000, r39002, r39007, r39052
        Eliminate duplicate notifications and improve error messages:
          r38831, r38896, r38907, r39008, r39096, r39124, r39125, r39127
-       Remove a redundant check:
-         r38831
    Branch:
      ^/branches/1.6.x-r38000
    Votes:
