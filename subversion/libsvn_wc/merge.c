@@ -917,7 +917,6 @@ merge_text_file(svn_stringbuf_t **log_accum,
   else
     {
       svn_boolean_t same, special;
-      svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
       const char *merge_abspath;
 
       SVN_ERR(svn_dirent_get_absolute(&merge_abspath, merge_target, pool));
