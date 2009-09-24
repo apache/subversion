@@ -162,14 +162,11 @@ run_revert(svn_wc__db_t *db,
      (yet) allowed. If we read any conflict files, then we (obviously) have
      not removed them from the metadata (yet).  */
   SVN_ERR(svn_wc__db_read_info(
-            NULL, &kind, NULL,
-            NULL, NULL, NULL,
-            NULL, NULL, NULL,
-            NULL, NULL, NULL, NULL, NULL, NULL,
-            NULL, NULL, NULL, NULL,
-            NULL, NULL, NULL,
+            NULL, &kind, NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL, NULL, NULL, NULL,
             &conflict_old, &conflict_new, &conflict_wrk, &prop_reject_file,
-            NULL, NULL,
+            NULL,
             db, local_abspath,
             scratch_pool, scratch_pool));
 
@@ -483,14 +480,10 @@ svn_wc__wq_add_revert(svn_boolean_t *will_revert,
   svn_boolean_t magic_changed = FALSE;
 
   SVN_ERR(svn_wc__db_read_info(
-            &status, &kind, NULL,
-            NULL, NULL, NULL,
-            NULL, NULL, NULL,
-            NULL, NULL, NULL, NULL, NULL, NULL,
-            NULL, NULL, NULL, NULL,
-            NULL, NULL, NULL,
-            NULL, NULL, NULL, NULL,
-            NULL, NULL,
+            &status, &kind, NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL, NULL,
             db, local_abspath,
             scratch_pool, scratch_pool));
 

@@ -141,7 +141,7 @@ compare_and_verify(svn_boolean_t *modified_p,
                                        NULL, &node_checksum, NULL, NULL,
                                        NULL, NULL, NULL, NULL, NULL,
                                        NULL, NULL, NULL,
-                                       NULL, NULL, NULL, NULL, NULL, NULL,
+                                       NULL, NULL, NULL, NULL, NULL,
                                        db, versioned_file_abspath,
                                        scratch_pool, scratch_pool));
 
@@ -316,7 +316,7 @@ svn_wc__text_modified_internal_p(svn_boolean_t *modified_p,
                                  NULL, NULL, &last_mod_time, NULL, NULL,
                                  &translated_size , NULL,
                                  NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                 NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                 NULL, NULL, NULL, NULL, NULL, NULL,
                                  db, local_abspath,
                                  scratch_pool, scratch_pool);
       if (err)
@@ -421,8 +421,7 @@ svn_wc__internal_conflicted_p(svn_boolean_t *text_conflicted_p,
                                NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL,
                                &conflict_old, &conflict_new,
-                               &conflict_working, &prop_rej_file,
-                               NULL, NULL,
+                               &conflict_working, &prop_rej_file, NULL,
                                db, local_abspath, scratch_pool,
                                scratch_pool));
 
@@ -548,13 +547,11 @@ svn_wc__internal_is_replaced(svn_boolean_t *replaced,
 
   SVN_ERR(svn_wc__db_read_info(
             &status, NULL, NULL,
-            NULL, NULL, NULL,
-            NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL, NULL, NULL,
             NULL, NULL, NULL, NULL, NULL, NULL,
             NULL, NULL, NULL, NULL,
             NULL, NULL, &base_shadowed,
-            NULL, NULL, NULL, NULL,
-            NULL, NULL,
+            NULL, NULL, NULL, NULL, NULL,
             db, local_abspath,
             scratch_pool, scratch_pool));
   if (base_shadowed)

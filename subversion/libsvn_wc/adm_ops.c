@@ -153,7 +153,7 @@ tweak_entries(svn_wc__db_t *db,
                                    NULL, NULL, NULL, NULL, &child_depth, NULL,
                                    NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                    NULL, NULL, NULL,
-                                   NULL, NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, NULL,
                                    db, child_abspath, iterpool, iterpool));
 
       /* If a file, or deleted, excluded or absent dir, then tweak the
@@ -1081,7 +1081,7 @@ erase_from_wc(svn_wc__db_t *db,
                                        NULL, NULL, NULL, NULL, NULL, &depth,
                                        NULL, NULL, NULL, NULL, NULL, NULL,
                                        NULL, NULL, NULL, NULL, NULL, NULL,
-                                       NULL, NULL, NULL, NULL, NULL,
+                                       NULL, NULL, NULL, NULL,
                                        db, node_abspath, iterpool, iterpool));
 
           if (status == svn_wc__db_status_absent ||
@@ -2528,7 +2528,7 @@ resolve_conflict_on_node(svn_wc__db_t *db,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, &conflict_old, &conflict_new,
                                &conflict_working, &prop_reject_file,
-                               NULL, NULL,
+                               NULL,
                                db, local_abspath, pool, pool));
 
   if (kind == svn_wc__db_kind_dir)
@@ -2977,7 +2977,7 @@ svn_wc_set_changelist2(svn_wc_context_t *wc_ctx,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                &existing_changelist,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL,
                                wc_ctx->db, local_abspath, scratch_pool,
                                scratch_pool));
 
@@ -3087,7 +3087,7 @@ svn_wc__internal_changelist_match(svn_wc__db_t *db,
                              NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                              &changelist,
                              NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                             NULL, NULL, NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL, NULL,
                              db, local_abspath, scratch_pool, scratch_pool);
 
   if (err)

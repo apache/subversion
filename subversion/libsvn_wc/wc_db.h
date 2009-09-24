@@ -1094,7 +1094,6 @@ svn_wc__db_op_set_tree_conflict(svn_wc__db_t *db,
  *   CONFLICT_WORKING        NULL
  *   PROP_REJECT_FILE        NULL
  *   LOCK                    NULL
- *   TREE_CONFLICT_DATA      NULL
  *
  * If DEPTH is requested, and the node is NOT a directory, then
  * the value will be set to svn_depth_unknown.
@@ -1189,12 +1188,6 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,  /* ### derived */
                      const char **prop_reject_file,  /* ### is this right? */
 
                      svn_wc__db_lock_t **lock,
-
-                     /* ### this should eventually turn into a 
-                        ### svn_wc_conflict_description2_t, but for the time
-                        ### being, we're just going to return the raw text
-                        ### and let the caller deal with it. */
-                     const char **tree_conflict_data,
 
                      svn_wc__db_t *db,
                      const char *local_abspath,

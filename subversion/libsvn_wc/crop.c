@@ -83,7 +83,7 @@ crop_children(svn_wc__db_t *db,
   SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, &dir_depth,
                                NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL,
                                db, local_abspath, pool, iterpool));
 
@@ -112,7 +112,7 @@ crop_children(svn_wc__db_t *db,
       SVN_ERR(svn_wc__db_read_info(NULL, &kind, NULL, NULL, NULL, NULL,
                                    NULL, NULL, NULL, NULL, &child_depth,
                                    NULL, NULL, NULL, NULL, NULL, NULL,
-                                   NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, NULL, NULL,
                                    NULL, NULL, NULL, NULL,
                                    db, child_abspath, iterpool, iterpool));
 
@@ -230,7 +230,7 @@ svn_wc_crop_tree2(svn_wc_context_t *wc_ctx,
     SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL, NULL,
                                  NULL, NULL, NULL, &depth, NULL, NULL, NULL,
                                  NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                 NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                 NULL, NULL, NULL, NULL, NULL, NULL,
                                  db, local_abspath,
                                  scratch_pool, scratch_pool));
 
@@ -271,7 +271,7 @@ svn_wc_crop_tree2(svn_wc_context_t *wc_ctx,
                                    NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                    NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                    NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                   NULL, db, local_abspath,
+                                   db, local_abspath,
                                    scratch_pool, scratch_pool));
 
       /* This simulates the logic of svn_wc__check_wc_root(). */
