@@ -1736,9 +1736,9 @@ svn_wc_diff6(svn_wc_adm_access_t *anchor,
 {
   struct edit_baton *eb;
   struct dir_baton *b;
-  const svn_wc_entry_t *entry;
   const char *target_path;
-  svn_wc_adm_access_t *adm_access;
+  const char *target_abspath;
+  svn_wc__db_kind_t kind;
 
   SVN_ERR(make_editor_baton(&eb, anchor, target, callbacks, callback_baton,
                             depth, ignore_ancestry, FALSE, FALSE,
@@ -1747,12 +1747,11 @@ svn_wc_diff6(svn_wc_adm_access_t *anchor,
   target_path = svn_dirent_join(svn_wc_adm_access_path(anchor), target,
                                 eb->pool);
 
-  SVN_ERR(svn_wc_adm_probe_retrieve(&adm_access, anchor, target_path,
-                                    eb->pool));
-  SVN_ERR(svn_wc__entry_versioned(&entry, target_path, adm_access, FALSE,
-                                  eb->pool));
+  SVN_ERR(svn_dirent_get_absolute(&target_abspath, target_path, pool));
+  SVN_ERR(svn_wc__db_read_kind(&kind, svn_wc__adm_get_db(anchor),
+                               target_abspath, FALSE, pool));
 
-  if (entry->kind == svn_node_dir)
+  if (kind == svn_wc__db_kind_dir)
     b = make_dir_baton(target_path, NULL, eb, FALSE, depth, eb->pool);
   else
     b = make_dir_baton(eb->anchor_path, NULL, eb, FALSE, depth, eb->pool);
