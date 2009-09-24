@@ -64,8 +64,10 @@ svn_client_upgrade(const char *path,
   const char *local_abspath;
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, scratch_pool));
-  SVN_ERR(svn_wc_upgrade(ctx->wc_ctx, local_abspath, ctx->cancel_func,
-                         ctx->cancel_baton, scratch_pool));
+  SVN_ERR(svn_wc_upgrade(ctx->wc_ctx, local_abspath,
+                         ctx->cancel_func, ctx->cancel_baton,
+                         ctx->notify_func2, ctx->notify_baton2,
+                         scratch_pool));
 
   return SVN_NO_ERROR;
 }

@@ -741,6 +741,8 @@ upgrade_working_copy(svn_wc__db_t *db,
                      const char *dir_abspath,
                      svn_cancel_func_t cancel_func,
                      void *cancel_baton,
+                     svn_wc_notify_func2_t notify_func,
+                     void *notify_baton,
                      apr_pool_t *scratch_pool)
 {
   int old_format;
@@ -762,6 +764,12 @@ upgrade_working_copy(svn_wc__db_t *db,
   if (old_format < SVN_WC__WC_NG_VERSION)
     SVN_ERR(upgrade_to_wcng(db, dir_abspath, old_format, iterpool));
 
+  if (notify_func)
+    notify_func(notify_baton,
+                svn_wc_create_notify(dir_abspath, svn_wc_notify_upgraded_path,
+                                     iterpool),
+                iterpool);
+
   /* Now recurse. */
   for (i = 0; i < subdirs->nelts; ++i)
     {
@@ -769,8 +777,10 @@ upgrade_working_copy(svn_wc__db_t *db,
 
       svn_pool_clear(iterpool);
 
-      SVN_ERR(upgrade_working_copy(db, child_abspath, cancel_func,
-                                   cancel_baton, iterpool));
+      SVN_ERR(upgrade_working_copy(db, child_abspath,
+                                   cancel_func, cancel_baton,
+                                   notify_func, notify_baton,
+                                   iterpool));
     }
 
   svn_pool_destroy(iterpool);
@@ -784,6 +794,8 @@ svn_wc_upgrade(svn_wc_context_t *wc_ctx,
                const char *local_abspath,
                svn_cancel_func_t cancel_func,
                void *cancel_baton,
+               svn_wc_notify_func2_t notify_func,
+               void *notify_baton,
                apr_pool_t *scratch_pool)
 {
   svn_wc__db_t *db;
@@ -808,8 +820,10 @@ svn_wc_upgrade(svn_wc_context_t *wc_ctx,
 #endif
 
   /* Upgrade this directory and/or its subdirectories.  */
-  SVN_ERR(upgrade_working_copy(db, local_abspath, cancel_func,
-                               cancel_baton, scratch_pool));
+  SVN_ERR(upgrade_working_copy(db, local_abspath,
+                               cancel_func, cancel_baton,
+                               notify_func, notify_baton,
+                               scratch_pool));
 
   SVN_ERR(svn_wc__db_close(db));
 
