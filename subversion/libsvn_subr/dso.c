@@ -49,7 +49,9 @@ static int not_there_sentinel;
 svn_error_t *
 svn_dso_initialize2(void)
 {
+#if APR_HAS_THREADS
   apr_status_t status;
+#endif
   if (dso_pool)
     return SVN_NO_ERROR;
 
