@@ -225,10 +225,9 @@ svn_wc_crop_tree2(svn_wc_context_t *wc_ctx,
   {
     svn_wc__db_status_t status;
     svn_wc__db_kind_t kind;
-    svn_depth_t depth;
 
     SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL, NULL,
-                                 NULL, NULL, NULL, &depth, NULL, NULL, NULL,
+                                 NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                  NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                  NULL, NULL, NULL, NULL, NULL, NULL,
                                  db, local_abspath,
