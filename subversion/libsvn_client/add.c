@@ -296,12 +296,26 @@ add_file(const char *local_abspath,
         {
           const char *pname = svn_apr_hash_index_key(hi);
           const svn_string_t *pval = svn_apr_hash_index_val(hi);
+          svn_error_t *err;
 
           /* It's probably best to pass 0 for force, so that if
              the autoprops say to set some weird combination,
              we just error and let the user sort it out. */
-          SVN_ERR(svn_wc_prop_set4(ctx->wc_ctx, local_abspath, pname, pval,
-                                   FALSE, NULL, NULL, pool));
+          err = svn_wc_prop_set4(ctx->wc_ctx, local_abspath, pname, pval,
+                                 FALSE, NULL, NULL, pool);
+          if (err)
+            {
+              /* Don't leave the job half-done. If we fail to set a property,
+               * (try to) un-add the file. */
+              svn_error_clear(svn_wc_revert4(ctx->wc_ctx,
+                                             local_abspath,
+                                             svn_depth_empty,
+                                             FALSE /* use_commit_times */,
+                                             NULL /* changelists */,
+                                             NULL, NULL, NULL, NULL,
+                                             pool));
+              return svn_error_return(err);
+            }
         }
     }
 
