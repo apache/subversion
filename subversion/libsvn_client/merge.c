@@ -585,8 +585,8 @@ tree_conflict_on_add(merge_cmd_baton_t *merge_b,
   if (existing_conflict == NULL)
     {
       /* There is no existing tree conflict so it is safe to add one. */
-      return svn_error_return(svn_wc__add_tree_conflict(merge_b->ctx->wc_ctx,
-                              conflict, merge_b->pool));
+      SVN_ERR(svn_wc__add_tree_conflict(merge_b->ctx->wc_ctx, conflict,
+                                        merge_b->pool));
     }
   else if (existing_conflict->action == svn_wc_conflict_action_delete &&
            conflict->action == svn_wc_conflict_action_add)
@@ -609,9 +609,8 @@ tree_conflict_on_add(merge_cmd_baton_t *merge_b,
                                      existing_conflict->src_left_version,
                                      merge_b->pool);
 
-      return svn_error_return(svn_wc__add_tree_conflict(merge_b->ctx->wc_ctx,
-                                                        conflict,
-                                                        merge_b->pool));
+      SVN_ERR(svn_wc__add_tree_conflict(merge_b->ctx->wc_ctx, conflict,
+                                        merge_b->pool));
     }
 
   /* In any other cases, we don't touch the existing conflict. */
@@ -1598,7 +1597,7 @@ merge_file_added(svn_wc_adm_access_t *adm_access,
             const char *copyfrom_url = NULL;
             svn_revnum_t copyfrom_rev = SVN_INVALID_REVNUM;
             svn_stream_t *new_base_contents;
-            svn_wc_conflict_version_t *existing_conflict;
+            svn_wc_conflict_description2_t *existing_conflict;
 
             /* If this is a merge from the same repository as our working copy,
                we handle adds as add-with-history.  Otherwise, we'll use a pure
