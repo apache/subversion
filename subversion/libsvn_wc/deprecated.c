@@ -2839,6 +2839,18 @@ svn_wc_adm_probe_open2(svn_wc_adm_access_t **adm_access,
 }
 
 svn_error_t *
+svn_wc_adm_probe_try2(svn_wc_adm_access_t **adm_access,
+                      svn_wc_adm_access_t *associated,
+                      const char *path,
+                      svn_boolean_t write_lock,
+                      int levels_to_lock,
+                      apr_pool_t *pool)
+{
+  return svn_wc_adm_probe_try3(adm_access, associated, path, write_lock,
+                               levels_to_lock, NULL, NULL, pool);
+}
+
+svn_error_t *
 svn_wc_adm_probe_try(svn_wc_adm_access_t **adm_access,
                      svn_wc_adm_access_t *associated,
                      const char *path,

@@ -874,24 +874,15 @@ svn_wc_adm_retrieve(svn_wc_adm_access_t **adm_access,
      for NULL batons. */
   if (! *adm_access)
     {
-      const char *wcpath;
-      const svn_wc_entry_t *subdir_entry;
+      /* We are going to send a SVN_ERR_WC_NOT_LOCKED, but let's provide
+         a bit more information to our caller */
+
+      const char *local_abspath;
+      svn_wc__db_kind_t kind = svn_wc__db_kind_unknown;
       svn_node_kind_t wckind;
-      svn_node_kind_t kind;
       svn_error_t *err;
 
-      err = svn_wc_entry(&subdir_entry, path, associated, TRUE, pool);
-
-      /* If we can't get an entry here, we are in pretty bad shape,
-         and will have to fall back to using just regular old paths to
-         see what's going on.  */
-      if (err)
-        {
-          svn_error_clear(err);
-          subdir_entry = NULL;
-        }
-
-      err = svn_io_check_path(path, &kind, pool);
+      err = svn_io_check_path(path, &wckind, pool);
 
       /* If we can't check the path, we can't make a good error
          message.  */
@@ -902,65 +893,46 @@ svn_wc_adm_retrieve(svn_wc_adm_access_t **adm_access,
                                    svn_dirent_local_style(path, pool));
         }
 
-      if (subdir_entry)
+      SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+
+      if (associated)
         {
-          if (subdir_entry->kind == svn_node_dir
-              && kind == svn_node_file)
+          err = svn_wc__db_read_kind(&kind, svn_wc__adm_get_db(associated),
+                                     local_abspath, TRUE, pool);
+
+          if (err)
             {
-              const char *err_msg = apr_psprintf
-                (pool, _("Expected '%s' to be a directory but found a file"),
-                 svn_dirent_local_style(path, pool));
-              return svn_error_create(SVN_ERR_WC_NOT_LOCKED,
-                                      svn_error_create(
-                                         SVN_ERR_WC_NOT_WORKING_COPY, NULL,
-                                         err_msg),
-                                      err_msg);
-            }
-          else if (subdir_entry->kind == svn_node_file
-                   && kind == svn_node_dir)
-            {
-              const char *err_msg = apr_psprintf
-                (pool, _("Expected '%s' to be a file but found a directory"),
-                 svn_dirent_local_style(path, pool));
-              return svn_error_create(SVN_ERR_WC_NOT_LOCKED,
-                                      svn_error_create(SVN_ERR_WC_NOT_FILE,
-                                                       NULL, err_msg),
-                                      err_msg);
+              kind = svn_wc__db_kind_unknown;
+              svn_error_clear(err);
             }
         }
 
-      wcpath = svn_wc__adm_child(path, NULL, pool);
-      err = svn_io_check_path(wcpath, &wckind, pool);
-
-      /* If we can't check the path, we can't make a good error
-         message.  */
-      if (err)
+      if (kind == svn_wc__db_kind_dir && wckind == svn_node_file)
         {
-          return svn_error_createf(SVN_ERR_WC_NOT_LOCKED, err,
-                                   _("Unable to check path existence for '%s'"),
-                                   svn_dirent_local_style(wcpath, pool));
-        }
+          err = svn_error_createf(
+                   SVN_ERR_WC_NOT_WORKING_COPY, NULL,
+                   _("Expected '%s' to be a directory but found a file"),
+                   svn_dirent_local_style(path, pool));
 
-      if (kind == svn_node_none)
+          return svn_error_create(SVN_ERR_WC_NOT_LOCKED, err, err->message);
+        }
+      else if (kind != svn_wc__db_kind_dir && kind != svn_wc__db_kind_unknown)
         {
-          const char *err_msg = apr_psprintf(pool,
-                                             _("Directory '%s' is missing"),
-                                             svn_dirent_local_style(path, pool));
-          return svn_error_create(SVN_ERR_WC_NOT_LOCKED,
-                                  svn_error_create(SVN_ERR_WC_PATH_NOT_FOUND,
-                                                   NULL, err_msg),
-                                  err_msg);
+          err = svn_error_createf(
+                   SVN_ERR_WC_NOT_WORKING_COPY, NULL,
+                   _("Can't retrieve an access baton for non-directory '%s'"),
+                   svn_dirent_local_style(path, pool));
+
+          return svn_error_create(SVN_ERR_WC_NOT_LOCKED, err, err->message);
         }
+      else if (kind == svn_wc__db_kind_unknown || wckind == svn_node_none)
+        {
+          err = svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+                                  _("Directory '%s' is missing"),
+                                  svn_dirent_local_style(path, pool));
 
-      else if (kind == svn_node_dir && wckind == svn_node_none)
-        return svn_error_createf(SVN_ERR_WC_NOT_LOCKED, NULL,
-                                 _("Directory '%s' containing working copy admin area is missing"),
-                                 svn_dirent_local_style(wcpath, pool));
-
-      else if (kind == svn_node_dir && wckind == svn_node_dir)
-        return svn_error_createf(SVN_ERR_WC_NOT_LOCKED, NULL,
-                                 _("Unable to lock '%s'"),
-                                 svn_dirent_local_style(path, pool));
+          return svn_error_create(SVN_ERR_WC_NOT_LOCKED, err, err->message);
+        }
 
       /* If all else fails, return our useless generic error.  */
       return svn_error_createf(SVN_ERR_WC_NOT_LOCKED, NULL,
@@ -979,20 +951,22 @@ svn_wc_adm_probe_retrieve(svn_wc_adm_access_t **adm_access,
                           apr_pool_t *pool)
 {
   const char *dir;
-  const svn_wc_entry_t *entry;
+  const char *local_abspath;
+  svn_wc__db_kind_t kind;
   svn_error_t *err;
 
   SVN_ERR_ASSERT(associated != NULL);
 
-  SVN_ERR(svn_wc_entry(&entry, path, associated, TRUE, pool));
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+  SVN_ERR(svn_wc__db_read_kind(&kind, associated->db, local_abspath, TRUE, pool));
 
-  if (! entry)
-    /* Not a versioned item, probe it */
-    SVN_ERR(probe(associated->db, &dir, path, pool));
-  else if (entry->kind != svn_node_dir)
+  if (kind == svn_wc__db_kind_dir)
+    dir = path;
+  else if (kind != svn_wc__db_kind_unknown)
     dir = svn_dirent_dirname(path, pool);
   else
-    dir = path;
+    /* Not a versioned item, probe it */
+    SVN_ERR(probe(associated->db, &dir, path, pool));
 
   err = svn_wc_adm_retrieve(adm_access, associated, dir, pool);
   if (err && err->apr_err == SVN_ERR_WC_NOT_LOCKED)
@@ -1007,21 +981,9 @@ svn_wc_adm_probe_retrieve(svn_wc_adm_access_t **adm_access,
       SVN_ERR(svn_wc_adm_retrieve(adm_access, associated, dir, pool));
     }
   else
-    return err;
+    return svn_error_return(err);
 
   return SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn_wc_adm_probe_try2(svn_wc_adm_access_t **adm_access,
-                      svn_wc_adm_access_t *associated,
-                      const char *path,
-                      svn_boolean_t write_lock,
-                      int levels_to_lock,
-                      apr_pool_t *pool)
-{
-  return svn_wc_adm_probe_try3(adm_access, associated, path, write_lock,
-                               levels_to_lock, NULL, NULL, pool);
 }
 
 svn_error_t *
