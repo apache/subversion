@@ -16601,7 +16601,7 @@ test_list = [ None,
                    svntest.main.is_ra_type_dav_serf),
               SkipUnless(handle_gaps_in_implicit_mergeinfo,
                          server_has_mergeinfo),
-              XFail(copy_then_replace_via_merge),
+              copy_then_replace_via_merge,
               XFail(merge_replace_causes_tree_conflict2),
              ]
 
