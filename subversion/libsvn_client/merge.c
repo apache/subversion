@@ -499,8 +499,9 @@ make_conflict_versions(svn_wc_conflict_version_t **left,
   return SVN_NO_ERROR;
 }
 
-/* Create a tree-conflict description in *CONFLICT.
- * See tree_conflict() for function parameters.
+/* Set *CONFLICT to a new tree-conflict description allocated in MERGE_B->pool,
+ * populated with information from MERGE_B and the other parameters.
+ * See tree_conflict() for the other parameters.
  */
 static svn_error_t*
 make_tree_conflict(svn_wc_conflict_description2_t **conflict,
@@ -556,9 +557,9 @@ tree_conflict(merge_cmd_baton_t *merge_b,
     svn_wc__add_tree_conflict(merge_b->ctx->wc_ctx, conflict, merge_b->pool));
 }
 
-/* The same as tree_conflict(), but this one is called from
-   merge_*_added() and possibly collapses a new tree-conflict
-   with an existing one. */
+/* Similar to tree_conflict(), but if this is an "add" action and there
+   is an existing tree conflict on the victim with a "delete" action, then
+   combine the two conflicts into a single conflict with a "replace" action. */
 static svn_error_t*
 tree_conflict_on_add(merge_cmd_baton_t *merge_b,
                      const char *victim_abspath,
