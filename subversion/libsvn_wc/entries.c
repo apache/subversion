@@ -551,7 +551,7 @@ read_entries_new(apr_hash_t **result_entries,
       const char *entry_abspath;
       const char *original_repos_relpath;
       const char *original_root_url;
-      const char *prop_reject_file;
+      svn_boolean_t conflicted;
       svn_boolean_t base_shadowed;
 
       svn_pool_clear(iterpool);
@@ -587,10 +587,7 @@ read_entries_new(apr_hash_t **result_entries,
                 NULL,
                 NULL,
                 &base_shadowed,
-                &entry->conflict_old,
-                &entry->conflict_new,
-                &entry->conflict_wrk,
-                &prop_reject_file,
+                &conflicted,
                 &lock,
                 db,
                 entry_abspath,
@@ -997,16 +994,44 @@ read_entries_new(apr_hash_t **result_entries,
       if (checksum)
         entry->checksum = svn_checksum_to_cstring(checksum, result_pool);
 
-      if (prop_reject_file != NULL)
-        entry->prejfile = apr_pstrdup(result_pool, prop_reject_file);
+      if (conflicted)
+        {
+          const apr_array_header_t *conflicts;
+          int j;
+          SVN_ERR(svn_wc__db_read_conflicts(&conflicts, db, entry_abspath,
+                                            iterpool, iterpool));
 
-     if (lock)
-       {
-         entry->lock_token = lock->token;
-         entry->lock_owner = lock->owner;
-         entry->lock_comment = lock->comment;
-         entry->lock_creation_date = lock->date;
-       }
+          for (j = 0; j < conflicts->nelts; j++)
+            {
+              const svn_wc_conflict_description2_t *cd;
+              cd = APR_ARRAY_IDX(conflicts, j,
+                                 const svn_wc_conflict_description2_t *);
+
+              switch (cd->kind)
+                {
+                  case svn_wc_conflict_kind_text:
+                    entry->conflict_old = apr_pstrdup(result_pool,
+                                                      cd->base_file);
+                    entry->conflict_new = apr_pstrdup(result_pool,
+                                                      cd->their_file);
+                    entry->conflict_wrk = apr_pstrdup(result_pool,
+                                                      cd->my_file);
+                    break;
+                  case svn_wc_conflict_kind_property:
+                    entry->prejfile = apr_pstrdup(result_pool,
+                                                  cd->their_file);
+                    break;
+                }
+            }
+        }
+
+      if (lock)
+        {
+          entry->lock_token = lock->token;
+          entry->lock_owner = lock->owner;
+          entry->lock_comment = lock->comment;
+          entry->lock_creation_date = lock->date;
+        }
 
       /* Let's check for a file external.
          ### right now this is ugly, since we have no good way querying
@@ -3321,7 +3346,6 @@ svn_wc_walk_entries3(const char *path,
                              NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL, NULL,
-                             NULL, NULL, NULL,
                              db, abspath,
                              pool, pool);
   if (err)
@@ -3530,7 +3554,7 @@ visit_tc_too_error_handler(const char *path,
    * to reach such a node by recursion. */
   if (err && (err->apr_err == SVN_ERR_UNVERSIONED_RESOURCE))
     {
-      svn_wc_conflict_description2_t *conflict;
+      const svn_wc_conflict_description2_t *conflict;
 
       /* See if there is any tree conflict on this path. */
       SVN_ERR(svn_wc__db_op_read_tree_conflict(&conflict, baton->db,

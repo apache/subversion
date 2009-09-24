@@ -296,7 +296,7 @@ assemble_status(svn_wc_status2_t **status,
   svn_wc_status2_t *stat;
   svn_boolean_t locked_p = FALSE;
   svn_boolean_t switched_p = FALSE;
-  svn_wc_conflict_description2_t *tree_conflict;
+  const svn_wc_conflict_description2_t *tree_conflict;
   svn_boolean_t file_external_p = FALSE;
 #ifdef HAVE_SYMLINK
   svn_boolean_t wc_special;
@@ -988,7 +988,7 @@ get_dir_status(const struct walk_status_baton *wb,
     }
   else
     {
-      svn_wc_conflict_description2_t *tc;
+      const svn_wc_conflict_description2_t *tc;
       const char *selected_abspath;
 
       conflicts = apr_hash_make(subpool);

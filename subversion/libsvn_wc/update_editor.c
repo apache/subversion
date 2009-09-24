@@ -749,7 +749,7 @@ complete_directory(struct edit_baton *eb,
       SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                    NULL, NULL, NULL, &depth, NULL, NULL, NULL,
                                    NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                   NULL, NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL,
                                    eb->db, local_abspath, pool, pool));
 
 
@@ -1325,7 +1325,7 @@ open_root(void *edit_baton,
       SVN_ERR(svn_wc__db_read_info(&status, NULL, NULL, NULL, NULL, NULL, NULL,
                                    NULL, NULL, NULL, &depth, NULL, NULL, NULL,
                                    NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                   NULL, NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL,
                                    eb->db, d->local_abspath, pool, pool));
       d->ambient_depth = depth;
       d->was_incomplete = (status == svn_wc__db_status_incomplete);
@@ -1433,7 +1433,7 @@ modcheck_found_node(const char *local_abspath,
   SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL,
                                baton->db, local_abspath, scratch_pool,
                                scratch_pool));
 
@@ -2669,7 +2669,7 @@ open_directory(const char *path,
                                NULL, NULL, NULL, NULL, NULL,
                                &db->ambient_depth, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL,
                                eb->db, db->local_abspath, pool, pool));
 
   db->was_incomplete = (status == svn_wc__db_status_incomplete);
@@ -3743,7 +3743,7 @@ open_file(const char *path,
   SVN_ERR(svn_wc__db_read_info(NULL, NULL, &revision, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL,
                                eb->db, fb->local_abspath, FALSE, subpool));
   locally_deleted = in_deleted_tree(eb, fb->local_abspath, TRUE, pool);
 
@@ -5303,7 +5303,7 @@ svn_wc__strictly_is_wc_root(svn_boolean_t *wc_root,
       err = svn_wc__db_read_info(NULL, &kind, NULL, NULL, NULL, NULL,
                                  NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                  NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                 NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                 NULL, NULL, NULL, NULL,
                                  wc_ctx->db, local_abspath,
                                  scratch_pool, scratch_pool);
 
