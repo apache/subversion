@@ -3007,8 +3007,8 @@ svn_wc_entry_dup(const svn_wc_entry_t *entry, apr_pool_t *pool)
 svn_error_t *
 svn_wc__tweak_entry(svn_wc__db_t *db,
                     const char *local_abspath,
-                    svn_boolean_t tweak_stub,
                     svn_node_kind_t kind,
+                    svn_boolean_t parent_stub,
                     const char *new_url,
                     svn_revnum_t new_rev,
                     svn_boolean_t allow_removal,
@@ -3018,8 +3018,8 @@ svn_wc__tweak_entry(svn_wc__db_t *db,
   svn_wc_entry_t tmp_entry;
   apr_uint64_t modify_flags = 0;
  
-  SVN_ERR(svn_wc__get_entry(&entry, db, local_abspath, FALSE, kind, tweak_stub,
-                            scratch_pool, scratch_pool));
+  SVN_ERR(svn_wc__get_entry(&entry, db, local_abspath, FALSE, kind,
+                            parent_stub, scratch_pool, scratch_pool));
 
   if (new_url != NULL
       && (! entry->url || strcmp(new_url, entry->url)))
@@ -3060,7 +3060,7 @@ svn_wc__tweak_entry(svn_wc__db_t *db,
     }
   else if (modify_flags)
     {
-      SVN_ERR(svn_wc__entry_modify2(db, local_abspath, entry->kind, tweak_stub,
+      SVN_ERR(svn_wc__entry_modify2(db, local_abspath, entry->kind, parent_stub,
                                     &tmp_entry, modify_flags, scratch_pool));
     }
 
