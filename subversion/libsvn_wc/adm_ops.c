@@ -114,7 +114,7 @@ tweak_entries(svn_wc__db_t *db,
   iterpool = svn_pool_create(pool);
 
   /* Tweak "this_dir" */
-  SVN_ERR(svn_wc__tweak_entry(db, dir_abspath, FALSE, svn_node_dir,
+  SVN_ERR(svn_wc__tweak_entry(db, dir_abspath, svn_node_dir, FALSE,
                               base_url, new_rev,
                               FALSE /* allow_removal */, iterpool));
 
@@ -169,13 +169,13 @@ tweak_entries(svn_wc__db_t *db,
             continue;
 
           if (kind == svn_wc__db_kind_dir)
-            SVN_ERR(svn_wc__tweak_entry(db, child_abspath, TRUE,
-                                        svn_node_dir, child_url, new_rev,
+            SVN_ERR(svn_wc__tweak_entry(db, child_abspath, svn_node_dir, TRUE,
+                                        child_url, new_rev,
                                         TRUE /* allow_removal */,
                                         pool));
           else
-            SVN_ERR(svn_wc__tweak_entry(db, child_abspath, FALSE,
-                                        svn_node_file, child_url, new_rev,
+            SVN_ERR(svn_wc__tweak_entry(db, child_abspath, svn_node_file, FALSE,
+                                        child_url, new_rev,
                                         TRUE /* allow_removal */,
                                         pool));
         }
@@ -297,7 +297,7 @@ svn_wc__do_update_cleanup(svn_wc__db_t *db,
       if (apr_hash_get(exclude_paths, local_abspath, APR_HASH_KEY_STRING))
         return SVN_NO_ERROR;
 
-      SVN_ERR(svn_wc__tweak_entry(db, local_abspath, TRUE, svn_node_dir,
+      SVN_ERR(svn_wc__tweak_entry(db, local_abspath, svn_node_dir, TRUE,
                                   base_url, new_revision,
                                   FALSE /* allow_removal */,
                                   pool));
@@ -312,7 +312,7 @@ svn_wc__do_update_cleanup(svn_wc__db_t *db,
         return SVN_NO_ERROR;
 
       /* Parent not updated so don't remove PATH entry.  */
-      SVN_ERR(svn_wc__tweak_entry(db, local_abspath, FALSE, svn_node_file,
+      SVN_ERR(svn_wc__tweak_entry(db, local_abspath, svn_node_file, FALSE,
                                   base_url, new_revision,
                                   FALSE /* allow_removal */,
                                   pool));
