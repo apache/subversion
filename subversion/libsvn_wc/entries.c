@@ -592,11 +592,59 @@ read_entries_new(apr_hash_t **result_entries,
                 &entry->conflict_wrk,
                 &prop_reject_file,
                 &lock,
-                &entry->tree_conflict_data,
                 db,
                 entry_abspath,
                 result_pool,
                 iterpool));
+
+      if (kind == svn_wc__db_kind_dir)
+        {
+          /* get the tree conflict data. */
+          apr_hash_t *tree_conflicts = NULL;
+          apr_hash_t *conflict_victims;
+          apr_hash_index_t *hi;
+
+          SVN_ERR(svn_wc__db_read_conflict_victims(&conflict_victims, db,
+                                                   local_abspath, iterpool,
+                                                   iterpool));
+
+          for (hi = apr_hash_first(iterpool, conflict_victims); hi;
+                hi = apr_hash_next(hi))
+            {
+              int j;
+              const apr_array_header_t *child_conflicts;
+              const char *child_name = svn_apr_hash_index_key(hi);
+              const char *child_abspath = svn_dirent_join(local_abspath,
+                                                          child_name,
+                                                          iterpool);
+
+              SVN_ERR(svn_wc__db_read_conflicts(&child_conflicts,
+                                                db, child_abspath, iterpool,
+                                                iterpool));
+
+              for (j = 0; j < child_conflicts->nelts; j++)
+                {
+                  const svn_wc_conflict_description2_t *conflict =
+                    APR_ARRAY_IDX(child_conflicts, j,
+                                  svn_wc_conflict_description2_t *);
+
+                  if (conflict->kind == svn_wc_conflict_kind_tree)
+                    {
+                      if (!tree_conflicts)
+                        tree_conflicts = apr_hash_make(iterpool);
+                      apr_hash_set(tree_conflicts, child_name,
+                                   APR_HASH_KEY_STRING, conflict);
+                    }
+                }
+            }
+
+          if (tree_conflicts)
+            {
+              SVN_ERR(svn_wc__write_tree_conflicts(&entry->tree_conflict_data,
+                                                   tree_conflicts,
+                                                   result_pool));
+            }
+        }
 
       if (status == svn_wc__db_status_normal
           || status == svn_wc__db_status_incomplete)
@@ -3270,11 +3318,10 @@ svn_wc_walk_entries3(const char *path,
                              NULL, NULL, NULL,
                              NULL, NULL, NULL,
                              NULL, &depth,
-                             NULL, NULL,
-                             NULL, NULL,
+                             NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL, NULL,
-                             NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL,
                              db, abspath,
                              pool, pool);
   if (err)

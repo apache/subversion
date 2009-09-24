@@ -3016,7 +3016,6 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
                      const char **conflict_working,
                      const char **prop_reject_file,
                      svn_wc__db_lock_t **lock,
-                     const char **tree_conflict_data,
                      svn_wc__db_t *db,
                      const char *local_abspath,
                      apr_pool_t *result_pool,
@@ -3375,14 +3374,6 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
                 (*lock)->date = svn_sqlite__column_int64(stmt_base, 18);
             }
         }
-      if (tree_conflict_data)
-        {
-          if (have_act)
-            *tree_conflict_data = svn_sqlite__column_text(stmt_act, 5,
-                                                          result_pool);
-          else
-            *tree_conflict_data = NULL;
-        }
     }
   else if (have_act)
     {
@@ -3660,14 +3651,11 @@ svn_wc__db_global_relocate(svn_wc__db_t *db,
           svn_pool_clear(iterpool);
 
           child_abspath = svn_dirent_join(local_dir_abspath, child, iterpool);
-          SVN_ERR(svn_wc__db_read_info(NULL, &kind, NULL,
-                                       NULL, NULL, NULL,
-                                       NULL, NULL, NULL,
-                                       NULL, NULL, NULL,
-                                       NULL, NULL, NULL,
-                                       NULL, NULL, NULL,
-                                       NULL, NULL, NULL, NULL,
+          SVN_ERR(svn_wc__db_read_info(NULL, &kind, NULL, NULL, NULL, NULL,
                                        NULL, NULL, NULL, NULL, NULL, NULL,
+                                       NULL, NULL, NULL, NULL, NULL, NULL,
+                                       NULL, NULL, NULL, NULL, NULL, NULL,
+                                       NULL, NULL, NULL,
                                        db, child_abspath,
                                        iterpool, iterpool));
           if (kind != svn_wc__db_kind_dir)
@@ -4913,7 +4901,7 @@ svn_wc__db_read_kind(svn_wc__db_kind_t *kind,
   err = svn_wc__db_read_info(NULL, kind, NULL, NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                             NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL, NULL, NULL,
                              db, local_abspath, scratch_pool, scratch_pool);
   if (!err)
     return SVN_NO_ERROR;

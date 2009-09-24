@@ -537,7 +537,7 @@ svn_wc__adm_available(svn_boolean_t *available,
   SVN_ERR(svn_wc__db_read_info(&status, kind, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, &depth, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL,
                                db, local_abspath, scratch_pool, scratch_pool));
 
   if (status == svn_wc__db_status_obstructed ||

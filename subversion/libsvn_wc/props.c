@@ -258,11 +258,10 @@ get_existing_prop_reject_file(const char **reject_file,
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
   SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL,
-                               NULL, NULL, NULL, reject_file, NULL, NULL,
+                               NULL, NULL, NULL, reject_file, NULL,
                                db, local_abspath,
                                pool, pool));
 
@@ -2107,12 +2106,10 @@ svn_wc__internal_propset(svn_wc__db_t *db,
   /* Else, handle a regular property: */
 
   /* Get the node kind for this path. */
-  SVN_ERR(svn_wc__db_read_info(NULL, &kind, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL,
+  SVN_ERR(svn_wc__db_read_info(NULL, &kind, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL,
                                db, local_abspath,
                                scratch_pool, scratch_pool));
 
@@ -2419,7 +2416,7 @@ svn_wc__props_modified(svn_boolean_t *modified_p,
   err = svn_wc__db_read_info(&status, NULL, NULL, NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                             NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL, NULL, NULL,
                              db, local_abspath,
                              scratch_pool, scratch_pool);
 
