@@ -547,15 +547,19 @@ tree_conflict_on_add(merge_cmd_baton_t *merge_b,
   SVN_ERR(svn_wc__get_tree_conflict(&existing_conflict, conflict->path,
                                     adm_access, merge_b->pool));
 
-  /* If this change is an add, and there is already a tree conflict raised
-   * by a previous incoming change that attempted to delete the item (whether
-   * in this same merge operation or not), then don't try to add a second tree
-   * conflict. Instead, just change the existing conflict to note that the
-   * incoming change is replacement. */
-  if (existing_conflict != NULL
-      && existing_conflict->action == svn_wc_conflict_action_delete
-      && conflict->action == svn_wc_conflict_action_add)
+  if (existing_conflict == NULL)
     {
+      /* There is no existing tree conflict so it is safe to add one. */
+      SVN_ERR(svn_wc__add_tree_conflict(conflict, adm_access, merge_b->pool));
+    }
+  else if (existing_conflict->action == svn_wc_conflict_action_delete &&
+           conflict->action == svn_wc_conflict_action_add)
+    {
+      /* There is already a tree conflict raised by a previous incoming
+       * change that attempted to delete the item (whether in this same
+       * merge operation or not). Change the existing conflict to note
+       * that the incoming change is replacement. */
+
       /* Remove the existing tree-conflict so we can add a new one.*/
       SVN_ERR(svn_wc__del_tree_conflict(conflict->path,
                                         adm_access,
@@ -569,9 +573,11 @@ tree_conflict_on_add(merge_cmd_baton_t *merge_b,
       conflict->src_left_version = svn_wc_conflict_version_dup(
                                      existing_conflict->src_left_version,
                                      merge_b->pool);
+
+      SVN_ERR(svn_wc__add_tree_conflict(conflict, adm_access, merge_b->pool));
     }
- 
-  SVN_ERR(svn_wc__add_tree_conflict(conflict, adm_access, merge_b->pool));
+
+  /* In any other cases, we don't touch the existing conflict. */
   return SVN_NO_ERROR;
 }
 
@@ -1519,6 +1525,7 @@ merge_file_added(svn_wc_adm_access_t *adm_access,
             const char *copyfrom_url = NULL;
             svn_revnum_t copyfrom_rev = SVN_INVALID_REVNUM;
             svn_stream_t *new_base_contents;
+            svn_wc_conflict_description_t *existing_conflict;
 
             /* If this is a merge from the same repository as our working copy,
                we handle adds as add-with-history.  Otherwise, we'll use a pure
@@ -1540,20 +1547,39 @@ merge_file_added(svn_wc_adm_access_t *adm_access,
             SVN_ERR(svn_stream_open_readonly(&new_base_contents, yours,
                                              subpool, subpool));
 
-            /* Since 'mine' doesn't exist, and this is
-               'merge_file_added', I hope it's safe to assume that
-               'older' is empty, and 'yours' is the full file.  Merely
-               copying 'yours' to 'mine', isn't enough; we need to get
-               the whole text-base and props installed too, just as if
-               we had called 'svn cp wc wc'. */
-            /* ### would be nice to have cancel/notify funcs to pass */
-            SVN_ERR(svn_wc_add_repos_file3(
-                        mine, adm_access,
-                        new_base_contents, NULL, new_props, NULL,
-                        copyfrom_url, copyfrom_rev,
-                        NULL, NULL, NULL, NULL, subpool));
+            SVN_ERR(svn_wc__get_tree_conflict(&existing_conflict,
+                                              mine, adm_access,
+                                              merge_b->pool));
+            if (existing_conflict)
+              {
+                /* Possibly collapse the existing conflict into a 'replace'
+                 * tree conflict. The conflict reason is 'added' because
+                 * the now-deleted tree conflict victim must have been
+                 * added in the history of the merge target. */
+                SVN_ERR(tree_conflict_on_add(merge_b, adm_access, mine,
+                                             svn_node_file,
+                                             svn_wc_conflict_action_add,
+                                             svn_wc_conflict_reason_added));
+                if (tree_conflicted)
+                  *tree_conflicted = TRUE;
+              }
+            else
+              {
+                /* Since 'mine' doesn't exist, and this is
+                   'merge_file_added', I hope it's safe to assume that
+                   'older' is empty, and 'yours' is the full file.  Merely
+                   copying 'yours' to 'mine', isn't enough; we need to get
+                   the whole text-base and props installed too, just as if
+                   we had called 'svn cp wc wc'. */
+                /* ### would be nice to have cancel/notify funcs to pass */
+                SVN_ERR(svn_wc_add_repos_file3(
+                            mine, adm_access,
+                            new_base_contents, NULL, new_props, NULL,
+                            copyfrom_url, copyfrom_rev,
+                            NULL, NULL, NULL, NULL, subpool));
 
-            /* ### delete 'yours' ? */
+                /* ### delete 'yours' ? */
+              }
           }
         if (content_state)
           *content_state = svn_wc_notify_state_changed;
@@ -1595,40 +1621,15 @@ merge_file_added(svn_wc_adm_access_t *adm_access,
               }
             else
               {
-                const svn_wc_entry_t *entry;
-                svn_wc_conflict_reason_t reason;
-                const char *abs_mine;
-
-                /* Figure out what state the file which is already present
-                 * is in, and set the conflict reason accordingly. */
-                reason = svn_wc_conflict_reason_obstructed;
-                SVN_ERR(svn_dirent_get_absolute(&abs_mine, mine, subpool));
-                SVN_ERR(svn_wc_entry(&entry, mine, adm_access, FALSE, subpool));
-                if (entry)
-                  {
-                    switch (entry->schedule)
-                      {
-                        case svn_wc_schedule_normal:
-                          reason = svn_wc_conflict_reason_obstructed;
-                          break;
-                        case svn_wc_schedule_add:
-                          reason = svn_wc_conflict_reason_added;
-                          break;
-                        case svn_wc_schedule_delete:
-                        case svn_wc_schedule_replace:
-                          reason = svn_wc_conflict_reason_deleted;
-                          break;
-                      }
-                  }
-
                 /* The file add the merge wants to carry out is obstructed by
-                 * a versioned file, so the file the merge wants to add is a
-                 * tree conflict victim. See notes about obstructions in
-                 * notes/tree-conflicts/detection.txt.
-                 */
+                 * a versioned file. This file must have been added in the
+                 * history of the merge target, hence we flag a tree conflict
+                 * with reason 'added'. */
                 SVN_ERR(tree_conflict_on_add(
                           merge_b, adm_access, mine, svn_node_file,
-                          svn_wc_conflict_action_add, reason));
+                          svn_wc_conflict_action_add,
+                          svn_wc_conflict_reason_added));
+
                 if (tree_conflicted)
                   *tree_conflicted = TRUE;
               }
