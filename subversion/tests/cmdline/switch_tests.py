@@ -2592,6 +2592,82 @@ def relocate_with_switched_children(sbox):
     expected_info = { 'URL' : pattern }
     svntest.actions.run_and_verify_info([expected_info], path)
 
+def copy_with_switched_subdir(sbox):
+  "copy directory with switched subdir"
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  D = os.path.join(wc_dir, 'A/D')
+  G = os.path.join(D, 'G')
+  
+  E_url = sbox.repo_url + '/A/B/E'
+  R = os.path.join(wc_dir, 'R')
+  
+  state = svntest.actions.get_virginal_state(wc_dir, 1)
+  
+  # Verify before switching
+  svntest.actions.run_and_verify_status(wc_dir, state)
+  
+  # Switch D
+  svntest.actions.run_and_verify_svn(None, None, [], 'switch', E_url, G)
+  
+  state.tweak('A/D/G', switched='S')
+  state.remove('A/D/G/pi', 'A/D/G/rho', 'A/D/G/tau');
+  state.add({
+    'A/D/G/alpha' : Item(status='  ', wc_rev=1),
+    'A/D/G/beta' : Item(status='  ', wc_rev=1),
+    })
+  svntest.actions.run_and_verify_status(wc_dir, state)
+  
+  # And now copy A and everything below it to R
+  svntest.actions.run_and_verify_svn(None, None, [], 'cp', D, R)
+  
+  state.add({
+    'R'         : Item(status='A ', copied='+', wc_rev='-'),
+    'R/gamma'   : Item(status='  ', copied='+', wc_rev='-'),
+    'R/G/alpha' : Item(status='  ', copied='+', wc_rev='-'),
+    'R/G/beta'  : Item(status='  ', copied='+', wc_rev='-'),
+    'R/H'       : Item(status='  ', copied='+', wc_rev='-'),
+    'R/H/chi'   : Item(status='  ', copied='+', wc_rev='-'),
+    'R/H/omega' : Item(status='  ', copied='+', wc_rev='-'),
+    'R/H/psi'   : Item(status='  ', copied='+', wc_rev='-'),
+
+    # This should be:
+    # 'R/G'       : Item(status='A ', copied='+', wc_rev='-'),
+    # But is:
+    'R/G'       : Item(status='  ', copied='+', wc_rev='-'),
+    })
+
+  svntest.actions.run_and_verify_status(wc_dir, state)
+  
+  svntest.main.run_svn(None, 'ci', '-m', 'Commit added folder', wc_dir)
+  
+  # Additional test. Enable when the invalid copy is fixed.
+  # It should either commit to R/G/alpha or to A/D/G/alpha when the copy
+  # keeps the switch.. or it must be that there is no alpha file.
+  
+  # (Don't forget to bump the wc_rev below for the extra commit)
+  #svntest.main.run_svn(None, 'up', wc_dir)
+  #svntest.main.file_append(os.path.join(wc_dir, 'R/G/alpha'), "apple")
+  #svntest.main.run_svn(None, 'ci', '-m', 'Commit changed file', wc_dir)
+  
+  # Checkout working copy to verify result
+  svntest.main.safe_rmtree(wc_dir, 1)
+  svntest.actions.run_and_verify_svn(None,
+                                     None, [],
+                                     'checkout',
+                                     sbox.repo_url, wc_dir)
+
+  # Switch D again to recreate state
+  svntest.actions.run_and_verify_svn(None, None, [], 'switch', E_url, G)
+  
+  # Clear the statuses
+  state.tweak(status='  ', copied=None, wc_rev='2')
+  # But reset the switched state
+  state.tweak('A/D/G', switched='S')
+  
+  # This fails because the original tree of D is under R, while there
+  # should either be the tree of E, or nothing at all.
+  svntest.actions.run_and_verify_status(wc_dir, state)
 
 
 ########################################################################
@@ -2636,6 +2712,7 @@ test_list = [ None,
               tree_conflicts_on_switch_3,
               single_file_relocate,
               relocate_with_switched_children,
+              XFail(copy_with_switched_subdir),
              ]
 
 if __name__ == '__main__':
