@@ -149,9 +149,6 @@ typedef struct {
  * a given working copy directory.
  */
 struct svn_wc__db_pdh_t {
-  /* This per-dir state is associated with this global state. */
-  svn_wc__db_t *db;
-
   /* This (versioned) working copy directory is obstructing what *should*
      be a file in the parent directory (according to its metadata).
 
@@ -649,7 +646,6 @@ get_or_create_pdh(svn_wc__db_t *db,
   if (pdh == NULL && create_allowed)
     {
       pdh = apr_pcalloc(db->state_pool, sizeof(*pdh));
-      pdh->db = db;
 
       /* Copy the path for the proper lifetime.  */
       pdh->local_abspath = apr_pstrdup(db->state_pool, local_dir_abspath);
@@ -884,13 +880,11 @@ parse_local_abspath(svn_wc__db_pdh_t **pdh,
   if (*pdh == NULL)
     {
       *pdh = apr_pcalloc(db->state_pool, sizeof(**pdh));
-      (*pdh)->db = db;
       (*pdh)->local_abspath = apr_pstrdup(db->state_pool, local_abspath);
     }
   else
     {
       /* The PDH should have been built correctly (so far).  */
-      SVN_ERR_ASSERT((*pdh)->db == db);
       SVN_ERR_ASSERT(strcmp((*pdh)->local_abspath, local_abspath) == 0);
     }
 
@@ -1062,14 +1056,12 @@ parse_local_abspath(svn_wc__db_pdh_t **pdh,
                 {
                   parent_pdh = apr_pcalloc(db->state_pool,
                                            sizeof(*parent_pdh));
-                  parent_pdh->db = db;
                   parent_pdh->local_abspath = apr_pstrdup(db->state_pool,
                                                           parent_dir);
                 }
               else
                 {
                   /* The PDH should have been built correctly (so far).  */
-                  SVN_ERR_ASSERT(parent_pdh->db == db);
                   SVN_ERR_ASSERT(strcmp(parent_pdh->local_abspath,
                                         parent_dir) == 0);
                 }
@@ -1144,7 +1136,6 @@ parse_local_abspath(svn_wc__db_pdh_t **pdh,
       if (parent_pdh == NULL)
         {
           parent_pdh = apr_pcalloc(db->state_pool, sizeof(*parent_pdh));
-          parent_pdh->db = db;
           parent_pdh->local_abspath = apr_pstrdup(db->state_pool, parent_dir);
 
           /* All the PDHs have the same wcroot.  */
@@ -1207,6 +1198,7 @@ get_statement_for_path(svn_sqlite__stmt_t **stmt,
 
 static svn_error_t *
 navigate_to_parent(svn_wc__db_pdh_t **parent_pdh,
+                   svn_wc__db_t *db,
                    svn_wc__db_pdh_t *child_pdh,
                    svn_sqlite__mode_t smode,
                    apr_pool_t *scratch_pool)
@@ -1219,7 +1211,7 @@ navigate_to_parent(svn_wc__db_pdh_t **parent_pdh,
     return SVN_NO_ERROR;
 
   parent_abspath = svn_dirent_dirname(child_pdh->local_abspath, scratch_pool);
-  SVN_ERR(parse_local_abspath(parent_pdh, &local_relpath, child_pdh->db,
+  SVN_ERR(parse_local_abspath(parent_pdh, &local_relpath, db,
                               parent_abspath, smode,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(*parent_pdh);
@@ -2881,7 +2873,7 @@ svn_wc__db_temp_op_remove_entry(svn_wc__db_t *db,
   /* Check if we should remove it from the parent db instead */
   if (strcmp(current_relpath, "") == 0)
     {
-      SVN_ERR(navigate_to_parent(&pdh, pdh, svn_sqlite__mode_readwrite,
+      SVN_ERR(navigate_to_parent(&pdh, db, pdh, svn_sqlite__mode_readwrite,
                                  scratch_pool));
 
       VERIFY_USABLE_PDH(pdh);
@@ -2958,7 +2950,7 @@ svn_wc__db_temp_op_set_dir_depth(svn_wc__db_t *db,
     {
       svn_error_t *err;
 
-      err = navigate_to_parent(&pdh, pdh, svn_sqlite__mode_readwrite,
+      err = navigate_to_parent(&pdh, db, pdh, svn_sqlite__mode_readwrite,
                                scratch_pool);
 
       if (err && err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY)
@@ -3996,7 +3988,7 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
       if (strcmp(current_abspath, pdh->local_abspath) == 0)
         {
           /* The current node is a directory, so move to the parent dir.  */
-          SVN_ERR(navigate_to_parent(&pdh, pdh, svn_sqlite__mode_readonly,
+          SVN_ERR(navigate_to_parent(&pdh, db, pdh, svn_sqlite__mode_readonly,
                                      scratch_pool));
         }
       current_abspath = pdh->local_abspath;
@@ -4194,7 +4186,7 @@ svn_wc__db_scan_deletion(const char **base_del_abspath,
       if (strcmp(current_abspath, pdh->local_abspath) == 0)
         {
           /* The current node is a directory, so move to the parent dir.  */
-          SVN_ERR(navigate_to_parent(&pdh, pdh, svn_sqlite__mode_readonly,
+          SVN_ERR(navigate_to_parent(&pdh, db, pdh, svn_sqlite__mode_readonly,
                                      scratch_pool));
         }
       current_abspath = pdh->local_abspath;
