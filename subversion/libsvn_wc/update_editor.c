@@ -2004,6 +2004,7 @@ do_entry_deletion(struct edit_baton *eb,
                   apr_pool_t *pool)
 {
   svn_wc_adm_access_t *parent_adm_access;
+  svn_error_t *err;
   const svn_wc_entry_t *entry;
   const char *full_path = svn_dirent_join(eb->anchor, path, pool);
   svn_boolean_t already_conflicted;
@@ -2015,8 +2016,21 @@ do_entry_deletion(struct edit_baton *eb,
   SVN_ERR(svn_wc_adm_retrieve(&parent_adm_access, eb->adm_access,
                               parent_path, pool));
 
-  SVN_ERR(svn_wc__entry_versioned(&entry, full_path, parent_adm_access, TRUE,
-                                  pool));
+  /* ### hmm. in case we need to re-add the node, we use some fields from
+     ### this entry. I believe the required fields are filled in, but getting
+     ### just the stub might be a problem.  */
+  err = svn_wc__get_entry(&entry, eb->db, local_abspath,
+                          FALSE /* allow_unversioned */, svn_node_unknown,
+                          TRUE /* need_parent_stub */, pool, pool);
+  if (err)
+    {
+      if (err->apr_err != SVN_ERR_NODE_UNEXPECTED_KIND)
+        return svn_error_return(err);
+
+      /* The node was a file, and we got the "real" entry, not the stub.
+         That is just what we'd like.  */
+      svn_error_clear(err);
+    }
 
   /* Receive the remote removal of excluded entry. Do not notify. */
   if (entry->depth == svn_depth_exclude)

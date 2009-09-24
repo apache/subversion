@@ -1328,24 +1328,6 @@ svn_wc_entry(const svn_wc_entry_t **entry,
 
 
 svn_error_t *
-svn_wc__entry_versioned(const svn_wc_entry_t **entry,
-                        const char *path,
-                        svn_wc_adm_access_t *adm_access,
-                        svn_boolean_t show_hidden,
-                        apr_pool_t *pool)
-{
-  SVN_ERR(svn_wc_entry(entry, path, adm_access, show_hidden, pool));
-
-  if (! *entry)
-    return svn_error_createf(SVN_ERR_ENTRY_NOT_FOUND, NULL,
-                             _("'%s' is not under version control"),
-                             svn_dirent_local_style(path, pool));
-
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
 svn_wc__get_entry_versioned(const svn_wc_entry_t **entry,
                             svn_wc_context_t *wc_ctx,
                             const char *local_abspath,
