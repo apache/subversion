@@ -405,7 +405,7 @@ UPDATE BASE_NODE SET incomplete_children=null, dav_cache=null;
 
 /* A skel containing the conflict details. */
 ALTER TABLE ACTUAL_NODE
-ADD COLUMN conflict_data TEXT;
+ADD COLUMN conflict_data  BLOB;
 
 
 /* ------------------------------------------------------------------------- */
