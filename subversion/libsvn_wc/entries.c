@@ -1108,6 +1108,7 @@ svn_wc__get_entry(const svn_wc_entry_t **entry,
   const char *entry_name;
   svn_wc_adm_access_t *adm_access;
   apr_hash_t *entries;
+  apr_pool_t *source_pool;
 
   /* Can't ask for the parent stub if the node is a file.  */
   SVN_ERR_ASSERT(!need_parent_stub || kind != svn_node_file);
@@ -1130,7 +1131,7 @@ svn_wc__get_entry(const svn_wc_entry_t **entry,
          If the on-disk node is a DIR, and we asked for a stub, then we
          obviously can't provide that (parent has no info). If the on-disk
          node is a FILE/NONE/UNKNOWN, then it is obstructing the real
-         LOCAL_ABSPATCH (or it was never a versioned item). In all these
+         LOCAL_ABSPATH (or it was never a versioned item). In all these
          cases, the read_entries() will (properly) throw an error.
 
          NOTE: if KIND is a DIR and we asked for the real data, but it is
@@ -1182,18 +1183,24 @@ svn_wc__get_entry(const svn_wc_entry_t **entry,
                                  svn_dirent_local_style(local_abspath,
                                                         scratch_pool));
         }
+
+      /* The entries are allocated in scratch_pool right now.  */
+      source_pool = scratch_pool;
     }
   else
     {
+      /* We have a place to cache the results.  */
+
+      /* The entries are currently, or will be, allocated in the access
+         baton's pool.  */
+      source_pool = svn_wc_adm_access_pool(adm_access);
+
       entries = svn_wc__adm_access_entries(adm_access);
       if (entries == NULL)
         {
-          /* We have a place to cache the results.  */
-          apr_pool_t *access_pool = svn_wc_adm_access_pool(adm_access);
-
           /* See note above about reading the entries for an UNKNOWN.  */
           SVN_ERR(read_entries(&entries, db, dir_abspath,
-                               access_pool, scratch_pool));
+                               source_pool, scratch_pool));
           svn_wc__adm_access_set_entries(adm_access, entries);
         }
     }
@@ -1210,7 +1217,8 @@ svn_wc__get_entry(const svn_wc_entry_t **entry,
     }
 
   /* Give the caller a valid entry.  */
-  *entry = svn_wc_entry_dup(*entry, result_pool);
+  if (result_pool != source_pool)
+    *entry = svn_wc_entry_dup(*entry, result_pool);
 
   /* The caller had the wrong information.  */
   if ((kind == svn_node_file && (*entry)->kind != svn_node_file)
@@ -1264,40 +1272,56 @@ svn_wc_entry(const svn_wc_entry_t **entry,
              svn_boolean_t show_hidden,
              apr_pool_t *pool)
 {
-  const char *entry_name;
-  svn_wc_adm_access_t *dir_access;
+  const char *local_abspath;
+  svn_error_t *err;
 
-  SVN_ERR(svn_wc__adm_retrieve_internal(&dir_access, adm_access, path, pool));
-  if (! dir_access)
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+
+  err = svn_wc__get_entry(entry,
+                          svn_wc__adm_get_db(adm_access),
+                          local_abspath,
+                          TRUE /* allow_unversioned */,
+                          svn_node_unknown,
+                          FALSE /* need_parent_stub */,
+                          svn_wc_adm_access_pool(adm_access), pool);
+  if (err)
     {
-      const char *dir_path, *base_name;
-      svn_dirent_split(path, &dir_path, &base_name, pool);
-      SVN_ERR(svn_wc__adm_retrieve_internal(&dir_access, adm_access, dir_path,
-                                            pool));
-      entry_name = base_name;
-    }
-  else
-    entry_name = SVN_WC_ENTRY_THIS_DIR;
-
-  if (dir_access)
-    {
-      apr_hash_t *entries;
-
-      /* Fetch all the entries. We'll prune the entry ourself.  */
-      SVN_ERR(svn_wc_entries_read(&entries, dir_access, TRUE, pool));
-
-      *entry = apr_hash_get(entries, entry_name, APR_HASH_KEY_STRING);
-      if (!show_hidden && *entry != NULL)
+      if (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
         {
-          svn_boolean_t hidden;
+          /* Even though we said ALLOW_UNVERSIONED == TRUE, this error can
+             happen when the requested node is a directory, but that
+             directory is not found. We'll go ahead and return the stub.
 
-          SVN_ERR(svn_wc__entry_is_hidden(&hidden, *entry));
-          if (hidden)
-            *entry = NULL;
+             So: fall through to clear the error.  */
         }
+      else if (err->apr_err == SVN_ERR_WC_MISSING)
+        {
+          /* This can happen when we ask about a subdir's node, but both
+             the subdirectory and its parent are missing metadata. This
+             can happen during (say) the diff process against the repository
+             where a node *does* exist, and it looks for the same locally.
+
+             See diff_tests 36 -- diff_added_subtree()
+
+             We'll just say the entry does not exist, and fall through to
+             clear this error.  */
+          *entry = NULL;
+        }
+      else if (err->apr_err != SVN_ERR_NODE_UNEXPECTED_KIND)
+        return svn_error_return(err);
+
+      /* We got the parent stub instead of the real entry. Fine.  */
+      svn_error_clear(err);
     }
-  else
-    *entry = NULL;
+  
+  if (!show_hidden && *entry != NULL)
+    {
+      svn_boolean_t hidden;
+
+      SVN_ERR(svn_wc__entry_is_hidden(&hidden, *entry));
+      if (hidden)
+        *entry = NULL;
+    }
 
   return SVN_NO_ERROR;
 }
