@@ -1362,9 +1362,10 @@ filter_log_entry_with_rangelist(void *baton,
             svn_dirent_join(fleb->abs_repos_target_path,
                             path + tgt_root_dir_len, iterpool);
           
-          if (nearest_ancestor_mergeinfo =
-                find_nearest_ancestor(fleb->depth_first_catalog_index,
-                                      target_path_affected))
+          nearest_ancestor_mergeinfo = find_nearest_ancestor(
+                                            fleb->depth_first_catalog_index,
+                                            target_path_affected);
+          if (nearest_ancestor_mergeinfo)
             {
               for (hi2 = apr_hash_first(iterpool, nearest_ancestor_mergeinfo);
                    hi2;
