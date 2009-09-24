@@ -1801,7 +1801,7 @@ write_entry(svn_wc__db_t *db,
             apr_int64_t repos_id,
             const char *repos_root,
             const svn_wc_entry_t *entry,
-            const char *name,
+            const char *local_relpath,
             const char *entry_abspath,
             const svn_wc_entry_t *this_dir,
             apr_pool_t *scratch_pool)
@@ -1809,6 +1809,12 @@ write_entry(svn_wc__db_t *db,
   db_base_node_t *base_node = NULL;
   db_working_node_t *working_node = NULL;
   db_actual_node_t *actual_node = NULL;
+  const char *parent_relpath;
+
+  if (*local_relpath == '\0')
+    parent_relpath = NULL;
+  else
+    parent_relpath = svn_relpath_dirname(local_relpath, scratch_pool);
 
   switch (entry->schedule)
     {
@@ -1972,11 +1978,8 @@ write_entry(svn_wc__db_t *db,
   if (base_node)
     {
       base_node->wc_id = wc_id;
-      base_node->local_relpath = name;
-      if (*name == '\0')
-        base_node->parent_relpath = NULL;
-      else
-        base_node->parent_relpath = "";
+      base_node->local_relpath = local_relpath;
+      base_node->parent_relpath = parent_relpath;
       base_node->revision = entry->revision;
       base_node->depth = entry->depth;
       base_node->last_mod_time = entry->text_time;
@@ -2094,11 +2097,8 @@ write_entry(svn_wc__db_t *db,
   if (working_node)
     {
       working_node->wc_id = wc_id;
-      working_node->local_relpath = name;
-      if (*name == '\0')
-        working_node->parent_relpath = NULL;
-      else
-        working_node->parent_relpath = "";
+      working_node->local_relpath = local_relpath;
+      working_node->parent_relpath = parent_relpath;
       working_node->depth = entry->depth;
       working_node->changed_rev = SVN_INVALID_REVNUM;
       working_node->last_mod_time = entry->text_time;
@@ -2169,11 +2169,8 @@ write_entry(svn_wc__db_t *db,
   if (actual_node)
     {
       actual_node->wc_id = wc_id;
-      actual_node->local_relpath = name;
-      if (*name == '\0')
-        actual_node->parent_relpath = NULL;
-      else
-        actual_node->parent_relpath = "";
+      actual_node->local_relpath = local_relpath;
+      actual_node->parent_relpath = parent_relpath;
 
       SVN_ERR(insert_actual_node(sdb, actual_node, scratch_pool));
     }
