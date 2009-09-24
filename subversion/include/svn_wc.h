@@ -6267,6 +6267,7 @@ svn_wc_revert4(svn_wc_context_t *wc_ctx,
  * @since New in 1.5.
  * @deprecated Provided for backward compatibility with the 1.6 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_revert3(const char *path,
                svn_wc_adm_access_t *parent_access,
