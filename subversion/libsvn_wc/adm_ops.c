@@ -152,7 +152,6 @@ tweak_entries(svn_wc__db_t *db,
       SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL,
                                    NULL, NULL, NULL, NULL, &child_depth, NULL,
                                    NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                   NULL, NULL, NULL,
                                    NULL, NULL, NULL, NULL, NULL,
                                    db, child_abspath, iterpool, iterpool));
 
@@ -1081,7 +1080,7 @@ erase_from_wc(svn_wc__db_t *db,
                                        NULL, NULL, NULL, NULL, NULL, &depth,
                                        NULL, NULL, NULL, NULL, NULL, NULL,
                                        NULL, NULL, NULL, NULL, NULL, NULL,
-                                       NULL, NULL, NULL, NULL,
+                                       NULL,
                                        db, node_abspath, iterpool, iterpool));
 
           if (status == svn_wc__db_status_absent ||
@@ -1944,7 +1943,7 @@ revert_internal(svn_wc__db_t *db,
 {
   svn_node_kind_t kind;
   const svn_wc_entry_t *entry;
-  svn_wc_conflict_description2_t *tree_conflict;
+  const svn_wc_conflict_description2_t *tree_conflict;
   const char *path;
   svn_error_t *err;
 
@@ -2014,7 +2013,7 @@ revert_internal(svn_wc__db_t *db,
                                         pool))
     {
       svn_boolean_t reverted = FALSE;
-      svn_wc_conflict_description2_t *conflict;
+      const svn_wc_conflict_description2_t *conflict;
 
       /* Clear any tree conflict on the path, even if it is not a versioned
          resource. */
@@ -2516,20 +2515,39 @@ resolve_conflict_on_node(svn_wc__db_t *db,
   svn_boolean_t was_present, need_feedback = FALSE;
   apr_uint64_t modify_flags = 0;
   svn_wc_entry_t tmp_entry;
-  const char *conflict_old;
-  const char *conflict_new;
-  const char *conflict_working;
-  const char *prop_reject_file;
+  const char *conflict_old = NULL;
+  const char *conflict_new = NULL;
+  const char *conflict_working = NULL;
+  const char *prop_reject_file = NULL;
   svn_wc__db_kind_t kind;
+  int i;
+  const apr_array_header_t *conflicts = NULL;
   const char *conflict_dir_abspath;
 
   SVN_ERR(svn_wc__db_read_info(NULL, &kind, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, &conflict_old, &conflict_new,
-                               &conflict_working, &prop_reject_file,
-                               NULL,
+                               NULL, NULL, NULL,
                                db, local_abspath, pool, pool));
+  SVN_ERR(svn_wc__db_read_conflicts(&conflicts, db, local_abspath,
+                                    pool, pool));
+
+  for (i = 0; i < conflicts->nelts; i++)
+    {
+      const svn_wc_conflict_description2_t *desc;
+
+      desc = APR_ARRAY_IDX(conflicts, i,
+                           const svn_wc_conflict_description2_t*);
+
+      if (desc->kind == svn_wc_conflict_kind_text)
+        {
+          conflict_old = desc->base_file;
+          conflict_new = desc->their_file;
+          conflict_working = desc->my_file;
+        }
+      else if (desc->kind == svn_wc_conflict_kind_property)
+        prop_reject_file = desc->their_file;
+    }
 
   if (kind == svn_wc__db_kind_dir)
     conflict_dir_abspath = local_abspath;
@@ -2739,7 +2757,7 @@ resolve_found_entry_callback(const char *path,
    * If the target is a working copy root, don't check on the target itself.*/
   if (baton->resolve_tree && ! wc_root) /* but possibly a switched subdir */
     {
-      svn_wc_conflict_description2_t *conflict;
+      const svn_wc_conflict_description2_t *conflict;
       svn_boolean_t tree_conflict;
 
       SVN_ERR(svn_wc__db_op_read_tree_conflict(&conflict, baton->db,
@@ -2977,7 +2995,7 @@ svn_wc_set_changelist2(svn_wc_context_t *wc_ctx,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                &existing_changelist,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL,
                                wc_ctx->db, local_abspath, scratch_pool,
                                scratch_pool));
 
@@ -3087,7 +3105,7 @@ svn_wc__internal_changelist_match(svn_wc__db_t *db,
                              NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                              &changelist,
                              NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                             NULL, NULL, NULL, NULL, NULL,
+                             NULL, NULL,
                              db, local_abspath, scratch_pool, scratch_pool);
 
   if (err)

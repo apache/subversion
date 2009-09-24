@@ -159,7 +159,7 @@ restore_file(svn_wc__db_t *db,
                                    NULL, NULL, NULL, NULL, NULL,
                                    NULL, NULL, NULL, NULL,
                                    NULL, NULL, NULL,
-                                   NULL, NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL,
                                    db, local_abspath,
                                    pool, pool));
 
@@ -348,7 +348,7 @@ report_revisions_and_depths(svn_wc__db_t *db,
                                &dir_repos_root, NULL, NULL, NULL, NULL, NULL,
                                &dir_depth, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL,
+                               NULL,
                                db, dir_abspath,
                                subpool, subpool));
 
@@ -401,8 +401,8 @@ report_revisions_and_depths(svn_wc__db_t *db,
                                    NULL, NULL, NULL, NULL,
                                    &this_original_repos_relpath,
                                    NULL, NULL, NULL, NULL, NULL,
-                                   &this_shadows_base, NULL, NULL, NULL,
-                                   NULL, &this_lock,
+                                   &this_shadows_base, NULL,
+                                   &this_lock,
                                    db, this_abspath, iterpool, iterpool));
 
       /* First check the depth */
@@ -1096,7 +1096,7 @@ svn_wc__internal_transmit_text_deltas(const char **tempfile,
                                    &expected_checksum, NULL,
                                    NULL, NULL, NULL, NULL, NULL,
                                    NULL, NULL, NULL,
-                                   NULL, NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL,
                                    db, local_abspath,
                                    scratch_pool, scratch_pool));
 

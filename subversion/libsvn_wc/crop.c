@@ -84,7 +84,7 @@ crop_children(svn_wc__db_t *db,
                                NULL, NULL, NULL, NULL, &dir_depth,
                                NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL,
+                               NULL,
                                db, local_abspath, pool, iterpool));
 
   /* Update the depth of target first, if needed. */
@@ -113,7 +113,7 @@ crop_children(svn_wc__db_t *db,
                                    NULL, NULL, NULL, NULL, &child_depth,
                                    NULL, NULL, NULL, NULL, NULL, NULL,
                                    NULL, NULL, NULL, NULL, NULL, NULL,
-                                   NULL, NULL, NULL, NULL,
+                                   NULL,
                                    db, child_abspath, iterpool, iterpool));
 
       if (kind == svn_wc__db_kind_file)
@@ -229,7 +229,7 @@ svn_wc_crop_tree2(svn_wc_context_t *wc_ctx,
     SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL, NULL,
                                  NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                  NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                 NULL, NULL, NULL, NULL, NULL, NULL,
+                                 NULL, NULL, NULL,
                                  db, local_abspath,
                                  scratch_pool, scratch_pool));
 
@@ -269,7 +269,7 @@ svn_wc_crop_tree2(svn_wc_context_t *wc_ctx,
       SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL, &relpath, NULL, &uuid,
                                    NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                    NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                   NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL,
                                    db, local_abspath,
                                    scratch_pool, scratch_pool));
 

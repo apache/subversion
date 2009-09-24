@@ -140,12 +140,9 @@ run_revert(svn_wc__db_t *db,
   svn_boolean_t replaced;
   svn_wc__db_kind_t kind;
   svn_node_kind_t node_kind;
-  const char *conflict_old;
-  const char *conflict_new;
-  const char *conflict_wrk;
-  const char *prop_reject_file;
   const char *working_props_path;
   const char *parent_abspath;
+  svn_boolean_t conflicted;
   apr_uint64_t modify_flags = 0;
   svn_wc_entry_t tmp_entry;
 
@@ -165,8 +162,7 @@ run_revert(svn_wc__db_t *db,
             NULL, &kind, NULL, NULL, NULL, NULL,
             NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
             NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-            &conflict_old, &conflict_new, &conflict_wrk, &prop_reject_file,
-            NULL,
+            &conflicted, NULL,
             db, local_abspath,
             scratch_pool, scratch_pool));
 
@@ -333,41 +329,75 @@ run_revert(svn_wc__db_t *db,
   else
     parent_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
 
-  /* ### in wc-ng: the following four blocks clear ACTUAL_NODE.  */
-  if (conflict_old != NULL)
+  /* ### in wc-ng: the following block clears ACTUAL_NODE.  */
+  if (conflicted)
     {
-      SVN_ERR(svn_io_remove_file2(svn_dirent_join(parent_abspath,
-                                                  conflict_old,
-                                                  scratch_pool),
-                                  TRUE, scratch_pool));
-      modify_flags |= SVN_WC__ENTRY_MODIFY_CONFLICT_OLD;
+      const apr_array_header_t *conflicts;
+      int i;
+
+      SVN_ERR(svn_wc__db_read_conflicts(&conflicts, db, local_abspath,
+                                        scratch_pool, scratch_pool));
+
+      for (i = 0; i < conflicts->nelts; i++)
+        {
+          const svn_wc_conflict_description2_t *cd;
+          const char *conflict_abspath;
+          cd = APR_ARRAY_IDX(conflicts, i,
+                             const svn_wc_conflict_description2_t *);
+
+          if (cd->base_file)
+            {
+              conflict_abspath = svn_dirent_join(parent_abspath,
+                                                 cd->base_file,
+                                                 scratch_pool);
+
+              if (strcmp(conflict_abspath, local_abspath) != 0)
+                SVN_ERR(svn_io_remove_file2(conflict_abspath, TRUE,
+                                            scratch_pool));
+            }
+
+          if (cd->their_file)
+            {
+              conflict_abspath = svn_dirent_join(parent_abspath,
+                                                 cd->their_file,
+                                                 scratch_pool);
+
+              if (strcmp(conflict_abspath, local_abspath) != 0)
+                SVN_ERR(svn_io_remove_file2(conflict_abspath, TRUE,
+                                            scratch_pool));
+            }
+
+          if (cd->my_file)
+            {
+              conflict_abspath = svn_dirent_join(parent_abspath,
+                                                 cd->my_file,
+                                                 scratch_pool);
+
+              if (strcmp(conflict_abspath, local_abspath) != 0)
+                SVN_ERR(svn_io_remove_file2(conflict_abspath, TRUE,
+                                            scratch_pool));
+            }
+
+          if (cd->merged_file)
+            {
+              conflict_abspath = svn_dirent_join(parent_abspath,
+                                                 cd->my_file,
+                                                 scratch_pool);
+
+              if (strcmp(conflict_abspath, local_abspath) != 0)
+                SVN_ERR(svn_io_remove_file2(conflict_abspath, TRUE,
+                                            scratch_pool));
+            }
+        }
+
+      modify_flags |= SVN_WC__ENTRY_MODIFY_CONFLICT_OLD |
+                      SVN_WC__ENTRY_MODIFY_CONFLICT_NEW |
+                      SVN_WC__ENTRY_MODIFY_CONFLICT_WRK |
+                      SVN_WC__ENTRY_MODIFY_PREJFILE;
+
       tmp_entry.conflict_old = NULL;
-    }
-  if (conflict_new != NULL)
-    {
-      SVN_ERR(svn_io_remove_file2(svn_dirent_join(parent_abspath,
-                                                  conflict_new,
-                                                  scratch_pool),
-                                  TRUE, scratch_pool));
-      modify_flags |= SVN_WC__ENTRY_MODIFY_CONFLICT_NEW;
       tmp_entry.conflict_new = NULL;
-    }
-  if (conflict_wrk != NULL)
-    {
-      SVN_ERR(svn_io_remove_file2(svn_dirent_join(parent_abspath,
-                                                  conflict_wrk,
-                                                  scratch_pool),
-                                  TRUE, scratch_pool));
-      modify_flags |= SVN_WC__ENTRY_MODIFY_CONFLICT_WRK;
       tmp_entry.conflict_wrk = NULL;
-    }
-  if (prop_reject_file != NULL)
-    {
-      SVN_ERR(svn_io_remove_file2(svn_dirent_join(parent_abspath,
-                                                  prop_reject_file,
-                                                  scratch_pool),
-                                  TRUE, scratch_pool));
-      modify_flags |= SVN_WC__ENTRY_MODIFY_PREJFILE;
       tmp_entry.prejfile = NULL;
     }
 
@@ -483,7 +513,7 @@ svn_wc__wq_add_revert(svn_boolean_t *will_revert,
             &status, &kind, NULL, NULL, NULL, NULL,
             NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
             NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-            NULL, NULL, NULL, NULL, NULL,
+            NULL, NULL,
             db, local_abspath,
             scratch_pool, scratch_pool));
 

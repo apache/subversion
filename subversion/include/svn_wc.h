@@ -1504,6 +1504,8 @@ typedef struct svn_wc_conflict_description2_t
   const char *base_file;     /* common ancestor of the two files being merged */
 
   /** their version of the file */
+  /* ### BH: For properties this field contains the reference to
+             the property rejection (.prej) file */
   const char *their_file;
 
   /** my locally-edited version of the file */

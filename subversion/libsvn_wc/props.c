@@ -255,19 +255,22 @@ get_existing_prop_reject_file(const char **reject_file,
 {
   const char *local_abspath;
   svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
+  apr_array_header_t *conflicts;
+  int i;
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
-  SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL,
-                               NULL, NULL, NULL, reject_file, NULL,
-                               db, local_abspath,
+  SVN_ERR(svn_wc__db_read_conflicts(&conflicts, db, local_abspath,
                                pool, pool));
 
-  if (*reject_file)
-    *reject_file = svn_dirent_join(svn_wc_adm_access_path(adm_access),
-                                   *reject_file, pool);
+  for (i = 0; i < conflicts->nelts; i++)
+    {
+      const svn_wc_conflict_description2_t *cd;
+      cd = APR_ARRAY_IDX(conflicts, i, const svn_wc_conflict_description2_t *);
+
+      if (cd->kind == svn_wc_conflict_kind_property)
+        *reject_file = svn_dirent_join(svn_wc_adm_access_path(adm_access),
+                                       cd->their_file, pool);
+    }
 
   return SVN_NO_ERROR;
 }
@@ -2109,7 +2112,7 @@ svn_wc__internal_propset(svn_wc__db_t *db,
   SVN_ERR(svn_wc__db_read_info(NULL, &kind, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL,
                                db, local_abspath,
                                scratch_pool, scratch_pool));
 
@@ -2416,7 +2419,7 @@ svn_wc__props_modified(svn_boolean_t *modified_p,
   err = svn_wc__db_read_info(&status, NULL, NULL, NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                             NULL, NULL, NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL,
                              db, local_abspath,
                              scratch_pool, scratch_pool);
 
