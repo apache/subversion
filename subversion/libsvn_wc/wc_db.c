@@ -4881,6 +4881,8 @@ svn_wc__db_read_conflicts(const apr_array_header_t **conflicts,
         }
     }
 
+  SVN_ERR(svn_sqlite__reset(stmt));
+
   /* ### Tree conflicts are still stored on the directory */
   {
     svn_wc_conflict_description2_t *desc;
