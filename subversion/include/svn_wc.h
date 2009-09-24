@@ -983,6 +983,10 @@ typedef enum svn_wc_notify_action_t
    * @since New in 1.7. */
   svn_wc_notify_update_external_removed,
 
+  /** An working copy directory was upgraded to the latest format
+   * @since New in 1.7. */
+  svn_wc_notify_upgraded_path,
+
 } svn_wc_notify_action_t;
 
 
@@ -6032,8 +6036,7 @@ svn_wc_get_pristine_copy_path(const char *path,
 
 
 /**
- * Recurse from @a local_abspath, upgrading to the latest working copy format
- * if @a upgrade_wc is set, and cleaning up unfinished log business.  Perform
+ * Recurse from @a local_abspath, cleaning up unfinished log business.  Perform
  * any temporary allocations in @a scratch_pool.  Any working copy locks under
  * @a local_path will be taken over and then cleared by this function.  
  *
@@ -6092,6 +6095,11 @@ svn_wc_cleanup(const char *path,
  * various points during the operation.  If it returns an error
  * (typically @c SVN_ERR_CANCELLED), return that error immediately.
  *
+ * For each directory converted, @a notify_func will be called with
+ * in @a notify_baton action @a svn_wc_notify_upgrade_path and as path
+ * the path of the upgraded directory. @a notify_func may be @c NULL
+ * if this notification is not needed.
+ *
  * @since New in 1.7.
  */
 svn_error_t *
@@ -6099,6 +6107,8 @@ svn_wc_upgrade(svn_wc_context_t *wc_ctx,
                const char *local_abspath,
                svn_cancel_func_t cancel_func,
                void *cancel_baton,
+               svn_wc_notify_func2_t notify_func,
+               void *notify_baton,
                apr_pool_t *pool);
 
 /** Relocation validation callback typedef.
