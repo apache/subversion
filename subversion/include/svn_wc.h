@@ -4210,17 +4210,20 @@ svn_wc_remove_from_revision_control(svn_wc_adm_access_t *adm_access,
 
 
 /**
- * Assuming @a path is under version control and in a state of conflict,
- * then take @a path *out* of this state.  If @a resolve_text is TRUE then
- * any text conflict is resolved, if @a resolve_props is TRUE then any
- * property conflicts are resolved, if @a resolve_tree is TRUE then any
- * tree conflicts are resolved.
+ * Assuming @a local_abspath is under version control or a tree conflict
+ * victime and in a state of conflict, then take @a local_abspath *out*
+ * of this state.  If @a resolve_text is TRUE then any text conflict is
+ * resolved, if @a resolve_tree is TRUE then any tree conflicts are 
+ * resolved. If @a resolve_prop is set to "" all property conflicts are
+ * resolved, if it is set to any other string value, conflicts on that
+ * specific property are resolved and when resolve_prop is NULL, no
+ * property conflicts are resolved.
  *
- * If @a depth is @c svn_depth_empty, act only on @a path; if
- * @c svn_depth_files, resolve @a path and its conflicted file
- * children (if any); if @c svn_depth_immediates, resolve @a path and
- * all its immediate conflicted children (both files and directories,
- * if any); if @c svn_depth_infinity, resolve @a path and every
+ * If @a depth is @c svn_depth_empty, act only on @a local_abspath; if
+ * @c svn_depth_files, resolve @a local_abspath and its conflicted file
+ * children (if any); if @c svn_depth_immediates, resolve @a local_abspath
+ * and all its immediate conflicted children (both files and directories,
+ * if any); if @c svn_depth_infinity, resolve @a local_abspath and every
  * conflicted file or directory anywhere beneath it.
  *
  * If @a conflict_choice is @c svn_wc_conflict_choose_base, resolve the
@@ -4234,7 +4237,8 @@ svn_wc_remove_from_revision_control(svn_wc_adm_access_t *adm_access,
  * svn_wc_conflict_choose_mine_conflict are not legal for binary
  * files or properties.
  *
- * @a adm_access is an access baton, with a write lock, for @a path.
+ * @a wc_ctx is a working copy context, with a write lock, for @a 
+ * local_abspath.
  *
  * Needless to say, this function doesn't touch conflict markers or
  * anything of that sort -- only a human can semantically resolve a
@@ -4244,19 +4248,43 @@ svn_wc_remove_from_revision_control(svn_wc_adm_access_t *adm_access,
  * The implementation details are opaque, as our "conflicted" criteria
  * might change over time.  (At the moment, this routine removes the
  * three fulltext 'backup' files and any .prej file created in a conflict,
- * and modifies @a path's entry.)
+ * and modifies @a local_abspath's entry.)
  *
- * If @a path is not under version control, return @c SVN_ERR_ENTRY_NOT_FOUND.
- * If @a path isn't in a state of conflict to begin with, do nothing, and
- * return @c SVN_NO_ERROR.
+ * If @a local_abspath is not under version control and not a tree
+ * conflict, return @c SVN_ERR_ENTRY_NOT_FOUND. If @a path isn't in a
+ * state of conflict to begin with, do nothing, and return @c SVN_NO_ERROR.
  *
- * If @c path was successfully taken out of a state of conflict, report this
- * information to @c notify_func (if non-@c NULL.)  If only text, only
- * property, or only tree conflict resolution was requested, and it was
- * successful, then success gets reported.
+ * If @c local_abspath was successfully taken out of a state of conflict,
+ * report this information to @c notify_func (if non-@c NULL.)  If only
+ * text, only property, or only tree conflict resolution was requested,
+ * and it was successful, then success gets reported.
+ *
+ * Temporary allocations will be performed in @a scratch_pool.
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_wc_resolved_conflict5(svn_wc_context_t *wc_ctx,
+                          const char *local_abspath,
+                          svn_depth_t depth,
+                          svn_boolean_t resolve_text,
+                          const char *resolve_prop,
+                          svn_boolean_t resolve_tree,
+                          svn_wc_conflict_choice_t conflict_choice,
+                          svn_cancel_func_t cancel_func,
+                          void *cancel_baton,
+                          svn_wc_notify_func2_t notify_func,
+                          void *notify_baton,
+                          apr_pool_t *scratch_pool);
+
+/** Similar to svn_wc_resolved_conflict5, but takes an absolute path
+ * and an access baton. This version doesn't support resolving a specific
+ * property.conflict.
  *
  * @since New in 1.6.
+ * @deprecated Provided for backward compatibility with the 1.6 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_resolved_conflict4(const char *path,
                           svn_wc_adm_access_t *adm_access,

@@ -975,12 +975,15 @@ get_dir_status(const struct walk_status_baton *wb,
 
   if (selected == NULL)
     {
+      const apr_array_header_t *victims;
       /* Create a hash containing all children */
       all_children = apr_hash_overlay(subpool, nodes, dirents);
 
-      SVN_ERR(svn_wc__db_read_conflict_victims(&conflicts,
+      SVN_ERR(svn_wc__db_read_conflict_victims(&victims,
                                                wb->db, local_abspath,
-                                               subpool, iterpool));
+                                               iterpool, iterpool));
+
+      SVN_ERR(svn_hash_from_cstring_keys(&conflicts, victims, subpool));
 
       /* Optimize for the no-tree-conflict case */
       if (apr_hash_count(conflicts) > 0)
