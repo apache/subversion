@@ -554,7 +554,7 @@ recursive_resolve_conflict(svn_wc__db_t *db,
 {
   svn_boolean_t conflicted;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
-  apr_array_header_t *children;
+  const apr_array_header_t *children;
   apr_hash_t *visited = apr_hash_make(scratch_pool);
   svn_depth_t child_depth;
   svn_error_t *err;
