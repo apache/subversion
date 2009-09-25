@@ -2529,13 +2529,9 @@ add_directory(const char *path,
     }
   else  /* ...or we got invalid copyfrom args. */
     {
-      svn_wc_adm_access_t *adm_access;
       svn_wc_entry_t tmp_entry;
       apr_uint64_t modify_flags = SVN_WC__ENTRY_MODIFY_KIND |
         SVN_WC__ENTRY_MODIFY_DELETED | SVN_WC__ENTRY_MODIFY_ABSENT;
-
-      SVN_ERR(svn_wc_adm_retrieve(&adm_access, eb->adm_access,
-                                  pb->path, db->pool));
 
       /* Immediately create an entry for the new directory in the parent.
          Note that the parent must already be either added or opened, and
@@ -2558,8 +2554,9 @@ add_directory(const char *path,
             SVN_WC__ENTRY_MODIFY_FORCE;
         }
 
-      SVN_ERR(svn_wc__entry_modify(adm_access, db->name, &tmp_entry,
-                                   modify_flags, pool));
+      SVN_ERR(svn_wc__entry_modify2(eb->db, db->local_abspath,
+                                    svn_node_dir, TRUE,
+                                    &tmp_entry, modify_flags, pool));
 
       if (db->add_existed)
         {
@@ -2570,9 +2567,6 @@ add_directory(const char *path,
           modify_flags  = SVN_WC__ENTRY_MODIFY_SCHEDULE
             | SVN_WC__ENTRY_MODIFY_FORCE | SVN_WC__ENTRY_MODIFY_REVISION;
 
-          SVN_ERR(svn_wc_adm_retrieve(&adm_access,
-                                      db->edit_baton->adm_access,
-                                      db->path, pool));
           tmp_entry.revision = *(eb->target_revision);
 
           if (eb->switch_url)
@@ -2582,8 +2576,9 @@ add_directory(const char *path,
               modify_flags |= SVN_WC__ENTRY_MODIFY_URL;
             }
 
-          SVN_ERR(svn_wc__entry_modify(adm_access, NULL, &tmp_entry,
-                                       modify_flags, pool));
+          SVN_ERR(svn_wc__entry_modify2(eb->db, db->local_abspath,
+                                        svn_node_dir, FALSE,
+                                        &tmp_entry, modify_flags, pool));
         }
     }
 
@@ -2601,21 +2596,18 @@ add_directory(const char *path,
     {
       svn_wc_entry_t tmp_entry;
       apr_uint64_t modify_flags = SVN_WC__ENTRY_MODIFY_SCHEDULE;
-      svn_wc_adm_access_t *adm_access;
 
       tmp_entry.schedule = svn_wc_schedule_delete;
 
       /* Mark PATH as scheduled for deletion in its parent. */
-      SVN_ERR(svn_wc_adm_retrieve(&adm_access, eb->adm_access,
-                                  pb->path, db->pool));
-      SVN_ERR(svn_wc__entry_modify(adm_access, db->name, &tmp_entry,
-                                   modify_flags, pool));
+      SVN_ERR(svn_wc__entry_modify2(eb->db, db->local_abspath,
+                                    svn_node_dir, TRUE,
+                                    &tmp_entry, modify_flags, pool));
 
       /* Mark PATH's 'this dir' entry as scheduled for deletion. */
-      SVN_ERR(svn_wc_adm_retrieve(&adm_access, eb->adm_access,
-                                  db->path, db->pool));
-      SVN_ERR(svn_wc__entry_modify(adm_access, NULL /* This Dir entry */,
-                                   &tmp_entry, modify_flags, pool));
+      SVN_ERR(svn_wc__entry_modify2(eb->db, db->local_abspath,
+                                    svn_node_dir, FALSE,
+                                    &tmp_entry, modify_flags, pool));
     }
 
   /* If this add was obstructed by dir scheduled for addition without

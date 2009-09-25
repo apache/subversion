@@ -137,22 +137,23 @@ svn_wc__is_sendable_status(const svn_wc_status2_t *status,
                            svn_boolean_t no_ignore,
                            svn_boolean_t get_all);
 
-/* For the NAME entry in the entries in ADM_ACCESS, set the
+/* For the LOCAL_ABSPATH entry in WC_CTX, set the
  * file_external_path to URL, the file_external_peg_rev to *PEG_REV
  * and the file_external_rev to *REV.  The URL may be NULL which
  * clears the file external information in the entry.  The repository
  * root URL is given in REPOS_ROOT_URL and is used to store a
- * repository root relative path in the entry.  POOL is used for
+ * repository root relative path in the entry.  SCRATCH_POOL is used for
  * temporary allocations.
  */
 svn_error_t *
-svn_wc__set_file_external_location(svn_wc_adm_access_t *adm_access,
-                                   const char *name,
+svn_wc__set_file_external_location(svn_wc_context_t *wc_ctx,
+                                   const char *local_abspath,
                                    const char *url,
                                    const svn_opt_revision_t *peg_rev,
                                    const svn_opt_revision_t *rev,
                                    const char *repos_root_url,
-                                   apr_pool_t *pool);
+                                   apr_pool_t *scratch_pool);
+
 
 /** Set @a *tree_conflict to a newly allocated @c
  * svn_wc_conflict_description_t structure describing the tree

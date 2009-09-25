@@ -171,12 +171,12 @@ tweak_entries(svn_wc__db_t *db,
             SVN_ERR(svn_wc__tweak_entry(db, child_abspath, svn_node_dir, TRUE,
                                         child_url, new_rev,
                                         TRUE /* allow_removal */,
-                                        pool));
+                                        iterpool));
           else
             SVN_ERR(svn_wc__tweak_entry(db, child_abspath, svn_node_file, FALSE,
                                         child_url, new_rev,
                                         TRUE /* allow_removal */,
-                                        pool));
+                                        iterpool));
         }
 
       /* If a directory and recursive... */
@@ -1557,8 +1557,9 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
 
   /* Now, add the entry for this item to the parent_dir's
      entries file, marking it for addition. */
-  SVN_ERR(svn_wc__entry_modify(p_access, base_name, &tmp_entry,
-                               modify_flags, pool));
+  SVN_ERR(svn_wc__entry_modify2(db, local_abspath, kind,
+                                kind == svn_node_dir /* parent_stub */,
+                                &tmp_entry, modify_flags, pool));
 
 
   /* If this is a replacement without history, we need to reset the
@@ -1642,8 +1643,9 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
                            ? svn_wc_schedule_replace
                            : svn_wc_schedule_add;
       tmp_entry.incomplete = FALSE;
-      SVN_ERR(svn_wc__entry_modify(adm_access, NULL, &tmp_entry,
-                                   modify_flags, pool));
+      SVN_ERR(svn_wc__entry_modify2(db, local_abspath, svn_node_dir,
+                                    FALSE /* parent_stub */,
+                                    &tmp_entry, modify_flags, pool));
 
       if (copyfrom_url)
         {
@@ -3056,13 +3058,13 @@ svn_wc_set_changelist2(svn_wc_context_t *wc_ctx,
 }
 
 svn_error_t *
-svn_wc__set_file_external_location(svn_wc_adm_access_t *adm_access,
-                                   const char *name,
+svn_wc__set_file_external_location(svn_wc_context_t *wc_ctx,
+                                   const char *local_abspath,
                                    const char *url,
                                    const svn_opt_revision_t *peg_rev,
                                    const svn_opt_revision_t *rev,
                                    const char *repos_root_url,
-                                   apr_pool_t *pool)
+                                   apr_pool_t *scratch_pool)
 {
   svn_wc_entry_t entry = { 0 };
 
@@ -3082,8 +3084,10 @@ svn_wc__set_file_external_location(svn_wc_adm_access_t *adm_access,
       entry.file_external_rev.kind = svn_opt_revision_unspecified;
     }
 
-  SVN_ERR(svn_wc__entry_modify(adm_access, name, &entry,
-                               SVN_WC__ENTRY_MODIFY_FILE_EXTERNAL, pool));
+  SVN_ERR(svn_wc__entry_modify2(wc_ctx->db, local_abspath,
+                                svn_node_unknown, FALSE,
+                                &entry, SVN_WC__ENTRY_MODIFY_FILE_EXTERNAL,
+                                scratch_pool));
 
   return SVN_NO_ERROR;
 }
