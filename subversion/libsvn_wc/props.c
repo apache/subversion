@@ -255,8 +255,10 @@ get_existing_prop_reject_file(const char **reject_file,
 {
   const char *local_abspath;
   svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
-  apr_array_header_t *conflicts;
+  const apr_array_header_t *conflicts;
   int i;
+
+  *reject_file = NULL;
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
   SVN_ERR(svn_wc__db_read_conflicts(&conflicts, db, local_abspath,
