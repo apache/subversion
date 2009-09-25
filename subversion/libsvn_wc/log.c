@@ -587,15 +587,17 @@ log_do_modify_entry(struct log_runner *loggy,
   apr_uint64_t modify_flags;
   const char *valuestr;
 
+  /* Make TFILE the path of the thing being modified.  */
+  tfile = svn_dirent_join(svn_wc_adm_access_path(loggy->adm_access), name,
+                          loggy->pool);
+
   if (loggy->rerun)
     {
       /* When committing a delete the entry might get removed, in
          which case we don't want to reincarnate it.  */
       const svn_wc_entry_t *existing;
-      const char *path
-        = svn_dirent_join(svn_wc_adm_access_path(loggy->adm_access), name,
-                          loggy->pool);
-      SVN_ERR(svn_wc_entry(&existing, path, loggy->adm_access, TRUE,
+
+      SVN_ERR(svn_wc_entry(&existing, tfile, loggy->adm_access, TRUE,
                            loggy->pool));
       if (! existing)
         return SVN_NO_ERROR;
@@ -603,11 +605,6 @@ log_do_modify_entry(struct log_runner *loggy,
 
   /* Convert the attributes into an entry structure. */
   SVN_ERR(svn_wc__atts_to_entry(&entry, &modify_flags, ah, loggy->pool));
-
-  /* Make TFILE the path of the thing being modified.  */
-  tfile = svn_dirent_join(svn_wc_adm_access_path(loggy->adm_access),
-                          strcmp(name, SVN_WC_ENTRY_THIS_DIR) ? name : "",
-                          loggy->pool);
 
   /* svn_wc__atts_to_entry will no-op if the TEXT_TIME timestamp is
      SVN_WC__TIMESTAMP_WC, so look for that case and fill in the proper
@@ -639,7 +636,6 @@ log_do_modify_entry(struct log_runner *loggy,
 
       err = svn_wc_entry(&tfile_entry, tfile, loggy->adm_access,
                          FALSE, loggy->pool);
-
       if (err)
         SIGNAL_ERROR(loggy, err);
 
@@ -675,7 +671,7 @@ log_do_modify_entry(struct log_runner *loggy,
 
        1. modify_entry
        2. modify_wcprops
-       3. modify_entry(DELETD=FALSE)
+       3. modify_entry(DELETED=FALSE)
 
      Step 2 will fail if the current node is marked DELETED. r36697 fixes
      the ordering, moving step 3 to the beginning of the sequence. However,
@@ -702,9 +698,18 @@ log_do_modify_entry(struct log_runner *loggy,
       modify_flags |= SVN_WC__ENTRY_MODIFY_DELETED;
     }
 
-  /* Now write the new entry out */
-  err = svn_wc__entry_modify(loggy->adm_access, name,
-                             entry, modify_flags, loggy->pool);
+  /* Now write the new entry out. Note that we want to always operate
+     on the stub if name is not THIS_DIR. This loggy function is intended
+     to operate on the data in ADM_ABSPATH, so we do NOT want to reach
+     down into a subdir. For entry_modify2(), it is okay to set PARENT_STUB
+     to TRUE for files (kind errors are not raised).  */
+  err = svn_wc__entry_modify2(loggy->db,
+                              svn_dirent_join(loggy->adm_abspath,
+                                              name,
+                                              loggy->pool),
+                              svn_node_unknown,
+                              *name != '\0' /* parent_stub */,
+                              entry, modify_flags, loggy->pool);
   if (err)
     return svn_error_createf(pick_error_code(loggy), err,
                              _("Error modifying entry for '%s'"), name);
@@ -740,9 +745,12 @@ log_do_delete_changelist(struct log_runner *loggy,
   entry.changelist = NULL;
 
   /* Now write the new entry out */
-  err = svn_wc__entry_modify(loggy->adm_access, name,
-                             &entry, SVN_WC__ENTRY_MODIFY_CHANGELIST,
-                             loggy->pool);
+  err = svn_wc__entry_modify2(loggy->db,
+                              svn_dirent_join(loggy->adm_abspath, name,
+                                              loggy->pool),
+                              svn_node_unknown, FALSE,
+                              &entry, SVN_WC__ENTRY_MODIFY_CHANGELIST,
+                              loggy->pool);
   if (err)
     return svn_error_createf(pick_error_code(loggy), err,
                              _("Error removing changelist from entry '%s'"),
@@ -936,10 +944,12 @@ log_do_committed(struct log_runner *loggy,
           tmpentry.revision = new_rev;
           tmpentry.kind = svn_node_dir;
 
-          SVN_ERR(svn_wc__entry_modify
-                  (loggy->adm_access, NULL, &tmpentry,
-                   SVN_WC__ENTRY_MODIFY_REVISION | SVN_WC__ENTRY_MODIFY_KIND,
-                   pool));
+          SVN_ERR(svn_wc__entry_modify2(loggy->db, local_abspath,
+                                        svn_node_dir, FALSE,
+                                        &tmpentry,
+                                        SVN_WC__ENTRY_MODIFY_REVISION
+                                        | SVN_WC__ENTRY_MODIFY_KIND,
+                                        pool));
 
           /* Drop the 'killme' file. */
           err = svn_wc__make_killme(loggy->adm_access, entry->keep_local,
@@ -966,10 +976,9 @@ log_do_committed(struct log_runner *loggy,
           const svn_wc_entry_t *parentry;
           svn_wc_entry_t tmp_entry;
 
-          SVN_ERR(svn_wc_remove_from_revision_control(loggy->adm_access,
-                                                      name, FALSE, FALSE,
-                                                      NULL, NULL,
-                                                      pool));
+          SVN_ERR(svn_wc__remove_from_revision_control_internal(
+                    loggy->db, local_abspath,
+                    FALSE, FALSE, NULL, NULL, pool));
 
           /* If the parent entry's working rev 'lags' behind new_rev... */
           SVN_ERR(svn_wc_entry(&parentry,
@@ -985,12 +994,13 @@ log_do_committed(struct log_runner *loggy,
               tmp_entry.kind = svn_node_file;
               tmp_entry.deleted = TRUE;
               tmp_entry.revision = new_rev;
-              SVN_ERR(svn_wc__entry_modify
-                      (loggy->adm_access, name, &tmp_entry,
-                       SVN_WC__ENTRY_MODIFY_REVISION
-                       | SVN_WC__ENTRY_MODIFY_KIND
-                       | SVN_WC__ENTRY_MODIFY_DELETED,
-                       pool));
+              SVN_ERR(svn_wc__entry_modify2(loggy->db, local_abspath,
+                                            svn_node_file, FALSE,
+                                            &tmp_entry,
+                                            SVN_WC__ENTRY_MODIFY_REVISION
+                                              | SVN_WC__ENTRY_MODIFY_KIND
+                                              | SVN_WC__ENTRY_MODIFY_DELETED,
+                                            pool));
             }
 
           return SVN_NO_ERROR;
@@ -1204,21 +1214,23 @@ log_do_committed(struct log_runner *loggy,
   /* We don't reset tree_conflict_data, because it's about conflicts on
      children, not on this node, and it could conceivably be valid to commit
      this node non-recursively while children are still in conflict. */
-  if ((err = svn_wc__entry_modify(loggy->adm_access, name, entry,
-                                  (modify_flags
-                                   | SVN_WC__ENTRY_MODIFY_REVISION
-                                   | SVN_WC__ENTRY_MODIFY_KIND
-                                   | SVN_WC__ENTRY_MODIFY_SCHEDULE
-                                   | SVN_WC__ENTRY_MODIFY_COPIED
-                                   | SVN_WC__ENTRY_MODIFY_DELETED
-                                   | SVN_WC__ENTRY_MODIFY_CONFLICT_OLD
-                                   | SVN_WC__ENTRY_MODIFY_CONFLICT_NEW
-                                   | SVN_WC__ENTRY_MODIFY_CONFLICT_WRK
-                                   | SVN_WC__ENTRY_MODIFY_PREJFILE
-                                   | SVN_WC__ENTRY_MODIFY_COPYFROM_URL
-                                   | SVN_WC__ENTRY_MODIFY_COPYFROM_REV
-                                   | SVN_WC__ENTRY_MODIFY_FORCE),
-                                  pool)))
+  if ((err = svn_wc__entry_modify2(loggy->db, local_abspath,
+                                   svn_node_unknown, FALSE,
+                                   entry,
+                                   (modify_flags
+                                    | SVN_WC__ENTRY_MODIFY_REVISION
+                                    | SVN_WC__ENTRY_MODIFY_KIND
+                                    | SVN_WC__ENTRY_MODIFY_SCHEDULE
+                                    | SVN_WC__ENTRY_MODIFY_COPIED
+                                    | SVN_WC__ENTRY_MODIFY_DELETED
+                                    | SVN_WC__ENTRY_MODIFY_CONFLICT_OLD
+                                    | SVN_WC__ENTRY_MODIFY_CONFLICT_NEW
+                                    | SVN_WC__ENTRY_MODIFY_CONFLICT_WRK
+                                    | SVN_WC__ENTRY_MODIFY_PREJFILE
+                                    | SVN_WC__ENTRY_MODIFY_COPYFROM_URL
+                                    | SVN_WC__ENTRY_MODIFY_COPYFROM_REV
+                                    | SVN_WC__ENTRY_MODIFY_FORCE),
+                                   pool)))
     return svn_error_createf
       (pick_error_code(loggy), err,
        _("Error modifying entry of '%s'"), name);
@@ -1431,60 +1443,66 @@ start_handler(void *userData, const char *eltname, const char **atts)
   return;
 }
 
-/* Process the "KILLME" file in ADM_ACCESS: remove the administrative area
-   for ADM_ACCESS and its children, and, if ADM_ONLY is false, also remove
-   the contents of the working copy (leaving only locally-modified files). */
+/* Process the "KILLME" file associated with DIR_ABSPATH: remove the
+   administrative area for DIR_ABSPATH and its children, and, if ADM_ONLY
+   is FALSE, also remove the contents of the working copy (leaving only
+   locally-modified files).  */
 static svn_error_t *
-handle_killme(svn_wc_adm_access_t *adm_access,
+handle_killme(svn_wc__db_t *db,
+              const char *dir_abspath,
               svn_boolean_t adm_only,
               svn_cancel_func_t cancel_func,
               void *cancel_baton,
               apr_pool_t *scratch_pool)
 {
-  const svn_wc_entry_t *thisdir_entry, *parent_entry;
-  svn_wc_entry_t tmp_entry;
+  svn_revnum_t original_revision;
+  svn_revnum_t parent_revision;
   svn_error_t *err;
-  SVN_ERR(svn_wc_entry(&thisdir_entry,
-                       svn_wc_adm_access_path(adm_access), adm_access,
-                       FALSE, scratch_pool));
+
+  SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, &original_revision,
+                                   NULL, NULL, NULL,
+                                   NULL, NULL, NULL,
+                                   NULL, NULL, NULL,
+                                   NULL, NULL, NULL,
+                                   db, dir_abspath,
+                                   scratch_pool, scratch_pool));
+  SVN_ERR(svn_wc__db_read_info(NULL, NULL, &parent_revision,
+                               NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               db, svn_dirent_dirname(dir_abspath,
+                                                      scratch_pool),
+                               scratch_pool, scratch_pool));
 
   /* Blow away the administrative directories, and possibly the working
      copy tree too. */
-  err = svn_wc_remove_from_revision_control(adm_access,
-                                            SVN_WC_ENTRY_THIS_DIR,
-                                            !adm_only, /* destroy */
-                                            FALSE, /* no instant err */
-                                            cancel_func, cancel_baton,
-                                            scratch_pool);
+  err = svn_wc__remove_from_revision_control_internal(
+          db, dir_abspath,
+          !adm_only /* destroy_wf */, FALSE /* instant_error */,
+          cancel_func, cancel_baton,
+          scratch_pool);
   if (err && err->apr_err != SVN_ERR_WC_LEFT_LOCAL_MOD)
     return err;
   svn_error_clear(err);
 
   /* If revnum of this dir is greater than parent's revnum, then
      recreate 'deleted' entry in parent. */
-  {
-    const char *parent, *bname;
-    svn_wc_adm_access_t *parent_access;
+  if (original_revision > parent_revision)
+    {
+      svn_wc_entry_t tmp_entry;
 
-    svn_dirent_split(svn_wc_adm_access_path(adm_access), &parent, &bname,
-                     scratch_pool);
-    SVN_ERR(svn_wc_adm_retrieve(&parent_access, adm_access, parent,
-                                scratch_pool));
-    SVN_ERR(svn_wc_entry(&parent_entry, parent, parent_access, FALSE,
-                         scratch_pool));
+      tmp_entry.kind = svn_node_dir;
+      tmp_entry.deleted = TRUE;
+      tmp_entry.revision = original_revision;
+      SVN_ERR(svn_wc__entry_modify2(db, dir_abspath, svn_node_dir, TRUE,
+                                    &tmp_entry,
+                                    SVN_WC__ENTRY_MODIFY_REVISION
+                                      | SVN_WC__ENTRY_MODIFY_KIND
+                                      | SVN_WC__ENTRY_MODIFY_DELETED,
+                                    scratch_pool));
+    }
 
-    if (thisdir_entry->revision > parent_entry->revision)
-      {
-        tmp_entry.kind = svn_node_dir;
-        tmp_entry.deleted = TRUE;
-        tmp_entry.revision = thisdir_entry->revision;
-        SVN_ERR(svn_wc__entry_modify(parent_access, bname, &tmp_entry,
-                                     SVN_WC__ENTRY_MODIFY_REVISION
-                                     | SVN_WC__ENTRY_MODIFY_KIND
-                                     | SVN_WC__ENTRY_MODIFY_DELETED,
-                                     scratch_pool));
-      }
-  }
   return SVN_NO_ERROR;
 }
 
@@ -1513,6 +1531,7 @@ run_log(svn_wc_adm_access_t *adm_access,
         svn_boolean_t rerun,
         apr_pool_t *scratch_pool)
 {
+  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
   const char *dir_abspath = svn_wc__adm_access_abspath(adm_access);
   svn_xml_parser_t *parser;
   struct log_runner *loggy;
@@ -1527,8 +1546,8 @@ run_log(svn_wc_adm_access_t *adm_access,
   parser = svn_xml_make_parser(loggy, start_handler, NULL, NULL,
                                scratch_pool);
 
-  loggy->db = svn_wc__adm_get_db(adm_access);
-  loggy->adm_abspath = svn_wc__adm_access_abspath(adm_access);
+  loggy->db = db;
+  loggy->adm_abspath = dir_abspath;
   loggy->adm_access = adm_access;
   loggy->pool = svn_pool_create(scratch_pool);
   loggy->result_pool = svn_pool_create(scratch_pool);
@@ -1592,7 +1611,9 @@ run_log(svn_wc_adm_access_t *adm_access,
           const svn_wc_conflict_description2_t *conflict = 
                                                  svn_apr_hash_index_val(hi);
 
-          err = svn_wc__db_op_set_tree_conflict(loggy->db,
+          svn_pool_clear(iterpool);
+
+          err = svn_wc__db_op_set_tree_conflict(db,
                                                 conflict->local_abspath,
                                                 conflict, iterpool);
          
@@ -1605,11 +1626,11 @@ run_log(svn_wc_adm_access_t *adm_access,
 
   /* Check for a 'killme' file in the administrative area. */
   SVN_ERR(svn_wc__check_killme(adm_access, &killme, &kill_adm_only,
-                               scratch_pool));
+                               iterpool));
   if (killme)
     {
-      SVN_ERR(handle_killme(adm_access, kill_adm_only, NULL, NULL,
-                            scratch_pool));
+      SVN_ERR(handle_killme(db, dir_abspath, kill_adm_only, NULL, NULL,
+                            iterpool));
     }
   else
     {
@@ -2290,7 +2311,6 @@ run_existing_logs(svn_wc_adm_access_t *adm_access,
       entry_abspath = svn_dirent_join(adm_abspath, name, iterpool);
 
       SVN_ERR(svn_wc__db_node_hidden(&hidden, db, entry_abspath, iterpool));
-
       if (hidden)
         continue;
 
@@ -2323,16 +2343,14 @@ run_existing_logs(svn_wc_adm_access_t *adm_access,
                                         iterpool));
         }
     }
-  svn_pool_destroy(iterpool);
 
   SVN_ERR(svn_wc__check_killme(adm_access, &killme, &kill_adm_only,
-                               scratch_pool));
-
+                               iterpool));
   if (killme)
     {
       /* A KILLME indicates that the log has already been run */
-      SVN_ERR(handle_killme(adm_access, kill_adm_only, cancel_func,
-                            cancel_baton, scratch_pool));
+      SVN_ERR(handle_killme(db, adm_abspath, kill_adm_only, cancel_func,
+                            cancel_baton, iterpool));
     }
   else
     {
@@ -2341,15 +2359,15 @@ run_existing_logs(svn_wc_adm_access_t *adm_access,
       /* In an attempt to maintain consistency between the decisions made in
          this function, and those made in the access baton lock-removal code,
          we use the same test as the lock-removal code. */
-      SVN_ERR(svn_wc__logfile_present(&present,
-                                      svn_wc__adm_access_abspath(adm_access),
-                                      scratch_pool));
+      SVN_ERR(svn_wc__logfile_present(&present, adm_abspath, iterpool));
       if (present)
         {
           /* ### rerun the log. why? dunno. missing commentary... */
-          SVN_ERR(run_log(adm_access, TRUE, scratch_pool));
+          SVN_ERR(run_log(adm_access, TRUE, iterpool));
         }
     }
+
+  svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
 }

@@ -2913,10 +2913,6 @@ svn_wc__entry_modify2(svn_wc__db_t *db,
   else
     SVN_ERR(svn_wc_entries_read(&entries, adm_access, TRUE, scratch_pool));
 
-  /* Ensure that NAME is valid. */
-  if (name == NULL)
-    name = SVN_WC_ENTRY_THIS_DIR;
-
   if (modify_flags & SVN_WC__ENTRY_MODIFY_SCHEDULE)
     {
       /* We may just want to force the scheduling change in. Otherwise,
@@ -2957,71 +2953,8 @@ svn_wc__entry_modify2(svn_wc__db_t *db,
     }
 
   /* Sync changes to disk. */
-  return svn_error_return(
-    entries_write(entries, db, adm_abspath, scratch_pool));
-}
-
-
-svn_error_t *
-svn_wc__entry_modify(svn_wc_adm_access_t *adm_access,
-                     const char *name,
-                     svn_wc_entry_t *entry,
-                     apr_uint64_t modify_flags,
-                     apr_pool_t *pool)
-{
-  apr_hash_t *entries;
-  svn_boolean_t delete_entry = FALSE;
-  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
-
-  SVN_ERR_ASSERT(entry);
-
-  /* Load ADM_ACCESS's whole entries file. */
-  SVN_ERR(svn_wc_entries_read(&entries, adm_access, TRUE, pool));
-
-  /* Ensure that NAME is valid. */
-  if (name == NULL)
-    name = SVN_WC_ENTRY_THIS_DIR;
-
-  if (modify_flags & SVN_WC__ENTRY_MODIFY_SCHEDULE)
-    {
-      /* We may just want to force the scheduling change in. Otherwise,
-         call our special function to fold the change in.  */
-      if (!(modify_flags & SVN_WC__ENTRY_MODIFY_FORCE))
-        {
-          svn_boolean_t skip_schedule_change;
-
-          /* If scheduling changes were made, we have a special routine to
-             manage those modifications. */
-          SVN_ERR(fold_scheduling(&skip_schedule_change,
-                                  &delete_entry,
-                                  &entry->schedule,
-                                  apr_hash_get(entries, "",
-                                               APR_HASH_KEY_STRING),
-                                  apr_hash_get(entries, name,
-                                               APR_HASH_KEY_STRING),
-                                  entry->schedule,
-                                  name, pool));
-
-          /* Check if the scheduling folding resulted in removing this entry */
-          if (delete_entry)
-            apr_hash_set(entries, name, APR_HASH_KEY_STRING, NULL);
-
-          if (skip_schedule_change)
-            modify_flags &= ~SVN_WC__ENTRY_MODIFY_SCHEDULE;
-        }
-    }
-
-  /* If the entry wasn't just removed from the entries hash, fold the
-     changes into the entry. */
-  if (!delete_entry)
-    {
-      SVN_ERR(fold_entry(entries, name, modify_flags, entry,
-                         svn_wc_adm_access_pool(adm_access)));
-    }
-
-  /* Sync changes to disk. */
-  return svn_error_return(
-    entries_write(entries, db, svn_wc__adm_access_abspath(adm_access), pool));
+  return svn_error_return(entries_write(entries, db, adm_abspath,
+                                        scratch_pool));
 }
 
 

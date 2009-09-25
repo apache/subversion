@@ -166,16 +166,20 @@ svn_error_t *svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
      ### base / working / base and working version(s) ?
    of the node.
 
-   Perform all allocations in POOL.  */
-svn_error_t *
-svn_wc__entry_modify(svn_wc_adm_access_t *adm_access,
-                     const char *name,
-                     svn_wc_entry_t *entry,
-                     apr_uint64_t modify_flags,
-                     apr_pool_t *pool);
+   Perform all allocations in SCRATCH_POOL.
 
+   -----
 
-/* A cross between svn_wc__get_entry() and svn_wc__entry_modify(). */
+   A cross between svn_wc__get_entry() and svn_wc__entry_modify().
+
+   If PARENT_STUB is TRUE, then this function will modify a directory's
+   stub entry in the parent. If PARENT_STUB is FALSE, then it will operate
+   on a directory's real entry.
+
+   PARENT_STUB must be FALSE if KIND==FILE.
+
+   If KIND is svn_kind_unknown, then PARENT_STUB is interpreted based on
+   what is found on disk.  */
 svn_error_t *
 svn_wc__entry_modify2(svn_wc__db_t *db,
                       const char *local_abspath,
