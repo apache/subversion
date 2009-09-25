@@ -1395,7 +1395,7 @@ gather_children(const apr_array_header_t **children,
 
 
 static void
-flush_entries(svn_wc__db_pdh_t *pdh)
+flush_entries(const svn_wc__db_pdh_t *pdh)
 {
   if (pdh->adm_access)
     svn_wc__adm_access_set_entries(pdh->adm_access, NULL);
@@ -2600,7 +2600,6 @@ svn_wc__db_op_set_changelist(svn_wc__db_t *db,
   SVN_ERR(parse_local_abspath(&pdh, &scb.local_relpath, db, local_abspath,
                               svn_sqlite__mode_readwrite,
                               scratch_pool, scratch_pool));
-
   VERIFY_USABLE_PDH(pdh);
 
   scb.wc_id = pdh->wcroot->wc_id;
@@ -2630,11 +2629,51 @@ svn_wc__db_op_mark_conflict(svn_wc__db_t *db,
 svn_error_t *
 svn_wc__db_op_mark_resolved(svn_wc__db_t *db,
                             const char *local_abspath,
+                            svn_boolean_t resolved_text,
+                            svn_boolean_t resolved_props,
+                            svn_boolean_t resolved_tree,
                             apr_pool_t *scratch_pool)
 {
+  svn_wc__db_pdh_t *pdh;
+  const char *local_relpath;
+  svn_sqlite__stmt_t *stmt;
+
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
-  NOT_IMPLEMENTED();
+  /* ### we're not ready to handy RECEIVED_TREE just yet.  */
+  SVN_ERR_ASSERT(!resolved_tree);
+
+  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
+                              svn_sqlite__mode_readwrite,
+                              scratch_pool, scratch_pool));
+  VERIFY_USABLE_PDH(pdh);
+
+  /* ### these two statements are not transacted together. is this a
+     ### problem? I suspect a failure simply leaves the other in a
+     ### continued, unresolved state. However, that still retains
+     ### "integrity", so another re-run by the user will fix it.  */
+
+  if (resolved_text)
+    {
+      SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+                                        STMT_CLEAR_TEXT_CONFLICT));
+      SVN_ERR(svn_sqlite__bindf(stmt, "is",
+                                pdh->wcroot->wc_id, local_relpath));
+      SVN_ERR(svn_sqlite__step_done(stmt));
+    }
+  if (resolved_props)
+    {
+      SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+                                        STMT_CLEAR_PROPS_CONFLICT));
+      SVN_ERR(svn_sqlite__bindf(stmt, "is",
+                                pdh->wcroot->wc_id, local_relpath));
+      SVN_ERR(svn_sqlite__step_done(stmt));
+    }
+
+  /* Some entries have cached the above values. Kapow!!  */
+  flush_entries(pdh);
+
+  return SVN_NO_ERROR;
 }
 
 

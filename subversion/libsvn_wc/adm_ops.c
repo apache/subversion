@@ -2467,19 +2467,27 @@ svn_wc_remove_from_revision_control2(svn_wc_context_t *wc_ctx,
 
 /* Helper for resolve_conflict_on_entry.  Delete the file BASE_NAME in
    PARENT_DIR if it exists.  Set WAS_PRESENT to TRUE if the file existed,
-   and to FALSE otherwise. */
+   and leave it UNTOUCHED otherwise. */
 static svn_error_t *
 attempt_deletion(const char *parent_dir,
                  const char *base_name,
                  svn_boolean_t *was_present,
-                 apr_pool_t *pool)
+                 apr_pool_t *scratch_pool)
 {
-  const char *full_path = svn_dirent_join(parent_dir, base_name, pool);
-  svn_error_t *err = svn_io_remove_file2(full_path, FALSE, pool);
+  const char *full_path;
+  svn_error_t *err;
 
-  *was_present = ! err || ! APR_STATUS_IS_ENOENT(err->apr_err);
-  if (*was_present)
-    return err;
+  if (base_name == NULL)
+    return SVN_NO_ERROR;
+
+  full_path = svn_dirent_join(parent_dir, base_name, scratch_pool);
+  err = svn_io_remove_file2(full_path, FALSE, scratch_pool);
+
+  if (err == NULL || !APR_STATUS_IS_ENOENT(err->apr_err))
+    {
+      *was_present = TRUE;
+      return svn_error_return(err);
+    }
 
   svn_error_clear(err);
   return SVN_NO_ERROR;
@@ -2517,9 +2525,7 @@ resolve_conflict_on_node(svn_wc__db_t *db,
                          svn_boolean_t *did_resolve,
                          apr_pool_t *pool)
 {
-  svn_boolean_t was_present, need_feedback = FALSE;
-  apr_uint64_t modify_flags = 0;
-  svn_wc_entry_t tmp_entry;
+  svn_boolean_t found_file;
   const char *conflict_old = NULL;
   const char *conflict_new = NULL;
   const char *conflict_working = NULL;
@@ -2629,51 +2635,37 @@ resolve_conflict_on_node(svn_wc__db_t *db,
           local_abspath, TRUE, pool));
     }
 
-  /* Yes indeed, being able to map a function over a list would be nice. */
-  if (resolve_text && conflict_old)
+  /* Records whether we found any of the conflict files.  */
+  found_file = FALSE;
+
+  if (resolve_text)
     {
       SVN_ERR(attempt_deletion(conflict_dir_abspath, conflict_old,
-                               &was_present, pool));
-      modify_flags |= SVN_WC__ENTRY_MODIFY_CONFLICT_OLD;
-      tmp_entry.conflict_old = NULL;
-      need_feedback |= was_present;
-    }
-  if (resolve_text && conflict_new)
-    {
+                               &found_file, pool));
       SVN_ERR(attempt_deletion(conflict_dir_abspath, conflict_new,
-                               &was_present, pool));
-      modify_flags |= SVN_WC__ENTRY_MODIFY_CONFLICT_NEW;
-      tmp_entry.conflict_new = NULL;
-      need_feedback |= was_present;
-    }
-  if (resolve_text && conflict_working)
-    {
+                               &found_file, pool));
       SVN_ERR(attempt_deletion(conflict_dir_abspath, conflict_working,
-                               &was_present, pool));
-      modify_flags |= SVN_WC__ENTRY_MODIFY_CONFLICT_WRK;
-      tmp_entry.conflict_wrk = NULL;
-      need_feedback |= was_present;
+                               &found_file, pool));
+      resolve_text = conflict_old || conflict_new || conflict_working;
     }
-  if (resolve_props && prop_reject_file)
+  if (resolve_props)
     {
-      SVN_ERR(attempt_deletion(conflict_dir_abspath, prop_reject_file,
-                               &was_present, pool));
-      modify_flags |= SVN_WC__ENTRY_MODIFY_PREJFILE;
-      tmp_entry.prejfile = NULL;
-      need_feedback |= was_present;
+      if (prop_reject_file != NULL)
+        SVN_ERR(attempt_deletion(conflict_dir_abspath, prop_reject_file,
+                                 &found_file, pool));
+      else
+        resolve_props = FALSE;
     }
 
-  if (modify_flags)
+  if (resolve_text || resolve_props)
     {
-      /* Although removing the files is sufficient to indicate that the
-         conflict is resolved, if we update the entry as well future checks
-         for conflict state will be more efficient. */
-      SVN_ERR(svn_wc__entry_modify2(db, local_abspath, svn_node_unknown,
-                                    FALSE, &tmp_entry, modify_flags, pool));
+      SVN_ERR(svn_wc__db_op_mark_resolved(db, local_abspath,
+                                          resolve_text, resolve_props,
+                                          FALSE, pool));
 
       /* No feedback if no files were deleted and all we did was change the
          entry, such a file did not appear as a conflict */
-      if (need_feedback)
+      if (found_file)
         *did_resolve = TRUE;
     }
 

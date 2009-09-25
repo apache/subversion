@@ -1199,10 +1199,6 @@ log_do_committed(struct log_runner *loggy,
   entry->schedule = svn_wc_schedule_normal;
   entry->copied = FALSE;
   entry->deleted = FALSE;
-  entry->conflict_old = NULL;
-  entry->conflict_new = NULL;
-  entry->conflict_wrk = NULL;
-  entry->prejfile = NULL;
   entry->copyfrom_url = NULL;
   entry->copyfrom_rev = SVN_INVALID_REVNUM;
 
@@ -1218,10 +1214,6 @@ log_do_committed(struct log_runner *loggy,
                                     | SVN_WC__ENTRY_MODIFY_SCHEDULE
                                     | SVN_WC__ENTRY_MODIFY_COPIED
                                     | SVN_WC__ENTRY_MODIFY_DELETED
-                                    | SVN_WC__ENTRY_MODIFY_CONFLICT_OLD
-                                    | SVN_WC__ENTRY_MODIFY_CONFLICT_NEW
-                                    | SVN_WC__ENTRY_MODIFY_CONFLICT_WRK
-                                    | SVN_WC__ENTRY_MODIFY_PREJFILE
                                     | SVN_WC__ENTRY_MODIFY_COPYFROM_URL
                                     | SVN_WC__ENTRY_MODIFY_COPYFROM_REV
                                     | SVN_WC__ENTRY_MODIFY_FORCE),
@@ -1229,6 +1221,13 @@ log_do_committed(struct log_runner *loggy,
     return svn_error_createf
       (pick_error_code(loggy), err,
        _("Error modifying entry of '%s'"), name);
+
+  /* Clear out the conflict stuffs.  */
+  /* ### this isn't transacted with the above modification, but then again,
+     ### this entire function needs some kind of transactional behavior.  */
+  SVN_ERR(svn_wc__db_op_mark_resolved(loggy->db, local_abspath,
+                                      TRUE, TRUE, FALSE,
+                                      pool));
 
   /* If we aren't looking at "this dir" (meaning we are looking at a
      file), we are finished.  From here on out, it's all about a
@@ -1327,11 +1326,16 @@ log_do_add_tree_conflict(struct log_runner *loggy,
                                        loggy->pool),
                    APR_HASH_KEY_STRING) == NULL)
     {
+      /* ### should probably grab the pool from the hash, rather than
+         ### stored in loggy.  */
+
       /* Copy the new conflict to the result pool.  Add its pointer to
          the hash of existing conflicts. */
       const svn_wc_conflict_description2_t *duped_conflict =
                         svn_wc__conflict_description2_dup(new_conflict,
                                                           loggy->result_pool);
+
+      /* ### I think this loggy->pool is incorrect.  */
       apr_hash_set(loggy->tree_conflicts,
                    svn_dirent_basename(duped_conflict->local_abspath,
                                        loggy->pool),

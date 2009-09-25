@@ -131,6 +131,30 @@ move_if_present(const char *source_abspath,
 /* OP_REVERT  */
 
 
+/* Remvoe the file at join(PARENT_ABSPATH, BASE_NAME) if it is not the
+   working file defined by LOCAL_ABSPATH. If BASE_NAME is NULL, then
+   nothing is done. All temp allocations are made within SCRATCH_POOL.  */
+static svn_error_t *
+maybe_remove_conflict(const char *parent_abspath,
+                      const char *base_name,
+                      const char *local_abspath,
+                      apr_pool_t *scratch_pool)
+{
+  if (base_name != NULL)
+    {
+      const char *conflict_abspath = svn_dirent_join(parent_abspath,
+                                                     base_name,
+                                                     scratch_pool);
+
+      if (strcmp(conflict_abspath, local_abspath) != 0)
+        SVN_ERR(svn_io_remove_file2(conflict_abspath, TRUE,
+                                    scratch_pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
 static svn_error_t *
 run_revert(svn_wc__db_t *db,
            const svn_skel_t *work_item,
@@ -341,64 +365,23 @@ run_revert(svn_wc__db_t *db,
       for (i = 0; i < conflicts->nelts; i++)
         {
           const svn_wc_conflict_description2_t *cd;
-          const char *conflict_abspath;
+
           cd = APR_ARRAY_IDX(conflicts, i,
                              const svn_wc_conflict_description2_t *);
 
-          if (cd->base_file)
-            {
-              conflict_abspath = svn_dirent_join(parent_abspath,
-                                                 cd->base_file,
-                                                 scratch_pool);
-
-              if (strcmp(conflict_abspath, local_abspath) != 0)
-                SVN_ERR(svn_io_remove_file2(conflict_abspath, TRUE,
-                                            scratch_pool));
-            }
-
-          if (cd->their_file)
-            {
-              conflict_abspath = svn_dirent_join(parent_abspath,
-                                                 cd->their_file,
-                                                 scratch_pool);
-
-              if (strcmp(conflict_abspath, local_abspath) != 0)
-                SVN_ERR(svn_io_remove_file2(conflict_abspath, TRUE,
-                                            scratch_pool));
-            }
-
-          if (cd->my_file)
-            {
-              conflict_abspath = svn_dirent_join(parent_abspath,
-                                                 cd->my_file,
-                                                 scratch_pool);
-
-              if (strcmp(conflict_abspath, local_abspath) != 0)
-                SVN_ERR(svn_io_remove_file2(conflict_abspath, TRUE,
-                                            scratch_pool));
-            }
-
-          if (cd->merged_file)
-            {
-              conflict_abspath = svn_dirent_join(parent_abspath,
-                                                 cd->my_file,
-                                                 scratch_pool);
-
-              if (strcmp(conflict_abspath, local_abspath) != 0)
-                SVN_ERR(svn_io_remove_file2(conflict_abspath, TRUE,
-                                            scratch_pool));
-            }
+          SVN_ERR(maybe_remove_conflict(parent_abspath, cd->base_file,
+                                        local_abspath, scratch_pool));
+          SVN_ERR(maybe_remove_conflict(parent_abspath, cd->their_file,
+                                        local_abspath, scratch_pool));
+          SVN_ERR(maybe_remove_conflict(parent_abspath, cd->my_file,
+                                        local_abspath, scratch_pool));
+          SVN_ERR(maybe_remove_conflict(parent_abspath, cd->merged_file,
+                                        local_abspath, scratch_pool));
         }
 
-      modify_flags |= SVN_WC__ENTRY_MODIFY_CONFLICT_OLD |
-                      SVN_WC__ENTRY_MODIFY_CONFLICT_NEW |
-                      SVN_WC__ENTRY_MODIFY_CONFLICT_WRK |
-                      SVN_WC__ENTRY_MODIFY_PREJFILE;
-
-      tmp_entry.conflict_old = NULL;
-      tmp_entry.conflict_new = NULL;
-      tmp_entry.conflict_wrk = NULL;
-      tmp_entry.prejfile = NULL;
+      SVN_ERR(svn_wc__db_op_mark_resolved(db, local_abspath,
+                                          TRUE, TRUE, FALSE,
+                                          scratch_pool));
     }
 
   /* Clean up the copied state for all replacements.  */
