@@ -598,22 +598,23 @@ read_entries_new(apr_hash_t **result_entries,
         {
           /* get the tree conflict data. */
           apr_hash_t *tree_conflicts = NULL;
-          apr_hash_t *conflict_victims;
-          apr_hash_index_t *hi;
+          const apr_array_header_t *conflict_victims;
+          int k;
 
           SVN_ERR(svn_wc__db_read_conflict_victims(&conflict_victims, db,
                                                    local_abspath, iterpool,
                                                    iterpool));
 
-          for (hi = apr_hash_first(iterpool, conflict_victims); hi;
-                hi = apr_hash_next(hi))
+          for (k = 0; k < conflict_victims->nelts; k++)
             {
               int j;
               const apr_array_header_t *child_conflicts;
-              const char *child_name = svn_apr_hash_index_key(hi);
-              const char *child_abspath = svn_dirent_join(local_abspath,
-                                                          child_name,
-                                                          iterpool);
+              const char *child_name;
+              const char *child_abspath;
+              
+              child_name = APR_ARRAY_IDX(conflict_victims, k, const char *);
+              child_abspath = svn_dirent_join(local_abspath, child_name,
+                                                             iterpool);
 
               SVN_ERR(svn_wc__db_read_conflicts(&child_conflicts,
                                                 db, child_abspath, iterpool,
@@ -3326,254 +3327,6 @@ svn_wc_walk_entries3(const char *path,
                                svn_dirent_local_style(path, pool)),
        walk_baton, pool);
 }
-
-
-/* A baton for use with visit_tc_too_callbacks. */
-typedef struct visit_tc_too_baton_t {
-  svn_wc__db_t *db;
-  const svn_wc_entry_callbacks2_t *callbacks;
-  void *baton;
-  const char *target;
-  svn_depth_t depth;
-} visit_tc_too_baton_t;
-
-/* An svn_wc_entry_callbacks2_t callback function.
- *
- * Call the user's "found entry" callback
- * WALK_BATON->callbacks->found_entry(), passing it PATH, ENTRY and
- * WALK_BATON->baton. Then call it once for each unversioned tree-conflicted
- * child of this entry, passing it the child path, a null "entry", and
- * WALK_BATON->baton. WALK_BATON is of type (visit_tc_too_baton_t *).
- */
-static svn_error_t *
-visit_tc_too_found_entry(const char *path,
-                         const svn_wc_entry_t *entry,
-                         void *walk_baton,
-                         apr_pool_t *pool)
-{
-  struct visit_tc_too_baton_t *baton = walk_baton;
-  svn_boolean_t check_children;
-  svn_boolean_t hidden;
-
-  /* Call the entry callback for this entry. */
-  SVN_ERR(baton->callbacks->found_entry(path, entry, baton->baton, pool));
-
-  SVN_ERR(svn_wc__entry_is_hidden(&hidden, entry));
-  if (entry->kind != svn_node_dir || hidden)
-    return SVN_NO_ERROR;
-
-  /* If this is a directory, we may need to also visit any unversioned
-   * children that are tree conflict victims. However, that should not
-   * happen when we've already reached the requested depth. */
-
-  switch (baton->depth){
-    case svn_depth_empty:
-      check_children = FALSE;
-      break;
-
-    /* Since svn_depth_files only visits files and this is a directory,
-     * we have to be at the target. Just verify that anyway: */
-    case svn_depth_files:
-    case svn_depth_immediates:
-      /* Check if this already *is* an immediate child, in which
-       * case we shouldn't descend further. */
-      check_children = (strcmp(baton->target, path) == 0);
-      break;
-
-    case svn_depth_infinity:
-    case svn_depth_exclude:
-    case svn_depth_unknown:
-      check_children = TRUE;
-      break;
-  };
-
-  if (check_children)
-    {
-      /* We're supposed to check the children of this directory. However,
-       * in case of svn_depth_files, don't visit directories. */
-
-      apr_hash_t *conflicts;
-      apr_hash_index_t *hi;
-
-      /* Loop through all the tree conflict victims */
-      SVN_ERR(svn_wc__read_tree_conflicts(&conflicts,
-                                          entry->tree_conflict_data, path,
-                                          pool));
-      for (hi = apr_hash_first(pool, conflicts); hi; hi = apr_hash_next(hi))
-        {
-          const svn_wc_conflict_description2_t *conflict =
-              svn_apr_hash_index_val(hi);
-          svn_boolean_t visit_child = FALSE;
-          svn_wc__db_kind_t kind;
-
-          if ((conflict->node_kind == svn_node_dir)
-              && (baton->depth == svn_depth_files))
-            continue;
-
-          SVN_ERR(svn_wc__db_read_kind(&kind, baton->db,
-                                       conflict->local_abspath, TRUE, pool));
-
-          /* If the kind is UNKNOWN, then this node is unversioned, or
-             it is absent/excluded/etc. The regular walk will not visit
-             the thing, so we should visit it.  */
-          visit_child = (kind == svn_wc__db_kind_unknown);
-
-          if (!visit_child)
-            {
-              /* DELETED nodes will be visited as a child node. However,
-                 we want to visit them as an entry=NULL node. So if this
-                 entry is DELETED, then visit it.  */
-              /* ### this is pretty bogus. the callback should accept
-                 ### the child node. a bit harder to change right now.  */
-              SVN_ERR(svn_wc__node_is_deleted(&visit_child, baton->db,
-                                              conflict->local_abspath, pool));
-            }
-
-          if (visit_child)
-            {
-              /* Found an unversioned tree conflict victim. Call the "found
-               * entry" callback with a null "entry" parameter. */
-              SVN_ERR(baton->callbacks->found_entry(
-                        svn_dirent_join(path,
-                                svn_dirent_basename(conflict->local_abspath,
-                                                    pool),
-                                pool),
-                        NULL, baton->baton, pool));
-            }
-        }
-    }
-
-  return SVN_NO_ERROR;
-}
-
-/* An svn_wc_entry_callbacks2_t callback function.
- *
- * If the error ERR is because this PATH is an unversioned tree conflict
- * victim, call the user's "found entry" callback
- * WALK_BATON->callbacks->found_entry(), passing it this PATH, a null
- * "entry" parameter, and WALK_BATON->baton. Otherwise, forward this call
- * to the user's "handle error" callback
- * WALK_BATON->callbacks->handle_error().
- */
-static svn_error_t *
-visit_tc_too_error_handler(const char *path,
-                           svn_error_t *err,
-                           void *walk_baton,
-                           apr_pool_t *pool)
-{
-  struct visit_tc_too_baton_t *baton = walk_baton;
-  const char *local_abspath;
-
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
-
-  /* If this is an unversioned tree conflict victim, call the "found entry"
-   * callback. This can occur on the root node of the walk; we do not expect
-   * to reach such a node by recursion. */
-  if (err && (err->apr_err == SVN_ERR_UNVERSIONED_RESOURCE))
-    {
-      const svn_wc_conflict_description2_t *conflict;
-
-      /* See if there is any tree conflict on this path. */
-      SVN_ERR(svn_wc__db_op_read_tree_conflict(&conflict, baton->db,
-                                               local_abspath, pool, pool));
-
-      /* If so, don't regard it as an error but call the "found entry"
-       * callback with a null "entry" parameter. */
-      if (conflict)
-        {
-          svn_error_clear(err);
-          err = NULL;
-
-          SVN_ERR(baton->callbacks->found_entry(conflict->local_abspath, NULL,
-                                                baton->baton, pool));
-        }
-    }
-
-  /* Call the user's error handler for this entry. */
-  return baton->callbacks->handle_error(path, err, baton->baton, pool);
-}
-
-/* Callbacks used by svn_wc_walk_entries_and_tc(). */
-static const svn_wc_entry_callbacks2_t
-visit_tc_too_callbacks =
-  {
-    visit_tc_too_found_entry,
-    visit_tc_too_error_handler
-  };
-
-svn_error_t *
-svn_wc__walk_entries_and_tc(const char *path,
-                            svn_wc_adm_access_t *adm_access,
-                            const svn_wc_entry_callbacks2_t *walk_callbacks,
-                            void *walk_baton,
-                            svn_depth_t depth,
-                            svn_cancel_func_t cancel_func,
-                            void *cancel_baton,
-                            apr_pool_t *pool)
-{
-  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
-  const char *local_abspath;
-  svn_error_t *err;
-  svn_wc_adm_access_t *path_adm_access;
-  const svn_wc_entry_t *entry;
-
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
-
-  /* Is 'path' versioned? Set path_adm_access accordingly. */
-  /* First: Get item's adm access (meaning parent's if it's a file). */
-  err = svn_wc_adm_probe_retrieve(&path_adm_access, adm_access, path, pool);
-  if (err && err->apr_err == SVN_ERR_WC_NOT_LOCKED)
-    {
-      /* Item is unversioned and doesn't have a versioned parent so there is
-       * nothing to walk. */
-      svn_error_clear(err);
-      return SVN_NO_ERROR;
-    }
-  else if (err)
-    return svn_error_return(err);
-  /* If we can get the item's entry then it is versioned. */
-  err = svn_wc_entry(&entry, path, path_adm_access, TRUE, pool);
-  if (err)
-    {
-      svn_error_clear(err);
-      /* Indicate that it is unversioned. */
-      entry = NULL;
-    }
-
-  /* If this path is versioned, do a tree walk, else perhaps call the
-   * "unversioned tree conflict victim" callback directly. */
-  if (entry)
-    {
-      /* Versioned, so use the regular entries walker with callbacks that
-       * make it also visit unversioned tree conflict victims. */
-      visit_tc_too_baton_t visit_tc_too_baton;
-
-      visit_tc_too_baton.db = db;
-      visit_tc_too_baton.callbacks = walk_callbacks;
-      visit_tc_too_baton.baton = walk_baton;
-      visit_tc_too_baton.target = path;
-      visit_tc_too_baton.depth = depth;
-
-      SVN_ERR(svn_wc_walk_entries3(path, path_adm_access,
-                                   &visit_tc_too_callbacks, &visit_tc_too_baton,
-                                   depth, TRUE /*show_hidden*/,
-                                   cancel_func, cancel_baton, pool));
-    }
-  else
-    {
-      /* Not locked, so assume unversioned. If it is a tree conflict victim,
-       * call the "found entry" callback with a null "entry" parameter. */
-      const svn_wc_conflict_description2_t *conflict;
-
-      SVN_ERR(svn_wc__db_op_read_tree_conflict(&conflict, db, local_abspath,
-                                               pool, pool));
-      if (conflict)
-        SVN_ERR(walk_callbacks->found_entry(path, NULL, walk_baton, pool));
-    }
-
-  return SVN_NO_ERROR;
-}
-
 
 svn_error_t *
 svn_wc_mark_missing_deleted(const char *path,

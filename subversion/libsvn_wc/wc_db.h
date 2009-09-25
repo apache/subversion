@@ -1270,9 +1270,8 @@ svn_wc__db_read_children(const apr_array_header_t **children,
 
    Allocate *VICTIMS in RESULT_POOL and do temporary allocations in
    SCRATCH_POOL */
-/* ### Use apr_array_header_t? */
 svn_error_t *
-svn_wc__db_read_conflict_victims(apr_hash_t **victims,
+svn_wc__db_read_conflict_victims(const apr_array_header_t **victims,
                                  svn_wc__db_t *db,
                                  const char *local_abspath,
                                  apr_pool_t *result_pool,
