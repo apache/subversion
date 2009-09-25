@@ -1633,11 +1633,14 @@ svn_wc_create_tree_conflict(svn_wc_conflict_t **conflict,
                             apr_pool_t *scratch_pool);
 
 /** A struct that describes a conflict that has occurred in the
- * working copy.  Passed to @c svn_wc_conflict_resolver_func2_t.
+ * working copy.
  *
  * The conflict described by this structure is one of:
- *   - a conflict on the content of the file node @a path
- *   - a conflict on the property @a property_name of @a path
+ *   - a conflict on the content of the file node @a local_abspath
+ *   - a conflict on the property @a property_name of @a local_abspath
+ *   - a tree conflict, of which @a local_abspath is the victim
+ * Be aware that the victim of a tree conflict can be a non-existent node.
+ * The three kinds of conflict are distinguished by @a kind.
  *
  * @note Fields may be added to the end of this structure in future
  * versions.  Therefore, to preserve binary compatibility, users
