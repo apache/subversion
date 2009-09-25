@@ -247,20 +247,18 @@ append_prop_conflict(svn_stream_t *stream,
    name of that file, or to NULL if no such file exists. */
 static svn_error_t *
 get_existing_prop_reject_file(const char **reject_file,
-                              svn_wc_adm_access_t *adm_access,
-                              const char *path,
+                              svn_wc__db_t *db,
+                              const char *adm_abspath,
+                              const char *local_abspath,
                               apr_pool_t *pool)
 {
-  const char *local_abspath;
-  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
   const apr_array_header_t *conflicts;
   int i;
 
   *reject_file = NULL;
 
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
   SVN_ERR(svn_wc__db_read_conflicts(&conflicts, db, local_abspath,
-                               pool, pool));
+                                    pool, pool));
 
   for (i = 0; i < conflicts->nelts; i++)
     {
@@ -268,8 +266,7 @@ get_existing_prop_reject_file(const char **reject_file,
       cd = APR_ARRAY_IDX(conflicts, i, const svn_wc_conflict_description2_t *);
 
       if (cd->kind == svn_wc_conflict_kind_property)
-        *reject_file = svn_dirent_join(svn_wc_adm_access_path(adm_access),
-                                       cd->their_file, pool);
+        *reject_file = svn_dirent_join(adm_abspath, cd->their_file, pool);
     }
 
   return SVN_NO_ERROR;
@@ -1723,8 +1720,9 @@ svn_wc__merge_props(svn_stringbuf_t **entry_accum,
 
       /* Now try to get the name of a pre-existing .prej file from the
          entries file */
-      SVN_ERR(get_existing_prop_reject_file(&reject_path,
-                                            adm_access, path, pool));
+      SVN_ERR(get_existing_prop_reject_file(&reject_path, db,
+                                      svn_wc__adm_access_abspath(adm_access),
+                                      local_abspath, pool));
 
       if (! reject_path)
         {
