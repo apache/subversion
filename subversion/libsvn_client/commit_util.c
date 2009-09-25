@@ -996,7 +996,7 @@ svn_client__harvest_committables(apr_hash_t **committables,
        * conflicts error instead of a "not under version control". */
       if (err && (err->apr_err == SVN_ERR_ENTRY_NOT_FOUND))
         {
-          svn_wc_conflict_description2_t *conflict;
+          const svn_wc_conflict_description2_t *conflict;
           svn_wc__get_tree_conflict(&conflict, ctx->wc_ctx, target_abspath,
                                     pool, subpool);
           if (conflict != NULL)
