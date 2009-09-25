@@ -108,6 +108,52 @@ svn_wc_conflict_dup(svn_wc_conflict_t** duplicate,
 }
 
 svn_error_t *
+svn_wc_create_property_conflict(svn_wc_conflict_t **conflict,
+                                const char *property_name,
+                                const svn_wc_conflict_version_t *older_version,
+                                const svn_wc_conflict_version_t *left_version,
+                                const svn_wc_conflict_version_t *right_version,
+                                const svn_string_t *older_value,
+                                const svn_string_t *left_value,
+                                const svn_string_t *right_value,
+                                const char *marker_abspath,
+                                svn_wc_operation_t operation,
+                                apr_pool_t *result_pool,
+                                apr_pool_t *scratch_pool)
+{
+  SVN_ERR_MALFUNCTION(); /* ### Not implemented yet */
+}
+
+svn_error_t *
+svn_wc_create_text_conflict(svn_wc_conflict_t **conflict,
+                            const svn_wc_conflict_version_t *older_version,
+                            const svn_wc_conflict_version_t *left_version,
+                            const svn_wc_conflict_version_t *right_version,
+                            const char *older_abspath,
+                            const char *left_abspath,
+                            const char *right_abspath,
+                            svn_wc_operation_t operation,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool)
+{
+  SVN_ERR_MALFUNCTION(); /* ### Not implemented yet */
+}
+
+svn_error_t *
+svn_wc_create_tree_conflict(svn_wc_conflict_t **conflict,
+                            const svn_wc_conflict_version_t *older_version,
+                            const svn_wc_conflict_version_t *left_version,
+                            const svn_wc_conflict_version_t *right_version,
+                            svn_wc_conflict_action_t action,
+                            svn_wc_conflict_reason_t reason,
+                            svn_wc_operation_t operation,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool)
+{
+  SVN_ERR_MALFUNCTION(); /* ### Not implemented yet */
+}
+
+svn_error_t *
 svn_wc_get_conflict_info(svn_wc_conflict_kind_t *kind,
                          const char **property_name,
                          svn_wc_conflict_action_t *action,

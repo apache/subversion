@@ -1561,6 +1561,72 @@ svn_wc_get_property_conflict_data(const svn_string_t **older_value,
                                   apr_pool_t *result_pool,
                                   apr_pool_t *scratch_pool);
 
+/** Creates a new property conflict, recording the passed values.
+ *
+ * @a property_name must be set to the conflicted property name or ""
+ * if no property name is available. (Older api compatibility)
+ *
+ * @a older_version, @a left_version and @a right_version can be
+ * NULL for compatibility with older apis.
+ *
+ * Iif @a property_name is not "", @a older_value, @a left_value and
+ * @a right_value must be set to the values of property in these versions.
+ * (which could be NULL if the property does not exist there).
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_wc_create_property_conflict(svn_wc_conflict_t **conflict,
+                                const char *property_name,
+                                const svn_wc_conflict_version_t *older_version,
+                                const svn_wc_conflict_version_t *left_version,
+                                const svn_wc_conflict_version_t *right_version,
+                                const svn_string_t *older_value,
+                                const svn_string_t *left_value,
+                                const svn_string_t *right_value,
+                                const char *marker_abspath,
+                                svn_wc_operation_t operation,
+                                apr_pool_t *result_pool,
+                                apr_pool_t *scratch_pool);
+
+/** Creates a new text conflict, recording the passed values.
+ *
+ * @a older_version, @a left_version and @a right_version can be NULL,
+ * for compatibility with older apis.
+ *
+ * @a older_abspath, @a left_abspath and @a right_abspath can be NULL,
+ * @a indicating that the file did not exist in that version.
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_wc_create_text_conflict(svn_wc_conflict_t **conflict,
+                            const svn_wc_conflict_version_t *older_version,
+                            const svn_wc_conflict_version_t *left_version,
+                            const svn_wc_conflict_version_t *right_version,
+                            const char *older_abspath,
+                            const char *left_abspath,
+                            const char *right_abspath,
+                            svn_wc_operation_t operation,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool);
+
+/** Creates a new tree conflict @a conflict, recording the passed values.
+ * All values except @a older_version must be non-NULL. @a older_version
+ * can be NULL for backwards compatibility with older apis.
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_wc_create_tree_conflict(svn_wc_conflict_t **conflict,
+                            const svn_wc_conflict_version_t *older_version,
+                            const svn_wc_conflict_version_t *left_version,
+                            const svn_wc_conflict_version_t *right_version,
+                            svn_wc_conflict_action_t action,
+                            svn_wc_conflict_reason_t reason,
+                            svn_wc_operation_t operation,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool);
 
 /** A struct that describes a conflict that has occurred in the
  * working copy.  Passed to @c svn_wc_conflict_resolver_func2_t.
