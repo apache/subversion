@@ -173,6 +173,10 @@ Candidate changes:
    Justification:
      The fix makes it easier to add a large set of files, by removing a
      considerable annoyance. The fix is small and has a regression test.
+   Branch:
+     Uses adm_access instead of wc_ctx, so svn_wc_revert3() instead of
+     svn_wc_revert4().
+     ^/branches/1.6.x-r39557
   Votes:
     +1: julianfoad
 
