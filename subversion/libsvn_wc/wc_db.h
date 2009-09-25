@@ -984,10 +984,16 @@ svn_wc__db_op_mark_conflict(svn_wc__db_t *db,
 
 
 /* ### caller maintains ACTUAL, and how the resolution occurred. we're just
-   ### recording state. */
+   ### recording state.
+   ###
+   ### I'm not sure that these three values are the best way to do this,
+   ### but they're handy for now.  */
 svn_error_t *
 svn_wc__db_op_mark_resolved(svn_wc__db_t *db,
                             const char *local_abspath,
+                            svn_boolean_t resolved_text,
+                            svn_boolean_t resolved_props,
+                            svn_boolean_t resolved_tree,
                             apr_pool_t *scratch_pool);
 
 
@@ -1015,11 +1021,12 @@ svn_wc__db_op_invalidate_last_mod_time(svn_wc__db_t *db,
  * Use SCRATCH_POOL for any temporary allocations.
  */
 svn_error_t *
-svn_wc__db_op_read_tree_conflict(svn_wc_conflict_description2_t **tree_conflict,
-                                 svn_wc__db_t *db,
-                                 const char *local_abspath,
-                                 apr_pool_t *result_pool,
-                                 apr_pool_t *scratch_pool);
+svn_wc__db_op_read_tree_conflict(
+                     const svn_wc_conflict_description2_t **tree_conflict,
+                     svn_wc__db_t *db,
+                     const char *local_abspath,
+                     apr_pool_t *result_pool,
+                     apr_pool_t *scratch_pool);
 
 
 /** Set the tree conflict on LOCAL_ABSPATH in DB to TREE_CONFLICT.  Use
@@ -1029,6 +1036,7 @@ svn_wc__db_op_read_tree_conflict(svn_wc_conflict_description2_t **tree_conflict,
  */
 /* ### can this also record text/prop conflicts? drop "tree"? */
 /* ### dunno if it can, but it definately should be able to. */
+/* ### gjs: also ref: db_op_mark_conflict()  */
 svn_error_t *
 svn_wc__db_op_set_tree_conflict(svn_wc__db_t *db,
                                 const char *local_abspath,
@@ -1089,10 +1097,7 @@ svn_wc__db_op_set_tree_conflict(svn_wc__db_t *db,
  *   TEXT_MOD                n/a (always available)
  *   PROPS_MOD               n/a (always available)
  *   BASE_SHADOWED           n/a (always available)
- *   CONFLICT_OLD            NULL
- *   CONFLICT_NEW            NULL
- *   CONFLICT_WORKING        NULL
- *   PROP_REJECT_FILE        NULL
+ *   CONFLICTED              FALSE
  *   LOCK                    NULL
  *
  * If DEPTH is requested, and the node is NOT a directory, then
@@ -1182,10 +1187,7 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,  /* ### derived */
                      svn_boolean_t *base_shadowed,  /* ### WORKING shadows a
                                                        ### deleted BASE? */
 
-                     const char **conflict_old,
-                     const char **conflict_new,
-                     const char **conflict_working,
-                     const char **prop_reject_file,  /* ### is this right? */
+                     svn_boolean_t *conflicted,
 
                      svn_wc__db_lock_t **lock,
 
@@ -1268,9 +1270,8 @@ svn_wc__db_read_children(const apr_array_header_t **children,
 
    Allocate *VICTIMS in RESULT_POOL and do temporary allocations in
    SCRATCH_POOL */
-/* ### Use apr_array_header_t? */
 svn_error_t *
-svn_wc__db_read_conflict_victims(apr_hash_t **victims,
+svn_wc__db_read_conflict_victims(const apr_array_header_t **victims,
                                  svn_wc__db_t *db,
                                  const char *local_abspath,
                                  apr_pool_t *result_pool,

@@ -53,6 +53,19 @@
 					Outputs="..\..\subversion\svn_private_config.h"/>
 			</FileConfiguration>
 [end][end]		</File>
+[for sql]		<File
+			RelativePath="../../[sql.source]">
+[for platforms][for configs]			<FileConfiguration
+				Name="[configs]|[platforms]">
+				<Tool
+					Name="VCCustomBuildTool"
+					Description="Generating [sql.header]"
+					CommandLine="&quot;$(SolutionDir)\build\transform_sql.py&quot; &quot;$(InputPath)&quot; &quot;$(SolutionDir)\[sql.header]&quot;"
+					Outputs="$(SolutionDir)\[sql.header]"
+				/>
+			</FileConfiguration>
+[end][end]		</File>
+[end]
 	</Files>
 	<Globals>
 	</Globals>

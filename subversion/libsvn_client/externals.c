@@ -434,7 +434,7 @@ switch_file_external(const char *path,
         goto cleanup;
       revert_file = TRUE;
 
-      err = svn_wc__set_file_external_location(target_adm_access, target,
+      err = svn_wc__set_file_external_location(ctx->wc_ctx, local_abspath,
                                                url, peg_revision, revision,
                                                repos_root_url, subpool);
       if (err)
