@@ -984,10 +984,16 @@ svn_wc__db_op_mark_conflict(svn_wc__db_t *db,
 
 
 /* ### caller maintains ACTUAL, and how the resolution occurred. we're just
-   ### recording state. */
+   ### recording state.
+   ###
+   ### I'm not sure that these three values are the best way to do this,
+   ### but they're handy for now.  */
 svn_error_t *
 svn_wc__db_op_mark_resolved(svn_wc__db_t *db,
                             const char *local_abspath,
+                            svn_boolean_t resolved_text,
+                            svn_boolean_t resolved_props,
+                            svn_boolean_t resolved_tree,
                             apr_pool_t *scratch_pool);
 
 
@@ -1030,6 +1036,7 @@ svn_wc__db_op_read_tree_conflict(
  */
 /* ### can this also record text/prop conflicts? drop "tree"? */
 /* ### dunno if it can, but it definately should be able to. */
+/* ### gjs: also ref: db_op_mark_conflict()  */
 svn_error_t *
 svn_wc__db_op_set_tree_conflict(svn_wc__db_t *db,
                                 const char *local_abspath,
