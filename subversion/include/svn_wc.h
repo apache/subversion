@@ -144,6 +144,10 @@ svn_wc_version(void);
  * contexts can be created for the same working copy simultaneously, within
  * the same process or different processes.  Context mutexing will be handled
  * internally by the working copy library.
+ *
+ * @note: @c svn_wc_context_t should be passed by non-const pointer in all
+ * APIs, even for read-only operations, as it contains mutable data (caching,
+ * etc.).
  */
 typedef struct svn_wc_context_t svn_wc_context_t;
 
@@ -1436,12 +1440,207 @@ svn_wc_conflict_version_dup(const svn_wc_conflict_version_t *version,
                             apr_pool_t *pool);
 
 
+/** An opaque structure that describes a conflict that has occurred on a
+ * specific target in a working copy. Passed to the conflict helper
+ * functions and to @c  svn_wc_conflict_resolver_func2_t when performing
+ * interactive conflict resolving.
+ *
+ * @since New in 1.7.
+ */
+ /* ### We use svn_wc_conflict_t as non constant to allow delayloading
+        values. */
+typedef struct svn_wc_conflict_t svn_wc_conflict_t;
+
+/** Duplicates a @a base conflict, to a @a duplicate conflict, allocated
+ * in @a result_pool.
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_wc_conflict_dup(svn_wc_conflict_t **duplicate,
+                    svn_wc_conflict_t *base,
+                    apr_pool_t *result_pool);
+
+/** Read information about @a conflict, as it applies to @a local_abspath
+ * in @a wc_ctx.
+ *
+ * If @a kind is not NULL, retrieves the kind of conflict.
+ *
+ * If @a property_name is not NULL, retrieves the name of the property
+ * where this conflict applies to. @a property_name is NULL, when this
+ * information is not available. (This information is not always recorded).
+ *
+ * If @a action is not NULL, retrieves the action that raised the conflict
+ * or @c svn_wc_conflict_action_edit if no action was recorded.
+ *
+ * If @a reason is not NULL, retrieves the reason why the conflict was
+ * raised or @c svn_wc_conflict_reason_t if no reason was recorded.
+ *
+ * If @a operation is not NULL, retrieves the operation that was performed
+ * when the conflict was raised or @c svn_wc_operation_none if no operation
+ * was recorded.
+ *
+ * If @a conflict_resolved is not NULL, conflict type specific checks are
+ * performed to see if this conflict is resolved. (E.g. for file and property
+ * conflicts the marker and rejection files are tested for availablity).
+ * If the conflict is resolved sets @a *conflict_resolved to TRUE, otherwise
+ * to FALSE.
+ *
+ * @since New in 1.7.
+ */
+/* ### Separate in more methods like the WC-1.0 api, or add more
+       to remove other apis, like we do in WC-NG? */
+svn_error_t *
+svn_wc_get_conflict_info(svn_wc_conflict_kind_t *kind,
+                         const char **property_name,
+                         svn_wc_conflict_action_t *action,
+                         svn_wc_conflict_reason_t *reason,
+                         svn_wc_operation_t *operation,
+                         svn_boolean_t *conflict_resolved,
+                         svn_wc_context_t *wc_ctx,
+                         const char *local_abspath,
+                         svn_wc_conflict_t *conflict,
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool);
+
+/** Retrieves the conflict marker file locations recorded in @a conflict,
+ * as it applies to @a local_abspath in @a wc_ctx.
+ *
+ * For text and property conflicts older is the BASE version, left the MINE
+ * version and right the THEIRS version. Depending on the type of conflict,
+ * some or all of these values might be NULL.
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_wc_get_conflict_marker_files(const char **older_abspath,
+                                 const char **left_abspath,
+                                 const char **right_abspath,
+                                 svn_wc_context_t *wc_ctx,
+                                 const char *local_abspath,
+                                 svn_wc_conflict_t *conflict,
+                                 apr_pool_t *result_pool,
+                                 apr_pool_t *scratch_pool);
+
+/** Retrieves the origin of the conflict recorded in @a conflict, as it 
+ * applies to @a local_abspath in @a wc_ctx.
+ *
+ * For text and property conflicts older is the BASE version, left the MINE
+ * version and right the THEIRS version. Depending on the type of conflict,
+ * some or all of these values might be NULL.
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_wc_get_conflict_sources(const svn_wc_conflict_version_t **older_version,
+                            const svn_wc_conflict_version_t **left_version,
+                            const svn_wc_conflict_version_t **right_version,
+                            svn_wc_context_t *wc_ctx,
+                            const char *local_abspath,
+                            svn_wc_conflict_t *conflict,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool);
+
+/** Retrieves the values of the conflicted property recorded in @a
+ * conflict, as it applies to @a local_abspath in @a wc_ctx.
+ *
+ * If @a older_value, @a left_value and/or @a right_value are not NULL,
+ * retrieves this property value as recorded in the conflict data. A
+ * returned NULL indicates that the property was not available in that
+ * version. (If @c svn_wc_get_conflict_info doesn't provide a property
+ * name, no property data was recorded in the property conflict)
+ *
+ * For property conflicts older is the BASE version, left the MINE
+ * version and right the THEIRS version.
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_wc_get_property_conflict_data(const svn_string_t **older_value,
+                                  const svn_string_t **left_value,
+                                  const svn_string_t **right_value,
+                                  svn_wc_context_t *wc_ctx,
+                                  const char *local_abspath,
+                                  svn_wc_conflict_t *conflict,
+                                  apr_pool_t *result_pool,
+                                  apr_pool_t *scratch_pool);
+
+/** Creates a new property conflict, recording the passed values.
+ *
+ * @a property_name must be set to the conflicted property name or ""
+ * if no property name is available. (Older api compatibility)
+ *
+ * @a older_version, @a left_version and @a right_version can be
+ * NULL for compatibility with older apis.
+ *
+ * Iif @a property_name is not "", @a older_value, @a left_value and
+ * @a right_value must be set to the values of property in these versions.
+ * (which could be NULL if the property does not exist there).
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_wc_create_property_conflict(svn_wc_conflict_t **conflict,
+                                const char *property_name,
+                                const svn_wc_conflict_version_t *older_version,
+                                const svn_wc_conflict_version_t *left_version,
+                                const svn_wc_conflict_version_t *right_version,
+                                const svn_string_t *older_value,
+                                const svn_string_t *left_value,
+                                const svn_string_t *right_value,
+                                const char *marker_abspath,
+                                svn_wc_operation_t operation,
+                                apr_pool_t *result_pool,
+                                apr_pool_t *scratch_pool);
+
+/** Creates a new text conflict, recording the passed values.
+ *
+ * @a older_version, @a left_version and @a right_version can be NULL,
+ * for compatibility with older apis.
+ *
+ * @a older_abspath, @a left_abspath and @a right_abspath can be NULL,
+ * @a indicating that the file did not exist in that version.
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_wc_create_text_conflict(svn_wc_conflict_t **conflict,
+                            const svn_wc_conflict_version_t *older_version,
+                            const svn_wc_conflict_version_t *left_version,
+                            const svn_wc_conflict_version_t *right_version,
+                            const char *older_abspath,
+                            const char *left_abspath,
+                            const char *right_abspath,
+                            svn_wc_operation_t operation,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool);
+
+/** Creates a new tree conflict @a conflict, recording the passed values.
+ * All values except @a older_version must be non-NULL. @a older_version
+ * can be NULL for backwards compatibility with older apis.
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_wc_create_tree_conflict(svn_wc_conflict_t **conflict,
+                            const svn_wc_conflict_version_t *older_version,
+                            const svn_wc_conflict_version_t *left_version,
+                            const svn_wc_conflict_version_t *right_version,
+                            svn_wc_conflict_action_t action,
+                            svn_wc_conflict_reason_t reason,
+                            svn_wc_operation_t operation,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool);
+
 /** A struct that describes a conflict that has occurred in the
- * working copy.  Passed to @c svn_wc_conflict_resolver_func2_t.
+ * working copy.
  *
  * The conflict described by this structure is one of:
- *   - a conflict on the content of the file node @a path
- *   - a conflict on the property @a property_name of @a path
+ *   - a conflict on the content of the file node @a local_abspath
+ *   - a conflict on the property @a property_name of @a local_abspath
+ *   - a tree conflict, of which @a local_abspath is the victim
+ * Be aware that the victim of a tree conflict can be a non-existent node.
+ * The three kinds of conflict are distinguished by @a kind.
  *
  * @note Fields may be added to the end of this structure in future
  * versions.  Therefore, to preserve binary compatibility, users
@@ -1504,6 +1703,8 @@ typedef struct svn_wc_conflict_description2_t
   const char *base_file;     /* common ancestor of the two files being merged */
 
   /** their version of the file */
+  /* ### BH: For properties this field contains the reference to
+             the property rejection (.prej) file */
   const char *their_file;
 
   /** my locally-edited version of the file */
@@ -4208,17 +4409,20 @@ svn_wc_remove_from_revision_control(svn_wc_adm_access_t *adm_access,
 
 
 /**
- * Assuming @a path is under version control and in a state of conflict,
- * then take @a path *out* of this state.  If @a resolve_text is TRUE then
- * any text conflict is resolved, if @a resolve_props is TRUE then any
- * property conflicts are resolved, if @a resolve_tree is TRUE then any
- * tree conflicts are resolved.
+ * Assuming @a local_abspath is under version control or a tree conflict
+ * victime and in a state of conflict, then take @a local_abspath *out*
+ * of this state.  If @a resolve_text is TRUE then any text conflict is
+ * resolved, if @a resolve_tree is TRUE then any tree conflicts are 
+ * resolved. If @a resolve_prop is set to "" all property conflicts are
+ * resolved, if it is set to any other string value, conflicts on that
+ * specific property are resolved and when resolve_prop is NULL, no
+ * property conflicts are resolved.
  *
- * If @a depth is @c svn_depth_empty, act only on @a path; if
- * @c svn_depth_files, resolve @a path and its conflicted file
- * children (if any); if @c svn_depth_immediates, resolve @a path and
- * all its immediate conflicted children (both files and directories,
- * if any); if @c svn_depth_infinity, resolve @a path and every
+ * If @a depth is @c svn_depth_empty, act only on @a local_abspath; if
+ * @c svn_depth_files, resolve @a local_abspath and its conflicted file
+ * children (if any); if @c svn_depth_immediates, resolve @a local_abspath
+ * and all its immediate conflicted children (both files and directories,
+ * if any); if @c svn_depth_infinity, resolve @a local_abspath and every
  * conflicted file or directory anywhere beneath it.
  *
  * If @a conflict_choice is @c svn_wc_conflict_choose_base, resolve the
@@ -4232,7 +4436,8 @@ svn_wc_remove_from_revision_control(svn_wc_adm_access_t *adm_access,
  * svn_wc_conflict_choose_mine_conflict are not legal for binary
  * files or properties.
  *
- * @a adm_access is an access baton, with a write lock, for @a path.
+ * @a wc_ctx is a working copy context, with a write lock, for @a 
+ * local_abspath.
  *
  * Needless to say, this function doesn't touch conflict markers or
  * anything of that sort -- only a human can semantically resolve a
@@ -4242,19 +4447,43 @@ svn_wc_remove_from_revision_control(svn_wc_adm_access_t *adm_access,
  * The implementation details are opaque, as our "conflicted" criteria
  * might change over time.  (At the moment, this routine removes the
  * three fulltext 'backup' files and any .prej file created in a conflict,
- * and modifies @a path's entry.)
+ * and modifies @a local_abspath's entry.)
  *
- * If @a path is not under version control, return @c SVN_ERR_ENTRY_NOT_FOUND.
- * If @a path isn't in a state of conflict to begin with, do nothing, and
- * return @c SVN_NO_ERROR.
+ * If @a local_abspath is not under version control and not a tree
+ * conflict, return @c SVN_ERR_ENTRY_NOT_FOUND. If @a path isn't in a
+ * state of conflict to begin with, do nothing, and return @c SVN_NO_ERROR.
  *
- * If @c path was successfully taken out of a state of conflict, report this
- * information to @c notify_func (if non-@c NULL.)  If only text, only
- * property, or only tree conflict resolution was requested, and it was
- * successful, then success gets reported.
+ * If @c local_abspath was successfully taken out of a state of conflict,
+ * report this information to @c notify_func (if non-@c NULL.)  If only
+ * text, only property, or only tree conflict resolution was requested,
+ * and it was successful, then success gets reported.
+ *
+ * Temporary allocations will be performed in @a scratch_pool.
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_wc_resolved_conflict5(svn_wc_context_t *wc_ctx,
+                          const char *local_abspath,
+                          svn_depth_t depth,
+                          svn_boolean_t resolve_text,
+                          const char *resolve_prop,
+                          svn_boolean_t resolve_tree,
+                          svn_wc_conflict_choice_t conflict_choice,
+                          svn_cancel_func_t cancel_func,
+                          void *cancel_baton,
+                          svn_wc_notify_func2_t notify_func,
+                          void *notify_baton,
+                          apr_pool_t *scratch_pool);
+
+/** Similar to svn_wc_resolved_conflict5, but takes an absolute path
+ * and an access baton. This version doesn't support resolving a specific
+ * property.conflict.
  *
  * @since New in 1.6.
+ * @deprecated Provided for backward compatibility with the 1.6 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_resolved_conflict4(const char *path,
                           svn_wc_adm_access_t *adm_access,
@@ -4462,7 +4691,7 @@ svn_wc_process_committed4(const char *path,
                           svn_revnum_t new_revnum,
                           const char *rev_date,
                           const char *rev_author,
-                          apr_array_header_t *wcprop_changes,
+                          const apr_array_header_t *wcprop_changes,
                           svn_boolean_t remove_lock,
                           svn_boolean_t remove_changelist,
                           const unsigned char *digest,
@@ -4481,7 +4710,7 @@ svn_wc_process_committed3(const char *path,
                           svn_revnum_t new_revnum,
                           const char *rev_date,
                           const char *rev_author,
-                          apr_array_header_t *wcprop_changes,
+                          const apr_array_header_t *wcprop_changes,
                           svn_boolean_t remove_lock,
                           const unsigned char *digest,
                           apr_pool_t *pool);
@@ -4499,7 +4728,7 @@ svn_wc_process_committed2(const char *path,
                           svn_revnum_t new_revnum,
                           const char *rev_date,
                           const char *rev_author,
-                          apr_array_header_t *wcprop_changes,
+                          const apr_array_header_t *wcprop_changes,
                           svn_boolean_t remove_lock,
                           apr_pool_t *pool);
 
@@ -4516,7 +4745,7 @@ svn_wc_process_committed(const char *path,
                          svn_revnum_t new_revnum,
                          const char *rev_date,
                          const char *rev_author,
-                         apr_array_header_t *wcprop_changes,
+                         const apr_array_header_t *wcprop_changes,
                          apr_pool_t *pool);
 
 

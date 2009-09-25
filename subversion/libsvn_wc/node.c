@@ -115,7 +115,7 @@ svn_wc__node_get_repos_info(const char **repos_root_url,
                              repos_root_url, repos_uuid,
                              NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                             NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL,
                              wc_ctx->db, local_abspath, result_pool,
                              scratch_pool);
 
@@ -188,7 +188,7 @@ svn_wc__node_get_depth(svn_depth_t *depth,
     svn_wc__db_read_info(NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                          NULL, NULL, NULL, depth, NULL, NULL, NULL,
                          NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                         NULL, NULL, NULL, NULL, NULL, NULL,
+                         NULL, NULL, NULL,
                          wc_ctx->db, local_abspath, scratch_pool,
                          scratch_pool));
 }
@@ -206,7 +206,7 @@ svn_wc__node_get_changed_info(svn_revnum_t *changed_rev,
     svn_wc__db_read_info(NULL, NULL, NULL, NULL, NULL, NULL, changed_rev,
                          changed_date, changed_author, NULL, NULL, NULL,
                          NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                         NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                         NULL, NULL, NULL, NULL,
                          wc_ctx->db, local_abspath, result_pool,
                          scratch_pool));
 }
@@ -224,7 +224,7 @@ svn_wc__node_get_changelist(const char **changelist,
                              NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                              changelist,
                              NULL, NULL, NULL, NULL, NULL, NULL,
-                             NULL, NULL, NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL,
                              wc_ctx->db, local_abspath, result_pool,
                              scratch_pool);
 
@@ -253,7 +253,7 @@ svn_wc__node_get_url(const char **url,
                                &repos_root_url,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL,
                                wc_ctx->db, local_abspath, scratch_pool,
                                scratch_pool));
 
@@ -341,7 +341,7 @@ walker_helper(svn_wc__db_t *db,
                                    NULL, NULL, NULL, NULL, NULL, NULL,
                                    NULL, NULL, NULL, NULL, NULL, NULL,
                                    NULL, NULL, NULL, NULL, NULL,
-                                   NULL, NULL, NULL, NULL,
+                                   NULL,
                                    db, child_abspath, iterpool, iterpool));
 
       /* Return the child, if appropriate.  (For a directory,
@@ -392,7 +392,6 @@ svn_wc__internal_walk_children(svn_wc__db_t *db,
                                NULL, NULL, NULL, NULL, &depth, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL,
                                db, local_abspath, scratch_pool, scratch_pool));
 
   if (kind == svn_wc__db_kind_file || depth == svn_depth_exclude)

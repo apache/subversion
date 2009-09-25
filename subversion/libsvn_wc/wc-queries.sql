@@ -254,6 +254,19 @@ SELECT prop_reject, conflict_old, conflict_new, conflict_working
 FROM actual_node
 WHERE wc_id = ?1 AND local_relpath = ?2;
 
+-- STMT_CLEAR_TEXT_CONFLICT
+UPDATE ACTUAL_NODE SET
+  conflict_old = null,
+  conflict_new = null,
+  conflict_working = null
+WHERE wc_id = ?1 AND local_relpath = ?2;
+
+-- STMT_CLEAR_PROPS_CONFLICT
+UPDATE ACTUAL_NODE SET
+  prop_reject = null
+WHERE wc_id = ?1 AND local_relpath = ?2;
+
+
 /* ------------------------------------------------------------------------- */
 
 /* these are used in entries.c  */

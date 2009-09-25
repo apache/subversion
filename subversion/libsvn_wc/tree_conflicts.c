@@ -482,7 +482,7 @@ svn_wc__add_tree_conflict(svn_wc_context_t *wc_ctx,
                           const svn_wc_conflict_description2_t *conflict,
                           apr_pool_t *scratch_pool)
 {
-  svn_wc_conflict_description2_t *existing_conflict;
+  const svn_wc_conflict_description2_t *existing_conflict;
 
   /* Re-adding an existing tree conflict victim is an error. */
   SVN_ERR(svn_wc__db_op_read_tree_conflict(&existing_conflict, wc_ctx->db,
@@ -502,7 +502,7 @@ svn_wc__add_tree_conflict(svn_wc_context_t *wc_ctx,
 
 
 svn_error_t *
-svn_wc__get_tree_conflict(svn_wc_conflict_description2_t **tree_conflict,
+svn_wc__get_tree_conflict(const svn_wc_conflict_description2_t **tree_conflict,
                           svn_wc_context_t *wc_ctx,
                           const char *victim_abspath,
                           apr_pool_t *result_pool,

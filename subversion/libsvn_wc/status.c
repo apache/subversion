@@ -296,7 +296,7 @@ assemble_status(svn_wc_status2_t **status,
   svn_wc_status2_t *stat;
   svn_boolean_t locked_p = FALSE;
   svn_boolean_t switched_p = FALSE;
-  svn_wc_conflict_description2_t *tree_conflict;
+  const svn_wc_conflict_description2_t *tree_conflict;
   svn_boolean_t file_external_p = FALSE;
 #ifdef HAVE_SYMLINK
   svn_boolean_t wc_special;
@@ -975,12 +975,15 @@ get_dir_status(const struct walk_status_baton *wb,
 
   if (selected == NULL)
     {
+      const apr_array_header_t *victims;
       /* Create a hash containing all children */
       all_children = apr_hash_overlay(subpool, nodes, dirents);
 
-      SVN_ERR(svn_wc__db_read_conflict_victims(&conflicts,
+      SVN_ERR(svn_wc__db_read_conflict_victims(&victims,
                                                wb->db, local_abspath,
-                                               subpool, iterpool));
+                                               iterpool, iterpool));
+
+      SVN_ERR(svn_hash_from_cstring_keys(&conflicts, victims, subpool));
 
       /* Optimize for the no-tree-conflict case */
       if (apr_hash_count(conflicts) > 0)
@@ -988,7 +991,7 @@ get_dir_status(const struct walk_status_baton *wb,
     }
   else
     {
-      svn_wc_conflict_description2_t *tc;
+      const svn_wc_conflict_description2_t *tc;
       const char *selected_abspath;
 
       conflicts = apr_hash_make(subpool);
