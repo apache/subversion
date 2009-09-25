@@ -567,7 +567,7 @@ tree_conflict_on_add(merge_cmd_baton_t *merge_b,
                      svn_wc_conflict_action_t action,
                      svn_wc_conflict_reason_t reason)
 {
-  svn_wc_conflict_description2_t *existing_conflict;
+  const svn_wc_conflict_description2_t *existing_conflict;
   svn_wc_conflict_description2_t *conflict;
 
   if (merge_b->record_only || merge_b->dry_run)
@@ -1597,7 +1597,7 @@ merge_file_added(svn_wc_adm_access_t *adm_access,
             const char *copyfrom_url = NULL;
             svn_revnum_t copyfrom_rev = SVN_INVALID_REVNUM;
             svn_stream_t *new_base_contents;
-            svn_wc_conflict_description2_t *existing_conflict;
+            const svn_wc_conflict_description2_t *existing_conflict;
 
             /* If this is a merge from the same repository as our working copy,
                we handle adds as add-with-history.  Otherwise, we'll use a pure

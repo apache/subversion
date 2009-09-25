@@ -291,7 +291,7 @@ info_found_entry_callback(const char *path,
                                fe_baton->changelist_hash, pool))
     {
       svn_info_t *info;
-      svn_wc_conflict_description2_t *tmp_conflict;
+      const svn_wc_conflict_description2_t *tmp_conflict;
 
       SVN_ERR(build_info_from_entry(&info, fe_baton->wc_ctx, entry, path,
                                     pool));
@@ -320,7 +320,7 @@ info_error_handler(const char *path,
   if (err && (err->apr_err == SVN_ERR_UNVERSIONED_RESOURCE))
     {
       struct found_entry_baton *fe_baton = walk_baton;
-      svn_wc_conflict_description2_t *tree_conflict;
+      const svn_wc_conflict_description2_t *tree_conflict;
       const char *local_abspath;
 
       SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
