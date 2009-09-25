@@ -3563,7 +3563,7 @@ svn_wc__walk_entries_and_tc(const char *path,
     {
       /* Not locked, so assume unversioned. If it is a tree conflict victim,
        * call the "found entry" callback with a null "entry" parameter. */
-      svn_wc_conflict_description2_t *conflict;
+      const svn_wc_conflict_description2_t *conflict;
 
       SVN_ERR(svn_wc__db_op_read_tree_conflict(&conflict, db, local_abspath,
                                                pool, pool));
