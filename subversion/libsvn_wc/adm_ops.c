@@ -80,8 +80,8 @@ typedef struct
   svn_boolean_t recurse;
   svn_boolean_t remove_lock;
   svn_boolean_t remove_changelist;
-  apr_array_header_t *wcprop_changes;
-  svn_checksum_t *checksum;
+  const apr_array_header_t *wcprop_changes;
+  const svn_checksum_t *checksum;
 } committed_queue_item_t;
 
 
@@ -340,10 +340,10 @@ process_committed_leaf(int log_number,
                        svn_revnum_t new_revnum,
                        const char *rev_date,
                        const char *rev_author,
-                       apr_array_header_t *wcprop_changes,
+                       const apr_array_header_t *wcprop_changes,
                        svn_boolean_t remove_lock,
                        svn_boolean_t remove_changelist,
-                       svn_checksum_t *checksum,
+                       const svn_checksum_t *checksum,
                        svn_wc_committed_queue_t *queue,
                        apr_pool_t *pool)
 {
@@ -395,10 +395,13 @@ process_committed_leaf(int log_number,
                  base for it. And the entry should have a checksum. */
               if (entry->checksum != NULL)
                 {
-                  SVN_ERR(svn_checksum_parse_hex(&checksum,
+                  svn_checksum_t *parsed_checksum;
+
+                  SVN_ERR(svn_checksum_parse_hex(&parsed_checksum,
                                                  svn_checksum_md5,
                                                  entry->checksum,
                                                  pool));
+                  checksum = parsed_checksum;
                 }
 #ifdef SVN_DEBUG
               else
@@ -499,10 +502,10 @@ process_committed_internal(int *log_number,
                            svn_revnum_t new_revnum,
                            const char *rev_date,
                            const char *rev_author,
-                           apr_array_header_t *wcprop_changes,
+                           const apr_array_header_t *wcprop_changes,
                            svn_boolean_t remove_lock,
                            svn_boolean_t remove_changelist,
-                           svn_checksum_t *checksum,
+                           const svn_checksum_t *checksum,
                            svn_wc_committed_queue_t *queue,
                            apr_pool_t *pool)
 {
@@ -800,13 +803,13 @@ svn_wc_process_committed4(const char *path,
                           svn_revnum_t new_revnum,
                           const char *rev_date,
                           const char *rev_author,
-                          apr_array_header_t *wcprop_changes,
+                          const apr_array_header_t *wcprop_changes,
                           svn_boolean_t remove_lock,
                           svn_boolean_t remove_changelist,
                           const unsigned char *digest,
                           apr_pool_t *pool)
 {
-  svn_checksum_t *checksum;
+  const svn_checksum_t *checksum;
   int log_number = 0;
 
   if (digest)
