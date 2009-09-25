@@ -4872,14 +4872,14 @@ svn_wc__db_read_conflicts(const apr_array_header_t **conflicts,
 
   /* ### Tree conflicts are still stored on the directory */
   {
-    svn_wc_conflict_description2_t *desc;
+    const svn_wc_conflict_description2_t *desc;
 
     SVN_ERR(svn_wc__db_op_read_tree_conflict(&desc,
                                              db, local_abspath,
                                              result_pool, scratch_pool));
 
     if (desc)
-      APR_ARRAY_PUSH(cflcts, svn_wc_conflict_description2_t*) = desc;
+      APR_ARRAY_PUSH(cflcts, const svn_wc_conflict_description2_t*) = desc;
   }
 
   *conflicts = cflcts;
