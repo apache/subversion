@@ -362,9 +362,9 @@ copy_versioned_files(const char *from,
             {
               if (depth == svn_depth_infinity)
                 {
-                  const char *new_from = svn_path_join(from, child_basename,
+                  const char *new_from = svn_dirent_join(from, child_basename,
                                                        iterpool);
-                  const char *new_to = svn_path_join(to, child_basename,
+                  const char *new_to = svn_dirent_join(to, child_basename,
                                                      iterpool);
 
                   SVN_ERR(copy_versioned_files(new_from, new_to,
@@ -379,14 +379,14 @@ copy_versioned_files(const char *from,
               const char *new_to_abspath;
 
               SVN_ERR(svn_dirent_get_absolute(&new_from_abspath,
-                                              svn_path_join(from,
-                                                            child_basename,
-                                                            iterpool),
+                                              svn_dirent_join(from,
+                                                              child_basename,
+                                                              iterpool),
                                               iterpool));
               SVN_ERR(svn_dirent_get_absolute(&new_to_abspath,
-                                              svn_path_join(to,
-                                                            child_basename,
-                                                            iterpool),
+                                              svn_dirent_join(to,
+                                                              child_basename,
+                                                              iterpool),
                                               iterpool));
 
               SVN_ERR(copy_one_versioned_file(new_from_abspath, new_to_abspath,
@@ -420,10 +420,9 @@ copy_versioned_files(const char *from,
 
                   ext_item = APR_ARRAY_IDX(ext_items, i,
                                            svn_wc_external_item2_t *);
-                  new_from = svn_path_join(from, ext_item->target_dir,
-                                           iterpool);
-                  new_to = svn_path_join(to, ext_item->target_dir,
-                                         iterpool);
+                  new_from = svn_dirent_join(from, ext_item->target_dir,
+                                             iterpool);
+                  new_to = svn_dirent_join(to, ext_item->target_dir, iterpool);
 
                    /* The target dir might have multiple components.  Guarantee
                       the path leading down to the last component. */
@@ -613,7 +612,7 @@ add_directory(const char *path,
   struct dir_baton *pb = parent_baton;
   struct dir_baton *db = apr_pcalloc(pool, sizeof(*db));
   struct edit_baton *eb = pb->edit_baton;
-  const char *full_path = svn_path_join(eb->root_path, path, pool);
+  const char *full_path = svn_dirent_join(eb->root_path, path, pool);
   svn_node_kind_t kind;
 
   SVN_ERR(svn_io_check_path(full_path, &kind, pool));
@@ -658,8 +657,8 @@ add_file(const char *path,
   struct dir_baton *pb = parent_baton;
   struct edit_baton *eb = pb->edit_baton;
   struct file_baton *fb = apr_pcalloc(pool, sizeof(*fb));
-  const char *full_path = svn_path_join(eb->root_path, path, pool);
-  const char *full_url = svn_path_join(eb->root_url, path, pool);
+  const char *full_path = svn_dirent_join(eb->root_path, path, pool);
+  const char *full_url = svn_uri_join(eb->root_url, path, pool);
 
   fb->edit_baton = eb;
   fb->path = full_path;
