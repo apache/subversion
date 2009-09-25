@@ -1788,7 +1788,7 @@ already_in_a_tree_conflict(svn_boolean_t *conflicted,
   /* From the root end, check the conflict status of each ancestor. */
   for (i = ancestors->nelts - 1; i >= 0; i--)
     {
-      svn_wc_conflict_description2_t *conflict;
+      const svn_wc_conflict_description2_t *conflict;
 
       ancestor_abspath = APR_ARRAY_IDX(ancestors, i, const char *);
 

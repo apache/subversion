@@ -1470,7 +1470,7 @@ handle_killme(svn_wc__db_t *db,
                                NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL,
                                db, svn_dirent_dirname(dir_abspath,
                                                       scratch_pool),
                                scratch_pool, scratch_pool));
