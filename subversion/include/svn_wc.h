@@ -1436,6 +1436,132 @@ svn_wc_conflict_version_dup(const svn_wc_conflict_version_t *version,
                             apr_pool_t *pool);
 
 
+/** An opaque structure that describes a conflict that has occurred on a
+ * specific target in a working copy. Passed to the conflict helper
+ * functions and to @c  svn_wc_conflict_resolver_func2_t when performing
+ * interactive conflict resolving.
+ *
+ * @since New in 1.7.
+ */
+ /* ### We use svn_wc_conflict_t as non constant to allow delayloading
+        values. */
+typedef struct svn_wc_conflict_t svn_wc_conflict_t;
+
+/** Duplicates a @a base conflict, to a @a duplicate conflict, allocated
+ * in @a result_pool.
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_wc_conflict_dup(svn_wc_conflict_t **duplicate,
+                    svn_wc_conflict_t *base,
+                    apr_pool_t *result_pool);
+
+/** Read information about @a conflict, as it applies to @a local_abspath
+ * in @a wc_ctx.
+ *
+ * If @a kind is not NULL, retrieves the kind of conflict.
+ *
+ * If @a property_name is not NULL, retrieves the name of the property
+ * where this conflict applies to. @a property_name is NULL, when this
+ * information is not available. (This information is not always recorded).
+ *
+ * If @a action is not NULL, retrieves the action that raised the conflict
+ * or @c svn_wc_conflict_action_edit if no action was recorded.
+ *
+ * If @a reason is not NULL, retrieves the reason why the conflict was
+ * raised or @c svn_wc_conflict_reason_t if no reason was recorded.
+ *
+ * If @a operation is not NULL, retrieves the operation that was performed
+ * when the conflict was raised or @c svn_wc_operation_none if no operation
+ * was recorded.
+ *
+ * If @a conflict_resolved is not NULL, conflict type specific checks are
+ * performed to see if this conflict is resolved. (E.g. for file and property
+ * conflicts the marker and rejection files are tested for availablity).
+ * If the conflict is resolved sets @a *conflict_resolved to TRUE, otherwise
+ * to FALSE.
+ *
+ * @since New in 1.7.
+ */
+/* ### Separate in more methods like the WC-1.0 api, or add more
+       to remove other apis, like we do in WC-NG? */
+svn_error_t *
+svn_wc_get_conflict_info(svn_wc_conflict_kind_t *kind,
+                         const char **property_name,
+                         svn_wc_conflict_action_t *action,
+                         svn_wc_conflict_reason_t *reason,
+                         svn_wc_operation_t *operation,
+                         svn_boolean_t *conflict_resolved,
+                         svn_wc_context_t *wc_ctx,
+                         const char *local_abspath,
+                         svn_wc_conflict_t *conflict,
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool);
+
+/** Retrieves the conflict marker file locations recorded in @a conflict,
+ * as it applies to @a local_abspath in @a wc_ctx.
+ *
+ * For text and property conflicts older is the BASE version, left the MINE
+ * version and right the THEIRS version. Depending on the type of conflict,
+ * some or all of these values might be NULL.
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_wc_get_conflict_marker_files(const char **older_abspath,
+                                 const char **left_abspath,
+                                 const char **right_abspath,
+                                 svn_wc_context_t *wc_ctx,
+                                 const char *local_abspath,
+                                 svn_wc_conflict_t *conflict,
+                                 apr_pool_t *result_pool,
+                                 apr_pool_t *scratch_pool);
+
+/** Retrieves the origin of the conflict recorded in @a conflict, as it 
+ * applies to @a local_abspath in @a wc_ctx.
+ *
+ * For text and property conflicts older is the BASE version, left the MINE
+ * version and right the THEIRS version. Depending on the type of conflict,
+ * some or all of these values might be NULL.
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_wc_get_conflict_sources(const svn_wc_conflict_version_t **older_version,
+                            const svn_wc_conflict_version_t **left_version,
+                            const svn_wc_conflict_version_t **right_version,
+                            svn_wc_context_t *wc_ctx,
+                            const char *local_abspath,
+                            svn_wc_conflict_t *conflict,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool);
+
+/** Retrieves the values of the conflicted property recorded in @a
+ * conflict, as it applies to @a local_abspath in @a wc_ctx.
+ *
+ * If @a older_value, @a left_value and/or @a right_value are not NULL,
+ * retrieves this property value as recorded in the conflict data. A
+ * returned NULL indicates that the property was not available in that
+ * version. (If @c svn_wc_get_conflict_info doesn't provide a property
+ * name, no property data was recorded in the property conflict)
+ *
+ * For property conflicts older is the BASE version, left the MINE
+ * version and right the THEIRS version.
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_wc_get_property_conflict_data(const svn_string_t **older_value,
+                                  const svn_string_t **left_value,
+                                  const svn_string_t **right_value,
+                                  svn_wc_context_t *wc_ctx,
+                                  const char *local_abspath,
+                                  svn_wc_conflict_t *conflict,
+                                  apr_pool_t *result_pool,
+                                  apr_pool_t *scratch_pool);
+
+
 /** A struct that describes a conflict that has occurred in the
  * working copy.  Passed to @c svn_wc_conflict_resolver_func2_t.
  *
