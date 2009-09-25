@@ -217,7 +217,7 @@ SVN_ERROR_START
   /** @since New in 1.7. */
   SVN_ERRDEF(SVN_ERR_BAD_TOKEN,
              SVN_ERR_BAD_CATEGORY_START + 13,
-             "Unknown string token value")
+             "Unknown string value of token")
 
   /* xml errors */
 
