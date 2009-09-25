@@ -142,8 +142,8 @@ copy_one_versioned_file(const char *from_abspath,
 
   if (revision->kind != svn_opt_revision_working)
     {
-      SVN_ERR(svn_wc_get_pristine_contents(&source, from_abspath,
-                                           scratch_pool, scratch_pool));
+      SVN_ERR(svn_wc_get_pristine_contents2(&source, wc_ctx, from_abspath,
+                                            scratch_pool, scratch_pool));
       SVN_ERR(svn_wc_get_prop_diffs2(NULL, &props, wc_ctx, from_abspath,
                                      scratch_pool, scratch_pool));
     }
