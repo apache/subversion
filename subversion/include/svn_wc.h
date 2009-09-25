@@ -144,6 +144,10 @@ svn_wc_version(void);
  * contexts can be created for the same working copy simultaneously, within
  * the same process or different processes.  Context mutexing will be handled
  * internally by the working copy library.
+ *
+ * @note: @c svn_wc_context_t should be passed by non-const pointer in all
+ * APIs, even for read-only operations, as it contains mutable data (caching,
+ * etc.).
  */
 typedef struct svn_wc_context_t svn_wc_context_t;
 
