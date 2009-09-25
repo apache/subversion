@@ -2530,11 +2530,7 @@ fold_entry(apr_hash_t *entries,
 
   /* LOCK flags are no longer passed to entry_modify().  */
 
-  /* Changelist */
-  if (modify_flags & SVN_WC__ENTRY_MODIFY_CHANGELIST)
-    cur_entry->changelist = (entry->changelist
-                             ? apr_pstrdup(pool, entry->changelist)
-                             : NULL);
+  /* changelist is no longer modified with this function.  */
 
   /* has-props, prop-mods, cachable-props, and present-props are deprecated,
      so we do not copy them. */

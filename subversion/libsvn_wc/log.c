@@ -740,17 +740,12 @@ log_do_delete_changelist(struct log_runner *loggy,
                          const char *name)
 {
   svn_error_t *err;
-  svn_wc_entry_t entry;
 
-  entry.changelist = NULL;
-
-  /* Now write the new entry out */
-  err = svn_wc__entry_modify2(loggy->db,
-                              svn_dirent_join(loggy->adm_abspath, name,
-                                              loggy->pool),
-                              svn_node_unknown, FALSE,
-                              &entry, SVN_WC__ENTRY_MODIFY_CHANGELIST,
-                              loggy->pool);
+  err = svn_wc__db_op_set_changelist(loggy->db,
+                                     svn_dirent_join(loggy->adm_abspath, name,
+                                                     loggy->pool),
+                                     NULL,
+                                     loggy->pool);
   if (err)
     return svn_error_createf(pick_error_code(loggy), err,
                              _("Error removing changelist from entry '%s'"),
