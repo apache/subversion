@@ -538,7 +538,7 @@ svn_wc_process_committed3(const char *path,
                           svn_revnum_t new_revnum,
                           const char *rev_date,
                           const char *rev_author,
-                          apr_array_header_t *wcprop_changes,
+                          const apr_array_header_t *wcprop_changes,
                           svn_boolean_t remove_lock,
                           const unsigned char *digest,
                           apr_pool_t *pool)
@@ -555,7 +555,7 @@ svn_wc_process_committed2(const char *path,
                           svn_revnum_t new_revnum,
                           const char *rev_date,
                           const char *rev_author,
-                          apr_array_header_t *wcprop_changes,
+                          const apr_array_header_t *wcprop_changes,
                           svn_boolean_t remove_lock,
                           apr_pool_t *pool)
 {
@@ -571,7 +571,7 @@ svn_wc_process_committed(const char *path,
                          svn_revnum_t new_revnum,
                          const char *rev_date,
                          const char *rev_author,
-                         apr_array_header_t *wcprop_changes,
+                         const apr_array_header_t *wcprop_changes,
                          apr_pool_t *pool)
 {
   return svn_wc_process_committed2(path, adm_access, recurse, new_revnum,
