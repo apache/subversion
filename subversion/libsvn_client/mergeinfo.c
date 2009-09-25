@@ -61,7 +61,7 @@ svn_client__merge_path_dup(const svn_client__merge_path_t *old,
                                                  pool);
   if (new->implicit_mergeinfo)
     new->implicit_mergeinfo = svn_mergeinfo_dup(old->implicit_mergeinfo,
-                                                 pool);
+                                                pool);
 
   return new;
 }
@@ -75,19 +75,17 @@ svn_client__parse_mergeinfo(svn_mergeinfo_t *mergeinfo,
 {
   const svn_string_t *propval;
 
+  *mergeinfo = NULL;
+
   /* ### Use svn_wc_prop_get() would actually be sufficient for now.
      ### DannyB thinks that later we'll need behavior more like
      ### svn_client__get_prop_from_wc(). */
   SVN_ERR(svn_wc_prop_get2(&propval, wc_ctx, local_abspath, SVN_PROP_MERGEINFO,
                            scratch_pool, scratch_pool));
   if (propval)
-    return svn_error_return(
-        svn_mergeinfo_parse(mergeinfo, propval->data, result_pool));
-  else
-    {
-      *mergeinfo = NULL;
-      return SVN_NO_ERROR;
-    }
+    SVN_ERR(svn_mergeinfo_parse(mergeinfo, propval->data, result_pool));
+
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -96,22 +94,13 @@ svn_client__record_wc_mergeinfo(const char *local_abspath,
                                 svn_client_ctx_t *ctx,
                                 apr_pool_t *scratch_pool)
 {
-  svn_string_t *mergeinfo_str;
+  svn_string_t *mergeinfo_str = NULL;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
-  /* Convert the mergeinfo (if any) into text for storage as a
-     property value. */
+  /* Convert MERGEINFO (if any) into text for storage as a property value. */
   if (mergeinfo)
-    {
-      /* The WC will contain mergeinfo. */
-      SVN_ERR(svn_mergeinfo_to_string(&mergeinfo_str, mergeinfo,
-                                      scratch_pool));
-    }
-  else
-    {
-      mergeinfo_str = NULL;
-    }
+    SVN_ERR(svn_mergeinfo_to_string(&mergeinfo_str, mergeinfo, scratch_pool));
 
   /* Record the new mergeinfo in the WC. */
   /* ### Later, we'll want behavior more analogous to
@@ -181,14 +170,12 @@ svn_client__get_wc_mergeinfo(svn_mergeinfo_t *mergeinfo,
   svn_boolean_t switched;
   svn_revnum_t base_revision = entry->revision;
   const char *local_abspath;
-  const char *limit_abspath;
+  const char *limit_abspath = NULL;
   apr_pool_t *iterpool;
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, wcpath, pool));
   if (limit_path)
     SVN_ERR(svn_dirent_get_absolute(&limit_abspath, limit_path, pool));
-  else
-    limit_abspath = NULL;
 
   iterpool = svn_pool_create(pool);
   while (TRUE)
@@ -267,7 +254,7 @@ svn_client__get_wc_mergeinfo(svn_mergeinfo_t *mergeinfo,
 
           /* We haven't yet risen above the root of the WC. */
           continue;
-      }
+        }
       break;
     }
 
@@ -309,6 +296,7 @@ svn_client__get_wc_mergeinfo(svn_mergeinfo_t *mergeinfo,
               SVN_INVALID_REVNUM, SVN_INVALID_REVNUM, pool));
       svn_mergeinfo__remove_empty_rangelists(*mergeinfo, pool);
     }
+
   return SVN_NO_ERROR;
 }
 
@@ -452,6 +440,8 @@ svn_client__get_repos_mergeinfo(svn_ra_session_t *ra_session,
 {
   svn_mergeinfo_catalog_t tgt_mergeinfo_cat;
 
+  *target_mergeinfo = NULL;
+
   SVN_ERR(svn_client__get_repos_mergeinfo_catalog(&tgt_mergeinfo_cat,
                                                   ra_session,
                                                   rel_path, rev, inherit,
@@ -466,10 +456,6 @@ svn_client__get_repos_mergeinfo(svn_ra_session_t *ra_session,
       *target_mergeinfo =
         svn_apr_hash_index_val(apr_hash_first(pool, tgt_mergeinfo_cat));
       
-    }
-  else
-    {
-      *target_mergeinfo = NULL;
     }
 
   return SVN_NO_ERROR;
@@ -545,6 +531,8 @@ svn_client__get_wc_or_repos_mergeinfo(svn_mergeinfo_t *target_mergeinfo,
                                       apr_pool_t *pool)
 {
   svn_mergeinfo_catalog_t tgt_mergeinfo_cat;
+  
+  *target_mergeinfo = NULL;
 
   SVN_ERR(svn_client__get_wc_or_repos_mergeinfo_catalog(&tgt_mergeinfo_cat,
                                                         indirect, FALSE,
@@ -555,15 +543,13 @@ svn_client__get_wc_or_repos_mergeinfo(svn_mergeinfo_t *target_mergeinfo,
   if (tgt_mergeinfo_cat && apr_hash_count(tgt_mergeinfo_cat))
     {
       /* We asked only for the TARGET_WCPATH's mergeinfo, not any of its
-         descendants.  So if there is anything in the catalog it is the
-         mergeinfo for TARGET_WCPATH. */
+         descendants.  It this mergeinfo is in the catalog, it's keyed
+         on TARGET_WCPATH's root-relative path.  We could dig that up
+         so we can peek into our catalog, but it ought to be the only
+         thing in the catalog, so we'll just fetch the first hash item. */
       *target_mergeinfo =
         svn_apr_hash_index_val(apr_hash_first(pool, tgt_mergeinfo_cat));
       
-    }
-  else
-    {
-      *target_mergeinfo = NULL;
     }
 
   return SVN_NO_ERROR;
