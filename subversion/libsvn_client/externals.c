@@ -414,7 +414,7 @@ switch_file_external(const char *path,
       /* Try to create an empty file.  If there is a file already
          there, then don't touch it. */
       SVN_ERR(svn_io_file_open(&f,
-                               path,
+                               local_abspath,
                                APR_WRITE | APR_CREATE | APR_EXCL,
                                APR_OS_DEFAULT,
                                subpool));
@@ -423,7 +423,7 @@ switch_file_external(const char *path,
       if (err)
         goto cleanup;
 
-      err = svn_wc_add3(path, target_adm_access, svn_depth_infinity,
+      err = svn_wc_add4(ctx->wc_ctx, local_abspath, svn_depth_infinity,
                         NULL, /* const char *copyfrom_url */
                         SVN_INVALID_REVNUM, /* svn_revnum_t copyfrom_rev */
                         ctx->cancel_func, ctx->cancel_baton,
@@ -474,7 +474,7 @@ switch_file_external(const char *path,
   if (revert_file)
     {
       svn_error_t *e =
-        svn_wc_revert3(path, target_adm_access, svn_depth_empty,
+        svn_wc_revert4(ctx->wc_ctx, local_abspath, svn_depth_empty,
                        use_commit_times,
                        NULL, /* apr_array_header_t *changelists */
                        ctx->cancel_func,
@@ -564,7 +564,7 @@ resolve_relative_external_url(svn_wc_external_item2_t *item,
   apr_uri_t parent_dir_parsed_uri;
   apr_status_t status;
 
-  canonicalized_url = svn_path_canonicalize(uncanonicalized_url, pool);
+  canonicalized_url = svn_uri_canonicalize(uncanonicalized_url, pool);
 
   /* If the URL is already absolute, there is nothing to do. */
   if (svn_path_is_url(canonicalized_url))
@@ -671,12 +671,12 @@ resolve_relative_external_url(svn_wc_external_item2_t *item,
       const char *scheme;
 
       SVN_ERR(uri_scheme(&scheme, repos_root_url, pool));
-      item->url = svn_path_canonicalize(apr_pstrcat(pool,
-                                                    scheme,
-                                                    ":",
-                                                    uncanonicalized_url,
-                                                    NULL),
-                                        pool);
+      item->url = svn_uri_canonicalize(apr_pstrcat(pool,
+                                                   scheme,
+                                                   ":",
+                                                   uncanonicalized_url,
+                                                   NULL),
+                                       pool);
       return SVN_NO_ERROR;
     }
 
@@ -708,8 +708,8 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
   struct handle_external_item_change_baton *ib = baton;
   svn_wc_external_item2_t *old_item, *new_item;
   const char *parent;
-  const char *path = svn_path_join(ib->parent_dir,
-                                   (const char *) key, ib->iter_pool);
+  const char *path = svn_dirent_join(ib->parent_dir,
+                                     (const char *) key, ib->iter_pool);
   svn_ra_session_t *ra_session;
   svn_node_kind_t kind;
   svn_client__ra_session_from_path_results ra_cache = { 0 };
@@ -1038,8 +1038,8 @@ handle_external_item_change_wrapper(const void *key, apr_ssize_t klen,
     {
       if (ib->ctx->notify_func2)
         {
-          const char *path = svn_path_join(ib->parent_dir, key,
-                                           ib->iter_pool);
+          const char *path = svn_dirent_join(ib->parent_dir, key,
+                                             ib->iter_pool);
           svn_wc_notify_t *notifier =
           svn_wc_create_notify(path,
                                svn_wc_notify_failed_external,
@@ -1351,7 +1351,7 @@ svn_client__do_external_status(apr_hash_t *externals_new,
           svn_pool_clear(iterpool);
 
           external = APR_ARRAY_IDX(exts, i, svn_wc_external_item2_t *);
-          fullpath = svn_path_join(path, external->target_dir, iterpool);
+          fullpath = svn_dirent_join(path, external->target_dir, iterpool);
 
           /* If the external target directory doesn't exist on disk,
              just skip it. */
