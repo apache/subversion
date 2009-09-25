@@ -2415,34 +2415,6 @@ svn_wc__entries_write_new(svn_wc__db_t *db,
 }
 
 
-static svn_error_t *
-entries_write(apr_hash_t *entries,
-              svn_wc__db_t *db,
-              const char *adm_abspath,
-              apr_pool_t *scratch_pool)
-{
-  apr_pool_t *subpool = svn_pool_create(scratch_pool);
-  svn_error_t *err;
-  svn_wc_adm_access_t *adm_access =
-                svn_wc__adm_retrieve_internal2(db, adm_abspath, subpool);
-
-  if (adm_access)
-    SVN_ERR(svn_wc__adm_write_check(adm_access, subpool));
-
-  /* Write the entries. */
-  err = svn_wc__entries_write_new(db, adm_abspath, entries, subpool);
-
-  svn_pool_destroy(subpool); /* Close wc.db handles */
-
-  SVN_ERR(err);
-
-  if (adm_access)
-    svn_wc__adm_access_set_entries(adm_access, entries);
-
-  return SVN_NO_ERROR;
-}
-
-
 /* Update an entry NAME in ENTRIES, according to the combination of
    entry data found in ENTRY and masked by MODIFY_FLAGS. If the entry
    already exists, the requested changes will be folded (merged) into
@@ -2889,8 +2861,9 @@ svn_wc__entry_modify2(svn_wc__db_t *db,
                       apr_uint64_t modify_flags,
                       apr_pool_t *scratch_pool)
 {
+  apr_pool_t *subpool = svn_pool_create(scratch_pool);
+  svn_error_t *err;
   apr_hash_t *entries;
-  svn_boolean_t delete_entry = FALSE;
   svn_wc_adm_access_t *adm_access;
   const char *adm_abspath;
   const char *name;
@@ -2898,20 +2871,25 @@ svn_wc__entry_modify2(svn_wc__db_t *db,
   SVN_ERR_ASSERT(entry);
 
   SVN_ERR(get_entry_access_info(&adm_abspath, &name, db, local_abspath,
-                                kind, parent_stub, scratch_pool,
-                                scratch_pool));
+                                kind, parent_stub, subpool, subpool));
 
   /* Load ADM_ACCESS's whole entries file:
      Is there an existing access baton for this path?  */
-  adm_access = svn_wc__adm_retrieve_internal2(db, adm_abspath, scratch_pool);
+  adm_access = svn_wc__adm_retrieve_internal2(db, adm_abspath, subpool);
   if (adm_access == NULL)
     {
+      /* ### should we have some kind of write check here?  */
+
       /* Don't bother caching entries; we've got no place to store 'em. */
-      SVN_ERR(read_entries(&entries, db, adm_abspath, scratch_pool,
-                           scratch_pool));
+      SVN_ERR(read_entries(&entries, db, adm_abspath, subpool, subpool));
     }
   else
-    SVN_ERR(svn_wc_entries_read(&entries, adm_access, TRUE, scratch_pool));
+    {
+      /* Are we allowed to write to this admin area?  */
+      SVN_ERR(svn_wc__adm_write_check(adm_access, subpool));
+
+      SVN_ERR(svn_wc_entries_read(&entries, adm_access, TRUE, subpool));
+    }
 
   if (modify_flags & SVN_WC__ENTRY_MODIFY_SCHEDULE)
     {
@@ -2920,6 +2898,7 @@ svn_wc__entry_modify2(svn_wc__db_t *db,
       if (!(modify_flags & SVN_WC__ENTRY_MODIFY_FORCE))
         {
           svn_boolean_t skip_schedule_change;
+          svn_boolean_t delete_entry;
 
           /* If scheduling changes were made, we have a special routine to
              manage those modifications. */
@@ -2931,30 +2910,39 @@ svn_wc__entry_modify2(svn_wc__db_t *db,
                                   apr_hash_get(entries, name,
                                                APR_HASH_KEY_STRING),
                                   entry->schedule,
-                                  name, scratch_pool));
+                                  name, subpool));
 
           /* Check if the scheduling folding resulted in removing this entry */
           if (delete_entry)
-            apr_hash_set(entries, name, APR_HASH_KEY_STRING, NULL);
+            {
+              SVN_ERR(svn_wc__entry_remove(db, local_abspath, subpool));
+              svn_pool_destroy(subpool);
+              return SVN_NO_ERROR;
+            }
 
           if (skip_schedule_change)
             modify_flags &= ~SVN_WC__ENTRY_MODIFY_SCHEDULE;
         }
     }
 
-  /* If the entry wasn't just removed from the entries hash, fold the
-     changes into the entry. */
-  if (!delete_entry)
+  /* Fold in the changes, and write them out.  */
+  SVN_ERR(fold_entry(entries, name, modify_flags, entry,
+                     adm_access
+                       ? svn_wc_adm_access_pool(adm_access)
+                       : subpool));
+  err = svn_wc__entries_write_new(db, adm_abspath, entries, subpool);
+
+  svn_pool_destroy(subpool); /* Close wc.db handles */
+
+  SVN_ERR(err);
+
+  if (adm_access)
     {
-      SVN_ERR(fold_entry(entries, name, modify_flags, entry,
-                         adm_access
-                           ? svn_wc_adm_access_pool(adm_access)
-                           : scratch_pool));
+      /* ### is this needed? didn't we already pull the hash from here?  */
+      svn_wc__adm_access_set_entries(adm_access, entries);
     }
 
-  /* Sync changes to disk. */
-  return svn_error_return(entries_write(entries, db, adm_abspath,
-                                        scratch_pool));
+  return SVN_NO_ERROR;
 }
 
 
