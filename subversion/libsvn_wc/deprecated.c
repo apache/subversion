@@ -2061,6 +2061,21 @@ svn_wc_get_prop_diffs(apr_array_header_t **propchanges,
 }
 
 
+svn_error_t *
+svn_wc_props_modified_p(svn_boolean_t *modified_p,
+                        const char *path,
+                        svn_wc_adm_access_t *adm_access,
+                        apr_pool_t *pool)
+{
+  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
+  const char *local_abspath;
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+
+  return svn_wc__props_modified(modified_p, db, local_abspath, pool);
+}
+
+
 /*** From status.c ***/
 
 struct status4_wrapper_baton
