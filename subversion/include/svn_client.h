@@ -4691,6 +4691,7 @@ svn_client_info3(const char *abspath_or_url,
  * @since New in 1.5.
  * @deprecated Provided for backward compatibility with the 1.6 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_info2(const char *path_or_url,
                  const svn_opt_revision_t *peg_revision,
