@@ -507,7 +507,7 @@ def info_with_changelists(sbox):
           expected_paths.append('A/D/G/pi')
           expected_paths.append('A/D/H/chi')
           expected_paths.append('A/D/H/psi')
-      expected_paths = sorted([os.path.join(wc_dir, x.replace('/', os.sep)) for x in expected_paths])
+      expected_paths = sorted([os.path.abspath(os.path.join(wc_dir, x.replace('/', os.sep))) for x in expected_paths])
 
       # Build the command line.
       args = ['info', wc_dir]

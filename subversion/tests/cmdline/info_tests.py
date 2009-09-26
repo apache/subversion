@@ -239,7 +239,7 @@ def info_on_added_file(sbox):
 
   verify_xml_elements(output,
                       [('entry',    {'kind'     : 'file',
-                                     'path'     : new_file,
+                                     'path'     : os.path.abspath(new_file),
                                      'revision' : '0'}),
                        ('url',      {}, '.*/new_file'),
                        ('root',     {}, '.*'),
@@ -277,7 +277,7 @@ def info_on_mkdir(sbox):
                                                                 '--xml')
   verify_xml_elements(output,
                       [('entry',    {'kind'     : 'dir',
-                                     'path'     : new_dir,
+                                     'path'     : os.path.abspath(new_dir),
                                      'revision' : '0'}),
                        ('url',      {}, '.*/new_dir'),
                        ('root',     {}, '.*'),
