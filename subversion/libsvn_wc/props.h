@@ -173,9 +173,10 @@ svn_wc__loggy_revert_props_restore(svn_stringbuf_t **log_accum,
 /* Extends LOG_ACCUM to delete PROPS_KIND props installed for PATH. */
 svn_error_t *
 svn_wc__loggy_props_delete(svn_stringbuf_t **log_accum,
-                           const char *path,
+                           svn_wc__db_t *db,
+                           const char *local_abspath,
+                           const char *adm_abspath,
                            svn_wc__props_kind_t props_kind,
-                           svn_wc_adm_access_t *adm_access,
                            apr_pool_t *pool);
 
 /* Delete PROPS_KIND props for LOCAL_ABSPATH */

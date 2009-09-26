@@ -245,16 +245,14 @@ remove_revert_files(svn_stringbuf_t **logtags,
                     const char *path,
                     apr_pool_t * pool)
 {
+  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
   const char *revert_file, *local_abspath;
   svn_node_kind_t kind;
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
 
-  SVN_ERR(svn_wc__text_revert_path(&revert_file,
-                                   svn_wc__adm_get_db(adm_access),
-                                   local_abspath,
-                                   pool));
+  SVN_ERR(svn_wc__text_revert_path(&revert_file, db, local_abspath, pool));
 
   SVN_ERR(svn_io_check_path(revert_file, &kind, pool));
   if (kind == svn_node_file)
@@ -262,8 +260,10 @@ remove_revert_files(svn_stringbuf_t **logtags,
                                  svn_wc__adm_access_abspath(adm_access),
                                  revert_file, pool, pool));
 
-  return svn_wc__loggy_props_delete(logtags, path, svn_wc__props_revert,
-                                    adm_access, pool);
+  return svn_error_return(
+    svn_wc__loggy_props_delete(logtags, db, local_abspath,
+                               svn_wc__adm_access_abspath(adm_access),
+                               svn_wc__props_revert, pool));
 }
 
 svn_error_t *
@@ -1276,9 +1276,9 @@ svn_wc_delete4(svn_wc_context_t *wc_ctx,
                                                      path, adm_access, pool));
         }
       if (was_schedule == svn_wc_schedule_add)
-        SVN_ERR(svn_wc__loggy_props_delete(&log_accum, path,
-                                           svn_wc__props_base,
-                                           adm_access, pool));
+        SVN_ERR(svn_wc__loggy_props_delete(&log_accum, wc_ctx->db,
+                                           local_abspath, parent_abspath,
+                                           svn_wc__props_base, pool));
 
       SVN_ERR(svn_wc__write_log(adm_access, 0, log_accum, pool));
 
