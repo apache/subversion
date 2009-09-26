@@ -495,43 +495,112 @@ svn_wc_conflict_version_dup(const svn_wc_conflict_version_t *version,
 }
 
 
-/* This should be a temp API, and should disappear when we get rid of all uses
-   of svn_wc_conflict_description_t */
-svn_wc_conflict_description2_t *
-svn_wc__conflict_desc2_from_conflict_desc(const svn_wc_conflict_description_t *
-                                                                     conflict,
-                                          apr_pool_t *result_pool)
+svn_wc_conflict_description_t *
+svn_wc__cd2_to_cd(const svn_wc_conflict_description2_t *conflict,
+                  apr_pool_t *result_pool)
 {
-  svn_wc_conflict_description2_t *conflict2;
+  svn_wc_conflict_description_t *new_conflict;
+ 
+  if (conflict == NULL)
+    return NULL;
 
-  conflict2 = apr_pcalloc(result_pool, sizeof(*conflict2));
-  svn_dirent_get_absolute(&conflict2->local_abspath, conflict->path,
-                          result_pool);
-  conflict2->node_kind = conflict->node_kind;
-  conflict2->kind = conflict->kind;
-  if (conflict->property_name)
-    conflict2->property_name = apr_pstrdup(result_pool,
-                                           conflict2->property_name);
-  conflict2->is_binary = conflict->is_binary;
-  if (conflict->mime_type)
-    conflict2->mime_type = apr_pstrdup(result_pool, conflict->mime_type);
-  conflict2->action = conflict->action;
-  conflict2->reason = conflict->reason;
-  if (conflict->base_file)
-    conflict2->base_file = apr_pstrdup(result_pool, conflict->base_file);
-  if (conflict->their_file)
-    conflict2->their_file = apr_pstrdup(result_pool, conflict->their_file);
-  if (conflict->my_file)
-    conflict2->my_file = apr_pstrdup(result_pool, conflict->my_file);
-  if (conflict->merged_file)
-    conflict2->merged_file = apr_pstrdup(result_pool, conflict->merged_file);
-  conflict2->operation = conflict->operation;
+  new_conflict = apr_pcalloc(result_pool, sizeof(*new_conflict));
+
+  new_conflict->path = apr_pstrdup(result_pool, conflict->local_abspath);
+  new_conflict->node_kind = conflict->node_kind;
+  new_conflict->kind = conflict->kind;
+  new_conflict->action = conflict->action;
+  new_conflict->reason = conflict->reason;
   if (conflict->src_left_version)
-    conflict2->src_left_version = svn_wc_conflict_version_dup(
-                                    conflict->src_left_version, result_pool);
+    new_conflict->src_left_version =
+          svn_wc_conflict_version_dup(conflict->src_left_version, result_pool);
   if (conflict->src_right_version)
-    conflict2->src_right_version = svn_wc_conflict_version_dup(
-                                    conflict->src_right_version, result_pool);
+    new_conflict->src_right_version =
+          svn_wc_conflict_version_dup(conflict->src_right_version, result_pool);
 
-  return conflict2;
+  switch (conflict->kind)
+    {
+      case svn_wc_conflict_kind_property:
+        new_conflict->property_name = apr_pstrdup(result_pool,
+                                                  conflict->property_name);
+        break;
+
+      case svn_wc_conflict_kind_text:
+        new_conflict->is_binary = conflict->is_binary;
+        new_conflict->mime_type = apr_pstrdup(result_pool,
+                                              conflict->mime_type);
+        new_conflict->base_file = apr_pstrdup(result_pool,
+                                              conflict->base_file);
+        new_conflict->their_file = apr_pstrdup(result_pool,
+                                               conflict->their_file);
+        new_conflict->my_file = apr_pstrdup(result_pool,
+                                            conflict->my_file);
+        new_conflict->merged_file = apr_pstrdup(result_pool,
+                                                conflict->merged_file);
+        break;
+
+      case svn_wc_conflict_kind_tree:
+        new_conflict->operation = conflict->operation;
+        break;
+    }
+
+  /* A NULL access baton is allowable by the API. */
+  new_conflict->access = NULL;
+
+  return new_conflict;
+}
+
+
+svn_wc_conflict_description2_t *
+svn_wc__cd_to_cd2(const svn_wc_conflict_description_t *conflict,
+                  apr_pool_t *result_pool)
+{
+  svn_wc_conflict_description2_t *new_conflict;
+ 
+  if (conflict == NULL)
+    return NULL;
+
+  new_conflict = apr_pcalloc(result_pool, sizeof(*new_conflict));
+
+  svn_error_clear(
+    svn_dirent_get_absolute(&new_conflict->local_abspath, conflict->path,
+                            result_pool));
+  new_conflict->node_kind = conflict->node_kind;
+  new_conflict->kind = conflict->kind;
+  new_conflict->action = conflict->action;
+  new_conflict->reason = conflict->reason;
+  if (conflict->src_left_version)
+    new_conflict->src_left_version =
+          svn_wc_conflict_version_dup(conflict->src_left_version, result_pool);
+  if (conflict->src_right_version)
+    new_conflict->src_right_version =
+          svn_wc_conflict_version_dup(conflict->src_right_version, result_pool);
+
+  switch (conflict->kind)
+    {
+      case svn_wc_conflict_kind_property:
+        new_conflict->property_name = apr_pstrdup(result_pool,
+                                                  conflict->property_name);
+        break;
+
+      case svn_wc_conflict_kind_text:
+        new_conflict->is_binary = conflict->is_binary;
+        new_conflict->mime_type = apr_pstrdup(result_pool,
+                                              conflict->mime_type);
+        new_conflict->base_file = apr_pstrdup(result_pool,
+                                              conflict->base_file);
+        new_conflict->their_file = apr_pstrdup(result_pool,
+                                               conflict->their_file);
+        new_conflict->my_file = apr_pstrdup(result_pool,
+                                            conflict->my_file);
+        new_conflict->merged_file = apr_pstrdup(result_pool,
+                                                conflict->merged_file);
+        break;
+
+      case svn_wc_conflict_kind_tree:
+        new_conflict->operation = conflict->operation;
+        break;
+    }
+
+  return new_conflict;
 }
