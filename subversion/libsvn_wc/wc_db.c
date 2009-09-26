@@ -2798,9 +2798,10 @@ svn_wc__db_op_revert(svn_wc__db_t *db,
 }
 
 svn_error_t *
-svn_wc__db_op_invalidate_last_mod_time(svn_wc__db_t *db,
-                                       const char *local_abspath,
-                                       apr_pool_t *scratch_pool)
+svn_wc__db_op_set_last_mod_time(svn_wc__db_t *db,
+                                const char *local_abspath,
+                                apr_time_t last_mod_time,
+                                apr_pool_t *scratch_pool)
 {
   svn_sqlite__stmt_t *stmt;
 
@@ -2808,9 +2809,7 @@ svn_wc__db_op_invalidate_last_mod_time(svn_wc__db_t *db,
                                  STMT_UPDATE_BASE_LAST_MOD_TIME,
                                  scratch_pool));
 
-  /* Setting the last mod time to zero will effectively invalidate it's
-     value. */
-  SVN_ERR(svn_sqlite__bind_int64(stmt, 3, 0));
+  SVN_ERR(svn_sqlite__bind_int64(stmt, 3, last_mod_time));
 
   return svn_error_return(svn_sqlite__step_done(stmt));
 }
