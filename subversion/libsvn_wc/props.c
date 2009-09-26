@@ -540,12 +540,11 @@ svn_wc__loggy_revert_props_create(svn_stringbuf_t **log_accum,
 
 svn_error_t *
 svn_wc__loggy_revert_props_restore(svn_stringbuf_t **log_accum,
-                                   const char *path,
-                                   svn_wc_adm_access_t *adm_access,
+                                   svn_wc__db_t *db,
+                                   const char *local_abspath,
+                                   const char *adm_abspath,
                                    apr_pool_t *pool)
 {
-  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
-  const char *local_abspath;
   svn_wc__db_kind_t kind;
   const char *revert_file;
   const char *base_file;
@@ -553,17 +552,16 @@ svn_wc__loggy_revert_props_restore(svn_stringbuf_t **log_accum,
   /* TODO(#2843) The current caller ensures that PATH will not be an excluded
      item. But do we really need show_hidden = TRUE here? */
 
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
   SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath, FALSE, pool));
 
-  SVN_ERR(svn_wc__prop_path(&base_file, path, kind, svn_wc__props_base, pool));
-  SVN_ERR(svn_wc__prop_path(&revert_file, path, kind, svn_wc__props_revert,
-                            pool));
+  SVN_ERR(svn_wc__prop_path(&base_file, local_abspath, kind,
+                            svn_wc__props_base, pool));
+  SVN_ERR(svn_wc__prop_path(&revert_file, local_abspath, kind,
+                            svn_wc__props_revert, pool));
 
-  return svn_error_return(svn_wc__loggy_move(
-                            log_accum,
-                            svn_wc__adm_access_abspath(adm_access),
-                            revert_file, base_file, pool, pool));
+  return svn_error_return(
+    svn_wc__loggy_move(log_accum, adm_abspath, revert_file, base_file,
+                       pool, pool));
 }
 
 
