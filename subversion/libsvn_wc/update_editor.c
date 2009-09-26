@@ -5500,8 +5500,8 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
 
       SVN_ERR(svn_wc__loggy_move(&log_accum, dir_abspath,
                                  dst_txtb, dst_rtext, pool, pool));
-      SVN_ERR(svn_wc__loggy_revert_props_create(&log_accum,
-                                                dst_path, adm_access,
+      SVN_ERR(svn_wc__loggy_revert_props_create(&log_accum, wc_ctx->db,
+                                                local_abspath, dir_abspath,
                                                 pool));
     }
 

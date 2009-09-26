@@ -494,18 +494,15 @@ svn_wc__props_delete(svn_wc__db_t *db,
 
 svn_error_t *
 svn_wc__loggy_revert_props_create(svn_stringbuf_t **log_accum,
-                                  const char *path,
-                                  svn_wc_adm_access_t *adm_access,
+                                  svn_wc__db_t *db,
+                                  const char *local_abspath,
+                                  const char *adm_abspath,
                                   apr_pool_t *pool)
 {
-  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
-  const char *local_abspath;
   svn_wc__db_kind_t kind;
   const char *revert_prop_abspath;
   const char *base_prop_abspath;
   svn_node_kind_t on_disk;
-
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
   SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath, FALSE, pool));
 
@@ -521,8 +518,7 @@ svn_wc__loggy_revert_props_create(svn_stringbuf_t **log_accum,
   SVN_ERR(svn_io_check_path(base_prop_abspath, &on_disk, pool));
   if (on_disk == svn_node_file)
     {
-      SVN_ERR(svn_wc__loggy_move(log_accum,
-                                 svn_wc__adm_access_abspath(adm_access),
+      SVN_ERR(svn_wc__loggy_move(log_accum, adm_abspath,
                                  base_prop_abspath, revert_prop_abspath,
                                  pool, pool));
     }
@@ -535,8 +531,7 @@ svn_wc__loggy_revert_props_create(svn_stringbuf_t **log_accum,
 
       SVN_ERR(svn_wc__write_properties(
                 apr_hash_make(pool), revert_prop_abspath,
-                log_accum, svn_wc__adm_access_abspath(adm_access),
-                pool));
+                log_accum, adm_abspath, pool));
     }
 
   return SVN_NO_ERROR;
