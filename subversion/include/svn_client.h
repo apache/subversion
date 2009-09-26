@@ -4592,6 +4592,19 @@ typedef struct svn_info_t
 
 } svn_info_t;
 
+/**
+ * The callback invoked by svn_client_info3().  Each invocation
+ * describes @a abspath_or_url with the information present in @a info.
+ * Use @a scratch_pool for all temporary allocation.
+ *
+ * @since New in 1.7.
+ */
+/* ### Before 1.7: We might want to rev  svn_wc_info2_t* to update conflict
+       information, remove schedule, etc. */
+typedef svn_error_t *(*svn_info_receiver2_t)(void *baton,
+                                             const char *abspath_or_url,
+                                             const svn_info_t *info,
+                                             apr_pool_t *scratch_pool);
 
 /**
  * The callback invoked by svn_client_info2().  Each invocation
@@ -4600,6 +4613,7 @@ typedef struct svn_info_t
  * unavailable.  Use @a pool for all temporary allocation.
  *
  * @since New in 1.2.
+ * @deprecated Provided for backward compatibility with the 1.6 API.
  */
 typedef svn_error_t *(*svn_info_receiver_t)(
   void *baton,
@@ -4658,7 +4672,24 @@ svn_info_dup(const svn_info_t *info,
  * it's a member of one of those changelists.  If @a changelists is
  * empty (or altogether @c NULL), no changelist filtering occurs.
  *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_client_info3(const char *abspath_or_url,
+                 const svn_opt_revision_t *peg_revision,
+                 const svn_opt_revision_t *revision,
+                 svn_info_receiver2_t receiver,
+                 void *receiver_baton,
+                 svn_depth_t depth,
+                 const apr_array_header_t *changelists,
+                 svn_client_ctx_t *ctx,
+                 apr_pool_t *scratch_pool);
+
+/** Similar to svn_client_info3, but uses an svn_info_receiver_t instead of
+ * a svn_info_receiver2_t.
+ *
  * @since New in 1.5.
+ * @deprecated Provided for backward compatibility with the 1.6 API.
  */
 svn_error_t *
 svn_client_info2(const char *path_or_url,
