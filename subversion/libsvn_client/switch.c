@@ -54,6 +54,51 @@
        URL attributes.
 */
 
+struct external_func_baton
+{
+  apr_hash_t *externals_old;
+  apr_hash_t *externals_new;
+  apr_hash_t *ambient_depths;
+
+  apr_pool_t *result_pool;
+};
+
+/* This function gets invoked whenever external changes are encountered.
+   This implements svn_wc_external_update_t */
+static svn_error_t *
+external_func(void *baton,
+              const char *local_abspath,
+              const svn_string_t *old_val,
+              const svn_string_t *new_val,
+              svn_depth_t depth,
+              apr_pool_t *scratch_pool)
+{
+  struct external_func_baton *efb = baton;
+  const char *dup_val = NULL;
+  const char *dup_path = apr_pstrdup(efb->result_pool, local_abspath);
+
+  if (old_val)
+    {
+      dup_val = apr_pstrmemdup(efb->result_pool, old_val->data, old_val->len);
+
+      apr_hash_set(efb->externals_old, dup_path, APR_HASH_KEY_STRING, dup_val);
+    }
+
+  if (new_val)
+    {
+      /* In most cases the value is identical */
+      if (old_val != new_val)
+        dup_val = apr_pstrmemdup(efb->result_pool, new_val->data, new_val->len);
+
+      apr_hash_set(efb->externals_new, dup_path, APR_HASH_KEY_STRING, dup_val);
+    }
+
+  apr_hash_set(efb->ambient_depths, dup_path, APR_HASH_KEY_STRING,
+               svn_depth_to_word(depth));
+
+  return SVN_NO_ERROR;
+}
+
 
 svn_error_t *
 svn_client__switch_internal(svn_revnum_t *result_rev,
@@ -85,12 +130,12 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
   svn_boolean_t *use_sleep = timestamp_sleep ? timestamp_sleep : &sleep_here;
   const svn_delta_editor_t *switch_editor;
   void *switch_edit_baton;
-  svn_wc_traversal_info_t *traversal_info = svn_wc_init_traversal_info(pool);
   const char *preserved_exts_str;
   const char *anchor_abspath;
   apr_array_header_t *preserved_exts;
   svn_boolean_t server_supports_depth;
   const char *local_abspath;
+  struct external_func_baton efb;
   svn_config_t *cfg = ctx->config ? apr_hash_get(ctx->config,
                                                  SVN_CONFIG_CATEGORY_CONFIG,
                                                  APR_HASH_KEY_STRING)
@@ -212,15 +257,20 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
 
   /* Fetch the switch (update) editor.  If REVISION is invalid, that's
      okay; the RA driver will call editor->set_target_revision() later on. */
-  SVN_ERR(svn_wc_get_switch_editor3(&revnum, adm_access, target,
-                                    switch_rev_url, use_commit_times, depth,
+  efb.externals_new = apr_hash_make(pool);
+  efb.externals_old = apr_hash_make(pool);
+  efb.ambient_depths = apr_hash_make(pool);
+  efb.result_pool = pool;
+  SVN_ERR(svn_wc_get_switch_editor4(&switch_editor, &switch_edit_baton,
+                                    &revnum, ctx->wc_ctx, anchor_abspath,
+                                    target, switch_rev_url, use_commit_times,
+                                    depth,
                                     depth_is_sticky, allow_unver_obstructions,
                                     ctx->notify_func2, ctx->notify_baton2,
                                     ctx->cancel_func, ctx->cancel_baton,
                                     ctx->conflict_func, ctx->conflict_baton,
-                                    diff3_cmd, preserved_exts,
-                                    &switch_editor, &switch_edit_baton,
-                                    traversal_info, pool));
+                                    external_func, &efb, NULL, NULL,
+                                    diff3_cmd, preserved_exts, pool, pool));
 
   /* Tell RA to do an update of URL+TARGET to REVISION; if we pass an
      invalid revnum, that means RA will use the latest revision. */
@@ -257,17 +307,10 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
      handling external items (and any errors therefrom) doesn't delay
      the primary operation. */
   if (SVN_DEPTH_IS_RECURSIVE(depth) && (! ignore_externals))
-    {
-      apr_hash_t *externals_old, *externals_new, *ambient_depths;
-
-      svn_wc_edited_externals(&externals_old, &externals_new, traversal_info);
-      svn_wc_traversed_depths(&ambient_depths, traversal_info);
-
-      err = svn_client__handle_externals(adm_access, externals_old,
-                                         externals_new, ambient_depths,
-                                         switch_url, path, source_root, depth,
-                                         use_sleep, ctx, pool);
-    }
+    err = svn_client__handle_externals(adm_access, efb.externals_old,
+                                       efb.externals_new, efb.ambient_depths,
+                                       switch_url, path, source_root, depth,
+                                       use_sleep, ctx, pool);
 
   /* Sleep to ensure timestamp integrity (we do this regardless of
      errors in the actual switch operation(s)). */
