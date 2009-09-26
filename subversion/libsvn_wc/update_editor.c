@@ -1841,12 +1841,6 @@ set_copied_callback(const char *local_abspath,
 
   if (entry->kind == svn_node_dir)
     {
-      const svn_wc_entry_t *parent_entry;
-
-      SVN_ERR(svn_wc__get_entry(&parent_entry, b->eb->db, local_abspath,
-                                FALSE, svn_node_unknown, TRUE,
-                                scratch_pool, scratch_pool));
-
       /* We don't want to mark a deleted PATH as copied.  If PATH
          is added without history we don't want to make it look like
          it has history.  If PATH is replaced we don't want to make
