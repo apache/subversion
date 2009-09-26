@@ -149,6 +149,11 @@ Candidate changes:
    Votes:
      +1: pburba
 
+ * r39283
+   Support Neon 0.29.
+   Votes:
+     +1: arfrever
+
  * r39301
    Allow non-threadsafe sqlite if APR has been compiled without threads.
    Justification:
@@ -164,7 +169,7 @@ Candidate changes:
      The correct merge result adds only two lines, "#if APR_HAS_THREADS"
      and the corresponding #endif.
    Votes:
-     +1: stsp
+     +1: stsp, arfrever
 
  * r39557
    Fix issue #2713: When adding a file with auto-props setting svn:eol-style,
@@ -178,7 +183,12 @@ Candidate changes:
      svn_wc_revert4().
      ^/branches/1.6.x-r39557
   Votes:
-    +1: julianfoad
+    +1: julianfoad, arfrever
+
+ * r39614
+   Support Berkeley DB 4.8.
+   Votes:
+     +1: arfrever
 
 Approved changes:
 =================
