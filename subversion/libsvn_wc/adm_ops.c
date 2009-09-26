@@ -1272,8 +1272,9 @@ svn_wc_delete4(svn_wc_context_t *wc_ctx,
                                        text_revert, text_base,
                                        pool, pool));
 
-          SVN_ERR(svn_wc__loggy_revert_props_restore(&log_accum,
-                                                     path, adm_access, pool));
+          SVN_ERR(svn_wc__loggy_revert_props_restore(&log_accum, wc_ctx->db,
+                                                     local_abspath,
+                                                     parent_abspath, pool));
         }
       if (was_schedule == svn_wc_schedule_add)
         SVN_ERR(svn_wc__loggy_props_delete(&log_accum, wc_ctx->db,
