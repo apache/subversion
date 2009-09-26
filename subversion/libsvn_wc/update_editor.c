@@ -1830,23 +1830,27 @@ set_copied_callback(const char *local_abspath,
                     apr_pool_t *scratch_pool)
 {
   struct set_copied_baton_t *b = walk_baton;
-  const svn_wc_entry_t *entry;
+  svn_wc__db_status_t status;
+  svn_wc__db_kind_t kind;
 
   if (strcmp(local_abspath, b->added_subtree_root_path) == 0)
     return SVN_NO_ERROR; /* Don't touch the root */
 
-  SVN_ERR(svn_wc__get_entry(&entry, b->eb->db, local_abspath, FALSE,
-                            svn_node_unknown, FALSE,
-                            scratch_pool, scratch_pool));
+  SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL,
+                               b->eb->db, local_abspath,
+                               scratch_pool, scratch_pool));
 
-  if (entry->kind == svn_node_dir)
+  if (kind == svn_wc__db_kind_dir)
     {
       /* We don't want to mark a deleted PATH as copied.  If PATH
          is added without history we don't want to make it look like
          it has history.  If PATH is replaced we don't want to make
          it look like it has history if it doesn't.  Only if PATH is
          schedule normal do we need to mark it as copied. */
-      if (entry->schedule == svn_wc_schedule_normal)
+      if (status == svn_wc__db_status_normal)
         {
           svn_wc_entry_t tmp_entry;
 
@@ -1867,7 +1871,7 @@ set_copied_callback(const char *local_abspath,
      it has history.  If PATH is replaced we don't want to make
      it look like it has history if it doesn't.  Only if PATH is
      schedule normal do we need to mark it as copied. */
-  if (entry->schedule == svn_wc_schedule_normal)
+  if (status == svn_wc__db_status_normal)
     {
       svn_wc_entry_t tmp_entry;
 
@@ -1875,7 +1879,9 @@ set_copied_callback(const char *local_abspath,
       tmp_entry.copied = TRUE;
       SVN_ERR(svn_wc__entry_modify2(b->eb->db,
                                     local_abspath,
-                                    entry->kind,
+                                    kind == svn_wc__db_kind_dir
+                                      ? svn_node_dir
+                                      : svn_node_file,
                                     FALSE,
                                     &tmp_entry,
                                     SVN_WC__ENTRY_MODIFY_COPIED,
