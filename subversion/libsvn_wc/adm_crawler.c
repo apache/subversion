@@ -71,9 +71,9 @@ restore_file(svn_wc__db_t *db,
 {
   svn_stream_t *src_stream;
   svn_boolean_t special;
-  svn_wc_entry_t newentry;
   const char *adm_dir, *file_path;
   svn_wc_adm_access_t *adm_access;
+  apr_time_t text_time;
 
   svn_dirent_split(local_abspath, &adm_dir, &file_path, pool);
 
@@ -165,18 +165,16 @@ restore_file(svn_wc__db_t *db,
 
       SVN_ERR(svn_io_set_file_affected_time(changed_date, file_path, pool));
 
-      newentry.text_time = changed_date;
+      text_time = changed_date;
     }
   else
     {
-      SVN_ERR(svn_io_file_affected_time(&newentry.text_time,
-                                        file_path, pool));
+      SVN_ERR(svn_io_file_affected_time(&text_time, file_path, pool));
     }
 
   /* Modify our entry's text-timestamp to match the working file. */
   return svn_error_return(
-    svn_wc__entry_modify2(db, local_abspath, svn_node_file, FALSE,
-                          &newentry, SVN_WC__ENTRY_MODIFY_TEXT_TIME, pool));
+    svn_wc__db_op_set_last_mod_time(db, local_abspath, text_time, pool));
 }
 
 /* Try to restore LOCAL_ABSPATH of node type KIND and if successfull,

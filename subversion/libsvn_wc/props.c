@@ -2196,9 +2196,10 @@ svn_wc__internal_propset(svn_wc__db_t *db,
           /* If we changed the keywords or newlines, void the entry
              timestamp for this file, so svn_wc_text_modified_p() does
              a real (albeit slow) check later on. */
-          SVN_ERR(svn_wc__db_op_invalidate_last_mod_time(db,
-                                                         local_abspath,
-                                                         scratch_pool));
+          /* Setting the last mod time to zero will effectively invalidate
+             it's value. */
+          SVN_ERR(svn_wc__db_op_set_last_mod_time(db, local_abspath, 0,
+                                                  scratch_pool));
         }
     }
 
