@@ -227,7 +227,7 @@ push_dir_info(svn_ra_session_t *ra_session,
       if (ctx->cancel_func)
         SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
 
-      path = svn_path_join(dir, name, subpool);
+      path = svn_uri_join(dir, name, subpool);
       URL  = svn_path_url_add_component2(session_URL, name, subpool);
 
       fs_path = svn_uri_is_child(repos_root, URL, subpool);
@@ -427,7 +427,7 @@ same_resource_in_head(svn_boolean_t *same_p,
 }
 
 svn_error_t *
-svn_client_info2(const char *path_or_url,
+svn_client_info3(const char *abspath_or_url,
                  const svn_opt_revision_t *peg_revision,
                  const svn_opt_revision_t *revision,
                  svn_info_receiver_t receiver,
@@ -456,16 +456,13 @@ svn_client_info2(const char *path_or_url,
           || peg_revision->kind == svn_opt_revision_unspecified))
     {
       /* Do all digging in the working copy. */
-      const char *local_abspath;
-
       apr_hash_t *changelist_hash = NULL;
       if (changelists && changelists->nelts)
         SVN_ERR(svn_hash_from_cstring_keys(&changelist_hash,
                                            changelists, pool));
 
-      SVN_ERR(svn_dirent_get_absolute(&local_abspath, path_or_url, pool));
       return svn_error_return(
-        crawl_entries(local_abspath, receiver, receiver_baton,
+        crawl_entries(abspath_or_url, receiver, receiver_baton,
                       depth, changelist_hash, ctx, pool));
     }
 
@@ -475,7 +472,7 @@ svn_client_info2(const char *path_or_url,
      return RA session to the possibly-renamed URL as it exists in REVISION.
      The ra_session returned will be anchored on this "final" URL. */
   SVN_ERR(svn_client__ra_session_from_path(&ra_session, &rev,
-                                           &url, path_or_url, NULL,
+                                           &url, abspath_or_url, NULL,
                                            peg_revision,
                                            revision, ctx, pool));
 
