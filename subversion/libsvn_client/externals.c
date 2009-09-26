@@ -1234,7 +1234,9 @@ handle_externals_desc_change(const void *key, apr_ssize_t klen,
 
 svn_error_t *
 svn_client__handle_externals(svn_wc_adm_access_t *adm_access,
-                             svn_wc_traversal_info_t *traversal_info,
+                             apr_hash_t *externals_old,
+                             apr_hash_t *externals_new,
+                             apr_hash_t *ambient_depths,
                              const char *from_url,
                              const char *to_path,
                              const char *repos_root_url,
@@ -1243,11 +1245,7 @@ svn_client__handle_externals(svn_wc_adm_access_t *adm_access,
                              svn_client_ctx_t *ctx,
                              apr_pool_t *pool)
 {
-  apr_hash_t *externals_old, *externals_new, *ambient_depths;
   struct handle_externals_desc_change_baton cb = { 0 };
-
-  svn_wc_edited_externals(&externals_old, &externals_new, traversal_info);
-  svn_wc_traversed_depths(&ambient_depths, traversal_info);
 
   /* Sanity check; see r30124. */
   if (! svn_path_is_url(from_url))
