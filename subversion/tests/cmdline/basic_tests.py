@@ -1632,11 +1632,11 @@ def basic_info(sbox):
 
   # Check that "info" works with 0, 1 and more than 1 explicit targets.
   exit_code, output, errput = svntest.main.run_svn(None, 'info')
-  check_paths(output, ['.'])
+  check_paths(output, [os.path.abspath('.')])
   exit_code, output, errput = svntest.main.run_svn(None, 'info', 'iota')
-  check_paths(output, ['iota'])
+  check_paths(output, [os.path.abspath('iota')])
   exit_code, output, errput = svntest.main.run_svn(None, 'info', 'iota', '.')
-  check_paths(output, ['iota', '.'])
+  check_paths(output, [os.path.abspath('iota'), os.path.abspath('.')])
 
 def repos_root(sbox):
   "check that repos root gets set on checkout"
