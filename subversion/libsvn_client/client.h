@@ -951,9 +951,8 @@ svn_client__do_commit(const char *base_url,
 
 /*** Externals (Modules) ***/
 
-/* Handle changes to the svn:externals property in the tree traversed
-   by TRAVERSAL_INFO (obtained from svn_wc_get_update_editor or
-   svn_wc_get_switch_editor, for example).  The tree's top level
+/* Handle changes to the svn:externals property described by EXTERNALS_OLD,
+   EXTERNALS_NEW, and AMBIENT_DEPTHS.  The tree's top level
    directory is at TO_PATH and should have a write lock in ADM_ACCESS
    and corresponds to FROM_URL URL in the repository, which has a root
    URL of REPOS_ROOT_URL.
@@ -987,7 +986,9 @@ svn_client__do_commit(const char *base_url,
    Use POOL for temporary allocation. */
 svn_error_t *
 svn_client__handle_externals(svn_wc_adm_access_t *adm_access,
-                             svn_wc_traversal_info_t *traversal_info,
+                             apr_hash_t *externals_old,
+                             apr_hash_t *externals_new,
+                             apr_hash_t *ambient_depths,
                              const char *from_url,
                              const char *to_path,
                              const char *repos_root_url,
