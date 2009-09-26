@@ -515,7 +515,8 @@ process_committed_internal(int *log_number,
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
-  SVN_ERR(svn_wc_entry(&entry, path, adm_access, FALSE, pool));
+  SVN_ERR(svn_wc__get_entry(&entry, db, local_abspath, TRUE, svn_node_unknown,
+                            FALSE, pool, pool));
   if (entry == NULL)
     return SVN_NO_ERROR;  /* deleted/absent. (?) ... nothing to do. */
 
