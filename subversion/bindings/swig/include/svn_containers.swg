@@ -674,7 +674,7 @@
 */
 #ifdef SWIGPYTHON
 %typemap(in) apr_array_header_t *REVISION_RANGE_LIST {
-  $1 = svn_swig_py_struct_ptr_list_to_array($input,
+  $1 = (apr_array_header_t *) svn_swig_py_struct_ptr_list_to_array($input,
     $descriptor(svn_opt_revision_range_t *), _global_pool);
   if (PyErr_Occurred()) {
     SWIG_fail;
