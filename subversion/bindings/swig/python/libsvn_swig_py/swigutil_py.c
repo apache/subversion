@@ -1250,7 +1250,7 @@ const apr_array_header_t *svn_swig_py_revnums_to_array(PyObject *source,
 
 const apr_array_header_t *
 svn_swig_py_struct_ptr_list_to_array(PyObject *source,
-                                     swig_type_info * type_descriptor,
+                                     swig_type_info *type_descriptor,
                                      apr_pool_t *pool)
 {
     int targlen;
@@ -1270,7 +1270,7 @@ svn_swig_py_struct_ptr_list_to_array(PyObject *source,
     temp->nelts = targlen;
     while (targlen--)
       {
-        void * struct_ptr;
+        void *struct_ptr;
         int status;
         PyObject *o = PySequence_GetItem(source, targlen);
         if (o == NULL)
@@ -1287,7 +1287,7 @@ svn_swig_py_struct_ptr_list_to_array(PyObject *source,
           {
             Py_DECREF(o);
             PyErr_SetString(PyExc_TypeError,
-              "not a SWIG proxy of correct type");
+                            "not a SWIG proxy of correct type");
             return NULL;
           }
       }
