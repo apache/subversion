@@ -255,7 +255,7 @@ const apr_array_header_t *svn_swig_py_revnums_to_array(PyObject *source,
 SVN_SWIG_SWIGUTIL_EXPORT
 const apr_array_header_t *
 svn_swig_py_struct_ptr_list_to_array(PyObject *source,
-                                     swig_type_info * type_descriptor,
+                                     swig_type_info *type_descriptor,
                                      apr_pool_t *pool);
 
 
