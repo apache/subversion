@@ -81,9 +81,9 @@ Candidate changes:
    Votes:
      +1: pburba
 
- * r38000, r38006, r38099, r38100, r38181, r38803, r38831, r38841, r38896,
-   r38907, r39000, r39002, r39007, r39008, r39052, r39096, r39124,
-   r39125, r39127, r39561, r39562
+ * r38000, r38006, r38099, r38100, r38181, r38198, r38803, r38831,
+   r38841, r38896, r38907, r39000, r39002, r39007, r39008, r39052,
+   r39096, r39124, r39125, r39127, r39561, r39562
    Properly handle tree conflicts during replace.
    (See issue #3281 "Merge a replacement of a directory")
    Justification:
@@ -100,20 +100,20 @@ Candidate changes:
      Since some of these revisions revert or change edits from earlier
      ones, it makes more sense to review the diff of the branch rather
      than all the individual changes:
-       svn diff -x-p ^/branches/1.6.x@39485 ^/branches/1.6.x-r38000@39494
+       svn diff -x-p ^/branches/1.6.x@39485 ^/branches/1.6.x-r38000@39641
      See the log messages on the branch as well as those on trunk.
      Here is a summary of the revisions, grouped by purpose:
        Fix the "tree conflict that already exists" error:
          r38000, r38006, r38181, r38841, r39561, r39562
        Add and tweak new merge tests:
-         r38099, r38100, r38803, r39000, r39002, r39007, r39052
+         r38099, r38100, r38198, r38803, r39000, r39002, r39007, r39052
        Eliminate duplicate notifications and improve error messages:
          r38831, r38896, r38907, r39008, r39096, r39124, r39125, r39127
    Branch:
      ^/branches/1.6.x-r38000
    Votes:
-     +1: stsp
-     +1: sbutler (without r38831, r39561, r39562)
+     +1: stsp (without r38198)
+     +1: sbutler (without r38198, r38831, r39561, r39562)
 
  * r35958, r36030, r38373, r38836, r38837, r38842
    Several fixes to the Win32 exception handler. This change also makes it
