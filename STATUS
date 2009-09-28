@@ -112,7 +112,7 @@ Candidate changes:
    Branch:
      ^/branches/1.6.x-r38000
    Votes:
-     +1: stsp (without r38198)
+     +1: stsp
      +1: sbutler (without r38198, r38831, r39561, r39562)
 
  * r35958, r36030, r38373, r38836, r38837, r38842
