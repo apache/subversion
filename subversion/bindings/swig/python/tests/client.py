@@ -27,6 +27,10 @@ class SubversionClientTestCase(unittest.TestCase):
     self.change_author = author
     self.changed_paths = changed_paths
 
+  def log_entry_receiver(self, log_entry, pool):
+    """An implementation of svn_log_entry_receiver_t."""
+    self.received_revisions.append(log_entry.revision)
+
   def setUp(self):
     """Set up authentication and client context"""
     self.client_ctx = client.svn_client_create_context()
@@ -200,6 +204,27 @@ class SubversionClientTestCase(unittest.TestCase):
     for dir in ('/trunk/dir1', '/trunk/dir2', '/trunk/dir3'):
       self.assert_(dir in self.changed_paths)
       self.assertEqual(self.changed_paths[dir].action, 'A')
+
+  def test_log5(self):
+    """Test svn_client_log5."""
+    start = core.svn_opt_revision_t()
+    start.kind = core.svn_opt_revision_number
+    start.value.number = 0
+
+    end = core.svn_opt_revision_t()
+    end.kind = core.svn_opt_revision_number
+    end.value.number = 4
+
+    rev_range = core.svn_opt_revision_range_t()
+    rev_range.start = start
+    rev_range.end = end
+
+    self.received_revisions = []
+
+    client.log5((REPOS_URL,), end, (rev_range,), 0, False, True, False, (),
+        self.log_entry_receiver, self.client_ctx)
+
+    self.assertEqual(self.received_revisions, range(0, 5))
 
   def test_uuid_from_url(self):
     """Test svn_client_uuid_from_url on a file:// URL"""
