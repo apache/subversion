@@ -4396,8 +4396,9 @@ svn_wc_remove_from_revision_control2(svn_wc_context_t *wc_ctx,
  * libsvn_client.  Do *not* call this routine unless you really
  * understand what the heck you're doing.
  *
- * @deprecated Provided for compatibility with the 1.5 API
+ * @deprecated Provided for compatibility with the 1.6 API
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_remove_from_revision_control(svn_wc_adm_access_t *adm_access,
                                     const char *name,
