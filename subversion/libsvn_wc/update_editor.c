@@ -2946,11 +2946,8 @@ close_directory(void *dir_baton,
           SVN_ERR_W(svn_wc__merge_props(&dirprop_log,
                                         &prop_state,
                                         eb->db,
-                                        svn_wc__adm_retrieve_internal2(
-                                                   eb->db,
-                                                   db->local_abspath,
-                                                   pool),
-                                        db->path,
+                                        db->local_abspath,
+                                        db->local_abspath,
                                         NULL, /* left_version */
                                         NULL, /* right_version */
                                         NULL /* use baseprops */,
@@ -4056,11 +4053,14 @@ merge_props(svn_stringbuf_t *log_accum,
 {
   apr_array_header_t *regular_props = NULL, *wc_props = NULL,
     *entry_props = NULL;
+  const char *file_abspath;
+  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
+
+  SVN_ERR(svn_dirent_get_absolute(&file_abspath, file_path, pool));
 
   /* Sort the property list into three arrays, based on kind. */
-  SVN_ERR(svn_categorize_props(prop_changes,
-                               &entry_props, &wc_props, &regular_props,
-                               pool));
+  SVN_ERR(svn_categorize_props(prop_changes, &entry_props, &wc_props,
+                               &regular_props, pool));
 
   /* Always initialize to unknown state. */
   *prop_state = svn_wc_notify_state_unknown;
@@ -4073,8 +4073,9 @@ merge_props(svn_stringbuf_t *log_accum,
          props.  */
       SVN_ERR(svn_wc__merge_props(&log_accum,
                                   prop_state,
-                                  svn_wc__adm_get_db(adm_access),
-                                  adm_access, file_path,
+                                  db,
+                                  file_abspath,
+                                  svn_wc__adm_access_abspath(adm_access),
                                   left_version,
                                   right_version,
                                   NULL /* update, not merge */,
@@ -4100,16 +4101,9 @@ merge_props(svn_stringbuf_t *log_accum,
 
   /* This writes a whole bunch of log commands to install wcprops.  */
   if (wc_props)
-    {
-      const char *local_abspath;
-      svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
-
-      SVN_ERR(svn_dirent_get_absolute(&local_abspath, file_path, pool));
-      SVN_ERR(svn_wc__db_base_set_dav_cache(db, local_abspath,
-                                            prop_hash_from_array(wc_props,
-                                                                 pool),
-                                            pool));
-    }
+    SVN_ERR(svn_wc__db_base_set_dav_cache(db, file_abspath,
+                                          prop_hash_from_array(wc_props, pool),
+                                          pool));
 
   return SVN_NO_ERROR;
 }
