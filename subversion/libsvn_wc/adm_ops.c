@@ -490,7 +490,9 @@ process_committed_leaf(int log_number,
     }
 
   /* Write our accumulation of log entries into a log file */
-  return svn_wc__write_log(adm_access, log_number, logtags, pool);
+  return svn_error_return(
+    svn_wc__write_log(svn_wc__adm_access_abspath(adm_access), log_number,
+                      logtags, pool));
 }
 
 
@@ -1281,7 +1283,7 @@ svn_wc_delete4(svn_wc_context_t *wc_ctx,
                                            local_abspath, parent_abspath,
                                            svn_wc__props_base, pool));
 
-      SVN_ERR(svn_wc__write_log(adm_access, 0, log_accum, pool));
+      SVN_ERR(svn_wc__write_log(parent_abspath, 0, log_accum, pool));
 
       SVN_ERR(svn_wc__run_log(adm_access, pool));
 

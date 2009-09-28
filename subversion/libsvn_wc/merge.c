@@ -1321,7 +1321,8 @@ svn_wc_merge4(enum svn_wc_merge_outcome_t *merge_outcome,
                                  scratch_pool));
 
   /* Write our accumulation of log entries into a log file */
-  SVN_ERR(svn_wc__write_log(adm_access, 0, log_accum, scratch_pool));
+  SVN_ERR(svn_wc__write_log(svn_wc__adm_access_abspath(adm_access), 0,
+                            log_accum, scratch_pool));
 
   return svn_wc__run_log(adm_access, scratch_pool);
 }

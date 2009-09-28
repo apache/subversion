@@ -490,12 +490,8 @@ flush_log(struct dir_baton *db, apr_pool_t *pool)
 {
   if (! svn_stringbuf_isempty(db->log_accum))
     {
-      svn_wc_adm_access_t *adm_access;
-
-      SVN_ERR(svn_wc_adm_retrieve(&adm_access, db->edit_baton->adm_access,
-                                   db->path, pool));
-      SVN_ERR(svn_wc__write_log(adm_access, db->log_number, db->log_accum,
-                                pool));
+      SVN_ERR(svn_wc__write_log(db->local_abspath, db->log_number,
+                                db->log_accum, pool));
       db->log_number++;
       svn_stringbuf_setempty(db->log_accum);
     }
@@ -2101,8 +2097,9 @@ do_entry_deletion(struct edit_baton *eb,
           /* Run the log in the parent dir, to record the tree conflict.
            * Do this before schedule_existing_item_for_re_add(), in case
            * that needs to modify the same entries. */
-          SVN_ERR(svn_wc__write_log(parent_adm_access, *log_number, log_item,
-                                    pool));
+          SVN_ERR(svn_wc__write_log(
+                                svn_wc__adm_access_abspath(parent_adm_access),
+                                *log_number, log_item, pool));
           SVN_ERR(svn_wc__run_log(parent_adm_access, pool));
           *log_number = 0;
 
@@ -2132,8 +2129,9 @@ do_entry_deletion(struct edit_baton *eb,
           /* Run the log in the parent dir, to record the tree conflict.
            * Do this before schedule_existing_item_for_re_add(), in case
            * that needs to modify the same entries. */
-          SVN_ERR(svn_wc__write_log(parent_adm_access, *log_number, log_item,
-                                    pool));
+          SVN_ERR(svn_wc__write_log(
+                                svn_wc__adm_access_abspath(parent_adm_access),
+                                *log_number, log_item, pool));
           SVN_ERR(svn_wc__run_log(parent_adm_access, pool));
           *log_number = 0;
 
@@ -2177,7 +2175,8 @@ do_entry_deletion(struct edit_baton *eb,
       eb->target_deleted = TRUE;
     }
 
-  SVN_ERR(svn_wc__write_log(parent_adm_access, *log_number, log_item, pool));
+  SVN_ERR(svn_wc__write_log(svn_wc__adm_access_abspath(parent_adm_access),
+                            *log_number, log_item, pool));
 
   if (eb->switch_url)
     {
@@ -5609,7 +5608,7 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
   }
 
   /* Write our accumulation of log entries into a log file */
-  SVN_ERR(svn_wc__write_log(adm_access, 0, log_accum, pool));
+  SVN_ERR(svn_wc__write_log(dir_abspath, 0, log_accum, pool));
 
   return svn_wc__run_log(adm_access, pool);
 }
