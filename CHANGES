@@ -1,3 +1,26 @@
+Version 1.6.6
+(?? ??? ????, from /branches/1.6.x)
+http://svn.collab.net/repos/svn/tags/1.6.6
+
+ User-visible changes:
+  * ...
+  * print a newline before the plaintext passphrase prompt (r39302)
+  * improve merge performance with implicit subtree mergeinfo (issue #3443)
+  * fix "libsvn_ra_svn/marshal.c assertion failed (opt || cstr)" (issue #3485)
+  * make file externals with for binary files (issue #3368)
+  * perform MIME type matching case-insensitively (issue #3479)
+  * do not treat non-existent revisions as HEAD in 'svn export' (issue #3400)
+  * print a newline before the plaintext password prompt (r38982)
+  * revert part of r36720, use "text/plain" as the default MIME type (r39074)
+  * improve "tree conflict already exists" error message (r38872)
+  * fix failure to commit replacement of a directory (issue #3281)
+  * fix mod_dav_svn parent dir links to preserve peg revisions (issue #3425)
+
+ Developer-visible changes:
+  * fix 2 failing tests in ruby bindings (r38886)
+  * do not require GNU grep for build (issue #3453)
+  * use '$SED' instead of 'sed' in build scripts (issue #3458)
+ 
 Version 1.6.5
 (21 Aug 2009, from /branches/1.6.x)
 http://svn.collab.net/repos/svn/tags/1.6.5
