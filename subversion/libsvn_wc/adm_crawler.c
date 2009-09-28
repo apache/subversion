@@ -143,10 +143,10 @@ restore_file(svn_wc__db_t *db,
   SVN_ERR(svn_wc__maybe_set_executable(NULL, db, local_abspath, pool));
 
   /* Remove any text conflict */
-  SVN_ERR(svn_wc_resolved_conflict4(file_path, adm_access, TRUE, FALSE,
-                                    FALSE, svn_depth_empty,
-                                    svn_wc_conflict_choose_merged,
-                                    NULL, NULL, NULL, NULL, pool));
+  SVN_ERR(svn_wc__resolved_conflict_internal(
+                    db, local_abspath, svn_depth_empty, TRUE, NULL, FALSE,
+                    svn_wc_conflict_choose_merged, NULL, NULL, NULL, NULL,
+                    pool));
 
   /* Possibly set timestamp to last-commit-time. */
   if (use_commit_times && (! special))
