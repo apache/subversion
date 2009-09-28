@@ -90,7 +90,7 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
   apr_array_header_t *preserved_exts;
   svn_boolean_t server_supports_depth;
   const char *local_abspath;
-  svn_wc__external_func_baton_t efb;
+  svn_client__external_func_baton_t efb;
   svn_config_t *cfg = ctx->config ? apr_hash_get(ctx->config,
                                                  SVN_CONFIG_CATEGORY_CONFIG,
                                                  APR_HASH_KEY_STRING)
@@ -224,7 +224,7 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
                                     ctx->notify_func2, ctx->notify_baton2,
                                     ctx->cancel_func, ctx->cancel_baton,
                                     ctx->conflict_func, ctx->conflict_baton,
-                                    svn_wc__external_info_gatherer, &efb,
+                                    svn_client__external_info_gatherer, &efb,
                                     NULL, NULL,
                                     diff3_cmd, preserved_exts, pool, pool));
 

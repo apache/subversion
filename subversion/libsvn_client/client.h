@@ -1109,23 +1109,23 @@ svn_cl__rev_default_to_peg(const svn_opt_revision_t *revision,
 /* This function gets invoked whenever external changes are encountered.
    This implements svn_wc_external_update_t */
 svn_error_t *
-svn_wc__external_info_gatherer(void *baton,
-                               const char *local_abspath,
-                               const svn_string_t *old_val,
-                               const svn_string_t *new_val,
-                               svn_depth_t depth,
-                               apr_pool_t *scratch_pool);
+svn_client__external_info_gatherer(void *baton,
+                                   const char *local_abspath,
+                                   const svn_string_t *old_val,
+                                   const svn_string_t *new_val,
+                                   svn_depth_t depth,
+                                   apr_pool_t *scratch_pool);
 
 /* Baton type for svn_wc__external_info_gatherer().  All fields must be
    populated before use. */
-typedef struct svn_wc__external_func_baton_t
+typedef struct svn_client__external_func_baton_t
 {
   apr_hash_t *externals_old;
   apr_hash_t *externals_new;
   apr_hash_t *ambient_depths;
 
   apr_pool_t *result_pool;
-} svn_wc__external_func_baton_t;
+} svn_client__external_func_baton_t;
 
 
 
