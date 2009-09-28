@@ -169,39 +169,49 @@ read_enum_field(int *result,
 
 /* Parse the conflict info fields from SKEL into *VERSION_INFO. */
 static svn_error_t *
-read_node_version_info(svn_wc_conflict_version_t *version_info,
+read_node_version_info(svn_wc_conflict_version_t **version_info,
                        const svn_skel_t *skel,
                        apr_pool_t *result_pool,
                        apr_pool_t *scratch_pool)
 {
   int n;
+  const char *repos_root;
+  const char *repos_relpath;
+  svn_revnum_t peg_rev;
+  svn_node_kind_t kind;
+  svn_boolean_t ok = TRUE;
 
   if (!is_valid_version_info_skel(skel))
     return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
                             _("Invalid version info in tree conflict "
                               "description"));
 
-  version_info->repos_url = apr_pstrmemdup(result_pool,
+  repos_root = apr_pstrmemdup(result_pool,
                                            skel->children->next->data,
                                            skel->children->next->len);
-  if (*version_info->repos_url == '\0')
-    version_info->repos_url = NULL;
+  if (*repos_root == '\0')
+    {
+      *version_info = NULL;
+      return SVN_NO_ERROR;
+    }
 
-  version_info->peg_rev =
-    SVN_STR_TO_REV(apr_pstrmemdup(scratch_pool,
-                                  skel->children->next->next->data,
-                                  skel->children->next->next->len));
+  peg_rev = SVN_STR_TO_REV(apr_pstrmemdup(scratch_pool,
+                                          skel->children->next->next->data,
+                                          skel->children->next->next->len));
 
-  version_info->path_in_repos =
-    apr_pstrmemdup(result_pool,
-                   skel->children->next->next->next->data,
-                   skel->children->next->next->next->len);
-  if (*version_info->path_in_repos == '\0')
-    version_info->path_in_repos = NULL;
+  repos_relpath = apr_pstrmemdup(result_pool,
+                                 skel->children->next->next->next->data,
+                                 skel->children->next->next->next->len);
 
   SVN_ERR(read_enum_field(&n, node_kind_map,
                           skel->children->next->next->next->next));
-  version_info->node_kind = (svn_node_kind_t)n;
+  kind = (svn_node_kind_t)n;
+
+  *version_info = svn_wc_conflict_version_create(repos_root,
+                                                 repos_relpath,
+                                                 peg_rev,
+                                                 kind,
+                                                 result_pool);
 
   return SVN_NO_ERROR;
 }
@@ -256,16 +266,6 @@ read_one_tree_conflict(svn_wc_conflict_description2_t **conflict,
                           skel->children->next->next->next));
   operation = (svn_wc_operation_t)n;
 
-  /* Construct the description object */
-  src_left_version = svn_wc_conflict_version_create(NULL, NULL,
-                                                    SVN_INVALID_REVNUM,
-                                                    svn_node_none,
-                                                    result_pool);
-  src_right_version = svn_wc_conflict_version_create(NULL, NULL,
-                                                     SVN_INVALID_REVNUM,
-                                                     svn_node_none,
-                                                     result_pool);
-
   SVN_ERR(svn_dirent_get_absolute(&victim_abspath,
                     svn_dirent_join(dir_path, victim_basename, scratch_pool),
                     scratch_pool));
@@ -284,11 +284,11 @@ read_one_tree_conflict(svn_wc_conflict_description2_t **conflict,
   skel = skel->children->next->next->next->next->next->next;
 
   /* src_left_version */
-  SVN_ERR(read_node_version_info(src_left_version, skel,
+  SVN_ERR(read_node_version_info(&src_left_version, skel,
                                  result_pool, scratch_pool));
 
   /* src_right_version */
-  SVN_ERR(read_node_version_info(src_right_version, skel->next,
+  SVN_ERR(read_node_version_info(&src_right_version, skel->next,
                                  result_pool, scratch_pool));
 
   *conflict = svn_wc_conflict_description_create_tree2(victim_abspath,
