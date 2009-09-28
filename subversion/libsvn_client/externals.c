@@ -1414,14 +1414,14 @@ svn_cl__store_externals(void *baton,
 
 
 svn_error_t *
-svn_wc__external_info_gatherer(void *baton,
-                               const char *local_abspath,
-                               const svn_string_t *old_val,
-                               const svn_string_t *new_val,
-                               svn_depth_t depth,
-                               apr_pool_t *scratch_pool)
+svn_client__external_info_gatherer(void *baton,
+                                   const char *local_abspath,
+                                   const svn_string_t *old_val,
+                                   const svn_string_t *new_val,
+                                   svn_depth_t depth,
+                                   apr_pool_t *scratch_pool)
 {
-  struct svn_wc__external_func_baton_t *efb = baton;
+  svn_client__external_func_baton_t *efb = baton;
   const char *dup_val = NULL;
   const char *dup_path = apr_pstrdup(efb->result_pool, local_abspath);
 
