@@ -1410,3 +1410,39 @@ svn_cl__store_externals(void *baton,
 
   return SVN_NO_ERROR;
 }
+
+
+
+svn_error_t *
+svn_wc__external_info_gatherer(void *baton,
+                               const char *local_abspath,
+                               const svn_string_t *old_val,
+                               const svn_string_t *new_val,
+                               svn_depth_t depth,
+                               apr_pool_t *scratch_pool)
+{
+  struct svn_wc__external_func_baton_t *efb = baton;
+  const char *dup_val = NULL;
+  const char *dup_path = apr_pstrdup(efb->result_pool, local_abspath);
+
+  if (old_val)
+    {
+      dup_val = apr_pstrmemdup(efb->result_pool, old_val->data, old_val->len);
+
+      apr_hash_set(efb->externals_old, dup_path, APR_HASH_KEY_STRING, dup_val);
+    }
+
+  if (new_val)
+    {
+      /* In most cases the value is identical */
+      if (old_val != new_val)
+        dup_val = apr_pstrmemdup(efb->result_pool, new_val->data, new_val->len);
+
+      apr_hash_set(efb->externals_new, dup_path, APR_HASH_KEY_STRING, dup_val);
+    }
+
+  apr_hash_set(efb->ambient_depths, dup_path, APR_HASH_KEY_STRING,
+               svn_depth_to_word(depth));
+
+  return SVN_NO_ERROR;
+}
