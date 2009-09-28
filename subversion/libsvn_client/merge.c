@@ -2010,7 +2010,8 @@ merge_dir_added(svn_wc_adm_access_t *adm_access,
       else
         {
           SVN_ERR(svn_io_make_dir_recursively(path, subpool));
-          SVN_ERR(svn_wc_add3(path, adm_access, svn_depth_infinity,
+          SVN_ERR(svn_wc_add4(merge_b->ctx->wc_ctx, local_abspath,
+                              svn_depth_infinity,
                               copyfrom_url, copyfrom_rev,
                               merge_b->ctx->cancel_func,
                               merge_b->ctx->cancel_baton,
@@ -2028,7 +2029,8 @@ merge_dir_added(svn_wc_adm_access_t *adm_access,
           /* The dir is not known to Subversion, or is schedule-delete.
            * We will make it schedule-add. */
           if (!merge_b->dry_run)
-            SVN_ERR(svn_wc_add3(path, adm_access, svn_depth_infinity,
+            SVN_ERR(svn_wc_add4(merge_b->ctx->wc_ctx, local_abspath,
+                                svn_depth_infinity,
                                 copyfrom_url, copyfrom_rev,
                                 merge_b->ctx->cancel_func,
                                 merge_b->ctx->cancel_baton,
