@@ -4,13 +4,13 @@ http://svn.collab.net/repos/svn/tags/1.6.6
 
  User-visible changes:
   * ...
-  * print a newline before the plaintext passphrase prompt (r39302)
+  * print a newline before prompting for an SSL cert passphrase or a
+    plaintext password (r39302, r38982)
   * improve merge performance with implicit subtree mergeinfo (issue #3443)
   * fix "libsvn_ra_svn/marshal.c assertion failed (opt || cstr)" (issue #3485)
   * make file externals work for binary files (issue #3368)
   * perform MIME type matching case-insensitively (issue #3479)
   * do not treat non-existent revisions as HEAD in 'svn export' (issue #3400)
-  * print a newline before the plaintext password prompt (r38982)
   * revert part of r36720, use "text/plain" as the default MIME type (r39074)
   * improve "tree conflict already exists" error message (r38872)
   * fix failure to commit replacement of a directory (issue #3281)
