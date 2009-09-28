@@ -1641,8 +1641,8 @@ merge_file_added(svn_wc_adm_access_t *adm_access,
                    the whole text-base and props installed too, just as if
                    we had called 'svn cp wc wc'. */
                 /* ### would be nice to have cancel/notify funcs to pass */
-                SVN_ERR(svn_wc_add_repos_file3(
-                            mine, adm_access,
+                SVN_ERR(svn_wc_add_repos_file4(
+                            merge_b->ctx->wc_ctx, mine_abspath,
                             new_base_contents, NULL, new_props, NULL,
                             copyfrom_url, copyfrom_rev,
                             NULL, NULL, NULL, NULL, subpool));
