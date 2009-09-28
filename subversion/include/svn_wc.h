@@ -6916,7 +6916,7 @@ svn_wc_remove_lock2(svn_wc_context_t *wc_ctx,
  * relative path parameter pair.
  *
  * @deprecated Provided for backward compatibility with the 1.6 API.
- * @since New in 1.7.
+ * @since New in 1.2.
  */
 SVN_DEPRECATED
 svn_error_t *
