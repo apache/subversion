@@ -714,7 +714,8 @@ svn_wc_merge_props3(svn_wc_notify_state_t *state,
 
   if (! dry_run)
     {
-      SVN_ERR(svn_wc__write_log(adm_access, 0, log_accum, pool));
+      SVN_ERR(svn_wc__write_log(svn_wc__adm_access_abspath(adm_access), 0,
+                                log_accum, pool));
       SVN_ERR(svn_wc__run_log(adm_access, pool));
     }
 
