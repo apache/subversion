@@ -257,7 +257,7 @@ attempt_deletion(const char *parent_dir,
    If this call marks any conflict as resolved, set *DID_RESOLVE to true,
    else do not change *DID_RESOLVE.
 
-   See svn_wc_resolved_conflict3() for how CONFLICT_CHOICE behaves.
+   See svn_wc_resolved_conflict5() for how CONFLICT_CHOICE behaves.
 
    ### FIXME: This function should be loggy, otherwise an interruption can
    ### leave, for example, one of the conflict artifact files deleted but
@@ -679,6 +679,32 @@ recursive_resolve_conflict(svn_wc__db_t *db,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_wc__resolved_conflict_internal(svn_wc__db_t *db,
+                                   const char *local_abspath,
+                                   svn_depth_t depth,
+                                   svn_boolean_t resolve_text,
+                                   const char *resolve_prop,
+                                   svn_boolean_t resolve_tree,
+                                   svn_wc_conflict_choice_t conflict_choice,
+                                   svn_cancel_func_t cancel_func,
+                                   void *cancel_baton,
+                                   svn_wc_notify_func2_t notify_func,
+                                   void *notify_baton,
+                                   apr_pool_t *scratch_pool)
+{
+  return svn_error_return(
+    recursive_resolve_conflict(db,
+                               local_abspath,
+                               depth,
+                               resolve_text,
+                               resolve_prop,
+                               resolve_tree,
+                               conflict_choice,
+                               cancel_func, cancel_baton,
+                               notify_func, notify_baton,
+                               scratch_pool));
+}
 
 /* The public function */
 svn_error_t *
@@ -695,16 +721,15 @@ svn_wc_resolved_conflict5(svn_wc_context_t *wc_ctx,
                           void *notify_baton,
                           apr_pool_t *scratch_pool)
 {
-  SVN_ERR(recursive_resolve_conflict(wc_ctx->db,
-                                     local_abspath,
-                                     depth,
-                                     resolve_text,
-                                     resolve_prop,
-                                     resolve_tree,
-                                     conflict_choice,
-                                     cancel_func, cancel_baton,
-                                     notify_func, notify_baton,
-                                     scratch_pool));
-
-  return SVN_NO_ERROR;
+  return svn_error_return(
+    svn_wc__resolved_conflict_internal(wc_ctx->db,
+                                       local_abspath,
+                                       depth,
+                                       resolve_text,
+                                       resolve_prop,
+                                       resolve_tree,
+                                       conflict_choice,
+                                       cancel_func, cancel_baton,
+                                       notify_func, notify_baton,
+                                       scratch_pool));
 }
