@@ -703,7 +703,8 @@ svn_wc_merge_props3(svn_wc_notify_state_t *state,
   /* Note that while this routine does the "real" work, it's only
      prepping tempfiles and writing log commands.  */
   SVN_ERR(svn_wc__merge_props(&log_accum, state, 
-                              wc_ctx->db, adm_access, path,
+                              wc_ctx->db, local_abspath,
+                              svn_wc__adm_access_abspath(adm_access),
                               NULL, NULL,
                               baseprops, NULL, NULL,
                               propchanges, base_merge, dry_run,
@@ -1534,8 +1535,8 @@ svn_error_t *
 svn_wc__merge_props(svn_stringbuf_t **entry_accum,
                     svn_wc_notify_state_t *state,
                     svn_wc__db_t *db,
-                    svn_wc_adm_access_t *adm_access,
-                    const char *path,
+                    const char *local_abspath,
+                    const char *adm_abspath,
                     const svn_wc_conflict_version_t *left_version,
                     const svn_wc_conflict_version_t *right_version,
                     apr_hash_t *server_baseprops,
@@ -1556,11 +1557,8 @@ svn_wc__merge_props(svn_stringbuf_t **entry_accum,
   const char *reject_path = NULL;
   svn_stream_t *reject_tmp_stream = NULL;  /* the temporary conflicts stream */
   const char *reject_tmp_path = NULL;
-  const char *local_abspath;
 
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
-
-  if (! svn_dirent_is_child(svn_wc_adm_access_path(adm_access), path, NULL))
+  if (! svn_dirent_is_child(adm_abspath, local_abspath, NULL))
     is_dir = TRUE;
   else
     is_dir = FALSE;
@@ -1679,7 +1677,7 @@ svn_wc__merge_props(svn_stringbuf_t **entry_accum,
           if (! reject_tmp_stream)
             /* This is the very first prop conflict found on this item. */
             SVN_ERR(open_reject_tmp_stream(&reject_tmp_stream, &reject_tmp_path,
-                                           path, is_dir, pool));
+                                           local_abspath, is_dir, pool));
 
           /* Append the conflict to the open tmp/PROPS/---.prej file */
           SVN_ERR(append_prop_conflict(reject_tmp_stream, conflict, pool));
@@ -1693,9 +1691,7 @@ svn_wc__merge_props(svn_stringbuf_t **entry_accum,
   if (dry_run)
     return SVN_NO_ERROR;
 
-  SVN_ERR(svn_wc__install_props(entry_accum,
-                                svn_wc__adm_access_abspath(adm_access),
-                                local_abspath,
+  SVN_ERR(svn_wc__install_props(entry_accum, adm_abspath, local_abspath,
                                 base_props, working_props, base_merge,
                                 pool));
 
@@ -1710,9 +1706,8 @@ svn_wc__merge_props(svn_stringbuf_t **entry_accum,
 
       /* Now try to get the name of a pre-existing .prej file from the
          entries file */
-      SVN_ERR(get_existing_prop_reject_file(&reject_path, db,
-                                      svn_wc__adm_access_abspath(adm_access),
-                                      local_abspath, pool));
+      SVN_ERR(get_existing_prop_reject_file(&reject_path, db, adm_abspath,
+                                            local_abspath, pool));
 
       if (! reject_path)
         {
@@ -1723,11 +1718,12 @@ svn_wc__merge_props(svn_stringbuf_t **entry_accum,
 
           if (is_dir)
             {
-              reject_dirpath = path;
+              reject_dirpath = local_abspath;
               reject_filename = SVN_WC__THIS_DIR_PREJ;
             }
           else
-            svn_dirent_split(path, &reject_dirpath, &reject_filename, pool);
+            svn_dirent_split(local_abspath, &reject_dirpath, &reject_filename,
+                             pool);
 
           SVN_ERR(svn_io_open_uniquely_named(NULL, &reject_path,
                                              reject_dirpath,
@@ -1744,26 +1740,22 @@ svn_wc__merge_props(svn_stringbuf_t **entry_accum,
       /* We've now guaranteed that some kind of .prej file exists
          above the .svn/ dir.  We write log entries to append our
          conflicts to it. */
-      SVN_ERR(svn_wc__loggy_append(entry_accum,
-                                   svn_wc__adm_access_abspath(adm_access),
+      SVN_ERR(svn_wc__loggy_append(entry_accum, adm_abspath,
                                    reject_tmp_path, reject_path, pool));
 
       /* And of course, delete the temporary reject file. */
-      SVN_ERR(svn_wc__loggy_remove(entry_accum,
-                                   svn_wc__adm_access_abspath(adm_access),
+      SVN_ERR(svn_wc__loggy_remove(entry_accum, adm_abspath,
                                    reject_tmp_path, pool, pool));
 
       /* Mark entry as "conflicted" with a particular .prej file. */
       {
         svn_wc_entry_t entry;
 
-        entry.prejfile = svn_dirent_is_child(svn_wc_adm_access_path(adm_access),
-                                             reject_path, NULL);
-        SVN_ERR(svn_wc__loggy_entry_modify(entry_accum,
-                                      svn_wc__adm_access_abspath(adm_access),
-                                      path, &entry,
-                                      SVN_WC__ENTRY_MODIFY_PREJFILE,
-                                      pool, pool));
+        entry.prejfile = svn_dirent_is_child(adm_abspath, reject_path, NULL);
+        SVN_ERR(svn_wc__loggy_entry_modify(entry_accum, adm_abspath,
+                                           local_abspath, &entry,
+                                           SVN_WC__ENTRY_MODIFY_PREJFILE,
+                                           pool, pool));
       }
 
     } /* if (reject_tmp_fp) */
