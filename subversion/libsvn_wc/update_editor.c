@@ -4038,8 +4038,9 @@ static svn_error_t *
 merge_props(svn_stringbuf_t *log_accum,
             svn_wc_notify_state_t *prop_state,
             svn_wc_notify_lock_state_t *lock_state,
-            svn_wc_adm_access_t *adm_access,
-            const char *file_path,
+            svn_wc__db_t *db,
+            const char *file_abspath,
+            const char *dir_abspath,
             const svn_wc_conflict_version_t *left_version,
             const svn_wc_conflict_version_t *right_version,
             const apr_array_header_t *prop_changes,
@@ -4053,10 +4054,6 @@ merge_props(svn_stringbuf_t *log_accum,
 {
   apr_array_header_t *regular_props = NULL, *wc_props = NULL,
     *entry_props = NULL;
-  const char *file_abspath;
-  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
-
-  SVN_ERR(svn_dirent_get_absolute(&file_abspath, file_path, pool));
 
   /* Sort the property list into three arrays, based on kind. */
   SVN_ERR(svn_categorize_props(prop_changes, &entry_props, &wc_props,
@@ -4075,7 +4072,7 @@ merge_props(svn_stringbuf_t *log_accum,
                                   prop_state,
                                   db,
                                   file_abspath,
-                                  svn_wc__adm_access_abspath(adm_access),
+                                  dir_abspath,
                                   left_version,
                                   right_version,
                                   NULL /* update, not merge */,
@@ -4093,9 +4090,9 @@ merge_props(svn_stringbuf_t *log_accum,
      Note that no merging needs to happen; these kinds of props aren't
      versioned, so if the property is present, we overwrite the value. */
   if (entry_props)
-    SVN_ERR(accumulate_entry_props(log_accum,
-                                   svn_wc__adm_access_abspath(adm_access),
-                                   lock_state, file_path, entry_props, pool));
+    SVN_ERR(accumulate_entry_props(log_accum, dir_abspath,
+                                   lock_state, file_abspath, entry_props,
+                                   pool));
   else
     *lock_state = svn_wc_notify_lock_state_unchanged;
 
@@ -4114,8 +4111,8 @@ merge_props(svn_stringbuf_t *log_accum,
    Use POOL for temporary allocations. */
 static svn_error_t *
 loggy_tweak_entry(svn_stringbuf_t *log_accum,
-                  svn_wc_adm_access_t *adm_access,
-                  const char *path,
+                  const char *local_abspath,
+                  const char *dir_abspath,
                   svn_revnum_t new_revision,
                   const char *new_URL,
                   apr_pool_t *pool)
@@ -4153,10 +4150,10 @@ loggy_tweak_entry(svn_stringbuf_t *log_accum,
       modify_flags |= SVN_WC__ENTRY_MODIFY_URL;
     }
 
-  return svn_wc__loggy_entry_modify(&log_accum,
-                                    svn_wc__adm_access_abspath(adm_access),
-                                    path, &tmp_entry, modify_flags,
-                                    pool, pool);
+  return svn_error_return(
+    svn_wc__loggy_entry_modify(&log_accum, dir_abspath,
+                               local_abspath, &tmp_entry, modify_flags,
+                               pool, pool));
 }
 
 
@@ -4211,6 +4208,7 @@ merge_file(svn_wc_notify_state_t *content_state,
   const svn_wc_entry_t *entry;
   svn_wc_conflict_version_t *left_version = NULL; /* ### Fill */
   svn_wc_conflict_version_t *right_version = NULL; /* ### Fill */
+  const char *parent_abspath;
 
   /* Accumulated entry modifications. */
   svn_wc_entry_t tmp_entry;
@@ -4236,6 +4234,7 @@ merge_file(svn_wc_notify_state_t *content_state,
   /* Start by splitting the file path, getting an access baton for the parent,
      and an entry for the file if any. */
   svn_dirent_split(fb->path, &parent_dir, NULL, pool);
+  parent_abspath = svn_dirent_dirname(fb->local_abspath, pool);
   SVN_ERR(svn_wc_adm_retrieve(&adm_access, eb->adm_access,
                               parent_dir, pool));
 
@@ -4254,14 +4253,14 @@ merge_file(svn_wc_notify_state_t *content_state,
   /* Set the new revision and URL in the entry and clean up some other
      fields. This clears DELETED from any prior versioned file with the
      same name (needed before attempting to install props).  */
-  SVN_ERR(loggy_tweak_entry(log_accum, adm_access, fb->path,
+  SVN_ERR(loggy_tweak_entry(log_accum, fb->local_abspath, parent_abspath,
                             *eb->target_revision, fb->new_URL, pool));
 
   /* Install all kinds of properties.  It is important to do this before
      any file content merging, since that process might expand keywords, in
      which case we want the new entryprops to be in place. */
-  SVN_ERR(merge_props(log_accum, prop_state, lock_state, adm_access,
-                      fb->path,
+  SVN_ERR(merge_props(log_accum, prop_state, lock_state, eb->db,
+                      fb->local_abspath, parent_abspath,
                       left_version, right_version,
                       fb->propchanges,
                       fb->copied_base_props, fb->copied_working_props,
@@ -5530,7 +5529,7 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
   /* Set the new revision number and URL in the entry and clean up some other
      fields. This clears DELETED from any prior versioned file with the
      same name (needed before attempting to install props).  */
-  SVN_ERR(loggy_tweak_entry(log_accum, adm_access, dst_path,
+  SVN_ERR(loggy_tweak_entry(log_accum, local_abspath, dir_abspath,
                             dst_entry ? dst_entry->revision : ent->revision,
                             new_URL, pool));
 
