@@ -360,6 +360,15 @@ struct dir_baton
      directory. */
   struct dir_baton *parent_baton;
 
+  /* Gets set if updates to this directory are skipped */
+  svn_boolean_t skip_this;
+
+  /* Gets set if updates to all descendants of this directory are skipped */
+  svn_boolean_t skip_descendants;
+
+  /* Gets set if some (high priority) notification for this dir was peformed */
+  svn_boolean_t skip_notify;
+
   /* Gets set iff this is a new directory that is not yet versioned and not
      yet in the parent's list of entries */
   svn_boolean_t added;
@@ -650,14 +659,20 @@ make_dir_baton(struct dir_baton **d_p,
 }
 
 
-/* Forward declaration. */
+/* Forward declarations. */
 static svn_error_t *
 do_entry_deletion(struct edit_baton *eb,
-                  const char *parent_path,
-                  const char *path,
+                  const char *local_abspath,
                   const char *their_url,
                   int *log_number,
                   apr_pool_t *pool);
+
+static svn_error_t *
+already_in_a_tree_conflict(svn_boolean_t *conflicted,
+                           svn_wc__db_t *db,
+                           const char *local_abspath,
+                           apr_pool_t *scratch_pool);
+
 
 /* Helper for maybe_bump_dir_info():
 
@@ -676,11 +691,6 @@ complete_directory(struct edit_baton *eb,
   int i;
   apr_pool_t *iterpool;
   svn_wc_entry_t tmp_entry;
-
-  /* If inside a tree conflict, do nothing. */
-  if (in_skipped_tree(eb, local_abspath, pool)
-      && !in_deleted_tree(eb, local_abspath, TRUE, pool))
-    return SVN_NO_ERROR;
 
   /* If this is the root directory and there is a target, we can't
      mark this directory complete. */
@@ -719,7 +729,7 @@ complete_directory(struct edit_baton *eb,
                * is needed in this call is rare or even non-existant.
                * ### TODO: Construct a proper THEIR_URL anyway. See also
                * NULL handling code in do_entry_deletion(). */
-              SVN_ERR(do_entry_deletion(eb, eb->anchor, eb->target, NULL,
+              SVN_ERR(do_entry_deletion(eb, eb->target_abspath, NULL,
                                         &log_number, pool));
             }
           else
@@ -897,12 +907,6 @@ maybe_bump_dir_info(struct edit_baton *eb,
 
 struct file_baton
 {
-  /* The global edit baton. */
-  struct edit_baton *edit_baton;
-
-  /* The parent directory of this file. */
-  struct dir_baton *dir_baton;
-
   /* Pool specific to this file_baton. */
   apr_pool_t *pool;
 
@@ -921,14 +925,23 @@ struct file_baton
   /* The revision of the file before updating */
   svn_revnum_t old_revision;
 
+  /* The global edit baton. */
+  struct edit_baton *edit_baton;
+
+  /* The parent directory of this file. */
+  struct dir_baton *dir_baton;
+
+  /* Set if updates to this directory are skipped */
+  svn_boolean_t skip_this;
+
+  /* Set if some (high priority) notification for this dir was performed */
+  svn_boolean_t skip_notify;
+
   /* Set if this file is new. */
   svn_boolean_t added;
 
   /* Set if this file is new with history. */
   svn_boolean_t added_with_history;
-
-  /* Set if this file is skipped because it was in conflict. */
-  svn_boolean_t skipped;
 
   /* Set if an unversioned file of the same name already existed in
      this directory. */
@@ -1299,14 +1312,46 @@ open_root(void *edit_baton,
           void **dir_baton)
 {
   struct edit_baton *eb = edit_baton;
-  struct dir_baton *d;
+  struct dir_baton *db;
+  svn_boolean_t already_conflicted;
+  svn_error_t *err;
 
   /* Note that something interesting is actually happening in this
      edit run. */
   eb->root_opened = TRUE;
 
-  SVN_ERR(make_dir_baton(&d, NULL, eb, NULL, FALSE, pool));
-  *dir_baton = d;
+  SVN_ERR(make_dir_baton(&db, NULL, eb, NULL, FALSE, pool));
+  *dir_baton = db;
+
+  err = already_in_a_tree_conflict(&already_conflicted, eb->db,
+                                   db->local_abspath, pool);
+
+  if (err && err->apr_err == SVN_ERR_WC_MISSING)
+    {
+      svn_error_clear(err);
+      already_conflicted = FALSE;
+    }
+  else
+    SVN_ERR(err);
+
+  if (already_conflicted)
+    {
+      db->skip_this = TRUE;
+      db->skip_descendants = TRUE;
+      db->skip_notify = TRUE;
+      db->bump_info->skipped = TRUE;
+
+      /* Notify that we skipped the target, while we actually skipped
+         the anchor */
+      if (eb->notify_func)
+        eb->notify_func(eb->notify_baton,
+                        svn_wc_create_notify(eb->target_abspath,
+                                             svn_wc_notify_skip,
+                                             pool),
+                        pool);
+
+      return SVN_NO_ERROR;
+    }
 
   if (! *eb->target)
     {
@@ -1322,17 +1367,17 @@ open_root(void *edit_baton,
                                    NULL, NULL, NULL, &depth, NULL, NULL, NULL,
                                    NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                    NULL, NULL, NULL,
-                                   eb->db, d->local_abspath, pool, pool));
-      d->ambient_depth = depth;
-      d->was_incomplete = (status == svn_wc__db_status_incomplete);
+                                   eb->db, db->local_abspath, pool, pool));
+      db->ambient_depth = depth;
+      db->was_incomplete = (status == svn_wc__db_status_incomplete);
 
       /* ### TODO: Skip if inside a conflicted tree. */
 
       /* Mark directory as being at target_revision, but incomplete. */
       tmp_entry.revision = *(eb->target_revision);
-      tmp_entry.url = d->new_URL;
+      tmp_entry.url = db->new_URL;
       tmp_entry.incomplete = TRUE;
-      SVN_ERR(svn_wc__entry_modify2(eb->db, d->local_abspath, svn_node_dir,
+      SVN_ERR(svn_wc__entry_modify2(eb->db, db->local_abspath, svn_node_dir,
                                     FALSE,
                                     &tmp_entry, flags,
                                     pool));
@@ -1806,6 +1851,50 @@ already_in_a_tree_conflict(svn_boolean_t *conflicted,
   return SVN_NO_ERROR;
 }
 
+/* Temporary helper until the new conflict handling is in place */
+static svn_error_t *
+node_already_conflicted(svn_boolean_t *conflicted,
+                        svn_wc__db_t *db,
+                        const char *local_abspath,
+                        apr_pool_t *scratch_pool)
+{
+  const apr_array_header_t *conflicts;
+  int i;
+
+  SVN_ERR(svn_wc__db_read_conflicts(&conflicts, db, local_abspath,
+                                    scratch_pool, scratch_pool));
+
+  *conflicted = FALSE;
+
+  for (i = 0; i < conflicts->nelts; i++)
+    {
+      const svn_wc_conflict_description2_t *cd;
+      cd = APR_ARRAY_IDX(conflicts, i, const svn_wc_conflict_description2_t *);
+
+      if (cd->kind == svn_wc_conflict_kind_tree)
+        {
+          *conflicted = TRUE;
+          return SVN_NO_ERROR;
+        }
+      else if (cd->kind == svn_wc_conflict_kind_property ||
+               cd->kind == svn_wc_conflict_kind_text)
+        {
+          svn_boolean_t text_conflicted, prop_conflicted, tree_conflicted;
+          SVN_ERR(svn_wc__internal_conflicted_p(&text_conflicted,
+                                                &prop_conflicted,
+                                                &tree_conflicted,
+                                                db, local_abspath,
+                                                scratch_pool));
+
+          *conflicted = (text_conflicted || prop_conflicted || tree_conflicted);
+          return SVN_NO_ERROR;
+        }
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
 /* A walk baton for schedule_existing_item_for_re_add()'s call
    to svn_wc_walk_entries3(). */
 struct set_copied_baton_t
@@ -1993,24 +2082,23 @@ schedule_existing_item_for_re_add(const svn_wc_entry_t *entry,
  */
 static svn_error_t *
 do_entry_deletion(struct edit_baton *eb,
-                  const char *parent_path,
-                  const char *path,
+                  const char *local_abspath,
                   const char *their_url,
                   int *log_number,
                   apr_pool_t *pool)
 {
-  svn_wc_adm_access_t *parent_adm_access;
   svn_error_t *err;
   const svn_wc_entry_t *entry;
-  const char *full_path = svn_dirent_join(eb->anchor, path, pool);
   svn_boolean_t already_conflicted;
   svn_stringbuf_t *log_item = svn_stringbuf_create("", pool);
   svn_wc_conflict_description2_t *tree_conflict;
-  const char *local_abspath;
+  const char *dir_abspath = svn_dirent_dirname(local_abspath, pool);
+  svn_wc_adm_access_t *parent_adm_access;
 
-  local_abspath = svn_dirent_join(eb->anchor_abspath, path, pool);
-  SVN_ERR(svn_wc_adm_retrieve(&parent_adm_access, eb->adm_access,
-                              parent_path, pool));
+
+  parent_adm_access = svn_wc__adm_retrieve_internal2(eb->db, dir_abspath,
+                                                     pool);
+  SVN_ERR_ASSERT(parent_adm_access != NULL);
 
   /* ### hmm. in case we need to re-add the node, we use some fields from
      ### this entry. I believe the required fields are filled in, but getting
@@ -2033,31 +2121,25 @@ do_entry_deletion(struct edit_baton *eb,
     {
       SVN_ERR(svn_wc__entry_remove(eb->db, local_abspath, pool));
 
-      if (strcmp(path, eb->target) == 0)
+      if (strcmp(local_abspath, eb->target_abspath) == 0)
         eb->target_deleted = TRUE;
       return SVN_NO_ERROR;
     }
 
-  /* Is an ancestor-dir (already visited by this edit) a tree conflict
-     victim?  If so, skip without notification. */
-  if (in_skipped_tree(eb, local_abspath, pool)
-      && !in_deleted_tree(eb, local_abspath, TRUE, pool))
-    return SVN_NO_ERROR;
-
-  /* Is this path, or an ancestor-dir NOT visited by this edit, already
-     marked as a tree conflict victim? */
-  SVN_ERR(already_in_a_tree_conflict(&already_conflicted, eb->db,
-                                     local_abspath, pool));
+  /* Is this path a conflict victim? */
+  SVN_ERR(node_already_conflicted(&already_conflicted, eb->db,
+                                  local_abspath, pool));
   if (already_conflicted)
     {
       SVN_ERR(remember_skipped_tree(eb, local_abspath));
 
       /* ### TODO: Also print victim_path in the skip msg. */
       if (eb->notify_func)
-        (*eb->notify_func)(eb->notify_baton,
-                           svn_wc_create_notify(full_path, svn_wc_notify_skip,
-                                                pool),
-                           pool);
+        eb->notify_func(eb->notify_baton,
+                        svn_wc_create_notify(local_abspath,
+                                             svn_wc_notify_skip,
+                                             pool),
+                        pool);
 
       return SVN_NO_ERROR;
     }
@@ -2078,11 +2160,11 @@ do_entry_deletion(struct edit_baton *eb,
       SVN_ERR(remember_skipped_tree(eb, local_abspath));
 
       if (eb->notify_func)
-        (*eb->notify_func)(eb->notify_baton,
-                           svn_wc_create_notify(full_path,
-                                                svn_wc_notify_tree_conflict,
-                                                pool),
-                           pool);
+        eb->notify_func(eb->notify_baton,
+                        svn_wc_create_notify(local_abspath,
+                                             svn_wc_notify_tree_conflict,
+                                             pool),
+                        pool);
 
       if (tree_conflict->reason == svn_wc_conflict_reason_edited)
         {
@@ -2147,14 +2229,13 @@ do_entry_deletion(struct edit_baton *eb,
   /* Issue a loggy command to delete the entry from version control and to
    * delete it from disk if unmodified, but leave any modified files on disk
    * unversioned. */
-  SVN_ERR(svn_wc__loggy_delete_entry(&log_item,
-                             svn_wc__adm_access_abspath(parent_adm_access),
-                             full_path, pool, pool));
+  SVN_ERR(svn_wc__loggy_delete_entry(&log_item, dir_abspath, local_abspath,
+                                     pool, pool));
 
   /* If the thing being deleted is the *target* of this update, then
      we need to recreate a 'deleted' entry, so that the parent can give
      accurate reports about itself in the future. */
-  if (strcmp(path, eb->target) == 0)
+  if (strcmp(local_abspath, eb->target_abspath) == 0)
     {
       svn_wc_entry_t tmp_entry;
 
@@ -2165,8 +2246,8 @@ do_entry_deletion(struct edit_baton *eb,
       tmp_entry.deleted = TRUE;
 
       SVN_ERR(svn_wc__loggy_entry_modify(&log_item,
-                               svn_wc__adm_access_abspath(parent_adm_access),
-                               full_path, &tmp_entry,
+                               dir_abspath, local_abspath,
+                               &tmp_entry,
                                SVN_WC__ENTRY_MODIFY_REVISION
                                | SVN_WC__ENTRY_MODIFY_KIND
                                | SVN_WC__ENTRY_MODIFY_DELETED,
@@ -2197,16 +2278,10 @@ do_entry_deletion(struct edit_baton *eb,
 
       if (entry->kind == svn_node_dir)
         {
-          svn_wc_adm_access_t *child_access;
-
-          SVN_ERR(svn_wc_adm_retrieve(
-                    &child_access, eb->adm_access,
-                    full_path, pool));
-
           SVN_ERR(leftmod_error_chain(
-                    svn_wc_remove_from_revision_control(
-                      child_access,
-                      SVN_WC_ENTRY_THIS_DIR,
+                    svn_wc__remove_from_revision_control_internal(
+                      eb->db,
+                      local_abspath,
                       TRUE, /* destroy */
                       FALSE, /* instant error */
                       eb->cancel_func,
@@ -2226,7 +2301,7 @@ do_entry_deletion(struct edit_baton *eb,
       && !in_deleted_tree(eb, local_abspath, TRUE, pool))
     {
       svn_wc_notify_t *notify
-        = svn_wc_create_notify(full_path, svn_wc_notify_update_delete, pool);
+        = svn_wc_create_notify(local_abspath, svn_wc_notify_update_delete, pool);
 
       (*eb->notify_func)(eb->notify_baton, notify, pool);
     }
@@ -2243,12 +2318,25 @@ delete_entry(const char *path,
              apr_pool_t *pool)
 {
   struct dir_baton *pb = parent_baton;
-  const char *path_basename = svn_uri_basename(path, pool);
-  const char *their_url = svn_path_url_add_component2(pb->new_URL,
-                                                      path_basename, pool);
+  const char *basename = svn_uri_basename(path, pool);
+  const char *local_abspath;
+  const char *their_url;
 
-  SVN_ERR(check_path_under_root(pb->local_abspath, path_basename, pool));
-  return do_entry_deletion(pb->edit_baton, pb->path, path, their_url,
+  local_abspath = svn_dirent_join(pb->local_abspath, basename, pool);
+  
+  if (pb->skip_descendants)
+    {
+      if (!pb->skip_this)
+        SVN_ERR(remember_skipped_tree(pb->edit_baton, local_abspath));
+
+      return SVN_NO_ERROR;
+    }
+
+  SVN_ERR(check_path_under_root(pb->local_abspath, basename, pool));
+
+  their_url = svn_path_url_add_component2(pb->new_URL, basename, pool);
+
+  return do_entry_deletion(pb->edit_baton, local_abspath, their_url,
                            &pb->log_number, pool);
 }
 
@@ -2269,8 +2357,29 @@ add_directory(const char *path,
   svn_boolean_t already_conflicted;
   svn_boolean_t locally_deleted;
 
+  /* Semantic check.  Either both "copyfrom" args are valid, or they're
+     NULL and SVN_INVALID_REVNUM.  A mixture is illegal semantics. */
+  SVN_ERR_ASSERT((copyfrom_path && SVN_IS_VALID_REVNUM(copyfrom_revision))
+                 || (!copyfrom_path &&
+                     !SVN_IS_VALID_REVNUM(copyfrom_revision)));
+
   SVN_ERR(make_dir_baton(&db, path, eb, pb, TRUE, pool));
   *child_baton = db;
+
+  if (pb->skip_descendants)
+    {
+      if (!pb->skip_this)
+        SVN_ERR(remember_skipped_tree(eb, db->local_abspath));
+
+      db->skip_this = TRUE;
+      db->skip_descendants = TRUE;
+      db->skip_notify = TRUE;
+
+      return SVN_NO_ERROR;
+    }
+
+  SVN_ERR(check_path_under_root(pb->local_abspath, db->name, pool));
+
 
   locally_deleted = in_deleted_tree(eb, db->local_abspath, TRUE, pool);
 
@@ -2296,39 +2405,33 @@ add_directory(const char *path,
   /* Flush the log for the parent directory before going into this subtree. */
   SVN_ERR(flush_log(pb, pool));
 
-  /* Semantic check.  Either both "copyfrom" args are valid, or they're
-     NULL and SVN_INVALID_REVNUM.  A mixture is illegal semantics. */
-  SVN_ERR_ASSERT((copyfrom_path && SVN_IS_VALID_REVNUM(copyfrom_revision))
-                 || (!copyfrom_path &&
-                     !SVN_IS_VALID_REVNUM(copyfrom_revision)));
 
-  SVN_ERR(check_path_under_root(pb->local_abspath, db->name, pool));
-  SVN_ERR(svn_io_check_path(db->local_abspath, &kind, db->pool));
 
-  /* Is an ancestor-dir (already visited by this edit) a tree conflict
-     victim?  If so, skip without notification. */
-  if (in_skipped_tree(eb, db->local_abspath, pool) && !locally_deleted)
-    return SVN_NO_ERROR;
 
-  /* Is this path, or an ancestor-dir NOT visited by this edit, already
-     marked as a tree conflict victim? */
-  SVN_ERR(already_in_a_tree_conflict(&already_conflicted, eb->db,
-                                     db->local_abspath, pool));
+  /* Is this path a conflict victim? */
+  SVN_ERR(node_already_conflicted(&already_conflicted, eb->db,
+                                  db->local_abspath, pool));
   if (already_conflicted)
     {
       /* Record this conflict so that its descendants are skipped silently. */
       SVN_ERR(remember_skipped_tree(eb, db->local_abspath));
 
+      db->skip_this = TRUE;
+      db->skip_descendants = TRUE;
+      db->skip_notify = TRUE;
+
       /* ### TODO: Also print victim_path in the skip msg. */
       if (eb->notify_func)
-        (*eb->notify_func)(eb->notify_baton,
-                           svn_wc_create_notify(db->local_abspath,
-                                                svn_wc_notify_skip,
-                                                pool),
-                           pool);
+        eb->notify_func(eb->notify_baton,
+                        svn_wc_create_notify(db->local_abspath,
+                                             svn_wc_notify_skip,
+                                             pool),
+                        pool);
 
       return SVN_NO_ERROR;
     }
+
+  SVN_ERR(svn_io_check_path(db->local_abspath, &kind, db->pool));
 
   /* The path can exist, but it must be a directory... */
   if (kind == svn_node_file || kind == svn_node_unknown)
@@ -2361,6 +2464,7 @@ add_directory(const char *path,
             }
           else
             {
+              db->skip_notify = TRUE;
               if (eb->notify_func)
                 {
                   svn_wc_notify_t *notify = 
@@ -2369,7 +2473,7 @@ add_directory(const char *path,
                                              pool);
 
                   notify->kind = svn_node_dir;
-                  (*eb->notify_func)(eb->notify_baton, notify, pool);
+                  eb->notify_func(eb->notify_baton, notify, pool);
                 }
 
               return svn_error_createf(
@@ -2468,13 +2572,17 @@ add_directory(const char *path,
                      skipped silently. */
                   SVN_ERR(remember_skipped_tree(eb, db->local_abspath));
 
+                  db->skip_this = TRUE;
+                  db->skip_descendants = TRUE;
+                  db->skip_notify = TRUE;
+
                   if (eb->notify_func)
-                    (*eb->notify_func)(eb->notify_baton,
-                                       svn_wc_create_notify(
-                                        db->local_abspath,
-                                        svn_wc_notify_tree_conflict,
-                                        pool),
-                                       pool);
+                    eb->notify_func(eb->notify_baton,
+                                    svn_wc_create_notify(
+                                               db->local_abspath,
+                                               svn_wc_notify_tree_conflict,
+                                               pool),
+                                    pool);
 
                   return SVN_NO_ERROR;
                 }
@@ -2614,16 +2722,18 @@ add_directory(const char *path,
      might be properties to deal with.  If PATH was added inside a locally
      deleted tree, then suppress notification, a tree conflict was already
      issued. */
-  if (eb->notify_func && !(db->add_existed) && !locally_deleted)
+  if (eb->notify_func && !db->skip_notify &&
+      !(db->add_existed) && !locally_deleted)
     {
       svn_wc_notify_t *notify = svn_wc_create_notify(
-        db->path,
-        db->existed
-        ? svn_wc_notify_exists
-        : svn_wc_notify_update_add,
-        pool);
+                                        db->path,
+                                        db->existed
+                                        ? svn_wc_notify_exists
+                                        : svn_wc_notify_update_add,
+                                        pool);
       notify->kind = svn_node_dir;
-      (*eb->notify_func)(eb->notify_baton, notify, pool);
+      eb->notify_func(eb->notify_baton, notify, pool);
+      db->skip_notify = TRUE;
     }
 
   return SVN_NO_ERROR;
@@ -2645,16 +2755,29 @@ open_directory(const char *path,
 
   svn_boolean_t already_conflicted;
   svn_wc_conflict_description2_t *tree_conflict;
-  svn_boolean_t prop_conflicted;
   svn_wc__db_status_t status;
 
   SVN_ERR(make_dir_baton(&db, path, eb, pb, FALSE, pool));
   *child_baton = db;
 
-  /* Flush the log for the parent directory before going into this subtree. */
-  SVN_ERR(flush_log(pb, pool));
+  if (pb->skip_descendants)
+    {
+      if (!pb->skip_this)
+        SVN_ERR(remember_skipped_tree(eb, db->local_abspath));
+
+      db->skip_this = TRUE;
+      db->skip_descendants = TRUE;
+      db->skip_notify = TRUE;
+
+      db->bump_info->skipped = TRUE;
+
+      return SVN_NO_ERROR;
+    }
 
   SVN_ERR(check_path_under_root(pb->local_abspath, db->name, pool));
+
+  /* Flush the log for the parent directory before going into this subtree. */
+  SVN_ERR(flush_log(pb, pool));
 
   SVN_ERR(svn_wc__db_read_info(&status, NULL, &db->old_revision, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL,
@@ -2665,76 +2788,66 @@ open_directory(const char *path,
 
   db->was_incomplete = (status == svn_wc__db_status_incomplete);
 
-  /* Is an ancestor-dir (already visited by this edit) a tree conflict
-     victim?  If so, skip the tree without notification. */
-  if (in_skipped_tree(eb, db->local_abspath, pool)
-      && !in_deleted_tree(eb, db->local_abspath, TRUE, pool))
+  /* Is this path a conflict victim? */
+  SVN_ERR(node_already_conflicted(&already_conflicted, eb->db,
+                                  db->local_abspath, pool));
+  if (already_conflicted)
     {
-      db->bump_info->skipped = TRUE;
+      SVN_ERR(remember_skipped_tree(eb, db->local_abspath));
+
+      db->skip_this = TRUE;
+      db->skip_descendants = TRUE;
+      db->skip_notify = TRUE;
+
+      if (eb->notify_func)
+        eb->notify_func(eb->notify_baton,
+                        svn_wc_create_notify(db->local_abspath,
+                                             svn_wc_notify_skip,
+                                             pool),
+                        pool);
 
       return SVN_NO_ERROR;
     }
-
-  /* Is this path, or an ancestor-dir NOT visited by this edit, already a
-     tree conflict victim?  If so, skip the tree with one notification. */
-  SVN_ERR(already_in_a_tree_conflict(&already_conflicted, eb->db,
-                                     db->local_abspath, pool));
-  if (already_conflicted)
-    tree_conflict = NULL;
-  else
-    /* Is this path a fresh tree conflict victim?  If so, skip the tree
-       with one notification. */
-    SVN_ERR(check_tree_conflict(&tree_conflict, eb, db->local_abspath,
-                                pb->log_accum,
-                                svn_wc_conflict_action_edit,
-                                svn_node_dir, db->new_URL, pool));
+  
+  /* Is this path a fresh tree conflict victim?  If so, skip the tree
+     with one notification. */
+  SVN_ERR(check_tree_conflict(&tree_conflict, eb, db->local_abspath,
+                              pb->log_accum,
+                              svn_wc_conflict_action_edit,
+                              svn_node_dir, db->new_URL, pool));
 
   /* Remember the roots of any locally deleted trees. */
-  if (tree_conflict
-      && (tree_conflict->reason == svn_wc_conflict_reason_deleted ||
-          tree_conflict->reason == svn_wc_conflict_reason_replaced)
-      && !in_deleted_tree(eb, db->local_abspath, TRUE, pool))
-    remember_deleted_tree(eb, db->local_abspath);
-
-  /* If property-conflicted, skip the tree with notification. */
-  SVN_ERR(svn_wc__internal_conflicted_p(NULL, &prop_conflicted, NULL,
-                                        eb->db, db->local_abspath, pool));
-
-  if (already_conflicted || tree_conflict != NULL || prop_conflicted)
+  if (tree_conflict != NULL)
     {
-      if (!in_deleted_tree(eb, db->local_abspath, TRUE, pool))
-        db->bump_info->skipped = TRUE;
-
-      SVN_ERR(remember_skipped_tree(eb, db->local_abspath));
-
-      /* Don't bother with a notification if PATH is inside a locally
-         deleted tree, a conflict notification will already have been
-         issued for the root of that tree. */
-      if (eb->notify_func
-          && !in_deleted_tree(eb, db->local_abspath, FALSE, pool))
+      if (eb->notify_func)
         {
           svn_wc_notify_t *notify
-            = svn_wc_create_notify(db->local_abspath,
-                                   prop_conflicted
-                                   ? svn_wc_notify_skip
-                                   : svn_wc_notify_tree_conflict,
-                                   pool);
+              = svn_wc_create_notify(db->local_abspath,
+                                     svn_wc_notify_tree_conflict,
+                                     pool);
           notify->kind = svn_node_dir;
 
-          if (prop_conflicted)
-            notify->prop_state = svn_wc_notify_state_conflicted;
-
-          (*eb->notify_func)(eb->notify_baton, notify, pool);
+          eb->notify_func(eb->notify_baton, notify, pool);
+          db->skip_notify = TRUE;
         }
 
       /* Even if PATH is locally deleted we still need mark it as being
          at TARGET_REVISION, so fall through to the code below to do just
          that. */
-      if (prop_conflicted
-          || (tree_conflict
-              && (tree_conflict->reason != svn_wc_conflict_reason_deleted &&
-                  tree_conflict->reason != svn_wc_conflict_reason_replaced)))
-        return SVN_NO_ERROR;
+      if (tree_conflict->reason != svn_wc_conflict_reason_deleted &&
+          tree_conflict->reason != svn_wc_conflict_reason_replaced)
+        {
+          SVN_ERR(remember_skipped_tree(eb, db->local_abspath));
+          db->skip_descendants = TRUE;
+          db->skip_this = TRUE;
+
+          return SVN_NO_ERROR;
+        }
+      else
+        {
+          SVN_ERR(remember_skipped_tree(eb, db->local_abspath));
+          remember_deleted_tree(eb, db->local_abspath);
+        }
     }
 
   /* Mark directory as being at target_revision and URL, but incomplete. */
@@ -2759,7 +2872,7 @@ change_dir_prop(void *dir_baton,
   svn_prop_t *propchange;
   struct dir_baton *db = dir_baton;
 
-  if (db->bump_info->skipped)
+  if (db->skip_this)
     return SVN_NO_ERROR;
 
   propchange = apr_array_push(db->propchanges);
@@ -2768,8 +2881,6 @@ change_dir_prop(void *dir_baton,
 
   return SVN_NO_ERROR;
 }
-
-
 
 /* If any of the svn_prop_t objects in PROPCHANGES represents a change
    to the SVN_PROP_EXTERNALS property, return that change, else return
@@ -2844,9 +2955,10 @@ close_directory(void *dir_baton,
   apr_hash_t *base_props = NULL, *working_props = NULL;
 
   /* Skip if we're in a conflicted tree. */
-  if (in_skipped_tree(db->edit_baton, db->local_abspath, pool)
-      && !in_deleted_tree(db->edit_baton, db->local_abspath, TRUE, pool))
+  if (db->skip_this)
     {
+      db->bump_info->skipped = TRUE;
+
       /* Allow the parent to complete its update. */
       SVN_ERR(maybe_bump_dir_info(db->edit_baton, db->bump_info, db->pool));
 
@@ -2996,15 +3108,7 @@ close_directory(void *dir_baton,
      happened in that case - unless the add was obstructed by a dir
      scheduled for addition without history, in which case we handle
      notification here). */
-  /* ### TODO: Instead of duplicating these complex conditions, should say
-   * "if (! db->have_notified) ...". Alternatively, if it would be
-   * acceptable for the notification to come always after the children, then
-   * store the desired notification in the baton as soon as we know what it
-   * is, and finally, here, just send it if it has already been created. */
-   if (! db->bump_info->skipped
-       && (db->add_existed || (! db->added))
-       && (db->edit_baton->notify_func)
-       && !in_deleted_tree(db->edit_baton, db->local_abspath, TRUE, pool))
+  if (!db->skip_notify && eb->notify_func)
     {
       svn_wc_notify_t *notify
         = svn_wc_create_notify(db->path,
@@ -3016,8 +3120,8 @@ close_directory(void *dir_baton,
       notify->prop_state = prop_state;
       notify->revision = *db->edit_baton->target_revision;
       notify->old_revision = db->old_revision;
-      (*db->edit_baton->notify_func)(db->edit_baton->notify_baton,
-                                     notify, pool);
+
+      eb->notify_func(db->edit_baton->notify_baton, notify, pool);
     }
 
   return SVN_NO_ERROR;
@@ -3498,37 +3602,35 @@ add_file(const char *path,
   svn_boolean_t locally_deleted;
   svn_error_t *err;
 
-  if (copyfrom_path || SVN_IS_VALID_REVNUM(copyfrom_rev))
-    {
-      /* Sanity checks */
-      if (! (copyfrom_path && SVN_IS_VALID_REVNUM(copyfrom_rev)))
-        return svn_error_create(SVN_ERR_WC_INVALID_OP_ON_CWD, NULL,
-                                  _("Bad copyfrom arguments received"));
-    }
+  /* Semantic check.  Either both "copyfrom" args are valid, or they're
+     NULL and SVN_INVALID_REVNUM.  A mixture is illegal semantics. */
+  SVN_ERR_ASSERT((copyfrom_path && SVN_IS_VALID_REVNUM(copyfrom_rev))
+                 || (!copyfrom_path &&
+                     !SVN_IS_VALID_REVNUM(copyfrom_rev)));
 
   SVN_ERR(make_file_baton(&fb, pb, path, TRUE, pool));
   *file_baton = fb;
 
-  locally_deleted = in_deleted_tree(eb, fb->local_abspath, TRUE, pool);
-
-  /* Is an ancestor-dir (already visited by this edit) a tree conflict
-     victim?  If so, skip without notification. */
-  if (in_skipped_tree(eb, fb->local_abspath, pool)
-      && !locally_deleted)
+  if (pb->skip_descendants)
     {
-      fb->skipped = TRUE;
+      if (!pb->skip_this)
+        SVN_ERR(remember_skipped_tree(eb, fb->local_abspath));
+
+      fb->skip_this = TRUE;
+      fb->skip_notify = TRUE;
 
       return SVN_NO_ERROR;
     }
+
+  SVN_ERR(check_path_under_root(pb->local_abspath, fb->name, pool));
+
+  locally_deleted = in_deleted_tree(eb, fb->local_abspath, TRUE, pool);
 
   fb->deleted = locally_deleted;
 
   /* The file_pool can stick around for a *long* time, so we want to
      use a subpool for any temporary allocations. */
   subpool = svn_pool_create(pool);
-
-  SVN_ERR(check_path_under_root(fb->dir_baton->local_abspath, fb->name,
-                                subpool));
 
   SVN_ERR(svn_io_check_path(fb->local_abspath, &kind, subpool));
   err = svn_wc__get_entry(&entry, eb->db, fb->local_abspath, TRUE,
@@ -3548,21 +3650,22 @@ add_file(const char *path,
         entry = NULL;
     }
 
-  /* Is this path, or an ancestor-dir NOT visited by this edit, already
-     marked as a tree conflict victim? */
-  SVN_ERR(already_in_a_tree_conflict(&already_conflicted, eb->db,
-                                     fb->local_abspath, subpool));
+  /* Is this path a conflict victim? */
+  SVN_ERR(node_already_conflicted(&already_conflicted, eb->db,
+                                  fb->local_abspath, pool));
   if (already_conflicted)
     {
-      fb->skipped = TRUE;
       SVN_ERR(remember_skipped_tree(eb, fb->local_abspath));
 
+      fb->skip_this = TRUE;
+      fb->skip_notify = TRUE;
+
       if (eb->notify_func)
-        (*eb->notify_func)(eb->notify_baton,
-                           svn_wc_create_notify(fb->local_abspath,
-                                                svn_wc_notify_skip,
-                                                subpool),
-                           subpool);
+        eb->notify_func(eb->notify_baton,
+                        svn_wc_create_notify(fb->local_abspath,
+                                             svn_wc_notify_skip,
+                                             subpool),
+                        subpool);
 
       svn_pool_destroy(subpool);
 
@@ -3592,7 +3695,7 @@ add_file(const char *path,
                                            pool);
 
               notify->kind = svn_node_file;
-              (*eb->notify_func)(eb->notify_baton, notify, pool);
+              eb->notify_func(eb->notify_baton, notify, pool);
             }
           return svn_error_createf(
              SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
@@ -3666,15 +3769,16 @@ add_file(const char *path,
               /* Record the conflict so that the file is skipped silently
                  by the other callbacks. */
               SVN_ERR(remember_skipped_tree(eb, fb->local_abspath));
-              fb->skipped = TRUE;
+              fb->skip_this = TRUE;
+              fb->skip_notify = TRUE;
 
               if (eb->notify_func)
-                (*eb->notify_func)(eb->notify_baton,
-                                   svn_wc_create_notify(
-                                    fb->local_abspath,
-                                    svn_wc_notify_tree_conflict,
-                                    subpool),
-                                   subpool);
+                eb->notify_func(eb->notify_baton,
+                                svn_wc_create_notify(
+                                       fb->local_abspath,
+                                       svn_wc_notify_tree_conflict,
+                                       subpool),
+                                subpool);
 
               return SVN_NO_ERROR;
             }
@@ -3684,7 +3788,7 @@ add_file(const char *path,
   svn_pool_destroy(subpool);
 
   /* Now, if this is an add with history, do the history part. */
-  if (copyfrom_path && !fb->skipped)
+  if (copyfrom_path)
     {
       SVN_ERR(add_file_with_history(path, pb, copyfrom_path, copyfrom_rev,
                                     fb, pool));
@@ -3706,8 +3810,6 @@ open_file(const char *path,
   struct edit_baton *eb = pb->edit_baton;
   struct file_baton *fb;
   svn_node_kind_t kind;
-  svn_boolean_t text_conflicted;
-  svn_boolean_t prop_conflicted;
   svn_boolean_t locally_deleted;
   svn_boolean_t already_conflicted;
   svn_wc_conflict_description2_t *tree_conflict;
@@ -3720,8 +3822,18 @@ open_file(const char *path,
   SVN_ERR(make_file_baton(&fb, pb, path, FALSE, pool));
   *file_baton = fb;
 
-  SVN_ERR(check_path_under_root(fb->dir_baton->local_abspath, fb->name,
-                                subpool));
+  if (pb->skip_descendants)
+    {
+      if (!pb->skip_this)
+        SVN_ERR(remember_skipped_tree(eb, fb->local_abspath));
+
+      fb->skip_this = TRUE;
+      fb->skip_notify = TRUE;
+
+      return SVN_NO_ERROR;
+    }
+
+  SVN_ERR(check_path_under_root(pb->local_abspath, fb->name, subpool));
 
   SVN_ERR(svn_io_check_path(fb->local_abspath, &kind, subpool));
 
@@ -3735,31 +3847,34 @@ open_file(const char *path,
                                eb->db, fb->local_abspath, FALSE, subpool));
   locally_deleted = in_deleted_tree(eb, fb->local_abspath, TRUE, pool);
 
-  /* Is an ancestor-dir (already visited by this edit) a tree conflict
-     victim?  If so, skip without notification. */
-  if (in_skipped_tree(eb, fb->local_abspath, pool) && !locally_deleted)
+  /* Is this path a conflict victim? */
+  SVN_ERR(node_already_conflicted(&already_conflicted, eb->db,
+                                  fb->local_abspath, pool));
+  if (already_conflicted)
     {
-      fb->skipped = TRUE;
+      SVN_ERR(remember_skipped_tree(eb, fb->local_abspath));
+
+      fb->skip_this = TRUE;
+      fb->skip_notify = TRUE;
+
+      if (eb->notify_func)
+        eb->notify_func(eb->notify_baton,
+                        svn_wc_create_notify(fb->local_abspath,
+                                             svn_wc_notify_skip,
+                                             subpool),
+                        subpool);
+
+      svn_pool_destroy(subpool);
 
       return SVN_NO_ERROR;
     }
 
-  /* Is this path, or an ancestor-dir NOT visited by this edit, already
-     marked as a tree conflict victim? */
-  SVN_ERR(already_in_a_tree_conflict(&already_conflicted, eb->db,
-                                     fb->local_abspath, pool));
 
   /* Is this path the victim of a newly-discovered tree conflict? */
-  tree_conflict = NULL;
-  if (!already_conflicted)
-    SVN_ERR(check_tree_conflict(&tree_conflict, eb, fb->local_abspath,
-                                pb->log_accum,
-                                svn_wc_conflict_action_edit,
-                                svn_node_file, fb->new_URL, pool));
-
-  /* Does the file already have text or property conflicts? */
-  SVN_ERR(svn_wc__internal_conflicted_p(&text_conflicted, &prop_conflicted,
-                                        NULL, eb->db, fb->local_abspath, pool));
+  SVN_ERR(check_tree_conflict(&tree_conflict, eb, fb->local_abspath,
+                              pb->log_accum,
+                              svn_wc_conflict_action_edit,
+                              svn_node_file, fb->new_URL, pool));
 
   /* Remember any locally deleted files that are not already within
      a locally delete tree. */
@@ -3776,29 +3891,20 @@ open_file(const char *path,
   fb->deleted = locally_deleted;
   fb->old_revision = revision;
 
-  if (already_conflicted || tree_conflict != NULL || text_conflicted
-      || prop_conflicted)
+  if (tree_conflict != NULL)
     {
       if (!locally_deleted)
-        fb->skipped = TRUE;
+        fb->skip_this = TRUE;
 
       SVN_ERR(remember_skipped_tree(eb, fb->local_abspath));
 
-      /* Don't bother with a notification if PATH is inside a locally
-         deleted tree, a conflict notification will already have been
-         issued for the root of that tree. */
-      /* ### TODO: Also print victim_path in the t-c skip msg. */
-      if (eb->notify_func
-          && !in_deleted_tree(eb, fb->local_abspath, FALSE, pool))
-        (*eb->notify_func)(eb->notify_baton,
-                           svn_wc_create_notify(fb->local_abspath,
-                                                (tree_conflict != NULL)
-                                                ? svn_wc_notify_tree_conflict
-                                                : svn_wc_notify_skip,
-                                                pool),
-                           pool);
-
-      return SVN_NO_ERROR;
+      fb->skip_notify = TRUE;
+      if (eb->notify_func)
+        eb->notify_func(eb->notify_baton,
+                        svn_wc_create_notify(fb->local_abspath,
+                                             svn_wc_notify_tree_conflict,
+                                             pool),
+                         pool);
     }
 
   svn_pool_destroy(subpool);
@@ -3874,7 +3980,7 @@ apply_textdelta(void *file_baton,
   svn_stream_t *source;
   svn_stream_t *target;
 
-  if (fb->skipped)
+  if (fb->skip_this)
     {
       *handler = svn_delta_noop_window_handler;
       *handler_baton = NULL;
@@ -4000,7 +4106,7 @@ change_file_prop(void *file_baton,
   struct edit_baton *eb = fb->edit_baton;
   svn_prop_t *propchange;
 
-  if (fb->skipped)
+  if (fb->skip_this)
     return SVN_NO_ERROR;
 
   /* Push a new propchange to the file baton's array of propchanges */
@@ -4616,7 +4722,7 @@ close_file(void *file_baton,
   svn_checksum_t *actual_checksum;
   const char *new_base_path;
 
-  if (fb->skipped)
+  if (fb->skip_this)
     return maybe_bump_dir_info(eb, fb->bump_info, pool);
 
   if (expected_hex_digest)
@@ -4663,14 +4769,9 @@ close_file(void *file_baton,
   /* We have one less referrer to the directory's bump information. */
   SVN_ERR(maybe_bump_dir_info(eb, fb->bump_info, pool));
 
-  if (((content_state != svn_wc_notify_state_unchanged) ||
-       (prop_state != svn_wc_notify_state_unchanged) ||
-       (lock_state != svn_wc_notify_lock_state_unchanged) ||
-       (fb->tree_conflicted))
-      && eb->notify_func
-      /* Supress notifications for files within locally deleted trees,
-         we will have already raised a tree conflict notification. */
-      && !in_deleted_tree(eb, fb->local_abspath, TRUE, pool))
+  /* Skip notifications about files which were already notified for
+     another reason */
+  if (eb->notify_func && !fb->skip_notify)
     {
       const svn_string_t *mime_type;
       svn_wc_notify_t *notify;
@@ -4701,7 +4802,7 @@ close_file(void *file_baton,
                                        SVN_PROP_MIME_TYPE, pool, pool));
       notify->mime_type = mime_type == NULL ? NULL : mime_type->data;
 
-      (*eb->notify_func)(eb->notify_baton, notify, pool);
+      eb->notify_func(eb->notify_baton, notify, pool);
     }
   return SVN_NO_ERROR;
 }
@@ -4728,7 +4829,7 @@ close_edit(void *edit_baton,
      * is needed in this call is rare or even non-existant.
      * ### TODO: Construct a proper THEIR_URL anyway. See also
      * NULL handling code in do_entry_deletion(). */
-    SVN_ERR(do_entry_deletion(eb, eb->anchor, eb->target, NULL,
+    SVN_ERR(do_entry_deletion(eb, eb->target_abspath, NULL,
                               &log_number, pool));
 
   /* The editor didn't even open the root; we have to take care of
