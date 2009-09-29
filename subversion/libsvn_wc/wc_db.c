@@ -3229,10 +3229,13 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
                 *repos_uuid = NULL;
             }
           else
-            err = fetch_repos_info(repos_root_url, repos_uuid,
-                                   pdh->wcroot->sdb,
-                                   svn_sqlite__column_int64(stmt_base, 2),
-                                   result_pool);
+            err = svn_error_compose_create(
+                     err,
+                     fetch_repos_info(repos_root_url,
+                                      repos_uuid,
+                                      pdh->wcroot->sdb,
+                                      svn_sqlite__column_int64(stmt_base, 2),
+                                      result_pool));
         }
       if (changed_rev)
         {
@@ -3294,17 +3297,22 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
             }
           else
             {
+              svn_error_t *err2;
               if (have_work)
-                err = svn_sqlite__column_checksum(checksum, stmt_work, 2,
-                                                  result_pool);
+                err2 = svn_sqlite__column_checksum(checksum, stmt_work, 2,
+                                                   result_pool);
               else
-                err = svn_sqlite__column_checksum(checksum, stmt_base, 7,
-                                                  result_pool);
-              if (err != NULL)
-                err = svn_error_createf(
-                        err->apr_err, err,
-                        _("The node '%s' has a corrupt checksum value."),
-                        svn_dirent_local_style(local_abspath, scratch_pool));
+                err2 = svn_sqlite__column_checksum(checksum, stmt_base, 7,
+                                                   result_pool);
+
+              if (err2 != NULL)
+                err = svn_error_compose_create(
+                         err,
+                         svn_error_createf(
+                               err->apr_err, err,
+                              _("The node '%s' has a corrupt checksum value."),
+                              svn_dirent_local_style(local_abspath,
+                                                     scratch_pool)));
             }
         }
       if (translated_size)
@@ -3348,10 +3356,12 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
       else if (original_root_url || original_uuid)
         {
           /* Fetch repository information via COPYFROM_REPOS_ID. */
-          err = fetch_repos_info(original_root_url, original_uuid,
-                                 pdh->wcroot->sdb,
-                                 svn_sqlite__column_int64(stmt_work, 9),
-                                 result_pool);
+          err = svn_error_compose_create(
+                     err,
+                     fetch_repos_info(original_root_url, original_uuid,
+                                      pdh->wcroot->sdb,
+                                      svn_sqlite__column_int64(stmt_work, 9),
+                                      result_pool));
         }
       if (original_revision)
         {
