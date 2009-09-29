@@ -473,7 +473,7 @@ switch_file_external(const char *path,
  cleanup:
   if (revert_file)
     {
-      svn_error_t *e =
+      svn_error_clear(
         svn_wc_revert4(ctx->wc_ctx, local_abspath, svn_depth_empty,
                        use_commit_times,
                        NULL, /* apr_array_header_t *changelists */
@@ -481,21 +481,17 @@ switch_file_external(const char *path,
                        ctx->cancel_baton,
                        NULL, /* svn_wc_notify_func2_t */
                        NULL, /* void *notify_baton */
-                       subpool);
-      if (e)
-        svn_error_clear(e);
+                       subpool));
     }
 
   if (remove_from_revision_control)
     {
-      svn_error_t *e = svn_wc_remove_from_revision_control(target_adm_access,
-                                                           target,
-                                                           TRUE, FALSE,
-                                                           ctx->cancel_func,
-                                                           ctx->cancel_baton,
-                                                           subpool);
-      if (e)
-        svn_error_clear(e);
+      svn_error_clear(
+        svn_wc_remove_from_revision_control(target_adm_access, target,
+                                            TRUE, FALSE,
+                                            ctx->cancel_func,
+                                            ctx->cancel_baton,
+                                            subpool));
     }
 
   if (unlink_file)
