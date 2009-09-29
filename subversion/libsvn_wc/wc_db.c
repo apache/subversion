@@ -3309,7 +3309,7 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
                 err = svn_error_compose_create(
                          err,
                          svn_error_createf(
-                               err->apr_err, err,
+                               err->apr_err, err2,
                               _("The node '%s' has a corrupt checksum value."),
                               svn_dirent_local_style(local_abspath,
                                                      scratch_pool)));
