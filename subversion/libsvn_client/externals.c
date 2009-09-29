@@ -878,7 +878,7 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
       svn_wc_adm_access_t *adm_access;
       svn_boolean_t close_access_baton_when_done;
 
-      const char *what_to_remove;
+      const char *remove_target_abspath;
 
       /* Determine if a directory or file external is being removed.
          Try to handle the case when the user deletes the external by
@@ -911,29 +911,32 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
               svn_error_clear(err);
             }
           close_access_baton_when_done = FALSE;
-          what_to_remove = target;
+          SVN_ERR(svn_dirent_get_absolute(&remove_target_abspath, target,
+                                          ib->iter_pool));
         }
       else
         {
           close_access_baton_when_done = TRUE;
-          what_to_remove = SVN_WC_ENTRY_THIS_DIR;
+          SVN_ERR(svn_dirent_get_absolute(&remove_target_abspath,
+                                          svn_wc_adm_access_path(adm_access),
+                                          ib->iter_pool));
         }
 
       /* We don't use relegate_dir_external() here, because we know that
          nothing else in this externals description (at least) is
          going to need this directory, and therefore it's better to
          leave stuff where the user expects it. */
-      err = svn_wc_remove_from_revision_control
-        (adm_access, what_to_remove, TRUE, FALSE,
-         ib->ctx->cancel_func, ib->ctx->cancel_baton, ib->iter_pool);
+      err = svn_wc_remove_from_revision_control2(
+                        ib->ctx->wc_ctx, remove_target_abspath, TRUE, FALSE,
+                        ib->ctx->cancel_func, ib->ctx->cancel_baton,
+                        ib->iter_pool);
 
       if (ib->ctx->notify_func2)
         {
           svn_wc_notify_t *notify = 
-              svn_wc_create_notify(
-                        svn_dirent_join(svn_wc_adm_access_path(adm_access),
-                                        what_to_remove, ib->iter_pool),
-                        svn_wc_notify_update_external_removed, ib->iter_pool);
+              svn_wc_create_notify(remove_target_abspath,
+                                   svn_wc_notify_update_external_removed,
+                                   ib->iter_pool);
 
           notify->kind = svn_node_dir;
           notify->err = err;
