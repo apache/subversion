@@ -528,10 +528,14 @@ file_diff(struct dir_baton *dir_baton,
                                       pool))
     return SVN_NO_ERROR;
 
-  /* If the item is schedule-add *with history*, then we don't want to
-     see a comparison to the empty file;  we want the usual working
-     vs. text-base comparison. */
-  if (copied)
+  /* If the item is schedule-add *with history*, then we usually want to see
+   * a comparison to the empty file; otherwise we won't produce a patch which
+   * can be applied back to yield the same result, since plain unidiff has
+   * no concept of 'added' vs. 'copied'.
+   * But in case we're noticing ancestry, the user has asked us to do
+   * the usual working vs. text-base comparison, which will show changes
+   * made since the file was copied. */
+  if (copied && ! eb->ignore_ancestry)
     schedule = svn_wc_schedule_normal;
 
   /* If this was scheduled replace and we are ignoring ancestry,
