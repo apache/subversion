@@ -185,6 +185,13 @@ Candidate changes:
    Votes:
      +1: stsp
 
+ * r39635, r39636, r39637
+   Fix svn.client.log5 in the SWIG/Python bindings.
+   Justification:
+     As currently shipped, this function is non-functional.
+   Votes:
+     +1: rdonch
+
 Approved changes:
 =================
 
