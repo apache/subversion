@@ -102,20 +102,13 @@ relegate_dir_external(const char *path,
                       apr_pool_t *pool)
 {
   svn_error_t *err = SVN_NO_ERROR;
-  svn_wc_adm_access_t *adm_access;
+  const char *local_abspath;
 
-  SVN_ERR(svn_wc__adm_open_in_context(&adm_access, wc_ctx, path, TRUE, -1,
-                                      cancel_func, cancel_baton, pool));
-  err = svn_wc_remove_from_revision_control(adm_access,
-                                            SVN_WC_ENTRY_THIS_DIR,
-                                            TRUE, FALSE,
-                                            cancel_func,
-                                            cancel_baton,
-                                            pool);
-
-  /* ### Ugly. Unlock only if not going to return an error. Revisit */
-  if (!err || err->apr_err == SVN_ERR_WC_LEFT_LOCAL_MOD)
-    SVN_ERR(svn_wc_adm_close2(adm_access, pool));
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+  err = svn_wc_remove_from_revision_control2(wc_ctx, local_abspath,
+                                             TRUE, FALSE,
+                                             cancel_func, cancel_baton,
+                                             pool);
 
   if (err && (err->apr_err == SVN_ERR_WC_LEFT_LOCAL_MOD))
     {
@@ -487,11 +480,11 @@ switch_file_external(const char *path,
   if (remove_from_revision_control)
     {
       svn_error_clear(
-        svn_wc_remove_from_revision_control(target_adm_access, target,
-                                            TRUE, FALSE,
-                                            ctx->cancel_func,
-                                            ctx->cancel_baton,
-                                            subpool));
+        svn_wc_remove_from_revision_control2(ctx->wc_ctx, local_abspath,
+                                             TRUE, FALSE,
+                                             ctx->cancel_func,
+                                             ctx->cancel_baton,
+                                             subpool));
     }
 
   if (unlink_file)
