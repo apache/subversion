@@ -1509,7 +1509,8 @@ svn_dirent_is_absolute(const char *dirent)
   if (! dirent)
     return FALSE;
 
-  /* dirent is absolute if it starts with '/' */
+  /* dirent is absolute if it starts with '/' on non-Windows platforms
+     or with '//' on Windows platforms */
   if (dirent[0] == '/'
 #if defined(WIN32) || defined(__CYGWIN__)
       && dirent[1] == '/' /* Single '/' depends on current drive */
@@ -1517,7 +1518,7 @@ svn_dirent_is_absolute(const char *dirent)
       )
     return TRUE;
 
-  /* On Windows, dirent is also absolute when it starts with 'H:' or 'H:/'
+  /* On Windows, dirent is also absolute when it starts with 'H:/'
      where 'H' is any letter. */
 #if defined(WIN32) || defined(__CYGWIN__)
   if (((dirent[0] >= 'A' && dirent[0] <= 'Z')) &&
