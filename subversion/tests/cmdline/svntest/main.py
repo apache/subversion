@@ -1086,8 +1086,8 @@ class TestSpawningThread(threading.Thread):
       args.append('--cleanup')
     if enable_sasl:
       args.append('--enable-sasl')
-    if http_library:
-      args.append('--http-library=' + http_library)
+    if preferred_http_library:
+      args.append('--http-library=' + preferred_http_library)
     if server_minor_version:
       args.append('--server-minor-version=' + str(server_minor_version))
 
