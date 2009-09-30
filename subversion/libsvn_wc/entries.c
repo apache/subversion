@@ -519,7 +519,8 @@ read_entries_new(apr_hash_t **result_entries,
   svn_sqlite__db_t *sdb;
   apr_hash_t *entries;
   const apr_array_header_t *children;
-  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+  apr_pool_t *handle_pool = svn_pool_create(scratch_pool);
+  apr_pool_t *iterpool = svn_pool_create(handle_pool);
   int i;
   const svn_wc_entry_t *parent_entry = NULL;
   apr_uint64_t wc_id = 1;  /* ### hacky. should remove.  */
@@ -527,12 +528,12 @@ read_entries_new(apr_hash_t **result_entries,
   entries = apr_hash_make(result_pool);
 
   /* ### need database to determine: incomplete, keep_local, ACTUAL info.  */
-  SVN_ERR(svn_wc__db_temp_get_sdb(&sdb, local_abspath,
-                                  scratch_pool, scratch_pool));
+  SVN_ERR(svn_wc__db_temp_get_sdb(&sdb, db, local_abspath, FALSE,
+                                  handle_pool, iterpool));
 
   SVN_ERR(svn_wc__db_read_children(&children, db,
                                    local_abspath,
-                                   result_pool, scratch_pool));
+                                   result_pool, iterpool));
 
   APR_ARRAY_PUSH((apr_array_header_t *)children, const char *) = "";
 
@@ -1045,8 +1046,7 @@ read_entries_new(apr_hash_t **result_entries,
       apr_hash_set(entries, entry->name, APR_HASH_KEY_STRING, entry);
     }
 
-  SVN_ERR(svn_sqlite__close(sdb));
-  svn_pool_destroy(iterpool);
+  svn_pool_destroy(handle_pool);
 
   *result_entries = entries;
 
@@ -2280,7 +2280,7 @@ svn_wc__entries_write_new(svn_wc__db_t *db,
   int i;
 
   /* ### need the SDB so we can jam rows directly into it.  */
-  SVN_ERR(svn_wc__db_temp_get_sdb(&sdb, local_abspath,
+  SVN_ERR(svn_wc__db_temp_get_sdb(&sdb, db, local_abspath, FALSE,
                                   scratch_pool, iterpool));
 
   /* Get a copy of the "this dir" entry for comparison purposes. */
