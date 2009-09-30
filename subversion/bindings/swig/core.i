@@ -223,6 +223,14 @@
 %ignore svn_path_cstring_from_utf8;
 %ignore svn_path_cstring_to_utf8;
 
+/* svn_dirent_uri.h: SWIG can't digest these functions yet, so ignore them
+ * for now. TODO: make them work.
+ */
+%ignore svn_dirent_join_many;
+%ignore svn_dirent_condense_targets;
+%ignore svn_uri_condense_targets;
+%ignore svn_dirent_is_under_root;
+
 /* Other files */
 
 /* Ignore platform-specific auth functions */
@@ -758,6 +766,7 @@ svn_swig_pl_set_current_pool (apr_pool_t *pool)
 %include svn_utf_h.swg
 %include svn_nls_h.swg
 %include svn_path_h.swg
+%include svn_dirent_uri_h.swg
 %include svn_mergeinfo_h.swg
 %include svn_io_h.swg
 
