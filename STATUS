@@ -100,7 +100,7 @@ Candidate changes:
      Since some of these revisions revert or change edits from earlier
      ones, it makes more sense to review the diff of the branch rather
      than all the individual changes:
-       svn diff -x-p ^/branches/1.6.x@39485 ^/branches/1.6.x-r38000@39641
+       svn diff -x-p ^/branches/1.6.x@39642 ^/branches/1.6.x-r38000@39646
      See the log messages on the branch as well as those on trunk.
      Here is a summary of the revisions, grouped by purpose:
        Fix the "tree conflict that already exists" error:
@@ -112,8 +112,9 @@ Candidate changes:
    Branch:
      ^/branches/1.6.x-r38000
    Votes:
-     +1: stsp (without r38198)
+     +1: stsp
      +1: sbutler (without r38198, r38831, r39561, r39562)
+     +1: julianfoad
 
  * r35958, r36030, r38373, r38836, r38837, r38842
    Several fixes to the Win32 exception handler. This change also makes it
@@ -154,23 +155,6 @@ Candidate changes:
    Votes:
      +1: arfrever
 
- * r39301
-   Allow non-threadsafe sqlite if APR has been compiled without threads.
-   Justification:
-     Subversion itself does not require threads, so it should be possible
-     to compile it against non-threaded libraries. This change follows
-     common practice in our code base by wrapping threading-related code
-     in #if APR_HAS_THREADS.
-   Notes:
-     There is a trivial text conflict during merge, in the second hunk.
-     To resolve it, choose 'edit', and keep only the line which reads
-     "#endif /* APR_HAS_THREADS */" from the ".merge-right.r39301" part.
-     Changes below that line do not apply to 1.6.x.
-     The correct merge result adds only two lines, "#if APR_HAS_THREADS"
-     and the corresponding #endif.
-   Votes:
-     +1: stsp, arfrever
-
  * r39557
    Fix issue #2713: When adding a file with auto-props setting svn:eol-style,
      if it had inconsistent line endings, svn added it and then aborted without
@@ -190,5 +174,24 @@ Candidate changes:
    Votes:
      +1: arfrever
 
+ * r39673
+   Fix a segfault during update.
+   Justification:
+     We should never crash.
+   Notes:
+     See http://svn.haxx.se/dev/archive-2009-09/0530.shtml
+     More tweaks may be needed for true proper behaviour, but the crash
+     can be fixed separately.
+   Votes:
+     +1: stsp
+
+ * r39635, r39636, r39637
+   Fix svn.client.log5 in the SWIG/Python bindings.
+   Justification:
+     As currently shipped, this function is non-functional.
+   Votes:
+     +1: rdonch
+
 Approved changes:
 =================
+
