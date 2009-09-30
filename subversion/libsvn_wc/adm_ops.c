@@ -245,16 +245,14 @@ remove_revert_files(svn_stringbuf_t **logtags,
                     const char *path,
                     apr_pool_t * pool)
 {
+  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
   const char *revert_file, *local_abspath;
   svn_node_kind_t kind;
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
 
-  SVN_ERR(svn_wc__text_revert_path(&revert_file,
-                                   svn_wc__adm_get_db(adm_access),
-                                   local_abspath,
-                                   pool));
+  SVN_ERR(svn_wc__text_revert_path(&revert_file, db, local_abspath, pool));
 
   SVN_ERR(svn_io_check_path(revert_file, &kind, pool));
   if (kind == svn_node_file)
@@ -262,8 +260,10 @@ remove_revert_files(svn_stringbuf_t **logtags,
                                  svn_wc__adm_access_abspath(adm_access),
                                  revert_file, pool, pool));
 
-  return svn_wc__loggy_props_delete(logtags, path, svn_wc__props_revert,
-                                    adm_access, pool);
+  return svn_error_return(
+    svn_wc__loggy_props_delete(logtags, db, local_abspath,
+                               svn_wc__adm_access_abspath(adm_access),
+                               svn_wc__props_revert, pool));
 }
 
 svn_error_t *
@@ -490,7 +490,9 @@ process_committed_leaf(int log_number,
     }
 
   /* Write our accumulation of log entries into a log file */
-  return svn_wc__write_log(adm_access, log_number, logtags, pool);
+  return svn_error_return(
+    svn_wc__write_log(svn_wc__adm_access_abspath(adm_access), log_number,
+                      logtags, pool));
 }
 
 
@@ -515,7 +517,8 @@ process_committed_internal(int *log_number,
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
-  SVN_ERR(svn_wc_entry(&entry, path, adm_access, FALSE, pool));
+  SVN_ERR(svn_wc__get_entry(&entry, db, local_abspath, TRUE, svn_node_unknown,
+                            FALSE, pool, pool));
   if (entry == NULL)
     return SVN_NO_ERROR;  /* deleted/absent. (?) ... nothing to do. */
 
@@ -829,29 +832,25 @@ svn_wc_process_committed4(const char *path,
 
 
 
-/* Recursively mark a tree LOCAL_ABSPATH with a SCHEDULE, COPIED and/or
-   KEEP_LOCAL flag, depending on the state of MODIFY_FLAGS (which may contain
-   only a subset of the possible modification flags, namely, those indicating
-   a change to one of the three flags mentioned above).  If setting the COPIED
-   flag, skip items scheduled for deletion. */
+/* Recursively mark a tree LOCAL_ABSPATH with SCHEDULE svn_wc_schedule_delete
+   and a KEEP_LOCAL flag. */
+/* ### If the implementation looks familiar to mark_tree_copied(), that is not
+       strictly coincidence. The function was duplicated, to make it easier to
+       replace these two specific cases for WC-NG. */
 static svn_error_t *
-mark_tree(svn_wc__db_t *db,
-          const char *dir_abspath,
-          apr_uint64_t modify_flags,
-          svn_wc_schedule_t schedule,
-          svn_boolean_t copied,
-          svn_boolean_t keep_local,
-          svn_cancel_func_t cancel_func,
-          void *cancel_baton,
-          svn_wc_notify_func2_t notify_func,
-          void *notify_baton,
-          apr_pool_t *pool)
+mark_tree_deleted(svn_wc__db_t *db,
+                 const char *dir_abspath,
+                 svn_boolean_t keep_local,
+                 svn_cancel_func_t cancel_func,
+                 void *cancel_baton,
+                 svn_wc_notify_func2_t notify_func,
+                 void *notify_baton,
+                 apr_pool_t *pool)
 {
   apr_pool_t *iterpool = svn_pool_create(pool);
   const apr_array_header_t *children;
   const svn_wc_entry_t *entry;
   svn_wc_entry_t tmp_entry;
-  apr_uint64_t this_dir_flags;
   int i;
 
   /* Read the entries file for this directory. */
@@ -877,87 +876,56 @@ mark_tree(svn_wc__db_t *db,
       SVN_ERR(svn_wc__get_entry(&entry, db, child_abspath, FALSE,
                                 svn_node_unknown, FALSE, iterpool, iterpool));
 
-      /* If setting the COPIED flag, skip deleted items. */
-      if (copied && entry->schedule == svn_wc_schedule_delete)
-        continue;
-  
       /* If this is a directory, recurse. */
       if (entry->kind == svn_node_dir)
         {
-          SVN_ERR(mark_tree(db, child_abspath, modify_flags,
-                            schedule, copied, keep_local,
-                            cancel_func, cancel_baton,
-                            notify_func, notify_baton,
-                            iterpool));
+          SVN_ERR(mark_tree_deleted(db, child_abspath,
+                                    keep_local,
+                                    cancel_func, cancel_baton,
+                                    notify_func, notify_baton,
+                                    iterpool));
         }
 
-      tmp_entry.schedule = schedule;
-      tmp_entry.copied = copied;
+      tmp_entry.schedule = svn_wc_schedule_delete;
       SVN_ERR(svn_wc__entry_modify2(db, child_abspath, svn_node_unknown,
                             TRUE, &tmp_entry,
-                            modify_flags & (SVN_WC__ENTRY_MODIFY_SCHEDULE
-                                           | SVN_WC__ENTRY_MODIFY_COPIED),
+                            SVN_WC__ENTRY_MODIFY_SCHEDULE,
                             iterpool));
 
-      if (copied)
-        {
-          /* Remove now obsolete dav cache values.  */
-          SVN_ERR(svn_wc__db_base_set_dav_cache(db, child_abspath, NULL,
-                                                iterpool));
-        }
-
       /* Tell someone what we've done. */
-      if (schedule == svn_wc_schedule_delete && notify_func != NULL)
-        (*notify_func)(notify_baton,
-                       svn_wc_create_notify(child_abspath,
-                                            svn_wc_notify_delete,
-                                            iterpool), iterpool);
+      if (notify_func != NULL)
+        notify_func(notify_baton,
+                    svn_wc_create_notify(child_abspath,
+                                         svn_wc_notify_delete,
+                                         iterpool),
+                    iterpool);
     }
 
   /* Handle "this dir" for states that need it done post-recursion. */
   SVN_ERR(svn_wc__get_entry(&entry, db, dir_abspath, FALSE,
                             svn_node_dir, FALSE, iterpool, iterpool));
-  this_dir_flags = 0;
 
   /* Uncommitted directories (schedule add) that are to be scheduled for
      deletion are a special case, they don't need to be changed as they
      will be removed from their parent's entry list.
      The files and directories are left on the disk in this special
      case, so KEEP_LOCAL doesn't need to be set either. */
-  if (! (entry->schedule == svn_wc_schedule_add
-         && schedule == svn_wc_schedule_delete))
-  {
-    if (modify_flags & SVN_WC__ENTRY_MODIFY_SCHEDULE)
-      {
-        tmp_entry.schedule = schedule;
-        this_dir_flags |= SVN_WC__ENTRY_MODIFY_SCHEDULE;
-      }
+  if (entry->schedule != svn_wc_schedule_add)
+    {
+      tmp_entry.schedule = svn_wc_schedule_delete;
+      tmp_entry.keep_local = keep_local;
 
-    /* If setting the COPIED flag, skip deleted items. */
-    if (modify_flags & SVN_WC__ENTRY_MODIFY_COPIED
-        && entry->schedule != svn_wc_schedule_delete)
-      {
-        tmp_entry.copied = copied;
-        this_dir_flags |= SVN_WC__ENTRY_MODIFY_COPIED;
-      }
-
-    /* Set keep_local on the "this dir", if requested. */
-    if (modify_flags & SVN_WC__ENTRY_MODIFY_KEEP_LOCAL)
-      {
-        tmp_entry.keep_local = keep_local;
-        this_dir_flags |= SVN_WC__ENTRY_MODIFY_KEEP_LOCAL;
-      }
-  }
+      SVN_ERR(svn_wc__entry_modify2(db, dir_abspath, svn_node_dir, FALSE,
+                                    &tmp_entry,
+                                    SVN_WC__ENTRY_MODIFY_SCHEDULE |
+                                    SVN_WC__ENTRY_MODIFY_KEEP_LOCAL,
+                                    iterpool));
+    }
   else
     {
       return svn_error_return(
         svn_wc__db_temp_forget_directory(db, dir_abspath, pool));
     }
-
-  /* Modify this_dir entry if requested. */
-  if (this_dir_flags)
-    SVN_ERR(svn_wc__entry_modify2(db, dir_abspath, svn_node_dir, FALSE,
-                                  &tmp_entry, this_dir_flags, iterpool));
 
   /* Destroy our per-iteration pool. */
   svn_pool_destroy(iterpool);
@@ -1253,14 +1221,12 @@ svn_wc_delete4(svn_wc_context_t *wc_ctx,
           if (available)
             {
               /* Recursively mark a whole tree for deletion. */
-              SVN_ERR(mark_tree(wc_ctx->db,
-                                local_abspath,
-                                SVN_WC__ENTRY_MODIFY_SCHEDULE
-                                | SVN_WC__ENTRY_MODIFY_KEEP_LOCAL,
-                                svn_wc_schedule_delete, FALSE, keep_local,
-                                cancel_func, cancel_baton,
-                                notify_func, notify_baton,
-                                pool));
+              SVN_ERR(mark_tree_deleted(wc_ctx->db,
+                                        local_abspath,
+                                        keep_local,
+                                        cancel_func, cancel_baton,
+                                        notify_func, notify_baton,
+                                        pool));
             }
         }
       /* else
@@ -1308,15 +1274,16 @@ svn_wc_delete4(svn_wc_context_t *wc_ctx,
                                        text_revert, text_base,
                                        pool, pool));
 
-          SVN_ERR(svn_wc__loggy_revert_props_restore(&log_accum,
-                                                     path, adm_access, pool));
+          SVN_ERR(svn_wc__loggy_revert_props_restore(&log_accum, wc_ctx->db,
+                                                     local_abspath,
+                                                     parent_abspath, pool));
         }
       if (was_schedule == svn_wc_schedule_add)
-        SVN_ERR(svn_wc__loggy_props_delete(&log_accum, path,
-                                           svn_wc__props_base,
-                                           adm_access, pool));
+        SVN_ERR(svn_wc__loggy_props_delete(&log_accum, wc_ctx->db,
+                                           local_abspath, parent_abspath,
+                                           svn_wc__props_base, pool));
 
-      SVN_ERR(svn_wc__write_log(adm_access, 0, log_accum, pool));
+      SVN_ERR(svn_wc__write_log(parent_abspath, 0, log_accum, pool));
 
       SVN_ERR(svn_wc__run_log(adm_access, pool));
 
@@ -1397,6 +1364,88 @@ svn_wc_get_ancestry2(const char **url,
                                   result_pool, scratch_pool));
 }
 
+/* Recursively mark a tree LOCAL_ABSPATH with a COPIED flag, skip items
+   scheduled for deletion. */
+/* ### If the implementation looks familiar to mark_tree_deleted(), that
+       is not strictly coincidence. The function was duplicated, to make it
+       easier to replace these two specific cases for WC-NG. */
+static svn_error_t *
+mark_tree_copied(svn_wc__db_t *db,
+                 const char *dir_abspath,
+                 svn_cancel_func_t cancel_func,
+                 void *cancel_baton,
+                 apr_pool_t *pool)
+{
+  apr_pool_t *iterpool = svn_pool_create(pool);
+  const apr_array_header_t *children;
+  const svn_wc_entry_t *entry;
+  svn_wc_entry_t tmp_entry;
+  int i;
+
+  /* Read the entries file for this directory. */
+  SVN_ERR(svn_wc__db_read_children(&children, db, dir_abspath, pool, pool));
+
+  /* Mark each entry in the entries file. */
+  for (i = 0; i < children->nelts; i++)
+    {
+      const char *child_basename = APR_ARRAY_IDX(children, i, const char *);
+      const char *child_abspath;
+      svn_boolean_t hidden;
+
+      /* Clear our per-iteration pool. */
+      svn_pool_clear(iterpool);
+
+      child_abspath = svn_dirent_join(dir_abspath, child_basename, iterpool);
+
+      /* We exclude hidden nodes from this operation. */
+      SVN_ERR(svn_wc__db_node_hidden(&hidden, db, child_abspath, iterpool));
+      if (hidden)
+        continue;
+
+      SVN_ERR(svn_wc__get_entry(&entry, db, child_abspath, FALSE,
+                                svn_node_unknown, FALSE, iterpool, iterpool));
+
+      /* Skip deleted items. */
+      if (entry->schedule == svn_wc_schedule_delete)
+        continue;
+  
+      /* If this is a directory, recurse. */
+      if (entry->kind == svn_node_dir)
+        {
+          SVN_ERR(mark_tree_copied(db, child_abspath,
+                            cancel_func, cancel_baton,
+                            iterpool));
+        }
+
+      tmp_entry.copied = TRUE;
+      SVN_ERR(svn_wc__entry_modify2(db, child_abspath, svn_node_unknown,
+                            TRUE, &tmp_entry,
+                            SVN_WC__ENTRY_MODIFY_COPIED,
+                            iterpool));
+
+       /* Remove now obsolete dav cache values.  */
+       SVN_ERR(svn_wc__db_base_set_dav_cache(db, child_abspath, NULL,
+                                             iterpool));
+    }
+
+  /* Handle "this dir" for states that need it done post-recursion. */
+  SVN_ERR(svn_wc__get_entry(&entry, db, dir_abspath, FALSE,
+                            svn_node_dir, FALSE, iterpool, iterpool));
+
+  /* If setting the COPIED flag, skip deleted items. */
+  if (entry->schedule != svn_wc_schedule_delete)
+    {
+      tmp_entry.copied = TRUE;
+
+      SVN_ERR(svn_wc__entry_modify2(db, dir_abspath, svn_node_dir, FALSE,
+                                  &tmp_entry, SVN_WC__ENTRY_MODIFY_COPIED,
+                                  iterpool));
+    }
+
+  /* Destroy our per-iteration pool. */
+  svn_pool_destroy(iterpool);
+  return SVN_NO_ERROR;
+}
 
 svn_error_t *
 svn_wc_add4(svn_wc_context_t *wc_ctx,
@@ -1676,13 +1725,9 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
                                             pool));
 
           /* Recursively add the 'copied' existence flag as well!  */
-          SVN_ERR(mark_tree(db, svn_wc__adm_access_abspath(adm_access),
-                            SVN_WC__ENTRY_MODIFY_COPIED,
-                            svn_wc_schedule_normal, TRUE, FALSE,
-                            cancel_func,
-                            cancel_baton,
-                            NULL, NULL, /* N/A cuz we aren't deleting */
-                            pool));
+          SVN_ERR(mark_tree_copied(db, svn_wc__adm_access_abspath(adm_access),
+                                   cancel_func, cancel_baton,
+                                   pool));
 
           /* Clean out the now-obsolete dav cache values.  */
           SVN_ERR(svn_wc__db_base_set_dav_cache(db, local_abspath, NULL,

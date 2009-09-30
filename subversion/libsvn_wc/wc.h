@@ -485,6 +485,24 @@ svn_wc__remove_from_revision_control_internal(svn_wc__db_t *db,
                                               svn_cancel_func_t cancel_func,
                                               void *cancel_baton,
                                               apr_pool_t *scratch_pool);
+
+
+/* Library-internal version of svn_wc__resolved_conflict5(). */
+svn_error_t *
+svn_wc__resolved_conflict_internal(svn_wc__db_t *db,
+                                   const char *local_abspath,
+                                   svn_depth_t depth,
+                                   svn_boolean_t resolve_text,
+                                   const char *resolve_prop,
+                                   svn_boolean_t resolve_tree,
+                                   svn_wc_conflict_choice_t conflict_choice,
+                                   svn_cancel_func_t cancel_func,
+                                   void *cancel_baton,
+                                   svn_wc_notify_func2_t notify_func,
+                                   void *notify_baton,
+                                   apr_pool_t *scratch_pool);
+
+
 svn_error_t *
 svn_wc__internal_is_replaced(svn_boolean_t *replaced,
                              svn_wc__db_t *db,

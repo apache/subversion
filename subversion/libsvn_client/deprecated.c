@@ -1591,6 +1591,78 @@ svn_client_checkout(svn_revnum_t *result_rev,
 }
 
 /*** From info.c ***/
+
+struct info_to_relpath_baton
+{
+  const char *anchor_abspath;
+  const char *anchor_relpath;
+  svn_info_receiver_t info_receiver;
+  void *info_baton;
+};
+
+static svn_error_t *
+info_receiver_relpath_wrapper(void *baton,
+                              const char *abspath_or_url,
+                              const svn_info_t *info,
+                              apr_pool_t *scratch_pool)
+{
+  struct info_to_relpath_baton *rb = baton;
+  const char *path = abspath_or_url;
+
+  if (rb->anchor_relpath)
+    {
+      path = svn_dirent_join(rb->anchor_relpath,
+                             svn_dirent_skip_ancestor(rb->anchor_abspath,
+                                                      abspath_or_url),
+                             scratch_pool);
+    }
+
+  SVN_ERR(rb->info_receiver(rb->info_baton,
+                            path,
+                            info,
+                            scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_client_info2(const char *path_or_url,
+                 const svn_opt_revision_t *peg_revision,
+                 const svn_opt_revision_t *revision,
+                 svn_info_receiver_t receiver,
+                 void *receiver_baton,
+                 svn_depth_t depth,
+                 const apr_array_header_t *changelists,
+                 svn_client_ctx_t *ctx,
+                 apr_pool_t *pool)
+{
+  struct info_to_relpath_baton rb;
+  const char *abspath_or_url = path_or_url;
+
+  rb.anchor_relpath = NULL;
+  rb.info_receiver = receiver;
+  rb.info_baton = receiver_baton;
+
+  if (!svn_path_is_url(path_or_url))
+    {
+      SVN_ERR(svn_dirent_get_absolute(&abspath_or_url, path_or_url, pool));
+      rb.anchor_abspath = abspath_or_url;
+      rb.anchor_relpath = path_or_url;
+    }
+
+  SVN_ERR(svn_client_info3(abspath_or_url,
+                           peg_revision,
+                           revision,
+                           info_receiver_relpath_wrapper,
+                           &rb,
+                           depth,
+                           changelists,
+                           ctx,
+                           pool));
+
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_client_info(const char *path_or_url,
                 const svn_opt_revision_t *peg_revision,

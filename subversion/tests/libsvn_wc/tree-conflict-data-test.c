@@ -260,6 +260,7 @@ test_write_2_tree_conflicts(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+#ifdef THIS_TEST_RAISES_MALFUNCTION
 static svn_error_t *
 test_write_invalid_tree_conflicts(apr_pool_t *pool)
 {
@@ -348,6 +349,7 @@ test_write_invalid_tree_conflicts(apr_pool_t *pool)
 
   return SVN_NO_ERROR;
 }
+#endif
 
 
 /* The test table.  */

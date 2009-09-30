@@ -2798,21 +2798,32 @@ svn_wc__db_op_revert(svn_wc__db_t *db,
 }
 
 svn_error_t *
-svn_wc__db_op_invalidate_last_mod_time(svn_wc__db_t *db,
-                                       const char *local_abspath,
-                                       apr_pool_t *scratch_pool)
+svn_wc__db_op_set_last_mod_time(svn_wc__db_t *db,
+                                const char *local_abspath,
+                                apr_time_t last_mod_time,
+                                apr_pool_t *scratch_pool)
 {
+  svn_wc__db_pdh_t *pdh;
+  const char *local_relpath;
   svn_sqlite__stmt_t *stmt;
 
-  SVN_ERR(get_statement_for_path(&stmt, db, local_abspath,
-                                 STMT_UPDATE_BASE_LAST_MOD_TIME,
-                                 scratch_pool));
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
-  /* Setting the last mod time to zero will effectively invalidate it's
-     value. */
-  SVN_ERR(svn_sqlite__bind_int64(stmt, 3, 0));
+  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
+                              svn_sqlite__mode_readwrite,
+                              scratch_pool, scratch_pool));
+  VERIFY_USABLE_PDH(pdh);
 
-  return svn_error_return(svn_sqlite__step_done(stmt));
+  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+                                    STMT_UPDATE_BASE_LAST_MOD_TIME));
+  SVN_ERR(svn_sqlite__bindf(stmt, "isi",
+                            pdh->wcroot->wc_id, local_relpath,
+                            last_mod_time));
+  SVN_ERR(svn_sqlite__step_done(stmt));
+  
+  flush_entries(pdh);
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -3218,10 +3229,13 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
                 *repos_uuid = NULL;
             }
           else
-            err = fetch_repos_info(repos_root_url, repos_uuid,
-                                   pdh->wcroot->sdb,
-                                   svn_sqlite__column_int64(stmt_base, 2),
-                                   result_pool);
+            err = svn_error_compose_create(
+                     err,
+                     fetch_repos_info(repos_root_url,
+                                      repos_uuid,
+                                      pdh->wcroot->sdb,
+                                      svn_sqlite__column_int64(stmt_base, 2),
+                                      result_pool));
         }
       if (changed_rev)
         {
@@ -3283,17 +3297,22 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
             }
           else
             {
+              svn_error_t *err2;
               if (have_work)
-                err = svn_sqlite__column_checksum(checksum, stmt_work, 2,
-                                                  result_pool);
+                err2 = svn_sqlite__column_checksum(checksum, stmt_work, 2,
+                                                   result_pool);
               else
-                err = svn_sqlite__column_checksum(checksum, stmt_base, 7,
-                                                  result_pool);
-              if (err != NULL)
-                err = svn_error_createf(
-                        err->apr_err, err,
-                        _("The node '%s' has a corrupt checksum value."),
-                        svn_dirent_local_style(local_abspath, scratch_pool));
+                err2 = svn_sqlite__column_checksum(checksum, stmt_base, 7,
+                                                   result_pool);
+
+              if (err2 != NULL)
+                err = svn_error_compose_create(
+                         err,
+                         svn_error_createf(
+                               err->apr_err, err2,
+                              _("The node '%s' has a corrupt checksum value."),
+                              svn_dirent_local_style(local_abspath,
+                                                     scratch_pool)));
             }
         }
       if (translated_size)
@@ -3337,10 +3356,12 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
       else if (original_root_url || original_uuid)
         {
           /* Fetch repository information via COPYFROM_REPOS_ID. */
-          err = fetch_repos_info(original_root_url, original_uuid,
-                                 pdh->wcroot->sdb,
-                                 svn_sqlite__column_int64(stmt_work, 9),
-                                 result_pool);
+          err = svn_error_compose_create(
+                     err,
+                     fetch_repos_info(original_root_url, original_uuid,
+                                      pdh->wcroot->sdb,
+                                      svn_sqlite__column_int64(stmt_work, 9),
+                                      result_pool));
         }
       if (original_revision)
         {

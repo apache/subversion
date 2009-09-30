@@ -298,13 +298,17 @@ svn_client__update_internal(svn_revnum_t *result_rev,
      handling external items (and any errors therefrom) doesn't delay
      the primary operation.  */
   if (SVN_DEPTH_IS_RECURSIVE(depth) && (! ignore_externals))
-    SVN_ERR(svn_client__handle_externals(adm_access,
-                                         traversal_info,
-                                         entry->url,
-                                         anchor,
-                                         repos_root,
-                                         depth,
-                                         use_sleep, ctx, pool));
+    {
+      apr_hash_t *externals_old, *externals_new, *ambient_depths;
+
+      svn_wc_edited_externals(&externals_old, &externals_new, traversal_info);
+      svn_wc_traversed_depths(&ambient_depths, traversal_info);
+
+      SVN_ERR(svn_client__handle_externals(adm_access, externals_old,
+                                           externals_new, ambient_depths,
+                                           entry->url, anchor, repos_root,
+                                           depth, use_sleep, ctx, pool));
+    }
 
   if (sleep_here)
     svn_io_sleep_for_timestamps(path, pool);

@@ -332,8 +332,9 @@ svn_wc__loggy_remove(svn_stringbuf_t **log_accum,
    Use SCRATCH_POOL for temporary allocations.
 */
 svn_error_t *
-svn_wc__write_log(svn_wc_adm_access_t *adm_access,
-                  int log_number, svn_stringbuf_t *log_content,
+svn_wc__write_log(const char *adm_abspath,
+                  int log_number,
+                  svn_stringbuf_t *log_content,
                   apr_pool_t *scratch_pool);
 
 

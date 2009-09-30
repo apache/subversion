@@ -167,7 +167,6 @@ svn_client__get_wc_mergeinfo(svn_mergeinfo_t *mergeinfo,
 {
   const char *walk_relpath = "";
   svn_mergeinfo_t wc_mergeinfo;
-  svn_boolean_t switched;
   svn_revnum_t base_revision = entry->revision;
   const char *local_abspath;
   const char *limit_abspath = NULL;
@@ -199,13 +198,6 @@ svn_client__get_wc_mergeinfo(svn_mergeinfo_t *mergeinfo,
           SVN_ERR(svn_client__parse_mergeinfo(&wc_mergeinfo, ctx->wc_ctx,
                                               local_abspath, pool, iterpool));
         }
-
-      /* If WCPATH is switched, don't look any higher for inherited
-         mergeinfo. */
-      SVN_ERR(svn_wc__path_switched(&switched, ctx->wc_ctx, local_abspath,
-                                    iterpool));
-      if (switched)
-        break;
 
       if (wc_mergeinfo == NULL &&
           inherit != svn_mergeinfo_explicit &&

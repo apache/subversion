@@ -463,7 +463,7 @@ diff_content_changed(const char *path,
 
   path1 = diff_cmd_baton->orig_path_1;
   path2 = diff_cmd_baton->orig_path_2;
-  len = strlen(svn_path_get_longest_ancestor(path1, path2, subpool));
+  len = strlen(svn_dirent_get_longest_ancestor(path1, path2, subpool));
   path1 = path1 + len;
   path2 = path2 + len;
 
@@ -576,13 +576,13 @@ diff_content_changed(const char *path,
       /* Close the stream (flush) */
       SVN_ERR(svn_stream_close(os));
 
-      SVN_ERR(svn_io_run_diff(".",
-                              diff_cmd_baton->options.for_external.argv,
-                              diff_cmd_baton->options.for_external.argc,
-                              label1, label2,
-                              tmpfile1, tmpfile2,
-                              &exitcode, diff_cmd_baton->outfile, errfile,
-                              diff_cmd_baton->diff_cmd, subpool));
+      SVN_ERR(svn_io_run_diff2(".",
+                               diff_cmd_baton->options.for_external.argv,
+                               diff_cmd_baton->options.for_external.argc,
+                               label1, label2,
+                               tmpfile1, tmpfile2,
+                               &exitcode, diff_cmd_baton->outfile, errfile,
+                               diff_cmd_baton->diff_cmd, subpool));
     }
   else   /* use libsvn_diff to generate the diff  */
     {
@@ -1379,11 +1379,11 @@ diff_repos_wc(const char *path1,
       if (!reverse)
         {
           callback_baton->orig_path_1 = url1;
-          callback_baton->orig_path_2 = svn_path_join(anchor_url, target, pool);
+          callback_baton->orig_path_2 = svn_uri_join(anchor_url, target, pool);
         }
       else
         {
-          callback_baton->orig_path_1 = svn_path_join(anchor_url, target, pool);
+          callback_baton->orig_path_1 = svn_uri_join(anchor_url, target, pool);
           callback_baton->orig_path_2 = url1;
         }
     }
@@ -1587,7 +1587,11 @@ set_up_diff_cmd_and_options(struct diff_cmd_baton *diff_cmd_baton,
                      SVN_CONFIG_OPTION_DIFF_CMD, NULL);
     }
 
-  diff_cmd_baton->diff_cmd = diff_cmd;
+  if (diff_cmd)
+    SVN_ERR(svn_path_cstring_to_utf8(&diff_cmd_baton->diff_cmd, diff_cmd,
+                                     pool));
+  else
+    diff_cmd_baton->diff_cmd = NULL;
 
   /* If there was a command, arrange options to pass to it. */
   if (diff_cmd_baton->diff_cmd)
@@ -1599,7 +1603,8 @@ set_up_diff_cmd_and_options(struct diff_cmd_baton *diff_cmd_baton,
           int i;
           argv = apr_palloc(pool, argc * sizeof(char *));
           for (i = 0; i < argc; i++)
-            argv[i] = APR_ARRAY_IDX(options, i, const char *);
+            SVN_ERR(svn_utf_cstring_to_utf8(&argv[i],
+                      APR_ARRAY_IDX(options, i, const char *), pool));
         }
       diff_cmd_baton->options.for_external.argv = argv;
       diff_cmd_baton->options.for_external.argc = argc;

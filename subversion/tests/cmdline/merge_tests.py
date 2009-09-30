@@ -1652,13 +1652,19 @@ def merge_in_new_file_and_diff(sbox):
                                        expected_status,
                                        expected_skip)
 
-  # Finally, run diff.  This diff produces no output!
+  # Finally, run diff.
   expected_output = [
     "\n",
     "Property changes on: " + branch_path + "\n",
     "___________________________________________________________________\n",
     "Added: " + SVN_PROP_MERGEINFO + "\n",
-    "   Merged /A/B/E:r2-3\n" ]
+    "   Merged /A/B/E:r2-3\n",
+    "Index: " + branch_path + os.path.sep + "newfile\n",
+    "===================================================================\n",
+    "--- "+ branch_path + os.path.sep + "newfile	(revision 0)\n",
+    "+++ "+ branch_path + os.path.sep + "newfile	(revision 2)\n",
+    "@@ -0,0 +1 @@\n",
+    "+newfile\n"]
   svntest.actions.run_and_verify_svn(None, expected_output, [], 'diff',
                                      branch_path)
 
@@ -16597,8 +16603,8 @@ test_list = [ None,
               SkipUnless(multiple_reintegrates_from_the_same_branch,
                          server_has_mergeinfo),
               # ra_serf causes duplicate notifications with this test:
-              Skip(merge_replace_causes_tree_conflict,
-                   svntest.main.is_ra_type_dav_serf),
+              XFail(merge_replace_causes_tree_conflict,
+                    svntest.main.is_ra_type_dav_serf),
               SkipUnless(handle_gaps_in_implicit_mergeinfo,
                          server_has_mergeinfo),
               copy_then_replace_via_merge,

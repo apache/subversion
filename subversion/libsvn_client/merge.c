@@ -567,7 +567,7 @@ tree_conflict_on_add(merge_cmd_baton_t *merge_b,
                      svn_wc_conflict_action_t action,
                      svn_wc_conflict_reason_t reason)
 {
-  svn_wc_conflict_description2_t *existing_conflict;
+  const svn_wc_conflict_description2_t *existing_conflict;
   svn_wc_conflict_description2_t *conflict;
 
   if (merge_b->record_only || merge_b->dry_run)
@@ -1070,6 +1070,9 @@ merge_props_changed(svn_wc_adm_access_t *adm_access,
   svn_client_ctx_t *ctx = merge_b->ctx;
   apr_pool_t *subpool = svn_pool_create(merge_b->pool);
   svn_error_t *err;
+  const char *local_abspath;
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, subpool));
 
   if (tree_conflicted)
     *tree_conflicted = FALSE;
@@ -1098,26 +1101,17 @@ merge_props_changed(svn_wc_adm_access_t *adm_access,
     {
       int i;
 
-      /* svn_wc_merge_props2() requires ADM_ACCESS to be the access for
-         the parent of PATH. Since the advent of merge tracking,
-         do_directory_merge() may call this (indirectly) with
-         the access for the merge_b->target instead (issue #2781).
-         So, if we have the wrong access, get the right one. */
-      if (svn_path_compare_paths(svn_wc_adm_access_path(adm_access),
-                                 path) != 0)
-        SVN_ERR(svn_wc_adm_probe_try3(&adm_access, adm_access, path,
-                                      TRUE, -1, ctx->cancel_func,
-                                      ctx->cancel_baton, subpool));
-
       /* If this is a forward merge then don't add new mergeinfo to
          PATH that is already part of PATH's own history. */
       if (merge_b->merge_source.rev1 < merge_b->merge_source.rev2)
         SVN_ERR(filter_self_referential_mergeinfo(&props, path, merge_b,
                                                   subpool));
 
-      err = svn_wc_merge_props2(state, path, adm_access, original_props, props,
-                                FALSE, merge_b->dry_run, ctx->conflict_func,
-                                ctx->conflict_baton, subpool);
+      err = svn_wc_merge_props3(state, ctx->wc_ctx, local_abspath, NULL, NULL,
+                                original_props, props, FALSE, merge_b->dry_run,
+                                ctx->conflict_func, ctx->conflict_baton,
+                                ctx->cancel_func, ctx->cancel_baton,
+                                subpool);
 
       /* If this is not a dry run then make a record in BATON if we find a
          PATH where mergeinfo is added where none existed previously or PATH
@@ -1597,7 +1591,7 @@ merge_file_added(svn_wc_adm_access_t *adm_access,
             const char *copyfrom_url = NULL;
             svn_revnum_t copyfrom_rev = SVN_INVALID_REVNUM;
             svn_stream_t *new_base_contents;
-            svn_wc_conflict_description2_t *existing_conflict;
+            const svn_wc_conflict_description2_t *existing_conflict;
 
             /* If this is a merge from the same repository as our working copy,
                we handle adds as add-with-history.  Otherwise, we'll use a pure
@@ -1647,8 +1641,8 @@ merge_file_added(svn_wc_adm_access_t *adm_access,
                    the whole text-base and props installed too, just as if
                    we had called 'svn cp wc wc'. */
                 /* ### would be nice to have cancel/notify funcs to pass */
-                SVN_ERR(svn_wc_add_repos_file3(
-                            mine, adm_access,
+                SVN_ERR(svn_wc_add_repos_file4(
+                            merge_b->ctx->wc_ctx, mine_abspath,
                             new_base_contents, NULL, new_props, NULL,
                             copyfrom_url, copyfrom_rev,
                             NULL, NULL, NULL, NULL, subpool));
@@ -2016,7 +2010,8 @@ merge_dir_added(svn_wc_adm_access_t *adm_access,
       else
         {
           SVN_ERR(svn_io_make_dir_recursively(path, subpool));
-          SVN_ERR(svn_wc_add3(path, adm_access, svn_depth_infinity,
+          SVN_ERR(svn_wc_add4(merge_b->ctx->wc_ctx, local_abspath,
+                              svn_depth_infinity,
                               copyfrom_url, copyfrom_rev,
                               merge_b->ctx->cancel_func,
                               merge_b->ctx->cancel_baton,
@@ -2034,7 +2029,8 @@ merge_dir_added(svn_wc_adm_access_t *adm_access,
           /* The dir is not known to Subversion, or is schedule-delete.
            * We will make it schedule-add. */
           if (!merge_b->dry_run)
-            SVN_ERR(svn_wc_add3(path, adm_access, svn_depth_infinity,
+            SVN_ERR(svn_wc_add4(merge_b->ctx->wc_ctx, local_abspath,
+                                svn_depth_infinity,
                                 copyfrom_url, copyfrom_rev,
                                 merge_b->ctx->cancel_func,
                                 merge_b->ctx->cancel_baton,
