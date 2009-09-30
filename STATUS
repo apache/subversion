@@ -157,6 +157,17 @@ Candidate changes:
    Votes:
      +1: rdonch
 
+ * r39692
+   Fix issue #3498: Subversion password stores freeze Eclipse
+   Justification:
+     All subclipse users are in great need of this.
+   Branch:
+     Resolves a minor conflict in libsvn_auth_gnome_keyring/gnome_keyring.c
+     where the code changed was refactored on trunk.
+     ^/branches/1.6.x-r39692
+   Votes:
+     +1: stylesen
+
 Approved changes:
 =================
 
