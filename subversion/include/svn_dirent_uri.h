@@ -486,7 +486,7 @@ svn_dirent_is_canonical(const char *dirent,
  * @since New in 1.7.
  */
 svn_boolean_t
-svn_relpath_is_canonical(const char *uri,
+svn_relpath_is_canonical(const char *relpath,
                          apr_pool_t *scratch_pool);
 
 /** Return @c TRUE iff @a uri is canonical.  Use @a pool for temporary
