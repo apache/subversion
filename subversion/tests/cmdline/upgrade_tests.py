@@ -30,6 +30,7 @@
 #
 
 import os, sys, tarfile, shutil
+import sqlite3
 
 import svntest
 
@@ -63,8 +64,6 @@ def replace_sbox_with_tarfile(sbox, tar_filename):
 
 
 def check_format(sbox, expected_format):
-  import sqlite3
-
   for root, dirs, files in os.walk(sbox.wc_dir):
     db = sqlite3.connect(os.path.join(root, '.svn', 'wc.db'))
     c = db.cursor()
@@ -81,8 +80,6 @@ def check_format(sbox, expected_format):
 
 
 def check_dav_cache(dir_path, wc_id, expected_dav_caches):
-  import sqlite3
-
   db = sqlite3.connect(os.path.join(dir_path, '.svn', 'wc.db'))
   c = db.cursor()
 
@@ -211,20 +208,13 @@ def upgrade_wcprops(sbox):
 ########################################################################
 # Run the tests
 
-def has_sqlite():
-  try:
-    import sqlite3
-    return True
-  except ImportError:
-    return False
-
 # list all tests here, starting with None:
 test_list = [ None,
-              SkipUnless(basic_upgrade, has_sqlite),
-              SkipUnless(upgrade_1_5, has_sqlite),
-              XFail(SkipUnless(update_1_5, has_sqlite)),
+              basic_upgrade,
+              upgrade_1_5,
+              XFail(update_1_5),
               logs_left_1_5,
-              SkipUnless(upgrade_wcprops, has_sqlite),
+              upgrade_wcprops,
              ]
 
 
