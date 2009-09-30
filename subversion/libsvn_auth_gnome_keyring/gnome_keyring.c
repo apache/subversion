@@ -390,39 +390,34 @@ simple_gnome_keyring_first_creds(void **credentials,
 
       char *keyring_password;
 
-      if (check_keyring_is_locked(default_keyring))
+      if (unlock_prompt_func && check_keyring_is_locked(default_keyring))
         {
-          if (unlock_prompt_func)
-            {
-              SVN_ERR((*unlock_prompt_func)(&keyring_password,
-                                            default_keyring,
-                                            unlock_prompt_baton,
-                                            pool));
+          SVN_ERR((*unlock_prompt_func)(&keyring_password,
+                                        default_keyring,
+                                        unlock_prompt_baton,
+                                        pool));
 
-              /* If keyring is locked give up and try the next provider. */
-              if (! unlock_gnome_keyring(default_keyring, keyring_password,
-                                         pool))
-                return SVN_NO_ERROR;
-            }
+          /* If keyring is locked give up and try the next provider. */
+          if (! unlock_gnome_keyring(default_keyring, keyring_password, pool))
+            return SVN_NO_ERROR;
         }
     }
-
-  if (check_keyring_is_locked(default_keyring))
-    {
-      return svn_error_create(SVN_ERR_AUTHN_CREDS_UNAVAILABLE, NULL,
-                              _("GNOME Keyring is locked and "
-                                "we are non-interactive"));
-    }
   else
-    {
-      return svn_auth__simple_first_creds_helper
-               (credentials,
-                iter_baton, provider_baton,
-                parameters, realmstring,
-                password_get_gnome_keyring,
-                SVN_AUTH__GNOME_KEYRING_PASSWORD_TYPE,
-                pool);
+    {  
+      if (check_keyring_is_locked(default_keyring))
+        {
+          return svn_error_create(SVN_ERR_AUTHN_CREDS_UNAVAILABLE, NULL,
+                                  _("GNOME Keyring is locked and "
+                                    "we are non-interactive"));
+        }
     }
+  return svn_auth__simple_first_creds_helper
+           (credentials,
+            iter_baton, provider_baton,
+            parameters, realmstring,
+            password_get_gnome_keyring,
+            SVN_AUTH__GNOME_KEYRING_PASSWORD_TYPE,
+            pool);
 }
 
 /* Save encrypted credentials to the simple provider's cache. */
@@ -450,38 +445,34 @@ simple_gnome_keyring_save_creds(svn_boolean_t *saved,
 
       char *keyring_password;
 
-      if (check_keyring_is_locked(default_keyring))
+      if (unlock_prompt_func && check_keyring_is_locked(default_keyring))
         {
-          if (unlock_prompt_func)
-            {
-              SVN_ERR((*unlock_prompt_func)(&keyring_password,
-                                            default_keyring,
-                                            unlock_prompt_baton,
-                                            pool));
+          SVN_ERR((*unlock_prompt_func)(&keyring_password,
+                                        default_keyring,
+                                        unlock_prompt_baton,
+                                        pool));
 
-              /* If keyring is locked give up and try the next provider. */
-              if (! unlock_gnome_keyring(default_keyring, keyring_password,
-                                         pool))
-                return SVN_NO_ERROR;
-            }
+          /* If keyring is locked give up and try the next provider. */
+          if (! unlock_gnome_keyring(default_keyring, keyring_password, pool))
+            return SVN_NO_ERROR;
         }
-    }
-  if (check_keyring_is_locked(default_keyring))
-    {
-      return svn_error_create(SVN_ERR_AUTHN_CREDS_NOT_SAVED, NULL,
-                              _("GNOME Keyring is locked and "
-                                "we are non-interactive"));
     }
   else
     {
-      return svn_auth__simple_save_creds_helper
-               (saved, credentials,
-                provider_baton, parameters,
-                realmstring,
-                password_set_gnome_keyring,
-                SVN_AUTH__GNOME_KEYRING_PASSWORD_TYPE,
-                pool);
+      if (check_keyring_is_locked(default_keyring))
+        {
+          return svn_error_create(SVN_ERR_AUTHN_CREDS_NOT_SAVED, NULL,
+                                  _("GNOME Keyring is locked and "
+                                    "we are non-interactive"));
+        }
     }
+  return svn_auth__simple_save_creds_helper
+           (saved, credentials,
+            provider_baton, parameters,
+            realmstring,
+            password_set_gnome_keyring,
+            SVN_AUTH__GNOME_KEYRING_PASSWORD_TYPE,
+            pool);
 }
 
 static void
@@ -561,38 +552,34 @@ ssl_client_cert_pw_gnome_keyring_first_creds(void **credentials,
 
       char *keyring_password;
 
-      if (check_keyring_is_locked(default_keyring))
+      if (unlock_prompt_func && check_keyring_is_locked(default_keyring))
         {
-          if (unlock_prompt_func)
-            {
-              SVN_ERR((*unlock_prompt_func)(&keyring_password,
-                                            default_keyring,
-                                            unlock_prompt_baton,
-                                            pool));
+          SVN_ERR((*unlock_prompt_func)(&keyring_password,
+                                        default_keyring,
+                                        unlock_prompt_baton,
+                                        pool));
             
-              /* If keyring is locked give up and try the next provider. */
-              if (! unlock_gnome_keyring(default_keyring, keyring_password,
-                                         pool))
-                return SVN_NO_ERROR;
-            }
+          /* If keyring is locked give up and try the next provider. */
+          if (! unlock_gnome_keyring(default_keyring, keyring_password, pool))
+            return SVN_NO_ERROR;
         }
-    }
-  if (check_keyring_is_locked(default_keyring))
-    {
-      return svn_error_create(SVN_ERR_AUTHN_CREDS_UNAVAILABLE, NULL,
-                              _("GNOME Keyring is locked and "
-                                "we are non-interactive"));
     }
   else
     {
-      return svn_auth__ssl_client_cert_pw_file_first_creds_helper
-               (credentials,
-                iter_baton, provider_baton,
-                parameters, realmstring,
-                password_get_gnome_keyring,
-                SVN_AUTH__GNOME_KEYRING_PASSWORD_TYPE,
-                pool);
+      if (check_keyring_is_locked(default_keyring))
+        {
+          return svn_error_create(SVN_ERR_AUTHN_CREDS_UNAVAILABLE, NULL,
+                                  _("GNOME Keyring is locked and "
+                                    "we are non-interactive"));
+        }
     }
+  return svn_auth__ssl_client_cert_pw_file_first_creds_helper
+           (credentials,
+            iter_baton, provider_baton,
+            parameters, realmstring,
+            password_get_gnome_keyring,
+            SVN_AUTH__GNOME_KEYRING_PASSWORD_TYPE,
+            pool);
 }
 
 /* Save encrypted credentials to the ssl client cert password provider's
@@ -621,38 +608,34 @@ ssl_client_cert_pw_gnome_keyring_save_creds(svn_boolean_t *saved,
 
       char *keyring_password;
 
-      if (check_keyring_is_locked(default_keyring))
+      if (unlock_prompt_func && check_keyring_is_locked(default_keyring))
         {
-          if (unlock_prompt_func)
-            {
-              SVN_ERR((*unlock_prompt_func)(&keyring_password,
-                                            default_keyring,
-                                            unlock_prompt_baton,
-                                            pool));
+          SVN_ERR((*unlock_prompt_func)(&keyring_password,
+                                        default_keyring,
+                                        unlock_prompt_baton,
+                                        pool));
 
-              /* If keyring is locked give up and try the next provider. */
-              if (! unlock_gnome_keyring(default_keyring, keyring_password,
-                                         pool))
-                return SVN_NO_ERROR;
-            }
-        }
-    }
-  if (check_keyring_is_locked(default_keyring))
-    {
-      return svn_error_create(SVN_ERR_AUTHN_CREDS_UNAVAILABLE, NULL,
-                              _("GNOME Keyring is locked and "
-                                "we are non-interactive"));
+          /* If keyring is locked give up and try the next provider. */
+          if (! unlock_gnome_keyring(default_keyring, keyring_password, pool))
+            return SVN_NO_ERROR;
+         }
     }
   else
     {
-      return svn_auth__ssl_client_cert_pw_file_save_creds_helper
-               (saved, credentials,
-                provider_baton, parameters,
-                realmstring,
-                password_set_gnome_keyring,
-                SVN_AUTH__GNOME_KEYRING_PASSWORD_TYPE,
-                pool);
+      if (check_keyring_is_locked(default_keyring))
+        {
+          return svn_error_create(SVN_ERR_AUTHN_CREDS_UNAVAILABLE, NULL,
+                                  _("GNOME Keyring is locked and "
+                                    "we are non-interactive"));
+        }
     }
+  return svn_auth__ssl_client_cert_pw_file_save_creds_helper
+           (saved, credentials,
+            provider_baton, parameters,
+            realmstring,
+            password_set_gnome_keyring,
+            SVN_AUTH__GNOME_KEYRING_PASSWORD_TYPE,
+            pool);
 }
 
 static const svn_auth_provider_t gnome_keyring_ssl_client_cert_pw_provider = {
