@@ -30,9 +30,9 @@
 #
 
 import os, sys, tarfile, shutil
-import sqlite3
 
 import svntest
+import sqlite3
 
 Item = svntest.wc.StateItem
 XFail = svntest.testcase.XFail
