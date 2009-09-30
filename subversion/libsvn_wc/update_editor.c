@@ -3607,7 +3607,6 @@ add_file(const char *path,
   svn_node_kind_t kind;
   apr_pool_t *subpool;
   svn_boolean_t already_conflicted;
-  svn_boolean_t locally_deleted;
   svn_error_t *err;
 
   /* Semantic check.  Either both "copyfrom" args are valid, or they're
@@ -3632,9 +3631,7 @@ add_file(const char *path,
 
   SVN_ERR(check_path_under_root(pb->local_abspath, fb->name, pool));
 
-  locally_deleted = in_deleted_tree(eb, fb->local_abspath, TRUE, pool);
-
-  fb->deleted = locally_deleted;
+  fb->deleted = in_deleted_tree(eb, fb->local_abspath, TRUE, pool);
 
   /* The file_pool can stick around for a *long* time, so we want to
      use a subpool for any temporary allocations. */
@@ -3818,10 +3815,8 @@ open_file(const char *path,
   struct edit_baton *eb = pb->edit_baton;
   struct file_baton *fb;
   svn_node_kind_t kind;
-  svn_boolean_t locally_deleted;
   svn_boolean_t already_conflicted;
   svn_wc_conflict_description2_t *tree_conflict;
-  svn_revnum_t revision;
 
   /* the file_pool can stick around for a *long* time, so we want to use
      a subpool for any temporary allocations. */
@@ -3848,12 +3843,11 @@ open_file(const char *path,
   /* Sanity check. */
 
   /* If replacing, make sure the .svn entry already exists. */
-  SVN_ERR(svn_wc__db_read_info(NULL, NULL, &revision, NULL, NULL, NULL,
+  SVN_ERR(svn_wc__db_read_info(NULL, NULL, &fb->old_revision, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL,
                                eb->db, fb->local_abspath, FALSE, subpool));
-  locally_deleted = in_deleted_tree(eb, fb->local_abspath, TRUE, pool);
 
   /* Is this path a conflict victim? */
   SVN_ERR(node_already_conflicted(&already_conflicted, eb->db,
@@ -3877,6 +3871,7 @@ open_file(const char *path,
       return SVN_NO_ERROR;
     }
 
+  fb->deleted = in_deleted_tree(eb, fb->local_abspath, TRUE, pool);
 
   /* Is this path the victim of a newly-discovered tree conflict? */
   SVN_ERR(check_tree_conflict(&tree_conflict, eb, fb->local_abspath,
@@ -3884,27 +3879,20 @@ open_file(const char *path,
                               svn_wc_conflict_action_edit,
                               svn_node_file, fb->new_URL, pool));
 
-  /* Remember any locally deleted files that are not already within
-     a locally delete tree. */
-  if (tree_conflict
-      && (tree_conflict->reason == svn_wc_conflict_reason_deleted ||
+  if (tree_conflict)
+    {
+      if (tree_conflict->reason == svn_wc_conflict_reason_deleted ||
           tree_conflict->reason == svn_wc_conflict_reason_replaced)
-      && !locally_deleted)
-    {
-      remember_deleted_tree(eb, fb->local_abspath);
+        {
+          fb->deleted = TRUE;
+          remember_deleted_tree(eb, fb->local_abspath);
+          SVN_ERR(remember_skipped_tree(eb, fb->local_abspath));
+        }
+      else
+        SVN_ERR(remember_skipped_tree(eb, fb->local_abspath));
 
-      locally_deleted = TRUE;
-    }
-
-  fb->deleted = locally_deleted;
-  fb->old_revision = revision;
-
-  if (tree_conflict != NULL)
-    {
-      if (!locally_deleted)
+      if (!fb->deleted)
         fb->skip_this = TRUE;
-
-      SVN_ERR(remember_skipped_tree(eb, fb->local_abspath));
 
       fb->skip_notify = TRUE;
       if (eb->notify_func)
