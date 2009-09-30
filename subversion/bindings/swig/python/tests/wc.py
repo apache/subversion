@@ -29,7 +29,7 @@ class SubversionWorkingCopyTestCase(unittest.TestCase):
     self.repos = repos.open(REPOS_PATH)
     self.fs = repos.fs(self.repos)
 
-    self.path = core.svn_path_canonicalize(tempfile.mktemp())
+    self.path = core.svn_dirent_internal_style(tempfile.mktemp())
 
     client_ctx = client.create_context()
 
