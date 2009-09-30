@@ -1314,6 +1314,7 @@ open_root(void *edit_baton,
   struct edit_baton *eb = edit_baton;
   struct dir_baton *db;
   svn_boolean_t already_conflicted;
+  svn_wc__db_kind_t kind;
   svn_error_t *err;
 
   /* Note that something interesting is actually happening in this
@@ -1323,16 +1324,23 @@ open_root(void *edit_baton,
   SVN_ERR(make_dir_baton(&db, NULL, eb, NULL, FALSE, pool));
   *dir_baton = db;
 
-  err = already_in_a_tree_conflict(&already_conflicted, eb->db,
-                                   db->local_abspath, pool);
+  SVN_ERR(svn_wc__db_read_kind(&kind, eb->db, db->local_abspath, TRUE, pool));
 
-  if (err && err->apr_err == SVN_ERR_WC_MISSING)
+  if (kind == svn_wc__db_kind_dir)
     {
-      svn_error_clear(err);
-      already_conflicted = FALSE;
+      err = already_in_a_tree_conflict(&already_conflicted, eb->db,
+                                       db->local_abspath, pool);
+
+      if (err && err->apr_err == SVN_ERR_WC_MISSING)
+        {
+          svn_error_clear(err);
+          already_conflicted = FALSE;
+        }
+      else
+        SVN_ERR(err);
     }
   else
-    SVN_ERR(err);
+    already_conflicted = FALSE;
 
   if (already_conflicted)
     {
