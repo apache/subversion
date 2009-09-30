@@ -73,7 +73,8 @@
    *TARGET_MERGEINFO.  ADM_ACCESS may be NULL, if SRC_PATH_OR_URL is an
    URL.  If NO_REPOS_ACCESS is set, this function is disallowed from
    consulting the repository about anything.  RA_SESSION may be NULL but
-   only if NO_REPOS_ACCESS is true. */
+   only if NO_REPOS_ACCESS is true; if non-NULL, it must be an
+   ancestor of SRC_PATH_OR_URL's resolved URL value.  */
 static svn_error_t *
 calculate_target_mergeinfo(svn_ra_session_t *ra_session,
                            apr_hash_t **target_mergeinfo,
@@ -119,16 +120,14 @@ calculate_target_mergeinfo(svn_ra_session_t *ra_session,
 
   if (! locally_added)
     {
-      const char *mergeinfo_path;
-
       if (! no_repos_access)
         {
+          const char *mergeinfo_path;
+
           /* Fetch any existing (explicit) mergeinfo. */
-          SVN_ERR(svn_client__path_relative_to_root(&mergeinfo_path,
-                                                    ctx->wc_ctx, src_url,
-                                                    entry ? entry->repos : NULL,
-                                                    FALSE, ra_session,
-                                                    pool, pool));
+          SVN_ERR(svn_client__path_relative_to_session(&mergeinfo_path,
+                                                       ra_session, src_url,
+                                                       pool));
           SVN_ERR(svn_client__get_repos_mergeinfo(ra_session, &src_mergeinfo,
                                                   mergeinfo_path, src_revnum,
                                                   svn_mergeinfo_inherited,
