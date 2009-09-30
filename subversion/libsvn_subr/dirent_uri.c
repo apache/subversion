@@ -102,9 +102,19 @@ internal_style(path_type_t type, const char *path, apr_pool_t *pool)
 static const char *
 local_style(path_type_t type, const char *path, apr_pool_t *pool)
 {
-  path = type == type_uri ? svn_uri_canonicalize(path, pool)
-                          : svn_dirent_canonicalize(path, pool);
-  /* FIXME: Should also remove trailing /.'s, if the style says so. */
+  switch (type)
+    {
+      case type_dirent:
+        path = svn_dirent_canonicalize(path, pool);
+        break;
+      case type_relpath:
+        path = svn_relpath_canonicalize(path, pool);
+        break;
+      case type_uri:
+      default:
+        path = svn_uri_canonicalize(path, pool);
+        break;
+    }
 
   /* Internally, Subversion represents the current directory with the
      empty string.  But users like to see "." . */
@@ -420,6 +430,17 @@ canonicalize(path_type_t type, const char *path, apr_pool_t *pool)
             *(dst++) = *(src++);
 #endif /* WIN32 or Cygwin */
         }
+#if defined(WIN32) || defined(__CYGWIN__)
+      /* On Windows the first segment can be a drive letter, which we normalize
+         to upper case. */
+      else if (type == type_dirent &&
+               ((*src >= 'a' && *src <= 'z') ||
+                (*src >= 'A' && *src <= 'Z')) &&
+               (src[1] == ':'))
+        {
+          *(dst++) = canonicalize_to_upper(*(src++));
+        }
+#endif
     }
 
   while (*src)
@@ -1571,7 +1592,7 @@ svn_dirent_canonicalize(const char *dirent, apr_pool_t *pool)
         dst[3] == '\0')
     {
       char *dst_slash = apr_pcalloc(pool, 4);
-      dst_slash[0] =  dirent[0];
+      dst_slash[0] = canonicalize_to_upper(dirent[0]);
       dst_slash[1] = ':';
       dst_slash[2] = '/';
       dst_slash[3] = '\0';
@@ -1586,7 +1607,33 @@ svn_dirent_canonicalize(const char *dirent, apr_pool_t *pool)
 svn_boolean_t
 svn_dirent_is_canonical(const char *dirent, apr_pool_t *pool)
 {
-  return (strcmp(dirent, svn_dirent_canonicalize(dirent, pool)) == 0);
+  const char *ptr = dirent;
+  if (*ptr == '/')
+    {
+      ptr++;
+#if defined(WIN32) || defined(__CYGWIN__)
+      /* Check for UNC paths */
+      if (*ptr == '/')
+        {
+          /* TODO: Scan hostname and sharename and fall back to part code */
+
+          /* ### Fall back to old implementation */
+          return (strcmp(dirent, svn_dirent_canonicalize(dirent, pool)) == 0);
+        }
+#endif
+    }
+#if defined(WIN32) || defined(__CYGWIN__)
+  else if (((*ptr >= 'a' && *ptr <= 'z') || (*ptr >= 'A' && *ptr <= 'Z')) &&
+           (ptr[1] == ':'))
+    {
+      ptr += 2;
+
+      if (*ptr == '/')
+        ptr++;
+    }
+#endif
+
+  return svn_relpath_is_canonical(ptr, pool);
 }
 
 svn_boolean_t

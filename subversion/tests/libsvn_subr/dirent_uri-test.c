@@ -777,6 +777,9 @@ test_dirent_canonicalize(apr_pool_t *pool)
 #if defined(WIN32) || defined(__CYGWIN__)
     { "X:/",                  "X:/" },
     { "X:/./",                "X:/" },
+    { "x:/",                  "X:/" },
+    { "x:",                   "X:" },
+    { "x:AAAAA",              "X:AAAAA" },
     /* We permit UNC dirents on Windows.  By definition UNC
      * dirents must have two components so we should remove the
      * double slash if there is only one component. */
@@ -2433,8 +2436,10 @@ test_dirent_local_style(apr_pool_t *pool)
     { "",                     "." },
     { ".",                    "." },
 #if defined(WIN32) || defined(__CYGWIN__)
-    { "a:/",                 "a:\\" },
-    { "a:/file",             "a:\\file" },
+    { "A:/",                 "A:\\" },
+    { "A:/file",             "A:\\file" },
+    { "a:/",                 "A:\\" },
+    { "a:/file",             "A:\\file" },
     { "dir/file",            "dir\\file" },
     { "/",                   "\\" },
     { "//server/share/dir",  "\\\\server\\share\\dir" },
@@ -2551,9 +2556,12 @@ test_dirent_internal_style(apr_pool_t *pool)
     { "dir/file",            "dir/file" },
     { "dir/file/./.",        "dir/file" },
 #if defined(WIN32) || defined(__CYGWIN__)
-    { "a:\\",                "a:/" },
-    { "a:\\file",            "a:/file" },
-    { "a:file",              "a:file" },
+    { "A:\\",                "A:/" },
+    { "A:\\file",            "A:/file" },
+    { "A:file",              "A:file" },
+    { "a:\\",                "A:/" },
+    { "a:\\file",            "A:/file" },
+    { "a:file",              "A:file" },
     { "dir\\file",           "dir/file" },
     { "\\\\srv\\shr\\dir",   "//srv/shr/dir" },
     { "\\\\srv\\shr\\",      "//srv/shr" },
