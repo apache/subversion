@@ -151,6 +151,8 @@ test_dirent_is_absolute(apr_pool_t *pool)
     { "/",             FALSE },
     { "X:/foo",        TRUE },
     { "X:/",           TRUE },
+    { "x:/",           FALSE },
+    { "x:/foo",        FALSE },
     { "//srv/shr",     TRUE },
     { "//srv/shr/fld", TRUE },
     { "//srv/s r",     TRUE },
@@ -178,6 +180,25 @@ test_dirent_is_absolute(apr_pool_t *pool)
            "svn_dirent_is_absolute (%s) returned %s instead of %s",
            tests[i].path, retval ? "TRUE" : "FALSE",
            tests[i].result ? "TRUE" : "FALSE");
+
+      /* Don't get absolute paths for the UNC paths, because this will
+         always fail */
+      if (tests[i].result &&
+          strncmp(tests[i].path, "//", 2) != 0)
+        {
+          const char *abspath;
+
+          SVN_ERR(svn_dirent_get_absolute(&abspath, tests[i].path, pool));
+
+          if (tests[i].result != (strcmp(tests[i].path, abspath) == 0))
+            return svn_error_createf(
+                          SVN_ERR_TEST_FAILED,
+                          NULL,
+                          "svn_dirent_is_absolute(%s) returned TRUE, but "
+                          "svn_dirent_get_absolute() returned \"%s\"",
+                          tests[i].path,
+                          abspath);
+        }
     }
 
   return SVN_NO_ERROR;
@@ -2210,6 +2231,9 @@ test_dirent_get_absolute(apr_pool_t *pool)
     { "C:", "@" },
     { "/", "$/" },
     { "/x/abc", "$/x/abc" },
+    { "c:/", "C:/" },
+    { "c:/AbC", "C:/AbC" },
+    { "c:abc", "@/abc" },
     /* svn_dirent_get_absolute will check existence of this UNC shares on the
        test machine, so we can't really test this.
     { "//srv/shr",      "//srv/shr" },
