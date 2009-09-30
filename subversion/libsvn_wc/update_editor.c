@@ -312,30 +312,6 @@ in_deleted_tree(struct edit_baton *eb,
   return FALSE;
 }
 
-/* Return TRUE if LOCAL_ABSPATH or any of its ancestor is in the set of skipped
- * trees, otherwise return FALSE.  Use SCRATCH_POOL for allocations. */
-static svn_boolean_t
-in_skipped_tree(struct edit_baton *eb,
-                const char *local_abspath,
-                apr_pool_t *scratch_pool)
-{
-  SVN_ERR_ASSERT_NO_RETURN(svn_dirent_is_absolute(local_abspath));
-
-  if (apr_hash_count(eb->skipped_trees) == 0)
-    return FALSE;
-
-  while (!svn_path_is_empty(local_abspath) && 
-         !svn_dirent_is_root(local_abspath, strlen(local_abspath)))
-    {
-      if (apr_hash_get(eb->skipped_trees, local_abspath, APR_HASH_KEY_STRING))
-        return TRUE;
-
-      local_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
-    }
-
-  return FALSE;
-}
-
 struct dir_baton
 {
   /* The path to this directory. */
@@ -2853,7 +2829,6 @@ open_directory(const char *path,
         }
       else
         {
-          SVN_ERR(remember_skipped_tree(eb, db->local_abspath));
           remember_deleted_tree(eb, db->local_abspath);
         }
     }
@@ -3886,7 +3861,6 @@ open_file(const char *path,
         {
           fb->deleted = TRUE;
           remember_deleted_tree(eb, fb->local_abspath);
-          SVN_ERR(remember_skipped_tree(eb, fb->local_abspath));
         }
       else
         SVN_ERR(remember_skipped_tree(eb, fb->local_abspath));
@@ -4856,23 +4830,6 @@ close_edit(void *edit_baton,
      will only remove the deleted entry!  */
   if (! eb->target_deleted)
     {
-      apr_hash_index_t *hi;
-
-      /* Remove locally deleted paths from EB->SKIPPED_TREES.  We want
-         to update the working revision for those */
-      for (hi = apr_hash_first(pool, eb->deleted_trees);
-           hi;
-           hi = apr_hash_next(hi))
-        {
-          const void *key;
-          const char *deleted_abspath;
-
-          apr_hash_this(hi, &key, NULL, NULL);
-          SVN_ERR(svn_dirent_get_absolute(&deleted_abspath, key, eb->pool));
-          apr_hash_set(eb->skipped_trees, deleted_abspath,
-                       APR_HASH_KEY_STRING, NULL);
-        }
-
       SVN_ERR(svn_wc__do_update_cleanup(eb->db, target_abspath,
                                         eb->requested_depth,
                                         eb->switch_url,
