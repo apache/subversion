@@ -183,9 +183,9 @@ enable_sasl = False
 # Global variable indicating that SVNKit binaries should be used
 use_jsvn = False
 
-# Global variable indicating which DAV library, if any, is in use
+# Global variable indicating which DAV library to use if both are available
 # ('neon', 'serf')
-http_library = None
+preferred_http_library = 'serf'
 
 # Global variable: Number of shards to use in FSFS
 # 'None' means "use FSFS's default"
@@ -559,8 +559,8 @@ interactive-conflicts = false
   # define default server file contents if none provided
   if server_contents is None:
     http_library_str = ""
-    if http_library:
-      http_library_str = "http-library=%s" % (http_library)
+    if preferred_http_library:
+      http_library_str = "http-library=%s" % (preferred_http_library)
     server_contents = """
 #
 [global]
@@ -978,27 +978,31 @@ def _check_command_line_parsed():
   if not command_line_parsed:
     raise Failure("Condition cannot be tested until command line is parsed")
 
-def is_not_serf():
-  _check_command_line_parsed()
-  return not (http_library == "serf")
-
 def is_ra_type_dav():
   _check_command_line_parsed()
   return test_area_url.startswith('http')
   
 def is_ra_type_dav_neon():
+  """Return True iff running tests over RA-Neon.
+     CAUTION: Result is only valid if svn was built to support both."""
   _check_command_line_parsed()
-  return test_area_url.startswith('http') and not(http_library == "serf")
+  return test_area_url.startswith('http') and \
+    (preferred_http_library == "neon")
   
 def is_ra_type_dav_serf():
+  """Return True iff running tests over RA-Serf.
+     CAUTION: Result is only valid if svn was built to support both."""
   _check_command_line_parsed()
-  return test_area_url.startswith('http') and (http_library == "serf")
+  return test_area_url.startswith('http') and \
+    (preferred_http_library == "serf")
 
 def is_ra_type_svn():
+  """Return True iff running tests over RA-svn."""
   _check_command_line_parsed()
   return test_area_url.startswith('svn')
 
 def is_ra_type_file():
+  """Return True iff running tests over RA-local."""
   _check_command_line_parsed()
   return test_area_url.startswith('file')
 
@@ -1298,7 +1302,7 @@ def usage():
   print("Options:")
   print(" --list          Print test doc strings instead of running them")
   print(" --fs-type       Subversion file system type (fsfs or bdb)")
-  print(" --http-library  DAV library to use (neon or serf)")
+  print(" --http-library  DAV library to use (neon or serf), default serf")
   print(" --url           Base url to the repos (e.g. svn://localhost)")
   print(" --verbose       Print binary command-lines (not with --quiet)")
   print(" --quiet         Print only unexpected results (not with --verbose)")
@@ -1348,7 +1352,7 @@ def run_tests(test_list, serial_only = False):
   global svndumpfilter_binary
   global svnversion_binary
   global command_line_parsed
-  global http_library
+  global preferred_http_library
   global fsfs_sharding
   global fsfs_packing
   global config_file
@@ -1468,7 +1472,7 @@ def run_tests(test_list, serial_only = False):
       svn_bin = val
 
     elif opt == '--http-library':
-      http_library = val
+      preferred_http_library = val
 
     elif opt == '--fsfs-sharding':
       fsfs_sharding = int(val)
