@@ -71,17 +71,7 @@ restore_file(svn_wc__db_t *db,
 {
   svn_stream_t *src_stream;
   svn_boolean_t special;
-  const char *adm_dir, *file_path;
-  svn_wc_adm_access_t *adm_access;
   apr_time_t text_time;
-
-  svn_dirent_split(local_abspath, &adm_dir, &file_path, pool);
-
-  adm_access = svn_wc__adm_retrieve_internal2(db, adm_dir, pool);
-  SVN_ERR_ASSERT(adm_access != NULL);
-
-  file_path = svn_dirent_join(svn_wc_adm_access_path(adm_access), file_path,
-                              pool);
 
   SVN_ERR(svn_wc__get_pristine_contents(&src_stream, db, local_abspath, pool,
                                         pool));
@@ -93,7 +83,7 @@ restore_file(svn_wc__db_t *db,
 
       /* Copy the source into the destination to create the special file.
          The creation wil happen atomically. */
-      SVN_ERR(svn_subst_create_specialfile(&dst_stream, file_path,
+      SVN_ERR(svn_subst_create_specialfile(&dst_stream, local_abspath,
                                            pool, pool));
       /* ### need a cancel_func/baton */
       SVN_ERR(svn_stream_copy3(src_stream, dst_stream, NULL, NULL, pool));
@@ -134,7 +124,7 @@ restore_file(svn_wc__db_t *db,
 
       SVN_ERR(svn_stream_copy3(src_stream, tmp_stream, NULL, NULL, pool));
       /* ### need a cancel_func/baton */
-      SVN_ERR(svn_io_file_rename(tmp_file, file_path, pool));
+      SVN_ERR(svn_io_file_rename(tmp_file, local_abspath, pool));
     }
 
   SVN_ERR(svn_wc__maybe_set_read_only(NULL, db, local_abspath, pool));
@@ -163,13 +153,14 @@ restore_file(svn_wc__db_t *db,
                                    db, local_abspath,
                                    pool, pool));
 
-      SVN_ERR(svn_io_set_file_affected_time(changed_date, file_path, pool));
+      SVN_ERR(svn_io_set_file_affected_time(changed_date, local_abspath,
+                                            pool));
 
       text_time = changed_date;
     }
   else
     {
-      SVN_ERR(svn_io_file_affected_time(&text_time, file_path, pool));
+      SVN_ERR(svn_io_file_affected_time(&text_time, local_abspath, pool));
     }
 
   /* Modify our entry's text-timestamp to match the working file. */
