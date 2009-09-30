@@ -3457,8 +3457,8 @@ add_file_with_history(const char *path,
   SVN_ERR(svn_wc_adm_retrieve(&adm_access, pb->edit_baton->adm_access,
                               pb->path, subpool));
 
-  temp_dir_path = svn_wc__adm_child(svn_wc_adm_access_path(adm_access),
-                                    SVN_WC__ADM_TMP, pool);
+  SVN_ERR(svn_wc__db_temp_wcroot_tempdir(&temp_dir_path, db, pb->local_abspath,
+                                         subpool, subpool));
   SVN_ERR(svn_stream_open_unique(&copied_stream,
                                  &tfb->copied_text_base,
                                  temp_dir_path,

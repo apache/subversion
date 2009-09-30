@@ -1846,6 +1846,14 @@ svn_wc__db_temp_get_sdb(svn_sqlite__db_t **db,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool);
 
+
+svn_error_t *
+svn_wc__db_temp_wcroot_tempdir(const char **temp_dir_abspath,
+                               svn_wc__db_t *db,
+                               const char *wri_abspath,
+                               apr_pool_t *result_pool,
+                               apr_pool_t *scratch_pool);
+
 /** @} */
 
 
