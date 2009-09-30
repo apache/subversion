@@ -1627,6 +1627,10 @@ svn_dirent_is_canonical(const char *dirent, apr_pool_t *pool)
   else if (((*ptr >= 'a' && *ptr <= 'z') || (*ptr >= 'A' && *ptr <= 'Z')) &&
            (ptr[1] == ':'))
     {
+      /* The only canonical drive names are "A:"..."Z:", no lower case */
+      if (*ptr < 'A' || *ptr > 'Z')
+        return FALSE;
+
       ptr += 2;
 
       if (*ptr == '/')
