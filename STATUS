@@ -160,36 +160,3 @@ Candidate changes:
 Approved changes:
 =================
 
- * r38000, r38006, r38099, r38100, r38181, r38198, r38803, r38831,
-   r38841, r38896, r38907, r39000, r39002, r39007, r39008, r39052,
-   r39096, r39124, r39125, r39127, r39561, r39562
-   Properly handle tree conflicts during replace.
-   (See issue #3281 "Merge a replacement of a directory")
-   Justification:
-     If a merge has a delete followed by an add on the same node, and
-     also that node is modified locally, svn tried to create two tree-
-     conflicts on the same node. That hit an assertion and bailed out,
-     breaking the working copy.
-   Notes:
-     The cmdline test for this issue is merge_replace_causes_tree_conflict
-     in merge_tests.py.
-     Some revisions depend on API and working copy meta data changes made
-     on trunk and don't merge cleanly. The backport branch omits any API
-     and working copy metadata changes.
-     Since some of these revisions revert or change edits from earlier
-     ones, it makes more sense to review the diff of the branch rather
-     than all the individual changes:
-       svn diff -x-p ^/branches/1.6.x@39642 ^/branches/1.6.x-r38000@39646
-     See the log messages on the branch as well as those on trunk.
-     Here is a summary of the revisions, grouped by purpose:
-       Fix the "tree conflict that already exists" error:
-         r38000, r38006, r38181, r38841, r39561, r39562
-       Add and tweak new merge tests:
-         r38099, r38100, r38198, r38803, r39000, r39002, r39007, r39052
-       Eliminate duplicate notifications and improve error messages:
-         r38831, r38896, r38907, r39008, r39096, r39124, r39125, r39127
-   Branch:
-     ^/branches/1.6.x-r38000
-   Votes:
-     +1: stsp, sbutler, julianfoad
-
