@@ -1831,9 +1831,12 @@ apr_hash_t *
 svn_wc__db_temp_get_all_access(svn_wc__db_t *db,
                                apr_pool_t *result_pool);
 
-/* ### temp function to open an sqlite database to the appropriate location.
+/* ### temp function to open the sqlite database to the appropriate location.
    ### The *only* reason for this function is because entries.c still
    ### manually hacks the sqlite database.
+
+   ### If ALWAYS_OPEN is FALSE, try to retrieve the existing database
+   ### handle instead of reopening.
 
    ### No matter how tempted you may be DO NOT USE THIS FUNCTION!
    ### (if you do, gstein will hunt you down and burn your knee caps off
@@ -1841,8 +1844,10 @@ svn_wc__db_temp_get_all_access(svn_wc__db_t *db,
    ### "Bet on it." --gstein
 */
 svn_error_t *
-svn_wc__db_temp_get_sdb(svn_sqlite__db_t **db,
+svn_wc__db_temp_get_sdb(svn_sqlite__db_t **sdb,
+                        svn_wc__db_t *db,
                         const char *local_dir_abspath,
+                        svn_boolean_t always_open,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool);
 

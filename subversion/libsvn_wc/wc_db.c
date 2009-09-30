@@ -4718,10 +4718,28 @@ svn_wc__db_temp_get_all_access(svn_wc__db_t *db,
 
 svn_error_t *
 svn_wc__db_temp_get_sdb(svn_sqlite__db_t **sdb,
+                        svn_wc__db_t *db,
                         const char *dir_abspath,
+                        svn_boolean_t always_open,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool)
 {
+  if (!always_open)
+    {
+      svn_wc__db_pdh_t *pdh;
+      
+      pdh = get_or_create_pdh(db, dir_abspath, FALSE, scratch_pool);
+
+      if (pdh != NULL &&
+          pdh->wcroot != NULL && 
+          pdh->wcroot->sdb != NULL &&
+          strcmp(pdh->wcroot->abspath, dir_abspath) == 0)
+        {
+          *sdb = pdh->wcroot->sdb;
+          return SVN_NO_ERROR;
+        }
+    }
+
   return svn_error_return(open_db(sdb, dir_abspath, SDB_FILE,
                                   svn_sqlite__mode_readwrite,
                                   result_pool, scratch_pool));
