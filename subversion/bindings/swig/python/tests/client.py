@@ -62,7 +62,7 @@ class SubversionClientTestCase(unittest.TestCase):
       core.svn_io_remove_dir(dir)
 
   def allocate_temp_dir(self, suffix = ""):
-    temp_dir_name = core.svn_path_internal_style(tempfile.mkdtemp(suffix))
+    temp_dir_name = core.svn_dirent_internal_style(tempfile.mkdtemp(suffix))
     self.cleanup_dirs.append(temp_dir_name)
     return temp_dir_name
 
