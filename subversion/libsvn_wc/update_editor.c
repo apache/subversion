@@ -366,7 +366,7 @@ struct dir_baton
   /* Gets set if updates to all descendants of this directory are skipped */
   svn_boolean_t skip_descendants;
 
-  /* Gets set if some (high priority) notification for this dir was peformed */
+  /* Gets set if some (high priority) notification for this dir was performed */
   svn_boolean_t skip_notify;
 
   /* Gets set iff this is a new directory that is not yet versioned and not
