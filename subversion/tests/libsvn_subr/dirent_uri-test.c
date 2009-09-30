@@ -1031,6 +1031,13 @@ test_dirent_is_canonical(apr_pool_t *pool)
     { "file with spaces",      TRUE },
 #if defined(WIN32) || defined(__CYGWIN__)
     { "X:/",                   TRUE },
+    { "X:/foo",                TRUE },
+    { "X:",                    TRUE },
+    { "X:foo",                 TRUE },
+    { "x:/",                   FALSE },
+    { "x:/foo",                FALSE },
+    { "x:",                    FALSE },
+    { "x:foo",                 FALSE },
     /* We permit UNC dirents on Windows.  By definition UNC
      * dirents must have two components so we should remove the
      * double slash if there is only one component. */
