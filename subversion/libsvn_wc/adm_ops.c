@@ -886,11 +886,24 @@ mark_tree_deleted(svn_wc__db_t *db,
                                     iterpool));
         }
 
-      tmp_entry.schedule = svn_wc_schedule_delete;
-      SVN_ERR(svn_wc__entry_modify2(db, child_abspath, svn_node_unknown,
-                            TRUE, &tmp_entry,
-                            SVN_WC__ENTRY_MODIFY_SCHEDULE,
-                            iterpool));
+      /* If this node has no function after the delete, remove it
+         directly. Otherwise svn_wc__entry_modify2 would do this for us,
+         but using the entries api would leave the db handle open */
+      /* ### BH: This check matches the only case in fold_scheduling()
+                 that removes the entry via delete scheduling */
+      if (entry->schedule == svn_wc_schedule_add && !entry->deleted)
+        {
+          SVN_ERR(svn_wc__entry_remove(db, child_abspath, pool));
+          SVN_ERR(svn_wc__db_temp_forget_directory(db, dir_abspath, pool));
+        }
+      else
+        {
+          tmp_entry.schedule = svn_wc_schedule_delete;
+          SVN_ERR(svn_wc__entry_modify2(db, child_abspath, svn_node_unknown,
+                                        TRUE, &tmp_entry,
+                                        SVN_WC__ENTRY_MODIFY_SCHEDULE,
+                                        iterpool));
+        }
 
       /* Tell someone what we've done. */
       if (notify_func != NULL)
@@ -920,11 +933,6 @@ mark_tree_deleted(svn_wc__db_t *db,
                                     SVN_WC__ENTRY_MODIFY_SCHEDULE |
                                     SVN_WC__ENTRY_MODIFY_KEEP_LOCAL,
                                     iterpool));
-    }
-  else
-    {
-      return svn_error_return(
-        svn_wc__db_temp_forget_directory(db, dir_abspath, pool));
     }
 
   /* Destroy our per-iteration pool. */
