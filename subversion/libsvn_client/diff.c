@@ -1363,18 +1363,37 @@ diff_repos_wc(const char *path1,
      actual URLs will be. */
   if (peg_revision->kind != svn_opt_revision_unspecified)
     {
-      svn_opt_revision_t *start_ignore, *end_ignore, end;
-      const char *url_ignore;
+      if (ignore_ancestry)
+        {
+          const svn_wc_entry_t *entry;
 
-      end.kind = svn_opt_revision_unspecified;
+          SVN_ERR(svn_wc__get_entry_versioned(&entry, ctx->wc_ctx, abspath1,
+                                              svn_node_unknown, FALSE, FALSE,
+                                              pool, pool));
+          if (! entry->url)
+            return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
+                                     _("'%s' has no URL"),
+                                     svn_dirent_local_style(path1, pool));
 
-      SVN_ERR(svn_client__repos_locations(&url1, &start_ignore,
-                                          &url_ignore, &end_ignore,
-                                          NULL,
-                                          path1,
-                                          peg_revision,
-                                          revision1, &end,
-                                          ctx, pool));
+          /* Just use whatever URL is specified in the entry.
+           * We don't want to follow copyfrom info. */
+          url1 = entry->url;
+        }
+      else
+        {
+          svn_opt_revision_t *start_ignore, *end_ignore, end;
+          const char *url_ignore;
+
+          end.kind = svn_opt_revision_unspecified;
+
+          SVN_ERR(svn_client__repos_locations(&url1, &start_ignore,
+                                              &url_ignore, &end_ignore,
+                                              NULL,
+                                              path1,
+                                              peg_revision,
+                                              revision1, &end,
+                                              ctx, pool));
+        }
 
       if (!reverse)
         {
@@ -1435,7 +1454,7 @@ diff_repos_wc(const char *path1,
                                   FALSE, NULL, NULL, /* notification is N/A */
                                   NULL, NULL, pool));
 
-  return svn_wc_adm_close2(adm_access, pool);
+  return svn_error_return(svn_wc_adm_close2(adm_access, pool));
 }
 
 
