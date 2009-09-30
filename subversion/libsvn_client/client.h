@@ -951,9 +951,8 @@ svn_client__do_commit(const char *base_url,
 
 /*** Externals (Modules) ***/
 
-/* Handle changes to the svn:externals property in the tree traversed
-   by TRAVERSAL_INFO (obtained from svn_wc_get_update_editor or
-   svn_wc_get_switch_editor, for example).  The tree's top level
+/* Handle changes to the svn:externals property described by EXTERNALS_OLD,
+   EXTERNALS_NEW, and AMBIENT_DEPTHS.  The tree's top level
    directory is at TO_PATH and should have a write lock in ADM_ACCESS
    and corresponds to FROM_URL URL in the repository, which has a root
    URL of REPOS_ROOT_URL.
@@ -987,7 +986,9 @@ svn_client__do_commit(const char *base_url,
    Use POOL for temporary allocation. */
 svn_error_t *
 svn_client__handle_externals(svn_wc_adm_access_t *adm_access,
-                             svn_wc_traversal_info_t *traversal_info,
+                             apr_hash_t *externals_old,
+                             apr_hash_t *externals_new,
+                             apr_hash_t *ambient_depths,
                              const char *from_url,
                              const char *to_path,
                              const char *repos_root_url,
@@ -1101,6 +1102,32 @@ svn_cl__rev_default_to_head_or_working(const svn_opt_revision_t *revision,
 const svn_opt_revision_t *
 svn_cl__rev_default_to_peg(const svn_opt_revision_t *revision,
                            const svn_opt_revision_t *peg_revision);
+
+
+/* Some external traversal helpers.
+ */
+/* This function gets invoked whenever external changes are encountered.
+   This implements svn_wc_external_update_t */
+svn_error_t *
+svn_client__external_info_gatherer(void *baton,
+                                   const char *local_abspath,
+                                   const svn_string_t *old_val,
+                                   const svn_string_t *new_val,
+                                   svn_depth_t depth,
+                                   apr_pool_t *scratch_pool);
+
+/* Baton type for svn_wc__external_info_gatherer().  All fields must be
+   populated before use. */
+typedef struct svn_client__external_func_baton_t
+{
+  apr_hash_t *externals_old;
+  apr_hash_t *externals_new;
+  apr_hash_t *ambient_depths;
+
+  apr_pool_t *result_pool;
+} svn_client__external_func_baton_t;
+
+
 
 
 #ifdef __cplusplus

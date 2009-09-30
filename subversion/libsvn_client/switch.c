@@ -85,12 +85,12 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
   svn_boolean_t *use_sleep = timestamp_sleep ? timestamp_sleep : &sleep_here;
   const svn_delta_editor_t *switch_editor;
   void *switch_edit_baton;
-  svn_wc_traversal_info_t *traversal_info = svn_wc_init_traversal_info(pool);
   const char *preserved_exts_str;
   const char *anchor_abspath;
   apr_array_header_t *preserved_exts;
   svn_boolean_t server_supports_depth;
   const char *local_abspath;
+  svn_client__external_func_baton_t efb;
   svn_config_t *cfg = ctx->config ? apr_hash_get(ctx->config,
                                                  SVN_CONFIG_CATEGORY_CONFIG,
                                                  APR_HASH_KEY_STRING)
@@ -212,15 +212,21 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
 
   /* Fetch the switch (update) editor.  If REVISION is invalid, that's
      okay; the RA driver will call editor->set_target_revision() later on. */
-  SVN_ERR(svn_wc_get_switch_editor3(&revnum, adm_access, target,
-                                    switch_rev_url, use_commit_times, depth,
+  efb.externals_new = apr_hash_make(pool);
+  efb.externals_old = apr_hash_make(pool);
+  efb.ambient_depths = apr_hash_make(pool);
+  efb.result_pool = pool;
+  SVN_ERR(svn_wc_get_switch_editor4(&switch_editor, &switch_edit_baton,
+                                    &revnum, ctx->wc_ctx, anchor_abspath,
+                                    target, switch_rev_url, use_commit_times,
+                                    depth,
                                     depth_is_sticky, allow_unver_obstructions,
                                     ctx->notify_func2, ctx->notify_baton2,
                                     ctx->cancel_func, ctx->cancel_baton,
                                     ctx->conflict_func, ctx->conflict_baton,
-                                    diff3_cmd, preserved_exts,
-                                    &switch_editor, &switch_edit_baton,
-                                    traversal_info, pool));
+                                    svn_client__external_info_gatherer, &efb,
+                                    NULL, NULL,
+                                    diff3_cmd, preserved_exts, pool, pool));
 
   /* Tell RA to do an update of URL+TARGET to REVISION; if we pass an
      invalid revnum, that means RA will use the latest revision. */
@@ -257,8 +263,9 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
      handling external items (and any errors therefrom) doesn't delay
      the primary operation. */
   if (SVN_DEPTH_IS_RECURSIVE(depth) && (! ignore_externals))
-    err = svn_client__handle_externals(adm_access, traversal_info, switch_url,
-                                       path, source_root, depth,
+    err = svn_client__handle_externals(adm_access, efb.externals_old,
+                                       efb.externals_new, efb.ambient_depths,
+                                       switch_url, path, source_root, depth,
                                        use_sleep, ctx, pool);
 
   /* Sleep to ensure timestamp integrity (we do this regardless of

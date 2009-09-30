@@ -2235,25 +2235,25 @@ svn_wc__loggy_add_tree_conflict(svn_stringbuf_t **log_accum,
 /*** Helper to write log files ***/
 
 svn_error_t *
-svn_wc__write_log(svn_wc_adm_access_t *adm_access,
-                  int log_number, svn_stringbuf_t *log_content,
+svn_wc__write_log(const char *adm_abspath,
+                  int log_number,
+                  svn_stringbuf_t *log_content,
                   apr_pool_t *scratch_pool)
 {
   svn_stream_t *stream;
   const char *temp_file_path;
   const char *logfile_name = compute_logfile_path(log_number, scratch_pool);
-  const char *adm_path = svn_wc_adm_access_path(adm_access);
   apr_size_t len = log_content->len;
 
   SVN_ERR(svn_wc__open_adm_writable(&stream, &temp_file_path,
-                                    adm_path, logfile_name,
+                                    adm_abspath, logfile_name,
                                     scratch_pool, scratch_pool));
 
   SVN_ERR_W(svn_stream_write(stream, log_content->data, &len),
             apr_psprintf(scratch_pool, _("Error writing log for '%s'"),
                          svn_dirent_local_style(logfile_name, scratch_pool)));
 
-  return svn_wc__close_adm_stream(stream, temp_file_path, adm_path,
+  return svn_wc__close_adm_stream(stream, temp_file_path, adm_abspath,
                                   logfile_name, scratch_pool);
 }
 

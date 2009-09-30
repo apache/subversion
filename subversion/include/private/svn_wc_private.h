@@ -340,14 +340,6 @@ svn_wc__node_get_repos_info(const char **repos_root_url,
                             apr_pool_t *result_pool,
                             apr_pool_t *scratch_pool);
 
-/* A convenience function for creating a new-style conflict description from
-   an old one.
-   ### This should probably disappear once all the old-style conflict
-       descriptions are gone. */
-svn_wc_conflict_description2_t *
-svn_wc__conflict_desc2_from_conflict_desc(const svn_wc_conflict_description_t *
-                                                                     conflict,
-                                          apr_pool_t *result_pool);
 
 /**
  * Set @a kind to the @c svn_node_kind_t of @a abspath.  Use @a wc_ctx

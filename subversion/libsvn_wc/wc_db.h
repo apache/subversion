@@ -1004,15 +1004,16 @@ svn_wc__db_op_revert(svn_wc__db_t *db,
                      apr_pool_t *scratch_pool);
 
 
-/** Invalidate the last mod time cache for the appropriate BASE node
- * for LOCAL_ABSPATH in DB.
+/** Set the last mod time cache to LAST_MOD_TIME for the appropriate BASE
+ * node for LOCAL_ABSPATH in DB.
  *
  * Use SCRATCH_POOL for any temporary allocations.
  */
 svn_error_t *
-svn_wc__db_op_invalidate_last_mod_time(svn_wc__db_t *db,
-                                       const char *local_abspath,
-                                       apr_pool_t *scratch_pool);
+svn_wc__db_op_set_last_mod_time(svn_wc__db_t *db,
+                                const char *local_abspath,
+                                apr_time_t last_mod_time,
+                                apr_pool_t *scratch_pool);
 
 
 /** Get any tree conflict associated with LOCAL_ABSPATH in DB, and put it
