@@ -847,8 +847,9 @@ merge_text_file(svn_stringbuf_t **log_accum,
      will write the merged results.  We want to use a tempfile
      with a name that reflects the original, in case this
      ultimately winds up in a conflict resolution editor.  */
-  temp_dir = svn_wc__adm_child(svn_wc_adm_access_path(adm_access),
-                               SVN_WC__ADM_TMP, pool);
+  SVN_ERR(svn_wc__db_temp_wcroot_tempdir(&temp_dir, db,
+                                    svn_wc__adm_access_abspath(adm_access),
+                                    pool, pool));
   SVN_ERR(svn_io_open_uniquely_named(&result_f, &result_target,
                                      temp_dir, base_name, ".tmp",
                                      svn_io_file_del_none, pool, pool));

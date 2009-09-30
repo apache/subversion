@@ -61,6 +61,7 @@
 
 #define PRISTINE_STORAGE_RELPATH ".svn/pristine"
 #define PRISTINE_TEMPDIR_RELPATH ".svn"
+#define WCROOT_TEMPDIR_RELPATH       ".svn/tmp"
 
 
 /*
@@ -5083,5 +5084,30 @@ svn_wc__db_node_hidden(svn_boolean_t *hidden,
              || base_status == svn_wc__db_status_not_present
              || depth == svn_depth_exclude);
 
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc__db_temp_wcroot_tempdir(const char **temp_dir_abspath,
+                               svn_wc__db_t *db,
+                               const char *wri_abspath,
+                               apr_pool_t *result_pool,
+                               apr_pool_t *scratch_pool)
+{
+  svn_wc__db_pdh_t *pdh;
+  const char *local_relpath;
+
+  SVN_ERR_ASSERT(temp_dir_abspath != NULL);
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(wri_abspath));
+
+  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, wri_abspath,
+                              svn_sqlite__mode_readonly,
+                              scratch_pool, scratch_pool));
+  VERIFY_USABLE_PDH(pdh);
+
+  *temp_dir_abspath = svn_dirent_join(pdh->wcroot->abspath,
+                                      WCROOT_TEMPDIR_RELPATH,
+                                      result_pool);
   return SVN_NO_ERROR;
 }

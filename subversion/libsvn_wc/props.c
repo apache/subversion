@@ -204,20 +204,21 @@ svn_wc__write_properties(apr_hash_t *properties,
 
 /* Opens reject temporary stream for FULL_PATH in the appropriate tmp space. */
 static svn_error_t *
-open_reject_tmp_stream(svn_stream_t **stream, const char **reject_tmp_path,
-                       const char *full_path,
-                       svn_boolean_t is_dir, apr_pool_t *pool)
+open_reject_tmp_stream(svn_stream_t **stream,
+                       const char **reject_tmp_path,
+                       svn_wc__db_t *db,
+                       const char *local_abspath,
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool)
 {
-  const char *tmp_base_path;
+  const char *tmp_base_abspath;
 
-  if (is_dir)
-    tmp_base_path = svn_wc__adm_child(full_path, SVN_WC__ADM_TMP, pool);
-  else
-    tmp_base_path = svn_wc__adm_child(svn_dirent_dirname(full_path, pool),
-                                      SVN_WC__ADM_TMP, pool);
+  SVN_ERR(svn_wc__db_temp_wcroot_tempdir(&tmp_base_abspath, db, local_abspath,
+                                         scratch_pool, scratch_pool));
 
-  return svn_stream_open_unique(stream, reject_tmp_path, tmp_base_path,
-                                svn_io_file_del_none, pool, pool);
+  return svn_stream_open_unique(stream, reject_tmp_path, tmp_base_abspath,
+                                svn_io_file_del_none, result_pool,
+                                scratch_pool);
 }
 
 
@@ -1677,8 +1678,9 @@ svn_wc__merge_props(svn_stringbuf_t **entry_accum,
 
           if (! reject_tmp_stream)
             /* This is the very first prop conflict found on this item. */
-            SVN_ERR(open_reject_tmp_stream(&reject_tmp_stream, &reject_tmp_path,
-                                           local_abspath, is_dir, pool));
+            SVN_ERR(open_reject_tmp_stream(&reject_tmp_stream,
+                                           &reject_tmp_path, db,
+                                           local_abspath, pool, pool));
 
           /* Append the conflict to the open tmp/PROPS/---.prej file */
           SVN_ERR(append_prop_conflict(reject_tmp_stream, conflict, pool));

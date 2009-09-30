@@ -208,9 +208,8 @@ svn_wc__internal_translated_file(const char **xlated_abspath,
       if (flags & SVN_WC_TRANSLATE_USE_GLOBAL_TMP)
         tmp_dir = NULL;
       else
-        tmp_dir = svn_wc__adm_child(
-                    svn_dirent_dirname(versioned_abspath, scratch_pool),
-                    SVN_WC__ADM_TMP, scratch_pool);
+        SVN_ERR(svn_wc__db_temp_wcroot_tempdir(&tmp_dir, db, versioned_abspath,
+                                               scratch_pool, scratch_pool));
 
       SVN_ERR(svn_io_open_unique_file3(NULL, &tmp_vfile, tmp_dir,
                 (flags & SVN_WC_TRANSLATE_NO_OUTPUT_CLEANUP)

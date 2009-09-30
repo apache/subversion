@@ -114,8 +114,8 @@ restore_file(svn_wc__db_t *db,
 
       /* Get a temporary destination so we can use a rename to create the
          real destination atomically. */
-      tmp_dir = svn_wc__adm_child(svn_wc_adm_access_path(adm_access),
-                                  SVN_WC__ADM_TMP, pool);
+      SVN_ERR(svn_wc__db_temp_wcroot_tempdir(&tmp_dir, db, local_abspath,
+                                             pool, pool));
       SVN_ERR(svn_stream_open_unique(&tmp_stream, &tmp_file, tmp_dir,
                                      svn_io_file_del_none, pool, pool));
 
