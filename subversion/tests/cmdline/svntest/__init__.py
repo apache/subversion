@@ -2,7 +2,7 @@ __all__ = ["main", "tree", "actions"]
 
 import sys
 if sys.hexversion < 0x2040000:
-  sys.stderr.write('[SKIPPED] at least Python 2.4 is required')
+  sys.stderr.write('[SKIPPED] at least Python 2.4 is required\n')
 
   # note: exiting is a bit harsh for a library module, but we really do
   # require Python 2.4. this package isn't going to work otherwise.
@@ -13,7 +13,7 @@ if sys.hexversion < 0x2040000:
 try:
   import sqlite3
 except ImportError:
-  sys.stderr.write('[SKIPPED] Python sqlite3 module required')
+  sys.stderr.write('[SKIPPED] Python sqlite3 module required\n')
   sys.exit(0)
 
 # don't export these names
