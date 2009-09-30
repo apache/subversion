@@ -1627,6 +1627,7 @@ def merge_in_new_file_and_diff(sbox):
                                      "Changing the trunk.", wc_dir)
 
   branch_path = os.path.join(wc_dir, "branch")
+  url_branch_path = branch_path.replace(os.path.sep, '/')
 
   # Merge our addition into the branch.
   expected_output = svntest.wc.State(branch_path, {
@@ -1659,10 +1660,10 @@ def merge_in_new_file_and_diff(sbox):
     "___________________________________________________________________\n",
     "Added: " + SVN_PROP_MERGEINFO + "\n",
     "   Merged /A/B/E:r2-3\n",
-    "Index: " + branch_path + os.path.sep + "newfile\n",
+    "Index: " + url_branch_path + "/newfile\n",
     "===================================================================\n",
-    "--- "+ branch_path + os.path.sep + "newfile	(revision 0)\n",
-    "+++ "+ branch_path + os.path.sep + "newfile	(revision 2)\n",
+    "--- "+ url_branch_path + "/newfile	(revision 0)\n",
+    "+++ "+ url_branch_path + "/newfile	(revision 2)\n",
     "@@ -0,0 +1 @@\n",
     "+newfile\n"]
   svntest.actions.run_and_verify_svn(None, expected_output, [], 'diff',
