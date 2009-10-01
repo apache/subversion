@@ -980,12 +980,20 @@ typedef enum svn_wc_notify_action_t
    * unversioned obstruction was found.  @since New in 1.7. */
   svn_wc_notify_update_obstruction,
 
-  /* The mergeinfo on path was updated.  @since New in 1.7. */
-  svn_wc_notify_merge_record_info,
-
   /** An update operation removed an external working copy.
    * @since New in 1.7. */
   svn_wc_notify_update_external_removed,
+
+  /** A node below a deleted and tree conflicted directory was added
+   *  during update @since New in 1.7. */
+  svn_wc_notify_update_add_deleted,
+
+  /** A node below a deleted and tree conflicted directory was updated
+   * @since New in 1.7. */
+  svn_wc_notify_update_update_deleted
+
+  /* The mergeinfo on path was updated.  @since New in 1.7. */
+  svn_wc_notify_merge_record_info,
 
   /** An working copy directory was upgraded to the latest format
    * @since New in 1.7. */

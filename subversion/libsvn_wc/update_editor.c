@@ -886,9 +886,6 @@ struct file_baton
      scheduled for addition without history. */
   svn_boolean_t add_existed;
 
-  /* Set if the dir is a tree conflict victim. */
-  svn_boolean_t tree_conflicted;
-
   /* Set if this file is locally deleted or is being added
      within a locally deleted tree. */
   svn_boolean_t deleted;
@@ -984,7 +981,6 @@ make_file_baton(struct file_baton **f_p,
   f->added             = adding;
   f->existed           = FALSE;
   f->add_existed       = FALSE;
-  f->tree_conflicted   = FALSE;
   f->deleted           = FALSE;
   f->dir_baton         = pb;
 
@@ -2240,13 +2236,13 @@ do_entry_deletion(int *log_number,
 
   /* Notify. (If tree_conflict, we've already notified.) */
   if (eb->notify_func
-      && tree_conflict == NULL
-      && !accept_deleted)
+      && tree_conflict == NULL)
     {
-      svn_wc_notify_t *notify
-        = svn_wc_create_notify(local_abspath, svn_wc_notify_update_delete, pool);
-
-      (*eb->notify_func)(eb->notify_baton, notify, pool);
+      eb->notify_func(eb->notify_baton,
+                      svn_wc_create_notify(local_abspath,
+                                           svn_wc_notify_update_delete,
+                                           pool),
+                      pool);
     }
 
   return SVN_NO_ERROR;
@@ -2662,15 +2658,19 @@ add_directory(const char *path,
      might be properties to deal with.  If PATH was added inside a locally
      deleted tree, then suppress notification, a tree conflict was already
      issued. */
-  if (eb->notify_func && !db->already_notified &&
-      !(db->add_existed) && !pb->accept_deleted)
+  if (eb->notify_func && !db->already_notified && !db->add_existed)
     {
-      svn_wc_notify_t *notify = svn_wc_create_notify(
-                                        db->path,
-                                        db->existed
-                                        ? svn_wc_notify_exists
-                                        : svn_wc_notify_update_add,
-                                        pool);
+      svn_wc_notify_t *notify;
+      svn_wc_notify_action_t action;
+
+      if (db->accept_deleted)
+        action = svn_wc_notify_update_add_deleted;
+      else if (db->existed)
+        action = svn_wc_notify_exists;
+      else
+        action = svn_wc_notify_update_add;
+
+      notify = svn_wc_create_notify(db->local_abspath, action, pool);
       notify->kind = svn_node_dir;
       eb->notify_func(eb->notify_baton, notify, pool);
       db->already_notified = TRUE;
@@ -3048,12 +3048,17 @@ close_directory(void *dir_baton,
      notification here). */
   if (!db->already_notified && eb->notify_func)
     {
-      svn_wc_notify_t *notify
-        = svn_wc_create_notify(db->path,
-                               (db->existed || db->add_existed
-                                ? svn_wc_notify_exists
-                                : svn_wc_notify_update_update),
-                               pool);
+      svn_wc_notify_t *notify;
+      svn_wc_notify_action_t action;
+
+      if (db->accept_deleted)
+        action = svn_wc_notify_update_update_deleted;
+      else if (db->existed || db->add_existed)
+        action = svn_wc_notify_exists;
+      else
+        action = svn_wc_notify_update_update;
+
+      notify = svn_wc_create_notify(db->local_abspath, action, pool);
       notify->kind = svn_node_dir;
       notify->prop_state = prop_state;
       notify->revision = *db->edit_baton->target_revision;
@@ -4703,8 +4708,8 @@ close_file(void *file_baton,
       svn_wc_notify_t *notify;
       svn_wc_notify_action_t action = svn_wc_notify_update_update;
 
-      if (fb->tree_conflicted)
-        action = svn_wc_notify_tree_conflict;
+      if (fb->deleted)
+        action = svn_wc_notify_update_add_deleted;
       else if (fb->existed || fb->add_existed)
         {
           if (content_state != svn_wc_notify_state_conflicted)
