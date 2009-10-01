@@ -288,21 +288,21 @@ struct dir_baton
      directory. */
   struct dir_baton *parent_baton;
 
-  /* Gets set if updates to this directory are skipped */
+  /* Set if updates to this directory are skipped */
   svn_boolean_t skip_this;
 
-  /* Gets set if updates to all descendants of this directory are skipped */
+  /* Set if updates to all descendants of this directory are skipped */
   svn_boolean_t skip_descendants;
 
-  /* Gets set if some (high priority) notification for this dir was performed */
-  svn_boolean_t skip_notify;
+  /* Set if there was a previous notification for this directory */
+  svn_boolean_t already_notified;
 
-  /* Gets set on a node and its descendants when a node gets tree conflicted
+  /* Set on a node and its descendants when a node gets tree conflicted
      and descendants should be updated (not skipped), but these nodes should
      all be marked as deleted*/
   svn_boolean_t accept_deleted;
 
-  /* Gets set iff this is a new directory that is not yet versioned and not
+  /* Set iff this is a new directory that is not yet versioned and not
      yet in the parent's list of entries */
   svn_boolean_t added;
 
@@ -869,8 +869,8 @@ struct file_baton
   /* Set if updates to this directory are skipped */
   svn_boolean_t skip_this;
 
-  /* Set if some (high priority) notification for this dir was performed */
-  svn_boolean_t skip_notify;
+  /* Set if there was a previous notification  */
+  svn_boolean_t already_notified;
 
   /* Set if this file is new. */
   svn_boolean_t added;
@@ -1281,7 +1281,7 @@ open_root(void *edit_baton,
     {
       db->skip_this = TRUE;
       db->skip_descendants = TRUE;
-      db->skip_notify = TRUE;
+      db->already_notified = TRUE;
       db->bump_info->skipped = TRUE;
 
       /* Notify that we skipped the target, while we actually skipped
@@ -2315,7 +2315,7 @@ add_directory(const char *path,
 
       db->skip_this = TRUE;
       db->skip_descendants = TRUE;
-      db->skip_notify = TRUE;
+      db->already_notified = TRUE;
 
       return SVN_NO_ERROR;
     }
@@ -2357,7 +2357,7 @@ add_directory(const char *path,
 
       db->skip_this = TRUE;
       db->skip_descendants = TRUE;
-      db->skip_notify = TRUE;
+      db->already_notified = TRUE;
 
       /* ### TODO: Also print victim_path in the skip msg. */
       if (eb->notify_func)
@@ -2403,7 +2403,7 @@ add_directory(const char *path,
             }
           else
             {
-              db->skip_notify = TRUE;
+              db->already_notified = TRUE;
               if (eb->notify_func)
                 {
                   svn_wc_notify_t *notify = 
@@ -2514,7 +2514,7 @@ add_directory(const char *path,
 
                   db->skip_this = TRUE;
                   db->skip_descendants = TRUE;
-                  db->skip_notify = TRUE;
+                  db->already_notified = TRUE;
 
                   if (eb->notify_func)
                     eb->notify_func(eb->notify_baton,
@@ -2662,7 +2662,7 @@ add_directory(const char *path,
      might be properties to deal with.  If PATH was added inside a locally
      deleted tree, then suppress notification, a tree conflict was already
      issued. */
-  if (eb->notify_func && !db->skip_notify &&
+  if (eb->notify_func && !db->already_notified &&
       !(db->add_existed) && !pb->accept_deleted)
     {
       svn_wc_notify_t *notify = svn_wc_create_notify(
@@ -2673,7 +2673,7 @@ add_directory(const char *path,
                                         pool);
       notify->kind = svn_node_dir;
       eb->notify_func(eb->notify_baton, notify, pool);
-      db->skip_notify = TRUE;
+      db->already_notified = TRUE;
     }
 
   return SVN_NO_ERROR;
@@ -2707,7 +2707,7 @@ open_directory(const char *path,
 
       db->skip_this = TRUE;
       db->skip_descendants = TRUE;
-      db->skip_notify = TRUE;
+      db->already_notified = TRUE;
 
       db->bump_info->skipped = TRUE;
 
@@ -2737,7 +2737,7 @@ open_directory(const char *path,
 
       db->skip_this = TRUE;
       db->skip_descendants = TRUE;
-      db->skip_notify = TRUE;
+      db->already_notified = TRUE;
 
       if (eb->notify_func)
         eb->notify_func(eb->notify_baton,
@@ -2769,7 +2769,7 @@ open_directory(const char *path,
           notify->kind = svn_node_dir;
 
           eb->notify_func(eb->notify_baton, notify, pool);
-          db->skip_notify = TRUE;
+          db->already_notified = TRUE;
         }
 
       /* Even if PATH is locally deleted we still need mark it as being
@@ -3046,7 +3046,7 @@ close_directory(void *dir_baton,
      happened in that case - unless the add was obstructed by a dir
      scheduled for addition without history, in which case we handle
      notification here). */
-  if (!db->skip_notify && eb->notify_func)
+  if (!db->already_notified && eb->notify_func)
     {
       svn_wc_notify_t *notify
         = svn_wc_create_notify(db->path,
@@ -3554,7 +3554,7 @@ add_file(const char *path,
         SVN_ERR(remember_skipped_tree(eb, fb->local_abspath));
 
       fb->skip_this = TRUE;
-      fb->skip_notify = TRUE;
+      fb->already_notified = TRUE;
 
       return SVN_NO_ERROR;
     }
@@ -3593,7 +3593,7 @@ add_file(const char *path,
       SVN_ERR(remember_skipped_tree(eb, fb->local_abspath));
 
       fb->skip_this = TRUE;
-      fb->skip_notify = TRUE;
+      fb->already_notified = TRUE;
 
       if (eb->notify_func)
         eb->notify_func(eb->notify_baton,
@@ -3706,7 +3706,7 @@ add_file(const char *path,
                  by the other callbacks. */
               SVN_ERR(remember_skipped_tree(eb, fb->local_abspath));
               fb->skip_this = TRUE;
-              fb->skip_notify = TRUE;
+              fb->already_notified = TRUE;
 
               if (eb->notify_func)
                 eb->notify_func(eb->notify_baton,
@@ -3762,7 +3762,7 @@ open_file(const char *path,
         SVN_ERR(remember_skipped_tree(eb, fb->local_abspath));
 
       fb->skip_this = TRUE;
-      fb->skip_notify = TRUE;
+      fb->already_notified = TRUE;
 
       return SVN_NO_ERROR;
     }
@@ -3788,7 +3788,7 @@ open_file(const char *path,
       SVN_ERR(remember_skipped_tree(eb, fb->local_abspath));
 
       fb->skip_this = TRUE;
-      fb->skip_notify = TRUE;
+      fb->already_notified = TRUE;
 
       if (eb->notify_func)
         eb->notify_func(eb->notify_baton,
@@ -3824,7 +3824,7 @@ open_file(const char *path,
       if (!fb->deleted)
         fb->skip_this = TRUE;
 
-      fb->skip_notify = TRUE;
+      fb->already_notified = TRUE;
       if (eb->notify_func)
         eb->notify_func(eb->notify_baton,
                         svn_wc_create_notify(fb->local_abspath,
@@ -4697,7 +4697,7 @@ close_file(void *file_baton,
 
   /* Skip notifications about files which were already notified for
      another reason */
-  if (eb->notify_func && !fb->skip_notify)
+  if (eb->notify_func && !fb->already_notified)
     {
       const svn_string_t *mime_type;
       svn_wc_notify_t *notify;
