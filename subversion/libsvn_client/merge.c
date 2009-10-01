@@ -417,13 +417,14 @@ obstructed_or_missing(const char *path,
   svn_error_t *err;
   const svn_wc_entry_t *entry;
   svn_node_kind_t kind_expected, kind_on_disk;
+  svn_boolean_t obstructed;
   const char *local_abspath;
 
   err = svn_dirent_get_absolute(&local_abspath, path, pool);
 
   if (!err)
     err = svn_wc__maybe_get_entry(&entry, merge_b->ctx->wc_ctx, local_abspath,
-                                  svn_node_unknown, TRUE, FALSE, pool, pool);
+                                  svn_node_unknown, FALSE, FALSE, pool, pool);
   if (err)
     {
       svn_error_clear(err);
@@ -432,6 +433,19 @@ obstructed_or_missing(const char *path,
 
   if (entry && entry->absent)
     return svn_wc_notify_state_missing;
+
+  /* svn_wc__maybe_get_entry ignores node kind errors, so check if we
+     didn't get the parent stub */
+  if (entry && entry->kind == svn_node_dir && *entry->name != '\0')
+    return svn_wc_notify_state_missing; /* Only found parent entry */
+
+  err = svn_wc__temp_node_obstructed(&obstructed, merge_b->ctx->wc_ctx,
+                                     local_abspath, pool);
+
+  if (err)
+    svn_error_clear(err);
+  else if (obstructed)
+    return svn_wc_notify_state_obstructed;
 
   kind_expected = node_kind_working(path, merge_b, entry);
   kind_on_disk = node_kind_on_disk(path, merge_b, pool);
