@@ -9,16 +9,17 @@ if sys.hexversion < 0x2040000:
 
   # we're skipping this test, not failing, so exit with 0
   sys.exit(0)
-
 try:
   import sqlite3
 except ImportError:
-  sys.stderr.write('[SKIPPED] Python sqlite3 module required\n')
-  sys.exit(0)
+  try:
+    from pysqlite2 import dbapi2 as sqlite3
+  except ImportError:
+    sys.stderr.write('[SKIPPED] Python sqlite3 module required\n')
+    sys.exit(0)
 
-# don't export these names
+# don't export this name
 del sys
-del sqlite3
 
 class Failure(Exception):
   'Base class for exceptions that indicate test failure'
