@@ -426,16 +426,6 @@ svn_wc__node_walk_children(svn_wc_context_t *wc_ctx,
                            void *cancel_baton,
                            apr_pool_t *scratch_pool);
 
-/**
- * Gets booleans indicating whether LOCAL_ABSPATH is obstructed.
- */
-svn_error_t *
-svn_wc__temp_node_obstructed(svn_boolean_t *obstructed,
-                             svn_wc_context_t *wc_ctx,
-                             const char *local_abspath,
-                             apr_pool_t *scratch_pool);
-
-
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

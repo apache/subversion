@@ -415,37 +415,45 @@ obstructed_or_missing(const char *path,
                       apr_pool_t *pool)
 {
   svn_error_t *err;
-  const svn_wc_entry_t *entry;
-  svn_node_kind_t kind_expected, kind_on_disk;
-  svn_boolean_t obstructed;
+  const svn_wc_entry_t *entry = NULL;
+  svn_node_kind_t kind_expected, kind_on_disk, wc_kind;
   const char *local_abspath;
 
   err = svn_dirent_get_absolute(&local_abspath, path, pool);
 
   if (!err)
-    err = svn_wc__maybe_get_entry(&entry, merge_b->ctx->wc_ctx, local_abspath,
-                                  svn_node_unknown, FALSE, FALSE, pool, pool);
+    err = svn_wc__node_get_kind(&wc_kind, merge_b->ctx->wc_ctx, local_abspath,
+                                FALSE, pool);
+
   if (err)
     {
+      wc_kind = svn_node_none;
       svn_error_clear(err);
       entry = NULL;
     }
+  else
+    {
+      err = svn_wc__get_entry_versioned(&entry, merge_b->ctx->wc_ctx,
+                                        local_abspath, svn_node_unknown,
+                                        FALSE, FALSE, pool, pool);
 
-  if (entry && entry->absent)
+      if (err)
+        {
+          svn_error_clear(err);
+          entry = NULL;
+        }
+    }
+
+  if ((wc_kind == svn_node_dir || wc_kind == svn_node_file)
+      && !entry)
     return svn_wc_notify_state_missing;
 
-  /* svn_wc__maybe_get_entry ignores node kind errors, so check if we
-     didn't get the parent stub */
+  /* ### This check (and most of this function)
+         can be removed after we move to one DB */
+  /* svn_wc__get_entry_versioned ignores node kind errors, so check if we
+     didn't get the parent stub, instead of the real thing */
   if (entry && entry->kind == svn_node_dir && *entry->name != '\0')
     return svn_wc_notify_state_missing; /* Only found parent entry */
-
-  err = svn_wc__temp_node_obstructed(&obstructed, merge_b->ctx->wc_ctx,
-                                     local_abspath, pool);
-
-  if (err)
-    svn_error_clear(err);
-  else if (obstructed)
-    return svn_wc_notify_state_obstructed;
 
   kind_expected = node_kind_working(path, merge_b, entry);
   kind_on_disk = node_kind_on_disk(path, merge_b, pool);
