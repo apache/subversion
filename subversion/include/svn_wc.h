@@ -990,7 +990,7 @@ typedef enum svn_wc_notify_action_t
 
   /** A node below a deleted and tree conflicted directory was updated
    * @since New in 1.7. */
-  svn_wc_notify_update_update_deleted
+  svn_wc_notify_update_update_deleted,
 
   /* The mergeinfo on path was updated.  @since New in 1.7. */
   svn_wc_notify_merge_record_info,
