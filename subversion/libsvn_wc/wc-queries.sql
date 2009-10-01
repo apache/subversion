@@ -266,6 +266,18 @@ UPDATE ACTUAL_NODE SET
   prop_reject = null
 WHERE wc_id = ?1 AND local_relpath = ?2;
 
+-- STMT_INSERT_WC_LOCK
+INSERT INTO WC_LOCK (wc_id, local_dir_relpath)
+VALUES (?1, ?2);
+
+-- STMT_SELECT_WC_LOCK
+SELECT local_dir_relpath FROM WC_LOCK
+WHERE wc_id = ?1 AND local_dir_relpath = ?2;
+
+-- STMT_DELETE_WC_LOCK
+DELETE FROM WC_LOCK
+WHERE wc_id = ?1 AND local_dir_relpath = ?2;
+
 
 /* ------------------------------------------------------------------------- */
 

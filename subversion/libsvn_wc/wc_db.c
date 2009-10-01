@@ -204,7 +204,8 @@ static const char * const upgrade_sql[] = {
   NULL, NULL, NULL, NULL, NULL,
   NULL, NULL,
   WC_METADATA_SQL_12,
-  WC_METADATA_SQL_13
+  WC_METADATA_SQL_13,
+  WC_METADATA_SQL_14
 };
 
 WC_QUERIES_SQL_DECLARE_STATEMENTS(statements);
@@ -5127,5 +5128,61 @@ svn_wc__db_temp_wcroot_tempdir(const char **temp_dir_abspath,
   *temp_dir_abspath = svn_dirent_join(pdh->wcroot->abspath,
                                       WCROOT_TEMPDIR_RELPATH,
                                       result_pool);
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc__db_wclock_set(svn_wc__db_t *db,
+                      const char *local_abspath,
+                      apr_pool_t *scratch_pool)
+{
+  svn_sqlite__stmt_t *stmt;
+  svn_error_t *err;
+
+  SVN_ERR(get_statement_for_path(&stmt, db, local_abspath,
+                                 STMT_INSERT_WC_LOCK, scratch_pool));
+  err = svn_sqlite__insert(NULL, stmt);
+  if (err)
+    return svn_error_createf(SVN_ERR_WC_LOCKED, err,
+                             _("Working copy '%s' locked"),
+                             svn_dirent_local_style(local_abspath,
+                                                    scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc__db_wclocked(svn_boolean_t *locked,
+                    svn_wc__db_t *db,
+                    const char *local_abspath,
+                    apr_pool_t *scratch_pool)
+{
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
+
+  SVN_ERR(get_statement_for_path(&stmt, db, local_abspath,
+                                 STMT_SELECT_WC_LOCK, scratch_pool));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  SVN_ERR(svn_sqlite__reset(stmt));
+
+  *locked = have_row;
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc__db_wclock_remove(svn_wc__db_t *db,
+                         const char *local_abspath,
+                         apr_pool_t *scratch_pool)
+{
+  svn_sqlite__stmt_t *stmt;
+
+  SVN_ERR(get_statement_for_path(&stmt, db, local_abspath,
+                                 STMT_DELETE_WC_LOCK, scratch_pool));
+  SVN_ERR(svn_sqlite__step_done(stmt));
+
   return SVN_NO_ERROR;
 }

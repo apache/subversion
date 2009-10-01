@@ -101,12 +101,14 @@ extern "C" {
  * The change from 12 to 13 added the WORK_QUEUE table into 'wc.db', and
  * moved the wcprops into the 'dav_cache' column in BASE_NODE.
  *
+ * The change from 13 to 14 added the WCLOCKS table.
+ *
  * == 1.7.x shipped with format ???
  *
  * Please document any further format changes here.
  */
 
-#define SVN_WC__VERSION 13
+#define SVN_WC__VERSION 14
 
 
 /* A version <= this doesn't have property caching in the entries file. */
