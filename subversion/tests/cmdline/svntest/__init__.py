@@ -15,8 +15,12 @@ except ImportError:
   try:
     from pysqlite2 import dbapi2 as sqlite3
   except ImportError:
-    sys.stderr.write('[SKIPPED] Python sqlite3 module required\n')
-    sys.exit(0)
+    try:
+      # and for package "python-sqlite" on SuSE SLED 10, at least ...
+      import sqlite as sqlite3
+    except ImportError:
+      sys.stderr.write('[SKIPPED] Python sqlite3 module required\n')
+      sys.exit(0)
 
 # don't export this name
 del sys
