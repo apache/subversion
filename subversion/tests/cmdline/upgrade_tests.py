@@ -32,7 +32,6 @@
 import os, sys, tarfile, shutil
 
 import svntest
-import sqlite3
 
 Item = svntest.wc.StateItem
 XFail = svntest.testcase.XFail
@@ -65,7 +64,7 @@ def replace_sbox_with_tarfile(sbox, tar_filename):
 
 def check_format(sbox, expected_format):
   for root, dirs, files in os.walk(sbox.wc_dir):
-    db = sqlite3.connect(os.path.join(root, '.svn', 'wc.db'))
+    db = svntest.sqlite3.connect(os.path.join(root, '.svn', 'wc.db'))
     c = db.cursor()
     c.execute('pragma user_version;')
     found_format = c.fetchone()[0]
@@ -80,7 +79,7 @@ def check_format(sbox, expected_format):
 
 
 def check_dav_cache(dir_path, wc_id, expected_dav_caches):
-  db = sqlite3.connect(os.path.join(dir_path, '.svn', 'wc.db'))
+  db = svntest.sqlite3.connect(os.path.join(dir_path, '.svn', 'wc.db'))
   c = db.cursor()
 
   for local_relpath, expected_dav_cache in expected_dav_caches.items():
