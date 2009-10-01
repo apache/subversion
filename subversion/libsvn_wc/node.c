@@ -433,3 +433,18 @@ svn_wc__node_walk_children(svn_wc_context_t *wc_ctx,
                                    walk_callback, walk_baton, walk_depth,
                                    cancel_func, cancel_baton, scratch_pool));
 }
+
+svn_error_t *
+svn_wc__temp_node_obstructed(svn_boolean_t *obstructed,
+                             svn_wc_context_t *wc_ctx,
+                             const char *local_abspath,
+                             apr_pool_t *scratch_pool)
+{
+  svn_boolean_t available;
+
+  SVN_ERR(svn_wc__adm_available(&available, NULL, obstructed,
+                                wc_ctx->db, local_abspath, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
