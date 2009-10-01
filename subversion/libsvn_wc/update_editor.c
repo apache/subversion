@@ -476,7 +476,9 @@ cleanup_dir_baton(void *dir_baton)
 }
 
 /* An APR pool cleanup handler.  This is a child handler, it removes
-   the mail pool handler. */
+   the mail pool handler.
+   <stsp> mail pool?
+   <hwright> that's where the missing commit mails are going!  */
 static apr_status_t
 cleanup_dir_baton_child(void *dir_baton)
 {
