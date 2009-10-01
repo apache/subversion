@@ -168,6 +168,20 @@ Candidate changes:
    Votes:
      +1: stylesen
 
+ * r37953
+   Merge a NULL-dereference fix made in r37953.
+   Justification:
+     Fixes the crash reported by Peter Samuelson in
+     http://svn.haxx.se/dev/archive-2009-09/0575.shtml
+   Notes:
+     r37953 made many more changes to the affected file, this is just
+     the NULL pointer fix. We may want to merge more of r37953 in the future,
+     but that's a different beast and we should fix just the crash ASAP.
+   Branch:
+     ^/branches/1.6.x-r37953
+   Votes:
+     +1: stsp
+
 Approved changes:
 =================
 
