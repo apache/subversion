@@ -221,7 +221,6 @@ delete_urls(svn_commit_info_t **commit_info_p,
 
 svn_error_t *
 svn_client__wc_delete(const char *path,
-                      svn_wc_adm_access_t *adm_access,
                       svn_boolean_t force,
                       svn_boolean_t dry_run,
                       svn_boolean_t keep_local,
@@ -287,7 +286,7 @@ svn_client_delete3(svn_commit_info_t **commit_info_p,
                                               parent_path, TRUE, -1,
                                               ctx->cancel_func,
                                               ctx->cancel_baton, subpool));
-          SVN_ERR(svn_client__wc_delete(path, adm_access, force,
+          SVN_ERR(svn_client__wc_delete(path, force,
                                         FALSE, keep_local,
                                         ctx->notify_func2,
                                         ctx->notify_baton2,

@@ -410,15 +410,20 @@ node_kind_on_disk(const char *path,
  *   - Return 'missing' if there is no node on disk but one is expected. */
 static svn_wc_notify_state_t
 obstructed_or_missing(const char *path,
-                      svn_wc_adm_access_t *adm_access,
+                      const char *local_dir_abspath,
                       const merge_cmd_baton_t *merge_b,
                       apr_pool_t *pool)
 {
   svn_error_t *err;
   const svn_wc_entry_t *entry;
   svn_node_kind_t kind_expected, kind_on_disk;
+  const char *local_abspath;
 
-  err = svn_wc_entry(&entry, path, adm_access, TRUE, pool);
+  err = svn_dirent_get_absolute(&local_abspath, path, pool);
+
+  if (!err)
+    err = svn_wc__maybe_get_entry(&entry, merge_b->ctx->wc_ctx, local_abspath,
+                                  svn_node_unknown, TRUE, FALSE, pool, pool);
   if (err)
     {
       svn_error_clear(err);
@@ -1057,13 +1062,14 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
 /* An svn_wc_diff_callbacks4_t function.  Used for both file and directory
    property merges. */
 static svn_error_t *
-merge_props_changed(svn_wc_adm_access_t *adm_access,
+merge_props_changed(const char *local_dir_abspath,
                     svn_wc_notify_state_t *state,
                     svn_boolean_t *tree_conflicted,
                     const char *path,
                     const apr_array_header_t *propchanges,
                     apr_hash_t *original_props,
-                    void *baton)
+                    void *baton,
+                    apr_pool_t *scratch_pool)
 {
   apr_array_header_t *props;
   merge_cmd_baton_t *merge_b = baton;
@@ -1081,7 +1087,8 @@ merge_props_changed(svn_wc_adm_access_t *adm_access,
   {
     svn_wc_notify_state_t obstr_state;
 
-    obstr_state = obstructed_or_missing(path, adm_access, merge_b, subpool);
+    obstr_state = obstructed_or_missing(path, local_dir_abspath, merge_b,
+                                        subpool);
     if (obstr_state != svn_wc_notify_state_inapplicable)
       {
         if (state)
@@ -1238,7 +1245,7 @@ conflict_resolver(svn_wc_conflict_result_t **result,
 
 /* An svn_wc_diff_callbacks4_t function. */
 static svn_error_t *
-merge_file_changed(svn_wc_adm_access_t *adm_access,
+merge_file_changed(const char *local_dir_abspath,
                    svn_wc_notify_state_t *content_state,
                    svn_wc_notify_state_t *prop_state,
                    svn_boolean_t *tree_conflicted,
@@ -1251,7 +1258,8 @@ merge_file_changed(svn_wc_adm_access_t *adm_access,
                    const char *mimetype2,
                    const apr_array_header_t *prop_changes,
                    apr_hash_t *original_props,
-                   void *baton)
+                   void *baton,
+                   apr_pool_t *scratch_pool)
 {
   merge_cmd_baton_t *merge_b = baton;
   apr_pool_t *subpool = svn_pool_create(merge_b->pool);
@@ -1275,7 +1283,7 @@ merge_file_changed(svn_wc_adm_access_t *adm_access,
     *tree_conflicted = FALSE;
 
   /* Easy out:  no access baton means there ain't no merge target */
-  if (adm_access == NULL)
+  if (local_dir_abspath == NULL)
     {
       if (content_state)
         *content_state = svn_wc_notify_state_missing;
@@ -1293,7 +1301,8 @@ merge_file_changed(svn_wc_adm_access_t *adm_access,
   {
     svn_wc_notify_state_t obstr_state;
 
-    obstr_state = obstructed_or_missing(mine, adm_access, merge_b, subpool);
+    obstr_state = obstructed_or_missing(mine, local_dir_abspath, merge_b,
+                                        subpool);
     if (obstr_state != svn_wc_notify_state_inapplicable)
       {
         if (content_state)
@@ -1361,8 +1370,10 @@ merge_file_changed(svn_wc_adm_access_t *adm_access,
     {
       svn_boolean_t tree_conflicted2;
 
-      SVN_ERR(merge_props_changed(adm_access, prop_state, &tree_conflicted2,
-                                  mine, prop_changes, original_props, baton));
+      SVN_ERR(merge_props_changed(local_dir_abspath, prop_state,
+                                  &tree_conflicted2,
+                                  mine, prop_changes, original_props,
+                                  baton, scratch_pool));
 
       /* If the prop change caused a tree-conflict, just bail. */
       if (tree_conflicted2)
@@ -1475,7 +1486,7 @@ merge_file_changed(svn_wc_adm_access_t *adm_access,
 
 /* An svn_wc_diff_callbacks4_t function. */
 static svn_error_t *
-merge_file_added(svn_wc_adm_access_t *adm_access,
+merge_file_added(const char *local_dir_abspath,
                  svn_wc_notify_state_t *content_state,
                  svn_wc_notify_state_t *prop_state,
                  svn_boolean_t *tree_conflicted,
@@ -1490,7 +1501,8 @@ merge_file_added(svn_wc_adm_access_t *adm_access,
                  svn_revnum_t copyfrom_revision,
                  const apr_array_header_t *prop_changes,
                  apr_hash_t *original_props,
-                 void *baton)
+                 void *baton,
+                 apr_pool_t *scratch_pool)
 {
   merge_cmd_baton_t *merge_b = baton;
   apr_pool_t *subpool = svn_pool_create(merge_b->pool);
@@ -1543,7 +1555,7 @@ merge_file_added(svn_wc_adm_access_t *adm_access,
      then this portion of the tree-delta "patch" must be inapplicable.
      Send a 'missing' state back;  the repos-diff editor should then
      send a 'skip' notification. */
-  if (! adm_access)
+  if (! local_dir_abspath)
     {
       if (merge_b->dry_run && merge_b->added_path
           && svn_dirent_is_child(merge_b->added_path, mine, subpool))
@@ -1567,7 +1579,8 @@ merge_file_added(svn_wc_adm_access_t *adm_access,
   {
     svn_wc_notify_state_t obstr_state;
 
-    obstr_state = obstructed_or_missing(mine, adm_access, merge_b, subpool);
+    obstr_state = obstructed_or_missing(mine, local_dir_abspath, merge_b,
+                                        subpool);
     if (obstr_state != svn_wc_notify_state_inapplicable)
       {
         if (content_state)
@@ -1577,9 +1590,7 @@ merge_file_added(svn_wc_adm_access_t *adm_access,
       }
   }
 
-  SVN_ERR(svn_dirent_get_absolute(&parent_abspath,
-                                  svn_wc_adm_access_path(adm_access),
-                                  subpool));
+  parent_abspath = local_dir_abspath;
 
   SVN_ERR(svn_io_check_path(mine, &kind, subpool));
   switch (kind)
@@ -1781,7 +1792,7 @@ files_same_p(svn_boolean_t *same,
 
 /* An svn_wc_diff_callbacks4_t function. */
 static svn_error_t *
-merge_file_deleted(svn_wc_adm_access_t *adm_access,
+merge_file_deleted(const char *local_dir_abspath,
                    svn_wc_notify_state_t *state,
                    svn_boolean_t *tree_conflicted,
                    const char *mine,
@@ -1790,7 +1801,8 @@ merge_file_deleted(svn_wc_adm_access_t *adm_access,
                    const char *mimetype1,
                    const char *mimetype2,
                    apr_hash_t *original_props,
-                   void *baton)
+                   void *baton,
+                   apr_pool_t *scratch_pool)
 {
   merge_cmd_baton_t *merge_b = baton;
   apr_pool_t *subpool = svn_pool_create(merge_b->pool);
@@ -1806,7 +1818,7 @@ merge_file_deleted(svn_wc_adm_access_t *adm_access,
      then this portion of the tree-delta "patch" must be inapplicable.
      Send a 'missing' state back;  the repos-diff editor should then
      send a 'skip' notification. */
-  if (! adm_access)
+  if (! local_dir_abspath)
     {
       if (state)
         *state = svn_wc_notify_state_missing;
@@ -1818,7 +1830,8 @@ merge_file_deleted(svn_wc_adm_access_t *adm_access,
   {
     svn_wc_notify_state_t obstr_state;
 
-    obstr_state = obstructed_or_missing(mine, adm_access, merge_b, subpool);
+    obstr_state = obstructed_or_missing(mine, local_dir_abspath, merge_b,
+                                        subpool);
     if (obstr_state != svn_wc_notify_state_inapplicable)
       {
         if (state)
@@ -1845,7 +1858,7 @@ merge_file_deleted(svn_wc_adm_access_t *adm_access,
           {
             /* Passing NULL for the notify_func and notify_baton because
                repos_diff.c:delete_entry() will do it for us. */
-            SVN_ERR(svn_client__wc_delete(mine, adm_access, TRUE,
+            SVN_ERR(svn_client__wc_delete(mine, TRUE,
                                           merge_b->dry_run, FALSE, NULL, NULL,
                                           merge_b->ctx, subpool));
             if (state)
@@ -1909,14 +1922,15 @@ merge_file_deleted(svn_wc_adm_access_t *adm_access,
 
 /* An svn_wc_diff_callbacks4_t function. */
 static svn_error_t *
-merge_dir_added(svn_wc_adm_access_t *adm_access,
+merge_dir_added(const char *local_dir_abspath,
                 svn_wc_notify_state_t *state,
                 svn_boolean_t *tree_conflicted,
                 const char *path,
                 svn_revnum_t rev,
                 const char *copyfrom_path,
                 svn_revnum_t copyfrom_revision,
-                void *baton)
+                void *baton,
+               apr_pool_t *scratch_pool)
 {
   merge_cmd_baton_t *merge_b = baton;
   apr_pool_t *subpool = svn_pool_create(merge_b->pool);
@@ -1928,9 +1942,7 @@ merge_dir_added(svn_wc_adm_access_t *adm_access,
   const char *local_abspath;
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, subpool));
-  SVN_ERR(svn_dirent_get_absolute(&parent_abspath,
-                                  svn_wc_adm_access_path(adm_access),
-                                  subpool));
+  parent_abspath = local_dir_abspath;
 
   if (tree_conflicted)
     *tree_conflicted = FALSE;
@@ -1939,7 +1951,7 @@ merge_dir_added(svn_wc_adm_access_t *adm_access,
      then this portion of the tree-delta "patch" must be inapplicable.
      Send a 'missing' state back;  the repos-diff editor should then
      send a 'skip' notification. */
-  if (! adm_access)
+  if (! local_dir_abspath)
     {
       if (state)
         {
@@ -1973,7 +1985,8 @@ merge_dir_added(svn_wc_adm_access_t *adm_access,
     }
 
   /* Find the version-control state of this path */
-  SVN_ERR(svn_wc_entry(&entry, path, adm_access, TRUE, subpool));
+  SVN_ERR(svn_wc__maybe_get_entry(&entry, merge_b->ctx->wc_ctx, local_abspath,
+                                  svn_node_dir, TRUE, FALSE, subpool, subpool));
 
   SVN_ERR(svn_io_check_path(path, &kind, subpool));
 
@@ -1981,7 +1994,8 @@ merge_dir_added(svn_wc_adm_access_t *adm_access,
   {
     svn_wc_notify_state_t obstr_state;
 
-    obstr_state = obstructed_or_missing(path, adm_access, merge_b, subpool);
+    obstr_state = obstructed_or_missing(path, local_dir_abspath, merge_b,
+                                        subpool);
 
     /* In this case of adding a directory, we have an exception to the usual
      * "skip if it's inconsistent" rule. If the directory exists on disk
@@ -2102,17 +2116,17 @@ merge_dir_added(svn_wc_adm_access_t *adm_access,
 
 /* An svn_wc_diff_callbacks4_t function. */
 static svn_error_t *
-merge_dir_deleted(svn_wc_adm_access_t *adm_access,
+merge_dir_deleted(const char *local_dir_abspath,
                   svn_wc_notify_state_t *state,
                   svn_boolean_t *tree_conflicted,
                   const char *path,
-                  void *baton)
+                  void *baton,
+                  apr_pool_t *scratch_pool)
 {
   merge_cmd_baton_t *merge_b = baton;
   apr_pool_t *subpool = svn_pool_create(merge_b->pool);
   svn_node_kind_t kind;
   const svn_wc_entry_t *entry;
-  svn_wc_adm_access_t *parent_access;
   const char *parent_path;
   svn_error_t *err;
   const char *local_abspath;
@@ -2126,7 +2140,7 @@ merge_dir_deleted(svn_wc_adm_access_t *adm_access,
      then this portion of the tree-delta "patch" must be inapplicable.
      Send a 'missing' state back;  the repos-diff editor should then
      send a 'skip' notification. */
-  if (! adm_access)
+  if (! local_dir_abspath)
     {
       if (state)
         *state = svn_wc_notify_state_missing;
@@ -2139,13 +2153,16 @@ merge_dir_deleted(svn_wc_adm_access_t *adm_access,
     }
 
   /* Find the version-control state of this path */
-  SVN_ERR(svn_wc_entry(&entry, path, adm_access, TRUE, subpool));
+  SVN_ERR(svn_wc__maybe_get_entry(&entry, merge_b->ctx->wc_ctx, local_abspath,
+                                  svn_node_dir, TRUE, FALSE,
+                                  subpool, subpool));
 
   /* Check for an obstructed or missing node on disk. */
   {
     svn_wc_notify_state_t obstr_state;
 
-    obstr_state = obstructed_or_missing(path, adm_access, merge_b, subpool);
+    obstr_state = obstructed_or_missing(path, local_dir_abspath, merge_b,
+                                        subpool);
     if (obstr_state != svn_wc_notify_state_inapplicable)
       {
         if (state)
@@ -2171,11 +2188,9 @@ merge_dir_deleted(svn_wc_adm_access_t *adm_access,
              */
 
             svn_dirent_split(path, &parent_path, NULL, subpool);
-            SVN_ERR(svn_wc_adm_retrieve(&parent_access, adm_access, parent_path,
-                                        subpool));
             /* Passing NULL for the notify_func and notify_baton because
                repos_diff.c:delete_entry() will do it for us. */
-            err = svn_client__wc_delete(path, parent_access, merge_b->force,
+            err = svn_client__wc_delete(path, merge_b->force,
                                         merge_b->dry_run, FALSE,
                                         NULL, NULL,
                                         merge_b->ctx, subpool);
@@ -2240,16 +2255,17 @@ merge_dir_deleted(svn_wc_adm_access_t *adm_access,
 
 /* An svn_wc_diff_callbacks4_t function. */
 static svn_error_t *
-merge_dir_opened(svn_wc_adm_access_t *adm_access,
+merge_dir_opened(const char *local_dir_abspath,
                  svn_boolean_t *tree_conflicted,
                  const char *path,
                  svn_revnum_t rev,
-                 void *baton)
+                 void *baton,
+                 apr_pool_t *scratch_pool)
 {
   if (tree_conflicted)
     *tree_conflicted = FALSE;
 
-  if (adm_access == NULL)
+  if (local_dir_abspath == NULL)
     {
       /* Trying to open a directory at a non-existing path.
        * Although this is a tree-conflict, it will already have been
@@ -2272,7 +2288,8 @@ merge_dir_opened(svn_wc_adm_access_t *adm_access,
     SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, subpool));
 
     /* Find the version-control and on-disk states of this path */
-    SVN_ERR(svn_wc_entry(&entry, path, adm_access, TRUE, subpool));
+    SVN_ERR(svn_wc__maybe_get_entry(&entry, merge_b->ctx->wc_ctx, local_abspath,
+                                    svn_node_dir, TRUE, FALSE, subpool, subpool));
     SVN_ERR(svn_io_check_path(path, &kind, subpool));
 
     /* If we're trying to open a directory that's not a directory,
@@ -2295,12 +2312,13 @@ merge_dir_opened(svn_wc_adm_access_t *adm_access,
 
 /* An svn_wc_diff_callbacks4_t function. */
 static svn_error_t *
-merge_dir_closed(svn_wc_adm_access_t *adm_access,
+merge_dir_closed(const char *local_dir_abspath,
                  svn_wc_notify_state_t *contentstate,
                  svn_wc_notify_state_t *propstate,
                  svn_boolean_t *tree_conflicted,
                  const char *path,
-                 void *baton)
+                 void *baton,
+                 apr_pool_t *scratch_pool)
 {
   if (contentstate)
     *contentstate = svn_wc_notify_state_unknown;
@@ -6347,8 +6365,14 @@ do_file_merge(const char *url1,
              merge.  */
           if (! (merge_b->ignore_ancestry || sources_related))
             {
+              const char *adm_abspath;
+
+              SVN_ERR(svn_dirent_get_absolute(
+                                   &adm_abspath,
+                                   svn_wc_adm_access_path(adm_access),
+                                   pool));
               /* Delete... */
-              SVN_ERR(merge_file_deleted(adm_access,
+              SVN_ERR(merge_file_deleted(adm_abspath,
                                          &text_state,
                                          &tree_conflicted,
                                          target_wcpath,
@@ -6356,7 +6380,8 @@ do_file_merge(const char *url1,
                                          tmpfile2,
                                          mimetype1, mimetype2,
                                          props1,
-                                         merge_b));
+                                         merge_b,
+                                         pool));
               single_file_merge_notify(notify_b, target_wcpath,
                                        tree_conflicted
                                          ? svn_wc_notify_tree_conflict
@@ -6366,7 +6391,7 @@ do_file_merge(const char *url1,
                                        n, &header_sent, subpool);
 
               /* ...plus add... */
-              SVN_ERR(merge_file_added(adm_access,
+              SVN_ERR(merge_file_added(adm_abspath,
                                        &text_state, &prop_state,
                                        &tree_conflicted,
                                        target_wcpath,
@@ -6377,7 +6402,8 @@ do_file_merge(const char *url1,
                                        mimetype1, mimetype2,
                                        NULL, SVN_INVALID_REVNUM,
                                        propchanges, props1,
-                                       merge_b));
+                                       merge_b,
+                                       pool));
               single_file_merge_notify(notify_b, target_wcpath,
                                        tree_conflicted
                                          ? svn_wc_notify_tree_conflict
@@ -6388,7 +6414,11 @@ do_file_merge(const char *url1,
             }
           else
             {
-              SVN_ERR(merge_file_changed(adm_access,
+              const char *adm_dir = svn_wc_adm_access_path(adm_access);
+
+              SVN_ERR(svn_dirent_get_absolute(&adm_dir, adm_dir, pool));
+
+              SVN_ERR(merge_file_changed(adm_dir,
                                          &text_state, &prop_state,
                                          &tree_conflicted,
                                          target_wcpath,
@@ -6398,7 +6428,8 @@ do_file_merge(const char *url1,
                                          r->end,
                                          mimetype1, mimetype2,
                                          propchanges, props1,
-                                         merge_b));
+                                         merge_b,
+                                         pool));
               single_file_merge_notify(notify_b, target_wcpath,
                                        tree_conflicted
                                          ? svn_wc_notify_tree_conflict
