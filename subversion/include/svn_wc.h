@@ -2081,8 +2081,10 @@ typedef svn_error_t *(*svn_wc_conflict_resolver_func_t)(
  *
  * Common parameters:
  *
- * @a adm_access will be an access baton for the directory containing
- * @a path, or @c NULL if the diff editor is not using access batons.
+ * @a local_dir_abspath will be the absolute path to the local directory
+ * containing @a path, or @c NULL if the diff editor does not have a local
+ * path. Note that @a path is a relative path, not just the basename of the
+ * path.
  *
  * If @a state is non-NULL, set @a *state to the state of the item
  * after the operation has been performed.  (In practice, this is only
@@ -2119,7 +2121,7 @@ typedef struct svn_wc_diff_callbacks4_t
    * property name.
    *
    */
-  svn_error_t *(*file_changed)(svn_wc_adm_access_t *adm_access,
+  svn_error_t *(*file_changed)(const char *local_dir_abspath,
                                svn_wc_notify_state_t *contentstate,
                                svn_wc_notify_state_t *propstate,
                                svn_boolean_t *tree_conflicted,
@@ -2132,7 +2134,8 @@ typedef struct svn_wc_diff_callbacks4_t
                                const char *mimetype2,
                                const apr_array_header_t *propchanges,
                                apr_hash_t *originalprops,
-                               void *diff_baton);
+                               void *diff_baton,
+                               apr_pool_t *scratch_pool);
 
   /**
    * A file @a path was added.  The contents can be seen by comparing
@@ -2153,7 +2156,7 @@ typedef struct svn_wc_diff_callbacks4_t
    * copy), and the origin of the copy may be recorded as
    * @a copyfrom_path under @a copyfrom_revision.
    */
-  svn_error_t *(*file_added)(svn_wc_adm_access_t *adm_access,
+  svn_error_t *(*file_added)(const char *local_dir_abspath,
                              svn_wc_notify_state_t *contentstate,
                              svn_wc_notify_state_t *propstate,
                              svn_boolean_t *tree_conflicted,
@@ -2168,7 +2171,8 @@ typedef struct svn_wc_diff_callbacks4_t
                              svn_revnum_t copyfrom_revision,
                              const apr_array_header_t *propchanges,
                              apr_hash_t *originalprops,
-                             void *diff_baton);
+                             void *diff_baton,
+                             apr_pool_t *scratch_pool);
 
   /**
    * A file @a path was deleted.  The [loss of] contents can be seen by
@@ -2181,7 +2185,7 @@ typedef struct svn_wc_diff_callbacks4_t
    * be NULL.  The implementor can use this information to decide if
    * (or how) to generate differences.
    */
-  svn_error_t *(*file_deleted)(svn_wc_adm_access_t *adm_access,
+  svn_error_t *(*file_deleted)(const char *local_dir_abspath,
                                svn_wc_notify_state_t *state,
                                svn_boolean_t *tree_conflicted,
                                const char *path,
@@ -2190,7 +2194,8 @@ typedef struct svn_wc_diff_callbacks4_t
                                const char *mimetype1,
                                const char *mimetype2,
                                apr_hash_t *originalprops,
-                               void *diff_baton);
+                               void *diff_baton,
+                               apr_pool_t *scratch_pool);
 
   /**
    * A directory @a path was added.  @a rev is the revision that the
@@ -2200,23 +2205,25 @@ typedef struct svn_wc_diff_callbacks4_t
    * copy), and the origin of the copy may be recorded as
    * @a copyfrom_path under @a copyfrom_revision.
    */
-  svn_error_t *(*dir_added)(svn_wc_adm_access_t *adm_access,
+  svn_error_t *(*dir_added)(const char *local_dir_abspath,
                             svn_wc_notify_state_t *state,
                             svn_boolean_t *tree_conflicted,
                             const char *path,
                             svn_revnum_t rev,
                             const char *copyfrom_path,
                             svn_revnum_t copyfrom_revision,
-                            void *diff_baton);
+                            void *diff_baton,
+                            apr_pool_t *scratch_pool);
 
   /**
    * A directory @a path was deleted.
    */
-  svn_error_t *(*dir_deleted)(svn_wc_adm_access_t *adm_access,
+  svn_error_t *(*dir_deleted)(const char *local_dir_abspath,
                               svn_wc_notify_state_t *state,
                               svn_boolean_t *tree_conflicted,
                               const char *path,
-                              void *diff_baton);
+                              void *diff_baton,
+                              apr_pool_t *scratch_pool);
 
   /**
    * A list of property changes (@a propchanges) was applied to the
@@ -2228,13 +2235,14 @@ typedef struct svn_wc_diff_callbacks4_t
    * which is a hash of @c svn_string_t values, keyed on the property
    * name.
    */
-  svn_error_t *(*dir_props_changed)(svn_wc_adm_access_t *adm_access,
+  svn_error_t *(*dir_props_changed)(const char *local_dir_abspath,
                                     svn_wc_notify_state_t *propstate,
                                     svn_boolean_t *tree_conflicted,
                                     const char *path,
                                     const apr_array_header_t *propchanges,
                                     apr_hash_t *original_props,
-                                    void *diff_baton);
+                                    void *diff_baton,
+                                    apr_pool_t *scratch_pool);
 
   /**
    * A directory @a path has been opened.  @a rev is the revision that the
@@ -2243,21 +2251,23 @@ typedef struct svn_wc_diff_callbacks4_t
    * This function is called for @a path before any of the callbacks are
    * called for a child of @a path.
    */
-  svn_error_t *(*dir_opened)(svn_wc_adm_access_t *adm_access,
+  svn_error_t *(*dir_opened)(const char *local_dir_abspath,
                              svn_boolean_t *tree_conflicted,
                              const char *path,
                              svn_revnum_t rev,
-                             void *diff_baton);
+                             void *diff_baton,
+                             apr_pool_t *scratch_pool);
 
   /**
    * A directory @a path has been closed.
    */
-  svn_error_t *(*dir_closed)(svn_wc_adm_access_t *adm_access,
+  svn_error_t *(*dir_closed)(const char *local_dir_abspath,
                              svn_wc_notify_state_t *contentstate,
                              svn_wc_notify_state_t *propstate,
                              svn_boolean_t *tree_conflicted,
                              const char *path,
-                             void *diff_baton);
+                             void *diff_baton,
+                             apr_pool_t *scratch_pool);
 
 } svn_wc_diff_callbacks4_t;
 

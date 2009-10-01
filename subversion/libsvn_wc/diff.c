@@ -614,7 +614,8 @@ file_diff(struct dir_baton *dir_baton,
                base_mimetype,
                NULL,
                baseprops,
-               dir_baton->edit_baton->callback_baton));
+               dir_baton->edit_baton->callback_baton,
+               pool));
 
       /* Replace will fallthrough! */
       if (schedule == svn_wc_schedule_delete)
@@ -639,7 +640,8 @@ file_diff(struct dir_baton *dir_baton,
                working_mimetype,
                NULL, SVN_INVALID_REVNUM,
                propchanges, baseprops,
-               dir_baton->edit_baton->callback_baton));
+               dir_baton->edit_baton->callback_baton,
+               pool));
 
       break;
 
@@ -678,7 +680,8 @@ file_diff(struct dir_baton *dir_baton,
                    base_mimetype,
                    working_mimetype,
                    propchanges, baseprops,
-                   dir_baton->edit_baton->callback_baton));
+                   dir_baton->edit_baton->callback_baton,
+                   pool));
         }
     }
 
@@ -754,10 +757,12 @@ directory_elements_diff(struct dir_baton *dir_baton)
                                             dir_baton->pool, dir_baton->pool));
 
           SVN_ERR(dir_baton->edit_baton->callbacks->dir_props_changed
-                  (adm_access, NULL, NULL,
+                  (svn_wc__adm_access_abspath(adm_access),
+                   NULL, NULL,
                    dir_baton->path,
                    propchanges, baseprops,
-                   dir_baton->edit_baton->callback_baton));
+                   dir_baton->edit_baton->callback_baton,
+                   dir_baton->pool));
         }
     }
 
@@ -931,14 +936,16 @@ report_wc_file_as_added(struct dir_baton *dir_baton,
            pool, pool));
 
   SVN_ERR(eb->callbacks->file_added
-          (adm_access, NULL, NULL, NULL,
+          (svn_wc__adm_access_abspath(adm_access),
+           NULL, NULL, NULL,
            path,
            empty_file, translated_file,
            0, entry->revision,
            NULL, mimetype,
            NULL, SVN_INVALID_REVNUM,
            propchanges, emptyprops,
-           eb->callback_baton));
+           eb->callback_baton,
+           pool));
 
   return SVN_NO_ERROR;
 }
@@ -990,10 +997,11 @@ report_wc_directory_as_added(struct dir_baton *dir_baton,
 
       if (propchanges->nelts > 0)
         SVN_ERR(eb->callbacks->dir_props_changed
-                (adm_access, NULL, NULL,
+                (svn_wc__adm_access_abspath(adm_access), NULL, NULL,
                  dir_baton->path,
                  propchanges, emptyprops,
-                 eb->callback_baton));
+                 eb->callback_baton,
+                 pool));
     }
 
   /* Report the addition of the directory's contents. */
@@ -1165,7 +1173,8 @@ delete_entry(const char *path,
                    base_mimetype,
                    NULL,
                    baseprops,
-                   pb->edit_baton->callback_baton));
+                   pb->edit_baton->callback_baton,
+                   pool));
         }
       else
         {
@@ -1305,7 +1314,8 @@ close_directory(void *dir_baton,
                b->path,
                b->propchanges,
                originalprops,
-               b->edit_baton->callback_baton));
+               b->edit_baton->callback_baton,
+               pool));
 
       /* Mark the properties of this directory as having already been
          compared so that we know not to show any local modifications
@@ -1528,7 +1538,8 @@ close_file(void *file_baton,
                  NULL, SVN_INVALID_REVNUM,
                  b->propchanges,
                  apr_hash_make(pool),
-                 b->edit_baton->callback_baton);
+                 b->edit_baton->callback_baton,
+                 pool);
       else
         return b->edit_baton->callbacks->file_deleted
                 (NULL, NULL, NULL, b->path,
@@ -1537,7 +1548,8 @@ close_file(void *file_baton,
                  repos_mimetype,
                  NULL,
                  repos_props,
-                 b->edit_baton->callback_baton);
+                 b->edit_baton->callback_baton,
+                 pool);
     }
 
   /* If we didn't see any content changes between the BASE and repository
@@ -1598,7 +1610,8 @@ close_file(void *file_baton,
                eb->reverse_order ? original_mimetype : repos_mimetype,
                eb->reverse_order ? repos_mimetype : original_mimetype,
                b->propchanges, originalprops,
-               b->edit_baton->callback_baton));
+               b->edit_baton->callback_baton,
+               pool));
     }
 
   return SVN_NO_ERROR;
