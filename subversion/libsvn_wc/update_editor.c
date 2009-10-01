@@ -298,9 +298,9 @@ struct dir_baton
   svn_boolean_t already_notified;
 
   /* Set on a node and its descendants when a node gets tree conflicted
-     and descendants should be updated (not skipped), but these nodes should
-     all be marked as deleted*/
-  svn_boolean_t accept_deleted;
+     and descendants should still be updated (not skipped).
+     These nodes should all be marked as deleted. */
+  svn_boolean_t inside_deleted_subtree;
 
   /* Set iff this is a new directory that is not yet versioned and not
      yet in the parent's list of entries */
@@ -513,7 +513,7 @@ make_dir_baton(struct dir_baton **d_p,
       d->path = svn_dirent_join(eb->anchor, path, pool);
       d->name = svn_dirent_basename(path, pool);
       d->local_abspath = svn_dirent_join(pb->local_abspath, d->name, pool);
-      d->accept_deleted = pb->accept_deleted;
+      d->inside_deleted_subtree = pb->inside_deleted_subtree;
     }
   else
     {
@@ -601,7 +601,7 @@ do_entry_deletion(int *log_number,
                   struct edit_baton *eb,
                   const char *local_abspath,
                   const char *their_url,
-                  svn_boolean_t accept_deleted,
+                  svn_boolean_t inside_deleted_subtree,
                   apr_pool_t *pool);
 
 static svn_error_t *
@@ -1504,7 +1504,7 @@ check_tree_conflict(svn_wc_conflict_description2_t **pconflict,
                     svn_wc_conflict_action_t action,
                     svn_node_kind_t their_node_kind,
                     const char *their_url,
-                    svn_boolean_t accept_deleted,
+                    svn_boolean_t inside_deleted_subtree,
                     apr_pool_t *pool)
 {
   svn_wc_conflict_reason_t reason = (svn_wc_conflict_reason_t)(-1);
@@ -1539,7 +1539,7 @@ check_tree_conflict(svn_wc_conflict_description2_t **pconflict,
          to record a conflict within the conflict. */
       if ((entry->schedule == svn_wc_schedule_delete
            || entry->schedule == svn_wc_schedule_replace)
-          && !accept_deleted)
+          && !inside_deleted_subtree)
         reason = entry->schedule == svn_wc_schedule_delete
                                     ? svn_wc_conflict_reason_deleted
                                     : svn_wc_conflict_reason_replaced;
@@ -1566,7 +1566,7 @@ check_tree_conflict(svn_wc_conflict_description2_t **pconflict,
              tree deletion then we will already have recorded a tree
              conflict on the locally deleted parent tree.  No need
              to record a conflict within the conflict. */
-          if (!accept_deleted)
+          if (!inside_deleted_subtree)
             reason = entry->schedule == svn_wc_schedule_delete
                                         ? svn_wc_conflict_reason_deleted
                                         : svn_wc_conflict_reason_replaced;
@@ -2025,7 +2025,7 @@ do_entry_deletion(int *log_number,
                   struct edit_baton *eb,
                   const char *local_abspath,
                   const char *their_url,
-                  svn_boolean_t accept_deleted,
+                  svn_boolean_t inside_deleted_subtree,
                   apr_pool_t *pool)
 {
   svn_error_t *err;
@@ -2092,7 +2092,7 @@ do_entry_deletion(int *log_number,
    */
   SVN_ERR(check_tree_conflict(&tree_conflict, eb, local_abspath, log_item,
                               svn_wc_conflict_action_delete, svn_node_none,
-                              their_url, accept_deleted, pool));
+                              their_url, inside_deleted_subtree, pool));
   if (tree_conflict != NULL)
     {
       /* When we raise a tree conflict on a directory, we want to avoid
@@ -2278,7 +2278,7 @@ delete_entry(const char *path,
   their_url = svn_path_url_add_component2(pb->new_URL, basename, pool);
 
   return do_entry_deletion(&pb->log_number, pb->edit_baton, local_abspath,
-                           their_url, pb->accept_deleted, pool);
+                           their_url, pb->inside_deleted_subtree, pool);
 }
 
 
@@ -2501,7 +2501,7 @@ add_directory(const char *path,
                                           db->local_abspath, pb->log_accum,
                                           svn_wc_conflict_action_add,
                                           svn_node_dir, db->new_URL,
-                                          db->accept_deleted,
+                                          db->inside_deleted_subtree,
                                           pool));
 
               if (tree_conflict != NULL)
@@ -2637,7 +2637,7 @@ add_directory(const char *path,
      prep_directory() otherwise the administrative area for DB->PATH
      is not present, nor is there an entry for DB->PATH in DB->PATH's
      entries. */
-  if (pb->accept_deleted)
+  if (pb->inside_deleted_subtree)
     {
       svn_wc_entry_t tmp_entry;
       apr_uint64_t modify_flags = SVN_WC__ENTRY_MODIFY_SCHEDULE;
@@ -2665,7 +2665,7 @@ add_directory(const char *path,
       svn_wc_notify_t *notify;
       svn_wc_notify_action_t action;
 
-      if (db->accept_deleted)
+      if (db->inside_deleted_subtree)
         action = svn_wc_notify_update_add_deleted;
       else if (db->existed)
         action = svn_wc_notify_exists;
@@ -2757,7 +2757,7 @@ open_directory(const char *path,
                               pb->log_accum,
                               svn_wc_conflict_action_edit,
                               svn_node_dir, db->new_URL, 
-                              db->accept_deleted, pool));
+                              db->inside_deleted_subtree, pool));
 
   /* Remember the roots of any locally deleted trees. */
   if (tree_conflict != NULL)
@@ -2787,7 +2787,7 @@ open_directory(const char *path,
           return SVN_NO_ERROR;
         }
       else
-        db->accept_deleted = TRUE;
+        db->inside_deleted_subtree = TRUE;
     }
 
   /* Mark directory as being at target_revision and URL, but incomplete. */
@@ -3053,7 +3053,7 @@ close_directory(void *dir_baton,
       svn_wc_notify_t *notify;
       svn_wc_notify_action_t action;
 
-      if (db->accept_deleted)
+      if (db->inside_deleted_subtree)
         action = svn_wc_notify_update_update_deleted;
       else if (db->existed || db->add_existed)
         action = svn_wc_notify_exists;
@@ -3568,7 +3568,7 @@ add_file(const char *path,
 
   SVN_ERR(check_path_under_root(pb->local_abspath, fb->name, pool));
 
-  fb->deleted = pb->accept_deleted;
+  fb->deleted = pb->inside_deleted_subtree;
 
   /* The file_pool can stick around for a *long* time, so we want to
      use a subpool for any temporary allocations. */
@@ -3705,7 +3705,7 @@ add_file(const char *path,
                                       pb->log_accum,
                                       svn_wc_conflict_action_add,
                                       svn_node_file, fb->new_URL,
-                                      pb->accept_deleted, subpool));
+                                      pb->inside_deleted_subtree, subpool));
 
           if (tree_conflict != NULL)
             {
@@ -3809,14 +3809,14 @@ open_file(const char *path,
       return SVN_NO_ERROR;
     }
 
-  fb->deleted = pb->accept_deleted;
+  fb->deleted = pb->inside_deleted_subtree;
 
   /* Is this path the victim of a newly-discovered tree conflict? */
   SVN_ERR(check_tree_conflict(&tree_conflict, eb, fb->local_abspath,
                               pb->log_accum,
                               svn_wc_conflict_action_edit,
                               svn_node_file, fb->new_URL, 
-                              pb->accept_deleted, pool));
+                              pb->inside_deleted_subtree, pool));
 
   if (tree_conflict)
     {
