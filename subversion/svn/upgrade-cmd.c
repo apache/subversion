@@ -1,5 +1,5 @@
 /*
- * unlcok-cmd.c -- Upgrade a working copy.
+ * upgrade-cmd.c -- Upgrade a working copy.
  *
  * ====================================================================
  *    Licensed to the Subversion Corporation (SVN Corp.) under one
