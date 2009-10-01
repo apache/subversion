@@ -4046,14 +4046,16 @@ def tree_conflicts_on_update_1_1(sbox):
 
   expected_output = deep_trees_conflict_output.copy()
   expected_output.add({
-      'DDF/D1/D2/gamma'   : Item(status='UU'),
-      'DD/D1/D2'          : Item(status=' U'),
-      'DD/D1/D2/epsilon'  : Item(status='A '),
-      'DDD/D1/D2/D3'      : Item(status=' U'),
-      'DDD/D1/D2/D3/zeta' : Item(status='A '),
-      'D/D1/delta'        : Item(status='A '),
-      'DF/D1/beta'        : Item(status='UU'),
-    })
+    'DDF/D1/D2'         : Item(status='D '),
+    'DDF/D1/D2/gamma'   : Item(status='D '),
+    'DD/D1/D2'          : Item(status='D '),
+    'DD/D1/D2/epsilon'  : Item(status='D '),
+    'DDD/D1/D2'         : Item(status='D '),
+    'DDD/D1/D2/D3'      : Item(status='D '),
+    'DDD/D1/D2/D3/zeta' : Item(status='D '),
+    'D/D1/delta'        : Item(status='D '),
+    'DF/D1/beta'        : Item(status='D '),
+  })
 
   expected_disk = disk_empty_dirs.copy()
 
@@ -4084,7 +4086,15 @@ def tree_conflicts_on_update_1_2(sbox):
 
   # 1.2) local tree delete, incoming leaf delete
 
-  expected_output = deep_trees_conflict_output
+  expected_output = deep_trees_conflict_output.copy()
+  expected_output.add({
+    'DDD/D1/D2'         : Item(status='D '),
+    'DDD/D1/D2/D3'      : Item(status='D '),
+    'DF/D1/beta'        : Item(status='D '),
+    'DD/D1/D2'          : Item(status='D '),
+    'DDF/D1/D2'         : Item(status='D '),
+    'DDF/D1/D2/gamma'   : Item(status='D '),
+  })
 
   expected_disk = disk_empty_dirs.copy()
 
