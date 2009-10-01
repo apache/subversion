@@ -280,6 +280,31 @@ get_versioned_subdirs(apr_array_header_t **children,
 }
 
 
+/* Create a physical lock file in the admin directory for ABSPATH.  */
+static svn_error_t *
+create_physical_lock(const char *abspath, apr_pool_t *scratch_pool)
+{
+  const char *lock_abspath =
+        svn_dirent_join_many(scratch_pool, abspath, ".svn", "lock", NULL);
+  svn_error_t *err;
+  apr_file_t *file;
+
+  err = svn_io_file_open(&file, lock_abspath,
+                         APR_WRITE | APR_CREATE | APR_EXCL,
+                         APR_OS_DEFAULT,
+                         scratch_pool);
+
+  if (err && APR_STATUS_IS_EEXIST(err->apr_err))
+    {
+      /* Congratulations, we just stole a physical lock from somebody */
+      svn_error_clear(err);
+      return SVN_NO_ERROR;
+    }
+
+  return svn_error_return(err);
+}
+
+
 /* Upgrade the working copy directory represented by DB/DIR_ABSPATH
    from OLD_FORMAT to the wc-ng format (SVN_WC__WC_NG_VERSION)'.
 
@@ -291,7 +316,6 @@ upgrade_to_wcng(svn_wc__db_t *db,
                 apr_pool_t *scratch_pool)
 {
   svn_boolean_t present;
-  svn_wc_adm_access_t *adm_access;
   apr_hash_t *entries;
   const svn_wc_entry_t *this_dir;
   svn_sqlite__db_t *sdb;
@@ -306,8 +330,7 @@ upgrade_to_wcng(svn_wc__db_t *db,
   /* Lock this working copy directory, or steal an existing lock. Do this
      BEFORE we read the entries. We don't want another process to modify the
      entries after we've read them into memory.  */
-  SVN_ERR(svn_wc__adm_steal_write_lock(&adm_access, db, dir_abspath,
-                                       scratch_pool, scratch_pool));
+  SVN_ERR(create_physical_lock(dir_abspath, scratch_pool));
 
   /* What's going on here?
    *
@@ -336,6 +359,18 @@ upgrade_to_wcng(svn_wc__db_t *db,
   SVN_ERR(svn_wc__db_upgrade_begin(&sdb, dir_abspath,
                                    this_dir->repos, this_dir->uuid,
                                    scratch_pool, scratch_pool));
+  {
+    /* Unfortunately, we can't call the svn_wc__db_wclock_set() API just yet,
+       since the sdb isn't yet the right format.  So we've got to do the lock
+       insertion manually. */
+    svn_sqlite__stmt_t *stmt;
+
+    SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_INSERT_WC_LOCK));
+    /* ### These values are magic, and will need to be updated when we
+       ### go to a centralized system. */
+    SVN_ERR(svn_sqlite__bindf(stmt, "is", 1, ""));
+    SVN_ERR(svn_sqlite__step_done(stmt));
+  }
 
   /* Migrate the entries over to the new database.
      ### We need to think about atomicity here.
@@ -413,7 +448,13 @@ upgrade_to_wcng(svn_wc__db_t *db,
   /* All subdir access batons (and locks!) will be closed. Of course, they
      should have been closed/unlocked just after their own upgrade process
      has run.  */
-  SVN_ERR(svn_wc_adm_close2(adm_access, scratch_pool));
+  /* ### well, actually.... we don't recursively delete subdir locks here,
+     ### we rely upon their own upgrade processes to do it. */
+  SVN_ERR(svn_wc__db_wclock_remove(db, dir_abspath, scratch_pool));
+  SVN_ERR(svn_io_remove_file2(svn_dirent_join_many(scratch_pool, dir_abspath,
+                                                   ".svn", "lock", NULL),
+                              FALSE,
+                              scratch_pool));
 
   /* ### need to (eventually) delete the .svn subdir.  */
 
@@ -660,40 +701,67 @@ migrate_tree_conflicts(svn_sqlite__db_t *sdb,
 }
 
 
-struct bump14_baton {
+static svn_error_t *
+migrate_locks(const char *wcroot_abspath,
+              svn_sqlite__db_t *sdb,
+              apr_pool_t *scratch_pool)
+{
+  const char *lockfile_abspath =
+        svn_dirent_join_many(scratch_pool, wcroot_abspath, ".svn", "lock",
+                             NULL);
+  svn_node_kind_t kind;
+
+  SVN_ERR(svn_io_check_path(lockfile_abspath, &kind, scratch_pool));
+  if (kind != svn_node_none)
+    {
+      svn_sqlite__stmt_t *stmt;
+      SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_INSERT_WC_LOCK));
+      /* ### These values are magic, and will need to be updated when we
+         ### go to a centralized system. */
+      SVN_ERR(svn_sqlite__bindf(stmt, "is", 1, ""));
+      SVN_ERR(svn_sqlite__step_done(stmt));
+
+      SVN_ERR(svn_io_remove_file2(lockfile_abspath, FALSE, scratch_pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+struct bump15_baton {
   apr_pool_t *scratch_pool;
 };
 
 
 /* This implements svn_sqlite__transaction_callback_t */
 static svn_error_t *
-bump_database_to_14(void *baton,
+bump_database_to_15(void *baton,
                     svn_sqlite__db_t *sdb)
 {
-  struct bump14_baton *bb = baton;
+  struct bump15_baton *bb = baton;
 
   SVN_ERR(migrate_tree_conflicts(sdb, bb->scratch_pool));
 
   /* NOTE: this *is* transactional, so the version will not be bumped
      unless our overall transaction is committed.  */
-  SVN_ERR(svn_sqlite__set_schema_version(sdb, 14, bb->scratch_pool));
+  SVN_ERR(svn_sqlite__set_schema_version(sdb, 15, bb->scratch_pool));
 
   return SVN_NO_ERROR;
 }
 
 
 static svn_error_t *
-bump_to_14(const char *wcroot_abspath,
+bump_to_15(const char *wcroot_abspath,
            svn_sqlite__db_t *sdb,
            apr_pool_t *scratch_pool)
 {
-  struct bump14_baton bb = { scratch_pool };
+  struct bump15_baton bb = { scratch_pool };
 
   /* ### migrate disk bits here.  */
 
   /* Perform the database upgrade. The last thing this does is to bump
-     the recorded version to 14.  */
-  SVN_ERR(svn_sqlite__with_transaction(sdb, bump_database_to_14, &bb));
+     the recorded version to 15.  */
+  SVN_ERR(svn_sqlite__with_transaction(sdb, bump_database_to_15, &bb));
 
   return SVN_NO_ERROR;
 }
@@ -720,10 +788,17 @@ svn_wc__upgrade_sdb(int *result_format,
       ++start_format;
     }
 
-#if 0
   if (start_format == 13)
     {
-      SVN_ERR(bump_to_14(wcroot_abspath, sdb, scratch_pool));
+      SVN_ERR(migrate_locks(wcroot_abspath, sdb, scratch_pool));
+      SVN_ERR(svn_sqlite__set_schema_version(sdb, 14, scratch_pool));
+      ++start_format;
+    }
+
+#if 0
+  if (start_format == 14)
+    {
+      SVN_ERR(bump_to_15(wcroot_abspath, sdb, scratch_pool));
       ++start_format;
     }
 #endif

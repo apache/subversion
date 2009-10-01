@@ -161,34 +161,6 @@ svn_wc_check_wc2(int *wc_format,
 }
 
 
-/* Create a physical lock file in the admin directory for ADM_ACCESS.  */
-static svn_error_t *
-create_lock(const char *path, apr_pool_t *scratch_pool)
-{
-  const char *lock_path = svn_wc__adm_child(path, SVN_WC__ADM_LOCK,
-                                            scratch_pool);
-  svn_error_t *err;
-  apr_file_t *file;
-
-  err = svn_io_file_open(&file, lock_path,
-                         APR_WRITE | APR_CREATE | APR_EXCL,
-                         APR_OS_DEFAULT,
-                         scratch_pool);
-  if (err == NULL)
-    return svn_io_file_close(file, scratch_pool);
-
-  if (APR_STATUS_IS_EEXIST(err->apr_err))
-    {
-      svn_error_clear(err);
-      return svn_error_createf(SVN_ERR_WC_LOCKED, NULL,
-                               _("Working copy '%s' locked"),
-                               svn_dirent_local_style(path, scratch_pool));
-    }
-
-  return err;
-}
-
-
 /* An APR pool cleanup handler.  This handles access batons that have not
    been closed when their pool gets destroyed.  The physical locks
    associated with such batons remain in the working copy if they are
@@ -259,7 +231,7 @@ adm_access_alloc(svn_wc_adm_access_t **adm_access,
 
   if (type == svn_wc__adm_access_write_lock)
     {
-      err = create_lock(path, scratch_pool);
+      err = svn_wc__db_wclock_set(db, lock->abspath, scratch_pool);
 
       if (err)
         {
@@ -277,8 +249,7 @@ adm_access_alloc(svn_wc_adm_access_t **adm_access,
   if (err)
     return svn_error_compose_create(
                 err,
-                svn_wc__remove_adm_file(lock->abspath, SVN_WC__ADM_LOCK,
-                                        scratch_pool));
+                svn_wc__db_lock_remove(db, lock->abspath, scratch_pool));
 
   /* ### does this utf8 thing really/still apply??  */
   /* It's important that the cleanup handler is registered *after* at least
@@ -481,9 +452,9 @@ close_single(svn_wc_adm_access_t *adm_access,
              from the working copy.  It is an error for the lock to
              have disappeared if the administrative area still exists. */
 
-          svn_error_t *err = svn_wc__remove_adm_file(adm_access->path,
-                                                     SVN_WC__ADM_LOCK,
-                                                     scratch_pool);
+          svn_error_t *err = svn_wc__db_wclock_remove(adm_access->db,
+                                                      adm_access->abspath,
+                                                      scratch_pool);
           if (err)
             {
               if (svn_wc__adm_area_exists(adm_access, scratch_pool))
@@ -1404,7 +1375,8 @@ svn_wc__adm_write_check(const svn_wc_adm_access_t *adm_access,
              check. */
           svn_boolean_t locked;
 
-          SVN_ERR(svn_wc_locked(&locked, adm_access->path, scratch_pool));
+          SVN_ERR(svn_wc__db_wclocked(&locked, adm_access->db,
+                                      adm_access->abspath, scratch_pool));
           if (! locked)
             return svn_error_createf(SVN_ERR_WC_NOT_LOCKED, NULL,
                                      _("Write-lock stolen in '%s'"),
@@ -1426,20 +1398,14 @@ svn_wc__adm_write_check(const svn_wc_adm_access_t *adm_access,
 svn_error_t *
 svn_wc_locked(svn_boolean_t *locked, const char *path, apr_pool_t *pool)
 {
-  svn_node_kind_t kind;
-  const char *lockfile = svn_wc__adm_child(path, SVN_WC__ADM_LOCK, pool);
+  const char *local_abspath;
+  svn_wc_context_t *wc_ctx;
 
-  SVN_ERR(svn_io_check_path(lockfile, &kind, pool));
-  if (kind == svn_node_file)
-    *locked = TRUE;
-  else if (kind == svn_node_none)
-    *locked = FALSE;
-  else
-    return svn_error_createf(SVN_ERR_WC_LOCKED, NULL,
-                             _("Lock file '%s' is not a regular file"),
-                             svn_dirent_local_style(lockfile, pool));
-
-  return SVN_NO_ERROR;
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+  SVN_ERR(svn_wc_context_create(&wc_ctx, NULL, pool, pool));
+  SVN_ERR(svn_wc__db_wclocked(locked, wc_ctx->db, local_abspath, pool));
+  
+  return svn_error_return(svn_wc_context_destroy(wc_ctx));
 }
 
 

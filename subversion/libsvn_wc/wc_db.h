@@ -1715,6 +1715,24 @@ svn_wc__db_wq_completed(svn_wc__db_t *db,
 
 /** @} */
 
+
+svn_error_t *
+svn_wc__db_wclock_set(svn_wc__db_t *db,
+                      const char *local_abspath,
+                      apr_pool_t *scratch_pool);
+
+svn_error_t *
+svn_wc__db_wclocked(svn_boolean_t *locked,
+                    svn_wc__db_t *db,
+                    const char *local_abspath,
+                    apr_pool_t *scratch_pool);
+
+svn_error_t *
+svn_wc__db_wclock_remove(svn_wc__db_t *db,
+                         const char *local_abspath,
+                         apr_pool_t *scratch_pool);
+
+
 /**
  * @defgroup svn_wc__db_temp Various temporary functions during transition
  *

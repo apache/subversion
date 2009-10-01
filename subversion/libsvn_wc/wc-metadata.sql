@@ -397,11 +397,20 @@ CREATE TABLE WORK_QUEUE (
    erase anything there.  */
 UPDATE BASE_NODE SET incomplete_children=null, dav_cache=null;
 
-
 /* ------------------------------------------------------------------------- */
 
-/* Format 14 introduces new handling for conflict information.  */
+/* Format 14 introduces a table for storing wc locks, and additional columns
+   for storing conflict data in ACTUAL. */
 -- format: 14
+
+/* The existence of a row in this table implies a write lock. */
+CREATE TABLE WC_LOCK (
+  /* specifies the location of this node in the local filesystem */
+  wc_id  INTEGER NOT NULL,
+  local_dir_relpath  TEXT NOT NULL,
+ 
+  PRIMARY KEY (wc_id, local_dir_relpath)
+ );
 
 /* A skel containing the conflict details. */
 ALTER TABLE ACTUAL_NODE
@@ -417,6 +426,12 @@ ADD COLUMN left_checksum  TEXT;
 
 ALTER TABLE ACTUAL_NODE
 ADD COLUMN right_checksum  TEXT;
+
+/* ------------------------------------------------------------------------- */
+
+/* Format 15 introduces new handling for conflict information.  */
+-- format: 15
+
 
 
 /* ------------------------------------------------------------------------- */
