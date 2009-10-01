@@ -407,6 +407,17 @@ UPDATE BASE_NODE SET incomplete_children=null, dav_cache=null;
 ALTER TABLE ACTUAL_NODE
 ADD COLUMN conflict_data  BLOB;
 
+/* Three columns containing the checksums of older, left and right conflict
+   texts.  Stored in a column to allow storing them in the pristine store */
+ALTER TABLE ACTUAL_NODE
+ADD COLUMN older_checksum  TEXT;
+
+ALTER TABLE ACTUAL_NODE
+ADD COLUMN left_checksum  TEXT;
+
+ALTER TABLE ACTUAL_NODE
+ADD COLUMN right_checksum  TEXT;
+
 
 /* ------------------------------------------------------------------------- */
 
