@@ -1314,16 +1314,9 @@ do_close(svn_wc_adm_access_t *adm_access,
            hi;
            hi = apr_hash_next(hi))
         {
-          const void *key;
-          void *val;
-          const char *path;
-          const char *abspath;
-          svn_wc_adm_access_t *child;
-
-          apr_hash_this(hi, &key, NULL, &val);
-          abspath = key;
-          child = val;
-          path = child->path;
+          const char *abspath = svn_apr_hash_index_key(hi);
+          svn_wc_adm_access_t *child = svn_apr_hash_index_val(hi);
+          const char *path = child->path;
 
           if (IS_MISSING(child))
             {
