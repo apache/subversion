@@ -54,23 +54,11 @@ struct svn_wc_adm_access_t
   /* And the absolute form of the path.  */
   const char *abspath;
 
-  enum svn_wc__adm_access_type {
-
-    /* SVN_WC__ADM_ACCESS_UNLOCKED indicates no lock is held allowing
-       read-only access */
-    svn_wc__adm_access_unlocked,
-
-    /* SVN_WC__ADM_ACCESS_WRITE_LOCK indicates that a write lock is held
-       allowing read-write access */
-    svn_wc__adm_access_write_lock,
-
-  } type;
-
   /* Indicates that the baton has been closed. */
   svn_boolean_t closed;
 
-  /* LOCK_EXISTS is set TRUE when the write lock exists */
-  svn_boolean_t lock_exists;
+  /* TRUE if we own the write lock on this directory. */
+  svn_boolean_t locked;
 
   /* Handle to the administrative database. */
   svn_wc__db_t *db;
@@ -205,10 +193,10 @@ pool_cleanup_child(void *p)
    is already locked */
 static svn_error_t *
 adm_access_alloc(svn_wc_adm_access_t **adm_access,
-                 enum svn_wc__adm_access_type type,
                  const char *path,
                  svn_wc__db_t *db,
                  svn_boolean_t db_provided,
+                 svn_boolean_t write_lock,
                  svn_boolean_t steal_lock,
                  apr_pool_t *result_pool,
                  apr_pool_t *scratch_pool)
@@ -216,12 +204,11 @@ adm_access_alloc(svn_wc_adm_access_t **adm_access,
   svn_error_t *err;
   svn_wc_adm_access_t *lock = apr_palloc(result_pool, sizeof(*lock));
 
-  lock->type = type;
   lock->closed = FALSE;
   lock->entries_all = NULL;
   lock->db = db;
   lock->db_provided = db_provided;
-  lock->lock_exists = FALSE;
+  lock->locked = FALSE;
   lock->path = apr_pstrdup(result_pool, path);
   lock->pool = result_pool;
 
@@ -229,7 +216,7 @@ adm_access_alloc(svn_wc_adm_access_t **adm_access,
 
   *adm_access = lock;
 
-  if (type == svn_wc__adm_access_write_lock)
+  if (write_lock)
     {
       err = svn_wc__db_wclock_set(db, lock->abspath, scratch_pool);
 
@@ -241,7 +228,7 @@ adm_access_alloc(svn_wc_adm_access_t **adm_access,
           svn_error_clear(err);
         }
 
-      lock->lock_exists = TRUE;
+      lock->locked = TRUE;
     }
 
   err = add_to_shared(lock, scratch_pool);
@@ -368,8 +355,8 @@ svn_wc__adm_steal_write_lock(svn_wc_adm_access_t **adm_access,
                              apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool)
 {
-  SVN_ERR(adm_access_alloc(adm_access, svn_wc__adm_access_write_lock, path,
-                           db, TRUE, TRUE, result_pool, scratch_pool));
+  SVN_ERR(adm_access_alloc(adm_access, path, db, TRUE, TRUE, TRUE,
+                           result_pool, scratch_pool));
   
   /* We used to attempt to upgrade the working copy here, but now we let
      it slide.  Our sole caller is svn_wc_cleanup3(), which will itself
@@ -419,12 +406,8 @@ open_single(svn_wc_adm_access_t **adm_access,
     }
 
   /* Need to create a new lock */
-  SVN_ERR(adm_access_alloc(&lock,
-                           write_lock
-                             ? svn_wc__adm_access_write_lock
-                             : svn_wc__adm_access_unlocked,
-                           path, db, db_provided, FALSE, result_pool,
-                           scratch_pool));
+  SVN_ERR(adm_access_alloc(&lock, path, db, db_provided, write_lock, FALSE,
+                           result_pool, scratch_pool));
 
   /* ### recurse was here */
   *adm_access = lock;
@@ -442,9 +425,9 @@ close_single(svn_wc_adm_access_t *adm_access,
     return SVN_NO_ERROR;
 
   /* Physically unlock if required */
-  if (adm_access->type == svn_wc__adm_access_write_lock)
+  if (adm_access->locked)
     {
-      if (adm_access->lock_exists && !preserve_lock)
+      if (!preserve_lock)
         {
           /* Remove the physical lock in the admin directory for
              PATH. It is acceptable for the administrative area to
@@ -462,7 +445,7 @@ close_single(svn_wc_adm_access_t *adm_access,
               svn_error_clear(err);
             }
 
-          adm_access->lock_exists = FALSE;
+          adm_access->locked = FALSE;
         }
     }
 
@@ -1347,35 +1330,32 @@ svn_wc_adm_close2(svn_wc_adm_access_t *adm_access, apr_pool_t *scratch_pool)
 svn_boolean_t
 svn_wc_adm_locked(const svn_wc_adm_access_t *adm_access)
 {
-  return adm_access->type == svn_wc__adm_access_write_lock;
+  return adm_access->locked;
 }
 
 svn_error_t *
 svn_wc__adm_write_check(const svn_wc_adm_access_t *adm_access,
                         apr_pool_t *scratch_pool)
 {
-  if (adm_access->type == svn_wc__adm_access_write_lock)
+  if (adm_access->locked)
     {
-      if (adm_access->lock_exists)
-        {
-          /* Check physical lock still exists and hasn't been stolen.  This
-             really is paranoia, I have only ever seen one report of this
-             triggering (from someone using the 0.25 release) and that was
-             never reproduced.  The check accesses the physical filesystem
-             so it is expensive, but it only runs when we are going to
-             modify the admin area.  If it ever proves to be a bottleneck
-             the physical check could be removed, just leaving the logical
-             check. */
-          svn_boolean_t locked;
+      /* Check physical lock still exists and hasn't been stolen.  This
+         really is paranoia, I have only ever seen one report of this
+         triggering (from someone using the 0.25 release) and that was
+         never reproduced.  The check accesses the physical filesystem
+         so it is expensive, but it only runs when we are going to
+         modify the admin area.  If it ever proves to be a bottleneck
+         the physical check could be removed, just leaving the logical
+         check. */
+      svn_boolean_t locked;
 
-          SVN_ERR(svn_wc__db_wclocked(&locked, adm_access->db,
-                                      adm_access->abspath, scratch_pool));
-          if (! locked)
-            return svn_error_createf(SVN_ERR_WC_NOT_LOCKED, NULL,
-                                     _("Write-lock stolen in '%s'"),
-                                     svn_dirent_local_style(adm_access->path,
-                                                            scratch_pool));
-        }
+      SVN_ERR(svn_wc__db_wclocked(&locked, adm_access->db,
+                                  adm_access->abspath, scratch_pool));
+      if (! locked)
+        return svn_error_createf(SVN_ERR_WC_NOT_LOCKED, NULL,
+                                 _("Write-lock stolen in '%s'"),
+                                 svn_dirent_local_style(adm_access->path,
+                                                        scratch_pool));
     }
   else
     {
@@ -1490,10 +1470,8 @@ extend_lock_found_entry(const char *path,
       strcmp(entry->name, SVN_WC_ENTRY_THIS_DIR) != 0)
     {
       svn_wc_adm_access_t *anchor_access = walk_baton, *adm_access;
-      svn_boolean_t write_lock =
-        (anchor_access->type == svn_wc__adm_access_write_lock);
       svn_error_t *err = svn_wc_adm_probe_try3(&adm_access, anchor_access,
-                                               path, write_lock, -1,
+                                               path, anchor_access->locked, -1,
                                                NULL, NULL, pool);
       if (err)
         {
