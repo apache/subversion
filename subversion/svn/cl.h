@@ -254,6 +254,7 @@ svn_opt_subcommand_t
   svn_cl__mergeinfo,
   svn_cl__mkdir,
   svn_cl__move,
+  svn_cl__obliterate,
   svn_cl__patch,
   svn_cl__propdel,
   svn_cl__propedit,
@@ -672,6 +673,9 @@ svn_cl__changelist_paths(apr_array_header_t **paths,
                          svn_client_ctx_t *ctx,
                          apr_pool_t *pool);
 
+/* Like svn_client_args_to_target_array() but, if the only error is that some
+ * arguments are reserved file names, then print warning messages for those
+ * targets, store the rest of the targets in TARGETS_P and return success. */
 svn_error_t *
 svn_cl__args_to_target_array_print_reserved(apr_array_header_t **targets_p,
                                             apr_getopt_t *os,
