@@ -477,7 +477,6 @@ add(const char *local_abspath,
     svn_depth_t depth,
     svn_boolean_t force,
     svn_boolean_t no_ignore,
-    svn_wc_adm_access_t *adm_access,
     svn_client_ctx_t *ctx,
     apr_pool_t *pool)
 {
@@ -607,7 +606,7 @@ svn_client_add4(const char *path,
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
-  err = add(local_abspath, depth, force, no_ignore, adm_access, ctx, pool);
+  err = add(local_abspath, depth, force, no_ignore, ctx, pool);
 
   /* ### Currently we rely on the fact that this close (like all other access
          baton close operations), closes all batons opened by svn_wc_add4(). */
