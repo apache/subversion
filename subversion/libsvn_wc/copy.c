@@ -166,7 +166,6 @@ copy_added_dir_administratively(svn_wc_context_t *wc_ctx,
       svn_error_t *err;
       apr_pool_t *iterpool;
       apr_int32_t flags = APR_FINFO_TYPE | APR_FINFO_NAME;
-      /* The 'dst_path' is simply dst_parent/dst_basename */
 
       /* Check cancellation; note that this catches recursive calls too. */
       if (cancel_func)
@@ -176,8 +175,7 @@ copy_added_dir_administratively(svn_wc_context_t *wc_ctx,
          its children, for addition. */
       SVN_ERR(svn_io_dir_make(dst_abspath, APR_OS_DEFAULT, pool));
 
-      /* Add the directory, adding locking access for dst_path
-         to dst_parent_access at the same time. */
+      /* Add the directory */
       SVN_ERR(svn_wc_add4(wc_ctx, dst_abspath, svn_depth_infinity,
                           NULL, SVN_INVALID_REVNUM,
                           cancel_func, cancel_baton,
@@ -410,11 +408,9 @@ determine_copyfrom_info(const char **copyfrom_url,
 
    ASSUMPTIONS:
 
-     - src_path is under version control; the working file doesn't
+     - src_abspath is under version control; the working file doesn't
                   necessarily exist (its text-base does).
-     - dst_parent points to a dir under version control, in the same
-                  working copy.
-     - dst_basename will be the 'new' name of the copied file in dst_parent
+     - dst_abspath will be the 'new' name of the copied file.
  */
 static svn_error_t *
 copy_file_administratively(svn_wc_context_t *wc_ctx,
@@ -832,16 +828,11 @@ svn_wc_copy3(svn_wc_context_t *wc_ctx,
              apr_pool_t *pool)
 {
   svn_node_kind_t src_kind;
-  const char *dst_path, *target_path;
-  svn_wc__db_t *db = wc_ctx->db;
-  const svn_wc_entry_t *dst_entry, *src_entry, *target_entry;
-  svn_wc_adm_access_t *dst_parent;
+  const svn_wc_entry_t *dst_entry, *src_entry;
+  svn_wc__db_kind_t kind;
   const char *dstdir_abspath, *dst_basename;
 
   svn_dirent_split(dst_abspath, &dstdir_abspath, &dst_basename, pool);
-
-  dst_parent = svn_wc__adm_retrieve_internal2(db, dstdir_abspath, pool);
-  dst_path =  svn_wc_adm_access_path(dst_parent);
 
   SVN_ERR(svn_wc__get_entry_versioned(&dst_entry, wc_ctx, dstdir_abspath,
                                       svn_node_dir, FALSE, FALSE,
@@ -856,27 +847,44 @@ svn_wc_copy3(svn_wc_context_t *wc_ctx,
       (SVN_ERR_WC_INVALID_SCHEDULE, NULL,
        _("Cannot copy to '%s', as it is not from repository '%s'; "
          "it is from '%s'"),
-       svn_dirent_local_style(svn_wc_adm_access_path(dst_parent), pool),
+       svn_dirent_local_style(dst_abspath, pool),
        src_entry->repos, dst_entry->repos);
   if (dst_entry->schedule == svn_wc_schedule_delete)
     return svn_error_createf
       (SVN_ERR_WC_INVALID_SCHEDULE, NULL,
        _("Cannot copy to '%s' as it is scheduled for deletion"),
-       svn_dirent_local_style(svn_wc_adm_access_path(dst_parent), pool));
+       svn_dirent_local_style(dst_abspath, pool));
 
   /* TODO(#2843): Rework the error report. */
   /* Check if the copy target is missing or hidden and thus not exist on the
      disk, before actually doing the file copy. */
-  target_path = svn_dirent_join(dst_path, dst_basename, pool);
-  SVN_ERR(svn_wc_entry(&target_entry, target_path, dst_parent, TRUE, pool));
-  if (target_entry
-      && ((target_entry->depth == svn_depth_exclude)
-          || target_entry->absent))
+  SVN_ERR(svn_wc__db_read_kind(&kind, wc_ctx->db, dst_abspath, TRUE, pool));
+
+  if (kind != svn_wc__db_kind_unknown)
     {
-      return svn_error_createf
-        (SVN_ERR_ENTRY_EXISTS,
-         NULL, _("'%s' is already under version control"),
-         svn_dirent_local_style(target_path, pool));
+      svn_wc__db_status_t status;
+      svn_depth_t depth;
+      SVN_ERR(svn_wc__db_read_info(&status, NULL, NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, &depth, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL,
+                                   wc_ctx->db, dst_abspath, pool, pool));
+
+      if (depth == svn_depth_exclude)
+        status = svn_wc__db_status_excluded;
+
+      switch (status)
+        {
+        case svn_wc__db_status_excluded:
+          return svn_error_createf(SVN_ERR_ENTRY_EXISTS, NULL,
+                                   _("'%s' is already under version control "
+                                     "but is excluded."),
+                                   svn_dirent_local_style(dst_abspath, pool));
+        case svn_wc__db_status_absent:
+          return svn_error_createf(SVN_ERR_ENTRY_EXISTS, NULL,
+                                   _("'%s' is already under version control"),
+                                   svn_dirent_local_style(dst_abspath, pool));
+        }
     }
 
   SVN_ERR(svn_io_check_path(src_abspath, &src_kind, pool));
