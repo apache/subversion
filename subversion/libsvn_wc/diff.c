@@ -814,6 +814,9 @@ directory_elements_diff(struct dir_baton *db)
 
       svn_pool_clear(iterpool);
 
+      if (eb->cancel_func)
+        SVN_ERR(eb->cancel_func(eb->callback_baton));
+
       child_abpath = svn_dirent_join(dir_abspath, name, iterpool);
 
       SVN_ERR(svn_wc__db_node_hidden(&hidden, eb->db, child_abpath, iterpool));
@@ -1044,6 +1047,9 @@ report_wc_directory_as_added(struct dir_baton *db,
       svn_boolean_t hidden;
 
       svn_pool_clear(iterpool);
+
+      if (eb->cancel_func)
+        SVN_ERR(eb->cancel_func(eb->callback_baton));
 
       child_abspath = svn_dirent_join(dir_abspath, name, iterpool);
 
