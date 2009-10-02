@@ -300,6 +300,8 @@ svn_client__open_ra_session_internal(svn_ra_session_t **ra_session,
   callback_baton_t *cb = apr_pcalloc(pool, sizeof(*cb));
   const char *uuid = NULL;
 
+  SVN_ERR_ASSERT(base_dir != NULL || ! use_admin);
+
   cbtable->open_tmp_file = open_tmp_file;
   cbtable->get_wc_prop = use_admin ? get_wc_prop : NULL;
   cbtable->set_wc_prop = read_only_wc ? NULL : set_wc_prop;
