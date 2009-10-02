@@ -5825,6 +5825,10 @@ svn_wc_get_diff_editor(svn_wc_adm_access_t *anchor,
  * it's a member of one of those changelists.  If @a changelists is
  * empty (or altogether @c NULL), no changelist filtering occurs.
  *
+ * If @a cancel_func is non-NULL, invoke it with @a cancel_baton at various
+ * points during the operation.  If it returns an error (typically @c
+ * SVN_ERR_CANCELLED), return that error immediately.
+ *
  * @since New in 1.7.
  */
 svn_error_t *
@@ -5835,11 +5839,14 @@ svn_wc_diff6(svn_wc_adm_access_t *anchor,
              svn_depth_t depth,
              svn_boolean_t ignore_ancestry,
              const apr_array_header_t *changelists,
-             apr_pool_t *pool);
+             svn_cancel_func_t cancel_func,
+             void *cancel_baton,
+             apr_pool_t *scratch_pool);
 
 /**
  * Similar to svn_wc_diff6(), but with a @c svn_wc_diff_callbacks3_t argument
- * instead of @c svn_wc_diff_callbacks4_t.
+ * instead of @c svn_wc_diff_callbacks4_t. It also doesn't allow specifying
+ * a cancel function.
  *
  * @since New in 1.6.
  *
