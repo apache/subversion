@@ -254,7 +254,7 @@ delete_entry(const char *path,
   if (SVN_IS_VALID_REVNUM(revision) && (revision < cr_rev))
     return out_of_date(full_path, kind);
 
-  /* This routine is a mindless wrapper.  We call svn_fs_delete_tree
+  /* This routine is a mindless wrapper.  We call svn_fs_delete()
      because that will delete files and recursively delete
      directories.  */
   return svn_fs_delete(eb->txn_root, full_path, pool);
