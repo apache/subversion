@@ -1226,9 +1226,14 @@ diff_wc_wc(const char *path1,
                                           revision1, pool));
   callback_baton->revnum2 = SVN_INVALID_REVNUM;  /* WC */
 
-  SVN_ERR(svn_wc_diff6(adm_access, target, callbacks, callback_baton,
-                       depth, ignore_ancestry, changelists,
-                       ctx->cancel_func, ctx->cancel_baton, pool));
+  SVN_ERR(svn_wc_diff6(ctx->wc_ctx,
+                       path1,
+                       callbacks, callback_baton,
+                       depth,
+                       ignore_ancestry,
+                       changelists,
+                       ctx->cancel_func, ctx->cancel_baton,
+                       pool));
   return svn_wc_adm_close2(adm_access, pool);
 }
 
@@ -1424,16 +1429,18 @@ diff_repos_wc(const char *path1,
                                                NULL, NULL, FALSE, TRUE,
                                                ctx, pool));
 
-  SVN_ERR(svn_wc_get_diff_editor6(adm_access, target,
+  SVN_ERR(svn_wc_get_diff_editor6(&diff_editor, &diff_edit_baton,
+                                  ctx->wc_ctx,
+                                  svn_wc_adm_access_path(adm_access),
+                                  target,
                                   callbacks, callback_baton,
                                   depth,
                                   ignore_ancestry,
                                   rev2_is_base,
                                   reverse,
-                                  ctx->cancel_func, ctx->cancel_baton,
                                   changelists,
-                                  &diff_editor, &diff_edit_baton,
-                                  pool));
+                                  ctx->cancel_func, ctx->cancel_baton,
+                                  pool, pool));
 
   /* Tell the RA layer we want a delta to change our txn to URL1 */
   SVN_ERR(svn_client__get_revision_number(&rev, NULL, ctx->wc_ctx,

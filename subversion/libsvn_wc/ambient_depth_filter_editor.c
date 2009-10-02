@@ -27,7 +27,9 @@
 #include "svn_wc.h"
 #include "svn_dirent_uri.h"
 #include "svn_path.h"
+
 #include "wc.h"
+#include "lock.h"
 
 /*
      Notes on the general depth-filtering strategy.
@@ -91,6 +93,8 @@ struct edit_baton
 {
   const svn_delta_editor_t *wrapped_editor;
   void *wrapped_edit_baton;
+  svn_wc__db_t *db;
+  const char *anchor_abspath;
   const char *anchor;
   const char *target;
   svn_wc_adm_access_t *adm_access;
@@ -546,7 +550,7 @@ svn_wc__ambient_depth_filter_editor(const svn_delta_editor_t **editor,
                                     void *wrapped_edit_baton,
                                     const char *anchor,
                                     const char *target,
-                                    svn_wc_adm_access_t *adm_access,
+                                    svn_wc__db_t *db,
                                     apr_pool_t *pool)
 {
   svn_delta_editor_t *depth_filter_editor;
@@ -572,9 +576,15 @@ svn_wc__ambient_depth_filter_editor(const svn_delta_editor_t **editor,
   eb = apr_palloc(pool, sizeof(*eb));
   eb->wrapped_editor = wrapped_editor;
   eb->wrapped_edit_baton = wrapped_edit_baton;
+  eb->db = db;
+  SVN_ERR(svn_dirent_get_absolute(&eb->anchor_abspath, anchor, pool));
   eb->anchor = anchor;
   eb->target = target;
-  eb->adm_access = adm_access;
+
+  eb->adm_access = svn_wc__adm_retrieve_internal2(db, eb->anchor_abspath,
+                                                  pool);
+
+  SVN_ERR_ASSERT(eb->adm_access != NULL);
 
   *editor = depth_filter_editor;
   *edit_baton = eb;

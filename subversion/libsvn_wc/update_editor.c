@@ -4954,7 +4954,7 @@ make_editor(svn_revnum_t *target_revision,
                                                 inner_baton,
                                                 anchor,
                                                 target_basename,
-                                                adm_access,
+                                                wc_ctx->db,
                                                 pool));
 
   return svn_delta_get_cancellation_editor(cancel_func,
