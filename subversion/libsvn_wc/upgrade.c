@@ -368,7 +368,7 @@ upgrade_to_wcng(svn_wc__db_t *db,
     SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_INSERT_WC_LOCK));
     /* ### These values are magic, and will need to be updated when we
        ### go to a centralized system. */
-    SVN_ERR(svn_sqlite__bindf(stmt, "is", 1, ""));
+    SVN_ERR(svn_sqlite__bindf(stmt, "is", (apr_int64_t)1, ""));
     SVN_ERR(svn_sqlite__step_done(stmt));
   }
 
