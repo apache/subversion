@@ -368,7 +368,7 @@ svn_wc__walker_default_error_handler(const char *path,
  * depth.  It is safe for *EDITOR and *EDIT_BATON to start as
  * WRAPPED_EDITOR and WRAPPED_BATON.
  *
- * ANCHOR, TARGET, and ADM_ACCESS are as in svn_wc_get_update_editor3.
+ * ANCHOR, TARGET, and DB are as in svn_wc_get_update_editor3.
  *
  * @a requested_depth must be one of the following depth values:
  * @c svn_depth_infinity, @c svn_depth_empty, @c svn_depth_files,
@@ -383,7 +383,7 @@ svn_wc__ambient_depth_filter_editor(const svn_delta_editor_t **editor,
                                     void *wrapped_edit_baton,
                                     const char *anchor,
                                     const char *target,
-                                    svn_wc_adm_access_t *adm_access,
+                                    svn_wc__db_t *db,
                                     apr_pool_t *pool);
 
 /* Similar to svn_wc__path_switched(), but with a wc_db parameter instead of

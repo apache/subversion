@@ -1623,23 +1623,35 @@ svn_wc_get_diff_editor5(svn_wc_adm_access_t *anchor,
                         apr_pool_t *pool)
 {
   struct diff_callbacks3_wrapper_baton *b = apr_palloc(pool, sizeof(*b));
+  svn_wc_context_t *wc_ctx;
+  svn_wc__db_t *db = svn_wc__adm_get_db(anchor);
+
+  SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL, db, pool));
+
   b->callbacks3 = callbacks;
   b->baton = callback_baton;
-  b->db = svn_wc__adm_get_db(anchor);
-  return svn_wc_get_diff_editor6(anchor,
-                                 target,
-                                 &diff_callbacks3_wrapper,
-                                 b,
-                                 depth,
-                                 ignore_ancestry,
-                                 use_text_base,
-                                 reverse_order,
-                                 cancel_func,
-                                 cancel_baton,
-                                 changelists,
-                                 editor,
-                                 edit_baton,
-                                 pool);
+  b->db = db;
+
+  SVN_ERR(svn_wc_get_diff_editor6(editor,
+                                   edit_baton,
+                                   wc_ctx,
+                                   svn_wc_adm_access_path(anchor),
+                                   target,
+                                   &diff_callbacks3_wrapper,
+                                   b,
+                                   depth,
+                                   ignore_ancestry,
+                                   use_text_base,
+                                   reverse_order,
+                                   changelists,
+                                   cancel_func,
+                                   cancel_baton,
+                                   pool,
+                                   pool));
+
+  /* Can't destroy wc_ctx. It is used by the diff editor */
+
+   return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -1764,12 +1776,26 @@ svn_wc_diff5(svn_wc_adm_access_t *anchor,
              apr_pool_t *pool)
 {
   struct diff_callbacks3_wrapper_baton *b = apr_palloc(pool, sizeof(*b));
+  svn_wc_context_t *wc_ctx;
+  svn_wc__db_t *db = svn_wc__adm_get_db(anchor);
+
+  SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL, db, pool));
+
   b->callbacks3 = callbacks;
   b->baton = callback_baton;
 
-  return svn_wc_diff6(anchor, target, &diff_callbacks3_wrapper, b,
-                      depth, ignore_ancestry, changelists,
-                      NULL, NULL, pool);
+  SVN_ERR(svn_wc_diff6(wc_ctx,
+                       svn_dirent_join(svn_wc_adm_access_path(anchor),
+                                       target, pool),
+                       &diff_callbacks3_wrapper,
+                       b,
+                       depth,
+                       ignore_ancestry,
+                       changelists,
+                       NULL, NULL,
+                       pool));
+
+  return svn_error_return(svn_wc_context_destroy(wc_ctx));
 }
 
 svn_error_t *

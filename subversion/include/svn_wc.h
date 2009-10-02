@@ -5626,9 +5626,10 @@ svn_wc_canonicalize_svn_prop(const svn_string_t **propval_p,
 
 /**
  * Return an @a editor/@a edit_baton for diffing a working copy against the
- * repository.
+ * repository. The editor is allocated in @a result_pool; temporary
+ * calculations are performed in @a scratch_pool.
  *
- * @a anchor/@a target represent the base of the hierarchy to be compared.
+ * @a anchor_path/@a target represent the base of the hierarchy to be compared.
  *
  * @a callbacks/@a callback_baton is the callback table to use when two
  * files are to be compared.
@@ -5664,7 +5665,10 @@ svn_wc_canonicalize_svn_prop(const svn_string_t **propval_p,
  * @since New in 1.7.
  */
 svn_error_t *
-svn_wc_get_diff_editor6(svn_wc_adm_access_t *anchor,
+svn_wc_get_diff_editor6(const svn_delta_editor_t **editor,
+                        void **edit_baton,
+                        svn_wc_context_t *wc_ctx,
+                        const char *anchor_path,
                         const char *target,
                         const svn_wc_diff_callbacks4_t *callbacks,
                         void *callback_baton,
@@ -5672,12 +5676,11 @@ svn_wc_get_diff_editor6(svn_wc_adm_access_t *anchor,
                         svn_boolean_t ignore_ancestry,
                         svn_boolean_t use_text_base,
                         svn_boolean_t reverse_order,
+                        const apr_array_header_t *changelists,
                         svn_cancel_func_t cancel_func,
                         void *cancel_baton,
-                        const apr_array_header_t *changelists,
-                        const svn_delta_editor_t **editor,
-                        void **edit_baton,
-                        apr_pool_t *pool);
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool);
 
 /**
  * Similar to svn_wc_get_diff_editor6(), but with an
@@ -5801,7 +5804,7 @@ svn_wc_get_diff_editor(svn_wc_adm_access_t *anchor,
 /**
  * Compare working copy against the text-base.
  *
- * @a anchor/@a target represent the base of the hierarchy to be compared.
+ * @a target_path represents the base of the hierarchy to be compared.
  *
  * @a callbacks/@a callback_baton is the callback table to use when two
  * files are to be compared.
@@ -5832,8 +5835,8 @@ svn_wc_get_diff_editor(svn_wc_adm_access_t *anchor,
  * @since New in 1.7.
  */
 svn_error_t *
-svn_wc_diff6(svn_wc_adm_access_t *anchor,
-             const char *target,
+svn_wc_diff6(svn_wc_context_t *wc_ctx,
+             const char *target_path,
              const svn_wc_diff_callbacks4_t *callbacks,
              void *callback_baton,
              svn_depth_t depth,
