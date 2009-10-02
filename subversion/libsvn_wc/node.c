@@ -472,9 +472,9 @@ svn_wc__node_is_status_obstructed(svn_boolean_t *is_obstructed,
                                wc_ctx->db, local_abspath,
                                scratch_pool, scratch_pool));
 
-  /* ### Do we need to consider svn_wc__db_status_obstructed_add and/or
-     #### svn_wc__db_status_obstructed_delete? */
-  *is_obstructed = (status == svn_wc__db_status_obstructed);
+  *is_obstructed = (status == svn_wc__db_status_obstructed) ||
+                   (status == svn_wc__db_status_obstructed_add) ||
+                   (status == svn_wc__db_status_obstructed_delete);
 
   return SVN_NO_ERROR;
 }

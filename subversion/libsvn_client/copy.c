@@ -1040,7 +1040,6 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
   svn_ra_session_t *ra_session;
   const svn_delta_editor_t *editor;
   void *edit_baton;
-  svn_node_kind_t base_kind;
   void *commit_baton;
   apr_hash_t *committables;
   svn_wc_adm_access_t *adm_access, *dir_access;
@@ -1190,14 +1189,8 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
                                            message, ctx, pool));
 
   /* Crawl the working copy for commit items. */
-  SVN_ERR(svn_io_check_path(top_src_path, &base_kind, pool));
-  if (base_kind == svn_node_dir)
-    SVN_ERR(svn_wc_adm_retrieve(&dir_access, adm_access, top_src_path, pool));
-  else
-    dir_access = adm_access;
-
   SVN_ERR(svn_client__get_copy_committables(&committables,
-                                            copy_pairs, dir_access,
+                                            copy_pairs,
                                             ctx, pool));
 
   /* ### todo: There should be only one hash entry, which currently
