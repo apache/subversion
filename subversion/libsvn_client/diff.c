@@ -1192,10 +1192,7 @@ diff_wc_wc(const char *path1,
            svn_client_ctx_t *ctx,
            apr_pool_t *pool)
 {
-  svn_wc_adm_access_t *adm_access, *target_access;
-  const char *target;
   const char *abspath1;
-  int levels_to_lock = SVN_WC__LEVELS_TO_LOCK_FROM_DEPTH(depth);
 
   SVN_ERR_ASSERT(! svn_path_is_url(path1));
   SVN_ERR_ASSERT(! svn_path_is_url(path2));
@@ -1213,13 +1210,6 @@ diff_wc_wc(const char *path1,
         _("Only diffs between a path's text-base "
           "and its working files are supported at this time")));
 
-  SVN_ERR(svn_wc__adm_open_anchor_in_context(&adm_access, &target_access,
-                                             &target, ctx->wc_ctx, path1,
-                                             FALSE, levels_to_lock,
-                                             ctx->cancel_func,
-                                             ctx->cancel_baton,
-                                             pool));
-
   /* Resolve named revisions to real numbers. */
   SVN_ERR(svn_client__get_revision_number(&callback_baton->revnum1, NULL,
                                           ctx->wc_ctx, abspath1, NULL,
@@ -1234,7 +1224,7 @@ diff_wc_wc(const char *path1,
                        changelists,
                        ctx->cancel_func, ctx->cancel_baton,
                        pool));
-  return svn_wc_adm_close2(adm_access, pool);
+  return SVN_NO_ERROR;
 }
 
 
@@ -1333,7 +1323,6 @@ diff_repos_wc(const char *path1,
               apr_pool_t *pool)
 {
   const char *url1, *anchor, *anchor_url, *target;
-  svn_wc_adm_access_t *adm_access, *dir_access;
   svn_revnum_t rev;
   svn_ra_session_t *ra_session;
   const svn_ra_reporter3_t *reporter;
@@ -1341,7 +1330,6 @@ diff_repos_wc(const char *path1,
   const svn_delta_editor_t *diff_editor;
   void *diff_edit_baton;
   svn_boolean_t rev2_is_base = (revision2->kind == svn_opt_revision_base);
-  int levels_to_lock = SVN_WC__LEVELS_TO_LOCK_FROM_DEPTH(depth);
   svn_boolean_t server_supports_depth;
   const char *abspath1;
   const char *abspath2;
@@ -1359,13 +1347,9 @@ diff_repos_wc(const char *path1,
   /* Convert path1 to a URL to feed to do_diff. */
   SVN_ERR(convert_to_url(&url1, ctx->wc_ctx, abspath1, pool, pool));
 
-  SVN_ERR(svn_wc__adm_open_anchor_in_context(&adm_access, &dir_access,
-                                             &target, ctx->wc_ctx, path2,
-                                             FALSE, levels_to_lock,
-                                             ctx->cancel_func,
-                                             ctx->cancel_baton,
-                                             pool));
-  anchor = svn_wc_adm_access_path(adm_access);
+  SVN_ERR(svn_wc_get_actual_target2(&anchor, &target,
+                                    ctx->wc_ctx, path2,
+                                    pool, pool));
 
   /* Fetch the URL of the anchor directory. */
   SVN_ERR(svn_dirent_get_absolute(&anchor_abspath, anchor, pool));
@@ -1431,7 +1415,7 @@ diff_repos_wc(const char *path1,
 
   SVN_ERR(svn_wc_get_diff_editor6(&diff_editor, &diff_edit_baton,
                                   ctx->wc_ctx,
-                                  svn_wc_adm_access_path(adm_access),
+                                  anchor,
                                   target,
                                   callbacks, callback_baton,
                                   depth,
@@ -1473,7 +1457,7 @@ diff_repos_wc(const char *path1,
                                   FALSE, NULL, NULL, /* notification is N/A */
                                   NULL, NULL, pool));
 
-  return svn_error_return(svn_wc_adm_close2(adm_access, pool));
+  return SVN_NO_ERROR;
 }
 
 
