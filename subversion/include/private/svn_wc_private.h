@@ -426,6 +426,54 @@ svn_wc__node_walk_children(svn_wc_context_t *wc_ctx,
                            void *cancel_baton,
                            apr_pool_t *scratch_pool);
 
+/**
+ * Set @a *is_deleted to TRUE if @a local_abspath is deleted, using
+ * @a wc_ctx.  If @a local_abspath is not in the working copy, return
+ * @c SVN_ERR_WC_PATH_NOT_FOUND.  Use @a scratch_pool for all temporary
+ * allocations.
+ */
+svn_error_t *
+svn_wc__node_is_status_delete(svn_boolean_t *is_deleted,
+                              svn_wc_context_t *wc_ctx,
+                              const char *local_abspath,
+                              apr_pool_t *scratch_pool);
+
+/**
+ * Set @a *is_deleted to whether @a local_abspath is obstructed, using
+ * @a wc_ctx.  If @a local_abspath is not in the working copy, return
+ * @c SVN_ERR_WC_PATH_NOT_FOUND.  Use @a scratch_pool for all temporary
+ * allocations.
+ */
+svn_error_t *
+svn_wc__node_is_status_obstructed(svn_boolean_t *is_obstructed,
+                                  svn_wc_context_t *wc_ctx,
+                                  const char *local_abspath,
+                                  apr_pool_t *scratch_pool);
+
+/**
+ * Set @a *is_deleted to whether @a local_abspath is absent, using
+ * @a wc_ctx.  If @a local_abspath is not in the working copy, return
+ * @c SVN_ERR_WC_PATH_NOT_FOUND.  Use @a scratch_pool for all temporary
+ * allocations.
+ */
+svn_error_t *
+svn_wc__node_is_status_absent(svn_boolean_t *is_absent,
+                              svn_wc_context_t *wc_ctx,
+                              const char *local_abspath,
+                              apr_pool_t *scratch_pool);
+
+/**
+ * Set @a *is_present to whether @a local_abspath is present, using
+ * @a wc_ctx.  If @a local_abspath is not in the working copy, return
+ * @c SVN_ERR_WC_PATH_NOT_FOUND.  Use @a scratch_pool for all temporary
+ * allocations.
+ */
+svn_error_t *
+svn_wc__node_is_status_present(svn_boolean_t *is_present,
+                               svn_wc_context_t *wc_ctx,
+                               const char *local_abspath,
+                               apr_pool_t *scratch_pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
