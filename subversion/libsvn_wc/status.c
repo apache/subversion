@@ -1625,12 +1625,8 @@ handle_statii(struct edit_baton *eb,
   /* Loop over all the statuses still in our hash, handling each one. */
   for (hi = apr_hash_first(pool, statii); hi; hi = apr_hash_next(hi))
     {
-      const void *key;
-      void *val;
-      svn_wc_status2_t *status;
-
-      apr_hash_this(hi, &key, NULL, &val);
-      status = val;
+      const char *path = svn_apr_hash_index_key(hi);
+      svn_wc_status2_t *status = svn_apr_hash_index_val(hi);
 
       /* Clear the subpool. */
       svn_pool_clear(subpool);
@@ -1645,7 +1641,7 @@ handle_statii(struct edit_baton *eb,
         {
           const char *local_abspath;
 
-          SVN_ERR(svn_dirent_get_absolute(&local_abspath, key, subpool));
+          SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, subpool));
 
           SVN_ERR(get_dir_status(&eb->wb,
                                  local_abspath,
@@ -1658,7 +1654,7 @@ handle_statii(struct edit_baton *eb,
       if (dir_was_deleted)
         status->repos_text_status = svn_wc_status_deleted;
       if (svn_wc__is_sendable_status(status, eb->no_ignore, eb->get_all))
-        SVN_ERR((eb->status_func)(eb->status_baton, key, status, subpool));
+        SVN_ERR((eb->status_func)(eb->status_baton, path, status, subpool));
     }
 
   /* Destroy the subpool. */

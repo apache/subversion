@@ -1529,11 +1529,10 @@ prune_deleted(apr_hash_t **entries_pruned,
        hi;
        hi = apr_hash_next(hi))
     {
-      void *val;
       svn_boolean_t hidden;
 
-      apr_hash_this(hi, NULL, NULL, &val);
-      SVN_ERR(svn_wc__entry_is_hidden(&hidden, val));
+      SVN_ERR(svn_wc__entry_is_hidden(&hidden,
+                                      svn_apr_hash_index_val(hi)));
       if (hidden)
         break;
     }
@@ -1551,18 +1550,13 @@ prune_deleted(apr_hash_t **entries_pruned,
        hi;
        hi = apr_hash_next(hi))
     {
-      void *val;
-      const void *key;
-      const svn_wc_entry_t *entry;
+      const void *key = svn_apr_hash_index_key(hi);
+      const svn_wc_entry_t *entry = svn_apr_hash_index_val(hi);
       svn_boolean_t hidden;
 
-      apr_hash_this(hi, &key, NULL, &val);
-      entry = val;
       SVN_ERR(svn_wc__entry_is_hidden(&hidden, entry));
       if (!hidden)
-        {
-          apr_hash_set(*entries_pruned, key, APR_HASH_KEY_STRING, entry);
-        }
+        apr_hash_set(*entries_pruned, key, APR_HASH_KEY_STRING, entry);
     }
 
   return SVN_NO_ERROR;
@@ -2381,25 +2375,21 @@ svn_wc__entries_write_new(svn_wc__db_t *db,
   for (hi = apr_hash_first(scratch_pool, entries); hi;
         hi = apr_hash_next(hi))
     {
-      const void *key;
-      void *val;
-      const svn_wc_entry_t *this_entry;
+      const char *name = svn_apr_hash_index_key(hi);
+      const svn_wc_entry_t *this_entry = svn_apr_hash_index_val(hi);
       const char *child_abspath;
 
       svn_pool_clear(iterpool);
 
-      /* Get the entry and make sure its attributes are up-to-date. */
-      apr_hash_this(hi, &key, NULL, &val);
-      this_entry = val;
-
       /* Don't rewrite the "this dir" entry! */
-      if (strcmp(key, SVN_WC_ENTRY_THIS_DIR) == 0)
+      if (strcmp(name, SVN_WC_ENTRY_THIS_DIR) == 0)
         continue;
 
       /* Write the entry. */
-      child_abspath = svn_dirent_join(local_abspath, key, iterpool);
+      child_abspath = svn_dirent_join(local_abspath, name, iterpool);
       SVN_ERR(write_entry(db, sdb, wc_id, repos_id, repos_root,
-                          this_entry, key, child_abspath, this_dir, iterpool));
+                          this_entry, name, child_abspath, this_dir,
+                          iterpool));
 
       /* Write the dav cache.
          ### This can go away when we stop unconditionally deleting all
@@ -3162,9 +3152,8 @@ walker_helper(const char *dirpath,
   /* Loop over each of the other entries. */
   for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
     {
-      const void *key;
-      void *val;
-      const svn_wc_entry_t *current_entry;
+      const char *name = svn_apr_hash_index_key(hi);
+      const svn_wc_entry_t *current_entry = svn_apr_hash_index_val(hi);
       const char *entrypath;
       const char *entry_abspath;
       svn_boolean_t hidden;
@@ -3175,14 +3164,11 @@ walker_helper(const char *dirpath,
       if (cancel_func)
         SVN_ERR(cancel_func(cancel_baton));
 
-      apr_hash_this(hi, &key, NULL, &val);
-      current_entry = val;
-
       /* Skip the "this dir" entry. */
       if (strcmp(current_entry->name, SVN_WC_ENTRY_THIS_DIR) == 0)
         continue;
 
-      entrypath = svn_dirent_join(dirpath, key, subpool);
+      entrypath = svn_dirent_join(dirpath, name, subpool);
       SVN_ERR(svn_wc__entry_is_hidden(&hidden, current_entry));
       SVN_ERR(svn_dirent_get_absolute(&entry_abspath, entrypath, subpool));
 
