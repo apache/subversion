@@ -416,7 +416,8 @@ svn_client_revprop_set2(const char *propname,
       && strchr(propval->data, '\n') != NULL
       && (! force))
     return svn_error_create(SVN_ERR_CLIENT_REVISION_AUTHOR_CONTAINS_NEWLINE,
-                            NULL, _("Value will not be set unless forced"));
+                            NULL, _("Author name should not contain a newline;"
+                                    " value will not be set unless forced"));
 
   if (propval && ! svn_prop_name_is_valid(propname))
     return svn_error_createf(SVN_ERR_CLIENT_PROPERTY_NAME, NULL,
