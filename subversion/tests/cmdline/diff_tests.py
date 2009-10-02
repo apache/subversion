@@ -1538,7 +1538,6 @@ def diff_renamed_file(sbox):
                                      'ci', '-m', 'log msg')
 
   # Repos->WC diff of file after the rename
-  ### --notice-ancestry has no effect
   exit_code, diff_output, err_output = svntest.main.run_svn(None,
                                                             'diff', '-r', '1',
                                                             '--notice-ancestry',
@@ -1546,6 +1545,15 @@ def diff_renamed_file(sbox):
   if check_diff_output(diff_output,
                        pi2_path,
                        'M') :
+    raise svntest.Failure
+
+  # Repos->WC diff of file after the rename (without ancestry)
+  exit_code, diff_output, err_output = svntest.main.run_svn(None,
+                                                            'diff', '-r', '1',
+                                                            pi2_path)
+  if check_diff_output(diff_output,
+                       pi2_path,
+                       'A') :
     raise svntest.Failure
 
   # Repos->repos diff after the rename
