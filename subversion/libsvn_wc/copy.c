@@ -60,14 +60,8 @@ copy_props(svn_wc__db_t *db,
                              scratch_pool, scratch_pool));
   for (hi = apr_hash_first(scratch_pool, props); hi; hi = apr_hash_next(hi))
     {
-      const char *propname;
-      svn_string_t *propval;
-      const void *key;
-      void *val;
-
-      apr_hash_this(hi, &key, NULL, &val);
-      propname = key;
-      propval = val;
+      const char *propname = svn_apr_hash_index_key(hi);
+      svn_string_t *propval = svn_apr_hash_index_val(hi);
 
       SVN_ERR(svn_wc__internal_propset(db, dst_abspath, propname, propval,
                                        FALSE /* skip_checks */,

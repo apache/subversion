@@ -119,18 +119,16 @@ read_many_wcprops(apr_hash_t **all_wcprops,
        hi;
        hi = apr_hash_next(hi))
     {
-      const void *key;
+      const char *name = svn_apr_hash_index_key(hi);
       const char *prop_path;
 
       svn_pool_clear(iterpool);
 
-      apr_hash_this(hi, &key, NULL, NULL);
-
-      prop_path = svn_dirent_join(props_dir_abspath, key, iterpool);
+      prop_path = svn_dirent_join(props_dir_abspath, name, iterpool);
 
       SVN_ERR(svn_stream_open_readonly(&stream, prop_path,
                                        iterpool, iterpool));
-      SVN_ERR(read_one_proplist(*all_wcprops, key, stream,
+      SVN_ERR(read_one_proplist(*all_wcprops, name, stream,
                                 result_pool, iterpool));
       SVN_ERR(svn_stream_close(stream));
     }

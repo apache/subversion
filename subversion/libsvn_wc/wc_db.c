@@ -1417,11 +1417,8 @@ close_db(svn_wc__db_t *db,
   for (hi = apr_hash_first(scratch_pool, db->dir_data); hi;
        hi = apr_hash_next(hi))
     {
-      void *val;
-      svn_wc__db_pdh_t *pdh;
+      svn_wc__db_pdh_t *pdh = svn_apr_hash_index_val(hi);
 
-      apr_hash_this(hi, NULL, NULL, &val);
-      pdh = val;
       if (pdh->wcroot == NULL)
         continue;
 
@@ -1449,11 +1446,7 @@ close_db(svn_wc__db_t *db,
   /* Now close all of the non-duplicate databases. */
   for (hi = apr_hash_first(scratch_pool, roots); hi; hi = apr_hash_next(hi))
     {
-      void *val;
-      wcroot_t *wcroot;
-
-      apr_hash_this(hi, NULL, NULL, &val);
-      wcroot = val;
+      wcroot_t *wcroot = svn_apr_hash_index_val(hi);
 
       if (wcroot->sdb != NULL)
         {
@@ -4702,12 +4695,8 @@ svn_wc__db_temp_get_all_access(svn_wc__db_t *db,
        hi;
        hi = apr_hash_next(hi))
     {
-      const void *key;
-      void *val;
-      const svn_wc__db_pdh_t *pdh;
-
-      apr_hash_this(hi, &key, NULL, &val);
-      pdh = val;
+      const void *key = svn_apr_hash_index_key(hi);
+      const svn_wc__db_pdh_t *pdh = svn_apr_hash_index_val(hi);
 
       if (pdh->adm_access != NULL)
         apr_hash_set(result, key, APR_HASH_KEY_STRING, pdh->adm_access);

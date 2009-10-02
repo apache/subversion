@@ -781,13 +781,9 @@ svn_wc_process_committed_queue(svn_wc_committed_queue_t *queue,
          more than once per adm area */
   for (hi = apr_hash_first(pool, updated_adms); hi; hi = apr_hash_next(hi))
     {
-      void *val;
-      affected_adm_t *this_adm;
+      affected_adm_t *this_adm = svn_apr_hash_index_val(hi);
 
       svn_pool_clear(iterpool);
-
-      apr_hash_this(hi, NULL, NULL, &val);
-      this_adm = val;
 
       SVN_ERR(svn_wc__run_log(this_adm->adm_access, iterpool));
     }
@@ -1101,11 +1097,8 @@ erase_from_wc(svn_wc__db_t *db,
            hi;
            hi = apr_hash_next(hi))
         {
-          const void *key;
-          const char *name;
+          const char *name = svn_apr_hash_index_key(hi);
 
-          apr_hash_this(hi, &key, NULL, NULL);
-          name = key;
           svn_pool_clear(iterpool);
 
           /* The admin directory will show up, we don't want to delete it */
