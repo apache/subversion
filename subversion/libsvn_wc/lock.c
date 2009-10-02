@@ -64,11 +64,10 @@ struct svn_wc_adm_access_t
        allowing read-write access */
     svn_wc__adm_access_write_lock,
 
-    /* SVN_WC__ADM_ACCESS_CLOSED indicates that the baton has been
-       closed. */
-    svn_wc__adm_access_closed
-
   } type;
+
+  /* Indicates that the baton has been closed. */
+  svn_boolean_t closed;
 
   /* LOCK_EXISTS is set TRUE when the write lock exists */
   svn_boolean_t lock_exists;
@@ -172,7 +171,7 @@ pool_cleanup(void *p)
   svn_boolean_t present;
   svn_error_t *err;
 
-  if (lock->type == svn_wc__adm_access_closed)
+  if (lock->closed)
     return SVN_NO_ERROR;
 
   err = svn_wc__logfile_present(&present, lock->abspath, lock->pool);
@@ -218,6 +217,7 @@ adm_access_alloc(svn_wc_adm_access_t **adm_access,
   svn_wc_adm_access_t *lock = apr_palloc(result_pool, sizeof(*lock));
 
   lock->type = type;
+  lock->closed = FALSE;
   lock->entries_all = NULL;
   lock->db = db;
   lock->db_provided = db_provided;
@@ -438,7 +438,7 @@ close_single(svn_wc_adm_access_t *adm_access,
              svn_boolean_t preserve_lock,
              apr_pool_t *scratch_pool)
 {
-  if (adm_access->type == svn_wc__adm_access_closed)
+  if (adm_access->closed)
     return SVN_NO_ERROR;
 
   /* Physically unlock if required */
@@ -467,7 +467,7 @@ close_single(svn_wc_adm_access_t *adm_access,
     }
 
   /* Reset to prevent further use of the lock. */
-  adm_access->type = svn_wc__adm_access_closed;
+  adm_access->closed = TRUE;
 
   /* Detach from set */
   SVN_ERR(svn_wc__db_temp_close_access(adm_access->db, adm_access->abspath,
@@ -1296,7 +1296,7 @@ do_close(svn_wc_adm_access_t *adm_access,
 {
   svn_wc_adm_access_t *look;
 
-  if (adm_access->type == svn_wc__adm_access_closed)
+  if (adm_access->closed)
     return SVN_NO_ERROR;
 
   /* If we are part of the shared set, then close descendant batons.  */
