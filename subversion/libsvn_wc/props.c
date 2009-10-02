@@ -663,7 +663,7 @@ svn_wc_merge_props3(svn_wc_notify_state_t *state,
 {
   const svn_wc_entry_t *entry;
   svn_stringbuf_t *log_accum;
-  svn_wc_adm_access_t *adm_access;
+  const char *dir_abspath;
   const char *path;
 
   SVN_ERR(svn_wc__temp_get_relpath(&path, wc_ctx->db, local_abspath,
@@ -682,21 +682,14 @@ svn_wc_merge_props3(svn_wc_notify_state_t *state,
   switch (entry->kind)
     {
     case svn_node_dir:
-      adm_access = svn_wc__adm_retrieve_internal2(wc_ctx->db, local_abspath,
-                                                  pool);
+      dir_abspath = local_abspath;
       break;
     case svn_node_file:
-      adm_access = svn_wc__adm_retrieve_internal2(wc_ctx->db,
-                                                  svn_dirent_dirname(
-                                                             local_abspath,
-                                                             pool),
-                                                  pool);
+      dir_abspath = svn_dirent_dirname(local_abspath, pool);
       break;
     default:
       return SVN_NO_ERROR; /* ### svn_node_none or svn_node_unknown */
     }
-
-  SVN_ERR_ASSERT(adm_access != NULL);
 
   if (! dry_run)
     log_accum = svn_stringbuf_create("", pool);
@@ -705,7 +698,7 @@ svn_wc_merge_props3(svn_wc_notify_state_t *state,
      prepping tempfiles and writing log commands.  */
   SVN_ERR(svn_wc__merge_props(&log_accum, state, 
                               wc_ctx->db, local_abspath,
-                              svn_wc__adm_access_abspath(adm_access),
+                              dir_abspath,
                               NULL, NULL,
                               baseprops, NULL, NULL,
                               propchanges, base_merge, dry_run,
@@ -715,8 +708,11 @@ svn_wc_merge_props3(svn_wc_notify_state_t *state,
 
   if (! dry_run)
     {
-      SVN_ERR(svn_wc__write_log(svn_wc__adm_access_abspath(adm_access), 0,
-                                log_accum, pool));
+      svn_wc_adm_access_t *adm_access 
+              = svn_wc__adm_retrieve_internal2(wc_ctx->db, dir_abspath, pool);
+      SVN_ERR_ASSERT(adm_access != NULL);
+
+      SVN_ERR(svn_wc__write_log(dir_abspath, 0, log_accum, pool));
       SVN_ERR(svn_wc__run_log(adm_access, pool));
     }
 
@@ -824,7 +820,6 @@ maybe_generate_propconflict(svn_boolean_t *conflict_remains,
   apr_pool_t *filepool = svn_pool_create(scratch_pool);
   svn_wc_conflict_description2_t *cdesc;
   const char *dirpath = svn_dirent_dirname(local_abspath, filepool);
-  svn_wc_adm_access_t *adm_access;
 
   if (cancel_func)
     SVN_ERR(cancel_func(cancel_baton));
@@ -835,8 +830,6 @@ maybe_generate_propconflict(svn_boolean_t *conflict_remains,
       *conflict_remains = TRUE;
       return SVN_NO_ERROR;
     }
-
-  adm_access = svn_wc__db_temp_get_access(db, local_abspath, scratch_pool);
 
   cdesc = svn_wc_conflict_description_create_prop2(
     local_abspath,
