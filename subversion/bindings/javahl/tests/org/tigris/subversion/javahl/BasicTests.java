@@ -1255,6 +1255,8 @@ public class BasicTests extends SVNTests
 
     /**
      * Test the basic SVNClient.cleanup functionality.
+     * Without a way to force a lock, this test just verifies
+     * the method can be called succesfully.
      * @throws Throwable
      */
     public void testBasicCleanup() throws Throwable
@@ -1262,41 +1264,9 @@ public class BasicTests extends SVNTests
         // create a test working copy
         OneTest thisTest = new OneTest();
 
-        // create a lock file in A/B
-        File adminLock = new File(thisTest.getWorkingCopy(),"A/B/" +
-                                  getAdminDirectoryName() + "/lock");
-        PrintWriter pw = new PrintWriter(new FileOutputStream(adminLock));
-        pw.print("stop looking!");
-        pw.close();
-        thisTest.getWc().setItemIsLocked("A/B", true);
-
-        // create a lock file in A/D/G
-        adminLock = new File(thisTest.getWorkingCopy(),"A/D/G/" +
-                             getAdminDirectoryName() + "/lock");
-        pw = new PrintWriter(new FileOutputStream(adminLock));
-        pw.print("stop looking!");
-        pw.close();
-        thisTest.getWc().setItemIsLocked("A/D/G", true);
-
-        // create a lock file in A/C
-        adminLock = new File(thisTest.getWorkingCopy(),"A/C/" +
-                             getAdminDirectoryName() + "/lock");
-        pw = new PrintWriter(new FileOutputStream(adminLock));
-        pw.print("stop looking!");
-        pw.close();
-        thisTest.getWc().setItemIsLocked("A/C", true);
-
-        // test the status of the working copy
-        thisTest.checkStatus();
-
         // run cleanup
         client.cleanup(thisTest.getWCPath());
-        thisTest.getWc().setItemIsLocked("A/B", false);
-        thisTest.getWc().setItemIsLocked("A/D/G", false);
-        thisTest.getWc().setItemIsLocked("A/C", false);
 
-        // test the status of the working copy
-        thisTest.checkStatus();
     }
 
     /**
