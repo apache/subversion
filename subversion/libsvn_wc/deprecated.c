@@ -1768,7 +1768,8 @@ svn_wc_diff5(svn_wc_adm_access_t *anchor,
   b->baton = callback_baton;
 
   return svn_wc_diff6(anchor, target, &diff_callbacks3_wrapper, b,
-                      depth, ignore_ancestry, changelists, pool);
+                      depth, ignore_ancestry, changelists,
+                      NULL, NULL, pool);
 }
 
 svn_error_t *

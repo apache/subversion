@@ -133,8 +133,15 @@ reverse_propchanges(apr_hash_t *baseprops,
 struct edit_baton {
   /* ANCHOR/TARGET represent the base of the hierarchy to be compared. */
   svn_wc_adm_access_t *anchor;
+
+  /* A wc db. */
+  svn_wc__db_t *db;
+
   const char *anchor_path;
   const char *target;
+
+  /* The absolute path of the anchor directory */
+  const char *anchor_abspath;
 
   /* Target revision */
   svn_revnum_t revnum;
@@ -165,8 +172,9 @@ struct edit_baton {
   /* Hash whose keys are const char * changelist names. */
   apr_hash_t *changelist_hash;
 
-  /* A wc db. */
-  svn_wc__db_t *db;
+  /* Cancel function/baton */
+  svn_cancel_func_t cancel_func;
+  void *cancel_baton;
 
   apr_pool_t *pool;
 };
@@ -179,6 +187,11 @@ struct dir_baton {
 
   /* The depth at which this directory should be diffed. */
   svn_depth_t depth;
+
+  /* The name and path of this directory as if they would be/are in the
+      local working copy. */
+  const char *name;
+  const char *local_abspath;
 
   /* The "correct" path of the directory, but it may not exist in the
      working copy. */
@@ -215,6 +228,11 @@ struct file_baton {
   /* Gets set if the file is added rather than replaced. */
   svn_boolean_t added;
 
+  /* The name and path of this file as if they would be/are in the
+      local working copy. */
+  const char *name;
+  const char *local_abspath;
+
   /* PATH is the "correct" path of the file, but it may not exist in the
      working copy.  WC_PATH is a path we can use to make temporary files
      or open empty files; it doesn't necessarily exist either, but the
@@ -236,6 +254,8 @@ struct file_baton {
   /* The overall crawler editor baton. */
   struct edit_baton *edit_baton;
 
+  struct dir_baton *parent_baton;
+
   apr_pool_t *pool;
 };
 
@@ -254,17 +274,19 @@ struct file_baton {
  * filtering is requested.
  */
 static svn_error_t *
-make_editor_baton(struct edit_baton **edit_baton,
-                  svn_wc_adm_access_t *anchor,
-                  const char *target,
-                  const svn_wc_diff_callbacks4_t *callbacks,
-                  void *callback_baton,
-                  svn_depth_t depth,
-                  svn_boolean_t ignore_ancestry,
-                  svn_boolean_t use_text_base,
-                  svn_boolean_t reverse_order,
-                  const apr_array_header_t *changelists,
-                  apr_pool_t *pool)
+make_edit_baton(struct edit_baton **edit_baton,
+                svn_wc_adm_access_t *anchor,
+                const char *target,
+                const svn_wc_diff_callbacks4_t *callbacks,
+                void *callback_baton,
+                svn_depth_t depth,
+                svn_boolean_t ignore_ancestry,
+                svn_boolean_t use_text_base,
+                svn_boolean_t reverse_order,
+                const apr_array_header_t *changelists,
+                svn_cancel_func_t cancel_func,
+                void *cancel_baton,
+                apr_pool_t *pool)
 {
   apr_hash_t *changelist_hash = NULL;
   struct edit_baton *eb;
@@ -273,8 +295,10 @@ make_editor_baton(struct edit_baton **edit_baton,
     SVN_ERR(svn_hash_from_cstring_keys(&changelist_hash, changelists, pool));
 
   eb = apr_pcalloc(pool, sizeof(*eb));
+  eb->db = svn_wc__adm_get_db(anchor);
   eb->anchor = anchor;
   eb->anchor_path = svn_wc_adm_access_path(anchor);
+  SVN_ERR(svn_dirent_get_absolute(&eb->anchor_abspath, eb->anchor_path, pool));
   eb->target = apr_pstrdup(pool, target);
   eb->callbacks = callbacks;
   eb->callback_baton = callback_baton;
@@ -283,7 +307,8 @@ make_editor_baton(struct edit_baton **edit_baton,
   eb->use_text_base = use_text_base;
   eb->reverse_order = reverse_order;
   eb->changelist_hash = changelist_hash;
-  eb->db = svn_wc__adm_get_db(anchor);
+  eb->cancel_func = cancel_func;
+  eb->cancel_baton = cancel_baton;  
   eb->pool = pool;
 
   *edit_baton = eb;
@@ -317,6 +342,14 @@ make_dir_baton(const char *path,
   dir_baton->compared = apr_hash_make(dir_baton->pool);
   dir_baton->path = path;
 
+  dir_baton->name = svn_dirent_basename(path, NULL);
+
+  if (parent_baton != NULL)
+    dir_baton->local_abspath = svn_dirent_join(parent_baton->local_abspath,
+                                               dir_baton->name, pool);
+  else
+    dir_baton->local_abspath = apr_pstrdup(pool, edit_baton->anchor_abspath);
+
   return dir_baton;
 }
 
@@ -335,10 +368,15 @@ make_file_baton(const char *path,
   struct edit_baton *edit_baton = parent_baton->edit_baton;
 
   file_baton->edit_baton = edit_baton;
+  file_baton->parent_baton = parent_baton;
   file_baton->added = added;
   file_baton->pool = pool;
   file_baton->propchanges  = apr_array_make(pool, 1, sizeof(svn_prop_t));
   file_baton->path = path;
+
+  file_baton->name = svn_dirent_basename(path, NULL);
+  file_baton->local_abspath = svn_dirent_join(parent_baton->local_abspath,
+                                              file_baton->name, pool);
 
   /* If the parent directory is added rather than replaced it does not
      exist in the working copy.  Determine a working copy path whose
@@ -1697,9 +1735,10 @@ svn_wc_get_diff_editor6(svn_wc_adm_access_t *anchor,
   svn_delta_editor_t *tree_editor;
   const svn_delta_editor_t *inner_editor;
 
-  SVN_ERR(make_editor_baton(&eb, anchor, target, callbacks, callback_baton,
-                            depth, ignore_ancestry, use_text_base,
-                            reverse_order, changelists, pool));
+  SVN_ERR(make_edit_baton(&eb, anchor, target, callbacks, callback_baton,
+                          depth, ignore_ancestry, use_text_base,
+                          reverse_order, changelists,
+                          cancel_func, cancel_baton, pool));
 
   tree_editor = svn_delta_default_editor(eb->pool);
 
@@ -1749,6 +1788,8 @@ svn_wc_diff6(svn_wc_adm_access_t *anchor,
              svn_depth_t depth,
              svn_boolean_t ignore_ancestry,
              const apr_array_header_t *changelists,
+             svn_cancel_func_t cancel_func,
+             void *cancel_baton,
              apr_pool_t *pool)
 {
   struct edit_baton *eb;
@@ -1757,9 +1798,10 @@ svn_wc_diff6(svn_wc_adm_access_t *anchor,
   const char *target_abspath;
   svn_wc__db_kind_t kind;
 
-  SVN_ERR(make_editor_baton(&eb, anchor, target, callbacks, callback_baton,
-                            depth, ignore_ancestry, FALSE, FALSE,
-                            changelists, pool));
+  SVN_ERR(make_edit_baton(&eb, anchor, target, callbacks, callback_baton,
+                          depth, ignore_ancestry, FALSE, FALSE,
+                          changelists,
+                          cancel_func, cancel_baton, pool));
 
   target_path = svn_dirent_join(svn_wc_adm_access_path(anchor), target,
                                 eb->pool);

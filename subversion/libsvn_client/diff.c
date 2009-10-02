@@ -1227,7 +1227,8 @@ diff_wc_wc(const char *path1,
   callback_baton->revnum2 = SVN_INVALID_REVNUM;  /* WC */
 
   SVN_ERR(svn_wc_diff6(adm_access, target, callbacks, callback_baton,
-                       depth, ignore_ancestry, changelists, pool));
+                       depth, ignore_ancestry, changelists,
+                       ctx->cancel_func, ctx->cancel_baton, pool));
   return svn_wc_adm_close2(adm_access, pool);
 }
 
