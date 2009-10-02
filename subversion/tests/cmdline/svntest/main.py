@@ -184,8 +184,9 @@ enable_sasl = False
 use_jsvn = False
 
 # Global variable indicating which DAV library to use if both are available
-# ('neon', 'serf')
-preferred_http_library = 'serf'
+# ('neon', 'serf'). The default is neon for backward compatibility of the
+# test suite.
+preferred_http_library = 'neon'
 
 # Global variable: Number of shards to use in FSFS
 # 'None' means "use FSFS's default"
@@ -1302,7 +1303,9 @@ def usage():
   print("Options:")
   print(" --list          Print test doc strings instead of running them")
   print(" --fs-type       Subversion file system type (fsfs or bdb)")
-  print(" --http-library  DAV library to use (neon or serf), default serf")
+  print(" --http-library  Make svn use this DAV library (neon or serf) if\n"
+        "                 it supports both, else assume it's using this one;\n"
+        "                 the default is neon")
   print(" --url           Base url to the repos (e.g. svn://localhost)")
   print(" --verbose       Print binary command-lines (not with --quiet)")
   print(" --quiet         Print only unexpected results (not with --verbose)")
