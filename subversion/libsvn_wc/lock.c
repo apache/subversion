@@ -249,7 +249,7 @@ adm_access_alloc(svn_wc_adm_access_t **adm_access,
   if (err)
     return svn_error_compose_create(
                 err,
-                svn_wc__db_lock_remove(db, lock->abspath, scratch_pool));
+                svn_wc__db_wclock_remove(db, lock->abspath, scratch_pool));
 
   /* ### does this utf8 thing really/still apply??  */
   /* It's important that the cleanup handler is registered *after* at least
