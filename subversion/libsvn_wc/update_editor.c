@@ -3519,6 +3519,9 @@ add_file_with_history(const char *path,
 
           SVN_ERR(svn_io_copy_file(src_local_abspath, tfb->copied_working_text, TRUE,
                                    subpool));
+
+          SVN_ERR(svn_dirent_get_absolute(&tfb->copied_working_text,
+                                          tfb->copied_working_text, pool));
         }
     }
 
@@ -4247,10 +4250,17 @@ merge_file(svn_wc_notify_state_t *content_state,
   svn_wc_conflict_version_t *left_version = NULL; /* ### Fill */
   svn_wc_conflict_version_t *right_version = NULL; /* ### Fill */
   const char *parent_abspath;
+  const char *new_text_base_abspath;
 
   /* Accumulated entry modifications. */
   svn_wc_entry_t tmp_entry;
   apr_uint64_t flags = 0;
+
+  if (new_text_base_path)
+    SVN_ERR(svn_dirent_get_absolute(&new_text_base_abspath,
+                                    new_text_base_path, pool));
+  else
+    new_text_base_abspath = NULL;
 
   /*
      When this function is called on file F, we assume the following
@@ -4325,12 +4335,8 @@ merge_file(svn_wc_notify_state_t *content_state,
     SVN_ERR(svn_wc__text_modified_internal_p(&is_locally_modified, eb->db,
                                              fb->local_abspath, FALSE, FALSE,
                                              pool));
-  else if (new_text_base_path)
+  else if (new_text_base_abspath)
     {
-      const char *new_text_base_abspath;
-
-      SVN_ERR(svn_dirent_get_absolute(&new_text_base_abspath,
-                                      new_text_base_path, pool));
       SVN_ERR(svn_wc__internal_versioned_file_modcheck(&is_locally_modified,
                                                        eb->db,
                                                        fb->local_abspath,
@@ -4377,7 +4383,7 @@ merge_file(svn_wc_notify_state_t *content_state,
 
    So the first thing we do is figure out where we are in the
    matrix. */
-  if (new_text_base_path)
+  if (new_text_base_abspath)
     {
       if (is_replaced)
         {
@@ -4398,7 +4404,7 @@ merge_file(svn_wc_notify_state_t *content_state,
                text-base. */
             SVN_ERR(svn_wc__loggy_copy(&log_accum,
                                        svn_wc__adm_access_abspath(adm_access),
-                                       new_text_base_path,
+                                       new_text_base_abspath,
                                        fb->path, pool, pool));
         }
       else   /* working file or obstruction is locally modified... */
@@ -4412,7 +4418,7 @@ merge_file(svn_wc_notify_state_t *content_state,
                  Just copy the new text-base to the file. */
               SVN_ERR(svn_wc__loggy_copy(&log_accum,
                                          svn_wc__adm_access_abspath(adm_access),
-                                         new_text_base_path,
+                                         new_text_base_abspath,
                                          fb->path, pool, pool));
             }
           else if (! fb->existed)
@@ -4468,6 +4474,9 @@ merge_file(svn_wc_notify_state_t *content_state,
                                                       adm_access),
                                                   svn_io_file_del_none,
                                                   pool));
+
+                  SVN_ERR(svn_dirent_get_absolute(&merge_left, merge_left,
+                                                  pool));
                   delete_left = TRUE;
                 }
               else if (fb->copied_text_base)
@@ -4483,12 +4492,12 @@ merge_file(svn_wc_notify_state_t *content_state,
                        &log_accum, &merge_outcome,
                        eb->db,
                        merge_left, left_version,
-                       new_text_base_path, right_version,
-                       fb->path,
+                       new_text_base_abspath, right_version,
+                       fb->local_abspath,
                        fb->copied_working_text,
                        oldrev_str, newrev_str, mine_str,
                        FALSE, eb->diff3_cmd, NULL, fb->propchanges,
-                       eb->conflict_func, eb->conflict_baton, 
+                       eb->conflict_func, eb->conflict_baton,
                        eb->cancel_func, eb->cancel_baton,
                        pool));
 
@@ -4551,11 +4560,11 @@ merge_file(svn_wc_notify_state_t *content_state,
     }
 
   /* Deal with installation of the new textbase, if appropriate. */
-  if (new_text_base_path)
+  if (new_text_base_abspath)
     {
       SVN_ERR(svn_wc__loggy_move(&log_accum,
                                  svn_wc__adm_access_abspath(adm_access),
-                                 new_text_base_path,
+                                 new_text_base_abspath,
                                  fb->text_base_path, pool, pool));
       SVN_ERR(svn_wc__loggy_set_readonly(
                         &log_accum, svn_wc__adm_access_abspath(adm_access),
@@ -4590,7 +4599,7 @@ merge_file(svn_wc_notify_state_t *content_state,
                         &log_accum, svn_wc__adm_access_abspath(adm_access),
                         fb->path, fb->last_changed_date, pool, pool));
 
-      if ((new_text_base_path || magic_props_changed)
+      if ((new_text_base_abspath || magic_props_changed)
           && !fb->deleted)
         {
           /* Adjust entries file to match working file */
@@ -4621,7 +4630,7 @@ merge_file(svn_wc_notify_state_t *content_state,
 
   if (merge_outcome == svn_wc_merge_conflict)
     *content_state = svn_wc_notify_state_conflicted;
-  else if (new_text_base_path)
+  else if (new_text_base_abspath)
     {
       if (is_locally_modified)
         *content_state = svn_wc_notify_state_merged;
