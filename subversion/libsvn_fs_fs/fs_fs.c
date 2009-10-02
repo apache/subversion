@@ -3394,12 +3394,10 @@ unparse_dir_entries(apr_hash_t **str_entries_p,
     {
       const void *key;
       apr_ssize_t klen;
-      void *val;
-      svn_fs_dirent_t *dirent;
+      svn_fs_dirent_t *dirent = svn_apr_hash_index_val(hi);
       const char *new_val;
 
-      apr_hash_this(hi, &key, &klen, &val);
-      dirent = val;
+      apr_hash_this(hi, &key, &klen, NULL);
       new_val = unparse_dir_entry(dirent->kind, dirent->id, pool);
       apr_hash_set(*str_entries_p, key, klen,
                    svn_string_create(new_val, pool));
@@ -3444,16 +3442,13 @@ parse_dir_entries(apr_hash_t **entries_p,
   /* Translate the string dir entries into real entries. */
   for (hi = apr_hash_first(pool, str_entries); hi; hi = apr_hash_next(hi))
     {
-      const void *key;
-      void *val;
-      svn_string_t *str_val;
+      const char *name = svn_apr_hash_index_key(hi);
+      svn_string_t *str_val = svn_apr_hash_index_val(hi);
       char *str, *last_str;
       svn_fs_dirent_t *dirent = apr_pcalloc(pool, sizeof(*dirent));
 
-      apr_hash_this(hi, &key, NULL, &val);
-      str_val = val;
       str = apr_pstrdup(pool, str_val->data);
-      dirent->name = apr_pstrdup(pool, key);
+      dirent->name = apr_pstrdup(pool, name);
 
       str = apr_strtok(str, " ", &last_str);
       if (str == NULL)
@@ -4044,17 +4039,16 @@ fetch_all_changes(apr_hash_t *changed_paths,
                hi = apr_hash_next(hi))
             {
               /* KEY is the path. */
-              const void *hashkey;
-              apr_ssize_t klen;
-              apr_hash_this(hi, &hashkey, &klen, NULL);
+              const char *path = svn_apr_hash_index_key(hi);
+              apr_ssize_t klen = svn_apr_hash_index_klen(hi);
 
               /* If we come across our own path, ignore it. */
-              if (strcmp(change->path, hashkey) == 0)
+              if (strcmp(change->path, path) == 0)
                 continue;
 
               /* If we come across a child of our path, remove it. */
-              if (svn_path_is_child(change->path, hashkey, iterpool))
-                apr_hash_set(changed_paths, hashkey, klen, NULL);
+              if (svn_path_is_child(change->path, path, iterpool))
+                apr_hash_set(changed_paths, path, klen, NULL);
             }
         }
 
@@ -5281,8 +5275,6 @@ write_final_rev(const svn_fs_id_t **new_id_p,
     {
       apr_pool_t *subpool;
       apr_hash_t *entries, *str_entries;
-      svn_fs_dirent_t *dirent;
-      void *val;
       apr_hash_index_t *hi;
 
       /* This is a directory.  Write out all the children first. */
@@ -5292,9 +5284,9 @@ write_final_rev(const svn_fs_id_t **new_id_p,
 
       for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
         {
+          svn_fs_dirent_t *dirent = svn_apr_hash_index_val(hi);
+
           svn_pool_clear(subpool);
-          apr_hash_this(hi, NULL, NULL, &val);
-          dirent = val;
           SVN_ERR(write_final_rev(&new_id, file, rev, fs, dirent->id,
                                   start_node_id, start_copy_id,
                                   subpool));
@@ -5433,13 +5425,12 @@ write_final_changed_path_info(apr_off_t *offset_p,
       node_revision_t *noderev;
       const svn_fs_id_t *id;
       svn_fs_path_change2_t *change;
-      const void *key;
-      void *val;
+      const char *path;
 
       svn_pool_clear(iterpool);
 
-      apr_hash_this(hi, &key, NULL, &val);
-      change = val;
+      change = svn_apr_hash_index_val(hi);
+      path = svn_apr_hash_index_key(hi);
 
       id = change->node_rev_id;
 
@@ -5457,7 +5448,7 @@ write_final_changed_path_info(apr_off_t *offset_p,
         }
 
       /* Write out the new entry into the final rev-file. */
-      SVN_ERR(write_change_entry(file, key, change, include_node_kinds,
+      SVN_ERR(write_change_entry(file, path, change, include_node_kinds,
                                  iterpool));
     }
 
@@ -5574,11 +5565,7 @@ verify_locks(svn_fs_t *fs,
   changed_paths = apr_array_make(pool, apr_hash_count(changes) + 1,
                                  sizeof(const char *));
   for (hi = apr_hash_first(pool, changes); hi; hi = apr_hash_next(hi))
-    {
-      const void *key;
-      apr_hash_this(hi, &key, NULL, NULL);
-      APR_ARRAY_PUSH(changed_paths, const char *) = key;
-    }
+    APR_ARRAY_PUSH(changed_paths, const char *) = svn_apr_hash_index_key(hi);
   qsort(changed_paths->elts, changed_paths->nelts,
         changed_paths->elt_size, svn_sort_compare_paths);
 
@@ -6185,18 +6172,17 @@ recover_find_max_ids(svn_fs_t *fs, svn_revnum_t rev,
   iterpool = svn_pool_create(pool);
   for (hi = apr_hash_first(NULL, entries); hi; hi = apr_hash_next(hi))
     {
-      void *val;
       char *str_val;
       char *str, *last_str;
       svn_node_kind_t kind;
       svn_fs_id_t *id;
       const char *node_id, *copy_id;
       apr_off_t child_dir_offset;
+      const char *path = svn_apr_hash_index_val(hi);
 
       svn_pool_clear(iterpool);
 
-      apr_hash_this(hi, NULL, NULL, &val);
-      str_val = apr_pstrdup(iterpool, *((char **)val));
+      str_val = apr_pstrdup(iterpool, path);
 
       str = apr_strtok(str_val, " ", &last_str);
       if (str == NULL)
@@ -6613,12 +6599,9 @@ svn_fs_fs__list_transactions(apr_array_header_t **names_p,
   /* Loop through all the entries and return anything that ends with '.txn'. */
   for (hi = apr_hash_first(pool, dirents); hi; hi = apr_hash_next(hi))
     {
-      const void *key;
-      const char *name, *id;
-      apr_ssize_t klen;
-
-      apr_hash_this(hi, &key, &klen, NULL);
-      name = key;
+      const char *name = svn_apr_hash_index_key(hi);
+      apr_ssize_t klen = svn_apr_hash_index_klen(hi);
+      const char *id;
 
       /* The name must end with ".txn" to be considered a transaction. */
       if ((apr_size_t) klen <= ext_len
