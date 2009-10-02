@@ -241,28 +241,23 @@ tweak_entries(svn_wc__db_t *db,
 
 static svn_error_t *
 remove_revert_files(svn_stringbuf_t **logtags,
-                    svn_wc_adm_access_t *adm_access,
-                    const char *path,
+                    svn_wc__db_t *db,
+                    const char *dir_abspath,
+                    const char *local_abspath,
                     apr_pool_t * pool)
 {
-  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
-  const char *revert_file, *local_abspath;
+  const char *revert_file;
   svn_node_kind_t kind;
-
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
-
 
   SVN_ERR(svn_wc__text_revert_path(&revert_file, db, local_abspath, pool));
 
   SVN_ERR(svn_io_check_path(revert_file, &kind, pool));
   if (kind == svn_node_file)
-    SVN_ERR(svn_wc__loggy_remove(logtags,
-                                 svn_wc__adm_access_abspath(adm_access),
+    SVN_ERR(svn_wc__loggy_remove(logtags, dir_abspath,
                                  revert_file, pool, pool));
 
   return svn_error_return(
-    svn_wc__loggy_props_delete(logtags, db, local_abspath,
-                               svn_wc__adm_access_abspath(adm_access),
+    svn_wc__loggy_props_delete(logtags, db, local_abspath, dir_abspath,
                                svn_wc__props_revert, pool));
 }
 
@@ -350,8 +345,11 @@ process_committed_leaf(int log_number,
   svn_wc_entry_t tmp_entry;
   apr_uint64_t modify_flags = 0;
   svn_stringbuf_t *logtags = svn_stringbuf_create("", pool);
+  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
+  const char *local_abspath;
 
   SVN_ERR(svn_wc__adm_write_check(adm_access, pool));
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
   /* Set PATH's working revision to NEW_REVNUM; if REV_DATE and
      REV_AUTHOR are both non-NULL, then set the 'committed-rev',
@@ -363,7 +361,9 @@ process_committed_leaf(int log_number,
       /* If the props or text revert file exists it needs to be deleted when
        * the file is committed. */
       /* ### don't directories have revert props? */
-      SVN_ERR(remove_revert_files(&logtags, adm_access, path, pool));
+      SVN_ERR(remove_revert_files(&logtags, db,
+                                  svn_wc__adm_access_abspath(adm_access),
+                                  local_abspath, pool));
 
       if (checksum == NULL)
         {
