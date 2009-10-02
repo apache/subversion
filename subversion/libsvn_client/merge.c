@@ -762,8 +762,8 @@ split_mergeinfo_on_revision(svn_mergeinfo_t *younger_mergeinfo,
 /* Helper for merge_props_changed().
 
    *PROPS is an array of svn_prop_t structures representing regular properties
-   to be added to the working copy PATH.  ADM_ACCESS and MERGE_B are cascaded
-   from the arguments of the same name in merge_props_changed().
+   to be added to the working copy PATH.  MERGE_B is cascaded from the
+   argument of the same name in merge_props_changed().
 
    If mergeinfo is not being honored, MERGE_B->SAME_REPOS is true, and
    MERGE_B->REINTEGRATE_MERGE is FALSE do nothing.  Otherwise, if
@@ -1773,9 +1773,8 @@ properties_same_p(svn_boolean_t *same,
 }
 
 /* Compare the file OLDER (together with its normal properties in
- * ORIGINAL_PROPS which may also contain WC props and entry props) and MINE
- * (with its properties obtained from its WC admin area ADM_ACCESS). Set
- * *SAME to true if they are the same or false if they differ, ignoring
+ * ORIGINAL_PROPS which may also contain WC props and entry props) and MINE.
+ * Set *SAME to true if they are the same or false if they differ, ignoring
  * the "svn:mergeinfo" property, and ignoring differences in keyword
  * expansion and end-of-line style. */
 static svn_error_t *
@@ -3205,7 +3204,7 @@ get_full_mergeinfo(svn_mergeinfo_t *recorded_mergeinfo,
 
 /* Helper for ensure_implicit_mergeinfo().
 
-   PARENT, CHILD, REVISION1, REVISION2, RA_SESSION, ADM_ACCESS, and CTX
+   PARENT, CHILD, REVISION1, REVISION2, RA_SESSION, and CTX
    are all cascaded from the arguments of the same names in
    ensure_implicit_mergeinfo().  PARENT and CHILD must both exist, i.e.
    this function should never be called where CHILD is the merge target.
@@ -3272,7 +3271,7 @@ inherit_implicit_mergeinfo_from_parent(svn_client__merge_path_t *parent,
    PARNET->IMPLICIT_MERGEINFO, otherwise contact the repository.  Use
    SCRATCH_POOL for all temporary allocations.
 
-   PARENT, CHILD, ENTRY, REVISION1, REVISION2, RA_SESSION, ADM_ACCESS, and
+   PARENT, CHILD, ENTRY, REVISION1, REVISION2, RA_SESSION, and
    CTX are all cascased from the arguments of the same name in
    filter_merged_revisions() and the same conditions for that function
    hold here. */
@@ -3574,7 +3573,7 @@ filter_merged_revisions(svn_client__merge_path_t *parent,
    been merged to CHILD->PATH and populate CHILD->REMAINING_RANGES with the
    ranges that still need merging.
 
-   URL1, REVISION1, URL2, REVISION2, ADM_ACCESS, and CTX are all cascaded
+   URL1, REVISION1, URL2, REVISION2, and CTX are all cascaded
    from the caller's arguments of the same names.  Note that this means URL1,
    REVISION1, URL2, and REVISION2 adhere to the requirements noted in
    `MERGEINFO MERGE SOURCE NORMALIZATION'.
@@ -4307,7 +4306,7 @@ update_wc_mergeinfo(const char *target_wcpath,
    does not incorrectly inherit mergeinfo that will later be describing
    the merge.
 
-   MERGEINFO_PATH, ADM_ACCESS, NOTIFY_B, and MERGE_B are all cascased from
+   MERGEINFO_PATH, NOTIFY_B, and MERGE_B are all cascased from
    arguments of the same name in the caller.
 
    TARGET_ENTRY is the entry from MERGE_B->TARGET_ABSPATH.  IS_ROLLBACK is
@@ -5250,7 +5249,7 @@ insert_child_to_merge(apr_array_header_t *children_with_mergeinfo,
 
 /* Helper for get_mergeinfo_paths().
 
-   CHILDREN_WITH_MERGEINFO, MERGE_CMD_BATON, DEPTH, ADM_ACCESS, and POOL are
+   CHILDREN_WITH_MERGEINFO, MERGE_CMD_BATON, DEPTH, and POOL are
    all cascaded from the arguments of the same name to get_mergeinfo_paths().
 
    *CHILD is the element in in CHILDREN_WITH_MERGEINFO that
@@ -5394,7 +5393,7 @@ insert_parent_and_sibs_of_sw_absent_del_entry(
    ordering it is guaranteed to be the first element in
    *CHILDREN_WITH_MERGEINFO.
 
-   MERGE_COMMAND_BATON, URL1, URL2, REVISION1, REVISION2, and ADM_ACCESS are
+   MERGE_COMMAND_BATON, URL1, URL2, REVISION1, and REVISION2 are
    cascaded from the arguments of the same name in do_directory_merge().
 
    RA_SESSION is the session for, and SOURCE_ROOT_URL is the repository root
@@ -6530,7 +6529,7 @@ do_file_merge(const char *url1,
    drive adds explicit mergeinfo to a path which didn't have any explicit
    mergeinfo previously.
 
-   MERGE_B, NOTIFY_B, ADM_ACCESS are cascaded from the arguments of the same
+   MERGE_B and NOTIFY_B are cascaded from the arguments of the same
    name in do_directory_merge().  Should be called only after
    do_directory_merge() has called populate_remaining_ranges() and populated
    the remaining_ranges field of each child in
@@ -7000,7 +6999,7 @@ record_mergeinfo_for_dir_merge(const svn_wc_entry_t *target_entry,
    See also issue #2829
    http://subversion.tigris.org/issues/show_bug.cgi?id=2829#desc14.
 
-   DEPTH, NOTIFY_B, MERGE_B, and ADM_ACCESS are all cascaded from
+   DEPTH, NOTIFY_B and MERGE_B and are both cascaded from
    do_directory_merge's arguments of the same names.
 */
 static svn_error_t *
