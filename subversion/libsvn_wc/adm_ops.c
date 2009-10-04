@@ -1460,33 +1460,25 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
             void *notify_baton,
             apr_pool_t *pool)
 {
-  const char *parent_dir, *base_name;
-  const svn_wc_entry_t *orig_entry, *parent_entry;
+  const char *parent_abspath, *base_name;
+  const svn_wc_entry_t *parent_entry;
   svn_wc_entry_t tmp_entry;
   svn_boolean_t is_replace = FALSE;
   svn_node_kind_t kind;
   apr_uint64_t modify_flags = 0;
-  svn_wc_adm_access_t *p_access, *adm_access;
   svn_wc__db_t *db = wc_ctx->db;
-  const char *path;
+  svn_error_t *err;
+  svn_wc__db_status_t status;
+  svn_depth_t db_depth;
+  svn_wc__db_kind_t db_kind;
+  svn_boolean_t exists;
 
-  p_access = svn_wc__adm_retrieve_internal2(db,
-                                            svn_dirent_dirname(local_abspath,
-                                                               pool),
-                                            pool);
-
-  /* Check if we are not adding the working copy root
-     'svn wc add --force .' */
-  if (p_access == NULL)
-    p_access = svn_wc__adm_retrieve_internal2(db, local_abspath, pool);
-
-  SVN_ERR_ASSERT(p_access != NULL);
-
-  path = svn_dirent_join(svn_wc_adm_access_path(p_access),
-                         svn_dirent_skip_ancestor(
-                                     svn_wc__adm_access_abspath(p_access),
-                                     local_abspath),
-                         pool);
+  svn_dirent_split(local_abspath, &parent_abspath, &base_name, pool);
+  if (svn_wc_is_adm_dir(base_name, pool))
+    return svn_error_createf
+      (SVN_ERR_ENTRY_FORBIDDEN, NULL,
+       _("Can't create an entry with a reserved name while trying to add '%s'"),
+       svn_dirent_local_style(local_abspath, pool));
 
   SVN_ERR(svn_path_check_valid(local_abspath, pool));
 
@@ -1495,11 +1487,11 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
   if (kind == svn_node_none)
     return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
                              _("'%s' not found"),
-                             svn_dirent_local_style(path, pool));
+                             svn_dirent_local_style(local_abspath, pool));
   if (kind == svn_node_unknown)
     return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
                              _("Unsupported node kind for path '%s'"),
-                             svn_dirent_local_style(path, pool));
+                             svn_dirent_local_style(local_abspath, pool));
 
   /* Get the original entry for this path if one exists (perhaps
      this is actually a replacement of a previously deleted thing).
@@ -1507,34 +1499,57 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
      Note that this is one of the few functions that is allowed to see
      'deleted' entries;  it's totally fine to have an entry that is
      scheduled for addition and still previously 'deleted'.  */
-  SVN_ERR(svn_wc_adm_probe_try3(&adm_access, p_access, path,
-                                TRUE, copyfrom_url != NULL ? -1 : 0,
-                                cancel_func, cancel_baton, pool));
-  if (adm_access)
-    SVN_ERR(svn_wc_entry(&orig_entry, path, adm_access, TRUE, pool));
-  else
-    orig_entry = NULL;
 
-  /* You can only add something that is not in revision control, or
-     that is slated for deletion from revision control, or has been
-     previously 'deleted', unless, of course, you're specifying an
-     addition with -history-; then it's okay for the object to be
-     under version control already; it's not really new.
-     Also, if the target is recorded as excluded from wc, it really
-     exists in repos. Report error on this situation too. */
-  if (orig_entry)
+  err = svn_wc__db_read_info(&status, &db_kind, NULL, NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL, &db_depth, NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                             NULL, NULL,
+                             db, local_abspath, pool, pool);
+
+  if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
     {
-      if (((! copyfrom_url)
-           && (orig_entry->schedule != svn_wc_schedule_delete)
-           && (! orig_entry->deleted))
-          || (orig_entry->depth == svn_depth_exclude))
+      svn_error_clear(err);
+      exists = FALSE;
+    }
+  else
+    {
+      svn_node_kind_t wc_kind;
+
+      SVN_ERR(err);
+      exists = TRUE;
+
+      if (db_depth == svn_depth_exclude)
+        status = svn_wc__db_status_excluded;
+
+      switch (status)
         {
-          return svn_error_createf
-            (SVN_ERR_ENTRY_EXISTS, NULL,
-             _("'%s' is already under version control"),
-             svn_dirent_local_style(path, pool));
+          case svn_wc__db_status_not_present:
+            exists = TRUE; /* ### Make FALSE once we use SHA1 based pristine */
+            break; /* Already gone */
+          case svn_wc__db_status_deleted:
+          case svn_wc__db_status_obstructed_delete:
+            exists = TRUE; /* ### Make FALSE once we use SHA1 based pristine */
+            is_replace = TRUE;
+            break; /* Safe to add */
+
+          default:
+            if (copyfrom_url != NULL)
+              break; /* Just register as copied */
+            /* else fall through */
+
+          case svn_wc__db_status_excluded:
+          case svn_wc__db_status_absent:
+            return svn_error_createf(
+                             SVN_ERR_ENTRY_EXISTS, NULL,
+                             _("'%s' is already under version control"),
+                             svn_dirent_local_style(local_abspath, pool));
         }
-      else if (orig_entry->kind != kind)
+
+      wc_kind = (db_kind == svn_wc__db_kind_dir) ? svn_node_dir
+                                                 : svn_node_file;
+
+      /* ### Remove this check once we are fully switched to one wcroot db */
+      if (exists && wc_kind != kind)
         {
           /* ### todo: At some point, we obviously don't want to block
              replacements where the node kind changes.  When this
@@ -1546,32 +1561,24 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
              _("Can't replace '%s' with a node of a differing type; "
                "the deletion must be committed and the parent updated "
                "before adding '%s'"),
-             svn_dirent_local_style(path, pool),
-             svn_dirent_local_style(path, pool));
+             svn_dirent_local_style(local_abspath, pool),
+             svn_dirent_local_style(local_abspath, pool));
         }
-      if (orig_entry->schedule == svn_wc_schedule_delete)
-        is_replace = TRUE;
     }
 
-  /* Split off the base_name from the parent directory. */
-  svn_dirent_split(path, &parent_dir, &base_name, pool);
-  SVN_ERR(svn_wc_entry(&parent_entry, parent_dir, p_access, FALSE,
-                       pool));
+  SVN_ERR(svn_wc__get_entry(&parent_entry, db, parent_abspath, FALSE,
+                            svn_node_dir, FALSE, pool, pool));
   if (! parent_entry)
     return svn_error_createf
       (SVN_ERR_ENTRY_NOT_FOUND, NULL,
        _("Can't find parent directory's entry while trying to add '%s'"),
-       svn_dirent_local_style(path, pool));
-  if (svn_wc_is_adm_dir(base_name, pool))
-    return svn_error_createf
-      (SVN_ERR_ENTRY_FORBIDDEN, NULL,
-       _("Can't create an entry with a reserved name while trying to add '%s'"),
-       svn_dirent_local_style(path, pool));
+       svn_dirent_local_style(local_abspath, pool));
+
   if (parent_entry->schedule == svn_wc_schedule_delete)
     return svn_error_createf
       (SVN_ERR_WC_SCHEDULE_CONFLICT, NULL,
        _("Can't add '%s' to a parent directory scheduled for deletion"),
-       svn_dirent_local_style(path, pool));
+       svn_dirent_local_style(local_abspath, pool));
 
   /* Init the modify flags. */
   modify_flags = SVN_WC__ENTRY_MODIFY_SCHEDULE | SVN_WC__ENTRY_MODIFY_KIND;
@@ -1620,7 +1627,7 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
   /* ### this is totally bogus. we clear these cuz turds might have been
      ### left around. thankfully, this will be properly managed during the
      ### wc-ng upgrade process. for now, we try to compensate... */
-  if (copyfrom_url == NULL)
+  if ((exists || is_replace) && copyfrom_url == NULL)
     SVN_ERR(svn_wc__props_delete(db, local_abspath, svn_wc__props_working,
                                  pool));
 
@@ -1647,21 +1654,17 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
 
       if (! copyfrom_url)
         {
-          const svn_wc_entry_t *p_entry; /* ### why not use parent_entry? */
           const char *new_url;
 
-          /* Get the entry for this directory's parent.  We need to snatch
-             the ancestor path out of there. */
-          SVN_ERR(svn_wc_entry(&p_entry, parent_dir, p_access, FALSE,
-                               pool));
-
           /* Derive the parent path for our new addition here. */
-          new_url = svn_path_url_add_component2(p_entry->url, base_name, pool);
+          new_url = svn_path_url_add_component2(parent_entry->url, base_name,
+                                                pool);
 
           /* Make sure this new directory has an admistrative subdirectory
              created inside of it */
-          SVN_ERR(svn_wc__internal_ensure_adm(db, local_abspath, p_entry->uuid,
-                                              new_url, p_entry->repos, 0,
+          SVN_ERR(svn_wc__internal_ensure_adm(db, local_abspath,
+                                              parent_entry->uuid,
+                                              new_url, parent_entry->repos, 0,
                                               depth, pool));
         }
       else
@@ -1676,14 +1679,31 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
                                               copyfrom_rev, depth, pool));
         }
 
-      /* We want the locks to persist, so use the access baton's pool */
-      if (! orig_entry || orig_entry->deleted)
+      /* The next block is to keep the access batons in sync. As long as we
+         only have file locks inside access batons we have to open a new
+         access baton for new directories here. svn_wc_add3() handles this
+         case when we don't need the access batons for locking. */
+      /* ### This block can be removed after we fully abandon access batons. */
+      if (! exists)
         {
-          apr_pool_t* access_pool = svn_wc_adm_access_pool(p_access);
-          SVN_ERR(svn_wc_adm_open3(&adm_access, p_access, path,
-                                   TRUE, copyfrom_url != NULL ? -1 : 0,
-                                   cancel_func, cancel_baton,
-                                   access_pool));
+          svn_wc_adm_access_t *adm_access
+                 = svn_wc__adm_retrieve_internal2(db, parent_abspath, pool);
+
+          if (adm_access != NULL)
+            {
+              const char *rel_path;
+              apr_pool_t* adm_pool;
+
+              SVN_ERR(svn_wc__temp_get_relpath(&rel_path, db, local_abspath,
+                                               pool, pool));
+
+              /* Open access baton for new child directory */
+              adm_pool = svn_wc_adm_access_pool(adm_access);
+              SVN_ERR(svn_wc_adm_open3(&adm_access, adm_access, rel_path,
+                                       TRUE, copyfrom_url != NULL ? -1 : 0,
+                                       cancel_func, cancel_baton,
+                                       adm_pool));
+            }
         }
 
       /* We're making the same mods we made above, but this time we'll
@@ -1726,7 +1746,7 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
                                             pool));
 
           /* Recursively add the 'copied' existence flag as well!  */
-          SVN_ERR(mark_tree_copied(db, svn_wc__adm_access_abspath(adm_access),
+          SVN_ERR(mark_tree_copied(db, local_abspath,
                                    cancel_func, cancel_baton,
                                    pool));
 
@@ -1739,7 +1759,8 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
   /* Report the addition to the caller. */
   if (notify_func != NULL)
     {
-      svn_wc_notify_t *notify = svn_wc_create_notify(path, svn_wc_notify_add,
+      svn_wc_notify_t *notify = svn_wc_create_notify(local_abspath,
+                                                     svn_wc_notify_add,
                                                      pool);
       notify->kind = kind;
       (*notify_func)(notify_baton, notify, pool);
