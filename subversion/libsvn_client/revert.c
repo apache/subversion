@@ -29,6 +29,7 @@
 
 #include "svn_wc.h"
 #include "svn_client.h"
+#include "svn_dirent_uri.h"
 #include "svn_pools.h"
 #include "svn_error.h"
 #include "svn_time.h"
@@ -68,7 +69,7 @@ revert(const char *path,
        apr_pool_t *pool)
 {
   svn_wc_adm_access_t *adm_access, *target_access;
-  const char *target;
+  const char *target, *local_abspath;
   svn_error_t *err;
   int adm_lock_level = SVN_WC__LEVELS_TO_LOCK_FROM_DEPTH(depth);
 
@@ -78,7 +79,13 @@ revert(const char *path,
                                  ctx->cancel_func, ctx->cancel_baton,
                                  pool));
 
-  err = svn_wc_revert3(path, adm_access, depth, use_commit_times, changelists,
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+
+  err = svn_wc_revert4(ctx->wc_ctx,
+                       local_abspath,
+                       depth,
+                       use_commit_times,
+                       changelists,
                        ctx->cancel_func, ctx->cancel_baton,
                        ctx->notify_func2, ctx->notify_baton2,
                        pool);
