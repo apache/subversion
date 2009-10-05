@@ -308,7 +308,7 @@ const apr_getopt_option_t svn_cl__options[] =
                        "                             "
                        "while -p2 would give just crunchy.html\n")},
   {"show-copies-as-adds", opt_show_copies_as_adds, 0,
-                    N_("don't diff copied or moved files with their source,")},
+                    N_("don't diff copied or moved files with their source")},
 
   /* Long-opt Aliases
    *
