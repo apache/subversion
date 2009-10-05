@@ -535,6 +535,7 @@ read_entries_new(apr_hash_t **result_entries,
                                    local_abspath,
                                    result_pool, iterpool));
 
+  /* HACK: Push the directory at the end of a constant array */
   APR_ARRAY_PUSH((apr_array_header_t *)children, const char *) = "";
 
   /* Note that this loop order causes "this dir" to be processed first.
