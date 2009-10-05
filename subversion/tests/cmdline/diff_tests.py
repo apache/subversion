@@ -1473,24 +1473,24 @@ def diff_renamed_file(sbox):
                                                             pi2_path)
   if check_diff_output(diff_output,
                        pi2_path,
-                       'A') :
-    raise svntest.Failure
-
-  # Repos->WC diff of the file (with ancestry)
-  exit_code, diff_output, err_output = svntest.main.run_svn(None,
-                                                            'diff', '-r', '1',
-                                                            '--notice-ancestry',
-                                                            pi2_path)
-  if check_diff_output(diff_output,
-                       pi2_path,
                        'M') :
     raise svntest.Failure
+
+  # Repos->WC diff of the file ignoring copyfrom
+  ### does not work yet
+  #exit_code, diff_output, err_output = svntest.main.run_svn(
+  #                                       None, 'diff', '-r', '1',
+  #                                       '--show-copies-as-adds', pi2_path)
+  #if check_diff_output(diff_output,
+  #                     pi2_path,
+  #                     'A') :
+  #  raise svntest.Failure
 
   svntest.main.file_append(pi2_path, "new pi")
 
   # Repos->WC of the directory
   exit_code, diff_output, err_output = svntest.main.run_svn(
-    None, 'diff', '-r', '1', '--notice-ancestry', os.path.join('A', 'D'))
+    None, 'diff', '-r', '1', os.path.join('A', 'D'))
 
   if check_diff_output(diff_output,
                        pi_path,
@@ -1502,32 +1502,33 @@ def diff_renamed_file(sbox):
                        'M') :
     raise svntest.Failure
 
-  # Repos->WC of the directory (without ancestry)
-  exit_code, diff_output, err_output = svntest.main.run_svn(
-    None, 'diff', '-r', '1',  os.path.join('A', 'D'))
-
-  if check_diff_output(diff_output,
-                       pi_path,
-                       'D') :
-    raise svntest.Failure
-
-  if check_diff_output(diff_output,
-                       pi2_path,
-                       'A') :
-    raise svntest.Failure
+  # Repos->WC of the directory ignoring copyfrom
+  ### does not work yet
+  #exit_code, diff_output, err_output = svntest.main.run_svn(
+  #  None, 'diff', '-r', '1', '--show-copies-as-adds', os.path.join('A', 'D'))
+  #
+  #if check_diff_output(diff_output,
+  #                     pi_path,
+  #                     'D') :
+  #  raise svntest.Failure
+  #
+  #if check_diff_output(diff_output,
+  #                     pi2_path,
+  #                     'A') :
+  #  raise svntest.Failure
 
   # WC->WC of the file
   exit_code, diff_output, err_output = svntest.main.run_svn(None, 'diff',
-                                                            '--notice-ancestry',
                                                             pi2_path)
   if check_diff_output(diff_output,
                        pi2_path,
                        'M') :
     raise svntest.Failure
 
-  # WC->WC of the file (without ancestry)
-  exit_code, diff_output, err_output = svntest.main.run_svn(None, 'diff',
-                                                            pi2_path)
+  # WC->WC of the file ignoring copyfrom
+  exit_code, diff_output, err_output = svntest.main.run_svn(
+                                         None, 'diff',
+                                         '--show-copies-as-adds', pi2_path)
   if check_diff_output(diff_output,
                        pi2_path,
                        'A') :
@@ -1540,24 +1541,24 @@ def diff_renamed_file(sbox):
   # Repos->WC diff of file after the rename
   exit_code, diff_output, err_output = svntest.main.run_svn(None,
                                                             'diff', '-r', '1',
-                                                            '--notice-ancestry',
                                                             pi2_path)
   if check_diff_output(diff_output,
                        pi2_path,
                        'M') :
     raise svntest.Failure
 
-  # Repos->WC diff of file after the rename (without ancestry)
-  exit_code, diff_output, err_output = svntest.main.run_svn(None,
-                                                            'diff', '-r', '1',
-                                                            pi2_path)
-  if check_diff_output(diff_output,
-                       pi2_path,
-                       'A') :
-    raise svntest.Failure
+  # Repos->WC diff of file after the rename ignoring copyfrom
+  ### does not work yet
+  #exit_code, diff_output, err_output = svntest.main.run_svn(
+  #                                       None, 'diff', '-r', '1',
+  #                                       '--show-copies-as-adds', pi2_path)
+  #if check_diff_output(diff_output,
+  #                     pi2_path,
+  #                     'A') :
+  #  raise svntest.Failure
 
   # Repos->repos diff after the rename
-  ### --notice-ancestry has no effect
+  ### --show-copies-as-adds has no effect
   exit_code, diff_output, err_output = svntest.main.run_svn(None, 'diff',
                                                             '-r', '2:3',
                                                             pi2_path)
@@ -1597,15 +1598,14 @@ def diff_within_renamed_dir(sbox):
 
   if check_diff_output(diff_output,
                        os.path.join('A', 'D', 'I', 'pi'),
-                       'A') :
+                       'M') :
     raise svntest.Failure
 
   # Test the diff while within the moved directory
   os.chdir(os.path.join('A','D','I'))
 
   exit_code, diff_output, err_output = svntest.main.run_svn(None,
-                                                            'diff', '-r', '1',
-                                                            '--notice-ancestry')
+                                                            'diff', '-r', '1')
 
   if check_diff_output(diff_output, 'pi', 'M') :
     raise svntest.Failure
@@ -2289,7 +2289,7 @@ def diff_nonrecursive_checkout_deleted_dir(sbox):
   # We don't particular care about the output here, just that it doesn't
   # segfault.
   svntest.main.run_svn(None,
-                       'diff', '-r1', '--notice-ancestry')
+                       'diff', '-r1')
 
 
 #----------------------------------------------------------------------
@@ -2351,10 +2351,9 @@ def diff_base_repos_moved(sbox):
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'ci', '-m', '')
 
-  # Check that a base->repos diff with ancestry shows deleted and added lines.
+  # Check that a base->repos diff with copyfrom shows deleted and added lines.
   exit_code, out, err = svntest.actions.run_and_verify_svn(
-    None, svntest.verify.AnyOutput, [], 'diff', '-rBASE:1',
-    '--notice-ancestry', newfile)
+    None, svntest.verify.AnyOutput, [], 'diff', '-rBASE:1', newfile)
 
   if check_diff_output(out, newfile, 'M'):
     raise svntest.Failure
@@ -2365,18 +2364,20 @@ def diff_base_repos_moved(sbox):
       out[3][:3] != '+++' or out[3].find('iota)') == -1):
     raise svntest.Failure
 
-  # Check that a base->repos diff without ancestry shows deleted lines.
-  exit_code, out, err = svntest.actions.run_and_verify_svn(
-    None, svntest.verify.AnyOutput, [], 'diff', '-rBASE:1', newfile)
-
-  if check_diff_output(out, newfile, 'D'):
-    raise svntest.Failure
-
+  # Check that a base->repos diff without copyfrom shows deleted lines.
+  ### does not work yet
+  #exit_code, out, err = svntest.actions.run_and_verify_svn(
+  #  None, svntest.verify.AnyOutput, [], 'diff', '--show-copies-as-adds',
+  #  '-rBASE:1', newfile)
+  #
+  #if check_diff_output(out, newfile, 'D'):
+  #  raise svntest.Failure
+  #
   # This time, diff should display the item's name unchanged in both
   # lines of the diff header.
-  if (out[2][:3] == '---' and out[2].find('kappa)') != -1 or
-      out[3][:3] == '+++' and out[3].find('kappa)') != -1):
-    raise svntest.Failure
+  #if (out[2][:3] == '---' and out[2].find('kappa)') != -1 or
+  #    out[3][:3] == '+++' and out[3].find('kappa)') != -1):
+  #  raise svntest.Failure
 
 #----------------------------------------------------------------------
 # A diff of an added file within an added directory should work, and

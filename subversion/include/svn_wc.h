@@ -5647,6 +5647,10 @@ svn_wc_canonicalize_svn_prop(const svn_string_t **propval_p,
  * @a ignore_ancestry is @c FALSE, then any discontinuous node ancestry will
  * result in the diff given as a full delete followed by an add.
  *
+ * @a show_copies_as_adds determines whether paths added with history will
+ * appear as a diff against their copy source, or whether such paths will
+ * appear as if they were newly added in their entirety.
+ *
  * If @a use_text_base is TRUE, then compare the repository against
  * the working copy's text-base files, rather than the working files.
  *
@@ -5674,6 +5678,7 @@ svn_wc_get_diff_editor6(const svn_delta_editor_t **editor,
                         void *callback_baton,
                         svn_depth_t depth,
                         svn_boolean_t ignore_ancestry,
+                        svn_boolean_t show_copies_as_adds,
                         svn_boolean_t use_text_base,
                         svn_boolean_t reverse_order,
                         const apr_array_header_t *changelists,
@@ -5684,7 +5689,8 @@ svn_wc_get_diff_editor6(const svn_delta_editor_t **editor,
 
 /**
  * Similar to svn_wc_get_diff_editor6(), but with an
- * @c svn_wc_diff_callbacks3_t instead of @c svn_wc_diff_callbacks4_t.
+ * @c svn_wc_diff_callbacks3_t instead of @c svn_wc_diff_callbacks4_t,
+ * and @a show_copies_as_adds set to @c FALSE.
  *
  * @since New in 1.6.
  *
@@ -5822,6 +5828,10 @@ svn_wc_get_diff_editor(svn_wc_adm_access_t *anchor,
  * @a ignore_ancestry is @c FALSE, then any discontinuous node ancestry will
  * result in the diff given as a full delete followed by an add.
  *
+ * @a show_copies_as_adds determines whether paths added with history will
+ * appear as a diff against their copy source, or whether such paths will
+ * appear as if they were newly added in their entirety.
+ *
  * @a changelists is an array of <tt>const char *</tt> changelist
  * names, used as a restrictive filter on items whose differences are
  * reported; that is, don't generate diffs about any item unless
@@ -5841,6 +5851,7 @@ svn_wc_diff6(svn_wc_context_t *wc_ctx,
              void *callback_baton,
              svn_depth_t depth,
              svn_boolean_t ignore_ancestry,
+             svn_boolean_t show_copies_as_adds,
              const apr_array_header_t *changelists,
              svn_cancel_func_t cancel_func,
              void *cancel_baton,
@@ -5848,8 +5859,8 @@ svn_wc_diff6(svn_wc_context_t *wc_ctx,
 
 /**
  * Similar to svn_wc_diff6(), but with a @c svn_wc_diff_callbacks3_t argument
- * instead of @c svn_wc_diff_callbacks4_t. It also doesn't allow specifying
- * a cancel function.
+ * instead of @c svn_wc_diff_callbacks4_t, and @a show_copies_as_adds set to
+ * @c FALSE. It also doesn't allow specifying a cancel function.
  *
  * @since New in 1.6.
  *

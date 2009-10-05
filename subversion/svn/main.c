@@ -113,7 +113,8 @@ typedef enum {
   opt_accept,
   opt_show_revs,
   opt_reintegrate,
-  opt_trust_server_cert
+  opt_trust_server_cert,
+  opt_show_copies_as_adds
 } svn_cl__longopt_t;
 
 /* Option codes and descriptions for the command line client.
@@ -306,6 +307,8 @@ const apr_getopt_option_t svn_cl__options[] =
                        "    fudge/crunchy.html\n"
                        "                             "
                        "while -p2 would give just crunchy.html\n")},
+  {"show-copies-as-adds", opt_show_copies_as_adds, 0,
+                    N_("don't diff copied or moved files with their source,")},
 
   /* Long-opt Aliases
    *
@@ -490,8 +493,8 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "\n"
      "  Use just 'svn diff' to display local modifications in a working copy.\n"),
     {'r', 'c', opt_old_cmd, opt_new_cmd, 'N', opt_depth, opt_diff_cmd, 'x',
-     opt_no_diff_deleted, opt_notice_ancestry, opt_summarize, opt_changelist,
-     opt_force, opt_xml} },
+     opt_no_diff_deleted, opt_show_copies_as_adds, opt_notice_ancestry,
+     opt_summarize, opt_changelist, opt_force, opt_xml} },
   { "export", svn_cl__export, {0}, N_
     ("Create an unversioned copy of a tree.\n"
      "usage: 1. export [-r REV] URL[@PEGREV] [PATH]\n"
@@ -1483,6 +1486,9 @@ main(int argc, const char *argv[])
         break;
       case opt_no_diff_deleted:
         opt_state.no_diff_deleted = TRUE;
+        break;
+      case opt_show_copies_as_adds:
+        opt_state.show_copies_as_adds = TRUE;
         break;
       case opt_notice_ancestry:
         opt_state.notice_ancestry = TRUE;
