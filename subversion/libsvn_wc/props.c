@@ -661,55 +661,55 @@ svn_wc_merge_props3(svn_wc_notify_state_t *state,
                     void *cancel_baton,
                     apr_pool_t *pool /* scratch_pool */)
 {
-  const svn_wc_entry_t *entry;
+  svn_wc__db_kind_t kind;
+  svn_boolean_t hidden;
   svn_stringbuf_t *log_accum;
-  const char *dir_abspath;
-  const char *path;
-
-  SVN_ERR(svn_wc__temp_get_relpath(&path, wc_ctx->db, local_abspath,
-                                   pool, pool));
 
   /* IMPORTANT: svn_wc_merge_prop_diffs relies on the fact that baseprops
      may be NULL. */
 
-  SVN_ERR(svn_wc__get_entry_versioned(&entry, wc_ctx, local_abspath,
-                                      svn_node_unknown, FALSE, FALSE,
-                                      pool, pool));
+  /* Checks whether the node exists and returns the hidden flag */
+  SVN_ERR(svn_wc__db_node_hidden(&hidden, wc_ctx->db, local_abspath, pool));
 
-  /* Notice that we're not using svn_path_split_if_file(), because
-     that looks at the actual working file.  Its existence shouldn't
-     matter, so we're looking at entry->kind instead. */
-  switch (entry->kind)
-    {
-    case svn_node_dir:
-      dir_abspath = local_abspath;
-      break;
-    case svn_node_file:
-      dir_abspath = svn_dirent_dirname(local_abspath, pool);
-      break;
-    default:
-      return SVN_NO_ERROR; /* ### svn_node_none or svn_node_unknown */
-    }
+  if (hidden)
+    return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+                             _("The node '%s' was not found."),
+                             svn_dirent_local_style(local_abspath, pool));
 
   if (! dry_run)
     log_accum = svn_stringbuf_create("", pool);
+  else
+    log_accum = NULL; /* Provide NULL to __merge_props */
 
   /* Note that while this routine does the "real" work, it's only
      prepping tempfiles and writing log commands.  */
-  SVN_ERR(svn_wc__merge_props(&log_accum, state, 
+  SVN_ERR(svn_wc__merge_props(&log_accum, state,
                               wc_ctx->db, local_abspath,
-                              dir_abspath,
-                              NULL, NULL,
+                              left_version, right_version,
                               baseprops, NULL, NULL,
                               propchanges, base_merge, dry_run,
                               conflict_func, conflict_baton,
                               cancel_func, cancel_baton,
                               pool));
 
-  if (! dry_run)
+  if (! dry_run && !svn_stringbuf_isempty(log_accum))
     {
-      svn_wc_adm_access_t *adm_access 
-              = svn_wc__adm_retrieve_internal2(wc_ctx->db, dir_abspath, pool);
+      svn_wc_adm_access_t *adm_access;
+      const char *dir_abspath;
+
+      SVN_ERR(svn_wc__db_read_kind(&kind, wc_ctx->db, local_abspath, FALSE, pool));
+
+      switch (kind)
+        {
+        case svn_wc__db_kind_dir:
+          dir_abspath = local_abspath;
+          break;
+        default:
+          dir_abspath = svn_dirent_dirname(local_abspath, pool);
+          break;
+        }
+
+      adm_access = svn_wc__adm_retrieve_internal2(wc_ctx->db, dir_abspath, pool);
       SVN_ERR_ASSERT(adm_access != NULL);
 
       SVN_ERR(svn_wc__write_log(dir_abspath, 0, log_accum, pool));
@@ -1531,7 +1531,6 @@ svn_wc__merge_props(svn_stringbuf_t **entry_accum,
                     svn_wc_notify_state_t *state,
                     svn_wc__db_t *db,
                     const char *local_abspath,
-                    const char *adm_abspath,
                     const svn_wc_conflict_version_t *left_version,
                     const svn_wc_conflict_version_t *right_version,
                     apr_hash_t *server_baseprops,
@@ -1552,20 +1551,29 @@ svn_wc__merge_props(svn_stringbuf_t **entry_accum,
   const char *reject_path = NULL;
   svn_stream_t *reject_tmp_stream = NULL;  /* the temporary conflicts stream */
   const char *reject_tmp_path = NULL;
+  svn_wc__db_kind_t kind;
+  const char *adm_abspath;
 
-  if (! svn_dirent_is_child(adm_abspath, local_abspath, NULL))
-    is_dir = TRUE;
+  /* ### shouldn't ALLOW_MISSING be FALSE? how can we merge props into
+     ### a node that doesn't exist?!  */
+  /* ### BH: In some cases we allow merging into missing to create a new
+             node. */
+  SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath, TRUE, pool));
+
+  if (kind == svn_wc__db_kind_dir)
+    {
+      is_dir = TRUE;
+      adm_abspath = local_abspath;
+    }
   else
-    is_dir = FALSE;
+    {
+      is_dir = FALSE;
+      adm_abspath = svn_dirent_dirname(local_abspath, pool);
+    }
 
   /* If not provided, load the base & working property files into hashes */
   if (! base_props || ! working_props)
     {
-      svn_wc__db_kind_t kind;
-
-      /* ### shouldn't ALLOW_MISSING be FALSE? how can we merge props into
-         ### a node that doesn't exist?!  */
-      SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath, TRUE, pool));
       if (kind == svn_wc__db_kind_unknown)
         {
           /* No entry... no props.  */
@@ -1840,42 +1848,17 @@ svn_wc__internal_propget(const svn_string_t **value,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool)
 {
-  svn_error_t *err;
   apr_hash_t *prophash = NULL;
   enum svn_prop_kind kind = svn_property_kind(NULL, name);
-  const svn_wc_entry_t *entry;
+  svn_wc__db_kind_t wc_kind;
   svn_boolean_t hidden;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
   SVN_ERR_ASSERT(kind != svn_prop_entry_kind);
 
-  err = svn_wc__get_entry(&entry, db, local_abspath, TRUE, svn_node_unknown,
-                          FALSE, result_pool, scratch_pool);
-  if (err)
-    {
-      /* For compatibility with wc-1 behavior, disregard some of the
-         various "reason why I can't get an entry" errors here. 
-         ### should SVN_ERR_WC_NOT_WORKING_COPY be here too?  */
-      if (err->apr_err == SVN_ERR_WC_MISSING)
-        {
-          svn_error_clear(err);
-          *value = NULL;
-          return SVN_NO_ERROR;
-        }
+  SVN_ERR(svn_wc__db_read_kind(&wc_kind, db, local_abspath, TRUE, scratch_pool));
 
-      if (err->apr_err == SVN_ERR_NODE_UNEXPECTED_KIND)
-        {
-          /* We're trying to fetch a property on a directory, but we ended
-             up with the stub because the directory is missing. Let's map
-             this into a PATH_NOT_FOUND.  */
-          return svn_error_createf(
-            SVN_ERR_WC_PATH_NOT_FOUND, err,
-            _("Directory '%s' is missing or obstructed"),
-            svn_dirent_local_style(local_abspath, scratch_pool));
-        }
-      return svn_error_return(err);
-    }
-  if (entry == NULL)
+  if (wc_kind == svn_wc__db_kind_unknown)
     {
       /* The node is not present, or not really "here". Therefore, the
          property is not present.  */
@@ -1883,7 +1866,7 @@ svn_wc__internal_propget(const svn_string_t **value,
       return SVN_NO_ERROR;
     }
 
-  SVN_ERR(svn_wc__entry_is_hidden(&hidden, entry));
+  SVN_ERR(svn_wc__db_node_hidden(&hidden, db, local_abspath, scratch_pool));
   if (hidden)
     {
       /* The node is not present, or not really "here". Therefore, the
@@ -1894,6 +1877,7 @@ svn_wc__internal_propget(const svn_string_t **value,
 
   if (kind == svn_prop_wc_kind)
     {
+      svn_error_t *err;
       /* If no dav cache can be found, just set VALUE to NULL (for
          compatibility with pre-WC-NG code). */
       err = svn_wc__db_base_get_dav_cache(&prophash, db, local_abspath,
