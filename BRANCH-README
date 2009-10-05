@@ -1,0 +1,3 @@
+This branch exists for the resolution of issue #3242.  It is being
+managed as a reintegrate-able branch, with regular catch-up merges
+from the trunk.
