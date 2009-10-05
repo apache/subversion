@@ -1420,7 +1420,7 @@ svn_fs_fs__hotcopy(const char *src_path,
                       pool));
   SVN_ERR(check_format(format));
 
-  /* Copy the current file. */
+  /* Copy the 'current' file. */
   SVN_ERR(svn_io_dir_file_copy(src_path, dst_path, PATH_CURRENT, pool));
 
   /* Copy the uuid. */
@@ -1443,7 +1443,7 @@ svn_fs_fs__hotcopy(const char *src_path,
       min_unpacked_rev = 0;
     }
 
-  /* Find the youngest revision from this current file. */
+  /* Find the youngest revision from this 'current' file. */
   SVN_ERR(get_youngest(&youngest, dst_path, pool));
 
   /* Copy the necessary rev files. */
@@ -5159,19 +5159,19 @@ get_next_revision_ids(const char **node_id,
   str = apr_strtok(buf, " ", &last_str);
   if (! str)
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
-                            _("Corrupt current file"));
+                            _("Corrupt 'current' file"));
 
   str = apr_strtok(NULL, " ", &last_str);
   if (! str)
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
-                            _("Corrupt current file"));
+                            _("Corrupt 'current' file"));
 
   *node_id = apr_pstrdup(pool, str);
 
   str = apr_strtok(NULL, " ", &last_str);
   if (! str)
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
-                            _("Corrupt current file"));
+                            _("Corrupt 'current' file"));
 
   *copy_id = apr_pstrdup(pool, str);
 
@@ -5487,7 +5487,7 @@ svn_fs_fs__dup_perms(const char *filename,
 }
 
 
-/* Atomically update the current file to hold the specifed REV,
+/* Atomically update the 'current' file to hold the specifed REV,
    NEXT_NODE_ID, and NEXT_COPY_ID.  (The two next-ID parameters are
    ignored and may be NULL if the FS format does not use them.)
    Perform temporary allocations in POOL. */
@@ -5514,7 +5514,7 @@ write_current(svn_fs_t *fs, svn_revnum_t rev, const char *next_node_id,
   return move_into_place(tmp_name, name, name, pool);
 }
 
-/* Update the current file to hold the correct next node and copy_ids
+/* Update the 'current' file to hold the correct next node and copy_ids
    from transaction TXN_ID in filesystem FS.  The current revision is
    set to REV.  Perform temporary allocations in POOL. */
 static svn_error_t *
@@ -5534,7 +5534,7 @@ write_final_current(svn_fs_t *fs,
     return write_current(fs, rev, NULL, NULL, pool);
 
   /* To find the next available ids, we add the id that used to be in
-     the current file, to the next ids from the transaction file. */
+     the 'current' file, to the next ids from the transaction file. */
   SVN_ERR(read_next_ids(&txn_node_id, &txn_copy_id, fs, txn_id, pool));
 
   svn_fs_fs__add_keys(start_node_id, txn_node_id, new_node_id);
@@ -6356,7 +6356,7 @@ recover_body(void *baton, apr_pool_t *pool)
                              max_rev);
 
   /* Now store the discovered youngest revision, and the next IDs if
-     relevant, in a new current file. */
+     relevant, in a new 'current' file. */
   return write_current(fs, max_rev, next_node_id, next_copy_id, pool);
 }
 
@@ -6370,7 +6370,7 @@ svn_fs_fs__recover(svn_fs_t *fs,
 
   /* We have no way to take out an exclusive lock in FSFS, so we're
      restricted as to the types of recovery we can do.  Luckily,
-     we just want to recreate the current file, and we can do that just
+     we just want to recreate the 'current' file, and we can do that just
      by blocking other writers. */
   b.fs = fs;
   b.cancel_func = cancel_func;
