@@ -492,7 +492,7 @@ with_txnlist_lock(svn_fs_t *fs,
                   svn_error_t *(*body)(svn_fs_t *fs,
                                        const void *baton,
                                        apr_pool_t *pool),
-                  void *baton,
+                  const void *baton,
                   apr_pool_t *pool)
 {
   svn_error_t *err;
@@ -839,7 +839,7 @@ get_writable_proto_rev(apr_file_t **file,
 static svn_error_t *
 purge_shared_txn_body(svn_fs_t *fs, const void *baton, apr_pool_t *pool)
 {
-  const char *txn_id = *(const char **)baton;
+  const char *txn_id = baton;
 
   free_shared_txn(fs, txn_id);
   return SVN_NO_ERROR;
@@ -850,7 +850,7 @@ purge_shared_txn_body(svn_fs_t *fs, const void *baton, apr_pool_t *pool)
 static svn_error_t *
 purge_shared_txn(svn_fs_t *fs, const char *txn_id, apr_pool_t *pool)
 {
-  return with_txnlist_lock(fs, purge_shared_txn_body, (char **) &txn_id, pool);
+  return with_txnlist_lock(fs, purge_shared_txn_body, txn_id, pool);
 }
 
 
