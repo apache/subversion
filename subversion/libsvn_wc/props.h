@@ -84,7 +84,7 @@ svn_wc__internal_propset(svn_wc__db_t *db,
                          apr_pool_t *scratch_pool);
 
 
-/* Given LOCAL_ABSPATH/ADM_ABSPATH/DB and an array of PROPCHANGES based on
+/* Given LOCAL_ABSPATH/DB and an array of PROPCHANGES based on
    SERVER_BASEPROPS, merge the changes into the working copy.
    Append all necessary log entries to ENTRY_ACCUM.
 
@@ -110,7 +110,6 @@ svn_wc__merge_props(svn_stringbuf_t **entry_accum,
                     svn_wc_notify_state_t *state,
                     svn_wc__db_t *db,
                     const char *local_abspath,
-                    const char *adm_abspath,
                     const svn_wc_conflict_version_t *left_version,
                     const svn_wc_conflict_version_t *right_version,
                     apr_hash_t *server_baseprops,
