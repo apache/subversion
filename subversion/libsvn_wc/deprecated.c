@@ -614,6 +614,7 @@ svn_wc_delete3(const char *path,
   SVN_ERR(svn_wc_delete4(wc_ctx,
                          local_abspath,
                          keep_local,
+                         TRUE,
                          cancel_func, cancel_baton,
                          notify_func, notify_baton,
                          pool));
