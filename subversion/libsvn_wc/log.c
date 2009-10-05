@@ -1657,6 +1657,21 @@ svn_wc__run_log(svn_wc_adm_access_t *adm_access,
   return run_log(adm_access, FALSE, scratch_pool);
 }
 
+svn_error_t *
+svn_wc__run_log2(svn_wc__db_t *db,
+                 const char *adm_abspath,
+                 apr_pool_t *scratch_pool)
+{
+  svn_wc_adm_access_t *adm_access;
+
+  adm_access = svn_wc__adm_retrieve_internal2(db, adm_abspath, scratch_pool);
+
+  SVN_ERR_ASSERT(adm_access != NULL); /* A lock MUST exist */
+
+  return run_log(adm_access, FALSE, scratch_pool);
+}
+
+
 
 
 /*** Log file generation helpers ***/

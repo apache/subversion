@@ -360,6 +360,17 @@ svn_error_t *svn_wc__run_log(svn_wc_adm_access_t *adm_access,
                              apr_pool_t *scratch_pool);
 
 
+/* Process the instructions in the log file for ADM_ABSPATH,
+   using its access baton that MUST BE cached in DB.
+
+   Use SCRATCH_POOL for temporary allocations.
+ */
+svn_error_t *
+svn_wc__run_log2(svn_wc__db_t *db,
+                 const char *adm_abspath,
+                 apr_pool_t *scratch_pool);
+
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
