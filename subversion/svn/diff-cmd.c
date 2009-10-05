@@ -339,7 +339,7 @@ svn_cl__diff(apr_getopt_t *os,
                      (void *) target1,
                      ctx, iterpool));
           else
-            SVN_ERR(svn_client_diff4
+            SVN_ERR(svn_client_diff5
                     (options,
                      target1,
                      &(opt_state->start_revision),
@@ -349,6 +349,7 @@ svn_cl__diff(apr_getopt_t *os,
                      opt_state->depth,
                      ! opt_state->notice_ancestry,
                      opt_state->no_diff_deleted,
+                     opt_state->show_copies_as_adds,
                      opt_state->force,
                      svn_cmdline_output_encoding(pool),
                      outfile,
@@ -383,35 +384,23 @@ svn_cl__diff(apr_getopt_t *os,
                      (void *) truepath,
                      ctx, iterpool));
           else
-            {
-              svn_error_t *err;
-
-              err = svn_client_diff_peg4
-                      (options,
-                       truepath,
-                       &peg_revision,
-                       &opt_state->start_revision,
-                       &opt_state->end_revision,
-                       NULL,
-                       opt_state->depth,
-                       ! opt_state->notice_ancestry,
-                       opt_state->no_diff_deleted,
-                       opt_state->force,
-                       svn_cmdline_output_encoding(pool),
-                       outfile,
-                       errfile,
-                       opt_state->changelists,
-                       ctx, iterpool);
-              if (err)
-                {
-                  if (err->apr_err == SVN_ERR_FS_PATH_SYNTAX &&
-                      ! opt_state->notice_ancestry)
-                    return svn_error_quick_wrap(
-                             err, _("Try using the --notice-ancestry option"));
-                  else
-                    return err;
-                }
-            }
+            SVN_ERR(svn_client_diff_peg5
+                    (options,
+                     truepath,
+                     &peg_revision,
+                     &opt_state->start_revision,
+                     &opt_state->end_revision,
+                     NULL,
+                     opt_state->depth,
+                     ! opt_state->notice_ancestry,
+                     opt_state->no_diff_deleted,
+                     opt_state->show_copies_as_adds,
+                     opt_state->force,
+                     svn_cmdline_output_encoding(pool),
+                     outfile,
+                     errfile,
+                     opt_state->changelists,
+                     ctx, iterpool));
         }
     }
 

@@ -155,8 +155,11 @@ struct edit_baton {
   /* How does this diff descend? */
   svn_depth_t depth;
 
-  /* Should this diff ignore node ancestry. */
+  /* Should this diff ignore node ancestry? */
   svn_boolean_t ignore_ancestry;
+
+  /* Should this diff not compare copied files with their source? */
+  svn_boolean_t show_copies_as_adds;
 
   /* Possibly diff repos against text-bases instead of working files. */
   svn_boolean_t use_text_base;
@@ -280,6 +283,7 @@ make_edit_baton(struct edit_baton **edit_baton,
                 void *callback_baton,
                 svn_depth_t depth,
                 svn_boolean_t ignore_ancestry,
+                svn_boolean_t show_copies_as_adds,
                 svn_boolean_t use_text_base,
                 svn_boolean_t reverse_order,
                 const apr_array_header_t *changelists,
@@ -302,6 +306,7 @@ make_edit_baton(struct edit_baton **edit_baton,
   eb->callback_baton = callback_baton;
   eb->depth = depth;
   eb->ignore_ancestry = ignore_ancestry;
+  eb->show_copies_as_adds = show_copies_as_adds;
   eb->use_text_base = use_text_base;
   eb->reverse_order = reverse_order;
   eb->changelist_hash = changelist_hash;
@@ -565,13 +570,10 @@ file_diff(struct dir_baton *db,
     return SVN_NO_ERROR;
 
   /* If the item is schedule-add *with history*, then we usually want to see
-   * a comparison to the empty file; otherwise we won't produce a patch which
-   * can be applied back to yield the same result, since plain unidiff has
-   * no concept of 'added' vs. 'copied'.
-   * But in case we're noticing ancestry, the user has asked us to do
    * the usual working vs. text-base comparison, which will show changes
-   * made since the file was copied. */
-  if (copied && ! eb->ignore_ancestry)
+   * made since the file was copied.  But in case we're not diffing copies,
+   * we need to compare the copied file to the empty file. */
+  if (copied && ! eb->show_copies_as_adds)
     schedule = svn_wc_schedule_normal;
 
   /* If this was scheduled replace and we are ignoring ancestry,
@@ -1706,6 +1708,7 @@ svn_wc_get_diff_editor6(const svn_delta_editor_t **editor,
                         void *callback_baton,
                         svn_depth_t depth,
                         svn_boolean_t ignore_ancestry,
+                        svn_boolean_t show_copies_as_adds,
                         svn_boolean_t use_text_base,
                         svn_boolean_t reverse_order,
                         const apr_array_header_t *changelists,
@@ -1723,8 +1726,8 @@ svn_wc_get_diff_editor6(const svn_delta_editor_t **editor,
                           wc_ctx->db,
                           anchor_path, target,
                           callbacks, callback_baton,
-                          depth, ignore_ancestry, use_text_base,
-                          reverse_order, changelists,
+                          depth, ignore_ancestry, show_copies_as_adds,
+                          use_text_base, reverse_order, changelists,
                           cancel_func, cancel_baton,
                           result_pool));
 
@@ -1775,6 +1778,7 @@ svn_wc_diff6(svn_wc_context_t *wc_ctx,
              void *callback_baton,
              svn_depth_t depth,
              svn_boolean_t ignore_ancestry,
+             svn_boolean_t show_copies_as_adds,
              const apr_array_header_t *changelists,
              svn_cancel_func_t cancel_func,
              void *cancel_baton,
@@ -1804,8 +1808,8 @@ svn_wc_diff6(svn_wc_context_t *wc_ctx,
                           anchor_path,
                           target, 
                           callbacks, callback_baton,
-                          depth, ignore_ancestry, FALSE, FALSE,
-                          changelists,
+                          depth, ignore_ancestry, show_copies_as_adds,
+                          FALSE, FALSE, changelists,
                           cancel_func, cancel_baton,
                           pool));
 

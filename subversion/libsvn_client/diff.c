@@ -926,6 +926,9 @@ struct diff_parameters
   /* Ignore deleted */
   svn_boolean_t no_diff_deleted;
 
+  /* Don't follow copyfrom when diffing copies. */
+  svn_boolean_t show_copies_as_adds;
+
   /* Changelists of interest */
   const apr_array_header_t *changelists;
 };
@@ -1186,6 +1189,7 @@ diff_wc_wc(const char *path1,
            const svn_opt_revision_t *revision2,
            svn_depth_t depth,
            svn_boolean_t ignore_ancestry,
+           svn_boolean_t show_copies_as_adds,
            const apr_array_header_t *changelists,
            const svn_wc_diff_callbacks4_t *callbacks,
            struct diff_cmd_baton *callback_baton,
@@ -1221,6 +1225,7 @@ diff_wc_wc(const char *path1,
                        callbacks, callback_baton,
                        depth,
                        ignore_ancestry,
+                       show_copies_as_adds,
                        changelists,
                        ctx->cancel_func, ctx->cancel_baton,
                        pool));
@@ -1364,38 +1369,18 @@ diff_repos_wc(const char *path1,
      actual URLs will be. */
   if (peg_revision->kind != svn_opt_revision_unspecified)
     {
-      if (ignore_ancestry)
-        {
-          const svn_wc_entry_t *entry;
+      svn_opt_revision_t *start_ignore, *end_ignore, end;
+      const char *url_ignore;
 
-          SVN_ERR(svn_wc__get_entry_versioned(&entry, ctx->wc_ctx, abspath1,
-                                              svn_node_unknown, FALSE, FALSE,
-                                              pool, pool));
-          if (! entry->url)
-            return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
-                                     _("'%s' has no URL"),
-                                     svn_dirent_local_style(path1, pool));
+      end.kind = svn_opt_revision_unspecified;
 
-          /* Just use whatever URL is specified in the entry.
-           * We don't want to follow copyfrom info. */
-          url1 = entry->url;
-        }
-      else
-        {
-          svn_opt_revision_t *start_ignore, *end_ignore, end;
-          const char *url_ignore;
-
-          end.kind = svn_opt_revision_unspecified;
-
-          SVN_ERR(svn_client__repos_locations(&url1, &start_ignore,
-                                              &url_ignore, &end_ignore,
-                                              NULL,
-                                              path1,
-                                              peg_revision,
-                                              revision1, &end,
-                                              ctx, pool));
-        }
-
+      SVN_ERR(svn_client__repos_locations(&url1, &start_ignore,
+                                          &url_ignore, &end_ignore,
+                                          NULL,
+                                          path1,
+                                          peg_revision,
+                                          revision1, &end,
+                                          ctx, pool));
       if (!reverse)
         {
           callback_baton->orig_path_1 = url1;
@@ -1420,6 +1405,7 @@ diff_repos_wc(const char *path1,
                                   callbacks, callback_baton,
                                   depth,
                                   ignore_ancestry,
+                                  FALSE, /* ### pass show_copies_as_adds */
                                   rev2_is_base,
                                   reverse,
                                   changelists,
@@ -1510,6 +1496,7 @@ do_diff(const struct diff_parameters *diff_param,
                              diff_param->path2, diff_param->revision2,
                              diff_param->depth,
                              diff_param->ignore_ancestry,
+                             diff_param->show_copies_as_adds,
                              diff_param->changelists,
                              callbacks, callback_baton, ctx, pool));
         }
@@ -1679,7 +1666,7 @@ set_up_diff_cmd_and_options(struct diff_cmd_baton *diff_cmd_baton,
       * These cases require server communication.
 */
 svn_error_t *
-svn_client_diff4(const apr_array_header_t *options,
+svn_client_diff5(const apr_array_header_t *options,
                  const char *path1,
                  const svn_opt_revision_t *revision1,
                  const char *path2,
@@ -1688,6 +1675,7 @@ svn_client_diff4(const apr_array_header_t *options,
                  svn_depth_t depth,
                  svn_boolean_t ignore_ancestry,
                  svn_boolean_t no_diff_deleted,
+                 svn_boolean_t show_copies_as_adds,
                  svn_boolean_t ignore_content_type,
                  const char *header_encoding,
                  apr_file_t *outfile,
@@ -1714,6 +1702,7 @@ svn_client_diff4(const apr_array_header_t *options,
   diff_params.depth = depth;
   diff_params.ignore_ancestry = ignore_ancestry;
   diff_params.no_diff_deleted = no_diff_deleted;
+  diff_params.show_copies_as_adds = show_copies_as_adds;
   diff_params.changelists = changelists;
 
   /* setup callback and baton */
@@ -1747,7 +1736,7 @@ svn_client_diff4(const apr_array_header_t *options,
 }
 
 svn_error_t *
-svn_client_diff_peg4(const apr_array_header_t *options,
+svn_client_diff_peg5(const apr_array_header_t *options,
                      const char *path,
                      const svn_opt_revision_t *peg_revision,
                      const svn_opt_revision_t *start_revision,
@@ -1756,6 +1745,7 @@ svn_client_diff_peg4(const apr_array_header_t *options,
                      svn_depth_t depth,
                      svn_boolean_t ignore_ancestry,
                      svn_boolean_t no_diff_deleted,
+                     svn_boolean_t show_copies_as_adds,
                      svn_boolean_t ignore_content_type,
                      const char *header_encoding,
                      apr_file_t *outfile,
@@ -1785,6 +1775,7 @@ svn_client_diff_peg4(const apr_array_header_t *options,
   diff_params.depth = depth;
   diff_params.ignore_ancestry = ignore_ancestry;
   diff_params.no_diff_deleted = no_diff_deleted;
+  diff_params.show_copies_as_adds = show_copies_as_adds;
   diff_params.changelists = changelists;
 
   /* setup callback and baton */

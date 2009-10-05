@@ -1667,7 +1667,7 @@ def merge_in_new_file_and_diff(sbox):
     "@@ -0,0 +1 @@\n",
     "+newfile\n"]
   svntest.actions.run_and_verify_svn(None, expected_output, [], 'diff',
-                                     branch_path)
+                                     '--show-copies-as-adds', branch_path)
 
 
 #----------------------------------------------------------------------
