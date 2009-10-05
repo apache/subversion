@@ -322,6 +322,46 @@ class SubversionClientTestCase(unittest.TestCase):
     finally:
       wc.adm_close(adm_access)
 
+  def test_merge_peg3(self):
+    """Test svn_client_merge_peg3."""
+    head = core.svn_opt_revision_t()
+    head.kind = core.svn_opt_revision_head
+    wc_path = self.allocate_temp_dir('-merge_peg3')
+
+    client.checkout3(REPOS_URL, wc_path, head, head, core.svn_depth_infinity,
+                     True, False, self.client_ctx)
+
+    # Let's try to backport a change from the v1x branch
+    trunk_path = core.svn_dirent_join(wc_path, 'trunk')
+    v1x_path = core.svn_dirent_join(wc_path, 'branches/v1x')
+
+    start = core.svn_opt_revision_t()
+    start.kind = core.svn_opt_revision_number
+    start.value.number = 8
+
+    end = core.svn_opt_revision_t()
+    end.kind = core.svn_opt_revision_number
+    end.value.number = 9
+
+    range = core.svn_opt_revision_range_t()
+    range.start = start
+    range.end = end
+    
+    client.merge_peg3(v1x_path, (range,), end, trunk_path,
+                      core.svn_depth_infinity, False, False, False, False,
+                      None, self.client_ctx)
+
+    # Did it take effect?
+    readme_path_native = core.svn_dirent_local_style(
+      core.svn_dirent_join(trunk_path, 'README.txt')
+    )
+
+    readme = open(readme_path_native, 'r')
+    readme_text = readme.read()
+    readme.close()
+
+    self.assertEqual(readme_text, 'This is a test.\n')
+
 def suite():
     return unittest.makeSuite(SubversionClientTestCase, 'test',
                               suiteClass=SubversionRepositoryTestSetup)
