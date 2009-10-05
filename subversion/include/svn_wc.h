@@ -4040,13 +4040,21 @@ svn_wc_copy(const char *src,
  * and everything below @ local_abspath.
  *
  * If @a keep_local is FALSE, this function immediately deletes all files,
- * modified and unmodified, versioned and unversioned from the working copy.
+ * modified and unmodified, versioned and of @a delete_unversioned is TRUE,
+ * unversioned from the working copy.
  * It also immediately deletes unversioned directories and directories that
- * are scheduled to be added.  Only versioned directories will remain in the
- * working copy, these get deleted by the update following the commit.
+ * are scheduled to be added below @a local_abspath.  Only versioned may
+ * remain in the working copy, these get deleted by the update following
+ * the commit.
  *
  * If @a keep_local is TRUE, all files and directories will be kept in the
  * working copy (and will become unversioned on the next commit).
+ *
+ * If @a delete_unversioned_target is TRUE and @a local_abspath is not
+ * versioned, @a local_abspath will be handled as an added files without
+ * history. So it will be deleted if @a keep_local is FALSE. If @a
+ * delete_unversioned is FALSE and @a local_abspath is not versioned a
+ * @c SVN_ERR_WC_PATH_NOT_FOUND error will be returned.
  *
  * If @a cancel_func is non-NULL, call it with @a cancel_baton at
  * various points during the operation.  If it returns an error
@@ -4065,6 +4073,7 @@ svn_error_t *
 svn_wc_delete4(svn_wc_context_t *wc_ctx,
                const char *local_abspath,
                svn_boolean_t keep_local,
+               svn_boolean_t delete_unversioned_target,
                svn_cancel_func_t cancel_func,
                void *cancel_baton,
                svn_wc_notify_func2_t notify_func,
@@ -4074,7 +4083,9 @@ svn_wc_delete4(svn_wc_context_t *wc_ctx,
 /**
  * Similar to svn_wc_delete4, but uses an access baton and relative path
  * instead of a working copy context and absolute path. @a adm_access
- * must hold a write lock for the parent of @a local_abspath.
+ * must hold a write lock for the parent of @a local_abspath. 
+ *
+ * @c delete_unversioned will always be set to TRUE.
  *
  * @since New in 1.5.
  * @deprecated Provided for backward compatibility with the 1.6 API.

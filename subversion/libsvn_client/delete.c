@@ -259,7 +259,7 @@ svn_client__wc_delete(const char *path,
 
   if (!dry_run)
     /* Mark the entry for commit deletion and perform wc deletion */
-    return svn_wc_delete4(ctx->wc_ctx, local_abspath, keep_local,
+    return svn_wc_delete4(ctx->wc_ctx, local_abspath, keep_local, TRUE,
                           ctx->cancel_func, ctx->cancel_baton,
                           notify_func, notify_baton, pool);
   else

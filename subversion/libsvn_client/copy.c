@@ -374,7 +374,7 @@ do_wc_to_wc_moves(const apr_array_header_t *copy_pairs,
         break;
 
       /* Perform the delete. */
-      SVN_ERR(svn_wc_delete4(ctx->wc_ctx, pair->src_abs, FALSE,
+      SVN_ERR(svn_wc_delete4(ctx->wc_ctx, pair->src_abs, FALSE, FALSE,
                              ctx->cancel_func, ctx->cancel_baton,
                              ctx->notify_func2, ctx->notify_baton2,
                              iterpool));
