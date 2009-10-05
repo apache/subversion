@@ -1280,14 +1280,19 @@ svn_wc_delete4(svn_wc_context_t *wc_ctx,
                                                      parent_abspath, pool));
         }
       if (was_schedule == svn_wc_schedule_add)
-        SVN_ERR(svn_wc__loggy_props_delete(&log_accum, wc_ctx->db,
-                                           local_abspath, parent_abspath,
-                                           svn_wc__props_base, pool));
+        {
+          SVN_ERR(svn_wc__loggy_props_delete(&log_accum, wc_ctx->db,
+                                             local_abspath, parent_abspath,
+                                             svn_wc__props_base, pool));
+
+          SVN_ERR(svn_wc__loggy_props_delete(&log_accum, wc_ctx->db,
+                                             local_abspath, parent_abspath,
+                                             svn_wc__props_working, pool));
+        }
 
       SVN_ERR(svn_wc__write_log(parent_abspath, 0, log_accum, pool));
 
       SVN_ERR(svn_wc__run_log(adm_access, pool));
-
     }
 
   /* Report the deletion to the caller. */
