@@ -701,8 +701,22 @@ read_entries_new(apr_hash_t **result_entries,
           entry->schedule = svn_wc_schedule_delete;
 
           /* ### keep_local ... ugh. hacky.  */
-          SVN_ERR(determine_keep_local(&entry->keep_local, sdb,
-                                       wc_id, entry->name));
+          /* We only read keep_local in the directory itself, because we
+             can't rely on the actual record being available in the parent
+             stub when the directory is recorded as deleted in the directory
+             itself. (This last value is the status that brought us in this
+             if block).
+             
+             This is safe because we will only write this flag in the
+             directory itself (see mark_deleted() in adm_ops.c), and also
+             because we will never use keep_local in the final version of
+             WC-NG. With a central db and central pristine store we can
+             remove working copy directories directly. So any left over
+             directories after the delete operation are always kept locally.
+             */
+          if (*entry->name == '\0')
+            SVN_ERR(determine_keep_local(&entry->keep_local, sdb,
+                                         wc_id, entry->name));
         }
       else if (status == svn_wc__db_status_added
                || status == svn_wc__db_status_obstructed_add)
