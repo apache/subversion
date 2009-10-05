@@ -151,9 +151,9 @@ Candidate changes:
      +1: stsp
 
  * r39635, r39636, r39637
-   Fix svn.client.log5 in the SWIG/Python bindings.
+   Fix svn.client.log5 and svn.client.merge_peg3 in the SWIG/Python bindings.
    Justification:
-     As currently shipped, this function is non-functional.
+     As currently shipped, these functions are non-functional.
    Votes:
      +1: rdonch
 
