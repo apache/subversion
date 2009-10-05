@@ -1131,7 +1131,6 @@ svn_wc_delete4(svn_wc_context_t *wc_ctx,
                apr_pool_t *pool)
 {
   svn_wc__db_t *db = wc_ctx->db;
-  const svn_wc_entry_t *entry;
   svn_boolean_t was_add = FALSE, was_replace = FALSE;
   svn_boolean_t was_copied = FALSE;
   svn_boolean_t was_deleted = FALSE; /* Silence a gcc uninitialized warning */
@@ -1190,14 +1189,6 @@ svn_wc_delete4(svn_wc_context_t *wc_ctx,
       else
         was_replace = TRUE;
     }
-
-  err = svn_wc__get_entry(&entry, wc_ctx->db, local_abspath, FALSE,
-                          svn_node_unknown, FALSE, pool, pool);
-
-  if (err && err->apr_err == SVN_ERR_NODE_UNEXPECTED_KIND)
-    svn_error_clear(err);
-  else
-    SVN_ERR(err);
 
   if (kind == svn_wc__db_kind_dir)
     {
