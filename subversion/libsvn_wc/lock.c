@@ -989,20 +989,23 @@ child_is_disjoint(svn_boolean_t *disjoint,
                   const char *local_abspath,
                   apr_pool_t *scratch_pool)
 {
-  const svn_wc_entry_t *t_entry;
-  const svn_wc_entry_t *p_entry;
-  const svn_wc_entry_t *t_entry_in_p;
-  const char *parent_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
-  const char *expected_url;
+  const char *node_repos_root, *node_repos_relpath, *node_repos_uuid;
+  const char *parent_repos_root, *parent_repos_relpath, *parent_repos_uuid;
+  svn_wc__db_status_t parent_status;
+  const apr_array_header_t *children;
+  const char *parent_abspath, *basename;
   svn_error_t *err;
+  svn_boolean_t found_in_parent = FALSE;
+  int i;
 
-  err = svn_wc__get_entry(&t_entry_in_p, db, local_abspath, FALSE,
-                          svn_node_dir, TRUE, scratch_pool, scratch_pool);
+  svn_dirent_split(local_abspath, &parent_abspath, &basename, scratch_pool);
 
-  if (err && (err->apr_err == SVN_ERR_WC_MISSING || 
-              (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)))
+  /* Check if the parent directory knows about this node */
+  err = svn_wc__db_read_children(&children, db, parent_abspath, scratch_pool,
+                                 scratch_pool);
+
+  if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
     {
-      /* Parent doesn't know about the child.  */
       svn_error_clear(err);
       *disjoint = TRUE;
       return SVN_NO_ERROR;
@@ -1010,23 +1013,72 @@ child_is_disjoint(svn_boolean_t *disjoint,
   else
     SVN_ERR(err);
 
-  SVN_ERR(svn_wc__get_entry(&p_entry, db, parent_abspath, FALSE, svn_node_dir,
-                            FALSE, scratch_pool, scratch_pool));
-  if (p_entry->url == NULL)
+  for (i = 0; i < children->nelts; i++)
+    {
+      const char *name = APR_ARRAY_IDX(children, i, const char *);
+
+      if (strcmp(name, basename) == 0)
+        {
+          found_in_parent = TRUE;
+          break;
+        }
+    }
+
+  if (!found_in_parent)
+    {
+      *disjoint = TRUE;
+      return SVN_NO_ERROR;
+    }
+
+  SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL, &node_repos_relpath,
+                               &node_repos_root, &node_repos_uuid, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               db, local_abspath,
+                               scratch_pool, scratch_pool));
+
+  /* If the node does not have its own relpath, its value is inherited
+     which tells us that it is not disjoint. */
+  if (node_repos_relpath == NULL)
     {
       *disjoint = FALSE;
       return SVN_NO_ERROR;
     }
-  expected_url = svn_path_url_add_component2(p_entry->url,
-                                             svn_dirent_basename(local_abspath,
-                                                                 scratch_pool),
-                                             scratch_pool);
 
-  SVN_ERR(svn_wc__get_entry(&t_entry, db, local_abspath, FALSE, svn_node_dir,
-                            FALSE, scratch_pool, scratch_pool));
+  SVN_ERR(svn_wc__db_read_info(&parent_status, NULL, NULL,
+                               &parent_repos_relpath, &parent_repos_root, 
+                               &parent_repos_uuid, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               db, parent_abspath,
+                               scratch_pool, scratch_pool));
 
-  /* Is the child switched?  */
-  *disjoint = t_entry->url && (strcmp(t_entry->url, expected_url) != 0);
+  if (parent_repos_relpath == NULL)
+    {
+      if (parent_status == svn_wc__db_status_added)
+        SVN_ERR(svn_wc__db_scan_addition(NULL, NULL, &parent_repos_relpath,
+                                         &parent_repos_root,
+                                         &parent_repos_uuid,
+                                         NULL, NULL, NULL, NULL,
+                                         db, parent_abspath,
+                                         scratch_pool, scratch_pool));
+      else
+        SVN_ERR(svn_wc__db_scan_base_repos(&parent_repos_relpath,
+                                           &parent_repos_root,
+                                           &parent_repos_uuid,
+                                           db, parent_abspath,
+                                           scratch_pool, scratch_pool));
+    }
+
+  if (strcmp(parent_repos_root, node_repos_root) != 0 ||
+      strcmp(parent_repos_uuid, node_repos_uuid) != 0 ||
+      strcmp(svn_relpath_join(parent_repos_relpath, basename, scratch_pool),
+             node_repos_relpath) != 0)
+    {
+      *disjoint = TRUE;
+    }
+  else
+    *disjoint = FALSE;
 
   return SVN_NO_ERROR;
 }
@@ -1151,7 +1203,7 @@ open_anchor(svn_wc_adm_access_t **anchor_access,
               svn_error_clear(p_access_err);
               svn_error_clear(svn_wc_adm_close2(p_access, pool));
               svn_error_clear(svn_wc_adm_close2(t_access, pool));
-              return err;
+              return svn_error_return(err);
             }
 
           if (disjoint)
@@ -1184,21 +1236,24 @@ open_anchor(svn_wc_adm_access_t **anchor_access,
 
       if (! t_access)
         {
-          const svn_wc_entry_t *t_entry;
+          svn_boolean_t available, obstructed;
+          svn_wc__db_kind_t kind;
+          svn_error_t *err;
 
-          err = svn_wc_entry(&t_entry, path, p_access, FALSE, pool);
-          if (err)
+          err = svn_wc__adm_available(&available, &kind, &obstructed,
+                                      db, local_abspath, pool);
+
+          if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+            svn_error_clear(err);
+          else if (err)
             {
               svn_error_clear(svn_wc_adm_close2(p_access, pool));
               return err;
             }
-          if (t_entry && t_entry->kind == svn_node_dir)
+          if (obstructed && kind == svn_wc__db_kind_dir)
             {
-              const char *abspath;
-
               /* Child PATH is missing.  */
-              SVN_ERR(svn_dirent_get_absolute(&abspath, path, pool));
-              svn_wc__db_temp_set_access(db, abspath,
+              svn_wc__db_temp_set_access(db, local_abspath,
                                          (svn_wc_adm_access_t *)&missing,
                                          pool);
             }
