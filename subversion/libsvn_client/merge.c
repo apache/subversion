@@ -5163,34 +5163,6 @@ get_mergeinfo_walk_cb(const char *local_abspath,
   return SVN_NO_ERROR;
 }
 
-/* svn_wc_entry_callbacks2_t handle_error() callback for
-   get_mergeinfo_paths().
-
-   Squelch ERR by returning SVN_NO_ERROR if ERR is caused by a missing
-   path (i.e. SVN_ERR_WC_PATH_NOT_FOUND) or an unversioned path
-   (i.e. SVN_ERR_WC_NOT_LOCKED). */
-static svn_error_t *
-get_mergeinfo_error_handler(const char *path,
-                            svn_error_t *err,
-                            void *walk_baton,
-                            apr_pool_t *pool)
-{
-  svn_error_t *root_err = svn_error_root_cause(err);
-  if (root_err == SVN_NO_ERROR)
-    return svn_error_return(err);
-
-  switch (root_err->apr_err)
-    {
-    case SVN_ERR_WC_PATH_NOT_FOUND:
-    case SVN_ERR_WC_NOT_LOCKED:
-      svn_error_clear(err);
-      return SVN_NO_ERROR;
-
-    default:
-      return svn_error_return(err);
-    }
-}
-
 /* Compare two svn_client__merge_path_t elements **A and **B, given the
    addresses of pointers to them. Return an integer less than, equal to, or
    greater than zero if A sorts before, the same as, or after B, respectively.
