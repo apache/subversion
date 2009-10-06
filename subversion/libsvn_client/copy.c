@@ -1042,7 +1042,7 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
   void *edit_baton;
   void *commit_baton;
   apr_hash_t *committables;
-  svn_wc_adm_access_t *adm_access, *dir_access;
+  svn_wc_adm_access_t *adm_access;
   apr_array_header_t *commit_items;
   const svn_wc_entry_t *entry;
   apr_pool_t *iterpool;
