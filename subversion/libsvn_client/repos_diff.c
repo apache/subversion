@@ -42,6 +42,8 @@
 
 #include "client.h"
 
+#include "private/svn_wc_private.h"
+
 /* Overall crawler editor baton.  */
 struct edit_baton {
   /* TARGET is a working-copy directory which corresponds to the base
@@ -1135,7 +1137,7 @@ absent_file(const char *path,
 /* Create a repository diff editor and baton.  */
 svn_error_t *
 svn_client__get_diff_editor(const char *target,
-                            svn_wc_adm_access_t *adm_access,
+                            svn_wc_context_t *wc_ctx,
                             const svn_wc_diff_callbacks4_t *diff_callbacks,
                             void *diff_cmd_baton,
                             svn_depth_t depth,
@@ -1155,7 +1157,17 @@ svn_client__get_diff_editor(const char *target,
   struct edit_baton *eb = apr_palloc(subpool, sizeof(*eb));
 
   eb->target = target;
-  eb->adm_access = adm_access;
+  if (wc_ctx)
+    {
+      const char *target_abspath;
+      SVN_ERR(svn_dirent_get_absolute(&target_abspath, target, pool));
+      SVN_ERR(svn_wc__adm_retrieve_from_context(&(eb->adm_access), wc_ctx,
+                                                target_abspath, pool));
+    }
+  else
+    {
+      eb->adm_access = NULL;
+    }
   eb->diff_callbacks = diff_callbacks;
   eb->diff_cmd_baton = diff_cmd_baton;
   eb->dry_run = dry_run;

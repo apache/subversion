@@ -4540,10 +4540,9 @@ remove_children_with_deleted_mergeinfo(merge_cmd_baton_t *merge_b,
    nearest path-wise ancestor, then the subtree child *will not* be described
    to the reporter.
 
-   DEPTH, NOTIFY_B, ADM_ACCESS, and MERGE_B are cascasded from
-   do_directory_merge(), see that function for more info.  CALLBACKS are the
-   svn merge versions of the svn_wc_diff_callbacks4_t callbacks invoked by
-   the editor.
+   DEPTH, NOTIFY_B, and MERGE_B are cascasded from do_directory_merge(), see
+   that function for more info.  CALLBACKS are the svn merge versions of
+   the svn_wc_diff_callbacks4_t callbacks invoked by the editor.
 
    If MERGE_B->sources_ancestral is set, then URL1@REVISION1 must be a
    historical ancestor of URL2@REVISION2, or vice-versa (see
@@ -4559,7 +4558,6 @@ drive_merge_report_editor(const char *target_wcpath,
                           apr_array_header_t *children_with_mergeinfo,
                           svn_depth_t depth,
                           notification_receiver_baton_t *notify_b,
-                          svn_wc_adm_access_t *adm_access,
                           const svn_wc_diff_callbacks4_t *callbacks,
                           merge_cmd_baton_t *merge_b,
                           apr_pool_t *pool)
@@ -4637,8 +4635,9 @@ drive_merge_report_editor(const char *target_wcpath,
     
   /* Get the diff editor and a reporter with which to, ultimately,
      drive it. */
-  SVN_ERR(svn_client__get_diff_editor(target_wcpath, adm_access, callbacks,
-                                      merge_b, depth, merge_b->dry_run,
+  SVN_ERR(svn_client__get_diff_editor(target_wcpath, merge_b->ctx->wc_ctx,
+                                      callbacks, merge_b, depth,
+                                      merge_b->dry_run,
                                       merge_b->ra_session2, revision1,
                                       notification_receiver, notify_b,
                                       merge_b->ctx->cancel_func,
@@ -6677,7 +6676,7 @@ subtree_touched_by_merge(const char *path,
 
    Merge the diff of URL1@REVISION1:URL2@REVISION2 to TARGET_DIR_WCPATH.
 
-   URL1, REVISION1, URL2, REVISION2, ADM_ACCESS, DEPTH, NOTIFY_B, and MERGE_B
+   URL1, REVISION1, URL2, REVISION2, DEPTH, NOTIFY_B, and MERGE_B
    are all cascaded from do_directory_merge's arguments of the same names.
 
    NOTE: This is a very thin wrapper around drive_merge_report_editor() and
@@ -6690,7 +6689,6 @@ do_mergeinfo_unaware_dir_merge(const char *url1,
                                const char *url2,
                                svn_revnum_t revision2,
                                const char *target_dir_wcpath,
-                               svn_wc_adm_access_t *adm_access,
                                svn_depth_t depth,
                                notification_receiver_baton_t *notify_b,
                                merge_cmd_baton_t *merge_b,
@@ -6717,7 +6715,7 @@ do_mergeinfo_unaware_dir_merge(const char *url1,
   return drive_merge_report_editor(target_dir_wcpath,
                                    url1, revision1, url2, revision2,
                                    NULL, depth, notify_b,
-                                   adm_access, &merge_callbacks,
+                                   &merge_callbacks,
                                    merge_b, pool);
 }
 
@@ -7408,7 +7406,7 @@ remove_noop_subtree_ranges(const char *url1,
 /* Helper for do_merge() when the merge target is a directory.
 
    Perform a merge of changes between URL1@REVISION1 and URL2@REVISION2
-   to the working copy path represented by TARGET_ENTRY and ADM_ACCESS.
+   to the working copy path represented by TARGET_ENTRY.
    URL1, URL2, and TARGET_ENTRY all represent directories -- for the
    single file case, the caller should use do_file_merge().
 
@@ -7431,8 +7429,8 @@ do_directory_merge(const char *url1,
                    svn_revnum_t revision1,
                    const char *url2,
                    svn_revnum_t revision2,
+                   const char *target_abspath,
                    const svn_wc_entry_t *target_entry,
-                   svn_wc_adm_access_t *adm_access,
                    svn_depth_t depth,
                    notification_receiver_baton_t *notify_b,
                    merge_cmd_baton_t *merge_b,
@@ -7441,7 +7439,6 @@ do_directory_merge(const char *url1,
   svn_error_t *err = SVN_NO_ERROR;
   svn_merge_range_t range;
   svn_ra_session_t *ra_session;
-  const char *target_wcpath = svn_wc_adm_access_path(adm_access);
   svn_client__merge_path_t *target_merge_path;
   svn_boolean_t is_rollback = (revision1 > revision2);
   const char *primary_url = is_rollback ? url1 : url2;
@@ -7460,7 +7457,7 @@ do_directory_merge(const char *url1,
      business of merging changes! */
   if (!honor_mergeinfo)
     return do_mergeinfo_unaware_dir_merge(url1, revision1, url2, revision2,
-                                          target_wcpath, adm_access, depth,
+                                          target_abspath, depth,
                                           notify_b, merge_b, pool);
 
   /*** If we get here, we're dealing with related sources from the
@@ -7631,7 +7628,7 @@ do_directory_merge(const char *url1,
                 real_url1, start_rev,
                 real_url2, end_rev,
                 notify_b->children_with_mergeinfo,
-                depth, notify_b, adm_access,
+                depth, notify_b,
                 &merge_callbacks, merge_b,
                 iterpool));
               if (old_sess1_url)
@@ -7693,7 +7690,7 @@ do_directory_merge(const char *url1,
           SVN_ERR(drive_merge_report_editor(merge_b->target_abspath,
                                             url1, revision1, url2, revision2,
                                             NULL,
-                                            depth, notify_b, adm_access,
+                                            depth, notify_b,
                                             &merge_callbacks, merge_b,
                                             pool));
         }
@@ -7774,7 +7771,7 @@ ensure_ra_session_url(svn_ra_session_t **ra_session,
 }
 
 /* Drive a merge of MERGE_SOURCES into working copy path TARGET_ABSPATH (with
-   associated TARGET_ENTRY and ADM_ACCESS baton).
+   associated TARGET_ENTRY).
 
    If SOURCES_ANCESTRAL is set, then for every merge source in
    MERGE_SOURCES, the "left" and "right" side of the merge source are
@@ -7803,7 +7800,6 @@ static svn_error_t *
 do_merge(apr_array_header_t *merge_sources,
          const char *target_abspath,
          const svn_wc_entry_t *target_entry,
-         svn_wc_adm_access_t *adm_access,
          svn_boolean_t sources_ancestral,
          svn_boolean_t sources_related,
          svn_boolean_t same_repos,
@@ -7952,8 +7948,8 @@ do_merge(apr_array_header_t *merge_sources,
         }
       else if (target_entry->kind == svn_node_dir)
         {
-          SVN_ERR(do_directory_merge(url1, rev1, url2, rev2, target_entry,
-                                     adm_access, depth, &notify_baton,
+          SVN_ERR(do_directory_merge(url1, rev1, url2, rev2, target_abspath,
+                                     target_entry, depth, &notify_baton,
                                      &merge_cmd_baton, subpool));
         }
 
@@ -7999,7 +7995,6 @@ do_merge(apr_array_header_t *merge_sources,
 static svn_error_t *
 merge_cousins_and_supplement_mergeinfo(const char *target_abspath,
                                        const svn_wc_entry_t *entry,
-                                       svn_wc_adm_access_t *adm_access,
                                        svn_ra_session_t *ra_session,
                                        const char *URL1,
                                        svn_revnum_t rev1,
@@ -8083,7 +8078,7 @@ merge_cousins_and_supplement_mergeinfo(const char *target_abspath,
       faux_source->rev1 = rev1;
       faux_source->rev2 = rev2;
       APR_ARRAY_PUSH(faux_sources, merge_source_t *) = faux_source;
-      SVN_ERR(do_merge(faux_sources, target_abspath, entry, adm_access,
+      SVN_ERR(do_merge(faux_sources, target_abspath, entry,
                        FALSE, TRUE, same_repos,
                        ignore_ancestry, force, dry_run, FALSE, TRUE,
                        depth, merge_options, use_sleep, ctx, pool));
@@ -8103,11 +8098,11 @@ merge_cousins_and_supplement_mergeinfo(const char *target_abspath,
   if (same_repos)
     {
       SVN_ERR(do_merge(add_sources, target_abspath, entry,
-                       adm_access, TRUE, TRUE, same_repos,
+                       TRUE, TRUE, same_repos,
                        ignore_ancestry, force, dry_run, TRUE, TRUE,
                        depth, merge_options, use_sleep, ctx, pool));
       SVN_ERR(do_merge(remove_sources, target_abspath, entry,
-                       adm_access, TRUE, TRUE, same_repos,
+                       TRUE, TRUE, same_repos,
                        ignore_ancestry, force, dry_run, TRUE, TRUE,
                        depth, merge_options, use_sleep, ctx, pool));
     }
@@ -8319,7 +8314,6 @@ svn_client_merge3(const char *source1,
       else
         {
           err = merge_cousins_and_supplement_mergeinfo(target_abspath, entry,
-                                                       adm_access,
                                                        ra_session1,
                                                        URL1, rev1,
                                                        URL2, rev2,
@@ -8363,7 +8357,7 @@ svn_client_merge3(const char *source1,
   /* Close our temporary RA sessions. */
   svn_pool_destroy(sesspool);
 
-  err = do_merge(merge_sources, target_abspath, entry, adm_access,
+  err = do_merge(merge_sources, target_abspath, entry,
                  ancestral, related, same_repos,
                  ignore_ancestry, force, dry_run,
                  record_only, FALSE, depth, merge_options,
@@ -9207,7 +9201,7 @@ svn_client_merge_reintegrate(const char *source,
      ### related" in this source file).  We can merge to trunk without
      ### implementing this. */
   err = merge_cousins_and_supplement_mergeinfo(target_abspath, entry,
-                                               adm_access, ra_session,
+                                               ra_session,
                                                url1, rev1, url2, rev2,
                                                yc_ancestor_rev,
                                                source_repos_root,
@@ -9315,7 +9309,7 @@ svn_client_merge_peg3(const char *source,
 
   /* Do the real merge!  (We say with confidence that our merge
      sources are both ancestral and related.) */
-  err = do_merge(merge_sources, target_abspath, entry, adm_access,
+  err = do_merge(merge_sources, target_abspath, entry,
                  TRUE, TRUE, same_repos, ignore_ancestry, force, dry_run,
                  record_only, FALSE, depth, merge_options,
                  &use_sleep, ctx, pool);
