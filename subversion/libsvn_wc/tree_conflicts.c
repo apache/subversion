@@ -179,7 +179,6 @@ read_node_version_info(svn_wc_conflict_version_t **version_info,
   const char *repos_relpath;
   svn_revnum_t peg_rev;
   svn_node_kind_t kind;
-  svn_boolean_t ok = TRUE;
 
   if (!is_valid_version_info_skel(skel))
     return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
