@@ -506,6 +506,15 @@ svn_wc__resolved_conflict_internal(svn_wc__db_t *db,
                                    void *notify_baton,
                                    apr_pool_t *scratch_pool);
 
+/* Library-internal version of svn_wc_locked2(). */
+svn_error_t *
+svn_wc__internal_locked(svn_boolean_t *locked_here,
+                        svn_boolean_t *locked,
+                        svn_wc__db_t *db,
+                        const char *local_abspath,
+                        apr_pool_t *scratch_pool);
+
+
 
 svn_error_t *
 svn_wc__internal_is_replaced(svn_boolean_t *replaced,
