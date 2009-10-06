@@ -3282,13 +3282,13 @@ svn_wc_walk_entries3(const char *path,
                      void *cancel_baton,
                      apr_pool_t *pool)
 {
-  const char *abspath;
+  const char *local_abspath;
   svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
   svn_error_t *err;
   svn_wc__db_kind_t kind;
   svn_depth_t depth;
 
-  SVN_ERR(svn_dirent_get_absolute(&abspath, path, pool));
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
   err = svn_wc__db_read_info(NULL, &kind, NULL,
                              NULL, NULL, NULL,
                              NULL, NULL, NULL,
@@ -3296,7 +3296,7 @@ svn_wc_walk_entries3(const char *path,
                              NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL, NULL,
-                             db, abspath,
+                             db, local_abspath,
                              pool, pool);
   if (err)
     {
@@ -3307,39 +3307,44 @@ svn_wc_walk_entries3(const char *path,
       return walk_callbacks->handle_error(
         path, svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
                                 _("'%s' is not under version control"),
-                                svn_dirent_local_style(path, pool)),
+                                svn_dirent_local_style(local_abspath, pool)),
         walk_baton, pool);
     }
 
   if (kind == svn_wc__db_kind_file || depth == svn_depth_exclude)
     {
       const svn_wc_entry_t *entry;
-      svn_boolean_t hidden;
 
       /* ### we should stop passing out entry structures.
          ###
          ### we should not call handle_error for an error the *callback*
          ###   gave us. let it deal with the problem before returning.  */
 
-      /* This entry should be present.  */
-      SVN_ERR(svn_wc_entry(&entry, path, adm_access, TRUE, pool));
-      SVN_ERR_ASSERT(entry != NULL);
-      SVN_ERR(svn_wc__entry_is_hidden(&hidden, entry));
-      if (!show_hidden && hidden)
+      if (!show_hidden)
         {
-          /* The fool asked to walk a "hidden" node. Report the node as
-             unversioned.
+          svn_boolean_t hidden;
+          SVN_ERR(svn_wc__db_node_hidden(&hidden, db, local_abspath, pool));
 
-             ### this is incorrect behavior. see depth_test 36. the walk
-             ### API will be revamped to avoid entry structures. we should
-             ### be able to solve the problem with the new API. (since we
-             ### shouldn't return a hidden entry here)  */
-          return walk_callbacks->handle_error(
-            path, svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-                                    _("'%s' is not under version control"),
-                                    svn_dirent_local_style(path, pool)),
-            walk_baton, pool);
+          if (hidden)
+            {
+              /* The fool asked to walk a "hidden" node. Report the node as
+                 unversioned.
+
+                 ### this is incorrect behavior. see depth_test 36. the walk
+                 ### API will be revamped to avoid entry structures. we should
+                 ### be able to solve the problem with the new API. (since we
+                 ### shouldn't return a hidden entry here)  */
+              return walk_callbacks->handle_error(
+                               path, svn_error_createf(
+                                  SVN_ERR_UNVERSIONED_RESOURCE, NULL,
+                                  _("'%s' is not under version control"),
+                                  svn_dirent_local_style(local_abspath, pool)),
+                               walk_baton, pool);
+            }
         }
+
+      SVN_ERR(svn_wc__get_entry(&entry, db, local_abspath, FALSE,
+                                svn_node_file, FALSE, pool, pool));
 
       err = walk_callbacks->found_entry(path, entry, walk_baton, pool);
       if (err)
@@ -3356,7 +3361,7 @@ svn_wc_walk_entries3(const char *path,
   return walk_callbacks->handle_error(
        path, svn_error_createf(SVN_ERR_NODE_UNKNOWN_KIND, NULL,
                                _("'%s' has an unrecognized node kind"),
-                               svn_dirent_local_style(path, pool)),
+                               svn_dirent_local_style(local_abspath, pool)),
        walk_baton, pool);
 }
 
