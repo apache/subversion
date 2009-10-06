@@ -2259,11 +2259,11 @@ delete_entry(const char *path,
              apr_pool_t *pool)
 {
   struct dir_baton *pb = parent_baton;
-  const char *basename = svn_uri_basename(path, pool);
+  const char *base = svn_uri_basename(path, pool);
   const char *local_abspath;
   const char *their_url;
 
-  local_abspath = svn_dirent_join(pb->local_abspath, basename, pool);
+  local_abspath = svn_dirent_join(pb->local_abspath, base, pool);
   
   if (pb->skip_descendants)
     {
@@ -2273,9 +2273,9 @@ delete_entry(const char *path,
       return SVN_NO_ERROR;
     }
 
-  SVN_ERR(check_path_under_root(pb->local_abspath, basename, pool));
+  SVN_ERR(check_path_under_root(pb->local_abspath, base, pool));
 
-  their_url = svn_path_url_add_component2(pb->new_URL, basename, pool);
+  their_url = svn_path_url_add_component2(pb->new_URL, base, pool);
 
   return do_entry_deletion(&pb->log_number, pb->edit_baton, local_abspath,
                            their_url, pb->inside_deleted_subtree, pool);
