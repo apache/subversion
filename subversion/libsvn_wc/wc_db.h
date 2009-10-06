@@ -1365,6 +1365,8 @@ svn_wc__db_global_relocate(svn_wc__db_t *db,
 
 
 /* ### collapse changes (for this node) from the trees into a new BASE node. */
+/* ### BH: This probably needs an exclude filter and some kind of depth support,
+           before it can replace other code. */
 svn_error_t *
 svn_wc__db_global_commit(svn_wc__db_t *db,
                          const char *local_abspath,
