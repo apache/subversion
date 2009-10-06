@@ -2267,14 +2267,25 @@ write_entry(svn_wc__db_t *db,
   return SVN_NO_ERROR;
 }
 
-
-svn_error_t *
-svn_wc__entries_write_new(svn_wc__db_t *db,
-                          const char *local_abspath,
-                          apr_hash_t *entries,
-                          apr_pool_t *scratch_pool)
+struct entries_write_baton
 {
-  svn_sqlite__db_t *sdb;
+  svn_wc__db_t *db;
+  const char *local_abspath;
+  apr_hash_t *entries;
+  apr_pool_t *scratch_pool;
+};
+
+/* Writes entries inside a sqlite transaction
+   Implements svn_sqlite__transaction_callback_t. */
+static svn_error_t *
+entries_write_new_cb(void *baton,
+                     svn_sqlite__db_t *sdb)
+{
+  struct entries_write_baton *ewb = baton;
+  svn_wc__db_t *db = ewb->db;
+  const char *local_abspath = ewb->local_abspath;
+  apr_hash_t *entries = ewb->entries;
+  apr_pool_t *scratch_pool = ewb->scratch_pool;
   const svn_wc_entry_t *this_dir;
   svn_sqlite__stmt_t *stmt;
   apr_hash_index_t *hi;
@@ -2287,10 +2298,6 @@ svn_wc__entries_write_new(svn_wc__db_t *db,
   apr_hash_t *child_cache;
   svn_error_t *err;
   int i;
-
-  /* ### need the SDB so we can jam rows directly into it.  */
-  SVN_ERR(svn_wc__db_temp_get_sdb(&sdb, db, local_abspath, FALSE,
-                                  scratch_pool, iterpool));
 
   /* Get a copy of the "this dir" entry for comparison purposes. */
   this_dir = apr_hash_get(entries, SVN_WC_ENTRY_THIS_DIR,
@@ -2419,6 +2426,30 @@ svn_wc__entries_write_new(svn_wc__db_t *db,
   svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
 }
+
+svn_error_t *
+svn_wc__entries_write_new(svn_wc__db_t *db,
+                          const char *local_abspath,
+                          apr_hash_t *entries,
+                          apr_pool_t *scratch_pool)
+{
+  struct entries_write_baton ewb;
+  svn_sqlite__db_t *sdb;
+
+  /* ### need the SDB so we can jam rows directly into it.  */
+  SVN_ERR(svn_wc__db_temp_get_sdb(&sdb, db, local_abspath, FALSE,
+                                  scratch_pool, scratch_pool));
+  ewb.db = db;
+  ewb.local_abspath = local_abspath;
+  ewb.entries = entries;
+  ewb.scratch_pool = scratch_pool;
+
+  /* Run this operation in a transaction to speed up SQLite.
+     See http://www.sqlite.org/faq.html#q19 for more details */
+  return svn_error_return(
+      svn_sqlite__with_transaction(sdb, entries_write_new_cb, &ewb));
+}
+
 
 
 /* Update an entry NAME in ENTRIES, according to the combination of
