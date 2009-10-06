@@ -4780,7 +4780,7 @@ svn_client_info(const char *path_or_url,
 
 
 /**
- * @defgroup Patch
+ * @defgroup Patch Apply a patch to the working copy
  *
  * @{
  */
