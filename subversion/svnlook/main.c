@@ -68,6 +68,7 @@ static svn_opt_subcommand_t
   subcommand_date,
   subcommand_diff,
   subcommand_dirschanged,
+  subcommand_filesize,
   subcommand_help,
   subcommand_history,
   subcommand_info,
@@ -214,6 +215,12 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
    N_("usage: svnlook dirs-changed REPOS_PATH\n\n"
       "Print the directories that were themselves changed (property edits)\n"
       "or whose file children were changed.\n"),
+   {'r', 't'} },
+
+  {"filesize", subcommand_filesize, {0},
+   N_("usage: svnlook filesize REPOS_PATH PATH_IN_REPOS\n\n"
+      "Print the size (in bytes) of the file located at PATH_IN_REPOS as\n"
+      "it is represented in the repository.\n"),
    {'r', 't'} },
 
   {"help", subcommand_help, {"?", "h"},
@@ -1373,6 +1380,28 @@ verify_path(svn_node_kind_t *kind,
 }
 
 
+/* Print the size (in bytes) of a file. */
+static svn_error_t *
+do_filesize(svnlook_ctxt_t *c, const char *path, apr_pool_t *pool)
+{
+  svn_fs_root_t *root;
+  svn_node_kind_t kind;
+  svn_filesize_t length;
+  svn_stream_t *fstream, *stdout_stream;
+
+  SVN_ERR(get_root(&root, c, pool));
+  SVN_ERR(verify_path(&kind, root, path, pool));
+
+  if (kind != svn_node_file)
+    return svn_error_createf
+      (SVN_ERR_FS_NOT_FILE, NULL, _("Path '%s' is not a file"), path);
+
+  /* Else. */
+
+  SVN_ERR(svn_fs_file_length(&length, root, path, pool));
+  return svn_cmdline_printf(pool, "%ld\n", length);
+}
+
 /* Print the contents of the file at PATH in the repository.
    Error with SVN_ERR_FS_NOT_FOUND if PATH does not exist, or with
    SVN_ERR_FS_NOT_FILE if PATH exists but is not a file. */
@@ -1883,6 +1912,23 @@ subcommand_dirschanged(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
   SVN_ERR(get_ctxt_baton(&c, opt_state, pool));
   SVN_ERR(do_dirs_changed(c, pool));
+  return SVN_NO_ERROR;
+}
+
+/* This implements `svn_opt_subcommand_t'. */
+static svn_error_t *
+subcommand_filesize(apr_getopt_t *os, void *baton, apr_pool_t *pool)
+{
+  struct svnlook_opt_state *opt_state = baton;
+  svnlook_ctxt_t *c;
+
+  if (opt_state->arg1 == NULL)
+    return svn_error_createf
+      (SVN_ERR_CL_INSUFFICIENT_ARGS, NULL,
+       _("Missing repository path argument"));
+
+  SVN_ERR(get_ctxt_baton(&c, opt_state, pool));
+  SVN_ERR(do_filesize(c, opt_state->arg1, pool));
   return SVN_NO_ERROR;
 }
 
