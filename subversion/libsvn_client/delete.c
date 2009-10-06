@@ -85,7 +85,7 @@ svn_client__can_delete(const char *path,
                        apr_pool_t *pool)
 {
   svn_opt_revision_t revision;
-  svn_wc_entry_t *entry;
+  const svn_wc_entry_t *entry;
   const char* local_abspath;
 
   revision.kind = svn_opt_revision_unspecified;
