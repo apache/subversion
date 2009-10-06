@@ -371,8 +371,8 @@ svn_client_propset3(svn_commit_info_t **commit_info_p,
       err = svn_wc__node_get_kind(&kind, ctx->wc_ctx, target_abspath, FALSE,
                                   pool);
 
-      if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND ||
-          kind == svn_node_unknown || kind == svn_node_none)
+      if ((err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+          || kind == svn_node_unknown || kind == svn_node_none)
         {
           /* svn uses SVN_ERR_UNVERSIONED_RESOURCE as warning only
              for this function. */
@@ -855,8 +855,8 @@ svn_client_propget3(apr_hash_t **props,
       err = svn_wc__node_get_kind(&kind, ctx->wc_ctx, local_abspath, FALSE,
                                   pool);
 
-      if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND ||
-          kind == svn_node_unknown || kind == svn_node_none)
+      if ((err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+          || kind == svn_node_unknown || kind == svn_node_none)
         {
           /* svn uses SVN_ERR_UNVERSIONED_RESOURCE as warning only
              for this function. */
@@ -1172,8 +1172,8 @@ svn_client_proplist3(const char *path_or_url,
       err = svn_wc__node_get_kind(&kind, ctx->wc_ctx, local_abspath, FALSE,
                                   pool);
 
-      if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND ||
-          kind == svn_node_unknown || kind == svn_node_none)
+      if ((err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+          || kind == svn_node_unknown || kind == svn_node_none)
         {
           /* svn uses SVN_ERR_UNVERSIONED_RESOURCE as warning only
              for this function. */
