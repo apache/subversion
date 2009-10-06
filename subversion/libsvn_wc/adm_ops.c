@@ -274,51 +274,63 @@ svn_wc__do_update_cleanup(svn_wc__db_t *db,
                           apr_hash_t *exclude_paths,
                           apr_pool_t *pool)
 {
-  const svn_wc_entry_t *entry;
+  svn_wc__db_status_t status;
+  svn_wc__db_kind_t kind;
+  svn_depth_t wc_depth;
   svn_error_t *err;
 
-  err = svn_wc__get_entry(&entry, db, local_abspath, TRUE, svn_node_unknown,
-                          FALSE, pool, pool);
-  if (err)
-    {
-      if (err->apr_err != SVN_ERR_NODE_UNEXPECTED_KIND)
-        return svn_error_return(err);
-
-      /* We got the parent stub instead. That's fine... just tweak it
-         and avoid directory recursion.  */
-      svn_error_clear(err);
-
-      if (apr_hash_get(exclude_paths, local_abspath, APR_HASH_KEY_STRING))
-        return SVN_NO_ERROR;
-
-      SVN_ERR(svn_wc__tweak_entry(db, local_abspath, svn_node_dir, TRUE,
-                                  base_url, new_revision,
-                                  FALSE /* allow_removal */,
-                                  pool));
-      return SVN_NO_ERROR;
-    }
-  if (entry == NULL)
+  if (apr_hash_get(exclude_paths, local_abspath, APR_HASH_KEY_STRING))
     return SVN_NO_ERROR;
 
-  if (entry->kind == svn_node_file)
-    {
-      if (apr_hash_get(exclude_paths, local_abspath, APR_HASH_KEY_STRING))
-        return SVN_NO_ERROR;
+  err = svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL, &wc_depth, NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL,
+                             db, local_abspath, pool, pool));
 
+  if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+    {
+      svn_error_clear(err);
+      return SVN_NO_ERROR;
+    }
+  else
+    SVN_ERR(err);
+
+  if (wc_depth == svn_depth_exclude)
+    status = svn_wc__db_status_excluded;
+
+  switch (status)
+    {
+      case svn_wc__db_status_excluded:
+      case svn_wc__db_status_absent:
+      case svn_wc__db_status_not_present:
+        return SVN_NO_ERROR;
+      case svn_wc__db_status_obstructed:
+      case svn_wc__db_status_obstructed_add:
+      case svn_wc__db_status_obstructed_delete:
+        /* There is only a parent stub. That's fine... just tweak it
+           and avoid directory recursion.  */
+        SVN_ERR(svn_wc__tweak_entry(db, local_abspath, svn_node_dir, TRUE,
+                                    base_url, new_revision,
+                                    FALSE /* allow_removal */,
+                                    pool));
+        return SVN_NO_ERROR;
+    }
+
+  if (kind == svn_wc__db_kind_file || kind == svn_wc__db_kind_symlink)
+    {
       /* Parent not updated so don't remove PATH entry.  */
       SVN_ERR(svn_wc__tweak_entry(db, local_abspath, svn_node_file, FALSE,
                                   base_url, new_revision,
                                   FALSE /* allow_removal */,
                                   pool));
     }
-
-  else if (entry->kind == svn_node_dir)
+  else if (kind == svn_wc__db_kind_dir)
     {
       SVN_ERR(tweak_entries(db, local_abspath, base_url, new_revision,
                             notify_func, notify_baton, remove_missing_dirs,
                             depth, exclude_paths, pool));
     }
-
   else
     return svn_error_createf(SVN_ERR_NODE_UNKNOWN_KIND, NULL,
                              _("Unrecognized node kind: '%s'"),
