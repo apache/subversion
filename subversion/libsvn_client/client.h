@@ -653,10 +653,8 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
    TARGET is a working-copy path, the base of the hierarchy to be
    compared.  It corresponds to the URL opened in RA_SESSION below.
 
-   ADM_ACCESS is an access baton with a write lock for the anchor of
-   TARGET.  It should lock the entire TARGET tree if RECURSE is TRUE.
-   ADM_ACCESS may be NULL, in which case the DIFF_CMD callbacks will be
-   passed a NULL access baton.
+   If WC_CTX is not NULL, then it is a context for the working copy which
+   TARGET is located in.
 
    DIFF_CMD/DIFF_CMD_BATON represent the callback and callback argument that
    implement the file comparison function
@@ -676,7 +674,7 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
    EDITOR/EDIT_BATON return the newly created editor and baton. */
 svn_error_t *
 svn_client__get_diff_editor(const char *target,
-                            svn_wc_adm_access_t *adm_access,
+                            svn_wc_context_t *wc_ctx,
                             const svn_wc_diff_callbacks4_t *diff_cmd,
                             void *diff_cmd_baton,
                             svn_depth_t depth,
