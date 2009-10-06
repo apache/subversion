@@ -136,12 +136,13 @@ svn_wc__internal_check_wc(int *wc_format,
 svn_error_t *svn_wc__adm_write_check(const svn_wc_adm_access_t *adm_access,
                                      apr_pool_t *scratch_pool);
 
-/* Ensure ADM_ACCESS has a lock and for an entire WC tree (all the way
+/* Ensure DB has a lock and for an entire WC tree (all the way
    to its leaf nodes).  While locking a tree up front using
    LEVELS_TO_LOCK of -1 is a more appropriate operation, this function
    can be used to extend the depth of a lock via a tree-crawl after a
    lock is taken out.  Use POOL for temporary allocations. */
-svn_error_t *svn_wc__adm_extend_lock_to_tree(svn_wc_adm_access_t *adm_access,
+svn_error_t *svn_wc__adm_extend_lock_to_tree(svn_wc__db_t *db,
+                                             const char* adm_abspath,
                                              apr_pool_t *pool);
 
 
