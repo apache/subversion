@@ -541,6 +541,35 @@ def diff_binary(sbox):
     raise svntest.Failure("No 'Binary files differ' indication in "
                           "'svnlook diff' output.")
 
+#----------------------------------------------------------------------
+def test_filesize(sbox):
+  "test 'svnlook filesize'"
+
+  sbox.build()
+  repo_dir = sbox.repo_dir
+  wc_dir = sbox.wc_dir
+
+  tree_output = run_svnlook('tree', '--full-paths', repo_dir)
+  for line in tree_output:
+    # Drop line endings
+    line = line.rstrip()
+    # Skip directories
+    if line[-1] == '/':
+      continue
+    # Run 'svnlook cat' and measure the size of the output.
+    cat_output = run_svnlook('cat', repo_dir, line)
+    cat_size = len("".join(cat_output))
+    # Run 'svnlook filesize' and compare the results with the CAT_SIZE.
+    filesize_output = run_svnlook('filesize', repo_dir, line)
+    if len(filesize_output) != 1:
+      raise svntest.Failure("'svnlook filesize' printed something other than "
+                            "a single line of output.")
+    filesize = int(filesize_output[0].strip())    
+    if filesize != cat_size:
+      raise svntest.Failure("'svnlook filesize' and the counted length of "
+                            "'svnlook cat's output differ for the path "
+                            "'%s'." % (line))
+  
 ########################################################################
 # Run the tests
 
@@ -557,6 +586,7 @@ test_list = [ None,
               diff_ignore_whitespace,
               diff_ignore_eolstyle,
               diff_binary,
+              test_filesize,
              ]
 
 if __name__ == '__main__':
