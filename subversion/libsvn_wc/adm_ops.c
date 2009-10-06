@@ -286,7 +286,7 @@ svn_wc__do_update_cleanup(svn_wc__db_t *db,
                              NULL, NULL, NULL, &wc_depth, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL,
-                             db, local_abspath, pool, pool));
+                             db, local_abspath, pool, pool);
 
   if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
     {
