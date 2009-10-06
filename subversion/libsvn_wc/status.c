@@ -572,7 +572,8 @@ assemble_status(svn_wc_status2_t **status,
 #endif /* HAVE_SYMLINK */
 
       if (path_kind == svn_node_dir && entry->kind == svn_node_dir)
-        SVN_ERR(svn_wc_locked(&locked_p, local_abspath, scratch_pool));
+        SVN_ERR(svn_wc__internal_locked(NULL, &locked_p, db, local_abspath,
+                                        scratch_pool));
     }
 
   /* 5. Easy out:  unless we're fetching -every- entry, don't bother

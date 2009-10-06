@@ -511,11 +511,39 @@ svn_wc_adm_access_pool(const svn_wc_adm_access_t *adm_access);
 /** Return @c TRUE is the access baton @a adm_access has a write lock,
  * @c FALSE otherwise. Compared to svn_wc_locked() this is a cheap, fast
  * function that doesn't access the filesystem.
+ *
+ * New code should use svn_wc_locked2() instead.
  */
+SVN_DEPRECATED
 svn_boolean_t
 svn_wc_adm_locked(const svn_wc_adm_access_t *adm_access);
 
-/** Set @a *locked to non-zero if @a path is locked, else set it to zero. */
+/** Gets up to two booleans indicating whether a path is locked for
+ * writing.
+ *
+ * @a locked_here is set to TRUE when a write lock on @a local_abspath
+ * exists in @a wc_ctx. @a locked is set to TRUE when there is a
+ * write_lock on @a local_abspath
+ *
+ * @a locked_here and/or @a locked can be NULL when you are not
+ * interrested in a specific value
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_wc_locked2(svn_boolean_t *locked_here,
+               svn_boolean_t *locked,
+               svn_wc_context_t *wc_ctx,
+               const char *local_abspath,
+               apr_pool_t *scratch_pool);
+
+/** Set @a *locked to non-zero if @a path is locked, else set it to zero.
+ *
+ * New code should use svn_wc_locked2() instead.
+ *
+ * @deprecated Provided for backward compatibility with the 1.6 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_locked(svn_boolean_t *locked,
               const char *path,
