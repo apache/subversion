@@ -869,15 +869,19 @@ svn_wc_copy3(svn_wc_context_t *wc_ctx,
 
       switch (status)
         {
-        case svn_wc__db_status_excluded:
-          return svn_error_createf(SVN_ERR_ENTRY_EXISTS, NULL,
+          case svn_wc__db_status_excluded:
+            return svn_error_createf(SVN_ERR_ENTRY_EXISTS, NULL,
                                    _("'%s' is already under version control "
                                      "but is excluded."),
                                    svn_dirent_local_style(dst_abspath, pool));
-        case svn_wc__db_status_absent:
-          return svn_error_createf(SVN_ERR_ENTRY_EXISTS, NULL,
+          case svn_wc__db_status_absent:
+            return svn_error_createf(SVN_ERR_ENTRY_EXISTS, NULL,
                                    _("'%s' is already under version control"),
                                    svn_dirent_local_style(dst_abspath, pool));
+
+          /* Explicitly ignore other statii */
+          default:
+            break;
         }
     }
 
