@@ -190,7 +190,7 @@ Candidate changes:
    Windows implements per file handle locking, so it doesn't need these
    locks. We usually see the opposite problem in Subversion.
    Justification:
-     A +- 20% decrease in running time on running the testsuite in parallel
+     A +- 5% decrease in running time on running the testsuite in parallel
      mode (on trunk) is too good to not port back to 1.6. Especially since
      it is a clean merge.
    Votes:
