@@ -33,6 +33,7 @@
 #include "wc.h"
 #include "lock.h"
 #include "entries.h"
+#include "adm_files.h"
 
 #include "svn_private_config.h"
 
@@ -47,7 +48,7 @@
         if (__temp->apr_err == SVN_ERR_WC_LEFT_LOCAL_MOD)        \
           svn_error_clear(__temp);                               \
         else                                                     \
-          return __temp;                                         \
+          return svn_error_return(__temp);                       \
       }                                                          \
   } while (0)
 
@@ -194,6 +195,54 @@ crop_children(svn_wc__db_t *db,
   return SVN_NO_ERROR;
 }
 
+/* Removes everything below LOCAL_ABSPATH from version control,
+   but not the administrative data in the parent for LOCAL_ABSPATH
+   itself. (As that will contain the excluded marking) */
+svn_error_t *
+remove_for_exclude(svn_wc__db_t *db,
+                   const char *local_abspath,
+                   svn_cancel_func_t cancel_func,
+                   void *cancel_baton,
+                   apr_pool_t *scratch_pool)
+{
+  const apr_array_header_t *children;
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+  int i;
+
+  SVN_ERR(svn_wc__db_read_children(&children, db, local_abspath, scratch_pool,
+                                   iterpool));
+
+  for (i = 0; i < children->nelts; i++)
+    {
+      const char *name = APR_ARRAY_IDX(children, i, const char *);
+      const char *child_abspath;
+
+      svn_pool_clear(iterpool);
+      child_abspath = svn_dirent_join(local_abspath, name, iterpool);
+      
+      IGNORE_LOCAL_MOD(svn_wc__internal_remove_from_revision_control(
+                                       db,
+                                       child_abspath,
+                                       TRUE,
+                                       FALSE,
+                                       cancel_func, cancel_baton,
+                                       iterpool));
+    }
+
+  /* Now destroy the wc root inside local_abspath */
+  SVN_ERR(svn_wc__adm_destroy(svn_wc__adm_retrieve_internal2(db, local_abspath,
+                                                             iterpool),
+                              iterpool));
+
+  /* And now try to remove the directory itself, ignoring errors
+     for leaving local modifications */
+  svn_error_clear(svn_io_dir_remove_nonrecursive(local_abspath, iterpool));
+
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_wc_crop_tree2(svn_wc_context_t *wc_ctx,
                   const char *local_abspath,
@@ -315,15 +364,14 @@ svn_wc_crop_tree2(svn_wc_context_t *wc_ctx,
       SVN_ERR(svn_wc__set_depth(db, local_abspath, svn_depth_exclude,
                                 scratch_pool));
 
+      /* Remove all working copy data below local_abspath */
       /* TODO(#2843): Do we need to restore the modified depth if the user
          cancel this operation? */
-      IGNORE_LOCAL_MOD(
-          svn_wc_remove_from_revision_control2(wc_ctx,
-                                               local_abspath,
-                                               TRUE, /* destroy */
-                                               FALSE, /* instant error */
-                                               cancel_func, cancel_baton,
-                                               scratch_pool));
+      SVN_ERR(remove_for_exclude(wc_ctx->db,
+                                 local_abspath,
+                                 cancel_func, cancel_baton,
+                                 scratch_pool));
+
 
       if (notify_func)
         {
