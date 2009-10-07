@@ -549,13 +549,24 @@
 
 #ifdef SWIGPYTHON
 %typemap(in) apr_array_header_t *providers {
+    Py_ssize_t inputlen;
     svn_auth_provider_object_t *provider;
     int targlen;
     if (!PySequence_Check($input)) {
         PyErr_SetString(PyExc_TypeError, "not a sequence");
         SWIG_fail;
     }
-    targlen = PySequence_Length($input);
+    
+    inputlen = PySequence_Length($input);
+    if (inputlen < 0)
+        return NULL;
+    if (inputlen > INT_MAX)
+      {
+        PyErr_SetString(PyExc_ValueError, "too many elements");
+        return NULL;
+      }
+
+    targlen = (int) inputlen;
     $1 = apr_array_make(_global_pool, targlen, sizeof(provider));
     ($1)->nelts = targlen;
     while (targlen--) {
