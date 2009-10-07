@@ -195,10 +195,11 @@ crop_children(svn_wc__db_t *db,
   return SVN_NO_ERROR;
 }
 
+
 /* Removes everything below LOCAL_ABSPATH from version control,
    but not the administrative data in the parent for LOCAL_ABSPATH
    itself. (As that will contain the excluded marking) */
-svn_error_t *
+static svn_error_t *
 remove_for_exclude(svn_wc__db_t *db,
                    const char *local_abspath,
                    svn_cancel_func_t cancel_func,
