@@ -1210,6 +1210,8 @@ svn_wc_delete4(svn_wc_context_t *wc_ctx,
         was_replace = TRUE;
     }
 
+  /* ### Maybe we should disallow deleting switched nodes here? */
+
   if (kind == svn_wc__db_kind_dir)
     {
       svn_revnum_t base_rev;
