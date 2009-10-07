@@ -6257,6 +6257,7 @@ do_file_merge(const char *url1,
     {
       const char *source_root_url;
       merge_target = apr_pcalloc(scratch_pool, sizeof(*merge_target));
+      merge_target->path = target_abspath;
 
       SVN_ERR(svn_ra_get_repos_root2(merge_b->ra_session1,
                                      &source_root_url, scratch_pool));
