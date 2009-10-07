@@ -177,13 +177,6 @@ svn_client__update_internal(svn_revnum_t *result_rev,
 
   /* Get full URL from the ANCHOR. */
 
-  {
-    const svn_wc_entry_t *entry;
-  
-  SVN_ERR(svn_wc__get_entry_versioned(&entry, ctx->wc_ctx, anchor_abspath,
-                                      svn_node_unknown, FALSE, FALSE,
-                                      pool, pool));
-}
   SVN_ERR(svn_wc__node_get_url(&anchor_url, ctx->wc_ctx, anchor_abspath,
                                pool, pool));
   if (! anchor_url)
