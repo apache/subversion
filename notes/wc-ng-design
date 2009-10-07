@@ -1018,7 +1018,7 @@ base-presence: *
 
 working-presence: not-present
 base-presence: *
-  NOTE: this situatino should never be seen, since the node's parent
+  NOTE: this situation should never be seen, since the node's parent
   should have been committed first, which handles this node as part of
   the child processing (see <normal, *> resolution for directories).
 
@@ -1105,7 +1105,7 @@ base-presence: *
 
 working-presence: not-present
 base-presence: *
-  NOTE: this situatino should never be seen, since the node's parent
+  NOTE: this situation should never be seen, since the node's parent
   should have been committed first, which handles this node as part of
   the child processing (see <normal, *> resolution).
 
