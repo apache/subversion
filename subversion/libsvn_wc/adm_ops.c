@@ -315,6 +315,10 @@ svn_wc__do_update_cleanup(svn_wc__db_t *db,
                                     FALSE /* allow_removal */,
                                     pool));
         return SVN_NO_ERROR;
+
+      /* Explicitly ignore other statii */
+      default:
+        break;
     }
 
   if (kind == svn_wc__db_kind_file || kind == svn_wc__db_kind_symlink)
@@ -1184,6 +1188,10 @@ svn_wc_delete4(svn_wc_context_t *wc_ctx,
         return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
                                  _("'%s' can not be deleted"),
                                  svn_dirent_local_style(local_abspath, pool));
+
+      /* Explicitly ignore other statii */
+      default:
+        break;
     }
 
   if (status == svn_wc__db_status_added)
