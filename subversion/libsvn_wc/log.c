@@ -506,11 +506,11 @@ static svn_error_t *
 log_do_file_maybe_executable(struct log_runner *loggy,
                              const char *name)
 {
-  const char *full_abspath
+  const char *local_abspath
     = svn_dirent_join(loggy->adm_abspath, name, loggy->pool);
 
   return svn_error_return(svn_wc__maybe_set_executable(
-                                NULL, loggy->db, full_abspath, loggy->pool));
+                                NULL, loggy->db, local_abspath, loggy->pool));
 }
 
 /* Maybe make file NAME in log's CWD readonly */
@@ -518,10 +518,10 @@ static svn_error_t *
 log_do_file_maybe_readonly(struct log_runner *loggy,
                            const char *name)
 {
-  const char *full_abspath
+  const char *local_abspath
     = svn_dirent_join(loggy->adm_abspath, name, loggy->pool);
 
-  return svn_wc__maybe_set_read_only(NULL, loggy->db, full_abspath,
+  return svn_wc__maybe_set_read_only(NULL, loggy->db, local_abspath,
                                      loggy->pool);
 }
 
