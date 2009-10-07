@@ -4097,6 +4097,8 @@ svn_wc_copy(const char *src,
  *
  * @since New in 1.7.
  */
+ /* ### BH: Maybe add a delete_switched flag that allows deny switched
+            nodes like file externals? */
 svn_error_t *
 svn_wc_delete4(svn_wc_context_t *wc_ctx,
                const char *local_abspath,
