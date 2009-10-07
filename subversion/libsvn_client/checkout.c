@@ -163,7 +163,6 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
   else if (kind == svn_node_dir)
     {
       int wc_format;
-      const svn_wc_entry_t *entry;
       const char *entry_url;
 
       SVN_ERR(svn_wc_check_wc2(&wc_format, ctx->wc_ctx, local_abspath, pool));
@@ -188,9 +187,6 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
         }
 
       /* Get PATH's entry. */
-      SVN_ERR(svn_wc__get_entry_versioned(&entry, ctx->wc_ctx, local_abspath,
-                                          svn_node_unknown, FALSE, FALSE,
-                                          pool, pool));
       SVN_ERR(svn_wc__node_get_url(&entry_url, ctx->wc_ctx, local_abspath,
                                    pool, pool));
 
@@ -208,6 +204,12 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
       else
         {
           const char *errmsg;
+          const svn_wc_entry_t *entry;
+
+          SVN_ERR(svn_wc__get_entry_versioned(&entry, ctx->wc_ctx, local_abspath,
+                                              svn_node_unknown, FALSE, FALSE,
+                                              pool, pool));
+
           errmsg = apr_psprintf
             (pool,
              _("'%s' is already a working copy for a different URL"),

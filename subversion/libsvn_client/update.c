@@ -97,7 +97,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
   void *update_edit_baton;
   const svn_ra_reporter3_t *reporter;
   void *report_baton;
-  const svn_wc_entry_t *entry;
+  const char *anchor_url;
   const char *anchor, *target;
   const char *repos_root;
   svn_error_t *err;
@@ -176,13 +176,20 @@ svn_client__update_internal(svn_revnum_t *result_rev,
   SVN_ERR(svn_dirent_get_absolute(&anchor_abspath, anchor, pool));
 
   /* Get full URL from the ANCHOR. */
+
+  {
+    const svn_wc_entry_t *entry;
+  
   SVN_ERR(svn_wc__get_entry_versioned(&entry, ctx->wc_ctx, anchor_abspath,
                                       svn_node_unknown, FALSE, FALSE,
                                       pool, pool));
-  if (! entry->url)
+}
+  SVN_ERR(svn_wc__node_get_url(&anchor_url, ctx->wc_ctx, anchor_abspath,
+                               pool, pool));
+  if (! anchor_url)
     return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
-                             _("Entry '%s' has no URL"),
-                             svn_dirent_local_style(anchor, pool));
+                             _("'%s' has no URL"),
+                             svn_dirent_local_style(anchor_abspath, pool));
 
   /* We may need to crop the tree if the depth is sticky */
   if (depth_is_sticky && depth < svn_depth_infinity)
@@ -226,7 +233,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
     : NULL;
 
   /* Open an RA session for the URL */
-  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, entry->url,
+  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, anchor_url,
                                                anchor, NULL, TRUE, TRUE,
                                                ctx, pool));
 
@@ -306,7 +313,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
 
       SVN_ERR(svn_client__handle_externals(adm_access, externals_old,
                                            externals_new, ambient_depths,
-                                           entry->url, anchor, repos_root,
+                                           anchor_url, anchor, repos_root,
                                            depth, use_sleep, ctx, pool));
     }
 
