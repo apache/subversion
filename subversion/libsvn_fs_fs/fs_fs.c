@@ -496,7 +496,7 @@ with_txnlist_lock(svn_fs_t *fs,
                   apr_pool_t *pool)
 {
   svn_error_t *err;
-#if SVN_FS_FS__USE_LOCK_MUTEX
+#if APR_HAS_THREADS
   fs_fs_data_t *ffd = fs->fsap_data;
   fs_fs_shared_data_t *ffsd = ffd->shared;
   apr_status_t apr_err;
@@ -508,7 +508,7 @@ with_txnlist_lock(svn_fs_t *fs,
 
   err = body(fs, baton, pool);
 
-#if SVN_FS_FS__USE_LOCK_MUTEX
+#if APR_HAS_THREADS
   apr_err = apr_thread_mutex_unlock(ffsd->txn_list_lock);
   if (apr_err && !err)
     return svn_error_wrap_apr(apr_err, _("Can't ungrab FSFS txn list mutex"));
