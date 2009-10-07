@@ -221,7 +221,7 @@ file_xfer_under_path(svn_wc__db_t *db,
       if (err)
         {
           if (! rerun || ! APR_STATUS_IS_ENOENT(err->apr_err))
-            return err;
+            return svn_error_return(err);
           svn_error_clear(err);
         }
       break;
@@ -498,7 +498,7 @@ log_do_file_readonly(struct log_runner *loggy,
       return SVN_NO_ERROR;
     }
   else
-    return err;
+    return svn_error_return(err);
 }
 
 /* Maybe make file NAME in log's CWD executable */
@@ -582,14 +582,12 @@ log_do_modify_entry(struct log_runner *loggy,
 {
   svn_error_t *err;
   apr_hash_t *ah = svn_xml_make_att_hash(atts, loggy->pool);
-  const char *tfile;
+  const char *local_abspath;
   svn_wc_entry_t *entry;
   apr_uint64_t modify_flags;
   const char *valuestr;
 
-  /* Make TFILE the path of the thing being modified.  */
-  tfile = svn_dirent_join(svn_wc_adm_access_path(loggy->adm_access), name,
-                          loggy->pool);
+  local_abspath = svn_dirent_join(loggy->adm_abspath, name, loggy->pool);
 
   if (loggy->rerun)
     {
@@ -597,8 +595,9 @@ log_do_modify_entry(struct log_runner *loggy,
          which case we don't want to reincarnate it.  */
       const svn_wc_entry_t *existing;
 
-      SVN_ERR(svn_wc_entry(&existing, tfile, loggy->adm_access, TRUE,
-                           loggy->pool));
+      SVN_ERR(svn_wc__get_entry(&existing, loggy->db, local_abspath, TRUE,
+                                svn_node_unknown, FALSE,
+                                loggy->pool, loggy->pool));
       if (! existing)
         return SVN_NO_ERROR;
     }
@@ -616,12 +615,12 @@ log_do_modify_entry(struct log_runner *loggy,
     {
       apr_time_t text_time;
 
-      err = svn_io_file_affected_time(&text_time, tfile, loggy->pool);
+      err = svn_io_file_affected_time(&text_time, local_abspath, loggy->pool);
       if (err)
         return svn_error_createf
           (pick_error_code(loggy), err,
            _("Error getting 'affected time' on '%s'"),
-           svn_dirent_local_style(tfile, loggy->pool));
+           svn_dirent_local_style(local_abspath, loggy->pool));
 
       entry->text_time = text_time;
     }
@@ -634,15 +633,16 @@ log_do_modify_entry(struct log_runner *loggy,
       apr_finfo_t finfo;
       const svn_wc_entry_t *tfile_entry;
 
-      err = svn_wc_entry(&tfile_entry, tfile, loggy->adm_access,
-                         FALSE, loggy->pool);
+      err = svn_wc__get_entry(&tfile_entry, loggy->db, local_abspath, TRUE,
+                              svn_node_file, FALSE,
+                              loggy->pool, loggy->pool);
       if (err)
         SIGNAL_ERROR(loggy, err);
 
       if (! tfile_entry)
         return SVN_NO_ERROR;
 
-      err = svn_io_stat(&finfo, tfile, APR_FINFO_MIN | APR_FINFO_LINK,
+      err = svn_io_stat(&finfo, local_abspath, APR_FINFO_MIN | APR_FINFO_LINK,
                         loggy->pool);
       if (err && APR_STATUS_IS_ENOENT(err->apr_err))
         {
@@ -653,7 +653,7 @@ log_do_modify_entry(struct log_runner *loggy,
         return svn_error_createf
           (pick_error_code(loggy), NULL,
             _("Error getting file size on '%s'"),
-            svn_dirent_local_style(tfile, loggy->pool));
+            svn_dirent_local_style(local_abspath, loggy->pool));
 
       entry->working_size = finfo.size;
     }
@@ -764,22 +764,24 @@ log_do_delete_changelist(struct log_runner *loggy,
 static svn_error_t *
 log_do_delete_entry(struct log_runner *loggy, const char *name)
 {
-  svn_wc_adm_access_t *adm_access;
-  const svn_wc_entry_t *entry;
-  svn_error_t *err = SVN_NO_ERROR;
-  const char *full_path
-    = svn_dirent_join(svn_wc_adm_access_path(loggy->adm_access), name,
-                      loggy->pool);
+  const char *local_abspath;
+  svn_wc__db_kind_t kind;
+  svn_boolean_t hidden;
+  svn_error_t *err;
+
+  local_abspath = svn_dirent_join(loggy->adm_abspath, name, loggy->pool);
 
   /* Figure out if 'name' is a dir or a file */
-  SVN_ERR(svn_wc_adm_probe_retrieve(&adm_access, loggy->adm_access, full_path,
-                                    loggy->pool));
-  SVN_ERR(svn_wc_entry(&entry, full_path, adm_access, FALSE, loggy->pool));
+  SVN_ERR(svn_wc__db_read_kind(&kind, loggy->db, local_abspath, TRUE,
+                               loggy->pool));
 
-  if (! entry)
-    /* Hmm....this entry is already absent from the revision control
-       system.  Chances are good that this item was removed via a
-       commit from this working copy.  */
+  if (kind == svn_wc__db_kind_unknown)
+    return SVN_NO_ERROR; /* Already gone */
+
+  SVN_ERR(svn_wc__db_node_hidden(&hidden, loggy->db, local_abspath,
+                                 loggy->pool));
+
+  if (hidden)
     return SVN_NO_ERROR;
 
   /* Remove the object from revision control -- whether it's a
@@ -788,34 +790,33 @@ log_do_delete_entry(struct log_runner *loggy, const char *name)
 
      ### We pass NULL, NULL for cancel_func and cancel_baton below.
      ### If they were available, it would be nice to use them. */
-  if (entry->kind == svn_node_dir)
+  if (kind == svn_wc__db_kind_dir)
     {
-      svn_wc_adm_access_t *ignored;
+      svn_wc__db_status_t status;
 
-      /* If we get the right kind of error, it means the directory is
-         already missing, so all we need to do is delete its entry in
-         the parent directory. */
-      err = svn_wc_adm_retrieve(&ignored, adm_access, full_path, loggy->pool);
-      if (err)
+      SVN_ERR(svn_wc__db_read_info(&status, NULL, NULL, NULL, NULL, NULL,
+                                      NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                      NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                      NULL, NULL, NULL, NULL,
+                                      loggy->db, local_abspath,
+                                      loggy->pool, loggy->pool));
+      if (status == svn_wc__db_status_obstructed ||
+          status == svn_wc__db_status_obstructed_add ||
+          status == svn_wc__db_status_obstructed_delete)
         {
-          if (err->apr_err == SVN_ERR_WC_NOT_LOCKED)
-            {
-              svn_error_clear(err);
-              err = SVN_NO_ERROR;
+          /* Removing a missing wcroot is easy, just remove its parent entry
+             ### BH: I can't tell why we don't use this for adds.
+                     We might want to remove WC obstructions? 
 
-              if (entry->schedule != svn_wc_schedule_add)
-                {
-                  const char *local_abspath;
-
-                  SVN_ERR(svn_dirent_get_absolute(&local_abspath, full_path,
-                                                  loggy->pool));
-                  SVN_ERR(svn_wc__entry_remove(loggy->db, local_abspath,
-                                               loggy->pool));
-                }
-            }
-          else
+             We don't have a missing status in the final version of WC-NG,
+             so why bother researching its history.
+          */
+          if (status != svn_wc__db_status_obstructed_add)
             {
-              return err;
+              SVN_ERR(svn_wc__entry_remove(loggy->db, local_abspath,
+                                           loggy->pool));
+
+              return SVN_NO_ERROR;
             }
         }
       else
@@ -823,24 +824,17 @@ log_do_delete_entry(struct log_runner *loggy, const char *name)
           /* Deleting full_path requires that any children it has are
              also locked (issue #3039). */
             SVN_ERR(svn_wc__adm_extend_lock_to_tree(loggy->db,
-                                                    loggy->adm_abspath,
+                                                    local_abspath,
                                                     loggy->pool));
-          err = svn_wc_remove_from_revision_control(adm_access,
-                                                    SVN_WC_ENTRY_THIS_DIR,
-                                                    TRUE, /* destroy */
-                                                    FALSE, /* instant_error */
-                                                    NULL, NULL,
-                                                    loggy->pool);
         }
     }
-  else if (entry->kind == svn_node_file)
-    {
-      err = svn_wc_remove_from_revision_control(loggy->adm_access, name,
-                                                TRUE, /* destroy */
-                                                FALSE, /* instant_error */
-                                                NULL, NULL,
-                                                loggy->pool);
-    }
+
+  err = svn_wc__remove_from_revision_control_internal(loggy->db,
+                                                      local_abspath,
+                                                      TRUE, /* destroy */
+                                                      FALSE, /* instant_error*/
+                                                      NULL, NULL,
+                                                      loggy->pool);
 
   if (err && err->apr_err == SVN_ERR_WC_LEFT_LOCAL_MOD)
     {
@@ -849,7 +843,7 @@ log_do_delete_entry(struct log_runner *loggy, const char *name)
     }
   else
     {
-      return err;
+      return svn_error_return(err);
     }
 }
 
@@ -867,22 +861,17 @@ log_do_committed(struct log_runner *loggy,
   const char *rev = svn_xml_get_attr_value(SVN_WC__LOG_ATTR_REVISION, atts);
   svn_boolean_t wc_root, remove_executable = FALSE;
   svn_boolean_t set_read_write = FALSE;
-  const char *full_path;
   const char *local_abspath;
   const svn_wc_entry_t *orig_entry;
   svn_wc_entry_t *entry;
-  svn_wc_adm_access_t *adm_access;
   svn_boolean_t prop_mods;
   apr_uint64_t modify_flags = 0;
 
   /* Determine the actual full path of the affected item. */
   if (! is_this_dir)
-    full_path = svn_dirent_join(svn_wc_adm_access_path(loggy->adm_access),
-                                name, pool);
+    local_abspath = svn_dirent_join(loggy->adm_abspath, name, pool);
   else
-    full_path = apr_pstrdup(pool, svn_wc_adm_access_path(loggy->adm_access));
-
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, full_path, pool));
+    local_abspath = loggy->adm_abspath;
 
   /*** Perform sanity checking operations ***/
 
@@ -896,9 +885,8 @@ log_do_committed(struct log_runner *loggy,
      entry, or if the entry states that our item is not either "this
      dir" or a file kind, perhaps this isn't really the entry our log
      creator was expecting.  */
-  SVN_ERR(svn_wc_adm_probe_retrieve(&adm_access, loggy->adm_access, full_path,
-                                    pool));
-  SVN_ERR(svn_wc_entry(&orig_entry, full_path, adm_access, TRUE, pool));
+  SVN_ERR(svn_wc__get_entry(&orig_entry, loggy->db, local_abspath, FALSE,
+                            svn_node_unknown, FALSE, pool, pool));
 
   /* Cannot rerun a commit of a delete since the entry gets changed
      too much; if it's got as far as being in state deleted=true, or
@@ -957,7 +945,7 @@ log_do_committed(struct log_runner *loggy,
               if (loggy->rerun && APR_STATUS_IS_EEXIST(err->apr_err))
                 svn_error_clear(err);
               else
-                return err;
+                return svn_error_return(err);
             }
 
           return SVN_NO_ERROR;
@@ -978,10 +966,8 @@ log_do_committed(struct log_runner *loggy,
                     FALSE, FALSE, NULL, NULL, pool));
 
           /* If the parent entry's working rev 'lags' behind new_rev... */
-          SVN_ERR(svn_wc_entry(&parentry,
-                               svn_wc_adm_access_path(loggy->adm_access),
-                               loggy->adm_access,
-                               FALSE, pool));
+          SVN_ERR(svn_wc__get_entry(&parentry, loggy->db, loggy->adm_abspath,
+                                    FALSE, svn_node_dir, FALSE, pool, pool));
           if (new_rev > parentry->revision)
             {
               /* ...then the parent's revision is now officially a
@@ -1122,11 +1108,11 @@ log_do_committed(struct log_runner *loggy,
           (pick_error_code(loggy), err,
            _("Error replacing text-base of '%s'"), name);
 
-      if ((err = svn_io_stat(&finfo, full_path,
+      if ((err = svn_io_stat(&finfo, local_abspath,
                              APR_FINFO_MIN | APR_FINFO_LINK, pool)))
         return svn_error_createf(pick_error_code(loggy), err,
                                  _("Error getting 'affected time' of '%s'"),
-                                 svn_dirent_local_style(full_path, pool));
+                                 svn_dirent_local_style(local_abspath, pool));
 
       /* We will compute and modify the size and timestamp */
       modify_flags |= SVN_WC__ENTRY_MODIFY_WORKING_SIZE
@@ -1183,7 +1169,7 @@ log_do_committed(struct log_runner *loggy,
                     return svn_error_createf
                       (pick_error_code(loggy), err,
                        _("Error comparing '%s' and '%s'"),
-                       svn_dirent_local_style(full_path, pool),
+                       svn_dirent_local_style(local_abspath, pool),
                        svn_dirent_local_style(basef, pool));
                 }
               /* If they are the same, use the working file's timestamp,
@@ -1484,7 +1470,7 @@ handle_killme(svn_wc__db_t *db,
           cancel_func, cancel_baton,
           scratch_pool);
   if (err && err->apr_err != SVN_ERR_WC_LEFT_LOCAL_MOD)
-    return err;
+    return svn_error_return(err);
   svn_error_clear(err);
 
   /* If revnum of this dir is greater than parent's revnum, then
