@@ -474,6 +474,29 @@ svn_wc__node_is_status_present(svn_boolean_t *is_present,
                                const char *local_abspath,
                                apr_pool_t *scratch_pool);
 
+/**
+ * Set @a *is_added to whether @a local_abspath is added, using
+ * @a wc_ctx.  If @a local_abspath is not in the working copy, return
+ * @c SVN_ERR_WC_PATH_NOT_FOUND.  Use @a scratch_pool for all temporary
+ * allocations.
+ */
+svn_error_t *
+svn_wc__node_is_status_added(svn_boolean_t *is_added,
+                             svn_wc_context_t *wc_ctx,
+                             const char *local_abspath,
+                             apr_pool_t *scratch_pool);
+
+/**
+ * Get the base revision of @a local_abspath using @a wc_ctx.  If
+ * @a local_abspath is not in the working copy, return
+ * @c SVN_ERR_WC_PATH_NOT_FOUND.
+ */
+svn_error_t *
+svn_wc__node_get_base_rev(svn_revnum_t *base_revision,
+                          svn_wc_context_t *wc_ctx,
+                          const char *local_abspath,
+                          apr_pool_t *scratch_pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
