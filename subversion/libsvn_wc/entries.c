@@ -1038,6 +1038,8 @@ read_entries_new(apr_hash_t **result_entries,
                     entry->prejfile = apr_pstrdup(result_pool,
                                                   cd->their_file);
                     break;
+                  case svn_wc_conflict_kind_tree:
+                    break;
                 }
             }
         }
