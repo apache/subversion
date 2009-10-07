@@ -182,7 +182,7 @@ static svn_error_t *
 restore_node(svn_boolean_t *restored,
              svn_wc__db_t *db,
              const char *local_abspath,
-             svn_node_kind_t kind,
+             svn_wc__db_kind_t kind,
              svn_boolean_t use_commit_times,
              svn_wc_notify_func2_t notify_func,
              void *notify_baton,
@@ -192,7 +192,7 @@ restore_node(svn_boolean_t *restored,
 
   /* Currently we can only restore files, but we will be able to restore
      directories after we move to a single database and pristine store. */
-  if (kind == svn_node_file)
+  if (kind == svn_wc__db_kind_file || kind == svn_wc__db_kind_symlink)
     {
       /* ... recreate file from text-base, and ... */
       SVN_ERR(restore_file(db, local_abspath, use_commit_times,
@@ -318,7 +318,7 @@ report_revisions_and_depths(svn_wc__db_t *db,
   apr_hash_t *dirents;
   apr_pool_t *subpool = svn_pool_create(pool), *iterpool;
   int i;
-  const char *dir_repos_root, *dir_repos_relpath, *dir_url;
+  const char *dir_repos_root, *dir_repos_relpath;
   svn_depth_t dir_depth;
 
 
@@ -346,10 +346,6 @@ report_revisions_and_depths(svn_wc__db_t *db,
     SVN_ERR(svn_wc__db_scan_base_repos(&dir_repos_relpath, &dir_repos_root,
                                        NULL, db, dir_abspath,
                                        subpool, subpool));
-
-  /* ### The entries based code still uses full urls */
-  dir_url = svn_path_url_add_component2(dir_repos_root, dir_repos_relpath,
-                                        subpool);
 
   /* If "this dir" has "svn:externals" property set on it, store its name
      and depth in traversal_info. */
@@ -508,11 +504,7 @@ report_revisions_and_depths(svn_wc__db_t *db,
               if (dirent_kind == svn_node_none)
                 {
                   svn_boolean_t restored;
-                  svn_node_kind_t kind = (this_kind == svn_wc__db_kind_dir)
-                                                     ? svn_node_dir
-                                                     : svn_node_file;
-
-                  SVN_ERR(restore_node(&restored, db, this_abspath, kind,
+                  SVN_ERR(restore_node(&restored, db, this_abspath, this_kind,
                                        use_commit_times, notify_func,
                                        notify_baton, iterpool));
 
@@ -718,6 +710,71 @@ report_revisions_and_depths(svn_wc__db_t *db,
   return SVN_NO_ERROR;
 }
 
+/* Helper for svn_wc_crawl_revisions5() that finds a base revision for a node
+   that doesn't have one itself. */
+static svn_error_t *
+find_base_rev(svn_revnum_t *base_rev,
+              svn_wc__db_t *db,
+              const char *local_abspath,
+              const char *top_local_abspath,
+              apr_pool_t *pool)
+{
+  const char *op_root_abspath;
+  svn_wc__db_status_t status;
+  svn_boolean_t base_shadowed;
+
+  SVN_ERR(svn_wc__db_read_info(&status, NULL, base_rev, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, 
+                               &base_shadowed, NULL, NULL,
+                               db, local_abspath, pool, pool));
+
+  if (SVN_IS_VALID_REVNUM(*base_rev))
+      return SVN_NO_ERROR;
+
+  if (base_shadowed)
+    return svn_error_return(
+        svn_wc__db_base_get_info(NULL, NULL, base_rev, NULL, NULL, NULL, NULL,
+                                 NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                 NULL,
+                                 db, local_abspath, pool, pool));
+
+  if (status == svn_wc__db_status_added)
+    {
+      SVN_ERR(svn_wc__db_scan_addition(NULL, &op_root_abspath, NULL, NULL,
+                                       NULL, NULL, NULL, NULL,  NULL,
+                                       db, local_abspath, pool, pool));
+
+      return svn_error_return(
+                 find_base_rev(base_rev,
+                               db, svn_dirent_dirname(op_root_abspath, pool),
+                               top_local_abspath,
+                               pool));
+    }
+  else if (status == svn_wc__db_status_deleted)
+    {
+      const char *base_del_abspath, *moved_to_abspath;
+      const char *work_del_abspath;
+      svn_boolean_t replaced;
+      SVN_ERR(svn_wc__db_scan_deletion(&base_del_abspath, &replaced,
+                                       &moved_to_abspath, &work_del_abspath,
+                                       db, local_abspath, pool, pool));
+
+      if (work_del_abspath != NULL)
+        return svn_error_return(
+                 find_base_rev(base_rev,
+                               db, work_del_abspath,
+                               top_local_abspath,
+                               pool));
+    }
+
+  SVN_DBG(("Path %s, for %s, status %d\n", local_abspath, top_local_abspath, status));
+
+  return svn_error_createf(SVN_ERR_WC_CORRUPT, NULL,
+                           _("Can't retrieve base revision for %s"),
+                           svn_dirent_local_style(top_local_abspath, pool));
+}
+
 
 /*------------------------------------------------------------------*/
 /*** Public Interfaces ***/
@@ -739,51 +796,87 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
                         void *notify_baton,
                         apr_pool_t *pool)
 {
+  svn_wc__db_t *db = wc_ctx->db;
   svn_error_t *fserr, *err;
-  const svn_wc_entry_t *entry;
-  svn_revnum_t base_rev = SVN_INVALID_REVNUM;
+  svn_revnum_t base_rev = SVN_INVALID_REVNUM, target_rev;
   svn_boolean_t missing = FALSE;
-  const svn_wc_entry_t *parent_entry = NULL;
   svn_boolean_t start_empty;
-
+  svn_wc__db_status_t status;
+  svn_wc__db_kind_t target_kind;
+  const char *repos_relpath, *repos_root_url;
+  svn_depth_t target_depth;
+  svn_boolean_t replaced = FALSE;
+  svn_wc__db_lock_t *target_lock;
+  svn_boolean_t target_exists = TRUE;
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
   /* The first thing we do is get the base_rev from the working copy's
      ROOT_DIRECTORY.  This is the first revnum that entries will be
      compared to. */
-  err = svn_wc__get_entry(&entry, wc_ctx->db, local_abspath, TRUE,
-                          svn_node_unknown, FALSE, pool, pool);
-
-  if (err && err->apr_err != SVN_ERR_NODE_UNEXPECTED_KIND)
-    return svn_error_return(err);
+  err = svn_wc__db_read_info(&status, &target_kind, &target_rev,
+                             &repos_relpath, &repos_root_url,
+                             NULL, NULL, NULL, NULL, NULL,
+                             &target_depth, NULL, NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                             &target_lock,
+                             db, local_abspath, pool, pool);
 
   if (err)
     {
-      entry = NULL;
+      if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
+        return svn_error_return(err);
+
       svn_error_clear(err);
-      err = NULL;
+      target_exists = FALSE;
+
+      /* Set output values of svn_wc__db_read_info to their empty values */
+      status = svn_wc__db_status_not_present;
+      target_kind = svn_wc__db_kind_unknown;
+      target_rev = -1;
+      repos_relpath = NULL;
+      repos_root_url = NULL;
+      target_depth = svn_depth_unknown;
+      target_lock = NULL;
     }
 
-  if ((! entry) || entry->deleted || ((entry->schedule == svn_wc_schedule_add)
-                                      && (entry->kind == svn_node_dir)))
-    {
-        /* Don't check the exclude flag for the target.
+  svn_error_clear(err);
 
-         If we report the target itself as excluded, the server will
-         send us nothing about the target -- but we want to permit
-         targets to be explicitly pulled in.  For example, 'svn up A'
-         should always work, even if its parent is svn_depth_empty or
-         svn_depth_files, or even if A was explicitly excluded from a
-         parent at svn_depth_immediates or svn_depth_infinity.
-         Whatever the case, we want A back now. */
+  if (target_depth == svn_depth_exclude)
+    status = svn_wc__db_status_excluded;
+
+  if (status == svn_wc__db_status_added)
+    SVN_ERR(svn_wc__internal_is_replaced(&replaced, db, local_abspath, pool));
+
+  if (!target_exists ||
+      (status == svn_wc__db_status_not_present) ||
+      (target_kind == svn_wc__db_kind_dir && !replaced &&
+           (status == svn_wc__db_status_added ||
+            status == svn_wc__db_status_absent ||
+            status == svn_wc__db_status_excluded ||
+            status == svn_wc__db_status_obstructed ||
+            status == svn_wc__db_status_obstructed_add ||
+            status == svn_wc__db_status_obstructed_delete)))
+    {
+      /* Don't check the exclude flag for the target.
+
+       If we report the target itself as excluded, the server will
+       send us nothing about the target -- but we want to permit
+       targets to be explicitly pulled in.  For example, 'svn up A'
+       should always work, even if its parent is svn_depth_empty or
+       svn_depth_files, or even if A was explicitly excluded from a
+       parent at svn_depth_immediates or svn_depth_infinity.
+       Whatever the case, we want A back now. */
+
+      if (!SVN_IS_VALID_REVNUM(base_rev))
+        {
+          const char *dir_abspath = svn_dirent_dirname(local_abspath, pool);
+
+          SVN_ERR(find_base_rev(&base_rev, db, dir_abspath, dir_abspath,
+                                pool));
+        }
 
       /* There aren't any versioned paths to crawl which are known to
          the repository. */
-      SVN_ERR(svn_wc__get_entry(&parent_entry, wc_ctx->db,
-                                svn_dirent_dirname(local_abspath, pool),
-                                FALSE, svn_node_dir, FALSE, pool, pool));
-
-      base_rev = parent_entry->revision;
 
       /* If no versioned path exists, we use the requested depth, which
          is the depth at which the new path should be brought in.  Default
@@ -792,8 +885,9 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
         depth = svn_depth_infinity;
 
       SVN_ERR(reporter->set_path(report_baton, "", base_rev, depth,
-                                 entry ? entry->incomplete : TRUE,
-                                 entry ? entry->lock_token : NULL, pool));
+                                 status == svn_wc__db_status_incomplete,
+                                 target_lock ? target_lock->token : NULL,
+                                 pool));
       SVN_ERR(reporter->delete_path(report_baton, "", pool));
 
       /* Finish the report, which causes the update editor to be
@@ -801,31 +895,29 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
       return reporter->finish_report(report_baton, pool);
     }
 
-  base_rev = entry->revision;
+  base_rev = target_rev;
 
-  start_empty = entry->incomplete;
+  if (!SVN_IS_VALID_REVNUM(base_rev))
+    SVN_ERR(find_base_rev(&base_rev, db, local_abspath, local_abspath, pool));
+
+  start_empty = (status == svn_wc__db_status_incomplete);
   if (depth_compatibility_trick
-      && entry->depth <= svn_depth_immediates
-      && depth > entry->depth)
+      && target_depth <= svn_depth_immediates
+      && depth > target_depth)
     {
       start_empty = TRUE;
     }
 
-  if (base_rev == SVN_INVALID_REVNUM)
-    {
-      SVN_ERR(svn_wc__get_entry(&parent_entry, wc_ctx->db,
-                                svn_dirent_dirname(local_abspath, pool),
-                                FALSE, svn_node_dir, FALSE, pool, pool));
-      base_rev = parent_entry->revision;
-    }
+  if (target_depth == svn_depth_unknown)
+    target_depth = svn_depth_infinity;
 
   /* The first call to the reporter merely informs it that the
      top-level directory being updated is at BASE_REV.  Its PATH
      argument is ignored. */
-  SVN_ERR(reporter->set_path(report_baton, "", base_rev, entry->depth,
+  SVN_ERR(reporter->set_path(report_baton, "", base_rev, target_depth,
                              start_empty, NULL, pool));
 
-  if (entry->schedule != svn_wc_schedule_delete)
+  if (status != svn_wc__db_status_deleted)
     {
       apr_finfo_t info;
       err = svn_io_stat(&info, local_abspath, APR_FINFO_MIN, pool);
@@ -843,21 +935,18 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
       svn_boolean_t restored;
 
       err = restore_node(&restored, wc_ctx->db, local_abspath,
-                         entry->kind, use_commit_times,
+                         target_kind, use_commit_times,
                          notify_func, notify_baton,
                          pool);
 
       if (err)
-        {
-          SVN_ERR_ASSERT(0 && "Restore failed");
           goto abort_report;
-        }
 
       if (restored)
         missing = FALSE;
     }
 
-  if (entry->kind == svn_node_dir)
+  if (target_kind == svn_wc__db_kind_dir)
     {
       if (missing)
         {
@@ -889,53 +978,88 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
         }
     }
 
-  else if (entry->kind == svn_node_file)
+  else if (target_kind == svn_wc__db_kind_file ||
+           target_kind == svn_wc__db_kind_symlink)
     {
-      const char *pdir, *bname;
+      svn_boolean_t skip_set_path  = FALSE;
 
-      /* Split PATH into parent PDIR and basename BNAME. */
-      svn_dirent_split(local_abspath, &pdir, &bname, pool);
-      if (! parent_entry)
+      if (repos_relpath)
         {
-          err = svn_wc__get_entry(&parent_entry, wc_ctx->db, pdir,
-                                  FALSE, svn_node_dir, FALSE, pool, pool);
+          const char *parent_abspath, *basename;
+          svn_wc__db_status_t parent_status;
+          const char *parent_repos_relpath;
+
+          svn_dirent_split(local_abspath, &parent_abspath, &basename, pool);
+
+          /* We can assume a file is in the same repository as its parent
+             directory, so we only look at the relpath. */
+          err = svn_wc__db_read_info(&parent_status, NULL, NULL,
+                                     &parent_repos_relpath, NULL, NULL, NULL,
+                                     NULL, NULL, NULL, NULL, NULL, NULL,
+                                     NULL, NULL, NULL, NULL, NULL, NULL,
+                                     NULL, NULL, NULL, NULL, NULL,
+                                     db, parent_abspath, pool, pool);
+
           if (err)
             goto abort_report;
-        }
 
-      if (parent_entry
-          && parent_entry->url
-          && entry->url
-          && strcmp(entry->url,
-                    svn_path_url_add_component2(parent_entry->url,
-                                                bname, pool)))
-        {
-          /* This file is disjoint with respect to its parent
-             directory.  Since we are looking at the actual target of
-             the report (not some file in a subdirectory of a target
-             directory), and that target is a file, we need to pass an
-             empty string to link_path. */
-          err = reporter->link_path(report_baton,
-                                    "",
-                                    entry->url,
-                                    entry->revision,
-                                    entry->depth,
-                                    FALSE,
-                                    entry->lock_token,
-                                    pool);
+          if (!parent_repos_relpath && 
+              parent_status == svn_wc__db_status_added)
+            {
+              err = svn_wc__db_scan_addition(NULL, NULL,
+                                             &parent_repos_relpath, NULL,
+                                             NULL, NULL, NULL, NULL, NULL,
+                                             db, parent_abspath,
+                                             pool, pool);
+            }
+          else if (!parent_repos_relpath)
+            err = svn_wc__db_scan_base_repos(&parent_repos_relpath, NULL,
+                                             NULL,
+                                             db, parent_abspath,
+                                             pool, pool);
+
           if (err)
             goto abort_report;
+
+          /* Split PATH into parent PDIR and basename BNAME. */
+
+          if (strcmp(repos_relpath,
+                     svn_relpath_join(parent_repos_relpath, basename, pool)) != 0)
+            {
+              /* This file is disjoint with respect to its parent
+                 directory.  Since we are looking at the actual target of
+                 the report (not some file in a subdirectory of a target
+                 directory), and that target is a file, we need to pass an
+                 empty string to link_path. */
+              err = reporter->link_path(report_baton,
+                                        "",
+                                        svn_path_url_add_component2(
+                                                        repos_root_url,
+                                                        repos_relpath,
+                                                        pool),
+                                        base_rev,
+                                        target_depth,
+                                        FALSE,
+                                        target_lock ? target_lock->token : NULL,
+                                        pool);
+              if (err)
+                goto abort_report;
+              skip_set_path = TRUE;
+            }
         }
-      else if (entry->revision != base_rev || entry->lock_token)
+
+      if (!skip_set_path && (target_rev != base_rev || target_lock))
         {
           /* If this entry is a file node, we just want to report that
              node's revision.  Since we are looking at the actual target
              of the report (not some file in a subdirectory of a target
              directory), and that target is a file, we need to pass an
              empty string to set_path. */
-          err = reporter->set_path(report_baton, "", base_rev, entry->depth,
+          err = reporter->set_path(report_baton, "", base_rev,
+                                   target_depth,
                                    FALSE,
-                                   entry->lock_token, pool);
+                                   target_lock ? target_lock->token : NULL,
+                                   pool);
           if (err)
             goto abort_report;
         }
