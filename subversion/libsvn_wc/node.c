@@ -518,3 +518,41 @@ svn_wc__node_is_status_present(svn_boolean_t *is_present,
 
   return SVN_NO_ERROR;
 }
+
+svn_error_t *
+svn_wc__node_is_status_added(svn_boolean_t *is_added,
+                             svn_wc_context_t *wc_ctx,
+                             const char *local_abspath,
+                             apr_pool_t *scratch_pool)
+{
+  svn_wc__db_status_t status;
+
+  SVN_ERR(svn_wc__db_read_info(&status,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL,
+                               wc_ctx->db, local_abspath,
+                               scratch_pool, scratch_pool));
+  *is_added = (status == svn_wc__db_status_added);
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc__node_get_base_rev(svn_revnum_t *base_revision,
+                          svn_wc_context_t *wc_ctx,
+                          const char *local_abspath,
+                          apr_pool_t *scratch_pool)
+{
+  svn_wc__db_status_t status;
+
+  SVN_ERR(svn_wc__db_read_info(&status,
+                               NULL, base_revision,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               wc_ctx->db, local_abspath,
+                               scratch_pool, scratch_pool));
+  return SVN_NO_ERROR;
+}
