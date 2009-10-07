@@ -182,6 +182,20 @@ Candidate changes:
    Votes:
      +1: stsp
 
+ * r39828
+   Disables file synchronization mutexes in fsfs on Windows. These mutexes
+   where enabled to make posix systems lock files that were in use by other
+   threads in the same process.
+   
+   Windows implements per file handle locking, so it doesn't need these
+   locks. We usually see the opposite problem in Subversion.
+   Justification:
+     A +- 20% decrease in running time on running the testsuite in parallel
+     mode (on trunk) is too good to not port back to 1.6. Especially since
+     it is a clean merge.
+   Votes:
+     +1: rhuijben
+
 Approved changes:
 =================
 
