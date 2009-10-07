@@ -768,8 +768,6 @@ find_base_rev(svn_revnum_t *base_rev,
                                pool));
     }
 
-  SVN_DBG(("Path %s, for %s, status %d\n", local_abspath, top_local_abspath, status));
-
   return svn_error_createf(SVN_ERR_WC_CORRUPT, NULL,
                            _("Can't retrieve base revision for %s"),
                            svn_dirent_local_style(top_local_abspath, pool));
