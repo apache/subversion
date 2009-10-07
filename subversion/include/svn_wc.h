@@ -4010,6 +4010,8 @@ svn_wc_status_set_repos_locks(void *set_locks_baton,
  * with its path and the @a notify_baton.  @a notify_func may be @c NULL
  * if you are not interested in this information.
  *
+ * Use @a scratch_pool for temporary allocations.
+ *
  * @par Important:
  * This is a variant of svn_wc_add4().  No changes will happen
  * to the repository until a commit occurs.  This scheduling can be
@@ -4025,7 +4027,7 @@ svn_wc_copy3(svn_wc_context_t *wc_ctx,
              void *cancel_baton,
              svn_wc_notify_func2_t notify_func,
              void *notify_baton,
-             apr_pool_t *pool);
+             apr_pool_t *scratch_pool);
 
 /* Similar to svn_wc_copy3(), but takes access batons and a relative path
  * and a basename instead of absolute paths and a working copy context.
