@@ -158,12 +158,12 @@ Candidate changes:
    Votes:
      +1: stsp
 
- * r39828
+ * r39828, r39842
    Disables file synchronization mutexes in fsfs on Windows. These mutexes
-   where enabled to make posix systems lock files that were in use by other
+   were added to make posix systems lock files that were in use by other
    threads in the same process.
    
-   Windows implements per file handle locking, so it doesn't need these
+   Windows implements per filehandle locking, so it doesn't need these
    locks. We usually see the opposite problem in Subversion.
    Justification:
      This gives a measurable performance boost (5% decrease in running time
