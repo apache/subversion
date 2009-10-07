@@ -125,7 +125,7 @@ crop_children(svn_wc__db_t *db,
              case. */
           if (depth == svn_depth_empty)
             IGNORE_LOCAL_MOD(
-              svn_wc__remove_from_revision_control_internal(
+              svn_wc__internal_remove_from_revision_control(
                                                    db,
                                                    child_abspath,
                                                    TRUE, /* destroy */
@@ -150,7 +150,7 @@ crop_children(svn_wc__db_t *db,
           else if (depth < svn_depth_immediates)
             {
               IGNORE_LOCAL_MOD(
-                svn_wc__remove_from_revision_control_internal(
+                svn_wc__internal_remove_from_revision_control(
                                                      db,
                                                      child_abspath,
                                                      TRUE, /* destroy */

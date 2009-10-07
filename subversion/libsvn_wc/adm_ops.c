@@ -1213,7 +1213,7 @@ svn_wc_delete4(svn_wc_context_t *wc_ctx,
           /* Deleting a directory that has been added but not yet
              committed is easy, just remove the administrative dir. */
 
-          SVN_ERR(svn_wc__remove_from_revision_control_internal(
+          SVN_ERR(svn_wc__internal_remove_from_revision_control(
                                            wc_ctx->db,
                                            local_abspath,
                                            FALSE, FALSE,
@@ -1890,7 +1890,7 @@ revert_entry(svn_depth_t *depth,
       if (entry->kind == svn_node_file)
         {
           was_deleted = entry->deleted;
-          SVN_ERR(svn_wc__remove_from_revision_control_internal(db,
+          SVN_ERR(svn_wc__internal_remove_from_revision_control(db,
                                                                 local_abspath,
                                                                 FALSE, FALSE,
                                                                 cancel_func,
@@ -1930,7 +1930,7 @@ revert_entry(svn_depth_t *depth,
             }
           else
             {
-              SVN_ERR(svn_wc__remove_from_revision_control_internal(
+              SVN_ERR(svn_wc__internal_remove_from_revision_control(
                                            db,
                                            local_abspath,
                                            FALSE, FALSE,
@@ -2298,7 +2298,7 @@ svn_wc__get_pristine_contents(svn_stream_t **contents,
 
 
 svn_error_t *
-svn_wc__remove_from_revision_control_internal(svn_wc__db_t *db,
+svn_wc__internal_remove_from_revision_control(svn_wc__db_t *db,
                                               const char *local_abspath,
                                               svn_boolean_t destroy_wf,
                                               svn_boolean_t instant_error,
@@ -2344,7 +2344,7 @@ svn_wc__remove_from_revision_control_internal(svn_wc__db_t *db,
       if (wc_special || ! local_special)
         {
           /* Check for local mods. before removing entry */
-          SVN_ERR(svn_wc__text_modified_internal_p(&text_modified_p, db,
+          SVN_ERR(svn_wc__internal_text_modified_p(&text_modified_p, db,
                                                    local_abspath, FALSE,
                                                    TRUE, scratch_pool));
           if (text_modified_p && instant_error)
@@ -2431,7 +2431,7 @@ svn_wc__remove_from_revision_control_internal(svn_wc__db_t *db,
               continue;
             }
 
-          err = svn_wc__remove_from_revision_control_internal(
+          err = svn_wc__internal_remove_from_revision_control(
             db, entry_abspath,
             destroy_wf, instant_error,
             cancel_func, cancel_baton,
@@ -2532,7 +2532,7 @@ svn_wc_remove_from_revision_control2(svn_wc_context_t *wc_ctx,
                                     apr_pool_t *scratch_pool)
 {
   return svn_error_return(
-      svn_wc__remove_from_revision_control_internal(wc_ctx->db,
+      svn_wc__internal_remove_from_revision_control(wc_ctx->db,
                                                     local_abspath,
                                                     destroy_wf,
                                                     instant_error,
