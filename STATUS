@@ -148,7 +148,7 @@ Candidate changes:
      More tweaks may be needed for true proper behaviour, but the crash
      can be fixed separately.
    Votes:
-     +1: stsp
+     +1: stsp, stylesen
 
  * r39635, r39636, r39637
    Fix svn.client.log5 and svn.client.merge_peg3 in the SWIG/Python bindings.
