@@ -120,35 +120,10 @@ Candidate changes:
    Votes:
      +1: arfrever
 
- * r39557
-   Fix issue #2713: When adding a file with auto-props setting svn:eol-style,
-     if it had inconsistent line endings, svn added it and then aborted without
-     setting all of its properties. Instead, abort without adding the file.
-   Justification:
-     The fix makes it easier to add a large set of files, by removing a
-     considerable annoyance. The fix is small and has a regression test.
-   Branch:
-     Uses adm_access instead of wc_ctx, so svn_wc_revert3() instead of
-     svn_wc_revert4().
-     ^/branches/1.6.x-r39557
-  Votes:
-    +1: julianfoad, arfrever
-
  * r39614
    Support Berkeley DB 4.8.
    Votes:
      +1: arfrever
-
- * r39673
-   Fix a segfault during update.
-   Justification:
-     We should never crash.
-   Notes:
-     See http://svn.haxx.se/dev/archive-2009-09/0530.shtml
-     More tweaks may be needed for true proper behaviour, but the crash
-     can be fixed separately.
-   Votes:
-     +1: stsp, stylesen
 
  * r39635, r39636, r39637
    Fix svn.client.log5 and svn.client.merge_peg3 in the SWIG/Python bindings.
@@ -156,6 +131,7 @@ Candidate changes:
      As currently shipped, these functions are non-functional.
    Votes:
      +1: rdonch
+     +0: rhuijben (in concept; reviewed patch)
 
  * r39692
    Fix issue #3498: Subversion password stores freeze Eclipse
@@ -190,12 +166,37 @@ Candidate changes:
    Windows implements per file handle locking, so it doesn't need these
    locks. We usually see the opposite problem in Subversion.
    Justification:
-     A +- 5% decrease in running time on running the testsuite in parallel
-     mode (on trunk) is too good to not port back to 1.6. Especially since
-     it is a clean merge.
+     This gives a measurable performance boost (5% decrease in running time
+     on running the testsuite in parallel mode (on trunk). The difference
+     will be bigger when measured on a real subversion server like one
+     running apache or svnserve.
    Votes:
      +1: rhuijben
 
 Approved changes:
 =================
 
+ * r39557
+   Fix issue #2713: When adding a file with auto-props setting svn:eol-style,
+     if it had inconsistent line endings, svn added it and then aborted without
+     setting all of its properties. Instead, abort without adding the file.
+   Justification:
+     The fix makes it easier to add a large set of files, by removing a
+     considerable annoyance. The fix is small and has a regression test.
+   Branch:
+     Uses adm_access instead of wc_ctx, so svn_wc_revert3() instead of
+     svn_wc_revert4().
+     ^/branches/1.6.x-r39557
+  Votes:
+    +1: julianfoad, arfrever, rhuijben
+
+ * r39673
+   Fix a segfault during update.
+   Justification:
+     We should never crash.
+   Notes:
+     See http://svn.haxx.se/dev/archive-2009-09/0530.shtml
+     More tweaks may be needed for true proper behaviour, but the crash
+     can be fixed separately.
+   Votes:
+     +1: stsp, stylesen, rhuijben
