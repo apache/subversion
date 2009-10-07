@@ -1238,7 +1238,6 @@ open_anchor(svn_wc_adm_access_t **anchor_access,
         {
           svn_boolean_t available, obstructed;
           svn_wc__db_kind_t kind;
-          svn_error_t *err;
 
           err = svn_wc__adm_available(&available, &kind, &obstructed,
                                       db, local_abspath, pool);
