@@ -1620,8 +1620,8 @@ check_tree_conflict(svn_wc_conflict_description2_t **pconflict,
   if (reason != (svn_wc_conflict_reason_t)(-1))
     {
       svn_wc_conflict_description2_t *conflict;
-      svn_wc_conflict_version_t *src_left_version;
-      svn_wc_conflict_version_t *src_right_version;
+      const svn_wc_conflict_version_t *src_left_version;
+      const svn_wc_conflict_version_t *src_right_version;
       const char *repos_url = NULL;
       const char *path_in_repos = NULL;
       svn_node_kind_t left_kind = (entry->schedule == svn_wc_schedule_add)

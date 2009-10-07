@@ -1941,14 +1941,14 @@ svn_wc_conflict_description_create_prop(const char *path,
  * @since New in 1.7.
  */
 svn_wc_conflict_description2_t *
-svn_wc_conflict_description_create_tree2(const char *local_abspath,
-                                         svn_node_kind_t node_kind,
-                                         svn_wc_operation_t operation,
-                                         svn_wc_conflict_version_t
-                                           *src_left_version,
-                                         svn_wc_conflict_version_t
-                                           *src_right_version,
-                                         apr_pool_t *result_pool);
+svn_wc_conflict_description_create_tree2(
+  const char *local_abspath,
+  svn_node_kind_t node_kind,
+  svn_wc_operation_t operation,
+  const svn_wc_conflict_version_t *src_left_version,
+  const svn_wc_conflict_version_t *src_right_version,
+  apr_pool_t *result_pool);
+
 
 /** Similar to svn_wc_conflict_description_create_tree(), but returns
  * a @c svn_wc_conflict_descriptor_t *.
@@ -1958,15 +1958,14 @@ svn_wc_conflict_description_create_tree2(const char *local_abspath,
  */
 SVN_DEPRECATED
 svn_wc_conflict_description_t *
-svn_wc_conflict_description_create_tree(const char *path,
-                                        svn_wc_adm_access_t *adm_access,
-                                        svn_node_kind_t node_kind,
-                                        svn_wc_operation_t operation,
-                                        svn_wc_conflict_version_t
-                                          *src_left_version,
-                                        svn_wc_conflict_version_t
-                                          *src_right_version,
-                                        apr_pool_t *pool);
+svn_wc_conflict_description_create_tree(
+  const char *path,
+  svn_wc_adm_access_t *adm_access,
+  svn_node_kind_t node_kind,
+  svn_wc_operation_t operation,
+  /* non-const */ svn_wc_conflict_version_t *src_left_version,
+  /* non-const */ svn_wc_conflict_version_t *src_right_version,
+  apr_pool_t *pool);
 
 
 /** Return a duplicate of @a conflict, allocated in @a result_pool.
@@ -1975,8 +1974,9 @@ svn_wc_conflict_description_create_tree(const char *path,
  * @since New in 1.7.
  */
 svn_wc_conflict_description2_t *
-svn_wc__conflict_description2_dup(const svn_wc_conflict_description2_t *conflict,
-                                  apr_pool_t *result_pool);
+svn_wc__conflict_description2_dup(
+  const svn_wc_conflict_description2_t *conflict,
+  apr_pool_t *result_pool);
 
 
 /** The way in which the conflict callback chooses a course of action.
