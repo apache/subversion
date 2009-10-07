@@ -175,17 +175,3 @@ Candidate changes:
 
 Approved changes:
 =================
-
- * r39557
-   Fix issue #2713: When adding a file with auto-props setting svn:eol-style,
-     if it had inconsistent line endings, svn added it and then aborted without
-     setting all of its properties. Instead, abort without adding the file.
-   Justification:
-     The fix makes it easier to add a large set of files, by removing a
-     considerable annoyance. The fix is small and has a regression test.
-   Branch:
-     Uses adm_access instead of wc_ctx, so svn_wc_revert3() instead of
-     svn_wc_revert4().
-     ^/branches/1.6.x-r39557
-  Votes:
-    +1: julianfoad, arfrever, rhuijben

@@ -291,13 +291,26 @@ add_file(const char *path,
         {
           const void *pname;
           void *pval;
+          svn_error_t *err;
 
           apr_hash_this(hi, &pname, NULL, &pval);
           /* It's probably best to pass 0 for force, so that if
              the autoprops say to set some weird combination,
              we just error and let the user sort it out. */
-          SVN_ERR(svn_wc_prop_set3(pname, pval, path, adm_access, FALSE,
-                                   NULL, NULL, pool));
+          err = svn_wc_prop_set3(pname, pval, path, adm_access, FALSE,
+                                 NULL, NULL, pool);
+          if (err)
+            {
+              /* Don't leave the job half-done. If we fail to set a property,
+               * (try to) un-add the file. */
+              svn_error_clear(svn_wc_revert3(path, adm_access,
+                                             svn_depth_empty,
+                                             FALSE /* use_commit_times */,
+                                             NULL /* changelists */,
+                                             NULL, NULL, NULL, NULL,
+                                             pool));
+              return err;
+            }
         }
     }
 

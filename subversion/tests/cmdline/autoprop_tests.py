@@ -269,6 +269,37 @@ def autoprops_imp_dir(sbox):
 
   autoprops_test(sbox, 'import', 1, 0, 'autodir')
 
+#----------------------------------------------------------------------
+
+# Issue #2713: adding a file with an svn:eol-style property, svn should abort
+# if the file has mixed EOL style. Previously, svn aborted but had added the
+# file anyway.
+def fail_add_mixed_eol_style(sbox):
+  "fail to add a file with mixed EOL style"
+
+  from svntest.actions import run_and_verify_svn, run_and_verify_unquiet_status
+
+  # Bootstrap
+  sbox.build()
+
+  filename = 'mixed-eol.txt'
+  filepath = os.path.join(sbox.wc_dir, filename)
+  parameters = ['--auto-props',
+                '--config-option=config:auto-props:' + filename
+                + '=svn:eol-style=native']
+
+  svntest.main.file_write(filepath, 'foo\nbar\r\nbaz\r')
+
+  expected_stderr = "svn: File '.*/" + filename + \
+                    "' has inconsistent newlines" + \
+                    "|" + "svn: Inconsistent line ending style\n"
+  run_and_verify_svn(None, [], expected_stderr,
+                     'add', filepath, *parameters)
+
+  expected_status = svntest.wc.State(sbox.wc_dir,
+    {filename : Item(status='? ')})
+  run_and_verify_unquiet_status(filepath, expected_status)
+
 
 ########################################################################
 # Run the tests
@@ -290,6 +321,7 @@ test_list = [ None,
               autoprops_imp_yes_no,
               autoprops_add_dir,
               autoprops_imp_dir,
+              fail_add_mixed_eol_style,
              ]
 
 if __name__ == '__main__':
