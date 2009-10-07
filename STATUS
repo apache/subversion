@@ -189,14 +189,3 @@ Approved changes:
      ^/branches/1.6.x-r39557
   Votes:
     +1: julianfoad, arfrever, rhuijben
-
- * r39673
-   Fix a segfault during update.
-   Justification:
-     We should never crash.
-   Notes:
-     See http://svn.haxx.se/dev/archive-2009-09/0530.shtml
-     More tweaks may be needed for true proper behaviour, but the crash
-     can be fixed separately.
-   Votes:
-     +1: stsp, stylesen, rhuijben

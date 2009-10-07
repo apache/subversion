@@ -3548,7 +3548,7 @@ add_file(const char *path,
              "from a different repository"),
            svn_path_local_style(full_path, pool));
 
-      if (!eb->switch_url
+      if (!eb->switch_url && fb->new_URL && entry->url
           && strcmp(fb->new_URL, entry->url) != 0)
         return svn_error_createf(
            SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
