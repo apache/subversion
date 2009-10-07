@@ -356,12 +356,12 @@ svn_wc_conflict_description_create_prop2(const char *local_abspath,
 
 svn_wc_conflict_description2_t *
 svn_wc_conflict_description_create_tree2(
-                            const char *local_abspath,
-                            svn_node_kind_t node_kind,
-                            svn_wc_operation_t operation,
-                            svn_wc_conflict_version_t *src_left_version,
-                            svn_wc_conflict_version_t *src_right_version,
-                            apr_pool_t *result_pool)
+  const char *local_abspath,
+  svn_node_kind_t node_kind,
+  svn_wc_operation_t operation,
+  const svn_wc_conflict_version_t *src_left_version,
+  const svn_wc_conflict_version_t *src_right_version,
+  apr_pool_t *result_pool)
 {
   svn_wc_conflict_description2_t *conflict;
 

@@ -169,7 +169,7 @@ read_enum_field(int *result,
 
 /* Parse the conflict info fields from SKEL into *VERSION_INFO. */
 static svn_error_t *
-read_node_version_info(svn_wc_conflict_version_t **version_info,
+read_node_version_info(const svn_wc_conflict_version_t **version_info,
                        const svn_skel_t *skel,
                        apr_pool_t *result_pool,
                        apr_pool_t *scratch_pool)
@@ -235,8 +235,8 @@ read_one_tree_conflict(svn_wc_conflict_description2_t **conflict,
   svn_wc_operation_t operation;
   svn_wc_conflict_action_t action;
   svn_wc_conflict_reason_t reason;
-  svn_wc_conflict_version_t *src_left_version;
-  svn_wc_conflict_version_t *src_right_version;
+  const svn_wc_conflict_version_t *src_left_version;
+  const svn_wc_conflict_version_t *src_right_version;
   int n;
 
   if (!is_valid_conflict_skel(skel))

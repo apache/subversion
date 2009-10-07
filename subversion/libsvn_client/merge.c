@@ -476,8 +476,8 @@ obstructed_or_missing(const char *path,
  * from MERGE_B.
  * Allocate returned conflict versions in MERGE_B->POOL. */
 static svn_error_t *
-make_conflict_versions(svn_wc_conflict_version_t **left,
-                       svn_wc_conflict_version_t **right,
+make_conflict_versions(const svn_wc_conflict_version_t **left,
+                       const svn_wc_conflict_version_t **right,
                        const char *victim_abspath,
                        svn_node_kind_t node_kind,
                        merge_cmd_baton_t *merge_b)
@@ -533,8 +533,8 @@ make_tree_conflict(svn_wc_conflict_description2_t **conflict,
                    svn_wc_conflict_action_t action,
                    svn_wc_conflict_reason_t reason)
 {
-  svn_wc_conflict_version_t *left;
-  svn_wc_conflict_version_t *right;
+  const svn_wc_conflict_version_t *left;
+  const svn_wc_conflict_version_t *right;
 
   SVN_ERR(make_conflict_versions(&left, &right, victim_abspath, node_kind,
                                  merge_b));
@@ -1460,8 +1460,8 @@ merge_file_changed(const char *local_dir_abspath,
                                                  _(".merge-right.r%ld"),
                                                  yours_rev);
           conflict_resolver_baton_t conflict_baton = { 0 };
-          svn_wc_conflict_version_t *left;
-          svn_wc_conflict_version_t *right;
+          const svn_wc_conflict_version_t *left;
+          const svn_wc_conflict_version_t *right;
 
           conflict_baton.wrapped_func = merge_b->ctx->conflict_func;
           conflict_baton.wrapped_baton = merge_b->ctx->conflict_baton;
