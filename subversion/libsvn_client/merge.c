@@ -3368,7 +3368,6 @@ ensure_implicit_mergeinfo(svn_client__merge_path_t *parent,
 
    Initialize CHILD->REMAINING_RANGES to a rangelist representing the
    requested merge of REVISION1:REVISION2 from MERGEINFO_PATH to CHILD->PATH.
-   ENTRY is the entry corresponding to CHILD->PATH.
 
    For forward merges remove any ranges from CHILD->REMAINING_RANGES that
    have already been merged to CHILD->PATH per TARGET_MERGEINFO or
@@ -3410,7 +3409,6 @@ ensure_implicit_mergeinfo(svn_client__merge_path_t *parent,
 static svn_error_t *
 filter_merged_revisions(svn_client__merge_path_t *parent,
                         svn_client__merge_path_t *child,
-                        const svn_wc_entry_t *entry,
                         const char *mergeinfo_path,
                         svn_mergeinfo_t target_mergeinfo,
                         svn_revnum_t revision1,
@@ -3655,8 +3653,9 @@ filter_merged_revisions(svn_client__merge_path_t *parent,
 
    NOTE: When performing reverse merges, return
    SVN_ERR_CLIENT_NOT_READY_TO_MERGE if URL1@REVISION1, URL2@REVISION2, and
-   ENTRY are all on the same line of history but ENTRY-REVISION is older than
-   the REVISION1-REVISION2 range, see comment re issue #2973 below.
+   CHILD->PATH are all on the same line of history but CHILD->PATH's base
+   revision is older than the REVISION1-REVISION2 range, see comment re
+   issue #2973 below.
 */
 static svn_error_t *
 calculate_remaining_ranges(svn_client__merge_path_t *parent,
@@ -3670,13 +3669,14 @@ calculate_remaining_ranges(svn_client__merge_path_t *parent,
                            apr_array_header_t *implicit_src_gap,
                            svn_boolean_t child_inherits_implicit,
                            svn_ra_session_t *ra_session,
-                           const svn_wc_entry_t *entry,
                            svn_client_ctx_t *ctx,
                            apr_pool_t *pool)
 {
   const char *mergeinfo_path;
   const char *primary_url = (revision1 < revision2) ? url2 : url1;
   svn_mergeinfo_t adjusted_target_mergeinfo = NULL;
+  svn_revnum_t child_base_revision;
+  const char *child_abspath;
 
   /* Determine which of the requested ranges to consider merging... */
   SVN_ERR(svn_client__path_relative_to_root(&mergeinfo_path, ctx->wc_ctx,
@@ -3713,7 +3713,7 @@ calculate_remaining_ranges(svn_client__merge_path_t *parent,
 
   /* Initialize CHILD->REMAINING_RANGES and filter out revisions already
      merged (or, in the case of reverse merges, ranges not yet merged). */
-  SVN_ERR(filter_merged_revisions(parent, child, entry, mergeinfo_path,
+  SVN_ERR(filter_merged_revisions(parent, child, mergeinfo_path,
                                   adjusted_target_mergeinfo,
                                   revision1, revision2,
                                   child_inherits_implicit,
@@ -3723,7 +3723,7 @@ calculate_remaining_ranges(svn_client__merge_path_t *parent,
      merge tracking, allowing merges into mixed rev and locally modified
      working copies isn't simple and could be considered downright evil".
 
-     If reverse merging a range to the WC path represented by ENTRY, from
+     If reverse merging a range to the WC path represented by CHILD, from
      that path's own history, where the path inherits no locally modified
      mergeinfo from its WC parents (i.e. there is no uncommitted merge to
      the WC), and the path's working revision is older than the range, then
@@ -3745,9 +3745,12 @@ calculate_remaining_ranges(svn_client__merge_path_t *parent,
      So in the name of user friendliness, return an error suggesting a helpful
      course of action.
   */
+  SVN_ERR(svn_dirent_get_absolute(&child_abspath, child->path, pool));
+  SVN_ERR(svn_wc__node_get_base_rev(&child_base_revision, ctx->wc_ctx,
+                                    child_abspath, pool));
   if (((child->remaining_ranges)->nelts == 0)
       && (revision2 < revision1)
-      && (entry->revision <= revision2))
+      && (child_base_revision <= revision2))
     {
       /* Hmmm, an inoperative reverse merge from the "future".  If it is
          from our own future return a helpful error. */
@@ -3756,7 +3759,7 @@ calculate_remaining_ranges(svn_client__merge_path_t *parent,
       svn_opt_revision_t requested, unspec, pegrev, *start_revision;
       unspec.kind = svn_opt_revision_unspecified;
       requested.kind = svn_opt_revision_number;
-      requested.value.number = entry->revision;
+      requested.value.number = child_base_revision;
       pegrev.kind = svn_opt_revision_number;
       pegrev.value.number = revision1;
 
@@ -3772,12 +3775,17 @@ calculate_remaining_ranges(svn_client__merge_path_t *parent,
           else
             return svn_error_return(err);
         }
-      else if (strcmp(start_url, entry->url) == 0)
+      else
         {
-          return svn_error_create(SVN_ERR_CLIENT_NOT_READY_TO_MERGE, NULL,
-                                  _("Cannot reverse-merge a range from a "
-                                    "path's own future history; try "
-                                    "updating first"));
+          const char *url;
+
+          SVN_ERR(svn_wc__node_get_url(&url, ctx->wc_ctx, child_abspath,
+                                       pool, pool));        
+          if (strcmp(start_url, url) == 0)
+            return svn_error_create(SVN_ERR_CLIENT_NOT_READY_TO_MERGE, NULL,
+                                    _("Cannot reverse-merge a range from a "
+                                      "path's own future history; try "
+                                      "updating first"));
         }
     }
 
@@ -4008,8 +4016,6 @@ populate_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
   for (i = 0; i < children_with_mergeinfo->nelts; i++)
     {
       const char *child_repos_path;
-      const svn_wc_entry_t *child_entry;
-      const char *child_abspath;
       const char *child_url1, *child_url2;
       svn_client__merge_path_t *child =
         APR_ARRAY_IDX(children_with_mergeinfo, i, svn_client__merge_path_t *);
@@ -4032,11 +4038,6 @@ populate_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
                                                iterpool);
       child_url2 = svn_path_url_add_component2(url2, child_repos_path,
                                                iterpool);
-
-      SVN_ERR(svn_dirent_get_absolute(&child_abspath, child->path, iterpool));
-      SVN_ERR(svn_wc__get_entry_versioned(&child_entry, merge_b->ctx->wc_ctx,
-                                          child_abspath, svn_node_unknown,
-                                          FALSE, FALSE, iterpool, iterpool));
 
       /* Get the explicit/inherited mergeinfo for CHILD.  If CHILD is the
          merge target then also get its implicit mergeinfo.  Otherwise defer
@@ -4080,7 +4081,7 @@ populate_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
                                          child->pre_merge_mergeinfo,
                                          merge_b->implicit_src_gap,
                                          child_inherits_implicit,
-                                         ra_session, child_entry,
+                                         ra_session,
                                          merge_b->ctx, pool));
 
       /* Deal with any gap in URL1@REVISION1:URL2@REVISION2's natural history.
@@ -6290,7 +6291,7 @@ do_file_merge(const char *url1,
                                              target_mergeinfo,
                                              merge_b->implicit_src_gap, FALSE,
                                              merge_b->ra_session1,
-                                             entry, ctx, scratch_pool));
+                                             ctx, scratch_pool));
           remaining_ranges = merge_target->remaining_ranges;
         }
     }
