@@ -1156,8 +1156,8 @@ struct rangelist_path
 static int
 compare_rangelist_paths(const void *a, const void *b)
 {
-  struct rangelist_path *rpa = *((struct rangelist_path **) a);
-  struct rangelist_path *rpb = *((struct rangelist_path **) b);
+  struct rangelist_path *rpa = *((struct rangelist_path *const *) a);
+  struct rangelist_path *rpb = *((struct rangelist_path *const *) b);
   svn_merge_range_t *mra = APR_ARRAY_IDX(rpa->rangelist, 0,
                                          svn_merge_range_t *);
   svn_merge_range_t *mrb = APR_ARRAY_IDX(rpb->rangelist, 0,
