@@ -35,8 +35,11 @@ from trac.test import TestSetup
 from trac.versioncontrol import Changeset, Node
 from trac.versioncontrol.svn_fs import SubversionRepository
 
-REPOS_PATH = tempfile.mktemp("-trac-svnrepos")
-REPOS_URL = pathname2url(REPOS_PATH)
+temp_path = tempfile.mktemp("-trac-svnrepos")
+REPOS_PATH = core.svn_dirent_internal_style(temp_path)
+REPOS_URL = pathname2url(temp_path)
+del temp_path
+
 if REPOS_URL.startswith("///"):
   # Don't add extra slashes if they're already present.
   # (This is important for Windows compatibility).
