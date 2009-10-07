@@ -562,7 +562,7 @@ svn_wc__wq_add_revert(svn_boolean_t *will_revert,
             {
               /* ### there may be ways to simplify this test, rather than
                  ### doing file comparisons and junk... */
-              SVN_ERR(svn_wc__text_modified_internal_p(will_revert,
+              SVN_ERR(svn_wc__internal_text_modified_p(will_revert,
                                                        db, local_abspath,
                                                        FALSE, FALSE,
                                                        scratch_pool));

@@ -462,7 +462,7 @@ assemble_status(svn_wc_status2_t **status,
 #endif /* HAVE_SYMLINK */
           )
         {
-          svn_error_t *err = svn_wc__text_modified_internal_p(&text_modified_p,
+          svn_error_t *err = svn_wc__internal_text_modified_p(&text_modified_p,
                                                               db,
                                                               local_abspath,
                                                               FALSE, TRUE,

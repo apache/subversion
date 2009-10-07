@@ -133,7 +133,7 @@ restore_file(svn_wc__db_t *db,
   SVN_ERR(svn_wc__maybe_set_executable(NULL, db, local_abspath, pool));
 
   /* Remove any text conflict */
-  SVN_ERR(svn_wc__resolved_conflict_internal(
+  SVN_ERR(svn_wc__internal_resolved_conflict(
                     db, local_abspath, svn_depth_empty, TRUE, NULL, FALSE,
                     svn_wc_conflict_choose_merged, NULL, NULL, NULL, NULL,
                     pool));

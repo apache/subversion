@@ -1379,7 +1379,7 @@ entry_has_local_mods(svn_boolean_t *modified,
 
   /* Check for text modifications */
   if (kind == svn_node_file)
-    SVN_ERR(svn_wc__text_modified_internal_p(&text_modified, db, local_abspath,
+    SVN_ERR(svn_wc__internal_text_modified_p(&text_modified, db, local_abspath,
                                              FALSE, TRUE, scratch_pool));
   else
     text_modified = FALSE;
@@ -2220,7 +2220,7 @@ do_entry_deletion(int *log_number,
       if (entry->kind == svn_node_dir)
         {
           SVN_ERR(leftmod_error_chain(
-                    svn_wc__remove_from_revision_control_internal(
+                    svn_wc__internal_remove_from_revision_control(
                       eb->db,
                       local_abspath,
                       TRUE, /* destroy */
@@ -3499,7 +3499,7 @@ add_file_with_history(const char *path,
          read its working *props* into tfb->copied_working_props.) */
       svn_boolean_t text_changed;
 
-      SVN_ERR(svn_wc__text_modified_internal_p(&text_changed, eb->db,
+      SVN_ERR(svn_wc__internal_text_modified_p(&text_changed, eb->db,
                                                src_local_abspath, FALSE,
                                                TRUE, subpool));
 
@@ -4325,7 +4325,7 @@ merge_file(svn_wc_notify_state_t *content_state,
            && entry->schedule == svn_wc_schedule_add)
     is_locally_modified = FALSE;
   else if (! fb->existed)
-    SVN_ERR(svn_wc__text_modified_internal_p(&is_locally_modified, eb->db,
+    SVN_ERR(svn_wc__internal_text_modified_p(&is_locally_modified, eb->db,
                                              fb->local_abspath, FALSE, FALSE,
                                              pool));
   else if (new_text_base_abspath)
@@ -4481,7 +4481,7 @@ merge_file(svn_wc_notify_state_t *content_state,
                  textbase into the file we're updating.
                  Remember that this function wants full paths! */
               /* ### TODO: Pass version info here. */
-              SVN_ERR(svn_wc__merge_internal(
+              SVN_ERR(svn_wc__internal_merge(
                        &log_accum, &merge_outcome,
                        eb->db,
                        merge_left, left_version,

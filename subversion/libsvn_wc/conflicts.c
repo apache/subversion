@@ -680,7 +680,7 @@ recursive_resolve_conflict(svn_wc__db_t *db,
 }
 
 svn_error_t *
-svn_wc__resolved_conflict_internal(svn_wc__db_t *db,
+svn_wc__internal_resolved_conflict(svn_wc__db_t *db,
                                    const char *local_abspath,
                                    svn_depth_t depth,
                                    svn_boolean_t resolve_text,
@@ -722,7 +722,7 @@ svn_wc_resolved_conflict5(svn_wc_context_t *wc_ctx,
                           apr_pool_t *scratch_pool)
 {
   return svn_error_return(
-    svn_wc__resolved_conflict_internal(wc_ctx->db,
+    svn_wc__internal_resolved_conflict(wc_ctx->db,
                                        local_abspath,
                                        depth,
                                        resolve_text,

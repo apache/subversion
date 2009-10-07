@@ -829,7 +829,7 @@ log_do_delete_entry(struct log_runner *loggy, const char *name)
         }
     }
 
-  err = svn_wc__remove_from_revision_control_internal(loggy->db,
+  err = svn_wc__internal_remove_from_revision_control(loggy->db,
                                                       local_abspath,
                                                       TRUE, /* destroy */
                                                       FALSE, /* instant_error*/
@@ -961,7 +961,7 @@ log_do_committed(struct log_runner *loggy,
           const svn_wc_entry_t *parentry;
           svn_wc_entry_t tmp_entry;
 
-          SVN_ERR(svn_wc__remove_from_revision_control_internal(
+          SVN_ERR(svn_wc__internal_remove_from_revision_control(
                     loggy->db, local_abspath,
                     FALSE, FALSE, NULL, NULL, pool));
 
@@ -1045,7 +1045,7 @@ log_do_committed(struct log_runner *loggy,
 
           /* ### We pass NULL, NULL for cancel_func and cancel_baton below.
              ### If they were available, it would be nice to use them. */
-          SVN_ERR(svn_wc__remove_from_revision_control_internal(
+          SVN_ERR(svn_wc__internal_remove_from_revision_control(
                                     loggy->db, child_abspath,
                                     FALSE, FALSE,
                                     NULL, NULL, iterpool));
@@ -1464,7 +1464,7 @@ handle_killme(svn_wc__db_t *db,
 
   /* Blow away the administrative directories, and possibly the working
      copy tree too. */
-  err = svn_wc__remove_from_revision_control_internal(
+  err = svn_wc__internal_remove_from_revision_control(
           db, dir_abspath,
           !adm_only /* destroy_wf */, FALSE /* instant_error */,
           cancel_func, cancel_baton,
@@ -2340,7 +2340,7 @@ run_existing_logs(svn_wc_adm_access_t *adm_access,
           SVN_ERR(svn_wc__props_modified(&modified, db, entry_abspath,
                                          iterpool));
           if (kind == svn_wc__db_kind_file || kind == svn_wc__db_kind_symlink)
-            SVN_ERR(svn_wc__text_modified_internal_p(&modified, db,
+            SVN_ERR(svn_wc__internal_text_modified_p(&modified, db,
                                         entry_abspath, FALSE, TRUE,
                                         iterpool));
         }

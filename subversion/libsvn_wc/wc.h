@@ -282,7 +282,7 @@ void svn_wc__compat_call_notify_func(void *baton,
  * addition), return the error SVN_ERR_ENTRY_NOT_FOUND.
  */
 svn_error_t *
-svn_wc__text_modified_internal_p(svn_boolean_t *modified_p,
+svn_wc__internal_text_modified_p(svn_boolean_t *modified_p,
                                  svn_wc__db_t *db,
                                  const char *local_abspath,
                                  svn_boolean_t force_comparison,
@@ -333,7 +333,7 @@ svn_wc__text_modified_internal_p(svn_boolean_t *modified_p,
    the (loggy) implementation.
 */
 svn_error_t *
-svn_wc__merge_internal(svn_stringbuf_t **log_accum,
+svn_wc__internal_merge(svn_stringbuf_t **log_accum,
                        enum svn_wc_merge_outcome_t *merge_outcome,
                        svn_wc__db_t *db,
                        const char *left_abspath,
@@ -482,7 +482,7 @@ svn_wc__internal_walk_children(svn_wc__db_t *db,
 /* Library-internal version of svn_wc_remove_from_revision_control2,
    which see.*/
 svn_error_t *
-svn_wc__remove_from_revision_control_internal(svn_wc__db_t *db,
+svn_wc__internal_remove_from_revision_control(svn_wc__db_t *db,
                                               const char *local_abspath,
                                               svn_boolean_t destroy_wf,
                                               svn_boolean_t instant_error,
@@ -493,7 +493,7 @@ svn_wc__remove_from_revision_control_internal(svn_wc__db_t *db,
 
 /* Library-internal version of svn_wc__resolved_conflict5(). */
 svn_error_t *
-svn_wc__resolved_conflict_internal(svn_wc__db_t *db,
+svn_wc__internal_resolved_conflict(svn_wc__db_t *db,
                                    const char *local_abspath,
                                    svn_depth_t depth,
                                    svn_boolean_t resolve_text,

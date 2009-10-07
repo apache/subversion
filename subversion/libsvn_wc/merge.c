@@ -1121,7 +1121,7 @@ merge_binary_file(svn_stringbuf_t **log_accum,
 
 /* XXX Insane amount of parameters... */
 svn_error_t *
-svn_wc__merge_internal(svn_stringbuf_t **log_accum,
+svn_wc__internal_merge(svn_stringbuf_t **log_accum,
                        enum svn_wc_merge_outcome_t *merge_outcome,
                        svn_wc__db_t *db,
                        const char *left_abspath,
@@ -1289,7 +1289,7 @@ svn_wc_merge4(enum svn_wc_merge_outcome_t *merge_outcome,
   svn_stringbuf_t *log_accum = svn_stringbuf_create("", scratch_pool);
   const char *dir_abspath = svn_dirent_dirname(target_abspath, scratch_pool);
 
-  SVN_ERR(svn_wc__merge_internal(&log_accum, merge_outcome,
+  SVN_ERR(svn_wc__internal_merge(&log_accum, merge_outcome,
                                  wc_ctx->db,
                                  left_abspath, left_version,
                                  right_abspath, right_version,
