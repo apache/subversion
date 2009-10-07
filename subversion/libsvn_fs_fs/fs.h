@@ -172,10 +172,11 @@ typedef struct
      Access to this object is synchronised under TXN_LIST_LOCK. */
   fs_fs_shared_txn_data_t *free_txn;
 
-#if SVN_FS_FS__USE_LOCK_MUTEX
+#if APR_HAS_THREADS
   /* A lock for intra-process synchronization when accessing the TXNS list. */
   apr_thread_mutex_t *txn_list_lock;
-
+#endif
+#if SVN_FS_FS__USE_LOCK_MUTEX
   /* A lock for intra-process synchronization when grabbing the
      repository write lock. */
   apr_thread_mutex_t *fs_write_lock;
