@@ -1387,7 +1387,6 @@ do_filesize(svnlook_ctxt_t *c, const char *path, apr_pool_t *pool)
   svn_fs_root_t *root;
   svn_node_kind_t kind;
   svn_filesize_t length;
-  svn_stream_t *fstream, *stdout_stream;
 
   SVN_ERR(get_root(&root, c, pool));
   SVN_ERR(verify_path(&kind, root, path, pool));
@@ -1399,7 +1398,7 @@ do_filesize(svnlook_ctxt_t *c, const char *path, apr_pool_t *pool)
   /* Else. */
 
   SVN_ERR(svn_fs_file_length(&length, root, path, pool));
-  return svn_cmdline_printf(pool, "%ld\n", length);
+  return svn_cmdline_printf(pool, "%" SVN_FILESIZE_T_FMT "\n", length);
 }
 
 /* Print the contents of the file at PATH in the repository.
