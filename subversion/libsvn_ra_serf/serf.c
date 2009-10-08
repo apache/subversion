@@ -892,7 +892,7 @@ svn_ra_serf__get_dir(svn_ra_session_t *ra_session,
        */
       dirent_walk.full_paths = apr_hash_make(pool);
       dirent_walk.base_paths = apr_hash_make(pool);
-      dirent_walk.orig_path = svn_path_canonicalize(path, pool);
+      dirent_walk.orig_path = svn_relpath_canonicalize(path, pool);
 
       svn_ra_serf__walk_all_paths(props, revision, path_dirent_walker,
                                   &dirent_walk, pool);
