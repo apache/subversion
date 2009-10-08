@@ -3726,20 +3726,163 @@ svn_wc__db_global_relocate(svn_wc__db_t *db,
 }
 
 
+struct commit_baton {
+  svn_wc__db_pdh_t *pdh;
+  const char *local_relpath;
+
+  svn_revnum_t new_revision;
+  apr_time_t new_date;
+  const char *new_author;
+  const svn_checksum_t *new_checksum;
+  const apr_array_header_t *new_children;
+  apr_hash_t *new_dav_cache;
+
+  apr_pool_t *scratch_pool;
+};
+
+
+static svn_error_t *
+commit_node(void *baton, svn_sqlite__db_t *sdb)
+{
+  struct commit_baton *cb = baton;
+  svn_sqlite__stmt_t *stmt_base;
+  svn_sqlite__stmt_t *stmt_work;
+  svn_sqlite__stmt_t *stmt_act;
+  svn_boolean_t have_base;
+  svn_boolean_t have_work;
+  svn_boolean_t have_act;
+  svn_string_t prop_blob = { 0 };
+  svn_wc__db_status_t base_presence;
+  svn_wc__db_status_t work_presence;
+  svn_wc__db_status_t new_presence;
+  svn_wc__db_kind_t new_kind;
+  svn_sqlite__stmt_t *stmt;
+
+  /* ### is it better to select only the data needed?  */
+  SVN_ERR(svn_sqlite__get_statement(&stmt_base, cb->pdh->wcroot->sdb,
+                                    STMT_SELECT_BASE_NODE));
+  SVN_ERR(svn_sqlite__get_statement(&stmt_work, cb->pdh->wcroot->sdb,
+                                    STMT_SELECT_WORKING_NODE));
+  SVN_ERR(svn_sqlite__get_statement(&stmt_act, cb->pdh->wcroot->sdb,
+                                    STMT_SELECT_ACTUAL_NODE));
+
+  SVN_ERR(svn_sqlite__bindf(stmt_base, "is",
+                            cb->pdh->wcroot->wc_id, cb->local_relpath));
+  SVN_ERR(svn_sqlite__bindf(stmt_work, "is",
+                            cb->pdh->wcroot->wc_id, cb->local_relpath));
+  SVN_ERR(svn_sqlite__bindf(stmt_act, "is",
+                            cb->pdh->wcroot->wc_id, cb->local_relpath));
+
+  SVN_ERR(svn_sqlite__step(&have_base, stmt_base));
+  SVN_ERR(svn_sqlite__step(&have_work, stmt_work));
+  SVN_ERR(svn_sqlite__step(&have_act, stmt_act));
+
+  /* There should be something to commit!  */
+  SVN_ERR_ASSERT(have_work || have_act);
+
+  if (have_base)
+    base_presence = svn_sqlite__column_token(stmt_base, 4, presence_map);
+  if (have_work)
+    work_presence = svn_sqlite__column_token(stmt_work, 0, presence_map);
+
+  /* Find the appropriate new properties -- ACTUAL overrides any properties
+     in WORKING that arrived as part of a copy/move.
+
+     Note: we'll keep them as a big blob of data, rather than
+     deserialize/serialize them.  */
+  if (have_act)
+    prop_blob.data = svn_sqlite__column_blob(stmt_act, 6, &prop_blob.len);
+  if (prop_blob.data == NULL)
+    prop_blob.data = svn_sqlite__column_blob(stmt_work, 15, &prop_blob.len);
+
+  /* If we have properties to store, then extend their lifetime past the
+     statement's reset().  */
+  /* ### this check may be unnecessary. commits that do not identify a new
+     ### set of properties (eg. a deletion) will probably be handled with
+     ### a different function.  */
+  if (prop_blob.data != NULL)
+    prop_blob.data = apr_pmemdup(cb->scratch_pool,
+                                 prop_blob.data, prop_blob.len);
+
+  /* ### other stuff?  */
+
+  SVN_ERR(svn_sqlite__reset(stmt_base));
+  SVN_ERR(svn_sqlite__reset(stmt_work));
+  SVN_ERR(svn_sqlite__reset(stmt_act));
+
+  /* ### other presences? or reserve that for separate functions?  */
+  new_presence = svn_wc__db_status_normal;
+
+  if (cb->new_checksum == NULL)
+    new_kind = svn_wc__db_kind_dir;
+  else
+    new_kind = svn_wc__db_kind_file;
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, cb->pdh->wcroot->sdb,
+                                    STMT_APPLY_CHANGES_TO_BASE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "istti",
+                            cb->pdh->wcroot->wc_id, cb->local_relpath,
+                            presence_map, new_presence,
+                            kind_map, new_kind,
+                            cb->new_revision));
+
+  SVN_ERR(svn_sqlite__bind_checksum(stmt, 6, cb->new_checksum,
+                                    cb->scratch_pool));
+  SVN_ERR(svn_sqlite__bind_int64(stmt, 7, cb->new_revision));
+  SVN_ERR(svn_sqlite__bind_int64(stmt, 8, cb->new_date));
+  SVN_ERR(svn_sqlite__bind_text(stmt, 9, cb->new_author));
+  /* ### 10. depth.  */
+  /* ### 11. target.  */
+  SVN_ERR(svn_sqlite__bind_blob(stmt, 12, prop_blob.data, prop_blob.len));
+  SVN_ERR(svn_sqlite__bind_properties(stmt, 13, cb->new_dav_cache,
+                                      cb->scratch_pool));
+
+  SVN_ERR(svn_sqlite__step_done(stmt));
+
+  return SVN_NO_ERROR;
+}
+
+
 svn_error_t *
 svn_wc__db_global_commit(svn_wc__db_t *db,
                          const char *local_abspath,
                          svn_revnum_t new_revision,
                          apr_time_t new_date,
                          const char *new_author,
+                         const svn_checksum_t *new_checksum,
+                         const apr_array_header_t *new_children,
+                         apr_hash_t *new_dav_cache,
                          apr_pool_t *scratch_pool)
 {
+  svn_wc__db_pdh_t *pdh;
+  const char *local_relpath;
+  struct commit_baton cb;
+
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
   SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(new_revision));
   SVN_ERR_ASSERT(new_date > 0);
   SVN_ERR_ASSERT(new_author != NULL);
+  SVN_ERR_ASSERT(new_checksum == NULL || new_children == NULL);
 
-  NOT_IMPLEMENTED();
+  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
+                              svn_sqlite__mode_readwrite,
+                              scratch_pool, scratch_pool));
+  VERIFY_USABLE_PDH(pdh);
+
+  cb.pdh = pdh;
+  cb.local_relpath = local_relpath;
+
+  cb.new_revision = new_revision;
+  cb.new_date = new_date;
+  cb.new_author = new_author;
+  cb.new_checksum = new_checksum;
+  cb.new_children = new_children;
+  cb.new_dav_cache = new_dav_cache;
+
+  cb.scratch_pool = scratch_pool;
+
+  return svn_error_return(svn_sqlite__with_transaction(
+                            pdh->wcroot->sdb, commit_node, &cb));
 }
 
 

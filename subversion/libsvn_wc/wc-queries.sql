@@ -49,13 +49,13 @@ where wc_id = ?1 and local_relpath = ?2;
 select presence, kind, checksum, translated_size,
   changed_rev, changed_date, changed_author, depth, symlink_target,
   copyfrom_repos_id, copyfrom_repos_path, copyfrom_revnum,
-  moved_here, moved_to, last_mod_time
+  moved_here, moved_to, last_mod_time, properties
 from working_node
 where wc_id = ?1 and local_relpath = ?2;
 
 -- STMT_SELECT_ACTUAL_NODE
 select prop_reject, changelist, conflict_old, conflict_new,
-conflict_working, tree_conflict_data
+conflict_working, tree_conflict_data, properties
 from actual_node
 where wc_id = ?1 and local_relpath = ?2;
 
@@ -277,6 +277,26 @@ WHERE wc_id = ?1 AND local_dir_relpath = ?2;
 -- STMT_DELETE_WC_LOCK
 DELETE FROM WC_LOCK
 WHERE wc_id = ?1 AND local_dir_relpath = ?2;
+
+-- STMT_APPLY_CHANGES_TO_BASE
+UPDATE BASE_NODE SET
+  -- cannot change: wc_id, local_relpath, repos_id, repos_relpath,
+  --   parent_relpath
+  presence = ?3,
+  kind = ?4,
+  revnum = ?5,
+  checksum = ?6,
+  translated_size = null,  -- will be tweaked after working file is created
+  changed_rev = ?7,
+  changed_date = ?8,
+  changed_author = ?9,
+  depth = ?10,
+  symlink_target = ?11,
+  last_mod_time = null,  -- will be tweaked after working file is created
+  properties = ?12,
+  dav_cache = ?13
+  -- do anything about file_external?
+WHERE wc_id = ?1 AND local_relpath = ?2;
 
 
 /* ------------------------------------------------------------------------- */
