@@ -12,7 +12,7 @@ http://svn.collab.net/repos/svn/tags/1.6.6
   * make file externals work for binary files (issue #3368)
   * perform MIME type matching case-insensitively (issue #3479)
   * do not treat non-existent revisions as HEAD in 'svn export' (issue #3400)
-  * revert part of r36720, use "text/plain" as the default MIME type (r39074)
+  * revert r36720's default MIME type change back to "text/plain" (issue #3508)
   * improve "tree conflict already exists" error message (r38872)
   * fix failure to commit replacement of a directory (issue #3281)
   * fix mod_dav_svn parent dir links to preserve peg revisions (issue #3425)
