@@ -543,6 +543,7 @@ svn_error_t *
 svn_wc__node_get_base_rev(svn_revnum_t *base_revision,
                           svn_wc_context_t *wc_ctx,
                           const char *local_abspath,
+                          svn_boolean_t scan_added,
                           apr_pool_t *scratch_pool)
 {
   while (TRUE)
