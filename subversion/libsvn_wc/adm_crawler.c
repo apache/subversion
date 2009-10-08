@@ -837,8 +837,6 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
       target_lock = NULL;
     }
 
-  svn_error_clear(err);
-
   if (target_depth == svn_depth_exclude)
     status = svn_wc__db_status_excluded;
 
