@@ -677,7 +677,6 @@ resolve_relative_external_url(svn_wc_external_item2_t *item,
       const char *scheme;
 
       SVN_ERR(uri_scheme(&scheme, repos_root_url, pool));
-      SVN_DBG(("Scheme=%s, root=%s, url=%s\n", scheme, repos_root_url, url));
       item->url = svn_uri_canonicalize(apr_pstrcat(pool,
                                                    scheme,
                                                    ":",
