@@ -6178,11 +6178,11 @@ recover_find_max_ids(svn_fs_t *fs, svn_revnum_t rev,
       svn_fs_id_t *id;
       const char *node_id, *copy_id;
       apr_off_t child_dir_offset;
-      const char *path = svn_apr_hash_index_val(hi);
+      const svn_string_t *path = svn_apr_hash_index_val(hi);
 
       svn_pool_clear(iterpool);
 
-      str_val = apr_pstrdup(iterpool, path);
+      str_val = apr_pstrdup(iterpool, path->data);
 
       str = apr_strtok(str_val, " ", &last_str);
       if (str == NULL)
