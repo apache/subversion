@@ -2259,7 +2259,7 @@ delete_entry(const char *path,
              apr_pool_t *pool)
 {
   struct dir_baton *pb = parent_baton;
-  const char *base = svn_uri_basename(path, pool);
+  const char *base = svn_relpath_basename(path, pool);
   const char *local_abspath;
   const char *their_url;
 
@@ -3199,16 +3199,16 @@ locate_copyfrom(svn_wc__db_t *db,
   *return_abspath = NULL;
 
   copyfrom_relpath = copyfrom_path+1; /* Skip the initial '/' */
-  svn_uri_split(copyfrom_relpath, &copyfrom_dir, &copyfrom_basename,
-                scratch_pool);
+  svn_relpath_split(copyfrom_relpath, &copyfrom_dir, &copyfrom_basename,
+                    scratch_pool);
 
   /* Subtract the dest_dir's URL from the repository "root" URL to get
      the absolute FS path represented by dest_dir. */
 
   /* Find nearest FS ancestor dir of current FS path and copyfrom_parent */
-  ancestor_relpath = svn_uri_get_longest_ancestor(dir_repos_relpath,
-                                                  copyfrom_relpath,
-                                                  scratch_pool);
+  ancestor_relpath = svn_relpath_get_longest_ancestor(dir_repos_relpath,
+                                                      copyfrom_relpath,
+                                                      scratch_pool);
   if (strlen(ancestor_relpath) == 0)
     return SVN_NO_ERROR;
 

@@ -906,7 +906,7 @@ read_entries_new(apr_hash_t **result_entries,
                 {
                   const char *relpath_to_entry = svn_dirent_is_child(
                     op_root_abspath, entry_abspath, NULL);
-                  const char *entry_repos_relpath = svn_uri_join(
+                  const char *entry_repos_relpath = svn_relpath_join(
                     parent_repos_relpath, relpath_to_entry, iterpool);
 
                   /* The copyfrom repos roots matched.
@@ -2008,7 +2008,7 @@ write_entry(svn_wc__db_t *db,
             {
               const char *relpath_to_entry = svn_dirent_is_child(
                 op_root_abspath, entry_abspath, NULL);
-              const char *new_copyfrom_relpath = svn_uri_join(
+              const char *new_copyfrom_relpath = svn_relpath_join(
                 original_repos_relpath, relpath_to_entry, scratch_pool);
 
               working_node->copyfrom_repos_id = repos_id;
