@@ -212,7 +212,7 @@ delete_entry(const char *path,
   svn_node_kind_t kind;
 
   /* Get (or create) the change node and update it. */
-  name = svn_uri_basename(path, pool);
+  name = svn_relpath_basename(path, pool);
   node = find_child_by_name(d->node, name);
   if (! node)
     node = create_child_node(d->node, name, eb->node_pool);
@@ -268,7 +268,7 @@ add_open_helper(const char *path,
   nb->parent_baton = pb;
 
   /* Create and populate the node. */
-  nb->node = create_child_node(pb->node, svn_uri_basename(path, pool),
+  nb->node = create_child_node(pb->node, svn_relpath_basename(path, pool),
                                eb->node_pool);
   nb->node->kind = kind;
   nb->node->action = action;

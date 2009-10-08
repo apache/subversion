@@ -548,17 +548,34 @@ resolve_relative_external_url(svn_wc_external_item2_t *item,
                               const char *parent_dir_url,
                               apr_pool_t *pool)
 {
-  const char *uncanonicalized_url = item->url;
-  const char *canonicalized_url;
+  const char *url = item->url;
   apr_uri_t parent_dir_parsed_uri;
   apr_status_t status;
 
-  canonicalized_url = svn_uri_canonicalize(uncanonicalized_url, pool);
+  if ((url[0] == '/') && (url[1] == '/'))
+    {
+      /* "//schema-relative" */
+      url = apr_pstrcat(
+                        pool, 
+                        "//",
+                        svn_relpath_canonicalize(url+2, pool),
+                        NULL);
+    }
+  else if (svn_path_is_url(url) || *url == '/')
+    {
+      /* "http://server/path" and "/path" */
+      url = svn_uri_canonicalize(url, pool);
+    }
+  else
+    {
+      /* "^/path" and "../path" */
+      url = svn_relpath_canonicalize(url, pool);
+    }
 
   /* If the URL is already absolute, there is nothing to do. */
-  if (svn_path_is_url(canonicalized_url))
+  if (svn_path_is_url(url))
     {
-      item->url = canonicalized_url;
+      item->url = url;
       return SVN_NO_ERROR;
     }
 
@@ -580,8 +597,8 @@ resolve_relative_external_url(svn_wc_external_item2_t *item,
      not the hostname.  This allows an external to refer to another
      repository in the same server relative to the location of this
      repository, say using SVNParentPath. */
-  if ((0 == strncmp("../", uncanonicalized_url, 3)) ||
-      (0 == strncmp("^/", uncanonicalized_url, 2)))
+  if ((0 == strncmp("../", url, 3)) ||
+      (0 == strncmp("^/", url, 2)))
     {
       apr_array_header_t *base_components;
       apr_array_header_t *relative_components;
@@ -589,11 +606,11 @@ resolve_relative_external_url(svn_wc_external_item2_t *item,
 
       /* Decompose either the parent directory's URL path or the
          repository root's URL path into components.  */
-      if (0 == strncmp("../", uncanonicalized_url, 3))
+      if (0 == strncmp("../", url, 3))
         {
           base_components = svn_path_decompose(parent_dir_parsed_uri.path,
                                                pool);
-          relative_components = svn_path_decompose(canonicalized_url, pool);
+          relative_components = svn_path_decompose(url, pool);
         }
       else
         {
@@ -613,8 +630,7 @@ resolve_relative_external_url(svn_wc_external_item2_t *item,
 
           base_components = svn_path_decompose(repos_root_parsed_uri.path,
                                                pool);
-          relative_components = svn_path_decompose(canonicalized_url + 2,
-                                                   pool);
+          relative_components = svn_path_decompose(url + 2, pool);
         }
 
       for (i = 0; i < relative_components->nelts; ++i)
@@ -648,14 +664,14 @@ resolve_relative_external_url(svn_wc_external_item2_t *item,
   /* The remaining URLs are relative to the either the scheme or
      server root and can only refer to locations inside that scope, so
      backpaths are not allowed. */
-  if (svn_path_is_backpath_present(canonicalized_url + 2))
+  if (svn_path_is_backpath_present(url + 2))
     return svn_error_createf(SVN_ERR_BAD_URL, 0,
                              _("The external relative URL '%s' cannot have "
                                "backpaths, i.e. '..'"),
-                             uncanonicalized_url);
+                             item->url);
 
   /* Relative to the scheme. */
-  if (0 == strncmp("//", uncanonicalized_url, 2))
+  if (0 == strncmp("//", url, 2))
     {
       const char *scheme;
 
@@ -663,20 +679,16 @@ resolve_relative_external_url(svn_wc_external_item2_t *item,
       item->url = svn_uri_canonicalize(apr_pstrcat(pool,
                                                    scheme,
                                                    ":",
-                                                   uncanonicalized_url,
+                                                   url,
                                                    NULL),
                                        pool);
       return SVN_NO_ERROR;
     }
 
   /* Relative to the server root. */
-  if (uncanonicalized_url[0] == '/')
+  if (url[0] == '/')
     {
-      parent_dir_parsed_uri.path = (char *)canonicalized_url;
-      parent_dir_parsed_uri.query = NULL;
-      parent_dir_parsed_uri.fragment = NULL;
-
-      item->url = apr_uri_unparse(pool, &parent_dir_parsed_uri, 0);
+      item->url = svn_uri_join(parent_dir_url, url, pool);
 
       return SVN_NO_ERROR;
     }
@@ -684,7 +696,7 @@ resolve_relative_external_url(svn_wc_external_item2_t *item,
   return svn_error_createf(SVN_ERR_BAD_URL, 0,
                            _("Unrecognized format for the relative external "
                              "URL '%s'"),
-                           uncanonicalized_url);
+                           item->url);
 }
 
 /* This implements the 'svn_hash_diff_func_t' interface.
