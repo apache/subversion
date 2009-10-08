@@ -6170,7 +6170,7 @@ recover_find_max_ids(svn_fs_t *fs, svn_revnum_t rev,
   /* Now check each of the entries in our directory to find new node and
      copy ids, and recurse into new subdirectories. */
   iterpool = svn_pool_create(pool);
-  for (hi = apr_hash_first(NULL, entries); hi; hi = apr_hash_next(hi))
+  for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
     {
       char *str_val;
       char *str, *last_str;

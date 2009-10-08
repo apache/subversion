@@ -660,7 +660,7 @@ adjust_mergeinfo(svn_string_t **final_val, const svn_string_t *initial_val,
   apr_pool_t *subpool = svn_pool_create(pool);
 
   SVN_ERR(svn_mergeinfo_parse(&mergeinfo, initial_val->data, subpool));
-  for (hi = apr_hash_first(NULL, mergeinfo); hi; hi = apr_hash_next(hi))
+  for (hi = apr_hash_first(subpool, mergeinfo); hi; hi = apr_hash_next(hi))
     {
       const char *merge_source = svn_apr_hash_index_key(hi);
       apr_array_header_t *rangelist = svn_apr_hash_index_val(hi);

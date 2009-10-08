@@ -138,7 +138,7 @@ svn_client__adjust_mergeinfo_source_paths(svn_mergeinfo_t adjusted_mergeinfo,
   SVN_ERR_ASSERT(adjusted_mergeinfo);
   SVN_ERR_ASSERT(mergeinfo);
 
-  for (hi = apr_hash_first(NULL, mergeinfo); hi; hi = apr_hash_next(hi))
+  for (hi = apr_hash_first(pool, mergeinfo); hi; hi = apr_hash_next(hi))
     {
       const char *merge_source = svn_apr_hash_index_key(hi);
       apr_array_header_t *rangelist = svn_apr_hash_index_val(hi);
@@ -2111,7 +2111,7 @@ svn_client_suggest_merge_sources(apr_array_header_t **suggestions,
 
   if (mergeinfo)
     {
-      for (hi = apr_hash_first(NULL, mergeinfo); hi; hi = apr_hash_next(hi))
+      for (hi = apr_hash_first(pool, mergeinfo); hi; hi = apr_hash_next(hi))
         {
           const char *rel_path = svn_apr_hash_index_key(hi);
 

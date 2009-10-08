@@ -988,7 +988,7 @@ close_directory(void *dir_baton,
       svn_wc_notify_t *notify;
       apr_hash_index_t *hi;
 
-      for (hi = apr_hash_first(NULL, eb->deleted_paths); hi;
+      for (hi = apr_hash_first(pool, eb->deleted_paths); hi;
            hi = apr_hash_next(hi))
         {
           const char *deleted_path = svn_apr_hash_index_key(hi);

@@ -691,7 +691,7 @@ split_mergeinfo_on_revision(svn_mergeinfo_t *younger_mergeinfo,
   apr_pool_t *iterpool = svn_pool_create(pool);
 
   *younger_mergeinfo = NULL;
-  for (hi = apr_hash_first(NULL, *mergeinfo); hi; hi = apr_hash_next(hi))
+  for (hi = apr_hash_first(pool, *mergeinfo); hi; hi = apr_hash_next(hi))
     {
       int i;
       const char *merge_source_path = svn_apr_hash_index_key(hi);
@@ -901,7 +901,7 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
           SVN_ERR(svn_ra_get_repos_root2(merge_b->ra_session2,
                                          &merge_source_root_url, pool));
 
-          for (hi = apr_hash_first(NULL, younger_mergeinfo);
+          for (hi = apr_hash_first(pool, younger_mergeinfo);
                hi; hi = apr_hash_next(hi))
             {
               int j;
@@ -4385,7 +4385,7 @@ record_skips(const char *mergeinfo_path,
 
       /* Override the mergeinfo for child paths which weren't
          actually merged. */
-      for (hi = apr_hash_first(NULL, notify_b->skipped_paths); hi;
+      for (hi = apr_hash_first(pool, notify_b->skipped_paths); hi;
            hi = apr_hash_next(hi))
         {
           const char *skipped_path = svn_apr_hash_index_key(hi);
@@ -6572,7 +6572,7 @@ process_children_with_new_mergeinfo(merge_cmd_baton_t *merge_b,
       apr_hash_index_t *hi;
 
       /* Iterate over each path with explicit mergeinfo added by the merge. */
-      for (hi = apr_hash_first(NULL, merge_b->paths_with_new_mergeinfo);
+      for (hi = apr_hash_first(pool, merge_b->paths_with_new_mergeinfo);
            hi;
            hi = apr_hash_next(hi))
         {
@@ -7027,7 +7027,7 @@ record_mergeinfo_for_added_subtrees(svn_merge_range_t *merged_range,
       apr_pool_t *iterpool = svn_pool_create(pool);
       apr_hash_index_t *hi;
 
-      for (hi = apr_hash_first(NULL, notify_b->added_paths); hi;
+      for (hi = apr_hash_first(pool, notify_b->added_paths); hi;
            hi = apr_hash_next(hi))
         {
           const char *added_path = svn_apr_hash_index_key(hi);
@@ -7185,7 +7185,7 @@ log_noop_revs(void *baton,
      inherited mergeinfo for *all* of the corresponding paths under
      MERGE_B->TARGET_ABSPATH reflects that LOG_ENTRY->REVISION has been
      merged, then add LOG_ENTRY->REVISION to BATON->MERGED_RANGES. */
-  for (hi = apr_hash_first(NULL, log_entry->changed_paths2);
+  for (hi = apr_hash_first(pool, log_entry->changed_paths2);
        hi;
        hi = apr_hash_next(hi))
   {
