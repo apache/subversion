@@ -490,11 +490,16 @@ svn_wc__node_is_status_added(svn_boolean_t *is_added,
  * Get the base revision of @a local_abspath using @a wc_ctx.  If
  * @a local_abspath is not in the working copy, return
  * @c SVN_ERR_WC_PATH_NOT_FOUND.
+ *
+ * If @a scan_added is TRUE, scan parents to find a base revision
+ * of added nodes. Otherwise set @a base_revision to -1 for these
+ * nodes.
  */
 svn_error_t *
 svn_wc__node_get_base_rev(svn_revnum_t *base_revision,
                           svn_wc_context_t *wc_ctx,
                           const char *local_abspath,
+                          svn_boolean_t scan_added,
                           apr_pool_t *scratch_pool);
 
 #ifdef __cplusplus
