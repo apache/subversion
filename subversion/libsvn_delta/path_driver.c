@@ -214,7 +214,10 @@ svn_delta_path_driver(const svn_delta_editor_t *editor,
 
       /*** Step C - Open any directories between the common ancestor
            and the parent of the current path. ***/
-      svn_relpath_split(path, &pdir, &bname, iterpool);
+      if (*path == '/')
+        svn_uri_split(path, &pdir, &bname, iterpool);
+      else
+        svn_relpath_split(path, &pdir, &bname, iterpool);
       if (strlen(pdir) > common_len)
         {
           const char *piece = pdir + common_len + 1;
