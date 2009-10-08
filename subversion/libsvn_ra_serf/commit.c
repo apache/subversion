@@ -317,9 +317,9 @@ relative_dir_path(dir_context_t *dir, apr_pool_t *pool)
 
   for (i = 0; i < components->nelts; i++)
     {
-      rel_path = svn_path_join(rel_path,
-                               APR_ARRAY_IDX(components, i, const char *),
-                               pool);
+      rel_path = svn_relpath_join(rel_path,
+                                  APR_ARRAY_IDX(components, i, const char *),
+                                  pool);
     }
 
   return rel_path;
@@ -333,7 +333,7 @@ static const char *
 relative_file_path(file_context_t *f, apr_pool_t *pool)
 {
   const char *dir_path = relative_dir_path(f->parent_dir, pool);
-  return svn_path_join(dir_path, f->name, pool);
+  return svn_relpath_join(dir_path, f->name, pool);
 }
 
 
@@ -541,7 +541,7 @@ checkout_file(file_context_t *file)
 
           file->checkout->activity_url = file->commit->activity_url;
           file->checkout->activity_url_len = file->commit->activity_url_len;
-          diff_path = svn_path_is_child(dir->name, file->name, file->pool);
+          diff_path = svn_relpath_is_child(dir->name, file->name, file->pool);
           file->checkout->resource_url =
             svn_path_url_add_component2(dir->checkout->resource_url,
                                         diff_path,
