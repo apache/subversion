@@ -815,7 +815,7 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
     return SVN_NO_ERROR;
 
   SVN_ERR(svn_wc__node_get_base_rev(&base_revision, merge_b->ctx->wc_ctx,
-                                    local_abspath, pool));
+                                    local_abspath, FALSE, pool));
 
   adjusted_props = apr_array_make(pool, (*props)->nelts, sizeof(svn_prop_t));
   iterpool = svn_pool_create(pool);
@@ -3747,7 +3747,7 @@ calculate_remaining_ranges(svn_client__merge_path_t *parent,
   */
   SVN_ERR(svn_dirent_get_absolute(&child_abspath, child->path, pool));
   SVN_ERR(svn_wc__node_get_base_rev(&child_base_revision, ctx->wc_ctx,
-                                    child_abspath, pool));
+                                    child_abspath, TRUE, pool));
   if (((child->remaining_ranges)->nelts == 0)
       && (revision2 < revision1)
       && (child_base_revision <= revision2))
