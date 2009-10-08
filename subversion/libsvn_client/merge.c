@@ -6691,13 +6691,14 @@ process_children_with_new_mergeinfo(merge_cmd_baton_t *merge_b,
    If PATH or SUBTREES are NULL return false. */
 static svn_boolean_t
 path_is_subtree(const char *path,
-                apr_hash_t *subtrees)
+                apr_hash_t *subtrees,
+                apr_pool_t *pool)
 {
   if (path && subtrees)
     {
       apr_hash_index_t *hi;
 
-      for (hi = apr_hash_first(NULL, subtrees);
+      for (hi = apr_hash_first(pool, subtrees);
            hi;
            hi = apr_hash_next(hi))
         {
@@ -6717,10 +6718,10 @@ subtree_touched_by_merge(const char *path,
                          notification_receiver_baton_t *notify_b,
                          apr_pool_t *pool)
 {
-  return (path_is_subtree(path, notify_b->merged_paths)
-          || path_is_subtree(path, notify_b->skipped_paths)
-          || path_is_subtree(path, notify_b->added_paths)
-          || path_is_subtree(path, notify_b->tree_conflicted_paths));
+  return (path_is_subtree(path, notify_b->merged_paths, pool)
+          || path_is_subtree(path, notify_b->skipped_paths, pool)
+          || path_is_subtree(path, notify_b->added_paths, pool)
+          || path_is_subtree(path, notify_b->tree_conflicted_paths, pool));
 }
 
 /* Helper for do_directory_merge() when performing mergeinfo unaware merges.

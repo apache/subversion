@@ -2650,7 +2650,7 @@ svn_fs_fs__revision_proplist(apr_hash_t **proplist_p,
           return svn_error_return(err);
         }
 
-      SVN_ERR(svn_hash__clear(proplist));
+      SVN_ERR(svn_hash__clear(proplist, pool));
       RETRY_RECOVERABLE(err, revprop_file,
                         svn_hash_read2(proplist,
                                        svn_stream_from_aprfile2(revprop_file,
