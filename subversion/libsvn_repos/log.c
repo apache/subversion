@@ -74,7 +74,7 @@ svn_repos_check_revision_access(svn_repos_revision_access_level_t *access_level,
   /* Otherwise, we have to check the readability of each changed
      path, or at least enough to answer the question asked. */
   subpool = svn_pool_create(pool);
-  for (hi = apr_hash_first(NULL, changes); hi; hi = apr_hash_next(hi))
+  for (hi = apr_hash_first(pool, changes); hi; hi = apr_hash_next(hi))
     {
       const void *key;
       void *val;
@@ -847,7 +847,7 @@ get_combined_mergeinfo_changes(svn_mergeinfo_t *combined_mergeinfo,
 
   /* Merge all the mergeinfos which are, or are children of, one of
      our paths of interest into one giant delta mergeinfo.  */
-  for (hi = apr_hash_first(NULL, added_mergeinfo_catalog);
+  for (hi = apr_hash_first(subpool, added_mergeinfo_catalog);
        hi; hi = apr_hash_next(hi))
     {
       const void *key;

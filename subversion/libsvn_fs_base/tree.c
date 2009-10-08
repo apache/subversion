@@ -4999,7 +4999,7 @@ txn_body_get_mergeinfo_data_and_entries(void *baton, trail_t *trail)
   SVN_ERR_ASSERT(svn_fs_base__dag_node_kind(node) == svn_node_dir);
 
   SVN_ERR(svn_fs_base__dag_dir_entries(&entries, node, trail, trail->pool));
-  for (hi = apr_hash_first(NULL, entries); hi; hi = apr_hash_next(hi))
+  for (hi = apr_hash_first(trail->pool, entries); hi; hi = apr_hash_next(hi))
     {
       void *val;
       svn_fs_dirent_t *dirent;
@@ -5105,7 +5105,7 @@ crawl_directory_for_mergeinfo(svn_fs_t *fs,
     return SVN_NO_ERROR;
 
   iterpool = svn_pool_create(pool);
-  for (hi = apr_hash_first(NULL, children_atop_mergeinfo_trees);
+  for (hi = apr_hash_first(pool, children_atop_mergeinfo_trees);
        hi;
        hi = apr_hash_next(hi))
     {
