@@ -4,7 +4,7 @@ http://svn.collab.net/repos/svn/tags/1.6.6
 
  User-visible changes:
   * ...
-  * handle tree conflicts involving replacements (see r39695's log for rev list)
+  * handle tree conflicts involving replacements (issue #3486)
   * allow non-threadsafe sqlite if APR has no threads (r39301)
   * print newline before plaintext SSL cert / password prompts (r38982, r39302)
   * improve merge performance with implicit subtree mergeinfo (issue #3443)
