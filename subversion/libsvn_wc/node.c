@@ -560,7 +560,7 @@ svn_wc__node_get_base_rev(svn_revnum_t *base_revision,
                                    wc_ctx->db, local_abspath,
                                    scratch_pool, scratch_pool));
 
-      if (SVN_IS_VALID_REVNUM(base_revision))
+      if (SVN_IS_VALID_REVNUM(*base_revision))
         return SVN_NO_ERROR;
 
       /* First check if we have a base */
