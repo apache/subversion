@@ -558,10 +558,10 @@ scan_upwards_for_repos(apr_int64_t *repos_id,
           /* Given the node's relpath, append all the segments that
              we stripped as we scanned upwards. */
           if (repos_relpath)
-            *repos_relpath = svn_dirent_join(svn_sqlite__column_text(stmt, 3,
-                                                                     NULL),
-                                             relpath_suffix,
-                                             result_pool);
+            *repos_relpath = svn_relpath_join(svn_sqlite__column_text(stmt, 3,
+                                                                      NULL),
+                                              relpath_suffix,
+                                              result_pool);
           return svn_sqlite__reset(stmt);
         }
       SVN_ERR(svn_sqlite__reset(stmt));
@@ -573,15 +573,15 @@ scan_upwards_for_repos(apr_int64_t *repos_id,
           return svn_error_createf(
             SVN_ERR_WC_CORRUPT, NULL,
             _("Parent(s) of '%s' should have repository information."),
-            svn_dirent_local_style(local_relpath, scratch_pool));
+            svn_relpath_local_style(local_relpath, scratch_pool));
         }
 
       /* Strip a path segment off the end, and append it to the suffix
          that we'll use when we finally find a base relpath.  */
-      svn_dirent_split(current_relpath, &current_relpath, &current_basename,
-                       scratch_pool);
-      relpath_suffix = svn_dirent_join(relpath_suffix, current_basename,
-                                       scratch_pool);
+      svn_relpath_split(current_relpath, &current_relpath, &current_basename,
+                        scratch_pool);
+      relpath_suffix = svn_relpath_join(relpath_suffix, current_basename,
+                                        scratch_pool);
 
       /* Loop to try the parent.  */
 
@@ -846,9 +846,9 @@ parse_local_abspath(svn_wc__db_pdh_t **pdh,
 
           /* Stashed directory's local_relpath + basename. */
           dir_relpath = compute_pdh_relpath(*pdh, NULL);
-          *local_relpath = svn_dirent_join(dir_relpath,
-                                           build_relpath,
-                                           result_pool);
+          *local_relpath = svn_relpath_join(dir_relpath,
+                                            build_relpath,
+                                            result_pool);
           return SVN_NO_ERROR;
         }
 
@@ -1019,7 +1019,7 @@ parse_local_abspath(svn_wc__db_pdh_t **pdh,
     dir_relpath = compute_pdh_relpath(*pdh, NULL);
 
     /* And the result local_relpath may include a filename.  */
-    *local_relpath = svn_dirent_join(dir_relpath, build_relpath, result_pool);
+    *local_relpath = svn_relpath_join(dir_relpath, build_relpath, result_pool);
   }
 
   /* Check to see if this (versioned) directory is obstructing what should
@@ -1386,7 +1386,7 @@ gather_children(const apr_array_header_t **children,
       const char *child_relpath = svn_sqlite__column_text(stmt, 0, NULL);
 
       APR_ARRAY_PUSH(child_names, const char *) =
-        svn_dirent_basename(child_relpath, result_pool);
+        svn_relpath_basename(child_relpath, result_pool);
 
       SVN_ERR(svn_sqlite__step(&have_row, stmt));
     }
@@ -4160,10 +4160,10 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
          traverse up the tree.  */
       if (repos_relpath)
         {
-          build_relpath = svn_dirent_join(svn_dirent_basename(current_abspath,
+          build_relpath = svn_relpath_join(svn_dirent_basename(current_abspath,
                                                               scratch_pool),
-                                          build_relpath,
-                                          scratch_pool);
+                                           build_relpath,
+                                           scratch_pool);
         }
 
       /* Move to the parent node. Remember the abspath to this node, since
@@ -4193,8 +4193,8 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
                                          result_pool, scratch_pool));
 
       if (repos_relpath)
-        *repos_relpath = svn_dirent_join(base_relpath, build_relpath,
-                                         result_pool);
+        *repos_relpath = svn_relpath_join(base_relpath, build_relpath,
+                                          result_pool);
     }
 
   return SVN_NO_ERROR;
