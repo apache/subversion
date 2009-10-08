@@ -554,10 +554,11 @@ resolve_relative_external_url(svn_wc_external_item2_t *item,
 
   if ((url[0] == '/') && (url[1] == '/'))
     {
-      /* "//schema-relative" */
+      /* "//schema-relative" and in some cases "///schema-relative".
+         This last format is supported on file:// schema relative. */
       url = apr_pstrcat(
                         pool, 
-                        "//",
+                        url[2] == '/' ? "///" : "//",
                         svn_relpath_canonicalize(url+2, pool),
                         NULL);
     }
@@ -676,6 +677,7 @@ resolve_relative_external_url(svn_wc_external_item2_t *item,
       const char *scheme;
 
       SVN_ERR(uri_scheme(&scheme, repos_root_url, pool));
+      SVN_DBG(("Scheme=%s, root=%s, url=%s\n", scheme, repos_root_url, url));
       item->url = svn_uri_canonicalize(apr_pstrcat(pool,
                                                    scheme,
                                                    ":",
