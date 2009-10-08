@@ -247,7 +247,7 @@ svn_hash_from_cstring_keys(apr_hash_t **hash,
  * @since New in 1.5.
  */
 svn_error_t *
-svn_hash__clear(apr_hash_t *hash);
+svn_hash__clear(apr_hash_t *hash, apr_pool_t *pool);
 
 /** @} */
 
