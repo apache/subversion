@@ -750,7 +750,7 @@ mkdir_urls(svn_commit_info_t **commit_info_p,
           for (i = 0; i < targets->nelts; i++)
             {
               const char *path = APR_ARRAY_IDX(targets, i, const char *);
-              path = svn_uri_join(bname, path, pool);
+              path = svn_relpath_join(bname, path, pool);
               APR_ARRAY_IDX(targets, i, const char *) = path;
             }
         }

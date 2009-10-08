@@ -327,7 +327,7 @@ get_base_info_for_deleted(svn_wc_entry_t *entry,
                                        result_pool, scratch_pool));
 
       /* Now glue it all together */
-      *repos_relpath = svn_uri_join(
+      *repos_relpath = svn_relpath_join(
         parent_repos_relpath,
         svn_dirent_is_child(parent_abspath,
                             entry_abspath,
