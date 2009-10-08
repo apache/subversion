@@ -1364,15 +1364,31 @@ svn_wc__db_global_relocate(svn_wc__db_t *db,
                            apr_pool_t *scratch_pool);
 
 
-/* ### collapse changes (for this node) from the trees into a new BASE node. */
-/* ### BH: This probably needs an exclude filter and some kind of depth support,
-           before it can replace other code. */
+/* ### docco
+
+   ### collapse the WORKING and ACTUAL tree changes down into BASE.
+
+   ### BH: This probably needs an exclude filter and some kind of depth
+   ###   support, before it can replace other code.
+   ### GS: nope. the intent is to call this once per committed node. each
+   ###   node is committed transactionally. upper layers can deal with
+   ###   depth and exclusion. this function will combine the functionality
+   ###   of process_committed_leaf() and log_do_committed().
+
+   One or both of new_checksum and new_children should be NULL. For new:
+     files: new_children should be NULL
+     dirs: new_checksum should be NULL
+     symlinks: both should be NULL
+*/
 svn_error_t *
 svn_wc__db_global_commit(svn_wc__db_t *db,
                          const char *local_abspath,
                          svn_revnum_t new_revision,
                          apr_time_t new_date,
                          const char *new_author,
+                         const svn_checksum_t *new_checksum,
+                         const apr_array_header_t *new_children,
+                         apr_hash_t *new_dav_cache,
                          apr_pool_t *scratch_pool);
 
 
