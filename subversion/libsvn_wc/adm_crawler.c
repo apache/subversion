@@ -533,8 +533,8 @@ report_revisions_and_depths(svn_wc__db_t *db,
       if (!this_repos_relpath)
         {
           this_switched = FALSE;
-          this_repos_relpath = svn_uri_join(dir_repos_relpath, child,
-                                            iterpool);
+          this_repos_relpath = svn_relpath_join(dir_repos_relpath, child,
+                                                iterpool);
         }
       else
         {
