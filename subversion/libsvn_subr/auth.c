@@ -415,8 +415,8 @@ svn_auth_get_platform_specific_provider
                           dso,
                           version_function_name) == 0)
             {
-              svn_version_func_t version_function;
-              version_function = (svn_version_func_t) version_function_symbol;
+              svn_version_func_t version_function
+                = (svn_version_func_t) version_function_symbol;
               const svn_version_checklist_t check_list[] =
                 {
                   { library_label, version_function },
