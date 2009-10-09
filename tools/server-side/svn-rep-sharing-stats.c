@@ -120,7 +120,7 @@ signal_handler(int signum)
 }
 
 /* Our cancellation callback. */
-svn_error_t *
+static svn_error_t *
 svn_cl__check_cancel(void *baton)
 {
   if (cancelled)
@@ -129,9 +129,9 @@ svn_cl__check_cancel(void *baton)
     return SVN_NO_ERROR;
 }
 
-svn_cancel_func_t cancel_func = svn_cl__check_cancel;
+static svn_cancel_func_t cancel_func = svn_cl__check_cancel;
 
-void set_up_cancellation()
+static void set_up_cancellation()
 {
   /* Set up our cancellation support. */
   apr_signal(SIGINT, signal_handler);
@@ -269,9 +269,10 @@ process_one_revision(svn_fs_t *fs,
  *
  * Use SCRATCH_POOL for temporary allocations.
  */
-svn_error_t *pretty_print(const char *name,
-                          apr_hash_t *reps_ref_counts,
-                          apr_pool_t *scratch_pool)
+static svn_error_t *
+pretty_print(const char *name,
+             apr_hash_t *reps_ref_counts,
+             apr_pool_t *scratch_pool)
 {
   apr_hash_index_t *hi;
 
@@ -362,11 +363,6 @@ static svn_error_t *process(const char *repos_path,
   return SVN_NO_ERROR;
 }
 
-/*
- * Why is this not an svn subcommand?  I have this vague idea that it could
- * be run as part of the build process, with the output embedded in the svn
- * program.  Obviously we don't want to have to run svn when building svn.
- */
 int
 main(int argc, const char *argv[])
 {
