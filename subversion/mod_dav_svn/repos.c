@@ -1222,7 +1222,7 @@ dav_svn_split_uri(request_rec *r,
   if (fs_path != NULL)
     {
       /* the repos_name is the last component of root_path. */
-      *repos_name = svn_uri_basename(root_path, r->pool);
+      *repos_name = svn_dirent_basename(root_path, r->pool);
 
       /* 'relative' is already correct for SVNPath; the root_path
          already contains the name of the repository, so relative is
@@ -2035,8 +2035,8 @@ get_resource(request_rec *r,
     /* If this is a ParentPath-based repository, treat the specified
        path as a similar parent directory. */
     repos->activities_db = svn_path_join(repos->activities_db,
-                                         svn_uri_basename(repos->fs_path,
-                                                          r->pool),
+                                         svn_dirent_basename(repos->fs_path,
+                                                             r->pool),
                                          r->pool);
 
   /* Remember various bits for later URL construction */
