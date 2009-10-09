@@ -198,7 +198,7 @@ where wc_id = ?1 and local_relpath = ?2;
 
 -- STMT_INSERT_ACTUAL_CHANGELIST
 insert into actual_node (
-  wc_id, local_relpath, changelist)
+  wc_id, local_relpath, /* ### parent_relpath, */ changelist)
 values (?1, ?2, ?3);
 
 -- STMT_RESET_ACTUAL_WITH_CHANGELIST
@@ -284,24 +284,15 @@ DELETE FROM WC_LOCK
 WHERE wc_id = ?1 AND local_dir_relpath = ?2;
 
 -- STMT_APPLY_CHANGES_TO_BASE
-UPDATE BASE_NODE SET
-  /* cannot change: wc_id, local_relpath, repos_id, repos_relpath,
-     parent_relpath  */
-  presence = ?3,
-  kind = ?4,
-  revnum = ?5,
-  checksum = ?6,
-  translated_size = null,  /* will be tweaked after working file is created  */
-  changed_rev = ?7,
-  changed_date = ?8,
-  changed_author = ?9,
-  depth = ?10,
-  symlink_target = ?11,
-  last_mod_time = null,  /* will be tweaked after working file is created  */
-  properties = ?12,
-  dav_cache = ?13
-  /* do anything about file_external?  */
-WHERE wc_id = ?1 AND local_relpath = ?2;
+/* translated_size and last_mod_time are not mentioned here because they will
+   be tweaked after the working-file is installed.
+   ### what to do about file_external?  */
+INSERT OR REPLACE INTO BASE_NODE (
+  wc_id, local_relpath, parent_relpath, presence, kind, revnum, changed_rev,
+  changed_author, properties, repos_id, repos_relpath, checksum, changed_date,
+  depth, symlink_target, dav_cache)
+/* NOTE: ?6 is duplicated because we insert the same value in two columns.  */
+VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15);
 
 
 /* ------------------------------------------------------------------------- */
