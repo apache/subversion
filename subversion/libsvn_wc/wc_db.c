@@ -3727,10 +3727,13 @@ commit_node(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
   svn_boolean_t have_base;
   svn_boolean_t have_work;
   svn_boolean_t have_act;
+  apr_int64_t repos_id;
+  const char *repos_relpath;
   svn_string_t prop_blob = { 0 };
   const char *changelist = NULL;
   svn_wc__db_status_t base_presence;
   svn_wc__db_status_t work_presence;
+  const char *parent_relpath;
   svn_wc__db_status_t new_presence;
   svn_wc__db_kind_t new_kind;
   svn_sqlite__stmt_t *stmt;
@@ -3758,10 +3761,26 @@ commit_node(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
   /* ### not true. we could simply have text changes. how to assert?
      SVN_ERR_ASSERT(have_work || have_act);  */
 
+  /* These presence values will direct the commit process.  */
   if (have_base)
     base_presence = svn_sqlite__column_token(stmt_base, 4, presence_map);
   if (have_work)
     work_presence = svn_sqlite__column_token(stmt_work, 0, presence_map);
+
+  /* Get the repository information. REPOS_RELPATH will indicate whether
+     we bind REPOS_ID/REPOS_RELPATH as null values in the database (in order
+     to inherit values from the parent node), or that we have actual data.  */
+  if (have_work)
+    {
+      repos_id = 0;
+      repos_relpath = NULL;
+    }
+  else
+    {
+      /* A commit cannot change these values, so retain them.  */
+      repos_id = svn_sqlite__column_int64(stmt_base, 2);
+      repos_relpath = svn_sqlite__column_text(stmt_base, 3, scratch_pool);
+    }
 
   /* Find the appropriate new properties -- ACTUAL overrides any properties
      in WORKING that arrived as part of a copy/move.
@@ -3775,14 +3794,8 @@ commit_node(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
     prop_blob.data = svn_sqlite__column_blob(stmt_work, 15, &prop_blob.len,
                                              scratch_pool);
 
-  if (have_act)
+  if (cb->keep_changelist && have_act)
     changelist = svn_sqlite__column_text(stmt_act, 1, scratch_pool);
-
-  /* ### for now, no kind changes are allowed.  */
-  if (have_work)
-    new_kind = svn_sqlite__column_token(stmt_work, 1, kind_map);
-  else
-    new_kind = svn_sqlite__column_token(stmt_base, 5, kind_map);
 
   /* ### other stuff?  */
 
@@ -3792,40 +3805,50 @@ commit_node(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
 
   /* Update the BASE_NODE row with all the new information.  */
 
+  if (*cb->local_relpath == '\0')
+    parent_relpath = NULL;
+  else
+    parent_relpath = svn_relpath_dirname(cb->local_relpath, scratch_pool);
+
   /* ### other presences? or reserve that for separate functions?  */
   new_presence = svn_wc__db_status_normal;
 
-#if 0
-  /* ### can't use yet. we pass NULL for files' checksums. just rely on
-     ### the above code to keep the same kind.  */
-  if (cb->new_checksum == NULL)
-    new_kind = svn_wc__db_kind_dir;
-  else
-    new_kind = svn_wc__db_kind_file;
-#endif
+  /* Determine the new BASE node's kind based on whether NEW_CHILDREN is
+     presented to this function.
 
-  /* ### right now, we're updating an existing BASE_NODE row, so it
-     ### should be there.  */
-  SVN_ERR_ASSERT(have_base);
+     ### theoretically, the kind will remain the same as BASE, or it will
+     ### be whatever is in WORKING_NODE. we should also be able to fetch
+     ### the new children from the database, rather than having it passed.
+     ### some work for the future.  */
+  if (cb->new_children == NULL)
+    new_kind = svn_wc__db_kind_file;
+  else
+    new_kind = svn_wc__db_kind_dir;
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, cb->pdh->wcroot->sdb,
                                     STMT_APPLY_CHANGES_TO_BASE));
-  SVN_ERR(svn_sqlite__bindf(stmt, "istti",
+  SVN_ERR(svn_sqlite__bindf(stmt, "issttisb",
                             cb->pdh->wcroot->wc_id, cb->local_relpath,
+                            parent_relpath,
                             presence_map, new_presence,
                             kind_map, new_kind,
-                            (apr_int64_t)cb->new_revision));
+                            (apr_int64_t)cb->new_revision,
+                            cb->new_author,
+                            prop_blob.data, prop_blob.len));
 
-  SVN_ERR(svn_sqlite__bind_checksum(stmt, 6, cb->new_checksum,
+  if (repos_relpath != NULL)
+    {
+      SVN_ERR(svn_sqlite__bind_int64(stmt, 9, repos_id));
+      SVN_ERR(svn_sqlite__bind_text(stmt, 10, repos_relpath));
+    }
+
+  SVN_ERR(svn_sqlite__bind_checksum(stmt, 11, cb->new_checksum,
                                     scratch_pool));
-  SVN_ERR(svn_sqlite__bind_int64(stmt, 7, cb->new_revision));
   if (cb->new_date > 0)
-    SVN_ERR(svn_sqlite__bind_int64(stmt, 8, cb->new_date));
-  SVN_ERR(svn_sqlite__bind_text(stmt, 9, cb->new_author));
-  /* ### 10. depth.  */
-  /* ### 11. target.  */
-  SVN_ERR(svn_sqlite__bind_blob(stmt, 12, prop_blob.data, prop_blob.len));
-  SVN_ERR(svn_sqlite__bind_properties(stmt, 13, cb->new_dav_cache,
+    SVN_ERR(svn_sqlite__bind_int64(stmt, 12, cb->new_date));
+  /* ### 13. depth.  */
+  /* ### 14. target.  */
+  SVN_ERR(svn_sqlite__bind_properties(stmt, 15, cb->new_dav_cache,
                                       scratch_pool));
 
   SVN_ERR(svn_sqlite__step_done(stmt));
