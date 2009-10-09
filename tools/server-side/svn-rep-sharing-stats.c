@@ -168,6 +168,8 @@ enum {
   OPT_BOTH
 };
 
+/* Increment records[rep->sha1_checksum] if all of them are non-NULL.
+ * If necessary, allocate the cstring key in RESULT_POOL.  */
 static svn_error_t *record(apr_hash_t *records,
                            representation_t *rep,
                            apr_pool_t *result_pool)
@@ -182,27 +184,12 @@ static svn_error_t *record(apr_hash_t *records,
   if (records == NULL || rep == NULL || rep->sha1_checksum == NULL)
     return SVN_NO_ERROR;
 
-  if (rep->sha1_checksum)
-    cstring = svn_checksum_to_cstring_display(rep->sha1_checksum, result_pool);
-
+  cstring = svn_checksum_to_cstring_display(rep->sha1_checksum, result_pool);
   oldvalue = (unsigned int) apr_hash_get(records, cstring, APR_HASH_KEY_STRING);
   newvalue = oldvalue + 1;
   apr_hash_set(records, cstring, APR_HASH_KEY_STRING, (void *) newvalue);
 
   return SVN_NO_ERROR;
-}
-
-const char *path_change_kind_to_word(svn_fs_path_change_kind_t change_kind)
-{
-  static const svn_token_map_t map[] = {
-      { "modify", svn_fs_path_change_modify },
-      { "add", svn_fs_path_change_add },
-      { "delete", svn_fs_path_change_delete },
-      { "replace", svn_fs_path_change_replace },
-      { "reset", svn_fs_path_change_reset }
-    };
-
-  return svn_token__to_word(map, change_kind);
 }
 
 /* Inspect the data and/or prop reps of revision REVNUM in FS.  Store
@@ -229,8 +216,11 @@ process_one_revision(svn_fs_t *fs,
 
   SVN_DBG(("processing r%ld\n", revnum));
 
+  /* Get the changed paths. */
   SVN_ERR(svn_fs_revision_root(&rev_root, fs, revnum, scratch_pool));
   SVN_ERR(svn_fs_paths_changed2(&paths_changed, rev_root, scratch_pool));
+
+  /* Iterate them. */
   for (hi = apr_hash_first(scratch_pool, paths_changed);
        hi; hi = apr_hash_next(hi))
     {
@@ -250,13 +240,14 @@ process_one_revision(svn_fs_t *fs,
          * at that revision! */
         continue;
 
+      /* Okay, we have two node_rev id's for this change: the txn one and
+       * the revision one.  We'll use the latter. */
       node_rev_id1 = change->node_rev_id;
       SVN_ERR(svn_fs_node_id(&node_rev_id2, rev_root, path, scratch_pool));
 
-      /* Okay, we have two node_rev id's for this change: the txn one and
-       * the revision one.  We'll use the latter. */
       SVN_ERR_ASSERT(svn_fs_fs__id_txn_id(node_rev_id1) != NULL);
       SVN_ERR_ASSERT(svn_fs_fs__id_rev(node_rev_id2) != SVN_INVALID_REVNUM);
+
       the_id = node_rev_id2;
 
       /* Get the node_rev using the chosen node_rev_id. */
@@ -272,6 +263,12 @@ process_one_revision(svn_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
+/* Print REPS_REF_COUNT (a hash mapping const char * keys to
+ * unsigned ints) to stdout in "value => key" format (for sorting,
+ * since the keys are just sha1's).  Prepend each line by NAME.
+ *
+ * Use SCRATCH_POOL for temporary allocations.
+ */
 svn_error_t *pretty_print(const char *name,
                           apr_hash_t *reps_ref_counts,
                           apr_pool_t *scratch_pool)
@@ -315,7 +312,7 @@ static svn_error_t *is_fs_fsfs(svn_fs_t *fs, apr_pool_t *scratch_pool)
 }
 
 /* The core logic.  This function iterates the repository REPOS_PATH
- * and sends all the (DATA and/or PROP) reps in each revision for counting by
+ * and sends all the (DATA and/or PROP) reps in each revision for counting
  * by process_one_revision().
  */
 static svn_error_t *process(const char *repos_path,
