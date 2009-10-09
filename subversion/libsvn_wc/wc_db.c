@@ -3755,7 +3755,8 @@ commit_node(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
   SVN_ERR(svn_sqlite__step(&have_act, stmt_act));
 
   /* There should be something to commit!  */
-  SVN_ERR_ASSERT(have_work || have_act);
+  /* ### not true. we could simply have text changes. how to assert?
+     SVN_ERR_ASSERT(have_work || have_act);  */
 
   if (have_base)
     base_presence = svn_sqlite__column_token(stmt_base, 4, presence_map);
@@ -3777,6 +3778,12 @@ commit_node(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
   if (have_act)
     changelist = svn_sqlite__column_text(stmt_act, 1, scratch_pool);
 
+  /* ### for now, no kind changes are allowed.  */
+  if (have_work)
+    new_kind = svn_sqlite__column_token(stmt_work, 1, kind_map);
+  else
+    new_kind = svn_sqlite__column_token(stmt_base, 5, kind_map);
+
   /* ### other stuff?  */
 
   SVN_ERR(svn_sqlite__reset(stmt_base));
@@ -3788,10 +3795,18 @@ commit_node(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
   /* ### other presences? or reserve that for separate functions?  */
   new_presence = svn_wc__db_status_normal;
 
+#if 0
+  /* ### can't use yet. we pass NULL for files' checksums. just rely on
+     ### the above code to keep the same kind.  */
   if (cb->new_checksum == NULL)
     new_kind = svn_wc__db_kind_dir;
   else
     new_kind = svn_wc__db_kind_file;
+#endif
+
+  /* ### right now, we're updating an existing BASE_NODE row, so it
+     ### should be there.  */
+  SVN_ERR_ASSERT(have_base);
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, cb->pdh->wcroot->sdb,
                                     STMT_APPLY_CHANGES_TO_BASE));
@@ -3799,7 +3814,7 @@ commit_node(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
                             cb->pdh->wcroot->wc_id, cb->local_relpath,
                             presence_map, new_presence,
                             kind_map, new_kind,
-                            cb->new_revision));
+                            (apr_int64_t)cb->new_revision));
 
   SVN_ERR(svn_sqlite__bind_checksum(stmt, 6, cb->new_checksum,
                                     scratch_pool));
@@ -3894,8 +3909,13 @@ svn_wc__db_global_commit(svn_wc__db_t *db,
   cb.new_dav_cache = new_dav_cache;
   cb.keep_changelist = keep_changelist;
 
-  return svn_error_return(svn_sqlite__with_transaction(
-                            pdh->wcroot->sdb, commit_node, &cb, scratch_pool));
+  SVN_ERR(svn_sqlite__with_transaction(pdh->wcroot->sdb, commit_node, &cb,
+                                       scratch_pool));
+
+  /* We *totally* monkeyed the entries. Toss 'em.  */
+  flush_entries(pdh);
+
+  return SVN_NO_ERROR;
 }
 
 
