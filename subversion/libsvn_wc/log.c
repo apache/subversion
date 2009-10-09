@@ -1096,8 +1096,8 @@ log_do_committed(struct log_runner *loggy,
       svn_boolean_t keep_changelist = FALSE;
       svn_wc_entry_t tmp_entry;
 
-      /* ### only for files, and only for replaces.  */
-      using_ng = (entry->schedule == svn_wc_schedule_replace);
+      /* ### only for files, and anything but delete (handled above).  */
+      using_ng = TRUE;
 
       if (using_ng)
         SVN_ERR(svn_wc__db_global_commit(loggy->db, local_abspath,
