@@ -938,6 +938,7 @@ def use_editor(func):
   os.environ['SVN_EDITOR'] = svneditor_script
   os.environ['SVN_MERGE'] = svneditor_script
   os.environ['SVNTEST_EDITOR_FUNC'] = func
+  os.environ['SVN_TEST_PYTHON'] = sys.executable
 
 
 def merge_notify_line(revstart=None, revend=None, same_URL=True,
