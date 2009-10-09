@@ -3726,7 +3726,7 @@ calculate_remaining_ranges(svn_client__merge_path_t *parent,
      If reverse merging a range to the WC path represented by CHILD, from
      that path's own history, where the path inherits no locally modified
      mergeinfo from its WC parents (i.e. there is no uncommitted merge to
-     the WC), and the path's working revision is older than the range, then
+     the WC), and the path's base revision is older than the range, then
      the merge will always be a no-op.  This is because we only allow reverse
      merges of ranges in the path's explicit or natural mergeinfo and a
      reverse merge from the path's future history obviously isn't going to be
@@ -3734,7 +3734,7 @@ calculate_remaining_ranges(svn_client__merge_path_t *parent,
 
      The problem is two-fold.  First, in a mixed rev WC, the change we
      want to revert might actually be to some child of the target path
-     which is at a younger working revision.  Sure, we can merge directly
+     which is at a younger base revision.  Sure, we can merge directly
      to that child or update the WC or even use --ignore-ancestry and then
      successfully run the reverse merge, but that gets to the second
      problem: Those courses of action are not very obvious.  Before 1.5 if
@@ -3747,10 +3747,13 @@ calculate_remaining_ranges(svn_client__merge_path_t *parent,
   */
   SVN_ERR(svn_dirent_get_absolute(&child_abspath, child->path, pool));
   SVN_ERR(svn_wc__node_get_base_rev(&child_base_revision, ctx->wc_ctx,
-                                    child_abspath, TRUE, pool));
-  if (((child->remaining_ranges)->nelts == 0)
-      && (revision2 < revision1)
-      && (child_base_revision <= revision2))
+                                    child_abspath, FALSE, pool));
+  /* If CHILD has no base revision then it hasn't been committed yet, so it
+     can't have any "future" history. */
+  if (SVN_IS_VALID_REVNUM(child_base_revision)
+      && ((child->remaining_ranges)->nelts == 0) /* Inoperative merge */
+      && (revision2 < revision1)                 /* Reverse merge */
+      && (child_base_revision <= revision2))     /* From CHILD's future */
     {
       /* Hmmm, an inoperative reverse merge from the "future".  If it is
          from our own future return a helpful error. */
@@ -3780,7 +3783,7 @@ calculate_remaining_ranges(svn_client__merge_path_t *parent,
           const char *url;
 
           SVN_ERR(svn_wc__node_get_url(&url, ctx->wc_ctx, child_abspath,
-                                       pool, pool));        
+                                       pool, pool));
           if (strcmp(start_url, url) == 0)
             return svn_error_create(SVN_ERR_CLIENT_NOT_READY_TO_MERGE, NULL,
                                     _("Cannot reverse-merge a range from a "
