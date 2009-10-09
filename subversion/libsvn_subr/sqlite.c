@@ -432,7 +432,8 @@ svn_sqlite__column_properties(apr_hash_t **props,
   apr_size_t len;
   const void *val;
 
-  val = svn_sqlite__column_blob(stmt, column, &len, result_pool);
+  /* svn_skel__parse_proplist copies everything needed to result_pool */
+  val = svn_sqlite__column_blob(stmt, column, &len, NULL);
   if (val == NULL)
     {
       *props = NULL;
