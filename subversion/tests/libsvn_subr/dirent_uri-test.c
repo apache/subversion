@@ -709,6 +709,8 @@ test_uri_dirname(apr_pool_t *pool)
     const char *result;
   } tests[] = {
     { "/", "/" },
+    { "/a", "/" },
+    { "/a/b", "/a" },
     { SVN_EMPTY_PATH, SVN_EMPTY_PATH },
     { "http://server/dir", "http://server" },
     { "http://server/dir/file", "http://server/dir" },

@@ -317,17 +317,20 @@ uri_previous_segment(const char *uri,
                      apr_size_t len)
 {
   apr_size_t root_length;
-  /* ### Still the old path segment code, should start checking scheme specific format */
+  apr_size_t i = len;
   if (len == 0)
     return 0;
 
   root_length = uri_schema_root_length(uri, len);
 
-  --len;
-  while (len > root_length && uri[len] != '/')
-    --len;
+  --i;
+  while (len > root_length && uri[i] != '/')
+    --i;
 
-  return len;
+  if (i == 0 && len > 1 && *uri == '/')
+    return 1;
+
+  return i;
 }
 
 /* Return the canonicalized version of PATH, allocated in POOL.
