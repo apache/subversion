@@ -1093,9 +1093,10 @@ absent_directory(const char *path,
   if (eb->notify_func)
     {
       svn_wc_notify_t *notify
-        = svn_wc_create_notify(svn_path_join(pb->wcpath,
-                                             svn_uri_basename(path, pool),
-                                             pool),
+        = svn_wc_create_notify(svn_dirent_join(pb->wcpath,
+                                               svn_relpath_basename(path,
+                                                                    pool),
+                                               pool),
                                svn_wc_notify_skip, pool);
       notify->kind = svn_node_dir;
       notify->content_state = notify->prop_state
@@ -1121,9 +1122,10 @@ absent_file(const char *path,
   if (eb->notify_func)
     {
       svn_wc_notify_t *notify
-        = svn_wc_create_notify(svn_path_join(pb->wcpath,
-                                             svn_uri_basename(path, pool),
-                                             pool),
+        = svn_wc_create_notify(svn_dirent_join(pb->wcpath,
+                                               svn_relpath_basename(path,
+                                                                    pool),
+                                               pool),
                                svn_wc_notify_skip, pool);
       notify->kind = svn_node_file;
       notify->content_state = notify->prop_state
