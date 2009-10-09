@@ -362,7 +362,7 @@ checkout_dir(dir_context_t *dir)
           dir->checkout->activity_url_len = dir->commit->activity_url_len;
           dir->checkout->resource_url =
             svn_path_url_add_component2(dir->parent_dir->checkout->resource_url,
-                                        svn_uri_basename(dir->name, dir->pool),
+                                        svn_relpath_basename(dir->name, dir->pool),
                                         dir->pool);
 
           apr_hash_set(dir->commit->copied_entries,
@@ -1661,7 +1661,7 @@ add_file(const char *path,
         {
           break;
         }
-      deleted_parent = svn_uri_dirname(deleted_parent, file_pool);
+      deleted_parent = svn_relpath_dirname(deleted_parent, file_pool);
     }
 
   if (! ((dir->added && !dir->copy_path) ||
