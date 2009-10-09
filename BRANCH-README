@@ -1,0 +1,7 @@
+This branch exists for the resolution of issue #3390.  It's intent is
+to be managed as a reintegrate-able branch, with regular catch-up
+merges from the trunk.
+
+Having said that, the state of svn:externals processing on the trunk
+has apparently diverged vastly since this branch was cut, and some are
+advising that the branch be trashed and re-cut from a newer trunk.
