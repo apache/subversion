@@ -859,6 +859,7 @@ log_do_committed(struct log_runner *loggy,
   apr_pool_t *pool = loggy->pool;
   int is_this_dir = (strcmp(name, SVN_WC_ENTRY_THIS_DIR) == 0);
   const char *rev = svn_xml_get_attr_value(SVN_WC__LOG_ATTR_REVISION, atts);
+  svn_revnum_t new_revision;
   svn_boolean_t wc_root, remove_executable = FALSE;
   svn_boolean_t set_read_write = FALSE;
   const char *local_abspath;
@@ -880,6 +881,7 @@ log_do_committed(struct log_runner *loggy,
     return svn_error_createf(pick_error_code(loggy), NULL,
                              _("Missing 'revision' attribute for '%s'"),
                              name);
+  new_revision = SVN_STR_TO_REV(rev);
 
   /* Read the entry for the affected item.  If we can't find the
      entry, or if the entry states that our item is not either "this
@@ -912,8 +914,6 @@ log_do_committed(struct log_runner *loggy,
      we are finished handling this item.  */
   if (entry->schedule == svn_wc_schedule_delete)
     {
-      svn_revnum_t new_rev = SVN_STR_TO_REV(rev);
-
       /* If we are suppose to delete "this dir", drop a 'killme' file
          into my own administrative dir as a signal for svn_wc__run_log()
          to blow away the administrative area after it is finished
@@ -926,7 +926,7 @@ log_do_committed(struct log_runner *loggy,
              the directory can also place a 'deleted' dir entry in the
              parent. */
           svn_wc_entry_t tmpentry;
-          tmpentry.revision = new_rev;
+          tmpentry.revision = new_revision;
           tmpentry.kind = svn_node_dir;
 
           SVN_ERR(svn_wc__entry_modify2(loggy->db, local_abspath,
@@ -968,7 +968,7 @@ log_do_committed(struct log_runner *loggy,
           /* If the parent entry's working rev 'lags' behind new_rev... */
           SVN_ERR(svn_wc__get_entry(&parentry, loggy->db, loggy->adm_abspath,
                                     FALSE, svn_node_dir, FALSE, pool, pool));
-          if (new_rev > parentry->revision)
+          if (new_revision > parentry->revision)
             {
               /* ...then the parent's revision is now officially a
                  lie;  therefore, it must remember the file as being
@@ -976,7 +976,7 @@ log_do_committed(struct log_runner *loggy,
                  ghost entry:  */
               tmp_entry.kind = svn_node_file;
               tmp_entry.deleted = TRUE;
-              tmp_entry.revision = new_rev;
+              tmp_entry.revision = new_revision;
               SVN_ERR(svn_wc__entry_modify2(loggy->db, local_abspath,
                                             svn_node_file, FALSE,
                                             &tmp_entry,
@@ -1087,8 +1087,26 @@ log_do_committed(struct log_runner *loggy,
 
   if (entry->kind == svn_node_file)
     {
+      svn_boolean_t using_ng;
       svn_boolean_t overwrote_working;
       apr_finfo_t finfo;
+      apr_time_t new_date = 0;
+      const char *new_author = NULL;
+      const svn_checksum_t *new_checksum = NULL;
+      svn_boolean_t keep_changelist = FALSE;
+      svn_wc_entry_t tmp_entry;
+
+      /* ### only for files, and only for replaces.  */
+      using_ng = (entry->schedule == svn_wc_schedule_replace);
+
+      if (using_ng)
+        SVN_ERR(svn_wc__db_global_commit(loggy->db, local_abspath,
+                                         new_revision, new_date, new_author,
+                                         new_checksum,
+                                         NULL /* new_children */,
+                                         NULL /* new_dav_cache */,
+                                         keep_changelist,
+                                         pool));
 
       /* Install the new file, which may involve expanding keywords.
          A copy of this file should have been dropped into our `tmp/text-base'
@@ -1115,13 +1133,13 @@ log_do_committed(struct log_runner *loggy,
                                  svn_dirent_local_style(local_abspath, pool));
 
       /* We will compute and modify the size and timestamp */
-      modify_flags |= SVN_WC__ENTRY_MODIFY_WORKING_SIZE
-                      | SVN_WC__ENTRY_MODIFY_TEXT_TIME;
 
-      entry->working_size = finfo.size;
+      tmp_entry.working_size = finfo.size;
+
+      /* ### svn_wc__db_op_set_last_mod_time()  */
 
       if (overwrote_working)
-        entry->text_time = finfo.mtime;
+        tmp_entry.text_time = finfo.mtime;
       else
         {
           /* The working copy file hasn't been overwritten, meaning
@@ -1174,15 +1192,29 @@ log_do_committed(struct log_runner *loggy,
                 }
               /* If they are the same, use the working file's timestamp,
                  else use the base file's timestamp. */
-              entry->text_time = modified ? basef_finfo.mtime : finfo.mtime;
+              tmp_entry.text_time = modified ? basef_finfo.mtime : finfo.mtime;
             }
         }
+
+      if (using_ng)
+        return svn_error_return(svn_wc__entry_modify2(
+                                  loggy->db, local_abspath,
+                                  svn_node_unknown, FALSE,
+                                  &tmp_entry,
+                                  SVN_WC__ENTRY_MODIFY_WORKING_SIZE
+                                  | SVN_WC__ENTRY_MODIFY_TEXT_TIME,
+                                  pool));
+
+      entry->text_time = tmp_entry.text_time;
+      entry->working_size = tmp_entry.working_size;
+      modify_flags |= SVN_WC__ENTRY_MODIFY_WORKING_SIZE
+        | SVN_WC__ENTRY_MODIFY_TEXT_TIME;
     }
 
   /* Files have been moved, and timestamps have been found.  It is now
      time for The Big Entry Modification. Here we set fields in the entry
      to values which we know must be so because it has just been committed. */
-  entry->revision = SVN_STR_TO_REV(rev);
+  entry->revision = new_revision;
   entry->kind = is_this_dir ? svn_node_dir : svn_node_file;
   entry->schedule = svn_wc_schedule_normal;
   entry->copied = FALSE;

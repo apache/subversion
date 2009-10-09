@@ -242,7 +242,7 @@ tweak_entries(svn_wc__db_t *db,
 static svn_error_t *
 remove_revert_files(svn_stringbuf_t **logtags,
                     svn_wc__db_t *db,
-                    const char *dir_abspath,
+                    const char *adm_abspath,
                     const char *local_abspath,
                     apr_pool_t * pool)
 {
@@ -253,11 +253,11 @@ remove_revert_files(svn_stringbuf_t **logtags,
 
   SVN_ERR(svn_io_check_path(revert_file, &kind, pool));
   if (kind == svn_node_file)
-    SVN_ERR(svn_wc__loggy_remove(logtags, dir_abspath,
+    SVN_ERR(svn_wc__loggy_remove(logtags, adm_abspath,
                                  revert_file, pool, pool));
 
   return svn_error_return(
-    svn_wc__loggy_props_delete(logtags, db, local_abspath, dir_abspath,
+    svn_wc__loggy_props_delete(logtags, db, local_abspath, adm_abspath,
                                svn_wc__props_revert, pool));
 }
 
@@ -363,6 +363,7 @@ process_committed_leaf(int log_number,
   svn_stringbuf_t *logtags = svn_stringbuf_create("", pool);
   svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
   const char *local_abspath;
+  svn_boolean_t using_ng = FALSE;
 
   SVN_ERR(svn_wc__adm_write_check(adm_access, pool));
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
@@ -374,6 +375,9 @@ process_committed_leaf(int log_number,
 
   if (entry->kind == svn_node_file)
     {
+      /* ### only for files, and only for replaces.  */
+      using_ng = (entry->schedule == svn_wc_schedule_replace);
+
       /* If the props or text revert file exists it needs to be deleted when
        * the file is committed. */
       /* ### don't directories have revert props? */
@@ -464,7 +468,8 @@ process_committed_leaf(int log_number,
       modify_flags |= SVN_WC__ENTRY_MODIFY_CHECKSUM;
     }
 
-  if (modify_flags)
+  /* ### the NG stuff is deferred. see below.  */
+  if (modify_flags && !using_ng)
     SVN_ERR(svn_wc__loggy_entry_modify(&logtags,
                                        svn_wc__adm_access_abspath(adm_access),
                                        path, &tmp_entry, modify_flags,
@@ -475,7 +480,8 @@ process_committed_leaf(int log_number,
                                       svn_wc__adm_access_abspath(adm_access),
                                       path, pool, pool));
 
-  if (remove_changelist)
+  /* ### messed up right now. we need to pass this boolean.  */
+  if (remove_changelist && !using_ng)
     SVN_ERR(svn_wc__loggy_delete_changelist(&logtags,
                                       svn_wc__adm_access_abspath(adm_access),
                                       path, pool, pool));
@@ -487,6 +493,12 @@ process_committed_leaf(int log_number,
                                   svn_wc__adm_access_abspath(adm_access),
                                   path, new_revnum, pool, pool));
 
+  /* ### the NG code doesn't set these values. do it now.  */
+  if (modify_flags && using_ng)
+    SVN_ERR(svn_wc__loggy_entry_modify(&logtags,
+                                       svn_wc__adm_access_abspath(adm_access),
+                                       path, &tmp_entry, modify_flags,
+                                       pool, pool));
 
   /* Do wcprops in the same log txn as revision, etc. */
   if (wcprop_changes && (wcprop_changes->nelts > 0))
