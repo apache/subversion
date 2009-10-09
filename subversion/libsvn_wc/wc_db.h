@@ -1375,9 +1375,19 @@ svn_wc__db_global_relocate(svn_wc__db_t *db,
    ###   depth and exclusion. this function will combine the functionality
    ###   of process_committed_leaf() and log_do_committed().
 
-   One or both of new_checksum and new_children should be NULL. For new:
-     files: new_children should be NULL
-     dirs: new_checksum should be NULL
+   NEW_REVISION must be the revision number of the revision created by
+   the commit. It will become the BASE node's 'revnum' and 'changed_rev'
+   values in the BASE_NODE table.
+
+   NEW_DATE is the (server-side) date of the new revision. It may be 0 if
+   the revprop is missing on the revision.
+
+   NEW_AUTHOR is the (server-side) author of the new revision. It may be
+   NULL if the revprop is missing on the revision.
+
+   One or both of NEW_CHECKSUM and NEW_CHILDREN should be NULL. For new:
+     files: NEW_CHILDREN should be NULL
+     dirs: NEW_CHECKSUM should be NULL
      symlinks: both should be NULL
 */
 svn_error_t *
@@ -1389,6 +1399,7 @@ svn_wc__db_global_commit(svn_wc__db_t *db,
                          const svn_checksum_t *new_checksum,
                          const apr_array_header_t *new_children,
                          apr_hash_t *new_dav_cache,
+                         svn_boolean_t keep_changelist,
                          apr_pool_t *scratch_pool);
 
 
