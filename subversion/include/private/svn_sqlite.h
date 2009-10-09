@@ -204,9 +204,12 @@ svn_sqlite__bind_checksum(svn_sqlite__stmt_t *stmt,
 */
 
 /* Wrapper around sqlite3_column_blob and sqlite3_column_bytes. The return
-   value will be NULL if the column is null. */
+   value will be NULL if the column is null.If RESULT_POOL is not NULL,
+   allocate the return value (if any) in it. Otherwise, the value will
+   become invalid on the next invocation of svn_sqlite__column_* */
 const void *
-svn_sqlite__column_blob(svn_sqlite__stmt_t *stmt, int column, apr_size_t *len);
+svn_sqlite__column_blob(svn_sqlite__stmt_t *stmt, int column,
+                        apr_size_t *len, apr_pool_t *result_pool);
 
 /* Wrapper around sqlite3_column_text. If the column is null, then the
    return value will be NULL. If RESULT_POOL is not NULL, allocate the
@@ -282,17 +285,17 @@ svn_sqlite__reset(svn_sqlite__stmt_t *stmt);
 
 /* Callback function to for use with svn_sqlite__with_transaction(). */
 typedef svn_error_t *(*svn_sqlite__transaction_callback_t)(
-  void *baton, svn_sqlite__db_t *db);
+  void *baton, svn_sqlite__db_t *db, apr_pool_t *scratch_pool);
 
 /* Helper function to handle SQLite transactions.  All the work done inside
    CB_FUNC will be wrapped in an SQLite transaction, which will be committed
    if CB_FUNC does not return an error.  If any error is returned from CB_FUNC,
    the transaction will be rolled back.  DB and CB_BATON will be passed to
-   CB_FUNC. */
+   CB_FUNC. SCRATCH_POOL will be passed to the callback (NULL is valid). */
 svn_error_t *
 svn_sqlite__with_transaction(svn_sqlite__db_t *db,
                              svn_sqlite__transaction_callback_t cb_func,
-                             void *cb_baton);
+                             void *cb_baton, apr_pool_t *scratch_pool);
 
 
 #ifdef __cplusplus

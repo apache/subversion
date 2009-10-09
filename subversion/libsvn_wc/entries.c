@@ -2274,20 +2274,19 @@ struct entries_write_baton
   svn_wc__db_t *db;
   const char *local_abspath;
   apr_hash_t *entries;
-  apr_pool_t *scratch_pool;
 };
 
 /* Writes entries inside a sqlite transaction
    Implements svn_sqlite__transaction_callback_t. */
 static svn_error_t *
 entries_write_new_cb(void *baton,
-                     svn_sqlite__db_t *sdb)
+                     svn_sqlite__db_t *sdb,
+                     apr_pool_t *scratch_pool)
 {
   struct entries_write_baton *ewb = baton;
   svn_wc__db_t *db = ewb->db;
   const char *local_abspath = ewb->local_abspath;
   apr_hash_t *entries = ewb->entries;
-  apr_pool_t *scratch_pool = ewb->scratch_pool;
   const svn_wc_entry_t *this_dir;
   svn_sqlite__stmt_t *stmt;
   apr_hash_index_t *hi;
@@ -2444,12 +2443,12 @@ svn_wc__entries_write_new(svn_wc__db_t *db,
   ewb.db = db;
   ewb.local_abspath = local_abspath;
   ewb.entries = entries;
-  ewb.scratch_pool = scratch_pool;
 
   /* Run this operation in a transaction to speed up SQLite.
      See http://www.sqlite.org/faq.html#q19 for more details */
   return svn_error_return(
-      svn_sqlite__with_transaction(sdb, entries_write_new_cb, &ewb));
+      svn_sqlite__with_transaction(sdb, entries_write_new_cb, &ewb,
+                                   scratch_pool));
 }
 
 

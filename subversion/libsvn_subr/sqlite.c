@@ -360,10 +360,15 @@ svn_sqlite__bind_checksum(svn_sqlite__stmt_t *stmt,
 
 
 const void *
-svn_sqlite__column_blob(svn_sqlite__stmt_t *stmt, int column, apr_size_t *len)
+svn_sqlite__column_blob(svn_sqlite__stmt_t *stmt, int column,
+                        apr_size_t *len, apr_pool_t *result_pool)
 {
   const void *val = sqlite3_column_blob(stmt->s3stmt, column);
   *len = sqlite3_column_bytes(stmt->s3stmt, column);
+
+  if (result_pool && val != NULL)
+    val = apr_pmemdup(result_pool, val, *len);
+
   return val;
 }
 
@@ -427,7 +432,7 @@ svn_sqlite__column_properties(apr_hash_t **props,
   apr_size_t len;
   const void *val;
 
-  val = svn_sqlite__column_blob(stmt, column, &len);
+  val = svn_sqlite__column_blob(stmt, column, &len, result_pool);
   if (val == NULL)
     {
       *props = NULL;
@@ -556,19 +561,18 @@ struct upgrade_baton
   int current_schema;
   int latest_schema;
   const char * const *upgrade_sql;
-
-  apr_pool_t *scratch_pool;
 };
 
 
 /* This implements svn_sqlite__transaction_callback_t */
 static svn_error_t *
 upgrade_format(void *baton,
-               svn_sqlite__db_t *db)
+               svn_sqlite__db_t *db,
+               apr_pool_t *scratch_pool)
 {
   struct upgrade_baton *ub = baton;
   int current_schema = ub->current_schema;
-  apr_pool_t *iterpool = svn_pool_create(ub->scratch_pool);
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
   while (current_schema < ub->latest_schema)
     {
@@ -631,10 +635,9 @@ check_format(svn_sqlite__db_t *db,
       ub.current_schema = current_schema;
       ub.latest_schema = latest_schema;
       ub.upgrade_sql = upgrade_sql;
-      ub.scratch_pool = scratch_pool;
 
       return svn_error_return(svn_sqlite__with_transaction(
-                                db, upgrade_format, &ub));
+                                db, upgrade_format, &ub, scratch_pool));
     }
 
   return svn_error_createf(SVN_ERR_SQLITE_UNSUPPORTED_SCHEMA, NULL,
@@ -919,12 +922,13 @@ svn_sqlite__close(svn_sqlite__db_t *db)
 svn_error_t *
 svn_sqlite__with_transaction(svn_sqlite__db_t *db,
                              svn_sqlite__transaction_callback_t cb_func,
-                             void *cb_baton)
+                             void *cb_baton,
+                             apr_pool_t *scratch_pool /* NULL allowed */)
 {
   svn_error_t *err;
 
   SVN_ERR(exec_sql(db, "BEGIN TRANSACTION;"));
-  err = cb_func(cb_baton, db);
+  err = cb_func(cb_baton, db, scratch_pool);
 
   /* Commit or rollback the sqlite transaction. */
   if (err)

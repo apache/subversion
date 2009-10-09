@@ -715,40 +715,33 @@ migrate_locks(const char *wcroot_abspath,
 }
 
 
-struct bump15_baton {
-  apr_pool_t *scratch_pool;
-};
 
 
 /* This implements svn_sqlite__transaction_callback_t */
 static svn_error_t *
 bump_database_to_15(void *baton,
-                    svn_sqlite__db_t *sdb)
+                    svn_sqlite__db_t *sdb,
+                    apr_pool_t *scratch_pool)
 {
-  struct bump15_baton *bb = baton;
-
-  SVN_ERR(migrate_tree_conflicts(sdb, bb->scratch_pool));
+  SVN_ERR(migrate_tree_conflicts(sdb, scratch_pool));
 
   /* NOTE: this *is* transactional, so the version will not be bumped
      unless our overall transaction is committed.  */
-  SVN_ERR(svn_sqlite__set_schema_version(sdb, 15, bb->scratch_pool));
+  SVN_ERR(svn_sqlite__set_schema_version(sdb, 15, scratch_pool));
 
   return SVN_NO_ERROR;
 }
-
 
 static svn_error_t *
 bump_to_15(const char *wcroot_abspath,
            svn_sqlite__db_t *sdb,
            apr_pool_t *scratch_pool)
 {
-  struct bump15_baton bb = { scratch_pool };
-
   /* ### migrate disk bits here.  */
 
   /* Perform the database upgrade. The last thing this does is to bump
      the recorded version to 15.  */
-  SVN_ERR(svn_sqlite__with_transaction(sdb, bump_database_to_15, &bb));
+  SVN_ERR(svn_sqlite__with_transaction(sdb, bump_database_to_15, NULL, scratch_pool));
 
   return SVN_NO_ERROR;
 }
