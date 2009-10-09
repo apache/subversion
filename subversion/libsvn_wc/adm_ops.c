@@ -375,8 +375,8 @@ process_committed_leaf(int log_number,
 
   if (entry->kind == svn_node_file)
     {
-      /* ### only for files, and only for replaces.  */
-      using_ng = (entry->schedule == svn_wc_schedule_replace);
+      /* ### only for files, and anything but deletes.  */
+      using_ng = (entry->schedule != svn_wc_schedule_delete);
 
       /* If the props or text revert file exists it needs to be deleted when
        * the file is committed. */
