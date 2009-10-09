@@ -245,9 +245,6 @@ typedef struct {
   /* for inserting symlinks */
   const char *target;
 
-  /* for temporary allocations */
-  apr_pool_t *scratch_pool;
-
 } insert_base_baton_t;
 
 
@@ -1266,10 +1263,9 @@ create_repos_id(apr_int64_t *repos_id,
 
 
 static svn_error_t *
-insert_base_node(void *baton, svn_sqlite__db_t *sdb)
+insert_base_node(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
 {
   const insert_base_baton_t *pibb = baton;
-  apr_pool_t *scratch_pool = pibb->scratch_pool;
   svn_sqlite__stmt_t *stmt;
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_INSERT_BASE_NODE));
@@ -1579,10 +1575,8 @@ svn_wc__db_init(const char *local_abspath,
 
   ibb.children = NULL;
   ibb.depth = depth;
-  
-  ibb.scratch_pool = scratch_pool;
 
-  SVN_ERR(insert_base_node(&ibb, sdb));
+  SVN_ERR(insert_base_node(&ibb, sdb, scratch_pool));
 
   return svn_sqlite__close(sdb);
 }
@@ -1641,14 +1635,13 @@ svn_wc__db_base_add_directory(svn_wc__db_t *db,
   ibb.children = children;
   ibb.depth = depth;
 
-  ibb.scratch_pool = scratch_pool;
-
   /* Insert the directory and all its children transactionally.
 
      Note: old children can stick around, even if they are no longer present
      in this directory's revision.  */
   return svn_sqlite__with_transaction(pdh->wcroot->sdb,
-                                      insert_base_node, &ibb);
+                                      insert_base_node, &ibb,
+                                      scratch_pool);
 }
 
 
@@ -1705,13 +1698,11 @@ svn_wc__db_base_add_file(svn_wc__db_t *db,
   ibb.checksum = checksum;
   ibb.translated_size = translated_size;
 
-  ibb.scratch_pool = scratch_pool;
-
   /* ### hmm. if this used to be a directory, we should remove children.
      ### or maybe let caller deal with that, if there is a possibility
      ### of a node kind change (rather than eat an extra lookup here).  */
 
-  return insert_base_node(&ibb, pdh->wcroot->sdb);
+  return insert_base_node(&ibb, pdh->wcroot->sdb, scratch_pool);
 }
 
 
@@ -1766,13 +1757,11 @@ svn_wc__db_base_add_symlink(svn_wc__db_t *db,
 
   ibb.target = target;
 
-  ibb.scratch_pool = scratch_pool;
-
   /* ### hmm. if this used to be a directory, we should remove children.
      ### or maybe let caller deal with that, if there is a possibility
      ### of a node kind change (rather than eat an extra lookup here).  */
 
-  return insert_base_node(&ibb, pdh->wcroot->sdb);
+  return insert_base_node(&ibb, pdh->wcroot->sdb, scratch_pool);
 }
 
 
@@ -1829,13 +1818,11 @@ svn_wc__db_base_add_absent_node(svn_wc__db_t *db,
   ibb.translated_size = SVN_INVALID_FILESIZE;
   ibb.target = NULL;
 
-  ibb.scratch_pool = scratch_pool;
-
   /* ### hmm. if this used to be a directory, we should remove children.
      ### or maybe let caller deal with that, if there is a possibility
      ### of a node kind change (rather than eat an extra lookup here).  */
 
-  return insert_base_node(&ibb, pdh->wcroot->sdb);
+  return insert_base_node(&ibb, pdh->wcroot->sdb, scratch_pool);
 }
 
 
@@ -1891,9 +1878,7 @@ svn_wc__db_temp_base_add_subdir(svn_wc__db_t *db,
   ibb.children = NULL;
   ibb.depth = depth;
 
-  ibb.scratch_pool = scratch_pool;
-
-  return insert_base_node(&ibb, pdh->wcroot->sdb);
+  return insert_base_node(&ibb, pdh->wcroot->sdb, scratch_pool);
 }
 
 
@@ -2534,12 +2519,10 @@ struct set_changelist_baton
   const char *local_relpath;
   apr_int64_t wc_id;
   const char *changelist;
-
-  apr_pool_t *scratch_pool;
 };
 
 static svn_error_t *
-set_changelist_txn(void *baton, svn_sqlite__db_t *sdb)
+set_changelist_txn(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
 {
   struct set_changelist_baton *scb = baton;
   const char *existing_changelist;
@@ -2550,7 +2533,7 @@ set_changelist_txn(void *baton, svn_sqlite__db_t *sdb)
   SVN_ERR(svn_sqlite__bindf(stmt, "is", scb->wc_id, scb->local_relpath));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   if (have_row)
-    existing_changelist = svn_sqlite__column_text(stmt, 0, scb->scratch_pool);
+    existing_changelist = svn_sqlite__column_text(stmt, 0, scratch_pool);
   SVN_ERR(svn_sqlite__reset(stmt));
 
   if (!have_row)
@@ -2600,10 +2583,9 @@ svn_wc__db_op_set_changelist(svn_wc__db_t *db,
 
   scb.wc_id = pdh->wcroot->wc_id;
   scb.changelist = changelist;
-  scb.scratch_pool = scratch_pool;
 
   SVN_ERR(svn_sqlite__with_transaction(pdh->wcroot->sdb, set_changelist_txn,
-                                       &scb));
+                                       &scb, scratch_pool));
 
   flush_entries(pdh);
 
@@ -2680,13 +2662,11 @@ struct set_tc_baton
   const char *local_relpath;
   const char *parent_abspath;
   const svn_wc_conflict_description2_t *tree_conflict;
-
-  apr_pool_t *scratch_pool;
 };
 
 
 static svn_error_t *
-set_tc_txn(void *baton, svn_sqlite__db_t *sdb)
+set_tc_txn(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
 {
   struct set_tc_baton *stb = baton;
   svn_sqlite__stmt_t *stmt;
@@ -2707,17 +2687,17 @@ set_tc_txn(void *baton, svn_sqlite__db_t *sdb)
   if (!have_row)
     tree_conflict_data = NULL;
   else
-    tree_conflict_data = svn_sqlite__column_text(stmt, 5, stb->scratch_pool);
+    tree_conflict_data = svn_sqlite__column_text(stmt, 5, scratch_pool);
 
   SVN_ERR(svn_sqlite__reset(stmt));
 
   /* Parse the conflict data, set the desired conflict, and then rewrite
      the conflict data. */
   SVN_ERR(svn_wc__read_tree_conflicts(&conflicts, tree_conflict_data,
-                                      stb->parent_abspath, stb->scratch_pool));
+                                      stb->parent_abspath, scratch_pool));
 
   apr_hash_set(conflicts, svn_dirent_basename(stb->local_abspath,
-                                              stb->scratch_pool),
+                                              scratch_pool),
                APR_HASH_KEY_STRING, stb->tree_conflict);
 
   if (apr_hash_count(conflicts) == 0 && !have_row)
@@ -2728,7 +2708,7 @@ set_tc_txn(void *baton, svn_sqlite__db_t *sdb)
     }
 
   SVN_ERR(svn_wc__write_tree_conflicts(&tree_conflict_data, conflicts,
-                                       stb->scratch_pool));
+                                       scratch_pool));
 
   if (have_row)
     {
@@ -2770,9 +2750,9 @@ svn_wc__db_op_set_tree_conflict(svn_wc__db_t *db,
   stb.local_abspath = local_abspath;
   stb.wc_id = pdh->wcroot->wc_id;
   stb.tree_conflict = tree_conflict;
-  stb.scratch_pool = scratch_pool;
 
-  SVN_ERR(svn_sqlite__with_transaction(pdh->wcroot->sdb, set_tc_txn, &stb));
+  SVN_ERR(svn_sqlite__with_transaction(pdh->wcroot->sdb, set_tc_txn, &stb,
+                                       scratch_pool));
 
   /* There may be some entries, and the lock info is now out of date.  */
   flush_entries(pdh);
@@ -3563,17 +3543,14 @@ struct relocate_baton
   const char *repos_uuid;
   svn_boolean_t have_base_node;
   apr_int64_t old_repos_id;
-
-  apr_pool_t *scratch_pool;
 };
 
 
 static svn_error_t *
-relocate_txn(void *baton, svn_sqlite__db_t *sdb)
+relocate_txn(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
 {
   struct relocate_baton *rb = baton;
   const char *like_arg;
-  apr_pool_t *scratch_pool = rb->scratch_pool;
   svn_sqlite__stmt_t *stmt;
   apr_int64_t new_repos_id;
 
@@ -3679,9 +3656,9 @@ svn_wc__db_global_relocate(svn_wc__db_t *db,
 
   rb.wc_id = pdh->wcroot->wc_id;
   rb.repos_root_url = repos_root_url;
-  rb.scratch_pool = scratch_pool;
 
-  SVN_ERR(svn_sqlite__with_transaction(pdh->wcroot->sdb, relocate_txn, &rb));
+  SVN_ERR(svn_sqlite__with_transaction(pdh->wcroot->sdb, relocate_txn, &rb,
+                                       scratch_pool));
 
   if (!single_db)
     {
@@ -3737,13 +3714,11 @@ struct commit_baton {
   const apr_array_header_t *new_children;
   apr_hash_t *new_dav_cache;
   svn_boolean_t keep_changelist;
-
-  apr_pool_t *scratch_pool;
 };
 
 
 static svn_error_t *
-commit_node(void *baton, svn_sqlite__db_t *sdb)
+commit_node(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
 {
   struct commit_baton *cb = baton;
   svn_sqlite__stmt_t *stmt_base;
@@ -3793,18 +3768,11 @@ commit_node(void *baton, svn_sqlite__db_t *sdb)
      Note: we'll keep them as a big blob of data, rather than
      deserialize/serialize them.  */
   if (have_act)
-    prop_blob.data = svn_sqlite__column_blob(stmt_act, 6, &prop_blob.len);
+    prop_blob.data = svn_sqlite__column_blob(stmt_act, 6, &prop_blob.len,
+                                             scratch_pool);
   if (prop_blob.data == NULL)
-    prop_blob.data = svn_sqlite__column_blob(stmt_work, 15, &prop_blob.len);
-
-  /* If we have properties to store, then extend their lifetime past the
-     statement's reset().  */
-  /* ### this check may be unnecessary. commits that do not identify a new
-     ### set of properties (eg. a deletion) will probably be handled with
-     ### a different function.  */
-  if (prop_blob.data != NULL)
-    prop_blob.data = apr_pmemdup(cb->scratch_pool,
-                                 prop_blob.data, prop_blob.len);
+    prop_blob.data = svn_sqlite__column_blob(stmt_work, 15, &prop_blob.len,
+                                             scratch_pool);
 
   if (have_act)
     changelist = svn_sqlite__column_text(stmt_act, 1, cb->scratch_pool);
@@ -3834,7 +3802,7 @@ commit_node(void *baton, svn_sqlite__db_t *sdb)
                             cb->new_revision));
 
   SVN_ERR(svn_sqlite__bind_checksum(stmt, 6, cb->new_checksum,
-                                    cb->scratch_pool));
+                                    scratch_pool));
   SVN_ERR(svn_sqlite__bind_int64(stmt, 7, cb->new_revision));
   if (cb->new_date > 0)
     SVN_ERR(svn_sqlite__bind_int64(stmt, 8, cb->new_date));
@@ -3843,7 +3811,7 @@ commit_node(void *baton, svn_sqlite__db_t *sdb)
   /* ### 11. target.  */
   SVN_ERR(svn_sqlite__bind_blob(stmt, 12, prop_blob.data, prop_blob.len));
   SVN_ERR(svn_sqlite__bind_properties(stmt, 13, cb->new_dav_cache,
-                                      cb->scratch_pool));
+                                      scratch_pool));
 
   SVN_ERR(svn_sqlite__step_done(stmt));
 
@@ -3926,10 +3894,8 @@ svn_wc__db_global_commit(svn_wc__db_t *db,
   cb.new_dav_cache = new_dav_cache;
   cb.keep_changelist = keep_changelist;
 
-  cb.scratch_pool = scratch_pool;
-
   return svn_error_return(svn_sqlite__with_transaction(
-                            pdh->wcroot->sdb, commit_node, &cb));
+                            pdh->wcroot->sdb, commit_node, &cb, scratch_pool));
 }
 
 
@@ -4593,18 +4559,12 @@ svn_wc__db_wq_fetch(apr_uint64_t *id,
     {
       apr_size_t len;
       const void *val;
-      char *buffer;
 
       *id = svn_sqlite__column_int64(stmt, 0);
 
-      val = svn_sqlite__column_blob(stmt, 1, &len);
+      val = svn_sqlite__column_blob(stmt, 1, &len, result_pool);
 
-      /* VAL lives until the svn_sqlite__reset(), make a copy
-         to allow the skels to reference values in the blob. */
-      buffer = apr_palloc(result_pool, len);
-      memcpy(buffer, val, len);
-
-      *work_item = svn_skel__parse(buffer, len, result_pool);
+      *work_item = svn_skel__parse(val, len, result_pool);
     }
 
   return svn_error_return(svn_sqlite__reset(stmt));

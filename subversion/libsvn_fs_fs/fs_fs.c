@@ -5787,19 +5787,12 @@ commit_body(void *baton, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
-/* Baton for use with an sqlite transaction'd commit body. */
-struct commit_sqlite_txn_baton
-{
-  struct commit_baton *cb;
-  apr_pool_t *pool;
-};
-
 /* Implements svn_sqlite__transaction_callback_t. */
 static svn_error_t *
-commit_sqlite_txn_callback(void *baton, svn_sqlite__db_t *db)
+commit_sqlite_txn_callback(void *baton, svn_sqlite__db_t *db,
+                           apr_pool_t *scratch_pool)
 {
-  struct commit_sqlite_txn_baton *cstb = baton;
-  return commit_body(cstb->cb, cstb->pool);
+  return commit_body(baton, scratch_pool);
 }
 
 /* Wrapper around commit_body() which implements SQLite transactions.  Arguments
@@ -5807,15 +5800,11 @@ commit_sqlite_txn_callback(void *baton, svn_sqlite__db_t *db)
 static svn_error_t *
 commit_body_rep_cache(void *baton, apr_pool_t *pool)
 {
-  struct commit_sqlite_txn_baton cstb;
   struct commit_baton *cb = baton;
   fs_fs_data_t *ffd = cb->fs->fsap_data;
 
-  cstb.cb = cb;
-  cstb.pool = pool;
-
   return svn_sqlite__with_transaction(ffd->rep_cache_db,
-                                      commit_sqlite_txn_callback, &cstb);
+                                      commit_sqlite_txn_callback, baton, pool);
 }
 
 svn_error_t *
