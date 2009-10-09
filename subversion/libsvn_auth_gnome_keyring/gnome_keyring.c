@@ -612,7 +612,7 @@ ssl_client_cert_pw_gnome_keyring_save_creds(svn_boolean_t *saved,
     {
       if (check_keyring_is_locked(default_keyring))
         {
-          return svn_error_create(SVN_ERR_AUTHN_CREDS_UNAVAILABLE, NULL,
+          return svn_error_create(SVN_ERR_AUTHN_CREDS_NOT_SAVED, NULL,
                                   _("GNOME Keyring is locked and "
                                     "we are non-interactive"));
         }
