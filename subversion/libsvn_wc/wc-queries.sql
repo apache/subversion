@@ -285,22 +285,22 @@ WHERE wc_id = ?1 AND local_dir_relpath = ?2;
 
 -- STMT_APPLY_CHANGES_TO_BASE
 UPDATE BASE_NODE SET
-  -- cannot change: wc_id, local_relpath, repos_id, repos_relpath,
-  --   parent_relpath
+  /* cannot change: wc_id, local_relpath, repos_id, repos_relpath,
+     parent_relpath  */
   presence = ?3,
   kind = ?4,
   revnum = ?5,
   checksum = ?6,
-  translated_size = null,  -- will be tweaked after working file is created
+  translated_size = null,  /* will be tweaked after working file is created  */
   changed_rev = ?7,
   changed_date = ?8,
   changed_author = ?9,
   depth = ?10,
   symlink_target = ?11,
-  last_mod_time = null,  -- will be tweaked after working file is created
+  last_mod_time = null,  /* will be tweaked after working file is created  */
   properties = ?12,
   dav_cache = ?13
-  -- do anything about file_external?
+  /* do anything about file_external?  */
 WHERE wc_id = ?1 AND local_relpath = ?2;
 
 
