@@ -2636,7 +2636,7 @@ svn_wc__db_op_mark_resolved(svn_wc__db_t *db,
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
-  /* ### we're not ready to handy RECEIVED_TREE just yet.  */
+  /* ### we're not ready to handy RESOLVED_TREE just yet.  */
   SVN_ERR_ASSERT(!resolved_tree);
 
   SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
@@ -3736,6 +3736,7 @@ struct commit_baton {
   const svn_checksum_t *new_checksum;
   const apr_array_header_t *new_children;
   apr_hash_t *new_dav_cache;
+  svn_boolean_t keep_changelist;
 
   apr_pool_t *scratch_pool;
 };
@@ -3752,6 +3753,7 @@ commit_node(void *baton, svn_sqlite__db_t *sdb)
   svn_boolean_t have_work;
   svn_boolean_t have_act;
   svn_string_t prop_blob = { 0 };
+  const char *changelist = NULL;
   svn_wc__db_status_t base_presence;
   svn_wc__db_status_t work_presence;
   svn_wc__db_status_t new_presence;
@@ -3804,11 +3806,16 @@ commit_node(void *baton, svn_sqlite__db_t *sdb)
     prop_blob.data = apr_pmemdup(cb->scratch_pool,
                                  prop_blob.data, prop_blob.len);
 
+  if (have_act)
+    changelist = svn_sqlite__column_text(stmt_act, 1, cb->scratch_pool);
+
   /* ### other stuff?  */
 
   SVN_ERR(svn_sqlite__reset(stmt_base));
   SVN_ERR(svn_sqlite__reset(stmt_work));
   SVN_ERR(svn_sqlite__reset(stmt_act));
+
+  /* Update the BASE_NODE row with all the new information.  */
 
   /* ### other presences? or reserve that for separate functions?  */
   new_presence = svn_wc__db_status_normal;
@@ -3829,7 +3836,8 @@ commit_node(void *baton, svn_sqlite__db_t *sdb)
   SVN_ERR(svn_sqlite__bind_checksum(stmt, 6, cb->new_checksum,
                                     cb->scratch_pool));
   SVN_ERR(svn_sqlite__bind_int64(stmt, 7, cb->new_revision));
-  SVN_ERR(svn_sqlite__bind_int64(stmt, 8, cb->new_date));
+  if (cb->new_date > 0)
+    SVN_ERR(svn_sqlite__bind_int64(stmt, 8, cb->new_date));
   SVN_ERR(svn_sqlite__bind_text(stmt, 9, cb->new_author));
   /* ### 10. depth.  */
   /* ### 11. target.  */
@@ -3838,6 +3846,45 @@ commit_node(void *baton, svn_sqlite__db_t *sdb)
                                       cb->scratch_pool));
 
   SVN_ERR(svn_sqlite__step_done(stmt));
+
+  if (have_work)
+    {
+      /* Get rid of the WORKING_NODE row.  */
+      SVN_ERR(svn_sqlite__get_statement(&stmt, cb->pdh->wcroot->sdb,
+                                        STMT_DELETE_WORKING_NODE));
+      SVN_ERR(svn_sqlite__bindf(stmt, "is",
+                                cb->pdh->wcroot->wc_id, cb->local_relpath));
+      SVN_ERR(svn_sqlite__step_done(stmt));
+    }
+
+  if (have_act)
+    {
+      if (cb->keep_changelist && changelist != NULL)
+        {
+          /* The user told us to keep the changelist. Replace the row in
+             ACTUAL_NODE with the basic keys and the changelist.  */
+          SVN_ERR(svn_sqlite__get_statement(
+                    &stmt, cb->pdh->wcroot->sdb,
+                    STMT_RESET_ACTUAL_WITH_CHANGELIST));
+          SVN_ERR(svn_sqlite__bindf(stmt, "isss",
+                                    cb->pdh->wcroot->wc_id,
+                                    cb->local_relpath,
+                                    svn_relpath_dirname(cb->local_relpath,
+                                                        cb->scratch_pool),
+                                    changelist));
+          SVN_ERR(svn_sqlite__step_done(stmt));
+        }
+      else
+        {
+          /* Toss the ACTUAL_NODE row.  */
+          SVN_ERR(svn_sqlite__get_statement(&stmt, cb->pdh->wcroot->sdb,
+                                            STMT_DELETE_ACTUAL_NODE));
+          SVN_ERR(svn_sqlite__bindf(stmt, "is",
+                                    cb->pdh->wcroot->wc_id,
+                                    cb->local_relpath));
+          SVN_ERR(svn_sqlite__step_done(stmt));
+        }
+    }
 
   return SVN_NO_ERROR;
 }
@@ -3852,6 +3899,7 @@ svn_wc__db_global_commit(svn_wc__db_t *db,
                          const svn_checksum_t *new_checksum,
                          const apr_array_header_t *new_children,
                          apr_hash_t *new_dav_cache,
+                         svn_boolean_t keep_changelist,
                          apr_pool_t *scratch_pool)
 {
   svn_wc__db_pdh_t *pdh;
@@ -3860,8 +3908,6 @@ svn_wc__db_global_commit(svn_wc__db_t *db,
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
   SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(new_revision));
-  SVN_ERR_ASSERT(new_date > 0);
-  SVN_ERR_ASSERT(new_author != NULL);
   SVN_ERR_ASSERT(new_checksum == NULL || new_children == NULL);
 
   SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
@@ -3878,6 +3924,7 @@ svn_wc__db_global_commit(svn_wc__db_t *db,
   cb.new_checksum = new_checksum;
   cb.new_children = new_children;
   cb.new_dav_cache = new_dav_cache;
+  cb.keep_changelist = keep_changelist;
 
   cb.scratch_pool = scratch_pool;
 
@@ -4146,7 +4193,7 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
           if (repos_relpath == NULL
               && repos_root_url == NULL
               && repos_uuid == NULL)
-            return svn_sqlite__reset(stmt);
+            return svn_error_return(svn_sqlite__reset(stmt));
 
           /* We've found the info we needed. Scan for the top of the
              WORKING tree, and then the REPOS_* information.  */
