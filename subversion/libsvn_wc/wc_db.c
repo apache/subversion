@@ -3775,7 +3775,7 @@ commit_node(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
                                              scratch_pool);
 
   if (have_act)
-    changelist = svn_sqlite__column_text(stmt_act, 1, cb->scratch_pool);
+    changelist = svn_sqlite__column_text(stmt_act, 1, scratch_pool);
 
   /* ### other stuff?  */
 
@@ -3838,7 +3838,7 @@ commit_node(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
                                     cb->pdh->wcroot->wc_id,
                                     cb->local_relpath,
                                     svn_relpath_dirname(cb->local_relpath,
-                                                        cb->scratch_pool),
+                                                        scratch_pool),
                                     changelist));
           SVN_ERR(svn_sqlite__step_done(stmt));
         }
