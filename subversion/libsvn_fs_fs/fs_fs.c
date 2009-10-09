@@ -5017,6 +5017,7 @@ rep_write_contents_close(void *baton)
   /* Check and see if we already have a representation somewhere that's
      identical to the one we just wrote out. */
   if (ffd->rep_sharing_allowed)
+    /* ### TODO: ignore errors opening the DB (issue #3506) * */
     SVN_ERR(svn_fs_fs__get_rep_reference(&old_rep, b->fs, rep->sha1_checksum,
                                          b->parent_pool));
   else
@@ -5840,27 +5841,7 @@ commit_sqlite_txn_callback(void *baton, svn_sqlite__db_t *db,
    * We use an sqlite transcation to speed things up;
    * see <http://www.sqlite.org/faq.html#q19>.
    */
-  /* ### TODO: ignore errors opening the DB; see this thread:
-   * ### Archived-At: <http://permalink.gmane.org/gmane.comp.version-control.subversion.devel/114594>
-   * ### Message-ID: <4AC9D133.1040500@xbc.nu>
-   * */
   SVN_ERR(write_reps_to_cache(cb->fs, cb->reps_to_cache, scratch_pool));
-
-  return SVN_NO_ERROR;
-}
-
-/* Wrapper around commit_body() which implements SQLite transactions.  Arguments
-   the same as commit_body().  */
-static svn_error_t *
-commit_body_rep_cache(void *baton, apr_pool_t *pool)
-{
-  struct commit_baton *cb = baton;
-  fs_fs_data_t *ffd = cb->fs->fsap_data;
-
-  SVN_ERR(commit_body(cb, pool));
-  SVN_ERR(svn_fs_fs__open_rep_cache(cb->fs, pool));
-  SVN_ERR(svn_sqlite__with_transaction(ffd->rep_cache_db,
-                                       commit_sqlite_txn_callback, cb, pool));
 
   return SVN_NO_ERROR;
 }
@@ -5889,11 +5870,18 @@ svn_fs_fs__commit(svn_revnum_t *new_rev_p,
       cb.reps_pool = NULL;
     }
 
-  return svn_fs_fs__with_write_lock(fs,
-                                    ffd->rep_sharing_allowed
-                                      ? commit_body_rep_cache
-                                      : commit_body,
-                                    &cb, pool);
+  SVN_ERR(svn_fs_fs__with_write_lock(fs, commit_body, &cb, pool));
+
+  if (ffd->rep_sharing_allowed)
+    {
+      /* ### TODO: ignore errors opening the DB (issue #3506) * */
+      SVN_ERR(svn_fs_fs__open_rep_cache(fs, pool));
+      SVN_ERR(svn_sqlite__with_transaction(ffd->rep_cache_db,
+                                           commit_sqlite_txn_callback,
+                                           &cb, pool));
+    }
+
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
