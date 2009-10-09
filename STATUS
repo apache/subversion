@@ -173,6 +173,15 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+ * r39887
+   When "make check" process is run, include the time taken by each test
+   in the log file, tests.log.
+   Justification:
+     Useful to specify the time taken by each test in integration tools
+     like Hudson, by parsing the log file.
+   Votes:
+     +1: brane, bhuvan
+
 Approved changes:
 =================
 
@@ -184,11 +193,3 @@ Approved changes:
    Votes:
      +1: blair, psamuelson, rhuijben
 
- * r39887
-   When "make check" process is run, include the time taken by each test
-   in the log file, tests.log.
-   Justification:
-     Useful to specify the time taken by each test in integration tools
-     like Hudson, by parsing the log file.
-   Votes:
-     +1: brane, bhuvan
