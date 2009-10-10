@@ -523,6 +523,14 @@ svn_wc__internal_is_replaced(svn_boolean_t *replaced,
                              apr_pool_t *scratch_pool);
 
 
+svn_error_t *
+svn_wc__internal_node_get_url(const char **url,
+                              svn_wc__db_t *db,
+                              const char *local_abspath,
+                              apr_pool_t *result_pool,
+                              apr_pool_t *scratch_pool);
+
+
 /* Upgrade the wc sqlite database given in SDB for the wc located at
    WCROOT_ABSPATH. It's current/starting format is given by START_FORMAT.
    After the upgrade is complete (to as far as the automatic upgrade will
