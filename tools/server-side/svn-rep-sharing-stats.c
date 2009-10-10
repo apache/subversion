@@ -28,14 +28,6 @@
 #include "svn_opt.h"
 #include "svn_utf.h"
 
-/* ### Why doesn't SVN_DBG work? */
-#if 0
-#include "../../subversion/libsvn_subr/debug.c"
-#else
-#undef SVN_DBG
-#define SVN_DBG(x) /* nothing */
-#endif
-
 #include "../../subversion/libsvn_fs_fs/fs.h"
 #include "../../subversion/libsvn_fs_fs/fs_fs.h"
 /* for svn_fs_fs__id_* (used in assertions only) */
