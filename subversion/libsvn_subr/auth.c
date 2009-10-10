@@ -416,7 +416,7 @@ svn_auth_get_platform_specific_provider
                           version_function_name) == 0)
             {
               svn_version_func_t version_function
-                = (svn_version_func_t) version_function_symbol;
+                = version_function_symbol;
               const svn_version_checklist_t check_list[] =
                 {
                   { library_label, version_function },
@@ -430,18 +430,14 @@ svn_auth_get_platform_specific_provider
             {
               if (strcmp(provider_type, "simple") == 0)
                 {
-                  svn_auth_simple_provider_func_t provider_function;
-                  provider_function =
-                    (svn_auth_simple_provider_func_t)
-                    provider_function_symbol;
+                  svn_auth_simple_provider_func_t provider_function
+                    = provider_function_symbol;
                   provider_function(provider, pool);
                 }
               else if (strcmp(provider_type, "ssl_client_cert_pw") == 0)
                 {
-                  svn_auth_ssl_client_cert_pw_provider_func_t provider_function;
-                  provider_function =
-                    (svn_auth_ssl_client_cert_pw_provider_func_t)
-                    provider_function_symbol;
+                  svn_auth_ssl_client_cert_pw_provider_func_t provider_function
+                    = provider_function_symbol;
                   provider_function(provider, pool);
                 }
             }
