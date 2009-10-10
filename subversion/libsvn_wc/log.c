@@ -864,9 +864,8 @@ log_do_committed(struct log_runner *loggy,
   svn_boolean_t set_read_write = FALSE;
   const char *local_abspath;
   const svn_wc_entry_t *orig_entry;
-  svn_wc_entry_t *entry;
   svn_boolean_t prop_mods;
-  apr_uint64_t modify_flags = 0;
+  svn_wc_entry_t tmp_entry;
 
   /* Determine the actual full path of the affected item. */
   if (! is_this_dir)
@@ -905,15 +904,15 @@ log_do_committed(struct log_runner *loggy,
       (pick_error_code(loggy), NULL,
        _("Log command for directory '%s' is mislocated"), name);
 
-  entry = svn_wc_entry_dup(orig_entry, pool);
-
   /*** Handle the committed deletion case ***/
 
   /* If the committed item was scheduled for deletion, it needs to
      now be removed from revision control.  Once that is accomplished,
      we are finished handling this item.  */
-  if (entry->schedule == svn_wc_schedule_delete)
+  if (orig_entry->schedule == svn_wc_schedule_delete)
     {
+      const svn_wc_entry_t *parentry;
+
       /* If we are suppose to delete "this dir", drop a 'killme' file
          into my own administrative dir as a signal for svn_wc__run_log()
          to blow away the administrative area after it is finished
@@ -925,21 +924,19 @@ log_do_committed(struct log_runner *loggy,
              higher, then the process that sees KILLME and destroys
              the directory can also place a 'deleted' dir entry in the
              parent. */
-          svn_wc_entry_t tmpentry;
-          tmpentry.revision = new_revision;
-          tmpentry.kind = svn_node_dir;
+          tmp_entry.revision = new_revision;
+          tmp_entry.kind = svn_node_dir;
 
           SVN_ERR(svn_wc__entry_modify2(loggy->db, local_abspath,
                                         svn_node_dir, FALSE,
-                                        &tmpentry,
+                                        &tmp_entry,
                                         SVN_WC__ENTRY_MODIFY_REVISION
                                         | SVN_WC__ENTRY_MODIFY_KIND,
                                         pool));
 
           /* Drop the 'killme' file. */
-          err = svn_wc__make_killme(loggy->adm_access, entry->keep_local,
+          err = svn_wc__make_killme(loggy->adm_access, orig_entry->keep_local,
                                     pool);
-
           if (err)
             {
               if (loggy->rerun && APR_STATUS_IS_EEXIST(err->apr_err))
@@ -956,43 +953,37 @@ log_do_committed(struct log_runner *loggy,
 
          ### We pass NULL, NULL for cancel_func and cancel_baton below.
          ### If they were available, it would be nice to use them. */
-      else
+
+      SVN_ERR(svn_wc__internal_remove_from_revision_control(
+                loggy->db, local_abspath,
+                FALSE, FALSE, NULL, NULL, pool));
+
+      /* If the parent entry's working rev 'lags' behind new_rev... */
+      SVN_ERR(svn_wc__get_entry(&parentry, loggy->db, loggy->adm_abspath,
+                                FALSE, svn_node_dir, FALSE, pool, pool));
+      if (new_revision > parentry->revision)
         {
-          const svn_wc_entry_t *parentry;
-          svn_wc_entry_t tmp_entry;
-
-          SVN_ERR(svn_wc__internal_remove_from_revision_control(
-                    loggy->db, local_abspath,
-                    FALSE, FALSE, NULL, NULL, pool));
-
-          /* If the parent entry's working rev 'lags' behind new_rev... */
-          SVN_ERR(svn_wc__get_entry(&parentry, loggy->db, loggy->adm_abspath,
-                                    FALSE, svn_node_dir, FALSE, pool, pool));
-          if (new_revision > parentry->revision)
-            {
-              /* ...then the parent's revision is now officially a
-                 lie;  therefore, it must remember the file as being
-                 'deleted' for a while.  Create a new, uninteresting
-                 ghost entry:  */
-              tmp_entry.kind = svn_node_file;
-              tmp_entry.deleted = TRUE;
-              tmp_entry.revision = new_revision;
-              SVN_ERR(svn_wc__entry_modify2(loggy->db, local_abspath,
-                                            svn_node_file, FALSE,
-                                            &tmp_entry,
-                                            SVN_WC__ENTRY_MODIFY_REVISION
-                                              | SVN_WC__ENTRY_MODIFY_KIND
-                                              | SVN_WC__ENTRY_MODIFY_DELETED,
-                                            pool));
-            }
-
-          return SVN_NO_ERROR;
+          /* ...then the parent's revision is now officially a
+             lie;  therefore, it must remember the file as being
+             'deleted' for a while.  Create a new, uninteresting
+             ghost entry:  */
+          tmp_entry.kind = svn_node_file;
+          tmp_entry.deleted = TRUE;
+          tmp_entry.revision = new_revision;
+          SVN_ERR(svn_wc__entry_modify2(loggy->db, local_abspath,
+                                        svn_node_file, FALSE,
+                                        &tmp_entry,
+                                        SVN_WC__ENTRY_MODIFY_REVISION
+                                        | SVN_WC__ENTRY_MODIFY_KIND
+                                        | SVN_WC__ENTRY_MODIFY_DELETED,
+                                        pool));
         }
+
+      return SVN_NO_ERROR;
     }
 
 
   /*** Mark the committed item committed-to-date ***/
-
 
   /* If "this dir" has been replaced (delete + add), all its
      immmediate children *must* be either scheduled for deletion (they
@@ -1006,7 +997,7 @@ log_do_committed(struct log_runner *loggy,
      individual commit targets, and thus will be re-visited by
      log_do_committed().  Children which were marked for deletion,
      however, need to be outright removed from revision control.  */
-  if ((entry->schedule == svn_wc_schedule_replace) && is_this_dir)
+  if ((orig_entry->schedule == svn_wc_schedule_replace) && is_this_dir)
     {
       /* Loop over all children entries, look for items scheduled for
          deletion. */
@@ -1055,7 +1046,7 @@ log_do_committed(struct log_runner *loggy,
   SVN_ERR(svn_wc__props_modified(&prop_mods, loggy->db, local_abspath, pool));
   if (prop_mods)
     {
-      if (entry->kind == svn_node_file)
+      if (orig_entry->kind == svn_node_file)
         {
           /* Examine propchanges here before installing the new
              propbase.  If the executable prop was -deleted-, then
@@ -1085,28 +1076,22 @@ log_do_committed(struct log_runner *loggy,
       SVN_ERR(svn_wc__working_props_committed(loggy->db, local_abspath, pool));
   }
 
-  if (entry->kind == svn_node_file)
+  if (orig_entry->kind == svn_node_file)
     {
-      svn_boolean_t using_ng;
       svn_boolean_t overwrote_working;
       apr_finfo_t finfo;
       apr_time_t new_date = 0;
       const char *new_author = NULL;
       const svn_checksum_t *new_checksum = NULL;
       svn_boolean_t keep_changelist = FALSE;
-      svn_wc_entry_t tmp_entry;
 
-      /* ### only for files, and anything but delete (handled above).  */
-      using_ng = TRUE;
-
-      if (using_ng)
-        SVN_ERR(svn_wc__db_global_commit(loggy->db, local_abspath,
-                                         new_revision, new_date, new_author,
-                                         new_checksum,
-                                         NULL /* new_children */,
-                                         NULL /* new_dav_cache */,
-                                         keep_changelist,
-                                         pool));
+      SVN_ERR(svn_wc__db_global_commit(loggy->db, local_abspath,
+                                       new_revision, new_date, new_author,
+                                       new_checksum,
+                                       NULL /* new_children */,
+                                       NULL /* new_dav_cache */,
+                                       keep_changelist,
+                                       pool));
 
       /* Install the new file, which may involve expanding keywords.
          A copy of this file should have been dropped into our `tmp/text-base'
@@ -1196,40 +1181,35 @@ log_do_committed(struct log_runner *loggy,
             }
         }
 
-      if (using_ng)
-        return svn_error_return(svn_wc__entry_modify2(
-                                  loggy->db, local_abspath,
-                                  svn_node_unknown, FALSE,
-                                  &tmp_entry,
-                                  SVN_WC__ENTRY_MODIFY_WORKING_SIZE
-                                  | SVN_WC__ENTRY_MODIFY_TEXT_TIME,
-                                  pool));
-
-      entry->text_time = tmp_entry.text_time;
-      entry->working_size = tmp_entry.working_size;
-      modify_flags |= SVN_WC__ENTRY_MODIFY_WORKING_SIZE
-        | SVN_WC__ENTRY_MODIFY_TEXT_TIME;
+      return svn_error_return(svn_wc__entry_modify2(
+                                loggy->db, local_abspath,
+                                svn_node_unknown, FALSE,
+                                &tmp_entry,
+                                SVN_WC__ENTRY_MODIFY_WORKING_SIZE
+                                | SVN_WC__ENTRY_MODIFY_TEXT_TIME,
+                                pool));
     }
 
   /* Files have been moved, and timestamps have been found.  It is now
      time for The Big Entry Modification. Here we set fields in the entry
      to values which we know must be so because it has just been committed. */
-  entry->revision = new_revision;
-  entry->kind = is_this_dir ? svn_node_dir : svn_node_file;
-  entry->schedule = svn_wc_schedule_normal;
-  entry->copied = FALSE;
-  entry->deleted = FALSE;
-  entry->copyfrom_url = NULL;
-  entry->copyfrom_rev = SVN_INVALID_REVNUM;
+  tmp_entry.revision = new_revision;
+  tmp_entry.kind = is_this_dir ? svn_node_dir : svn_node_file;
+  tmp_entry.schedule = svn_wc_schedule_normal;
+  tmp_entry.copied = FALSE;
+  tmp_entry.deleted = FALSE;
+  tmp_entry.copyfrom_url = NULL;
+  tmp_entry.copyfrom_rev = SVN_INVALID_REVNUM;
 
   /* We don't reset tree_conflict_data, because it's about conflicts on
      children, not on this node, and it could conceivably be valid to commit
-     this node non-recursively while children are still in conflict. */
+     this node non-recursively while children are still in conflict.
+
+     ### CAREFUL: tmp_entry.schedule is an OUT parameter.  */
   if ((err = svn_wc__entry_modify2(loggy->db, local_abspath,
                                    svn_node_unknown, FALSE,
-                                   entry,
-                                   (modify_flags
-                                    | SVN_WC__ENTRY_MODIFY_REVISION
+                                   &tmp_entry,
+                                   (SVN_WC__ENTRY_MODIFY_REVISION
                                     | SVN_WC__ENTRY_MODIFY_KIND
                                     | SVN_WC__ENTRY_MODIFY_SCHEDULE
                                     | SVN_WC__ENTRY_MODIFY_COPIED
@@ -1248,12 +1228,6 @@ log_do_committed(struct log_runner *loggy,
   SVN_ERR(svn_wc__db_op_mark_resolved(loggy->db, local_abspath,
                                       TRUE, TRUE, FALSE,
                                       pool));
-
-  /* If we aren't looking at "this dir" (meaning we are looking at a
-     file), we are finished.  From here on out, it's all about a
-     directory's entry in its parent.  */
-  if (! is_this_dir)
-    return SVN_NO_ERROR;
 
   /* For directories, we also have to reset the state in the parent's
      entry for this directory, unless the current directory is a `WC
@@ -1276,8 +1250,10 @@ log_do_committed(struct log_runner *loggy,
 
            If this fails for you in the transition to one DB phase, please
            run svn cleanup one level higher. */
+    /* ### BE WARY HERE! this uses tmp_entry.schedule, as set by the OUT
+       ### parameter of the above entry_modify2() call. ugh.  */
     err = svn_wc__entry_modify2(loggy->db, local_abspath, svn_node_dir,
-                                TRUE, entry,
+                                TRUE, &tmp_entry,
                                 (SVN_WC__ENTRY_MODIFY_SCHEDULE
                                  | SVN_WC__ENTRY_MODIFY_COPIED
                                  | SVN_WC__ENTRY_MODIFY_DELETED
