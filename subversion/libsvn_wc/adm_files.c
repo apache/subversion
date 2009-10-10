@@ -220,21 +220,6 @@ make_adm_subdir(const char *path,
 
 
 svn_error_t *
-svn_wc__make_killme(svn_wc_adm_access_t *adm_access,
-                    svn_boolean_t adm_only,
-                    apr_pool_t *pool)
-{
-  const char *path;
-
-  SVN_ERR(svn_wc__adm_write_check(adm_access, pool));
-
-  path = svn_wc__adm_child(svn_wc_adm_access_path(adm_access),
-                           SVN_WC__ADM_KILLME, pool);
-
-  return svn_io_file_create(path, adm_only ? SVN_WC__KILL_ADM_ONLY : "", pool);
-}
-
-svn_error_t *
 svn_wc__check_killme(svn_wc_adm_access_t *adm_access,
                      svn_boolean_t *exists,
                      svn_boolean_t *kill_adm_only,

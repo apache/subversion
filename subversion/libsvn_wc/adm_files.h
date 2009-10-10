@@ -52,15 +52,6 @@ svn_boolean_t svn_wc__adm_area_exists(const svn_wc_adm_access_t *adm_access,
                                       apr_pool_t *pool);
 
 
-/* Create a killme file in the administrative area, indicating that the
-   directory containing the administrative area should be removed.
-
-   If ADM_ONLY is true then remove only the administrative areas for the
-   directory and subdirectories. */
-svn_error_t *svn_wc__make_killme(svn_wc_adm_access_t *adm_access,
-                                 svn_boolean_t adm_only,
-                                 apr_pool_t *pool);
-
 /* Set EXISTS to TRUE if a killme file exists in the administrative area,
    FALSE otherwise.
 

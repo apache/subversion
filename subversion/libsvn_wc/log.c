@@ -50,6 +50,7 @@
 #include "workqueue.h"
 
 #include "private/svn_wc_private.h"
+#include "private/svn_skel.h"
 #include "svn_private_config.h"
 
 
@@ -111,7 +112,9 @@
 #define SVN_WC__LOG_SET_TIMESTAMP       "set-timestamp"
 
 /* Add a new tree conflict to the parent entry's tree-conflict-data. */
-#define SVN_WC__LOG_ADD_TREE_CONFLICT   "add-tree-conflict"
+/* ### rev'd to -2 because we changed the params. developers better not
+   ### update across this change if they have stale logs :-)  */
+#define SVN_WC__LOG_ADD_TREE_CONFLICT   "add-tree-conflict-2"
 
 
 /* Handle closure after a commit completes successfully:
@@ -158,7 +161,6 @@ struct log_runner
   apr_pool_t *result_pool;
   svn_xml_parser_t *parser;
   svn_boolean_t rerun;
-  svn_wc_adm_access_t *adm_access;  /* the dir in which all this happens */
   apr_hash_t *tree_conflicts;         /* hash of pointers to
                                          svn_wc_conflict_description2_t. */
   /* Which top-level log element we're on for this logfile.  Some
@@ -919,6 +921,8 @@ log_do_committed(struct log_runner *loggy,
          processing this logfile.  */
       if (is_this_dir)
         {
+          const char *killme_abspath;
+
           /* Bump the revision number of this_dir anyway, so that it
              might be higher than its parent's revnum.  If it's
              higher, then the process that sees KILLME and destroys
@@ -935,8 +939,13 @@ log_do_committed(struct log_runner *loggy,
                                         pool));
 
           /* Drop the 'killme' file. */
-          err = svn_wc__make_killme(loggy->adm_access, orig_entry->keep_local,
-                                    pool);
+          killme_abspath = svn_wc__adm_child(loggy->adm_abspath,
+                                             SVN_WC__ADM_KILLME, pool);
+          err = svn_io_file_create(killme_abspath,
+                                   orig_entry->keep_local
+                                     ? SVN_WC__KILL_ADM_ONLY
+                                     : "",
+                                   pool);
           if (err)
             {
               if (loggy->rerun && APR_STATUS_IS_EEXIST(err->apr_err))
@@ -1136,8 +1145,7 @@ log_do_committed(struct log_runner *loggy,
           /* If the working file was overwritten (due to re-translation)
              or touched (due to +x / -x), then use *that* textual
              timestamp instead. */
-          SVN_ERR(svn_wc__text_base_path(&basef,
-                                         svn_wc__adm_get_db(loggy->adm_access),
+          SVN_ERR(svn_wc__text_base_path(&basef, loggy->db,
                                          local_abspath, FALSE, pool));
           err = svn_io_stat(&basef_finfo, basef, APR_FINFO_MIN | APR_FINFO_LINK,
                             pool);
@@ -1301,26 +1309,25 @@ log_do_modify_wcprop(struct log_runner *loggy,
 
 static svn_error_t *
 log_do_add_tree_conflict(struct log_runner *loggy,
+                         const char *victim_basename,
                          const char **atts)
 {
-  apr_hash_t *new_conflicts;
+  svn_skel_t *skel;
+  const char *raw_conflict;
   const svn_wc_conflict_description2_t *new_conflict;
-  const char *dir_path = svn_wc_adm_access_path(loggy->adm_access);
-  apr_hash_index_t *hi;
 
   /* Convert the text data to a conflict. */
-  SVN_ERR(svn_wc__read_tree_conflicts(&new_conflicts,
-                            svn_xml_get_attr_value(SVN_WC__LOG_ATTR_DATA, atts),
-                                      dir_path, loggy->pool));
-  hi = apr_hash_first(loggy->pool, new_conflicts);
-  new_conflict = svn_apr_hash_index_val(hi);
+  raw_conflict = svn_xml_get_attr_value(SVN_WC__LOG_ATTR_DATA, atts);
+  skel = svn_skel__parse(raw_conflict, strlen(raw_conflict), loggy->pool);
+  SVN_ERR(svn_wc__deserialize_conflict(&new_conflict,
+                                       skel,
+                                       loggy->adm_abspath,
+                                       loggy->pool, loggy->pool));
 
   /* Ignore any attempt to re-add an existing tree conflict, as loggy
      operations are idempotent. */
-  if (apr_hash_get(loggy->tree_conflicts, 
-                   svn_dirent_basename(new_conflict->local_abspath,
-                                       loggy->pool),
-                   APR_HASH_KEY_STRING) == NULL)
+  if (apr_hash_get(loggy->tree_conflicts,
+                   victim_basename, APR_HASH_KEY_STRING) == NULL)
     {
       /* ### should probably grab the pool from the hash, rather than
          ### stored in loggy.  */
@@ -1331,11 +1338,10 @@ log_do_add_tree_conflict(struct log_runner *loggy,
                         svn_wc__conflict_description2_dup(new_conflict,
                                                           loggy->result_pool);
 
-      /* ### I think this loggy->pool is incorrect.  */
       apr_hash_set(loggy->tree_conflicts,
-                   svn_dirent_basename(duped_conflict->local_abspath,
-                                       loggy->pool),
-                   APR_HASH_KEY_STRING, duped_conflict);
+                   apr_pstrdup(loggy->result_pool, victim_basename),
+                   APR_HASH_KEY_STRING,
+                   duped_conflict);
     }
 
   return SVN_NO_ERROR;
@@ -1414,7 +1420,7 @@ start_handler(void *userData, const char *eltname, const char **atts)
     err = log_do_file_timestamp(loggy, name, atts);
   }
   else if (strcmp(eltname, SVN_WC__LOG_ADD_TREE_CONFLICT) == 0) {
-    err = log_do_add_tree_conflict(loggy, atts);
+    err = log_do_add_tree_conflict(loggy, name, atts);
   }
   else
     {
@@ -1536,6 +1542,9 @@ run_log(svn_wc_adm_access_t *adm_access,
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   svn_boolean_t killme, kill_adm_only;
 
+  /* Verify that we're holding this directory's write lock.  */
+  SVN_ERR(svn_wc__adm_write_check(adm_access, scratch_pool));
+
   loggy = apr_pcalloc(scratch_pool, sizeof(*loggy));
 
   parser = svn_xml_make_parser(loggy, start_handler, NULL, NULL,
@@ -1543,7 +1552,6 @@ run_log(svn_wc_adm_access_t *adm_access,
 
   loggy->db = db;
   loggy->adm_abspath = dir_abspath;
-  loggy->adm_access = adm_access;
   loggy->pool = svn_pool_create(scratch_pool);
   loggy->result_pool = svn_pool_create(scratch_pool);
   loggy->parser = parser;
@@ -2220,20 +2228,18 @@ svn_wc__loggy_add_tree_conflict(svn_stringbuf_t **log_accum,
                                 const svn_wc_conflict_description2_t *conflict,
                                 apr_pool_t *pool)
 {
+  const char *victim_basename;
+  svn_skel_t *skel;
   const char *conflict_data;
-  apr_hash_t *conflicts;
 
-  /* ### TODO: implement write_one_tree_conflict(). */
-  conflicts = apr_hash_make(pool);
-  apr_hash_set(conflicts, conflict->local_abspath, APR_HASH_KEY_STRING,
-               conflict);
-
-  SVN_ERR(svn_wc__write_tree_conflicts(&conflict_data, conflicts, pool));
-
+  victim_basename = svn_dirent_basename(conflict->local_abspath, pool);
+  SVN_ERR(svn_wc__serialize_conflict(&skel, conflict, pool, pool));
+  conflict_data = svn_skel__unparse(skel, pool)->data,
+ 
   svn_xml_make_open_tag(log_accum, pool, svn_xml_self_closing,
                         SVN_WC__LOG_ADD_TREE_CONFLICT,
                         SVN_WC__LOG_ATTR_NAME,
-                        SVN_WC_ENTRY_THIS_DIR,
+                        victim_basename,
                         SVN_WC__LOG_ATTR_DATA,
                         conflict_data,
                         NULL);
