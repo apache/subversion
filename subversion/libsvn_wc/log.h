@@ -31,6 +31,8 @@
 #include "svn_error.h"
 #include "svn_wc.h"
 
+#include "wc_db.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
