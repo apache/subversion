@@ -54,7 +54,7 @@ extern "C" {
 svn_error_t *
 svn_wc__adm_steal_write_lock(svn_wc_adm_access_t **adm_access,
                              svn_wc__db_t *db,
-                             const char *path,
+                             const char *adm_abspath,
                              apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool);
 
