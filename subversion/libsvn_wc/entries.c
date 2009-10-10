@@ -2533,8 +2533,10 @@ write_one_entry_cb(void *baton,
       base_props = svn_sqlite__column_blob(stmt, 15, &base_prop_len,
                                            scratch_pool);
 
+      err = svn_sqlite__column_checksum(&base_checksum, stmt, 7, scratch_pool);
+
       SVN_ERR(svn_error_compose_create(
-          svn_sqlite__column_checksum(&base_checksum, stmt, 7, scratch_pool),
+          err,
           svn_sqlite__reset(stmt)));
     }
   else
