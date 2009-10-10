@@ -2297,27 +2297,30 @@ svn_wc__logfile_present(svn_boolean_t *present,
 
 
 /*** Recursively do log things. ***/
+
 static svn_error_t *
 cleanup_internal(svn_wc__db_t *db,
                  const char *adm_abspath,
                  svn_cancel_func_t cancel_func,
                  void *cancel_baton,
-                 apr_pool_t *scratch_pool);
-
-static svn_error_t *
-run_existing_logs(svn_wc__db_t *db,
-                  const char *adm_abspath,
-                  svn_cancel_func_t cancel_func,
-                  void *cancel_baton,
-                  apr_pool_t *scratch_pool)
+                 apr_pool_t *scratch_pool)
 {
+  svn_wc_adm_access_t *adm_access;
   const apr_array_header_t *children;
   int i;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   svn_boolean_t killme;
   svn_boolean_t kill_adm_only;
 
-  /* Recurse on versioned elements first, oddly enough. */
+  /* Check cancellation; note that this catches recursive calls too. */
+  if (cancel_func)
+    SVN_ERR(cancel_func(cancel_baton));
+
+  /* Lock this working copy directory, or steal an existing lock */
+  SVN_ERR(svn_wc__adm_steal_write_lock(&adm_access, db, adm_abspath,
+                                       scratch_pool, iterpool));
+
+  /* Recurse on versioned, existing subdirectories.  */
   SVN_ERR(svn_wc__db_read_children(&children, db, adm_abspath,
                                    scratch_pool, iterpool));
   for (i = 0; i < children->nelts; i++)
@@ -2334,7 +2337,7 @@ run_existing_logs(svn_wc__db_t *db,
       if (kind == svn_wc__db_kind_dir)
         {
           svn_node_kind_t disk_kind;
-          /* Sub-directories */
+
           SVN_ERR(svn_io_check_path(entry_abspath, &disk_kind, iterpool));
           if (disk_kind == svn_node_dir)
             SVN_ERR(cleanup_internal(db, entry_abspath,
@@ -2365,39 +2368,17 @@ run_existing_logs(svn_wc__db_t *db,
         }
     }
 
-  svn_pool_destroy(iterpool);
-
-  return SVN_NO_ERROR;
-}
-
-
-static svn_error_t *
-cleanup_internal(svn_wc__db_t *db,
-                 const char *adm_abspath,
-                 svn_cancel_func_t cancel_func,
-                 void *cancel_baton,
-                 apr_pool_t *scratch_pool)
-{
-  svn_wc_adm_access_t *adm_access;
-
-  /* Check cancellation; note that this catches recursive calls too. */
-  if (cancel_func)
-    SVN_ERR(cancel_func(cancel_baton));
-
-  /* Lock this working copy directory, or steal an existing lock */
-  SVN_ERR(svn_wc__adm_steal_write_lock(&adm_access, db, adm_abspath,
-                                       scratch_pool, scratch_pool));
-
-  /* Recurse and run any existing logs. */
-  SVN_ERR(run_existing_logs(db, adm_abspath,
-                            cancel_func, cancel_baton, scratch_pool));
-
   /* Cleanup the tmp area of the admin subdir, if running the log has not
      removed it!  The logs have been run, so anything left here has no hope
      of being useful. */
-  SVN_ERR(svn_wc__adm_cleanup_tmp_area(adm_access, scratch_pool));
+  SVN_ERR(svn_wc__adm_cleanup_tmp_area(adm_access, iterpool));
 
-  return svn_wc_adm_close2(adm_access, scratch_pool);
+  /* All done with this thing. Toss it, and its lock.  */
+  SVN_ERR(svn_wc_adm_close2(adm_access, iterpool));
+
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
 }
 
 
