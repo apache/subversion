@@ -2478,12 +2478,14 @@ write_one_entry_cb(void *baton,
   const svn_wc_entry_t *this_entry = woeb->this_entry;
   const char *this_abspath = svn_dirent_join(local_abspath, this_entry->name,
                                              scratch_pool);
-  const void *base_props=NULL, *working_props=NULL, *actual_props=NULL;
-  apr_size_t base_prop_len, working_prop_len, actual_prop_len;
-
+  const void *base_props = NULL;
+  const void *working_props = NULL;
+  const void *actual_props = NULL;
+  apr_size_t base_prop_len;
+  apr_size_t working_prop_len;
+  apr_size_t actual_prop_len;
   apr_hash_t *dav_cache;
   svn_checksum_t *base_checksum;
-
   svn_sqlite__stmt_t *stmt;
   const char *repos_root;
   apr_int64_t repos_id;
@@ -2519,11 +2521,13 @@ write_one_entry_cb(void *baton,
   /* The dav cache is not in STMT_SELECT_BASE_NODE */
   err = svn_wc__db_base_get_dav_cache(&dav_cache, db, this_abspath,
                                       scratch_pool, scratch_pool);
-
-  if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
-    svn_error_clear(err); /* No BASE record */
-  else
-    SVN_ERR(err);
+  if (err)
+    {
+      if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
+        return svn_error_return(err);
+      svn_error_clear(err); /* No BASE record */
+      dav_cache = NULL;
+    }
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_SELECT_BASE_NODE));
   SVN_ERR(svn_sqlite__bindf(stmt, "is", wc_id, this_entry->name));
@@ -2534,10 +2538,7 @@ write_one_entry_cb(void *baton,
                                            scratch_pool);
 
       err = svn_sqlite__column_checksum(&base_checksum, stmt, 7, scratch_pool);
-
-      SVN_ERR(svn_error_compose_create(
-          err,
-          svn_sqlite__reset(stmt)));
+      SVN_ERR(svn_error_compose_create(err, svn_sqlite__reset(stmt)));
     }
   else
     SVN_ERR(svn_sqlite__reset(stmt));
