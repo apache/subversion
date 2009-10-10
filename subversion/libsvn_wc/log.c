@@ -158,11 +158,10 @@ struct log_runner
   const char *adm_abspath;
 
   apr_pool_t *pool; /* cleared before processing each log element */
-  apr_pool_t *result_pool;
+
   svn_xml_parser_t *parser;
   svn_boolean_t rerun;
-  apr_hash_t *tree_conflicts;         /* hash of pointers to
-                                         svn_wc_conflict_description2_t. */
+
   /* Which top-level log element we're on for this logfile.  Some
      callers care whether a failure happened on the first element or
      on some later element (e.g., 'svn cleanup').
@@ -1315,6 +1314,7 @@ log_do_add_tree_conflict(struct log_runner *loggy,
   svn_skel_t *skel;
   const char *raw_conflict;
   const svn_wc_conflict_description2_t *new_conflict;
+  svn_error_t *err;
 
   /* Convert the text data to a conflict. */
   raw_conflict = svn_xml_get_attr_value(SVN_WC__LOG_ATTR_DATA, atts);
@@ -1324,25 +1324,14 @@ log_do_add_tree_conflict(struct log_runner *loggy,
                                        loggy->adm_abspath,
                                        loggy->pool, loggy->pool));
 
-  /* Ignore any attempt to re-add an existing tree conflict, as loggy
-     operations are idempotent. */
-  if (apr_hash_get(loggy->tree_conflicts,
-                   victim_basename, APR_HASH_KEY_STRING) == NULL)
-    {
-      /* ### should probably grab the pool from the hash, rather than
-         ### stored in loggy.  */
-
-      /* Copy the new conflict to the result pool.  Add its pointer to
-         the hash of existing conflicts. */
-      const svn_wc_conflict_description2_t *duped_conflict =
-                        svn_wc__conflict_description2_dup(new_conflict,
-                                                          loggy->result_pool);
-
-      apr_hash_set(loggy->tree_conflicts,
-                   apr_pstrdup(loggy->result_pool, victim_basename),
-                   APR_HASH_KEY_STRING,
-                   duped_conflict);
-    }
+  err = svn_wc__db_op_set_tree_conflict(loggy->db,
+                                        new_conflict->local_abspath,
+                                        new_conflict,
+                                        loggy->pool);
+  if (err)
+    return svn_error_createf(pick_error_code(loggy), err,
+                             _("Error recording tree conflict on '%s'"),
+                             new_conflict->local_abspath);
 
   return SVN_NO_ERROR;
 }
@@ -1553,11 +1542,9 @@ run_log(svn_wc_adm_access_t *adm_access,
   loggy->db = db;
   loggy->adm_abspath = dir_abspath;
   loggy->pool = svn_pool_create(scratch_pool);
-  loggy->result_pool = svn_pool_create(scratch_pool);
   loggy->parser = parser;
   loggy->rerun = rerun;
   loggy->count = 0;
-  loggy->tree_conflicts = apr_hash_make(scratch_pool);
 
   /* Expat wants everything wrapped in a top-level form, so start with
      a ghost open tag. */
@@ -1601,31 +1588,6 @@ run_log(svn_wc_adm_access_t *adm_access,
   SVN_ERR(svn_xml_parse(parser, LOG_END, strlen(LOG_END), 1));
 
   svn_xml_free_parser(parser);
-
-  /* If the logs included tree conflicts, write them to the entry. */
-  if (apr_hash_count(loggy->tree_conflicts) > 0)
-    {
-      apr_hash_index_t *hi;
-
-      for (hi = apr_hash_first(scratch_pool, loggy->tree_conflicts); hi;
-            hi = apr_hash_next(hi))
-        {
-          svn_error_t *err;
-          const svn_wc_conflict_description2_t *conflict = 
-                                                 svn_apr_hash_index_val(hi);
-
-          svn_pool_clear(iterpool);
-
-          err = svn_wc__db_op_set_tree_conflict(db,
-                                                conflict->local_abspath,
-                                                conflict, iterpool);
-         
-          if (err)
-            return svn_error_createf(pick_error_code(loggy), err,
-                                 _("Error recording tree conflict on '%s'"),
-                                 conflict->local_abspath);
-        }
-    }
 
   /* Check for a 'killme' file in the administrative area. */
   SVN_ERR(svn_wc__check_killme(adm_access, &killme, &kill_adm_only,
