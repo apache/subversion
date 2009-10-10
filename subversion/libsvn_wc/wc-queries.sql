@@ -30,7 +30,7 @@
 select wc_id, local_relpath, repos_id, repos_relpath,
   presence, kind, revnum, checksum, translated_size,
   changed_rev, changed_date, changed_author, depth, symlink_target,
-  last_mod_time
+  last_mod_time, properties
 from base_node
 where wc_id = ?1 and local_relpath = ?2;
 
@@ -38,7 +38,7 @@ where wc_id = ?1 and local_relpath = ?2;
 select wc_id, local_relpath, base_node.repos_id, base_node.repos_relpath,
   presence, kind, revnum, checksum, translated_size,
   changed_rev, changed_date, changed_author, depth, symlink_target,
-  last_mod_time,
+  last_mod_time, properties,
   lock_token, lock_owner, lock_comment, lock_date
 from base_node
 left outer join lock on base_node.repos_id = lock.repos_id
@@ -105,6 +105,14 @@ where wc_id = ?1 and local_relpath = ?2;
 
 -- STMT_SELECT_BASE_PROPS
 select properties from base_node
+where wc_id = ?1 and local_relpath = ?2;
+
+-- STMT_UPDATE_BASE_PROPS
+update base_node set properties = ?3
+where wc_id = ?1 and local_relpath = ?2;
+
+-- STMT_UPDATE_WORKING_PROPS
+update working_node set properties = ?3
 where wc_id = ?1 and local_relpath = ?2;
 
 -- STMT_UPDATE_ACTUAL_PROPS

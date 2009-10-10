@@ -1977,22 +1977,22 @@ svn_wc__db_base_get_info(svn_wc__db_status_t *status,
         }
       if (lock)
         {
-          if (svn_sqlite__column_is_null(stmt, 15))
+          if (svn_sqlite__column_is_null(stmt, 16))
             {
               *lock = NULL;
             }
           else
             {
               *lock = apr_pcalloc(result_pool, sizeof(svn_wc__db_lock_t));
-              (*lock)->token = svn_sqlite__column_text(stmt, 15, result_pool);
-              if (!svn_sqlite__column_is_null(stmt, 16))
-                (*lock)->owner = svn_sqlite__column_text(stmt, 16,
-                                                         result_pool);
+              (*lock)->token = svn_sqlite__column_text(stmt, 16, result_pool);
               if (!svn_sqlite__column_is_null(stmt, 17))
-                (*lock)->comment = svn_sqlite__column_text(stmt, 17,
-                                                           result_pool);
+                (*lock)->owner = svn_sqlite__column_text(stmt, 17,
+                                                         result_pool);
               if (!svn_sqlite__column_is_null(stmt, 18))
-                (*lock)->date = svn_sqlite__column_int64(stmt, 18);
+                (*lock)->comment = svn_sqlite__column_text(stmt, 18,
+                                                           result_pool);
+              if (!svn_sqlite__column_is_null(stmt, 19))
+                (*lock)->date = svn_sqlite__column_int64(stmt, 19);
             }
         }
       if (repos_root_url || repos_uuid)
@@ -3376,21 +3376,21 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
         }
       if (lock)
         {
-          if (svn_sqlite__column_is_null(stmt_base, 15))
+          if (svn_sqlite__column_is_null(stmt_base, 16))
             *lock = NULL;
           else
             {
               *lock = apr_pcalloc(result_pool, sizeof(svn_wc__db_lock_t));
-              (*lock)->token = svn_sqlite__column_text(stmt_base, 15,
+              (*lock)->token = svn_sqlite__column_text(stmt_base, 16,
                                                        result_pool);
-              if (!svn_sqlite__column_is_null(stmt_base, 16))
-                (*lock)->owner = svn_sqlite__column_text(stmt_base, 16,
-                                                         result_pool);
               if (!svn_sqlite__column_is_null(stmt_base, 17))
-                (*lock)->comment = svn_sqlite__column_text(stmt_base, 17,
-                                                           result_pool);
+                (*lock)->owner = svn_sqlite__column_text(stmt_base, 17,
+                                                         result_pool);
               if (!svn_sqlite__column_is_null(stmt_base, 18))
-                (*lock)->date = svn_sqlite__column_int64(stmt_base, 18);
+                (*lock)->comment = svn_sqlite__column_text(stmt_base, 18,
+                                                           result_pool);
+              if (!svn_sqlite__column_is_null(stmt_base, 19))
+                (*lock)->date = svn_sqlite__column_int64(stmt_base, 19);
             }
         }
     }
