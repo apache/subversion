@@ -21,9 +21,9 @@
  * ====================================================================
  */
 
-/* These functions are only available to SVN developers.  */
-#ifdef SVN_DEBUG
-
+/* These functions are only available to SVN developers and should never
+   be used in release code. One of the reasons to avoid this code in release
+   builds is that this code is not thread-safe. */
 #include <stdarg.h>
 
 #include "svn_types.h"
@@ -77,6 +77,3 @@ svn_dbg__printf(const char *fmt, ...)
   (void) vfprintf(output, fmt, ap);
   va_end(ap);
 }
-
-
-#endif /* SVN_DEBUG */
