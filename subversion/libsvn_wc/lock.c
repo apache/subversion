@@ -351,11 +351,14 @@ probe(svn_wc__db_t *db,
 svn_error_t *
 svn_wc__adm_steal_write_lock(svn_wc_adm_access_t **adm_access,
                              svn_wc__db_t *db,
-                             const char *path,
+                             const char *adm_abspath,
                              apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool)
 {
-  SVN_ERR(adm_access_alloc(adm_access, path, db, TRUE, TRUE, TRUE,
+  /* ### we shouldn't really pass an abspath here, but it seems to work
+     ### because we never call svn_wc_adm_access_path() on the resulting
+     ### baton. (nor does anybody fetch it from DB and do that)  */
+  SVN_ERR(adm_access_alloc(adm_access, adm_abspath, db, TRUE, TRUE, TRUE,
                            result_pool, scratch_pool));
   
   /* We used to attempt to upgrade the working copy here, but now we let
