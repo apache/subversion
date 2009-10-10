@@ -1715,7 +1715,9 @@ svn_wc__db_wq_add(svn_wc__db_t *db,
    needs to be completed. Its identifier is returned in ID, and the data in
    WORK_ITEM.
 
-   There is no particular ordering to the work items returned by this function.
+   Items are returned in the same order they were queued. This allows for
+   (say) queueing work on a parent node to be handled before that of its
+   children.
 
    If there are no work items to be completed, then ID will be set to zero,
    and WORK_ITEM to NULL.
