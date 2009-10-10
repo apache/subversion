@@ -219,42 +219,6 @@ make_adm_subdir(const char *path,
 }
 
 
-svn_error_t *
-svn_wc__check_killme(svn_wc_adm_access_t *adm_access,
-                     svn_boolean_t *exists,
-                     svn_boolean_t *kill_adm_only,
-                     apr_pool_t *pool)
-{
-  const char *path;
-  svn_error_t *err;
-  svn_stringbuf_t *contents;
-
-  path = svn_wc__adm_child(svn_wc_adm_access_path(adm_access),
-                           SVN_WC__ADM_KILLME, pool);
-
-  err = svn_stringbuf_from_file2(&contents, path, pool);
-  if (err)
-    {
-      if (APR_STATUS_IS_ENOENT(err->apr_err))
-        {
-          /* Killme file doesn't exist. */
-          *exists = FALSE;
-          svn_error_clear(err);
-          err = SVN_NO_ERROR;
-        }
-
-      return err;
-    }
-
-  *exists = TRUE;
-
-  /* If the killme file contains the string 'adm-only' then only the
-     administrative area should be removed. */
-  *kill_adm_only = strcmp(contents->data, SVN_WC__KILL_ADM_ONLY) == 0;
-
-  return SVN_NO_ERROR;
-}
-
 
 /*** Syncing files in the adm area. ***/
 

@@ -1515,14 +1515,52 @@ compute_logfile_path(int log_number, apr_pool_t *result_pool)
 }
 
 
+/* Set EXISTS to TRUE if a killme file exists in the administrative area,
+   FALSE otherwise.
+
+   If EXISTS is true, set KILL_ADM_ONLY to the value passed to
+   svn_wc__make_killme() above. */
+static svn_error_t *
+check_killme(const char *adm_abspath,
+             svn_boolean_t *exists,
+             svn_boolean_t *kill_adm_only,
+             apr_pool_t *scratch_pool)
+{
+  const char *path;
+  svn_error_t *err;
+  svn_stringbuf_t *contents;
+
+  path = svn_wc__adm_child(adm_abspath, SVN_WC__ADM_KILLME, scratch_pool);
+
+  err = svn_stringbuf_from_file2(&contents, path, scratch_pool);
+  if (err)
+    {
+      if (!APR_STATUS_IS_ENOENT(err->apr_err))
+        return svn_error_return(err);
+      svn_error_clear(err);
+
+      /* Killme file doesn't exist. */
+      *exists = FALSE;
+      return SVN_NO_ERROR;
+    }
+
+  *exists = TRUE;
+
+  /* If the killme file contains the string 'adm-only' then only the
+     administrative area should be removed. */
+  *kill_adm_only = strcmp(contents->data, SVN_WC__KILL_ADM_ONLY) == 0;
+
+  return SVN_NO_ERROR;
+}
+
+
 /* Run a sequence of log files. */
 static svn_error_t *
-run_log(svn_wc_adm_access_t *adm_access,
+run_log(svn_wc__db_t *db,
+        const char *adm_abspath,
         svn_boolean_t rerun,
         apr_pool_t *scratch_pool)
 {
-  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
-  const char *dir_abspath = svn_wc__adm_access_abspath(adm_access);
   svn_xml_parser_t *parser;
   struct log_runner *loggy;
   char *buf = apr_palloc(scratch_pool, SVN__STREAM_CHUNK_SIZE);
@@ -1531,16 +1569,13 @@ run_log(svn_wc_adm_access_t *adm_access,
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   svn_boolean_t killme, kill_adm_only;
 
-  /* Verify that we're holding this directory's write lock.  */
-  SVN_ERR(svn_wc__adm_write_check(adm_access, scratch_pool));
-
   loggy = apr_pcalloc(scratch_pool, sizeof(*loggy));
 
   parser = svn_xml_make_parser(loggy, start_handler, NULL, NULL,
                                scratch_pool);
 
   loggy->db = db;
-  loggy->adm_abspath = dir_abspath;
+  loggy->adm_abspath = adm_abspath;
   loggy->pool = svn_pool_create(scratch_pool);
   loggy->parser = parser;
   loggy->rerun = rerun;
@@ -1560,7 +1595,7 @@ run_log(svn_wc_adm_access_t *adm_access,
       logfile_path = compute_logfile_path(log_number, iterpool);
 
       /* Parse the log file's contents. */
-      err = svn_wc__open_adm_stream(&stream, dir_abspath, logfile_path,
+      err = svn_wc__open_adm_stream(&stream, adm_abspath, logfile_path,
                                     iterpool, iterpool);
       if (err)
         {
@@ -1590,11 +1625,10 @@ run_log(svn_wc_adm_access_t *adm_access,
   svn_xml_free_parser(parser);
 
   /* Check for a 'killme' file in the administrative area. */
-  SVN_ERR(svn_wc__check_killme(adm_access, &killme, &kill_adm_only,
-                               iterpool));
+  SVN_ERR(check_killme(adm_abspath, &killme, &kill_adm_only, iterpool));
   if (killme)
     {
-      SVN_ERR(handle_killme(db, dir_abspath, kill_adm_only, NULL, NULL,
+      SVN_ERR(handle_killme(db, adm_abspath, kill_adm_only, NULL, NULL,
                             iterpool));
     }
   else
@@ -1606,7 +1640,7 @@ run_log(svn_wc_adm_access_t *adm_access,
 
           /* No 'killme'?  Remove the logfile; its commands have been
              executed. */
-          SVN_ERR(svn_wc__remove_adm_file(dir_abspath, logfile_path,
+          SVN_ERR(svn_wc__remove_adm_file(adm_abspath, logfile_path,
                                           iterpool));
         }
     }
@@ -1620,7 +1654,12 @@ svn_error_t *
 svn_wc__run_log(svn_wc_adm_access_t *adm_access,
                 apr_pool_t *scratch_pool)
 {
-  return run_log(adm_access, FALSE, scratch_pool);
+  /* Verify that we're holding this directory's write lock.  */
+  SVN_ERR(svn_wc__adm_write_check(adm_access, scratch_pool));
+
+  return run_log(svn_wc__adm_get_db(adm_access),
+                 svn_wc__adm_access_abspath(adm_access),
+                 FALSE, scratch_pool);
 }
 
 svn_error_t *
@@ -1634,7 +1673,10 @@ svn_wc__run_log2(svn_wc__db_t *db,
 
   SVN_ERR_ASSERT(adm_access != NULL); /* A lock MUST exist */
 
-  return run_log(adm_access, FALSE, scratch_pool);
+  /* Verify that we're holding this directory's write lock.  */
+  SVN_ERR(svn_wc__adm_write_check(adm_access, scratch_pool));
+
+  return run_log(db, adm_abspath, FALSE, scratch_pool);
 }
 
 
@@ -2257,23 +2299,23 @@ svn_wc__logfile_present(svn_boolean_t *present,
 /*** Recursively do log things. ***/
 static svn_error_t *
 cleanup_internal(svn_wc__db_t *db,
-                 const char *path,
+                 const char *adm_abspath,
                  svn_cancel_func_t cancel_func,
                  void *cancel_baton,
                  apr_pool_t *scratch_pool);
 
 static svn_error_t *
-run_existing_logs(svn_wc_adm_access_t *adm_access,
+run_existing_logs(svn_wc__db_t *db,
+                  const char *adm_abspath,
                   svn_cancel_func_t cancel_func,
                   void *cancel_baton,
                   apr_pool_t *scratch_pool)
 {
-  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
   const apr_array_header_t *children;
   int i;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
-  svn_boolean_t killme, kill_adm_only;
-  const char *adm_abspath = svn_wc__adm_access_abspath(adm_access);
+  svn_boolean_t killme;
+  svn_boolean_t kill_adm_only;
 
   /* Recurse on versioned elements first, oddly enough. */
   SVN_ERR(svn_wc__db_read_children(&children, db, adm_abspath,
@@ -2282,15 +2324,10 @@ run_existing_logs(svn_wc_adm_access_t *adm_access,
     {
       const char *name = APR_ARRAY_IDX(children, i, const char *);
       const char *entry_abspath;
-      svn_boolean_t hidden;
       svn_wc__db_kind_t kind;
 
       svn_pool_clear(iterpool);
       entry_abspath = svn_dirent_join(adm_abspath, name, iterpool);
-
-      SVN_ERR(svn_wc__db_node_hidden(&hidden, db, entry_abspath, iterpool));
-      if (hidden)
-        continue;
 
       SVN_ERR(svn_wc__db_read_kind(&kind, db, entry_abspath, FALSE, iterpool));
 
@@ -2300,30 +2337,13 @@ run_existing_logs(svn_wc_adm_access_t *adm_access,
           /* Sub-directories */
           SVN_ERR(svn_io_check_path(entry_abspath, &disk_kind, iterpool));
           if (disk_kind == svn_node_dir)
-            SVN_ERR(cleanup_internal(db, svn_dirent_join(
-                                            svn_wc_adm_access_path(adm_access),
-                                            name, iterpool),
+            SVN_ERR(cleanup_internal(db, entry_abspath,
                                      cancel_func, cancel_baton,
                                      iterpool));
         }
-      else
-        {
-          /* "." and things that are not directories, check for mods to
-             trigger the timestamp repair mechanism.  Since this rewrites
-             the entries file for each timestamp fixed it has the potential
-             to be slow, perhaps we need something more sophisticated? */
-          svn_boolean_t modified;
-          SVN_ERR(svn_wc__props_modified(&modified, db, entry_abspath,
-                                         iterpool));
-          if (kind == svn_wc__db_kind_file || kind == svn_wc__db_kind_symlink)
-            SVN_ERR(svn_wc__internal_text_modified_p(&modified, db,
-                                        entry_abspath, FALSE, TRUE,
-                                        iterpool));
-        }
     }
 
-  SVN_ERR(svn_wc__check_killme(adm_access, &killme, &kill_adm_only,
-                               iterpool));
+  SVN_ERR(check_killme(adm_abspath, &killme, &kill_adm_only, iterpool));
   if (killme)
     {
       /* A KILLME indicates that the log has already been run */
@@ -2341,7 +2361,7 @@ run_existing_logs(svn_wc_adm_access_t *adm_access,
       if (present)
         {
           /* ### rerun the log. why? dunno. missing commentary... */
-          SVN_ERR(run_log(adm_access, TRUE, iterpool));
+          SVN_ERR(run_log(db, adm_abspath, TRUE, iterpool));
         }
     }
 
@@ -2353,7 +2373,7 @@ run_existing_logs(svn_wc_adm_access_t *adm_access,
 
 static svn_error_t *
 cleanup_internal(svn_wc__db_t *db,
-                 const char *path,
+                 const char *adm_abspath,
                  svn_cancel_func_t cancel_func,
                  void *cancel_baton,
                  apr_pool_t *scratch_pool)
@@ -2365,11 +2385,11 @@ cleanup_internal(svn_wc__db_t *db,
     SVN_ERR(cancel_func(cancel_baton));
 
   /* Lock this working copy directory, or steal an existing lock */
-  SVN_ERR(svn_wc__adm_steal_write_lock(&adm_access, db, path,
+  SVN_ERR(svn_wc__adm_steal_write_lock(&adm_access, db, adm_abspath,
                                        scratch_pool, scratch_pool));
 
   /* Recurse and run any existing logs. */
-  SVN_ERR(run_existing_logs(adm_access,
+  SVN_ERR(run_existing_logs(db, adm_abspath,
                             cancel_func, cancel_baton, scratch_pool));
 
   /* Cleanup the tmp area of the admin subdir, if running the log has not
@@ -2389,7 +2409,7 @@ svn_wc_cleanup3(svn_wc_context_t *wc_ctx,
                 const char *local_abspath,
                 svn_cancel_func_t cancel_func,
                 void *cancel_baton,
-                apr_pool_t * scratch_pool)
+                apr_pool_t *scratch_pool)
 {
   svn_wc__db_t *db;
   int wc_format_version;
