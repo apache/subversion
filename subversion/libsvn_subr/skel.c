@@ -590,6 +590,25 @@ svn_skel__prepend(svn_skel_t *skel, svn_skel_t *list_skel)
 }
 
 
+void svn_skel__prepend_int(apr_int64_t value,
+                           svn_skel_t *skel,
+                           apr_pool_t *result_pool)
+{
+  const char *str = apr_psprintf(result_pool, "%" APR_INT64_T_FMT, value);
+
+  svn_skel__prepend_str(str, skel, result_pool);
+}
+
+
+void svn_skel__prepend_str(const char *value,
+                           svn_skel_t *skel,
+                           apr_pool_t *result_pool)
+{
+  svn_skel_t *atom = svn_skel__str_atom(value, result_pool);
+
+  svn_skel__prepend(atom, skel);
+}
+
 
 /* Examining skels.  */
 
