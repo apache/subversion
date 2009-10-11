@@ -1702,16 +1702,16 @@ svn_wc__db_upgrade_finish(const char *local_dir_abspath,
  * @{
  */
 
-/* In the WCROOT associated with DB and LOCAL_ABSPATH, add WORK_ITEM to the
+/* In the WCROOT associated with DB and WRI_ABSPATH, add WORK_ITEM to the
    wcroot's work queue. Use SCRATCH_POOL for all temporary allocations.  */
 svn_error_t *
 svn_wc__db_wq_add(svn_wc__db_t *db,
-                  const char *local_abspath,
+                  const char *wri_abspath,
                   const svn_skel_t *work_item,
                   apr_pool_t *scratch_pool);
 
 
-/* In the WCROOT associated with DB and LOCAL_ABSPATH, fetch a work item that
+/* In the WCROOT associated with DB and WRI_ABSPATH, fetch a work item that
    needs to be completed. Its identifier is returned in ID, and the data in
    WORK_ITEM.
 
@@ -1728,19 +1728,19 @@ svn_error_t *
 svn_wc__db_wq_fetch(apr_uint64_t *id,
                     svn_skel_t **work_item,
                     svn_wc__db_t *db,
-                    const char *local_abspath,
+                    const char *wri_abspath,
                     apr_pool_t *result_pool,
                     apr_pool_t *scratch_pool);
 
 
-/* In the WCROOT associated with DB and LOCAL_ABSPATH, mark work item ID as
+/* In the WCROOT associated with DB and WRI_ABSPATH, mark work item ID as
    completed. If an error occurs, then it is unknown whether the work item
    has been marked as completed.
 
    Uses SCRATCH_POOL for all temporary allocations.  */
 svn_error_t *
 svn_wc__db_wq_completed(svn_wc__db_t *db,
-                        const char *local_abspath,
+                        const char *wri_abspath,
                         apr_uint64_t id,
                         apr_pool_t *scratch_pool);
 

@@ -685,7 +685,7 @@ static const struct work_item_dispatch dispatch_table[] = {
 
 svn_error_t *
 svn_wc__wq_run(svn_wc__db_t *db,
-               const char *local_abspath,
+               const char *wri_abspath,
                svn_cancel_func_t cancel_func,
                void *cancel_baton,
                apr_pool_t *scratch_pool)
@@ -705,7 +705,7 @@ svn_wc__wq_run(svn_wc__db_t *db,
 
       svn_pool_clear(iterpool);
 
-      SVN_ERR(svn_wc__db_wq_fetch(&id, &work_item, db, local_abspath,
+      SVN_ERR(svn_wc__db_wq_fetch(&id, &work_item, db, wri_abspath,
                                   iterpool, iterpool));
       if (work_item == NULL)
         {
@@ -735,11 +735,11 @@ svn_wc__wq_run(svn_wc__db_t *db,
           return svn_error_createf(SVN_ERR_WC_BAD_ADM_LOG, NULL,
                                    _("Unrecognized work item in the queue "
                                      "associated with '%s'"),
-                                   svn_dirent_local_style(local_abspath,
+                                   svn_dirent_local_style(wri_abspath,
                                                           iterpool));
         }
 
-      SVN_ERR(svn_wc__db_wq_completed(db, local_abspath, id, iterpool));
+      SVN_ERR(svn_wc__db_wq_completed(db, wri_abspath, id, iterpool));
     }
 
   /* NOTREACHED */
