@@ -574,26 +574,16 @@ svn_wc__wq_add_revert(svn_boolean_t *will_revert,
   if (*will_revert)
     {
       svn_skel_t *work_item;
-      char bools[3] = {
-        replaced + '0',
-        magic_changed + '0',
-        use_commit_times + '0'
-      };
 
       work_item = svn_skel__make_empty_list(scratch_pool);
 
       /* These skel atoms hold references to very transitory state, but
          we only need the work_item to survive for the duration of wq_add.  */
-      svn_skel__prepend(svn_skel__mem_atom(&bools[2], 1, scratch_pool),
-                        work_item);
-      svn_skel__prepend(svn_skel__mem_atom(&bools[1], 1, scratch_pool),
-                        work_item);
-      svn_skel__prepend(svn_skel__mem_atom(&bools[0], 1, scratch_pool),
-                        work_item);
-      svn_skel__prepend(svn_skel__str_atom(local_abspath, scratch_pool),
-                        work_item);
-      svn_skel__prepend(svn_skel__str_atom(OP_REVERT, scratch_pool),
-                        work_item);
+      svn_skel__prepend_int(use_commit_times, work_item, scratch_pool);
+      svn_skel__prepend_int(magic_changed, work_item, scratch_pool);
+      svn_skel__prepend_int(replaced, work_item, scratch_pool);
+      svn_skel__prepend_str(local_abspath, work_item, scratch_pool);
+      svn_skel__prepend_str(OP_REVERT, work_item, scratch_pool);
 
       SVN_ERR(svn_wc__db_wq_add(db, local_abspath, work_item, scratch_pool));
     }
@@ -673,10 +663,8 @@ svn_wc__wq_prepare_revert_files(svn_wc__db_t *db,
 
   /* These skel atoms hold references to very transitory state, but
      we only need the work_item to survive for the duration of wq_add.  */
-  svn_skel__prepend(svn_skel__str_atom(local_abspath, scratch_pool),
-                    work_item);
-  svn_skel__prepend(svn_skel__str_atom(OP_PREPARE_REVERT_FILES, scratch_pool),
-                    work_item);
+  svn_skel__prepend_str(local_abspath, work_item, scratch_pool);
+  svn_skel__prepend_str(OP_PREPARE_REVERT_FILES, work_item, scratch_pool);
 
   SVN_ERR(svn_wc__db_wq_add(db, local_abspath, work_item, scratch_pool));
 
