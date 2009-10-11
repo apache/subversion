@@ -2384,8 +2384,9 @@ entries_write_new_cb(void *baton,
       apr_hash_set(dav_cache, child_abspath, APR_HASH_KEY_STRING, child_cache);
     }
 
-  /* Remove all WORKING, BASE and ACTUAL nodes for this directory, as well
-     as locks, since we're about to replace 'em. */
+  /* Remove all WORKING, BASE and ACTUAL nodes for this directory
+     ### This does NOT drop locks as recorded in the entries, because we
+         already update these via another route */
   SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_DELETE_ALL_WORKING));
   SVN_ERR(svn_sqlite__step_done(stmt));
   SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_DELETE_ALL_BASE));
@@ -2412,11 +2413,12 @@ entries_write_new_cb(void *baton,
       if (strcmp(name, SVN_WC_ENTRY_THIS_DIR) == 0)
         continue;
 
-      /* Write the entry. */
+      /* Write the entry. Pass TRUE for create locks, because we still
+         use this function for upgrading old working copies. */
       child_abspath = svn_dirent_join(local_abspath, name, iterpool);
       SVN_ERR(write_entry(db, sdb, wc_id, repos_id, repos_root,
                           this_entry, name, child_abspath, this_dir,
-                          TRUE, FALSE,
+                          FALSE, TRUE,
                           iterpool));
 
       /* Write the dav cache.
