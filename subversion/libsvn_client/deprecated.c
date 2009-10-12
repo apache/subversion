@@ -1671,7 +1671,8 @@ info_receiver_relpath_wrapper(void *baton,
   struct info_to_relpath_baton *rb = baton;
   const char *path = abspath_or_url;
 
-  if (rb->anchor_relpath)
+  if (rb->anchor_relpath &&
+      svn_dirent_is_ancestor(rb->anchor_abspath, abspath_or_url))
     {
       path = svn_dirent_join(rb->anchor_relpath,
                              svn_dirent_skip_ancestor(rb->anchor_abspath,
