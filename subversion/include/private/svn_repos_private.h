@@ -20,33 +20,25 @@
  * ====================================================================
  * @endcopyright
  *
- * @file svn_ra_private.h
- * @brief The Subversion repository access library - Internal routines
+ * @file svn_repos_private.h
+ * @brief Subversion-internal repos APIs.
  */
 
-#ifndef SVN_RA_PRIVATE_H
-#define SVN_RA_PRIVATE_H
+#ifndef SVN_REPOS_PRIVATE_H
+#define SVN_REPOS_PRIVATE_H
 
 #include <apr_pools.h>
 
-#include "svn_error.h"
-#include "svn_ra.h"
+#include "svn_repos.h"
+#include "svn_types.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
 
-/* Return an error with code SVN_ERR_UNSUPPORTED_FEATURE, and an error
-   message referencing PATH_OR_URL, if the "server" pointed to be
-   RA_SESSION doesn't support Merge Tracking (e.g. is pre-1.5).
-   Perform temporary allocations in POOL. */
-svn_error_t *
-svn_ra__assert_mergeinfo_capable_server(svn_ra_session_t *ra_session,
-                                        const char *path_or_url,
-                                        apr_pool_t *pool);
 
-/** Permanently delete @a path (relative to the URL of @a session) in revision
- * @a rev.
+/**
+ * Permanently delete @a path at revision @a revision in @a fs.
  *
  * Do not change the content of other node in the repository, even other nodes
  * that were copied from this one. The only other change in the repository is
@@ -60,16 +52,21 @@ svn_ra__assert_mergeinfo_capable_server(svn_ra_session_t *ra_session,
  * @note This functionality is not implemented in pre-1.7 servers and may not
  * be implemented in all 1.7 and later servers.
  *
+ * @note TODO: Maybe create svn_repos_fs_begin_obliteration_txn() and
+ * svn_repos_fs_commit_obliteration_txn() to enable an obliteration txn to be
+ * constructed at a higher level.
+ *
  * @since New in 1.7.
  */
 svn_error_t *
-svn_ra__obliterate(svn_ra_session_t *session,
-                   svn_revnum_t rev,
-                   const char *path,
-                   apr_pool_t *pool);
+svn_repos__obliterate_path_rev(svn_repos_t *repos,
+                               svn_revnum_t revision,
+                               const char *path,
+                               apr_pool_t *pool);
+
 
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
 
-#endif /* SVN_RA_PRIVATE_H */
+#endif /* SVN_REPOS_PRIVATE_H */

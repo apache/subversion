@@ -319,6 +319,15 @@ svn_error_t *svn_fs_fs__commit(svn_revnum_t *new_rev_p,
                                svn_fs_txn_t *txn,
                                apr_pool_t *pool);
 
+/* Commit the obliteration transaction TXN in filesystem FS for
+   revision number REV.  If the transaction is out of date (### meaning what?), return
+   the error SVN_ERR_FS_TXN_OUT_OF_DATE.  Use POOL for temporary
+   allocations. */
+svn_error_t *svn_fs_fs__commit_obliteration(svn_revnum_t rev,
+                                            svn_fs_t *fs,
+                                            svn_fs_txn_t *txn,
+                                            apr_pool_t *pool);
+
 /* Return the next available copy_id in *COPY_ID for the transaction
    TXN_ID in filesystem FS.  Allocate space in POOL. */
 svn_error_t *svn_fs_fs__reserve_copy_id(const char **copy_id,
@@ -463,6 +472,13 @@ svn_error_t *svn_fs_fs__get_txn_ids(const svn_fs_id_t **root_id_p,
 svn_error_t *svn_fs_fs__begin_txn(svn_fs_txn_t **txn_p, svn_fs_t *fs,
                                   svn_revnum_t rev, apr_uint32_t flags,
                                   apr_pool_t *pool);
+
+/* Begin a new transaction in filesystem FS, to replace an existing
+   revision REV.  The new transaction is returned in *TXN_P.  Allocate
+   the new transaction structure from POOL. */
+svn_error_t *svn_fs_fs__begin_obliteration_txn(svn_fs_txn_t **txn_p,
+                                               svn_fs_t *fs, svn_revnum_t rev,
+                                               apr_pool_t *pool);
 
 /* Find the value of the property named PROPNAME in transaction TXN.
    Return the contents in *VALUE_P.  The contents will be allocated

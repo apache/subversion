@@ -2773,6 +2773,18 @@ svn_fs_base__commit_txn(const char **conflict_p,
 }
 
 
+svn_error_t *
+svn_fs_base__commit_obliteration_txn(svn_revnum_t rev,
+                                     svn_fs_txn_t *txn,
+                                     apr_pool_t *pool)
+{
+  /* svn_fs_t *fs = txn->fs; */
+
+  return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL, NULL);
+  /* return SVN_NO_ERROR; */
+}
+
+
 /* Note:  it is acceptable for this function to call back into
    public FS API interfaces because it does not itself use trails.  */
 static svn_error_t *
