@@ -449,22 +449,15 @@ cleanup_dir_baton(void *dir_baton)
   struct dir_baton *db = dir_baton;
   svn_error_t *err;
   apr_status_t apr_err;
-  svn_wc_adm_access_t *adm_access;
   apr_pool_t *pool = apr_pool_parent_get(db->pool);
 
   err = flush_log(db, pool);
   if (! err && db->log_number > 0)
     {
-      err = svn_wc_adm_retrieve(&adm_access, db->edit_baton->adm_access,
-                                db->path, pool);
+      err = svn_wc__run_log2(db->edit_baton->db, db->local_abspath, pool);
 
       if (! err)
-        {
-          err = svn_wc__run_log(adm_access, pool);
-
-          if (! err)
-            return APR_SUCCESS;
-        }
+        return APR_SUCCESS;
     }
 
   if (err)
@@ -2024,12 +2017,6 @@ do_entry_deletion(int *log_number,
   svn_stringbuf_t *log_item = svn_stringbuf_create("", pool);
   svn_wc_conflict_description2_t *tree_conflict;
   const char *dir_abspath = svn_dirent_dirname(local_abspath, pool);
-  svn_wc_adm_access_t *parent_adm_access;
-
-
-  parent_adm_access = svn_wc__adm_retrieve_internal2(eb->db, dir_abspath,
-                                                     pool);
-  SVN_ERR_ASSERT(parent_adm_access != NULL);
 
   /* ### hmm. in case we need to re-add the node, we use some fields from
      ### this entry. I believe the required fields are filled in, but getting
@@ -2110,10 +2097,8 @@ do_entry_deletion(int *log_number,
           /* Run the log in the parent dir, to record the tree conflict.
            * Do this before schedule_existing_item_for_re_add(), in case
            * that needs to modify the same entries. */
-          SVN_ERR(svn_wc__write_log(
-                                svn_wc__adm_access_abspath(parent_adm_access),
-                                *log_number, log_item, pool));
-          SVN_ERR(svn_wc__run_log(parent_adm_access, pool));
+          SVN_ERR(svn_wc__write_log(dir_abspath, *log_number, log_item, pool));
+          SVN_ERR(svn_wc__run_log2(eb->db, dir_abspath, pool));
           *log_number = 0;
 
           SVN_ERR(schedule_existing_item_for_re_add(entry, eb,
@@ -2142,10 +2127,8 @@ do_entry_deletion(int *log_number,
           /* Run the log in the parent dir, to record the tree conflict.
            * Do this before schedule_existing_item_for_re_add(), in case
            * that needs to modify the same entries. */
-          SVN_ERR(svn_wc__write_log(
-                                svn_wc__adm_access_abspath(parent_adm_access),
-                                *log_number, log_item, pool));
-          SVN_ERR(svn_wc__run_log(parent_adm_access, pool));
+          SVN_ERR(svn_wc__write_log(dir_abspath, *log_number, log_item, pool));
+          SVN_ERR(svn_wc__run_log2(eb->db, dir_abspath, pool));
           *log_number = 0;
 
           SVN_ERR(schedule_existing_item_for_re_add(entry, eb,
@@ -2187,8 +2170,7 @@ do_entry_deletion(int *log_number,
       eb->target_deleted = TRUE;
     }
 
-  SVN_ERR(svn_wc__write_log(svn_wc__adm_access_abspath(parent_adm_access),
-                            *log_number, log_item, pool));
+  SVN_ERR(svn_wc__write_log(dir_abspath, *log_number, log_item, pool));
 
   if (eb->switch_url)
     {
@@ -2223,7 +2205,7 @@ do_entry_deletion(int *log_number,
 
   /* Note: these two lines are duplicated in the tree-conflicts bail out
    * above. */
-  SVN_ERR(svn_wc__run_log(parent_adm_access, pool));
+  SVN_ERR(svn_wc__run_log2(eb->db, dir_abspath, pool));
   *log_number = 0;
 
   /* Notify. (If tree_conflict, we've already notified.) */
@@ -3370,7 +3352,6 @@ add_file_with_history(const char *path,
                       apr_pool_t *pool)
 {
   struct edit_baton *eb = pb->edit_baton;
-  svn_wc_adm_access_t *adm_access;
   apr_hash_t *base_props, *working_props;
   svn_error_t *err;
   svn_stream_t *copied_stream;
@@ -3399,9 +3380,6 @@ add_file_with_history(const char *path,
     svn_error_clear(err);
   else
     SVN_ERR(err);
-
-  SVN_ERR(svn_wc_adm_retrieve(&adm_access, pb->edit_baton->adm_access,
-                              pb->path, subpool));
 
   SVN_ERR(svn_wc__db_temp_wcroot_tempdir(&temp_dir_path, db, pb->local_abspath,
                                          subpool, subpool));
@@ -3497,7 +3475,7 @@ add_file_with_history(const char *path,
         {
           /* Make a unique file name for the copied_working_text. */
           SVN_ERR(svn_wc_create_tmp_file2(NULL, &tfb->copied_working_text,
-                                          svn_wc_adm_access_path(adm_access),
+                                          pb->path,
                                           svn_io_file_del_none,
                                           pool));
 
@@ -4221,10 +4199,9 @@ merge_file(svn_wc_notify_state_t *content_state,
            const svn_checksum_t *actual_checksum,
            apr_pool_t *pool)
 {
-  const char *parent_dir;
   struct edit_baton *eb = fb->edit_baton;
+  struct dir_baton *pb = fb->dir_baton;
   svn_stringbuf_t *log_accum = svn_stringbuf_create("", pool);
-  svn_wc_adm_access_t *adm_access;
   svn_boolean_t is_locally_modified;
   svn_boolean_t is_replaced = FALSE;
   svn_boolean_t magic_props_changed;
@@ -4232,7 +4209,6 @@ merge_file(svn_wc_notify_state_t *content_state,
   const svn_wc_entry_t *entry;
   svn_wc_conflict_version_t *left_version = NULL; /* ### Fill */
   svn_wc_conflict_version_t *right_version = NULL; /* ### Fill */
-  const char *parent_abspath;
   const char *new_text_base_abspath;
 
   /* Accumulated entry modifications. */
@@ -4264,10 +4240,6 @@ merge_file(svn_wc_notify_state_t *content_state,
 
   /* Start by splitting the file path, getting an access baton for the parent,
      and an entry for the file if any. */
-  svn_dirent_split(fb->path, &parent_dir, NULL, pool);
-  parent_abspath = svn_dirent_dirname(fb->local_abspath, pool);
-  SVN_ERR(svn_wc_adm_retrieve(&adm_access, eb->adm_access,
-                              parent_dir, pool));
 
   SVN_ERR(svn_wc__get_entry(&entry, eb->db, fb->local_abspath, TRUE,
                             svn_node_file, FALSE, pool, pool));
@@ -4284,14 +4256,14 @@ merge_file(svn_wc_notify_state_t *content_state,
   /* Set the new revision and URL in the entry and clean up some other
      fields. This clears DELETED from any prior versioned file with the
      same name (needed before attempting to install props).  */
-  SVN_ERR(loggy_tweak_entry(log_accum, fb->local_abspath, parent_abspath,
+  SVN_ERR(loggy_tweak_entry(log_accum, fb->local_abspath, pb->local_abspath,
                             *eb->target_revision, fb->new_URL, pool));
 
   /* Install all kinds of properties.  It is important to do this before
      any file content merging, since that process might expand keywords, in
      which case we want the new entryprops to be in place. */
   SVN_ERR(merge_props(log_accum, prop_state, lock_state, eb->db,
-                      fb->local_abspath, parent_abspath,
+                      fb->local_abspath, pb->local_abspath,
                       left_version, right_version,
                       fb->propchanges,
                       fb->copied_base_props, fb->copied_working_props,
@@ -4386,7 +4358,7 @@ merge_file(svn_wc_notify_state_t *content_state,
                even if the file is not modified compared to the (non-revert)
                text-base. */
             SVN_ERR(svn_wc__loggy_copy(&log_accum,
-                                       svn_wc__adm_access_abspath(adm_access),
+                                       fb->dir_baton->local_abspath,
                                        new_text_base_abspath,
                                        fb->path, pool, pool));
         }
@@ -4400,7 +4372,7 @@ merge_file(svn_wc_notify_state_t *content_state,
               /* working file is missing?!
                  Just copy the new text-base to the file. */
               SVN_ERR(svn_wc__loggy_copy(&log_accum,
-                                         svn_wc__adm_access_abspath(adm_access),
+                                         pb->local_abspath,
                                          new_text_base_abspath,
                                          fb->path, pool, pool));
             }
@@ -4453,8 +4425,7 @@ merge_file(svn_wc_notify_state_t *content_state,
               if (fb->add_existed && ! is_replaced)
                 {
                   SVN_ERR(svn_wc_create_tmp_file2(NULL, &merge_left,
-                                                  svn_wc_adm_access_path(
-                                                      adm_access),
+                                                  pb->local_abspath,
                                                   svn_io_file_del_none,
                                                   pool));
 
@@ -4487,13 +4458,13 @@ merge_file(svn_wc_notify_state_t *content_state,
               /* If we created a temporary left merge file, get rid of it. */
               if (delete_left)
                 SVN_ERR(svn_wc__loggy_remove(
-                            &log_accum, svn_wc__adm_access_abspath(adm_access),
+                            &log_accum, pb->local_abspath,
                             merge_left, pool, pool));
 
               /* And clean up add-with-history-related temp file too. */
               if (fb->copied_working_text)
                 SVN_ERR(svn_wc__loggy_remove(
-                            &log_accum, svn_wc__adm_access_abspath(adm_access),
+                            &log_accum, pb->local_abspath,
                             fb->copied_working_text, pool, pool));
 
             } /* end: working file exists and has mods */
@@ -4529,29 +4500,26 @@ merge_file(svn_wc_notify_state_t *content_state,
              it back to the working file.
              Now, since this is done during the execution of the log file, this
              retranslation is actually done according to the new props. */
-          SVN_ERR(svn_wc__loggy_copy(&log_accum,
-                                     svn_wc__adm_access_abspath(adm_access),
+          SVN_ERR(svn_wc__loggy_copy(&log_accum, pb->local_abspath,
                                      tmptext, fb->path, pool, pool));
         }
 
       if (*lock_state == svn_wc_notify_lock_state_unlocked)
         /* If a lock was removed and we didn't update the text contents, we
            might need to set the file read-only. */
-        SVN_ERR(svn_wc__loggy_maybe_set_readonly(&log_accum,
-                                    svn_wc__adm_access_abspath(adm_access),
-                                    fb->path, pool, pool));
+        SVN_ERR(svn_wc__loggy_maybe_set_readonly(&log_accum, pb->local_abspath,
+                                                 fb->path, pool, pool));
     }
 
   /* Deal with installation of the new textbase, if appropriate. */
   if (new_text_base_abspath)
     {
       SVN_ERR(svn_wc__loggy_move(&log_accum,
-                                 svn_wc__adm_access_abspath(adm_access),
+                                 pb->local_abspath,
                                  new_text_base_abspath,
                                  fb->text_base_path, pool, pool));
-      SVN_ERR(svn_wc__loggy_set_readonly(
-                        &log_accum, svn_wc__adm_access_abspath(adm_access),
-                        fb->text_base_path, pool, pool));
+      SVN_ERR(svn_wc__loggy_set_readonly(&log_accum, pb->local_abspath,
+                                         fb->text_base_path, pool, pool));
       tmp_entry.checksum = svn_checksum_to_cstring(actual_checksum, pool);
       flags |= SVN_WC__ENTRY_MODIFY_CHECKSUM;
     }
@@ -4565,9 +4533,8 @@ merge_file(svn_wc_notify_state_t *content_state,
     }
 
   /* Do the entry modifications we've accumulated. */
-  SVN_ERR(svn_wc__loggy_entry_modify(&log_accum,
-                                     svn_wc__adm_access_abspath(adm_access),
-                                     fb->path, &tmp_entry, flags,
+  SVN_ERR(svn_wc__loggy_entry_modify(&log_accum, pb->local_abspath,
+                                     fb->local_abspath, &tmp_entry, flags,
                                      pool, pool));
 
   /* Log commands to handle text-timestamp and working-size,
@@ -4579,7 +4546,7 @@ merge_file(svn_wc_notify_state_t *content_state,
          obstruction. */
       if (fb->last_changed_date && !fb->existed)
         SVN_ERR(svn_wc__loggy_set_timestamp(
-                        &log_accum, svn_wc__adm_access_abspath(adm_access),
+                        &log_accum, pb->local_abspath,
                         fb->path, fb->last_changed_date, pool, pool));
 
       if ((new_text_base_abspath || magic_props_changed)
@@ -4587,18 +4554,17 @@ merge_file(svn_wc_notify_state_t *content_state,
         {
           /* Adjust entries file to match working file */
           SVN_ERR(svn_wc__loggy_set_entry_timestamp_from_wc(
-                        &log_accum, svn_wc__adm_access_abspath(adm_access),
+                        &log_accum, pb->local_abspath,
                         fb->path, pool, pool));
         }
       SVN_ERR(svn_wc__loggy_set_entry_working_size_from_wc(
-                        &log_accum, svn_wc__adm_access_abspath(adm_access),
+                        &log_accum, pb->local_abspath,
                         fb->path, pool, pool));
     }
 
   /* Clean up add-with-history temp file. */
   if (fb->copied_text_base)
-    SVN_ERR(svn_wc__loggy_remove(&log_accum,
-                                 svn_wc__adm_access_abspath(adm_access),
+    SVN_ERR(svn_wc__loggy_remove(&log_accum, pb->local_abspath,
                                  fb->copied_text_base, pool, pool));
 
 
@@ -4739,17 +4705,13 @@ close_edit(void *edit_baton,
            apr_pool_t *pool)
 {
   struct edit_baton *eb = edit_baton;
-  const char *target_path = svn_dirent_join(eb->anchor, eb->target, pool);
-  const char *target_abspath;
   int log_number = 0;
-
-  SVN_ERR(svn_dirent_get_absolute(&target_abspath, target_path, pool));
 
   /* If there is a target and that target is missing, then it
      apparently wasn't re-added by the update process, so we'll
      pretend that the editor deleted the entry.  The helper function
      do_entry_deletion() will take care of the necessary steps.  */
-  if ((*eb->target) && (svn_wc__adm_missing(eb->db, target_abspath, pool)))
+  if ((*eb->target) && (svn_wc__adm_missing(eb->db, eb->target_abspath, pool)))
     /* Still passing NULL for THEIR_URL. A case where THEIR_URL
      * is needed in this call is rare or even non-existant.
      * ### TODO: Construct a proper THEIR_URL anyway. See also
@@ -4785,7 +4747,7 @@ close_edit(void *edit_baton,
      will only remove the deleted entry!  */
   if (! eb->target_deleted)
     {
-      SVN_ERR(svn_wc__do_update_cleanup(eb->db, target_abspath,
+      SVN_ERR(svn_wc__do_update_cleanup(eb->db, eb->target_abspath,
                                         eb->requested_depth,
                                         eb->switch_url,
                                         eb->repos,
