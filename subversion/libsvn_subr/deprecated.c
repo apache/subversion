@@ -848,3 +848,24 @@ svn_error_t *svn_stream_copy(svn_stream_t *from, svn_stream_t *to,
                           svn_stream_disown(to, scratch_pool),
                           NULL, NULL, scratch_pool);
 }
+
+/*** From path.c ***/
+
+const char *
+svn_path_internal_style(const char *path, apr_pool_t *pool)
+{
+  if (svn_path_is_url(path))
+    return svn_uri_canonicalize(path, pool);
+  else
+    return svn_dirent_internal_style(path, pool);
+}
+
+
+const char *
+svn_path_local_style(const char *path, apr_pool_t *pool)
+{
+  if (svn_path_is_url(path))
+    return apr_pstrdup(pool, path);
+  else
+    return svn_dirent_local_style(path, pool);
+}
