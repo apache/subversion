@@ -300,6 +300,8 @@ svn_client__open_ra_session_internal(svn_ra_session_t **ra_session,
   callback_baton_t *cb = apr_pcalloc(pool, sizeof(*cb));
   const char *uuid = NULL;
 
+  SVN_ERR_ASSERT(base_dir != NULL || ! use_admin);
+
   cbtable->open_tmp_file = open_tmp_file;
   cbtable->get_wc_prop = use_admin ? get_wc_prop : NULL;
   cbtable->set_wc_prop = read_only_wc ? NULL : set_wc_prop;
@@ -743,7 +745,7 @@ svn_client__get_youngest_common_ancestor(const char **ancestor_path,
   /* Loop through the first location's history, check for overlapping
      paths and ranges in the second location's history, and
      remembering the youngest matching location. */
-  for (hi = apr_hash_first(NULL, history1); hi; hi = apr_hash_next(hi))
+  for (hi = apr_hash_first(pool, history1); hi; hi = apr_hash_next(hi))
     {
       const char *path = svn_apr_hash_index_key(hi);
       apr_ssize_t path_len = svn_apr_hash_index_klen(hi);

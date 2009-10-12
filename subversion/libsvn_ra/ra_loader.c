@@ -919,7 +919,7 @@ svn_error_t *svn_ra_lock(svn_ra_session_t *session,
 {
   apr_hash_index_t *hi;
 
-  for (hi = apr_hash_first(NULL, path_revs); hi; hi = apr_hash_next(hi))
+  for (hi = apr_hash_first(pool, path_revs); hi; hi = apr_hash_next(hi))
     {
       const void *path;
       apr_hash_this(hi, &path, NULL, NULL);
@@ -944,7 +944,7 @@ svn_error_t *svn_ra_unlock(svn_ra_session_t *session,
 {
   apr_hash_index_t *hi;
 
-  for (hi = apr_hash_first(NULL, path_tokens); hi; hi = apr_hash_next(hi))
+  for (hi = apr_hash_first(pool, path_tokens); hi; hi = apr_hash_next(hi))
     {
       const void *path;
       apr_hash_this(hi, &path, NULL, NULL);

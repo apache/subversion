@@ -85,7 +85,27 @@ svn_client__can_delete(const char *path,
                        apr_pool_t *pool)
 {
   svn_opt_revision_t revision;
+  const svn_wc_entry_t *entry;
+  const char* local_abspath;
+
   revision.kind = svn_opt_revision_unspecified;
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+
+  /* A file external should not be deleted since the file external is
+     implemented as a switched file and it would delete the file the
+     file external is switched to, which is not the behavior the user
+     would probably want. */
+  SVN_ERR(svn_wc__maybe_get_entry(&entry, ctx->wc_ctx, local_abspath,
+                                  svn_node_unknown, FALSE, FALSE, pool, pool));
+
+  if (entry != NULL && entry->file_external_path)
+    return svn_error_createf(SVN_ERR_WC_CANNOT_DELETE_FILE_EXTERNAL, NULL,
+                             _("Cannot remove the file external at '%s'; "
+                               "please propedit or propdel the svn:externals "
+                               "description that created it"),
+                             svn_dirent_local_style(local_abspath, pool));
+
 
   /* Use an infinite-depth status check to see if there's anything in
      or under PATH which would make it unsafe for deletion.  The
@@ -221,7 +241,6 @@ delete_urls(svn_commit_info_t **commit_info_p,
 
 svn_error_t *
 svn_client__wc_delete(const char *path,
-                      svn_wc_adm_access_t *adm_access,
                       svn_boolean_t force,
                       svn_boolean_t dry_run,
                       svn_boolean_t keep_local,
@@ -240,7 +259,7 @@ svn_client__wc_delete(const char *path,
 
   if (!dry_run)
     /* Mark the entry for commit deletion and perform wc deletion */
-    return svn_wc_delete4(ctx->wc_ctx, local_abspath, keep_local,
+    return svn_wc_delete4(ctx->wc_ctx, local_abspath, keep_local, TRUE,
                           ctx->cancel_func, ctx->cancel_baton,
                           notify_func, notify_baton, pool);
   else
@@ -287,7 +306,7 @@ svn_client_delete3(svn_commit_info_t **commit_info_p,
                                               parent_path, TRUE, -1,
                                               ctx->cancel_func,
                                               ctx->cancel_baton, subpool));
-          SVN_ERR(svn_client__wc_delete(path, adm_access, force,
+          SVN_ERR(svn_client__wc_delete(path, force,
                                         FALSE, keep_local,
                                         ctx->notify_func2,
                                         ctx->notify_baton2,

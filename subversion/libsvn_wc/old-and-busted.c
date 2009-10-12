@@ -168,7 +168,7 @@ read_path(const char **result,
           apr_pool_t *pool)
 {
   SVN_ERR(read_str(result, buf, end, pool));
-  if (*result && **result && (! svn_uri_is_canonical(*result, pool)))
+  if (*result && **result && !svn_relpath_is_canonical(*result, pool))
     return svn_error_createf(SVN_ERR_WC_CORRUPT, NULL,
                              _("Entry contains non-canonical path '%s'"),
                              *result);
@@ -1171,11 +1171,7 @@ resolve_to_defaults(apr_hash_t *entries,
   /* Then use it to fill in missing information in other entries. */
   for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
     {
-      void *val;
-      svn_wc_entry_t *this_entry;
-
-      apr_hash_this(hi, NULL, NULL, &val);
-      this_entry = val;
+      svn_wc_entry_t *this_entry = svn_apr_hash_index_val(hi);
 
       if (this_entry == default_entry)
         /* THIS_DIR already has all the information it can possibly

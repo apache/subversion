@@ -73,3 +73,72 @@ svn_diff_file_output_unified(svn_stream_t *output_stream,
                                        original_header, modified_header,
                                        SVN_APR_LOCALE_CHARSET, pool);
 }
+
+svn_error_t *
+svn_diff_file_diff(svn_diff_t **diff,
+                   const char *original,
+                   const char *modified,
+                   apr_pool_t *pool)
+{
+  return svn_diff_file_diff_2(diff, original, modified,
+                              svn_diff_file_options_create(pool), pool);
+}
+
+svn_error_t *
+svn_diff_file_diff3(svn_diff_t **diff,
+                    const char *original,
+                    const char *modified,
+                    const char *latest,
+                    apr_pool_t *pool)
+{
+  return svn_diff_file_diff3_2(diff, original, modified, latest,
+                               svn_diff_file_options_create(pool), pool);
+}
+
+svn_error_t *
+svn_diff_file_diff4(svn_diff_t **diff,
+                    const char *original,
+                    const char *modified,
+                    const char *latest,
+                    const char *ancestor,
+                    apr_pool_t *pool)
+{
+  return svn_diff_file_diff4_2(diff, original, modified, latest, ancestor,
+                               svn_diff_file_options_create(pool), pool);
+}
+
+svn_error_t *
+svn_diff_file_output_merge(svn_stream_t *output_stream,
+                           svn_diff_t *diff,
+                           const char *original_path,
+                           const char *modified_path,
+                           const char *latest_path,
+                           const char *conflict_original,
+                           const char *conflict_modified,
+                           const char *conflict_latest,
+                           const char *conflict_separator,
+                           svn_boolean_t display_original_in_conflict,
+                           svn_boolean_t display_resolved_conflicts,
+                           apr_pool_t *pool)
+{
+  svn_diff_conflict_display_style_t style =
+    svn_diff_conflict_display_modified_latest;
+
+  if (display_resolved_conflicts)
+    style = svn_diff_conflict_display_resolved_modified_latest;
+
+  if (display_original_in_conflict)
+    style = svn_diff_conflict_display_modified_original_latest;
+
+  return svn_diff_file_output_merge2(output_stream,
+                                     diff,
+                                     original_path,
+                                     modified_path,
+                                     latest_path,
+                                     conflict_original,
+                                     conflict_modified,
+                                     conflict_latest,
+                                     conflict_separator,
+                                     style,
+                                     pool);
+}

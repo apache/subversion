@@ -935,7 +935,7 @@ apply_one_patch(svn_patch_t *patch, const char *wc_path,
               /* Schedule the target for deletion.  Suppress
                * notification, we'll do it manually in a minute. */
               SVN_ERR(svn_wc_delete4(ctx->wc_ctx, target->abs_path,
-                                     FALSE /* keep_local */,
+                                     FALSE /* keep_local */, FALSE,
                                      ctx->cancel_func, ctx->cancel_baton,
                                      NULL, NULL, pool));
             }

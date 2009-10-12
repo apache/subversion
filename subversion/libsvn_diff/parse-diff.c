@@ -169,7 +169,7 @@ parse_hunk_header(const char *header, svn_hunk_t *hunk, apr_pool_t *pool)
 
 /* A stream line-filter which allows only original text from a hunk. */
 static svn_error_t *
-original_line_filter(svn_boolean_t *filtered, const char *line,
+original_line_filter(svn_boolean_t *filtered, const char *line, void *baton,
                      apr_pool_t *scratch_pool)
 {
   *filtered = line[0] == '+';
@@ -178,7 +178,7 @@ original_line_filter(svn_boolean_t *filtered, const char *line,
 
 /* A stream line-filter which allows only modified text from a hunk. */
 static svn_error_t *
-modified_line_filter(svn_boolean_t *filtered, const char *line,
+modified_line_filter(svn_boolean_t *filtered, const char *line, void *baton,
                      apr_pool_t *scratch_pool)
 {
   *filtered = line[0] == '-';
@@ -189,6 +189,7 @@ modified_line_filter(svn_boolean_t *filtered, const char *line,
 static svn_error_t *
 remove_leading_char_transformer(svn_stringbuf_t **buf,
                                 const char *line,
+                                void *baton,
                                 apr_pool_t *result_pool,
                                 apr_pool_t *scratch_pool)
 {

@@ -309,7 +309,8 @@ test_stream_range(apr_pool_t *pool)
 
 /* An implementation of svn_io_line_filter_cb_t */
 static svn_error_t *
-line_filter(svn_boolean_t *filtered, const char *line, apr_pool_t *scratch_pool)
+line_filter(svn_boolean_t *filtered, const char *line, void *baton,
+            apr_pool_t *scratch_pool)
 {
   *filtered = strchr(line, '!') != NULL;
   return SVN_NO_ERROR;
@@ -347,7 +348,7 @@ test_stream_line_filter(apr_pool_t *pool)
 
 /* An implementation of svn_io_line_transformer_cb_t */
 static svn_error_t *
-line_transformer(svn_stringbuf_t **buf, const char *line,
+line_transformer(svn_stringbuf_t **buf, const char *line, void *baton,
                  apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
   int i, len = strlen(line);

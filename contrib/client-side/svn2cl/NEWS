@@ -1,3 +1,14 @@
+changes from 0.11 to 0.12
+-------------------------
+
+* fix line wrapping problem thanks to Peter Samuelson, Mike Hommey and others
+* run svn command to find repository location with --non-interactive and don't
+  hide errors
+* perform URL highlighting (very basic) in the HTML output
+* some miscellaneous bugfixes and simplifications
+* correctly flag file additions
+
+
 changes from 0.10 to 0.11
 -------------------------
 

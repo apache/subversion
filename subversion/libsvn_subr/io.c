@@ -223,7 +223,7 @@ io_check_path(const char *path,
   if (APR_STATUS_IS_ENOENT(apr_err))
     *kind = svn_node_none;
   else if (APR_STATUS_IS_ENOTDIR(apr_err)
-#if WIN32
+#ifdef WIN32
            || (APR_TO_OS_ERROR(apr_err) == ERROR_INVALID_NAME)
 #endif
            )
@@ -416,7 +416,7 @@ svn_io_open_uniquely_named(apr_file_t **file,
               if (!apr_err_2 && finfo.filetype == APR_DIR)
                 continue;
 
-#if WIN32
+#ifdef WIN32
               apr_err_2 = APR_TO_OS_ERROR(apr_err);
 
               if (apr_err_2 == ERROR_ACCESS_DENIED ||

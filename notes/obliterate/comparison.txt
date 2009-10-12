@@ -15,9 +15,11 @@ TABLE OF CONTENTS
 
     4. CVS
 
-    5. MERCURIAL
+    5. CLEARCASE
 
-    6. GIT
+    6. MERCURIAL
+
+    7. GIT
 
 
 1. INTRODUCTION
@@ -43,6 +45,8 @@ TABLE OF CONTENTS
   |             | p4 protect        |                   |                   |
   |             |                   |                   |                   |
   | CVS         | Admin manual task | Admin manual task | NO ?              |
+  |             |                   |                   |                   |
+  | ClearCase   | rmversion/rmelem  | rmversion/rmelem  | ?                 |
   |             |                   |                   |                   |
   | Mercurial   | ?                 | ?                 | ?                 |
   |             |                   |                   |                   |
@@ -114,14 +118,17 @@ TABLE OF CONTENTS
   Backups, Mirrors: ### ?
 
 
-5. MERCURIAL
+5. CLEARCASE
+
+
+6. MERCURIAL
 
   Mercurial has no Obliterate command. This email describes how one might
   achieve obliteration:
   <http://www.selenic.com/pipermail/mercurial/2008-March/017859.html>.
 
 
-6. GIT
+7. GIT
 
   Git has a "git-filter-branch" command which can be used to achieve
   obliteration. See the manual page

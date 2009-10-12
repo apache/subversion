@@ -189,16 +189,18 @@ svn_string_find_char_backward(const svn_string_t *str, char ch);
 /** Create a new bytestring containing a C string (NULL-terminated). */
 svn_stringbuf_t *
 svn_stringbuf_create(const char *cstring, apr_pool_t *pool);
+
 /** Create a new bytestring containing a generic string of bytes
  * (NON-NULL-terminated)
  */
 svn_stringbuf_t *
 svn_stringbuf_ncreate(const char *bytes, apr_size_t size, apr_pool_t *pool);
+
 /** Create a new empty bytestring with at least @a minimum_size bytes of
  * space available in the memory block.
  *
  * The allocated string buffer will be one byte larger then @a minimum_size
- * to account for a final '\0'.
+ * to account for a final '\\0'.
  *
  * @since New in 1.6.
  */

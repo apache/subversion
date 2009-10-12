@@ -503,7 +503,7 @@ parent_path_relpath(parent_path_t *child,
   while (this_node != ancestor)
     {
       assert(this_node != NULL);
-      path_so_far = svn_uri_join(this_node->entry, path_so_far, pool);
+      path_so_far = svn_relpath_join(this_node->entry, path_so_far, pool);
       this_node = this_node->parent;
     }
   return path_so_far;
@@ -3207,6 +3207,9 @@ fs_same_p(svn_boolean_t *same_p,
   return SVN_NO_ERROR;
 }
 
+/* Copy the node at FROM_PATH under FROM_ROOT to TO_PATH under
+   TO_ROOT.  If PRESERVE_HISTORY is set, then the copy is recorded in
+   the copies table.  Perform temporary allocations in POOL. */
 static svn_error_t *
 copy_helper(svn_fs_root_t *from_root,
             const char *from_path,
@@ -4996,7 +4999,7 @@ txn_body_get_mergeinfo_data_and_entries(void *baton, trail_t *trail)
   SVN_ERR_ASSERT(svn_fs_base__dag_node_kind(node) == svn_node_dir);
 
   SVN_ERR(svn_fs_base__dag_dir_entries(&entries, node, trail, trail->pool));
-  for (hi = apr_hash_first(NULL, entries); hi; hi = apr_hash_next(hi))
+  for (hi = apr_hash_first(trail->pool, entries); hi; hi = apr_hash_next(hi))
     {
       void *val;
       svn_fs_dirent_t *dirent;
@@ -5102,7 +5105,7 @@ crawl_directory_for_mergeinfo(svn_fs_t *fs,
     return SVN_NO_ERROR;
 
   iterpool = svn_pool_create(pool);
-  for (hi = apr_hash_first(NULL, children_atop_mergeinfo_trees);
+  for (hi = apr_hash_first(pool, children_atop_mergeinfo_trees);
        hi;
        hi = apr_hash_next(hi))
     {

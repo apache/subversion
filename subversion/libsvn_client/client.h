@@ -441,7 +441,7 @@ svn_error_t *svn_client__get_auto_props(apr_hash_t **properties,
 
 
 /* The main logic for client deletion from a working copy. Deletes PATH
-   from ADM_ACCESS.  If PATH (or any item below a directory PATH) is
+   from CTX->WC_CTX.  If PATH (or any item below a directory PATH) is
    modified the delete will fail and return an error unless FORCE or KEEP_LOCAL
    is TRUE.
 
@@ -452,7 +452,6 @@ svn_error_t *svn_client__get_auto_props(apr_hash_t **properties,
    occur, but the working copy is not modified.  If NOTIFY_FUNC is not
    null, it is called with NOTIFY_BATON for each file or directory deleted. */
 svn_error_t * svn_client__wc_delete(const char *path,
-                                    svn_wc_adm_access_t *adm_access,
                                     svn_boolean_t force,
                                     svn_boolean_t dry_run,
                                     svn_boolean_t keep_local,
@@ -654,10 +653,8 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
    TARGET is a working-copy path, the base of the hierarchy to be
    compared.  It corresponds to the URL opened in RA_SESSION below.
 
-   ADM_ACCESS is an access baton with a write lock for the anchor of
-   TARGET.  It should lock the entire TARGET tree if RECURSE is TRUE.
-   ADM_ACCESS may be NULL, in which case the DIFF_CMD callbacks will be
-   passed a NULL access baton.
+   If WC_CTX is not NULL, then it is a context for the working copy which
+   TARGET is located in.
 
    DIFF_CMD/DIFF_CMD_BATON represent the callback and callback argument that
    implement the file comparison function
@@ -677,7 +674,7 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
    EDITOR/EDIT_BATON return the newly created editor and baton. */
 svn_error_t *
 svn_client__get_diff_editor(const char *target,
-                            svn_wc_adm_access_t *adm_access,
+                            svn_wc_context_t *wc_ctx,
                             const svn_wc_diff_callbacks4_t *diff_cmd,
                             void *diff_cmd_baton,
                             svn_depth_t depth,
@@ -895,7 +892,6 @@ svn_client__harvest_committables(apr_hash_t **committables,
 svn_error_t *
 svn_client__get_copy_committables(apr_hash_t **committables,
                                   const apr_array_header_t *copy_pairs,
-                                  svn_wc_adm_access_t *adm_access,
                                   svn_client_ctx_t *ctx,
                                   apr_pool_t *pool);
 

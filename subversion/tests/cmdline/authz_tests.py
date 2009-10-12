@@ -711,10 +711,12 @@ devs1 = @admins, dev1
 devs2 = @admins, dev2
 users = @devs1, @devs2, user1, user2""" })
 
-  # validation of this authz file should fail, so no repo access
+  # validation of this authz file should *not* fail (where formerly,
+  # it complained about circular dependencies that do not, in fact,
+  # exist), so this is business as usual.
   svntest.actions.run_and_verify_svn("ls remote folder",
-                                      ['B/\n', 'C/\n', 'D/\n', 'mu\n'],
-                                      [],
+                                     ['B/\n', 'C/\n', 'D/\n', 'mu\n'],
+                                     [],
                                      'ls',
                                      A_url)
 

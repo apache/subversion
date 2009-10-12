@@ -138,6 +138,7 @@ Commit access for specific areas:
          nmiyo   MIYOKAWA, Nobuyoshi <n-miyo@tempus.org>     (www: ja)
        rocksun   Rock Sun <daijun@gmail.com>                 (www: zh)
        kmradke   Kevin Radke <kmradke@gmail.com>             (add-needs-lock.py)
+           esr   Eric S. Raymond <esr@thyrsus.com>           (svncutter)
 
   Translation of message files:
 

@@ -36,11 +36,11 @@ extern "C" {
 #endif /* __cplusplus */
 
 
-/* For the WCROOT identified by the DB and LOCAL_ABSPATH pair, run any
+/* For the WCROOT identified by the DB and WRI_ABSPATH pair, run any
    work items that may be present in its workqueue.  */
 svn_error_t *
 svn_wc__wq_run(svn_wc__db_t *db,
-               const char *local_abspath,
+               const char *wri_abspath,
                svn_cancel_func_t cancel_func,
                void *cancel_baton,
                apr_pool_t *scratch_pool);

@@ -64,9 +64,9 @@ svn_ra__assert_mergeinfo_capable_server(svn_ra_session_t *ra_session,
         }
       return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
                                _("Retrieval of mergeinfo unsupported by '%s'"),
-                               svn_path_is_url(path_or_url) ?
-                                 svn_uri_local_style(path_or_url, pool):
-                                 svn_dirent_local_style(path_or_url, pool));
+                               svn_path_is_url(path_or_url) 
+                                  ? path_or_url
+                                  : svn_dirent_local_style(path_or_url, pool));
     }
   return SVN_NO_ERROR;
 }

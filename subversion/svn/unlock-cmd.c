@@ -1,5 +1,5 @@
 /*
- * unlcok-cmd.c -- Unlock a working copy path.
+ * unlock-cmd.c -- Unlock a working copy path.
  *
  * ====================================================================
  *    Licensed to the Subversion Corporation (SVN Corp.) under one
