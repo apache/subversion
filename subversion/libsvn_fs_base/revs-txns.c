@@ -616,6 +616,7 @@ svn_fs_base__change_txn_props(svn_fs_txn_t *txn,
 
 static txn_vtable_t txn_vtable = {
   svn_fs_base__commit_txn,
+  svn_fs_base__commit_obliteration_txn,
   svn_fs_base__abort_txn,
   svn_fs_base__txn_prop,
   svn_fs_base__txn_proplist,
@@ -691,6 +692,24 @@ txn_body_begin_txn(void *baton, trail_t *trail)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+txn_body_begin_obliteration_txn(void *baton, trail_t *trail)
+{
+  struct begin_txn_args *args = baton;
+  const svn_fs_id_t *root_id;
+  const char *txn_id;
+
+  SVN_ERR(svn_fs_base__rev_get_root(&root_id, trail->fs, args->rev,
+                                    trail, trail->pool));
+  SVN_ERR(svn_fs_bdb__create_txn(&txn_id, trail->fs, root_id,
+                                 trail, trail->pool));
+
+  /* ### No need for "CHECK_OOD" and "CHECK_LOCKS" like the non-oblit case? */
+
+  *args->txn_p = make_txn(trail->fs, txn_id, args->rev, trail->pool);
+  return SVN_NO_ERROR;
+}
+
 
 
 
@@ -725,6 +744,30 @@ svn_fs_base__begin_txn(svn_fs_txn_t **txn_p,
   date.len = strlen(date.data);
   return svn_fs_base__change_txn_prop(txn, SVN_PROP_REVISION_DATE,
                                        &date, pool);
+}
+
+
+svn_error_t *
+svn_fs_base__begin_obliteration_txn(svn_fs_txn_t **txn_p,
+                                    svn_fs_t *fs,
+                                    svn_revnum_t rev,
+                                    apr_pool_t *pool)
+{
+  svn_fs_txn_t *txn;
+  struct begin_txn_args args;
+
+  SVN_ERR(svn_fs__check_fs(fs, TRUE));
+
+  args.txn_p = &txn;
+  args.rev   = rev;
+  args.flags = 0;
+  SVN_ERR(svn_fs_base__retry_txn(fs, txn_body_begin_obliteration_txn, &args,
+          FALSE, pool));
+
+  *txn_p = txn;
+
+  return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL, NULL);
+  return SVN_NO_ERROR;
 }
 
 
