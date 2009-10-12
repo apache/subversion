@@ -424,9 +424,10 @@ copy_versioned_files(const char *from,
                                              iterpool);
                   new_to = svn_dirent_join(to, ext_item->target_dir, iterpool);
 
-                   /* The target dir might have multiple components.  Guarantee
-                      the path leading down to the last component. */
-                  if (svn_path_component_count(ext_item->target_dir) > 1)
+                   /* The target dir might have parents that don't exist.
+                      Guarantee the path upto the last component. */
+                  if (!svn_dirent_is_root(ext_item->target_dir,
+                                          strlen(ext_item->target_dir)))
                     {
                       const char *parent = svn_dirent_dirname(new_to, iterpool);
                       SVN_ERR(svn_io_make_dir_recursively(parent, iterpool));

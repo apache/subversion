@@ -7195,19 +7195,13 @@ log_noop_revs(void *baton,
   {
       const char *log_path = svn_apr_hash_index_key(hi);
       const char *path = log_path;
-      const char *path_dir = log_path;
       const char *rel_path;
       const char *cwmi_path;
-      apr_size_t j;
-      apr_size_t component_count;
       apr_array_header_t *paths_explicit_rangelist = NULL;
       svn_boolean_t mergeinfo_inherited = FALSE;
 
       /* Adjust REL_PATH so it is relative to the top most directory. */
-      component_count = svn_path_component_count(path);
-      for (j = 0; j < component_count - 1; j++)
-        path_dir = svn_dirent_dirname(path_dir, pool);
-      rel_path = path + strlen(path_dir);
+      rel_path = svn_uri_skip_ancestor(log_path, path);
 
       if (rel_path[0] == '/') /* Remove any leading '/'. */
         rel_path++;
