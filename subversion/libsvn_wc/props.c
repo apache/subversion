@@ -334,7 +334,7 @@ svn_wc__load_props(apr_hash_t **base_props_p,
 
 svn_error_t *
 svn_wc__install_props(svn_stringbuf_t **log_accum,
-                      const char *adm_abspath,
+                      svn_wc__db_t *db,
                       const char *local_abspath,
                       apr_hash_t *base_props,
                       apr_hash_t *working_props,
@@ -343,12 +343,16 @@ svn_wc__install_props(svn_stringbuf_t **log_accum,
 {
   svn_wc__db_kind_t kind;
   const char *working_propfile_path;
+  const char *adm_abspath;
   apr_array_header_t *prop_diffs;
 
-  if (strcmp(local_abspath, adm_abspath) == 0)
-    kind = svn_wc__db_kind_dir;
+  /* Allow installing properties on files that will be installed by loggy */
+  SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath, TRUE, pool));
+
+  if (kind == svn_wc__db_kind_dir)
+    adm_abspath = local_abspath;
   else
-    kind = svn_wc__db_kind_file;
+    adm_abspath = svn_dirent_dirname(local_abspath, pool);
 
   SVN_ERR(svn_wc__prop_path(&working_propfile_path, local_abspath,
                             kind, svn_wc__props_working, pool));
@@ -1695,7 +1699,7 @@ svn_wc__merge_props(svn_stringbuf_t **entry_accum,
   if (dry_run)
     return SVN_NO_ERROR;
 
-  SVN_ERR(svn_wc__install_props(entry_accum, adm_abspath, local_abspath,
+  SVN_ERR(svn_wc__install_props(entry_accum, db, local_abspath,
                                 base_props, working_props, base_merge,
                                 pool));
 
