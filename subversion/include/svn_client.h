@@ -3028,6 +3028,7 @@ svn_client_mergeinfo_log(const char *path_or_url,
  *
  * @since New in 1.5.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_mergeinfo_log_merged(const char *path_or_url,
                                 const svn_opt_revision_t *peg_revision,
@@ -3048,6 +3049,7 @@ svn_client_mergeinfo_log_merged(const char *path_or_url,
  *
  * @since New in 1.5.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_mergeinfo_log_eligible(const char *path_or_url,
                                   const svn_opt_revision_t *peg_revision,

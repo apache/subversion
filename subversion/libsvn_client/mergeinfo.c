@@ -1540,27 +1540,6 @@ location_from_path_and_rev(const char **url,
 /*** Public APIs ***/
 
 svn_error_t *
-svn_client_mergeinfo_log_merged(const char *path_or_url,
-                                const svn_opt_revision_t *peg_revision,
-                                const char *merge_source_path_or_url,
-                                const svn_opt_revision_t *src_peg_revision,
-                                svn_log_entry_receiver_t log_receiver,
-                                void *log_receiver_baton,
-                                svn_boolean_t discover_changed_paths,
-                                const apr_array_header_t *revprops,
-                                svn_client_ctx_t *ctx,
-                                apr_pool_t *pool)
-{
-  return svn_client_mergeinfo_log(path_or_url, TRUE, peg_revision,
-                                  merge_source_path_or_url,
-                                  src_peg_revision,
-                                  log_receiver, log_receiver_baton,
-                                  discover_changed_paths,
-                                  svn_depth_empty, revprops, ctx,
-                                  pool);
-}
-
-svn_error_t *
 svn_client_mergeinfo_get_merged(apr_hash_t **mergeinfo_p,
                                 const char *path_or_url,
                                 const svn_opt_revision_t *peg_revision,
@@ -2028,27 +2007,6 @@ svn_client_mergeinfo_log(const char *path_or_url,
                                        log_receiver, log_receiver_baton,
                                        ctx, scratch_pool));
   return SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn_client_mergeinfo_log_eligible(const char *path_or_url,
-                                  const svn_opt_revision_t *peg_revision,
-                                  const char *merge_source_path_or_url,
-                                  const svn_opt_revision_t *src_peg_revision,
-                                  svn_log_entry_receiver_t log_receiver,
-                                  void *log_receiver_baton,
-                                  svn_boolean_t discover_changed_paths,
-                                  const apr_array_header_t *revprops,
-                                  svn_client_ctx_t *ctx,
-                                  apr_pool_t *pool)
-{
-  return svn_client_mergeinfo_log(path_or_url, FALSE, peg_revision,
-                                  merge_source_path_or_url,
-                                  src_peg_revision,
-                                  log_receiver, log_receiver_baton,
-                                  discover_changed_paths,
-                                  svn_depth_empty, revprops, ctx,
-                                  pool);
 }
 
 svn_error_t *
