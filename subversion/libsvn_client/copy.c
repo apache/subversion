@@ -137,10 +137,14 @@ calculate_target_mergeinfo(svn_ra_session_t *ra_session,
       else
         {
           svn_boolean_t inherited;
+          const char *local_abspath;
+
+          SVN_ERR(svn_dirent_get_absolute(&local_abspath, src_path_or_url,
+                                          pool));
           SVN_ERR(svn_client__get_wc_mergeinfo(&src_mergeinfo, &inherited,
                                                svn_mergeinfo_inherited,
-                                               entry, src_path_or_url, NULL,
-                                               NULL, ctx, pool));
+                                               local_abspath, NULL,
+                                               NULL, ctx, pool, pool));
         }
     }
 

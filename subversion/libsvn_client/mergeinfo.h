@@ -84,33 +84,36 @@ svn_client__merge_path_dup(const svn_client__merge_path_t *old,
 
 /*** Functions ***/
 
-/* Find explicit or inherited WC mergeinfo for WCPATH, and return it
+/* Find explicit or inherited WC mergeinfo for LOCAL_ABSPATH, and return it
    in *MERGEINFO (NULL if no mergeinfo is set).  Set *INHERITED to
    whether the mergeinfo was inherited (TRUE or FALSE).
 
    This function will search for inherited mergeinfo in the parents of
-   WCPATH only if the working revision of WCPATH falls within the range
-   of the parent's last committed revision to the parent's working
-   revision (inclusive).
+   LOCAL_ABSPATH only if the base revision of LOCAL_ABSPATH falls within
+   the range of the parent's last committed revision to the parent's base
+   revision (inclusive) or is LOCAL_ABSPATH is a local addition.  If asking
+   for the inherited mergeinfo of an added path (i.e. one with no base
+   revision), that path may inherit mergeinfo from it's nearest parent
+   with a base revision and explicit mergeinfo.
 
    INHERIT indicates whether explicit, explicit or inherited, or only
-   inherited mergeinfo for WCPATH is retrieved.
+   inherited mergeinfo for LOCAL_ABSPATH is retrieved.
 
-   Don't look for inherited mergeinfo any higher than LIMIT_PATH
+   Don't look for inherited mergeinfo any higher than LIMIT_ABSPATH
    (ignored if NULL) or beyond any switched path.
 
-   Set *WALKED_PATH to the path climbed from WCPATH to find inherited
+   Set *WALKED_PATH to the path climbed from LOCAL_ABSPATH to find inherited
    mergeinfo, or "" if none was found. (ignored if NULL). */
 svn_error_t *
 svn_client__get_wc_mergeinfo(svn_mergeinfo_t *mergeinfo,
                              svn_boolean_t *inherited,
                              svn_mergeinfo_inheritance_t inherit,
-                             const svn_wc_entry_t *entry,
-                             const char *wcpath,
-                             const char *limit_path,
+                             const char *local_abspath,
+                             const char *limit_abspath,
                              const char **walked_path,
                              svn_client_ctx_t *ctx,
-                             apr_pool_t *pool);
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool);
 
 /* If INCLUDE_DESCENDANTS is false then behaves exactly like
    svn_client__get_wc_mergeinfo except the mergeinfo for WCPATH is put in the
