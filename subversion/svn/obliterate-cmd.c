@@ -35,6 +35,8 @@
 #include "cl.h"
 #include "svn_private_config.h"
 
+#include "private/svn_client_private.h"
+
 
 /*** Code. ***/
 
