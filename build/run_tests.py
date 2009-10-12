@@ -252,7 +252,7 @@ class TestHarness:
     if failed == 1:
       print(TextColors.FAILURE + 'FAILURE' + TextColors.ENDC)
     elif failed and self.log:
-      self.log.write('FAIL:  %s: Unknown test failure see tests.log.\n\n' % progbase)
+      self.log.write('FAIL:  %s: Unknown test failure; see tests.log.\n\n' % progbase)
       self.log.flush()
       print(TextColors.FAILURE + 'FAILURE' + TextColors.ENDC)
     else:
