@@ -1559,11 +1559,12 @@ static svn_error_t *
 run_log(svn_wc__db_t *db,
         const char *adm_abspath,
         svn_boolean_t rerun,
+        svn_cancel_func_t cancel_func,
+        void *cancel_baton,
         apr_pool_t *scratch_pool)
 {
   svn_xml_parser_t *parser;
   struct log_runner *loggy;
-  char *buf = apr_palloc(scratch_pool, SVN__STREAM_CHUNK_SIZE);
   const char *logfile_path;
   int log_number;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
@@ -1587,16 +1588,16 @@ run_log(svn_wc__db_t *db,
 
   for (log_number = 0; ; log_number++)
     {
-      svn_stream_t *stream;
       svn_error_t *err;
-      apr_size_t len = SVN__STREAM_CHUNK_SIZE;
+      svn_stringbuf_t *contents;
 
       svn_pool_clear(iterpool);
-      logfile_path = compute_logfile_path(log_number, iterpool);
 
-      /* Parse the log file's contents. */
-      err = svn_wc__open_adm_stream(&stream, adm_abspath, logfile_path,
-                                    iterpool, iterpool);
+      logfile_path = svn_wc__adm_child(adm_abspath,
+                                       compute_logfile_path(log_number,
+                                                            iterpool),
+                                       iterpool);
+      err = svn_stringbuf_from_file2(&contents, logfile_path, iterpool);
       if (err)
         {
           if (APR_STATUS_IS_ENOENT(err->apr_err))
@@ -1604,19 +1605,11 @@ run_log(svn_wc__db_t *db,
               svn_error_clear(err);
               break;
             }
-          else
-            {
-              SVN_ERR_W(err, _("Couldn't open log"));
-            }
+
+          return svn_error_quick_wrap(err, _("Couldn't open log"));
         }
 
-      do {
-        SVN_ERR(svn_stream_read(stream, buf, &len));
-        SVN_ERR(svn_xml_parse(parser, buf, len, 0));
-
-      } while (len == SVN__STREAM_CHUNK_SIZE);
-
-      SVN_ERR(svn_stream_close(stream));
+      SVN_ERR(svn_xml_parse(parser, contents->data, contents->len, 0));
     }
 
   /* Pacify Expat with a pointless closing element tag. */
@@ -1628,7 +1621,8 @@ run_log(svn_wc__db_t *db,
   SVN_ERR(check_killme(adm_abspath, &killme, &kill_adm_only, iterpool));
   if (killme)
     {
-      SVN_ERR(handle_killme(db, adm_abspath, kill_adm_only, NULL, NULL,
+      SVN_ERR(handle_killme(db, adm_abspath, kill_adm_only,
+                            cancel_func, cancel_baton,
                             iterpool));
     }
   else
@@ -1645,6 +1639,10 @@ run_log(svn_wc__db_t *db,
         }
     }
 
+  /* Run anything that might be sitting in the work queue.  */
+  SVN_ERR(svn_wc__wq_run(db, adm_abspath, cancel_func, cancel_baton,
+                         iterpool));
+
   svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
@@ -1659,7 +1657,7 @@ svn_wc__run_log(svn_wc_adm_access_t *adm_access,
 
   return run_log(svn_wc__adm_get_db(adm_access),
                  svn_wc__adm_access_abspath(adm_access),
-                 FALSE, scratch_pool);
+                 FALSE, NULL, NULL, scratch_pool);
 }
 
 svn_error_t *
@@ -1676,7 +1674,7 @@ svn_wc__run_log2(svn_wc__db_t *db,
   /* Verify that we're holding this directory's write lock.  */
   SVN_ERR(svn_wc__adm_write_check(adm_access, scratch_pool));
 
-  return run_log(db, adm_abspath, FALSE, scratch_pool);
+  return run_log(db, adm_abspath, FALSE, NULL, NULL, scratch_pool);
 }
 
 
@@ -2309,8 +2307,6 @@ cleanup_internal(svn_wc__db_t *db,
   const apr_array_header_t *children;
   int i;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
-  svn_boolean_t killme;
-  svn_boolean_t kill_adm_only;
 
   /* Check cancellation; note that this catches recursive calls too. */
   if (cancel_func)
@@ -2346,27 +2342,15 @@ cleanup_internal(svn_wc__db_t *db,
         }
     }
 
-  SVN_ERR(check_killme(adm_abspath, &killme, &kill_adm_only, iterpool));
-  if (killme)
-    {
-      /* A KILLME indicates that the log has already been run */
-      SVN_ERR(handle_killme(db, adm_abspath, kill_adm_only, cancel_func,
-                            cancel_baton, iterpool));
-    }
-  else
-    {
-      svn_boolean_t present;
+  /* The recursion is now complete.
 
-      /* In an attempt to maintain consistency between the decisions made in
-         this function, and those made in the access baton lock-removal code,
-         we use the same test as the lock-removal code. */
-      SVN_ERR(svn_wc__logfile_present(&present, adm_abspath, iterpool));
-      if (present)
-        {
-          /* ### rerun the log. why? dunno. missing commentary... */
-          SVN_ERR(run_log(db, adm_abspath, TRUE, iterpool));
-        }
-    }
+     In the past, we optimized for the "killme" case, and also looked to
+     see if any logs were actually present. Bah. Whatever. Just call
+     run_logs(), and let it sort everything out. A little extra time is
+     no big deal since all this code is going to be deleted.  */
+  /* ### cleanup means re-run. the "normal" path is first-run.  */
+  SVN_ERR(run_log(db, adm_abspath, TRUE /* re-run */,
+                  cancel_func, cancel_baton, iterpool));
 
   /* Cleanup the tmp area of the admin subdir, if running the log has not
      removed it!  The logs have been run, so anything left here has no hope
