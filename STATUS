@@ -179,8 +179,12 @@ Candidate changes:
    Justification:
      Useful to specify the time taken by each test in integration tools
      like Hudson, by parsing the log file.
+   Branch:
+     Resolves a minor conflict due to changes in trunk.
+     ^/branches/1.6.x-r39887
    Votes:
-     +1: brane, bhuvan
+     +1: brane, stylesen
+     +1 (non-binding): bhuvan
 
 Approved changes:
 =================
