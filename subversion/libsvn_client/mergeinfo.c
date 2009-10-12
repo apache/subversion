@@ -1395,7 +1395,7 @@ logs_for_mergeinfo_rangelist(const char *source_url,
                              apr_array_header_t *merge_source_paths,
                              svn_boolean_t filtering_merged,
                              apr_array_header_t *rangelist,
-                             svn_mergeinfo_t target_mereginfo_catalog,
+                             svn_mergeinfo_t target_mergeinfo_catalog,
                              const char *abs_repos_target_path,
                              svn_boolean_t discover_changed_paths,
                              const apr_array_header_t *revprops,
@@ -1431,17 +1431,17 @@ logs_for_mergeinfo_rangelist(const char *source_url,
   oldest_rev.kind = svn_opt_revision_number;
   oldest_rev.value.number = oldest_range->start;
 
-  if (! target_mereginfo_catalog)
-    target_mereginfo_catalog = apr_hash_make(scratch_pool);
+  if (! target_mergeinfo_catalog)
+    target_mergeinfo_catalog = apr_hash_make(scratch_pool);
 
   /* FILTER_LOG_ENTRY_BATON_T->TARGET_MERGEINFO_CATALOG's keys are required
      to be repository-absolute. */
-  if (apr_hash_count(target_mereginfo_catalog))
+  if (apr_hash_count(target_mergeinfo_catalog))
     {
       apr_hash_index_t *hi;
       svn_mergeinfo_catalog_t rekeyed_catalog = apr_hash_make(scratch_pool);
 
-      for (hi = apr_hash_first(scratch_pool, target_mereginfo_catalog);
+      for (hi = apr_hash_first(scratch_pool, target_mergeinfo_catalog);
            hi;
            hi = apr_hash_next(hi))
         {
@@ -1453,15 +1453,15 @@ logs_for_mergeinfo_rangelist(const char *source_url,
                          APR_HASH_KEY_STRING,
                          svn_apr_hash_index_val(hi));
         }
-      target_mereginfo_catalog = rekeyed_catalog;
+      target_mergeinfo_catalog = rekeyed_catalog;
     }
 
   /* Build the log filtering callback baton. */
   fleb.filtering_merged = filtering_merged;
   fleb.merge_source_paths = merge_source_paths;
-  fleb.target_mergeinfo_catalog = target_mereginfo_catalog;
+  fleb.target_mergeinfo_catalog = target_mergeinfo_catalog;
   fleb.depth_first_catalog_index =
-    svn_sort__hash(target_mereginfo_catalog,
+    svn_sort__hash(target_mergeinfo_catalog,
                    svn_sort_compare_items_as_paths,
                    scratch_pool);
   fleb.abs_repos_target_path = abs_repos_target_path;
