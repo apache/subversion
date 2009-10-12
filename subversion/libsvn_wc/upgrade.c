@@ -732,6 +732,7 @@ bump_database_to_15(void *baton,
   return SVN_NO_ERROR;
 }
 
+#if 0
 static svn_error_t *
 bump_to_15(const char *wcroot_abspath,
            svn_sqlite__db_t *sdb,
@@ -745,6 +746,7 @@ bump_to_15(const char *wcroot_abspath,
 
   return SVN_NO_ERROR;
 }
+#endif
 
 
 svn_error_t *
