@@ -920,8 +920,6 @@ log_do_committed(struct log_runner *loggy,
          processing this logfile.  */
       if (is_this_dir)
         {
-          const char *killme_abspath;
-
           /* Bump the revision number of this_dir anyway, so that it
              might be higher than its parent's revnum.  If it's
              higher, then the process that sees KILLME and destroys
@@ -937,23 +935,11 @@ log_do_committed(struct log_runner *loggy,
                                         | SVN_WC__ENTRY_MODIFY_KIND,
                                         pool));
 
-          /* Drop the 'killme' file. */
-          killme_abspath = svn_wc__adm_child(loggy->adm_abspath,
-                                             SVN_WC__ADM_KILLME, pool);
-          err = svn_io_file_create(killme_abspath,
-                                   orig_entry->keep_local
-                                     ? SVN_WC__KILL_ADM_ONLY
-                                     : "",
-                                   pool);
-          if (err)
-            {
-              if (loggy->rerun && APR_STATUS_IS_EEXIST(err->apr_err))
-                svn_error_clear(err);
-              else
-                return svn_error_return(err);
-            }
-
-          return SVN_NO_ERROR;
+          /* Ensure the directory is deleted later.  */
+          return svn_error_return(svn_wc__wq_add_killme(
+                                    loggy->db, loggy->adm_abspath,
+                                    orig_entry->keep_local /* adm_only */,
+                                    pool));
         }
 
       /* Else, we're deleting a file, and we can safely remove files
@@ -1433,68 +1419,6 @@ start_handler(void *userData, const char *eltname, const char **atts)
   return;
 }
 
-/* Process the "KILLME" file associated with DIR_ABSPATH: remove the
-   administrative area for DIR_ABSPATH and its children, and, if ADM_ONLY
-   is FALSE, also remove the contents of the working copy (leaving only
-   locally-modified files).  */
-static svn_error_t *
-handle_killme(svn_wc__db_t *db,
-              const char *dir_abspath,
-              svn_boolean_t adm_only,
-              svn_cancel_func_t cancel_func,
-              void *cancel_baton,
-              apr_pool_t *scratch_pool)
-{
-  svn_revnum_t original_revision;
-  svn_revnum_t parent_revision;
-  svn_error_t *err;
-
-  SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, &original_revision,
-                                   NULL, NULL, NULL,
-                                   NULL, NULL, NULL,
-                                   NULL, NULL, NULL,
-                                   NULL, NULL, NULL,
-                                   db, dir_abspath,
-                                   scratch_pool, scratch_pool));
-  SVN_ERR(svn_wc__db_read_info(NULL, NULL, &parent_revision,
-                               NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL,
-                               db, svn_dirent_dirname(dir_abspath,
-                                                      scratch_pool),
-                               scratch_pool, scratch_pool));
-
-  /* Blow away the administrative directories, and possibly the working
-     copy tree too. */
-  err = svn_wc__internal_remove_from_revision_control(
-          db, dir_abspath,
-          !adm_only /* destroy_wf */, FALSE /* instant_error */,
-          cancel_func, cancel_baton,
-          scratch_pool);
-  if (err && err->apr_err != SVN_ERR_WC_LEFT_LOCAL_MOD)
-    return svn_error_return(err);
-  svn_error_clear(err);
-
-  /* If revnum of this dir is greater than parent's revnum, then
-     recreate 'deleted' entry in parent. */
-  if (original_revision > parent_revision)
-    {
-      svn_wc_entry_t tmp_entry;
-
-      tmp_entry.kind = svn_node_dir;
-      tmp_entry.deleted = TRUE;
-      tmp_entry.revision = original_revision;
-      SVN_ERR(svn_wc__entry_modify2(db, dir_abspath, svn_node_dir, TRUE,
-                                    &tmp_entry,
-                                    SVN_WC__ENTRY_MODIFY_REVISION
-                                      | SVN_WC__ENTRY_MODIFY_KIND
-                                      | SVN_WC__ENTRY_MODIFY_DELETED,
-                                    scratch_pool));
-    }
-
-  return SVN_NO_ERROR;
-}
 
 
 /*** Using the parser to run the log file. ***/
@@ -1515,45 +1439,6 @@ compute_logfile_path(int log_number, apr_pool_t *result_pool)
 }
 
 
-/* Set EXISTS to TRUE if a killme file exists in the administrative area,
-   FALSE otherwise.
-
-   If EXISTS is true, set KILL_ADM_ONLY to the value passed to
-   svn_wc__make_killme() above. */
-static svn_error_t *
-check_killme(const char *adm_abspath,
-             svn_boolean_t *exists,
-             svn_boolean_t *kill_adm_only,
-             apr_pool_t *scratch_pool)
-{
-  const char *path;
-  svn_error_t *err;
-  svn_stringbuf_t *contents;
-
-  path = svn_wc__adm_child(adm_abspath, SVN_WC__ADM_KILLME, scratch_pool);
-
-  err = svn_stringbuf_from_file2(&contents, path, scratch_pool);
-  if (err)
-    {
-      if (!APR_STATUS_IS_ENOENT(err->apr_err))
-        return svn_error_return(err);
-      svn_error_clear(err);
-
-      /* Killme file doesn't exist. */
-      *exists = FALSE;
-      return SVN_NO_ERROR;
-    }
-
-  *exists = TRUE;
-
-  /* If the killme file contains the string 'adm-only' then only the
-     administrative area should be removed. */
-  *kill_adm_only = strcmp(contents->data, SVN_WC__KILL_ADM_ONLY) == 0;
-
-  return SVN_NO_ERROR;
-}
-
-
 /* Run a sequence of log files. */
 static svn_error_t *
 run_log(svn_wc__db_t *db,
@@ -1568,7 +1453,6 @@ run_log(svn_wc__db_t *db,
   const char *logfile_path;
   int log_number;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
-  svn_boolean_t killme, kill_adm_only;
 
   loggy = apr_pcalloc(scratch_pool, sizeof(*loggy));
 
@@ -1617,26 +1501,14 @@ run_log(svn_wc__db_t *db,
 
   svn_xml_free_parser(parser);
 
-  /* Check for a 'killme' file in the administrative area. */
-  SVN_ERR(check_killme(adm_abspath, &killme, &kill_adm_only, iterpool));
-  if (killme)
+  for (log_number--; log_number >= 0; log_number--)
     {
-      SVN_ERR(handle_killme(db, adm_abspath, kill_adm_only,
-                            cancel_func, cancel_baton,
-                            iterpool));
-    }
-  else
-    {
-      for (log_number--; log_number >= 0; log_number--)
-        {
-          svn_pool_clear(iterpool);
-          logfile_path = compute_logfile_path(log_number, iterpool);
+      svn_pool_clear(iterpool);
 
-          /* No 'killme'?  Remove the logfile; its commands have been
-             executed. */
-          SVN_ERR(svn_wc__remove_adm_file(adm_abspath, logfile_path,
-                                          iterpool));
-        }
+      logfile_path = compute_logfile_path(log_number, iterpool);
+
+      /* Remove the logfile; its commands have been executed. */
+      SVN_ERR(svn_wc__remove_adm_file(adm_abspath, logfile_path, iterpool));
     }
 
   /* Run anything that might be sitting in the work queue.  */

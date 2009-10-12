@@ -47,12 +47,15 @@
 /* Workqueue operation names.  */
 #define OP_REVERT "revert"
 #define OP_PREPARE_REVERT_FILES "prep-rev-files"
+#define OP_KILLME "killme"
 
 
 struct work_item_dispatch {
   const char *name;
   svn_error_t *(*func)(svn_wc__db_t *db,
                        const svn_skel_t *work_item,
+                       svn_cancel_func_t cancel_func,
+                       void *cancel_baton,
                        apr_pool_t *scratch_pool);
 };
 
@@ -131,7 +134,7 @@ move_if_present(const char *source_abspath,
 /* OP_REVERT  */
 
 
-/* Remvoe the file at join(PARENT_ABSPATH, BASE_NAME) if it is not the
+/* Remove the file at join(PARENT_ABSPATH, BASE_NAME) if it is not the
    working file defined by LOCAL_ABSPATH. If BASE_NAME is NULL, then
    nothing is done. All temp allocations are made within SCRATCH_POOL.  */
 static svn_error_t *
@@ -158,6 +161,8 @@ maybe_remove_conflict(const char *parent_abspath,
 static svn_error_t *
 run_revert(svn_wc__db_t *db,
            const svn_skel_t *work_item,
+           svn_cancel_func_t cancel_func,
+           void *cancel_baton,
            apr_pool_t *scratch_pool)
 {
   const char *local_abspath;
@@ -600,6 +605,8 @@ svn_wc__wq_add_revert(svn_boolean_t *will_revert,
 static svn_error_t *
 run_prepare_revert_files(svn_wc__db_t *db,
                          const svn_skel_t *work_item,
+                         svn_cancel_func_t cancel_func,
+                         void *cancel_baton,
                          apr_pool_t *scratch_pool)
 {
   const char *local_abspath;
@@ -674,9 +681,129 @@ svn_wc__wq_prepare_revert_files(svn_wc__db_t *db,
 
 /* ------------------------------------------------------------------------ */
 
+/* OP_KILLME  */
+
+static svn_error_t *
+run_killme(svn_wc__db_t *db,
+           const svn_skel_t *work_item,
+           svn_cancel_func_t cancel_func,
+           void *cancel_baton,
+           apr_pool_t *scratch_pool)
+{
+  const char *dir_abspath;
+  svn_boolean_t adm_only;
+  svn_wc__db_status_t status;
+  svn_revnum_t original_revision;
+  svn_revnum_t parent_revision;
+  svn_error_t *err;
+
+  /* We need a NUL-terminated path, so copy it out of the skel.  */
+  dir_abspath = apr_pstrmemdup(scratch_pool,
+                               work_item->children->next->data,
+                               work_item->children->next->len);
+  /* ### fix this code. validate.  */
+  adm_only = work_item->children->next->next->data[0] - '0';
+
+  err = svn_wc__db_base_get_info(&status, NULL, &original_revision,
+                                 NULL, NULL, NULL,
+                                 NULL, NULL, NULL,
+                                 NULL, NULL, NULL,
+                                 NULL, NULL, NULL,
+                                 db, dir_abspath,
+                                 scratch_pool, scratch_pool);
+  if (err)
+    {
+      if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
+        return svn_error_return(err);
+
+      /* The administrative area in the subdir is gone, and the subdir
+         is also removed from its parent's record.  */
+      svn_error_clear(err);
+
+      /* When we removed the directory, if ADM_ONLY was TRUE, then that
+         has definitely been done and there is nothing left to do.
+
+         If ADM_ONLY was FALSE, then the subdir and its contents were
+         removed *before* the administrative was removed. Anything that
+         may be left are unversioned nodes. We don't want to do anything
+         to those, so we're done for this case, too.  */
+      return SVN_NO_ERROR;
+    }
+  if (status == svn_wc__db_status_obstructed)
+    {
+      /* The subdir's administrative area has already been removed, but
+         there was still an entry in the parent. Whatever is in that
+         record, it doesn't matter. The subdir has been handled already.  */
+      return SVN_NO_ERROR;
+    }
+
+  SVN_ERR(svn_wc__db_read_info(NULL, NULL, &parent_revision,
+                               NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL,
+                               db, svn_dirent_dirname(dir_abspath,
+                                                      scratch_pool),
+                               scratch_pool, scratch_pool));
+
+  /* Blow away the administrative directories, and possibly the working
+     copy tree too. */
+  err = svn_wc__internal_remove_from_revision_control(
+          db, dir_abspath,
+          !adm_only /* destroy_wf */, FALSE /* instant_error */,
+          cancel_func, cancel_baton,
+          scratch_pool);
+  if (err && err->apr_err != SVN_ERR_WC_LEFT_LOCAL_MOD)
+    return svn_error_return(err);
+  svn_error_clear(err);
+
+  /* If revnum of this dir is greater than parent's revnum, then
+     recreate 'deleted' entry in parent. */
+  if (original_revision > parent_revision)
+    {
+      svn_wc_entry_t tmp_entry;
+
+      tmp_entry.kind = svn_node_dir;
+      tmp_entry.deleted = TRUE;
+      tmp_entry.revision = original_revision;
+      SVN_ERR(svn_wc__entry_modify2(db, dir_abspath, svn_node_dir, TRUE,
+                                    &tmp_entry,
+                                    SVN_WC__ENTRY_MODIFY_REVISION
+                                      | SVN_WC__ENTRY_MODIFY_KIND
+                                      | SVN_WC__ENTRY_MODIFY_DELETED,
+                                    scratch_pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc__wq_add_killme(svn_wc__db_t *db,
+                      const char *dir_abspath,
+                      svn_boolean_t adm_only,
+                      apr_pool_t *scratch_pool)
+{
+  svn_skel_t *work_item = svn_skel__make_empty_list(scratch_pool);
+
+  /* The skel still points at DIR_ABSPATH, but the skel will be serialized
+     just below in the wq_add call.  */
+  svn_skel__prepend_int(adm_only, work_item, scratch_pool);
+  svn_skel__prepend_str(dir_abspath, work_item, scratch_pool);
+  svn_skel__prepend_str(OP_KILLME, work_item, scratch_pool);
+
+  SVN_ERR(svn_wc__db_wq_add(db, dir_abspath, work_item, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+
+/* ------------------------------------------------------------------------ */
+
 static const struct work_item_dispatch dispatch_table[] = {
   { OP_REVERT, run_revert },
   { OP_PREPARE_REVERT_FILES, run_prepare_revert_files },
+  { OP_KILLME, run_killme },
 
   /* Sentinel.  */
   { NULL }
@@ -718,7 +845,9 @@ svn_wc__wq_run(svn_wc__db_t *db,
         {
           if (svn_skel__matches_atom(work_item->children, scan->name))
             {
-              SVN_ERR((*scan->func)(db, work_item, iterpool));
+              SVN_ERR((*scan->func)(db, work_item,
+                                    cancel_func, cancel_baton,
+                                    iterpool));
               break;
             }
         }
