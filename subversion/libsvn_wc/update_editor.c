@@ -1720,73 +1720,63 @@ already_in_a_tree_conflict(svn_boolean_t *conflicted,
                            apr_pool_t *scratch_pool)
 {
   const char *ancestor_abspath = local_abspath;
-  svn_error_t *err;
-  apr_array_header_t *ancestors;
-  const svn_wc_entry_t *entry;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
-  int i;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
-  ancestors = apr_array_make(scratch_pool, 0, sizeof(const char *));
+  *conflicted = FALSE;
 
-  /* If PATH is under version control, put it on the ancestor list. */
-  err = svn_wc__get_entry(&entry, db, ancestor_abspath, TRUE,
-                          svn_node_unknown, FALSE, iterpool, iterpool);
-  if (err)
+  while (TRUE)
     {
-      if (err->apr_err != SVN_ERR_NODE_UNEXPECTED_KIND
-          && err->apr_err != SVN_ERR_WC_MISSING
-          && err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
-        return svn_error_return(err);
-      svn_error_clear(err);
-
-      /* Obstructed or missing or whatever. Ignore it.  */
-      entry = NULL;
-    }
-  if (entry != NULL)
-    APR_ARRAY_PUSH(ancestors, const char *) = ancestor_abspath;
-
-  ancestor_abspath = svn_dirent_dirname(ancestor_abspath, scratch_pool);
-
-  /* Append to the list all ancestor-dirs in the working copy.  Ignore
-     the root because it can't be tree-conflicted. */
-  while (! svn_path_is_empty(ancestor_abspath))
-    {
+      svn_wc__db_kind_t kind;
+      svn_boolean_t hidden;
       svn_boolean_t is_wc_root;
+      svn_error_t *err;
+      const svn_wc_conflict_description2_t *conflict;
 
       svn_pool_clear(iterpool);
-      SVN_ERR(svn_wc__check_wc_root(&is_wc_root, NULL, db, ancestor_abspath,
-                                    iterpool));
-      if (is_wc_root)
+
+      err = svn_wc__db_read_kind(&kind, db, ancestor_abspath, TRUE,
+                                 iterpool);
+
+      if (err)
+        {
+          if (err->apr_err != SVN_ERR_WC_NOT_WORKING_COPY &&
+              err->apr_err != SVN_ERR_WC_UPGRADE_REQUIRED)
+            {
+              return svn_error_return(err);
+            }
+          svn_error_clear(err);
+          break;
+        }
+
+      if (kind == svn_wc__db_kind_unknown)
         break;
 
-      APR_ARRAY_PUSH(ancestors, const char *) = ancestor_abspath;
+      SVN_ERR(svn_wc__db_node_hidden(&hidden, db, ancestor_abspath, iterpool));
+
+      if (hidden)
+        break;
+
+      SVN_ERR(svn_wc__db_op_read_tree_conflict(&conflict, db, ancestor_abspath,
+                                               iterpool, iterpool));
+
+      if (conflict != NULL)
+        {
+          *conflicted = TRUE;
+          break;
+        }
+
+      if (svn_dirent_is_root(ancestor_abspath, strlen(ancestor_abspath)))
+        break;
+
+      SVN_ERR(svn_wc__check_wc_root(&is_wc_root, NULL, db, ancestor_abspath,
+                                    iterpool));
 
       ancestor_abspath = svn_dirent_dirname(ancestor_abspath, scratch_pool);
     }
 
-  /* From the root end, check the conflict status of each ancestor. */
-  for (i = ancestors->nelts - 1; i >= 0; i--)
-    {
-      const svn_wc_conflict_description2_t *conflict;
-
-      ancestor_abspath = APR_ARRAY_IDX(ancestors, i, const char *);
-
-      svn_pool_clear(iterpool);
-      SVN_ERR(svn_wc__db_op_read_tree_conflict(&conflict, db, ancestor_abspath,
-                                               scratch_pool, iterpool));
-      if (conflict != NULL)
-        {
-          *conflicted = TRUE;
-
-          return SVN_NO_ERROR;
-        }
-    }
-
   svn_pool_clear(iterpool);
-
-  *conflicted = FALSE;
 
   return SVN_NO_ERROR;
 }
