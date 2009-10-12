@@ -143,6 +143,8 @@ copy_added_dir_administratively(svn_wc_context_t *wc_ctx,
                                 void *notify_baton,
                                 apr_pool_t *scratch_pool)
 {
+  svn_wc__db_t *db = wc_ctx->db;
+
   if (! src_is_added)
     {
       /* src_path is the top of an unversioned tree, just copy
@@ -157,12 +159,9 @@ copy_added_dir_administratively(svn_wc_context_t *wc_ctx,
     }
   else
     {
-      const svn_wc_entry_t *entry;
-      apr_dir_t *dir;
-      apr_finfo_t this_entry;
-      svn_error_t *err;
-      apr_pool_t *iterpool;
-      apr_int32_t flags = APR_FINFO_TYPE | APR_FINFO_NAME;
+      apr_hash_t *dirents;
+      apr_hash_index_t *hi;
+      apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
       /* Check cancellation; note that this catches recursive calls too. */
       if (cancel_func)
@@ -170,66 +169,31 @@ copy_added_dir_administratively(svn_wc_context_t *wc_ctx,
 
       /* "Copy" the dir dst_path and schedule it, and possibly
          its children, for addition. */
-      SVN_ERR(svn_io_dir_make(dst_abspath, APR_OS_DEFAULT, scratch_pool));
+      SVN_ERR(svn_io_dir_make(dst_abspath, APR_OS_DEFAULT, iterpool));
 
       /* Add the directory */
       SVN_ERR(svn_wc_add4(wc_ctx, dst_abspath, svn_depth_infinity,
                           NULL, SVN_INVALID_REVNUM,
                           cancel_func, cancel_baton,
                           notify_func, notify_baton,
-                          scratch_pool));
+                          iterpool));
 
       /* Copy properties. */
-      SVN_ERR(copy_props(wc_ctx->db, src_abspath, dst_abspath, scratch_pool));
+      SVN_ERR(copy_props(wc_ctx->db, src_abspath, dst_abspath, iterpool));
 
-      SVN_ERR(svn_io_dir_open(&dir, src_abspath, scratch_pool));
-
-      iterpool = svn_pool_create(scratch_pool);
+      SVN_ERR(svn_io_get_dirents2(&dirents, src_abspath, scratch_pool));
 
       /* Read src_path's entries one by one. */
-      while (1)
+      for (hi = apr_hash_first(scratch_pool, dirents); 
+           hi;
+           hi = apr_hash_next(hi))
         {
+          const char *name = svn_apr_hash_index_key(hi);
+          svn_io_dirent_t *dirent = svn_apr_hash_index_val(hi);
           const char *node_abspath;
+          svn_wc__db_kind_t kind;
 
           svn_pool_clear(iterpool);
-
-          err = svn_io_dir_read(&this_entry, flags, dir, iterpool);
-
-          if (err)
-            {
-              /* Check if we're done reading the dir's entries. */
-              if (APR_STATUS_IS_ENOENT(err->apr_err))
-                {
-                  apr_status_t apr_err;
-
-                  svn_error_clear(err);
-                  apr_err = apr_dir_close(dir);
-                  if (apr_err)
-                    return svn_error_wrap_apr(apr_err,
-                                              _("Can't close "
-                                                "directory '%s'"),
-                                              svn_dirent_local_style(
-                                                     src_abspath,
-                                                     iterpool));
-                  break;
-                }
-              else
-                {
-                  return svn_error_createf(err->apr_err, err,
-                                           _("Error during recursive copy "
-                                             "of '%s'"),
-                                           svn_dirent_local_style(
-                                                     src_abspath,
-                                                     iterpool));
-                }
-            }
-
-          /* Skip entries for this dir and its parent.  */
-          if (this_entry.name[0] == '.'
-              && (this_entry.name[1] == '\0'
-                  || (this_entry.name[1] == '.'
-                      && this_entry.name[2] == '\0')))
-            continue;
 
           /* Check cancellation so you can cancel during an
            * add of a directory with lots of files. */
@@ -237,52 +201,59 @@ copy_added_dir_administratively(svn_wc_context_t *wc_ctx,
             SVN_ERR(cancel_func(cancel_baton));
 
           /* Skip over SVN admin directories. */
-          if (svn_wc_is_adm_dir(this_entry.name, iterpool))
+          if (svn_wc_is_adm_dir(name, iterpool))
             continue;
 
           /* Construct the path of the node. */
-          node_abspath = svn_dirent_join(src_abspath, this_entry.name,
-                                         iterpool);
+          node_abspath = svn_dirent_join(src_abspath, name, iterpool);
 
-          SVN_ERR(svn_wc__get_entry(&entry, wc_ctx->db, node_abspath, TRUE,
-                                    svn_node_unknown, FALSE, iterpool,
-                                    iterpool));
+          SVN_ERR(svn_wc__db_read_kind(&kind, db, node_abspath, TRUE,
+                                       iterpool));
+
+          if (kind != svn_wc__db_kind_unknown)
+            {
+              svn_boolean_t hidden;
+
+              SVN_ERR(svn_wc__db_node_hidden(&hidden, db, node_abspath,
+                                             iterpool));
+
+              if (hidden)
+                kind = svn_wc__db_kind_unknown;
+            }
 
           /* We do not need to handle excluded items here, since this function
              only deal with the sources which are not yet in the repos.
              Exclude flag is by definition not expected in such situation. */
 
           /* Recurse on directories; add files; ignore the rest. */
-          if (this_entry.filetype == APR_DIR)
+          if (dirent->kind == svn_node_dir)
             {
               SVN_ERR(copy_added_dir_administratively(
                                        wc_ctx, node_abspath,
-                                       entry != NULL,
-                                       svn_dirent_join(dst_abspath,
-                                                       this_entry.name,
+                                       (kind != svn_wc__db_kind_unknown),
+                                       svn_dirent_join(dst_abspath, name,
                                                        iterpool),
                                        cancel_func, cancel_baton,
                                        notify_func, notify_baton,
                                        iterpool));
             }
-          else if (this_entry.filetype != APR_UNKFILE)
+          else if (dirent->kind == svn_node_file)
             {
               SVN_ERR(copy_added_file_administratively(
                                        wc_ctx, node_abspath,
-                                       entry != NULL,
-                                       svn_dirent_join(dst_abspath,
-                                                       this_entry.name,
+                                       (kind != svn_wc__db_kind_unknown),
+                                       svn_dirent_join(dst_abspath, name,
                                                        iterpool),
                                        cancel_func, cancel_baton,
                                        notify_func, notify_baton,
                                        iterpool));
             }
 
-        } /* End while(1) loop */
+        }
 
-    svn_pool_destroy(iterpool);
+      svn_pool_destroy(iterpool);
 
-  } /* End else src_is_added. */
+    } /* End else src_is_added. */
 
   return SVN_NO_ERROR;
 }
