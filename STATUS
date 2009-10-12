@@ -188,12 +188,3 @@ Candidate changes:
 
 Approved changes:
 =================
-
- * r39880
-   Add the Academic Free License v.3.0 license to svn_load_dirs.pl.in.
-   Justification:
-    Downstream distributions no longer need to delete the script
-    because it isn't properly licensed.
-   Votes:
-     +1: blair, psamuelson, rhuijben
-
