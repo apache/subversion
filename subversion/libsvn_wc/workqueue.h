@@ -63,6 +63,15 @@ svn_wc__wq_prepare_revert_files(svn_wc__db_t *db,
                                 apr_pool_t *scratch_pool);
 
 
+/* Handle the old "KILLME" concept -- perform the actual deletion of a
+   subdir (or just its admin area) during post-commit processing of a
+   deleted subdir.  */
+svn_error_t *
+svn_wc__wq_add_killme(svn_wc__db_t *db,
+                      const char *adm_abspath,
+                      svn_boolean_t adm_only,
+                      apr_pool_t *scratch_pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
