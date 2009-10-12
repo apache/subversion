@@ -304,7 +304,8 @@ static const char * const data_loading_sql[] = {
    "'" I_TC_DATA "');"
    ),
 
-  WC_METADATA_SQL_13
+  WC_METADATA_SQL_13,
+  WC_METADATA_SQL_14
 };
 
 
@@ -1261,9 +1262,9 @@ test_global_relocate(apr_pool_t *pool)
 
 
 static svn_error_t *
-test_upgrading_to_f13(apr_pool_t *pool)
+test_upgrading_to_f14(apr_pool_t *pool)
 {
-  SVN_ERR(create_fake_wc("test_f13_upgrade", 13, pool));
+  SVN_ERR(create_fake_wc("test_f14_upgrade", 14, pool));
 
   return SVN_NO_ERROR;
 }
@@ -1358,8 +1359,8 @@ struct svn_test_descriptor_t test_funcs[] =
                    "deletion introspection functions"),
     SVN_TEST_PASS2(test_global_relocate,
                    "relocating a node"),
-    SVN_TEST_PASS2(test_upgrading_to_f13,
-                   "upgrading to format 13"),
+    SVN_TEST_PASS2(test_upgrading_to_f14,
+                   "upgrading to format 14"),
     SVN_TEST_PASS2(test_work_queue,
                    "work queue processing"),
     SVN_TEST_NULL

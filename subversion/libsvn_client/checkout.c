@@ -163,7 +163,6 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
   else if (kind == svn_node_dir)
     {
       int wc_format;
-      const svn_wc_entry_t *entry;
       const char *entry_url;
 
       SVN_ERR(svn_wc_check_wc2(&wc_format, ctx->wc_ctx, local_abspath, pool));
@@ -188,16 +187,13 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
         }
 
       /* Get PATH's entry. */
-      SVN_ERR(svn_wc__get_entry_versioned(&entry, ctx->wc_ctx, local_abspath,
-                                          svn_node_unknown, FALSE, FALSE,
-                                          pool, pool));
       SVN_ERR(svn_wc__node_get_url(&entry_url, ctx->wc_ctx, local_abspath,
                                    pool, pool));
 
       /* If PATH's existing URL matches the incoming one, then
          just update.  This allows 'svn co' to restart an
          interrupted checkout. */
-      if (entry_url && (strcmp(entry_url, session_url) == 0))
+      if (strcmp(entry_url, session_url) == 0)
         {
           err = svn_client__update_internal(result_rev, path, revision,
                                             depth, TRUE, ignore_externals,
@@ -206,26 +202,17 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
                                             ctx, pool);
         }
       else
-        {
-          const char *errmsg;
-          errmsg = apr_psprintf
-            (pool,
-             _("'%s' is already a working copy for a different URL"),
-             svn_dirent_local_style(path, pool));
-          if (entry->incomplete)
-            errmsg = apr_pstrcat
-              (pool, errmsg, _("; run 'svn update' to complete it"), NULL);
-
-          return svn_error_create(SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-                                  errmsg);
-        }
+        return svn_error_createf(
+                      SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
+                      _("'%s' is already a working copy for a different URL;"
+                        " use 'svn update' to update it"),
+                      svn_dirent_local_style(path, pool));
     }
   else
     {
-      return svn_error_createf
-        (SVN_ERR_WC_NODE_KIND_CHANGE, NULL,
-         _("'%s' already exists and is not a directory"),
-         svn_dirent_local_style(path, pool));
+      return svn_error_createf(SVN_ERR_WC_NODE_KIND_CHANGE, NULL,
+                               _("'%s' already exists and is not a directory"),
+                               svn_dirent_local_style(path, pool));
     }
 
  done:

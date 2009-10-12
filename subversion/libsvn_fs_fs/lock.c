@@ -189,10 +189,9 @@ write_digest_file(apr_hash_t *children,
       svn_stringbuf_t *children_list = svn_stringbuf_create("", pool);
       for (hi = apr_hash_first(pool, children); hi; hi = apr_hash_next(hi))
         {
-          const void *key;
-          apr_ssize_t klen;
-          apr_hash_this(hi, &key, &klen, NULL);
-          svn_stringbuf_appendbytes(children_list, key, klen);
+          svn_stringbuf_appendbytes(children_list,
+                                    svn_apr_hash_index_key(hi),
+                                    svn_apr_hash_index_klen(hi));
           svn_stringbuf_appendbytes(children_list, "\n", 1);
         }
       hash_store(hash, CHILDREN_KEY, sizeof(CHILDREN_KEY)-1,
@@ -560,11 +559,10 @@ walk_digest_files(svn_fs_t *fs,
   subpool = svn_pool_create(pool);
   for (hi = apr_hash_first(pool, children); hi; hi = apr_hash_next(hi))
     {
-      const void *key;
+      const char *digest = svn_apr_hash_index_key(hi);
       svn_pool_clear(subpool);
-      apr_hash_this(hi, &key, NULL, NULL);
       SVN_ERR(walk_digest_files
-              (fs, digest_path_from_digest(fs, key, subpool),
+              (fs, digest_path_from_digest(fs, digest, subpool),
                get_locks_func, get_locks_baton, have_write_lock, subpool));
     }
   svn_pool_destroy(subpool);

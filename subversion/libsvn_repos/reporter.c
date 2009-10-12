@@ -612,7 +612,10 @@ fake_dirent(const svn_fs_dirent_t **entry, svn_fs_root_t *root,
   else
     {
       ent = apr_palloc(pool, sizeof(**entry));
-      ent->name = svn_uri_basename(path, pool);
+      /* ### All callers should be updated to pass just one of these
+             formats */
+      ent->name = (*path == '/') ? svn_uri_basename(path, pool)
+                                 : svn_relpath_basename(path, pool);
       SVN_ERR(svn_fs_node_id(&ent->id, root, path, pool));
       ent->kind = kind;
       *entry = ent;

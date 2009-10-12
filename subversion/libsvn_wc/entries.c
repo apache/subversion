@@ -327,7 +327,7 @@ get_base_info_for_deleted(svn_wc_entry_t *entry,
                                        result_pool, scratch_pool));
 
       /* Now glue it all together */
-      *repos_relpath = svn_uri_join(
+      *repos_relpath = svn_relpath_join(
         parent_repos_relpath,
         svn_dirent_is_child(parent_abspath,
                             entry_abspath,
@@ -519,7 +519,8 @@ read_entries_new(apr_hash_t **result_entries,
   svn_sqlite__db_t *sdb;
   apr_hash_t *entries;
   const apr_array_header_t *children;
-  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+  apr_pool_t *handle_pool = svn_pool_create(scratch_pool);
+  apr_pool_t *iterpool = svn_pool_create(handle_pool);
   int i;
   const svn_wc_entry_t *parent_entry = NULL;
   apr_uint64_t wc_id = 1;  /* ### hacky. should remove.  */
@@ -527,13 +528,14 @@ read_entries_new(apr_hash_t **result_entries,
   entries = apr_hash_make(result_pool);
 
   /* ### need database to determine: incomplete, keep_local, ACTUAL info.  */
-  SVN_ERR(svn_wc__db_temp_get_sdb(&sdb, local_abspath,
-                                  scratch_pool, scratch_pool));
+  SVN_ERR(svn_wc__db_temp_get_sdb(&sdb, db, local_abspath, FALSE,
+                                  handle_pool, iterpool));
 
   SVN_ERR(svn_wc__db_read_children(&children, db,
                                    local_abspath,
-                                   result_pool, scratch_pool));
+                                   result_pool, iterpool));
 
+  /* HACK: Push the directory at the end of a constant array */
   APR_ARRAY_PUSH((apr_array_header_t *)children, const char *) = "";
 
   /* Note that this loop order causes "this dir" to be processed first.
@@ -699,8 +701,22 @@ read_entries_new(apr_hash_t **result_entries,
           entry->schedule = svn_wc_schedule_delete;
 
           /* ### keep_local ... ugh. hacky.  */
-          SVN_ERR(determine_keep_local(&entry->keep_local, sdb,
-                                       wc_id, entry->name));
+          /* We only read keep_local in the directory itself, because we
+             can't rely on the actual record being available in the parent
+             stub when the directory is recorded as deleted in the directory
+             itself. (This last value is the status that brought us in this
+             if block).
+             
+             This is safe because we will only write this flag in the
+             directory itself (see mark_deleted() in adm_ops.c), and also
+             because we will never use keep_local in the final version of
+             WC-NG. With a central db and central pristine store we can
+             remove working copy directories directly. So any left over
+             directories after the delete operation are always kept locally.
+             */
+          if (*entry->name == '\0')
+            SVN_ERR(determine_keep_local(&entry->keep_local, sdb,
+                                         wc_id, entry->name));
         }
       else if (status == svn_wc__db_status_added
                || status == svn_wc__db_status_obstructed_add)
@@ -890,7 +906,7 @@ read_entries_new(apr_hash_t **result_entries,
                 {
                   const char *relpath_to_entry = svn_dirent_is_child(
                     op_root_abspath, entry_abspath, NULL);
-                  const char *entry_repos_relpath = svn_uri_join(
+                  const char *entry_repos_relpath = svn_relpath_join(
                     parent_repos_relpath, relpath_to_entry, iterpool);
 
                   /* The copyfrom repos roots matched.
@@ -1022,6 +1038,8 @@ read_entries_new(apr_hash_t **result_entries,
                     entry->prejfile = apr_pstrdup(result_pool,
                                                   cd->their_file);
                     break;
+                  case svn_wc_conflict_kind_tree:
+                    break;
                 }
             }
         }
@@ -1045,8 +1063,7 @@ read_entries_new(apr_hash_t **result_entries,
       apr_hash_set(entries, entry->name, APR_HASH_KEY_STRING, entry);
     }
 
-  SVN_ERR(svn_sqlite__close(sdb));
-  svn_pool_destroy(iterpool);
+  svn_pool_destroy(handle_pool);
 
   *result_entries = entries;
 
@@ -1529,11 +1546,10 @@ prune_deleted(apr_hash_t **entries_pruned,
        hi;
        hi = apr_hash_next(hi))
     {
-      void *val;
       svn_boolean_t hidden;
 
-      apr_hash_this(hi, NULL, NULL, &val);
-      SVN_ERR(svn_wc__entry_is_hidden(&hidden, val));
+      SVN_ERR(svn_wc__entry_is_hidden(&hidden,
+                                      svn_apr_hash_index_val(hi)));
       if (hidden)
         break;
     }
@@ -1551,18 +1567,13 @@ prune_deleted(apr_hash_t **entries_pruned,
        hi;
        hi = apr_hash_next(hi))
     {
-      void *val;
-      const void *key;
-      const svn_wc_entry_t *entry;
+      const void *key = svn_apr_hash_index_key(hi);
+      const svn_wc_entry_t *entry = svn_apr_hash_index_val(hi);
       svn_boolean_t hidden;
 
-      apr_hash_this(hi, &key, NULL, &val);
-      entry = val;
       SVN_ERR(svn_wc__entry_is_hidden(&hidden, entry));
       if (!hidden)
-        {
-          apr_hash_set(*entries_pruned, key, APR_HASH_KEY_STRING, entry);
-        }
+        apr_hash_set(*entries_pruned, key, APR_HASH_KEY_STRING, entry);
     }
 
   return SVN_NO_ERROR;
@@ -1884,6 +1895,8 @@ write_entry(svn_wc__db_t *db,
             const char *local_relpath,
             const char *entry_abspath,
             const svn_wc_entry_t *this_dir,
+            svn_boolean_t always_create_actual,
+            svn_boolean_t create_locks,
             apr_pool_t *scratch_pool)
 {
   db_base_node_t *base_node = NULL;
@@ -1997,7 +2010,7 @@ write_entry(svn_wc__db_t *db,
             {
               const char *relpath_to_entry = svn_dirent_is_child(
                 op_root_abspath, entry_abspath, NULL);
-              const char *new_copyfrom_relpath = svn_uri_join(
+              const char *new_copyfrom_relpath = svn_relpath_join(
                 original_repos_relpath, relpath_to_entry, scratch_pool);
 
               working_node->copyfrom_repos_id = repos_id;
@@ -2138,7 +2151,7 @@ write_entry(svn_wc__db_t *db,
       /* We have to insert the lock after the base node, because the node
          must exist to lookup various bits of repos related information for
          the abs path. */
-      if (entry->lock_token)
+      if (entry->lock_token && create_locks)
         {
           svn_wc__db_lock_t lock;
 
@@ -2246,8 +2259,10 @@ write_entry(svn_wc__db_t *db,
     }
 
   /* Insert the actual node. */
-  if (actual_node)
+  if (actual_node || always_create_actual)
     {
+      actual_node = MAYBE_ALLOC(actual_node, scratch_pool);
+
       actual_node->wc_id = wc_id;
       actual_node->local_relpath = local_relpath;
       actual_node->parent_relpath = parent_relpath;
@@ -2258,14 +2273,24 @@ write_entry(svn_wc__db_t *db,
   return SVN_NO_ERROR;
 }
 
-
-svn_error_t *
-svn_wc__entries_write_new(svn_wc__db_t *db,
-                          const char *local_abspath,
-                          apr_hash_t *entries,
-                          apr_pool_t *scratch_pool)
+struct entries_write_baton
 {
-  svn_sqlite__db_t *sdb;
+  svn_wc__db_t *db;
+  const char *local_abspath;
+  apr_hash_t *entries;
+};
+
+/* Writes entries inside a sqlite transaction
+   Implements svn_sqlite__transaction_callback_t. */
+static svn_error_t *
+entries_write_new_cb(void *baton,
+                     svn_sqlite__db_t *sdb,
+                     apr_pool_t *scratch_pool)
+{
+  struct entries_write_baton *ewb = baton;
+  svn_wc__db_t *db = ewb->db;
+  const char *local_abspath = ewb->local_abspath;
+  apr_hash_t *entries = ewb->entries;
   const svn_wc_entry_t *this_dir;
   svn_sqlite__stmt_t *stmt;
   apr_hash_index_t *hi;
@@ -2278,10 +2303,6 @@ svn_wc__entries_write_new(svn_wc__db_t *db,
   apr_hash_t *child_cache;
   svn_error_t *err;
   int i;
-
-  /* ### need the SDB so we can jam rows directly into it.  */
-  SVN_ERR(svn_wc__db_temp_get_sdb(&sdb, local_abspath,
-                                  scratch_pool, iterpool));
 
   /* Get a copy of the "this dir" entry for comparison purposes. */
   this_dir = apr_hash_get(entries, SVN_WC_ENTRY_THIS_DIR,
@@ -2363,8 +2384,9 @@ svn_wc__entries_write_new(svn_wc__db_t *db,
       apr_hash_set(dav_cache, child_abspath, APR_HASH_KEY_STRING, child_cache);
     }
 
-  /* Remove all WORKING, BASE and ACTUAL nodes for this directory, as well
-     as locks, since we're about to replace 'em. */
+  /* Remove all WORKING, BASE and ACTUAL nodes for this directory
+     ### This does NOT drop locks as recorded in the entries, because we
+         already update these via another route */
   SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_DELETE_ALL_WORKING));
   SVN_ERR(svn_sqlite__step_done(stmt));
   SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_DELETE_ALL_BASE));
@@ -2376,30 +2398,28 @@ svn_wc__entries_write_new(svn_wc__db_t *db,
   SVN_ERR(fetch_wc_id(&wc_id, sdb));
   SVN_ERR(write_entry(db, sdb, wc_id, repos_id, repos_root, this_dir,
                       SVN_WC_ENTRY_THIS_DIR, local_abspath,
-                      this_dir, iterpool));
+                      this_dir, FALSE, FALSE, iterpool));
 
   for (hi = apr_hash_first(scratch_pool, entries); hi;
         hi = apr_hash_next(hi))
     {
-      const void *key;
-      void *val;
-      const svn_wc_entry_t *this_entry;
+      const char *name = svn_apr_hash_index_key(hi);
+      const svn_wc_entry_t *this_entry = svn_apr_hash_index_val(hi);
       const char *child_abspath;
 
       svn_pool_clear(iterpool);
 
-      /* Get the entry and make sure its attributes are up-to-date. */
-      apr_hash_this(hi, &key, NULL, &val);
-      this_entry = val;
-
       /* Don't rewrite the "this dir" entry! */
-      if (strcmp(key, SVN_WC_ENTRY_THIS_DIR) == 0)
+      if (strcmp(name, SVN_WC_ENTRY_THIS_DIR) == 0)
         continue;
 
-      /* Write the entry. */
-      child_abspath = svn_dirent_join(local_abspath, key, iterpool);
+      /* Write the entry. Pass TRUE for create locks, because we still
+         use this function for upgrading old working copies. */
+      child_abspath = svn_dirent_join(local_abspath, name, iterpool);
       SVN_ERR(write_entry(db, sdb, wc_id, repos_id, repos_root,
-                          this_entry, key, child_abspath, this_dir, iterpool));
+                          this_entry, name, child_abspath, this_dir,
+                          FALSE, TRUE,
+                          iterpool));
 
       /* Write the dav cache.
          ### This can go away when we stop unconditionally deleting all
@@ -2414,6 +2434,212 @@ svn_wc__entries_write_new(svn_wc__db_t *db,
   svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
 }
+
+svn_error_t *
+svn_wc__entries_write_new(svn_wc__db_t *db,
+                          const char *local_abspath,
+                          apr_hash_t *entries,
+                          apr_pool_t *scratch_pool)
+{
+  struct entries_write_baton ewb;
+  svn_sqlite__db_t *sdb;
+
+  /* ### need the SDB so we can jam rows directly into it.  */
+  SVN_ERR(svn_wc__db_temp_get_sdb(&sdb, db, local_abspath, FALSE,
+                                  scratch_pool, scratch_pool));
+  ewb.db = db;
+  ewb.local_abspath = local_abspath;
+  ewb.entries = entries;
+
+  /* Run this operation in a transaction to speed up SQLite.
+     See http://www.sqlite.org/faq.html#q19 for more details */
+  return svn_error_return(
+      svn_sqlite__with_transaction(sdb, entries_write_new_cb, &ewb,
+                                   scratch_pool));
+}
+
+struct write_one_entry_baton
+{
+  svn_wc__db_t *db;
+  const char *local_abspath;
+  const svn_wc_entry_t *this_dir;
+  const svn_wc_entry_t *this_entry;
+};
+
+/* Rewrites a single entry inside a sqlite transaction
+   Implements svn_sqlite__transaction_callback_t. */
+static svn_error_t *
+write_one_entry_cb(void *baton,
+                   svn_sqlite__db_t *sdb,
+                   apr_pool_t *scratch_pool)
+{
+  struct write_one_entry_baton *woeb = baton;
+  svn_wc__db_t *db = woeb->db;
+  const char *local_abspath = woeb->local_abspath;
+  const svn_wc_entry_t *this_dir = woeb->this_dir;
+  const svn_wc_entry_t *this_entry = woeb->this_entry;
+  const char *this_abspath = svn_dirent_join(local_abspath, this_entry->name,
+                                             scratch_pool);
+  const void *base_props = NULL;
+  const void *working_props = NULL;
+  const void *actual_props = NULL;
+  apr_size_t base_prop_len;
+  apr_size_t working_prop_len;
+  apr_size_t actual_prop_len;
+  apr_hash_t *dav_cache;
+  svn_checksum_t *base_checksum;
+  svn_sqlite__stmt_t *stmt;
+  const char *repos_root;
+  apr_int64_t repos_id;
+  apr_int64_t wc_id;
+  svn_error_t *err;
+  svn_boolean_t got_row;
+
+  SVN_ERR_ASSERT(this_dir && this_entry);
+
+  /* Get the repos ID. */
+  if (this_dir->uuid != NULL)
+    {
+      /* ### does this need to be done on a per-entry basis instead of
+         ### the per-directory way we do it now?  me thinks yes...
+         ###
+         ### when do we harvest repository entries which no longer have
+         ### any members?  */
+      SVN_ERR(svn_wc__db_repos_ensure(&repos_id, db, local_abspath,
+                                      this_dir->repos, this_dir->uuid,
+                                      scratch_pool));
+      repos_root = this_dir->repos;
+    }
+  else
+    {
+      repos_id = 0;
+      repos_root = NULL;
+    }
+
+  SVN_ERR(fetch_wc_id(&wc_id, sdb));
+
+  /* Before we nuke all the nodes, we need to get a few values */
+
+  /* The dav cache is not in STMT_SELECT_BASE_NODE */
+  err = svn_wc__db_base_get_dav_cache(&dav_cache, db, this_abspath,
+                                      scratch_pool, scratch_pool);
+  if (err)
+    {
+      if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
+        return svn_error_return(err);
+      svn_error_clear(err); /* No BASE record */
+      dav_cache = NULL;
+    }
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_SELECT_BASE_NODE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wc_id, this_entry->name));
+  SVN_ERR(svn_sqlite__step(&got_row, stmt));
+  if (got_row)
+    {
+      base_props = svn_sqlite__column_blob(stmt, 15, &base_prop_len,
+                                           scratch_pool);
+
+      err = svn_sqlite__column_checksum(&base_checksum, stmt, 7, scratch_pool);
+      SVN_ERR(svn_error_compose_create(err, svn_sqlite__reset(stmt)));
+    }
+  else
+    SVN_ERR(svn_sqlite__reset(stmt));
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_SELECT_WORKING_NODE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wc_id, this_entry->name));
+  SVN_ERR(svn_sqlite__step(&got_row, stmt));
+  if (got_row)
+    {
+      /* No need to store the working checksum, that is stored in the entry */
+      working_props = svn_sqlite__column_blob(stmt, 15, &working_prop_len,
+                                              scratch_pool);
+    }
+  SVN_ERR(svn_sqlite__reset(stmt));
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_SELECT_ACTUAL_NODE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wc_id, this_entry->name));
+  SVN_ERR(svn_sqlite__step(&got_row, stmt));
+  if (got_row)
+    {
+      actual_props = svn_sqlite__column_blob(stmt, 6, &actual_prop_len,
+                                             scratch_pool);
+    }
+  SVN_ERR(svn_sqlite__reset(stmt));
+
+  /* Remove the WORKING, BASE and ACTUAL nodes for this entry */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_DELETE_WORKING_NODE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wc_id, this_entry->name));
+  SVN_ERR(svn_sqlite__step_done(stmt));
+  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_DELETE_BASE_NODE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wc_id, this_entry->name));
+  SVN_ERR(svn_sqlite__step_done(stmt));
+  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_DELETE_ACTUAL_NODE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wc_id, this_entry->name));
+  SVN_ERR(svn_sqlite__step_done(stmt));
+
+  SVN_ERR(write_entry(db, sdb, wc_id, repos_id, repos_root, this_entry,
+                      this_entry->name, this_abspath, this_dir,
+                      actual_props != NULL, FALSE, scratch_pool));
+
+  if (dav_cache)
+    SVN_ERR(svn_wc__db_base_set_dav_cache(db, this_abspath, dav_cache,
+                                          scratch_pool));
+
+  if (base_props)
+    {
+      SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_UPDATE_BASE_PROPS));
+      SVN_ERR(svn_sqlite__bindf(stmt, "isb", wc_id, this_entry->name,
+                                base_props, base_prop_len));
+      SVN_ERR(svn_sqlite__step_done(stmt));
+    }
+
+  if (working_props)
+    {
+      SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
+                                        STMT_UPDATE_WORKING_PROPS));
+      SVN_ERR(svn_sqlite__bindf(stmt, "isb", wc_id, this_entry->name,
+                                working_props, working_prop_len));
+      SVN_ERR(svn_sqlite__step_done(stmt));
+    }
+
+  if (actual_props)
+    {
+      SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
+                                        STMT_UPDATE_ACTUAL_PROPS));
+      SVN_ERR(svn_sqlite__bindf(stmt, "isb", wc_id, this_entry->name,
+                                actual_props, actual_prop_len));
+      SVN_ERR(svn_sqlite__step_done(stmt));
+    }
+
+  /* TODO: Update base checksum if needed */
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+write_one_entry(svn_wc__db_t *db,
+                const char *local_abspath,
+                const svn_wc_entry_t *this_dir,
+                const svn_wc_entry_t *this_entry,
+                apr_pool_t *scratch_pool)
+{
+  struct write_one_entry_baton woeb;
+  svn_sqlite__db_t *sdb;
+
+  /* ### need the SDB so we can jam rows directly into it.  */
+  SVN_ERR(svn_wc__db_temp_get_sdb(&sdb, db, local_abspath, FALSE,
+                                  scratch_pool, scratch_pool));
+  woeb.db = db;
+  woeb.local_abspath = local_abspath;
+  woeb.this_dir = this_dir;
+  woeb.this_entry = this_entry;
+
+  /* Run this operation in a transaction to speed up SQLite.
+     See http://www.sqlite.org/faq.html#q19 for more details */
+  return svn_error_return(
+      svn_sqlite__with_transaction(sdb, write_one_entry_cb, &woeb,
+                                   scratch_pool));
+}
+
 
 
 /* Update an entry NAME in ENTRIES, according to the combination of
@@ -2927,7 +3153,11 @@ svn_wc__entry_modify2(svn_wc__db_t *db,
                      adm_access
                        ? svn_wc_adm_access_pool(adm_access)
                        : subpool));
-  err = svn_wc__entries_write_new(db, adm_abspath, entries, subpool);
+
+  err = write_one_entry(db, adm_abspath,
+                        apr_hash_get(entries, "", APR_HASH_KEY_STRING),
+                        apr_hash_get(entries, name, APR_HASH_KEY_STRING),
+                        subpool);
 
   svn_pool_destroy(subpool); /* Close wc.db handles */
 
@@ -3162,9 +3392,8 @@ walker_helper(const char *dirpath,
   /* Loop over each of the other entries. */
   for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
     {
-      const void *key;
-      void *val;
-      const svn_wc_entry_t *current_entry;
+      const char *name = svn_apr_hash_index_key(hi);
+      const svn_wc_entry_t *current_entry = svn_apr_hash_index_val(hi);
       const char *entrypath;
       const char *entry_abspath;
       svn_boolean_t hidden;
@@ -3175,14 +3404,11 @@ walker_helper(const char *dirpath,
       if (cancel_func)
         SVN_ERR(cancel_func(cancel_baton));
 
-      apr_hash_this(hi, &key, NULL, &val);
-      current_entry = val;
-
       /* Skip the "this dir" entry. */
       if (strcmp(current_entry->name, SVN_WC_ENTRY_THIS_DIR) == 0)
         continue;
 
-      entrypath = svn_dirent_join(dirpath, key, subpool);
+      entrypath = svn_dirent_join(dirpath, name, subpool);
       SVN_ERR(svn_wc__entry_is_hidden(&hidden, current_entry));
       SVN_ERR(svn_dirent_get_absolute(&entry_abspath, entrypath, subpool));
 
@@ -3250,13 +3476,13 @@ svn_wc_walk_entries3(const char *path,
                      void *cancel_baton,
                      apr_pool_t *pool)
 {
-  const char *abspath;
+  const char *local_abspath;
   svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
   svn_error_t *err;
   svn_wc__db_kind_t kind;
   svn_depth_t depth;
 
-  SVN_ERR(svn_dirent_get_absolute(&abspath, path, pool));
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
   err = svn_wc__db_read_info(NULL, &kind, NULL,
                              NULL, NULL, NULL,
                              NULL, NULL, NULL,
@@ -3264,7 +3490,7 @@ svn_wc_walk_entries3(const char *path,
                              NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL, NULL,
-                             db, abspath,
+                             db, local_abspath,
                              pool, pool);
   if (err)
     {
@@ -3275,39 +3501,44 @@ svn_wc_walk_entries3(const char *path,
       return walk_callbacks->handle_error(
         path, svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
                                 _("'%s' is not under version control"),
-                                svn_dirent_local_style(path, pool)),
+                                svn_dirent_local_style(local_abspath, pool)),
         walk_baton, pool);
     }
 
   if (kind == svn_wc__db_kind_file || depth == svn_depth_exclude)
     {
       const svn_wc_entry_t *entry;
-      svn_boolean_t hidden;
 
       /* ### we should stop passing out entry structures.
          ###
          ### we should not call handle_error for an error the *callback*
          ###   gave us. let it deal with the problem before returning.  */
 
-      /* This entry should be present.  */
-      SVN_ERR(svn_wc_entry(&entry, path, adm_access, TRUE, pool));
-      SVN_ERR_ASSERT(entry != NULL);
-      SVN_ERR(svn_wc__entry_is_hidden(&hidden, entry));
-      if (!show_hidden && hidden)
+      if (!show_hidden)
         {
-          /* The fool asked to walk a "hidden" node. Report the node as
-             unversioned.
+          svn_boolean_t hidden;
+          SVN_ERR(svn_wc__db_node_hidden(&hidden, db, local_abspath, pool));
 
-             ### this is incorrect behavior. see depth_test 36. the walk
-             ### API will be revamped to avoid entry structures. we should
-             ### be able to solve the problem with the new API. (since we
-             ### shouldn't return a hidden entry here)  */
-          return walk_callbacks->handle_error(
-            path, svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-                                    _("'%s' is not under version control"),
-                                    svn_dirent_local_style(path, pool)),
-            walk_baton, pool);
+          if (hidden)
+            {
+              /* The fool asked to walk a "hidden" node. Report the node as
+                 unversioned.
+
+                 ### this is incorrect behavior. see depth_test 36. the walk
+                 ### API will be revamped to avoid entry structures. we should
+                 ### be able to solve the problem with the new API. (since we
+                 ### shouldn't return a hidden entry here)  */
+              return walk_callbacks->handle_error(
+                               path, svn_error_createf(
+                                  SVN_ERR_UNVERSIONED_RESOURCE, NULL,
+                                  _("'%s' is not under version control"),
+                                  svn_dirent_local_style(local_abspath, pool)),
+                               walk_baton, pool);
+            }
         }
+
+      SVN_ERR(svn_wc__get_entry(&entry, db, local_abspath, FALSE,
+                                svn_node_file, FALSE, pool, pool));
 
       err = walk_callbacks->found_entry(path, entry, walk_baton, pool);
       if (err)
@@ -3324,7 +3555,7 @@ svn_wc_walk_entries3(const char *path,
   return walk_callbacks->handle_error(
        path, svn_error_createf(SVN_ERR_NODE_UNKNOWN_KIND, NULL,
                                _("'%s' has an unrecognized node kind"),
-                               svn_dirent_local_style(path, pool)),
+                               svn_dirent_local_style(local_abspath, pool)),
        walk_baton, pool);
 }
 

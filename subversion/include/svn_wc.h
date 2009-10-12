@@ -511,11 +511,39 @@ svn_wc_adm_access_pool(const svn_wc_adm_access_t *adm_access);
 /** Return @c TRUE is the access baton @a adm_access has a write lock,
  * @c FALSE otherwise. Compared to svn_wc_locked() this is a cheap, fast
  * function that doesn't access the filesystem.
+ *
+ * New code should use svn_wc_locked2() instead.
  */
+SVN_DEPRECATED
 svn_boolean_t
 svn_wc_adm_locked(const svn_wc_adm_access_t *adm_access);
 
-/** Set @a *locked to non-zero if @a path is locked, else set it to zero. */
+/** Gets up to two booleans indicating whether a path is locked for
+ * writing.
+ *
+ * @a locked_here is set to TRUE when a write lock on @a local_abspath
+ * exists in @a wc_ctx. @a locked is set to TRUE when there is a
+ * write_lock on @a local_abspath
+ *
+ * @a locked_here and/or @a locked can be NULL when you are not
+ * interrested in a specific value
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_wc_locked2(svn_boolean_t *locked_here,
+               svn_boolean_t *locked,
+               svn_wc_context_t *wc_ctx,
+               const char *local_abspath,
+               apr_pool_t *scratch_pool);
+
+/** Set @a *locked to non-zero if @a path is locked, else set it to zero.
+ *
+ * New code should use svn_wc_locked2() instead.
+ *
+ * @deprecated Provided for backward compatibility with the 1.6 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_locked(svn_boolean_t *locked,
               const char *path,
@@ -980,12 +1008,20 @@ typedef enum svn_wc_notify_action_t
    * unversioned obstruction was found.  @since New in 1.7. */
   svn_wc_notify_update_obstruction,
 
-  /* The mergeinfo on path was updated.  @since New in 1.7. */
-  svn_wc_notify_merge_record_info,
-
   /** An update operation removed an external working copy.
    * @since New in 1.7. */
   svn_wc_notify_update_external_removed,
+
+  /** A node below a deleted and tree conflicted directory was added
+   *  during update @since New in 1.7. */
+  svn_wc_notify_update_add_deleted,
+
+  /** A node below a deleted and tree conflicted directory was updated
+   * @since New in 1.7. */
+  svn_wc_notify_update_update_deleted,
+
+  /* The mergeinfo on path was updated.  @since New in 1.7. */
+  svn_wc_notify_merge_record_info,
 
   /** An working copy directory was upgraded to the latest format
    * @since New in 1.7. */
@@ -1905,14 +1941,14 @@ svn_wc_conflict_description_create_prop(const char *path,
  * @since New in 1.7.
  */
 svn_wc_conflict_description2_t *
-svn_wc_conflict_description_create_tree2(const char *local_abspath,
-                                         svn_node_kind_t node_kind,
-                                         svn_wc_operation_t operation,
-                                         svn_wc_conflict_version_t
-                                           *src_left_version,
-                                         svn_wc_conflict_version_t
-                                           *src_right_version,
-                                         apr_pool_t *result_pool);
+svn_wc_conflict_description_create_tree2(
+  const char *local_abspath,
+  svn_node_kind_t node_kind,
+  svn_wc_operation_t operation,
+  const svn_wc_conflict_version_t *src_left_version,
+  const svn_wc_conflict_version_t *src_right_version,
+  apr_pool_t *result_pool);
+
 
 /** Similar to svn_wc_conflict_description_create_tree(), but returns
  * a @c svn_wc_conflict_descriptor_t *.
@@ -1922,15 +1958,14 @@ svn_wc_conflict_description_create_tree2(const char *local_abspath,
  */
 SVN_DEPRECATED
 svn_wc_conflict_description_t *
-svn_wc_conflict_description_create_tree(const char *path,
-                                        svn_wc_adm_access_t *adm_access,
-                                        svn_node_kind_t node_kind,
-                                        svn_wc_operation_t operation,
-                                        svn_wc_conflict_version_t
-                                          *src_left_version,
-                                        svn_wc_conflict_version_t
-                                          *src_right_version,
-                                        apr_pool_t *pool);
+svn_wc_conflict_description_create_tree(
+  const char *path,
+  svn_wc_adm_access_t *adm_access,
+  svn_node_kind_t node_kind,
+  svn_wc_operation_t operation,
+  /* non-const */ svn_wc_conflict_version_t *src_left_version,
+  /* non-const */ svn_wc_conflict_version_t *src_right_version,
+  apr_pool_t *pool);
 
 
 /** Return a duplicate of @a conflict, allocated in @a result_pool.
@@ -1939,8 +1974,9 @@ svn_wc_conflict_description_create_tree(const char *path,
  * @since New in 1.7.
  */
 svn_wc_conflict_description2_t *
-svn_wc__conflict_description2_dup(const svn_wc_conflict_description2_t *conflict,
-                                  apr_pool_t *result_pool);
+svn_wc__conflict_description2_dup(
+  const svn_wc_conflict_description2_t *conflict,
+  apr_pool_t *result_pool);
 
 
 /** The way in which the conflict callback chooses a course of action.
@@ -2073,8 +2109,10 @@ typedef svn_error_t *(*svn_wc_conflict_resolver_func_t)(
  *
  * Common parameters:
  *
- * @a adm_access will be an access baton for the directory containing
- * @a path, or @c NULL if the diff editor is not using access batons.
+ * @a local_dir_abspath will be the absolute path to the local directory
+ * containing @a path, or @c NULL if the diff editor does not have a local
+ * path. Note that @a path is a relative path, not just the basename of the
+ * path.
  *
  * If @a state is non-NULL, set @a *state to the state of the item
  * after the operation has been performed.  (In practice, this is only
@@ -2111,7 +2149,7 @@ typedef struct svn_wc_diff_callbacks4_t
    * property name.
    *
    */
-  svn_error_t *(*file_changed)(svn_wc_adm_access_t *adm_access,
+  svn_error_t *(*file_changed)(const char *local_dir_abspath,
                                svn_wc_notify_state_t *contentstate,
                                svn_wc_notify_state_t *propstate,
                                svn_boolean_t *tree_conflicted,
@@ -2124,7 +2162,8 @@ typedef struct svn_wc_diff_callbacks4_t
                                const char *mimetype2,
                                const apr_array_header_t *propchanges,
                                apr_hash_t *originalprops,
-                               void *diff_baton);
+                               void *diff_baton,
+                               apr_pool_t *scratch_pool);
 
   /**
    * A file @a path was added.  The contents can be seen by comparing
@@ -2145,7 +2184,7 @@ typedef struct svn_wc_diff_callbacks4_t
    * copy), and the origin of the copy may be recorded as
    * @a copyfrom_path under @a copyfrom_revision.
    */
-  svn_error_t *(*file_added)(svn_wc_adm_access_t *adm_access,
+  svn_error_t *(*file_added)(const char *local_dir_abspath,
                              svn_wc_notify_state_t *contentstate,
                              svn_wc_notify_state_t *propstate,
                              svn_boolean_t *tree_conflicted,
@@ -2160,7 +2199,8 @@ typedef struct svn_wc_diff_callbacks4_t
                              svn_revnum_t copyfrom_revision,
                              const apr_array_header_t *propchanges,
                              apr_hash_t *originalprops,
-                             void *diff_baton);
+                             void *diff_baton,
+                             apr_pool_t *scratch_pool);
 
   /**
    * A file @a path was deleted.  The [loss of] contents can be seen by
@@ -2173,7 +2213,7 @@ typedef struct svn_wc_diff_callbacks4_t
    * be NULL.  The implementor can use this information to decide if
    * (or how) to generate differences.
    */
-  svn_error_t *(*file_deleted)(svn_wc_adm_access_t *adm_access,
+  svn_error_t *(*file_deleted)(const char *local_dir_abspath,
                                svn_wc_notify_state_t *state,
                                svn_boolean_t *tree_conflicted,
                                const char *path,
@@ -2182,7 +2222,8 @@ typedef struct svn_wc_diff_callbacks4_t
                                const char *mimetype1,
                                const char *mimetype2,
                                apr_hash_t *originalprops,
-                               void *diff_baton);
+                               void *diff_baton,
+                               apr_pool_t *scratch_pool);
 
   /**
    * A directory @a path was added.  @a rev is the revision that the
@@ -2192,23 +2233,25 @@ typedef struct svn_wc_diff_callbacks4_t
    * copy), and the origin of the copy may be recorded as
    * @a copyfrom_path under @a copyfrom_revision.
    */
-  svn_error_t *(*dir_added)(svn_wc_adm_access_t *adm_access,
+  svn_error_t *(*dir_added)(const char *local_dir_abspath,
                             svn_wc_notify_state_t *state,
                             svn_boolean_t *tree_conflicted,
                             const char *path,
                             svn_revnum_t rev,
                             const char *copyfrom_path,
                             svn_revnum_t copyfrom_revision,
-                            void *diff_baton);
+                            void *diff_baton,
+                            apr_pool_t *scratch_pool);
 
   /**
    * A directory @a path was deleted.
    */
-  svn_error_t *(*dir_deleted)(svn_wc_adm_access_t *adm_access,
+  svn_error_t *(*dir_deleted)(const char *local_dir_abspath,
                               svn_wc_notify_state_t *state,
                               svn_boolean_t *tree_conflicted,
                               const char *path,
-                              void *diff_baton);
+                              void *diff_baton,
+                              apr_pool_t *scratch_pool);
 
   /**
    * A list of property changes (@a propchanges) was applied to the
@@ -2220,13 +2263,14 @@ typedef struct svn_wc_diff_callbacks4_t
    * which is a hash of @c svn_string_t values, keyed on the property
    * name.
    */
-  svn_error_t *(*dir_props_changed)(svn_wc_adm_access_t *adm_access,
+  svn_error_t *(*dir_props_changed)(const char *local_dir_abspath,
                                     svn_wc_notify_state_t *propstate,
                                     svn_boolean_t *tree_conflicted,
                                     const char *path,
                                     const apr_array_header_t *propchanges,
                                     apr_hash_t *original_props,
-                                    void *diff_baton);
+                                    void *diff_baton,
+                                    apr_pool_t *scratch_pool);
 
   /**
    * A directory @a path has been opened.  @a rev is the revision that the
@@ -2235,21 +2279,23 @@ typedef struct svn_wc_diff_callbacks4_t
    * This function is called for @a path before any of the callbacks are
    * called for a child of @a path.
    */
-  svn_error_t *(*dir_opened)(svn_wc_adm_access_t *adm_access,
+  svn_error_t *(*dir_opened)(const char *local_dir_abspath,
                              svn_boolean_t *tree_conflicted,
                              const char *path,
                              svn_revnum_t rev,
-                             void *diff_baton);
+                             void *diff_baton,
+                             apr_pool_t *scratch_pool);
 
   /**
    * A directory @a path has been closed.
    */
-  svn_error_t *(*dir_closed)(svn_wc_adm_access_t *adm_access,
+  svn_error_t *(*dir_closed)(const char *local_dir_abspath,
                              svn_wc_notify_state_t *contentstate,
                              svn_wc_notify_state_t *propstate,
                              svn_boolean_t *tree_conflicted,
                              const char *path,
-                             void *diff_baton);
+                             void *diff_baton,
+                             apr_pool_t *scratch_pool);
 
 } svn_wc_diff_callbacks4_t;
 
@@ -3964,6 +4010,8 @@ svn_wc_status_set_repos_locks(void *set_locks_baton,
  * with its path and the @a notify_baton.  @a notify_func may be @c NULL
  * if you are not interested in this information.
  *
+ * Use @a scratch_pool for temporary allocations.
+ *
  * @par Important:
  * This is a variant of svn_wc_add4().  No changes will happen
  * to the repository until a commit occurs.  This scheduling can be
@@ -3979,7 +4027,7 @@ svn_wc_copy3(svn_wc_context_t *wc_ctx,
              void *cancel_baton,
              svn_wc_notify_func2_t notify_func,
              void *notify_baton,
-             apr_pool_t *pool);
+             apr_pool_t *scratch_pool);
 
 /* Similar to svn_wc_copy3(), but takes access batons and a relative path
  * and a basename instead of absolute paths and a working copy context.
@@ -4022,13 +4070,21 @@ svn_wc_copy(const char *src,
  * and everything below @ local_abspath.
  *
  * If @a keep_local is FALSE, this function immediately deletes all files,
- * modified and unmodified, versioned and unversioned from the working copy.
+ * modified and unmodified, versioned and of @a delete_unversioned is TRUE,
+ * unversioned from the working copy.
  * It also immediately deletes unversioned directories and directories that
- * are scheduled to be added.  Only versioned directories will remain in the
- * working copy, these get deleted by the update following the commit.
+ * are scheduled to be added below @a local_abspath.  Only versioned may
+ * remain in the working copy, these get deleted by the update following
+ * the commit.
  *
  * If @a keep_local is TRUE, all files and directories will be kept in the
  * working copy (and will become unversioned on the next commit).
+ *
+ * If @a delete_unversioned_target is TRUE and @a local_abspath is not
+ * versioned, @a local_abspath will be handled as an added files without
+ * history. So it will be deleted if @a keep_local is FALSE. If @a
+ * delete_unversioned is FALSE and @a local_abspath is not versioned a
+ * @c SVN_ERR_WC_PATH_NOT_FOUND error will be returned.
  *
  * If @a cancel_func is non-NULL, call it with @a cancel_baton at
  * various points during the operation.  If it returns an error
@@ -4043,10 +4099,13 @@ svn_wc_copy(const char *src,
  *
  * @since New in 1.7.
  */
+ /* ### BH: Maybe add a delete_switched flag that allows deny switched
+            nodes like file externals? */
 svn_error_t *
 svn_wc_delete4(svn_wc_context_t *wc_ctx,
                const char *local_abspath,
                svn_boolean_t keep_local,
+               svn_boolean_t delete_unversioned_target,
                svn_cancel_func_t cancel_func,
                void *cancel_baton,
                svn_wc_notify_func2_t notify_func,
@@ -4056,7 +4115,9 @@ svn_wc_delete4(svn_wc_context_t *wc_ctx,
 /**
  * Similar to svn_wc_delete4, but uses an access baton and relative path
  * instead of a working copy context and absolute path. @a adm_access
- * must hold a write lock for the parent of @a local_abspath.
+ * must hold a write lock for the parent of @a local_abspath. 
+ *
+ * @c delete_unversioned will always be set to TRUE.
  *
  * @since New in 1.5.
  * @deprecated Provided for backward compatibility with the 1.6 API.
@@ -5608,9 +5669,10 @@ svn_wc_canonicalize_svn_prop(const svn_string_t **propval_p,
 
 /**
  * Return an @a editor/@a edit_baton for diffing a working copy against the
- * repository.
+ * repository. The editor is allocated in @a result_pool; temporary
+ * calculations are performed in @a scratch_pool.
  *
- * @a anchor/@a target represent the base of the hierarchy to be compared.
+ * @a anchor_path/@a target represent the base of the hierarchy to be compared.
  *
  * @a callbacks/@a callback_baton is the callback table to use when two
  * files are to be compared.
@@ -5627,6 +5689,10 @@ svn_wc_canonicalize_svn_prop(const svn_string_t **propval_p,
  * ancestry are treated as delete/add or as simple modifications.  If
  * @a ignore_ancestry is @c FALSE, then any discontinuous node ancestry will
  * result in the diff given as a full delete followed by an add.
+ *
+ * @a show_copies_as_adds determines whether paths added with history will
+ * appear as a diff against their copy source, or whether such paths will
+ * appear as if they were newly added in their entirety.
  *
  * If @a use_text_base is TRUE, then compare the repository against
  * the working copy's text-base files, rather than the working files.
@@ -5646,24 +5712,28 @@ svn_wc_canonicalize_svn_prop(const svn_string_t **propval_p,
  * @since New in 1.7.
  */
 svn_error_t *
-svn_wc_get_diff_editor6(svn_wc_adm_access_t *anchor,
+svn_wc_get_diff_editor6(const svn_delta_editor_t **editor,
+                        void **edit_baton,
+                        svn_wc_context_t *wc_ctx,
+                        const char *anchor_path,
                         const char *target,
                         const svn_wc_diff_callbacks4_t *callbacks,
                         void *callback_baton,
                         svn_depth_t depth,
                         svn_boolean_t ignore_ancestry,
+                        svn_boolean_t show_copies_as_adds,
                         svn_boolean_t use_text_base,
                         svn_boolean_t reverse_order,
+                        const apr_array_header_t *changelists,
                         svn_cancel_func_t cancel_func,
                         void *cancel_baton,
-                        const apr_array_header_t *changelists,
-                        const svn_delta_editor_t **editor,
-                        void **edit_baton,
-                        apr_pool_t *pool);
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool);
 
 /**
  * Similar to svn_wc_get_diff_editor6(), but with an
- * @c svn_wc_diff_callbacks3_t instead of @c svn_wc_diff_callbacks4_t.
+ * @c svn_wc_diff_callbacks3_t instead of @c svn_wc_diff_callbacks4_t,
+ * and @a show_copies_as_adds set to @c FALSE.
  *
  * @since New in 1.6.
  *
@@ -5783,7 +5853,7 @@ svn_wc_get_diff_editor(svn_wc_adm_access_t *anchor,
 /**
  * Compare working copy against the text-base.
  *
- * @a anchor/@a target represent the base of the hierarchy to be compared.
+ * @a target_path represents the base of the hierarchy to be compared.
  *
  * @a callbacks/@a callback_baton is the callback table to use when two
  * files are to be compared.
@@ -5801,27 +5871,39 @@ svn_wc_get_diff_editor(svn_wc_adm_access_t *anchor,
  * @a ignore_ancestry is @c FALSE, then any discontinuous node ancestry will
  * result in the diff given as a full delete followed by an add.
  *
+ * @a show_copies_as_adds determines whether paths added with history will
+ * appear as a diff against their copy source, or whether such paths will
+ * appear as if they were newly added in their entirety.
+ *
  * @a changelists is an array of <tt>const char *</tt> changelist
  * names, used as a restrictive filter on items whose differences are
  * reported; that is, don't generate diffs about any item unless
  * it's a member of one of those changelists.  If @a changelists is
  * empty (or altogether @c NULL), no changelist filtering occurs.
  *
+ * If @a cancel_func is non-NULL, invoke it with @a cancel_baton at various
+ * points during the operation.  If it returns an error (typically @c
+ * SVN_ERR_CANCELLED), return that error immediately.
+ *
  * @since New in 1.7.
  */
 svn_error_t *
-svn_wc_diff6(svn_wc_adm_access_t *anchor,
-             const char *target,
+svn_wc_diff6(svn_wc_context_t *wc_ctx,
+             const char *target_path,
              const svn_wc_diff_callbacks4_t *callbacks,
              void *callback_baton,
              svn_depth_t depth,
              svn_boolean_t ignore_ancestry,
+             svn_boolean_t show_copies_as_adds,
              const apr_array_header_t *changelists,
-             apr_pool_t *pool);
+             svn_cancel_func_t cancel_func,
+             void *cancel_baton,
+             apr_pool_t *scratch_pool);
 
 /**
  * Similar to svn_wc_diff6(), but with a @c svn_wc_diff_callbacks3_t argument
- * instead of @c svn_wc_diff_callbacks4_t.
+ * instead of @c svn_wc_diff_callbacks4_t, and @a show_copies_as_adds set to
+ * @c FALSE. It also doesn't allow specifying a cancel function.
  *
  * @since New in 1.6.
  *

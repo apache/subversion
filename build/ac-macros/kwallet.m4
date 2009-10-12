@@ -41,7 +41,7 @@ AC_DEFUN(SVN_LIB_KWALLET,
                   old_LDFLAGS="$LDFLAGS"
                   old_LIBS="$LIBS"
                   for d in [`$PKG_CONFIG --cflags QtCore QtDBus QtGui`]; do
-                    if test -n ["`echo "$d" | $GREP -- '^-D[^[:space:]]*'`"]; then
+                    if test -n ["`echo "$d" | $EGREP -- '^-D[^[:space:]]*'`"]; then
                       CPPFLAGS="$CPPFLAGS $d"
                     fi
                   done

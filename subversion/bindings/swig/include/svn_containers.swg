@@ -555,7 +555,11 @@
         PyErr_SetString(PyExc_TypeError, "not a sequence");
         SWIG_fail;
     }
+    
     targlen = PySequence_Length($input);
+    if (targlen < 0)
+        return NULL;
+
     $1 = apr_array_make(_global_pool, targlen, sizeof(provider));
     ($1)->nelts = targlen;
     while (targlen--) {

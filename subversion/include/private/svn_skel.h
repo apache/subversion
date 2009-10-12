@@ -138,6 +138,24 @@ svn_skel_t *svn_skel__make_empty_list(apr_pool_t *pool);
 void svn_skel__prepend(svn_skel_t *skel, svn_skel_t *list);
 
 
+/* Create an atom skel whose contents are the string representation
+   of the integer VALUE, allocated in RESULT_POOL, and then prepend
+   it to SKEL.  */
+void svn_skel__prepend_int(apr_int64_t value,
+                           svn_skel_t *skel,
+                           apr_pool_t *result_pool);
+
+
+/* Create an atom skel (allocated from RESULT_POOL) whose contents refer
+   to the string VALUE, then prepend it to SKEL.
+
+   NOTE: VALUE must have a lifetime *at least* that of RESULT_POOL. This
+   function does NOT copy it into RESULT_POOL.  */
+void svn_skel__prepend_str(const char *value,
+                           svn_skel_t *skel,
+                           apr_pool_t *result_pool);
+
+
 /* Return a string whose contents are a concrete representation of
    SKEL.  Allocate the string from POOL.  */
 svn_stringbuf_t *svn_skel__unparse(const svn_skel_t *skel, apr_pool_t *pool);

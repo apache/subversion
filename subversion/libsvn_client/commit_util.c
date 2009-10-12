@@ -180,31 +180,37 @@ look_up_committable(apr_hash_t *committables,
   return NULL;
 }
 
-/* This implements the svn_wc_entry_callbacks_t->found_entry interface. */
-static svn_error_t *
-add_lock_token(const char *path, const svn_wc_entry_t *entry,
-               void *walk_baton, apr_pool_t *pool)
+/* Baton for add_lock_token() */
+struct add_lock_token_baton
 {
-  apr_hash_t *lock_tokens = walk_baton;
-  apr_pool_t *token_pool = apr_hash_pool_get(lock_tokens);
+  apr_hash_t *lock_tokens;
+  svn_wc_context_t *wc_ctx;
+};
+
+/* This implements the svn_wc__node_found_func_t interface. */
+static svn_error_t *
+add_lock_token(const char *local_abspath,
+               void *walk_baton,
+               apr_pool_t *scratch_pool)
+{
+  struct add_lock_token_baton *altb = walk_baton;
+  apr_pool_t *token_pool = apr_hash_pool_get(altb->lock_tokens);
+  const svn_wc_entry_t *entry;
+
+  SVN_ERR(svn_wc__maybe_get_entry(&entry, altb->wc_ctx, local_abspath,
+                                  svn_node_unknown, FALSE, FALSE,
+                                  scratch_pool, scratch_pool));
 
   /* I want every lock-token I can get my dirty hands on!
      If this entry is switched, so what.  We will send an irrelevant lock
      token. */
-  if (entry->url && entry->lock_token)
-    apr_hash_set(lock_tokens, apr_pstrdup(token_pool, entry->url),
+  if (entry && entry->url && entry->lock_token)
+    apr_hash_set(altb->lock_tokens, apr_pstrdup(token_pool, entry->url),
                  APR_HASH_KEY_STRING,
                  apr_pstrdup(token_pool, entry->lock_token));
 
   return SVN_NO_ERROR;
 }
-
-/* Entry walker callback table to add lock tokens in an hierarchy. */
-static svn_wc_entry_callbacks2_t add_tokens_callbacks = {
-  add_lock_token,
-  svn_client__default_walker_error_handler
-};
-
 
 /* Helper for harvest_committables().
  * If ENTRY is a dir, return an SVN_ERR_WC_FOUND_CONFLICT error when
@@ -347,7 +353,6 @@ static svn_error_t *
 harvest_committables(apr_hash_t *committables,
                      apr_hash_t *lock_tokens,
                      const char *path,
-                     svn_wc_adm_access_t *adm_access,
                      const char *url,
                      const char *copyfrom_url,
                      const svn_wc_entry_t *entry,
@@ -676,7 +681,6 @@ harvest_committables(apr_hash_t *committables,
           const char *full_path;
           const char *used_url = NULL;
           const char *this_cf_url = cf_url ? cf_url : copyfrom_url;
-          svn_wc_adm_access_t *dir_access = adm_access;
           svn_error_t *err;
 
           svn_pool_clear(iterpool);
@@ -785,55 +789,45 @@ harvest_committables(apr_hash_t *committables,
                 }
               else
                 {
-                  svn_error_t *lockerr;
-                  lockerr = svn_wc_adm_retrieve(&dir_access, adm_access,
-                                                full_path, iterpool);
+                  svn_boolean_t obstructed;
 
-                  if (lockerr)
+                  SVN_ERR(svn_wc__node_is_status_obstructed(&obstructed,
+                                                            ctx->wc_ctx,
+                                                            this_abspath,
+                                                            iterpool));
+                  
+                  if (obstructed)
                     {
-                      if (lockerr->apr_err == SVN_ERR_WC_NOT_LOCKED)
+                      /* A missing, schedule-delete child dir is
+                         allowable.  Just don't try to recurse. */
+                      svn_node_kind_t childkind;
+                      err = svn_io_check_path(full_path,
+                                              &childkind,
+                                              iterpool);
+                      if (! err
+                          && (childkind == svn_node_none)
+                          && (this_entry->schedule
+                              == svn_wc_schedule_delete))
                         {
-                          /* A missing, schedule-delete child dir is
-                             allowable.  Just don't try to recurse. */
-                          svn_node_kind_t childkind;
-                          err = svn_io_check_path(full_path,
-                                                  &childkind,
-                                                  iterpool);
-                          if (! err
-                              && (childkind == svn_node_none)
-                              && (this_entry->schedule
-                                  == svn_wc_schedule_delete))
+                          if (svn_wc__changelist_match(ctx->wc_ctx,
+                                                       this_abspath,
+                                                       changelists,
+                                                       iterpool))
                             {
-                              if (svn_wc__changelist_match(ctx->wc_ctx,
-                                                           this_abspath,
-                                                           changelists,
-                                                           iterpool))
-                                {
-                                  add_committable(
-                                    committables, full_path,
-                                    this_entry->kind, used_url,
-                                    SVN_INVALID_REVNUM,
-                                    NULL,
-                                    SVN_INVALID_REVNUM,
-                                    SVN_CLIENT_COMMIT_ITEM_DELETE);
-                                  svn_error_clear(lockerr);
-                                  continue; /* don't recurse! */
-                                }
-                            }
-                          else
-                            {
-                              svn_error_clear(err);
-                              return lockerr;
+                              add_committable(
+                                committables, full_path,
+                                this_entry->kind, used_url,
+                                SVN_INVALID_REVNUM,
+                                NULL,
+                                SVN_INVALID_REVNUM,
+                                SVN_CLIENT_COMMIT_ITEM_DELETE);
+                              continue; /* don't recurse! */
                             }
                         }
                       else
-                        return lockerr;
+                        SVN_ERR(err);
                     }
                 }
-            }
-          else
-            {
-              dir_access = adm_access;
             }
 
           {
@@ -852,7 +846,7 @@ harvest_committables(apr_hash_t *committables,
               depth_below_here = svn_depth_empty;
 
             SVN_ERR(harvest_committables
-                    (committables, lock_tokens, full_path, dir_access,
+                    (committables, lock_tokens, full_path,
                      used_url ? used_url : this_entry->url,
                      this_cf_url,
                      this_entry,
@@ -874,14 +868,19 @@ harvest_committables(apr_hash_t *committables,
   if (lock_tokens && entry->kind == svn_node_dir
       && (state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE))
     {
-      SVN_ERR(svn_wc_walk_entries3(path, adm_access, &add_tokens_callbacks,
-                                   lock_tokens,
-                                   /* If a directory was deleted, everything
-                                      under it would better be deleted too,
-                                      so pass svn_depth_infinity not depth. */
-                                   svn_depth_infinity, FALSE,
-                                   ctx->cancel_func, ctx->cancel_baton,
-                                   scratch_pool));
+      struct add_lock_token_baton altb;
+      altb.wc_ctx = ctx->wc_ctx;
+      altb.lock_tokens = lock_tokens;
+
+      SVN_ERR(svn_wc__node_walk_children(ctx->wc_ctx,
+                                         local_abspath,
+                                         FALSE,
+                                         add_lock_token,
+                                         &altb,
+                                         svn_depth_infinity,
+                                         ctx->cancel_func,
+                                         ctx->cancel_baton,
+                                         scratch_pool));
     }
 
   return SVN_NO_ERROR;
@@ -927,7 +926,6 @@ svn_client__harvest_committables(apr_hash_t **committables,
                                  apr_pool_t *pool)
 {
   int i = 0;
-  svn_wc_adm_access_t *dir_access;
   apr_pool_t *subpool = svn_pool_create(pool);
   apr_hash_t *changelist_hash = NULL;
 
@@ -1056,12 +1054,6 @@ svn_client__harvest_committables(apr_hash_t **committables,
            svn_dirent_local_style(target, pool));
 
       /* Handle our TARGET. */
-      SVN_ERR(svn_wc_adm_retrieve(&dir_access, parent_adm,
-                                  (entry->kind == svn_node_dir
-                                   ? target
-                                   : svn_dirent_dirname(target, subpool)),
-                                  subpool));
-
       /* Make sure this isn't inside a working copy subtree that is
        * marked as tree-conflicted. */
       SVN_ERR(bail_on_tree_conflicted_ancestor(ctx->wc_ctx,
@@ -1072,7 +1064,7 @@ svn_client__harvest_committables(apr_hash_t **committables,
                                                subpool));
 
       SVN_ERR(harvest_committables(*committables, *lock_tokens, target,
-                                   dir_access, entry->url, NULL,
+                                   entry->url, NULL,
                                    entry, NULL, FALSE, FALSE, depth,
                                    just_locked, changelist_hash,
                                    ctx, subpool));
@@ -1092,7 +1084,6 @@ svn_client__harvest_committables(apr_hash_t **committables,
 
 struct copy_committables_baton
 {
-  svn_wc_adm_access_t *adm_access;
   svn_client_ctx_t *ctx;
   apr_hash_t *committables;
 };
@@ -1106,7 +1097,6 @@ harvest_copy_committables(void *baton, void *item, apr_pool_t *pool)
   svn_client__copy_pair_t *pair =
     *(svn_client__copy_pair_t **)item;
   const char *src_abspath;
-  svn_wc_adm_access_t *dir_access;
 
   /* Read the entry for this SRC. */
   SVN_ERR(svn_dirent_get_absolute(&src_abspath, pair->src, pool));
@@ -1114,18 +1104,10 @@ harvest_copy_committables(void *baton, void *item, apr_pool_t *pool)
                                       svn_node_unknown, FALSE, FALSE,
                                       pool, pool));
 
-  /* Get the right access baton for this SRC. */
-  if (entry->kind == svn_node_dir)
-    SVN_ERR(svn_wc_adm_retrieve(&dir_access, btn->adm_access, pair->src, pool));
-  else
-    SVN_ERR(svn_wc_adm_retrieve(&dir_access, btn->adm_access,
-                                svn_dirent_dirname(pair->src, pool),
-                                pool));
-
   /* Handle this SRC.  Because add_committable() uses the hash pool to
      allocate the new commit_item, we can safely use the iterpool here. */
   return harvest_committables(btn->committables, NULL, pair->src,
-                              dir_access, pair->dst, entry->url, entry,
+                              pair->dst, entry->url, entry,
                               NULL, FALSE, TRUE, svn_depth_infinity,
                               FALSE, NULL, btn->ctx, pool);
 }
@@ -1135,7 +1117,6 @@ harvest_copy_committables(void *baton, void *item, apr_pool_t *pool)
 svn_error_t *
 svn_client__get_copy_committables(apr_hash_t **committables,
                                   const apr_array_header_t *copy_pairs,
-                                  svn_wc_adm_access_t *adm_access,
                                   svn_client_ctx_t *ctx,
                                   apr_pool_t *pool)
 {
@@ -1143,7 +1124,6 @@ svn_client__get_copy_committables(apr_hash_t **committables,
 
   *committables = apr_hash_make(pool);
 
-  btn.adm_access = adm_access;
   btn.ctx = ctx;
   btn.committables = *committables;
 

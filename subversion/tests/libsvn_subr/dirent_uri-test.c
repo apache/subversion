@@ -149,8 +149,10 @@ test_dirent_is_absolute(apr_pool_t *pool)
     { "/foo/bar",      FALSE },
     { "/foo",          FALSE },
     { "/",             FALSE },
-    { "X:/foo",        TRUE },
-    { "X:/",           TRUE },
+    { "C:/foo",        TRUE },
+    { "C:/",           TRUE },
+    { "c:/",           FALSE },
+    { "c:/foo",        FALSE },
     { "//srv/shr",     TRUE },
     { "//srv/shr/fld", TRUE },
     { "//srv/s r",     TRUE },
@@ -178,6 +180,25 @@ test_dirent_is_absolute(apr_pool_t *pool)
            "svn_dirent_is_absolute (%s) returned %s instead of %s",
            tests[i].path, retval ? "TRUE" : "FALSE",
            tests[i].result ? "TRUE" : "FALSE");
+
+      /* Don't get absolute paths for the UNC paths, because this will
+         always fail */
+      if (tests[i].result &&
+          strncmp(tests[i].path, "//", 2) != 0)
+        {
+          const char *abspath;
+
+          SVN_ERR(svn_dirent_get_absolute(&abspath, tests[i].path, pool));
+
+          if (tests[i].result != (strcmp(tests[i].path, abspath) == 0))
+            return svn_error_createf(
+                          SVN_ERR_TEST_FAILED,
+                          NULL,
+                          "svn_dirent_is_absolute(%s) returned TRUE, but "
+                          "svn_dirent_get_absolute() returned \"%s\"",
+                          tests[i].path,
+                          abspath);
+        }
     }
 
   return SVN_NO_ERROR;
@@ -688,6 +709,8 @@ test_uri_dirname(apr_pool_t *pool)
     const char *result;
   } tests[] = {
     { "/", "/" },
+    { "/a", "/" },
+    { "/a/b", "/a" },
     { SVN_EMPTY_PATH, SVN_EMPTY_PATH },
     { "http://server/dir", "http://server" },
     { "http://server/dir/file", "http://server/dir" },
@@ -756,6 +779,9 @@ test_dirent_canonicalize(apr_pool_t *pool)
 #if defined(WIN32) || defined(__CYGWIN__)
     { "X:/",                  "X:/" },
     { "X:/./",                "X:/" },
+    { "x:/",                  "X:/" },
+    { "x:",                   "X:" },
+    { "x:AAAAA",              "X:AAAAA" },
     /* We permit UNC dirents on Windows.  By definition UNC
      * dirents must have two components so we should remove the
      * double slash if there is only one component. */
@@ -1007,6 +1033,13 @@ test_dirent_is_canonical(apr_pool_t *pool)
     { "file with spaces",      TRUE },
 #if defined(WIN32) || defined(__CYGWIN__)
     { "X:/",                   TRUE },
+    { "X:/foo",                TRUE },
+    { "X:",                    TRUE },
+    { "X:foo",                 TRUE },
+    { "x:/",                   FALSE },
+    { "x:/foo",                FALSE },
+    { "x:",                    FALSE },
+    { "x:foo",                 FALSE },
     /* We permit UNC dirents on Windows.  By definition UNC
      * dirents must have two components so we should remove the
      * double slash if there is only one component. */
@@ -2210,6 +2243,9 @@ test_dirent_get_absolute(apr_pool_t *pool)
     { "C:", "@" },
     { "/", "$/" },
     { "/x/abc", "$/x/abc" },
+    { "c:/", "C:/" },
+    { "c:/AbC", "C:/AbC" },
+    { "c:abc", "@/abc" },
     /* svn_dirent_get_absolute will check existence of this UNC shares on the
        test machine, so we can't really test this.
     { "//srv/shr",      "//srv/shr" },
@@ -2409,8 +2445,10 @@ test_dirent_local_style(apr_pool_t *pool)
     { "",                     "." },
     { ".",                    "." },
 #if defined(WIN32) || defined(__CYGWIN__)
-    { "a:/",                 "a:\\" },
-    { "a:/file",             "a:\\file" },
+    { "A:/",                 "A:\\" },
+    { "A:/file",             "A:\\file" },
+    { "a:/",                 "A:\\" },
+    { "a:/file",             "A:\\file" },
     { "dir/file",            "dir\\file" },
     { "/",                   "\\" },
     { "//server/share/dir",  "\\\\server\\share\\dir" },
@@ -2527,9 +2565,12 @@ test_dirent_internal_style(apr_pool_t *pool)
     { "dir/file",            "dir/file" },
     { "dir/file/./.",        "dir/file" },
 #if defined(WIN32) || defined(__CYGWIN__)
-    { "a:\\",                "a:/" },
-    { "a:\\file",            "a:/file" },
-    { "a:file",              "a:file" },
+    { "A:\\",                "A:/" },
+    { "A:\\file",            "A:/file" },
+    { "A:file",              "A:file" },
+    { "a:\\",                "A:/" },
+    { "a:\\file",            "A:/file" },
+    { "a:file",              "A:file" },
     { "dir\\file",           "dir/file" },
     { "\\\\srv\\shr\\dir",   "//srv/shr/dir" },
     { "\\\\srv\\shr\\",      "//srv/shr" },

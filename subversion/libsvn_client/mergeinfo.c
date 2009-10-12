@@ -138,7 +138,7 @@ svn_client__adjust_mergeinfo_source_paths(svn_mergeinfo_t adjusted_mergeinfo,
   SVN_ERR_ASSERT(adjusted_mergeinfo);
   SVN_ERR_ASSERT(mergeinfo);
 
-  for (hi = apr_hash_first(NULL, mergeinfo); hi; hi = apr_hash_next(hi))
+  for (hi = apr_hash_first(pool, mergeinfo); hi; hi = apr_hash_next(hi))
     {
       const char *merge_source = svn_apr_hash_index_key(hi);
       apr_array_header_t *rangelist = svn_apr_hash_index_val(hi);
@@ -810,13 +810,12 @@ should_elide_mergeinfo(svn_boolean_t *elides,
 
 /* Helper for svn_client__elide_mergeinfo().
 
-   Given a working copy PATH, its mergeinfo hash CHILD_MERGEINFO, and
-   the mergeinfo of PATH's nearest ancestor PARENT_MERGEINFO, use
+   Given a working copy LOCAL_ABSPATH, its mergeinfo hash CHILD_MERGEINFO, and
+   the mergeinfo of LOCAL_ABSPATH's nearest ancestor PARENT_MERGEINFO, use
    should_elide_mergeinfo() to decide whether or not CHILD_MERGEINFO elides to
    PARENT_MERGEINFO; PATH_SUFFIX means the same as in that function.
 
-   If elision does occur, then update the mergeinfo for PATH (which is
-   the child) in the working copy via ADM_ACCESS appropriately.
+   If elision does occur, then remove the mergeinfo for LOCAL_ABSPATH.
 
    If CHILD_MERGEINFO is NULL, do nothing.
 
@@ -2111,7 +2110,7 @@ svn_client_suggest_merge_sources(apr_array_header_t **suggestions,
 
   if (mergeinfo)
     {
-      for (hi = apr_hash_first(NULL, mergeinfo); hi; hi = apr_hash_next(hi))
+      for (hi = apr_hash_first(pool, mergeinfo); hi; hi = apr_hash_next(hi))
         {
           const char *rel_path = svn_apr_hash_index_key(hi);
 

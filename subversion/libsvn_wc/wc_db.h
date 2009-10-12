@@ -1364,13 +1364,42 @@ svn_wc__db_global_relocate(svn_wc__db_t *db,
                            apr_pool_t *scratch_pool);
 
 
-/* ### collapse changes (for this node) from the trees into a new BASE node. */
+/* ### docco
+
+   ### collapse the WORKING and ACTUAL tree changes down into BASE.
+
+   ### BH: This probably needs an exclude filter and some kind of depth
+   ###   support, before it can replace other code.
+   ### GS: nope. the intent is to call this once per committed node. each
+   ###   node is committed transactionally. upper layers can deal with
+   ###   depth and exclusion. this function will combine the functionality
+   ###   of process_committed_leaf() and log_do_committed().
+
+   NEW_REVISION must be the revision number of the revision created by
+   the commit. It will become the BASE node's 'revnum' and 'changed_rev'
+   values in the BASE_NODE table.
+
+   NEW_DATE is the (server-side) date of the new revision. It may be 0 if
+   the revprop is missing on the revision.
+
+   NEW_AUTHOR is the (server-side) author of the new revision. It may be
+   NULL if the revprop is missing on the revision.
+
+   One or both of NEW_CHECKSUM and NEW_CHILDREN should be NULL. For new:
+     files: NEW_CHILDREN should be NULL
+     dirs: NEW_CHECKSUM should be NULL
+     symlinks: both should be NULL
+*/
 svn_error_t *
 svn_wc__db_global_commit(svn_wc__db_t *db,
                          const char *local_abspath,
                          svn_revnum_t new_revision,
                          apr_time_t new_date,
                          const char *new_author,
+                         const svn_checksum_t *new_checksum,
+                         const apr_array_header_t *new_children,
+                         apr_hash_t *new_dav_cache,
+                         svn_boolean_t keep_changelist,
                          apr_pool_t *scratch_pool);
 
 
@@ -1673,20 +1702,22 @@ svn_wc__db_upgrade_finish(const char *local_dir_abspath,
  * @{
  */
 
-/* In the WCROOT associated with DB and LOCAL_ABSPATH, add WORK_ITEM to the
+/* In the WCROOT associated with DB and WRI_ABSPATH, add WORK_ITEM to the
    wcroot's work queue. Use SCRATCH_POOL for all temporary allocations.  */
 svn_error_t *
 svn_wc__db_wq_add(svn_wc__db_t *db,
-                  const char *local_abspath,
+                  const char *wri_abspath,
                   const svn_skel_t *work_item,
                   apr_pool_t *scratch_pool);
 
 
-/* In the WCROOT associated with DB and LOCAL_ABSPATH, fetch a work item that
+/* In the WCROOT associated with DB and WRI_ABSPATH, fetch a work item that
    needs to be completed. Its identifier is returned in ID, and the data in
    WORK_ITEM.
 
-   There is no particular ordering to the work items returned by this function.
+   Items are returned in the same order they were queued. This allows for
+   (say) queueing work on a parent node to be handled before that of its
+   children.
 
    If there are no work items to be completed, then ID will be set to zero,
    and WORK_ITEM to NULL.
@@ -1697,23 +1728,41 @@ svn_error_t *
 svn_wc__db_wq_fetch(apr_uint64_t *id,
                     svn_skel_t **work_item,
                     svn_wc__db_t *db,
-                    const char *local_abspath,
+                    const char *wri_abspath,
                     apr_pool_t *result_pool,
                     apr_pool_t *scratch_pool);
 
 
-/* In the WCROOT associated with DB and LOCAL_ABSPATH, mark work item ID as
+/* In the WCROOT associated with DB and WRI_ABSPATH, mark work item ID as
    completed. If an error occurs, then it is unknown whether the work item
    has been marked as completed.
 
    Uses SCRATCH_POOL for all temporary allocations.  */
 svn_error_t *
 svn_wc__db_wq_completed(svn_wc__db_t *db,
-                        const char *local_abspath,
+                        const char *wri_abspath,
                         apr_uint64_t id,
                         apr_pool_t *scratch_pool);
 
 /** @} */
+
+
+svn_error_t *
+svn_wc__db_wclock_set(svn_wc__db_t *db,
+                      const char *local_abspath,
+                      apr_pool_t *scratch_pool);
+
+svn_error_t *
+svn_wc__db_wclocked(svn_boolean_t *locked,
+                    svn_wc__db_t *db,
+                    const char *local_abspath,
+                    apr_pool_t *scratch_pool);
+
+svn_error_t *
+svn_wc__db_wclock_remove(svn_wc__db_t *db,
+                         const char *local_abspath,
+                         apr_pool_t *scratch_pool);
+
 
 /**
  * @defgroup svn_wc__db_temp Various temporary functions during transition
@@ -1831,9 +1880,12 @@ apr_hash_t *
 svn_wc__db_temp_get_all_access(svn_wc__db_t *db,
                                apr_pool_t *result_pool);
 
-/* ### temp function to open an sqlite database to the appropriate location.
+/* ### temp function to open the sqlite database to the appropriate location.
    ### The *only* reason for this function is because entries.c still
    ### manually hacks the sqlite database.
+
+   ### If ALWAYS_OPEN is FALSE, try to retrieve the existing database
+   ### handle instead of reopening.
 
    ### No matter how tempted you may be DO NOT USE THIS FUNCTION!
    ### (if you do, gstein will hunt you down and burn your knee caps off
@@ -1841,10 +1893,20 @@ svn_wc__db_temp_get_all_access(svn_wc__db_t *db,
    ### "Bet on it." --gstein
 */
 svn_error_t *
-svn_wc__db_temp_get_sdb(svn_sqlite__db_t **db,
+svn_wc__db_temp_get_sdb(svn_sqlite__db_t **sdb,
+                        svn_wc__db_t *db,
                         const char *local_dir_abspath,
+                        svn_boolean_t always_open,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool);
+
+
+svn_error_t *
+svn_wc__db_temp_wcroot_tempdir(const char **temp_dir_abspath,
+                               svn_wc__db_t *db,
+                               const char *wri_abspath,
+                               apr_pool_t *result_pool,
+                               apr_pool_t *scratch_pool);
 
 /** @} */
 

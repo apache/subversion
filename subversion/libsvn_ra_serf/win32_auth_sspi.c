@@ -81,7 +81,8 @@ static unsigned int ntlm_maxtokensize = 0;
 static svn_error_t *
 sspi_get_credentials(char *token, apr_size_t token_len,
                      const char **buf, apr_size_t *buf_len,
-                     serf_sspi_context_t *sspi_ctx);
+                     serf_sspi_context_t *sspi_ctx,
+                     apr_pool_t *scratch_pool);
 
 
 /* Loads the SSPI function table we can use to call SSPI's public functions.
@@ -102,12 +103,15 @@ initialize_sspi(apr_pool_t* pool)
 
 /* Calculates the maximum token size based on the authentication protocol. */
 static svn_error_t *
-sspi_maxtokensize(const char *auth_pkg, unsigned int *maxtokensize)
+sspi_maxtokensize(const char *auth_pkg,
+                  unsigned int *maxtokensize,
+                  apr_pool_t *scratch_pool)
 {
   SECURITY_STATUS status;
   SecPkgInfo *sec_pkg_info = NULL;
+  SEC_CHAR *package_name = apr_pstrdup(scratch_pool, auth_pkg);
 
-  status = sspi->QuerySecurityPackageInfo(auth_pkg,
+  status = sspi->QuerySecurityPackageInfo(package_name,
                                           &sec_pkg_info);
   if (status == SEC_E_OK)
     {
@@ -140,7 +144,7 @@ svn_ra_serf__init_sspi_connection(svn_ra_serf__session_t *session,
   conn->auth_context = sspi_context;
 
   /* Setup the initial request to the server with an SSPI header */
-  SVN_ERR(sspi_get_credentials(NULL, 0, &tmp, &tmp_len, sspi_context));
+  SVN_ERR(sspi_get_credentials(NULL, 0, &tmp, &tmp_len, sspi_context, pool));
   svn_ra_serf__encode_auth_header("NTLM", &conn->auth_value, tmp, tmp_len,
                                   pool);
   conn->auth_header = "Authorization";
@@ -183,7 +187,7 @@ do_auth(serf_sspi_context_t *sspi_context,
     return SVN_NO_ERROR;
 
   SVN_ERR(sspi_get_credentials(token, token_len, &tmp, &tmp_len,
-                               sspi_context));
+                               sspi_context, pool));
 
   svn_ra_serf__encode_auth_header(auth_name, auth_value, tmp, tmp_len, pool);
   *auth_header = auth_header_value;
@@ -239,7 +243,8 @@ svn_ra_serf__setup_request_sspi_auth(svn_ra_serf__connection_t *conn,
 static svn_error_t *
 sspi_get_credentials(char *token, apr_size_t token_len,
                      const char **buf, apr_size_t *buf_len,
-                     serf_sspi_context_t *sspi_ctx)
+                     serf_sspi_context_t *sspi_ctx,
+                     apr_pool_t *scratch_pool)
 {
   SecBuffer in_buf, out_buf;
   SecBufferDesc in_buf_desc, out_buf_desc;
@@ -251,7 +256,7 @@ sspi_get_credentials(char *token, apr_size_t token_len,
   CtxtHandle *ctx = &(sspi_ctx->ctx);
 
   if (ntlm_maxtokensize == 0)
-    sspi_maxtokensize("NTLM", &ntlm_maxtokensize);
+    sspi_maxtokensize("NTLM", &ntlm_maxtokensize, scratch_pool);
 
   /* Prepare inbound buffer. */
   in_buf.BufferType = SECBUFFER_TOKEN;
@@ -352,7 +357,7 @@ svn_ra_serf__init_proxy_sspi_connection(svn_ra_serf__session_t *session,
   conn->proxy_auth_context = sspi_context;
 
   /* Setup the initial request to the server with an SSPI header */
-  SVN_ERR(sspi_get_credentials(NULL, 0, &tmp, &tmp_len, sspi_context));
+  SVN_ERR(sspi_get_credentials(NULL, 0, &tmp, &tmp_len, sspi_context, pool));
   svn_ra_serf__encode_auth_header("NTLM", &conn->proxy_auth_value, tmp,
                                   tmp_len,
                                   pool);

@@ -147,6 +147,15 @@ typedef struct fs_fs_shared_txn_data_t
   apr_pool_t *pool;
 } fs_fs_shared_txn_data_t;
 
+/* On most operating systems apr implements file locks per process, not
+   per file.  On Windows apr implements the locking as per file handle
+   locks, so we don't have to add our own mutex for just in-process
+   synchronization. */
+#if APR_HAS_THREADS && !defined(WIN32)
+#define SVN_FS_FS__USE_LOCK_MUTEX 1
+#else
+#define SVN_FS_FS__USE_LOCK_MUTEX 0
+#endif
 
 /* Private FSFS-specific data shared between all svn_fs_t objects that
    relate to a particular filesystem, as identified by filesystem UUID.
@@ -166,7 +175,8 @@ typedef struct
 #if APR_HAS_THREADS
   /* A lock for intra-process synchronization when accessing the TXNS list. */
   apr_thread_mutex_t *txn_list_lock;
-
+#endif
+#if SVN_FS_FS__USE_LOCK_MUTEX
   /* A lock for intra-process synchronization when grabbing the
      repository write lock. */
   apr_thread_mutex_t *fs_write_lock;
@@ -230,6 +240,10 @@ typedef struct
 
   /* The oldest revision not in a pack file. */
   svn_revnum_t min_unpacked_rev;
+
+  /* Whether rep-sharing is supported by the filesystem
+   * and allowed by the configuration. */
+  svn_boolean_t rep_sharing_allowed;
 } fs_fs_data_t;
 
 

@@ -254,7 +254,7 @@ delete_entry(const char *path,
   if (SVN_IS_VALID_REVNUM(revision) && (revision < cr_rev))
     return out_of_date(full_path, kind);
 
-  /* This routine is a mindless wrapper.  We call svn_fs_delete_tree
+  /* This routine is a mindless wrapper.  We call svn_fs_delete()
      because that will delete files and recursively delete
      directories.  */
   return svn_fs_delete(eb->txn_root, full_path, pool);
@@ -825,8 +825,8 @@ svn_repos_get_commit_editor5(const svn_delta_editor_t **editor,
   eb->base_path = apr_pstrdup(subpool, base_path);
   eb->repos = repos;
   eb->repos_url = repos_url;
-  eb->repos_name = svn_uri_basename(svn_repos_path(repos, subpool),
-                                    subpool);
+  eb->repos_name = svn_dirent_basename(svn_repos_path(repos, subpool),
+                                       subpool);
   eb->fs = svn_repos_fs(repos);
   eb->txn = txn;
   eb->txn_owner = txn == NULL;

@@ -30,9 +30,8 @@
 #include "svn_string.h"
 #include "svn_wc.h"
 
-#include "wc_db.h"
-
 #include "private/svn_token.h"
+#include "private/svn_skel.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -61,6 +60,19 @@ extern "C" {
  */
 
 
+svn_error_t *
+svn_wc__serialize_conflict(svn_skel_t **skel,
+                           const svn_wc_conflict_description2_t *conflict,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool);
+
+
+svn_error_t *
+svn_wc__deserialize_conflict(const svn_wc_conflict_description2_t **conflict,
+                             const svn_skel_t *skel,
+                             const char *dir_path,
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool);
 
 /* Like svn_wc__add_tree_conflict(), but append to the log accumulator
  * LOG_ACCUM a command to rewrite the entry field, and do not flush the log.

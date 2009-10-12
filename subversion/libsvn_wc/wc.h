@@ -101,12 +101,14 @@ extern "C" {
  * The change from 12 to 13 added the WORK_QUEUE table into 'wc.db', and
  * moved the wcprops into the 'dav_cache' column in BASE_NODE.
  *
+ * The change from 13 to 14 added the WCLOCKS table.
+ *
  * == 1.7.x shipped with format ???
  *
  * Please document any further format changes here.
  */
 
-#define SVN_WC__VERSION 13
+#define SVN_WC__VERSION 14
 
 
 /* A version <= this doesn't have property caching in the entries file. */
@@ -280,7 +282,7 @@ void svn_wc__compat_call_notify_func(void *baton,
  * addition), return the error SVN_ERR_ENTRY_NOT_FOUND.
  */
 svn_error_t *
-svn_wc__text_modified_internal_p(svn_boolean_t *modified_p,
+svn_wc__internal_text_modified_p(svn_boolean_t *modified_p,
                                  svn_wc__db_t *db,
                                  const char *local_abspath,
                                  svn_boolean_t force_comparison,
@@ -289,17 +291,19 @@ svn_wc__text_modified_internal_p(svn_boolean_t *modified_p,
 
 
 
-/* Merge the difference between LEFT and RIGHT into MERGE_TARGET,
-   accumulating instructions to update the working copy into LOG_ACCUM.
+/* Merge the difference between LEFT_ABSPATH and RIGHT_ABSPATH into
+   TARGET_ABSPATH, accumulating instructions to update the working
+   copy into LOG_ACCUM.
 
    Note that, in the case of updating, the update can have sent new
    properties, which could affect the way the wc target is
    detranslated and compared with LEFT and RIGHT for merging.
 
-   If COPYFROM_TEXT is not NULL, the "local mods" text should be taken
-   from the path named there instead of from MERGE_TARGET (but the
-   merge should still be installed into MERGE_TARGET).  The merge
-   target is allowed to not be under version control in this case.
+   If COPYFROM_ABSPATH is not NULL, the "local mods" text should be
+   taken from the path named there instead of from TARGET_ABSPATH
+   (but the merge should still be installed into TARGET_ABSPATH).
+   The merge target is allowed to not be under version control in
+   this case.
 
    The merge result is stored in *MERGE_OUTCOME and merge conflicts
    are marked in MERGE_RESULT using LEFT_LABEL, RIGHT_LABEL and
@@ -329,15 +333,15 @@ svn_wc__text_modified_internal_p(svn_boolean_t *modified_p,
    the (loggy) implementation.
 */
 svn_error_t *
-svn_wc__merge_internal(svn_stringbuf_t **log_accum,
+svn_wc__internal_merge(svn_stringbuf_t **log_accum,
                        enum svn_wc_merge_outcome_t *merge_outcome,
                        svn_wc__db_t *db,
-                       const char *left,
+                       const char *left_abspath,
                        const svn_wc_conflict_version_t *left_version,
-                       const char *right,
+                       const char *right_abspath,
                        const svn_wc_conflict_version_t *right_version,
-                       const char *merge_target,
-                       const char *copyfrom_text,
+                       const char *target_abspath,
+                       const char *copyfrom_abspath,
                        const char *left_label,
                        const char *right_label,
                        const char *target_label,
@@ -366,7 +370,7 @@ svn_wc__walker_default_error_handler(const char *path,
  * depth.  It is safe for *EDITOR and *EDIT_BATON to start as
  * WRAPPED_EDITOR and WRAPPED_BATON.
  *
- * ANCHOR, TARGET, and ADM_ACCESS are as in svn_wc_get_update_editor3.
+ * ANCHOR, TARGET, and DB are as in svn_wc_get_update_editor3.
  *
  * @a requested_depth must be one of the following depth values:
  * @c svn_depth_infinity, @c svn_depth_empty, @c svn_depth_files,
@@ -381,7 +385,7 @@ svn_wc__ambient_depth_filter_editor(const svn_delta_editor_t **editor,
                                     void *wrapped_edit_baton,
                                     const char *anchor,
                                     const char *target,
-                                    svn_wc_adm_access_t *adm_access,
+                                    svn_wc__db_t *db,
                                     apr_pool_t *pool);
 
 /* Similar to svn_wc__path_switched(), but with a wc_db parameter instead of
@@ -478,7 +482,7 @@ svn_wc__internal_walk_children(svn_wc__db_t *db,
 /* Library-internal version of svn_wc_remove_from_revision_control2,
    which see.*/
 svn_error_t *
-svn_wc__remove_from_revision_control_internal(svn_wc__db_t *db,
+svn_wc__internal_remove_from_revision_control(svn_wc__db_t *db,
                                               const char *local_abspath,
                                               svn_boolean_t destroy_wf,
                                               svn_boolean_t instant_error,
@@ -489,7 +493,7 @@ svn_wc__remove_from_revision_control_internal(svn_wc__db_t *db,
 
 /* Library-internal version of svn_wc__resolved_conflict5(). */
 svn_error_t *
-svn_wc__resolved_conflict_internal(svn_wc__db_t *db,
+svn_wc__internal_resolved_conflict(svn_wc__db_t *db,
                                    const char *local_abspath,
                                    svn_depth_t depth,
                                    svn_boolean_t resolve_text,
@@ -502,12 +506,29 @@ svn_wc__resolved_conflict_internal(svn_wc__db_t *db,
                                    void *notify_baton,
                                    apr_pool_t *scratch_pool);
 
+/* Library-internal version of svn_wc_locked2(). */
+svn_error_t *
+svn_wc__internal_locked(svn_boolean_t *locked_here,
+                        svn_boolean_t *locked,
+                        svn_wc__db_t *db,
+                        const char *local_abspath,
+                        apr_pool_t *scratch_pool);
+
+
 
 svn_error_t *
 svn_wc__internal_is_replaced(svn_boolean_t *replaced,
                              svn_wc__db_t *db,
                              const char *local_abspath,
                              apr_pool_t *scratch_pool);
+
+
+svn_error_t *
+svn_wc__internal_node_get_url(const char **url,
+                              svn_wc__db_t *db,
+                              const char *local_abspath,
+                              apr_pool_t *result_pool,
+                              apr_pool_t *scratch_pool);
 
 
 /* Upgrade the wc sqlite database given in SDB for the wc located at

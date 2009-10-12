@@ -71,7 +71,7 @@ svn_ra_version(void);
  * then it is returned in @a value. Otherwise, @a *value is set to @c NULL.
  */
 typedef svn_error_t *(*svn_ra_get_wc_prop_func_t)(void *baton,
-                                                  const char *relpath,
+                                                  const char *path,
                                                   const char *name,
                                                   const svn_string_t **value,
                                                   apr_pool_t *pool);
@@ -1750,24 +1750,6 @@ svn_ra_replay(svn_ra_session_t *session,
               apr_pool_t *pool);
 
 /**
- * Set @a *has to TRUE if the server represented by @a session has
- * @a capability (one of the capabilities beginning with
- * @c "SVN_RA_CAPABILITY_"), else set @a *has to FALSE.
- *
- * If @a capability isn't recognized, throw @c SVN_ERR_UNKNOWN_CAPABILITY,
- * with the effect on @a *has undefined.
- *
- * Use @a pool for all allocation.
- *
- * @since New in 1.5.
- */
-svn_error_t *
-svn_ra_has_capability(svn_ra_session_t *session,
-                      svn_boolean_t *has,
-                      const char *capability,
-                      apr_pool_t *pool);
-
-/**
  * Given @a path at revision @a peg_revision, set @a *revision_deleted to the
  * revision @a path was first deleted, within the inclusive revision range
  * defined by @a peg_revision and @a end_revision.  @a path is relative
@@ -1789,6 +1771,30 @@ svn_ra_get_deleted_rev(svn_ra_session_t *session,
                        svn_revnum_t end_revision,
                        svn_revnum_t *revision_deleted,
                        apr_pool_t *pool);
+
+/**
+ * @defgroup Capabilities Dynamically query the server's capabilities.
+ *
+ * @{
+ */
+
+/**
+ * Set @a *has to TRUE if the server represented by @a session has
+ * @a capability (one of the capabilities beginning with
+ * @c "SVN_RA_CAPABILITY_"), else set @a *has to FALSE.
+ *
+ * If @a capability isn't recognized, throw @c SVN_ERR_UNKNOWN_CAPABILITY,
+ * with the effect on @a *has undefined.
+ *
+ * Use @a pool for all allocation.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_ra_has_capability(svn_ra_session_t *session,
+                      svn_boolean_t *has,
+                      const char *capability,
+                      apr_pool_t *pool);
 
 /**
  * The capability of understanding @c svn_depth_t (e.g., the server
@@ -1841,6 +1847,9 @@ svn_ra_get_deleted_rev(svn_ra_session_t *session,
  * because we pass a list of client capabilities to the start-commit
  * hook as a single, colon-separated string.
  */
+
+/** @} */
+
 
 /**
  * Append a textual list of all available RA modules to the stringbuf
