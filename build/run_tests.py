@@ -16,6 +16,7 @@ test programs.
 '''
 
 import os, sys
+import time
 
 import getopt
 try:
@@ -135,6 +136,7 @@ class TestHarness:
     self.log.write('START: %s\n' % progbase)
     self.log.flush()
 
+    start_time = time.time()
     if progbase[-3:] == '.py':
       progname = sys.executable
       cmdline = [quote(progname),
@@ -197,7 +199,14 @@ class TestHarness:
       print('FAILURE')
     else:
       print('success')
-    self.log.write('END: %s\n\n' % progbase)
+    elapsed_time = time.strftime('%H:%M:%S', 
+                   time.gmtime(time.time() - start_time))
+    if self.log:
+      self.log.write('END: %s\n' % progbase)
+      self.log.write('ELAPSED: %s %s\n\n' % (progbase, elapsed_time))
+    else:
+      print('END: %s\n' % progbase)
+      print('ELAPSED: %s %s\n' % (progbase, elapsed_time))
     return failed
 
   def _run_prog(self, progname, arglist):
