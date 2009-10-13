@@ -562,7 +562,6 @@ log_do_modify_entry(struct log_runner *loggy,
                     const char *name,
                     const char **atts)
 {
-  svn_wc__db_kind_t kind;
   svn_error_t *err;
   apr_hash_t *ah = svn_xml_make_att_hash(atts, loggy->pool);
   const char *local_abspath;
@@ -1388,35 +1387,17 @@ start_handler(void *userData, const char *eltname, const char **atts)
 
 /*** Using the parser to run the log file. ***/
 
-/* Return the filename (with no path components) to use for logfile number
-   LOG_NUMBER.  The returned string will be allocated from POOL.
-
-   For log number 0, this will just be SVN_WC__ADM_LOG to maintain
-   compatibility with 1.0.x.  Higher numbers have the digits of the
-   number appended to SVN_WC__ADM_LOG so that they look like "log.1",
-   "log.2", etc. */
-static const char *
-compute_logfile_path(int log_number, apr_pool_t *result_pool)
-{
-  if (log_number == 0)
-    return SVN_WC__ADM_LOG;
-  return apr_psprintf(result_pool, SVN_WC__ADM_LOG ".%d", log_number);
-}
-
 
 /* Run a sequence of log files. */
-static svn_error_t *
-run_log(svn_wc__db_t *db,
-        const char *adm_abspath,
-        svn_cancel_func_t cancel_func,
-        void *cancel_baton,
-        apr_pool_t *scratch_pool)
+svn_error_t *
+svn_wc__run_xml_log(svn_wc__db_t *db,
+                    const char *adm_abspath,
+                    const char *log_contents,
+                    apr_size_t log_len,
+                    apr_pool_t *scratch_pool)
 {
   svn_xml_parser_t *parser;
   struct log_runner *loggy;
-  const char *logfile_path;
-  int log_number;
-  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
   loggy = apr_pcalloc(scratch_pool, sizeof(*loggy));
 
@@ -1432,52 +1413,12 @@ run_log(svn_wc__db_t *db,
      a ghost open tag. */
   SVN_ERR(svn_xml_parse(parser, LOG_START, strlen(LOG_START), 0));
 
-  for (log_number = 0; ; log_number++)
-    {
-      svn_error_t *err;
-      svn_stringbuf_t *contents;
-
-      svn_pool_clear(iterpool);
-
-      logfile_path = svn_wc__adm_child(adm_abspath,
-                                       compute_logfile_path(log_number,
-                                                            iterpool),
-                                       iterpool);
-      err = svn_stringbuf_from_file2(&contents, logfile_path, iterpool);
-      if (err)
-        {
-          if (APR_STATUS_IS_ENOENT(err->apr_err))
-            {
-              svn_error_clear(err);
-              break;
-            }
-
-          return svn_error_quick_wrap(err, _("Couldn't open log"));
-        }
-
-      SVN_ERR(svn_xml_parse(parser, contents->data, contents->len, 0));
-    }
+  SVN_ERR(svn_xml_parse(parser, log_contents, log_len, 0));
 
   /* Pacify Expat with a pointless closing element tag. */
   SVN_ERR(svn_xml_parse(parser, LOG_END, strlen(LOG_END), 1));
 
   svn_xml_free_parser(parser);
-
-  for (log_number--; log_number >= 0; log_number--)
-    {
-      svn_pool_clear(iterpool);
-
-      logfile_path = compute_logfile_path(log_number, iterpool);
-
-      /* Remove the logfile; its commands have been executed. */
-      SVN_ERR(svn_wc__remove_adm_file(adm_abspath, logfile_path, iterpool));
-    }
-
-  /* Run anything that might be sitting in the work queue.  */
-  SVN_ERR(svn_wc__wq_run(db, adm_abspath, cancel_func, cancel_baton,
-                         iterpool));
-
-  svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
 }
@@ -1489,9 +1430,11 @@ svn_wc__run_log(svn_wc_adm_access_t *adm_access,
   /* Verify that we're holding this directory's write lock.  */
   SVN_ERR(svn_wc__adm_write_check(adm_access, scratch_pool));
 
-  return run_log(svn_wc__adm_get_db(adm_access),
-                 svn_wc__adm_access_abspath(adm_access),
-                 NULL, NULL, scratch_pool);
+  return svn_error_return(svn_wc__wq_run(
+                            svn_wc__adm_get_db(adm_access),
+                            svn_wc__adm_access_abspath(adm_access),
+                            NULL, NULL,
+                            scratch_pool));
 }
 
 svn_error_t *
@@ -1503,12 +1446,18 @@ svn_wc__run_log2(svn_wc__db_t *db,
 
   adm_access = svn_wc__adm_retrieve_internal2(db, adm_abspath, scratch_pool);
 
-  SVN_ERR_ASSERT(adm_access != NULL); /* A lock MUST exist */
+  /* If we don't hold a lock, then assume there is no work to run.  */
+  /* ### this typically occurs from update_editor.c::cleanup_dir_baton  */
+  if (adm_access == NULL)
+    return SVN_NO_ERROR;
 
   /* Verify that we're holding this directory's write lock.  */
   SVN_ERR(svn_wc__adm_write_check(adm_access, scratch_pool));
 
-  return run_log(db, adm_abspath, NULL, NULL, scratch_pool);
+  return svn_error_return(svn_wc__wq_run(
+                            db, adm_abspath,
+                            NULL, NULL,
+                            scratch_pool));
 }
 
 
@@ -2083,50 +2032,6 @@ svn_wc__loggy_add_tree_conflict(svn_stringbuf_t **log_accum,
   return SVN_NO_ERROR;
 }
 
-
-
-/*** Helper to write log files ***/
-
-svn_error_t *
-svn_wc__write_log(const char *adm_abspath,
-                  int log_number,
-                  svn_stringbuf_t *log_content,
-                  apr_pool_t *scratch_pool)
-{
-  svn_stream_t *stream;
-  const char *temp_file_path;
-  const char *logfile_name = compute_logfile_path(log_number, scratch_pool);
-  apr_size_t len = log_content->len;
-
-  SVN_ERR(svn_wc__open_adm_writable(&stream, &temp_file_path,
-                                    adm_abspath, logfile_name,
-                                    scratch_pool, scratch_pool));
-
-  SVN_ERR_W(svn_stream_write(stream, log_content->data, &len),
-            apr_psprintf(scratch_pool, _("Error writing log for '%s'"),
-                         svn_dirent_local_style(logfile_name, scratch_pool)));
-
-  return svn_wc__close_adm_stream(stream, temp_file_path, adm_abspath,
-                                  logfile_name, scratch_pool);
-}
-
-
-svn_error_t *
-svn_wc__logfile_present(svn_boolean_t *present,
-                        const char *local_abspath,
-                        apr_pool_t *scratch_pool)
-{
-  const char *log_path = svn_wc__adm_child(local_abspath, SVN_WC__ADM_LOG,
-                                           scratch_pool);
-  svn_node_kind_t kind;
-
-  /* Is the (first) log file present?  */
-  SVN_ERR(svn_io_check_path(log_path, &kind, scratch_pool));
-  *present = (kind == svn_node_file);
-
-  return SVN_NO_ERROR;
-}
-
 
 /*** Recursively do log things. ***/
 
@@ -2182,9 +2087,8 @@ cleanup_internal(svn_wc__db_t *db,
      see if any logs were actually present. Bah. Whatever. Just call
      run_logs(), and let it sort everything out. A little extra time is
      no big deal since all this code is going to be deleted.  */
-  /* ### cleanup means re-run. the "normal" path is first-run.  */
-  SVN_ERR(run_log(db, adm_abspath,
-                  cancel_func, cancel_baton, iterpool));
+  SVN_ERR(svn_wc__wq_run(db, adm_abspath, cancel_func, cancel_baton,
+                         iterpool));
 
   /* Cleanup the tmp area of the admin subdir, if running the log has not
      removed it!  The logs have been run, so anything left here has no hope

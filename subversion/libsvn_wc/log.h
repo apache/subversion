@@ -328,27 +328,6 @@ svn_wc__loggy_remove(svn_stringbuf_t **log_accum,
                      apr_pool_t *result_pool,
                      apr_pool_t *scratch_pool);
 
-/* Create a log file with LOG_NUMBER. Write LOG_CONTENT to it and close-
-   and-sync afterwards. ADM_ACCESS must point to a locked working copy.
-
-   Use SCRATCH_POOL for temporary allocations.
-*/
-svn_error_t *
-svn_wc__write_log(const char *adm_abspath,
-                  int log_number,
-                  svn_stringbuf_t *log_content,
-                  apr_pool_t *scratch_pool);
-
-
-/* Set PRESENT if there is a log file present for the working copy directory
-   at LOCAL_ABSPATH. If that directory is missing or obstructed by a file or
-   whatever, then (obviously) there is no log file, so PRESENT will be set
-   to FALSE. All (temporary) allocations are performed in SCRATCH_POOL.  */
-svn_error_t *
-svn_wc__logfile_present(svn_boolean_t *present,
-                        const char *local_abspath,
-                        apr_pool_t *scratch_pool);
-
 
 /* Process the instructions in the log file for ADM_ACCESS.
 
@@ -372,6 +351,13 @@ svn_wc__run_log2(svn_wc__db_t *db,
                  const char *adm_abspath,
                  apr_pool_t *scratch_pool);
 
+
+svn_error_t *
+svn_wc__run_xml_log(svn_wc__db_t *db,
+                    const char *adm_abspath,
+                    const char *log_contents,
+                    apr_size_t log_len,
+                    apr_pool_t *scratch_pool);
 
 #ifdef __cplusplus
 }

@@ -72,6 +72,14 @@ svn_wc__wq_add_killme(svn_wc__db_t *db,
                       svn_boolean_t adm_only,
                       apr_pool_t *scratch_pool);
 
+
+/* ### temporary compat for mapping the old loggy into workqueue space.  */
+svn_error_t *
+svn_wc__wq_add_loggy(svn_wc__db_t *db,
+                     const char *adm_abspath,
+                     const svn_stringbuf_t *log_content,
+                     apr_pool_t *scratch_pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
