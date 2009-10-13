@@ -1145,6 +1145,8 @@ class TestRunner:
         - 0 if the test was successful
         - 1 if it errored in a way that indicates test failure
         - 2 if the test skipped
+        If the test was interrupted (Ctrl-C), exit the program with code 0.
+        If the test returned a status code, exit the program with code 255.
         """
     sbox_name = self.pred.get_sandbox_name()
     if sbox_name:
@@ -1226,6 +1228,13 @@ def run_one_test(n, test_list, finished_tests = None):
   """Run the Nth client test in TEST_LIST, return the result.
 
   If we're running the tests in parallel spawn the test in a new process.
+
+  The return value is
+    - 0 if the test was successful
+    - 1 if it errored in a way that indicates test failure
+    - 2 if the test skipped
+    If the test was interrupted (Ctrl-C), exit the program with code 0.
+    If the test returned a status code, exit the program with code 255.
   """
 
   if (n < 1) or (n > len(test_list) - 1):
@@ -1242,6 +1251,11 @@ def _internal_run_tests(test_list, testnums, parallel):
   If we're running the tests in parallel spawn as much parallel processes
   as requested and gather the results in a temp. buffer when a child
   process is finished.
+
+  The return value is
+    - 0 if all tests were successful (or skipped)
+    - 1 if any test errored in a way that indicates test failure
+    See run_one_test() for conditions that exit the program.
   """
 
   exit_code = 0
@@ -1330,15 +1344,15 @@ def usage():
   print(" --help          This information")
 
 
-# Main func.  This is the "entry point" that all the test scripts call
-# to run their list of tests.
-#
-# This routine parses sys.argv to decide what to do.
-def run_tests(test_list, serial_only = False):
-  """Main routine to run all tests in TEST_LIST.
+def run_tests_body(test_list, serial_only = False):
+  """Body of the main routine to run all tests in TEST_LIST.
+  This routine parses sys.argv to decide what to do.
 
-  NOTE: this function does not return. It does a sys.exit() with the
-        appropriate exit code.
+  The return value is
+    - 0 on success
+    - 1 if all tests ran but some failed
+    - 2 if a command-line parsing error occurred
+    See _internal_run_tests() for conditions that exit the program.
   """
 
   global test_area_url
@@ -1384,7 +1398,7 @@ def run_tests(test_list, serial_only = False):
   except getopt.GetoptError, e:
     print("ERROR: %s\n" % e)
     usage()
-    sys.exit(1)
+    return 2
 
   for arg in args:
     if arg == "list":
@@ -1438,7 +1452,7 @@ def run_tests(test_list, serial_only = False):
         print("ERROR: invalid test number, range of numbers, " +
               "or function '%s'\n" % arg)
         usage()
-        sys.exit(1)
+        return 2
 
   for opt, val in opts:
     if opt == "--url":
@@ -1464,7 +1478,7 @@ def run_tests(test_list, serial_only = False):
 
     elif opt == "-h" or opt == "--help":
       usage()
-      sys.exit(0)
+      return 0
 
     elif opt == '-p' or opt == "--parallel":
       parallel = 5   # use 5 parallel threads.
@@ -1487,7 +1501,7 @@ def run_tests(test_list, serial_only = False):
       server_minor_version = int(val)
       if server_minor_version < 4 or server_minor_version > 7:
         print("ERROR: test harness only supports server minor versions 4-6")
-        sys.exit(1)
+        return 2
 
     elif opt == '--use-jsvn':
       use_jsvn = True
@@ -1509,7 +1523,7 @@ def run_tests(test_list, serial_only = False):
 
   if verbose_mode and quiet_mode:
     sys.stderr.write("ERROR: 'verbose' and 'quiet' are incompatible\n")
-    sys.exit(1)
+    return 2
 
   # Calculate pristine_url from test_area_url.
   pristine_url = test_area_url + '/' + pathname2url(pristine_dir)
@@ -1552,7 +1566,7 @@ def run_tests(test_list, serial_only = False):
       TestRunner(test_list[testnum], testnum).list()
 
     # done. just exit with success.
-    sys.exit(0)
+    return 0
 
   # don't run tests in parallel when the tests don't support it or there
   # are only a few tests to run.
@@ -1577,4 +1591,24 @@ def run_tests(test_list, serial_only = False):
   svntest.sandbox.cleanup_deferred_test_paths()
 
   # Return the appropriate exit code from the tests.
-  sys.exit(exit_code)
+  return exit_code
+
+
+# Main func.  This is the "entry point" that all the test scripts call
+# to run their list of tests.
+def run_tests(test_list, serial_only = False):
+  """Main routine to run all tests in TEST_LIST.
+  This routine parses sys.argv to decide what to do.
+
+  NOTE: this function does not return. It does a sys.exit() with the
+        appropriate exit code: 0 on success, 1 if all tests ran but some
+        failed, 2 on any other error. Exit code 1 implies that we logged
+        the failure(s); exit code 2 does not.
+  """
+
+  try:
+    exit_code = run_tests_body(test_list, serial_only = False)
+    sys.exit(exit_code)
+  except:
+    sys.exit(2)
+
