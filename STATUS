@@ -130,7 +130,7 @@ Candidate changes:
    Justification:
      As currently shipped, these functions are non-functional.
    Votes:
-     +1: rdonch
+     +1: rdonch, stsp (dunno much about swig but the code sure looks funky)
      +0: rhuijben (in concept; reviewed patch)
 
  * r39692
