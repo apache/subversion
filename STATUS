@@ -162,16 +162,3 @@ Candidate changes:
 
 Approved changes:
 =================
-
- * r39887
-   When "make check" process is run, include the time taken by each test
-   in the log file, tests.log.
-   Justification:
-     Useful to specify the time taken by each test in integration tools
-     like Hudson, by parsing the log file.
-   Branch:
-     Resolves a minor conflict due to changes in trunk.
-     ^/branches/1.6.x-r39887
-   Votes:
-     +1: brane, stylesen, hwright
-     +1 (non-binding): bhuvan
