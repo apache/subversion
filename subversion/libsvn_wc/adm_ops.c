@@ -2632,7 +2632,8 @@ svn_wc_remove_from_revision_control(svn_wc_adm_access_t *adm_access,
                function is called by svn_wc_crop_tree(). */
             dir_entry = apr_hash_get(parent_entries, base_name,
                                      APR_HASH_KEY_STRING);
-            if (dir_entry->depth != svn_depth_exclude)
+            if (dir_entry
+                && dir_entry->depth != svn_depth_exclude)
               {
                 svn_wc__entry_remove(parent_entries, base_name);
                 SVN_ERR(svn_wc__entries_write(parent_entries, parent_access, pool));
