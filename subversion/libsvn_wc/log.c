@@ -160,7 +160,6 @@ struct log_runner
   apr_pool_t *pool; /* cleared before processing each log element */
 
   svn_xml_parser_t *parser;
-  svn_boolean_t rerun;
 };
 
 
@@ -197,7 +196,6 @@ file_xfer_under_path(svn_wc__db_t *db,
                      const char *dest,
                      const char *versioned,
                      enum svn_wc__xfer_action action,
-                     svn_boolean_t rerun,
                      apr_pool_t *scratch_pool)
 {
   svn_error_t *err;
@@ -213,7 +211,7 @@ file_xfer_under_path(svn_wc__db_t *db,
       err = svn_io_append_file(from_abspath, dest_abspath, scratch_pool);
       if (err)
         {
-          if (! rerun || ! APR_STATUS_IS_ENOENT(err->apr_err))
+          if (!APR_STATUS_IS_ENOENT(err->apr_err))
             return svn_error_return(err);
           svn_error_clear(err);
         }
@@ -252,7 +250,7 @@ file_xfer_under_path(svn_wc__db_t *db,
 
         if (err)
           {
-            if (! rerun || ! APR_STATUS_IS_ENOENT(err->apr_err))
+            if (!APR_STATUS_IS_ENOENT(err->apr_err))
               return svn_error_return(err);
             svn_error_clear(err);
           }
@@ -272,10 +270,11 @@ file_xfer_under_path(svn_wc__db_t *db,
          already completed in an earlier run of this log.  */
       if (err)
         {
-          if (! rerun || ! APR_STATUS_IS_ENOENT(err->apr_err))
+          if (!APR_STATUS_IS_ENOENT(err->apr_err))
             return svn_error_quick_wrap(err, _("Can't move source to dest"));
           svn_error_clear(err);
         }
+      break;
     }
 
   return SVN_NO_ERROR;
@@ -458,7 +457,7 @@ log_do_file_xfer(struct log_runner *loggy,
                                                     loggy->pool));
 
   err = file_xfer_under_path(loggy->db, loggy->adm_abspath, name, dest,
-                             versioned, action, loggy->rerun, loggy->pool);
+                             versioned, action, loggy->pool);
   if (err)
     SIGNAL_ERROR(loggy, err);
 
@@ -475,13 +474,13 @@ log_do_file_readonly(struct log_runner *loggy,
     = svn_dirent_join(loggy->adm_abspath, name, loggy->pool);
 
   err = svn_io_set_file_read_only(local_abspath, FALSE, loggy->pool);
-  if (err && loggy->rerun && APR_STATUS_IS_ENOENT(err->apr_err))
+  if (err)
     {
+      if (!APR_STATUS_IS_ENOENT(err->apr_err))
+        return svn_error_return(err);
       svn_error_clear(err);
-      return SVN_NO_ERROR;
     }
-  else
-    return svn_error_return(err);
+  return SVN_NO_ERROR;
 }
 
 /* Maybe make file NAME in log's CWD executable */
@@ -563,6 +562,7 @@ log_do_modify_entry(struct log_runner *loggy,
                     const char *name,
                     const char **atts)
 {
+  svn_wc__db_kind_t kind;
   svn_error_t *err;
   apr_hash_t *ah = svn_xml_make_att_hash(atts, loggy->pool);
   const char *local_abspath;
@@ -571,19 +571,6 @@ log_do_modify_entry(struct log_runner *loggy,
   const char *valuestr;
 
   local_abspath = svn_dirent_join(loggy->adm_abspath, name, loggy->pool);
-
-  if (loggy->rerun)
-    {
-      /* When committing a delete the entry might get removed, in
-         which case we don't want to reincarnate it.  */
-      const svn_wc_entry_t *existing;
-
-      SVN_ERR(svn_wc__get_entry(&existing, loggy->db, local_abspath, TRUE,
-                                svn_node_unknown, FALSE,
-                                loggy->pool, loggy->pool));
-      if (! existing)
-        return SVN_NO_ERROR;
-    }
 
   /* Convert the attributes into an entry structure. */
   SVN_ERR(svn_wc__atts_to_entry(&entry, &modify_flags, ah, loggy->pool));
@@ -872,17 +859,16 @@ log_do_committed(struct log_runner *loggy,
   SVN_ERR(svn_wc__get_entry(&orig_entry, loggy->db, local_abspath, FALSE,
                             svn_node_unknown, FALSE, pool, pool));
 
-  /* Cannot rerun a commit of a delete since the entry gets changed
-     too much; if it's got as far as being in state deleted=true, or
-     if it has been removed, then the all the processing has been
-     done. */
-  if (loggy->rerun && (! orig_entry
-                       || (orig_entry->schedule == svn_wc_schedule_normal
-                           && orig_entry->deleted)))
+  /* We should never be running a commit on a DELETED node, so if we see
+     this, then it (probably) means that a prior run has deleted this node.
+     There isn't anything more to do.  */
+  if (orig_entry->schedule == svn_wc_schedule_normal && orig_entry->deleted)
     return SVN_NO_ERROR;
 
-  if ((! orig_entry)
-      || ((! is_this_dir) && (orig_entry->kind != svn_node_file)))
+  /* We should never be looking at a subdir entry. For a directory, the NAME
+     parameter should always be THIS_DIR. We should always work with the
+     "real" entry.  */
+  if (!is_this_dir && orig_entry->kind != svn_node_file)
     return svn_error_createf
       (SVN_ERR_WC_BAD_ADM_LOG, NULL,
        _("Log command for directory '%s' is mislocated"), name);
@@ -1422,7 +1408,6 @@ compute_logfile_path(int log_number, apr_pool_t *result_pool)
 static svn_error_t *
 run_log(svn_wc__db_t *db,
         const char *adm_abspath,
-        svn_boolean_t rerun,
         svn_cancel_func_t cancel_func,
         void *cancel_baton,
         apr_pool_t *scratch_pool)
@@ -1442,7 +1427,6 @@ run_log(svn_wc__db_t *db,
   loggy->adm_abspath = adm_abspath;
   loggy->pool = svn_pool_create(scratch_pool);
   loggy->parser = parser;
-  loggy->rerun = rerun;
 
   /* Expat wants everything wrapped in a top-level form, so start with
      a ghost open tag. */
@@ -1507,7 +1491,7 @@ svn_wc__run_log(svn_wc_adm_access_t *adm_access,
 
   return run_log(svn_wc__adm_get_db(adm_access),
                  svn_wc__adm_access_abspath(adm_access),
-                 FALSE, NULL, NULL, scratch_pool);
+                 NULL, NULL, scratch_pool);
 }
 
 svn_error_t *
@@ -1524,7 +1508,7 @@ svn_wc__run_log2(svn_wc__db_t *db,
   /* Verify that we're holding this directory's write lock.  */
   SVN_ERR(svn_wc__adm_write_check(adm_access, scratch_pool));
 
-  return run_log(db, adm_abspath, FALSE, NULL, NULL, scratch_pool);
+  return run_log(db, adm_abspath, NULL, NULL, scratch_pool);
 }
 
 
@@ -2199,7 +2183,7 @@ cleanup_internal(svn_wc__db_t *db,
      run_logs(), and let it sort everything out. A little extra time is
      no big deal since all this code is going to be deleted.  */
   /* ### cleanup means re-run. the "normal" path is first-run.  */
-  SVN_ERR(run_log(db, adm_abspath, TRUE /* re-run */,
+  SVN_ERR(run_log(db, adm_abspath,
                   cancel_func, cancel_baton, iterpool));
 
   /* Cleanup the tmp area of the admin subdir, if running the log has not
