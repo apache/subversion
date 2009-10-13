@@ -2281,7 +2281,7 @@ add_directory(const char *path,
 
   SVN_ERR(check_path_under_root(pb->local_abspath, db->name, pool));
 
-  if (strcmp(eb->target_abspath, pb->local_abspath) == 0)
+  if (strcmp(eb->target_abspath, db->local_abspath) == 0)
     {
       /* The target of the edit is being added, give it the requested
          depth of the edit (but convert svn_depth_unknown to
