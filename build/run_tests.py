@@ -246,17 +246,17 @@ class TestHarness:
     else:
       os.chdir(old_cwd)
 
-    # We always return 1 for failed tests, if some other failure than 1
+    # We always return 1 for failed tests. Some other failure than 1
     # probably means the test didn't run at all and probably didn't
-    # output any failure info.
-    if failed == 1:
-      print(TextColors.FAILURE + 'FAILURE' + TextColors.ENDC)
-    elif failed and self.log:
-      self.log.write('FAIL:  %s: Unknown test failure; see tests.log.\n\n' % progbase)
-      self.log.flush()
-      print(TextColors.FAILURE + 'FAILURE' + TextColors.ENDC)
-    else:
-      print(TextColors.SUCCESS + 'success' + TextColors.ENDC)
+    # output any failure info. In that case, log a generic failure message.
+    if failed and failed != 1:
+      if self.log:
+        self.log.write('FAIL:  %s: Unknown test failure; see tests.log.\n\n' % progbase)
+        self.log.flush()
+      else:
+        print('FAIL:  %s: Unknown test failure.\n' % progbase)
+
+    # Log the elapsed time.
     elapsed_time = time.strftime('%H:%M:%S', 
                    time.gmtime(time.time() - start_time))
     if self.log:
@@ -265,6 +265,14 @@ class TestHarness:
     else:
       print('END: %s\n' % progbase)
       print('ELAPSED: %s %s\n' % (progbase, elapsed_time))
+
+    # If we printed a "Running all tests in ..." line, add the test result.
+    if self.log:
+      if failed:
+        print(TextColors.FAILURE + 'FAILURE' + TextColors.ENDC)
+      else:
+        print(TextColors.SUCCESS + 'success' + TextColors.ENDC)
+
     return failed
 
   def _run_prog(self, progname, arglist):
