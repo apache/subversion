@@ -1394,33 +1394,11 @@ svn_error_t *
 svn_wc__adm_write_check(const svn_wc_adm_access_t *adm_access,
                         apr_pool_t *scratch_pool)
 {
-  if (adm_access->locked)
-    {
-      /* Check physical lock still exists and hasn't been stolen.  This
-         really is paranoia, I have only ever seen one report of this
-         triggering (from someone using the 0.25 release) and that was
-         never reproduced.  The check accesses the physical filesystem
-         so it is expensive, but it only runs when we are going to
-         modify the admin area.  If it ever proves to be a bottleneck
-         the physical check could be removed, just leaving the logical
-         check. */
-      svn_boolean_t locked;
-
-      SVN_ERR(svn_wc__db_wclocked(&locked, adm_access->db,
-                                  adm_access->abspath, scratch_pool));
-      if (! locked)
-        return svn_error_createf(SVN_ERR_WC_NOT_LOCKED, NULL,
-                                 _("Write-lock stolen in '%s'"),
-                                 svn_dirent_local_style(adm_access->path,
-                                                        scratch_pool));
-    }
-  else
-    {
-      return svn_error_createf(SVN_ERR_WC_NOT_LOCKED, NULL,
-                               _("No write-lock in '%s'"),
-                               svn_dirent_local_style(adm_access->path,
-                                                      scratch_pool));
-    }
+  if (!adm_access->locked)
+    return svn_error_createf(SVN_ERR_WC_NOT_LOCKED, NULL,
+                             _("No write-lock in '%s'"),
+                             svn_dirent_local_style(adm_access->path,
+                                                    scratch_pool));
 
   return SVN_NO_ERROR;
 }
