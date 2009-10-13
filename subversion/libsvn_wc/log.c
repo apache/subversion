@@ -161,14 +161,6 @@ struct log_runner
 
   svn_xml_parser_t *parser;
   svn_boolean_t rerun;
-
-  /* Which top-level log element we're on for this logfile.  Some
-     callers care whether a failure happened on the first element or
-     on some later element (e.g., 'svn cleanup').
-
-     This is initialized to 0 when the log_runner is created, and
-     incremented every time start_handler() is called. */
-  int count;
 };
 
 
@@ -429,23 +421,13 @@ install_committed_file(svn_boolean_t *overwrote_working,
 }
 
 
-/* Sometimes, documentation would only confuse matters. */
-static apr_status_t
-pick_error_code(struct log_runner *loggy)
-{
-  if (loggy->count <= 1)
-    return SVN_ERR_WC_BAD_ADM_LOG_START;
-  else
-    return SVN_ERR_WC_BAD_ADM_LOG;
-}
-
 /* Helper macro for erroring out while running a logfile.
 
    This is implemented as a macro so that the error created has a useful
    line number associated with it. */
 #define SIGNAL_ERROR(loggy, err)                                   \
   svn_xml_signal_bailout                                           \
-    (svn_error_createf(pick_error_code(loggy), err,                \
+    (svn_error_createf(SVN_ERR_WC_BAD_ADM_LOG, err,                \
                        _("In directory '%s'"),                     \
                        svn_dirent_local_style(loggy->adm_abspath,  \
                                               loggy->pool)),       \
@@ -470,7 +452,7 @@ log_do_file_xfer(struct log_runner *loggy,
   versioned = svn_xml_get_attr_value(SVN_WC__LOG_ATTR_ARG_2, atts);
 
   if (! dest)
-    return svn_error_createf(pick_error_code(loggy), NULL,
+    return svn_error_createf(SVN_ERR_WC_BAD_ADM_LOG, NULL,
                              _("Missing 'dest' attribute in '%s'"),
                              svn_dirent_local_style(loggy->adm_abspath,
                                                     loggy->pool));
@@ -542,7 +524,7 @@ log_do_file_timestamp(struct log_runner *loggy,
   svn_boolean_t is_special;
 
   if (! timestamp_string)
-    return svn_error_createf(pick_error_code(loggy), NULL,
+    return svn_error_createf(SVN_ERR_WC_BAD_ADM_LOG, NULL,
                              _("Missing 'timestamp' attribute in '%s'"),
                              svn_dirent_local_style(loggy->adm_abspath,
                                                     loggy->pool));
@@ -619,7 +601,7 @@ log_do_modify_entry(struct log_runner *loggy,
       err = svn_io_file_affected_time(&text_time, local_abspath, loggy->pool);
       if (err)
         return svn_error_createf
-          (pick_error_code(loggy), err,
+          (SVN_ERR_WC_BAD_ADM_LOG, err,
            _("Error getting 'affected time' on '%s'"),
            svn_dirent_local_style(local_abspath, loggy->pool));
 
@@ -652,7 +634,7 @@ log_do_modify_entry(struct log_runner *loggy,
         }
       else if (err)
         return svn_error_createf
-          (pick_error_code(loggy), NULL,
+          (SVN_ERR_WC_BAD_ADM_LOG, NULL,
             _("Error getting file size on '%s'"),
             svn_dirent_local_style(local_abspath, loggy->pool));
 
@@ -712,7 +694,7 @@ log_do_modify_entry(struct log_runner *loggy,
                               *name != '\0' /* parent_stub */,
                               entry, modify_flags, loggy->pool);
   if (err)
-    return svn_error_createf(pick_error_code(loggy), err,
+    return svn_error_createf(SVN_ERR_WC_BAD_ADM_LOG, err,
                              _("Error modifying entry for '%s'"), name);
 
   return SVN_NO_ERROR;
@@ -729,7 +711,7 @@ log_do_delete_lock(struct log_runner *loggy,
 
   err = svn_wc__db_lock_remove(loggy->db, local_abspath, loggy->pool);
   if (err)
-    return svn_error_createf(pick_error_code(loggy), err,
+    return svn_error_createf(SVN_ERR_WC_BAD_ADM_LOG, err,
                              _("Error removing lock from entry for '%s'"),
                              name);
 
@@ -748,7 +730,7 @@ log_do_delete_changelist(struct log_runner *loggy,
                                      NULL,
                                      loggy->pool);
   if (err)
-    return svn_error_createf(pick_error_code(loggy), err,
+    return svn_error_createf(SVN_ERR_WC_BAD_ADM_LOG, err,
                              _("Error removing changelist from entry '%s'"),
                              name);
 
@@ -878,7 +860,7 @@ log_do_committed(struct log_runner *loggy,
 
   /* If no new post-commit revision was given us, bail with an error. */
   if (! rev)
-    return svn_error_createf(pick_error_code(loggy), NULL,
+    return svn_error_createf(SVN_ERR_WC_BAD_ADM_LOG, NULL,
                              _("Missing 'revision' attribute for '%s'"),
                              name);
   new_revision = SVN_STR_TO_REV(rev);
@@ -902,7 +884,7 @@ log_do_committed(struct log_runner *loggy,
   if ((! orig_entry)
       || ((! is_this_dir) && (orig_entry->kind != svn_node_file)))
     return svn_error_createf
-      (pick_error_code(loggy), NULL,
+      (SVN_ERR_WC_BAD_ADM_LOG, NULL,
        _("Log command for directory '%s' is mislocated"), name);
 
   /*** Handle the committed deletion case ***/
@@ -1102,12 +1084,12 @@ log_do_committed(struct log_runner *loggy,
                                         remove_executable, set_read_write,
                                         pool)))
         return svn_error_createf
-          (pick_error_code(loggy), err,
+          (SVN_ERR_WC_BAD_ADM_LOG, err,
            _("Error replacing text-base of '%s'"), name);
 
       if ((err = svn_io_stat(&finfo, local_abspath,
                              APR_FINFO_MIN | APR_FINFO_LINK, pool)))
-        return svn_error_createf(pick_error_code(loggy), err,
+        return svn_error_createf(SVN_ERR_WC_BAD_ADM_LOG, err,
                                  _("Error getting 'affected time' of '%s'"),
                                  svn_dirent_local_style(local_abspath, pool));
 
@@ -1136,7 +1118,7 @@ log_do_committed(struct log_runner *loggy,
                             pool);
           if (err)
             return svn_error_createf
-              (pick_error_code(loggy), err,
+              (SVN_ERR_WC_BAD_ADM_LOG, err,
                _("Error getting 'affected time' for '%s'"),
                svn_dirent_local_style(basef, pool));
           else
@@ -1163,7 +1145,7 @@ log_do_committed(struct log_runner *loggy,
                                                                  FALSE, pool);
                   if (err)
                     return svn_error_createf
-                      (pick_error_code(loggy), err,
+                      (SVN_ERR_WC_BAD_ADM_LOG, err,
                        _("Error comparing '%s' and '%s'"),
                        svn_dirent_local_style(local_abspath, pool),
                        svn_dirent_local_style(basef, pool));
@@ -1212,7 +1194,7 @@ log_do_committed(struct log_runner *loggy,
                                     | SVN_WC__ENTRY_MODIFY_FORCE),
                                    pool)))
     return svn_error_createf
-      (pick_error_code(loggy), err,
+      (SVN_ERR_WC_BAD_ADM_LOG, err,
        _("Error modifying entry of '%s'"), name);
 
   /* Clear out the conflict stuffs.  */
@@ -1254,7 +1236,7 @@ log_do_committed(struct log_runner *loggy,
                                 pool);
 
     if (err != NULL)
-      return svn_error_createf(pick_error_code(loggy), err,
+      return svn_error_createf(SVN_ERR_WC_BAD_ADM_LOG, err,
                                _("Error modifying entry of '%s'"), name);
   }
 
@@ -1315,7 +1297,7 @@ log_do_add_tree_conflict(struct log_runner *loggy,
                                         new_conflict,
                                         loggy->pool);
   if (err)
-    return svn_error_createf(pick_error_code(loggy), err,
+    return svn_error_createf(SVN_ERR_WC_BAD_ADM_LOG, err,
                              _("Error recording tree conflict on '%s'"),
                              new_conflict->local_abspath);
 
@@ -1340,16 +1322,13 @@ start_handler(void *userData, const char *eltname, const char **atts)
     {
       SIGNAL_ERROR
         (loggy, svn_error_createf
-         (pick_error_code(loggy), NULL,
+         (SVN_ERR_WC_BAD_ADM_LOG, NULL,
           _("Log entry missing 'name' attribute (entry '%s' "
             "for directory '%s')"),
           eltname,
           svn_dirent_local_style(loggy->adm_abspath, loggy->pool)));
       return;
     }
-
-  /* Increment the top-level element count before processing any commands. */
-  loggy->count += 1;
 
   /* Dispatch. */
   if (strcmp(eltname, SVN_WC__LOG_MODIFY_ENTRY) == 0) {
@@ -1401,7 +1380,7 @@ start_handler(void *userData, const char *eltname, const char **atts)
     {
       SIGNAL_ERROR
         (loggy, svn_error_createf
-         (pick_error_code(loggy), NULL,
+         (SVN_ERR_WC_BAD_ADM_LOG, NULL,
           _("Unrecognized logfile element '%s' in '%s'"),
           eltname,
           svn_dirent_local_style(loggy->adm_abspath, loggy->pool)));
@@ -1411,7 +1390,7 @@ start_handler(void *userData, const char *eltname, const char **atts)
   if (err)
     SIGNAL_ERROR
       (loggy, svn_error_createf
-       (pick_error_code(loggy), err,
+       (SVN_ERR_WC_BAD_ADM_LOG, err,
         _("Error processing command '%s' in '%s'"),
         eltname,
         svn_dirent_local_style(loggy->adm_abspath, loggy->pool)));
@@ -1464,7 +1443,6 @@ run_log(svn_wc__db_t *db,
   loggy->pool = svn_pool_create(scratch_pool);
   loggy->parser = parser;
   loggy->rerun = rerun;
-  loggy->count = 0;
 
   /* Expat wants everything wrapped in a top-level form, so start with
      a ghost open tag. */
