@@ -115,23 +115,10 @@ Candidate changes:
    Votes:
      +1: pburba
 
- * r39283
-   Support Neon 0.29.
-   Votes:
-     +1: arfrever, rhuijben
-
  * r39614
    Support Berkeley DB 4.8.
    Votes:
      +1: arfrever
-
- * r39635, r39636, r39637
-   Fix svn.client.log5 and svn.client.merge_peg3 in the SWIG/Python bindings.
-   Justification:
-     As currently shipped, these functions are non-functional.
-   Votes:
-     +1: rdonch, stsp (dunno much about swig but the code sure looks funky)
-     +0: rhuijben (in concept; reviewed patch)
 
  * r39692
    Fix issue #3498: Subversion password stores freeze Eclipse
@@ -156,11 +143,11 @@ Candidate changes:
    Branch:
      ^/branches/1.6.x-r37953
    Votes:
-     +1: stsp
+     +1: stsp, hwright
 
  * r39828, r39842
    Disables file synchronization mutexes in fsfs on Windows. These mutexes
-   were added to make posix systems lock files that were in use by other
+   were added to make POSIX systems lock files that were in use by other
    threads in the same process.
    
    Windows implements per filehandle locking, so it doesn't need these
@@ -173,6 +160,22 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+Approved changes:
+=================
+
+ * r39635, r39636, r39637
+   Fix svn.client.log5 and svn.client.merge_peg3 in the SWIG/Python bindings.
+   Justification:
+     As currently shipped, these functions are non-functional.
+   Votes:
+     +1: rdonch, stsp (dunno much about swig but the code sure looks funky)
+     +0: rhuijben (in concept; reviewed patch)
+
+ * r39283
+   Support Neon 0.29.
+   Votes:
+     +1: arfrever, rhuijben, hwright
+
  * r39887
    When "make check" process is run, include the time taken by each test
    in the log file, tests.log.
@@ -183,8 +186,5 @@ Candidate changes:
      Resolves a minor conflict due to changes in trunk.
      ^/branches/1.6.x-r39887
    Votes:
-     +1: brane, stylesen
+     +1: brane, stylesen, hwright
      +1 (non-binding): bhuvan
-
-Approved changes:
-=================
