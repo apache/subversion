@@ -7,7 +7,7 @@ SWIG=swig-1.3.36
 
 APR=apr-1.3.5
 APR_UTIL=apr-util-1.3.7
-NEON=neon-0.28.4
+NEON=neon-0.29.0
 SERF=serf-0.3.0
 ZLIB=zlib-1.2.3
 SQLITE_VERSION=3.6.13

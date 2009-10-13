@@ -163,11 +163,6 @@ Candidate changes:
 Approved changes:
 =================
 
- * r39283
-   Support Neon 0.29.
-   Votes:
-     +1: arfrever, rhuijben, hwright
-
  * r39887
    When "make check" process is run, include the time taken by each test
    in the log file, tests.log.
