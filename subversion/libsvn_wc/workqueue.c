@@ -35,6 +35,8 @@
 #include "props.h"
 #include "adm_files.h"
 #include "translate.h"
+#include "log.h"
+#include "lock.h"  /* for svn_wc__adm_available  */
 
 #include "svn_private_config.h"
 #include "private/svn_skel.h"
@@ -48,6 +50,7 @@
 #define OP_REVERT "revert"
 #define OP_PREPARE_REVERT_FILES "prep-rev-files"
 #define OP_KILLME "killme"
+#define OP_LOGGY "loggy"
 
 
 struct work_item_dispatch {
@@ -800,10 +803,57 @@ svn_wc__wq_add_killme(svn_wc__db_t *db,
 
 /* ------------------------------------------------------------------------ */
 
+/* OP_LOGGY  */
+
+static svn_error_t *
+run_loggy(svn_wc__db_t *db,
+          const svn_skel_t *work_item,
+          svn_cancel_func_t cancel_func,
+          void *cancel_baton,
+          apr_pool_t *scratch_pool)
+{
+  const char *adm_abspath;
+
+  /* We need a NUL-terminated path, so copy it out of the skel.  */
+  adm_abspath = apr_pstrmemdup(scratch_pool,
+                               work_item->children->next->data,
+                               work_item->children->next->len);
+
+  return svn_error_return(svn_wc__run_xml_log(
+                            db, adm_abspath,
+                            work_item->children->next->next->data,
+                            work_item->children->next->next->len,
+                            scratch_pool));
+}
+
+
+svn_error_t *
+svn_wc__wq_add_loggy(svn_wc__db_t *db,
+                     const char *adm_abspath,
+                     const svn_stringbuf_t *log_content,
+                     apr_pool_t *scratch_pool)
+{
+  svn_skel_t *work_item = svn_skel__make_empty_list(scratch_pool);
+
+  /* The skel still points at ADM_ABSPATH and LOG_CONTENT, but the skel will
+     be serialized just below in the wq_add call.  */
+  svn_skel__prepend_str(log_content->data, work_item, scratch_pool);
+  svn_skel__prepend_str(adm_abspath, work_item, scratch_pool);
+  svn_skel__prepend_str(OP_LOGGY, work_item, scratch_pool);
+
+  SVN_ERR(svn_wc__db_wq_add(db, adm_abspath, work_item, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+
+/* ------------------------------------------------------------------------ */
+
 static const struct work_item_dispatch dispatch_table[] = {
   { OP_REVERT, run_revert },
   { OP_PREPARE_REVERT_FILES, run_prepare_revert_files },
   { OP_KILLME, run_killme },
+  { OP_LOGGY, run_loggy },
 
   /* Sentinel.  */
   { NULL }
@@ -821,6 +871,8 @@ svn_wc__wq_run(svn_wc__db_t *db,
 
   while (TRUE)
     {
+      svn_boolean_t available;
+      svn_boolean_t obstructed;
       apr_uint64_t id;
       svn_skel_t *work_item;
       const struct work_item_dispatch *scan;
@@ -832,13 +884,17 @@ svn_wc__wq_run(svn_wc__db_t *db,
 
       svn_pool_clear(iterpool);
 
+      /* ### hmm. maybe we need a better way to handle this. or just leave
+         ### it for now, since I think it disappears in single-db.  */
+      SVN_ERR(svn_wc__adm_available(&available, NULL, &obstructed,
+                                    db, wri_abspath, scratch_pool));
+      if (!available || obstructed)
+        break;
+
       SVN_ERR(svn_wc__db_wq_fetch(&id, &work_item, db, wri_abspath,
                                   iterpool, iterpool));
       if (work_item == NULL)
-        {
-          svn_pool_destroy(iterpool);
-          return SVN_NO_ERROR;
-        }
+        break;
 
       /* Scan the dispatch table for a function to handle this work item.  */
       for (scan = &dispatch_table[0]; scan->name != NULL; ++scan)
@@ -871,5 +927,6 @@ svn_wc__wq_run(svn_wc__db_t *db,
       SVN_ERR(svn_wc__db_wq_completed(db, wri_abspath, id, iterpool));
     }
 
-  /* NOTREACHED */
+  svn_pool_destroy(iterpool);
+  return SVN_NO_ERROR;
 }

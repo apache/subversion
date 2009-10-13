@@ -56,6 +56,7 @@
 #include "props.h"
 #include "translate.h"
 #include "tree_conflicts.h"
+#include "workqueue.h"
 
 #include "private/svn_wc_private.h"
 #include "private/svn_debug.h"
@@ -264,6 +265,10 @@ remember_skipped_tree(struct edit_baton *eb, const char *local_abspath)
 
 struct dir_baton
 {
+  /* Keep a local copy of this because ->edit_baton might be garbage when
+     we need this in cleanup_dir_baton().  */
+  svn_wc__db_t *db;
+
   /* Basename of this directory. */
   const char *name;
 
@@ -315,9 +320,6 @@ struct dir_baton
 
   /* The bump information for this directory. */
   struct bump_dir_info *bump_info;
-
-  /* The current log file number. */
-  int log_number;
 
   /* The current log buffer. The content of this accumulator may be
      flushed and run at any time (in pool cleanup), so only append
@@ -427,9 +429,8 @@ flush_log(struct dir_baton *db, apr_pool_t *pool)
 {
   if (! svn_stringbuf_isempty(db->log_accum))
     {
-      SVN_ERR(svn_wc__write_log(db->local_abspath, db->log_number,
-                                db->log_accum, pool));
-      db->log_number++;
+      SVN_ERR(svn_wc__wq_add_loggy(db->db, db->local_abspath,
+                                   db->log_accum, pool));
       svn_stringbuf_setempty(db->log_accum);
     }
 
@@ -443,24 +444,21 @@ cleanup_dir_baton(void *dir_baton)
 {
   struct dir_baton *db = dir_baton;
   svn_error_t *err;
-  apr_status_t apr_err;
   apr_pool_t *pool = apr_pool_parent_get(db->pool);
 
-  err = flush_log(db, pool);
-  if (! err && db->log_number > 0)
-    {
-      err = svn_wc__run_log2(db->edit_baton->db, db->local_abspath, pool);
+  /* ### this function CANNOT reference ->edit_baton. it is garbage.  */
 
-      if (! err)
-        return APR_SUCCESS;
-    }
+  err = flush_log(db, pool);
+  if (!err)
+    err = svn_wc__run_log2(db->db, db->local_abspath, pool);
 
   if (err)
-    apr_err = err->apr_err;
-  else
-    apr_err = APR_SUCCESS;
-  svn_error_clear(err);
-  return apr_err;
+    {
+      apr_status_t apr_err = err->apr_err;
+      svn_error_clear(err);
+      return apr_err;
+    }
+  return APR_SUCCESS;
 }
 
 /* An APR pool cleanup handler.  This is a child handler, it removes
@@ -494,6 +492,7 @@ make_dir_baton(struct dir_baton **d_p,
 
   /* Okay, no easy out, so allocate and initialize a dir baton. */
   d = apr_pcalloc(pool, sizeof(*d));
+  d->db = eb->db;
 
   /* Construct the PATH and baseNAME of this directory. */
   if (path)
@@ -565,7 +564,6 @@ make_dir_baton(struct dir_baton **d_p,
   d->existed      = FALSE;
   d->add_existed  = FALSE;
   d->bump_info    = bdi;
-  d->log_number   = 0;
   d->log_accum    = svn_stringbuf_create("", pool);
   d->old_revision = SVN_INVALID_REVNUM;
 
@@ -583,8 +581,7 @@ make_dir_baton(struct dir_baton **d_p,
 
 /* Forward declarations. */
 static svn_error_t *
-do_entry_deletion(int *log_number,
-                  struct edit_baton *eb,
+do_entry_deletion(struct edit_baton *eb,
                   const char *local_abspath,
                   const char *their_url,
                   svn_boolean_t inside_deleted_subtree,
@@ -647,12 +644,11 @@ complete_directory(struct edit_baton *eb,
           if (target_entry->kind == svn_node_dir &&
               svn_wc__adm_missing(eb->db, eb->target_abspath, pool))
             {
-              int log_number = 0;
               /* Still passing NULL for THEIR_URL. A case where THEIR_URL
                * is needed in this call is rare or even non-existant.
                * ### TODO: Construct a proper THEIR_URL anyway. See also
                * NULL handling code in do_entry_deletion(). */
-              SVN_ERR(do_entry_deletion(&log_number, eb, eb->target_abspath,
+              SVN_ERR(do_entry_deletion(eb, eb->target_abspath,
                                         NULL, FALSE, pool));
             }
           else
@@ -1988,13 +1984,10 @@ schedule_existing_item_for_re_add(const svn_wc_entry_t *entry,
  * side that the target should become after the update. In other words,
  * that's the new URL the node would have if it were not deleted.
  *
- * Name temporary transactional logs based on *LOG_NUMBER, but set
- * *LOG_NUMBER to 0 after running the final log.  Perform all allocations in
- * POOL.
+ * Perform all allocations in POOL.
  */
 static svn_error_t *
-do_entry_deletion(int *log_number,
-                  struct edit_baton *eb,
+do_entry_deletion(struct edit_baton *eb,
                   const char *local_abspath,
                   const char *their_url,
                   svn_boolean_t inside_deleted_subtree,
@@ -2086,9 +2079,8 @@ do_entry_deletion(int *log_number,
           /* Run the log in the parent dir, to record the tree conflict.
            * Do this before schedule_existing_item_for_re_add(), in case
            * that needs to modify the same entries. */
-          SVN_ERR(svn_wc__write_log(dir_abspath, *log_number, log_item, pool));
+          SVN_ERR(svn_wc__wq_add_loggy(eb->db, dir_abspath, log_item, pool));
           SVN_ERR(svn_wc__run_log2(eb->db, dir_abspath, pool));
-          *log_number = 0;
 
           SVN_ERR(schedule_existing_item_for_re_add(entry, eb,
                                                     local_abspath, their_url,
@@ -2116,9 +2108,8 @@ do_entry_deletion(int *log_number,
           /* Run the log in the parent dir, to record the tree conflict.
            * Do this before schedule_existing_item_for_re_add(), in case
            * that needs to modify the same entries. */
-          SVN_ERR(svn_wc__write_log(dir_abspath, *log_number, log_item, pool));
+          SVN_ERR(svn_wc__wq_add_loggy(eb->db, dir_abspath, log_item, pool));
           SVN_ERR(svn_wc__run_log2(eb->db, dir_abspath, pool));
-          *log_number = 0;
 
           SVN_ERR(schedule_existing_item_for_re_add(entry, eb,
                                                     local_abspath, their_url,
@@ -2159,7 +2150,7 @@ do_entry_deletion(int *log_number,
       eb->target_deleted = TRUE;
     }
 
-  SVN_ERR(svn_wc__write_log(dir_abspath, *log_number, log_item, pool));
+  SVN_ERR(svn_wc__wq_add_loggy(eb->db, dir_abspath, log_item, pool));
 
   if (eb->switch_url)
     {
@@ -2195,7 +2186,6 @@ do_entry_deletion(int *log_number,
   /* Note: these two lines are duplicated in the tree-conflicts bail out
    * above. */
   SVN_ERR(svn_wc__run_log2(eb->db, dir_abspath, pool));
-  *log_number = 0;
 
   /* Notify. (If tree_conflict, we've already notified.) */
   if (eb->notify_func
@@ -2238,7 +2228,7 @@ delete_entry(const char *path,
 
   their_url = svn_path_url_add_component2(pb->new_URL, base, pool);
 
-  return do_entry_deletion(&pb->log_number, pb->edit_baton, local_abspath,
+  return do_entry_deletion(pb->edit_baton, local_abspath,
                            their_url, pb->inside_deleted_subtree, pool);
 }
 
@@ -2302,9 +2292,6 @@ add_directory(const char *path,
 
   /* Flush the log for the parent directory before going into this subtree. */
   SVN_ERR(flush_log(pb, pool));
-
-
-
 
   /* Is this path a conflict victim? */
   SVN_ERR(node_already_conflicted(&already_conflicted, eb->db,
@@ -2993,7 +2980,6 @@ close_directory(void *dir_baton,
   /* Flush and run the log. */
   SVN_ERR(flush_log(db, pool));
   SVN_ERR(svn_wc__run_log2(eb->db, db->local_abspath, pool));
-  db->log_number = 0;
 
   /* We're done with this directory, so remove one reference from the
      bump information. This may trigger a number of actions. See
@@ -4694,7 +4680,6 @@ close_edit(void *edit_baton,
            apr_pool_t *pool)
 {
   struct edit_baton *eb = edit_baton;
-  int log_number = 0;
 
   /* If there is a target and that target is missing, then it
      apparently wasn't re-added by the update process, so we'll
@@ -4706,8 +4691,7 @@ close_edit(void *edit_baton,
      * is needed in this call is rare or even non-existant.
      * ### TODO: Construct a proper THEIR_URL anyway. See also
      * NULL handling code in do_entry_deletion(). */
-    SVN_ERR(do_entry_deletion(&log_number, eb, eb->target_abspath, NULL,
-                              FALSE, pool));
+    SVN_ERR(do_entry_deletion(eb, eb->target_abspath, NULL, FALSE, pool));
 
   /* The editor didn't even open the root; we have to take care of
      some cleanup stuffs. */
@@ -5553,7 +5537,7 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
   }
 
   /* Write our accumulation of log entries into a log file */
-  SVN_ERR(svn_wc__write_log(dir_abspath, 0, log_accum, pool));
+  SVN_ERR(svn_wc__wq_add_loggy(wc_ctx->db, dir_abspath, log_accum, pool));
 
-  return svn_wc__run_log2(wc_ctx->db, dir_abspath, pool);
+  return svn_error_return(svn_wc__run_log2(wc_ctx->db, dir_abspath, pool));
 }

@@ -344,7 +344,7 @@ svn_wc__do_update_cleanup(svn_wc__db_t *db,
 }
 
 static svn_error_t *
-process_committed_leaf(int log_number,
+process_committed_leaf(svn_wc__db_t *db,
                        const char *path,
                        svn_wc_adm_access_t *adm_access,
                        const svn_wc_entry_t *entry,
@@ -361,7 +361,6 @@ process_committed_leaf(int log_number,
   svn_wc_entry_t tmp_entry;
   apr_uint64_t modify_flags = 0;
   svn_stringbuf_t *logtags = svn_stringbuf_create("", pool);
-  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
   const char *local_abspath;
   svn_boolean_t using_ng = FALSE;
 
@@ -518,14 +517,14 @@ process_committed_leaf(int log_number,
     }
 
   /* Write our accumulation of log entries into a log file */
-  return svn_error_return(
-    svn_wc__write_log(svn_wc__adm_access_abspath(adm_access), log_number,
-                      logtags, pool));
+  return svn_error_return(svn_wc__wq_add_loggy(
+                            db, svn_wc__adm_access_abspath(adm_access),
+                            logtags, pool));
 }
 
 
 static svn_error_t *
-process_committed_internal(int *log_number,
+process_committed_internal(svn_wc__db_t *db,
                            const char *path,
                            svn_wc_adm_access_t *adm_access,
                            svn_boolean_t recurse,
@@ -541,7 +540,6 @@ process_committed_internal(int *log_number,
 {
   const svn_wc_entry_t *entry;
   const char *local_abspath;
-  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
@@ -550,7 +548,7 @@ process_committed_internal(int *log_number,
   if (entry == NULL)
     return SVN_NO_ERROR;  /* deleted/absent. (?) ... nothing to do. */
 
-  SVN_ERR(process_committed_leaf((*log_number)++, path, adm_access, entry,
+  SVN_ERR(process_committed_leaf(db, path, adm_access, entry,
                                  new_revnum, rev_date, rev_author,
                                  wcprop_changes,
                                  remove_lock, remove_changelist,
@@ -603,20 +601,18 @@ process_committed_internal(int *log_number,
           if (current_entry->kind == svn_node_dir)
             {
               svn_wc_adm_access_t *child_access;
-              int inner_log = 0;
 
               SVN_ERR(svn_wc_adm_retrieve(&child_access, adm_access,
                                           this_path, subpool));
 
-              SVN_ERR(process_committed_internal(&inner_log,
-                                                 this_path, child_access,
+              SVN_ERR(process_committed_internal(db, this_path, child_access,
                                                  TRUE /* recurse */,
                                                  new_revnum, rev_date,
                                                  rev_author,
                                                  NULL, FALSE /* remove_lock */,
                                                  remove_changelist, NULL,
                                                  queue, subpool));
-              SVN_ERR(svn_wc__run_log(child_access, pool));
+              SVN_ERR(svn_wc__run_log2(db, this_abspath, pool));
             }
           else
             {
@@ -630,10 +626,11 @@ process_committed_internal(int *log_number,
                   if (entry->schedule == svn_wc_schedule_replace)
                     continue;
                 }
-              SVN_ERR(process_committed_leaf
-                      ((*log_number)++, this_path, adm_access, current_entry,
-                       new_revnum, rev_date, rev_author, NULL, FALSE,
-                       remove_changelist, NULL, queue, subpool));
+              SVN_ERR(process_committed_leaf(db, this_path, adm_access,
+                                             current_entry, new_revnum,
+                                             rev_date, rev_author, NULL,
+                                             FALSE, remove_changelist,
+                                             NULL, queue, subpool));
             }
         }
 
@@ -758,6 +755,7 @@ svn_wc_process_committed_queue(svn_wc_committed_queue_t *queue,
                                const char *rev_author,
                                apr_pool_t *pool)
 {
+  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
   int i;
   apr_hash_index_t *hi;
   apr_hash_t *updated_adms = apr_hash_make(pool);
@@ -794,7 +792,7 @@ svn_wc_process_committed_queue(svn_wc_committed_queue_t *queue,
                        affected_adm);
         }
 
-      SVN_ERR(process_committed_internal(&affected_adm->next_log, cqi->path,
+      SVN_ERR(process_committed_internal(db, cqi->path,
                                          cqi->adm_access, cqi->recurse,
                                          new_revnum, rev_date, rev_author,
                                          cqi->wcprop_changes,
@@ -809,11 +807,13 @@ svn_wc_process_committed_queue(svn_wc_committed_queue_t *queue,
          more than once per adm area */
   for (hi = apr_hash_first(pool, updated_adms); hi; hi = apr_hash_next(hi))
     {
-      affected_adm_t *this_adm = svn_apr_hash_index_val(hi);
+      const affected_adm_t *this_adm = svn_apr_hash_index_val(hi);
 
       svn_pool_clear(iterpool);
 
-      SVN_ERR(svn_wc__run_log(this_adm->adm_access, iterpool));
+      SVN_ERR(svn_wc__run_log2(
+                db, svn_wc__adm_access_abspath(this_adm->adm_access),
+                iterpool));
     }
 
   queue->queue->nelts = 0;
@@ -836,22 +836,22 @@ svn_wc_process_committed4(const char *path,
                           const unsigned char *digest,
                           apr_pool_t *pool)
 {
+  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
+  const char *adm_abspath = svn_wc__adm_access_abspath(adm_access);
   const svn_checksum_t *checksum;
-  int log_number = 0;
 
   if (digest)
     checksum = svn_checksum__from_digest(digest, svn_checksum_md5, pool);
   else
     checksum = NULL;
 
-  SVN_ERR(process_committed_internal(&log_number,
-                                     path, adm_access, recurse,
+  SVN_ERR(process_committed_internal(db, path, adm_access, recurse,
                                      new_revnum, rev_date, rev_author,
                                      wcprop_changes, remove_lock,
                                      remove_changelist, checksum, NULL, pool));
 
   /* Run the log file(s) we just created. */
-  return svn_wc__run_log(adm_access, pool);
+  return svn_wc__run_log2(db, adm_abspath, pool);
 }
 
 
@@ -1322,7 +1322,7 @@ svn_wc_delete4(svn_wc_context_t *wc_ctx,
                                              svn_wc__props_working, pool));
         }
 
-      SVN_ERR(svn_wc__write_log(parent_abspath, 0, log_accum, pool));
+      SVN_ERR(svn_wc__wq_add_loggy(db, parent_abspath, log_accum, pool));
 
       SVN_ERR(svn_wc__run_log2(db, parent_abspath, pool));
     }

@@ -156,15 +156,18 @@ static apr_status_t
 pool_cleanup(void *p)
 {
   svn_wc_adm_access_t *lock = p;
-  svn_boolean_t present;
+  apr_uint64_t id;
+  svn_skel_t *work_item;
   svn_error_t *err;
 
   if (lock->closed)
     return SVN_NO_ERROR;
 
-  err = svn_wc__logfile_present(&present, lock->abspath, lock->pool);
+  /* ### should we create an API that just looks, but doesn't return?  */
+  err = svn_wc__db_wq_fetch(&id, &work_item, lock->db, lock->abspath,
+                            lock->pool, lock->pool);
   if (!err)
-    err = do_close(lock, present /* preserve_lock */, lock->pool);
+    err = do_close(lock, work_item != NULL /* preserve_lock */, lock->pool);
 
   /* ### Is this the correct way to handle the error? */
   if (err)
@@ -173,8 +176,8 @@ pool_cleanup(void *p)
       svn_error_clear(err);
       return apr_err;
     }
-  else
-    return APR_SUCCESS;
+
+  return APR_SUCCESS;
 }
 
 /* An APR pool cleanup handler.  This is a child handler, it removes the

@@ -58,6 +58,7 @@
 #include "props.h"
 #include "translate.h"
 #include "lock.h"
+#include "workqueue.h"
 
 #include "svn_private_config.h"
 #include "private/svn_debug.h"
@@ -698,7 +699,6 @@ svn_wc_merge_props3(svn_wc_notify_state_t *state,
 
   if (! dry_run && !svn_stringbuf_isempty(log_accum))
     {
-      svn_wc_adm_access_t *adm_access;
       const char *dir_abspath;
 
       SVN_ERR(svn_wc__db_read_kind(&kind, wc_ctx->db, local_abspath, FALSE, pool));
@@ -713,11 +713,8 @@ svn_wc_merge_props3(svn_wc_notify_state_t *state,
           break;
         }
 
-      adm_access = svn_wc__adm_retrieve_internal2(wc_ctx->db, dir_abspath, pool);
-      SVN_ERR_ASSERT(adm_access != NULL);
-
-      SVN_ERR(svn_wc__write_log(dir_abspath, 0, log_accum, pool));
-      SVN_ERR(svn_wc__run_log(adm_access, pool));
+      SVN_ERR(svn_wc__wq_add_loggy(wc_ctx->db, dir_abspath, log_accum, pool));
+      SVN_ERR(svn_wc__run_log2(wc_ctx->db, dir_abspath, pool));
     }
 
   return SVN_NO_ERROR;

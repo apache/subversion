@@ -313,14 +313,18 @@ upgrade_to_wcng(svn_wc__db_t *db,
                 int old_format,
                 apr_pool_t *scratch_pool)
 {
-  svn_boolean_t present;
+  const char *logfile_path = svn_wc__adm_child(dir_abspath, SVN_WC__ADM_LOG,
+                                               scratch_pool);
+  svn_node_kind_t logfile_on_disk;
   apr_hash_t *entries;
   const svn_wc_entry_t *this_dir;
   svn_sqlite__db_t *sdb;
 
   /* Don't try to mess with the WC if there are old log files left. */
-  SVN_ERR(svn_wc__logfile_present(&present, dir_abspath, scratch_pool));
-  if (present)
+
+  /* Is the (first) log file present?  */
+  SVN_ERR(svn_io_check_path(logfile_path, &logfile_on_disk, scratch_pool));
+  if (logfile_on_disk == svn_node_file)
     return svn_error_create(SVN_ERR_WC_UNSUPPORTED_FORMAT, NULL,
                             _("Cannot upgrade with existing logs; please "
                               "run 'svn cleanup' with Subversion 1.6"));
