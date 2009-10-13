@@ -177,6 +177,9 @@ static svn_error_t *record(apr_hash_t *records,
     return SVN_NO_ERROR;
 
   cstring = svn_checksum_to_cstring_display(rep->sha1_checksum, result_pool);
+  /* TODO: cast may not be well-defined */
+  /* TODO: hash should be keyed not on checksum alone; reps with same key
+   *       are not necessarily shared */
   oldvalue = (unsigned int) apr_hash_get(records, cstring, APR_HASH_KEY_STRING);
   newvalue = oldvalue + 1;
   apr_hash_set(records, cstring, APR_HASH_KEY_STRING, (void *) newvalue);
@@ -417,6 +420,7 @@ main(int argc, const char *argv[])
         case OPT_DATA:
           data = TRUE;
           break;
+        /* It seems we don't actually rep-share props yet. */
         case OPT_PROP:
           prop = TRUE;
           break;
