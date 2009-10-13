@@ -191,7 +191,7 @@ fetch_wc_id(apr_int64_t *wc_id, svn_sqlite__db_t *sdb)
   if (!have_row)
     return svn_error_create(SVN_ERR_WC_DB_ERROR, NULL, _("No WC table entry"));
   *wc_id = svn_sqlite__column_int(stmt, 0);
-  return svn_sqlite__reset(stmt);
+  return svn_error_return(svn_sqlite__reset(stmt));
 }
 
 
@@ -209,7 +209,7 @@ determine_keep_local(svn_boolean_t *keep_local,
 
   *keep_local = svn_sqlite__column_boolean(stmt, 0);
 
-  return svn_sqlite__reset(stmt);
+  return svn_error_return(svn_sqlite__reset(stmt));
 }
 
 
@@ -241,7 +241,7 @@ check_file_external(svn_wc_entry_t *entry,
 
     }
 
-  return svn_sqlite__reset(stmt);
+  return svn_error_return(svn_sqlite__reset(stmt));
 }
 
 
@@ -1084,11 +1084,13 @@ read_entries(apr_hash_t **entries,
                                      scratch_pool));
 
   if (wc_format < SVN_WC__WC_NG_VERSION)
-    return svn_wc__read_entries_old(entries, wcroot_abspath,
-                                    result_pool, scratch_pool);
+    return svn_error_return(svn_wc__read_entries_old(entries,
+                                                     wcroot_abspath,
+                                                     result_pool,
+                                                     scratch_pool));
 
-  return read_entries_new(entries, db, wcroot_abspath,
-                          result_pool, scratch_pool);
+  return svn_error_return(read_entries_new(entries, db, wcroot_abspath,
+                                           result_pool, scratch_pool));
 }
 
 
@@ -1754,7 +1756,7 @@ insert_working_node(svn_sqlite__db_t *sdb,
   SVN_ERR(svn_sqlite__bind_int64(stmt, 19, working_node->keep_local));
 
   /* Execute and reset the insert clause. */
-  return svn_sqlite__insert(NULL, stmt);
+  return svn_error_return(svn_sqlite__insert(NULL, stmt));
 }
 
 static svn_error_t *
@@ -1801,7 +1803,7 @@ insert_actual_node(svn_sqlite__db_t *sdb,
     SVN_ERR(svn_sqlite__bind_text(stmt, 11, actual_node->tree_conflict_data));
 
   /* Execute and reset the insert clause. */
-  return svn_sqlite__insert(NULL, stmt);
+  return svn_error_return(svn_sqlite__insert(NULL, stmt));
 }
 
 
