@@ -3098,9 +3098,12 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
 
               /* We have a presence that allows a WORKING_NODE override
                  (normal or not-present), or we don't have an override.  */
+              /* ### for now, allow an override of an incomplete BASE_NODE
+                 ### row. it appears possible to get rows in BASE/WORKING
+                 ### both set to 'incomplete'.  */
               SVN_ERR_ASSERT((*status != svn_wc__db_status_absent
                               && *status != svn_wc__db_status_excluded
-                              && *status != svn_wc__db_status_incomplete)
+                              /* && *status != svn_wc__db_status_incomplete */)
                              || !have_work);
 
               if (node_kind == svn_wc__db_kind_subdir
