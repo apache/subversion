@@ -183,16 +183,20 @@ class TestHarness:
       else:
         return arg
 
+    if self.log:
+      log = self.log
+    else:
+      log = sys.stdout
+
     progdir, progbase = os.path.split(prog)
     if self.log:
       # Using write here because we don't want even a trailing space
       test_info = '%s [%d/%d]' % (progbase, test_nr + 1, total_tests)
       sys.stdout.write('Running all tests in %s' % (test_info, ))
       sys.stdout.write('.'*(35 - len(test_info)))
-      self.log.write('START: %s\n' % progbase)
-      self.log.flush()
-    else:
-      print('START: %s' % progbase)
+
+    log.write('START: %s\n' % progbase)
+    log.flush()
 
     start_time = time.time()
     if progbase[-3:] == '.py':
@@ -249,22 +253,20 @@ class TestHarness:
     # We always return 1 for failed tests. Some other failure than 1
     # probably means the test didn't run at all and probably didn't
     # output any failure info. In that case, log a generic failure message.
+    # ### Even if failure==1 it could be that the test didn't run at all.
     if failed and failed != 1:
       if self.log:
-        self.log.write('FAIL:  %s: Unknown test failure; see tests.log.\n\n' % progbase)
-        self.log.flush()
+        log.write('FAIL:  %s: Unknown test failure; see tests.log.\n' % progbase)
+        log.flush()
       else:
-        print('FAIL:  %s: Unknown test failure.\n' % progbase)
+        log.write('FAIL:  %s: Unknown test failure.\n' % progbase)
 
     # Log the elapsed time.
     elapsed_time = time.strftime('%H:%M:%S', 
                    time.gmtime(time.time() - start_time))
-    if self.log:
-      self.log.write('END: %s\n' % progbase)
-      self.log.write('ELAPSED: %s %s\n\n' % (progbase, elapsed_time))
-    else:
-      print('END: %s\n' % progbase)
-      print('ELAPSED: %s %s\n' % (progbase, elapsed_time))
+    log.write('END: %s\n' % progbase)
+    log.write('ELAPSED: %s %s\n' % (progbase, elapsed_time))
+    log.write('\n')
 
     # If we printed a "Running all tests in ..." line, add the test result.
     if self.log:
