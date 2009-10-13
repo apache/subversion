@@ -5300,11 +5300,18 @@ write_hash_rep(svn_filesize_t *size,
 }
 
 /* Copy a node-revision specified by id ID in fileystem FS from a
-   transaction into the permanent rev-file FILE.  Return the offset of
-   the new node-revision in *OFFSET.  If this is a directory, all
-   children are copied as well.  START_NODE_ID and START_COPY_ID are
+   transaction into the permanent rev-file FILE.  Set *NEW_ID_P to a
+   pointer to the new node-id which will be allocated in POOL.
+   If this is a directory, copy all children as well.
+
+   START_NODE_ID and START_COPY_ID are
    the first available node and copy ids for this filesystem, for older
-   FS formats. Temporary allocations are from POOL. */
+   FS formats.
+
+   If REPS_TO_CACHE is not NULL, append to it a copy (allocated in
+   REPS_POOL) of each data rep that is new in this revision.
+
+   Temporary allocations are also from POOL. */
 static svn_error_t *
 write_final_rev(const svn_fs_id_t **new_id_p,
                 apr_file_t *file,
@@ -6049,15 +6056,19 @@ svn_fs_fs__commit_obliteration(svn_revnum_t rev,
       cb.reps_pool = NULL;
     }
 
+  /* Commit the obliteration revision */
   SVN_ERR(svn_fs_fs__with_write_lock(fs, commit_obliteration_body, &cb, pool));
 
+  /* TODO: Update the rep cache: in particular, delete invalid entries, and
+   * ensure we will re-validate entries that may already be in pending txns. */
   if (ffd->rep_sharing_allowed)
     {
-      /* ### TODO: ignore errors opening the DB (issue #3506) * */
-      SVN_ERR(svn_fs_fs__open_rep_cache(fs, pool));
-      SVN_ERR(svn_sqlite__with_transaction(ffd->rep_cache_db,
-                                           commit_sqlite_txn_callback,
-                                           &cb, pool));
+      /* ###
+       * SVN_ERR(svn_fs_fs__open_rep_cache(fs, pool));
+       * SVN_ERR(svn_sqlite__with_transaction(ffd->rep_cache_db,
+       *                                      commit_sqlite_txn_callback,
+       *                                      &cb, pool));
+       */
     }
 
   return SVN_NO_ERROR;
