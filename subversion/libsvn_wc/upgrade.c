@@ -449,6 +449,7 @@ upgrade_to_wcng(svn_wc__db_t *db,
 }
 
 
+#if 0
 /* ### duplicated from wc_db.c  */
 static const char *
 kind_to_word(svn_wc__db_kind_t kind)
@@ -686,6 +687,7 @@ migrate_tree_conflicts(svn_sqlite__db_t *sdb,
   svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
 }
+#endif
 
 
 static svn_error_t *
@@ -715,8 +717,7 @@ migrate_locks(const char *wcroot_abspath,
 }
 
 
-
-
+#if 0
 /* This implements svn_sqlite__transaction_callback_t */
 static svn_error_t *
 bump_database_to_15(void *baton,
@@ -732,7 +733,6 @@ bump_database_to_15(void *baton,
   return SVN_NO_ERROR;
 }
 
-#if 0
 static svn_error_t *
 bump_to_15(const char *wcroot_abspath,
            svn_sqlite__db_t *sdb,
