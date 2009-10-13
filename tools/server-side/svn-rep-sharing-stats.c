@@ -160,13 +160,6 @@ enum {
   OPT_BOTH
 };
 
-/* In the hashes, the reference count is stored inside the value-pointer.
- * The value (unsigned int)u is stored as (char *)(INITIAL_VALUE + u),
- * where INITIAL_VALUE is the value returned by apr_hash_get() on an empty
- * hash:
- */
-#define INITIAL_VALUE NULL
-
 static svn_error_t *check_experimental(void)
 {
   if (getenv("SVN_REP_SHARING_STATS_IS_EXPERIMENTAL"))
@@ -177,14 +170,29 @@ static svn_error_t *check_experimental(void)
                           "be used on live data.");
 }
 
-/* Increment records[rep->sha1_checksum] if all of them are non-NULL.
- * If necessary, allocate the cstring key in RESULT_POOL.  */
+/* The parts of a rep that determine whether it's being shared. */
+struct key_t
+{
+  svn_revnum_t revision;
+  apr_off_t offset;
+};
+
+/* What we need to know about a rep. */
+struct value_t
+{
+  svn_checksum_t *sha1_checksum;
+  apr_uint64_t refcount;
+};
+
+/* Increment records[rep] if both are non-NULL and REP contains a sha1.
+ * Allocate keys and values in RESULT_POOL.
+ */
 static svn_error_t *record(apr_hash_t *records,
                            representation_t *rep,
                            apr_pool_t *result_pool)
 {
-  const char *cstring;
-  char *oldvalue, *newvalue;
+  struct key_t *key;
+  struct value_t *value;
 
   /* Skip if we ignore this particular kind of reps, or if the rep doesn't
    * exist or doesn't have the checksum we are after.  (The latter case
@@ -193,20 +201,31 @@ static svn_error_t *record(apr_hash_t *records,
   if (records == NULL || rep == NULL || rep->sha1_checksum == NULL)
     return SVN_NO_ERROR;
 
-  cstring = svn_checksum_to_cstring_display(rep->sha1_checksum, result_pool);
-  /* TODO: hash should be keyed not on checksum alone; reps with same key
-   *       are not necessarily shared */
-  oldvalue = apr_hash_get(records, cstring, APR_HASH_KEY_STRING);
-  newvalue = oldvalue + 1;
-  apr_hash_set(records, cstring, APR_HASH_KEY_STRING, newvalue);
+  /* Construct the key. */
+  key = apr_palloc(result_pool, sizeof(*key));
+  key->revision = rep->revision;
+  key->offset = rep->offset;
+
+  /* Update or create the value. */
+  if (value = apr_hash_get(records, key, sizeof(*key)))
+    {
+      value->refcount++;
+    }
+  else
+    {
+      value = apr_palloc(result_pool, sizeof(*value));
+      value->sha1_checksum = svn_checksum_dup(rep->sha1_checksum, result_pool);
+      value->refcount = 1;
+    }
+
+  /* Store them. */
+  apr_hash_set(records, key, sizeof(*key), value);
 
   return SVN_NO_ERROR;
 }
 
 /* Inspect the data and/or prop reps of revision REVNUM in FS.  Store
- * reference count tallies in passed hashes (allocated in RESULT_POOL),
- * as maps of const char * checksum cstrings to unsigned ints, represented
- * as in the documentation of INITIAL_VALUE.
+ * reference count tallies in passed hashes (allocated in RESULT_POOL).
  *
  * If PROP_REPS or DATA_REPS is NULL, the respective kind of reps are not
  * tallied.
@@ -276,8 +295,9 @@ process_one_revision(svn_fs_t *fs,
 }
 
 /* Print REPS_REF_COUNT (a hash as for process_one_revision())
- * to stdout in "value => key" format (for sorting, since the keys
- * are just sha1's).  Prepend each line by NAME.
+ * to stdout in "refcount => sha1" format.  A sha1 may appear
+ * more than once if not all its instances are shared.  Prepend
+ * each line by NAME.
  *
  * Use SCRATCH_POOL for temporary allocations.
  */
@@ -294,12 +314,18 @@ pretty_print(const char *name,
   for (hi = apr_hash_first(scratch_pool, reps_ref_counts);
        hi; hi = apr_hash_next(hi))
     {
-      const char *sha1_cstring = svn_apr_hash_index_key(hi);
-      unsigned int ref_count = (char *)svn_apr_hash_index_val(hi) - INITIAL_VALUE;
+      const struct key_t *key;
+      struct value_t *value;
 
       SVN_ERR(cancel_func(NULL));
-      SVN_ERR(svn_cmdline_printf(scratch_pool, "%s %u %s\n",
-                                 name, ref_count, sha1_cstring));
+
+      key = svn_apr_hash_index_key(hi);
+      value = svn_apr_hash_index_val(hi);
+      SVN_ERR(svn_cmdline_printf(scratch_pool, "%s %" APR_UINT64_T_FMT " %s\n",
+                                 name, value->refcount,
+                                 svn_checksum_to_cstring_display(
+                                   value->sha1_checksum,
+                                   scratch_pool)));
     }
 
   return SVN_NO_ERROR;
