@@ -185,8 +185,8 @@ svn_client__get_repos_mergeinfo_catalog(
 
    If no mergeinfo can be obtained from the WC or REPOS_ONLY is TRUE,
    get it from the repository.  RA_SESSION should be an open RA session
-   pointing at ENTRY->URL, or NULL, in which case this function will open
-   its own temporary session.
+   pointing at TARGET_WCPATH's URL, or NULL, in which case this function
+   will open its own temporary session.
 
    (opening a new RA session if RA_SESSION
    is NULL).  Store any mergeinfo obtained for TARGET_WCPATH in
@@ -257,7 +257,7 @@ svn_client__mergeinfo_from_segments(svn_mergeinfo_t *mergeinfo_p,
                                     apr_array_header_t *segments,
                                     apr_pool_t *pool);
 
-/* Parse any mergeinfo from the LOCAL_ABSPATH's ENTRY and store it in
+/* Parse any explicit mergeinfo on LOCAL_ABSPATH and store it in
    MERGEINFO.  If no record of any mergeinfo exists, set MERGEINFO to NULL.
    Does not acount for inherited mergeinfo. */
 svn_error_t *
