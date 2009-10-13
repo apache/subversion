@@ -163,14 +163,6 @@ Candidate changes:
 Approved changes:
 =================
 
- * r39635, r39636, r39637
-   Fix svn.client.log5 and svn.client.merge_peg3 in the SWIG/Python bindings.
-   Justification:
-     As currently shipped, these functions are non-functional.
-   Votes:
-     +1: rdonch, stsp (dunno much about swig but the code sure looks funky)
-     +0: rhuijben (in concept; reviewed patch)
-
  * r39283
    Support Neon 0.29.
    Votes:

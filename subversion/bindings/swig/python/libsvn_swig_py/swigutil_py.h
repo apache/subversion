@@ -244,6 +244,16 @@ SVN_SWIG_SWIGUTIL_EXPORT
 const apr_array_header_t *svn_swig_py_revnums_to_array(PyObject *source,
                                                        apr_pool_t *pool);
 
+/* helper function to convert a Python sequence of SWIG wrapper objects
+   into an APR array of pointers to the wrapped structs. The structs themselves
+   are not copied. */
+SVN_SWIG_SWIGUTIL_EXPORT
+const apr_array_header_t *
+svn_swig_py_struct_ptr_list_to_array(PyObject *source,
+                                     swig_type_info *type_descriptor,
+                                     apr_pool_t *pool);
+
+
 /* make an editor that "thunks" from C callbacks up to Python */
 SVN_SWIG_SWIGUTIL_EXPORT
 void svn_swig_py_make_editor(const svn_delta_editor_t **editor,

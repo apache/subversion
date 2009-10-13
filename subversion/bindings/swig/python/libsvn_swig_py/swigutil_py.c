@@ -1243,6 +1243,51 @@ const apr_array_header_t *svn_swig_py_revnums_to_array(PyObject *source,
     return temp;
 }
 
+const apr_array_header_t *
+svn_swig_py_struct_ptr_list_to_array(PyObject *source,
+                                     swig_type_info *type_descriptor,
+                                     apr_pool_t *pool)
+{
+    int targlen;
+    apr_array_header_t *temp;
+
+    if (source == Py_None)
+        return NULL;
+
+    if (!PySequence_Check(source))
+      {
+        PyErr_SetString(PyExc_TypeError, "not a sequence");
+        return NULL;
+      }
+    targlen = PySequence_Length(source);
+    temp = apr_array_make(pool, targlen, sizeof(void *));
+
+    temp->nelts = targlen;
+    while (targlen--)
+      {
+        void *struct_ptr;
+        int status;
+        PyObject *o = PySequence_GetItem(source, targlen);
+        if (o == NULL)
+          return NULL;
+
+        status = svn_swig_ConvertPtr(o, &struct_ptr, type_descriptor);
+
+        if (status == 0)
+          {
+            APR_ARRAY_IDX(temp, targlen, void *) = struct_ptr;
+            Py_DECREF(o);
+          }
+        else
+          {
+            Py_DECREF(o);
+            PyErr_SetString(PyExc_TypeError,
+                            "not a SWIG proxy of correct type");
+            return NULL;
+          }
+      }
+    return temp;
+}
 
 
 /*** apr_array_header_t conversions.  To create a new type of
