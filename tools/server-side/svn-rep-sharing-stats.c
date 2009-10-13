@@ -160,6 +160,16 @@ enum {
   OPT_BOTH
 };
 
+static svn_error_t *check_experimental(void)
+{
+  if (getenv("SVN_REP_SHARING_STATS_IS_EXPERIMENTAL"))
+      return SVN_NO_ERROR;
+
+  return svn_error_create(APR_EGENERAL, NULL,
+                          "This code is experimental and should not "
+                          "be used on live data.");
+}
+
 /* Increment records[rep->sha1_checksum] if all of them are non-NULL.
  * If necessary, allocate the cstring key in RESULT_POOL.  */
 static svn_error_t *record(apr_hash_t *records,
@@ -401,6 +411,8 @@ main(int argc, const char *argv[])
   err = svn_cmdline__getopt_init(&os, argc, argv, pool);
   if (err)
     return svn_cmdline_handle_exit_error(err, pool, "svn-rep-sharing-stats: ");
+
+  SVN_INT_ERR(check_experimental());
 
   os->interleave = 1;
   while (1)
