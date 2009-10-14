@@ -146,5 +146,12 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+ * r40008
+   Respect Apache's ServerSignature directive.
+   Justification:
+     Many subversion server administrators want it.
+   Votes:
+     +1: stylesen
+
 Approved changes:
 =================
