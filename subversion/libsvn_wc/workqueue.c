@@ -698,6 +698,9 @@ run_killme(svn_wc__db_t *db,
   svn_wc__db_status_t status;
   svn_revnum_t original_revision;
   svn_revnum_t parent_revision;
+  const char *repos_relpath;
+  const char *repos_root_url;
+  const char *repos_uuid;
   svn_error_t *err;
 
   /* We need a NUL-terminated path, so copy it out of the skel.  */
@@ -749,6 +752,12 @@ run_killme(svn_wc__db_t *db,
                                                       scratch_pool),
                                scratch_pool, scratch_pool));
 
+  /* Remember the repository this node is associated with.  */
+  SVN_ERR(svn_wc__db_scan_base_repos(&repos_relpath, &repos_root_url,
+                                     &repos_uuid,
+                                     db, dir_abspath,
+                                     scratch_pool, scratch_pool));
+
   /* Blow away the administrative directories, and possibly the working
      copy tree too. */
   err = svn_wc__internal_remove_from_revision_control(
@@ -764,17 +773,12 @@ run_killme(svn_wc__db_t *db,
      recreate 'deleted' entry in parent. */
   if (original_revision > parent_revision)
     {
-      svn_wc_entry_t tmp_entry;
-
-      tmp_entry.kind = svn_node_dir;
-      tmp_entry.deleted = TRUE;
-      tmp_entry.revision = original_revision;
-      SVN_ERR(svn_wc__entry_modify2(db, dir_abspath, svn_node_dir, TRUE,
-                                    &tmp_entry,
-                                    SVN_WC__ENTRY_MODIFY_REVISION
-                                      | SVN_WC__ENTRY_MODIFY_KIND
-                                      | SVN_WC__ENTRY_MODIFY_DELETED,
-                                    scratch_pool));
+      SVN_ERR(svn_wc__db_base_add_absent_node(
+                db, dir_abspath,
+                repos_relpath, repos_root_url, repos_uuid,
+                original_revision, svn_wc__db_kind_dir,
+                svn_wc__db_status_not_present,
+                scratch_pool));
     }
 
   return SVN_NO_ERROR;
