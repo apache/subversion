@@ -4,6 +4,7 @@ http://svn.collab.net/repos/svn/tags/1.6.6
 
  User-visible changes:
   * fix crash during 'svn update' (r39673)
+  * respect Apache's ServerSignature directive (r40008, -21, -31)
   * don't add a file with mixed line endings, and then abort (issue #2713)
   * support Neon 0.29.
   * fix a crash in 'svn rm --force' (r37953)
