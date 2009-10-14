@@ -1201,8 +1201,8 @@ log_do_committed(struct log_runner *loggy,
   {
     svn_boolean_t is_root, is_switched;
 
-    SVN_ERR(svn_wc__check_wc_root(&is_root, NULL, &is_switched,
-                                  loggy->db, loggy->adm_abspath, pool));
+    err = svn_wc__check_wc_root(&is_root, NULL, &is_switched,
+                                loggy->db, loggy->adm_abspath, pool);
 
     if (err)
       {
