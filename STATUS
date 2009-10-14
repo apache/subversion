@@ -163,6 +163,13 @@ Candidate changes for 1.5.8:
    Votes:
      +1: cmpilato
 
+ * r40008
+   Respect Apache's ServerSignature directive.
+   Justification:
+     Many subversion server administrators want it.
+   Votes:
+     +1: stylesen
+
 Approved changes:
 =================
 
