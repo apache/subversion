@@ -193,7 +193,7 @@ svn_log_entry_dup(svn_log_entry_t *log_entry, apr_pool_t *pool)
   *new_entry = *log_entry;
 
   if (log_entry->revprops)
-    log_entry->revprops = svn_prop_hash_dup(log_entry->revprops, pool);
+    new_entry->revprops = svn_prop_hash_dup(log_entry->revprops, pool);
 
   if (log_entry->changed_paths2)
     {
