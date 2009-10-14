@@ -451,7 +451,7 @@ flush_log(struct dir_baton *db, apr_pool_t *pool)
                                 pool));
     }
 
-  apr_array_clear(db->wq_accum);
+  db->wq_accum->nelts = 0;
 
   return SVN_NO_ERROR;
 }
@@ -1056,7 +1056,7 @@ flush_file_log(struct file_baton *fb, apr_pool_t *pool)
                                 pool));
     }
 
-  apr_array_clear(fb->wq_accum);
+  fb->wq_accum->nelts = 0;
 
   return SVN_NO_ERROR;
 }
