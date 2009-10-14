@@ -265,10 +265,6 @@ remember_skipped_tree(struct edit_baton *eb, const char *local_abspath)
 
 struct dir_baton
 {
-  /* Keep a local copy of this because ->edit_baton might be garbage when
-     we need this in cleanup_dir_baton().  */
-  svn_wc__db_t *db;
-
   /* Basename of this directory. */
   const char *name;
 
@@ -328,6 +324,11 @@ struct dir_baton
      svn_stringbuf_appendstr. */
   svn_stringbuf_t *log_accum;
 
+  /* wq item accumulator. Array of const svn_skel_t * instances.
+     will be flushed and run in close_file(). Items should be allocated
+     in the dir pool */
+  apr_array_header_t *wq_accum;
+
   /* The depth of the directory in the wc (or inferred if added).  Not
      used for filtering; we have a separate wrapping editor for that. */
   svn_depth_t ambient_depth;
@@ -366,6 +367,9 @@ struct bump_dir_info
   /* Set if this directory was previously recorded as excluded,
      but is pulled back in the working copy */
   svn_boolean_t was_excluded;
+
+  /* Pool that should be cleared after the dir is bumped */
+  apr_pool_t *pool;
 };
 
 
@@ -431,12 +435,23 @@ get_entry_url(svn_wc_context_t *wc_ctx,
 static svn_error_t *
 flush_log(struct dir_baton *db, apr_pool_t *pool)
 {
+  int i;
   if (! svn_stringbuf_isempty(db->log_accum))
     {
-      SVN_ERR(svn_wc__wq_add_loggy(db->db, db->local_abspath,
+      SVN_ERR(svn_wc__wq_add_loggy(db->edit_baton->db, db->local_abspath,
                                    db->log_accum, pool));
       svn_stringbuf_setempty(db->log_accum);
     }
+
+  for (i = 0; i < db->wq_accum->nelts; i++)
+    {
+      SVN_ERR(svn_wc__db_wq_add(db->edit_baton->db, db->local_abspath,
+                                APR_ARRAY_IDX(db->wq_accum, i,
+                                              const svn_skel_t *),
+                                pool));
+    }
+
+  apr_array_clear(db->wq_accum);
 
   return SVN_NO_ERROR;
 }
@@ -447,14 +462,13 @@ static apr_status_t
 cleanup_dir_baton(void *dir_baton)
 {
   struct dir_baton *db = dir_baton;
+  struct edit_baton *eb = db->edit_baton;
   svn_error_t *err;
   apr_pool_t *pool = apr_pool_parent_get(db->pool);
 
-  /* ### this function CANNOT reference ->edit_baton. it is garbage.  */
-
   err = flush_log(db, pool);
   if (!err)
-    err = svn_wc__run_log2(db->db, db->local_abspath, pool);
+    err = svn_wc__run_log2(eb->db, db->local_abspath, pool);
 
   if (err)
     {
@@ -487,22 +501,27 @@ make_dir_baton(struct dir_baton **d_p,
                struct edit_baton *eb,
                struct dir_baton *pb,
                svn_boolean_t added,
-               apr_pool_t *pool)
+               apr_pool_t *scratch_pool)
 {
+  apr_pool_t *dir_pool;
   struct dir_baton *d;
   struct bump_dir_info *bdi;
+
+  if (pb != NULL)
+    dir_pool = svn_pool_create(pb->pool);
+  else
+    dir_pool = svn_pool_create(eb->pool);
 
   SVN_ERR_ASSERT(path || (! pb));
 
   /* Okay, no easy out, so allocate and initialize a dir baton. */
-  d = apr_pcalloc(pool, sizeof(*d));
-  d->db = eb->db;
+  d = apr_pcalloc(dir_pool, sizeof(*d));
 
   /* Construct the PATH and baseNAME of this directory. */
   if (path)
     {
-      d->name = svn_dirent_basename(path, pool);
-      d->local_abspath = svn_dirent_join(pb->local_abspath, d->name, pool);
+      d->name = svn_dirent_basename(path, dir_pool);
+      d->local_abspath = svn_dirent_join(pb->local_abspath, d->name, dir_pool);
       d->inside_deleted_subtree = pb->inside_deleted_subtree;
     }
   else
@@ -522,9 +541,9 @@ make_dir_baton(struct dir_baton **d_p,
       if (! pb)
         {
           if (! *eb->target_basename) /* anchor is also target */
-            d->new_URL = apr_pstrdup(pool, eb->switch_url);
+            d->new_URL = apr_pstrdup(dir_pool, eb->switch_url);
           else
-            d->new_URL = svn_uri_dirname(eb->switch_url, pool);
+            d->new_URL = svn_uri_dirname(eb->switch_url, dir_pool);
         }
       /* Else this directory is *not* the root (has a parent).  If it
          is the target (there is a target, and this directory has no
@@ -533,10 +552,10 @@ make_dir_baton(struct dir_baton **d_p,
       else
         {
           if (*eb->target_basename && (! pb->parent_baton))
-            d->new_URL = apr_pstrdup(pool, eb->switch_url);
+            d->new_URL = apr_pstrdup(dir_pool, eb->switch_url);
           else
             d->new_URL = svn_path_url_add_component2(pb->new_URL,
-                                                     d->name, pool);
+                                                     d->name, dir_pool);
         }
     }
   else  /* must be an update */
@@ -544,18 +563,21 @@ make_dir_baton(struct dir_baton **d_p,
       /* updates are the odds ones.  if we're updating a path already
          present on disk, we use its original URL.  otherwise, we'll
          telescope based on its parent's URL. */
-      d->new_URL = get_entry_url(eb->wc_ctx, d->local_abspath, pool, pool);
+      d->new_URL = get_entry_url(eb->wc_ctx, d->local_abspath,
+                                 dir_pool, scratch_pool);
       if ((! d->new_URL) && pb)
-        d->new_URL = svn_path_url_add_component2(pb->new_URL, d->name, pool);
+        d->new_URL = svn_path_url_add_component2(pb->new_URL, d->name,
+                                                 dir_pool);
     }
 
   /* the bump information lives in the edit pool */
-  bdi = apr_pcalloc(eb->pool, sizeof(*bdi));
+  bdi = apr_pcalloc(dir_pool, sizeof(*bdi));
   bdi->parent = pb ? pb->bump_info : NULL;
   bdi->ref_count = 1;
   bdi->local_abspath = apr_pstrdup(eb->pool, d->local_abspath);
   bdi->skipped = FALSE;
   bdi->was_excluded = FALSE;
+  bdi->pool = dir_pool;
 
   /* the parent's bump info has one more referer */
   if (pb)
@@ -563,20 +585,21 @@ make_dir_baton(struct dir_baton **d_p,
 
   d->edit_baton   = eb;
   d->parent_baton = pb;
-  d->pool         = svn_pool_create(pool);
-  d->propchanges  = apr_array_make(pool, 1, sizeof(svn_prop_t));
+  d->pool         = dir_pool;
+  d->propchanges  = apr_array_make(dir_pool, 1, sizeof(svn_prop_t));
   d->added        = added;
   d->existed      = FALSE;
   d->add_existed  = FALSE;
   d->bump_info    = bdi;
-  d->log_accum    = svn_stringbuf_create("", pool);
+  d->log_accum    = svn_stringbuf_create("", dir_pool);
+  d->wq_accum     = apr_array_make(dir_pool, 4, sizeof(const svn_skel_t *));
   d->old_revision = SVN_INVALID_REVNUM;
 
   /* The caller of this function needs to fill these in. */
   d->ambient_depth = svn_depth_unknown;
   d->was_incomplete = FALSE;
 
-  apr_pool_cleanup_register(d->pool, d, cleanup_dir_baton,
+  apr_pool_cleanup_register(dir_pool, d, cleanup_dir_baton,
                             cleanup_dir_baton_child);
 
   *d_p = d;
@@ -843,6 +866,8 @@ maybe_bump_dir_info(struct edit_baton *eb,
         SVN_ERR(complete_directory(eb, bdi->local_abspath,
                                    bdi->parent == NULL,
                                    bdi->was_excluded, pool));
+
+      svn_pool_destroy(bdi->pool);
     }
   /* we exited the for loop because there are no more parents */
 
@@ -944,6 +969,12 @@ struct file_baton
 
   /* Bump information for the directory this file lives in */
   struct bump_dir_info *bump_info;
+
+  /* log accumulator; will be flushed and run in close_file(). */
+  svn_stringbuf_t *log_accum;
+  /* wq item accumulator. Array of const svn_skel_t * instances.
+     will be flushed and run in close_file() */
+  apr_array_header_t *wq_accum;
 };
 
 
@@ -955,33 +986,36 @@ make_file_baton(struct file_baton **f_p,
                 struct dir_baton *pb,
                 const char *path,
                 svn_boolean_t adding,
-                apr_pool_t *pool)
+                apr_pool_t *scratch_pool)
 {
-  struct file_baton *f = apr_pcalloc(pool, sizeof(*f));
+  apr_pool_t *file_pool = svn_pool_create(pb->pool);
+
+  struct file_baton *f = apr_pcalloc(file_pool, sizeof(*f));
 
   SVN_ERR_ASSERT(path);
 
   /* Make the file's on-disk name. */
-  f->name = svn_dirent_basename(path, pool);
+  f->name = svn_dirent_basename(path, file_pool);
   f->old_revision = SVN_INVALID_REVNUM;
-  f->local_abspath = svn_dirent_join(pb->local_abspath, f->name, pool);
+  f->local_abspath = svn_dirent_join(pb->local_abspath, f->name, file_pool);
 
   /* Figure out the new_URL for this file. */
   if (pb->edit_baton->switch_url)
     {
-      f->new_URL = svn_path_url_add_component2(pb->new_URL, f->name, pool);
+      f->new_URL = svn_path_url_add_component2(pb->new_URL, f->name,
+                                               file_pool);
     }
   else
     {
       f->new_URL = get_entry_url(pb->edit_baton->wc_ctx,
                                  svn_dirent_join(pb->local_abspath,
-                                                 f->name, pool),
-                                 pool, pool);
+                                                 f->name, scratch_pool),
+                                 file_pool, scratch_pool);
     }
 
-  f->pool              = pool;
+  f->pool              = file_pool;
   f->edit_baton        = pb->edit_baton;
-  f->propchanges       = apr_array_make(pool, 1, sizeof(svn_prop_t));
+  f->propchanges       = apr_array_make(file_pool, 1, sizeof(svn_prop_t));
   f->bump_info         = pb->bump_info;
   f->added             = adding;
   f->existed           = FALSE;
@@ -989,12 +1023,41 @@ make_file_baton(struct file_baton **f_p,
   f->deleted           = FALSE;
   f->dir_baton         = pb;
 
+  f->log_accum = svn_stringbuf_create("", file_pool);
+  f->wq_accum = apr_array_make(file_pool, 4, sizeof(const svn_skel_t *));
+
   /* No need to initialize f->digest, since we used pcalloc(). */
 
   /* the directory's bump info has one more referer now */
   ++f->bump_info->ref_count;
 
   *f_p = f;
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+flush_file_log(struct file_baton *fb, apr_pool_t *pool)
+{
+  int i;
+  if (! svn_stringbuf_isempty(fb->log_accum))
+    {
+      SVN_ERR(svn_wc__wq_add_loggy(fb->edit_baton->db,
+                                   fb->dir_baton->local_abspath,
+                                   fb->log_accum, pool));
+      svn_stringbuf_setempty(fb->log_accum);
+    }
+
+  for (i = 0; i < fb->wq_accum->nelts; i++)
+    {
+      SVN_ERR(svn_wc__db_wq_add(fb->edit_baton->db,
+                                fb->dir_baton->local_abspath,
+                                APR_ARRAY_IDX(fb->wq_accum, i,
+                                              const svn_skel_t *),
+                                pool));
+    }
+
+  apr_array_clear(fb->wq_accum);
+
   return SVN_NO_ERROR;
 }
 
@@ -2926,6 +2989,8 @@ close_directory(void *dir_baton,
     {
       db->bump_info->skipped = TRUE;
 
+      SVN_ERR(flush_log(db, pool));
+
       /* Allow the parent to complete its update. */
       SVN_ERR(maybe_bump_dir_info(db->edit_baton, db->bump_info, db->pool));
 
@@ -3718,7 +3783,7 @@ add_file(const char *path,
           svn_wc_conflict_description2_t *tree_conflict;
 
           SVN_ERR(check_tree_conflict(&tree_conflict, eb, fb->local_abspath,
-                                      pb->log_accum,
+                                      fb->log_accum,
                                       svn_wc_conflict_action_add,
                                       svn_node_file, fb->new_URL,
                                       pb->inside_deleted_subtree, subpool));
@@ -3829,7 +3894,7 @@ open_file(const char *path,
 
   /* Is this path the victim of a newly-discovered tree conflict? */
   SVN_ERR(check_tree_conflict(&tree_conflict, eb, fb->local_abspath,
-                              pb->log_accum,
+                              fb->log_accum,
                               svn_wc_conflict_action_edit,
                               svn_node_file, fb->new_URL, 
                               pb->inside_deleted_subtree, pool));
@@ -4645,7 +4710,7 @@ merge_file(svn_wc_notify_state_t *content_state,
   /* Now that we've built up *all* of the loggy commands for this
      file, add them to the directory's log accumulator in one fell
      swoop. */
-  svn_stringbuf_appendstr(fb->dir_baton->log_accum, log_accum);
+  svn_stringbuf_appendstr(fb->log_accum, log_accum);
 
   return SVN_NO_ERROR;
 }
@@ -4667,7 +4732,12 @@ close_file(void *file_baton,
   const char *new_base_path;
 
   if (fb->skip_this)
-    return maybe_bump_dir_info(eb, fb->bump_info, pool);
+    {
+      SVN_ERR(flush_file_log(fb, pool));
+      SVN_ERR(maybe_bump_dir_info(eb, fb->bump_info, pool));
+      svn_pool_destroy(fb->pool);
+      return SVN_NO_ERROR;
+    }
 
   if (expected_hex_digest)
     SVN_ERR(svn_checksum_parse_hex(&expected_checksum, svn_checksum_md5,
@@ -4711,6 +4781,7 @@ close_file(void *file_baton,
                      new_base_path,
                      actual_checksum, pool));
 
+  SVN_ERR(flush_file_log(fb, pool));
   /* We have one less referrer to the directory's bump information. */
   SVN_ERR(maybe_bump_dir_info(eb, fb->bump_info, pool));
 
@@ -4749,6 +4820,9 @@ close_file(void *file_baton,
 
       eb->notify_func(eb->notify_baton, notify, pool);
     }
+
+  svn_pool_destroy(fb->pool);
+
   return SVN_NO_ERROR;
 }
 
@@ -4851,13 +4925,13 @@ make_editor(svn_revnum_t *target_revision,
             apr_array_header_t *preserved_exts,
             const svn_delta_editor_t **editor,
             void **edit_baton,
-            apr_pool_t *pool, /* = result_pool */
+            apr_pool_t *result_pool,
             apr_pool_t *scratch_pool)
 {
   struct edit_baton *eb;
   void *inner_baton;
-  apr_pool_t *subpool = svn_pool_create(pool);
-  svn_delta_editor_t *tree_editor = svn_delta_default_editor(subpool);
+  apr_pool_t *edit_pool = svn_pool_create(result_pool);
+  svn_delta_editor_t *tree_editor = svn_delta_default_editor(edit_pool);
   const svn_delta_editor_t *inner_editor;
   const char *repos_root, *repos_uuid;
   svn_wc_adm_access_t *adm_access;
@@ -4873,7 +4947,8 @@ make_editor(svn_revnum_t *target_revision,
 
   /* Get the anchor entry, so we can fetch the repository root. */
   SVN_ERR(svn_wc__node_get_repos_info(&repos_root, &repos_uuid, wc_ctx,
-                                      anchor_abspath, pool, scratch_pool));
+                                      anchor_abspath,
+                                      result_pool, scratch_pool));
 
   /* Disallow a switch operation to change the repository root of the target,
      if that is known. */
@@ -4886,8 +4961,8 @@ make_editor(svn_revnum_t *target_revision,
          "'%s'"), switch_url, repos_root);
 
   /* Construct an edit baton. */
-  eb = apr_pcalloc(subpool, sizeof(*eb));
-  eb->pool                     = subpool;
+  eb = apr_pcalloc(edit_pool, sizeof(*eb));
+  eb->pool                     = edit_pool;
   eb->use_commit_times         = use_commit_times;
   eb->target_revision          = target_revision;
   eb->switch_url               = switch_url;
@@ -4903,7 +4978,7 @@ make_editor(svn_revnum_t *target_revision,
     eb->target_abspath = eb->anchor_abspath;
   else
     eb->target_abspath = svn_dirent_join(eb->anchor_abspath, target_basename,
-                                         pool);
+                                         edit_pool);
 
   eb->requested_depth          = depth;
   eb->depth_is_sticky          = depth_is_sticky;
@@ -4919,7 +4994,7 @@ make_editor(svn_revnum_t *target_revision,
   eb->fetch_func               = fetch_func;
   eb->fetch_baton              = fetch_baton;
   eb->allow_unver_obstructions = allow_unver_obstructions;
-  eb->skipped_trees            = apr_hash_make(subpool);
+  eb->skipped_trees            = apr_hash_make(edit_pool);
   eb->ext_patterns             = preserved_exts;
 
   /* Construct an editor. */
@@ -4961,7 +5036,7 @@ make_editor(svn_revnum_t *target_revision,
                                                 anchor,
                                                 target_basename,
                                                 wc_ctx->db,
-                                                pool));
+                                                result_pool));
 
   return svn_delta_get_cancellation_editor(cancel_func,
                                            cancel_baton,
@@ -4969,7 +5044,7 @@ make_editor(svn_revnum_t *target_revision,
                                            inner_baton,
                                            editor,
                                            edit_baton,
-                                           pool);
+                                           result_pool);
 }
 
 
