@@ -51,8 +51,8 @@
 */
 static svn_boolean_t
 combine_ranges(svn_merge_range_t *output,
-               svn_merge_range_t *in1,
-               svn_merge_range_t *in2,
+               const svn_merge_range_t *in1,
+               const svn_merge_range_t *in2,
                svn_boolean_t consider_inheritance)
 {
   if (in1->start <= in2->end && in2->start <= in1->end)
@@ -124,8 +124,8 @@ typedef enum
    set *INTERSECTION_TYPE to describe how the ranges intersect, if they
    do at all.  The inheritance type of the ranges is not considered. */
 static svn_error_t *
-get_type_of_intersection(svn_merge_range_t *r1,
-                         svn_merge_range_t *r2,
+get_type_of_intersection(const svn_merge_range_t *r1,
+                         const svn_merge_range_t *r2,
                          intersection_type_t *intersection_type)
 {
   SVN_ERR_ASSERT(r1);
@@ -243,9 +243,7 @@ combine_with_lastrange(svn_merge_range_t** lastrange,
          don't intersect at all we simply push NEW_RANGE only REVLIST. */
       if (combine_ranges(&combined_range, *lastrange, new_range, FALSE))
         {
-          (*lastrange)->start = combined_range.start;
-          (*lastrange)->end = combined_range.end;
-          (*lastrange)->inheritable = combined_range.inheritable;
+          **lastrange = combined_range;
         }
       else
         {
@@ -259,9 +257,7 @@ combine_with_lastrange(svn_merge_range_t** lastrange,
         {
           /* Even when considering inheritance two intersection ranges
              of the same inheritability can simply be combined. */
-          (*lastrange)->start = combined_range.start;
-          (*lastrange)->end = combined_range.end;
-          (*lastrange)->inheritable = combined_range.inheritable;
+          **lastrange = combined_range;
         }
       else
         {
@@ -314,12 +310,8 @@ combine_with_lastrange(svn_merge_range_t** lastrange,
                       if (r2->start < r1->start)
                         {
                           /* Swap R1 and R2. */
-                          r2->start = r1->start;
-                          r2->end = r1->end;
-                          r2->inheritable = r1->inheritable;
-                          r1->start = new_range->start;
-                          r1->end = new_range->end;
-                          r1->inheritable = new_range->inheritable;
+                          *r2 = *r1;
+                          *r1 = *new_range;
                         }
 
                       /* Absorb the intersecting ranges into the
@@ -354,12 +346,8 @@ combine_with_lastrange(svn_merge_range_t** lastrange,
                       if (r2->start < r1->start || r2->end > r1->end)
                         {
                           /* Swap R1 and R2. */
-                          r2->start = r1->start;
-                          r2->end = r1->end;
-                          r2->inheritable = r1->inheritable;
-                          r1->start = new_range->start;
-                          r1->end = new_range->end;
-                          r1->inheritable = new_range->inheritable;
+                          *r2 = *r1;
+                          *r1 = *new_range;
                         }
 
                       if (r1->inheritable)
@@ -423,7 +411,7 @@ combine_with_lastrange(svn_merge_range_t** lastrange,
 
 /* Convert a single svn_merge_range_t * back into an svn_string_t *.  */
 static svn_error_t *
-range_to_string(svn_string_t **result, svn_merge_range_t *range,
+range_to_string(svn_string_t **result, const svn_merge_range_t *range,
                 apr_pool_t *pool)
 {
   if (range->start == range->end - 1)
@@ -744,7 +732,7 @@ svn_rangelist_merge(apr_array_header_t **rangelist,
 }
 
 static svn_boolean_t
-range_intersect(svn_merge_range_t *first, svn_merge_range_t *second,
+range_intersect(const svn_merge_range_t *first, const svn_merge_range_t *second,
                 svn_boolean_t consider_inheritance)
 {
   return (first->start + 1 <= second->end)
@@ -754,7 +742,7 @@ range_intersect(svn_merge_range_t *first, svn_merge_range_t *second,
 }
 
 static svn_boolean_t
-range_contains(svn_merge_range_t *first, svn_merge_range_t *second,
+range_contains(const svn_merge_range_t *first, const svn_merge_range_t *second,
                svn_boolean_t consider_inheritance)
 {
   return (first->start <= second->start) && (second->end <= first->end)
