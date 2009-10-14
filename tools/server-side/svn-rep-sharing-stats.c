@@ -201,8 +201,11 @@ static svn_error_t *record(apr_hash_t *records,
   if (records == NULL || rep == NULL || rep->sha1_checksum == NULL)
     return SVN_NO_ERROR;
 
-  /* Construct the key. */
-  key = apr_palloc(result_pool, sizeof(*key));
+  /* Construct the key.
+   *
+   * Must use calloc() because apr_hash_* pay attention to padding bytes too.
+   */
+  key = apr_pcalloc(result_pool, sizeof(*key));
   key->revision = rep->revision;
   key->offset = rep->offset;
 
