@@ -3379,7 +3379,14 @@ deliver(const dav_resource *resource, ap_filter_t *output)
           if (strcmp(ap_psignature("FOO", resource->info->r), "") != 0)
             {
               /* Apache's signature generation code didn't eat our prefix.
-                 ServerSignature must be enabled.  Print our version info.  */
+                 ServerSignature must be enabled.  Print our version info.
+
+                 WARNING: This is a kludge!! ap_psignature() doesn't promise
+                 to return the empty string when ServerSignature is off.  We
+                 know it does by code inspection, but this behavior is subject
+                 to change. (Perhaps we should try to get the Apache folks to
+                 make this promise, though.  Seems harmless/useful enough...)
+              */
               ap_fputs(output, bb,
                        " </ul>\n <hr noshade><em>Powered by "
                        "<a href=\"http://subversion.tigris.org/\">Subversion"
