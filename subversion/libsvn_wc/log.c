@@ -879,6 +879,9 @@ log_do_committed(struct log_runner *loggy,
      we are finished handling this item.  */
   if (orig_entry->schedule == svn_wc_schedule_delete)
     {
+      const char *repos_relpath;
+      const char *repos_root_url;
+      const char *repos_uuid;
       const svn_wc_entry_t *parentry;
 
       /* If we are suppose to delete "this dir", drop a 'killme' file
@@ -909,6 +912,12 @@ log_do_committed(struct log_runner *loggy,
                                     pool));
         }
 
+      /* Remember the repository this node is associated with.  */
+      SVN_ERR(svn_wc__db_scan_base_repos(&repos_relpath, &repos_root_url,
+                                         &repos_uuid,
+                                         loggy->db, local_abspath,
+                                         pool, pool));
+
       /* Else, we're deleting a file, and we can safely remove files
          from revision control without screwing something else up.
 
@@ -928,16 +937,12 @@ log_do_committed(struct log_runner *loggy,
              lie;  therefore, it must remember the file as being
              'deleted' for a while.  Create a new, uninteresting
              ghost entry:  */
-          tmp_entry.kind = svn_node_file;
-          tmp_entry.deleted = TRUE;
-          tmp_entry.revision = new_revision;
-          SVN_ERR(svn_wc__entry_modify2(loggy->db, local_abspath,
-                                        svn_node_file, FALSE,
-                                        &tmp_entry,
-                                        SVN_WC__ENTRY_MODIFY_REVISION
-                                        | SVN_WC__ENTRY_MODIFY_KIND
-                                        | SVN_WC__ENTRY_MODIFY_DELETED,
-                                        pool));
+          SVN_ERR(svn_wc__db_base_add_absent_node(
+                    loggy->db, local_abspath,
+                    repos_relpath, repos_root_url, repos_uuid,
+                    new_revision, svn_wc__db_kind_file,
+                    svn_wc__db_status_not_present,
+                    pool));
         }
 
       return SVN_NO_ERROR;
