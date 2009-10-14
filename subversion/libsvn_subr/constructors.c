@@ -185,7 +185,7 @@ svn_log_entry_create(apr_pool_t *pool)
 }
 
 svn_log_entry_t *
-svn_log_entry_dup(svn_log_entry_t *log_entry, apr_pool_t *pool)
+svn_log_entry_dup(const svn_log_entry_t *log_entry, apr_pool_t *pool)
 {
   apr_hash_index_t *hi;
   svn_log_entry_t *new_entry = svn_log_entry_create(pool);
@@ -222,7 +222,7 @@ svn_log_entry_dup(svn_log_entry_t *log_entry, apr_pool_t *pool)
 }
 
 svn_location_segment_t *
-svn_location_segment_dup(svn_location_segment_t *segment,
+svn_location_segment_dup(const svn_location_segment_t *segment,
                          apr_pool_t *pool)
 {
   svn_location_segment_t *new_segment =

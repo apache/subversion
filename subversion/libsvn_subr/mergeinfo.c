@@ -1725,7 +1725,7 @@ svn_rangelist_dup(apr_array_header_t *rangelist, apr_pool_t *pool)
 }
 
 svn_merge_range_t *
-svn_merge_range_dup(svn_merge_range_t *range, apr_pool_t *pool)
+svn_merge_range_dup(const svn_merge_range_t *range, apr_pool_t *pool)
 {
   svn_merge_range_t *new_range = apr_palloc(pool, sizeof(*new_range));
   memcpy(new_range, range, sizeof(*new_range));
@@ -1733,7 +1733,7 @@ svn_merge_range_dup(svn_merge_range_t *range, apr_pool_t *pool)
 }
 
 svn_boolean_t
-svn_merge_range_contains_rev(svn_merge_range_t *range, svn_revnum_t rev)
+svn_merge_range_contains_rev(const svn_merge_range_t *range, svn_revnum_t rev)
 {
   assert(SVN_IS_VALID_REVNUM(range->start));
   assert(SVN_IS_VALID_REVNUM(range->end));

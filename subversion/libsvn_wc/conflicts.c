@@ -83,8 +83,8 @@ conflict_alloc(svn_wc_conflict_t **conflict, apr_pool_t *result_pool)
 }
 
 svn_error_t *
-svn_wc_conflict_dup(svn_wc_conflict_t** duplicate,
-                    svn_wc_conflict_t* base,
+svn_wc_conflict_dup(svn_wc_conflict_t **duplicate,
+                    const svn_wc_conflict_t *base,
                     apr_pool_t *result_pool)
 {
   svn_wc_conflict_t *c;

@@ -812,7 +812,7 @@ svn_log_entry_create(apr_pool_t *pool);
  * @since New in 1.6.
  */
 svn_log_entry_t *
-svn_log_entry_dup(svn_log_entry_t *log_entry, apr_pool_t *pool);
+svn_log_entry_dup(const svn_log_entry_t *log_entry, apr_pool_t *pool);
 
 /** The callback invoked by log message loopers, such as
  * @c svn_ra_plugin_t.get_log() and svn_repos_get_logs().
@@ -1052,7 +1052,7 @@ typedef struct svn_merge_range_t
  * @since New in 1.5.
  */
 svn_merge_range_t *
-svn_merge_range_dup(svn_merge_range_t *range, apr_pool_t *pool);
+svn_merge_range_dup(const svn_merge_range_t *range, apr_pool_t *pool);
 
 /**
  * Returns true if the changeset committed in revision @a rev is one
@@ -1061,7 +1061,7 @@ svn_merge_range_dup(svn_merge_range_t *range, apr_pool_t *pool);
  * @since New in 1.5.
  */
 svn_boolean_t
-svn_merge_range_contains_rev(svn_merge_range_t *range, svn_revnum_t rev);
+svn_merge_range_contains_rev(const svn_merge_range_t *range, svn_revnum_t rev);
 
 
 
@@ -1107,7 +1107,7 @@ typedef svn_error_t *(*svn_location_segment_receiver_t)(
  * @since New in 1.5.
  */
 svn_location_segment_t *
-svn_location_segment_dup(svn_location_segment_t *segment,
+svn_location_segment_dup(const svn_location_segment_t *segment,
                          apr_pool_t *pool);
 
 /** A line number, such as in a file or a stream.

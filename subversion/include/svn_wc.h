@@ -1494,7 +1494,7 @@ typedef struct svn_wc_conflict_t svn_wc_conflict_t;
  */
 svn_error_t *
 svn_wc_conflict_dup(svn_wc_conflict_t **duplicate,
-                    svn_wc_conflict_t *base,
+                    const svn_wc_conflict_t *base,
                     apr_pool_t *result_pool);
 
 /** Read information about @a conflict, as it applies to @a local_abspath
