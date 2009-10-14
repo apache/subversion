@@ -151,6 +151,9 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+Approved changes:
+=================
+
  * r40008, r40021, r40031
    Respect Apache's ServerSignature directive.
    Justification:
@@ -158,7 +161,4 @@ Candidate changes:
      informing the general public as to which version of mod_dav_svn
      is running on their server (for security purposes).
    Votes:
-     +1: stylesen (r40008 only), cmpilato, hwright
-
-Approved changes:
-=================
+     +1: stylesen (r40008 only), cmpilato, hwright, markphip
