@@ -312,7 +312,7 @@ def forced_checkout_with_versioned_obstruction(sbox):
     "Expected error during co", None, svntest.verify.AnyOutput,
     "co", "--force", repo_url, other_wc_dir)
 
-  test_stderr("UUID mismatch: existing directory '.*A'", serr)
+  test_stderr("(Failed to add directory|UUID mismatch:).*'.*A'", serr)
 
   #ensure that other_wc_dir_A is not affected by this forced checkout.
   svntest.actions.run_and_verify_svn("empty status output", None,
