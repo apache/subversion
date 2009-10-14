@@ -1748,8 +1748,8 @@ already_in_a_tree_conflict(svn_boolean_t *conflicted,
       if (svn_dirent_is_root(ancestor_abspath, strlen(ancestor_abspath)))
         break;
 
-      SVN_ERR(svn_wc__check_wc_root(&is_wc_root, NULL, db, ancestor_abspath,
-                                    iterpool));
+      SVN_ERR(svn_wc__check_wc_root(&is_wc_root, NULL, NULL,
+                                    db, ancestor_abspath, iterpool));
 
       ancestor_abspath = svn_dirent_dirname(ancestor_abspath, scratch_pool);
     }
@@ -5082,119 +5082,136 @@ svn_wc_get_switch_editor4(const svn_delta_editor_t **editor,
 svn_error_t *
 svn_wc__check_wc_root(svn_boolean_t *wc_root,
                       svn_node_kind_t *kind,
+                      svn_boolean_t *switched,
                       svn_wc__db_t *db,
                       const char *local_abspath,
                       apr_pool_t *scratch_pool)
 {
-  const char *parent, *base_name;
-  const svn_wc_entry_t *p_entry, *entry;
+  const char *parent_abspath, *name;
+  const char *repos_relpath, *repos_root, *repos_uuid;
   svn_error_t *err;
-  svn_boolean_t hidden;
+  svn_wc__db_status_t status;
+  svn_wc__db_kind_t my_kind;
+  svn_depth_t depth;
 
   /* Go ahead and initialize our return value to the most common
      (code-wise) values. */
+  if (!kind)
+    kind = &my_kind;
+
   *wc_root = TRUE;
+  *kind = svn_node_dir;
+  if (switched)
+    *switched = FALSE;
 
-  /* Get our ancestry.  In the event that the path is unversioned (or
-     otherwise hidden), treat it as if it were a file so that the anchor
-     will be the parent directory. If the node is a FILE, then it is
-     definitely not a root.  */
-  err = svn_wc__get_entry(&entry, db, local_abspath, TRUE, svn_node_unknown,
-                          FALSE, scratch_pool, scratch_pool);
+  SVN_ERR(svn_wc__db_read_info(&status, kind, NULL, &repos_relpath,
+                               &repos_root, &repos_uuid, NULL, NULL, NULL,
+                               NULL, &depth, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               db, local_abspath,
+                               scratch_pool, scratch_pool));
 
-  if (err && err->apr_err == SVN_ERR_NODE_UNEXPECTED_KIND
-        && entry->kind == svn_node_dir && *entry->name != '\0')
+  svn_dirent_split(local_abspath, &parent_abspath, &name, scratch_pool);
+
+  if (*kind != svn_wc__db_kind_dir)
+    *wc_root = FALSE; /* Every non-directory has a parent */
+  else if (status == svn_wc__db_status_added ||
+           status == svn_wc__db_status_deleted)
     {
-      /* The (subdir) node is (most likely) not present. We said we wanted
-         the actual information, but got the stub info instead. We can
-         pretend this is a file so the parent will be the anchor.  */
-      svn_error_clear(err);
-
-      if (kind)
-        *kind = svn_node_file;
       *wc_root = FALSE;
-      return SVN_NO_ERROR;
     }
-  else if (err)
-    return svn_error_return(err);
-
-  if (entry == NULL || entry->kind == svn_node_file)
+  else if (status == svn_wc__db_status_absent ||
+           status == svn_wc__db_status_excluded ||
+           status == svn_wc__db_status_not_present ||
+           depth == svn_depth_exclude)
     {
-      if (kind)
-        *kind = svn_node_file;
-      *wc_root = FALSE;
-      return SVN_NO_ERROR;
+      return svn_error_createf(
+                    SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+                    _("The node '%s' was not found."),
+                    svn_dirent_local_style(local_abspath, scratch_pool));
     }
-
-  SVN_ERR(svn_wc__entry_is_hidden(&hidden, entry));
-  if (hidden)
-    {
-      if (kind)
-        *kind = svn_node_file;
-      *wc_root = FALSE;
-      return SVN_NO_ERROR;
-    }
-
-  SVN_ERR_ASSERT(entry->kind == svn_node_dir);
-  if (kind)
-    *kind = svn_node_dir;
-
-  /* If this is the root folder (of a drive), it should be the WC
-     root too. */
-  if (svn_dirent_is_root(local_abspath, strlen(local_abspath)))
+  else if (svn_dirent_is_root(local_abspath, strlen(local_abspath)))
     return SVN_NO_ERROR;
 
-  svn_dirent_split(local_abspath, &parent, &base_name, scratch_pool);
+  if (!*wc_root && !switched)
+    return SVN_NO_ERROR; /* No more info needed */
 
-  /* If we cannot get an entry for PATH's parent, PATH is a WC root. */
-  err = svn_wc__get_entry(&p_entry, db, parent, FALSE, svn_node_dir, FALSE,
-                          scratch_pool, scratch_pool);
-  if (err)
+  /* Check if the node is recorded in the parent */
+  {
+    const apr_array_header_t *children;
+    svn_boolean_t found = FALSE;
+    int i;
+
+    err = svn_wc__db_read_children(&children, db, parent_abspath,
+                                   scratch_pool, scratch_pool);
+
+    if (err)
+      {
+        if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND &&
+            err->apr_err != SVN_ERR_WC_NOT_WORKING_COPY &&
+            err->apr_err != SVN_ERR_WC_UPGRADE_REQUIRED)
+          return svn_error_return(err);
+
+        svn_error_clear(err);
+        return SVN_NO_ERROR;
+      }
+    else
+      for (i = 0; i < children->nelts; i++)
+        {
+          if (strcmp(APR_ARRAY_IDX(children, i, const char *), name) == 0)
+            {
+              found = TRUE;
+              break;
+            }
+        }
+
+    if (!found)
+      {
+        return SVN_NO_ERROR;
+      }
+  }
+
+  if (repos_relpath == NULL)
     {
-      svn_error_clear(err);
+      /* Url is inherited */
+      *wc_root = FALSE;
       return SVN_NO_ERROR;
     }
-  SVN_ERR(svn_wc__entry_is_hidden(&hidden, p_entry));
-  SVN_ERR_ASSERT(!hidden);
-
-  /* If the parent directory has no url information, something is
-     messed up.  Bail with an error. */
-  if (! p_entry->url)
-    return svn_error_createf(
-       SVN_ERR_ENTRY_MISSING_URL, NULL,
-       _("'%s' has no ancestry information"),
-       svn_dirent_local_style(parent, scratch_pool));
-
-  /* If PATH's parent in the WC is not its parent in the repository,
-     PATH is a WC root. */
-  if (entry && entry->url
-      && (strcmp(svn_path_url_add_component2(p_entry->url, base_name,
-                                             scratch_pool),
-                 entry->url) != 0))
-    return SVN_NO_ERROR;
-
-  /* If PATH's parent in the repository is not its parent in the WC,
-     PATH is a WC root. */
-  err = svn_wc__get_entry(&p_entry, db, local_abspath, FALSE, svn_node_dir,
-                          TRUE, scratch_pool, scratch_pool);
-  if (err)
+  else
     {
-      svn_error_clear(err);
-      return SVN_NO_ERROR;
+      const char *parent_repos_root;
+      const char *parent_repos_relpath;
+      const char *parent_repos_uuid;
+
+      /* ### This returns an SVN_ERR_WC_CORRUPT error when this
+             function is called from log_do_committed() because
+             an added directory, can have status normal children
+             there. */
+      SVN_ERR(svn_wc__db_scan_base_repos(&parent_repos_relpath,
+                                         &parent_repos_root,
+                                         &parent_repos_uuid,
+                                         db, parent_abspath,
+                                         scratch_pool, scratch_pool));
+
+      if (strcmp(repos_root, parent_repos_root) != 0 ||
+          strcmp(repos_uuid, parent_repos_uuid) != 0)
+        {
+          return SVN_NO_ERROR; /* Should never occur */
+        }
+
+      *wc_root = FALSE;
+
+      if (switched)
+        {
+          const char *expected_relpath = svn_relpath_join(parent_repos_relpath,
+                                                          name, scratch_pool);
+
+          *switched = (strcmp(expected_relpath, repos_relpath) != 0);
+        }
     }
 
-  SVN_ERR(svn_wc__entry_is_hidden(&hidden, p_entry));
-  if (hidden)
-    {
-      return SVN_NO_ERROR;
-    }
-
-  /* If we have not determined that PATH is a WC root by now, it must
-     not be! */
-  *wc_root = FALSE;
   return SVN_NO_ERROR;
 }
-
 
 svn_error_t *
 svn_wc_is_wc_root2(svn_boolean_t *wc_root,
@@ -5202,11 +5219,27 @@ svn_wc_is_wc_root2(svn_boolean_t *wc_root,
                    const char *local_abspath,
                    apr_pool_t *scratch_pool)
 {
+  svn_boolean_t is_root;
+  svn_boolean_t is_switched;
+  svn_wc__db_kind_t kind;
+  svn_error_t *err;
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
-  return svn_error_return(
-    svn_wc__check_wc_root(wc_root, NULL, wc_ctx->db, local_abspath,
-                          scratch_pool));
+  err = svn_wc__check_wc_root(&is_root, &kind, &is_switched,
+                              wc_ctx->db, local_abspath, scratch_pool);
+
+  if (err)
+    {
+      if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND &&
+          err->apr_err != SVN_ERR_WC_NOT_WORKING_COPY)
+        return svn_error_return(err);
+
+      return svn_error_create(SVN_ERR_ENTRY_NOT_FOUND, err, err->message);
+    }
+
+  *wc_root = is_root || (kind == svn_wc__db_kind_dir && is_switched);
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -5216,58 +5249,10 @@ svn_wc__strictly_is_wc_root(svn_boolean_t *wc_root,
                             const char *local_abspath,
                             apr_pool_t *scratch_pool)
 {
-  SVN_ERR(svn_wc__check_wc_root(wc_root, NULL, wc_ctx->db, local_abspath,
-                                scratch_pool));
-
-  if (*wc_root)
-    {
-      svn_wc__db_kind_t kind;
-      svn_error_t *err;
-
-      /* Check whether this is a switched subtree or an absent item.
-       * Switched subtrees are considered working copy roots by
-       * svn_wc_is_wc_root(). */
-      err = svn_wc__db_read_info(NULL, &kind, NULL, NULL, NULL, NULL,
-                                 NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                 NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                 NULL, NULL, NULL, NULL,
-                                 wc_ctx->db, local_abspath,
-                                 scratch_pool, scratch_pool);
-
-      /* If the node doesn't exist, it can't possibly be a switched subdir.
-       * It can't be a WC root either, for that matter.*/
-      if (err)
-        {
-          svn_error_clear(err);
-          *wc_root = FALSE;
-          return SVN_NO_ERROR;
-        }
-
-      if (kind == svn_wc__db_kind_dir)
-        {
-          svn_boolean_t switched;
-
-          err = svn_wc__internal_path_switched(&switched, wc_ctx->db,
-                                               local_abspath, scratch_pool);
-
-          if (err && (err->apr_err == SVN_ERR_ENTRY_MISSING_URL))
-            {
-              /* This is e.g. a locally deleted dir. It has an entry but
-               * no repository URL. It cannot be a WC root. */
-              svn_error_clear(err);
-              *wc_root = FALSE;
-            }
-          else
-            {
-              SVN_ERR(err);
-              /* The query for a switched dir succeeded. If switched,
-               * don't consider this a WC root. */
-              *wc_root = ! switched;
-            }
-        }
-    }
-
-  return SVN_NO_ERROR;
+  return svn_error_return(
+             svn_wc__check_wc_root(wc_root, NULL, NULL,
+                                   wc_ctx->db, local_abspath,
+                                   scratch_pool));
 }
 
 
@@ -5279,17 +5264,30 @@ svn_wc_get_actual_target2(const char **anchor,
                           apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool)
 {
-  svn_boolean_t is_wc_root;
-  svn_node_kind_t kind;
+  svn_boolean_t is_wc_root, is_switched;
+  svn_wc__db_kind_t kind;
   const char *local_abspath;
+  svn_error_t *err;
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, scratch_pool));
 
-  SVN_ERR(svn_wc__check_wc_root(&is_wc_root, &kind, wc_ctx->db, local_abspath,
-                                scratch_pool));
+  err = svn_wc__check_wc_root(&is_wc_root, &kind, &is_switched,
+                              wc_ctx->db, local_abspath,
+                              scratch_pool);
+
+  if (err)
+    {
+      if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND &&
+          err->apr_err != SVN_ERR_WC_NOT_WORKING_COPY)
+        return svn_error_return(err);
+
+      svn_error_clear(err);
+      is_wc_root = FALSE;
+      is_switched = FALSE;
+    }
 
   /* If PATH is not a WC root, or if it is a file, lop off a basename. */
-  if ((! is_wc_root) || (kind == svn_node_file))
+  if (!(is_wc_root || is_switched) || (kind != svn_wc__db_kind_dir))
     {
       svn_dirent_split(path, anchor, target, result_pool);
     }

@@ -427,12 +427,12 @@ run_revert(svn_wc__db_t *db,
   /* ### need to revert some bits in the parent stub. sigh.  */
   if (kind == svn_wc__db_kind_dir)
     {
-      svn_boolean_t is_wc_root;
+      svn_boolean_t is_wc_root, is_switched;
 
       /* There is no parent stub if we're at the root.  */
-      SVN_ERR(svn_wc__check_wc_root(&is_wc_root, NULL, db, local_abspath,
-                                    scratch_pool));
-      if (!is_wc_root)
+      SVN_ERR(svn_wc__check_wc_root(&is_wc_root, NULL, &is_switched,
+                                    db, local_abspath, scratch_pool));
+      if (!is_wc_root && !is_switched)
         {
           modify_flags = (SVN_WC__ENTRY_MODIFY_COPIED
                           | SVN_WC__ENTRY_MODIFY_COPYFROM_URL
