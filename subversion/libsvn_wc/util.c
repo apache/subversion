@@ -461,9 +461,9 @@ svn_wc_conflict_version_create(const char *repos_url,
 
   version = apr_pcalloc(pool, sizeof(*version));
 
-  SVN_ERR_ASSERT_NO_RETURN(repos_url != NULL && *repos_url != '\0' &&
-                           path_in_repos != NULL && *path_in_repos != '/'
-                           && SVN_IS_VALID_REVNUM(peg_rev));
+  SVN_ERR_ASSERT_NO_RETURN(svn_uri_is_canonical(repos_url, pool) &&
+                           svn_relpath_is_canonical(path_in_repos, pool) &&
+                           SVN_IS_VALID_REVNUM(peg_rev));
 
   version->repos_url = repos_url;
   version->peg_rev = peg_rev;
