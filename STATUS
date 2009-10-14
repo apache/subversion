@@ -151,12 +151,14 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
- * r40008
+ * r40008, r40021, r40031
    Respect Apache's ServerSignature directive.
    Justification:
-     Many subversion server administrators want it.
+     Subversion server administrators have requested this to avoid
+     informing the general public as to which version of mod_dav_svn
+     is running on their server (for security purposes).
    Votes:
-     +1: stylesen
+     +1: stylesen (r40008 only), cmpilato
 
 Approved changes:
 =================
