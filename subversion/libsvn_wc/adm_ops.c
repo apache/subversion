@@ -1874,7 +1874,6 @@ revert_entry(svn_depth_t *depth,
              svn_boolean_t *did_revert,
              apr_pool_t *pool)
 {
-
   /* Initialize this even though revert_admin_things() is guaranteed
      to set it, because we don't know that revert_admin_things() will
      be called. */
@@ -1883,15 +1882,47 @@ revert_entry(svn_depth_t *depth,
   /* Additions. */
   if (entry->schedule == svn_wc_schedule_add)
     {
+      svn_revnum_t base_revision;
+      const char *repos_relpath;
+      const char *repos_root_url;
+      const char *repos_uuid;
       /* Before removing item from revision control, notice if the
          entry is in a 'deleted' state; this is critical for
          directories, where this state only exists in its parent's
          entry. */
       svn_boolean_t was_deleted = FALSE;
 
+      /* NOTE: if WAS_DELETED gets set, then we have BASE nodes. The code
+         below will then figure out the repository information, so that
+         we can later insert a node for the same repository.  */
+
+      /* ### much of this is probably bullshit. we should be able to just
+         ### remove the WORKING and ACTUAL rows, and be done. but we're
+         ### not quite there yet, so nodes get fully removed and then
+         ### shoved back into the database. this is why we need to record
+         ### the repository information, and the BASE revision.  */
+
       if (entry->kind == svn_node_file)
         {
           was_deleted = entry->deleted;
+          if (was_deleted)
+            {
+              /* Remember the BASE revision.  */
+              SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, &base_revision,
+                                               NULL, NULL, NULL, NULL, NULL,
+                                               NULL, NULL, NULL, NULL,
+                                               NULL, NULL, NULL,
+                                               db, local_abspath,
+                                               pool, pool));
+
+              /* Remember the repository this node is associated with.  */
+              SVN_ERR(svn_wc__db_scan_base_repos(&repos_relpath,
+                                                 &repos_root_url,
+                                                 &repos_uuid,
+                                                 db, local_abspath,
+                                                 pool, pool));
+            }
+
           SVN_ERR(svn_wc__internal_remove_from_revision_control(db,
                                                                 local_abspath,
                                                                 FALSE, FALSE,
@@ -1918,6 +1949,23 @@ revert_entry(svn_depth_t *depth,
 
           SVN_ERR(svn_wc__node_is_deleted(&was_deleted, db, local_abspath,
                                           pool));
+          if (was_deleted)
+            {
+              /* Remember the BASE revision.  */
+              SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, &base_revision,
+                                               NULL, NULL, NULL, NULL, NULL,
+                                               NULL, NULL, NULL, NULL,
+                                               NULL, NULL, NULL,
+                                               db, local_abspath,
+                                               pool, pool));
+
+              /* Remember the repository this node is associated with.  */
+              SVN_ERR(svn_wc__db_scan_base_repos(&repos_relpath,
+                                                 &repos_root_url,
+                                                 &repos_uuid,
+                                                 db, local_abspath,
+                                                 pool, pool));
+            }
 
           if (kind == svn_node_none
               || svn_wc__adm_missing(db, local_abspath, pool))
@@ -1960,33 +2008,15 @@ revert_entry(svn_depth_t *depth,
          parent. */
       if (was_deleted)
         {
-          svn_wc_entry_t tmp_entry;
-
-          /* ### this is some pretty bogus stuff here. for directories,
-             ### this will mark the stub as DELETED. the kind will be
-             ### unchanged. for files, the entry has been removed above,
-             ### so this will *RE-INSERT* an entry for this node, marked
-             ### as a "file" that is DELETED. lovely, how entry_modify(2)
-             ### can actually insert new nodes...  */
-          tmp_entry.kind = entry->kind;
-          tmp_entry.deleted = TRUE;
-
-          if (entry->kind == svn_node_dir)
-            {
-              SVN_ERR(svn_wc__entry_modify2(db, local_abspath,
-                                            svn_node_dir, TRUE, &tmp_entry,
-                                            SVN_WC__ENTRY_MODIFY_KIND
-                                            | SVN_WC__ENTRY_MODIFY_DELETED,
-                                            pool));
-            }
-          else
-            {
-              SVN_ERR(svn_wc__entry_modify2(db, local_abspath,
-                                            svn_node_file, FALSE, &tmp_entry,
-                                            SVN_WC__ENTRY_MODIFY_KIND
-                                            | SVN_WC__ENTRY_MODIFY_DELETED,
-                                            pool));
-            }
+          SVN_ERR(svn_wc__db_base_add_absent_node(
+                    db, local_abspath,
+                    repos_relpath, repos_root_url, repos_uuid,
+                    base_revision,
+                    entry->kind == svn_node_dir
+                      ? svn_wc__db_kind_dir
+                      : svn_wc__db_kind_file,
+                    svn_wc__db_status_not_present,
+                    pool));
         }
     }
   /* Regular prop and text edit. */
