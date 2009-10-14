@@ -829,7 +829,7 @@ log_do_committed(struct log_runner *loggy,
   int is_this_dir = (strcmp(name, SVN_WC_ENTRY_THIS_DIR) == 0);
   const char *rev = svn_xml_get_attr_value(SVN_WC__LOG_ATTR_REVISION, atts);
   svn_revnum_t new_revision;
-  svn_boolean_t wc_root, remove_executable = FALSE;
+  svn_boolean_t remove_executable = FALSE;
   svn_boolean_t set_read_write = FALSE;
   const char *local_abspath;
   const svn_wc_entry_t *orig_entry;
@@ -1198,10 +1198,26 @@ log_do_committed(struct log_runner *loggy,
      entry for this directory, unless the current directory is a `WC
      root' (meaning, our parent directory on disk is not our parent in
      Version Control Land), in which case we're all finished here. */
-  SVN_ERR(svn_wc__check_wc_root(&wc_root, NULL, loggy->db, loggy->adm_abspath,
-                                pool));
-  if (wc_root)
-    return SVN_NO_ERROR;
+  {
+    svn_boolean_t is_root, is_switched;
+
+    SVN_ERR(svn_wc__check_wc_root(&is_root, NULL, &is_switched,
+                                  loggy->db, loggy->adm_abspath, pool));
+
+    if (err)
+      {
+        if (err->apr_err != SVN_ERR_WC_CORRUPT)
+          return svn_error_return(err);
+
+        /* ### The parent is  added, but we are committed */
+        svn_error_clear(err);
+        is_root = FALSE;
+        is_switched = FALSE;
+      }
+    
+    if (is_root || is_switched)
+      return SVN_NO_ERROR;
+  }
 
   /* Make sure our entry exists in the parent. */
   {

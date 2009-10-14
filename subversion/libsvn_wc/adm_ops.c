@@ -2489,15 +2489,15 @@ svn_wc__internal_remove_from_revision_control(svn_wc__db_t *db,
       /* Remove self from parent's entries file, but only if parent is
          a working copy.  If it's not, that's fine, we just move on. */
       {
-        svn_boolean_t is_root;
+        svn_boolean_t is_root, is_switched;
 
-        SVN_ERR(svn_wc__check_wc_root(&is_root, NULL, db, local_abspath,
-                                      iterpool));
+        SVN_ERR(svn_wc__check_wc_root(&is_root, NULL, &is_switched,
+                                      db, local_abspath, iterpool));
 
         /* If full_path is not the top of a wc, then its parent
            directory is also a working copy and has an entry for
            full_path.  We need to remove that entry: */
-        if (! is_root)
+        if (!is_root && !is_switched)
           {
             const svn_wc_entry_t *dir_entry;
 
