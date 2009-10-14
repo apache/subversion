@@ -3374,16 +3374,20 @@ deliver(const dav_resource *resource, ap_filter_t *output)
 
       svn_pool_destroy(entry_pool);
 
-      if (gen_html
-          && (strcmp(ap_psignature("FOO", resource->info->r), "") != 0))
+      if (gen_html)
         {
-          /* Apache's signature generation code didn't eat our prefix.
-             ServerSignature must be enabled.  Print our version info.  */
-          ap_fputs(output, bb,
-                   " </ul>\n <hr noshade><em>Powered by "
-                   "<a href=\"http://subversion.tigris.org/\">Subversion</a> "
-                   "version " SVN_VERSION "."
-                   "</em>\n</body></html>");
+          if (strcmp(ap_psignature("FOO", resource->info->r), "") != 0)
+            {
+              /* Apache's signature generation code didn't eat our prefix.
+                 ServerSignature must be enabled.  Print our version info.  */
+              ap_fputs(output, bb,
+                       " </ul>\n <hr noshade><em>Powered by "
+                       "<a href=\"http://subversion.tigris.org/\">Subversion"
+                       "</a> version " SVN_VERSION "."
+                       "</em>\n</body></html>");
+            }
+          else
+            ap_fputs(output, bb, " </ul>\n</body></html>");
         }
       else
         ap_fputs(output, bb, "  </index>\n</svn>\n");
