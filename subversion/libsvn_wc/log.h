@@ -329,18 +329,6 @@ svn_wc__loggy_remove(svn_stringbuf_t **log_accum,
                      apr_pool_t *scratch_pool);
 
 
-/* Process the instructions in the log file for ADM_ACCESS.
-
-   If the log fails on its first command, return the error
-   SVN_ERR_WC_BAD_ADM_LOG_START.  If it fails on some subsequent
-   command, return SVN_ERR_WC_BAD_ADM_LOG
-
-   Use SCRATCH_POOL for temporary allocations.
- */
-svn_error_t *svn_wc__run_log(svn_wc_adm_access_t *adm_access,
-                             apr_pool_t *scratch_pool);
-
-
 /* Process the instructions in the log file for ADM_ABSPATH,
    using its access baton that MUST BE cached in DB.
 

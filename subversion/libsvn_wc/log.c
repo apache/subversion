@@ -1423,19 +1423,6 @@ svn_wc__run_xml_log(svn_wc__db_t *db,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_wc__run_log(svn_wc_adm_access_t *adm_access,
-                apr_pool_t *scratch_pool)
-{
-  /* Verify that we're holding this directory's write lock.  */
-  SVN_ERR(svn_wc__adm_write_check(adm_access, scratch_pool));
-
-  return svn_error_return(svn_wc__wq_run(
-                            svn_wc__adm_get_db(adm_access),
-                            svn_wc__adm_access_abspath(adm_access),
-                            NULL, NULL,
-                            scratch_pool));
-}
 
 svn_error_t *
 svn_wc__run_log2(svn_wc__db_t *db,
