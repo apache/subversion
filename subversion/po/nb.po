@@ -18,6 +18,7 @@
 #    under the License.
 #
 # Dictionary:
+#
 # '' - «»
 # API - programmeringsgrensesnitt
 # URL - URL
@@ -88,8 +89,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.7\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2009-10-14 16:56+0200\n"
-"PO-Revision-Date: 2009-09-16 19:00+0200\n"
+"POT-Creation-Date: 2009-10-14 16:27+0200\n"
+"PO-Revision-Date: 2009-10-14 16:21+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Norwegian <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -466,7 +467,7 @@ msgstr "Kan ikke flytte «%s» inn i seg selv"
 
 #: ../include/svn_error_codes.h:486
 msgid "Something's amiss with the wc sqlite database"
-msgstr ""
+msgstr "Noe er galt med SQLite-databasen for arbeidskopien"
 
 #: ../include/svn_error_codes.h:491
 msgid "The working copy is missing"
@@ -485,9 +486,8 @@ msgid "The working copy needs to be upgraded"
 msgstr "Arbeidskopien må oppgraderes"
 
 #: ../include/svn_error_codes.h:511
-#, fuzzy
 msgid "Previous operation was interrupted; run 'svn cleanup'"
-msgstr "Operasjonen ble avbrutt"
+msgstr "Forrige operasjon ble avbrutt; kjør «svn cleanup»"
 
 #: ../include/svn_error_codes.h:517
 msgid "General filesystem error"
@@ -764,9 +764,8 @@ msgid "Repository UUID does not match expected UUID"
 msgstr "Depot-UUID samsvarer ikke med forventet UUID"
 
 #: ../include/svn_error_codes.h:836
-#, fuzzy
 msgid "Repository root URL does not match expected root URL"
-msgstr "Depot-UUID samsvarer ikke med forventet UUID"
+msgstr "Rot-URL for depotet samsvarer ikke med forventet rot-URL"
 
 #: ../include/svn_error_codes.h:842
 msgid "RA layer failed to init socket layer"
@@ -1222,7 +1221,7 @@ msgstr "Forutsetning feilet"
 #: ../libsvn_auth_gnome_keyring/gnome_keyring.c:560
 #: ../libsvn_auth_gnome_keyring/gnome_keyring.c:616
 msgid "GNOME Keyring is locked and we are non-interactive"
-msgstr ""
+msgstr "GNOME-nøkkelringen er låst og vi er ikke interaktiv"
 
 #: ../libsvn_client/add.c:407
 #, c-format
@@ -1291,9 +1290,9 @@ msgid "URL '%s' refers to a file, not a directory"
 msgstr "URL-en «%s» refererer til en fil, ikke en katalog"
 
 #: ../libsvn_client/checkout.c:207
-#, fuzzy, c-format
+#, c-format
 msgid "'%s' is already a working copy for a different URL; use 'svn update' to update it"
-msgstr "«%s» er allerede en arbeidskopi, for en annen URL"
+msgstr "«%s» er allerede en arbeidskopi for en annen URL; bruk «svn update» for å oppdatere den"
 
 #: ../libsvn_client/checkout.c:214
 #, c-format
@@ -1919,12 +1918,12 @@ msgstr ""
 
 #: ../libsvn_client/mergeinfo.c:1638
 msgid "Only depths 'infinity' and 'empty' are currently supported"
-msgstr ""
+msgstr "Kun dybdene «infinity» og «empty» er for tiden støttet"
 
 #: ../libsvn_client/patch.c:151
-#, fuzzy, c-format
+#, c-format
 msgid "Cannot strip %u components from '%s'"
-msgstr "Kan ikke lese lengdelinje i filen «%s»"
+msgstr "Kan ikke strippe %u komponenter fra «%s»"
 
 #: ../libsvn_client/patch.c:626
 #, c-format
@@ -1933,16 +1932,16 @@ msgstr "Feil under skriving til «%s»"
 
 #: ../libsvn_client/patch.c:991
 msgid ".svnpatch.original"
-msgstr ""
+msgstr ".svnpatch.original"
 
 #: ../libsvn_client/patch.c:992
 msgid ".svnpatch.modified"
-msgstr ""
+msgstr ".svnpatch.modifisert"
 
 #: ../libsvn_client/patch.c:993
 #, fuzzy
 msgid ".svnpatch.working"
-msgstr ".working"
+msgstr "svnpatch.working"
 
 #: ../libsvn_client/patch.c:1096
 #, fuzzy
@@ -1985,9 +1984,8 @@ msgid "Setting property '%s' on non-local target '%s' is not supported"
 msgstr "Setting av egenskap «%s» på ikke-lokalt mål «%s» er ikke støttet"
 
 #: ../libsvn_client/prop_commands.c:433
-#, fuzzy
 msgid "Author name should not contain a newline; value will not be set unless forced"
-msgstr "Verdien blir ikke satt uten tvang"
+msgstr "Forfatternavn kan ikke inneholde linjeskift, verdien blir ikke satt uten tvang"
 
 #: ../libsvn_client/prop_commands.c:460
 #, c-format
@@ -2292,7 +2290,7 @@ msgstr "lukker databasepeker for forandringer"
 #: ../libsvn_fs_base/bdb/checksum-reps-table.c:116
 #: ../libsvn_fs_base/bdb/checksum-reps-table.c:159
 msgid "Only SHA1 checksums can be used as keys in the checksum-reps table.\n"
-msgstr ""
+msgstr "Kun SHA1-kontrollsummer kan brukes som nøkler i «checksum-reps»-tabellen.\n"
 
 #: ../libsvn_fs_base/bdb/checksum-reps-table.c:135
 #, c-format
@@ -2300,14 +2298,12 @@ msgid "Representation key for checksum '%s' exists in filesystem '%s'."
 msgstr "Representasjonsnøkkel for kontrollsum «%s» finnes i filsystem «%s»."
 
 #: ../libsvn_fs_base/bdb/checksum-reps-table.c:142
-#, fuzzy
 msgid "storing checksum-reps record"
-msgstr "lagrer kopieringspost"
+msgstr "lagrer «checksum-reps»-post"
 
 #: ../libsvn_fs_base/bdb/checksum-reps-table.c:186
-#, fuzzy
 msgid "allocating new representation reuse ID (getting 'next-key')"
-msgstr "reserverer ny representasjon (henter next-key)"
+msgstr "reserverer ny gjenbruks-ID for representasjon (henter «next-key»)"
 
 #: ../libsvn_fs_base/bdb/checksum-reps-table.c:207
 #: ../libsvn_fs_base/bdb/copies-table.c:133
@@ -2519,9 +2515,9 @@ msgid "Attempted to set textual contents of an immutable node"
 msgstr "Forsøkte å sette tekstinnhold på en uforanderlig node"
 
 #: ../libsvn_fs_base/dag.c:1285 ../libsvn_fs_base/reps-strings.c:829
-#, fuzzy, c-format
+#, c-format
 msgid "Checksum mismatch on representation '%s'"
-msgstr "Representasjon ikke funnet: «%s»"
+msgstr "Feil i kontrollsum på representasjon «%s»"
 
 #: ../libsvn_fs_base/dag.c:1286 ../libsvn_fs_base/reps-strings.c:830
 #: ../libsvn_fs_base/reps-strings.c:926 ../libsvn_fs_base/reps-strings.c:941
@@ -2629,9 +2625,9 @@ msgid "No record in 'node-origins' table for node id '%s' in filesystem '%s'"
 msgstr "Ingen post i tabellen «node-origins» for node-id «%s» i filsystem «%s»"
 
 #: ../libsvn_fs_base/err.c:172
-#, fuzzy, c-format
+#, c-format
 msgid "No record in 'checksum-reps' table for checksum '%s' in filesystem '%s'"
-msgstr "Ingen post i tabellen «node-origins» for node-id «%s» i filsystem «%s»"
+msgstr "Ingen post i tabellen «checksum-reps» for kontrollsum «%s» i filsystem «%s»"
 
 #: ../libsvn_fs_base/fs.c:86
 #, c-format
@@ -3208,9 +3204,8 @@ msgstr "Kan ikke sette tekstinnholdet til en katalog"
 
 #: ../libsvn_fs_fs/fs_fs.c:5222 ../libsvn_fs_fs/fs_fs.c:5227
 #: ../libsvn_fs_fs/fs_fs.c:5234
-#, fuzzy
 msgid "Corrupt 'current' file"
-msgstr "Gjeldende fil er ødelagt"
+msgstr "Ødelagt «current»-fil"
 
 #: ../libsvn_fs_fs/fs_fs.c:5553 ../libsvn_subr/io.c:3001 ../svn/util.c:414
 #: ../svn/util.c:429 ../svn/util.c:453
@@ -4068,18 +4063,18 @@ msgid "Premature EOF seen from server"
 msgstr "For tidlig filslutt mottatt fra tjener"
 
 #: ../libsvn_ra_serf/util.c:1312
-#, fuzzy, c-format
+#, c-format
 msgid "Unspecified error message: %d %s"
-msgstr "Uspesifisert feilmelding"
+msgstr "Uspesifisert feilmelding: %d %s"
 
 #: ../libsvn_ra_serf/util.c:1579
 msgid "The OPTIONS response did not include the requested version-controlled-configuration value"
 msgstr "OPTIONS-responsen manglet den forespurte «version-controlled-configuration»-verdien"
 
 #: ../libsvn_ra_serf/util.c:1693
-#, fuzzy, c-format
+#, c-format
 msgid "'%s': no lock token available"
-msgstr "Ingen låsnøkkel skaffet"
+msgstr "«%s»: Ingen låsnøkkel tilgjengelig"
 
 #: ../libsvn_ra_svn/client.c:135
 #, c-format
@@ -4275,9 +4270,8 @@ msgid "Expected 'revprops', found '%s'"
 msgstr "Forventet «revprops», fant «%s»"
 
 #: ../libsvn_ra_svn/client.c:2298
-#, fuzzy
 msgid "Error while replaying commit"
-msgstr "Under klargjøring av «%s» for innlegging"
+msgstr "Feil under avspilling av innlegging"
 
 #: ../libsvn_ra_svn/client.c:2359
 msgid "'get-deleted-rev' not implemented"
@@ -4405,15 +4399,13 @@ msgid "Source url '%s' is from different repository"
 msgstr "Kilde-URL «%s» er fra et forskjellig depot"
 
 #: ../libsvn_repos/commit.c:606
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "Checksum mismatch for resulting fulltext\n"
 "(%s)"
 msgstr ""
-"Kontrollsummene passer ikke for resultatfulltekst\n"
-"(%s):\n"
-"   forventet kontrollsum:  %s\n"
-"   gjeldende kontrollsum:  %s\n"
+"Kontrollsum stemmer ikke for resultatfulltekst\n"
+"(%s)"
 
 #: ../libsvn_repos/delta.c:191
 msgid "Unable to open root of edit"
@@ -4662,21 +4654,20 @@ msgstr "Summen av delblokkstørrelser er større enn total lengde av blokkinnhol
 msgid "<<< Started new transaction, based on original revision %ld\n"
 msgstr "<<< Startet ny transaksjon, basert på opprinnelig revisjon %ld\n"
 
+# >" This line is here to make Vim syntax highlighting happy
 #: ../libsvn_repos/load.c:1033
 #, c-format
 msgid "Relative source revision %ld is not available in current repository"
 msgstr "Relativ kilderevisjon %ld er ikke tilgjengelig i gjeldende depot"
 
 #: ../libsvn_repos/load.c:1049
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "Copy source checksum mismatch on copy from '%s'@%ld\n"
 "to '%s' in rev based on r%ld"
 msgstr ""
 "Kontrollsummen for kopikilde samsvarer ikke med kopi fra «%s»@%ld\n"
-" til «%s» i revisjonen basert på r%ld:\n"
-"  forventet:  %s\n"
-"    faktisk:  %s\n"
+"til «%s» i revisjonen basert på r%ld"
 
 #: ../libsvn_repos/load.c:1103
 msgid "Malformed dumpstream: Revision 0 must not contain node records"
@@ -4970,9 +4961,8 @@ msgid "Error initializing command line arguments"
 msgstr "Feil under initialisering av kommandolinjeargumenter"
 
 #: ../libsvn_subr/cmdline.c:659
-#, fuzzy
 msgid "Invalid syntax of argument of --config-option"
-msgstr "Ugyldig argument «%s» i diff-valg"
+msgstr "Ugyldig syntaks i argument til --config-option"
 
 #: ../libsvn_subr/cmdline.c:686
 #, c-format
@@ -5795,7 +5785,7 @@ msgid "Store passphrase unencrypted (yes/no)? "
 msgstr "Lagre passord ukryptert (ja/nei)?"
 
 #: ../libsvn_subr/prompt.c:477
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "\n"
 "-----------------------------------------------------------------------\n"
@@ -5812,6 +5802,7 @@ msgid ""
 "'no' in '%s'.\n"
 "-----------------------------------------------------------------------\n"
 msgstr ""
+"\n"
 "-----------------------------------------------------------------------\n"
 "OBS! Passordet ditt for klientsertifikat:\n"
 "\n"
@@ -5824,6 +5815,7 @@ msgstr ""
 "Hvis du vil forhindre at denne advarselen vises i framtiden, kan du sette\n"
 "verdien for «store-ssl-client-cert-pp-plaintext»-valget til enten «yes»\n"
 "eller «no» i «%s».\n"
+"-----------------------------------------------------------------------\n"
 
 #: ../libsvn_subr/prompt.c:523
 #, c-format
@@ -5856,7 +5848,7 @@ msgstr "SQLite er kompilert for %s, men kjører med %s"
 
 #: ../libsvn_subr/sqlite.c:673
 msgid "SQLite is required to be compiled and run in thread-safe mode"
-msgstr ""
+msgstr "SQLite må kompileres og kjøres i trådsikker modus"
 
 #: ../libsvn_subr/sqlite.c:683
 msgid "Could not configure SQLite"
@@ -5978,9 +5970,9 @@ msgid "Malformed XML: %s at line %ld"
 msgstr "Misdannet XML: %s i linje %ld"
 
 #: ../libsvn_wc/adm_crawler.c:772
-#, fuzzy, c-format
+#, c-format
 msgid "Can't retrieve base revision for %s"
-msgstr "hent alle revisjonsegenskaper"
+msgstr "Kan ikke hente baserevisjon for %s"
 
 #: ../libsvn_wc/adm_crawler.c:1071
 msgid "Error aborting report"
@@ -6021,9 +6013,9 @@ msgid "Unsupported node kind for path '%s'"
 msgstr "Nodetypen i filstien «%s» er ikke støttet"
 
 #: ../libsvn_wc/adm_ops.c:1181
-#, fuzzy, c-format
+#, c-format
 msgid "'%s' can not be deleted"
-msgstr "«%s» er ikke låst"
+msgstr "«%s» kan ikke slettes"
 
 #: ../libsvn_wc/adm_ops.c:1496
 #, c-format
@@ -6106,7 +6098,7 @@ msgstr ""
 #: ../libsvn_wc/copy.c:314
 #, c-format
 msgid "no parent with copyfrom information found above '%s'"
-msgstr ""
+msgstr "ingen foreldre med «copyfrom»-info ble funnet over «%s»"
 
 #: ../libsvn_wc/copy.c:402
 #, c-format
@@ -6134,29 +6126,27 @@ msgid "Cannot copy to '%s' as it is scheduled for deletion"
 msgstr "Kan ikke kopiere til «%s» fordi den er klargjort for sletting"
 
 #: ../libsvn_wc/copy.c:860
-#, fuzzy, c-format
+#, c-format
 msgid "'%s' is already under version control but is excluded."
-msgstr "«%s» er allerede under versjonskontroll"
+msgstr "«%s» er allerede under versjonskontroll, men er ekskludert"
 
 #: ../libsvn_wc/crop.c:264
-#, fuzzy
 msgid "Can only crop a working copy with a restrictive depth"
-msgstr "Kan ikke tilbakeføre til en arbeidskopi med et byttet katalogtre"
+msgstr "Kan bare kutte arbeidskopi med restriktiv dybde"
 
 #: ../libsvn_wc/crop.c:272 ../libsvn_wc/crop.c:288
-#, fuzzy
 msgid "Can only crop directories"
-msgstr "Kan ikke åpne katalogen «%s»"
+msgstr "Kan bare kutte kataloger"
 
 #: ../libsvn_wc/crop.c:293
-#, fuzzy, c-format
+#, c-format
 msgid "Cannot crop '%s': it is going to be removed from repository. Try commit instead"
-msgstr "Kan ikke kopiere eller flytte «%s»: Den er foreløpig ikke i depotet. Prøv innsending først"
+msgstr "Kan ikke kutte «%s», den skal fjernes fra depotet. Prøv innsending istedenfor"
 
 #: ../libsvn_wc/crop.c:302
-#, fuzzy, c-format
+#, c-format
 msgid "Cannot crop '%s': it is to be added to the repository. Try commit instead"
-msgstr "Kan ikke kopiere eller flytte «%s»: Den er foreløpig ikke i depotet. Prøv innsending først"
+msgstr "Kan ikke kutte «%s», den skal legges til i depotet. Prøv innsending istedenfor"
 
 #: ../libsvn_wc/crop.c:317
 #, c-format
@@ -6164,18 +6154,18 @@ msgid "Cannot exclude root directory"
 msgstr "Kan ikke ekskludere rotkatalog"
 
 #: ../libsvn_wc/crop.c:346
-#, fuzzy, c-format
+#, c-format
 msgid "Cannot crop '%s': it is a working copy root"
-msgstr "Kan ikke kopiere til «%s» fordi den er klargjort for sletting"
+msgstr "Kan ikke kutte «%s», det er roten på en arbeidskopi"
 
 #: ../libsvn_wc/crop.c:359
-#, fuzzy, c-format
+#, c-format
 msgid "Cannot crop '%s': it is a switched path"
-msgstr "Kan ikke kopiere til «%s» fordi den er klargjort for sletting"
+msgstr "Kan ikke kutte «%s», det er en byttet sti"
 
 #: ../libsvn_wc/entries.c:192
 msgid "No WC table entry"
-msgstr ""
+msgstr "Ingen arbeidskopi-tabellpost"
 
 #: ../libsvn_wc/entries.c:1275
 #, c-format
@@ -6239,9 +6229,9 @@ msgid "Path '%s' ends in '%s', which is unsupported for this operation"
 msgstr "Filstien «%s» slutter på «%s» som ikke er støttet til denne operasjonen"
 
 #: ../libsvn_wc/lock.c:408 ../libsvn_wc/upgrade.c:765
-#, fuzzy, c-format
+#, c-format
 msgid "Working copy format of '%s' is too old (%d); please run 'svn upgrade'"
-msgstr "Formatet til arbeidskopien «%s» er for gammelt (%d). Sjekk arbeidskopien igjen"
+msgstr "Formatet til arbeidskopien «%s» er for gammelt (%d), kjør «svn upgrade»"
 
 #: ../libsvn_wc/lock.c:680 ../libsvn_wc/wc_db.c:5325
 #, c-format
@@ -6362,9 +6352,9 @@ msgid "Error modifying entry of '%s'"
 msgstr "Feil under endring av oppføringen på «%s»"
 
 #: ../libsvn_wc/log.c:1307
-#, fuzzy, c-format
+#, c-format
 msgid "Error recording tree conflict on '%s'"
-msgstr "Feil ved gjenoppretting av tekst for «%s»"
+msgstr "Feil ved lagring av trekonflikt i «%s»"
 
 #: ../libsvn_wc/log.c:1332
 #, c-format
@@ -6382,9 +6372,9 @@ msgid "Error processing command '%s' in '%s'"
 msgstr "Feil under utføring av kommandoen «%s» i «%s»"
 
 #: ../libsvn_wc/log.c:1536
-#, fuzzy, c-format
+#, c-format
 msgid "Path '%s' is not a child of '%s'"
-msgstr "Filstien «%s» er ingen fil"
+msgstr "Stien «%s» er ikke barn av «%s»"
 
 #: ../libsvn_wc/log.c:2142
 #, c-format
@@ -6393,7 +6383,7 @@ msgstr "«%s» er ikke en arbeidskopikatalog"
 
 #: ../libsvn_wc/log.c:2148
 msgid "Log format too old, please use Subversion 1.6 or earlier"
-msgstr ""
+msgstr "Loggformatet er for gammelt, vennligst bruk Subversion 1.6 eller tidligere"
 
 #: ../libsvn_wc/merge.c:765 ../libsvn_wc/merge.c:994
 msgid "Conflict callback violated API: returned no results"
@@ -6448,14 +6438,14 @@ msgid "Entry for '%s' has invalid repository root"
 msgstr "Posten «%s» har ugyldig depotrot"
 
 #: ../libsvn_wc/old-and-busted.c:508
-#, fuzzy, c-format
+#, c-format
 msgid "Entry '%s' has invalid 'schedule' value"
-msgstr "Oppføringen «%s» har ugyldig «%s»-verdi"
+msgstr "Oppføringen «%s» har ugyldig «schedule»-verdi"
 
 #: ../libsvn_wc/old-and-busted.c:658
-#, fuzzy, c-format
+#, c-format
 msgid "Entry '%s' has invalid 'depth' value"
-msgstr "Oppføringen «%s» har ugyldig «%s»-verdi"
+msgstr "Oppføringen «%s» har ugyldig «depth»-verdi"
 
 #: ../libsvn_wc/old-and-busted.c:710 ../libsvn_wc/old-and-busted.c:832
 #, c-format
@@ -6637,9 +6627,9 @@ msgid "Error parsing %s property on '%s': '%s'"
 msgstr "Feil under tolking av %s-egenskapen på «%s»: «%s»"
 
 #: ../libsvn_wc/props.c:2621
-#, fuzzy, c-format
+#, c-format
 msgid "Can't split line into components: '%s'"
-msgstr "Kan ikke lese lengdelinje i filen «%s»"
+msgstr "Kan ikke splitte linje inn i komponenter: «%s»"
 
 #: ../libsvn_wc/props.c:2677
 #, c-format
@@ -6657,20 +6647,19 @@ msgid "Invalid %s property on '%s': target '%s' is an absolute path or involves 
 msgstr "Ugyldig %s-egenskap på «%s»: Målet «%s» er en absolutt filsti eller involverer «..»"
 
 #: ../libsvn_wc/questions.c:200
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "Checksum mismatch indicates corrupt text base: '%s':\n"
 "   expected:  %s\n"
 "     actual:  %s\n"
 msgstr ""
-"Kontrollsummer samsvarer ikke og indikerer ødelagt tekstbase: «%s»\n"
+"Feil i kontrollsum tyder på ødelagt tekstbase: «%s»:\n"
 "   forventet:  %s\n"
-"   gjeldende:  %s\n"
+"     faktisk:  %s\n"
 
 #: ../libsvn_wc/relocate.c:101
-#, fuzzy
 msgid "Cannot relocate a single file"
-msgstr "Kan ikke skrive lås/post-hashfil «%s»"
+msgstr "Kan ikke omplassere en enkelt fil"
 
 #: ../libsvn_wc/relocate.c:106
 msgid "Given source URL invalid"
@@ -6686,21 +6675,20 @@ msgid "Unknown enumeration value in tree conflict description"
 msgstr ""
 
 #: ../libsvn_wc/tree_conflicts.c:185
-#, fuzzy
 msgid "Invalid version info in tree conflict description"
-msgstr "Ugyldig versjonslinje i «entries»-fil for «%s»"
+msgstr "Ugyldig versjonsinfo i beskrivelse for trekonflikt"
 
 #: ../libsvn_wc/tree_conflicts.c:245
 msgid "Invalid conflict info in tree conflict description"
-msgstr ""
+msgstr "Ugyldig konfliktinfo i beskrivelse for trekonflikt"
 
 #: ../libsvn_wc/tree_conflicts.c:254
 msgid "Empty 'victim' field in tree conflict description"
-msgstr ""
+msgstr "Tomt «victim»-felt i beskrivelse for trekonflikt"
 
 #: ../libsvn_wc/tree_conflicts.c:262
 msgid "Invalid 'node_kind' field in tree conflict description"
-msgstr ""
+msgstr "Ugyldig «node_kind»-felt i beskrivelse for trekonflikt"
 
 #: ../libsvn_wc/tree_conflicts.c:326
 #, fuzzy
@@ -6708,9 +6696,9 @@ msgid "Error parsing tree conflict skel"
 msgstr "Feil under tolking av argumenter"
 
 #: ../libsvn_wc/tree_conflicts.c:508
-#, fuzzy, c-format
+#, c-format
 msgid "Attempt to add tree conflict that already exists at '%s'"
-msgstr "Forsøkte å opprette post som allerede finnes"
+msgstr "Forsøk på å legge til trekonflikt som allerede eksisterer i «%s»"
 
 #: ../libsvn_wc/update_editor.c:1026
 #, c-format
@@ -6744,14 +6732,14 @@ msgid "Failed to add directory '%s': an unversioned directory of the same name a
 msgstr "Klarte ikke å legge til katalogen «%s»: En uversjonert katalog med det samme navnet finnes allerede"
 
 #: ../libsvn_wc/update_editor.c:2443
-#, fuzzy, c-format
+#, c-format
 msgid "Failed to add directory '%s': a separate working copy with the same name already exists"
-msgstr "Klarte ikke å legge til katalogen «%s»: En versjonert katalog med det samme navnet finnes allerede"
+msgstr "Klarte ikke å legge til katalogen «%s»: En separat arbeidskopi med det samme navnet finnes allerede"
 
 #: ../libsvn_wc/update_editor.c:2452
-#, fuzzy, c-format
+#, c-format
 msgid "Switched directory '%s' does not match expected URL '%s'"
-msgstr "URL-en «%s» for eksisterende katalog «%s» samsvarer ikke med forventet URL «%s»"
+msgstr "Byttet katalog «%s» samsvarer ikke med forventet URL «%s»"
 
 #: ../libsvn_wc/update_editor.c:2598
 #, c-format
@@ -6782,9 +6770,9 @@ msgid "Failed to add file '%s': an unversioned file of the same name already exi
 msgstr "Klarte ikke å legge til filen «%s»: En uversjonert fil med det samme navnet finnes allerede"
 
 #: ../libsvn_wc/update_editor.c:3696
-#, fuzzy, c-format
+#, c-format
 msgid "UUID mismatch: existing file '%s' was checked out from a different repository"
-msgstr "Kilde-URL «%s» er fra et forskjellig depot"
+msgstr "UUID stemmer ikke: Eksisterende fil «%s» ble hentet ut fra et annet depot"
 
 #: ../libsvn_wc/update_editor.c:3704
 #, c-format
@@ -6814,7 +6802,7 @@ msgstr "Mangler linjeslutt i «wcprops»-fil for «%s»"
 
 #: ../libsvn_wc/upgrade.c:329
 msgid "Cannot upgrade with existing logs; please run 'svn cleanup' with Subversion 1.6"
-msgstr ""
+msgstr "Kan ikke oppgradere med eksisterende logger; vennligst kjør «svn cleanup» med Subversion 1.6"
 
 #: ../libsvn_wc/upgrade.c:880
 msgid "'svn upgrade' can only be run from the root of the working copy."
@@ -6861,12 +6849,12 @@ msgstr ""
 #: ../libsvn_wc/wc_db.c:478
 #, c-format
 msgid "No REPOSITORY table entry for id '%ld'"
-msgstr ""
+msgstr "Ingen «REPOSITORY»-tabellpost for id «%ld»"
 
 #: ../libsvn_wc/wc_db.c:532
 #, c-format
 msgid "Parent(s) of '%s' should have been present."
-msgstr ""
+msgstr "Foreldre for «%s» skulle vært tilstede."
 
 #: ../libsvn_wc/wc_db.c:572
 #, c-format
@@ -6914,9 +6902,9 @@ msgid "Error restoring text for '%s'"
 msgstr "Feil ved gjenoppretting av tekst for «%s»"
 
 #: ../libsvn_wc/workqueue.c:925
-#, fuzzy, c-format
+#, c-format
 msgid "Unrecognized work item in the queue associated with '%s'"
-msgstr "Det ble bedt om en ukjent revisjonstype for «%s»"
+msgstr "Ukjent arbeidselement i køen assosiert med «%s»"
 
 #: ../svn/blame-cmd.c:283 ../svn/list-cmd.c:232
 msgid "'verbose' option invalid in XML mode"
@@ -7201,9 +7189,9 @@ msgid "Target lists to diff may not contain both working copy paths and URLs"
 msgstr "Mållistene for diff kan ikke inneholde både arbeidskopi-stier og URL-er"
 
 #: ../svn/diff-cmd.c:323
-#, fuzzy, c-format
+#, c-format
 msgid "Path '%s' not relative to base URLs"
-msgstr "Filstien «%s» er ikke en URL"
+msgstr "Filstien «%s» er ikke relativ til base-URLer"
 
 #: ../svn/export-cmd.c:94
 msgid "Destination directory exists; please remove the directory or use --force to overwrite"
@@ -7457,11 +7445,11 @@ msgstr "Trekonflikt"
 
 #: ../svn/info-cmd.c:450
 msgid "Source  left"
-msgstr ""
+msgstr "Venstre kilde"
 
 #: ../svn/info-cmd.c:459
 msgid "Source right"
-msgstr ""
+msgstr "Høyre kilde"
 
 #: ../svn/info-cmd.c:544
 #, c-format
@@ -7761,13 +7749,12 @@ msgstr ""
 "                             beregnes"
 
 #: ../svn/main.c:225
-#, fuzzy
 msgid ""
 "ignore externals definitions\n"
 "                             [aliases: --ie]"
 msgstr ""
-"operer bare på medlemmer av forandringsliste ARG\n"
-"                             [alias: --cl]"
+"ignorer externals-definisjoner\n"
+"                             [alias: --ie]"
 
 #: ../svn/main.c:228
 msgid "use ARG as diff command"
@@ -8340,7 +8327,6 @@ msgid "force validity of lock comment source"
 msgstr "krev at kilden for låsekommentaren er gyldig"
 
 #: ../svn/main.c:582
-#, fuzzy
 msgid ""
 "Show the log messages for a set of revision(s) and/or file(s).\n"
 "usage: 1. log [PATH]\n"
@@ -8374,7 +8360,7 @@ msgid ""
 "    svn log http://www.example.com/repo/project/foo.c\n"
 "    svn log http://www.example.com/repo/project foo.c bar.c\n"
 msgstr ""
-"Viser loggmeldinger for revisjoner og/eller filer.\n"
+"Viser loggmeldinger for et sett med revisjoner og/eller filer.\n"
 "bruk: 1. log [STI]\n"
 "      2. log URL[@REV] [STI...]\n"
 "\n"
@@ -8386,19 +8372,22 @@ msgstr ""
 "     og standard revisjonsområde er REV:1. Ellers blir URLen lett opp i HEAD,\n"
 "     og standard revisjonsområde er HEAD:1.\n"
 "\n"
+"Flere «-c»- og «-r»-valg kan spesifiseres (men ikke kombinasjoner av\n"
+"«-c» og «-r»), og blanding av områder framover og bakover er tillatt.\n"
+"\n"
 "  Hvis -v brukes, vises alle berørte filstier med hver sin loggmelding.\n"
 "  Hvis -q brukes, skrives ikke loggmelding (kan brukes sammen med -v).\n"
 "\n"
 "  Hver loggmelding skrives ut kun én gang, dette gjelder også selv om flere av\n"
 "  filstiene for den angitte revisjonen er klart angitt. Som standard følger\n"
-"  loggene kopi-historikken. For å bestemme forgreningspunkter er det lurt å\n"
-"  bruke --stop-on-copy for å forhindre denne oppførselen.\n"
+"  loggene kopi-historikken. Bruk --stop-on-copy for å slå av denne\n"
+"  oppførselen, noe som kan være nyttig for å finne forgreningspunkter.\n"
 "\n"
 "  Eksempler:\n"
 "    svn log\n"
 "    svn log foo.c\n"
-"    svn log http://www.example.com/repo/project/foo.c\n"
-"    svn log http://www.example.com/repo/project foo.c bar.c\n"
+"    svn log http://www.example.com/repo/prosjekt/foo.c\n"
+"    svn log http://www.example.com/repo/prosjekt foo.c bar.c\n"
 
 #: ../svn/main.c:615
 msgid "retrieve revision property ARG"
@@ -9448,27 +9437,27 @@ msgstr ""
 
 #: ../svn/notify.c:92
 msgid "Summary of conflicts:\n"
-msgstr ""
+msgstr "Oversikt over konflikter:\n"
 
 #: ../svn/notify.c:105
 #, c-format
 msgid "  Text conflicts: %u\n"
-msgstr ""
+msgstr "  Tekstkonflikter: %u\n"
 
 #: ../svn/notify.c:109
-#, fuzzy, c-format
+#, c-format
 msgid "  Property conflicts: %u\n"
-msgstr "Fant ikke egenskap"
+msgstr "  Egenskapskonflikter: %u\n"
 
 #: ../svn/notify.c:113
 #, c-format
 msgid "  Tree conflicts: %u\n"
-msgstr ""
+msgstr "  Trekonflikter: %u\n"
 
 #: ../svn/notify.c:117
-#, fuzzy, c-format
+#, c-format
 msgid "  Skipped paths: %u\n"
-msgstr "Hoppet over «%s»\n"
+msgstr "  Stier hoppet over: %u\n"
 
 #: ../svn/notify.c:154
 #, c-format
@@ -9478,7 +9467,7 @@ msgstr "Hoppet over savnet mål: «%s»\n"
 #: ../svn/notify.c:161
 #, c-format
 msgid "Skipped target: '%s' -- copy-source is missing\n"
-msgstr ""
+msgstr "Hoppet over mål: «%s» -- kopikilde mangler\n"
 
 #: ../svn/notify.c:168
 #, c-format
@@ -9724,23 +9713,21 @@ msgid "property '%s' deleted from repository revision %ld\n"
 msgstr "Egenskap «%s» slettet fra depot-revisjon %ld\n"
 
 #: ../svn/notify.c:661
-#, fuzzy, c-format
+#, c-format
 msgid "Upgraded '%s'.\n"
-msgstr "Hoppet over «%s»\n"
+msgstr "Oppgraderte «%s».\n"
 
 #: ../svn/obliterate-cmd.c:65
-#, fuzzy
 msgid "Wrong number of arguments"
-msgstr "Feil antall mål angitt"
+msgstr "Feil antall argumenter"
 
 #: ../svn/obliterate-cmd.c:70
-#, fuzzy
 msgid "Target must specify the revision as a number"
-msgstr "angi revisjonsnummer ARG"
+msgstr "Målet må angi revisjonen som et nummer"
 
 #: ../svn/obliterate-cmd.c:73
 msgid "Target must specify a URL"
-msgstr ""
+msgstr "Målet må spesifisere en URL"
 
 #: ../svn/propdel-cmd.c:118
 #, c-format
@@ -9748,9 +9735,9 @@ msgid "Cannot specify revision for deleting versioned property '%s'"
 msgstr "Kan ikke angi revisjon for sletting av versjonert egenskap «%s»"
 
 #: ../svn/propdel-cmd.c:152
-#, fuzzy, c-format
+#, c-format
 msgid "Attempting to delete nonexistent property '%s'"
-msgstr "Forsøkte å åpne ikke-eksisterende barnenode «%s»"
+msgstr "Forsøker å slette ikke-eksisterende egenskap «%s»"
 
 #: ../svn/propedit-cmd.c:73 ../svn/propset-cmd.c:94
 msgid "--encoding option applies only to textual Subversion-controlled properties"
@@ -9872,38 +9859,36 @@ msgstr "«%s» til «%s» er ikke en gyldig relokalisering"
 
 #: ../svn/tree-conflicts.c:38 ../svn/tree-conflicts.c:58
 msgid "edit"
-msgstr ""
+msgstr "redigere"
 
 #: ../svn/tree-conflicts.c:39 ../svn/tree-conflicts.c:59
-#, fuzzy
 msgid "delete"
-msgstr "Slettet"
+msgstr "slette"
 
 #: ../svn/tree-conflicts.c:40 ../svn/tree-conflicts.c:62
 msgid "add"
-msgstr ""
+msgstr "legge til"
 
 #: ../svn/tree-conflicts.c:41 ../svn/tree-conflicts.c:63
 msgid "replace"
-msgstr ""
+msgstr "erstatte"
 
 #: ../svn/tree-conflicts.c:60
 msgid "missing"
-msgstr ""
+msgstr "manglende"
 
 #: ../svn/tree-conflicts.c:61
-#, fuzzy
 msgid "obstruction"
-msgstr "Transaksjon ikke funnet"
+msgstr "skjult"
 
 #: ../svn/tree-conflicts.c:64
 msgid "unversioned"
-msgstr ""
+msgstr "uversjonert"
 
 #: ../svn/tree-conflicts.c:108
 #, c-format
 msgid "local %s, incoming %s upon %s"
-msgstr ""
+msgstr "lokal %s, innkommende %s på %s"
 
 #: ../svn/util.c:72
 #, c-format
@@ -9962,7 +9947,7 @@ msgstr "Miljøvariabelen SVN_MERGE og innstillingen «merge-tool-cmd» er ikke d
 #: ../svn/util.c:277
 #, c-format
 msgid "The external merge tool exited with exit code %d"
-msgstr ""
+msgstr "Det eksterne fletteverktøyet avsluttet med sluttkode %d"
 
 #: ../svn/util.c:399
 #, c-format
@@ -10008,36 +9993,32 @@ msgstr ""
 "avbryt (a), fortsett (c), rediger (e)\n"
 
 #: ../svn/util.c:896
-#, fuzzy
 msgid "Use --force to override this restriction (local modifications may be lost)"
-msgstr "Bruk --force for å komme rundt denne begrensningen"
+msgstr "Bruk --force for å overstyre denne begrensningen (lokale forandringer kan gå tapt)"
 
 #: ../svn/util.c:1046 ../svn/util.c:1079
-#, fuzzy
 msgid "none"
-msgstr "nei"
+msgstr "ingen"
 
 #: ../svn/util.c:1047
 msgid "file"
-msgstr ""
+msgstr "fil"
 
 #: ../svn/util.c:1048
 msgid "dir"
-msgstr ""
+msgstr "katalog"
 
 #: ../svn/util.c:1080
-#, fuzzy
 msgid "update"
-msgstr "Ugyldig dato"
+msgstr "oppdatere"
 
 #: ../svn/util.c:1081
-#, fuzzy
 msgid "switch"
-msgstr "Ugyldig valg"
+msgstr "bytte"
 
 #: ../svn/util.c:1082
 msgid "merge"
-msgstr ""
+msgstr "flette"
 
 #: ../svn/util.c:1198
 msgid "(invalid date)"
@@ -10166,13 +10147,12 @@ msgstr ""
 "                             Subversionversjoner tidligere enn 1.5"
 
 #: ../svnadmin/main.c:316
-#, fuzzy
 msgid ""
 "use format compatible with Subversion versions\n"
 "                             earlier than 1.6"
 msgstr ""
 "bruk format som er kompatibelt med\n"
-"                             Subversionversjoner tidligere enn 1.4"
+"                             Subversionversjoner tidligere enn 1.6"
 
 #: ../svnadmin/main.c:329
 msgid ""
@@ -10329,6 +10309,10 @@ msgid ""
 "Possibly compact the repository into a more efficient storage model.\n"
 "This may not apply to all repositories, in which case, exit.\n"
 msgstr ""
+"bruk: svnadmin pack DEPOTSTI\n"
+"\n"
+"Prøv å pakke depotet med en mer effektiv lagringsmodell.\n"
+"Det kan hende dette ikke gjelder alle depoter, og i så fall, avslutt.\n"
 
 #: ../svnadmin/main.c:413
 msgid ""
@@ -10594,7 +10578,7 @@ msgid "Expires: %s\n"
 msgstr "Utgår: %s\n"
 
 #: ../svnadmin/main.c:1269
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "Comment (%i line):\n"
 "%s\n"
@@ -10608,7 +10592,7 @@ msgstr[0] ""
 "%s\n"
 "\n"
 msgstr[1] ""
-"Kommentar (%i linje):\n"
+"Kommentar (%i linjer):\n"
 "%s\n"
 "\n"
 
@@ -10803,7 +10787,7 @@ msgid "Including prefixes:\n"
 msgstr "Inkluderer prefikser:\n"
 
 #: ../svndumpfilter/main.c:1083
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "Dropped %d revision.\n"
 "\n"
@@ -10811,10 +10795,10 @@ msgid_plural ""
 "Dropped %d revisions.\n"
 "\n"
 msgstr[0] ""
-"Droppet %d revisjon(er).\n"
+"Droppet %d revisjon.\n"
 "\n"
 msgstr[1] ""
-"Droppet %d revisjon(er).\n"
+"Droppet %d revisjoner.\n"
 "\n"
 
 #: ../svndumpfilter/main.c:1091
@@ -10827,11 +10811,11 @@ msgid "   %ld => (dropped)\n"
 msgstr "   %ld => (droppet)\n"
 
 #: ../svndumpfilter/main.c:1134
-#, fuzzy, c-format
+#, c-format
 msgid "Dropped %d node:\n"
 msgid_plural "Dropped %d nodes:\n"
-msgstr[0] "Droppet %d node(r):\n"
-msgstr[1] "Droppet %d node(r):\n"
+msgstr[0] "Droppet %d node:\n"
+msgstr[1] "Droppet %d noder:\n"
 
 #: ../svndumpfilter/main.c:1400
 #, c-format
@@ -10996,17 +10980,16 @@ msgstr ""
 "underfiler er forandret.\n"
 
 #: ../svnlook/main.c:221
-#, fuzzy
 msgid ""
 "usage: svnlook filesize REPOS_PATH PATH_IN_REPOS\n"
 "\n"
 "Print the size (in bytes) of the file located at PATH_IN_REPOS as\n"
 "it is represented in the repository.\n"
 msgstr ""
-"bruk: svnadmin lslocks DEPOTSTI [STI-I-DEPOT]\n"
+"bruk: svnlook filesize DEPOTSTI STI_I_DEPOT\n"
 "\n"
-"Vis beskrivelser av alle låser i eller under STI-I-DEPOT (som, hvis ikke\n"
-"angitt, er roten av depotet).\n"
+"Vis størrelsen (i bytes) for filen lokalisert i STI_I_DEPOT sånn som\n"
+"den representeres i depotet.\n"
 
 #: ../svnlook/main.c:227
 msgid ""
@@ -11248,7 +11231,7 @@ msgid "Missing path argument"
 msgstr "Mangler stiargument"
 
 #: ../svnlook/main.c:2030
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "Comment (%i line):\n"
 "%s\n"
@@ -11259,7 +11242,7 @@ msgstr[0] ""
 "Kommentar (%i linje):\n"
 "%s\n"
 msgstr[1] ""
-"Kommentar (%i linje):\n"
+"Kommentar (%i linjer):\n"
 "%s\n"
 
 #: ../svnlook/main.c:2078
@@ -11281,7 +11264,6 @@ msgid "Invalid revision number supplied"
 msgstr "Det er angitt ugyldig revisjonsnummer"
 
 #: ../svnlook/main.c:2336
-#, fuzzy
 msgid "The '--transaction' (-t) and '--revision' (-r) arguments cannot co-exist"
 msgstr "Argumentene «--transaction» (-t) og «--revision» (-r) kan ikke brukes sammen"
 
@@ -11360,12 +11342,16 @@ msgid ""
 "listen port\n"
 "                             [mode: daemon, service, listen-once]"
 msgstr ""
+"lytteport\n"
+"                             [modus: daemon, tjeneste, lytt-en-gang]"
 
 #: ../svnserve/main.c:168
 msgid ""
 "listen port\n"
 "                             [mode: daemon, listen-once]"
 msgstr ""
+"lytteport\n"
+"                             [modus: daemon, lytt-en-gang]"
 
 #: ../svnserve/main.c:174
 msgid ""
@@ -11374,11 +11360,12 @@ msgid ""
 msgstr ""
 
 #: ../svnserve/main.c:178
-#, fuzzy
 msgid ""
 "listen hostname or IP address\n"
 "                             [mode: daemon, listen-once]"
-msgstr "tjenernavn eller IP-adresse for lytting (for tjenestemodus)"
+msgstr ""
+"tjenernavn eller IP-adresse for lytting\n"
+"                             [modus: daemon, lytt-en-gang]"
 
 #. ### Making the assumption here that WIN32 never has fork and so
 #. * ### this option never exists when --service exists.
@@ -11661,7 +11648,7 @@ msgstr "vis så lite informasjon som mulig"
 
 #: ../svnsync/main.c:148
 msgid "allow a non-empty destination repository"
-msgstr ""
+msgstr "tillat at måldepotet ikke er tomt"
 
 #: ../svnsync/main.c:154
 msgid ""
@@ -11735,9 +11722,8 @@ msgid "Destination repository is already synchronizing from '%s'"
 msgstr "Måldepotet synkroniserer allerede fra «%s»"
 
 #: ../svnsync/main.c:726
-#, fuzzy
 msgid "Destination repository has more revisions than source repository"
-msgstr "Måldepotet er ikke blitt initialisert"
+msgstr "Måldepotet har flere revisjoner enn kildedepotet"
 
 #: ../svnsync/main.c:790 ../svnsync/main.c:793 ../svnsync/main.c:1271
 #: ../svnsync/main.c:1427 ../svnsync/main.c:1468
@@ -11785,25 +11771,25 @@ msgid "Invalid revision number (%ld)"
 msgstr "Ugyldig revisjonsnummer (%ld)"
 
 #: ../svnsync/main.c:1482
-#, fuzzy, c-format
+#, c-format
 msgid "Repository '%s' is not initialized for synchronization"
-msgstr "For denne operasjonen kreves tilgang til depotet"
+msgstr "Depotet «%s» er ikke initialisert for synkronisering"
 
 #. Print the info.
 #: ../svnsync/main.c:1491
-#, fuzzy, c-format
+#, c-format
 msgid "Source URL: %s\n"
-msgstr "Nettadresse: %s\n"
+msgstr "Kilde-URL: %s\n"
 
 #: ../svnsync/main.c:1493
-#, fuzzy, c-format
+#, c-format
 msgid "Source Repository UUID: %s\n"
-msgstr "Depotets UUID: %s\n"
+msgstr "Kildedepotets UUID: %s\n"
 
 #: ../svnsync/main.c:1496
-#, fuzzy, c-format
+#, c-format
 msgid "Last Merged Revision: %s\n"
-msgstr "Siste endrede revisjon: %ld\n"
+msgstr "Siste flettede revisjon: %s\n"
 
 #: ../svnsync/main.c:1513
 msgid ""
@@ -11913,49 +11899,30 @@ msgid "last changed rather than current revisions"
 msgstr "sist endrede i stedet for aktuelle revisjoner"
 
 #: ../svnversion/main.c:232
-#, fuzzy, c-format
+#, c-format
 msgid "Unversioned directory%s"
-msgstr "Ingen versjonerte foreldrekataloger"
+msgstr "Uversjonert katalog%s"
 
 #: ../svnversion/main.c:250 ../svnversion/main.c:263
 #, c-format
 msgid "Unversioned file%s"
-msgstr ""
+msgstr "Uversjonert fil%s"
 
 #: ../svnversion/main.c:272
-#, fuzzy, c-format
+#, c-format
 msgid "'%s' doesn't exist\n"
-msgstr "«%s» finnes ikke"
+msgstr "«%s» finnes ikke\n"
 
 #: ../svnversion/main.c:280
 #, c-format
 msgid "'%s' is of unknown type\n"
-msgstr ""
+msgstr "«%s» er av en ukjent type\n"
 
 #~ msgid "; run 'svn update' to complete it"
 #~ msgstr "; kjør «svn update» for å fullføre den"
 
-#, fuzzy
-#~ msgid "unexpected kind for revert-base '%s'"
-#~ msgstr "Ukjent eller uventet type av filstien «%s»:"
-
 #~ msgid "Error during recursive copy of '%s'"
 #~ msgstr "Feil under rekursiv kopiering av «%s»"
-
-#~ msgid "Cannot exclude current directory"
-#~ msgstr "Kan ikke ekskludere gjeldende katalog"
-
-#~ msgid "No such entry: '%s'"
-#~ msgstr "Post ikke funnet: «%s»"
-
-#~ msgid "Expected '%s' to be a file but found a directory"
-#~ msgstr "Forventet at «%s» skulle være en fil, men fant en katalog"
-
-#~ msgid "Directory '%s' containing working copy admin area is missing"
-#~ msgstr "Katalogen «%s» som inneholder administrasjonsområdet for arbeidskopien mangler"
-
-#~ msgid "Unable to lock '%s'"
-#~ msgstr "Klarer ikke å låse «%s»"
 
 #~ msgid "Write-lock stolen in '%s'"
 #~ msgstr "Skrivelåsen er stjålet i «%s»"
@@ -11969,21 +11936,39 @@ msgstr ""
 #~ msgid "Error writing log for '%s'"
 #~ msgstr "Feil under skriving av loggfil for «%s»"
 
-#, fuzzy
 #~ msgid "Directory '%s' is missing or obstructed"
-#~ msgstr "Katalogen «%s» mangler"
+#~ msgstr "Katalogen «%s» mangler eller er sperret"
 
 #~ msgid "UUID mismatch: existing directory '%s' was checked out from a different repository"
 #~ msgstr "UUID samsvarer ikke: Eksisterende katalog «%s» er hentet ut fra et annet depot"
 
+#~ msgid "'%s' has no ancestry information"
+#~ msgstr "«%s» mangler informasjon om opprinnelse"
+
 #~ msgid "Bad copyfrom arguments received"
 #~ msgstr "Feil i mottatte «copyfrom»-argumenter"
+
+#~ msgid "Expected '%s' to be a file but found a directory"
+#~ msgstr "Forventet at «%s» skulle være en fil, men fant en katalog"
+
+#~ msgid "Directory '%s' containing working copy admin area is missing"
+#~ msgstr "Katalogen «%s» som inneholder administrasjonsområdet for arbeidskopien mangler"
+
+#~ msgid "Unable to lock '%s'"
+#~ msgstr "Klarer ikke å låse «%s»"
+
+#~ msgid "Cannot exclude current directory"
+#~ msgstr "Kan ikke ekskludere gjeldende katalog"
+
+#~ msgid "No such entry: '%s'"
+#~ msgstr "Post ikke funnet: «%s»"
 
 #~ msgid "File '%s' in directory '%s' is not a versioned resource"
 #~ msgstr "Filen «%s» i katalogen «%s» er ikke en versjonert ressurs"
 
-#~ msgid "'%s' has no ancestry information"
-#~ msgstr "«%s» mangler informasjon om opprinnelse"
+#, fuzzy
+#~ msgid "unexpected kind for revert-base '%s'"
+#~ msgstr "Ukjent eller uventet type av filstien «%s»:"
 
 #~ msgid "Entry '%s' has invalid depth"
 #~ msgstr "Posten «%s» har ugyldig dybde"
@@ -11997,9 +11982,8 @@ msgstr ""
 #~ msgid "Destination URLs are broken"
 #~ msgstr "Mål-URLer er ødelagt"
 
-#, fuzzy
 #~ msgid "unknown operation"
-#~ msgstr "Autorisasjonsmetoden er ukjent"
+#~ msgstr "ukjent operasjon"
 
 #~ msgid "blame of the WORKING revision is not supported"
 #~ msgstr "«blame» for ARBEID-revisjonen er ikke støttet"
@@ -12181,3 +12165,570 @@ msgstr ""
 
 #~ msgid "'%s' not versioned, and not exported\n"
 #~ msgstr "«%s» er verken versjonert eller eksportert\n"
+
+#~ msgid "  Source path: %s\n"
+#~ msgstr "  Kildesti: %s"
+
+#~ msgid ""
+#~ "specify automatic conflict resolution source\n"
+#~ "                             '"
+#~ msgstr ""
+#~ "spesifiser kilde for automatisk konfliktløsing\n"
+#~ "                             '"
+
+#~ msgid "'%s' is neither a file nor a directory"
+#~ msgstr "«%s» er verken en fil eller katalog"
+
+#~ msgid "Destination does not exist: '%s'"
+#~ msgstr "Målet finnes ikke: «%s»"
+
+#~ msgid "Invalid revision number"
+#~ msgstr "Ugyldig revisjonsnummer"
+
+#~ msgid "No revision list found "
+#~ msgstr "Fant ingen revisjonsliste "
+
+#~ msgid "Path '%s' is missing"
+#~ msgstr "Stien «%s» mangler"
+
+#~ msgid "The OPTIONS response did not include the requested baseline-relative-path value"
+#~ msgstr "OPTIONS-responsen manglet den forespurte «baseline-relative-path»-verdien"
+
+#~ msgid "   %ld => %ld\n"
+#~ msgstr "   %ld => %ld\n"
+
+#~ msgid " arg"
+#~ msgstr " arg"
+
+#~ msgid ""
+#~ "'%s' hook failed with error output:\n"
+#~ "%s"
+#~ msgstr ""
+#~ "«%s»-påhakning feilet med feilmeldinger:\n"
+#~ "%s"
+
+#~ msgid "'%s' is scheduled for deletion; it must be committed before it can be overwritten"
+#~ msgstr "«%s» er klarert for sletting; den må legges inn før den kan overskrives"
+
+#~ msgid ""
+#~ "Check out a working copy from a repository.\n"
+#~ "usage: checkout URL[@REV]... [PATH]\n"
+#~ "\n"
+#~ "  If specified, REV determines in which revision the URL is first\n"
+#~ "  looked up.\n"
+#~ "\n"
+#~ "  If PATH is omitted, the basename of the URL will be used as\n"
+#~ "  the destination. If multiple URLs are given each will be checked\n"
+#~ "  out into a sub-directory of PATH, with the name of the sub-directory\n"
+#~ "  being the basename of the URL.\n"
+#~ msgstr ""
+#~ "Hent ut en arbeidskopi fra et depot.\n"
+#~ "bruk: checkout URL[@REV]... [STI]\n"
+#~ "\n"
+#~ "  Hvis REV er spesifisert, bestemmer dette revisjonen URLen først blir\n"
+#~ "  lett opp.\n"
+#~ "\n"
+#~ "  Nettadressens basenavn blir brukt som målkatalog hvis STI er utelatt.\n"
+#~ "  Hvis flere nettadresser oppgis, blir hver nettadresse hentet ut i en under-\n"
+#~ "  katalog under STI hvor underkatalogen får samme navn som nettadressens\n"
+#~ "  basenavn.\n"
+
+#~ msgid "Currently copying rev %ld in source is less than latest rev in destination (%ld)"
+#~ msgstr "Kilderevisjonen %ld som kopieres er mindre enn den seneste revisjonen i målet (%ld)"
+
+#~ msgid "No deletion changes for path '%s' in transaction '%s' of filesystem '%s'"
+#~ msgstr "Ingen sletteforandringer for sti «%s» i transaksjon «%s» i filsystem «%s»"
+
+#~ msgid ""
+#~ "Send changes from your working copy to the repository.\n"
+#~ "usage: commit [PATH...]\n"
+#~ "\n"
+#~ "  A log message must be provided, but it can be empty.\n"
+#~ "  OS400 does not support the starting of an editor,\n"
+#~ "  so --message or --file must be used. If any targets are\n"
+#~ "  (or contain) locked items, those will be unlocked after a\n"
+#~ "  successful commit.\n"
+#~ msgstr ""
+#~ "Send endringer fra arbeidskopien til depotet.\n"
+#~ "bruk: commit [STI...]\n"
+#~ "\n"
+#~ "  En loggmelding må være med, men den kan være tom. OS400 støtter ikke\n"
+#~ "  kjøring av en tekstbehandler, så --message eller --file må brukes.\n"
+#~ "  Hvis noen mål er (eller inneholder) låste elementer, vil disse bli\n"
+#~ "  låst opp etter en vellykket innlegging.\n"
+
+#~ msgid ""
+#~ "Sorry, '(d)iff' is not yet implemented; see\n"
+#~ "http://subversion.tigris.org/issues/show_bug.cgi?id=3048\n"
+#~ "\n"
+#~ msgstr ""
+#~ "Beklager, «(d) - diff» er ikke lagt inn enda; se\n"
+#~ "http://subversion.tigris.org/issues/show_bug.cgi?id=3048\n"
+#~ "\n"
+
+#~ msgid ""
+#~ "Sorry, '(m)ine' is not yet implemented; see\n"
+#~ "http://subversion.tigris.org/issues/show_bug.cgi?id=3049\n"
+#~ "\n"
+#~ msgstr ""
+#~ "Beklager, «(m) - min» er ikke lagt inn enda; se\n"
+#~ "http://subversion.tigris.org/issues/show_bug.cgi?id=3049\n"
+#~ "\n"
+
+#~ msgid ""
+#~ "Sorry, '(t)heirs' is not yet implemented; see\n"
+#~ "http://subversion.tigris.org/issues/show_bug.cgi?id=3049\n"
+#~ "\n"
+#~ msgstr ""
+#~ "Beklager, «(t) - deres» er ikke lagt inn enda; se\n"
+#~ "http://subversion.tigris.org/issues/show_bug.cgi?id=3049\n"
+#~ "\n"
+
+#~ msgid "The entry '%s' is no longer a directory; remove the entry before updating"
+#~ msgstr "Posten «%s» er ikke lengre en katalog. Slett den før oppdatering"
+
+#~ msgid ""
+#~ "Warning: -R is deprecated.\n"
+#~ "Anonymous access is now read-only by default.\n"
+#~ "To change, use conf/svnserve.conf in repos:\n"
+#~ "  [general]\n"
+#~ "  anon-access = read|write|none (default read)\n"
+#~ "  auth-access = read|write|none (default write)\n"
+#~ "Forcing all access to read-only for now\n"
+#~ msgstr ""
+#~ "Advarsel: -R er avlegs.\n"
+#~ "Anonym tilgang er nå skrivebeskyttet som standard.\n"
+#~ "For å forandre dette, bruk conf/svnserve.conf i depotet:\n"
+#~ "  [general]\n"
+#~ "  anon-access = read|write|none (standard: read)\n"
+#~ "  auth-access = read|write|none (standard: write)\n"
+#~ "Setter all tilgang til skrivebeskyttet i denne omgang\n"
+
+#~ msgid ""
+#~ "\n"
+#~ "You can avoid future appearances of this warning by setting the value\n"
+#~ "of the 'store-plaintext-passwords' option to either 'yes' or 'no' in\n"
+#~ "'%s'.\n"
+#~ msgstr ""
+#~ "\n"
+#~ "Du kan slå av framtidige visninger av denne advarselen ved å sette verdien\n"
+#~ "for «store-plaintext-passwords»-valget til enten «yes» eller «no» i\n"
+#~ "«%s».\n"
+
+#~ msgid ""
+#~ "disallow use of SVNDIFF1 in on-disk storage,\n"
+#~ "                             for backwards compatibility"
+#~ msgstr ""
+#~ "forby bruk av SVNDIFF1 i lagring på disk\n"
+#~ "                             for bakoverkompatibilitet"
+
+#~ msgid ""
+#~ "usage: svnadmin lslocks REPOS_PATH\n"
+#~ "\n"
+#~ "Print descriptions of all locks.\n"
+#~ msgstr ""
+#~ "bruk: svnadmin lslocks DEPOTSTI\n"
+#~ "\n"
+#~ "Vis beskrivelser av alle låser.\n"
+
+#~ msgid ""
+#~ "usage: svnsync copy-revprops DEST_URL REV\n"
+#~ "\n"
+#~ "Copy all revision properties for revision REV from source to\n"
+#~ "destination.\n"
+#~ msgstr ""
+#~ "bruk: svnsync copy-revprops MÅLURL REV\n"
+#~ "\n"
+#~ "Kopier alle revisjonsegenskaper for revisjon REV fra kilde\n"
+#~ "til mål.\n"
+
+#~ msgid ""
+#~ "usage: svnsync initialize DEST_URL --source-url SOURCE_URL\n"
+#~ "Initialize a destination repository.\n"
+#~ msgstr ""
+#~ "bruk: svnsync initialize MÅLURL --source-url KILDEURL\n"
+#~ "Initialiser et måldepot.\n"
+
+#~ msgid "%s request failed on '%s'"
+#~ msgstr "Forespørselen %s feilet på «%s»"
+
+#~ msgid "%s\\ No newline at end of file%s"
+#~ msgstr "%s\\ Ingen linjeslutt på slutten av filen%s"
+
+#~ msgid "'%s' has unknown value for svn:eol-style property"
+#~ msgstr "«%s» har en ukjent verdi for egenskapen svn:eol-style"
+
+#~ msgid "'%s' has unsupported special file type '%s'"
+#~ msgstr "«%s» har spesialfiltypen «%s» som ikke støttes"
+
+#~ msgid "'%s' is already a file/something else"
+#~ msgstr "«%s» er allerede en fil eller noe annet"
+
+#~ msgid "'%s' is in the way"
+#~ msgstr "«%s» er i veien"
+
+#~ msgid "'%s' is not currently a member of changelist '%s'."
+#~ msgstr "«%s» er ikke medlem av forandringsliste «%s» for øyeblikket."
+
+#~ msgid "'%s' is not supported"
+#~ msgstr "«%s» er ikke støttet"
+
+#~ msgid "'%s' is not under version control or doesn't exist"
+#~ msgstr "«%s» er ikke under versjonskontroll eller finnes ikke"
+
+#~ msgid "'DAV:version-name' was not present on the baseline resource"
+#~ msgstr "«DAV:version-name» var ikke til stede i grunnlinje-ressursen"
+
+#~ msgid "'get-file-revs' request not implemented"
+#~ msgstr "«get-file-revs»-forespørsel ikke implementert"
+
+#~ msgid "'get-locations' request not implemented"
+#~ msgstr "«get-locations»-forespørsel ikke implementert"
+
+#~ msgid "Access repository via WebDAV protocol through serf."
+#~ msgstr "Aksesser depotet via WebDAV-protokollen gjennom serf."
+
+#~ msgid "Argument to -c must be positive"
+#~ msgstr "Argumentet til -c må være et positivt tall"
+
+#~ msgid "Asking contents changed in two different filesystems"
+#~ msgstr "Forespurt innhold forandret i to forskjellige filsystemer"
+
+#~ msgid "Asking props changed in two different filesystems"
+#~ msgstr "Forespurte egenskaper forandret seg i to forskjellige filsystemer"
+
+#~ msgid "Bad encoding option: prop value not stored as UTF8"
+#~ msgstr "Feil kodingsparameter: Egenskapsverdi er ikke lagret som UTF8"
+
+#~ msgid "Can't change executability of file '%s'"
+#~ msgstr "Kan ikke forandre kjørbarhet for filen «%s»"
+
+#~ msgid "Can't convert string from CCSID '%i' to CCSID '%i'"
+#~ msgstr "Kan ikke konvertere streng fra CCSID «%i» til CCSID «%i»:"
+
+#~ msgid "Can't create a character converter from '%i' to '%i'"
+#~ msgstr "Kan ikke opprette en tegnkonverterer fra «%i» til «%i»"
+
+#~ msgid "Can't create temporary directory"
+#~ msgstr "Kan ikke lage midlertidig katalog"
+
+#~ msgid "Can't find config file '%s'"
+#~ msgstr "Fant ikke konfigurasjonsfil «%s»"
+
+#~ msgid "Can't find entry '%s' in '%s'"
+#~ msgstr "Finner ikke oppføringen «%s» i «%s»"
+
+#~ msgid "Can't find entry for '%s'"
+#~ msgstr "Kan ikke finne post for «%s»"
+
+#~ msgid "Can't get default file perms for file at '%s' (file close error)"
+#~ msgstr "Klarer ikke å få tak i standard filrettigheter for filen i «%s» (feil under lukking av fil)"
+
+#~ msgid "Can't grab FSFS repository mutex"
+#~ msgstr "Kan ikke overta FSFS depot-mutex"
+
+#~ msgid "Can't open config file '%s'"
+#~ msgstr "Kan ikke åpne konfigurasjonsfil «%s»"
+
+#~ msgid "Can't open file '%s' for reading"
+#~ msgstr "Kan ikke åpne filen «%s» for lesing"
+
+#~ msgid "Can't open file '%s' for writing"
+#~ msgstr "Kan ikke åpne filen «%s» for skriving"
+
+#~ msgid "Can't seek in '%s'"
+#~ msgstr "Kan ikke søke i «%s»"
+
+#~ msgid "Can't set timeout"
+#~ msgstr "Kan ikke sette tidsavbrudd"
+
+#~ msgid "Can't stat directory '%s'"
+#~ msgstr "Kan ikke lese status fra katalogen «%s»"
+
+#~ msgid "Can't stat new directory '%s'"
+#~ msgstr "Kan ikke lese status fra den nye katalogen «%s»"
+
+#~ msgid "Can't ungrab FSFS repository mutex"
+#~ msgstr "Kan ikke slippe FSFS depot-mutex"
+
+#~ msgid "Cannot copy or move '%s': it's not in the repository yet; try committing first"
+#~ msgstr "Kan ikke kopiere eller flytte «%s»: Den er foreløpig ikke under versjonskontroll, prøv innsending først"
+
+#~ msgid "Cannot copy or move '%s': it's not under version control"
+#~ msgstr "Kan ikke kopiere eller flytte «%s»: Den er ikke under versjonskontroll"
+
+#~ msgid "Cannot read entry for '%s'"
+#~ msgstr "Kan ikke lese post for «%s»"
+
+#~ msgid "Cannot revert: '%s' is not under version control"
+#~ msgstr "Kan ikke tilbakestille: «%s» er ikke under versjonskontroll"
+
+#~ msgid "Checksum mismatch for '%s'; expected '%s', actual: '%s'"
+#~ msgstr "Kontrollsum for «%s» er feil. Forventet: «%s», gjeldende: «%s»"
+
+#~ msgid "Commit item '%s' has copy flag but no copyfrom URL\n"
+#~ msgstr "Objekt «%s» for innsending har kopimerke, men ingen copyfrom-URL\n"
+
+#~ msgid "Committing rev %ld\n"
+#~ msgstr "Legger inn revisjon %ld\n"
+
+#~ msgid "Connection closed unexpectedly"
+#~ msgstr "Forbindelsen plutselig stengt"
+
+#~ msgid "Corrupt clone record for '%s' in transaction '%s' in filesystem '%s'"
+#~ msgstr "Ødelagt klonepost for «%s» i transaksjon «%s» i filsystem «%s»"
+
+#~ msgid "Corrupt node revision for node '%s' in filesystem '%s'"
+#~ msgstr "Ødelagt noderevisjon for node «%s» i filsystem «%s»"
+
+#~ msgid "Corrupt node revision id '%s' appears in filesystem '%s'"
+#~ msgstr "Ødelagt noderevisjons-ID «%s» opptrer i filsystem «%s»"
+
+#~ msgid "Corrupt value for 'next-id' key in '%s' table of filesystem '%s'"
+#~ msgstr "Ødelagt verdi for nøkkelen «next-id» i tabellen «%s» i filsystem «%s»"
+
+#~ msgid "Could not create a CHECKOUT request (%s)"
+#~ msgstr "Klarte ikke å opprette en CHECKOUT-forespørsel (%s)"
+
+#~ msgid "Could not create a DELETE request (%s)"
+#~ msgstr "Kunne ikke lage en DELETE-forespørsel (%s)"
+
+#~ msgid "Could not create a GET request for '%s'"
+#~ msgstr "Kunne ikke lage GET-forespørsel for «%s»"
+
+#~ msgid "Could not create a PUT request (%s)"
+#~ msgstr "Kunne ikke lage en PUT-forespørsel (%s)"
+
+#~ msgid "Could not create a request (%s '%s')"
+#~ msgstr "Kunne ikke lage forespørsel (%s «%s»)"
+
+#~ msgid "Creating readme file"
+#~ msgstr "Lager readme-fil"
+
+#~ msgid "Editing property on non-local target '%s' not yet supported"
+#~ msgstr "Redigering av egenskap på ikke-lokalt mål «%s» er foreløpig ikke støttet"
+
+#~ msgid "Entry '%s' has invalid or missing working-size"
+#~ msgstr "Oppføringen «%s» har ugyldig eller manglende arbeidsstørrelse"
+
+#~ msgid "Error checking existence of '%s'"
+#~ msgstr "Feil mens eksistensen av «%s» ble undersøkt"
+
+#~ msgid "Error checking path '%s'"
+#~ msgstr "Feil under kontroll av filstien «%s»"
+
+#~ msgid "Error creating dir '%s' (path exists)"
+#~ msgstr "Feil under opprettelse av katalogen «%s» (stien eksisterer)"
+
+#~ msgid "Error opening local file"
+#~ msgstr "Feil under åpning av lokal fil"
+
+#~ msgid "Error reading file '%s'"
+#~ msgstr "Feil under lesing av filen «%s»"
+
+#~ msgid "Error removing props for '%s'"
+#~ msgstr "Feil ved sletting av egenskaper for «%s»"
+
+#~ msgid "Error restoring props for '%s'"
+#~ msgstr "Feil ved gjenoppretting av egenskaper for «%s»"
+
+#~ msgid "Error spooling the %s request response to disk"
+#~ msgstr "Feil under lagring av den køede %s-forespørselsresponsen til disk"
+
+#~ msgid "Error writing file '%s'"
+#~ msgstr "Feil under skriving til filen «%s»"
+
+#~ msgid "Error writing log file for '%s'"
+#~ msgstr "Feil under skriving av loggfil for «%s»"
+
+#~ msgid "Error writing to stream: unexpected EOF"
+#~ msgstr "Feil under skriving til strøm, forventet EOF"
+
+#~ msgid "Expected format '%d' of repository; found format '%d'"
+#~ msgstr "Forventet format «%d» av depotet, fant versjon «%d»"
+
+#~ msgid "Failed to add directory '%s': object of the same name already exists"
+#~ msgstr "Klarte ikke å legge til katalogen «%s»: En oppføring med samme navn finnes allerede"
+
+#~ msgid "Failed to add directory '%s': object of the same name is already scheduled for addition"
+#~ msgstr "Klarte ikke å legge til katalogen «%s»: En oppføring med samme navn er allerede forberedt for tillegging"
+
+#~ msgid "File doesn't exist on HEAD"
+#~ msgstr "Filen finnes ikke i HEAD-revisjonen"
+
+#~ msgid "Finished"
+#~ msgstr "Ferdig"
+
+#~ msgid "Found malformed header block in dumpfile stream"
+#~ msgstr "Fant misdannet headerblokk i dumpfilstrømmen"
+
+#~ msgid "GET request failed for '%s'"
+#~ msgstr "GET-forespørsel feilet for «%s»"
+
+#~ msgid "Item is out-of-date"
+#~ msgstr "Objektet er utdatert"
+
+#~ msgid "Lock comment has illegal characters."
+#~ msgstr "Låsekommentaren inneholder ulovlige tegn"
+
+#~ msgid "Lock has expired:  lock-token '%s' in filesystem '%s'"
+#~ msgstr "Låsen er utgått: Låsnøkkel «%s» i filsystem «%s»"
+
+#~ msgid "Lock request failed"
+#~ msgstr "Låseforespørsel feilet"
+
+#~ msgid "Malformed ID as key in 'nodes' table of filesystem '%s'"
+#~ msgstr "Misdannet identifikator som nøkkel i tabellen «nodes» i filsystem «%s»"
+
+#~ msgid "Missing path attr in open-directory element"
+#~ msgstr "Mangler stiattributt i «open-directory»-element"
+
+#~ msgid "Missing rev attr in delete-entry element"
+#~ msgstr "Mangler revisjonsattributt i «delete-entry»-element"
+
+#~ msgid "Move failed"
+#~ msgstr "Flytting feilet"
+
+#~ msgid "Move will not be attempted unless forced"
+#~ msgstr "Flytting vil ikke bli forsøkt uten tvang"
+
+#~ msgid "Multiple revision arguments encountered; can't specify -r and -c, or try '-r N:M' instead of '-r N -r M'"
+#~ msgstr "Flere revisjonsargumenter ble brukt; -r og -c kan ikke brukes samtidig, eller prøv «-r N:M» i stedet for «-r N -r M»"
+
+#~ msgid "No URL target available"
+#~ msgstr "Intet URL-mål er tilgjengelig"
+
+#~ msgid "No entry for '%s'"
+#~ msgstr "Ingen post for «%s»"
+
+#~ msgid "No error output was produced by the hook."
+#~ msgstr "Påhakningen genererte ingen feilmeldinger."
+
+#~ msgid "No get_dir() available for URL schema"
+#~ msgstr "Ingen get_dir() tilgjengelig for URL-klasse"
+
+#~ msgid "No support for repos <--> working copy moves"
+#~ msgstr "Ingen støtte for flytting mellom et depot og en arbeidskopi"
+
+#~ msgid "Node with dropped parent sneaked in"
+#~ msgstr "Node med droppet forelder sneket inn"
+
+#~ msgid "Non-string as part of text delta"
+#~ msgstr "Ikke-streng som del av tekst-delta"
+
+#~ msgid "Not enough args provided"
+#~ msgstr "For få argumenter"
+
+#~ msgid "Out of date: '%s' in transaction '%s'"
+#~ msgstr "Utdatert: «%s» i transaksjon «%s»"
+
+#~ msgid "Please upgrade the server to 0.19 or later"
+#~ msgstr "Oppgrader tjeneren til versjon 0.19 eller senere"
+
+#~ msgid "Print client version info\n"
+#~ msgstr "Vis versjonsinformasjon for klienten\n"
+
+#~ msgid "Property '%s' locally changed to '%s', but update deletes it\n"
+#~ msgstr "Egenskapen «%s» endret lokalt til «%s», men oppdateringen sletter den\n"
+
+#~ msgid "Property '%s' locally changed to '%s', but update sets it to '%s'\n"
+#~ msgstr "Egenskapen «%s» er endret lokalt til «%s», men oppdateringen setter den til «%s»\n"
+
+#~ msgid "Property '%s' locally deleted, but update sets it to '%s'\n"
+#~ msgstr "Egenskapen «%s» slettet lokalt, men oppdateringen setter den den til «%s»\n"
+
+#~ msgid "Reference to non-existent revision %ld in filesystem '%s'"
+#~ msgstr "Referanse til ikke-eksisterende revisjon %ld i filsystem «%s»"
+
+#~ msgid "Revision action '%c' for revision %ld of '%s' lacks a prior revision"
+#~ msgstr "Revisjonsoperasjon «%c» for revisjon %ld av «%s» savner en tidligere revisjon"
+
+#~ msgid "Revision properties not a list"
+#~ msgstr "Revisjonsegenskaper er ikke en liste"
+
+#~ msgid "Search for malformed path '%s' in filesystem '%s'"
+#~ msgstr "Søk etter misdannet sti «%s» i filsystem «%s»"
+
+#~ msgid "The following error output was produced by the hook:\n"
+#~ msgstr "Disse feilmeldingene ble laget av påhakningen:\n"
+
+#~ msgid "The url to synchronize from"
+#~ msgstr "URL som det skal synkroniseres fra"
+
+#~ msgid "This client is too old to work with working copy '%s'; please get a newer Subversion client"
+#~ msgstr "Denne klienten er for gammel til å brukes på arbeidskopien «%s». Du må få tak i en nyere Subversionklient"
+
+#~ msgid "This directory's entry has invalid or missing working-size"
+#~ msgstr "Oppføringen for denne katalogen har en ugyldig eller manglende arbeidsstørrelse"
+
+#~ msgid "Too few arguments"
+#~ msgstr "For få argumenter"
+
+#~ msgid "Unable to delete temporary file"
+#~ msgstr "Klarte ikke å slette midlertidig fil"
+
+#~ msgid "Unable to parse lock data"
+#~ msgstr "Klarte ikke å tolke låsedata"
+
+#~ msgid "Unhandled SASL interaction"
+#~ msgstr "Uhåndtert SASL-interaksjon"
+
+#~ msgid "Unknown node kind: '%s'"
+#~ msgstr "Ukjent nodetype: «%s»"
+
+#~ msgid "Unlock request failed"
+#~ msgstr "«Lås opp»-forespørsel feilet"
+
+#~ msgid "Unrecognized node kind of '%s'"
+#~ msgstr "Ukjent nodetype: «%s»"
+
+#~ msgid "Unsupported RA loader version (%d) for ra_dav"
+#~ msgstr "Versjonen av RA-laster (%d) for ra_dav er ikke støttet"
+
+#~ msgid "Unsupported RA plugin ABI version (%d) for ra_dav"
+#~ msgstr "Mangler støtte for programtilleggets ABI-versjon (%d) for ra_dav"
+
+#~ msgid "Unsupported RA plugin ABI version (%d) for ra_svn."
+#~ msgstr "Støtter ikke RA-programtilleggets ABI-versjon (%d) for ra_svn."
+
+#~ msgid "Use of an external editor to fetch log message is not supported on OS400; consider using the --message (-m) or --file (-F) options"
+#~ msgstr "Bruk av en ekstern tekstbehandler for å hente loggmelinger støttes ikke på OS400; vurder bruk av valgene --message (-m) eller --file (-F)"
+
+#~ msgid "Won't delete locally modified directory '%s'"
+#~ msgstr "Vil ikke slette lokalt endret katalog «%s»"
+
+#~ msgid "Working copy '%s' is missing or not locked"
+#~ msgstr "Arbeidskopien «%s» mangler eller er ikke låst"
+
+#~ msgid "Your lock comment was left in a temporary file:"
+#~ msgstr "Låsekommentaren er lagt i en midlertidig fil:"
+
+#~ msgid "applying log message to %s"
+#~ msgstr "bruker loggmelding på %s"
+
+#~ msgid "descend recursively"
+#~ msgstr "gå ned rekursivt"
+
+#~ msgid "listen port (for daemon mode)"
+#~ msgstr "lytteport (for tjenestemodus)"
+
+#~ msgid "pass ARG to --diff-cmd as options (default: '-u')"
+#~ msgstr "levér ARG til --diff-cmd som valg (standard: «-u»)"
+
+#~ msgid "print client version info"
+#~ msgstr "vis versjonsinformasjon for klienten"
+
+#~ msgid "run as a windows service (SCM only)"
+#~ msgstr "kjør som en Windows-tjeneste (kun SCM)"
+
+#~ msgid "specifiy revision number ARG"
+#~ msgstr "angi revisjonsnummer ARG"
+
+#~ msgid "svnserve: "
+#~ msgstr "svnserve: "
+
+#~ msgid "the change made by revision ARG (like -r ARG-1:ARG)"
+#~ msgstr "forandringen gjort av revisjon ARG (samme som -r ARG-1:ARG)"
+
+#~ msgid "write server process ID to file ARG"
+#~ msgstr "skriv tjenerprosess-ID til fil ARG"
