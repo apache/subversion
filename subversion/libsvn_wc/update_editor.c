@@ -1640,7 +1640,7 @@ check_tree_conflict(svn_wc_conflict_description2_t **pconflict,
       repos_url = entry->repos;
       path_in_repos = svn_uri_is_child(repos_url, entry->url, pool);
       if (path_in_repos == NULL)
-        path_in_repos = "/";
+        path_in_repos = "";
 
       src_left_version = svn_wc_conflict_version_create(repos_url,
                                                         path_in_repos,
