@@ -212,6 +212,11 @@ static svn_error_t *record(apr_hash_t *records,
   /* Update or create the value. */
   if (value = apr_hash_get(records, key, sizeof(*key)))
     {
+      /* Paranoia. */
+      SVN_ERR_ASSERT(value->sha1_checksum != NULL);
+      SVN_ERR_ASSERT(svn_checksum_match(value->sha1_checksum,
+                                        rep->sha1_checksum));
+      /* Real work. */
       value->refcount++;
     }
   else
