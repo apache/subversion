@@ -659,10 +659,10 @@ svn_wc_queue_committed2(svn_wc_committed_queue_t *queue,
                         const char *path,
                         svn_wc_adm_access_t *adm_access,
                         svn_boolean_t recurse,
-                        apr_array_header_t *wcprop_changes,
+                        const apr_array_header_t *wcprop_changes,
                         svn_boolean_t remove_lock,
                         svn_boolean_t remove_changelist,
-                        svn_checksum_t *checksum,
+                        const svn_checksum_t *checksum,
                         apr_pool_t *scratch_pool)
 {
   committed_queue_item_t *cqi;
@@ -693,13 +693,13 @@ svn_wc_queue_committed(svn_wc_committed_queue_t **queue,
                        const char *path,
                        svn_wc_adm_access_t *adm_access,
                        svn_boolean_t recurse,
-                       apr_array_header_t *wcprop_changes,
+                       const apr_array_header_t *wcprop_changes,
                        svn_boolean_t remove_lock,
                        svn_boolean_t remove_changelist,
                        const unsigned char *digest,
                        apr_pool_t *pool)
 {
-  svn_checksum_t *checksum;
+  const svn_checksum_t *checksum;
 
   if (digest)
     checksum = svn_checksum__from_digest(digest, svn_checksum_md5,
@@ -712,12 +712,6 @@ svn_wc_queue_committed(svn_wc_committed_queue_t **queue,
                                  remove_changelist,
                                  checksum, pool);
 }
-
-typedef struct affected_adm_t
-{
-  int next_log;
-  svn_wc_adm_access_t *adm_access;
-} affected_adm_t;
 
 
 /* Return TRUE if any item of QUEUE is a parent of ITEM and will be
@@ -734,12 +728,12 @@ have_recursive_parent(apr_array_header_t *queue,
 
   for (i = 0; i < queue->nelts; i++)
     {
-      committed_queue_item_t *qi;
+      const committed_queue_item_t *qi;
 
       if (i == item)
         continue;
 
-      qi = APR_ARRAY_IDX(queue, i, committed_queue_item_t *);
+      qi = APR_ARRAY_IDX(queue, i, const committed_queue_item_t *);
       if (qi->recurse && svn_dirent_is_child(qi->path, path, NULL))
         return TRUE;
     }
@@ -765,8 +759,7 @@ svn_wc_process_committed_queue(svn_wc_committed_queue_t *queue,
      the process ... */
   for (i = 0; i < queue->queue->nelts; i++)
     {
-      affected_adm_t *affected_adm;
-      const char *adm_path;
+      const char *adm_abspath;
       committed_queue_item_t *cqi = APR_ARRAY_IDX(queue->queue,
                                                   i, committed_queue_item_t *);
 
@@ -778,19 +771,8 @@ svn_wc_process_committed_queue(svn_wc_committed_queue_t *queue,
           && have_recursive_parent(queue->queue, i, iterpool))
         continue;
 
-      adm_path = svn_wc_adm_access_path(cqi->adm_access);
-      affected_adm = apr_hash_get(updated_adms,
-                                  adm_path, APR_HASH_KEY_STRING);
-      if (! affected_adm)
-        {
-          /* allocate in pool instead of iterpool:
-             we don't want this cleared at the next iteration */
-          affected_adm = apr_palloc(pool, sizeof(*affected_adm));
-          affected_adm->next_log = 0;
-          affected_adm->adm_access = cqi->adm_access;
-          apr_hash_set(updated_adms, adm_path, APR_HASH_KEY_STRING,
-                       affected_adm);
-        }
+      adm_abspath = svn_wc__adm_access_abspath(cqi->adm_access);
+      apr_hash_set(updated_adms, adm_abspath, APR_HASH_KEY_STRING, "");
 
       SVN_ERR(process_committed_internal(db, cqi->path,
                                          cqi->adm_access, cqi->recurse,
@@ -807,13 +789,11 @@ svn_wc_process_committed_queue(svn_wc_committed_queue_t *queue,
          more than once per adm area */
   for (hi = apr_hash_first(pool, updated_adms); hi; hi = apr_hash_next(hi))
     {
-      const affected_adm_t *this_adm = svn_apr_hash_index_val(hi);
+      const char *adm_abspath = svn_apr_hash_index_key(hi);
 
       svn_pool_clear(iterpool);
 
-      SVN_ERR(svn_wc__run_log2(
-                db, svn_wc__adm_access_abspath(this_adm->adm_access),
-                iterpool));
+      SVN_ERR(svn_wc__run_log2(db, adm_abspath, iterpool));
     }
 
   queue->queue->nelts = 0;

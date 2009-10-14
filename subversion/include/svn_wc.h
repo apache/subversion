@@ -4688,10 +4688,10 @@ svn_wc_queue_committed2(svn_wc_committed_queue_t *queue,
                         const char *path,
                         svn_wc_adm_access_t *adm_access,
                         svn_boolean_t recurse,
-                        apr_array_header_t *wcprop_changes,
+                        const apr_array_header_t *wcprop_changes,
                         svn_boolean_t remove_lock,
                         svn_boolean_t remove_changelist,
-                        svn_checksum_t *checksum,
+                        const svn_checksum_t *checksum,
                         apr_pool_t *scratch_pool);
 
 
@@ -4705,12 +4705,13 @@ svn_wc_queue_committed2(svn_wc_committed_queue_t *queue,
  *
  * @deprecated Provided for backwards compatibility with 1.5
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_queue_committed(svn_wc_committed_queue_t **queue,
                        const char *path,
                        svn_wc_adm_access_t *adm_access,
                        svn_boolean_t recurse,
-                       apr_array_header_t *wcprop_changes,
+                       const apr_array_header_t *wcprop_changes,
                        svn_boolean_t remove_lock,
                        svn_boolean_t remove_changelist,
                        const unsigned char *digest,
