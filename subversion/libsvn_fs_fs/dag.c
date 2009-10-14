@@ -1034,7 +1034,7 @@ svn_fs_fs__dag_finalize_edits(dag_node_t *file,
 
 
 dag_node_t *
-svn_fs_fs__dag_dup(dag_node_t *node,
+svn_fs_fs__dag_dup(const dag_node_t *node,
                    apr_pool_t *pool)
 {
   /* Allocate our new node. */
@@ -1059,10 +1059,12 @@ svn_fs_fs__dag_dup(dag_node_t *node,
 
 svn_error_t *
 svn_fs_fs__dag_dup_for_cache(void **out,
-                             void *in,
+                             const void *in,
                              apr_pool_t *pool)
 {
-  dag_node_t *in_node = in, *out_node;
+  const dag_node_t *in_node = in;
+  dag_node_t *out_node;
+
   out_node = svn_fs_fs__dag_dup(in_node, pool);
   out_node->fs = NULL;
   *out = out_node;
