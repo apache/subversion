@@ -36,8 +36,9 @@
 #include "svn_private_config.h"
 #include "svn_hash.h"
 
-/* Attempt to combine two adjacent or overlapping ranges, IN1 and IN2, and put
-   the result in OUTPUT.  Return whether they could be combined.
+/* Attempt to combine two ranges, IN1 and IN2. If they are adjacent or
+   overlapping, and their inheritability allows them to be combined, put
+   the result in OUTPUT and return TRUE, otherwise return FALSE.
 
    CONSIDER_INHERITANCE determines how to account for the inheritability
    of IN1 and IN2 when trying to combine ranges.  If ranges with different
@@ -157,107 +158,124 @@ get_type_of_intersection(const svn_merge_range_t *r1,
   return SVN_NO_ERROR;
 }
 
-/* Helper for svn_rangelist_merge() and rangelist_intersect_or_remove().
+/* Modify or extend RANGELIST (a list of merge ranges) to incorporate
+   NEW_RANGE. RANGELIST is a "rangelist" as defined in svn_mergeinfo.h.
 
-   If *LASTRANGE is not NULL it should point to the last element in REVLIST.
-   REVLIST must be sorted from lowest to highest revision and contain no
-   overlapping revision ranges.  All ranges in REVLIST must describe forward
-   merges. Any changes made to REVLIST will maintain these guarantees.
+   OVERVIEW
 
-   Make a copy of NEW_RANGE allocated in RESULT_POOL.  In some cases
-   *LASTRANGE may be popped from REVLIST, a copy made (allocated in
-   RESULT_POOL), the copy modified and then pushed back onto REVLIST.
+   Determine the minimal set of non-overlapping merge ranges required to
+   represent the combination of RANGELIST and NEW_RANGE. The result depends
+   on whether and how NEW_RANGE overlaps any merge range[*] in RANGELIST,
+   and also on any differences in the inheritability of each range,
+   according to the rules described below. Modify RANGELIST to represent
+   this result, by adjusting the last range in it and/or appending one or
+   two more ranges.
 
-   If *LASTRANGE is NULL then push the copy of NEW_RANGE onto REVLIST.
+   ([*] Due to the simplifying assumption below, only the last range in
+   RANGELIST is considered.)
 
-   If *LASTRANGE and NEW_RANGE don't intersect then push the copy of
-   NEW_RANGE onto REVLIST.
+   DETAILS
 
-   If the ranges do intersect and have the same inheritability then combine
-   the ranges.
-   
-   If the ranges intersect but differ in inheritability, then merge the
-   ranges as dictated below by CONSIDER_INHERITANCE.
+   If RANGELIST is not empty assume NEW_RANGE does not intersect with any
+   range before the last one in RANGELIST.
 
-   CONSIDER_INHERITANCE determines how to account for the inheritability of
-   NEW_RANGE and *LASTRANGE when determining if they intersect.
-   
-   If CONSIDER_INHERITANCE is false then any intersection between *LASTRANGE
-   and NEW_RANGE is determined strictly on the ranges start and end revisions.
-   If the ranges intersect then they are joined.  The inheritability of the
-   resulting range is non-inheritable *only* if both ranges were
-   non-inheritable, otherwise the combined range is inheritable, e.g.:
-     
-     *LASTRANGE        NEW_RANGE        RESULTING RANGES
-     ----------        ---------        ----------------
-     4-10*             6-13             4-13
-     4-10              6-13*            4-13
-     4-10*             6-13*            4-13*
+   If RANGELIST is empty or NEW_RANGE does not intersect with the lastrange
+   in RANGELIST, then append a copy of NEW_RANGE, allocated in RESULT_POOL,
+   to RANGELIST.
 
-   If CONSIDER_INHERITANCE is true, then only the intersection between two
-   ranges with differing inheritance can be combined.  If one range has
-   non-inheritable ranges unique to it and the other range is inheritable,
-   then the unique non-inheritable ranges are pushed onto REVLIST as separate
-   ranges.  Adjoining ranges of the same inheritance are joined to make a
+   If NEW_RANGE intersects with the last range in RANGELIST then combine
+   these two ranges as described below:
+
+   If the intersecting ranges have the same inheritability then simply
+   combine the ranges in place.  Otherwise, if the ranges intersect but
+   differ in inheritability, then merge the ranges as dictated by
+   CONSIDER_INHERITANCE:
+
+   If CONSIDER_INHERITANCE is false then intersecting ranges are combined
+   into a single range.  The inheritability of the resulting range is
+   non-inheritable *only* if both ranges are non-inheritable, otherwise the
+   combined range is inheritable, e.g.:
+
+     Last range in        NEW_RANGE        RESULTING RANGES
+     RANGELIST
+     -------------        ---------        ----------------
+     4-10*                6-13             4-13
+     4-10                 6-13*            4-13
+     4-10*                6-13*            4-13*
+
+   If CONSIDER_INHERITANCE is true, then only the intersection between the
+   two ranges is combined, with the inheritability of the resulting range
+   non-inheritable only if both ranges were non-inheritable.  The
+   non-intersecting portions are added as separate ranges allocated in
+   RESULT_POOL, e.g.:
+
+     Last range in        NEW_RANGE        RESULTING RANGES
+     RANGELIST
+     -------------        ---------        ----------------
+     4-10*                6                4-5*, 6, 7-10*
+     4-10*                6-12             4-5*, 6-12
+
+   Note that the standard rules for rangelists still apply and overlapping
+   ranges are not allowed.  So if the above would result in overlapping
+   ranges of the same inheritance, the overlapping ranges are merged into a
    single range, e.g.:
 
-     *LASTRANGE        NEW_RANGE        RESULTING RANGES
-     ----------        ---------        ----------------
-     4-10*             6                4-5*, 6, 7-10*
-     4-10              6*               4-10
-     4-10*             6-12             4-5*, 6-12
+     Last range in        NEW_RANGE        RESULTING RANGES
+     RANGELIST
+     -------------        ---------        ----------------
+     4-10                 6*               4-10 (Not 4-5, 6, 7-10)
 
-   SCRATCH_POOL is used for any temporary allocations.  RESULT_POOL is used
-   to allocate any svn_merge_range_t added to REVLIST.
+   When replacing the last range in RANGELIST, either allocate a new range in
+   RESULT_POOL or modify the existing range in place.  Any new ranges added
+   to RANGELIST are allocated in RESULT_POOL.  SCRATCH_POOL is used for any
+   temporary allocations.
 */
 static svn_error_t *
-combine_with_lastrange(svn_merge_range_t** lastrange,
-                       svn_merge_range_t *new_range,
-                       apr_array_header_t *revlist,
+combine_with_lastrange(const svn_merge_range_t *new_range,
+                       apr_array_header_t *rangelist,
                        svn_boolean_t consider_inheritance,
                        apr_pool_t *result_pool,
                        apr_pool_t *scratch_pool)
 {
+  svn_merge_range_t *lastrange;
   svn_merge_range_t combined_range;
 
-  /* We don't accept a NULL REVLIST. */
-  SVN_ERR_ASSERT(revlist);
+  /* We don't accept a NULL RANGELIST. */
+  SVN_ERR_ASSERT(rangelist);
 
-  /* Our contract requires that *LASTRANGE is the "last" range
-     if it isn't NULL. */
-  if (*lastrange)
-    SVN_ERR_ASSERT(*lastrange == APR_ARRAY_IDX(revlist,
-                                               revlist->nelts - 1,
-                                               svn_merge_range_t *));
+  if (rangelist->nelts > 0)
+    lastrange = APR_ARRAY_IDX(rangelist, rangelist->nelts - 1, svn_merge_range_t *);
+  else
+    lastrange = NULL;
 
-  if (!*lastrange)
+  if (!lastrange)
     {
-      /* No *LASTRANGE so push NEW_RANGE onto REVLIST and we are done. */
-      APR_ARRAY_PUSH(revlist, svn_merge_range_t *) =
+      /* No *LASTRANGE so push NEW_RANGE onto RANGELIST and we are done. */
+      APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) =
         svn_merge_range_dup(new_range, result_pool);
     }
   else if (!consider_inheritance)
     {
       /* We are not considering inheritance so we can merge intersecting
          ranges of different inheritability.  Of course if the ranges
-         don't intersect at all we simply push NEW_RANGE only REVLIST. */
-      if (combine_ranges(&combined_range, *lastrange, new_range, FALSE))
+         don't intersect at all we simply push NEW_RANGE only RANGELIST. */
+      if (combine_ranges(&combined_range, lastrange, new_range, FALSE))
         {
-          **lastrange = combined_range;
+          *lastrange = combined_range;
         }
       else
         {
-          APR_ARRAY_PUSH(revlist, svn_merge_range_t *) =
+          APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) =
             svn_merge_range_dup(new_range, result_pool);
         }
     }
   else /* Considering inheritance */
     {
-      if (combine_ranges(&combined_range, *lastrange, new_range, TRUE))
+      if (combine_ranges(&combined_range, lastrange, new_range, TRUE))
         {
           /* Even when considering inheritance two intersection ranges
              of the same inheritability can simply be combined. */
-          **lastrange = combined_range;
+          *lastrange = combined_range;
         }
       else
         {
@@ -266,45 +284,45 @@ combine_with_lastrange(svn_merge_range_t** lastrange,
              first case as that is easy to handle. */
           intersection_type_t intersection_type;
           
-          SVN_ERR(get_type_of_intersection(new_range, *lastrange,
+          SVN_ERR(get_type_of_intersection(new_range, lastrange,
                                            &intersection_type));
               
               switch (intersection_type)
                 {
                   case svn__no_intersection:
                     /* NEW_RANGE and *LASTRANGE *really* don't intersect so
-                       just push NEW_RANGE only REVLIST. */
-                    APR_ARRAY_PUSH(revlist, svn_merge_range_t *) =
+                       just push NEW_RANGE only RANGELIST. */
+                    APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) =
                       svn_merge_range_dup(new_range, result_pool);
                     break;
 
                   case svn__equal_intersection:
                     /* They range are equal so all we do is force the
                        inheritability of lastrange to true. */
-                    (*lastrange)->inheritable = TRUE;
+                    lastrange->inheritable = TRUE;
                     break;
 
                   case svn__adjoining_intersection:
                     /* They adjoin but don't overlap so just push NEW_RANGE
-                       onto REVLIST. */
-                    APR_ARRAY_PUSH(revlist, svn_merge_range_t *) =
+                       onto RANGELIST. */
+                    APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) =
                       svn_merge_range_dup(new_range, result_pool);
                     break;
 
                   case svn__overlapping_intersection:
                     /* They ranges overlap but neither is a proper subset of
                        the other.  We'll end up pusing two new ranges onto
-                       REVLIST, the intersecting part and the part unique to
+                       RANGELIST, the intersecting part and the part unique to
                        NEW_RANGE.*/
                     {
-                      svn_merge_range_t *r1 = svn_merge_range_dup(*lastrange,
+                      svn_merge_range_t *r1 = svn_merge_range_dup(lastrange,
                                                                   result_pool);
                       svn_merge_range_t *r2 = svn_merge_range_dup(new_range,
                                                                   result_pool);
 
                       /* Pop off *LASTRANGE to make our manipulations
                          easier. */
-                      apr_array_pop(revlist);
+                      apr_array_pop(rangelist);
 
                       /* Ensure R1 is the older range. */
                       if (r2->start < r1->start)
@@ -321,9 +339,9 @@ combine_with_lastrange(svn_merge_range_t** lastrange,
                       else
                         r1->end = r2->start;
                       
-                      /* Push everything back onto REVLIST. */
-                      APR_ARRAY_PUSH(revlist, svn_merge_range_t *) = r1;
-                      APR_ARRAY_PUSH(revlist, svn_merge_range_t *) = r2;
+                      /* Push everything back onto RANGELIST. */
+                      APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) = r1;
+                      APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) = r2;
 
                       break;
                     }
@@ -331,7 +349,7 @@ combine_with_lastrange(svn_merge_range_t** lastrange,
                   default: /* svn__proper_subset_intersection */
                     {
                       /* One range is a proper subset of the other. */
-                      svn_merge_range_t *r1 = svn_merge_range_dup(*lastrange,
+                      svn_merge_range_t *r1 = svn_merge_range_dup(lastrange,
                                                                   result_pool);
                       svn_merge_range_t *r2 = svn_merge_range_dup(new_range,
                                                                   result_pool);
@@ -340,7 +358,7 @@ combine_with_lastrange(svn_merge_range_t** lastrange,
 
                       /* Pop off *LASTRANGE to make our manipulations
                          easier. */
-                      apr_array_pop(revlist);
+                      apr_array_pop(rangelist);
 
                       /* Ensure R1 is the superset. */
                       if (r2->start < r1->start || r2->end > r1->end)
@@ -386,26 +404,24 @@ combine_with_lastrange(svn_merge_range_t** lastrange,
                           r1->end = r2->start;
                         }
 
-                      /* Push everything back onto REVLIST. */
-                      APR_ARRAY_PUSH(revlist, svn_merge_range_t *) = r1;
+                      /* Push everything back onto RANGELIST. */
+                      APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) = r1;
                       if (r2)
-                        APR_ARRAY_PUSH(revlist, svn_merge_range_t *) = r2;
+                        APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) = r2;
                       if (r3)
-                        APR_ARRAY_PUSH(revlist, svn_merge_range_t *) = r3;
+                        APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) = r3;
 
                       break;
                     }
                 }
 
-              /* Some of the above cases might have put *REVLIST out of
+              /* Some of the above cases might have put *RANGELIST out of
                  order, so re-sort.*/
-              qsort(revlist->elts, revlist->nelts, revlist->elt_size,
+              qsort(rangelist->elts, rangelist->nelts, rangelist->elt_size,
                     svn_sort_compare_ranges);
         }
     }
 
-  /* Make sure *LASTRANGE points at the "last" range. */
- *lastrange = APR_ARRAY_IDX(revlist, revlist->nelts - 1, svn_merge_range_t *);
   return SVN_NO_ERROR;
 }
 
@@ -667,7 +683,6 @@ svn_rangelist_merge(apr_array_header_t **rangelist,
                     apr_pool_t *pool)
 {
   int i, j;
-  svn_merge_range_t *lastrange = NULL;
   apr_array_header_t *output = apr_array_make(pool, 1,
                                               sizeof(svn_merge_range_t *));
   i = 0;
@@ -688,20 +703,20 @@ svn_rangelist_merge(apr_array_header_t **rangelist,
              result. */
           if (elt1->inheritable || elt2->inheritable)
             elt1->inheritable = TRUE;
-          SVN_ERR(combine_with_lastrange(&lastrange, elt1, output,
+          SVN_ERR(combine_with_lastrange(elt1, output,
                                          TRUE, pool, pool));
           i++;
           j++;
         }
       else if (res < 0)
         {
-          SVN_ERR(combine_with_lastrange(&lastrange, elt1, output,
+          SVN_ERR(combine_with_lastrange(elt1, output,
                                          TRUE, pool, pool));
           i++;
         }
       else
         {
-          SVN_ERR(combine_with_lastrange(&lastrange, elt2, output,
+          SVN_ERR(combine_with_lastrange(elt2, output,
                                          TRUE, pool, pool));
           j++;
         }
@@ -715,7 +730,7 @@ svn_rangelist_merge(apr_array_header_t **rangelist,
     {
       svn_merge_range_t *elt = APR_ARRAY_IDX(*rangelist, i,
                                              svn_merge_range_t *);
-      SVN_ERR(combine_with_lastrange(&lastrange, elt, output,
+      SVN_ERR(combine_with_lastrange(elt, output,
                                      TRUE, pool, pool));
     }
 
@@ -723,7 +738,7 @@ svn_rangelist_merge(apr_array_header_t **rangelist,
   for (; j < changes->nelts; j++)
     {
       svn_merge_range_t *elt = APR_ARRAY_IDX(changes, j, svn_merge_range_t *);
-      SVN_ERR(combine_with_lastrange(&lastrange, elt, output,
+      SVN_ERR(combine_with_lastrange(elt, output,
                                      TRUE, pool, pool));
     }
 
@@ -844,7 +859,6 @@ rangelist_intersect_or_remove(apr_array_header_t **output,
                               apr_pool_t *pool)
 {
   int i, j, lasti;
-  svn_merge_range_t *lastrange = NULL;
   svn_merge_range_t wboardelt;
 
   *output = apr_array_make(pool, 1, sizeof(svn_merge_range_t *));
@@ -881,7 +895,7 @@ rangelist_intersect_or_remove(apr_array_header_t **output,
       if (range_contains(elt2, elt1, consider_inheritance))
         {
           if (!do_remove)
-            SVN_ERR(combine_with_lastrange(&lastrange, elt1, *output,
+            SVN_ERR(combine_with_lastrange(elt1, *output,
                                            consider_inheritance, pool,
                                            pool));
 
@@ -911,7 +925,7 @@ rangelist_intersect_or_remove(apr_array_header_t **output,
                   tmp_range.end = MIN(elt1->end, elt2->end);
                 }
 
-              SVN_ERR(combine_with_lastrange(&lastrange, &tmp_range,
+              SVN_ERR(combine_with_lastrange(&tmp_range,
                                              *output, consider_inheritance,
                                              pool, pool));
             }
@@ -928,7 +942,7 @@ rangelist_intersect_or_remove(apr_array_header_t **output,
                   tmp_range.start = MAX(elt1->start, elt2->start);
                   tmp_range.end = elt2->end;
                   tmp_range.inheritable = elt1->inheritable;
-                  SVN_ERR(combine_with_lastrange(&lastrange, &tmp_range,
+                  SVN_ERR(combine_with_lastrange(&tmp_range,
                                                  *output,
                                                  consider_inheritance,
                                                  pool, pool));
@@ -952,6 +966,14 @@ rangelist_intersect_or_remove(apr_array_header_t **output,
             j++;
           else
             {
+              svn_merge_range_t *lastrange;
+
+              if ((*output)->nelts > 0)
+                lastrange = APR_ARRAY_IDX(*output, (*output)->nelts - 1,
+                                          svn_merge_range_t *);
+              else
+                lastrange = NULL;
+
               if (do_remove && !(lastrange &&
                                  combine_ranges(lastrange, lastrange, elt1,
                                                 consider_inheritance)))
@@ -974,7 +996,7 @@ rangelist_intersect_or_remove(apr_array_header_t **output,
          the whiteboard element. */
       if (i == lasti && i < whiteboard->nelts)
         {
-          SVN_ERR(combine_with_lastrange(&lastrange, &wboardelt, *output,
+          SVN_ERR(combine_with_lastrange(&wboardelt, *output,
                                          consider_inheritance, pool, pool));
           i++;
         }
@@ -985,7 +1007,7 @@ rangelist_intersect_or_remove(apr_array_header_t **output,
           svn_merge_range_t *elt = APR_ARRAY_IDX(whiteboard, i,
                                                  svn_merge_range_t *);
 
-          SVN_ERR(combine_with_lastrange(&lastrange, elt, *output,
+          SVN_ERR(combine_with_lastrange(elt, *output,
                                          consider_inheritance, pool, pool));
         }
     }
