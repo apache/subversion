@@ -1163,13 +1163,13 @@ svn_cl__changelist_paths(apr_array_header_t **paths,
       const char *target = APR_ARRAY_IDX(targets, i, const char *);
       svn_pool_clear(iterpool);
       SVN_ERR(svn_client_get_changelists(target, changelists, depth,
-                                         changelist_receiver, (void *)found,
+                                         changelist_receiver, found,
                                          ctx, iterpool));
     }
+  svn_pool_destroy(iterpool);
 
   SVN_ERR(svn_hash_from_cstring_keys(&paths_hash, found, result_pool));
-  return svn_error_return(
-    svn_hash_keys(paths, paths_hash, result_pool));
+  return svn_error_return(svn_hash_keys(paths, paths_hash, result_pool));
 }
 
 svn_cl__show_revs_t
