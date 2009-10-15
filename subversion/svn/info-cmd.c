@@ -543,7 +543,7 @@ svn_cl__info(apr_getopt_t *os,
                       (stderr, subpool,
                        _("%s:  (Not a versioned resource)\n\n"),
                        svn_path_is_url(truepath)
-                         ? svn_uri_local_style(truepath, pool)
+                         ? truepath
                          : svn_dirent_local_style(truepath, pool)));
             }
           else if (err->apr_err == SVN_ERR_RA_ILLEGAL_URL)
@@ -552,7 +552,7 @@ svn_cl__info(apr_getopt_t *os,
                       (stderr, subpool,
                        _("%s:  (Not a valid URL)\n\n"),
                        svn_path_is_url(truepath)
-                         ? svn_uri_local_style(truepath, pool)
+                         ? truepath
                          : svn_dirent_local_style(truepath, pool)));
             }
           else
