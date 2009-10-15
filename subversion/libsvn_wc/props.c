@@ -244,8 +244,7 @@ append_prop_conflict(svn_stream_t *stream,
 }
 
 
-/* Look up the entry for PATH within ADM_ACCESS and see if it has a `current'
-   reject file describing a state of conflict.  Set *REJECT_FILE to the
+/* Get the reject file for LOCAL_ABSPATH in DB.  Set *REJECT_FILE to the
    name of that file, or to NULL if no such file exists. */
 static svn_error_t *
 get_existing_prop_reject_file(const char **reject_file,
@@ -778,11 +777,10 @@ set_prop_merge_state(svn_wc_notify_state_t *state,
 /* Helper function for the three apply_* functions below, used when
  * merging properties together.
  *
- * Given property PROPNAME on PATH, and four possible property values,
- * generate four tmpfiles and pass them to CONFLICT_FUNC callback.
+ * Given property PROPNAME on LOCAL_ABSPATH, and four possible property
+ * values, generate four tmpfiles and pass them to CONFLICT_FUNC callback.
  * This gives the client an opportunity to interactively resolve the
- * property conflict.  (ADM_ACCESS provides the ability to examine
- * PATH's entries.)
+ * property conflict.
  *
  * BASE_VAL/WORKING_VAL represent the current state of the working
  * copy, and OLD_VAL/NEW_VAL represents the incoming propchange.  Any
@@ -1040,8 +1038,7 @@ maybe_generate_propconflict(svn_boolean_t *conflict_remains,
  *
  * CONFLICT_FUNC/BATON is a callback to be called before declaring a
  * property conflict;  it gives the client a chance to resolve the
- * conflict interactively.  It uses ADM_ACCESS to possibly examine
- * PATH's entries.
+ * conflict interactively.
  */
 static svn_error_t *
 apply_single_prop_add(svn_wc_notify_state_t *state,
@@ -1150,8 +1147,7 @@ apply_single_prop_add(svn_wc_notify_state_t *state,
  *
  * CONFLICT_FUNC/BATON is a callback to be called before declaring a
  * property conflict;  it gives the client a chance to resolve the
- * conflict interactively.  It uses ADM_ACCESS to possibly examine
- * PATH's entries.
+ * conflict interactively.
  */
 static svn_error_t *
 apply_single_prop_delete(svn_wc_notify_state_t *state,
@@ -1461,8 +1457,7 @@ apply_single_generic_prop_change(svn_wc_notify_state_t *state,
  *
  * CONFLICT_FUNC/BATON is a callback to be called before declaring a
  * property conflict;  it gives the client a chance to resolve the
- * conflict interactively.  It uses ADM_ACCESS to possibly examine the
- * path's entries.
+ * conflict interactively.
  */
 static svn_error_t *
 apply_single_prop_change(svn_wc_notify_state_t *state,
