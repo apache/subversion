@@ -459,9 +459,9 @@ range_to_string(svn_string_t **result, const svn_merge_range_t *range,
    used only for producing a more descriptive error message.
 */
 static svn_error_t *
-parse_revlist(const char **input, const char *end,
-              apr_array_header_t *revlist, const char *pathname,
-              apr_pool_t *pool)
+parse_rangelist(const char **input, const char *end,
+                apr_array_header_t *rangelist, const char *pathname,
+                apr_pool_t *pool)
 {
   const char *curr = *input;
 
@@ -515,13 +515,13 @@ parse_revlist(const char **input, const char *end,
 
       if (*curr == '\n' || curr == end)
         {
-          APR_ARRAY_PUSH(revlist, svn_merge_range_t *) = mrange;
+          APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) = mrange;
           *input = curr;
           return SVN_NO_ERROR;
         }
       else if (*curr == ',')
         {
-          APR_ARRAY_PUSH(revlist, svn_merge_range_t *) = mrange;
+          APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) = mrange;
           curr++;
         }
       else if (*curr == '*')
@@ -530,7 +530,7 @@ parse_revlist(const char **input, const char *end,
           curr++;
           if (*curr == ',' || *curr == '\n' || curr == end)
             {
-              APR_ARRAY_PUSH(revlist, svn_merge_range_t *) = mrange;
+              APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) = mrange;
               if (*curr == ',')
                 {
                   curr++;
@@ -570,8 +570,8 @@ parse_revision_line(const char **input, const char *end, svn_mergeinfo_t hash,
                     apr_pool_t *pool)
 {
   svn_stringbuf_t *pathname;
-  apr_array_header_t *revlist = apr_array_make(pool, 1,
-                                               sizeof(svn_merge_range_t *));
+  apr_array_header_t *rangelist = apr_array_make(pool, 1,
+                                                 sizeof(svn_merge_range_t *));
 
   SVN_ERR(parse_pathname(input, end, &pathname, pool));
 
@@ -581,7 +581,7 @@ parse_revision_line(const char **input, const char *end, svn_mergeinfo_t hash,
 
   *input = *input + 1;
 
-  SVN_ERR(parse_revlist(input, end, revlist, pathname->data, pool));
+  SVN_ERR(parse_rangelist(input, end, rangelist, pathname->data, pool));
 
   if (*input != end && *(*input) != '\n')
     return svn_error_createf(SVN_ERR_MERGEINFO_PARSE_ERROR, NULL,
@@ -593,18 +593,18 @@ parse_revision_line(const char **input, const char *end, svn_mergeinfo_t hash,
 
   /* Sort the rangelist, combine adjacent ranges into single ranges,
      and make sure there are no overlapping ranges. */
-  if (revlist->nelts > 1)
+  if (rangelist->nelts > 1)
     {
       int i;
       svn_merge_range_t *range, *lastrange;
 
-      qsort(revlist->elts, revlist->nelts, revlist->elt_size,
-        svn_sort_compare_ranges);
-      lastrange = APR_ARRAY_IDX(revlist, 0, svn_merge_range_t *);
+      qsort(rangelist->elts, rangelist->nelts, rangelist->elt_size,
+            svn_sort_compare_ranges);
+      lastrange = APR_ARRAY_IDX(rangelist, 0, svn_merge_range_t *);
 
-      for (i = 1; i < revlist->nelts; i++)
+      for (i = 1; i < rangelist->nelts; i++)
         {
-          range = APR_ARRAY_IDX(revlist, i, svn_merge_range_t *);
+          range = APR_ARRAY_IDX(rangelist, i, svn_merge_range_t *);
           if (lastrange->start <= range->end
               && range->start <= lastrange->end)
             {
@@ -631,18 +631,18 @@ parse_revision_line(const char **input, const char *end, svn_mergeinfo_t hash,
               if (lastrange->inheritable == range->inheritable)
                 {
                   lastrange->end = MAX(range->end, lastrange->end);
-                  if (i + 1 < revlist->nelts)
-                    memmove(revlist->elts + (revlist->elt_size * i),
-                            revlist->elts + (revlist->elt_size * (i + 1)),
-                            revlist->elt_size * (revlist->nelts - i));
-                  revlist->nelts--;
+                  if (i + 1 < rangelist->nelts)
+                    memmove(rangelist->elts + (rangelist->elt_size * i),
+                            rangelist->elts + (rangelist->elt_size * (i + 1)),
+                            rangelist->elt_size * (rangelist->nelts - i));
+                  rangelist->nelts--;
                   i--;
                 }
             }
-          lastrange = APR_ARRAY_IDX(revlist, i, svn_merge_range_t *);
+          lastrange = APR_ARRAY_IDX(rangelist, i, svn_merge_range_t *);
         }
     }
-  apr_hash_set(hash, pathname->data, APR_HASH_KEY_STRING, revlist);
+  apr_hash_set(hash, pathname->data, APR_HASH_KEY_STRING, rangelist);
 
   return SVN_NO_ERROR;
 }
