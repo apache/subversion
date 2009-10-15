@@ -1142,11 +1142,12 @@ svn_cl__changelist_paths(apr_array_header_t **paths,
                          const apr_array_header_t *targets,
                          svn_depth_t depth,
                          svn_client_ctx_t *ctx,
-                         apr_pool_t *pool)
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool)
 {
   apr_array_header_t *found;
-  apr_pool_t *subpool = svn_pool_create(pool);
   apr_hash_t *paths_hash;
+  apr_pool_t *iterpool;
   int i;
 
   if (! (changelists && changelists->nelts))
@@ -1155,19 +1156,20 @@ svn_cl__changelist_paths(apr_array_header_t **paths,
       return SVN_NO_ERROR;
     }
 
-  found = apr_array_make(pool, 8, sizeof(const char *));
+  found = apr_array_make(scratch_pool, 8, sizeof(const char *));
+  iterpool = svn_pool_create(scratch_pool);
   for (i = 0; i < targets->nelts; i++)
     {
       const char *target = APR_ARRAY_IDX(targets, i, const char *);
-      svn_pool_clear(subpool);
+      svn_pool_clear(iterpool);
       SVN_ERR(svn_client_get_changelists(target, changelists, depth,
                                          changelist_receiver, (void *)found,
-                                         ctx, subpool));
+                                         ctx, iterpool));
     }
-  svn_pool_destroy(subpool);
 
-  SVN_ERR(svn_hash_from_cstring_keys(&paths_hash, found, pool));
-  return svn_hash_keys(paths, paths_hash, pool);
+  SVN_ERR(svn_hash_from_cstring_keys(&paths_hash, found, result_pool));
+  return svn_error_return(
+    svn_hash_keys(paths, paths_hash, result_pool));
 }
 
 svn_cl__show_revs_t

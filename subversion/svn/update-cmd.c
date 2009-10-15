@@ -69,7 +69,7 @@ svn_cl__update(apr_getopt_t *os,
         cl_depth = svn_depth_infinity;
       SVN_ERR(svn_cl__changelist_paths(&targets,
                                        opt_state->changelists, targets,
-                                       cl_depth, ctx, pool));
+                                       cl_depth, ctx, pool, pool));
     }
 
   if (! opt_state->quiet)
