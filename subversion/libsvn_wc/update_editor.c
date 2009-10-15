@@ -364,10 +364,6 @@ struct bump_dir_info
      This does NOT mean that children are skipped. */
   svn_boolean_t skipped;
 
-  /* Set if this directory was previously recorded as excluded,
-     but is pulled back in the working copy */
-  svn_boolean_t was_excluded;
-
   /* Pool that should be cleared after the dir is bumped */
   apr_pool_t *pool;
 };
@@ -576,7 +572,6 @@ make_dir_baton(struct dir_baton **d_p,
   bdi->ref_count = 1;
   bdi->local_abspath = apr_pstrdup(eb->pool, d->local_abspath);
   bdi->skipped = FALSE;
-  bdi->was_excluded = FALSE;
   bdi->pool = dir_pool;
 
   /* the parent's bump info has one more referer */
@@ -633,7 +628,6 @@ static svn_error_t *
 complete_directory(struct edit_baton *eb,
                    const char *local_abspath,
                    svn_boolean_t is_root_dir,
-                   svn_boolean_t was_excluded,
                    apr_pool_t *pool)
 {
   const apr_array_header_t *children;
@@ -721,26 +715,6 @@ complete_directory(struct edit_baton *eb,
                                       eb->requested_depth, pool));
           }
       }
-    }
-
-  /* ### Hack: When a node was excluded before the update and then added the
-     information in the parent stub is still on excluded, while the directory
-     itself has an updated exclusion state. We fix that here.
-     
-     ### This hack is no longer needed when excluded becomes a proper status
-         or when we move to a single database. (Whatever occurs sooner) */
-  if (was_excluded)
-    {
-      svn_depth_t depth;
-
-      SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                   NULL, NULL, NULL, &depth, NULL, NULL, NULL,
-                                   NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                   NULL, NULL, NULL,
-                                   eb->db, local_abspath, pool, pool));
-
-      SVN_ERR(svn_wc__set_depth(eb->db, local_abspath,
-                                depth, pool));
     }
 
   /* Remove any deleted or missing entries. */
@@ -847,8 +821,7 @@ maybe_bump_dir_info(struct edit_baton *eb,
          the directory and mark it 'complete'.  */
       if (! bdi->skipped)
         SVN_ERR(complete_directory(eb, bdi->local_abspath,
-                                   bdi->parent == NULL,
-                                   bdi->was_excluded, pool));
+                                   bdi->parent == NULL, pool));
 
       svn_pool_destroy(bdi->pool);
     }
@@ -2557,7 +2530,8 @@ add_directory(const char *path,
         {
           case svn_wc__db_status_absent:
           case svn_wc__db_status_not_present:
-            /* Ignore these hidden states */
+          case svn_wc__db_status_excluded:
+            /* Ignore these hidden states. Allow pulling them (back) in. */
             break;
           case svn_wc__db_status_obstructed:
           case svn_wc__db_status_obstructed_add:
@@ -2567,10 +2541,6 @@ add_directory(const char *path,
 
                    Explicitly handle them as not raising a tree conflict
                    now. Will never occur once we have a central DB. */
-            break;
-          case svn_wc__db_status_excluded:
-            /* Make sure we clear the excluded status in the parent node */
-            db->bump_info->was_excluded = TRUE;
             break;
           case svn_wc__db_status_added:
             /* ### BH: I think this case should be conditional with something
@@ -4838,7 +4808,7 @@ close_edit(void *edit_baton,
   if (! eb->root_opened)
     {
       /* We need to "un-incomplete" the root directory. */
-      SVN_ERR(complete_directory(eb, eb->anchor_abspath, TRUE, FALSE, pool));
+      SVN_ERR(complete_directory(eb, eb->anchor_abspath, TRUE, pool));
     }
 
 
