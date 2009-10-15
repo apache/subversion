@@ -920,9 +920,7 @@ principles:</p>
            do_operation(..., iterpool);
          }
 
-         /* Since the iterpool was created as a child of the scratch_pool,
-            we don't need to explicitly destory it. */
-         /* svn_pool_destroy(iterpool); */
+         svn_pool_destroy(iterpool);
        </pre>
 </li>
 </ol>
@@ -980,6 +978,7 @@ code:</p>
         apr_hash_set(persistent_objects, key, APR_HASH_KEY_STRING, val);
       }
 
+      svn_pool_destroy(iterpool);
       return persistent_objects;
 </pre>
 
