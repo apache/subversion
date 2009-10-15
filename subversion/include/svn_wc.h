@@ -7149,8 +7149,8 @@ svn_wc_set_changelist(const char *path,
  * @a local_abspath) from revision control.  Leave modified items behind
  * (unversioned), while removing unmodified ones completely.
  *
- * @a depth can be svn_depth_empty or svn_depth_files. Excluding nodes
- * is handled by svn_wc_exclude().
+ * @a depth can be svn_depth_empty, svn_depth_files or svn_depth_immediates.
+ * Excluding nodes is handled by svn_wc_exclude().
  *
  * If @a local_abspath starts out with a shallower depth than @a depth,
  * do not upgrade it to @a depth (that would not be cropping); however, do
