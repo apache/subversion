@@ -1562,6 +1562,22 @@ close_file(void *file_baton,
                                            pool);
     }
 
+  /* If the file was locally added with history, and we want to show copies
+   * as added, diff the file with the empty file. */
+  if (entry->copied && eb->show_copies_as_adds)
+    return eb->callbacks->file_added(NULL, NULL, NULL, NULL, fb->path,
+                                     empty_file,
+                                     fb->local_abspath,
+                                     0,
+                                     eb->revnum,
+                                     NULL,
+                                     repos_mimetype,
+                                     NULL, SVN_INVALID_REVNUM,
+                                     fb->propchanges,
+                                     apr_hash_make(pool),
+                                     eb->callback_baton,
+                                     pool);
+    
   /* If we didn't see any content changes between the BASE and repository
      versions (i.e. we only saw property changes), then, if we're diffing
      against WORKING, we also need to check whether there are any local
