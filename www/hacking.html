@@ -912,20 +912,43 @@ principles:</p>
        it at the start of each iteration, then destroy it after the loop 
        is done, like so:</p>
        <pre>
-         apr_pool_t *subpool = svn_pool_create(pool);
+         apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
          for (i = 0; i &lt; n; ++i)
          {
-           svn_pool_clear(subpool);
-           do_operation(..., subpool);
+           svn_pool_clear(iterpool);
+           do_operation(..., iterpool);
          }
 
-         svn_pool_destroy(subpool);
+         /* Since the iterpool was created as a child of the scratch_pool,
+            we don't need to explicitly destory it. */
+         /* svn_pool_destroy(iterpool); */
        </pre>
 </li>
 </ol>
 
-<p>By using a loop subpool for loop-bounded data, you ensure O(1) instead
+<p>Supporting the above rules, we use the following pool names as conventions
+to represent various pool lifetimes:
+<ul>
+<li><p><code>result_pool</code> - The pool in which the output of a function
+should be allocated.  A result pool declaration should <strong>always</strong>
+be found in a function argument list, and never inside a local block.  (But
+not all functions need or have result pools.)
+</p></li>
+
+<li><p><code>scratch_pool</code> - The pool in which all function-local data
+should be allocated.  This pool is also provided by the caller, who may
+choose to clear this pool immediately when control returns to it.
+</p></li>
+
+<li><p><code>iterpool</code> - An <em>iteration</em> pool, used inside loops,
+as per the above example.</p></li>
+</ul>
+
+<p>(Note: Some legacy code uses a single <code>pool</code> function argument,
+which operates as both the result and scratch pools.)</p>
+
+<p>By using an iterpool for loop-bounded data, you ensure O(1) instead
 of O(N) memory leakage should the function return abruptly from
 within the loop (say, due to error).  That's why you shouldn't make a
 subpool for data which persists throughout a function, but instead
@@ -942,20 +965,20 @@ example, pool choices indicate a lot about what's going on in this
 code:</p>
 
 <pre>
-      apr_hash_t *persistent_objects = apr_hash_make(pool);
-      apr_pool_t *subpool = svn_pool_create(pool);
+      apr_hash_t *persistent_objects = apr_hash_make(result_pool);
+      apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
       for (i = 0; i &lt; n; ++i)
       {
         const char *intermediate_result;
         const char *key, *val;
         
-        svn_pool_clear(subpool);
-        SVN_ERR(do_something(&amp;intermediate_result, ..., subpool));
-        SVN_ERR(get_result(intermediate_result, &amp;key, &amp;val, ..., pool));
+        svn_pool_clear(iterpool);
+        SVN_ERR(do_something(&amp;intermediate_result, ..., iterpool));
+        SVN_ERR(get_result(intermediate_result, &amp;key, &amp;val, ...,
+                           result_pool));
         apr_hash_set(persistent_objects, key, APR_HASH_KEY_STRING, val);
       }
-      svn_pool_destroy(subpool);
 
       return persistent_objects;
 </pre>
