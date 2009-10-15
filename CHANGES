@@ -1,3 +1,34 @@
+Version 1.6.6
+(16 Oct 2009, from /branches/1.6.x)
+http://svn.collab.net/repos/svn/tags/1.6.6
+
+ User-visible changes:
+  * fix crash during 'svn update' (r39673)
+  * respect Apache's ServerSignature directive (r40008, -21, -31)
+  * don't add a file with mixed line endings, and then abort (issue #2713)
+  * support Neon 0.29.
+  * fix a crash in 'svn rm --force' (r37953)
+  * handle tree conflicts involving replacements (issue #3486)
+  * allow non-threadsafe sqlite if APR has no threads (r39301)
+  * print newline before plaintext SSL cert / password prompts (r38982, r39302)
+  * improve merge performance with implicit subtree mergeinfo (issue #3443)
+  * fix "libsvn_ra_svn/marshal.c assertion failed (opt || cstr)" (issue #3485)
+  * make file externals work for binary files (issue #3368)
+  * perform MIME type matching case-insensitively (issue #3479)
+  * do not treat non-existent revisions as HEAD in 'svn export' (issue #3400)
+  * revert r36720's default MIME type change back to "text/plain" (issue #3508)
+  * improve "tree conflict already exists" error message (r38872)
+  * fix failure to commit replacement of a directory (issue #3281)
+  * fix mod_dav_svn parent dir links to preserve peg revisions (issue #3425)
+
+ Developer-visible changes:
+  * fix 2 failing tests in ruby bindings (r38886)
+  * do not require GNU grep for build (issue #3453)
+  * use '$SED' instead of 'sed' in build scripts (issue #3458)
+  * add svn.client.{log5,merge_peg3} to python bindings (r39635, -6, -7)
+  * include the time of a test run in tests.log (r39887)
+
+ 
 Version 1.6.5
 (21 Aug 2009, from /branches/1.6.x)
 http://svn.collab.net/repos/svn/tags/1.6.5
