@@ -118,7 +118,19 @@ crop_children(svn_wc__db_t *db,
                                    NULL,
                                    db, child_abspath, iterpool, iterpool));
 
-      if (kind == svn_wc__db_kind_file)
+      if (child_status == svn_wc__db_status_absent ||
+          child_status == svn_wc__db_status_excluded ||
+          child_status == svn_wc__db_status_not_present)
+        {
+          svn_depth_t remove_below = (kind == svn_wc__db_kind_dir)
+                                            ? svn_depth_immediates
+                                            : svn_depth_files;
+          if (depth < remove_below)
+            SVN_ERR(svn_wc__entry_remove(db, local_abspath, iterpool);
+
+          continue;
+        }
+      else if (kind == svn_wc__db_kind_file)
         {
           /* We currently crop on a directory basis. So don't worry about
              svn_depth_exclude here. And even we permit excluding a single
@@ -140,16 +152,7 @@ crop_children(svn_wc__db_t *db,
         }
       else if (kind == svn_wc__db_kind_dir)
         {
-          if (child_status == svn_wc__db_status_excluded)
-            {
-              /* Preserve the excluded node if the parent need it.
-                 Anyway, don't report on excluded subdir, since they are
-                 logically not exist. */
-              if (depth < svn_depth_immediates)
-                SVN_ERR(svn_wc__entry_remove(db, child_abspath, iterpool));
-              continue;
-            }
-          else if (depth < svn_depth_immediates)
+          if (depth < svn_depth_immediates)
             {
               IGNORE_LOCAL_MOD(
                 svn_wc__internal_remove_from_revision_control(
