@@ -672,7 +672,8 @@ svn_cl__changelist_paths(apr_array_header_t **paths,
                          const apr_array_header_t *targets,
                          svn_depth_t depth,
                          svn_client_ctx_t *ctx,
-                         apr_pool_t *pool);
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool);
 
 /* Like svn_client_args_to_target_array() but, if the only error is that some
  * arguments are reserved file names, then print warning messages for those
