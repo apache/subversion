@@ -3617,12 +3617,24 @@ svn_wc_crop_tree(svn_wc_adm_access_t *anchor,
                                   target, pool);
 
   SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL, db, pool));
-  SVN_ERR(svn_wc_crop_tree2(wc_ctx,
-                            local_abspath,
-                            depth,
-                            notify_func, notify_baton,
-                            cancel_func, cancel_baton,
-                            pool));
+
+  if (depth == svn_depth_exclude)
+    {
+      SVN_ERR(svn_wc_exclude(wc_ctx,
+                             local_abspath,
+                             cancel_func, cancel_baton,
+                             notify_func, notify_baton,
+                             pool));
+    }
+  else
+    {
+      SVN_ERR(svn_wc_crop_tree2(wc_ctx,
+                                local_abspath,
+                                depth,
+                                notify_func, notify_baton,
+                                cancel_func, cancel_baton,
+                                pool));
+    }
 
   return svn_error_return(svn_wc_context_destroy(wc_ctx));
 }

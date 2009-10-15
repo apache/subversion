@@ -132,7 +132,6 @@ tweak_entries(svn_wc__db_t *db,
       const char *child_basename = APR_ARRAY_IDX(children, i, const char *);
       const char *child_abspath;
       svn_wc__db_kind_t kind;
-      svn_depth_t child_depth;
       svn_wc__db_status_t status;
 
       const char *child_url = NULL;
@@ -150,7 +149,7 @@ tweak_entries(svn_wc__db_t *db,
                                APR_HASH_KEY_STRING) != NULL);
 
       SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL,
-                                   NULL, NULL, NULL, NULL, &child_depth, NULL,
+                                   NULL, NULL, NULL, NULL, NULL, NULL,
                                    NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                    NULL, NULL, NULL, NULL, NULL,
                                    db, child_abspath, iterpool, iterpool));
@@ -162,7 +161,7 @@ tweak_entries(svn_wc__db_t *db,
       if (kind == svn_wc__db_kind_file
             || status == svn_wc__db_status_not_present
             || status == svn_wc__db_status_absent
-            || child_depth == svn_depth_exclude)
+            || status == svn_wc__db_status_excluded)
         {
           if (excluded)
             continue;
@@ -276,14 +275,13 @@ svn_wc__do_update_cleanup(svn_wc__db_t *db,
 {
   svn_wc__db_status_t status;
   svn_wc__db_kind_t kind;
-  svn_depth_t wc_depth;
   svn_error_t *err;
 
   if (apr_hash_get(exclude_paths, local_abspath, APR_HASH_KEY_STRING))
     return SVN_NO_ERROR;
 
   err = svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL, NULL,
-                             NULL, NULL, NULL, &wc_depth, NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL,
                              db, local_abspath, pool, pool);
@@ -295,9 +293,6 @@ svn_wc__do_update_cleanup(svn_wc__db_t *db,
     }
   else
     SVN_ERR(err);
-
-  if (wc_depth == svn_depth_exclude)
-    status = svn_wc__db_status_excluded;
 
   switch (status)
     {
@@ -1052,7 +1047,6 @@ erase_from_wc(svn_wc__db_t *db,
         {
           const char *name = APR_ARRAY_IDX(children, i, const char *);
           svn_wc__db_status_t status;
-          svn_depth_t depth;
           const char *node_abspath;
 
           svn_pool_clear(iterpool);
@@ -1060,7 +1054,7 @@ erase_from_wc(svn_wc__db_t *db,
           node_abspath = svn_dirent_join(local_abspath, name, iterpool);
 
           SVN_ERR(svn_wc__db_read_info(&status, &wc_kind, NULL, NULL, NULL,
-                                       NULL, NULL, NULL, NULL, NULL, &depth,
+                                       NULL, NULL, NULL, NULL, NULL, NULL,
                                        NULL, NULL, NULL, NULL, NULL, NULL,
                                        NULL, NULL, NULL, NULL, NULL, NULL,
                                        NULL,
@@ -1071,8 +1065,7 @@ erase_from_wc(svn_wc__db_t *db,
               status == svn_wc__db_status_obstructed ||
               status == svn_wc__db_status_obstructed_add ||
               status == svn_wc__db_status_obstructed_delete ||
-              status == svn_wc__db_status_excluded ||
-              depth == svn_depth_exclude)
+              status == svn_wc__db_status_excluded)
             continue; /* Not here */
 
           /* ### We don't have to record dirs once we have a single database */
@@ -1146,11 +1139,10 @@ svn_wc_delete4(svn_wc_context_t *wc_ctx,
   const char *parent_abspath = svn_dirent_dirname(local_abspath, pool);
   svn_wc__db_status_t status;
   svn_wc__db_kind_t kind;
-  svn_depth_t depth;
   svn_boolean_t base_shadowed;
 
   err = svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL, NULL,
-                             NULL, NULL, NULL, &depth, NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                              &base_shadowed, NULL, NULL,
                              db, local_abspath, pool, pool);
@@ -1168,9 +1160,6 @@ svn_wc_delete4(svn_wc_context_t *wc_ctx,
     }
   else
     SVN_ERR(err);
-
-  if (depth == svn_depth_exclude)
-    status = svn_wc__db_status_excluded;
 
   switch (status)
     {
@@ -1485,7 +1474,6 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
   svn_wc__db_t *db = wc_ctx->db;
   svn_error_t *err;
   svn_wc__db_status_t status;
-  svn_depth_t db_depth;
   svn_wc__db_kind_t db_kind;
   svn_boolean_t exists;
 
@@ -1517,7 +1505,7 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
      scheduled for addition and still previously 'deleted'.  */
 
   err = svn_wc__db_read_info(&status, &db_kind, NULL, NULL, NULL, NULL, NULL,
-                             NULL, NULL, NULL, &db_depth, NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                              NULL, NULL,
                              db, local_abspath, pool, pool);
@@ -1533,9 +1521,6 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
 
       SVN_ERR(err);
       exists = TRUE;
-
-      if (db_depth == svn_depth_exclude)
-        status = svn_wc__db_status_excluded;
 
       switch (status)
         {

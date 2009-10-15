@@ -187,24 +187,30 @@ svn_client__update_internal(svn_revnum_t *result_rev,
   /* We may need to crop the tree if the depth is sticky */
   if (depth_is_sticky && depth < svn_depth_infinity)
     {
-      const char *target_abspath;
       svn_node_kind_t target_kind;
 
-      SVN_ERR(svn_dirent_get_absolute(&target_abspath, path, pool));
+      if (depth == svn_depth_exclude)
+        {
+          SVN_ERR(svn_wc_exclude(ctx->wc_ctx,
+                                 local_abspath,
+                                 ctx->cancel_func, ctx->cancel_baton,
+                                 ctx->notify_func2, ctx->notify_baton2,
+                                 pool));
+
+          /* Target excluded, we are done now */
+          SVN_ERR(svn_wc_adm_close2(adm_access, pool));
+
+          return SVN_NO_ERROR;
+        }
+
       SVN_ERR(svn_wc__node_get_kind(&target_kind, ctx->wc_ctx,
-                                    target_abspath, TRUE, pool));
+                                    local_abspath, TRUE, pool));
       if (target_kind == svn_node_dir)
         {
-          SVN_ERR(svn_wc_crop_tree2(ctx->wc_ctx, target_abspath, depth,
+          SVN_ERR(svn_wc_crop_tree2(ctx->wc_ctx, local_abspath, depth,
                                     ctx->notify_func2, ctx->notify_baton2,
                                     ctx->cancel_func, ctx->cancel_baton,
                                     pool));
-          /* If we are asked to exclude a target, we can just stop now. */
-          if (depth == svn_depth_exclude)
-            {
-              SVN_ERR(svn_wc_adm_close2(adm_access, pool));
-              return SVN_NO_ERROR;
-            }
         }
     }
 

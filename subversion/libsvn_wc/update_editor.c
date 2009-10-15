@@ -798,23 +798,6 @@ complete_directory(struct edit_baton *eb,
           else
             SVN_ERR(svn_wc__db_base_remove(eb->db, node_abspath, iterpool));
         }
-      else if (depth == svn_depth_exclude)
-        {
-         /* ### We currently never see this condition, because the excluded
-                state is only recorded in the parent stub, but we can only
-                read the real node with WC-NG after it is pulled in.
-
-                This state is currently repaired by the was_excluded boolean
-                on the directory itself */
-
-            /* Clear the exclude flag if it is pulled in again. */
-          if (eb->depth_is_sticky
-              && eb->requested_depth >= svn_depth_immediates)
-            {
-              SVN_ERR(svn_wc__set_depth(eb->db, node_abspath,
-                                        svn_depth_infinity, iterpool));
-            }
-        }
       else if (kind == svn_wc__db_kind_dir
                && svn_wc__adm_missing(eb->db, node_abspath, iterpool)
                && base_status != svn_wc__db_status_absent
@@ -2087,6 +2070,7 @@ do_entry_deletion(struct edit_baton *eb,
   svn_stringbuf_t *log_item = svn_stringbuf_create("", pool);
   svn_wc_conflict_description2_t *tree_conflict;
   const char *dir_abspath = svn_dirent_dirname(local_abspath, pool);
+  svn_boolean_t hidden;
 
   /* ### hmm. in case we need to re-add the node, we use some fields from
      ### this entry. I believe the required fields are filled in, but getting
@@ -2104,16 +2088,6 @@ do_entry_deletion(struct edit_baton *eb,
       svn_error_clear(err);
     }
 
-  /* Receive the remote removal of excluded entry. Do not notify. */
-  if (entry->depth == svn_depth_exclude)
-    {
-      SVN_ERR(svn_wc__entry_remove(eb->db, local_abspath, pool));
-
-      if (strcmp(local_abspath, eb->target_abspath) == 0)
-        eb->target_deleted = TRUE;
-      return SVN_NO_ERROR;
-    }
-
   /* Is this path a conflict victim? */
   SVN_ERR(node_already_conflicted(&already_conflicted, eb->db,
                                   local_abspath, pool));
@@ -2128,6 +2102,19 @@ do_entry_deletion(struct edit_baton *eb,
                                              svn_wc_notify_skip,
                                              pool),
                         pool);
+
+      return SVN_NO_ERROR;
+    }
+
+    /* Receive the remote removal of excluded/absent/not present node.
+       Do not notify. */
+  SVN_ERR(svn_wc__db_node_hidden(&hidden, eb->db, local_abspath, pool));
+  if (hidden)
+    {
+      SVN_ERR(svn_wc__entry_remove(eb->db, local_abspath, pool));
+
+      if (strcmp(local_abspath, eb->target_abspath) == 0)
+        eb->target_deleted = TRUE;
 
       return SVN_NO_ERROR;
     }
@@ -2315,6 +2302,9 @@ delete_entry(const char *path,
   SVN_ERR(check_path_under_root(pb->local_abspath, base, pool));
 
   their_url = svn_path_url_add_component2(pb->new_URL, base, pool);
+
+  /* Flush parent log before potentially adding tree conflicts */
+  flush_log(pb, pool);
 
   return do_entry_deletion(pb->edit_baton, local_abspath,
                            their_url, pb->inside_deleted_subtree, pool);
@@ -2553,9 +2543,6 @@ add_directory(const char *path,
                                    NULL, NULL, NULL, NULL, NULL, NULL,
                                    eb->db, db->local_abspath,
                                    pool, pool));
-
-      if (depth == svn_depth_exclude)
-        status = svn_wc__db_status_excluded;
 
       if (status == svn_wc__db_status_added)
         {
@@ -5246,7 +5233,6 @@ svn_wc__check_wc_root(svn_boolean_t *wc_root,
   svn_error_t *err;
   svn_wc__db_status_t status;
   svn_wc__db_kind_t my_kind;
-  svn_depth_t depth;
 
   /* Go ahead and initialize our return value to the most common
      (code-wise) values. */
@@ -5260,7 +5246,7 @@ svn_wc__check_wc_root(svn_boolean_t *wc_root,
 
   SVN_ERR(svn_wc__db_read_info(&status, kind, NULL, &repos_relpath,
                                &repos_root, &repos_uuid, NULL, NULL, NULL,
-                               NULL, &depth, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                db, local_abspath,
                                scratch_pool, scratch_pool));
@@ -5276,8 +5262,7 @@ svn_wc__check_wc_root(svn_boolean_t *wc_root,
     }
   else if (status == svn_wc__db_status_absent ||
            status == svn_wc__db_status_excluded ||
-           status == svn_wc__db_status_not_present ||
-           depth == svn_depth_exclude)
+           status == svn_wc__db_status_not_present)
     {
       return svn_error_createf(
                     SVN_ERR_WC_PATH_NOT_FOUND, NULL,
