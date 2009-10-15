@@ -390,8 +390,8 @@ report_revisions_and_depths(svn_wc__db_t *db,
                                    &this_lock,
                                    db, this_abspath, iterpool, iterpool));
 
-      /* First check the depth */
-      if (this_depth == svn_depth_exclude)
+      /* First check for exclusion */
+      if (this_status == svn_wc__db_status_excluded)
         {
           if (honor_depth_exclude)
             {
@@ -836,9 +836,6 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
       target_depth = svn_depth_unknown;
       target_lock = NULL;
     }
-
-  if (target_depth == svn_depth_exclude)
-    status = svn_wc__db_status_excluded;
 
   if (status == svn_wc__db_status_added)
     SVN_ERR(svn_wc__internal_is_replaced(&replaced, db, local_abspath, pool));

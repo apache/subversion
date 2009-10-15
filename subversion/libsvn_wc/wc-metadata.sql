@@ -429,9 +429,31 @@ ADD COLUMN right_checksum  TEXT;
 
 /* ------------------------------------------------------------------------- */
 
-/* Format 15 introduces new handling for conflict information.  */
+/* Format 15 introduces new handling for excluded nodes.  */
 -- format: 15
 
+UPDATE base_node
+SET checksum = NULL, translated_size = NULL, changed_rev = NULL,
+  changed_date = NULL, changed_author = NULL, depth = NULL,
+  symlink_target = NULL, last_mod_time = NULL, properties = NULL,
+  incomplete_children = NULL, file_external = NULL
+WHERE depth = 'exclude';
+
+/* We don't support cropping working nodes, but we might see them
+   via a copy from a sparse tree. Convert them anyway to make sure
+   we never see depth exclude in our database */
+UPDATE working_node
+SET checksum = NULL, translated_size = NULL, changed_rev = NULL,
+  changed_date = NULL, changed_author = NULL, depth = NULL,
+  symlink_target = NULL, copyfrom_repos_id = NULL, copyfrom_repos_path = NULL,
+  copyfrom_revnum = NULL, moved_here = NULL, moved_to = NULL,
+  last_mod_time = NULL, properties = NULL, keep_local = NULL
+WHERE depth = 'exclude';
+
+/* ------------------------------------------------------------------------- */
+
+/* Format 16 introduces new handling for conflict information.  */
+-- format: 16
 
 
 /* ------------------------------------------------------------------------- */

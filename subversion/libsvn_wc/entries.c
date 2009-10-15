@@ -965,6 +965,11 @@ read_entries_new(apr_hash_t **result_entries,
         {
           entry->absent = TRUE;
         }
+      else if (status == svn_wc__db_status_excluded)
+        {
+          entry->schedule = svn_wc_schedule_normal;
+          entry->depth = svn_depth_exclude;
+        }
       else
         {
           /* ### We aren't using this status. Yet.  */
@@ -1547,6 +1552,8 @@ svn_wc__set_depth(svn_wc__db_t *db,
   svn_wc_adm_access_t *adm_access;
   svn_wc_entry_t *entry;
 
+  SVN_ERR_ASSERT(depth >= svn_depth_empty && depth <= svn_depth_infinity);
+
   svn_dirent_split(local_dir_abspath, &parent_abspath, &base_name,
                    scratch_pool);
 
@@ -1627,6 +1634,8 @@ insert_base_node(svn_sqlite__db_t *sdb,
     SVN_ERR(svn_sqlite__bind_text(stmt, 6, "absent"));
   else if (base_node->presence == svn_wc__db_status_incomplete)
     SVN_ERR(svn_sqlite__bind_text(stmt, 6, "incomplete"));
+  else if (base_node->presence == svn_wc__db_status_excluded)
+    SVN_ERR(svn_sqlite__bind_text(stmt, 6, "excluded"));
 
   SVN_ERR(svn_sqlite__bind_int64(stmt, 7, base_node->revision));
 
@@ -1699,6 +1708,8 @@ insert_working_node(svn_sqlite__db_t *sdb,
     SVN_ERR(svn_sqlite__bind_text(stmt, 4, "base-deleted"));
   else if (working_node->presence == svn_wc__db_status_incomplete)
     SVN_ERR(svn_sqlite__bind_text(stmt, 4, "incomplete"));
+  else if (working_node->presence == svn_wc__db_status_excluded)
+    SVN_ERR(svn_sqlite__bind_text(stmt, 4, "excluded"));
 
   /* ### in per-subdir operation, if we're about to write a directory and
      ### it is *not* "this dir", then we're writing a row in the parent
@@ -2000,9 +2011,16 @@ write_entry(svn_wc__db_t *db,
       base_node->local_relpath = local_relpath;
       base_node->parent_relpath = parent_relpath;
       base_node->revision = entry->revision;
-      base_node->depth = entry->depth;
       base_node->last_mod_time = entry->text_time;
       base_node->translated_size = entry->working_size;
+
+      if (entry->depth != svn_depth_exclude)
+        base_node->depth = entry->depth;
+      else
+        {
+          base_node->presence = svn_wc__db_status_excluded;
+          base_node->depth = svn_depth_infinity;
+        }
 
       if (entry->deleted)
         {
@@ -2118,10 +2136,17 @@ write_entry(svn_wc__db_t *db,
       working_node->wc_id = wc_id;
       working_node->local_relpath = local_relpath;
       working_node->parent_relpath = parent_relpath;
-      working_node->depth = entry->depth;
       working_node->changed_rev = SVN_INVALID_REVNUM;
       working_node->last_mod_time = entry->text_time;
       working_node->translated_size = entry->working_size;
+
+      if (entry->depth != svn_depth_exclude)
+        working_node->depth = entry->depth;
+      else
+        {
+          working_node->presence = svn_wc__db_status_excluded;
+          working_node->depth = svn_depth_infinity;
+        }
 
       if (entry->kind == svn_node_dir)
         working_node->checksum = NULL;

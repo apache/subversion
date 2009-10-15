@@ -7149,6 +7149,9 @@ svn_wc_set_changelist(const char *path,
  * @a local_abspath) from revision control.  Leave modified items behind
  * (unversioned), while removing unmodified ones completely.
  *
+ * @a depth can be svn_depth_empty or svn_depth_files. Excluding nodes
+ * is handled by svn_wc_exclude().
+ *
  * If @a local_abspath starts out with a shallower depth than @a depth,
  * do not upgrade it to @a depth (that would not be cropping); however, do
  * check children and crop them appropriately according to @a depth.
@@ -7180,6 +7183,9 @@ svn_wc_crop_tree2(svn_wc_context_t *wc_ctx,
 
 /** Similar to svn_wc_crop_tree2(), but uses an access baton and target.
  *
+ * svn_wc_crop_tree() also allows @c svn_depth_exclude, which is now
+ * handled via svn_wc_exclude()
+ *
  * @a target is a basename in @a anchor or "" for @a anchor itself.
  *
  * @since New in 1.6
@@ -7195,6 +7201,34 @@ svn_wc_crop_tree(svn_wc_adm_access_t *anchor,
                  svn_cancel_func_t cancel_func,
                  void *cancel_baton,
                  apr_pool_t *pool);
+
+/** Remove the local node for @a local_abspath from the working copy and
+ * add an excluded node placeholder in its place.
+ *
+ * This feature is only supported for unmodified nodes. An
+ * SVN_ERR_UNSUPPORTED_FEATURE error is returned if the node can't be
+ * excluded in its current state.
+ *
+ * @a wc_ctx contains a tree lock, for the local path to the working copy
+ * which will be used as the root of this operation
+ *
+ * If @a notify_func is not @c NULL, call it with @a notify_baton to
+ * report changes as they are made.
+ *
+ * If @a cancel_func is not @c NULL, call it with @a cancel_baton at
+ * various points to determine if the client has cancelled the operation.
+ *
+ *
+ * @since New in 1.7
+ */
+svn_error_t *
+svn_wc_exclude(svn_wc_context_t *wc_ctx,
+               const char *local_abspath,
+               svn_cancel_func_t cancel_func,
+               void *cancel_baton,
+               svn_wc_notify_func2_t notify_func,
+               void *notify_baton,
+               apr_pool_t *scratch_pool);
 
 
 /** @} */

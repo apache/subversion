@@ -724,7 +724,7 @@ migrate_locks(const char *wcroot_abspath,
 #if 0
 /* This implements svn_sqlite__transaction_callback_t */
 static svn_error_t *
-bump_database_to_15(void *baton,
+bump_database_to_16(void *baton,
                     svn_sqlite__db_t *sdb,
                     apr_pool_t *scratch_pool)
 {
@@ -738,7 +738,7 @@ bump_database_to_15(void *baton,
 }
 
 static svn_error_t *
-bump_to_15(const char *wcroot_abspath,
+bump_to_16(const char *wcroot_abspath,
            svn_sqlite__db_t *sdb,
            apr_pool_t *scratch_pool)
 {
@@ -781,10 +781,17 @@ svn_wc__upgrade_sdb(int *result_format,
       ++start_format;
     }
 
-#if 0
   if (start_format == 14)
     {
-      SVN_ERR(bump_to_15(wcroot_abspath, sdb, scratch_pool));
+      /* Nothing to do here for format 15 */
+      SVN_ERR(svn_sqlite__set_schema_version(sdb, 15, scratch_pool));
+      ++start_format;
+    }
+
+#if 0
+  if (start_format == 15)
+    {
+      SVN_ERR(bump_to_16(wcroot_abspath, sdb, scratch_pool));
       ++start_format;
     }
 #endif

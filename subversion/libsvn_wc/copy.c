@@ -841,16 +841,13 @@ svn_wc_copy3(svn_wc_context_t *wc_ctx,
   if (kind != svn_wc__db_kind_unknown)
     {
       svn_wc__db_status_t status;
-      svn_depth_t depth;
 
       SVN_ERR(svn_wc__db_read_info(&status, NULL, NULL, NULL, NULL, NULL, NULL,
-                                   NULL, NULL, NULL, &depth, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                    NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                    NULL, NULL, NULL,
                                    wc_ctx->db, dst_abspath,
                                    scratch_pool, scratch_pool));
-      if (depth == svn_depth_exclude)
-        status = svn_wc__db_status_excluded;
 
       switch (status)
         {
