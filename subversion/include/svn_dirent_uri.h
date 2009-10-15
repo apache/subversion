@@ -21,14 +21,26 @@
  * @endcopyright
  *
  * @file svn_dirent_uri.h
- * @brief A library to manipulate URIs and directory entries.
+ * @brief A library to manipulate URIs, relative paths and directory entries.
  *
- * This library makes a clear distinction between directory entries (dirents)
- * and URIs where:
- *  - a dirent is a path on (local) disc or a UNC path (Windows)
- *    examples: "/foo/bar", "X:/temp", "//server/share"
- *  - a URI is a path in a repository or a URL
- *    examples: "/trunk/README", "http://hostname/svn/repos"
+ * This library makes a clear distinction between several path formats:
+ *
+ *  - a dirent is a path on (local) disc or a UNC path (Windows) in either
+ *    relative or absolute format
+ *    Examples: "/foo/bar", "X:/temp", "//server/share" and on Windows "A:/"
+ *    But not: "http://server"
+ *
+ *  - a URI is an absolute path that starts with a '/' or a schema definition.
+ *    Examples: "/", "/foo", "http://server", "svn+ssh://user@host:123/file"
+ *    But not: "file", "dir/file", "A:/dir"
+ *    ### Currently the URI implementation still allows relpaths as valid
+ *    uris, but this will change soon.
+ *
+ *  - a relative path (relpath) is an unrooted path that can be joined to
+ *    any other relative path, uri or dirent. A relative path is never
+ *    rooted/prefixed by a '/'.
+ *    Examples: "file", "dir/file", "dir/subdir/../file"
+ *    But not: "/file", "http://server/file"
  *
  * This distinction is needed because on Windows we have to handle some
  * dirents and URIs differently. Since it's not possible to determine from
@@ -36,7 +48,7 @@
  * make this choice. See also issue #2028.
  *
  * Nearly all the @c svn_dirent_xxx, @c svn_relpath_xxx and @c svn_uri_xxx
- * functions expect paths passed into them to be in canonical form.  The only 
+ * functions expect paths passed into them to be in canonical form.  The only
  * functions which do *not* have such expectations are:
  *
  *    - @c svn_dirent_canonicalize()
@@ -49,12 +61,23 @@
  *    - @c svn_relpath_local_style()
  *    - @c svn_uri_canonicalize()
  *    - @c svn_uri_is_canonical()
- *    - @c svn_uri_internal_style()
- *    - @c svn_uri_local_style()
  *
- * ### TODO: add description in line with svn_path.h, once more functions
- * are moved.
- * ### END TODO
+ * Code that works with repository paths should always use repository
+ * root based relative paths (relpaths), or uris if it has to specify the
+ * repository itself too.
+ *
+ * All code that works with local files, MUST USE the dirent apis.
+ *
+ * When translating between local paths (dirents) and uris code should
+ * always go via the relative path format. 
+ * E.g.
+ *  - by truncating a parent portion from a path with svn_*_skip_ancestor(),
+ *  - or by converting portions to basenames and then joining to existing paths.
+ *
+ * SECURITY WARNING: If a path that is received from an untrusted source -like
+ * from the network- is converted to a dirent it should be tested with
+ * svn_dirent_is_under_root() before you can assume the path to be a safe local
+ * path.
  */
 
 #ifndef SVN_DIRENT_URI_H
@@ -103,21 +126,6 @@ const char *
 svn_relpath_local_style(const char *relpath,
                         apr_pool_t *pool);
 
-/** Convert @a uri from the local style to the canonical internal style.
- *
- * @since New in 1.7.
- */
-const char *
-svn_uri_internal_style(const char *uri,
-                       apr_pool_t *pool);
-
-/** Convert @a uri from the canonical internal style to the local style.
- *
- * @since New in 1.7.
- */
-const char *
-svn_uri_local_style(const char *uri,
-                    apr_pool_t *pool);
 
 /** Join a base dirent (@a base) with a component (@a component), allocated in
  * @a pool.
@@ -171,13 +179,13 @@ svn_relpath_join(const char *base,
                  const char *component,
                  apr_pool_t *pool);
 
-/** Join a base uri (@a base) with a component (@a component), allocating
- * the result in @a pool. @a component need not be a single component: it
- * can be any uri, absolute or relative to @a base.
+/** Join a valid base uri (@a base) with a relative path or uri
+ * (@a component), allocating the result in @a pool. @a relpath need
+ * not be a single component: it can be a relative path or a '/'
+ * prefixed relative path to join component to the root path of @a base.
  *
- * If either @a base or @a component is the empty path, then the other
- * argument will be copied and returned.  If both are the empty path the
- * empty path is returned.
+ * If @a relpath is the empty path, then @a base will be copied and
+ * returned.
  *
  * If the @a component is an absolute uri, then it is copied and returned.
  *

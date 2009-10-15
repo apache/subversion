@@ -2512,46 +2512,6 @@ test_relpath_local_style(apr_pool_t *pool)
 }
 
 static svn_error_t *
-test_uri_local_style(apr_pool_t *pool)
-{
-  struct {
-    const char *path;
-    const char *result;
-  } tests[] = {
-    { "",                     "." },
-    { ".",                    "." },
-#if defined(WIN32) || defined(__CYGWIN__)
-    /* Rules are as uri, but paths are shown with local separator */
-    { "a:/",                 "a:" },
-    { "a:/file",             "a:\\file" },
-    { "dir/file",            "dir\\file" },
-    { "/",                   "\\" },
-    { "//server/share/dir",  "\\server\\share\\dir" },
-#else
-    { "a:/",                 "a:" },
-    { "a:/file",             "a:/file" },
-    { "dir/file",            "dir/file" },
-    { "/",                   "/" },
-    { "//server/share/dir",  "/server/share/dir" },
-#endif
-  };
-  int i;
-
-  for (i = 0; i < COUNT_OF(tests); i++)
-    {
-      const char *local = svn_uri_local_style(tests[i].path, pool);
-
-      if (strcmp(local, tests[i].result))
-        return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
-                                 "svn_uri_local_style(\"%s\") returned "
-                                 "\"%s\" expected \"%s\"",
-                                 tests[i].path, local, tests[i].result);
-    }
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
 test_dirent_internal_style(apr_pool_t *pool)
 {
   struct {
@@ -2629,52 +2589,6 @@ test_relpath_internal_style(apr_pool_t *pool)
       if (strcmp(internal, tests[i].result))
         return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                                  "svn_relpath_internal_style(\"%s\") returned "
-                                 "\"%s\" expected \"%s\"",
-                                 tests[i].path, internal, tests[i].result);
-    }
-
-  return SVN_NO_ERROR;
-}
-
-
-static svn_error_t *
-test_uri_internal_style(apr_pool_t *pool)
-{
-  struct {
-    const char *path;
-    const char *result;
-  } tests[] = {
-    { "",                     "" },
-    { ".",                    "" },
-    { "/",                   "/" },
-    { "file",                "file" },
-    { "dir/file",            "dir/file" },
-    { "dir/file/./.",        "dir/file" },
-#if defined(WIN32) || defined(__CYGWIN__)
-    /* Rules are as uri, but paths are shown with internal separator */
-    { "a:\\",                "a:" },
-    { "a:\\file",            "a:/file" },
-    { "a:file",              "a:file" },
-    { "dir\\file",           "dir/file" },
-    { "//server/share/dir",  "/server/share/dir" },
-    { "\\\\srv\\shr\\dir",   "/srv/shr/dir" },
-#else
-    { "a:/",                 "a:" },
-    { "a:/file",             "a:/file" },
-    { "dir/file",            "dir/file" },
-    { "/",                   "/" },
-    { "//server/share/dir",  "/server/share/dir" },
-#endif
-  };
-  int i;
-
-  for (i = 0; i < COUNT_OF(tests); i++)
-    {
-      const char *internal = svn_uri_internal_style(tests[i].path, pool);
-
-      if (strcmp(internal, tests[i].result))
-        return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
-                                 "svn_uri_internal_style(\"%s\") returned "
                                  "\"%s\" expected \"%s\"",
                                  tests[i].path, internal, tests[i].result);
     }
@@ -2766,13 +2680,9 @@ struct svn_test_descriptor_t test_funcs[] =
                    "test svn_dirent_local_style"),
     SVN_TEST_PASS2(test_relpath_local_style,
                    "test svn_relpath_local_style"),
-    SVN_TEST_PASS2(test_uri_local_style,
-                   "test svn_uri_local_style"),
     SVN_TEST_PASS2(test_dirent_internal_style,
                    "test svn_dirent_internal_style"),
     SVN_TEST_PASS2(test_relpath_internal_style,
                    "test svn_relpath_internal_style"),
-    SVN_TEST_PASS2(test_uri_internal_style,
-                   "test svn_uri_internal_style"),
     SVN_TEST_NULL
   };
