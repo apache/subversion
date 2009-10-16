@@ -2088,10 +2088,10 @@ close_edit(void *edit_baton,
                              eb->ignores,
                              eb->status_func,
                              eb->status_baton,
-                             eb->cancel_func,
-                             eb->cancel_baton,
                              eb->wb.external_func,
                              eb->wb.external_baton,
+                             eb->cancel_func,
+                             eb->cancel_baton,
                              pool));
 
   return SVN_NO_ERROR;
@@ -2115,10 +2115,10 @@ svn_wc_get_status_editor5(const svn_delta_editor_t **editor,
                           const apr_array_header_t *ignore_patterns,
                           svn_wc_status_func4_t status_func,
                           void *status_baton,
-                          svn_cancel_func_t cancel_func,
-                          void *cancel_baton,
                           svn_wc_external_update_t external_func,
                           void *external_baton,
+                          svn_cancel_func_t cancel_func,
+                          void *cancel_baton,
                           apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool)
 {
@@ -2208,10 +2208,10 @@ svn_wc_walk_status(svn_wc_context_t *wc_ctx,
                    const apr_array_header_t *ignore_patterns,
                    svn_wc_status_func4_t status_func,
                    void *status_baton,
-                   svn_cancel_func_t cancel_func,
-                   void *cancel_baton,
                    svn_wc_external_update_t external_func,
                    void *external_baton,
+                   svn_cancel_func_t cancel_func,
+                   void *cancel_baton,
                    apr_pool_t *scratch_pool)
 {
   svn_node_kind_t kind, local_kind;

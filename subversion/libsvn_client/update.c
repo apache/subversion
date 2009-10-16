@@ -208,8 +208,8 @@ svn_client__update_internal(svn_revnum_t *result_rev,
       if (target_kind == svn_node_dir)
         {
           SVN_ERR(svn_wc_crop_tree2(ctx->wc_ctx, local_abspath, depth,
-                                    ctx->notify_func2, ctx->notify_baton2,
                                     ctx->cancel_func, ctx->cancel_baton,
+                                    ctx->notify_func2, ctx->notify_baton2,
                                     pool));
         }
     }
