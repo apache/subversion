@@ -208,9 +208,8 @@ svn_wc__internal_translated_file(const char **xlated_abspath,
       if (flags & SVN_WC_TRANSLATE_USE_GLOBAL_TMP)
         tmp_dir = NULL;
       else
-        tmp_dir = svn_wc__adm_child(
-                    svn_dirent_dirname(versioned_abspath, scratch_pool),
-                    SVN_WC__ADM_TMP, scratch_pool);
+        SVN_ERR(svn_wc__db_temp_wcroot_tempdir(&tmp_dir, db, versioned_abspath,
+                                               scratch_pool, scratch_pool));
 
       SVN_ERR(svn_io_open_unique_file3(NULL, &tmp_vfile, tmp_dir,
                 (flags & SVN_WC_TRANSLATE_NO_OUTPUT_CLEANUP)
@@ -319,8 +318,6 @@ svn_wc__get_keywords(apr_hash_t **keywords,
                      apr_pool_t *scratch_pool)
 {
   const char *list;
-  const char *repos_relpath;
-  const char *repos_root_url;
   svn_revnum_t changed_rev;
   apr_time_t changed_date;
   const char *changed_author;
@@ -350,23 +347,14 @@ svn_wc__get_keywords(apr_hash_t **keywords,
   else
     list = force_list;
 
-  SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL, &repos_relpath,
-                               &repos_root_url, NULL, &changed_rev,
+  SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL, NULL,
+                               NULL, NULL, &changed_rev,
                                &changed_date, &changed_author, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL,
                                db, local_abspath, scratch_pool, scratch_pool));
-
-  if (repos_root_url == NULL)
-    {
-      SVN_ERR(svn_wc__db_scan_addition(NULL, NULL, &repos_relpath,
-                                       &repos_root_url,
-                                       NULL, NULL, NULL, NULL, NULL,
-                                       db, local_abspath, scratch_pool,
-                                       scratch_pool));
-    }
-  url = svn_uri_join(repos_root_url, repos_relpath, scratch_pool);
+  SVN_ERR(svn_wc__internal_node_get_url(&url, db, local_abspath,
+                                        scratch_pool, scratch_pool));
 
   SVN_ERR(svn_subst_build_keywords2(keywords,
                                     list,
@@ -449,7 +437,7 @@ svn_wc__maybe_set_read_only(svn_boolean_t *did_set,
                              NULL, NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL, NULL, NULL,
-                             NULL, NULL, NULL, &lock, NULL,
+                             &lock,
                              db, local_abspath, scratch_pool, scratch_pool);
 
   if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)

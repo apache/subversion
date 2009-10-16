@@ -298,6 +298,8 @@ create_env(bdb_env_t **bdbp, const char *path, apr_pool_t *pool)
      because it must survive the cache pool cleanup. */
   path_size = strlen(path) + 1;
   path_bdb_size = strlen(path_bdb) + 1;
+  /* Using calloc() to ensure the padding bytes in bdb->key (which is used as
+   * a hash key) are zeroed. */
   bdb = calloc(1, sizeof(*bdb) + path_size + path_bdb_size);
 
   /* We must initialize this now, as our callers may assume their bdb

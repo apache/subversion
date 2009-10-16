@@ -1684,14 +1684,25 @@ argument."
 
 (defun svn-delete-dir-tree (file)
   "Remove a file or directory tree."
-  (if (file-directory-p file)
-      (progn
-	(mapc #'(lambda (f)
-		  (unless (or (equal f ".") (equal f ".."))
-		    (svn-delete-dir-tree (concat file "/" f))))
-	      (directory-files file))
-	(delete-directory file))
-    (delete-file file)))
+  (cond ((file-symlink-p file)
+	 ;; In Emacs 21, delete-file refuses to delete a symlink to a
+	 ;; directory. We work around it by overwriting the symlink
+	 ;; with a dangling link first. (We can't do that in later
+	 ;; Emacs versions, because make-symbolic-link may decide to
+	 ;; create the link inside the old link target directory.)
+	 (when (<= emacs-major-version 21)
+	   (make-symbolic-link "/a/file/that/does/not/exist" file t))
+	 (delete-file file))
+
+	((file-directory-p file)
+	 (mapc #'(lambda (f)
+		   (unless (or (equal f ".") (equal f ".."))
+		     (svn-delete-dir-tree (concat file "/" f))))
+	       (directory-files file))
+	 (delete-directory file))
+
+	(t 				; regular file
+	 (delete-file file))))
 
 (defun svn-remove-file ()
   "Remove the selected files and directories."

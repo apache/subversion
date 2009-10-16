@@ -397,73 +397,67 @@ CREATE TABLE WORK_QUEUE (
    erase anything there.  */
 UPDATE BASE_NODE SET incomplete_children=null, dav_cache=null;
 
+/* ------------------------------------------------------------------------- */
+
+/* Format 14 introduces a table for storing wc locks, and additional columns
+   for storing conflict data in ACTUAL. */
+-- format: 14
+
+/* The existence of a row in this table implies a write lock. */
+CREATE TABLE WC_LOCK (
+  /* specifies the location of this node in the local filesystem */
+  wc_id  INTEGER NOT NULL,
+  local_dir_relpath  TEXT NOT NULL,
+ 
+  PRIMARY KEY (wc_id, local_dir_relpath)
+ );
+
+/* A skel containing the conflict details. */
+ALTER TABLE ACTUAL_NODE
+ADD COLUMN conflict_data  BLOB;
+
+/* Three columns containing the checksums of older, left and right conflict
+   texts.  Stored in a column to allow storing them in the pristine store */
+ALTER TABLE ACTUAL_NODE
+ADD COLUMN older_checksum  TEXT;
+
+ALTER TABLE ACTUAL_NODE
+ADD COLUMN left_checksum  TEXT;
+
+ALTER TABLE ACTUAL_NODE
+ADD COLUMN right_checksum  TEXT;
 
 /* ------------------------------------------------------------------------- */
 
-/* Format 14 introduces new handling for conflict information.  */
--- format: 14
+/* Format 15 introduces new handling for excluded nodes.  */
+-- format: 15
 
-CREATE TABLE CONFLICT_VICTIM (
-  /* specifies the location of this node in the local filesystem */
-  wc_id  INTEGER NOT NULL,
-  local_relpath  TEXT NOT NULL,
+UPDATE base_node
+SET
+  presence = 'excluded',
+  checksum = NULL, translated_size = NULL, changed_rev = NULL,
+  changed_date = NULL, changed_author = NULL, depth = NULL,
+  symlink_target = NULL, last_mod_time = NULL, properties = NULL,
+  incomplete_children = NULL, file_external = NULL
+WHERE depth = 'exclude';
 
-  /* parent's local_relpath for aggregating children of a given parent.
-     this will be "" if the parent is the wcroot. NULL if this is the
-     wcroot node. */
-  parent_relpath  TEXT,
-  
-  /* what kind of node is this? may be "unknown" if the node is not present */
-  node_kind  TEXT NOT NULL,
+/* We don't support cropping working nodes, but we might see them
+   via a copy from a sparse tree. Convert them anyway to make sure
+   we never see depth exclude in our database */
+UPDATE working_node
+SET
+  presence = 'excluded',
+  checksum = NULL, translated_size = NULL, changed_rev = NULL,
+  changed_date = NULL, changed_author = NULL, depth = NULL,
+  symlink_target = NULL, copyfrom_repos_id = NULL, copyfrom_repos_path = NULL,
+  copyfrom_revnum = NULL, moved_here = NULL, moved_to = NULL,
+  last_mod_time = NULL, properties = NULL, keep_local = NULL
+WHERE depth = 'exclude';
 
-  /* what sort of conflict are we describing?
-     "text", "property" or "tree" */
-  conflict_kind  TEXT NOT NULL,
+/* ------------------------------------------------------------------------- */
 
-  /* the name of the property in conflict, or NULL */
-  property_name  TEXT,
-
-  /* conflict information, if kind is 'text' */
-  conflict_action  TEXT,
-  conflict_reason  TEXT,
-
-  /* operation which exposed the conflict, if kind is 'tree' */
-  operation  TEXT,
-  
-  /* ### BH: Add original/base version? */
-  /* ### BH: Add relpath for conflict files? Or just basename */
-  /* ### BH: Add checksum to allow referring to pristine? */
-  /* ### BH: How to handle the .prej file? (Multiple property conflicts?) */
-  /* the 'base' version of the incoming change. */
-/*base_repos_id  INTEGER,
-  base_repos_relpath  TEXT,
-  base_peg_rev  INTEGER,
-  base_kind  TEXT,
-  base_local_relpath  TEXT,
-  base_checksum  TEXT */
-
-  /* the 'merge-left' source, 'older' version of the incoming change. */
-  left_repos_id  INTEGER,
-  left_repos_relpath  TEXT,
-  left_peg_rev  INTEGER,
-  left_kind  TEXT,
-/*left_local_relpath  TEXT,
-  left_checksum  TEXT, */
-
-  /* the 'merge-right' source, or 'their' version of the incoming change. */
-  right_repos_id  INTEGER,
-  right_repos_relpath  TEXT,
-  right_peg_rev  INTEGER,
-  right_kind  TEXT,
-/*right_local_relpath  TEXT,
-  right_checksum  TEXT, */
-
-  /* ### BH: Add conflict kind? Add property name? Primary key should be
-         unique */
-  PRIMARY KEY (wc_id, local_relpath)
-  );
-
-CREATE INDEX I_CVPARENT ON CONFLICT_VICTIM (wc_id, parent_relpath);
+/* Format 16 introduces new handling for conflict information.  */
+-- format: 16
 
 
 /* ------------------------------------------------------------------------- */

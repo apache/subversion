@@ -1560,13 +1560,6 @@ svn_fs_make_dir(svn_fs_root_t *root,
  * the root of a transaction, not of a revision.  Use @a pool for
  * temporary allocation.
  *
- * This function may be more efficient than making the equivalent
- * series of calls to svn_fs_delete(), because it takes advantage of the
- * fact that, to delete an immutable subtree, shared with some
- * committed revision, you need only remove the directory entry.  The
- * dumb algorithm would recurse into the subtree and end up cloning
- * each non-empty directory it contains, only to delete it later.
- *
  * If return @c SVN_ERR_FS_NO_SUCH_ENTRY, then the basename of @a path is
  * missing from its parent, that is, the final target of the deletion
  * is missing.

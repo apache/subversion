@@ -48,7 +48,7 @@ class SubversionRepositoryTestCase(unittest.TestCase):
        using a config hash"""
     fs_config = { "fs-type": "fsfs" }
     for i in range(5):
-      path = tempfile.mkdtemp("-test" + str(i))
+      path = core.svn_dirent_internal_style(tempfile.mkdtemp("-test" + str(i)))
       repos.create(path, "", "", None, fs_config)
       repos.delete(path)
 

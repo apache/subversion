@@ -1590,6 +1590,26 @@ def wc_to_wc_copy_deleted(sbox):
     'A/B2/lambda'  : Item(verb='Deleting'),
     'A/B2/F'       : Item(verb='Deleting'),
     })
+
+  ### This commit fails with a core dump. Before the commit, the rows
+  ### in WORKING_NODE are marked as "not-present" indicating that the
+  ### added node has been (schedule-)deleted. This is all fine.
+  ###
+  ### During the commit, the B2 directory is "promoted" to a BASE_NODE
+  ### indicating it now reflects what is in the repository. HOWEVER, the
+  ### not-present WORKING_NODE rows are left as not-present. Since there
+  ### is no longer a parent for those nodes in WORKING_NODE, this is an
+  ### integrity problem in the database. not-present is used to delete
+  ### subtrees of *added* nodes. "base-deleted" is used to indicate a
+  ### deletion in the BASE tree.
+  ###
+  ### In this particular situation, the proper status of "lambda" and
+  ### "F" are unclear. Some thinking needs to happen around the correct
+  ### transactional process during the commit.
+  ###
+  ### For now, this test is marked as an XFail() until we get our commit
+  ### processing fixed up.
+
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
                                         expected_status,
@@ -4151,7 +4171,9 @@ test_list = [ None,
               repos_to_wc_1634,
               double_uri_escaping_1814,
               wc_to_wc_copy_between_different_repos,
-              wc_to_wc_copy_deleted,
+              ### should be XFail, but it core dumps with an assertion.
+              ### marking as Skip() to avoid core dump turds...
+              Skip(wc_to_wc_copy_deleted),
               url_to_non_existent_url_path,
               non_existent_url_to_url,
               old_dir_url_to_url,

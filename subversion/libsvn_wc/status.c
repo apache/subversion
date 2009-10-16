@@ -296,7 +296,7 @@ assemble_status(svn_wc_status2_t **status,
   svn_wc_status2_t *stat;
   svn_boolean_t locked_p = FALSE;
   svn_boolean_t switched_p = FALSE;
-  svn_wc_conflict_description2_t *tree_conflict;
+  const svn_wc_conflict_description2_t *tree_conflict;
   svn_boolean_t file_external_p = FALSE;
 #ifdef HAVE_SYMLINK
   svn_boolean_t wc_special;
@@ -462,7 +462,7 @@ assemble_status(svn_wc_status2_t **status,
 #endif /* HAVE_SYMLINK */
           )
         {
-          svn_error_t *err = svn_wc__text_modified_internal_p(&text_modified_p,
+          svn_error_t *err = svn_wc__internal_text_modified_p(&text_modified_p,
                                                               db,
                                                               local_abspath,
                                                               FALSE, TRUE,
@@ -572,7 +572,8 @@ assemble_status(svn_wc_status2_t **status,
 #endif /* HAVE_SYMLINK */
 
       if (path_kind == svn_node_dir && entry->kind == svn_node_dir)
-        SVN_ERR(svn_wc_locked(&locked_p, local_abspath, scratch_pool));
+        SVN_ERR(svn_wc__internal_locked(NULL, &locked_p, db, local_abspath,
+                                        scratch_pool));
     }
 
   /* 5. Easy out:  unless we're fetching -every- entry, don't bother
@@ -945,7 +946,7 @@ get_dir_status(const struct walk_status_baton *wb,
 {
   apr_hash_index_t *hi;
   const svn_wc_entry_t *dir_entry;
-  apr_hash_t *dirents, *nodes, *tree_conflicts, *all_children;
+  apr_hash_t *dirents, *nodes, *conflicts, *all_children;
   apr_array_header_t *patterns = NULL;
   apr_pool_t *iterpool, *subpool = svn_pool_create(scratch_pool);
 
@@ -975,25 +976,26 @@ get_dir_status(const struct walk_status_baton *wb,
 
   if (selected == NULL)
     {
+      const apr_array_header_t *victims;
       /* Create a hash containing all children */
       all_children = apr_hash_overlay(subpool, nodes, dirents);
 
-      /* ### This creates the tree conflicts with bogus paths.
-             We can't just push these in the status result! */
-      SVN_ERR(svn_wc__read_tree_conflicts(&tree_conflicts,
-                                          dir_entry->tree_conflict_data,
-                                          "" /* Used for path */, subpool));
+      SVN_ERR(svn_wc__db_read_conflict_victims(&victims,
+                                               wb->db, local_abspath,
+                                               iterpool, iterpool));
+
+      SVN_ERR(svn_hash_from_cstring_keys(&conflicts, victims, subpool));
 
       /* Optimize for the no-tree-conflict case */
-      if (apr_hash_count(tree_conflicts) > 0)
-        all_children = apr_hash_overlay(subpool, tree_conflicts, all_children);
+      if (apr_hash_count(conflicts) > 0)
+        all_children = apr_hash_overlay(subpool, conflicts, all_children);
     }
   else
     {
-      svn_wc_conflict_description2_t *tc;
+      const svn_wc_conflict_description2_t *tc;
       const char *selected_abspath;
 
-      tree_conflicts = apr_hash_make(subpool);
+      conflicts = apr_hash_make(subpool);
       all_children = apr_hash_make(subpool);
       
       apr_hash_set(all_children, selected, APR_HASH_KEY_STRING, selected);
@@ -1005,7 +1007,7 @@ get_dir_status(const struct walk_status_baton *wb,
 
       /* Note this path if a tree conflict is present.  */
       if (tc != NULL)
-        apr_hash_set(tree_conflicts, selected, APR_HASH_KEY_STRING, "");
+        apr_hash_set(conflicts, selected, APR_HASH_KEY_STRING, "");
     }
 
   /* If "this dir" has "svn:externals" property set on it, store the
@@ -1109,7 +1111,7 @@ get_dir_status(const struct walk_status_baton *wb,
             }
         }
       
-      if (apr_hash_get(tree_conflicts, key, klen))
+      if (apr_hash_get(conflicts, key, klen))
         {
           /* Tree conflict */
 
@@ -1624,12 +1626,8 @@ handle_statii(struct edit_baton *eb,
   /* Loop over all the statuses still in our hash, handling each one. */
   for (hi = apr_hash_first(pool, statii); hi; hi = apr_hash_next(hi))
     {
-      const void *key;
-      void *val;
-      svn_wc_status2_t *status;
-
-      apr_hash_this(hi, &key, NULL, &val);
-      status = val;
+      const char *path = svn_apr_hash_index_key(hi);
+      svn_wc_status2_t *status = svn_apr_hash_index_val(hi);
 
       /* Clear the subpool. */
       svn_pool_clear(subpool);
@@ -1644,7 +1642,7 @@ handle_statii(struct edit_baton *eb,
         {
           const char *local_abspath;
 
-          SVN_ERR(svn_dirent_get_absolute(&local_abspath, key, subpool));
+          SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, subpool));
 
           SVN_ERR(get_dir_status(&eb->wb,
                                  local_abspath,
@@ -1657,7 +1655,7 @@ handle_statii(struct edit_baton *eb,
       if (dir_was_deleted)
         status->repos_text_status = svn_wc_status_deleted;
       if (svn_wc__is_sendable_status(status, eb->no_ignore, eb->get_all))
-        SVN_ERR((eb->status_func)(eb->status_baton, key, status, subpool));
+        SVN_ERR((eb->status_func)(eb->status_baton, path, status, subpool));
     }
 
   /* Destroy the subpool. */

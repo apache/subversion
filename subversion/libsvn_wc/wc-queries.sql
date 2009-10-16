@@ -30,7 +30,7 @@
 select wc_id, local_relpath, repos_id, repos_relpath,
   presence, kind, revnum, checksum, translated_size,
   changed_rev, changed_date, changed_author, depth, symlink_target,
-  last_mod_time
+  last_mod_time, properties
 from base_node
 where wc_id = ?1 and local_relpath = ?2;
 
@@ -38,7 +38,7 @@ where wc_id = ?1 and local_relpath = ?2;
 select wc_id, local_relpath, base_node.repos_id, base_node.repos_relpath,
   presence, kind, revnum, checksum, translated_size,
   changed_rev, changed_date, changed_author, depth, symlink_target,
-  last_mod_time,
+  last_mod_time, properties,
   lock_token, lock_owner, lock_comment, lock_date
 from base_node
 left outer join lock on base_node.repos_id = lock.repos_id
@@ -49,13 +49,13 @@ where wc_id = ?1 and local_relpath = ?2;
 select presence, kind, checksum, translated_size,
   changed_rev, changed_date, changed_author, depth, symlink_target,
   copyfrom_repos_id, copyfrom_repos_path, copyfrom_revnum,
-  moved_here, moved_to, last_mod_time
+  moved_here, moved_to, last_mod_time, properties
 from working_node
 where wc_id = ?1 and local_relpath = ?2;
 
 -- STMT_SELECT_ACTUAL_NODE
 select prop_reject, changelist, conflict_old, conflict_new,
-conflict_working, tree_conflict_data
+conflict_working, tree_conflict_data, properties
 from actual_node
 where wc_id = ?1 and local_relpath = ?2;
 
@@ -105,6 +105,14 @@ where wc_id = ?1 and local_relpath = ?2;
 
 -- STMT_SELECT_BASE_PROPS
 select properties from base_node
+where wc_id = ?1 and local_relpath = ?2;
+
+-- STMT_UPDATE_BASE_PROPS
+update base_node set properties = ?3
+where wc_id = ?1 and local_relpath = ?2;
+
+-- STMT_UPDATE_WORKING_PROPS
+update working_node set properties = ?3
 where wc_id = ?1 and local_relpath = ?2;
 
 -- STMT_UPDATE_ACTUAL_PROPS
@@ -198,8 +206,13 @@ where wc_id = ?1 and local_relpath = ?2;
 
 -- STMT_INSERT_ACTUAL_CHANGELIST
 insert into actual_node (
-  wc_id, local_relpath, changelist)
+  wc_id, local_relpath, /* ### parent_relpath, */ changelist)
 values (?1, ?2, ?3);
+
+-- STMT_RESET_ACTUAL_WITH_CHANGELIST
+REPLACE INTO actual_node (
+  wc_id, local_relpath, parent_relpath, changelist)
+VALUES (?1, ?2, ?3, ?4);
 
 -- STMT_DELETE_BASE_NODE
 delete from base_node
@@ -228,10 +241,66 @@ SELECT id FROM WORK_QUEUE LIMIT 1;
 INSERT INTO WORK_QUEUE (work) values (?1);
 
 -- STMT_SELECT_WORK_ITEM
-SELECT id, work FROM WORK_QUEUE LIMIT 1;
+SELECT id, work FROM WORK_QUEUE ORDER BY id LIMIT 1;
 
 -- STMT_DELETE_WORK_ITEM
 DELETE FROM WORK_QUEUE WHERE id = ?1;
+
+-- STMT_INSERT_PRISTINE
+INSERT OR IGNORE INTO PRISTINE (checksum, size, refcount)
+VALUES (?1, ?2, 1);
+
+-- STMT_SELECT_ACTUAL_CONFLICT_VICTIMS
+SELECT local_relpath
+FROM actual_node
+WHERE wc_id = ?1 AND parent_relpath = ?2 AND
+NOT((prop_reject IS NULL) AND (conflict_old IS NULL)
+    AND (conflict_new IS NULL) AND (conflict_working IS NULL))
+
+-- STMT_SELECT_ACTUAL_TREE_CONFLICT
+SELECT tree_conflict_data
+FROM actual_node
+WHERE wc_id = ?1 AND local_relpath = ?2;
+
+-- STMT_SELECT_CONFLICT_DETAILS
+SELECT prop_reject, conflict_old, conflict_new, conflict_working
+FROM actual_node
+WHERE wc_id = ?1 AND local_relpath = ?2;
+
+-- STMT_CLEAR_TEXT_CONFLICT
+UPDATE ACTUAL_NODE SET
+  conflict_old = null,
+  conflict_new = null,
+  conflict_working = null
+WHERE wc_id = ?1 AND local_relpath = ?2;
+
+-- STMT_CLEAR_PROPS_CONFLICT
+UPDATE ACTUAL_NODE SET
+  prop_reject = null
+WHERE wc_id = ?1 AND local_relpath = ?2;
+
+-- STMT_INSERT_WC_LOCK
+INSERT INTO WC_LOCK (wc_id, local_dir_relpath)
+VALUES (?1, ?2);
+
+-- STMT_SELECT_WC_LOCK
+SELECT local_dir_relpath FROM WC_LOCK
+WHERE wc_id = ?1 AND local_dir_relpath = ?2;
+
+-- STMT_DELETE_WC_LOCK
+DELETE FROM WC_LOCK
+WHERE wc_id = ?1 AND local_dir_relpath = ?2;
+
+-- STMT_APPLY_CHANGES_TO_BASE
+/* translated_size and last_mod_time are not mentioned here because they will
+   be tweaked after the working-file is installed.
+   ### what to do about file_external?  */
+INSERT OR REPLACE INTO BASE_NODE (
+  wc_id, local_relpath, parent_relpath, presence, kind, revnum, changed_rev,
+  changed_author, properties, repos_id, repos_relpath, checksum, changed_date,
+  depth, symlink_target, dav_cache)
+/* NOTE: ?6 is duplicated because we insert the same value in two columns.  */
+VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15);
 
 
 /* ------------------------------------------------------------------------- */

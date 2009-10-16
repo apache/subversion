@@ -1063,6 +1063,65 @@ def tree_conflicts_and_changelists_on_commit3(sbox):
                                         "--changelist",
                                         "list")
 
+#----------------------------------------------------------------------
+
+def move_keeps_changelist(sbox):
+  "'svn mv' of existing keeps the changelist"
+
+  sbox.build(read_only = True)
+  wc_dir = sbox.wc_dir
+  iota_path  = os.path.join(wc_dir, 'iota')
+  iota2_path = iota_path + '2'
+
+  # 'svn mv' of existing file should *copy* the changelist to the new place
+  svntest.main.run_svn(None, "changelist", 'foo', iota_path)
+  svntest.main.run_svn(None, "rename", iota_path, iota2_path)
+  expected_infos = [
+    {
+      'Name' : 'iota',
+      'Schedule' : 'delete',
+      'Changelist' : 'foo',
+    },
+    {
+      'Name' : 'iota2',
+      'Schedule' : 'add',
+      'Changelist' : 'foo',  # this line fails the test
+    },
+  ]
+  svntest.actions.run_and_verify_info(expected_infos, iota_path, iota2_path)
+
+def move_added_keeps_changelist(sbox):
+  "'svn mv' of added keeps the changelist"
+  sbox.build(read_only = True)
+  wc_dir = sbox.wc_dir
+  repo_url = sbox.repo_url
+
+  kappa_path  = os.path.join(wc_dir, 'kappa')
+  kappa2_path = kappa_path + '2'
+
+  # add 'kappa' (do not commit!)
+  svntest.main.file_write(kappa_path, "This is the file 'kappa'.\n")
+  svntest.main.run_svn(None, 'add', kappa_path)
+
+  # 'svn mv' of added file should *move* the changelist to the new place
+  svntest.main.run_svn(None, "changelist", 'foo', kappa_path)
+  svntest.main.run_svn(None, "rename", kappa_path, kappa2_path)
+
+  # kappa not under version control
+  svntest.actions.run_and_verify_svnversion(None, kappa_path, repo_url,
+                                            [], ".*doesn't exist.*")
+  # kappa2 in a changelist
+  expected_infos = [
+    {
+      'Name' : 'kappa2',
+      'Schedule' : 'add',
+      'Changelist' : 'foo',  # this line fails the test
+    },
+  ]
+  svntest.actions.run_and_verify_info(expected_infos, kappa2_path)
+
+                                             
+
 ########################################################################
 # Run the tests
 
@@ -1079,6 +1138,8 @@ test_list = [ None,
               tree_conflicts_and_changelists_on_commit1,
               tree_conflicts_and_changelists_on_commit2,
               tree_conflicts_and_changelists_on_commit3,
+              XFail(move_keeps_changelist),
+              XFail(move_added_keeps_changelist),
              ]
 
 if __name__ == '__main__':

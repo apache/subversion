@@ -994,8 +994,7 @@ def update_receive_illegal_name(sbox):
   for n in range(2):
     exit_code, out, err = svntest.main.run_svn(1, 'up', wc_dir)
     for line in err:
-      if line.find("an unversioned directory of the same " \
-                   "name already exists") != -1:
+      if line.find("of the same name") != -1:
         break
     else:
       raise svntest.Failure
@@ -4044,7 +4043,18 @@ def tree_conflicts_on_update_1_1(sbox):
   # use case 1, as in notes/tree-conflicts/use-cases.txt
   # 1.1) local tree delete, incoming leaf edit
 
-  expected_output = deep_trees_conflict_output
+  expected_output = deep_trees_conflict_output.copy()
+  expected_output.add({
+    'DDF/D1/D2'         : Item(status='D '),
+    'DDF/D1/D2/gamma'   : Item(status='D '),
+    'DD/D1/D2'          : Item(status='D '),
+    'DD/D1/D2/epsilon'  : Item(status='D '),
+    'DDD/D1/D2'         : Item(status='D '),
+    'DDD/D1/D2/D3'      : Item(status='D '),
+    'DDD/D1/D2/D3/zeta' : Item(status='D '),
+    'D/D1/delta'        : Item(status='D '),
+    'DF/D1/beta'        : Item(status='D '),
+  })
 
   expected_disk = disk_empty_dirs.copy()
 
@@ -4075,7 +4085,15 @@ def tree_conflicts_on_update_1_2(sbox):
 
   # 1.2) local tree delete, incoming leaf delete
 
-  expected_output = deep_trees_conflict_output
+  expected_output = deep_trees_conflict_output.copy()
+  expected_output.add({
+    'DDD/D1/D2'         : Item(status='D '),
+    'DDD/D1/D2/D3'      : Item(status='D '),
+    'DF/D1/beta'        : Item(status='D '),
+    'DD/D1/D2'          : Item(status='D '),
+    'DDF/D1/D2'         : Item(status='D '),
+    'DDF/D1/D2/gamma'   : Item(status='D '),
+  })
 
   expected_disk = disk_empty_dirs.copy()
 

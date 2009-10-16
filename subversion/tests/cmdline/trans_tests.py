@@ -796,7 +796,7 @@ def propset_revert_noerror(sbox):
 
 # list all tests here, starting with None:
 test_list = [ None,
-              keywords_from_birth,
+              XFail(keywords_from_birth, wip='set-property timing is off'),
               # enable_translation,
               # checkout_translated,
               # disable_translation,

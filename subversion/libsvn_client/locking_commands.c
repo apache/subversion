@@ -90,7 +90,8 @@ store_locks_callback(void *baton,
       const char *local_abspath;
 
       SVN_ERR(svn_dirent_get_absolute(&local_abspath,
-                                      svn_path_join(lb->base_path, path, pool),
+                                      svn_dirent_join(lb->base_path,
+                                                      path, pool),
                                       pool));
 
       /* Notify a valid working copy path */
@@ -180,19 +181,37 @@ organize_lock_targets(const char **common_parent_url,
                                                    sizeof(const char *));
   apr_hash_t *rel_targets_ret = apr_hash_make(pool);
   apr_pool_t *subpool = svn_pool_create(pool);
+  svn_boolean_t url_mode;
 
-  /* Get the common parent and all relative paths */
-  SVN_ERR(svn_path_condense_targets(common_parent_url, &rel_targets, targets,
-                                    FALSE, pool));
+  /* All targets must be either urls or paths */
+
+  url_mode = ((targets->nelts >= 1) && 
+              svn_path_is_url(APR_ARRAY_IDX(targets, 0, const char *)));
+
+  /* Get the common parent and all paths */
+  if (url_mode)
+    {
+      SVN_ERR(svn_uri_condense_targets(common_parent_url, &rel_targets,
+                                       targets, TRUE, pool, pool));
+    }
+  else
+    {
+      SVN_ERR(svn_dirent_condense_targets(common_parent_url, &rel_targets,
+                                          targets, TRUE, pool, pool));
+    }
 
   /* svn_path_condense_targets leaves paths empty if TARGETS only had
      1 member, so we special case that. */
   if (apr_is_empty_array(rel_targets))
     {
-      const char *base_name = svn_uri_basename(*common_parent_url, pool);
-      *common_parent_url = svn_uri_dirname(*common_parent_url, pool);
+      const char *parent, *basename;
+      if (url_mode)
+        svn_uri_split(*common_parent_url, &parent, &basename, pool);
+      else
+        svn_dirent_split(*common_parent_url, &parent, &basename, pool);
 
-      APR_ARRAY_PUSH(rel_targets, const char *) = base_name;
+      *common_parent_url = parent;
+      APR_ARRAY_PUSH(rel_targets, const char *) = basename;
     }
 
   if (*common_parent_url == NULL || (*common_parent_url)[0] == '\0')
@@ -200,7 +219,7 @@ organize_lock_targets(const char **common_parent_url,
       (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
        _("No common parent found, unable to operate on disjoint arguments"));
 
-  if (svn_path_is_url(*common_parent_url))
+  if (url_mode)
     {
       svn_revnum_t *invalid_revnum;
       invalid_revnum = apr_palloc(pool, sizeof(*invalid_revnum));
@@ -231,15 +250,15 @@ organize_lock_targets(const char **common_parent_url,
       for (i = 0; i < rel_targets->nelts; i++)
         {
           const char *target = APR_ARRAY_IDX(rel_targets, i, const char *);
-          const char *abs_path;
+          const char *local_abspath;
           const char *url;
 
           svn_pool_clear(subpool);
 
-          abs_path = svn_path_join(*common_parent_url, target, subpool);
+          local_abspath = svn_dirent_join(*common_parent_url, target, subpool);
 
-          SVN_ERR(svn_wc__node_get_url(&url, ctx->wc_ctx, abs_path, pool,
-                                       subpool));
+          SVN_ERR(svn_wc__node_get_url(&url, ctx->wc_ctx, local_abspath,
+                                       pool, subpool));
 
           if (! url)
             return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
@@ -250,8 +269,8 @@ organize_lock_targets(const char **common_parent_url,
         }
 
       /* Condense our absolute urls and get the relative urls. */
-      SVN_ERR(svn_path_condense_targets(&common_url, &rel_urls, urls,
-                                        FALSE, pool));
+      SVN_ERR(svn_uri_condense_targets(&common_url, &rel_urls, urls,
+                                       FALSE, pool, pool));
 
       /* svn_path_condense_targets leaves paths empty if TARGETS only had
          1 member, so we special case that (again). */
@@ -284,7 +303,7 @@ organize_lock_targets(const char **common_parent_url,
                        APR_HASH_KEY_STRING,
                        apr_pstrdup(pool, target));
 
-          abs_path = svn_path_join(*common_parent_url, target, subpool);
+          abs_path = svn_dirent_join(*common_parent_url, target, subpool);
 
           SVN_ERR(svn_wc__get_entry_versioned(&entry, ctx->wc_ctx, abs_path,
                                               svn_node_unknown, FALSE, FALSE,

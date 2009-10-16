@@ -216,7 +216,7 @@ line_filter(svn_stream_t *stream, svn_boolean_t *filtered, const char *line,
     }
 
   scratch_pool = svn_pool_create(pool);
-  SVN_ERR(stream->line_filter_cb(filtered, line, scratch_pool));
+  SVN_ERR(stream->line_filter_cb(filtered, line, stream->baton, scratch_pool));
   svn_pool_destroy(scratch_pool);
   return SVN_NO_ERROR;
 }
@@ -229,7 +229,8 @@ line_transformer(svn_stream_t *stream, svn_stringbuf_t **buf,
                  const char *line, apr_pool_t *pool, apr_pool_t *scratch_pool)
 {
   *buf = NULL;  /* so we can assert that the callback has set it non-null */
-  SVN_ERR(stream->line_transformer_cb(buf, line, pool, scratch_pool));
+  SVN_ERR(stream->line_transformer_cb(buf, line, stream->baton,
+                                      pool, scratch_pool));
 
   /* Die if the line transformer didn't provide any output. */
   SVN_ERR_ASSERT(*buf);

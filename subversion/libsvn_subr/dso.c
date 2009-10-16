@@ -49,7 +49,9 @@ static int not_there_sentinel;
 svn_error_t *
 svn_dso_initialize2(void)
 {
+#if APR_HAS_THREADS
   apr_status_t status;
+#endif
   if (dso_pool)
     return SVN_NO_ERROR;
 
@@ -105,7 +107,7 @@ svn_dso_load(apr_dso_handle_t **dso, const char *fname)
         {
 #ifdef SVN_DEBUG
           char buf[1024];
-          fprintf(stderr, "%s\n", apr_dso_error(*dso, buf, 1024));
+          SVN_DBG(("%s\n", apr_dso_error(*dso, buf, 1024)));
 #endif
           *dso = NULL;
 

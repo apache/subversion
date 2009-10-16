@@ -97,7 +97,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
   void *update_edit_baton;
   const svn_ra_reporter3_t *reporter;
   void *report_baton;
-  const svn_wc_entry_t *entry;
+  const char *anchor_url;
   const char *anchor, *target;
   const char *repos_root;
   svn_error_t *err;
@@ -176,35 +176,41 @@ svn_client__update_internal(svn_revnum_t *result_rev,
   SVN_ERR(svn_dirent_get_absolute(&anchor_abspath, anchor, pool));
 
   /* Get full URL from the ANCHOR. */
-  SVN_ERR(svn_wc__get_entry_versioned(&entry, ctx->wc_ctx, anchor_abspath,
-                                      svn_node_unknown, FALSE, FALSE,
-                                      pool, pool));
-  if (! entry->url)
+
+  SVN_ERR(svn_wc__node_get_url(&anchor_url, ctx->wc_ctx, anchor_abspath,
+                               pool, pool));
+  if (! anchor_url)
     return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
-                             _("Entry '%s' has no URL"),
-                             svn_dirent_local_style(anchor, pool));
+                             _("'%s' has no URL"),
+                             svn_dirent_local_style(anchor_abspath, pool));
 
   /* We may need to crop the tree if the depth is sticky */
   if (depth_is_sticky && depth < svn_depth_infinity)
     {
-      const char *target_abspath;
       svn_node_kind_t target_kind;
 
-      SVN_ERR(svn_dirent_get_absolute(&target_abspath, path, pool));
+      if (depth == svn_depth_exclude)
+        {
+          SVN_ERR(svn_wc_exclude(ctx->wc_ctx,
+                                 local_abspath,
+                                 ctx->cancel_func, ctx->cancel_baton,
+                                 ctx->notify_func2, ctx->notify_baton2,
+                                 pool));
+
+          /* Target excluded, we are done now */
+          SVN_ERR(svn_wc_adm_close2(adm_access, pool));
+
+          return SVN_NO_ERROR;
+        }
+
       SVN_ERR(svn_wc__node_get_kind(&target_kind, ctx->wc_ctx,
-                                    target_abspath, TRUE, pool));
+                                    local_abspath, TRUE, pool));
       if (target_kind == svn_node_dir)
         {
-          SVN_ERR(svn_wc_crop_tree(adm_access, target, depth,
-                                   ctx->notify_func2, ctx->notify_baton2,
-                                   ctx->cancel_func, ctx->cancel_baton,
-                                   pool));
-          /* If we are asked to exclude a target, we can just stop now. */
-          if (depth == svn_depth_exclude)
-            {
-              SVN_ERR(svn_wc_adm_close2(adm_access, pool));
-              return SVN_NO_ERROR;
-            }
+          SVN_ERR(svn_wc_crop_tree2(ctx->wc_ctx, local_abspath, depth,
+                                    ctx->notify_func2, ctx->notify_baton2,
+                                    ctx->cancel_func, ctx->cancel_baton,
+                                    pool));
         }
     }
 
@@ -226,7 +232,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
     : NULL;
 
   /* Open an RA session for the URL */
-  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, entry->url,
+  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, anchor_url,
                                                anchor, NULL, TRUE, TRUE,
                                                ctx, pool));
 
@@ -241,7 +247,6 @@ svn_client__update_internal(svn_revnum_t *result_rev,
      when we start depending on it.  (We can never *depend* upon it in
      a strict sense, however.) */
   SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root, pool));
-  SVN_ERR(svn_wc_maybe_set_repos_root(dir_access, path, repos_root, pool));
 
   /* Build a baton for the file-fetching callback. */
   ffb = apr_pcalloc(pool, sizeof(*ffb));
@@ -299,13 +304,17 @@ svn_client__update_internal(svn_revnum_t *result_rev,
      handling external items (and any errors therefrom) doesn't delay
      the primary operation.  */
   if (SVN_DEPTH_IS_RECURSIVE(depth) && (! ignore_externals))
-    SVN_ERR(svn_client__handle_externals(adm_access,
-                                         traversal_info,
-                                         entry->url,
-                                         anchor,
-                                         repos_root,
-                                         depth,
-                                         use_sleep, ctx, pool));
+    {
+      apr_hash_t *externals_old, *externals_new, *ambient_depths;
+
+      svn_wc_edited_externals(&externals_old, &externals_new, traversal_info);
+      svn_wc_traversed_depths(&ambient_depths, traversal_info);
+
+      SVN_ERR(svn_client__handle_externals(adm_access, externals_old,
+                                           externals_new, ambient_depths,
+                                           anchor_url, anchor, repos_root,
+                                           depth, use_sleep, ctx, pool));
+    }
 
   if (sleep_here)
     svn_io_sleep_for_timestamps(path, pool);

@@ -919,7 +919,7 @@ svn_error_t *svn_ra_lock(svn_ra_session_t *session,
 {
   apr_hash_index_t *hi;
 
-  for (hi = apr_hash_first(NULL, path_revs); hi; hi = apr_hash_next(hi))
+  for (hi = apr_hash_first(pool, path_revs); hi; hi = apr_hash_next(hi))
     {
       const void *path;
       apr_hash_this(hi, &path, NULL, NULL);
@@ -944,7 +944,7 @@ svn_error_t *svn_ra_unlock(svn_ra_session_t *session,
 {
   apr_hash_index_t *hi;
 
-  for (hi = apr_hash_first(NULL, path_tokens); hi; hi = apr_hash_next(hi))
+  for (hi = apr_hash_first(pool, path_tokens); hi; hi = apr_hash_next(hi))
     {
       const void *path;
       apr_hash_this(hi, &path, NULL, NULL);
@@ -1084,6 +1084,19 @@ svn_ra_get_deleted_rev(svn_ra_session_t *session,
                                              pool);
     }
   return err;
+}
+
+svn_error_t *
+svn_ra__obliterate(svn_ra_session_t *session,
+                   svn_revnum_t rev,
+                   const char *path,
+                   apr_pool_t *pool)
+{
+  const char *session_url;
+
+  SVN_ERR(svn_ra_get_session_url(session, &session_url, pool));
+
+  return session->vtable->obliterate_path_rev(session, rev, path, pool);
 }
 
 

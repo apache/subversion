@@ -36,11 +36,11 @@ extern "C" {
 #endif /* __cplusplus */
 
 
-/* For the WCROOT identified by the DB and LOCAL_ABSPATH pair, run any
+/* For the WCROOT identified by the DB and WRI_ABSPATH pair, run any
    work items that may be present in its workqueue.  */
 svn_error_t *
 svn_wc__wq_run(svn_wc__db_t *db,
-               const char *local_abspath,
+               const char *wri_abspath,
                svn_cancel_func_t cancel_func,
                void *cancel_baton,
                apr_pool_t *scratch_pool);
@@ -48,11 +48,37 @@ svn_wc__wq_run(svn_wc__db_t *db,
 
 /* Record a work item to revert LOCAL_ABSPATH.  */
 svn_error_t *
-svn_wc__wq_add_revert(svn_wc__db_t *db,
+svn_wc__wq_add_revert(svn_boolean_t *will_revert,
+                      svn_wc__db_t *db,
                       const char *local_abspath,
-                      svn_wc_schedule_t orig_schedule,
+                      svn_boolean_t use_commit_times,
                       apr_pool_t *scratch_pool);
 
+
+/* Record a work item to prepare the "revert props" and "revert text base"
+   for LOCAL_ABSPATH.  */
+svn_error_t *
+svn_wc__wq_prepare_revert_files(svn_wc__db_t *db,
+                                const char *local_abspath,
+                                apr_pool_t *scratch_pool);
+
+
+/* Handle the old "KILLME" concept -- perform the actual deletion of a
+   subdir (or just its admin area) during post-commit processing of a
+   deleted subdir.  */
+svn_error_t *
+svn_wc__wq_add_killme(svn_wc__db_t *db,
+                      const char *adm_abspath,
+                      svn_boolean_t adm_only,
+                      apr_pool_t *scratch_pool);
+
+
+/* ### temporary compat for mapping the old loggy into workqueue space.  */
+svn_error_t *
+svn_wc__wq_add_loggy(svn_wc__db_t *db,
+                     const char *adm_abspath,
+                     const svn_stringbuf_t *log_content,
+                     apr_pool_t *scratch_pool);
 
 #ifdef __cplusplus
 }

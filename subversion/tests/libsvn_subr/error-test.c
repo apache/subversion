@@ -71,7 +71,7 @@ test_error_root_cause(apr_pool_t *pool)
       svn_error_clear(err);
       return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                                "svn_error_root_cause failed to locate the "
-                               "correct error from teh chain");
+                               "correct error from the chain");
     }
 
   svn_error_clear(err);

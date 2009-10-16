@@ -304,7 +304,9 @@ static const char * const data_loading_sql[] = {
    "'" I_TC_DATA "');"
    ),
 
-  WC_METADATA_SQL_13
+  WC_METADATA_SQL_13,
+  WC_METADATA_SQL_14,
+  WC_METADATA_SQL_15
 };
 
 
@@ -796,12 +798,8 @@ test_working_info(apr_pool_t *pool)
   svn_boolean_t text_mod;
   svn_boolean_t props_mod;
   svn_boolean_t base_shadowed;
-  const char *conflict_old;
-  const char *conflict_new;
-  const char *conflict_working;
-  const char *prop_reject_file;
+  svn_boolean_t conflicted;
   svn_wc__db_lock_t *lock;
-  const char *tree_conflict_data;
   svn_wc__db_t *db;
 
   SVN_ERR(create_open(&db, &local_abspath,
@@ -817,8 +815,7 @@ test_working_info(apr_pool_t *pool)
             &changelist, &original_repos_relpath, &original_root_url,
             &original_uuid, &original_revnum,
             &text_mod, &props_mod, &base_shadowed,
-            &conflict_old, &conflict_new, &conflict_working,
-            &prop_reject_file, &lock, &tree_conflict_data,
+            &conflicted, &lock,
             db, svn_dirent_join(local_abspath, "I", pool),
             pool, pool));
   SVN_TEST_ASSERT(status == svn_wc__db_status_added);
@@ -842,12 +839,8 @@ test_working_info(apr_pool_t *pool)
   SVN_TEST_ASSERT(text_mod == FALSE);
   SVN_TEST_ASSERT(props_mod == FALSE);
   SVN_TEST_ASSERT(base_shadowed == TRUE);
-  SVN_TEST_ASSERT(conflict_old == NULL);
-  SVN_TEST_ASSERT(conflict_new == NULL);
-  SVN_TEST_ASSERT(conflict_working == NULL);
-  SVN_TEST_ASSERT(prop_reject_file == NULL);
+  SVN_TEST_ASSERT(conflicted == FALSE);
   SVN_TEST_ASSERT(lock == NULL);
-  SVN_TEST_STRING_ASSERT(tree_conflict_data, I_TC_DATA);
 
 
   /* ### we need a hojillion more tests in here. I just want to get this
@@ -1227,7 +1220,6 @@ test_global_relocate(apr_pool_t *pool)
                                NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL,
                                db, local_abspath,
                                pool, pool));
 
@@ -1244,7 +1236,6 @@ test_global_relocate(apr_pool_t *pool)
                                NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL,
                                db, local_abspath,
                                pool, pool));
   SVN_TEST_STRING_ASSERT(repos_relpath, "");
@@ -1259,7 +1250,6 @@ test_global_relocate(apr_pool_t *pool)
                                NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL,
                                db, svn_dirent_join(local_abspath, "G",
                                                    pool),
                                pool, pool));
@@ -1273,9 +1263,9 @@ test_global_relocate(apr_pool_t *pool)
 
 
 static svn_error_t *
-test_upgrading_to_f13(apr_pool_t *pool)
+test_upgrading_to_f15(apr_pool_t *pool)
 {
-  SVN_ERR(create_fake_wc("test_f13_upgrade", 13, pool));
+  SVN_ERR(create_fake_wc("test_f15_upgrade", 15, pool));
 
   return SVN_NO_ERROR;
 }
@@ -1370,8 +1360,8 @@ struct svn_test_descriptor_t test_funcs[] =
                    "deletion introspection functions"),
     SVN_TEST_PASS2(test_global_relocate,
                    "relocating a node"),
-    SVN_TEST_PASS2(test_upgrading_to_f13,
-                   "upgrading to format 13"),
+    SVN_TEST_PASS2(test_upgrading_to_f15,
+                   "upgrading to format 15"),
     SVN_TEST_PASS2(test_work_queue,
                    "work queue processing"),
     SVN_TEST_NULL

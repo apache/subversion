@@ -32,6 +32,7 @@
 #include "svn_types.h"
 
 #include "props.h"
+#include "wc_db.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -50,25 +51,6 @@ const char *svn_wc__adm_child(const char *path,
 svn_boolean_t svn_wc__adm_area_exists(const svn_wc_adm_access_t *adm_access,
                                       apr_pool_t *pool);
 
-
-/* Create a killme file in the administrative area, indicating that the
-   directory containing the administrative area should be removed.
-
-   If ADM_ONLY is true then remove only the administrative areas for the
-   directory and subdirectories. */
-svn_error_t *svn_wc__make_killme(svn_wc_adm_access_t *adm_access,
-                                 svn_boolean_t adm_only,
-                                 apr_pool_t *pool);
-
-/* Set EXISTS to TRUE if a killme file exists in the administrative area,
-   FALSE otherwise.
-
-   If EXISTS is true, set KILL_ADM_ONLY to the value passed to
-   svn_wc__make_killme() above. */
-svn_error_t *svn_wc__check_killme(svn_wc_adm_access_t *adm_access,
-                                  svn_boolean_t *exists,
-                                  svn_boolean_t *kill_adm_only,
-                                  apr_pool_t *pool);
 
 /* Atomically rename a temporary text-base file to its canonical
    location.  The tmp file should be closed already. */
@@ -118,7 +100,7 @@ svn_wc__text_revert_path(const char **result_abspath,
    and svn_node_file. */
 svn_error_t *svn_wc__prop_path(const char **prop_path,
                                const char *path,
-                               svn_node_kind_t node_kind,
+                               svn_wc__db_kind_t kind,
                                svn_wc__props_kind_t props_kind,
                                apr_pool_t *pool);
 

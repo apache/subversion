@@ -219,57 +219,6 @@ make_adm_subdir(const char *path,
 }
 
 
-svn_error_t *
-svn_wc__make_killme(svn_wc_adm_access_t *adm_access,
-                    svn_boolean_t adm_only,
-                    apr_pool_t *pool)
-{
-  const char *path;
-
-  SVN_ERR(svn_wc__adm_write_check(adm_access, pool));
-
-  path = svn_wc__adm_child(svn_wc_adm_access_path(adm_access),
-                           SVN_WC__ADM_KILLME, pool);
-
-  return svn_io_file_create(path, adm_only ? SVN_WC__KILL_ADM_ONLY : "", pool);
-}
-
-svn_error_t *
-svn_wc__check_killme(svn_wc_adm_access_t *adm_access,
-                     svn_boolean_t *exists,
-                     svn_boolean_t *kill_adm_only,
-                     apr_pool_t *pool)
-{
-  const char *path;
-  svn_error_t *err;
-  svn_stringbuf_t *contents;
-
-  path = svn_wc__adm_child(svn_wc_adm_access_path(adm_access),
-                           SVN_WC__ADM_KILLME, pool);
-
-  err = svn_stringbuf_from_file2(&contents, path, pool);
-  if (err)
-    {
-      if (APR_STATUS_IS_ENOENT(err->apr_err))
-        {
-          /* Killme file doesn't exist. */
-          *exists = FALSE;
-          svn_error_clear(err);
-          err = SVN_NO_ERROR;
-        }
-
-      return err;
-    }
-
-  *exists = TRUE;
-
-  /* If the killme file contains the string 'adm-only' then only the
-     administrative area should be removed. */
-  *kill_adm_only = strcmp(contents->data, SVN_WC__KILL_ADM_ONLY) == 0;
-
-  return SVN_NO_ERROR;
-}
-
 
 /*** Syncing files in the adm area. ***/
 
@@ -371,16 +320,15 @@ svn_wc__get_revert_contents(svn_stream_t **contents,
 svn_error_t *
 svn_wc__prop_path(const char **prop_path,
                   const char *path,
-                  svn_node_kind_t node_kind,
+                  svn_wc__db_kind_t kind,
                   svn_wc__props_kind_t props_kind,
                   apr_pool_t *pool)
 {
-  if (node_kind == svn_node_dir)  /* It's a working copy dir */
+  if (kind == svn_wc__db_kind_dir)
     {
       static const char * names[] = {
         SVN_WC__ADM_DIR_PROP_BASE,    /* svn_wc__props_base */
         SVN_WC__ADM_DIR_PROP_REVERT,  /* svn_wc__props_revert */
-        SVN_WC__ADM_DIR_WCPROPS,      /* svn_wc__props_wcprop */
         SVN_WC__ADM_DIR_PROPS         /* svn_wc__props_working */
       };
 
@@ -397,14 +345,12 @@ svn_wc__prop_path(const char **prop_path,
       static const char * extensions[] = {
         SVN_WC__BASE_EXT,     /* svn_wc__props_base */
         SVN_WC__REVERT_EXT,   /* svn_wc__props_revert */
-        SVN_WC__WORK_EXT,     /* svn_wc__props_wcprop */
         SVN_WC__WORK_EXT      /* svn_wc__props_working */
       };
 
       static const char * dirs[] = {
         SVN_WC__ADM_PROP_BASE,  /* svn_wc__props_base */
         SVN_WC__ADM_PROP_BASE,  /* svn_wc__props_revert */
-        SVN_WC__ADM_WCPROPS,    /* svn_wc__props_wcprop */
         SVN_WC__ADM_PROPS       /* svn_wc__props_working */
       };
 

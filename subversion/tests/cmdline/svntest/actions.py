@@ -1545,8 +1545,12 @@ def remove_admin_tmp_dir(wc_dir):
 def lock_admin_dir(wc_dir):
   "Lock a SVN administrative directory"
 
-  path = os.path.join(wc_dir, main.get_admin_name(), 'lock')
-  main.file_append(path, "stop looking!")
+  db = svntest.sqlite3.connect(os.path.join(wc_dir, main.get_admin_name(),
+                                            'wc.db'))
+  db.execute('insert into wc_lock (wc_id, local_dir_relpath) values (?, ?)',
+             (1, ''))
+  db.commit()
+  db.close()
 
 def get_wc_uuid(wc_dir):
   "Return the UUID of the working copy at WC_DIR."

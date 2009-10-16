@@ -124,9 +124,26 @@ class Generator(gen_win.WinGeneratorBase):
   def write(self):
     "Write a Solution (.sln)"
 
+    # Gather sql targets for inclusion in svn_config project.
+    class _eztdata(object):
+      def __init__(self, **kw):
+        vars(self).update(kw)
+
+    import sys
+    sql=[]
+    for hdrfile, sqlfile in sorted(self.graph.get_deps(gen_base.DT_SQLHDR),
+                                   key=lambda t: t[0]):
+      sql.append(_eztdata(header=hdrfile.replace('/', '\\'), 
+                          source=sqlfile[0].replace('/', '\\'),
+                          svn_python=sys.executable))
+
     # apr doesn't supply vcproj files, the user must convert them
     # manually before loading the generated solution
-    self.move_proj_file(os.path.join('build', 'win32'), 'svn_config.vcproj')
+    self.move_proj_file(os.path.join('build', 'win32'), 'svn_config.vcproj',
+                          (
+                            ('sql', sql),
+                          )
+                        )
     self.move_proj_file(os.path.join('build', 'win32'), 'svn_locale.vcproj')
     self.write_zlib_project_file('zlib.vcproj')
     self.write_neon_project_file('neon.vcproj')
