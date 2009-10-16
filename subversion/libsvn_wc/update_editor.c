@@ -61,6 +61,12 @@
 #include "private/svn_wc_private.h"
 #include "private/svn_debug.h"
 
+/* Checks whether a svn_wc__db_status_t indicates whether a node is
+   present in a working copy. Used by the editor implementation */
+#define IS_NODE_PRESENT(status)                             \
+           ((status) != svn_wc__db_status_absent &&         \
+            (status) != svn_wc__db_status_excluded &&       \
+            (status) != svn_wc__db_status_not_present)
 
 
 /*
@@ -2297,8 +2303,9 @@ add_directory(const char *path,
   struct edit_baton *eb = pb->edit_baton;
   struct dir_baton *db;
   svn_node_kind_t kind;
+  svn_wc__db_status_t status;
   svn_wc__db_kind_t wc_kind;
-  svn_boolean_t hidden, already_conflicted;
+  svn_boolean_t already_conflicted;
   svn_error_t *err;
 
   /* Semantic check.  Either both "copyfrom" args are valid, or they're
@@ -2379,26 +2386,26 @@ add_directory(const char *path,
 
   SVN_ERR(svn_io_check_path(db->local_abspath, &kind, db->pool));
 
-  err = svn_wc__db_read_kind(&wc_kind, eb->db, db->local_abspath, TRUE,
-                             db->pool);
+  err = svn_wc__db_read_info(&status, &wc_kind, NULL, NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                             NULL,
+                             eb->db, db->local_abspath, db->pool, db->pool);
 
   if (err)
     {
-      if (err->apr_err != SVN_ERR_WC_MISSING &&
-          err->apr_err != SVN_ERR_WC_UPGRADE_REQUIRED)
+      if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
         return svn_error_return(err);
 
       svn_error_clear(err);
       wc_kind = svn_wc__db_kind_unknown;
+      status = svn_wc__db_status_normal;
     }
-
-  if (wc_kind != svn_wc__db_kind_unknown)
-    SVN_ERR(svn_wc__db_node_hidden(&hidden, eb->db, db->local_abspath, pool));
 
   /* The path can exist, but it must be a directory. */
   if (kind == svn_node_file || kind == svn_node_unknown ||
       (wc_kind != svn_wc__db_kind_unknown &&
-       wc_kind != svn_wc__db_kind_dir && !hidden))
+       wc_kind != svn_wc__db_kind_dir && IS_NODE_PRESENT(status)))
     {
       db->already_notified = TRUE;
       if (eb->notify_func)
@@ -2419,7 +2426,8 @@ add_directory(const char *path,
        svn_dirent_local_style(db->local_abspath, pool));
     }
 
-  if (kind == svn_node_dir && wc_kind == svn_wc__db_kind_unknown)
+  if (kind == svn_node_dir &&
+      (wc_kind == svn_wc__db_kind_unknown || !IS_NODE_PRESENT(status)))
     {
       /* Found an unversioned directory */
       db->existed = TRUE;
@@ -2448,13 +2456,12 @@ add_directory(const char *path,
   else if (wc_kind == svn_wc__db_kind_dir)
     {
       /* Directory exists */
-      svn_wc__db_status_t status;
-      svn_depth_t depth;
-
-      if (!hidden)
+      if (IS_NODE_PRESENT(status) &&
+          status != svn_wc__db_status_deleted)
         {
           svn_boolean_t wc_root;
           svn_boolean_t switched;
+
           SVN_ERR(svn_wc__check_wc_root(&wc_root, NULL, &switched, eb->db,
                                         db->local_abspath, pool));
 
@@ -2480,23 +2487,23 @@ add_directory(const char *path,
                          svn_dirent_local_style(db->local_abspath, pool),
                          db->new_URL);
             }
+        }
 
-          if (err != NULL)
+      if (err != NULL)
+        {
+          db->already_notified = TRUE;
+          if (eb->notify_func)
             {
-              db->already_notified = TRUE;
-              if (eb->notify_func)
-                {
-                  svn_wc_notify_t *notify = 
-                        svn_wc_create_notify(db->local_abspath,
-                                             svn_wc_notify_update_obstruction,
-                                             pool);
+              svn_wc_notify_t *notify = 
+                    svn_wc_create_notify(db->local_abspath,
+                                         svn_wc_notify_update_obstruction,
+                                         pool);
 
-                  notify->kind = svn_node_dir;
-                  eb->notify_func(eb->notify_baton, notify, pool);
-                }
-
-              return svn_error_return(err);
+              notify->kind = svn_node_dir;
+              eb->notify_func(eb->notify_baton, notify, pool);
             }
+
+          return svn_error_return(err);
         }
 
       /* What to do with a versioned or schedule-add dir:
@@ -2510,13 +2517,6 @@ add_directory(const char *path,
 
          A dir added with history is a tree conflict. */
 
-      SVN_ERR(svn_wc__db_read_info(&status, NULL, NULL, NULL, NULL, NULL,
-                                   NULL, NULL, NULL, NULL, &depth, NULL,
-                                   NULL, NULL, NULL, NULL, NULL, NULL,
-                                   NULL, NULL, NULL, NULL, NULL, NULL,
-                                   eb->db, db->local_abspath,
-                                   pool, pool));
-
       if (status == svn_wc__db_status_added)
         {
           /* Specialize the added case to added, copied, moved */
@@ -2529,9 +2529,10 @@ add_directory(const char *path,
       switch (status)
         {
           case svn_wc__db_status_absent:
-          case svn_wc__db_status_not_present:
           case svn_wc__db_status_excluded:
             /* Ignore these hidden states. Allow pulling them (back) in. */
+            break;
+          case svn_wc__db_status_not_present:
             break;
           case svn_wc__db_status_obstructed:
           case svn_wc__db_status_obstructed_add:
@@ -3578,8 +3579,9 @@ add_file(const char *path,
   struct dir_baton *pb = parent_baton;
   struct edit_baton *eb = pb->edit_baton;
   struct file_baton *fb;
-  const svn_wc_entry_t *entry;
   svn_node_kind_t kind;
+  svn_wc__db_kind_t wc_kind;
+  svn_wc__db_status_t status;
   apr_pool_t *subpool;
   svn_boolean_t already_conflicted;
   svn_error_t *err;
@@ -3612,27 +3614,10 @@ add_file(const char *path,
      use a subpool for any temporary allocations. */
   subpool = svn_pool_create(pool);
 
-  SVN_ERR(svn_io_check_path(fb->local_abspath, &kind, subpool));
-  err = svn_wc__get_entry(&entry, eb->db, fb->local_abspath, TRUE,
-                          svn_node_unknown, FALSE, subpool, subpool);
-
-  if (err && err->apr_err == SVN_ERR_NODE_UNEXPECTED_KIND)
-    svn_error_clear(err);
-  else
-    SVN_ERR(err);
-
-  if (entry)
-    {
-      svn_boolean_t hidden;
-      SVN_ERR(svn_wc__db_node_hidden(&hidden, eb->db, fb->local_abspath, pool));
-
-      if (hidden)
-        entry = NULL;
-    }
 
   /* Is this path a conflict victim? */
   SVN_ERR(node_already_conflicted(&already_conflicted, eb->db,
-                                  fb->local_abspath, pool));
+                                  fb->local_abspath, subpool));
   if (already_conflicted)
     {
       SVN_ERR(remember_skipped_tree(eb, fb->local_abspath));
@@ -3652,20 +3637,64 @@ add_file(const char *path,
       return SVN_NO_ERROR;
     }
 
-  /* An obstructing dir (or unknown, just to be paranoid) is an error. */
-  if (kind == svn_node_dir || kind == svn_node_unknown)
+  /* It may not be named the same as the administrative directory. */
+  if (svn_wc_is_adm_dir(fb->name, pool))
     return svn_error_createf(
        SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-       _("Failed to add file '%s': a non-file object of the "
-         "same name already exists"),
-       svn_dirent_local_style(fb->local_abspath, subpool));
+       _("Failed to add file '%s': object of the same name as the "
+         "administrative directory"),
+       svn_dirent_local_style(fb->local_abspath, pool));
+
+  SVN_ERR(svn_io_check_path(fb->local_abspath, &kind, subpool));
+
+  err = svn_wc__db_read_info(&status, &wc_kind, NULL, NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                             NULL,
+                             eb->db, fb->local_abspath, subpool, subpool);
+
+  if (err)
+    {
+      if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
+        return svn_error_return(err);
+
+      svn_error_clear(err);
+      wc_kind = svn_wc__db_kind_unknown;
+      status = svn_wc__db_status_normal;
+    }
+
+  /* An obstructing dir (or unknown, just to be paranoid) is an error. */
+  if (kind == svn_node_dir || kind == svn_node_unknown ||
+      (wc_kind != svn_wc__db_kind_unknown &&
+       wc_kind != svn_wc__db_kind_file &&
+       wc_kind != svn_wc__db_kind_symlink && IS_NODE_PRESENT(status)))
+    {
+      fb->already_notified = TRUE;
+      if (eb->notify_func)
+        {
+          svn_wc_notify_t *notify = 
+                svn_wc_create_notify(fb->local_abspath,
+                                     svn_wc_notify_update_obstruction,
+                                     pool);
+
+          notify->kind = svn_node_file;
+          eb->notify_func(eb->notify_baton, notify, pool);
+        }
+
+      return svn_error_createf(
+               SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
+               _("Failed to add file '%s': a non-file object of the "
+                 "same name already exists"),
+               svn_dirent_local_style(fb->local_abspath, subpool));
+    }
 
   /* An unversioned, obstructing file may be OK. */
-  if (!entry && kind == svn_node_file)
+  if (kind == svn_node_file && 
+      (wc_kind == svn_wc__db_kind_unknown || !IS_NODE_PRESENT(status)))
     {
-      if (eb->allow_unver_obstructions)
-        fb->existed = TRUE;
-      else
+      fb->existed = TRUE;
+
+      if (!eb->allow_unver_obstructions)
         {
           if (eb->notify_func)
             {
@@ -3677,6 +3706,7 @@ add_file(const char *path,
               notify->kind = svn_node_file;
               eb->notify_func(eb->notify_baton, notify, pool);
             }
+
           return svn_error_createf(
              SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
              _("Failed to add file '%s': an unversioned "
@@ -3684,85 +3714,125 @@ add_file(const char *path,
              svn_dirent_local_style(fb->local_abspath, subpool));
         }
     }
-
-  /* What to do with a versioned or schedule-add file:
-
-     If the UUID doesn't match the parent's, or the URL isn't a child of
-     the parent dir's URL, it's an error.
-
-     A file already added without history is OK.  Set add_existed so that
-     user notification is delayed until after any text or prop conflicts
-     have been found.
-
-     A file added with history is a tree conflict.
-
-     sussman sez: If we're trying to add a file that's already in
-     `entries' (but not on disk), that's okay.  It's probably because
-     the user deleted the working version and ran 'svn up' as a means
-     of getting the file back.
-
-     It certainly doesn't hurt to re-add the file.  We can't possibly
-     get the entry showing up twice in `entries', since it's a hash;
-     and we know that we won't lose any local mods.  Let the existing
-     entry be overwritten. */
-  if (entry)
+  else if (wc_kind == svn_wc__db_kind_file ||
+           wc_kind == svn_wc__db_kind_symlink)
     {
-      const svn_wc_entry_t *parent_entry;
-      SVN_ERR(svn_wc__get_entry(&parent_entry, eb->db, pb->local_abspath,
-                                FALSE, svn_node_dir, FALSE, pool, pool));
-
-      if (entry->uuid /* UUID is optional for file entries. */
-          && strcmp(entry->uuid, parent_entry->uuid) != 0)
-        return svn_error_createf(
-           SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-           _("UUID mismatch: existing file '%s' was checked out "
-             "from a different repository"),
-           svn_dirent_local_style(fb->local_abspath, pool));
-
-      if (!eb->switch_url && fb->new_URL && entry->url
-          && strcmp(fb->new_URL, entry->url) != 0)
-        return svn_error_createf(
-           SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-           _("URL '%s' of existing file '%s' does not match "
-             "expected URL '%s'"),
-           entry->url, svn_dirent_local_style(fb->local_abspath, pool),
-           fb->new_URL);
-    }
-
-  if (entry && kind == svn_node_file)
-    {
-      if ((entry->schedule == svn_wc_schedule_add
-           || entry->schedule == svn_wc_schedule_replace)
-          && !entry->copied) /* added without history */
-        fb->add_existed = TRUE;
-      else
+      if (IS_NODE_PRESENT(status) &&
+          status != svn_wc__db_status_deleted)
         {
-          svn_wc_conflict_description2_t *tree_conflict;
+          svn_boolean_t wc_root, switched;
 
-          SVN_ERR(check_tree_conflict(&tree_conflict, eb, fb->local_abspath,
-                                      fb->log_accum,
-                                      svn_wc_conflict_action_add,
-                                      svn_node_file, fb->new_URL,
-                                      pb->inside_deleted_subtree, subpool));
+          SVN_ERR(svn_wc__check_wc_root(&wc_root, NULL, &switched,
+                                        eb->db, fb->local_abspath, pool));
 
-          if (tree_conflict != NULL)
+          err = NULL;
+
+          if (wc_root)
             {
-              /* Record the conflict so that the file is skipped silently
-                 by the other callbacks. */
-              SVN_ERR(remember_skipped_tree(eb, fb->local_abspath));
-              fb->skip_this = TRUE;
-              fb->already_notified = TRUE;
-
-              if (eb->notify_func)
-                eb->notify_func(eb->notify_baton,
-                                svn_wc_create_notify(
-                                       fb->local_abspath,
-                                       svn_wc_notify_tree_conflict,
-                                       subpool),
-                                subpool);
-
-              return SVN_NO_ERROR;
+              err = svn_error_createf(
+                         SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
+                         _("Failed to add file '%s': a file "
+                           "from another repository with the same name "
+                           "already exists"),
+                         svn_dirent_local_style(fb->local_abspath, pool));
             }
+
+          if (switched && !eb->switch_url)
+            {
+              err = svn_error_createf(
+                         SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
+                         _("Switched file '%s' does not match "
+                           "expected URL '%s'"),
+                         svn_dirent_local_style(fb->local_abspath, pool),
+                         fb->new_URL);
+            }
+
+          if (err != NULL)
+            {
+              fb->already_notified = TRUE;
+              if (eb->notify_func)
+                {
+                  svn_wc_notify_t *notify = 
+                        svn_wc_create_notify(fb->local_abspath,
+                                             svn_wc_notify_update_obstruction,
+                                             pool);
+
+                  notify->kind = svn_node_file;
+                  eb->notify_func(eb->notify_baton, notify, pool);
+                }
+
+              return svn_error_return(err);
+            }
+        }
+
+      /* What to do with a versioned or schedule-add file:
+
+         If the UUID doesn't match the parent's, or the URL isn't a child of
+         the parent dir's URL, it's an error.
+
+         A file already added without history is OK.  Set add_existed so that
+         user notification is delayed until after any text or prop conflicts
+         have been found.
+
+         A file added with history is a tree conflict.
+
+         We will never see missing files here, because these would be
+         re-added during the crawler phase. */
+
+      /* Specialize the added case to added, copied, moved */
+      if (status == svn_wc__db_status_added)
+        {
+          SVN_ERR(svn_wc__db_scan_addition(&status, NULL, NULL, NULL, NULL, NULL,
+                                           NULL, NULL, NULL,
+                                           eb->db, fb->local_abspath,
+                                           subpool, subpool));
+        }
+
+      switch (status)
+        {
+          case svn_wc__db_status_absent:
+          case svn_wc__db_status_excluded:
+            /* Ignore these hidden states. Allow pulling them (back) in. */
+            break;
+          case svn_wc__db_status_not_present:
+            break; 
+          case svn_wc__db_status_added:
+            /* ### BH: I think this case should be conditional with something
+                       like allow_unver_obstructions, as this changes the
+                       base of locally added files.
+               ### BH: Always generate tree conflict? */
+            fb->add_existed = TRUE;
+            break;
+          default:
+            {
+              svn_wc_conflict_description2_t *tree_conflict;
+
+              SVN_ERR(check_tree_conflict(&tree_conflict, eb, fb->local_abspath,
+                                          fb->log_accum,
+                                          svn_wc_conflict_action_add,
+                                          svn_node_file, fb->new_URL,
+                                          pb->inside_deleted_subtree, subpool));
+
+              if (tree_conflict != NULL)
+                {
+                  /* Record the conflict so that the file is skipped silently
+                     by the other callbacks. */
+                  SVN_ERR(remember_skipped_tree(eb, fb->local_abspath));
+                  fb->skip_this = TRUE;
+                  fb->already_notified = TRUE;
+
+                  if (eb->notify_func)
+                    eb->notify_func(eb->notify_baton,
+                                    svn_wc_create_notify(
+                                           fb->local_abspath,
+                                           svn_wc_notify_tree_conflict,
+                                           subpool),
+                                    subpool);
+
+                  return SVN_NO_ERROR;
+                }
+            }
+            break;
         }
     }
 
