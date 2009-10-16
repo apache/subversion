@@ -57,9 +57,6 @@ struct svn_wc_adm_access_t
   /* Indicates that the baton has been closed. */
   svn_boolean_t closed;
 
-  /* TRUE if we own the write lock on this directory. */
-  svn_boolean_t locked;
-
   /* Handle to the administrative database. */
   svn_wc__db_t *db;
 
@@ -211,7 +208,6 @@ adm_access_alloc(svn_wc_adm_access_t **adm_access,
   lock->entries_all = NULL;
   lock->db = db;
   lock->db_provided = db_provided;
-  lock->locked = FALSE;
   lock->path = apr_pstrdup(result_pool, path);
   lock->pool = result_pool;
 
@@ -231,7 +227,7 @@ adm_access_alloc(svn_wc_adm_access_t **adm_access,
           svn_error_clear(err);
         }
 
-      lock->locked = TRUE;
+      SVN_ERR(svn_wc__db_temp_mark_locked(db, lock->abspath, scratch_pool));
     }
 
   err = add_to_shared(lock, scratch_pool);
@@ -427,11 +423,15 @@ close_single(svn_wc_adm_access_t *adm_access,
              svn_boolean_t preserve_lock,
              apr_pool_t *scratch_pool)
 {
+  svn_boolean_t locked;
+
   if (adm_access->closed)
     return SVN_NO_ERROR;
 
   /* Physically unlock if required */
-  if (adm_access->locked)
+  SVN_ERR(svn_wc__db_temp_own_lock(&locked, adm_access->db,
+                                   adm_access->abspath, scratch_pool));
+  if (locked)
     {
       if (!preserve_lock)
         {
@@ -451,7 +451,7 @@ close_single(svn_wc_adm_access_t *adm_access,
               svn_error_clear(err);
             }
 
-          adm_access->locked = FALSE;
+          /* ### remove lock? */
         }
     }
 
@@ -1379,14 +1379,30 @@ svn_wc_adm_close2(svn_wc_adm_access_t *adm_access, apr_pool_t *scratch_pool)
 svn_boolean_t
 svn_wc_adm_locked(const svn_wc_adm_access_t *adm_access)
 {
-  return adm_access->locked;
+  /* Use the baton pool is Evil here, but we've got no other pool to use. */
+  svn_boolean_t locked;
+  svn_error_t *err = svn_wc__db_temp_own_lock(&locked, adm_access->db,
+                                              adm_access->abspath,
+                                              adm_access->pool);
+  if (err)
+    {
+      svn_error_clear(err);
+      /* ### is this right? */
+      return FALSE;
+    }
+
+  return locked;
 }
 
 svn_error_t *
 svn_wc__adm_write_check(const svn_wc_adm_access_t *adm_access,
                         apr_pool_t *scratch_pool)
 {
-  if (!adm_access->locked)
+  svn_boolean_t locked;
+
+  SVN_ERR(svn_wc__db_temp_own_lock(&locked, adm_access->db,
+                                   adm_access->abspath, scratch_pool));
+  if (!locked)
     return svn_error_createf(SVN_ERR_WC_NOT_LOCKED, NULL,
                              _("No write-lock in '%s'"),
                              svn_dirent_local_style(adm_access->path,
@@ -1405,29 +1421,8 @@ svn_wc_locked2(svn_boolean_t *locked_here,
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
   if (locked_here != NULL)
-    {
-      svn_wc_adm_access_t *adm_access
-          = svn_wc__adm_retrieve_internal2(wc_ctx->db, local_abspath,
-                                           scratch_pool);
-
-      if (adm_access == NULL)
-        {
-          svn_wc__db_kind_t kind;
-
-          SVN_ERR(svn_wc__db_read_kind(&kind, wc_ctx->db, local_abspath, TRUE,
-                                       scratch_pool));
-
-          if (kind != svn_wc__db_kind_dir)
-            adm_access = svn_wc__adm_retrieve_internal2(wc_ctx->db,
-                                                        svn_dirent_dirname(
-                                                                local_abspath,
-                                                                scratch_pool),
-                                                        scratch_pool);
-        }
-
-      *locked_here = (adm_access != NULL) && adm_access->locked;
-    }
-
+    SVN_ERR(svn_wc__db_temp_own_lock(locked_here, wc_ctx->db, local_abspath,
+                                     scratch_pool));
   if (locked != NULL)
     SVN_ERR(svn_wc__db_wclocked(locked, wc_ctx->db, local_abspath,
                                 scratch_pool));
