@@ -818,8 +818,10 @@ maybe_bump_dir_info(struct edit_baton *eb,
 {
   /* Keep moving up the tree of directories until we run out of parents,
      or a directory is not yet "done".  */
-  for ( ; bdi != NULL; bdi = bdi->parent)
+  while (bdi != NULL)
     {
+      apr_pool_t *destroy_pool;
+
       if (--bdi->ref_count > 0)
         return SVN_NO_ERROR;    /* directory isn't done yet */
 
@@ -829,7 +831,9 @@ maybe_bump_dir_info(struct edit_baton *eb,
         SVN_ERR(complete_directory(eb, bdi->local_abspath,
                                    bdi->parent == NULL, pool));
 
-      svn_pool_destroy(bdi->pool);
+      destroy_pool = bdi->pool;
+      bdi = bdi->parent;
+      svn_pool_destroy(destroy_pool);
     }
   /* we exited the for loop because there are no more parents */
 
