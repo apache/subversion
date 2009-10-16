@@ -239,9 +239,11 @@ typedef enum {
        it should be treated similar to the other missing status values
        until some (later) process updates the node with its data.
 
-       Only valid on directories. In this case the list of children and
-       the base properties are incomplete and/or overcomplete. A directory
-       can be completed by updating it. */
+       When the incomplete status applies to a directory, the list of
+       children and the list of its base properties as recorded in the
+       working copy do not match their working copy versions.
+       The update editor can complete a directory by using a different
+       update algorithm. */
     svn_wc__db_status_incomplete,
 
     /* The BASE node has been marked as deleted. Only used as an internal
