@@ -812,7 +812,7 @@ svn_sqlite__get_schema_version(int *version,
   return SVN_NO_ERROR;
 }
 
-/* APR cleanup function used to close the database when its pool is destoryed.
+/* APR cleanup function used to close the database when its pool is destroyed.
    DATA should be the svn_sqlite__db_t handle for the database. */
 static apr_status_t
 close_apr(void *data)

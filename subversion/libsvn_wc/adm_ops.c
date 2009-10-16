@@ -1167,7 +1167,7 @@ svn_wc_delete4(svn_wc_context_t *wc_ctx,
       case svn_wc__db_status_excluded:
       case svn_wc__db_status_not_present:
         return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
-                                 _("'%s' can not be deleted"),
+                                 _("'%s' cannot be deleted"),
                                  svn_dirent_local_style(local_abspath, pool));
 
       /* Explicitly ignore other statii */
