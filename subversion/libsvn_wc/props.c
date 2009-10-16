@@ -812,6 +812,7 @@ maybe_generate_propconflict(svn_boolean_t *conflict_remains,
                             void *conflict_baton,
                             svn_cancel_func_t cancel_func,
                             void *cancel_baton,
+                            svn_boolean_t dry_run,
                             apr_pool_t *scratch_pool)
 {
   svn_wc_conflict_result_t *result = NULL;
@@ -823,7 +824,7 @@ maybe_generate_propconflict(svn_boolean_t *conflict_remains,
   if (cancel_func)
     SVN_ERR(cancel_func(cancel_baton));
 
-  if (! conflict_func)
+  if (! conflict_func || dry_run)
     {
       /* Just postpone the conflict. */
       *conflict_remains = TRUE;
@@ -1056,6 +1057,7 @@ apply_single_prop_add(svn_wc_notify_state_t *state,
                       void *conflict_baton,
                       svn_cancel_func_t cancel_func,
                       void *cancel_baton,
+                      svn_boolean_t dry_run,
                       apr_pool_t *result_pool,
                       apr_pool_t *scratch_pool)
 
@@ -1098,7 +1100,7 @@ apply_single_prop_add(svn_wc_notify_state_t *state,
                                                   base_val, working_val,
                                                   conflict_func, conflict_baton,
                                                   cancel_func, cancel_baton,
-                                                  scratch_pool));
+                                                  dry_run, scratch_pool));
               if (got_conflict)
                 *conflict = svn_string_createf
                     (result_pool,
@@ -1117,7 +1119,7 @@ apply_single_prop_add(svn_wc_notify_state_t *state,
                                           base_val, NULL,
                                           conflict_func, conflict_baton,
                                           cancel_func, cancel_baton,
-                                          scratch_pool));
+                                          dry_run, scratch_pool));
       if (got_conflict)
         *conflict = svn_string_createf
             (result_pool,
@@ -1165,6 +1167,7 @@ apply_single_prop_delete(svn_wc_notify_state_t *state,
                          void *conflict_baton,
                          svn_cancel_func_t cancel_func,
                          void *cancel_baton,
+                         svn_boolean_t dry_run,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool)
 {
@@ -1198,7 +1201,7 @@ apply_single_prop_delete(svn_wc_notify_state_t *state,
                                                    base_val, working_val,
                                                    conflict_func, conflict_baton,
                                                    cancel_func, cancel_baton,
-                                                   scratch_pool));
+                                                   dry_run, scratch_pool));
                if (got_conflict)
                  *conflict = svn_string_createf
                      (result_pool,
@@ -1222,7 +1225,7 @@ apply_single_prop_delete(svn_wc_notify_state_t *state,
                                           base_val, working_val,
                                           conflict_func, conflict_baton,
                                           cancel_func, cancel_baton,
-                                          scratch_pool));
+                                          dry_run, scratch_pool));
       if (got_conflict)
         *conflict = svn_string_createf
             (result_pool,
@@ -1259,6 +1262,7 @@ apply_single_mergeinfo_prop_change(svn_wc_notify_state_t *state,
                                    void *conflict_baton,
                                    svn_cancel_func_t cancel_func,
                                    void *cancel_baton,
+                                   svn_boolean_t dry_run,
                                    apr_pool_t *result_pool,
                                    apr_pool_t *scratch_pool)
 {
@@ -1302,7 +1306,7 @@ apply_single_mergeinfo_prop_change(svn_wc_notify_state_t *state,
                                               base_val, working_val,
                                               conflict_func, conflict_baton,
                                               cancel_func, cancel_baton,
-                                              scratch_pool));
+                                              dry_run, scratch_pool));
           if (got_conflict)
             *conflict = svn_string_createf
                 (result_pool,
@@ -1372,6 +1376,7 @@ apply_single_generic_prop_change(svn_wc_notify_state_t *state,
                                  void *conflict_baton,
                                  svn_cancel_func_t cancel_func,
                                  void *cancel_baton,
+                                 svn_boolean_t dry_run,
                                  apr_pool_t *result_pool,
                                  apr_pool_t *scratch_pool)
 {
@@ -1397,7 +1402,7 @@ apply_single_generic_prop_change(svn_wc_notify_state_t *state,
                                           base_val, working_val,
                                           conflict_func, conflict_baton,
                                           cancel_func, cancel_baton,
-                                          scratch_pool));
+                                          dry_run, scratch_pool));
       if (got_conflict)
         {
           /* Describe the conflict, referring to base_val as well as
@@ -1476,6 +1481,7 @@ apply_single_prop_change(svn_wc_notify_state_t *state,
                          void *conflict_baton,
                          svn_cancel_func_t cancel_func,
                          void *cancel_baton,
+                         svn_boolean_t dry_run,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool)
 {
@@ -1499,7 +1505,7 @@ apply_single_prop_change(svn_wc_notify_state_t *state,
                                                  new_val,
                                                  conflict_func, conflict_baton,
                                                  cancel_func, cancel_baton,
-                                                 result_pool, scratch_pool));
+                                                 dry_run, result_pool, scratch_pool));
     }
   else
     {
@@ -1515,7 +1521,7 @@ apply_single_prop_change(svn_wc_notify_state_t *state,
                                                new_val,
                                                conflict_func, conflict_baton,
                                                cancel_func, cancel_baton,
-                                               result_pool, scratch_pool));
+                                               dry_run, result_pool, scratch_pool));
     }
 
   return SVN_NO_ERROR;
@@ -1637,7 +1643,7 @@ svn_wc__merge_props(svn_stringbuf_t **entry_accum,
                                       propname, base_val, to_val,
                                       conflict_func, conflict_baton,
                                       cancel_func, cancel_baton,
-                                      pool, iterpool));
+                                      dry_run, pool, iterpool));
 
       else if (! to_val) /* delete an existing property */
         SVN_ERR(apply_single_prop_delete(is_normal ? state : NULL, &conflict,
@@ -1648,7 +1654,7 @@ svn_wc__merge_props(svn_stringbuf_t **entry_accum,
                                          propname, base_val, from_val,
                                          conflict_func, conflict_baton,
                                          cancel_func, cancel_baton,
-                                         pool, iterpool));
+                                         dry_run, pool, iterpool));
 
       else  /* changing an existing property */
         SVN_ERR(apply_single_prop_change(is_normal ? state : NULL, &conflict,
@@ -1659,7 +1665,7 @@ svn_wc__merge_props(svn_stringbuf_t **entry_accum,
                                          propname, base_val, from_val, to_val,
                                          conflict_func, conflict_baton,
                                          cancel_func, cancel_baton,
-                                         pool, iterpool));
+                                         dry_run, pool, iterpool));
 
 
       /* merging logic complete, now we need to possibly log conflict
