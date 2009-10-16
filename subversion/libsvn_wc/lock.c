@@ -785,10 +785,10 @@ svn_wc__adm_retrieve_internal2(svn_wc__db_t *db,
 
 
 svn_error_t *
-svn_wc__adm_retrieve_internal(svn_wc_adm_access_t **adm_access,
-                              svn_wc_adm_access_t *associated,
-                              const char *path,
-                              apr_pool_t *pool)
+svn_wc_adm_retrieve(svn_wc_adm_access_t **adm_access,
+                    svn_wc_adm_access_t *associated,
+                    const char *path,
+                    apr_pool_t *pool)
 {
   if (strcmp(associated->path, path) == 0)
     {
@@ -817,17 +817,6 @@ svn_wc__adm_retrieve_internal(svn_wc_adm_access_t **adm_access,
           && strcmp(path, (*adm_access)->path) != 0)
         *adm_access = NULL;
     }
-
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn_wc_adm_retrieve(svn_wc_adm_access_t **adm_access,
-                    svn_wc_adm_access_t *associated,
-                    const char *path,
-                    apr_pool_t *pool)
-{
-  SVN_ERR(svn_wc__adm_retrieve_internal(adm_access, associated, path, pool));
 
   /* Most of the code expects access batons to exist, so returning an error
      generally makes the calling code simpler as it doesn't need to check
