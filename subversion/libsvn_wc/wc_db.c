@@ -4287,7 +4287,10 @@ svn_wc__db_scan_deletion(const char **base_del_abspath,
   const char *child_abspath = NULL;
   svn_wc__db_status_t child_presence;
   svn_boolean_t child_has_base = FALSE;
+  svn_boolean_t found_moved_to = FALSE;
   svn_wc__db_pdh_t *pdh;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
   /* Initialize all the OUT parameters.  */
   if (base_del_abspath != NULL)
@@ -4409,12 +4412,14 @@ svn_wc__db_scan_deletion(const char **base_del_abspath,
         }
 
       /* Only grab the nearest ancestor.  */
-      if ((moved_to_abspath != NULL || base_del_abspath != NULL)
-          && *moved_to_abspath == NULL
+      if (!found_moved_to &&
+          (moved_to_abspath != NULL || base_del_abspath != NULL)
           && !svn_sqlite__column_is_null(stmt, 2 /* moved_to */))
         {
           /* There better be a BASE_NODE (that was moved-away).  */
           SVN_ERR_ASSERT(have_base);
+
+          found_moved_to = TRUE;
 
           /* This makes things easy. It's the BASE_DEL_ABSPATH!  */
           if (base_del_abspath != NULL)
