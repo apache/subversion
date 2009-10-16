@@ -173,15 +173,10 @@ typedef enum {
        the BASE node; see BASE_SHADOWED param). The text will be marked as
        modified, and if properties exist, they will be marked as modified. 
 
-       svn_wc__db_read_status() will return this status for all added,
-       copied and moved_here nodes. In this case you can use
-       svn_wc__db_scan_addition() to get a more detailed status */
+       In many cases svn_wc__db_status_added means any of added, moved-here
+       or copied-here. See individual functions for clarification and
+       svn_wc__db_scan_addition() to get more details. */
     svn_wc__db_status_added,
-
-    /* This node is no longer present because it was the source of a move. */
-    /* ### This status is unused, and can probably be removed. The details
-       are already available via svn_wc__db_scan_deletion(). */
-    svn_wc__db_status_moved_away,
 
     /* This node has been added with history, based on the move source.
        Text and property modifications are based on whether changes have
@@ -1639,10 +1634,8 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
  * delete operations in WORKING, so there is only one deletion root in
  * the ancestry).
  *
- *
- * NOTE: contrary to some APIs in wc_db.h, ALL of the OUT parameters must
- *   be received. You may NOT pass NULL for any parameter (otherwise, you
- *   would lose important information about the deletion).
+ * All OUT parameters may be set to NULL to indicate a lack of interest in
+ * that piece of information.
  *
  * If the node given by LOCAL_ABSPATH does not exit, then
  * SVN_ERR_WC_PATH_NOT_FOUND is returned. If it doesn't have a "deleted"

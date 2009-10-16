@@ -292,9 +292,6 @@ get_base_info_for_deleted(svn_wc_entry_t *entry,
                                  scratch_pool);
   if (err)
     {
-      const char *base_del_abspath;
-      svn_boolean_t base_replaced;
-      const char *moved_to_abspath;
       const char *work_del_abspath;
       const char *parent_repos_relpath;
       const char *parent_abspath;
@@ -308,9 +305,9 @@ get_base_info_for_deleted(svn_wc_entry_t *entry,
          future location in the repository.  */
       svn_error_clear(err);
 
-      SVN_ERR(svn_wc__db_scan_deletion(&base_del_abspath,
-                                       &base_replaced,
-                                       &moved_to_abspath,
+      SVN_ERR(svn_wc__db_scan_deletion(NULL,
+                                       NULL,
+                                       NULL,
                                        &work_del_abspath,
                                        db, entry_abspath,
                                        scratch_pool, scratch_pool));
@@ -417,15 +414,13 @@ get_base_info_for_deleted(svn_wc_entry_t *entry,
     }
   else
     {
-      const char *base_del_abspath;
       svn_boolean_t base_replaced;
-      const char *moved_to_abspath;
       const char *work_del_abspath;
 
       /* Find out details of our deletion.  */
-      SVN_ERR(svn_wc__db_scan_deletion(&base_del_abspath,
+      SVN_ERR(svn_wc__db_scan_deletion(NULL,
                                        &base_replaced,
-                                       &moved_to_abspath,
+                                       NULL,
                                        &work_del_abspath,
                                        db, entry_abspath,
                                        scratch_pool, scratch_pool));

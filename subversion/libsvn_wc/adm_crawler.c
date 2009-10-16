@@ -753,11 +753,8 @@ find_base_rev(svn_revnum_t *base_rev,
     }
   else if (status == svn_wc__db_status_deleted)
     {
-      const char *base_del_abspath, *moved_to_abspath;
       const char *work_del_abspath;
-      svn_boolean_t replaced;
-      SVN_ERR(svn_wc__db_scan_deletion(&base_del_abspath, &replaced,
-                                       &moved_to_abspath, &work_del_abspath,
+       SVN_ERR(svn_wc__db_scan_deletion(NULL, NULL, NULL, &work_del_abspath,
                                        db, local_abspath, pool, pool));
 
       if (work_del_abspath != NULL)
