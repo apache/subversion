@@ -171,10 +171,16 @@ typedef enum {
 
     /* The node has been added (potentially obscuring a delete or move of
        the BASE node; see BASE_SHADOWED param). The text will be marked as
-       modified, and if properties exist, they will be marked as modified. */
+       modified, and if properties exist, they will be marked as modified. 
+
+       svn_wc__db_read_status() will return this status for all added,
+       copied and moved_here nodes. In this case you can use
+       svn_wc__db_scan_addition() to get a more detailed status */
     svn_wc__db_status_added,
 
     /* This node is no longer present because it was the source of a move. */
+    /* ### This status is unused, and can probably be removed. The details
+       are already available via svn_wc__db_scan_deletion(). */
     svn_wc__db_status_moved_away,
 
     /* This node has been added with history, based on the move source.
@@ -238,10 +244,8 @@ typedef enum {
        can be completed by updating it. */
     svn_wc__db_status_incomplete,
 
-    /* The BASE node has been marked as deleted.
-       ### is this internal or external to wc_db? we may be able to hide
-       ### behind status_deleted, and this value is only used within the
-       ### scan_deletion function.  */
+    /* The BASE node has been marked as deleted. Only used as an internal
+       status in wc_db.c and entries.c.  */
     svn_wc__db_status_base_deleted
 
 } svn_wc__db_status_t;
@@ -715,6 +719,11 @@ svn_wc__db_base_get_dav_cache(apr_hash_t **props,
    ### directory? empty, files, immediates, infinity. recording depth
    ### doesn't seem to be part of BASE, but instructions on how to maintain
    ### the BASE/WORKING/ACTUAL trees. are there other instructional items?
+
+   ### BH: We use depth as a partial incomplete marker on directories. If
+   ### depth < svn_depth_infinity, the directory can miss entries that fall
+   ### out of the scope marked by the depth. (There can still be explicitly
+   ### pulled in targets)
 */
 
 /* ### anything else needed for maintaining the BASE tree? */
@@ -936,7 +945,7 @@ svn_wc__db_op_add_symlink(svn_wc__db_t *db,
 /* ### note: there is no db_op_set_prop() function. callers must read
    ### all the properties, change one, and write all the properties.  */
 
-/* Set the props on the WORKING node for LOCAL_ABSPATH to PROPS.  This will
+/* Set the props on the ACTUAL node for LOCAL_ABSPATH to PROPS.  This will
    overwrite whatever working props the node currently has.  PROPS maps
    property names of type "const char *" to values of type
    "const svn_string_t *".  Use SCRATCH_POOL for temporary allocations. */
@@ -1158,6 +1167,9 @@ svn_wc__db_op_set_tree_conflict(svn_wc__db_t *db,
    ### Would be nice to keep it consistent.  For example, it always
    ### comes first, or always comes first after any result params, or
    ### whatever.
+   ### BH: 'db' is the first argument after the output arguments, the next
+   ### is always 'local_abspath'. Next are other input arguments. Result 
+   ### and scratch pool are last.
 
    ### note that @a base_shadowed can be derived. if the status specifies
    ### an add/copy/move *and* there is a corresponding node in BASE, then
@@ -1370,14 +1382,8 @@ svn_wc__db_global_relocate(svn_wc__db_t *db,
 
 /* ### docco
 
-   ### collapse the WORKING and ACTUAL tree changes down into BASE.
-
-   ### BH: This probably needs an exclude filter and some kind of depth
-   ###   support, before it can replace other code.
-   ### GS: nope. the intent is to call this once per committed node. each
-   ###   node is committed transactionally. upper layers can deal with
-   ###   depth and exclusion. this function will combine the functionality
-   ###   of process_committed_leaf() and log_do_committed().
+   ### collapse the WORKING and ACTUAL tree changes down into BASE, called
+       for each committed node.
 
    NEW_REVISION must be the revision number of the revision created by
    the commit. It will become the BASE node's 'revnum' and 'changed_rev'
