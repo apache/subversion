@@ -1477,7 +1477,7 @@ close_file(void *file_baton,
 {
   struct file_baton *fb = file_baton;
   struct edit_baton *eb = fb->eb;
-  const svn_wc_entry_t *entry;
+  svn_wc__db_status_t status;
   const char *repos_mimetype;
   const char *empty_file;
   svn_error_t *err;
@@ -1496,17 +1496,20 @@ close_file(void *file_baton,
      comparison: either BASE or WORKING. */
   apr_hash_t *originalprops;
 
-  err = svn_wc__get_entry(&entry, eb->db, fb->local_abspath, TRUE,
-                          svn_node_file, FALSE, pool, pool);
-
-  if (err && err->apr_err == SVN_ERR_WC_MISSING)
-    {
-      svn_error_clear(err);
-      entry = NULL;
-    }
+  err = svn_wc__db_read_info(&status, NULL, NULL, NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                             NULL, eb->db, fb->local_abspath, pool, pool);
+  if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+    svn_error_clear(err);
   else
     SVN_ERR(err);
 
+  if (status == svn_wc__db_status_added)
+    SVN_ERR(svn_wc__db_scan_addition(&status, NULL, NULL, NULL, NULL, NULL,
+                                     NULL, NULL, NULL, eb->db,
+                                     fb->local_abspath, pool, pool));
+    
   SVN_ERR(get_empty_file(eb, &empty_file));
 
   /* Load the BASE and repository file properties. */
@@ -1535,8 +1538,7 @@ close_file(void *file_baton,
      and it was marked as schedule-deleted), we show either an addition
      or a deletion of the complete contents of the repository file,
      depending upon the direction of the diff. */
-  if (fb->added ||
-      (!eb->use_text_base && entry->schedule == svn_wc_schedule_delete))
+  if (fb->added || (!eb->use_text_base && status == svn_wc__db_status_deleted))
     {
       if (eb->reverse_order)
         return eb->callbacks->file_added(NULL, NULL, NULL, NULL, fb->path,
@@ -1564,7 +1566,8 @@ close_file(void *file_baton,
 
   /* If the file was locally added with history, and we want to show copies
    * as added, diff the file with the empty file. */
-  if (entry->copied && eb->show_copies_as_adds)
+  if ((status == svn_wc__db_status_copied ||
+       status == svn_wc__db_status_moved_here) && eb->show_copies_as_adds)
     return eb->callbacks->file_added(NULL, NULL, NULL, NULL, fb->path,
                                      empty_file,
                                      fb->local_abspath,
