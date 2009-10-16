@@ -100,15 +100,6 @@ svn_wc__adm_available(svn_boolean_t *available,
                       const char *local_abspath,
                       apr_pool_t *scratch_pool);
 
-/* Sets *ADM_ACCESS to an access baton for PATH from the set ASSOCIATED.
-   This function is similar to svn_wc_adm_retrieve except that if the baton
-   for PATH is not found, this function sets *ADM_ACCESS to NULL and does
-   not return an error. */
-svn_error_t *svn_wc__adm_retrieve_internal(svn_wc_adm_access_t **adm_access,
-                                           svn_wc_adm_access_t *associated,
-                                           const char *path,
-                                           apr_pool_t *pool);
-
 /* Same as svn_wc__adm_retrieve_internal, but takes a DB and an absolute
    directory path.  */
 svn_wc_adm_access_t *
