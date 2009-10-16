@@ -433,7 +433,9 @@ ADD COLUMN right_checksum  TEXT;
 -- format: 15
 
 UPDATE base_node
-SET checksum = NULL, translated_size = NULL, changed_rev = NULL,
+SET
+  presence = 'excluded',
+  checksum = NULL, translated_size = NULL, changed_rev = NULL,
   changed_date = NULL, changed_author = NULL, depth = NULL,
   symlink_target = NULL, last_mod_time = NULL, properties = NULL,
   incomplete_children = NULL, file_external = NULL
@@ -443,7 +445,9 @@ WHERE depth = 'exclude';
    via a copy from a sparse tree. Convert them anyway to make sure
    we never see depth exclude in our database */
 UPDATE working_node
-SET checksum = NULL, translated_size = NULL, changed_rev = NULL,
+SET
+  presence = 'excluded',
+  checksum = NULL, translated_size = NULL, changed_rev = NULL,
   changed_date = NULL, changed_author = NULL, depth = NULL,
   symlink_target = NULL, copyfrom_repos_id = NULL, copyfrom_repos_path = NULL,
   copyfrom_revnum = NULL, moved_here = NULL, moved_to = NULL,
