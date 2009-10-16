@@ -231,7 +231,11 @@ typedef enum {
 
     /* This node is known, but its information is incomplete. Generally,
        it should be treated similar to the other missing status values
-       until some (later) process updates the node with its data. */
+       until some (later) process updates the node with its data.
+
+       Only valid on directories. In this case the list of children and
+       the base properties are incomplete and/or overcomplete. A directory
+       can be completed by updating it. */
     svn_wc__db_status_incomplete,
 
     /* The BASE node has been marked as deleted.
