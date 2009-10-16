@@ -34,13 +34,37 @@
  *            - Clients.
  *
  * Notes:
- *            The 'path' parameters to most of these functions can be
+ *            The 'path' parameters to most of the older functions can be
  *            absolute or relative (relative to current working
  *            directory).  If there are any cases where they are
  *            relative to the path associated with the
- *            'svn_wc_adm_access_t *adm_access' baton passed along
- *            with the path, those cases should be explicitly
- *            documented, and if they are not, please fix it.
+ *            'svn_wc_adm_access_t *adm_access' baton passed along with the
+ *            path, those cases should be explicitly documented, and if they
+ *            are not, please fix it. All new functions introduced since
+ *            Subversion 1.7 require absolute paths, unless explicitly
+ *            documented otherwise.
+ *
+ *            Starting with Subversion 1.7, several arguments are re-ordered
+ *            to be more consistent through the api. The common ordering used
+ *            is:
+ *
+ *            Firsts:
+ *              - Output arguments
+ *            Then:
+ *              - Working copy context
+ *              - Local abspath
+ *            Followed by:
+ *              - Function specific arguments
+ *              - Specific callbacks with their batons
+ *            Finally:
+ *              - Generic callbacks (with baton) from directly functional to
+ *                just observing:
+ *                  - svn_wc_conflict_resolver_func2_t
+ *                  - svn_wc_external_update_t
+ *                  - svn_cancel_func_t
+ *                  - svn_wc_notify_func2_t
+ *              - Result pool
+ *              - Scratch pool.
  */
 
 #ifndef SVN_WC_H
@@ -3764,6 +3788,8 @@ typedef void (*svn_wc_status_func_t)(void *baton,
  * external definition is found while walking @a local_abspath.
  *
  * This function uses @a scratch_pool for temporary allocations.
+ *
+ * @since New in 1.7.
  */
 svn_error_t *
 svn_wc_walk_status(svn_wc_context_t *wc_ctx,
@@ -3774,10 +3800,10 @@ svn_wc_walk_status(svn_wc_context_t *wc_ctx,
                    const apr_array_header_t *ignore_patterns,
                    svn_wc_status_func4_t status_func,
                    void *status_baton,
-                   svn_cancel_func_t cancel_func,
-                   void *cancel_baton,
                    svn_wc_external_update_t external_func,
                    void *external_baton,
+                   svn_cancel_func_t cancel_func,
+                   void *cancel_baton,
                    apr_pool_t *scratch_pool);
 
 /**
@@ -3852,10 +3878,10 @@ svn_wc_get_status_editor5(const svn_delta_editor_t **editor,
                           const apr_array_header_t *ignore_patterns,
                           svn_wc_status_func4_t status_func,
                           void *status_baton,
-                          svn_cancel_func_t cancel_func,
-                          void *cancel_baton,
                           svn_wc_external_update_t external_update,
                           void *external_baton,
+                          svn_cancel_func_t cancel_func,
+                          void *cancel_baton,
                           apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool);
 
@@ -5145,18 +5171,18 @@ svn_wc_get_update_editor4(const svn_delta_editor_t **editor,
                           svn_depth_t depth,
                           svn_boolean_t depth_is_sticky,
                           svn_boolean_t allow_unver_obstructions,
-                          svn_wc_notify_func2_t notify_func,
-                          void *notify_baton,
-                          svn_cancel_func_t cancel_func,
-                          void *cancel_baton,
+                          const char *diff3_cmd,
+                          apr_array_header_t *preserved_exts,
+                          svn_wc_get_file_t fetch_func,
+                          void *fetch_baton,
                           svn_wc_conflict_resolver_func_t conflict_func,
                           void *conflict_baton,
                           svn_wc_external_update_t external_func,
                           void *external_baton,
-                          svn_wc_get_file_t fetch_func,
-                          void *fetch_baton,
-                          const char *diff3_cmd,
-                          apr_array_header_t *preserved_exts,
+                          svn_cancel_func_t cancel_func,
+                          void *cancel_baton,
+                          svn_wc_notify_func2_t notify_func,
+                          void *notify_baton,
                           apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool);
 
@@ -5324,18 +5350,18 @@ svn_wc_get_switch_editor4(const svn_delta_editor_t **editor,
                           svn_depth_t depth,
                           svn_boolean_t depth_is_sticky,
                           svn_boolean_t allow_unver_obstructions,
-                          svn_wc_notify_func2_t notify_func,
-                          void *notify_baton,
-                          svn_cancel_func_t cancel_func,
-                          void *cancel_baton,
+                          const char *diff3_cmd,
+                          apr_array_header_t *preserved_exts,
+                          svn_wc_get_file_t fetch_func,
+                          void *fetch_baton,
                           svn_wc_conflict_resolver_func_t conflict_func,
                           void *conflict_baton,
                           svn_wc_external_update_t external_func,
                           void *external_baton,
-                          svn_wc_get_file_t fetch_func,
-                          void *fetch_baton,
-                          const char *diff3_cmd,
-                          apr_array_header_t *preserved_exts,
+                          svn_cancel_func_t cancel_func,
+                          void *cancel_baton,
+                          svn_wc_notify_func2_t notify_func,
+                          void *notify_baton,
                           apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool);
 
@@ -7175,10 +7201,10 @@ svn_error_t *
 svn_wc_crop_tree2(svn_wc_context_t *wc_ctx,
                   const char *local_abspath,
                   svn_depth_t depth,
-                  svn_wc_notify_func2_t notify_func,
-                  void *notify_baton,
                   svn_cancel_func_t cancel_func,
                   void *cancel_baton,
+                  svn_wc_notify_func2_t notify_func,
+                  void *notify_baton,
                   apr_pool_t *scratch_pool);
 
 /** Similar to svn_wc_crop_tree2(), but uses an access baton and target.

@@ -2247,8 +2247,8 @@ svn_wc_get_status_editor4(const svn_delta_editor_t **editor,
                                     target, depth, get_all,
                                     no_ignore, ignore_patterns,
                                     status4_wrapper_func, swb,
-                                    cancel_func, cancel_baton,
                                     external_func, eb,
+                                    cancel_func, cancel_baton,
                                     pool, pool));
 
   /* We can't destroy wc_ctx here, because the editor needs it while it's
@@ -2695,13 +2695,13 @@ svn_wc_get_update_editor3(svn_revnum_t *target_revision,
                                     use_commit_times,
                                     depth, depth_is_sticky,
                                     allow_unver_obstructions,
-                                    notify_func, notify_baton,
-                                    cancel_func, cancel_baton,
-                                    conflict_func, conflict_baton,
-                                    external_func, eb,
-                                    fetch_func, fetch_baton,
                                     diff3_cmd,
                                     preserved_exts,
+                                    fetch_func, fetch_baton,
+                                    conflict_func, conflict_baton,
+                                    external_func, eb,
+                                    cancel_func, cancel_baton,
+                                    notify_func, notify_baton,
                                     pool, pool));
 
   /* We can't destroy wc_ctx here, because the editor needs it while it's
@@ -2812,13 +2812,13 @@ svn_wc_get_switch_editor3(svn_revnum_t *target_revision,
                                     use_commit_times,
                                     depth, depth_is_sticky,
                                     allow_unver_obstructions,
-                                    notify_func, notify_baton,
-                                    cancel_func, cancel_baton,
-                                    conflict_func, conflict_baton,
-                                    external_func, eb,
-                                    NULL, NULL, 
                                     diff3_cmd,
                                     preserved_exts,
+                                    NULL, NULL, 
+                                    conflict_func, conflict_baton,
+                                    external_func, eb,
+                                    cancel_func, cancel_baton,
+                                    notify_func, notify_baton,
                                     pool, pool));
 
   /* We can't destroy wc_ctx here, because the editor needs it while it's
@@ -3631,8 +3631,8 @@ svn_wc_crop_tree(svn_wc_adm_access_t *anchor,
       SVN_ERR(svn_wc_crop_tree2(wc_ctx,
                                 local_abspath,
                                 depth,
-                                notify_func, notify_baton,
                                 cancel_func, cancel_baton,
+                                notify_func, notify_baton,
                                 pool));
     }
 

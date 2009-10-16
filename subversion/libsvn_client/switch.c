@@ -200,8 +200,8 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
 
       if (target_kind == svn_node_dir)
         SVN_ERR(svn_wc_crop_tree2(ctx->wc_ctx, local_abspath, depth,
-                                  ctx->notify_func2, ctx->notify_baton2,
                                   ctx->cancel_func, ctx->cancel_baton,
+                                  ctx->notify_func2, ctx->notify_baton2,
                                   pool));
     }
 
@@ -235,12 +235,13 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
                                     target, switch_rev_url, use_commit_times,
                                     depth,
                                     depth_is_sticky, allow_unver_obstructions,
-                                    ctx->notify_func2, ctx->notify_baton2,
-                                    ctx->cancel_func, ctx->cancel_baton,
+                                    diff3_cmd, preserved_exts,
+                                    NULL, NULL,
                                     ctx->conflict_func, ctx->conflict_baton,
                                     svn_client__external_info_gatherer, &efb,
-                                    NULL, NULL,
-                                    diff3_cmd, preserved_exts, pool, pool));
+                                    ctx->cancel_func, ctx->cancel_baton,
+                                    ctx->notify_func2, ctx->notify_baton2,
+                                    pool, pool));
 
   /* Tell RA to do an update of URL+TARGET to REVISION; if we pass an
      invalid revnum, that means RA will use the latest revision. */
