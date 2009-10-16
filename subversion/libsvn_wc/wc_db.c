@@ -4289,17 +4289,15 @@ svn_wc__db_scan_deletion(const char **base_del_abspath,
   svn_boolean_t child_has_base = FALSE;
   svn_wc__db_pdh_t *pdh;
 
-  SVN_ERR_ASSERT(base_del_abspath != NULL);
-  SVN_ERR_ASSERT(base_replaced != NULL);
-  SVN_ERR_ASSERT(moved_to_abspath != NULL);
-  SVN_ERR_ASSERT(work_del_abspath != NULL);
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-
   /* Initialize all the OUT parameters.  */
-  *base_del_abspath = NULL;
-  *base_replaced = FALSE;  /* becomes TRUE when we know for sure.  */
-  *moved_to_abspath = NULL;
-  *work_del_abspath = NULL;
+  if (base_del_abspath != NULL)
+    *base_del_abspath = NULL;
+  if (base_replaced != NULL)
+    *base_replaced = FALSE;  /* becomes TRUE when we know for sure.  */
+  if (moved_to_abspath != NULL)
+    *moved_to_abspath = NULL;
+  if (work_del_abspath != NULL)
+    *work_del_abspath = NULL;
 
   /* Initialize to something that won't denote an important parent/child
      transition.  */
@@ -4358,7 +4356,9 @@ svn_wc__db_scan_deletion(const char **base_del_abspath,
 
              In both cases, set the root of the operation (if we have not
              already set it as part of a moved-away).  */
-          if (child_has_base && *base_del_abspath == NULL)
+          if (base_del_abspath != NULL
+              && child_has_base 
+              && *base_del_abspath == NULL)
             *base_del_abspath = apr_pstrdup(result_pool, child_abspath);
 
           /* We found whatever roots we needed. This BASE node and its
@@ -4400,7 +4400,8 @@ svn_wc__db_scan_deletion(const char **base_del_abspath,
           /* If we're looking at a present BASE node, *and* there is a
              WORKING node (present or deleted), then a replacement has
              occurred here or in an ancestor.  */
-          if (base_presence == svn_wc__db_status_normal
+          if (base_replaced != NULL
+              && base_presence == svn_wc__db_status_normal
               && work_presence != svn_wc__db_status_base_deleted)
             {
               *base_replaced = TRUE;
@@ -4408,21 +4409,26 @@ svn_wc__db_scan_deletion(const char **base_del_abspath,
         }
 
       /* Only grab the nearest ancestor.  */
-      if (*moved_to_abspath == NULL
+      if ((moved_to_abspath != NULL || base_del_abspath != NULL)
+          && *moved_to_abspath == NULL
           && !svn_sqlite__column_is_null(stmt, 2 /* moved_to */))
         {
           /* There better be a BASE_NODE (that was moved-away).  */
           SVN_ERR_ASSERT(have_base);
 
           /* This makes things easy. It's the BASE_DEL_ABSPATH!  */
-          *base_del_abspath = apr_pstrdup(result_pool, current_abspath);
-          *moved_to_abspath = svn_dirent_join(
-                                pdh->wcroot->abspath,
-                                svn_sqlite__column_text(stmt, 2, NULL),
-                                result_pool);
+          if (base_del_abspath != NULL)
+            *base_del_abspath = apr_pstrdup(result_pool, current_abspath);
+
+          if (moved_to_abspath != NULL)
+            *moved_to_abspath = svn_dirent_join(
+                                    pdh->wcroot->abspath,
+                                    svn_sqlite__column_text(stmt, 2, NULL),
+                                    result_pool);
         }
 
-      if (work_presence == svn_wc__db_status_normal
+      if (work_del_abspath != NULL
+          && work_presence == svn_wc__db_status_normal
           && child_presence == svn_wc__db_status_not_present)
         {
           /* Parent is normal, but child was deleted. Therefore, the child
