@@ -1396,28 +1396,29 @@ svn_wc__adm_write_check(const svn_wc_adm_access_t *adm_access,
 }
 
 svn_error_t *
-svn_wc__internal_locked(svn_boolean_t *locked_here,
-                        svn_boolean_t *locked,
-                        svn_wc__db_t *db,
-                        const char *local_abspath,
-                        apr_pool_t *scratch_pool)
+svn_wc_locked2(svn_boolean_t *locked_here,
+               svn_boolean_t *locked,
+               svn_wc_context_t *wc_ctx,
+               const char *local_abspath,
+               apr_pool_t *scratch_pool)
 {
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
   if (locked_here != NULL)
     {
       svn_wc_adm_access_t *adm_access
-          = svn_wc__adm_retrieve_internal2(db, local_abspath, scratch_pool);
+          = svn_wc__adm_retrieve_internal2(wc_ctx->db, local_abspath,
+                                           scratch_pool);
 
       if (adm_access == NULL)
         {
           svn_wc__db_kind_t kind;
 
-          SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath, TRUE,
+          SVN_ERR(svn_wc__db_read_kind(&kind, wc_ctx->db, local_abspath, TRUE,
                                        scratch_pool));
 
           if (kind != svn_wc__db_kind_dir)
-            adm_access = svn_wc__adm_retrieve_internal2(db,
+            adm_access = svn_wc__adm_retrieve_internal2(wc_ctx->db,
                                                         svn_dirent_dirname(
                                                                 local_abspath,
                                                                 scratch_pool),
@@ -1428,25 +1429,12 @@ svn_wc__internal_locked(svn_boolean_t *locked_here,
     }
 
   if (locked != NULL)
-    SVN_ERR(svn_wc__db_wclocked(locked, db, local_abspath, scratch_pool));
+    SVN_ERR(svn_wc__db_wclocked(locked, wc_ctx->db, local_abspath,
+                                scratch_pool));
 
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_wc_locked2(svn_boolean_t *locked_here,
-               svn_boolean_t *locked,
-               svn_wc_context_t *wc_ctx,
-               const char *local_abspath,
-               apr_pool_t *scratch_pool)
-{
-  return svn_error_return(
-             svn_wc__internal_locked(locked_here,
-                                     locked,
-                                     wc_ctx->db,
-                                     local_abspath,
-                                     scratch_pool));
-}
 
 const char *
 svn_wc_adm_access_path(const svn_wc_adm_access_t *adm_access)
