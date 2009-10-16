@@ -331,6 +331,8 @@ class SvnWcTest < Test::Unit::TestCase
     assert(File.exists?(adm_dir))
     FileUtils.rm_rf(adm_dir)
     assert(!File.exists?(adm_dir))
+    flunk("avoid segfault until Hyrum and Greg fix svn_wc_ensure_adm4 to allow"+
+          " nulls or decide it doesn't have to anymore")
     Svn::Wc.ensure_adm(@wc_path, nil, @repos_uri, nil, 0)
     assert(File.exists?(adm_dir))
   end
