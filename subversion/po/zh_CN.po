@@ -37,8 +37,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.6\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2009-06-18 11:25+0800\n"
-"PO-Revision-Date: 2009-06-18 11:27+0800\n"
+"POT-Creation-Date: 2009-10-16 11:05+0800\n"
+"PO-Revision-Date: 2009-10-16 12:27+0800\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Simplified Chinese <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -847,6 +847,9 @@ msgstr "没有外部合并工具可用"
 msgid "Assertion failure"
 msgstr "断言失败"
 
+msgid "GNOME Keyring is locked and we are non-interactive"
+msgstr "GNOME Keyring 被锁定，并且我们处于非交互方式"
+
 #, c-format
 msgid "Can't close directory '%s'"
 msgstr "无法关闭目录 “%s”"
@@ -1498,6 +1501,12 @@ msgstr "URL “%s” 不是版本库根 URL “%s” 的子节点"
 msgid "Compression of svndiff data failed"
 msgstr "压缩 svndiff 数据失败"
 
+msgid "Decompression of svndiff data failed: no size"
+msgstr "解压 svndiff 数据失败: 没有长度"
+
+msgid "Decompression of svndiff data failed: size too large"
+msgstr "解压 svndiff 数据失败: 长度太大"
+
 msgid "Decompression of svndiff data failed"
 msgstr "解压 svndiff 数据失败"
 
@@ -1509,8 +1518,8 @@ msgid "Invalid diff stream: insn %d cannot be decoded"
 msgstr "无效的差异流: insn %d 不能解码"
 
 #, c-format
-msgid "Invalid diff stream: insn %d has non-positive length"
-msgstr "无效的差异流: insn %d 出现非正长度"
+msgid "Invalid diff stream: insn %d has length zero"
+msgstr "无效的差异流: insn %d 出现 0 长度"
 
 #, c-format
 msgid "Invalid diff stream: insn %d overflows the target view"
@@ -1537,6 +1546,9 @@ msgstr "Delta 没有包含足够新数据"
 
 msgid "Svndiff has invalid header"
 msgstr "Svndiff 数据包含无效头"
+
+msgid "Svndiff contains a too-large window"
+msgstr "Svndiff 数据包含太大的窗口"
 
 msgid "Svndiff contains corrupt window header"
 msgstr "Svndiff 数据包含无效窗口"
@@ -3219,6 +3231,9 @@ msgstr "服务器不支持重放范围命令"
 msgid "Expected 'revprops', found '%s'"
 msgstr "期望“revprops”，发现“%s”"
 
+msgid "Error while replaying commit"
+msgstr "重演提交操作错误"
+
 msgid "'get-deleted-rev' not implemented"
 msgstr "未实现 “get-deleted-rev”"
 
@@ -4228,7 +4243,7 @@ msgstr "空合并信息\n"
 
 #, c-format
 msgid "Can't convert string to UCS-2: '%s'"
-msgstr "不能把字符串转换为UCS-2: “%s”。"
+msgstr "不能把字符串转换为 UCS-2: “%s”。"
 
 msgid "Can't get module file name"
 msgstr "无法获取模块文件名"
@@ -4257,6 +4272,10 @@ msgstr "版本属性对为空"
 #, c-format
 msgid "'%s' is not a valid Subversion property name"
 msgstr "“%s”不是有效的 Subversion 属性名称"
+
+#, c-format
+msgid "'%s' is just a peg revision. Maybe try '%s@' instead?"
+msgstr "“%s” 是 peg 版本。或许你应该使用 “%s@” ?"
 
 #, c-format
 msgid "URL '%s' is not properly URI-encoded"
@@ -4381,6 +4400,7 @@ msgstr "保存未加密的密码(yes/no)?"
 
 #, c-format
 msgid ""
+"\n"
 "-----------------------------------------------------------------------\n"
 "ATTENTION!  Your password for authentication realm:\n"
 "\n"
@@ -4395,6 +4415,7 @@ msgid ""
 "'%s'.\n"
 "-----------------------------------------------------------------------\n"
 msgstr ""
+"\n"
 "-----------------------------------------------------------------------\n"
 "注意!  你的密码，对于认证域:\n"
 "\n"
@@ -4412,6 +4433,7 @@ msgstr "保存未加密的密码(yes/no)?"
 
 #, c-format
 msgid ""
+"\n"
 "-----------------------------------------------------------------------\n"
 "ATTENTION!  Your passphrase for client certificate:\n"
 "\n"
@@ -4426,6 +4448,7 @@ msgid ""
 "'no' in '%s'.\n"
 "-----------------------------------------------------------------------\n"
 msgstr ""
+"\n"
 "-----------------------------------------------------------------------\n"
 "注意!  你的客户端证书密码:\n"
 "\n"
@@ -4657,6 +4680,11 @@ msgstr "文件“%s”有本地修改"
 
 msgid "Invalid 'conflict_result' argument"
 msgstr "无效的 “conflict_result” 参数"
+
+#, c-format
+msgid ""
+"Tree conflicts can only be resolved to 'working' state; '%s' not resolved"
+msgstr "树冲突只能解决为 “working” 状态；“%s” 还没有解决"
 
 #, c-format
 msgid "'%s' is a directory, and thus cannot be a member of a changelist"
@@ -5178,8 +5206,9 @@ msgstr "树冲突描述中有非法的 “node_kind” 域"
 msgid "Error parsing tree conflict skel"
 msgstr "解析树冲突骨架出错"
 
-msgid "Attempt to add tree conflict that already exists"
-msgstr "试图增加已经存在的树冲突"
+#, c-format
+msgid "Attempt to add tree conflict that already exists at '%s'"
+msgstr "试图增加已经位于“%s”的树冲突"
 
 #, c-format
 msgid "No '.' entry in: '%s'"
@@ -7740,7 +7769,7 @@ msgid "obstruction"
 msgstr "阻塞"
 
 msgid "missing"
-msgstr "丢失"
+msgstr "失踪"
 
 msgid "unversioned"
 msgstr "未版本控制"
