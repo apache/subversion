@@ -1913,6 +1913,20 @@ svn_wc__db_temp_wcroot_tempdir(const char **temp_dir_abspath,
                                apr_pool_t *result_pool,
                                apr_pool_t *scratch_pool);
 
+
+svn_error_t *
+svn_wc__db_temp_mark_locked(svn_wc__db_t *db,
+                            const char *local_dir_abspath,
+                            apr_pool_t *scratch_pool);
+
+
+svn_error_t *
+svn_wc__db_temp_own_lock(svn_boolean_t *own_lock,
+                         svn_wc__db_t *db,
+                         const char *local_dir_abspath,
+                         apr_pool_t *scratch_pool);
+
+
 /** @} */
 
 

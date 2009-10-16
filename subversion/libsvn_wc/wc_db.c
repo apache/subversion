@@ -168,6 +168,9 @@ struct svn_wc__db_pdh_t {
   /* The parent directory's per-dir information. */
   svn_wc__db_pdh_t *parent;
 
+  /* Whether this process owns a write-lock on this directory. */
+  svn_boolean_t locked;
+
   /* Hold onto the old-style access baton that corresponds to this PDH.  */
   svn_wc_adm_access_t *adm_access;
 };
@@ -4777,6 +4780,7 @@ svn_wc__db_temp_forget_directory(svn_wc__db_t *db,
       if (!svn_dirent_is_ancestor(local_dir_abspath, pdh->local_abspath))
         continue;
 
+      SVN_ERR(svn_wc__db_wclock_remove(db, pdh->local_abspath, scratch_pool));
       apr_hash_set(db->dir_data, pdh->local_abspath, APR_HASH_KEY_STRING, NULL);
 
       if (pdh->wcroot && pdh->wcroot->sdb &&
@@ -5319,10 +5323,51 @@ svn_wc__db_wclock_remove(svn_wc__db_t *db,
                          apr_pool_t *scratch_pool)
 {
   svn_sqlite__stmt_t *stmt;
+  svn_wc__db_pdh_t *pdh;
 
   SVN_ERR(get_statement_for_path(&stmt, db, local_abspath,
                                  STMT_DELETE_WC_LOCK, scratch_pool));
   SVN_ERR(svn_sqlite__step_done(stmt));
 
+  /* If we've just removed the "physical" lock, we also need to ensure we
+     don't continue to think we own the lock. */
+  pdh = get_or_create_pdh(db, local_abspath, FALSE, scratch_pool);
+  if (pdh)
+    pdh->locked = FALSE;
+
   return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc__db_temp_mark_locked(svn_wc__db_t *db,
+                            const char *local_dir_abspath,
+                            apr_pool_t *scratch_pool)
+{
+  svn_wc__db_pdh_t *pdh;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_dir_abspath));
+
+  pdh = get_or_create_pdh(db, local_dir_abspath, FALSE, scratch_pool);
+  pdh->locked = TRUE;
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc__db_temp_own_lock(svn_boolean_t *own_lock,
+                         svn_wc__db_t *db,
+                         const char *local_dir_abspath,
+                         apr_pool_t *scratch_pool)
+{
+  svn_wc__db_pdh_t *pdh;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_dir_abspath));
+
+  pdh = get_or_create_pdh(db, local_dir_abspath, FALSE, scratch_pool);
+  *own_lock = (pdh != NULL && pdh->locked);
+
+  return SVN_NO_ERROR;
+
 }
