@@ -349,9 +349,9 @@ canonicalize(path_type_t type, const char *path, apr_pool_t *pool)
   /* "" is already canonical, so just return it; note that later code
      depends on path not being zero-length.  */
   if (SVN_PATH_IS_EMPTY(path))
-    return type == type_uri ? "/" : "";
+    return "";
 
-  dst = canon = apr_pcalloc(pool, strlen(path) + ((type == type_uri ? 1 : 2)));
+  dst = canon = apr_pcalloc(pool, strlen(path) + 1);
 
   /* Try to parse the path as an URI. */
   url = FALSE;
@@ -414,8 +414,6 @@ canonicalize(path_type_t type, const char *path, apr_pool_t *pool)
 
           canon_segments = 1;
         }
-      else
-        *(dst++) = '/';
     }
 
   if (! url && type != type_relpath)
@@ -1110,11 +1108,11 @@ svn_uri_join(const char *base, const char *component, apr_pool_t *pool)
   char *path;
 
   assert(svn_uri_is_canonical(base, pool));
+  assert(svn_uri_is_canonical(component, pool));
 
-  assert(svn_relpath_is_canonical(component, pool) ||
-         svn_uri_is_canonical(component, pool));
-
-  /* If component is empty return base */
+  /* If either is empty return the other */
+  if (SVN_PATH_IS_EMPTY(base))
+    return apr_pmemdup(pool, component, clen + 1);
   if (SVN_PATH_IS_EMPTY(component))
     return apr_pmemdup(pool, base, blen + 1);
 
@@ -1694,7 +1692,7 @@ svn_uri_is_canonical(const char *uri, apr_pool_t *pool)
    */
 
   if (*uri == '\0')
-    return FALSE;
+    return TRUE;
 
   /* Maybe parse hostname and scheme. */
   if (*ptr != '/')
@@ -1736,7 +1734,11 @@ svn_uri_is_canonical(const char *uri, apr_pool_t *pool)
             }
         }
       else
-        return FALSE;
+        {
+          /* Didn't find a scheme; finish the segment. */
+          while (*ptr && *ptr != '/')
+            ptr++;
+        }
     }
 
 #if defined(WIN32) || defined(__CYGWIN__)
