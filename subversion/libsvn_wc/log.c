@@ -1450,17 +1450,8 @@ svn_wc__run_log2(svn_wc__db_t *db,
                  const char *adm_abspath,
                  apr_pool_t *scratch_pool)
 {
-  svn_wc_adm_access_t *adm_access;
-
-  adm_access = svn_wc__adm_retrieve_internal2(db, adm_abspath, scratch_pool);
-
-  /* If we don't hold a lock, then assume there is no work to run.  */
-  /* ### this typically occurs from update_editor.c::cleanup_dir_baton  */
-  if (adm_access == NULL)
-    return SVN_NO_ERROR;
-
   /* Verify that we're holding this directory's write lock.  */
-  SVN_ERR(svn_wc__adm_write_check(adm_access, scratch_pool));
+  SVN_ERR(svn_wc__write_check(db, adm_abspath, scratch_pool));
 
   return svn_error_return(svn_wc__wq_run(
                             db, adm_abspath,

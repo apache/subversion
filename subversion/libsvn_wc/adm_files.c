@@ -681,7 +681,8 @@ svn_wc__adm_destroy(svn_wc_adm_access_t *adm_access,
   const char *path, *local_abspath;
   svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
 
-  SVN_ERR(svn_wc__adm_write_check(adm_access, scratch_pool));
+  SVN_ERR(svn_wc__write_check(db, svn_wc__adm_access_abspath(adm_access),
+                              scratch_pool));
 
   /* Well, the coast is clear for blowing away the administrative
      directory, which also removes the lock file */
@@ -710,7 +711,9 @@ svn_wc__adm_cleanup_tmp_area(const svn_wc_adm_access_t *adm_access,
   if (!svn_wc__adm_area_exists(adm_access, scratch_pool))
     return SVN_NO_ERROR;
 
-  SVN_ERR(svn_wc__adm_write_check(adm_access, scratch_pool));
+  SVN_ERR(svn_wc__write_check(svn_wc__adm_get_db(adm_access),
+                              svn_wc__adm_access_abspath(adm_access),
+                              scratch_pool));
 
   /* Get the path to the tmp area, and blow it away. */
   tmp_path = svn_wc__adm_child(path, SVN_WC__ADM_TMP, scratch_pool);

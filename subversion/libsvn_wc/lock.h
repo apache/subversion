@@ -117,15 +117,12 @@ svn_wc__internal_check_wc(int *wc_format,
                           apr_pool_t *scratch_pool);
 
 
-/* Ensure ADM_ACCESS has a write lock and that it is still valid.  Returns
- * the error SVN_ERR_WC_NOT_LOCKED if this is not the case.  Compared to
- * the function svn_wc_adm_locked, this function is run-time expensive as
- * it does additional checking to verify the physical lock.  It is used
- * when the library expects a write lock, and where it is an error for the
- * lock not to be present.  Applications are not expected to call it.
+/* Ensure LOCAL_ABSPATH is still locked in DB.  Returns the error
+ * SVN_ERR_WC_NOT_LOCKED if this is not the case.
  */
-svn_error_t *svn_wc__adm_write_check(const svn_wc_adm_access_t *adm_access,
-                                     apr_pool_t *scratch_pool);
+svn_error_t *svn_wc__write_check(svn_wc__db_t *db,
+                                 const char *local_abspath,
+                                 apr_pool_t *scratch_pool);
 
 /* Ensure DB has a lock and for an entire WC tree (all the way
    to its leaf nodes).  While locking a tree up front using
