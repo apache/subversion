@@ -155,13 +155,15 @@ pool_cleanup(void *p)
   svn_wc_adm_access_t *lock = p;
   apr_uint64_t id;
   svn_skel_t *work_item;
+  const char *wq_abspath;
   svn_error_t *err;
 
   if (lock->closed)
     return SVN_NO_ERROR;
 
   /* ### should we create an API that just looks, but doesn't return?  */
-  err = svn_wc__db_wq_fetch(&id, &work_item, lock->db, lock->abspath,
+  err = svn_wc__db_wq_fetch(&id, &work_item, &wq_abspath,
+                            lock->db, lock->abspath,
                             lock->pool, lock->pool);
   if (!err)
     err = do_close(lock, work_item != NULL /* preserve_lock */, lock->pool);

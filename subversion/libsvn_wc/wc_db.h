@@ -1728,24 +1728,31 @@ svn_wc__db_wq_add(svn_wc__db_t *db,
    and WORK_ITEM to NULL.
 
    RESULT_POOL will be used to allocate WORK_ITEM, and SCRATCH_POOL
-   will be used for all temporary allocations.  */
+   will be used for all temporary allocations.  
+   
+   ### WQ_ABSPATH will return the absolute path to the working copy that
+       holds the fetched working item. Pass this path to
+       svn_wc__db_wq_completed to complete the work item.
+   */
 svn_error_t *
 svn_wc__db_wq_fetch(apr_uint64_t *id,
                     svn_skel_t **work_item,
+                    const char **wq_abspath,
                     svn_wc__db_t *db,
                     const char *wri_abspath,
                     apr_pool_t *result_pool,
                     apr_pool_t *scratch_pool);
 
 
-/* In the WCROOT associated with DB and WRI_ABSPATH, mark work item ID as
+/* In the WCROOT associated with DB and WQ_ABSPATH, mark work item ID as
    completed. If an error occurs, then it is unknown whether the work item
-   has been marked as completed.
+   has been marked as completed. WQ_ABSPATH is obtained by a matching
+   svn_wc__db_wq_fetch() call.
 
    Uses SCRATCH_POOL for all temporary allocations.  */
 svn_error_t *
 svn_wc__db_wq_completed(svn_wc__db_t *db,
-                        const char *wri_abspath,
+                        const char *wq_abspath,
                         apr_uint64_t id,
                         apr_pool_t *scratch_pool);
 

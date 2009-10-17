@@ -1306,9 +1306,11 @@ test_work_queue(apr_pool_t *pool)
     {
       apr_uint64_t id;
       int which;
+      const char *wq_abspath;
 
       /* Fetch the next work item, or break when the work queue is empty.  */
-      SVN_ERR(svn_wc__db_wq_fetch(&id, &work_item, db, local_abspath,
+      SVN_ERR(svn_wc__db_wq_fetch(&id, &work_item, &wq_abspath,
+                                  db, local_abspath,
                                   pool, pool));
       if (work_item == NULL)
         break;
@@ -1331,7 +1333,7 @@ test_work_queue(apr_pool_t *pool)
       /* If we have run this particular item enough times, then go ahead
          and remove it from the work queue.  */
       if (--run_count[which] == 0)
-        SVN_ERR(svn_wc__db_wq_completed(db, local_abspath, id, pool));
+        SVN_ERR(svn_wc__db_wq_completed(db, wq_abspath, id, pool));
     }
 
   /* Should have run precisely 13 work items.  */

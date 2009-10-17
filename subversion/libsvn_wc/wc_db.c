@@ -4586,6 +4586,7 @@ svn_wc__db_wq_add(svn_wc__db_t *db,
 svn_error_t *
 svn_wc__db_wq_fetch(apr_uint64_t *id,
                     svn_skel_t **work_item,
+                    const char **wq_abspath,
                     svn_wc__db_t *db,
                     const char *wri_abspath,
                     apr_pool_t *result_pool,
@@ -4613,6 +4614,7 @@ svn_wc__db_wq_fetch(apr_uint64_t *id,
     {
       *id = 0;
       *work_item = NULL;
+      *wq_abspath = NULL;
     }
   else
     {
@@ -4624,6 +4626,7 @@ svn_wc__db_wq_fetch(apr_uint64_t *id,
       val = svn_sqlite__column_blob(stmt, 1, &len, result_pool);
 
       *work_item = svn_skel__parse(val, len, result_pool);
+      *wq_abspath = apr_pstrdup(result_pool, pdh->wcroot->abspath);
     }
 
   return svn_error_return(svn_sqlite__reset(stmt));
@@ -4632,7 +4635,7 @@ svn_wc__db_wq_fetch(apr_uint64_t *id,
 
 svn_error_t *
 svn_wc__db_wq_completed(svn_wc__db_t *db,
-                        const char *wri_abspath,
+                        const char *wq_abspath,
                         apr_uint64_t id,
                         apr_pool_t *scratch_pool)
 {
@@ -4640,13 +4643,18 @@ svn_wc__db_wq_completed(svn_wc__db_t *db,
   const char *local_relpath;
   svn_sqlite__stmt_t *stmt;
 
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(wri_abspath));
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(wq_abspath));
   SVN_ERR_ASSERT(id != 0);
 
-  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, wri_abspath,
+  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, wq_abspath,
                               svn_sqlite__mode_readwrite,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(pdh);
+
+  if (strcmp(wq_abspath, pdh->wcroot->abspath) != 0)
+    return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+                             _("The working queue for '%s' was not found."),
+                             svn_dirent_local_style(wq_abspath, scratch_pool));
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
                                     STMT_DELETE_WORK_ITEM));
