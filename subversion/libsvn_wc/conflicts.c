@@ -693,6 +693,11 @@ svn_wc__internal_resolved_conflict(svn_wc__db_t *db,
                                    void *notify_baton,
                                    apr_pool_t *scratch_pool)
 {
+  /* When the implementation still used the entry walker, depth
+     unknown was translated to infinity. */
+  if (depth == svn_depth_unknown)
+    depth = svn_depth_infinity;
+
   return svn_error_return(
     recursive_resolve_conflict(db,
                                local_abspath,
