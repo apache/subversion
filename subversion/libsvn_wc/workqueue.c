@@ -880,6 +880,8 @@ svn_wc__wq_run(svn_wc__db_t *db,
       apr_uint64_t id;
       svn_skel_t *work_item;
       const struct work_item_dispatch *scan;
+      const char *wq_abspath;
+      svn_error_t *err;
 
       /* Stop work queue processing, if requested. A future 'svn cleanup'
          should be able to continue the processing.  */
@@ -889,13 +891,20 @@ svn_wc__wq_run(svn_wc__db_t *db,
       svn_pool_clear(iterpool);
 
       /* ### hmm. maybe we need a better way to handle this. or just leave
-         ### it for now, since I think it disappears in single-db.  */
+         ### it for now, since I think it disappears in single-db.  
+         
+         ### Does this work for updating base-deleted and excluded items?
+         ### A WRI_ABSPATH can point to 'any related path'. 
+
+         ### Maybe this check can be removed after the wq_abspath
+         ### introduction? */
       SVN_ERR(svn_wc__adm_available(&available, NULL, &obstructed,
                                     db, wri_abspath, scratch_pool));
       if (!available || obstructed)
         break;
 
-      SVN_ERR(svn_wc__db_wq_fetch(&id, &work_item, db, wri_abspath,
+      SVN_ERR(svn_wc__db_wq_fetch(&id, &work_item, &wq_abspath,
+                                  db, wri_abspath,
                                   iterpool, iterpool));
       if (work_item == NULL)
         break;
@@ -928,7 +937,17 @@ svn_wc__wq_run(svn_wc__db_t *db,
                                                           iterpool));
         }
 
-      SVN_ERR(svn_wc__db_wq_completed(db, wri_abspath, id, iterpool));
+      err = svn_wc__db_wq_completed(db, wq_abspath, id, iterpool);
+
+      /* Maybe the database holding the wq item was removed? */
+      if (err)
+        {
+          if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
+            return svn_error_return(err);
+
+          svn_error_clear(err);
+          break; /* No more items to fetch from this DB */
+        }
     }
 
   svn_pool_destroy(iterpool);
