@@ -2368,7 +2368,7 @@ class SvnClientTest < Test::Unit::TestCase
         ctx.ci(@wc_path)
       end
 
-      ctx.resolve(:path=>dir_path, :depth=>:infinite, :conflict_choice=>choice)
+      ctx.resolve(:path=>dir_path, :depth=>:infinity, :conflict_choice=>choice)
       yield ctx, path
     end
   end
