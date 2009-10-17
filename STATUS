@@ -150,5 +150,13 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+ * r40088
+   Update the expectation of a ruby bindings test.  Follow on to the already
+   merged r39219.
+   Justification:
+     Gets rid of a misleading test failure.
+   Votes:
+     +1: joeswatosh
+
 Approved changes:
 =================
