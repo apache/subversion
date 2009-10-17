@@ -3055,7 +3055,8 @@ svn_wc__entry_modify2(svn_wc__db_t *db,
   else
     {
       /* Are we allowed to write to this admin area?  */
-      SVN_ERR(svn_wc__adm_write_check(adm_access, subpool));
+      SVN_ERR(svn_wc__write_check(db, svn_wc__adm_access_abspath(adm_access),
+                                  subpool));
 
       SVN_ERR(svn_wc_entries_read(&entries, adm_access, TRUE, subpool));
     }

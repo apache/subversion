@@ -359,7 +359,8 @@ process_committed_leaf(svn_wc__db_t *db,
   const char *local_abspath;
   svn_boolean_t using_ng = FALSE;
 
-  SVN_ERR(svn_wc__adm_write_check(adm_access, pool));
+  SVN_ERR(svn_wc__write_check(db, svn_wc__adm_access_abspath(adm_access),
+                              pool));
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
   /* Set PATH's working revision to NEW_REVNUM; if REV_DATE and

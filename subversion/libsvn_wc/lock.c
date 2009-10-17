@@ -1395,17 +1395,17 @@ svn_wc_adm_locked(const svn_wc_adm_access_t *adm_access)
 }
 
 svn_error_t *
-svn_wc__adm_write_check(const svn_wc_adm_access_t *adm_access,
-                        apr_pool_t *scratch_pool)
+svn_wc__write_check(svn_wc__db_t *db,
+                    const char *local_abspath,
+                    apr_pool_t *scratch_pool)
 {
   svn_boolean_t locked;
 
-  SVN_ERR(svn_wc__db_temp_own_lock(&locked, adm_access->db,
-                                   adm_access->abspath, scratch_pool));
+  SVN_ERR(svn_wc__db_temp_own_lock(&locked, db, local_abspath, scratch_pool));
   if (!locked)
     return svn_error_createf(SVN_ERR_WC_NOT_LOCKED, NULL,
                              _("No write-lock in '%s'"),
-                             svn_dirent_local_style(adm_access->path,
+                             svn_dirent_local_style(local_abspath,
                                                     scratch_pool));
 
   return SVN_NO_ERROR;
