@@ -4574,6 +4574,26 @@ svn_wc__db_wq_add(svn_wc__db_t *db,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(pdh);
 
+#ifndef SINGLE_DB
+  if (*local_relpath != '\0')
+    {
+      svn_wc__db_kind_t kind;
+
+      SVN_ERR(svn_wc__db_read_kind(&kind, db, wri_abspath, TRUE,
+                                   scratch_pool));
+      if (kind == svn_wc__db_kind_dir)
+        {
+          /* This node is a directory which is not on disk (since
+             LOCAL_RELPATH is specifying the stub). Therefore, the
+             work queue does not exist.  */
+          return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+                                   _("There is no work queue for '%s'."),
+                                   svn_dirent_local_style(wri_abspath,
+                                                          scratch_pool));
+        }
+    }
+#endif
+
   serialized = svn_skel__unparse(work_item, scratch_pool);
  
   SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
@@ -4604,6 +4624,25 @@ svn_wc__db_wq_fetch(apr_uint64_t *id,
                               svn_sqlite__mode_readonly,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(pdh);
+
+#ifndef SINGLE_DB
+  if (*local_relpath != '\0')
+    {
+      svn_wc__db_kind_t kind;
+
+      SVN_ERR(svn_wc__db_read_kind(&kind, db, wri_abspath, TRUE,
+                                   scratch_pool));
+      if (kind == svn_wc__db_kind_dir)
+        {
+          /* This node is a directory which is not on disk (since
+             LOCAL_RELPATH is specifying the stub). Therefore, it
+             has no items in the work queue.  */
+          *id = 0;
+          *work_item = NULL;
+          return SVN_NO_ERROR;
+        }
+    }
+#endif
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
                                     STMT_SELECT_WORK_ITEM));
@@ -4647,6 +4686,24 @@ svn_wc__db_wq_completed(svn_wc__db_t *db,
                               svn_sqlite__mode_readwrite,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(pdh);
+
+#ifndef SINGLE_DB
+  if (*local_relpath != '\0')
+    {
+      svn_wc__db_kind_t kind;
+
+      SVN_ERR(svn_wc__db_read_kind(&kind, db, wri_abspath, TRUE,
+                                   scratch_pool));
+      if (kind == svn_wc__db_kind_dir)
+        {
+          /* This node is a directory which is not on disk (since
+             LOCAL_RELPATH is specifying the stub). Therefore, the
+             work queue does not exist, and this work item has been
+             (implicitly) removed/completed.  */
+          return SVN_NO_ERROR;
+        }
+    }
+#endif
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
                                     STMT_DELETE_WORK_ITEM));
