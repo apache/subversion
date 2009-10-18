@@ -1663,7 +1663,7 @@ def merge_in_new_file_and_diff(sbox):
     "Index: " + url_branch_path + "/newfile\n",
     "===================================================================\n",
     "--- "+ url_branch_path + "/newfile	(revision 0)\n",
-    "+++ "+ url_branch_path + "/newfile	(revision 2)\n",
+    "+++ "+ url_branch_path + "/newfile	(working copy)\n",
     "@@ -0,0 +1 @@\n",
     "+newfile\n"]
   svntest.actions.run_and_verify_svn(None, expected_output, [], 'diff',
