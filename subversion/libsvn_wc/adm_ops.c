@@ -353,24 +353,39 @@ process_committed_leaf(svn_wc__db_t *db,
                        const svn_wc_committed_queue_t *queue,
                        apr_pool_t *scratch_pool)
 {
+  const char *local_abspath;
+  svn_wc__db_status_t status;
+  svn_wc__db_kind_t kind;
+  svn_checksum_t *copied_checksum;
   svn_wc_entry_t tmp_entry;
   apr_uint64_t modify_flags = 0;
   svn_stringbuf_t *log_accum = svn_stringbuf_create("", scratch_pool);
-  const char *local_abspath;
   svn_boolean_t using_ng = FALSE;
 
   SVN_ERR(svn_wc__write_check(db, adm_abspath, scratch_pool));
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, scratch_pool));
+
+  SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL,
+                               NULL, NULL, NULL,
+                               NULL, NULL, NULL,
+                               NULL, NULL, &copied_checksum,
+                               NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL,
+                               db, local_abspath,
+                               scratch_pool, scratch_pool));
 
   /* Set PATH's working revision to NEW_REVNUM; if REV_DATE and
      REV_AUTHOR are both non-NULL, then set the 'committed-rev',
      'committed-date', and 'last-author' entry values; and set the
      checksum if a file. */
 
-  if (entry->kind == svn_node_file)
+  /* ### this picks up file and symlink  */
+  if (kind != svn_wc__db_kind_dir)
     {
       /* ### only for files, and anything but deletes.  */
-      using_ng = (entry->schedule != svn_wc_schedule_delete);
+      using_ng = (status != svn_wc__db_status_deleted
+                  && status != svn_wc__db_status_obstructed_delete);
 
       /* If the props or text revert file exists it needs to be deleted when
        * the file is committed. */
@@ -416,6 +431,9 @@ process_committed_leaf(svn_wc__db_t *db,
                                                  entry->checksum,
                                                  scratch_pool));
                   checksum = parsed_checksum;
+
+                  SVN_ERR_ASSERT(svn_checksum_match(copied_checksum,
+                                                    checksum));
                 }
 #ifdef SVN_DEBUG
               else
@@ -423,7 +441,9 @@ process_committed_leaf(svn_wc__db_t *db,
                   /* If we copy a deleted file, then it will become scheduled
                      for deletion, but there is no base text for it. So we
                      cannot get/compute a checksum for this file. */
-                  SVN_ERR_ASSERT(entry->schedule == svn_wc_schedule_delete);
+                  SVN_ERR_ASSERT(
+                    status == svn_wc__db_status_deleted
+                    || status == svn_wc__db_status_obstructed_delete);
 
                   /* checksum will remain NULL in this one case. */
                 }
@@ -677,6 +697,9 @@ svn_wc_queue_committed2(svn_wc_committed_queue_t *queue,
   return SVN_NO_ERROR;
 }
 
+
+/* NOTE: this function doesn't move to deprecated.c because of its need
+   for the internals of svn_wc_committed_queue_t.  */
 svn_error_t *
 svn_wc_queue_committed(svn_wc_committed_queue_t **queue,
                        const char *path,
