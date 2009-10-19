@@ -6683,7 +6683,9 @@ svn_wc_revert(const char *path,
  * This means that as soon as @a fp is closed, the tmp file will vanish.
  *
  * @since New in 1.4
+ * @deprecated For compatibility with 1.6 API
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_create_tmp_file2(apr_file_t **fp,
                         const char **new_name,
