@@ -700,28 +700,21 @@ svn_wc__adm_destroy(svn_wc_adm_access_t *adm_access,
 
 
 svn_error_t *
-svn_wc__adm_cleanup_tmp_area(const svn_wc_adm_access_t *adm_access,
+svn_wc__adm_cleanup_tmp_area(svn_wc__db_t *db,
+                             const char *adm_abspath,
                              apr_pool_t *scratch_pool)
 {
-  const char *path = svn_wc_adm_access_path(adm_access);
   const char *tmp_path;
 
-  /* If the admin area doesn't even *exist*, then the temp area is
-     definitely cleaned up. */
-  if (!svn_wc__adm_area_exists(adm_access, scratch_pool))
-    return SVN_NO_ERROR;
-
-  SVN_ERR(svn_wc__write_check(svn_wc__adm_get_db(adm_access),
-                              svn_wc__adm_access_abspath(adm_access),
-                              scratch_pool));
+  SVN_ERR(svn_wc__write_check(db, adm_abspath, scratch_pool));
 
   /* Get the path to the tmp area, and blow it away. */
-  tmp_path = svn_wc__adm_child(path, SVN_WC__ADM_TMP, scratch_pool);
+  tmp_path = svn_wc__adm_child(adm_abspath, SVN_WC__ADM_TMP, scratch_pool);
 
   SVN_ERR(svn_io_remove_dir2(tmp_path, TRUE, NULL, NULL, scratch_pool));
 
   /* Now, rebuild the tmp area. */
-  return init_adm_tmp_area(path, scratch_pool);
+  return init_adm_tmp_area(adm_abspath, scratch_pool);
 }
 
 

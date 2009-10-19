@@ -2092,7 +2092,7 @@ cleanup_internal(svn_wc__db_t *db,
   /* Cleanup the tmp area of the admin subdir, if running the log has not
      removed it!  The logs have been run, so anything left here has no hope
      of being useful. */
-  SVN_ERR(svn_wc__adm_cleanup_tmp_area(adm_access, iterpool));
+  SVN_ERR(svn_wc__adm_cleanup_tmp_area(db, adm_abspath, iterpool));
 
   /* All done with this thing. Toss it, and its lock.  */
   SVN_ERR(svn_wc_adm_close2(adm_access, iterpool));
