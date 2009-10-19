@@ -41,24 +41,6 @@ extern "C" {
 
 /*** General utilities that may get moved upstairs at some point. */
 
-/* Take out a write-lock, stealing an existing lock if one exists.  This
-   function avoids the potential race between checking for an existing lock
-   and creating a lock. The cleanup code uses this function, but stealing
-   locks is not a good idea because the code cannot determine whether a
-   lock is still in use. Try not to write any more code that requires this
-   feature.
-
-   PATH is the directory to lock, and the lock is returned in
-   *ADM_ACCESS.
-*/
-svn_error_t *
-svn_wc__adm_steal_write_lock(svn_wc_adm_access_t **adm_access,
-                             svn_wc__db_t *db,
-                             const char *adm_abspath,
-                             apr_pool_t *result_pool,
-                             apr_pool_t *scratch_pool);
-
-
 /* Store ENTRIES in the cache in ADM_ACCESS.  ENTRIES may be NULL. */
 void svn_wc__adm_access_set_entries(svn_wc_adm_access_t *adm_access,
                                     apr_hash_t *entries);

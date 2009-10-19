@@ -197,7 +197,6 @@ adm_access_alloc(svn_wc_adm_access_t **adm_access,
                  svn_wc__db_t *db,
                  svn_boolean_t db_provided,
                  svn_boolean_t write_lock,
-                 svn_boolean_t steal_lock,
                  apr_pool_t *result_pool,
                  apr_pool_t *scratch_pool)
 {
@@ -217,16 +216,7 @@ adm_access_alloc(svn_wc_adm_access_t **adm_access,
 
   if (write_lock)
     {
-      err = svn_wc__db_wclock_set(db, lock->abspath, scratch_pool);
-
-      if (err)
-        {
-          if (err->apr_err != SVN_ERR_WC_LOCKED || !steal_lock)
-            return svn_error_return(err);
-
-          svn_error_clear(err);
-        }
-
+      SVN_ERR(svn_wc__db_wclock_set(db, lock->abspath, scratch_pool));
       SVN_ERR(svn_wc__db_temp_mark_locked(db, lock->abspath, scratch_pool));
     }
 
@@ -347,27 +337,6 @@ probe(svn_wc__db_t *db,
 }
 
 
-svn_error_t *
-svn_wc__adm_steal_write_lock(svn_wc_adm_access_t **adm_access,
-                             svn_wc__db_t *db,
-                             const char *adm_abspath,
-                             apr_pool_t *result_pool,
-                             apr_pool_t *scratch_pool)
-{
-  /* ### we shouldn't really pass an abspath here, but it seems to work
-     ### because we never call svn_wc_adm_access_path() on the resulting
-     ### baton. (nor does anybody fetch it from DB and do that)  */
-  SVN_ERR(adm_access_alloc(adm_access, adm_abspath, db, TRUE, TRUE, TRUE,
-                           result_pool, scratch_pool));
-  
-  /* We used to attempt to upgrade the working copy here, but now we let
-     it slide.  Our sole caller is svn_wc_cleanup3(), which will itself
-     worry about upgrading.  */
-
-  return SVN_NO_ERROR;
-}
-
-
 static svn_error_t *
 open_single(svn_wc_adm_access_t **adm_access,
             const char *path,
@@ -408,7 +377,7 @@ open_single(svn_wc_adm_access_t **adm_access,
     }
 
   /* Need to create a new lock */
-  SVN_ERR(adm_access_alloc(&lock, path, db, db_provided, write_lock, FALSE,
+  SVN_ERR(adm_access_alloc(&lock, path, db, db_provided, write_lock,
                            result_pool, scratch_pool));
 
   /* ### recurse was here */
