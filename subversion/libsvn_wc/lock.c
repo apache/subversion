@@ -988,12 +988,12 @@ child_is_disjoint(svn_boolean_t *disjoint,
   const char *parent_repos_root, *parent_repos_relpath, *parent_repos_uuid;
   svn_wc__db_status_t parent_status;
   const apr_array_header_t *children;
-  const char *parent_abspath, *basename;
+  const char *parent_abspath, *base;
   svn_error_t *err;
   svn_boolean_t found_in_parent = FALSE;
   int i;
 
-  svn_dirent_split(local_abspath, &parent_abspath, &basename, scratch_pool);
+  svn_dirent_split(local_abspath, &parent_abspath, &base, scratch_pool);
 
   /* Check if the parent directory knows about this node */
   err = svn_wc__db_read_children(&children, db, parent_abspath, scratch_pool,
@@ -1012,7 +1012,7 @@ child_is_disjoint(svn_boolean_t *disjoint,
     {
       const char *name = APR_ARRAY_IDX(children, i, const char *);
 
-      if (strcmp(name, basename) == 0)
+      if (strcmp(name, base) == 0)
         {
           found_in_parent = TRUE;
           break;
@@ -1067,7 +1067,7 @@ child_is_disjoint(svn_boolean_t *disjoint,
 
   if (strcmp(parent_repos_root, node_repos_root) != 0 ||
       strcmp(parent_repos_uuid, node_repos_uuid) != 0 ||
-      strcmp(svn_relpath_join(parent_repos_relpath, basename, scratch_pool),
+      strcmp(svn_relpath_join(parent_repos_relpath, base, scratch_pool),
              node_repos_relpath) != 0)
     {
       *disjoint = TRUE;
@@ -1515,7 +1515,7 @@ extend_lock_cb(const char *local_abspath,
   svn_wc__db_t *db = walk_baton;
   svn_wc__db_kind_t kind;
   svn_wc_adm_access_t *parent_access, *adm_access;
-  const char *parent_abspath, *basename;
+  const char *parent_abspath, *base;
 
   SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath, FALSE, scratch_pool));
 
@@ -1525,7 +1525,7 @@ extend_lock_cb(const char *local_abspath,
   if (NULL != svn_wc__adm_retrieve_internal2(db, local_abspath, scratch_pool))
     return SVN_NO_ERROR;
 
-  svn_dirent_split(local_abspath, &parent_abspath, &basename, scratch_pool);
+  svn_dirent_split(local_abspath, &parent_abspath, &base, scratch_pool);
 
   parent_access = svn_wc__adm_retrieve_internal2(db, parent_abspath,
                                                  scratch_pool);
@@ -1539,7 +1539,7 @@ extend_lock_cb(const char *local_abspath,
   SVN_ERR(svn_wc_adm_open3(&adm_access, parent_access,
                            svn_dirent_join(
                                svn_wc_adm_access_path(parent_access),
-                               basename, scratch_pool),
+                               base, scratch_pool),
                            TRUE, -1, NULL, NULL,
                            svn_wc_adm_access_pool(parent_access)));
 
