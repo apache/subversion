@@ -447,7 +447,7 @@ svn_sqlite__column_properties(apr_hash_t **props,
 }
 
 svn_error_t *
-svn_sqlite__column_checksum(svn_checksum_t **checksum,
+svn_sqlite__column_checksum(const svn_checksum_t **checksum,
                             svn_sqlite__stmt_t *stmt, int column,
                             apr_pool_t *result_pool)
 {
@@ -458,13 +458,15 @@ svn_sqlite__column_checksum(svn_checksum_t **checksum,
   else
     {
       svn_checksum_kind_t ckind;
+      svn_checksum_t *parsed_checksum;
 
       /* "$md5 $..." or "$sha1$..." */
       SVN_ERR_ASSERT(strlen(digest) > 6);
 
       ckind = (digest[1] == 'm' ? svn_checksum_md5 : svn_checksum_sha1);
-      SVN_ERR(svn_checksum_parse_hex(checksum, ckind,
+      SVN_ERR(svn_checksum_parse_hex(&parsed_checksum, ckind,
                                      digest + 6, result_pool));
+      *checksum = parsed_checksum;
     }
 
   return SVN_NO_ERROR;

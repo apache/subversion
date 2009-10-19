@@ -355,7 +355,7 @@ process_committed_leaf(svn_wc__db_t *db,
   const char *local_abspath;
   svn_wc__db_status_t status;
   svn_wc__db_kind_t kind;
-  svn_checksum_t *copied_checksum;
+  const svn_checksum_t *copied_checksum;
   svn_wc_entry_t tmp_entry;
   apr_uint64_t modify_flags = 0;
   svn_stringbuf_t *log_accum = svn_stringbuf_create("", scratch_pool);
