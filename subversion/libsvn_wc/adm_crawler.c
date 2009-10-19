@@ -975,11 +975,11 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
 
       if (repos_relpath)
         {
-          const char *parent_abspath, *basename;
+          const char *parent_abspath, *base;
           svn_wc__db_status_t parent_status;
           const char *parent_repos_relpath;
 
-          svn_dirent_split(local_abspath, &parent_abspath, &basename, pool);
+          svn_dirent_split(local_abspath, &parent_abspath, &base, pool);
 
           /* We can assume a file is in the same repository as its parent
              directory, so we only look at the relpath. */
@@ -1014,7 +1014,7 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
           /* Split PATH into parent PDIR and basename BNAME. */
 
           if (strcmp(repos_relpath,
-                     svn_relpath_join(parent_repos_relpath, basename, pool)) != 0)
+                     svn_relpath_join(parent_repos_relpath, base, pool)) != 0)
             {
               /* This file is disjoint with respect to its parent
                  directory.  Since we are looking at the actual target of

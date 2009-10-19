@@ -204,14 +204,14 @@ organize_lock_targets(const char **common_parent_url,
      1 member, so we special case that. */
   if (apr_is_empty_array(rel_targets))
     {
-      const char *parent, *basename;
+      const char *parent, *base;
       if (url_mode)
-        svn_uri_split(*common_parent_url, &parent, &basename, pool);
+        svn_uri_split(*common_parent_url, &parent, &base, pool);
       else
-        svn_dirent_split(*common_parent_url, &parent, &basename, pool);
+        svn_dirent_split(*common_parent_url, &parent, &base, pool);
 
       *common_parent_url = parent;
-      APR_ARRAY_PUSH(rel_targets, const char *) = basename;
+      APR_ARRAY_PUSH(rel_targets, const char *) = base;
     }
 
   if (*common_parent_url == NULL || (*common_parent_url)[0] == '\0')
