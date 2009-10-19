@@ -59,7 +59,7 @@ def validate_added_extensions(repos_path, txn_name, extensions, action):
         # ... then check it for a valid extension.
         base, ext = os.path.splitext(path)
         if ext:
-          ext = ext[1:]
+          ext = ext[1:].lower()
         if ((ext in extensions) and (action == 'deny')) \
            or ((ext not in extensions) and (action == 'allow')):
           sys.stderr.write("Path '%s' has an extension disallowed by server "
@@ -83,7 +83,7 @@ def main():
   if action not in ("allow", "deny"):
     usage_and_exit("Invalid action '%s'.  Expected either 'allow' or 'deny'."
                    % (action))
-  extensions = sys.argv[4:]
+  extensions = map(lambda x: x.lower(), sys.argv[4:])
   validate_added_extensions(repos_path, txn_name, extensions, action)
 
 if __name__ == "__main__":
