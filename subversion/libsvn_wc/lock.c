@@ -1377,11 +1377,13 @@ svn_wc_adm_close2(svn_wc_adm_access_t *adm_access, apr_pool_t *scratch_pool)
 svn_boolean_t
 svn_wc_adm_locked(const svn_wc_adm_access_t *adm_access)
 {
-  /* Use the baton pool is Evil here, but we've got no other pool to use. */
   svn_boolean_t locked;
+  apr_pool_t *subpool = svn_pool_create(adm_access->pool);
   svn_error_t *err = svn_wc__db_temp_own_lock(&locked, adm_access->db,
                                               adm_access->abspath,
-                                              adm_access->pool);
+                                              subpool);
+  svn_pool_destroy(subpool);
+
   if (err)
     {
       svn_error_clear(err);
