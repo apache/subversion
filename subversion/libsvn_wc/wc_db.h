@@ -1111,6 +1111,50 @@ svn_wc__db_op_set_tree_conflict(svn_wc__db_t *db,
  *   CONFLICTED              FALSE
  *   LOCK                    NULL
  *
+ * When STATUS is requested, then it will be one of these values:
+ *
+ *   svn_wc__db_status_normal
+ *     A plain BASE node, with no local changes.
+ *
+ *   svn_wc__db_status_added
+ *   svn_wc__db_status_obstructed_add
+ *     A node has been added/copied/moved to here. See BASE_SHADOWED to see
+ *     if this change overwrites a BASE node. Use scan_addition() to resolve
+ *     whether this has been added, copied, or moved, and the details of the
+ *     operation (this function only looks at LOCAL_ABSPATH, but resolving
+ *     the details requires scanning one or more ancestor nodes).
+ *
+ *   svn_wc__db_status_deleted
+ *   svn_wc__db_status_obstructed_delete
+ *     This node has been deleted or moved away. It may be a delete/move of
+ *     a BASE node, or a child node of a subtree that was copied/moved to
+ *     an ancestor location. Call scan_deletion() to determine the full
+ *     details of the operations upon this node.
+ *
+ *   svn_wc__db_status_obstructed
+ *     The versioned subdirectory is missing or obstructed by a file.
+ *
+ *   svn_wc__db_status_absent
+ *     The node is versioned/known by the server, but the server has
+ *     decided not to provide further information about the node. This
+ *     is a BASE node (since changes are not allowed to this node).
+ *
+ *   svn_wc__db_status_excluded
+ *     The node has been excluded from the working copy tree. This may
+ *     be an exclusion from the BASE tree, or an exclusion for a child
+ *     node of a copy/move to an ancestor (see BASE_SHADOWED to determine
+ *     the situation).
+ *
+ *   svn_wc__db_status_not_present
+ *     This is a node from the BASE tree, has been marked as "not-present"
+ *     within this mixed-revision working copy. This node is at a revision
+ *     that is not in the tree, contrary to its inclusion in the parent
+ *     node's revision.
+ *
+ *   svn_wc__db_status_incomplete
+ *     The BASE or WORKING node is incomplete due to an interrupted
+ *     operation.
+ *
  * If DEPTH is requested, and the node is NOT a directory, then
  * the value will be set to svn_depth_unknown.
  *
