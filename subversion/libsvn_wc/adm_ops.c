@@ -562,6 +562,13 @@ process_committed_internal(svn_wc__db_t *db,
       apr_pool_t *iterpool = svn_pool_create(scratch_pool);
       int i;
 
+      /* Run the log. It might delete this node, leaving us nothing
+         more to do.  */
+      SVN_ERR(svn_wc__wq_run(db, local_abspath, NULL, NULL, iterpool));
+      SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath, TRUE, iterpool));
+      if (kind == svn_wc__db_kind_unknown)
+        return SVN_NO_ERROR;  /* it got deleted!  */
+
       /* Read PATH's entries;  this is the absolute path. */
       SVN_ERR(svn_wc__db_read_children(&children, db, local_abspath,
                                        scratch_pool, iterpool));
@@ -610,7 +617,7 @@ process_committed_internal(svn_wc__db_t *db,
                                                  NULL, FALSE /* remove_lock */,
                                                  remove_changelist, NULL,
                                                  queue, iterpool));
-              SVN_ERR(svn_wc__run_log2(db, this_abspath, iterpool));
+              SVN_ERR(svn_wc__wq_run(db, this_abspath, NULL, NULL, iterpool));
             }
           else
             {
@@ -758,8 +765,6 @@ svn_wc_process_committed_queue(svn_wc_committed_queue_t *queue,
 {
   svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
   int i;
-  apr_hash_index_t *hi;
-  apr_hash_t *updated_adms = apr_hash_make(pool);
   apr_pool_t *iterpool = svn_pool_create(pool);
 
   /* Now, we write all log files, collecting the affected adms in
@@ -779,7 +784,6 @@ svn_wc_process_committed_queue(svn_wc_committed_queue_t *queue,
         continue;
 
       adm_abspath = svn_wc__adm_access_abspath(cqi->adm_access);
-      apr_hash_set(updated_adms, adm_abspath, APR_HASH_KEY_STRING, "");
 
       SVN_ERR(process_committed_internal(db, adm_abspath, cqi->path,
                                          cqi->recurse,
@@ -788,19 +792,8 @@ svn_wc_process_committed_queue(svn_wc_committed_queue_t *queue,
                                          cqi->remove_lock,
                                          cqi->remove_changelist,
                                          cqi->checksum, queue, iterpool));
-    }
 
-  /* ... and then we run them; all at once.
-
-         This prevents writing the entries file
-         more than once per adm area */
-  for (hi = apr_hash_first(pool, updated_adms); hi; hi = apr_hash_next(hi))
-    {
-      const char *adm_abspath = svn_apr_hash_index_key(hi);
-
-      svn_pool_clear(iterpool);
-
-      SVN_ERR(svn_wc__run_log2(db, adm_abspath, iterpool));
+      SVN_ERR(svn_wc__wq_run(db, adm_abspath, NULL, NULL, iterpool));
     }
 
   queue->queue->nelts = 0;
@@ -839,7 +832,7 @@ svn_wc_process_committed4(const char *path,
                                      remove_changelist, checksum, NULL, pool));
 
   /* Run the log file(s) we just created. */
-  return svn_wc__run_log2(db, adm_abspath, pool);
+  return svn_error_return(svn_wc__wq_run(db, adm_abspath, NULL, NULL, pool));
 }
 
 
