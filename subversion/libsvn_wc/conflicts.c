@@ -338,7 +338,7 @@ resolve_conflict_on_node(svn_wc__db_t *db,
           {
             if (conflict_old && conflict_working && conflict_new)
               {
-                apr_file_t *tmp_f;
+                const char *temp_dir;
                 svn_stream_t *tmp_stream;
                 svn_diff_t *diff;
                 svn_diff_conflict_display_style_t style =
@@ -346,12 +346,13 @@ resolve_conflict_on_node(svn_wc__db_t *db,
                   ? svn_diff_conflict_display_latest
                   : svn_diff_conflict_display_modified;
 
-                SVN_ERR(svn_wc_create_tmp_file2(&tmp_f,
-                                                &auto_resolve_src,
-                                                conflict_dir_abspath,
-                                                svn_io_file_del_none,
-                                                pool));
-                tmp_stream = svn_stream_from_aprfile2(tmp_f, FALSE, pool);
+                SVN_ERR(svn_wc__db_temp_wcroot_tempdir(&temp_dir, db,
+                                                       conflict_dir_abspath,
+                                                       pool, pool));
+                SVN_ERR(svn_stream_open_unique(&tmp_stream,
+                                               &auto_resolve_src,
+                                               temp_dir, svn_io_file_del_none,
+                                               pool, pool));
                 SVN_ERR(svn_diff_file_diff3_2(&diff,
                                               conflict_old,
                                               conflict_working,

@@ -470,8 +470,8 @@ eval_conflict_func_result(enum svn_wc_merge_outcome_t *merge_outcome,
       case svn_wc_conflict_choose_theirs_conflict:
       case svn_wc_conflict_choose_mine_conflict:
         {
-          apr_file_t *chosen_f;
           const char *chosen_path;
+          const char *temp_dir;
           svn_stream_t *chosen_stream;
           svn_diff_t *diff;
           svn_diff_conflict_display_style_t style;
@@ -480,12 +480,12 @@ eval_conflict_func_result(enum svn_wc_merge_outcome_t *merge_outcome,
                     ? svn_diff_conflict_display_latest
                     : svn_diff_conflict_display_modified;
 
-          SVN_ERR(svn_wc_create_tmp_file2(&chosen_f,
-                                          &chosen_path, adm_abspath,
-                                          svn_io_file_del_none,
-                                          pool));
-          chosen_stream = svn_stream_from_aprfile2(chosen_f, FALSE,
-                                                   pool);
+          SVN_ERR(svn_wc__db_temp_wcroot_tempdir(&temp_dir, db, adm_abspath,
+                                                 pool, pool));
+          SVN_ERR(svn_stream_open_unique(&chosen_stream, &chosen_path,
+                                         temp_dir,
+                                         svn_io_file_del_none, pool, pool));
+
           SVN_ERR(svn_diff_file_diff3_2(&diff,
                                         left, detranslated_target, right,
                                         options, pool));
@@ -559,9 +559,12 @@ preserve_pre_merge_files(svn_stringbuf_t **log_accum,
   const char *left_copy, *right_copy, *target_copy;
   const char *tmp_left, *tmp_right, *detranslated_target_copy;
   const char *dir_abspath, *target_name;
+  const char *temp_dir;
   svn_wc_entry_t tmp_entry;
 
   svn_dirent_split(target_abspath, &dir_abspath, &target_name, pool);
+  SVN_ERR(svn_wc__db_temp_wcroot_tempdir(&temp_dir, db, target_abspath,
+                                         pool, pool));
 
   /* I miss Lisp. */
 
@@ -605,8 +608,8 @@ preserve_pre_merge_files(svn_stringbuf_t **log_accum,
      Make our LEFT and RIGHT files 'local' if they aren't... */
   if (! svn_dirent_is_ancestor(dir_abspath, left_abspath))
     {
-      SVN_ERR(svn_wc_create_tmp_file2(NULL, &tmp_left, dir_abspath,
-                                      svn_io_file_del_none, pool));
+      SVN_ERR(svn_io_open_unique_file3(NULL, &tmp_left, temp_dir,
+                                       svn_io_file_del_none, pool, pool));
       SVN_ERR(svn_io_copy_file(left_abspath, tmp_left, TRUE, pool));
     }
   else
@@ -614,8 +617,8 @@ preserve_pre_merge_files(svn_stringbuf_t **log_accum,
 
   if (! svn_dirent_is_ancestor(dir_abspath, right_abspath))
     {
-      SVN_ERR(svn_wc_create_tmp_file2(NULL, &tmp_right, dir_abspath,
-                                      svn_io_file_del_none, pool));
+      SVN_ERR(svn_io_open_unique_file3(NULL, &tmp_right, temp_dir,
+                                       svn_io_file_del_none, pool, pool));
       SVN_ERR(svn_io_copy_file(right_abspath, tmp_right, TRUE, pool));
     }
   else
