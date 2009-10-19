@@ -342,7 +342,6 @@ static svn_error_t *
 process_committed_leaf(svn_wc__db_t *db,
                        const char *adm_abspath,
                        const char *path,
-                       const svn_wc_entry_t *entry,
                        svn_revnum_t new_revnum,
                        const char *rev_date,
                        const char *rev_author,
@@ -422,18 +421,9 @@ process_committed_leaf(svn_wc__db_t *db,
             {
               /* It was copied and not modified. We should have a text
                  base for it. And the entry should have a checksum. */
-              if (entry->checksum != NULL)
+              if (copied_checksum != NULL)
                 {
-                  svn_checksum_t *parsed_checksum;
-
-                  SVN_ERR(svn_checksum_parse_hex(&parsed_checksum,
-                                                 svn_checksum_md5,
-                                                 entry->checksum,
-                                                 scratch_pool));
-                  checksum = parsed_checksum;
-
-                  SVN_ERR_ASSERT(svn_checksum_match(copied_checksum,
-                                                    checksum));
+                  checksum = copied_checksum;
                 }
 #ifdef SVN_DEBUG
               else
@@ -551,24 +541,22 @@ process_committed_internal(svn_wc__db_t *db,
                            const svn_wc_committed_queue_t *queue,
                            apr_pool_t *scratch_pool)
 {
-  const svn_wc_entry_t *entry;
+  svn_wc__db_kind_t kind;
   const char *local_abspath;
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, scratch_pool));
 
-  SVN_ERR(svn_wc__get_entry(&entry, db, local_abspath, TRUE, svn_node_unknown,
-                            FALSE, scratch_pool, scratch_pool));
-  if (entry == NULL)
+  SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath, TRUE, scratch_pool));
+  if (kind == svn_wc__db_kind_unknown)
     return SVN_NO_ERROR;  /* deleted/absent. (?) ... nothing to do. */
 
-  SVN_ERR(process_committed_leaf(db, adm_abspath,
-                                 path, entry,
+  SVN_ERR(process_committed_leaf(db, adm_abspath, path,
                                  new_revnum, rev_date, rev_author,
                                  wcprop_changes,
                                  remove_lock, remove_changelist,
                                  checksum, queue, scratch_pool));
 
-  if (recurse && entry->kind == svn_node_dir)
+  if (recurse && kind == svn_wc__db_kind_dir)
     {
       const apr_array_header_t *children;
       apr_pool_t *iterpool = svn_pool_create(scratch_pool);
@@ -582,27 +570,28 @@ process_committed_internal(svn_wc__db_t *db,
       for (i = 0; i < children->nelts; i++)
         {
           const char *name = APR_ARRAY_IDX(children, i, const char *);
-          const svn_wc_entry_t *current_entry;
-          const char *this_path;
           const char *this_abspath;
-          svn_error_t *err;
+          svn_wc__db_status_t status;
+          const char *this_path;
 
           svn_pool_clear(iterpool);
 
           this_abspath = svn_dirent_join(local_abspath, name, iterpool);
 
-          err = svn_wc__get_entry(&current_entry, db, this_abspath, FALSE,
-                                  svn_node_unknown, FALSE, iterpool, iterpool);
-
-          if (err && err->apr_err == SVN_ERR_NODE_UNEXPECTED_KIND)
-            svn_error_clear(err);
-          else
-            SVN_ERR(err);
+          SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL,
+                                       NULL, NULL, NULL,
+                                       NULL, NULL, NULL,
+                                       NULL, NULL, NULL,
+                                       NULL, NULL, NULL,
+                                       NULL, NULL, NULL, NULL,
+                                       NULL, NULL, NULL, NULL, NULL,
+                                       db, this_abspath,
+                                       iterpool, iterpool));
 
           /* We come to this branch since we have committed a copied tree.
              svn_depth_exclude is possible in this situation. So check and
              skip */
-          if (current_entry->depth == svn_depth_exclude)
+          if (status == svn_wc__db_status_excluded)
             continue;
 
           /* Create child path by telescoping the main path. */
@@ -612,7 +601,7 @@ process_committed_internal(svn_wc__db_t *db,
              a directory.  Pass null for wcprop_changes, because the
              ones present in the current call are only applicable to
              this one committed item. */
-          if (current_entry->kind == svn_node_dir)
+          if (kind == svn_wc__db_kind_dir)
             {
               SVN_ERR(process_committed_internal(db, this_abspath, this_path,
                                                  TRUE /* recurse */,
@@ -630,13 +619,19 @@ process_committed_internal(svn_wc__db_t *db,
                  those entries will already have been removed (as a result
                  of running the log for the replaced directory that was
                  created at the start of this function). */
-              if (current_entry->schedule == svn_wc_schedule_delete)
+              if (status == svn_wc__db_status_deleted
+                  || status == svn_wc__db_status_obstructed_delete)
                 {
-                  if (entry->schedule == svn_wc_schedule_replace)
+                  svn_boolean_t replaced;
+
+                  SVN_ERR(svn_wc__internal_is_replaced(&replaced,
+                                                       db, local_abspath,
+                                                       iterpool));
+                  if (replaced)
                     continue;
                 }
               SVN_ERR(process_committed_leaf(db, adm_abspath, this_path,
-                                             current_entry, new_revnum,
+                                             new_revnum,
                                              rev_date, rev_author, NULL,
                                              FALSE, remove_changelist,
                                              NULL, queue, iterpool));
