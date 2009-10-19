@@ -2041,7 +2041,7 @@ cleanup_internal(svn_wc__db_t *db,
                  void *cancel_baton,
                  apr_pool_t *scratch_pool)
 {
-  svn_wc_adm_access_t *adm_access;
+  svn_error_t *err;
   const apr_array_header_t *children;
   int i;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
@@ -2051,8 +2051,11 @@ cleanup_internal(svn_wc__db_t *db,
     SVN_ERR(cancel_func(cancel_baton));
 
   /* Lock this working copy directory, or steal an existing lock */
-  SVN_ERR(svn_wc__adm_steal_write_lock(&adm_access, db, adm_abspath,
-                                       scratch_pool, iterpool));
+  err = svn_wc__db_wclock_set(db, adm_abspath, iterpool);
+  if (err && err->apr_err == SVN_ERR_WC_LOCKED)
+    svn_error_clear(err);
+  else if (err)
+    return svn_error_return(err);
 
   /* Recurse on versioned, existing subdirectories.  */
   SVN_ERR(svn_wc__db_read_children(&children, db, adm_abspath,
@@ -2094,8 +2097,8 @@ cleanup_internal(svn_wc__db_t *db,
      of being useful. */
   SVN_ERR(svn_wc__adm_cleanup_tmp_area(db, adm_abspath, iterpool));
 
-  /* All done with this thing. Toss it, and its lock.  */
-  SVN_ERR(svn_wc_adm_close2(adm_access, iterpool));
+  /* All done, toss the lock */
+  SVN_ERR(svn_wc__db_wclock_remove(db, adm_abspath, iterpool));
 
   svn_pool_destroy(iterpool);
 
