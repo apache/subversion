@@ -37,10 +37,10 @@
 /* Implements svn_cache__dup_func_t */
 static svn_error_t *
 dup_id(void **out,
-       void *in,
+       const void *in,
        apr_pool_t *pool)
 {
-  svn_fs_id_t *id = in;
+  const svn_fs_id_t *id = in;
   *out = svn_fs_fs__id_copy(id, pool);
   return SVN_NO_ERROR;
 }
@@ -84,10 +84,11 @@ deserialize_id(void **out,
 /* Implements svn_cache__dup_func_t */
 static svn_error_t *
 dup_dir_listing(void **out,
-                void *in,
+                const void *in,
                 apr_pool_t *pool)
 {
-  apr_hash_t *new_entries = apr_hash_make(pool), *entries = in;
+  apr_hash_t *new_entries = apr_hash_make(pool);
+  const apr_hash_t *entries = in;
   apr_hash_index_t *hi;
 
   for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
@@ -145,10 +146,10 @@ manifest_deserialize(void **out,
 /* Implements svn_cache__dup_func_t */
 static svn_error_t *
 dup_pack_manifest(void **out,
-                  void *in,
+                  const void *in,
                   apr_pool_t *pool)
 {
-  apr_array_header_t *manifest = in;
+  const apr_array_header_t *manifest = in;
 
   *out = apr_array_copy(pool, manifest);
   return SVN_NO_ERROR;
