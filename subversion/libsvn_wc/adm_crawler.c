@@ -1011,8 +1011,6 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
           if (err)
             goto abort_report;
 
-          /* Split PATH into parent PDIR and basename BNAME. */
-
           if (strcmp(repos_relpath,
                      svn_relpath_join(parent_repos_relpath, base, pool)) != 0)
             {
