@@ -2056,6 +2056,7 @@ cleanup_internal(svn_wc__db_t *db,
     svn_error_clear(err);
   else if (err)
     return svn_error_return(err);
+  SVN_ERR(svn_wc__db_temp_mark_locked(db, adm_abspath, iterpool));
 
   /* Recurse on versioned, existing subdirectories.  */
   SVN_ERR(svn_wc__db_read_children(&children, db, adm_abspath,
