@@ -450,8 +450,6 @@ close_single(svn_wc_adm_access_t *adm_access,
                 return err;
               svn_error_clear(err);
             }
-
-          /* ### remove lock? */
         }
     }
 
