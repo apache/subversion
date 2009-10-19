@@ -1436,8 +1436,9 @@ apply_textdelta(void *file_baton,
   struct edit_baton *eb = fb->eb;
   const svn_wc_entry_t *entry;
   const char *parent, *base_name;
+  const char *temp_dir;
   svn_stream_t *source;
-  apr_file_t *temp_file;
+  svn_stream_t *temp_stream;
   svn_error_t *err;
 
   err = svn_wc__get_entry(&entry, eb->db, fb->local_abspath, TRUE,
@@ -1473,12 +1474,13 @@ apply_textdelta(void *file_baton,
   /* This is the file that will contain the pristine repository version. It
      is created in the admin temporary area. This file continues to exists
      until after the diff callback is run, at which point it is deleted. */
-  SVN_ERR(svn_wc_create_tmp_file2(&temp_file, &fb->temp_file_path,
-                                  parent, svn_io_file_del_on_pool_cleanup,
-                                  fb->pool));
+  SVN_ERR(svn_wc__db_temp_wcroot_tempdir(&temp_dir, eb->db, fb->local_abspath,
+                                         pool, pool));
+  SVN_ERR(svn_stream_open_unique(&temp_stream, &fb->temp_file_path,
+                                 temp_dir, svn_io_file_del_on_pool_cleanup,
+                                 fb->pool, fb->pool));
 
-  svn_txdelta_apply(source,
-                    svn_stream_from_aprfile2(temp_file, FALSE, fb->pool),
+  svn_txdelta_apply(source, temp_stream,
                     NULL,
                     fb->temp_file_path /* error_info */,
                     fb->pool,
