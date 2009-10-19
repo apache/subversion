@@ -260,7 +260,7 @@ svn_sqlite__column_properties(apr_hash_t **props,
 /* Return the column as a checksum. If the column is null, then NULL will
    be stored into *CHECKSUM. The result will be allocated in RESULT_POOL. */
 svn_error_t *
-svn_sqlite__column_checksum(svn_checksum_t **checksum,
+svn_sqlite__column_checksum(const svn_checksum_t **checksum,
                             svn_sqlite__stmt_t *stmt,
                             int column,
                             apr_pool_t *result_pool);

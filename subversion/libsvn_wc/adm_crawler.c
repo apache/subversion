@@ -1140,7 +1140,7 @@ svn_wc__internal_transmit_text_deltas(const char **tempfile,
   svn_txdelta_window_handler_t handler;
   void *wh_baton;
   const char *base_digest_hex;
-  svn_checksum_t *expected_checksum = NULL;
+  const svn_checksum_t *expected_checksum = NULL;
   svn_checksum_t *verify_checksum = NULL;
   svn_checksum_t *local_checksum;
   svn_error_t *err;
@@ -1215,16 +1215,19 @@ svn_wc__internal_transmit_text_deltas(const char **tempfile,
       else
         {
           svn_stream_t *p_stream;
+          svn_checksum_t *p_checksum;
 
           /* ### we should ALREADY have the checksum for pristine. */
           SVN_ERR(svn_wc__get_pristine_contents(&p_stream, db, local_abspath,
                                                scratch_pool, scratch_pool));
-          p_stream = svn_stream_checksummed2(p_stream, &expected_checksum,
+          p_stream = svn_stream_checksummed2(p_stream, &p_checksum,
                                              NULL, svn_checksum_md5, TRUE,
                                              scratch_pool);
 
           /* Closing this will cause a full read/checksum. */
           SVN_ERR(svn_stream_close(p_stream));
+
+          expected_checksum = p_checksum;
         }
 
       /* apply_textdelta() is working against a base with this checksum */

@@ -264,7 +264,7 @@ static svn_error_t *
 get_base_info_for_deleted(svn_wc_entry_t *entry,
                           svn_wc__db_kind_t *kind,
                           const char **repos_relpath,
-                          svn_checksum_t **checksum,
+                          const svn_checksum_t **checksum,
                           svn_wc__db_t *db,
                           const char *entry_abspath,
                           const svn_wc_entry_t *parent_entry,
@@ -542,7 +542,7 @@ read_entries_new(apr_hash_t **result_entries,
       svn_wc__db_status_t status;
       svn_wc__db_lock_t *lock;
       const char *repos_relpath;
-      svn_checksum_t *checksum;
+      const svn_checksum_t *checksum;
       svn_filesize_t translated_size;
       svn_wc_entry_t *entry = alloc_entry(result_pool);
       const char *entry_abspath;
@@ -2433,7 +2433,7 @@ write_one_entry_cb(void *baton,
   apr_size_t working_prop_len;
   apr_size_t actual_prop_len;
   apr_hash_t *dav_cache;
-  svn_checksum_t *base_checksum;
+  const svn_checksum_t *base_checksum;
   svn_sqlite__stmt_t *stmt;
   const char *repos_root;
   apr_int64_t repos_id;
@@ -2786,7 +2786,7 @@ svn_wc__entry_remove(svn_wc__db_t *db,
   const char *name;
   const char *parent_dir;
 
-/* First: Update the entry cache */
+  /* First: Update the entry cache */
   svn_dirent_split(local_abspath, &parent_dir, &name, scratch_pool);
   adm_access = svn_wc__adm_retrieve_internal2(db, parent_dir, scratch_pool);
 
