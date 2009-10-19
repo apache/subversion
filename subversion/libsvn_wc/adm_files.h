@@ -182,7 +182,8 @@ svn_error_t *svn_wc__adm_destroy(svn_wc_adm_access_t *adm_access,
 /* Cleanup the temporary storage area of the administrative
    directory (assuming temp and admin areas exist). */
 svn_error_t *
-svn_wc__adm_cleanup_tmp_area(const svn_wc_adm_access_t *adm_access,
+svn_wc__adm_cleanup_tmp_area(svn_wc__db_t *db,
+                             const char *adm_abspath,
                              apr_pool_t *scratch_pool);
 
 
