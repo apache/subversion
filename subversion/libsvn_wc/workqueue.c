@@ -875,8 +875,7 @@ svn_wc__wq_run(svn_wc__db_t *db,
 
   while (TRUE)
     {
-      svn_boolean_t available;
-      svn_boolean_t obstructed;
+      svn_wc__db_kind_t kind;
       apr_uint64_t id;
       svn_skel_t *work_item;
       const struct work_item_dispatch *scan;
@@ -888,11 +887,12 @@ svn_wc__wq_run(svn_wc__db_t *db,
 
       svn_pool_clear(iterpool);
 
-      /* ### hmm. maybe we need a better way to handle this. or just leave
-         ### it for now, since I think it disappears in single-db.  */
-      SVN_ERR(svn_wc__adm_available(&available, NULL, &obstructed,
-                                    db, wri_abspath, scratch_pool));
-      if (!available || obstructed)
+      /* ### right now, we expect WRI_ABSPATH to exist. this section should
+         ### disappear in single-db. also, note that db_wq_fetch() will
+         ### watch out for missing/obstructed subdirs (ie. wq is gone)  */
+      SVN_ERR(svn_wc__db_read_kind(&kind, db, wri_abspath, TRUE,
+                                   scratch_pool));
+      if (kind == svn_wc__db_kind_unknown)
         break;
 
       SVN_ERR(svn_wc__db_wq_fetch(&id, &work_item, db, wri_abspath,
