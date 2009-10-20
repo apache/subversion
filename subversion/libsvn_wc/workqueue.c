@@ -51,6 +51,7 @@
 #define OP_PREPARE_REVERT_FILES "prep-rev-files"
 #define OP_KILLME "killme"
 #define OP_LOGGY "loggy"
+#define OP_DELETION_POSTCOMMIT "deletion-postcommit"
 
 
 struct work_item_dispatch {
@@ -846,11 +847,138 @@ svn_wc__wq_add_loggy(svn_wc__db_t *db,
 
 /* ------------------------------------------------------------------------ */
 
+/* OP_DELETION_POSTCOMMIT  */
+
+static svn_error_t *
+run_deletion_postcommit(svn_wc__db_t *db,
+                        const svn_skel_t *work_item,
+                        svn_cancel_func_t cancel_func,
+                        void *cancel_baton,
+                        apr_pool_t *scratch_pool)
+{
+  const svn_skel_t *arg1 = work_item->children->next;
+  const char *local_abspath;
+  svn_revnum_t new_revision;
+  svn_boolean_t no_unlock;
+  svn_wc__db_kind_t kind;
+
+  /* ### warning: this code has not been vetted for running multiple times  */
+
+  /* We need a NUL-terminated path, so copy it out of the skel.  */
+  local_abspath = apr_pstrmemdup(scratch_pool, arg1->data, arg1->len);
+  new_revision = (svn_revnum_t)svn_skel__parse_int(arg1->next, scratch_pool);
+  no_unlock = svn_skel__parse_int(arg1->next->next, scratch_pool) != 0;
+
+  SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath, FALSE, scratch_pool));
+
+  /* ### the section below was ripped out of log.c::log_do_committed().
+     ### it needs to be rewritten into wc-ng terms.  */
+
+    {
+      const char *repos_relpath;
+      const char *repos_root_url;
+      const char *repos_uuid;
+      const svn_wc_entry_t *parent_entry;
+
+      /* If we are suppose to delete "this dir", drop a 'killme' file
+         into my own administrative dir as a signal for svn_wc__run_log()
+         to blow away the administrative area after it is finished
+         processing this logfile.  */
+      if (kind == svn_wc__db_kind_dir)
+        {
+          const svn_wc_entry_t *orig_entry;
+          svn_wc_entry_t tmp_entry;
+
+          /* Bump the revision number of this_dir anyway, so that it
+             might be higher than its parent's revnum.  If it's
+             higher, then the process that sees KILLME and destroys
+             the directory can also place a 'deleted' dir entry in the
+             parent. */
+          tmp_entry.revision = new_revision;
+          SVN_ERR(svn_wc__entry_modify2(db, local_abspath,
+                                        svn_node_dir, FALSE,
+                                        &tmp_entry,
+                                        SVN_WC__ENTRY_MODIFY_REVISION,
+                                        scratch_pool));
+
+          SVN_ERR(svn_wc__get_entry(&orig_entry, db, local_abspath, FALSE,
+                                    svn_node_unknown, FALSE,
+                                    scratch_pool, scratch_pool));
+
+          /* Ensure the directory is deleted later.  */
+          return svn_error_return(svn_wc__wq_add_killme(
+                                    db, local_abspath,
+                                    orig_entry->keep_local /* adm_only */,
+                                    scratch_pool));
+        }
+
+      /* Remember the repository this node is associated with.  */
+      SVN_ERR(svn_wc__db_scan_base_repos(&repos_relpath, &repos_root_url,
+                                         &repos_uuid,
+                                         db, local_abspath,
+                                         scratch_pool, scratch_pool));
+
+      /* Else, we're deleting a file, and we can safely remove files
+         from revision control without screwing something else up.  */
+      SVN_ERR(svn_wc__internal_remove_from_revision_control(
+                db, local_abspath,
+                FALSE, FALSE, cancel_func, cancel_baton, scratch_pool));
+
+      /* If the parent entry's working rev 'lags' behind new_rev... */
+      SVN_ERR(svn_wc__get_entry(&parent_entry, db,
+                                svn_dirent_dirname(local_abspath,
+                                                   scratch_pool),
+                                FALSE, svn_node_dir, FALSE,
+                                scratch_pool, scratch_pool));
+      if (new_revision > parent_entry->revision)
+        {
+          /* ...then the parent's revision is now officially a
+             lie;  therefore, it must remember the file as being
+             'deleted' for a while.  Create a new, uninteresting
+             ghost entry:  */
+          SVN_ERR(svn_wc__db_base_add_absent_node(
+                    db, local_abspath,
+                    repos_relpath, repos_root_url, repos_uuid,
+                    new_revision, svn_wc__db_kind_file,
+                    svn_wc__db_status_not_present,
+                    scratch_pool));
+        }
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc__wq_add_deletion_postcommit(svn_wc__db_t *db,
+                                   const char *local_abspath,
+                                   svn_revnum_t new_revision,
+                                   svn_boolean_t no_unlock,
+                                   apr_pool_t *scratch_pool)
+{
+  svn_skel_t *work_item = svn_skel__make_empty_list(scratch_pool);
+
+  /* The skel still points at LOCAL_ABSPATH, but the skel will be
+     serialized just below in the wq_add call.  */
+  svn_skel__prepend_int(no_unlock, work_item, scratch_pool);
+  svn_skel__prepend_int(new_revision, work_item, scratch_pool);
+  svn_skel__prepend_str(local_abspath, work_item, scratch_pool);
+  svn_skel__prepend_str(OP_DELETION_POSTCOMMIT, work_item, scratch_pool);
+
+  SVN_ERR(svn_wc__db_wq_add(db, local_abspath, work_item, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+
+/* ------------------------------------------------------------------------ */
+
 static const struct work_item_dispatch dispatch_table[] = {
   { OP_REVERT, run_revert },
   { OP_PREPARE_REVERT_FILES, run_prepare_revert_files },
   { OP_KILLME, run_killme },
   { OP_LOGGY, run_loggy },
+  { OP_DELETION_POSTCOMMIT, run_deletion_postcommit },
 
   /* Sentinel.  */
   { NULL }

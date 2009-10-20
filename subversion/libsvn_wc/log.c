@@ -872,81 +872,8 @@ log_do_committed(struct log_runner *loggy,
       (SVN_ERR_WC_BAD_ADM_LOG, NULL,
        _("Log command for directory '%s' is mislocated"), name);
 
-  /*** Handle the committed deletion case ***/
-
-  /* If the committed item was scheduled for deletion, it needs to
-     now be removed from revision control.  Once that is accomplished,
-     we are finished handling this item.  */
-  if (orig_entry->schedule == svn_wc_schedule_delete)
-    {
-      const char *repos_relpath;
-      const char *repos_root_url;
-      const char *repos_uuid;
-      const svn_wc_entry_t *parentry;
-
-      /* If we are suppose to delete "this dir", drop a 'killme' file
-         into my own administrative dir as a signal for svn_wc__run_log()
-         to blow away the administrative area after it is finished
-         processing this logfile.  */
-      if (is_this_dir)
-        {
-          /* Bump the revision number of this_dir anyway, so that it
-             might be higher than its parent's revnum.  If it's
-             higher, then the process that sees KILLME and destroys
-             the directory can also place a 'deleted' dir entry in the
-             parent. */
-          tmp_entry.revision = new_revision;
-          tmp_entry.kind = svn_node_dir;
-
-          SVN_ERR(svn_wc__entry_modify2(loggy->db, local_abspath,
-                                        svn_node_dir, FALSE,
-                                        &tmp_entry,
-                                        SVN_WC__ENTRY_MODIFY_REVISION
-                                        | SVN_WC__ENTRY_MODIFY_KIND,
-                                        pool));
-
-          /* Ensure the directory is deleted later.  */
-          return svn_error_return(svn_wc__wq_add_killme(
-                                    loggy->db, loggy->adm_abspath,
-                                    orig_entry->keep_local /* adm_only */,
-                                    pool));
-        }
-
-      /* Remember the repository this node is associated with.  */
-      SVN_ERR(svn_wc__db_scan_base_repos(&repos_relpath, &repos_root_url,
-                                         &repos_uuid,
-                                         loggy->db, local_abspath,
-                                         pool, pool));
-
-      /* Else, we're deleting a file, and we can safely remove files
-         from revision control without screwing something else up.
-
-         ### We pass NULL, NULL for cancel_func and cancel_baton below.
-         ### If they were available, it would be nice to use them. */
-
-      SVN_ERR(svn_wc__internal_remove_from_revision_control(
-                loggy->db, local_abspath,
-                FALSE, FALSE, NULL, NULL, pool));
-
-      /* If the parent entry's working rev 'lags' behind new_rev... */
-      SVN_ERR(svn_wc__get_entry(&parentry, loggy->db, loggy->adm_abspath,
-                                FALSE, svn_node_dir, FALSE, pool, pool));
-      if (new_revision > parentry->revision)
-        {
-          /* ...then the parent's revision is now officially a
-             lie;  therefore, it must remember the file as being
-             'deleted' for a while.  Create a new, uninteresting
-             ghost entry:  */
-          SVN_ERR(svn_wc__db_base_add_absent_node(
-                    loggy->db, local_abspath,
-                    repos_relpath, repos_root_url, repos_uuid,
-                    new_revision, svn_wc__db_kind_file,
-                    svn_wc__db_status_not_present,
-                    pool));
-        }
-
-      return SVN_NO_ERROR;
-    }
+  /* We shouldn't be in this function for schedule-delete nodes.  */
+  SVN_ERR_ASSERT(orig_entry->schedule != svn_wc_schedule_delete);
 
 
   /*** Mark the committed item committed-to-date ***/
