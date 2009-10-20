@@ -154,12 +154,12 @@ load_props(apr_hash_t **hash,
 }
 
 
-svn_error_t *
-svn_wc__write_properties(apr_hash_t *properties,
-                         const char *dest_abspath,
-                         svn_stringbuf_t **log_accum,
-                         const char *adm_abspath,
-                         apr_pool_t *scratch_pool)
+static svn_error_t *
+loggy_write_properties(svn_stringbuf_t **log_accum,
+                       apr_hash_t *properties,
+                       const char *dest_abspath,
+                       const char *adm_abspath,
+                       apr_pool_t *scratch_pool)
 {
   const char *prop_tmp_abspath;
   svn_stream_t *stream;
@@ -175,25 +175,15 @@ svn_wc__write_properties(apr_hash_t *properties,
                             scratch_pool));
   SVN_ERR(svn_stream_close(stream));
 
-  if (log_accum)
-    {
-      /* Write a log entry to move tmp file to the destination.  */
-      SVN_ERR(svn_wc__loggy_move(log_accum, adm_abspath,
-                                 prop_tmp_abspath, dest_abspath,
-                                 scratch_pool, scratch_pool));
+  /* Write a log entry to move tmp file to the destination.  */
+  SVN_ERR(svn_wc__loggy_move(log_accum, adm_abspath,
+                             prop_tmp_abspath, dest_abspath,
+                             scratch_pool, scratch_pool));
 
-      /* And make the destination read-only.  */
-      SVN_ERR(svn_wc__loggy_set_readonly(log_accum, adm_abspath,
-                                         dest_abspath,
-                                         scratch_pool, scratch_pool));
-    }
-  else
-    {
-      /* And move the sucker into place as a read-only file.  */
-      SVN_ERR(svn_io_file_rename(prop_tmp_abspath, dest_abspath,
-                                 scratch_pool));
-      SVN_ERR(svn_io_set_file_read_only(dest_abspath, FALSE, scratch_pool));
-    }
+  /* And make the destination read-only.  */
+  SVN_ERR(svn_wc__loggy_set_readonly(log_accum, adm_abspath,
+                                     dest_abspath,
+                                     scratch_pool, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -364,8 +354,9 @@ svn_wc__install_props(svn_stringbuf_t **log_accum,
   if (prop_diffs->nelts > 0)
     {
       /* Loggily write the properties to the destination file.  */
-      SVN_ERR(svn_wc__write_properties(working_props, working_propfile_path,
-                                       log_accum, adm_abspath, pool));
+      SVN_ERR(loggy_write_properties(log_accum, working_props,
+                                     working_propfile_path,
+                                     adm_abspath, pool));
     }
   else
     {
@@ -384,8 +375,9 @@ svn_wc__install_props(svn_stringbuf_t **log_accum,
 
       if (apr_hash_count(base_props) > 0)
         {
-          SVN_ERR(svn_wc__write_properties(base_props, base_propfile_path,
-                                           log_accum, adm_abspath, pool));
+          SVN_ERR(loggy_write_properties(log_accum, base_props,
+                                         base_propfile_path,
+                                         adm_abspath, pool));
         }
       else
         {
@@ -421,8 +413,18 @@ immediate_install_props(const char *path,
   if (prop_diffs->nelts > 0)
     {
       /* Write out the properties (synchronously).  */
-      SVN_ERR(svn_wc__write_properties(working_props, propfile_abspath,
-                                       NULL, NULL, scratch_pool));
+      svn_stream_t *stream;
+
+      SVN_ERR(svn_io_remove_file2(propfile_abspath, TRUE, scratch_pool));
+      SVN_ERR(svn_stream_open_writable(&stream, propfile_abspath, scratch_pool,
+                                       scratch_pool));
+      if (apr_hash_count(working_props) != 0)
+        SVN_ERR(svn_hash_write2(working_props, stream, SVN_HASH_TERMINATOR,
+                                scratch_pool));
+      SVN_ERR(svn_stream_close(stream));
+
+      SVN_ERR(svn_io_set_file_read_only(propfile_abspath, FALSE,
+                                        scratch_pool));
     }
   else
     {
@@ -534,9 +536,9 @@ svn_wc__loggy_revert_props_create(svn_stringbuf_t **log_accum,
          props needs to be made (it'll just see no file, and do nothing).
          So (loggily) write out an empty revert propfile.  */
 
-      SVN_ERR(svn_wc__write_properties(
-                apr_hash_make(pool), revert_prop_abspath,
-                log_accum, adm_abspath, pool));
+      SVN_ERR(loggy_write_properties(log_accum, apr_hash_make(pool),
+                                     revert_prop_abspath,
+                                     adm_abspath, pool));
     }
 
   return SVN_NO_ERROR;
