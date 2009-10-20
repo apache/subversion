@@ -1153,6 +1153,7 @@ prep_directory(struct dir_baton *db,
    will be set to svn_wc_lock_state_unchanged. */
 static svn_error_t *
 accumulate_entry_props(svn_stringbuf_t *log_accum,
+                       svn_wc__db_t *db,
                        const char *adm_abspath,
                        svn_wc_notify_lock_state_t *lock_state,
                        const char *path,
@@ -1175,8 +1176,10 @@ accumulate_entry_props(svn_stringbuf_t *log_accum,
          defunct. */
       if (! strcmp(prop->name, SVN_PROP_ENTRY_LOCK_TOKEN))
         {
+          SVN_WC__FLUSH_LOG_ACCUM(db, adm_abspath, log_accum, pool);
           SVN_ERR(svn_wc__loggy_delete_lock(&log_accum, adm_abspath,
                                             path, pool, pool));
+          SVN_WC__FLUSH_LOG_ACCUM(db, adm_abspath, log_accum, pool);
 
           if (lock_state)
             *lock_state = svn_wc_notify_lock_state_unlocked;
@@ -3065,9 +3068,10 @@ close_directory(void *dir_baton,
                     _("Couldn't do property merge"));
         }
 
-      SVN_ERR(accumulate_entry_props(dirprop_log,
+      SVN_ERR(accumulate_entry_props(dirprop_log, eb->db,
                                      db->local_abspath,
-                                     NULL, db->local_abspath, entry_props, pool));
+                                     NULL, db->local_abspath, entry_props,
+                                     pool));
 
       /* Handle the wcprops. */
       if (wc_props && wc_props->nelts > 0)
@@ -4242,7 +4246,7 @@ merge_props(svn_stringbuf_t *log_accum,
      Note that no merging needs to happen; these kinds of props aren't
      versioned, so if the property is present, we overwrite the value. */
   if (entry_props)
-    SVN_ERR(accumulate_entry_props(log_accum, dir_abspath,
+    SVN_ERR(accumulate_entry_props(log_accum, db, dir_abspath,
                                    lock_state, file_abspath, entry_props,
                                    pool));
   else
@@ -5529,7 +5533,7 @@ install_added_props(svn_stringbuf_t *log_accum,
                                 TRUE, pool));
 
   /* Install the entry props. */
-  SVN_ERR(accumulate_entry_props(log_accum, dir_abspath,
+  SVN_ERR(accumulate_entry_props(log_accum, db, dir_abspath,
                                  NULL, local_abspath, entry_props, pool));
 
   return svn_error_return(svn_wc__db_base_set_dav_cache(db, local_abspath,
