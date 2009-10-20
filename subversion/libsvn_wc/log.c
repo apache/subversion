@@ -1902,12 +1902,38 @@ svn_wc__loggy_add_tree_conflict(svn_stringbuf_t **log_accum,
 /*** Recursively do log things. ***/
 
 static svn_error_t *
+can_be_cleaned(int *wc_format,
+               svn_wc__db_t *db,
+               const char *local_abspath,
+               apr_pool_t *scratch_pool)
+{
+  SVN_ERR(svn_wc__internal_check_wc(wc_format, db, 
+                                    local_abspath, scratch_pool));
+
+  /* a "version" of 0 means a non-wc directory */
+  if (*wc_format == 0)
+    return svn_error_createf(SVN_ERR_WC_NOT_WORKING_COPY, NULL,
+                             _("'%s' is not a working copy directory"),
+                             svn_dirent_local_style(local_abspath, 
+                                                    scratch_pool));
+
+  if (*wc_format < SVN_WC__WC_NG_VERSION)
+    return svn_error_create(SVN_ERR_WC_UNSUPPORTED_FORMAT, NULL,
+                            _("Log format too old, please use "
+                              "Subversion 1.6 or earlier"));
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
 cleanup_internal(svn_wc__db_t *db,
                  const char *adm_abspath,
                  svn_cancel_func_t cancel_func,
                  void *cancel_baton,
                  apr_pool_t *scratch_pool)
 {
+  int wc_format;
   svn_error_t *err;
   const apr_array_header_t *children;
   int i;
@@ -1917,6 +1943,9 @@ cleanup_internal(svn_wc__db_t *db,
   if (cancel_func)
     SVN_ERR(cancel_func(cancel_baton));
 
+  /* Can we even work with this directory?  */
+  SVN_ERR(can_be_cleaned(&wc_format, db, adm_abspath, iterpool));
+
   /* Lock this working copy directory, or steal an existing lock */
   err = svn_wc__db_wclock_set(db, adm_abspath, iterpool);
   if (err && err->apr_err == SVN_ERR_WC_LOCKED)
@@ -1924,6 +1953,12 @@ cleanup_internal(svn_wc__db_t *db,
   else if (err)
     return svn_error_return(err);
   SVN_ERR(svn_wc__db_temp_mark_locked(db, adm_abspath, iterpool));
+
+  /* Run our changes before the subdirectories. We may not have to recurse
+     if we blow away a subdir.  */
+  if (wc_format >= SVN_WC__HAS_WORK_QUEUE)
+    SVN_ERR(svn_wc__wq_run(db, adm_abspath, cancel_func, cancel_baton,
+                           iterpool));
 
   /* Recurse on versioned, existing subdirectories.  */
   SVN_ERR(svn_wc__db_read_children(&children, db, adm_abspath,
@@ -1951,15 +1986,6 @@ cleanup_internal(svn_wc__db_t *db,
         }
     }
 
-  /* The recursion is now complete.
-
-     In the past, we optimized for the "killme" case, and also looked to
-     see if any logs were actually present. Bah. Whatever. Just call
-     run_logs(), and let it sort everything out. A little extra time is
-     no big deal since all this code is going to be deleted.  */
-  SVN_ERR(svn_wc__wq_run(db, adm_abspath, cancel_func, cancel_baton,
-                         iterpool));
-
   /* Cleanup the tmp area of the admin subdir, if running the log has not
      removed it!  The logs have been run, so anything left here has no hope
      of being useful. */
@@ -1985,7 +2011,6 @@ svn_wc_cleanup3(svn_wc_context_t *wc_ctx,
                 apr_pool_t *scratch_pool)
 {
   svn_wc__db_t *db;
-  int wc_format_version;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
@@ -1995,33 +2020,11 @@ svn_wc_cleanup3(svn_wc_context_t *wc_ctx,
                           NULL /* ### config */, TRUE, FALSE,
                           scratch_pool, scratch_pool));
 
-  SVN_ERR(svn_wc__internal_check_wc(&wc_format_version, db, 
-                                    local_abspath, scratch_pool));
-
-  /* a "version" of 0 means a non-wc directory */
-  if (wc_format_version == 0)
-    return svn_error_createf(SVN_ERR_WC_NOT_WORKING_COPY, NULL,
-                             _("'%s' is not a working copy directory"),
-                             svn_dirent_local_style(local_abspath, 
-                                                    scratch_pool));
-
-  if (wc_format_version < SVN_WC__WC_NG_VERSION)
-    return svn_error_create(SVN_ERR_WC_UNSUPPORTED_FORMAT, NULL,
-                            _("Log format too old, please use "
-                              "Subversion 1.6 or earlier"));
-
-  /* ### we really should be running these logs recursively. bleah.
-     ### for now, just run them in "this" directory. when we reach the
-     ### one-dir layout, then this will work just fine.  */
-  if (wc_format_version >= SVN_WC__HAS_WORK_QUEUE)
-    SVN_ERR(svn_wc__wq_run(db, local_abspath, cancel_func, cancel_baton,
+  SVN_ERR(cleanup_internal(db, local_abspath, cancel_func, cancel_baton, 
                            scratch_pool));
 
-  /* We're done with this DB. We can go back to the DB provided in the
-     WC_CTX for the old-style log processing.  */
+  /* We're done with this DB, so proactively close it.  */
   SVN_ERR(svn_wc__db_close(db));
 
-  return svn_error_return(cleanup_internal(wc_ctx->db, local_abspath, 
-                                           cancel_func, cancel_baton, 
-                                           scratch_pool));
+  return SVN_NO_ERROR;
 }
