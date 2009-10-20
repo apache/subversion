@@ -336,15 +336,6 @@ insert or replace into actual_node (
   tree_conflict_data)
 values (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11);
 
--- STMT_DELETE_ALL_WORKING
-delete from working_node;
-
--- STMT_DELETE_ALL_BASE
-delete from base_node;
-
--- STMT_DELETE_ALL_ACTUAL
-delete from actual_node;
-
 -- STMT_SELECT_KEEP_LOCAL_FLAG
 select keep_local from working_node
 where wc_id = ?1 and local_relpath = ?2;

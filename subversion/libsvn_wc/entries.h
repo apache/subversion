@@ -30,6 +30,7 @@
 #include "svn_types.h"
 
 #include "wc_db.h"
+#include "private/svn_sqlite.h"
 
 
 #ifdef __cplusplus
@@ -296,10 +297,13 @@ svn_wc__read_entries_old(apr_hash_t **entries,
 
 /* For internal use by upgrade.c to write entries in the wc-ng format.  */
 svn_error_t *
-svn_wc__entries_write_new(svn_wc__db_t *db,
-                          const char *dir_abspath,
-                          apr_hash_t *entries,
-                          apr_pool_t *scratch_pool);
+svn_wc__write_upgraded_entries(svn_wc__db_t *db,
+                               svn_sqlite__db_t *sdb,
+                               apr_int64_t repos_id,
+                               apr_int64_t wc_id,
+                               const char *dir_abspath,
+                               apr_hash_t *entries,
+                               apr_pool_t *scratch_pool);
 
 
 /* ### return a flag corresponding to the classic "DELETED" concept.  */
