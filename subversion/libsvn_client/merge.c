@@ -433,7 +433,7 @@ obstructed_or_missing(const char *path,
     {
       err = svn_wc__get_entry_versioned(&entry, merge_b->ctx->wc_ctx,
                                         local_abspath, svn_node_unknown,
-                                        FALSE, FALSE, pool, pool);
+                                        TRUE, FALSE, pool, pool);
 
       if (err)
         {
