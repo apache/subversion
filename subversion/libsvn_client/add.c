@@ -332,11 +332,11 @@ add_file(const char *local_abspath,
   return SVN_NO_ERROR;
 }
 
-/* Schedule directory DIRNAME, and some of the tree under it, for
- * addition with access baton ADM_ACCESS.  DEPTH is the depth at this
+/* Schedule directory DIR_ABSPATH, and some of the tree under it, for
+ * addition.  DEPTH is the depth at this
  * point in the descent (it may be changed for recursive calls).
  *
- * If DIRNAME (or any item below directory DIRNAME) is already scheduled for
+ * If DIR_ABSPATH (or any item below DIR_ABSPATH) is already scheduled for
  * addition, add will fail and return an error unless FORCE is TRUE.
  *
  * Files and directories that match ignore patterns will not be added unless

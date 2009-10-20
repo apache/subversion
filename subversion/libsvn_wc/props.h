@@ -98,10 +98,16 @@ svn_wc__internal_propset(svn_wc__db_t *db,
    if TRUE, change both the base and working properties.
 
    If conflicts are found when merging, place them into a temporary
-   .prej file within SVN, and write log commands to move this file
-   into PATH, or append the conflicts to the file's already-existing
-   .prej file in ADM_ACCESS.  Modify base properties unconditionally,
+   .prej file, and write log commands to move this file into LOCAL_ABSPATH's
+   parent directory, or append the conflicts to the file's already-existing
+   .prej file.  Modify base properties unconditionally,
    if BASE_MERGE is TRUE, they do not generate conficts.
+
+   TODO ### LEFT_VERSION and RIGHT_VERSION ...
+
+   TODO ### DRY_RUN ...
+
+   TODO ### CONFLICT_FUNC/CONFLICT_BATON ...
 
    If STATE is non-null, set *STATE to the state of the local properties
    after the merge.  */
@@ -138,7 +144,7 @@ svn_error_t *svn_wc__wcprop_set(svn_wc__db_t *db,
 svn_boolean_t svn_wc__has_magic_property(const apr_array_header_t *properties);
 
 /* Extend LOG_ACCUM with log entries to install PROPS and, if WRITE_BASE_PROPS
-   is true, BASE_PROPS for the PATH in ADM_ACCESS, updating the wc entry
+   is true, BASE_PROPS for the LOCAL_ABSPATH in DB, updating the wc entry
    to reflect the changes.  BASE_PROPS must be supplied even if
    WRITE_BASE_PROPS is false.  Use POOL for temporary allocations. */
 svn_error_t *svn_wc__install_props(svn_stringbuf_t **log_accum,

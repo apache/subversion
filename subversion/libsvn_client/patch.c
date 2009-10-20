@@ -1030,7 +1030,9 @@ apply_one_patch(svn_patch_t *patch, const char *wc_path,
 }
 
 /* Apply all diffs in the patch file at PATCH_PATH to the working copy
- * at WC_PATH. ADM_ACCESS should hold a write lock to the working copy.
+ * at WC_PATH.
+ * TODO ### DRY_RUN ...
+ * TODO ### STRIP_COUNT ...
  * Use client context CTX to send notifiations.
  * Do all allocations in POOL.  */
 static svn_error_t *

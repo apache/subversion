@@ -733,14 +733,14 @@ is_external_path(apr_hash_t *externals,
 }
 
 
-/* Assuming that NAME is unversioned, send a status structure
+/* Assuming that LOCAL_ABSPATH is unversioned, send a status structure
    for it through STATUS_FUNC/STATUS_BATON unless this path is being
    ignored.  This function should never be called on a versioned entry.
 
-   NAME is the basename of the unversioned file whose status is being
+   LOCAL_ABSPATH is the path to the unversioned file whose status is being
    requested.  PATH_KIND is the node kind of NAME as determined by the
    caller.  PATH_SPECIAL is the special status of the path, also determined
-   by the caller.  ADM_ACCESS is an access baton for the working copy path.
+   by the caller.
    PATTERNS points to a list of filename patterns which are marked as
    ignored.  None of these parameter may be NULL.  EXTERNALS is a hash
    of known externals definitions for this status run.

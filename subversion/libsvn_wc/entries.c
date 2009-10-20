@@ -1449,7 +1449,9 @@ svn_wc__node_is_deleted(svn_boolean_t *deleted,
 }
 
 
-/* Prune the deleted entries from the cached entries in ADM_ACCESS, and
+/* TODO ### Rewrite doc string to mention ENTRIES_ALL; not ADM_ACCESS.
+
+   Prune the deleted entries from the cached entries in ADM_ACCESS, and
    return that collection in *ENTRIES_PRUNED.  SCRATCH_POOL is used for local,
    short term, memory allocation, RESULT_POOL for permanent stuff.  */
 static svn_error_t *
@@ -3042,7 +3044,7 @@ svn_wc__entry_modify2(svn_wc__db_t *db,
   SVN_ERR(get_entry_access_info(&adm_abspath, &name, db, local_abspath,
                                 kind, parent_stub, subpool, subpool));
 
-  /* Load ADM_ACCESS's whole entries file:
+  /* Load ADM_ABSPATH's whole entries file:
      Is there an existing access baton for this path?  */
   adm_access = svn_wc__adm_retrieve_internal2(db, adm_abspath, subpool);
   if (adm_access == NULL)
