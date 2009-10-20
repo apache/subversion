@@ -338,6 +338,25 @@ svn_wc__do_update_cleanup(svn_wc__db_t *db,
   return SVN_NO_ERROR;
 }
 
+
+static svn_error_t *
+process_deletion_postcommit(svn_wc__db_t *db,
+                            const char *adm_abspath,
+                            const char *local_abspath,
+                            svn_revnum_t new_revision,
+                            svn_boolean_t no_unlock,
+                            apr_pool_t *scratch_pool)
+{
+#ifdef NOT_NEEDED_NOW__CALLER_DOES_THIS
+  SVN_ERR(svn_wc__write_check(db, adm_abspath, scratch_pool));
+#endif
+
+  return svn_error_return(svn_wc__wq_add_deletion_postcommit(
+                            db, local_abspath, new_revision, no_unlock,
+                            scratch_pool));
+}
+
+
 static svn_error_t *
 process_committed_leaf(svn_wc__db_t *db,
                        const char *adm_abspath,
@@ -373,6 +392,15 @@ process_committed_leaf(svn_wc__db_t *db,
                                NULL, NULL, NULL, NULL, NULL,
                                db, local_abspath,
                                scratch_pool, scratch_pool));
+
+  if (status == svn_wc__db_status_deleted
+      || status == svn_wc__db_status_obstructed_delete)
+    {
+      return svn_error_return(process_deletion_postcommit(
+                                db, adm_abspath, local_abspath,
+                                new_revnum, !remove_lock,
+                                scratch_pool));
+    }
 
   /* Set PATH's working revision to NEW_REVNUM; if REV_DATE and
      REV_AUTHOR are both non-NULL, then set the 'committed-rev',

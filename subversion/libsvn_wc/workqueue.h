@@ -80,6 +80,14 @@ svn_wc__wq_add_loggy(svn_wc__db_t *db,
                      const svn_stringbuf_t *log_content,
                      apr_pool_t *scratch_pool);
 
+
+svn_error_t *
+svn_wc__wq_add_deletion_postcommit(svn_wc__db_t *db,
+                                   const char *local_abspath,
+                                   svn_revnum_t new_revision,
+                                   svn_boolean_t no_unlock,
+                                   apr_pool_t *scratch_pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
