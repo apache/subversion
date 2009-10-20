@@ -2182,8 +2182,9 @@ do_entry_deletion(struct edit_baton *eb,
   /* Issue a loggy command to delete the entry from version control and to
    * delete it from disk if unmodified, but leave any modified files on disk
    * unversioned. */
-  SVN_ERR(svn_wc__loggy_delete_entry(&log_item, dir_abspath, local_abspath,
-                                     pool, pool));
+  SVN_WC__FLUSH_LOG_ACCUM(eb->db, dir_abspath, log_item, pool);
+  SVN_ERR(svn_wc__loggy_delete_entry(eb->db, dir_abspath, local_abspath,
+                                     pool));
 
   /* If the thing being deleted is the *target* of this update, then
      we need to recreate a 'deleted' entry, so that the parent can give
