@@ -227,19 +227,6 @@ svn_wc__marked_as_binary(svn_boolean_t *marked,
                          svn_wc__db_t *db,
                          apr_pool_t *scratch_pool);
 
-
-/* Write the PROPERTIES hash to a temporary file, then move it atomically
-   to DEST_ABSPATH. If LOG_ACCUM is NULL, these actions will be performed
-   immediately. Otherwise, loggy instructions will be written into the
-   buffer, assuming eventual storage as a logfile for ADM_ABSPATH. Temporary
-   allocations are performed in SCRATCH_POOL.  */
-svn_error_t *
-svn_wc__write_properties(apr_hash_t *properties,
-                         const char *dest_abspath,
-                         svn_stringbuf_t **log_accum,
-                         const char *adm_abspath,
-                         apr_pool_t *scratch_pool);
-
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

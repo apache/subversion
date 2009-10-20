@@ -652,10 +652,14 @@ run_prepare_revert_files(svn_wc__db_t *db,
   SVN_ERR(svn_io_check_path(revert_prop_abspath, &on_disk, scratch_pool));
   if (on_disk == svn_node_none)
     {
-      SVN_ERR(svn_wc__write_properties(
-                apr_hash_make(scratch_pool), revert_prop_abspath,
-                NULL, NULL,
-                scratch_pool));
+      svn_stream_t *stream;
+
+      /* A set of empty props is just an empty file. */
+      SVN_ERR(svn_stream_open_writable(&stream, revert_prop_abspath,
+                                       scratch_pool, scratch_pool));
+      SVN_ERR(svn_stream_close(stream));
+      SVN_ERR(svn_io_set_file_read_only(revert_prop_abspath, FALSE,
+                                        scratch_pool));
     }
 
   return SVN_NO_ERROR;
