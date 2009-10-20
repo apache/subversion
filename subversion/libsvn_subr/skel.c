@@ -646,6 +646,14 @@ svn_skel__list_length(const svn_skel_t *skel)
 
 /* Parsing and unparsing into high-level types. */
 
+apr_int64_t svn_skel__parse_int(const svn_skel_t *skel,
+                                apr_pool_t *scratch_pool)
+{
+  /* We need to duplicate the SKEL contents in order to get a NUL-terminated
+     version of it. The SKEL may not have valid memory at DATA[LEN].  */
+  return apr_atoi64(apr_pstrmemdup(scratch_pool, skel->data, skel->len));
+}
+
 
 svn_error_t *
 svn_skel__parse_proplist(apr_hash_t **proplist_p,
