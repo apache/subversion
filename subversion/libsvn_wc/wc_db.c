@@ -4477,19 +4477,18 @@ svn_wc__db_scan_deletion(const char **base_del_abspath,
 
 svn_error_t *
 svn_wc__db_upgrade_begin(svn_sqlite__db_t **sdb,
+                         apr_int64_t *repos_id,
+                         apr_int64_t *wc_id,
                          const char *dir_abspath,
                          const char *repos_root_url,
                          const char *repos_uuid,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool)
 {
-  apr_int64_t repos_id;
-  apr_int64_t wc_id;
-
   /* ### for now, using SDB_FILE rather than SDB_FILE_UPGRADE. there are
      ### too many interacting components that want to *read* the normal
      ### SDB_FILE as we perform the upgrade.  */
-  return svn_error_return(create_db(sdb, &repos_id, &wc_id, dir_abspath,
+  return svn_error_return(create_db(sdb, repos_id, wc_id, dir_abspath,
                                     repos_root_url, repos_uuid,
                                     SDB_FILE,
                                     result_pool, scratch_pool));

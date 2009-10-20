@@ -2224,6 +2224,8 @@ write_entry(svn_wc__db_t *db,
 struct entries_write_baton
 {
   svn_wc__db_t *db;
+  apr_int64_t repos_id;
+  apr_int64_t wc_id;
   const char *local_abspath;
   apr_hash_t *entries;
 };
@@ -2238,22 +2240,13 @@ entries_write_new_cb(void *baton,
   struct entries_write_baton *ewb = baton;
   svn_wc__db_t *db = ewb->db;
   const char *local_abspath = ewb->local_abspath;
-  apr_hash_t *entries = ewb->entries;
   const svn_wc_entry_t *this_dir;
-  svn_sqlite__stmt_t *stmt;
   apr_hash_index_t *hi;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
-  const apr_array_header_t *children;
   const char *repos_root;
-  apr_int64_t repos_id;
-  apr_int64_t wc_id;
-  apr_hash_t *dav_cache;
-  apr_hash_t *child_cache;
-  svn_error_t *err;
-  int i;
 
   /* Get a copy of the "this dir" entry for comparison purposes. */
-  this_dir = apr_hash_get(entries, SVN_WC_ENTRY_THIS_DIR,
+  this_dir = apr_hash_get(ewb->entries, SVN_WC_ENTRY_THIS_DIR,
                           APR_HASH_KEY_STRING);
 
   /* If there is no "this dir" entry, something is wrong. */
@@ -2262,94 +2255,15 @@ entries_write_new_cb(void *baton,
                              _("No default entry in directory '%s'"),
                              svn_dirent_local_style(local_abspath,
                                                     iterpool));
-
-  /* Get the repos ID. */
-  if (this_dir->uuid != NULL)
-    {
-      /* ### does this need to be done on a per-entry basis instead of
-         ### the per-directory way we do it now?  me thinks yes...
-         ###
-         ### when do we harvest repository entries which no longer have
-         ### any members?  */
-      SVN_ERR(svn_wc__db_repos_ensure(&repos_id, db, local_abspath,
-                                      this_dir->repos, this_dir->uuid,
-                                      iterpool));
-      repos_root = this_dir->repos;
-    }
-  else
-    {
-      repos_id = 0;
-      repos_root = NULL;
-    }
-
-  /* Before we nuke all the nodes, we need to get any dav_cache data which may
-     be in them, so that we can reapply it later.
-
-     ### this can go away once we get smart enough not to blow away all the
-         nodes here. */
-  dav_cache = apr_hash_make(scratch_pool);
-  err = svn_wc__db_base_get_dav_cache(&child_cache, db, local_abspath,
-                                      scratch_pool, iterpool);
-  if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
-    {
-      /* We could be looking at a newly added node, without a BASE node,
-         and hence no dav cache, so just ignore the error. */
-      svn_error_clear(err);
-    }
-  else if (err)
-    return svn_error_return(err);
-  else
-    apr_hash_set(dav_cache, local_abspath, APR_HASH_KEY_STRING, child_cache);
-
-  SVN_ERR(svn_wc__db_base_get_children(&children, db, local_abspath,
-                                       scratch_pool, iterpool));
-
-  for (i = 0; i < children->nelts; i++)
-    {
-      const char *child_basename = APR_ARRAY_IDX(children, i, const char *);
-      const char *child_abspath;
-
-      svn_pool_clear(iterpool);
-      child_abspath = svn_dirent_join(local_abspath, child_basename,
-                                      scratch_pool);
-
-      err = svn_wc__db_base_get_dav_cache(&child_cache, db, child_abspath,
-                                          scratch_pool, iterpool);
-      if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
-        {
-          /* We could be looking at a newly added node, without a BASE node,
-             and hence no dav cache, so just ignore the error.
-             ### we shouldn't have to do this dance, since the children
-             ### we are looping over are all the BASE children.  but something
-             ### is mysteriously awry, and in the interested of passing tests,
-             ### I'm going to leave this in for a bit.  TODO: Investigate.*/
-          svn_error_clear(err);
-          continue;
-        }
-      else if (err)
-        return svn_error_return(err);
-
-      apr_hash_set(dav_cache, child_abspath, APR_HASH_KEY_STRING, child_cache);
-    }
-
-  /* Remove all WORKING, BASE and ACTUAL nodes for this directory
-     ### This does NOT drop locks as recorded in the entries, because we
-         already update these via another route */
-  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_DELETE_ALL_WORKING));
-  SVN_ERR(svn_sqlite__step_done(stmt));
-  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_DELETE_ALL_BASE));
-  SVN_ERR(svn_sqlite__step_done(stmt));
-  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_DELETE_ALL_ACTUAL));
-  SVN_ERR(svn_sqlite__step_done(stmt));
+  repos_root = this_dir->repos;
 
   /* Write out "this dir" */
-  SVN_ERR(fetch_wc_id(&wc_id, sdb));
-  SVN_ERR(write_entry(db, sdb, wc_id, repos_id, repos_root, this_dir,
-                      SVN_WC_ENTRY_THIS_DIR, local_abspath,
+  SVN_ERR(write_entry(db, sdb, ewb->wc_id, ewb->repos_id, repos_root,
+                      this_dir, SVN_WC_ENTRY_THIS_DIR, local_abspath,
                       this_dir, FALSE, FALSE, iterpool));
 
-  for (hi = apr_hash_first(scratch_pool, entries); hi;
-        hi = apr_hash_next(hi))
+  for (hi = apr_hash_first(scratch_pool, ewb->entries); hi;
+       hi = apr_hash_next(hi))
     {
       const char *name = svn_apr_hash_index_key(hi);
       const svn_wc_entry_t *this_entry = svn_apr_hash_index_val(hi);
@@ -2364,38 +2278,31 @@ entries_write_new_cb(void *baton,
       /* Write the entry. Pass TRUE for create locks, because we still
          use this function for upgrading old working copies. */
       child_abspath = svn_dirent_join(local_abspath, name, iterpool);
-      SVN_ERR(write_entry(db, sdb, wc_id, repos_id, repos_root,
+      SVN_ERR(write_entry(db, sdb, ewb->wc_id, ewb->repos_id, repos_root,
                           this_entry, name, child_abspath, this_dir,
                           FALSE, TRUE,
                           iterpool));
-
-      /* Write the dav cache.
-         ### This can go away when we stop unconditionally deleting all
-         ### the entries before writing them (see comments above). */
-      child_cache = apr_hash_get(dav_cache, child_abspath,
-                                 APR_HASH_KEY_STRING);
-      if (child_cache)
-        SVN_ERR(svn_wc__db_base_set_dav_cache(db, child_abspath, child_cache,
-                                              iterpool));
     }
 
   svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
 }
 
+
 svn_error_t *
-svn_wc__entries_write_new(svn_wc__db_t *db,
-                          const char *local_abspath,
-                          apr_hash_t *entries,
-                          apr_pool_t *scratch_pool)
+svn_wc__write_upgraded_entries(svn_wc__db_t *db,
+                               svn_sqlite__db_t *sdb,
+                               apr_int64_t repos_id,
+                               apr_int64_t wc_id,
+                               const char *local_abspath,
+                               apr_hash_t *entries,
+                               apr_pool_t *scratch_pool)
 {
   struct entries_write_baton ewb;
-  svn_sqlite__db_t *sdb;
 
-  /* ### need the SDB so we can jam rows directly into it.  */
-  SVN_ERR(svn_wc__db_temp_get_sdb(&sdb, db, local_abspath, FALSE,
-                                  scratch_pool, scratch_pool));
   ewb.db = db;
+  ewb.repos_id = repos_id;
+  ewb.wc_id = wc_id;
   ewb.local_abspath = local_abspath;
   ewb.entries = entries;
 
