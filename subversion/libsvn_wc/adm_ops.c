@@ -518,9 +518,8 @@ process_committed_leaf(svn_wc__db_t *db,
 
   /* ### messed up right now. we need to pass this boolean.  */
   if (remove_changelist && !using_ng)
-    SVN_ERR(svn_wc__loggy_delete_changelist(&log_accum, adm_abspath,
-                                            path, scratch_pool, scratch_pool));
-  SVN_WC__FLUSH_LOG_ACCUM(db, adm_abspath, log_accum, scratch_pool);
+    SVN_ERR(svn_wc__loggy_delete_changelist(db, adm_abspath,
+                                            path, scratch_pool));
 
   /* Regardless of whether it's a file or dir, the "main" logfile
      contains a command to bump the revision attribute (and
