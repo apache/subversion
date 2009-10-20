@@ -322,9 +322,9 @@ get_dirprops_from_ra(struct dir_baton *b, svn_revnum_t base_revision)
 
 
 /* Return in *LOCAL_DIR_ABSPATH the absolute path for the directory PATH by
-   searching the access baton set of ADM_ACCESS.  If ADM_ACCESS is NULL
-   then *PATH_ACCESS will be NULL.  If LENIENT is TRUE then failure to find
-   an access baton will not return an error but will set *PATH_ACCESS to
+   searching the access baton set of ADM_ACCESS.  If ADM_ACCESS is NULL then
+   *LOCAL_DIR_ABSPATH will be NULL.  If LENIENT is TRUE then failure to find
+   an access baton will not return an error but will set *LOCAL_DIR_ABSPATH to
    NULL instead. */
 static svn_error_t *
 get_dir_abspath(const char **local_dir_abspath,

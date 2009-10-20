@@ -476,7 +476,7 @@ get_base_mimetype(const char **mimetype,
 
 
 /* Set *MIMETYPE to the WORKING version of the svn:mime-type property
-   of file PATH, using ADM_ACCESS, or to NULL if no such property exists.
+   of file LOCAL_ABSPATH, using DB, or to NULL if no such property exists.
    WORKINGPROPS is optional: if present, use it to cache the WORKING
    properties of the file.
 

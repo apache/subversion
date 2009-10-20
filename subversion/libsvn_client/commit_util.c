@@ -217,7 +217,8 @@ add_lock_token(const char *local_abspath,
  * encountering a tree-conflicted immediate child node. However, do
  * not consider immediate children that are outside the bounds of DEPTH.
  *
- * PATH, ENTRY, ADM_ACCESS, DEPTH, CHANGELISTS and POOL are the same ones
+ * TODO ### WC_CTX and LOCAL_ABSPATH ...
+ * ENTRY, DEPTH, CHANGELISTS and POOL are the same ones
  * originally received by harvest_committables().
  *
  * Tree-conflicts information is stored in the victim's immediate parent.

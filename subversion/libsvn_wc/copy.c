@@ -622,8 +622,8 @@ post_copy_cleanup(svn_wc__db_t *db,
         continue;
 
       /* Convert deleted="true" into schedule="delete" for all
-         children (and grandchildren, if RECURSE is set) of the path
-         represented by ADM_ACCESS.  The result of this is that when
+         children (and grandchildren, if RECURSE is set) of the path.
+         The result of this is that when
          the copy is committed the items in question get deleted and
          the result is a directory in the repository that matches the
          original source directory for copy.  If this were not done

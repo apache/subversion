@@ -1471,10 +1471,10 @@ modcheck_found_node(const char *local_abspath,
 
 
 /* Set *MODIFIED to true iff there are any local modifications within the
- * tree rooted at PATH whose admin access baton is ADM_ACCESS. If *MODIFIED
+ * tree rooted at LOCAL_ABSPATH, using DB. If *MODIFIED
  * is set to true and all the local modifications were deletes then set
- * *ALL_EDITS_ARE_DELETES to true, set it to false otherwise.  PATH may be a
- * file or a directory. */
+ * *ALL_EDITS_ARE_DELETES to true, set it to false otherwise.  LOCAL_ABSPATH
+ * may be a file or a directory. */
 static svn_error_t *
 tree_has_local_mods(svn_boolean_t *modified,
                     svn_boolean_t *all_edits_are_deletes,
@@ -4172,7 +4172,9 @@ change_file_prop(void *file_baton,
 }
 
 
-/* Write log commands to merge PROP_CHANGES into the existing
+/* TODO ### Update to mention DB, FILE_ABSPATH, DIR_ABSPATH; not ADM_ACCESS.
+
+   Write log commands to merge PROP_CHANGES into the existing
    properties of FILE_PATH.  PROP_CHANGES can contain regular
    properties as well as entryprops and wcprops.  Update *PROP_STATE
    to reflect the result of the regular prop merge.  Make *LOCK_STATE
@@ -4255,7 +4257,9 @@ merge_props(svn_stringbuf_t *log_accum,
   return SVN_NO_ERROR;
 }
 
-/* Append, to LOG_ACCUM, log commands to update the entry for NAME in
+/* TODO ### Update to mention LOCAL_ABSPATH, DIR_ABSPATH; not NAME, ADM_ACCESS.
+
+   Append, to LOG_ACCUM, log commands to update the entry for NAME in
    ADM_ACCESS with a NEW_REVISION and a NEW_URL (if non-NULL), making sure
    the entry refers to a file and has no absent or deleted state.
    Use POOL for temporary allocations. */
@@ -5483,7 +5487,9 @@ svn_wc_get_actual_target2(const char **anchor,
   return SVN_NO_ERROR;
 }
 
-/* Write, to LOG_ACCUM, commands to install properties for an added DST_PATH.
+/* TODO ### Update to mention LOCAL_ABSPATH, DIR_ABSPATH; not DST_PATH, ADM_ACCESS.
+
+   Write, to LOG_ACCUM, commands to install properties for an added DST_PATH.
    NEW_BASE_PROPS and NEW_PROPS are base and working properties, respectively.
    BASE_PROPS can contain entryprops and wcprops as well.  ADM_ACCESS must
    be an access baton for DST_PATH.
