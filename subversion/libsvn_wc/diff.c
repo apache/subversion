@@ -909,15 +909,13 @@ directory_elements_diff(struct dir_baton *db)
  * as having been added.
  *
  * DIR_BATON is the parent directory baton, ADM_ACCESS/PATH is the path
- * to the file to be compared. ENTRY is the working copy entry for
- * the file.
+ * to the file to be compared.
  *
  * Do all allocation in POOL.
  */
 static svn_error_t *
 report_wc_file_as_added(struct dir_baton *db,
                         const char *path,
-                        const svn_wc_entry_t *entry,
                         apr_pool_t *pool)
 {
   struct edit_baton *eb = db->eb;
@@ -929,6 +927,8 @@ report_wc_file_as_added(struct dir_baton *db,
   const char *source_file;
   const char *translated_file;
   const char *local_abspath;
+  svn_wc__db_status_t status;
+  svn_revnum_t revision;
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
@@ -939,14 +939,25 @@ report_wc_file_as_added(struct dir_baton *db,
 
   SVN_ERR(get_empty_file(eb, &empty_file));
 
+  SVN_ERR(svn_wc__db_read_info(&status, &revision, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, eb->db, local_abspath,
+                               pool, pool));
+
+  if (status == svn_wc__db_status_added)
+    SVN_ERR(svn_wc__db_scan_addition(&status, NULL, NULL, NULL, NULL, NULL,
+                                     NULL, NULL, NULL, eb->db, local_abspath,
+                                     pool, pool));
+
   /* We can't show additions for files that don't exist. */
-  SVN_ERR_ASSERT(!(entry->schedule == svn_wc_schedule_delete
-                                                && !eb->use_text_base));
+  SVN_ERR_ASSERT(status != svn_wc__db_status_deleted || eb->use_text_base);
 
   /* If the file was added *with history*, then we don't want to
      see a comparison to the empty file;  we want the usual working
      vs. text-base comparison. */
-  if (entry->copied)
+  if (status == svn_wc__db_status_copied ||
+      status == svn_wc__db_status_moved_here)
     {
       /* Don't show anything if we're comparing to BASE, since by
          definition there can't be any local modifications. */
@@ -985,7 +996,7 @@ report_wc_file_as_added(struct dir_baton *db,
                                     NULL, NULL, NULL,
                                     path,
                                     empty_file, translated_file,
-                                    0, entry->revision,
+                                    0, revision,
                                     NULL, mimetype,
                                     NULL, SVN_INVALID_REVNUM,
                                     propchanges, emptyprops,
@@ -1083,7 +1094,7 @@ report_wc_directory_as_added(struct dir_baton *db,
       switch (entry->kind)
         {
         case svn_node_file:
-          SVN_ERR(report_wc_file_as_added(db, path, entry, iterpool));
+          SVN_ERR(report_wc_file_as_added(db, path, iterpool));
           break;
 
         case svn_node_dir:
@@ -1217,7 +1228,7 @@ delete_entry(const char *path,
       else
         {
           /* Or normally, show the working file being added. */
-          SVN_ERR(report_wc_file_as_added(pb, full_path, entry, pool));
+          SVN_ERR(report_wc_file_as_added(pb, full_path, pool));
         }
       break;
     case svn_node_dir:
