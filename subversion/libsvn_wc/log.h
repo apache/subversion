@@ -52,6 +52,19 @@ extern "C" {
    be either absolute or relative to the adm_abspath argument.
 */
 
+
+/* A macro to flush LOG_ACCUM using DB and ADM_ABSPATH.  This writes all
+   current items in LOG_ACCUM to the work queue, and then reinitializes
+   LOG_ACCUM to an empty buffer. */
+#define SVN_WC__FLUSH_LOG_ACCUM(db, adm_abspath, log_accum, scratch_pool)   \
+  if (!svn_stringbuf_isempty(log_accum))                                    \
+    {                                                                       \
+      SVN_ERR(svn_wc__wq_add_loggy(db, adm_abspath, log_accum, scratch_pool));\
+      svn_stringbuf_setempty(log_accum);                                    \
+    }                                                                       \
+  else {}
+
+
 /* Extend **LOG_ACCUM with log instructions to append the contents
    of SRC to DST.
    SRC and DST are relative to ADM_ABSPATH.
