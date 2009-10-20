@@ -150,7 +150,7 @@ svn_wc__loggy_delete_entry(svn_stringbuf_t **log_accum,
                            apr_pool_t *scratch_pool);
 
 
-/* Extend **LOG_ACCUM with log instructions to delete lock related
+/* Insert into DB a work queue instruction to delete lock related
    fields from the entry belonging to PATH.
    ADM_ABSPATH is the absolute path for the access baton for PATH.
 
@@ -158,7 +158,7 @@ svn_wc__loggy_delete_entry(svn_stringbuf_t **log_accum,
    temporary allocations.
 */
 svn_error_t *
-svn_wc__loggy_delete_lock(svn_stringbuf_t **log_accum,
+svn_wc__loggy_delete_lock(svn_wc__db_t *db,
                           const char *adm_abspath,
                           const char *path,
                           apr_pool_t *result_pool,

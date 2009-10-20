@@ -513,9 +513,8 @@ process_committed_leaf(svn_wc__db_t *db,
   SVN_WC__FLUSH_LOG_ACCUM(db, adm_abspath, log_accum, scratch_pool);
 
   if (remove_lock)
-    SVN_ERR(svn_wc__loggy_delete_lock(&log_accum, adm_abspath,
+    SVN_ERR(svn_wc__loggy_delete_lock(db, adm_abspath,
                                       path, scratch_pool, scratch_pool));
-  SVN_WC__FLUSH_LOG_ACCUM(db, adm_abspath, log_accum, scratch_pool);
 
   /* ### messed up right now. we need to pass this boolean.  */
   if (remove_changelist && !using_ng)
