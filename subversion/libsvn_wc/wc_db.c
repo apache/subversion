@@ -2535,7 +2535,9 @@ struct set_changelist_baton
 };
 
 static svn_error_t *
-set_changelist_txn(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
+set_changelist_txn(void *baton,
+                   svn_sqlite__db_t *sdb,
+                   apr_pool_t *scratch_pool)
 {
   struct set_changelist_baton *scb = baton;
   const char *existing_changelist;
@@ -2558,6 +2560,13 @@ set_changelist_txn(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
 
       SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
                                         STMT_INSERT_ACTUAL_CHANGELIST));
+
+      /* The parent of relpath=="" is null, so we simply skip binding the
+         column. Otherwise, bind the proper value to 'parent_relpath'.  */
+      if (*scb->local_relpath != '\0')
+        SVN_ERR(svn_sqlite__bind_text(stmt, 4,
+                                      svn_relpath_dirname(scb->local_relpath,
+                                                          scratch_pool)));
     }
   else
     {

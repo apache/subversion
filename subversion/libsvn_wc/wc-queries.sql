@@ -196,6 +196,8 @@ update actual_node set tree_conflict_data = ?3
 where wc_id = ?1 and local_relpath = ?2;
 
 -- STMT_INSERT_ACTUAL_TREE_CONFLICTS
+/* tree conflicts are always recorded on the wcroot node, so the
+   parent_relpath will be null.  */
 insert into actual_node (
   wc_id, local_relpath, tree_conflict_data)
 values (?1, ?2, ?3);
@@ -206,8 +208,8 @@ where wc_id = ?1 and local_relpath = ?2;
 
 -- STMT_INSERT_ACTUAL_CHANGELIST
 insert into actual_node (
-  wc_id, local_relpath, /* ### parent_relpath, */ changelist)
-values (?1, ?2, ?3);
+  wc_id, local_relpath, changelist, parent_relpath)
+values (?1, ?2, ?3, ?4);
 
 -- STMT_RESET_ACTUAL_WITH_CHANGELIST
 REPLACE INTO actual_node (
