@@ -529,28 +529,32 @@ process_committed_leaf(svn_wc__db_t *db,
                                        path, &tmp_entry, modify_flags,
                                        scratch_pool, scratch_pool));
 
-  /* Do wcprops in the same log txn as revision, etc. */
+  /* Queue all of the operations so far.  */
+  SVN_ERR(svn_wc__wq_add_loggy(db, adm_abspath, log_accum, scratch_pool));
+
   if (wcprop_changes && (wcprop_changes->nelts > 0))
     {
       int i;
+      apr_hash_t *props = apr_hash_make(scratch_pool);
 
+      /* Queue up a work item to set the dav-cache properties. They arrive
+         as a set of diffs, but we'll take all of the additions/changes as
+         a "complete" set of properties. IOW, we start from an empty
+         dav-cache and apply the changes.  */
       for (i = 0; i < wcprop_changes->nelts; i++)
         {
           const svn_prop_t *prop
             = APR_ARRAY_IDX(wcprop_changes, i, const svn_prop_t *);
 
-          SVN_ERR(svn_wc__loggy_modify_wcprop(&log_accum, adm_abspath,
-                                              path, prop->name,
-                                              prop->value
-                                                ? prop->value->data
-                                                : NULL,
-                                              scratch_pool, scratch_pool));
+          if (prop->value != NULL)
+            apr_hash_set(props, prop->name, APR_HASH_KEY_STRING, prop->value);
         }
+
+      SVN_ERR(svn_wc__wq_set_dav_cache(db, local_abspath, props,
+                                       scratch_pool));
     }
 
-  /* Write our accumulation of log entries into a log file */
-  return svn_error_return(svn_wc__wq_add_loggy(db, adm_abspath, log_accum,
-                                               scratch_pool));
+  return SVN_NO_ERROR;
 }
 
 

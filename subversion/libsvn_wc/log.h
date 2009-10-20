@@ -182,22 +182,6 @@ svn_wc__loggy_entry_modify(svn_stringbuf_t **log_accum,
                            apr_pool_t *result_pool,
                            apr_pool_t *scratch_pool);
 
-/* Extend **LOG_ACCUM with log instructions to modify wcprop PROPNAME
-   for PATH, setting it to PROPVAL (which may be NULL to delete the property).
-   ADM_ABSPATH is the absolute path for the access baton for PATH.
-
-   Allocate *LOG_ACCUM in RESULT_POOL if it is NULL. Use SCRATCH_POOL for
-   temporary allocations.
-*/
-svn_error_t *
-svn_wc__loggy_modify_wcprop(svn_stringbuf_t **log_accum,
-                            const char *adm_abspath,
-                            const char *path,
-                            const char *propname,
-                            const char *propval,
-                            apr_pool_t *result_pool,
-                            apr_pool_t *scratch_pool);
-
 
 /* Extend **LOG_ACCUM with log instructions to move the file SRC_PATH to
    DST_PATH, if it exists. If it doesn't and REMOVE_DST_IF_NO_SRC is TRUE
