@@ -162,18 +162,16 @@ svn_wc__loggy_delete_lock(svn_wc__db_t *db,
                           const char *path,
                           apr_pool_t *scratch_pool);
 
-/* Extend **LOG_ACCUM with log instructions to delete changelist
+/* Insert into DB a work queue instruction to delete changelist
    from the entry belonging to PATH.
    ADM_ABSPATH is the absolute path for the access baton for PATH.
 
-   Allocate *LOG_ACCUM in RESULT_POOL if it is NULL. Use SCRATCH_POOL for
-   temporary allocations.
+   Use SCRATCH_POOL for temporary allocations.
 */
 svn_error_t *
-svn_wc__loggy_delete_changelist(svn_stringbuf_t **log_accum,
+svn_wc__loggy_delete_changelist(svn_wc__db_t *db,
                                 const char *adm_abspath,
                                 const char *path,
-                                apr_pool_t *result_pool,
                                 apr_pool_t *scratch_pool);
 
 /* Extend **LOG_ACCUM with commands to modify the entry associated with PATH
