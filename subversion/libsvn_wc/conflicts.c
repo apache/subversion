@@ -90,7 +90,7 @@ svn_wc_conflict_dup(svn_wc_conflict_t **duplicate,
   svn_wc_conflict_t *c;
   if (result_pool == base->pool)
     {
-      /* No need to duplicate; base has the same liftime and its inner
+      /* No need to duplicate; base has the same lifetime and its inner
          values can't change */
       *duplicate = base;
       return SVN_NO_ERROR;
