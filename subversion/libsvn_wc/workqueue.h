@@ -88,6 +88,13 @@ svn_wc__wq_add_deletion_postcommit(svn_wc__db_t *db,
                                    svn_boolean_t no_unlock,
                                    apr_pool_t *scratch_pool);
 
+
+svn_error_t *
+svn_wc__wq_set_dav_cache(svn_wc__db_t *db,
+                         const char *local_abspath,
+                         apr_hash_t *props,
+                         apr_pool_t *scratch_pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

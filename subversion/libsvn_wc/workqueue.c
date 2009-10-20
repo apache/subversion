@@ -52,6 +52,7 @@
 #define OP_KILLME "killme"
 #define OP_LOGGY "loggy"
 #define OP_DELETION_POSTCOMMIT "deletion-postcommit"
+#define OP_SET_DAV_CACHE "set-dav-cache"
 
 
 struct work_item_dispatch {
@@ -66,11 +67,11 @@ struct work_item_dispatch {
 
 /* Ripped from the old loggy cp_and_translate operation.
 
-   LOCAL_ABSPATH specifies the destination of the copy (typically the
-   working file).
-
    SOURCE_ABSPATH specifies the source which is translated for
    installation as the working file.
+
+   DEST_ABSPATH specifies the destination of the copy (typically the
+   working file).
 
    VERSIONED_ABSPATH specifies the versioned file holding the properties
    which specify the translation parameters.  */
@@ -977,12 +978,61 @@ svn_wc__wq_add_deletion_postcommit(svn_wc__db_t *db,
 
 /* ------------------------------------------------------------------------ */
 
+/* OP_SET_DAV_CACHE  */
+
+static svn_error_t *
+run_set_dav_cache(svn_wc__db_t *db,
+                  const svn_skel_t *work_item,
+                  svn_cancel_func_t cancel_func,
+                  void *cancel_baton,
+                  apr_pool_t *scratch_pool)
+{
+  const svn_skel_t *arg1 = work_item->children->next;
+  const char *local_abspath;
+  apr_hash_t *props;
+
+  /* We need a NUL-terminated path, so copy it out of the skel.  */
+  local_abspath = apr_pstrmemdup(scratch_pool, arg1->data, arg1->len);
+
+  SVN_ERR(svn_skel__parse_proplist(&props, arg1->next, scratch_pool));
+
+  return svn_error_return(svn_wc__db_base_set_dav_cache(
+                            db, local_abspath, props, scratch_pool));
+}
+
+
+svn_error_t *
+svn_wc__wq_set_dav_cache(svn_wc__db_t *db,
+                         const char *local_abspath,
+                         apr_hash_t *props,
+                         apr_pool_t *scratch_pool)
+{
+  svn_skel_t *work_item = svn_skel__make_empty_list(scratch_pool);
+  svn_skel_t *props_skel;
+
+  SVN_ERR(svn_skel__unparse_proplist(&props_skel, props, scratch_pool));
+
+  /* The skel still points at ADM_ABSPATH and LOG_CONTENT, but the skel will
+     be serialized just below in the wq_add call.  */
+  svn_skel__prepend(props_skel, work_item);
+  svn_skel__prepend_str(local_abspath, work_item, scratch_pool);
+  svn_skel__prepend_str(OP_SET_DAV_CACHE, work_item, scratch_pool);
+
+  SVN_ERR(svn_wc__db_wq_add(db, local_abspath, work_item, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+
+/* ------------------------------------------------------------------------ */
+
 static const struct work_item_dispatch dispatch_table[] = {
   { OP_REVERT, run_revert },
   { OP_PREPARE_REVERT_FILES, run_prepare_revert_files },
   { OP_KILLME, run_killme },
   { OP_LOGGY, run_loggy },
   { OP_DELETION_POSTCOMMIT, run_deletion_postcommit },
+  { OP_SET_DAV_CACHE, run_set_dav_cache },
 
   /* Sentinel.  */
   { NULL }
