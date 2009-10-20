@@ -168,6 +168,7 @@ run_revert(svn_wc__db_t *db,
            void *cancel_baton,
            apr_pool_t *scratch_pool)
 {
+  const svn_skel_t *arg1 = work_item->children->next;
   const char *local_abspath;
   svn_boolean_t replaced;
   svn_wc__db_kind_t kind;
@@ -179,11 +180,8 @@ run_revert(svn_wc__db_t *db,
   svn_wc_entry_t tmp_entry;
 
   /* We need a NUL-terminated path, so copy it out of the skel.  */
-  local_abspath = apr_pstrmemdup(scratch_pool,
-                                 work_item->children->next->data,
-                                 work_item->children->next->len);
-  /* ### fix this code. validate.  */
-  replaced = work_item->children->next->next->data[0] - '0';
+  local_abspath = apr_pstrmemdup(scratch_pool, arg1->data, arg1->len);
+  replaced = svn_skel__parse_int(arg1->next, scratch_pool) != 0;
   /* magic_changed is extracted further below.  */
   /* use_commit_times is extracted further below.  */
 
@@ -228,7 +226,7 @@ run_revert(svn_wc__db_t *db,
       SVN_ERR(svn_wc__text_base_path(&text_base_path, db, local_abspath,
                                      FALSE, scratch_pool));
 
-      magic_changed = work_item->children->next->next->next->data[0] - '0';
+      magic_changed = svn_skel__parse_int(arg1->next->next, scratch_pool) != 0;
 
       /* If there was a magic property change, then we'll reinstall the
          working-file to pick up any/all appropriate changes. If there was
@@ -305,8 +303,8 @@ run_revert(svn_wc__db_t *db,
           SVN_ERR(copy_and_translate(db, text_base_path, local_abspath,
                                      local_abspath, scratch_pool));
 
-          use_commit_times = (work_item->children->next->next->next
-                              ->next->data[0] - '0');
+          use_commit_times = svn_skel__parse_int(arg1->next->next->next,
+                                                 scratch_pool) != 0;
 
           /* Possibly set the timestamp to last-commit-time, rather
              than the 'now' time that already exists. */
@@ -612,6 +610,7 @@ run_prepare_revert_files(svn_wc__db_t *db,
                          void *cancel_baton,
                          apr_pool_t *scratch_pool)
 {
+  const svn_skel_t *arg1 = work_item->children->next;
   const char *local_abspath;
   svn_wc__db_kind_t kind;
   const char *revert_prop_abspath;
@@ -619,9 +618,7 @@ run_prepare_revert_files(svn_wc__db_t *db,
   svn_node_kind_t on_disk;
 
   /* We need a NUL-terminated path, so copy it out of the skel.  */
-  local_abspath = apr_pstrmemdup(scratch_pool,
-                                 work_item->children->next->data,
-                                 work_item->children->next->len);
+  local_abspath = apr_pstrmemdup(scratch_pool, arg1->data, arg1->len);
 
   /* Rename the original text base over to the revert text base.  */
   SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath, FALSE, scratch_pool));
@@ -693,6 +690,7 @@ run_killme(svn_wc__db_t *db,
            void *cancel_baton,
            apr_pool_t *scratch_pool)
 {
+  const svn_skel_t *arg1 = work_item->children->next;
   const char *dir_abspath;
   svn_boolean_t adm_only;
   svn_wc__db_status_t status;
@@ -704,11 +702,8 @@ run_killme(svn_wc__db_t *db,
   svn_error_t *err;
 
   /* We need a NUL-terminated path, so copy it out of the skel.  */
-  dir_abspath = apr_pstrmemdup(scratch_pool,
-                               work_item->children->next->data,
-                               work_item->children->next->len);
-  /* ### fix this code. validate.  */
-  adm_only = work_item->children->next->next->data[0] - '0';
+  dir_abspath = apr_pstrmemdup(scratch_pool, arg1->data, arg1->len);
+  adm_only = svn_skel__parse_int(arg1->next, scratch_pool) != 0;
 
   err = svn_wc__db_base_get_info(&status, NULL, &original_revision,
                                  NULL, NULL, NULL,
@@ -816,17 +811,15 @@ run_loggy(svn_wc__db_t *db,
           void *cancel_baton,
           apr_pool_t *scratch_pool)
 {
+  const svn_skel_t *arg1 = work_item->children->next;
   const char *adm_abspath;
 
   /* We need a NUL-terminated path, so copy it out of the skel.  */
-  adm_abspath = apr_pstrmemdup(scratch_pool,
-                               work_item->children->next->data,
-                               work_item->children->next->len);
+  adm_abspath = apr_pstrmemdup(scratch_pool, arg1->data, arg1->len);
 
   return svn_error_return(svn_wc__run_xml_log(
                             db, adm_abspath,
-                            work_item->children->next->next->data,
-                            work_item->children->next->next->len,
+                            arg1->next->data, arg1->next->len,
                             scratch_pool));
 }
 
