@@ -55,9 +55,6 @@
 
 struct svn_wc_conflict_t
 {
-  /* Pool conflict is allocated in */
-  apr_pool_t *pool;
-
   /* ### kind + property name are the primary keys of a conflict */
   /* The kind of conflict recorded */
   svn_wc_conflict_kind_t kind;
@@ -75,8 +72,6 @@ conflict_alloc(svn_wc_conflict_t **conflict, apr_pool_t *result_pool)
 {
   svn_wc_conflict_t *c = apr_pcalloc(result_pool, sizeof(*c));
 
-  c->pool = result_pool;
-
   *conflict = c;
 
   return SVN_NO_ERROR;
@@ -88,14 +83,7 @@ svn_wc_conflict_dup(svn_wc_conflict_t **duplicate,
                     apr_pool_t *result_pool)
 {
   svn_wc_conflict_t *c;
-  if (result_pool == base->pool)
-    {
-      /* No need to duplicate; base has the same lifetime and its inner
-         values can't change */
-      *duplicate = base;
-      return SVN_NO_ERROR;
-    }
-  
+
   SVN_ERR(conflict_alloc(&c, result_pool));
 
   c->kind = base->kind;
