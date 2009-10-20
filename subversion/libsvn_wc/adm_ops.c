@@ -243,7 +243,7 @@ remove_revert_files(svn_stringbuf_t **logtags,
                     svn_wc__db_t *db,
                     const char *adm_abspath,
                     const char *local_abspath,
-                    apr_pool_t * pool)
+                    apr_pool_t *pool)
 {
   const char *revert_file;
   svn_node_kind_t kind;
@@ -254,10 +254,13 @@ remove_revert_files(svn_stringbuf_t **logtags,
   if (kind == svn_node_file)
     SVN_ERR(svn_wc__loggy_remove(logtags, adm_abspath,
                                  revert_file, pool, pool));
+  SVN_WC__FLUSH_LOG_ACCUM(db, adm_abspath, *logtags, pool);
 
-  return svn_error_return(
-    svn_wc__loggy_props_delete(logtags, db, local_abspath, adm_abspath,
-                               svn_wc__props_revert, pool));
+  SVN_ERR(svn_wc__loggy_props_delete(logtags, db, local_abspath, adm_abspath,
+                                     svn_wc__props_revert, pool));
+  SVN_WC__FLUSH_LOG_ACCUM(db, adm_abspath, *logtags, pool);
+
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -470,6 +473,7 @@ process_committed_leaf(svn_wc__db_t *db,
         }
     }
 
+  SVN_WC__FLUSH_LOG_ACCUM(db, adm_abspath, log_accum, scratch_pool);
 
   /* Append a log command to set (overwrite) the 'committed-rev',
      'committed-date', 'last-author', and possibly 'checksum'
@@ -506,15 +510,18 @@ process_committed_leaf(svn_wc__db_t *db,
     SVN_ERR(svn_wc__loggy_entry_modify(&log_accum, adm_abspath,
                                        path, &tmp_entry, modify_flags,
                                        scratch_pool, scratch_pool));
+  SVN_WC__FLUSH_LOG_ACCUM(db, adm_abspath, log_accum, scratch_pool);
 
   if (remove_lock)
     SVN_ERR(svn_wc__loggy_delete_lock(&log_accum, adm_abspath,
                                       path, scratch_pool, scratch_pool));
+  SVN_WC__FLUSH_LOG_ACCUM(db, adm_abspath, log_accum, scratch_pool);
 
   /* ### messed up right now. we need to pass this boolean.  */
   if (remove_changelist && !using_ng)
     SVN_ERR(svn_wc__loggy_delete_changelist(&log_accum, adm_abspath,
                                             path, scratch_pool, scratch_pool));
+  SVN_WC__FLUSH_LOG_ACCUM(db, adm_abspath, log_accum, scratch_pool);
 
   /* Regardless of whether it's a file or dir, the "main" logfile
      contains a command to bump the revision attribute (and
@@ -522,12 +529,14 @@ process_committed_leaf(svn_wc__db_t *db,
   SVN_ERR(svn_wc__loggy_committed(&log_accum, adm_abspath,
                                   path, new_revnum,
                                   scratch_pool, scratch_pool));
+  SVN_WC__FLUSH_LOG_ACCUM(db, adm_abspath, log_accum, scratch_pool);
 
   /* ### the NG code doesn't set these values. do it now.  */
   if (modify_flags && using_ng)
     SVN_ERR(svn_wc__loggy_entry_modify(&log_accum, adm_abspath,
                                        path, &tmp_entry, modify_flags,
                                        scratch_pool, scratch_pool));
+  SVN_WC__FLUSH_LOG_ACCUM(db, adm_abspath, log_accum, scratch_pool);
 
   /* Queue all of the operations so far.  */
   SVN_ERR(svn_wc__wq_add_loggy(db, adm_abspath, log_accum, scratch_pool));
@@ -1295,6 +1304,7 @@ svn_wc_delete4(svn_wc_context_t *wc_ctx,
                                          local_abspath, &tmp_entry,
                                          SVN_WC__ENTRY_MODIFY_SCHEDULE,
                                          pool, pool));
+      SVN_WC__FLUSH_LOG_ACCUM(db, parent_abspath, log_accum, pool);
 
       /* is it a replacement with history? */
       if (was_replace && was_copied)
@@ -1313,20 +1323,24 @@ svn_wc_delete4(svn_wc_context_t *wc_ctx,
                                        parent_abspath,
                                        text_revert, text_base,
                                        pool, pool));
+          SVN_WC__FLUSH_LOG_ACCUM(db, parent_abspath, log_accum, pool);
 
           SVN_ERR(svn_wc__loggy_revert_props_restore(&log_accum, wc_ctx->db,
                                                      local_abspath,
                                                      parent_abspath, pool));
+          SVN_WC__FLUSH_LOG_ACCUM(db, parent_abspath, log_accum, pool);
         }
       if (was_add)
         {
           SVN_ERR(svn_wc__loggy_props_delete(&log_accum, wc_ctx->db,
                                              local_abspath, parent_abspath,
                                              svn_wc__props_base, pool));
+          SVN_WC__FLUSH_LOG_ACCUM(db, parent_abspath, log_accum, pool);
 
           SVN_ERR(svn_wc__loggy_props_delete(&log_accum, wc_ctx->db,
                                              local_abspath, parent_abspath,
                                              svn_wc__props_working, pool));
+          SVN_WC__FLUSH_LOG_ACCUM(db, parent_abspath, log_accum, pool);
         }
 
       SVN_ERR(svn_wc__wq_add_loggy(db, parent_abspath, log_accum, pool));
