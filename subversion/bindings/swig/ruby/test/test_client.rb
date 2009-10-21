@@ -500,20 +500,26 @@ class SvnClientTest < Test::Unit::TestCase
     path = File.join(dir_path, file)
     content = "Hello"
 
+    wc_path2 = @wc_path + '2'
+    path2 = File.join(wc_path2, dir, file)
+    wc_path3 = @wc_path + '3'
+    path3 = File.join(wc_path3, dir, file)
+
     make_context(log) do |ctx|
       ctx.mkdir(dir_path)
       File.open(path, "w"){|f| f.print(content)}
       ctx.add(path)
       ctx.commit(@wc_path)
 
-      FileUtils.rm_rf(@wc_path)
-      ctx.checkout(@repos_uri, @wc_path)
-      assert(File.exist?(path))
+      ctx.checkout(@repos_uri, wc_path2)
+      assert(File.exist?(path2))
 
-      FileUtils.rm_rf(@wc_path)
-      ctx.co(@repos_uri, @wc_path, nil, nil, false)
-      assert(!File.exist?(path))
+      ctx.co(@repos_uri, wc_path3, nil, nil, false)
+      assert(!File.exist?(path3))
     end
+  ensure
+    FileUtils.rm_rf(wc_path3)
+    FileUtils.rm_rf(wc_path2)
   end
 
   def test_update
