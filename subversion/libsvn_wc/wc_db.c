@@ -3740,6 +3740,9 @@ struct commit_baton {
   const apr_array_header_t *new_children;
   apr_hash_t *new_dav_cache;
   svn_boolean_t keep_changelist;
+
+  apr_int64_t repos_id;
+  const char *repos_relpath;
 };
 
 
@@ -3753,8 +3756,6 @@ commit_node(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
   svn_boolean_t have_base;
   svn_boolean_t have_work;
   svn_boolean_t have_act;
-  apr_int64_t repos_id;
-  const char *repos_relpath;
   svn_string_t prop_blob = { 0 };
   const char *changelist = NULL;
   svn_wc__db_status_t base_presence;
@@ -3793,19 +3794,26 @@ commit_node(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
   if (have_work)
     work_presence = svn_sqlite__column_token(stmt_work, 0, presence_map);
 
+  /* Figure out the new node's kind. It will be whatever is in WORKING_NODE,
+     or there will be a BASE_NODE that has it.  */
+  if (have_work)
+    new_kind = svn_sqlite__column_token(stmt_work, 1, kind_map);
+  else
+    new_kind = svn_sqlite__column_token(stmt_base, 5, kind_map);
+
   /* Get the repository information. REPOS_RELPATH will indicate whether
      we bind REPOS_ID/REPOS_RELPATH as null values in the database (in order
-     to inherit values from the parent node), or that we have actual data.  */
-  if (have_work)
+     to inherit values from the parent node), or that we have actual data.
+     Note: only inherit if we're not at the root.  */
+  if (have_base && !svn_sqlite__column_is_null(stmt_base, 2))
     {
-      repos_id = 0;
-      repos_relpath = NULL;
-    }
-  else
-    {
-      /* A commit cannot change these values, so retain them.  */
-      repos_id = svn_sqlite__column_int64(stmt_base, 2);
-      repos_relpath = svn_sqlite__column_text(stmt_base, 3, scratch_pool);
+      /* If 'repos_id' is valid, then 'repos_relpath' should be, too.  */
+      SVN_ERR_ASSERT(!svn_sqlite__column_is_null(stmt_base, 3));
+
+      /* A commit cannot change these values.  */
+      SVN_ERR_ASSERT(cb->repos_id == svn_sqlite__column_int64(stmt_base, 2));
+      SVN_ERR_ASSERT(strcmp(cb->repos_relpath,
+                            svn_sqlite__column_text(stmt_base, 3, NULL)) == 0);
     }
 
   /* Find the appropriate new properties -- ACTUAL overrides any properties
@@ -3829,6 +3837,13 @@ commit_node(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
   SVN_ERR(svn_sqlite__reset(stmt_work));
   SVN_ERR(svn_sqlite__reset(stmt_act));
 
+#ifndef SINGLE_DB
+  /* We're committing a file/symlink, or we're committing a dir at "". We
+     never commit child directories (parent stubs).  */
+  SVN_ERR_ASSERT(new_kind != svn_wc__db_kind_dir
+                 || *cb->local_relpath == '\0');
+#endif
+
   /* Update the BASE_NODE row with all the new information.  */
 
   if (*cb->local_relpath == '\0')
@@ -3838,18 +3853,6 @@ commit_node(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
 
   /* ### other presences? or reserve that for separate functions?  */
   new_presence = svn_wc__db_status_normal;
-
-  /* Determine the new BASE node's kind based on whether NEW_CHILDREN is
-     presented to this function.
-
-     ### theoretically, the kind will remain the same as BASE, or it will
-     ### be whatever is in WORKING_NODE. we should also be able to fetch
-     ### the new children from the database, rather than having it passed.
-     ### some work for the future.  */
-  if (cb->new_children == NULL)
-    new_kind = svn_wc__db_kind_file;
-  else
-    new_kind = svn_wc__db_kind_dir;
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, cb->pdh->wcroot->sdb,
                                     STMT_APPLY_CHANGES_TO_BASE));
@@ -3862,11 +3865,12 @@ commit_node(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
                             cb->new_author,
                             prop_blob.data, prop_blob.len));
 
-  if (repos_relpath != NULL)
-    {
-      SVN_ERR(svn_sqlite__bind_int64(stmt, 9, repos_id));
-      SVN_ERR(svn_sqlite__bind_text(stmt, 10, repos_relpath));
-    }
+  /* ### for now, always set the repos_id/relpath. we should make these
+     ### null whenever possible. but that also means we'd have to check
+     ### on whether this node is switched, so the values would need to
+     ### remain unchanged.  */
+  SVN_ERR(svn_sqlite__bind_int64(stmt, 9, cb->repos_id));
+  SVN_ERR(svn_sqlite__bind_text(stmt, 10, cb->repos_relpath));
 
   SVN_ERR(svn_sqlite__bind_checksum(stmt, 11, cb->new_checksum,
                                     scratch_pool));
@@ -3918,6 +3922,85 @@ commit_node(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
         }
     }
 
+  if (new_kind == svn_wc__db_kind_dir)
+    {
+      /* When committing a directory, we should have its new children.  */
+      /* ### one day. just not today.  */
+#if 0
+      SVN_ERR_ASSERT(cb->new_children != NULL);
+#endif
+
+      /* ### process the children  */
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+determine_repos_info(apr_int64_t *repos_id,
+                     const char **repos_relpath,
+                     svn_wc__db_t *db,
+                     svn_wc__db_pdh_t *pdh,
+                     const char *local_relpath,
+                     const char *name,
+                     apr_pool_t *result_pool,
+                     apr_pool_t *scratch_pool)
+{
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
+  const char *repos_parent_relpath;
+
+  /* ### is it faster to fetch fewer columns? */
+
+  /* Prefer the current node's repository information.  */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+                                    STMT_SELECT_BASE_NODE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id, local_relpath));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+
+  if (have_row && !svn_sqlite__column_is_null(stmt, 2))
+    {
+      /* If one is non-NULL, then so should the other. */
+      SVN_ERR_ASSERT(!svn_sqlite__column_is_null(stmt, 3));
+
+      *repos_id = svn_sqlite__column_int64(stmt, 2);
+      *repos_relpath = svn_sqlite__column_text(stmt, 3, result_pool);
+
+      return svn_error_return(svn_sqlite__reset(stmt));
+    }
+
+  SVN_ERR(svn_sqlite__reset(stmt));
+
+  /* The parent MUST have a BASE node (otherwise, THIS node cannot be
+     processed for a commit). Move up and re-query.   */
+
+  if (*local_relpath == '\0')
+    {
+      /* There is no entry for "" in the BASE_NODE table, so this directory
+         is just now being added. Therefore, the stub in the parent dir
+         does not exist either. We want to jump to the logical parent node,
+         which means one PDH up, and stick to local_relpath == "".  */
+      SVN_ERR(navigate_to_parent(&pdh, db, pdh,
+                                 svn_sqlite__mode_readonly,
+                                 scratch_pool));
+      local_relpath = "";
+    }
+  else
+    {
+      /* This was a child node within this wcroot. We want to look at the
+         BASE node of the directory, which is local_relpath == "".  */
+      local_relpath = "";
+    }
+
+  /* The REPOS_ID will be the same (### until we support mixed-repos)  */
+  SVN_ERR(scan_upwards_for_repos(repos_id, &repos_parent_relpath,
+                                 pdh->wcroot,
+                                 "" /* local_relpath. see above.  */,
+                                 scratch_pool, scratch_pool));
+
+  *repos_relpath = svn_relpath_join(repos_parent_relpath, name, result_pool);
+
   return SVN_NO_ERROR;
 }
 
@@ -3957,6 +4040,25 @@ svn_wc__db_global_commit(svn_wc__db_t *db,
   cb.new_children = new_children;
   cb.new_dav_cache = new_dav_cache;
   cb.keep_changelist = keep_changelist;
+
+  /* If we are adding a directory (no BASE_NODE), then we need to get
+     repository information from an ancestor node (start scanning from the
+     parent node since "this node" does not have a BASE). We cannot simply
+     inherit that information (across SDB boundaries).
+
+     If we're adding a file, then leaving the fields as null (in order to
+     inherit) would be possible.
+
+     For existing nodes, we should retain the (potentially-switched)
+     repository information.
+
+     ### this always returns values. we should switch to null if/when
+     ### possible.  */
+  SVN_ERR(determine_repos_info(&cb.repos_id, &cb.repos_relpath,
+                               db, pdh, local_relpath,
+                               svn_dirent_basename(local_abspath,
+                                                   scratch_pool),
+                               scratch_pool, scratch_pool));
 
   SVN_ERR(svn_sqlite__with_transaction(pdh->wcroot->sdb, commit_node, &cb,
                                        scratch_pool));
