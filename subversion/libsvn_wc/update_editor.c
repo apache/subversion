@@ -5302,18 +5302,25 @@ svn_wc__check_wc_root(svn_boolean_t *wc_root,
                                db, local_abspath,
                                scratch_pool, scratch_pool));
 
-  svn_dirent_split(local_abspath, &parent_abspath, &name, scratch_pool);
-
+  if (repos_relpath == NULL)
+    {
+      /* If we inherit our URL, then we can't be a root, nor switched.  */
+      *wc_root = FALSE;
+      return SVN_NO_ERROR;
+    }
   if (*kind != svn_wc__db_kind_dir)
-    *wc_root = FALSE; /* Every non-directory has a parent */
-  else if (status == svn_wc__db_status_added ||
-           status == svn_wc__db_status_deleted)
+    {
+      /* File/symlinks cannot be a root.  */
+      *wc_root = FALSE;
+    }
+  else if (status == svn_wc__db_status_added
+           || status == svn_wc__db_status_deleted)
     {
       *wc_root = FALSE;
     }
-  else if (status == svn_wc__db_status_absent ||
-           status == svn_wc__db_status_excluded ||
-           status == svn_wc__db_status_not_present)
+  else if (status == svn_wc__db_status_absent
+           || status == svn_wc__db_status_excluded
+           || status == svn_wc__db_status_not_present)
     {
       return svn_error_createf(
                     SVN_ERR_WC_PATH_NOT_FOUND, NULL,
@@ -5323,8 +5330,10 @@ svn_wc__check_wc_root(svn_boolean_t *wc_root,
   else if (svn_dirent_is_root(local_abspath, strlen(local_abspath)))
     return SVN_NO_ERROR;
 
-  if (!*wc_root && !switched)
+  if (!*wc_root && switched == NULL )
     return SVN_NO_ERROR; /* No more info needed */
+
+  svn_dirent_split(local_abspath, &parent_abspath, &name, scratch_pool);
 
   /* Check if the node is recorded in the parent */
   {
@@ -5334,12 +5343,11 @@ svn_wc__check_wc_root(svn_boolean_t *wc_root,
 
     err = svn_wc__db_read_children(&children, db, parent_abspath,
                                    scratch_pool, scratch_pool);
-
     if (err)
       {
-        if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND &&
-            err->apr_err != SVN_ERR_WC_NOT_WORKING_COPY &&
-            err->apr_err != SVN_ERR_WC_UPGRADE_REQUIRED)
+        if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND
+            && err->apr_err != SVN_ERR_WC_NOT_WORKING_COPY
+            && err->apr_err != SVN_ERR_WC_UPGRADE_REQUIRED)
           return svn_error_return(err);
 
         svn_error_clear(err);
@@ -5357,36 +5365,31 @@ svn_wc__check_wc_root(svn_boolean_t *wc_root,
 
     if (!found)
       {
+        /* We're not in the (versioned) parent directory's list of
+           children, so we must be the root of a distinct working copy.  */
         return SVN_NO_ERROR;
       }
   }
 
-  if (repos_relpath == NULL)
-    {
-      /* Url is inherited */
-      *wc_root = FALSE;
-      return SVN_NO_ERROR;
-    }
-  else
     {
       const char *parent_repos_root;
       const char *parent_repos_relpath;
       const char *parent_repos_uuid;
 
-      /* ### This returns an SVN_ERR_WC_CORRUPT error when this
-             function is called from log_do_committed() because
-             an added directory, can have status normal children
-             there. */
       SVN_ERR(svn_wc__db_scan_base_repos(&parent_repos_relpath,
                                          &parent_repos_root,
                                          &parent_repos_uuid,
                                          db, parent_abspath,
                                          scratch_pool, scratch_pool));
 
-      if (strcmp(repos_root, parent_repos_root) != 0 ||
-          strcmp(repos_uuid, parent_repos_uuid) != 0)
+      if (strcmp(repos_root, parent_repos_root) != 0
+          || strcmp(repos_uuid, parent_repos_uuid) != 0)
         {
-          return SVN_NO_ERROR; /* Should never occur */
+          /* This should never happen (### until we get mixed-repos working
+             copies). If we're in the parent, then we should be from the
+             same repository. For this situation, just declare us the root
+             of a separate, unswitched working copy.  */
+          return SVN_NO_ERROR;
         }
 
       *wc_root = FALSE;
