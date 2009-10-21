@@ -240,6 +240,34 @@ class SvnBackupOutputBzip2(SvnBackupOutput):
         self.__ofd.write(self.__compressor.flush())
         self.__ofd.close()
 
+class SvnBackupOutputCommand(SvnBackupOutput):
+
+    def __init__(self, abspath, filename, file_extension, cmd_path,
+                 cmd_options):
+        SvnBackupOutput.__init__(self, abspath, filename + file_extension)
+        self.__cmd_path    = cmd_path
+        self.__cmd_options = cmd_options
+ 
+    def open(self):
+        cmd = [ self.__cmd_path, self.__cmd_options ]
+
+        self.__ofd = open(self.get_absfilename(), "wb")
+        try:
+            proc = Popen(cmd, stdin=PIPE, stdout=self.__ofd, shell=False)
+        except:
+            print (256, "", "Popen failed (%s ...):\n  %s" % (cmd[0],
+                    str(sys.exc_info()[1])))
+            sys.exit(256)
+        self.__proc  = proc
+        self.__stdin = proc.stdin
+
+    def write(self, data):
+        self.__stdin.write(data)
+
+    def close(self):
+        self.__stdin.close()
+        rc = self.__proc.wait()
+        self.__ofd.close()
 
 class SvnBackupException(Exception):
 
@@ -288,7 +316,26 @@ class SvnBackup:
         self.__quiet = options.quiet
         self.__deltas = options.deltas
         self.__relative_incremental = options.relative_incremental
-        self.__zip = options.zip
+
+        # check compress option
+        self.__gzip_path  = options.gzip_path
+        self.__bzip2_path = options.bzip2_path
+        self.__zip        = None
+        compress_options  = 0
+        if options.gzip_path  != None:
+            compress_options = compress_options + 1
+        if options.bzip2_path != None:
+            compress_options = compress_options + 1
+        if options.bzip2:
+            compress_options = compress_options + 1
+            self.__zip = "bzip2"
+        if options.gzip:
+            compress_options = compress_options + 1
+            self.__zip = "gzip"
+        if compress_options > 1:
+            raise SvnBackupException("--bzip2-path, --gzip-path, -b, -z are "
+                                     "mutually exclusive.")
+
         self.__overwrite = False
         self.__overwrite_all = False
         if options.overwrite > 0:
@@ -450,7 +497,13 @@ class SvnBackup:
             r += "-%06d" % torev
         filename = "%s.%s.svndmp" % (self.__reposname, r)
         output = None
-        if self.__zip:
+        if self.__bzip2_path:
+             output = SvnBackupOutputCommand(self.__dumpdir, filename, ".bz2",
+                                             self.__bzip2_path, "-cz" )
+        elif self.__gzip_path:
+             output = SvnBackupOutputCommand(self.__dumpdir, filename, ".gz",
+                                             self.__gzip_path, "-cf" )
+        elif self.__zip:
             if self.__zip == "gzip":
                 output = SvnBackupOutputGzip(self.__dumpdir, filename)
             else:
@@ -540,9 +593,9 @@ if __name__ == "__main__":
     parser = OptionParser(usage=usage, version="%prog "+__version)
     if have_bz2:
         parser.add_option("-b",
-                       action="store_const", const="bzip2",
-                       dest="zip", default=None,
-                       help="compress the dump using bzip2.")
+                       action="store_true",
+                       dest="bzip2", default=False,
+                       help="compress the dump using python bzip2 library.")
     parser.add_option("-i",
                        action="store_true",
                        dest="relative_incremental", default=False,
@@ -577,9 +630,17 @@ if __name__ == "__main__":
                        help="transfer dumps to another machine "+
                             "(s.a. --help-transfer).")
     parser.add_option("-z",
-                       action="store_const", const="gzip",
-                       dest="zip",
-                       help="compress the dump using gzip.")
+                       action="store_true",
+                       dest="gzip", default=False,
+                       help="compress the dump using python gzip library.")
+    parser.add_option("--bzip2-path",
+                       action="store", type="string",
+                       dest="bzip2_path", default=None,
+                       help="compress the dump using bzip2 custom command.")
+    parser.add_option("--gzip-path",
+                       action="store", type="string",
+                       dest="gzip_path", default=None,
+                       help="compress the dump using gzip custom command.")
     parser.add_option("--help-transfer",
                        action="store_true",
                        dest="help_transfer", default=False,
