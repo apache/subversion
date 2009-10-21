@@ -824,19 +824,19 @@ directory_elements_diff(struct dir_baton *db)
   for (i = 0; i < children->nelts; i++)
     {
       const char *name = APR_ARRAY_IDX(children, i, const char*);
-      const svn_wc_entry_t *entry;
       struct dir_baton *subdir_baton;
-      const char *child_abpath, *path;
+      const char *child_abspath, *path;
       svn_boolean_t hidden;
+      svn_wc__db_kind_t kind;
 
       svn_pool_clear(iterpool);
 
       if (eb->cancel_func)
         SVN_ERR(eb->cancel_func(eb->cancel_baton));
 
-      child_abpath = svn_dirent_join(db->local_abspath, name, iterpool);
+      child_abspath = svn_dirent_join(db->local_abspath, name, iterpool);
 
-      SVN_ERR(svn_wc__db_node_hidden(&hidden, eb->db, child_abpath, iterpool));
+      SVN_ERR(svn_wc__db_node_hidden(&hidden, eb->db, child_abspath, iterpool));
 
       if (hidden)
         continue;
@@ -850,29 +850,26 @@ directory_elements_diff(struct dir_baton *db)
 
       path = svn_dirent_join(db->path, name, iterpool);
 
-      /* Skip entry if it is in the list of entries already diff'd. */
+      /* Skip this node if it is in the list of nodes already diff'd. */
       if (apr_hash_get(db->compared, path, APR_HASH_KEY_STRING))
         continue;
 
-      SVN_ERR(svn_wc__get_entry(&entry, eb->db, child_abpath, FALSE,
-                                svn_node_unknown, FALSE, iterpool, iterpool));
-
-      switch (entry->kind)
+      SVN_ERR(svn_wc__db_read_kind(&kind, eb->db, child_abspath, TRUE,
+                                   iterpool));
+      switch (kind)
         {
-        case svn_node_file:
+        case svn_wc__db_kind_file:
+        case svn_wc__db_kind_symlink:
           SVN_ERR(file_diff(db, path, iterpool));
           break;
 
-        case svn_node_dir:
-          if (entry->schedule == svn_wc_schedule_replace)
-            {
-              /* ### TODO: Don't know how to do this bit. How do I get
-                 information about what is being replaced? If it was a
-                 directory then the directory elements are also going to be
-                 deleted. We need to show deletion diffs for these
-                 files. If it was a file we need to show a deletion diff
-                 for that file. */
-            }
+        case svn_wc__db_kind_dir:
+          /* ### TODO: Don't know how to do replaced dirs. How do I get
+             information about what is being replaced? If it was a
+             directory then the directory elements are also going to be
+             deleted. We need to show deletion diffs for these
+             files. If it was a file we need to show a deletion diff
+             for that file. */
 
           /* Check the subdir if in the anchor (the subdir is the target), or
              if recursive */
