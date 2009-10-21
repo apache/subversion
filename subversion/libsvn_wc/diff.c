@@ -1165,39 +1165,34 @@ delete_entry(const char *path,
 {
   struct dir_baton *pb = parent_baton;
   struct edit_baton *eb = pb->eb;
-  const svn_wc_entry_t *entry;
   struct dir_baton *db;
   const char *empty_file;
   const char *full_path = svn_dirent_join(eb->anchor_path, path,
                                           pb->pool);
   const char *name = svn_dirent_basename(path, pool);
   const char *local_abspath = svn_dirent_join(pb->local_abspath, name, pool);
+  svn_wc__db_status_t status;
+  svn_wc__db_kind_t kind;
 
-  SVN_ERR(svn_wc__get_entry(&entry, eb->db, local_abspath, TRUE,
-                            svn_node_unknown, FALSE, pool, pool));
-
-  /* So, it turns out that this can be NULL in at least one actual case,
-     if you do a nonrecursive checkout and the diff involves the addition
-     of one of the directories that is not present due to the fact that
-     your checkout is nonrecursive.  There isn't really a good way to be
-     sure though, since nonrecursive checkouts suck, and don't leave any
-     indication in .svn/entries that the directories in question are just
-     missing. */
-  if (! entry)
-    return SVN_NO_ERROR;
-
-  /* Mark this entry as compared in the parent directory's baton. */
+  /* Mark this node as compared in the parent directory's baton. */
   apr_hash_set(pb->compared, full_path, APR_HASH_KEY_STRING, "");
 
-  /* If comparing against WORKING, skip entries that are schedule-deleted
+  SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, eb->db,
+                               local_abspath, pool, pool));
+
+  /* If comparing against WORKING, skip nodes that are deleted
      - they don't really exist. */
-  if (!eb->use_text_base && entry->schedule == svn_wc_schedule_delete)
+  if (!eb->use_text_base && status == svn_wc__db_status_deleted)
     return SVN_NO_ERROR;
 
   SVN_ERR(get_empty_file(pb->eb, &empty_file));
-  switch (entry->kind)
+  switch (kind)
     {
-    case svn_node_file:
+    case svn_wc__db_kind_file:
+    case svn_wc__db_kind_symlink:
       /* A delete is required to change working-copy into requested
          revision, so diff should show this as an add. Thus compare
          the empty file against the current working copy.  If
@@ -1233,7 +1228,7 @@ delete_entry(const char *path,
           SVN_ERR(report_wc_file_as_added(pb, full_path, pool));
         }
       break;
-    case svn_node_dir:
+    case svn_wc__db_kind_dir:
       db = make_dir_baton(full_path, pb, pb->eb, FALSE,
                           svn_depth_infinity, pool);
       /* A delete is required to change working-copy into requested
