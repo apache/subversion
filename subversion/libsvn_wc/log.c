@@ -77,9 +77,6 @@
 /* Delete lock related fields from the entry SVN_WC__LOG_ATTR_NAME. */
 #define SVN_WC__LOG_DELETE_LOCK         "delete-lock"
 
-/* Delete changelist field from the entry SVN_WC__LOG_ATTR_NAME. */
-#define SVN_WC__LOG_DELETE_CHANGELIST   "delete-changelist"
-
 /* Delete the entry SVN_WC__LOG_ATTR_NAME. */
 #define SVN_WC__LOG_DELETE_ENTRY        "delete-entry"
 
@@ -699,24 +696,6 @@ log_do_delete_lock(struct log_runner *loggy,
   return SVN_NO_ERROR;
 }
 
-static svn_error_t *
-log_do_delete_changelist(struct log_runner *loggy,
-                         const char *name)
-{
-  svn_error_t *err;
-
-  err = svn_wc__db_op_set_changelist(loggy->db,
-                                     svn_dirent_join(loggy->adm_abspath, name,
-                                                     loggy->pool),
-                                     NULL,
-                                     loggy->pool);
-  if (err)
-    return svn_error_createf(SVN_ERR_WC_BAD_ADM_LOG, err,
-                             _("Error removing changelist from entry '%s'"),
-                             name);
-
-  return SVN_NO_ERROR;
-}
 
 /* Ben sez:  this log command is (at the moment) only executed by the
    update editor.  It attempts to forcefully remove working data. */
@@ -830,6 +809,11 @@ log_do_committed(struct log_runner *loggy,
   const svn_wc_entry_t *orig_entry;
   svn_boolean_t prop_mods;
   svn_wc_entry_t tmp_entry;
+  /* ### need these next four values (arguments)  */
+  apr_time_t new_date = 0;
+  const char *new_author = NULL;
+  const svn_checksum_t *new_checksum = NULL;
+  svn_boolean_t keep_changelist = FALSE;
 
   /* Determine the actual full path of the affected item. */
   if (! is_this_dir)
@@ -968,10 +952,6 @@ log_do_committed(struct log_runner *loggy,
     {
       svn_boolean_t overwrote_working;
       apr_finfo_t finfo;
-      apr_time_t new_date = 0;
-      const char *new_author = NULL;
-      const svn_checksum_t *new_checksum = NULL;
-      svn_boolean_t keep_changelist = FALSE;
 
       SVN_ERR(svn_wc__db_global_commit(loggy->db, local_abspath,
                                        new_revision, new_date, new_author,
@@ -1077,66 +1057,24 @@ log_do_committed(struct log_runner *loggy,
                                 pool));
     }
 
-  /* Files have been moved, and timestamps have been found.  It is now
-     time for The Big Entry Modification. Here we set fields in the entry
-     to values which we know must be so because it has just been committed. */
-  tmp_entry.revision = new_revision;
-  tmp_entry.kind = is_this_dir ? svn_node_dir : svn_node_file;
-  tmp_entry.schedule = svn_wc_schedule_normal;
-  tmp_entry.copied = FALSE;
-  tmp_entry.deleted = FALSE;
-  tmp_entry.copyfrom_url = NULL;
-  tmp_entry.copyfrom_rev = SVN_INVALID_REVNUM;
-
-  /* We don't reset tree_conflict_data, because it's about conflicts on
-     children, not on this node, and it could conceivably be valid to commit
-     this node non-recursively while children are still in conflict.
-
-     ### CAREFUL: tmp_entry.schedule is an OUT parameter.  */
-  if ((err = svn_wc__entry_modify2(loggy->db, local_abspath,
-                                   svn_node_unknown, FALSE,
-                                   &tmp_entry,
-                                   (SVN_WC__ENTRY_MODIFY_REVISION
-                                    | SVN_WC__ENTRY_MODIFY_KIND
-                                    | SVN_WC__ENTRY_MODIFY_SCHEDULE
-                                    | SVN_WC__ENTRY_MODIFY_COPIED
-                                    | SVN_WC__ENTRY_MODIFY_DELETED
-                                    | SVN_WC__ENTRY_MODIFY_COPYFROM_URL
-                                    | SVN_WC__ENTRY_MODIFY_COPYFROM_REV
-                                    | SVN_WC__ENTRY_MODIFY_FORCE),
-                                   pool)))
-    return svn_error_createf
-      (SVN_ERR_WC_BAD_ADM_LOG, err,
-       _("Error modifying entry of '%s'"), name);
-
-  /* Clear out the conflict stuffs.  */
-  /* ### this isn't transacted with the above modification, but then again,
-     ### this entire function needs some kind of transactional behavior.  */
-  SVN_ERR(svn_wc__db_op_mark_resolved(loggy->db, local_abspath,
-                                      TRUE, TRUE, FALSE,
-                                      pool));
+  SVN_ERR(svn_wc__db_global_commit(loggy->db, local_abspath,
+                                   new_revision, new_date, new_author,
+                                   NULL /* new_checksum */,
+                                   NULL /* new_children */,
+                                   NULL /* new_dav_cache */,
+                                   keep_changelist,
+                                   pool));
 
   /* For directories, we also have to reset the state in the parent's
      entry for this directory, unless the current directory is a `WC
      root' (meaning, our parent directory on disk is not our parent in
      Version Control Land), in which case we're all finished here. */
   {
-    svn_boolean_t is_root, is_switched;
+    svn_boolean_t is_root;
+    svn_boolean_t is_switched;
 
-    err = svn_wc__check_wc_root(&is_root, NULL, &is_switched,
-                                loggy->db, loggy->adm_abspath, pool);
-
-    if (err)
-      {
-        if (err->apr_err != SVN_ERR_WC_CORRUPT)
-          return svn_error_return(err);
-
-        /* ### The parent is  added, but we are committed */
-        svn_error_clear(err);
-        is_root = FALSE;
-        is_switched = FALSE;
-      }
-    
+    SVN_ERR(svn_wc__check_wc_root(&is_root, NULL, &is_switched,
+                                  loggy->db, loggy->adm_abspath, pool));
     if (is_root || is_switched)
       return SVN_NO_ERROR;
   }
@@ -1149,12 +1087,13 @@ log_do_committed(struct log_runner *loggy,
     SVN_ERR(svn_wc__get_entry(&dir_entry, loggy->db, local_abspath,
                               FALSE, svn_node_dir, TRUE, pool, pool));
 
+    tmp_entry.schedule = svn_wc_schedule_normal;
+    tmp_entry.copied = FALSE;
+    tmp_entry.deleted = FALSE;
     /* ### We assume we have the right lock to modify the parent record.
 
            If this fails for you in the transition to one DB phase, please
            run svn cleanup one level higher. */
-    /* ### BE WARY HERE! this uses tmp_entry.schedule, as set by the OUT
-       ### parameter of the above entry_modify2() call. ugh.  */
     err = svn_wc__entry_modify2(loggy->db, local_abspath, svn_node_dir,
                                 TRUE, &tmp_entry,
                                 (SVN_WC__ENTRY_MODIFY_SCHEDULE
@@ -1162,7 +1101,6 @@ log_do_committed(struct log_runner *loggy,
                                  | SVN_WC__ENTRY_MODIFY_DELETED
                                  | SVN_WC__ENTRY_MODIFY_FORCE),
                                 pool);
-
     if (err != NULL)
       return svn_error_createf(SVN_ERR_WC_BAD_ADM_LOG, err,
                                _("Error modifying entry of '%s'"), name);
@@ -1234,9 +1172,6 @@ start_handler(void *userData, const char *eltname, const char **atts)
   }
   else if (strcmp(eltname, SVN_WC__LOG_DELETE_LOCK) == 0) {
     err = log_do_delete_lock(loggy, name);
-  }
-  else if (strcmp(eltname, SVN_WC__LOG_DELETE_CHANGELIST) == 0) {
-    err = log_do_delete_changelist(loggy, name);
   }
   else if (strcmp(eltname, SVN_WC__LOG_DELETE_ENTRY) == 0) {
     err = log_do_delete_entry(loggy, name);
@@ -1550,24 +1485,6 @@ svn_wc__loggy_delete_lock(svn_wc__db_t *db,
                                                scratch_pool));
 }
 
-svn_error_t *
-svn_wc__loggy_delete_changelist(svn_wc__db_t *db,
-                                const char *adm_abspath,
-                                const char *path,
-                                apr_pool_t *scratch_pool)
-{
-  const char *loggy_path1;
-  svn_stringbuf_t *buf = NULL;
-
-  SVN_ERR(loggy_path(&loggy_path1, path, adm_abspath, scratch_pool));
-  svn_xml_make_open_tag(&buf, scratch_pool, svn_xml_self_closing,
-                        SVN_WC__LOG_DELETE_CHANGELIST,
-                        SVN_WC__LOG_ATTR_NAME, loggy_path1,
-                        NULL);
-
-  return svn_error_return(svn_wc__wq_add_loggy(db, adm_abspath, buf,
-                                               scratch_pool));
-}
 
 svn_error_t *
 svn_wc__loggy_entry_modify(svn_stringbuf_t **log_accum,
