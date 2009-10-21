@@ -165,7 +165,7 @@ Candidate changes:
    Notes:
      See the issue for a reproduction script which fails without this fix.
    Votes:
-     +1: stsp
+     +1: stsp, hwright
 
 Approved changes:
 =================
