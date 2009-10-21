@@ -1062,8 +1062,9 @@ report_wc_directory_as_added(struct dir_baton *db,
     {
       const char *name = APR_ARRAY_IDX(children, i, const char *);
       const char *child_abspath, *path;
-      const svn_wc_entry_t *entry;
       svn_boolean_t hidden;
+      svn_wc__db_status_t status;
+      svn_wc__db_kind_t kind;
 
       svn_pool_clear(iterpool);
 
@@ -1078,23 +1079,27 @@ report_wc_directory_as_added(struct dir_baton *db,
       if (hidden)
         continue;
 
-      SVN_ERR(svn_wc__get_entry(&entry, eb->db, child_abspath, FALSE,
-                                svn_node_unknown, FALSE, iterpool, iterpool));
+      SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, eb->db,
+                                   child_abspath, iterpool, iterpool));
 
       /* If comparing against WORKING, skip entries that are
          schedule-deleted - they don't really exist. */
-      if (!eb->use_text_base && entry->schedule == svn_wc_schedule_delete)
+      if (!eb->use_text_base && status == svn_wc__db_status_deleted)
         continue;
 
       path = svn_dirent_join(db->path, name, iterpool);
 
-      switch (entry->kind)
+      switch (kind)
         {
-        case svn_node_file:
+        case svn_wc__db_kind_file:
+        case svn_wc__db_kind_symlink:
           SVN_ERR(report_wc_file_as_added(db, path, iterpool));
           break;
 
-        case svn_node_dir:
+        case svn_wc__db_kind_dir:
           if (db->depth > svn_depth_files || db->depth == svn_depth_unknown)
             {
               svn_depth_t depth_below_here = db->depth;
