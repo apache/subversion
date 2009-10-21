@@ -381,7 +381,6 @@ process_committed_leaf(svn_wc__db_t *db,
   svn_wc_entry_t tmp_entry;
   apr_uint64_t modify_flags = 0;
   svn_stringbuf_t *log_accum = svn_stringbuf_create("", scratch_pool);
-  svn_boolean_t using_ng = FALSE;
 
   SVN_ERR(svn_wc__write_check(db, adm_abspath, scratch_pool));
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, scratch_pool));
@@ -413,10 +412,6 @@ process_committed_leaf(svn_wc__db_t *db,
   /* ### this picks up file and symlink  */
   if (kind != svn_wc__db_kind_dir)
     {
-      /* ### only for files, and anything but deletes.  */
-      using_ng = (status != svn_wc__db_status_deleted
-                  && status != svn_wc__db_status_obstructed_delete);
-
       /* If the props or text revert file exists it needs to be deleted when
        * the file is committed. */
       /* ### don't directories have revert props? */
@@ -505,21 +500,11 @@ process_committed_leaf(svn_wc__db_t *db,
       modify_flags |= SVN_WC__ENTRY_MODIFY_CHECKSUM;
     }
 
-  /* ### the NG stuff is deferred. see below.  */
-  if (modify_flags && !using_ng)
-    SVN_ERR(svn_wc__loggy_entry_modify(&log_accum, adm_abspath,
-                                       path, &tmp_entry, modify_flags,
-                                       scratch_pool, scratch_pool));
-  SVN_WC__FLUSH_LOG_ACCUM(db, adm_abspath, log_accum, scratch_pool);
-
   if (remove_lock)
     SVN_ERR(svn_wc__loggy_delete_lock(db, adm_abspath,
                                       path, scratch_pool));
 
-  /* ### messed up right now. we need to pass this boolean.  */
-  if (remove_changelist && !using_ng)
-    SVN_ERR(svn_wc__loggy_delete_changelist(db, adm_abspath,
-                                            path, scratch_pool));
+  /* ### need to pass REMOVE_CHANGELIST into log_do_committed()  */
 
   /* Regardless of whether it's a file or dir, the "main" logfile
      contains a command to bump the revision attribute (and
@@ -530,7 +515,7 @@ process_committed_leaf(svn_wc__db_t *db,
   SVN_WC__FLUSH_LOG_ACCUM(db, adm_abspath, log_accum, scratch_pool);
 
   /* ### the NG code doesn't set these values. do it now.  */
-  if (modify_flags && using_ng)
+  if (modify_flags)
     SVN_ERR(svn_wc__loggy_entry_modify(&log_accum, adm_abspath,
                                        path, &tmp_entry, modify_flags,
                                        scratch_pool, scratch_pool));
