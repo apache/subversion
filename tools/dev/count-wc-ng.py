@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import os
+import os, sys
 
 SKIP = ['deprecated.c',
         'entries.c',
@@ -37,9 +37,9 @@ def count_terms_in(path):
   return counts
 
 
-def print_report():
-  client = count_terms_in('../../subversion/libsvn_client')
-  wc = count_terms_in('../../subversion/libsvn_wc')
+def print_report(wcroot = os.path.join('..','..')):
+  client = count_terms_in(os.path.join(wcroot, 'subversion', 'libsvn_client'))
+  wc = count_terms_in(os.path.join(wcroot, 'subversion', 'libsvn_wc'))
 
   client_total = 0
   wc_total = 0
@@ -58,4 +58,7 @@ def print_report():
 
 
 if __name__ == '__main__':
-  print_report()
+  if len(sys.argv) > 1:
+    print_report(sys.argv[1])
+  else:
+    print_report()
