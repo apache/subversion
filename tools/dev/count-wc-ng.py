@@ -12,6 +12,7 @@ TERMS = ['svn_wc_adm_access_t',
          'svn_wc__node_',
          'log_accum',
          'svn_wc__wq_add_loggy',
+         'svn_wc__db_temp_',
          ]
 
 
@@ -53,7 +54,7 @@ def print_report():
     client_total += client[term]
     wc_total += wc[term]
   print SEP
-  print FMT % ('', client_total, wc_total, client_total + wc_total)
+  print FMT % ('Total', client_total, wc_total, client_total + wc_total)
 
 
 if __name__ == '__main__':
