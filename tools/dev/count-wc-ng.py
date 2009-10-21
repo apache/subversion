@@ -37,7 +37,7 @@ def count_terms_in(path):
   return counts
 
 
-def print_report(wcroot = os.path.join('..','..')):
+def print_report(wcroot):
   client = count_terms_in(os.path.join(wcroot, 'subversion', 'libsvn_client'))
   wc = count_terms_in(os.path.join(wcroot, 'subversion', 'libsvn_wc'))
 
@@ -61,4 +61,4 @@ if __name__ == '__main__':
   if len(sys.argv) > 1:
     print_report(sys.argv[1])
   else:
-    print_report()
+    print_report(os.path.join('..', '..'))
