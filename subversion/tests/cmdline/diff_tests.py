@@ -1989,7 +1989,7 @@ def diff_schedule_delete(sbox):
   ]
 
   expected_output_r1_base = make_diff_header("foo", "revision 0",
-                                                "revision 1") + [
+                                                "working copy") + [
   "@@ -0,0 +1,2 @@\n",
   "+xxx\n",
   "+yyy\n"
@@ -2222,11 +2222,11 @@ def diff_repos_wc_add_with_props(sbox):
     ]
 
   diff_foo_r1_base = make_diff_header("foo", "revision 0",
-                                              "revision 1") + diff_foo
+                                              "revision 3") + diff_foo
   diff_foo_base_r3 = make_diff_header("foo", "revision 0",
                                              "revision 3") + diff_foo
   diff_X_bar_r1_base = make_diff_header("X/bar", "revision 0",
-                                                 "revision 1") + diff_X_bar
+                                                 "revision 3") + diff_X_bar
   diff_X_bar_base_r3 = make_diff_header("X/bar", "revision 0",
                                                  "revision 3") + diff_X_bar
 
@@ -2310,11 +2310,11 @@ def diff_repos_working_added_dir(sbox):
   sbox.build()
 
   expected_output_r1_BASE = make_diff_header("X/bar", "revision 0",
-                                                "revision 1") + [
+                                                "revision 2") + [
     "@@ -0,0 +1 @@\n",
     "+content\n" ]
   expected_output_r1_WORKING = make_diff_header("X/bar", "revision 0",
-                                                "revision 1") + [
+                                                "revision 2") + [
     "@@ -0,0 +1,2 @@\n",
     "+content\n",
     "+more content\n" ]
