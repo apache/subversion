@@ -939,7 +939,7 @@ report_wc_file_as_added(struct dir_baton *db,
 
   SVN_ERR(get_empty_file(eb, &empty_file));
 
-  SVN_ERR(svn_wc__db_read_info(&status, &revision, NULL, NULL, NULL, NULL,
+  SVN_ERR(svn_wc__db_read_info(&status, NULL, &revision, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, eb->db, local_abspath,
