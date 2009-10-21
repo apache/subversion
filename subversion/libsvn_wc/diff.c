@@ -1442,30 +1442,33 @@ apply_textdelta(void *file_baton,
 {
   struct file_baton *fb = file_baton;
   struct edit_baton *eb = fb->eb;
-  const svn_wc_entry_t *entry;
+  svn_wc__db_status_t status;
   const char *parent, *base_name;
   const char *temp_dir;
   svn_stream_t *source;
   svn_stream_t *temp_stream;
   svn_error_t *err;
 
-  err = svn_wc__get_entry(&entry, eb->db, fb->local_abspath, TRUE,
-                          svn_node_file, FALSE, pool, pool);
-
-  if (err && err->apr_err == SVN_ERR_WC_MISSING)
-    {
-      svn_error_clear(err);
-      entry = NULL;
-    }
+  err = svn_wc__db_read_info(&status, NULL, NULL, NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                             NULL, eb->db, fb->local_abspath, pool, pool);
+  if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+    svn_error_clear(err);
   else
     SVN_ERR(err);
 
+  if (status == svn_wc__db_status_added)
+    SVN_ERR(svn_wc__db_scan_addition(&status, NULL, NULL, NULL, NULL, NULL,
+                                     NULL, NULL, NULL, eb->db,
+                                     fb->local_abspath, pool, pool));
+
   svn_dirent_split(fb->wc_path, &parent, &base_name, fb->pool);
 
-  /* Check to see if there is a schedule-add with history entry in
-     the current working copy.  If so, then this is not actually
-     an add, but instead a modification.*/
-  if (entry && entry->copyfrom_url)
+  /* If the node is added-with-history, then this is not actually
+     an add, but a modification. */
+  if (status == svn_wc__db_status_copied ||
+      status == svn_wc__db_status_moved_here)
     fb->added = FALSE;
 
   if (fb->added)
