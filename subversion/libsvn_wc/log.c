@@ -794,47 +794,31 @@ log_do_delete_entry(struct log_runner *loggy, const char *name)
    the <committed...> commands, the `name' attribute will either be a
    file or SVN_WC_ENTRY_THIS_DIR. */
 static svn_error_t *
-log_do_committed(struct log_runner *loggy,
-                 const char *name,
-                 const char **atts)
+log_do_committed(svn_wc__db_t *db,
+                 const char *local_abspath,
+                 svn_revnum_t new_revision,
+                 apr_time_t new_date,
+                 const char *new_author,
+                 const svn_checksum_t *new_checksum,
+                 svn_boolean_t keep_changelist,
+                 apr_pool_t *scratch_pool)
 {
   svn_error_t *err;
-  apr_pool_t *pool = loggy->pool;
-  int is_this_dir = (strcmp(name, SVN_WC_ENTRY_THIS_DIR) == 0);
-  const char *rev = svn_xml_get_attr_value(SVN_WC__LOG_ATTR_REVISION, atts);
-  svn_revnum_t new_revision;
+  apr_pool_t *pool = scratch_pool;
+  int is_this_dir;
   svn_boolean_t remove_executable = FALSE;
   svn_boolean_t set_read_write = FALSE;
-  const char *local_abspath;
   const svn_wc_entry_t *orig_entry;
   svn_boolean_t prop_mods;
   svn_wc_entry_t tmp_entry;
-  /* ### need these next four values (arguments)  */
-  apr_time_t new_date = 0;
-  const char *new_author = NULL;
-  const svn_checksum_t *new_checksum = NULL;
-  svn_boolean_t keep_changelist = FALSE;
-
-  /* Determine the actual full path of the affected item. */
-  if (! is_this_dir)
-    local_abspath = svn_dirent_join(loggy->adm_abspath, name, pool);
-  else
-    local_abspath = loggy->adm_abspath;
 
   /*** Perform sanity checking operations ***/
-
-  /* If no new post-commit revision was given us, bail with an error. */
-  if (! rev)
-    return svn_error_createf(SVN_ERR_WC_BAD_ADM_LOG, NULL,
-                             _("Missing 'revision' attribute for '%s'"),
-                             name);
-  new_revision = SVN_STR_TO_REV(rev);
 
   /* Read the entry for the affected item.  If we can't find the
      entry, or if the entry states that our item is not either "this
      dir" or a file kind, perhaps this isn't really the entry our log
      creator was expecting.  */
-  SVN_ERR(svn_wc__get_entry(&orig_entry, loggy->db, local_abspath, FALSE,
+  SVN_ERR(svn_wc__get_entry(&orig_entry, db, local_abspath, FALSE,
                             svn_node_unknown, FALSE, pool, pool));
 
   /* We should never be running a commit on a DELETED node, so if we see
@@ -843,13 +827,7 @@ log_do_committed(struct log_runner *loggy,
   if (orig_entry->schedule == svn_wc_schedule_normal && orig_entry->deleted)
     return SVN_NO_ERROR;
 
-  /* We should never be looking at a subdir entry. For a directory, the NAME
-     parameter should always be THIS_DIR. We should always work with the
-     "real" entry.  */
-  if (!is_this_dir && orig_entry->kind != svn_node_file)
-    return svn_error_createf
-      (SVN_ERR_WC_BAD_ADM_LOG, NULL,
-       _("Log command for directory '%s' is mislocated"), name);
+  is_this_dir = orig_entry->kind == svn_node_dir;
 
   /* We shouldn't be in this function for schedule-delete nodes.  */
   SVN_ERR_ASSERT(orig_entry->schedule != svn_wc_schedule_delete);
@@ -877,8 +855,8 @@ log_do_committed(struct log_runner *loggy,
       int i;
       apr_pool_t *iterpool = svn_pool_create(pool);
 
-      SVN_ERR(svn_wc__db_read_children(&children, loggy->db,
-                                       loggy->adm_abspath, pool, pool));
+      SVN_ERR(svn_wc__db_read_children(&children, db, local_abspath,
+                                       pool, pool));
 
       for(i = 0; i < children->nelts; i++)
         {
@@ -889,16 +867,15 @@ log_do_committed(struct log_runner *loggy,
           const svn_wc_entry_t *child_entry;
 
           apr_pool_clear(iterpool);
-          child_abspath = svn_dirent_join(loggy->adm_abspath, child_name,
-                                          iterpool);
+          child_abspath = svn_dirent_join(local_abspath, child_name, iterpool);
 
-          SVN_ERR(svn_wc__db_read_kind(&kind, loggy->db, child_abspath, TRUE,
+          SVN_ERR(svn_wc__db_read_kind(&kind, db, child_abspath, TRUE,
                                        iterpool));
 
           is_file = (kind == svn_wc__db_kind_file ||
                      kind == svn_wc__db_kind_symlink);
 
-          SVN_ERR(svn_wc__get_entry(&child_entry, loggy->db, child_abspath,
+          SVN_ERR(svn_wc__get_entry(&child_entry, db, child_abspath,
                                     FALSE,
                                     is_file ? svn_node_file : svn_node_dir,
                                     !is_file, iterpool, iterpool));
@@ -909,13 +886,13 @@ log_do_committed(struct log_runner *loggy,
           /* ### We pass NULL, NULL for cancel_func and cancel_baton below.
              ### If they were available, it would be nice to use them. */
           SVN_ERR(svn_wc__internal_remove_from_revision_control(
-                                    loggy->db, child_abspath,
+                                    db, child_abspath,
                                     FALSE, FALSE,
                                     NULL, NULL, iterpool));
         }
     }
 
-  SVN_ERR(svn_wc__props_modified(&prop_mods, loggy->db, local_abspath, pool));
+  SVN_ERR(svn_wc__props_modified(&prop_mods, db, local_abspath, pool));
   if (prop_mods)
     {
       if (orig_entry->kind == svn_node_file)
@@ -929,7 +906,7 @@ log_do_committed(struct log_runner *loggy,
           apr_array_header_t *propchanges;
 
 
-          SVN_ERR(svn_wc__internal_propdiff(&propchanges, NULL, loggy->db,
+          SVN_ERR(svn_wc__internal_propdiff(&propchanges, NULL, db,
                                             local_abspath, pool, pool));
           for (i = 0; i < propchanges->nelts; i++)
             {
@@ -945,15 +922,16 @@ log_do_committed(struct log_runner *loggy,
             }
         }
 
-      SVN_ERR(svn_wc__working_props_committed(loggy->db, local_abspath, pool));
+      SVN_ERR(svn_wc__working_props_committed(db, local_abspath, pool));
   }
 
   if (orig_entry->kind == svn_node_file)
     {
       svn_boolean_t overwrote_working;
       apr_finfo_t finfo;
+      const char *name = svn_dirent_basename(local_abspath, scratch_pool);
 
-      SVN_ERR(svn_wc__db_global_commit(loggy->db, local_abspath,
+      SVN_ERR(svn_wc__db_global_commit(db, local_abspath,
                                        new_revision, new_date, new_author,
                                        new_checksum,
                                        NULL /* new_children */,
@@ -971,8 +949,10 @@ log_do_committed(struct log_runner *loggy,
          timestamp of the copy of this file in `tmp/text-base' (which
          by then will have moved to `text-base'. */
 
-      if ((err = install_committed_file(&overwrote_working, loggy->db,
-                                        loggy->adm_abspath, name,
+      if ((err = install_committed_file(&overwrote_working, db,
+                                        svn_dirent_dirname(local_abspath,
+                                                           pool),
+                                        name,
                                         remove_executable, set_read_write,
                                         pool)))
         return svn_error_createf
@@ -1004,7 +984,7 @@ log_do_committed(struct log_runner *loggy,
           /* If the working file was overwritten (due to re-translation)
              or touched (due to +x / -x), then use *that* textual
              timestamp instead. */
-          SVN_ERR(svn_wc__text_base_path(&basef, loggy->db,
+          SVN_ERR(svn_wc__text_base_path(&basef, db,
                                          local_abspath, FALSE, pool));
           err = svn_io_stat(&basef_finfo, basef, APR_FINFO_MIN | APR_FINFO_LINK,
                             pool);
@@ -1031,7 +1011,7 @@ log_do_committed(struct log_runner *loggy,
               if (finfo.mtime != basef_finfo.mtime && ! modified)
                 {
                   err = svn_wc__internal_versioned_file_modcheck(&modified,
-                                                                 loggy->db,
+                                                                 db,
                                                                  local_abspath,
                                                                  base_abspath,
                                                                  FALSE, pool);
@@ -1049,7 +1029,7 @@ log_do_committed(struct log_runner *loggy,
         }
 
       return svn_error_return(svn_wc__entry_modify2(
-                                loggy->db, local_abspath,
+                                db, local_abspath,
                                 svn_node_unknown, FALSE,
                                 &tmp_entry,
                                 SVN_WC__ENTRY_MODIFY_WORKING_SIZE
@@ -1057,7 +1037,7 @@ log_do_committed(struct log_runner *loggy,
                                 pool));
     }
 
-  SVN_ERR(svn_wc__db_global_commit(loggy->db, local_abspath,
+  SVN_ERR(svn_wc__db_global_commit(db, local_abspath,
                                    new_revision, new_date, new_author,
                                    NULL /* new_checksum */,
                                    NULL /* new_children */,
@@ -1074,7 +1054,7 @@ log_do_committed(struct log_runner *loggy,
     svn_boolean_t is_switched;
 
     SVN_ERR(svn_wc__check_wc_root(&is_root, NULL, &is_switched,
-                                  loggy->db, loggy->adm_abspath, pool));
+                                  db, local_abspath, pool));
     if (is_root || is_switched)
       return SVN_NO_ERROR;
   }
@@ -1084,7 +1064,7 @@ log_do_committed(struct log_runner *loggy,
     const svn_wc_entry_t *dir_entry;
 
     /* Check if we have a valid record in our parent */
-    SVN_ERR(svn_wc__get_entry(&dir_entry, loggy->db, local_abspath,
+    SVN_ERR(svn_wc__get_entry(&dir_entry, db, local_abspath,
                               FALSE, svn_node_dir, TRUE, pool, pool));
 
     tmp_entry.schedule = svn_wc_schedule_normal;
@@ -1094,7 +1074,7 @@ log_do_committed(struct log_runner *loggy,
 
            If this fails for you in the transition to one DB phase, please
            run svn cleanup one level higher. */
-    err = svn_wc__entry_modify2(loggy->db, local_abspath, svn_node_dir,
+    err = svn_wc__entry_modify2(db, local_abspath, svn_node_dir,
                                 TRUE, &tmp_entry,
                                 (SVN_WC__ENTRY_MODIFY_SCHEDULE
                                  | SVN_WC__ENTRY_MODIFY_COPIED
@@ -1103,7 +1083,7 @@ log_do_committed(struct log_runner *loggy,
                                 pool);
     if (err != NULL)
       return svn_error_createf(SVN_ERR_WC_BAD_ADM_LOG, err,
-                               _("Error modifying entry of '%s'"), name);
+                               _("Error modifying entry of '%s'"), "");
   }
 
   return SVN_NO_ERROR;
@@ -1177,7 +1157,16 @@ start_handler(void *userData, const char *eltname, const char **atts)
     err = log_do_delete_entry(loggy, name);
   }
   else if (strcmp(eltname, SVN_WC__LOG_COMMITTED) == 0) {
-    err = log_do_committed(loggy, name, atts);
+    const char *rev = svn_xml_get_attr_value(SVN_WC__LOG_ATTR_REVISION, atts);
+    const char *local_abspath;
+
+    if (*name == '\0')
+      local_abspath = loggy->adm_abspath;
+    else
+      local_abspath = svn_dirent_join(loggy->adm_abspath, name, loggy->pool);
+
+    err = log_do_committed(loggy->db, local_abspath, SVN_STR_TO_REV(rev),
+                           0, NULL, NULL, FALSE, loggy->pool);
   }
   else if (strcmp(eltname, SVN_WC__LOG_RM) == 0) {
     err = log_do_rm(loggy, name);
