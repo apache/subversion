@@ -229,7 +229,7 @@ const apr_getopt_option_t svn_cl__options[] =
   {"diff3-cmd",     opt_merge_cmd, 1, N_("use ARG as merge command")},
   {"editor-cmd",    opt_editor_cmd, 1, N_("use ARG as external editor")},
   {"record-only",   opt_record_only, 0,
-                    N_("mark revisions as merged (use with -r)")},
+                    N_("merge only mergeinfo differences")},
   {"old",           opt_old_cmd, 1, N_("use ARG as the older target")},
   {"new",           opt_new_cmd, 1, N_("use ARG as the newer target")},
   {"revprop",       opt_revprop, 0,
