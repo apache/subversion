@@ -1762,8 +1762,7 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
       svn_boolean_t modified;
 
       /* Check for prop changes. */
-      SVN_ERR(svn_wc_props_modified_p(&modified, fullpath, adm_access,
-                                      pool));
+      SVN_ERR(svn_wc__props_modified(&modified, db, local_abspath, pool));
       if (modified)
         {
           apr_array_header_t *propchanges;
@@ -1877,9 +1876,9 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
 
           if (! reinstall_working)
             {
-              SVN_ERR(svn_wc__text_modified_internal_p
-                      (&reinstall_working, fullpath, FALSE,
-                       adm_access, FALSE, pool));
+              SVN_ERR(svn_wc__text_modified_internal_p(&reinstall_working,
+                                                       db, local_abspath,
+                                                       FALSE, FALSE, pool));
             }
 
           if (reinstall_working)
@@ -2234,8 +2233,8 @@ revert_internal(svn_wc__db_t *db,
   /* Safeguard 1: the item must be versioned for any reversion to make sense,
      except that a tree conflict can exist on an unversioned item. */
   SVN_ERR(svn_wc_entry(&entry, path, dir_access, FALSE, pool));
-  SVN_ERR(svn_wc__internal_get_tree_conflict(&tree_conflict, local_abspath, db,
-                                             pool, pool));
+  SVN_ERR(svn_wc__db_op_get_tree_conflict(&tree_conflict, db, local_abspath,
+                                          pool, pool));
   if (entry == NULL && tree_conflict == NULL)
     return svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
                              _("Cannot revert unversioned item '%s'"), path);
@@ -2287,11 +2286,12 @@ revert_internal(svn_wc__db_t *db,
 
       /* Clear any tree conflict on the path, even if it is not a versioned
          resource. */
-      SVN_ERR(svn_wc__internal_get_tree_conflict(&conflict, local_abspath, db,
-                                                 pool, pool));
+      SVN_ERR(svn_wc__db_op_get_tree_conflict(&conflict, db, local_abspath,
+                                               pool, pool));
       if (conflict)
         {
-          SVN_ERR(svn_wc__del_tree_conflict(path, parent_access, pool));
+          SVN_ERR(svn_wc__db_op_set_tree_conflict(db, local_abspath, NULL,
+                                                  pool));
           reverted = TRUE;
         }
 
@@ -2489,8 +2489,9 @@ svn_wc_remove_from_revision_control(svn_wc_adm_access_t *adm_access,
       if (wc_special || ! local_special)
         {
           /* Check for local mods. before removing entry */
-          SVN_ERR(svn_wc_text_modified_p(&text_modified_p, full_path,
-                  FALSE, adm_access, pool));
+          SVN_ERR(svn_wc__text_modified_internal_p(&text_modified_p, db,
+                                                   local_abspath, FALSE,
+                                                   TRUE, pool));
           if (text_modified_p && instant_error)
             return svn_error_createf(SVN_ERR_WC_LEFT_LOCAL_MOD, NULL,
                    _("File '%s' has local modifications"),
@@ -2999,13 +3000,14 @@ resolve_found_entry_callback(const char *path,
       SVN_ERR(svn_wc_adm_probe_retrieve(&parent_adm_access, baton->adm_access,
                                         conflict_dir, pool));
 
-      SVN_ERR(svn_wc__internal_get_tree_conflict(&conflict, local_abspath,
-                                                 baton->db, pool, pool));
+      SVN_ERR(svn_wc__db_op_get_tree_conflict(&conflict, baton->db,
+                                              local_abspath, pool, pool));
       if (conflict)
         {
           svn_error_t *err;
 
-          SVN_ERR(svn_wc__del_tree_conflict(path, parent_adm_access, pool));
+          SVN_ERR(svn_wc__db_op_set_tree_conflict(baton->db, local_abspath,
+                                                  NULL, pool));
 
           /* Sanity check:  see if libsvn_wc *still* thinks this item is in a
              state of conflict that we have asked to resolve. If so,

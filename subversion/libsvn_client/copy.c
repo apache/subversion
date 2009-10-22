@@ -1288,7 +1288,7 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
                                     pool));
 
   /* Perform the commit. */
-  SVN_ERR_W(svn_client__do_commit(top_dst_url, commit_items, adm_access,
+  SVN_ERR_W(svn_client__do_commit(top_dst_url, commit_items,
                                   editor, edit_baton,
                                   0, /* ### any notify_path_offset needed? */
                                   NULL, NULL, ctx, pool),

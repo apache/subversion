@@ -40,6 +40,8 @@
 #include "svn_time.h"
 #include "client.h"
 
+#include "private/svn_wc_private.h"
+
 #include "svn_private_config.h"
 
 
@@ -181,9 +183,9 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
         }
 
       /* Get PATH's entry. */
-      SVN_ERR(svn_wc_adm_open3(&adm_access, NULL, path,
-                               FALSE, 0, ctx->cancel_func,
-                               ctx->cancel_baton, pool));
+      SVN_ERR(svn_wc__adm_open_in_context(&adm_access, ctx->wc_ctx, path,
+                                          FALSE, 0, ctx->cancel_func,
+                                          ctx->cancel_baton, pool));
       SVN_ERR(svn_wc_entry(&entry, path, adm_access, FALSE, pool));
       SVN_ERR(svn_wc_adm_close2(adm_access, pool));
 

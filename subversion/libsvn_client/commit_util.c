@@ -127,15 +127,12 @@ add_committable(apr_hash_t *committables,
 static svn_error_t *
 check_prop_mods(svn_boolean_t *props_changed,
                 svn_boolean_t *eol_prop_changed,
-                const char *path,
+                const char *local_abspath,
                 svn_wc_context_t *wc_ctx,
                 apr_pool_t *pool)
 {
   apr_array_header_t *prop_mods;
-  const char *local_abspath;
   int i;
-
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
   *eol_prop_changed = *props_changed = FALSE;
   SVN_ERR(svn_wc_get_prop_diffs2(&prop_mods, NULL, wc_ctx, local_abspath,
@@ -321,10 +318,10 @@ bail_on_tree_conflicted_ancestor(svn_wc_context_t *wc_ctx,
 
   while(1)
     {
-      svn_wc__strictly_is_wc_root(&wc_root,
-                                  wc_ctx,
-                                  local_abspath,
-                                  scratch_pool);
+      SVN_ERR(svn_wc__strictly_is_wc_root(&wc_root,
+                                          wc_ctx,
+                                          local_abspath,
+                                          scratch_pool));
 
       if (wc_root)
         break;
@@ -332,9 +329,8 @@ bail_on_tree_conflicted_ancestor(svn_wc_context_t *wc_ctx,
       /* Check the parent directory's entry for tree-conflicts
        * on PATH. */
       parent_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
-      svn_wc_conflicted_p3(NULL, NULL, &tree_conflicted,
-                           wc_ctx, parent_abspath, scratch_pool);
-
+      SVN_ERR(svn_wc_conflicted_p3(NULL, NULL, &tree_conflicted,
+                                   wc_ctx, parent_abspath, scratch_pool));
       if (tree_conflicted)
         return svn_error_createf(
                  SVN_ERR_WC_FOUND_CONFLICT, NULL,
@@ -611,7 +607,7 @@ harvest_committables(apr_hash_t *committables,
         }
 
       /* See if there are property modifications to send. */
-      SVN_ERR(check_prop_mods(&prop_mod, &eol_prop_changed, path,
+      SVN_ERR(check_prop_mods(&prop_mod, &eol_prop_changed, local_abspath,
                               ctx->wc_ctx, scratch_pool));
 
       /* Regular adds of files have text mods, but for copies we have
@@ -625,9 +621,9 @@ harvest_committables(apr_hash_t *committables,
              prop was changed, we might have to send new text to the
              server to match the new newline style.  */
           if (state_flags & SVN_CLIENT_COMMIT_ITEM_IS_COPY)
-            SVN_ERR(svn_wc_text_modified_p(&text_mod, path,
-                                           eol_prop_changed,
-                                           adm_access, scratch_pool));
+            SVN_ERR(svn_wc_text_modified_p2(&text_mod, ctx->wc_ctx,
+                                            local_abspath, eol_prop_changed,
+                                            scratch_pool));
           else
             text_mod = TRUE;
         }
@@ -641,7 +637,7 @@ harvest_committables(apr_hash_t *committables,
       svn_boolean_t eol_prop_changed;
 
       /* See if there are property modifications to send. */
-      SVN_ERR(check_prop_mods(&prop_mod, &eol_prop_changed, path,
+      SVN_ERR(check_prop_mods(&prop_mod, &eol_prop_changed, local_abspath,
                               ctx->wc_ctx, scratch_pool));
 
       /* Check for text mods on files.  If EOL_PROP_CHANGED is TRUE,
@@ -651,8 +647,8 @@ harvest_committables(apr_hash_t *committables,
          changed, we might have to send new text to the server to
          match the new newline style.  */
       if (entry->kind == svn_node_file)
-        SVN_ERR(svn_wc_text_modified_p(&text_mod, path, eol_prop_changed,
-                                       adm_access, scratch_pool));
+        SVN_ERR(svn_wc_text_modified_p2(&text_mod, ctx->wc_ctx, local_abspath,
+                                        eol_prop_changed, scratch_pool));
     }
 
   /* Set text/prop modification flags accordingly. */
@@ -989,9 +985,10 @@ svn_client__harvest_committables(apr_hash_t **committables,
           if (err && err->apr_err == SVN_ERR_WC_NOT_LOCKED)
             {
               svn_error_clear(err);
-              SVN_ERR(svn_wc_adm_open3(&parent_access, NULL, parent,
-                                       FALSE, 0, ctx->cancel_func,
-                                       ctx->cancel_baton, subpool));
+              SVN_ERR(svn_wc__adm_open_in_context(&parent_access, ctx->wc_ctx,
+                                                  parent, FALSE, 0,
+                                                  ctx->cancel_func,
+                                                  ctx->cancel_baton, subpool));
             }
           else if (err)
             {
@@ -1274,16 +1271,23 @@ do_item_commit(void **dir_baton,
   void *file_baton = NULL;
   const char *copyfrom_url = NULL;
   apr_pool_t *file_pool = NULL;
-  svn_wc_adm_access_t *adm_access = cb_baton->adm_access;
   const svn_delta_editor_t *editor = cb_baton->editor;
   apr_hash_t *file_mods = cb_baton->file_mods;
   svn_client_ctx_t *ctx = cb_baton->ctx;
   svn_error_t *err = SVN_NO_ERROR;
+  const char *local_abspath = NULL;
 
   /* Do some initializations. */
   *dir_baton = NULL;
   if (item->copyfrom_url)
     copyfrom_url = item->copyfrom_url;
+  if (item->kind != svn_node_none && item->path)
+    {
+      /* We might not always get a local_abspath.
+       * The item might not exist on disk e.g. if the item is a parent
+       * directory being added as part of a WC->URL copy with cp --parents. */
+      SVN_ERR(svn_dirent_get_absolute(&local_abspath, item->path, pool));
+    }
 
   /* If this is a file with textual mods, we'll be keeping its baton
      around until the end of the commit.  So just lump its memory into
@@ -1315,8 +1319,8 @@ do_item_commit(void **dir_baton,
     }
 
   /* If a feedback table was supplied by the application layer,
-     describe what we're about to do to this item.  */
-  if (ctx->notify_func2)
+     describe what we're about to do to this item. */
+  if (ctx->notify_func2 && item->path)
     {
       const char *npath = item->path;
       svn_wc_notify_t *notify;
@@ -1342,10 +1346,7 @@ do_item_commit(void **dir_baton,
           if (item->kind == svn_node_file)
             {
               const svn_string_t *propval;
-              const char *local_abspath;
 
-              SVN_ERR(svn_dirent_get_absolute(&local_abspath, item->path,
-                                              pool));
               SVN_ERR(svn_wc_prop_get2(&propval, ctx->wc_ctx, local_abspath,
                                        SVN_PROP_MIME_TYPE, pool, pool));
             
@@ -1400,7 +1401,7 @@ do_item_commit(void **dir_baton,
                    copyfrom_url ? item->copyfrom_rev : SVN_INVALID_REVNUM,
                    file_pool, &file_baton));
         }
-      else
+      else /* May be svn_node_none when adding parent dirs for a copy. */
         {
           SVN_ERR_ASSERT(parent_baton);
           SVN_ERR(editor->add_directory
@@ -1435,8 +1436,6 @@ do_item_commit(void **dir_baton,
   /* Now handle property mods. */
   if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_PROP_MODS)
     {
-      const svn_wc_entry_t *tmp_entry;
-
       if (kind == svn_node_file)
         {
           if (! file_baton)
@@ -1469,26 +1468,20 @@ do_item_commit(void **dir_baton,
             }
         }
 
-      /* Ensured by harvest_committables(), item->path will never be an
-         excluded path. However, will it be deleted/absent items?  I think
-         committing an modification on a deleted/absent item does not make
-         sense. So it's probably safe to turn off the show_hidden flag here.*/
-      SVN_ERR(svn_wc_entry(&tmp_entry, item->path, adm_access, FALSE, pool));
-
       /* When committing a directory that no longer exists in the
          repository, a "not found" error does not occur immediately
          upon opening the directory.  It appears here during the delta
          transmisssion. */
-      err = svn_wc_transmit_prop_deltas
-        (item->path, adm_access, tmp_entry, editor,
-         (kind == svn_node_dir) ? *dir_baton : file_baton, NULL, pool);
+      err = svn_wc_transmit_prop_deltas2(
+              ctx->wc_ctx, local_abspath, editor,
+              (kind == svn_node_dir) ? *dir_baton : file_baton, pool);
 
       if (err)
         return fixup_out_of_date_error(path, kind, err);
 
-      SVN_ERR(svn_wc_transmit_prop_deltas
-              (item->path, adm_access, tmp_entry, editor,
-               (kind == svn_node_dir) ? *dir_baton : file_baton, NULL, pool));
+      SVN_ERR(svn_wc_transmit_prop_deltas2(
+                ctx->wc_ctx, local_abspath, editor,
+                (kind == svn_node_dir) ? *dir_baton : file_baton, pool));
 
       /* Make any additional client -> repository prop changes. */
       if (item->outgoing_prop_changes)
@@ -1562,7 +1555,6 @@ static svn_error_t *get_test_editor(const svn_delta_editor_t **editor,
 svn_error_t *
 svn_client__do_commit(const char *base_url,
                       apr_array_header_t *commit_items,
-                      svn_wc_adm_access_t *adm_access,
                       const svn_delta_editor_t *editor,
                       void *edit_baton,
                       const char *notify_path_prefix,
@@ -1610,7 +1602,6 @@ svn_client__do_commit(const char *base_url,
     }
 
   /* Setup the callback baton. */
-  cb_baton.adm_access = adm_access;
   cb_baton.editor = editor;
   cb_baton.edit_baton = edit_baton;
   cb_baton.file_mods = file_mods;
@@ -1628,16 +1619,17 @@ svn_client__do_commit(const char *base_url,
       struct file_mod_t *mod = svn_apr_hash_index_val(hi);
       svn_client_commit_item3_t *item;
       void *file_baton;
-      const char *tempfile, *dir_path;
+      const char *tempfile;
       unsigned char digest[APR_MD5_DIGESTSIZE];
       svn_boolean_t fulltext = FALSE;
-      svn_wc_adm_access_t *item_access;
+      const char *item_abspath;
 
       svn_pool_clear(iterpool);
 
       /* Transmit the entry. */
       item = mod->item;
       file_baton = mod->file_baton;
+      SVN_ERR(svn_dirent_get_absolute(&item_abspath, item->path, iterpool));
 
       if (ctx->cancel_func)
         SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
@@ -1656,13 +1648,10 @@ svn_client__do_commit(const char *base_url,
       if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_ADD)
         fulltext = TRUE;
 
-      dir_path = svn_dirent_dirname(item->path, iterpool);
-      SVN_ERR(svn_wc_adm_retrieve(&item_access, adm_access, dir_path,
-                                  iterpool));
-      SVN_ERR(svn_wc_transmit_text_deltas2(tempfiles ? &tempfile : NULL,
-                                           digest, item->path,
-                                           item_access, fulltext, editor,
-                                           file_baton, iterpool));
+      SVN_ERR(svn_wc_transmit_text_deltas3(tempfiles ? &tempfile : NULL,
+                                           digest, ctx->wc_ctx, item_abspath,
+                                           fulltext, editor, file_baton,
+                                           iterpool, iterpool));
       if (tempfiles && tempfile)
         {
           tempfile = apr_pstrdup(pool, tempfile);

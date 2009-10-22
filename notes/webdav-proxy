@@ -83,5 +83,7 @@ Issues/Thoughts:
 - Remove the location_filter for the header.  I believe mod_proxy does this
   for us already.  We may just be duplicating things.  We will still have
   to rewrite the bodies of the requests/responses though.
+  Apache-2.2.11's mod_proxy does no such Location Header fixing may be
+  the Later versions could.
 - Determine a better way to handle the MERGE call.  It's the only operation
   that doesn't occur on the activity URL.

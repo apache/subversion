@@ -424,9 +424,12 @@ output_unified_token_range(output_baton_t *btn,
 }
 
 /* Flush the hunk currently built up in BATON
-   into the baton's output_stream */
+   into the BATON's output_stream.
+   Use the specified HUNK_DELIMITER.
+   If HUNK_DELIMITER is NULL, fall back to the default delimiter. */
 static svn_error_t *
-output_unified_flush_hunk(output_baton_t *baton)
+output_unified_flush_hunk(output_baton_t *baton,
+                          const char *hunk_delimiter)
 {
   apr_off_t target_token;
   apr_size_t hunk_len;
@@ -442,33 +445,48 @@ output_unified_flush_hunk(output_baton_t *baton)
   SVN_ERR(output_unified_token_range(baton, 0 /*original*/,
                                      unified_output_context,
                                      baton->next_token, target_token));
+  if (hunk_delimiter == NULL)
+    hunk_delimiter = "@@";
 
   /* Write the hunk header */
   if (baton->hunk_length[0] > 0)
     /* Convert our 0-based line numbers into unidiff 1-based numbers */
     baton->hunk_start[0]++;
-  SVN_ERR(svn_stream_printf_from_utf8
-          (baton->output_stream, baton->header_encoding,
-           baton->pool,
-           /* Hunk length 1 is implied, don't show the
-              length field if we have a hunk that long */
-           (baton->hunk_length[0] == 1)
-           ? ("@@ -%" APR_OFF_T_FMT)
-           : ("@@ -%" APR_OFF_T_FMT ",%" APR_OFF_T_FMT),
-           baton->hunk_start[0], baton->hunk_length[0]));
+  SVN_ERR(svn_stream_printf_from_utf8(
+            baton->output_stream, baton->header_encoding,
+            baton->pool,
+            /* Hunk length 1 is implied, don't show the
+               length field if we have a hunk that long */
+            (baton->hunk_length[0] == 1)
+            ? ("%s -%" APR_OFF_T_FMT)
+            : ("%s -%" APR_OFF_T_FMT ",%" APR_OFF_T_FMT),
+            hunk_delimiter,
+            baton->hunk_start[0], baton->hunk_length[0]));
 
   if (baton->hunk_length[1] > 0)
     /* Convert our 0-based line numbers into unidiff 1-based numbers */
     baton->hunk_start[1]++;
-  SVN_ERR(svn_stream_printf_from_utf8
-          (baton->output_stream, baton->header_encoding,
-           baton->pool,
-           /* Hunk length 1 is implied, don't show the
-              length field if we have a hunk that long */
-           (baton->hunk_length[1] == 1)
-           ? (" +%" APR_OFF_T_FMT " @@" APR_EOL_STR)
-           : (" +%" APR_OFF_T_FMT ",%" APR_OFF_T_FMT " @@" APR_EOL_STR),
-           baton->hunk_start[1], baton->hunk_length[1]));
+
+
+  /* Hunk length 1 is implied, don't show the
+     length field if we have a hunk that long */
+  if (baton->hunk_length[1] == 1)
+    {
+      SVN_ERR(svn_stream_printf_from_utf8(
+                baton->output_stream, baton->header_encoding,
+                baton->pool,
+                " +%" APR_OFF_T_FMT " %s" APR_EOL_STR,
+                baton->hunk_start[1], hunk_delimiter));
+    }
+  else
+    {
+      SVN_ERR(svn_stream_printf_from_utf8(
+                baton->output_stream, baton->header_encoding,
+                baton->pool,
+                " +%" APR_OFF_T_FMT ",%" APR_OFF_T_FMT " %s" APR_EOL_STR,
+                baton->hunk_start[1], baton->hunk_length[1],
+                hunk_delimiter));
+    }
 
   hunk_len = baton->hunk->len;
   SVN_ERR(svn_stream_write(baton->output_stream,
@@ -498,7 +516,7 @@ output_unified_diff_modified(void *baton,
   targ_mod = modified_start;
 
   if (btn->next_token + SVN_DIFF__UNIFIED_CONTEXT_SIZE < targ_orig)
-    SVN_ERR(output_unified_flush_hunk(btn));
+    SVN_ERR(output_unified_flush_hunk(btn, NULL));
 
   if (btn->hunk_length[0] == 0
       && btn->hunk_length[1] == 0)
@@ -530,14 +548,16 @@ static const svn_diff_output_fns_t mem_output_unified_vtable =
 
 
 svn_error_t *
-svn_diff_mem_string_output_unified(svn_stream_t *output_stream,
-                                   svn_diff_t *diff,
-                                   const char *original_header,
-                                   const char *modified_header,
-                                   const char *header_encoding,
-                                   const svn_string_t *original,
-                                   const svn_string_t *modified,
-                                   apr_pool_t *pool)
+svn_diff_mem_string_output_unified2(svn_stream_t *output_stream,
+                                    svn_diff_t *diff,
+                                    svn_boolean_t with_diff_header,
+                                    const char *hunk_delimiter,
+                                    const char *original_header,
+                                    const char *modified_header,
+                                    const char *header_encoding,
+                                    const svn_string_t *original,
+                                    const svn_string_t *modified,
+                                    apr_pool_t *pool)
 {
 
   if (svn_diff_contains_diffs(diff))
@@ -563,19 +583,47 @@ svn_diff_mem_string_output_unified(svn_stream_t *output_stream,
       fill_source_tokens(&baton.sources[0], original, pool);
       fill_source_tokens(&baton.sources[1], modified, pool);
 
-      SVN_ERR(svn_stream_printf_from_utf8
-              (output_stream, header_encoding, pool,
-               "--- %s" APR_EOL_STR
-               "+++ %s" APR_EOL_STR,
-               original_header, modified_header));
+      if (with_diff_header)
+        {
+          SVN_ERR(svn_stream_printf_from_utf8(output_stream,
+                                              header_encoding, pool,
+                                              "--- %s" APR_EOL_STR
+                                              "+++ %s" APR_EOL_STR,
+                                              original_header,
+                                              modified_header));
+        }
 
       SVN_ERR(svn_diff_output(diff, &baton,
                               &mem_output_unified_vtable));
-      SVN_ERR(output_unified_flush_hunk(&baton));
+
+      SVN_ERR(output_unified_flush_hunk(&baton, hunk_delimiter));
 
       svn_pool_destroy(baton.pool);
     }
 
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_diff_mem_string_output_unified(svn_stream_t *output_stream,
+                                   svn_diff_t *diff,
+                                   const char *original_header,
+                                   const char *modified_header,
+                                   const char *header_encoding,
+                                   const svn_string_t *original,
+                                   const svn_string_t *modified,
+                                   apr_pool_t *pool)
+{
+  SVN_ERR(svn_diff_mem_string_output_unified2(output_stream,
+                                              diff,
+                                              TRUE,
+                                              NULL,
+                                              original_header,
+                                              modified_header,
+                                              header_encoding,
+                                              original,
+                                              modified,
+                                              pool));
   return SVN_NO_ERROR;
 }
 

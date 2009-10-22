@@ -197,10 +197,10 @@ svn_client_cat2(svn_stream_t *out,
     {
       svn_wc_adm_access_t *adm_access;
 
-      SVN_ERR(svn_wc_adm_open3(&adm_access, NULL,
-                               svn_dirent_dirname(path_or_url, pool),
-                               FALSE, 0, ctx->cancel_func, ctx->cancel_baton,
-                               pool));
+      SVN_ERR(svn_wc__adm_open_in_context(&adm_access, ctx->wc_ctx,
+                                          svn_dirent_dirname(path_or_url, pool),
+                                          FALSE, 0, ctx->cancel_func,
+                                          ctx->cancel_baton, pool));
 
       SVN_ERR(cat_local_file(path_or_url, out, adm_access, revision,
                              ctx->cancel_func, ctx->cancel_baton, ctx->wc_ctx,

@@ -239,7 +239,11 @@ typedef struct svn_wc_adm_access_t svn_wc_adm_access_t;
  * the root of the hierarchy.
  *
  * @since New in 1.2.
+ * @deprecated Provided for backward compatibility with the 1.6 API.
+ *    Callers should use a @c svn_wc_context_t object to access the working
+ *    copy.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_adm_open3(svn_wc_adm_access_t **adm_access,
                  svn_wc_adm_access_t *associated,
@@ -292,7 +296,11 @@ svn_wc_adm_open(svn_wc_adm_access_t **adm_access,
  * not to @a path's parent.
  *
  * @since New in 1.2.
+ * @deprecated Provided for backward compatibility with the 1.6 API.
+ *    Callers should use a @c svn_wc_context_t object to access the working
+ *    copy.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_adm_probe_open3(svn_wc_adm_access_t **adm_access,
                        svn_wc_adm_access_t *associated,
@@ -354,7 +362,11 @@ svn_wc_adm_probe_open(svn_wc_adm_access_t **adm_access,
  * svn_wc_get_actual_target(), with the emphasis on reducing physical IO.
  *
  * @since New in 1.2.
+ * @deprecated Provided for backward compatibility with the 1.6 API.
+ *    Callers should use a @c svn_wc_context_t object to access the working
+ *    copy.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_adm_open_anchor(svn_wc_adm_access_t **anchor_access,
                        svn_wc_adm_access_t **target_access,
@@ -2261,10 +2273,9 @@ svn_wc_has_binary_prop(svn_boolean_t *has_binary_prop,
 
 /* Detecting modification. */
 
-/** Set @a *modified_p to non-zero if @a filename's text is modified
+/** Set @a *modified_p to non-zero if @a local_abspath's text is modified
  * with regard to the base revision, else set @a *modified_p to zero.
- * @a filename is a path to the file, not just a basename. @a adm_access
- * must be an access baton for @a filename.
+ * @a local_abspath is the absolute path to the file.
  *
  * If @a force_comparison is @c TRUE, this function will not allow
  * early return mechanisms that avoid actual content comparison.
@@ -2273,14 +2284,25 @@ svn_wc_has_binary_prop(svn_boolean_t *has_binary_prop,
  * that if the text base is much longer than the working file, every
  * byte of the text base will still be examined.)
  *
- * If @a filename does not exist, consider it unmodified.  If it exists
+ * If @a local_abspath does not exist, consider it unmodified.  If it exists
  * but is not under revision control (not even scheduled for
  * addition), return the error @c SVN_ERR_ENTRY_NOT_FOUND.
  *
- * If @a filename is unmodified but has a timestamp variation then this
- * function may "repair" @a filename's text-time by setting it to
- * @a filename's last modification time.
+ * @since New in 1.7.
  */
+svn_error_t *
+svn_wc_text_modified_p2(svn_boolean_t *modified_p,
+                        svn_wc_context_t *wc_ctx,
+                        const char *local_abspath,
+                        svn_boolean_t force_comparison,
+                        apr_pool_t *scratch_pool);
+
+/** Similar to svn_wc_text_modified_p2(), but with a relative path and
+ * adm_access baton?
+ *
+ * @deprecated Provided for backward compatibility with the 1.6 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_text_modified_p(svn_boolean_t *modified_p,
                        const char *filename,
@@ -5872,9 +5894,9 @@ svn_wc_translated_file(const char **xlated_p,
                        apr_pool_t *pool);
 
 
-/** Returns a @a stream allocated in @a pool with access to the given
- * @a path taking the file properties from @a versioned_file using
- * @a adm_access.
+/** Returns a @a stream allocated in @a result_pool with access to the given
+ * @a local_abspath taking the file properties from @a versioned_abspath
+ * using @a wc_ctx.
  *
  * When translation from normal form is requested
  * (@c SVN_WC_TRANSLATE_FROM_NF is specified in @a flags), @a path
@@ -5886,8 +5908,26 @@ svn_wc_translated_file(const char **xlated_p,
  * The @a flags are the same constants as those used for
  * svn_wc_translated_file().
  *
- * @since New in 1.5.
+ * Use @a scratch_pool for temporary allocations.
+ *
+ * @since New in 1.7.
  */
+svn_error_t *
+svn_wc_translated_stream2(svn_stream_t **stream,
+                          svn_wc_context_t *wc_ctx,
+                          const char *local_abspath,
+                          const char *versioned_abspath,
+                          apr_uint32_t flags,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool);
+
+/** Similar to svn_wc_translated_stream2(), but with an adm_access baton
+ * and relative paths instead of a wc_context and absolute paths.
+ *
+ * @since New in 1.5.
+ * @deprecated Provided for compatibility with the 1.6 API
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_translated_stream(svn_stream_t **stream,
                          const char *path,
@@ -5900,33 +5940,50 @@ svn_wc_translated_stream(svn_stream_t **stream,
 /* Text/Prop Deltas Using an Editor */
 
 
-/** Send the local modifications for versioned file @a path (with
+/** Send the local modifications for versioned file @a local_abspath (with
  * matching @a file_baton) through @a editor, then close @a file_baton
- * afterwards.  Use @a pool for any temporary allocation and
- * @a adm_access as an access baton for @a path.
+ * afterwards.  Use @a scratch_pool for any temporary allocation.
  *
- * This process creates a copy of @a path with keywords and eol
+ * This process creates a copy of @a local_abspath with keywords and eol
  * untranslated.  If @a tempfile is non-NULL, set @a *tempfile to the
- * path to this copy.  Do not clean up the copy; caller can do that.
- * If @a digest is non-NULL, put the MD5 checksum of the
- * temporary file into @a digest, which must point to @c APR_MD5_DIGESTSIZE
- * bytes of storage.  (The purpose of handing back the tmp copy is that
- * it is usually about to become the new text base anyway, but the
- * installation of the new text base is outside the scope of this
+ * absolute path to this copy, allocated in @a result_pool.  Do not clean
+ * up the copy; caller can do that.  If @a digest is non-NULL, put the MD5
+ * checksum of the temporary file into @a digest, which must point to @c
+ * APR_MD5_DIGESTSIZE bytes of storage.  (The purpose of handing back the
+ * tmp copy is that it is usually about to become the new text base anyway,
+ * but the installation of the new text base is outside the scope of this
  * function.)
  *
- * If @a fulltext, send the untranslated copy of @a path through @a editor
- * as full-text; else send it as svndiff against the current text base.
+ * If @a fulltext, send the untranslated copy of @a local_abspath through
+ * @a editor as full-text; else send it as svndiff against the current text
+ * base.
  *
- * If sending a diff, and the recorded checksum for @a path's text-base
- * does not match the current actual checksum, then remove the tmp
+ * If sending a diff, and the recorded checksum for @a local_abspath's
+ * text-base does not match the current actual checksum, then remove the tmp
  * copy (and set @a *tempfile to NULL if appropriate), and return the
  * error @c SVN_ERR_WC_CORRUPT_TEXT_BASE.
  *
  * @note This is intended for use with both infix and postfix
  * text-delta styled editor drivers.
  *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_wc_transmit_text_deltas3(const char **tempfile,
+                             unsigned char digest[],
+                             svn_wc_context_t *wc_ctx,
+                             const char *local_path,
+                             svn_boolean_t fulltext,
+                             const svn_delta_editor_t *editor,
+                             void *file_baton,
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool);
+
+/** Similar to svn_wc_transmit_text_deltas3(), but with a relative path
+ * and adm_access baton.
+ *
  * @since New in 1.4.
+ * @deprecated Provided for backwards compatibility with the 1.6 API.
  */
 svn_error_t *
 svn_wc_transmit_text_deltas2(const char **tempfile,
@@ -5953,10 +6010,22 @@ svn_wc_transmit_text_deltas(const char *path,
                             apr_pool_t *pool);
 
 
-/** Given a @a path with its accompanying @a entry, transmit all local
- * property modifications using the appropriate @a editor method (in
- * conjunction with @a baton). @a adm_access is an access baton set
- * that contains @a path.  Use @a pool for all allocations.
+/** Given a @a local_abspath, transmit all local property 
+ * modifications using the appropriate @a editor method (in conjunction 
+ * with @a baton). Use @a scratch_pool for any temporary allocation.
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_wc_transmit_prop_deltas2(svn_wc_context_t *wc_ctx,
+                             const char *local_abspath,
+                             const svn_delta_editor_t *editor,
+                             void *baton,
+                             apr_pool_t *scratch_pool);
+
+
+/** Similar to svn_wc_transmit_prop_deltas2(), but with a relative path,
+ * adm_access baton and tempfile.
  *
  * If a temporary file remains after this function is finished, the
  * path to that file is returned in @a *tempfile (so the caller can
@@ -5964,7 +6033,10 @@ svn_wc_transmit_text_deltas(const char *path,
  *
  * @note Starting version 1.5, no tempfile will ever be returned
  *       anymore.  If @a *tempfile is passed, its value is set to @c NULL.
+ *
+ * @deprecated Provided for backwards compatibility with the 1.6 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_transmit_prop_deltas(const char *path,
                             svn_wc_adm_access_t *adm_access,
@@ -6102,7 +6174,8 @@ typedef struct svn_wc_revision_status_t
 
 /** Set @a *result_p to point to a new @c svn_wc_revision_status_t structure
  * containing a summary of the revision range and status of the working copy
- * at @a wc_path (not including "externals").
+ * at @a local_abspath (not including "externals").  @a local_abspath must
+ * be absolute.
  *
  * Set @a (*result_p)->min_rev and @a (*result_p)->max_rev respectively to the
  * lowest and highest revision numbers in the working copy.  If @a committed
@@ -6122,10 +6195,32 @@ typedef struct svn_wc_revision_status_t
  * If @a cancel_func is non-NULL, call it with @a cancel_baton to determine
  * if the client has cancelled the operation.
  *
- * Allocate *result_p in @a pool.
+ * Allocate *result_p in @a result_pool, use @a scratch_pool for temporary
+ * allocations.
  *
- * @since New in 1.4
+ * @a wc_ctx should be a valid working copy context.
+ *
+ * @since New in 1.7
  */
+svn_error_t *
+svn_wc_revision_status2(svn_wc_revision_status_t **result_p,
+                        svn_wc_context_t *wc_ctx,
+                        const char *local_abspath,
+                        const char *trail_url,
+                        svn_boolean_t committed,
+                        svn_cancel_func_t cancel_func,
+                        void *cancel_baton,
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool);
+
+
+/** Similar to svn_wc_revision_status2(), but with a (possibly) local
+ * path and no wc_ctx parameter.
+ *
+ * @since New in 1.4.
+ * @deprecated Provided for backward compatibility with the 1.6 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_revision_status(svn_wc_revision_status_t **result_p,
                        const char *wc_path,

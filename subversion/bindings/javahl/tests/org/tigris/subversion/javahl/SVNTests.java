@@ -569,17 +569,19 @@ class SVNTests extends TestCase
          *
          * @param createWC Whether to create the working copy on disk,
          * and initialize the expected working copy layout.
+         * @param loadRepos Whether to load the sample repository, or
+         * leave it with no initial revisions
          * @throws SubversionException If there is a problem
          * creating or loading the repository.
          * @throws IOException If there is a problem finding the
          * dump file.
          */
-        protected OneTest(boolean createWC)
+        protected OneTest(boolean createWC, boolean loadRepos)
             throws SubversionException, IOException
         {
             this.testName = testBaseName + ++testCounter;
             this.wc = greekWC.copy();
-            this.repository = createInitialRepository();
+            this.repository = createInitialRepository(loadRepos);
             this.url = makeReposUrl(repository);
 
             if (createWC)
@@ -588,6 +590,21 @@ class SVNTests extends TestCase
             }
         }
 
+        /**
+         * Build a new test setup with a new repository.  Create a
+         * corresponding working copy and expected working copy
+         * layout.
+         *
+         * @param createWC Whether to create the working copy on disk,
+         * and initialize the expected working copy layout.
+         * 
+         * @see #OneTest
+         */
+        protected OneTest(boolean createWC)
+            throws SubversionException, IOException
+        {
+            this(createWC,true);
+        }
         /**
          * Build a new test setup with a new repository.  Create a
          * corresponding working copy and expected working copy
@@ -695,7 +712,7 @@ class SVNTests extends TestCase
          * @throws IOException If there is a problem finding the
          * dump file.
          */
-        protected File createInitialRepository()
+        protected File createInitialRepository(boolean loadGreek)
             throws SubversionException, IOException
         {
             // build a clean repository directory
@@ -704,8 +721,11 @@ class SVNTests extends TestCase
             // create and load the repository from the default repository dump
             admin.create(repos.getAbsolutePath(), true, false,
                          conf.getAbsolutePath(), fsType);
-            admin.load(repos.getAbsolutePath(), new FileInputer(greekDump),
-                       new IgnoreOutputer(), false, false, null);
+            if (loadGreek)
+            {
+                admin.load(repos.getAbsolutePath(), new FileInputer(greekDump),
+                           new IgnoreOutputer(), false, false, null);
+            }
             return repos;
         }
 

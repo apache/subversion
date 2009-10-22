@@ -385,7 +385,9 @@ module Svn
       body << "  New Revision: #{@info.revision}\n"
       body << "\n"
       body << "  Log:\n"
-      @info.log.rstrip.each_line do |line|
+      stripped_log = @info.log.rstrip
+      stripped_log << "\n" unless stripped_log.empty?
+      stripped_log.each_line do |line|
         body << "    #{line}"
       end
       body << "\n"

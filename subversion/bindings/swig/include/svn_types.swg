@@ -582,7 +582,8 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
     apr_pool_t *dir_pool,
     apr_pool_t *file_pool,
     apr_pool_t *node_pool,
-    apr_pool_t *result_pool
+    apr_pool_t *result_pool,
+    apr_pool_t *scratch_pool
 };
 #endif
 

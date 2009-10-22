@@ -264,10 +264,8 @@ void svn_wc__compat_call_notify_func(void *baton,
                                      const svn_wc_notify_t *notify,
                                      apr_pool_t *pool);
 
-/* Set *MODIFIED_P to non-zero if FILENAME's text is modified with
+/* Set *MODIFIED_P to non-zero if LOCAL_ABSPATH's text is modified with
  * regard to the base revision, else set *MODIFIED_P to zero.
- * FILENAME is a path to the file, not just a basename. ADM_ACCESS
- * must be an access baton for @a FILENAME.
  *
  * If FORCE_COMPARISON is true, this function will not allow early
  * return mechanisms that avoid actual content comparison.  Instead,
@@ -277,20 +275,20 @@ void svn_wc__compat_call_notify_func(void *baton,
  * the text base will still be examined.)
  *
  * If COMPARE_TEXTBASES is true, the comparison will be between a
- * detranslated version of *FILENAME and the text base, otherwise, a
- * translated version of the text base and *FILENAME will be compared.
+ * detranslated version of *LOCAL_ABSPATH and the text base, otherwise, a
+ * translated version of the text base and *LOCAL_ABSPATH will be compared.
  *
- * If FILENAME does not exist, consider it unmodified.  If it exists
+ * If LOCAL_ABSPATH does not exist, consider it unmodified.  If it exists
  * but is not under revision control (not even scheduled for
  * addition), return the error SVN_ERR_ENTRY_NOT_FOUND.
  */
 svn_error_t *
 svn_wc__text_modified_internal_p(svn_boolean_t *modified_p,
-                                 const char *filename,
+                                 svn_wc__db_t *db,
+                                 const char *local_abspath,
                                  svn_boolean_t force_comparison,
-                                 svn_wc_adm_access_t *adm_access,
                                  svn_boolean_t compare_textbases,
-                                 apr_pool_t *pool);
+                                 apr_pool_t *scratch_pool);
 
 
 
@@ -447,6 +445,26 @@ svn_wc_conflict_description2_t *
 svn_wc__conflict_desc2_from_conflict_desc(const svn_wc_conflict_description_t *
                                                                      conflict,
                                           apr_pool_t *result_pool);
+
+/* Internal version of svn_wc_transmit_text_deltas3(). */
+svn_error_t *
+svn_wc__internal_transmit_text_deltas(const char **tempfile,
+                                      unsigned char digest[],
+                                      svn_wc__db_t *db,
+                                      const char *local_abspath,
+                                      svn_boolean_t fulltext,
+                                      const svn_delta_editor_t *editor,
+                                      void *file_baton,
+                                      apr_pool_t *result_pool,
+                                      apr_pool_t *scratch_pool);
+
+/* Internal version of svn_wc_transmit_prop_deltas2(). */
+svn_error_t *
+svn_wc__internal_transmit_prop_deltas(svn_wc__db_t *db,
+                                     const char *local_abspath,
+                                     const svn_delta_editor_t *editor,
+                                     void *baton,
+                                     apr_pool_t *scratch_pool);
 
 
 #ifdef __cplusplus

@@ -62,7 +62,7 @@ AC_DEFUN(SVN_LIB_BERKELEY_DB,
         status=required
       fi
     else
-      if test -n "`echo "$withval" | $EGREP -o ":.*:.*:"`"; then
+      if echo "$withval" | $EGREP ":.*:.*:" > /dev/null; then
         svn_berkeley_db_header=["`echo "$withval" | sed -e "s/\([^:]*\):.*/\1/"`"]
         SVN_DB_INCLUDES=""
         for i in [`echo "$withval" | sed -e "s/.*:\([^:]*\):[^:]*:.*/\1/"`]; do

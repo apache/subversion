@@ -475,16 +475,11 @@ svn_wc__del_tree_conflict(const char *victim_path,
                           svn_wc_adm_access_t *adm_access,
                           apr_pool_t *pool)
 {
-  svn_stringbuf_t *log_accum = NULL;
+  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
+  const char *local_abspath;
 
-  SVN_ERR(svn_wc__loggy_del_tree_conflict(&log_accum, victim_path, adm_access,
-                                          pool));
-
-  if (log_accum != NULL)
-    {
-      SVN_ERR(svn_wc__write_log(adm_access, 0, log_accum, pool));
-      SVN_ERR(svn_wc__run_log(adm_access, NULL, pool));
-    }
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, victim_path, pool));
+  SVN_ERR(svn_wc__db_op_set_tree_conflict(db, local_abspath, NULL, pool));
 
   return SVN_NO_ERROR;
 }
@@ -495,76 +490,24 @@ svn_wc__add_tree_conflict(const svn_wc_conflict_description_t *conflict,
                           apr_pool_t *pool)
 {
   svn_wc_conflict_description_t *existing_conflict;
-  svn_stringbuf_t *log_accum = NULL;
   svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
   const char *conflict_abspath;
 
   SVN_ERR(svn_dirent_get_absolute(&conflict_abspath, conflict->path, pool));
 
   /* Re-adding an existing tree conflict victim is an error. */
-  SVN_ERR(svn_wc__internal_get_tree_conflict(&existing_conflict,
-                                             conflict_abspath, db,
-                                             pool, pool));
+  SVN_ERR(svn_wc__db_op_get_tree_conflict(&existing_conflict, db,
+                                          conflict_abspath, pool, pool));
   if (existing_conflict != NULL)
     return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
                          _("Attempt to add tree conflict that already exists"));
 
-  SVN_ERR(svn_wc__loggy_add_tree_conflict(&log_accum, conflict, adm_access,
+  SVN_ERR(svn_wc__db_op_set_tree_conflict(db, conflict_abspath, conflict,
                                           pool));
 
-  SVN_ERR(svn_wc__write_log(adm_access, 0, log_accum, pool));
-  SVN_ERR(svn_wc__run_log(adm_access, NULL, pool));
-
   return SVN_NO_ERROR;
 }
 
-
-svn_error_t *
-svn_wc__loggy_del_tree_conflict(svn_stringbuf_t **log_accum,
-                                const char *victim_path,
-                                svn_wc_adm_access_t *adm_access,
-                                apr_pool_t *pool)
-{
-  const char *dir_path;
-  const svn_wc_entry_t *entry;
-  apr_hash_t *conflicts;
-  svn_wc_entry_t tmp_entry;
-  const char *victim_basename = svn_dirent_basename(victim_path, pool);
-  const svn_wc_conflict_description_t *conflict;
-
-  /* Make sure the node is a directory.
-   * Otherwise we should not have been called. */
-  dir_path = svn_wc_adm_access_path(adm_access);
-  SVN_ERR(svn_wc_entry(&entry, dir_path, adm_access, TRUE, pool));
-  SVN_ERR_ASSERT((entry != NULL) && (entry->kind == svn_node_dir));
-
-  /* Make sure that VICTIM_PATH is a child node of DIR_PATH.
-   * Anything else is a bug. */
-  SVN_ERR_ASSERT(strcmp(dir_path, svn_dirent_dirname(victim_path, pool)) == 0);
-
-  SVN_ERR(svn_wc__read_tree_conflicts(&conflicts, entry->tree_conflict_data,
-                                      dir_path, pool));
-
-  /* If CONFLICTS has a tree conflict with the same victim path as the
-   * new conflict, then remove it. */
-  conflict = apr_hash_get(conflicts, victim_basename, APR_HASH_KEY_STRING);
-  if (conflict)
-    {
-      apr_hash_set(conflicts, victim_basename, APR_HASH_KEY_STRING, NULL);
-
-      /* Rewrite the entry. */
-      SVN_ERR(svn_wc__write_tree_conflicts(&tmp_entry.tree_conflict_data,
-                                           conflicts,
-                                           pool));
-
-      SVN_ERR(svn_wc__loggy_entry_modify(log_accum, adm_access, dir_path,
-                                         &tmp_entry,
-                                         SVN_WC__ENTRY_MODIFY_TREE_CONFLICT_DATA,
-                                         pool));
-    }
-
-  return SVN_NO_ERROR;
-}
 
 svn_error_t *
 svn_wc__get_tree_conflict(svn_wc_conflict_description_t **tree_conflict,
@@ -575,54 +518,9 @@ svn_wc__get_tree_conflict(svn_wc_conflict_description_t **tree_conflict,
 {
   SVN_ERR_ASSERT(svn_dirent_is_absolute(victim_abspath));
 
-  return svn_error_return(svn_wc__internal_get_tree_conflict(
-                            tree_conflict,
-                            victim_abspath,
-                            wc_ctx->db,
-                            result_pool,
-                            scratch_pool));
-}
-
-
-svn_error_t *
-svn_wc__internal_get_tree_conflict(svn_wc_conflict_description_t **tree_conflict,
-                                   const char *victim_abspath,
-                                   svn_wc__db_t *db,
-                                   apr_pool_t *result_pool,
-                                   apr_pool_t *scratch_pool)
-{
-  const char *parent_abspath;
-  const char *victim_name;
-  svn_error_t *err;
-  apr_hash_t *conflicts;
-  const svn_wc_entry_t *entry;
-
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(victim_abspath));
-
-  svn_dirent_split(victim_abspath, &parent_abspath, &victim_name,
-                   scratch_pool);
-  err = svn_wc__get_entry(&entry, db, parent_abspath, FALSE,
-                          svn_node_dir, FALSE, scratch_pool, scratch_pool);
-  if (err)
-    {
-      if (err->apr_err != SVN_ERR_WC_MISSING)
-        return svn_error_return(err);
-      svn_error_clear(err);
-
-      /* We walked off the top of a working copy.  */
-      *tree_conflict = NULL;
-      return SVN_NO_ERROR;
-    }
-
-  SVN_ERR(svn_wc__read_tree_conflicts(&conflicts, entry->tree_conflict_data,
-                                      svn_dirent_dirname(victim_abspath,
-                                                         scratch_pool),
-                                      result_pool));
-
-  *tree_conflict = apr_hash_get(conflicts,
-                                svn_dirent_basename(victim_abspath,
-                                                    scratch_pool),
-                                APR_HASH_KEY_STRING);
-
-  return SVN_NO_ERROR;
+  return svn_error_return(svn_wc__db_op_get_tree_conflict(tree_conflict,
+                                                          wc_ctx->db,
+                                                          victim_abspath,
+                                                          result_pool,
+                                                          scratch_pool));
 }

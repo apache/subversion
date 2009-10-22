@@ -123,6 +123,16 @@ svn_error_t * svn_wc__maybe_set_read_only(svn_boolean_t *did_set,
                                           const char *local_abspath,
                                           apr_pool_t *scratch_pool);
 
+/* Internal version of svn_wc_translated_stream2(), which see. */
+svn_error_t *
+svn_wc__internal_translated_stream(svn_stream_t **stream,
+                                   svn_wc__db_t *db,
+                                   const char *local_abspath,
+                                   const char *versioned_abspath,
+                                   apr_uint32_t flags,
+                                   apr_pool_t *result_pool,
+                                   apr_pool_t *scratch_pool);
+
 
 #ifdef __cplusplus
 }

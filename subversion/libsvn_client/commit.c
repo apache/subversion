@@ -1206,13 +1206,13 @@ lock_dirs_for_commit(void *baton, void *this_item, apr_pool_t *pool)
   struct lock_dirs_baton *btn = baton;
   svn_wc_adm_access_t *adm_access;
 
-  return svn_wc_adm_open3(&adm_access, btn->base_dir_access,
-                          *(const char **)this_item,
-                          TRUE, /* Write lock */
-                          btn->levels_to_lock,
-                          btn->ctx->cancel_func,
-                          btn->ctx->cancel_baton,
-                          pool);
+  return svn_wc__adm_open_in_context(&adm_access, btn->ctx->wc_ctx,
+                                     *(const char **)this_item,
+                                     TRUE, /* Write lock */
+                                     btn->levels_to_lock,
+                                     btn->ctx->cancel_func,
+                                     btn->ctx->cancel_baton,
+                                     pool);
 }
 
 struct check_dir_delete_baton
@@ -1649,10 +1649,9 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
   notify_prefix = svn_dirent_get_longest_ancestor(current_dir, base_dir, pool);
 
   /* Perform the commit. */
-  cmt_err = svn_client__do_commit(base_url, commit_items, base_dir_access,
-                                  editor, edit_baton,
-                                  notify_prefix,
-                                  &tempfiles, &checksums, ctx, pool);
+  cmt_err = svn_client__do_commit(base_url, commit_items, editor, edit_baton,
+                                  notify_prefix, &tempfiles, &checksums, ctx, 
+                                  pool);
 
   /* Handle a successful commit. */
   if ((! cmt_err)

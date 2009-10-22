@@ -185,6 +185,12 @@ svn_wc__props_delete(svn_wc__db_t *db,
                      svn_wc__props_kind_t props_kind,
                      apr_pool_t *pool);
 
+/* Set *MODIFIED_P TRUE if the props for LOCAL_ABSPATH have been modified. */
+svn_error_t *
+svn_wc__props_modified(svn_boolean_t *modified_p,
+                       svn_wc__db_t *db,
+                       const char *local_abspath,
+                       apr_pool_t *scratch_pool);
 
 /* Flushes wcprops cached in ADM_ACCESS to disk using SCRATCH_POOL for
    temporary allocations. */

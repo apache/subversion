@@ -3438,9 +3438,8 @@ visit_tc_too_error_handler(const char *path,
       svn_wc_conflict_description_t *conflict;
 
       /* See if there is any tree conflict on this path. */
-      SVN_ERR(svn_wc__internal_get_tree_conflict(&conflict, local_abspath,
-                                                 baton->db,
-                                                 pool, pool));
+      SVN_ERR(svn_wc__db_op_get_tree_conflict(&conflict, baton->db,
+                                              local_abspath, pool, pool));
 
       /* If so, don't regard it as an error but call the "found entry"
        * callback with a null "entry" parameter. */
@@ -3530,8 +3529,8 @@ svn_wc__walk_entries_and_tc(const char *path,
        * call the "found entry" callback with a null "entry" parameter. */
       svn_wc_conflict_description_t *conflict;
 
-      SVN_ERR(svn_wc__internal_get_tree_conflict(&conflict, local_abspath, db,
-                                                 pool, pool));
+      SVN_ERR(svn_wc__db_op_get_tree_conflict(&conflict, db, local_abspath,
+                                              pool, pool));
       if (conflict)
         SVN_ERR(walk_callbacks->found_entry(path, NULL, walk_baton, pool));
     }
