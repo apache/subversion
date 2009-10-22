@@ -105,73 +105,67 @@ svn_error_t *
 svn_wc__node_get_repos_info(const char **repos_root_url,
                             const char **repos_uuid,
                             svn_wc_context_t *wc_ctx,
-                            const char * local_abspath,
+                            const char *local_abspath,
                             svn_boolean_t scan_added,
                             apr_pool_t *result_pool,
                             apr_pool_t *scratch_pool)
 {
-  while (TRUE)
+  svn_error_t *err;
+  svn_wc__db_status_t status;
+
+  err = svn_wc__db_read_info(&status, NULL, NULL, NULL,
+                             repos_root_url, repos_uuid,
+                             NULL, NULL, NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL, NULL, NULL,
+                             wc_ctx->db, local_abspath, result_pool,
+                             scratch_pool);
+  if (err)
     {
-      svn_error_t *err;
-      svn_wc__db_status_t status;
+      if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND
+          && err->apr_err != SVN_ERR_WC_NOT_WORKING_COPY)
+        return svn_error_return(err);
 
-      err = svn_wc__db_read_info(&status, NULL, NULL, NULL,
-                                 repos_root_url, repos_uuid,
-                                 NULL, NULL, NULL, NULL, NULL, NULL,
-                                 NULL, NULL, NULL, NULL, NULL, NULL,
-                                 NULL, NULL, NULL, NULL, NULL, NULL,
-                                 wc_ctx->db, local_abspath, result_pool,
-                                 scratch_pool);
+      /* This node is not versioned. Return NULL repos info.  */
+      svn_error_clear(err);
 
-      if (err)
-        {
-          if (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND
-              || err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY)
-            {
-              svn_error_clear(err);
-              err = SVN_NO_ERROR;
-              if (repos_root_url)
-                *repos_root_url = NULL;
-              if (repos_uuid)
-                *repos_uuid = NULL;
-            }
-          return err;
-        }
-
-      if (!scan_added
-          || !(status == svn_wc__db_status_added
-               || status == svn_wc__db_status_obstructed_add))
-        {
-          break;
-        }
-      else
-        {
-          /* We have an addition. Let's look at the root of the addition */
-          const char *check_abspath;
-          SVN_ERR(svn_wc__db_scan_addition(&status, &check_abspath, NULL,
-                                           repos_root_url, repos_uuid,
-                                           NULL, NULL, NULL, NULL,
-                                           wc_ctx->db, local_abspath,
-                                           scratch_pool, scratch_pool));
-
-          if (check_abspath != NULL &&
-              strcmp(check_abspath, local_abspath) != 0)
-            {
-              /* Check the root of the addition, it might be replaced */
-              local_abspath = check_abspath;
-            }
-          else
-            {
-              /* The parent was not replaced, check the parent to which this
-                 node was added */
-              SVN_ERR_ASSERT(!svn_dirent_is_root(local_abspath,
-                                                 strlen(local_abspath)));
-
-              local_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
-            }
-        }
+      if (repos_root_url)
+        *repos_root_url = NULL;
+      if (repos_uuid)
+        *repos_uuid = NULL;
+      return SVN_NO_ERROR;
     }
-  
+
+  if (scan_added
+      && (status == svn_wc__db_status_added
+          || status == svn_wc__db_status_obstructed_add))
+    {
+      /* We have an addition. scan_addition() will find the intended
+         repository location by scanning up the tree.  */
+      return svn_error_return(svn_wc__db_scan_addition(
+                                &status, NULL,
+                                NULL, repos_root_url, repos_uuid,
+                                NULL, NULL, NULL, NULL,
+                                wc_ctx->db, local_abspath,
+                                scratch_pool, scratch_pool));
+    }
+
+  /* If we didn't get repository information, and the status means we are
+     looking at an unchanged BASE node, then scan upwards for repos info.  */
+  if (((repos_root_url != NULL && *repos_root_url == NULL)
+       || (repos_uuid != NULL && *repos_uuid == NULL))
+      && (status == svn_wc__db_status_normal
+          || status == svn_wc__db_status_obstructed
+          || status == svn_wc__db_status_absent
+          || status == svn_wc__db_status_excluded
+          || status == svn_wc__db_status_not_present))
+    {
+      SVN_ERR(svn_wc__db_scan_base_repos(NULL, repos_root_url, repos_uuid,
+                                         wc_ctx->db, local_abspath,
+                                         result_pool, scratch_pool));
+    }
+  /* else maybe a deletion, or an addition w/ SCAN_ADDED==FALSE.  */
+
   return SVN_NO_ERROR;
 }
 
