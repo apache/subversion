@@ -76,12 +76,12 @@ struct svn_wc_committed_queue_t
 typedef struct
 {
   const char *path;
-  svn_wc_adm_access_t *adm_access;
+  const char *adm_abspath;
   svn_boolean_t recurse;
-  svn_boolean_t remove_lock;
-  svn_boolean_t remove_changelist;
-  const apr_array_header_t *wcprop_changes;
+  svn_boolean_t no_unlock;
+  svn_boolean_t keep_changelist;
   const svn_checksum_t *checksum;
+  apr_hash_t *new_dav_cache;
 } committed_queue_item_t;
 
 
@@ -367,9 +367,9 @@ process_committed_leaf(svn_wc__db_t *db,
                        svn_revnum_t new_revnum,
                        const char *rev_date,
                        const char *rev_author,
-                       const apr_array_header_t *wcprop_changes,
-                       svn_boolean_t remove_lock,
-                       svn_boolean_t remove_changelist,
+                       apr_hash_t *new_dav_cache,
+                       svn_boolean_t no_unlock,
+                       svn_boolean_t keep_changelist,
                        const svn_checksum_t *checksum,
                        const svn_wc_committed_queue_t *queue,
                        apr_pool_t *scratch_pool)
@@ -400,7 +400,7 @@ process_committed_leaf(svn_wc__db_t *db,
     {
       return svn_error_return(process_deletion_postcommit(
                                 db, adm_abspath, local_abspath,
-                                new_revnum, !remove_lock,
+                                new_revnum, no_unlock,
                                 scratch_pool));
     }
 
@@ -500,11 +500,11 @@ process_committed_leaf(svn_wc__db_t *db,
       modify_flags |= SVN_WC__ENTRY_MODIFY_CHECKSUM;
     }
 
-  if (remove_lock)
+  if (!no_unlock)
     SVN_ERR(svn_wc__loggy_delete_lock(db, adm_abspath,
                                       path, scratch_pool));
 
-  /* ### need to pass REMOVE_CHANGELIST into log_do_committed()  */
+  /* ### need to pass KEEP_CHANGELIST into log_do_committed()  */
 
   /* Regardless of whether it's a file or dir, the "main" logfile
      contains a command to bump the revision attribute (and
@@ -524,27 +524,9 @@ process_committed_leaf(svn_wc__db_t *db,
   /* Queue all of the operations so far.  */
   SVN_ERR(svn_wc__wq_add_loggy(db, adm_abspath, log_accum, scratch_pool));
 
-  if (wcprop_changes && (wcprop_changes->nelts > 0))
-    {
-      int i;
-      apr_hash_t *props = apr_hash_make(scratch_pool);
-
-      /* Queue up a work item to set the dav-cache properties. They arrive
-         as a set of diffs, but we'll take all of the additions/changes as
-         a "complete" set of properties. IOW, we start from an empty
-         dav-cache and apply the changes.  */
-      for (i = 0; i < wcprop_changes->nelts; i++)
-        {
-          const svn_prop_t *prop
-            = APR_ARRAY_IDX(wcprop_changes, i, const svn_prop_t *);
-
-          if (prop->value != NULL)
-            apr_hash_set(props, prop->name, APR_HASH_KEY_STRING, prop->value);
-        }
-
-      SVN_ERR(svn_wc__wq_set_dav_cache(db, local_abspath, props,
-                                       scratch_pool));
-    }
+  if (new_dav_cache && apr_hash_count(new_dav_cache) > 0)
+    SVN_ERR(svn_wc__wq_set_dav_cache(db, local_abspath, new_dav_cache,
+                                     scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -558,9 +540,9 @@ process_committed_internal(svn_wc__db_t *db,
                            svn_revnum_t new_revnum,
                            const char *rev_date,
                            const char *rev_author,
-                           const apr_array_header_t *wcprop_changes,
-                           svn_boolean_t remove_lock,
-                           svn_boolean_t remove_changelist,
+                           apr_hash_t *new_dav_cache,
+                           svn_boolean_t no_unlock,
+                           svn_boolean_t keep_changelist,
                            const svn_checksum_t *checksum,
                            const svn_wc_committed_queue_t *queue,
                            apr_pool_t *scratch_pool)
@@ -576,8 +558,8 @@ process_committed_internal(svn_wc__db_t *db,
 
   SVN_ERR(process_committed_leaf(db, adm_abspath, path,
                                  new_revnum, rev_date, rev_author,
-                                 wcprop_changes,
-                                 remove_lock, remove_changelist,
+                                 new_dav_cache,
+                                 no_unlock, keep_changelist,
                                  checksum, queue, scratch_pool));
 
   if (recurse && kind == svn_wc__db_kind_dir)
@@ -629,7 +611,7 @@ process_committed_internal(svn_wc__db_t *db,
           this_path = svn_dirent_join(path, name, iterpool);
 
           /* Recurse, but only allow further recursion if the child is
-             a directory.  Pass null for wcprop_changes, because the
+             a directory.  Pass NULL for NEW_DAV_CACHE, because the
              ones present in the current call are only applicable to
              this one committed item. */
           if (kind == svn_wc__db_kind_dir)
@@ -638,8 +620,8 @@ process_committed_internal(svn_wc__db_t *db,
                                                  TRUE /* recurse */,
                                                  new_revnum, rev_date,
                                                  rev_author,
-                                                 NULL, FALSE /* remove_lock */,
-                                                 remove_changelist, NULL,
+                                                 NULL, TRUE /* no_unlock */,
+                                                 keep_changelist, NULL,
                                                  queue, iterpool));
               SVN_ERR(svn_wc__wq_run(db, this_abspath, NULL, NULL, iterpool));
             }
@@ -664,7 +646,8 @@ process_committed_internal(svn_wc__db_t *db,
               SVN_ERR(process_committed_leaf(db, adm_abspath, this_path,
                                              new_revnum,
                                              rev_date, rev_author, NULL,
-                                             FALSE, remove_changelist,
+                                             TRUE /* no_unlock */,
+                                             keep_changelist,
                                              NULL, queue, iterpool));
             }
         }
@@ -673,6 +656,31 @@ process_committed_internal(svn_wc__db_t *db,
    }
 
   return SVN_NO_ERROR;
+}
+
+
+static apr_hash_t *
+convert_to_hash(const apr_array_header_t *wcprop_changes,
+                apr_pool_t *result_pool)
+{
+  int i;
+  apr_hash_t *dav_cache;
+
+  if (wcprop_changes == NULL || wcprop_changes->nelts == 0)
+    return NULL;
+
+  dav_cache = apr_hash_make(result_pool);
+
+  for (i = 0; i < wcprop_changes->nelts; i++)
+    {
+      const svn_prop_t *prop = APR_ARRAY_IDX(wcprop_changes, i,
+                                             const svn_prop_t *);
+
+      if (prop->value != NULL)
+        apr_hash_set(dav_cache, prop->name, APR_HASH_KEY_STRING, prop->value);
+    }
+
+  return dav_cache;
 }
 
 
@@ -711,12 +719,12 @@ svn_wc_queue_committed2(svn_wc_committed_queue_t *queue,
   /* Add to the array with paths and options */
   cqi = apr_palloc(queue->pool, sizeof(*cqi));
   cqi->path = path;
-  cqi->adm_access = adm_access;
+  cqi->adm_abspath = svn_wc__adm_access_abspath(adm_access);
   cqi->recurse = recurse;
-  cqi->remove_lock = remove_lock;
-  cqi->remove_changelist = remove_changelist;
-  cqi->wcprop_changes = wcprop_changes;
+  cqi->no_unlock = !remove_lock;
+  cqi->keep_changelist = !remove_changelist;
   cqi->checksum = checksum;
+  cqi->new_dav_cache = convert_to_hash(wcprop_changes, queue->pool);
 
   APR_ARRAY_PUSH(queue->queue, committed_queue_item_t *) = cqi;
 
@@ -756,9 +764,7 @@ svn_wc_queue_committed(svn_wc_committed_queue_t **queue,
    processed recursively, return FALSE otherwise.
 */
 static svn_boolean_t
-have_recursive_parent(apr_array_header_t *queue,
-                      int item,
-                      apr_pool_t *pool)
+have_recursive_parent(apr_array_header_t *queue, int item)
 {
   int i;
   const char *path
@@ -791,11 +797,8 @@ svn_wc_process_committed_queue(svn_wc_committed_queue_t *queue,
   int i;
   apr_pool_t *iterpool = svn_pool_create(pool);
 
-  /* Now, we write all log files, collecting the affected adms in
-     the process ... */
   for (i = 0; i < queue->queue->nelts; i++)
     {
-      const char *adm_abspath;
       const committed_queue_item_t *cqi
         = APR_ARRAY_IDX(queue->queue, i, const committed_queue_item_t *);
 
@@ -803,21 +806,18 @@ svn_wc_process_committed_queue(svn_wc_committed_queue_t *queue,
 
       /* If there are some recursive items, then see if this item is a
          child of one, and will (implicitly) be accounted for. */
-      if (queue->have_recursive
-          && have_recursive_parent(queue->queue, i, iterpool))
+      if (queue->have_recursive && have_recursive_parent(queue->queue, i))
         continue;
 
-      adm_abspath = svn_wc__adm_access_abspath(cqi->adm_access);
-
-      SVN_ERR(process_committed_internal(db, adm_abspath, cqi->path,
+      SVN_ERR(process_committed_internal(db, cqi->adm_abspath, cqi->path,
                                          cqi->recurse,
                                          new_revnum, rev_date, rev_author,
-                                         cqi->wcprop_changes,
-                                         cqi->remove_lock,
-                                         cqi->remove_changelist,
+                                         cqi->new_dav_cache,
+                                         cqi->no_unlock,
+                                         cqi->keep_changelist,
                                          cqi->checksum, queue, iterpool));
 
-      SVN_ERR(svn_wc__wq_run(db, adm_abspath, NULL, NULL, iterpool));
+      SVN_ERR(svn_wc__wq_run(db, cqi->adm_abspath, NULL, NULL, iterpool));
     }
 
   queue->queue->nelts = 0;
@@ -852,8 +852,10 @@ svn_wc_process_committed4(const char *path,
   SVN_ERR(process_committed_internal(db, adm_abspath,
                                      path, recurse,
                                      new_revnum, rev_date, rev_author,
-                                     wcprop_changes, remove_lock,
-                                     remove_changelist, checksum, NULL, pool));
+                                     convert_to_hash(wcprop_changes, pool),
+                                     !remove_lock,!remove_changelist,
+                                     checksum, NULL,
+                                     pool));
 
   /* Run the log file(s) we just created. */
   return svn_error_return(svn_wc__wq_run(db, adm_abspath, NULL, NULL, pool));
