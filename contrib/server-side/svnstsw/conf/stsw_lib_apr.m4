@@ -68,7 +68,7 @@ AC_DEFUN([STSW_LIB_APR],
         AC_MSG_ERROR([the Apache Portable Runtime (APR) library (version 0.x or 1.x) was not found.  Please specify a path to APR using '--with-apr'.])
     fi
 
-    # check APR version number against regex  
+    # check APR version number against regex
 
     APR_WANTED_REGEXES="$1"
     if test "x$APR_WANTED_REGEXES" = "x" ; then

@@ -117,13 +117,13 @@ def print_report(authors, sectionroots=[ ]):
       else:
         topdirs[key] = 1
 
-    print author
+    print(author)
     tags = [ ]
     branches = [ ]
     for topdir in sorted(topdirs):
       if len(topdir) == 1:
         assert topdirs[topdir] == 1
-        print '  %s  (ROOT)' % topdir[0]
+        print('  %s  (ROOT)' % topdir[0])
       else:
         if topdir[0] == 'tags':
           if not topdir[1] in tags:
@@ -132,13 +132,13 @@ def print_report(authors, sectionroots=[ ]):
           if not topdir[1] in branches:
             branches.append(topdir[1])
         else:
-          print '  %s (%d items)' % ('/'.join(topdir), topdirs[topdir])
+          print('  %s (%d items)' % ('/'.join(topdir), topdirs[topdir]))
     if tags:
-      print '  TAGS:', ', '.join(tags)
+      print('  TAGS: %s' % ', '.join(tags))
     if branches:
-      print '  BRANCHES:', ', '.join(branches)
+      print('  BRANCHES: %s' % ', '.join(branches))
 
-    print
+    print('')
 
 
 def run(logfile):

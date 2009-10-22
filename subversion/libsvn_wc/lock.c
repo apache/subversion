@@ -2,17 +2,22 @@
  * lock.c:  routines for locking working copy subdirectories.
  *
  * ====================================================================
- * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -23,12 +28,12 @@
 #include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_sorts.h"
+#include "svn_hash.h"
 #include "svn_types.h"
 
 #include "wc.h"
 #include "adm_files.h"
 #include "lock.h"
-#include "questions.h"
 #include "props.h"
 #include "log.h"
 #include "entries.h"
@@ -84,16 +89,6 @@ struct svn_wc_adm_access_t
 
 };
 
-#ifndef BLAST_FORMAT_11
-static svn_boolean_t
-should_create_next_gen(void)
-{
-  /* ### this is temporary. developers will use this while wc-ng is being
-     ### developed. in the future, we will *always* create a next gen wc. */
-  return getenv("SVN_ENABLE_NG") != NULL;
-}
-#endif
-
 
 /* This is a placeholder used in the set hash to represent missing
    directories.  Only its address is important, it contains no useful
@@ -113,251 +108,105 @@ static svn_error_t *
 add_to_shared(svn_wc_adm_access_t *lock, apr_pool_t *scratch_pool);
 
 
-/* Write, to LOG_ACCUM, commands to convert a WC that has wcprops in individual
-   files to use one wcprops file per directory.
-   Do this for ADM_ACCESS and its file children, using POOL for temporary
-   allocations. */
 static svn_error_t *
-convert_wcprops(svn_stringbuf_t *log_accum,
-                svn_wc_adm_access_t *adm_access,
-                apr_pool_t *pool)
+check_format(int wc_format, const char *path, apr_pool_t *pool)
 {
-  const char *dir_abspath;
-  apr_hash_t *entries;
-  apr_hash_index_t *hi;
-  apr_pool_t *subpool = svn_pool_create(pool);
-
-  SVN_ERR(svn_dirent_get_absolute(&dir_abspath, adm_access->path, pool));
-  SVN_ERR(svn_wc_entries_read(&entries, adm_access, FALSE, pool));
-
-  /* Walk over the entries, adding a modify-wcprop command for each wcprop.
-     Note that the modifications happen in memory and are just written once
-     at the end of the log execution, so this isn't as inefficient as it
-     might sound. */
-  for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
+  if (wc_format < 2)
     {
-      void *val;
-      const svn_wc_entry_t *entry;
-      apr_hash_t *wcprops;
-      apr_hash_index_t *hj;
-      const char *full_path;
-      const char *local_abspath;
-
-      apr_hash_this(hi, NULL, NULL, &val);
-      entry = val;
-
-      if (entry->kind != svn_node_file
-          && strcmp(entry->name, SVN_WC_ENTRY_THIS_DIR) != 0)
-        continue;
-
-      svn_pool_clear(subpool);
-
-      full_path = svn_dirent_join(adm_access->path, entry->name, subpool);
-      local_abspath = svn_dirent_join(dir_abspath, entry->name, subpool);
-
-      SVN_ERR(svn_wc__wcprop_list(&wcprops, adm_access->db, local_abspath,
-                                  entry->kind, subpool, subpool));
-
-      /* Create a subsubpool for the inner loop...
-         No, just kidding.  There are typically just one or two wcprops
-         per entry... */
-      for (hj = apr_hash_first(subpool, wcprops); hj; hj = apr_hash_next(hj))
-        {
-          const void *key2;
-          void *val2;
-          const char *propname;
-          svn_string_t *propval;
-
-          apr_hash_this(hj, &key2, NULL, &val2);
-          propname = key2;
-          propval = val2;
-          SVN_ERR(svn_wc__loggy_modify_wcprop(&log_accum, adm_access,
-                                              full_path, propname,
-                                              propval->data,
-                                              subpool));
-        }
+      return svn_error_createf
+        (SVN_ERR_WC_UNSUPPORTED_FORMAT, NULL,
+         _("Working copy format of '%s' is too old (%d); "
+           "please check out your working copy again"),
+         svn_dirent_local_style(path, pool), wc_format);
+    }
+  else if (wc_format > SVN_WC__VERSION)
+    {
+      /* This won't do us much good for the 1.4<->1.5 crossgrade,
+         since 1.4.x clients don't refer to this FAQ entry, but at
+         least post-1.5 crossgrades will be somewhat less painful. */
+      return svn_error_createf
+        (SVN_ERR_WC_UNSUPPORTED_FORMAT, NULL,
+         _("This client is too old to work with working copy '%s'.  You need\n"
+           "to get a newer Subversion client, or to downgrade this working "
+           "copy.\n"
+           "See "
+           "http://subversion.tigris.org/faq.html#working-copy-format-change\n"
+           "for details."
+           ),
+         svn_dirent_local_style(path, pool));
     }
 
   return SVN_NO_ERROR;
 }
 
 
-#ifndef BLAST_FORMAT_11
-/* Helper function so we can still upgrade for format 11, for the time being.
-   ### This will go away with before 1.7. */
-static svn_error_t *
-upgrade_format_old(svn_wc_adm_access_t *adm_access,
-                   apr_pool_t *scratch_pool)
+svn_error_t *
+svn_wc__internal_check_wc(int *wc_format,
+                          svn_wc__db_t *db,
+                          const char *local_abspath,
+                          apr_pool_t *scratch_pool)
 {
-  int wc_format;
-  svn_boolean_t cleanup_required;
-  svn_stringbuf_t *log_accum;
+  svn_error_t *err;
 
-  SVN_ERR(svn_wc__adm_wc_format(&wc_format, adm_access, scratch_pool));
-  SVN_ERR(svn_wc__check_format(wc_format, adm_access->path, scratch_pool));
-
-  /* We can upgrade all formats that are accepted by svn_wc__check_format. */
-  if (wc_format >= SVN_WC__VERSION)
-    return SVN_NO_ERROR;
-
-  log_accum = svn_stringbuf_create("", scratch_pool);
-
-  /* Don't try to mess with the WC if there are old log files left. */
-  SVN_ERR(svn_wc__adm_is_cleanup_required(&cleanup_required,
-                                          adm_access, scratch_pool));
-  SVN_ERR_ASSERT(cleanup_required == FALSE);
-
-  /* First, loggily upgrade the format file. */
-  SVN_ERR(svn_wc__loggy_upgrade_format(&log_accum, SVN_WC__VERSION,
-                                       scratch_pool));
-
-  /* If the WC uses one file per entry for wcprops, give back some inodes
-     to the poor user. */
-  if (wc_format <= SVN_WC__WCPROPS_MANY_FILES_VERSION)
-    SVN_ERR(convert_wcprops(log_accum, adm_access, scratch_pool));
-
-  SVN_ERR(svn_wc__write_log(adm_access, 0, log_accum, scratch_pool));
-
-  if (wc_format <= SVN_WC__WCPROPS_MANY_FILES_VERSION)
+  err = svn_wc__db_temp_get_format(wc_format, db, local_abspath, scratch_pool);
+  if (err)
     {
-      /* Remove wcprops directory, dir-props, README.txt and empty-file
-         files.
-         We just silently ignore errors, because keeping these files is
-         not catastrophic. */
+      svn_node_kind_t kind;
 
-      svn_error_clear(svn_io_remove_dir2(
-          svn_wc__adm_child(adm_access->path, SVN_WC__ADM_WCPROPS,
-                            scratch_pool),
-          FALSE, NULL, NULL, scratch_pool));
-      svn_error_clear(svn_io_remove_file(
-          svn_wc__adm_child(adm_access->path, SVN_WC__ADM_DIR_WCPROPS,
-                            scratch_pool),
-          scratch_pool));
-      svn_error_clear(svn_io_remove_file(
-          svn_wc__adm_child(adm_access->path, SVN_WC__ADM_EMPTY_FILE,
-                            scratch_pool),
-          scratch_pool));
-      svn_error_clear(svn_io_remove_file(
-          svn_wc__adm_child(adm_access->path, SVN_WC__ADM_README,
-                            scratch_pool),
-          scratch_pool));
+      if (err->apr_err != SVN_ERR_WC_MISSING)
+        return svn_error_return(err);
+      svn_error_clear(err);
+
+      /* ### the stuff below seems to be redundant. get_format() probably
+         ### does all this.
+         ###
+         ### investigate all callers. DEFINITELY keep in mind the
+         ### svn_wc_check_wc() entrypoint.
+      */
+
+      /* If the format file does not exist or path not directory, then for
+         our purposes this is not a working copy, so return 0. */
+      *wc_format = 0;
+
+      /* Check path itself exists. */
+      SVN_ERR(svn_io_check_path(local_abspath, &kind, scratch_pool));
+      if (kind == svn_node_none)
+        {
+          return svn_error_createf(APR_ENOENT, NULL, _("'%s' does not exist"),
+                                   svn_dirent_local_style(local_abspath,
+                                                          scratch_pool));
+        }
+
+      return SVN_NO_ERROR;
     }
 
-  return svn_wc__run_log(adm_access, NULL, scratch_pool);
+  /* If we managed to read the format we assume that we
+     are dealing with a real wc so we can return a nice
+     error. */
+  return check_format(*wc_format, local_abspath, scratch_pool);
 }
-#endif
+
 
 svn_error_t *
-svn_wc__upgrade_format(svn_wc_adm_access_t *adm_access,
-                       apr_pool_t *scratch_pool)
+svn_wc_check_wc(const char *path,
+                int *wc_format,
+                apr_pool_t *pool)
 {
-  int wc_format;
-  svn_boolean_t cleanup_required;
-  svn_stringbuf_t *log_accum;
-  const svn_wc_entry_t *this_dir;
+  const char *local_abspath;
+  svn_wc__db_t *db;
+  svn_error_t *err;
 
-  SVN_ERR(svn_wc__adm_wc_format(&wc_format, adm_access, scratch_pool));
-  SVN_ERR(svn_wc__check_format(wc_format, adm_access->path, scratch_pool));
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
-  /* We can upgrade all formats that are accepted by svn_wc__check_format. */
-  if (wc_format >= SVN_WC__VERSION)
-    return SVN_NO_ERROR;
+  /* Ugh. Too bad about having to open a DB.  */
+  SVN_ERR(svn_wc__db_open(&db, svn_wc__db_openmode_readonly,
+                          NULL /* ### config */, pool, pool));
+  err = svn_wc__internal_check_wc(wc_format, db, local_abspath, pool);
+  svn_error_clear(svn_wc__db_close(db));
 
-#ifndef BLAST_FORMAT_11
-  if (!should_create_next_gen())
-    return upgrade_format_old(adm_access, scratch_pool);
-#endif
-
-  /* Don't try to mess with the WC if there are old log files left. */
-  SVN_ERR(svn_wc__adm_is_cleanup_required(&cleanup_required,
-                                          adm_access, scratch_pool));
-
-  if (cleanup_required)
-    return svn_error_create(SVN_ERR_WC_UNSUPPORTED_FORMAT, NULL,
-                            _("Cannot upgrade with existing logs; please "
-                              "run 'svn cleanup' with Subversion 1.6"));
-
-  log_accum = svn_stringbuf_create("", scratch_pool);
-
-  /* What's going on here?
-   *
-   * We're attempting to upgrade an older working copy to the new wc-ng format.
-   * The sematics and storage mechanisms between the two are vastly different,
-   * so it's going to be a bit painful.  Here's a plan for the operation:
-   *
-   * 1) The 'entries' file needs to be moved to the new format.  Ideally, we'd
-   *    read it using svn_wc__entries_read_old(), and then translate the
-   *    current state of the file into a series of wc_db commands to duplicate
-   *    that state in WC-NG.  We're not quite there yet, so we just use
-   *    the same loggy process as we always have, relying on the lower layers
-   *    to take care of the translation, and remembering to remove the old
-   *    entries file when were're done.  ### This isn't a long-term solution.
-   *
-   * ### (fill in other bits as they are implemented)
-   */
-
-  /***** ENTRIES *****/
-  /* Create an empty sqlite database for this directory. */
-  SVN_ERR(svn_wc_entry(&this_dir, adm_access->path, adm_access, FALSE,
-                       scratch_pool));
-  SVN_ERR(svn_wc__entries_init(adm_access->path, this_dir->uuid, this_dir->url,
-                               this_dir->repos, this_dir->revision,
-                               this_dir->depth, scratch_pool));
-
-  /* Do the loggy upgrade thing. */
-#ifndef BLAST_FORMAT_11
-  SVN_ERR(svn_wc__loggy_upgrade_format(&log_accum,
-                                       SVN_WC__VERSION_EXPERIMENTAL,
-                                       scratch_pool));
-#else
-  SVN_ERR(svn_wc__loggy_upgrade_format(&log_accum, SVN_WC__VERSION,
-                                       scratch_pool));
-#endif
-  SVN_ERR(svn_wc__loggy_remove(&log_accum, adm_access,
-                               svn_wc__adm_child(adm_access->path,
-                                                 SVN_WC__ADM_ENTRIES,
-                                                 scratch_pool),
-                               scratch_pool));
-
-  /* ### Note that lots of this content is cribbed from the old format updater.
-     ### The following code will change as the wc-ng format changes and more
-     ### stuff gets migrated to the sqlite format. */
-
-  /***** WC PROPS *****/
-  /* If the WC uses one file per entry for wcprops, give back some inodes
-     to the poor user. */
-  if (wc_format <= SVN_WC__WCPROPS_MANY_FILES_VERSION)
-    SVN_ERR(convert_wcprops(log_accum, adm_access, scratch_pool));
-
-  SVN_ERR(svn_wc__write_log(adm_access, 0, log_accum, scratch_pool));
-
-  if (wc_format <= SVN_WC__WCPROPS_MANY_FILES_VERSION)
-    {
-      /* Remove wcprops directory, dir-props, README.txt and empty-file
-         files.
-         We just silently ignore errors, because keeping these files is
-         not catastrophic. */
-
-      svn_error_clear(svn_io_remove_dir2(
-          svn_wc__adm_child(adm_access->path, SVN_WC__ADM_WCPROPS,
-                            scratch_pool),
-          FALSE, NULL, NULL, scratch_pool));
-      svn_error_clear(svn_io_remove_file(
-          svn_wc__adm_child(adm_access->path, SVN_WC__ADM_DIR_WCPROPS,
-                            scratch_pool),
-          scratch_pool));
-      svn_error_clear(svn_io_remove_file(
-          svn_wc__adm_child(adm_access->path, SVN_WC__ADM_EMPTY_FILE,
-                            scratch_pool),
-          scratch_pool));
-      svn_error_clear(svn_io_remove_file(
-          svn_wc__adm_child(adm_access->path, SVN_WC__ADM_README,
-                            scratch_pool),
-          scratch_pool));
-    }
-
-  return svn_wc__run_log(adm_access, NULL, scratch_pool);
+  return svn_error_return(err);
 }
+
 
 /* Create a physical lock file in the admin directory for ADM_ACCESS.
 
@@ -385,7 +234,7 @@ create_lock(const char *path, apr_pool_t *scratch_pool)
       svn_error_clear(err);
       return svn_error_createf(SVN_ERR_WC_LOCKED, NULL,
                                _("Working copy '%s' locked"),
-                               svn_path_local_style(path, scratch_pool));
+                               svn_dirent_local_style(path, scratch_pool));
     }
 
   return err;
@@ -521,7 +370,8 @@ get_from_shared(const char *abspath,
 
 
 static svn_error_t *
-probe(const char **dir,
+probe(svn_wc__db_t *db,
+      const char **dir,
       const char *path,
       apr_pool_t *pool)
 {
@@ -530,7 +380,12 @@ probe(const char **dir,
 
   SVN_ERR(svn_io_check_path(path, &kind, pool));
   if (kind == svn_node_dir)
-    SVN_ERR(svn_wc_check_wc(path, &wc_format, pool));
+    {
+      const char *local_abspath;
+
+      SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+      SVN_ERR(svn_wc__internal_check_wc(&wc_format, db, local_abspath, pool));
+    }
 
   /* a "version" of 0 means a non-wc directory */
   if (kind != svn_node_dir || wc_format == 0)
@@ -548,7 +403,7 @@ probe(const char **dir,
             (SVN_ERR_WC_BAD_PATH, NULL,
              _("Path '%s' ends in '%s', "
                "which is unsupported for this operation"),
-             svn_path_local_style(path, pool), base_name);
+             svn_dirent_local_style(path, pool), base_name);
         }
 
       *dir = svn_dirent_dirname(path, pool);
@@ -567,22 +422,16 @@ check_format_upgrade(const svn_wc_adm_access_t *adm_access,
                      int wc_format,
                      apr_pool_t *scratch_pool)
 {
-  SVN_ERR(svn_wc__check_format(wc_format,
-                               adm_access->path,
-                               scratch_pool));
+  SVN_ERR(check_format(wc_format, adm_access->path, scratch_pool));
 
-#ifndef BLAST_FORMAT_11
-  /* ### we'll need to update this conditional when _EXPERIMENTAL
-     ### goes away */
-  if (wc_format != SVN_WC__VERSION
-      && wc_format != SVN_WC__VERSION_EXPERIMENTAL)
-#else
   if (wc_format != SVN_WC__VERSION)
-#endif
     {
-      return svn_error_createf(SVN_ERR_WC_UNSUPPORTED_FORMAT, NULL,
-                               "Working copy format is too old; run "
-                               "'svn cleanup' to upgrade");
+      return svn_error_createf(SVN_ERR_WC_UPGRADE_REQUIRED, NULL,
+                               _("Working copy format of '%s' is too old (%d); "
+                                 "please run 'svn upgrade'"),
+                               svn_dirent_local_style(adm_access->path,
+                                                      scratch_pool),
+                               wc_format);
     }
 
   return SVN_NO_ERROR;
@@ -631,18 +480,20 @@ open_single(svn_wc_adm_access_t **adm_access,
             apr_pool_t *result_pool,
             apr_pool_t *scratch_pool)
 {
+  const char *local_abspath;
   int wc_format = 0;
   svn_error_t *err;
   svn_wc_adm_access_t *lock;
 
-  err = svn_wc_check_wc(path, &wc_format, scratch_pool);
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, scratch_pool));
+  err = svn_wc__internal_check_wc(&wc_format, db, local_abspath, scratch_pool);
   if (wc_format == 0 || (err && APR_STATUS_IS_ENOENT(err->apr_err)))
     {
       return svn_error_createf(SVN_ERR_WC_NOT_DIRECTORY, err,
                                _("'%s' is not a working copy"),
-                               svn_path_local_style(path, scratch_pool));
+                               svn_dirent_local_style(path, scratch_pool));
     }
-  svn_error_clear(err);
+  SVN_ERR(err);
 
   /* Need to create a new lock */
   SVN_ERR(adm_access_alloc(&lock,
@@ -716,7 +567,7 @@ close_single(svn_wc_adm_access_t *adm_access,
                                                           scratch_pool);
       if (apr_hash_count(opened) == 0)
         {
-          SVN_ERR(svn_wc__db_close(adm_access->db, scratch_pool));
+          SVN_ERR(svn_wc__db_close(adm_access->db));
           adm_access->db = NULL;
         }
     }
@@ -900,7 +751,7 @@ svn_wc_adm_open3(svn_wc_adm_access_t **adm_access,
            call svn_wc_adm_retrieve.  */
         return svn_error_createf(SVN_ERR_WC_LOCKED, NULL,
                                  _("Working copy '%s' locked"),
-                                 svn_path_local_style(path, pool));
+                                 svn_dirent_local_style(path, pool));
       db = associated->db;
       db_provided = associated->db_provided;
     }
@@ -951,7 +802,21 @@ svn_wc_adm_probe_open3(svn_wc_adm_access_t **adm_access,
   svn_error_t *err;
   const char *dir;
 
-  SVN_ERR(probe(&dir, path, pool));
+  if (associated == NULL)
+    {
+      svn_wc__db_t *db;
+
+      /* Ugh. Too bad about having to open a DB.  */
+      SVN_ERR(svn_wc__db_open(&db, svn_wc__db_openmode_readonly,
+                              NULL /* ### config */, pool, pool));
+      err = probe(db, &dir, path, pool);
+      svn_error_clear(svn_wc__db_close(db));
+      SVN_ERR(err);
+    }
+  else
+    {
+      SVN_ERR(probe(associated->db, &dir, path, pool));
+    }
 
   /* If we moved up a directory, then the path is not a directory, or it
      is not under version control. In either case, the notion of
@@ -985,7 +850,7 @@ svn_wc_adm_probe_open3(svn_wc_adm_access_t **adm_access,
           svn_error_clear(err);
           return svn_error_createf(SVN_ERR_WC_NOT_DIRECTORY, NULL,
                                    _("'%s' is not a working copy"),
-                                   svn_path_local_style(path, pool));
+                                   svn_dirent_local_style(path, pool));
         }
 
       return err;
@@ -1085,7 +950,7 @@ svn_wc_adm_retrieve(svn_wc_adm_access_t **adm_access,
         {
           return svn_error_createf(SVN_ERR_WC_NOT_LOCKED, err,
                                    _("Unable to check path existence for '%s'"),
-                                   svn_path_local_style(path, pool));
+                                   svn_dirent_local_style(path, pool));
         }
 
       if (subdir_entry)
@@ -1095,7 +960,7 @@ svn_wc_adm_retrieve(svn_wc_adm_access_t **adm_access,
             {
               const char *err_msg = apr_psprintf
                 (pool, _("Expected '%s' to be a directory but found a file"),
-                 svn_path_local_style(path, pool));
+                 svn_dirent_local_style(path, pool));
               return svn_error_create(SVN_ERR_WC_NOT_LOCKED,
                                       svn_error_create
                                         (SVN_ERR_WC_NOT_DIRECTORY, NULL,
@@ -1107,7 +972,7 @@ svn_wc_adm_retrieve(svn_wc_adm_access_t **adm_access,
             {
               const char *err_msg = apr_psprintf
                 (pool, _("Expected '%s' to be a file but found a directory"),
-                 svn_path_local_style(path, pool));
+                 svn_dirent_local_style(path, pool));
               return svn_error_create(SVN_ERR_WC_NOT_LOCKED,
                                       svn_error_create(SVN_ERR_WC_NOT_FILE,
                                                        NULL, err_msg),
@@ -1124,14 +989,14 @@ svn_wc_adm_retrieve(svn_wc_adm_access_t **adm_access,
         {
           return svn_error_createf(SVN_ERR_WC_NOT_LOCKED, err,
                                    _("Unable to check path existence for '%s'"),
-                                   svn_path_local_style(wcpath, pool));
+                                   svn_dirent_local_style(wcpath, pool));
         }
 
       if (kind == svn_node_none)
         {
           const char *err_msg = apr_psprintf(pool,
                                              _("Directory '%s' is missing"),
-                                             svn_path_local_style(path, pool));
+                                             svn_dirent_local_style(path, pool));
           return svn_error_create(SVN_ERR_WC_NOT_LOCKED,
                                   svn_error_create(SVN_ERR_WC_PATH_NOT_FOUND,
                                                    NULL, err_msg),
@@ -1141,17 +1006,17 @@ svn_wc_adm_retrieve(svn_wc_adm_access_t **adm_access,
       else if (kind == svn_node_dir && wckind == svn_node_none)
         return svn_error_createf(SVN_ERR_WC_NOT_LOCKED, NULL,
                                  _("Directory '%s' containing working copy admin area is missing"),
-                                 svn_path_local_style(wcpath, pool));
+                                 svn_dirent_local_style(wcpath, pool));
 
       else if (kind == svn_node_dir && wckind == svn_node_dir)
         return svn_error_createf(SVN_ERR_WC_NOT_LOCKED, NULL,
                                  _("Unable to lock '%s'"),
-                                 svn_path_local_style(path, pool));
+                                 svn_dirent_local_style(path, pool));
 
       /* If all else fails, return our useless generic error.  */
       return svn_error_createf(SVN_ERR_WC_NOT_LOCKED, NULL,
                                _("Working copy '%s' is not locked"),
-                               svn_path_local_style(path, pool));
+                               svn_dirent_local_style(path, pool));
     }
 
   return SVN_NO_ERROR;
@@ -1168,11 +1033,13 @@ svn_wc_adm_probe_retrieve(svn_wc_adm_access_t **adm_access,
   const svn_wc_entry_t *entry;
   svn_error_t *err;
 
+  SVN_ERR_ASSERT(associated != NULL);
+
   SVN_ERR(svn_wc_entry(&entry, path, associated, TRUE, pool));
 
   if (! entry)
     /* Not a versioned item, probe it */
-    SVN_ERR(probe(&dir, path, pool));
+    SVN_ERR(probe(associated->db, &dir, path, pool));
   else if (entry->kind != svn_node_dir)
     dir = svn_dirent_dirname(path, pool);
   else
@@ -1187,7 +1054,7 @@ svn_wc_adm_probe_retrieve(svn_wc_adm_access_t **adm_access,
          we want its parent's adm_access (which holds minimal data
          on the child) */
       svn_error_clear(err);
-      SVN_ERR(probe(&dir, path, pool));
+      SVN_ERR(probe(associated->db, &dir, path, pool));
       SVN_ERR(svn_wc_adm_retrieve(adm_access, associated, dir, pool));
     }
   else
@@ -1583,16 +1450,16 @@ svn_wc__adm_write_check(const svn_wc_adm_access_t *adm_access,
           if (! locked)
             return svn_error_createf(SVN_ERR_WC_NOT_LOCKED, NULL,
                                      _("Write-lock stolen in '%s'"),
-                                     svn_path_local_style(adm_access->path,
-                                                          scratch_pool));
+                                     svn_dirent_local_style(adm_access->path,
+                                                            scratch_pool));
         }
     }
   else
     {
       return svn_error_createf(SVN_ERR_WC_NOT_LOCKED, NULL,
                                _("No write-lock in '%s'"),
-                               svn_path_local_style(adm_access->path,
-                                                    scratch_pool));
+                               svn_dirent_local_style(adm_access->path,
+                                                      scratch_pool));
     }
 
   return SVN_NO_ERROR;
@@ -1612,7 +1479,7 @@ svn_wc_locked(svn_boolean_t *locked, const char *path, apr_pool_t *pool)
   else
     return svn_error_createf(SVN_ERR_WC_LOCKED, NULL,
                              _("Lock file '%s' is not a regular file"),
-                             svn_path_local_style(lockfile, pool));
+                             svn_dirent_local_style(lockfile, pool));
 
   return SVN_NO_ERROR;
 }
@@ -1772,3 +1639,20 @@ svn_wc__adm_extend_lock_to_tree(svn_wc_adm_access_t *adm_access,
                               svn_depth_infinity, FALSE, NULL, NULL, pool);
 }
 
+svn_error_t *
+svn_wc__adm_open_in_context(svn_wc_adm_access_t **adm_access,
+                            svn_wc_context_t *wc_ctx,
+                            const char *path,
+                            svn_boolean_t write_lock,
+                            int levels_to_lock,
+                            svn_cancel_func_t cancel_func,
+                            void *cancel_baton,
+                            apr_pool_t *pool)
+{
+  SVN_ERR_ASSERT(wc_ctx != NULL);
+
+  SVN_ERR(open_all(adm_access, path, wc_ctx->db, TRUE, write_lock,
+                   levels_to_lock, cancel_func, cancel_baton, pool));
+
+  return SVN_NO_ERROR;
+}

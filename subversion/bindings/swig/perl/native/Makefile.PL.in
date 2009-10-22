@@ -35,7 +35,7 @@ my $apu_cflags = '@SVN_APRUTIL_INCLUDES@';
 
 # According to the log of r7937, the flags guarded by the conditional break
 # the build on FreeBSD if not conditionalized.
-my $apr_ldflags = '@SVN_APR_EXPORT_LIBS@' 
+my $apr_ldflags = '@SVN_APR_LIBS@' 
    if $^O eq 'darwin' or $^O eq 'cygwin';
 
 chomp $apr_shlib_path_var;

@@ -2,17 +2,22 @@
  * cl.h:  shared stuff in the command line program
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -189,7 +194,6 @@ typedef struct svn_cl__opt_state_t
   const char *diff_cmd;          /* the external diff command to use */
   const char *merge_cmd;         /* the external merge command to use */
   const char *editor_cmd;        /* the external editor command to use */
-  const char *patch_cmd;         /* the external patch command to use */
   svn_boolean_t record_only;     /* whether to record mergeinfo */
   const char *old_target;        /* diff target */
   const char *new_target;        /* diff target */
@@ -263,7 +267,8 @@ svn_opt_subcommand_t
   svn_cl__status,
   svn_cl__switch,
   svn_cl__unlock,
-  svn_cl__update;
+  svn_cl__update,
+  svn_cl__upgrade;
 
 
 /* See definition in main.c for documentation. */

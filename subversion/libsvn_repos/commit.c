@@ -1,17 +1,22 @@
 /* commit.c --- editor for committing changes to a filesystem.
  *
  * ====================================================================
- * Copyright (c) 2000-2006, 2009 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -705,7 +710,7 @@ close_edit(void *edit_baton,
              We ignore the possible error result from svn_fs_abort_txn();
              it's more important to return the original error. */
           svn_error_clear(svn_fs_abort_txn(eb->txn, pool));
-          return err;
+          return svn_error_return(err);
         }
     }
 
@@ -743,7 +748,7 @@ close_edit(void *edit_baton,
       }
   }
 
-  return err;
+  return svn_error_return(err);
 }
 
 
@@ -755,33 +760,6 @@ abort_edit(void *edit_baton,
   if ((! eb->txn) || (! eb->txn_owner))
     return SVN_NO_ERROR;
   return svn_fs_abort_txn(eb->txn, pool);
-}
-
-
-/* Copy REVPROP_TABLE and its data to POOL. */
-static apr_hash_t *
-revprop_table_dup(apr_hash_t *revprop_table,
-                  apr_pool_t *pool)
-{
-  apr_hash_t *new_revprop_table = NULL;
-  const void *key;
-  apr_ssize_t klen;
-  void *value;
-  const char *propname;
-  const svn_string_t *propval;
-  apr_hash_index_t *hi;
-
-  new_revprop_table =  apr_hash_make(pool);
-
-  for (hi = apr_hash_first(pool, revprop_table); hi; hi = apr_hash_next(hi))
-    {
-      apr_hash_this(hi, &key, &klen, &value);
-      propname = apr_pstrdup(pool, (const char *) key);
-      propval = svn_string_dup((const svn_string_t *) value, pool);
-      apr_hash_set(new_revprop_table, propname, klen, propval);
-    }
-
-  return new_revprop_table;
 }
 
 
@@ -839,7 +817,7 @@ svn_repos_get_commit_editor5(const svn_delta_editor_t **editor,
 
   /* Set up the edit baton. */
   eb->pool = subpool;
-  eb->revprop_table = revprop_table_dup(revprop_table, subpool);
+  eb->revprop_table = svn_prop_hash_dup(revprop_table, subpool);
   eb->commit_callback = callback;
   eb->commit_callback_baton = callback_baton;
   eb->authz_callback = authz_callback;

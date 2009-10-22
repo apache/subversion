@@ -1,17 +1,22 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  * @endcopyright
  *
@@ -106,6 +111,26 @@ typedef struct svn_error_t
 
 /** @} */
 
+/** @defgroup apr_hash_utilities APR Hash Table Helpers
+ * These functions enable the caller to dereference an APR hash table index
+ * without type casts or temporary variables.
+ * @{
+ */
+
+/** Return the key of the hash table entry indexed by @a hi. */
+const void *
+svn_apr_hash_index_key(const apr_hash_index_t *hi);
+
+/** Return the key length of the hash table entry indexed by @a hi. */
+apr_ssize_t
+svn_apr_hash_index_klen(const apr_hash_index_t *hi);
+
+/** Return the value of the hash table entry indexed by @a hi. */
+void *
+svn_apr_hash_index_val(const apr_hash_index_t *hi);
+
+/** @} */
+
 /** The various types of nodes in the Subversion filesystem. */
 typedef enum
 {
@@ -140,6 +165,33 @@ svn_node_kind_to_word(svn_node_kind_t kind);
  */
 svn_node_kind_t
 svn_node_kind_from_word(const char *word);
+
+/** Generic three-state property to represent an unknown value for values that
+ * are just like booleans. @since New in 1.7. */
+typedef enum
+{
+  svn_tristate_unknown = 0,
+  svn_tristate_false,
+  svn_tristate_true
+} svn_tristate_t;
+
+/** Return a constant string "true", "false" or NULL representing the value of
+ * @a tristate.
+ *
+ * @since New in 1.7.
+ */
+const char *
+svn_tristate_to_word(svn_tristate_t tristate);
+
+/** Return the appropriate tristate for @a word. If @a word is "true", returns
+ * @c svn_tristate_true; if @a word is "false", returns @c svn_tristate_false,
+ * for all other values (including NULL) returns @c svn_tristate_unknown.
+ *
+ * @since New in 1.7.
+ */
+svn_tristate_t
+svn_tristate_from_word(const char * word);
+
 
 /** About Special Files in Subversion
  *
@@ -601,6 +653,14 @@ typedef struct svn_log_changed_path2_t
   /** The type of the node, may be svn_node_unknown. */
   svn_node_kind_t node_kind;
 
+  /** Is the text modified, may be svn_tristate_unknown.
+   * @since New in 1.7. */
+  svn_tristate_t text_modified;
+
+  /** Are properties modified, may be svn_tristate_unknown.
+   * @since New in 1.7. */
+  svn_tristate_t props_modified;
+
   /* NOTE: Add new fields at the end to preserve binary compatibility.
      Also, if you add fields here, you have to update
      svn_log_changed_path2_dup(). */
@@ -1041,6 +1101,19 @@ typedef svn_error_t *(*svn_location_segment_receiver_t)
 svn_location_segment_t *
 svn_location_segment_dup(svn_location_segment_t *segment,
                          apr_pool_t *pool);
+
+/** A line number, such as in a file or a stream.
+ *
+ * @since New in 1.7.
+ */
+typedef unsigned long svn_linenum_t;
+
+/* The maximum value of an svn_linenum_t.
+ *
+ * @since New in 1.7.
+ */
+#define SVN_LINENUM_MAX_VALUE ULONG_MAX
+
 /** @} */
 
 

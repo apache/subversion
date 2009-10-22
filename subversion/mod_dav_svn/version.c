@@ -2,17 +2,22 @@
  * version.c: mod_dav_svn versioning provider functions for Subversion
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -223,24 +228,27 @@ get_option(const dav_resource *resource,
     }
 
   /* Welcome to the 2nd generation of the svn HTTP protocol, now
-     DeltaV-free! */
-  apr_table_set(r->headers_out, SVN_DAV_ROOT_URI_HEADER, repos_root_uri);
-  apr_table_set(r->headers_out, SVN_DAV_ME_RESOURCE_HEADER,
-                apr_pstrcat(resource->pool, repos_root_uri, "/",
-                            dav_svn__get_me_resource_uri(r), NULL));
-  apr_table_set(r->headers_out, SVN_DAV_REV_ROOT_STUB_HEADER,
-                apr_pstrcat(resource->pool, repos_root_uri, "/",
-                            dav_svn__get_rev_root_stub(r), NULL));
-  apr_table_set(r->headers_out, SVN_DAV_REV_STUB_HEADER,
-                apr_pstrcat(resource->pool, repos_root_uri, "/",
-                            dav_svn__get_rev_stub(r), NULL));
-  apr_table_set(r->headers_out, SVN_DAV_TXN_ROOT_STUB_HEADER,
-                apr_pstrcat(resource->pool, repos_root_uri, "/",
-                            dav_svn__get_txn_root_stub(r), NULL));
-  apr_table_set(r->headers_out, SVN_DAV_TXN_STUB_HEADER,
-                apr_pstrcat(resource->pool, repos_root_uri, "/",
-                            dav_svn__get_txn_stub(r), NULL));
-  
+     DeltaV-free!  If we're configured to advise this support, do so.  */
+  if (resource->info->repos->v2_protocol)
+    {
+      apr_table_set(r->headers_out, SVN_DAV_ROOT_URI_HEADER, repos_root_uri);
+      apr_table_set(r->headers_out, SVN_DAV_ME_RESOURCE_HEADER,
+                    apr_pstrcat(resource->pool, repos_root_uri, "/",
+                                dav_svn__get_me_resource_uri(r), NULL));
+      apr_table_set(r->headers_out, SVN_DAV_REV_ROOT_STUB_HEADER,
+                    apr_pstrcat(resource->pool, repos_root_uri, "/",
+                                dav_svn__get_rev_root_stub(r), NULL));
+      apr_table_set(r->headers_out, SVN_DAV_REV_STUB_HEADER,
+                    apr_pstrcat(resource->pool, repos_root_uri, "/",
+                                dav_svn__get_rev_stub(r), NULL));
+      apr_table_set(r->headers_out, SVN_DAV_TXN_ROOT_STUB_HEADER,
+                    apr_pstrcat(resource->pool, repos_root_uri, "/",
+                                dav_svn__get_txn_root_stub(r), NULL));
+      apr_table_set(r->headers_out, SVN_DAV_TXN_STUB_HEADER,
+                    apr_pstrcat(resource->pool, repos_root_uri, "/",
+                                dav_svn__get_txn_stub(r), NULL));
+    }
+
   return NULL;
 }
 
@@ -1396,6 +1404,7 @@ merge(dav_resource *target,
     }
   else if (serr)
     {
+      serr = svn_error_purge_tracing(serr);
       if (serr->child && serr->child->message)
         post_commit_err = apr_pstrdup(pool, serr->child->message);
       svn_error_clear(serr);

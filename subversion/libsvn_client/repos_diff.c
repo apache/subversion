@@ -2,17 +2,22 @@
  * repos_diff.c -- The diff editor for comparing two repository versions
  *
  * ====================================================================
- * Copyright (c) 2000-2009 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -100,7 +105,7 @@ struct edit_baton {
   apr_off_t savepoint;
 
   /* Diff editor baton */
-  svn_delta_editor_t *diff_editor;
+  svn_delta_editor_t *svnpatch_editor;
 
   /* A token holder, helps to build the svnpatch. */
   int next_token;
@@ -544,8 +549,6 @@ transmit_svndiff(const char *path,
                  void *file_baton,
                  apr_pool_t *pool)
 {
-  struct file_baton *fb = file_baton;
-  struct edit_baton *eb = fb->edit_baton;
   svn_txdelta_window_handler_t handler;
   svn_txdelta_stream_t *txdelta_stream;
   apr_file_t *file;
@@ -555,8 +558,8 @@ transmit_svndiff(const char *path,
 
   /* Initialize window_handler/baton to produce svndiff from txdelta
    * windows. */
-  SVN_ERR(eb->diff_editor->apply_textdelta
-          (fb, NULL, pool, &handler, &wh_baton));
+  SVN_ERR(editor->apply_textdelta(file_baton, NULL, pool,
+                                  &handler, &wh_baton));
 
   base_stream = svn_stream_empty(pool);
 
@@ -871,7 +874,7 @@ delete_entry(const char *path,
     }
 
   if (eb->svnpatch_stream)
-    SVN_ERR(eb->diff_editor->delete_entry
+    SVN_ERR(eb->svnpatch_editor->delete_entry
             (path, SVN_INVALID_REVNUM, pb, pool));
 
   return SVN_NO_ERROR;
@@ -927,6 +930,12 @@ add_directory(const char *path,
 
   if (eb->notify_func)
     {
+      /* If a path was replaced, we issue a separate 'D' notification
+         here, followed by the 'A' notification in the usual way.
+         However, if the path was replaced on top of a conflicting mod,
+         this is a tree-conflict case. The path is already marked tree-
+         conflicted (either by some previous run altogether, or by this
+         replace's delete operation). No need to notify again here. */
       svn_wc_notify_t *notify;
       svn_boolean_t is_replace = FALSE;
       deleted_path_notify_t *dpn = apr_hash_get(eb->deleted_paths, b->wcpath,
@@ -934,6 +943,7 @@ add_directory(const char *path,
       if (dpn)
         {
           svn_wc_notify_action_t new_action;
+
           if (dpn->action == svn_wc_notify_update_delete
               && action == svn_wc_notify_update_add)
             {
@@ -942,11 +952,19 @@ add_directory(const char *path,
             }
           else
             new_action = dpn->action;
-          notify = svn_wc_create_notify(b->wcpath, new_action, pool);
-          notify->kind = dpn->kind;
-          notify->content_state = notify->prop_state = dpn->state;
-          notify->lock_state = svn_wc_notify_lock_state_inapplicable;
-          (*eb->notify_func)(eb->notify_baton, notify, pool);
+
+          /* Tree-conflicts during replace were notified about elsewhere. */
+          if (action != svn_wc_notify_tree_conflict)
+            {
+              notify = svn_wc_create_notify(b->wcpath, new_action, pool);
+              notify->kind = dpn->kind;
+              notify->content_state = notify->prop_state = dpn->state;
+              notify->lock_state = svn_wc_notify_lock_state_inapplicable;
+              (*eb->notify_func)(eb->notify_baton, notify, pool);
+            }
+
+          /* Remove from the list of deleted paths. We don't want to
+             notify about this path any more than we did already. */
           apr_hash_set(eb->deleted_paths, b->wcpath,
                        APR_HASH_KEY_STRING, NULL);
         }
@@ -1268,7 +1286,7 @@ close_file(void *file_baton,
 
       if (binary_file && eb->svnpatch_stream)
         SVN_ERR(transmit_svndiff(b->path_end_revision,
-                                 eb->diff_editor, b, pool));
+                                 eb->svnpatch_editor, b, pool));
     }
 
 
@@ -1299,11 +1317,15 @@ close_file(void *file_baton,
             }
           else
             new_action = dpn->action;
-          notify  = svn_wc_create_notify(b->wcpath, new_action, pool);
-          notify->kind = dpn->kind;
-          notify->content_state = notify->prop_state = dpn->state;
-          notify->lock_state = svn_wc_notify_lock_state_inapplicable;
-          (*eb->notify_func)(eb->notify_baton, notify, pool);
+
+          if (action != svn_wc_notify_tree_conflict)
+            {
+              notify  = svn_wc_create_notify(b->wcpath, new_action, pool);
+              notify->kind = dpn->kind;
+              notify->content_state = notify->prop_state = dpn->state;
+              notify->lock_state = svn_wc_notify_lock_state_inapplicable;
+              (*eb->notify_func)(eb->notify_baton, notify, pool);
+            }
           apr_hash_set(eb->deleted_paths, b->wcpath,
                        APR_HASH_KEY_STRING, NULL);
         }
@@ -1325,7 +1347,7 @@ close_file(void *file_baton,
       if (binary_file && !b->added)
           svnpatch_release_savepoint(b, svn_node_file);
 
-      SVN_ERR(eb->diff_editor->close_file
+      SVN_ERR(eb->svnpatch_editor->close_file
               (b, binary_file ? text_checksum : NULL, b->pool));
     }
 
@@ -1407,9 +1429,9 @@ close_directory(void *dir_baton,
       for (hi = apr_hash_first(NULL, eb->deleted_paths); hi;
            hi = apr_hash_next(hi))
         {
-          const void *deleted_path;
-          deleted_path_notify_t *dpn;
-          apr_hash_this(hi, &deleted_path, NULL, (void *)&dpn);
+          const char *deleted_path = svn_apr_hash_index_key(hi);
+          deleted_path_notify_t *dpn = svn_apr_hash_index_val(hi);
+
           notify = svn_wc_create_notify(deleted_path, dpn->action, pool);
           notify->kind = dpn->kind;
           notify->content_state = notify->prop_state = dpn->state;
@@ -1437,7 +1459,7 @@ close_directory(void *dir_baton,
     }
 
   if (eb->svnpatch_stream)
-    eb->diff_editor->close_directory(b, pool);
+    eb->svnpatch_editor->close_directory(b, pool);
 
   return SVN_NO_ERROR;
 }
@@ -1465,7 +1487,7 @@ change_file_prop(void *file_baton,
   /* Restrict to Regular Properties. */
   if (eb->svnpatch_stream
       && svn_property_kind(NULL, name) == svn_prop_regular_kind)
-    SVN_ERR(eb->diff_editor->change_file_prop
+    SVN_ERR(eb->svnpatch_editor->change_file_prop
             (b, name, value, pool));
 
   return SVN_NO_ERROR;
@@ -1493,7 +1515,7 @@ change_dir_prop(void *dir_baton,
   /* Restrict to Regular Properties. */
   if (eb->svnpatch_stream
       && svn_property_kind(NULL, name) == svn_prop_regular_kind)
-    SVN_ERR(eb->diff_editor->change_dir_prop
+    SVN_ERR(eb->svnpatch_editor->change_dir_prop
             (dir_baton, name, value, pool));
 
   return SVN_NO_ERROR;
@@ -1507,10 +1529,10 @@ close_edit(void *edit_baton,
 {
   struct edit_baton *eb = edit_baton;
 
-  svn_pool_destroy(eb->pool);
-
   if (eb->svnpatch_stream)
-      SVN_ERR(eb->diff_editor->close_edit(eb, pool));
+      SVN_ERR(eb->svnpatch_editor->close_edit(eb, pool));
+
+  svn_pool_destroy(eb->pool);
 
   return SVN_NO_ERROR;
 }
@@ -1581,22 +1603,22 @@ absent_file(const char *path,
  * drive is being performed by transmit_svndiff() against binary files
  * to generate svndiffs and txdelta Editor Commands though. */
 static void
-get_svnpatch_diff_editor(svn_delta_editor_t **editor,
-                         apr_pool_t *pool)
+get_svnpatch_editor(svn_delta_editor_t **editor,
+                       apr_pool_t *pool)
 {
-  svn_delta_editor_t *diff_editor;
+  svn_delta_editor_t *ed;
 
-  diff_editor = svn_delta_default_editor(pool);
+  ed = svn_delta_default_editor(pool);
+   
+  ed->delete_entry = svnpatch_delete_entry;
+  ed->close_directory = svnpatch_close_directory;
+  ed->apply_textdelta = svnpatch_apply_textdelta;
+  ed->change_file_prop = svnpatch_change_file_prop;
+  ed->change_dir_prop = svnpatch_change_dir_prop;
+  ed->close_file = svnpatch_close_file;
+  ed->close_edit = svnpatch_close_edit;
 
-  diff_editor->delete_entry = svnpatch_delete_entry;
-  diff_editor->close_directory = svnpatch_close_directory;
-  diff_editor->apply_textdelta = svnpatch_apply_textdelta;
-  diff_editor->change_file_prop = svnpatch_change_file_prop;
-  diff_editor->change_dir_prop = svnpatch_change_dir_prop;
-  diff_editor->close_file = svnpatch_close_file;
-  diff_editor->close_edit = svnpatch_close_edit;
-
-  *editor = diff_editor;
+  *editor = ed;
 }
 
 /* Create a repository diff editor and baton.  */
@@ -1637,7 +1659,7 @@ svn_client__get_diff_editor(const char *target,
   eb->notify_baton = notify_baton;
   eb->next_token = 0;
   eb->savepoint = 0;
-  eb->diff_editor = NULL;
+  eb->svnpatch_editor = NULL;
   eb->svnpatch_stream = NULL;
   eb->svnpatch_file = svnpatch_file;
 
@@ -1646,7 +1668,7 @@ svn_client__get_diff_editor(const char *target,
       eb->svnpatch_stream =
         svn_stream_from_aprfile2(eb->svnpatch_file,
                                  FALSE, eb->pool);
-      get_svnpatch_diff_editor(&eb->diff_editor, eb->pool);
+      get_svnpatch_editor(&eb->svnpatch_editor, eb->pool);
     }
 
   tree_editor->set_target_revision = set_target_revision;

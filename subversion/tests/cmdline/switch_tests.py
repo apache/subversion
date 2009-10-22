@@ -6,14 +6,22 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2004, 2008 CollabNet.  All rights reserved.
+#    Licensed to the Subversion Corporation (SVN Corp.) under one
+#    or more contributor license agreements.  See the NOTICE file
+#    distributed with this work for additional information
+#    regarding copyright ownership.  The SVN Corp. licenses this file
+#    to you under the Apache License, Version 2.0 (the
+#    "License"); you may not use this file except in compliance
+#    with the License.  You may obtain a copy of the License at
 #
-# This software is licensed as described in the file COPYING, which
-# you should have received as part of this distribution.  The terms
-# are also available at http://subversion.tigris.org/license-1.html.
-# If newer versions of this license are posted there, you may use a
-# newer version instead, at your option.
+#      http://www.apache.org/licenses/LICENSE-2.0
 #
+#    Unless required by applicable law or agreed to in writing,
+#    software distributed under the License is distributed on an
+#    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+#    KIND, either express or implied.  See the License for the
+#    specific language governing permissions and limitations
+#    under the License.
 ######################################################################
 
 # General modules
@@ -695,40 +703,24 @@ def nonrecursive_switching(sbox):
                                      'switch', '-N', version1_url, wc2_dir)
 
   # Check the URLs of the (not switched) directories.
-  exit_code, out, err = svntest.actions.run_and_verify_svn(None, None, [],
-                                                           'info', wc2_B_dir)
-  if out[1].find('/A/B') == -1:
-    print(out[1])
-    raise svntest.Failure
-
-  exit_code, out, err = svntest.actions.run_and_verify_svn(None, None, [],
-                                                           'info', wc2_C_dir)
-  if out[1].find('/A/C') == -1:
-    print(out[1])
-    raise svntest.Failure
-
-  exit_code, out, err = svntest.actions.run_and_verify_svn(None, None, [],
-                                                           'info', wc2_D_dir)
-  if out[1].find('/A/D') == -1:
-    print(out[1])
-    raise svntest.Failure
+  expected_infos = [
+      { 'URL' : '.*/A/B$' },
+      { 'URL' : '.*/A/C$' },
+      { 'URL' : '.*/A/D$' },
+    ]
+  svntest.actions.run_and_verify_info(expected_infos,
+                                      wc2_B_dir, wc2_C_dir, wc2_D_dir)
 
   # Check the URLs of the switched files.
   # ("svn status -u" might be a better check: it fails when newfile's URL
   # is bad, and shows "S" when mu's URL is wrong.)
   # mu: not switched
-  exit_code, out, err = svntest.actions.run_and_verify_svn(None, None, [],
-                                                           'info', wc2_mu_file)
-  if out[2].find('/branch/version1/mu') == -1:
-    print(out[2])
-    raise svntest.Failure
-  # newfile: wrong URL
-  exit_code, out, err = svntest.actions.run_and_verify_svn(None, None, [],
-                                                           'info',
-                                                           wc2_new_file)
-  if out[2].find('/branch/version1/newfile') == -1:
-    print(out[2])
-    raise svntest.Failure
+  expected_infos = [
+      { 'URL' : '.*/branch/version1/mu$' },
+      { 'URL' : '.*/branch/version1/newfile$' },   # newfile: wrong URL
+    ]
+  svntest.actions.run_and_verify_info(expected_infos,
+                                      wc2_mu_file, wc2_new_file)
 
 
 #----------------------------------------------------------------------
@@ -770,13 +762,10 @@ def failed_anchor_is_target(sbox):
 
   # There was a bug whereby the failed switch left the wrong URL in
   # the target directory H.  Check for that.
-  exit_code, out, err = svntest.actions.run_and_verify_svn(None, None, [],
-                                                           'info', H_path)
-  for line in out:
-    if line == 'URL: ' + G_url + '\n':
-      break
-  else:
-    raise svntest.Failure
+  expected_infos = [
+      { 'URL' : '.*' + G_url + '$' },
+    ]
+  svntest.actions.run_and_verify_info(expected_infos, H_path)
 
   # Resolve tree conflict at psi.
   svntest.actions.run_and_verify_resolved([psi_path])
@@ -819,11 +808,10 @@ def bad_intermediate_urls(sbox):
     raise svntest.Failure
 
   # However, the URL for A should now reflect A/C/A, not something else.
-  exit_code, out, err = svntest.actions.run_and_verify_svn(None, None, [],
-                                                           'info', A_path)
-  if out[1].find('/A/C/A') == -1:
-    raise svntest.Failure
-
+  expected_infos = [
+      { 'URL' : '.*/A/C/A$' },
+    ]
+  svntest.actions.run_and_verify_info(expected_infos, A_path)
 
 
 #----------------------------------------------------------------------
@@ -945,14 +933,14 @@ def relocate_beyond_repos_root(sbox):
   # A relocate that changes the repo path part of the URL shouldn't work.
   # This tests for issue #2380.
   svntest.actions.run_and_verify_svn(None, None,
-                                     ".*can only change the repository part.*",
+                                     ".*Given destination URL invalid.*",
                                      'switch', '--relocate',
                                      A_url, other_B_url, A_wc_dir)
 
   # Another way of trying to change the fs path, leading to an invalid
   # repository root.
   svntest.actions.run_and_verify_svn(None, None,
-                                     ".*is not the root.*",
+                                     ".*Given source URL invalid.*",
                                      'switch', '--relocate',
                                      repo_url, other_B_url, A_wc_dir)
 
@@ -964,10 +952,16 @@ def relocate_beyond_repos_root(sbox):
   # relocate actually changed the URI.  Escape the expected URI to
   # avoid problems from any regex meta-characters it may contain
   # (e.g. '+').
-  escaped_exp = '^URL: ' + re.escape(other_A_url) + '$' \
-                '|Path.+|Repository.+|Revision.+|Node.+|Last.+|\n'
-  svntest.actions.run_and_verify_svn(None, escaped_exp, [],
-                                     'info', '-rHEAD', A_wc_dir)
+  expected_infos = [
+      { 'URL'                : re.escape(other_A_url) + '$',
+        'Path'               : '.+',
+        'Repository UUID'    : '.+',
+        'Revision'           : '.+',
+        'Node Kind'          : '.+',
+        'Last Changed Date'  : '.+' },
+    ]
+  svntest.actions.run_and_verify_info(expected_infos, A_wc_dir, '-rHEAD')
+
 
 #----------------------------------------------------------------------
 # Issue 2306.
@@ -1130,34 +1124,6 @@ def relocate_and_propset(sbox):
 
   # Make a propchange on A/D
   svntest.main.run_svn(None, 'ps', 'foo', 'bar', D_path)
-
-  # This test is failing over Neon, which differs in the approach it
-  # takes versus Serf.  Here's a Neon trace:
-  #
-  #   "MKACTIVITY /svn-test-work/repositories/switch_tests-19.other/!svn/act/ACTIVITYID HTTP/1.1" 201 267
-  #   "PROPFIND /svn-test-work/repositories/switch_tests-19.other/A/D HTTP/1.1" 207 762
-  #   "PROPFIND /svn-test-work/repositories/switch_tests-19.other/!svn/vcc/default HTTP/1.1" 207 478
-  #   "CHECKOUT /svn-test-work/repositories/switch_tests-19.other/!svn/bln/2 HTTP/1.1" 201 281
-  #   "PROPPATCH /svn-test-work/repositories/switch_tests-19.other/!svn/wbl/ACTIVITYID/2 HTTP/1.1" 207 500
-  #   "PROPFIND /svn-test-work/repositories/switch_tests-19.other/A/D HTTP/1.1" 207 470
-  #   "CHECKOUT /svn-test-work/repositories/switch_tests-19.other/!svn/ver/2/A/D HTTP/1.1" 201 283
-  #   "PROPPATCH /svn-test-work/repositories/switch_tests-19.other/!svn/wrk/ACTIVITYID/A/D HTTP/1.1" 207 502
-  #   "MERGE /svn-test-work/repositories/switch_tests-19.other/A/D HTTP/1.1" 200 858
-  #   "DELETE /svn-test-work/repositories/switch_tests-19.other/!svn/act/ACTIVITYID HTTP/1.1" 204 -
-  #
-  # Notice the PROPPATCH that succeeds instead of failing.
-  #
-  # Here's the same in Serf:
-  #
-  #   "MKACTIVITY /svn-test-work/repositories/switch_tests-19.other/!svn/act/ACTIVITYID HTTP/1.1" 201 267
-  #   "PROPFIND /svn-test-work/repositories/switch_tests-19.other/A/D HTTP/1.1" 207 762
-  #   "PROPFIND /svn-test-work/repositories/switch_tests-19.other/!svn/vcc/default HTTP/1.1" 207 478
-  #   "PROPFIND /svn-test-work/repositories/switch_tests-19.other/A/D HTTP/1.1" 207 470
-  #   "CHECKOUT /svn-test-work/repositories/switch_tests-19.other/!svn/bln/2 HTTP/1.1" 201 281
-  #   "PROPPATCH /svn-test-work/repositories/switch_tests-19.other/!svn/wbl/ACTIVITYID/2 HTTP/1.1" 207 500
-  #   "CHECKOUT /svn-test-work/repositories/switch_tests-19.other/!svn/ver/2/A/D HTTP/1.1" 201 283
-  #   "PROPPATCH /svn-test-work/repositories/switch_tests-19.other/!svn/wrk/ACTIVITYID/A/D HTTP/1.1" 409 222
-  #   "DELETE /svn-test-work/repositories/switch_tests-19.other/!svn/act/ACTIVITYID HTTP/1.1" 204 -
 
   # Commit and *expect* a repository Merge failure:
   svntest.actions.run_and_verify_commit(wc_dir,
@@ -2405,20 +2371,7 @@ def tree_conflicts_on_switch_2_1(sbox):
   expected_disk = disk_after_leaf_edit.copy()
 
   expected_status = deep_trees_status_local_leaf_edit.copy()
-  # These 'switched' statuses are bogus, because of do_entry_deletion not
-  # updating the URLs (issue #3334).  For example, after the switch, D/D1
-  # has a URL pointing to incoming/D/D1 and is scheduled for addition as a
-  # copy from local/D/D1.  But D/D1/delta, which was an add without history
-  # prior to the switch, still has a URL pointing to local/D/D1/delta, so it
-  # looks like it is switched relative to its parent.
-  # NOTE: wc-ng fixes the bug. see notes/api-errata/wc001.txt
-  if not sbox.using_wc_ng():
-    expected_status.tweak('D/D1/delta',
-                          'DD/D1/D2',
-                          'DF/D1/beta',
-                          'DDD/D1/D2',
-                          'DDF/D1/D2',
-                          switched='S')
+
   # The expectation on 'alpha' reflects partial progress on issue #3334.
   expected_status.tweak('D/D1',
                         'F/alpha',
@@ -2548,6 +2501,93 @@ def tree_conflicts_on_switch_3(sbox):
                         expected_status) ] )
 
 
+def single_file_relocate(sbox):
+  "relocate a single file"
+
+  # Create virgin repos and working copy
+  svntest.main.safe_rmtree(sbox.repo_dir, 1)
+  svntest.main.create_repos(sbox.repo_dir)
+
+  wc_dir = sbox.wc_dir
+  iota_path = os.path.join(sbox.wc_dir, 'iota')
+  repo_dir = sbox.repo_dir
+  repo_url = sbox.repo_url
+  iota_url = repo_url + '/iota'
+
+  # import the greek tree
+  svntest.main.greek_state.write_to_disk(svntest.main.greek_dump_dir)
+  exit_code, output, errput = svntest.main.run_svn(
+    None, 'import', '-m', 'Log message for revision 1.',
+    svntest.main.greek_dump_dir, sbox.repo_url)
+
+  # checkout
+  svntest.main.safe_rmtree(wc_dir, 1)
+  svntest.actions.run_and_verify_svn(None,
+                                     None, [],
+                                     'checkout',
+                                     repo_url, wc_dir)
+
+  # Relocate
+  other_repo_dir, other_repo_url = sbox.add_repo_path('other')
+  other_iota_url = other_repo_url + '/iota'
+  svntest.main.copy_repos(repo_dir, other_repo_dir, 1, 0)
+  svntest.main.safe_rmtree(repo_dir, 1)
+  svntest.actions.run_and_verify_svn(None, None,
+                                     ".*Cannot relocate a single file\n",
+                                     'switch', '--relocate',
+                                     iota_url, other_iota_url, iota_path)
+
+
+def relocate_with_switched_children(sbox):
+  "relocate a directory with switched children"
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Setup (and verify) some switched things
+  do_routine_switching(sbox.wc_dir, sbox.repo_url, False)
+
+  # Relocate
+  repo_dir = sbox.repo_dir
+  repo_url = sbox.repo_url
+  other_repo_dir, other_repo_url = sbox.add_repo_path('other')
+  svntest.main.copy_repos(repo_dir, other_repo_dir, 1, 0)
+  svntest.main.safe_rmtree(repo_dir, 1)
+
+  # Do the switch and check the results in three ways.
+  svntest.actions.run_and_verify_svn(None, None, [], 'switch', '--relocate',
+                                     repo_url, other_repo_url, wc_dir)
+
+  # Attempt to commit changes and examine results
+  expected_output = svntest.wc.State(wc_dir, { })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/B', 'iota',
+                        switched='S')
+  expected_status.remove('A/B/E', 'A/B/F', 'A/B/E/alpha', 'A/B/E/beta',
+                         'A/B/lambda')
+  expected_status.add({
+    'A/B/pi'       : Item(status='  ', wc_rev='1'),
+    'A/B/rho'      : Item(status='  ', wc_rev='1'),
+    'A/B/tau'      : Item(status='  ', wc_rev='1'),
+    })
+
+  # This won't actually do a commit, because nothing should be modified.
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output, expected_status,
+                                        None, wc_dir)
+
+  # Check the URLs of various nodes.
+  info_output = {
+        wc_dir:                                '.*.other$',
+        os.path.join(wc_dir, 'iota'):          '.*.other/A/D/gamma$',
+        os.path.join(wc_dir, 'A', 'B'):        '.*.other/A/D/G$',
+        os.path.join(wc_dir, 'A', 'B', 'pi'):  '.*.other/A/D/G/pi$',
+    }
+
+  for path, pattern in info_output.items():
+    expected_info = { 'URL' : pattern }
+    svntest.actions.run_and_verify_info([expected_info], path)
+
+
 
 ########################################################################
 # Run the tests
@@ -2572,7 +2612,7 @@ test_list = [ None,
               relocate_beyond_repos_root,
               refresh_read_only_attribute,
               switch_change_repos_root,
-              XFail(relocate_and_propset, svntest.main.is_ra_type_dav_neon),
+              relocate_and_propset,
               forced_switch,
               forced_switch_failures,
               switch_scheduled_add,
@@ -2589,6 +2629,8 @@ test_list = [ None,
               tree_conflicts_on_switch_2_1,
               tree_conflicts_on_switch_2_2,
               tree_conflicts_on_switch_3,
+              single_file_relocate,
+              relocate_with_switched_children,
              ]
 
 if __name__ == '__main__':

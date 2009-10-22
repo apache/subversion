@@ -5,14 +5,22 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2001, 2006, 2008-2009 CollabNet.  All rights reserved.
+#    Licensed to the Subversion Corporation (SVN Corp.) under one
+#    or more contributor license agreements.  See the NOTICE file
+#    distributed with this work for additional information
+#    regarding copyright ownership.  The SVN Corp. licenses this file
+#    to you under the Apache License, Version 2.0 (the
+#    "License"); you may not use this file except in compliance
+#    with the License.  You may obtain a copy of the License at
 #
-# This software is licensed as described in the file COPYING, which
-# you should have received as part of this distribution.  The terms
-# are also available at http://subversion.tigris.org/license-1.html.
-# If newer versions of this license are posted there, you may use a
-# newer version instead, at your option.
+#      http://www.apache.org/licenses/LICENSE-2.0
 #
+#    Unless required by applicable law or agreed to in writing,
+#    software distributed under the License is distributed on an
+#    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+#    KIND, either express or implied.  See the License for the
+#    specific language governing permissions and limitations
+#    under the License.
 ######################################################################
 
 import re
@@ -24,6 +32,8 @@ if sys.version_info[0] >= 3:
 else:
   # Python <3.0
   from StringIO import StringIO
+from xml.dom.minidom import parseString
+import base64
 
 import svntest
 
@@ -209,24 +219,45 @@ class SVNTreeNode:
       stream.write("    Children:  None (node is probably a file)\n")
     stream.flush()
 
-  def print_script(self, stream = sys.stdout, subtree = ""):
-    """Python-script-print the meta data for this node to STREAM.
-    Print only those nodes whose path string starts with the string SUBTREE,
-    and print only the part of the path string that remains after SUBTREE."""
-
-    # remove some occurrences of root_node_name = "__SVN_ROOT_NODE",
-    # it is in the way when matching for a subtree, and looks bad.
+  def get_printable_path(self):
+    """Remove some occurrences of root_node_name = "__SVN_ROOT_NODE",
+    it is in the way when matching for a subtree, and looks bad."""
     path = self.path
     if path.startswith(root_node_name + os.sep):
       path = path[len(root_node_name + os.sep):]
+    return path
+
+  def print_script(self, stream = sys.stdout, subtree = "", prepend="\n  ",
+                   drop_empties = True):
+    """Python-script-print the meta data for this node to STREAM.
+    Print only those nodes whose path string starts with the string SUBTREE,
+    and print only the part of the path string that remains after SUBTREE.
+    PREPEND is a string prepended to each node printout (does the line
+    feed if desired, don't include a comma in PREPEND).
+    If DROP_EMPTIES is true, all dir nodes that have no data set in them
+    (no props, no atts) and that have children (so they are included
+    implicitly anyway) are not printed.
+    Return 1 if this node was printed, 0 otherwise (added up by
+    dump_tree_script())"""
+
+    # figure out if this node would be obsolete to print.
+    if drop_empties and len(self.props) < 1 and len(self.atts) < 1 and \
+       self.contents is None and self.children is not None:
+      return 0
+
+    path = self.get_printable_path()
 
     # remove the subtree path, skip this node if necessary.
     if path.startswith(subtree):
       path = path[len(subtree):]
     else:
-      return
+      return 0
 
-    line = "  %-20s: Item(" % ("'%s'" % path)
+    if path.startswith(os.sep):
+      path = path[1:]
+
+    line = prepend
+    line += "%-20s: Item(" % ("'%s'" % path)
     comma = False
 
     mime_type = self.props.get("svn:mime-type")
@@ -266,8 +297,9 @@ class SVNTreeNode:
       comma = True
 
     line += "),"
-    stream.write("%s\n" % line)
+    stream.write("%s" % line)
     stream.flush()
+    return 1
 
 
   def __str__(self):
@@ -337,6 +369,23 @@ class SVNTreeNode:
                                 self.atts.get('writelocked'),
                                 self.atts.get('treeconflict'))
 
+  def recurse(self, function):
+    results = []
+    results += [ function(self) ]
+    if self.children:
+      for child in self.children:
+        results += child.recurse(function)
+    return results
+
+  def find_node(self, path):
+    if self.get_printable_path() == path:
+      return self
+    if self.children:
+      for child in self.children:
+        result = child.find_node(path)
+        if result:
+          return result
+    return None
 
 # reserved name of the root of the tree
 root_node_name = "__SVN_ROOT_NODE"
@@ -440,6 +489,7 @@ def create_from_path(path, contents=None, props={}, atts={}):
   return root_node
 
 
+eol_re = re.compile(r'(\r\n|\r)')
 
 # helper for build_tree_from_wc()
 def get_props(paths):
@@ -452,46 +502,46 @@ def get_props(paths):
   # respecting the black-box paradigm.
 
   files = {}
-  filename = None
   exit_code, output, errput = svntest.main.run_svn(1,
                                                    "proplist",
                                                    "--verbose",
+                                                   "--xml",
                                                    *paths)
 
-  properties_on_re = re.compile("^Properties on '(.+)':$")
+  output = (line for line in output if not line.startswith('DBG:'))
+  dom = parseString(''.join(output))
+  target_nodes = dom.getElementsByTagName('target')
+  for target_node in target_nodes:
+    filename = target_node.attributes['path'].nodeValue
+    file_props = {}
+    for property_node in target_node.getElementsByTagName('property'):
+      name = property_node.attributes['name'].nodeValue
+      if property_node.hasChildNodes():
+        text_node = property_node.firstChild
+        value = text_node.nodeValue
+      else:
+        value = ''
+      try:
+        encoding = property_node.attributes['encoding'].nodeValue
+        if encoding == 'base64':
+          value = base64.b64decode(value)
+        else:
+          raise Exception("Unknown encoding '%s' for file '%s' property '%s'"
+                          % (encoding, filename, name,))
+      except KeyError:
+        pass
+      # If the property value contained a CR, or if under Windows an
+      # "svn:*" property contains a newline, then the XML output
+      # contains a CR character XML-encoded as '&#13;'.  The XML
+      # parser converts it back into a CR character.  So again convert
+      # all end-of-line variants into a single LF:
+      value = eol_re.sub('\n', value)
+      file_props[name] = value
+    files[filename] = file_props
 
-  # Parse the output
-  for line in output:
-    if line.startswith('DBG:'):
-      continue
-    line = line.rstrip('\r\n')  # ignore stdout's EOL sequence
-
-    match = properties_on_re.match(line)
-    if match:
-      filename = match.group(1)
-
-    elif line.startswith('    '):
-      # It's (part of) the value (strip the indentation)
-      if filename is None:
-        raise Exception("Missing 'Properties on' line: '"+line+"'")
-      files.setdefault(filename, {})[name] += line[4:] + '\n'
-
-    elif line.startswith('  '):
-      # It's the name
-      name = line[2:]  # strip the indentation
-      if filename is None:
-        raise Exception("Missing 'Properties on' line: '"+line+"'")
-      files.setdefault(filename, {})[name] = ''
-
-    else:
-      raise Exception("Malformed line from proplist: '"+line+"'")
-
-  # Strip, from each property value, the final new-line that we added
-  for filename in files:
-    for name in files[filename]:
-      files[filename][name] = files[filename][name][:-1]
-
+  dom.unlink()
   return files
+
 
 ### ridiculous function. callers should do this one line themselves.
 def get_text(path):
@@ -666,26 +716,34 @@ def dump_tree(n,indent=""):
       dump_tree(c,indent + "  |-- ")
 
 
-def dump_tree_script__crawler(n, subtree=""):
+def dump_tree_script__crawler(n, subtree="", stream=sys.stdout):
   "Helper for dump_tree_script. See that comment."
+  count = 0
 
   # skip printing the root node.
   if n.name != root_node_name:
-    n.print_script(subtree=subtree)
+    count += n.print_script(stream, subtree)
 
   for child in n.children or []:
-    dump_tree_script__crawler(child, subtree)
+    count += dump_tree_script__crawler(child, subtree, stream)
+  
+  return count
 
 
-def dump_tree_script(n, subtree=""):
+def dump_tree_script(n, subtree="", stream=sys.stdout, wc_varname='wc_dir'):
   """Print out a python script representation of the structure of the tree
   in the SVNTreeNode N. Print only those nodes whose path string starts
   with the string SUBTREE, and print only the part of the path string
-  that remains after SUBTREE."""
+  that remains after SUBTREE.
+  The result is printed to STREAM.
+  The WC_VARNAME is inserted in the svntest.wc.State(wc_dir,{}) call
+  that is printed out (this is used by factory.py)."""
 
-  print("svntest.wc.State('%s', {" % subtree)
-  dump_tree_script__crawler(n, subtree)
-  print("})")
+  stream.write("svntest.wc.State(" + wc_varname + ", {")
+  count = dump_tree_script__crawler(n, subtree, stream)
+  if count > 0:
+    stream.write('\n')
+  stream.write("})")
 
 
 ###################################################################

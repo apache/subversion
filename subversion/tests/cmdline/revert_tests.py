@@ -6,14 +6,22 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2008 CollabNet.  All rights reserved.
+#    Licensed to the Subversion Corporation (SVN Corp.) under one
+#    or more contributor license agreements.  See the NOTICE file
+#    distributed with this work for additional information
+#    regarding copyright ownership.  The SVN Corp. licenses this file
+#    to you under the Apache License, Version 2.0 (the
+#    "License"); you may not use this file except in compliance
+#    with the License.  You may obtain a copy of the License at
 #
-# This software is licensed as described in the file COPYING, which
-# you should have received as part of this distribution.  The terms
-# are also available at http://subversion.tigris.org/license-1.html.
-# If newer versions of this license are posted there, you may use a
-# newer version instead, at your option.
+#      http://www.apache.org/licenses/LICENSE-2.0
 #
+#    Unless required by applicable law or agreed to in writing,
+#    software distributed under the License is distributed on an
+#    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+#    KIND, either express or implied.  See the License for the
+#    specific language governing permissions and limitations
+#    under the License.
 ######################################################################
 
 # General modules
@@ -449,12 +457,10 @@ def revert_file_merge_replace_with_history(sbox):
   svntest.tree.compare_trees("disk", actual_disk, expected_disk.old_tree())
 
   # Make sure the revert removed the copy from information.
-  exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
-                                                              'info', rho_path)
-  for line in output:
-    if line.find("Copied") != -1:
-      print("Error: Revert didn't get rid of copy from information")
-      raise svntest.Failure
+  expected_infos = [
+      { 'Copied' : None }
+    ]
+  svntest.actions.run_and_verify_info(expected_infos, rho_path)
 
 def revert_wc_to_wc_replace_with_props(sbox):
   "revert svn cp PATH PATH replace file with props"
@@ -786,10 +792,6 @@ def status_of_missing_dir_after_revert_replaced_with_history_dir(sbox):
                         'A/D/G/pi',
                         'A/D/G/tau',
                         copied='+', wc_rev='-')
-  if not sbox.using_wc_ng():
-    # see notes/api-errata/wc003.txt. in wc-1 these nodes' individual
-    # copyfrom records come thru intact and appear as distinct additions.
-    expected_status.tweak('A/D/G/rho', 'A/D/G/pi', 'A/D/G/tau', status='A ')
   expected_status.add({
     'A/D/G/alpha' : Item(status='D ', wc_rev='3'),
     'A/D/G/beta' : Item(status='D ', wc_rev='3'),
@@ -812,12 +814,6 @@ def status_of_missing_dir_after_revert_replaced_with_history_dir(sbox):
   revert_paths = [G_path,
                   os.path.join(G_path, 'alpha'),
                   os.path.join(G_path, 'beta')]
-  if not sbox.using_wc_ng():
-    # see notes/api-errata/wc003.txt. in wc-1, these nodes' individual
-    # copyfrom records come thru intact as distinct additions to be reverted
-    revert_paths.extend([os.path.join(G_path, 'pi'),
-                         os.path.join(G_path, 'rho'),
-                         os.path.join(G_path, 'tau')])
 
   expected_output = svntest.verify.UnorderedOutput([
     "Reverted '%s'\n" % path for path in revert_paths])
@@ -825,18 +821,12 @@ def status_of_missing_dir_after_revert_replaced_with_history_dir(sbox):
   svntest.actions.run_and_verify_svn(None, expected_output, [], "revert", "-R",
                                      G_path)
 
-  if not sbox.using_wc_ng():
-    expected_output = svntest.verify.UnorderedOutput(
-      ["?       " + os.path.join(G_path, "pi") + "\n",
-       "?       " + os.path.join(G_path, "rho") + "\n",
-       "?       " + os.path.join(G_path, "tau") + "\n"])
-  else:
-    expected_output = svntest.verify.UnorderedOutput(
-      ["A       " + os.path.join(G_path, "pi") + "\n",
-       "A       " + os.path.join(G_path, "rho") + "\n",
-       "A       " + os.path.join(G_path, "alpha") + "\n",
-       "A       " + os.path.join(G_path, "beta") + "\n",
-       "A       " + os.path.join(G_path, "tau") + "\n"])
+  expected_output = svntest.verify.UnorderedOutput(
+    ["A       " + os.path.join(G_path, "pi") + "\n",
+     "A       " + os.path.join(G_path, "rho") + "\n",
+     "A       " + os.path.join(G_path, "alpha") + "\n",
+     "A       " + os.path.join(G_path, "beta") + "\n",
+     "A       " + os.path.join(G_path, "tau") + "\n"])
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      "status", wc_dir)
 

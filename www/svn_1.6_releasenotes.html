@@ -256,8 +256,8 @@ Minor problems with the conflict summary are described in
 <div class="h4" id="pre-lock-hook-output" title="pre-lock-hook-output">
 <h4>Changed handling of output of <code>pre-lock</code> hook</h4>
  
-<p><!-- XXX(r32778) --><em>This section is currently incomplete, please
-help write it!</em></p>
+<p>The output of <code>pre-lock</code> hook was previously discarded, but now
+it is used to specify the names of lock tokens.</p>
 
 </div>  <!-- pre-lock-hook-output -->
 
@@ -478,8 +478,8 @@ drastically smaller repositories.  These changes include:</p>
       >FSFS inode packing</a></li>
   <li><a href="#fsfs-memcached"
       >FSFS repositories: Support for Memcached</a></li>
-  <li><a href="#bdb-reverse-deltas"
-      >BDB repositories: Reverse deltas</a></li>
+  <li><a href="#bdb-forward-deltas"
+      >BDB repositories: Forward deltas</a></li>
 </ul>
 
 <div class="h4" id="rep-sharing" title="rep-sharing">
@@ -497,7 +497,7 @@ repositories.</p>
 
 </div> <!-- rep-sharing -->
 
-<div class="h4" id="fsfs-packing" title="fsfs-memcached">
+<div class="h4" id="fsfs-packing" title="fsfs-packing">
 <h4>FSFS repositories: Packing completed shards (<em>server</em>)</h4>
 
 <p>Subversion 1.5 introduced the ability for FSFS repositories to be
@@ -516,7 +516,7 @@ Once a repository has been packed, there is no migration path back to an
 unpacked state, and it can only be read by Subversion 1.6 or greater
 servers.</p>
 
-</div> <!-- fs-packing -->
+</div> <!-- fsfs-packing -->
 
 <div class="h4" id="fsfs-memcached" title="fsfs-memcached">
 <h4>FSFS repositories: Support for Memcached (<em>server</em>)</h4>
@@ -529,13 +529,16 @@ cache data of FSFS repositories.</p>
 
 </div> <!-- fsfs-memcached -->
 
-<div class="h4" id="bdb-reverse-deltas" title="bdb-reverse-deltas">
-<h4>BDB repositories: Reverse deltas (<em>server</em>)</h4>
+<div class="h4" id="bdb-forward-deltas" title="bdb-forward-deltas">
+<h4>BDB repositories: Forward deltas (<em>server</em>)</h4>
 
-<p><!-- XXX --><em>This section is currently incomplete, please
-help write it!</em></p>
+<p>Newly created BDB repositories now use forward deltas instead of reverse
+deltas. <code>svnadmin upgrade</code> can be used to make older repositories
+use forward deltas for new revisions. If you want to achieve the most
+optimized state of an older repository, you still need to perform dump and
+load of the repository.</p>
 
-</div> <!-- bdb-reverse-deltas -->
+</div> <!-- bdb-forward-deltas -->
 
 </div> <!-- filesystem-improvements -->
 
@@ -577,7 +580,8 @@ programmers not familiar with the C API.</p>
              title="improved-interactive-conflict-resolution">
 <h3>Improved interactive conflict resolution (<em>client</em>)</h3>
 
-<p>dc, mc, tc options.</p>
+<p>Interactive conflict resolution supports new <code>display-conflict</code>,
+<code>mine-conflict</code> and <code>theirs-conflict</code> options.</p>
 
 <p>Here's an example using the command-line client:</p>
 
@@ -648,8 +652,8 @@ reach those files, too.</p>
              title="svnserve-logging">
 <h3>Logging support for svnserve (<em>server</em>)</h3>
 
-<p><!-- XXX --><em>This section is currently incomplete, please help write
-it!</em></p>
+<p><code>svnserve</code> now accepts the <code>--log-file</code> option which
+allows to specify the file used for logging.</p>
 
 </div>  <!-- svnserve-logging -->
 

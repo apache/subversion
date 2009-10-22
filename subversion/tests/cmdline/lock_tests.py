@@ -6,14 +6,22 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2005-2006, 2008-2009 CollabNet.  All rights reserved.
+#    Licensed to the Subversion Corporation (SVN Corp.) under one
+#    or more contributor license agreements.  See the NOTICE file
+#    distributed with this work for additional information
+#    regarding copyright ownership.  The SVN Corp. licenses this file
+#    to you under the Apache License, Version 2.0 (the
+#    "License"); you may not use this file except in compliance
+#    with the License.  You may obtain a copy of the License at
 #
-# This software is licensed as described in the file COPYING, which
-# you should have received as part of this distribution.  The terms
-# are also available at http://subversion.tigris.org/license-1.html.
-# If newer versions of this license are posted there, you may use a
-# newer version instead, at your option.
+#      http://www.apache.org/licenses/LICENSE-2.0
 #
+#    Unless required by applicable law or agreed to in writing,
+#    software distributed under the License is distributed on an
+#    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+#    KIND, either express or implied.  See the License for the
+#    specific language governing permissions and limitations
+#    under the License.
 ######################################################################
 
 # General modules
@@ -1114,48 +1122,18 @@ def repos_lock_with_info(sbox):
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   # Get repository lock token
-  exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
-                                                              'info', file_url)
-  for line in output:
-    if line.find("Lock Token:") != -1:
-      repos_lock_token = line[12:]
-      break
-  else:
-    print("Error: Lock token not found")
-    raise svntest.Failure
+  repos_lock_token \
+    = svntest.actions.run_and_parse_info(file_url)[0]['Lock Token']
 
   # info with revision option
-  exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
-                                                              'info',
-                                                              file_path, '-r1')
-
-  for line in output:
-    if line.find("Lock Token:") != -1:
-      lock_token = line[12:]
-      break
-  else:
-    print("Error: Lock token not found")
-    raise svntest.Failure
-
-  if (repos_lock_token != lock_token):
-    print("Error: expected repository lock information not found.")
-    raise svntest.Failure
+  expected_infos = [
+      { 'Lock Token' : repos_lock_token },
+    ]
+  svntest.actions.run_and_verify_info(expected_infos, file_path, '-r1')
 
   # info with peg revision
-  exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
-                                                              'info',
-                                                              file_path + '@1')
-  for line in output:
-    if line.find("Lock Token:") != -1:
-      lock_token = line[12:]
-      break
-  else:
-    print("Error: Lock token not found")
-    raise svntest.Failure
+  svntest.actions.run_and_verify_info(expected_infos, file_path + '@1')
 
-  if (repos_lock_token != lock_token):
-    print("Error: expected repository lock information not found.")
-    raise svntest.Failure
 
 #----------------------------------------------------------------------
 def unlock_already_unlocked_files(sbox):
@@ -1257,21 +1235,11 @@ def info_moved_path(sbox):
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   # Get info for old iota at r1. This shouldn't give us any lock info.
-  exit_code, output, errput = svntest.actions.run_and_verify_svn(
-    None, None, [], 'info', fname2, '-r1')
-
-  # Since we want to make sure that there is *no* lock info, to make this
-  # more robust, we also check that the info command actually output some info.
-  got_url = 0
-  for line in output:
-    if line.find("URL:") >= 0:
-      got_url = 1
-    if line.find("Lock Token:") >= 0:
-      print(fname2 + " was reported as locked.")
-      raise svntest.Failure
-  if not got_url:
-    print("Info didn't output an URL.")
-    raise svntest.Failure
+  expected_infos = [
+      { 'URL'           : '.*' ,
+        'Lock Token'    : None },
+    ]
+  svntest.actions.run_and_verify_info(expected_infos, fname2, '-r1')
 
 #----------------------------------------------------------------------
 def ls_url_encoded(sbox):
@@ -1405,6 +1373,24 @@ def unlocked_lock_of_other_user(sbox):
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 
+#----------------------------------------------------------------------
+def lock_funky_comment_chars(sbox):
+  "lock a file using a comment with xml special chars"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # lock a file as wc_author
+  fname = 'iota'
+  file_path = os.path.join(sbox.wc_dir, fname)
+
+  svntest.main.file_append(file_path, "This represents a binary file\n")
+  svntest.main.run_svn(None, 'commit',
+                       '-m', '', file_path)
+  svntest.actions.run_and_verify_svn(None, ".*locked by user", [], 'lock',
+                                     '-m', 'lock & load', file_path)
+
+
 ########################################################################
 # Run the tests
 
@@ -1444,7 +1430,8 @@ test_list = [ None,
               XFail(unlock_wrong_token, svntest.main.is_ra_type_dav),
               examine_lock_encoded_recurse,
               XFail(unlocked_lock_of_other_user,
-                    svntest.main.is_ra_type_dav)
+                    svntest.main.is_ra_type_dav),
+              lock_funky_comment_chars,
             ]
 
 if __name__ == '__main__':

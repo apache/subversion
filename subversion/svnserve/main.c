@@ -2,17 +2,22 @@
  * main.c :  Main control function for svnserve
  *
  * ====================================================================
- * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -497,8 +502,8 @@ int main(int argc, const char *argv[])
               return EXIT_FAILURE;
             }
 
-          params.root = svn_path_internal_style(params.root, pool);
-          SVN_INT_ERR(svn_path_get_absolute(&params.root, params.root, pool));
+          params.root = svn_dirent_internal_style(params.root, pool);
+          SVN_INT_ERR(svn_dirent_get_absolute(&params.root, params.root, pool));
           break;
 
         case 'R':
@@ -521,23 +526,23 @@ int main(int argc, const char *argv[])
 
         case SVNSERVE_OPT_CONFIG_FILE:
           SVN_INT_ERR(svn_utf_cstring_to_utf8(&config_filename, arg, pool));
-          config_filename = svn_path_internal_style(config_filename, pool);
-          SVN_INT_ERR(svn_path_get_absolute(&config_filename, config_filename,
-                                            pool));
+          config_filename = svn_dirent_internal_style(config_filename, pool);
+          SVN_INT_ERR(svn_dirent_get_absolute(&config_filename, config_filename,
+                                              pool));
           break;
 
         case SVNSERVE_OPT_PID_FILE:
           SVN_INT_ERR(svn_utf_cstring_to_utf8(&pid_filename, arg, pool));
-          pid_filename = svn_path_internal_style(pid_filename, pool);
-          SVN_INT_ERR(svn_path_get_absolute(&pid_filename, pid_filename,
-                                            pool));
+          pid_filename = svn_dirent_internal_style(pid_filename, pool);
+          SVN_INT_ERR(svn_dirent_get_absolute(&pid_filename, pid_filename,
+                                              pool));
           break;
 
         case SVNSERVE_OPT_LOG_FILE:
           SVN_INT_ERR(svn_utf_cstring_to_utf8(&log_filename, arg, pool));
-          log_filename = svn_path_internal_style(log_filename, pool);
-          SVN_INT_ERR(svn_path_get_absolute(&log_filename, log_filename,
-                                            pool));
+          log_filename = svn_dirent_internal_style(log_filename, pool);
+          SVN_INT_ERR(svn_dirent_get_absolute(&log_filename, log_filename,
+                                              pool));
           break;
 
         }

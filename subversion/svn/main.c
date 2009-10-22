@@ -2,17 +2,22 @@
  * main.c:  Subversion command line client.
  *
  * ====================================================================
- * Copyright (c) 2000-2009 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -106,7 +111,6 @@ typedef enum {
   opt_parents,
   opt_accept,
   opt_svnpatch_format,
-  opt_patch_cmd,
   opt_from_source,
   opt_show_revs,
   opt_reintegrate,
@@ -227,8 +231,6 @@ const apr_getopt_option_t svn_cl__options[] =
   {"diff-cmd",      opt_diff_cmd, 1, N_("use ARG as diff command")},
   {"diff3-cmd",     opt_merge_cmd, 1, N_("use ARG as merge command")},
   {"editor-cmd",    opt_editor_cmd, 1, N_("use ARG as external editor")},
-  {"patch-cmd",     opt_patch_cmd, 1,
-                    N_("use ARG as external patch command")},
   {"record-only",   opt_record_only, 0,
                     N_("mark revisions as merged (use with -r)")},
   {"old",           opt_old_cmd, 1, N_("use ARG as the older target")},
@@ -692,12 +694,13 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  copy WCPATH into a modified tree that reflects all the changes the\n"
      "  patch carries along.  When WCPATH is omitted '.' is assumed.\n"
      "\n"
-     "  The format of bytes embedded in the patch can be of two types: Unified\n"
-     "  diff and/or svnpatch diff (see 'svn diff --svnpatch').\n"
+     "  The content embedded in the patch file can be of two types:\n"
+     "  Unified diff and/or svnpatch diff (see 'svn diff --svnpatch').\n"
+     "  Any other content of the patch file is ignored.\n"
      "\n"
      "  This command allows some amount of fuzzing as Unidiff is contextual\n"
-     "  and svnpatch revisionless.\n"),
-    {'q', opt_force, opt_patch_cmd, opt_config_dir} },
+     "  and an svnpatch is revisionless.\n"),
+    {'q', opt_force, opt_dry_run} },
 
   { "propdel", svn_cl__propdel, {"pdel", "pd"}, N_
     ("Remove a property from files, dirs, or revisions.\n"
@@ -966,8 +969,19 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "     or hostname change) but your working copy still reflects the same\n"
      "     directory within the same repository.\n"
      "\n"
+     "     FROM is the root URL which will be relocated from.\n"
+     "     You can use 'svn info' to determine the root URL of the current\n"
+     "     working copy directory (look for 'URL:' in its output).\n"
+     "\n"
+     "     TO is the root URL which will be relocated to.\n"
+     "\n"
      "  See also 'svn help update' for a list of possible characters\n"
-     "  reporting the action taken.\n"),
+     "  reporting the action taken.\n"
+     "\n"
+     "  Examples:\n"
+     "    svn switch ^/branches/1.x-release\n"
+     "    svn switch --relocate http://www.example.com/repo/project \\\n"
+     "                          svn://svn.example.com/repo/project\n"),
     { 'r', 'N', opt_depth, opt_set_depth, 'q', opt_merge_cmd, opt_relocate,
       opt_ignore_externals, opt_force, opt_accept} },
 
@@ -1018,6 +1032,11 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  make a directory more shallow.\n"),
     {'r', 'N', opt_depth, opt_set_depth, 'q', opt_merge_cmd, opt_force,
      opt_ignore_externals, opt_changelist, opt_editor_cmd, opt_accept} },
+
+  { "upgrade", svn_cl__upgrade, {0}, N_
+    ("Upgrade the metadata storage format for a working copy.\n"
+     "usage: upgrade TARGET...\n"),
+    {0} },
 
   { NULL, NULL, {0}, NULL, {0} }
 };
@@ -1451,9 +1470,6 @@ main(int argc, const char *argv[])
       case opt_editor_cmd:
         opt_state.editor_cmd = apr_pstrdup(pool, opt_arg);
         break;
-      case opt_patch_cmd:
-        opt_state.patch_cmd = apr_pstrdup(pool, opt_arg);
-        break;
       case opt_old_cmd:
         if (opt_state.used_change_arg)
           {
@@ -1792,7 +1808,7 @@ main(int argc, const char *argv[])
         {
           svn_wc_adm_access_t *adm_access;
           const svn_wc_entry_t *e;
-          const char *fname_utf8 = svn_path_internal_style(dash_F_arg, pool);
+          const char *fname_utf8 = svn_dirent_internal_style(dash_F_arg, pool);
           err = svn_wc_adm_probe_open3(&adm_access, NULL, fname_utf8,
                                        FALSE, 0, NULL, NULL, pool);
           if (! err)
@@ -2045,6 +2061,9 @@ main(int argc, const char *argv[])
                                            ctx->cancel_baton,
                                            pool)))
     svn_handle_error2(err, stderr, TRUE, "svn: ");
+
+  /* svn can safely create instance of QApplication class. */
+  svn_auth_set_parameter(ab, "svn:auth:qapplication-safe", "1");
 
   ctx->auth_baton = ab;
 

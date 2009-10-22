@@ -1,17 +1,22 @@
 /* error.c:  common exception handling for Subversion
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -67,7 +72,10 @@ static apr_status_t err_abort(void *data)
 {
   svn_error_t *err = data;  /* For easy viewing in a debugger */
   err = err; /* Fake a use for the variable to avoid compiler warnings */
-  abort();
+
+  if (!getenv("SVN_DBG_NO_ABORT_ON_ERROR_LEAK"))
+    abort();
+  return APR_SUCCESS;
 }
 #endif
 
@@ -311,14 +319,61 @@ svn_error_clear(svn_error_t *err)
     }
 }
 
-/* Is MESSAGE the message used for the "fake" errors used in tracing? */
-static svn_boolean_t is_trace_message(const char *message)
+/* Is ERR a tracing-only error chain link?  */
+static svn_boolean_t is_tracing_link(svn_error_t *err)
 {
 #ifdef SVN_ERR__TRACING
-  return (message != NULL && !strcmp(message, SVN_ERR__TRACED));
+  /* ### A strcmp()?  Really?  I think it's the best we can do unless
+     ### we add a boolean field to svn_error_t that's set only for
+     ### these "placeholder error chain" items.  Not such a bad idea,
+     ### really...  */
+  return (err && err->message && !strcmp(err->message, SVN_ERR__TRACED));
 #else
   return FALSE;
 #endif
+}
+
+svn_error_t *
+svn_error_purge_tracing(svn_error_t *err)
+{
+#ifdef SVN_ERR__TRACING  
+  svn_error_t *tmp_err = err;
+  svn_error_t *new_err = NULL, *new_err_leaf = NULL;
+
+  if (! err)
+    return SVN_NO_ERROR;
+
+  while (tmp_err)
+    {
+      /* Skip over any trace-only links. */
+      while (tmp_err && is_tracing_link(tmp_err))
+        tmp_err = tmp_err->child;
+
+      /* Add a new link to the new chain (creating the chain if necessary). */
+      if (! new_err)
+        {
+          new_err = tmp_err;
+          new_err_leaf = new_err;
+        }
+      else
+        {
+          new_err_leaf->child = tmp_err;
+          new_err_leaf = new_err_leaf->child;
+        }
+
+      /* Advance to the next link in the original chain. */
+      tmp_err = tmp_err->child;
+    }
+  
+  /* If we get here, there had better be a real link in this error chain. */
+  SVN_ERR_ASSERT(new_err_leaf);
+
+  /* Tie off the chain, and return its head. */
+  new_err_leaf->child = NULL;
+  return new_err;
+#else  /* SVN_ERR__TRACING */
+  return err;
+#endif /* SVN_ERR__TRACING */
 }
 
 static void
@@ -353,7 +408,7 @@ print_error(svn_error_t *err, FILE *stream, const char *prefix)
 #endif /* SVN_DEBUG */
 
   /* "traced call" */
-  if (is_trace_message(err->message))
+  if (is_tracing_link(err))
     {
       /* Skip it.  We already printed the file-line coordinates. */
     }
@@ -472,7 +527,7 @@ svn_handle_warning2(FILE *stream, svn_error_t *err, const char *prefix)
   char buf[256];
 
   /* Skip over any trace records.  */
-  while (is_trace_message(err->message))
+  while (is_tracing_link(err))
     err = err->child;
 
   svn_error_clear(svn_cmdline_fprintf

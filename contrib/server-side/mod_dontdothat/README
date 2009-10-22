@@ -9,7 +9,7 @@ You can compile and install it via apxs:
 
 $ apxs -c \
        -I$PREFIX/include/subversion-1 \
-       -L$PREFIX/lib -lsvn_subr-1 
+       -L$PREFIX/lib -lsvn_subr-1
        mod_dontdothat.c
 
 $ apxs -i -n dontdothat mod_dontdothat.la

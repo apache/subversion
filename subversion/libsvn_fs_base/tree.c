@@ -1,17 +1,22 @@
 /* tree.c : tree-like filesystem, built on DAG filesystem
  *
  * ====================================================================
- * Copyright (c) 2000-2009 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -1161,7 +1166,7 @@ base_check_path(svn_node_kind_t *kind_p,
       *kind_p = svn_node_none;
     }
 
-  return err;
+  return svn_error_return(err);
 }
 
 
@@ -2723,7 +2728,7 @@ svn_fs_base__commit_txn(const char **conflict_p,
         {
           if ((err->apr_err == SVN_ERR_FS_CONFLICT) && conflict_p)
             *conflict_p = merge_args.conflict->data;
-          return err;
+          return svn_error_return(err);
         }
 
       /* Try to commit. */
@@ -2743,16 +2748,17 @@ svn_fs_base__commit_txn(const char **conflict_p,
           if (err2)
             {
               svn_error_clear(err);
-              return err2;  /* err2 is bad, it should not occur */
+              return svn_error_return(err2);  /* err2 is bad,
+                                                 it should not occur */
             }
           else if (youngest_rev == youngish_rev)
-            return err;
+            return svn_error_return(err);
           else
             svn_error_clear(err);
         }
       else if (err)
         {
-          return err;
+          return svn_error_return(err);
         }
       else
         {
@@ -2832,7 +2838,7 @@ base_merge(const char **conflict_p,
     {
       if ((err->apr_err == SVN_ERR_FS_CONFLICT) && conflict_p)
         *conflict_p = merge_args.conflict->data;
-      return err;
+      return svn_error_return(err);
     }
 
   return SVN_NO_ERROR;
@@ -4553,7 +4559,7 @@ txn_body_closest_copy(void *baton, trail_t *trail)
           svn_error_clear(err);
           return SVN_NO_ERROR;
         }
-      return err;
+      return svn_error_return(err);
     }
   if ((svn_fs_base__dag_node_kind(path_node_in_copy_dst) == svn_node_none)
       || (! (svn_fs_base__id_check_related
@@ -4676,7 +4682,7 @@ svn_fs_base__get_path_kind(svn_node_kind_t *kind,
       return SVN_NO_ERROR;
     }
   else if (err)
-    return err;
+    return svn_error_return(err);
 
   *kind = svn_fs_base__dag_node_kind(path_node);
   return SVN_NO_ERROR;
@@ -4711,7 +4717,7 @@ svn_fs_base__get_path_created_rev(svn_revnum_t *rev,
       return SVN_NO_ERROR;
     }
   else if (err)
-    return err;
+    return svn_error_return(err);
 
   /* Find the created_rev of the dag_node. */
   SVN_ERR(svn_fs_base__dag_get_revision(&created_rev, path_node,
@@ -5413,14 +5419,11 @@ static svn_fs_root_t *
 make_root(svn_fs_t *fs,
           apr_pool_t *pool)
 {
-  /* We create a subpool for each root object to allow us to implement
-     svn_fs_close_root.  */
-  apr_pool_t *subpool = svn_pool_create(pool);
-  svn_fs_root_t *root = apr_pcalloc(subpool, sizeof(*root));
-  base_root_data_t *brd = apr_palloc(subpool, sizeof(*brd));
+  svn_fs_root_t *root = apr_pcalloc(pool, sizeof(*root));
+  base_root_data_t *brd = apr_palloc(pool, sizeof(*brd));
 
   root->fs = fs;
-  root->pool = subpool;
+  root->pool = pool;
 
   /* Init the node ID cache. */
   brd->node_cache = apr_hash_make(pool);

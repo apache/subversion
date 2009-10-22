@@ -2,17 +2,22 @@
  * lock.h:  routines for locking working copy subdirectories.
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -102,6 +107,15 @@ svn_wc__adm_retrieve_internal2(svn_wc__db_t *db,
                                const char *abspath,
                                apr_pool_t *scratch_pool);
 
+/* ### this is probably bunk. but I dunna want to trace backwards-compat
+   ### users of svn_wc_check_wc(). probably gonna be rewritten for wc-ng
+   ### in any case.  */
+svn_error_t *
+svn_wc__internal_check_wc(int *wc_format,
+                          svn_wc__db_t *db,
+                          const char *local_abspath,
+                          apr_pool_t *scratch_pool);
+
 /* Return the working copy format version number for ADM_ACCESS. */
 svn_error_t *
 svn_wc__adm_wc_format(int *wc_format,
@@ -142,21 +156,6 @@ svn_wc__adm_get_db(const svn_wc_adm_access_t *adm_access);
 /* Get a reference to the baton's internal ABSPATH.  */
 const char *
 svn_wc__adm_access_abspath(const svn_wc_adm_access_t *adm_access);
-
-
-/* Upgrade the working copy directory represented by ADM_ACCESS
-   to the latest 'SVN_WC__VERSION'.  ADM_ACCESS must contain a write
-   lock.  Use SCRATCH_POOL for all temporary allocation.
-
-   Not all upgrade paths are necessarily supported.  For example,
-   upgrading a version 1 working copy results in an error.
-
-   Sometimes the format file can contain "0" while the administrative
-   directory is being constructed; calling this on a format 0 working
-   copy has no effect and returns no error. */
-svn_error_t *
-svn_wc__upgrade_format(svn_wc_adm_access_t *adm_access,
-                       apr_pool_t *scratch_pool);
 
 #ifdef __cplusplus
 }

@@ -1,17 +1,22 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2008-2009 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  * @endcopyright
  *
@@ -80,7 +85,7 @@ svn_dirent_local_style(const char *dirent,
 
 /** Convert @a uri from the local style to the canonical internal style.
  *
- * @since New in 1.6.
+ * @since New in 1.7.
  */
 const char *
 svn_uri_internal_style(const char *uri,
@@ -88,7 +93,7 @@ svn_uri_internal_style(const char *uri,
 
 /** Convert @a uri from the canonical internal style to the local style.
  *
- * @since New in 1.6.
+ * @since New in 1.7.
  */
 const char *
 svn_uri_local_style(const char *uri,
@@ -265,7 +270,7 @@ svn_uri_basename(const char *uri,
  *
  * The returned dirname will be allocated in @a pool.
  *
- * @since New in 1.6.
+ * @since New in 1.7.
  */
 char *
 svn_uri_dirname(const char *dirent,
@@ -283,7 +288,7 @@ svn_dirent_is_absolute(const char *dirent);
 
 /** Return TRUE if @a uri is considered absolute or is a URL.
  *
- * @since New in 1.6.
+ * @since New in 1.7.
  */
 svn_boolean_t
 svn_uri_is_absolute(const char *uri);
@@ -307,7 +312,7 @@ svn_dirent_is_root(const char *dirent,
  *
  * Do not use this function with URLs.
  *
- * @since New in 1.6
+ * @since New in 1.7
  */
 svn_boolean_t
 svn_uri_is_root(const char *uri,
@@ -345,7 +350,7 @@ svn_dirent_canonicalize(const char *dirent,
  *
  * The returned uri may be statically allocated or allocated from @a pool.
  *
- * @since New in 1.6.
+ * @since New in 1.7.
  */
 const char *
 svn_uri_canonicalize(const char *uri,
@@ -367,7 +372,7 @@ svn_dirent_is_canonical(const char *dirent,
 /** Return @c TRUE iff @a uri is canonical.  Use @a pool for temporary
  * allocations.
  *
- * @since New in 1.6.
+ * @since New in 1.7.
  */
 svn_boolean_t
 svn_uri_is_canonical(const char *uri,
@@ -394,7 +399,7 @@ svn_dirent_get_longest_ancestor(const char *dirent1,
  * different resources), and (b) share a common ancestor in their path
  * component, i.e. 'protocol://' is not a sufficient ancestor.
  *
- * @since New in 1.6.
+ * @since New in 1.7.
  */
 char *
 svn_uri_get_longest_ancestor(const char *path1,
@@ -432,7 +437,7 @@ svn_dirent_get_absolute(const char **pabsolute,
  * trivial: if the uri is "../foo", how do you know whether or not
  * the current directory is named "foo" in its parent?
  *
- * @since New in 1.6.
+ * @since New in 1.7.
  */
 const char *
 svn_uri_is_child(const char *uri1,
@@ -440,7 +445,7 @@ svn_uri_is_child(const char *uri1,
                  apr_pool_t *pool);
 
 /**
- * This function is similar as @c svn_uri_is_child, except that it supports
+ * This function is similar as svn_uri_is_child(), except that it supports
  * Windows dirents and UNC paths on Windows.
  *
  * @since New in 1.6.
@@ -464,7 +469,7 @@ svn_dirent_is_ancestor(const char *path1,
  *
  * This function supports URLs.
  *
- * @since New in 1.6.
+ * @since New in 1.7.
  */
 svn_boolean_t
 svn_uri_is_ancestor(const char *path1,

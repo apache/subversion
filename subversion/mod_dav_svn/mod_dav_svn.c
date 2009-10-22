@@ -3,17 +3,22 @@
  *                repository.
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -75,6 +80,7 @@ typedef struct {
   const char *fs_parent_path;        /* path to parent of SVN FS'es  */
   enum conf_flag autoversioning;     /* whether autoversioning is active */
   enum conf_flag bulk_updates;       /* whether bulk updates are allowed */
+  enum conf_flag v2_protocol;        /* whether HTTP v2 is advertised */
   enum path_authz_conf path_authz_method; /* how GET subrequests are handled */
   enum conf_flag list_parentpath;    /* whether to allow GET of parentpath */
   const char *root_dir;              /* our top-level directory */
@@ -165,6 +171,7 @@ create_dir_config(apr_pool_t *p, char *dir)
 
   conf->root_dir = dir;
   conf->bulk_updates = CONF_FLAG_ON;
+  conf->v2_protocol = CONF_FLAG_ON;
 
   return conf;
 }
@@ -187,6 +194,7 @@ merge_dir_config(apr_pool_t *p, void *base, void *overrides)
   newconf->fs_parent_path = INHERIT_VALUE(parent, child, fs_parent_path);
   newconf->autoversioning = INHERIT_VALUE(parent, child, autoversioning);
   newconf->bulk_updates = INHERIT_VALUE(parent, child, bulk_updates);
+  newconf->v2_protocol = INHERIT_VALUE(parent, child, v2_protocol);
   newconf->path_authz_method = INHERIT_VALUE(parent, child, path_authz_method);
   newconf->list_parentpath = INHERIT_VALUE(parent, child, list_parentpath);
   /* Prefer our parent's value over our new one - hence the swap. */
@@ -263,6 +271,20 @@ SVNAllowBulkUpdates_cmd(cmd_parms *cmd, void *config, int arg)
     conf->bulk_updates = CONF_FLAG_ON;
   else
     conf->bulk_updates = CONF_FLAG_OFF;
+
+  return NULL;
+}
+
+
+static const char *
+SVNAdvertiseV2Protocol_cmd(cmd_parms *cmd, void *config, int arg)
+{
+  dir_conf_t *conf = config;
+
+  if (arg)
+    conf->v2_protocol = CONF_FLAG_ON;
+  else
+    conf->v2_protocol = CONF_FLAG_OFF;
 
   return NULL;
 }
@@ -540,6 +562,16 @@ dav_svn__get_bulk_updates_flag(request_rec *r)
 }
 
 
+svn_boolean_t
+dav_svn__get_v2_protocol_flag(request_rec *r)
+{
+  dir_conf_t *conf;
+
+  conf = ap_get_module_config(r->per_dir_config, &dav_svn_module);
+  return conf->v2_protocol == CONF_FLAG_ON;
+}
+
+
 /* FALSE if path authorization should be skipped.
  * TRUE if either the bypass or the apache subrequest methods should be used.
  */
@@ -782,6 +814,12 @@ static const command_rec cmds[] =
                "enables support for bulk update-style requests (as opposed to "
                "only skeletal reports that require additional per-file "
                "downloads."),
+
+  /* per directory/location */
+  AP_INIT_FLAG("SVNAdvertiseV2Protocol", SVNAdvertiseV2Protocol_cmd, NULL,
+               ACCESS_CONF|RSRC_CONF,
+               "enables server advertising of support for version 2 of "
+               "Subversion's HTTP protocol (default values is On)."),
 
   { NULL }
 };

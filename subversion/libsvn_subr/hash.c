@@ -2,17 +2,22 @@
  * hash.c :  dumping and reading hash tables to/from files.
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -85,16 +90,19 @@ hash_read(apr_hash_t *hash, svn_stream_t *stream, const char *terminator,
   svn_boolean_t eof;
   apr_size_t len, keylen, vallen;
   char c, *end, *keybuf, *valbuf;
+  apr_pool_t *iterpool = svn_pool_create(pool);
 
   while (1)
     {
+      svn_pool_clear(iterpool);
+
       /* Read a key length line.  Might be END, though. */
-      SVN_ERR(svn_stream_readline(stream, &buf, "\n", &eof, pool));
+      SVN_ERR(svn_stream_readline(stream, &buf, "\n", &eof, iterpool));
 
       /* Check for the end of the hash. */
       if ((!terminator && eof && buf->len == 0)
           || (terminator && (strcmp(buf->data, terminator) == 0)))
-        return SVN_NO_ERROR;
+        break;
 
       /* Check for unexpected end of stream */
       if (eof)
@@ -119,7 +127,7 @@ hash_read(apr_hash_t *hash, svn_stream_t *stream, const char *terminator,
             return svn_error_create(SVN_ERR_MALFORMED_FILE, NULL, NULL);
 
           /* Read a val length line */
-          SVN_ERR(svn_stream_readline(stream, &buf, "\n", &eof, pool));
+          SVN_ERR(svn_stream_readline(stream, &buf, "\n", &eof, iterpool));
 
           if ((buf->data[0] == 'V') && (buf->data[1] == ' '))
             {
@@ -127,7 +135,7 @@ hash_read(apr_hash_t *hash, svn_stream_t *stream, const char *terminator,
               if (vallen == (size_t) ULONG_MAX || *end != '\0')
                 return svn_error_create(SVN_ERR_MALFORMED_FILE, NULL, NULL);
 
-              valbuf = apr_palloc(pool, vallen + 1);
+              valbuf = apr_palloc(iterpool, vallen + 1);
               SVN_ERR(svn_stream_read(stream, valbuf, &vallen));
               valbuf[vallen] = '\0';
 
@@ -153,7 +161,7 @@ hash_read(apr_hash_t *hash, svn_stream_t *stream, const char *terminator,
             return svn_error_create(SVN_ERR_MALFORMED_FILE, NULL, NULL);
 
           /* Now read that much into a buffer. */
-          keybuf = apr_palloc(pool, keylen + 1);
+          keybuf = apr_palloc(iterpool, keylen + 1);
           SVN_ERR(svn_stream_read(stream, keybuf, &keylen));
           keybuf[keylen] = '\0';
 
@@ -167,8 +175,13 @@ hash_read(apr_hash_t *hash, svn_stream_t *stream, const char *terminator,
           apr_hash_set(hash, keybuf, keylen, NULL);
         }
       else
-        return svn_error_create(SVN_ERR_MALFORMED_FILE, NULL, NULL);
+        {
+          return svn_error_create(SVN_ERR_MALFORMED_FILE, NULL, NULL);
+        }
     }
+
+  svn_pool_destroy(iterpool);
+  return SVN_NO_ERROR;
 }
 
 

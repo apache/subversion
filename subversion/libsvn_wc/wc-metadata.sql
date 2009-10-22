@@ -2,17 +2,22 @@
  *     This is intended for use with SQLite 3
  *
  * ====================================================================
- * Copyright (c) 2008 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -33,6 +38,8 @@
  *   "base-deleted" -- node represents a delete of a BASE node
  */
 
+/* All the SQL below is for format 12: SVN_WC__WC_NG_VERSION  */
+-- format: 12
 
 /* ------------------------------------------------------------------------- */
 
@@ -133,10 +140,7 @@ CREATE TABLE BASE_NODE (
      node does not have any dav-cache. */
   dav_cache  BLOB,
 
-  /* this node is a directory, and all of its child nodes have not (yet)
-     been created [for this revision number]. Note: boolean value. */
-  /* ### this will probably disappear in favor of incomplete child
-     ### nodes */
+  /* ### this column is removed in format 13. it will always be NULL.  */
   incomplete_children  INTEGER,
 
   /* The serialized file external information. */
@@ -307,6 +311,9 @@ CREATE TABLE ACTUAL_NODE (
   properties  BLOB,
 
   /* ### do we want to record the revnums which caused this? */
+  /* ### also, shouldn't these be absolute paths?
+     ### they aren't currently, but that would be more consistent with other
+     ### columns. (though it would require a format bump) */
   conflict_old  TEXT,
   conflict_new  TEXT,
   conflict_working  TEXT,
@@ -320,7 +327,8 @@ CREATE TABLE ACTUAL_NODE (
      ### scanning the filesystem). */
   text_mod  TEXT,
 
-  /* if a directory, serialized data for all of tree conflicts therein. */
+  /* if a directory, serialized data for all of tree conflicts therein.
+     removed in format 13, in favor of the TREE_CONFLICT_VICTIM table*/
   tree_conflict_data  TEXT,
 
   PRIMARY KEY (wc_id, local_relpath)
@@ -350,3 +358,190 @@ CREATE TABLE LOCK (
 
 
 /* ------------------------------------------------------------------------- */
+
+/* Format 13 introduces the work queue, and erases a few columns from the
+   original schema.  */
+-- format: 13
+CREATE TABLE WORK_QUEUE (
+  /* Work items are identified by this value.  */
+  id  INTEGER PRIMARY KEY AUTOINCREMENT,
+
+  /* A serialized skel specifying the work item.  */
+  work  BLOB NOT NULL
+  );
+
+CREATE TABLE CONFLICT_VICTIM (
+  /* specifies the location of this node in the local filesystem */
+  wc_id  INTEGER NOT NULL,
+  local_relpath  TEXT NOT NULL,
+
+  /* parent's local_relpath for aggregating children of a given parent.
+     this will be "" if the parent is the wcroot. NULL if this is the
+     wcroot node. */
+  parent_relpath  TEXT,
+  
+  /* what kind of node is this? may be "unknown" if the node is not present */
+  node_kind  TEXT NOT NULL,
+
+  /* what sort of conflict are we describing? */
+  conflict_kind  TEXT NOT NULL,
+
+  /* the name of the property in conflict, or NULL */
+  property_name  TEXT,
+
+  /* conflict information, if kind is 'text' */
+  conflict_action  TEXT,
+  conflict_reason  TEXT,
+
+  /* operation which exposed the conflict, if kind is 'tree' */
+  operation  TEXT,
+
+  /* the 'merge-left' source, or 'older' version of the incoming change. */
+  left_repos_id  INTEGER,
+  left_repos_relpath  TEXT,
+  left_peg_rev  INTEGER,
+  left_kind  TEXT,
+
+  /* the 'merge-right' source, or 'their' version of the incoming change. */
+  right_repos_id  INTEGER,
+  right_repos_relpath  TEXT,
+  right_peg_rev  INTEGER,
+  right_kind  TEXT,
+
+  PRIMARY KEY (wc_id, local_relpath)
+  );
+
+CREATE INDEX I_TCPARENT ON CONFLICT_VICTIM (wc_id, parent_relpath);
+
+/* The contents of dav_cache are suspect in format 12, so it is best to just
+   erase anything there.  */
+UPDATE BASE_NODE SET incomplete_children=null, dav_cache=null;
+
+
+/* ------------------------------------------------------------------------- */
+
+/* Format 14 drops all columns not needed due to previous format upgrades.
+   As more formats are added, this number will be bumped, and it will
+   eventually become the final format for 1.7. */
+-- format: 14
+
+/* We cannot directly remove columns, so we use a temporary table instead. */
+/* First create the temporary table without the undesired column(s). */
+CREATE TEMPORARY TABLE BASE_NODE_BACKUP(
+  wc_id  INTEGER NOT NULL,
+  local_relpath  TEXT NOT NULL,
+  repos_id  INTEGER,
+  repos_relpath  TEXT,
+  parent_relpath  TEXT,
+  presence  TEXT NOT NULL,
+  kind  TEXT NOT NULL,
+  revnum  INTEGER,
+  checksum  TEXT,
+  translated_size  INTEGER,
+  changed_rev  INTEGER,
+  changed_date  INTEGER,
+  changed_author  TEXT,
+  depth  TEXT,
+  symlink_target  TEXT,
+  last_mod_time  INTEGER,
+  properties  BLOB,
+  dav_cache  BLOB,
+  file_external  TEXT
+);
+
+/* Copy everything into the temporary table. */
+INSERT INTO BASE_NODE_BACKUP SELECT
+  wc_id, local_relpath, repos_id, repos_relpath, parent_relpath, presence,
+  kind, revnum, checksum, translated_size, changed_rev, changed_date,
+  changed_author, depth, symlink_target, last_mod_time, properties, dav_cache,
+  file_external
+FROM BASE_NODE;
+
+/* Drop the original table. */
+DROP TABLE BASE_NODE;
+
+/* Recreate the original table, this time less the temporary columns.
+   Column descriptions are same as BASE_NODE in format 12 */
+CREATE TABLE BASE_NODE(
+  wc_id  INTEGER NOT NULL,
+  local_relpath  TEXT NOT NULL,
+  repos_id  INTEGER,
+  repos_relpath  TEXT,
+  parent_relpath  TEXT,
+  presence  TEXT NOT NULL,
+  kind  TEXT NOT NULL,
+  revnum  INTEGER,
+  checksum  TEXT,
+  translated_size  INTEGER,
+  changed_rev  INTEGER,
+  changed_date  INTEGER,
+  changed_author  TEXT,
+  depth  TEXT,
+  symlink_target  TEXT,
+  last_mod_time  INTEGER,
+  properties  BLOB,
+  dav_cache  BLOB,
+  file_external  TEXT,
+
+  PRIMARY KEY (wc_id, local_relpath)
+  );
+
+/* Recreate the index. */
+CREATE INDEX I_PARENT ON BASE_NODE (wc_id, parent_relpath);
+
+/* Copy everything back into the original table. */
+INSERT INTO BASE_NODE SELECT
+  wc_id, local_relpath, repos_id, repos_relpath, parent_relpath, presence,
+  kind, revnum, checksum, translated_size, changed_rev, changed_date,
+  changed_author, depth, symlink_target, last_mod_time, properties, dav_cache,
+  file_external
+FROM BASE_NODE_BACKUP;
+
+/* Drop the temporary table. */
+DROP TABLE BASE_NODE_BACKUP;
+
+/* Now "drop" the tree_conflict_data column from actual_node. */
+CREATE TABLE ACTUAL_NODE_BACKUP (
+  wc_id  INTEGER NOT NULL,
+  local_relpath  TEXT NOT NULL,
+  parent_relpath  TEXT,
+  properties  BLOB,
+  conflict_old  TEXT,
+  conflict_new  TEXT,
+  conflict_working  TEXT,
+  prop_reject  TEXT,
+  changelist  TEXT,
+  text_mod  TEXT
+  );
+
+INSERT INTO ACTUAL_NODE_BACKUP SELECT
+  wc_id, local_relpath, parent_relpath, properties, conflict_old,
+  conflict_new, conflict_working, prop_reject, changelist, text_mod
+FROM ACTUAL_NODE;
+
+DROP TABLE ACTUAL_NODE;
+
+CREATE TABLE ACTUAL_NODE (
+  wc_id  INTEGER NOT NULL,
+  local_relpath  TEXT NOT NULL,
+  parent_relpath  TEXT,
+  properties  BLOB,
+  conflict_old  TEXT,
+  conflict_new  TEXT,
+  conflict_working  TEXT,
+  prop_reject  TEXT,
+  changelist  TEXT,
+  text_mod  TEXT,
+
+  PRIMARY KEY (wc_id, local_relpath)
+  );
+
+CREATE INDEX I_ACTUAL_PARENT ON ACTUAL_NODE (wc_id, parent_relpath);
+CREATE INDEX I_ACTUAL_CHANGELIST ON ACTUAL_NODE (changelist);
+
+INSERT INTO ACTUAL_NODE SELECT
+  wc_id, local_relpath, parent_relpath, properties, conflict_old,
+  conflict_new, conflict_working, prop_reject, changelist, text_mod
+FROM ACTUAL_NODE_BACKUP;
+
+DROP TABLE ACTUAL_NODE_BACKUP;

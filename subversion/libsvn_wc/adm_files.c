@@ -6,17 +6,22 @@
  *              information is kept.
  *
  * ====================================================================
- * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -99,7 +104,7 @@ svn_wc_set_adm_dir(const char *name, apr_pool_t *pool)
   return svn_error_createf
     (SVN_ERR_BAD_FILENAME, NULL,
      _("'%s' is not a valid administrative directory name"),
-     svn_path_local_style(name, pool));
+     svn_dirent_local_style(name, pool));
 }
 
 
@@ -456,7 +461,7 @@ open_adm_file(svn_stream_t **stream,
     {
       /* Exclusive open failed, delete and retry */
       svn_error_clear(err);
-      SVN_ERR(svn_io_remove_file(path, scratch_pool));
+      SVN_ERR(svn_io_remove_file2(path, FALSE, scratch_pool));
       err = svn_stream_open_writable(stream, path, result_pool, scratch_pool);
     }
 
@@ -518,7 +523,7 @@ svn_wc__remove_adm_file(const char *dir_path,
 {
   const char *path = svn_wc__adm_child(dir_path, filename, scratch_pool);
 
-  return svn_io_remove_file(path, scratch_pool);
+  return svn_error_return(svn_io_remove_file2(path, FALSE, scratch_pool));
 }
 
 
@@ -653,11 +658,21 @@ svn_wc_ensure_adm3(const char *path,
                    svn_depth_t depth,
                    apr_pool_t *pool)
 {
+  svn_wc__db_t *db;
+  const char *local_abspath;
   svn_wc_adm_access_t *adm_access;
   const svn_wc_entry_t *entry;
   int format;
 
-  SVN_ERR(svn_wc_check_wc(path, &format, pool));
+  SVN_ERR(svn_wc__db_open(&db, svn_wc__db_openmode_readwrite,
+                          NULL /* ### config */, pool, pool));
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+
+  SVN_ERR(svn_wc__internal_check_wc(&format, db, local_abspath, pool));
+
+  /* ### we just created a DB. we should pass that into the other
+     ### functions below.  */
 
   /* Early out: we know we're not dealing with an existing wc, so
      just create one. */

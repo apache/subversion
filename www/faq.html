@@ -229,7 +229,7 @@ a <tt>file:</tt> URL?</a></li>
 <li><a href="#debian-libtool">I can't build Subversion from working
     copy source on Debian GNU/Linux; I get errors at the final link
     stage.  What's wrong?</a></li>
-<li><a href="#freebsd-listen-host">I'm using FreeBSD, and I've started
+<li><a href="#svnserve-listen-host">I've started
   svnserve, but it doesn't seem to be listening on port 3690.</a></li>
 <li><a href="#already-under-version-control">I can't add a directory
     because Subversion says it's "already under version control".</a></li>
@@ -3333,14 +3333,14 @@ solution described here was not mentioned in that thread.</p>
 </div>
 
 
-<div class="h3" id="freebsd-listen-host" title="freebsd-listen-host">
-<h3>I'm using FreeBSD, and I've started svnserve, but it doesn't seem
-  to be listening on port 3690.</h3>
+<div class="h3" id="svnserve-listen-host" title="svnserve-listen-host">
+<h3>I've started svnserve, but it doesn't seem to be listening on
+    port 3690.</h3>
     
-<p>Short answer: invoke <tt>svnserve</tt> with
-   the <tt>--listen-host=0.0.0.0</tt> option.</p>
-<p>Slightly longer answer: FreeBSD daemons only listen on tcp6 by
-  default; that option tells them to also listen on tcp4.</p>
+<p>Invoke <tt>svnserve</tt> with the <tt>--listen-host=0.0.0.0</tt> option.
+  Svnserve does not properly support IPv4/IPv6 dual-stack operation. 
+  See <a href="http://subversion.tigris.org/issues/show_bug.cgi?id=2382"
+  >issue #2382</a>.</p>
 </div>
 
 <div class="h3" id="already-under-version-control" title="already-under-version-control">
@@ -3757,41 +3757,10 @@ universally beneficial.</p>
 <p/>
 
 <div class="h3" id="ramdisk-tests" title="ramdisk-tests">
-<h3>How do I run the regression tests in a
-    RAM disk?</h3>
-
-<p>Test execution can be dramatically sped up by keeping Subversion
-test data on a RAM disk.  On a Linux system, you can mount a RAM disk
-on the fly with the command:</p>
-
-<blockquote>
-<div><code>mount -t tmpfs tmpfs
-/path/to/src/subversion/tests/cmdline/svn-test-work
--o uid=$USER,mode=770,size=32m</code></div>
-</blockquote>
-
-<p>Or, for a more permanent solution, add lines like the following in
-your <code>/etc/fstab</code> file:</p>
-
-<blockquote>
-<div><code>tmpfs  /path/to/src/svn/subversion/tests/cmdline/svn-test-work
-tmpfs  defaults,user,noauto,exec,size=32m</code></div>
-</blockquote>
-
-<p>The minimum required size for testing ramdisk is approximately 700MB.
-However, flagging your test targets for cleanup dramatically reduces
-the space requirements (as shown in the example configuration above),
-and thus your memory usage.  Cleanup means more I/O, but since test
-data is in-memory, there will be no performance degradation.  Example:</p>
-
-<blockquote><div><code>
-make check CLEANUP=true
-</code></div></blockquote>
-
-<p>See <a href="http://svn.haxx.se/dev/archive-2003-02/0068.shtml"
->http://svn.haxx.se/dev/archive-2003-02/0068.shtml</a> for the
-original authoritative discussion on use of RAM disks.</p>
-
+<h3>How do I run the regression tests in a RAM disk?</h3>
+ See
+ <a href="http://svn.collab.net/repos/svn/trunk/subversion/tests/cmdline/README"
+ >http://svn.collab.net/repos/svn/trunk/subversion/tests/cmdline/README</a>
 </div>
 
 

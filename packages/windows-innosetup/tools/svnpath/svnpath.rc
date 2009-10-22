@@ -16,11 +16,11 @@
     {
         BLOCK "000004b0"
         {
-            VALUE "CompanyName", "CollabNet\0"
+            VALUE "CompanyName", "Subversion Corporation\0"
             VALUE "FileDescription", "Subversion Windows Distro's Inno Setup System path editor\0"
             VALUE "FileVersion", "1.1.2\0"
             VALUE "InternalName", "svnpath\0"
-            VALUE "LegalCopyright", "Copyright ©2000-2004 CollabNet. All rights reserved.\0"
+            VALUE "LegalCopyright", "Copyright ©2009 Subversion Corporation.\0"
             VALUE "OriginalFilename", "svnpath.exe\0"
             VALUE "ProductName", "Subversion Windows Distribution\0"
             VALUE "ProductVersion", "1.00\0"

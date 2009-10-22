@@ -1,16 +1,21 @@
 /*
  * ====================================================================
- * Copyright (c) 2000-2004, 2008 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -40,11 +45,27 @@ extern "C" {
  * This macro should be used in place of SVN_ERR_ASSERT() since we don't
  * want to core-dump the test.
  */
-#define SVN_TEST_ASSERT(expr)                                  \
-  do {                                                         \
-    if (!(expr))                                               \
-      return svn_error_create(SVN_ERR_TEST_FAILED, 0, #expr);  \
+#define SVN_TEST_ASSERT(expr)                                     \
+  do {                                                            \
+    if (!(expr))                                                  \
+      return svn_error_create(SVN_ERR_TEST_FAILED, NULL, #expr);  \
   } while (0)
+
+/** Handy macro for testing string equality.
+ */
+#define SVN_TEST_STRING_ASSERT(expr, expected_expr)                 \
+  do {                                                              \
+    const char *tst_str1 = (expr);                                  \
+    const char *tst_str2 = (expected_expr);                         \
+                                                                    \
+    if (tst_str2 == NULL && tst_str1 == NULL)                       \
+      break;                                                        \
+    if (   (tst_str2 != NULL && tst_str1 == NULL)                   \
+        || (strcmp(tst_str2, tst_str1) != 0)  )                     \
+      return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,           \
+          "Strings not equal\n  Expected: '%s'\n  Found:    '%s'",  \
+          tst_str2, tst_str1);                                      \
+  } while(0)
 
 
 /* Baton for any arguments that need to be passed from main() to svn
@@ -69,13 +90,6 @@ typedef svn_error_t* (*svn_test_driver2_t)(apr_pool_t *pool);
 typedef svn_error_t* (*svn_test_driver_opts_t)(const svn_test_opts_t *opts,
                                                apr_pool_t *pool);
 
-/* Prototype for test driver functions.
-   @deprecated Use svn_test_driver2_t instead.  */
-typedef svn_error_t* (*svn_test_driver_t)(const char **msg,
-                                          svn_boolean_t msg_only,
-                                          svn_test_opts_t *opts,
-                                          apr_pool_t *pool);
-
 /* Test modes. */
 enum svn_test_mode_t
   {
@@ -89,9 +103,6 @@ enum svn_test_mode_t
  */
 struct svn_test_descriptor_t
 {
-  /* Obsolete. A pointer to an old-style test driver function. */
-  svn_test_driver_t func;
-
   /* Is the test marked XFAIL? */
   enum svn_test_mode_t mode;
 
@@ -117,47 +128,36 @@ extern struct svn_test_descriptor_t test_funcs[];
 #define SVN_TEST_NULL  {0}
 
 /* Initializer for PASS tests */
-#define SVN_TEST_PASS2(func, msg)  {NULL , svn_test_pass, func, NULL, msg}
+#define SVN_TEST_PASS2(func, msg)  {svn_test_pass, func, NULL, msg}
 
 /* Initializer for XFAIL tests */
-#define SVN_TEST_XFAIL2(func, msg) {NULL, svn_test_xfail, func, NULL, msg}
+#define SVN_TEST_XFAIL2(func, msg) {svn_test_xfail, func, NULL, msg}
 
 /* Initializer for conditional XFAIL tests */
 #define SVN_TEST_XFAIL_COND2(func, p, msg) \
-  {NULL, (p) ? svn_test_xfail : svn_test_pass, func, NULL, msg}
+  {(p) ? svn_test_xfail : svn_test_pass, func, NULL, msg}
 
 /* Initializer for SKIP tests */
 #define SVN_TEST_SKIP2(func, p, msg) \
-  {NULL, (p) ? svn_test_skip : svn_test_pass, func, NULL, msg}
+  {(p) ? svn_test_skip : svn_test_pass, func, NULL, msg}
 
 /* Similar macros, but for tests needing options.  */
-#define SVN_TEST_OPTS_PASS(func, msg)  {NULL, svn_test_pass, NULL, func, msg}
-#define SVN_TEST_OPTS_XFAIL(func, msg) {NULL, svn_test_xfail, NULL, func, msg}
+#define SVN_TEST_OPTS_PASS(func, msg)  {svn_test_pass, NULL, func, msg}
+#define SVN_TEST_OPTS_XFAIL(func, msg) {svn_test_xfail, NULL, func, msg}
 #define SVN_TEST_OPTS_XFAIL_COND(func, p, msg) \
-  {NULL, (p) ? svn_test_xfail : svn_test_pass, NULL, func, msg}
+  {(p) ? svn_test_xfail : svn_test_pass, NULL, func, msg}
 #define SVN_TEST_OPTS_SKIP(func, p, msg) \
-  {NULL, (p) ? svn_test_skip : svn_test_pass, NULL, func, msg}
-
-/* Obsolete initializer macros.  */
-#define SVN_TEST_PASS(func)  {func, svn_test_pass}
-#define SVN_TEST_XFAIL(func) {func, svn_test_xfail}
-#define SVN_TEST_XFAIL_COND(func, p) \
-                                {func, (p) ? svn_test_xfail : svn_test_pass}
-#define SVN_TEST_SKIP(func, p) {func, ((p) ? svn_test_skip : svn_test_pass)}
+  {(p) ? svn_test_skip : svn_test_pass, NULL, func, msg}
 
 /* Initializer for XFAIL tests for works-in-progress. */
 #define SVN_TEST_WIMP(func, msg, wip) \
-  {NULL, svn_test_xfail, func, NULL, msg, wip}
+  {svn_test_xfail, func, NULL, msg, wip}
 #define SVN_TEST_WIMP_COND(func, p, msg, wip) \
-  {NULL, (p) ? svn_test_xfail : svn_test_pass, func, NULL, msg, wip}
+  {(p) ? svn_test_xfail : svn_test_pass, func, NULL, msg, wip}
 #define SVN_TEST_OPTS_WIMP(func, msg, wip) \
-  {NULL, svn_test_xfail, NULL, func, msg, wip}
+  {svn_test_xfail, NULL, func, msg, wip}
 #define SVN_TEST_OPTS_WIMP_COND(func, p, msg, wip) \
-  {NULL, (p) ? svn_test_xfail : svn_test_pass, NULL, func, msg, wip}
-
-/* Obsolete version of work-in-progress macros. */
-#define SVN_TEST_WIMP0(func, wip) \
-  {func, svn_test_xfail, NULL, NULL, NULL, wip}
+  {(p) ? svn_test_xfail : svn_test_pass, NULL, func, msg, wip}
 
 
 

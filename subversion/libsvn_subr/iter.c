@@ -1,17 +1,22 @@
 /* iter.c : iteration drivers
  *
  * ====================================================================
- * Copyright (c) 2007 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -119,4 +124,28 @@ svn_error_t *
 svn_iter__break(void)
 {
   return &internal_break_error;
+}
+
+const void *svn_apr_hash_index_key(const apr_hash_index_t *hi)
+{
+  const void *key;
+
+  apr_hash_this(hi, &key, NULL, NULL);
+  return key;
+}
+
+apr_ssize_t svn_apr_hash_index_klen(const apr_hash_index_t *hi)
+{
+  apr_ssize_t klen;
+
+  apr_hash_this(hi, NULL, &klen, NULL);
+  return klen;
+}
+
+void *svn_apr_hash_index_val(const apr_hash_index_t *hi)
+{
+  void *val;
+
+  apr_hash_this(hi, NULL, NULL, &val);
+  return val;
 }

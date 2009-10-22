@@ -5,14 +5,22 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2009 CollabNet.  All rights reserved.
+#    Licensed to the Subversion Corporation (SVN Corp.) under one
+#    or more contributor license agreements.  See the NOTICE file
+#    distributed with this work for additional information
+#    regarding copyright ownership.  The SVN Corp. licenses this file
+#    to you under the Apache License, Version 2.0 (the
+#    "License"); you may not use this file except in compliance
+#    with the License.  You may obtain a copy of the License at
 #
-# This software is licensed as described in the file COPYING, which
-# you should have received as part of this distribution.  The terms
-# are also available at http://subversion.tigris.org/license-1.html.
-# If newer versions of this license are posted there, you may use a
-# newer version instead, at your option.
+#      http://www.apache.org/licenses/LICENSE-2.0
 #
+#    Unless required by applicable law or agreed to in writing,
+#    software distributed under the License is distributed on an
+#    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+#    KIND, either express or implied.  See the License for the
+#    specific language governing permissions and limitations
+#    under the License.
 ######################################################################
 
 import os, shutil, re, sys, errno
@@ -226,7 +234,7 @@ def run_and_verify_svn2(message, expected_stdout, expected_stderr,
     raise verify.SVNIncorrectDatatype("expected_stderr must not be None")
 
   want_err = None
-  if expected_stderr is not None and expected_stderr != []:
+  if expected_stderr != []:
     want_err = True
 
   exit_code, out, err = main.run_svn(want_err, *varargs)
@@ -340,12 +348,7 @@ def run_and_verify_checkout(URL, wc_dir_name, output_tree, disk_tree,
   # Remove dir if it's already there, unless this is a forced checkout.
   # In that case assume we want to test a forced checkout's toleration
   # of obstructing paths.
-  remove_wc = True
-  for arg in args:
-    if arg == '--force':
-      remove_wc = False
-      break
-  if remove_wc:
+  if '--force' not in args:
     main.safe_rmtree(wc_dir_name)
 
   # Checkout and make a tree of the output, using l:foo/p:bar
@@ -704,26 +707,46 @@ def run_and_parse_info(*args):
   # per-target variables
   iter_info = {}
   prev_key = None
+  lock_comment_lines = 0
+  lock_comments = []
 
   exit_code, output, errput = main.run_svn(None, 'info', *args)
 
   for line in output:
     line = line[:-1] # trim '\n'
-    if len(line) == 0:
+
+    if lock_comment_lines > 0:
+      # mop up any lock comment lines
+      lock_comments.append(line)
+      lock_comment_lines = lock_comment_lines - 1
+      if lock_comment_lines == 0:
+        iter_info[prev_key] = lock_comments
+    elif len(line) == 0:
       # separator line between items
       all_infos.append(iter_info)
       iter_info = {}
       prev_key = None
+      lock_comment_lines = 0
+      lock_comments = []
     elif line[0].isspace():
       # continuation line (for tree conflicts)
       iter_info[prev_key] += line[1:]
     else:
       # normal line
       key, value = line.split(':', 1)
-      if len(value) > 1:
+
+      if re.search(' \(\d+ lines?\)$', key):
+        # numbered continuation lines
+        match = re.match('^(.*) \((\d+) lines?\)$', key)
+        key = match.group(1)
+        lock_comment_lines = int(match.group(2))
+      elif len(value) > 1:
+        # normal normal line
         iter_info[key] = value[1:]
       else:
-        # it's a "Tree conflict:\n" line; value is in continuation lines
+        ### originally added for "Tree conflict:\n" lines;
+        ### tree-conflicts output format has changed since then
+        # continuation lines are implicit (prefixed by whitespace)
         iter_info[key] = ''
       prev_key = key
 
@@ -744,9 +767,16 @@ def run_and_verify_info(expected_infos, *args):
   actual_infos = run_and_parse_info(*args)
 
   try:
+    # zip() won't complain, so check this manually
+    if len(actual_infos) != len(expected_infos):
+      raise verify.SVNUnexpectedStdout(
+          "Expected %d infos, found %d infos"
+           % (len(expected_infos), len(actual_infos)))
+
     for actual, expected in zip(actual_infos, expected_infos):
       # compare dicts
       for key, value in expected.items():
+        assert ':' not in key # caller passed impossible expectations?
         if value is None and key in actual:
           raise main.SVNLineUnequal("Found unexpected key '%s' with value '%s'"
                                     % (key, actual[key]))
@@ -1115,6 +1145,37 @@ def run_and_verify_switch(wc_dir_name,
                 singleton_handler_b, b_baton,
                 check_props)
 
+def process_output_for_commit(output):
+  """Helper for run_and_verify_commit(), also used in the factory."""
+  # Remove the final output line, and verify that the commit succeeded.
+  lastline = ""
+  if len(output):
+    lastline = output.pop().strip()
+
+    cm = re.compile("(Committed|Imported) revision [0-9]+.")
+    match = cm.search(lastline)
+    if not match:
+      print("ERROR:  commit did not succeed.")
+      print("The final line from 'svn ci' was:")
+      print(lastline)
+      raise main.SVNCommitFailure
+
+  # The new 'final' line in the output is either a regular line that
+  # mentions {Adding, Deleting, Sending, ...}, or it could be a line
+  # that says "Transmitting file data ...".  If the latter case, we
+  # want to remove the line from the output; it should be ignored when
+  # building a tree.
+  if len(output):
+    lastline = output.pop()
+
+    tm = re.compile("Transmitting file data.+")
+    match = tm.search(lastline)
+    if not match:
+      # whoops, it was important output, put it back.
+      output.append(lastline)
+
+  return output
+
 
 def run_and_verify_commit(wc_dir_name, output_tree, status_tree,
                           error_re_string = None,
@@ -1152,34 +1213,8 @@ def run_and_verify_commit(wc_dir_name, output_tree, status_tree,
 
   # Else not expecting error:
 
-  # Remove the final output line, and verify that the commit succeeded.
-  lastline = ""
-  if len(output):
-    lastline = output.pop().strip()
-
-    cm = re.compile("(Committed|Imported) revision [0-9]+.")
-    match = cm.search(lastline)
-    if not match:
-      print("ERROR:  commit did not succeed.")
-      print("The final line from 'svn ci' was:")
-      print(lastline)
-      raise main.SVNCommitFailure
-
-  # The new 'final' line in the output is either a regular line that
-  # mentions {Adding, Deleting, Sending, ...}, or it could be a line
-  # that says "Transmitting file data ...".  If the latter case, we
-  # want to remove the line from the output; it should be ignored when
-  # building a tree.
-  if len(output):
-    lastline = output.pop()
-
-    tm = re.compile("Transmitting file data.+")
-    match = tm.search(lastline)
-    if not match:
-      # whoops, it was important output, put it back.
-      output.append(lastline)
-
   # Convert the output into a tree.
+  output = process_output_for_commit(output)
   actual = tree.build_tree_from_commit(output)
 
   # Verify actual output against expected output.
@@ -1516,6 +1551,10 @@ def lock_admin_dir(wc_dir):
 def get_wc_uuid(wc_dir):
   "Return the UUID of the working copy at WC_DIR."
   return run_and_parse_info(wc_dir)[0]['Repository UUID']
+
+def get_wc_base_rev(wc_dir):
+  "Return the BASE revision of the working copy at WC_DIR."
+  return run_and_parse_info(wc_dir)[0]['Revision']
 
 def create_failing_hook(repo_dir, hook_name, text):
   """Create a HOOK_NAME hook in REPO_DIR that prints TEXT to stderr and exits
@@ -2069,7 +2108,8 @@ class DeepTreesTestCase:
   def __init__(self, name, local_action, incoming_action,
                 expected_output = None, expected_disk = None,
                 expected_status = None, expected_skip = None,
-                error_re_string = None):
+                error_re_string = None,
+                commit_block_string = ".*remains in conflict.*"):
     self.name = name
     self.local_action = local_action
     self.incoming_action = incoming_action
@@ -2078,6 +2118,7 @@ class DeepTreesTestCase:
     self.expected_status = expected_status
     self.expected_skip = expected_skip
     self.error_re_string = error_re_string
+    self.commit_block_string = commit_block_string
 
 
 
@@ -2114,6 +2155,9 @@ def deep_trees_run_tests_scheme_for_update(sbox, greater_scheme):
    7) An update to -r3 is performed across all test cases and depths.
       This causes tree-conflicts between the "local" state in the working
       copy and the "incoming" state from the repository, -r3.
+
+   8) A commit is performed in each separate container, to verify
+      that each tree-conflict indeed blocks a commit.
 
   The sbox parameter is just the sbox passed to a test function. No need
   to call sbox.build(), since it is called (once) within this function.
@@ -2209,6 +2253,26 @@ def deep_trees_run_tests_scheme_for_update(sbox, greater_scheme):
       raise
 
 
+  # 8) Verify that commit fails.
+
+  for test_case in greater_scheme:
+    try:
+      base = j(wc_dir, test_case.name)
+
+      x_status = test_case.expected_status
+      if x_status != None:
+        x_status.copy()
+        x_status.wc_dir = base
+
+      run_and_verify_commit(base, None, x_status,
+                            test_case.commit_block_string,
+                            base)
+    except:
+      print("ERROR IN: Tests scheme for update: "
+          + "while checking commit-blocking in '%s'" % test_case.name)
+      raise
+
+
 
 def deep_trees_skipping_on_update(sbox, test_case, skip_paths,
                                   chdir_skip_paths):
@@ -2286,7 +2350,16 @@ def deep_trees_skipping_on_update(sbox, test_case, skip_paths,
     run_and_verify_update('',
                           wc.State('', {skipped : Item(verb='Skipped')}),
                           None, None)
-    os.chdir(was_cwd)
+  os.chdir(was_cwd)
+
+  run_and_verify_unquiet_status(base, x_status)
+
+  # Verify that commit still fails.
+  for path, skipped in chdir_skip_paths:
+
+    run_and_verify_commit(j(base, path), None, None,
+                          test_case.commit_block_string,
+                          base)
 
   run_and_verify_unquiet_status(base, x_status)
 
@@ -2318,6 +2391,9 @@ def deep_trees_run_tests_scheme_for_switch(sbox, greater_scheme):
       corresponding incoming dir.
       This causes conflicts between the "local" state in the working
       copy and the "incoming" state from the incoming subdir (still -r3).
+
+   7) A commit is performed in each separate container, to verify
+      that each tree-conflict indeed blocks a commit.
 
   The sbox parameter is just the sbox passed to a test function. No need
   to call sbox.build(), since it is called (once) within this function.
@@ -2412,6 +2488,26 @@ def deep_trees_run_tests_scheme_for_switch(sbox, greater_scheme):
       raise
 
 
+  # 7) Verify that commit fails.
+
+  for test_case in greater_scheme:
+    try:
+      local = j(wc_dir, test_case.name, 'local')
+
+      x_status = test_case.expected_status
+      if x_status != None:
+        x_status.copy()
+        x_status.wc_dir = local
+
+      run_and_verify_commit(local, None, x_status,
+                            test_case.commit_block_string,
+                            local)
+    except:
+      print("ERROR IN: Tests scheme for switch: "
+          + "while checking commit-blocking in '%s'" % test_case.name)
+      raise
+
+
 def deep_trees_run_tests_scheme_for_merge(sbox, greater_scheme,
                                           do_commit_local_changes):
   """
@@ -2450,6 +2546,9 @@ def deep_trees_run_tests_scheme_for_merge(sbox, greater_scheme,
       "local" subdir.
       This causes conflicts between the "local" state in the working
       copy and the "incoming" state from the incoming subdir.
+
+   9) A commit is performed in each separate container, to verify
+      that each tree-conflict indeed blocks a commit.
 
   The sbox parameter is just the sbox passed to a test function. No need
   to call sbox.build(), since it is called (once) within this function.
@@ -2588,6 +2687,26 @@ def deep_trees_run_tests_scheme_for_merge(sbox, greater_scheme,
     except:
       print("ERROR IN: Tests scheme for merge: "
           + "while verifying in '%s'" % test_case.name)
+      raise
+
+
+  # 9) Verify that commit fails.
+
+  for test_case in greater_scheme:
+    try:
+      local = j(wc_dir, test_case.name, 'local')
+
+      x_status = test_case.expected_status
+      if x_status != None:
+        x_status.copy()
+        x_status.wc_dir = local
+
+      run_and_verify_commit(local, None, x_status,
+                            test_case.commit_block_string,
+                            local)
+    except:
+      print("ERROR IN: Tests scheme for merge: "
+          + "while checking commit-blocking in '%s'" % test_case.name)
       raise
 
 

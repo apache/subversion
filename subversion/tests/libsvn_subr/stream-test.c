@@ -2,17 +2,22 @@
  * stream-test.c -- test the stream functions
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -25,10 +30,7 @@
 
 
 static svn_error_t *
-test_stream_from_string(const char **msg,
-                        svn_boolean_t msg_only,
-                        svn_test_opts_t *opts,
-                        apr_pool_t *pool)
+test_stream_from_string(apr_pool_t *pool)
 {
   int i;
   apr_pool_t *subpool = svn_pool_create(pool);
@@ -51,11 +53,6 @@ test_stream_from_string(const char **msg,
     "it--but I feel that it is safe to assume that I'm far longer than my "
     "peers.  And that demands some amount of respect, wouldn't you say?"
   };
-
-  *msg = "test svn_stream_from_string";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
 
   /* Test svn_stream_from_stringbuf() as a readable stream. */
   for (i = 0; i < NUM_TEST_STRINGS; i++)
@@ -147,10 +144,7 @@ generate_test_bytes(int num_bytes, apr_pool_t *pool)
 
 
 static svn_error_t *
-test_stream_compressed(const char **msg,
-                       svn_boolean_t msg_only,
-                       svn_test_opts_t *opts,
-                       apr_pool_t *pool)
+test_stream_compressed(apr_pool_t *pool)
 {
 #define NUM_TEST_STRINGS 5
 #define TEST_BUF_SIZE 10
@@ -176,11 +170,6 @@ test_stream_compressed(const char **msg,
     "peers.  And that demands some amount of respect, wouldn't you say?"
   };
 
-
-  *msg = "test compressed streams";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
 
   for (i = 0; i < (NUM_TEST_STRINGS - 1); i++)
     bufs[i] = svn_stringbuf_create(strings[i], pool);
@@ -235,13 +224,140 @@ test_stream_compressed(const char **msg,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_stream_range(apr_pool_t *pool)
+{
+  static const char *file_data[3] = {"Before", "Now", "After"};
+  const char *before, *now, *after;
+  char buf[14 + 1] = {0}; /* Enough to hold file data + '\0' */
+  static const char *fname = "test_stream_range.txt";
+  apr_off_t start, end;
+  apr_file_t *f;
+  apr_status_t status;
+  unsigned int i, j;
+  apr_size_t len;
+  svn_stream_t *stream;
+
+  status = apr_file_open(&f, fname, (APR_READ | APR_WRITE | APR_CREATE |
+                         APR_TRUNCATE | APR_DELONCLOSE), APR_OS_DEFAULT, pool);
+  if (status != APR_SUCCESS)
+    return svn_error_createf(SVN_ERR_TEST_FAILED, NULL, "Cannot open '%s'",
+                             fname);
+
+  /* Create the file. */
+  for (j = 0; j < 3; j++)
+    {
+      len = strlen(file_data[j]);
+      status = apr_file_write(f, file_data[j], &len);
+      if (status || len != strlen(file_data[j]))
+        return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                                 "Cannot write to '%s'", fname);
+    }
+
+    /* Create a stream to read from a range of the file. */
+    before = file_data[0];
+    now = file_data[1];
+    after = file_data[2];
+
+    start = strlen(before);
+    end = start + strlen(now);
+
+    stream = svn_stream_from_aprfile_range_readonly(f, TRUE, start, end, pool);
+
+    /* Even when requesting more data than contained in the range,
+     * we should only receive data from the range. */
+    len = strlen(now) + strlen(after);
+
+    for (i = 0; i < 2; i++)
+      {
+        /* Read the range. */
+        SVN_ERR(svn_stream_read(stream, buf, &len));
+        if (len > strlen(now))
+          return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                                   "Read past range");
+        if (strcmp(buf, now))
+          return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                                   "Unexpected data");
+
+        /* Reading past the end of the range should be impossible. */
+        SVN_ERR(svn_stream_read(stream, buf, &len));
+        if (len != 0)
+          return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                                   "Read past range");
+
+        /* Resetting the stream should allow us to read the range again. */
+        SVN_ERR(svn_stream_reset(stream));
+      }
+
+    SVN_ERR(svn_stream_close(stream));
+
+    /* The attempt to create a stream with invalid ranges should result
+     * in an empty stream. */
+    stream = svn_stream_from_aprfile_range_readonly(f, TRUE, 0, -1, pool);
+    len = 42;
+    SVN_ERR(svn_stream_read(stream, buf, &len));
+    SVN_ERR_ASSERT(len == 0);
+    stream = svn_stream_from_aprfile_range_readonly(f, TRUE, -1, 0, pool);
+    len = 42;
+    SVN_ERR(svn_stream_read(stream, buf, &len));
+    SVN_ERR_ASSERT(len == 0);
+
+    SVN_ERR(svn_stream_close(stream));
+    apr_file_close(f);
+    return SVN_NO_ERROR;
+}
+
+/* An implementation of svn_io_line_filter_cb_t */
+static svn_error_t *
+line_filter(svn_boolean_t *filtered, const char *line, apr_pool_t *scratch_pool)
+{
+  *filtered = strchr(line, '!') != NULL;
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_stream_line_filter(apr_pool_t *pool)
+{
+  static const char *lines[4] = {"Not filtered.", "Filtered!",
+                                 "Not filtered either.", "End of the lines!"};
+  svn_string_t *string;
+  svn_stream_t *stream;
+  svn_stringbuf_t *line;
+  svn_boolean_t eof;
+
+  string = svn_string_createf(pool, "%s\n%s\n%s\n%s", lines[0], lines[1],
+                              lines[2], lines[3]);
+  stream = svn_stream_from_string(string, pool);
+
+  svn_stream_set_line_filter_callback(stream, line_filter);
+
+  svn_stream_readline(stream, &line, "\n", &eof, pool);
+  SVN_ERR_ASSERT(strcmp(line->data, lines[0]) == 0);
+  /* line[1] should be filtered */
+  svn_stream_readline(stream, &line, "\n", &eof, pool);
+  SVN_ERR_ASSERT(strcmp(line->data, lines[2]) == 0);
+
+  /* The last line should also be filtered, and the resulting
+   * stringbuf should be empty. */
+  svn_stream_readline(stream, &line, "\n", &eof, pool);
+  SVN_ERR_ASSERT(eof && svn_stringbuf_isempty(line));
+
+  return SVN_NO_ERROR;
+}
+
 
 /* The test table.  */
 
 struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
-    SVN_TEST_PASS(test_stream_from_string),
-    SVN_TEST_PASS(test_stream_compressed),
+    SVN_TEST_PASS2(test_stream_from_string,
+                   "test svn_stream_from_string"),
+    SVN_TEST_PASS2(test_stream_compressed,
+                   "test compressed streams"),
+    SVN_TEST_PASS2(test_stream_range,
+                   "test streams reading from range of file"),
+    SVN_TEST_PASS2(test_stream_line_filter,
+                   "test stream line filtering"),
     SVN_TEST_NULL
   };

@@ -6,14 +6,22 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2009 CollabNet.  All rights reserved.
+#    Licensed to the Subversion Corporation (SVN Corp.) under one
+#    or more contributor license agreements.  See the NOTICE file
+#    distributed with this work for additional information
+#    regarding copyright ownership.  The SVN Corp. licenses this file
+#    to you under the Apache License, Version 2.0 (the
+#    "License"); you may not use this file except in compliance
+#    with the License.  You may obtain a copy of the License at
 #
-# This software is licensed as described in the file COPYING, which
-# you should have received as part of this distribution.  The terms
-# are also available at http://subversion.tigris.org/license-1.html.
-# If newer versions of this license are posted there, you may use a
-# newer version instead, at your option.
+#      http://www.apache.org/licenses/LICENSE-2.0
 #
+#    Unless required by applicable law or agreed to in writing,
+#    software distributed under the License is distributed on an
+#    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+#    KIND, either express or implied.  See the License for the
+#    specific language governing permissions and limitations
+#    under the License.
 ######################################################################
 
 # General modules
@@ -1333,7 +1341,44 @@ def switch_relative_external(sbox):
     ]
   svntest.actions.run_and_verify_info(expected_infos, D_path, ext_path)
 
-  
+#----------------------------------------------------------------------
+
+# A regression test for a bug in exporting externals from a mixed-depth WC.
+def export_sparse_wc_with_externals(sbox):
+  "export from a sparse working copy with externals"
+
+  externals_test_setup(sbox)
+
+  repo_url = sbox.repo_url + '/A/B'
+  wc_dir = sbox.wc_dir
+  # /A/B contains (dir 'E', dir 'F', file 'lambda', external dir 'gamma').
+  children = [ 'E', 'F', 'lambda' ]
+  ext_children = [ 'gamma' ]
+
+  def wc_paths_of(relative_paths):
+    return [ os.path.join(wc_dir, path) for path in relative_paths ]
+
+  child_paths = wc_paths_of(children)
+  ext_child_paths = wc_paths_of(ext_children)
+
+  export_target = sbox.add_wc_path('export')
+
+  # Create a working copy with depth=empty itself but children that are
+  # depth=infinity.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'checkout', '--depth=empty',
+                                     repo_url, wc_dir)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'update', *child_paths)
+  # Export the working copy.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'export', wc_dir, export_target)
+  # It failed with "'gamma' is not under version control" because the
+  # depth-infinity children led it wrongly to try to process externals
+  # in the parent.
+
+  svntest.main.safe_rmtree(export_target)
+
 ########################################################################
 # Run the tests
 
@@ -1360,6 +1405,7 @@ test_list = [ None,
               XFail(binary_file_externals),
               XFail(update_lose_file_external),
               XFail(switch_relative_external),
+              export_sparse_wc_with_externals,
              ]
 
 if __name__ == '__main__':

@@ -318,4 +318,4 @@ if __name__ == "__main__":
       shutil.rmtree(repos_path)
   except:
     pass
-  print "SUCCESS!"
+  print("SUCCESS!")

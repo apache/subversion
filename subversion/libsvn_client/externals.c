@@ -2,17 +2,22 @@
  * externals.c:  handle the svn:externals property
  *
  * ====================================================================
- * Copyright (c) 2000-2009 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -146,7 +151,7 @@ relegate_dir_external(const char *path,
          no big deal.
       */
       /* Do our best, but no biggy if it fails. The rename will fail. */
-      svn_error_clear(svn_io_remove_file(new_path, pool));
+      svn_error_clear(svn_io_remove_file2(new_path, TRUE, pool));
 
       /* Rename. */
       SVN_ERR(svn_io_file_rename(path, new_path, pool));
@@ -294,6 +299,7 @@ switch_file_external(const char *path,
   apr_pool_t *subpool = svn_pool_create(pool);
   svn_wc_adm_access_t *target_adm_access;
   const char *anchor;
+  const char *anchor_abspath;
   const char *target;
   const svn_wc_entry_t *entry;
   svn_config_t *cfg = ctx->config ? apr_hash_get(ctx->config,
@@ -308,6 +314,7 @@ switch_file_external(const char *path,
 
   /* There must be a working copy to place the file external into. */
   SVN_ERR(svn_wc_get_actual_target(path, &anchor, &target, subpool));
+  SVN_ERR(svn_dirent_get_absolute(&anchor_abspath, anchor, subpool));
 
   /* Try to get a access baton for the anchor using the input access
      baton.  If this fails and returns SVN_ERR_WC_NOT_LOCKED, then try
@@ -389,9 +396,9 @@ switch_file_external(const char *path,
          external to be added when one exists. */
       SVN_ERR(svn_wc__entry_versioned(&anchor_dir_entry, anchor,
                                       target_adm_access, FALSE, subpool));
-      SVN_ERR(svn_wc_conflicted_p2(&text_conflicted, &prop_conflicted,
-                                   &tree_conflicted, anchor, target_adm_access,
-                                   subpool));
+      SVN_ERR(svn_wc_conflicted_p3(&text_conflicted, &prop_conflicted,
+                                   &tree_conflicted, ctx->wc_ctx,
+                                   anchor_abspath, subpool));
       if (text_conflicted || prop_conflicted || tree_conflicted)
         return svn_error_createf
           (SVN_ERR_WC_FOUND_CONFLICT, 0,
@@ -487,11 +494,7 @@ switch_file_external(const char *path,
     }
 
   if (unlink_file)
-    {
-      svn_error_t *e = svn_io_remove_file(path, subpool);
-      if (e)
-        svn_error_clear(e);
-    }
+    svn_error_clear(svn_io_remove_file2(path, TRUE, subpool));
 
   if (close_adm_access)
     SVN_ERR(svn_wc_adm_close2(target_adm_access, subpool));
@@ -1299,19 +1302,13 @@ svn_client__do_external_status(svn_wc_traversal_info_t *traversal_info,
        hi = apr_hash_next(hi))
     {
       apr_array_header_t *exts;
-      const void *key;
-      void *val;
-      const char *path;
-      const char *propval;
+      const char *path = svn_apr_hash_index_key(hi);
+      const char *propval = svn_apr_hash_index_val(hi);
       apr_pool_t *iterpool;
       int i;
 
       /* Clear the subpool. */
       svn_pool_clear(subpool);
-
-      apr_hash_this(hi, &key, NULL, &val);
-      path = key;
-      propval = val;
 
       /* Parse the svn:externals property value.  This results in a
          hash mapping subdirectories to externals structures. */

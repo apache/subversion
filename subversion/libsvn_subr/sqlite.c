@@ -1,17 +1,22 @@
 /* sqlite.c
  *
  * ====================================================================
- * Copyright (c) 2008-2009 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -90,8 +95,8 @@ struct svn_sqlite__stmt_t
 } while (0)
 
 
-svn_error_t *
-svn_sqlite__exec(svn_sqlite__db_t *db, const char *sql)
+static svn_error_t *
+exec_sql(svn_sqlite__db_t *db, const char *sql)
 {
   char *err_msg;
   int sqlite_err = sqlite3_exec(db->db3, sql, NULL, NULL, &err_msg);
@@ -110,19 +115,19 @@ svn_sqlite__exec(svn_sqlite__db_t *db, const char *sql)
 svn_error_t *
 svn_sqlite__transaction_begin(svn_sqlite__db_t *db)
 {
-  return svn_sqlite__exec(db, "BEGIN TRANSACTION;");
+  return exec_sql(db, "BEGIN TRANSACTION;");
 }
 
 svn_error_t *
 svn_sqlite__transaction_commit(svn_sqlite__db_t *db)
 {
-  return svn_sqlite__exec(db, "COMMIT TRANSACTION;");
+  return exec_sql(db, "COMMIT TRANSACTION;");
 }
 
 svn_error_t *
 svn_sqlite__transaction_rollback(svn_sqlite__db_t *db)
 {
-  return svn_sqlite__exec(db, "ROLLBACK TRANSACTION;");
+  return exec_sql(db, "ROLLBACK TRANSACTION;");
 }
 
 svn_error_t *
@@ -508,27 +513,53 @@ static const int latest_schema_format =
 
 #endif
 
-
-static svn_error_t *
-upgrade_format(svn_sqlite__db_t *db, int current_schema, int latest_schema,
-               const char * const *upgrade_sql, apr_pool_t *scratch_pool)
+struct upgrade_baton
 {
-  while (current_schema < latest_schema)
+  int current_schema;
+  int latest_schema;
+  const char * const *upgrade_sql;
+
+  svn_sqlite__upgrade_func_t upgrade_func;
+  void *upgrade_baton;
+
+  apr_pool_t *scratch_pool;
+};
+
+/* This implements svn_sqlite__transaction_callback_t */
+static svn_error_t *
+upgrade_format(void *baton,
+               svn_sqlite__db_t *db)
+{
+  struct upgrade_baton *ub = baton;
+  int current_schema = ub->current_schema;
+  apr_pool_t *iterpool = svn_pool_create(ub->scratch_pool);
+
+  while (current_schema < ub->latest_schema)
     {
       const char *pragma_cmd;
+
+      svn_pool_clear(iterpool);
 
       /* Go to the next schema */
       current_schema++;
 
       /* Run the upgrade SQL */
-      SVN_ERR(svn_sqlite__exec(db, upgrade_sql[current_schema]));
+      if (ub->upgrade_sql[current_schema])
+        SVN_ERR(exec_sql(db, ub->upgrade_sql[current_schema]));
+
+      /* Run the upgrade callback. */
+      if (ub->upgrade_func)
+        SVN_ERR(ub->upgrade_func(ub->upgrade_baton, db, current_schema,
+                                 iterpool));
 
       /* Update the user version pragma */
-      pragma_cmd = apr_psprintf(scratch_pool,
+      pragma_cmd = apr_psprintf(iterpool,
                                 "PRAGMA user_version = %d;",
                                 current_schema);
-      SVN_ERR(svn_sqlite__exec(db, pragma_cmd));
+      SVN_ERR(exec_sql(db, pragma_cmd));
     }
+
+  svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
 }
@@ -555,7 +586,9 @@ svn_sqlite__read_schema_version(int *version,
    Return SVN_NO_ERROR if everything is okay. */
 static svn_error_t *
 check_format(svn_sqlite__db_t *db, int latest_schema,
-             const char * const *upgrade_sql, apr_pool_t *scratch_pool)
+             const char * const *upgrade_sql, 
+             svn_sqlite__upgrade_func_t upgrade_func, void *upgrade_baton,
+             apr_pool_t *scratch_pool)
 {
   int current_schema;
 
@@ -566,8 +599,19 @@ check_format(svn_sqlite__db_t *db, int latest_schema,
     return SVN_NO_ERROR;
 
   if (current_schema < latest_schema)
-    return upgrade_format(db, current_schema, latest_schema, upgrade_sql,
-                          scratch_pool);
+    {
+      struct upgrade_baton ub;
+
+      ub.current_schema = current_schema;
+      ub.latest_schema = latest_schema;
+      ub.upgrade_sql = upgrade_sql;
+      ub.scratch_pool = scratch_pool;
+
+      ub.upgrade_func = upgrade_func;
+      ub.upgrade_baton = upgrade_baton;
+
+      return svn_sqlite__with_transaction(db, upgrade_format, &ub);
+    }
 
   return svn_error_createf(SVN_ERR_SQLITE_UNSUPPORTED_SCHEMA, NULL,
                            _("Schema format %d not recognized"),
@@ -657,6 +701,7 @@ internal_open(sqlite3 **db3, const char *path, svn_sqlite__mode_t mode,
              error than the close error at this point. */
           sqlite3_close(*db3);
 
+          msg = apr_pstrcat(scratch_pool, msg, ": '", path, "'", NULL);
           return svn_error_create(SQLITE_ERROR_CODE(err_code), NULL, msg);
         }
     }
@@ -734,7 +779,7 @@ close_apr(void *data)
 {
   svn_sqlite__db_t *db = data;
   svn_error_t *err = SVN_NO_ERROR;
-  int result;
+  apr_status_t result;
   int i;
 
   /* Check to see if we've already closed this database. */
@@ -771,6 +816,7 @@ svn_error_t *
 svn_sqlite__open(svn_sqlite__db_t **db, const char *path,
                  svn_sqlite__mode_t mode, const char * const statements[],
                  int latest_schema, const char * const *upgrade_sql,
+                 svn_sqlite__upgrade_func_t upgrade_func, void *upgrade_baton,
                  apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
   SVN_ERR(svn_atomic__init_once(&sqlite_init_state, init_sqlite, scratch_pool));
@@ -783,7 +829,7 @@ svn_sqlite__open(svn_sqlite__db_t **db, const char *path,
   sqlite3_trace((*db)->db3, sqlite_tracer, (*db)->db3);
 #endif
 
-  SVN_ERR(svn_sqlite__exec(*db, 
+  SVN_ERR(exec_sql(*db, 
               "PRAGMA case_sensitive_like=1;"
               /* Disable synchronization to disable the explicit disk flushes
                  that make Sqlite up to 50 times slower; especially on small
@@ -800,7 +846,8 @@ svn_sqlite__open(svn_sqlite__db_t **db, const char *path,
               "PRAGMA synchronous=OFF;"));
 
   /* Validate the schema, upgrading if necessary. */
-  SVN_ERR(check_format(*db, latest_schema, upgrade_sql, scratch_pool));
+  SVN_ERR(check_format(*db, latest_schema, upgrade_sql, upgrade_func,
+                       upgrade_baton, scratch_pool));
 
   /* Store the provided statements. */
   if (statements)
@@ -827,9 +874,12 @@ svn_sqlite__open(svn_sqlite__db_t **db, const char *path,
 svn_error_t *
 svn_sqlite__close(svn_sqlite__db_t *db)
 {
-  apr_pool_cleanup_run(db->result_pool, db, close_apr);
+  apr_status_t result = apr_pool_cleanup_run(db->result_pool, db, close_apr);
 
-  return SVN_NO_ERROR;
+  if (result == APR_SUCCESS)
+    return SVN_NO_ERROR;
+
+  return svn_error_wrap_apr(result, NULL);
 }
 
 svn_error_t *

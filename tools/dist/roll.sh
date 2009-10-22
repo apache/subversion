@@ -4,13 +4,19 @@ set -e
 VERSION=$1
 REV=$2
 EXTRA=$3
-BRANCH=${VERSION%.*}.x
+if [ "$VERSION" != "trunk" ]; then
+  BRANCH=branches/${VERSION%.*}.x
+else
+  BRANCH=trunk
+fi
 
 rs=http://svn.collab.net/repos/svn
 
-if [ -n "`svn diff --summarize $rs/branches/$BRANCH/CHANGES@$REV $rs/trunk/CHANGES@$REV | grep ^M`" ]; then
-  echo "CHANGES not synced between trunk and branch, aborting!" >&2
-  exit 1
+if [ "$VERSION" != "trunk" ]; then
+  if [ -n "`svn diff --summarize $rs/branches/$BRANCH/CHANGES@$REV $rs/trunk/CHANGES@$REV | grep ^M`" ]; then
+    echo "CHANGES not synced between trunk and branch, aborting!" >&2
+    exit 1
+  fi
 fi
 
 SVNRM_BIN="`pwd`/prefix/bin"
@@ -24,12 +30,12 @@ export PATH="$SVNRM_BIN:$PATH"
 mkdir deploy
 
 (cd unix-dependencies &&
-  `dirname $0`/dist.sh -v $VERSION -pr branches/$BRANCH -r $REV $EXTRA &&
+  `dirname $0`/dist.sh -v $VERSION -pr $BRANCH -r $REV $EXTRA &&
   mv subversion-* ../deploy/ &&
   mv svn_version.h.dist ../deploy/) || exit $?
 
 (cd win32-dependencies &&
-  `dirname $0`/dist.sh -v $VERSION -pr branches/$BRANCH -r $REV -zip $EXTRA &&
+  `dirname $0`/dist.sh -v $VERSION -pr $BRANCH -r $REV -zip $EXTRA &&
   mv subversion-* ../deploy/ &&
   rm svn_version.h.dist) || exit $?
 

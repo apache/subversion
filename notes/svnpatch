@@ -138,22 +138,10 @@ V PATCHING
   --------
 
 When it comes to applying an svnpatch patch (RAS syndrom), the 'svn patch'
-subcommand is a good friend.  We don't currently support applying (a) Unidiffs
-internally.  We instead call an external program to do the job for us which the
-user may specify with the 'patch-cmd' entry in the run-time configuration.  'svn
-patch' also has a --patch-cmd flag that overrides this run-time config.  When
-none of those flags are specified, the ultimate fallback is to try to call
-'patch'.  Since GNU patch is widely available on many UNIX-like platforms, this
-workaround should cover a fairly large amount of users.  No decision nor
-consensus have been taken towards this issue yet.
-On the other hand, (b) is handled with internal routines that read and drive
+subcommand is a good friend.  We do support applying (a) Unidiffs
+internally, and (b) is handled with routines that read and drive
 editor functions out from the patch file much like what's being performed by
 libsvn_ra_svn with a network stream.
-
-Put differently, for now 'svn patch' will gladly apply any (full-featured-)patch
-on GNU-patch-enabled environments while it will bail out with a message on a
-GNU-patch-less one.  In the latter, the user is left the burden to apply the
-Unidiff with his own tools.
 
 Now some words about the order to process (a) and (b).  There might be cases
 when operations to a single file live in the two parts of the patch (see above).

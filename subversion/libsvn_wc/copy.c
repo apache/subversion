@@ -2,17 +2,22 @@
  * copy.c:  wc 'copy' functionality.
  *
  * ====================================================================
- * Copyright (c) 2000-2009 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -43,17 +48,17 @@
 
 /* Copy all properties of SRC_PATH to DST_PATH. */
 static svn_error_t *
-copy_props(const char *src_path,
-           const char *dst_path,
-           svn_wc_adm_access_t *src_access,
-           svn_wc_adm_access_t *dst_access,
-           apr_pool_t *pool)
+copy_props(svn_wc__db_t *db,
+           const char *src_abspath,
+           const char *dst_abspath,
+           apr_pool_t *scratch_pool)
 {
   apr_hash_t *props;
   apr_hash_index_t *hi;
 
-  SVN_ERR(svn_wc_prop_list(&props, src_path, src_access, pool));
-  for (hi = apr_hash_first(pool, props); hi; hi = apr_hash_next(hi))
+  SVN_ERR(svn_wc__load_props(NULL, &props, NULL, db, src_abspath,
+                             scratch_pool, scratch_pool));
+  for (hi = apr_hash_first(scratch_pool, props); hi; hi = apr_hash_next(hi))
     {
       const char *propname;
       svn_string_t *propval;
@@ -64,10 +69,9 @@ copy_props(const char *src_path,
       propname = key;
       propval = val;
 
-      SVN_ERR(svn_wc_prop_set3(propname, propval,
-                               dst_path, dst_access,
-                               FALSE /* skip_checks */,
-                               NULL, NULL, pool));
+      SVN_ERR(svn_wc__internal_propset(db, dst_abspath, propname, propval,
+                                       FALSE /* skip_checks */,
+                                       NULL, NULL, scratch_pool));
     }
 
   return SVN_NO_ERROR;
@@ -93,7 +97,6 @@ copy_props(const char *src_path,
 static svn_error_t *
 copy_added_file_administratively(const char *src_path,
                                  svn_boolean_t src_is_added,
-                                 svn_wc_adm_access_t *src_access,
                                  svn_wc_adm_access_t *dst_parent_access,
                                  const char *dst_basename,
                                  svn_cancel_func_t cancel_func,
@@ -105,6 +108,12 @@ copy_added_file_administratively(const char *src_path,
   const char *dst_path
     = svn_dirent_join(svn_wc_adm_access_path(dst_parent_access),
                       dst_basename, pool);
+  svn_wc__db_t *db = svn_wc__adm_get_db(dst_parent_access);
+  const char *dst_abspath;
+  const char *src_abspath;
+
+  SVN_ERR(svn_dirent_get_absolute(&dst_abspath, dst_path, pool));
+  SVN_ERR(svn_dirent_get_absolute(&src_abspath, src_path, pool));
 
   /* Copy this file and possibly put it under version control. */
   SVN_ERR(svn_io_copy_file(src_path, dst_path, TRUE, pool));
@@ -116,9 +125,7 @@ copy_added_file_administratively(const char *src_path,
                           cancel_baton, notify_func,
                           notify_baton, pool));
 
-      SVN_ERR(copy_props(src_path, dst_path,
-                         src_access, dst_parent_access,
-                         pool));
+      SVN_ERR(copy_props(db, src_abspath, dst_abspath, pool));
     }
 
   return SVN_NO_ERROR;
@@ -158,6 +165,7 @@ copy_added_dir_administratively(const char *src_path,
                                 apr_pool_t *pool)
 {
   const char *dst_parent = svn_wc_adm_access_path(dst_parent_access);
+  svn_wc__db_t *db = svn_wc__adm_get_db(dst_parent_access);
 
   if (! src_is_added)
     {
@@ -179,6 +187,11 @@ copy_added_dir_administratively(const char *src_path,
       apr_int32_t flags = APR_FINFO_TYPE | APR_FINFO_NAME;
       /* The 'dst_path' is simply dst_parent/dst_basename */
       const char *dst_path = svn_dirent_join(dst_parent, dst_basename, pool);
+      const char *dst_abspath;
+      const char *src_abspath;
+
+      SVN_ERR(svn_dirent_get_absolute(&dst_abspath, dst_path, pool));
+      SVN_ERR(svn_dirent_get_absolute(&src_abspath, src_path, pool));
 
       /* Check cancellation; note that this catches recursive calls too. */
       if (cancel_func)
@@ -195,9 +208,7 @@ copy_added_dir_administratively(const char *src_path,
                           notify_func, notify_baton, pool));
 
       /* Copy properties. */
-      SVN_ERR(copy_props(src_path, dst_path,
-                         src_access, dst_parent_access,
-                         pool));
+      SVN_ERR(copy_props(db, src_abspath, dst_abspath, pool));
 
       /* Get the accesses for the newly added dir and its source, we'll
          need both to process any of SRC_PATHS's children below. */
@@ -232,8 +243,8 @@ copy_added_dir_administratively(const char *src_path,
                     return svn_error_wrap_apr(apr_err,
                                               _("Can't close "
                                                 "directory '%s'"),
-                                              svn_path_local_style(src_path,
-                                                                   subpool));
+                                              svn_dirent_local_style(src_path,
+                                                                     subpool));
                   break;
                 }
               else
@@ -241,8 +252,8 @@ copy_added_dir_administratively(const char *src_path,
                   return svn_error_createf(err->apr_err, err,
                                            _("Error during recursive copy "
                                              "of '%s'"),
-                                           svn_path_local_style(src_path,
-                                                            subpool));
+                                           svn_dirent_local_style(src_path,
+                                                                  subpool));
                 }
             }
 
@@ -290,7 +301,6 @@ copy_added_dir_administratively(const char *src_path,
             {
               SVN_ERR(copy_added_file_administratively(src_fullpath,
                                                        entry != NULL,
-                                                       src_child_dir_access,
                                                        dst_child_dir_access,
                                                        this_entry.name,
                                                        cancel_func,
@@ -327,7 +337,7 @@ get_copyfrom_url_rev_via_parent(const char *src_path,
   const char *rest;
   const char *abs_src_path;
 
-  SVN_ERR(svn_path_get_absolute(&abs_src_path, src_path, pool));
+  SVN_ERR(svn_dirent_get_absolute(&abs_src_path, src_path, pool));
 
   svn_dirent_split(abs_src_path, &parent_path, &rest, pool);
 
@@ -364,7 +374,7 @@ get_copyfrom_url_rev_via_parent(const char *src_path,
               return svn_error_createf(
                  SVN_ERR_WC_COPYFROM_PATH_NOT_FOUND, NULL,
                  _("no parent with copyfrom information found above '%s'"),
-                 svn_path_local_style(src_path, pool));
+                 svn_dirent_local_style(src_path, pool));
             }
         }
     }
@@ -454,7 +464,7 @@ copy_file_administratively(const char *src_path,
   if (dst_kind != svn_node_none)
     return svn_error_createf(SVN_ERR_ENTRY_EXISTS, NULL,
                              _("'%s' already exists and is in the way"),
-                             svn_path_local_style(dst_path, pool));
+                             svn_dirent_local_style(dst_path, pool));
 
   /* Even if DST_PATH doesn't exist it may still be a versioned item; it
      may be scheduled for deletion, or the user may simply have removed the
@@ -465,7 +475,7 @@ copy_file_administratively(const char *src_path,
     {
       return svn_error_createf(SVN_ERR_ENTRY_EXISTS, NULL,
                                _("There is already a versioned item '%s'"),
-                               svn_path_local_style(dst_path, pool));
+                               svn_dirent_local_style(dst_path, pool));
     }
 
   /* Sanity check 1: You cannot make a copy of something that's not
@@ -481,7 +491,7 @@ copy_file_administratively(const char *src_path,
       (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
        _("Cannot copy or move '%s': it is not in the repository yet; "
          "try committing first"),
-       svn_path_local_style(src_path, pool));
+       svn_dirent_local_style(src_path, pool));
 
 
   /* Schedule the new file for addition in its parent, WITH HISTORY. */
@@ -491,6 +501,8 @@ copy_file_administratively(const char *src_path,
     apr_hash_t *props, *base_props;
     svn_stream_t *base_contents;
     svn_stream_t *contents;
+    svn_wc__db_t *db;
+    const char *src_local_abspath;
 
     /* Are we moving or copying a file that is already moved or copied
        but not committed? */
@@ -512,14 +524,16 @@ copy_file_administratively(const char *src_path,
       }
 
     /* Load source base and working props. */
-    SVN_ERR(svn_wc__load_props(&base_props, &props, NULL, src_entry, src_path,
-                               pool, pool));
+    db = svn_wc__adm_get_db(src_access);
+    SVN_ERR(svn_dirent_get_absolute(&src_local_abspath, src_path, pool));
+    SVN_ERR(svn_wc__load_props(&base_props, &props, NULL, db,
+                               src_local_abspath, pool, pool));
 
     /* Copy working copy file to temporary location */
     {
       svn_boolean_t special;
 
-      SVN_ERR(svn_wc__get_special(&special, src_path, src_access, pool));
+      SVN_ERR(svn_wc__get_special(&special, db, src_local_abspath, pool));
       if (special)
         {
           SVN_ERR(svn_subst_read_specialfile(&contents, src_path,
@@ -532,10 +546,10 @@ copy_file_administratively(const char *src_path,
           apr_hash_t *keywords;
           svn_error_t *err = SVN_NO_ERROR;
 
-          SVN_ERR(svn_wc__get_keywords(&keywords, src_path, src_access, NULL,
-                                       pool));
-          SVN_ERR(svn_wc__get_eol_style(&eol_style, &eol_str, src_path,
-                                        src_access, pool));
+          SVN_ERR(svn_wc__get_keywords(&keywords, db, src_local_abspath, NULL,
+                                       pool, pool));
+          SVN_ERR(svn_wc__get_eol_style(&eol_style, &eol_str, db,
+                                        src_local_abspath, pool, pool));
 
           /* Try with the working file and fallback on its text-base. */
           err = svn_stream_open_readonly(&contents, src_path, pool, pool);
@@ -604,40 +618,44 @@ copy_file_administratively(const char *src_path,
 
 /* Recursively crawl over a directory PATH and do a number of things:
      - Remove lock tokens
-     - Remove WC props
+     - Remove the DAV cache
      - Convert deleted items to schedule-delete items
      - Set .svn directories to be hidden
 */
 static svn_error_t *
-post_copy_cleanup(svn_wc_adm_access_t *adm_access,
+post_copy_cleanup(svn_wc__db_t *db,
+                  const char *local_abspath,
                   apr_pool_t *pool)
 {
   apr_pool_t *subpool = svn_pool_create(pool);
   apr_hash_t *entries;
   apr_hash_index_t *hi;
-  const char *path = svn_wc_adm_access_path(adm_access);
+  svn_wc_adm_access_t *adm_access;
 
-  /* Remove wcprops. */
-  SVN_ERR(svn_wc__props_delete(path, svn_wc__props_wcprop, adm_access, pool));
+  /* Clear the DAV cache.  */
+  SVN_ERR(svn_wc__db_base_set_dav_cache(db, local_abspath, NULL, subpool));
 
   /* Because svn_io_copy_dir_recursively() doesn't copy directory
      permissions, we'll patch up our tree's .svn subdirs to be
      hidden. */
 #ifdef APR_FILE_ATTR_HIDDEN
   {
-    const char *adm_dir = svn_wc__adm_child(path, NULL, pool);
+    const char *adm_dir = svn_wc__adm_child(local_abspath, NULL, subpool);
     const char *path_apr;
     apr_status_t status;
-    SVN_ERR(svn_path_cstring_from_utf8(&path_apr, adm_dir, pool));
+
+    SVN_ERR(svn_path_cstring_from_utf8(&path_apr, adm_dir, subpool));
     status = apr_file_attrs_set(path_apr,
                                 APR_FILE_ATTR_HIDDEN,
                                 APR_FILE_ATTR_HIDDEN,
-                                pool);
+                                subpool);
     if (status)
       return svn_error_wrap_apr(status, _("Can't hide directory '%s'"),
-                                svn_path_local_style(adm_dir, pool));
+                                svn_dirent_local_style(adm_dir, subpool));
   }
 #endif
+
+  adm_access = svn_wc__adm_retrieve_internal2(db, local_abspath, subpool);
 
   /* Loop over all children, removing lock tokens and recursing into
      directories. */
@@ -646,17 +664,12 @@ post_copy_cleanup(svn_wc_adm_access_t *adm_access,
     {
       const void *key;
       void *val;
-      svn_wc_entry_t *entry;
-      svn_node_kind_t kind;
-      svn_boolean_t deleted = FALSE;
-      apr_uint64_t flags = SVN_WC__ENTRY_MODIFY_FORCE;
+      const svn_wc_entry_t *entry;
 
       svn_pool_clear(subpool);
 
       apr_hash_this(hi, &key, NULL, &val);
       entry = val;
-      kind = entry->kind;
-      deleted = entry->deleted;
 
       if (entry->depth == svn_depth_exclude)
         continue;
@@ -676,11 +689,13 @@ post_copy_cleanup(svn_wc_adm_access_t *adm_access,
          with creating a directory.  See Issue #2101 for details. */
       if (entry->deleted)
         {
-          entry->schedule = svn_wc_schedule_delete;
-          flags |= SVN_WC__ENTRY_MODIFY_SCHEDULE;
+          apr_uint64_t flags = (SVN_WC__ENTRY_MODIFY_FORCE
+                                | SVN_WC__ENTRY_MODIFY_SCHEDULE
+                                | SVN_WC__ENTRY_MODIFY_DELETED);
+          svn_wc_entry_t tmp_entry;
 
-          entry->deleted = FALSE;
-          flags |= SVN_WC__ENTRY_MODIFY_DELETED;
+          tmp_entry.schedule = svn_wc_schedule_delete;
+          tmp_entry.deleted = FALSE;
 
           if (entry->kind == svn_node_dir)
             {
@@ -701,42 +716,27 @@ post_copy_cleanup(svn_wc_adm_access_t *adm_access,
               effectively means that the schedule deletes have to remain
               schedule delete until the copy is committed, when they become
               state deleted and everything works! */
-              entry->kind = svn_node_file;
+              tmp_entry.kind = svn_node_file;
               flags |= SVN_WC__ENTRY_MODIFY_KIND;
             }
+
+          SVN_ERR(svn_wc__entry_modify(adm_access, key, &tmp_entry,
+                                       flags, subpool));
         }
 
       /* Remove lock stuffs. */
       if (entry->lock_token)
-        {
-          entry->lock_token = NULL;
-          entry->lock_owner = NULL;
-          entry->lock_comment = NULL;
-          entry->lock_creation_date = 0;
-          flags |= (SVN_WC__ENTRY_MODIFY_LOCK_TOKEN
-                    | SVN_WC__ENTRY_MODIFY_LOCK_OWNER
-                    | SVN_WC__ENTRY_MODIFY_LOCK_COMMENT
-                    | SVN_WC__ENTRY_MODIFY_LOCK_CREATION_DATE);
-        }
-
-      /* If we meaningfully modified the flags, we must be wanting to
-         change the entry. */
-      if (flags != SVN_WC__ENTRY_MODIFY_FORCE)
-        SVN_ERR(svn_wc__entry_modify(adm_access, key, entry,
-                                     flags, subpool));
+        SVN_ERR(svn_wc__db_lock_remove(db, local_abspath, subpool));
 
       /* If a dir, not deleted, and not "this dir", recurse. */
-      if ((! deleted)
-          && (kind == svn_node_dir)
-          && (strcmp(key, SVN_WC_ENTRY_THIS_DIR) != 0))
+      if (!entry->deleted
+          && entry->kind == svn_node_dir
+          && strcmp(key, SVN_WC_ENTRY_THIS_DIR) != 0)
         {
-          svn_wc_adm_access_t *child_access;
-          const char *child_path;
-          child_path = svn_dirent_join
-            (svn_wc_adm_access_path(adm_access), key, subpool);
-          SVN_ERR(svn_wc_adm_retrieve(&child_access, adm_access,
-                                      child_path, subpool));
-          SVN_ERR(post_copy_cleanup(child_access, subpool));
+          const char *child_abspath;
+
+          child_abspath = svn_dirent_join(local_abspath, key, subpool);
+          SVN_ERR(post_copy_cleanup(db, child_abspath, subpool));
         }
     }
 
@@ -789,7 +789,7 @@ copy_dir_administratively(const char *src_path,
       (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
        _("Cannot copy or move '%s': it is not in the repository yet; "
          "try committing first"),
-       svn_path_local_style(src_path, pool));
+       svn_dirent_local_style(src_path, pool));
 
   /* Recursively copy the whole directory over.  This gets us all
      text-base, props, base-props, as well as entries, local mods,
@@ -807,13 +807,15 @@ copy_dir_administratively(const char *src_path,
      because the source directory was locked.  Running cleanup will remove
      the locks, even though this directory has not yet been added to the
      parent. */
-  SVN_ERR(svn_wc_cleanup3(dst_path, NULL, FALSE, cancel_func, cancel_baton,
-                          pool));
+  SVN_ERR(svn_wc_cleanup2(dst_path, NULL, cancel_func, cancel_baton, pool));
 
   /* We've got some post-copy cleanup to do now. */
+  /* ### we should do this open using our existing DB.  */
   SVN_ERR(svn_wc_adm_open3(&adm_access, NULL, dst_path, TRUE, -1,
                            cancel_func, cancel_baton, pool));
-  SVN_ERR(post_copy_cleanup(adm_access, pool));
+  SVN_ERR(post_copy_cleanup(svn_wc__adm_get_db(adm_access),
+                            svn_wc__adm_access_abspath(adm_access),
+                            pool));
 
   /* Schedule the directory for addition in both its parent and itself
      (this_dir) -- WITH HISTORY.  This function should leave the
@@ -894,13 +896,13 @@ svn_wc_copy2(const char *src_path,
       (SVN_ERR_WC_INVALID_SCHEDULE, NULL,
        _("Cannot copy to '%s', as it is not from repository '%s'; "
          "it is from '%s'"),
-       svn_path_local_style(svn_wc_adm_access_path(dst_parent), pool),
+       svn_dirent_local_style(svn_wc_adm_access_path(dst_parent), pool),
        src_entry->repos, dst_entry->repos);
   if (dst_entry->schedule == svn_wc_schedule_delete)
     return svn_error_createf
       (SVN_ERR_WC_INVALID_SCHEDULE, NULL,
        _("Cannot copy to '%s' as it is scheduled for deletion"),
-       svn_path_local_style(svn_wc_adm_access_path(dst_parent), pool));
+       svn_dirent_local_style(svn_wc_adm_access_path(dst_parent), pool));
 
   /* TODO(#2843): Rework the error report. */
   /* Check if the copy target is missing or hidden and thus not exist on the
@@ -914,7 +916,7 @@ svn_wc_copy2(const char *src_path,
       return svn_error_createf
         (SVN_ERR_ENTRY_EXISTS,
          NULL, _("'%s' is already under version control"),
-         svn_path_local_style(target_path, pool));
+         svn_dirent_local_style(target_path, pool));
     }
 
   SVN_ERR(svn_io_check_path(src_path, &src_kind, pool));
@@ -927,7 +929,7 @@ svn_wc_copy2(const char *src_path,
       if (src_entry->schedule == svn_wc_schedule_add
           && (! src_entry->copied))
         {
-          SVN_ERR(copy_added_file_administratively(src_path, TRUE, adm_access,
+          SVN_ERR(copy_added_file_administratively(src_path, TRUE,
                                                    dst_parent, dst_basename,
                                                    cancel_func, cancel_baton,
                                                    notify_func, notify_baton,
@@ -967,26 +969,3 @@ svn_wc_copy2(const char *src_path,
 
   return svn_wc_adm_close2(adm_access, pool);
 }
-
-
-svn_error_t *
-svn_wc_copy(const char *src_path,
-            svn_wc_adm_access_t *dst_parent,
-            const char *dst_basename,
-            svn_cancel_func_t cancel_func,
-            void *cancel_baton,
-            svn_wc_notify_func_t notify_func,
-            void *notify_baton,
-            apr_pool_t *pool)
-{
-  svn_wc__compat_notify_baton_t nb;
-
-  nb.func = notify_func;
-  nb.baton = notify_baton;
-
-  return svn_wc_copy2(src_path, dst_parent, dst_basename, cancel_func,
-                      cancel_baton, svn_wc__compat_call_notify_func,
-                      &nb, pool);
-}
-
-

@@ -2,17 +2,22 @@
  * entries.h :  manipulating entries
  *
  * ====================================================================
- * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -105,13 +110,6 @@ svn_error_t *svn_wc__entries_init(const char *path,
                                   apr_pool_t *pool);
 
 
-/* Create or overwrite an `entries' file for ADM_ACCESS using the contents
-   of ENTRIES.  See also svn_wc_entries_read() in the public api. */
-svn_error_t *svn_wc__entries_write(apr_hash_t *entries,
-                                   svn_wc_adm_access_t *adm_access,
-                                   apr_pool_t *pool);
-
-
 /* Set *NEW_ENTRY to a new entry, taking attributes from ATTS, whose
    keys and values are both char *.  Allocate the entry and copy
    attributes into POOL as needed.
@@ -132,7 +130,7 @@ svn_error_t *svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
 #define SVN_WC__ENTRY_MODIFY_REPOS              APR_INT64_C(0x0000000000000004)
 #define SVN_WC__ENTRY_MODIFY_KIND               APR_INT64_C(0x0000000000000008)
 #define SVN_WC__ENTRY_MODIFY_TEXT_TIME          APR_INT64_C(0x0000000000000010)
-/* OPEN                                      APR_INT64_C(0x0000000000000020) */
+/* OPEN */
 #define SVN_WC__ENTRY_MODIFY_CHECKSUM           APR_INT64_C(0x0000000000000040)
 #define SVN_WC__ENTRY_MODIFY_SCHEDULE           APR_INT64_C(0x0000000000000080)
 #define SVN_WC__ENTRY_MODIFY_COPIED             APR_INT64_C(0x0000000000000100)
@@ -149,10 +147,7 @@ svn_error_t *svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
 #define SVN_WC__ENTRY_MODIFY_UUID               APR_INT64_C(0x0000000000080000)
 #define SVN_WC__ENTRY_MODIFY_INCOMPLETE         APR_INT64_C(0x0000000000100000)
 #define SVN_WC__ENTRY_MODIFY_ABSENT             APR_INT64_C(0x0000000000200000)
-#define SVN_WC__ENTRY_MODIFY_LOCK_TOKEN         APR_INT64_C(0x0000000000400000)
-#define SVN_WC__ENTRY_MODIFY_LOCK_OWNER         APR_INT64_C(0x0000000000800000)
-#define SVN_WC__ENTRY_MODIFY_LOCK_COMMENT       APR_INT64_C(0x0000000001000000)
-#define SVN_WC__ENTRY_MODIFY_LOCK_CREATION_DATE APR_INT64_C(0x0000000002000000)
+/* OPEN */
 #define SVN_WC__ENTRY_MODIFY_CHANGELIST         APR_INT64_C(0x0000000040000000)
 #define SVN_WC__ENTRY_MODIFY_KEEP_LOCAL         APR_INT64_C(0x0000000080000000)
 #define SVN_WC__ENTRY_MODIFY_WORKING_SIZE       APR_INT64_C(0x0000000100000000)
@@ -201,47 +196,37 @@ svn_error_t *svn_wc__entry_modify(svn_wc_adm_access_t *adm_access,
                                   apr_uint64_t modify_flags,
                                   apr_pool_t *pool);
 
-/* Remove entry NAME from ENTRIES, unconditionally.  ADM_ACCESS should be
-   the access baton for the directory which contains the .svn administrative
-   directory containing NAME.  The modified ENTRIES will be written out
-   to disk.
-
-   If ENTRIES is NULL, then the entries will be read from disk, modified,
-   and written back to disk.
+/* Remove LOCAL_ABSPATH from DB, unconditionally.
 
    All temporary allocations will be performed in SCRATCH_POOL.  */
 svn_error_t *
-svn_wc__entry_remove(apr_hash_t *entries,
-                     svn_wc_adm_access_t *adm_access,
-                     const char *name,
+svn_wc__entry_remove(svn_wc__db_t *db,
+                     const char *local_abspath,
                      apr_pool_t *scratch_pool);
 
 
-/* Tweak the entry NAME within hash ENTRIES.  If NEW_URL is non-null,
+/* Tweak the information for LOCAL_ABSPATH in DB.  If NEW_URL is non-null,
  * make this the entry's new url.  If NEW_REV is valid, make this the
- * entry's working revision.  (This is purely an in-memory operation.)
- * If REPOS is non-NULL, set the repository root on the entry to REPOS,
- * provided it is a prefix of the entry's URL (and if it is the THIS_DIR
- * entry, all child URLs also match.)
+ * entry's working revision. If REPOS is non-NULL, set the repository root
+ * on the entry to REPOS, provided it is a prefix of the entry's URL (and
+ * if it is the THIS_DIR entry, all child URLs also match.)
  *
  * If ALLOW_REMOVAL is TRUE the tweaks might cause the entry NAME to
  * be removed from the hash, if ALLOW_REMOVAL is FALSE this will not
  * happen.
  *
- * The tweaked ENTRIES will be unconditionally written out to disk.
- *
- * If ENTRIES is NULL, then it will be read via ADM_ACCESS, tweaked,
- * and then written to disk.
+ * THIS_DIR should be true if the LOCAL_ABSPATH refers to a directory, and
+ * the information to be edited is not in the stub entry.
  *
  * (Intended as a helper to svn_wc__do_update_cleanup, which see.)
  */
 svn_error_t *
-svn_wc__tweak_entry(svn_wc_adm_access_t *adm_access,
-                    apr_hash_t *entries,
-                    const char *name,
+svn_wc__tweak_entry(svn_wc__db_t *db,
+                    const char *local_abspath,
                     const char *new_url,
                     const char *repos,
                     svn_revnum_t new_rev,
+                    svn_boolean_t this_dir,
                     svn_boolean_t allow_removal,
                     apr_pool_t *scratch_pool);
 
@@ -297,9 +282,22 @@ svn_wc__get_entry(const svn_wc_entry_t **entry,
 
 /* Is ENTRY in a 'hidden' state in the sense of the 'show_hidden'
  * switches on svn_wc_entries_read(), svn_wc_walk_entries*(), etc.? */
-svn_boolean_t
-svn_wc__entry_is_hidden(const svn_wc_entry_t *entry);
+svn_error_t *
+svn_wc__entry_is_hidden(svn_boolean_t *hidden, const svn_wc_entry_t *entry);
 
+
+/* Set the depth of a directory.  */
+svn_error_t *
+svn_wc__set_depth(svn_wc__db_t *db,
+                  const char *local_dir_abspath,
+                  svn_depth_t depth,
+                  apr_pool_t *scratch_pool);
+
+/* Read the current entries, and write them out for WC_FORMAT. */
+svn_error_t *
+svn_wc__entries_upgrade(svn_wc_adm_access_t *adm_access,
+                        int wc_format,
+                        apr_pool_t *scratch_pool);
 
 /* For internal use by entries.c to read/write old-format working copies. */
 svn_error_t *
@@ -308,64 +306,13 @@ svn_wc__read_entries_old(apr_hash_t **entries,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool);
 
-#ifndef BLAST_FORMAT_11
-svn_error_t *
-svn_wc__entries_write_old(apr_hash_t *entries,
-                          svn_wc_adm_access_t *adm_access,
-                          int wc_format,
-                          apr_pool_t *pool);
 
+/* ### return a flag corresponding to the classic "DELETED" concept.  */
 svn_error_t *
-svn_wc__entries_init_old(const char *path,
-                         const char *uuid,
-                         const char *url,
-                         const char *repos,
-                         svn_revnum_t initial_rev,
-                         svn_depth_t depth,
-                         apr_pool_t *pool);
-#endif
-
-/* Fulfill a svn_wc__db_read_info() invocation by reading an old-style
-   entry structure. Limited fields are available.  */
-svn_error_t *
-svn_wc__read_info_old(svn_wc__db_status_t *status,
-                      svn_wc__db_kind_t *kind,
-                      svn_revnum_t *revision,
-                      const char **repos_relpath,
-                      const char **repos_root_url,
-                      const char **repos_uuid,
-                      svn_revnum_t *changed_rev,
-                      apr_time_t *changed_date,
-                      const char **changed_author,
-                      apr_time_t *last_mod_time,
-                      svn_depth_t *depth,
-                      svn_checksum_t **checksum,
-                      svn_filesize_t *translated_size,
-                      const char **target,
-                      const char **changelist,
-                      const char **original_repos_relpath,
-                      const char **original_root_url,
-                      const char **original_uuid,
-                      svn_revnum_t *original_revision,
-                      svn_boolean_t *text_mod,
-                      svn_boolean_t *props_mod,
-                      svn_boolean_t *base_shadowed,
-                      svn_wc__db_lock_t **lock,
-                      svn_wc__db_t *db,
-                      const char *wcroot_abspath,
-                      const char *local_relpath,
-                      apr_pool_t *result_pool,
-                      apr_pool_t *scratch_pool);
-
-
-svn_error_t *
-svn_wc__gather_children_old(const apr_array_header_t **children,
-                            svn_boolean_t base_only,
-                            svn_wc__db_t *db,
-                            const char *wcroot_abspath,
-                            const char *local_relpath,
-                            apr_pool_t *result_pool,
-                            apr_pool_t *scratch_pool);
+svn_wc__node_is_deleted(svn_boolean_t *deleted,
+                        svn_wc__db_t *db,
+                        const char *local_abspath,
+                        apr_pool_t *scratch_pool);
 
 
 /* Parse a file external specification in the NULL terminated STR and

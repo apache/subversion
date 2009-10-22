@@ -6,14 +6,22 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2009 CollabNet.  All rights reserved.
+#    Licensed to the Subversion Corporation (SVN Corp.) under one
+#    or more contributor license agreements.  See the NOTICE file
+#    distributed with this work for additional information
+#    regarding copyright ownership.  The SVN Corp. licenses this file
+#    to you under the Apache License, Version 2.0 (the
+#    "License"); you may not use this file except in compliance
+#    with the License.  You may obtain a copy of the License at
 #
-# This software is licensed as described in the file COPYING, which
-# you should have received as part of this distribution.  The terms
-# are also available at http://subversion.tigris.org/license-1.html.
-# If newer versions of this license are posted there, you may use a
-# newer version instead, at your option.
+#      http://www.apache.org/licenses/LICENSE-2.0
 #
+#    Unless required by applicable law or agreed to in writing,
+#    software distributed under the License is distributed on an
+#    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+#    KIND, either express or implied.  See the License for the
+#    specific language governing permissions and limitations
+#    under the License.
 ######################################################################
 
 # General modules
@@ -2186,7 +2194,7 @@ def update_wc_on_windows_drive(sbox):
     os.chdir(wc_dir)
 
     expected_disk = svntest.main.greek_state.copy()
-    expected_output = svntest.wc.State(wc_dir, {
+    expected_output = svntest.wc.State('', {
       'A/mu' : Item(status='U '),
       'zeta' : Item(status='D '),
       'dir1' : Item(status='D '),
@@ -2690,25 +2698,24 @@ def update_with_obstructing_additions(sbox):
   # Resolve the tree conflict.
   svntest.main.run_svn(None, 'resolve', '--accept', 'working', omicron_path)
 
-  if sbox.using_wc_ng():
-    ### in wc-1, I believe we see the local-copy as a different revision
-    ### than the parent directory (entry->revision is overloaded; normally,
-    ### it is supposed to represent the BASE revision; we drop a copyfrom
-    ### rev in there, making it appear different from the parent), so we
-    ### send the mixed-rev in the update report (UNVERIFIED; this is
-    ### speculation on cause; the effect is known, as follows). given the
-    ### mixed-rev report, the server will send down another add, reporting
-    ### another conflict.
-    ###
-    ### in wc-ng, a local-copy does not have a revision (it hasn't been
-    ### committed yet!). further, all BASE information has been lost, so
-    ### there is no knowledge of a BASE 'omicron', which is not-present or
-    ### at an old revision, or whatever. thus, wc-ng sees "r4" for the
-    ### directory and thinks there are no sub-items to report as different.
-    ### the server returns with "you're up to date" rather than sending
-    ### another add. thus, no conflict occurs on 'omicron'.
-    expected_output = wc.State(wc_dir, { })
-    expected_status.tweak('omicron', treeconflict=None)
+  ### in wc-1, I believe we see the local-copy as a different revision
+  ### than the parent directory (entry->revision is overloaded; normally,
+  ### it is supposed to represent the BASE revision; we drop a copyfrom
+  ### rev in there, making it appear different from the parent), so we
+  ### send the mixed-rev in the update report (UNVERIFIED; this is
+  ### speculation on cause; the effect is known, as follows). given the
+  ### mixed-rev report, the server will send down another add, reporting
+  ### another conflict.
+  ###
+  ### in wc-ng, a local-copy does not have a revision (it hasn't been
+  ### committed yet!). further, all BASE information has been lost, so
+  ### there is no knowledge of a BASE 'omicron', which is not-present or
+  ### at an old revision, or whatever. thus, wc-ng sees "r4" for the
+  ### directory and thinks there are no sub-items to report as different.
+  ### the server returns with "you're up to date" rather than sending
+  ### another add. thus, no conflict occurs on 'omicron'.
+  expected_output = wc.State(wc_dir, { })
+  expected_status.tweak('omicron', treeconflict=None)
 
   # Again, --force shouldn't matter.
   svntest.actions.run_and_verify_update(wc_dir, expected_output,
@@ -4760,6 +4767,26 @@ def set_deep_depth_on_target_with_shallow_children(sbox):
                                         '--set-depth', 'infinity',
                                         A_path)
 
+#----------------------------------------------------------------------
+
+def update_wc_of_dir_to_rev_not_containing_this_dir(sbox):
+  "update wc of dir to rev not containing this dir"
+
+  sbox.build()
+
+  # Create working copy of 'A' directory
+  A_url = sbox.repo_url + "/A"
+  other_wc_dir = sbox.add_wc_path("other")
+  svntest.actions.run_and_verify_svn(None, None, [], "co", A_url, other_wc_dir)
+  
+  # Delete 'A' directory from repository
+  svntest.actions.run_and_verify_svn(None, None, [], "rm", A_url, "-m", "")
+
+  # Try to update working copy of 'A' directory
+  svntest.actions.run_and_verify_svn(None, None,
+                                     "svn: Target path '/A' does not exist",
+                                     "up", other_wc_dir)
+
 #######################################################################
 # Run the tests
 
@@ -4824,6 +4851,7 @@ test_list = [ None,
               tree_conflict_uc1_update_deleted_tree,
               tree_conflict_uc2_schedule_re_add,
               set_deep_depth_on_target_with_shallow_children,
+              update_wc_of_dir_to_rev_not_containing_this_dir,
              ]
 
 if __name__ == '__main__':

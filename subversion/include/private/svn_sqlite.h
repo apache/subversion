@@ -1,17 +1,22 @@
 /* svn_sqlite.h
  *
  * ====================================================================
- * Copyright (c) 2008-2009 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -38,6 +43,19 @@ typedef enum svn_sqlite__mode_e {
     svn_sqlite__mode_rwcreate    /* open/create the database read-write */
 } svn_sqlite__mode_t;
 
+/* A callback which is called between format upgrades when doing automagic
+   sql schema upgrades.  CURRENT_SCHEMA refers to the schema version to which
+   the schema is being upgraded, and for which the upgrade sql has already
+   been run.
+
+   This function may be called multiple times, in the case where a format needs
+   to be upgraded past multiple versions.
+
+   SCRATCH_POOL will be cleared between invocations. */
+typedef svn_error_t *(*svn_sqlite__upgrade_func_t)
+  (void *baton, svn_sqlite__db_t *db, int current_schema,
+   apr_pool_t *scratch_pool);
+
 
 /* Steps the given statement; if it returns SQLITE_DONE, resets the statement.
    Otherwise, raises an SVN error.  */
@@ -61,11 +79,6 @@ svn_sqlite__step(svn_boolean_t *got_row, svn_sqlite__stmt_t *stmt);
    STMT will be reset prior to returning. */
 svn_error_t *
 svn_sqlite__insert(apr_int64_t *row_id, svn_sqlite__stmt_t *stmt);
-
-/* Execute SQL on the sqlite database DB, and raise an SVN error if the
-   result is not okay.  */
-svn_error_t *
-svn_sqlite__exec(svn_sqlite__db_t *db, const char *sql);
 
 /* Return in *VERSION the version of the schema for the database as PATH.
    Use SCRATCH_POOL for temporary allocations. */
@@ -92,12 +105,18 @@ svn_sqlite__read_schema_version(int *version,
    STATEMENTS itself may be NULL, in which case it has no impact.
    See svn_sqlite__get_statement() for how these strings are used.
 
+   UPGRADE_FUNC and UPGRADE_BATON provide a means for the caller to do
+   data conversion during a schema upgrade.  UPGRADE_FUNC will be called with
+   UPGRADE_BATON *after* each step in upgrading the schema given in
+   UPGRADE_SQL.  See svn_sqlite__upgrade_func_t for more info.
+
    The statements will be finalized and the SQLite database will be closed
    when RESULT_POOL is cleaned up. */
 svn_error_t *
 svn_sqlite__open(svn_sqlite__db_t **db, const char *repos_path,
                  svn_sqlite__mode_t mode, const char * const statements[],
                  int latest_schema, const char * const *upgrade_sql,
+                 svn_sqlite__upgrade_func_t upgrade_func, void *upgrade_baton,
                  apr_pool_t *result_pool, apr_pool_t *scratch_pool);
 
 /* Explicity close the connection in DB. */

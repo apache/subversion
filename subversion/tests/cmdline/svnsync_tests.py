@@ -6,14 +6,22 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2005-2009 CollabNet.  All rights reserved.
+#    Licensed to the Subversion Corporation (SVN Corp.) under one
+#    or more contributor license agreements.  See the NOTICE file
+#    distributed with this work for additional information
+#    regarding copyright ownership.  The SVN Corp. licenses this file
+#    to you under the Apache License, Version 2.0 (the
+#    "License"); you may not use this file except in compliance
+#    with the License.  You may obtain a copy of the License at
 #
-# This software is licensed as described in the file COPYING, which
-# you should have received as part of this distribution.  The terms
-# are also available at http://subversion.tigris.org/license-1.html.
-# If newer versions of this license are posted there, you may use a
-# newer version instead, at your option.
+#      http://www.apache.org/licenses/LICENSE-2.0
 #
+#    Unless required by applicable law or agreed to in writing,
+#    software distributed under the License is distributed on an
+#    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+#    KIND, either express or implied.  See the License for the
+#    specific language governing permissions and limitations
+#    under the License.
 ######################################################################
 
 # General modules
@@ -134,7 +142,8 @@ or another dump file."""
                                    'svnsync_tests_data')
   # Load the specified dump file into the master repository.
   master_dumpfile_contents = open(os.path.join(svnsync_tests_dir,
-                                               dump_file_name)).readlines()
+                                               dump_file_name),
+                                  'rb').readlines()
   svntest.actions.run_and_verify_load(sbox.repo_dir, master_dumpfile_contents)
 
   # Create the empty destination repository.
@@ -742,6 +751,25 @@ def info_not_synchronized(sbox):
   run_info(sbox.repo_url,
            ".*Repository '%s' is not initialized.*" % sbox.repo_url)
 
+#----------------------------------------------------------------------
+
+def copy_bad_line_endings(sbox):
+  "copy with inconsistent lineendings in svn:props"
+  run_test(sbox, "copy-bad-line-endings.dump",
+           exp_dump_file_name="copy-bad-line-endings.expected.dump")
+
+#----------------------------------------------------------------------
+
+def delete_svn_props(sbox):
+  "copy with svn:prop deletions"
+  run_test(sbox, "delete-svn-props.dump")
+
+def commit_a_copy_of_root(sbox):
+  "commit a copy of root causes sync to fail"
+  #Testcase for issue 3438.
+  run_test(sbox, "repo_with_copy_of_root_dir.dump")
+
+
 ########################################################################
 # Run the tests
 
@@ -777,6 +805,9 @@ test_list = [ None,
               move_and_modify_in_the_same_revision,
               info_synchronized,
               info_not_synchronized,
+              copy_bad_line_endings,
+              delete_svn_props,
+              commit_a_copy_of_root,
              ]
 
 if __name__ == '__main__':

@@ -1,9 +1,5 @@
 #!/bin/sh
 
-if test "$(uname)" = "Darwin"; then
-  exit
-fi
-
 # Dependencies of libraries
 subr="subr"
 auth_gnome_keyring="auth_gnome_keyring $subr"
@@ -39,10 +35,11 @@ svndumpfilter="$delta $fs $repos $subr"
 svnlook="$delta $diff $fs $repos $subr"
 svnserve="$delta $fs $ra_svn $repos $subr"
 svnsync="$auth_gnome_keyring $auth_kwallet $delta $ra $subr"
+svnversion="$subr $wc"
 entries_dump="$subr $wc"
 
 # Variable 'executables' containing names of variables corresponding to executables
-executables="svn svnadmin svndumpfilter svnlook svnserve svnsync entries_dump"
+executables="svn svnadmin svndumpfilter svnlook svnserve svnsync svnversion entries_dump"
 
 for executable in $executables; do
   # Set variables containing paths of executables
@@ -56,7 +53,7 @@ for executable in $executables; do
   eval "$executable=\$executable_dependencies"
 done
 
-test_paths="$(find subversion/tests -name '*-test' ! -path '*/.libs/*')"
+test_paths="$(find subversion/tests -name '*-test' ! -path '*/.libs/*' | sort)"
 for test in $test_paths; do
   test_path="$test"
   # Dependencies of tests are based on names of directories containing tests
@@ -77,7 +74,8 @@ auth_test="auth_gnome_keyring auth_kwallet $auth_test"
 # Usage: sed_append LINE_NUMBER TEXT FILE
 sed_append()
 {
-  sed -e "$1a$2" "$3" > "$3.new"
+  sed -e "$1a\
+$2" "$3" > "$3.new"
   mv -f "$3.new" "$3"
 }
 
@@ -94,8 +92,8 @@ for libtool_script in $executables $tests; do
       done
       libtool_script_libraries="${libtool_script_libraries# *}"
       # Append definitions of LD_PRELOAD to libtool scripts
-      sed_append 1 "LD_PRELOAD=\"$libtool_script_libraries\"" "$libtool_script_path"
-      sed_append 2 "export LD_PRELOAD" "$libtool_script_path"
+      sed_append 4 "LD_PRELOAD=\"$libtool_script_libraries\"" "$libtool_script_path"
+      sed_append 5 "export LD_PRELOAD" "$libtool_script_path"
       chmod +x "$libtool_script_path"
     fi
   fi

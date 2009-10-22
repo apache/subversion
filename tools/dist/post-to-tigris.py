@@ -86,7 +86,7 @@ def add_single_item(opener, url, headers, data):
     try:
         opener.open(request)
     except urllib2.URLError, e:
-        print 'URL open failed: %s, continuing...' % e.reason
+        print('URL open failed: %s, continuing...' % e.reason)
 
 
 def add_items(opener, folderId, release_name):

@@ -2,17 +2,22 @@
  * wc.h :  shared stuff internal to the svn_wc library.
  *
  * ====================================================================
- * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -26,6 +31,8 @@
 #include "svn_types.h"
 #include "svn_error.h"
 #include "svn_wc.h"
+
+#include "wc_db.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -85,24 +92,19 @@ extern "C" {
  *
  * The change from 10 to 11 was clearing the has_props, has_prop_mods,
  * cachable_props, and present_props values in the entries file. Older
- * client expect proper values for these fields. Note: this change
- * occurred during 1.7 development, and is not expected to be released.
+ * client expect proper values for these fields.
  *
- * The change from 11 to 12 was a complete rewrite of the wc datastore,
- * which resulted in centralization and migration of data to an sqlite
- * datebase. Shipped in 1.7.
+ * The change from 11 to 12 was a switch from 'entries' to 'wc.db'.
+ *
+ * The change from 12 to 13 added the WORK_QUEUE table into 'wc.db', and
+ * moved the wcprops into the 'dav_cache' column in BASE_NODE.
+ *
+ * == 1.7.x shipped with format ???
  *
  * Please document any further format changes here.
  */
 
-#ifndef BLAST_FORMAT_11
-#define SVN_WC__VERSION 11
-
-/* ### only used by devs temporarily during 1.7 development. */
-#define SVN_WC__VERSION_EXPERIMENTAL 12
-#else
 #define SVN_WC__VERSION 12
-#endif
 
 
 /* A version <= this doesn't have property caching in the entries file. */
@@ -118,8 +120,50 @@ extern "C" {
    rules. See issue #2475. */
 #define SVN_WC__CHANGED_CANONICAL_URLS 10
 
-/* A version < this is pre-wc-ng. */
+/* A version < this uses the old 'entries' file mechanism.  */
 #define SVN_WC__WC_NG_VERSION 12
+
+/* In this version, the wcprops are "lost" between files and wc.db. We want
+   to ignore them in upgrades.  */
+#define SVN_WC__WCPROPS_LOST 12
+
+/* A version < this has no work queue (see workqueue.h).  */
+#define SVN_WC__HAS_WORK_QUEUE 13
+
+/* A version < this has wcprops located in files OR in wc.db. Versions using
+   this format or later will only have wcprops in BASE_NODE.dav_cache.  */
+#define SVN_WC__USES_DAV_CACHE 13
+
+
+
+/*** Context handling ***/
+struct svn_wc_context_t
+{
+  /* The wc_db handle for this working copy. */
+  svn_wc__db_t *db;
+
+  /* Close the DB when we destroy this context?
+     (This is used inside backward compat wrappers, and should only be
+      modified by the proper create() functions. */
+  svn_boolean_t close_db_on_destroy;
+
+  /* The state pool for this context. */
+  apr_pool_t *state_pool;
+};
+
+/**
+ * Just like svn_wc_context_create(), only use the provided DB to construct
+ * the context.
+ *
+ * Even though DB is not allocated from the same pool at *WC_CTX, it is
+ * expected to remain open throughout the life of *WC_CTX.
+ */
+svn_error_t *
+svn_wc__context_create_with_db(svn_wc_context_t **wc_ctx,
+                               svn_config_t *config,
+                               svn_wc__db_t *db,
+                               apr_pool_t *result_pool);
+
 
 /*** Update traversals. ***/
 
@@ -362,6 +406,48 @@ svn_wc__walk_entries_and_tc(const char *path,
                             svn_cancel_func_t cancel_func,
                             void *cancel_baton,
                             apr_pool_t *pool);
+
+
+/* Similar to svn_wc__path_switched(), but with a wc_db parameter instead of
+ * a wc_context. */
+svn_error_t *
+svn_wc__internal_path_switched(svn_boolean_t *switched,
+                               svn_wc__db_t *wc_db,
+                               const char *local_abspath,
+                               apr_pool_t *scratch_pool);
+
+
+/* Similar to svn_wc_conflicted_p3(), but with a wc_db parameter in place of
+ * a wc_context. */
+svn_error_t *
+svn_wc__internal_conflicted_p(svn_boolean_t *text_conflicted_p,
+                              svn_boolean_t *prop_conflicted_p,
+                              svn_boolean_t *tree_conflicted_p,
+                              svn_wc__db_t *db,
+                              const char *local_abspath,
+                              apr_pool_t *scratch_pool);
+
+
+/* Similar to svn_wc__versioned_file_modcheck(), but with a wc_db parameter
+ * instead of a wc_context. */
+svn_error_t *
+svn_wc__internal_versioned_file_modcheck(svn_boolean_t *modified_p,
+                                         svn_wc__db_t *db,
+                                         const char *versioned_file_abspath,
+                                         const char *base_file_abspath,
+                                         svn_boolean_t compare_textbases,
+                                         apr_pool_t *scratch_pool);
+
+
+/* A convenience function for creating a new-style conflict description from
+   an old one.
+   ### This should probably disappear once all the old-style conflict
+       descriptions are gone. */
+svn_wc_conflict_description2_t *
+svn_wc__conflict_desc2_from_conflict_desc(const svn_wc_conflict_description_t *
+                                                                     conflict,
+                                          apr_pool_t *result_pool);
+
 
 #ifdef __cplusplus
 }

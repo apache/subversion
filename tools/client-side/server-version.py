@@ -43,9 +43,12 @@ def print_version(url):
   status, msg, server = (resp.status, resp.msg, resp.getheader('Server'))
   conn.close()
 
-  # Handle "OK" and Handle redirect requests, if requested resource
-  # resides temporarily under a different URL
-  if status != 200 and status != 302:
+  # 1) Handle "OK" (200)
+  # 2) Handle redirect requests (302), if requested resource
+  #    resides temporarily under a different URL
+  # 3) Handle authorization (401), if server requests for authorization
+  #    ignore it, since we are interested in server version only
+  if status != 200 and status != 302 and status != 401:
     print('ERROR: bad status response: %s %s' % (status, msg))
     sys.exit(1)
   if not server:

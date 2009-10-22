@@ -1,17 +1,22 @@
 /* load.c --- parsing a 'dumpfile'-formatted stream.
  *
  * ====================================================================
- * Copyright (c) 2000-2006, 2008-2009 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -28,6 +33,7 @@
 #include "svn_private_config.h"
 #include "svn_mergeinfo.h"
 #include "svn_checksum.h"
+#include "svn_subst.h"
 
 #include <apr_lib.h>
 
@@ -195,7 +201,7 @@ read_key_or_val(char **pbuf,
   SVN_ERR(svn_stream_read(stream, buf, &numread));
   *actual_length += numread;
   if (numread != len)
-    return stream_ran_dry();
+    return svn_error_return(stream_ran_dry());
   buf[len] = '\0';
 
   /* Suck up extra newline after key data */
@@ -203,9 +209,9 @@ read_key_or_val(char **pbuf,
   SVN_ERR(svn_stream_read(stream, &c, &numread));
   *actual_length += numread;
   if (numread != 1)
-    return stream_ran_dry();
+    return svn_error_return(stream_ran_dry());
   if (c != '\n')
-    return stream_malformed();
+    return svn_error_return(stream_malformed());
 
   *pbuf = buf;
   return SVN_NO_ERROR;
@@ -308,6 +314,7 @@ parse_property_block(svn_stream_t *stream,
                      svn_filesize_t content_length,
                      const svn_repos_parse_fns2_t *parse_fns,
                      void *record_baton,
+                     void *parse_baton,
                      svn_boolean_t is_node,
                      svn_filesize_t *actual_length,
                      apr_pool_t *pool)
@@ -368,13 +375,48 @@ parse_property_block(svn_stream_t *stream,
 
               /* Now, send the property pair to the vtable! */
               if (is_node)
-                SVN_ERR(parse_fns->set_node_property(record_baton,
-                                                     keybuf,
-                                                     &propstring));
+                {
+                  /* svn_mergeinfo_parse() in parse_fns->set_node_property()
+                     will choke on mergeinfo with "\r\n" line endings, but we
+                     might legitimately encounter these in a dump stream.  If
+                     so normalize the line endings to '\n' and make a
+                     notification to PARSE_BATON->FEEDBACK_STREAM that we
+                     have made this correction. */
+                  if (strcmp(keybuf, SVN_PROP_MERGEINFO) == 0
+                      && strstr(propstring.data, "\r"))
+                    {
+                      const char *prop_eol_normalized;
+                      struct parse_baton *pb = parse_baton;
+
+                      SVN_ERR(svn_subst_translate_cstring2(
+                        propstring.data,
+                        &prop_eol_normalized,
+                        "\n",  /* translate to LF */
+                        FALSE, /* no repair */
+                        NULL,  /* no keywords */
+                        FALSE, /* no expansion */
+                        proppool));
+                      propstring.data = prop_eol_normalized;
+                      propstring.len = strlen(prop_eol_normalized);
+
+                      if (pb->outstream)
+                        SVN_ERR(svn_stream_printf(
+                          pb->outstream,
+                          proppool,
+                          _(" removing '\\r' from %s ..."),
+                          SVN_PROP_MERGEINFO));
+                    }
+
+                  SVN_ERR(parse_fns->set_node_property(record_baton,
+                                                       keybuf,
+                                                       &propstring));
+                }
               else
-                SVN_ERR(parse_fns->set_revision_property(record_baton,
-                                                         keybuf,
-                                                         &propstring));
+                {
+                  SVN_ERR(parse_fns->set_revision_property(record_baton,
+                                                           keybuf,
+                                                           &propstring));
+                }
             }
           else
             return stream_malformed(); /* didn't find expected 'V' line */
@@ -689,6 +731,7 @@ svn_repos_parse_dumpstream2(svn_stream_t *stream,
                    svn__atoui64(prop_cl ? prop_cl : content_length),
                    parse_fns,
                    found_node ? node_baton : rev_baton,
+                   parse_baton,
                    found_node,
                    &actual_prop_length,
                    found_node ? nodepool : revpool));
@@ -1288,7 +1331,7 @@ close_revision(void *baton)
       if (err)
         {
           svn_error_clear(svn_fs_abort_txn(rb->txn, rb->pool));
-          return err;
+          return svn_error_return(err);
         }
     }
 
@@ -1299,7 +1342,7 @@ close_revision(void *baton)
       if (conflict_msg)
         return svn_error_quick_wrap(err, conflict_msg);
       else
-        return err;
+        return svn_error_return(err);
     }
 
   /* Run post-commit hook, if so commanded.  */

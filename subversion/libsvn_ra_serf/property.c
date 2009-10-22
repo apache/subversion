@@ -2,17 +2,22 @@
  * property.c : property routines for ra_serf
  *
  * ====================================================================
- * Copyright (c) 2006-2007 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -696,12 +701,6 @@ svn_ra_serf__wait_for_props(svn_ra_serf__propfind_context_t *prop_ctx,
 
   err = svn_ra_serf__context_run_wait(&prop_ctx->done, sess, pool);
 
-  if (prop_ctx->parser_ctx->error)
-    {
-      svn_error_clear(err);
-      SVN_ERR(prop_ctx->parser_ctx->error);
-    }
-
   err2 = svn_ra_serf__error_on_status(prop_ctx->status_code, prop_ctx->path);
   if (err2)
     {
@@ -973,20 +972,11 @@ svn_ra_serf__get_baseline_info(const char **bc_url,
       if (latest_revnum)
         {
           svn_ra_serf__options_context_t *opt_ctx;
-          svn_error_t *err;
 
           svn_ra_serf__create_options_req(&opt_ctx, session, conn,
                                           session->repos_url.path, pool);
-          err = svn_ra_serf__context_run_wait(
-            svn_ra_serf__get_options_done_ptr(opt_ctx), session, pool);
-
-          /* Return all of the three available errors, favoring the
-             more specific ones over the more generic. */
-          SVN_ERR(svn_error_compose_create(
-            svn_ra_serf__get_options_error(opt_ctx),
-            svn_error_compose_create(
-              svn_ra_serf__get_options_parser_error(opt_ctx),
-              err)));
+          SVN_ERR(svn_ra_serf__context_run_wait(
+            svn_ra_serf__get_options_done_ptr(opt_ctx), session, pool));
 
           *latest_revnum = svn_ra_serf__options_get_youngest_rev(opt_ctx);
           if (! SVN_IS_VALID_REVNUM(*latest_revnum))

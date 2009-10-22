@@ -5,14 +5,22 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2009 CollabNet.  All rights reserved.
+#    Licensed to the Subversion Corporation (SVN Corp.) under one
+#    or more contributor license agreements.  See the NOTICE file
+#    distributed with this work for additional information
+#    regarding copyright ownership.  The SVN Corp. licenses this file
+#    to you under the Apache License, Version 2.0 (the
+#    "License"); you may not use this file except in compliance
+#    with the License.  You may obtain a copy of the License at
 #
-# This software is licensed as described in the file COPYING, which
-# you should have received as part of this distribution.  The terms
-# are also available at http://subversion.tigris.org/license-1.html.
-# If newer versions of this license are posted there, you may use a
-# newer version instead, at your option.
+#      http://www.apache.org/licenses/LICENSE-2.0
 #
+#    Unless required by applicable law or agreed to in writing,
+#    software distributed under the License is distributed on an
+#    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+#    KIND, either express or implied.  See the License for the
+#    specific language governing permissions and limitations
+#    under the License.
 ######################################################################
 
 import sys     # for argv[]
@@ -461,7 +469,7 @@ def spawn_process(command, binary_mode=0, stdin_lines=None, *varargs):
 
   # Log the command line
   if verbose_mode and not command.endswith('.py'):
-    sys.stdout.write('CMD: %s %s ' % (os.path.basename(command),
+    sys.stdout.write('CMD: %s %s\n' % (os.path.basename(command),
                                       ' '.join([_quote_arg(x) for x in varargs])))
     sys.stdout.flush()
 
@@ -785,7 +793,7 @@ def copy_repos(src_path, dst_path, head_revision, ignore_uuid = 1):
   if ignore_uuid:
     load_args = load_args + ['--ignore-uuid']
   if verbose_mode:
-    sys.stdout.write('CMD: %s%s | %s%s ' % (os.path.basename(svnadmin_binary),
+    sys.stdout.write('CMD: %s%s | %s%s\n' % (os.path.basename(svnadmin_binary),
                                             ' '.join(dump_args),
                                             os.path.basename(svnadmin_binary),
                                             ' '.join(load_args)))
@@ -998,9 +1006,6 @@ def is_posix_os():
 def is_os_darwin():
   return sys.platform == 'darwin'
 
-def is_not_ng():
-  return 'SVN_ENABLE_NG' not in os.environ.keys()
-
 def server_has_mergeinfo():
   _check_command_line_parsed()
   return server_minor_version >= 5
@@ -1095,6 +1100,9 @@ class TestRunner:
       print(" %2d     %-5s  %s" % (self.index,
                                    self.pred.list_mode(),
                                    self.pred.description))
+
+  def get_function_name(self):
+    return self.pred.get_function_name()
 
   def _print_name(self, prefix):
     if self.pred.inprogress:
@@ -1271,7 +1279,8 @@ def usage():
   print("Arguments:")
   print(" <test>  The number of the test to run, or a range of test\n"
         "         numbers, like 10:12 or 10-12. Multiple numbers and\n"
-        "         ranges are ok. If you supply none, all tests are run.\n")
+        "         ranges are ok. If you supply none, all tests are run.\n"
+        "         You can also pass the name of a test function to run.\n")
   print("Options:")
   print(" --list          Print test doc strings instead of running them")
   print(" --fs-type       Subversion file system type (fsfs or bdb)")
@@ -1391,7 +1400,21 @@ def run_tests(test_list, serial_only = False):
           appended = False
 
       if not appended:
-        print("ERROR: invalid test number or range '%s'\n" % arg)
+        try:
+          # Check if the argument is a function name, and translate
+          # it to a number if possible
+          for testnum in list(range(1, len(test_list))):
+            test_case = TestRunner(test_list[testnum], testnum)
+            if test_case.get_function_name() == str(arg):
+              testnums.append(testnum)
+              appended = True
+              break
+        except ValueError:
+          appended = False
+
+      if not appended:
+        print("ERROR: invalid test number, range of numbers, " +
+              "or function '%s'\n" % arg)
         usage()
         sys.exit(1)
 

@@ -1,17 +1,22 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2007-2008 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  * @endcopyright
  *
@@ -53,18 +58,19 @@ svn_wc__entry_versioned(const svn_wc_entry_t **entry,
                         apr_pool_t *pool);
 
 
-/** Given a @a wcpath with its accompanying @a entry, set @a *switched to
- * true if @a wcpath is switched, otherwise set @a *switched to false.
- * If @a entry is an incomplete entry obtained from @a wcpath's parent return
- * @c SVN_ERR_ENTRY_MISSING_URL.  All allocations are done in @a pool.
+/** Given a @a local_abspath with a @a wc_ctx, set @a *switched to
+ * TRUE if @a local_abspath is switched, otherwise set @a *switched to FALSE.
+ * If neither @a local_abspath or its parent have valid URLs, return
+ * @c SVN_ERR_ENTRY_MISSING_URL.  All temporaryallocations are done in
+ * @a scratch_pool.
  *
- * @since New in 1.5.
+ * @since New in 1.7.
  */
 svn_error_t *
-svn_wc__path_switched(const char *wcpath,
-                      svn_boolean_t *switched,
-                      const svn_wc_entry_t *entry,
-                      apr_pool_t *pool);
+svn_wc__path_switched(svn_boolean_t *switched,
+                      svn_wc_context_t *wc_ctx,
+                      const char *local_abspath,
+                      apr_pool_t *scratch_pool);
 
 
 /* Return the shallowest sufficient @c levels_to_lock value for @a depth;
@@ -87,26 +93,25 @@ svn_wc__path_switched(const char *wcpath,
                               APR_HASH_KEY_STRING))) ? TRUE : FALSE)
 
 
-/* Set *MODIFIED_P to true if VERSIONED_FILE is modified with respect
- * to BASE_FILE, or false if it is not.  The comparison compensates
- * for VERSIONED_FILE's eol and keyword properties, but leaves
- * BASE_FILE alone (as though BASE_FILE were a text-base file, which
- * it usually is, only sometimes we're calling this on incoming
- * temporary text-bases).  ADM_ACCESS must be an access baton for
- * VERSIONED_FILE.  If COMPARE_TEXTBASES is false, a clean copy of the
- * versioned file is compared to VERSIONED_FILE.
+/* Set *MODIFIED_P to true if VERSIONED_FILE_ABSPATH is modified with respect
+ * to BASE_FILE_ABSPATH, or false if it is not.  The comparison compensates
+ * for VERSIONED_FILE_ABSPATH's eol and keyword properties, but leaves
+ * BASE_FILE_ABSPATH alone (as though BASE_FILE_ABSPATH were a text-base file,
+ * which it usually is, only sometimes we're calling this on incoming
+ * temporary text-bases).  If COMPARE_TEXTBASES is false, a clean copy of the
+ * versioned file is compared to VERSIONED_FILE_ABSPATH.
  *
  * If an error is returned, the effect on *MODIFIED_P is undefined.
  *
- * Use POOL for temporary allocation.
+ * Use SCRATCH_POOL for temporary allocation; WC_CTX is the normal thing.
  */
 svn_error_t *
 svn_wc__versioned_file_modcheck(svn_boolean_t *modified_p,
-                                const char *versioned_file,
-                                svn_wc_adm_access_t *adm_access,
-                                const char *base_file,
+                                svn_wc_context_t *wc_ctx,
+                                const char *versioned_file_abspath,
+                                const char *base_file_abspath,
                                 svn_boolean_t compare_textbases,
-                                apr_pool_t *pool);
+                                apr_pool_t *scratch_pool);
 
 /**
  * Return a boolean answer to the question "Is @a status something that
@@ -141,17 +146,19 @@ svn_wc__set_file_external_location(svn_wc_adm_access_t *adm_access,
 
 /** Set @a *tree_conflict to a newly allocated @c
  * svn_wc_conflict_description_t structure describing the tree
- * conflict state of @a victim_path, or to @c NULL if @a victim_path
- * is not in a state of tree conflict. @a adm_access is the admin
- * access baton for @a victim_path. Use @a pool for all allocations.
+ * conflict state of @a victim_abspath, or to @c NULL if @a victim_abspath
+ * is not in a state of tree conflict. @a wc_ctx is a working copy context
+ * used to access @a victim_path.  Allocate @a *tree_conflict in @a result_pool,
+ * use @a scratch_pool for temporary allocations.
  *
- * @since New in 1.6.
+ * @since New in 1.7.
  */
 svn_error_t *
 svn_wc__get_tree_conflict(svn_wc_conflict_description_t **tree_conflict,
-                          const char *victim_path,
-                          svn_wc_adm_access_t *adm_access,
-                          apr_pool_t *pool);
+                          svn_wc_context_t *wc_ctx,
+                          const char *victim_abspath,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool);
 
 /** Record the tree conflict described by @a conflict in the WC.
  * @a adm_access must be a write-access baton for the parent directory of
@@ -186,16 +193,16 @@ svn_wc__del_tree_conflict(const char *victim_path,
 
 /*
  * Read tree conflict descriptions from @a conflict_data.  Set @a *conflicts
- * to an array of pointers to svn_wc_conflict_description_t objects, all
- * newly allocated in @a pool.  @a dir_path is the path to the
- * working copy directory whose conflicts are being read.  The conflicts
- * read are the tree conflicts on the immediate child nodes of @a
- * dir_path.  Do all allocations in @a pool.
+ * to a hash of pointers to svn_wc_conflict_description_t objects indexed by
+ * svn_wc_conflict_description_t.path, all newly allocated in @a pool.  @a
+ * dir_path is the path to the working copy directory whose conflicts are
+ * being read.  The conflicts read are the tree conflicts on the immediate
+ * child nodes of @a dir_path.  Do all allocations in @a pool.
  *
  * @since New in 1.6.
  */
 svn_error_t *
-svn_wc__read_tree_conflicts(apr_array_header_t **conflicts,
+svn_wc__read_tree_conflicts(apr_hash_t **conflicts,
                             const char *conflict_data,
                             const char *dir_path,
                             apr_pool_t *pool);
@@ -212,11 +219,29 @@ svn_wc__conflict_description_dup(const svn_wc_conflict_description_t *conflict,
 /** Like svn_wc_is_wc_root(), but it doesn't consider switched subdirs or
  * deleted entries as working copy roots.
  *
- * @since New in 1.6.*/
+ * @since New in 1.7.*/
 svn_error_t *
 svn_wc__strictly_is_wc_root(svn_boolean_t *wc_root,
+                            svn_wc_context_t *wc_ctx,
+                            const char *local_abspath,
+                            apr_pool_t *scratch_pool);
+
+/** Like svn_wc_adm_open3() but with a svn_wc_ctx_t* instead of an associated
+ * baton.
+ *
+ * ### BH: This function is not for public consumption. New code should either
+ *         use the deprecated access battons or the new wc contexts but not
+ *         both. Too bad the WC-NG conversion is not done yet.
+ *
+ * @since New in 1.7.*/
+svn_error_t *
+svn_wc__adm_open_in_context(svn_wc_adm_access_t **adm_access,
+                            svn_wc_context_t *wc_ctx,
                             const char *path,
-                            svn_wc_adm_access_t *adm_access,
+                            svn_boolean_t write_lock,
+                            int levels_to_lock,
+                            svn_cancel_func_t cancel_func,
+                            void *cancel_baton,
                             apr_pool_t *pool);
 
 #ifdef __cplusplus

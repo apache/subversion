@@ -2,17 +2,22 @@
  * reporter.c : `reporter' vtable routines for updates.
  *
  * ====================================================================
- * Copyright (c) 2000-2006, 2008 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -1144,14 +1149,12 @@ drive(report_baton_t *b, svn_revnum_t s_rev, path_info_t *info,
 
   /* Compute the target path corresponding to the working copy anchor,
      and check its authorization. */
-  t_anchor = *b->s_operand ? svn_path_dirname(b->t_path, pool) : b->t_path;
+  t_anchor = *b->s_operand ? svn_dirent_dirname(b->t_path, pool) : b->t_path;
   SVN_ERR(check_auth(b, &allowed, t_anchor, pool));
   if (!allowed)
     return svn_error_create
       (SVN_ERR_AUTHZ_ROOT_UNREADABLE, NULL,
        _("Not authorized to open root of edit operation"));
-
-  SVN_ERR(b->editor->set_target_revision(b->edit_baton, b->t_rev, pool));
 
   /* Collect information about the source and target nodes. */
   s_fullpath = svn_path_join(b->fs_base, b->s_operand, pool);
@@ -1178,6 +1181,7 @@ drive(report_baton_t *b, svn_revnum_t s_rev, path_info_t *info,
     return svn_error_create(SVN_ERR_FS_PATH_SYNTAX, NULL,
                             _("Cannot replace a directory from within"));
 
+  SVN_ERR(b->editor->set_target_revision(b->edit_baton, b->t_rev, pool));
   SVN_ERR(b->editor->open_root(b->edit_baton, s_rev, pool, &root_baton));
 
   /* If the anchor is the operand, diff the two directories; otherwise
@@ -1254,7 +1258,7 @@ finish_report(report_baton_t *b, apr_pool_t *pool)
     if (err == SVN_NO_ERROR)
       return b->editor->close_edit(b->edit_baton, pool);
     svn_error_clear(b->editor->abort_edit(b->edit_baton, pool));
-    return err;
+    return svn_error_return(err);
   }
 }
 

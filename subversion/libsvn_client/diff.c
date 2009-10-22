@@ -2,17 +2,22 @@
  * diff.c: comparing
  *
  * ====================================================================
- * Copyright (c) 2000-2009 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -109,8 +114,6 @@ display_mergeinfo_diff(const char *old_mergeinfo_val,
 {
   apr_hash_t *old_mergeinfo_hash, *new_mergeinfo_hash, *added, *deleted;
   apr_hash_index_t *hi;
-  const char *from_path;
-  apr_array_header_t *merge_revarray;
 
   if (old_mergeinfo_val)
     SVN_ERR(svn_mergeinfo_parse(&old_mergeinfo_hash, old_mergeinfo_val, pool));
@@ -129,13 +132,9 @@ display_mergeinfo_diff(const char *old_mergeinfo_val,
   for (hi = apr_hash_first(pool, deleted);
        hi; hi = apr_hash_next(hi))
     {
-      const void *key;
-      void *val;
+      const char *from_path = svn_apr_hash_index_key(hi);
+      apr_array_header_t *merge_revarray = svn_apr_hash_index_val(hi);
       svn_string_t *merge_revstr;
-
-      apr_hash_this(hi, &key, NULL, &val);
-      from_path = key;
-      merge_revarray = val;
 
       SVN_ERR(svn_rangelist_to_string(&merge_revstr, merge_revarray, pool));
 
@@ -148,13 +147,9 @@ display_mergeinfo_diff(const char *old_mergeinfo_val,
   for (hi = apr_hash_first(pool, added);
        hi; hi = apr_hash_next(hi))
     {
-      const void *key;
-      void *val;
+      const char *from_path = svn_apr_hash_index_key(hi);
+      apr_array_header_t *merge_revarray = svn_apr_hash_index_val(hi);
       svn_string_t *merge_revstr;
-
-      apr_hash_this(hi, &key, NULL, &val);
-      from_path = key;
-      merge_revarray = val;
 
       SVN_ERR(svn_rangelist_to_string(&merge_revstr, merge_revarray, pool));
 
@@ -239,7 +234,7 @@ display_prop_diffs(const apr_array_header_t *propchanges,
           SVN_ERR(file_printf_from_utf8(file, encoding,
                                         _("%sProperty changes on: %s%s"),
                                         APR_EOL_STR,
-                                        svn_path_local_style(path, pool),
+                                        svn_dirent_local_style(path, pool),
                                         APR_EOL_STR));
 
           SVN_ERR(file_printf_from_utf8(file, encoding, "%s" APR_EOL_STR,
@@ -540,7 +535,7 @@ diff_content_changed(const char *path,
 
   /* ### Should diff labels print paths in local style?  Is there
      already a standard for this?  In any case, this code depends on
-     a particular style, so not calling svn_path_local_style() on the
+     a particular style, so not calling svn_dirent_local_style() on the
      paths below.*/
   if (path1[0] == '\0')
     path1 = apr_psprintf(subpool, "%s", path);
@@ -1166,7 +1161,7 @@ diff_prepare_repos_repos(const struct diff_parameters *params,
       svn_uri_split(drr->url2, &drr->anchor2, &drr->target2, pool);
       drr->target2 = svn_path_uri_decode(drr->target2, pool);
       if (drr->base_path)
-        drr->base_path = svn_path_dirname(drr->base_path, pool);
+        drr->base_path = svn_dirent_dirname(drr->base_path, pool);
       SVN_ERR(svn_ra_reparent(ra_session, drr->anchor1, pool));
     }
 
@@ -1288,7 +1283,7 @@ diff_repos_repos(const struct diff_parameters *diff_param,
   svn_ra_session_t *extra_ra_session;
 
   const svn_ra_reporter3_t *reporter;
-  void *report_baton;
+  void *reporter_baton;
 
   const svn_delta_editor_t *diff_editor;
   void *diff_edit_baton;
@@ -1326,16 +1321,16 @@ diff_repos_repos(const struct diff_parameters *diff_param,
 
   /* We want to switch our txn into URL2 */
   SVN_ERR(svn_ra_do_diff3
-          (drr.ra_session, &reporter, &report_baton, drr.rev2, drr.target1,
+          (drr.ra_session, &reporter, &reporter_baton, drr.rev2, drr.target1,
            diff_param->depth, diff_param->ignore_ancestry, TRUE,
            drr.url2, diff_editor, diff_edit_baton, pool));
 
   /* Drive the reporter; do the diff. */
-  SVN_ERR(reporter->set_path(report_baton, "", drr.rev1,
+  SVN_ERR(reporter->set_path(reporter_baton, "", drr.rev1,
                              svn_depth_infinity,
                              FALSE, NULL,
                              pool));
-  return reporter->finish_report(report_baton, pool);
+  return reporter->finish_report(reporter_baton, pool);
 }
 
 
@@ -1370,7 +1365,7 @@ diff_repos_wc(const char *path1,
   svn_revnum_t rev;
   svn_ra_session_t *ra_session;
   const svn_ra_reporter3_t *reporter;
-  void *report_baton;
+  void *reporter_baton;
   const svn_delta_editor_t *diff_editor;
   void *diff_edit_baton;
   svn_boolean_t rev2_is_base = (revision2->kind == svn_opt_revision_base);
@@ -1393,7 +1388,7 @@ diff_repos_wc(const char *path1,
   if (! entry->url)
     return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
                              _("Directory '%s' has no URL"),
-                             svn_path_local_style(anchor, pool));
+                             svn_dirent_local_style(anchor, pool));
   anchor_url = apr_pstrdup(pool, entry->url);
 
   /* If we are performing a pegged diff, we need to find out what our
@@ -1453,7 +1448,7 @@ diff_repos_wc(const char *path1,
     callback_baton->revnum2 = rev;
 
   SVN_ERR(svn_ra_do_diff3(ra_session,
-                          &reporter, &report_baton,
+                          &reporter, &reporter_baton,
                           rev,
                           target ? svn_path_uri_decode(target, pool) : NULL,
                           depth,
@@ -1468,7 +1463,7 @@ diff_repos_wc(const char *path1,
   /* Create a txn mirror of path2;  the diff editor will print
      diffs in reverse.  :-)  */
   SVN_ERR(svn_wc_crawl_revisions4(path2, dir_access,
-                                  reporter, report_baton,
+                                  reporter, reporter_baton,
                                   FALSE, depth, TRUE, (! server_supports_depth),
                                   FALSE, NULL, NULL, /* notification is N/A */
                                   NULL, pool));
@@ -1549,7 +1544,7 @@ diff_summarize_repos_repos(const struct diff_parameters *diff_param,
   svn_ra_session_t *extra_ra_session;
 
   const svn_ra_reporter3_t *reporter;
-  void *report_baton;
+  void *reporter_baton;
 
   const svn_delta_editor_t *diff_editor;
   void *diff_edit_baton;
@@ -1573,16 +1568,16 @@ diff_summarize_repos_repos(const struct diff_parameters *diff_param,
 
   /* We want to switch our txn into URL2 */
   SVN_ERR(svn_ra_do_diff3
-          (drr.ra_session, &reporter, &report_baton, drr.rev2, drr.target1,
+          (drr.ra_session, &reporter, &reporter_baton, drr.rev2, drr.target1,
            diff_param->depth, diff_param->ignore_ancestry,
            FALSE /* do not create text delta */, drr.url2, diff_editor,
            diff_edit_baton, pool));
 
   /* Drive the reporter; do the diff. */
-  SVN_ERR(reporter->set_path(report_baton, "", drr.rev1,
+  SVN_ERR(reporter->set_path(reporter_baton, "", drr.rev1,
                              svn_depth_infinity,
                              FALSE, NULL, pool));
-  return reporter->finish_report(report_baton, pool);
+  return reporter->finish_report(reporter_baton, pool);
 }
 
 /* This is basically just the guts of svn_client_diff_summarize[_peg]2(). */

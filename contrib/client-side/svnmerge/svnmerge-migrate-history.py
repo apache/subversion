@@ -212,7 +212,7 @@ class Migrator:
       # natural history.  So, we also examine the natural history of
       # the merge sources, and use that as a filter for the explicit
       # mergeinfo we've calculated so far.
-      self.log("Filtering mergeinfo by recontruction from source history ...")
+      self.log("Filtering mergeinfo by reconstruction from source history ...")
       filtered_mergeinfo = {}
       for source_path, ranges in new_mergeinfo.items():
         ### If by some chance it is the case that /path:RANGE1 and

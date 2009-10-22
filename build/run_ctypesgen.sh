@@ -13,15 +13,20 @@ CTYPESGEN="$5"
 abs_srcdir="$6"
 abs_builddir="$7"
 
-svn_prefix="$8"
+svn_libdir="$8"
 apr_prefix="$9"
 apu_prefix="${10}"
 
 cp_relpath="subversion/bindings/ctypes-python"
-### tempfile instead?
-output="$abs_builddir/$cp_relpath/svn_all.py"
+output="$cp_relpath/svn_all.py"
 
-svn_includes="$abs_srcdir/subversion/include"
+# Avoid build path in csvn/core/functions.py
+if test "$abs_builddir" = "$abs_srcdir"; then
+  svn_includes="subversion/include"
+else
+  mkdir -p "$cp_relpath/csvn/core"
+  svn_includes="$abs_srcdir/subversion/include"
+fi
 
 ### most of this should be done at configure time and passed in
 apr_config="$apr_prefix/bin/apr-1-config"
@@ -39,7 +44,7 @@ cpp="`$apr_config --cpp`"
 ### end
 
 cppflags="$apr_cppflags $apu_cppflags -I$svn_includes"
-ldflags="$apr_ldflags $apu_ldflags -L$svn_prefix/lib $EXTRA_CTYPES_LDFLAGS"
+ldflags="$apr_ldflags $apu_ldflags -L$svn_libdir $EXTRA_CTYPES_LDFLAGS"
 
 
 # This order is important. The resulting stubs will load libraries in
@@ -54,6 +59,9 @@ if test "$apr_include_dir" != "$apu_include_dir" ; then
   includes="$includes $apu_include_dir/ap[ru]_*.h"
 fi
 
+# Remove some whitespace in csvn/core/functions.py
+CPPFLAGS="`echo $CPPFLAGS`"
+cppflags="`echo $cppflags`"
 
 echo $LT_EXECUTE $PYTHON $CTYPESGEN --cpp "$cpp $CPPFLAGS $cppflags" $ldflags $includes -o $output --no-macro-warnings --strip-build-path=$abs_srcdir
 $LT_EXECUTE $PYTHON $CTYPESGEN --cpp "$cpp $CPPFLAGS $cppflags" $ldflags $includes -o $output --no-macro-warnings --strip-build-path=$abs_srcdir

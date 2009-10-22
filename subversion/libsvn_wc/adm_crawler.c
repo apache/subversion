@@ -2,17 +2,22 @@
  * adm_crawler.c:  report local WC mods to an Editor.
  *
  * ====================================================================
- * Copyright (c) 2000-2009 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -64,10 +69,14 @@ restore_file(const char *file_path,
   svn_stream_t *src_stream;
   svn_boolean_t special;
   svn_wc_entry_t newentry;
+  const char *local_abspath;
+  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, file_path, pool));
 
   SVN_ERR(svn_wc_get_pristine_contents(&src_stream, file_path, pool, pool));
 
-  SVN_ERR(svn_wc__get_special(&special, file_path, adm_access, pool));
+  SVN_ERR(svn_wc__get_special(&special, db, local_abspath, pool));
   if (special)
     {
       svn_stream_t *dst_stream;
@@ -88,9 +97,9 @@ restore_file(const char *file_path,
       const char *tmp_file;
       svn_stream_t *tmp_stream;
 
-      SVN_ERR(svn_wc__get_eol_style(&style, &eol_str, file_path, adm_access,
-                                    pool));
-      SVN_ERR(svn_wc__get_keywords(&keywords, file_path, adm_access, NULL,
+      SVN_ERR(svn_wc__get_eol_style(&style, &eol_str, db, local_abspath,
+                                    pool, pool));
+      SVN_ERR(svn_wc__get_keywords(&keywords, db, local_abspath, NULL, pool,
                                    pool));
 
       /* Get a temporary destination so we can use a rename to create the
@@ -118,10 +127,10 @@ restore_file(const char *file_path,
       SVN_ERR(svn_io_file_rename(tmp_file, file_path, pool));
     }
 
-  SVN_ERR(svn_wc__maybe_set_read_only(NULL, file_path, adm_access, pool));
+  SVN_ERR(svn_wc__maybe_set_read_only(NULL, db, local_abspath, pool));
 
   /* If necessary, tweak the new working file's executable bit. */
-  SVN_ERR(svn_wc__maybe_set_executable(NULL, file_path, adm_access, pool));
+  SVN_ERR(svn_wc__maybe_set_executable(NULL, db, local_abspath, pool));
 
   /* Remove any text conflict */
   SVN_ERR(svn_wc_resolved_conflict4(file_path, adm_access, TRUE, FALSE,
@@ -132,11 +141,8 @@ restore_file(const char *file_path,
   /* Possibly set timestamp to last-commit-time. */
   if (use_commit_times && (! special))
     {
-      svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
-      const char *abspath;
       apr_time_t changed_date;
 
-      SVN_ERR(svn_dirent_get_absolute(&abspath, file_path, pool));
       SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL,
                                    NULL, NULL, NULL,
                                    NULL, &changed_date, NULL,
@@ -144,8 +150,9 @@ restore_file(const char *file_path,
                                    NULL, NULL,
                                    NULL, NULL,
                                    NULL, NULL, NULL, NULL,
-                                   NULL, NULL, NULL, NULL,
-                                   db, abspath,
+                                   NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, NULL, NULL,
+                                   db, local_abspath,
                                    pool, pool));
 
       SVN_ERR(svn_io_set_file_affected_time(changed_date, file_path, pool));
@@ -271,8 +278,8 @@ report_revisions_and_depths(svn_wc_adm_access_t *adm_access,
   if (traversal_info)
     {
       const svn_string_t *val;
-      SVN_ERR(svn_wc_prop_get(&val, SVN_PROP_EXTERNALS, full_path, adm_access,
-                              subpool));
+      SVN_ERR(svn_wc__internal_propget(&val, SVN_PROP_EXTERNALS, abspath, db,
+                                       subpool, subpool));
       if (val)
         {
           apr_pool_t *dup_pool = traversal_info->pool;
@@ -926,7 +933,8 @@ svn_wc_transmit_text_deltas2(const char **tempfile,
                                    &expected_checksum, NULL,
                                    NULL, NULL,
                                    NULL, NULL, NULL, NULL,
-                                   NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, NULL, NULL,
                                    db, abspath,
                                    pool, pool));
 
@@ -1012,25 +1020,24 @@ svn_wc_transmit_text_deltas2(const char **tempfile,
          checksum mismatch is more important to return. */
       svn_error_clear(err);
       if (tempfile)
-        svn_error_clear(svn_io_remove_file(*tempfile, pool));
+        svn_error_clear(svn_io_remove_file2(*tempfile, TRUE, pool));
 
-      return svn_error_createf
-        (SVN_ERR_WC_CORRUPT_TEXT_BASE, NULL,
-         apr_psprintf(pool, "%s:\n%s\n%s\n",
-                      _("Checksum mismatch for '%s'"),
-                      _("   expected:  %s"),
-                      _("     actual:  %s")),
-         svn_path_local_style(svn_wc__text_base_path(path, FALSE, pool),
-                              pool),
-         svn_checksum_to_cstring_display(expected_checksum, pool),
-         svn_checksum_to_cstring_display(verify_checksum, pool));
+      return svn_error_createf(SVN_ERR_WC_CORRUPT_TEXT_BASE, NULL,
+                      _("Checksum mismatch for '%s':\n"
+                        "   expected:  %s\n"
+                        "     actual:  %s\n"),
+                      svn_dirent_local_style(svn_wc__text_base_path(
+                                                            path, FALSE, pool),
+                                             pool),
+                      svn_checksum_to_cstring_display(expected_checksum, pool),
+                      svn_checksum_to_cstring_display(verify_checksum, pool));
     }
 
   /* Now, handle that delta transmission error if any, so we can stop
      thinking about it after this point. */
   SVN_ERR_W(err, apr_psprintf(pool,
                               _("While preparing '%s' for commit"),
-                              svn_path_local_style(path, pool)));
+                              svn_dirent_local_style(path, pool)));
 
   if (digest)
     memcpy(digest, local_checksum->digest, svn_checksum_size(local_checksum));
@@ -1065,13 +1072,17 @@ svn_wc_transmit_prop_deltas(const char *path,
 {
   int i;
   apr_array_header_t *propmods;
+  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
+  const char *local_abspath;
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
   if (tempfile)
     *tempfile = NULL;
 
   /* Get an array of local changes by comparing the hashes. */
-  SVN_ERR(svn_wc_get_prop_diffs(&propmods, NULL,
-                                path, adm_access, pool));
+  SVN_ERR(svn_wc__internal_propdiff(&propmods, NULL, db, local_abspath,
+                                    pool, pool));
 
   /* Apply each local change to the baton */
   for (i = 0; i < propmods->nelts; i++)

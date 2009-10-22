@@ -3,7 +3,7 @@
 .\"
 .TH @PACKAGE@ 8 "2008-04-18" "version @PACKAGE_VERSION@" Subversion
 .SH NAME
-@PACKAGE@ \- 
+@PACKAGE@ \-
 .BR svns "erve " t "unnel-mode " s "etuid " w rapper
 .SH SYNOPSIS
 .B @PACKAGE@

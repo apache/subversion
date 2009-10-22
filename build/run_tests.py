@@ -36,7 +36,9 @@ class TestHarness:
     '''Construct a TestHarness instance.
 
     ABS_SRCDIR and ABS_BUILDDIR are the source and build directories.
-    LOGFILE is the name of the log file.
+    LOGFILE is the name of the log file. If LOGFILE is None, let tests
+    print their output to stdout and stderr, and don't print a summary
+    at the end (since there's no log file to analyze).
     BASE_URL is the base url for DAV tests.
     FS_TYPE is the FS type for repository creation.
     HTTP_LIBRARY is the HTTP library for DAV-based communications.
@@ -71,6 +73,9 @@ class TestHarness:
     failed = 0
     for cnt, prog in enumerate(list):
       failed = self._run_test(prog, cnt, len(list)) or failed
+
+    if self.log is None:
+      return failed
 
     # Open the log in binary mode because it can contain binary data
     # from diff_tests.py's testing of svnpatch. This may prevent
@@ -143,8 +148,9 @@ class TestHarness:
 
   def _open_log(self, mode):
     'Open the log file with the required MODE.'
-    self._close_log()
-    self.log = open(self.logfile, mode)
+    if self.logfile:
+      self._close_log()
+      self.log = open(self.logfile, mode)
 
   def _close_log(self):
     'Close the log file.'
@@ -162,11 +168,14 @@ class TestHarness:
         return arg
 
     progdir, progbase = os.path.split(prog)
-    # Using write here because we don't want even a trailing space
-    sys.stdout.write('Running all tests in %s [%d/%d]...' % (
-      progbase, test_nr + 1, total_tests))
-    self.log.write('START: %s\n' % progbase)
-    self.log.flush()
+    if self.log:
+      # Using write here because we don't want even a trailing space
+      sys.stdout.write('Running all tests in %s [%d/%d]...' % (
+        progbase, test_nr + 1, total_tests))
+      self.log.write('START: %s\n' % progbase)
+      self.log.flush()
+    else:
+      print('START: %s' % progbase)
 
     if progbase[-3:] == '.py':
       progname = sys.executable
@@ -224,13 +233,16 @@ class TestHarness:
     # output any failure info.
     if failed == 1:
       print('FAILURE')
-    elif failed:
+    elif failed and self.log:
       self.log.write('FAIL:  %s: Unknown test failure see tests.log.\n\n' % progbase)
       self.log.flush()
       print('FAILURE')
     else:
       print('success')
-    self.log.write('END: %s\n\n' % progbase)
+    if self.log:
+      self.log.write('END: %s\n\n' % progbase)
+    else:
+      print('END: %s\n' % progbase)
     return failed
 
   def _run_prog(self, progname, arglist):
@@ -243,20 +255,24 @@ class TestHarness:
       os.close(stdout)
       os.close(stderr)
 
-    sys.stdout.flush()
-    sys.stderr.flush()
-    self.log.flush()
-    old_stdout = os.dup(1)
-    old_stderr = os.dup(2)
+    if self.log:
+      sys.stdout.flush()
+      sys.stderr.flush()
+      self.log.flush()
+      old_stdout = os.dup(1)
+      old_stderr = os.dup(2)
     try:
-      os.dup2(self.log.fileno(), 1)
-      os.dup2(self.log.fileno(), 2)
+      if self.log:
+        os.dup2(self.log.fileno(), 1)
+        os.dup2(self.log.fileno(), 2)
       rv = os.spawnv(os.P_WAIT, progname, arglist)
     except:
-      restore_streams(old_stdout, old_stderr)
+      if self.log:
+        restore_streams(old_stdout, old_stderr)
       raise
     else:
-      restore_streams(old_stdout, old_stderr)
+      if self.log:
+        restore_streams(old_stdout, old_stderr)
       return rv
 
 
@@ -266,7 +282,8 @@ def main():
                            ['url=', 'fs-type=', 'verbose', 'cleanup',
                             'http-library=', 'server-minor-version=',
                             'fsfs-packing', 'fsfs-sharding=',
-                            'enable-sasl', 'parallel', 'config-file='])
+                            'enable-sasl', 'parallel', 'config-file=',
+                            'log-to-stdout'])
   except getopt.GetoptError:
     args = []
 
@@ -276,8 +293,9 @@ def main():
 
   base_url, fs_type, verbose, cleanup, enable_sasl, http_library, \
     server_minor_version, fsfs_sharding, fsfs_packing, parallel, \
-    config_file = \
-            None, None, None, None, None, None, None, None, None, None, None
+    config_file, log_to_stdout = \
+            None, None, None, None, None, None, None, None, None, None, None, \
+            None
   for opt, val in opts:
     if opt in ['-u', '--url']:
       base_url = val
@@ -301,11 +319,17 @@ def main():
       parallel = 1
     elif opt in ['--config-file']:
       config_file = val
+    elif opt in ['--log-to-stdout']:
+      log_to_stdout = 1
     else:
       raise getopt.GetoptError
 
-  th = TestHarness(args[0], args[1],
-                   os.path.abspath('tests.log'),
+  if log_to_stdout:
+    logfile = None
+  else:
+    logfile = os.path.abspath('tests.log')
+
+  th = TestHarness(args[0], args[1], logfile,
                    base_url, fs_type, http_library, server_minor_version,
                    verbose, cleanup, enable_sasl, parallel, config_file,
                    fsfs_sharding, fsfs_packing)

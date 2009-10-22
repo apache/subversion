@@ -2,17 +2,22 @@
  * tree_conflicts.h: declarations related to tree conflicts
  *
  * ====================================================================
- * Copyright (c) 2007 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -92,9 +97,9 @@ svn_wc__loggy_del_tree_conflict(svn_stringbuf_t **log_accum,
  *
  * Set *CONFLICT_DATA to a string, allocated in POOL, that encodes the tree
  * conflicts in CONFLICTS in a form suitable for storage in a single string
- * field in a WC entry. CONFLICTS is an array of zero or more pointers to
- * svn_wc_conflict_description_t objects. All of the conflict victim paths
- * must be siblings.
+ * field in a WC entry. CONFLICTS is a hash of zero or more pointers to
+ * svn_wc_conflict_description_t objects, index by their basenames. All of the
+ * conflict victim paths must be siblings.
  *
  * Do all allocations in POOL.
  *
@@ -104,31 +109,17 @@ svn_wc__loggy_del_tree_conflict(svn_stringbuf_t **log_accum,
  */
 svn_error_t *
 svn_wc__write_tree_conflicts(const char **conflict_data,
-                             apr_array_header_t *conflicts,
-                             apr_pool_t *pool);
-
-/*
- * Search in CONFLICTS (an array of svn_wc_conflict_description_t tree
- * conflicts) for a conflict with the given VICTIM_BASENAME.
- *
- * This function is used in a unit test in tests/libsvn_wc.
- *
- * @since New in 1.6.
- */
-svn_boolean_t
-svn_wc__tree_conflict_exists(const apr_array_header_t *conflicts,
-                             const char *victim_basename,
+                             apr_hash_t *conflicts,
                              apr_pool_t *pool);
 
 
-/* See svn_wc__get_tree_conflict() in svn_wc_private.h. This is a variant
-   that takes a DB and dual-pools. This function is preferred.  */
+/* See svn_wc__get_tree_conflict() in svn_wc_private.h. */
 svn_error_t *
-svn_wc__get_tree_conflict2(svn_wc_conflict_description_t **tree_conflict,
-                           const char *victim_path,
-                           svn_wc__db_t *db,
-                           apr_pool_t *result_pool,
-                           apr_pool_t *scratch_pool);
+svn_wc__internal_get_tree_conflict(svn_wc_conflict_description_t **tree_conflict,
+                                   const char *victim_path,
+                                   svn_wc__db_t *db,
+                                   apr_pool_t *result_pool,
+                                   apr_pool_t *scratch_pool);
 
 #ifdef __cplusplus
 }

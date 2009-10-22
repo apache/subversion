@@ -16,7 +16,7 @@
             	<Control Id="Title" Type="Text" X="15" Y="6" Width="300" Height="15" Transparent="yes" NoPrefix="yes" Text="!(loc.PostDlgTitle)" />
             	
             	<Control Id="PostText" Type="ScrollableText" X="20" Y="70" Width="330" Height="151" Sunken="yes" TabSkip="no" Hidden="yes">
-            		<Text SourceFile="!(wix.WixUIPostRtf=$(var.postRtf))">
+            		<Text SourceFile="!(loc.PostText)">
             		</Text>
                     <Condition Action="show">Not WixUI_InstallMode = "Remove" AND Not WixUI_InstallMode = "Repair"</Condition>
             	</Control>

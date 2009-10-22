@@ -115,10 +115,10 @@ sub init_repo
 # Check-out a working copy
 sub check_out
   {
-    my ( $url ) = @_;
+    my ( $url, $options ) = @_;
     my $wc_dir = "wcstress.$$";
     mkdir "$wc_dir", 0755 or die "$stress: mkdir wcstress.$$: $!\n";
-    my $svn_cmd = "svn co $url $wc_dir";
+    my $svn_cmd = "svn co $url $wc_dir $options";
     system( $svn_cmd ) and die "$stress: $svn_cmd: failed: $?\n";
     return $wc_dir;
   }
@@ -126,8 +126,9 @@ sub check_out
 # Print status and update. The update is to do any required merges.
 sub status_update
   {
-    my ( $wc_dir, $wait_for_key, $disable_status, $resolve_conflicts ) = @_;
-    my $svn_cmd = "svn st -u $wc_dir";
+    my ( $options, $wc_dir, $wait_for_key, $disable_status,
+         $resolve_conflicts ) = @_;
+    my $svn_cmd = "svn st -u $options $wc_dir";
     if ( not $disable_status ) {
       print "Status:\n";
       system( $svn_cmd ) and die "$stress: $svn_cmd: failed: $?\n";
@@ -135,7 +136,7 @@ sub status_update
     print "Press return to update/commit\n" if $wait_for_key;
     read STDIN, $wait_for_key, 1 if $wait_for_key;
     print "Updating:\n";
-    $svn_cmd = "svn up --non-interactive $wc_dir";
+    $svn_cmd = "svn up --non-interactive $options $wc_dir";
 
     # Check for conflicts during the update.  If any exist, we resolve them.
     my $pid = open3(\*UPDATE_WRITE, \*UPDATE_READ, \*UPDATE_ERR_READ,
@@ -194,13 +195,15 @@ sub status_update
 # conflict.
 sub status_update_commit
   {
-    my ( $wc_dir, $wait_for_key, $disable_status, $resolve_conflicts ) = @_;
-    status_update $wc_dir, $wait_for_key, $disable_status, $resolve_conflicts;
+    my ( $options, $wc_dir, $wait_for_key, $disable_status,
+         $resolve_conflicts ) = @_;
+    status_update $options, $wc_dir, $wait_for_key, $disable_status, \
+                  $resolve_conflicts;
     print "Committing:\n";
     # Use current time as log message
     my $now_time = localtime;
     # [Windows compat] Must use double quotes for the log message.
-    my $svn_cmd = "svn ci $wc_dir -m \"$now_time\"";
+    my $svn_cmd = "svn ci $options $wc_dir -m \"$now_time\"";
 
     # Need to handle the commit carefully. It could fail for all sorts
     # of reasons, but errors that indicate a conflict are "acceptable"
@@ -335,8 +338,9 @@ sub ParseCommandLine
   {
     my %cmd_opts;
     my $usage = "
-usage: stress.pl [-cdfhprW] [-i num] [-n num] [-s secs] [-x num] [-D num]
-                 [-F num] [-N num] [-P num] [-R path] [-S path] [-U url]
+usage: stress.pl [-cdfhprW] [-i num] [-n num] [-s secs] [-x num] [-o options]
+                 [-D num] [-F num] [-N num] [-P num] [-R path] [-S path]
+                 [-U url]
 
 where
   -c cause repository creation
@@ -349,6 +353,7 @@ where
   -r perform update-time conflict resolution
   -s the sleep delay (-1 wait for key, 0 none)
   -x the number of files to modify in each commit
+  -o options to pass for subversion client
   -D the number of sub-directories per directory in the tree
   -F the number of files per directory in the tree
   -N the depth of the tree
@@ -378,8 +383,9 @@ where
     $cmd_opts{'r'} = 0;            # conflict resolution
     $cmd_opts{'s'} = -1;           # sleep interval
     $cmd_opts{'x'} = 4;            # files to modify
+    $cmd_opts{'o'} = "";           # no options passed
 
-    getopts( 'cdfhi:n:prs:x:D:F:N:P:R:S:U:W', \%cmd_opts ) or die $usage;
+    getopts( 'cdfhi:n:prs:x:o:D:F:N:P:R:S:U:W', \%cmd_opts ) or die $usage;
 
     # print help info (and exit nicely) if requested
     if ( $cmd_opts{'h'} )
@@ -424,7 +430,7 @@ $repo =~ s/\\/\//g;
 # Make URL from path if URL not explicitly specified
 $cmd_opts{'U'} = "file:$urlsep$repo" if $cmd_opts{'U'} eq "none";
 
-my $wc_dir = check_out $cmd_opts{'U'};
+my $wc_dir = check_out $cmd_opts{'U'}, $cmd_opts{'o'};
 
 if ( $cmd_opts{'c'} )
   {
@@ -432,7 +438,7 @@ if ( $cmd_opts{'c'} )
     system( $svn_cmd ) and die "$stress: $svn_cmd: failed: $?\n";
     populate( "$wc_dir/trunk", $cmd_opts{'D'}, $cmd_opts{'F'}, $cmd_opts{'N'},
               $cmd_opts{'P'}, $cmd_opts{'p'} );
-    status_update_commit $wc_dir, 0, 1
+    status_update_commit $cmd_opts{'o'}, $wc_dir, 0, 1
         and die "$stress: populate checkin failed\n";
   }
 
@@ -460,10 +466,11 @@ for my $mod_number ( 1..$cmd_opts{'n'} )
     if ( $cmd_opts{'x'} > 0 ) {
       # Loop committing until successful or the stop file is created
       1 while not -e $stop_file
-        and status_update_commit $wc_dir, $wait_for_key, \
+        and status_update_commit $cmd_opts{'o'}, $wc_dir, $wait_for_key, \
                                  $cmd_opts{'d'}, $cmd_opts{'r'};
     } else {
-      status_update $wc_dir, $wait_for_key, $cmd_opts{'d'}, $cmd_opts{'r'};
+      status_update $cmd_opts{'o'}, $wc_dir, $wait_for_key, $cmd_opts{'d'}, \
+                    $cmd_opts{'r'};
     }
 
     # Break out of loop, or sleep, if required

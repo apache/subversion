@@ -2,17 +2,22 @@
  * info.c:  return system-generated metadata about paths or URLs.
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -194,7 +199,6 @@ push_dir_info(svn_ra_session_t *ra_session,
               apr_pool_t *pool)
 {
   apr_hash_t *tmpdirents;
-  svn_dirent_t *the_ent;
   svn_info_t *info;
   apr_hash_index_t *hi;
   apr_pool_t *subpool = svn_pool_create(pool);
@@ -205,20 +209,17 @@ push_dir_info(svn_ra_session_t *ra_session,
   for (hi = apr_hash_first(pool, tmpdirents); hi; hi = apr_hash_next(hi))
     {
       const char *path, *URL, *fs_path;
-      const void *key;
       svn_lock_t *lock;
-      void *val;
+      const char *name = svn_apr_hash_index_key(hi);
+      svn_dirent_t *the_ent = svn_apr_hash_index_val(hi);
 
       svn_pool_clear(subpool);
 
       if (ctx->cancel_func)
         SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
 
-      apr_hash_this(hi, &key, NULL, &val);
-      the_ent = val;
-
-      path = svn_path_join(dir, key, subpool);
-      URL  = svn_path_url_add_component2(session_URL, key, subpool);
+      path = svn_path_join(dir, name, subpool);
+      URL  = svn_path_url_add_component2(session_URL, name, subpool);
 
       fs_path = svn_path_is_child(repos_root, URL, subpool);
       fs_path = apr_pstrcat(subpool, "/", fs_path, NULL);
@@ -257,6 +258,7 @@ struct found_entry_baton
   apr_hash_t *changelist_hash;
   svn_info_receiver_t receiver;
   void *receiver_baton;
+  svn_wc_context_t *wc_ctx;
   svn_wc_adm_access_t *adm_access;  /* adm access baton for root of walk */
 };
 
@@ -268,6 +270,7 @@ info_found_entry_callback(const char *path,
                           apr_pool_t *pool)
 {
   struct found_entry_baton *fe_baton = walk_baton;
+  const char *local_abspath;
 
   /* We're going to receive dirents twice;  we want to ignore the
      first one (where it's a child of a parent dir), and only print
@@ -276,17 +279,14 @@ info_found_entry_callback(const char *path,
       && (strcmp(entry->name, SVN_WC_ENTRY_THIS_DIR)))
     return SVN_NO_ERROR;
 
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
   if (SVN_WC__CL_MATCH(fe_baton->changelist_hash, entry))
     {
       svn_info_t *info;
-      svn_wc_adm_access_t *adm_access;
 
       SVN_ERR(build_info_from_entry(&info, entry, path, pool));
-      SVN_ERR(svn_wc_adm_probe_try3(&adm_access, fe_baton->adm_access, path,
-                               FALSE /* read-only */, 0 /* levels */,
-                               NULL, NULL, pool));
-      SVN_ERR(svn_wc__get_tree_conflict(&info->tree_conflict, path, adm_access,
-                                        pool));
+      SVN_ERR(svn_wc__get_tree_conflict(&info->tree_conflict, fe_baton->wc_ctx,
+                                        local_abspath, pool, pool));
       SVN_ERR(fe_baton->receiver(fe_baton->receiver_baton, path, info, pool));
     }
   return SVN_NO_ERROR;
@@ -308,14 +308,12 @@ info_error_handler(const char *path,
   if (err && (err->apr_err == SVN_ERR_UNVERSIONED_RESOURCE))
     {
       struct found_entry_baton *fe_baton = walk_baton;
-      svn_wc_adm_access_t *adm_access;
       svn_wc_conflict_description_t *tree_conflict;
+      const char *local_abspath;
 
-      SVN_ERR(svn_wc_adm_probe_try3(&adm_access, fe_baton->adm_access,
-                                    svn_dirent_dirname(path, pool),
-                                    FALSE, 0, NULL, NULL, pool));
-      SVN_ERR(svn_wc__get_tree_conflict(&tree_conflict, path, adm_access,
-                                        pool));
+      SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+      SVN_ERR(svn_wc__get_tree_conflict(&tree_conflict, fe_baton->wc_ctx,
+                                        local_abspath, pool, pool));
 
       if (tree_conflict)
         {
@@ -366,6 +364,7 @@ crawl_entries(const char *wcpath,
   fe_baton.receiver = receiver;
   fe_baton.receiver_baton = receiver_baton;
   fe_baton.adm_access = adm_access;
+  fe_baton.wc_ctx = ctx->wc_ctx;
   return svn_wc_walk_entries3(wcpath, adm_access,
                               &entry_walk_callbacks, &fe_baton,
                               depth, FALSE, ctx->cancel_func,

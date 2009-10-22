@@ -2,17 +2,22 @@
  * kwallet.cpp: KWallet provider for SVN_AUTH_CRED_*
  *
  * ====================================================================
- * Copyright (c) 2008-2009 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -22,6 +27,7 @@
 
 /*** Includes. ***/
 
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
@@ -30,6 +36,9 @@
 #include "svn_auth.h"
 #include "svn_config.h"
 #include "svn_error.h"
+#include "svn_io.h"
+#include "svn_pools.h"
+#include "svn_string.h"
 #include "svn_version.h"
 
 #include "private/svn_auth_private.h"
@@ -38,19 +47,48 @@
 
 #include <dbus/dbus.h>
 #include <QtCore/QCoreApplication>
+#include <QtCore/QList>
+#include <QtCore/QMap>
 #include <QtCore/QString>
+#include <QtGui/QApplication>
+#include <QtGui/QX11Info>
 
 #include <kaboutdata.h>
 #include <kcmdlineargs.h>
 #include <kcomponentdata.h>
 #include <klocalizedstring.h>
 #include <kwallet.h>
+#include <kwindowsystem.h>
+#include <netwm.h>
+#include <netwm_def.h>
 
 
 /*-----------------------------------------------------------------------*/
 /* KWallet simple provider, puts passwords in KWallet                    */
 /*-----------------------------------------------------------------------*/
 
+
+#define INITIALIZE_APPLICATION                                            \
+  if (apr_hash_get(parameters,                                            \
+                   "svn:auth:qapplication-safe",                          \
+                   APR_HASH_KEY_STRING))                                  \
+    {                                                                     \
+      QApplication *app;                                                  \
+      if (! qApp)                                                         \
+        {                                                                 \
+          int argc = 1;                                                   \
+          app = new QApplication(argc, (char *[1]) {(char *) "svn"});     \
+        }                                                                 \
+    }                                                                     \
+  else                                                                    \
+    {                                                                     \
+      QCoreApplication *app;                                              \
+      if (! qApp)                                                         \
+        {                                                                 \
+          int argc = 1;                                                   \
+          app = new QCoreApplication(argc, (char *[1]) {(char *) "svn"}); \
+        }                                                                 \
+    }
 
 static const char *
 get_application_name(apr_hash_t *parameters,
@@ -69,8 +107,7 @@ get_application_name(apr_hash_t *parameters,
   const char *svn_application_name;
   if (svn_application_name_with_pid)
     {
-      long pid = getpid();
-      svn_application_name = apr_psprintf(pool, "Subversion [%ld]", pid);
+      svn_application_name = apr_psprintf(pool, "Subversion [%ld]", long(getpid()));
     }
   else
     {
@@ -102,9 +139,108 @@ get_wallet_name(apr_hash_t *parameters)
     }
 }
 
+static pid_t
+get_parent_pid(pid_t pid,
+               apr_pool_t *pool)
+{
+  pid_t parent_pid = 0;
+
+#ifdef __linux__
+  svn_stream_t *stat_file_stream;
+  svn_string_t *stat_file_string;
+  const char *preceeding_space, *following_space, *parent_pid_string;
+
+  const char *path = apr_psprintf(pool, "/proc/%ld/stat", long(pid));
+  svn_error_t *err = svn_stream_open_readonly(&stat_file_stream, path, pool, pool);
+  if (err == SVN_NO_ERROR)
+    {
+      err = svn_string_from_stream(&stat_file_string, stat_file_stream, pool, pool);
+      if (err == SVN_NO_ERROR)
+        {
+          if ((preceeding_space = strchr(stat_file_string->data, ' ')))
+            {
+              if ((preceeding_space = strchr(preceeding_space + 1, ' ')))
+                {
+                  if ((preceeding_space = strchr(preceeding_space + 1, ' ')))
+                    {
+                      if ((following_space = strchr(preceeding_space + 1, ' ')))
+                        {
+                          parent_pid_string = apr_pstrndup(pool,
+                                                           preceeding_space + 1,
+                                                           following_space - preceeding_space);
+                          parent_pid = atol(parent_pid_string);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+  if (err)
+    {
+      svn_error_clear(err);
+    }
+#endif
+
+  return parent_pid;
+}
+
+static WId
+get_wid(apr_hash_t *parameters,
+        apr_pool_t *pool)
+{
+  WId wid = 1;
+
+  if (apr_hash_get(parameters,
+                   "svn:auth:qapplication-safe",
+                   APR_HASH_KEY_STRING))
+    {
+      QMap<pid_t, WId> process_info_list;
+      QList<WId> windows(KWindowSystem::windows());
+      QList<WId>::const_iterator i;
+      for (i = windows.begin(); i != windows.end(); i++)
+        {
+          process_info_list[NETWinInfo(QX11Info::display(),
+                                       *i,
+                                       QX11Info::appRootWindow(),
+                                       NET::WMPid).pid()] = *i;
+        }
+
+      apr_pool_t *iterpool = svn_pool_create(pool);
+      pid_t pid = getpid();
+      while (pid != 0)
+        {
+          svn_pool_clear(iterpool);
+          if (process_info_list.contains(pid))
+            {
+              wid = process_info_list[pid];
+              break;
+            }
+          pid = get_parent_pid(pid, iterpool);
+        }
+      svn_pool_destroy(iterpool);
+    }
+
+  if (wid == 1)
+    {
+      const char *wid_env_string = getenv("WINDOWID");
+      if (wid_env_string)
+        {
+          long wid_env = atol(wid_env_string);
+          if (wid_env != 0)
+            {
+              wid = wid_env;
+            }
+        }
+    }
+
+  return wid;
+}
+
 static KWallet::Wallet *
 get_wallet(QString wallet_name,
-           apr_hash_t *parameters)
+           apr_hash_t *parameters,
+           apr_pool_t *pool)
 {
   KWallet::Wallet *wallet =
     static_cast<KWallet::Wallet *> (apr_hash_get(parameters,
@@ -115,7 +251,7 @@ get_wallet(QString wallet_name,
                                  APR_HASH_KEY_STRING))
     {
       wallet = KWallet::Wallet::openWallet(wallet_name,
-                                           -1,
+                                           pool ? get_wid(parameters, pool) : 1,
                                            KWallet::Wallet::Synchronous);
     }
   if (wallet)
@@ -141,7 +277,7 @@ kwallet_terminate(void *data)
   apr_hash_t *parameters = static_cast<apr_hash_t *> (data);
   if (apr_hash_get(parameters, "kwallet-initialized", APR_HASH_KEY_STRING))
     {
-      KWallet::Wallet *wallet = get_wallet(NULL, parameters);
+      KWallet::Wallet *wallet = get_wallet(NULL, parameters, NULL);
       delete wallet;
       apr_hash_set(parameters,
                    "kwallet-initialized",
@@ -172,12 +308,7 @@ kwallet_password_get(const char **password,
       return FALSE;
     }
 
-  QCoreApplication *app;
-  if (! qApp)
-    {
-      int argc = 1;
-      app = new QCoreApplication(argc, (char *[1]) {(char *) "svn"});
-    }
+  INITIALIZE_APPLICATION
 
   KCmdLineArgs::init(1,
                      (char *[1]) {(char *) "svn"},
@@ -195,7 +326,7 @@ kwallet_password_get(const char **password,
     QString::fromUtf8(username) + "@" + QString::fromUtf8(realmstring);
   if (! KWallet::Wallet::keyDoesNotExist(wallet_name, folder, key))
     {
-      KWallet::Wallet *wallet = get_wallet(wallet_name, parameters);
+      KWallet::Wallet *wallet = get_wallet(wallet_name, parameters, pool);
       if (wallet)
         {
           apr_hash_set(parameters,
@@ -242,12 +373,7 @@ kwallet_password_set(apr_hash_t *creds,
       return FALSE;
     }
 
-  QCoreApplication *app;
-  if (! qApp)
-    {
-      int argc = 1;
-      app = new QCoreApplication(argc, (char *[1]) {(char *) "svn"});
-    }
+  INITIALIZE_APPLICATION
 
   KCmdLineArgs::init(1,
                      (char *[1]) {(char *) "svn"},
@@ -262,7 +388,7 @@ kwallet_password_set(apr_hash_t *creds,
   QString q_password = QString::fromUtf8(password);
   QString wallet_name = get_wallet_name(parameters);
   QString folder = QString::fromUtf8("Subversion");
-  KWallet::Wallet *wallet = get_wallet(wallet_name, parameters);
+  KWallet::Wallet *wallet = get_wallet(wallet_name, parameters, pool);
   if (wallet)
     {
       apr_hash_set(parameters,

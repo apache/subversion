@@ -6,14 +6,22 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+#    Licensed to the Subversion Corporation (SVN Corp.) under one
+#    or more contributor license agreements.  See the NOTICE file
+#    distributed with this work for additional information
+#    regarding copyright ownership.  The SVN Corp. licenses this file
+#    to you under the Apache License, Version 2.0 (the
+#    "License"); you may not use this file except in compliance
+#    with the License.  You may obtain a copy of the License at
 #
-# This software is licensed as described in the file COPYING, which
-# you should have received as part of this distribution.  The terms
-# are also available at http://subversion.tigris.org/license-1.html.
-# If newer versions of this license are posted there, you may use a
-# newer version instead, at your option.
+#      http://www.apache.org/licenses/LICENSE-2.0
 #
+#    Unless required by applicable law or agreed to in writing,
+#    software distributed under the License is distributed on an
+#    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+#    KIND, either express or implied.  See the License for the
+#    specific language governing permissions and limitations
+#    under the License.
 ######################################################################
 
 # General modules
@@ -31,10 +39,12 @@ Skip = svntest.testcase.Skip
 SkipUnless = svntest.testcase.SkipUnless
 
 from merge_tests import set_up_branch
-
+from merge_tests import expected_merge_output
 from svntest.main import SVN_PROP_MERGEINFO
 from svntest.main import write_restrictive_svnserve_conf
 from svntest.main import write_authz_file
+from svntest.main import is_ra_type_dav
+from svntest.main import is_ra_type_svn
 from svntest.main import server_has_mergeinfo
 from svntest.actions import fill_file_with_lines
 from svntest.actions import make_conflict_marker_text
@@ -356,7 +366,6 @@ def mergeinfo_and_skipped_paths(sbox):
                                        None, None, None, None,
                                        None, 1, 0, '-c5', '-c8')
 
-
   # Test issue #2829 'Improve handling for skipped paths encountered
   # during a merge'
 
@@ -408,6 +417,122 @@ def mergeinfo_and_skipped_paths(sbox):
                                        None, None, None, None,
                                        None, 1, 0)
 
+def merge_fails_if_subtree_is_deleted_on_src(sbox):
+  "merge fails if subtree is deleted on src"
+
+  ## See http://subversion.tigris.org/issues/show_bug.cgi?id=2876. ##
+
+  # Create a WC
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  if is_ra_type_svn() or is_ra_type_dav():
+    write_authz_file(sbox, {"/" : "* = rw",
+                            "/unrelated" : ("* =\n" +
+                             svntest.main.wc_author2 + " = rw")})
+
+  # Some paths we'll care about
+  Acopy_path = os.path.join(wc_dir, 'A_copy')
+  gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma')
+  Acopy_gamma_path = os.path.join(wc_dir, 'A_copy', 'D', 'gamma')
+  Acopy_D_path = os.path.join(wc_dir, 'A_copy', 'D')
+  A_url = sbox.repo_url + '/A'
+  Acopy_url = sbox.repo_url + '/A_copy'
+
+  # Contents to be added to 'gamma'
+  new_content = "line1\nline2\nline3\nline4\nline5\n"
+
+  svntest.main.file_write(gamma_path, new_content)
+
+  # Create expected output tree for commit
+  expected_output = wc.State(wc_dir, {
+    'A/D/gamma' : Item(verb='Sending'),
+    })
+
+  # Create expected status tree for commit
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/D/gamma', wc_rev=2)
+
+  # Commit the new content
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None, wc_dir)
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'cp', A_url, Acopy_url,
+                                     '-m', 'create a new copy of A')
+
+  # Update working copy
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+
+  svntest.main.file_substitute(gamma_path, "line1", "this is line1")
+  # Create expected output tree for commit
+  expected_output = wc.State(wc_dir, {
+    'A/D/gamma' : Item(verb='Sending'),
+    })
+
+  # Create expected status tree for commit
+  expected_status.tweak(wc_rev=3)
+  expected_status.tweak('A/D/gamma', wc_rev=4)
+  expected_status.add({
+    'A_copy'          : Item(status='  ', wc_rev=3),
+    'A_copy/B'        : Item(status='  ', wc_rev=3),
+    'A_copy/B/lambda' : Item(status='  ', wc_rev=3),
+    'A_copy/B/E'      : Item(status='  ', wc_rev=3),
+    'A_copy/B/E/alpha': Item(status='  ', wc_rev=3),
+    'A_copy/B/E/beta' : Item(status='  ', wc_rev=3),
+    'A_copy/B/F'      : Item(status='  ', wc_rev=3),
+    'A_copy/mu'       : Item(status='  ', wc_rev=3),
+    'A_copy/C'        : Item(status='  ', wc_rev=3),
+    'A_copy/D'        : Item(status='  ', wc_rev=3),
+    'A_copy/D/gamma'  : Item(status='  ', wc_rev=3),
+    'A_copy/D/G'      : Item(status='  ', wc_rev=3),
+    'A_copy/D/G/pi'   : Item(status='  ', wc_rev=3),
+    'A_copy/D/G/rho'  : Item(status='  ', wc_rev=3),
+    'A_copy/D/G/tau'  : Item(status='  ', wc_rev=3),
+    'A_copy/D/H'      : Item(status='  ', wc_rev=3),
+    'A_copy/D/H/chi'  : Item(status='  ', wc_rev=3),
+    'A_copy/D/H/omega': Item(status='  ', wc_rev=3),
+    'A_copy/D/H/psi'  : Item(status='  ', wc_rev=3),
+    })
+
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None, wc_dir)
+
+  # Delete A/D/gamma from working copy
+  svntest.actions.run_and_verify_svn(None, None, [], 'delete', gamma_path)
+  # Create expected output tree for commit
+  expected_output = wc.State(wc_dir, {
+    'A/D/gamma' : Item(verb='Deleting'),
+    })
+
+  expected_status.remove('A/D/gamma')
+
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None,
+                                        wc_dir, wc_dir)
+  svntest.actions.run_and_verify_svn(None, expected_merge_output([[3,4]],
+                                     'U    ' + Acopy_gamma_path + '\n'),
+                                     [], 'merge', '-r1:4',
+                                     A_url + '/D/gamma' + '@4',
+                                     Acopy_gamma_path)
+
+  # r6: create an empty (unreadable) commit.
+  # Empty or unreadable revisions used to crash a svn 1.6+ client when
+  # used with a 1.5 server:
+  # http://svn.haxx.se/dev/archive-2009-04/0476.shtml
+  svntest.main.run_svn(None, 'mkdir', sbox.repo_url + '/unrelated',
+                       '--username', svntest.main.wc_author2,
+                       '-m', 'creating a rev with no paths.')
+
+  # A delete merged ontop of a modified file is normally a tree conflict,
+  # see notes/tree-conflicts/detection.txt, but --force currently avoids
+  # this.
+  svntest.actions.run_and_verify_svn(None, expected_merge_output([[3,6]],
+                                     ['D    ' + Acopy_gamma_path + '\n']),
+                                     [], 'merge', '-r1:6', '--force',
+                                     A_url, Acopy_path)
+
 ########################################################################
 # Run the tests
 
@@ -417,6 +542,8 @@ test_list = [ None,
               SkipUnless(Skip(mergeinfo_and_skipped_paths,
                               svntest.main.is_ra_type_file),
                          svntest.main.server_has_mergeinfo),
+              SkipUnless(merge_fails_if_subtree_is_deleted_on_src,
+                         server_has_mergeinfo),
              ]
 
 if __name__ == '__main__':

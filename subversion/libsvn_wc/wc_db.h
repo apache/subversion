@@ -1,17 +1,22 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2008 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  * @endcopyright
  *
@@ -31,10 +36,15 @@
 #ifndef SVN_WC_DB_H
 #define SVN_WC_DB_H
 
+#include "svn_wc.h"
+
 #include "svn_types.h"
 #include "svn_error.h"
 #include "svn_config.h"
 #include "svn_io.h"
+
+#include "private/svn_skel.h"
+#include "private/svn_sqlite.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -262,12 +272,9 @@ svn_wc__db_open(svn_wc__db_t **db,
 
 /**
  * Close DB.
- *
- * Temporary allocations will be made in SCRATCH_POOL.
  */
 svn_error_t *
-svn_wc__db_close(svn_wc__db_t *db,
-                 apr_pool_t *scratch_pool);
+svn_wc__db_close(svn_wc__db_t *db);
 
 
 /**
@@ -621,7 +628,9 @@ svn_wc__db_base_set_dav_cache(svn_wc__db_t *db,
 
 
 /** Retrieve the dav cache for LOCAL_ABSPATH into *PROPS, allocated in
-    RESULT_POOL.  Use SCRATCH_POOL for temporary allocations. */
+    RESULT_POOL.  Use SCRATCH_POOL for temporary allocations.  Return
+    SVN_ERR_WC_PATH_NOT_FOUND if no dav cache can be located for
+    LOCAL_ABSPATH in DB.  */
 svn_error_t *
 svn_wc__db_base_get_dav_cache(apr_hash_t **props,
                               svn_wc__db_t *db,
@@ -797,6 +806,31 @@ svn_wc__db_pristine_decref(int *new_refcount,
 
 /** @} */
 
+
+/**
+ * @defgroup svn_wc__db_repos  Repository information management
+ * @{
+ */
+
+/**
+ * Ensure an entry for the repository at REPOS_ROOT_URL with UUID exists
+ * in DB for LOCAL_ABSPATH, either by finding the correct row, or inserting
+ * a new row.  In either case return the id in *REPOS_ID.
+ *
+ * Use SCRATCH_POOL for temporary allocations.
+ */
+svn_error_t *
+svn_wc__db_repos_ensure(apr_int64_t *repos_id,
+                        svn_wc__db_t *db,
+                        const char *local_abspath,
+                        const char *repos_root_url,
+                        const char *repos_uuid,
+                        apr_pool_t *scratch_pool);
+                        
+
+/** @} */
+
+
 /**
  * @defgroup svn_wc__db_op  Operations on WORKING tree
  * @{
@@ -925,6 +959,17 @@ svn_wc__db_op_revert(svn_wc__db_t *db,
                      apr_pool_t *scratch_pool);
 
 
+/** Invalidate the last mod time cache for the appropriate BASE node
+ * for LOCAL_ABSPATH in DB.
+ *
+ * Use SCRATCH_POOL for any temporary allocations.
+ */
+svn_error_t *
+svn_wc__db_op_invalidate_last_mod_time(svn_wc__db_t *db,
+                                       const char *local_abspath,
+                                       apr_pool_t *scratch_pool);
+
+
 /* ### status */
 
 
@@ -978,7 +1023,12 @@ svn_wc__db_op_revert(svn_wc__db_t *db,
  *   TEXT_MOD                n/a (always available)
  *   PROPS_MOD               n/a (always available)
  *   BASE_SHADOWED           n/a (always available)
+ *   CONFLICT_OLD            NULL
+ *   CONFLICT_NEW            NULL
+ *   CONFLICT_WORKING        NULL
+ *   PROP_REJECT_FILE        NULL
  *   LOCK                    NULL
+ *   TREE_CONFLICT_DATA      NULL
  *
  * If DEPTH is requested, and the node is NOT a directory, then
  * the value will be set to svn_depth_unknown.
@@ -1069,7 +1119,18 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,  /* ### derived */
                      svn_boolean_t *base_shadowed,  /* ### WORKING shadows a
                                                        ### deleted BASE? */
 
+                     const char **conflict_old,
+                     const char **conflict_new,
+                     const char **conflict_working,
+                     const char **prop_reject_file,  /* ### is this right? */
+
                      svn_wc__db_lock_t **lock,
+
+                     /* ### this should eventually turn into a 
+                        ### svn_wc_conflict_description2_t, but for the time
+                        ### being, we're just going to return the raw text
+                        ### and let the caller deal with it. */
+                     const char **tree_conflict_data,
 
                      svn_wc__db_t *db,
                      const char *local_abspath,
@@ -1141,6 +1202,15 @@ svn_wc__db_read_children(const apr_array_header_t **children,
                          apr_pool_t *scratch_pool);
 
 
+/* Return the kind of the node in DB at LOCAL_ABSPATH.  If it doesn't exist,
+   return svn_wc__db_unknown.  Use SCRATCH_POOL for temporary allocations. */
+svn_error_t *
+svn_wc__db_check_node(svn_wc__db_kind_t *kind,
+                      svn_wc__db_t *db,
+                      const char *local_abspath,
+                      apr_pool_t *scratch_pool);
+
+
 /* ### changelists. return an array, or an iterator interface? how big
    ### are these things? are we okay with an in-memory array? examine other
    ### changelist usage -- we may already assume the list fits in memory.
@@ -1155,14 +1225,33 @@ svn_wc__db_read_children(const apr_array_header_t **children,
  * @{
  */
 
-/* ### local_dir_abspath "should be" the wcroot or a switch root. all URLs
-   ### under this directory (depth=infinity) will be rewritten. */
+/*
+ * Associate LOCAL_DIR_ABSPATH, and all its children with the repository at
+ * at REPOS_ROOT_URL.  The relative path to the repos root will not change,
+ * just the repository root.  The repos uuid will also remain the same.
+ * This also updates any locks which may exist for the node, as well as any
+ * copyfrom repository information.
+ *
+ * Use SCRATCH_POOL for any temporary allocations.
+ *
+ * ### local_dir_abspath "should be" the wcroot or a switch root. all URLs
+ * ### under this directory (depth=infinity) will be rewritten.
+ *
+ * ### This API had a depth parameter, which was removed, should it be
+ * ### resurrected?  What's the purpose if we claim relocate is infinitely
+ * ### recursive?
+ *
+ * ### Assuming the future ability to copy across repositories, should we
+ * ### refrain from resetting the copyfrom information in this operation?
+ *
+ * ### SINGLE_DB is a temp argument, and should be TRUE if using compressed
+ * ### metadata.  When *all* metadata gets compressed, it should disappear.
+ */
 svn_error_t *
 svn_wc__db_global_relocate(svn_wc__db_t *db,
                            const char *local_dir_abspath,
-                           const char *from_url,
-                           const char *to_url,
-                           svn_depth_t depth,
+                           const char *repos_root_url,
+                           svn_boolean_t single_db,
                            apr_pool_t *scratch_pool);
 
 
@@ -1193,12 +1282,19 @@ svn_wc__db_global_commit(svn_wc__db_t *db,
  * @{
  */
 
-/** Add LOCK for LOCAL_ABSPATH to DB */
+/** Add or replace LOCK for LOCAL_ABSPATH to DB.  */
 svn_error_t *
 svn_wc__db_lock_add(svn_wc__db_t *db,
                     const char *local_abspath,
                     const svn_wc__db_lock_t *lock,
                     apr_pool_t *scratch_pool);
+
+
+/** Remove any lock for LOCAL_ABSPATH in DB.  */
+svn_error_t *
+svn_wc__db_lock_remove(svn_wc__db_t *db,
+                       const char *local_abspath,
+                       apr_pool_t *scratch_pool);
 
 
 /** @} */
@@ -1420,6 +1516,62 @@ svn_wc__db_scan_deletion(const char **base_del_abspath,
 /** @} */
 
 
+/** The upgrade function for the wc_db sqlite database.  This is exposed
+    quasi-publicly for testing purposes only. */
+svn_error_t *
+svn_wc__db_upgrade_func(void *baton,
+                        svn_sqlite__db_t *sdb,
+                        int current_schema,
+                        apr_pool_t *scratch_pool);
+
+
+/**
+ * @defgroup svn_wc__db_wq  Work queue manipulation. see workqueue.h
+ * @{
+ */
+
+/* In the WCROOT associated with DB and LOCAL_ABSPATH, add WORK_ITEM to the
+   wcroot's work queue. Use SCRATCH_POOL for all temporary allocations.  */
+svn_error_t *
+svn_wc__db_wq_add(svn_wc__db_t *db,
+                  const char *local_abspath,
+                  const svn_skel_t *work_item,
+                  apr_pool_t *scratch_pool);
+
+
+/* In the WCROOT associated with DB and LOCAL_ABSPATH, fetch a work item that
+   needs to be completed. Its identifier is returned in ID, and the data in
+   WORK_ITEM.
+
+   There is no particular ordering to the work items returned by this function.
+
+   If there are no work items to be completed, then ID will be set to zero,
+   and WORK_ITEM to NULL.
+
+   RESULT_POOL will be used to allocate WORK_ITEM, and SCRATCH_POOL
+   will be used for all temporary allocations.  */
+svn_error_t *
+svn_wc__db_wq_fetch(apr_uint64_t *id,
+                    svn_skel_t **work_item,
+                    svn_wc__db_t *db,
+                    const char *local_abspath,
+                    apr_pool_t *result_pool,
+                    apr_pool_t *scratch_pool);
+
+
+/* In the WCROOT associated with DB and LOCAL_ABSPATH, mark work item ID as
+   completed. If an error occurs, then it is unknown whether the work item
+   has been marked as completed.
+
+   Uses SCRATCH_POOL for all temporary allocations.  */
+svn_error_t *
+svn_wc__db_wq_completed(svn_wc__db_t *db,
+                        const char *local_abspath,
+                        apr_uint64_t id,
+                        apr_pool_t *scratch_pool);
+
+/** @} */
+
 /**
  * @defgroup svn_wc__db_temp Various temporary functions during transition
  *
@@ -1498,6 +1650,20 @@ svn_wc__db_temp_clear_access(svn_wc__db_t *db,
 apr_hash_t *
 svn_wc__db_temp_get_all_access(svn_wc__db_t *db,
                                apr_pool_t *result_pool);
+
+/* ### temp function to open an sqlite database to the appropriate location.
+   ### The *only* reason for this function is because entries.c still
+   ### manually hacks the sqlite database.
+
+   ### No matter how tempted you may be DO NOT USE THIS FUNCTION!
+   ### (if you do, gstein will hunt you down and burn your knee caps off
+   ### in the middle of the night) */
+svn_error_t *
+svn_wc__db_temp_get_sdb(svn_sqlite__db_t **db,
+                        const char *local_dir_abspath,
+                        const char * const statements_in[],
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool);
 
 /** @} */
 

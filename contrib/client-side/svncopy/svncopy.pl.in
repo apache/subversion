@@ -16,13 +16,13 @@
 #  USE, DATA,  OR PROFITS; OR  BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
 #  ANY THEORY OF LIABILITY, WHETHER IN  CONTRACT, STRICT LIABILITY, OR TORT
 #  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
-#  THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+#  THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 #  You should have received a copy of the  GNU General Public License along
 #  with this program; if not, write  to the Free Software Foundation, Inc.,
 #  59 Temple Place - Suite 330, Boston MA 02111-1307 USA.
 #
-#  This product makes use of software developed by 
+#  This product makes use of software developed by
 #  CollabNet (http://www.Collab.Net/), see http://subversion.tigris.org/.
 #
 #  This software consists of voluntary contributions made by many
@@ -180,7 +180,7 @@ sub DoCopy
   my $src;
   my $startdir = cwd;
   my $starterrors = scalar( @errors );
-    
+
   print "\n=================================================================\n";
   $revstr = "\@$revision" if $revision;
   print "=== Copying from:\n";
@@ -200,7 +200,7 @@ sub DoCopy
   # Convert destination to URI
   $destination =~ s|/*$||;
   my $destination_uri = URI->new($destination);
-   
+
   #
   # Generate a message if we don't have one.
   #
@@ -212,7 +212,7 @@ sub DoCopy
           $message .= "            Copied from '$src'\n";
         }
     }
-    
+
   #
   # Create a temporary directory to work in.
   #
@@ -220,7 +220,7 @@ sub DoCopy
     PrepareDirectory( $destination_uri, "svncopy.pl to '$destination'\n - creating intermediate directory" );
   $temp_dir = $auto_temp_dir->temp_dir();
   chdir( $temp_dir );
-    
+
   foreach $src ( @sources )
     {
       # Convert source to URI
@@ -237,7 +237,7 @@ sub DoCopy
           return 0;
         }
     }
-        
+
   #
   # Do any processing.
   #
@@ -249,18 +249,18 @@ sub DoCopy
           return 0;
         }
     }
-    
+
   #
   # And check in the new.
   #
   DoCommit( $dest_dir, $message ) or die "Couldn't commit\n";
-    
+
   # Make sure we finish in the directory we started
   chdir( $startdir );
 
   print "=== ... copy complete\n";
   print "=================================================================\n";
-    
+
   # Return whether there was an error.
   return ( scalar( @errors ) == $starterrors );
 }
@@ -284,7 +284,7 @@ sub PrepareDirectory
   my $auto_temp_dir = Temp::Delete->new();
   $temp_dir = $auto_temp_dir->temp_dir();
   info( "Using temporary directory $temp_dir\n" );
-  
+
   #
   # Our working destination directory has the same name as the last directory
   # in the destination URI.
@@ -292,7 +292,7 @@ sub PrepareDirectory
   my @path_segments = grep { length($_) } $destination->path_segments;
   my $new_dir = pop( @path_segments );
   my $dest_dir = "$temp_dir/$new_dir";
-  
+
   # Make sure the destination directory exists in Subversion.
   info( "Creating intermediate directories (if necessary)\n" );
   if ( !CreateSVNDirectories( $destination, $message ) )
@@ -300,7 +300,7 @@ sub PrepareDirectory
       error( "Couldn't create parent directories for '$destination'" );
       return;
     }
-  
+
   # Check out the destination.
   info( "Checking out destination directory '$destination'\n" );
   if ( 0 != SVNCall( 'co', $destination, $dest_dir ) )
@@ -308,7 +308,7 @@ sub PrepareDirectory
       error( "Couldn't check out '$destination' into work directory." );
       return;
     }
-  
+
   return ( $auto_temp_dir, $dest_dir );
 }
 
@@ -329,15 +329,15 @@ sub CopyToWorkDir
   my ( $source, $work_dir ) = @_;
   my $dest_dir = DestinationSubdir( $source, $work_dir );
   my @commandline = ();
-    
+
   push( @commandline, "--revision", $revision ) if ( $revision );
-    
+
   push( @commandline, $source, $work_dir );
-        
+
   my $exit = SVNCall( "copy", @commandline );
-    
+
   error( "$0: svn copy failed" ) if ( 0 != $exit );
-    
+
   return ( 0 == $exit );
 }
 
@@ -358,7 +358,7 @@ sub DestinationSubdir
 {
   my ( $source, $destination ) = @_;
   my $subdir;
-    
+
   # Make sure source and destination are consistent about separator.
   # Note every function we call can handle Unix path format, so we
   # default to that.
@@ -403,7 +403,7 @@ sub UpdateExternals
   # Check the externals on this directory and subdirectories
   info( "Checking '$work_dir'\n" );
   %extlist = GetRecursiveExternals( $work_dir );
-    
+
   # And do the update
   while ( my ( $subdir, $exts ) = each ( %extlist ) )
     {
@@ -413,7 +413,7 @@ sub UpdateExternals
           UpdateExternalsOnDir( $sourceref, $destination, $subdir, $msgref, \@externals );
         }
     }
-  
+
   return 1;
 }
 
@@ -440,20 +440,20 @@ sub UpdateExternalsOnDir
   my @externals = @$externalsref;
   my @new_externals;
   my %changed;
-    
+
   # Do any updating required
   foreach my $external ( @externals )
     {
       chomp( $external );
       next unless ( $external =~ m"^(\S+)(\s+)(?:-r\s*(\d+)\s+)?(.*)" );
       my ( $ext_dir, $spacing, $ext_rev, $ext_val ) = ( $1, $2, $3, $4 );
-            
+
       info( " - Found $ext_dir => '$ext_val'" );
       info( " ($ext_rev)" ) if $ext_rev;
       info( "\n" );
-        
+
       $externals_hash{ "$ext_val" } = $ext_rev;
-        
+
       # Only update if it's not pinned to a version
       if ( !$ext_rev )
         {
@@ -524,9 +524,9 @@ sub GetRecursiveExternals
   my %retval;
   my $externals;
   my $subdir = ".";
-    
+
   my ( $status, @externals ) = SVNCall( "propget", "-R", "svn:externals", $location );
-    
+
   foreach my $external ( @externals )
     {
       chomp( $external );
@@ -562,9 +562,9 @@ sub SVNInfo
   my ( $retval, @output ) = SVNCall( "info", $file );
   $verbose = $old_verbose;
   my %info;
-    
+
   return if ( 0 != $retval );
-    
+
   foreach my $line ( @output )
     {
       if ( $line =~ "^(.*): (.*)" )
@@ -572,7 +572,7 @@ sub SVNInfo
           $info{ $1 } = $2;
         }
     }
-    
+
   return %info;
 }
 
@@ -600,7 +600,7 @@ sub LatestRevision
     {
       $revtext = "--revision $revision:0";
     }
-        
+
   my $old_verbose = $verbose;
   $verbose = 0;
   my ( $retval, @output ) = SVNCall( "log -q", $revtext, $source );
@@ -611,7 +611,7 @@ sub LatestRevision
       error( "LatestRevision: log -q on '$source' failed" );
       return -1;
     }
-    
+
   #
   # The second line should give us the info we need: e.g.
   #
@@ -632,9 +632,9 @@ sub LatestRevision
     {
       return $1;
     }
-    
+
   error( "LatestRevision: log output not formatted as expected\n" );
-    
+
   return -1;
 }
 
@@ -654,19 +654,19 @@ sub DoCommit
 {
   my ( $work_dir, $message ) = @_;
   my @commandline = ();
-    
+
   # Prepare a file containing the message
   my ($handle, $messagefile) = tempfile( DIR => $temp_dir );
   print $handle $message;
   close($handle);
   push( @commandline, "--file", $messagefile );
-    
+
   push( @commandline, $work_dir );
-        
+
   my ( $exit ) = SVNCall( "commit", @commandline );
-    
+
   error( "$0: svn commit failed" ) if ( 0 != $exit );
-    
+
   return ( 0 == $exit );
 }
 
@@ -689,9 +689,9 @@ sub SVNCall
   my @commandline = ( $svn, $command, @svn_options, @options );
 
   info( " > ", join( " ", @commandline ), "\n" );
-  
+
   my @output = qx( @commandline 2>&1 );
-      
+
   my $result = $?;
   my $exit   = $result >> 8;
   my $signal = $result & 127;
@@ -700,7 +700,7 @@ sub SVNCall
     {
       error( "$0: 'svn $command' failed $cd: exit=$exit signal=$signal\n" );
     }
-  
+
   if ( $exit > 0 )
     {
       info( join( "\n", @output ) );
@@ -709,7 +709,7 @@ sub SVNCall
     {
       return ( $exit, @output );
     }
-    
+
   return $exit;
 }
 
@@ -734,9 +734,9 @@ sub FindRepositoryRoot
   my $repos_root_uri_path;
   my $old_verbose = $verbose;
   $verbose = 0;
-  
+
   info( "Finding the root URL of '$URI'.\n" );
-  
+
   my $r = $URI->clone;
   my @path_segments = grep { length($_) } $r->path_segments;
   unshift(@path_segments, '');
@@ -754,9 +754,9 @@ sub FindRepositoryRoot
           last;
         }
     }
-    
+
   $verbose = $old_verbose;
-  
+
   if ($repos_root_uri)
     {
       info( "Determined that the svn root URL is $repos_root_uri.\n\n" );
@@ -824,7 +824,7 @@ sub CreateSVNDirectories
               $found_tail = 1;
             }
         }
-        
+
       if ( $found_tail )
         {
           # We're creating directories
@@ -837,7 +837,7 @@ sub CreateSVNDirectories
         }
     }
   $verbose = $old_verbose;
-  
+
   return 1;
 }
 
@@ -874,13 +874,13 @@ sub info
 sub error
 {
   my $error;
-    
+
   # This is used during testing
   if ( $hideerrors )
     {
       return;
     }
-    
+
   # Now print out each error message and add it to the list.
   foreach $error ( @_ )
     {
@@ -908,7 +908,7 @@ sub Usage
 {
   my $msg;
   $msg = "\n*** $_[0] ***\n" if $_[0];
-    
+
   pod2usage( { -message => $msg,
                -verbose => 0 } );
 }
@@ -929,9 +929,9 @@ sub new
   bless $self, $class;
 
   my $temp_dir = tempdir("svncopy_XXXXXXXXXX", TMPDIR => 1);
-  
+
   $self->{tempdir} = $temp_dir;
-  
+
   return $self;
 }
 

@@ -2,17 +2,22 @@
  * commit.c:  wrappers around wc commit functionality.
  *
  * ====================================================================
- * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -44,6 +49,7 @@
 #include "svn_iter.h"
 
 #include "client.h"
+#include "private/svn_wc_private.h"
 
 #include "svn_private_config.h"
 
@@ -215,10 +221,9 @@ import_file(const svn_delta_editor_t *editor,
     {
       for (hi = apr_hash_first(pool, properties); hi; hi = apr_hash_next(hi))
         {
-          const void *pname;
-          void *pval;
+          const char *pname = svn_apr_hash_index_key(hi);
+          const svn_string_t *pval = svn_apr_hash_index_val(hi);
 
-          apr_hash_this(hi, &pname, NULL, &pval);
           SVN_ERR(editor->change_file_prop(file_baton, pname, pval, pool));
         }
     }
@@ -310,17 +315,10 @@ import_dir(const svn_delta_editor_t *editor,
   for (hi = apr_hash_first(pool, dirents); hi; hi = apr_hash_next(hi))
     {
       const char *this_path, *this_edit_path, *abs_path;
-      const svn_io_dirent_t *dirent;
-      const char *filename;
-      const void *key;
-      void *val;
+      const char *filename = svn_apr_hash_index_key(hi);
+      const svn_io_dirent_t *dirent = svn_apr_hash_index_val(hi);
 
       svn_pool_clear(subpool);
-
-      apr_hash_this(hi, &key, NULL, &val);
-
-      filename = key;
-      dirent = val;
 
       if (ctx->cancel_func)
         SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
@@ -821,22 +819,11 @@ remove_tmpfiles(apr_hash_t *tempfiles,
   /* Clean up any tempfiles. */
   for (hi = apr_hash_first(pool, tempfiles); hi; hi = apr_hash_next(hi))
     {
-      const void *key;
-      void *val;
-      svn_error_t *err;
+      const char *path = svn_apr_hash_index_key(hi);
 
       svn_pool_clear(subpool);
-      apr_hash_this(hi, &key, NULL, &val);
 
-      err = svn_io_remove_file((const char *)key, subpool);
-
-      if (err)
-        {
-          if (! APR_STATUS_IS_ENOENT(err->apr_err))
-            return err;
-          else
-            svn_error_clear(err);
-        }
+      SVN_ERR(svn_io_remove_file2(path, TRUE, subpool));
     }
 
   /* Remove the subpool. */
@@ -1109,14 +1096,8 @@ collect_lock_tokens(apr_hash_t **result,
 
   for (hi = apr_hash_first(pool, all_tokens); hi; hi = apr_hash_next(hi))
     {
-      const void *key;
-      void *val;
-      const char *url;
-      const char *token;
-
-      apr_hash_this(hi, &key, NULL, &val);
-      url = key;
-      token = val;
+      const char *url = svn_apr_hash_index_key(hi);
+      const char *token = svn_apr_hash_index_val(hi);
 
       if (strncmp(base_url, url, base_len) == 0
           && (url[base_len] == '\0' || url[base_len] == '/'))
@@ -1524,11 +1505,13 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
       svn_pool_destroy(subpool);
     }
 
-  SVN_ERR(svn_wc_adm_open3(&base_dir_access, NULL, base_dir,
-                           TRUE,  /* Write lock */
-                           lock_base_dir_recursive ? -1 : 0, /* lock levels */
-                           ctx->cancel_func, ctx->cancel_baton,
-                           pool));
+  SVN_ERR(svn_wc__adm_open_in_context(&base_dir_access,
+                                      ctx->wc_ctx,
+                                      base_dir,
+                                      TRUE,  /* Write lock */
+                                      lock_base_dir_recursive ? -1 : 0,
+                                      ctx->cancel_func, ctx->cancel_baton,
+                                      pool));
 
   if (!lock_base_dir_recursive)
     {

@@ -6,6 +6,7 @@ import os
 import sys
 import fnmatch
 import re
+import subprocess
 import glob
 import generator.swig.header_wrappers
 import generator.swig.checkout_swig_header
@@ -330,6 +331,13 @@ class WinGeneratorBase(GeneratorBase):
     if self.without_neon:
       install_targets = [x for x in install_targets if x.name != 'neon']
       install_targets = [x for x in install_targets if x.name != 'libsvn_ra_neon']
+
+    # Drop the swig targets if we don't have swig
+    if not self.swig_path and not self.swig_libdir:
+      install_targets = [x for x in install_targets
+                                     if not (isinstance(x, gen_base.TargetSWIG)
+                                             or isinstance(x, gen_base.TargetSWIGLib)
+                                             or isinstance(x, gen_base.TargetSWIGProject))]
 
     dll_targets = []
     for target in install_targets:
@@ -1220,9 +1228,8 @@ class WinGeneratorBase(GeneratorBase):
     else:
       self.swig_exe = 'swig'
 
-    infp, outfp = os.popen4(self.swig_exe + ' -version')
-    infp.close()
     try:
+      outfp = subprocess.Popen([self.swig_exe, '-version'], stdout=subprocess.PIPE, universal_newlines=True).stdout
       txt = outfp.read()
       if txt:
         vermatch = re.compile(r'^SWIG\ Version\ (\d+)\.(\d+)\.(\d+)$', re.M) \
@@ -1244,8 +1251,11 @@ class WinGeneratorBase(GeneratorBase):
         sys.stderr.write('Could not find installed SWIG,'
                          ' assuming version %s\n' % default_version)
         self.swig_libdir = ''
-    finally:
       outfp.close()
+    except OSError:
+      sys.stderr.write('Could not find installed SWIG,'
+                       ' assuming version %s\n' % default_version)
+      self.swig_libdir = ''
 
     self.swig_vernum = vernum
     self.swig_libdir = libdir

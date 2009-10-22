@@ -2,17 +2,22 @@
  * tree_conflicts.c: Storage of tree conflict descriptions in the WC.
  *
  * ====================================================================
- * Copyright (c) 2007 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -25,6 +30,7 @@
 #include "log.h"
 #include "entries.h"
 #include "lock.h"
+#include "wc.h"
 
 #include "private/svn_skel.h"
 #include "private/svn_wc_private.h"
@@ -176,8 +182,8 @@ read_enum_field(int *result,
 static svn_error_t *
 read_node_version_info(svn_wc_conflict_version_t *version_info,
                        const svn_skel_t *skel,
-                       apr_pool_t *scratch_pool,
-                       apr_pool_t *result_pool)
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool)
 {
   int n;
 
@@ -222,8 +228,8 @@ static svn_error_t *
 read_one_tree_conflict(svn_wc_conflict_description_t **conflict,
                        const svn_skel_t *skel,
                        const char *dir_path,
-                       apr_pool_t *scratch_pool,
-                       apr_pool_t *result_pool)
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool)
 {
   const char *victim_basename;
   svn_node_kind_t node_kind;
@@ -287,11 +293,11 @@ read_one_tree_conflict(svn_wc_conflict_description_t **conflict,
 
   /* src_left_version */
   SVN_ERR(read_node_version_info((*conflict)->src_left_version, skel,
-                                 scratch_pool, result_pool));
+                                 result_pool, scratch_pool));
 
   /* src_right_version */
   SVN_ERR(read_node_version_info((*conflict)->src_right_version, skel->next,
-                                 scratch_pool, result_pool));
+                                 result_pool, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -302,7 +308,7 @@ read_one_tree_conflict(svn_wc_conflict_description_t **conflict,
    ### a whole path. (and a path which happens to vary based upon invocation
    ### of the user client and these APIs)  */
 svn_error_t *
-svn_wc__read_tree_conflicts(apr_array_header_t **conflicts,
+svn_wc__read_tree_conflicts(apr_hash_t **conflicts,
                             const char *conflict_data,
                             const char *dir_path,
                             apr_pool_t *pool)
@@ -310,8 +316,7 @@ svn_wc__read_tree_conflicts(apr_array_header_t **conflicts,
   const svn_skel_t *skel;
   apr_pool_t *iterpool;
 
-  *conflicts = apr_array_make(pool, 0,
-                              sizeof(svn_wc_conflict_description_t *));
+  *conflicts = apr_hash_make(pool);
 
   if (conflict_data == NULL)
     return SVN_NO_ERROR;
@@ -327,10 +332,11 @@ svn_wc__read_tree_conflicts(apr_array_header_t **conflicts,
       svn_wc_conflict_description_t *conflict;
 
       svn_pool_clear(iterpool);
-      SVN_ERR(read_one_tree_conflict(&conflict, skel, dir_path, iterpool,
-                                     pool));
+      SVN_ERR(read_one_tree_conflict(&conflict, skel, dir_path,
+                                     pool, iterpool));
       if (conflict != NULL)
-        APR_ARRAY_PUSH(*conflicts, svn_wc_conflict_description_t *) = conflict;
+        apr_hash_set(*conflicts, svn_dirent_basename(conflict->path, pool),
+                     APR_HASH_KEY_STRING, conflict);
     }
   svn_pool_destroy(iterpool);
 
@@ -400,22 +406,20 @@ prepend_version_info_skel(svn_skel_t *parent_skel,
  */
 svn_error_t *
 svn_wc__write_tree_conflicts(const char **conflict_data,
-                             apr_array_header_t *conflicts,
+                             apr_hash_t *conflicts,
                              apr_pool_t *pool)
 {
   /* A conflict version struct with all fields null/invalid. */
   static const svn_wc_conflict_version_t null_version = {
     NULL, SVN_INVALID_REVNUM, NULL, svn_node_unknown };
-  int i;
   svn_skel_t *skel = svn_skel__make_empty_list(pool);
+  apr_hash_index_t *hi;
 
-  /* Iterate backwards so that the list-prepend will build the skel in
-     proper order. */
-  for (i = conflicts->nelts; --i >= 0; )
+  for (hi = apr_hash_first(pool, conflicts); hi; hi = apr_hash_next(hi))
     {
       const char *path;
       const svn_wc_conflict_description_t *conflict =
-          APR_ARRAY_IDX(conflicts, i, svn_wc_conflict_description_t *);
+          svn_apr_hash_index_val(hi);
       svn_skel_t *c_skel = svn_skel__make_empty_list(pool);
 
       /* src_right_version */
@@ -465,29 +469,6 @@ svn_wc__write_tree_conflicts(const char **conflict_data,
   return SVN_NO_ERROR;
 }
 
-/*
- * This function could be static, but we need to link to it
- * in a unit test in tests/libsvn_wc/, so it isn't.
- */
-svn_boolean_t
-svn_wc__tree_conflict_exists(const apr_array_header_t *conflicts,
-                             const char *victim_basename,
-                             apr_pool_t *pool)
-{
-  const svn_wc_conflict_description_t *conflict;
-  int i;
-
-  for (i = 0; i < conflicts->nelts; i++)
-    {
-      conflict = APR_ARRAY_IDX(conflicts, i,
-                               const svn_wc_conflict_description_t *);
-      if (strcmp(svn_dirent_basename(conflict->path, pool),
-                 victim_basename) == 0)
-        return TRUE;
-    }
-
-  return FALSE;
-}
 
 svn_error_t *
 svn_wc__del_tree_conflict(const char *victim_path,
@@ -515,10 +496,15 @@ svn_wc__add_tree_conflict(const svn_wc_conflict_description_t *conflict,
 {
   svn_wc_conflict_description_t *existing_conflict;
   svn_stringbuf_t *log_accum = NULL;
+  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
+  const char *conflict_abspath;
+
+  SVN_ERR(svn_dirent_get_absolute(&conflict_abspath, conflict->path, pool));
 
   /* Re-adding an existing tree conflict victim is an error. */
-  SVN_ERR(svn_wc__get_tree_conflict(&existing_conflict, conflict->path,
-                                    adm_access, pool));
+  SVN_ERR(svn_wc__internal_get_tree_conflict(&existing_conflict,
+                                             conflict_abspath, db,
+                                             pool, pool));
   if (existing_conflict != NULL)
     return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
                          _("Attempt to add tree conflict that already exists"));
@@ -532,26 +518,6 @@ svn_wc__add_tree_conflict(const svn_wc_conflict_description_t *conflict,
   return SVN_NO_ERROR;
 }
 
-/* Remove, from the array ARRAY, the element at index REMOVE_INDEX, possibly
- * changing the order of the remaining elements.
- */
-static void
-array_remove_unordered(apr_array_header_t *array, int remove_index)
-{
-  /* Get the address of the last element, and mark it as removed. Rely on
-   * that element's memory being preserved intact for the moment. (This
-   * guarantee is implied as it is how 'pop' returns the value.) */
-  void *last_element = apr_array_pop(array);
-
-  /* If the element to remove is not the last, overwrite it with the old
-   * last element. (We have just decremented the array size, so check that
-   * the index is still inside the array.) */
-  if (remove_index < array->nelts)
-    memcpy(array->elts + remove_index * array->elt_size, last_element,
-           array->elt_size);
-
-  /* The memory at LAST_ELEMENT need no longer be preserved. */
-}
 
 svn_error_t *
 svn_wc__loggy_del_tree_conflict(svn_stringbuf_t **log_accum,
@@ -561,9 +527,10 @@ svn_wc__loggy_del_tree_conflict(svn_stringbuf_t **log_accum,
 {
   const char *dir_path;
   const svn_wc_entry_t *entry;
-  apr_array_header_t *conflicts;
+  apr_hash_t *conflicts;
   svn_wc_entry_t tmp_entry;
   const char *victim_basename = svn_dirent_basename(victim_path, pool);
+  const svn_wc_conflict_description_t *conflict;
 
   /* Make sure the node is a directory.
    * Otherwise we should not have been called. */
@@ -580,24 +547,10 @@ svn_wc__loggy_del_tree_conflict(svn_stringbuf_t **log_accum,
 
   /* If CONFLICTS has a tree conflict with the same victim path as the
    * new conflict, then remove it. */
-  if (svn_wc__tree_conflict_exists(conflicts, victim_basename, pool))
+  conflict = apr_hash_get(conflicts, victim_basename, APR_HASH_KEY_STRING);
+  if (conflict)
     {
-      int i;
-
-      /* Delete the element that matches VICTIM_BASENAME */
-      for (i = 0; i < conflicts->nelts; i++)
-        {
-          const svn_wc_conflict_description_t *conflict
-            = APR_ARRAY_IDX(conflicts, i, svn_wc_conflict_description_t *);
-
-          if (strcmp(svn_dirent_basename(conflict->path, pool),
-                     victim_basename) == 0)
-            {
-              array_remove_unordered(conflicts, i);
-
-              break;
-            }
-        }
+      apr_hash_set(conflicts, victim_basename, APR_HASH_KEY_STRING, NULL);
 
       /* Rewrite the entry. */
       SVN_ERR(svn_wc__write_tree_conflicts(&tmp_entry.tree_conflict_data,
@@ -615,35 +568,37 @@ svn_wc__loggy_del_tree_conflict(svn_stringbuf_t **log_accum,
 
 svn_error_t *
 svn_wc__get_tree_conflict(svn_wc_conflict_description_t **tree_conflict,
-                          const char *victim_path,
-                          svn_wc_adm_access_t *adm_access,
-                          apr_pool_t *pool)
+                          svn_wc_context_t *wc_ctx,
+                          const char *victim_abspath,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool)
 {
-  return svn_error_return(svn_wc__get_tree_conflict2(
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(victim_abspath));
+
+  return svn_error_return(svn_wc__internal_get_tree_conflict(
                             tree_conflict,
-                            victim_path,
-                            svn_wc__adm_get_db(adm_access),
-                            pool,
-                            pool));
+                            victim_abspath,
+                            wc_ctx->db,
+                            result_pool,
+                            scratch_pool));
 }
 
 
 svn_error_t *
-svn_wc__get_tree_conflict2(svn_wc_conflict_description_t **tree_conflict,
-                           const char *victim_path,
-                           svn_wc__db_t *db,
-                           apr_pool_t *result_pool,
-                           apr_pool_t *scratch_pool)
+svn_wc__internal_get_tree_conflict(svn_wc_conflict_description_t **tree_conflict,
+                                   const char *victim_abspath,
+                                   svn_wc__db_t *db,
+                                   apr_pool_t *result_pool,
+                                   apr_pool_t *scratch_pool)
 {
-  const char *victim_abspath;
   const char *parent_abspath;
   const char *victim_name;
   svn_error_t *err;
-  apr_array_header_t *conflicts;
+  apr_hash_t *conflicts;
   const svn_wc_entry_t *entry;
-  int i;
 
-  SVN_ERR(svn_dirent_get_absolute(&victim_abspath, victim_path, scratch_pool));
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(victim_abspath));
+
   svn_dirent_split(victim_abspath, &parent_abspath, &victim_name,
                    scratch_pool);
   err = svn_wc__get_entry(&entry, db, parent_abspath, FALSE,
@@ -660,24 +615,14 @@ svn_wc__get_tree_conflict2(svn_wc_conflict_description_t **tree_conflict,
     }
 
   SVN_ERR(svn_wc__read_tree_conflicts(&conflicts, entry->tree_conflict_data,
-                                      svn_dirent_dirname(victim_path,
+                                      svn_dirent_dirname(victim_abspath,
                                                          scratch_pool),
                                       result_pool));
 
-  *tree_conflict = NULL;
-  for (i = 0; i < conflicts->nelts; i++)
-    {
-      svn_wc_conflict_description_t *conflict;
-
-      conflict = APR_ARRAY_IDX(conflicts, i,
-                               svn_wc_conflict_description_t *);
-      if (strcmp(svn_dirent_basename(conflict->path, scratch_pool),
-                 victim_name) == 0)
-        {
-          *tree_conflict = conflict;
-          break;
-        }
-    }
+  *tree_conflict = apr_hash_get(conflicts,
+                                svn_dirent_basename(victim_abspath,
+                                                    scratch_pool),
+                                APR_HASH_KEY_STRING);
 
   return SVN_NO_ERROR;
 }

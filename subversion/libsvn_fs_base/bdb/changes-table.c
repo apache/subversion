@@ -1,17 +1,22 @@
 /* changes-table.c : operations on the `changes' table
  *
  * ====================================================================
- * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -33,7 +38,7 @@
 #include "dbt.h"
 #include "changes-table.h"
 
-
+#include "private/svn_fs_util.h"
 #include "svn_private_config.h"
 
 
@@ -217,7 +222,7 @@ fold_change(apr_hash_t *changes,
       /* This change is new to the hash, so make a new public change
          structure from the internal one (in the hash's pool), and dup
          the path into the hash's pool, too. */
-      new_change = svn_fs_path_change2_create(
+      new_change = svn_fs__path_change_create_internal(
                        svn_fs_base__id_copy(change->noderev_id, pool),
                        change->kind,
                        pool);
@@ -345,7 +350,7 @@ svn_fs_bdb__changes_fetch(apr_hash_t **changes_p,
 
   /* If we had an error prior to closing the cursor, return the error. */
   if (err)
-    return err;
+    return svn_error_return(err);
 
   /* If our only error thus far was when we closed the cursor, return
      that error. */
@@ -428,7 +433,7 @@ svn_fs_bdb__changes_fetch_raw(apr_array_header_t **changes_p,
 
   /* If we had an error prior to closing the cursor, return the error. */
   if (err)
-    return err;
+    return svn_error_return(err);
 
   /* If our only error thus far was when we closed the cursor, return
      that error. */

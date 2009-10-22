@@ -760,7 +760,7 @@ sub safe_read_from_pipe
       croak "$0: safe_read_from_pipe passed no arguments.\n";
     }
 
-  my $openfork_available = $^O ne "MSWin32"; 
+  my $openfork_available = $^O ne "MSWin32";
   if ($openfork_available) # We can fork on this system.
     {
       my $pid = open(SAFE_READ, '-|');
@@ -776,18 +776,18 @@ sub safe_read_from_pipe
             or die "$0: cannot exec `@_': $!\n";
         }
     }
-  else  # Running on Windows.  No fork. 
+  else  # Running on Windows.  No fork.
     {
       my @commandline = ();
       my $arg;
-      
+
       while ($arg = shift)
         {
           $arg =~ s/\"/\\\"/g;
           if ($arg eq "" or $arg =~ /\s/) { $arg = "\"$arg\""; }
           push(@commandline, $arg);
         }
-        
+
       # Now do the pipe.
       open(SAFE_READ, "@commandline |")
         or die "$0: cannot pipe to command: $!\n";

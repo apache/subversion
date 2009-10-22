@@ -75,13 +75,13 @@ AC_DEFUN(SVN_FIND_SWIG,
     #   packages/rpm/rhel-4/subversion.spec
     if test -n "$SWIG_VERSION" &&
        test "$SWIG_VERSION" -ge "103024" &&
-       test "$SWIG_VERSION" -le "103036"; then
+       test "$SWIG_VERSION" -le "103039"; then
       SWIG_SUITABLE=yes
     else
       SWIG_SUITABLE=no
       AC_MSG_WARN([Detected SWIG version $SWIG_VERSION_RAW])
       AC_MSG_WARN([Subversion requires 1.3.24 or later, and is known to work])
-      AC_MSG_WARN([with versions up to 1.3.36])
+      AC_MSG_WARN([with versions up to 1.3.39])
     fi
   fi
  
@@ -112,7 +112,7 @@ AC_DEFUN(SVN_FIND_SWIG,
     AC_CACHE_CHECK([for linking Python libraries], [ac_cv_python_libs],[
       ac_cv_python_libs="`$PYTHON ${abs_srcdir}/build/get-py-info.py --libs`"
     ])
-    SWIG_PY_LIBS="$ac_cv_python_libs"
+    SWIG_PY_LIBS="`SVN_REMOVE_STANDARD_LIB_DIRS($ac_cv_python_libs)`"
 
     dnl Sun Forte adds an extra space before substituting APR_INT64_T_FMT
     dnl gcc-2.95 adds an extra space after substituting APR_INT64_T_FMT
@@ -205,7 +205,7 @@ AC_DEFUN(SVN_FIND_SWIG,
     AC_CACHE_CHECK([for linking Ruby libraries], [ac_cv_ruby_libs], [
       ac_cv_ruby_libs="$rbconfig_LIBRUBYARG"
     ])
-    SWIG_RB_LIBS="$ac_cv_ruby_libs"
+    SWIG_RB_LIBS="`SVN_REMOVE_STANDARD_LIB_DIRS($ac_cv_ruby_libs)`"
 
     AC_MSG_CHECKING([for rb_errinfo])
     old_CFLAGS="$CFLAGS"

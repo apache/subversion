@@ -2,17 +2,22 @@
  * cache-test.c -- test the in-memory cache
  *
  * ====================================================================
- * Copyright (c) 2006 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -133,17 +138,9 @@ basic_cache_test(svn_cache__t *cache,
 }
 
 static svn_error_t *
-test_inprocess_cache_basic(const char **msg,
-                           svn_boolean_t msg_only,
-                           svn_test_opts_t *opts,
-                           apr_pool_t *pool)
+test_inprocess_cache_basic(apr_pool_t *pool)
 {
   svn_cache__t *cache;
-
-  *msg = "basic inprocess svn_cache test";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
 
   /* Create a cache with just one entry. */
   SVN_ERR(svn_cache__create_inprocess(&cache,
@@ -158,9 +155,7 @@ test_inprocess_cache_basic(const char **msg,
 }
 
 static svn_error_t *
-test_memcache_basic(const char **msg,
-                    svn_boolean_t msg_only,
-                    svn_test_opts_t *opts,
+test_memcache_basic(const svn_test_opts_t *opts,
                     apr_pool_t *pool)
 {
   svn_cache__t *cache;
@@ -169,11 +164,6 @@ test_memcache_basic(const char **msg,
   const char *prefix = apr_psprintf(pool,
                                     "test_memcache_basic-%" APR_TIME_T_FMT,
                                     apr_time_now());
-
-  *msg = "basic memcache svn_cache test";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
 
   if (opts->config_file)
     {
@@ -201,9 +191,7 @@ test_memcache_basic(const char **msg,
 
 
 static svn_error_t *
-test_memcache_long_key(const char **msg,
-                       svn_boolean_t msg_only,
-                       svn_test_opts_t *opts,
+test_memcache_long_key(const svn_test_opts_t *opts,
                        apr_pool_t *pool)
 {
   svn_cache__t *cache;
@@ -222,11 +210,6 @@ test_memcache_long_key(const char **msg,
     "0123456789" "0123456789" "0123456789" "0123456789" "0123456789" /* 250 */
     "0123456789" "0123456789" "0123456789" "0123456789" "0123456789" /* 300 */
     ;
-
-  *msg = "memcache svn_cache with very long keys";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
 
   if (opts->config_file)
     {
@@ -267,8 +250,11 @@ test_memcache_long_key(const char **msg,
 struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
-    SVN_TEST_PASS(test_inprocess_cache_basic),
-    SVN_TEST_PASS(test_memcache_basic),
-    SVN_TEST_PASS(test_memcache_long_key),
+    SVN_TEST_PASS2(test_inprocess_cache_basic,
+                   "basic inprocess svn_cache test"),
+    SVN_TEST_OPTS_PASS(test_memcache_basic,
+                       "basic memcache svn_cache test"),
+    SVN_TEST_OPTS_PASS(test_memcache_long_key,
+                       "memcache svn_cache with very long keys"),
     SVN_TEST_NULL
   };

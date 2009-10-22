@@ -2,17 +2,22 @@
  * translate.c :  wc-specific eol/keyword substitution
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -20,9 +25,11 @@
 
 #include <stdlib.h>
 #include <string.h>
+
 #include <apr_pools.h>
 #include <apr_file_io.h>
 #include <apr_strings.h>
+
 #include "svn_types.h"
 #include "svn_string.h"
 #include "svn_dirent_uri.h"
@@ -36,6 +43,7 @@
 #include "adm_files.h"
 #include "translate.h"
 #include "props.h"
+#include "lock.h"
 
 #include "svn_private_config.h"
 #include "private/svn_wc_private.h"
@@ -68,8 +76,11 @@ svn_wc_translated_stream(svn_stream_t **stream,
   const char *eol;
   apr_hash_t *keywords;
   svn_boolean_t repair_forced = flags & SVN_WC_TRANSLATE_FORCE_EOL_REPAIR;
+  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
+  const char *versioned_abspath;
 
-  SVN_ERR(svn_wc__get_special(&special, versioned_file, adm_access, pool));
+  SVN_ERR(svn_dirent_get_absolute(&versioned_abspath, versioned_file, pool));
+  SVN_ERR(svn_wc__get_special(&special, db, versioned_abspath, pool));
 
   if (special)
     {
@@ -79,10 +90,10 @@ svn_wc_translated_stream(svn_stream_t **stream,
       return svn_subst_create_specialfile(stream, path, pool, pool);
     }
 
-  SVN_ERR(svn_wc__get_eol_style(&style, &eol, versioned_file,
-                                adm_access, pool));
-  SVN_ERR(svn_wc__get_keywords(&keywords, versioned_file,
-                               adm_access, NULL, pool));
+  SVN_ERR(svn_wc__get_eol_style(&style, &eol, db, versioned_abspath,
+                                pool, pool));
+  SVN_ERR(svn_wc__get_keywords(&keywords, db, versioned_abspath, NULL, pool,
+                               pool));
 
   if (to_nf)
     SVN_ERR(svn_stream_open_readonly(stream, path, pool, pool));
@@ -146,12 +157,15 @@ svn_wc_translated_file2(const char **xlated_path,
   const char *eol;
   apr_hash_t *keywords;
   svn_boolean_t special;
+  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
+  const char *versioned_abspath;
 
-  SVN_ERR(svn_wc__get_eol_style(&style, &eol, versioned_file,
-                                adm_access, pool));
-  SVN_ERR(svn_wc__get_keywords(&keywords, versioned_file,
-                               adm_access, NULL, pool));
-  SVN_ERR(svn_wc__get_special(&special, versioned_file, adm_access, pool));
+  SVN_ERR(svn_dirent_get_absolute(&versioned_abspath, versioned_file, pool));
+  SVN_ERR(svn_wc__get_eol_style(&style, &eol, db, versioned_abspath,
+                                pool, pool));
+  SVN_ERR(svn_wc__get_keywords(&keywords, db, versioned_abspath, NULL, pool,
+                               pool));
+  SVN_ERR(svn_wc__get_special(&special, db, versioned_abspath, pool));
 
   if (! svn_subst_translation_required(style, eol, keywords, special, TRUE)
       && (! (flags & SVN_WC_TRANSLATE_FORCE_COPY)))
@@ -219,15 +233,18 @@ svn_wc_translated_file2(const char **xlated_path,
 svn_error_t *
 svn_wc__get_eol_style(svn_subst_eol_style_t *style,
                       const char **eol,
-                      const char *path,
-                      svn_wc_adm_access_t *adm_access,
-                      apr_pool_t *pool)
+                      svn_wc__db_t *db,
+                      const char *local_abspath,
+                      apr_pool_t *result_pool,
+                      apr_pool_t *scratch_pool)
 {
   const svn_string_t *propval;
 
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
   /* Get the property value. */
-  SVN_ERR(svn_wc_prop_get(&propval, SVN_PROP_EOL_STYLE, path, adm_access,
-                          pool));
+  SVN_ERR(svn_wc__internal_propget(&propval, SVN_PROP_EOL_STYLE, local_abspath,
+                                   db, result_pool, scratch_pool));
 
   /* Convert it. */
   svn_subst_eol_style_from_value(style, eol, propval ? propval->data : NULL);
@@ -254,13 +271,21 @@ svn_wc__eol_value_from_string(const char **value, const char *eol)
 
 svn_error_t *
 svn_wc__get_keywords(apr_hash_t **keywords,
-                     const char *path,
-                     svn_wc_adm_access_t *adm_access,
+                     svn_wc__db_t *db,
+                     const char *local_abspath,
                      const char *force_list,
-                     apr_pool_t *pool)
+                     apr_pool_t *result_pool,
+                     apr_pool_t *scratch_pool)
 {
   const char *list;
-  const svn_wc_entry_t *entry = NULL;
+  const char *repos_relpath;
+  const char *repos_root_url;
+  svn_revnum_t changed_rev;
+  apr_time_t changed_date;
+  const char *changed_author;
+  const char *url;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
   /* Choose a property list to parse:  either the one that came into
      this function, or the one attached to PATH. */
@@ -268,8 +293,9 @@ svn_wc__get_keywords(apr_hash_t **keywords,
     {
       const svn_string_t *propval;
 
-      SVN_ERR(svn_wc_prop_get(&propval, SVN_PROP_KEYWORDS, path, adm_access,
-                              pool));
+      SVN_ERR(svn_wc__internal_propget(&propval, SVN_PROP_KEYWORDS,
+                                       local_abspath, db, scratch_pool,
+                                       scratch_pool));
 
       /* The easy answer. */
       if (propval == NULL)
@@ -283,16 +309,32 @@ svn_wc__get_keywords(apr_hash_t **keywords,
   else
     list = force_list;
 
-  SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access, FALSE, pool));
+  SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL, &repos_relpath,
+                               &repos_root_url, NULL, &changed_rev,
+                               &changed_date, &changed_author, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL,
+                               db, local_abspath, scratch_pool, scratch_pool));
+
+  if (repos_root_url == NULL)
+    {
+      SVN_ERR(svn_wc__db_scan_addition(NULL, NULL, &repos_relpath,
+                                       &repos_root_url,
+                                       NULL, NULL, NULL, NULL, NULL,
+                                       db, local_abspath, scratch_pool,
+                                       scratch_pool));
+    }
+  url = svn_uri_join(repos_root_url, repos_relpath, scratch_pool);
 
   SVN_ERR(svn_subst_build_keywords2(keywords,
                                     list,
-                                    apr_psprintf(pool, "%ld",
-                                                 entry->cmt_rev),
-                                    entry->url,
-                                    entry->cmt_date,
-                                    entry->cmt_author,
-                                    pool));
+                                    apr_psprintf(scratch_pool, "%ld",
+                                                 changed_rev),
+                                    url,
+                                    changed_date,
+                                    changed_author,
+                                    result_pool));
 
   if (apr_hash_count(*keywords) == 0)
     *keywords = NULL;
@@ -303,15 +345,16 @@ svn_wc__get_keywords(apr_hash_t **keywords,
 
 svn_error_t *
 svn_wc__get_special(svn_boolean_t *special,
-                    const char *path,
-                    svn_wc_adm_access_t *adm_access,
-                    apr_pool_t *pool)
+                    svn_wc__db_t *db,
+                    const char *local_abspath,
+                    apr_pool_t *scratch_pool)
 {
   const svn_string_t *propval;
 
   /* Get the property value. */
-  SVN_ERR(svn_wc_prop_get(&propval, SVN_PROP_SPECIAL, path,
-                          adm_access, pool));
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+  SVN_ERR(svn_wc__internal_propget(&propval, SVN_PROP_SPECIAL, local_abspath,
+                                   db, scratch_pool, scratch_pool));
   *special = propval != NULL;
 
   return SVN_NO_ERROR;
@@ -320,17 +363,21 @@ svn_wc__get_special(svn_boolean_t *special,
 
 svn_error_t *
 svn_wc__maybe_set_executable(svn_boolean_t *did_set,
-                             const char *path,
-                             svn_wc_adm_access_t *adm_access,
-                             apr_pool_t *pool)
+                             svn_wc__db_t *db,
+                             const char *local_abspath,
+                             apr_pool_t *scratch_pool)
 {
   const svn_string_t *propval;
-  SVN_ERR(svn_wc_prop_get(&propval, SVN_PROP_EXECUTABLE, path, adm_access,
-                          pool));
 
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  SVN_ERR(svn_wc__internal_propget(&propval, SVN_PROP_EXECUTABLE,
+                                   local_abspath, db, scratch_pool,
+                                   scratch_pool));
   if (propval != NULL)
     {
-      SVN_ERR(svn_io_set_file_executable(path, TRUE, FALSE, pool));
+      SVN_ERR(svn_io_set_file_executable(local_abspath, TRUE, FALSE,
+                                         scratch_pool));
       if (did_set)
         *did_set = TRUE;
     }
@@ -343,26 +390,42 @@ svn_wc__maybe_set_executable(svn_boolean_t *did_set,
 
 svn_error_t *
 svn_wc__maybe_set_read_only(svn_boolean_t *did_set,
-                            const char *path,
-                            svn_wc_adm_access_t *adm_access,
-                            apr_pool_t *pool)
+                            svn_wc__db_t *db,
+                            const char *local_abspath,
+                            apr_pool_t *scratch_pool)
 {
   const svn_string_t *needs_lock;
-  const svn_wc_entry_t* entry;
+  svn_wc__db_lock_t *lock;
+  svn_error_t *err;
 
   if (did_set)
     *did_set = FALSE;
 
-  SVN_ERR(svn_wc_entry(&entry, path, adm_access, FALSE, pool));
-  if (entry && entry->lock_token)
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  err = svn_wc__db_read_info(NULL, NULL, NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL, &lock, NULL,
+                             db, local_abspath, scratch_pool, scratch_pool);
+
+  if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+    {
+      /* If the path wasn't versioned, we still want to set it to read-only. */
+      svn_error_clear(err);
+    }
+  else if (err)
+    return svn_error_return(err);
+  else if (lock)
     return SVN_NO_ERROR;
 
-  SVN_ERR(svn_wc_prop_get(&needs_lock, SVN_PROP_NEEDS_LOCK, path,
-                          adm_access, pool));
-
+  SVN_ERR(svn_wc__internal_propget(&needs_lock, SVN_PROP_NEEDS_LOCK,
+                                   local_abspath, db, scratch_pool,
+                                   scratch_pool));
   if (needs_lock != NULL)
     {
-      SVN_ERR(svn_io_set_file_read_only(path, FALSE, pool));
+      SVN_ERR(svn_io_set_file_read_only(local_abspath, FALSE, scratch_pool));
       if (did_set)
         *did_set = TRUE;
     }

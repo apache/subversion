@@ -2,17 +2,22 @@
  * util.c: some handy utility functions
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -75,6 +80,11 @@ dav_svn__convert_err(svn_error_t *serr,
                      apr_pool_t *pool)
 {
     dav_error *derr;
+
+    /* Remove the trace-only error chain links.  We need predictable
+       protocol behavior regardless of whether or not we're in a
+       debugging build. */
+    serr = svn_error_purge_tracing(serr);
 
     /* ### someday mod_dav_svn will send back 'rich' error tags, much
        finer grained than plain old svn_error_t's.  But for now, all
@@ -382,11 +392,50 @@ dav_svn__find_ns(apr_array_header_t *namespaces, const char *uri)
 }
 
 
+
+/*** Brigade I/O wrappers ***/
+
+
 svn_error_t *
-dav_svn__send_xml(apr_bucket_brigade *bb,
-                  ap_filter_t *output,
-                  const char *fmt,
-                  ...)
+dav_svn__brigade_write(apr_bucket_brigade *bb,
+                       ap_filter_t *output,
+                       const char *data,
+                       apr_size_t len)
+{
+  apr_status_t apr_err;
+  apr_err = apr_brigade_write(bb, ap_filter_flush, output, data, len);
+  if (apr_err)
+    return svn_error_create(apr_err, 0, NULL);
+  /* Check for an aborted connection, since the brigade functions don't
+     appear to be return useful errors when the connection is dropped. */
+  if (output->c->aborted)
+    return svn_error_create(SVN_ERR_APMOD_CONNECTION_ABORTED, 0, NULL);
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+dav_svn__brigade_puts(apr_bucket_brigade *bb,
+                      ap_filter_t *output,
+                      const char *str)
+{
+  apr_status_t apr_err;
+  apr_err = apr_brigade_puts(bb, ap_filter_flush, output, str);
+  if (apr_err)
+    return svn_error_create(apr_err, 0, NULL);
+  /* Check for an aborted connection, since the brigade functions don't
+     appear to be return useful errors when the connection is dropped. */
+  if (output->c->aborted)
+    return svn_error_create(SVN_ERR_APMOD_CONNECTION_ABORTED, 0, NULL);
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+dav_svn__brigade_printf(apr_bucket_brigade *bb,
+                        ap_filter_t *output,
+                        const char *fmt,
+                        ...)
 {
   apr_status_t apr_err;
   va_list ap;
@@ -396,14 +445,15 @@ dav_svn__send_xml(apr_bucket_brigade *bb,
   va_end(ap);
   if (apr_err)
     return svn_error_create(apr_err, 0, NULL);
-  /* ### check for an aborted connection, since the brigade functions
-     don't appear to be return useful errors when the connection is
-     dropped. */
+  /* Check for an aborted connection, since the brigade functions don't
+     appear to be return useful errors when the connection is dropped. */
   if (output->c->aborted)
     return svn_error_create(SVN_ERR_APMOD_CONNECTION_ABORTED, 0, NULL);
   return SVN_NO_ERROR;
 }
 
+
+
 
 dav_error *
 dav_svn__test_canonical(const char *path, apr_pool_t *pool)

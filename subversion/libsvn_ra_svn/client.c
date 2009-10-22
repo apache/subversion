@@ -2,17 +2,22 @@
  * client.c :  Functions for repository access via the Subversion protocol
  *
  * ====================================================================
- * Copyright (c) 2000-2009 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -154,6 +159,21 @@ static svn_error_t *make_connection(const char *hostname, unsigned short port,
   if (status)
     return svn_error_wrap_apr(status, _("Can't connect to host '%s'"),
                               hostname);
+
+  /* Enable TCP keep-alives on the socket so we time out when
+   * the connection breaks due to network-layer problems.
+   * If the peer has dropped the connection due to a network partition
+   * or a crash, or if the peer no longer considers the connection
+   * valid because we are behind a NAT and our public IP has changed,
+   * it will respond to the keep-alive probe with a RST instead of an
+   * acknowledgment segment, which will cause svn to abort the session
+   * even while it is currently blocked waiting for data from the peer.
+   * See issue #3347. */
+  status = apr_socket_opt_set(*sock, APR_SO_KEEPALIVE, 1);
+  if (status)
+    {
+      /* It's not a fatal error if we cannot enable keep-alives. */
+    }
 
   return SVN_NO_ERROR;
 }
@@ -358,7 +378,16 @@ static svn_error_t *find_tunnel_agent(const char *tunnel,
 
   /* We have one predefined tunnel scheme, if it isn't overridden by config. */
   if (!val && strcmp(tunnel, "ssh") == 0)
-    val = "$SVN_SSH ssh";
+    {
+      /* Killing the tunnel agent with SIGTERM leads to unsightly
+       * stderr output from ssh, unless we pass -q.
+       * The "-q" option to ssh is widely supported: all versions of
+       * OpenSSH have it, the old ssh-1.x and the 2.x, 3.x ssh.com
+       * versions have it too. If the user is using some other ssh
+       * implementation that doesn't accept it, they can override it
+       * in the [tunnels] section of the config. */
+      val = "$SVN_SSH ssh -q";
+    }
 
   if (!val || !*val)
     return svn_error_createf(SVN_ERR_BAD_URL, NULL,
@@ -446,6 +475,21 @@ static svn_error_t *make_tunnel(const char **args, svn_ra_svn_conn_t **conn,
     status = apr_proc_create(proc, *args, args, NULL, attr, pool);
   if (status != APR_SUCCESS)
     return svn_error_wrap_apr(status, _("Can't create tunnel"));
+
+  /* Arrange for the tunnel agent to get a SIGTERM on pool
+   * cleanup.  This is a little extreme, but the alternatives
+   * weren't working out.
+   *
+   * Closing the pipes and waiting for the process to die
+   * was prone to mysterious hangs which are difficult to
+   * diagnose (e.g. svnserve dumps core due to unrelated bug;
+   * sshd goes into zombie state; ssh connection is never
+   * closed; ssh never terminates).
+   * See also the long dicussion in issue #2580 if you really
+   * want to know various reasons for these problems and
+   * the different opinions on this issue.
+   */
+  apr_pool_note_subprocess(pool, proc, APR_KILL_ONLY_ONCE);
 
   /* APR pipe objects inherit by default.  But we don't want the
    * tunnel agent's pipes held open by future child processes
@@ -1198,6 +1242,23 @@ static svn_error_t *ra_svn_diff(svn_ra_session_t *session,
   return SVN_NO_ERROR;
 }
 
+/* Converts a apr_uint64_t with values TRUE, FALSE or
+   SVN_RA_SVN_UNSPECIFIED_NUMBER as provided by svn_ra_svn_parse_tuple
+   to a svn_tristate_t */
+static svn_tristate_t
+optbool_to_tristate(apr_uint64_t v)
+{
+  switch (v)
+  {
+    case TRUE:
+      return svn_tristate_true;
+    case FALSE:
+      return svn_tristate_false;
+    default: /* Contains SVN_RA_SVN_UNSPECIFIED_NUMBER */
+      return svn_tristate_unknown;
+  }
+}
+
 static svn_error_t *ra_svn_log(svn_ra_session_t *session,
                                const apr_array_header_t *paths,
                                svn_revnum_t start, svn_revnum_t end,
@@ -1310,6 +1371,7 @@ static svn_error_t *ra_svn_log(svn_ra_session_t *session,
             {
               svn_log_changed_path2_t *change;
               const char *copy_path, *action, *cpath, *kind_str;
+              apr_uint64_t text_mods, prop_mods;
               svn_revnum_t copy_rev;
               svn_ra_svn_item_t *elt = &APR_ARRAY_IDX(cplist, i,
                                                       svn_ra_svn_item_t);
@@ -1318,9 +1380,10 @@ static svn_error_t *ra_svn_log(svn_ra_session_t *session,
                 return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                         _("Changed-path entry not a list"));
               SVN_ERR(svn_ra_svn_parse_tuple(elt->u.list, iterpool,
-                                             "cw(?cr)?(?c)",
+                                             "cw(?cr)?(?c?BB)",
                                              &cpath, &action, &copy_path,
-                                             &copy_rev, &kind_str));
+                                             &copy_rev, &kind_str,
+                                             &text_mods, &prop_mods));
               cpath = svn_path_canonicalize(cpath, iterpool);
               if (copy_path)
                 copy_path = svn_path_canonicalize(copy_path, iterpool);
@@ -1329,6 +1392,8 @@ static svn_error_t *ra_svn_log(svn_ra_session_t *session,
               change->copyfrom_path = copy_path;
               change->copyfrom_rev = copy_rev;
               change->node_kind = svn_node_kind_from_word(kind_str);
+              change->text_modified = optbool_to_tristate(text_mods);
+              change->props_modified = optbool_to_tristate(prop_mods);
               apr_hash_set(cphash, cpath, APR_HASH_KEY_STRING, change);
             }
         }

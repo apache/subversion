@@ -2,17 +2,22 @@
  * patch.c:  apply a patch to a working tree.
  *
  * ====================================================================
- * Copyright (c) 2007, 2009 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -390,20 +395,17 @@ static const struct {
 
 
 svn_error_t *
-svn_wc_apply_svnpatch(apr_file_t *decoded_patch_file,
+svn_wc_apply_svnpatch(svn_stream_t *patch_stream,
                       const svn_delta_editor_t *diff_editor,
                       void *diff_edit_baton,
                       apr_pool_t *pool)
 {
-  svn_stream_t *patch_stream;
   ra_svn_driver_state_t state;
   apr_pool_t *subpool = svn_pool_create(pool);
   const char *cmd;
   int i;
   svn_error_t *err;
   apr_array_header_t *params;
-
-  patch_stream = svn_stream_from_aprfile2(decoded_patch_file, FALSE, pool);
 
   state.editor = diff_editor;
   state.edit_baton = diff_edit_baton;

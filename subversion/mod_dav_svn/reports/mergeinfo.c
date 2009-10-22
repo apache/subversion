@@ -2,17 +2,22 @@
  * mergeinfo.c :  routines for getting mergeinfo
  *
  * ====================================================================
- * Copyright (c) 2006-2008 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -134,18 +139,18 @@ dav_svn__get_mergeinfo_report(const dav_resource *resource,
       goto cleanup;
     }
 
-  /* Ideally, dav_svn__send_xml() would set a flag in bb (or rather,
+  /* Ideally, dav_svn__brigade_printf() would set a flag in bb (or rather,
      in r->sent_bodyct, see dav_method_report()), and ap_fflush()
      would not set that flag unless it actually sent something.  But
      we are condemned to live in another universe, so we must keep
      track ourselves of whether we've sent anything or not.  See the
      long comment after the 'cleanup' label for more details. */
   sent_anything = TRUE;
-  serr = dav_svn__send_xml(bb, output,
-                           DAV_XML_HEADER DEBUG_CR
-                           "<S:" SVN_DAV__MERGEINFO_REPORT " "
-                           "xmlns:S=\"" SVN_XML_NAMESPACE "\" "
-                           "xmlns:D=\"DAV:\">" DEBUG_CR);
+  serr = dav_svn__brigade_puts(bb, output,
+                               DAV_XML_HEADER DEBUG_CR
+                               "<S:" SVN_DAV__MERGEINFO_REPORT " "
+                               "xmlns:S=\"" SVN_XML_NAMESPACE "\" "
+                               "xmlns:D=\"DAV:\">" DEBUG_CR);
   if (serr)
     {
       derr = dav_svn__convert_err(serr, HTTP_BAD_REQUEST, serr->message,
@@ -161,13 +166,6 @@ dav_svn__get_mergeinfo_report(const dav_resource *resource,
       const char *path;
       svn_mergeinfo_t mergeinfo;
       svn_string_t *mergeinfo_string;
-      const char itemformat[] = "<S:" SVN_DAV__MERGEINFO_ITEM ">"
-        DEBUG_CR
-        "<S:" SVN_DAV__MERGEINFO_PATH ">%s</S:" SVN_DAV__MERGEINFO_PATH ">"
-        DEBUG_CR
-        "<S:" SVN_DAV__MERGEINFO_INFO ">%s</S:" SVN_DAV__MERGEINFO_INFO ">"
-        DEBUG_CR
-        "</S:" SVN_DAV__MERGEINFO_ITEM ">";
 
       apr_hash_this(hi, &key, NULL, &value);
       path = key;
@@ -181,11 +179,17 @@ dav_svn__get_mergeinfo_report(const dav_resource *resource,
                                       resource->pool);
           goto cleanup;
         }
-      serr = dav_svn__send_xml(bb, output, itemformat,
-                               apr_xml_quote_string(resource->pool,
-                                                    path, 0),
-                               apr_xml_quote_string(resource->pool,
-                                                    mergeinfo_string->data, 0));
+      serr = dav_svn__brigade_printf
+        (bb, output,
+         "<S:" SVN_DAV__MERGEINFO_ITEM ">"
+         DEBUG_CR
+         "<S:" SVN_DAV__MERGEINFO_PATH ">%s</S:" SVN_DAV__MERGEINFO_PATH ">"
+         DEBUG_CR
+         "<S:" SVN_DAV__MERGEINFO_INFO ">%s</S:" SVN_DAV__MERGEINFO_INFO ">"
+         DEBUG_CR
+         "</S:" SVN_DAV__MERGEINFO_ITEM ">",
+         apr_xml_quote_string(resource->pool, path, 0),
+         apr_xml_quote_string(resource->pool, mergeinfo_string->data, 0));
       if (serr)
         {
           derr = dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
@@ -195,9 +199,9 @@ dav_svn__get_mergeinfo_report(const dav_resource *resource,
         }
     }
 
-  if ((serr = dav_svn__send_xml(bb, output,
-                                "</S:" SVN_DAV__MERGEINFO_REPORT ">"
-                                DEBUG_CR)))
+  if ((serr = dav_svn__brigade_puts(bb, output,
+                                    "</S:" SVN_DAV__MERGEINFO_REPORT ">"
+                                    DEBUG_CR)))
     {
       derr = dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                   "Error ending REPORT response.",

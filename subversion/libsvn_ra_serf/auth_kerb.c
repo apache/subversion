@@ -2,17 +2,22 @@
  * auth_kerb.c : Kerberos authn implementation
  *
  * ====================================================================
- * Copyright (c) 2009 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -42,7 +47,6 @@
 /** TODO:
  ** - send session key directly on new connections where we already know
  **   the server requires Kerberos authn.
- ** - add better error reporting
  ** - fix authn status, as the COMPLETE/CONTINUE status values
  **   are never used.
  ** - test
@@ -121,6 +125,42 @@ typedef struct
 
 } serf_gss_api_context_t;
 
+static svn_error_t *
+create_gss_api_error(OM_uint32 maj_err, OM_uint32 min_err, apr_pool_t *pool)
+{
+  OM_uint32 message_ctx = 0;
+  OM_uint32 min_stat;
+  char *maj_err_str = NULL, *min_err_str = NULL;
+
+  maj_err_str = apr_psprintf(pool, "major status: %8.8x", maj_err);
+  do {
+    gss_buffer_desc err_str;
+    if (GSS_ERROR(gss_display_status(&min_stat, maj_err, GSS_C_GSS_CODE,
+                                     GSS_C_NO_OID, &message_ctx, &err_str)))
+      break;
+    maj_err_str = apr_pstrcat(pool, maj_err_str, ": ",
+                              (char *)err_str.value, NULL);
+    gss_release_buffer(&min_stat, &err_str);
+  } while (message_ctx);
+
+  message_ctx = 0;
+  min_err_str = apr_psprintf(pool, "minor status: %8.8x", min_err);
+  do{
+    gss_buffer_desc err_str;
+    if (GSS_ERROR(gss_display_status(&min_stat, min_err, GSS_C_MECH_CODE,
+                                     GSS_C_NO_OID, &message_ctx, &err_str)))
+      break;
+    min_err_str = apr_pstrcat(pool, min_err_str, ": ",
+                              (char *)err_str.value, NULL);
+    gss_release_buffer(&min_stat, &err_str);
+  } while (message_ctx);
+
+  return svn_error_createf
+    (SVN_ERR_RA_SERF_GSSAPI_INITIALISATION_FAILED, NULL,
+     _("Initialization of the GSSAPI context failed.\n %s\n %s\n"),
+     maj_err_str, min_err_str);
+}
+
 /* On the initial 401 response of the server, request a session key from
    the Kerberos KDC to pass to the server, proving that we are who we
    claim to be. The session key can only be used with the HTTP service
@@ -146,9 +186,7 @@ gss_api_get_credentials(char *token, apr_size_t token_len,
                               &host_gss_name);
   if(GSS_ERROR(maj_stat))
     {
-      return svn_error_createf
-        (SVN_ERR_RA_SERF_GSSAPI_INITIALISATION_FAILED, NULL,
-         _("Initialization of the GSSAPI context failed"));
+      return create_gss_api_error(maj_stat, min_stat, gss_api_ctx->pool);
     }
 
   /* If the server sent us a token, pass it to gss_init_sec_token for
@@ -187,9 +225,7 @@ gss_api_get_credentials(char *token, apr_size_t token_len,
             gss_api_ctx->state = gss_api_auth_in_progress;
             break;
           default:
-            err = svn_error_createf
-              (SVN_ERR_RA_SERF_GSSAPI_INITIALISATION_FAILED, NULL,
-               _("Initialization of the GSSAPI context failed"));
+            err = create_gss_api_error(maj_stat, min_stat, gss_api_ctx->pool);
             goto cleanup;
         }
     }
@@ -289,8 +325,8 @@ cleanup_gss_ctx(void *data)
    Kerberos. */
 svn_error_t *
 svn_ra_serf__init_kerb_connection(svn_ra_serf__session_t *session,
-				  svn_ra_serf__connection_t *conn,
-				  apr_pool_t *pool)
+                                  svn_ra_serf__connection_t *conn,
+                                  apr_pool_t *pool)
 {
   serf_gss_api_context_t *gss_api_ctx;
 
@@ -313,11 +349,11 @@ svn_ra_serf__init_kerb_connection(svn_ra_serf__session_t *session,
 /* A 401 response was received, handle the authentication. */
 svn_error_t *
 svn_ra_serf__handle_kerb_auth(svn_ra_serf__handler_t *ctx,
-			      serf_request_t *request,
-			      serf_bucket_t *response,
-			      const char *auth_hdr,
-			      const char *auth_attr,
-			      apr_pool_t *pool)
+                              serf_request_t *request,
+                              serf_bucket_t *response,
+                              const char *auth_hdr,
+                              const char *auth_attr,
+                              apr_pool_t *pool)
 {
   return do_auth(ctx->conn->auth_context,
                  ctx->conn,
@@ -332,9 +368,9 @@ svn_ra_serf__handle_kerb_auth(svn_ra_serf__handler_t *ctx,
 /* Setup the authn headers on this request message. */
 svn_error_t *
 svn_ra_serf__setup_request_kerb_auth(svn_ra_serf__connection_t *conn,
-				     const char *method,
-				     const char *uri,
-				     serf_bucket_t *hdrs_bkt)
+                                     const char *method,
+                                     const char *uri,
+                                     serf_bucket_t *hdrs_bkt)
 {
   /* Take the default authentication header for this connection, if any. */
   if (conn->auth_header && conn->auth_value)
@@ -368,13 +404,13 @@ svn_ra_serf__validate_response_kerb_auth(svn_ra_serf__handler_t *ctx,
   if (gss_api_ctx->state != gss_api_auth_completed)
     {
       return do_auth(ctx->conn->auth_context,
-		     ctx->conn,
-		     ctx->session->auth_protocol->auth_name,
-		     &ctx->conn->auth_value,
-		     auth_attr,
-		     &ctx->conn->auth_header,
-		     "Authorization",
-		     pool);
+                     ctx->conn,
+                     ctx->session->auth_protocol->auth_name,
+                     &ctx->conn->auth_value,
+                     auth_attr,
+                     &ctx->conn->auth_header,
+                     "Authorization",
+                     pool);
     }
 
   return SVN_NO_ERROR;

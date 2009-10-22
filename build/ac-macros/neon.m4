@@ -125,8 +125,8 @@ int main()
       SVN_DOWNLOAD_NEON()
     fi
 
-  else
-    # user probably passed --without-neon, or --with-neon=/something/dumb
+  elif test "$with_neon" != "no"; then
+    # user passed --with-neon=/incorrect/path
     SVN_DOWNLOAD_NEON()
   fi
 ])

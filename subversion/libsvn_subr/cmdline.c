@@ -2,17 +2,22 @@
  * cmdline.c :  Helpers for command-line programs.
  *
  * ====================================================================
- * Copyright (c) 2003-2009 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -36,6 +41,7 @@
 
 #include "svn_cmdline.h"
 #include "svn_dso.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_pools.h"
 #include "svn_error.h"
@@ -247,7 +253,7 @@ svn_cmdline_path_local_style_from_utf8(const char **dest,
                                        apr_pool_t *pool)
 {
   return svn_cmdline_cstring_from_utf8(dest,
-                                       svn_path_local_style(src, pool),
+                                       svn_dirent_local_style(src, pool),
                                        pool);
 }
 
@@ -670,7 +676,11 @@ svn_cmdline__apply_config_options(apr_hash_t *config,
 
      cfg = apr_hash_get(config, arg->file, APR_HASH_KEY_STRING);
 
-     if (!cfg)
+     if (cfg)
+       {
+         svn_config_set(cfg, arg->section, arg->option, arg->value);
+       }
+     else
        {
          svn_error_t *err = svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
              _("Unrecognized file in argument of %s"), argument_name);
@@ -678,8 +688,6 @@ svn_cmdline__apply_config_options(apr_hash_t *config,
          svn_handle_warning2(stderr, err, prefix);
          svn_error_clear(err);
        }
-
-     svn_config_set(cfg, arg->section, arg->option, arg->value);
     }
 
   return SVN_NO_ERROR;
