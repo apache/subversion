@@ -239,12 +239,12 @@ tweak_entries(svn_wc__db_t *db,
 
 
 static svn_error_t *
-remove_revert_files(svn_stringbuf_t **logtags,
-                    svn_wc__db_t *db,
+remove_revert_files(svn_wc__db_t *db,
                     const char *adm_abspath,
                     const char *local_abspath,
                     apr_pool_t *pool)
 {
+  svn_stringbuf_t *log_accum = svn_stringbuf_create("", pool);
   const char *revert_file;
   svn_node_kind_t kind;
 
@@ -252,13 +252,15 @@ remove_revert_files(svn_stringbuf_t **logtags,
 
   SVN_ERR(svn_io_check_path(revert_file, &kind, pool));
   if (kind == svn_node_file)
-    SVN_ERR(svn_wc__loggy_remove(logtags, adm_abspath,
+    SVN_ERR(svn_wc__loggy_remove(&log_accum, adm_abspath,
                                  revert_file, pool, pool));
-  SVN_WC__FLUSH_LOG_ACCUM(db, adm_abspath, *logtags, pool);
+  SVN_WC__FLUSH_LOG_ACCUM(db, adm_abspath, log_accum, pool);
 
-  SVN_ERR(svn_wc__loggy_props_delete(logtags, db, local_abspath, adm_abspath,
+  SVN_ERR(svn_wc__loggy_props_delete(&log_accum, db, local_abspath,
+                                     adm_abspath,
                                      svn_wc__props_revert, pool));
-  SVN_WC__FLUSH_LOG_ACCUM(db, adm_abspath, *logtags, pool);
+
+  SVN_ERR(svn_wc__wq_add_loggy(db, adm_abspath, log_accum, pool));
 
   return SVN_NO_ERROR;
 }
@@ -410,14 +412,11 @@ process_committed_leaf(svn_wc__db_t *db,
   /* ### this picks up file and symlink  */
   if (kind != svn_wc__db_kind_dir)
     {
-      svn_stringbuf_t *log_accum = svn_stringbuf_create("", scratch_pool);
-
       /* If the props or text revert file exists it needs to be deleted when
        * the file is committed. */
       /* ### don't directories have revert props? */
-      SVN_ERR(remove_revert_files(&log_accum, db, adm_abspath, local_abspath,
+      SVN_ERR(remove_revert_files(db, adm_abspath, local_abspath,
                                   scratch_pool));
-      SVN_ERR(svn_wc__wq_add_loggy(db, adm_abspath, log_accum, scratch_pool));
 
       if (checksum == NULL)
         {
