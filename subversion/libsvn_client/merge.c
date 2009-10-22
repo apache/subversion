@@ -816,7 +816,7 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
     return SVN_NO_ERROR;
 
   SVN_ERR(svn_wc__node_get_base_rev(&base_revision, merge_b->ctx->wc_ctx,
-                                    local_abspath, FALSE, pool));
+                                    local_abspath, pool));
 
   adjusted_props = apr_array_make(pool, (*props)->nelts, sizeof(svn_prop_t));
   iterpool = svn_pool_create(pool);
@@ -3811,7 +3811,7 @@ calculate_remaining_ranges(svn_client__merge_path_t *parent,
   */
   SVN_ERR(svn_dirent_get_absolute(&child_abspath, child->path, pool));
   SVN_ERR(svn_wc__node_get_base_rev(&child_base_revision, ctx->wc_ctx,
-                                    child_abspath, FALSE, pool));
+                                    child_abspath, pool));
   /* If CHILD has no base revision then it hasn't been committed yet, so it
      can't have any "future" history. */
   if (SVN_IS_VALID_REVNUM(child_base_revision)
@@ -9185,7 +9185,7 @@ svn_client_merge_reintegrate(const char *source,
 
   SVN_ERR(ensure_wc_reflects_repository_subtree(target_abspath, ctx, pool));
   SVN_ERR(svn_wc__node_get_base_rev(&target_base_rev, ctx->wc_ctx,
-                                    target_abspath, FALSE, pool));
+                                    target_abspath, pool));
 
   /* As the WC tree is "pure", use its last-updated-to revision as
      the default revision for the left side of our merge, since that's
