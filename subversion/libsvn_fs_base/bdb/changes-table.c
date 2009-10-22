@@ -322,7 +322,7 @@ svn_fs_bdb__changes_fetch(apr_hash_t **changes_p,
                 continue;
 
               /* If we come across a child of our path, remove it. */
-              if (svn_dirent_is_child(change->path, hashkey, subpool))
+              if (svn_uri_is_child(change->path, hashkey, subpool))
                 apr_hash_set(changes, hashkey, klen, NULL);
             }
         }
