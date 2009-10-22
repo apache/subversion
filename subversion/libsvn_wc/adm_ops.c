@@ -367,7 +367,7 @@ process_committed_leaf(svn_wc__db_t *db,
                        const char *adm_abspath,
                        const char *path,
                        svn_revnum_t new_revnum,
-                       const char *rev_date,
+                       apr_time_t new_date,
                        const char *rev_author,
                        apr_hash_t *new_dav_cache,
                        svn_boolean_t no_unlock,
@@ -380,7 +380,6 @@ process_committed_leaf(svn_wc__db_t *db,
   svn_wc__db_status_t status;
   svn_wc__db_kind_t kind;
   const svn_checksum_t *copied_checksum;
-  apr_time_t new_date;
 
   SVN_ERR(svn_wc__write_check(db, adm_abspath, scratch_pool));
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, scratch_pool));
@@ -403,11 +402,6 @@ process_committed_leaf(svn_wc__db_t *db,
                                 new_revnum, no_unlock,
                                 scratch_pool));
     }
-
-  /* Set PATH's working revision to NEW_REVNUM; if REV_DATE and
-     REV_AUTHOR are both non-NULL, then set the 'committed-rev',
-     'committed-date', and 'last-author' entry values; and set the
-     checksum if a file. */
 
   /* ### this picks up file and symlink  */
   if (kind != svn_wc__db_kind_dir)
@@ -472,7 +466,6 @@ process_committed_leaf(svn_wc__db_t *db,
     SVN_ERR(svn_wc__loggy_delete_lock(db, adm_abspath,
                                       path, scratch_pool));
 
-  SVN_ERR(svn_time_from_cstring(&new_date, rev_date, scratch_pool));
   SVN_ERR(svn_wc__wq_add_postcommit(db, local_abspath, new_revnum,
                                     new_date, rev_author, checksum,
                                     keep_changelist, scratch_pool));
@@ -491,7 +484,7 @@ process_committed_internal(svn_wc__db_t *db,
                            const char *path,
                            svn_boolean_t recurse,
                            svn_revnum_t new_revnum,
-                           const char *rev_date,
+                           apr_time_t new_date,
                            const char *rev_author,
                            apr_hash_t *new_dav_cache,
                            svn_boolean_t no_unlock,
@@ -510,7 +503,7 @@ process_committed_internal(svn_wc__db_t *db,
     return SVN_NO_ERROR;  /* deleted/absent. (?) ... nothing to do. */
 
   SVN_ERR(process_committed_leaf(db, adm_abspath, path,
-                                 new_revnum, rev_date, rev_author,
+                                 new_revnum, new_date, rev_author,
                                  new_dav_cache,
                                  no_unlock, keep_changelist,
                                  checksum, queue, scratch_pool));
@@ -571,7 +564,7 @@ process_committed_internal(svn_wc__db_t *db,
             {
               SVN_ERR(process_committed_internal(db, this_abspath, this_path,
                                                  TRUE /* recurse */,
-                                                 new_revnum, rev_date,
+                                                 new_revnum, new_date,
                                                  rev_author,
                                                  NULL, TRUE /* no_unlock */,
                                                  keep_changelist, NULL,
@@ -598,7 +591,7 @@ process_committed_internal(svn_wc__db_t *db,
                 }
               SVN_ERR(process_committed_leaf(db, adm_abspath, this_path,
                                              new_revnum,
-                                             rev_date, rev_author, NULL,
+                                             new_date, rev_author, NULL,
                                              TRUE /* no_unlock */,
                                              keep_changelist,
                                              NULL, queue, iterpool));
@@ -749,6 +742,12 @@ svn_wc_process_committed_queue(svn_wc_committed_queue_t *queue,
   svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
   int i;
   apr_pool_t *iterpool = svn_pool_create(pool);
+  apr_time_t new_date;
+
+  if (rev_date)
+    SVN_ERR(svn_time_from_cstring(&new_date, rev_date, pool));
+  else
+    new_date = 0;
 
   for (i = 0; i < queue->queue->nelts; i++)
     {
@@ -764,7 +763,7 @@ svn_wc_process_committed_queue(svn_wc_committed_queue_t *queue,
 
       SVN_ERR(process_committed_internal(db, cqi->adm_abspath, cqi->path,
                                          cqi->recurse,
-                                         new_revnum, rev_date, rev_author,
+                                         new_revnum, new_date, rev_author,
                                          cqi->new_dav_cache,
                                          cqi->no_unlock,
                                          cqi->keep_changelist,
@@ -796,6 +795,12 @@ svn_wc_process_committed4(const char *path,
   svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
   const char *adm_abspath = svn_wc__adm_access_abspath(adm_access);
   const svn_checksum_t *checksum;
+  apr_time_t new_date;
+
+  if (rev_date)
+    SVN_ERR(svn_time_from_cstring(&new_date, rev_date, pool));
+  else
+    new_date = 0;
 
   if (digest)
     checksum = svn_checksum__from_digest(digest, svn_checksum_md5, pool);
@@ -804,7 +809,7 @@ svn_wc_process_committed4(const char *path,
 
   SVN_ERR(process_committed_internal(db, adm_abspath,
                                      path, recurse,
-                                     new_revnum, rev_date, rev_author,
+                                     new_revnum, new_date, rev_author,
                                      convert_to_hash(wcprop_changes, pool),
                                      !remove_lock,!remove_changelist,
                                      checksum, NULL,
