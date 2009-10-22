@@ -7376,7 +7376,7 @@ remove_noop_subtree_ranges(const char *url1,
                                               scratch_pool));
               SVN_ERR(svn_wc__node_get_repos_info(&repos_root_url, NULL,
                                                   merge_b->ctx->wc_ctx,
-                                                  target_abspath,
+                                                  target_abspath, FALSE,
                                                   scratch_pool,
                                                   scratch_pool));
 

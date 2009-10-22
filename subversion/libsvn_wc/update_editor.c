@@ -4985,7 +4985,7 @@ make_editor(svn_revnum_t *target_revision,
 
   /* Get the anchor entry, so we can fetch the repository root. */
   SVN_ERR(svn_wc__node_get_repos_info(&repos_root, &repos_uuid, wc_ctx,
-                                      anchor_abspath,
+                                      anchor_abspath, FALSE,
                                       result_pool, scratch_pool));
 
   /* Disallow a switch operation to change the repository root of the target,
