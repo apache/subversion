@@ -246,8 +246,8 @@ process_one_revision(svn_fs_t *fs,
                      apr_hash_t *prop_reps,
                      apr_hash_t *data_reps,
                      apr_hash_t *both_reps,
-                     apr_pool_t *scratch_pool,
-                     apr_pool_t *result_pool)
+                     apr_pool_t *result_pool,
+                     apr_pool_t *scratch_pool)
 {
   svn_fs_root_t *rev_root;
   apr_hash_t *paths_changed;
@@ -397,7 +397,7 @@ static svn_error_t *process(const char *repos_path,
       svn_pool_clear(iterpool);
       SVN_ERR(cancel_func(NULL));
       SVN_ERR(process_one_revision(fs, rev, prop_reps, data_reps, both_reps,
-                                   iterpool, scratch_pool));
+                                   scratch_pool, iterpool));
     }
   svn_pool_destroy(iterpool);
 
