@@ -3763,6 +3763,7 @@ commit_node(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
   const char *parent_relpath;
   svn_wc__db_status_t new_presence;
   svn_wc__db_kind_t new_kind;
+  const char *new_depth_str = NULL;
   svn_sqlite__stmt_t *stmt;
 
   /* ### is it better to select only the data needed?  */
@@ -3800,6 +3801,15 @@ commit_node(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
     new_kind = svn_sqlite__column_token(stmt_work, 1, kind_map);
   else
     new_kind = svn_sqlite__column_token(stmt_base, 5, kind_map);
+
+  /* What will the new depth be?  */
+  if (new_kind == svn_wc__db_kind_dir)
+    {
+      if (have_work)
+        new_depth_str = svn_sqlite__column_text(stmt_work, 7, scratch_pool);
+      else
+        new_depth_str = svn_sqlite__column_text(stmt_base, 12, scratch_pool);
+    }
 
   /* Get the repository information. REPOS_RELPATH will indicate whether
      we bind REPOS_ID/REPOS_RELPATH as null values in the database (in order
@@ -3876,7 +3886,7 @@ commit_node(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
                                     scratch_pool));
   if (cb->new_date > 0)
     SVN_ERR(svn_sqlite__bind_int64(stmt, 12, cb->new_date));
-  /* ### 13. depth.  */
+  SVN_ERR(svn_sqlite__bind_text(stmt, 13, new_depth_str));
   /* ### 14. target.  */
   SVN_ERR(svn_sqlite__bind_properties(stmt, 15, cb->new_dav_cache,
                                       scratch_pool));
