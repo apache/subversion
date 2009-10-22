@@ -16387,6 +16387,174 @@ def merge_replace_causes_tree_conflict2(sbox):
 
   actions.run_and_verify_status(wc_dir, expected_status)
 
+def record_only_merge(sbox):
+  "record only merge applies mergeinfo diffs"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  wc_disk, wc_status = set_up_branch(sbox)
+
+  # Some paths we'll care about
+  nu_path         = os.path.join(wc_dir, "A", "C", "nu")
+  A_COPY_path     = os.path.join(wc_dir, "A_COPY")
+  A2_path         = os.path.join(wc_dir, "A2")
+  Z_path          = os.path.join(wc_dir, "A", "B", "Z")
+  Z_COPY_path     = os.path.join(wc_dir, "A_COPY", "B", "Z")
+  rho_COPY_path   = os.path.join(wc_dir, "A_COPY", "D", "G", "rho")
+  omega_COPY_path = os.path.join(wc_dir, "A_COPY", "D", "H", "omega")
+  H_COPY_path     = os.path.join(wc_dir, "A_COPY", "D", "H")
+  nu_COPY_path    = os.path.join(wc_dir, "A_COPY", "C", "nu")
+
+  # r7 - Copy the branch A_COPY@2 to A2 and update the WC.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'copy', A_COPY_path, A2_path)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'commit', '-m', 'Branch the branch',
+                                     wc_dir)
+  # r8 - Add A/C/nu and A/B/Z.
+  # Add a new file with mergeinfo in the foreign repos.
+  svntest.main.file_write(nu_path, "This is the file 'nu'.\n")
+  svntest.actions.run_and_verify_svn(None, None, [], 'add', nu_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'mkdir', Z_path)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'commit', '-m', 'Add subtrees',
+                                     wc_dir)
+
+  # r9 - Edit A/C/nu and add a random property on A/B/Z.
+  svntest.main.file_write(nu_path, "New content.\n")
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'ps', 'propname', 'propval', Z_path)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'commit', '-m', 'Subtree changes',
+                                     wc_dir)
+
+  # r10 - Merge r8 from A to A_COPY.
+  svntest.actions.run_and_verify_svn(None, ["At revision 9.\n"], [], 'up',
+                                     wc_dir)
+  svntest.actions.run_and_verify_svn(None,
+                                     expected_merge_output(
+                                       [[8]],
+                                       ['A    ' + Z_COPY_path + '\n',
+                                        'A    ' + nu_COPY_path + '\n']),
+                                     [], 'merge', '-c8',
+                                     sbox.repo_url + '/A',
+                                     A_COPY_path)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'commit', '-m', 'Root merge of r8',
+                                     wc_dir)
+
+  # r11 - Do several subtree merges:
+  #
+  #   r4 from A/D/G/rho to A_COPY/D/G/rho
+  #   r6 from A/D/H to A_COPY/D/H
+  #   r9 from A/C/nu to A_COPY/C/nu
+  #   r9 from A/B/Z to A_COPY/B/Z
+  svntest.actions.run_and_verify_svn(None,
+                                     expected_merge_output(
+                                       [[4]], 'U    ' + rho_COPY_path + '\n'),
+                                     [], 'merge', '-c4',
+                                     sbox.repo_url + '/A/D/G/rho',
+                                     rho_COPY_path)
+  svntest.actions.run_and_verify_svn(
+    None,
+    expected_merge_output([[6]], 'U    ' + omega_COPY_path + '\n'),
+    [], 'merge', '-c6', sbox.repo_url + '/A/D/H', H_COPY_path)
+  svntest.actions.run_and_verify_svn(None,
+                                     expected_merge_output(
+                                       [[9]], 'U    ' + nu_COPY_path + '\n'),
+                                     [], 'merge', '-c9',
+                                     sbox.repo_url + '/A/C/nu',
+                                     nu_COPY_path)
+  svntest.actions.run_and_verify_svn(None,
+                                     expected_merge_output(
+                                       [[9]], ' U   ' + Z_COPY_path + '\n'),
+                                     [], 'merge', '-c9',
+                                     sbox.repo_url + '/A/B/Z',
+                                     Z_COPY_path)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'commit', '-m', 'Several subtree merges',
+                                     wc_dir)
+
+  svntest.actions.run_and_verify_svn(None, ["At revision 11.\n"], [], 'up',
+                                     wc_dir)
+
+  # Now do a --record-only merge of r10 and r11 from A_COPY to A2.
+  #
+  # We only expect svn:mergeinfo changes to be applied to existing paths:
+  #
+  # From r10 the mergeinfo '/A:r8' is recorded on A_COPY.
+  #
+  # From r11 the mergeinfo of '/A/D/G/rho:r4' is recorded on A_COPY/D/G/rho
+  # and the mergeinfo of '/A/D/H:r6' is recorded on A_COPY/D/H.  Rev 8 should
+  # also be recorded on both subtrees because explicit mergeinfo must be
+  # complete.
+  #
+  # The mergeinfo describing the merge source itself, '/A_COPY:10-11' should
+  # also be recorded on the root and the two subtrees.
+  #
+  # The mergeinfo changes from r10 to A_COPY/C/nu and A_COPY/B/Z cannot be
+  # applied because the corresponding paths don't exist under A2; this should
+  # not cause any problems.
+  expected_output = wc.State(A2_path, {
+    ''        : Item(status=' U'),
+    'D/G/rho' : Item(status=' U'),
+    'D/H'     : Item(status=' U'),
+    })
+  expected_disk = wc.State('', {
+    ''          : Item(props={SVN_PROP_MERGEINFO : '/A:8\n/A_COPY:10-11'}),
+    'mu'        : Item("This is the file 'mu'.\n"),
+    'B'         : Item(),
+    'B/lambda'  : Item("This is the file 'lambda'.\n"),
+    'B/E'       : Item(),
+    'B/E/alpha' : Item("This is the file 'alpha'.\n"),
+    'B/E/beta'  : Item("This is the file 'beta'.\n"),
+    'B/F'       : Item(),
+    'C'         : Item(),
+    'D'         : Item(),
+    'D/gamma'   : Item("This is the file 'gamma'.\n"),
+    'D/H'       : Item(props={SVN_PROP_MERGEINFO :
+                              '/A/D/H:6,8\n/A_COPY/D/H:10-11'}),
+    'D/H/chi'   : Item("This is the file 'chi'.\n"),
+    'D/H/psi'   : Item("This is the file 'psi'.\n"),
+    'D/H/omega' : Item("This is the file 'omega'.\n"),
+    'D/G'       : Item(),
+    'D/G/pi'    : Item("This is the file 'pi'.\n"),
+    'D/G/rho'   : Item("This is the file 'rho'.\n",
+                       props={SVN_PROP_MERGEINFO :
+                              '/A/D/G/rho:4,8\n/A_COPY/D/G/rho:10-11'}),
+    'D/G/tau'   : Item("This is the file 'tau'.\n"),
+    })
+  expected_status = wc.State(A2_path, {
+    ''          : Item(status=' M'),
+    'mu'        : Item(status='  '),
+    'B'         : Item(status='  '),
+    'B/lambda'  : Item(status='  '),
+    'B/E'       : Item(status='  '),
+    'B/E/alpha' : Item(status='  '),
+    'B/E/beta'  : Item(status='  '),
+    'B/F'       : Item(status='  '),
+    'C'         : Item(status='  '),
+    'D'         : Item(status='  '),
+    'D/gamma'   : Item(status='  '),
+    'D/H'       : Item(status=' M'),
+    'D/H/chi'   : Item(status='  '),
+    'D/H/psi'   : Item(status='  '),
+    'D/H/omega' : Item(status='  '),
+    'D/G'       : Item(status='  '),
+    'D/G/pi'    : Item(status='  '),
+    'D/G/rho'   : Item(status=' M'),
+    'D/G/tau'   : Item(status='  '),
+    })
+  expected_status.tweak(wc_rev=11)
+  expected_skip = wc.State('', { })
+  svntest.actions.run_and_verify_merge(A2_path, '9', '11',
+                                       sbox.repo_url + '/A_COPY',
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, None, None, None, None, 1, 0,
+                                       '--record-only')
 
 ########################################################################
 # Run the tests
@@ -16610,6 +16778,8 @@ test_list = [ None,
                          server_has_mergeinfo),
               copy_then_replace_via_merge,
               XFail(merge_replace_causes_tree_conflict2),
+              SkipUnless(record_only_merge,
+                         server_has_mergeinfo),
              ]
 
 if __name__ == '__main__':

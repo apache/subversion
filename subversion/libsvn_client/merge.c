@@ -225,7 +225,8 @@ typedef struct merge_source_t
 typedef struct merge_cmd_baton_t {
   svn_boolean_t force;
   svn_boolean_t dry_run;
-  svn_boolean_t record_only;          /* Whether to only record mergeinfo. */
+  svn_boolean_t record_only;          /* Whether to merge only mergeinfo
+                                         differences. */
   svn_boolean_t sources_ancestral;    /* Whether the left-side merge source is
                                          an ancestor of the right-side, or
                                          vice-versa (history-wise). */
@@ -1120,6 +1121,27 @@ merge_props_changed(const char *local_dir_abspath,
 
   SVN_ERR(svn_categorize_props(propchanges, NULL, NULL, &props, subpool));
 
+  /* If we are only applying mergeinfo changes then we need to do
+     additional filtering of PROPS so it contains only mergeinfo changes. */
+  if (merge_b->record_only && props->nelts)
+    {
+      apr_array_header_t *mergeinfo_props =
+        apr_array_make(subpool, 1, sizeof(svn_prop_t));
+      int i;
+
+      for (i = 0; i < props->nelts; i++)
+        {
+          svn_prop_t *prop = &APR_ARRAY_IDX(props, i, svn_prop_t);
+
+          if (strcmp(prop->name, SVN_PROP_MERGEINFO) == 0)
+            {
+              APR_ARRAY_PUSH(mergeinfo_props, svn_prop_t) = *prop;
+              break;
+            }
+        }
+      props = mergeinfo_props;
+    }
+
   /* We only want to merge "regular" version properties:  by
      definition, 'svn merge' shouldn't touch any data within .svn/  */
   if (props->nelts)
@@ -1407,6 +1429,13 @@ merge_file_changed(const char *local_dir_abspath,
     if (prop_state)
       *prop_state = svn_wc_notify_state_unchanged;
 
+  /* Easy out: We are only applying mergeinfo changes to existing paths. */
+  if (merge_b->record_only)
+    {
+      svn_pool_destroy(subpool);
+      return SVN_NO_ERROR;
+    }
+
   if (older)
     {
       svn_boolean_t has_local_mods;
@@ -1529,6 +1558,13 @@ merge_file_added(const char *local_dir_abspath,
   int i;
   apr_hash_t *new_props;
   const char *mine_abspath;
+
+  /* Easy out: We are only applying mergeinfo changes to existing paths. */
+  if (merge_b->record_only)
+    {
+      svn_pool_destroy(subpool);
+      return SVN_NO_ERROR;
+    }
 
   SVN_ERR(svn_dirent_get_absolute(&mine_abspath, mine, subpool));
 
@@ -1826,6 +1862,13 @@ merge_file_deleted(const char *local_dir_abspath,
   svn_node_kind_t kind;
   const char *mine_abspath;
 
+  /* Easy out: We are only applying mergeinfo changes to existing paths. */
+  if (merge_b->record_only)
+    {
+      svn_pool_destroy(subpool);
+      return SVN_NO_ERROR;
+    }
+
   SVN_ERR(svn_dirent_get_absolute(&mine_abspath, mine, subpool));
 
   if (*tree_conflicted)
@@ -1959,6 +2002,13 @@ merge_dir_added(const char *local_dir_abspath,
   svn_boolean_t is_versioned;
   svn_boolean_t is_deleted;
   svn_error_t *err;
+
+  /* Easy out: We are only applying mergeinfo changes to existing paths. */
+  if (merge_b->record_only)
+    {
+      svn_pool_destroy(subpool);
+      return SVN_NO_ERROR;
+    }
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, subpool));
   parent_abspath = local_dir_abspath;
@@ -2165,6 +2215,13 @@ merge_dir_deleted(const char *local_dir_abspath,
   const char *local_abspath;
   svn_boolean_t is_versioned;
   svn_boolean_t is_deleted;
+
+  /* Easy out: We are only applying mergeinfo changes to existing paths. */
+  if (merge_b->record_only)
+    {
+      svn_pool_destroy(subpool);
+      return SVN_NO_ERROR;
+    }
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, subpool));
 
@@ -2528,6 +2585,14 @@ notification_receiver(void *baton, const svn_wc_notify_t *notify,
 {
   notification_receiver_baton_t *notify_b = baton;
   svn_boolean_t is_operative_notification = FALSE;
+
+  /* Skip notifications if this is a --mergeinfo-only merge that is adding
+     or deleting NOTIFY->PATH, allow only mergeinfo changes to be notified.
+     We will already have skipped the actual addition or deletion, but will
+     still get a notification callback for it.*/
+  if (notify_b->merge_b->record_only
+      && notify->action != svn_wc_notify_update_update)
+    return;
 
   /* Is the notification the result of a real operative merge? */
   if (IS_OPERATIVE_NOTIFICATION(notify))
@@ -7542,7 +7607,7 @@ do_directory_merge(const char *url1,
   range.end = revision2;
   range.inheritable = TRUE;
 
-  if (honor_mergeinfo && !merge_b->record_only)
+  if (honor_mergeinfo && !merge_b->reintegrate_merge)
     {
       svn_revnum_t start_rev, end_rev;
       apr_pool_t *iterpool = svn_pool_create(pool);
