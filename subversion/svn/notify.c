@@ -69,12 +69,10 @@ struct notify_baton
 };
 
 
-/* Print conflict stats accumulated in notify baton NB.
- * Return any error encountered during printing.
- * Do all allocations in POOL.*/
-static svn_error_t *
-print_conflict_stats(struct notify_baton *nb, apr_pool_t *pool)
+svn_error_t *
+svn_cl__print_conflict_stats(void *notify_baton, apr_pool_t *pool)
 {
+  struct notify_baton *nb = notify_baton;
   const char *header;
   unsigned int text_conflicts;
   unsigned int prop_conflicts;
@@ -449,28 +447,13 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
           }
       }
 
-      if ((err = print_conflict_stats(nb, pool)))
-        goto print_error;
-
       if (nb->in_external)
         {
           nb->in_external = FALSE;
-          nb->ext_text_conflicts = nb->ext_prop_conflicts
-            = nb->ext_tree_conflicts = nb->ext_skipped_paths = 0;
           if ((err = svn_cmdline_printf(pool, "\n")))
             goto print_error;
         }
-      else
-          nb->text_conflicts = nb->prop_conflicts
-            = nb->tree_conflicts = nb->skipped_paths = 0;
       break;
-
-    case svn_wc_notify_merge_completed:
-        if ((err = print_conflict_stats(nb, pool)))
-          goto print_error;
-        nb->text_conflicts = nb->prop_conflicts
-          = nb->tree_conflicts = nb->skipped_paths = 0;
-        break;
 
     case svn_wc_notify_status_external:
       if ((err = svn_cmdline_printf

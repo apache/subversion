@@ -113,12 +113,12 @@ def cat_skip_uncattable(sbox):
       continue
     item_to_cat = os.path.join(dir_path, file)
     if item_to_cat == new_file_path:
-      expected_err = ["svn: warning: '" + item_to_cat + "'" + \
+      expected_err = ["svn: warning: '" + os.path.abspath(item_to_cat) + "'" + \
                      " is not under version control\n"]
       svntest.actions.run_and_verify_svn2(None, None, expected_err, 0,
                                           'cat', item_to_cat)
     elif os.path.isdir(item_to_cat):
-      expected_err = ["svn: warning: '" + item_to_cat + "'" + \
+      expected_err = ["svn: warning: '" + os.path.abspath(item_to_cat) + "'" + \
                      " refers to a directory\n"]
       svntest.actions.run_and_verify_svn2(None, None, expected_err, 0,
                                           'cat', item_to_cat)
@@ -131,12 +131,12 @@ def cat_skip_uncattable(sbox):
   rho_path = os.path.join(G_path, 'rho')
 
   expected_out = ["This is the file 'rho'.\n"]
-  expected_err1 = ["svn: warning: '" + G_path + "'"
+  expected_err1 = ["svn: warning: '" + os.path.abspath(G_path) + "'"
                    + " refers to a directory\n"]
   svntest.actions.run_and_verify_svn2(None, expected_out, expected_err1, 0,
                                       'cat', rho_path, G_path)
 
-  expected_err2 = ["svn: warning: '" + new_file_path + "'"
+  expected_err2 = ["svn: warning: '" + os.path.abspath(new_file_path) + "'"
                    + " is not under version control\n"]
   svntest.actions.run_and_verify_svn2(None, expected_out, expected_err2, 0,
                                       'cat', rho_path, new_file_path)

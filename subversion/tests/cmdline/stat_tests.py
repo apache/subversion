@@ -1575,20 +1575,20 @@ def status_ignore_mergeinfo(sbox):
 
   # Check vanilla status
   expected = svntest.verify.UnorderedOutput(
-        [' M     ' + beta_path + '\n',
-         ' M     ' + H_path + '\n',
-         ' M     ' + C_path + '\n',
-         ' M     ' + gamma_path + '\n',
-         ' M     ' + rho_path + '\n',
-         ' M     ' + iota_path + '\n',
-         ' M     ' + chi_path + '\n'])
+        [' M      ' + beta_path + '\n',
+         ' M      ' + H_path + '\n',
+         ' M      ' + C_path + '\n',
+         ' M      ' + gamma_path + '\n',
+         ' M      ' + rho_path + '\n',
+         ' M      ' + iota_path + '\n',
+         ' M      ' + chi_path + '\n'])
   svntest.actions.run_and_verify_svn(None, expected, [], 'status')
 
   # Check '--ignore-mergeinfo' status
   expected = svntest.verify.UnorderedOutput([
-         ' M     ' + iota_path + '\n',
-         ' M     ' + rho_path + '\n',
-         ' M     ' + chi_path + '\n'])
+         ' M      ' + iota_path + '\n',
+         ' M      ' + rho_path + '\n',
+         ' M      ' + chi_path + '\n'])
   svntest.actions.run_and_verify_svn(None, expected, [], 'status',
                                      '--ignore-mergeinfo')
 

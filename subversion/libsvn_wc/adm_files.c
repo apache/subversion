@@ -574,13 +574,6 @@ svn_wc__open_writable_base(svn_stream_t **stream,
 
 /*** Checking for and creating administrative subdirs. ***/
 
-static svn_error_t *
-make_empty_adm(const char *path, apr_pool_t *pool)
-{
-  path = svn_wc__adm_child(path, NULL, pool);
-  return svn_io_dir_make_hidden(path, APR_OS_DEFAULT, pool);
-}
-
 
 static svn_error_t *
 init_adm_tmp_area(const char *path, apr_pool_t *pool)
@@ -612,15 +605,9 @@ init_adm(const char *path,
          svn_depth_t depth,
          apr_pool_t *pool)
 {
-  svn_wc_adm_access_t *adm_access;
-
   /* First, make an empty administrative area. */
-  SVN_ERR(make_empty_adm(path, pool));
-
-  /* Lock it immediately.  Theoretically, no compliant wc library
-     would ever consider this an adm area until a README file were
-     present... but locking it is still appropriately paranoid. */
-  SVN_ERR(svn_wc__adm_pre_open(&adm_access, path, pool));
+  SVN_ERR(svn_io_dir_make_hidden(svn_wc__adm_child(path, NULL, pool),
+                                 APR_OS_DEFAULT, pool));
 
   /** Make subdirectories. ***/
 
@@ -644,9 +631,7 @@ init_adm(const char *path,
   SVN_ERR(svn_wc__entries_init(path, uuid, url, repos,
                                initial_rev, depth, pool));
 
-  /* Now unlock it.  It's now a valid working copy directory, that
-     just happens to be at revision 0. */
-  return svn_wc_adm_close2(adm_access, pool);
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *

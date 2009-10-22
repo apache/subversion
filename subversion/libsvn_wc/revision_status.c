@@ -126,7 +126,8 @@ svn_wc_revision_status2(svn_wc_revision_status_t **result_p,
                                  scratch_pool));
 
   SVN_ERR(svn_wc_get_status_editor5(&editor, &edit_baton, NULL,
-                                    &edit_revision, anchor_access, target,
+                                    &edit_revision, wc_ctx, anchor_access,
+                                    target,
                                     svn_depth_infinity,
                                     TRUE  /* get_all */,
                                     FALSE /* no_ignore */,

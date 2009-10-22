@@ -585,6 +585,7 @@ svn_client_log5(const apr_array_header_t *targets,
     {
       svn_revnum_t start_revnum, end_revnum, youngest_rev = SVN_INVALID_REVNUM;
       const char *path = APR_ARRAY_IDX(targets, 0, const char *);
+      const char *local_abspath;
       svn_opt_revision_range_t *range;
       limit_receiver_baton_t lb;
       svn_log_entry_receiver_t passed_receiver;
@@ -592,14 +593,17 @@ svn_client_log5(const apr_array_header_t *targets,
       const apr_array_header_t *passed_receiver_revprops;
 
       svn_pool_clear(iterpool);
+      SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, iterpool));
       range = APR_ARRAY_IDX(revision_ranges, i, svn_opt_revision_range_t *);
 
-      SVN_ERR(svn_client__get_revision_number
-              (&start_revnum, &youngest_rev, ra_session, &range->start, path,
-               iterpool));
-      SVN_ERR(svn_client__get_revision_number
-              (&end_revnum, &youngest_rev, ra_session, &range->end, path,
-               iterpool));
+      SVN_ERR(svn_client__get_revision_number(&start_revnum, &youngest_rev,
+                                              ctx->wc_ctx, local_abspath,
+                                              ra_session, &range->start,
+                                              iterpool));
+      SVN_ERR(svn_client__get_revision_number(&end_revnum, &youngest_rev,
+                                              ctx->wc_ctx, local_abspath,
+                                              ra_session, &range->end,
+                                              iterpool));
 
       if (has_log_revprops)
         {

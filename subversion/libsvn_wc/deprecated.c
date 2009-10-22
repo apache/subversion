@@ -1666,18 +1666,25 @@ svn_wc_get_status_editor4(const svn_delta_editor_t **editor,
                           apr_pool_t *pool)
 {
   struct status4_wrapper_baton *swb = apr_palloc(pool, sizeof(*swb));
+  svn_wc_context_t *wc_ctx;
   apr_pool_t *scratch_pool = svn_pool_create(pool);
   svn_error_t *err;
 
   swb->old_func = status_func;
   swb->old_baton = status_baton;
 
+  SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL /* config */,
+                                         svn_wc__adm_get_db(anchor),
+                                         scratch_pool));
+
   err = svn_wc_get_status_editor5(editor, edit_baton, set_locks_baton,
-                                  edit_revision, anchor, target, depth,
-                                  get_all, no_ignore, ignore_patterns,
+                                  edit_revision, wc_ctx, anchor, target,
+                                  depth, get_all, no_ignore, ignore_patterns,
                                   status4_wrapper_func, swb,
                                   cancel_func, cancel_baton, traversal_info,
                                   pool, scratch_pool);
+
+  /* This destroys the context also. */
   svn_pool_destroy(scratch_pool);
   return err;
 }
@@ -1866,6 +1873,25 @@ svn_wc_get_ignores(apr_array_header_t **patterns,
 
   SVN_ERR(svn_wc_get_ignores2(patterns, wc_ctx, local_abspath, config, pool,
                               pool));
+
+  return svn_error_return(svn_wc_context_destroy(wc_ctx));
+}
+
+svn_error_t *
+svn_wc_status2(svn_wc_status2_t **status,
+               const char *path,
+               svn_wc_adm_access_t *adm_access,
+               apr_pool_t *pool)
+{
+  const char *local_abspath;
+  svn_wc_context_t *wc_ctx;
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+  SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL /* config */,
+                                         svn_wc__adm_get_db(adm_access),
+                                         pool));
+
+  SVN_ERR(svn_wc_status3(status, wc_ctx, local_abspath, pool, pool));
 
   return svn_error_return(svn_wc_context_destroy(wc_ctx));
 }
@@ -2096,6 +2122,39 @@ svn_wc_translated_stream(svn_stream_t **stream,
   SVN_ERR(svn_wc_translated_stream2(stream, wc_ctx, local_abspath,
                                     versioned_abspath, flags,
                                     pool, pool));
+
+  return svn_error_return(svn_wc_context_destroy(wc_ctx));
+}
+
+svn_error_t *
+svn_wc_translated_file2(const char **xlated_path,
+                        const char *src,
+                        const char *versioned_file,
+                        svn_wc_adm_access_t *adm_access,
+                        apr_uint32_t flags,
+                        apr_pool_t *pool)
+{
+  const char *versioned_abspath;
+  const char *root;
+  const char *tmp_root;
+  svn_wc_context_t *wc_ctx;
+
+  SVN_ERR(svn_dirent_get_absolute(&versioned_abspath, versioned_file, pool));
+  SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL,
+                                         svn_wc__adm_get_db(adm_access),
+                                         pool));
+
+  SVN_ERR(svn_wc_translated_file3(xlated_path, src, wc_ctx, versioned_abspath, 
+                                  flags, pool, pool));
+  if (! svn_dirent_is_absolute(versioned_file))
+    {
+      SVN_ERR(svn_io_temp_dir(&tmp_root, pool));
+      if (! svn_dirent_is_child(tmp_root, *xlated_path, pool))
+        {
+          SVN_ERR(svn_dirent_get_absolute(&root, "", pool));
+          *xlated_path = svn_dirent_is_child(root, *xlated_path, pool);
+        }
+    }
 
   return svn_error_return(svn_wc_context_destroy(wc_ctx));
 }

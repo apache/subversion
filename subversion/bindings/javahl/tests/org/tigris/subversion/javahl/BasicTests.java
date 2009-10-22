@@ -2781,7 +2781,8 @@ public class BasicTests extends SVNTests
         expectedDiffOutput = NL + "Property changes on: A" + NL +
             underSepLine +
             "Added: testprop" + NL +
-            "   + Test property value." + NL + NL;
+            "## -0,0 +1 ##" + NL +
+            "+Test property value." + NL;
 
         client.propertySet(aPath, "testprop", "Test property value.", false);
         client.diff(aPath, Revision.BASE, aPath, Revision.WORKING, wcPath,
@@ -2795,7 +2796,8 @@ public class BasicTests extends SVNTests
         expectedDiffOutput = NL + "Property changes on: ." + NL +
             underSepLine +
             "Added: testprop" + NL +
-            "   + Test property value." + NL + NL;
+            "## -0,0 +1 ##" + NL +
+            "+Test property value." + NL;
 
         client.propertySet(aPath, "testprop", "Test property value.", false);
         client.diff(aPath, Revision.BASE, aPath, Revision.WORKING, aPath,

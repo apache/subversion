@@ -67,6 +67,7 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
                             svn_boolean_t *timestamp_sleep,
                             svn_boolean_t ignore_externals,
                             svn_boolean_t allow_unver_obstructions,
+                            svn_boolean_t innerswitch,
                             svn_client_ctx_t *ctx,
                             apr_pool_t *pool)
 {
@@ -126,7 +127,16 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
 
   /* ### Need to lock the whole target tree to invalidate wcprops. Does
      non-recursive switch really need to invalidate the whole tree? */
-  if (adm_access)
+  if (innerswitch)
+    {
+      SVN_ERR(svn_wc__adm_open_in_context(&adm_access, ctx->wc_ctx,
+                                          path, TRUE, -1, ctx->cancel_func,
+                                          ctx->cancel_baton, pool));
+      dir_access = adm_access;
+      target = "";
+      anchor = svn_wc_adm_access_path(adm_access);
+    }
+  else if (adm_access)
     {
       svn_wc_adm_access_t *a = adm_access;
       const char *dir_access_path;
@@ -146,9 +156,11 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
     }
   else
     {
-      SVN_ERR(svn_wc_adm_open_anchor(&adm_access, &dir_access, &target, path,
-                                     TRUE, -1, ctx->cancel_func,
-                                     ctx->cancel_baton, pool));
+      SVN_ERR(svn_wc__adm_open_anchor_in_context(&adm_access, &dir_access,
+                                                 &target, ctx->wc_ctx, path,
+                                                 TRUE, -1, ctx->cancel_func,
+                                                 ctx->cancel_baton, pool));
+
       anchor = svn_wc_adm_access_path(adm_access);
     }
 
@@ -299,5 +311,6 @@ svn_client_switch2(svn_revnum_t *result_rev,
   return svn_client__switch_internal(result_rev, path, switch_url,
                                      peg_revision, revision, NULL, depth,
                                      depth_is_sticky, NULL, ignore_externals,
-                                     allow_unver_obstructions, ctx, pool);
+                                     allow_unver_obstructions, FALSE, ctx,
+                                     pool);
 }

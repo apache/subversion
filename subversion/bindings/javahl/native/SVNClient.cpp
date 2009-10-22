@@ -1804,7 +1804,9 @@ jstring SVNClient::getVersionInfo(const char *path, const char *trailUrl,
     SVN_JNI_ERR(intPath.error_occured(), NULL);
 
     int wc_format;
-    svn_client_ctx_t ctx = { 0 };
+    svn_client_ctx_t *ctx = getContext(NULL);
+    if (ctx == NULL)
+        return NULL;
     SVN_JNI_ERR(svn_wc_check_wc(intPath.c_str(), &wc_format,
                                 requestPool.pool()),
                 NULL);
@@ -1831,19 +1833,11 @@ jstring SVNClient::getVersionInfo(const char *path, const char *trailUrl,
     sb.wc_path = path;
     svn_opt_revision_t rev;
     rev.kind = svn_opt_revision_unspecified;
-    ctx.config = apr_hash_make(requestPool.pool());
-
-    /* Setup the notification and cancellation callbacks, and their
-     * shared baton (which is also shared with the status function). */
-    ctx.notify_func = notify;
-    ctx.notify_baton = &sb;
-    ctx.cancel_func = cancel;
-    ctx.cancel_baton = &sb;
 
     svn_error_t *err;
     err = svn_client_status4(NULL, intPath.c_str(), &rev, analyze_status,
                              &sb, svn_depth_infinity, TRUE, FALSE, FALSE,
-                             FALSE, NULL, &ctx, requestPool.pool());
+                             FALSE, NULL, ctx, requestPool.pool());
     if (err && (err->apr_err == SVN_ERR_CANCELLED))
         svn_error_clear(err);
     else

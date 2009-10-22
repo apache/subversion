@@ -1218,6 +1218,7 @@ lock_dirs_for_commit(void *baton, void *this_item, apr_pool_t *pool)
 struct check_dir_delete_baton
 {
   svn_wc_adm_access_t *base_dir_access;
+  svn_wc_context_t *wc_ctx;
   svn_depth_t depth;
 };
 
@@ -1226,11 +1227,12 @@ check_nonrecursive_dir_delete(void *baton, void *this_item, apr_pool_t *pool)
 {
   struct check_dir_delete_baton *btn = baton;
   svn_wc_adm_access_t *adm_access;
-  const char *target;
+  const char *target_abspath;
 
-  SVN_ERR(svn_dirent_get_absolute(&target, *(const char **)this_item, pool));
+  SVN_ERR(svn_dirent_get_absolute(&target_abspath, *(const char **)this_item,
+                                  pool));
   SVN_ERR_W(svn_wc_adm_probe_retrieve(&adm_access, btn->base_dir_access,
-                                      target, pool),
+                                      target_abspath, pool),
             _("Are all the targets part of the same working copy?"));
 
   /* ### TODO(sd): This check is slightly too strict.  It should be
@@ -1254,11 +1256,12 @@ check_nonrecursive_dir_delete(void *baton, void *this_item, apr_pool_t *pool)
       svn_wc_status2_t *status;
       svn_node_kind_t kind;
 
-      SVN_ERR(svn_io_check_path(target, &kind, pool));
+      SVN_ERR(svn_io_check_path(target_abspath, &kind, pool));
 
       if (kind == svn_node_dir)
         {
-          SVN_ERR(svn_wc_status2(&status, target, adm_access, pool));
+          SVN_ERR(svn_wc_status3(&status, btn->wc_ctx, target_abspath, pool,
+                                 pool));
           if (status->text_status == svn_wc_status_deleted ||
               status->text_status == svn_wc_status_replaced)
             {
@@ -1563,6 +1566,7 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
     struct check_dir_delete_baton btn;
 
     btn.base_dir_access = base_dir_access;
+    btn.wc_ctx = ctx->wc_ctx;
     btn.depth = depth;
     SVN_ERR(svn_iter_apr_array(NULL, targets,
                                check_nonrecursive_dir_delete, &btn,

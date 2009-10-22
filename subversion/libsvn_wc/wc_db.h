@@ -1236,6 +1236,16 @@ svn_wc__db_check_node(svn_wc__db_kind_t *kind,
                       apr_pool_t *scratch_pool);
 
 
+/* An analog to svn_wc__entry_is_hidden().  Set *HIDDEN to TRUE if
+   LOCAL_ABSPATH in DB "is not present, and I haven't scheduled something
+   over the top of it." */
+svn_error_t *
+svn_wc__db_node_hidden(svn_boolean_t *hidden,
+                       svn_wc__db_t *db,
+                       const char *local_abspath,
+                       apr_pool_t *scratch_pool);
+
+
 /* ### changelists. return an array, or an iterator interface? how big
    ### are these things? are we okay with an in-memory array? examine other
    ### changelist usage -- we may already assume the list fits in memory.
@@ -1682,7 +1692,9 @@ svn_wc__db_temp_get_all_access(svn_wc__db_t *db,
 
    ### No matter how tempted you may be DO NOT USE THIS FUNCTION!
    ### (if you do, gstein will hunt you down and burn your knee caps off
-   ### in the middle of the night) */
+   ### in the middle of the night)
+   ### "Bet on it." --gstein
+*/
 svn_error_t *
 svn_wc__db_temp_get_sdb(svn_sqlite__db_t **db,
                         const char *local_dir_abspath,

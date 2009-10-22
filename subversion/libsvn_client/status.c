@@ -56,7 +56,7 @@ struct status_baton
   svn_wc_status_func4_t real_status_func;  /* real status function */
   void *real_status_baton;                 /* real status baton */
   apr_hash_t *ignored_props;               /* props to ignore mods to */
-  svn_wc_adm_access_t *adm_access;         /* access to the wc */
+  svn_wc_context_t *wc_ctx;                /* working copy context */
   svn_boolean_t no_ignore;            /* Same as svn_client_status4() */
   svn_boolean_t get_all;              /* Same as svn_client_status4() */
 };
@@ -98,10 +98,13 @@ tweak_status(void *baton,
     {
       svn_boolean_t ignore = TRUE;
       apr_array_header_t *which_props;
+      const char *local_abspath;
       int i;
 
-      SVN_ERR(svn_wc_get_prop_diffs(&which_props, NULL, path, sb->adm_access,
-                                    scratch_pool));
+      SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, scratch_pool));
+      SVN_ERR(svn_wc_get_prop_diffs2(&which_props, NULL, sb->wc_ctx,
+                                     local_abspath, scratch_pool,
+                                     scratch_pool));
 
       for (i = 0; i < which_props->nelts; i++)
         {
@@ -277,6 +280,7 @@ svn_client_status5(svn_revnum_t *result_rev,
   void *edit_baton, *set_locks_baton;
   const svn_wc_entry_t *entry = NULL;
   struct status_baton sb;
+  const char *target_abspath;
   apr_array_header_t *ignores;
   apr_hash_t *ignored_props;
   svn_error_t *err;
@@ -307,6 +311,7 @@ svn_client_status5(svn_revnum_t *result_rev,
   sb.ignored_props = ignored_props;
   sb.no_ignore = no_ignore;
   sb.get_all = get_all;
+  sb.wc_ctx = ctx->wc_ctx;
 
   /* Try to open the target directory. If the target is a file or an
      unversioned directory, open the parent directory instead */
@@ -332,14 +337,14 @@ svn_client_status5(svn_revnum_t *result_rev,
     return svn_error_return(err);
 
   anchor = svn_wc_adm_access_path(anchor_access);
-  sb.adm_access = anchor_access;
+  SVN_ERR(svn_dirent_get_absolute(&target_abspath, target, pool));
 
   /* Get the status edit, and use our wrapping status function/baton
      as the callback pair. */
   SVN_ERR(svn_wc_get_default_ignores(&ignores, ctx->config, pool));
   SVN_ERR(svn_wc_get_status_editor5(&editor, &edit_baton, &set_locks_baton,
-                                    &edit_revision, anchor_access, target,
-                                    depth, get_all, no_ignore, ignores,
+                                    &edit_revision, ctx->wc_ctx, anchor_access,
+                                    target, depth, get_all, no_ignore, ignores,
                                     tweak_status, &sb, ctx->cancel_func,
                                     ctx->cancel_baton, traversal_info,
                                     pool, pool));
@@ -403,8 +408,11 @@ svn_client_status5(svn_revnum_t *result_rev,
           else
             {
               /* Get a revision number for our status operation. */
-              SVN_ERR(svn_client__get_revision_number
-                      (&revnum, NULL, ra_session, revision, target, pool));
+              SVN_ERR(svn_client__get_revision_number(&revnum, NULL,
+                                                      ctx->wc_ctx,
+                                                      target_abspath,
+                                                      ra_session, revision,
+                                                      pool));
             }
 
           /* Do the deed.  Let the RA layer drive the status editor. */

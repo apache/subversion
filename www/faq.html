@@ -2555,17 +2555,20 @@ and when I try to check out Subversion, I get an error about an
 
 <p>Subversion uses a plugin system to allow access to repositories.
 Currently there are three of these plugins: ra_local allows access to
-a local repository, ra_dav which allows access to a repository via
+a local repository, ra_neon or ra_serf which allow access to a repository via
 WebDAV, and ra_svn allows local or remote access via the svnserve
 server.  When you attempt to perform an operation in Subversion, the
 program tries to dynamically load a plugin based on the URL scheme.  A
 `file://' URL will try to load ra_local, and an `http://' URL will try
-to load ra_dav.</p>
+to load ra_neon or ra_serf.</p>
 
 <p>The error you are seeing means that the dynamic linker/loader can't find
-the plugins to load.  This normally happens when you build Subversion with
-shared libraries, then attempt to run it without first running 'make
-install'.  Another possible cause is that you ran make install, but the
+the plugins to load.  For `http://' access, this normally means that you have
+not linked Subversion to neon or serf when compiling it (check the configure
+script output and the config.log file for information about this).
+It also happens when you build Subversion with shared libraries,
+then attempt to run it without first running 'make install'.
+Another possible cause is that you ran make install, but the
 libraries were installed in a location that the dynamic linker/loader
 doesn't recognize.  Under Linux, you can allow the linker/loader to find the
 libraries by adding the library directory to /etc/ld.so.conf and running

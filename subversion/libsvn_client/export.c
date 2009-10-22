@@ -150,7 +150,7 @@ copy_one_versioned_file(const char *from,
       SVN_ERR(svn_subst_read_specialfile(&source, from, pool, pool));
 
       SVN_ERR(svn_wc_prop_list2(&props, wc_ctx, from_abspath, pool, pool));
-      SVN_ERR(svn_wc_status2(&status, from, adm_access, pool));
+      SVN_ERR(svn_wc_status3(&status, wc_ctx, from_abspath, pool, pool));
       if (status->text_status != svn_wc_status_normal)
         local_mod = TRUE;
     }

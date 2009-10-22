@@ -198,8 +198,10 @@ def basic_update(sbox):
   # path, are skipped and do not raise an error
   xx_path = os.path.join(wc_dir, 'xx', 'xx')
   exit_code, out, err = svntest.actions.run_and_verify_svn(
-    "update xx/xx", ["Skipped '"+xx_path+"'\n"], [],
-    'update', xx_path)
+    "update xx/xx", 
+    ["Skipped '"+xx_path+"'\n", 
+    "Summary of conflicts:\n", 
+    "  Skipped paths: 1\n"], [], 'update', xx_path)
   exit_code, out, err = svntest.actions.run_and_verify_svn(
     "update xx/xx", [], [],
     'update', '--quiet', xx_path)
@@ -208,7 +210,10 @@ def basic_update(sbox):
   urls = ('http://localhost/a/b/c', 'http://localhost', 'svn://localhost')
   for url in urls:
     exit_code, out, err = svntest.actions.run_and_verify_svn(
-      "update " + url, ["Skipped '"+url+"'\n"], [],
+      "update " + url, 
+      ["Skipped '"+url+"'\n",
+      "Summary of conflicts:\n",
+      "  Skipped paths: 1\n"], [],
       'update', url)
 
 #----------------------------------------------------------------------

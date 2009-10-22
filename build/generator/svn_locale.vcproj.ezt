@@ -12,6 +12,8 @@
 	<Configurations>
 [for platforms][for configs]		<Configuration
 			Name="[configs]|[platforms]"
+			OutputDirectory="..\..\[configs]\mo"
+			IntermediateDirectory="..\..\[configs]\mo"
 			ConfigurationType="0"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="FALSE">
@@ -19,6 +21,7 @@
 				Name="VCNMakeTool"
 				BuildCommandLine="cmd /c build_locale.bat [configs]"
 				ReBuildCommandLine="cmd /c build_locale.bat [configs]"
+				CleanCommandLine="cmd /c del $(OutDir)\*.mo"
 			/>
 		</Configuration>
 [end][end]	</Configurations>

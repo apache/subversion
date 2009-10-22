@@ -88,10 +88,15 @@ svn_cl__update(apr_getopt_t *os,
       depth_is_sticky = FALSE;
     }
 
-  return svn_client_update3(NULL, targets,
-                            &(opt_state->start_revision),
-                            depth, depth_is_sticky,
-                            opt_state->ignore_externals,
-                            opt_state->force,
-                            ctx, pool);
+  SVN_ERR(svn_client_update3(NULL, targets,
+                             &(opt_state->start_revision),
+                             depth, depth_is_sticky,
+                             opt_state->ignore_externals,
+                             opt_state->force,
+                             ctx, pool));
+
+  if (! opt_state->quiet)
+    SVN_ERR(svn_cl__print_conflict_stats(ctx->notify_baton2, pool));
+  
+  return SVN_NO_ERROR;
 }

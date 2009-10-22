@@ -375,8 +375,13 @@ svn_wc__text_modified_internal_p(svn_boolean_t *modified_p,
           return SVN_NO_ERROR;
         }
 
-      svn_error_clear(err);
-      return err2;
+      if (err2)
+        {
+          svn_error_clear(err);
+          return err2;
+        }
+      
+      return err;
     }
 
   return SVN_NO_ERROR;
@@ -519,8 +524,9 @@ svn_wc__marked_as_binary(svn_boolean_t *marked,
 {
   const svn_string_t *value;
 
-  SVN_ERR(svn_wc__internal_propget(&value, SVN_PROP_MIME_TYPE, local_abspath,
-                                   db, scratch_pool, scratch_pool));
+  SVN_ERR(svn_wc__internal_propget(&value, db, local_abspath,
+                                   SVN_PROP_MIME_TYPE,
+                                   scratch_pool, scratch_pool));
 
   if (value && (svn_mime_type_is_binary(value->data)))
     *marked = TRUE;
