@@ -83,21 +83,6 @@ svn_wc__loggy_append(svn_stringbuf_t **log_accum,
                      apr_pool_t *pool);
 
 
-/* Extend **LOG_ACCUM with log instructions to mark PATH as committed
-   with revision REVNUM.
-   ADM_ABSPATH is the absolute path for the admin directory for PATH.
-
-   Allocate *LOG_ACCUM in RESULT_POOL if it is NULL. Use SCRATCH_POOL for
-   temporary allocations.
-*/
-svn_error_t *
-svn_wc__loggy_committed(svn_stringbuf_t **log_accum,
-                        const char *adm_abspath,
-                        const char *path, svn_revnum_t revnum,
-                        apr_pool_t *result_pool,
-                        apr_pool_t *scratch_pool);
-
-
 /* Extend **LOG_ACCUM with log instructions to copy (and translate!) the
    file SRC_PATH to DST_PATH, if it exists. If it doesn't and
    REMOVE_DST_IF_NO_SRC is TRUE the file at DST_PATH will be deleted if any.

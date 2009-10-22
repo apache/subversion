@@ -378,9 +378,7 @@ process_committed_leaf(svn_wc__db_t *db,
   svn_wc__db_status_t status;
   svn_wc__db_kind_t kind;
   const svn_checksum_t *copied_checksum;
-  svn_wc_entry_t tmp_entry;
-  apr_uint64_t modify_flags = 0;
-  svn_stringbuf_t *log_accum = svn_stringbuf_create("", scratch_pool);
+  apr_time_t new_date;
 
   SVN_ERR(svn_wc__write_check(db, adm_abspath, scratch_pool));
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, scratch_pool));
@@ -412,11 +410,14 @@ process_committed_leaf(svn_wc__db_t *db,
   /* ### this picks up file and symlink  */
   if (kind != svn_wc__db_kind_dir)
     {
+      svn_stringbuf_t *log_accum = svn_stringbuf_create("", scratch_pool);
+
       /* If the props or text revert file exists it needs to be deleted when
        * the file is committed. */
       /* ### don't directories have revert props? */
       SVN_ERR(remove_revert_files(&log_accum, db, adm_abspath, local_abspath,
                                   scratch_pool));
+      SVN_ERR(svn_wc__wq_add_loggy(db, adm_abspath, log_accum, scratch_pool));
 
       if (checksum == NULL)
         {
@@ -468,61 +469,14 @@ process_committed_leaf(svn_wc__db_t *db,
         }
     }
 
-  SVN_WC__FLUSH_LOG_ACCUM(db, adm_abspath, log_accum, scratch_pool);
-
-  /* Append a log command to set (overwrite) the 'committed-rev',
-     'committed-date', 'last-author', and possibly 'checksum'
-     attributes in the entry.
-
-     Note: it's important that this log command come *before* the
-     LOG_COMMITTED command, because log_do_committed() might actually
-     remove the entry! */
-  if (rev_date)
-    {
-      tmp_entry.cmt_rev = new_revnum;
-      SVN_ERR(svn_time_from_cstring(&tmp_entry.cmt_date, rev_date,
-                                    scratch_pool));
-      modify_flags |= SVN_WC__ENTRY_MODIFY_CMT_REV
-        | SVN_WC__ENTRY_MODIFY_CMT_DATE;
-    }
-
-  if (rev_author)
-    {
-      tmp_entry.cmt_rev = new_revnum;
-      tmp_entry.cmt_author = rev_author;
-      modify_flags |= SVN_WC__ENTRY_MODIFY_CMT_REV
-        | SVN_WC__ENTRY_MODIFY_CMT_AUTHOR;
-    }
-
-  if (checksum)
-    {
-      tmp_entry.checksum = svn_checksum_to_cstring(checksum, scratch_pool);
-      modify_flags |= SVN_WC__ENTRY_MODIFY_CHECKSUM;
-    }
-
   if (!no_unlock)
     SVN_ERR(svn_wc__loggy_delete_lock(db, adm_abspath,
                                       path, scratch_pool));
 
-  /* ### need to pass KEEP_CHANGELIST into log_do_committed()  */
-
-  /* Regardless of whether it's a file or dir, the "main" logfile
-     contains a command to bump the revision attribute (and
-     timestamp). */
-  SVN_ERR(svn_wc__loggy_committed(&log_accum, adm_abspath,
-                                  path, new_revnum,
-                                  scratch_pool, scratch_pool));
-  SVN_WC__FLUSH_LOG_ACCUM(db, adm_abspath, log_accum, scratch_pool);
-
-  /* ### the NG code doesn't set these values. do it now.  */
-  if (modify_flags)
-    SVN_ERR(svn_wc__loggy_entry_modify(&log_accum, adm_abspath,
-                                       path, &tmp_entry, modify_flags,
-                                       scratch_pool, scratch_pool));
-  SVN_WC__FLUSH_LOG_ACCUM(db, adm_abspath, log_accum, scratch_pool);
-
-  /* Queue all of the operations so far.  */
-  SVN_ERR(svn_wc__wq_add_loggy(db, adm_abspath, log_accum, scratch_pool));
+  SVN_ERR(svn_time_from_cstring(&new_date, rev_date, scratch_pool));
+  SVN_ERR(svn_wc__wq_add_postcommit(db, local_abspath, new_revnum,
+                                    new_date, rev_author, checksum,
+                                    keep_changelist, scratch_pool));
 
   if (new_dav_cache && apr_hash_count(new_dav_cache) > 0)
     SVN_ERR(svn_wc__wq_set_dav_cache(db, local_abspath, new_dav_cache,
