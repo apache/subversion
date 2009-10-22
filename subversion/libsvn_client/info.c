@@ -304,7 +304,7 @@ info_found_node_callback(const char *local_abspath,
               SVN_ERR(svn_wc__node_get_repos_info(&(info->repos_root_URL),
                                                   NULL,
                                                   fe_baton->wc_ctx,
-                                                  local_abspath,
+                                                  local_abspath, FALSE,
                                                   pool, pool));
             }
           else
@@ -367,7 +367,7 @@ crawl_entries(const char *local_abspath,
           SVN_ERR(svn_wc__node_get_repos_info(&(info->repos_root_URL),
                                               NULL,
                                               ctx->wc_ctx,
-                                              local_abspath,
+                                              local_abspath, FALSE,
                                               pool, pool));
 
           SVN_ERR(receiver(receiver_baton, local_abspath, info, pool));

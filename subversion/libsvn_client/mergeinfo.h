@@ -116,18 +116,19 @@ svn_client__get_wc_mergeinfo(svn_mergeinfo_t *mergeinfo,
                              apr_pool_t *scratch_pool);
 
 /* If INCLUDE_DESCENDANTS is false then behaves exactly like
-   svn_client__get_wc_mergeinfo except the mergeinfo for WCPATH is put in the
-   mergeinfo catalog MERGEINFO_CAT, mapped from WC_PATH's repository root-
-   relative path.  If INCLUDE_DESCENDANTS is true, then any subtrees under
-   WCPATH with explicit mergeinfo are also included in MERGEINFO_CAT and
-   again the keys are the repository root-relative paths of the subtrees.
-   If no mergeinfo is found, then *MERGEINFO_CAT is set to NULL. */
+   svn_client__get_wc_mergeinfo except the mergeinfo for LOCAL_ABSPATH is
+   put in the mergeinfo catalog MERGEINFO_CAT, mapped from WC_PATH's
+   repository root-relative path.  If INCLUDE_DESCENDANTS is true, then any
+   subtrees under LOCAL_ABSPATH with explicit mergeinfo are also included in
+   MERGEINFO_CAT and again the keys are the repository root-relative paths
+   of the subtrees.  If no mergeinfo is found, then *MERGEINFO_CAT is set to
+   NULL. */
 svn_error_t *
 svn_client__get_wc_mergeinfo_catalog(svn_mergeinfo_catalog_t *mergeinfo_cat,
                                      svn_boolean_t *inherited,
                                      svn_boolean_t include_descendants,
                                      svn_mergeinfo_inheritance_t inherit,
-                                     const char *wcpath,
+                                     const char *local_abspath,
                                      const char *limit_path,
                                      const char **walked_path,
                                      svn_client_ctx_t *ctx,
