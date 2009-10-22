@@ -41,8 +41,34 @@
 
 #include "svn_private_config.h"
 #include "private/svn_wc_private.h"
+#include "private/svn_sqlite.h"
 
 
+static svn_error_t *
+is_inside_wc_ng(const char *abspath,
+                int *wc_format,
+                apr_pool_t *pool)
+{
+  svn_error_t *err;
+  const char *wc_db_path = svn_path_join_many(pool, abspath, ".svn", "wc.db",
+                                              NULL);
+
+  err = svn_sqlite__get_schema_version(wc_format, wc_db_path, pool);
+  if (!err)
+    return SVN_NO_ERROR;
+
+  if (err->apr_err == SVN_ERR_SQLITE_ERROR)
+    svn_error_clear(err);
+  else
+    return err;
+
+  if (svn_dirent_is_root(abspath, strlen(abspath)))
+    return SVN_NO_ERROR;
+  else
+    return is_inside_wc_ng(svn_path_dirname(abspath, pool), wc_format, pool);
+}
+
+
 /* ### todo: make this compare repository too?  Or do so in parallel
    code.  */
 svn_error_t *
@@ -95,7 +121,17 @@ svn_wc_check_wc(const char *path,
     }
   else if (err)
     return err;
-  else
+
+  /* Let's check for the future. */
+  if (*wc_format == 0)
+    {
+      const char *abspath;
+
+      SVN_ERR(svn_path_get_absolute(&abspath, path, pool));
+      SVN_ERR(is_inside_wc_ng(abspath, wc_format, pool));
+    }
+
+  if (*wc_format > 0)
     {
       /* If we managed to read the format file we assume that we
           are dealing with a real wc so we can return a nice
@@ -125,12 +161,9 @@ svn_wc__check_format(int wc_format, const char *path, apr_pool_t *pool)
          least post-1.5 crossgrades will be somewhat less painful. */
       return svn_error_createf
         (SVN_ERR_WC_UNSUPPORTED_FORMAT, NULL,
-         _("This client is too old to work with working copy '%s'.  You need\n"
-           "to get a newer Subversion client, or to downgrade this working "
-           "copy.\n"
-           "See "
-           "http://subversion.tigris.org/faq.html#working-copy-format-change\n"
-           "for details."
+         _("The path '%s' appears to be part of a Subversion 1.7 or greater\n"
+           "working copy.  Please upgrade your Subversion client to use this\n"
+           "working copy."
            ),
          svn_path_local_style(path, pool));
     }
