@@ -1816,7 +1816,7 @@ def diff_renamed_dir(sbox):
 
   # Check a repos->wc diff
   exit_code, diff_output, err_output = svntest.main.run_svn(
-    None, 'diff', os.path.join('A', 'D'))
+    None, 'diff', '--show-copies-as-adds', os.path.join('A', 'D'))
 
   if check_diff_output(diff_output,
                        os.path.join('A', 'D', 'G', 'pi'),
