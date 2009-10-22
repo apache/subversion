@@ -146,6 +146,43 @@ svn_checksum_to_cstring(const svn_checksum_t *checksum,
     }
 }
 
+
+const char *
+svn_checksum_serialize(const svn_checksum_t *checksum,
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool)
+{
+  const char *ckind_str;
+
+  ckind_str = (checksum->kind == svn_checksum_md5 ? "$md5 $" : "$sha1$");
+  return apr_pstrcat(result_pool,
+                     ckind_str,
+                     svn_checksum_to_cstring(checksum, scratch_pool),
+                     NULL);
+}
+
+
+svn_error_t *
+svn_checksum_deserialize(const svn_checksum_t **checksum,
+                         const char *data,
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool)
+{
+  svn_checksum_kind_t ckind;
+  svn_checksum_t *parsed_checksum;
+
+  /* "$md5 $..." or "$sha1$..." */
+  SVN_ERR_ASSERT(strlen(data) > 6);
+
+  ckind = (data[1] == 'm' ? svn_checksum_md5 : svn_checksum_sha1);
+  SVN_ERR(svn_checksum_parse_hex(&parsed_checksum, ckind,
+                                 data + 6, result_pool));
+  *checksum = parsed_checksum;
+
+  return SVN_NO_ERROR;
+}
+
+
 svn_error_t *
 svn_checksum_parse_hex(svn_checksum_t **checksum,
                        svn_checksum_kind_t kind,

@@ -341,19 +341,9 @@ svn_sqlite__bind_checksum(svn_sqlite__stmt_t *stmt,
   const char *csum_str;
 
   if (checksum == NULL)
-    {
-      csum_str = NULL;
-    }
+    csum_str = NULL;
   else
-    {
-      const char *ckind_str;
-
-      ckind_str = (checksum->kind == svn_checksum_md5 ? "$md5 $" : "$sha1$");
-      csum_str = apr_pstrcat(scratch_pool,
-                             ckind_str,
-                             svn_checksum_to_cstring(checksum, scratch_pool),
-                             NULL);
-    }
+    csum_str = svn_checksum_serialize(checksum, scratch_pool, scratch_pool);
 
   return svn_error_return(svn_sqlite__bind_text(stmt, slot, csum_str));
 }
@@ -456,18 +446,8 @@ svn_sqlite__column_checksum(const svn_checksum_t **checksum,
   if (digest == NULL)
     *checksum = NULL;
   else
-    {
-      svn_checksum_kind_t ckind;
-      svn_checksum_t *parsed_checksum;
-
-      /* "$md5 $..." or "$sha1$..." */
-      SVN_ERR_ASSERT(strlen(digest) > 6);
-
-      ckind = (digest[1] == 'm' ? svn_checksum_md5 : svn_checksum_sha1);
-      SVN_ERR(svn_checksum_parse_hex(&parsed_checksum, ckind,
-                                     digest + 6, result_pool));
-      *checksum = parsed_checksum;
-    }
+    SVN_ERR(svn_checksum_deserialize(checksum, digest,
+                                     result_pool, result_pool));
 
   return SVN_NO_ERROR;
 }
