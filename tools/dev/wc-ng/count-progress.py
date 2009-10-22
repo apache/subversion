@@ -61,4 +61,15 @@ if __name__ == '__main__':
   if len(sys.argv) > 1:
     print_report(sys.argv[1])
   else:
-    print_report(os.path.join('..', '..', '..'))
+    cwd = os.path.abspath(os.getcwd())
+    idx = cwd.rfind(os.sep + 'subversion')
+    if idx > 0:
+      wcroot = cwd[:idx]
+    else:
+      idx = cwd.rfind(os.sep + 'tools')
+      if idx > 0:
+        wcroot = cwd[:idx]
+      else:
+        print "ERROR: the root of 'trunk' cannot be located -- please provide"
+        sys.exit(1)
+    print_report(wcroot)
