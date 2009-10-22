@@ -156,7 +156,7 @@ Candidate changes:
    Justification:
      Gets rid of a misleading test failure.
    Votes:
-     +1: joeswatosh
+     +1: joeswatosh, stsp
 
  * r40152
    Fix issue #3487, "cannot update many externals at once (over ra_svn)"
