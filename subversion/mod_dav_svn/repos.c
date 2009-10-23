@@ -1937,9 +1937,9 @@ get_resource(request_rec *r,
     {
       /* ...then the URL to the repository is actually one implicit
          component longer... */
-      root_path = svn_path_join(root_path, repos_name, r->pool);
+      root_path = svn_uri_join(root_path, repos_name, r->pool);
       /* ...and we need to specify exactly what repository to open. */
-      fs_path = svn_path_join(fs_parent_path, repos_name, r->pool);
+      fs_path = svn_dirent_join(fs_parent_path, repos_name, r->pool);
     }
 
   /* Start building and filling a 'combination' object. */
@@ -2028,16 +2028,16 @@ get_resource(request_rec *r,
   repos->activities_db = dav_svn__get_activities_db(r);
   if (repos->activities_db == NULL)
     /* If not specified, use default ($repos/dav/activities.d). */
-    repos->activities_db = svn_path_join(repos->fs_path,
+    repos->activities_db = svn_dirent_join(repos->fs_path,
                                          DEFAULT_ACTIVITY_DB,
                                          r->pool);
   else if (fs_parent_path != NULL)
     /* If this is a ParentPath-based repository, treat the specified
        path as a similar parent directory. */
-    repos->activities_db = svn_path_join(repos->activities_db,
-                                         svn_dirent_basename(repos->fs_path,
-                                                             r->pool),
-                                         r->pool);
+    repos->activities_db = svn_dirent_join(repos->activities_db,
+                                           svn_dirent_basename(repos->fs_path,
+                                                               r->pool),
+                                           r->pool);
 
   /* Remember various bits for later URL construction */
   repos->base_url = ap_construct_url(r->pool, "", r);
