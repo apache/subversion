@@ -70,10 +70,13 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
   const char *session_url;
   svn_node_kind_t kind;
   const char *uuid, *repos_root;
+  const char *local_abspath;
 
   /* Sanity check.  Without these, the checkout is meaningless. */
   SVN_ERR_ASSERT(path != NULL);
   SVN_ERR_ASSERT(url != NULL);
+  
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
   /* Fulfill the docstring promise of svn_client_checkout: */
   if ((revision->kind != svn_opt_revision_number)
@@ -161,9 +164,8 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
     {
       int wc_format;
       const svn_wc_entry_t *entry;
-      svn_wc_adm_access_t *adm_access;
 
-      SVN_ERR(svn_wc_check_wc(path, &wc_format, pool));
+      SVN_ERR(svn_wc_check_wc2(&wc_format, ctx->wc_ctx, local_abspath, pool));
       if (! wc_format)
         {
         initialize_area:
@@ -172,8 +174,9 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
             depth = svn_depth_infinity;
 
           /* Make the unversioned directory into a versioned one.  */
-          SVN_ERR(svn_wc_ensure_adm3(path, uuid, session_url,
-                                     repos_root, revnum, depth, pool));
+          SVN_ERR(svn_wc_ensure_adm4(ctx->wc_ctx, local_abspath, uuid,
+                                     session_url, repos_root, revnum, depth,
+                                     pool));
           /* Have update fix the incompleteness. */
           err = svn_client__update_internal(result_rev, path, revision,
                                             depth, TRUE, ignore_externals,
@@ -184,11 +187,9 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
         }
 
       /* Get PATH's entry. */
-      SVN_ERR(svn_wc__adm_open_in_context(&adm_access, ctx->wc_ctx, path,
-                                          FALSE, 0, ctx->cancel_func,
-                                          ctx->cancel_baton, pool));
-      SVN_ERR(svn_wc_entry(&entry, path, adm_access, FALSE, pool));
-      SVN_ERR(svn_wc_adm_close2(adm_access, pool));
+      SVN_ERR(svn_wc__get_entry_versioned(&entry, ctx->wc_ctx, local_abspath,
+                                          svn_node_unknown, FALSE, FALSE,
+                                          pool, pool));
 
       /* If PATH's existing URL matches the incoming one, then
          just update.  This allows 'svn co' to restart an

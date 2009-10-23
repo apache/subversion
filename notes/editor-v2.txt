@@ -55,8 +55,8 @@ add_absent(path, kind, replaces_rev)
 set_props(path, against_rev, props, complete)
   -- 'complete' indicates whether this completes the change to this node
      -- MUST be TRUE for directories
-     -- if TRUE, then a set_text() MUST follow if node is a file
-     -- if TRUE, then a set_target() MUST follow if node is a symlink
+     -- if FALSE, then a set_text() MUST follow if node is a file
+     -- if FALSE, then a set_target() MUST follow if node is a symlink
 set_text(path, against_rev, checksum, stream)
   -- completes the change for this file (ie. if set_props was called)
   -- stream can be ignored by recipient if it knows the checksum

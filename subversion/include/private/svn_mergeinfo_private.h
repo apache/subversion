@@ -44,6 +44,14 @@ void
 svn_rangelist__set_inheritance(apr_array_header_t *rangelist,
                                svn_boolean_t inheritable);
 
+/* Set inheritability of all rangelists in MERGEINFO to INHERITABLE.
+   If MERGEINFO is NULL do nothing.  If a rangelist in MERGEINFO is
+   NULL leave it alone. */
+void
+svn_mergeinfo__set_inheritance(svn_mergeinfo_t mergeinfo,
+                               svn_boolean_t inheritable,
+                               apr_pool_t *scratch_pool);
+
 /* Return whether INFO1 and INFO2 are equal in *IS_EQUAL.
 
    CONSIDER_INERITANCE determines how the rangelists in the two

@@ -279,6 +279,17 @@ svn_wc__get_entry(const svn_wc_entry_t **entry,
                   apr_pool_t *result_pool,
                   apr_pool_t *scratch_pool);
 
+/** Same as svn_wc_entry() except that the entry returned
+ * is a non @c NULL entry.
+ *
+ * Returns an error when svn_wc_entry() would have returned a @c NULL entry.
+ */
+svn_error_t *
+svn_wc__entry_versioned(const svn_wc_entry_t **entry,
+                        const char *path,
+                        svn_wc_adm_access_t *adm_access,
+                        svn_boolean_t show_hidden,
+                        apr_pool_t *pool);
 
 /* Is ENTRY in a 'hidden' state in the sense of the 'show_hidden'
  * switches on svn_wc_entries_read(), svn_wc_walk_entries*(), etc.? */
@@ -293,11 +304,6 @@ svn_wc__set_depth(svn_wc__db_t *db,
                   svn_depth_t depth,
                   apr_pool_t *scratch_pool);
 
-/* Read the current entries, and write them out for WC_FORMAT. */
-svn_error_t *
-svn_wc__entries_upgrade(svn_wc_adm_access_t *adm_access,
-                        int wc_format,
-                        apr_pool_t *scratch_pool);
 
 /* For internal use by entries.c to read/write old-format working copies. */
 svn_error_t *
@@ -305,6 +311,13 @@ svn_wc__read_entries_old(apr_hash_t **entries,
                          const char *path,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool);
+
+/* For internal use by upgrade.c to write entries in the wc-ng format.  */
+svn_error_t *
+svn_wc__entries_write_new(svn_wc__db_t *db,
+                          const char *dir_abspath,
+                          apr_hash_t *entries,
+                          apr_pool_t *scratch_pool);
 
 
 /* ### return a flag corresponding to the classic "DELETED" concept.  */

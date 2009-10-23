@@ -78,7 +78,7 @@ static void
 trim_string(char **pstr)
 {
   char *str = *pstr;
-  int i;
+  size_t i;
 
   while (apr_isspace(*str))
     str++;
@@ -160,7 +160,7 @@ auto_props_enumerator(const char *name,
 
   for (i = 0; i < props->nelts; i++)
     {
-      int len;
+      size_t len;
       const char *this_value;
       char *property = APR_ARRAY_IDX(props, i, char *);
       char *equal_sign = strchr(property, '=');
@@ -694,7 +694,7 @@ mkdir_urls(svn_commit_info_t **commit_info_p,
       apr_pool_t *iterpool = svn_pool_create(pool);
 
       SVN_ERR(svn_client__open_ra_session_internal(&ra_session, first_url,
-                                                   NULL, NULL, NULL, FALSE,
+                                                   NULL, NULL, FALSE,
                                                    TRUE, ctx, pool));
 
       for (i = 0; i < urls->nelts; i++)
@@ -786,8 +786,7 @@ mkdir_urls(svn_commit_info_t **commit_info_p,
      directory, nor a place to put temp files. */
   if (!ra_session)
     SVN_ERR(svn_client__open_ra_session_internal(&ra_session, common, NULL,
-                                                 NULL, NULL, FALSE, TRUE,
-                                                 ctx, pool));
+                                                 NULL, FALSE, TRUE, ctx, pool));
 
   /* URI-decode each target. */
   for (i = 0; i < targets->nelts; i++)

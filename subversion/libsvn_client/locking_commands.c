@@ -87,17 +87,21 @@ store_locks_callback(void *baton,
     {
       char *path = apr_hash_get(lb->urls_to_paths, rel_url,
                                 APR_HASH_KEY_STRING);
-      const char *abs_path = svn_path_join(lb->base_path, path, lb->pool);
+      const char *local_abspath;
+
+      SVN_ERR(svn_dirent_get_absolute(&local_abspath,
+                                      svn_path_join(lb->base_path, path, pool),
+                                      pool));
 
       /* Notify a valid working copy path */
-      notify->path = abs_path;
+      notify->path = local_abspath;
       notify->path_prefix = lb->base_path;
 
       if (do_lock)
         {
           if (!ra_err)
             {
-              SVN_ERR(svn_wc_add_lock2(lb->ctx->wc_ctx, abs_path, lock,
+              SVN_ERR(svn_wc_add_lock2(lb->ctx->wc_ctx, local_abspath, lock,
                                        lb->pool));
               notify->lock_state = svn_wc_notify_lock_state_locked;
             }
@@ -114,7 +118,8 @@ store_locks_callback(void *baton,
           if (!ra_err ||
               (ra_err && (ra_err->apr_err != SVN_ERR_FS_LOCK_OWNER_MISMATCH)))
             {
-              SVN_ERR(svn_wc_remove_lock2(lb->ctx->wc_ctx, abs_path, lb->pool));
+              SVN_ERR(svn_wc_remove_lock2(lb->ctx->wc_ctx, local_abspath,
+                                          lb->pool));
               notify->lock_state = svn_wc_notify_lock_state_unlocked;
             }
           else
@@ -236,10 +241,10 @@ organize_lock_targets(const char **common_parent,
       for (i = 0; i < rel_targets->nelts; ++i)
         {
           const char *target = APR_ARRAY_IDX(rel_targets, i, const char *);
-          int n = svn_path_component_count(target);
+          apr_size_t n = svn_path_component_count(target);
 
           if (n > max_levels_to_lock)
-            max_levels_to_lock = n;
+            max_levels_to_lock = (int) n;
         }
 
       SVN_ERR(svn_wc_adm_probe_open3(parent_adm_access_p, NULL,
@@ -257,11 +262,11 @@ organize_lock_targets(const char **common_parent,
 
           svn_pool_clear(subpool);
 
-          abs_path = svn_path_join
-            (svn_wc_adm_access_path(*parent_adm_access_p), target, subpool);
+          abs_path = svn_path_join(*common_parent, target, subpool);
 
-          SVN_ERR(svn_wc__entry_versioned(&entry, abs_path,
-                                         *parent_adm_access_p, FALSE, subpool));
+          SVN_ERR(svn_wc__get_entry_versioned(&entry, ctx->wc_ctx, abs_path,
+                                              svn_node_unknown, FALSE, FALSE,
+                                              subpool, subpool));
 
           if (! entry->url)
             return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
@@ -307,11 +312,11 @@ organize_lock_targets(const char **common_parent,
                        APR_HASH_KEY_STRING,
                        apr_pstrdup(pool, target));
 
-          abs_path = svn_path_join
-            (svn_wc_adm_access_path(*parent_adm_access_p), target, subpool);
+          abs_path = svn_path_join(*common_parent, target, subpool);
 
-          SVN_ERR(svn_wc_entry(&entry, abs_path, *parent_adm_access_p, FALSE,
-                               subpool));
+          SVN_ERR(svn_wc__get_entry_versioned(&entry, ctx->wc_ctx, abs_path,
+                                              svn_node_unknown, FALSE, FALSE,
+                                              subpool, subpool));
 
           if (do_lock) /* Lock. */
             {
@@ -416,10 +421,9 @@ svn_client_lock(const apr_array_header_t *targets,
                                 steal_lock, ctx, pool));
 
   /* Open an RA session to the common parent of TARGETS. */
-  SVN_ERR(svn_client__open_ra_session_internal
-          (&ra_session, common_parent,
-           adm_access ? svn_wc_adm_access_path(adm_access) : NULL,
-           adm_access, NULL, FALSE, FALSE, ctx, pool));
+  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, common_parent,
+                        adm_access ? svn_wc_adm_access_path(adm_access) : NULL,
+                        NULL, FALSE, FALSE, ctx, pool));
 
   if (adm_access)
     {
@@ -461,10 +465,9 @@ svn_client_unlock(const apr_array_header_t *targets,
                                 FALSE, break_lock, ctx, pool));
 
   /* Open an RA session. */
-  SVN_ERR(svn_client__open_ra_session_internal
-          (&ra_session, common_parent,
-           adm_access ? svn_wc_adm_access_path(adm_access) : NULL,
-           adm_access, NULL, FALSE, FALSE, ctx, pool));
+  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, common_parent,
+                        adm_access ? svn_wc_adm_access_path(adm_access) : NULL,
+                        NULL, FALSE, FALSE, ctx, pool));
 
   /* If break_lock is not set, lock tokens are required by the server.
      If the targets were all URLs, ensure that we provide lock tokens,

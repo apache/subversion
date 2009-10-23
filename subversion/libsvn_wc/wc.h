@@ -437,16 +437,6 @@ svn_wc__internal_versioned_file_modcheck(svn_boolean_t *modified_p,
                                          svn_boolean_t compare_textbases,
                                          apr_pool_t *scratch_pool);
 
-
-/* A convenience function for creating a new-style conflict description from
-   an old one.
-   ### This should probably disappear once all the old-style conflict
-       descriptions are gone. */
-svn_wc_conflict_description2_t *
-svn_wc__conflict_desc2_from_conflict_desc(const svn_wc_conflict_description_t *
-                                                                     conflict,
-                                          apr_pool_t *result_pool);
-
 /* Internal version of svn_wc_transmit_text_deltas3(). */
 svn_error_t *
 svn_wc__internal_transmit_text_deltas(const char **tempfile,
@@ -467,6 +457,25 @@ svn_wc__internal_transmit_prop_deltas(svn_wc__db_t *db,
                                      void *baton,
                                      apr_pool_t *scratch_pool);
 
+/* Internal version of svn_wc_get_ancestry2(). */
+svn_error_t *
+svn_wc__internal_get_ancestry(const char **url,
+                              svn_revnum_t *rev,
+                              svn_wc__db_t *db,
+                              const char *local_abspath,
+                              apr_pool_t *result_pool,
+                              apr_pool_t *scratch_pool);
+
+/* Library-internal version of svn_wc_ensure_adm4(). */
+svn_error_t *
+svn_wc__internal_ensure_adm(svn_wc__db_t *db,
+                            const char *local_abspath,
+                            const char *uuid,
+                            const char *url,
+                            const char *repos,
+                            svn_revnum_t revision,
+                            svn_depth_t depth,
+                            apr_pool_t *scratch_pool);
 
 /* Upgrade the wc sqlite database given in SDB for the wc located at
    WCROOT_ABSPATH. It's current/starting format is given by START_FORMAT.
@@ -479,6 +488,18 @@ svn_wc__upgrade_sdb(int *result_format,
                     svn_sqlite__db_t *sdb,
                     int start_format,
                     apr_pool_t *scratch_pool);
+
+
+/* Like svn_wc_is_wc_root(), but also, if KIND is not null, set *KIND to
+ * the versioned node kind of PATH, or to svn_node_file if PATH is
+ * unversioned.
+ */
+svn_error_t *
+svn_wc__check_wc_root(svn_boolean_t *wc_root,
+                      svn_node_kind_t *kind,
+                      svn_wc__db_t *db,
+                      const char *local_abspath,
+                      apr_pool_t *scratch_pool);
 
 
 #ifdef __cplusplus

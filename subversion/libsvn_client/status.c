@@ -207,7 +207,7 @@ reporter_finish_report(void *report_baton, apr_pool_t *pool)
   /* Open an RA session to our common ancestor and grab the locks under it.
    */
   SVN_ERR(svn_client__open_ra_session_internal(&ras, rb->ancestor, NULL,
-                                               NULL, NULL, FALSE, TRUE,
+                                               NULL, FALSE, TRUE,
                                                rb->ctx, subpool));
 
   /* The locks need to live throughout the edit.  Note that if the
@@ -281,6 +281,7 @@ svn_client_status5(svn_revnum_t *result_rev,
   const svn_wc_entry_t *entry = NULL;
   struct status_baton sb;
   const char *target_abspath;
+  const char *anchor_abspath;
   apr_array_header_t *ignores;
   apr_hash_t *ignored_props;
   svn_error_t *err;
@@ -338,6 +339,7 @@ svn_client_status5(svn_revnum_t *result_rev,
 
   anchor = svn_wc_adm_access_path(anchor_access);
   SVN_ERR(svn_dirent_get_absolute(&target_abspath, target, pool));
+  SVN_ERR(svn_dirent_get_absolute(&anchor_abspath, anchor, pool));
 
   /* Get the status edit, and use our wrapping status function/baton
      as the callback pair. */
@@ -361,8 +363,9 @@ svn_client_status5(svn_revnum_t *result_rev,
 
       /* Get full URL from the ANCHOR. */
       if (! entry)
-        SVN_ERR(svn_wc__entry_versioned(&entry, anchor, anchor_access, FALSE,
-                                        pool));
+        SVN_ERR(svn_wc__get_entry_versioned(&entry, ctx->wc_ctx, anchor_abspath,
+                                            svn_node_unknown, FALSE, FALSE,
+                                            pool, pool));
       if (! entry->url)
         return svn_error_createf
           (SVN_ERR_ENTRY_MISSING_URL, NULL,
@@ -372,8 +375,7 @@ svn_client_status5(svn_revnum_t *result_rev,
 
       /* Open a repository session to the URL. */
       SVN_ERR(svn_client__open_ra_session_internal(&ra_session, URL, anchor,
-                                                   anchor_access, NULL,
-                                                   FALSE, TRUE,
+                                                   NULL, FALSE, TRUE,
                                                    ctx, pool));
 
       /* Verify that URL exists in HEAD.  If it doesn't, this can save

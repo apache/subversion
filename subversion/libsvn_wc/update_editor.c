@@ -147,14 +147,18 @@
 struct edit_baton
 {
   /* For updates, the "destination" of the edit is the ANCHOR (the
-     directory at which the edit is rooted) plus the TARGET (the
-     actual thing we wish to update).  Target may be the empty string,
-     but it is never NULL; for example, for checkouts and for updates
+     directory at which the edit is rooted) plus the TARGET (the entry
+     name of the actual thing we wish to update).  Target may be the empty
+     string, but it is never NULL; for example, for checkouts and for updates
      that do not specify a target path, ANCHOR holds the whole path,
      and TARGET is empty. */
   /* ### ANCHOR is relative to CWD; TARGET is relative to ANCHOR? */
   const char *anchor;
   const char *target;
+
+  /* Absolute variants of ANCHOR and TARGET */
+  const char *anchor_abspath;
+  const char *target_abspath;
 
   /* The DB handle for managing the working copy state.  */
   svn_wc__db_t *db;
@@ -246,15 +250,6 @@ struct edit_baton
 };
 
 
-/* ### rather than churn the file with a move... just forward-declare.  */
-static svn_error_t *
-check_wc_root(svn_boolean_t *wc_root,
-              svn_node_kind_t *kind,
-              svn_wc__db_t *db,
-              const char *local_abspath,
-              apr_pool_t *scratch_pool);
-
-
 /* Record in the edit baton EB that PATH's base version is not being updated.
  *
  * Add to EB->skipped_trees a copy (allocated in EB->pool) of the string
@@ -335,6 +330,9 @@ struct dir_baton
 
   /* Basename of this directory. */
   const char *name;
+
+  /* Absolute path of this directory */
+  const char *local_abspath;
 
   /* The repository URL this directory will correspond to. */
   const char *new_URL;
@@ -444,32 +442,26 @@ struct handler_baton
 };
 
 
-/* Return the url for NAME in DIR, allocated in POOL, or null if
- * unable to obtain a url.  If NAME is null, get the url for DIR.
+/* Return the url for LOCAL_ABSPATH of type KIND which can be unknown, 
+ * allocated in RESULT_POOL, or null if unable to obtain a url.
  *
  * Use ASSOCIATED_ACCESS to retrieve an access baton for PATH, and do
- * all temporary allocation in POOL.
+ * all temporary allocation in SCRATCH_POOL.
  */
 static const char *
-get_entry_url(svn_wc_adm_access_t *associated_access,
-              const char *dir,
-              const char *name,
-              apr_pool_t *pool)
+get_entry_url(svn_wc__db_t *db,
+              const char *local_abspath,
+              svn_node_kind_t kind,
+              apr_pool_t *result_pool,
+              apr_pool_t *scratch_pool)
 {
   svn_error_t *err;
   const svn_wc_entry_t *entry;
-  svn_wc_adm_access_t *adm_access;
 
-  err = svn_wc_adm_retrieve(&adm_access, associated_access, dir, pool);
+  err = svn_wc__get_entry(&entry, db, local_abspath, FALSE, kind, FALSE,
+                          result_pool, scratch_pool);
 
-  if (! err)
-    {
-      /* Note that `name' itself may be NULL. */
-      name = name ? svn_dirent_join(dir, name, pool) : dir;
-
-      err = svn_wc_entry(&entry, name, adm_access, FALSE, pool);
-    }
-  if (err || (! entry) || (! entry->url))
+  if (err || !entry->url)
     {
       svn_error_clear(err);
       return NULL;
@@ -518,7 +510,7 @@ cleanup_dir_baton(void *dir_baton)
 
       if (! err)
         {
-          err = svn_wc__run_log(adm_access, NULL, pool);
+          err = svn_wc__run_log(adm_access, pool);
 
           if (! err)
             return APR_SUCCESS;
@@ -568,11 +560,13 @@ make_dir_baton(struct dir_baton **d_p,
     {
       d->path = svn_dirent_join(eb->anchor, path, pool);
       d->name = svn_dirent_basename(path, pool);
+      d->local_abspath = svn_dirent_join(pb->local_abspath, d->name, pool);
     }
   else
     {
       d->path = apr_pstrdup(pool, eb->anchor);
       d->name = NULL;
+      d->local_abspath = eb->anchor_abspath;
     }
 
   /* Figure out the new_URL for this directory. */
@@ -608,7 +602,8 @@ make_dir_baton(struct dir_baton **d_p,
       /* updates are the odds ones.  if we're updating a path already
          present on disk, we use its original URL.  otherwise, we'll
          telescope based on its parent's URL. */
-      d->new_URL = get_entry_url(eb->adm_access, d->path, NULL, pool);
+      d->new_URL = get_entry_url(eb->db, d->local_abspath, svn_node_dir,
+                                 pool, pool);
       if ((! d->new_URL) && pb)
         d->new_URL = svn_path_url_add_component2(pb->new_URL, d->name, pool);
     }
@@ -692,18 +687,12 @@ complete_directory(struct edit_baton *eb,
       /* Before we can finish, we may need to clear the exclude flag for
          target. Also give a chance to the target that is explicitly pulled
          in. */
-
-      const char *full_target;
-      const char *target_abspath;
       svn_error_t *err;
       const svn_wc_entry_t *target_entry;
 
       SVN_ERR_ASSERT(strcmp(path, eb->anchor) == 0);
 
-      full_target = svn_dirent_join(eb->anchor, eb->target, pool);
-      SVN_ERR(svn_dirent_get_absolute(&target_abspath, full_target, pool));
-
-      err = svn_wc__get_entry(&target_entry, eb->db, target_abspath, TRUE,
+      err = svn_wc__get_entry(&target_entry, eb->db, eb->target_abspath, TRUE,
                               svn_node_dir, TRUE, pool, pool);
       if (err)
         {
@@ -723,7 +712,7 @@ complete_directory(struct edit_baton *eb,
              (and thus get rid of the exclude flag) now. */
 
           target_access = svn_wc__adm_retrieve_internal2(eb->db,
-                                                         target_abspath,
+                                                         eb->target_abspath,
                                                          pool);
           if (!target_access && target_entry->kind == svn_node_dir)
             {
@@ -737,7 +726,7 @@ complete_directory(struct edit_baton *eb,
             }
           else
             {
-              SVN_ERR(svn_wc__set_depth(eb->db, target_abspath,
+              SVN_ERR(svn_wc__set_depth(eb->db, eb->target_abspath,
                                         svn_depth_infinity, pool));
             }
         }
@@ -825,22 +814,17 @@ complete_directory(struct edit_baton *eb,
         }
       else if (current_entry->kind == svn_node_dir)
         {
-          const char *child_path = svn_dirent_join(path, name, subpool);
-          const char *child_abspath;
-
-          SVN_ERR(svn_dirent_get_absolute(&child_abspath, child_path, pool));
-
           if (current_entry->depth == svn_depth_exclude)
             {
               /* Clear the exclude flag if it is pulled in again. */
               if (eb->depth_is_sticky
                   && eb->requested_depth >= svn_depth_immediates)
                 {
-                  SVN_ERR(svn_wc__set_depth(eb->db, child_abspath,
+                  SVN_ERR(svn_wc__set_depth(eb->db, local_abspath,
                                             svn_depth_infinity, pool));
                 }
             }
-          else if ((svn_wc__adm_missing(eb->db, child_abspath, subpool))
+          else if ((svn_wc__adm_missing(eb->db, local_abspath, subpool))
                    && (! current_entry->absent)
                    && (current_entry->schedule != svn_wc_schedule_add))
             {
@@ -850,7 +834,7 @@ complete_directory(struct edit_baton *eb,
               if (eb->notify_func)
                 {
                   svn_wc_notify_t *notify
-                    = svn_wc_create_notify(child_path,
+                    = svn_wc_create_notify(local_abspath,
                                            svn_wc_notify_update_delete,
                                            subpool);
                   notify->kind = current_entry->kind;
@@ -1020,8 +1004,10 @@ make_file_baton(struct file_baton **f_p,
     }
   else
     {
-      f->new_URL = get_entry_url(pb->edit_baton->adm_access,
-                                 pb->path, f->name, pool);
+      f->new_URL = get_entry_url(pb->edit_baton->db,
+                                 svn_dirent_join(pb->local_abspath,
+                                                 f->name, pool),
+                                 svn_node_file, pool, pool);
     }
 
   f->pool              = pool;
@@ -1116,6 +1102,9 @@ prep_directory(struct dir_baton *db,
                apr_pool_t *pool)
 {
   const char *repos;
+  const char *dir_abspath;
+
+  SVN_ERR(svn_dirent_get_absolute(&dir_abspath, db->path, pool));
 
   /* Make sure the directory exists. */
   SVN_ERR(svn_wc__ensure_directory(db->path, pool));
@@ -1130,9 +1119,10 @@ prep_directory(struct dir_baton *db,
 
   /* Make sure it's the right working copy, either by creating it so,
      or by checking that it is so already. */
-  SVN_ERR(svn_wc_ensure_adm3(db->path, db->edit_baton->uuid,
-                             ancestor_url, repos,
-                             ancestor_revision, db->ambient_depth, pool));
+  SVN_ERR(svn_wc__internal_ensure_adm(db->edit_baton->db, dir_abspath,
+                                      db->edit_baton->uuid, ancestor_url,
+                                      repos, ancestor_revision,
+                                      db->ambient_depth, pool));
 
   if (! db->edit_baton->adm_access
       || strcmp(svn_wc_adm_access_path(db->edit_baton->adm_access),
@@ -1198,8 +1188,9 @@ accumulate_entry_props(svn_stringbuf_t *log_accum,
          defunct. */
       if (! strcmp(prop->name, SVN_PROP_ENTRY_LOCK_TOKEN))
         {
-          SVN_ERR(svn_wc__loggy_delete_lock(
-                  &log_accum, adm_access, path, pool));
+          SVN_ERR(svn_wc__loggy_delete_lock(&log_accum,
+                                   svn_wc__adm_access_abspath(adm_access),
+                                   path, pool));
 
           if (lock_state)
             *lock_state = svn_wc_notify_lock_state_unlocked;
@@ -1237,8 +1228,9 @@ accumulate_entry_props(svn_stringbuf_t *log_accum,
     }
 
   if (flags)
-    SVN_ERR(svn_wc__loggy_entry_modify(&log_accum, adm_access, path,
-                                       &tmp_entry, flags, pool));
+    SVN_ERR(svn_wc__loggy_entry_modify(&log_accum,
+                                       svn_wc__adm_access_abspath(adm_access),
+                                       path, &tmp_entry, flags, pool));
 
   return SVN_NO_ERROR;
 }
@@ -1386,34 +1378,32 @@ leftmod_error_chain(svn_error_t *err)
 /* ===================================================================== */
 /* Checking for local modifications. */
 
-/* Set *MODIFIED to true iff the item described by (ADM_ACCESS, FULL_PATH,
- * KIND) has local modifications.
- * For a file, this means text mods or property mods.
+/* Set *MODIFIED to true iff the item described by (LOCAL_ABSPATH, KIND)
+ * has local modifications. For a file, this means text mods or property mods.
  * For a directory, this means property mods.
+ *
+ * Use SCRATCH_POOL for temporary allocations.
  */
 static svn_error_t *
 entry_has_local_mods(svn_boolean_t *modified,
-                     svn_wc_adm_access_t *adm_access,
+                     svn_wc__db_t *db,
+                     const char *local_abspath,
                      svn_node_kind_t kind,
-                     const char *full_path,
-                     apr_pool_t *pool)
+                     apr_pool_t *scratch_pool)
 {
   svn_boolean_t text_modified;
   svn_boolean_t props_modified;
-  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
-  const char *local_abspath;
-
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, full_path, pool));
 
   /* Check for text modifications */
   if (kind == svn_node_file)
     SVN_ERR(svn_wc__text_modified_internal_p(&text_modified, db, local_abspath,
-                                             FALSE, TRUE, pool));
+                                             FALSE, TRUE, scratch_pool));
   else
     text_modified = FALSE;
 
   /* Check for property modifications */
-  SVN_ERR(svn_wc__props_modified(&props_modified, db, local_abspath, pool));
+  SVN_ERR(svn_wc__props_modified(&props_modified, db, local_abspath,
+                                 scratch_pool));
 
   *modified = (text_modified || props_modified);
 
@@ -1422,7 +1412,7 @@ entry_has_local_mods(svn_boolean_t *modified,
 
 /* A baton for use with modcheck_found_entry(). */
 typedef struct modcheck_baton_t {
-  svn_wc_adm_access_t *adm_access;  /* access for the root of the sub-tree */
+  svn_wc__db_t *db;         /* wc_db to access nodes */
   svn_boolean_t found_mod;  /* whether a modification has been found */
   svn_boolean_t all_edits_are_deletes;  /* If all the mods found, if any,
                                           were deletes.  If FOUND_MOD is false
@@ -1437,37 +1427,15 @@ modcheck_found_entry(const char *path,
 {
   modcheck_baton_t *baton = walk_baton;
   svn_boolean_t modified;
+  const char *local_abspath;
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
   if (entry->schedule != svn_wc_schedule_normal)
     modified = TRUE;
   else
-    {
-      svn_error_t *err;
-      svn_wc_adm_access_t *adm_access;
-
-      /* Try to get a WC access baton for this node. */
-      err = svn_wc_adm_probe_retrieve(&adm_access, baton->adm_access, path,
-                                      pool);
-
-      /* If this node is not locked, e.g. because of a shallow update command
-       * such as "svn update --depth=immediates", then acquire a deep lock on
-       * this node. */
-      if (err)
-        {
-          if (err->apr_err != SVN_ERR_WC_NOT_LOCKED)
-            return svn_error_return(err);
-
-          svn_error_clear(err);
-          SVN_ERR(svn_wc_adm_open3(&adm_access, baton->adm_access, path,
-                                   FALSE /* read-only */,
-                                   -1 /* infinite */,
-                                   NULL, NULL /* no cancellation */,
-                                   pool));
-        }
-
-      SVN_ERR(entry_has_local_mods(&modified, adm_access, entry->kind,
-                                   path, pool));
-    }
+    SVN_ERR(entry_has_local_mods(&modified, baton->db, local_abspath,
+                                 entry->kind, pool));
 
   if (modified)
     {
@@ -1498,7 +1466,7 @@ tree_has_local_mods(svn_boolean_t *modified,
     { modcheck_found_entry, svn_wc__walker_default_error_handler };
   modcheck_baton_t modcheck_baton = { NULL, FALSE, TRUE };
 
-  modcheck_baton.adm_access = adm_access;
+  modcheck_baton.db = svn_wc__adm_get_db(adm_access);
 
   /* Walk the WC tree to its full depth, looking for any local modifications.
    * If it's a "sparse" directory, that's OK: there can be no local mods in
@@ -1558,6 +1526,9 @@ check_tree_conflict(svn_wc_conflict_description_t **pconflict,
   svn_boolean_t all_mods_are_deletes = FALSE;
   svn_boolean_t is_subtree_of_locally_deleted =
     in_deleted_tree(eb, full_path, FALSE, pool);
+  const char *local_abspath;
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, full_path, pool));
 
   switch (action)
     {
@@ -1570,7 +1541,9 @@ check_tree_conflict(svn_wc_conflict_description_t **pconflict,
       if ((entry->schedule == svn_wc_schedule_delete
            || entry->schedule == svn_wc_schedule_replace)
           && !is_subtree_of_locally_deleted)
-        reason = svn_wc_conflict_reason_deleted;
+        reason = entry->schedule == svn_wc_schedule_delete
+                                    ? svn_wc_conflict_reason_deleted
+                                    : svn_wc_conflict_reason_replaced;
       break;
 
     case svn_wc_conflict_action_add:
@@ -1585,6 +1558,7 @@ check_tree_conflict(svn_wc_conflict_description_t **pconflict,
       break;
 
     case svn_wc_conflict_action_delete:
+    case svn_wc_conflict_action_replace:
       /* Use case 3: Deleting a locally-deleted item. */
       if (entry->schedule == svn_wc_schedule_delete
           || entry->schedule == svn_wc_schedule_replace)
@@ -1594,7 +1568,9 @@ check_tree_conflict(svn_wc_conflict_description_t **pconflict,
              conflict on the locally deleted parent tree.  No need
              to record a conflict within the conflict. */
           if (!is_subtree_of_locally_deleted)
-            reason = svn_wc_conflict_reason_deleted;
+            reason = entry->schedule == svn_wc_schedule_delete
+                                        ? svn_wc_conflict_reason_deleted
+                                        : svn_wc_conflict_reason_replaced;
         }
       else
         {
@@ -1607,8 +1583,8 @@ check_tree_conflict(svn_wc_conflict_description_t **pconflict,
               if (entry->schedule != svn_wc_schedule_normal)
                 modified = TRUE;
               else
-                SVN_ERR(entry_has_local_mods(&modified, parent_adm_access,
-                                             entry->kind, full_path, pool));
+                SVN_ERR(entry_has_local_mods(&modified, eb->db, local_abspath,
+                                             entry->kind, pool));
               if (entry->schedule == svn_wc_schedule_delete)
                 all_mods_are_deletes = TRUE;
             }
@@ -1787,8 +1763,8 @@ already_in_a_tree_conflict(svn_boolean_t *conflicted,
       svn_boolean_t is_wc_root;
 
       svn_pool_clear(iterpool);
-      SVN_ERR(check_wc_root(&is_wc_root, NULL, db, ancestor_abspath,
-                            iterpool));
+      SVN_ERR(svn_wc__check_wc_root(&is_wc_root, NULL, db, ancestor_abspath,
+                                    iterpool));
       if (is_wc_root)
         break;
 
@@ -1885,8 +1861,9 @@ set_copied_callback(const char *path,
 }
 
 
-/* Schedule the WC item PATH, whose entry is ENTRY, for re-addition as a copy
- * with history of (ENTRY->url)@(ENTRY->rev). PATH's parent is PARENT_PATH.
+/* Schedule the WC item PATH, whose entry is ENTRY, for re-addition.
+ * If MODIFY_COPYFROM is TRUE, re-add the item as a copy with history
+ * of (ENTRY->url)@(ENTRY->rev). PATH's parent is PARENT_PATH.
  * PATH and PARENT_PATH are relative to the current working directory.
  * Assume that the item exists locally and is scheduled as still existing with
  * some local modifications relative to its (old) base, but does not exist in
@@ -1910,6 +1887,7 @@ schedule_existing_item_for_re_add(const svn_wc_entry_t *entry,
                                   const char *parent_path,
                                   const char *path,
                                   const char *their_url,
+                                  svn_boolean_t modify_copyfrom,
                                   apr_pool_t *pool)
 {
   const char *base_name = svn_dirent_basename(path, pool);
@@ -1928,12 +1906,15 @@ schedule_existing_item_for_re_add(const svn_wc_entry_t *entry,
   flags |= SVN_WC__ENTRY_MODIFY_SCHEDULE;
   flags |= SVN_WC__ENTRY_MODIFY_FORCE;
 
-  tmp_entry.copyfrom_url = entry->url;
-  flags |= SVN_WC__ENTRY_MODIFY_COPYFROM_URL;
-  tmp_entry.copyfrom_rev = entry->revision;
-  flags |= SVN_WC__ENTRY_MODIFY_COPYFROM_REV;
-  tmp_entry.copied = TRUE;
-  flags |= SVN_WC__ENTRY_MODIFY_COPIED;
+  if (modify_copyfrom)
+    {
+      tmp_entry.copyfrom_url = entry->url;
+      flags |= SVN_WC__ENTRY_MODIFY_COPYFROM_URL;
+      tmp_entry.copyfrom_rev = entry->revision;
+      flags |= SVN_WC__ENTRY_MODIFY_COPYFROM_REV;
+      tmp_entry.copied = TRUE;
+      flags |= SVN_WC__ENTRY_MODIFY_COPIED;
+    }
 
   /* ### Need to change the "base" into a "revert-base" ? */
 
@@ -2090,12 +2071,12 @@ do_entry_deletion(struct edit_baton *eb,
            * that needs to modify the same entries. */
           SVN_ERR(svn_wc__write_log(parent_adm_access, *log_number, log_item,
                                     pool));
-          SVN_ERR(svn_wc__run_log(parent_adm_access, NULL, pool));
+          SVN_ERR(svn_wc__run_log(parent_adm_access, pool));
           *log_number = 0;
 
           SVN_ERR(schedule_existing_item_for_re_add(entry, eb, parent_path,
                                                     full_path, their_url,
-                                                    pool));
+                                                    TRUE, pool));
           return SVN_NO_ERROR;
         }
       else if (tree_conflict->reason == svn_wc_conflict_reason_deleted)
@@ -2107,6 +2088,28 @@ do_entry_deletion(struct edit_baton *eb,
 
           /* Fall through to the normal "delete" code path. */
         }
+      else if (tree_conflict->reason == svn_wc_conflict_reason_replaced)
+        {
+          /* The item was locally replaced with something else. We should
+           * keep the existing item schedule-replace, but we also need to
+           * update the BASE rev of the item to the revision we are updating
+           * to. Otherwise, the replace cannot be committed because the item
+           * is considered out-of-date, and it cannot be updated either because
+           * we're here to do just that. */
+
+          /* Run the log in the parent dir, to record the tree conflict.
+           * Do this before schedule_existing_item_for_re_add(), in case
+           * that needs to modify the same entries. */
+          SVN_ERR(svn_wc__write_log(parent_adm_access, *log_number, log_item,
+                                    pool));
+          SVN_ERR(svn_wc__run_log(parent_adm_access, pool));
+          *log_number = 0;
+
+          SVN_ERR(schedule_existing_item_for_re_add(entry, eb, parent_path,
+                                                    full_path, their_url,
+                                                    FALSE, pool));
+          return SVN_NO_ERROR;
+        }
       else
         SVN_ERR_MALFUNCTION();  /* other reasons are not expected here */
     }
@@ -2114,8 +2117,9 @@ do_entry_deletion(struct edit_baton *eb,
   /* Issue a loggy command to delete the entry from version control and to
    * delete it from disk if unmodified, but leave any modified files on disk
    * unversioned. */
-  SVN_ERR(svn_wc__loggy_delete_entry(&log_item, parent_adm_access, full_path,
-                                     pool));
+  SVN_ERR(svn_wc__loggy_delete_entry(&log_item,
+                             svn_wc__adm_access_abspath(parent_adm_access),
+                             full_path, pool));
 
   /* If the thing being deleted is the *target* of this update, then
      we need to recreate a 'deleted' entry, so that the parent can give
@@ -2130,12 +2134,13 @@ do_entry_deletion(struct edit_baton *eb,
       tmp_entry.kind = entry->kind;
       tmp_entry.deleted = TRUE;
 
-      SVN_ERR(svn_wc__loggy_entry_modify(&log_item, parent_adm_access,
-                                         full_path, &tmp_entry,
-                                         SVN_WC__ENTRY_MODIFY_REVISION
-                                         | SVN_WC__ENTRY_MODIFY_KIND
-                                         | SVN_WC__ENTRY_MODIFY_DELETED,
-                                         pool));
+      SVN_ERR(svn_wc__loggy_entry_modify(&log_item,
+                               svn_wc__adm_access_abspath(parent_adm_access),
+                               full_path, &tmp_entry,
+                               SVN_WC__ENTRY_MODIFY_REVISION
+                               | SVN_WC__ENTRY_MODIFY_KIND
+                               | SVN_WC__ENTRY_MODIFY_DELETED,
+                               pool));
 
       eb->target_deleted = TRUE;
     }
@@ -2181,7 +2186,7 @@ do_entry_deletion(struct edit_baton *eb,
 
   /* Note: these two lines are duplicated in the tree-conflicts bail out
    * above. */
-  SVN_ERR(svn_wc__run_log(parent_adm_access, NULL, pool));
+  SVN_ERR(svn_wc__run_log(parent_adm_access, pool));
   *log_number = 0;
 
   /* Notify. (If tree_conflict, we've already notified.) */
@@ -2679,7 +2684,8 @@ open_directory(const char *path,
 
   /* Remember the roots of any locally deleted trees. */
   if (tree_conflict
-      && tree_conflict->reason == svn_wc_conflict_reason_deleted
+      && (tree_conflict->reason == svn_wc_conflict_reason_deleted ||
+          tree_conflict->reason == svn_wc_conflict_reason_replaced)
       && !in_deleted_tree(eb, full_path, TRUE, pool))
     remember_deleted_tree(eb, full_path);
 
@@ -2719,7 +2725,8 @@ open_directory(const char *path,
          that. */
       if (prop_conflicted
           || (tree_conflict
-              && tree_conflict->reason != svn_wc_conflict_reason_deleted))
+              && (tree_conflict->reason != svn_wc_conflict_reason_deleted &&
+                  tree_conflict->reason != svn_wc_conflict_reason_replaced)))
         return SVN_NO_ERROR;
     }
 
@@ -2990,7 +2997,7 @@ close_directory(void *dir_baton,
 
   /* Flush and run the log. */
   SVN_ERR(flush_log(db, pool));
-  SVN_ERR(svn_wc__run_log(adm_access, db->edit_baton->diff3_cmd, db->pool));
+  SVN_ERR(svn_wc__run_log(adm_access, db->pool));
   db->log_number = 0;
 
   /* We're done with this directory, so remove one reference from the
@@ -3113,26 +3120,25 @@ absent_directory(const char *path,
    If the file isn't found, set *RETURN_PATH to NULL.
 
    If the file is found, return the absolute path to it in
-   *RETURN_PATH, its entry in *RETURN_ENTRY, and a (read-only)
-   access_t for its parent in *RETURN_ACCESS.
+   *RETURN_PATH, its entry in *RETURN_ENTRY.
 */
 static svn_error_t *
-locate_copyfrom(const char *copyfrom_path,
+locate_copyfrom(svn_wc__db_t *db,
+                const char *copyfrom_path,
                 svn_revnum_t copyfrom_rev,
                 const char *dest_dir,
                 const svn_wc_entry_t *dest_entry,
                 const char **return_path,
                 const svn_wc_entry_t **return_entry,
-                svn_wc_adm_access_t **return_access,
                 apr_pool_t *pool)
 {
   const char *dest_fs_path, *ancestor_fs_path, *ancestor_url, *file_url;
   const char *copyfrom_parent, *copyfrom_file;
   const char *abs_dest_dir, *extra_components;
   const svn_wc_entry_t *ancestor_entry, *file_entry;
-  svn_wc_adm_access_t *ancestor_access;
   apr_size_t levels_up;
   svn_stringbuf_t *cwd, *cwd_parent;
+  const char *cwd_abspath;
   svn_node_kind_t kind;
   svn_error_t *err;
   apr_pool_t *subpool = svn_pool_create(pool);
@@ -3181,10 +3187,9 @@ locate_copyfrom(const char *copyfrom_path,
   SVN_ERR(svn_io_check_path(cwd->data, &kind, subpool));
   if (kind != svn_node_dir)
     return SVN_NO_ERROR;
-  err = svn_wc_adm_open3(&ancestor_access, NULL, cwd->data,
-                         FALSE, /* open read-only, please */
-                         0,     /* open only this directory */
-                         NULL, NULL, subpool);
+  SVN_ERR(svn_dirent_get_absolute(&cwd_abspath, cwd->data, subpool));
+  err = svn_wc__get_entry(&ancestor_entry, db, cwd_abspath, FALSE,
+                          svn_node_dir, FALSE, subpool, subpool);
   if (err && err->apr_err == SVN_ERR_WC_NOT_DIRECTORY)
     {
       /* The common ancestor directory isn't version-controlled. */
@@ -3193,9 +3198,6 @@ locate_copyfrom(const char *copyfrom_path,
     }
   else if (err)
     return svn_error_return(err);
-
-  SVN_ERR(svn_wc_entry(&ancestor_entry, cwd->data, ancestor_access,
-                       FALSE, subpool));
 
   /* If we got this far, we know that the ancestor dir exists, and
      that it's a working copy too.  But is it from the same
@@ -3225,10 +3227,9 @@ locate_copyfrom(const char *copyfrom_path,
     return SVN_NO_ERROR;
 
   /* Next: is the file's parent-dir under version control?   */
-  err = svn_wc_adm_open3(&ancestor_access, NULL, cwd_parent->data,
-                         FALSE, /* open read-only, please */
-                         0,     /* open only the parent dir */
-                         NULL, NULL, pool);
+  SVN_ERR(svn_dirent_get_absolute(&cwd_abspath, cwd->data, pool));
+  err = svn_wc__get_entry(&file_entry, db, cwd_abspath, TRUE, svn_node_file,
+                          FALSE, pool, pool);
   if (err && err->apr_err == SVN_ERR_WC_NOT_DIRECTORY)
     {
       svn_error_clear(err);
@@ -3255,8 +3256,6 @@ locate_copyfrom(const char *copyfrom_path,
 
   /* The candidate file is under version control;  but is it
      really the file we're looking for?  <wave hand in circle> */
-  SVN_ERR(svn_wc_entry(&file_entry, cwd->data, ancestor_access,
-                       FALSE, pool));
   if (! file_entry)
     /* Parent dir is versioned, but file is not.  Be safe and
        return no results (see large discourse above.) */
@@ -3285,7 +3284,6 @@ locate_copyfrom(const char *copyfrom_path,
   /* Success!  We found the exact file we wanted! */
   *return_path = apr_pstrdup(pool, cwd->data);
   *return_entry = file_entry;
-  *return_access = ancestor_access;
 
   svn_pool_clear(subpool);
   return SVN_NO_ERROR;
@@ -3339,7 +3337,7 @@ add_file_with_history(const char *path,
                       apr_pool_t *pool)
 {
   struct edit_baton *eb = pb->edit_baton;
-  svn_wc_adm_access_t *adm_access, *src_access;
+  svn_wc_adm_access_t *adm_access;
   const char *src_path;
   const svn_wc_entry_t *src_entry;
   apr_hash_t *base_props, *working_props;
@@ -3358,9 +3356,9 @@ add_file_with_history(const char *path,
 
   /* Attempt to locate the copyfrom_path in the working copy first. */
   SVN_ERR(svn_wc_entry(&path_entry, pb->path, eb->adm_access, FALSE, subpool));
-  err = locate_copyfrom(copyfrom_path, copyfrom_rev,
+  err = locate_copyfrom(eb->db, copyfrom_path, copyfrom_rev,
                         pb->path, path_entry,
-                        &src_path, &src_entry, &src_access, subpool);
+                        &src_path, &src_entry, subpool);
   if (err && err->apr_err == SVN_ERR_WC_COPYFROM_PATH_NOT_FOUND)
     svn_error_clear(err);
   else if (err)
@@ -3759,7 +3757,8 @@ open_file(const char *path,
   /* Remember any locally deleted files that are not already within
      a locally delete tree. */
   if (tree_conflict
-      && tree_conflict->reason == svn_wc_conflict_reason_deleted
+      && (tree_conflict->reason == svn_wc_conflict_reason_deleted ||
+          tree_conflict->reason == svn_wc_conflict_reason_replaced)
       && !locally_deleted)
     {
       remember_deleted_tree(eb, full_path);
@@ -4138,7 +4137,8 @@ loggy_tweak_entry(svn_stringbuf_t *log_accum,
       modify_flags |= SVN_WC__ENTRY_MODIFY_URL;
     }
 
-  return svn_wc__loggy_entry_modify(&log_accum, adm_access,
+  return svn_wc__loggy_entry_modify(&log_accum,
+                                    svn_wc__adm_access_abspath(adm_access),
                                     path, &tmp_entry, modify_flags,
                                     pool);
 }
@@ -4331,7 +4331,8 @@ merge_file(svn_wc_notify_state_t *content_state,
                For replaced files, though, we want to merge in the changes
                even if the file is not modified compared to the (non-revert)
                text-base. */
-            SVN_ERR(svn_wc__loggy_copy(&log_accum, adm_access,
+            SVN_ERR(svn_wc__loggy_copy(&log_accum,
+                                       svn_wc__adm_access_abspath(adm_access),
                                        new_text_base_path,
                                        fb->path, pool));
         }
@@ -4344,7 +4345,8 @@ merge_file(svn_wc_notify_state_t *content_state,
             {
               /* working file is missing?!
                  Just copy the new text-base to the file. */
-              SVN_ERR(svn_wc__loggy_copy(&log_accum, adm_access,
+              SVN_ERR(svn_wc__loggy_copy(&log_accum,
+                                         svn_wc__adm_access_abspath(adm_access),
                                          new_text_base_path,
                                          fb->path, pool));
             }
@@ -4457,17 +4459,17 @@ merge_file(svn_wc_notify_state_t *content_state,
 
           /* Copy and DEtranslate the working file to a temp text-base.
              Note that detranslation is done according to the old props. */
-          SVN_ERR(svn_wc_translated_file2(&tmptext, fb->path, fb->path,
-                                          adm_access,
-                                          SVN_WC_TRANSLATE_TO_NF
-                                          | SVN_WC_TRANSLATE_NO_OUTPUT_CLEANUP,
-                                          pool));
+          SVN_ERR(svn_wc__internal_translated_file(
+                   &tmptext, local_abspath, eb->db, local_abspath,
+                   SVN_WC_TRANSLATE_TO_NF | SVN_WC_TRANSLATE_NO_OUTPUT_CLEANUP,
+                   pool, pool));
 
           /* A log command that copies the tmp-text-base and REtranslates
              it back to the working file.
              Now, since this is done during the execution of the log file, this
              retranslation is actually done according to the new props. */
-          SVN_ERR(svn_wc__loggy_copy(&log_accum, adm_access,
+          SVN_ERR(svn_wc__loggy_copy(&log_accum,
+                                     svn_wc__adm_access_abspath(adm_access),
                                      tmptext, fb->path, pool));
         }
 
@@ -4482,7 +4484,8 @@ merge_file(svn_wc_notify_state_t *content_state,
   if (new_text_base_path)
     {
       SVN_ERR(svn_wc__loggy_move(&log_accum,
-                                 adm_access, new_text_base_path,
+                                 svn_wc__adm_access_abspath(adm_access),
+                                 new_text_base_path,
                                  fb->text_base_path, pool));
       SVN_ERR(svn_wc__loggy_set_readonly(&log_accum, adm_access,
                                          fb->text_base_path, pool));
@@ -4499,7 +4502,8 @@ merge_file(svn_wc_notify_state_t *content_state,
     }
 
   /* Do the entry modifications we've accumulated. */
-  SVN_ERR(svn_wc__loggy_entry_modify(&log_accum, adm_access,
+  SVN_ERR(svn_wc__loggy_entry_modify(&log_accum,
+                                     svn_wc__adm_access_abspath(adm_access),
                                      fb->path, &tmp_entry, flags, pool));
 
   /* Log commands to handle text-timestamp and working-size,
@@ -4832,6 +4836,13 @@ make_editor(svn_revnum_t *target_revision,
   eb->adm_access               = adm_access;
   eb->anchor                   = anchor;
   eb->target                   = target;
+  SVN_ERR(svn_dirent_get_absolute(&eb->anchor_abspath, anchor, pool));
+
+  if (svn_path_is_empty(target))
+    eb->target_abspath = eb->anchor_abspath;
+  else
+    eb->target_abspath = svn_dirent_join(eb->anchor_abspath, target, pool);
+
   eb->requested_depth          = depth;
   eb->depth_is_sticky          = depth_is_sticky;
   eb->notify_func              = notify_func;
@@ -5118,7 +5129,7 @@ svn_wc_traversed_depths(apr_hash_t **depths,
 }
 
 
-/* ABOUT ANCHOR AND TARGET, AND svn_wc_get_actual_target()
+/* ABOUT ANCHOR AND TARGET, AND svn_wc_get_actual_target2()
 
    THE GOAL
 
@@ -5193,7 +5204,7 @@ svn_wc_traversed_depths(apr_hash_t **depths,
    this directory in mind), and the "target" is the actual intended
    subject of the update.
 
-   svn_wc_get_actual_target() is that function.
+   svn_wc_get_actual_target2() is that function.
 
    So, what are the conditions?
 
@@ -5222,16 +5233,12 @@ svn_wc_traversed_depths(apr_hash_t **depths,
 */
 
 
-/* Like svn_wc_is_wc_root(), but also, if KIND is not null, set *KIND to
- * the versioned node kind of PATH, or to svn_node_file if PATH is
- * unversioned.
- */
-static svn_error_t *
-check_wc_root(svn_boolean_t *wc_root,
-              svn_node_kind_t *kind,
-              svn_wc__db_t *db,
-              const char *local_abspath,
-              apr_pool_t *scratch_pool)
+svn_error_t *
+svn_wc__check_wc_root(svn_boolean_t *wc_root,
+                      svn_node_kind_t *kind,
+                      svn_wc__db_t *db,
+                      const char *local_abspath,
+                      apr_pool_t *scratch_pool)
 {
   const char *parent, *base_name;
   const svn_wc_entry_t *p_entry, *entry;
@@ -5344,17 +5351,16 @@ check_wc_root(svn_boolean_t *wc_root,
 
 
 svn_error_t *
-svn_wc_is_wc_root(svn_boolean_t *wc_root,
-                  const char *path,
-                  svn_wc_adm_access_t *adm_access,
-                  apr_pool_t *pool)
+svn_wc_is_wc_root2(svn_boolean_t *wc_root,
+                   svn_wc_context_t *wc_ctx,
+                   const char *local_abspath,
+                   apr_pool_t *scratch_pool)
 {
-  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
-  const char *local_abspath;
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
-
-  return check_wc_root(wc_root, NULL, db, local_abspath, pool);
+  return svn_error_return(
+    svn_wc__check_wc_root(wc_root, NULL, wc_ctx->db, local_abspath,
+                          scratch_pool));
 }
 
 
@@ -5364,8 +5370,8 @@ svn_wc__strictly_is_wc_root(svn_boolean_t *wc_root,
                             const char *local_abspath,
                             apr_pool_t *scratch_pool)
 {
-  SVN_ERR(check_wc_root(wc_root, NULL, wc_ctx->db, local_abspath,
-                        scratch_pool));
+  SVN_ERR(svn_wc__check_wc_root(wc_root, NULL, wc_ctx->db, local_abspath,
+                                scratch_pool));
 
   if (*wc_root)
     {
@@ -5422,31 +5428,30 @@ svn_wc__strictly_is_wc_root(svn_boolean_t *wc_root,
 
 
 svn_error_t *
-svn_wc_get_actual_target(const char *path,
-                         const char **anchor,
-                         const char **target,
-                         apr_pool_t *pool)
+svn_wc_get_actual_target2(const char **anchor,
+                          const char **target,
+                          svn_wc_context_t *wc_ctx,
+                          const char *path,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool)
 {
-  svn_wc__db_t *db;
   svn_boolean_t is_wc_root;
   svn_node_kind_t kind;
   const char *local_abspath;
 
-  /* ### this sucks. somebody should pass us a DB/ABSPATH instead.  */
-  SVN_ERR(svn_wc__db_open(&db, svn_wc__db_openmode_readonly,
-                          NULL /* ### config */, pool, pool));
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
-  SVN_ERR(check_wc_root(&is_wc_root, &kind, db, local_abspath, pool));
-  SVN_ERR(svn_wc__db_close(db));
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, scratch_pool));
+
+  SVN_ERR(svn_wc__check_wc_root(&is_wc_root, &kind, wc_ctx->db, local_abspath,
+                                scratch_pool));
 
   /* If PATH is not a WC root, or if it is a file, lop off a basename. */
   if ((! is_wc_root) || (kind == svn_node_file))
     {
-      svn_dirent_split(path, anchor, target, pool);
+      svn_dirent_split(path, anchor, target, result_pool);
     }
   else
     {
-      *anchor = apr_pstrdup(pool, path);
+      *anchor = apr_pstrdup(result_pool, path);
       *target = "";
     }
 
@@ -5570,8 +5575,8 @@ svn_wc_add_repos_file3(const char *dst_path,
       const char *dst_txtb = svn_wc__text_base_path(dst_path, FALSE, pool);
 
       SVN_ERR(svn_wc__loggy_move(&log_accum,
-                                 adm_access, dst_txtb, dst_rtext,
-                                 pool));
+                                 svn_wc__adm_access_abspath(adm_access),
+                                 dst_txtb, dst_rtext, pool));
       SVN_ERR(svn_wc__loggy_revert_props_create(&log_accum,
                                                 dst_path, adm_access,
                                                 TRUE, pool));
@@ -5600,7 +5605,8 @@ svn_wc_add_repos_file3(const char *dst_path,
           | SVN_WC__ENTRY_MODIFY_COPIED;
       }
 
-    SVN_ERR(svn_wc__loggy_entry_modify(&log_accum, adm_access,
+    SVN_ERR(svn_wc__loggy_entry_modify(&log_accum,
+                                       svn_wc__adm_access_abspath(adm_access),
                                        dst_path, &tmp_entry,
                                        modify_flags, pool));
   }
@@ -5646,7 +5652,8 @@ svn_wc_add_repos_file3(const char *dst_path,
                                pool));
 
       /* Translate new temporary text file to working text. */
-      SVN_ERR(svn_wc__loggy_copy(&log_accum, adm_access,
+      SVN_ERR(svn_wc__loggy_copy(&log_accum,
+                                 svn_wc__adm_access_abspath(adm_access),
                                  tmp_text_path, dst_path,
                                  pool));
 
@@ -5659,7 +5666,8 @@ svn_wc_add_repos_file3(const char *dst_path,
     {
       /* No working file provided by the caller, copy and translate the
          text base. */
-      SVN_ERR(svn_wc__loggy_copy(&log_accum, adm_access,
+      SVN_ERR(svn_wc__loggy_copy(&log_accum,
+                                 svn_wc__adm_access_abspath(adm_access),
                                  tmp_text_base_path, dst_path,
                                  pool));
       SVN_ERR(svn_wc__loggy_set_entry_timestamp_from_wc(&log_accum,
@@ -5677,13 +5685,14 @@ svn_wc_add_repos_file3(const char *dst_path,
     /* Write out log commands to set up the new text base and its
        checksum. */
     SVN_ERR(svn_wc__loggy_move(&log_accum,
-                               adm_access, tmp_text_base_path,
-                               text_base_path, pool));
+                               svn_wc__adm_access_abspath(adm_access),
+                               tmp_text_base_path, text_base_path, pool));
     SVN_ERR(svn_wc__loggy_set_readonly(&log_accum, adm_access,
                                        text_base_path, pool));
 
     tmp_entry.checksum = svn_checksum_to_cstring(base_checksum, pool);
-    SVN_ERR(svn_wc__loggy_entry_modify(&log_accum, adm_access,
+    SVN_ERR(svn_wc__loggy_entry_modify(&log_accum,
+                                       svn_wc__adm_access_abspath(adm_access),
                                        dst_path, &tmp_entry,
                                        SVN_WC__ENTRY_MODIFY_CHECKSUM,
                                        pool));
@@ -5692,5 +5701,5 @@ svn_wc_add_repos_file3(const char *dst_path,
   /* Write our accumulation of log entries into a log file */
   SVN_ERR(svn_wc__write_log(adm_access, 0, log_accum, pool));
 
-  return svn_wc__run_log(adm_access, NULL, pool);
+  return svn_wc__run_log(adm_access, pool);
 }

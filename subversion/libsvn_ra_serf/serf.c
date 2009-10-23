@@ -952,9 +952,6 @@ svn_ra_serf__get_uuid(svn_ra_session_t *ra_session,
                       apr_pool_t *pool)
 {
   svn_ra_serf__session_t *session = ra_session->priv;
-  apr_hash_t *props;
-
-  props = apr_hash_make(pool);
 
   if (!session->uuid)
     {

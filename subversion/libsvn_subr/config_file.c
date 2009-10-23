@@ -765,10 +765,12 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "###                              may be cached to disk."            NL
         "###   username                   Specifies the default username."   NL
         "###"                                                                NL
-        "### Set store-passwords to 'no' to avoid storing passwords in the"  NL
-        "### auth/ area of your config directory.  It defaults to 'yes',"    NL
-        "### but Subversion will never save your password to disk in"        NL
-        "### plaintext unless you tell it to."                               NL
+        "### Set store-passwords to 'no' to avoid storing passwords on disk" NL
+        "### in any way, including in password stores. It defaults to 'yes',"
+                                                                             NL
+        "### but Subversion will never save your password to disk in plaintext"
+                                                                             NL
+        "### unless you tell it to."                                         NL
         "### Note that this option only prevents saving of *new* passwords;" NL
         "### it doesn't invalidate existing passwords.  (To do that, remove" NL
         "### the cache files by hand as described in the Subversion book.)"  NL
@@ -944,6 +946,8 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
 #else
         "# password-stores = gnome-keyring,kwallet"                          NL
 #endif
+        "### To disable all password stores, use an empty list:"             NL
+        "# password-stores ="                                                NL
 #ifdef SVN_HAVE_KWALLET
         "###"                                                                NL
         "### Set KWallet wallet used by Subversion. If empty or unset,"      NL
@@ -955,25 +959,13 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "# kwallet-svn-application-name-with-pid = yes"                      NL
 #endif
         "###"                                                                NL
-        "### The rest of this section in this file has been deprecated."     NL
+        "### The rest of the [auth] section in this file has been deprecated."
+                                                                             NL
         "### Both 'store-passwords' and 'store-auth-creds' can now be"       NL
-        "### specified in the 'servers' file in your config directory."      NL
-        "### Anything specified in this section is overridden by settings"   NL
-        "### specified in the 'servers' file."                               NL
-        "###"                                                                NL
-        "### Set store-passwords to 'no' to avoid storing passwords in the"  NL
-        "### auth/ area of your config directory.  It defaults to 'yes',"    NL
-        "### but Subversion will never save your password to disk in"        NL
-        "### plaintext unless you tell it to (see the 'servers' file)."      NL
-        "### Note that this option only prevents saving of *new* passwords;" NL
-        "### it doesn't invalidate existing passwords.  (To do that, remove" NL
-        "### the cache files by hand as described in the Subversion book.)"  NL
+        "### specified in the 'servers' file in your config directory"       NL
+        "### and are documented there. Anything specified in this section "  NL
+        "### is overridden by settings specified in the 'servers' file."     NL
         "# store-passwords = no"                                             NL
-        "### Set store-auth-creds to 'no' to avoid storing any subversion"   NL
-        "### credentials in the auth/ area of your config directory."        NL
-        "### It defaults to 'yes'.  Note that this option only prevents"     NL
-        "### saving of *new* credentials;  it doesn't invalidate existing"   NL
-        "### caches.  (To do that, remove the cache files by hand.)"         NL
         "# store-auth-creds = no"                                            NL
         ""                                                                   NL
         "### Section for configuring external helper applications."          NL

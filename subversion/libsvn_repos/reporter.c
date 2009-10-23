@@ -954,8 +954,6 @@ delta_dirs(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
   apr_hash_t *s_entries = NULL, *t_entries;
   apr_hash_index_t *hi;
   apr_pool_t *subpool;
-  const svn_fs_dirent_t *s_entry, *t_entry;
-  void *val;
   const char *name, *s_fullpath, *t_fullpath, *e_fullpath;
   path_info_t *info;
 
@@ -982,6 +980,8 @@ delta_dirs(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
 
       while (1)
         {
+          const svn_fs_dirent_t *s_entry, *t_entry;
+
           svn_pool_clear(subpool);
           SVN_ERR(fetch_path_info(b, &name, &info, e_path, subpool));
           if (!name)
@@ -1050,9 +1050,10 @@ delta_dirs(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
                hi;
                hi = apr_hash_next(hi))
             {
+              const svn_fs_dirent_t *s_entry;
+
               svn_pool_clear(subpool);
-              apr_hash_this(hi, NULL, NULL, &val);
-              s_entry = val;
+              s_entry = svn_apr_hash_index_val(hi);
 
               if (apr_hash_get(t_entries, s_entry->name,
                                APR_HASH_KEY_STRING) == NULL)
@@ -1087,9 +1088,10 @@ delta_dirs(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
       /* Loop over the dirents in the target. */
       for (hi = apr_hash_first(pool, t_entries); hi; hi = apr_hash_next(hi))
         {
+          const svn_fs_dirent_t *s_entry, *t_entry;
+
           svn_pool_clear(subpool);
-          apr_hash_this(hi, NULL, NULL, &val);
-          t_entry = val;
+          t_entry = svn_apr_hash_index_val(hi);
 
           if (is_depth_upgrade(wc_depth, requested_depth, t_entry->kind))
             {

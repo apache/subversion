@@ -120,10 +120,11 @@ svn_client_add_to_changelist(const apr_array_header_t *paths,
       const char *path = APR_ARRAY_IDX(paths, i, const char *);
 
       svn_pool_clear(subpool);
-      SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, path,
-                                     TRUE, /* write lock */ -1, /* infinity */
-                                     ctx->cancel_func, ctx->cancel_baton,
-                                     subpool));
+      SVN_ERR(svn_wc__adm_probe_in_context(&adm_access, ctx->wc_ctx, path,
+                                           TRUE, /* write lock */
+                                           -1, /* infinity */
+                                           ctx->cancel_func, ctx->cancel_baton,
+                                           subpool));
 
       seb.adm_access = adm_access;
       seb.changelist = changelist;
@@ -168,10 +169,11 @@ svn_client_remove_from_changelists(const apr_array_header_t *paths,
       const char *path = APR_ARRAY_IDX(paths, i, const char *);
 
       svn_pool_clear(subpool);
-      SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, path,
-                                     TRUE, /* write lock */ -1, /* infinity */
-                                     ctx->cancel_func, ctx->cancel_baton,
-                                     subpool));
+      SVN_ERR(svn_wc__adm_probe_in_context(&adm_access, ctx->wc_ctx, path,
+                                           TRUE, /* write lock */
+                                           -1, /* infinity */
+                                           ctx->cancel_func, ctx->cancel_baton,
+                                           subpool));
 
       seb.adm_access = adm_access;
       seb.changelist = NULL;
@@ -251,10 +253,11 @@ svn_client_get_changelists(const char *path,
     SVN_ERR(svn_hash_from_cstring_keys(&(geb.changelists), changelists, pool));
   else
     geb.changelists = NULL;
-  SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, path,
-                                 FALSE, /* no write lock */
-                                 -1, /* levels to lock == infinity */
-                                 ctx->cancel_func, ctx->cancel_baton, pool));
+  SVN_ERR(svn_wc__adm_probe_in_context(&adm_access, ctx->wc_ctx, path,
+                                       FALSE, /* no write lock */
+                                       -1, /* levels to lock == infinity */
+                                       ctx->cancel_func, ctx->cancel_baton,
+                                       pool));
   SVN_ERR(svn_wc_walk_entries3(path, adm_access, &get_cl_entry_callbacks, &geb,
                                depth, FALSE, /* don't show hidden entries */
                                ctx->cancel_func, ctx->cancel_baton, pool));

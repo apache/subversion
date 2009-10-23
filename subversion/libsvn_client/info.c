@@ -324,6 +324,11 @@ info_error_handler(const char *path,
           SVN_ERR(build_info_for_unversioned(&info, pool));
           info->tree_conflict = tree_conflict;
 
+          SVN_ERR(svn_wc__node_get_repos_root(&(info->repos_root_URL),
+                                              fe_baton->wc_ctx,
+                                              local_abspath,
+                                              pool, pool));
+
           SVN_ERR(fe_baton->receiver(fe_baton->receiver_baton, path, info,
                                      pool));
           return SVN_NO_ERROR;
@@ -507,7 +512,7 @@ svn_client_info2(const char *path_or_url,
       /* Open a new RA session to the item's parent. */
       SVN_ERR(svn_client__open_ra_session_internal(&parent_ra_session,
                                                    parent_url, NULL,
-                                                   NULL, NULL, FALSE, TRUE,
+                                                   NULL, FALSE, TRUE,
                                                    ctx, pool));
 
       /* Get all parent's entries, and find the item's dirent in the hash. */

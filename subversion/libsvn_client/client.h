@@ -42,21 +42,22 @@ extern "C" {
 #define SVN_CLIENT_SVNPATCH_VERSION   1
 
 
-/* Set *URL and *PEG_REVNUM (the latter is ignored if NULL) to the
-   repository URL of PATH_OR_URL.  If PATH_OR_URL is a WC path and
-   PEG_REVISION->kind is svn_opt_revision_working, use the
-   corresponding entry's copyfrom info.  RA_SESSION and ADM_ACCESS may
-   be NULL, regardless of whether PATH_OR_URL is a URL.  Use CTX for
-   cancellation (ignored if NULL), and POOL for all allocations. */
+/* Set *URL, allocated in RESULT_POOL, and *PEG_REVNUM (the latter is
+   ignored if NULL) to the repository URL of ABSPATH_OR_URL.  If
+   ABSPATH_OR_URL is an absolute WC path and PEG_REVISION->kind is
+   svn_opt_revision_working, use the corresponding entry's copyfrom info.
+   RA_SESSION may be NULL regardless of whether ABSPATH_OR_URL is a URL.
+   Use CTX for cancellation (ignored if NULL), and SCRATCH_POOL for all
+   temporary allocations. */
 svn_error_t *
 svn_client__derive_location(const char **url,
                             svn_revnum_t *peg_revnum,
-                            const char *path_or_url,
+                            const char *abspath_or_url,
                             const svn_opt_revision_t *peg_revision,
                             svn_ra_session_t *ra_session,
-                            svn_wc_adm_access_t *adm_access,
                             svn_client_ctx_t *ctx,
-                            apr_pool_t *pool);
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool);
 
 /* Get the repository URL and revision number for WC entry ENTRY,
    which is sometimes the entry's copyfrom info rather than its actual
@@ -363,7 +364,6 @@ svn_client__default_walker_error_handler(const char *path,
 /* Open an RA session, returning it in *RA_SESSION.
 
    The root of the session is specified by BASE_URL and BASE_DIR.
-   BASE_ACCESS is an access baton for BASE_DIR administrative data.
 
    Additional control parameters:
 
@@ -378,8 +378,7 @@ svn_client__default_walker_error_handler(const char *path,
         modify the WC props directly.
 
    BASE_DIR may be NULL if the RA operation does not correspond to a
-   working copy (in which case, USE_ADMIN should be FALSE, and
-   BASE_ACCESS should be null).
+   working copy (in which case, USE_ADMIN should be FALSE).
 
    The calling application's authentication baton is provided in CTX,
    and allocations related to this session are performed in POOL.
@@ -390,7 +389,6 @@ svn_error_t *
 svn_client__open_ra_session_internal(svn_ra_session_t **ra_session,
                                      const char *base_url,
                                      const char *base_dir,
-                                     svn_wc_adm_access_t *base_access,
                                      apr_array_header_t *commit_items,
                                      svn_boolean_t use_admin,
                                      svn_boolean_t read_only_wc,

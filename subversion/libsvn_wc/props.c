@@ -358,7 +358,7 @@ install_props_file(svn_stringbuf_t **log_accum,
                              FALSE, pool));
 
   /* Write a log entry to move tmp file to real file. */
-  SVN_ERR(svn_wc__loggy_move(log_accum, adm_access,
+  SVN_ERR(svn_wc__loggy_move(log_accum, svn_wc__adm_access_abspath(adm_access),
                              propfile_tmp_path,
                              propfile_path,
                              pool));
@@ -474,9 +474,9 @@ immediate_install_props(const char *path,
 
 
 svn_error_t *
-svn_wc__working_props_committed(const char *path,
-                                svn_wc_adm_access_t *adm_access,
-                                apr_pool_t *pool)
+svn_wc__working_props_committed(svn_wc__db_t *db,
+                                const char *local_abspath,
+                                apr_pool_t *scratch_pool)
 {
   const char *working;
   const char *base;
@@ -486,16 +486,18 @@ svn_wc__working_props_committed(const char *path,
   /* The path is ensured not an excluded path. */
   /* TODO(#2843) It seems that there is no need to
      reveal hidden entry here? */
-  SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access, FALSE, pool));
+  SVN_ERR(svn_wc__get_entry(&entry, db, local_abspath,
+                            FALSE, svn_node_unknown, FALSE,
+                            scratch_pool, scratch_pool));
 
-  SVN_ERR(svn_wc__prop_path(&working, path, entry->kind,
-                            svn_wc__props_working, pool));
-  SVN_ERR(svn_wc__prop_path(&base, path, entry->kind,
-                            svn_wc__props_base, pool));
+  SVN_ERR(svn_wc__prop_path(&working, local_abspath, entry->kind,
+                            svn_wc__props_working, scratch_pool));
+  SVN_ERR(svn_wc__prop_path(&base, local_abspath, entry->kind,
+                            svn_wc__props_base, scratch_pool));
 
   /* svn_io_file_rename() retains a read-only bit, so there's no
      need to explicitly set it. */
-  return svn_io_file_rename(working, base, pool);
+  return svn_io_file_rename(working, base, scratch_pool);
 }
 
 
@@ -580,12 +582,13 @@ svn_wc__loggy_revert_props_create(svn_stringbuf_t **log_accum,
     {
       if (destroy_baseprops)
         SVN_ERR(svn_wc__loggy_move(log_accum,
-                                   adm_access, dst_bprop, dst_rprop,
-                                   pool));
+                                   svn_wc__adm_access_abspath(adm_access),
+                                   dst_bprop, dst_rprop, pool));
       else
         {
           SVN_ERR(svn_io_copy_file(dst_bprop, tmp_rprop, TRUE, pool));
-          SVN_ERR(svn_wc__loggy_move(log_accum, adm_access,
+          SVN_ERR(svn_wc__loggy_move(log_accum,
+                                     svn_wc__adm_access_abspath(adm_access),
                                      tmp_rprop, dst_rprop, pool));
         }
     }
@@ -601,8 +604,8 @@ svn_wc__loggy_revert_props_create(svn_stringbuf_t **log_accum,
                                  TRUE, pool));
 
       SVN_ERR(svn_wc__loggy_move(log_accum,
-                                 adm_access, dst_bprop, dst_rprop,
-                                 pool));
+                                 svn_wc__adm_access_abspath(adm_access),
+                                 dst_bprop, dst_rprop, pool));
     }
 
   return SVN_NO_ERROR;
@@ -626,7 +629,7 @@ svn_wc__loggy_revert_props_restore(svn_stringbuf_t **log_accum,
   SVN_ERR(svn_wc__prop_path(&revert_file, path, entry->kind,
                             svn_wc__props_revert, pool));
 
-  return svn_wc__loggy_move(log_accum, adm_access,
+  return svn_wc__loggy_move(log_accum, svn_wc__adm_access_abspath(adm_access),
                             revert_file, base_file, pool);
 }
 
@@ -668,13 +671,15 @@ static svn_error_t *
 combine_mergeinfo_props(const svn_string_t **output,
                         const svn_string_t *prop_val1,
                         const svn_string_t *prop_val2,
-                        apr_pool_t *pool)
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool)
 {
   svn_mergeinfo_t mergeinfo1, mergeinfo2;
-  SVN_ERR(svn_mergeinfo_parse(&mergeinfo1, prop_val1->data, pool));
-  SVN_ERR(svn_mergeinfo_parse(&mergeinfo2, prop_val2->data, pool));
-  SVN_ERR(svn_mergeinfo_merge(mergeinfo1, mergeinfo2, pool));
-  return svn_mergeinfo_to_string((svn_string_t **)output, mergeinfo1, pool);
+  SVN_ERR(svn_mergeinfo_parse(&mergeinfo1, prop_val1->data, scratch_pool));
+  SVN_ERR(svn_mergeinfo_parse(&mergeinfo2, prop_val2->data, scratch_pool));
+  SVN_ERR(svn_mergeinfo_merge(mergeinfo1, mergeinfo2, scratch_pool));
+  return svn_mergeinfo_to_string((svn_string_t **)output, mergeinfo1,
+                                 result_pool);
 }
 
 /* Perform a 3-way merge operation on mergeinfo.  FROM_PROP_VAL is
@@ -752,7 +757,7 @@ svn_wc_merge_props2(svn_wc_notify_state_t *state,
   if (! dry_run)
     {
       SVN_ERR(svn_wc__write_log(adm_access, 0, log_accum, pool));
-      SVN_ERR(svn_wc__run_log(adm_access, NULL, pool));
+      SVN_ERR(svn_wc__run_log(adm_access, pool));
     }
 
   return SVN_NO_ERROR;
@@ -1105,10 +1110,13 @@ apply_single_prop_add(svn_wc_notify_state_t *state,
            We only merge mergeinfo;  other props conflict */
           if (strcmp(propname, SVN_PROP_MERGEINFO) == 0)
             {
-              SVN_ERR(combine_mergeinfo_props(&new_val, working_val,
-                                              new_val, scratch_pool));
+              const svn_string_t *merged_val;
+
+              SVN_ERR(combine_mergeinfo_props(&merged_val, working_val,
+                                              new_val, result_pool,
+                                              scratch_pool));
               apr_hash_set(working_props, propname,
-                           APR_HASH_KEY_STRING, new_val);
+                           APR_HASH_KEY_STRING, merged_val);
               set_prop_merge_state(state, svn_wc_notify_state_merged);
             }
           else
@@ -1708,7 +1716,8 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
       /* We've now guaranteed that some kind of .prej file exists
          above the .svn/ dir.  We write log entries to append our
          conflicts to it. */
-      SVN_ERR(svn_wc__loggy_append(entry_accum, adm_access,
+      SVN_ERR(svn_wc__loggy_append(entry_accum,
+                                   svn_wc__adm_access_abspath(adm_access),
                                    reject_tmp_path, reject_path, pool));
 
       /* And of course, delete the temporary reject file. */
@@ -1722,11 +1731,10 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
         entry.prejfile = svn_dirent_is_child(svn_wc_adm_access_path(adm_access),
                                              reject_path, NULL);
         SVN_ERR(svn_wc__loggy_entry_modify(entry_accum,
-                                           adm_access,
-                                           path,
-                                           &entry,
-                                           SVN_WC__ENTRY_MODIFY_PREJFILE,
-                                           pool));
+                                      svn_wc__adm_access_abspath(adm_access),
+                                      path, &entry,
+                                      SVN_WC__ENTRY_MODIFY_PREJFILE,
+                                      pool));
       }
 
     } /* if (reject_tmp_fp) */

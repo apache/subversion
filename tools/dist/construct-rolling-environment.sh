@@ -5,15 +5,15 @@ AUTOCONF=autoconf-2.64
 LIBTOOL=libtool-1.5.26
 SWIG=swig-1.3.36
 
-APR=apr-1.3.7
-APR_UTIL=apr-util-1.3.8
-NEON=neon-0.28.5
+APR=apr-1.3.8
+APR_UTIL=apr-util-1.3.9
+NEON=neon-0.28.6
 SERF=serf-0.3.0
 ZLIB=zlib-1.2.3
-SQLITE_VERSION=3.6.16
+SQLITE_VERSION=3.6.17
 SQLITE=sqlite-amalgamation-$SQLITE_VERSION
 
-HTTPD=httpd-2.2.12
+HTTPD=httpd-2.2.13
 HTTPD_OOPS=
 APR_ICONV=apr-iconv-1.2.1
 APR_ICONV_OOPS=

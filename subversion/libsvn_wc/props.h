@@ -197,11 +197,11 @@ svn_error_t *
 svn_wc__wcprops_flush(svn_wc_adm_access_t *adm_access,
                       apr_pool_t *scratch_pool);
 
-/* Install PATHs working props as base props. */
+/* Install LOCAL_ABSPATHs working props as base props. */
 svn_error_t *
-svn_wc__working_props_committed(const char *path,
-                                svn_wc_adm_access_t *adm_access,
-                                apr_pool_t *pool);
+svn_wc__working_props_committed(svn_wc__db_t *db,
+                                const char *local_abspath,
+                                apr_pool_t *scratch_pool);
 
 /* Load the base, working and revert props for ENTRY at PATH returning
    them in *BASE_PROPS_P, *PROPS_P and *REVERT_PROPS_P respectively.

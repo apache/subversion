@@ -433,9 +433,11 @@ print_info(void *baton,
       SVN_ERR(svn_cl__get_human_readable_tree_conflict_description(
                 &desc, info->tree_conflict, pool));
       src_left_version =
-        svn_cl__node_description(info->tree_conflict->src_left_version, pool);
+        svn_cl__node_description(info->tree_conflict->src_left_version,
+                                 info->repos_root_URL, pool);
       src_right_version =
-        svn_cl__node_description(info->tree_conflict->src_right_version, pool);
+        svn_cl__node_description(info->tree_conflict->src_right_version,
+                                 info->repos_root_URL, pool);
 
       svn_cmdline_printf(pool,
                          "%s: %s\n",

@@ -485,12 +485,27 @@ simple_gnome_keyring_save_creds(svn_boolean_t *saved,
 }
 
 static void
+log_noop(const gchar *log_domain, GLogLevelFlags log_level,
+         const gchar *message, gpointer user_data)
+{
+  /* do nothing */
+}
+
+static void
 init_gnome_keyring(void)
 {
   const char *application_name = NULL;
   application_name = g_get_application_name();
   if (!application_name)
     g_set_application_name("Subversion");
+
+  /* Ideally we call g_log_set_handler() with a log_domain specific to
+     libgnome-keyring.  Unfortunately, at least as of gnome-keyring
+     2.22.3, it doesn't have its own log_domain.  As a result, we
+     suppress stderr spam for not only libgnome-keyring, but for
+     anything else the app is linked to that uses glib logging and
+     doesn't specify a log_domain. */
+  g_log_set_default_handler(log_noop, NULL);
 }
 
 static const svn_auth_provider_t gnome_keyring_simple_provider = {

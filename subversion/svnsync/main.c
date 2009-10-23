@@ -36,6 +36,8 @@
 #include "private/svn_opt_private.h"
 #include "private/svn_cmdline_private.h"
 
+#include "sync.h"
+
 #include "svn_private_config.h"
 
 #include <apr_network_io.h>
@@ -60,7 +62,8 @@ enum svnsync__opt {
   svnsync_opt_config_dir,
   svnsync_opt_config_options,
   svnsync_opt_version,
-  svnsync_opt_trust_server_cert
+  svnsync_opt_trust_server_cert,
+  svnsync_opt_allow_non_empty,
 };
 
 #define SVNSYNC_OPTS_DEFAULT svnsync_opt_non_interactive, \
@@ -83,18 +86,24 @@ static const svn_opt_subcommand_desc2_t svnsync_cmd_table[] =
          "Initialize a destination repository for synchronization from\n"
          "another repository.\n"
          "\n"
-         "The destination URL must point to the root of a repository with\n"
-         "no committed revisions.  The destination repository must allow\n"
-         "revision property changes.\n"
-         "\n"
          "If the source URL is not the root of a repository, only the\n"
          "specified part of the repository will be synchronized.\n"
+         "\n"
+         "The destination URL must point to the root of a repository which\n"
+         "has been configured to allow revision property changes.  In\n"
+         "the general case, the destination repository must contain no\n"
+         "committed revisions.  Use --allow-non-empty to override this\n"
+         "restriction, which will cause svnsync to assume that any revisions\n"
+         "already present in the destination repository perfectly mirror\n"
+         "their counterparts in the source repository.  (This is useful\n"
+         "when initializing a copy of a repository as a mirror of that same\n"
+         "repository, for example.)\n"
          "\n"
          "You should not commit to, or make revision property changes in,\n"
          "the destination repository by any method other than 'svnsync'.\n"
          "In other words, the destination repository should be a read-only\n"
          "mirror of the source repository.\n"),
-      { SVNSYNC_OPTS_DEFAULT, 'q' } },
+      { SVNSYNC_OPTS_DEFAULT, 'q', svnsync_opt_allow_non_empty } },
     { "synchronize", synchronize_cmd, { "sync" },
       N_("usage: svnsync synchronize DEST_URL\n"
          "\n"
@@ -135,6 +144,8 @@ static const apr_getopt_option_t svnsync_options[] =
   {
     {"quiet",          'q', 0,
                        N_("print as little as possible") },
+    {"allow-non-empty", svnsync_opt_allow_non_empty, 0,
+                       N_("allow a non-empty destination repository") },
     {"non-interactive", svnsync_opt_non_interactive, 0,
                        N_("do no interactive prompting") },
     {"no-auth-cache",  svnsync_opt_no_auth_cache, 0,
@@ -191,6 +202,7 @@ typedef struct {
   const char *config_dir;
   apr_hash_t *config;
   svn_boolean_t quiet;
+  svn_boolean_t allow_non_empty;
   svn_boolean_t version;
   svn_boolean_t help;
 } opt_baton_t;
@@ -307,6 +319,7 @@ typedef struct {
   svn_ra_callbacks2_t source_callbacks;
   svn_ra_callbacks2_t sync_callbacks;
   svn_boolean_t quiet;
+  svn_boolean_t allow_non_empty;
   const char *to_url;
 
   /* initialize only */
@@ -413,7 +426,7 @@ remove_props_not_in_source(svn_ra_session_t *session,
        hi;
        hi = apr_hash_next(hi))
     {
-      const void *propname = svn_apr_hash_index_key(hi);
+      const char *propname = svn_apr_hash_index_key(hi);
 
       svn_pool_clear(subpool);
 
@@ -438,7 +451,7 @@ typedef svn_boolean_t (*filter_func_t)(const char *key);
 /* Make a new set of properties, by copying those properties in PROPS for which
  * the filter FILTER returns FALSE.
  *
- * The number of filtered properties will be stored in FILTERED_COUNT.
+ * The number of properties not copied will be stored in FILTERED_COUNT.
  *
  * The returned set of properties is allocated from POOL.
  */
@@ -475,6 +488,9 @@ filter_props(int *filtered_count, apr_hash_t *props,
 
 /* Write the set of revision properties REV_PROPS to revision REV to the
  * repository associated with RA session SESSION.
+ * Omit any properties whose names are in the svnsync property name space,
+ * and set *FILTERED_COUNT to the number of properties thus omitted.
+ * REV_PROPS is a hash mapping (char *)propname to (svn_string_t *)propval.
  *
  * All allocations will be done in a subpool of POOL.
  */
@@ -511,83 +527,6 @@ write_revprops(int *filtered_count,
 
   svn_pool_destroy(subpool);
 
-  return SVN_NO_ERROR;
-}
-
-
-/* Normalize the line ending style of *STR, so that it contains only
- * LF (\n) line endings. After return, *STR may point at a new
- * svn_string_t* allocated from POOL.
- *
- * *WAS_NORMALIZED is set to TRUE when *STR needed to be normalized,
- * and to FALSE if *STR remains unchanged.
- */
-static svn_error_t*
-normalize_string(const svn_string_t **str,
-                 svn_boolean_t *was_normalized,
-                 apr_pool_t *pool)
-{
-  *was_normalized = FALSE;
-
-  if (*str == NULL)
-    return SVN_NO_ERROR;
-
-  SVN_ERR_ASSERT((*str)->data != NULL);
-
-  /* Detect inconsistent line ending style simply by looking
-     for carriage return (\r) characters. */
-  if (strchr((*str)->data, '\r') != NULL)
-    {
-      /* Found some. Normalize. */
-      const char* cstring = NULL;
-      SVN_ERR(svn_subst_translate_cstring2((*str)->data, &cstring,
-                                           "\n", TRUE,
-                                           NULL, FALSE,
-                                           pool));
-      *str = svn_string_create(cstring, pool);
-      *was_normalized = TRUE;
-    }
-
-  return SVN_NO_ERROR;
-}
-
-
-/* Normalize the line ending style of the values of properties in REV_PROPS
- * that "need translation" (according to svn_prop_needs_translation(),
- * currently all svn:* props) so that they contain only LF (\n) line endings.
- * The number of properties that needed normalization is returned in
- * *NORMALIZED_COUNT.
- */
-static svn_error_t *
-normalize_revprops(apr_hash_t *rev_props,
-                   int *normalized_count,
-                   apr_pool_t *pool)
-{
-  apr_hash_index_t *hi;
-  *normalized_count = 0;
-
-  for (hi = apr_hash_first(pool, rev_props);
-       hi;
-       hi = apr_hash_next(hi))
-    {
-      const char *propname = svn_apr_hash_index_key(hi);
-      const svn_string_t *propval = svn_apr_hash_index_val(hi);
-
-      if (svn_prop_needs_translation(propname))
-        {
-          svn_boolean_t was_normalized;
-          SVN_ERR(normalize_string(&propval,
-                                   &was_normalized,
-                                   pool));
-          if (was_normalized)
-            {
-              /* Replace the existing prop value. */
-              apr_hash_set(rev_props, propname, APR_HASH_KEY_STRING, propval);
-              /* And count this. */
-              (*normalized_count)++;
-            }
-        }
-    }
   return SVN_NO_ERROR;
 }
 
@@ -665,7 +604,7 @@ copy_revprops(svn_ra_session_t *from_session,
 
   /* If necessary, normalize line ending style, and return the count
      of changes in int *NORMALIZED_COUNT. */
-  SVN_ERR(normalize_revprops(rev_props, normalized_count, pool));
+  SVN_ERR(svnsync_normalize_revprops(rev_props, normalized_count, pool));
 
   /* Copy all but the svn:svnsync properties. */
   SVN_ERR(write_revprops(&filtered_count, to_session, rev, rev_props, pool));
@@ -704,6 +643,7 @@ make_subcommand_baton(opt_baton_t *opt_baton,
   b->sync_callbacks.open_tmp_file = open_tmp_file;
   b->sync_callbacks.auth_baton = opt_baton->sync_auth_baton;
   b->quiet = opt_baton->quiet;
+  b->allow_non_empty = opt_baton->allow_non_empty;
   b->to_url = to_url;
   b->from_url = from_url;
   b->start_rev = start_rev;
@@ -725,26 +665,24 @@ do_initialize(svn_ra_session_t *to_session,
 {
   svn_ra_session_t *from_session;
   svn_string_t *from_url;
-  svn_revnum_t latest;
+  svn_revnum_t latest, from_latest;
   const char *uuid, *root_url;
   int normalized_rev_props_count;
 
-  /* First, sanity check to see that we're copying into a brand new repos. */
-
+  /* First, sanity check to see that we're copying into a brand new
+     repos.  If we aren't, and we aren't being asked to forcibly
+     complete this initialization, that's a bad news.  */
   SVN_ERR(svn_ra_get_latest_revnum(to_session, &latest, pool));
-
-  if (latest != 0)
+  if ((latest != 0) && (! baton->allow_non_empty))
     return svn_error_create
       (APR_EINVAL, NULL,
-       _("Cannot initialize a repository with content in it"));
-
-  /* And check to see if anyone's run initialize on it before...  We
-     may want a --force option to override this check. */
+       _("Destination repository already contains revision history; consider "
+         "using --allow-non-empty if the repository's revisions are known "
+         "to mirror their respective revisions in the source repository"));
 
   SVN_ERR(svn_ra_rev_prop(to_session, 0, SVNSYNC_PROP_FROM_URL,
                           &from_url, pool));
-
-  if (from_url)
+  if (from_url && (! baton->allow_non_empty))
     return svn_error_createf
       (APR_EINVAL, NULL,
        _("Destination repository is already synchronizing from '%s'"),
@@ -777,25 +715,41 @@ do_initialize(svn_ra_session_t *to_session,
                                 NULL);
     }
 
+  /* If we're initializing a non-empty destination, we'll make sure
+     that it at least doesn't have more revisions than the source. */
+  if (latest != 0)
+    {
+      SVN_ERR(svn_ra_get_latest_revnum(from_session, &from_latest, pool));
+      if (from_latest < latest)
+        return svn_error_create
+          (APR_EINVAL, NULL,
+           _("Destination repository has more revisions than source "
+             "repository"));
+    }
+
   SVN_ERR(svn_ra_change_rev_prop(to_session, 0, SVNSYNC_PROP_FROM_URL,
                                  svn_string_create(baton->from_url, pool),
                                  pool));
 
   SVN_ERR(svn_ra_get_uuid2(from_session, &uuid, pool));
-
   SVN_ERR(svn_ra_change_rev_prop(to_session, 0, SVNSYNC_PROP_FROM_UUID,
                                  svn_string_create(uuid, pool), pool));
 
   SVN_ERR(svn_ra_change_rev_prop(to_session, 0, SVNSYNC_PROP_LAST_MERGED_REV,
-                                 svn_string_create("0", pool), pool));
+                                 svn_string_createf(pool, "%ld", latest),
+                                 pool));
 
-  /* Finally, copy all non-svnsync revprops from rev 0 of the source
-     repos into the dest repos. */
-
-  SVN_ERR(copy_revprops(from_session, to_session, 0, FALSE,
+  /* Copy all non-svnsync revprops from the LATEST rev in the source
+     repository into the destination, notifying about normalized
+     props, if any.  When LATEST is 0, this serves the practical
+     purpose of initializing data that would otherwise be overlooked
+     by the sync process (which is going to begin with r1).  When
+     LATEST is not 0, this really serves merely aesthetic and
+     informational purposes, keeping the output of this command
+     consistent while allowing folks to see what the latest revision is.  */
+  SVN_ERR(copy_revprops(from_session, to_session, latest, FALSE,
                         baton->quiet, &normalized_rev_props_count, pool));
-
-  /* Notify about normalized props, if any. */
+  
   SVN_ERR(log_properties_normalized(normalized_rev_props_count, 0, pool));
 
   /* TODO: It would be nice if we could set the dest repos UUID to be
@@ -843,529 +797,6 @@ initialize_cmd(apr_getopt_t *os, void *b, apr_pool_t *pool)
                        &(baton->sync_callbacks), baton, baton->config, pool));
   SVN_ERR(check_if_session_is_at_repos_root(to_session, baton->to_url, pool));
   SVN_ERR(with_locked(to_session, do_initialize, baton, pool));
-
-  return SVN_NO_ERROR;
-}
-
-
-
-/*** Synchronization Editor ***/
-
-/* This editor has a couple of jobs.
- *
- * First, it needs to filter out the propchanges that can't be passed over
- * libsvn_ra.
- *
- * Second, it needs to adjust for the fact that we might not actually have
- * permission to see all of the data from the remote repository, which means
- * we could get revisions that are totally empty from our point of view.
- *
- * Third, it needs to adjust copyfrom paths, adding the root url for the
- * destination repository to the beginning of them.
- */
-
-
-/* Edit baton */
-typedef struct {
-  const svn_delta_editor_t *wrapped_editor;
-  void *wrapped_edit_baton;
-  const char *to_url;  /* URL we're copying into, for correct copyfrom URLs */
-  svn_boolean_t called_open_root;
-  svn_boolean_t got_textdeltas;
-  svn_revnum_t base_revision;
-  svn_boolean_t quiet;
-  svn_boolean_t strip_mergeinfo;    /* Are we stripping svn:mergeinfo? */
-  svn_boolean_t migrate_svnmerge;   /* Are we converting svnmerge.py data? */
-  svn_boolean_t mergeinfo_stripped; /* Did we strip svn:mergeinfo? */
-  svn_boolean_t svnmerge_migrated;  /* Did we convert svnmerge.py data? */
-  svn_boolean_t svnmerge_blocked;   /* Was there any blocked svnmerge data? */
-  int *normalized_node_props_counter;  /* Where to count normalizations? */
-} edit_baton_t;
-
-
-/* A dual-purpose baton for files and directories. */
-typedef struct {
-  void *edit_baton;
-  void *wrapped_node_baton;
-} node_baton_t;
-
-
-/*** Editor vtable functions ***/
-
-static svn_error_t *
-set_target_revision(void *edit_baton,
-                    svn_revnum_t target_revision,
-                    apr_pool_t *pool)
-{
-  edit_baton_t *eb = edit_baton;
-  return eb->wrapped_editor->set_target_revision(eb->wrapped_edit_baton,
-                                                 target_revision, pool);
-}
-
-static svn_error_t *
-open_root(void *edit_baton,
-          svn_revnum_t base_revision,
-          apr_pool_t *pool,
-          void **root_baton)
-{
-  edit_baton_t *eb = edit_baton;
-  node_baton_t *dir_baton = apr_palloc(pool, sizeof(*dir_baton));
-
-  SVN_ERR(eb->wrapped_editor->open_root(eb->wrapped_edit_baton,
-                                        base_revision, pool,
-                                        &dir_baton->wrapped_node_baton));
-
-  eb->called_open_root = TRUE;
-  dir_baton->edit_baton = edit_baton;
-  *root_baton = dir_baton;
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-delete_entry(const char *path,
-             svn_revnum_t base_revision,
-             void *parent_baton,
-             apr_pool_t *pool)
-{
-  node_baton_t *pb = parent_baton;
-  edit_baton_t *eb = pb->edit_baton;
-
-  return eb->wrapped_editor->delete_entry(path, base_revision,
-                                          pb->wrapped_node_baton, pool);
-}
-
-static svn_error_t *
-add_directory(const char *path,
-              void *parent_baton,
-              const char *copyfrom_path,
-              svn_revnum_t copyfrom_rev,
-              apr_pool_t *pool,
-              void **child_baton)
-{
-  node_baton_t *pb = parent_baton;
-  edit_baton_t *eb = pb->edit_baton;
-  node_baton_t *b = apr_palloc(pool, sizeof(*b));
-
-  /* if copyfrom_path starts with '/' join rest of copyfrom_path leaving
-   * leading '/' with canonicalized url eb->to_url.
-   */
-  if (copyfrom_path && copyfrom_path[0] == '/')
-    copyfrom_path = svn_path_url_add_component2(eb->to_url,
-                                                copyfrom_path + 1, pool);
-
-  SVN_ERR(eb->wrapped_editor->add_directory(path, pb->wrapped_node_baton,
-                                            copyfrom_path,
-                                            copyfrom_rev, pool,
-                                            &b->wrapped_node_baton));
-
-  b->edit_baton = eb;
-  *child_baton = b;
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-open_directory(const char *path,
-               void *parent_baton,
-               svn_revnum_t base_revision,
-               apr_pool_t *pool,
-               void **child_baton)
-{
-  node_baton_t *pb = parent_baton;
-  edit_baton_t *eb = pb->edit_baton;
-  node_baton_t *db = apr_palloc(pool, sizeof(*db));
-
-  SVN_ERR(eb->wrapped_editor->open_directory(path, pb->wrapped_node_baton,
-                                             base_revision, pool,
-                                             &db->wrapped_node_baton));
-
-  db->edit_baton = eb;
-  *child_baton = db;
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-add_file(const char *path,
-         void *parent_baton,
-         const char *copyfrom_path,
-         svn_revnum_t copyfrom_rev,
-         apr_pool_t *pool,
-         void **file_baton)
-{
-  node_baton_t *pb = parent_baton;
-  edit_baton_t *eb = pb->edit_baton;
-  node_baton_t *fb = apr_palloc(pool, sizeof(*fb));
-
-  if (copyfrom_path)
-    copyfrom_path = apr_psprintf(pool, "%s%s", eb->to_url,
-                                 svn_path_uri_encode(copyfrom_path, pool));
-
-  SVN_ERR(eb->wrapped_editor->add_file(path, pb->wrapped_node_baton,
-                                       copyfrom_path, copyfrom_rev,
-                                       pool, &fb->wrapped_node_baton));
-
-  fb->edit_baton = eb;
-  *file_baton = fb;
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-open_file(const char *path,
-          void *parent_baton,
-          svn_revnum_t base_revision,
-          apr_pool_t *pool,
-          void **file_baton)
-{
-  node_baton_t *pb = parent_baton;
-  edit_baton_t *eb = pb->edit_baton;
-  node_baton_t *fb = apr_palloc(pool, sizeof(*fb));
-
-  SVN_ERR(eb->wrapped_editor->open_file(path, pb->wrapped_node_baton,
-                                        base_revision, pool,
-                                        &fb->wrapped_node_baton));
-
-  fb->edit_baton = eb;
-  *file_baton = fb;
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-apply_textdelta(void *file_baton,
-                const char *base_checksum,
-                apr_pool_t *pool,
-                svn_txdelta_window_handler_t *handler,
-                void **handler_baton)
-{
-  node_baton_t *fb = file_baton;
-  edit_baton_t *eb = fb->edit_baton;
-
-  if (! eb->quiet)
-    {
-      if (! eb->got_textdeltas)
-        SVN_ERR(svn_cmdline_printf(pool, _("Transmitting file data ")));
-      SVN_ERR(svn_cmdline_printf(pool, "."));
-      SVN_ERR(svn_cmdline_fflush(stdout));
-    }
-
-  eb->got_textdeltas = TRUE;
-  return eb->wrapped_editor->apply_textdelta(fb->wrapped_node_baton,
-                                             base_checksum, pool,
-                                             handler, handler_baton);
-}
-
-static svn_error_t *
-close_file(void *file_baton,
-           const char *text_checksum,
-           apr_pool_t *pool)
-{
-  node_baton_t *fb = file_baton;
-  edit_baton_t *eb = fb->edit_baton;
-  return eb->wrapped_editor->close_file(fb->wrapped_node_baton,
-                                        text_checksum, pool);
-}
-
-static svn_error_t *
-absent_file(const char *path,
-            void *file_baton,
-            apr_pool_t *pool)
-{
-  node_baton_t *fb = file_baton;
-  edit_baton_t *eb = fb->edit_baton;
-  return eb->wrapped_editor->absent_file(path, fb->wrapped_node_baton, pool);
-}
-
-static svn_error_t *
-close_directory(void *dir_baton,
-                apr_pool_t *pool)
-{
-  node_baton_t *db = dir_baton;
-  edit_baton_t *eb = db->edit_baton;
-  return eb->wrapped_editor->close_directory(db->wrapped_node_baton, pool);
-}
-
-static svn_error_t *
-absent_directory(const char *path,
-                 void *dir_baton,
-                 apr_pool_t *pool)
-{
-  node_baton_t *db = dir_baton;
-  edit_baton_t *eb = db->edit_baton;
-  return eb->wrapped_editor->absent_directory(path, db->wrapped_node_baton,
-                                              pool);
-}
-
-static svn_error_t *
-change_file_prop(void *file_baton,
-                 const char *name,
-                 const svn_string_t *value,
-                 apr_pool_t *pool)
-{
-  node_baton_t *fb = file_baton;
-  edit_baton_t *eb = fb->edit_baton;
-
-  /* only regular properties can pass over libsvn_ra */
-  if (svn_property_kind(NULL, name) != svn_prop_regular_kind)
-    return SVN_NO_ERROR;
-
-  /* Maybe drop svn:mergeinfo.  */
-  if (eb->strip_mergeinfo && (strcmp(name, SVN_PROP_MERGEINFO) == 0))
-    {
-      eb->mergeinfo_stripped = TRUE;
-      return SVN_NO_ERROR;
-    }
-
-  /* Maybe drop (errantly set, as this is a file) svnmerge.py properties. */
-  if (eb->migrate_svnmerge && (strcmp(name, "svnmerge-integrated") == 0))
-    {
-      eb->svnmerge_migrated = TRUE;
-      return SVN_NO_ERROR;
-    }
-
-  /* Remember if we see any svnmerge-blocked properties.  (They really
-     shouldn't be here, as this is a file, but whatever...)  */
-  if (eb->migrate_svnmerge && (strcmp(name, "svnmerge-blocked") == 0))
-    {
-      eb->svnmerge_blocked = TRUE;
-    }
-
-  /* Normalize svn:* properties as necessary. */
-  if (svn_prop_needs_translation(name))
-    {
-      svn_boolean_t was_normalized;
-      SVN_ERR(normalize_string(&value, &was_normalized, pool));
-      if (was_normalized)
-        (*(eb->normalized_node_props_counter))++;
-    }
-
-  return eb->wrapped_editor->change_file_prop(fb->wrapped_node_baton,
-                                              name, value, pool);
-}
-
-static svn_error_t *
-change_dir_prop(void *dir_baton,
-                const char *name,
-                const svn_string_t *value,
-                apr_pool_t *pool)
-{
-  node_baton_t *db = dir_baton;
-  edit_baton_t *eb = db->edit_baton;
-
-  /* Only regular properties can pass over libsvn_ra */
-  if (svn_property_kind(NULL, name) != svn_prop_regular_kind)
-    return SVN_NO_ERROR;
-
-  /* Maybe drop svn:mergeinfo.  */
-  if (eb->strip_mergeinfo && (strcmp(name, SVN_PROP_MERGEINFO) == 0))
-    {
-      eb->mergeinfo_stripped = TRUE;
-      return SVN_NO_ERROR;
-    }
-
-  /* Maybe convert svnmerge-integrated data into svn:mergeinfo.  (We
-     ignore svnmerge-blocked for now.) */
-  /* ### FIXME: Consult the mirror repository's HEAD prop values and
-     ### merge svn:mergeinfo, svnmerge-integrated, and svnmerge-blocked. */
-  if (eb->migrate_svnmerge && (strcmp(name, "svnmerge-integrated") == 0))
-    {
-      if (value)
-        {
-          /* svnmerge-integrated differs from svn:mergeinfo in a pair
-             of ways.  First, it can use tabs, newlines, or spaces to
-             delimit source information.  Secondly, the source paths
-             are relative URLs, whereas svn:mergeinfo uses relative
-             paths (not URI-encoded). */
-          svn_error_t *err;
-          svn_stringbuf_t *mergeinfo_buf = svn_stringbuf_create("", pool);
-          svn_mergeinfo_t mergeinfo;
-          int i;
-          apr_array_header_t *sources =
-            svn_cstring_split(value->data, " \t\n", TRUE, pool);
-          svn_string_t *new_value;
-
-          for (i = 0; i < sources->nelts; i++)
-            {
-              const char *rel_path;
-              apr_array_header_t *path_revs =
-                svn_cstring_split(APR_ARRAY_IDX(sources, i, const char *),
-                                  ":", TRUE, pool);
-
-              /* ### TODO: Warn? */
-              if (path_revs->nelts != 2)
-                continue;
-
-              /* Append this source's mergeinfo data. */
-              rel_path = APR_ARRAY_IDX(path_revs, 0, const char *);
-              rel_path = svn_path_uri_decode(rel_path, pool);
-              svn_stringbuf_appendcstr(mergeinfo_buf, rel_path);
-              svn_stringbuf_appendcstr(mergeinfo_buf, ":");
-              svn_stringbuf_appendcstr(mergeinfo_buf,
-                                       APR_ARRAY_IDX(path_revs, 1,
-                                                     const char *));
-              svn_stringbuf_appendcstr(mergeinfo_buf, "\n");
-            }
-
-          /* Try to parse the mergeinfo string we've created, just to
-             check for bogosity.  If all goes well, we'll unparse it
-             again and use that as our property value.  */
-          err = svn_mergeinfo_parse(&mergeinfo, mergeinfo_buf->data, pool);
-          if (err)
-            {
-              svn_error_clear(err);
-              return SVN_NO_ERROR;
-            }
-          SVN_ERR(svn_mergeinfo_to_string(&new_value, mergeinfo, pool));
-          value = new_value;
-        }
-      name = SVN_PROP_MERGEINFO;
-      eb->svnmerge_migrated = TRUE;
-    }
-
-  /* Remember if we see any svnmerge-blocked properties. */
-  if (eb->migrate_svnmerge && (strcmp(name, "svnmerge-blocked") == 0))
-    {
-      eb->svnmerge_blocked = TRUE;
-    }
-
-  /* Normalize svn:* properties as necessary. */
-  if (svn_prop_needs_translation(name))
-    {
-      svn_boolean_t was_normalized;
-      SVN_ERR(normalize_string(&value, &was_normalized, pool));
-      if (was_normalized)
-        (*(eb->normalized_node_props_counter))++;
-    }
-
-  return eb->wrapped_editor->change_dir_prop(db->wrapped_node_baton,
-                                             name, value, pool);
-}
-
-static svn_error_t *
-close_edit(void *edit_baton,
-           apr_pool_t *pool)
-{
-  edit_baton_t *eb = edit_baton;
-
-  /* If we haven't opened the root yet, that means we're transfering
-     an empty revision, probably because we aren't allowed to see the
-     contents for some reason.  In any event, we need to open the root
-     and close it again, before we can close out the edit, or the
-     commit will fail. */
-
-  if (! eb->called_open_root)
-    {
-      void *baton;
-      SVN_ERR(eb->wrapped_editor->open_root(eb->wrapped_edit_baton,
-                                            eb->base_revision, pool,
-                                            &baton));
-      SVN_ERR(eb->wrapped_editor->close_directory(baton, pool));
-    }
-
-  if (! eb->quiet)
-    {
-      if (eb->got_textdeltas)
-        SVN_ERR(svn_cmdline_printf(pool, "\n"));
-      if (eb->mergeinfo_stripped)
-        SVN_ERR(svn_cmdline_printf(pool,
-                                   "NOTE: Dropped Subversion mergeinfo "
-                                   "from this revision.\n"));
-      if (eb->svnmerge_migrated)
-        SVN_ERR(svn_cmdline_printf(pool,
-                                   "NOTE: Migrated 'svnmerge-integrated' in "
-                                   "this revision.\n"));
-      if (eb->svnmerge_blocked)
-        SVN_ERR(svn_cmdline_printf(pool,
-                                   "NOTE: Saw 'svnmerge-blocked' in this "
-                                   "revision (but didn't migrate it).\n"));
-    }
-
-  return eb->wrapped_editor->close_edit(eb->wrapped_edit_baton, pool);
-}
-
-static svn_error_t *
-abort_edit(void *edit_baton,
-           apr_pool_t *pool)
-{
-  edit_baton_t *eb = edit_baton;
-  return eb->wrapped_editor->abort_edit(eb->wrapped_edit_baton, pool);
-}
-
-
-
-/*** Editor factory function ***/
-
-/* Set WRAPPED_EDITOR and WRAPPED_EDIT_BATON to an editor/baton pair
- * that wraps our own commit EDITOR/EDIT_BATON.  BASE_REVISION is the
- * revision on which the driver of this returned editor will be basing
- * the commit.  TO_URL is the URL of the root of the repository into
- * which the commit is being made.
- *
- * As the sync editor encounters property values, it might see the need to
- * normalize them (to LF line endings). Each carried out normalization adds 1
- * to the *NORMALIZED_NODE_PROPS_COUNTER (for notification).
- */
-static svn_error_t *
-get_sync_editor(const svn_delta_editor_t *wrapped_editor,
-                void *wrapped_edit_baton,
-                svn_revnum_t base_revision,
-                const char *to_url,
-                svn_boolean_t quiet,
-                const svn_delta_editor_t **editor,
-                void **edit_baton,
-                int *normalized_node_props_counter,
-                apr_pool_t *pool)
-{
-  svn_delta_editor_t *tree_editor = svn_delta_default_editor(pool);
-  edit_baton_t *eb = apr_pcalloc(pool, sizeof(*eb));
-
-  tree_editor->set_target_revision = set_target_revision;
-  tree_editor->open_root = open_root;
-  tree_editor->delete_entry = delete_entry;
-  tree_editor->add_directory = add_directory;
-  tree_editor->open_directory = open_directory;
-  tree_editor->change_dir_prop = change_dir_prop;
-  tree_editor->close_directory = close_directory;
-  tree_editor->absent_directory = absent_directory;
-  tree_editor->add_file = add_file;
-  tree_editor->open_file = open_file;
-  tree_editor->apply_textdelta = apply_textdelta;
-  tree_editor->change_file_prop = change_file_prop;
-  tree_editor->close_file = close_file;
-  tree_editor->absent_file = absent_file;
-  tree_editor->close_edit = close_edit;
-  tree_editor->abort_edit = abort_edit;
-
-  eb->wrapped_editor = wrapped_editor;
-  eb->wrapped_edit_baton = wrapped_edit_baton;
-  eb->base_revision = base_revision;
-  eb->to_url = to_url;
-  eb->quiet = quiet;
-  eb->normalized_node_props_counter = normalized_node_props_counter;
-
-  if (getenv("SVNSYNC_UNSUPPORTED_STRIP_MERGEINFO"))
-    {
-      eb->strip_mergeinfo = TRUE;
-    }
-  if (getenv("SVNSYNC_UNSUPPORTED_MIGRATE_SVNMERGE"))
-    {
-      /* Current we can't merge property values.  That's only possible
-         if all the properties to be merged were always modified in
-         exactly the same revisions, or if we allow ourselves to
-         lookup the current state of properties in the sync
-         destination.  So for now, migrating svnmerge.py data implies
-         stripping pre-existing svn:mergeinfo. */
-      /* ### FIXME: Do a real migration by consulting the mirror
-         ### repository's HEAD propvalues and merging svn:mergeinfo,
-         ### svnmerge-integrated, and svnmerge-blocked together. */
-      eb->migrate_svnmerge = TRUE;
-      eb->strip_mergeinfo = TRUE;
-    }
-
-  *editor = tree_editor;
-  *edit_baton = eb;
 
   return SVN_NO_ERROR;
 }
@@ -1457,7 +888,10 @@ make_replay_baton(svn_ra_session_t *from_session,
   return rb;
 }
 
-/* Filter out svn:date and svn:author properties. */
+/* Return TRUE iff KEY is the name of an svn:date or svn:author or any svnsync
+ * property. Implements filter_func_t. Use with filter_props() to filter out
+ * svn:date and svn:author and svnsync properties.
+ */
 static svn_boolean_t
 filter_exclude_date_author_sync(const char *key)
 {
@@ -1472,7 +906,10 @@ filter_exclude_date_author_sync(const char *key)
   return FALSE;
 }
 
-/* Filter out all properties except svn:date and svn:author */
+/* Return FALSE iff KEY is the name of an svn:date or svn:author or any svnsync
+ * property. Implements filter_func_t. Use with filter_props() to filter out
+ * all properties except svn:date and svn:author and svnsync properties.
+ */
 static svn_boolean_t
 filter_include_date_author_sync(const char *key)
 {
@@ -1480,7 +917,9 @@ filter_include_date_author_sync(const char *key)
 }
 
 
-/* Only exclude svn:log .*/
+/* Return TRUE iff KEY is the name of the svn:log property.
+ * Implements filter_func_t. Use with filter_props() to only exclude svn:log.
+ */
 static svn_boolean_t
 filter_exclude_log(const char *key)
 {
@@ -1490,7 +929,9 @@ filter_exclude_log(const char *key)
     return FALSE;
 }
 
-/* Only include svn:log. */
+/* Return FALSE iff KEY is the name of the svn:log property.
+ * Implements filter_func_t. Use with filter_props() to only include svn:log.
+ */
 static svn_boolean_t
 filter_include_log(const char *key)
 {
@@ -1559,7 +1000,7 @@ replay_rev_started(svn_revnum_t revision,
 
   /* If necessary, normalize line ending style, and add the number
      of changes to the overall count in the replay baton. */
-  SVN_ERR(normalize_revprops(filtered, &normalized_count, pool));
+  SVN_ERR(svnsync_normalize_revprops(filtered, &normalized_count, pool));
   rb->normalized_rev_props_count += normalized_count;
 
   SVN_ERR(svn_ra_get_commit_editor3(rb->to_session, &commit_editor,
@@ -1571,10 +1012,10 @@ replay_rev_started(svn_revnum_t revision,
   /* There's one catch though, the diff shows us props we can't send
      over the RA interface, so we need an editor that's smart enough
      to filter those out for us.  */
-  SVN_ERR(get_sync_editor(commit_editor, commit_baton, revision - 1,
-                          rb->sb->to_url, rb->sb->quiet,
-                          &sync_editor, &sync_baton, 
-                          &(rb->normalized_node_props_count), pool));
+  SVN_ERR(svnsync_get_sync_editor(commit_editor, commit_baton, revision - 1,
+                                  rb->sb->to_url, rb->sb->quiet,
+                                  &sync_editor, &sync_baton,
+                                  &(rb->normalized_node_props_count), pool));
 
   SVN_ERR(svn_delta_get_cancellation_editor(check_cancel, NULL,
                                             sync_editor, sync_baton,
@@ -1629,7 +1070,7 @@ replay_rev_finished(svn_revnum_t revision,
 
   /* If necessary, normalize line ending style, and add the number
      of changes to the overall count in the replay baton. */
-  SVN_ERR(normalize_revprops(filtered, &normalized_count, pool));
+  SVN_ERR(svnsync_normalize_revprops(filtered, &normalized_count, pool));
   rb->normalized_rev_props_count += normalized_count;
 
   SVN_ERR(write_revprops(&filtered_count, rb->to_session, revision, filtered,
@@ -2223,6 +1664,10 @@ main(int argc, const char *argv[])
             break;
           case svnsync_opt_version:
             opt_baton.version = TRUE;
+            break;
+
+          case svnsync_opt_allow_non_empty:
+            opt_baton.allow_non_empty = TRUE;
             break;
 
           case 'q':

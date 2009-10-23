@@ -72,8 +72,9 @@ revert(const char *path,
   svn_error_t *err;
   int adm_lock_level = SVN_WC__LEVELS_TO_LOCK_FROM_DEPTH(depth);
 
-  SVN_ERR(svn_wc_adm_open_anchor(&adm_access, &target_access, &target, path,
-                                 TRUE, adm_lock_level,
+  SVN_ERR(svn_wc__adm_open_anchor_in_context(
+                                 &adm_access, &target_access, &target,
+                                 ctx->wc_ctx, path, TRUE, adm_lock_level,
                                  ctx->cancel_func, ctx->cancel_baton,
                                  pool));
 

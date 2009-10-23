@@ -226,7 +226,7 @@ main(int argc, const char *argv[])
   SVN_INT_ERR(svn_io_check_path(wc_path, &kind, pool));
   if (kind == svn_node_dir)
     {
-      SVN_INT_ERR(svn_wc_check_wc(wc_path, &wc_format, pool));
+      SVN_INT_ERR(svn_wc_check_wc2(&wc_format, wc_ctx, local_abspath, pool));
       if (wc_format == 0)
         {
           SVN_INT_ERR(svn_cmdline_printf(pool, _("Unversioned directory%s"),
@@ -240,8 +240,9 @@ main(int argc, const char *argv[])
     }
   else if (kind == svn_node_file)
     {
-      SVN_INT_ERR(svn_wc_check_wc(svn_dirent_dirname(wc_path, pool),
-                                  &wc_format, pool));
+      SVN_INT_ERR(svn_wc_check_wc2(&wc_format, wc_ctx,
+                                   svn_dirent_dirname(local_abspath, pool),
+                                   pool));
 
       /* Unversioned file in unversioned directory */
       if (wc_format == 0)

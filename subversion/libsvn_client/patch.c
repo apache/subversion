@@ -45,6 +45,8 @@
 
 #include "svn_private_config.h"
 #include "private/svn_diff_private.h"
+#include "private/svn_wc_private.h"
+#include "private/svn_eol_private.h"
 
 
 /*** Code. ***/
@@ -205,7 +207,11 @@ merge_file_changed(svn_wc_adm_access_t *adm_access,
     const svn_wc_entry_t *entry;
     svn_node_kind_t kind;
 
-    SVN_ERR(svn_wc_entry(&entry, mine, adm_access, FALSE, subpool));
+    SVN_ERR(svn_wc__maybe_get_entry(&entry, patch_b->ctx->wc_ctx,
+                                    mine_abspath, svn_node_unknown,
+                                    FALSE, FALSE,
+                                    subpool, subpool));
+
     SVN_ERR(svn_io_check_path(mine, &kind, subpool));
 
     /* ### a future thought:  if the file is under version control,
@@ -325,6 +331,9 @@ merge_file_added(svn_wc_adm_access_t *adm_access,
   int i;
   apr_hash_t *new_props;
   const char *path_basename = svn_dirent_basename(mine, subpool);
+  const char *mine_abspath;
+
+  SVN_ERR(svn_dirent_get_absolute(&mine_abspath, mine, subpool));
 
   /* This new file can't have any original prop in this offline context. */
   original_props = apr_hash_make(subpool);
@@ -369,7 +378,13 @@ merge_file_added(svn_wc_adm_access_t *adm_access,
     case svn_node_none:
       {
         const svn_wc_entry_t *entry;
-        SVN_ERR(svn_wc_entry(&entry, mine, adm_access, FALSE, subpool));
+        svn_error_t *err;
+
+        SVN_ERR(svn_wc__maybe_get_entry(&entry, patch_b->ctx->wc_ctx,
+                                        mine_abspath, svn_node_none,
+                                        FALSE, FALSE,
+                                        subpool, subpool));
+
         if (entry && entry->schedule != svn_wc_schedule_delete)
           {
             /* It's versioned but missing. */
@@ -383,7 +398,6 @@ merge_file_added(svn_wc_adm_access_t *adm_access,
           {
             if (copyfrom_path) /* schedule-add-with-history */
               {
-                svn_error_t *err;
                 err = svn_wc_copy2(copyfrom_path, adm_access,
                                    path_basename,
                                    patch_b->ctx->cancel_func,
@@ -454,7 +468,11 @@ merge_file_added(svn_wc_adm_access_t *adm_access,
         {
           /* directory already exists, is it under version control? */
           const svn_wc_entry_t *entry;
-          SVN_ERR(svn_wc_entry(&entry, mine, adm_access, FALSE, subpool));
+
+          SVN_ERR(svn_wc__maybe_get_entry(&entry, patch_b->ctx->wc_ctx,
+                                          mine_abspath, svn_node_dir,
+                                          FALSE, FALSE,
+                                          subpool, subpool));
 
           if (entry && dry_run_deleted_p(patch_b, mine))
             *content_state = svn_wc_notify_state_changed;
@@ -467,7 +485,11 @@ merge_file_added(svn_wc_adm_access_t *adm_access,
       {
         /* file already exists, is it under version control? */
         const svn_wc_entry_t *entry;
-        SVN_ERR(svn_wc_entry(&entry, mine, adm_access, FALSE, subpool));
+
+        SVN_ERR(svn_wc__maybe_get_entry(&entry, patch_b->ctx->wc_ctx,
+                                        mine_abspath, svn_node_file,
+                                        FALSE, FALSE,
+                                        subpool, subpool));
 
         /* If it's an unversioned file, don't touch it.  If it's scheduled
            for deletion, then rm removed it from the working copy and the
@@ -606,6 +628,7 @@ merge_dir_added(svn_wc_adm_access_t *adm_access,
   svn_node_kind_t kind;
   const svn_wc_entry_t *entry;
   const char *child;
+  const char *local_abspath;
 
   /* Easy out:  if we have no adm_access for the parent directory,
      then this portion of the tree-delta "patch" must be inapplicable.
@@ -628,11 +651,19 @@ merge_dir_added(svn_wc_adm_access_t *adm_access,
   child = svn_dirent_is_child(patch_b->target, path, subpool);
   assert(child != NULL);
 
+  /* libsvn_wc wants absolute paths. */
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, subpool));
+
   SVN_ERR(svn_io_check_path(path, &kind, subpool));
   switch (kind)
     {
     case svn_node_none:
-      SVN_ERR(svn_wc_entry(&entry, path, adm_access, FALSE, subpool));
+      SVN_ERR(svn_wc__maybe_get_entry(&entry, patch_b->ctx->wc_ctx,
+                                      local_abspath,
+                                      svn_node_none,
+                                      FALSE, FALSE,
+                                      subpool, subpool));
+
       if (entry && entry->schedule != svn_wc_schedule_delete)
         {
           /* Versioned but missing */
@@ -659,7 +690,13 @@ merge_dir_added(svn_wc_adm_access_t *adm_access,
       break;
     case svn_node_dir:
       /* Adding an unversioned directory doesn't destroy data */
-      SVN_ERR(svn_wc_entry(&entry, path, adm_access, TRUE, subpool));
+      SVN_ERR(svn_wc__maybe_get_entry(&entry, patch_b->ctx->wc_ctx,
+                                      local_abspath,
+                                      svn_node_dir,
+                                      TRUE,
+                                      FALSE,
+                                      subpool, subpool));
+
       if (! entry || entry->schedule == svn_wc_schedule_delete)
         {
           if (!patch_b->dry_run)
@@ -688,7 +725,11 @@ merge_dir_added(svn_wc_adm_access_t *adm_access,
 
       if (state)
         {
-          SVN_ERR(svn_wc_entry(&entry, path, adm_access, FALSE, subpool));
+          SVN_ERR(svn_wc__maybe_get_entry(&entry, patch_b->ctx->wc_ctx,
+                                          local_abspath,
+                                          svn_node_file,
+                                          FALSE, FALSE,
+                                          subpool, subpool));
 
           if (entry && dry_run_deleted_p(patch_b, path))
             /* ### TODO: Retain record of this dir being added to
@@ -2018,8 +2059,13 @@ init_patch_target(patch_target_t **target, const svn_patch_t *patch,
       const svn_wc_entry_t *entry;
 
       /* If the target is versioned, we should be able to get an entry. */
-      SVN_ERR(svn_wc_entry(&entry, new_target->abs_path, adm_access,
-                           TRUE /* show_hidden */, scratch_pool));
+      SVN_ERR(svn_wc__maybe_get_entry(&entry, ctx->wc_ctx,
+                                      new_target->abs_path,
+                                      svn_node_unknown,
+                                      TRUE, FALSE,
+                                      result_pool,
+                                      scratch_pool));
+
       if (entry && entry->schedule == svn_wc_schedule_delete)
         {
           /* The target is versioned and scheduled for deletion, so skip it. */
@@ -2033,7 +2079,7 @@ init_patch_target(patch_target_t **target, const svn_patch_t *patch,
       SVN_ERR(svn_io_file_open(&new_target->file, new_target->abs_path,
                                APR_READ | APR_BINARY | APR_BUFFERED,
                                APR_OS_DEFAULT, result_pool));
-      SVN_ERR(svn_subst_detect_file_eol(&new_target->eol_str, new_target->file,
+      SVN_ERR(svn_eol__detect_file_eol(&new_target->eol_str, new_target->file,
                                         scratch_pool));
       new_target->stream = svn_stream_from_aprfile2(new_target->file, FALSE,
                                                     result_pool);
@@ -2094,12 +2140,12 @@ match_hunk(svn_boolean_t *matched, patch_target_t *target,
   *matched = FALSE;
 
   pos = 0;
-  iterpool = svn_pool_create(pool);
-  SVN_ERR(svn_io_file_seek(target->file, APR_CUR, &pos, iterpool));
+  SVN_ERR(svn_io_file_seek(target->file, APR_CUR, &pos, pool));
 
   svn_stream_reset(hunk->original_text);
 
   lines_matched = FALSE;
+  iterpool = svn_pool_create(pool);
   do
     {
       svn_pool_clear(iterpool);
@@ -2161,7 +2207,7 @@ scan_for_match(svn_boolean_t *match, svn_linenum_t *matched_line,
 
       svn_pool_clear(iterpool);
 
-      SVN_ERR(match_hunk(&matched, target, hunk, pool));
+      SVN_ERR(match_hunk(&matched, target, hunk, iterpool));
       if (matched)
         {
           *match = TRUE;
@@ -2795,7 +2841,7 @@ apply_textdiffs(const char *patch_path, const char *wc_path,
   SVN_ERR(svn_io_file_open(&patch_file, patch_path,
                            APR_READ | APR_BINARY, 0, pool));
 
-  SVN_ERR(svn_subst_detect_file_eol(&patch_eol_str, patch_file, pool));
+  SVN_ERR(svn_eol__detect_file_eol(&patch_eol_str, patch_file, pool));
   if (patch_eol_str == NULL)
     {
       /* If we can't figure out the EOL scheme, just assume native.

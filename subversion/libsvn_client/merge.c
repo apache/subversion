@@ -154,19 +154,22 @@
 /*** Utilities ***/
 
 /* Return SVN_ERR_UNSUPPORTED_FEATURE if URL's scheme does not
-   match the scheme of the url for ADM_ACCESS's path; return
+   match the scheme of the url for LOCAL_ABSPATH; return
    SVN_ERR_BAD_URL if no scheme can be found for one or both urls;
-   otherwise return SVN_NO_ERROR.  Use ADM_ACCESS's pool for
-   temporary allocation. */
+   otherwise return SVN_NO_ERROR.  Use SCRATCH_POOL for temporary
+   allocation. */
 static svn_error_t *
-check_scheme_match(svn_wc_adm_access_t *adm_access, const char *url)
+check_scheme_match(svn_wc_context_t *wc_ctx,
+                   const char *local_abspath,
+                   const char *url,
+                   apr_pool_t *scratch_pool)
 {
-  const char *path = svn_wc_adm_access_path(adm_access);
-  apr_pool_t *pool = svn_wc_adm_access_pool(adm_access);
   const svn_wc_entry_t *ent;
   const char *idx1, *idx2;
 
-  SVN_ERR(svn_wc_entry(&ent, path, adm_access, FALSE, pool));
+  SVN_ERR(svn_wc__get_entry_versioned(&ent, wc_ctx, local_abspath,
+                                      svn_node_unknown, FALSE, FALSE,
+                                      scratch_pool, scratch_pool));
 
   idx1 = strchr(url, ':');
   idx2 = strchr(ent->url, ':');
@@ -525,7 +528,6 @@ tree_conflict(merge_cmd_baton_t *merge_b,
               svn_wc_conflict_reason_t reason)
 {
   svn_wc_conflict_description_t *conflict;
-  svn_wc_conflict_description_t *existing_conflict;
   const char *conflict_abspath;
 
   if (merge_b->record_only || merge_b->dry_run)
@@ -537,14 +539,6 @@ tree_conflict(merge_cmd_baton_t *merge_b,
 
   SVN_ERR(svn_dirent_get_absolute(&conflict_abspath, conflict->path,
                                   merge_b->pool));
-  SVN_ERR(svn_wc__get_tree_conflict(&existing_conflict, merge_b->ctx->wc_ctx,
-                                    conflict_abspath, merge_b->pool,
-                                    merge_b->pool));
-
-  if (existing_conflict != NULL)
-    /* Re-adding an existing tree conflict victim is an error. */
-    return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
-                       _("Attempt to add tree conflict that already exists"));
 
   SVN_ERR(svn_wc__add_tree_conflict(conflict, adm_access, merge_b->pool));
   return SVN_NO_ERROR;
@@ -579,35 +573,30 @@ tree_conflict_on_add(merge_cmd_baton_t *merge_b,
                                     conflict_abspath, merge_b->pool,
                                     merge_b->pool));
 
-  if (existing_conflict != NULL)
+  /* If this change is an add, and there is already a tree conflict raised
+   * by a previous incoming change that attempted to delete the item (whether
+   * in this same merge operation or not), then don't try to add a second tree
+   * conflict. Instead, just change the existing conflict to note that the
+   * incoming change is replacement. */
+  if (existing_conflict != NULL
+      && existing_conflict->action == svn_wc_conflict_action_delete
+      && conflict->action == svn_wc_conflict_action_add)
     {
-      /* A merge may send two separate tree-conflicts if the merge
-         replaces the item. This means merge will first set a tree-conflict
-         with an incoming "delete", and then one with an incoming "add". */
-      if (existing_conflict->action == svn_wc_conflict_action_delete
-          && conflict->action == svn_wc_conflict_action_add)
-        {
-          if (existing_conflict->node_kind == conflict->node_kind)
-            {
-              /* Same node kinds, this would be a replace, or, say,
-                 an add. We need to remove the existing tree-conflict
-                 and add this new one.*/
-              SVN_ERR(svn_wc__del_tree_conflict(conflict->path,
-                                                adm_access,
-                                                merge_b->pool));
-            }
-          else
-            /* Else, the replace changed the node kind. Let's leave this
-               at the first delete after all. Nothing needs to be changed. */
-            return SVN_NO_ERROR;
-        }
-      else
-        /* Re-adding an existing tree conflict victim is an error in
-           all other cases (that are currently relevant). */
-        return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
-                       _("Attempt to add tree conflict that already exists"));
-    }
+      /* Remove the existing tree-conflict so we can add a new one.*/
+      SVN_ERR(svn_wc__del_tree_conflict(merge_b->ctx->wc_ctx,
+                                        conflict_abspath,
+                                        merge_b->pool));
 
+      /* Preserve the reason which caused the first conflict,
+       * re-label the incoming change as 'replacement', and update
+       * version info for the left version of the conflict. */
+      conflict->reason = existing_conflict->reason;
+      conflict->action = svn_wc_conflict_action_replace;
+      conflict->src_left_version = svn_wc_conflict_version_dup(
+                                     existing_conflict->src_left_version,
+                                     merge_b->pool);
+    }
+ 
   SVN_ERR(svn_wc__add_tree_conflict(conflict, adm_access, merge_b->pool));
   return SVN_NO_ERROR;
 }
@@ -757,7 +746,6 @@ static svn_error_t*
 filter_self_referential_mergeinfo(apr_array_header_t **props,
                                   const char *path,
                                   merge_cmd_baton_t *merge_b,
-                                  svn_wc_adm_access_t *adm_access,
                                   apr_pool_t *pool)
 {
   svn_boolean_t honor_mergeinfo;
@@ -765,6 +753,9 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
   int i;
   const svn_wc_entry_t *target_entry;
   apr_pool_t *iterpool;
+  const char *local_abspath;
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
   /* If we aren't honoring mergeinfo and this is a merge from the
      same repository, then get outta here.  If this is a reintegrate
@@ -778,8 +769,9 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
 
   /* If this is a merge from the same repository and PATH itself is
      newly added or replaced there is no need to filter. */
-  SVN_ERR(svn_wc__entry_versioned(&target_entry, path, adm_access,
-                                  FALSE, pool));
+  SVN_ERR(svn_wc__get_entry_versioned(&target_entry, merge_b->ctx->wc_ctx,
+                                      local_abspath, svn_node_unknown,
+                                      FALSE, FALSE, pool, pool));
   if (merge_b->same_repos
       && (target_entry->schedule == svn_wc_schedule_add
           || target_entry->schedule == svn_wc_schedule_replace))
@@ -822,7 +814,8 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
       /* Non-empty mergeinfo; filter self-referential mergeinfo out. */
       /* Temporarily reparent our RA session to the merge
          target's URL. */
-      SVN_ERR(svn_client_url_from_path(&target_url, path, pool));
+      SVN_ERR(svn_client_url_from_path2(&target_url, path, merge_b->ctx,
+                                        pool, pool));
       SVN_ERR(svn_client__ensure_ra_session_url(&old_url,
                                                 merge_b->ra_session2,
                                                 target_url, pool));
@@ -1000,7 +993,6 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
             target_entry->revision,
             SVN_INVALID_REVNUM,
             merge_b->ra_session2,
-            adm_access,
             merge_b->ctx,
             pool));
 
@@ -1105,7 +1097,7 @@ merge_props_changed(svn_wc_adm_access_t *adm_access,
          PATH that is already part of PATH's own history. */
       if (merge_b->merge_source.rev1 < merge_b->merge_source.rev2)
         SVN_ERR(filter_self_referential_mergeinfo(&props, path, merge_b,
-                                                  adm_access, subpool));
+                                                  subpool));
 
       err = svn_wc_merge_props2(state, path, adm_access, original_props, props,
                                 FALSE, merge_b->dry_run, ctx->conflict_func,
@@ -1472,6 +1464,7 @@ merge_file_added(svn_wc_adm_access_t *adm_access,
 {
   merge_cmd_baton_t *merge_b = baton;
   apr_pool_t *subpool = svn_pool_create(merge_b->pool);
+  const char *parent_abspath;
   svn_node_kind_t kind;
   int i;
   apr_hash_t *new_props;
@@ -1551,6 +1544,10 @@ merge_file_added(svn_wc_adm_access_t *adm_access,
       }
   }
 
+  SVN_ERR(svn_dirent_get_absolute(&parent_abspath,
+                                  svn_wc_adm_access_path(adm_access),
+                                  subpool));
+
   SVN_ERR(svn_io_check_path(mine, &kind, subpool));
   switch (kind)
     {
@@ -1576,7 +1573,9 @@ merge_file_added(svn_wc_adm_access_t *adm_access,
                 else
                   copyfrom_url = merge_b->merge_source.url2;
                 copyfrom_rev = rev2;
-                SVN_ERR(check_scheme_match(adm_access, copyfrom_url));
+                SVN_ERR(check_scheme_match(merge_b->ctx->wc_ctx,
+                                           parent_abspath,
+                                           copyfrom_url, subpool));
               }
 
             SVN_ERR(svn_stream_open_readonly(&new_base_contents, yours,
@@ -1637,6 +1636,33 @@ merge_file_added(svn_wc_adm_access_t *adm_access,
               }
             else
               {
+                const svn_wc_entry_t *entry;
+                svn_wc_conflict_reason_t reason;
+                const char *abs_mine;
+
+                /* Figure out what state the file which is already present
+                 * is in, and set the conflict reason accordingly. */
+                SVN_ERR(svn_dirent_get_absolute(&abs_mine, mine, subpool));
+                SVN_ERR(svn_wc__get_entry_versioned(&entry,
+                                                    merge_b->ctx->wc_ctx,
+                                                    abs_mine, kind, FALSE,
+                                                    FALSE, subpool, subpool));
+                switch (entry->schedule)
+                  {
+                    case svn_wc_schedule_normal:
+                      reason = svn_wc_conflict_reason_obstructed;
+                      break;
+                    case svn_wc_schedule_add:
+                      reason = svn_wc_conflict_reason_added;
+                      break;
+                    case svn_wc_schedule_delete:
+                      reason = svn_wc_conflict_reason_deleted;
+                      break;
+                    case svn_wc_schedule_replace:
+                      reason = svn_wc_conflict_reason_replaced;
+                      break;
+                  }
+
                 /* The file add the merge wants to carry out is obstructed by
                  * a versioned file, so the file the merge wants to add is a
                  * tree conflict victim. See notes about obstructions in
@@ -1644,8 +1670,7 @@ merge_file_added(svn_wc_adm_access_t *adm_access,
                  */
                 SVN_ERR(tree_conflict_on_add(
                           merge_b, adm_access, mine, svn_node_file,
-                          svn_wc_conflict_action_add,
-                          svn_wc_conflict_reason_obstructed));
+                          svn_wc_conflict_action_add, reason));
                 if (tree_conflicted)
                   *tree_conflicted = TRUE;
               }
@@ -1873,6 +1898,11 @@ merge_dir_added(svn_wc_adm_access_t *adm_access,
   const svn_wc_entry_t *entry;
   const char *copyfrom_url = NULL, *child;
   svn_revnum_t copyfrom_rev = SVN_INVALID_REVNUM;
+  const char *parent_abspath;
+
+  SVN_ERR(svn_dirent_get_absolute(&parent_abspath,
+                                  svn_wc_adm_access_path(adm_access),
+                                  subpool));
 
   if (tree_conflicted)
     *tree_conflicted = FALSE;
@@ -1910,7 +1940,8 @@ merge_dir_added(svn_wc_adm_access_t *adm_access,
       copyfrom_url = svn_path_url_add_component2(merge_b->merge_source.url2,
                                                  child, subpool);
       copyfrom_rev = rev;
-      SVN_ERR(check_scheme_match(adm_access, copyfrom_url));
+      SVN_ERR(check_scheme_match(merge_b->ctx->wc_ctx, parent_abspath,
+                                 copyfrom_url, subpool));
     }
 
   /* Find the version-control state of this path */
@@ -2018,10 +2049,10 @@ merge_dir_added(svn_wc_adm_access_t *adm_access,
         {
           /* Obstructed: we can't add a dir because there's a file here
            * (whatever the entry says should be here). */
-          SVN_ERR(tree_conflict(merge_b, adm_access, path,
-                                svn_node_dir,
-                                svn_wc_conflict_action_add,
-                                svn_wc_conflict_reason_obstructed));
+          SVN_ERR(tree_conflict_on_add(merge_b, adm_access, path,
+                                       svn_node_dir,
+                                       svn_wc_conflict_action_add,
+                                       svn_wc_conflict_reason_obstructed));
           if (tree_conflicted)
             *tree_conflicted = TRUE;
           if (state)
@@ -2118,9 +2149,19 @@ merge_dir_deleted(svn_wc_adm_access_t *adm_access,
                                         merge_b->ctx, subpool);
             if (err)
               {
-                if (state)
-                  *state = svn_wc_notify_state_obstructed;
                 svn_error_clear(err);
+
+                /* If the attempt to delete an existing directory failed,
+                 * the directory has local modifications (e.g. locally added
+                 * files, or property changes). Flag a tree conflict. */
+                SVN_ERR(tree_conflict(merge_b, adm_access, path,
+                                      svn_node_dir,
+                                      svn_wc_conflict_action_delete,
+                                      svn_wc_conflict_reason_edited));
+                if (tree_conflicted)
+                  *tree_conflicted = TRUE;
+                if (state)
+                  *state = svn_wc_notify_state_conflicted;
               }
             else
               {
@@ -2858,6 +2899,7 @@ fix_deleted_subtree_ranges(const char *url1,
   int i;
   const char *source_root_url;
   apr_pool_t *iterpool = svn_pool_create(pool);
+  svn_boolean_t is_rollback = revision2 < revision1;
 
   SVN_ERR(svn_ra_get_repos_root2(ra_session, &source_root_url, pool));
 
@@ -2889,10 +2931,24 @@ fix_deleted_subtree_ranges(const char *url1,
          'THE CHILDREN_WITH_MERGEINFO ARRAY'. */
       SVN_ERR_ASSERT(parent);
 
+      /* If this is a reverse merge reorder CHILD->REMAINING_RANGES
+         so it will work with the svn_rangelist_diff API. */
+      if (is_rollback)
+        {
+          SVN_ERR(svn_rangelist_reverse(child->remaining_ranges, iterpool));
+          SVN_ERR(svn_rangelist_reverse(parent->remaining_ranges, iterpool));
+        }
+
       SVN_ERR(svn_rangelist_diff(&deleted_rangelist, &added_rangelist,
                                  child->remaining_ranges,
                                  parent->remaining_ranges,
                                  TRUE, iterpool));
+
+      if (is_rollback)
+        {
+          SVN_ERR(svn_rangelist_reverse(child->remaining_ranges, iterpool));
+          SVN_ERR(svn_rangelist_reverse(parent->remaining_ranges, iterpool));
+        }
 
       /* If CHILD is the merge target we then know that URL1, URL2,
          REVISION1, and REVISION2 are provided by normalize_merge_sources()
@@ -2914,7 +2970,7 @@ fix_deleted_subtree_ranges(const char *url1,
          case, see the 'Note' in drive_merge_report_editor's docstring. */
       if (deleted_rangelist->nelts || added_rangelist->nelts)
         {
-          int merge_target_len = strlen(merge_b->target);
+          size_t merge_target_len = strlen(merge_b->target);
           const char *child_mergeinfo_path;
           const char *child_repos_src_path = child->path +
             (merge_target_len ? merge_target_len + 1 : 0);
@@ -2973,10 +3029,13 @@ get_full_mergeinfo(svn_mergeinfo_t *recorded_mergeinfo,
                    const char *target_wcpath,
                    svn_revnum_t start,
                    svn_revnum_t end,
-                   svn_wc_adm_access_t *adm_access,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
 {
+  const char *target_abspath;
+
+  SVN_ERR(svn_dirent_get_absolute(&target_abspath, target_wcpath, pool));
+
   /* First, we get the real mergeinfo. */
   if (recorded_mergeinfo)
     {
@@ -2985,8 +3044,7 @@ get_full_mergeinfo(svn_mergeinfo_t *recorded_mergeinfo,
                                                     &inherited, FALSE,
                                                     inherit, ra_session,
                                                     target_wcpath,
-                                                    adm_access, ctx,
-                                                    pool));
+                                                    ctx, pool));
       if (indirect)
         *indirect = inherited;
     }
@@ -3004,9 +3062,9 @@ get_full_mergeinfo(svn_mergeinfo_t *recorded_mergeinfo,
                  && (start > end));
 
       peg_revision.kind = svn_opt_revision_working;
-      SVN_ERR(svn_client__derive_location(&url, &target_rev, target_wcpath,
+      SVN_ERR(svn_client__derive_location(&url, &target_rev, target_abspath,
                                           &peg_revision, ra_session,
-                                          adm_access, ctx, pool));
+                                          ctx, pool, pool));
 
       if (target_rev <= end)
         {
@@ -3027,7 +3085,7 @@ get_full_mergeinfo(svn_mergeinfo_t *recorded_mergeinfo,
         {
           sesspool = svn_pool_create(pool);
           SVN_ERR(svn_client__open_ra_session_internal(&ra_session, url,
-                                                       NULL, NULL, NULL,
+                                                       NULL, NULL,
                                                        FALSE, TRUE,
                                                        ctx, sesspool));
         }
@@ -3061,8 +3119,7 @@ get_full_mergeinfo(svn_mergeinfo_t *recorded_mergeinfo,
       peg_revision.value.number = target_rev;
       SVN_ERR(svn_client__get_history_as_mergeinfo(implicit_mergeinfo, url,
                                                    &peg_revision, start, end,
-                                                   ra_session, NULL, ctx,
-                                                   pool));
+                                                   ra_session, ctx, pool));
 
       /* If we created an RA_SESSION above, destroy it.  Otherwise, if
          reparented an existing session, point it back where it was when
@@ -3099,7 +3156,6 @@ inherit_implicit_mergeinfo_from_parent(svn_client__merge_path_t *parent,
                                        svn_revnum_t revision1,
                                        svn_revnum_t revision2,
                                        svn_ra_session_t *ra_session,
-                                       svn_wc_adm_access_t *adm_access,
                                        svn_client_ctx_t *ctx,
                                        apr_pool_t *pool)
 {
@@ -3117,7 +3173,7 @@ inherit_implicit_mergeinfo_from_parent(svn_client__merge_path_t *parent,
                                ra_session, child->path,
                                MAX(revision1, revision2),
                                MIN(revision1, revision2),
-                               adm_access, ctx, pool));
+                               ctx, pool));
 
   /* Let CHILD inherit PARENT's implicit mergeinfo. */
   child->implicit_mergeinfo = apr_hash_make(pool);
@@ -3162,7 +3218,6 @@ ensure_implicit_mergeinfo(svn_client__merge_path_t *parent,
                           svn_revnum_t revision1,
                           svn_revnum_t revision2,
                           svn_ra_session_t *ra_session,
-                          svn_wc_adm_access_t *adm_access,
                           svn_client_ctx_t *ctx,
                           apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool)
@@ -3179,7 +3234,6 @@ ensure_implicit_mergeinfo(svn_client__merge_path_t *parent,
                                                    revision1,
                                                    revision2,
                                                    ra_session,
-                                                   adm_access,
                                                    ctx,
                                                    result_pool));
   else
@@ -3190,7 +3244,7 @@ ensure_implicit_mergeinfo(svn_client__merge_path_t *parent,
                                ra_session, child->path,
                                MAX(revision1, revision2),
                                MIN(revision1, revision2),
-                               adm_access, ctx, result_pool));
+                               ctx, result_pool));
 
   return SVN_NO_ERROR;
 }
@@ -3248,7 +3302,6 @@ filter_merged_revisions(svn_client__merge_path_t *parent,
                         svn_revnum_t revision2,
                         svn_boolean_t child_inherits_implicit,
                         svn_ra_session_t *ra_session,
-                        svn_wc_adm_access_t *adm_access,
                         svn_client_ctx_t *ctx,
                         apr_pool_t *pool)
 {
@@ -3340,7 +3393,6 @@ filter_merged_revisions(svn_client__merge_path_t *parent,
                                             revision1,
                                             revision2,
                                             ra_session,
-                                            adm_access,
                                             ctx,
                                             pool,
                                             subpool));
@@ -3430,7 +3482,6 @@ filter_merged_revisions(svn_client__merge_path_t *parent,
                                             revision1,
                                             revision2,
                                             ra_session,
-                                            adm_access,
                                             ctx,
                                             pool,
                                             subpool));
@@ -3507,7 +3558,6 @@ calculate_remaining_ranges(svn_client__merge_path_t *parent,
                            svn_boolean_t child_inherits_implicit,
                            svn_ra_session_t *ra_session,
                            const svn_wc_entry_t *entry,
-                           svn_wc_adm_access_t *adm_access,
                            svn_client_ctx_t *ctx,
                            apr_pool_t *pool)
 {
@@ -3554,7 +3604,7 @@ calculate_remaining_ranges(svn_client__merge_path_t *parent,
                                   adjusted_target_mergeinfo,
                                   revision1, revision2,
                                   child_inherits_implicit,
-                                  ra_session, adm_access, ctx, pool));
+                                  ra_session, ctx, pool));
 
   /* Issue #2973 -- from the continuing series of "Why, since the advent of
      merge tracking, allowing merges into mixed rev and locally modified
@@ -3657,8 +3707,7 @@ find_gaps_in_merge_source_history(svn_revnum_t *gap_start,
                                   svn_revnum_t revision2,
                                   svn_ra_session_t *ra_session,
                                   merge_cmd_baton_t *merge_b,
-                                  apr_pool_t *scratch_pool,
-                                  apr_pool_t *result_pool)
+                                  apr_pool_t *scratch_pool)
 {
   svn_mergeinfo_t implicit_src_mergeinfo;
   svn_opt_revision_t peg_rev;
@@ -3675,8 +3724,8 @@ find_gaps_in_merge_source_history(svn_revnum_t *gap_start,
   peg_rev.value.number = young_rev;
   SVN_ERR(svn_client__get_history_as_mergeinfo(&implicit_src_mergeinfo, url,
                                                &peg_rev, young_rev, old_rev,
-                                               ra_session, NULL,
-                                               merge_b->ctx, scratch_pool));
+                                               ra_session, merge_b->ctx,
+                                               scratch_pool));
 
   rangelist = apr_hash_get(implicit_src_mergeinfo,
                            merge_src_canon_path,
@@ -3785,12 +3834,11 @@ populate_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
                           svn_boolean_t honor_mergeinfo,
                           svn_ra_session_t *ra_session,
                           const char *parent_merge_src_canon_path,
-                          svn_wc_adm_access_t *adm_access,
                           merge_cmd_baton_t *merge_b,
                           apr_pool_t *pool)
 {
   apr_pool_t *iterpool;
-  int merge_target_len = strlen(merge_b->target);
+  size_t merge_target_len = strlen(merge_b->target);
   int i;
   svn_revnum_t gap_start, gap_end;
 
@@ -3836,7 +3884,7 @@ populate_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
                                             url1, revision1,
                                             url2, revision2,
                                             ra_session, merge_b,
-                                            iterpool, pool));
+                                            iterpool));
 
   /* Stash any gap in the merge command baton, we'll need it later when
      recording mergeinfo describing this merge. */
@@ -3848,6 +3896,7 @@ populate_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
     {
       const char *child_repos_path;
       const svn_wc_entry_t *child_entry;
+      const char *child_abspath;
       const char *child_url1, *child_url2;
       svn_client__merge_path_t *child =
         APR_ARRAY_IDX(children_with_mergeinfo, i, svn_client__merge_path_t *);
@@ -3871,8 +3920,10 @@ populate_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
       child_url2 = svn_path_url_add_component2(url2, child_repos_path,
                                                iterpool);
 
-      SVN_ERR(svn_wc__entry_versioned(&child_entry, child->path, adm_access,
-                                      FALSE, iterpool));
+      SVN_ERR(svn_dirent_get_absolute(&child_abspath, child->path, iterpool));
+      SVN_ERR(svn_wc__get_entry_versioned(&child_entry, merge_b->ctx->wc_ctx,
+                                          child_abspath, svn_node_unknown,
+                                          FALSE, FALSE, iterpool, iterpool));
 
       /* Get the explicit/inherited mergeinfo for CHILD.  If CHILD is the
          merge target then also get its implicit mergeinfo.  Otherwise defer
@@ -3888,7 +3939,7 @@ populate_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
         child->path,
         MAX(revision1, revision2),
         MIN(revision1, revision2),
-        adm_access, merge_b->ctx, pool));
+        merge_b->ctx, pool));
 
       /* If CHILD isn't the merge target find its parent. */
       if (i > 0)
@@ -3918,8 +3969,7 @@ populate_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
                                          merge_b->implicit_src_gap,
                                          child_inherits_implicit,
                                          ra_session, child_entry,
-                                         adm_access, merge_b->ctx,
-                                         pool));
+                                         merge_b->ctx, pool));
 
       /* Deal with any gap in URL1@REVISION1:URL2@REVISION2's natural history.
 
@@ -4004,29 +4054,37 @@ populate_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
 /* Helper for record_mergeinfo_for_dir_merge().
 
    Adjust, in place, the inheritability of the ranges in RANGELIST to
-   describe a merge of RANGELIST into WC_WCPATH at depth DEPTH.  ENTRY
-   is the entry for WC_PATH.
+   describe a merge of RANGELIST into WC_WCPATH at depth DEPTH.
    
    WC_PATH_IS_MERGE_TARGET is true if WC_PATH is the target of the merge,
    otherwise WC_PATH is a subtree.
 
    WC_PATH_HAS_MISSING_CHILD is true if WC_PATH is missing an immediate child
    because the child is switched or absent from the WC, or due to a sparse
-   checkout -- see get_mergeinfo_paths(). */
+   checkout -- see get_mergeinfo_paths().
+
+   Perform any temporary allocations in SCRATCH_POOL. */
 static svn_error_t *
 calculate_merge_inheritance(apr_array_header_t *rangelist,
                             const char *wc_path,
-                            const svn_wc_entry_t *entry,
                             svn_boolean_t wc_path_is_merge_target,
                             svn_boolean_t wc_path_has_missing_child,
-                            svn_depth_t depth)
+                            svn_depth_t depth,
+                            svn_wc_context_t *wc_ctx,
+                            apr_pool_t * scratch_pool)
 {
-  if (entry->kind == svn_node_file)
+  const char * wc_abspath;
+  svn_node_kind_t path_kind;
+
+  SVN_ERR(svn_dirent_get_absolute(&wc_abspath, wc_path, scratch_pool));
+  SVN_ERR(svn_wc__node_get_kind(&path_kind, wc_ctx, wc_abspath,
+                                FALSE, scratch_pool));
+  if (path_kind == svn_node_file)
     {
       /* Files *never* have non-inheritable mergeinfo. */
       svn_rangelist__set_inheritance(rangelist, TRUE);
     }
-  else if (entry->kind == svn_node_dir)
+  else if (path_kind == svn_node_dir)
     {
       if (wc_path_is_merge_target)
         {
@@ -4059,13 +4117,12 @@ update_wc_mergeinfo(const char *target_wcpath,
                     const char *repos_rel_path,
                     apr_hash_t *merges,
                     svn_boolean_t is_rollback,
-                    svn_wc_adm_access_t *adm_access,
                     svn_client_ctx_t *ctx,
                     apr_pool_t *pool)
 {
   apr_pool_t *subpool = svn_pool_create(pool);
   const char *rel_path;
-  svn_mergeinfo_catalog_t mergeinfo;
+  svn_mergeinfo_t mergeinfo;
   apr_hash_index_t *hi;
 
   /* Combine the mergeinfo for the revision range just merged into
@@ -4114,8 +4171,7 @@ update_wc_mergeinfo(const char *target_wcpath,
           SVN_ERR(svn_client__get_wc_mergeinfo(&mergeinfo, &inherited,
                                                svn_mergeinfo_nearest_ancestor,
                                                entry, path, NULL, NULL,
-                                               adm_access, ctx,
-                                               subpool));
+                                               ctx, subpool));
         }
 
       if (mergeinfo == NULL)
@@ -4202,7 +4258,6 @@ record_skips(const char *mergeinfo_path,
              const svn_wc_entry_t *target_entry,
              apr_array_header_t *rangelist,
              svn_boolean_t is_rollback,
-             svn_wc_adm_access_t *adm_access,
              notification_receiver_baton_t *notify_b,
              merge_cmd_baton_t *merge_b,
              apr_pool_t *pool)
@@ -4258,8 +4313,7 @@ record_skips(const char *mergeinfo_path,
         }
       SVN_ERR(update_wc_mergeinfo(merge_b->target, target_entry,
                                   mergeinfo_path, merges,
-                                  is_rollback, adm_access,
-                                  merge_b->ctx, pool));
+                                  is_rollback, merge_b->ctx, pool));
     }
   return SVN_NO_ERROR;
 }
@@ -5155,19 +5209,21 @@ insert_parent_and_sibs_of_sw_absent_del_entry(
                                    int *curr_index,
                                    svn_client__merge_path_t *child,
                                    svn_depth_t depth,
-                                   svn_wc_adm_access_t *adm_access,
                                    apr_pool_t *pool)
 {
   svn_client__merge_path_t *parent;
   const char *parent_path = svn_dirent_dirname(child->path, pool);
-  apr_hash_t *entries;
-  apr_hash_index_t *hi;
-  svn_wc_adm_access_t *parent_access;
+  const char *parent_abspath;
+  apr_pool_t *iterpool;
+  const apr_array_header_t *children;
+  int i;
 
   if (!(child->absent
           || (child->switched
               && strcmp(merge_cmd_baton->target, child->path) != 0)))
     return SVN_NO_ERROR;
+
+  SVN_ERR(svn_dirent_get_absolute(&parent_abspath, parent_path, pool));
 
   parent = get_child_with_mergeinfo(children_with_mergeinfo, parent_path);
   if (parent)
@@ -5187,21 +5243,25 @@ insert_parent_and_sibs_of_sw_absent_del_entry(
     } /*(parent == NULL) */
 
   /* Add all of PARENT's non-missing children that are not already present.*/
-  SVN_ERR(svn_wc_adm_probe_try3(&parent_access, adm_access, parent->path,
-                                TRUE, -1, merge_cmd_baton->ctx->cancel_func,
-                                merge_cmd_baton->ctx->cancel_baton, pool));
-  SVN_ERR(svn_wc_entries_read(&entries, parent_access, FALSE, pool));
-  for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
+  SVN_ERR(svn_wc__node_get_children(&children, merge_cmd_baton->ctx->wc_ctx,
+                                    parent_abspath, FALSE, pool, pool));
+  iterpool = svn_pool_create(pool);
+  for (i = 0; i < children->nelts; i++)
     {
-      const char *name = svn_apr_hash_index_key(hi);
+      const char *child_abspath = APR_ARRAY_IDX(children, i, const char *);
       svn_client__merge_path_t *sibling_of_missing;
       const char *child_path;
+      const svn_wc_entry_t *child_entry;
 
-      if (strcmp(name, SVN_WC_ENTRY_THIS_DIR) == 0)
-        continue;
+      svn_pool_clear(iterpool);
+
+      SVN_ERR(svn_wc__get_entry_versioned(&child_entry,
+                                          merge_cmd_baton->ctx->wc_ctx,
+                                          child_abspath, svn_node_unknown,
+                                          FALSE, FALSE, iterpool, iterpool));
 
       /* Does this child already exist in CHILDREN_WITH_MERGEINFO? */
-      child_path = svn_path_join(parent->path, name, pool);
+      child_path = svn_path_join(parent->path, child_entry->name, iterpool);
       sibling_of_missing = get_child_with_mergeinfo(children_with_mergeinfo,
                                                     child_path);
       /* Create the missing child and insert it into CHILDREN_WITH_MERGEINFO.*/
@@ -5210,9 +5270,6 @@ insert_parent_and_sibs_of_sw_absent_del_entry(
           /* Don't add directory children if DEPTH is svn_depth_files. */
           if (depth == svn_depth_files)
             {
-              const svn_wc_entry_t *child_entry;
-              SVN_ERR(svn_wc_entry(&child_entry, child_path,
-                                   adm_access, FALSE, pool));
               if (child_entry->kind != svn_node_file)
                 continue;
             }
@@ -5225,6 +5282,9 @@ insert_parent_and_sibs_of_sw_absent_del_entry(
                                 pool);
         }
     }
+
+  svn_pool_destroy(iterpool);
+
   return SVN_NO_ERROR;
 }
 
@@ -5403,6 +5463,7 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
                   const char *name = svn_apr_hash_index_key(hi);
                   svn_client__merge_path_t *child_of_noninheritable;
                   const char *child_path;
+                  const char *child_abspath;
 
                   if (strcmp(name, SVN_WC_ENTRY_THIS_DIR) == 0)
                     continue;
@@ -5412,6 +5473,8 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
                      CHILDREN_WITH_MERGEINFO and set override mergeinfo on
                      it. */
                   child_path = svn_path_join(child->path, name, iterpool);
+                  SVN_ERR(svn_dirent_get_absolute(&child_abspath, child_path,
+                                                  iterpool));
                   child_of_noninheritable =
                     get_child_with_mergeinfo(children_with_mergeinfo,
                                              child_path);
@@ -5423,10 +5486,11 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
                          is svn_depth_files. */
                       if (depth == svn_depth_files)
                         {
-                          const svn_wc_entry_t *child_entry;
-                          SVN_ERR(svn_wc_entry(&child_entry, child_path,
-                                               adm_access, FALSE, iterpool));
-                          if (child_entry->kind != svn_node_file)
+                          svn_node_kind_t child_kind;
+                          SVN_ERR(svn_wc__node_get_kind(
+                            &child_kind, merge_cmd_baton->ctx->wc_ctx,
+                            child_abspath, FALSE, iterpool));
+                          if (child_kind != svn_node_file)
                             continue;
                         }
                       /* else DEPTH is infinity or immediates so we want both
@@ -5454,15 +5518,16 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
                           svn_mergeinfo_t mergeinfo;
                           const svn_wc_entry_t *child_entry;
 
-                          SVN_ERR(svn_wc__entry_versioned(
-                            &child_entry, child_of_noninheritable->path,
-                            adm_access, FALSE, iterpool));
+                          SVN_ERR(svn_wc__get_entry_versioned(
+                            &child_entry, merge_cmd_baton->ctx->wc_ctx,
+                            con_abspath, svn_node_unknown, FALSE, FALSE,
+                            iterpool, iterpool));
 
                           SVN_ERR(svn_client__get_wc_mergeinfo(
                             &mergeinfo, &inherited,
                             svn_mergeinfo_nearest_ancestor,
                             child_entry, child_of_noninheritable->path,
-                            merge_cmd_baton->target, NULL, adm_access,
+                            merge_cmd_baton->target, NULL,
                             merge_cmd_baton->ctx, iterpool));
 
                           SVN_ERR(svn_client__record_wc_mergeinfo(
@@ -5475,7 +5540,7 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
           /* Case 4 and 5 are handled by the following function. */
           SVN_ERR(insert_parent_and_sibs_of_sw_absent_del_entry(
             children_with_mergeinfo, merge_cmd_baton, &i, child,
-            depth, adm_access, pool));
+            depth, pool));
         } /* i < children_with_mergeinfo->nelts */
       svn_pool_destroy(iterpool);
     } /* honor_mergeinfo */
@@ -6117,8 +6182,9 @@ do_file_merge(const char *url1,
                                 merge_b->ctx->cancel_baton,
                                 pool));
 
-  SVN_ERR(svn_wc__entry_versioned(&entry, target_wcpath, adm_access, FALSE,
-                                  pool));
+  SVN_ERR(svn_wc__get_entry_versioned(&entry, merge_b->ctx->wc_ctx,
+                                      target_abspath, svn_node_unknown,
+                                      FALSE, FALSE, pool, pool));
 
   range.start = revision1;
   range.end = revision2;
@@ -6145,7 +6211,7 @@ do_file_merge(const char *url1,
                                  merge_b->ra_session1, target_wcpath,
                                  MAX(revision1, revision2),
                                  MIN(revision1, revision2),
-                                 adm_access, ctx, pool));
+                                 ctx, pool));
 
       SVN_ERR(svn_ra_reparent(merge_b->ra_session1, url1, pool));
 
@@ -6160,7 +6226,7 @@ do_file_merge(const char *url1,
                                              target_mergeinfo,
                                              merge_b->implicit_src_gap, FALSE,
                                              merge_b->ra_session1,
-                                             entry, adm_access, ctx, pool));
+                                             entry, ctx, pool));
           remaining_ranges = merge_target->remaining_ranges;
         }
     }
@@ -6378,8 +6444,7 @@ do_file_merge(const char *url1,
           apr_hash_set(merges, target_wcpath, APR_HASH_KEY_STRING,
                        filtered_rangelist);
           SVN_ERR(update_wc_mergeinfo(target_wcpath, entry, mergeinfo_path,
-                                      merges, is_rollback, adm_access,
-                                      ctx, subpool));
+                                      merges, is_rollback, ctx, subpool));
         }
     }
 
@@ -6423,7 +6488,6 @@ do_file_merge(const char *url1,
 static svn_error_t *
 process_children_with_new_mergeinfo(merge_cmd_baton_t *merge_b,
                                     notification_receiver_baton_t *notify_b,
-                                    svn_wc_adm_access_t *adm_access,
                                     apr_pool_t *pool)
 {
   if (merge_b->paths_with_new_mergeinfo && !merge_b->dry_run)
@@ -6448,10 +6512,11 @@ process_children_with_new_mergeinfo(merge_cmd_baton_t *merge_b,
           apr_pool_clear(iterpool);
           SVN_ERR(svn_dirent_get_absolute(&pwnm_abspath,
                                           path_with_new_mergeinfo, iterpool));
-          SVN_ERR(svn_wc__entry_versioned(&path_entry,
-                                          path_with_new_mergeinfo,
-                                          adm_access, FALSE,
-                                          iterpool));
+          SVN_ERR(svn_wc__get_entry_versioned(&path_entry,
+                                              merge_b->ctx->wc_ctx,
+                                              pwnm_abspath, svn_node_unknown,
+                                              FALSE, FALSE,
+                                              iterpool, iterpool));
 
           /* Get the path's new explicit mergeinfo... */
           SVN_ERR(svn_client__get_wc_mergeinfo(&path_explicit_mergeinfo,
@@ -6459,7 +6524,7 @@ process_children_with_new_mergeinfo(merge_cmd_baton_t *merge_b,
                                                svn_mergeinfo_explicit,
                                                path_entry,
                                                path_with_new_mergeinfo,
-                                               NULL, NULL, adm_access,
+                                               NULL, NULL,
                                                merge_b->ctx, iterpool));
           /* ...there *should* always be explicit mergeinfo at this point
              but you can't be too careful. */
@@ -6481,7 +6546,6 @@ process_children_with_new_mergeinfo(merge_cmd_baton_t *merge_b,
                 svn_mergeinfo_nearest_ancestor, /* We only want inherited MI */
                 merge_b->ra_session2,
                 path_with_new_mergeinfo,
-                adm_access,
                 merge_b->ctx,
                 iterpool));
 
@@ -6562,9 +6626,7 @@ path_is_subtree(const char *path,
            hi;
            hi = apr_hash_next(hi))
         {
-          const char *path_touched_by_merge;
-
-          apr_hash_this(hi, &path_touched_by_merge, NULL, NULL);
+          const char *path_touched_by_merge = svn_apr_hash_index_key(hi);
           if (svn_path_is_ancestor(path, path_touched_by_merge))
             return TRUE;
         }
@@ -6652,11 +6714,10 @@ record_mergeinfo_for_dir_merge(const svn_wc_entry_t *target_entry,
                                svn_depth_t depth,
                                notification_receiver_baton_t *notify_b,
                                merge_cmd_baton_t *merge_b,
-                               svn_wc_adm_access_t *adm_access,
                                apr_pool_t *pool)
 {
   int i;
-  int merge_target_len = strlen(merge_b->target);
+  size_t merge_target_len = strlen(merge_b->target);
   svn_boolean_t is_rollback = (merged_range->start > merged_range->end);
   svn_boolean_t operative_merge = FALSE;
 
@@ -6717,9 +6778,11 @@ record_mergeinfo_for_dir_merge(const svn_wc_entry_t *target_entry,
         continue;
 
       svn_pool_clear(iterpool);
+      SVN_ERR(svn_dirent_get_absolute(&child_abspath, child->path, iterpool));
 
-      SVN_ERR(svn_wc__entry_versioned(&child_entry, child->path,
-                                      adm_access, FALSE, iterpool));
+      SVN_ERR(svn_wc__get_entry_versioned(&child_entry, merge_b->ctx->wc_ctx,
+                                          child_abspath, svn_node_unknown,
+                                          FALSE, FALSE, iterpool, iterpool));
 
       /* If CHILD is a subtree, this is not a record only merge, and
          CHILD was not affected by the merge then we don't need to
@@ -6740,8 +6803,6 @@ record_mergeinfo_for_dir_merge(const svn_wc_entry_t *target_entry,
              mergeinfo. */
           if (child->child_of_noninheritable)
             {
-              SVN_ERR(svn_dirent_get_absolute(&child_abspath, child->path,
-                                              iterpool));
               SVN_ERR(svn_client__record_wc_mergeinfo(child_abspath,
                                                       NULL,
                                                       merge_b->ctx,
@@ -6778,14 +6839,15 @@ record_mergeinfo_for_dir_merge(const svn_wc_entry_t *target_entry,
           if (i == 0)
             SVN_ERR(record_skips(mergeinfo_path,
                                  target_entry, child_merge_rangelist,
-                                 is_rollback, adm_access,
-                                 notify_b, merge_b, iterpool));
+                                 is_rollback, notify_b, merge_b, iterpool));
 
           SVN_ERR(calculate_merge_inheritance(child_merge_rangelist,
                                               child->path,
-                                              child_entry, i == 0,
+                                              i == 0,
                                               child->missing_child,
-                                              depth));
+                                              depth,
+                                              merge_b->ctx->wc_ctx,
+                                              iterpool));
 
           /* If CHILD has indirect mergeinfo set it before
              recording the first merge range. */
@@ -6818,7 +6880,7 @@ record_mergeinfo_for_dir_merge(const svn_wc_entry_t *target_entry,
           SVN_ERR(update_wc_mergeinfo(child->path, child_entry,
                                       child_merge_src_canon_path,
                                       child_merges, is_rollback,
-                                      adm_access, merge_b->ctx, iterpool));
+                                      merge_b->ctx, iterpool));
         }
 
       /* Elide explicit subtree mergeinfo whether or not we updated it. */
@@ -6854,7 +6916,7 @@ record_mergeinfo_for_dir_merge(const svn_wc_entry_t *target_entry,
           SVN_ERR(svn_client__elide_mergeinfo(
             child->path,
             in_switched_subtree ? NULL : merge_b->target,
-            child_entry, adm_access, merge_b->ctx, iterpool));
+            child_entry, merge_b->ctx, iterpool));
         }
     } /* (i = 0; i < notify_b->children_with_mergeinfo->nelts; i++) */
 
@@ -6883,7 +6945,6 @@ record_mergeinfo_for_added_subtrees(svn_merge_range_t *merged_range,
                                     svn_depth_t depth,
                                     notification_receiver_baton_t *notify_b,
                                     merge_cmd_baton_t *merge_b,
-                                    svn_wc_adm_access_t *adm_access,
                                     apr_pool_t *pool)
 {
   /* If no paths were added by the merge then we have nothing to do. */
@@ -6932,9 +6993,18 @@ record_mergeinfo_for_added_subtrees(svn_merge_range_t *merged_range,
                 *abs_added_path, *abs_target_path,
                 *added_path_mergeinfo_path;
 
-              SVN_ERR(svn_wc__entry_versioned(&entry, added_path,
-                                              adm_access, FALSE,
+              SVN_ERR(svn_dirent_get_absolute(&abs_target_path,
+                                              target_merge_path->path,
                                               iterpool));
+              SVN_ERR(svn_dirent_get_absolute(&abs_added_path,
+                                              added_path,
+                                              iterpool));
+
+              SVN_ERR(svn_wc__get_entry_versioned(&entry, merge_b->ctx->wc_ctx,
+                                                  abs_added_path,
+                                                  svn_node_unknown,
+                                                  FALSE, FALSE,
+                                                  iterpool, iterpool));
 
               /* Calculate the mergeinfo resulting from this merge. */
               merge_mergeinfo = apr_hash_make(iterpool);
@@ -6951,12 +7021,6 @@ record_mergeinfo_for_added_subtrees(svn_merge_range_t *merged_range,
 
               /* Create the new mergeinfo path for
                  added_path's mergeinfo. */
-              SVN_ERR(svn_dirent_get_absolute(&abs_target_path,
-                                              target_merge_path->path,
-                                              iterpool));
-              SVN_ERR(svn_dirent_get_absolute(&abs_added_path,
-                                              added_path,
-                                              iterpool));
 
               /* abs_added_path had better be a child of abs_target_path
                  or something is *really* wrong. */
@@ -6976,7 +7040,7 @@ record_mergeinfo_for_added_subtrees(svn_merge_range_t *merged_range,
               SVN_ERR(svn_client__get_wc_mergeinfo(
                 &added_path_mergeinfo, &inherited,
                 svn_mergeinfo_explicit, entry, added_path,
-                NULL, NULL, adm_access, merge_b->ctx, iterpool));
+                NULL, NULL, merge_b->ctx, iterpool));
 
               /* Combine the explict mergeinfo on the added path (if any)
                  with the mergeinfo for this merge. */
@@ -7412,7 +7476,7 @@ do_directory_merge(const char *url1,
                                     url1, revision1, url2, revision2,
                                     honor_mergeinfo,
                                     ra_session, mergeinfo_path,
-                                    adm_access, merge_b, pool));
+                                    merge_b, pool));
 
   /* Always start with a range which describes the most inclusive merge
      possible, i.e. REVISION1:REVISION2. */
@@ -7556,7 +7620,7 @@ do_directory_merge(const char *url1,
                  inherited is recorded and then add these paths to
                  MERGE_B->CHILDREN_WITH_MERGEINFO.*/
               SVN_ERR(process_children_with_new_mergeinfo(merge_b, notify_b,
-                                                          adm_access, pool));
+                                                          pool));
 
               /* If any subtrees had their explicit mergeinfo deleted as a
                  result of the merge then remove these paths from
@@ -7618,7 +7682,6 @@ do_directory_merge(const char *url1,
                                              depth,
                                              notify_b,
                                              merge_b,
-                                             adm_access,
                                              pool));
 
       /* If a path has an immediate parent with non-inheritable mergeinfo at
@@ -7640,7 +7703,6 @@ do_directory_merge(const char *url1,
                                                   depth,
                                                   notify_b,
                                                   merge_b,
-                                                  adm_access,
                                                   pool));
     }
 
@@ -7677,7 +7739,7 @@ ensure_ra_session_url(svn_ra_session_t **ra_session,
     {
       svn_error_clear(err);
       err = svn_client__open_ra_session_internal(ra_session, url,
-                                                 NULL, NULL, NULL,
+                                                 NULL, NULL,
                                                  FALSE, TRUE, ctx, pool);
     }
   SVN_ERR(err);
@@ -7870,7 +7932,7 @@ do_merge(apr_array_header_t *merge_sources,
       /* The final mergeinfo on TARGET_WCPATH may itself elide. */
       if (! dry_run)
         SVN_ERR(svn_client__elide_mergeinfo(target, NULL, target_entry,
-                                            adm_access, ctx, subpool));
+                                            ctx, subpool));
     }
 
   /* Let everyone know we're finished here. */
@@ -8088,13 +8150,13 @@ svn_client_merge3(const char *source1,
      able to figure out some kind of revision specifications, but in
      that case it won't matter, because those ways of specifying a
      revision are meaningless for a url. */
-  SVN_ERR(svn_client_url_from_path(&URL1, source1, pool));
+  SVN_ERR(svn_client_url_from_path2(&URL1, source1, ctx, pool, pool));
   if (! URL1)
     return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
                              _("'%s' has no URL"),
                              svn_dirent_local_style(source1, pool));
 
-  SVN_ERR(svn_client_url_from_path(&URL2, source2, pool));
+  SVN_ERR(svn_client_url_from_path2(&URL2, source2, ctx, pool, pool));
   if (! URL2)
     return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
                              _("'%s' has no URL"),
@@ -8106,8 +8168,9 @@ svn_client_merge3(const char *source1,
                                  ctx->cancel_baton, pool));
 
   /* Fetch the target's entry. */
-  SVN_ERR(svn_wc__entry_versioned(&entry, target_wcpath, adm_access,
-                                  FALSE, pool));
+  SVN_ERR(svn_wc__get_entry_versioned(&entry, ctx->wc_ctx, target_abspath,
+                                      svn_node_unknown, FALSE, FALSE,
+                                      pool, pool));
 
   /* Determine the working copy target's repository root URL. */
   working_rev.kind = svn_opt_revision_working;
@@ -8117,10 +8180,10 @@ svn_client_merge3(const char *source1,
   /* Open some RA sessions to our merge source sides. */
   sesspool = svn_pool_create(pool);
   SVN_ERR(svn_client__open_ra_session_internal(&ra_session1,
-                                               URL1, NULL, NULL, NULL,
+                                               URL1, NULL, NULL,
                                                FALSE, TRUE, ctx, sesspool));
   SVN_ERR(svn_client__open_ra_session_internal(&ra_session2,
-                                               URL2, NULL, NULL, NULL,
+                                               URL2, NULL, NULL,
                                                FALSE, TRUE, ctx, sesspool));
 
   /* Resolve revisions to real numbers. */
@@ -8887,7 +8950,7 @@ calculate_left_hand_side(const char **url_left,
         svn_path_url_add_component2(source_repos_root,
                                     target_repos_rel_path,
                                     subpool),
-        &peg_revision, ra_session, NULL, ctx, subpool));
+        &peg_revision, ra_session, ctx, subpool, subpool));
       *url_left = apr_pstrdup(pool, youngest_url);
     }
 
@@ -8999,11 +9062,12 @@ svn_client_merge_reintegrate(const char *source,
                                  ctx->cancel_baton, pool));
 
   /* Fetch the target's entry. */
-  SVN_ERR(svn_wc__entry_versioned(&entry, target_wcpath, adm_access,
-                                  FALSE, pool));
+  SVN_ERR(svn_wc__get_entry_versioned(&entry, ctx->wc_ctx, target_abspath,
+                                      svn_node_unknown, FALSE, FALSE,
+                                      pool, pool));
 
   /* Make sure we're dealing with a real URL. */
-  SVN_ERR(svn_client_url_from_path(&url2, source, pool));
+  SVN_ERR(svn_client_url_from_path2(&url2, source, ctx, pool, pool));
   if (! url2)
     return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
                              _("'%s' has no URL"),
@@ -9016,7 +9080,7 @@ svn_client_merge_reintegrate(const char *source,
 
   /* Open an RA session to our source URL, and determine its root URL. */
   SVN_ERR(svn_client__open_ra_session_internal(&ra_session, wc_repos_root,
-                                               NULL, NULL, NULL,
+                                               NULL, NULL,
                                                FALSE, FALSE, ctx, pool));
   SVN_ERR(svn_ra_get_repos_root2(ra_session, &source_repos_root, pool));
 
@@ -9195,11 +9259,12 @@ svn_client_merge_peg3(const char *source,
                                  ctx->cancel_baton, pool));
 
   /* Fetch the target's entry. */
-  SVN_ERR(svn_wc__entry_versioned(&entry, target_wcpath, adm_access,
-                                  FALSE, pool));
+  SVN_ERR(svn_wc__get_entry_versioned(&entry, ctx->wc_ctx, target_abspath,
+                                      svn_node_unknown, FALSE, FALSE,
+                                      pool, pool));
 
   /* Make sure we're dealing with a real URL. */
-  SVN_ERR(svn_client_url_from_path(&URL, source, pool));
+  SVN_ERR(svn_client_url_from_path2(&URL, source, ctx, pool, pool));
   if (! URL)
     return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
                              _("'%s' has no URL"),
@@ -9212,8 +9277,7 @@ svn_client_merge_peg3(const char *source,
 
   /* Open an RA session to our source URL, and determine its root URL. */
   sesspool = svn_pool_create(pool);
-  SVN_ERR(svn_client__open_ra_session_internal(&ra_session,
-                                               URL, NULL, NULL, NULL,
+  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, URL, NULL, NULL,
                                                FALSE, TRUE, ctx, sesspool));
   SVN_ERR(svn_ra_get_repos_root2(ra_session, &source_repos_root, pool));
 

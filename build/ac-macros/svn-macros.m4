@@ -60,7 +60,7 @@ AC_DEFUN([SVN_EXTERNAL_PROJECT], [
     cd $1
 
     # A "../" for each directory in /$config_subdirs.
-    ac_dots=[`echo $apr_config_subdirs|sed -e 's%^\./%%' -e 's%[^/]$%&/%' -e 's%[^/]*/%../%g'`]
+    ac_dots=[`echo $apr_config_subdirs| $SED -e 's%^\./%%' -e 's%[^/]$%&/%' -e 's%[^/]*/%../%g'`]
 
     # Make the cache file name correct relative to the subdirectory.
     case "$cache_file" in

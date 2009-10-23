@@ -634,11 +634,33 @@ test_merge_mergeinfo(apr_pool_t *pool)
   for (i = 0; i < NBR_MERGEINFO_MERGES; i++)
     {
       int j;
+      svn_string_t *info2_starting, *info2_ending;
+
       SVN_ERR(svn_mergeinfo_parse(&info1, mergeinfo[i].mergeinfo1, pool));
       SVN_ERR(svn_mergeinfo_parse(&info2, mergeinfo[i].mergeinfo2, pool));
+
+      /* Make a copy of info2.  We will merge it into info1, but info2
+         should remain unchanged.  Store the mergeinfo as a svn_string_t
+         rather than making a copy and using svn_mergeinfo_diff().  Since
+         that API uses some of the underlying code as svn_mergeinfo_merge
+         we might mask potential errors. */
+      SVN_ERR(svn_mergeinfo_to_string(&info2_starting, info2, pool));
+
       SVN_ERR(svn_mergeinfo_merge(info1, info2, pool));
       if (mergeinfo[i].expected_paths != apr_hash_count(info1))
         return fail(pool, "Wrong number of paths in merged mergeinfo");
+
+      /* Check that info2 remained unchanged. */
+      SVN_ERR(svn_mergeinfo_to_string(&info2_ending, info2, pool));
+
+      if (strcmp(info2_ending->data, info2_starting->data))
+        return fail(pool,
+                    apr_psprintf(pool,
+                                 "svn_mergeinfo_merge case %i "
+                                 "modified its CHANGES arg from "
+                                 "%s to %s", i, info2_starting->data,
+                                 info2_ending->data));
+
       for (j = 0; j < mergeinfo[i].expected_paths; j++)
         {
           int k;
@@ -753,6 +775,10 @@ test_remove_rangelist(apr_pool_t *pool)
         {
           int expected_nbr_ranges;
           svn_merge_range_t *expected_ranges;
+          svn_string_t *eraser_starting;
+          svn_string_t *eraser_ending;
+          svn_string_t *whiteboard_starting;
+          svn_string_t *whiteboard_ending;
 
           SVN_ERR(svn_mergeinfo_parse(&info1, (test_data[i]).eraser, pool));
           SVN_ERR(svn_mergeinfo_parse(&info2, (test_data[i]).whiteboard, pool));
@@ -779,6 +805,13 @@ test_remove_rangelist(apr_pool_t *pool)
               expected_ranges = (test_data[i]).expected_removed_ignore_inheritance;
 
             }
+
+         /* Make a copies of whiteboard and eraser.  They should not be
+            modified by svn_rangelist_remove(). */
+         SVN_ERR(svn_rangelist_to_string(&eraser_starting, eraser, pool));
+         SVN_ERR(svn_rangelist_to_string(&whiteboard_starting, whiteboard,
+                                         pool));
+
           SVN_ERR(svn_rangelist_remove(&output, eraser, whiteboard,
                                        j == 0,
                                        pool));
@@ -792,6 +825,43 @@ test_remove_rangelist(apr_pool_t *pool)
           /* Collect all the errors rather than returning on the first. */
           if (child_err)
             {
+              if (err)
+                svn_error_compose(err, child_err);
+              else
+                err = child_err;
+            }
+
+          /* Check that eraser and whiteboard were not modified. */
+          SVN_ERR(svn_rangelist_to_string(&eraser_ending, eraser, pool));
+          SVN_ERR(svn_rangelist_to_string(&whiteboard_ending, whiteboard,
+                                          pool));
+          if (strcmp(eraser_starting->data, eraser_ending->data))
+            {
+              child_err = fail(pool,
+                               apr_psprintf(pool,
+                                            "svn_rangelist_remove case %i "
+                                            "modified its ERASER arg from "
+                                            "%s to %s when %sconsidering "
+                                            "inheritance", i,
+                                            eraser_starting->data,
+                                            eraser_ending->data,
+                                            j ? "" : "not "));
+              if (err)
+                svn_error_compose(err, child_err);
+              else
+                err = child_err;
+            }
+          if (strcmp(whiteboard_starting->data, whiteboard_ending->data))
+            {
+              child_err = fail(pool,
+                               apr_psprintf(pool,
+                                            "svn_rangelist_remove case %i "
+                                            "modified its WHITEBOARD arg "
+                                            "from %s to %s when "
+                                            "%sconsidering inheritance", i,
+                                            whiteboard_starting->data,
+                                            whiteboard_ending->data,
+                                            j ? "" : "not "));
               if (err)
                 svn_error_compose(err, child_err);
               else
@@ -1138,6 +1208,8 @@ test_rangelist_merge(apr_pool_t *pool)
   err = child_err = SVN_NO_ERROR;
   for (i = 0; i < SIZE_OF_RANGE_MERGE_TEST_ARRAY; i++)
     {
+      svn_string_t *rangelist2_starting, *rangelist2_ending;
+
       SVN_ERR(svn_mergeinfo_parse(&info1, (test_data[i]).mergeinfo1, pool));
       SVN_ERR(svn_mergeinfo_parse(&info2, (test_data[i]).mergeinfo2, pool));
       rangelist1 = apr_hash_get(info1, "/A", APR_HASH_KEY_STRING);
@@ -1149,6 +1221,10 @@ test_rangelist_merge(apr_pool_t *pool)
       if (rangelist2 == NULL)
         rangelist2 = apr_array_make(pool, 0, sizeof(svn_merge_range_t *));
 
+      /* Make a copy of rangelist2.  We will merge it into rangelist1, but
+         rangelist2 should remain unchanged. */
+      SVN_ERR(svn_rangelist_to_string(&rangelist2_starting, rangelist2,
+                                      pool));
       SVN_ERR(svn_rangelist_merge(&rangelist1, rangelist2, pool));
       child_err = verify_ranges_match(rangelist1,
                                      (test_data[i]).expected_merge,
@@ -1161,6 +1237,23 @@ test_rangelist_merge(apr_pool_t *pool)
       /* Collect all the errors rather than returning on the first. */
       if (child_err)
         {
+          if (err)
+            svn_error_compose(err, child_err);
+          else
+            err = child_err;
+        }
+
+      /* Check that rangelist2 remains unchanged. */
+      SVN_ERR(svn_rangelist_to_string(&rangelist2_ending, rangelist2, pool));
+      if (strcmp(rangelist2_ending->data, rangelist2_starting->data))
+        {
+          child_err = fail(pool,
+                           apr_psprintf(pool,
+                                        "svn_rangelist_merge case %i "
+                                        "modified its CHANGES arg from "
+                                        "%s to %s", i,
+                                        rangelist2_starting->data,
+                                        rangelist2_ending->data));
           if (err)
             svn_error_compose(err, child_err);
           else

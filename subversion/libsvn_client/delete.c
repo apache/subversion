@@ -174,8 +174,7 @@ delete_urls(svn_commit_info_t **commit_info_p,
   /* Open an RA session for the URL. Note that we don't have a local
      directory, nor a place to put temp files. */
   SVN_ERR(svn_client__open_ra_session_internal(&ra_session, common, NULL,
-                                               NULL, NULL, FALSE, TRUE,
-                                               ctx, pool));
+                                               NULL, FALSE, TRUE, ctx, pool));
 
   /* Verify that each thing to be deleted actually exists (to prevent
      the creation of a revision that has no changes, since the

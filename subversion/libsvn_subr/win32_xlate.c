@@ -183,10 +183,11 @@ svn_subr__win32_xlate_to_stringbuf(win32_xlate_t *handle,
   WCHAR * wide_str;
   int retval, wide_size;
 
-  *dest = svn_stringbuf_create("", pool);
-
   if (src_length == 0)
+  {
+    *dest = svn_stringbuf_create("", pool);
     return APR_SUCCESS;
+  }
 
   retval = MultiByteToWideChar(handle->from_page_id, 0, src_data, src_length,
                                NULL, 0);
@@ -219,7 +220,7 @@ svn_subr__win32_xlate_to_stringbuf(win32_xlate_t *handle,
 
   /* Ensure that buffer is enough to hold result string and termination
      character. */
-  svn_stringbuf_ensure(*dest, retval + 1);
+  *dest = svn_stringbuf_create_ensure(retval + 1, pool);
   (*dest)->len = retval;
 
   retval = WideCharToMultiByte(handle->to_page_id, 0, wide_str, wide_size,
