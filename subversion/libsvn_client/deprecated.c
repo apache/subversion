@@ -809,6 +809,25 @@ svn_client_diff_peg(const apr_array_header_t *options,
 }
 
 svn_error_t *
+svn_client_diff_summarize2(const char *path1,
+                           const svn_opt_revision_t *revision1,
+                           const char *path2,
+                           const svn_opt_revision_t *revision2,
+                           svn_depth_t depth,
+                           svn_boolean_t ignore_ancestry,
+                           const apr_array_header_t *changelists,
+                           svn_client_diff_summarize_func_t summarize_func,
+                           void *summarize_baton,
+                           svn_client_ctx_t *ctx,
+                           apr_pool_t *pool)
+{
+  return svn_client_diff_summarize3(path1, revision1, path2, revision2,
+                                    depth, ignore_ancestry, FALSE,
+                                    changelists, summarize_func,
+                                    summarize_baton, ctx, pool);
+}
+
+svn_error_t *
 svn_client_diff_summarize(const char *path1,
                           const svn_opt_revision_t *revision1,
                           const char *path2,
@@ -825,6 +844,25 @@ svn_client_diff_summarize(const char *path1,
                                     SVN_DEPTH_INFINITY_OR_FILES(recurse),
                                     ignore_ancestry, NULL, summarize_func,
                                     summarize_baton, ctx, pool);
+}
+
+svn_error_t *
+svn_client_diff_summarize_peg2(const char *path,
+                               const svn_opt_revision_t *peg_revision,
+                               const svn_opt_revision_t *start_revision,
+                               const svn_opt_revision_t *end_revision,
+                               svn_depth_t depth,
+                               svn_boolean_t ignore_ancestry,
+                               const apr_array_header_t *changelists,
+                               svn_client_diff_summarize_func_t summarize_func,
+                               void *summarize_baton,
+                               svn_client_ctx_t *ctx,
+                               apr_pool_t *pool)
+{
+  return svn_client_diff_summarize_peg3(path, peg_revision, start_revision,
+                                        end_revision, depth, ignore_ancestry,
+                                        FALSE, changelists, summarize_func,
+                                        summarize_baton, ctx, pool);
 }
 
 svn_error_t *
