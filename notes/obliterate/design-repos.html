@@ -133,6 +133,11 @@
           class="filename">tuna</tt>, and a new node for each of its parent
           directories up to the root.</p>
 
+        <p>We will do this in two steps. First, a begin_obliteration_txn()
+          function will create a new transaction that is a mutable clone of
+          the old r2. Second, we will use the normal transaction editing
+          functions to delete the "tuna" entry.</p>
+
         <pre>
        ______________________________________________________
       |___1_______2________3________4________5_________6_____...
