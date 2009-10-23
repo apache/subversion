@@ -389,7 +389,7 @@ test_getting_info(apr_pool_t *pool)
   const char *changed_author;
   apr_time_t last_mod_time;
   svn_depth_t depth;
-  svn_checksum_t *checksum;
+  const svn_checksum_t *checksum;
   svn_filesize_t translated_size;
   const char *target;
   svn_wc__db_lock_t *lock;
@@ -787,7 +787,7 @@ test_working_info(apr_pool_t *pool)
   const char *changed_author;
   apr_time_t last_mod_time;
   svn_depth_t depth;
-  svn_checksum_t *checksum;
+  const svn_checksum_t *checksum;
   svn_filesize_t translated_size;
   const char *target;
   const char *changelist;
