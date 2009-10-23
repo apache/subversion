@@ -374,7 +374,7 @@ static svn_error_t * add_child(version_rsrc_t **child,
   rsrc->revision = revision;
   rsrc->name = name;
   rsrc->url = svn_path_url_add_component2(parent->url, name, pool);
-  rsrc->local_path = svn_uri_join(parent->local_path, name, pool);
+  rsrc->local_path = svn_relpath_join(parent->local_path, name, pool);
 
   /* Case 1:  the resource is truly "new".  Either it was added as a
      completely new object, or implicitly created via a COPY.  Either
