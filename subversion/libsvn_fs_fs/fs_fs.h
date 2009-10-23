@@ -75,8 +75,8 @@ svn_fs_fs__write_noderev(svn_stream_t *outfile,
                          svn_boolean_t include_mergeinfo,
                          apr_pool_t *pool);
 
-/* Reads the node-revision *NODEREV from the stream STREAM.  Temporary
-   allocations are from POOL. */
+/* Read a node-revision from STREAM. Set *NODEREV to the new structure,
+   allocated in POOL. */
 svn_error_t *
 svn_fs_fs__read_noderev(node_revision_t **noderev,
                         svn_stream_t *stream,

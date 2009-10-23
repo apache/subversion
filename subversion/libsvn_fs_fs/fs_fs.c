@@ -1944,7 +1944,9 @@ read_rep_offsets(representation_t **rep_p,
   return SVN_NO_ERROR;
 }
 
-/* See svn_fs_fs__get_node_revision, which wraps this and adds another
+/* Get the node-revision for the node ID in FS.
+   Set *NODEREV_P to the new node-revision structure, allocated in POOL.
+   See svn_fs_fs__get_node_revision, which wraps this and adds another
    error. */
 static svn_error_t *
 get_node_revision_body(node_revision_t **noderev_p,
