@@ -83,7 +83,7 @@ def main():
   if action not in ("allow", "deny"):
     usage_and_exit("Invalid action '%s'.  Expected either 'allow' or 'deny'."
                    % (action))
-  extensions = map(lambda x: x.lower(), sys.argv[4:])
+  extensions = [x.lower() for x in sys.argv[4:]]
   validate_added_extensions(repos_path, txn_name, extensions, action)
 
 if __name__ == "__main__":
