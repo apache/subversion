@@ -74,7 +74,7 @@ typedef enum svn_io_file_del_t
 typedef struct svn_io_dirent_t {
   /** The kind of this entry. */
   svn_node_kind_t kind;
-  /** If @c kind is @c svn_node_file, whether this entry is a special file;
+  /** If @c kind is #svn_node_file, whether this entry is a special file;
    * else FALSE.
    *
    * @see svn_io_check_special_path().
@@ -84,14 +84,14 @@ typedef struct svn_io_dirent_t {
 
 /** Determine the @a kind of @a path.  @a path should be UTF-8 encoded.
  *
- * If @a path is a file, set @a *kind to @c svn_node_file.
+ * If @a path is a file, set @a *kind to #svn_node_file.
  *
- * If @a path is a directory, set @a *kind to @c svn_node_dir.
+ * If @a path is a directory, set @a *kind to #svn_node_dir.
  *
- * If @a path does not exist, set @a *kind to @c svn_node_none.
+ * If @a path does not exist, set @a *kind to #svn_node_none.
  *
- * If @a path exists but is none of the above, set @a *kind to @c
- * svn_node_unknown.
+ * If @a path exists but is none of the above, set @a *kind to
+ * #svn_node_unknown.
  *
  * If unable to determine @a path's kind, return an error, with @a *kind's
  * value undefined.
@@ -131,7 +131,7 @@ svn_io_check_resolved_path(const char *path,
  * in @a *unique_name, also utf8-encoded.  Either @a file or @a unique_name
  * may be @c NULL.
  *
- * If @a delete_when is @c svn_io_file_del_on_close, then the @c APR_DELONCLOSE
+ * If @a delete_when is #svn_io_file_del_on_close, then the @c APR_DELONCLOSE
  * flag will be used when opening the file.  The @c APR_BUFFERED flag will
  * always be used.
  *
@@ -164,7 +164,7 @@ svn_io_check_resolved_path(const char *path,
  * Allocates @a *file and @a *unique_name in @a result_pool. All
  * intermediate allocations will be performed in @a scratch_pool.
  *
- * If no unique name can be found, @c SVN_ERR_IO_UNIQUE_NAMES_EXHAUSTED is
+ * If no unique name can be found, #SVN_ERR_IO_UNIQUE_NAMES_EXHAUSTED is
  * the error returned.
  *
  * Claim of Historical Inevitability: this function was written
@@ -323,7 +323,7 @@ svn_io_copy_link(const char *src,
  *
  * If @a cancel_func is non-NULL, invoke it with @a cancel_baton at
  * various points during the operation.  If it returns any error
- * (typically @c SVN_ERR_CANCELLED), return that error immediately.
+ * (typically #SVN_ERR_CANCELLED), return that error immediately.
  */
 svn_error_t *
 svn_io_copy_dir_recursively(const char *src,
@@ -1192,7 +1192,7 @@ svn_stringbuf_from_file2(svn_stringbuf_t **result,
                          apr_pool_t *pool);
 
 /** Similar to svn_stringbuf_from_file2(), except that if @a filename
- * is "-", return the error @c SVN_ERR_UNSUPPORTED_FEATURE and don't
+ * is "-", return the error #SVN_ERR_UNSUPPORTED_FEATURE and don't
  * touch @a *result.
  *
  * @deprecated Provided for backwards compatibility with the 1.4 API.
@@ -1276,7 +1276,7 @@ svn_io_get_dir_filenames(apr_hash_t **dirents,
 
 /** Read all of the disk entries in directory @a path, a utf8-encoded
  * path.  Set @a *dirents to a hash mapping dirent names (<tt>char *</tt>) to
- * @c svn_io_dirent_t structures, allocated in @a pool.
+ * #svn_io_dirent_t structures, allocated in @a pool.
  *
  * @note The `.' and `..' directories normally returned by
  * apr_dir_read() are NOT returned in the hash.
@@ -1292,7 +1292,7 @@ svn_io_get_dirents2(apr_hash_t **dirents,
                     apr_pool_t *pool);
 
 /** Similar to svn_io_get_dirents2(), but @a *dirents is a hash table
- * with @c svn_node_kind_t values.
+ * with #svn_node_kind_t values.
  *
  * @deprecated Provided for backwards compatibility with the 1.2 API.
  */
@@ -1367,13 +1367,13 @@ svn_io_start_cmd(apr_proc_t *cmd_proc,
  *
  * If @a exitcode is not NULL, and SVN_NO_ERROR is returned, @a *exitcode
  * will contain the exit code of the process.  If @a exitcode is NULL and
- * the exit code is non-zero, then an @c SVN_ERR_EXTERNAL_PROGRAM error
+ * the exit code is non-zero, then an #SVN_ERR_EXTERNAL_PROGRAM error
  * will be returned.
  *
  * If @a exitwhy is not NULL, and SVN_NO_ERROR is returned, @a *exitwhy
  * will indicate why the process terminated.  If @a exitwhy is NULL,
  * and the exit reason is not @c APR_PROC_CHECK_EXIT(), then an
- * @c SVN_ERR_EXTERNAL_PROGRAM error will be returned.
+ * #SVN_ERR_EXTERNAL_PROGRAM error will be returned.
  *
  * @since New in 1.3.
  */
@@ -1478,7 +1478,7 @@ svn_io_run_diff(const char *dir,
  * used instead.
  *
  * Set @a *exitcode to diff3's exit status.  If @a *exitcode is anything
- * other than 0 or 1, then return @c SVN_ERR_EXTERNAL_PROGRAM.  (Note the
+ * other than 0 or 1, then return #SVN_ERR_EXTERNAL_PROGRAM.  (Note the
  * following from the diff3 info pages: "An exit status of 0 means
  * `diff3' was successful, 1 means some conflicts were found, and 2
  * means trouble.")
@@ -1785,7 +1785,7 @@ svn_io_dir_read(apr_finfo_t *finfo,
 
 /** Set @a *version to the integer that starts the file at @a path.  If the
  * file does not begin with a series of digits followed by a newline,
- * return the error @c SVN_ERR_BAD_VERSION_FILE_FORMAT.  Use @a pool for
+ * return the error #SVN_ERR_BAD_VERSION_FILE_FORMAT.  Use @a pool for
  * all allocations.
  */
 svn_error_t *
@@ -1825,7 +1825,7 @@ svn_io_file_name_get(const char **filename,
  * returned in @a *file, and the name is returned in @a *unique_name, also
  * utf8-encoded.  Either @a file or @a unique_name may be @c NULL.
  *
- * If @a delete_when is @c svn_io_file_del_on_close, then the @c APR_DELONCLOSE
+ * If @a delete_when is #svn_io_file_del_on_close, then the @c APR_DELONCLOSE
  * flag will be used when opening the file.  The @c APR_BUFFERED flag will
  * always be used.
  *
