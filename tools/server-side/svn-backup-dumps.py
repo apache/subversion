@@ -283,9 +283,13 @@ class SvnBackup:
         # need 3 args: progname, reposname, dumpdir
         if len(args) != 3:
             if len(args) < 3:
-                raise SvnBackupException("too few arguments, specify repospath and dumpdir.")
+                raise SvnBackupException("too few arguments, specify"
+                                         " repospath and dumpdir.\nuse -h or"
+                                         " --help option to see help.")
             else:
-                raise SvnBackupException("too many arguments, specify repospath and dumpdir only.")
+                raise SvnBackupException("too many arguments, specify"
+                                         " repospath and dumpdir only.\n use"
+                                         " -h or --help option to see help.")
         self.__repospath = args[1]
         self.__dumpdir = args[2]
         # check repospath
