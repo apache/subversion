@@ -44,7 +44,7 @@
 svn_error_t *
 svn_cl__resolve(apr_getopt_t *os,
                 void *baton,
-                apr_pool_t *pool)
+                apr_pool_t *scratch_pool)
 {
   svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
@@ -52,7 +52,7 @@ svn_cl__resolve(apr_getopt_t *os,
   svn_error_t *err;
   apr_array_header_t *targets;
   int i;
-  apr_pool_t *subpool;
+  apr_pool_t *iterpool;
 
   switch (opt_state->accept_which)
     {
@@ -84,36 +84,36 @@ svn_cl__resolve(apr_getopt_t *os,
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
                                                       opt_state->targets,
-                                                      ctx, pool));
+                                                      ctx, scratch_pool));
   if (! targets->nelts)
     return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, 0, NULL);
 
-  subpool = svn_pool_create(pool);
   if (! opt_state->quiet)
     svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2, FALSE,
-                         FALSE, FALSE, pool);
+                         FALSE, FALSE, scratch_pool);
 
   if (opt_state->depth == svn_depth_unknown)
     opt_state->depth = svn_depth_empty;
 
-  SVN_ERR(svn_opt_eat_peg_revisions(&targets, targets, pool));
+  SVN_ERR(svn_opt_eat_peg_revisions(&targets, targets, scratch_pool));
 
+  iterpool = svn_pool_create(scratch_pool);
   for (i = 0; i < targets->nelts; i++)
     {
       const char *target = APR_ARRAY_IDX(targets, i, const char *);
-      svn_pool_clear(subpool);
+      svn_pool_clear(iterpool);
       SVN_ERR(svn_cl__check_cancel(ctx->cancel_baton));
       err = svn_client_resolve(target,
                                opt_state->depth, conflict_choice,
                                ctx,
-                               subpool);
+                               iterpool);
       if (err)
         {
           svn_handle_warning2(stderr, err, "svn: ");
           svn_error_clear(err);
         }
     }
+  svn_pool_destroy(iterpool);
 
-  svn_pool_destroy(subpool);
   return SVN_NO_ERROR;
 }

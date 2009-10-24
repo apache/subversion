@@ -43,7 +43,7 @@
 svn_error_t *
 svn_cl__update(apr_getopt_t *os,
                void *baton,
-               apr_pool_t *pool)
+               apr_pool_t *scratch_pool)
 {
   svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
@@ -53,12 +53,12 @@ svn_cl__update(apr_getopt_t *os,
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
                                                       opt_state->targets,
-                                                      ctx, pool));
+                                                      ctx, scratch_pool));
 
   /* Add "." if user passed 0 arguments */
-  svn_opt_push_implicit_dot_target(targets, pool);
+  svn_opt_push_implicit_dot_target(targets, scratch_pool);
 
-  SVN_ERR(svn_opt_eat_peg_revisions(&targets, targets, pool));
+  SVN_ERR(svn_opt_eat_peg_revisions(&targets, targets, scratch_pool));
 
   /* If using changelists, convert targets into a set of paths that
      match the specified changelist(s). */
@@ -69,12 +69,13 @@ svn_cl__update(apr_getopt_t *os,
         cl_depth = svn_depth_infinity;
       SVN_ERR(svn_cl__changelist_paths(&targets,
                                        opt_state->changelists, targets,
-                                       cl_depth, ctx, pool, pool));
+                                       cl_depth, ctx, scratch_pool,
+                                       scratch_pool));
     }
 
   if (! opt_state->quiet)
     svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2,
-                         FALSE, FALSE, FALSE, pool);
+                         FALSE, FALSE, FALSE, scratch_pool);
 
   /* Deal with depthstuffs. */
   if (opt_state->set_depth != svn_depth_unknown)
@@ -93,10 +94,10 @@ svn_cl__update(apr_getopt_t *os,
                              depth, depth_is_sticky,
                              opt_state->ignore_externals,
                              opt_state->force,
-                             ctx, pool));
+                             ctx, scratch_pool));
 
   if (! opt_state->quiet)
-    SVN_ERR(svn_cl__print_conflict_stats(ctx->notify_baton2, pool));
+    SVN_ERR(svn_cl__print_conflict_stats(ctx->notify_baton2, scratch_pool));
   
   return SVN_NO_ERROR;
 }

@@ -170,23 +170,23 @@ print_status(void *baton,
 svn_error_t *
 svn_cl__status(apr_getopt_t *os,
                void *baton,
-               apr_pool_t *pool)
+               apr_pool_t *scratch_pool)
 {
   svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   apr_array_header_t *targets;
-  apr_pool_t *subpool;
-  apr_hash_t *master_cl_hash = apr_hash_make(pool);
+  apr_pool_t *iterpool;
+  apr_hash_t *master_cl_hash = apr_hash_make(scratch_pool);
   int i;
   svn_opt_revision_t rev;
   struct status_baton sb;
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
                                                       opt_state->targets,
-                                                      ctx, pool));
+                                                      ctx, scratch_pool));
 
   /* Add "." if user passed 0 arguments */
-  svn_opt_push_implicit_dot_target(targets, pool);
+  svn_opt_push_implicit_dot_target(targets, scratch_pool);
 
   /* We want our -u statuses to be against HEAD. */
   rev.kind = svn_opt_revision_head;
@@ -194,9 +194,7 @@ svn_cl__status(apr_getopt_t *os,
   /* The notification callback, leave the notifier as NULL in XML mode */
   if (! opt_state->xml)
     svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2, FALSE,
-                         FALSE, FALSE, pool);
-
-  subpool = svn_pool_create(pool);
+                         FALSE, FALSE, scratch_pool);
 
   sb.had_print_error = FALSE;
 
@@ -206,7 +204,7 @@ svn_cl__status(apr_getopt_t *os,
          everything in a top-level element. This makes the output in
          its entirety a well-formed XML document. */
       if (! opt_state->incremental)
-        SVN_ERR(svn_cl__xml_print_header("status", pool));
+        SVN_ERR(svn_cl__xml_print_header("status", scratch_pool));
     }
   else
     {
@@ -222,22 +220,23 @@ svn_cl__status(apr_getopt_t *os,
   sb.repos_locks = opt_state->update;
   sb.xml_mode = opt_state->xml;
   sb.cached_changelists = master_cl_hash;
-  sb.cl_pool = pool;
+  sb.cl_pool = scratch_pool;
 
-  SVN_ERR(svn_opt_eat_peg_revisions(&targets, targets, pool));
+  SVN_ERR(svn_opt_eat_peg_revisions(&targets, targets, scratch_pool));
 
+  iterpool = svn_pool_create(scratch_pool);
   for (i = 0; i < targets->nelts; i++)
     {
       const char *target = APR_ARRAY_IDX(targets, i, const char *);
       svn_revnum_t repos_rev = SVN_INVALID_REVNUM;
 
-      svn_pool_clear(subpool);
+      svn_pool_clear(iterpool);
 
       SVN_ERR(svn_cl__check_cancel(ctx->cancel_baton));
 
       if (opt_state->xml)
-        SVN_ERR(print_start_target_xml(svn_dirent_local_style(target, subpool),
-                                       subpool));
+        SVN_ERR(print_start_target_xml(svn_dirent_local_style(target, iterpool),
+                                       iterpool));
 
       /* Retrieve a hash of status structures with the information
          requested by the user. */
@@ -249,14 +248,14 @@ svn_cl__status(apr_getopt_t *os,
                                              opt_state->no_ignore,
                                              opt_state->ignore_externals,
                                              opt_state->changelists,
-                                             ctx, subpool),
+                                             ctx, iterpool),
                           NULL, opt_state->quiet,
                           /* not versioned: */
                           SVN_ERR_WC_NOT_WORKING_COPY,
                           SVN_NO_ERROR));
 
       if (opt_state->xml)
-        SVN_ERR(print_finish_target_xml(repos_rev, subpool));
+        SVN_ERR(print_finish_target_xml(repos_rev, iterpool));
     }
 
   /* If any paths were cached because they were associatied with
@@ -267,9 +266,9 @@ svn_cl__status(apr_getopt_t *os,
       svn_stringbuf_t *buf;
 
       if (opt_state->xml)
-        buf = svn_stringbuf_create("", pool);
+        buf = svn_stringbuf_create("", scratch_pool);
 
-      for (hi = apr_hash_first(pool, master_cl_hash); hi;
+      for (hi = apr_hash_first(scratch_pool, master_cl_hash); hi;
            hi = apr_hash_next(hi))
         {
           const char *changelist_name = svn_apr_hash_index_key(hi);
@@ -282,12 +281,14 @@ svn_cl__status(apr_getopt_t *os,
           if (opt_state->xml)
             {
               svn_stringbuf_set(buf, "");
-              svn_xml_make_open_tag(&buf, pool, svn_xml_normal, "changelist",
-                                    "name", changelist_name, NULL);
+              svn_xml_make_open_tag(&buf, scratch_pool, svn_xml_normal,
+                                    "changelist", "name", changelist_name,
+                                    NULL);
               SVN_ERR(svn_cl__error_checked_fputs(buf->data, stdout));
             }
           else
-            SVN_ERR(svn_cmdline_printf(pool, _("\n--- Changelist '%s':\n"),
+            SVN_ERR(svn_cmdline_printf(scratch_pool,
+                                       _("\n--- Changelist '%s':\n"),
                                        changelist_name));
 
           for (j = 0; j < path_array->nelts; j++)
@@ -295,21 +296,21 @@ svn_cl__status(apr_getopt_t *os,
               struct status_cache *scache =
                 APR_ARRAY_IDX(path_array, j, struct status_cache *);
               SVN_ERR(print_status_normal_or_xml(&sb, scache->path,
-                                                 scache->status, pool));
+                                                 scache->status, scratch_pool));
             }
 
           if (opt_state->xml)
             {
               svn_stringbuf_set(buf, "");
-              svn_xml_make_close_tag(&buf, pool, "changelist");
+              svn_xml_make_close_tag(&buf, scratch_pool, "changelist");
               SVN_ERR(svn_cl__error_checked_fputs(buf->data, stdout));
             }
         }
     }
+  svn_pool_destroy(iterpool);
 
-  svn_pool_destroy(subpool);
   if (opt_state->xml && (! opt_state->incremental))
-    SVN_ERR(svn_cl__xml_print_footer("status", pool));
+    SVN_ERR(svn_cl__xml_print_footer("status", scratch_pool));
 
   return SVN_NO_ERROR;
 }
