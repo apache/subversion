@@ -47,14 +47,14 @@ def print_report(wcroot):
   FMT = '%22s |%14s |%10s |%6s'
   SEP = '%s+%s+%s+%s' % (23*'-', 15*'-', 11*'-', 7*'-')
 
-  print FMT % ('', 'libsvn_client', 'libsvn_wc', 'Total')
-  print SEP
+  print(FMT % ('', 'libsvn_client', 'libsvn_wc', 'Total'))
+  print(SEP)
   for term in TERMS:
-    print FMT % (term, client[term], wc[term], client[term] + wc[term])
+    print(FMT % (term, client[term], wc[term], client[term] + wc[term]))
     client_total += client[term]
     wc_total += wc[term]
-  print SEP
-  print FMT % ('Total', client_total, wc_total, client_total + wc_total)
+  print(SEP)
+  print(FMT % ('Total', client_total, wc_total, client_total + wc_total))
 
 
 if __name__ == '__main__':
@@ -70,6 +70,6 @@ if __name__ == '__main__':
       if idx > 0:
         wcroot = cwd[:idx]
       else:
-        print "ERROR: the root of 'trunk' cannot be located -- please provide"
+        print("ERROR: the root of 'trunk' cannot be located -- please provide")
         sys.exit(1)
     print_report(wcroot)

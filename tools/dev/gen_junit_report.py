@@ -129,11 +129,11 @@ def main():
 
     # create junit output directory, if not exists
     if not os.path.exists(output_dir):
-        print "Directory '%s' not exists, creating ..." % output_dir
+        print("Directory '%s' not exists, creating ..." % output_dir)
         try:
             os.makedirs(output_dir)
         except OSError, err:
-            print >> sys.stderr, "ERROR: %s" % err
+            sys.stderr.write("ERROR: %s\n" % err)
             sys.exit(1)
     patterns = {
       'start' : 'START:',
@@ -153,7 +153,7 @@ def main():
     try:
         fp = open(log_file, 'r')
     except IOError, err:
-        print >> sys.stderr, "ERROR: %s" % err
+        sys.stderr.write("ERROR: %s\n" % err)
         sys.exit(1)
 
     for line in fp.readlines():
