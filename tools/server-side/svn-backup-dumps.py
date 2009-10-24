@@ -320,6 +320,14 @@ class SvnBackup:
         self.__quiet = options.quiet
         self.__deltas = options.deltas
         self.__relative_incremental = options.relative_incremental
+        
+        # svnadmin/svnlook path
+        self.__svnadmin_path = "svnadmin"
+        if options.svnadmin_path:
+           self.__svnadmin_path = options.svnadmin_path
+        self.__svnlook_path = "svnlook"
+        if options.svnlook_path:
+           self.__svnlook_path = options.svnlook_path
 
         # check compress option
         self.__gzip_path  = options.gzip_path
@@ -425,7 +433,7 @@ class SvnBackup:
         return (rc, bufout, buferr)
 
     def get_head_rev(self):
-        cmd = [ "svnlook", "youngest", self.__repospath ]
+        cmd = [ self.__svnlook_path, "youngest", self.__repospath ]
         r = self.exec_cmd(cmd)
         if r[0] == 0 and len(r[2]) == 0:
             return int(r[1].strip())
@@ -526,7 +534,7 @@ class SvnBackup:
                 return True
         else:
             print("writing " + absfilename)
-        cmd = [ "svnadmin", "dump",
+        cmd = [ self.__svnadmin_path, "dump",
                 "--incremental", "-r", revparam, self.__repospath ]
         if self.__quiet:
             cmd[2:2] = [ "-q" ]
@@ -645,6 +653,14 @@ if __name__ == "__main__":
                        action="store", type="string",
                        dest="gzip_path", default=None,
                        help="compress the dump using gzip custom command.")
+    parser.add_option("--svnadmin-path",
+                       action="store", type="string",
+                       dest="svnadmin_path", default=None,
+                       help="svnadmin command path.")
+    parser.add_option("--svnlook-path",
+                       action="store", type="string",
+                       dest="svnlook_path", default=None,
+                       help="svnlook command path.")
     parser.add_option("--help-transfer",
                        action="store_true",
                        dest="help_transfer", default=False,
