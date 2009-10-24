@@ -468,11 +468,8 @@ process_committed_leaf(svn_wc__db_t *db,
 
   SVN_ERR(svn_wc__wq_add_postcommit(db, local_abspath, new_revnum,
                                     new_date, rev_author, checksum,
-                                    keep_changelist, scratch_pool));
-
-  if (new_dav_cache && apr_hash_count(new_dav_cache) > 0)
-    SVN_ERR(svn_wc__wq_set_dav_cache(db, local_abspath, new_dav_cache,
-                                     scratch_pool));
+                                    new_dav_cache, keep_changelist,
+                                    scratch_pool));
 
   return SVN_NO_ERROR;
 }
