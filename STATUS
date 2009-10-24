@@ -150,6 +150,9 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+Approved changes:
+=================
+
  * r40152
    Fix issue #3487, "cannot update many externals at once (over ra_svn)"
    Justification:
@@ -157,7 +160,4 @@ Candidate changes:
    Notes:
      See the issue for a reproduction script which fails without this fix.
    Votes:
-     +1: stsp, hwright
-
-Approved changes:
-=================
+     +1: stsp, hwright, arfrever
