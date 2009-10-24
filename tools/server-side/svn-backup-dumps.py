@@ -288,7 +288,7 @@ class SvnBackup:
                                          " --help option to see help.")
             else:
                 raise SvnBackupException("too many arguments, specify"
-                                         " repospath and dumpdir only.\n use"
+                                         " repospath and dumpdir only.\nuse"
                                          " -h or --help option to see help.")
         self.__repospath = args[1]
         self.__dumpdir = args[2]
