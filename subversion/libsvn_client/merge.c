@@ -762,28 +762,29 @@ split_mergeinfo_on_revision(svn_mergeinfo_t *younger_mergeinfo,
 /* Helper for merge_props_changed().
 
    *PROPS is an array of svn_prop_t structures representing regular properties
-   to be added to the working copy PATH.  MERGE_B is cascaded from the
-   argument of the same name in merge_props_changed().
+   to be added to the working copy LOCAL_ABSPATH.  MERGE_B is cascaded from
+   the argument of the same name in merge_props_changed().
 
    If mergeinfo is not being honored, MERGE_B->SAME_REPOS is true, and
    MERGE_B->REINTEGRATE_MERGE is FALSE do nothing.  Otherwise, if
    MERGE_B->SAME_REPOS is false, then filter out all mergeinfo
    property additions (Issue #3383) from *PROPS.  If MERGE_B->SAME_REPOS is
-   true then filter out mergeinfo property additions to PATH when those
-   additions refer to the same line of history as PATH as described below.  
+   true then filter out mergeinfo property additions to LOCAL_ABSPATH when
+   those additions refer to the same line of history as LOCAL_ABSPATH as
+   described below.  
 
    If mergeinfo is being honored and MERGE_B->SAME_REPOS is true
    then examine the added mergeinfo, looking at each range (or single rev)
    of each source path.  If a source_path/range refers to the same line of
-   history as PATH (pegged at its base revision), then filter out that range.
-   If the entire rangelist for a given path is filtered then filter out the
-   path as well.
+   history as LOCAL_ABSPATH (pegged at its base revision), then filter out
+   that range.  If the entire rangelist for a given path is filtered then
+   filter out the path as well.
 
    If any filtering occurs, set outgoing *PROPS to a shallow copy (allocated
    in POOL) of incoming *PROPS minus the filtered mergeinfo. */
 static svn_error_t*
 filter_self_referential_mergeinfo(apr_array_header_t **props,
-                                  const char *path,
+                                  const char *local_abspath,
                                   merge_cmd_baton_t *merge_b,
                                   apr_pool_t *pool)
 {
@@ -791,11 +792,8 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
   apr_array_header_t *adjusted_props;
   int i;
   apr_pool_t *iterpool;
-  const char *local_abspath;
   svn_boolean_t is_added;
   svn_revnum_t base_revision;
-
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
   /* If we aren't honoring mergeinfo and this is a merge from the
      same repository, then get outta here.  If this is a reintegrate
@@ -855,8 +853,8 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
       /* Non-empty mergeinfo; filter self-referential mergeinfo out. */
       /* Temporarily reparent our RA session to the merge
          target's URL. */
-      SVN_ERR(svn_client_url_from_path2(&target_url, path, merge_b->ctx,
-                                        pool, pool));
+      SVN_ERR(svn_client_url_from_path2(&target_url, local_abspath,
+                                        merge_b->ctx, pool, pool));
       SVN_ERR(svn_client__ensure_ra_session_url(&old_url,
                                                 merge_b->ra_session2,
                                                 target_url, pool));
@@ -1029,7 +1027,7 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
           peg_rev.value.number = base_revision;
           SVN_ERR(svn_client__get_history_as_mergeinfo(
             &implicit_mergeinfo,
-            path, &peg_rev,
+            local_abspath, &peg_rev,
             base_revision,
             SVN_INVALID_REVNUM,
             merge_b->ra_session2,
@@ -1151,8 +1149,8 @@ merge_props_changed(const char *local_dir_abspath,
       /* If this is a forward merge then don't add new mergeinfo to
          PATH that is already part of PATH's own history. */
       if (merge_b->merge_source.rev1 < merge_b->merge_source.rev2)
-        SVN_ERR(filter_self_referential_mergeinfo(&props, path, merge_b,
-                                                  subpool));
+        SVN_ERR(filter_self_referential_mergeinfo(&props, local_abspath,
+                                                  merge_b, subpool));
 
       err = svn_wc_merge_props3(state, ctx->wc_ctx, local_abspath, NULL, NULL,
                                 original_props, props, FALSE, merge_b->dry_run,
@@ -4288,11 +4286,11 @@ calculate_merge_inheritance(apr_array_header_t *rangelist,
 }
 
 /* Calculate the new mergeinfo for the target tree based on the merge
-   info for TARGET_WCPATH and MERGES (a mapping of WC paths to range
+   info for TARGET_ABSPATH and MERGES (a mapping of WC paths to range
    lists), and record it in the WC (at, and possibly below,
-   TARGET_WCPATH). */
+   TARGET_ABSPATH). */
 static svn_error_t *
-update_wc_mergeinfo(const char *target_wcpath,
+update_wc_mergeinfo(const char *target_abspath,
                     const char *repos_rel_path,
                     apr_hash_t *merges,
                     svn_boolean_t is_rollback,
@@ -4358,7 +4356,7 @@ update_wc_mergeinfo(const char *target_wcpath,
 
       /* ASSUMPTION: "target_wcpath" is always both a parent and
          prefix of "path". */
-      len = strlen(target_wcpath);
+      len = strlen(target_abspath);
       if (len < strlen(path))
         {
           const char *path_relative_to_target = len?(path + len + 1):(path);
@@ -7433,15 +7431,12 @@ remove_noop_subtree_ranges(const char *url1,
                               subtree_gap_ranges->nelts - 1,
                               svn_merge_range_t *);
               apr_array_header_t *inoperative_ranges;
-              const char *target_abspath;
               const char *repos_root_url;
 
-              SVN_ERR(svn_dirent_get_absolute(&target_abspath,
-                                              merge_b->target_abspath,
-                                              scratch_pool));
               SVN_ERR(svn_wc__node_get_repos_info(&repos_root_url, NULL,
                                                   merge_b->ctx->wc_ctx,
-                                                  target_abspath, FALSE,
+                                                  merge_b->target_abspath,
+                                                  FALSE,
                                                   scratch_pool,
                                                   scratch_pool));
 
@@ -7451,7 +7446,7 @@ remove_noop_subtree_ranges(const char *url1,
                 notify_b->children_with_mergeinfo;
               SVN_ERR(svn_client__path_relative_to_root(
                 &(log_gap_baton.target_repos_abs), merge_b->ctx->wc_ctx,
-                target_abspath, repos_root_url, TRUE, NULL,
+                merge_b->target_abspath, repos_root_url, TRUE, NULL,
                 result_pool, scratch_pool));
               log_gap_baton.merged_ranges = merged_ranges;
               log_gap_baton.operative_ranges = operative_ranges;
