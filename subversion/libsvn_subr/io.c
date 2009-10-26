@@ -2790,7 +2790,7 @@ do_io_file_wrapper_cleanup(apr_file_t *file, apr_status_t status,
     return svn_error_wrap_apr(status, _(msg),
                               svn_dirent_local_style(name, pool));
   else
-    return svn_error_wrap_apr(status, _(msg_no_name));
+    return svn_error_wrap_apr(status, "%s", _(msg_no_name));
 }
 
 
