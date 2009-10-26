@@ -325,8 +325,8 @@ static svn_error_t * create_activity(commit_ctx_t *cc,
      the activity, and create the activity.  The URL for our activity
      will be ACTIVITY_COLL/UUID */
   SVN_ERR(get_activity_collection(cc, &activity_collection, FALSE, pool));
-  url = svn_path_url_add_component2(activity_collection->data,
-                                    uuid_buf, pool);
+  url = svn_path_url_add_component(activity_collection->data,
+                                   uuid_buf, pool);
   SVN_ERR(svn_ra_neon__simple_request(&code, cc->ras,
                                       "MKACTIVITY", url, NULL, NULL,
                                       201 /* Created */,
