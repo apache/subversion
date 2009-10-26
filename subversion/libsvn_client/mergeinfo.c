@@ -53,7 +53,7 @@ svn_client__merge_path_dup(const svn_client__merge_path_t *old,
 {
   svn_client__merge_path_t *new = apr_pmemdup(pool, old, sizeof(*old));
 
-  new->path = apr_pstrdup(pool, old->path);
+  new->abspath = apr_pstrdup(pool, old->abspath);
   if (new->remaining_ranges)
     new->remaining_ranges = svn_rangelist_dup(old->remaining_ranges, pool);
   if (new->pre_merge_mergeinfo)

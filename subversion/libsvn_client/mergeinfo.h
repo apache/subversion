@@ -38,24 +38,23 @@
 */
 typedef struct svn_client__merge_path_t
 {
-  const char *path;                  /* Working copy path, either absolute or
-                                        relative to the current working
-                                        directory. */
-  svn_boolean_t missing_child;       /* PATH has an immediate child which is
-                                        missing. */
-  svn_boolean_t switched;            /* PATH is switched. */
-  svn_boolean_t has_noninheritable;  /* PATH has svn:mergeinfo set on it which
-                                        includes non-inheritable revision
-                                        ranges. */
-  svn_boolean_t absent;              /* PATH is absent from the WC, probably
-                                        due to authz restrictions. */
+  const char *abspath;               /* Absolute working copy path. */
+  svn_boolean_t missing_child;       /* ABSPATH has an immediate child which
+                                        is missing. */
+  svn_boolean_t switched;            /* ABSPATH is switched. */
+  svn_boolean_t has_noninheritable;  /* ABSPATH has svn:mergeinfo set on it
+                                        which includes non-inheritable
+                                        revision ranges. */
+  svn_boolean_t absent;              /* ABSPATH is absent from the WC,
+                                        probably due to authz
+                                        restrictions. */
 
-  svn_boolean_t child_of_noninheritable; /* PATH has no explict mergeinfo
+  svn_boolean_t child_of_noninheritable; /* ABSPATH has no explict mergeinfo
                                             itself but is the child of a
                                             path with noniheritable
                                             mergeinfo. */
 
-  /* The remaining ranges to be merged to PATH.  When describing a forward
+  /* The remaining ranges to be merged to ABSPATH.  When describing a forward
      merge this rangelist adheres to the rules for rangelists described in
      svn_mergeinfo.h.  However, when describing reverse merges this
      rangelist can contain reverse merge ranges that are not sorted per
@@ -66,13 +65,14 @@ typedef struct svn_client__merge_path_t
   apr_array_header_t *remaining_ranges;
 
   svn_mergeinfo_t pre_merge_mergeinfo;  /* Explicit or inherited mergeinfo
-                                           on PATH prior to a merge.
+                                           on ABSPATH prior to a merge.
                                            May be NULL. */
-  svn_mergeinfo_t implicit_mergeinfo;   /* Implicit mergeinfo on PATH prior
-                                           to a merge.  May be NULL. */
+  svn_mergeinfo_t implicit_mergeinfo;   /* Implicit mergeinfo on ABSPATH
+                                           prior to a merge.  May be NULL. */
   svn_boolean_t indirect_mergeinfo;     /* Whether PRE_MERGE_MERGEINFO was
                                            explicit or inherited. */
-  svn_boolean_t scheduled_for_deletion; /* PATH is scheduled for deletion. */
+  svn_boolean_t scheduled_for_deletion; /* ABSPATH is scheduled for
+                                           deletion. */
 } svn_client__merge_path_t;
 
 /* Return a deep copy of the merge-path structure OLD, allocated in POOL. */
