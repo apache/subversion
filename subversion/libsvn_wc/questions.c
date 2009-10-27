@@ -46,26 +46,36 @@
 
 static svn_error_t *
 is_inside_wc_ng(const char *abspath,
+                const char *target_path,
                 int *wc_format,
                 apr_pool_t *pool)
 {
-  svn_error_t *err;
+  svn_node_kind_t kind;
   const char *wc_db_path = svn_path_join_many(pool, abspath, ".svn", "wc.db",
                                               NULL);
 
-  err = svn_sqlite__get_schema_version(wc_format, wc_db_path, pool);
-  if (!err)
-    return SVN_NO_ERROR;
+  SVN_ERR(svn_io_check_path(wc_db_path, &kind, pool));
 
-  if (err->apr_err == SVN_ERR_SQLITE_ERROR)
-    svn_error_clear(err);
-  else
-    return err;
+  if (kind == svn_node_file)
+    {
+      /* This value is completely bogus, but it is much higher than 1.6 will
+         have any prayer of reading. */
+      *wc_format = 9999;
+
+      return svn_error_createf(SVN_ERR_WC_UNSUPPORTED_FORMAT, NULL,
+         _("The path '%s' appears to be part of a Subversion 1.7 or greater\n"
+           "working copy rooted at '%s'.\n"
+           "Please upgrade your Subversion client to use this working copy."
+           ),
+         svn_path_local_style(target_path, pool),
+         svn_path_local_style(abspath, pool));
+    }
 
   if (svn_dirent_is_root(abspath, strlen(abspath)))
     return SVN_NO_ERROR;
   else
-    return is_inside_wc_ng(svn_path_dirname(abspath, pool), wc_format, pool);
+    return is_inside_wc_ng(svn_path_dirname(abspath, pool), target_path,
+                           wc_format, pool);
 }
 
 
@@ -128,7 +138,7 @@ svn_wc_check_wc(const char *path,
       const char *abspath;
 
       SVN_ERR(svn_path_get_absolute(&abspath, path, pool));
-      SVN_ERR(is_inside_wc_ng(abspath, wc_format, pool));
+      SVN_ERR(is_inside_wc_ng(abspath, path, wc_format, pool));
     }
 
   if (*wc_format > 0)
