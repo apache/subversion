@@ -154,7 +154,7 @@ class GeneratorBase(gen_base.GeneratorBase):
 
   def _find_bdb(self):
     "Find the Berkeley DB library and version"
-    for ver in ("47", "46", "45", "44", "43", "42", "41", "40"):
+    for ver in ("48", "47", "46", "45", "44", "43", "42", "41", "40"):
       lib = "libdb" + ver
       path = os.path.join(self.bdb_path, "lib")
       if os.path.exists(os.path.join(path, lib + ".lib")):
@@ -1362,8 +1362,8 @@ class WinGeneratorBase(GeneratorBase):
           self.serf_ver = '.'.join(str(v) for v in version)
           if version < minimal_serf_version:
             self.serf_lib = None
-            msg = ('Found serf %s, but >= 0.3.0 is required. '
-                   'ra_serf will not be built.\n' % self.serf_ver)
+            msg = 'Found serf %s, but >= %s is required. ra_serf will not be built.\n' % \
+                  (self.serf_ver, '.'.join(str(v) for v in minimal_serf_version))
           else:
             msg = 'Found serf version %s\n' % self.serf_ver
         sys.stderr.write(msg)

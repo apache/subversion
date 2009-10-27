@@ -431,7 +431,7 @@ static svn_error_t *
 bdb_cache_key(bdb_env_key_t *keyp, apr_file_t **dbconfig_file,
               const char *path, apr_pool_t *pool)
 {
-  const char *dbcfg_file_name = svn_path_join(path, BDB_CONFIG_FILE, pool);
+  const char *dbcfg_file_name = svn_dirent_join(path, BDB_CONFIG_FILE, pool);
   apr_file_t *dbcfg_file;
   apr_status_t apr_err;
   apr_finfo_t finfo;

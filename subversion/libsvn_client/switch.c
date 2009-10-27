@@ -73,8 +73,7 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
 {
   const svn_ra_reporter3_t *reporter;
   void *report_baton;
-  const svn_wc_entry_t *entry;
-  const char *URL, *anchor, *target, *source_root, *switch_rev_url;
+  const char *url, *anchor, *target, *source_root, *switch_rev_url;
   svn_ra_session_t *ra_session;
   svn_revnum_t revnum;
   svn_error_t *err = SVN_NO_ERROR;
@@ -86,15 +85,18 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
   svn_boolean_t *use_sleep = timestamp_sleep ? timestamp_sleep : &sleep_here;
   const svn_delta_editor_t *switch_editor;
   void *switch_edit_baton;
-  svn_wc_traversal_info_t *traversal_info = svn_wc_init_traversal_info(pool);
   const char *preserved_exts_str;
   const char *anchor_abspath;
   apr_array_header_t *preserved_exts;
   svn_boolean_t server_supports_depth;
+  const char *local_abspath;
+  svn_client__external_func_baton_t efb;
   svn_config_t *cfg = ctx->config ? apr_hash_get(ctx->config,
                                                  SVN_CONFIG_CATEGORY_CONFIG,
                                                  APR_HASH_KEY_STRING)
                                   : NULL;
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
   /* An unknown depth can't be sticky. */
   if (depth == svn_depth_unknown)
@@ -166,15 +168,11 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
     }
 
   SVN_ERR(svn_dirent_get_absolute(&anchor_abspath, anchor, pool));
-  SVN_ERR(svn_wc__get_entry_versioned(&entry, ctx->wc_ctx, anchor_abspath,
-                                      svn_node_unknown, FALSE, FALSE,
-                                      pool, pool));
-  if (! entry->url)
+  SVN_ERR(svn_wc__node_get_url(&url, ctx->wc_ctx, anchor_abspath, pool, pool));
+  if (! url)
     return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
                              _("Directory '%s' has no URL"),
                              svn_dirent_local_style(anchor, pool));
-
-  URL = apr_pstrdup(pool, entry->url);
 
   /* Open an RA session to 'source' URL */
   SVN_ERR(svn_client__ra_session_from_path(&ra_session, &revnum,
@@ -186,12 +184,12 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
 
   /* Disallow a switch operation to change the repository root of the
      target. */
-  if (! svn_uri_is_ancestor(source_root, URL))
+  if (! svn_uri_is_ancestor(source_root, url))
     return svn_error_createf
       (SVN_ERR_WC_INVALID_SWITCH, NULL,
        _("'%s'\n"
          "is not the same repository as\n"
-         "'%s'"), URL, source_root);
+         "'%s'"), url, source_root);
 
   /* We may need to crop the tree if the depth is sticky */
   if (depth_is_sticky && depth < svn_depth_infinity)
@@ -204,25 +202,31 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
                                     target_abspath, TRUE, pool));
 
       if (target_kind == svn_node_dir)
-        SVN_ERR(svn_wc_crop_tree(adm_access, target, depth,
-                                 ctx->notify_func2, ctx->notify_baton2,
-                                 ctx->cancel_func, ctx->cancel_baton,
-                                 pool));
+        SVN_ERR(svn_wc_crop_tree2(ctx->wc_ctx, target_abspath, depth,
+                                  ctx->notify_func2, ctx->notify_baton2,
+                                  ctx->cancel_func, ctx->cancel_baton,
+                                  pool));
     }
 
-  SVN_ERR(svn_ra_reparent(ra_session, URL, pool));
+  SVN_ERR(svn_ra_reparent(ra_session, url, pool));
 
   /* Fetch the switch (update) editor.  If REVISION is invalid, that's
      okay; the RA driver will call editor->set_target_revision() later on. */
-  SVN_ERR(svn_wc_get_switch_editor3(&revnum, adm_access, target,
-                                    switch_rev_url, use_commit_times, depth,
+  efb.externals_new = apr_hash_make(pool);
+  efb.externals_old = apr_hash_make(pool);
+  efb.ambient_depths = apr_hash_make(pool);
+  efb.result_pool = pool;
+  SVN_ERR(svn_wc_get_switch_editor4(&switch_editor, &switch_edit_baton,
+                                    &revnum, ctx->wc_ctx, anchor_abspath,
+                                    target, switch_rev_url, use_commit_times,
+                                    depth,
                                     depth_is_sticky, allow_unver_obstructions,
                                     ctx->notify_func2, ctx->notify_baton2,
                                     ctx->cancel_func, ctx->cancel_baton,
                                     ctx->conflict_func, ctx->conflict_baton,
-                                    diff3_cmd, preserved_exts,
-                                    &switch_editor, &switch_edit_baton,
-                                    traversal_info, pool));
+                                    svn_client__external_info_gatherer, &efb,
+                                    NULL, NULL,
+                                    diff3_cmd, preserved_exts, pool, pool));
 
   /* Tell RA to do an update of URL+TARGET to REVISION; if we pass an
      invalid revnum, that means RA will use the latest revision. */
@@ -240,13 +244,11 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
      We pass NULL for traversal_info because this is a switch, not an
      update, and therefore we don't want to handle any externals
      except the ones directly affected by the switch. */
-  err = svn_wc_crawl_revisions4(path, dir_access, reporter, report_baton,
-                                TRUE, depth, (! depth_is_sticky),
+  err = svn_wc_crawl_revisions5(ctx->wc_ctx, local_abspath, reporter,
+                                report_baton, TRUE, depth, (! depth_is_sticky),
                                 (! server_supports_depth),
-                                use_commit_times,
-                                ctx->notify_func2, ctx->notify_baton2,
-                                NULL, /* no traversal info */
-                                pool);
+                                use_commit_times, NULL, NULL,
+                                ctx->notify_func2, ctx->notify_baton2, pool);
 
   if (err)
     {
@@ -261,8 +263,9 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
      handling external items (and any errors therefrom) doesn't delay
      the primary operation. */
   if (SVN_DEPTH_IS_RECURSIVE(depth) && (! ignore_externals))
-    err = svn_client__handle_externals(adm_access, traversal_info, switch_url,
-                                       path, source_root, depth,
+    err = svn_client__handle_externals(adm_access, efb.externals_old,
+                                       efb.externals_new, efb.ambient_depths,
+                                       switch_url, path, source_root, depth,
                                        use_sleep, ctx, pool);
 
   /* Sleep to ensure timestamp integrity (we do this regardless of

@@ -93,15 +93,9 @@ svn_client__derive_location(const char **url,
      it into a URL. */
   if (! svn_path_is_url(abspath_or_url))
     {
-      const svn_wc_entry_t *entry;
-
-      SVN_ERR(svn_wc__get_entry_versioned(&entry, ctx->wc_ctx, abspath_or_url,
-                                          svn_node_unknown, FALSE, FALSE,
-                                          scratch_pool, scratch_pool));
-
-      SVN_ERR(svn_client__entry_location(url, peg_revnum, abspath_or_url,
-                                         peg_revision->kind, entry,
-                                         result_pool));
+      SVN_ERR(svn_client__entry_location(url, peg_revnum, ctx->wc_ctx,
+                                         abspath_or_url, peg_revision->kind,
+                                         result_pool, scratch_pool));
     }
   else
     {
@@ -127,20 +121,29 @@ svn_client__derive_location(const char **url,
 }
 
 svn_error_t *
-svn_client__entry_location(const char **url, svn_revnum_t *revnum,
-                           const char *wc_path,
+svn_client__entry_location(const char **url,
+                           svn_revnum_t *revnum,
+                           svn_wc_context_t *wc_ctx,
+                           const char *local_abspath,
                            enum svn_opt_revision_kind peg_rev_kind,
-                           const svn_wc_entry_t *entry, apr_pool_t *pool)
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool)
 {
+  const svn_wc_entry_t *entry;
+
+  SVN_ERR(svn_wc__get_entry_versioned(&entry, wc_ctx, local_abspath,
+                                      svn_node_unknown, FALSE, FALSE,
+                                      scratch_pool, scratch_pool));
+
   if (entry->copyfrom_url && peg_rev_kind == svn_opt_revision_working)
     {
-      *url = entry->copyfrom_url;
+      *url = apr_pstrdup(result_pool, entry->copyfrom_url);
       if (revnum)
         *revnum = entry->copyfrom_rev;
     }
   else if (entry->url)
     {
-      *url = entry->url;
+      *url = apr_pstrdup(result_pool, entry->url);
       if (revnum)
         *revnum = entry->revision;
     }
@@ -148,7 +151,8 @@ svn_client__entry_location(const char **url, svn_revnum_t *revnum,
     {
       return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
                                _("Entry for '%s' has no URL"),
-                               svn_dirent_local_style(wc_path, pool));
+                               svn_dirent_local_style(local_abspath,
+                                                      scratch_pool));
     }
 
   return SVN_NO_ERROR;

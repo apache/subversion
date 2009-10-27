@@ -41,7 +41,6 @@ typedef enum svn_wc__props_kind_t
 {
   svn_wc__props_base = 0,
   svn_wc__props_revert,
-  svn_wc__props_wcprop,
   svn_wc__props_working
 } svn_wc__props_kind_t;
 
@@ -85,7 +84,7 @@ svn_wc__internal_propset(svn_wc__db_t *db,
                          apr_pool_t *scratch_pool);
 
 
-/* Given ADM_ACCESS/PATH and an array of PROPCHANGES based on
+/* Given LOCAL_ABSPATH/DB and an array of PROPCHANGES based on
    SERVER_BASEPROPS, merge the changes into the working copy.
    Append all necessary log entries to ENTRY_ACCUM.
 
@@ -106,19 +105,24 @@ svn_wc__internal_propset(svn_wc__db_t *db,
 
    If STATE is non-null, set *STATE to the state of the local properties
    after the merge.  */
-svn_error_t *svn_wc__merge_props(svn_wc_notify_state_t *state,
-                                 svn_wc_adm_access_t *adm_access,
-                                 const char *path,
-                                 apr_hash_t *server_baseprops,
-                                 apr_hash_t *base_props,
-                                 apr_hash_t *working_props,
-                                 const apr_array_header_t *propchanges,
-                                 svn_boolean_t base_merge,
-                                 svn_boolean_t dry_run,
-                                 svn_wc_conflict_resolver_func_t conflict_func,
-                                 void *conflict_baton,
-                                 apr_pool_t *pool,
-                                 svn_stringbuf_t **entry_accum);
+svn_error_t *
+svn_wc__merge_props(svn_stringbuf_t **entry_accum,
+                    svn_wc_notify_state_t *state,
+                    svn_wc__db_t *db,
+                    const char *local_abspath,
+                    const svn_wc_conflict_version_t *left_version,
+                    const svn_wc_conflict_version_t *right_version,
+                    apr_hash_t *server_baseprops,
+                    apr_hash_t *base_props,
+                    apr_hash_t *working_props,
+                    const apr_array_header_t *propchanges,
+                    svn_boolean_t base_merge,
+                    svn_boolean_t dry_run,
+                    svn_wc_conflict_resolver_func_t conflict_func,
+                    void *conflict_baton,
+                    svn_cancel_func_t cancel_func,
+                    void *cancel_baton,
+                    apr_pool_t *pool);
 
 /* Set a single 'wcprop' NAME to VALUE for versioned object LOCAL_ABSPATH.
    If VALUE is null, remove property NAME.  */
@@ -127,9 +131,6 @@ svn_error_t *svn_wc__wcprop_set(svn_wc__db_t *db,
                                 const char *name,
                                 const svn_string_t *value,
                                 apr_pool_t *scratch_pool);
-
-/* Returns TRUE if PROPS contains the svn:special property */
-svn_boolean_t svn_wc__has_special_property(apr_hash_t *props);
 
 /* Given PROPERTIES is array of @c svn_prop_t structures. Returns TRUE if any
    of the PROPERTIES are the known "magic" ones that might require
@@ -141,8 +142,8 @@ svn_boolean_t svn_wc__has_magic_property(const apr_array_header_t *properties);
    to reflect the changes.  BASE_PROPS must be supplied even if
    WRITE_BASE_PROPS is false.  Use POOL for temporary allocations. */
 svn_error_t *svn_wc__install_props(svn_stringbuf_t **log_accum,
-                                   svn_wc_adm_access_t *adm_access,
-                                   const char *path,
+                                   const char *adm_abspath,
+                                   const char *local_abspath,
                                    apr_hash_t *base_props,
                                    apr_hash_t *props,
                                    svn_boolean_t write_base_props,
@@ -156,25 +157,27 @@ svn_error_t *svn_wc__install_props(svn_stringbuf_t **log_accum,
 */
 svn_error_t *
 svn_wc__loggy_revert_props_create(svn_stringbuf_t **log_accum,
-                                  const char *path,
-                                  svn_wc_adm_access_t *adm_access,
-                                  svn_boolean_t destroy_baseprops,
+                                  svn_wc__db_t *db,
+                                  const char *local_abspath,
+                                  const char *adm_abspath,
                                   apr_pool_t *pool);
 
 /* Extends LOG_ACCUM to make the revert props back into base props,
    deleting the revert props. */
 svn_error_t *
 svn_wc__loggy_revert_props_restore(svn_stringbuf_t **log_accum,
-                                   const char *path,
-                                   svn_wc_adm_access_t *adm_access,
+                                   svn_wc__db_t *db,
+                                   const char *local_abspath,
+                                   const char *adm_abspath,
                                    apr_pool_t *pool);
 
 /* Extends LOG_ACCUM to delete PROPS_KIND props installed for PATH. */
 svn_error_t *
 svn_wc__loggy_props_delete(svn_stringbuf_t **log_accum,
-                           const char *path,
+                           svn_wc__db_t *db,
+                           const char *local_abspath,
+                           const char *adm_abspath,
                            svn_wc__props_kind_t props_kind,
-                           svn_wc_adm_access_t *adm_access,
                            apr_pool_t *pool);
 
 /* Delete PROPS_KIND props for LOCAL_ABSPATH */
@@ -224,6 +227,18 @@ svn_wc__marked_as_binary(svn_boolean_t *marked,
                          svn_wc__db_t *db,
                          apr_pool_t *scratch_pool);
 
+
+/* Write the PROPERTIES hash to a temporary file, then move it atomically
+   to DEST_ABSPATH. If LOG_ACCUM is NULL, these actions will be performed
+   immediately. Otherwise, loggy instructions will be written into the
+   buffer, assuming eventual storage as a logfile for ADM_ABSPATH. Temporary
+   allocations are performed in SCRATCH_POOL.  */
+svn_error_t *
+svn_wc__write_properties(apr_hash_t *properties,
+                         const char *dest_abspath,
+                         svn_stringbuf_t **log_accum,
+                         const char *adm_abspath,
+                         apr_pool_t *scratch_pool);
 
 #ifdef __cplusplus
 }

@@ -86,6 +86,31 @@ ssl_convert_serf_failures(int failures)
   return svn_failures;
 }
 
+/* Construct the realmstring, e.g. https://svn.collab.net:443. */
+static const char *
+construct_realm(svn_ra_serf__session_t *session,
+                apr_pool_t *pool)
+{
+  const char *realm;
+  apr_port_t port;
+
+  if (session->repos_url.port_str)
+    {
+      port = session->repos_url.port;
+    }
+  else
+    {
+      port = apr_uri_port_of_scheme(session->repos_url.scheme);
+    }
+  
+  realm = apr_psprintf(pool, "%s://%s:%d",
+                       session->repos_url.scheme,
+                       session->repos_url.hostname,
+                       port);
+
+  return realm;
+}
+
 /* Convert a hash table containing the fields (as documented in X.509) of an
    organisation to a string ORG, allocated in POOL. ORG is as returned by
    serf_ssl_cert_issuer() and serf_ssl_cert_subject(). */
@@ -171,9 +196,7 @@ ssl_server_cert(void *baton, int failures,
                          SVN_AUTH_PARAM_SSL_SERVER_CERT_INFO,
                          &cert_info);
 
-  /* Construct the realmstring, e.g. https://svn.collab.net:443 */
-  realmstring = apr_uri_unparse(subpool, &conn->session->repos_url,
-                                APR_URI_UNP_OMITPATHINFO);
+  realmstring = construct_realm(conn->session, conn->session->pool);
 
   err = svn_auth_first_credentials(&creds, &state,
                                    SVN_AUTH_CRED_SSL_SERVER_TRUST,
@@ -230,24 +253,49 @@ load_authorities(svn_ra_serf__connection_t *conn, const char *authorities,
   return SVN_NO_ERROR;
 }
 
+#if SERF_VERSION_AT_LEAST(0, 4, 0)
+/* This ugly ifdef construction can be cleaned up as soon as serf >= 0.4
+   gets the minimum supported serf version! */
+
+/* svn_ra_serf__conn_setup is a callback for serf. This function 
+   creates a read bucket and will wrap the write bucket if SSL
+   is needed. */
+apr_status_t
+svn_ra_serf__conn_setup(apr_socket_t *sock,
+                        serf_bucket_t **read_bkt,
+                        serf_bucket_t **write_bkt,
+                        void *baton,
+                        apr_pool_t *pool)
+{
+  serf_bucket_t *wb = NULL;
+#else
+/* This is the old API, for compatibility with serf
+   versions <= 0.3. */
 serf_bucket_t *
 svn_ra_serf__conn_setup(apr_socket_t *sock,
                         void *baton,
                         apr_pool_t *pool)
 {
-  serf_bucket_t *bucket;
+#endif
+  serf_bucket_t *rb = NULL;
   svn_ra_serf__connection_t *conn = baton;
 
-  bucket = serf_context_bucket_socket_create(conn->session->context,
-                                             sock, conn->bkt_alloc);
+  rb = serf_context_bucket_socket_create(conn->session->context,
+                                         sock, conn->bkt_alloc);
 
   if (conn->using_ssl)
     {
-      bucket = serf_bucket_ssl_decrypt_create(bucket, conn->ssl_context,
-                                              conn->bkt_alloc);
+      /* input stream */
+      rb = serf_bucket_ssl_decrypt_create(rb, conn->ssl_context,
+                                          conn->bkt_alloc);
+#if SERF_VERSION_AT_LEAST(0, 4, 0)
+      /* output stream */
+      *write_bkt = serf_bucket_ssl_encrypt_create(*write_bkt, conn->ssl_context,
+                                                  conn->bkt_alloc);
+#endif
       if (!conn->ssl_context)
         {
-          conn->ssl_context = serf_bucket_ssl_decrypt_context_get(bucket);
+          conn->ssl_context = serf_bucket_ssl_encrypt_context_get(rb);
 
           serf_ssl_client_cert_provider_set(conn->ssl_context,
                                             svn_ra_serf__handle_client_cert,
@@ -255,10 +303,10 @@ svn_ra_serf__conn_setup(apr_socket_t *sock,
           serf_ssl_client_cert_password_set(conn->ssl_context,
                                             svn_ra_serf__handle_client_cert_pw,
                                             conn, conn->session->pool);
-
           serf_ssl_server_cert_callback_set(conn->ssl_context,
                                             ssl_server_cert,
                                             conn);
+
           /* See if the user wants us to trust "default" openssl CAs. */
           if (conn->session->trust_default_ca)
             {
@@ -280,8 +328,15 @@ svn_ra_serf__conn_setup(apr_socket_t *sock,
         }
     }
 
-  return bucket;
+#if SERF_VERSION_AT_LEAST(0, 4, 0)
+  *read_bkt = rb;
+
+  return APR_SUCCESS;
 }
+#else  
+  return rb;
+}
+#endif
 
 serf_bucket_t*
 svn_ra_serf__accept_response(serf_request_t *request,
@@ -357,25 +412,12 @@ apr_status_t svn_ra_serf__handle_client_cert(void *data,
     svn_ra_serf__connection_t *conn = data;
     svn_ra_serf__session_t *session = conn->session;
     const char *realm;
-    apr_port_t port;
     svn_error_t *err;
     void *creds;
 
     *cert_path = NULL;
 
-    if (session->repos_url.port_str)
-      {
-        port = session->repos_url.port;
-      }
-    else
-      {
-        port = apr_uri_port_of_scheme(session->repos_url.scheme);
-      }
-
-    realm = apr_psprintf(session->pool, "%s://%s:%d",
-                         session->repos_url.scheme,
-                         session->repos_url.hostname,
-                         port);
+    realm = construct_realm(session, session->pool);
 
     if (!conn->ssl_client_auth_state)
       {
@@ -491,6 +533,7 @@ svn_ra_serf__setup_serf_req(serf_request_t *request,
     conn->session->proxy_auth_protocol->setup_request_func(conn, method,
                                                            url, hdrs_bkt);
 
+#if ! SERF_VERSION_AT_LEAST(0, 4, 0)
   /* Set up SSL if we need to */
   if (conn->using_ssl)
     {
@@ -508,6 +551,7 @@ svn_ra_serf__setup_serf_req(serf_request_t *request,
                                             conn, conn->session->pool);
         }
     }
+#endif
 
   /* Set up Proxy settings */
   if (conn->session->using_proxy)

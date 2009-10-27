@@ -146,22 +146,40 @@ OPEN ISSUES
 
       L3: recovering space on the server disk
 
+    NOTES:
+
+      L1 and L3 are directly relevant to the common use cases. Requirements
+      for L2 are coneivable but appear not to be common.
+
   3.2 Content of the Modified Repository
 
     * At revisions older than the obliteration, the repository should yield
       exactly the same data that it used to.
 
-      Rationale: A Subversion repository has no forward-looking metadata so
+      RATIONALE: A Subversion repository has no forward-looking metadata so
       there is no reason for old revisions to be changed so they should not be
       changed.
 
-      Exceptions: any manual adjustments to revision properties, such as to
+      EXCEPTIONS: Any manual adjustments to revision properties, such as to
       forward-looking comments in log messages or to third-party data in
       revision-0 properties.
 
-    * At the revision of the obliterated data, ...
+    * At the revision of the obliterated data, the stored tree should be
+      modified in a way to be specified in a Functional Spec. Briefly, two
+      likely schemes are:
+        (scheme "dd") each node to be obliterated is deleted; or
+        (scheme "cc") each node to be obliterated becomes exactly like it was
+          in the previous revision.
 
-    * At revisions younger than the obliteration, ...
+    * At each revision younger than the obliteration, the repository file
+      system tree structure and content should look exactly as it used to.
+      However, any node with a "copied from" pointer that pointed to a node
+      which has been removed by obliteration should have this pointer adjusted
+      or removed, as defined by the Functional Spec.
+
+    NOTES:
+
+      This description assumes per-revision granularity of obliteration.
 
   3.3 Working Copies
 
@@ -198,6 +216,12 @@ OPEN ISSUES
     * On the server side, the administrator should be able to choose whether a
       record of obliterations is stored. The form and storage location of this
       record is not specified here.
+
+    NOTES:
+
+      Some customers are concerned about auditability and may want an audit
+      trail to be stored with the repository so that it is included in backups
+      and perpetually available for later examination.
 
   3.6 Svnsync Mirrors
 

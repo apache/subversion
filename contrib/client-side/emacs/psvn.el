@@ -1210,13 +1210,13 @@ If there is no .svn directory, examine if there is CVS and run
 (defun svn-expand-filename-for-remote-access (file-name)
   "Convert the given local part of a filename to a full file name to allow accessing remote files"
   ;; when running svn on a remote host: expand local file names to get full names to access the file on the remote host via emacs
-  (if (file-remote-p default-directory)
+  (if (and (fboundp 'file-remote-p) (file-remote-p default-directory))
       (concat (file-remote-p default-directory) file-name)
     file-name))
 
 (defun svn-local-filename-for-remote-access (file-name)
   "Convert a full file name to a local file name that can be used for a local svn invocation."
-  (if (file-remote-p file-name)
+  (if (and (fboundp 'file-remote-p) (file-remote-p file-name))
       (tramp-file-name-localname (tramp-dissect-file-name file-name))
     file-name))
 
@@ -1857,8 +1857,9 @@ A and B must be line-info's."
 
 (defun svn-fixup-tramp-output-maybe ()
   "Fixup leftover output when running via tramp"
-  (when (file-remote-p default-directory)
-    (svn-fixup-tramp-exit)))
+  (when (fboundp 'file-remote-p)
+    (when (file-remote-p default-directory)
+      (svn-fixup-tramp-exit))))
 
 (condition-case nil
     ;;(easy-menu-add-item nil '("tools") ["SVN Status" svn-status t] "PCL-CVS")

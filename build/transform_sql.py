@@ -95,10 +95,11 @@ def main(input, output, filename):
   ### in the future, we can always add a var_name discriminator or use
   ### the statement name itself (which should hopefully be unique across
   ### all names in use; or can easily be made so)
-  output.write('#define %s_DECLARE_STATEMENTS(varname) \\\n' % (var_name,)
-               + '  static const char * const varname[] = { \\\n'
-               + ', \\\n'.join('    STMT_%d' % (i,) for i in range(stmt_count))
-               + ' \\\n  }\n')
+  if stmt_count > 0:
+    output.write('#define %s_DECLARE_STATEMENTS(varname) \\\n' % (var_name,)
+                 + '  static const char * const varname[] = { \\\n'
+                 + ', \\\n'.join('    STMT_%d' % (i,) for i in range(stmt_count))
+                 + ' \\\n  }\n')
 
 
 if __name__ == '__main__':

@@ -939,7 +939,7 @@ typedef struct svn_client_ctx_t
    * @since New in 1.5. */
   const char *client_name;
 
-  /** An optional working copy context for the client operation to use.
+  /** A working copy context for the client operation to use.
    * This is initialized by svn_client_create_context() and should never
    * be @c NULL.
    *
@@ -2319,6 +2319,10 @@ svn_client_blame(const char *path_or_url,
  * If @a no_diff_deleted is TRUE, then no diff output will be
  * generated on deleted files.
  *
+ * If @a show_copies_as_adds is TRUE, then copied files will not be diffed
+ * against their copyfrom source, and will appear in the diff output
+ * in their entirety, as if they were newly added.
+ *
  * Generated headers are encoded using @a header_encoding.
  *
  * Diff output will not be generated for binary files, unless @a
@@ -2362,6 +2366,7 @@ svn_client_diff5(const apr_array_header_t *diff_options,
                  svn_depth_t depth,
                  svn_boolean_t ignore_ancestry,
                  svn_boolean_t no_diff_deleted,
+                 svn_boolean_t show_copies_as_adds,
                  svn_boolean_t ignore_content_type,
                  svn_boolean_t ignore_mergeinfo,
                  const char *header_encoding,
@@ -2374,11 +2379,12 @@ svn_client_diff5(const apr_array_header_t *diff_options,
 
 /**
  * Similar to svn_client_diff5(), but with  @a ignore_mergeinfo passed as
- * @a FALSE.
+ * @a FALSE and @a show_copies_as_adds set to @c FALSE.
  *
  * @deprecated Provided for backward compatibility with the 1.6 API.
  * @since New in 1.5.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_diff4(const apr_array_header_t *diff_options,
                  const char *path1,
@@ -2495,6 +2501,7 @@ svn_client_diff_peg5(const apr_array_header_t *diff_options,
                      svn_boolean_t ignore_ancestry,
                      svn_boolean_t no_diff_deleted,
                      svn_boolean_t ignore_content_type,
+                     svn_boolean_t show_copies_as_adds,
                      svn_boolean_t ignore_mergeinfo,
                      const char *header_encoding,
                      apr_file_t *outfile,
@@ -2506,12 +2513,13 @@ svn_client_diff_peg5(const apr_array_header_t *diff_options,
 
 /**
  * Similar to svn_client_diff_peg5(), but with @a ignore_mergeinfo passed
- * as @a FALSE.
+ * as @a FALSE @a show_copies_as_adds set to @c FALSE.
  *
  * @deprecated Provided for backward compatibility with the 1.6 API.
  *
  * @since New in 1.5.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_diff_peg4(const apr_array_header_t *diff_options,
                      const char *path,
@@ -3012,8 +3020,10 @@ svn_client_suggest_merge_sources(apr_array_header_t **suggestions,
  * Set @a *mergeinfo to a hash mapping <tt>const char *</tt> merge
  * source URLs to <tt>apr_array_header_t *</tt> rangelists (arrays of
  * <tt>svn_merge_range_t *</tt> ranges) describing the ranges which
- * have been merged into @a path_or_url as of @a peg_revision, or @c
- * NULL if there is no mergeinfo.
+ * have been merged into @a path_or_url as of @a peg_revision, per
+ * @a path_or_url's explicit mergeinfo or inherited mergeinfo if no
+ * explicit mergeinfo if found.  If no explicit or inherited mergeinfo
+ * is found, then set @a *mergeinfo to NULL.
  *
  * Use @a pool for all necessary allocations.
  *
@@ -3036,16 +3046,48 @@ svn_client_mergeinfo_get_merged(apr_hash_t **mergeinfo,
 
 
 /**
- * Drive log entry callbacks @a receiver / @a receiver_baton with the
- * revisions merged from @a merge_source_path_or_url (as of @a
- * src_peg_revision) into @a path_or_url (as of @a peg_revision).  @a
- * ctx is a context used for authentication.
+ * If @a finding_merged is TRUE, then drive log entry callbacks
+ * @a receiver / @a receiver_baton with the revisions merged from
+ * @a merge_source_path_or_url (as of @a src_peg_revision) into
+ * @a path_or_url (as of @a peg_revision).  If @a finding_merged is FALSE
+ * then find the revisions eligible for merging.
+ *
+ * If @a depth is @c svn_depth_empty consider only the explicit or
+ * inherited mergeinfo on @a path_or_url when calculating merged revisions
+ * from @a merge_source_path_or_url.  If @a depth is @c svn_depth_infinity
+ * then also consider the explicit subtree mergeinfo under @a path_or_url.
+ * If a depth other than @c svn_depth_empty or @c svn_depth_infinity is
+ * requested then return a @c SVN_ERR_UNSUPPORTED_FEATURE error.
  *
  * @a discover_changed_paths and @a revprops are the same as for
- * svn_client_log4().  Use @a pool for all necessary allocations.
+ * svn_client_log4().  Use @a scratch_pool for all temporary allocations.
+ *
+ * @a ctx is a context used for authentication.
  *
  * If the server doesn't support retrieval of mergeinfo, return an @c
  * SVN_ERR_UNSUPPORTED_FEATURE error.
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_client_mergeinfo_log(const char *path_or_url,
+                         svn_boolean_t finding_merged,
+                         const svn_opt_revision_t *peg_revision,
+                         const char *merge_source_path_or_url,
+                         const svn_opt_revision_t *src_peg_revision,
+                         svn_log_entry_receiver_t receiver,
+                         void *receiver_baton,
+                         svn_boolean_t discover_changed_paths,
+                         svn_depth_t depth,
+                         const apr_array_header_t *revprops,
+                         svn_client_ctx_t *ctx,
+                         apr_pool_t *scratch_pool);
+
+/**
+ * Similar to svn_client_mergeinfo_log(), but finds only merged revisions
+ * and always operates at @a depth @c svn_depth_empty.
+ *
+ * @deprecated Provided for backwards compatibility with the 1.6 API.
  *
  * @since New in 1.5.
  */
@@ -3062,16 +3104,10 @@ svn_client_mergeinfo_log_merged(const char *path_or_url,
                                 apr_pool_t *pool);
 
 /**
- * Drive log entry callbacks @a receiver / @a receiver_baton with the
- * revisions eligible for merge from @a merge_source_path_or_url (as
- * of @a src_peg_revision) into @a path_or_url (as of @a
- * peg_revision).  @a ctx is a context used for authentication.
+ * Similar to svn_client_mergeinfo_log(), but finds only eligible revisions
+ * and always operates at @a depth @c svn_depth_empty.
  *
- * @a discover_changed_paths and @a revprops are the same as for
- * svn_client_log4().  Use @a pool for all necessary allocations.
- *
- * If the server doesn't support retrieval of mergeinfo, return an @c
- * SVN_ERR_UNSUPPORTED_FEATURE error.
+ * @deprecated Provided for backwards compatibility with the 1.6 API.
  *
  * @since New in 1.5.
  */
@@ -4674,6 +4710,19 @@ typedef struct svn_info_t
 
 } svn_info_t;
 
+/**
+ * The callback invoked by svn_client_info3().  Each invocation
+ * describes @a abspath_or_url with the information present in @a info.
+ * Use @a scratch_pool for all temporary allocation.
+ *
+ * @since New in 1.7.
+ */
+/* ### Before 1.7: We might want to rev  svn_wc_info2_t* to update conflict
+       information, remove schedule, etc. */
+typedef svn_error_t *(*svn_info_receiver2_t)(void *baton,
+                                             const char *abspath_or_url,
+                                             const svn_info_t *info,
+                                             apr_pool_t *scratch_pool);
 
 /**
  * The callback invoked by svn_client_info2().  Each invocation
@@ -4682,6 +4731,7 @@ typedef struct svn_info_t
  * unavailable.  Use @a pool for all temporary allocation.
  *
  * @since New in 1.2.
+ * @deprecated Provided for backward compatibility with the 1.6 API.
  */
 typedef svn_error_t *(*svn_info_receiver_t)(
   void *baton,
@@ -4740,8 +4790,26 @@ svn_info_dup(const svn_info_t *info,
  * it's a member of one of those changelists.  If @a changelists is
  * empty (or altogether @c NULL), no changelist filtering occurs.
  *
- * @since New in 1.5.
+ * @since New in 1.7.
  */
+svn_error_t *
+svn_client_info3(const char *abspath_or_url,
+                 const svn_opt_revision_t *peg_revision,
+                 const svn_opt_revision_t *revision,
+                 svn_info_receiver2_t receiver,
+                 void *receiver_baton,
+                 svn_depth_t depth,
+                 const apr_array_header_t *changelists,
+                 svn_client_ctx_t *ctx,
+                 apr_pool_t *scratch_pool);
+
+/** Similar to svn_client_info3, but uses an svn_info_receiver_t instead of
+ * a svn_info_receiver2_t.
+ *
+ * @since New in 1.5.
+ * @deprecated Provided for backward compatibility with the 1.6 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_info2(const char *path_or_url,
                  const svn_opt_revision_t *peg_revision,
@@ -4775,17 +4843,27 @@ svn_client_info(const char *path_or_url,
 
 
 /**
- * @defgroup Patch
+ * @defgroup Patch Apply a patch to the working copy
  *
  * @{
  */
 
 /**
- * Apply a patch that's located at @a patch_path against a working copy
- * pointed to by @a target.
+ * Apply a unidiff patch that's located at @a patch_path against a
+ * working copy pointed to by @a target.
  *
  * If @a dry_run is TRUE, the patching process is carried out, and full
  * notification feedback is provided, but the working copy is not modified.
+ * 
+ * @a strip_count specifies how many leading path components should be
+ * stripped from paths obtained from the patch. It is an error is a
+ * negative strip count is passed.
+ *
+ * If @a ctx->notify_func2 is non-NULL, invoke @a ctx->notify_func2 with
+ * @a ctx->notify_baton2 as patching progresses.
+ *
+ * If @a ctx->cancel_func is non-NULL, invoke it passing @a
+ * ctx->cancel_baton at various places during the operation.
  *
  * @since New in 1.7.
  */
@@ -4793,6 +4871,7 @@ svn_error_t *
 svn_client_patch(const char *patch_path,
                  const char *target,
                  svn_boolean_t dry_run,
+                 int strip_count,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *pool);
 

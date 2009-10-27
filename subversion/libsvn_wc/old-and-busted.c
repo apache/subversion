@@ -52,6 +52,7 @@
 
 /* Attribute names used in our old XML entries file.  */
 #define ENTRIES_ATTR_REPOS              "repos"
+#define ENTRIES_ATTR_UUID               "uuid"
 #define ENTRIES_ATTR_INCOMPLETE         "incomplete"
 #define ENTRIES_ATTR_LOCK_TOKEN         "lock-token"
 #define ENTRIES_ATTR_LOCK_OWNER         "lock-owner"
@@ -927,11 +928,13 @@ svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
                                    SVN_WC__ENTRY_MODIFY_CHECKSUM,
                                    FALSE, pool);
 
-  /* UUID. */
+  /* UUID.
+
+     NOTE: we do not set a modify_flags value since this attribute only
+     occurs in old XML entries files. */
   entry->uuid = extract_string(modify_flags, atts,
-                               SVN_WC__ENTRY_ATTR_UUID,
-                               SVN_WC__ENTRY_MODIFY_UUID,
-                               FALSE, pool);
+                               ENTRIES_ATTR_UUID,
+                               0, FALSE, pool);
 
   /* Setup last-committed values. */
   {
@@ -1168,11 +1171,7 @@ resolve_to_defaults(apr_hash_t *entries,
   /* Then use it to fill in missing information in other entries. */
   for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
     {
-      void *val;
-      svn_wc_entry_t *this_entry;
-
-      apr_hash_this(hi, NULL, NULL, &val);
-      this_entry = val;
+      svn_wc_entry_t *this_entry = svn_apr_hash_index_val(hi);
 
       if (this_entry == default_entry)
         /* THIS_DIR already has all the information it can possibly

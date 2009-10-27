@@ -125,5 +125,9 @@ EOC
         raise(ArgumentError, "Missing key(s): #{missing_keys.join(", ")}")
       end
     end
+
+    def windows?
+      /cygwin|mingw|mswin32|bccwin32/.match(RUBY_PLATFORM)
+    end
   end
 end

@@ -810,7 +810,7 @@ EOE
         assert_equal(0, ctx.up(@wc_path, 0))
         assert(!File.exists?(path2))
         Svn::Wc::AdmAccess.open(nil, @wc_path) do |access|
-          editor = access.update_editor(@wc_path, 0)
+          editor = access.update_editor('', 0)
           assert_equal(0, editor.target_revision)
 
           reporter = session.update2(rev2, "", editor)
@@ -854,10 +854,10 @@ EOE
           notify_func = Proc.new {|n| notification_count += 1}
           assert_raises(ArgumentError) do
             access.update_editor2(:target_revision => 0,
-                                  :target => @wc_path,
+                                  :target => '',
                                   :notify_fun => notify_func)
           end
-          editor = access.update_editor(@wc_path, 0, true, nil, false, nil,
+          editor = access.update_editor('', 0, true, nil, false, nil,
                                         notify_func)
           assert_equal(0, editor.target_revision)
 
@@ -895,7 +895,7 @@ EOE
 
         Svn::Wc::AdmAccess.open(nil, @wc_path) do |access|
           editor = access.update_editor2(
-              :target => @wc_path,
+              :target => '',
               :conflict_func => lambda{|n|
                 conflicted_paths[n.path]=true
                 Svn::Wc::CONFLICT_CHOOSE_MERGED
@@ -910,7 +910,7 @@ EOE
           assert_equal(rev2, editor.target_revision)
         end
 
-        assert_equal([path], conflicted_paths.keys);
+        assert_equal([File.expand_path(path)], conflicted_paths.keys);
       end
     end
   end
@@ -948,7 +948,7 @@ EOE
         assert_equal(rev2, ctx.switch(@wc_path, dir2_uri))
         assert(File.exists?(File.join(@wc_path, file2)))
         Svn::Wc::AdmAccess.open_anchor(@wc_path) do |access, dir_access, target|
-          editor = dir_access.switch_editor(@wc_path, dir1_uri, rev2)
+          editor = dir_access.switch_editor('', dir1_uri, rev2)
           assert_equal(rev2, editor.target_revision)
 
           reporter = session.switch2(rev1, dir1, dir1_uri, editor)

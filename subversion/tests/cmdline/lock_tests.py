@@ -676,7 +676,7 @@ def lock_non_existent_file(sbox):
   exit_code, output, error = svntest.main.run_svn(1, 'lock',
                                                   '-m', '', file_path)
 
-  error_msg = "foo' is not under version control"
+  error_msg = "The node '%s' was not found." % os.path.abspath(file_path)
   for line in error:
     if line.find(error_msg) != -1:
       break

@@ -300,6 +300,8 @@ svn_client__open_ra_session_internal(svn_ra_session_t **ra_session,
   callback_baton_t *cb = apr_pcalloc(pool, sizeof(*cb));
   const char *uuid = NULL;
 
+  SVN_ERR_ASSERT(base_dir != NULL || ! use_admin);
+
   cbtable->open_tmp_file = open_tmp_file;
   cbtable->get_wc_prop = use_admin ? get_wc_prop : NULL;
   cbtable->set_wc_prop = read_only_wc ? NULL : set_wc_prop;
@@ -459,7 +461,7 @@ svn_client__path_relative_to_session(const char **rel_path,
   if (strcmp(session_url, url) == 0)
     *rel_path = "";
   else
-    *rel_path = svn_path_uri_decode(svn_path_is_child(session_url, url, pool),
+    *rel_path = svn_path_uri_decode(svn_uri_is_child(session_url, url, pool),
                                     pool);
   return SVN_NO_ERROR;
 }

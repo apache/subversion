@@ -71,17 +71,7 @@ restore_file(svn_wc__db_t *db,
 {
   svn_stream_t *src_stream;
   svn_boolean_t special;
-  svn_wc_entry_t newentry;
-  const char *adm_dir, *file_path;
-  svn_wc_adm_access_t *adm_access;
-
-  svn_dirent_split(local_abspath, &adm_dir, &file_path, pool);
-
-  adm_access = svn_wc__adm_retrieve_internal2(db, adm_dir, pool);
-  SVN_ERR_ASSERT(adm_access != NULL);
-
-  file_path = svn_dirent_join(svn_wc_adm_access_path(adm_access), file_path,
-                              pool);
+  apr_time_t text_time;
 
   SVN_ERR(svn_wc__get_pristine_contents(&src_stream, db, local_abspath, pool,
                                         pool));
@@ -93,7 +83,7 @@ restore_file(svn_wc__db_t *db,
 
       /* Copy the source into the destination to create the special file.
          The creation wil happen atomically. */
-      SVN_ERR(svn_subst_create_specialfile(&dst_stream, file_path,
+      SVN_ERR(svn_subst_create_specialfile(&dst_stream, local_abspath,
                                            pool, pool));
       /* ### need a cancel_func/baton */
       SVN_ERR(svn_stream_copy3(src_stream, dst_stream, NULL, NULL, pool));
@@ -114,8 +104,8 @@ restore_file(svn_wc__db_t *db,
 
       /* Get a temporary destination so we can use a rename to create the
          real destination atomically. */
-      tmp_dir = svn_wc__adm_child(svn_wc_adm_access_path(adm_access),
-                                  SVN_WC__ADM_TMP, pool);
+      SVN_ERR(svn_wc__db_temp_wcroot_tempdir(&tmp_dir, db, local_abspath,
+                                             pool, pool));
       SVN_ERR(svn_stream_open_unique(&tmp_stream, &tmp_file, tmp_dir,
                                      svn_io_file_del_none, pool, pool));
 
@@ -134,7 +124,7 @@ restore_file(svn_wc__db_t *db,
 
       SVN_ERR(svn_stream_copy3(src_stream, tmp_stream, NULL, NULL, pool));
       /* ### need a cancel_func/baton */
-      SVN_ERR(svn_io_file_rename(tmp_file, file_path, pool));
+      SVN_ERR(svn_io_file_rename(tmp_file, local_abspath, pool));
     }
 
   SVN_ERR(svn_wc__maybe_set_read_only(NULL, db, local_abspath, pool));
@@ -143,10 +133,10 @@ restore_file(svn_wc__db_t *db,
   SVN_ERR(svn_wc__maybe_set_executable(NULL, db, local_abspath, pool));
 
   /* Remove any text conflict */
-  SVN_ERR(svn_wc_resolved_conflict4(file_path, adm_access, TRUE, FALSE,
-                                    FALSE, svn_depth_empty,
-                                    svn_wc_conflict_choose_merged,
-                                    NULL, NULL, NULL, NULL, pool));
+  SVN_ERR(svn_wc__resolved_conflict_internal(
+                    db, local_abspath, svn_depth_empty, TRUE, NULL, FALSE,
+                    svn_wc_conflict_choose_merged, NULL, NULL, NULL, NULL,
+                    pool));
 
   /* Possibly set timestamp to last-commit-time. */
   if (use_commit_times && (! special))
@@ -156,28 +146,26 @@ restore_file(svn_wc__db_t *db,
       SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL,
                                    NULL, NULL, NULL,
                                    NULL, &changed_date, NULL,
-                                   NULL, NULL,
-                                   NULL, NULL,
-                                   NULL, NULL,
+                                   NULL, NULL, NULL, NULL, NULL,
                                    NULL, NULL, NULL, NULL,
                                    NULL, NULL, NULL,
-                                   NULL, NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL,
                                    db, local_abspath,
                                    pool, pool));
 
-      SVN_ERR(svn_io_set_file_affected_time(changed_date, file_path, pool));
+      SVN_ERR(svn_io_set_file_affected_time(changed_date, local_abspath,
+                                            pool));
 
-      newentry.text_time = changed_date;
+      text_time = changed_date;
     }
   else
     {
-      SVN_ERR(svn_io_file_affected_time(&newentry.text_time,
-                                        file_path, pool));
+      SVN_ERR(svn_io_file_affected_time(&text_time, local_abspath, pool));
     }
 
   /* Modify our entry's text-timestamp to match the working file. */
-  return svn_wc__entry_modify(adm_access, svn_dirent_basename(file_path, pool),
-                              &newentry, SVN_WC__ENTRY_MODIFY_TEXT_TIME, pool);
+  return svn_error_return(
+    svn_wc__db_op_set_last_mod_time(db, local_abspath, text_time, pool));
 }
 
 /* Try to restore LOCAL_ABSPATH of node type KIND and if successfull,
@@ -349,7 +337,7 @@ report_revisions_and_depths(svn_wc__db_t *db,
                                &dir_repos_root, NULL, NULL, NULL, NULL, NULL,
                                &dir_depth, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL,
+                               NULL,
                                db, dir_abspath,
                                subpool, subpool));
 
@@ -402,8 +390,8 @@ report_revisions_and_depths(svn_wc__db_t *db,
                                    NULL, NULL, NULL, NULL,
                                    &this_original_repos_relpath,
                                    NULL, NULL, NULL, NULL, NULL,
-                                   &this_shadows_base, NULL, NULL, NULL,
-                                   NULL, &this_lock, NULL,
+                                   &this_shadows_base, NULL,
+                                   &this_lock,
                                    db, this_abspath, iterpool, iterpool));
 
       /* First check the depth */
@@ -1095,10 +1083,9 @@ svn_wc__internal_transmit_text_deltas(const char **tempfile,
                                    NULL, NULL, NULL,
                                    NULL, NULL,
                                    &expected_checksum, NULL,
-                                   NULL, NULL,
-                                   NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, NULL,
                                    NULL, NULL, NULL,
-                                   NULL, NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL,
                                    db, local_abspath,
                                    scratch_pool, scratch_pool));
 
@@ -1250,7 +1237,8 @@ svn_wc__internal_transmit_prop_deltas(svn_wc__db_t *db,
   apr_array_header_t *propmods;
   svn_wc__db_kind_t kind;
 
-  SVN_ERR(svn_wc__db_check_node(&kind, db, local_abspath, scratch_pool));
+  SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath, FALSE, scratch_pool));
+
   /* Get an array of local changes by comparing the hashes. */
   SVN_ERR(svn_wc__internal_propdiff(&propmods, NULL, db, local_abspath,
                                     scratch_pool, scratch_pool));

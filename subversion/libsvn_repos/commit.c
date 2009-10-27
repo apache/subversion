@@ -254,7 +254,7 @@ delete_entry(const char *path,
   if (SVN_IS_VALID_REVNUM(revision) && (revision < cr_rev))
     return out_of_date(full_path, kind);
 
-  /* This routine is a mindless wrapper.  We call svn_fs_delete_tree
+  /* This routine is a mindless wrapper.  We call svn_fs_delete()
      because that will delete files and recursively delete
      directories.  */
   return svn_fs_delete(eb->txn_root, full_path, pool);
@@ -306,7 +306,7 @@ add_directory(const char *path,
       const char *fs_path;
       svn_fs_root_t *copy_root;
       svn_node_kind_t kind;
-      int repos_url_len;
+      size_t repos_url_len;
 
       /* Copy requires recursive write access to the destination path
          and write access to the parent path. */
@@ -451,7 +451,7 @@ add_file(const char *path,
       const char *fs_path;
       svn_fs_root_t *copy_root;
       svn_node_kind_t kind;
-      int repos_url_len;
+      size_t repos_url_len;
 
       /* Copy requires recursive write to the destination path and
          parent path. */

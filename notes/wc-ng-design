@@ -554,6 +554,11 @@ The wc_db API will provide a low-level framework for adding, fetching,
 and completing these work items. Each work item will be described by a
 skel, to be interpreted by higher levels.
 
+### the "independent" requirement is subject to discussion. It may be
+    possible to have a work item that touches multiple nodes. As long
+    as it can definitely place those nodes into a specific state, then
+    it might be okay to operate on many.
+
 
 Prerequisites for a good wc implementation
 ==========================================
@@ -908,6 +913,10 @@ not-present    normal         A node is no longer present in the BASE
                               excluded from the working copy. Note:
                               plain adds cannot have an excluded
                               node -- we'd just not add the node.
+                              Further note: the root of the copy/move
+                              cannot be excluded since we need the
+                              source information. The root may be
+                              depth==empty, however.
 *              not-present    This node has been locally-deleted. This
                               can only occur for a child of a copied
                               or moved subtree (for a plain add, we
@@ -944,6 +953,177 @@ Note 2: this will probably only apply to a repository-to-wc copy. For
 Note 3: this may be possible, though we may need more state to pull
   it off (eg. what revision of the node is "not there" is will be
   deleted? need the rev for out-of-date checks)
+
+
+Commit Process
+--------------
+
+Committing is essentially a review of all the rows in the WORKING_NODE
+and ACTUAL_NODE tables, and sending appropriate instructions to the
+server. After the commit, those rows are removed and the data
+"collapsed" down into the BASE_NODE. For example, if a copy has been
+performed, then WORKING_NODE contains data about the copy, and the new
+BASE_NODE will "become" that WORKING_NODE. If the user additionally
+modifies some properties (stored in ACTUAL_NODE), then those will also
+fall down into the post-commit BASE_NODE row.
+
+copy_tests 24 sets up a specific scenario that breaks a lot of the
+code in libsvn_wc today (Sep 28, 2009). While the commit is being
+processed, the database is temporarily placed into a state which does
+have not have proper integrity.
+
+This section is an attempt to document rules for how nodes are to be
+treated during the commit process. These rules focus on the effects
+upon an individual node, independent of what happens to any child
+nodes on the theory that children can be configured as a mixed-ref
+working copy with appropriate operations applied. Note that the
+decision process is independent of the children, but the children
+*will* be affected by the commit of the parent node. The commit MUST
+operate in a top-down fashion, however, since (for example) it is
+impossible to model a copied parent and an unmodified (committed) BASE
+child.
+
+There is a large operational difference between directories and
+files/symlinks, so we'll divide the discussion along that line. Note
+that we only consider the kind of the WORKING node; the kind of the
+BASE will simply be replaced by the new node. If the BASE used to be a
+directory, then its (obsolete) children must be removed from BASE_NODE
+during this commit proces.
+
+NOTE: if either the BASE_NODE or the WORKING_NODE has an "incomplete"
+presence, then it CAN NOT be committed. It means we are missing
+information that may be required to properly commit a change to that
+node.
+
+
+FILES AND SYMLINKS
+
+working-presence: normal
+base-presence: *
+  The WORKING and ACTUAL data is collapsed down into BASE_NODE, with
+  the new revision.
+
+
+working-presence: excluded
+base-presence: *
+  A new, excluded BASE_NODE is constructed, and the WORKING_NODE is
+  removed. Any BASE_NODE rows which appear to be descendents of this
+  (used-to-be-directory) node are removed. There should be no
+  descendents in the WORKING_NODE table.
+  
+  ### what information do we keep for excluded nodes?
+  ### note: at this point, there is no user command to exclude
+  ###   files/symlinks. but we will be able to at some point...
+
+
+working-presence: not-present
+base-presence: *
+  NOTE: this situatino should never be seen, since the node's parent
+  should have been committed first, which handles this node as part of
+  the child processing (see <normal, *> resolution for directories).
+
+  ### in short, this work-presence can only occur for a deleted
+  ### *subroot*. and we cannot commit *just* this node. must commit
+  ### the root of any copy/move operation.
+
+
+working-presence: base-deleted
+base-presence: *
+  The WORKING_NODE and BASE_NODE rows are removed.
+
+  ### if base-presence == excluded, there are some concerns:
+  ###   -- what information do we keep for base=excluded nodes?
+  ###   -- the base-deleted node would (at least) need to retain the
+  ###      revision in order to mark it for deletion.
+  ###   -- note: at this point, there is no user command to exclude
+  ###      files/symlinks. but we will be able to at some point...
+
+
+actual: row is available
+working-presence: <none>
+base-presence: normal
+  ACTUAL_NODE.properties are folded into the BASE_NODE and the
+  revision is bumped.
+  
+  Note: there is no data in ACTUAL_NODE other than properties.
+  Conflict information exists, but that must be cleared before
+  committing is possible.
+
+
+DIRECTORIES
+
+Whenever a directory is bumped to a new revision, the new set of
+children is provided. This is required, in order to maintain the
+proper integrity.
+
+Example: if a child is to be added in this new revision, but a failure
+happened between the directory-commit and the add-child processes,
+then there would be no record of the added child. The directory would
+not know it was missing a child and would report "at revision R" to
+the server, implying that the child is present.
+
+working-presence: normal
+base-presence: *
+  The WORKING and ACTUAL data is collapsed down into BASE_NODE, with
+  the new revision.
+  
+  The depth status of the WORKING node is carried over to the BASE
+  node. Children in the WORKING_NODE table should align with that
+  depth value, and the commit will iterate over each available child
+  row. Its status will be examined, and specific action taken:
+  
+    normal
+      An incomplete node should be added for this child. This node
+      will become its own add/copy/move root, and will be handled as a
+      separate action (via recursion over the children).
+
+    excluded
+      An incomplete node should be added for this child. No action
+      taken. This node will become an excluded BASE node when it is
+      handled as a separate action (via recursion).
+
+    not-present
+      This row in WORKING_NODE is removed, along with descendent
+      nodes. The directory will not list this node in its (new) set of
+      children. Any BASE_NODE row at this path is also removed, along
+      with any descendent nodes.
+
+    base-deleted
+      No action toaken. This ndoe will be removed when it is handled
+      as a separate action (via recursion).
+
+
+working-presence: excluded
+base-presence: *
+  A new, excluded BASE_NODE is constructed, and the WORKING_NODE is
+  removed. Any BASE_NODE rows which appear to be descendents of this
+  (used-to-be-directory) node are removed. There should be no
+  descendents in the WORKING_NODE table.
+
+  ### what information do we keep for excluded nodes?
+
+
+working-presence: not-present
+base-presence: *
+  NOTE: this situatino should never be seen, since the node's parent
+  should have been committed first, which handles this node as part of
+  the child processing (see <normal, *> resolution).
+
+
+working-presence: base-deleted
+base-presence: *
+  The WORKING_NODE and BASE_NODE rows are removed.
+
+
+actual: row is available
+working-presence: <none>
+base-presence: normal
+  ACTUAL_NODE.properties are folded into the BASE_NODE and the
+  revision is bumped.
+  
+  Note: there is no data in ACTUAL_NODE other than properties.
+  Conflict information exists, but that must be cleared before
+  committing is possible.
 
 
 Random Notes

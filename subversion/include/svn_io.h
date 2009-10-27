@@ -699,12 +699,14 @@ typedef svn_error_t *(*svn_close_fn_t)(void *baton);
 typedef svn_error_t *(*svn_io_reset_fn_t)(void *baton);
 
 /** Line-filtering callback function for a generic stream.
- * @see svn_stream_t and svn_stream_readline().
+ * @a baton is the stream's baton.
+ * @see svn_stream_t, svn_stream_set_baton() and svn_stream_readline().
  *
  * @since New in 1.7.
  */
 typedef svn_error_t *(*svn_io_line_filter_cb_t)(svn_boolean_t *filtered,
                                                 const char *line,
+                                                void *baton,
                                                 apr_pool_t *scratch_pool);
 
 /** A callback function, invoked by svn_stream_readline(), which can perform
@@ -718,12 +720,16 @@ typedef svn_error_t *(*svn_io_line_filter_cb_t)(svn_boolean_t *filtered,
  * Implementations should always at least return an empty stringbuf.
  * It is a fatal error if an implementation returns @a *buf as NULL.
  *
- * @see svn_stream_t, svn_io_line_filter_cb_t and svn_stream_readline().
- * 
+ * @a baton is the stream's baton.
+ *
+ * @see svn_stream_t, svn_stream_set_baton(), svn_io_line_filter_cb_t and
+ * svn_stream_readline().
+ *
  * @since New in 1.7.
  */
 typedef svn_error_t *(*svn_io_line_transformer_cb_t)(svn_stringbuf_t **buf,
                                                      const char *line,
+                                                     void *baton,
                                                      apr_pool_t *result_pool,
                                                      apr_pool_t *scratch_pool);
 

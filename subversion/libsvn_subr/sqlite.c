@@ -162,14 +162,15 @@ svn_error_t *
 svn_sqlite__step_done(svn_sqlite__stmt_t *stmt)
 {
   SVN_ERR(step_with_expectation(stmt, FALSE));
-  return svn_sqlite__reset(stmt);
+  return svn_error_return(svn_sqlite__reset(stmt));
 }
 
 svn_error_t *
 svn_sqlite__step_row(svn_sqlite__stmt_t *stmt)
 {
-  return step_with_expectation(stmt, TRUE);
+  return svn_error_return(step_with_expectation(stmt, TRUE));
 }
+
 
 svn_error_t *
 svn_sqlite__step(svn_boolean_t *got_row, svn_sqlite__stmt_t *stmt)
@@ -200,7 +201,7 @@ svn_sqlite__insert(apr_int64_t *row_id, svn_sqlite__stmt_t *stmt)
   if (row_id)
     *row_id = sqlite3_last_insert_rowid(stmt->db->db3);
 
-  return svn_sqlite__reset(stmt);
+  return svn_error_return(svn_sqlite__reset(stmt));
 }
 
 static svn_error_t *
@@ -320,13 +321,15 @@ svn_sqlite__bind_properties(svn_sqlite__stmt_t *stmt,
   svn_stringbuf_t *properties;
 
   if (props == NULL)
-    return SVN_NO_ERROR;
+    return svn_error_return(svn_sqlite__bind_blob(stmt, slot, NULL, 0));
 
   SVN_ERR(svn_skel__unparse_proplist(&skel, (apr_hash_t *)props,
                                      scratch_pool));
   properties = svn_skel__unparse(skel, scratch_pool);
-  return svn_sqlite__bind_blob(stmt, slot,
-                               properties->data, properties->len);
+  return svn_error_return(svn_sqlite__bind_blob(stmt,
+                                                slot,
+                                                properties->data,
+                                                properties->len));
 }
 
 svn_error_t *
@@ -335,19 +338,24 @@ svn_sqlite__bind_checksum(svn_sqlite__stmt_t *stmt,
                           const svn_checksum_t *checksum,
                           apr_pool_t *scratch_pool)
 {
-  const char *ckind_str;
   const char *csum_str;
 
   if (checksum == NULL)
-    return SVN_NO_ERROR;
+    {
+      csum_str = NULL;
+    }
+  else
+    {
+      const char *ckind_str;
 
-  ckind_str = (checksum->kind == svn_checksum_md5 ? "$md5 $" : "$sha1$");
-  csum_str = apr_pstrcat(scratch_pool,
-                         ckind_str,
-                         svn_checksum_to_cstring(checksum, scratch_pool),
-                         NULL);
+      ckind_str = (checksum->kind == svn_checksum_md5 ? "$md5 $" : "$sha1$");
+      csum_str = apr_pstrcat(scratch_pool,
+                             ckind_str,
+                             svn_checksum_to_cstring(checksum, scratch_pool),
+                             NULL);
+    }
 
-  return svn_sqlite__bind_text(stmt, slot, csum_str);
+  return svn_error_return(svn_sqlite__bind_text(stmt, slot, csum_str));
 }
 
 
@@ -426,9 +434,10 @@ svn_sqlite__column_properties(apr_hash_t **props,
       return SVN_NO_ERROR;
     }
 
-  return svn_skel__parse_proplist(props,
-                                  svn_skel__parse(val, len, scratch_pool),
-                                  result_pool);
+  return svn_error_return(svn_skel__parse_proplist(
+                            props,
+                            svn_skel__parse(val, len, scratch_pool),
+                            result_pool));
 }
 
 svn_error_t *
@@ -593,7 +602,7 @@ svn_sqlite__read_schema_version(int *version,
 
   *version = svn_sqlite__column_int(stmt, 0);
 
-  return svn_sqlite__finalize(stmt);
+  return svn_error_return(svn_sqlite__finalize(stmt));
 }
 
 
@@ -624,7 +633,8 @@ check_format(svn_sqlite__db_t *db,
       ub.upgrade_sql = upgrade_sql;
       ub.scratch_pool = scratch_pool;
 
-      return svn_sqlite__with_transaction(db, upgrade_format, &ub);
+      return svn_error_return(svn_sqlite__with_transaction(
+                                db, upgrade_format, &ub));
     }
 
   return svn_error_createf(SVN_ERR_SQLITE_UNSUPPORTED_SCHEMA, NULL,
@@ -648,6 +658,7 @@ init_sqlite(apr_pool_t *pool)
                     SQLITE_VERSION, sqlite3_libversion());
     }
 
+#if APR_HAS_THREADS
 #if SQLITE_VERSION_AT_LEAST(3,5,0)
   /* SQLite 3.5 allows verification of its thread-safety at runtime.
      Older versions are simply expected to have been configured with
@@ -669,10 +680,12 @@ init_sqlite(apr_pool_t *pool)
   }
   SQLITE_ERR_MSG(sqlite3_initialize(), _("Could not initialize SQLite"));
 #endif
+#endif /* APR_HAS_THRADS */
+
 #if SQLITE_VERSION_AT_LEAST(3,5,0)
-  /* SQLite 3.5 allows sharing cache instances in a multithreaded environment.
-     This allows sharing cached data when we open a database more than once
-     (Very common in the current pre-single-database state) */
+  /* SQLite 3.5 allows sharing cache instances, even in a multithreaded
+   * environment. This allows sharing cached data when we open a database
+   * more than once (Very common in the current pre-single-database state) */
   SQLITE_ERR_MSG(sqlite3_enable_shared_cache(TRUE),
                  _("Could not initialize SQLite shared cache"));
 #endif

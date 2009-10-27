@@ -103,7 +103,7 @@ svn_wc__path_switched(svn_boolean_t *switched,
 svn_boolean_t
 svn_wc__changelist_match(svn_wc_context_t *wc_ctx,
                          const char *local_abspath,
-                         const apr_hash_t *clhash,
+                         apr_hash_t *clhash,
                          apr_pool_t *scratch_pool);
 
 
@@ -137,22 +137,23 @@ svn_wc__is_sendable_status(const svn_wc_status2_t *status,
                            svn_boolean_t no_ignore,
                            svn_boolean_t get_all);
 
-/* For the NAME entry in the entries in ADM_ACCESS, set the
+/* For the LOCAL_ABSPATH entry in WC_CTX, set the
  * file_external_path to URL, the file_external_peg_rev to *PEG_REV
  * and the file_external_rev to *REV.  The URL may be NULL which
  * clears the file external information in the entry.  The repository
  * root URL is given in REPOS_ROOT_URL and is used to store a
- * repository root relative path in the entry.  POOL is used for
+ * repository root relative path in the entry.  SCRATCH_POOL is used for
  * temporary allocations.
  */
 svn_error_t *
-svn_wc__set_file_external_location(svn_wc_adm_access_t *adm_access,
-                                   const char *name,
+svn_wc__set_file_external_location(svn_wc_context_t *wc_ctx,
+                                   const char *local_abspath,
                                    const char *url,
                                    const svn_opt_revision_t *peg_rev,
                                    const svn_opt_revision_t *rev,
                                    const char *repos_root_url,
-                                   apr_pool_t *pool);
+                                   apr_pool_t *scratch_pool);
+
 
 /** Set @a *tree_conflict to a newly allocated @c
  * svn_wc_conflict_description_t structure describing the tree
@@ -162,7 +163,7 @@ svn_wc__set_file_external_location(svn_wc_adm_access_t *adm_access,
  * use @a scratch_pool for temporary allocations.
  */
 svn_error_t *
-svn_wc__get_tree_conflict(svn_wc_conflict_description2_t **tree_conflict,
+svn_wc__get_tree_conflict(const svn_wc_conflict_description2_t **tree_conflict,
                           svn_wc_context_t *wc_ctx,
                           const char *victim_abspath,
                           apr_pool_t *result_pool,
@@ -339,14 +340,6 @@ svn_wc__node_get_repos_info(const char **repos_root_url,
                             apr_pool_t *result_pool,
                             apr_pool_t *scratch_pool);
 
-/* A convenience function for creating a new-style conflict description from
-   an old one.
-   ### This should probably disappear once all the old-style conflict
-       descriptions are gone. */
-svn_wc_conflict_description2_t *
-svn_wc__conflict_desc2_from_conflict_desc(const svn_wc_conflict_description_t *
-                                                                     conflict,
-                                          apr_pool_t *result_pool);
 
 /**
  * Set @a kind to the @c svn_node_kind_t of @a abspath.  Use @a wc_ctx
@@ -404,6 +397,21 @@ svn_wc__node_get_changelist(const char **changelist,
 
 
 /**
+ * Set @a *url to the corresponding url for @a local_abspath, using @a wc_ctx.
+ * If the node is added, return the url it will have in the repository.
+ *
+ * If @a local_abspath is not in the working copy, return
+ * @c SVN_ERR_WC_PATH_NOT_FOUND.
+ */
+svn_error_t *
+svn_wc__node_get_url(const char **url,
+                     svn_wc_context_t *wc_ctx,
+                     const char *local_abspath,
+                     apr_pool_t *result_pool,
+                     apr_pool_t *scratch_pool);
+
+
+/**
  * Recursively call @a callbacks->found_node for all nodes underneath
  * @a local_abspath.
  */
@@ -417,6 +425,54 @@ svn_wc__node_walk_children(svn_wc_context_t *wc_ctx,
                            svn_cancel_func_t cancel_func,
                            void *cancel_baton,
                            apr_pool_t *scratch_pool);
+
+/**
+ * Set @a *is_deleted to TRUE if @a local_abspath is deleted, using
+ * @a wc_ctx.  If @a local_abspath is not in the working copy, return
+ * @c SVN_ERR_WC_PATH_NOT_FOUND.  Use @a scratch_pool for all temporary
+ * allocations.
+ */
+svn_error_t *
+svn_wc__node_is_status_delete(svn_boolean_t *is_deleted,
+                              svn_wc_context_t *wc_ctx,
+                              const char *local_abspath,
+                              apr_pool_t *scratch_pool);
+
+/**
+ * Set @a *is_deleted to whether @a local_abspath is obstructed, using
+ * @a wc_ctx.  If @a local_abspath is not in the working copy, return
+ * @c SVN_ERR_WC_PATH_NOT_FOUND.  Use @a scratch_pool for all temporary
+ * allocations.
+ */
+svn_error_t *
+svn_wc__node_is_status_obstructed(svn_boolean_t *is_obstructed,
+                                  svn_wc_context_t *wc_ctx,
+                                  const char *local_abspath,
+                                  apr_pool_t *scratch_pool);
+
+/**
+ * Set @a *is_deleted to whether @a local_abspath is absent, using
+ * @a wc_ctx.  If @a local_abspath is not in the working copy, return
+ * @c SVN_ERR_WC_PATH_NOT_FOUND.  Use @a scratch_pool for all temporary
+ * allocations.
+ */
+svn_error_t *
+svn_wc__node_is_status_absent(svn_boolean_t *is_absent,
+                              svn_wc_context_t *wc_ctx,
+                              const char *local_abspath,
+                              apr_pool_t *scratch_pool);
+
+/**
+ * Set @a *is_present to whether @a local_abspath is present, using
+ * @a wc_ctx.  If @a local_abspath is not in the working copy, return
+ * @c SVN_ERR_WC_PATH_NOT_FOUND.  Use @a scratch_pool for all temporary
+ * allocations.
+ */
+svn_error_t *
+svn_wc__node_is_status_present(svn_boolean_t *is_present,
+                               svn_wc_context_t *wc_ctx,
+                               const char *local_abspath,
+                               apr_pool_t *scratch_pool);
 
 #ifdef __cplusplus
 }

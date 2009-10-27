@@ -195,10 +195,10 @@ svn_client__update_internal(svn_revnum_t *result_rev,
                                     target_abspath, TRUE, pool));
       if (target_kind == svn_node_dir)
         {
-          SVN_ERR(svn_wc_crop_tree(adm_access, target, depth,
-                                   ctx->notify_func2, ctx->notify_baton2,
-                                   ctx->cancel_func, ctx->cancel_baton,
-                                   pool));
+          SVN_ERR(svn_wc_crop_tree2(ctx->wc_ctx, target_abspath, depth,
+                                    ctx->notify_func2, ctx->notify_baton2,
+                                    ctx->cancel_func, ctx->cancel_baton,
+                                    pool));
           /* If we are asked to exclude a target, we can just stop now. */
           if (depth == svn_depth_exclude)
             {
@@ -241,7 +241,6 @@ svn_client__update_internal(svn_revnum_t *result_rev,
      when we start depending on it.  (We can never *depend* upon it in
      a strict sense, however.) */
   SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root, pool));
-  SVN_ERR(svn_wc_maybe_set_repos_root(dir_access, path, repos_root, pool));
 
   /* Build a baton for the file-fetching callback. */
   ffb = apr_pcalloc(pool, sizeof(*ffb));
@@ -299,13 +298,17 @@ svn_client__update_internal(svn_revnum_t *result_rev,
      handling external items (and any errors therefrom) doesn't delay
      the primary operation.  */
   if (SVN_DEPTH_IS_RECURSIVE(depth) && (! ignore_externals))
-    SVN_ERR(svn_client__handle_externals(adm_access,
-                                         traversal_info,
-                                         entry->url,
-                                         anchor,
-                                         repos_root,
-                                         depth,
-                                         use_sleep, ctx, pool));
+    {
+      apr_hash_t *externals_old, *externals_new, *ambient_depths;
+
+      svn_wc_edited_externals(&externals_old, &externals_new, traversal_info);
+      svn_wc_traversed_depths(&ambient_depths, traversal_info);
+
+      SVN_ERR(svn_client__handle_externals(adm_access, externals_old,
+                                           externals_new, ambient_depths,
+                                           entry->url, anchor, repos_root,
+                                           depth, use_sleep, ctx, pool));
+    }
 
   if (sleep_here)
     svn_io_sleep_for_timestamps(path, pool);

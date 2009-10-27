@@ -413,7 +413,7 @@ parent_path_path(parent_path_t *parent_path,
   if (parent_path->parent)
     path_so_far = parent_path_path(parent_path->parent, pool);
   return parent_path->entry
-    ? svn_path_join(path_so_far, parent_path->entry, pool)
+    ? svn_uri_join(path_so_far, parent_path->entry, pool)
     : path_so_far;
 }
 
@@ -430,7 +430,7 @@ parent_path_relpath(parent_path_t *child,
   while (this_node != ancestor)
     {
       assert(this_node != NULL);
-      path_so_far = svn_path_join(this_node->entry, path_so_far, pool);
+      path_so_far = svn_uri_join(this_node->entry, path_so_far, pool);
       this_node = this_node->parent;
     }
   return path_so_far;
@@ -620,7 +620,7 @@ open_path(parent_path_t **parent_path_p,
       entry = svn_fs__next_entry_name(&next, rest, pool);
 
       /* Calculate the path traversed thus far. */
-      path_so_far = svn_path_join(path_so_far, entry, pool);
+      path_so_far = svn_uri_join(path_so_far, entry, pool);
 
       if (*entry == '\0')
         {
@@ -1375,19 +1375,17 @@ merge(svn_stringbuf_t *conflict_p,
        hi = apr_hash_next(hi))
     {
       svn_fs_dirent_t *s_entry, *t_entry, *a_entry;
-
-      const void *key;
-      void *val;
+      const char *name;
       apr_ssize_t klen;
 
       svn_pool_clear(iterpool);
 
-      /* KEY will be the entry name in ancestor, VAL the dirent */
-      apr_hash_this(hi, &key, &klen, &val);
-      a_entry = val;
+      name = svn_apr_hash_index_key(hi);
+      klen = svn_apr_hash_index_klen(hi);
+      a_entry = svn_apr_hash_index_val(hi);
 
-      s_entry = apr_hash_get(s_entries, key, klen);
-      t_entry = apr_hash_get(t_entries, key, klen);
+      s_entry = apr_hash_get(s_entries, name, klen);
+      t_entry = apr_hash_get(t_entries, name, klen);
 
       /* No changes were made to this entry while the transaction was
          in progress, so do nothing to the target. */
@@ -1425,7 +1423,7 @@ merge(svn_stringbuf_t *conflict_p,
                   mergeinfo_increment += mergeinfo_end;
                 }
 
-              SVN_ERR(svn_fs_fs__dag_set_entry(target, key,
+              SVN_ERR(svn_fs_fs__dag_set_entry(target, name,
                                                s_entry->id,
                                                s_entry->kind,
                                                txn_id,
@@ -1433,7 +1431,7 @@ merge(svn_stringbuf_t *conflict_p,
             }
           else
             {
-              SVN_ERR(svn_fs_fs__dag_delete(target, key, txn_id, iterpool));
+              SVN_ERR(svn_fs_fs__dag_delete(target, name, txn_id, iterpool));
             }
         }
 
@@ -1451,18 +1449,18 @@ merge(svn_stringbuf_t *conflict_p,
              a modification. In any of these cases, flag a conflict. */
           if (s_entry == NULL || t_entry == NULL)
             return conflict_err(conflict_p,
-                                svn_path_join(target_path,
-                                              a_entry->name,
-                                              iterpool));
+                                svn_dirent_join(target_path,
+                                                a_entry->name,
+                                                iterpool));
 
           /* If any of the three entries is of type file, flag a conflict. */
           if (s_entry->kind == svn_node_file
               || t_entry->kind == svn_node_file
               || a_entry->kind == svn_node_file)
             return conflict_err(conflict_p,
-                                svn_path_join(target_path,
-                                              a_entry->name,
-                                              iterpool));
+                                svn_dirent_join(target_path,
+                                                a_entry->name,
+                                                iterpool));
 
           /* If either SOURCE-ENTRY or TARGET-ENTRY is not a direct
              modification of ANCESTOR-ENTRY, declare a conflict. */
@@ -1475,9 +1473,9 @@ merge(svn_stringbuf_t *conflict_p,
               || strcmp(svn_fs_fs__id_copy_id(t_entry->id),
                         svn_fs_fs__id_copy_id(a_entry->id)) != 0)
             return conflict_err(conflict_p,
-                                svn_path_join(target_path,
-                                              a_entry->name,
-                                              iterpool));
+                                svn_dirent_join(target_path,
+                                                a_entry->name,
+                                                iterpool));
 
           /* Direct modifications were made to the directory
              ANCESTOR-ENTRY in both SOURCE and TARGET.  Recursively
@@ -1488,7 +1486,7 @@ merge(svn_stringbuf_t *conflict_p,
                                           t_entry->id, iterpool));
           SVN_ERR(svn_fs_fs__dag_get_node(&a_ent_node, fs,
                                           a_entry->id, iterpool));
-          new_tpath = svn_path_join(target_path, t_entry->name, iterpool);
+          new_tpath = svn_dirent_join(target_path, t_entry->name, iterpool);
           SVN_ERR(merge(conflict_p, new_tpath,
                         t_ent_node, s_ent_node, a_ent_node,
                         txn_id,
@@ -1503,7 +1501,7 @@ merge(svn_stringbuf_t *conflict_p,
          over all the source entries that didn't exist in
          ancestor_entries. */
     end:
-      apr_hash_set(s_entries, key, klen, NULL);
+      apr_hash_set(s_entries, name, klen, NULL);
     }
 
   /* For each entry E in source but not in ancestor */
@@ -1512,23 +1510,21 @@ merge(svn_stringbuf_t *conflict_p,
        hi = apr_hash_next(hi))
     {
       svn_fs_dirent_t *s_entry, *t_entry;
-      const void *key;
-      void *val;
-      apr_ssize_t klen;
+      const char *name = svn_apr_hash_index_key(hi);
+      apr_ssize_t klen = svn_apr_hash_index_klen(hi);
       dag_node_t *s_ent_node;
 
       svn_pool_clear(iterpool);
 
-      apr_hash_this(hi, &key, &klen, &val);
-      s_entry = val;
-      t_entry = apr_hash_get(t_entries, key, klen);
+      s_entry = svn_apr_hash_index_val(hi);
+      t_entry = apr_hash_get(t_entries, name, klen);
 
       /* If NAME exists in TARGET, declare a conflict. */
       if (t_entry)
         return conflict_err(conflict_p,
-                            svn_path_join(target_path,
-                                          t_entry->name,
-                                          iterpool));
+                            svn_dirent_join(target_path,
+                                            t_entry->name,
+                                            iterpool));
 
       SVN_ERR(svn_fs_fs__dag_get_node(&s_ent_node, fs,
                                       s_entry->id, iterpool));
@@ -2969,7 +2965,7 @@ prev_location(const char **prev_path,
                          copy_root, copy_path, pool));
   if (strcmp(copy_path, path) != 0)
     remainder = svn_path_is_child(copy_path, path, pool);
-  *prev_path = svn_path_join(copy_src_path, remainder, pool);
+  *prev_path = svn_uri_join(copy_src_path, remainder, pool);
   *prev_rev = copy_src_rev;
   return SVN_NO_ERROR;
 }
@@ -3232,7 +3228,7 @@ history_prev(void *baton, apr_pool_t *pool)
           SVN_ERR(svn_fs_fs__dag_get_copyfrom_path(&copy_src, node, pool));
 
           dst_rev = copyroot_rev;
-          src_path = svn_path_join(copy_src, remainder, pool);
+          src_path = svn_uri_join(copy_src, remainder, pool);
         }
     }
 
@@ -3395,17 +3391,14 @@ crawl_directory_dag_for_mergeinfo(svn_fs_root_t *root,
        hi;
        hi = apr_hash_next(hi))
     {
-      void *val;
-      svn_fs_dirent_t *dirent;
+      svn_fs_dirent_t *dirent = svn_apr_hash_index_val(hi);
       const char *kid_path;
       dag_node_t *kid_dag;
       svn_boolean_t has_mergeinfo, go_down;
 
       svn_pool_clear(iterpool);
 
-      apr_hash_this(hi, NULL, NULL, &val);
-      dirent = val;
-      kid_path = svn_path_join(this_path, dirent->name, iterpool);
+      kid_path = svn_uri_join(this_path, dirent->name, iterpool);
       SVN_ERR(get_dag(&kid_dag, root, kid_path, iterpool));
 
       SVN_ERR(svn_fs_fs__dag_has_mergeinfo(&has_mergeinfo, kid_dag, iterpool));
@@ -3470,14 +3463,13 @@ append_to_merged_froms(svn_mergeinfo_t *output,
 
   for (hi = apr_hash_first(pool, input); hi; hi = apr_hash_next(hi))
     {
-      const void *key;
-      void *val;
+      const char *path = svn_apr_hash_index_key(hi);
+      apr_array_header_t *rangelist = svn_apr_hash_index_val(hi);
       char *newpath;
 
-      apr_hash_this(hi, &key, NULL, &val);
-      newpath = svn_path_join((const char *) key, path_piece, pool);
+      newpath = svn_uri_join(path, path_piece, pool);
       apr_hash_set(*output, newpath, APR_HASH_KEY_STRING,
-                   svn_rangelist_dup((apr_array_header_t *) val, pool));
+                   svn_rangelist_dup(rangelist, pool));
     }
 
   return SVN_NO_ERROR;

@@ -633,16 +633,6 @@ svn_diff_file_diff_2(svn_diff_t **diff,
 }
 
 svn_error_t *
-svn_diff_file_diff(svn_diff_t **diff,
-                   const char *original,
-                   const char *modified,
-                   apr_pool_t *pool)
-{
-  return svn_diff_file_diff_2(diff, original, modified,
-                              svn_diff_file_options_create(pool), pool);
-}
-
-svn_error_t *
 svn_diff_file_diff3_2(svn_diff_t **diff,
                       const char *original,
                       const char *modified,
@@ -663,17 +653,6 @@ svn_diff_file_diff3_2(svn_diff_t **diff,
 
   svn_pool_destroy(baton.pool);
   return SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn_diff_file_diff3(svn_diff_t **diff,
-                    const char *original,
-                    const char *modified,
-                    const char *latest,
-                    apr_pool_t *pool)
-{
-  return svn_diff_file_diff3_2(diff, original, modified, latest,
-                               svn_diff_file_options_create(pool), pool);
 }
 
 svn_error_t *
@@ -701,17 +680,6 @@ svn_diff_file_diff4_2(svn_diff_t **diff,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_diff_file_diff4(svn_diff_t **diff,
-                    const char *original,
-                    const char *modified,
-                    const char *latest,
-                    const char *ancestor,
-                    apr_pool_t *pool)
-{
-  return svn_diff_file_diff4_2(diff, original, modified, latest, ancestor,
-                               svn_diff_file_options_create(pool), pool);
-}
 
 /** Display unified context diffs **/
 
@@ -1201,27 +1169,32 @@ svn_diff_file_output_unified3(svn_stream_t *output_stream,
 
       if (! original_header)
         {
-          child_path = svn_path_is_child(relative_to_dir,
-                                         original_path, pool);
+          child_path = svn_dirent_is_child(relative_to_dir,
+                                           original_path, pool);
           if (child_path)
             original_path = child_path;
           else
-            return svn_error_createf(SVN_ERR_BAD_RELATIVE_PATH, NULL,
-                                     _("Path '%s' must be an immediate child of "
-                                       "the directory '%s'"),
-                                     original_path, relative_to_dir);
+            return svn_error_createf(
+                               SVN_ERR_BAD_RELATIVE_PATH, NULL,
+                               _("Path '%s' must be an immediate child of "
+                                 "the directory '%s'"),
+                               svn_dirent_local_style(original_path, pool),
+                               svn_dirent_local_style(relative_to_dir, pool));
         }
 
       if (! modified_header)
         {
-          child_path = svn_path_is_child(relative_to_dir, modified_path, pool);
+          child_path = svn_dirent_is_child(relative_to_dir,
+                                           modified_path, pool);
           if (child_path)
             modified_path = child_path;
           else
-            return svn_error_createf(SVN_ERR_BAD_RELATIVE_PATH, NULL,
-                                     _("Path '%s' must be an immediate child of "
-                                       "the directory '%s'"),
-                                     modified_path, relative_to_dir);
+            return svn_error_createf(
+                               SVN_ERR_BAD_RELATIVE_PATH, NULL,
+                               _("Path '%s' must be an immediate child of "
+                                 "the directory '%s'"),
+                               svn_dirent_local_style(modified_path, pool),
+                               svn_dirent_local_style(relative_to_dir, pool));
         }
     }
 
@@ -1759,39 +1732,3 @@ svn_diff_file_output_merge2(svn_stream_t *output_stream,
   return SVN_NO_ERROR;
 }
 
-
-svn_error_t *
-svn_diff_file_output_merge(svn_stream_t *output_stream,
-                           svn_diff_t *diff,
-                           const char *original_path,
-                           const char *modified_path,
-                           const char *latest_path,
-                           const char *conflict_original,
-                           const char *conflict_modified,
-                           const char *conflict_latest,
-                           const char *conflict_separator,
-                           svn_boolean_t display_original_in_conflict,
-                           svn_boolean_t display_resolved_conflicts,
-                           apr_pool_t *pool)
-{
-  svn_diff_conflict_display_style_t style =
-    svn_diff_conflict_display_modified_latest;
-
-  if (display_resolved_conflicts)
-    style = svn_diff_conflict_display_resolved_modified_latest;
-
-  if (display_original_in_conflict)
-    style = svn_diff_conflict_display_modified_original_latest;
-
-  return svn_diff_file_output_merge2(output_stream,
-                                     diff,
-                                     original_path,
-                                     modified_path,
-                                     latest_path,
-                                     conflict_original,
-                                     conflict_modified,
-                                     conflict_latest,
-                                     conflict_separator,
-                                     style,
-                                     pool);
-}

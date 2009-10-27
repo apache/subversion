@@ -170,6 +170,13 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
         }
       break;
 
+    case svn_wc_notify_update_add_deleted:
+    case svn_wc_notify_update_update_deleted:
+      /* ### Before 1.7.0 these notifications where suppressed in the wc
+         ### library.. how should we notify these?
+
+         ### Fall through in deleted notification. */
+
     case svn_wc_notify_update_delete:
     case svn_wc_notify_update_external_removed:
       nb->received_some_change = TRUE;
@@ -646,6 +653,12 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
         err = svn_cmdline_printf(pool,
                      _("property '%s' deleted from repository revision %ld\n"),
                      n->prop_name, n->revision);
+        if (err)
+          goto print_error;
+      break;
+
+    case svn_wc_notify_upgraded_path:
+        err = svn_cmdline_printf(pool, _("Upgraded '%s'.\n"), path_local);
         if (err)
           goto print_error;
       break;

@@ -217,7 +217,7 @@ SVN_ERROR_START
   /** @since New in 1.7. */
   SVN_ERRDEF(SVN_ERR_BAD_TOKEN,
              SVN_ERR_BAD_CATEGORY_START + 13,
-             "Unknown string token value")
+             "Unknown string value of token")
 
   /* xml errors */
 
@@ -504,6 +504,11 @@ SVN_ERROR_START
   SVN_ERRDEF(SVN_ERR_WC_UPGRADE_REQUIRED,
              SVN_ERR_WC_CATEGORY_START + 36,
              "The working copy needs to be upgraded")
+
+  /** @since New in 1.7. */
+  SVN_ERRDEF(SVN_ERR_WC_CLEANUP_REQUIRED,
+             SVN_ERR_WC_CATEGORY_START + 37,
+             "Previous operation was interrupted; run 'svn cleanup'")
 
   /* fs errors */
 
@@ -1147,6 +1152,11 @@ SVN_ERROR_START
   SVN_ERRDEF(SVN_ERR_CLIENT_FILE_EXTERNAL_OVERWRITE_VERSIONED,
              SVN_ERR_CLIENT_CATEGORY_START + 17,
              "A file external cannot overwrite an existing versioned item")
+
+  /** @since New in 1.7. */
+  SVN_ERRDEF(SVN_ERR_CLIENT_PATCH_BAD_STRIP_COUNT,
+             SVN_ERR_CLIENT_CATEGORY_START + 18,
+             "Invalid path component strip count specified")
 
   /* misc errors */
 

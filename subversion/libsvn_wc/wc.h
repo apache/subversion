@@ -101,12 +101,14 @@ extern "C" {
  * The change from 12 to 13 added the WORK_QUEUE table into 'wc.db', and
  * moved the wcprops into the 'dav_cache' column in BASE_NODE.
  *
+ * The change from 13 to 14 added the WCLOCKS table.
+ *
  * == 1.7.x shipped with format ???
  *
  * Please document any further format changes here.
  */
 
-#define SVN_WC__VERSION 12
+#define SVN_WC__VERSION 14
 
 
 /* A version <= this doesn't have property caching in the entries file. */
@@ -228,13 +230,8 @@ struct svn_wc_traversal_info_t
 #define SVN_WC__ADM_DIR_PROPS           "dir-props"
 #define SVN_WC__ADM_DIR_PROP_BASE       "dir-prop-base"
 #define SVN_WC__ADM_DIR_PROP_REVERT     "dir-prop-revert"
-#define SVN_WC__ADM_WCPROPS             "wcprops"
-#define SVN_WC__ADM_DIR_WCPROPS         "dir-wcprops"
-#define SVN_WC__ADM_ALL_WCPROPS         "all-wcprops"
 #define SVN_WC__ADM_LOG                 "log"
 #define SVN_WC__ADM_KILLME              "KILLME"
-#define SVN_WC__ADM_README              "README.txt"
-#define SVN_WC__ADM_EMPTY_FILE          "empty-file"
 
 /* The basename of the ".prej" file, if a directory ever has property
    conflicts.  This .prej file will appear *within* the conflicted
@@ -294,17 +291,19 @@ svn_wc__text_modified_internal_p(svn_boolean_t *modified_p,
 
 
 
-/* Merge the difference between LEFT and RIGHT into MERGE_TARGET,
-   accumulating instructions to update the working copy into LOG_ACCUM.
+/* Merge the difference between LEFT_ABSPATH and RIGHT_ABSPATH into
+   TARGET_ABSPATH, accumulating instructions to update the working
+   copy into LOG_ACCUM.
 
    Note that, in the case of updating, the update can have sent new
    properties, which could affect the way the wc target is
    detranslated and compared with LEFT and RIGHT for merging.
 
-   If COPYFROM_TEXT is not NULL, the "local mods" text should be taken
-   from the path named there instead of from MERGE_TARGET (but the
-   merge should still be installed into MERGE_TARGET).  The merge
-   target is allowed to not be under version control in this case.
+   If COPYFROM_ABSPATH is not NULL, the "local mods" text should be
+   taken from the path named there instead of from TARGET_ABSPATH
+   (but the merge should still be installed into TARGET_ABSPATH).
+   The merge target is allowed to not be under version control in
+   this case.
 
    The merge result is stored in *MERGE_OUTCOME and merge conflicts
    are marked in MERGE_RESULT using LEFT_LABEL, RIGHT_LABEL and
@@ -336,13 +335,13 @@ svn_wc__text_modified_internal_p(svn_boolean_t *modified_p,
 svn_error_t *
 svn_wc__merge_internal(svn_stringbuf_t **log_accum,
                        enum svn_wc_merge_outcome_t *merge_outcome,
-                       const char *left,
+                       svn_wc__db_t *db,
+                       const char *left_abspath,
                        const svn_wc_conflict_version_t *left_version,
-                       const char *right,
+                       const char *right_abspath,
                        const svn_wc_conflict_version_t *right_version,
-                       const char *merge_target,
-                       const char *copyfrom_text,
-                       svn_wc_adm_access_t *adm_access,
+                       const char *target_abspath,
+                       const char *copyfrom_abspath,
                        const char *left_label,
                        const char *right_label,
                        const char *target_label,
@@ -352,6 +351,8 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
                        const apr_array_header_t *prop_diff,
                        svn_wc_conflict_resolver_func_t conflict_func,
                        void *conflict_baton,
+                       svn_cancel_func_t cancel_func,
+                       void *cancel_baton,
                        apr_pool_t *pool);
 
 /* A default error handler for svn_wc_walk_entries3().  Returns ERR in
@@ -369,7 +370,7 @@ svn_wc__walker_default_error_handler(const char *path,
  * depth.  It is safe for *EDITOR and *EDIT_BATON to start as
  * WRAPPED_EDITOR and WRAPPED_BATON.
  *
- * ANCHOR, TARGET, and ADM_ACCESS are as in svn_wc_get_update_editor3.
+ * ANCHOR, TARGET, and DB are as in svn_wc_get_update_editor3.
  *
  * @a requested_depth must be one of the following depth values:
  * @c svn_depth_infinity, @c svn_depth_empty, @c svn_depth_files,
@@ -384,29 +385,8 @@ svn_wc__ambient_depth_filter_editor(const svn_delta_editor_t **editor,
                                     void *wrapped_edit_baton,
                                     const char *anchor,
                                     const char *target,
-                                    svn_wc_adm_access_t *adm_access,
+                                    svn_wc__db_t *db,
                                     apr_pool_t *pool);
-
-/* Similar to svn_wc_walk_entries3(), but also visit unversioned paths that
- * are tree conflict victims. For such a path, call the "found_entry"
- * callback but with a null "entry" parameter. Walk all entries including
- * hidden and schedule-delete entries, like with "show_hidden = TRUE" in
- * svn_wc_walk_entries3().
- *
- * @a adm_access should be an access baton in a set that includes @a path
- * (unless @a path is an unversioned victim of a tree conflict) and @a
- * path's parent directory (if available).  If neither is available, @a
- * adm_access may be null. */
-svn_error_t *
-svn_wc__walk_entries_and_tc(const char *path,
-                            svn_wc_adm_access_t *adm_access,
-                            const svn_wc_entry_callbacks2_t *walk_callbacks,
-                            void *walk_baton,
-                            svn_depth_t depth,
-                            svn_cancel_func_t cancel_func,
-                            void *cancel_baton,
-                            apr_pool_t *pool);
-
 
 /* Similar to svn_wc__path_switched(), but with a wc_db parameter instead of
  * a wc_context. */
@@ -483,7 +463,7 @@ svn_wc__internal_ensure_adm(svn_wc__db_t *db,
 svn_boolean_t
 svn_wc__internal_changelist_match(svn_wc__db_t *db,
                                   const char *local_abspath,
-                                  const apr_hash_t *clhash,
+                                  apr_hash_t *clhash,
                                   apr_pool_t *scratch_pool);
 
 
@@ -498,6 +478,42 @@ svn_wc__internal_walk_children(svn_wc__db_t *db,
                                svn_cancel_func_t cancel_func,
                                void *cancel_baton,
                                apr_pool_t *scratch_pool);
+
+/* Library-internal version of svn_wc_remove_from_revision_control2,
+   which see.*/
+svn_error_t *
+svn_wc__remove_from_revision_control_internal(svn_wc__db_t *db,
+                                              const char *local_abspath,
+                                              svn_boolean_t destroy_wf,
+                                              svn_boolean_t instant_error,
+                                              svn_cancel_func_t cancel_func,
+                                              void *cancel_baton,
+                                              apr_pool_t *scratch_pool);
+
+
+/* Library-internal version of svn_wc__resolved_conflict5(). */
+svn_error_t *
+svn_wc__resolved_conflict_internal(svn_wc__db_t *db,
+                                   const char *local_abspath,
+                                   svn_depth_t depth,
+                                   svn_boolean_t resolve_text,
+                                   const char *resolve_prop,
+                                   svn_boolean_t resolve_tree,
+                                   svn_wc_conflict_choice_t conflict_choice,
+                                   svn_cancel_func_t cancel_func,
+                                   void *cancel_baton,
+                                   svn_wc_notify_func2_t notify_func,
+                                   void *notify_baton,
+                                   apr_pool_t *scratch_pool);
+
+/* Library-internal version of svn_wc_locked2(). */
+svn_error_t *
+svn_wc__internal_locked(svn_boolean_t *locked_here,
+                        svn_boolean_t *locked,
+                        svn_wc__db_t *db,
+                        const char *local_abspath,
+                        apr_pool_t *scratch_pool);
+
 
 
 svn_error_t *

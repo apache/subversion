@@ -35,14 +35,24 @@
 #include "log.h"
 #include "entries.h"
 #include "wc_db.h"
-#include "wc-metadata.h"  /* for STMT_*  */
+#include "tree_conflicts.h"
+#include "wc-queries.h"  /* for STMT_*  */
 
 #include "svn_private_config.h"
 #include "private/svn_wc_private.h"
 #include "private/svn_sqlite.h"
+#include "private/svn_token.h"
 
 
-
+/* Old locations for storing "wcprops" (aka "dav cache").  */
+#define WCPROPS_SUBDIR_FOR_FILES "wcprops"
+#define WCPROPS_FNAME_FOR_DIR "dir-wcprops"
+#define WCPROPS_ALL_DATA "all-wcprops"
+
+/* Old data files that we no longer need/use.  */
+#define ADM_README "README.txt"
+#define ADM_EMPTY_FILE "empty-file"
+
 
 /* Read one proplist (allocated from RESULT_POOL) from STREAM, and place it
    into ALL_WCPROPS at NAME.  */
@@ -82,8 +92,7 @@ read_many_wcprops(apr_hash_t **all_wcprops,
   *all_wcprops = apr_hash_make(result_pool);
 
   /* First, look at dir-wcprops. */
-  err = svn_wc__open_adm_stream(&stream, dir_abspath,
-                                SVN_WC__ADM_DIR_WCPROPS,
+  err = svn_wc__open_adm_stream(&stream, dir_abspath, WCPROPS_FNAME_FOR_DIR,
                                 iterpool, iterpool);
   if (err)
     {
@@ -100,7 +109,7 @@ read_many_wcprops(apr_hash_t **all_wcprops,
       SVN_ERR(svn_stream_close(stream));
     }
 
-  props_dir_abspath = svn_wc__adm_child(dir_abspath, SVN_WC__ADM_WCPROPS,
+  props_dir_abspath = svn_wc__adm_child(dir_abspath, WCPROPS_SUBDIR_FOR_FILES,
                                         scratch_pool);
 
   /* Now walk the wcprops directory. */
@@ -110,18 +119,16 @@ read_many_wcprops(apr_hash_t **all_wcprops,
        hi;
        hi = apr_hash_next(hi))
     {
-      const void *key;
+      const char *name = svn_apr_hash_index_key(hi);
       const char *prop_path;
 
       svn_pool_clear(iterpool);
 
-      apr_hash_this(hi, &key, NULL, NULL);
-
-      prop_path = svn_dirent_join(props_dir_abspath, key, iterpool);
+      prop_path = svn_dirent_join(props_dir_abspath, name, iterpool);
 
       SVN_ERR(svn_stream_open_readonly(&stream, prop_path,
                                        iterpool, iterpool));
-      SVN_ERR(read_one_proplist(*all_wcprops, key, stream,
+      SVN_ERR(read_one_proplist(*all_wcprops, name, stream,
                                 result_pool, iterpool));
       SVN_ERR(svn_stream_close(stream));
     }
@@ -146,7 +153,7 @@ read_wcprops(apr_hash_t **all_wcprops,
   *all_wcprops = apr_hash_make(result_pool);
 
   err = svn_wc__open_adm_stream(&stream, dir_abspath,
-                                SVN_WC__ADM_ALL_WCPROPS,
+                                WCPROPS_ALL_DATA,
                                 scratch_pool, scratch_pool);
 
   /* A non-existent file means there are no props. */
@@ -271,6 +278,31 @@ get_versioned_subdirs(apr_array_header_t **children,
 }
 
 
+/* Create a physical lock file in the admin directory for ABSPATH.  */
+static svn_error_t *
+create_physical_lock(const char *abspath, apr_pool_t *scratch_pool)
+{
+  const char *lock_abspath =
+        svn_dirent_join_many(scratch_pool, abspath, ".svn", "lock", NULL);
+  svn_error_t *err;
+  apr_file_t *file;
+
+  err = svn_io_file_open(&file, lock_abspath,
+                         APR_WRITE | APR_CREATE | APR_EXCL,
+                         APR_OS_DEFAULT,
+                         scratch_pool);
+
+  if (err && APR_STATUS_IS_EEXIST(err->apr_err))
+    {
+      /* Congratulations, we just stole a physical lock from somebody */
+      svn_error_clear(err);
+      return SVN_NO_ERROR;
+    }
+
+  return svn_error_return(err);
+}
+
+
 /* Upgrade the working copy directory represented by DB/DIR_ABSPATH
    from OLD_FORMAT to the wc-ng format (SVN_WC__WC_NG_VERSION)'.
 
@@ -282,7 +314,6 @@ upgrade_to_wcng(svn_wc__db_t *db,
                 apr_pool_t *scratch_pool)
 {
   svn_boolean_t present;
-  svn_wc_adm_access_t *adm_access;
   apr_hash_t *entries;
   const svn_wc_entry_t *this_dir;
   svn_sqlite__db_t *sdb;
@@ -297,8 +328,7 @@ upgrade_to_wcng(svn_wc__db_t *db,
   /* Lock this working copy directory, or steal an existing lock. Do this
      BEFORE we read the entries. We don't want another process to modify the
      entries after we've read them into memory.  */
-  SVN_ERR(svn_wc__adm_steal_write_lock(&adm_access, db, dir_abspath,
-                                       scratch_pool, scratch_pool));
+  SVN_ERR(create_physical_lock(dir_abspath, scratch_pool));
 
   /* What's going on here?
    *
@@ -335,6 +365,7 @@ upgrade_to_wcng(svn_wc__db_t *db,
      function bumps a working copy all the way to current.  */
   SVN_ERR(svn_wc__db_temp_reset_format(SVN_WC__VERSION, db, dir_abspath,
                                        scratch_pool));
+  SVN_ERR(svn_wc__db_wclock_set(db, dir_abspath, scratch_pool));
   SVN_ERR(svn_wc__entries_write_new(db, dir_abspath, entries, scratch_pool));
 
   SVN_ERR(svn_io_remove_file2(svn_wc__adm_child(dir_abspath,
@@ -378,23 +409,24 @@ upgrade_to_wcng(svn_wc__db_t *db,
          not catastrophic. */
 
       svn_error_clear(svn_io_remove_dir2(
-          svn_wc__adm_child(dir_abspath, SVN_WC__ADM_WCPROPS, scratch_pool),
+          svn_wc__adm_child(dir_abspath, WCPROPS_SUBDIR_FOR_FILES,
+                            scratch_pool),
           FALSE, NULL, NULL, scratch_pool));
 
       svn_error_clear(svn_io_remove_file2(
-          svn_wc__adm_child(dir_abspath, SVN_WC__ADM_DIR_WCPROPS, scratch_pool),
+          svn_wc__adm_child(dir_abspath, WCPROPS_FNAME_FOR_DIR, scratch_pool),
           TRUE, scratch_pool));
       svn_error_clear(svn_io_remove_file2(
-          svn_wc__adm_child(dir_abspath, SVN_WC__ADM_EMPTY_FILE, scratch_pool),
+          svn_wc__adm_child(dir_abspath, ADM_EMPTY_FILE, scratch_pool),
           TRUE, scratch_pool));
       svn_error_clear(svn_io_remove_file2(
-          svn_wc__adm_child(dir_abspath, SVN_WC__ADM_README, scratch_pool),
+          svn_wc__adm_child(dir_abspath, ADM_README, scratch_pool),
           TRUE, scratch_pool));
     }
   else
     {
       svn_error_clear(svn_io_remove_file2(
-          svn_wc__adm_child(dir_abspath, SVN_WC__ADM_ALL_WCPROPS, scratch_pool),
+          svn_wc__adm_child(dir_abspath, WCPROPS_ALL_DATA, scratch_pool),
           TRUE, scratch_pool));
     }
 
@@ -403,7 +435,13 @@ upgrade_to_wcng(svn_wc__db_t *db,
   /* All subdir access batons (and locks!) will be closed. Of course, they
      should have been closed/unlocked just after their own upgrade process
      has run.  */
-  SVN_ERR(svn_wc_adm_close2(adm_access, scratch_pool));
+  /* ### well, actually.... we don't recursively delete subdir locks here,
+     ### we rely upon their own upgrade processes to do it. */
+  SVN_ERR(svn_wc__db_wclock_remove(db, dir_abspath, scratch_pool));
+  SVN_ERR(svn_io_remove_file2(svn_dirent_join_many(scratch_pool, dir_abspath,
+                                                   ".svn", "lock", NULL),
+                              FALSE,
+                              scratch_pool));
 
   /* ### need to (eventually) delete the .svn subdir.  */
 
@@ -453,59 +491,21 @@ conflict_kind_to_word(svn_wc_conflict_kind_t conflict_kind)
 static const char *
 conflict_action_to_word(svn_wc_conflict_action_t action)
 {
-  switch (action)
-    {
-    case svn_wc_conflict_action_edit:
-      return "edit";
-    case svn_wc_conflict_action_add:
-      return "add";
-    case svn_wc_conflict_action_delete:
-      return "delete";
-    default:
-      SVN_ERR_MALFUNCTION_NO_RETURN();
-    }
+  return svn_token__to_word(svn_wc__conflict_action_map, action);
 }
 
 
 static const char *
 conflict_reason_to_word(svn_wc_conflict_reason_t reason)
 {
-  switch (reason)
-    {
-    case svn_wc_conflict_reason_edited:
-      return "edited";
-    case svn_wc_conflict_reason_obstructed:
-      return "obstructed";
-    case svn_wc_conflict_reason_deleted:
-      return "deleted";
-    case svn_wc_conflict_reason_missing:
-      return "missing";
-    case svn_wc_conflict_reason_unversioned:
-      return "unversioned";
-    case svn_wc_conflict_reason_added:
-      return "added";
-    default:
-      SVN_ERR_MALFUNCTION_NO_RETURN();
-    }
+  return svn_token__to_word(svn_wc__conflict_reason_map, reason);
 }
 
 
 static const char *
 wc_operation_to_word(svn_wc_operation_t operation)
 {
-  switch (operation)
-    {
-    case svn_wc_operation_none:
-      return "none";
-    case svn_wc_operation_update:
-      return "update";
-    case svn_wc_operation_switch:
-      return "switch";
-    case svn_wc_operation_merge:
-      return "merge";
-    default:
-      SVN_ERR_MALFUNCTION_NO_RETURN();
-    }
+  return svn_token__to_word(svn_wc__operation_map, operation);
 }
 
 
@@ -688,40 +688,67 @@ migrate_tree_conflicts(svn_sqlite__db_t *sdb,
 }
 
 
-struct bump13_baton {
+static svn_error_t *
+migrate_locks(const char *wcroot_abspath,
+              svn_sqlite__db_t *sdb,
+              apr_pool_t *scratch_pool)
+{
+  const char *lockfile_abspath =
+        svn_dirent_join_many(scratch_pool, wcroot_abspath, ".svn", "lock",
+                             NULL);
+  svn_node_kind_t kind;
+
+  SVN_ERR(svn_io_check_path(lockfile_abspath, &kind, scratch_pool));
+  if (kind != svn_node_none)
+    {
+      svn_sqlite__stmt_t *stmt;
+      SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_INSERT_WC_LOCK));
+      /* ### These values are magic, and will need to be updated when we
+         ### go to a centralized system. */
+      SVN_ERR(svn_sqlite__bindf(stmt, "is", 1, ""));
+      SVN_ERR(svn_sqlite__step_done(stmt));
+
+      SVN_ERR(svn_io_remove_file2(lockfile_abspath, FALSE, scratch_pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+struct bump15_baton {
   apr_pool_t *scratch_pool;
 };
 
 
 /* This implements svn_sqlite__transaction_callback_t */
 static svn_error_t *
-bump_database_to_13(void *baton,
+bump_database_to_15(void *baton,
                     svn_sqlite__db_t *sdb)
 {
-  struct bump13_baton *bb = baton;
+  struct bump15_baton *bb = baton;
 
   SVN_ERR(migrate_tree_conflicts(sdb, bb->scratch_pool));
 
   /* NOTE: this *is* transactional, so the version will not be bumped
      unless our overall transaction is committed.  */
-  SVN_ERR(svn_sqlite__set_schema_version(sdb, 13, bb->scratch_pool));
+  SVN_ERR(svn_sqlite__set_schema_version(sdb, 15, bb->scratch_pool));
 
   return SVN_NO_ERROR;
 }
 
 
 static svn_error_t *
-bump_to_13(const char *wcroot_abspath,
+bump_to_15(const char *wcroot_abspath,
            svn_sqlite__db_t *sdb,
            apr_pool_t *scratch_pool)
 {
-  struct bump13_baton bb = { scratch_pool };
+  struct bump15_baton bb = { scratch_pool };
 
   /* ### migrate disk bits here.  */
 
   /* Perform the database upgrade. The last thing this does is to bump
-     the recorded version to 13.  */
-  SVN_ERR(svn_sqlite__with_transaction(sdb, bump_database_to_13, &bb));
+     the recorded version to 15.  */
+  SVN_ERR(svn_sqlite__with_transaction(sdb, bump_database_to_15, &bb));
 
   return SVN_NO_ERROR;
 }
@@ -744,9 +771,24 @@ svn_wc__upgrade_sdb(int *result_format,
 
   if (start_format == 12)
     {
-      SVN_ERR(bump_to_13(wcroot_abspath, sdb, scratch_pool));
+      /* Nothing to do for the 12->13 bump.  */
       ++start_format;
     }
+
+  if (start_format == 13)
+    {
+      SVN_ERR(migrate_locks(wcroot_abspath, sdb, scratch_pool));
+      SVN_ERR(svn_sqlite__set_schema_version(sdb, 14, scratch_pool));
+      ++start_format;
+    }
+
+#if 0
+  if (start_format == 14)
+    {
+      SVN_ERR(bump_to_15(wcroot_abspath, sdb, scratch_pool));
+      ++start_format;
+    }
+#endif
 
   /* ### future bumps go here.  */
 
@@ -761,6 +803,8 @@ upgrade_working_copy(svn_wc__db_t *db,
                      const char *dir_abspath,
                      svn_cancel_func_t cancel_func,
                      void *cancel_baton,
+                     svn_wc_notify_func2_t notify_func,
+                     void *notify_baton,
                      apr_pool_t *scratch_pool)
 {
   int old_format;
@@ -782,6 +826,12 @@ upgrade_working_copy(svn_wc__db_t *db,
   if (old_format < SVN_WC__WC_NG_VERSION)
     SVN_ERR(upgrade_to_wcng(db, dir_abspath, old_format, iterpool));
 
+  if (notify_func)
+    notify_func(notify_baton,
+                svn_wc_create_notify(dir_abspath, svn_wc_notify_upgraded_path,
+                                     iterpool),
+                iterpool);
+
   /* Now recurse. */
   for (i = 0; i < subdirs->nelts; ++i)
     {
@@ -789,8 +839,10 @@ upgrade_working_copy(svn_wc__db_t *db,
 
       svn_pool_clear(iterpool);
 
-      SVN_ERR(upgrade_working_copy(db, child_abspath, cancel_func,
-                                   cancel_baton, iterpool));
+      SVN_ERR(upgrade_working_copy(db, child_abspath,
+                                   cancel_func, cancel_baton,
+                                   notify_func, notify_baton,
+                                   iterpool));
     }
 
   svn_pool_destroy(iterpool);
@@ -804,6 +856,8 @@ svn_wc_upgrade(svn_wc_context_t *wc_ctx,
                const char *local_abspath,
                svn_cancel_func_t cancel_func,
                void *cancel_baton,
+               svn_wc_notify_func2_t notify_func,
+               void *notify_baton,
                apr_pool_t *scratch_pool)
 {
   svn_wc__db_t *db;
@@ -811,10 +865,10 @@ svn_wc_upgrade(svn_wc_context_t *wc_ctx,
   svn_boolean_t is_wcroot;
 #endif
 
-  /* We need a DB that does not attempt an auto-upgrade. We'll handle
-     everything manually.  */
+  /* We need a DB that does not attempt an auto-upgrade, nor require
+     running a stale work queue. We'll handle everything manually.  */
   SVN_ERR(svn_wc__db_open(&db, svn_wc__db_openmode_readwrite,
-                          NULL /* ### config */, FALSE,
+                          NULL /* ### config */, FALSE, FALSE,
                           scratch_pool, scratch_pool));
 
   /* ### this expects a wc-ng working copy. sigh. fix up soonish...  */
@@ -828,8 +882,10 @@ svn_wc_upgrade(svn_wc_context_t *wc_ctx,
 #endif
 
   /* Upgrade this directory and/or its subdirectories.  */
-  SVN_ERR(upgrade_working_copy(db, local_abspath, cancel_func,
-                               cancel_baton, scratch_pool));
+  SVN_ERR(upgrade_working_copy(db, local_abspath,
+                               cancel_func, cancel_baton,
+                               notify_func, notify_baton,
+                               scratch_pool));
 
   SVN_ERR(svn_wc__db_close(db));
 
