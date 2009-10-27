@@ -4279,8 +4279,8 @@ calculate_merge_inheritance(apr_array_header_t *rangelist,
 }
 
 /* Calculate the new mergeinfo for the target tree based on the merge
-   info for TARGET_ABSPATH and MERGES (a mapping of WC paths to range
-   lists), and record it in the WC (at, and possibly below,
+   info for TARGET_ABSPATH and MERGES (a mapping of absolute WC paths to
+   rangelists), and record it in the WC (at, and possibly below,
    TARGET_ABSPATH). */
 static svn_error_t *
 update_wc_mergeinfo(const char *target_abspath,
@@ -4288,32 +4288,29 @@ update_wc_mergeinfo(const char *target_abspath,
                     apr_hash_t *merges,
                     svn_boolean_t is_rollback,
                     svn_client_ctx_t *ctx,
-                    apr_pool_t *pool)
+                    apr_pool_t *scratch_pool)
 {
-  apr_pool_t *subpool = svn_pool_create(pool);
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   const char *rel_path;
   svn_mergeinfo_t mergeinfo;
   apr_hash_index_t *hi;
 
   /* Combine the mergeinfo for the revision range just merged into
      the WC with its on-disk mergeinfo. */
-  for (hi = apr_hash_first(pool, merges); hi; hi = apr_hash_next(hi))
+  for (hi = apr_hash_first(scratch_pool, merges); hi; hi = apr_hash_next(hi))
     {
-      const char *path = svn_apr_hash_index_key(hi);
+      const char *local_abspath = svn_apr_hash_index_key(hi);
       apr_array_header_t *ranges = svn_apr_hash_index_val(hi);
-      const char *local_abspath;
       apr_array_header_t *rangelist;
       svn_error_t *err;
       const char *local_abspath_rel_to_target;
 
-      svn_pool_clear(subpool);
-
-      SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, subpool));
+      svn_pool_clear(iterpool);
 
       /* As some of the merges may've changed the WC's mergeinfo, get
          a fresh copy before using it to update the WC's mergeinfo. */
       err = svn_client__parse_mergeinfo(&mergeinfo, ctx->wc_ctx,
-                                        local_abspath, subpool, subpool);
+                                        local_abspath, iterpool, iterpool);
 
       /* If a directory PATH was skipped because it is missing or was
          obstructed by an unversioned item then there's nothing we can
@@ -4341,37 +4338,37 @@ update_wc_mergeinfo(const char *target_abspath,
           SVN_ERR(svn_client__get_wc_mergeinfo(&mergeinfo, &inherited,
                                                svn_mergeinfo_nearest_ancestor,
                                                local_abspath, NULL, NULL,
-                                               ctx, subpool, subpool));
+                                               ctx, iterpool, iterpool));
         }
 
       if (mergeinfo == NULL)
-        mergeinfo = apr_hash_make(subpool);
+        mergeinfo = apr_hash_make(iterpool);
 
       local_abspath_rel_to_target = svn_dirent_is_child(target_abspath,
                                                         local_abspath,
-                                                        subpool);
+                                                        iterpool);
       if (local_abspath_rel_to_target)
         rel_path = svn_dirent_join(repos_rel_path,
                                    local_abspath_rel_to_target,
-                                   subpool);
+                                   iterpool);
       else
           rel_path = repos_rel_path;
       rangelist = apr_hash_get(mergeinfo, rel_path, APR_HASH_KEY_STRING);
       if (rangelist == NULL)
-        rangelist = apr_array_make(subpool, 0, sizeof(svn_merge_range_t *));
+        rangelist = apr_array_make(iterpool, 0, sizeof(svn_merge_range_t *));
 
       if (is_rollback)
         {
-          ranges = svn_rangelist_dup(ranges, subpool);
-          SVN_ERR(svn_rangelist_reverse(ranges, subpool));
+          ranges = svn_rangelist_dup(ranges, iterpool);
+          SVN_ERR(svn_rangelist_reverse(ranges, iterpool));
           SVN_ERR(svn_rangelist_remove(&rangelist, ranges, rangelist,
                                        FALSE,
-                                       subpool));
+                                       iterpool));
         }
       else
         {
           SVN_ERR(svn_rangelist_merge(&rangelist, ranges,
-                                      subpool));
+                                      iterpool));
         }
       /* Update the mergeinfo by adjusting the path's rangelist. */
       apr_hash_set(mergeinfo, rel_path, APR_HASH_KEY_STRING, rangelist);
@@ -4379,10 +4376,10 @@ update_wc_mergeinfo(const char *target_abspath,
       if (is_rollback && apr_hash_count(mergeinfo) == 0)
         mergeinfo = NULL;
 
-      svn_mergeinfo__remove_empty_rangelists(mergeinfo, pool);
+      svn_mergeinfo__remove_empty_rangelists(mergeinfo, scratch_pool);
 
       err = svn_client__record_wc_mergeinfo(local_abspath, mergeinfo,
-                                            ctx, subpool);
+                                            ctx, iterpool);
 
       if (err && err->apr_err == SVN_ERR_ENTRY_NOT_FOUND)
         {
@@ -4402,7 +4399,7 @@ update_wc_mergeinfo(const char *target_abspath,
         SVN_ERR(err);
     }
 
-  svn_pool_destroy(subpool);
+  svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
 }
 
@@ -4467,7 +4464,7 @@ record_skips(const char *mergeinfo_path,
              ### inherit any mergeinfo from a parent, but if it does
              ### we need to account for that.  See issue #3440
              ### http://subversion.tigris.org/issues/show_bug.cgi?id=3440. */
-          apr_hash_set(merges, skipped_path,
+          apr_hash_set(merges, skipped_abspath,
                        APR_HASH_KEY_STRING,
                        apr_array_make(pool, 0, sizeof(svn_merge_range_t)));
 
