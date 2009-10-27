@@ -150,5 +150,15 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+ * ^/branches/1.6.x-future-proof
+   Make 1.6.7 (and subsequent Subversion releases) recognize Subversion 1.7+
+   working copies.
+   Justification:
+     Throwing a decent error is a Good Thing, especially in a world where we
+     are getting ready to drastically alter the way working copies are stored
+     and recognized.
+   Votes:
+     +1: hwright
+
 Approved changes:
 =================
