@@ -7087,17 +7087,12 @@ record_mergeinfo_for_added_subtrees(svn_merge_range_t *merged_range,
               svn_node_kind_t added_path_kind;
               svn_mergeinfo_t merge_mergeinfo, added_path_mergeinfo;
               apr_array_header_t *rangelist;
-              const char *rel_added_path,
-                *abs_added_path,
-                *added_path_mergeinfo_path;
-
-              SVN_ERR(svn_dirent_get_absolute(&abs_added_path,
-                                              added_path,
-                                              iterpool));
+              const char *rel_added_path;
+              const char *added_path_mergeinfo_path;
 
               SVN_ERR(svn_wc__node_get_kind(&added_path_kind,
                                             merge_b->ctx->wc_ctx,
-                                            abs_added_path, FALSE,
+                                            added_abspath, FALSE,
                                             iterpool));
 
               /* Calculate the mergeinfo resulting from this merge. */
@@ -7120,7 +7115,7 @@ record_mergeinfo_for_added_subtrees(svn_merge_range_t *merged_range,
                  or something is *really* wrong. */
 
               rel_added_path = svn_dirent_is_child(target_merge_path->abspath,
-                                                   abs_added_path,
+                                                   added_abspath,
                                                    iterpool);
               SVN_ERR_ASSERT(rel_added_path);
               added_path_mergeinfo_path = svn_dirent_join(mergeinfo_path,
@@ -7133,7 +7128,7 @@ record_mergeinfo_for_added_subtrees(svn_merge_range_t *merged_range,
               /* Get any explicit mergeinfo the added path has. */
               SVN_ERR(svn_client__get_wc_mergeinfo(
                 &added_path_mergeinfo, &inherited,
-                svn_mergeinfo_explicit, abs_added_path,
+                svn_mergeinfo_explicit, added_abspath,
                 NULL, NULL, merge_b->ctx, iterpool, iterpool));
 
               /* Combine the explict mergeinfo on the added path (if any)
