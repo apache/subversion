@@ -224,9 +224,9 @@ static svn_wc_entry_callbacks2_t add_tokens_callbacks = {
  * Note: Tree-conflicts info can only be found in "THIS_DIR" entries,
  * where each THIS_DIR will only hold tree-conflicts on its children. */
 static svn_error_t *
-bail_on_tree_conflicted_children(const char *path,
+bail_on_tree_conflicted_children(svn_wc_context_t *wc_ctx,
+                                 const char *local_abspath,
                                  const svn_wc_entry_t *entry,
-                                 svn_wc_adm_access_t *adm_access,
                                  svn_depth_t depth,
                                  apr_hash_t *changelists,
                                  apr_pool_t *pool)
@@ -241,7 +241,7 @@ bail_on_tree_conflicted_children(const char *path,
     return SVN_NO_ERROR;
 
   SVN_ERR(svn_wc__read_tree_conflicts(&conflicts, entry->tree_conflict_data,
-                                      path, pool));
+                                      local_abspath, pool));
 
   for (hi = apr_hash_first(pool, conflicts); hi; hi = apr_hash_next(hi))
     {
@@ -255,38 +255,8 @@ bail_on_tree_conflicted_children(const char *path,
       /* So we've encountered a conflict that is included in DEPTH.
          Bail out. But if there are CHANGELISTS, avoid bailing out
          on an item that doesn't match the CHANGELISTS. */
-      if (changelists != NULL)
-        {
-          svn_wc_adm_access_t *child_adm_access = NULL;
-          const svn_wc_entry_t *child_entry = NULL;
-
-          /* To match with CHANGELISTS, we need an entry. This is all
-             about seeing if there is an entry and getting it if there
-             is. If there is no entry, the CHANGELISTS can't ever match. */
-          /* TODO: Currently, there is no way to set a changelist name on
-           * a tree-conflict victim that has no entry (e.g. locally
-           * deleted). */
-
-          /* If the child is a dir, we need its adm_access.
-             If the child is a file, the current adm_access will do. */
-          if (conflict->node_kind == svn_node_dir)
-            SVN_ERR(svn_wc_adm_probe_retrieve(&child_adm_access, adm_access,
-                                              conflict->path, pool));
-          else
-            child_adm_access = adm_access;
-
-          if (child_adm_access == NULL)
-            continue;
-
-          SVN_ERR(svn_wc_entry(&child_entry, conflict->path,
-                               child_adm_access, TRUE, pool));
-
-          /* If changelists are used but there is no entry, no changelist
-           * can possibly match. */
-          if (child_entry == NULL ||
-              !SVN_WC__CL_MATCH(changelists, child_entry))
-            continue;
-        }
+      if (!svn_wc__changelist_match(wc_ctx, local_abspath, changelists, pool))
+        continue;
 
       /* At this point, a conflict was found, and either there were no
          changelists, or the changelists matched. Bail out already! */
@@ -479,7 +449,8 @@ harvest_committables(apr_hash_t *committables,
 
   /* If ENTRY is in our changelist, then examine it for conflicts. We
      need to bail out if any conflicts exist.  */
-  if (SVN_WC__CL_MATCH(changelists, entry))
+  if (svn_wc__changelist_match(ctx->wc_ctx, local_abspath, changelists,
+                               scratch_pool))
     {
       svn_boolean_t tc, pc, treec;
 
@@ -499,8 +470,9 @@ harvest_committables(apr_hash_t *committables,
   if (entry->keep_local)
     SVN_ERR_ASSERT(entry->schedule == svn_wc_schedule_delete);
   else
-    SVN_ERR(bail_on_tree_conflicted_children(path, entry, adm_access, depth,
-                                             changelists, scratch_pool));
+    SVN_ERR(bail_on_tree_conflicted_children(ctx->wc_ctx, local_abspath,
+                                             entry, depth, changelists,
+                                             scratch_pool));
 
   /* If we have our own URL, and we're NOT in COPY_MODE, it wins over
      the telescoping one(s).  In COPY_MODE, URL will always be the
@@ -668,7 +640,8 @@ harvest_committables(apr_hash_t *committables,
   /* Now, if this is something to commit, add it to our list. */
   if (state_flags)
     {
-      if (SVN_WC__CL_MATCH(changelists, entry))
+      if (svn_wc__changelist_match(ctx->wc_ctx, local_abspath, changelists,
+                                   scratch_pool))
         {
           /* Finally, add the committable item. */
           add_committable(committables, path, entry->kind, url,
@@ -705,6 +678,7 @@ harvest_committables(apr_hash_t *committables,
           const char *used_url = NULL;
           const char *this_cf_url = cf_url ? cf_url : copyfrom_url;
           svn_wc_adm_access_t *dir_access = adm_access;
+          const char *entry_abspath;
 
           svn_pool_clear(iterpool);
 
@@ -775,6 +749,8 @@ harvest_committables(apr_hash_t *committables,
             continue;
 
           full_path = svn_dirent_join(path, name, iterpool);
+          SVN_ERR(svn_dirent_get_absolute(&entry_abspath, full_path,
+                                          iterpool));
           if (this_cf_url)
             this_cf_url = svn_path_url_add_component2(this_cf_url, name, iterpool);
 
@@ -819,7 +795,10 @@ harvest_committables(apr_hash_t *committables,
                               && (this_entry->schedule
                                   == svn_wc_schedule_delete))
                             {
-                              if (SVN_WC__CL_MATCH(changelists, entry))
+                              if (svn_wc__changelist_match(ctx->wc_ctx,
+                                                           entry_abspath,
+                                                           changelists,
+                                                           iterpool))
                                 {
                                   add_committable(
                                     committables, full_path,
@@ -1008,7 +987,7 @@ svn_client__harvest_committables(apr_hash_t **committables,
        * conflicts error instead of a "not under version control". */
       if (err && (err->apr_err == SVN_ERR_ENTRY_NOT_FOUND))
         {
-          svn_wc_conflict_description_t *conflict = NULL;
+          svn_wc_conflict_description2_t *conflict;
           svn_wc__get_tree_conflict(&conflict, ctx->wc_ctx, target_abspath,
                                     pool, subpool);
           if (conflict != NULL)
@@ -1017,7 +996,7 @@ svn_client__harvest_committables(apr_hash_t **committables,
               return svn_error_createf(
                        SVN_ERR_WC_FOUND_CONFLICT, NULL,
                        _("Aborting commit: '%s' remains in conflict"),
-                       svn_dirent_local_style(conflict->path, pool));
+                       svn_dirent_local_style(conflict->local_abspath, pool));
             }
         }
       SVN_ERR(err);

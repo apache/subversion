@@ -29,6 +29,8 @@
 #include "svn_types.h"
 #include "svn_error.h"
 
+#include "private/svn_token.h"  /* for svn_token_map_t  */
+
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
@@ -42,19 +44,6 @@ typedef enum svn_sqlite__mode_e {
     svn_sqlite__mode_readwrite,  /* open the database read-write */
     svn_sqlite__mode_rwcreate    /* open/create the database read-write */
 } svn_sqlite__mode_t;
-
-/* A callback which is called between format upgrades when doing automagic
-   sql schema upgrades.  CURRENT_SCHEMA refers to the schema version to which
-   the schema is being upgraded, and for which the upgrade sql has already
-   been run.
-
-   This function may be called multiple times, in the case where a format needs
-   to be upgraded past multiple versions.
-
-   SCRATCH_POOL will be cleared between invocations. */
-typedef svn_error_t *(*svn_sqlite__upgrade_func_t)
-  (void *baton, svn_sqlite__db_t *db, int current_schema,
-   apr_pool_t *scratch_pool);
 
 
 /* Steps the given statement; if it returns SQLITE_DONE, resets the statement.
@@ -113,18 +102,12 @@ svn_sqlite__set_schema_version(svn_sqlite__db_t *db,
    STATEMENTS itself may be NULL, in which case it has no impact.
    See svn_sqlite__get_statement() for how these strings are used.
 
-   UPGRADE_FUNC and UPGRADE_BATON provide a means for the caller to do
-   data conversion during a schema upgrade.  UPGRADE_FUNC will be called with
-   UPGRADE_BATON *after* each step in upgrading the schema given in
-   UPGRADE_SQL.  See svn_sqlite__upgrade_func_t for more info.
-
    The statements will be finalized and the SQLite database will be closed
    when RESULT_POOL is cleaned up. */
 svn_error_t *
 svn_sqlite__open(svn_sqlite__db_t **db, const char *repos_path,
                  svn_sqlite__mode_t mode, const char * const statements[],
                  int latest_schema, const char * const *upgrade_sql,
-                 svn_sqlite__upgrade_func_t upgrade_func, void *upgrade_baton,
                  apr_pool_t *result_pool, apr_pool_t *scratch_pool);
 
 /* Explicity close the connection in DB. */
@@ -151,17 +134,19 @@ svn_sqlite__prepare(svn_sqlite__stmt_t **stmt, svn_sqlite__db_t *db,
 
 */
 
-/* Bind values to arguments in STMT, according to FMT.  FMT may contain:
+/* Bind values to SQL parameters in STMT, according to FMT.  FMT may contain:
 
    Spec  Argument type       Item type
    ----  -----------------   ---------
    i     apr_int64_t         Number
    s     const char **       String
-   b     const void *        Blob (must be followed by an additional argument
-                                   of type apr_size_t with the number of bytes
-                                   in the object)
+   b     const void *        Blob data
+         apr_size_t          Blob length
+   t     const svn_token_t * Token mapping table
+         int value           Token value
 
-  Each character in FMT maps to one argument, in the order they appear.
+  Each character in FMT maps to one SQL parameter, and one or two function
+  parameters, in the order they appear.
 */
 svn_error_t *
 svn_sqlite__bindf(svn_sqlite__stmt_t *stmt, const char *fmt, ...);
@@ -187,6 +172,13 @@ svn_sqlite__bind_blob(svn_sqlite__stmt_t *stmt,
                       int slot,
                       const void *val,
                       apr_size_t len);
+
+/* Look up VALUE in MAP, and bind the resulting token word at SLOT.  */
+svn_error_t *
+svn_sqlite__bind_token(svn_sqlite__stmt_t *stmt,
+                       int slot,
+                       const svn_token_map_t *map,
+                       int value);
 
 /* Bind a set of properties to the given slot. If PROPS is NULL, then no
    binding will occur. PROPS will be stored as a serialized skel. */
@@ -244,6 +236,13 @@ svn_sqlite__column_int(svn_sqlite__stmt_t *stmt, int column);
 apr_int64_t
 svn_sqlite__column_int64(svn_sqlite__stmt_t *stmt, int column);
 
+/* Fetch the word at COLUMN, look it up in the MAP, and return its value.
+   MALFUNCTION is thrown if the column is null or contains an unknown word.  */
+int
+svn_sqlite__column_token(svn_sqlite__stmt_t *stmt,
+                         int column,
+                         const svn_token_map_t *map);
+
 /* Return the column as a hash of const char * => const svn_string_t *.
    If the column is null, then NULL will be stored into *PROPS. The
    results will be allocated in RESULT_POOL, and any temporary allocations
@@ -281,21 +280,9 @@ svn_error_t *
 svn_sqlite__reset(svn_sqlite__stmt_t *stmt);
 
 
-/* Wrapper around sqlite transaction handling. */
-svn_error_t *
-svn_sqlite__transaction_begin(svn_sqlite__db_t *db);
-
-/* Wrapper around sqlite transaction handling. */
-svn_error_t *
-svn_sqlite__transaction_commit(svn_sqlite__db_t *db);
-
-/* Wrapper around sqlite transaction handling. */
-svn_error_t *
-svn_sqlite__transaction_rollback(svn_sqlite__db_t *db);
-
 /* Callback function to for use with svn_sqlite__with_transaction(). */
-typedef svn_error_t *(*svn_sqlite__transaction_callback_t)
-  (void *baton, svn_sqlite__db_t *db);
+typedef svn_error_t *(*svn_sqlite__transaction_callback_t)(
+  void *baton, svn_sqlite__db_t *db);
 
 /* Helper function to handle SQLite transactions.  All the work done inside
    CB_FUNC will be wrapped in an SQLite transaction, which will be committed

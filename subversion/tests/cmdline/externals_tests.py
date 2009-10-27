@@ -651,12 +651,20 @@ def disallow_dot_or_dotdot_directory_reference(sbox):
 
   external_url_for = externals_test_setup(sbox)
   wc_dir         = sbox.wc_dir
+  repo_url       = sbox.repo_url
+
+  # Checkout a working copy
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'checkout',
+                                     repo_url, wc_dir)
 
   # Try to set illegal externals in the original WC.
   def set_externals_for_path_expect_error(path, val):
     (fd, tmp_f) = tempfile.mkstemp()
     svntest.main.file_append(tmp_f, val)
-    svntest.actions.run_and_verify_svn(None, None, svntest.verify.AnyOutput,
+    expected_err = ".*Invalid svn:externals property on '.*': target " + \
+                   "'.*' is an absolute path or involves '..'.*"
+    svntest.actions.run_and_verify_svn(None, None, expected_err,
                                        'pset', '-F', tmp_f,
                                        'svn:externals', path)
     os.close(fd)
@@ -666,25 +674,29 @@ def disallow_dot_or_dotdot_directory_reference(sbox):
   G_path = os.path.join(wc_dir, 'A', 'D', 'G')
   H_path = os.path.join(wc_dir, 'A', 'D', 'H')
   C_path = os.path.join(wc_dir, 'A', 'C')
-  F_path = os.path.join(wc_dir, 'A', 'C', 'F')
+  F_path = os.path.join(wc_dir, 'A', 'B', 'F')
 
   external_urls = list(external_url_for.values())
 
-  externals_value_1 = "../foo"         + " " + external_urls.pop() + "\n"
+  # The external_urls contains some examples of relative urls that are
+  # ambiguous with these local test paths, so we have to use the 
+  # <url> <path> ordering here to check the local path validator.
+  
+  externals_value_1 = external_urls.pop() + " ../foo\n"
   if not external_urls: external_urls = list(external_url_for.values())
-  externals_value_2 = "foo/bar/../baz" + " " + external_urls.pop() + "\n"
+  externals_value_2 = external_urls.pop() + " foo/bar/../baz\n"
   if not external_urls: external_urls = list(external_url_for.values())
-  externals_value_3 = "foo/.."         + " " + external_urls.pop() + "\n"
+  externals_value_3 = external_urls.pop() + " foo/..\n"
   if not external_urls: external_urls = list(external_url_for.values())
-  externals_value_4 = "."              + " " + external_urls.pop() + "\n"
+  externals_value_4 = external_urls.pop() + " .\n"
   if not external_urls: external_urls = list(external_url_for.values())
-  externals_value_5 = "./"             + " " + external_urls.pop() + "\n"
+  externals_value_5 = external_urls.pop() + " ./\n"
   if not external_urls: external_urls = list(external_url_for.values())
-  externals_value_6 = ".."             + " " + external_urls.pop() + "\n"
+  externals_value_6 = external_urls.pop() + " ..\n"
   if not external_urls: external_urls = list(external_url_for.values())
-  externals_value_7 = "././/.///."     + " " + external_urls.pop() + "\n"
+  externals_value_7 = external_urls.pop() + " ././/.///. \n"
   if not external_urls: external_urls = list(external_url_for.values())
-  externals_value_8 = "/foo"           + " " + external_urls.pop() + "\n"
+  externals_value_8 = external_urls.pop() + " /foo \n"
   if not external_urls: external_urls = list(external_url_for.values())
 
   set_externals_for_path_expect_error(B_path, externals_value_1)
@@ -750,7 +762,7 @@ def export_with_externals(sbox):
 def export_wc_with_externals(sbox):
   "test exports from working copies with externals"
 
-  externals_test_setup(sbox)
+  paths_dict = externals_test_setup(sbox)
 
   wc_dir         = sbox.wc_dir
   repo_url       = sbox.repo_url
@@ -764,6 +776,11 @@ def export_wc_with_externals(sbox):
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'export', wc_dir, export_target)
 
+  ### We should be able to check exactly the paths that externals_test_setup()
+  ### set up; however, --ignore-externals fails to ignore 'A/B/gamma' so this
+  ### doesn't work:
+  # paths = [ os.path.join(export_target, path) for path in paths_dict.keys() ]
+  ### Therefore currently we check only a particular selection of paths.
   paths = [
     os.path.join(export_target, "A", "C", "exdir_G"),
     os.path.join(export_target, "A", "C", "exdir_G", "pi"),

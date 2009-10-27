@@ -437,7 +437,7 @@ static svn_error_t *
 test_dirent_basename(apr_pool_t *pool)
 {
   int i;
-  char *result;
+  const char *result;
 
   struct {
     const char *path;
@@ -491,7 +491,7 @@ static svn_error_t *
 test_uri_basename(apr_pool_t *pool)
 {
   int i;
-  char *result;
+  const char *result;
 
   struct {
     const char *path;
@@ -1189,6 +1189,99 @@ test_uri_is_ancestor(apr_pool_t *pool)
 }
 
 static svn_error_t *
+test_dirent_skip_ancestor(apr_pool_t *pool)
+{
+  apr_size_t i;
+
+  /* Dirents to test and their expected results. */
+  struct {
+    const char *path1;
+    const char *path2;
+    const char *result;
+  } tests[] = {
+    { "/foo",            "/foo/bar",        "bar"},
+    { "/foo/bar",        "/foot/bar",       "/foot/bar"},
+    { "/foo",            "/foo",            ""},
+    { "/foo",            "/foot",           "/foot"},
+    { "/foot",           "/foo",            "/foo"},
+    { "",                "foo",             "foo"},
+    { "",                "/foo",            "/foo"},
+    { "/",               "/foo",            "foo"},
+    { "/foo/bar/bla",    "/foo/bar",        "/foo/bar"},
+    { "/foo/bar",        "/foo/bar/bla",    "bla"},
+    { "foo/bar",         "foo",             "foo"},
+    { "/foo/bar",        "foo",             "foo"},
+    { "/",               "bar/bla",         "bar/bla"},
+#ifdef WIN32
+    { "A:/foo",          "A:/foo/bar",      "bar"},
+    { "A:/foo",          "A:/foot",         "A:/foot"},
+    { "A:/",             "A:/foo",          "foo"},
+    { "A:",              "A:foo",           "foo"},
+    { "A:",              "A:/",             "A:/"},
+    { "//srv/share",     "//vrs/share",     "//vrs/share"},
+    { "//srv",           "//srv/share",     "//srv/share"},
+    { "//srv/share",     "//srv/share/foo", "foo"},
+    { "/",               "//srv/share",     "//srv/share"},
+#endif
+  };
+
+  for (i = 0; i < COUNT_OF(tests); i++)
+    {
+      const char* retval;
+
+      retval = svn_dirent_skip_ancestor(tests[i].path1, tests[i].path2);
+      if (strcmp(tests[i].result, retval))
+        return svn_error_createf(
+             SVN_ERR_TEST_FAILED, NULL,
+             "test_dirent_skip_ancestor (%s, %s) returned %s instead of %s",
+             tests[i].path1, tests[i].path2, retval, tests[i].result);
+    }
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_uri_skip_ancestor(apr_pool_t *pool)
+{
+  apr_size_t i;
+
+  /* Dirents to test and their expected results. */
+  struct {
+    const char *path1;
+    const char *path2;
+    const char *result;
+  } tests[] = {
+    { "/foo",            "/foo/bar",        "bar"},
+    { "/foo/bar",        "/foot/bar",       "/foot/bar"},
+    { "/foo",            "/foo",            ""},
+    { "/foo",            "/foot",           "/foot"},
+    { "/foot",           "/foo",            "/foo"},
+    { "",                "foo",             "foo"},
+    { "",                "/foo",            "/foo"},
+    { "/",               "/foo",            "foo"},
+    { "/foo/bar/bla",    "/foo/bar",        "/foo/bar"},
+    { "/foo/bar",        "/foo/bar/bla",    "bla"},
+    { "foo/bar",         "foo",             "foo"},
+    { "/foo/bar",        "foo",             "foo"},
+    { "/",               "bar/bla",         "bar/bla"},
+    { "http://server",   "http://server/q", "q" },
+    { "svn://server",   "http://server/q",  "http://server/q" },
+  };
+
+  for (i = 0; i < COUNT_OF(tests); i++)
+    {
+      const char* retval;
+
+      retval = svn_uri_skip_ancestor(tests[i].path1, tests[i].path2);
+      if (strcmp(tests[i].result, retval))
+        return svn_error_createf(
+             SVN_ERR_TEST_FAILED, NULL,
+             "svn_uri_skip_ancestor (%s, %s) returned %s instead of %s",
+             tests[i].path1, tests[i].path2, retval, tests[i].result);
+    }
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
 test_dirent_get_longest_ancestor(apr_pool_t *pool)
 {
   apr_size_t i;
@@ -1456,7 +1549,7 @@ test_uri_is_child(apr_pool_t *pool)
 {
   int i, j;
 
-#define NUM_TEST_PATHS 16
+#define NUM_TEST_PATHS 20
 
   static const char * const paths[] = {
     "/foo/bar",
@@ -1470,9 +1563,13 @@ test_uri_is_child(apr_pool_t *pool)
     ".foo",
     "/",
     "foo2",
+    "http://foo/bar",
+    "http://foo/baz",
+    "H:",
+    "http://foo",
+    "http://f",
     "H:/foo/bar",
     "H:/foo/baz",
-    "H:",
     "H:foo",
     "H:foo/baz",
     };
@@ -1480,40 +1577,46 @@ test_uri_is_child(apr_pool_t *pool)
   static const char * const
     remainders[COUNT_OF(paths)][COUNT_OF(paths)] = {
     { 0, 0, 0, "baz", 0, "baz/bing/boom", 0, 0, 0, 0, 0,
-      0, 0, 0, 0, 0 },
+      0, 0, 0, 0, 0, 0, 0, 0, 0 },
     { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-      0, 0, 0, 0, 0 },
+      0, 0, 0, 0, 0, 0, 0, 0, 0 },
     { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-      0, 0, 0, 0, 0 },
+      0, 0, 0, 0, 0, 0, 0, 0, 0 },
     { 0, 0, 0, 0, 0, "bing/boom", 0, 0, 0, 0, 0,
-      0, 0, 0, 0, 0 },
+      0, 0, 0, 0, 0, 0, 0, 0, 0 },
     { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-      0, 0, 0, 0, 0 },
+      0, 0, 0, 0, 0, 0, 0, 0, 0 },
     { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-      0, 0, 0, 0, 0 },
+      0, 0, 0, 0, 0, 0, 0, 0, 0 },
     { 0, 0, 0, 0, 0, 0, 0, "foo", ".foo", 0, "foo2",
-      "H:/foo/bar", "H:/foo/baz", "H:", "H:foo", "H:foo/baz" },
+      0, 0, "H:", 0, 0, "H:/foo/bar", "H:/foo/baz", "H:foo", "H:foo/baz" },
     { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-      0, 0, 0, 0, 0 },
+      0, 0, 0, 0, 0, 0, 0, 0, 0 },
     { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-      0, 0, 0, 0, 0 },
+      0, 0, 0, 0, 0, 0, 0, 0, 0 },
     { "foo/bar", "foo/bars", "foo/baz", "foo/bar/baz", "flu/blar/blaz",
       "foo/bar/baz/bing/boom", 0, 0, 0, 0, 0,
-      0, 0, 0, 0, 0 },
+      0, 0, 0, 0, 0, 0, 0, 0, 0 },
     { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-      0, 0, 0, 0, 0 },
-    /* H:/ paths */
+      0, 0, 0, 0, 0, 0, 0, 0, 0 },
     { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-      0, 0, 0, 0, 0 },
+      0, 0, 0, 0, 0, 0, 0, 0, 0 },
     { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-      0, 0, 0, 0, 0 },
-    /* H: paths */
+      0, 0, 0, 0, 0, 0, 0, 0, 0 },
     { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-      "foo/bar", "foo/baz", 0, 0, 0 },
+      0, 0, 0, 0, 0, "foo/bar", "foo/baz", 0, 0 },
     { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-      0, 0, 0, 0, "baz" },
+      "bar", "baz", 0, 0, 0, 0, 0, 0, 0 },
     { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-      0, 0, 0, 0, 0 },
+      0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, "baz" },
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0 }
   };
 
   for (i = 0; i < COUNT_OF(paths); i++)
@@ -1529,8 +1632,8 @@ test_uri_is_child(apr_pool_t *pool)
               || (remainder && strcmp(remainder, remainders[i][j])))
             return svn_error_createf
               (SVN_ERR_TEST_FAILED, NULL,
-               "svn_uri_is_child (%s, %s) returned '%s' instead of '%s'",
-               paths[i], paths[j],
+               "svn_uri_is_child (%s, %s) [%d,%d] returned '%s' instead of '%s'",
+               paths[i], paths[j], i, j,
                remainder ? remainder : "(null)",
                remainders[i][j] ? remainders[i][j] : "(null)" );
         }
@@ -1633,13 +1736,18 @@ test_dirent_condense_targets(apr_pool_t *pool)
     const char *common;
     const char *results[8]; /* must be same size as paths */
   } tests[] = {
+    { { "/dir", "/dir/file", NULL },         NULL,     { "", "file" } },
+    { { "/dir1", "/dir2", NULL },            NULL,     { "dir1", "dir2" } },
+    { { "dir1", "dir2", NULL },              NULL,     { "dir1", "dir2" } },
 #if defined(WIN32) || defined(__CYGWIN__)
     { {"C:/", "C:/zeta", NULL},              "C:/",    {"", "zeta"} },
     { {"C:/dir", "C:/dir/zeta", NULL},       "C:/dir", {"", "zeta"} },
     { {"C:/dir/omega", "C:/dir/zeta", NULL}, "C:/dir", {"omega", "zeta" } },
+    { {"C:/dir", "D:/dir", NULL},            "",       {"C:/dir", "D:/dir"} },
+    { {"C:A", "C:dir/b", NULL},              NULL,     {"A", "dir/b"} },
 #else
-    { { "/dir", "/dir/file", NULL }, "/dir", { "", "file" } },
-    { { "/dir1", "/dir2", NULL },    "/",     { "dir1", "dir2" } },
+    { { "/dir", "/dir/file", NULL },        "/dir",    { "", "file" } },
+    { { "/dir1", "/dir2", NULL },           "/",       { "dir1", "dir2" } },
 #endif
   };
 
@@ -1661,9 +1769,9 @@ test_dirent_condense_targets(apr_pool_t *pool)
       SVN_ERR(svn_dirent_condense_targets(&common, &condensed, hdr, 
                                           FALSE, pool, pool));
 
-      if (strcmp(common, tests[i].common))
+      if (tests[i].common != NULL && strcmp(common, tests[i].common))
         return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
-                                 "svn_dirent_condense_targets returned common"
+                                 "svn_dirent_condense_targets returned common "
                                  "\"%s\". expected \"%s\"",
                                  common, tests[i].common);
 
@@ -1676,6 +1784,71 @@ test_dirent_condense_targets(apr_pool_t *pool)
                      tests[i].results[j]))
             return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                            "svn_dirent_condense_targets returned first"
+                           "\"%s\". expected \"%s\"",
+                           APR_ARRAY_IDX(condensed, j, const char*),
+                           tests[i].results[j]);
+        }
+    }
+
+  
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_uri_condense_targets(apr_pool_t *pool)
+{
+  int i;
+  struct {
+    const char *paths[8];
+    const char *common;
+    const char *results[8]; /* must be same size as paths */
+  } tests[] = {
+    { { "/dir", "/dir/file", NULL },         "/dir",     { "", "file" } },
+    { { "dir", "dir/file", NULL },           "dir",      { "", "file" } },
+    { { "/dir1", "/dir2", NULL },            "/",        { "dir1", "dir2" } },
+    { { "dir1", "dir2", NULL },              "",         { "dir1", "dir2" } },
+    { { "/dir", "/dir/file", NULL },         "/dir",     { "", "file" } },
+    { { "/dir1", "/dir2", NULL },            "/",        { "dir1", "dir2" } },
+    { { "/dir1", "dir2", NULL },             "",         { "/dir1", "dir2" } },
+    { { "sc://s/A", "sc://s/B", "sc://s" },  "sc://s",   { "A", "B", "" } },
+    { { "sc://S/A", "sc://S/B", "sc://S" },  "sc://s",   { "A", "B", "" } },
+    { { "sc://A/A", "sc://B/B", "sc://s" },  "",         { "sc://a/A", "sc://b/B", "sc://s"} },
+    { { "sc://A/A", "sc://A/a/B", "sc://a/Q" }, "sc://a",{ "A", "a/B", "Q"} },
+  };
+
+  for (i = 0; i < COUNT_OF(tests); i++)
+    {
+      int j;
+      const char* common;
+      apr_array_header_t *hdr = apr_array_make(pool, 8, sizeof(const char*));
+      apr_array_header_t *condensed;
+
+      for (j = 0; j < COUNT_OF(tests[i].paths); j++)
+        {
+          if (tests[i].paths[j] != NULL)
+            APR_ARRAY_PUSH(hdr, const char*) = tests[i].paths[j];
+          else
+            break;
+        }
+
+      SVN_ERR(svn_uri_condense_targets(&common, &condensed, hdr, 
+                                       FALSE, pool, pool));
+
+      if (tests[i].common != NULL && strcmp(common, tests[i].common))
+        return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                                 "svn_uri_condense_targets returned common "
+                                 "\"%s\". expected \"%s\"",
+                                 common, tests[i].common);
+
+      for (j = 0; j < COUNT_OF(tests[i].paths); j++)
+        {
+          if (tests[i].paths[j] == NULL || tests[i].results[j] == NULL)
+            break;
+
+          if (strcmp(APR_ARRAY_IDX(condensed, j, const char*), 
+                     tests[i].results[j]))
+            return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                           "svn_uri_condense_targets returned first"
                            "\"%s\". expected \"%s\"",
                            APR_ARRAY_IDX(condensed, j, const char*),
                            tests[i].results[j]);
@@ -1907,10 +2080,16 @@ struct svn_test_descriptor_t test_funcs[] =
                    "test svn_dirent_is_ancestor"),
     SVN_TEST_PASS2(test_uri_is_ancestor,
                    "test svn_uri_is_ancestor"),
+    SVN_TEST_PASS2(test_dirent_skip_ancestor,
+                   "test test_dirent_skip_ancestor"),
+    SVN_TEST_PASS2(test_uri_skip_ancestor,
+                   "test test_uri_skip_ancestor"),
     SVN_TEST_PASS2(test_dirent_get_absolute,
                    "test svn_dirent_get_absolute"),
     SVN_TEST_PASS2(test_dirent_condense_targets,
                    "test svn_dirent_condense_targets"),
+    SVN_TEST_PASS2(test_uri_condense_targets,
+                   "test svn_uri_condense_targets"),
     SVN_TEST_PASS2(test_dirent_local_style,
                    "test svn_dirent_local_style"),
     SVN_TEST_PASS2(test_uri_local_style,

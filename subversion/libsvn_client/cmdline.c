@@ -123,7 +123,7 @@ check_root_url_of_target(const char **root_url,
        * argument.
        */
       if ((err->apr_err == SVN_ERR_ENTRY_NOT_FOUND)
-          || (err->apr_err == SVN_ERR_WC_NOT_DIRECTORY))
+          || (err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY))
         {
           svn_error_clear(err);
           return SVN_NO_ERROR;
@@ -242,7 +242,7 @@ svn_client_args_to_target_array(apr_array_header_t **targets_p,
             }
           else  /* not a url, so treat as a path */
             {
-              char *base_name;
+              const char *base_name;
 
               SVN_ERR(svn_opt__arg_canonicalize_path(&true_target,
                                                      true_target, pool));

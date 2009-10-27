@@ -38,7 +38,6 @@
 #include "svn_delta.h"
 #include "svn_version.h"
 #include "svn_dirent_uri.h"
-#include "svn_path.h"
 #include "svn_private_config.h"
 
 #include "ra_serf.h"
@@ -326,9 +325,9 @@ capabilities_headers_iterator_callback(void *baton,
           orc->session->repos_root = orc->session->repos_url;
           orc->session->repos_root.path = apr_pstrdup(orc->session->pool, val);
           orc->session->repos_root_str =
-            svn_path_canonicalize(apr_uri_unparse(orc->session->pool,
-                                                  &orc->session->repos_root,
-                                                  0),
+            svn_uri_canonicalize(apr_uri_unparse(orc->session->pool,
+                                                 &orc->session->repos_root,
+                                                 0),
                                   orc->session->pool);
         }
       else if (svn_cstring_casecmp(key, SVN_DAV_ME_RESOURCE_HEADER) == 0)

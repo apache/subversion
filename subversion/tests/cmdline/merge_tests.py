@@ -2773,12 +2773,12 @@ def merge_dir_and_file_replace(sbox):
     'foo/bar/new file 3' : Item("Initial text in new file 3.\n"),
     })
   expected_status = wc.State(C_path, {
-    ''    : Item(status=' M', wc_rev=3),
-    'foo' : Item(status='R ', wc_rev='-', copied='+'),
-    'foo/new file 2'     : Item(status='R ', wc_rev='-', copied='+'),
-    'foo/bar'            : Item(status='A ', wc_rev='-', copied='+'),
-    'foo/bar/new file 3' : Item(status='A ', wc_rev='-', copied='+'),
-    'foo/new file'       : Item(status='D ', wc_rev='-', copied='+'),
+    ''                   : Item(status=' M', wc_rev=3),
+    'foo'                : Item(status='R ', wc_rev='-', copied='+'),
+    'foo/new file 2'     : Item(status='  ', wc_rev='-', copied='+'),
+    'foo/bar'            : Item(status='  ', wc_rev='-', copied='+'),
+    'foo/bar/new file 3' : Item(status='  ', wc_rev='-', copied='+'),
+    'foo/new file'       : Item(status='D ', wc_rev=3),
     })
   expected_skip = wc.State(C_path, { })
   svntest.actions.run_and_verify_merge(C_path, '2', '5', F_url,
@@ -2791,26 +2791,12 @@ def merge_dir_and_file_replace(sbox):
                                        0) # don't do a dry-run
                                           # the output differs
 
-  # This test is failing, after this merge, in 'svn status' with
-  # the following error:
-  # subversion/svn/status-cmd.c:256: (apr_err=160013)
-  # subversion/svn/util.c:958: (apr_err=160013)
-  # subversion/libsvn_client/status.c:382: (apr_err=160013)
-  # subversion/libsvn_repos/reporter.c:1263: (apr_err=160013)
-  # subversion/libsvn_repos/reporter.c:1194: (apr_err=160013)
-  # subversion/libsvn_repos/reporter.c:1029: (apr_err=160013)
-  # subversion/libsvn_repos/reporter.c:851: (apr_err=160013)
-  # subversion/libsvn_repos/reporter.c:1029: (apr_err=160013)
-  # subversion/libsvn_repos/reporter.c:790: (apr_err=160013)
-  # svn: Working copy path 'foo/bar' does not exist in repository
-
   # Commit merge of foo onto C
   expected_output = svntest.wc.State(wc_dir, {
+    'A/C'                    : Item(verb='Sending'),
     'A/C/foo'                : Item(verb='Replacing'),
-    'A/C/foo/new file 2'     : Item(verb='Replacing'),
-    'A/C/foo/new file'       : Item(verb='Deleting'),
+    'A/C/foo/new file 2'     : Item(verb='Adding'),
     'A/C/foo/bar'            : Item(verb='Adding'),
-    'A/C/foo/bar/new file 3' : Item(verb='Adding'),
 
     })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
@@ -2819,26 +2805,12 @@ def merge_dir_and_file_replace(sbox):
     'A/B/F/foo/new file 2'     : Item(status='  ', wc_rev=5),
     'A/B/F/foo/bar'            : Item(status='  ', wc_rev=5),
     'A/B/F/foo/bar/new file 3' : Item(status='  ', wc_rev=5),
+    'A/C'                      : Item(status='  ', wc_rev=6),
     'A/C/foo'                  : Item(status='  ', wc_rev=6),
     'A/C/foo/new file 2'       : Item(status='  ', wc_rev=6),
     'A/C/foo/bar'              : Item(status='  ', wc_rev=6),
     'A/C/foo/bar/new file 3'   : Item(status='  ', wc_rev=6),
     })
-
-  # This test is failing on the following commit with this error:
-  #
-  #   >svn ci -m "" svn-test-work\working_copies\merge_tests-34
-  #   Sending        svn-test-work\working_copies\merge_tests-34\A\C
-  #   Replacing      svn-test-work\working_copies\merge_tests-34\A\C\foo
-  #   Adding         svn-test-work\working_copies\merge_tests-34\A\C\foo\bar
-  #   Adding         svn-test-work\working_copies\merge_tests-34\A\C\foo\bar\
-  #                  new file 3
-  #   Deleting       svn-test-work\working_copies\merge_tests-34\A\C\foo\
-  #                  new file
-  #   svn: Commit failed (details follow):
-  #   svn: '/A/C/foo/new file' is out of date
-  #
-  # Test marked as XFail until issue #2690 is fixed.
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
                                         expected_status,
@@ -15858,53 +15830,39 @@ def multiple_reintegrates_from_the_same_branch(sbox):
 
 #----------------------------------------------------------------------
 
-def merge_replace_causes_tree_conflict(sbox):
-  "replace that causes a tree-conflict"
+def merge_replace_setup(sbox):
+  "helper for merge_replace_causes_tree_conflict*()."
 
-  # svntest.factory.make(sbox,r"""
-  #     # make a branch of A
-  #     svn cp $URL/A $URL/branch
-  #     svn up
-  #     # ACTIONS ON THE MERGE SOURCE (branch)
-  #     # various deletes of files and dirs
-  #     svn delete branch/mu branch/B/E branch/D/G/pi branch/D/H
-  #     svn ci
-  #     svn up
-  #
-  #     # replacements.
-  #     # file-with-file
-  #     echo "replacement for mu" > branch/mu
-  #     svn add branch/mu
-  #     # dir-with-dir
-  #     svn mkdir branch/B/E
-  #     svn ps propname propval branch/B/E
-  #     # file-with-dir
-  #     svn mkdir branch/D/G/pi
-  #     svn ps propname propval branch/D/G/pi
-  #     # dir-with-file
-  #     echo "replacement for H" > branch/D/H
-  #     svn add branch/D/H
-  #     svn ci
-  #    
-  #     # ACTIONS ON THE MERGE TARGET (A)
-  #     # local mods to conflict with merge source
-  #     echo modified > A/mu
-  #     svn ps propname otherpropval A/B/E
-  #     echo modified > A/D/G/pi
-  #     svn ps propname propval A/D/H
-  #     svn merge $URL/A $URL/branch A
-  #     svn st
-  #     """)
+  #  svntest.factory.make(sbox,r"""
+  #      # make a branch of A
+  #      svn cp $URL/A $URL/branch
+  #      svn up
+  #      # ACTIONS ON THE MERGE SOURCE (branch)
+  #      # various deletes of files and dirs
+  #      svn delete branch/mu branch/B/E branch/D/G/pi branch/D/H
+  #      svn ci
+  #      svn up
+  # 
+  #      # replacements.
+  #      # file-with-file
+  #      echo "replacement for mu" > branch/mu
+  #      svn add branch/mu
+  #      # dir-with-dir
+  #      svn mkdir branch/B/E
+  #      svn ps propname propval branch/B/E
+  #      # file-with-dir
+  #      svn mkdir branch/D/G/pi
+  #      svn ps propname propval branch/D/G/pi
+  #      # dir-with-file
+  #      echo "replacement for H" > branch/D/H
+  #      svn add branch/D/H
+  #      svn ci
+  #      """)
 
   sbox.build()
   wc_dir = sbox.wc_dir
   url = sbox.repo_url
 
-  A = os.path.join(wc_dir, 'A')
-  A_B_E = os.path.join(wc_dir, 'A', 'B', 'E')
-  A_D_G_pi = os.path.join(wc_dir, 'A', 'D', 'G', 'pi')
-  A_D_H = os.path.join(wc_dir, 'A', 'D', 'H')
-  A_mu = os.path.join(wc_dir, 'A', 'mu')
   branch_B_E = os.path.join(wc_dir, 'branch', 'B', 'E')
   branch_D_G_pi = os.path.join(wc_dir, 'branch', 'D', 'G', 'pi')
   branch_D_H = os.path.join(wc_dir, 'branch', 'D', 'H')
@@ -16104,6 +16062,36 @@ def merge_replace_causes_tree_conflict(sbox):
   actions.run_and_verify_commit(wc_dir, expected_output, expected_status,
     None, wc_dir)
 
+  return expected_disk, expected_status
+
+
+def merge_replace_causes_tree_conflict(sbox):
+  "replace vs. edit tree-conflicts"
+
+  expected_disk, expected_status = merge_replace_setup(sbox)
+
+  #  svntest.factory.make(sbox,r"""
+  #      # ACTIONS ON THE MERGE TARGET (A)
+  #      # local mods to conflict with merge source
+  #      echo modified > A/mu
+  #      svn ps propname otherpropval A/B/E
+  #      echo modified > A/D/G/pi
+  #      svn ps propname propval A/D/H
+  #      svn merge $URL/A $URL/branch A
+  #      svn st
+  #      """, prev_status=expected_status, prev_disk=expected_disk)
+
+  wc_dir = sbox.wc_dir
+  url = sbox.repo_url
+
+  A = os.path.join(wc_dir, 'A')
+  A_B_E = os.path.join(wc_dir, 'A', 'B', 'E')
+  A_D_G_pi = os.path.join(wc_dir, 'A', 'D', 'G', 'pi')
+  A_D_H = os.path.join(wc_dir, 'A', 'D', 'H')
+  A_mu = os.path.join(wc_dir, 'A', 'mu')
+  url_A = url + '/A'
+  url_branch = url + '/branch'
+
   # ACTIONS ON THE MERGE TARGET (A)
   # local mods to conflict with merge source
   # echo modified > A/mu
@@ -16211,14 +16199,14 @@ def copy_then_replace_via_merge(sbox):
   main.run_svn(None, 'merge', url_A, branch)
 
   # Check status:
-  #   sigma and K from r4 were deleted
-  #   theta and L from r4 were replaced by r6
-  #   omega and M were added (from r6)
+  #   sigma and K are deleted (not copied!)
+  #   theta and L are replaced (deleted then copied-here)
+  #   omega and M are copied-here
   expected_status = wc.State(branch_J, {
     ''          : Item(status='R ', copied='+', wc_rev='-'),
-    'sigma'     : Item(status='D ', copied='+', wc_rev='-'),
-    'K'         : Item(status='D ', copied='+', wc_rev='-'),
-    'K/zeta'    : Item(status='D ', copied='+', wc_rev='-'),
+    'sigma'     : Item(status='D ', wc_rev=6),
+    'K'         : Item(status='D ', wc_rev=6),
+    'K/zeta'    : Item(status='D ', wc_rev=6),
     'theta'     : Item(status='  ', copied='+', wc_rev='-'),
     'L'         : Item(status='  ', copied='+', wc_rev='-'),
     'L/zeta'    : Item(status='  ', copied='+', wc_rev='-'),
@@ -16227,6 +16215,170 @@ def copy_then_replace_via_merge(sbox):
     'M/zeta'    : Item(status='  ', copied='+', wc_rev='-'),
     })
   actions.run_and_verify_status(branch_J, expected_status)
+
+  # Update and commit, just to make sure the WC isn't busted.
+  main.run_svn(None, 'up', branch_J)
+  expected_output = wc.State(branch_J, {
+    ''          : Item(verb='Replacing'),
+    })
+  expected_status = wc.State(branch_J, {
+    ''          : Item(status='  ', wc_rev=7),
+    'theta'     : Item(status='  ', wc_rev=7),
+    'L'         : Item(status='  ', wc_rev=7),
+    'L/zeta'    : Item(status='  ', wc_rev=7),
+    'omega'     : Item(status='  ', wc_rev=7),
+    'M'         : Item(status='  ', wc_rev=7),
+    'M/zeta'    : Item(status='  ', wc_rev=7),
+    })
+  actions.run_and_verify_commit(branch_J,
+                                expected_output,
+                                expected_status,
+                                None, branch_J)
+
+#----------------------------------------------------------------------
+
+def merge_replace_causes_tree_conflict2(sbox):
+  "replace vs. delete tree-conflicts"
+
+  expected_disk, expected_status = merge_replace_setup(sbox)
+
+  #  svntest.factory.make(sbox,r"""
+  #      # ACTIONS ON THE MERGE TARGET (A)
+  #      # local mods to conflict with merge source
+  #      # Delete each of the files and dirs to be replaced by the merge.
+  #      svn delete A/mu A/B/E A/D/G/pi A/D/H
+  #      # Merge them one by one to see all the errors.
+  #      svn merge $URL/A/mu $URL/branch/mu A/mu
+  #      svn merge $URL/A/B $URL/branch/B A/B
+  #      svn merge --depth=immediates $URL/A/D $URL/branch/D A/D
+  #      svn merge $URL/A/D/G $URL/branch/D/G A/D/G
+  #      svn st
+  #      """, prev_disk=expected_disk, prev_status=expected_status)
+
+  wc_dir = sbox.wc_dir
+  url = sbox.repo_url
+
+  A_B = os.path.join(wc_dir, 'A', 'B')
+  A_B_E = os.path.join(wc_dir, 'A', 'B', 'E')
+  A_D = os.path.join(wc_dir, 'A', 'D')
+  A_D_G = os.path.join(wc_dir, 'A', 'D', 'G')
+  A_D_G_pi = os.path.join(wc_dir, 'A', 'D', 'G', 'pi')
+  A_D_H = os.path.join(wc_dir, 'A', 'D', 'H')
+  A_mu = os.path.join(wc_dir, 'A', 'mu')
+  url_A_B = url + '/A/B'
+  url_A_D = url + '/A/D'
+  url_A_D_G = url + '/A/D/G'
+  url_A_mu = url + '/A/mu'
+  url_branch_B = url + '/branch/B'
+  url_branch_D = url + '/branch/D'
+  url_branch_D_G = url + '/branch/D/G'
+  url_branch_mu = url + '/branch/mu'
+
+  # ACTIONS ON THE MERGE TARGET (A)
+  # local mods to conflict with merge source
+  # Delete each of the files and dirs to be replaced by the merge.
+  # svn delete A/mu A/B/E A/D/G/pi A/D/H
+  expected_stdout = verify.UnorderedOutput([
+    'D         ' + A_mu + '\n',
+    'D         ' + os.path.join(A_B_E, 'alpha') + '\n',
+    'D         ' + os.path.join(A_B_E, 'beta') + '\n',
+    'D         ' + A_B_E + '\n',
+    'D         ' + A_D_G_pi + '\n',
+    'D         ' + os.path.join(A_D_H, 'chi') + '\n',
+    'D         ' + os.path.join(A_D_H, 'omega') + '\n',
+    'D         ' + os.path.join(A_D_H, 'psi') + '\n',
+    'D         ' + A_D_H + '\n',
+  ])
+
+  actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'delete',
+    A_mu, A_B_E, A_D_G_pi, A_D_H)
+
+  # Merge them one by one to see all the errors.
+  # svn merge $URL/A/mu $URL/branch/mu A/mu
+  expected_stdout = verify.UnorderedOutput([
+    "--- Merging differences between repository URLs into '" + A_mu + "':\n",
+    '   C ' + A_mu + '\n',
+    'Summary of conflicts:\n',
+    '  Tree conflicts: 1\n',
+  ])
+  ### This currently says:
+  # "Skipped missing target: '" + A_mu + "'\n",
+  # "--- Merging differences between repository URLs into '" + A_mu + "':\n",
+  # 'A    ' + A_mu + '\n',
+  # 'Summary of conflicts:\n',
+  # '  Skipped paths: 1\n',
+  ###
+
+  actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'merge',
+    url_A_mu, url_branch_mu, A_mu)
+
+  # svn merge $URL/A/B $URL/branch/B A/B
+  expected_stdout = verify.UnorderedOutput([
+    "--- Merging differences between repository URLs into '" + A_B + "':\n",
+    '   C ' + A_B_E + '\n',
+    'Summary of conflicts:\n',
+    '  Tree conflicts: 1\n',
+  ])
+
+  actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'merge',
+    url_A_B, url_branch_B, A_B)
+
+  # svn merge --depth=immediates $URL/A/D $URL/branch/D A/D
+  expected_stdout = verify.UnorderedOutput([
+    "--- Merging differences between repository URLs into '" + A_D + "':\n",
+    '   C ' + A_D_H + '\n',
+    'Summary of conflicts:\n',
+    '  Tree conflicts: 1\n',
+  ])
+
+  actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'merge',
+    '--depth=immediates', url_A_D, url_branch_D, A_D)
+
+  # svn merge $URL/A/D/G $URL/branch/D/G A/D/G
+  expected_stdout = verify.UnorderedOutput([
+    "--- Merging differences between repository URLs into '" + A_D_G +
+    "':\n",
+    '   C ' + A_D_G_pi + '\n',
+    'Summary of conflicts:\n',
+    '  Tree conflicts: 1\n',
+  ])
+  ### This currently says:
+  # 'subversion/svn/util.c:898: (apr_err=155018)\n',
+  # 'subversion/libsvn_client/merge.c:8317: (apr_err=155018)\n',
+  # 'subversion/libsvn_client/merge.c:8064: (apr_err=155018)\n',
+  # 'subversion/libsvn_client/merge.c:7928: (apr_err=155018)\n',
+  # 'subversion/libsvn_client/merge.c:4694: (apr_err=155018)\n',
+  # 'subversion/libsvn_repos/reporter.c:1263: (apr_err=155018)\n',
+  # 'subversion/libsvn_repos/reporter.c:1194: (apr_err=155018)\n',
+  # 'subversion/libsvn_repos/reporter.c:1132: (apr_err=155018)\n',
+  # 'subversion/libsvn_repos/reporter.c:847: (apr_err=155018)\n',
+  # 'subversion/libsvn_delta/cancel.c:120: (apr_err=155018)\n',
+  # 'subversion/libsvn_delta/cancel.c:120: (apr_err=155018)\n',
+  # 'subversion/libsvn_client/repos_diff.c:554: (apr_err=155018)\n',
+  # 'subversion/libsvn_client/merge.c:1990: (apr_err=155018)\n',
+  # 'subversion/libsvn_wc/adm_ops.c:1474: (apr_err=155018)\n',
+  # "svn: Can't replace '" + A_D_G_pi + "' with a node of a differing type; t
+  # he deletion must be committed and the parent updated before adding '" +
+  # A_D_G_pi + "'\n",
+  ###
+
+  actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'merge',
+    url_A_D_G, url_branch_D_G, A_D_G)
+
+  # svn st
+  expected_status.tweak('A/mu', 'A/B/E', 'A/D/G/pi', 'A/D/H', status='R ',
+    wc_rev='-', treeconflict='C')
+  ### This currently says:
+  # expected_status.remove('A/D/G/pi')
+  # expected_status.tweak('A/mu', 'A/B/E', status='R ', wc_rev='-', copied='+',
+  #   treeconflict='C')
+  # expected_status.tweak('A/D/H', status='D ', treeconflict='C')
+  ###
+  expected_status.tweak('A/D', 'A/D/G', 'A/B', status=' M')
+  expected_status.tweak('A/D/H/chi', 'A/D/H/omega', 'A/D/H/psi',
+    'A/B/E/alpha', 'A/B/E/beta', status='D ')
+
+  actions.run_and_verify_status(wc_dir, expected_status)
 
 
 ########################################################################
@@ -16289,7 +16441,7 @@ test_list = [ None,
               merge_file_replace,
               XFail(SkipUnless(merge_dir_replace,
                                server_has_mergeinfo)),
-              XFail(merge_dir_and_file_replace),
+              merge_dir_and_file_replace,
               merge_file_replace_to_mixed_rev_wc,
               merge_added_dir_to_deleted_in_target,
               SkipUnless(merge_ignore_whitespace,
@@ -16450,6 +16602,7 @@ test_list = [ None,
               SkipUnless(handle_gaps_in_implicit_mergeinfo,
                          server_has_mergeinfo),
               XFail(copy_then_replace_via_merge),
+              XFail(merge_replace_causes_tree_conflict2),
              ]
 
 if __name__ == '__main__':

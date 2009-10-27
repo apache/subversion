@@ -526,7 +526,7 @@ add_parent_dirs(const char *path,
   err = svn_wc__adm_open_in_context(&adm_access, ctx->wc_ctx, path, TRUE, 0,
                                     ctx->cancel_func, ctx->cancel_baton, pool);
 
-  if (err && err->apr_err == SVN_ERR_WC_NOT_DIRECTORY)
+  if (err && err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY)
     {
       svn_error_clear(err);
       if (svn_dirent_is_root(path, strlen(path)))

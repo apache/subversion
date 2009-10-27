@@ -300,21 +300,11 @@ svn_wc__load_props(apr_hash_t **base_props_p,
 
   if (revert_props_p)
     {
-      svn_wc__db_status_t status;
-      svn_boolean_t base_shadowed;
+      svn_boolean_t replaced;
 
-      SVN_ERR(svn_wc__db_read_info(&status, NULL, NULL, NULL, NULL, NULL,
-                                   NULL, NULL, NULL, NULL,
-                                   NULL, NULL, NULL, NULL,
-                                   NULL, NULL, NULL, NULL, NULL,
-                                   NULL, NULL, &base_shadowed, NULL, NULL,
-                                   NULL, NULL, NULL, NULL,
-                                   db, local_abspath,
-                                   scratch_pool, scratch_pool));
-
-      if ((status == svn_wc__db_status_added
-                || status == svn_wc__db_status_obstructed_add)
-            && base_shadowed)
+      SVN_ERR(svn_wc__internal_is_replaced(&replaced, db, local_abspath,
+                                           scratch_pool));
+      if (replaced)
         SVN_ERR(load_props(revert_props_p, db, local_abspath,
                            svn_wc__props_revert, result_pool));
       else
@@ -364,7 +354,8 @@ install_props_file(svn_stringbuf_t **log_accum,
                              pool));
 
   /* Make the props file read-only */
-  return svn_wc__loggy_set_readonly(log_accum, adm_access,
+  return svn_wc__loggy_set_readonly(log_accum,
+                                    svn_wc__adm_access_abspath(adm_access),
                                     propfile_path, pool);
 }
 
@@ -402,7 +393,8 @@ svn_wc__install_props(svn_stringbuf_t **log_accum,
       SVN_ERR(svn_wc__prop_path(&working_propfile_path, path,
                                 kind, svn_wc__props_working, pool));
 
-      SVN_ERR(svn_wc__loggy_remove(log_accum, adm_access,
+      SVN_ERR(svn_wc__loggy_remove(log_accum,
+                                   svn_wc__adm_access_abspath(adm_access),
                                    working_propfile_path, pool));
     }
 
@@ -421,7 +413,8 @@ svn_wc__install_props(svn_stringbuf_t **log_accum,
           SVN_ERR(svn_wc__prop_path(&base_propfile_path, path,
                                     kind, svn_wc__props_base, pool));
 
-          SVN_ERR(svn_wc__loggy_remove(log_accum, adm_access,
+          SVN_ERR(svn_wc__loggy_remove(log_accum,
+                                       svn_wc__adm_access_abspath(adm_access),
                                        base_propfile_path, pool));
         }
     }
@@ -515,7 +508,9 @@ svn_wc__loggy_props_delete(svn_stringbuf_t **log_accum,
 
   SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access, TRUE, pool));
   SVN_ERR(svn_wc__prop_path(&props_file, path, entry->kind, props_kind, pool));
-  SVN_ERR(svn_wc__loggy_remove(log_accum, adm_access, props_file, pool));
+  SVN_ERR(svn_wc__loggy_remove(log_accum,
+                               svn_wc__adm_access_abspath(adm_access),
+                               props_file, pool));
 
   return SVN_NO_ERROR;
 }
@@ -1721,7 +1716,8 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
                                    reject_tmp_path, reject_path, pool));
 
       /* And of course, delete the temporary reject file. */
-      SVN_ERR(svn_wc__loggy_remove(entry_accum, adm_access,
+      SVN_ERR(svn_wc__loggy_remove(entry_accum,
+                                   svn_wc__adm_access_abspath(adm_access),
                                    reject_tmp_path, pool));
 
       /* Mark entry as "conflicted" with a particular .prej file. */
@@ -1783,22 +1779,11 @@ svn_wc_prop_list2(apr_hash_t **props,
                   apr_pool_t *result_pool,
                   apr_pool_t *scratch_pool)
 {
-  svn_wc__db_kind_t kind;
-
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
-  /* if there is no entry, 'path' is not under version control and
-     therefore has no props. */
-  SVN_ERR(svn_wc__db_check_node(&kind, wc_ctx->db, local_abspath,
-                                scratch_pool));
-  if (kind == svn_wc__db_kind_unknown)
-    {
-      *props = apr_hash_make(result_pool);
-      return SVN_NO_ERROR;
-    }
-
-  return svn_wc__load_props(NULL, props, NULL, wc_ctx->db, local_abspath,
-                            result_pool, scratch_pool);
+  return svn_error_return(
+    svn_wc__load_props(NULL, props, NULL, wc_ctx->db, local_abspath,
+                       result_pool, scratch_pool));
 }
 
 svn_error_t *
@@ -2389,7 +2374,7 @@ svn_wc__props_modified(svn_boolean_t *modified_p,
   apr_hash_t *baseprops;
   svn_wc__db_status_t status;
   svn_error_t *err;
-  svn_boolean_t replaced = FALSE;
+  svn_boolean_t replaced;
 
   err = svn_wc__db_read_info(&status, NULL, NULL, NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL, NULL, NULL, NULL,
@@ -2426,18 +2411,8 @@ svn_wc__props_modified(svn_boolean_t *modified_p,
      ### base props. hard to know on old WCs tho? (given the above
      ### comment). just declare propmods if the node has any working
      ### properties. */
-  if (status == svn_wc__db_status_deleted)
-    {
-      const char *base_del_abspath;
-      const char *moved_to_abspath;
-      const char *work_del_abspath;
-
-      SVN_ERR(svn_wc__db_scan_deletion(&base_del_abspath, &replaced,
-                                       &moved_to_abspath, &work_del_abspath,
-                                       db, local_abspath, scratch_pool,
+  SVN_ERR(svn_wc__internal_is_replaced(&replaced, db, local_abspath,
                                        scratch_pool));
-    }
-
   if (replaced)
     {
       *modified_p = apr_hash_count(localprops) > 0;
@@ -2764,8 +2739,7 @@ svn_wc_parse_externals_description3(apr_array_header_t **externals_p,
                                         &item->revision, TRUE, FALSE,
                                         pool));
 
-      item->target_dir = svn_path_canonicalize
-        (svn_dirent_internal_style(item->target_dir, pool), pool);
+      item->target_dir = svn_dirent_internal_style(item->target_dir, pool);
 
       if (item->target_dir[0] == '\0' || item->target_dir[0] == '/'
           || svn_path_is_backpath_present(item->target_dir))
@@ -2778,7 +2752,7 @@ svn_wc_parse_externals_description3(apr_array_header_t **externals_p,
            item->target_dir);
 
       if (canonicalize_url)
-          item->url = svn_path_canonicalize(item->url, pool);
+          item->url = svn_uri_canonicalize(item->url, pool);
 
       if (externals_p)
         APR_ARRAY_PUSH(*externals_p, svn_wc_external_item2_t *) = item;

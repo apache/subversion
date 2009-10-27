@@ -32,6 +32,7 @@
 #include "svn_error.h"
 #include "svn_wc.h"
 #include "private/svn_sqlite.h"
+#include "private/svn_wc_private.h"
 
 #include "wc_db.h"
 
@@ -336,9 +337,9 @@ svn_error_t *
 svn_wc__merge_internal(svn_stringbuf_t **log_accum,
                        enum svn_wc_merge_outcome_t *merge_outcome,
                        const char *left,
-                       svn_wc_conflict_version_t *left_version,
+                       const svn_wc_conflict_version_t *left_version,
                        const char *right,
-                       svn_wc_conflict_version_t *right_version,
+                       const svn_wc_conflict_version_t *right_version,
                        const char *merge_target,
                        const char *copyfrom_text,
                        svn_wc_adm_access_t *adm_access,
@@ -477,6 +478,35 @@ svn_wc__internal_ensure_adm(svn_wc__db_t *db,
                             svn_depth_t depth,
                             apr_pool_t *scratch_pool);
 
+
+/* Library-internal version of svn_wc__changelist_match(). */
+svn_boolean_t
+svn_wc__internal_changelist_match(svn_wc__db_t *db,
+                                  const char *local_abspath,
+                                  const apr_hash_t *clhash,
+                                  apr_pool_t *scratch_pool);
+
+
+/* Library-internal version of svn_wc__node_walk_children(), which see. */
+svn_error_t *
+svn_wc__internal_walk_children(svn_wc__db_t *db,
+                               const char *local_abspath,
+                               svn_boolean_t show_hidden,
+                               svn_wc__node_found_func_t walk_callback,
+                               void *walk_baton,
+                               svn_depth_t walk_depth,
+                               svn_cancel_func_t cancel_func,
+                               void *cancel_baton,
+                               apr_pool_t *scratch_pool);
+
+
+svn_error_t *
+svn_wc__internal_is_replaced(svn_boolean_t *replaced,
+                             svn_wc__db_t *db,
+                             const char *local_abspath,
+                             apr_pool_t *scratch_pool);
+
+
 /* Upgrade the wc sqlite database given in SDB for the wc located at
    WCROOT_ABSPATH. It's current/starting format is given by START_FORMAT.
    After the upgrade is complete (to as far as the automatic upgrade will
@@ -501,6 +531,20 @@ svn_wc__check_wc_root(svn_boolean_t *wc_root,
                       const char *local_abspath,
                       apr_pool_t *scratch_pool);
 
+/* Gets the relative path REL_PATH as used by the access batons in WC_CTX,
+ * by looking at open access batons of LOCAL_ABSPATH and its parents.
+ * Perform temporary allocations in SCRATCH_POOL and return the result in
+ * RESULT_POOL.
+ *
+ * Sets REL_PATH to a copy of LOCAL_ABSPATH when no access batons for this
+ * node or any of its parents are found
+ */
+svn_error_t *
+svn_wc__temp_get_relpath(const char **rel_path,
+                         svn_wc__db_t *db,
+                         const char *local_abspath,
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool);
 
 #ifdef __cplusplus
 }

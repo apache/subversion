@@ -194,7 +194,11 @@ module Svn
         def add_windows_simple_provider
           add_provider(Core.auth_get_windows_simple_provider)
         end
-      end
+      elsif Core.respond_to?(:auth_get_platform_specific_provider)
+        def add_windows_simple_provider
+          add_provider(Core.auth_get_platform_specific_provider("windows","simple"))
+        end
+     end
 
       if Core.respond_to?(:auth_get_keychain_simple_provider)
         def add_keychain_simple_provider

@@ -636,7 +636,7 @@ svn_client_diff4(const apr_array_header_t *options,
 {
   return svn_client_diff5(options, path1, revision1, path2, revision2,
                           relative_to_dir, depth, ignore_ancestry,
-                          no_diff_deleted, ignore_content_type, FALSE, FALSE,
+                          no_diff_deleted, ignore_content_type, FALSE,
                           header_encoding, outfile, errfile, changelists,
                           ctx, pool);
 }
@@ -726,9 +726,8 @@ svn_client_diff_peg4(const apr_array_header_t *options,
   return svn_client_diff_peg5(options, path, peg_revision, start_revision,
                               end_revision, relative_to_dir, depth,
                               ignore_ancestry, no_diff_deleted,
-                              ignore_content_type, FALSE, FALSE,
-                              header_encoding, outfile, errfile, changelists,
-                              ctx, pool);
+                              ignore_content_type, FALSE, header_encoding,
+                              outfile, errfile, changelists, ctx, pool);
 }
 
 svn_error_t *

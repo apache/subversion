@@ -108,7 +108,8 @@ CREATE TABLE BASE_NODE (
   /* if this node is a file, then the checksum and its translated size
      (given the properties on this file) are specified by the following
      two fields. translated_size may be NULL if the size has not (yet)
-     been computed. */
+     been computed. The kind of checksum (e.g. SHA-1, MD5) is stored in the
+     value */
   checksum  TEXT,
   translated_size  INTEGER,
 
@@ -162,7 +163,10 @@ CREATE INDEX I_PARENT ON BASE_NODE (wc_id, parent_relpath);
 
 
 /* ------------------------------------------------------------------------- */
-
+/* ### BH: Will CHECKSUM be the same key as used for indexing a file in the
+           Pristine store? If that key is SHA-1 we might need an alternative
+           MD5 checksum column on this table to use with the current delta
+           editors that don't understand SHA-1. */
 CREATE TABLE PRISTINE (
   /* ### the hash algorithm (MD5 or SHA-1) is encoded in this value */
   checksum  TEXT NOT NULL PRIMARY KEY,
@@ -310,10 +314,21 @@ CREATE TABLE ACTUAL_NODE (
      the properties, relative to WORKING/BASE as appropriate. */
   properties  BLOB,
 
-  /* ### do we want to record the revnums which caused this? */
-  /* ### also, shouldn't these be absolute paths?
+  /* basenames of the conflict files. */
+  /* ### do we want to record the revnums which caused this?  
+     ### BH: Yes, probably urls too if it is caused by a merge. Preferably
+     ###     the same info as currently passed to the interactive conflict
+     ###     handler. I would like url@rev for left, right and original, but
+     ###     some of those are available in other ways. Refer to repository
+     ###     table instead of full urls? .*/
+  /* ### also, shouldn't these be local_relpaths too?
      ### they aren't currently, but that would be more consistent with other
-     ### columns. (though it would require a format bump) */
+     ### columns. (though it would require a format bump). */
+  /* ### BH: Shouldn't we move all these into the new CONFLICT_VICTIM table? */
+  /* ### HKW: I think so.  These columns pre-date that table, and are just
+     ###      a mapping from svn_wc_entry_t.  I haven't thought about how the
+     ###      CONFLICT_VICTIM table would need to be extended for this, though.
+     ###      (may want do to that before the f13 bump, if possible) */
   conflict_old  TEXT,
   conflict_new  TEXT,
   conflict_working  TEXT,
@@ -344,6 +359,11 @@ CREATE TABLE LOCK (
   /* what repository location is locked */
   repos_id  INTEGER NOT NULL,
   repos_relpath  TEXT NOT NULL,
+  /* ### BH: Shouldn't this refer to an working copy location? You can have a
+         single relpath checked out multiple times in one (switch) or more
+         working copies. */
+  /* ### HKW: No, afaik.  This table is just a cache of what's in the
+         repository, so these should be repos_relpaths. */
 
   /* Information about the lock. Note: these values are just caches from
      the server, and are not authoritative. */
@@ -383,7 +403,8 @@ CREATE TABLE CONFLICT_VICTIM (
   /* what kind of node is this? may be "unknown" if the node is not present */
   node_kind  TEXT NOT NULL,
 
-  /* what sort of conflict are we describing? */
+  /* what sort of conflict are we describing?
+     "text", "property" or "tree" */
   conflict_kind  TEXT NOT NULL,
 
   /* the name of the property in conflict, or NULL */
@@ -395,19 +416,37 @@ CREATE TABLE CONFLICT_VICTIM (
 
   /* operation which exposed the conflict, if kind is 'tree' */
   operation  TEXT,
+  
+  /* ### BH: Add original/base version? */
+  /* ### BH: Add relpath for conflict files? Or just basename */
+  /* ### BH: Add checksum to allow referring to pristine? */
+  /* ### BH: How to handle the .prej file? (Multiple property conflicts?) */
+  /* the 'base' version of the incoming change. */
+/*base_repos_id  INTEGER,
+  base_repos_relpath  TEXT,
+  base_peg_rev  INTEGER,
+  base_kind  TEXT,
+  base_local_relpath  TEXT,
+  base_checksum  TEXT */
 
   /* the 'merge-left' source, or 'older' version of the incoming change. */
   left_repos_id  INTEGER,
   left_repos_relpath  TEXT,
   left_peg_rev  INTEGER,
   left_kind  TEXT,
+/*left_local_relpath  TEXT,
+  left_checksum  TEXT, */
 
   /* the 'merge-right' source, or 'their' version of the incoming change. */
   right_repos_id  INTEGER,
   right_repos_relpath  TEXT,
   right_peg_rev  INTEGER,
   right_kind  TEXT,
+/*right_local_relpath  TEXT,
+  right_checksum  TEXT, */
 
+  /* ### BH: Add conflict kind? Add property name? Primary key should be
+         unique */
   PRIMARY KEY (wc_id, local_relpath)
   );
 
@@ -545,3 +584,265 @@ INSERT INTO ACTUAL_NODE SELECT
 FROM ACTUAL_NODE_BACKUP;
 
 DROP TABLE ACTUAL_NODE_BACKUP;
+
+
+/* ------------------------------------------------------------------------- */
+
+/* these are used in wc_db.c  */
+
+-- STMT_SELECT_BASE_NODE
+select wc_id, local_relpath, repos_id, repos_relpath,
+  presence, kind, revnum, checksum, translated_size,
+  changed_rev, changed_date, changed_author, depth, symlink_target,
+  last_mod_time
+from base_node
+where wc_id = ?1 and local_relpath = ?2;
+
+-- STMT_SELECT_BASE_NODE_WITH_LOCK
+select wc_id, local_relpath, base_node.repos_id, base_node.repos_relpath,
+  presence, kind, revnum, checksum, translated_size,
+  changed_rev, changed_date, changed_author, depth, symlink_target,
+  last_mod_time,
+  lock_token, lock_owner, lock_comment, lock_date
+from base_node
+left outer join lock on base_node.repos_id = lock.repos_id
+  and base_node.repos_relpath = lock.repos_relpath
+where wc_id = ?1 and local_relpath = ?2;
+
+-- STMT_SELECT_WORKING_NODE
+select presence, kind, checksum, translated_size,
+  changed_rev, changed_date, changed_author, depth, symlink_target,
+  copyfrom_repos_id, copyfrom_repos_path, copyfrom_revnum,
+  moved_here, moved_to, last_mod_time
+from working_node
+where wc_id = ?1 and local_relpath = ?2;
+
+-- STMT_SELECT_ACTUAL_NODE
+select prop_reject, changelist, conflict_old, conflict_new,
+conflict_working, tree_conflict_data
+from actual_node
+where wc_id = ?1 and local_relpath = ?2;
+
+-- STMT_SELECT_REPOSITORY_BY_ID
+select root, uuid from repository where id = ?1;
+
+-- STMT_SELECT_WCROOT_NULL
+select id from wcroot where local_abspath is null;
+
+-- STMT_SELECT_REPOSITORY
+select id from repository where root = ?1;
+
+-- STMT_INSERT_REPOSITORY
+insert into repository (root, uuid) values (?1, ?2);
+
+-- STMT_INSERT_BASE_NODE
+insert or replace into base_node (
+  wc_id, local_relpath, repos_id, repos_relpath, parent_relpath, presence,
+  kind, revnum, properties, changed_rev, changed_date, changed_author,
+  depth, checksum, translated_size, symlink_target)
+values (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14,
+        ?15, ?16);
+
+-- STMT_INSERT_BASE_NODE_INCOMPLETE
+insert or ignore into base_node (
+  wc_id, local_relpath, parent_relpath, presence, kind, revnum)
+values (?1, ?2, ?3, 'incomplete', 'unknown', ?5);
+
+-- STMT_SELECT_BASE_NODE_CHILDREN
+select local_relpath from base_node
+where wc_id = ?1 and parent_relpath = ?2;
+
+-- STMT_SELECT_WORKING_CHILDREN
+select local_relpath from base_node
+where wc_id = ?1 and parent_relpath = ?2
+union
+select local_relpath from working_node
+where wc_id = ?1 and parent_relpath = ?2;
+
+-- STMT_SELECT_WORKING_IS_FILE
+select kind == 'file' from working_node
+where wc_id = ?1 and local_relpath = ?2;
+
+-- STMT_SELECT_BASE_IS_FILE
+select kind == 'file' from base_node
+where wc_id = ?1 and local_relpath = ?2;
+
+-- STMT_SELECT_BASE_PROPS
+select properties from base_node
+where wc_id = ?1 and local_relpath = ?2;
+
+-- STMT_UPDATE_ACTUAL_PROPS
+update actual_node set properties = ?3
+where wc_id = ?1 and local_relpath = ?2;
+
+-- STMT_SELECT_ALL_PROPS
+select actual_node.properties, working_node.properties,
+  base_node.properties
+from base_node
+left outer join working_node on base_node.wc_id = working_node.wc_id
+  and base_node.local_relpath = working_node.local_relpath
+left outer join actual_node on base_node.wc_id = actual_node.wc_id
+  and base_node.local_relpath = actual_node.local_relpath
+where base_node.wc_id = ?1 and base_node.local_relpath = ?2;
+
+-- STMT_SELECT_PRISTINE_PROPS
+select working_node.properties, base_node.properties
+from base_node
+left outer join working_node on base_node.wc_id = working_node.wc_id
+  and base_node.local_relpath = working_node.local_relpath
+where base_node.wc_id = ?1 and base_node.local_relpath = ?2;
+
+-- STMT_INSERT_LOCK
+insert or replace into lock
+(repos_id, repos_relpath, lock_token, lock_owner, lock_comment,
+ lock_date)
+values (?1, ?2, ?3, ?4, ?5, ?6);
+
+-- STMT_INSERT_WCROOT
+insert into wcroot (local_abspath)
+values (?1);
+
+-- STMT_UPDATE_BASE_DAV_CACHE
+update base_node set dav_cache = ?3
+where wc_id = ?1 and local_relpath = ?2;
+
+-- STMT_SELECT_BASE_DAV_CACHE
+select dav_cache from base_node
+where wc_id = ?1 and local_relpath = ?2;
+
+-- STMT_SELECT_DELETION_INFO
+select base_node.presence, working_node.presence, moved_to
+from working_node
+left outer join base_node on base_node.wc_id = working_node.wc_id
+  and base_node.local_relpath = working_node.local_relpath
+where working_node.wc_id = ?1 and working_node.local_relpath = ?2;
+
+-- STMT_SELECT_PARENT_STUB_INFO
+select presence = 'not-present', revnum from base_node
+where wc_id = ?1 and local_relpath = ?2;
+
+-- STMT_DELETE_LOCK
+delete from lock
+where repos_id = ?1 and repos_relpath = ?2;
+
+-- STMT_UPDATE_BASE_RECURSIVE_REPO
+update base_node set repos_id = ?4
+where repos_id is not null and wc_id = ?1 and
+  (local_relpath = ?2 or
+   local_relpath like ?3 escape '#');
+
+-- STMT_UPDATE_WORKING_RECURSIVE_COPYFROM_REPO
+update working_node set copyfrom_repos_id = ?4
+where copyfrom_repos_id is not null and wc_id = ?1 and
+  (local_relpath = ?2 or
+   local_relpath like ?3 escape '#');
+
+-- STMT_UPDATE_LOCK_REPOS_ID
+update lock set repos_id = ?4
+where repos_id = ?1 and
+  (repos_relpath = ?2 or
+   repos_relpath like ?3 escape '#');
+
+-- STMT_UPDATE_BASE_LAST_MOD_TIME
+update base_node set last_mod_time = ?3
+where wc_id = ?1 and local_relpath = ?2;
+
+-- STMT_UPDATE_ACTUAL_TREE_CONFLICTS
+update actual_node set tree_conflict_data = ?3
+where wc_id = ?1 and local_relpath = ?2;
+
+-- STMT_INSERT_ACTUAL_TREE_CONFLICTS
+insert into actual_node (
+  wc_id, local_relpath, tree_conflict_data)
+values (?1, ?2, ?3);
+
+-- STMT_UPDATE_ACTUAL_CHANGELIST
+update actual_node set changelist = ?3
+where wc_id = ?1 and local_relpath = ?2;
+
+-- STMT_INSERT_ACTUAL_CHANGELIST
+insert into actual_node (
+  wc_id, local_relpath, changelist)
+values (?1, ?2, ?3);
+
+
+/* ------------------------------------------------------------------------- */
+
+/* these are used in entries.c  */
+
+-- STMT_INSERT_BASE_NODE_FOR_ENTRY
+insert or replace into base_node (
+  wc_id, local_relpath, repos_id, repos_relpath, parent_relpath,
+  presence,
+  revnum, kind, checksum, translated_size, changed_rev, changed_date,
+  changed_author, depth, last_mod_time, properties)
+values (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14,
+  ?15, ?16);
+
+-- STMT_INSERT_WORKING_NODE
+insert or replace into working_node (
+  wc_id, local_relpath, parent_relpath, presence, kind,
+  copyfrom_repos_id,
+  copyfrom_repos_path, copyfrom_revnum, moved_here, moved_to, checksum,
+  translated_size, changed_rev, changed_date, changed_author, depth,
+  last_mod_time, properties, keep_local)
+values (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14,
+  ?15, ?16, ?17, ?18, ?19);
+
+-- STMT_INSERT_ACTUAL_NODE
+insert or replace into actual_node (
+  wc_id, local_relpath, parent_relpath, properties, conflict_old,
+  conflict_new,
+  conflict_working, prop_reject, changelist, text_mod,
+  tree_conflict_data)
+values (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11);
+
+-- STMT_DELETE_ALL_WORKING
+delete from working_node;
+
+-- STMT_DELETE_ALL_BASE
+delete from base_node;
+
+-- STMT_DELETE_ALL_ACTUAL
+delete from actual_node;
+
+-- STMT_SELECT_KEEP_LOCAL_FLAG
+select keep_local from working_node
+where wc_id = ?1 and local_relpath = ?2;
+
+-- STMT_SELECT_NOT_PRESENT
+select 1 from base_node
+where wc_id = ?1 and local_relpath = ?2 and presence = 'not-present';
+
+-- STMT_SELECT_FILE_EXTERNAL
+select file_external from base_node
+where wc_id = ?1 and local_relpath = ?2;
+
+-- STMT_UPDATE_FILE_EXTERNAL
+update base_node set file_external = ?3
+where wc_id = ?1 and local_relpath = ?2;
+
+
+/* ------------------------------------------------------------------------- */
+
+/* these are used in upgrade.c  */
+
+-- STMT_SELECT_OLD_TREE_CONFLICT
+select wc_id, local_relpath, tree_conflict_data
+from actual_node
+where tree_conflict_data is not null;
+
+-- STMT_INSERT_NEW_CONFLICT
+insert into conflict_victim (
+  wc_id, local_relpath, parent_relpath, node_kind, conflict_kind,
+  property_name, conflict_action, conflict_reason, operation,
+  left_repos_id, left_repos_relpath, left_peg_rev, left_kind,
+  right_repos_id, right_repos_relpath, right_peg_rev, right_kind)
+values (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15,
+  ?16, ?17);
+
+-- STMT_ERASE_OLD_CONFLICTS
+update actual_node set tree_conflict_data = null;
+
+
+/* ------------------------------------------------------------------------- */

@@ -32,6 +32,8 @@
 
 #include "wc_db.h"
 
+#include "private/svn_token.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
@@ -67,13 +69,10 @@ extern "C" {
  *
  * If *LOG_ACCUM is NULL then set *LOG_ACCUM to a new stringbug allocated in
  * POOL, else append to the existing stringbuf there.
- *
- * @since New in 1.6.
  */
 svn_error_t *
 svn_wc__loggy_add_tree_conflict(svn_stringbuf_t **log_accum,
-                                const svn_wc_conflict_description_t *conflict,
-                                svn_wc_adm_access_t *adm_access,
+                                const svn_wc_conflict_description2_t *conflict,
                                 apr_pool_t *pool);
 
 /*
@@ -82,19 +81,24 @@ svn_wc__loggy_add_tree_conflict(svn_stringbuf_t **log_accum,
  * Set *CONFLICT_DATA to a string, allocated in POOL, that encodes the tree
  * conflicts in CONFLICTS in a form suitable for storage in a single string
  * field in a WC entry. CONFLICTS is a hash of zero or more pointers to
- * svn_wc_conflict_description_t objects, index by their basenames. All of the
+ * svn_wc_conflict_description2_t objects, index by their basenames. All of the
  * conflict victim paths must be siblings.
  *
  * Do all allocations in POOL.
  *
  * @see svn_wc__read_tree_conflicts()
- *
- * @since New in 1.6.
  */
 svn_error_t *
 svn_wc__write_tree_conflicts(const char **conflict_data,
                              apr_hash_t *conflicts,
                              apr_pool_t *pool);
+
+
+/* Token mapping tables.  */
+extern const svn_token_map_t svn_wc__operation_map[];
+extern const svn_token_map_t svn_wc__conflict_action_map[];
+extern const svn_token_map_t svn_wc__conflict_reason_map[];
+
 
 #ifdef __cplusplus
 }

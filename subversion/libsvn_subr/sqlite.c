@@ -34,6 +34,7 @@
 #include "private/svn_dep_compat.h"
 #include "private/svn_atomic.h"
 #include "private/svn_skel.h"
+#include "private/svn_token.h"
 
 
 #ifdef SVN_SQLITE_INLINE
@@ -110,24 +111,6 @@ exec_sql(svn_sqlite__db_t *db, const char *sql)
     }
 
   return SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn_sqlite__transaction_begin(svn_sqlite__db_t *db)
-{
-  return exec_sql(db, "BEGIN TRANSACTION;");
-}
-
-svn_error_t *
-svn_sqlite__transaction_commit(svn_sqlite__db_t *db)
-{
-  return exec_sql(db, "COMMIT TRANSACTION;");
-}
-
-svn_error_t *
-svn_sqlite__transaction_rollback(svn_sqlite__db_t *db)
-{
-  return exec_sql(db, "ROLLBACK TRANSACTION;");
 }
 
 svn_error_t *
@@ -229,6 +212,7 @@ vbindf(svn_sqlite__stmt_t *stmt, const char *fmt, va_list ap)
     {
       const void *blob;
       apr_size_t blob_size;
+      const svn_token_map_t *map;
 
       switch (*fmt)
         {
@@ -246,6 +230,11 @@ vbindf(svn_sqlite__stmt_t *stmt, const char *fmt, va_list ap)
             blob = va_arg(ap, const void *);
             blob_size = va_arg(ap, apr_size_t);
             SVN_ERR(svn_sqlite__bind_blob(stmt, count, blob, blob_size));
+            break;
+
+          case 't':
+            map = va_arg(ap, const svn_token_map_t *);
+            SVN_ERR(svn_sqlite__bind_token(stmt, count, map, va_arg(ap, int)));
             break;
 
           default:
@@ -309,6 +298,19 @@ svn_sqlite__bind_blob(svn_sqlite__stmt_t *stmt,
 }
 
 svn_error_t *
+svn_sqlite__bind_token(svn_sqlite__stmt_t *stmt,
+                       int slot,
+                       const svn_token_map_t *map,
+                       int value)
+{
+  const char *word = svn_token__to_word(map, value);
+
+  SQLITE_ERR(sqlite3_bind_text(stmt->s3stmt, slot, word, -1, SQLITE_STATIC),
+             stmt->db);
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
 svn_sqlite__bind_properties(svn_sqlite__stmt_t *stmt,
                             int slot,
                             const apr_hash_t *props,
@@ -361,7 +363,8 @@ const char *
 svn_sqlite__column_text(svn_sqlite__stmt_t *stmt, int column,
                         apr_pool_t *result_pool)
 {
-  const char *result = (const char *) sqlite3_column_text(stmt->s3stmt, column);
+  /* cast from 'unsigned char' to regular 'char'  */
+  const char *result = (const char *)sqlite3_column_text(stmt->s3stmt, column);
 
   if (result_pool && result != NULL)
     result = apr_pstrdup(result_pool, result);
@@ -393,6 +396,17 @@ apr_int64_t
 svn_sqlite__column_int64(svn_sqlite__stmt_t *stmt, int column)
 {
   return sqlite3_column_int64(stmt->s3stmt, column);
+}
+
+int
+svn_sqlite__column_token(svn_sqlite__stmt_t *stmt,
+                         int column,
+                         const svn_token_map_t *map)
+{
+  /* cast from 'unsigned char' to regular 'char'  */
+  const char *word = (const char *)sqlite3_column_text(stmt->s3stmt, column);
+
+  return svn_token__from_word_strict(map, word);
 }
 
 svn_error_t *
@@ -534,9 +548,6 @@ struct upgrade_baton
   int latest_schema;
   const char * const *upgrade_sql;
 
-  svn_sqlite__upgrade_func_t upgrade_func;
-  void *upgrade_baton;
-
   apr_pool_t *scratch_pool;
 };
 
@@ -560,11 +571,6 @@ upgrade_format(void *baton,
       /* Run the upgrade SQL */
       if (ub->upgrade_sql[current_schema])
         SVN_ERR(exec_sql(db, ub->upgrade_sql[current_schema]));
-
-      /* Run the upgrade callback. */
-      if (ub->upgrade_func)
-        SVN_ERR(ub->upgrade_func(ub->upgrade_baton, db, current_schema,
-                                 iterpool));
 
       /* Update the user version pragma */
       SVN_ERR(svn_sqlite__set_schema_version(db, current_schema, iterpool));
@@ -596,9 +602,9 @@ svn_sqlite__read_schema_version(int *version,
    or SVN_ERR_SQLITE_ERROR if an sqlite error occurs during validation.
    Return SVN_NO_ERROR if everything is okay. */
 static svn_error_t *
-check_format(svn_sqlite__db_t *db, int latest_schema,
+check_format(svn_sqlite__db_t *db,
+             int latest_schema,
              const char * const *upgrade_sql, 
-             svn_sqlite__upgrade_func_t upgrade_func, void *upgrade_baton,
              apr_pool_t *scratch_pool)
 {
   int current_schema;
@@ -617,9 +623,6 @@ check_format(svn_sqlite__db_t *db, int latest_schema,
       ub.latest_schema = latest_schema;
       ub.upgrade_sql = upgrade_sql;
       ub.scratch_pool = scratch_pool;
-
-      ub.upgrade_func = upgrade_func;
-      ub.upgrade_baton = upgrade_baton;
 
       return svn_sqlite__with_transaction(db, upgrade_format, &ub);
     }
@@ -836,7 +839,6 @@ svn_error_t *
 svn_sqlite__open(svn_sqlite__db_t **db, const char *path,
                  svn_sqlite__mode_t mode, const char * const statements[],
                  int latest_schema, const char * const *upgrade_sql,
-                 svn_sqlite__upgrade_func_t upgrade_func, void *upgrade_baton,
                  apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
   SVN_ERR(svn_atomic__init_once(&sqlite_init_state, init_sqlite, scratch_pool));
@@ -866,8 +868,7 @@ svn_sqlite__open(svn_sqlite__db_t **db, const char *path,
               "PRAGMA synchronous=OFF;"));
 
   /* Validate the schema, upgrading if necessary. */
-  SVN_ERR(check_format(*db, latest_schema, upgrade_sql, upgrade_func,
-                       upgrade_baton, scratch_pool));
+  SVN_ERR(check_format(*db, latest_schema, upgrade_sql, scratch_pool));
 
   /* Store the provided statements. */
   if (statements)
@@ -909,15 +910,15 @@ svn_sqlite__with_transaction(svn_sqlite__db_t *db,
 {
   svn_error_t *err;
 
-  SVN_ERR(svn_sqlite__transaction_begin(db));
+  SVN_ERR(exec_sql(db, "BEGIN TRANSACTION;"));
   err = cb_func(cb_baton, db);
 
   /* Commit or rollback the sqlite transaction. */
   if (err)
     {
-      svn_error_clear(svn_sqlite__transaction_rollback(db));
+      svn_error_clear(exec_sql(db, "ROLLBACK TRANSACTION;"));
       return svn_error_return(err);
     }
 
-  return svn_error_return(svn_sqlite__transaction_commit(db));
+  return svn_error_return(exec_sql(db, "COMMIT TRANSACTION;"));
 }

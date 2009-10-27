@@ -100,7 +100,10 @@ svn_path_local_style(const char *path, apr_pool_t *pool);
  * based on a leading '/' character.  Thus, an "absolute URI" for the
  * @a component won't be detected. An absolute URI can only be used
  * for the base.
+ *
+ * @deprecated Provided for backward compatibility with the 1.6 API.
  */
+SVN_DEPRECATED
 char *
 svn_path_join(const char *base, const char *component, apr_pool_t *pool);
 
@@ -115,7 +118,10 @@ svn_path_join(const char *base, const char *component, apr_pool_t *pool);
  * This function does not support URLs.
  *
  * See svn_path_join() for further notes about joining paths.
+ *
+ * @deprecated Provided for backward compatibility with the 1.6 API.
  */
+SVN_DEPRECATED
 char *
 svn_path_join_many(apr_pool_t *pool, const char *base, ...);
 
@@ -259,7 +265,10 @@ svn_dirent_is_root(const char *dirent, apr_size_t len);
  *
  * The returned path may be statically allocated, equal to @a path, or
  * allocated from @a pool.
+ *
+ * @deprecated Provided for backward compatibility with the 1.6 API.
  */
+SVN_DEPRECATED
 const char *
 svn_path_canonicalize(const char *path, apr_pool_t *pool);
 
@@ -267,7 +276,9 @@ svn_path_canonicalize(const char *path, apr_pool_t *pool);
  * allocations.
  *
  * @since New in 1.5.
+ * @deprecated Provided for backward compatibility with the 1.6 API.
  */
+SVN_DEPRECATED
 svn_boolean_t
 svn_path_is_canonical(const char *path, apr_pool_t *pool);
 
@@ -288,7 +299,10 @@ svn_path_compare_paths(const char *path1, const char *path2);
  * with the same path but different protocols may point at completely
  * different resources), and (b) share a common ancestor in their path
  * component, i.e. 'protocol://' is not a sufficient ancestor.
+ *
+ * @deprecated Provided for backward compatibility with the 1.6 API.
  */
+SVN_DEPRECATED
 char *
 svn_path_get_longest_ancestor(const char *path1,
                               const char *path2,
@@ -352,7 +366,11 @@ svn_path_split_if_file(const char *path,
  * applicable) @a *pcondensed_targets to @c NULL.
  *
  * @note There is no guarantee that @a *pcommon is within a working
- * copy.  */
+ * copy.
+ *
+ * @deprecated Provided for backward compatibility with the 1.6 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_path_condense_targets(const char **pcommon,
                           apr_array_header_t **pcondensed_targets,
@@ -471,11 +489,9 @@ svn_path_is_dotpath_present(const char *path);
  *       in which case a pointer into @a path2 will be returned to
  *       identify the remainder path.
  *
- * ### @todo the ".." restriction is unfortunate, and would ideally
- * be lifted by making the implementation smarter.  But this is not
- * trivial: if the path is "../foo", how do you know whether or not
- * the current directory is named "foo" in its parent?
+ * @deprecated Provided for backward compatibility with the 1.6 API.
  */
+SVN_DEPRECATED
 const char *
 svn_path_is_child(const char *path1, const char *path2, apr_pool_t *pool);
 
@@ -483,7 +499,9 @@ svn_path_is_child(const char *path1, const char *path2, apr_pool_t *pool);
  * and FALSE otherwise.
  *
  * @since New in 1.3.
+ * @deprecated Provided for backward compatibility with the 1.6 API.
  */
+SVN_DEPRECATED
 svn_boolean_t
 svn_path_is_ancestor(const char *path1, const char *path2);
 

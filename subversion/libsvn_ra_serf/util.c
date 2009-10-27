@@ -1227,29 +1227,30 @@ handle_response(serf_request_t *request,
     {
       /* 401 Authorization or 407 Proxy-Authentication required */
       svn_error_t *err;
+      status = svn_ra_serf__response_discard_handler(request, response, NULL, pool);
 
-      err = svn_ra_serf__handle_auth(sl.code, ctx,
-                                     request, response, pool);
-      if (err)
+      /* Don't bother handling the authentication request if the response
+         wasn't received completely yet. Serf will call handle_response
+         again when more data is received. */
+      if (! APR_STATUS_IS_EAGAIN(status))
         {
-          ctx->session->pending_error = svn_error_compose_create(
-                                                err,
-                                                ctx->session->pending_error);
-          svn_ra_serf__response_discard_handler(request, response, NULL, pool);
-          status = ctx->session->pending_error->apr_err;
-          goto cleanup;
+          err = svn_ra_serf__handle_auth(sl.code, ctx,
+                                         request, response, pool);
+          if (err)
+            {
+              ctx->session->pending_error = svn_error_compose_create(
+                                                  err,
+                                                  ctx->session->pending_error);
+              status = ctx->session->pending_error->apr_err;
+              goto cleanup;
+            }
+
+          svn_ra_serf__priority_request_create(ctx);
+          return status;
         }
       else
         {
-          status = svn_ra_serf__response_discard_handler(request, response, NULL, pool);
-          /* At this time we might not have received the whole response from
-             the server. If that's the case, don't setup a new request now
-             but wait till we retry the request later. */
-          if (! APR_STATUS_IS_EAGAIN(status))
-            {
-              svn_ra_serf__priority_request_create(ctx);
-              return status;
-            }
+          return status;
         }
     }
   else if (sl.code == 409 || sl.code >= 500)
@@ -1263,8 +1264,8 @@ handle_response(serf_request_t *request,
       if (!ctx->session->pending_error)
         {
           ctx->session->pending_error =
-              svn_error_create(APR_EGENERAL, NULL,
-                               _("Unspecified error message"));
+              svn_error_createf(APR_EGENERAL, NULL,
+              _("Unspecified error message: %d %s"), sl.code, sl.reason);
         }
       status = ctx->session->pending_error->apr_err;
       goto cleanup;
@@ -1520,8 +1521,8 @@ svn_ra_serf__discover_vcc(const char **vcc_url,
               svn_error_clear(err);
 
               /* Okay, strip off. */
-              present_path = svn_path_join(svn_uri_basename(path, pool),
-                                           present_path, pool);
+              present_path = svn_uri_join(svn_uri_basename(path, pool),
+                                          present_path, pool);
               path = svn_uri_dirname(path, pool);
             }
         }
@@ -1556,9 +1557,9 @@ svn_ra_serf__discover_vcc(const char **vcc_url,
       session->repos_root = session->repos_url;
       session->repos_root.path = apr_pstrdup(session->pool, url_buf->data);
       session->repos_root_str =
-        svn_path_canonicalize(apr_uri_unparse(session->pool,
-                                              &session->repos_root, 0),
-                              session->pool);
+        svn_uri_canonicalize(apr_uri_unparse(session->pool,
+                                             &session->repos_root, 0),
+                             session->pool);
     }
 
   /* Store the repository UUID in the cache. */
@@ -1603,7 +1604,7 @@ svn_ra_serf__get_relative_path(const char **rel_path,
     }
   else
     {
-      *rel_path = svn_path_is_child(decoded_root, decoded_orig, pool);
+      *rel_path = svn_uri_is_child(decoded_root, decoded_orig, pool);
       SVN_ERR_ASSERT(*rel_path != NULL);
     }
   return SVN_NO_ERROR;
@@ -1643,6 +1644,9 @@ svn_ra_serf__error_on_status(int status_code, const char *path)
       case 404:
         return svn_error_createf(SVN_ERR_FS_NOT_FOUND, NULL,
                                  _("'%s' path not found"), path);
+      case 423:
+        return svn_error_createf(SVN_ERR_FS_NO_LOCK_TOKEN, NULL,
+                                 _("'%s': no lock token available"), path);
     }
 
   return SVN_NO_ERROR;

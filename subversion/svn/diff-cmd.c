@@ -305,10 +305,6 @@ svn_cl__diff(apr_getopt_t *os,
 
     }
 
-  /* This helps create a patch that will apply cleanly. */
-  if (opt_state->svnpatch)
-    opt_state->no_diff_deleted = TRUE;
-
   svn_opt_push_implicit_dot_target(targets, pool);
 
   iterpool = svn_pool_create(pool);
@@ -355,7 +351,6 @@ svn_cl__diff(apr_getopt_t *os,
                      ! opt_state->notice_ancestry,
                      opt_state->no_diff_deleted,
                      opt_state->force,
-                     opt_state->svnpatch,
                      opt_state->ignore_mergeinfo,
                      svn_cmdline_output_encoding(pool),
                      outfile,
@@ -402,7 +397,6 @@ svn_cl__diff(apr_getopt_t *os,
                      ! opt_state->notice_ancestry,
                      opt_state->no_diff_deleted,
                      opt_state->force,
-                     opt_state->svnpatch,
                      opt_state->ignore_mergeinfo,
                      svn_cmdline_output_encoding(pool),
                      outfile,

@@ -56,7 +56,6 @@ cat_local_file(svn_wc_context_t *wc_ctx,
                void *cancel_baton,
                apr_pool_t *scratch_pool)
 {
-  const svn_wc_entry_t *entry;
   apr_hash_t *kw = NULL;
   svn_subst_eol_style_t style;
   apr_hash_t *props;
@@ -65,14 +64,19 @@ cat_local_file(svn_wc_context_t *wc_ctx,
   svn_boolean_t local_mod = FALSE;
   apr_time_t tm;
   svn_stream_t *input;
+  svn_node_kind_t kind;
 
   SVN_ERR_ASSERT(SVN_CLIENT__REVKIND_IS_LOCAL_TO_WC(revision->kind));
 
-  SVN_ERR(svn_wc__get_entry_versioned(&entry, wc_ctx, local_abspath,
-                                      svn_node_unknown, FALSE, FALSE,
-                                      scratch_pool, scratch_pool));
+  SVN_ERR(svn_wc__node_get_kind(&kind, wc_ctx, local_abspath, FALSE,
+                                scratch_pool));
 
-  if (entry->kind != svn_node_file)
+  if (kind == svn_node_unknown)
+    return svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
+                             _("'%s' is not under version control"),
+                             svn_dirent_local_style(local_abspath,
+                                                    scratch_pool));
+  if (kind != svn_node_file)
     return svn_error_createf(SVN_ERR_CLIENT_IS_DIRECTORY, NULL,
                              _("'%s' refers to a directory"),
                              svn_dirent_local_style(local_abspath,
@@ -80,8 +84,8 @@ cat_local_file(svn_wc_context_t *wc_ctx,
 
   if (revision->kind != svn_opt_revision_working)
     {
-      SVN_ERR(svn_wc_get_pristine_contents(&input, local_abspath, scratch_pool,
-                                           scratch_pool));
+      SVN_ERR(svn_wc_get_pristine_contents2(&input, wc_ctx, local_abspath,
+                                            scratch_pool, scratch_pool));
       SVN_ERR(svn_wc_get_prop_diffs2(NULL, &props, wc_ctx, local_abspath,
                                      scratch_pool, scratch_pool));
     }
@@ -118,13 +122,25 @@ cat_local_file(svn_wc_context_t *wc_ctx,
     }
   else
     {
-      tm = entry->cmt_date;
+      SVN_ERR(svn_wc__node_get_changed_info(NULL, &tm, NULL, wc_ctx,
+                                            local_abspath, scratch_pool,
+                                            scratch_pool));
     }
 
   if (keywords)
     {
+      svn_revnum_t changed_rev;
       const char *rev_str;
       const char *author;
+      const svn_wc_entry_t *entry;
+
+      SVN_ERR(svn_wc__get_entry_versioned(&entry, wc_ctx, local_abspath,
+                                          svn_node_unknown, FALSE, FALSE,
+                                          scratch_pool, scratch_pool));
+
+      SVN_ERR(svn_wc__node_get_changed_info(&changed_rev, NULL, &author, wc_ctx,
+                                            local_abspath, scratch_pool,
+                                            scratch_pool));
 
       if (local_mod)
         {
@@ -132,13 +148,12 @@ cat_local_file(svn_wc_context_t *wc_ctx,
              to the revision number, and set the author to
              "(local)" since we can't always determine the
              current user's username */
-          rev_str = apr_psprintf(scratch_pool, "%ldM", entry->cmt_rev);
+          rev_str = apr_psprintf(scratch_pool, "%ldM", changed_rev);
           author = _("(local)");
         }
       else
         {
-          rev_str = apr_psprintf(scratch_pool, "%ld", entry->cmt_rev);
-          author = entry->cmt_author;
+          rev_str = apr_psprintf(scratch_pool, "%ld", changed_rev);
         }
 
       SVN_ERR(svn_subst_build_keywords2(&kw, keywords->data, rev_str,

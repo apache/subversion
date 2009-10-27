@@ -37,9 +37,6 @@ extern "C" {
 #endif /* __cplusplus */
 
 
-#define SVN_WC__ENTRIES_TOPLEVEL       "wc-entries"
-#define SVN_WC__ENTRIES_ENTRY          "entry"
-
 /* String representations for svn_node_kind.  This maybe should be
    abstracted farther out? */
 #define SVN_WC__ENTRIES_ATTR_FILE_STR   "file"
@@ -55,7 +52,6 @@ extern "C" {
 #define SVN_WC__ENTRY_ATTR_NAME               "name"
 #define SVN_WC__ENTRY_ATTR_REVISION           "revision"
 #define SVN_WC__ENTRY_ATTR_URL                "url"
-#define SVN_WC__ENTRY_ATTR_REPOS              "repos"
 #define SVN_WC__ENTRY_ATTR_KIND               "kind"
 #define SVN_WC__ENTRY_ATTR_TEXT_TIME          "text-time"
 #define SVN_WC__ENTRY_ATTR_CHECKSUM           "checksum"
@@ -73,16 +69,7 @@ extern "C" {
 #define SVN_WC__ENTRY_ATTR_CMT_DATE           "committed-date"
 #define SVN_WC__ENTRY_ATTR_CMT_AUTHOR         "last-author"
 #define SVN_WC__ENTRY_ATTR_UUID               "uuid"
-#define SVN_WC__ENTRY_ATTR_INCOMPLETE         "incomplete"
-#define SVN_WC__ENTRY_ATTR_LOCK_TOKEN         "lock-token"
-#define SVN_WC__ENTRY_ATTR_LOCK_OWNER         "lock-owner"
-#define SVN_WC__ENTRY_ATTR_LOCK_COMMENT       "lock-comment"
-#define SVN_WC__ENTRY_ATTR_LOCK_CREATION_DATE "lock-creation-date"
-#define SVN_WC__ENTRY_ATTR_CHANGELIST         "changelist"
-#define SVN_WC__ENTRY_ATTR_KEEP_LOCAL         "keep-local"
 #define SVN_WC__ENTRY_ATTR_WORKING_SIZE       "working-size"
-#define SVN_WC__ENTRY_ATTR_TREE_CONFLICT_DATA "tree-conflicts"
-#define SVN_WC__ENTRY_ATTR_FILE_EXTERNAL      "file-external"
 
 /* Attribute values for 'schedule' */
 #define SVN_WC__ENTRY_VALUE_ADD        "add"
@@ -151,7 +138,7 @@ svn_error_t *svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
 #define SVN_WC__ENTRY_MODIFY_CHANGELIST         APR_INT64_C(0x0000000040000000)
 #define SVN_WC__ENTRY_MODIFY_KEEP_LOCAL         APR_INT64_C(0x0000000080000000)
 #define SVN_WC__ENTRY_MODIFY_WORKING_SIZE       APR_INT64_C(0x0000000100000000)
-#define SVN_WC__ENTRY_MODIFY_TREE_CONFLICT_DATA APR_INT64_C(0x0000000200000000)
+/* OPEN */
 #define SVN_WC__ENTRY_MODIFY_FILE_EXTERNAL      APR_INT64_C(0x0000000400000000)
 /* No #define for DEPTH, because it's only meaningful on this-dir anyway. */
 
@@ -171,12 +158,6 @@ svn_error_t *svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
    NAME can be NULL to specify that the caller wishes to modify the
    "this dir" entry in ADM_ACCESS.
 
-   If DO_SYNC is FALSE then the modification will be entirely local to the
-   access baton, if DO_SYNC is TRUE the modification will be written to
-   the entries file.  Be careful when setting DO_SYNC to FALSE: if there
-   is no subsequent svn_wc__entries_write call the modifications will be
-   lost when the access baton is closed.
-
    "Folding in" a change means, in most cases, simply replacing the field
    with the new value. However, for the "schedule" field, unless
    MODIFY_FLAGS includes SVN_WC__ENTRY_MODIFY_FORCE (in which case just take
@@ -186,15 +167,25 @@ svn_error_t *svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
      ### base / working / base and working version(s) ?
    of the node.
 
-   Perform all allocations in POOL.
+   Perform all allocations in POOL.  */
+svn_error_t *
+svn_wc__entry_modify(svn_wc_adm_access_t *adm_access,
+                     const char *name,
+                     svn_wc_entry_t *entry,
+                     apr_uint64_t modify_flags,
+                     apr_pool_t *pool);
 
-   NOTE: when you call this function, the entries file will be read,
-   tweaked and finally, if DO_SYNC is TRUE, written back out.  */
-svn_error_t *svn_wc__entry_modify(svn_wc_adm_access_t *adm_access,
-                                  const char *name,
-                                  svn_wc_entry_t *entry,
-                                  apr_uint64_t modify_flags,
-                                  apr_pool_t *pool);
+
+/* A cross between svn_wc__get_entry() and svn_wc__entry_modify(). */
+svn_error_t *
+svn_wc__entry_modify2(svn_wc__db_t *db,
+                      const char *local_abspath,
+                      svn_node_kind_t kind,
+                      svn_boolean_t parent_stub,
+                      svn_wc_entry_t *entry,
+                      apr_uint64_t modify_flags,
+                      apr_pool_t *scratch_pool);
+
 
 /* Remove LOCAL_ABSPATH from DB, unconditionally.
 

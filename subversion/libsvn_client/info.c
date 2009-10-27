@@ -83,20 +83,28 @@ build_info_from_dirent(svn_info_t **info,
    PATH is the path of the WC node that ENTRY represents. */
 static svn_error_t *
 build_info_from_entry(svn_info_t **info,
+                      svn_wc_context_t *wc_ctx,
                       const svn_wc_entry_t *entry,
                       const char *path,
                       apr_pool_t *pool)
 {
+  const char *local_abspath;
   svn_info_t *tmpinfo = apr_pcalloc(pool, sizeof(*tmpinfo));
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+
+  SVN_ERR(svn_wc__node_get_kind(&tmpinfo->kind, wc_ctx, local_abspath, TRUE,
+                                pool));
 
   tmpinfo->URL                  = entry->url;
   tmpinfo->rev                  = entry->revision;
   tmpinfo->kind                 = entry->kind;
   tmpinfo->repos_UUID           = entry->uuid;
   tmpinfo->repos_root_URL       = entry->repos;
-  tmpinfo->last_changed_rev     = entry->cmt_rev;
-  tmpinfo->last_changed_date    = entry->cmt_date;
-  tmpinfo->last_changed_author  = entry->cmt_author;
+  SVN_ERR(svn_wc__node_get_changed_info(&tmpinfo->last_changed_rev,
+                                        &tmpinfo->last_changed_date,
+                                        &tmpinfo->last_changed_author,
+                                        wc_ctx, local_abspath, pool, pool));
 
   /* entry-specific stuff */
   tmpinfo->has_wc_info          = TRUE;
@@ -259,7 +267,6 @@ struct found_entry_baton
   svn_info_receiver_t receiver;
   void *receiver_baton;
   svn_wc_context_t *wc_ctx;
-  svn_wc_adm_access_t *adm_access;  /* adm access baton for root of walk */
 };
 
 /* An svn_wc_entry_callbacks2_t callback function. */
@@ -280,13 +287,18 @@ info_found_entry_callback(const char *path,
     return SVN_NO_ERROR;
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
-  if (SVN_WC__CL_MATCH(fe_baton->changelist_hash, entry))
+  if (svn_wc__changelist_match(fe_baton->wc_ctx, local_abspath,
+                               fe_baton->changelist_hash, pool))
     {
       svn_info_t *info;
+      svn_wc_conflict_description2_t *tmp_conflict;
 
-      SVN_ERR(build_info_from_entry(&info, entry, path, pool));
-      SVN_ERR(svn_wc__get_tree_conflict(&info->tree_conflict, fe_baton->wc_ctx,
+      SVN_ERR(build_info_from_entry(&info, fe_baton->wc_ctx, entry, path,
+                                    pool));
+      SVN_ERR(svn_wc__get_tree_conflict(&tmp_conflict, fe_baton->wc_ctx,
                                         local_abspath, pool, pool));
+      if (tmp_conflict)
+        info->tree_conflict = svn_wc__cd2_to_cd(tmp_conflict, pool);
       SVN_ERR(fe_baton->receiver(fe_baton->receiver_baton, path, info, pool));
     }
   return SVN_NO_ERROR;
@@ -308,7 +320,7 @@ info_error_handler(const char *path,
   if (err && (err->apr_err == SVN_ERR_UNVERSIONED_RESOURCE))
     {
       struct found_entry_baton *fe_baton = walk_baton;
-      svn_wc_conflict_description_t *tree_conflict;
+      svn_wc_conflict_description2_t *tree_conflict;
       const char *local_abspath;
 
       SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
@@ -322,9 +334,10 @@ info_error_handler(const char *path,
           svn_error_clear(err);
 
           SVN_ERR(build_info_for_unversioned(&info, pool));
-          info->tree_conflict = tree_conflict;
+          info->tree_conflict = svn_wc__cd2_to_cd(tree_conflict, pool);
 
-          SVN_ERR(svn_wc__node_get_repos_root(&(info->repos_root_URL),
+          SVN_ERR(svn_wc__node_get_repos_info(&(info->repos_root_URL),
+                                              NULL,
                                               fe_baton->wc_ctx,
                                               local_abspath,
                                               pool, pool));
@@ -361,14 +374,13 @@ crawl_entries(const char *wcpath,
   int adm_lock_level = SVN_WC__LEVELS_TO_LOCK_FROM_DEPTH(depth);
   struct found_entry_baton fe_baton;
 
-  SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, wcpath, FALSE,
-                                 adm_lock_level, ctx->cancel_func,
-                                 ctx->cancel_baton, pool));
+  SVN_ERR(svn_wc__adm_probe_in_context(&adm_access, ctx->wc_ctx, wcpath, FALSE,
+                                       adm_lock_level, ctx->cancel_func,
+                                       ctx->cancel_baton, pool));
 
   fe_baton.changelist_hash = changelist_hash;
   fe_baton.receiver = receiver;
   fe_baton.receiver_baton = receiver_baton;
-  fe_baton.adm_access = adm_access;
   fe_baton.wc_ctx = ctx->wc_ctx;
   return svn_wc_walk_entries3(wcpath, adm_access,
                               &entry_walk_callbacks, &fe_baton,

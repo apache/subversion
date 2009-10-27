@@ -219,7 +219,7 @@ svn_cl__propget(apr_getopt_t *os,
       svn_string_t *propval;
 
       SVN_ERR(svn_cl__revprop_prepare(&opt_state->start_revision, targets,
-                                      &URL, pool));
+                                      &URL, ctx, pool));
 
       /* Let libsvn_client do the real work. */
       SVN_ERR(svn_client_revprop_get(pname_utf8, &propval,

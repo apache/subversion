@@ -62,17 +62,17 @@ AC_DEFUN(SVN_NEON_CONFIG,
       fi
       AC_MSG_RESULT([$NEON_VERSION])
 
-      if test -n ["`echo "$NEON_VERSION" | grep '^0\.2[6-9]\.'`"] ; then
+      if test -n ["`echo "$NEON_VERSION" | $EGREP '^0\.(2[6-9]|3[0-9])\.'`"] ; then
         AC_DEFINE_UNQUOTED([SVN_NEON_0_26], [1],
                            [Define to 1 if you have Neon 0.26 or later.])
       fi
 
-      if test -n ["`echo "$NEON_VERSION" | grep '^0\.2[7-9]\.'`"] ; then
+      if test -n ["`echo "$NEON_VERSION" | $EGREP '^0\.(2[7-9]|3[0-9])\.'`"] ; then
         AC_DEFINE_UNQUOTED([SVN_NEON_0_27], [1],
                            [Define to 1 if you have Neon 0.27 or later.])
       fi
 
-      if test -n ["`echo "$NEON_VERSION" | grep '^0\.2[8-9]\.'`"] ; then
+      if test -n ["`echo "$NEON_VERSION" | $EGREP '^0\.(2[8-9]|3[0-9])\.'`"] ; then
         AC_DEFINE_UNQUOTED([SVN_NEON_0_28], [1],
                            [Define to 1 if you have Neon 0.28 or later.])
       fi

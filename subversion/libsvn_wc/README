@@ -223,7 +223,7 @@ analogous to CVS/ subdirs.  See the separate sections below for more details.
        <mv name="tmp/prop-base/name"
            dest="prop-base/name">
 
-   The problem with the second way is that is violates the
+   The problem with the second way is that it violates the
    separability of .svn subdirectories -- a subdir should be operable
    independent of its location in the local filesystem.  
 

@@ -115,7 +115,7 @@ module SvnTestUtil
 
   def setup_wc
     teardown_wc
-    make_context("").checkout(@repos_uri, @wc_path)
+    make_context("") { |ctx| ctx.checkout(@repos_uri, @wc_path) }
   end
 
   def teardown_wc
@@ -198,7 +198,7 @@ realm = #{@realm}
   end
 
   def setup_greek_tree
-    @greek.setup(make_context("setup greek tree"))
+    make_context("setup greek tree") { |ctx| @greek.setup(ctx) }
   end
 
   module_function
