@@ -84,11 +84,11 @@ def update_stat(test_name, junit, count):
     """update the test statistics in the junit string"""
     junit_str = '\n'.join(junit)
     t_count = count[test_name]
-    total = t_count['pass'] + t_count['fail'] + t_count['skip']
-    elapsed = t_count['elapsed']
+    total = float(t_count['pass'] + t_count['fail'] + t_count['skip'])
+    elapsed = float(t_count['elapsed'])
     case_time = 0
     if total > 0: # there are tests with no test cases
-        case_time = '%.2f' % float(elapsed/total)
+        case_time = elapsed/total
 
     total_patt = 'TOTAL_%s' % test_name
     fail_patt = 'FAIL_%s' % test_name
@@ -100,8 +100,8 @@ def update_stat(test_name, junit, count):
     junit_str = junit_str.replace(total_patt, "%s" % total)
     junit_str = junit_str.replace(fail_patt, "%s" % t_count['fail'])
     junit_str = junit_str.replace(skip_patt, "%s" % t_count['skip'])
-    junit_str = junit_str.replace(elapsed_patt, "%d" % elapsed)
-    junit_str = junit_str.replace(elapsed_case_patt, "%s" % case_time)
+    junit_str = junit_str.replace(elapsed_patt, "%.3f" % elapsed)
+    junit_str = junit_str.replace(elapsed_case_patt, "%.3f" % case_time)
     return junit_str
 
 def main():
@@ -199,8 +199,8 @@ def main():
             reason = ""
             elapsed = line.split(' ')[2].strip()
             (hrs, mins, secs) = elapsed.split(':')
-            secs_taken = int(hrs)*24 + int(mins)*60 + int(secs)
-            count[test_name]['elapsed'] = int(secs_taken)
+            secs_taken = int(hrs)*24 + int(mins)*60 + float(secs)
+            count[test_name]['elapsed'] = secs_taken
 
             junit_str = update_stat(test_name, junit, count)
             test_junit_file = os.path.join(output_dir, 
