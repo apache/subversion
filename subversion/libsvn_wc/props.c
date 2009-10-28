@@ -670,6 +670,8 @@ svn_wc_merge_props3(svn_wc_notify_state_t *state,
   svn_wc__db_kind_t kind;
   svn_boolean_t hidden;
   svn_stringbuf_t *log_accum;
+  apr_hash_t *new_base_props;
+  apr_hash_t *new_actual_props;
 
   /* IMPORTANT: svn_wc_merge_prop_diffs relies on the fact that baseprops
      may be NULL. */
@@ -690,13 +692,20 @@ svn_wc_merge_props3(svn_wc_notify_state_t *state,
   /* Note that while this routine does the "real" work, it's only
      prepping tempfiles and writing log commands.  */
   SVN_ERR(svn_wc__merge_props(&log_accum, state,
+                              &new_base_props, &new_actual_props,
                               wc_ctx->db, local_abspath,
                               left_version, right_version,
                               baseprops, NULL, NULL,
                               propchanges, base_merge, dry_run,
                               conflict_func, conflict_baton,
                               cancel_func, cancel_baton,
-                              pool));
+                              pool, pool));
+
+  if (!dry_run)
+    SVN_ERR(svn_wc__install_props(&log_accum, wc_ctx->db, local_abspath,
+                                  new_base_props, new_actual_props,
+                                  base_merge, pool));
+
 
   if (! dry_run && !svn_stringbuf_isempty(log_accum))
     {
@@ -1533,6 +1542,8 @@ apply_single_prop_change(svn_wc_notify_state_t *state,
 svn_error_t *
 svn_wc__merge_props(svn_stringbuf_t **entry_accum,
                     svn_wc_notify_state_t *state,
+                    apr_hash_t **new_base_props,
+                    apr_hash_t **new_actual_props,
                     svn_wc__db_t *db,
                     const char *local_abspath,
                     const svn_wc_conflict_version_t *left_version,
@@ -1547,7 +1558,8 @@ svn_wc__merge_props(svn_stringbuf_t **entry_accum,
                     void *conflict_baton,
                     svn_cancel_func_t cancel_func,
                     void *cancel_baton,
-                    apr_pool_t *pool)
+                    apr_pool_t *result_pool,
+                    apr_pool_t *scratch_pool)
 {
   apr_pool_t *iterpool;
   int i;
@@ -1558,11 +1570,14 @@ svn_wc__merge_props(svn_stringbuf_t **entry_accum,
   svn_wc__db_kind_t kind;
   const char *adm_abspath;
 
+  *new_base_props = NULL;
+  *new_actual_props = NULL;
+
   /* ### shouldn't ALLOW_MISSING be FALSE? how can we merge props into
      ### a node that doesn't exist?!  */
   /* ### BH: In some cases we allow merging into missing to create a new
              node. */
-  SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath, TRUE, pool));
+  SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath, TRUE, scratch_pool));
 
   if (kind == svn_wc__db_kind_dir)
     {
@@ -1572,7 +1587,7 @@ svn_wc__merge_props(svn_stringbuf_t **entry_accum,
   else
     {
       is_dir = FALSE;
-      adm_abspath = svn_dirent_dirname(local_abspath, pool);
+      adm_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
     }
 
   /* If not provided, load the base & working property files into hashes */
@@ -1582,15 +1597,16 @@ svn_wc__merge_props(svn_stringbuf_t **entry_accum,
         {
           /* No entry... no props.  */
           if (base_props == NULL)
-            base_props = apr_hash_make(pool);
+            base_props = apr_hash_make(result_pool);
           if (working_props == NULL)
-            working_props = apr_hash_make(pool);
+            working_props = apr_hash_make(result_pool);
         }
       else
         {
           SVN_ERR(svn_wc__load_props(base_props ? NULL : &base_props,
                                      working_props ? NULL : &working_props,
-                                     NULL, db, local_abspath, pool, pool));
+                                     NULL, db, local_abspath,
+                                     result_pool, scratch_pool));
         }
     }
   if (!server_baseprops)
@@ -1606,7 +1622,7 @@ svn_wc__merge_props(svn_stringbuf_t **entry_accum,
     }
 
   /* Looping over the array of incoming propchanges we want to apply: */
-  iterpool = svn_pool_create(pool);
+  iterpool = svn_pool_create(scratch_pool);
   for (i = 0; i < propchanges->nelts; i++)
     {
       const char *propname;
@@ -1622,7 +1638,7 @@ svn_wc__merge_props(svn_stringbuf_t **entry_accum,
       propname = incoming_change->name;
       is_normal = svn_wc_is_normal_prop(propname);
       to_val = incoming_change->value
-        ? svn_string_dup(incoming_change->value, pool) : NULL;
+        ? svn_string_dup(incoming_change->value, result_pool) : NULL;
       from_val = apr_hash_get(server_baseprops, propname, APR_HASH_KEY_STRING);
 
       working_val = apr_hash_get(working_props, propname, APR_HASH_KEY_STRING);
@@ -1645,7 +1661,7 @@ svn_wc__merge_props(svn_stringbuf_t **entry_accum,
                                       propname, base_val, to_val,
                                       conflict_func, conflict_baton,
                                       cancel_func, cancel_baton,
-                                      dry_run, pool, iterpool));
+                                      dry_run, result_pool, iterpool));
 
       else if (! to_val) /* delete an existing property */
         SVN_ERR(apply_single_prop_delete(is_normal ? state : NULL, &conflict,
@@ -1656,7 +1672,7 @@ svn_wc__merge_props(svn_stringbuf_t **entry_accum,
                                          propname, base_val, from_val,
                                          conflict_func, conflict_baton,
                                          cancel_func, cancel_baton,
-                                         dry_run, pool, iterpool));
+                                         dry_run, result_pool, iterpool));
 
       else  /* changing an existing property */
         SVN_ERR(apply_single_prop_change(is_normal ? state : NULL, &conflict,
@@ -1667,7 +1683,7 @@ svn_wc__merge_props(svn_stringbuf_t **entry_accum,
                                          propname, base_val, from_val, to_val,
                                          conflict_func, conflict_baton,
                                          cancel_func, cancel_baton,
-                                         dry_run, pool, iterpool));
+                                         dry_run, result_pool, iterpool));
 
 
       /* merging logic complete, now we need to possibly log conflict
@@ -1685,10 +1701,12 @@ svn_wc__merge_props(svn_stringbuf_t **entry_accum,
             /* This is the very first prop conflict found on this item. */
             SVN_ERR(open_reject_tmp_stream(&reject_tmp_stream,
                                            &reject_tmp_path, db,
-                                           local_abspath, pool, pool));
+                                           local_abspath,
+                                           scratch_pool, iterpool));
 
           /* Append the conflict to the open tmp/PROPS/---.prej file */
-          SVN_ERR(append_prop_conflict(reject_tmp_stream, conflict, pool));
+          SVN_ERR(append_prop_conflict(reject_tmp_stream, conflict,
+                                       iterpool));
         }
 
     }  /* foreach propchange ... */
@@ -1699,9 +1717,8 @@ svn_wc__merge_props(svn_stringbuf_t **entry_accum,
   if (dry_run)
     return SVN_NO_ERROR;
 
-  SVN_ERR(svn_wc__install_props(entry_accum, db, local_abspath,
-                                base_props, working_props, base_merge,
-                                pool));
+  *new_base_props = base_props;
+  *new_actual_props = working_props;
 
   if (reject_tmp_stream)
     {
@@ -1715,7 +1732,7 @@ svn_wc__merge_props(svn_stringbuf_t **entry_accum,
       /* Now try to get the name of a pre-existing .prej file from the
          entries file */
       SVN_ERR(get_existing_prop_reject_file(&reject_path, db, adm_abspath,
-                                            local_abspath, pool));
+                                            local_abspath, scratch_pool));
 
       if (! reject_path)
         {
@@ -1731,14 +1748,14 @@ svn_wc__merge_props(svn_stringbuf_t **entry_accum,
             }
           else
             svn_dirent_split(local_abspath, &reject_dirpath, &reject_filename,
-                             pool);
+                             scratch_pool);
 
           SVN_ERR(svn_io_open_uniquely_named(NULL, &reject_path,
                                              reject_dirpath,
                                              reject_filename,
                                              SVN_WC__PROP_REJ_EXT,
                                              svn_io_file_del_none,
-                                             pool, pool));
+                                             scratch_pool, scratch_pool));
 
           /* This file will be overwritten when the log is run; that's
              ok, because at least now we have a reservation on
@@ -1749,11 +1766,13 @@ svn_wc__merge_props(svn_stringbuf_t **entry_accum,
          above the .svn/ dir.  We write log entries to append our
          conflicts to it. */
       SVN_ERR(svn_wc__loggy_append(entry_accum, adm_abspath,
-                                   reject_tmp_path, reject_path, pool));
+                                   reject_tmp_path, reject_path,
+                                   result_pool));
 
       /* And of course, delete the temporary reject file. */
       SVN_ERR(svn_wc__loggy_remove(entry_accum, adm_abspath,
-                                   reject_tmp_path, pool, pool));
+                                   reject_tmp_path, result_pool,
+                                   scratch_pool));
 
       /* Mark entry as "conflicted" with a particular .prej file. */
       {
@@ -1763,7 +1782,7 @@ svn_wc__merge_props(svn_stringbuf_t **entry_accum,
         SVN_ERR(svn_wc__loggy_entry_modify(entry_accum, adm_abspath,
                                            local_abspath, &entry,
                                            SVN_WC__ENTRY_MODIFY_PREJFILE,
-                                           pool, pool));
+                                           result_pool, scratch_pool));
       }
 
     } /* if (reject_tmp_fp) */

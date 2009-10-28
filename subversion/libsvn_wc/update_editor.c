@@ -2947,6 +2947,7 @@ close_directory(void *dir_baton,
   svn_wc_notify_state_t prop_state = svn_wc_notify_state_unknown;
   apr_array_header_t *entry_props, *wc_props, *regular_props;
   apr_hash_t *base_props = NULL, *working_props = NULL;
+  apr_hash_t *new_base_props = NULL, *new_actual_props = NULL;
 
   /* Skip if we're in a conflicted tree. */
   if (db->skip_this)
@@ -3052,18 +3053,23 @@ close_directory(void *dir_baton,
              conflicts). */
           SVN_ERR_W(svn_wc__merge_props(&dirprop_log,
                                         &prop_state,
+                                        &new_base_props,
+                                        &new_actual_props,
                                         eb->db,
                                         db->local_abspath,
                                         NULL, /* left_version */
                                         NULL, /* right_version */
                                         NULL /* use baseprops */,
                                         base_props, working_props,
-                                        regular_props, TRUE, FALSE,
+                                        regular_props,
+                                        TRUE /* base_merge */,
+                                        FALSE /* dry_run */,
                                         db->edit_baton->conflict_func,
                                         db->edit_baton->conflict_baton,
                                         db->edit_baton->cancel_func,
                                         db->edit_baton->cancel_baton,
-                                        db->pool),
+                                        db->pool,
+                                        pool),
                     _("Couldn't do property merge"));
         }
 
@@ -3085,6 +3091,11 @@ close_directory(void *dir_baton,
          accumulator. */
       svn_stringbuf_appendstr(db->log_accum, dirprop_log);
     }
+
+  if (new_base_props || new_actual_props)
+    SVN_ERR(svn_wc__install_props(&db->log_accum, eb->db, db->local_abspath,
+                                  new_base_props, new_actual_props,
+                                  TRUE /* write_base_props */, pool));
 
   /* Flush and run the log. */
   SVN_ERR(flush_log(db, pool));
@@ -4194,6 +4205,8 @@ static svn_error_t *
 merge_props(svn_stringbuf_t *log_accum,
             svn_wc_notify_state_t *prop_state,
             svn_wc_notify_lock_state_t *lock_state,
+            apr_hash_t **new_base_props,
+            apr_hash_t **new_actual_props,
             svn_wc__db_t *db,
             const char *file_abspath,
             const char *dir_abspath,
@@ -4226,6 +4239,8 @@ merge_props(svn_stringbuf_t *log_accum,
          props.  */
       SVN_ERR(svn_wc__merge_props(&log_accum,
                                   prop_state,
+                                  new_base_props,
+                                  new_actual_props,
                                   db,
                                   file_abspath,
                                   left_version,
@@ -4236,6 +4251,7 @@ merge_props(svn_stringbuf_t *log_accum,
                                   regular_props, TRUE, FALSE,
                                   conflict_func, conflict_baton,
                                   cancel_func, cancel_baton,
+                                  pool,
                                   pool));
     }
 
@@ -4349,6 +4365,8 @@ static svn_error_t *
 merge_file(svn_wc_notify_state_t *content_state,
            svn_wc_notify_state_t *prop_state,
            svn_wc_notify_lock_state_t *lock_state,
+           apr_hash_t **new_base_props,
+           apr_hash_t **new_actual_props,
            struct file_baton *fb,
            const char *new_text_base_path,
            const svn_checksum_t *actual_checksum,
@@ -4417,8 +4435,9 @@ merge_file(svn_wc_notify_state_t *content_state,
   /* Install all kinds of properties.  It is important to do this before
      any file content merging, since that process might expand keywords, in
      which case we want the new entryprops to be in place. */
-  SVN_ERR(merge_props(log_accum, prop_state, lock_state, eb->db,
-                      fb->local_abspath, pb->local_abspath,
+  SVN_ERR(merge_props(log_accum, prop_state, lock_state,
+                      new_base_props, new_actual_props,
+                      eb->db, fb->local_abspath, pb->local_abspath,
                       left_version, right_version,
                       fb->propchanges,
                       fb->copied_base_props, fb->copied_working_props,
@@ -4768,6 +4787,8 @@ close_file(void *file_baton,
   svn_checksum_t *expected_checksum = NULL;
   svn_checksum_t *actual_checksum;
   const char *new_base_path;
+  apr_hash_t *new_base_props = NULL;
+  apr_hash_t *new_actual_props = NULL;
 
   if (fb->skip_this)
     {
@@ -4815,11 +4836,23 @@ close_file(void *file_baton,
             expected_hex_digest,
             svn_checksum_to_cstring_display(actual_checksum, pool));
 
-  SVN_ERR(merge_file(&content_state, &prop_state, &lock_state, fb,
-                     new_base_path,
-                     actual_checksum, pool));
+  SVN_ERR(merge_file(&content_state, &prop_state, &lock_state,
+                     &new_base_props, &new_actual_props, fb,
+                     new_base_path, actual_checksum, pool));
+
+  if (new_base_props || new_actual_props)
+    {
+      svn_stringbuf_t *prop_accum = NULL;
+      SVN_ERR(svn_wc__install_props(&prop_accum, eb->db, fb->local_abspath,
+                                    new_base_props, new_actual_props,
+                                    TRUE /* write_base_props */, pool));
+
+      SVN_ERR(svn_wc__wq_add_loggy(eb->db, fb->dir_baton->local_abspath,
+                                   prop_accum, pool));
+    }
 
   SVN_ERR(flush_file_log(fb, pool));
+
   /* We have one less referrer to the directory's bump information. */
   SVN_ERR(maybe_bump_dir_info(eb, fb->bump_info, pool));
 
