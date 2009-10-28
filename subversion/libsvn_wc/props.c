@@ -323,8 +323,7 @@ svn_wc__load_props(apr_hash_t **base_props_p,
 
 
 svn_error_t *
-svn_wc__install_props(svn_stringbuf_t **log_accum,
-                      svn_wc__db_t *db,
+svn_wc__install_props(svn_wc__db_t *db,
                       const char *local_abspath,
                       apr_hash_t *base_props,
                       apr_hash_t *working_props,
@@ -335,6 +334,7 @@ svn_wc__install_props(svn_stringbuf_t **log_accum,
   const char *working_propfile_path;
   const char *adm_abspath;
   apr_array_header_t *prop_diffs;
+  svn_stringbuf_t *log_accum = NULL;
 
   /* Allow installing properties on files that will be installed by loggy */
   SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath, TRUE, pool));
@@ -354,14 +354,14 @@ svn_wc__install_props(svn_stringbuf_t **log_accum,
   if (prop_diffs->nelts > 0)
     {
       /* Loggily write the properties to the destination file.  */
-      SVN_ERR(loggy_write_properties(log_accum, working_props,
+      SVN_ERR(loggy_write_properties(&log_accum, working_props,
                                      working_propfile_path,
                                      adm_abspath, pool));
     }
   else
     {
       /* No property modifications, remove the file instead. */
-      SVN_ERR(svn_wc__loggy_remove(log_accum, adm_abspath,
+      SVN_ERR(svn_wc__loggy_remove(&log_accum, adm_abspath,
                                    working_propfile_path, pool, pool));
     }
 
@@ -375,16 +375,19 @@ svn_wc__install_props(svn_stringbuf_t **log_accum,
 
       if (apr_hash_count(base_props) > 0)
         {
-          SVN_ERR(loggy_write_properties(log_accum, base_props,
+          SVN_ERR(loggy_write_properties(&log_accum, base_props,
                                          base_propfile_path,
                                          adm_abspath, pool));
         }
       else
         {
-          SVN_ERR(svn_wc__loggy_remove(log_accum, adm_abspath,
+          SVN_ERR(svn_wc__loggy_remove(&log_accum, adm_abspath,
                                        base_propfile_path, pool, pool));
         }
     }
+
+  if (log_accum != NULL)
+    SVN_ERR(svn_wc__wq_add_loggy(db, adm_abspath, log_accum, pool));
 
   return SVN_NO_ERROR;
 }
@@ -702,16 +705,17 @@ svn_wc_merge_props3(svn_wc_notify_state_t *state,
                               pool, pool));
 
   if (!dry_run)
-    SVN_ERR(svn_wc__install_props(&log_accum, wc_ctx->db, local_abspath,
+    SVN_ERR(svn_wc__install_props(wc_ctx->db, local_abspath,
                                   new_base_props, new_actual_props,
                                   base_merge, pool));
 
 
-  if (! dry_run && !svn_stringbuf_isempty(log_accum))
+  if (! dry_run)
     {
       const char *dir_abspath;
 
-      SVN_ERR(svn_wc__db_read_kind(&kind, wc_ctx->db, local_abspath, FALSE, pool));
+      SVN_ERR(svn_wc__db_read_kind(&kind, wc_ctx->db, local_abspath,
+                                   FALSE, pool));
 
       switch (kind)
         {
@@ -723,7 +727,10 @@ svn_wc_merge_props3(svn_wc_notify_state_t *state,
           break;
         }
 
-      SVN_ERR(svn_wc__wq_add_loggy(wc_ctx->db, dir_abspath, log_accum, pool));
+      if (! svn_stringbuf_isempty(log_accum))
+          SVN_ERR(svn_wc__wq_add_loggy(wc_ctx->db, dir_abspath, log_accum,
+                                       pool));
+
       SVN_ERR(svn_wc__run_log2(wc_ctx->db, dir_abspath, pool));
     }
 
