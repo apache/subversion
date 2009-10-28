@@ -3277,12 +3277,12 @@ svn_wc_mark_missing_deleted(const char *path,
 
 /** Ensure that an administrative area exists for @a local_abspath, so
  * that @a local_abspath is a working copy subdir based on @a url at @a
- * revision, with depth @a depth, and with repository UUID @a uuid and
- * repository root URL @a repos.
+ * revision, with depth @a depth, and with repository UUID @a repos_uuid
+ * and repository root URL @a repos_root_url.
  *
  * @a depth must be a definite depth, it cannot be @c svn_depth_unknown.
- * @a uuid and @a repos may be @c NULL.  If non-@c NULL, @a repos must
- * be a prefix of @a url.
+ * @a repos_uuid and @a repos_root_url MUST NOT be @c NULL, and
+ * @a repos_root_url must be a prefix of @a url.
  *
  * If the administrative area does not exist, then create it and
  * initialize it to an unlocked state.
@@ -3303,15 +3303,19 @@ svn_wc_mark_missing_deleted(const char *path,
 svn_error_t *
 svn_wc_ensure_adm4(svn_wc_context_t *wc_ctx,
                    const char *local_abspath,
-                   const char *uuid,
                    const char *url,
-                   const char *repos,
+                   const char *repos_root_url,
+                   const char *repos_uuid,
                    svn_revnum_t revision,
                    svn_depth_t depth,
                    apr_pool_t *scratch_pool);
 
 /**
  * Similar to svn_wc_ensure_adm4(), but without the wc context parameter.
+ *
+ * @note the @a uuid and @a repos parameters were documented as allowing
+ * @c NULL to be passed. Beginning with 1.7, this will return an error,
+ * contrary to prior documented behavior.
  *
  * @since New in 1.5.
  * @deprecated Provided for backwards compatibility with the 1.6 API.
@@ -3331,9 +3335,11 @@ svn_wc_ensure_adm3(const char *path,
  * Similar to svn_wc_ensure_adm3(), but with @a depth set to
  * @c svn_depth_infinity.
  *
- * @deprecated Provided for backwards compatibility with the 1.4 API.
+ * See the note on svn_wc_ensure_adm3() regarding the @a repos and @a uuid
+ * parameters.
  *
  * @since New in 1.3.
+ * @deprecated Provided for backwards compatibility with the 1.4 API.
  */
 SVN_DEPRECATED
 svn_error_t *
@@ -3347,6 +3353,9 @@ svn_wc_ensure_adm2(const char *path,
 
 /**
  * Similar to svn_wc_ensure_adm2(), but with @a repos set to @c NULL.
+ *
+ * @note as of 1.7, this function always returns #SVN_ERR_BAD_URL since
+ * the @a repos parameter may not be @c NULL.
  *
  * @deprecated Provided for backwards compatibility with the 1.2 API.
  */

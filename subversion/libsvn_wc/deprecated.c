@@ -462,10 +462,15 @@ svn_wc_ensure_adm3(const char *path,
   const char *local_abspath;
   svn_wc_context_t *wc_ctx;
 
+  if (uuid == NULL)
+    return svn_error_create(SVN_ERR_BAD_UUID, NULL, NULL);
+  if (repos == NULL)
+    return svn_error_create(SVN_ERR_BAD_URL, NULL, NULL);
+
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
   SVN_ERR(svn_wc_context_create(&wc_ctx, NULL /* config */, pool, pool));
 
-  SVN_ERR(svn_wc_ensure_adm4(wc_ctx, local_abspath, uuid, url, repos, revision,
+  SVN_ERR(svn_wc_ensure_adm4(wc_ctx, local_abspath, url, repos, uuid, revision,
                              depth, pool));
 
   return svn_error_return(svn_wc_context_destroy(wc_ctx));

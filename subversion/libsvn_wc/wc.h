@@ -451,9 +451,9 @@ svn_wc__internal_get_ancestry(const char **url,
 svn_error_t *
 svn_wc__internal_ensure_adm(svn_wc__db_t *db,
                             const char *local_abspath,
-                            const char *uuid,
                             const char *url,
-                            const char *repos,
+                            const char *repos_root_url,
+                            const char *repos_uuid,
                             svn_revnum_t revision,
                             svn_depth_t depth,
                             apr_pool_t *scratch_pool);
