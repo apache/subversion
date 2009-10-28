@@ -522,7 +522,7 @@ apply_textdelta(void *file_baton,
 
   return eb->wrapped_editor->apply_textdelta(fb->wrapped_baton,
                                              base_checksum, pool,
-                                             handler, handler_baton);;
+                                             handler, handler_baton);
 }
 
 static svn_error_t *
