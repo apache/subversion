@@ -1316,3 +1316,21 @@ disruption and potential for error.
    note: this will also involve merging datastores
 
 8. replace loggy with sqlite-based work journal
+
+Endgame
+-------
+
+As WC-NG development has progress, and many of the above milestones have been
+met, we've identified the following milestones leading to the completion of
+wc-ng development (and hence 1.7).  They are not all necessarily serially
+dependent, but some dependencies do exist.
+
+1. Move properties into wc.db.
+
+2. Convert loggy actions into work queue actions.
+
+3. Move pristines into a SHA-1 based store.
+
+4. Consolidate metadata into the centralized system.
+
+5. Test, tweak and release!
