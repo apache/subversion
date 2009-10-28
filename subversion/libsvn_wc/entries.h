@@ -77,26 +77,6 @@ extern "C" {
 #define SVN_WC__ENTRY_VALUE_REPLACE    "replace"
 
 
-
-/* Initialize an entries file based on URL at INITIAL_REV, in the adm
-   area for PATH.  The adm area must not already have an entries
-   file.  UUID is the repository UUID, and may be NULL.  REPOS is the
-   repository root URL and, if not NULL, must be a prefix of URL.
-   DEPTH is the initial depth of the working copy, it must be a
-   definite depth, not svn_depth_unknown.
-
-   If initial rev is valid and non-zero, then mark the 'this_dir'
-   entry as being incomplete.
-*/
-svn_error_t *svn_wc__entries_init(const char *path,
-                                  const char *uuid,
-                                  const char *url,
-                                  const char *repos,
-                                  svn_revnum_t initial_rev,
-                                  svn_depth_t depth,
-                                  apr_pool_t *pool);
-
-
 /* Set *NEW_ENTRY to a new entry, taking attributes from ATTS, whose
    keys and values are both char *.  Allocate the entry and copy
    attributes into POOL as needed.
