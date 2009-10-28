@@ -404,6 +404,31 @@ struct handler_baton
 };
 
 
+/* Get an empty file in the temporary area for WRI_ABSPATH.  The file will
+   not be set for automatic deletion, and the name will be returned in
+   TMP_FILENAME. */
+static svn_error_t *
+get_empty_tmp_file(const char **tmp_filename,
+                   svn_wc__db_t *db,
+                   const char *wri_abspath,
+                   apr_pool_t *result_pool,
+                   apr_pool_t *scratch_pool)
+{
+  const char *temp_dir_path;
+  svn_stream_t *empty_stream;
+
+  SVN_ERR(svn_wc__db_temp_wcroot_tempdir(&temp_dir_path, db, wri_abspath,
+                                         scratch_pool, scratch_pool));
+  SVN_ERR(svn_stream_open_unique(&empty_stream, tmp_filename, temp_dir_path,
+                                 svn_io_file_del_none, scratch_pool,
+                                 scratch_pool));
+  SVN_ERR(svn_stream_close(empty_stream));
+
+  return svn_error_return(svn_dirent_get_absolute(tmp_filename, *tmp_filename,
+                                                  result_pool));
+}
+
+
 /* Return the url for LOCAL_ABSPATH of type KIND which can be unknown, 
  * allocated in RESULT_POOL, or null if unable to obtain a url.
  *
@@ -3568,16 +3593,11 @@ add_file_with_history(const char *path,
       if (text_changed)
         {
           /* Make a unique file name for the copied_working_text. */
-          SVN_ERR(svn_wc_create_tmp_file2(NULL, &tfb->copied_working_text,
-                                          pb->local_abspath,
-                                          svn_io_file_del_none,
-                                          pool));
+          SVN_ERR(get_empty_tmp_file(&tfb->copied_working_text, eb->db,
+                                     pb->local_abspath, pool, pool));
 
           SVN_ERR(svn_io_copy_file(src_local_abspath, tfb->copied_working_text,
                                    TRUE, subpool));
-
-          SVN_ERR(svn_dirent_get_absolute(&tfb->copied_working_text,
-                                          tfb->copied_working_text, pool));
         }
     }
 
@@ -4602,13 +4622,9 @@ merge_file(svn_wc_notify_state_t *content_state,
 
               if (fb->add_existed && ! is_replaced)
                 {
-                  SVN_ERR(svn_wc_create_tmp_file2(NULL, &merge_left,
-                                                  pb->local_abspath,
-                                                  svn_io_file_del_none,
-                                                  pool));
-
-                  SVN_ERR(svn_dirent_get_absolute(&merge_left, merge_left,
-                                                  pool));
+                  SVN_ERR(get_empty_tmp_file(&merge_left, eb->db,
+                                             pb->local_abspath,
+                                             pool, pool));
                   delete_left = TRUE;
                 }
               else if (fb->copied_text_base)
