@@ -5593,17 +5593,19 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
 {
   const char *new_URL;
   const char *dir_abspath = svn_dirent_dirname(local_abspath, pool);
-  apr_file_t *base_file;
   const char *tmp_text_base_path;
   svn_checksum_t *base_checksum;
   svn_stream_t *tmp_base_contents;
   const char *text_base_path;
   const svn_wc_entry_t *ent;
   const svn_wc_entry_t *dst_entry;
+  const char *temp_dir_abspath;
   svn_stringbuf_t *log_accum;
 
   SVN_ERR(svn_wc__text_base_path(&text_base_path, wc_ctx->db, local_abspath,
                                  FALSE, pool));
+  SVN_ERR(svn_wc__db_temp_wcroot_tempdir(&temp_dir_abspath, wc_ctx->db,
+                                         local_abspath, pool, pool));
 
   /* Fabricate the anticipated new URL of the target and check the
      copyfrom URL to be in the same repository. */
@@ -5694,12 +5696,12 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
 
   /* Copy the text base contents into a temporary file so our log
      can refer to it. Compute its checksum as we copy. */
-  SVN_ERR(svn_wc_create_tmp_file2(&base_file, &tmp_text_base_path, dir_abspath,
-                                  svn_io_file_del_none, pool));
+  SVN_ERR(svn_stream_open_unique(&tmp_base_contents, &tmp_text_base_path,
+                                 temp_dir_abspath, svn_io_file_del_none, pool,
+                                 pool));
   new_base_contents = svn_stream_checksummed2(new_base_contents,
                                               &base_checksum, NULL,
                                               svn_checksum_md5, TRUE, pool);
-  tmp_base_contents = svn_stream_from_aprfile2(base_file, FALSE, pool);
   SVN_ERR(svn_stream_copy3(new_base_contents, tmp_base_contents,
                            cancel_func, cancel_baton,
                            pool));
@@ -5708,14 +5710,12 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
   if (new_contents)
     {
       /* If the caller gave us a new working file, copy it in place. */
-      apr_file_t *contents_file;
       svn_stream_t *tmp_contents;
       const char *tmp_text_path;
 
-      SVN_ERR(svn_wc_create_tmp_file2(&contents_file, &tmp_text_path,
-                                      dir_abspath, svn_io_file_del_none,
-                                      pool));
-      tmp_contents = svn_stream_from_aprfile2(contents_file, FALSE, pool);
+      SVN_ERR(svn_stream_open_unique(&tmp_contents, &tmp_text_path,
+                                     temp_dir_abspath, svn_io_file_del_none,
+                                     pool, pool));
       SVN_ERR(svn_stream_copy3(new_contents,
                                tmp_contents,
                                cancel_func, cancel_baton,
