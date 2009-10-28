@@ -153,9 +153,9 @@
 
 struct edit_baton
 {
-  /* For updates, the "destination" of the edit is ANCHOR_ABSPATH, the directory
-     containing TARGET_ABSPATH. If ANCHOR_ABSPATH itself is the target, the values
-     are identical.
+  /* For updates, the "destination" of the edit is ANCHOR_ABSPATH, the
+     directory containing TARGET_ABSPATH. If ANCHOR_ABSPATH itself is the
+     target, the values are identical.
 
      TARGET_BASENAME is the name of TARGET_ABSPATH in ANCHOR_ABSPATH, or "" if
      ANCHOR_ABSPATH is the target */
@@ -1849,7 +1849,8 @@ node_already_conflicted(svn_boolean_t *conflicted,
                                                 db, local_abspath,
                                                 scratch_pool));
 
-          *conflicted = (text_conflicted || prop_conflicted || tree_conflicted);
+          *conflicted = (text_conflicted || prop_conflicted 
+                            || tree_conflicted);
           return SVN_NO_ERROR;
         }
     }
@@ -2025,7 +2026,8 @@ schedule_existing_item_for_re_add(const svn_wc_entry_t *entry,
       SVN_ERR(svn_wc__entry_modify2(eb->db, local_abspath, svn_node_dir, TRUE,
                                    &tmp_entry, flags, pool));
 
-      /* ### Need to do something more, such as change 'base' into 'revert-base'? */
+      /* ### Need to do something more, such as change 'base' into
+         ### 'revert-base'? */
     }
 
   return SVN_NO_ERROR;
@@ -3571,8 +3573,8 @@ add_file_with_history(const char *path,
                                           svn_io_file_del_none,
                                           pool));
 
-          SVN_ERR(svn_io_copy_file(src_local_abspath, tfb->copied_working_text, TRUE,
-                                   subpool));
+          SVN_ERR(svn_io_copy_file(src_local_abspath, tfb->copied_working_text,
+                                   TRUE, subpool));
 
           SVN_ERR(svn_dirent_get_absolute(&tfb->copied_working_text,
                                           tfb->copied_working_text, pool));
@@ -3800,8 +3802,8 @@ add_file(const char *path,
       /* Specialize the added case to added, copied, moved */
       if (status == svn_wc__db_status_added)
         {
-          SVN_ERR(svn_wc__db_scan_addition(&status, NULL, NULL, NULL, NULL, NULL,
-                                           NULL, NULL, NULL,
+          SVN_ERR(svn_wc__db_scan_addition(&status, NULL, NULL, NULL, NULL,
+                                           NULL, NULL, NULL, NULL,
                                            eb->db, fb->local_abspath,
                                            subpool, subpool));
         }
@@ -3825,11 +3827,13 @@ add_file(const char *path,
             {
               svn_wc_conflict_description2_t *tree_conflict;
 
-              SVN_ERR(check_tree_conflict(&tree_conflict, eb, fb->local_abspath,
+              SVN_ERR(check_tree_conflict(&tree_conflict, eb,
+                                          fb->local_abspath,
                                           fb->log_accum,
                                           svn_wc_conflict_action_add,
                                           svn_node_file, fb->new_URL,
-                                          pb->inside_deleted_subtree, subpool));
+                                          pb->inside_deleted_subtree,
+                                          subpool));
 
               if (tree_conflict != NULL)
                 {
@@ -4682,7 +4686,8 @@ merge_file(svn_wc_notify_state_t *content_state,
         /* If a lock was removed and we didn't update the text contents, we
            might need to set the file read-only. */
         SVN_ERR(svn_wc__loggy_maybe_set_readonly(&log_accum, pb->local_abspath,
-                                                 fb->local_abspath, pool, pool));
+                                                 fb->local_abspath, pool,
+                                                 pool));
     }
 
   /* Deal with installation of the new textbase, if appropriate. */
@@ -5526,7 +5531,8 @@ svn_wc_get_actual_target2(const char **anchor,
   return SVN_NO_ERROR;
 }
 
-/* TODO ### Update to mention LOCAL_ABSPATH, DIR_ABSPATH; not DST_PATH, ADM_ACCESS.
+/* TODO ### Update to mention LOCAL_ABSPATH, DIR_ABSPATH; not DST_PATH,
+            ADM_ACCESS.
 
    Write, to LOG_ACCUM, commands to install properties for an added DST_PATH.
    NEW_BASE_PROPS and NEW_PROPS are base and working properties, respectively.
