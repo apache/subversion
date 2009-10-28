@@ -468,19 +468,6 @@ svn_io_open_uniquely_named(apr_file_t **file,
 }
 
 svn_error_t *
-svn_io_open_unique_file3(apr_file_t **file,
-                         const char **temp_path,
-                         const char *dirpath,
-                         svn_io_file_del_t delete_when,
-                         apr_pool_t *result_pool,
-                         apr_pool_t *scratch_pool)
-{
-  return svn_io_open_uniquely_named(file, temp_path,
-                                    dirpath, "tempfile", ".tmp",
-                                    delete_when, result_pool, scratch_pool);
-}
-
-svn_error_t *
 svn_io_create_unique_link(const char **unique_name_p,
                           const char *path,
                           const char *dest,
@@ -3631,18 +3618,15 @@ svn_io_file_name_get(const char **filename,
 }
 
 svn_error_t *
-svn_io_mktemp(apr_file_t **file,
-              const char **unique_path,
-              const char *dirpath,
-              const char *filename,
-              svn_io_file_del_t delete_when,
-              apr_pool_t *result_pool,
-              apr_pool_t *scratch_pool)
+svn_io_open_unique_file3(apr_file_t **file,
+                         const char **unique_path,
+                         const char *dirpath,
+                         svn_io_file_del_t delete_when,
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool)
 {
   apr_file_t *tempfile;
   char *path;
-  const char *x = "XXXXXX";
-  char *template;
   struct temp_file_cleanup_s *baton = NULL;
   apr_int32_t flags = (APR_READ | APR_WRITE | APR_CREATE | APR_EXCL |
                        APR_BUFFERED | APR_BINARY);
@@ -3655,12 +3639,8 @@ svn_io_mktemp(apr_file_t **file,
 
   if (dirpath == NULL)
     SVN_ERR(svn_io_temp_dir(&dirpath, scratch_pool));
-  if (filename == NULL)
-    template = apr_pstrdup(scratch_pool, x);
-  else
-    template = apr_pstrcat(scratch_pool, filename, "-", x, NULL);
-    
-  path = svn_dirent_join(dirpath, template, scratch_pool);
+
+  path = svn_dirent_join(dirpath, "XXXXXX", scratch_pool);
 
   switch (delete_when)
     {
