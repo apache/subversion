@@ -57,7 +57,7 @@ extern "C" {
    current items in LOG_ACCUM to the work queue, and then reinitializes
    LOG_ACCUM to an empty buffer. */
 #define SVN_WC__FLUSH_LOG_ACCUM(db, adm_abspath, log_accum, scratch_pool)   \
-  if (!svn_stringbuf_isempty(log_accum))                                    \
+  if ((log_accum) && !svn_stringbuf_isempty(log_accum))                     \
     {                                                                       \
       SVN_ERR(svn_wc__wq_add_loggy(db, adm_abspath, log_accum, scratch_pool));\
       svn_stringbuf_setempty(log_accum);                                    \
