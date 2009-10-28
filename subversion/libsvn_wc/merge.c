@@ -211,8 +211,9 @@ detranslate_wc_file(const char **detranslated_abspath,
 
       /* ### svn_subst_copy_and_translate3() also creates a tempfile
          ### internally.  Anyway to piggyback on that? */
-      SVN_ERR(svn_io_mktemp(NULL, &detranslated, NULL, NULL,
-                            svn_io_file_del_none, scratch_pool, scratch_pool));
+      SVN_ERR(svn_io_open_unique_file3(NULL, &detranslated, NULL,
+                                      svn_io_file_del_none, scratch_pool,
+                                      scratch_pool));
 
       /* Always 'repair' EOLs here, so that we can apply a diff that
          changes from inconsistent newlines and no 'svn:eol-style' to
@@ -262,8 +263,9 @@ maybe_update_target_eols(const char **new_target_abspath,
       const char *tmp_new;
 
       svn_subst_eol_style_from_value(NULL, &eol, prop->value->data);
-      SVN_ERR(svn_io_mktemp(NULL, &tmp_new, NULL, NULL,
-                            svn_io_file_del_none, scratch_pool, scratch_pool));
+      SVN_ERR(svn_io_open_unique_file3(NULL, &tmp_new, NULL,
+                                       svn_io_file_del_none, scratch_pool,
+                                       scratch_pool));
 
       /* Always 'repair' EOLs here, so that we can apply a diff that
          changes from inconsistent newlines and no 'svn:eol-style' to

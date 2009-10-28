@@ -448,6 +448,9 @@ copy_file_administratively(svn_wc_context_t *wc_ctx,
     apr_hash_t *props, *base_props;
     svn_stream_t *base_contents;
     svn_stream_t *contents;
+    svn_boolean_t src_exists;
+
+    src_exists = TRUE;
 
     /* Are we moving or copying a file that is already moved or copied
        but not committed? */
@@ -497,6 +500,8 @@ copy_file_administratively(svn_wc_context_t *wc_ctx,
             {
               svn_error_clear(err);
 
+              src_exists = FALSE;
+
               err = svn_wc__get_pristine_contents(&contents, db, src_abspath,
                                                   scratch_pool, scratch_pool);
 
@@ -542,6 +547,22 @@ copy_file_administratively(svn_wc_context_t *wc_ctx,
                                    cancel_func, cancel_baton,
                                    notify_func, notify_baton,
                                    scratch_pool));
+
+    /* The underlying file created by svn_stream_open_unique() might
+     * have fairly restrictive file permissions (due to mkstemp()).
+     * Make sure the file permission of the copied file are what
+     * users expect. Either inherit them from the copy source if possible,
+     * or use OS defaults (which should take umask into account). */
+    if (src_exists)
+      SVN_ERR(svn_io_copy_perms(src_abspath, dst_abspath, scratch_pool));
+    else
+      {
+        /* ### An svn_io wrapper for apr_file_perms_set would be nice. */
+        apr_status_t status;
+        status = apr_file_perms_set(dst_abspath, APR_FPROT_OS_DEFAULT);
+        if (status)
+          return svn_error_wrap_apr(status, "%s", dst_abspath);
+      }
   }
 
   /* Report the addition to the caller. */
