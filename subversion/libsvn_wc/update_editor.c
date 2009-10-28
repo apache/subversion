@@ -1117,8 +1117,8 @@ prep_directory(struct dir_baton *db,
   /* Make sure it's the right working copy, either by creating it so,
      or by checking that it is so already. */
   SVN_ERR(svn_wc__internal_ensure_adm(db->edit_baton->db, dir_abspath,
-                                      db->edit_baton->uuid, ancestor_url,
-                                      repos, ancestor_revision,
+                                      ancestor_url, repos,
+                                      db->edit_baton->uuid, ancestor_revision,
                                       db->ambient_depth, pool));
 
   if (NULL == svn_wc__adm_retrieve_internal2(db->edit_baton->db, dir_abspath,

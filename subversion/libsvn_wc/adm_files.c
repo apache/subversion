@@ -486,16 +486,16 @@ init_adm_tmp_area(const char *path, apr_pool_t *pool)
 static svn_error_t *
 init_adm(svn_wc__db_t *db,
          const char *local_abspath,
-         const char *uuid,
          const char *url,
          const char *repos_root_url,
+         const char *repos_uuid,
          svn_revnum_t initial_rev,
          svn_depth_t depth,
          apr_pool_t *pool)
 {
   const char *repos_relpath;
 
-  SVN_ERR_ASSERT(! repos_root_url || svn_uri_is_ancestor(repos_root_url, url));
+  SVN_ERR_ASSERT(svn_uri_is_ancestor(repos_root_url, url));
 
   /* First, make an empty administrative area. */
   SVN_ERR(svn_io_dir_make_hidden(svn_wc__adm_child(local_abspath, NULL, pool),
@@ -521,7 +521,8 @@ init_adm(svn_wc__db_t *db,
                           repos_relpath == NULL
                             ? ""
                             : svn_path_uri_decode(repos_relpath, pool),
-                          repos_root_url, uuid, initial_rev, depth, pool));
+                          repos_root_url, repos_uuid, initial_rev, depth,
+                          pool));
 
   return SVN_NO_ERROR;
 }
@@ -529,9 +530,9 @@ init_adm(svn_wc__db_t *db,
 svn_error_t *
 svn_wc__internal_ensure_adm(svn_wc__db_t *db,
                             const char *local_abspath,
-                            const char *uuid,
                             const char *url,
-                            const char *repos,
+                            const char *repos_root_url,
+                            const char *repos_uuid,
                             svn_revnum_t revision,
                             svn_depth_t depth,
                             apr_pool_t *scratch_pool)
@@ -540,14 +541,16 @@ svn_wc__internal_ensure_adm(svn_wc__db_t *db,
   int format;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+  SVN_ERR_ASSERT(repos_root_url != NULL);
+  SVN_ERR_ASSERT(repos_uuid != NULL);
 
   SVN_ERR(svn_wc__internal_check_wc(&format, db, local_abspath, scratch_pool));
 
   /* Early out: we know we're not dealing with an existing wc, so
      just create one. */
   if (format == 0)
-    return init_adm(db, local_abspath, uuid, url, repos, revision, depth,
-                    scratch_pool);
+    return init_adm(db, local_abspath, url, repos_root_url, repos_uuid,
+                    revision, depth, scratch_pool);
 
   /* Now, get the existing url and repos for PATH. */
   SVN_ERR(svn_wc__get_entry(&entry, db, local_abspath, FALSE, svn_node_unknown,
@@ -575,8 +578,8 @@ svn_wc__internal_ensure_adm(svn_wc__db_t *db,
       if (strcmp(entry->url, url) != 0
           && (entry->copyfrom_url == NULL
               || strcmp(entry->copyfrom_url, url) != 0)
-          && ((repos != NULL && !svn_uri_is_ancestor(repos, entry->url))
-              || strcmp(entry->uuid, uuid) != 0))
+          && (!svn_uri_is_ancestor(repos_root_url, entry->url)
+              || strcmp(entry->uuid, repos_uuid) != 0))
         {
           return
             svn_error_createf
@@ -592,16 +595,16 @@ svn_wc__internal_ensure_adm(svn_wc__db_t *db,
 svn_error_t *
 svn_wc_ensure_adm4(svn_wc_context_t *wc_ctx,
                    const char *local_abspath,
-                   const char *uuid,
                    const char *url,
-                   const char *repos,
+                   const char *repos_root_url,
+                   const char *repos_uuid,
                    svn_revnum_t revision,
                    svn_depth_t depth,
                    apr_pool_t *scratch_pool)
 {
   return svn_error_return(
-    svn_wc__internal_ensure_adm(wc_ctx->db, local_abspath, uuid, url, repos,
-                                revision, depth, scratch_pool));
+    svn_wc__internal_ensure_adm(wc_ctx->db, local_abspath, url, repos_root_url,
+                                repos_uuid, revision, depth, scratch_pool));
 }
 
 svn_error_t *

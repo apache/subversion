@@ -1656,8 +1656,8 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
           /* Make sure this new directory has an admistrative subdirectory
              created inside of it */
           SVN_ERR(svn_wc__internal_ensure_adm(db, local_abspath,
-                                              parent_entry->uuid,
-                                              new_url, parent_entry->repos, 0,
+                                              new_url, parent_entry->repos,
+                                              parent_entry->uuid, 0,
                                               depth, pool));
         }
       else
@@ -1667,8 +1667,9 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
              contain the copyfrom settings.  So we need to pass the
              copyfrom arguments to the ensure call. */
           SVN_ERR(svn_wc__internal_ensure_adm(db, local_abspath,
-                                              parent_entry->uuid, copyfrom_url,
+                                              copyfrom_url,
                                               parent_entry->repos,
+                                              parent_entry->uuid,
                                               copyfrom_rev, depth, pool));
         }
 
