@@ -108,53 +108,11 @@ svn_error_t *svn_wc__prop_path(const char **prop_path,
 
 /*** Opening all kinds of adm files ***/
 
-/* Yo, read this if you open and close files in the adm area:
- *
- * ### obsolete documentation. see implementation for now. this entire
- * ### section is likely to be tossed out "soon".
- *
- * When you open a file for writing with svn_wc__open_foo(), the file
- * is actually opened in the corresponding location in the tmp/
- * directory.  Opening with APR_APPEND is not supported.  You are
- * guaranteed to be the owner of the new file.
- *
- * Somehow, this tmp file must eventually get renamed to its real
- * destination in the adm area.  You can do it either by passing the
- * SYNC flag to svn_wc__close_foo(), or by calling
- * svn_wc__sync_foo() (though of course you should still have
- * called svn_wc__close_foo() first, just without the SYNC flag).
- *
- * In other words, the adm area is only capable of modifying files
- * atomically, but you get some control over when the rename happens.
- */
-
-/* Open `PATH/<adminstrative_subdir>/FNAME'. Note: STREAM and TEMP_FILE_PATH
-   should be passed to svn_wc__close_adm_stream when you're done writing. */
-svn_error_t *svn_wc__open_adm_writable(svn_stream_t **stream,
-                                       const char **temp_file_path,
-                                       const char *path,
-                                       const char *fname,
-                                       apr_pool_t *result_pool,
-                                       apr_pool_t *scratch_pool);
-
-/* Close `PATH/<adminstrative_subdir>/FNAME'. */
-svn_error_t *svn_wc__close_adm_stream(svn_stream_t *stream,
-                                      const char *temp_file_path,
-                                      const char *path,
-                                      const char *fname,
-                                      apr_pool_t *scratch_pool);
-
 /* Open `PATH/<adminstrative_subdir>/FNAME'. */
 svn_error_t *svn_wc__open_adm_stream(svn_stream_t **stream,
-                                     const char *path,
+                                     const char *dir_abspath,
                                      const char *fname,
                                      apr_pool_t *result_pool,
-                                     apr_pool_t *scratch_pool);
-
-
-/* Remove `DIR_PATH/<adminstrative_subdir>/FILENAME'. */
-svn_error_t *svn_wc__remove_adm_file(const char *dir_path,
-                                     const char *filename,
                                      apr_pool_t *scratch_pool);
 
 
