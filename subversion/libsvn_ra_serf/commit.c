@@ -284,14 +284,18 @@ handle_checkout(serf_request_t *request,
       serf_bucket_t *hdrs;
       apr_uri_t uri;
       const char *location;
+      apr_status_t status;
 
       hdrs = serf_bucket_response_get_headers(response);
       location = serf_bucket_headers_get(hdrs, "Location");
       if (!location)
-        {
-          SVN_ERR_MALFUNCTION();
-        }
-      apr_uri_parse(pool, location, &uri);
+        return svn_error_create(SVN_ERR_RA_DAV_MALFORMED_DATA, err,
+                                _("No Location header received"));
+
+      status = apr_uri_parse(pool, location, &uri);
+
+      if (status)
+        err = svn_error_compose_create(svn_error_wrap_apr(status, NULL), err);
 
       ctx->resource_url = svn_uri_canonicalize(uri.path, ctx->pool);
     }
