@@ -254,7 +254,7 @@ svn_client_status5(svn_revnum_t *result_rev,
     SVN_ERR(svn_hash_from_cstring_keys(&changelist_hash, changelists, pool));
 
   if (result_rev)
-    *result_rev = SVN_INVALID_REVNUM;;
+    *result_rev = SVN_INVALID_REVNUM;
 
   sb.real_status_func = status_func;
   sb.real_status_baton = status_baton;

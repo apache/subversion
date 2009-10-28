@@ -1199,7 +1199,7 @@ find_nearest_ancestor(apr_array_header_t *depth_first_catalog_index,
   else
     return (APR_ARRAY_IDX(depth_first_catalog_index,
                           ancestor_index,
-                          svn_sort__item_t)).value;;
+                          svn_sort__item_t)).value;
 }
 
 /* Baton for use with the filter_log_entry_with_rangelist()

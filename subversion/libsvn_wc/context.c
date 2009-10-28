@@ -108,7 +108,7 @@ svn_error_t *
 svn_wc_context_destroy(svn_wc_context_t *wc_ctx)
 {
   /* We added a cleanup when creating; just run it now to close the context. */
-  apr_pool_cleanup_run(wc_ctx->state_pool, wc_ctx, close_ctx_apr);;
+  apr_pool_cleanup_run(wc_ctx->state_pool, wc_ctx, close_ctx_apr);
 
   return SVN_NO_ERROR;
 }

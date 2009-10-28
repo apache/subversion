@@ -1561,19 +1561,19 @@ svn_dirent_get_absolute(const char **pabsolute,
 const char *
 svn_uri_canonicalize(const char *uri, apr_pool_t *pool)
 {
-  return canonicalize(type_uri, uri, pool);;
+  return canonicalize(type_uri, uri, pool);
 }
 
 const char *
 svn_relpath_canonicalize(const char *relpath, apr_pool_t *pool)
 {
-  return canonicalize(type_relpath, relpath, pool);;
+  return canonicalize(type_relpath, relpath, pool);
 }
 
 const char *
 svn_dirent_canonicalize(const char *dirent, apr_pool_t *pool)
 {
-  const char *dst = canonicalize(type_dirent, dirent, pool);;
+  const char *dst = canonicalize(type_dirent, dirent, pool);
 
 #if defined(WIN32) || defined(__CYGWIN__)
   /* Handle a specific case on Windows where path == "X:/". Here we have to
