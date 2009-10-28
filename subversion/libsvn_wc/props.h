@@ -150,12 +150,11 @@ svn_error_t *svn_wc__wcprop_set(svn_wc__db_t *db,
    changing the working file. */
 svn_boolean_t svn_wc__has_magic_property(const apr_array_header_t *properties);
 
-/* Extend LOG_ACCUM with log entries to install PROPS and, if WRITE_BASE_PROPS
-   is true, BASE_PROPS for the LOCAL_ABSPATH in DB, updating the wc entry
-   to reflect the changes.  BASE_PROPS must be supplied even if
-   WRITE_BASE_PROPS is false.  Use POOL for temporary allocations. */
-svn_error_t *svn_wc__install_props(svn_stringbuf_t **log_accum,
-                                   svn_wc__db_t *db,
+/* Add a working queue item to install PROPS and, if INSTALL_BASE_PROPS is true,
+   BASE_PROPS for the LOCAL_ABSPATH in DB, updating the node to reflect the
+   changes.  BASE_PROPS must be supplied even if INSTALL_BASE_PROPS is false.
+   Use POOL for temporary allocations. */
+svn_error_t *svn_wc__install_props(svn_wc__db_t *db,
                                    const char *local_abspath,
                                    apr_hash_t *base_props,
                                    apr_hash_t *props,
