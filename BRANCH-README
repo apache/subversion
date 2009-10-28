@@ -1,0 +1,16 @@
+This branch exists to add --ignore-mergeinfo to 'diff', 'st' and 'log.
+The goal of this flag is to allow the user to filter changes to mergeinfo
+from various reporting operations, thus allowing them to more easily detect
+"real" changes of interest.  Several modes need to be supported:
+
+ * 'log'
+   - Retrieve logs from the server
+
+ * 'diff'
+   - Local diff
+   - URL <-> WC diff
+   - URL <-> URL diff
+   - Diff summarize (in the above modes)
+
+ * 'status'
+   - Local status
