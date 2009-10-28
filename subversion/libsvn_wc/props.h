@@ -86,7 +86,10 @@ svn_wc__internal_propset(svn_wc__db_t *db,
 
 /* Given LOCAL_ABSPATH/DB and an array of PROPCHANGES based on
    SERVER_BASEPROPS, merge the changes into the working copy.
-   Append all necessary log entries to ENTRY_ACCUM.
+   Append all necessary log entries except the property changes to
+   ENTRY_ACCUM. Return the new property collections to the caller
+   via NEW_BASE_PROPS and NEW_ACTUAL_PROPS, so the caller can combine
+   the property update with other operations.
 
    If BASE_PROPS or WORKING_PROPS is NULL, use the props from the
    working copy.
@@ -114,6 +117,8 @@ svn_wc__internal_propset(svn_wc__db_t *db,
 svn_error_t *
 svn_wc__merge_props(svn_stringbuf_t **entry_accum,
                     svn_wc_notify_state_t *state,
+                    apr_hash_t **new_base_props,
+                    apr_hash_t **new_actual_props,
                     svn_wc__db_t *db,
                     const char *local_abspath,
                     const svn_wc_conflict_version_t *left_version,
@@ -128,7 +133,9 @@ svn_wc__merge_props(svn_stringbuf_t **entry_accum,
                     void *conflict_baton,
                     svn_cancel_func_t cancel_func,
                     void *cancel_baton,
-                    apr_pool_t *pool);
+                    apr_pool_t *result_pool,
+                    apr_pool_t *scratch_pool);
+
 
 /* Set a single 'wcprop' NAME to VALUE for versioned object LOCAL_ABSPATH.
    If VALUE is null, remove property NAME.  */
