@@ -27,6 +27,7 @@
 #include "svn_pools.h"
 #include "svn_dirent_uri.h"
 #include "svn_subst.h"
+#include "svn_hash.h"
 
 #include "wc.h"
 #include "wc_db.h"
@@ -53,6 +54,7 @@
 #define OP_LOGGY "loggy"
 #define OP_DELETION_POSTCOMMIT "deletion-postcommit"
 #define OP_POSTCOMMIT "postcommit"
+#define OP_INSTALL_PROPERTIES "install-properties"
 
 
 struct work_item_dispatch {
@@ -1512,6 +1514,135 @@ svn_wc__wq_add_postcommit(svn_wc__db_t *db,
   return SVN_NO_ERROR;
 }
 
+/* ------------------------------------------------------------------------ */
+
+/* OP_INSTALL_PROPERTIES */
+
+static svn_error_t *
+run_install_properties(svn_wc__db_t *db,
+                       const svn_skel_t *work_item,
+                       svn_cancel_func_t cancel_func,
+                       void *cancel_baton,
+                       apr_pool_t *scratch_pool)
+{
+  const svn_skel_t *arg = work_item->children->next;
+  const char *local_abspath;
+  apr_hash_t *base_props;
+  apr_hash_t *actual_props;
+  svn_wc__db_kind_t kind;
+  const char *prop_abspath;
+
+  /* We need a NUL-terminated path, so copy it out of the skel.  */
+  local_abspath = apr_pstrmemdup(scratch_pool, arg->data, arg->len);
+
+  arg = arg->next;
+  if (arg->is_atom)
+    base_props = NULL;
+  else
+    {
+      SVN_ERR(svn_skel__parse_proplist(&base_props, arg, scratch_pool));
+
+      if (base_props == NULL)
+        base_props = apr_hash_make(scratch_pool);
+    }
+
+  arg = arg->next;
+  if (arg->is_atom)
+    actual_props = NULL;
+  else
+    {
+      SVN_ERR(svn_skel__parse_proplist(&actual_props, arg, scratch_pool));
+
+      if (actual_props == NULL)
+        actual_props = apr_hash_make(scratch_pool);
+    }
+
+
+  /* ### Yes.. we install properties on files that don't exist in the db...
+         I'm not surprised any more... */
+  SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath, TRUE, scratch_pool));
+
+  if (base_props != NULL)
+    {
+      SVN_ERR(svn_wc__prop_path(&prop_abspath, local_abspath, kind,
+                                svn_wc__props_base, scratch_pool));
+
+      SVN_ERR(svn_io_remove_file2(prop_abspath, TRUE, scratch_pool));
+
+      if (apr_hash_count(base_props) > 0)
+        {
+          svn_stream_t *propfile;
+
+          SVN_ERR(svn_stream_open_writable(&propfile, prop_abspath,
+                                           scratch_pool, scratch_pool));
+
+          SVN_ERR(svn_hash_write2(base_props, propfile, SVN_HASH_TERMINATOR,
+                                  scratch_pool));
+
+          SVN_ERR(svn_stream_close(propfile));
+
+          SVN_ERR(svn_io_set_file_read_only(prop_abspath, FALSE, scratch_pool));
+        }
+    }
+
+
+  SVN_ERR(svn_wc__prop_path(&prop_abspath, local_abspath, kind,
+                            svn_wc__props_working, scratch_pool));
+
+  SVN_ERR(svn_io_remove_file2(prop_abspath, TRUE, scratch_pool));
+
+  if (actual_props != NULL)
+    {
+      svn_stream_t *propfile;
+
+      SVN_ERR(svn_stream_open_writable(&propfile, prop_abspath,
+                                       scratch_pool, scratch_pool));
+
+      SVN_ERR(svn_hash_write2(actual_props, propfile, SVN_HASH_TERMINATOR,
+                              scratch_pool));
+
+      SVN_ERR(svn_stream_close(propfile));
+      SVN_ERR(svn_io_set_file_read_only(prop_abspath, FALSE, scratch_pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc__wq_add_install_properties(svn_wc__db_t *db,
+                                  const char *local_abspath,
+                                  apr_hash_t *base_props,
+                                  apr_hash_t *actual_props,
+                                  apr_pool_t *scratch_pool)
+{
+  svn_skel_t *work_item = svn_skel__make_empty_list(scratch_pool);
+  svn_skel_t *props;
+
+  if (actual_props != NULL)
+    {
+      SVN_ERR(svn_skel__unparse_proplist(&props, actual_props, scratch_pool));
+      svn_skel__prepend(props, work_item);
+    }
+  else
+    svn_skel__prepend_str("", work_item, scratch_pool);
+
+  if (base_props != NULL)
+    {
+      SVN_ERR(svn_skel__unparse_proplist(&props, base_props, scratch_pool));
+      svn_skel__prepend(props, work_item);
+    }
+  else
+    svn_skel__prepend_str("", work_item, scratch_pool);
+
+  svn_skel__prepend_str(local_abspath, work_item, scratch_pool);
+  svn_skel__prepend_str(OP_INSTALL_PROPERTIES, work_item, scratch_pool);
+
+  SVN_ERR(svn_wc__db_wq_add(db, local_abspath, work_item, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
 
 /* ------------------------------------------------------------------------ */
 
@@ -1522,6 +1653,7 @@ static const struct work_item_dispatch dispatch_table[] = {
   { OP_LOGGY, run_loggy },
   { OP_DELETION_POSTCOMMIT, run_deletion_postcommit },
   { OP_POSTCOMMIT, run_postcommit },
+  { OP_INSTALL_PROPERTIES, run_install_properties },
 
   /* Sentinel.  */
   { NULL }

@@ -100,6 +100,13 @@ svn_wc__wq_add_postcommit(svn_wc__db_t *db,
                           svn_boolean_t keep_changelist,
                           apr_pool_t *scratch_pool);
 
+svn_error_t *
+svn_wc__wq_add_install_properties(svn_wc__db_t *db,
+                                  const char *local_abspath,
+                                  apr_hash_t *base_props,
+                                  apr_hash_t *actual_props,
+                                  apr_pool_t *scratch_pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

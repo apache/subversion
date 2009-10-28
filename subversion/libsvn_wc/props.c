@@ -330,64 +330,23 @@ svn_wc__install_props(svn_wc__db_t *db,
                       svn_boolean_t write_base_props,
                       apr_pool_t *pool)
 {
-  svn_wc__db_kind_t kind;
-  const char *working_propfile_path;
-  const char *adm_abspath;
   apr_array_header_t *prop_diffs;
-  svn_stringbuf_t *log_accum = NULL;
-
-  /* Allow installing properties on files that will be installed by loggy */
-  SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath, TRUE, pool));
-
-  if (kind == svn_wc__db_kind_dir)
-    adm_abspath = local_abspath;
-  else
-    adm_abspath = svn_dirent_dirname(local_abspath, pool);
-
-  SVN_ERR(svn_wc__prop_path(&working_propfile_path, local_abspath,
-                            kind, svn_wc__props_working, pool));
 
   /* Check if the props are modified. */
   SVN_ERR(svn_prop_diffs(&prop_diffs, working_props, base_props, pool));
 
-  /* Save the working properties file if it differs from base. */
-  if (prop_diffs->nelts > 0)
-    {
-      /* Loggily write the properties to the destination file.  */
-      SVN_ERR(loggy_write_properties(&log_accum, working_props,
-                                     working_propfile_path,
-                                     adm_abspath, pool));
-    }
-  else
-    {
-      /* No property modifications, remove the file instead. */
-      SVN_ERR(svn_wc__loggy_remove(&log_accum, adm_abspath,
-                                   working_propfile_path, pool, pool));
-    }
+  /* Save the actual properties file if it differs from base. */
+  if (prop_diffs->nelts == 0)
+    working_props = NULL; /* Remove actual properties*/
 
-  /* Repeat the above steps for the base properties if required. */
-  if (write_base_props)
-    {
-      const char *base_propfile_path;
+  if (!write_base_props)
+    base_props = NULL; /* Don't change the base properties */
 
-      SVN_ERR(svn_wc__prop_path(&base_propfile_path, local_abspath,
-                                kind, svn_wc__props_base, pool));
-
-      if (apr_hash_count(base_props) > 0)
-        {
-          SVN_ERR(loggy_write_properties(&log_accum, base_props,
-                                         base_propfile_path,
-                                         adm_abspath, pool));
-        }
-      else
-        {
-          SVN_ERR(svn_wc__loggy_remove(&log_accum, adm_abspath,
-                                       base_propfile_path, pool, pool));
-        }
-    }
-
-  if (log_accum != NULL)
-    SVN_ERR(svn_wc__wq_add_loggy(db, adm_abspath, log_accum, pool));
+  SVN_ERR(svn_wc__wq_add_install_properties(db,
+                                            local_abspath,
+                                            base_props,
+                                            working_props,
+                                            pool));
 
   return SVN_NO_ERROR;
 }
