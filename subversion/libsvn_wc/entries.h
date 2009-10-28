@@ -291,7 +291,7 @@ svn_wc__set_depth(svn_wc__db_t *db,
 /* For internal use by entries.c to read/write old-format working copies. */
 svn_error_t *
 svn_wc__read_entries_old(apr_hash_t **entries,
-                         const char *path,
+                         const char *dir_abspath,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool);
 

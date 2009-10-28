@@ -1071,7 +1071,7 @@ handle_start_tag(void *userData, const char *tagname, const char **atts)
    entries in ENTRIES.  Use SCRATCH_POOL for temporary allocations and
    RESULT_POOL for the returned entries.  */
 static svn_error_t *
-parse_entries_xml(const char *path,
+parse_entries_xml(const char *dir_abspath,
                   apr_hash_t *entries,
                   const char *buf,
                   apr_size_t size,
@@ -1101,7 +1101,7 @@ parse_entries_xml(const char *path,
   SVN_ERR_W(svn_xml_parse(svn_parser, buf, size, TRUE),
             apr_psprintf(scratch_pool,
                          _("XML parser failed in '%s'"),
-                         svn_dirent_local_style(path, scratch_pool)));
+                         svn_dirent_local_style(dir_abspath, scratch_pool)));
 
   svn_pool_destroy(accum.scratch_pool);
 
@@ -1206,7 +1206,7 @@ resolve_to_defaults(apr_hash_t *entries,
    SCRATCH_POOL.  */
 svn_error_t *
 svn_wc__read_entries_old(apr_hash_t **entries,
-                         const char *path,
+                         const char *dir_abspath,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool)
 {
@@ -1220,7 +1220,7 @@ svn_wc__read_entries_old(apr_hash_t **entries,
   *entries = apr_hash_make(result_pool);
 
   /* Open the entries file. */
-  SVN_ERR(svn_wc__open_adm_stream(&stream, path, SVN_WC__ADM_ENTRIES,
+  SVN_ERR(svn_wc__open_adm_stream(&stream, dir_abspath, SVN_WC__ADM_ENTRIES,
                                   scratch_pool, scratch_pool));
   SVN_ERR(svn_string_from_stream(&buf, stream, scratch_pool, scratch_pool));
 
@@ -1231,7 +1231,7 @@ svn_wc__read_entries_old(apr_hash_t **entries,
   /* If the first byte of the file is not a digit, then it is probably in XML
      format. */
   if (curp != endp && !svn_ctype_isdigit(*curp))
-    SVN_ERR(parse_entries_xml(path, *entries, buf->data, buf->len,
+    SVN_ERR(parse_entries_xml(dir_abspath, *entries, buf->data, buf->len,
                               result_pool, scratch_pool));
   else
     {
@@ -1247,7 +1247,8 @@ svn_wc__read_entries_old(apr_hash_t **entries,
         return svn_error_createf(SVN_ERR_WC_CORRUPT, NULL,
                                  _("Invalid version line in entries file "
                                    "of '%s'"),
-                                 svn_dirent_local_style(path, scratch_pool));
+                                 svn_dirent_local_style(dir_abspath,
+                                                        scratch_pool));
       entryno = 1;
 
       while (curp != endp)
@@ -1271,7 +1272,7 @@ svn_wc__read_entries_old(apr_hash_t **entries,
                                      _("Error at entry %d in entries file for "
                                        "'%s':"),
                                      entryno,
-                                     svn_dirent_local_style(path,
+                                     svn_dirent_local_style(dir_abspath,
                                                             scratch_pool));
 
           ++curp;
