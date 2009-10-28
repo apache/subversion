@@ -33,6 +33,7 @@
 #include "translate.h"
 #include "log.h"
 #include "lock.h"
+#include "workqueue.h"
 
 #include "svn_private_config.h"
 
@@ -469,8 +470,8 @@ eval_conflict_func_result(enum svn_wc_merge_outcome_t *merge_outcome,
       case svn_wc_conflict_choose_theirs_conflict:
       case svn_wc_conflict_choose_mine_conflict:
         {
-          apr_file_t *chosen_f;
           const char *chosen_path;
+          const char *temp_dir;
           svn_stream_t *chosen_stream;
           svn_diff_t *diff;
           svn_diff_conflict_display_style_t style;
@@ -479,12 +480,12 @@ eval_conflict_func_result(enum svn_wc_merge_outcome_t *merge_outcome,
                     ? svn_diff_conflict_display_latest
                     : svn_diff_conflict_display_modified;
 
-          SVN_ERR(svn_wc_create_tmp_file2(&chosen_f,
-                                          &chosen_path, adm_abspath,
-                                          svn_io_file_del_none,
-                                          pool));
-          chosen_stream = svn_stream_from_aprfile2(chosen_f, FALSE,
-                                                   pool);
+          SVN_ERR(svn_wc__db_temp_wcroot_tempdir(&temp_dir, db, adm_abspath,
+                                                 pool, pool));
+          SVN_ERR(svn_stream_open_unique(&chosen_stream, &chosen_path,
+                                         temp_dir,
+                                         svn_io_file_del_none, pool, pool));
+
           SVN_ERR(svn_diff_file_diff3_2(&diff,
                                         left, detranslated_target, right,
                                         options, pool));
@@ -558,9 +559,12 @@ preserve_pre_merge_files(svn_stringbuf_t **log_accum,
   const char *left_copy, *right_copy, *target_copy;
   const char *tmp_left, *tmp_right, *detranslated_target_copy;
   const char *dir_abspath, *target_name;
+  const char *temp_dir;
   svn_wc_entry_t tmp_entry;
 
   svn_dirent_split(target_abspath, &dir_abspath, &target_name, pool);
+  SVN_ERR(svn_wc__db_temp_wcroot_tempdir(&temp_dir, db, target_abspath,
+                                         pool, pool));
 
   /* I miss Lisp. */
 
@@ -604,8 +608,8 @@ preserve_pre_merge_files(svn_stringbuf_t **log_accum,
      Make our LEFT and RIGHT files 'local' if they aren't... */
   if (! svn_dirent_is_ancestor(dir_abspath, left_abspath))
     {
-      SVN_ERR(svn_wc_create_tmp_file2(NULL, &tmp_left, dir_abspath,
-                                      svn_io_file_del_none, pool));
+      SVN_ERR(svn_io_open_unique_file3(NULL, &tmp_left, temp_dir,
+                                       svn_io_file_del_none, pool, pool));
       SVN_ERR(svn_io_copy_file(left_abspath, tmp_left, TRUE, pool));
     }
   else
@@ -613,8 +617,8 @@ preserve_pre_merge_files(svn_stringbuf_t **log_accum,
 
   if (! svn_dirent_is_ancestor(dir_abspath, right_abspath))
     {
-      SVN_ERR(svn_wc_create_tmp_file2(NULL, &tmp_right, dir_abspath,
-                                      svn_io_file_del_none, pool));
+      SVN_ERR(svn_io_open_unique_file3(NULL, &tmp_right, temp_dir,
+                                       svn_io_file_del_none, pool, pool));
       SVN_ERR(svn_io_copy_file(right_abspath, tmp_right, TRUE, pool));
     }
   else
@@ -1121,7 +1125,7 @@ merge_binary_file(svn_stringbuf_t **log_accum,
 
 /* XXX Insane amount of parameters... */
 svn_error_t *
-svn_wc__merge_internal(svn_stringbuf_t **log_accum,
+svn_wc__internal_merge(svn_stringbuf_t **log_accum,
                        enum svn_wc_merge_outcome_t *merge_outcome,
                        svn_wc__db_t *db,
                        const char *left_abspath,
@@ -1289,7 +1293,7 @@ svn_wc_merge4(enum svn_wc_merge_outcome_t *merge_outcome,
   svn_stringbuf_t *log_accum = svn_stringbuf_create("", scratch_pool);
   const char *dir_abspath = svn_dirent_dirname(target_abspath, scratch_pool);
 
-  SVN_ERR(svn_wc__merge_internal(&log_accum, merge_outcome,
+  SVN_ERR(svn_wc__internal_merge(&log_accum, merge_outcome,
                                  wc_ctx->db,
                                  left_abspath, left_version,
                                  right_abspath, right_version,
@@ -1307,18 +1311,9 @@ svn_wc_merge4(enum svn_wc_merge_outcome_t *merge_outcome,
   /* Write our accumulation of log entries into a log file */
   if (!dry_run)
     {
-      svn_wc_adm_access_t *adm_access;
-
-      SVN_ERR(svn_wc__write_log(dir_abspath, 0,
-                                log_accum, scratch_pool));
-
-      adm_access = svn_wc__adm_retrieve_internal2(wc_ctx->db,
-                                                  dir_abspath,
-                                                  scratch_pool);
-
-      SVN_ERR_ASSERT(adm_access != NULL);
-
-      SVN_ERR(svn_wc__run_log(adm_access, scratch_pool));
+      SVN_ERR(svn_wc__wq_add_loggy(wc_ctx->db, dir_abspath,
+                                   log_accum, scratch_pool));
+      SVN_ERR(svn_wc__run_log2(wc_ctx->db, dir_abspath, scratch_pool));
     }
 
   return SVN_NO_ERROR;

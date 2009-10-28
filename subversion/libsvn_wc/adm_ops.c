@@ -76,12 +76,12 @@ struct svn_wc_committed_queue_t
 typedef struct
 {
   const char *path;
-  svn_wc_adm_access_t *adm_access;
+  const char *adm_abspath;
   svn_boolean_t recurse;
-  svn_boolean_t remove_lock;
-  svn_boolean_t remove_changelist;
-  const apr_array_header_t *wcprop_changes;
+  svn_boolean_t no_unlock;
+  svn_boolean_t keep_changelist;
   const svn_checksum_t *checksum;
+  apr_hash_t *new_dav_cache;
 } committed_queue_item_t;
 
 
@@ -132,7 +132,6 @@ tweak_entries(svn_wc__db_t *db,
       const char *child_basename = APR_ARRAY_IDX(children, i, const char *);
       const char *child_abspath;
       svn_wc__db_kind_t kind;
-      svn_depth_t child_depth;
       svn_wc__db_status_t status;
 
       const char *child_url = NULL;
@@ -150,7 +149,7 @@ tweak_entries(svn_wc__db_t *db,
                                APR_HASH_KEY_STRING) != NULL);
 
       SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL,
-                                   NULL, NULL, NULL, NULL, &child_depth, NULL,
+                                   NULL, NULL, NULL, NULL, NULL, NULL,
                                    NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                    NULL, NULL, NULL, NULL, NULL,
                                    db, child_abspath, iterpool, iterpool));
@@ -162,7 +161,7 @@ tweak_entries(svn_wc__db_t *db,
       if (kind == svn_wc__db_kind_file
             || status == svn_wc__db_status_not_present
             || status == svn_wc__db_status_absent
-            || child_depth == svn_depth_exclude)
+            || status == svn_wc__db_status_excluded)
         {
           if (excluded)
             continue;
@@ -240,12 +239,12 @@ tweak_entries(svn_wc__db_t *db,
 
 
 static svn_error_t *
-remove_revert_files(svn_stringbuf_t **logtags,
-                    svn_wc__db_t *db,
-                    const char *dir_abspath,
+remove_revert_files(svn_wc__db_t *db,
+                    const char *adm_abspath,
                     const char *local_abspath,
-                    apr_pool_t * pool)
+                    apr_pool_t *pool)
 {
+  svn_stringbuf_t *log_accum = svn_stringbuf_create("", pool);
   const char *revert_file;
   svn_node_kind_t kind;
 
@@ -253,12 +252,17 @@ remove_revert_files(svn_stringbuf_t **logtags,
 
   SVN_ERR(svn_io_check_path(revert_file, &kind, pool));
   if (kind == svn_node_file)
-    SVN_ERR(svn_wc__loggy_remove(logtags, dir_abspath,
+    SVN_ERR(svn_wc__loggy_remove(&log_accum, adm_abspath,
                                  revert_file, pool, pool));
+  SVN_WC__FLUSH_LOG_ACCUM(db, adm_abspath, log_accum, pool);
 
-  return svn_error_return(
-    svn_wc__loggy_props_delete(logtags, db, local_abspath, dir_abspath,
-                               svn_wc__props_revert, pool));
+  SVN_ERR(svn_wc__loggy_props_delete(&log_accum, db, local_abspath,
+                                     adm_abspath,
+                                     svn_wc__props_revert, pool));
+
+  SVN_ERR(svn_wc__wq_add_loggy(db, adm_abspath, log_accum, pool));
+
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -276,14 +280,13 @@ svn_wc__do_update_cleanup(svn_wc__db_t *db,
 {
   svn_wc__db_status_t status;
   svn_wc__db_kind_t kind;
-  svn_depth_t wc_depth;
   svn_error_t *err;
 
   if (apr_hash_get(exclude_paths, local_abspath, APR_HASH_KEY_STRING))
     return SVN_NO_ERROR;
 
   err = svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL, NULL,
-                             NULL, NULL, NULL, &wc_depth, NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL,
                              db, local_abspath, pool, pool);
@@ -295,9 +298,6 @@ svn_wc__do_update_cleanup(svn_wc__db_t *db,
     }
   else
     SVN_ERR(err);
-
-  if (wc_depth == svn_depth_exclude)
-    status = svn_wc__db_status_excluded;
 
   switch (status)
     {
@@ -315,6 +315,10 @@ svn_wc__do_update_cleanup(svn_wc__db_t *db,
                                     FALSE /* allow_removal */,
                                     pool));
         return SVN_NO_ERROR;
+
+      /* Explicitly ignore other statii */
+      default:
+        break;
     }
 
   if (kind == svn_wc__db_kind_file || kind == svn_wc__db_kind_symlink)
@@ -339,43 +343,74 @@ svn_wc__do_update_cleanup(svn_wc__db_t *db,
   return SVN_NO_ERROR;
 }
 
+
 static svn_error_t *
-process_committed_leaf(int log_number,
-                       const char *path,
-                       svn_wc_adm_access_t *adm_access,
-                       const svn_wc_entry_t *entry,
-                       svn_revnum_t new_revnum,
-                       const char *rev_date,
-                       const char *rev_author,
-                       const apr_array_header_t *wcprop_changes,
-                       svn_boolean_t remove_lock,
-                       svn_boolean_t remove_changelist,
-                       const svn_checksum_t *checksum,
-                       svn_wc_committed_queue_t *queue,
-                       apr_pool_t *pool)
+process_deletion_postcommit(svn_wc__db_t *db,
+                            const char *adm_abspath,
+                            const char *local_abspath,
+                            svn_revnum_t new_revision,
+                            svn_boolean_t no_unlock,
+                            apr_pool_t *scratch_pool)
 {
-  svn_wc_entry_t tmp_entry;
-  apr_uint64_t modify_flags = 0;
-  svn_stringbuf_t *logtags = svn_stringbuf_create("", pool);
-  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
+#ifdef NOT_NEEDED_NOW__CALLER_DOES_THIS
+  SVN_ERR(svn_wc__write_check(db, adm_abspath, scratch_pool));
+#endif
+
+  return svn_error_return(svn_wc__wq_add_deletion_postcommit(
+                            db, local_abspath, new_revision, no_unlock,
+                            scratch_pool));
+}
+
+
+static svn_error_t *
+process_committed_leaf(svn_wc__db_t *db,
+                       const char *adm_abspath,
+                       const char *path,
+                       svn_revnum_t new_revnum,
+                       apr_time_t new_date,
+                       const char *rev_author,
+                       apr_hash_t *new_dav_cache,
+                       svn_boolean_t no_unlock,
+                       svn_boolean_t keep_changelist,
+                       const svn_checksum_t *checksum,
+                       const svn_wc_committed_queue_t *queue,
+                       apr_pool_t *scratch_pool)
+{
   const char *local_abspath;
+  svn_wc__db_status_t status;
+  svn_wc__db_kind_t kind;
+  const svn_checksum_t *copied_checksum;
 
-  SVN_ERR(svn_wc__adm_write_check(adm_access, pool));
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+  SVN_ERR(svn_wc__write_check(db, adm_abspath, scratch_pool));
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, scratch_pool));
 
-  /* Set PATH's working revision to NEW_REVNUM; if REV_DATE and
-     REV_AUTHOR are both non-NULL, then set the 'committed-rev',
-     'committed-date', and 'last-author' entry values; and set the
-     checksum if a file. */
+  SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL,
+                               NULL, NULL, NULL,
+                               NULL, NULL, NULL,
+                               NULL, NULL, &copied_checksum,
+                               NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL,
+                               db, local_abspath,
+                               scratch_pool, scratch_pool));
 
-  if (entry->kind == svn_node_file)
+  if (status == svn_wc__db_status_deleted
+      || status == svn_wc__db_status_obstructed_delete)
+    {
+      return svn_error_return(process_deletion_postcommit(
+                                db, adm_abspath, local_abspath,
+                                new_revnum, no_unlock,
+                                scratch_pool));
+    }
+
+  /* ### this picks up file and symlink  */
+  if (kind != svn_wc__db_kind_dir)
     {
       /* If the props or text revert file exists it needs to be deleted when
        * the file is committed. */
       /* ### don't directories have revert props? */
-      SVN_ERR(remove_revert_files(&logtags, db,
-                                  svn_wc__adm_access_abspath(adm_access),
-                                  local_abspath, pool));
+      SVN_ERR(remove_revert_files(db, adm_abspath, local_abspath,
+                                  scratch_pool));
 
       if (checksum == NULL)
         {
@@ -393,8 +428,9 @@ process_committed_leaf(int log_number,
           if (queue != NULL)
             for (i = 0; i < queue->queue->nelts; i++)
               {
-                committed_queue_item_t *cqi
-                  = APR_ARRAY_IDX(queue->queue, i, committed_queue_item_t *);
+                const committed_queue_item_t *cqi
+                  = APR_ARRAY_IDX(queue->queue, i,
+                                  const committed_queue_item_t *);
                 if (strcmp(path, cqi->path) == 0)
                   {
                     checksum = cqi->checksum;
@@ -405,15 +441,9 @@ process_committed_leaf(int log_number,
             {
               /* It was copied and not modified. We should have a text
                  base for it. And the entry should have a checksum. */
-              if (entry->checksum != NULL)
+              if (copied_checksum != NULL)
                 {
-                  svn_checksum_t *parsed_checksum;
-
-                  SVN_ERR(svn_checksum_parse_hex(&parsed_checksum,
-                                                 svn_checksum_md5,
-                                                 entry->checksum,
-                                                 pool));
-                  checksum = parsed_checksum;
+                  checksum = copied_checksum;
                 }
 #ifdef SVN_DEBUG
               else
@@ -421,7 +451,9 @@ process_committed_leaf(int log_number,
                   /* If we copy a deleted file, then it will become scheduled
                      for deletion, but there is no base text for it. So we
                      cannot get/compute a checksum for this file. */
-                  SVN_ERR_ASSERT(entry->schedule == svn_wc_schedule_delete);
+                  SVN_ERR_ASSERT(
+                    status == svn_wc__db_status_deleted
+                    || status == svn_wc__db_status_obstructed_delete);
 
                   /* checksum will remain NULL in this one case. */
                 }
@@ -430,177 +462,111 @@ process_committed_leaf(int log_number,
         }
     }
 
+  if (!no_unlock)
+    SVN_ERR(svn_wc__loggy_delete_lock(db, adm_abspath,
+                                      path, scratch_pool));
 
-  /* Append a log command to set (overwrite) the 'committed-rev',
-     'committed-date', 'last-author', and possibly 'checksum'
-     attributes in the entry.
+  SVN_ERR(svn_wc__wq_add_postcommit(db, local_abspath, new_revnum,
+                                    new_date, rev_author, checksum,
+                                    new_dav_cache, keep_changelist,
+                                    scratch_pool));
 
-     Note: it's important that this log command come *before* the
-     LOG_COMMITTED command, because log_do_committed() might actually
-     remove the entry! */
-  if (rev_date)
-    {
-      tmp_entry.cmt_rev = new_revnum;
-      SVN_ERR(svn_time_from_cstring(&tmp_entry.cmt_date, rev_date, pool));
-      modify_flags |= SVN_WC__ENTRY_MODIFY_CMT_REV
-        | SVN_WC__ENTRY_MODIFY_CMT_DATE;
-    }
-
-  if (rev_author)
-    {
-      tmp_entry.cmt_rev = new_revnum;
-      tmp_entry.cmt_author = rev_author;
-      modify_flags |= SVN_WC__ENTRY_MODIFY_CMT_REV
-        | SVN_WC__ENTRY_MODIFY_CMT_AUTHOR;
-    }
-
-  if (checksum)
-    {
-      tmp_entry.checksum = svn_checksum_to_cstring(checksum, pool);
-      modify_flags |= SVN_WC__ENTRY_MODIFY_CHECKSUM;
-    }
-
-  if (modify_flags)
-    SVN_ERR(svn_wc__loggy_entry_modify(&logtags,
-                                       svn_wc__adm_access_abspath(adm_access),
-                                       path, &tmp_entry, modify_flags,
-                                       pool, pool));
-
-  if (remove_lock)
-    SVN_ERR(svn_wc__loggy_delete_lock(&logtags,
-                                      svn_wc__adm_access_abspath(adm_access),
-                                      path, pool, pool));
-
-  if (remove_changelist)
-    SVN_ERR(svn_wc__loggy_delete_changelist(&logtags,
-                                      svn_wc__adm_access_abspath(adm_access),
-                                      path, pool, pool));
-
-  /* Regardless of whether it's a file or dir, the "main" logfile
-     contains a command to bump the revision attribute (and
-     timestamp). */
-  SVN_ERR(svn_wc__loggy_committed(&logtags,
-                                  svn_wc__adm_access_abspath(adm_access),
-                                  path, new_revnum, pool, pool));
-
-
-  /* Do wcprops in the same log txn as revision, etc. */
-  if (wcprop_changes && (wcprop_changes->nelts > 0))
-    {
-      int i;
-
-      for (i = 0; i < wcprop_changes->nelts; i++)
-        {
-          svn_prop_t *prop = APR_ARRAY_IDX(wcprop_changes, i, svn_prop_t *);
-
-          SVN_ERR(svn_wc__loggy_modify_wcprop(&logtags,
-                                       svn_wc__adm_access_abspath(adm_access),
-                                       path, prop->name,
-                                       prop->value ? prop->value->data : NULL,
-                                       pool, pool));
-        }
-    }
-
-  /* Write our accumulation of log entries into a log file */
-  return svn_error_return(
-    svn_wc__write_log(svn_wc__adm_access_abspath(adm_access), log_number,
-                      logtags, pool));
+  return SVN_NO_ERROR;
 }
 
 
 static svn_error_t *
-process_committed_internal(int *log_number,
+process_committed_internal(svn_wc__db_t *db,
+                           const char *adm_abspath,
                            const char *path,
-                           svn_wc_adm_access_t *adm_access,
                            svn_boolean_t recurse,
                            svn_revnum_t new_revnum,
-                           const char *rev_date,
+                           apr_time_t new_date,
                            const char *rev_author,
-                           const apr_array_header_t *wcprop_changes,
-                           svn_boolean_t remove_lock,
-                           svn_boolean_t remove_changelist,
+                           apr_hash_t *new_dav_cache,
+                           svn_boolean_t no_unlock,
+                           svn_boolean_t keep_changelist,
                            const svn_checksum_t *checksum,
-                           svn_wc_committed_queue_t *queue,
-                           apr_pool_t *pool)
+                           const svn_wc_committed_queue_t *queue,
+                           apr_pool_t *scratch_pool)
 {
-  const svn_wc_entry_t *entry;
+  svn_wc__db_kind_t kind;
   const char *local_abspath;
-  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
 
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, scratch_pool));
 
-  SVN_ERR(svn_wc__get_entry(&entry, db, local_abspath, TRUE, svn_node_unknown,
-                            FALSE, pool, pool));
-  if (entry == NULL)
+  SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath, TRUE, scratch_pool));
+  if (kind == svn_wc__db_kind_unknown)
     return SVN_NO_ERROR;  /* deleted/absent. (?) ... nothing to do. */
 
-  SVN_ERR(process_committed_leaf((*log_number)++, path, adm_access, entry,
-                                 new_revnum, rev_date, rev_author,
-                                 wcprop_changes,
-                                 remove_lock, remove_changelist,
-                                 checksum, queue, pool));
+  SVN_ERR(process_committed_leaf(db, adm_abspath, path,
+                                 new_revnum, new_date, rev_author,
+                                 new_dav_cache,
+                                 no_unlock, keep_changelist,
+                                 checksum, queue, scratch_pool));
 
-  if (recurse && entry->kind == svn_node_dir)
+  if (recurse && kind == svn_wc__db_kind_dir)
     {
       const apr_array_header_t *children;
-      apr_pool_t *subpool = svn_pool_create(pool);
+      apr_pool_t *iterpool = svn_pool_create(scratch_pool);
       int i;
 
+      /* Run the log. It might delete this node, leaving us nothing
+         more to do.  */
+      SVN_ERR(svn_wc__wq_run(db, local_abspath, NULL, NULL, iterpool));
+      SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath, TRUE, iterpool));
+      if (kind == svn_wc__db_kind_unknown)
+        return SVN_NO_ERROR;  /* it got deleted!  */
+
       /* Read PATH's entries;  this is the absolute path. */
-      SVN_ERR(svn_wc__db_read_children(&children, db, local_abspath, pool,
-                                       subpool));
+      SVN_ERR(svn_wc__db_read_children(&children, db, local_abspath,
+                                       scratch_pool, iterpool));
 
       /* Recursively loop over all children. */
       for (i = 0; i < children->nelts; i++)
         {
           const char *name = APR_ARRAY_IDX(children, i, const char *);
-          const svn_wc_entry_t *current_entry;
-          const char *this_path;
           const char *this_abspath;
-          svn_error_t *err;
+          svn_wc__db_status_t status;
+          const char *this_path;
 
-          svn_pool_clear(subpool);
+          svn_pool_clear(iterpool);
 
-          this_abspath = svn_dirent_join(local_abspath, name, subpool);
+          this_abspath = svn_dirent_join(local_abspath, name, iterpool);
 
-          err = svn_wc__get_entry(&current_entry, db, this_abspath, FALSE,
-                                  svn_node_unknown, FALSE, subpool, subpool);
-
-          if (err && err->apr_err == SVN_ERR_NODE_UNEXPECTED_KIND)
-            svn_error_clear(err);
-          else
-            SVN_ERR(err);
+          SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL,
+                                       NULL, NULL, NULL,
+                                       NULL, NULL, NULL,
+                                       NULL, NULL, NULL,
+                                       NULL, NULL, NULL,
+                                       NULL, NULL, NULL, NULL,
+                                       NULL, NULL, NULL, NULL, NULL,
+                                       db, this_abspath,
+                                       iterpool, iterpool));
 
           /* We come to this branch since we have committed a copied tree.
              svn_depth_exclude is possible in this situation. So check and
              skip */
-          if (current_entry->depth == svn_depth_exclude)
+          if (status == svn_wc__db_status_excluded)
             continue;
 
           /* Create child path by telescoping the main path. */
-          this_path = svn_dirent_join(path, name, subpool);
+          this_path = svn_dirent_join(path, name, iterpool);
 
           /* Recurse, but only allow further recursion if the child is
-             a directory.  Pass null for wcprop_changes, because the
+             a directory.  Pass NULL for NEW_DAV_CACHE, because the
              ones present in the current call are only applicable to
              this one committed item. */
-          if (current_entry->kind == svn_node_dir)
+          if (kind == svn_wc__db_kind_dir)
             {
-              svn_wc_adm_access_t *child_access;
-              int inner_log = 0;
-
-              SVN_ERR(svn_wc_adm_retrieve(&child_access, adm_access,
-                                          this_path, subpool));
-
-              SVN_ERR(process_committed_internal(&inner_log,
-                                                 this_path, child_access,
+              SVN_ERR(process_committed_internal(db, this_abspath, this_path,
                                                  TRUE /* recurse */,
-                                                 new_revnum, rev_date,
+                                                 new_revnum, new_date,
                                                  rev_author,
-                                                 NULL, FALSE /* remove_lock */,
-                                                 remove_changelist, NULL,
-                                                 queue, subpool));
-              SVN_ERR(svn_wc__run_log(child_access, pool));
+                                                 NULL, TRUE /* no_unlock */,
+                                                 keep_changelist, NULL,
+                                                 queue, iterpool));
+              SVN_ERR(svn_wc__wq_run(db, this_abspath, NULL, NULL, iterpool));
             }
           else
             {
@@ -609,22 +575,55 @@ process_committed_internal(int *log_number,
                  those entries will already have been removed (as a result
                  of running the log for the replaced directory that was
                  created at the start of this function). */
-              if (current_entry->schedule == svn_wc_schedule_delete)
+              if (status == svn_wc__db_status_deleted
+                  || status == svn_wc__db_status_obstructed_delete)
                 {
-                  if (entry->schedule == svn_wc_schedule_replace)
+                  svn_boolean_t replaced;
+
+                  SVN_ERR(svn_wc__internal_is_replaced(&replaced,
+                                                       db, local_abspath,
+                                                       iterpool));
+                  if (replaced)
                     continue;
                 }
-              SVN_ERR(process_committed_leaf
-                      ((*log_number)++, this_path, adm_access, current_entry,
-                       new_revnum, rev_date, rev_author, NULL, FALSE,
-                       remove_changelist, NULL, queue, subpool));
+              SVN_ERR(process_committed_leaf(db, adm_abspath, this_path,
+                                             new_revnum,
+                                             new_date, rev_author, NULL,
+                                             TRUE /* no_unlock */,
+                                             keep_changelist,
+                                             NULL, queue, iterpool));
             }
         }
 
-      svn_pool_destroy(subpool);
+      svn_pool_destroy(iterpool);
    }
 
   return SVN_NO_ERROR;
+}
+
+
+static apr_hash_t *
+convert_to_hash(const apr_array_header_t *wcprop_changes,
+                apr_pool_t *result_pool)
+{
+  int i;
+  apr_hash_t *dav_cache;
+
+  if (wcprop_changes == NULL || wcprop_changes->nelts == 0)
+    return NULL;
+
+  dav_cache = apr_hash_make(result_pool);
+
+  for (i = 0; i < wcprop_changes->nelts; i++)
+    {
+      const svn_prop_t *prop = APR_ARRAY_IDX(wcprop_changes, i,
+                                             const svn_prop_t *);
+
+      if (prop->value != NULL)
+        apr_hash_set(dav_cache, prop->name, APR_HASH_KEY_STRING, prop->value);
+    }
+
+  return dav_cache;
 }
 
 
@@ -646,10 +645,10 @@ svn_wc_queue_committed2(svn_wc_committed_queue_t *queue,
                         const char *path,
                         svn_wc_adm_access_t *adm_access,
                         svn_boolean_t recurse,
-                        apr_array_header_t *wcprop_changes,
+                        const apr_array_header_t *wcprop_changes,
                         svn_boolean_t remove_lock,
                         svn_boolean_t remove_changelist,
-                        svn_checksum_t *checksum,
+                        const svn_checksum_t *checksum,
                         apr_pool_t *scratch_pool)
 {
   committed_queue_item_t *cqi;
@@ -663,30 +662,33 @@ svn_wc_queue_committed2(svn_wc_committed_queue_t *queue,
   /* Add to the array with paths and options */
   cqi = apr_palloc(queue->pool, sizeof(*cqi));
   cqi->path = path;
-  cqi->adm_access = adm_access;
+  cqi->adm_abspath = svn_wc__adm_access_abspath(adm_access);
   cqi->recurse = recurse;
-  cqi->remove_lock = remove_lock;
-  cqi->remove_changelist = remove_changelist;
-  cqi->wcprop_changes = wcprop_changes;
+  cqi->no_unlock = !remove_lock;
+  cqi->keep_changelist = !remove_changelist;
   cqi->checksum = checksum;
+  cqi->new_dav_cache = convert_to_hash(wcprop_changes, queue->pool);
 
   APR_ARRAY_PUSH(queue->queue, committed_queue_item_t *) = cqi;
 
   return SVN_NO_ERROR;
 }
 
+
+/* NOTE: this function doesn't move to deprecated.c because of its need
+   for the internals of svn_wc_committed_queue_t.  */
 svn_error_t *
 svn_wc_queue_committed(svn_wc_committed_queue_t **queue,
                        const char *path,
                        svn_wc_adm_access_t *adm_access,
                        svn_boolean_t recurse,
-                       apr_array_header_t *wcprop_changes,
+                       const apr_array_header_t *wcprop_changes,
                        svn_boolean_t remove_lock,
                        svn_boolean_t remove_changelist,
                        const unsigned char *digest,
                        apr_pool_t *pool)
 {
-  svn_checksum_t *checksum;
+  const svn_checksum_t *checksum;
 
   if (digest)
     checksum = svn_checksum__from_digest(digest, svn_checksum_md5,
@@ -700,20 +702,12 @@ svn_wc_queue_committed(svn_wc_committed_queue_t **queue,
                                  checksum, pool);
 }
 
-typedef struct affected_adm_t
-{
-  int next_log;
-  svn_wc_adm_access_t *adm_access;
-} affected_adm_t;
-
 
 /* Return TRUE if any item of QUEUE is a parent of ITEM and will be
    processed recursively, return FALSE otherwise.
 */
 static svn_boolean_t
-have_recursive_parent(apr_array_header_t *queue,
-                      int item,
-                      apr_pool_t *pool)
+have_recursive_parent(apr_array_header_t *queue, int item)
 {
   int i;
   const char *path
@@ -721,12 +715,12 @@ have_recursive_parent(apr_array_header_t *queue,
 
   for (i = 0; i < queue->nelts; i++)
     {
-      committed_queue_item_t *qi;
+      const committed_queue_item_t *qi;
 
       if (i == item)
         continue;
 
-      qi = APR_ARRAY_IDX(queue, i, committed_queue_item_t *);
+      qi = APR_ARRAY_IDX(queue, i, const committed_queue_item_t *);
       if (qi->recurse && svn_dirent_is_child(qi->path, path, NULL))
         return TRUE;
     }
@@ -742,62 +736,37 @@ svn_wc_process_committed_queue(svn_wc_committed_queue_t *queue,
                                const char *rev_author,
                                apr_pool_t *pool)
 {
+  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
   int i;
-  apr_hash_index_t *hi;
-  apr_hash_t *updated_adms = apr_hash_make(pool);
   apr_pool_t *iterpool = svn_pool_create(pool);
+  apr_time_t new_date;
 
-  /* Now, we write all log files, collecting the affected adms in
-     the process ... */
+  if (rev_date)
+    SVN_ERR(svn_time_from_cstring(&new_date, rev_date, pool));
+  else
+    new_date = 0;
+
   for (i = 0; i < queue->queue->nelts; i++)
     {
-      affected_adm_t *affected_adm;
-      const char *adm_path;
-      committed_queue_item_t *cqi = APR_ARRAY_IDX(queue->queue,
-                                                  i, committed_queue_item_t *);
+      const committed_queue_item_t *cqi
+        = APR_ARRAY_IDX(queue->queue, i, const committed_queue_item_t *);
 
       svn_pool_clear(iterpool);
 
       /* If there are some recursive items, then see if this item is a
          child of one, and will (implicitly) be accounted for. */
-      if (queue->have_recursive
-          && have_recursive_parent(queue->queue, i, iterpool))
+      if (queue->have_recursive && have_recursive_parent(queue->queue, i))
         continue;
 
-      adm_path = svn_wc_adm_access_path(cqi->adm_access);
-      affected_adm = apr_hash_get(updated_adms,
-                                  adm_path, APR_HASH_KEY_STRING);
-      if (! affected_adm)
-        {
-          /* allocate in pool instead of iterpool:
-             we don't want this cleared at the next iteration */
-          affected_adm = apr_palloc(pool, sizeof(*affected_adm));
-          affected_adm->next_log = 0;
-          affected_adm->adm_access = cqi->adm_access;
-          apr_hash_set(updated_adms, adm_path, APR_HASH_KEY_STRING,
-                       affected_adm);
-        }
-
-      SVN_ERR(process_committed_internal(&affected_adm->next_log, cqi->path,
-                                         cqi->adm_access, cqi->recurse,
-                                         new_revnum, rev_date, rev_author,
-                                         cqi->wcprop_changes,
-                                         cqi->remove_lock,
-                                         cqi->remove_changelist,
+      SVN_ERR(process_committed_internal(db, cqi->adm_abspath, cqi->path,
+                                         cqi->recurse,
+                                         new_revnum, new_date, rev_author,
+                                         cqi->new_dav_cache,
+                                         cqi->no_unlock,
+                                         cqi->keep_changelist,
                                          cqi->checksum, queue, iterpool));
-    }
 
-  /* ... and then we run them; all at once.
-
-         This prevents writing the entries file
-         more than once per adm area */
-  for (hi = apr_hash_first(pool, updated_adms); hi; hi = apr_hash_next(hi))
-    {
-      affected_adm_t *this_adm = svn_apr_hash_index_val(hi);
-
-      svn_pool_clear(iterpool);
-
-      SVN_ERR(svn_wc__run_log(this_adm->adm_access, iterpool));
+      SVN_ERR(svn_wc__wq_run(db, cqi->adm_abspath, NULL, NULL, iterpool));
     }
 
   queue->queue->nelts = 0;
@@ -820,22 +789,31 @@ svn_wc_process_committed4(const char *path,
                           const unsigned char *digest,
                           apr_pool_t *pool)
 {
+  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
+  const char *adm_abspath = svn_wc__adm_access_abspath(adm_access);
   const svn_checksum_t *checksum;
-  int log_number = 0;
+  apr_time_t new_date;
+
+  if (rev_date)
+    SVN_ERR(svn_time_from_cstring(&new_date, rev_date, pool));
+  else
+    new_date = 0;
 
   if (digest)
     checksum = svn_checksum__from_digest(digest, svn_checksum_md5, pool);
   else
     checksum = NULL;
 
-  SVN_ERR(process_committed_internal(&log_number,
-                                     path, adm_access, recurse,
-                                     new_revnum, rev_date, rev_author,
-                                     wcprop_changes, remove_lock,
-                                     remove_changelist, checksum, NULL, pool));
+  SVN_ERR(process_committed_internal(db, adm_abspath,
+                                     path, recurse,
+                                     new_revnum, new_date, rev_author,
+                                     convert_to_hash(wcprop_changes, pool),
+                                     !remove_lock,!remove_changelist,
+                                     checksum, NULL,
+                                     pool));
 
   /* Run the log file(s) we just created. */
-  return svn_wc__run_log(adm_access, pool);
+  return svn_error_return(svn_wc__wq_run(db, adm_abspath, NULL, NULL, pool));
 }
 
 
@@ -1056,7 +1034,6 @@ erase_from_wc(svn_wc__db_t *db,
         {
           const char *name = APR_ARRAY_IDX(children, i, const char *);
           svn_wc__db_status_t status;
-          svn_depth_t depth;
           const char *node_abspath;
 
           svn_pool_clear(iterpool);
@@ -1064,7 +1041,7 @@ erase_from_wc(svn_wc__db_t *db,
           node_abspath = svn_dirent_join(local_abspath, name, iterpool);
 
           SVN_ERR(svn_wc__db_read_info(&status, &wc_kind, NULL, NULL, NULL,
-                                       NULL, NULL, NULL, NULL, NULL, &depth,
+                                       NULL, NULL, NULL, NULL, NULL, NULL,
                                        NULL, NULL, NULL, NULL, NULL, NULL,
                                        NULL, NULL, NULL, NULL, NULL, NULL,
                                        NULL,
@@ -1075,8 +1052,7 @@ erase_from_wc(svn_wc__db_t *db,
               status == svn_wc__db_status_obstructed ||
               status == svn_wc__db_status_obstructed_add ||
               status == svn_wc__db_status_obstructed_delete ||
-              status == svn_wc__db_status_excluded ||
-              depth == svn_depth_exclude)
+              status == svn_wc__db_status_excluded)
             continue; /* Not here */
 
           /* ### We don't have to record dirs once we have a single database */
@@ -1150,11 +1126,10 @@ svn_wc_delete4(svn_wc_context_t *wc_ctx,
   const char *parent_abspath = svn_dirent_dirname(local_abspath, pool);
   svn_wc__db_status_t status;
   svn_wc__db_kind_t kind;
-  svn_depth_t depth;
   svn_boolean_t base_shadowed;
 
   err = svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL, NULL,
-                             NULL, NULL, NULL, &depth, NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                              &base_shadowed, NULL, NULL,
                              db, local_abspath, pool, pool);
@@ -1173,17 +1148,18 @@ svn_wc_delete4(svn_wc_context_t *wc_ctx,
   else
     SVN_ERR(err);
 
-  if (depth == svn_depth_exclude)
-    status = svn_wc__db_status_excluded;
-
   switch (status)
     {
       case svn_wc__db_status_absent:
       case svn_wc__db_status_excluded:
       case svn_wc__db_status_not_present:
         return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
-                                 _("'%s' can not be deleted"),
+                                 _("'%s' cannot be deleted"),
                                  svn_dirent_local_style(local_abspath, pool));
+
+      /* Explicitly ignore other statii */
+      default:
+        break;
     }
 
   if (status == svn_wc__db_status_added)
@@ -1202,6 +1178,8 @@ svn_wc_delete4(svn_wc_context_t *wc_ctx,
         was_replace = TRUE;
     }
 
+  /* ### Maybe we should disallow deleting switched nodes here? */
+
   if (kind == svn_wc__db_kind_dir)
     {
       svn_revnum_t base_rev;
@@ -1213,7 +1191,7 @@ svn_wc_delete4(svn_wc_context_t *wc_ctx,
           /* Deleting a directory that has been added but not yet
              committed is easy, just remove the administrative dir. */
 
-          SVN_ERR(svn_wc__remove_from_revision_control_internal(
+          SVN_ERR(svn_wc__internal_remove_from_revision_control(
                                            wc_ctx->db,
                                            local_abspath,
                                            FALSE, FALSE,
@@ -1266,6 +1244,7 @@ svn_wc_delete4(svn_wc_context_t *wc_ctx,
                                          local_abspath, &tmp_entry,
                                          SVN_WC__ENTRY_MODIFY_SCHEDULE,
                                          pool, pool));
+      SVN_WC__FLUSH_LOG_ACCUM(db, parent_abspath, log_accum, pool);
 
       /* is it a replacement with history? */
       if (was_replace && was_copied)
@@ -1284,23 +1263,27 @@ svn_wc_delete4(svn_wc_context_t *wc_ctx,
                                        parent_abspath,
                                        text_revert, text_base,
                                        pool, pool));
+          SVN_WC__FLUSH_LOG_ACCUM(db, parent_abspath, log_accum, pool);
 
           SVN_ERR(svn_wc__loggy_revert_props_restore(&log_accum, wc_ctx->db,
                                                      local_abspath,
                                                      parent_abspath, pool));
+          SVN_WC__FLUSH_LOG_ACCUM(db, parent_abspath, log_accum, pool);
         }
       if (was_add)
         {
           SVN_ERR(svn_wc__loggy_props_delete(&log_accum, wc_ctx->db,
                                              local_abspath, parent_abspath,
                                              svn_wc__props_base, pool));
+          SVN_WC__FLUSH_LOG_ACCUM(db, parent_abspath, log_accum, pool);
 
           SVN_ERR(svn_wc__loggy_props_delete(&log_accum, wc_ctx->db,
                                              local_abspath, parent_abspath,
                                              svn_wc__props_working, pool));
+          SVN_WC__FLUSH_LOG_ACCUM(db, parent_abspath, log_accum, pool);
         }
 
-      SVN_ERR(svn_wc__write_log(parent_abspath, 0, log_accum, pool));
+      SVN_ERR(svn_wc__wq_add_loggy(db, parent_abspath, log_accum, pool));
 
       SVN_ERR(svn_wc__run_log2(db, parent_abspath, pool));
     }
@@ -1483,7 +1466,6 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
   svn_wc__db_t *db = wc_ctx->db;
   svn_error_t *err;
   svn_wc__db_status_t status;
-  svn_depth_t db_depth;
   svn_wc__db_kind_t db_kind;
   svn_boolean_t exists;
 
@@ -1515,7 +1497,7 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
      scheduled for addition and still previously 'deleted'.  */
 
   err = svn_wc__db_read_info(&status, &db_kind, NULL, NULL, NULL, NULL, NULL,
-                             NULL, NULL, NULL, &db_depth, NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                              NULL, NULL,
                              db, local_abspath, pool, pool);
@@ -1531,9 +1513,6 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
 
       SVN_ERR(err);
       exists = TRUE;
-
-      if (db_depth == svn_depth_exclude)
-        status = svn_wc__db_status_excluded;
 
       switch (status)
         {
@@ -1872,7 +1851,6 @@ revert_entry(svn_depth_t *depth,
              svn_boolean_t *did_revert,
              apr_pool_t *pool)
 {
-
   /* Initialize this even though revert_admin_things() is guaranteed
      to set it, because we don't know that revert_admin_things() will
      be called. */
@@ -1881,16 +1859,48 @@ revert_entry(svn_depth_t *depth,
   /* Additions. */
   if (entry->schedule == svn_wc_schedule_add)
     {
+      svn_revnum_t base_revision;
+      const char *repos_relpath;
+      const char *repos_root_url;
+      const char *repos_uuid;
       /* Before removing item from revision control, notice if the
          entry is in a 'deleted' state; this is critical for
          directories, where this state only exists in its parent's
          entry. */
       svn_boolean_t was_deleted = FALSE;
 
+      /* NOTE: if WAS_DELETED gets set, then we have BASE nodes. The code
+         below will then figure out the repository information, so that
+         we can later insert a node for the same repository.  */
+
+      /* ### much of this is probably bullshit. we should be able to just
+         ### remove the WORKING and ACTUAL rows, and be done. but we're
+         ### not quite there yet, so nodes get fully removed and then
+         ### shoved back into the database. this is why we need to record
+         ### the repository information, and the BASE revision.  */
+
       if (entry->kind == svn_node_file)
         {
           was_deleted = entry->deleted;
-          SVN_ERR(svn_wc__remove_from_revision_control_internal(db,
+          if (was_deleted)
+            {
+              /* Remember the BASE revision.  */
+              SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, &base_revision,
+                                               NULL, NULL, NULL, NULL, NULL,
+                                               NULL, NULL, NULL, NULL,
+                                               NULL, NULL, NULL,
+                                               db, local_abspath,
+                                               pool, pool));
+
+              /* Remember the repository this node is associated with.  */
+              SVN_ERR(svn_wc__db_scan_base_repos(&repos_relpath,
+                                                 &repos_root_url,
+                                                 &repos_uuid,
+                                                 db, local_abspath,
+                                                 pool, pool));
+            }
+
+          SVN_ERR(svn_wc__internal_remove_from_revision_control(db,
                                                                 local_abspath,
                                                                 FALSE, FALSE,
                                                                 cancel_func,
@@ -1916,6 +1926,23 @@ revert_entry(svn_depth_t *depth,
 
           SVN_ERR(svn_wc__node_is_deleted(&was_deleted, db, local_abspath,
                                           pool));
+          if (was_deleted)
+            {
+              /* Remember the BASE revision.  */
+              SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, &base_revision,
+                                               NULL, NULL, NULL, NULL, NULL,
+                                               NULL, NULL, NULL, NULL,
+                                               NULL, NULL, NULL,
+                                               db, local_abspath,
+                                               pool, pool));
+
+              /* Remember the repository this node is associated with.  */
+              SVN_ERR(svn_wc__db_scan_base_repos(&repos_relpath,
+                                                 &repos_root_url,
+                                                 &repos_uuid,
+                                                 db, local_abspath,
+                                                 pool, pool));
+            }
 
           if (kind == svn_node_none
               || svn_wc__adm_missing(db, local_abspath, pool))
@@ -1930,7 +1957,7 @@ revert_entry(svn_depth_t *depth,
             }
           else
             {
-              SVN_ERR(svn_wc__remove_from_revision_control_internal(
+              SVN_ERR(svn_wc__internal_remove_from_revision_control(
                                            db,
                                            local_abspath,
                                            FALSE, FALSE,
@@ -1958,33 +1985,15 @@ revert_entry(svn_depth_t *depth,
          parent. */
       if (was_deleted)
         {
-          svn_wc_entry_t tmp_entry;
-
-          /* ### this is some pretty bogus stuff here. for directories,
-             ### this will mark the stub as DELETED. the kind will be
-             ### unchanged. for files, the entry has been removed above,
-             ### so this will *RE-INSERT* an entry for this node, marked
-             ### as a "file" that is DELETED. lovely, how entry_modify(2)
-             ### can actually insert new nodes...  */
-          tmp_entry.kind = entry->kind;
-          tmp_entry.deleted = TRUE;
-
-          if (entry->kind == svn_node_dir)
-            {
-              SVN_ERR(svn_wc__entry_modify2(db, local_abspath,
-                                            svn_node_dir, TRUE, &tmp_entry,
-                                            SVN_WC__ENTRY_MODIFY_KIND
-                                            | SVN_WC__ENTRY_MODIFY_DELETED,
-                                            pool));
-            }
-          else
-            {
-              SVN_ERR(svn_wc__entry_modify2(db, local_abspath,
-                                            svn_node_file, FALSE, &tmp_entry,
-                                            SVN_WC__ENTRY_MODIFY_KIND
-                                            | SVN_WC__ENTRY_MODIFY_DELETED,
-                                            pool));
-            }
+          SVN_ERR(svn_wc__db_base_add_absent_node(
+                    db, local_abspath,
+                    repos_relpath, repos_root_url, repos_uuid,
+                    base_revision,
+                    entry->kind == svn_node_dir
+                      ? svn_wc__db_kind_dir
+                      : svn_wc__db_kind_file,
+                    svn_wc__db_status_not_present,
+                    pool));
         }
     }
   /* Regular prop and text edit. */
@@ -2298,7 +2307,7 @@ svn_wc__get_pristine_contents(svn_stream_t **contents,
 
 
 svn_error_t *
-svn_wc__remove_from_revision_control_internal(svn_wc__db_t *db,
+svn_wc__internal_remove_from_revision_control(svn_wc__db_t *db,
                                               const char *local_abspath,
                                               svn_boolean_t destroy_wf,
                                               svn_boolean_t instant_error,
@@ -2344,7 +2353,7 @@ svn_wc__remove_from_revision_control_internal(svn_wc__db_t *db,
       if (wc_special || ! local_special)
         {
           /* Check for local mods. before removing entry */
-          SVN_ERR(svn_wc__text_modified_internal_p(&text_modified_p, db,
+          SVN_ERR(svn_wc__internal_text_modified_p(&text_modified_p, db,
                                                    local_abspath, FALSE,
                                                    TRUE, scratch_pool));
           if (text_modified_p && instant_error)
@@ -2431,7 +2440,7 @@ svn_wc__remove_from_revision_control_internal(svn_wc__db_t *db,
               continue;
             }
 
-          err = svn_wc__remove_from_revision_control_internal(
+          err = svn_wc__internal_remove_from_revision_control(
             db, entry_abspath,
             destroy_wf, instant_error,
             cancel_func, cancel_baton,
@@ -2459,28 +2468,15 @@ svn_wc__remove_from_revision_control_internal(svn_wc__db_t *db,
       {
         svn_boolean_t is_root;
 
-        SVN_ERR(svn_wc__check_wc_root(&is_root, NULL, db, local_abspath,
-                                      iterpool));
+        SVN_ERR(svn_wc__check_wc_root(&is_root, NULL, NULL,
+                                      db, local_abspath, iterpool));
 
         /* If full_path is not the top of a wc, then its parent
            directory is also a working copy and has an entry for
            full_path.  We need to remove that entry: */
         if (! is_root)
           {
-            const svn_wc_entry_t *dir_entry;
-
-            SVN_ERR(svn_wc__get_entry(&dir_entry, db, local_abspath, FALSE,
-                                      svn_node_dir, TRUE, iterpool, iterpool));
-
-            /* An exception: When the path is at svn_depth_exclude,
-               the entry in the parent directory should be preserved
-               for bookkeeping purpose. This only happens when the
-               function is called by svn_wc_crop_tree(). */
-            if (dir_entry
-                && dir_entry->depth != svn_depth_exclude)
-              {
-                SVN_ERR(svn_wc__entry_remove(db, local_abspath, iterpool));
-              }
+            SVN_ERR(svn_wc__entry_remove(db, local_abspath, iterpool));
           }
       }
 
@@ -2532,7 +2528,7 @@ svn_wc_remove_from_revision_control2(svn_wc_context_t *wc_ctx,
                                     apr_pool_t *scratch_pool)
 {
   return svn_error_return(
-      svn_wc__remove_from_revision_control_internal(wc_ctx->db,
+      svn_wc__internal_remove_from_revision_control(wc_ctx->db,
                                                     local_abspath,
                                                     destroy_wf,
                                                     instant_error,

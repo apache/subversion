@@ -724,8 +724,8 @@ remote_propget(apr_hash_t *props,
           if (depth == svn_depth_files || depth == svn_depth_immediates)
             depth_below_here = svn_depth_empty;
 
-          new_target_relative = svn_uri_join(target_relative, this_name,
-                                             iterpool);
+          new_target_relative = svn_relpath_join(target_relative, this_name,
+                                                 iterpool);
 
           SVN_ERR(remote_propget(props,
                                  propname,
@@ -1042,8 +1042,8 @@ remote_proplist(const char *target_prefix,
 
           svn_pool_clear(subpool);
 
-          new_target_relative = svn_uri_join(target_relative,
-                                             this_name, subpool);
+          new_target_relative = svn_relpath_join(target_relative,
+                                                 this_name, subpool);
 
           if (this_ent->kind == svn_node_file
               || depth > svn_depth_files)

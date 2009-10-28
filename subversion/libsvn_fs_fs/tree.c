@@ -430,7 +430,7 @@ parent_path_relpath(parent_path_t *child,
   while (this_node != ancestor)
     {
       assert(this_node != NULL);
-      path_so_far = svn_uri_join(this_node->entry, path_so_far, pool);
+      path_so_far = svn_relpath_join(this_node->entry, path_so_far, pool);
       this_node = this_node->parent;
     }
   return path_so_far;
@@ -1740,6 +1740,25 @@ svn_fs_fs__commit_txn(const char **conflict_p,
 }
 
 
+svn_error_t *
+svn_fs_fs__commit_obliteration_txn(svn_revnum_t rev,
+                                   svn_fs_txn_t *txn,
+                                   apr_pool_t *pool)
+{
+  svn_error_t *err = SVN_NO_ERROR;
+  svn_fs_t *fs = txn->fs;
+
+  /* Try to commit. */
+  err = svn_fs_fs__commit_obliteration(rev, fs, txn, pool);
+  if (err && (err->apr_err == SVN_ERR_FS_TXN_OUT_OF_DATE))
+    {
+      /* ### ? */
+    }
+
+  return svn_error_return(err);
+}
+
+
 /* Merge changes between two nodes into a third node.  Given nodes
    SOURCE_PATH under SOURCE_ROOT, TARGET_PATH under TARGET_ROOT and
    ANCESTOR_PATH under ANCESTOR_ROOT, modify target to contain all the
@@ -2964,7 +2983,7 @@ prev_location(const char **prev_path,
   SVN_ERR(fs_copied_from(&copy_src_rev, &copy_src_path,
                          copy_root, copy_path, pool));
   if (strcmp(copy_path, path) != 0)
-    remainder = svn_path_is_child(copy_path, path, pool);
+    remainder = svn_relpath_is_child(copy_path, path, pool);
   *prev_path = svn_uri_join(copy_src_path, remainder, pool);
   *prev_rev = copy_src_rev;
   return SVN_NO_ERROR;
@@ -3217,7 +3236,7 @@ history_prev(void *baton, apr_pool_t *pool)
       if (strcmp(path, copy_dst) == 0)
         remainder = "";
       else
-        remainder = svn_path_is_child(copy_dst, path, pool);
+        remainder = svn_relpath_is_child(copy_dst, path, pool);
 
       if (remainder)
         {

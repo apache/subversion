@@ -1222,7 +1222,7 @@ dav_svn_split_uri(request_rec *r,
   if (fs_path != NULL)
     {
       /* the repos_name is the last component of root_path. */
-      *repos_name = svn_uri_basename(root_path, r->pool);
+      *repos_name = svn_dirent_basename(root_path, r->pool);
 
       /* 'relative' is already correct for SVNPath; the root_path
          already contains the name of the repository, so relative is
@@ -1937,9 +1937,9 @@ get_resource(request_rec *r,
     {
       /* ...then the URL to the repository is actually one implicit
          component longer... */
-      root_path = svn_path_join(root_path, repos_name, r->pool);
+      root_path = svn_uri_join(root_path, repos_name, r->pool);
       /* ...and we need to specify exactly what repository to open. */
-      fs_path = svn_path_join(fs_parent_path, repos_name, r->pool);
+      fs_path = svn_dirent_join(fs_parent_path, repos_name, r->pool);
     }
 
   /* Start building and filling a 'combination' object. */
@@ -2028,16 +2028,16 @@ get_resource(request_rec *r,
   repos->activities_db = dav_svn__get_activities_db(r);
   if (repos->activities_db == NULL)
     /* If not specified, use default ($repos/dav/activities.d). */
-    repos->activities_db = svn_path_join(repos->fs_path,
+    repos->activities_db = svn_dirent_join(repos->fs_path,
                                          DEFAULT_ACTIVITY_DB,
                                          r->pool);
   else if (fs_parent_path != NULL)
     /* If this is a ParentPath-based repository, treat the specified
        path as a similar parent directory. */
-    repos->activities_db = svn_path_join(repos->activities_db,
-                                         svn_uri_basename(repos->fs_path,
-                                                          r->pool),
-                                         r->pool);
+    repos->activities_db = svn_dirent_join(repos->activities_db,
+                                           svn_dirent_basename(repos->fs_path,
+                                                               r->pool),
+                                           r->pool);
 
   /* Remember various bits for later URL construction */
   repos->base_url = ap_construct_url(r->pool, "", r);
@@ -3375,11 +3375,27 @@ deliver(const dav_resource *resource, ap_filter_t *output)
       svn_pool_destroy(entry_pool);
 
       if (gen_html)
-        ap_fputs(output, bb,
-                 " </ul>\n <hr noshade><em>Powered by "
-                 "<a href=\"http://subversion.tigris.org/\">Subversion</a> "
-                 "version " SVN_VERSION "."
-                 "</em>\n</body></html>");
+        {
+          if (strcmp(ap_psignature("FOO", resource->info->r), "") != 0)
+            {
+              /* Apache's signature generation code didn't eat our prefix.
+                 ServerSignature must be enabled.  Print our version info.
+
+                 WARNING: This is a kludge!! ap_psignature() doesn't promise
+                 to return the empty string when ServerSignature is off.  We
+                 know it does by code inspection, but this behavior is subject
+                 to change. (Perhaps we should try to get the Apache folks to
+                 make this promise, though.  Seems harmless/useful enough...)
+              */
+              ap_fputs(output, bb,
+                       " </ul>\n <hr noshade><em>Powered by "
+                       "<a href=\"http://subversion.tigris.org/\">Subversion"
+                       "</a> version " SVN_VERSION "."
+                       "</em>\n</body></html>");
+            }
+          else
+            ap_fputs(output, bb, " </ul>\n</body></html>");
+        }
       else
         ap_fputs(output, bb, "  </index>\n</svn>\n");
 
@@ -3650,15 +3666,15 @@ copy_resource(const dav_resource *src,
         return err;
     }
 
-  serr = svn_path_get_absolute(&src_repos_path,
-                               svn_repos_path(src->info->repos->repos,
-                                              src->pool),
-                               src->pool);
+  serr = svn_dirent_get_absolute(&src_repos_path,
+                                 svn_repos_path(src->info->repos->repos,
+                                                src->pool),
+                                 src->pool);
   if (!serr)
-    serr = svn_path_get_absolute(&dst_repos_path,
-                                 svn_repos_path(dst->info->repos->repos,
-                                                dst->pool),
-                                 dst->pool);
+    serr = svn_dirent_get_absolute(&dst_repos_path,
+                                   svn_repos_path(dst->info->repos->repos,
+                                                  dst->pool),
+                                   dst->pool);
 
   if (!serr)
     {

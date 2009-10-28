@@ -180,14 +180,14 @@ make_child_baton(item_baton_t *parent, const char *path, apr_pool_t *pool)
   baton = apr_pcalloc(pool, sizeof(*baton));
   baton->pool = pool;
   baton->uc = parent->uc;
-  baton->name = svn_uri_basename(path, pool);
+  baton->name = svn_relpath_basename(path, pool);
   baton->parent = parent;
 
   /* Telescope the path based on uc->anchor.  */
-  baton->path = svn_path_join(parent->path, baton->name, pool);
+  baton->path = svn_uri_join(parent->path, baton->name, pool);
 
   /* Telescope the path based on uc->dst_path in the exact same way. */
-  baton->path2 = svn_path_join(parent->path2, baton->name, pool);
+  baton->path2 = svn_uri_join(parent->path2, baton->name, pool);
 
   /* Telescope the third path:  it's relative, not absolute, to
      dst_path.  Now, we gotta be careful here, because if this
@@ -249,8 +249,8 @@ absent_helper(svn_boolean_t is_dir,
               (uc->bb, uc->output,
                "<S:absent-%s name=\"%s\"/>" DEBUG_CR,
                DIR_OR_FILE(is_dir),
-               apr_xml_quote_string(pool, 
-                                    svn_uri_basename(path, pool),
+               apr_xml_quote_string(pool,
+                                    svn_relpath_basename(path, pool),
                                     1)));
     }
 
@@ -589,7 +589,8 @@ upd_delete_entry(const char *path,
 {
   item_baton_t *parent = parent_baton;
   const char *qname = apr_xml_quote_string(pool,
-                                           svn_uri_basename(path, pool), 1);
+                                           svn_relpath_basename(path, pool),
+                                           1);
   return dav_svn__brigade_printf(parent->uc->bb, parent->uc->output,
                                  "<S:delete-entry name=\"%s\"/>" DEBUG_CR,
                                  qname);

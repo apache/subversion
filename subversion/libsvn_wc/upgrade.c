@@ -313,14 +313,20 @@ upgrade_to_wcng(svn_wc__db_t *db,
                 int old_format,
                 apr_pool_t *scratch_pool)
 {
-  svn_boolean_t present;
+  const char *logfile_path = svn_wc__adm_child(dir_abspath, SVN_WC__ADM_LOG,
+                                               scratch_pool);
+  svn_node_kind_t logfile_on_disk;
   apr_hash_t *entries;
   const svn_wc_entry_t *this_dir;
   svn_sqlite__db_t *sdb;
+  apr_int64_t repos_id;
+  apr_int64_t wc_id;
 
   /* Don't try to mess with the WC if there are old log files left. */
-  SVN_ERR(svn_wc__logfile_present(&present, dir_abspath, scratch_pool));
-  if (present)
+
+  /* Is the (first) log file present?  */
+  SVN_ERR(svn_io_check_path(logfile_path, &logfile_on_disk, scratch_pool));
+  if (logfile_on_disk == svn_node_file)
     return svn_error_create(SVN_ERR_WC_UNSUPPORTED_FORMAT, NULL,
                             _("Cannot upgrade with existing logs; please "
                               "run 'svn cleanup' with Subversion 1.6"));
@@ -354,7 +360,7 @@ upgrade_to_wcng(svn_wc__db_t *db,
   this_dir = apr_hash_get(entries, SVN_WC_ENTRY_THIS_DIR, APR_HASH_KEY_STRING);
 
   /* Create an empty sqlite database for this directory. */
-  SVN_ERR(svn_wc__db_upgrade_begin(&sdb, dir_abspath,
+  SVN_ERR(svn_wc__db_upgrade_begin(&sdb, &repos_id, &wc_id, dir_abspath,
                                    this_dir->repos, this_dir->uuid,
                                    scratch_pool, scratch_pool));
 
@@ -366,7 +372,9 @@ upgrade_to_wcng(svn_wc__db_t *db,
   SVN_ERR(svn_wc__db_temp_reset_format(SVN_WC__VERSION, db, dir_abspath,
                                        scratch_pool));
   SVN_ERR(svn_wc__db_wclock_set(db, dir_abspath, scratch_pool));
-  SVN_ERR(svn_wc__entries_write_new(db, dir_abspath, entries, scratch_pool));
+  SVN_ERR(svn_wc__write_upgraded_entries(db, sdb, repos_id, wc_id,
+                                         dir_abspath, entries,
+                                         scratch_pool));
 
   SVN_ERR(svn_io_remove_file2(svn_wc__adm_child(dir_abspath,
                                                 SVN_WC__ADM_FORMAT,
@@ -449,6 +457,7 @@ upgrade_to_wcng(svn_wc__db_t *db,
 }
 
 
+#if 0
 /* ### duplicated from wc_db.c  */
 static const char *
 kind_to_word(svn_wc__db_kind_t kind)
@@ -686,6 +695,7 @@ migrate_tree_conflicts(svn_sqlite__db_t *sdb,
   svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
 }
+#endif
 
 
 static svn_error_t *
@@ -715,43 +725,36 @@ migrate_locks(const char *wcroot_abspath,
 }
 
 
-struct bump15_baton {
-  apr_pool_t *scratch_pool;
-};
-
-
+#if 0
 /* This implements svn_sqlite__transaction_callback_t */
 static svn_error_t *
-bump_database_to_15(void *baton,
-                    svn_sqlite__db_t *sdb)
+bump_database_to_16(void *baton,
+                    svn_sqlite__db_t *sdb,
+                    apr_pool_t *scratch_pool)
 {
-  struct bump15_baton *bb = baton;
-
-  SVN_ERR(migrate_tree_conflicts(sdb, bb->scratch_pool));
+  SVN_ERR(migrate_tree_conflicts(sdb, scratch_pool));
 
   /* NOTE: this *is* transactional, so the version will not be bumped
      unless our overall transaction is committed.  */
-  SVN_ERR(svn_sqlite__set_schema_version(sdb, 15, bb->scratch_pool));
+  SVN_ERR(svn_sqlite__set_schema_version(sdb, 15, scratch_pool));
 
   return SVN_NO_ERROR;
 }
 
-
 static svn_error_t *
-bump_to_15(const char *wcroot_abspath,
+bump_to_16(const char *wcroot_abspath,
            svn_sqlite__db_t *sdb,
            apr_pool_t *scratch_pool)
 {
-  struct bump15_baton bb = { scratch_pool };
-
   /* ### migrate disk bits here.  */
 
   /* Perform the database upgrade. The last thing this does is to bump
      the recorded version to 15.  */
-  SVN_ERR(svn_sqlite__with_transaction(sdb, bump_database_to_15, &bb));
+  SVN_ERR(svn_sqlite__with_transaction(sdb, bump_database_to_15, NULL, scratch_pool));
 
   return SVN_NO_ERROR;
 }
+#endif
 
 
 svn_error_t *
@@ -782,10 +785,17 @@ svn_wc__upgrade_sdb(int *result_format,
       ++start_format;
     }
 
-#if 0
   if (start_format == 14)
     {
-      SVN_ERR(bump_to_15(wcroot_abspath, sdb, scratch_pool));
+      /* Nothing to do here for format 15 */
+      SVN_ERR(svn_sqlite__set_schema_version(sdb, 15, scratch_pool));
+      ++start_format;
+    }
+
+#if 0
+  if (start_format == 15)
+    {
+      SVN_ERR(bump_to_16(wcroot_abspath, sdb, scratch_pool));
       ++start_format;
     }
 #endif

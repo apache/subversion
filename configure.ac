@@ -493,7 +493,7 @@ if test -n "$PKG_CONFIG"; then
     DBUS_VERSION="`$PKG_CONFIG --modversion dbus-1`"
     AC_MSG_RESULT([$DBUS_VERSION])
     # D-Bus 0.* requires DBUS_API_SUBJECT_TO_CHANGE
-    if test -n ["`echo "$DBUS_VERSION" | $GREP '^0\.[[:digit:]]\+'`"]; then
+    if test -n ["`echo "$DBUS_VERSION" | $EGREP '^0\.[[:digit:]]+'`"]; then
       DBUS_CPPFLAGS="$DBUS_CPPFLAGS -DDBUS_API_SUBJECT_TO_CHANGE"
     fi
     DBUS_LIBS="`$PKG_CONFIG --libs dbus-1`"

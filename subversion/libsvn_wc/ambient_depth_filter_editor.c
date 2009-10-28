@@ -150,7 +150,6 @@ make_dir_baton(struct dir_baton **d_p,
       svn_boolean_t exclude;
       svn_error_t *err;
       svn_wc__db_status_t status;
-      svn_depth_t depth;
       svn_boolean_t exists = TRUE;
 
       abspath = svn_dirent_join(eb->anchor_abspath,
@@ -158,7 +157,7 @@ make_dir_baton(struct dir_baton **d_p,
                                 pool);
 
       err = svn_wc__db_read_info(&status, NULL, NULL, NULL, NULL, NULL, NULL,
-                                 NULL, NULL, NULL, &depth, NULL, NULL, NULL,
+                                 NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                  NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                  NULL, NULL, NULL,
                                  eb->db, abspath, pool, pool);
@@ -188,7 +187,7 @@ make_dir_baton(struct dir_baton **d_p,
         {
           /* If the parent expect all children by default, only exclude
              it whenever it is explicitly marked as exclude. */
-          exclude = exists && (depth == svn_depth_exclude);
+          exclude = exists && (status == svn_wc__db_status_excluded);
         }
       if (exclude)
         {

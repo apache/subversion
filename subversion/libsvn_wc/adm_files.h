@@ -52,25 +52,6 @@ svn_boolean_t svn_wc__adm_area_exists(const svn_wc_adm_access_t *adm_access,
                                       apr_pool_t *pool);
 
 
-/* Create a killme file in the administrative area, indicating that the
-   directory containing the administrative area should be removed.
-
-   If ADM_ONLY is true then remove only the administrative areas for the
-   directory and subdirectories. */
-svn_error_t *svn_wc__make_killme(svn_wc_adm_access_t *adm_access,
-                                 svn_boolean_t adm_only,
-                                 apr_pool_t *pool);
-
-/* Set EXISTS to TRUE if a killme file exists in the administrative area,
-   FALSE otherwise.
-
-   If EXISTS is true, set KILL_ADM_ONLY to the value passed to
-   svn_wc__make_killme() above. */
-svn_error_t *svn_wc__check_killme(svn_wc_adm_access_t *adm_access,
-                                  svn_boolean_t *exists,
-                                  svn_boolean_t *kill_adm_only,
-                                  apr_pool_t *pool);
-
 /* Atomically rename a temporary text-base file to its canonical
    location.  The tmp file should be closed already. */
 svn_error_t *
@@ -201,7 +182,8 @@ svn_error_t *svn_wc__adm_destroy(svn_wc_adm_access_t *adm_access,
 /* Cleanup the temporary storage area of the administrative
    directory (assuming temp and admin areas exist). */
 svn_error_t *
-svn_wc__adm_cleanup_tmp_area(const svn_wc_adm_access_t *adm_access,
+svn_wc__adm_cleanup_tmp_area(svn_wc__db_t *db,
+                             const char *adm_abspath,
                              apr_pool_t *scratch_pool);
 
 

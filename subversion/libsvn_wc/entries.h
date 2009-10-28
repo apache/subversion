@@ -30,6 +30,7 @@
 #include "svn_types.h"
 
 #include "wc_db.h"
+#include "private/svn_sqlite.h"
 
 
 #ifdef __cplusplus
@@ -146,7 +147,9 @@ svn_error_t *svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
 #define SVN_WC__ENTRY_MODIFY_FORCE              APR_INT64_C(0x4000000000000000)
 
 
-/* Modify an entry for NAME in access baton ADM_ACCESS by folding in
+/* TODO ### Rewrite doc string to mention DB, LOCAL_ABSPATH; not ADM_ACCESS, NAME.
+
+   Modify an entry for NAME in access baton ADM_ACCESS by folding in
    ("merging") changes, and sync those changes to disk.  New values
    for the entry are pulled from their respective fields in ENTRY, and
    MODIFY_FLAGS is a bitmask to specify which of those fields to pay
@@ -294,10 +297,13 @@ svn_wc__read_entries_old(apr_hash_t **entries,
 
 /* For internal use by upgrade.c to write entries in the wc-ng format.  */
 svn_error_t *
-svn_wc__entries_write_new(svn_wc__db_t *db,
-                          const char *dir_abspath,
-                          apr_hash_t *entries,
-                          apr_pool_t *scratch_pool);
+svn_wc__write_upgraded_entries(svn_wc__db_t *db,
+                               svn_sqlite__db_t *sdb,
+                               apr_int64_t repos_id,
+                               apr_int64_t wc_id,
+                               const char *dir_abspath,
+                               apr_hash_t *entries,
+                               apr_pool_t *scratch_pool);
 
 
 /* ### return a flag corresponding to the classic "DELETED" concept.  */

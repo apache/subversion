@@ -89,6 +89,23 @@ trim_string(char **pstr)
   str[i] = '\0';
 }
 
+/* Remove leading and trailing single- or double quotes from a C string,
+ * in place. */
+static void
+unquote_string(char **pstr)
+{
+  char *str = *pstr;
+  size_t i = strlen(str);
+
+  if (i > 0 && ((*str == '"' && str[i - 1] == '"') ||
+                (*str == '\'' && str[i - 1] == '\'')))
+    {
+      str[i - 1] = '\0';
+      str++;
+    }
+  *pstr = str;
+}
+
 /* Split PROPERTY and store each individual value in PROPS.
    Allocates from POOL. */
 static void
@@ -170,6 +187,7 @@ auto_props_enumerator(const char *name,
           *equal_sign = '\0';
           equal_sign++;
           trim_string(&equal_sign);
+          unquote_string(&equal_sign);
           this_value = equal_sign;
         }
       else
@@ -332,11 +350,11 @@ add_file(const char *local_abspath,
   return SVN_NO_ERROR;
 }
 
-/* Schedule directory DIRNAME, and some of the tree under it, for
- * addition with access baton ADM_ACCESS.  DEPTH is the depth at this
+/* Schedule directory DIR_ABSPATH, and some of the tree under it, for
+ * addition.  DEPTH is the depth at this
  * point in the descent (it may be changed for recursive calls).
  *
- * If DIRNAME (or any item below directory DIRNAME) is already scheduled for
+ * If DIR_ABSPATH (or any item below DIR_ABSPATH) is already scheduled for
  * addition, add will fail and return an error unless FORCE is TRUE.
  *
  * Files and directories that match ignore patterns will not be added unless
@@ -750,7 +768,7 @@ mkdir_urls(svn_commit_info_t **commit_info_p,
           for (i = 0; i < targets->nelts; i++)
             {
               const char *path = APR_ARRAY_IDX(targets, i, const char *);
-              path = svn_uri_join(bname, path, pool);
+              path = svn_relpath_join(bname, path, pool);
               APR_ARRAY_IDX(targets, i, const char *) = path;
             }
         }

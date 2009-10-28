@@ -1178,8 +1178,8 @@ find_interesting_revisions(apr_array_header_t *path_revisions,
 static int
 compare_path_revisions(const void *a, const void *b)
 {
-  struct path_revision *a_pr = *(struct path_revision **)a;
-  struct path_revision *b_pr = *(struct path_revision **)b;
+  struct path_revision *a_pr = *(struct path_revision *const *)a;
+  struct path_revision *b_pr = *(struct path_revision *const *)b;
 
   if (a_pr->revnum == b_pr->revnum)
     return 0;

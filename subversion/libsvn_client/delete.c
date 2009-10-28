@@ -85,7 +85,7 @@ svn_client__can_delete(const char *path,
                        apr_pool_t *pool)
 {
   svn_opt_revision_t revision;
-  svn_wc_entry_t *entry;
+  const svn_wc_entry_t *entry;
   const char* local_abspath;
 
   revision.kind = svn_opt_revision_unspecified;
@@ -112,9 +112,11 @@ svn_client__can_delete(const char *path,
      status callback function find_undeletables() makes the
      determination, returning an error if it finds anything that shouldn't
      be deleted. */
-  return svn_client_status5(NULL, path, &revision, find_undeletables, NULL,
-                            svn_depth_infinity, FALSE, FALSE, FALSE, FALSE,
-                            FALSE, NULL, ctx, pool);
+  return svn_error_return(svn_client_status5(NULL, path, &revision,
+                                             find_undeletables, NULL,
+                                             svn_depth_infinity, FALSE,
+                                             FALSE, FALSE, FALSE, FALSE,
+                                             NULL, ctx, pool));
 }
 
 
@@ -259,11 +261,12 @@ svn_client__wc_delete(const char *path,
 
   if (!dry_run)
     /* Mark the entry for commit deletion and perform wc deletion */
-    return svn_wc_delete4(ctx->wc_ctx, local_abspath, keep_local, TRUE,
-                          ctx->cancel_func, ctx->cancel_baton,
-                          notify_func, notify_baton, pool);
-  else
-    return SVN_NO_ERROR;
+    return svn_error_return(svn_wc_delete4(ctx->wc_ctx, local_abspath,
+                                           keep_local, TRUE,
+                                           ctx->cancel_func, ctx->cancel_baton,
+                                           notify_func, notify_baton, pool));
+
+  return SVN_NO_ERROR;
 }
 
 

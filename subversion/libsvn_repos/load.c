@@ -232,7 +232,7 @@ prefix_mergeinfo_paths(svn_string_t **mergeinfo_val,
 
   SVN_ERR(svn_mergeinfo_parse(&mergeinfo, mergeinfo_orig->data, pool));
   prefixed_mergeinfo = apr_hash_make(pool);
-  for (hi = apr_hash_first(NULL, mergeinfo); hi; hi = apr_hash_next(hi))
+  for (hi = apr_hash_first(pool, mergeinfo); hi; hi = apr_hash_next(hi))
     {
       const char *path;
       const void *merge_source;
@@ -259,7 +259,7 @@ renumber_mergeinfo_revs(svn_string_t **final_val,
   apr_hash_index_t *hi;
 
   SVN_ERR(svn_mergeinfo_parse(&mergeinfo, initial_val->data, subpool));
-  for (hi = apr_hash_first(NULL, mergeinfo); hi; hi = apr_hash_next(hi))
+  for (hi = apr_hash_first(subpool, mergeinfo); hi; hi = apr_hash_next(hi))
     {
       const char *merge_source;
       apr_array_header_t *rangelist;

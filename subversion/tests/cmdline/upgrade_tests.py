@@ -43,7 +43,7 @@ wc_is_too_old_regex = (".*Working copy format of '.*' is too old \(\d+\); " +
 
 def get_current_format():
   ### parse this from libsvn_wc/wc.h
-  return 14
+  return 15
 
 
 def replace_sbox_with_tarfile(sbox, tar_filename):

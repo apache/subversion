@@ -462,7 +462,7 @@ assemble_status(svn_wc_status2_t **status,
 #endif /* HAVE_SYMLINK */
           )
         {
-          svn_error_t *err = svn_wc__text_modified_internal_p(&text_modified_p,
+          svn_error_t *err = svn_wc__internal_text_modified_p(&text_modified_p,
                                                               db,
                                                               local_abspath,
                                                               FALSE, TRUE,
@@ -572,8 +572,8 @@ assemble_status(svn_wc_status2_t **status,
 #endif /* HAVE_SYMLINK */
 
       if (path_kind == svn_node_dir && entry->kind == svn_node_dir)
-        SVN_ERR(svn_wc__internal_locked(NULL, &locked_p, db, local_abspath,
-                                        scratch_pool));
+        SVN_ERR(svn_wc__db_wclocked(&locked_p, db, local_abspath,
+                                    scratch_pool));
     }
 
   /* 5. Easy out:  unless we're fetching -every- entry, don't bother
@@ -733,14 +733,14 @@ is_external_path(apr_hash_t *externals,
 }
 
 
-/* Assuming that NAME is unversioned, send a status structure
+/* Assuming that LOCAL_ABSPATH is unversioned, send a status structure
    for it through STATUS_FUNC/STATUS_BATON unless this path is being
    ignored.  This function should never be called on a versioned entry.
 
-   NAME is the basename of the unversioned file whose status is being
+   LOCAL_ABSPATH is the path to the unversioned file whose status is being
    requested.  PATH_KIND is the node kind of NAME as determined by the
    caller.  PATH_SPECIAL is the special status of the path, also determined
-   by the caller.  ADM_ACCESS is an access baton for the working copy path.
+   by the caller.
    PATTERNS points to a list of filename patterns which are marked as
    ignored.  None of these parameter may be NULL.  EXTERNALS is a hash
    of known externals definitions for this status run.
@@ -2088,10 +2088,10 @@ close_edit(void *edit_baton,
                              eb->ignores,
                              eb->status_func,
                              eb->status_baton,
-                             eb->cancel_func,
-                             eb->cancel_baton,
                              eb->wb.external_func,
                              eb->wb.external_baton,
+                             eb->cancel_func,
+                             eb->cancel_baton,
                              pool));
 
   return SVN_NO_ERROR;
@@ -2115,10 +2115,10 @@ svn_wc_get_status_editor5(const svn_delta_editor_t **editor,
                           const apr_array_header_t *ignore_patterns,
                           svn_wc_status_func4_t status_func,
                           void *status_baton,
-                          svn_cancel_func_t cancel_func,
-                          void *cancel_baton,
                           svn_wc_external_update_t external_func,
                           void *external_baton,
+                          svn_cancel_func_t cancel_func,
+                          void *cancel_baton,
                           apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool)
 {
@@ -2208,10 +2208,10 @@ svn_wc_walk_status(svn_wc_context_t *wc_ctx,
                    const apr_array_header_t *ignore_patterns,
                    svn_wc_status_func4_t status_func,
                    void *status_baton,
-                   svn_cancel_func_t cancel_func,
-                   void *cancel_baton,
                    svn_wc_external_update_t external_func,
                    void *external_baton,
+                   svn_cancel_func_t cancel_func,
+                   void *cancel_baton,
                    apr_pool_t *scratch_pool)
 {
   svn_node_kind_t kind, local_kind;

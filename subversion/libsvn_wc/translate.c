@@ -318,8 +318,6 @@ svn_wc__get_keywords(apr_hash_t **keywords,
                      apr_pool_t *scratch_pool)
 {
   const char *list;
-  const char *repos_relpath;
-  const char *repos_root_url;
   svn_revnum_t changed_rev;
   apr_time_t changed_date;
   const char *changed_author;
@@ -349,22 +347,14 @@ svn_wc__get_keywords(apr_hash_t **keywords,
   else
     list = force_list;
 
-  SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL, &repos_relpath,
-                               &repos_root_url, NULL, &changed_rev,
+  SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL, NULL,
+                               NULL, NULL, &changed_rev,
                                &changed_date, &changed_author, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                db, local_abspath, scratch_pool, scratch_pool));
-
-  if (repos_root_url == NULL)
-    {
-      SVN_ERR(svn_wc__db_scan_addition(NULL, NULL, &repos_relpath,
-                                       &repos_root_url,
-                                       NULL, NULL, NULL, NULL, NULL,
-                                       db, local_abspath, scratch_pool,
-                                       scratch_pool));
-    }
-  url = svn_uri_join(repos_root_url, repos_relpath, scratch_pool);
+  SVN_ERR(svn_wc__internal_node_get_url(&url, db, local_abspath,
+                                        scratch_pool, scratch_pool));
 
   SVN_ERR(svn_subst_build_keywords2(keywords,
                                     list,

@@ -503,7 +503,7 @@ parent_path_relpath(parent_path_t *child,
   while (this_node != ancestor)
     {
       assert(this_node != NULL);
-      path_so_far = svn_uri_join(this_node->entry, path_so_far, pool);
+      path_so_far = svn_relpath_join(this_node->entry, path_so_far, pool);
       this_node = this_node->parent;
     }
   return path_so_far;
@@ -2522,7 +2522,7 @@ verify_locks(const char *txn_name,
       /* If this path has already been verified as part of a recursive
          check of one of its parents, no need to do it again.  */
       if (last_recursed
-          && svn_path_is_child(last_recursed->data, path, subpool))
+          && svn_uri_is_child(last_recursed->data, path, subpool))
         continue;
 
       /* Fetch the change associated with our path.  */
@@ -2770,6 +2770,18 @@ svn_fs_base__commit_txn(const char **conflict_p,
 
   svn_pool_destroy(subpool);
   return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_fs_base__commit_obliteration_txn(svn_revnum_t rev,
+                                     svn_fs_txn_t *txn,
+                                     apr_pool_t *pool)
+{
+  /* svn_fs_t *fs = txn->fs; */
+
+  return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL, NULL);
+  /* return SVN_NO_ERROR; */
 }
 
 
@@ -4359,7 +4371,7 @@ txn_body_history_prev(void *baton, trail_t *trail)
       if (strcmp(path, copy_dst) == 0)
         remainder = "";
       else
-        remainder = svn_path_is_child(copy_dst, path, trail->pool);
+        remainder = svn_uri_is_child(copy_dst, path, trail->pool);
 
       if (remainder)
         {
@@ -4782,7 +4794,7 @@ prev_location(const char **prev_path,
   SVN_ERR(base_copied_from(&copy_src_rev, &copy_src_path,
                            copy_root, copy_path, pool));
   if (! strcmp(copy_path, path) == 0)
-    remainder = svn_path_is_child(copy_path, path, pool);
+    remainder = svn_uri_is_child(copy_path, path, pool);
   *prev_path = svn_uri_join(copy_src_path, remainder, pool);
   *prev_rev = copy_src_rev;
   return SVN_NO_ERROR;
@@ -4999,7 +5011,7 @@ txn_body_get_mergeinfo_data_and_entries(void *baton, trail_t *trail)
   SVN_ERR_ASSERT(svn_fs_base__dag_node_kind(node) == svn_node_dir);
 
   SVN_ERR(svn_fs_base__dag_dir_entries(&entries, node, trail, trail->pool));
-  for (hi = apr_hash_first(NULL, entries); hi; hi = apr_hash_next(hi))
+  for (hi = apr_hash_first(trail->pool, entries); hi; hi = apr_hash_next(hi))
     {
       void *val;
       svn_fs_dirent_t *dirent;
@@ -5105,7 +5117,7 @@ crawl_directory_for_mergeinfo(svn_fs_t *fs,
     return SVN_NO_ERROR;
 
   iterpool = svn_pool_create(pool);
-  for (hi = apr_hash_first(NULL, children_atop_mergeinfo_trees);
+  for (hi = apr_hash_first(pool, children_atop_mergeinfo_trees);
        hi;
        hi = apr_hash_next(hi))
     {

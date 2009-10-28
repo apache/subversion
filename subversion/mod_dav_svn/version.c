@@ -461,7 +461,7 @@ dav_svn__checkout(dav_resource *resource,
     {
       return dav_svn__new_error_tag(resource->pool, HTTP_NOT_IMPLEMENTED,
                                     SVN_ERR_UNSUPPORTED_FEATURE,
-                                    "CHECKOUT can not create an activity at "
+                                    "CHECKOUT cannot create an activity at "
                                     "this time. Use MKACTIVITY first.",
                                     SVN_DAV_ERROR_NAMESPACE,
                                     SVN_DAV_ERROR_TAG);
@@ -1203,7 +1203,7 @@ dav_svn__build_lock_hash(apr_hash_t **locks,
                 return derr;
 
               /* Create an absolute fs-path */
-              lockpath = svn_path_join(path_prefix, cdata, pool);
+              lockpath = svn_dirent_join(path_prefix, cdata, pool);
               if (lockpath && locktoken)
                 {
                   apr_hash_set(hash, lockpath, APR_HASH_KEY_STRING, locktoken);

@@ -1,6 +1,6 @@
    svn2cl - create a ChangeLog from a subversion log
 
-   Copyright (C) 2004, 2005, 2006, 2007, 2008 Arthur de Jong
+   Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009 Arthur de Jong
 
    Redistribution and use in source and binary forms, with or without
    modification, are permitted provided that the following conditions
@@ -42,9 +42,9 @@ converted a repository to subversion. I used cvs2cl before.
 INSTALLING SVN2CL
 =================
 
-Just unpack the tarball in some directory (e.g. /opt/svn2cl-0.10)
+Just unpack the tarball in some directory (e.g. /opt/svn2cl-0.12)
 and symlink the svn2cl.sh script in your path somewhere (e.g.
-ln -s /opt/svn2cl-0.10/svn2cl.sh /usr/local/bin/svn2cl).
+ln -s /opt/svn2cl-0.12/svn2cl.sh /usr/local/bin/svn2cl).
 
 Note: Be sure to keep the svn2cl.xsl file in the same directory as the
 svn2cl.sh script as the script looks for it there (symlinking is ok).
@@ -93,10 +93,10 @@ your working copy up to date with 'svn update' (non-recursive update will do)
 or pass --revision HEAD:1 as a parameter to svn2cl.sh.
 
 There will not be very frequent new releases but if there are they can be
-found at: http://ch.tudelft.nl/~arthur/svn2cl/
+found at: http://arthurdejong.org/svn2cl/
 
 FEEDBACK AND BUG REPORTS
 ========================
 
 If you have any questions about svn2cl or would like to report a bug please
-send an email to Arthur de Jong <arthur@ch.tudelft.nl>.
+send an email to Arthur de Jong <arthur@arthurdejong.org>.

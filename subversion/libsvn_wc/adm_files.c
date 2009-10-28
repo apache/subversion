@@ -219,57 +219,6 @@ make_adm_subdir(const char *path,
 }
 
 
-svn_error_t *
-svn_wc__make_killme(svn_wc_adm_access_t *adm_access,
-                    svn_boolean_t adm_only,
-                    apr_pool_t *pool)
-{
-  const char *path;
-
-  SVN_ERR(svn_wc__adm_write_check(adm_access, pool));
-
-  path = svn_wc__adm_child(svn_wc_adm_access_path(adm_access),
-                           SVN_WC__ADM_KILLME, pool);
-
-  return svn_io_file_create(path, adm_only ? SVN_WC__KILL_ADM_ONLY : "", pool);
-}
-
-svn_error_t *
-svn_wc__check_killme(svn_wc_adm_access_t *adm_access,
-                     svn_boolean_t *exists,
-                     svn_boolean_t *kill_adm_only,
-                     apr_pool_t *pool)
-{
-  const char *path;
-  svn_error_t *err;
-  svn_stringbuf_t *contents;
-
-  path = svn_wc__adm_child(svn_wc_adm_access_path(adm_access),
-                           SVN_WC__ADM_KILLME, pool);
-
-  err = svn_stringbuf_from_file2(&contents, path, pool);
-  if (err)
-    {
-      if (APR_STATUS_IS_ENOENT(err->apr_err))
-        {
-          /* Killme file doesn't exist. */
-          *exists = FALSE;
-          svn_error_clear(err);
-          err = SVN_NO_ERROR;
-        }
-
-      return err;
-    }
-
-  *exists = TRUE;
-
-  /* If the killme file contains the string 'adm-only' then only the
-     administrative area should be removed. */
-  *kill_adm_only = strcmp(contents->data, SVN_WC__KILL_ADM_ONLY) == 0;
-
-  return SVN_NO_ERROR;
-}
-
 
 /*** Syncing files in the adm area. ***/
 
@@ -732,7 +681,8 @@ svn_wc__adm_destroy(svn_wc_adm_access_t *adm_access,
   const char *path, *local_abspath;
   svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
 
-  SVN_ERR(svn_wc__adm_write_check(adm_access, scratch_pool));
+  SVN_ERR(svn_wc__write_check(db, svn_wc__adm_access_abspath(adm_access),
+                              scratch_pool));
 
   /* Well, the coast is clear for blowing away the administrative
      directory, which also removes the lock file */
@@ -750,26 +700,21 @@ svn_wc__adm_destroy(svn_wc_adm_access_t *adm_access,
 
 
 svn_error_t *
-svn_wc__adm_cleanup_tmp_area(const svn_wc_adm_access_t *adm_access,
+svn_wc__adm_cleanup_tmp_area(svn_wc__db_t *db,
+                             const char *adm_abspath,
                              apr_pool_t *scratch_pool)
 {
-  const char *path = svn_wc_adm_access_path(adm_access);
   const char *tmp_path;
 
-  /* If the admin area doesn't even *exist*, then the temp area is
-     definitely cleaned up. */
-  if (!svn_wc__adm_area_exists(adm_access, scratch_pool))
-    return SVN_NO_ERROR;
-
-  SVN_ERR(svn_wc__adm_write_check(adm_access, scratch_pool));
+  SVN_ERR(svn_wc__write_check(db, adm_abspath, scratch_pool));
 
   /* Get the path to the tmp area, and blow it away. */
-  tmp_path = svn_wc__adm_child(path, SVN_WC__ADM_TMP, scratch_pool);
+  tmp_path = svn_wc__adm_child(adm_abspath, SVN_WC__ADM_TMP, scratch_pool);
 
   SVN_ERR(svn_io_remove_dir2(tmp_path, TRUE, NULL, NULL, scratch_pool));
 
   /* Now, rebuild the tmp area. */
-  return init_adm_tmp_area(path, scratch_pool);
+  return init_adm_tmp_area(adm_abspath, scratch_pool);
 }
 
 

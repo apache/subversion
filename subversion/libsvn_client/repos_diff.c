@@ -42,6 +42,8 @@
 
 #include "client.h"
 
+#include "private/svn_wc_private.h"
+
 /* Overall crawler editor baton.  */
 struct edit_baton {
   /* TARGET is a working-copy directory which corresponds to the base
@@ -320,9 +322,9 @@ get_dirprops_from_ra(struct dir_baton *b, svn_revnum_t base_revision)
 
 
 /* Return in *LOCAL_DIR_ABSPATH the absolute path for the directory PATH by
-   searching the access baton set of ADM_ACCESS.  If ADM_ACCESS is NULL
-   then *PATH_ACCESS will be NULL.  If LENIENT is TRUE then failure to find
-   an access baton will not return an error but will set *PATH_ACCESS to
+   searching the access baton set of ADM_ACCESS.  If ADM_ACCESS is NULL then
+   *LOCAL_DIR_ABSPATH will be NULL.  If LENIENT is TRUE then failure to find
+   an access baton will not return an error but will set *LOCAL_DIR_ABSPATH to
    NULL instead. */
 static svn_error_t *
 get_dir_abspath(const char **local_dir_abspath,
@@ -930,7 +932,7 @@ close_directory(void *dir_baton,
     return SVN_NO_ERROR;
 
   if (eb->dry_run)
-    svn_hash__clear(svn_client__dry_run_deletions(eb->diff_cmd_baton));
+    svn_hash__clear(svn_client__dry_run_deletions(eb->diff_cmd_baton), pool);
 
   err = get_dir_abspath(&local_dir_abspath, eb->adm_access, b->wcpath,
                         eb->dry_run, b->pool);
@@ -986,7 +988,7 @@ close_directory(void *dir_baton,
       svn_wc_notify_t *notify;
       apr_hash_index_t *hi;
 
-      for (hi = apr_hash_first(NULL, eb->deleted_paths); hi;
+      for (hi = apr_hash_first(pool, eb->deleted_paths); hi;
            hi = apr_hash_next(hi))
         {
           const char *deleted_path = svn_apr_hash_index_key(hi);
@@ -1091,9 +1093,10 @@ absent_directory(const char *path,
   if (eb->notify_func)
     {
       svn_wc_notify_t *notify
-        = svn_wc_create_notify(svn_path_join(pb->wcpath,
-                                             svn_uri_basename(path, pool),
-                                             pool),
+        = svn_wc_create_notify(svn_dirent_join(pb->wcpath,
+                                               svn_relpath_basename(path,
+                                                                    pool),
+                                               pool),
                                svn_wc_notify_skip, pool);
       notify->kind = svn_node_dir;
       notify->content_state = notify->prop_state
@@ -1119,9 +1122,10 @@ absent_file(const char *path,
   if (eb->notify_func)
     {
       svn_wc_notify_t *notify
-        = svn_wc_create_notify(svn_path_join(pb->wcpath,
-                                             svn_uri_basename(path, pool),
-                                             pool),
+        = svn_wc_create_notify(svn_dirent_join(pb->wcpath,
+                                               svn_relpath_basename(path,
+                                                                    pool),
+                                               pool),
                                svn_wc_notify_skip, pool);
       notify->kind = svn_node_file;
       notify->content_state = notify->prop_state
@@ -1135,7 +1139,7 @@ absent_file(const char *path,
 /* Create a repository diff editor and baton.  */
 svn_error_t *
 svn_client__get_diff_editor(const char *target,
-                            svn_wc_adm_access_t *adm_access,
+                            svn_wc_context_t *wc_ctx,
                             const svn_wc_diff_callbacks4_t *diff_callbacks,
                             void *diff_cmd_baton,
                             svn_depth_t depth,
@@ -1153,9 +1157,12 @@ svn_client__get_diff_editor(const char *target,
   apr_pool_t *subpool = svn_pool_create(pool);
   svn_delta_editor_t *tree_editor = svn_delta_default_editor(subpool);
   struct edit_baton *eb = apr_palloc(subpool, sizeof(*eb));
+  const char *target_abspath;
+  SVN_ERR(svn_dirent_get_absolute(&target_abspath, target, pool));
 
   eb->target = target;
-  eb->adm_access = adm_access;
+  SVN_ERR(svn_wc__adm_retrieve_from_context(&(eb->adm_access), wc_ctx,
+                                            target_abspath, pool));
   eb->diff_callbacks = diff_callbacks;
   eb->diff_cmd_baton = diff_cmd_baton;
   eb->dry_run = dry_run;

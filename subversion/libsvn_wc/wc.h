@@ -108,7 +108,7 @@ extern "C" {
  * Please document any further format changes here.
  */
 
-#define SVN_WC__VERSION 14
+#define SVN_WC__VERSION 15
 
 
 /* A version <= this doesn't have property caching in the entries file. */
@@ -282,7 +282,7 @@ void svn_wc__compat_call_notify_func(void *baton,
  * addition), return the error SVN_ERR_ENTRY_NOT_FOUND.
  */
 svn_error_t *
-svn_wc__text_modified_internal_p(svn_boolean_t *modified_p,
+svn_wc__internal_text_modified_p(svn_boolean_t *modified_p,
                                  svn_wc__db_t *db,
                                  const char *local_abspath,
                                  svn_boolean_t force_comparison,
@@ -333,7 +333,7 @@ svn_wc__text_modified_internal_p(svn_boolean_t *modified_p,
    the (loggy) implementation.
 */
 svn_error_t *
-svn_wc__merge_internal(svn_stringbuf_t **log_accum,
+svn_wc__internal_merge(svn_stringbuf_t **log_accum,
                        enum svn_wc_merge_outcome_t *merge_outcome,
                        svn_wc__db_t *db,
                        const char *left_abspath,
@@ -482,7 +482,7 @@ svn_wc__internal_walk_children(svn_wc__db_t *db,
 /* Library-internal version of svn_wc_remove_from_revision_control2,
    which see.*/
 svn_error_t *
-svn_wc__remove_from_revision_control_internal(svn_wc__db_t *db,
+svn_wc__internal_remove_from_revision_control(svn_wc__db_t *db,
                                               const char *local_abspath,
                                               svn_boolean_t destroy_wf,
                                               svn_boolean_t instant_error,
@@ -493,7 +493,7 @@ svn_wc__remove_from_revision_control_internal(svn_wc__db_t *db,
 
 /* Library-internal version of svn_wc__resolved_conflict5(). */
 svn_error_t *
-svn_wc__resolved_conflict_internal(svn_wc__db_t *db,
+svn_wc__internal_resolved_conflict(svn_wc__db_t *db,
                                    const char *local_abspath,
                                    svn_depth_t depth,
                                    svn_boolean_t resolve_text,
@@ -506,21 +506,20 @@ svn_wc__resolved_conflict_internal(svn_wc__db_t *db,
                                    void *notify_baton,
                                    apr_pool_t *scratch_pool);
 
-/* Library-internal version of svn_wc_locked2(). */
-svn_error_t *
-svn_wc__internal_locked(svn_boolean_t *locked_here,
-                        svn_boolean_t *locked,
-                        svn_wc__db_t *db,
-                        const char *local_abspath,
-                        apr_pool_t *scratch_pool);
-
-
 
 svn_error_t *
 svn_wc__internal_is_replaced(svn_boolean_t *replaced,
                              svn_wc__db_t *db,
                              const char *local_abspath,
                              apr_pool_t *scratch_pool);
+
+
+svn_error_t *
+svn_wc__internal_node_get_url(const char **url,
+                              svn_wc__db_t *db,
+                              const char *local_abspath,
+                              apr_pool_t *result_pool,
+                              apr_pool_t *scratch_pool);
 
 
 /* Upgrade the wc sqlite database given in SDB for the wc located at
@@ -536,13 +535,23 @@ svn_wc__upgrade_sdb(int *result_format,
                     apr_pool_t *scratch_pool);
 
 
-/* Like svn_wc_is_wc_root(), but also, if KIND is not null, set *KIND to
- * the versioned node kind of PATH, or to svn_node_file if PATH is
- * unversioned.
+/* Checks whether a node is a working copy root or switched.
+ *
+ * If LOCAL_ABSPATH is the root of a working copy set WC_ROOT to TRUE,
+ * otherwise to FALSE.
+ *
+ * If LOCAL_ABSPATH is switched against its parent in the same working copy
+ * set *SWITCHED to TRUE, otherwise to FALSE. SWITCHED can be set to NULL
+ * if the result is not important.
+ *
+ * If KIND is not null *KIND is set to the node type of LOCAL_ABSPATH
+ *
+ * Use SCRATCH_POOL for temporary allocations.
  */
 svn_error_t *
 svn_wc__check_wc_root(svn_boolean_t *wc_root,
-                      svn_node_kind_t *kind,
+                      svn_wc__db_kind_t *kind,
+                      svn_boolean_t *switched,
                       svn_wc__db_t *db,
                       const char *local_abspath,
                       apr_pool_t *scratch_pool);

@@ -476,7 +476,7 @@ get_base_mimetype(const char **mimetype,
 
 
 /* Set *MIMETYPE to the WORKING version of the svn:mime-type property
-   of file PATH, using ADM_ACCESS, or to NULL if no such property exists.
+   of file LOCAL_ABSPATH, using DB, or to NULL if no such property exists.
    WORKINGPROPS is optional: if present, use it to cache the WORKING
    properties of the file.
 
@@ -533,7 +533,7 @@ apply_propchanges(apr_hash_t *props,
  * stage we are dealing with a file that does exist in the working copy.
  *
  * DIR_BATON is the parent directory baton, PATH is the path to the file to
- * be compared. ENTRY is the working copy entry for the file.
+ * be compared.
  *
  * Do all allocation in POOL.
  *
@@ -543,16 +543,14 @@ apply_propchanges(apr_hash_t *props,
 static svn_error_t *
 file_diff(struct dir_baton *db,
           const char *path,
-          const svn_wc_entry_t *entry,
           apr_pool_t *pool)
 {
   struct edit_baton *eb = db->eb;
-  const char *textbase, *empty_file;
-  svn_boolean_t modified;
-  enum svn_wc_schedule_t schedule = entry->schedule;
-  svn_boolean_t copied = entry->copied;
-  const char *base_mimetype, *working_mimetype;
-  const char *translated = NULL;
+  const char *textbase;
+  const char *empty_file;
+  svn_boolean_t replaced;
+  svn_wc__db_status_t status;
+  svn_revnum_t revision;
   apr_array_header_t *propchanges = NULL;
   apr_hash_t *baseprops = NULL;
   const char *local_abspath;
@@ -569,17 +567,16 @@ file_diff(struct dir_baton *db,
                                           eb->changelist_hash, pool))
     return SVN_NO_ERROR;
 
-  /* If the item is schedule-add *with history*, then we usually want to see
-   * the usual working vs. text-base comparison, which will show changes
-   * made since the file was copied.  But in case we're not diffing copies,
-   * we need to compare the copied file to the empty file. */
-  if (copied && ! eb->show_copies_as_adds)
-    schedule = svn_wc_schedule_normal;
+  SVN_ERR(svn_wc__db_read_info(&status, NULL, &revision, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, eb->db, local_abspath,
+                               pool, pool));
 
-  /* If this was scheduled replace and we are ignoring ancestry,
-     report it as a normal file modification. */
-  if (eb->ignore_ancestry && (schedule == svn_wc_schedule_replace))
-    schedule = svn_wc_schedule_normal;
+  if (status == svn_wc__db_status_added)
+    SVN_ERR(svn_wc__db_scan_addition(&status, NULL, NULL, NULL, NULL, NULL,
+                                     NULL, NULL, NULL, eb->db, local_abspath,
+                                     pool, pool));
 
   /* Prep these two paths early. */
   SVN_ERR(svn_wc__text_base_path(&textbase, eb->db, local_abspath, FALSE,
@@ -615,8 +612,10 @@ file_diff(struct dir_baton *db,
   SVN_ERR(get_empty_file(eb, &empty_file));
 
   /* Get property diffs if this is not schedule delete. */
-  if (schedule != svn_wc_schedule_delete)
+  if (status != svn_wc__db_status_deleted)
     {
+      svn_boolean_t modified;
+
       SVN_ERR(svn_wc__props_modified(&modified, eb->db, local_abspath,
                                      pool));
       if (modified)
@@ -631,15 +630,19 @@ file_diff(struct dir_baton *db,
                                         local_abspath, pool, pool));
     }
 
-  switch (schedule)
+  SVN_ERR(svn_wc__internal_is_replaced(&replaced, eb->db, local_abspath,
+                                       pool));
+
+  /* Delete compares text-base against empty file, modifications to the
+   * working-copy version of the deleted file are not wanted.
+   * Replace is treated like a delete plus an add: two comparisons are
+   * generated, first one for the delete and then one for the add.
+   * However, if this file was replaced and we are ignoring ancestry,
+   * report it as a normal file modification instead. */
+  if ((! replaced && status == svn_wc__db_status_deleted) ||
+      (replaced && ! eb->ignore_ancestry))
     {
-      /* Replace is treated like a delete plus an add: two
-         comparisons are generated, first one for the delete and
-         then one for the add. */
-    case svn_wc_schedule_replace:
-    case svn_wc_schedule_delete:
-      /* Delete compares text-base against empty file, modifications to the
-         working-copy version of the deleted file are not wanted. */
+      const char *base_mimetype;
 
       /* Get svn:mime-type from BASE props of PATH. */
       SVN_ERR(get_base_mimetype(&base_mimetype, &baseprops, eb->db,
@@ -654,11 +657,26 @@ file_diff(struct dir_baton *db,
                                           eb->callback_baton,
                                           pool));
 
-      /* Replace will fallthrough! */
-      if (schedule == svn_wc_schedule_delete)
-        break;
+      if (! (replaced && ! eb->ignore_ancestry))
+        {
+          /* We're here only for showing a delete, so we're done. */
+          return SVN_NO_ERROR;
+        }
+    }
 
-    case svn_wc_schedule_add:
+ /* Now deal with showing additions, or the add-half of replacements.
+  * If the item is schedule-add *with history*, then we usually want
+  * to see the usual working vs. text-base comparison, which will show changes
+  * made since the file was copied.  But in case we're showing copies as adds,
+  * we need to compare the copied file to the empty file. */
+  if ((! replaced && status == svn_wc__db_status_added) ||
+     (replaced && ! eb->ignore_ancestry) ||
+     ((status == svn_wc__db_status_copied ||
+       status == svn_wc__db_status_moved_here) && eb->show_copies_as_adds))
+    {
+      const char *translated = NULL;
+      const char *working_mimetype;
+
       /* Get svn:mime-type from working props of PATH. */
       SVN_ERR(get_working_mimetype(&working_mimetype, NULL, local_abspath,
                                    eb->db, pool, pool));
@@ -671,18 +689,22 @@ file_diff(struct dir_baton *db,
       SVN_ERR(eb->callbacks->file_added(NULL, NULL, NULL, NULL, path,
                                         empty_file,
                                         translated,
-                                        0, entry->revision,
+                                        0, revision,
                                         NULL,
                                         working_mimetype,
                                         NULL, SVN_INVALID_REVNUM,
                                         propchanges, baseprops,
                                         eb->callback_baton,
                                         pool));
+    }
+  else
+    {
+      svn_boolean_t modified;
+      const char *translated = NULL;
 
-      break;
+      /* Here we deal with showing pure modifications. */
 
-    default:
-      SVN_ERR(svn_wc__text_modified_internal_p(&modified, eb->db,
+      SVN_ERR(svn_wc__internal_text_modified_p(&modified, eb->db,
                                                local_abspath, FALSE, TRUE,
                                                pool));
       if (modified)
@@ -700,6 +722,9 @@ file_diff(struct dir_baton *db,
 
       if (modified || propchanges->nelts > 0)
         {
+          const char *base_mimetype;
+          const char *working_mimetype;
+
           /* Get svn:mime-type for both base and working file. */
           SVN_ERR(get_base_mimetype(&base_mimetype, &baseprops, eb->db,
                                     local_abspath, pool, pool));
@@ -710,7 +735,7 @@ file_diff(struct dir_baton *db,
                                               path,
                                               modified ? textbase : NULL,
                                               translated,
-                                              entry->revision,
+                                              revision,
                                               SVN_INVALID_REVNUM,
                                               base_mimetype,
                                               working_mimetype,
@@ -799,19 +824,19 @@ directory_elements_diff(struct dir_baton *db)
   for (i = 0; i < children->nelts; i++)
     {
       const char *name = APR_ARRAY_IDX(children, i, const char*);
-      const svn_wc_entry_t *entry;
       struct dir_baton *subdir_baton;
-      const char *child_abpath, *path;
+      const char *child_abspath, *path;
       svn_boolean_t hidden;
+      svn_wc__db_kind_t kind;
 
       svn_pool_clear(iterpool);
 
       if (eb->cancel_func)
-        SVN_ERR(eb->cancel_func(eb->callback_baton));
+        SVN_ERR(eb->cancel_func(eb->cancel_baton));
 
-      child_abpath = svn_dirent_join(db->local_abspath, name, iterpool);
+      child_abspath = svn_dirent_join(db->local_abspath, name, iterpool);
 
-      SVN_ERR(svn_wc__db_node_hidden(&hidden, eb->db, child_abpath, iterpool));
+      SVN_ERR(svn_wc__db_node_hidden(&hidden, eb->db, child_abspath, iterpool));
 
       if (hidden)
         continue;
@@ -825,29 +850,26 @@ directory_elements_diff(struct dir_baton *db)
 
       path = svn_dirent_join(db->path, name, iterpool);
 
-      /* Skip entry if it is in the list of entries already diff'd. */
+      /* Skip this node if it is in the list of nodes already diff'd. */
       if (apr_hash_get(db->compared, path, APR_HASH_KEY_STRING))
         continue;
 
-      SVN_ERR(svn_wc__get_entry(&entry, eb->db, child_abpath, FALSE,
-                                svn_node_unknown, FALSE, iterpool, iterpool));
-
-      switch (entry->kind)
+      SVN_ERR(svn_wc__db_read_kind(&kind, eb->db, child_abspath, TRUE,
+                                   iterpool));
+      switch (kind)
         {
-        case svn_node_file:
-          SVN_ERR(file_diff(db, path, entry, iterpool));
+        case svn_wc__db_kind_file:
+        case svn_wc__db_kind_symlink:
+          SVN_ERR(file_diff(db, path, iterpool));
           break;
 
-        case svn_node_dir:
-          if (entry->schedule == svn_wc_schedule_replace)
-            {
-              /* ### TODO: Don't know how to do this bit. How do I get
-                 information about what is being replaced? If it was a
-                 directory then the directory elements are also going to be
-                 deleted. We need to show deletion diffs for these
-                 files. If it was a file we need to show a deletion diff
-                 for that file. */
-            }
+        case svn_wc__db_kind_dir:
+          /* ### TODO: Don't know how to do replaced dirs. How do I get
+             information about what is being replaced? If it was a
+             directory then the directory elements are also going to be
+             deleted. We need to show deletion diffs for these
+             files. If it was a file we need to show a deletion diff
+             for that file. */
 
           /* Check the subdir if in the anchor (the subdir is the target), or
              if recursive */
@@ -884,15 +906,13 @@ directory_elements_diff(struct dir_baton *db)
  * as having been added.
  *
  * DIR_BATON is the parent directory baton, ADM_ACCESS/PATH is the path
- * to the file to be compared. ENTRY is the working copy entry for
- * the file.
+ * to the file to be compared.
  *
  * Do all allocation in POOL.
  */
 static svn_error_t *
 report_wc_file_as_added(struct dir_baton *db,
                         const char *path,
-                        const svn_wc_entry_t *entry,
                         apr_pool_t *pool)
 {
   struct edit_baton *eb = db->eb;
@@ -904,6 +924,8 @@ report_wc_file_as_added(struct dir_baton *db,
   const char *source_file;
   const char *translated_file;
   const char *local_abspath;
+  svn_wc__db_status_t status;
+  svn_revnum_t revision;
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
@@ -914,14 +936,25 @@ report_wc_file_as_added(struct dir_baton *db,
 
   SVN_ERR(get_empty_file(eb, &empty_file));
 
+  SVN_ERR(svn_wc__db_read_info(&status, NULL, &revision, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, eb->db, local_abspath,
+                               pool, pool));
+
+  if (status == svn_wc__db_status_added)
+    SVN_ERR(svn_wc__db_scan_addition(&status, NULL, NULL, NULL, NULL, NULL,
+                                     NULL, NULL, NULL, eb->db, local_abspath,
+                                     pool, pool));
+
   /* We can't show additions for files that don't exist. */
-  SVN_ERR_ASSERT(!(entry->schedule == svn_wc_schedule_delete
-                                                && !eb->use_text_base));
+  SVN_ERR_ASSERT(status != svn_wc__db_status_deleted || eb->use_text_base);
 
   /* If the file was added *with history*, then we don't want to
      see a comparison to the empty file;  we want the usual working
      vs. text-base comparison. */
-  if (entry->copied)
+  if (status == svn_wc__db_status_copied ||
+      status == svn_wc__db_status_moved_here)
     {
       /* Don't show anything if we're comparing to BASE, since by
          definition there can't be any local modifications. */
@@ -929,7 +962,7 @@ report_wc_file_as_added(struct dir_baton *db,
         return SVN_NO_ERROR;
 
       /* Otherwise show just the local modifications. */
-      return file_diff(db, path, entry, pool);
+      return file_diff(db, path, pool);
     }
 
   emptyprops = apr_hash_make(pool);
@@ -960,7 +993,7 @@ report_wc_file_as_added(struct dir_baton *db,
                                     NULL, NULL, NULL,
                                     path,
                                     empty_file, translated_file,
-                                    0, entry->revision,
+                                    0, revision,
                                     NULL, mimetype,
                                     NULL, SVN_INVALID_REVNUM,
                                     propchanges, emptyprops,
@@ -1029,13 +1062,14 @@ report_wc_directory_as_added(struct dir_baton *db,
     {
       const char *name = APR_ARRAY_IDX(children, i, const char *);
       const char *child_abspath, *path;
-      const svn_wc_entry_t *entry;
       svn_boolean_t hidden;
+      svn_wc__db_status_t status;
+      svn_wc__db_kind_t kind;
 
       svn_pool_clear(iterpool);
 
       if (eb->cancel_func)
-        SVN_ERR(eb->cancel_func(eb->callback_baton));
+        SVN_ERR(eb->cancel_func(eb->cancel_baton));
 
       child_abspath = svn_dirent_join(dir_abspath, name, iterpool);
 
@@ -1045,23 +1079,27 @@ report_wc_directory_as_added(struct dir_baton *db,
       if (hidden)
         continue;
 
-      SVN_ERR(svn_wc__get_entry(&entry, eb->db, child_abspath, FALSE,
-                                svn_node_unknown, FALSE, iterpool, iterpool));
+      SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, eb->db,
+                                   child_abspath, iterpool, iterpool));
 
       /* If comparing against WORKING, skip entries that are
          schedule-deleted - they don't really exist. */
-      if (!eb->use_text_base && entry->schedule == svn_wc_schedule_delete)
+      if (!eb->use_text_base && status == svn_wc__db_status_deleted)
         continue;
 
       path = svn_dirent_join(db->path, name, iterpool);
 
-      switch (entry->kind)
+      switch (kind)
         {
-        case svn_node_file:
-          SVN_ERR(report_wc_file_as_added(db, path, entry, iterpool));
+        case svn_wc__db_kind_file:
+        case svn_wc__db_kind_symlink:
+          SVN_ERR(report_wc_file_as_added(db, path, iterpool));
           break;
 
-        case svn_node_dir:
+        case svn_wc__db_kind_dir:
           if (db->depth > svn_depth_files || db->depth == svn_depth_unknown)
             {
               svn_depth_t depth_below_here = db->depth;
@@ -1127,39 +1165,34 @@ delete_entry(const char *path,
 {
   struct dir_baton *pb = parent_baton;
   struct edit_baton *eb = pb->eb;
-  const svn_wc_entry_t *entry;
   struct dir_baton *db;
   const char *empty_file;
   const char *full_path = svn_dirent_join(eb->anchor_path, path,
                                           pb->pool);
   const char *name = svn_dirent_basename(path, pool);
   const char *local_abspath = svn_dirent_join(pb->local_abspath, name, pool);
+  svn_wc__db_status_t status;
+  svn_wc__db_kind_t kind;
 
-  SVN_ERR(svn_wc__get_entry(&entry, eb->db, local_abspath, TRUE,
-                            svn_node_unknown, FALSE, pool, pool));
-
-  /* So, it turns out that this can be NULL in at least one actual case,
-     if you do a nonrecursive checkout and the diff involves the addition
-     of one of the directories that is not present due to the fact that
-     your checkout is nonrecursive.  There isn't really a good way to be
-     sure though, since nonrecursive checkouts suck, and don't leave any
-     indication in .svn/entries that the directories in question are just
-     missing. */
-  if (! entry)
-    return SVN_NO_ERROR;
-
-  /* Mark this entry as compared in the parent directory's baton. */
+  /* Mark this node as compared in the parent directory's baton. */
   apr_hash_set(pb->compared, full_path, APR_HASH_KEY_STRING, "");
 
-  /* If comparing against WORKING, skip entries that are schedule-deleted
+  SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, eb->db,
+                               local_abspath, pool, pool));
+
+  /* If comparing against WORKING, skip nodes that are deleted
      - they don't really exist. */
-  if (!eb->use_text_base && entry->schedule == svn_wc_schedule_delete)
+  if (!eb->use_text_base && status == svn_wc__db_status_deleted)
     return SVN_NO_ERROR;
 
   SVN_ERR(get_empty_file(pb->eb, &empty_file));
-  switch (entry->kind)
+  switch (kind)
     {
-    case svn_node_file:
+    case svn_wc__db_kind_file:
+    case svn_wc__db_kind_symlink:
       /* A delete is required to change working-copy into requested
          revision, so diff should show this as an add. Thus compare
          the empty file against the current working copy.  If
@@ -1192,10 +1225,10 @@ delete_entry(const char *path,
       else
         {
           /* Or normally, show the working file being added. */
-          SVN_ERR(report_wc_file_as_added(pb, full_path, entry, pool));
+          SVN_ERR(report_wc_file_as_added(pb, full_path, pool));
         }
       break;
-    case svn_node_dir:
+    case svn_wc__db_kind_dir:
       db = make_dir_baton(full_path, pb, pb->eb, FALSE,
                           svn_depth_infinity, pool);
       /* A delete is required to change working-copy into requested
@@ -1409,29 +1442,33 @@ apply_textdelta(void *file_baton,
 {
   struct file_baton *fb = file_baton;
   struct edit_baton *eb = fb->eb;
-  const svn_wc_entry_t *entry;
+  svn_wc__db_status_t status;
   const char *parent, *base_name;
+  const char *temp_dir;
   svn_stream_t *source;
-  apr_file_t *temp_file;
+  svn_stream_t *temp_stream;
   svn_error_t *err;
 
-  err = svn_wc__get_entry(&entry, eb->db, fb->local_abspath, TRUE,
-                          svn_node_file, FALSE, pool, pool);
-
-  if (err && err->apr_err == SVN_ERR_WC_MISSING)
-    {
-      svn_error_clear(err);
-      entry = NULL;
-    }
+  err = svn_wc__db_read_info(&status, NULL, NULL, NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                             NULL, eb->db, fb->local_abspath, pool, pool);
+  if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+    svn_error_clear(err);
   else
     SVN_ERR(err);
 
+  if (status == svn_wc__db_status_added)
+    SVN_ERR(svn_wc__db_scan_addition(&status, NULL, NULL, NULL, NULL, NULL,
+                                     NULL, NULL, NULL, eb->db,
+                                     fb->local_abspath, pool, pool));
+
   svn_dirent_split(fb->wc_path, &parent, &base_name, fb->pool);
 
-  /* Check to see if there is a schedule-add with history entry in
-     the current working copy.  If so, then this is not actually
-     an add, but instead a modification.*/
-  if (entry && entry->copyfrom_url)
+  /* If the node is added-with-history, then this is not actually
+     an add, but a modification. */
+  if (status == svn_wc__db_status_copied ||
+      status == svn_wc__db_status_moved_here)
     fb->added = FALSE;
 
   if (fb->added)
@@ -1448,12 +1485,13 @@ apply_textdelta(void *file_baton,
   /* This is the file that will contain the pristine repository version. It
      is created in the admin temporary area. This file continues to exists
      until after the diff callback is run, at which point it is deleted. */
-  SVN_ERR(svn_wc_create_tmp_file2(&temp_file, &fb->temp_file_path,
-                                  parent, svn_io_file_del_on_pool_cleanup,
-                                  fb->pool));
+  SVN_ERR(svn_wc__db_temp_wcroot_tempdir(&temp_dir, eb->db, fb->local_abspath,
+                                         pool, pool));
+  SVN_ERR(svn_stream_open_unique(&temp_stream, &fb->temp_file_path,
+                                 temp_dir, svn_io_file_del_on_pool_cleanup,
+                                 fb->pool, fb->pool));
 
-  svn_txdelta_apply(source,
-                    svn_stream_from_aprfile2(temp_file, FALSE, fb->pool),
+  svn_txdelta_apply(source, temp_stream,
                     NULL,
                     fb->temp_file_path /* error_info */,
                     fb->pool,
@@ -1477,7 +1515,7 @@ close_file(void *file_baton,
 {
   struct file_baton *fb = file_baton;
   struct edit_baton *eb = fb->eb;
-  const svn_wc_entry_t *entry;
+  svn_wc__db_status_t status;
   const char *repos_mimetype;
   const char *empty_file;
   svn_error_t *err;
@@ -1496,17 +1534,20 @@ close_file(void *file_baton,
      comparison: either BASE or WORKING. */
   apr_hash_t *originalprops;
 
-  err = svn_wc__get_entry(&entry, eb->db, fb->local_abspath, TRUE,
-                          svn_node_file, FALSE, pool, pool);
-
-  if (err && err->apr_err == SVN_ERR_WC_MISSING)
-    {
-      svn_error_clear(err);
-      entry = NULL;
-    }
+  err = svn_wc__db_read_info(&status, NULL, NULL, NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                             NULL, eb->db, fb->local_abspath, pool, pool);
+  if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+    svn_error_clear(err);
   else
     SVN_ERR(err);
 
+  if (status == svn_wc__db_status_added)
+    SVN_ERR(svn_wc__db_scan_addition(&status, NULL, NULL, NULL, NULL, NULL,
+                                     NULL, NULL, NULL, eb->db,
+                                     fb->local_abspath, pool, pool));
+    
   SVN_ERR(get_empty_file(eb, &empty_file));
 
   /* Load the BASE and repository file properties. */
@@ -1535,8 +1576,7 @@ close_file(void *file_baton,
      and it was marked as schedule-deleted), we show either an addition
      or a deletion of the complete contents of the repository file,
      depending upon the direction of the diff. */
-  if (fb->added ||
-      (!eb->use_text_base && entry->schedule == svn_wc_schedule_delete))
+  if (fb->added || (!eb->use_text_base && status == svn_wc__db_status_deleted))
     {
       if (eb->reverse_order)
         return eb->callbacks->file_added(NULL, NULL, NULL, NULL, fb->path,
@@ -1562,13 +1602,30 @@ close_file(void *file_baton,
                                            pool);
     }
 
+  /* If the file was locally added with history, and we want to show copies
+   * as added, diff the file with the empty file. */
+  if ((status == svn_wc__db_status_copied ||
+       status == svn_wc__db_status_moved_here) && eb->show_copies_as_adds)
+    return eb->callbacks->file_added(NULL, NULL, NULL, NULL, fb->path,
+                                     empty_file,
+                                     fb->local_abspath,
+                                     0,
+                                     eb->revnum,
+                                     NULL,
+                                     repos_mimetype,
+                                     NULL, SVN_INVALID_REVNUM,
+                                     fb->propchanges,
+                                     apr_hash_make(pool),
+                                     eb->callback_baton,
+                                     pool);
+    
   /* If we didn't see any content changes between the BASE and repository
      versions (i.e. we only saw property changes), then, if we're diffing
      against WORKING, we also need to check whether there are any local
      (BASE:WORKING) modifications. */
   modified = (fb->temp_file_path != NULL);
   if (!modified && !eb->use_text_base)
-    SVN_ERR(svn_wc__text_modified_internal_p(&modified, eb->db,
+    SVN_ERR(svn_wc__internal_text_modified_p(&modified, eb->db,
                                              fb->local_abspath,
                                              FALSE, TRUE, pool));
 

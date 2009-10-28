@@ -994,8 +994,7 @@ def update_receive_illegal_name(sbox):
   for n in range(2):
     exit_code, out, err = svntest.main.run_svn(1, 'up', wc_dir)
     for line in err:
-      if line.find("an unversioned directory of the same " \
-                   "name already exists") != -1:
+      if line.find("of the same name") != -1:
         break
     else:
       raise svntest.Failure

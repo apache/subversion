@@ -98,10 +98,16 @@ svn_wc__internal_propset(svn_wc__db_t *db,
    if TRUE, change both the base and working properties.
 
    If conflicts are found when merging, place them into a temporary
-   .prej file within SVN, and write log commands to move this file
-   into PATH, or append the conflicts to the file's already-existing
-   .prej file in ADM_ACCESS.  Modify base properties unconditionally,
+   .prej file, and write log commands to move this file into LOCAL_ABSPATH's
+   parent directory, or append the conflicts to the file's already-existing
+   .prej file.  Modify base properties unconditionally,
    if BASE_MERGE is TRUE, they do not generate conficts.
+
+   TODO ### LEFT_VERSION and RIGHT_VERSION ...
+
+   TODO ### DRY_RUN ...
+
+   TODO ### CONFLICT_FUNC/CONFLICT_BATON ...
 
    If STATE is non-null, set *STATE to the state of the local properties
    after the merge.  */
@@ -138,11 +144,11 @@ svn_error_t *svn_wc__wcprop_set(svn_wc__db_t *db,
 svn_boolean_t svn_wc__has_magic_property(const apr_array_header_t *properties);
 
 /* Extend LOG_ACCUM with log entries to install PROPS and, if WRITE_BASE_PROPS
-   is true, BASE_PROPS for the PATH in ADM_ACCESS, updating the wc entry
+   is true, BASE_PROPS for the LOCAL_ABSPATH in DB, updating the wc entry
    to reflect the changes.  BASE_PROPS must be supplied even if
    WRITE_BASE_PROPS is false.  Use POOL for temporary allocations. */
 svn_error_t *svn_wc__install_props(svn_stringbuf_t **log_accum,
-                                   const char *adm_abspath,
+                                   svn_wc__db_t *db,
                                    const char *local_abspath,
                                    apr_hash_t *base_props,
                                    apr_hash_t *props,
@@ -225,19 +231,6 @@ svn_error_t *
 svn_wc__marked_as_binary(svn_boolean_t *marked,
                          const char *local_abspath,
                          svn_wc__db_t *db,
-                         apr_pool_t *scratch_pool);
-
-
-/* Write the PROPERTIES hash to a temporary file, then move it atomically
-   to DEST_ABSPATH. If LOG_ACCUM is NULL, these actions will be performed
-   immediately. Otherwise, loggy instructions will be written into the
-   buffer, assuming eventual storage as a logfile for ADM_ABSPATH. Temporary
-   allocations are performed in SCRATCH_POOL.  */
-svn_error_t *
-svn_wc__write_properties(apr_hash_t *properties,
-                         const char *dest_abspath,
-                         svn_stringbuf_t **log_accum,
-                         const char *adm_abspath,
                          apr_pool_t *scratch_pool);
 
 #ifdef __cplusplus

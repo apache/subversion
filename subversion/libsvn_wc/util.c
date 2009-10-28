@@ -356,12 +356,12 @@ svn_wc_conflict_description_create_prop2(const char *local_abspath,
 
 svn_wc_conflict_description2_t *
 svn_wc_conflict_description_create_tree2(
-                            const char *local_abspath,
-                            svn_node_kind_t node_kind,
-                            svn_wc_operation_t operation,
-                            svn_wc_conflict_version_t *src_left_version,
-                            svn_wc_conflict_version_t *src_right_version,
-                            apr_pool_t *result_pool)
+  const char *local_abspath,
+  svn_node_kind_t node_kind,
+  svn_wc_operation_t operation,
+  const svn_wc_conflict_version_t *src_left_version,
+  const svn_wc_conflict_version_t *src_right_version,
+  apr_pool_t *result_pool)
 {
   svn_wc_conflict_description2_t *conflict;
 
@@ -461,9 +461,9 @@ svn_wc_conflict_version_create(const char *repos_url,
 
   version = apr_pcalloc(pool, sizeof(*version));
 
-  SVN_ERR_ASSERT_NO_RETURN(repos_url != NULL && *repos_url != '\0' &&
-                           path_in_repos != NULL && *path_in_repos != '/'
-                           && SVN_IS_VALID_REVNUM(peg_rev));
+  SVN_ERR_ASSERT_NO_RETURN(svn_uri_is_canonical(repos_url, pool) &&
+                           svn_relpath_is_canonical(path_in_repos, pool) &&
+                           SVN_IS_VALID_REVNUM(peg_rev));
 
   version->repos_url = repos_url;
   version->peg_rev = peg_rev;
