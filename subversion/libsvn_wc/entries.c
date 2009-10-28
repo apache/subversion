@@ -3148,43 +3148,7 @@ svn_wc__tweak_entry(svn_wc__db_t *db,
 }
 
 
-
-
-svn_error_t *
-svn_wc__entries_init(const char *path,
-                     const char *uuid,
-                     const char *url,
-                     const char *repos_root,
-                     svn_revnum_t initial_rev,
-                     svn_depth_t depth,
-                     apr_pool_t *pool)
-{
-  apr_pool_t *scratch_pool = svn_pool_create(pool);
-  const char *abspath;
-  const char *repos_relpath;
-
-  SVN_ERR_ASSERT(! repos_root || svn_uri_is_ancestor(repos_root, url));
-  SVN_ERR_ASSERT(depth == svn_depth_empty
-                 || depth == svn_depth_files
-                 || depth == svn_depth_immediates
-                 || depth == svn_depth_infinity);
-
-  /* Initialize the db for this directory. */
-  SVN_ERR(svn_dirent_get_absolute(&abspath, path, scratch_pool));
-  repos_relpath = svn_uri_is_child(repos_root, url, scratch_pool);
-  SVN_ERR(svn_wc__db_init(abspath, repos_relpath == NULL ? ""
-                            : svn_path_uri_decode(repos_relpath, scratch_pool),
-                          repos_root, uuid, initial_rev, depth, scratch_pool));
-
-  svn_pool_destroy(scratch_pool);
-  return SVN_NO_ERROR;
-}
-
-
-/*--------------------------------------------------------------- */
-
 /*** Generic Entry Walker */
-
 
 /* A recursive entry-walker, helper for svn_wc_walk_entries3().
  *

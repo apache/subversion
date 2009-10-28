@@ -484,39 +484,44 @@ init_adm_tmp_area(const char *path, apr_pool_t *pool)
    marked as 'incomplete.  The adm area starts out locked; remember to
    unlock it when done. */
 static svn_error_t *
-init_adm(const char *path,
+init_adm(svn_wc__db_t *db,
+         const char *local_abspath,
          const char *uuid,
          const char *url,
-         const char *repos,
+         const char *repos_root_url,
          svn_revnum_t initial_rev,
          svn_depth_t depth,
          apr_pool_t *pool)
 {
+  const char *repos_relpath;
+
+  SVN_ERR_ASSERT(! repos_root_url || svn_uri_is_ancestor(repos_root_url, url));
+
   /* First, make an empty administrative area. */
-  SVN_ERR(svn_io_dir_make_hidden(svn_wc__adm_child(path, NULL, pool),
+  SVN_ERR(svn_io_dir_make_hidden(svn_wc__adm_child(local_abspath, NULL, pool),
                                  APR_OS_DEFAULT, pool));
 
   /** Make subdirectories. ***/
 
   /* SVN_WC__ADM_TEXT_BASE */
-  SVN_ERR(make_adm_subdir(path, SVN_WC__ADM_TEXT_BASE, FALSE, pool));
+  SVN_ERR(make_adm_subdir(local_abspath, SVN_WC__ADM_TEXT_BASE, FALSE, pool));
 
   /* SVN_WC__ADM_PROP_BASE */
-  SVN_ERR(make_adm_subdir(path, SVN_WC__ADM_PROP_BASE, FALSE, pool));
+  SVN_ERR(make_adm_subdir(local_abspath, SVN_WC__ADM_PROP_BASE, FALSE, pool));
 
   /* SVN_WC__ADM_PROPS */
-  SVN_ERR(make_adm_subdir(path, SVN_WC__ADM_PROPS, FALSE, pool));
+  SVN_ERR(make_adm_subdir(local_abspath, SVN_WC__ADM_PROPS, FALSE, pool));
 
   /** Init the tmp area. ***/
-  SVN_ERR(init_adm_tmp_area(path, pool));
+  SVN_ERR(init_adm_tmp_area(local_abspath, pool));
 
-  /** Initialize each administrative file. */
-
-  /* SVN_WC__ADM_ENTRIES */
-  /* THIS FILE MUST BE CREATED LAST:
-     After this exists, the dir is considered complete. */
-  SVN_ERR(svn_wc__entries_init(path, uuid, url, repos,
-                               initial_rev, depth, pool));
+  /* Lastly, create the SDB.  */
+  repos_relpath = svn_uri_is_child(repos_root_url, url, pool);
+  SVN_ERR(svn_wc__db_init(db, local_abspath,
+                          repos_relpath == NULL
+                            ? ""
+                            : svn_path_uri_decode(repos_relpath, pool),
+                          repos_root_url, uuid, initial_rev, depth, pool));
 
   return SVN_NO_ERROR;
 }
@@ -541,7 +546,7 @@ svn_wc__internal_ensure_adm(svn_wc__db_t *db,
   /* Early out: we know we're not dealing with an existing wc, so
      just create one. */
   if (format == 0)
-    return init_adm(local_abspath, uuid, url, repos, revision, depth,
+    return init_adm(db, local_abspath, uuid, url, repos, revision, depth,
                     scratch_pool);
 
   /* Now, get the existing url and repos for PATH. */

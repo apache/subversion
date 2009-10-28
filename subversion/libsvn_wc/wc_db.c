@@ -1545,7 +1545,8 @@ svn_wc__db_close(svn_wc__db_t *db)
 
 
 svn_error_t *
-svn_wc__db_init(const char *local_abspath,
+svn_wc__db_init(svn_wc__db_t *db,
+                const char *local_abspath,
                 const char *repos_relpath,
                 const char *repos_root_url,
                 const char *repos_uuid,
@@ -1556,10 +1557,35 @@ svn_wc__db_init(const char *local_abspath,
   svn_sqlite__db_t *sdb;
   apr_int64_t repos_id;
   apr_int64_t wc_id;
+  svn_wc__db_pdh_t *pdh;
   insert_base_baton_t ibb;
 
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+  SVN_ERR_ASSERT(repos_relpath != NULL);
+  SVN_ERR_ASSERT(depth == svn_depth_empty
+                 || depth == svn_depth_files
+                 || depth == svn_depth_immediates
+                 || depth == svn_depth_infinity);
+
+  /* ### REPOS_ROOT_URL and REPOS_UUID may be NULL. ... more doc: tbd  */
+
+  /* Create the SDB and insert the basic rows.  */
   SVN_ERR(create_db(&sdb, &repos_id, &wc_id, local_abspath, repos_root_url,
-                    repos_uuid, SDB_FILE, scratch_pool, scratch_pool));
+                    repos_uuid, SDB_FILE, db->state_pool, scratch_pool));
+
+  /* Begin construction of the PDH.  */
+  pdh = apr_pcalloc(db->state_pool, sizeof(*pdh));
+  pdh->local_abspath = apr_pstrdup(db->state_pool, local_abspath);
+
+  /* Create the WCROOT for this directory.  */
+  SVN_ERR(create_wcroot(&pdh->wcroot, pdh->local_abspath,
+                        sdb, wc_id, FORMAT_FROM_SDB,
+                        FALSE /* auto-upgrade */,
+                        FALSE /* enforce_empty_wq */,
+                        db->state_pool, scratch_pool));
+
+  /* The PDH is complete. Stash it into DB.  */
+  apr_hash_set(db->dir_data, pdh->local_abspath, APR_HASH_KEY_STRING, pdh);
 
   if (initial_rev > 0)
     ibb.status = svn_wc__db_status_incomplete;
@@ -1580,9 +1606,7 @@ svn_wc__db_init(const char *local_abspath,
   ibb.children = NULL;
   ibb.depth = depth;
 
-  SVN_ERR(insert_base_node(&ibb, sdb, scratch_pool));
-
-  return svn_sqlite__close(sdb);
+  return svn_error_return(insert_base_node(&ibb, sdb, scratch_pool));
 }
 
 
