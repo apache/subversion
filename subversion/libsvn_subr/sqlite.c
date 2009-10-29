@@ -204,6 +204,18 @@ svn_sqlite__insert(apr_int64_t *row_id, svn_sqlite__stmt_t *stmt)
   return svn_error_return(svn_sqlite__reset(stmt));
 }
 
+svn_error_t *
+svn_sqlite__update(int *affected_rows, svn_sqlite__stmt_t *stmt)
+{
+  SVN_ERR(step_with_expectation(stmt, FALSE));
+
+  if (affected_rows)
+    *affected_rows = sqlite3_changes(stmt->db->db3);
+
+  return svn_error_return(svn_sqlite__reset(stmt));
+}
+
+
 static svn_error_t *
 vbindf(svn_sqlite__stmt_t *stmt, const char *fmt, va_list ap)
 {
