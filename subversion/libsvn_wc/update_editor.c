@@ -330,11 +330,6 @@ struct dir_baton
      svn_stringbuf_appendstr. */
   svn_stringbuf_t *log_accum;
 
-  /* wq item accumulator. Array of const svn_skel_t * instances.
-     will be flushed and run in close_file(). Items should be allocated
-     in the dir pool */
-  apr_array_header_t *wq_accum;
-
   /* The depth of the directory in the wc (or inferred if added).  Not
      used for filtering; we have a separate wrapping editor for that. */
   svn_depth_t ambient_depth;
@@ -462,23 +457,12 @@ get_entry_url(svn_wc_context_t *wc_ctx,
 static svn_error_t *
 flush_log(struct dir_baton *db, apr_pool_t *pool)
 {
-  int i;
   if (! svn_stringbuf_isempty(db->log_accum))
     {
       SVN_ERR(svn_wc__wq_add_loggy(db->edit_baton->db, db->local_abspath,
                                    db->log_accum, pool));
       svn_stringbuf_setempty(db->log_accum);
     }
-
-  for (i = 0; i < db->wq_accum->nelts; i++)
-    {
-      SVN_ERR(svn_wc__db_wq_add(db->edit_baton->db, db->local_abspath,
-                                APR_ARRAY_IDX(db->wq_accum, i,
-                                              const svn_skel_t *),
-                                pool));
-    }
-
-  db->wq_accum->nelts = 0;
 
   return SVN_NO_ERROR;
 }
@@ -618,7 +602,6 @@ make_dir_baton(struct dir_baton **d_p,
   d->add_existed  = FALSE;
   d->bump_info    = bdi;
   d->log_accum    = svn_stringbuf_create("", dir_pool);
-  d->wq_accum     = apr_array_make(dir_pool, 4, sizeof(const svn_skel_t *));
   d->old_revision = SVN_INVALID_REVNUM;
 
   /* The caller of this function needs to fill these in. */
