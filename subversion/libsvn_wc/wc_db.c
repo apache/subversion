@@ -338,6 +338,48 @@ verify_no_work(svn_sqlite__db_t *sdb)
 }
 
 
+static apr_status_t
+close_wcroot(void *data)
+{
+  wcroot_t *wcroot = data;
+  svn_error_t *err;
+
+  SVN_ERR_ASSERT_NO_RETURN(wcroot->sdb != NULL);
+
+  err = svn_sqlite__close(wcroot->sdb);
+  wcroot->sdb = NULL;
+  if (err)
+    {
+      apr_status_t result = err->apr_err;
+      svn_error_clear(err);
+      return result;
+    }
+
+  return APR_SUCCESS;
+}
+
+
+static svn_error_t *
+close_many_wcroots(apr_hash_t *roots,
+                   apr_pool_t *state_pool,
+                   apr_pool_t *scratch_pool)
+{
+  apr_hash_index_t *hi;
+
+  for (hi = apr_hash_first(scratch_pool, roots); hi; hi = apr_hash_next(hi))
+    {
+      wcroot_t *wcroot = svn_apr_hash_index_val(hi);
+      apr_status_t result;
+
+      result = apr_pool_cleanup_run(state_pool, wcroot, close_wcroot);
+      if (result != APR_SUCCESS)
+        return svn_error_wrap_apr(result, NULL);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
 /* Construct a new wcroot_t. The WCROOT_ABSPATH and SDB parameters must
    have lifetime of at least RESULT_POOL.  */
 static svn_error_t *
@@ -398,6 +440,8 @@ create_wcroot(wcroot_t **wcroot,
   (*wcroot)->wc_id = wc_id;
   (*wcroot)->format = format;
 
+  apr_pool_cleanup_register(result_pool, *wcroot, close_wcroot,
+                            apr_pool_cleanup_null);
   return SVN_NO_ERROR;
 }
 
@@ -1406,79 +1450,6 @@ flush_entries(const svn_wc__db_pdh_t *pdh)
 
 
 static svn_error_t *
-close_db(svn_wc__db_t *db,
-         apr_pool_t *scratch_pool)
-{
-  apr_hash_t *roots = apr_hash_make(scratch_pool);
-  apr_hash_index_t *hi;
-
-  /* We may have WCROOTs shared between PDHs, so put them all in a hash to
-     collapse them, validating along the way. */
-  for (hi = apr_hash_first(scratch_pool, db->dir_data); hi;
-       hi = apr_hash_next(hi))
-    {
-      svn_wc__db_pdh_t *pdh = svn_apr_hash_index_val(hi);
-
-      if (pdh->wcroot == NULL)
-        continue;
-
-#ifdef SVN_DEBUG
-      /* If two PDH records have the same wcroot_abspath, then they should
-         be using the same WCROOT handle.  */
-      {
-        wcroot_t *existing_wcroot = apr_hash_get(roots,
-                                                 pdh->wcroot->abspath,
-                                                 APR_HASH_KEY_STRING);
-        if (existing_wcroot)
-          SVN_ERR_ASSERT(existing_wcroot == pdh->wcroot);
-      }
-#endif
-
-      apr_hash_set(roots, pdh->wcroot->abspath, APR_HASH_KEY_STRING,
-                   pdh->wcroot);
-    }
-
-  /* ### it would also be nice to assert that two different wcroot_abspath
-     ### values are not sharing the same SDB. If they *do*, then we will
-     ### double-close below. That won't cause problems, but it does
-     ### represent an internal consistency error.  */
-
-  /* Now close all of the non-duplicate databases. */
-  for (hi = apr_hash_first(scratch_pool, roots); hi; hi = apr_hash_next(hi))
-    {
-      wcroot_t *wcroot = svn_apr_hash_index_val(hi);
-
-      if (wcroot->sdb != NULL)
-        {
-          SVN_ERR(svn_sqlite__close(wcroot->sdb));
-          wcroot->sdb = NULL;
-          wcroot->wc_id = UNKNOWN_WC_ID;
-       }
-    }
-
-  return SVN_NO_ERROR;
-}
-
-
-static apr_status_t
-close_db_apr(void *data)
-{
-  svn_wc__db_t *db = data;
-  svn_error_t *err;
-
-  err = close_db(db, db->state_pool);
-  if (err)
-    {
-      apr_status_t result = err->apr_err;
-      svn_error_clear(err);
-      return result;
-    }
-
-  return APR_SUCCESS;
-}
-
-
-static svn_error_t *
 create_db(svn_sqlite__db_t **sdb,
           apr_int64_t *repos_id,
           apr_int64_t *wc_id,
@@ -1525,9 +1496,6 @@ svn_wc__db_open(svn_wc__db_t **db,
   (*db)->dir_data = apr_hash_make(result_pool);
   (*db)->state_pool = result_pool;
 
-  apr_pool_cleanup_register((*db)->state_pool, *db, close_db_apr,
-                            apr_pool_cleanup_null);
-
   return SVN_NO_ERROR;
 }
 
@@ -1535,12 +1503,33 @@ svn_wc__db_open(svn_wc__db_t **db,
 svn_error_t *
 svn_wc__db_close(svn_wc__db_t *db)
 {
-  apr_status_t result = apr_pool_cleanup_run(db->state_pool, db, close_db_apr);
+  apr_pool_t *scratch_pool = db->state_pool;
+  apr_hash_t *roots = apr_hash_make(scratch_pool);
+  apr_hash_index_t *hi;
 
-  if (result == APR_SUCCESS)
-    return SVN_NO_ERROR;
+  /* Collect all the unique WCROOT structures, and empty out DIR_DATA.  */
+  for (hi = apr_hash_first(scratch_pool, db->dir_data);
+       hi;
+       hi = apr_hash_next(hi))
+    {
+      const void *key;
+      apr_ssize_t klen;
+      void *val;
+      svn_wc__db_pdh_t *pdh;
 
-  return svn_error_wrap_apr(result, NULL);
+      apr_hash_this(hi, &key, &klen, &val);
+      pdh = val;
+
+      if (pdh->wcroot && pdh->wcroot->sdb)
+        apr_hash_set(roots, pdh->wcroot->abspath, APR_HASH_KEY_STRING,
+                     pdh->wcroot);
+
+      apr_hash_set(db->dir_data, key, klen, NULL);
+    }
+
+  /* Run the cleanup for each WCROOT.  */
+  return svn_error_return(close_many_wcroots(roots, db->state_pool,
+                                             scratch_pool));
 }
 
 
@@ -4976,13 +4965,19 @@ svn_wc__db_temp_forget_directory(svn_wc__db_t *db,
        hi;
        hi = apr_hash_next(hi))
     {
-      svn_wc__db_pdh_t *pdh = svn_apr_hash_index_val(hi);
+      const void *key;
+      apr_ssize_t klen;
+      void *val;
+      svn_wc__db_pdh_t *pdh;
+
+      apr_hash_this(hi, &key, &klen, &val);
+      pdh = val;
 
       if (!svn_dirent_is_ancestor(local_dir_abspath, pdh->local_abspath))
         continue;
 
       SVN_ERR(svn_wc__db_wclock_remove(db, pdh->local_abspath, scratch_pool));
-      apr_hash_set(db->dir_data, pdh->local_abspath, APR_HASH_KEY_STRING, NULL);
+      apr_hash_set(db->dir_data, key, klen, NULL);
 
       if (pdh->wcroot && pdh->wcroot->sdb &&
           svn_dirent_is_ancestor(local_dir_abspath, pdh->wcroot->abspath))
@@ -4992,13 +4987,8 @@ svn_wc__db_temp_forget_directory(svn_wc__db_t *db,
         }
     }
 
-  for (hi = apr_hash_first(scratch_pool, roots); hi; hi = apr_hash_next(hi))
-    {
-      wcroot_t *wcroot = svn_apr_hash_index_val(hi);
-      SVN_ERR(svn_sqlite__close(wcroot->sdb));
-    }
-
-  return SVN_NO_ERROR;
+  return svn_error_return(close_many_wcroots(roots, db->state_pool,
+                                             scratch_pool));
 }
 
 /* ### temporary API. remove before release.  */
