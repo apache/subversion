@@ -103,7 +103,7 @@ svn_wc__loggy_copy(svn_stringbuf_t **log_accum,
                    apr_pool_t *scratch_pool);
 
 
-/* Extend **LOG_ACCUM with log instructions to generate a translated
+/* Insert into DB a work queue instruction to generate a translated
    file from SRC to DST with translation settings from VERSIONED.
    ADM_ABSPATH is the absolute path for the admin directory for PATH.
    DST and SRC and VERSIONED are relative to ADM_ABSPATH.
@@ -112,12 +112,11 @@ svn_wc__loggy_copy(svn_stringbuf_t **log_accum,
    temporary allocations.
 */
 svn_error_t *
-svn_wc__loggy_translated_file(svn_stringbuf_t **log_accum,
+svn_wc__loggy_translated_file(svn_wc__db_t *db,
                               const char *adm_abspath,
                               const char *dst,
                               const char *src,
                               const char *versioned,
-                              apr_pool_t *result_pool,
                               apr_pool_t *scratch_pool);
 
 /* Insert into DB a work queue instruction to delete the entry
