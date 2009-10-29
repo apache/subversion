@@ -38,14 +38,6 @@
 
 
 #ifdef SVN_SQLITE_INLINE
-
-  /* Ensure foreign key constraints are enabled, but only if we're going to use
-     them later on. */
-  #ifdef SVN_DEBUG
-    #undef SQLITE_OMIT_FOREIGN_KEY
-    #undef SQLITE_OMIT_TRIGGER
-  #endif
-
 /* Include sqlite3 inline, making all symbols private. */
   #define SQLITE_API static
   #include <sqlite3.c>
@@ -874,7 +866,7 @@ svn_sqlite__open(svn_sqlite__db_t **db, const char *path,
                      scopes */
               "PRAGMA synchronous=OFF;"));
 
-#if SQLITE_VERSION_AT_LEAST(3,6,19) && SVN_DEBUG
+#if SQLITE_VERSION_AT_LEAST(3,6,19) && defined(SVN_DEBUG)
   /* When running in debug mode, enable the checking of foreign key
      constraints.  This has possible performance implications, so we don't
      bother to do it for production...for now. */
