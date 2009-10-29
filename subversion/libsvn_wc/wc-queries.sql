@@ -107,6 +107,14 @@ where wc_id = ?1 and local_relpath = ?2;
 select properties from base_node
 where wc_id = ?1 and local_relpath = ?2;
 
+-- STMT_SELECT_WORKING_PROPS
+select properties from working_node
+where wc_id = ?1 and local_relpath = ?2;
+
+-- STMT_SELECT_ACTUAL_PROPS
+select properties from actual_node
+where wc_id = ?1 and local_relpath = ?2;
+
 -- STMT_UPDATE_BASE_PROPS
 update base_node set properties = ?3
 where wc_id = ?1 and local_relpath = ?2;
@@ -118,23 +126,6 @@ where wc_id = ?1 and local_relpath = ?2;
 -- STMT_UPDATE_ACTUAL_PROPS
 update actual_node set properties = ?3
 where wc_id = ?1 and local_relpath = ?2;
-
--- STMT_SELECT_ALL_PROPS
-select actual_node.properties, working_node.properties,
-  base_node.properties
-from base_node
-left outer join working_node on base_node.wc_id = working_node.wc_id
-  and base_node.local_relpath = working_node.local_relpath
-left outer join actual_node on base_node.wc_id = actual_node.wc_id
-  and base_node.local_relpath = actual_node.local_relpath
-where base_node.wc_id = ?1 and base_node.local_relpath = ?2;
-
--- STMT_SELECT_PRISTINE_PROPS
-select working_node.properties, base_node.properties
-from base_node
-left outer join working_node on base_node.wc_id = working_node.wc_id
-  and base_node.local_relpath = working_node.local_relpath
-where base_node.wc_id = ?1 and base_node.local_relpath = ?2;
 
 -- STMT_INSERT_LOCK
 insert or replace into lock

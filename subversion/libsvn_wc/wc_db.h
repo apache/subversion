@@ -966,6 +966,14 @@ svn_wc__db_op_set_props(svn_wc__db_t *db,
                         const apr_hash_t *props,
                         apr_pool_t *scratch_pool);
 
+/* Sets the pristine props of LOCAL_ABSPATH on BASE, or in case of an addition
+   on WORKING */
+svn_error_t *
+svn_wc__db_op_set_pristine_props(svn_wc__db_t *db,
+                                 const char *local_abspath,
+                                 const apr_hash_t *props,
+                                 apr_pool_t *scratch_pool);
+
 
 /* ### KFF: This handles files, dirs, symlinks, anything else? */
 /* ### dlr: Does this support recursive dir deletes (e.g. _revert)? Document. */

@@ -613,6 +613,19 @@ validate_node(svn_wc__db_t *db,
                                    scratch_pool, scratch_pool));
   SVN_TEST_ASSERT(value != NULL && strcmp(value->data, relpath) == 0);
 
+  SVN_ERR(svn_wc__db_read_props(&props, db, path,
+                                scratch_pool, scratch_pool));
+  SVN_TEST_ASSERT(props != NULL);
+  value = apr_hash_get(props, "p1", APR_HASH_KEY_STRING);
+  SVN_TEST_ASSERT(value != NULL && strcmp(value->data, "v1") == 0);
+
+  SVN_ERR(svn_wc__db_read_pristine_props(&props, db, path,
+                                         scratch_pool, scratch_pool));
+  SVN_TEST_ASSERT(props != NULL);
+  value = apr_hash_get(props, "p1", APR_HASH_KEY_STRING);
+  SVN_TEST_ASSERT(value != NULL && strcmp(value->data, "v1") == 0);
+
+
   return SVN_NO_ERROR;
 }
 
