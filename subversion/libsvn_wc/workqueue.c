@@ -1539,23 +1539,13 @@ run_install_properties(svn_wc__db_t *db,
   if (arg->is_atom)
     base_props = NULL;
   else
-    {
-      SVN_ERR(svn_skel__parse_proplist(&base_props, arg, scratch_pool));
-
-      if (base_props == NULL)
-        base_props = apr_hash_make(scratch_pool);
-    }
+    SVN_ERR(svn_skel__parse_proplist(&base_props, arg, scratch_pool));
 
   arg = arg->next;
   if (arg->is_atom)
     actual_props = NULL;
   else
-    {
-      SVN_ERR(svn_skel__parse_proplist(&actual_props, arg, scratch_pool));
-
-      if (actual_props == NULL)
-        actual_props = apr_hash_make(scratch_pool);
-    }
+    SVN_ERR(svn_skel__parse_proplist(&actual_props, arg, scratch_pool));
 
   SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath, FALSE, scratch_pool));
   if (base_props != NULL)

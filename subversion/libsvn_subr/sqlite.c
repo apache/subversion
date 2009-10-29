@@ -434,9 +434,6 @@ svn_sqlite__column_properties(apr_hash_t **props,
                                    svn_skel__parse(val, len, scratch_pool),
                                    result_pool));
 
-  if (*props == NULL)
-    *props = apr_hash_make(result_pool);
-
   return SVN_NO_ERROR;
 }
 
