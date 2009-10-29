@@ -2152,6 +2152,7 @@ svn_wc__db_base_get_props(apr_hash_t **props,
 {
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
+  svn_error_t *err;
 
   SVN_ERR(get_statement_for_path(&stmt, db, local_abspath,
                                  STMT_SELECT_BASE_PROPS, scratch_pool));
@@ -2162,9 +2163,10 @@ svn_wc__db_base_get_props(apr_hash_t **props,
                              svn_dirent_local_style(local_abspath,
                                                     scratch_pool));
 
-  SVN_ERR(svn_sqlite__column_properties(props, stmt, 0, result_pool,
-                                        scratch_pool));
-  return svn_sqlite__reset(stmt);
+  err = svn_sqlite__column_properties(props, stmt, 0, result_pool,
+                                      scratch_pool);
+
+  return svn_error_compose_create(err, svn_sqlite__reset(stmt));
 }
 
 
@@ -3492,7 +3494,7 @@ svn_wc__db_read_prop(const svn_string_t **propval,
 
   /* ### should: fetch into scratch_pool, then dup into result_pool.  */
   SVN_ERR(svn_wc__db_read_props(&props, db, local_abspath,
-                                    result_pool, scratch_pool));
+                                result_pool, scratch_pool));
 
   *propval = apr_hash_get(props, propname, APR_HASH_KEY_STRING);
 
@@ -3509,28 +3511,25 @@ svn_wc__db_read_props(apr_hash_t **props,
 {
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
+  svn_error_t *err = NULL;
 
   SVN_ERR(get_statement_for_path(&stmt, db, local_abspath,
-                                 STMT_SELECT_ALL_PROPS, scratch_pool));
+                                 STMT_SELECT_ACTUAL_PROPS, scratch_pool));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
-  if (!have_row)
-    return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
-                             _("The node '%s' was not found."),
-                             svn_dirent_local_style(local_abspath,
-                                                    scratch_pool));
 
-  /* Try ACTUAL, then WORKING and finally BASE. */
-  if (!svn_sqlite__column_is_null(stmt, 0))
-    SVN_ERR(svn_sqlite__column_properties(props, stmt, 0, result_pool,
-                                          scratch_pool));
-  else if (!svn_sqlite__column_is_null(stmt, 1))
-    SVN_ERR(svn_sqlite__column_properties(props, stmt, 1, result_pool,
-                                          scratch_pool));
-  else
-    SVN_ERR(svn_sqlite__column_properties(props, stmt, 2, result_pool,
-                                          scratch_pool));
+  if (have_row && !svn_sqlite__column_is_null(stmt, 0))
+    {
+      err = svn_sqlite__column_properties(props, stmt, 0, result_pool,
+                                          scratch_pool);
 
-  return svn_sqlite__reset(stmt);
+      return svn_error_compose_create(err, svn_sqlite__reset(stmt));
+    }
+
+  SVN_ERR(svn_error_compose_create(err, svn_sqlite__reset(stmt)));
+
+  return svn_error_return(
+      svn_wc__db_read_pristine_props(props, db, local_abspath,
+                                     result_pool, scratch_pool));
 }
 
 
@@ -3543,25 +3542,25 @@ svn_wc__db_read_pristine_props(apr_hash_t **props,
 {
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
+  svn_error_t *err = NULL;
 
   SVN_ERR(get_statement_for_path(&stmt, db, local_abspath,
-                                 STMT_SELECT_PRISTINE_PROPS, scratch_pool));
+                                 STMT_SELECT_WORKING_PROPS, scratch_pool));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
-  if (!have_row)
-    return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
-                             _("The node '%s' was not found."),
-                             svn_dirent_local_style(local_abspath,
-                                                    scratch_pool));
 
-  /* Try WORKING, then BASE. */
-  if (!svn_sqlite__column_is_null(stmt, 0))
-    SVN_ERR(svn_sqlite__column_properties(props, stmt, 0, result_pool,
-                                          scratch_pool));
-  else
-    SVN_ERR(svn_sqlite__column_properties(props, stmt, 1, result_pool,
-                                          scratch_pool));
+  if (have_row && !svn_sqlite__column_is_null(stmt, 0))
+    {
+      err = svn_sqlite__column_properties(props, stmt, 0, result_pool,
+                                          scratch_pool);
 
-  return svn_sqlite__reset(stmt);
+      return svn_error_compose_create(err, svn_sqlite__reset(stmt));
+    }
+
+  SVN_ERR(svn_error_compose_create(err, svn_sqlite__reset(stmt)));
+
+  return svn_error_return(
+      svn_wc__db_base_get_props(props, db, local_abspath,
+                                result_pool, scratch_pool));
 }
 
 
