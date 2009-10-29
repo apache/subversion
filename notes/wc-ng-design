@@ -994,6 +994,8 @@ NOTE: if either the BASE_NODE or the WORKING_NODE has an "incomplete"
 presence, then it CAN NOT be committed. It means we are missing
 information that may be required to properly commit a change to that
 node.
+### hmm. during the commit, we create incomplete BASE nodes (see
+### below). so this is more of a statement of the starting condition.
 
 
 FILES AND SYMLINKS
@@ -1089,7 +1091,7 @@ base-presence: *
       with any descendent nodes.
 
     base-deleted
-      No action toaken. This ndoe will be removed when it is handled
+      No action taken. This node will be removed when it is handled
       as a separate action (via recursion).
 
 
@@ -1317,6 +1319,7 @@ disruption and potential for error.
 
 8. replace loggy with sqlite-based work journal
 
+
 Endgame
 -------
 
@@ -1325,12 +1328,18 @@ met, we've identified the following milestones leading to the completion of
 wc-ng development (and hence 1.7).  They are not all necessarily serially
 dependent, but some dependencies do exist.
 
-1. Move properties into wc.db.
+  1. Move properties into wc.db.
+  2. Convert loggy actions into work queue actions.
+  3. Move pristines into a SHA-1 based store.
+  4. Consolidate metadata into the centralized system.
+  5. Test, tweak and release!
 
-2. Convert loggy actions into work queue actions.
 
-3. Move pristines into a SHA-1 based store.
+The above items are milestones. There are a number of work items that
+need to be completed in/around the milestones. The progress of this
+work can be roughly measured by the tools/dev/wc-ng/count-progress.py
+script:
 
-4. Consolidate metadata into the centralized system.
-
-5. Test, tweak and release!
+  * remove use of svn_wc_adm_access_t and svn_wc_entry_t
+  * review/revamp the requirements, definitions, and use of the
+    svn_wc__node_* and svn_wc__db_temp_* functions
