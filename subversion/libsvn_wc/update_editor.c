@@ -4861,6 +4861,38 @@ close_file(void *file_baton,
                      &new_base_props, &new_actual_props, fb,
                      new_base_path, actual_checksum, pool));
 
+
+  if (fb->added)
+    {
+      /* ### HACK: Before we can set properties, we need a node in
+                   the database. This code could be its own WQ item,
+                   handling more than just this tweak, but it will
+                   be removed soon anyway.
+
+         ### HACK: The loggy stuff checked the preconditions for us,
+                   we just make the property code happy here. */
+      svn_wc_entry_t tmp_entry;
+      svn_stringbuf_t *create_log = NULL;
+
+      /* Create a very minimalistic file node that will be overridden
+         from the loggy operations we have in the file baton log accumulator */
+      tmp_entry.kind = svn_node_file;
+      tmp_entry.revision = *eb->target_revision;
+
+      SVN_ERR(svn_wc__loggy_entry_modify(&create_log,
+                                         fb->dir_baton->local_abspath,
+                                         fb->local_abspath,
+                                         &tmp_entry,
+                                         SVN_WC__ENTRY_MODIFY_KIND |
+                                         SVN_WC__ENTRY_MODIFY_REVISION,
+                                         pool, pool));
+
+      SVN_ERR(svn_wc__wq_add_loggy(eb->db,
+                                   fb->dir_baton->local_abspath,
+                                   create_log,
+                                   pool));
+    }
+
   if (new_base_props || new_actual_props)
       SVN_ERR(svn_wc__install_props(eb->db, fb->local_abspath,
                                     new_base_props, new_actual_props,
