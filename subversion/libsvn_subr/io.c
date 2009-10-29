@@ -638,7 +638,9 @@ init_temp_dir(apr_pool_t *scratch_pool)
 
   SVN_ERR(cstring_to_utf8(&dir, dir, scratch_pool));
 
-  temp_dir = svn_dirent_internal_style(dir, global_pool);
+  dir = svn_dirent_internal_style(dir, scratch_pool);
+
+  SVN_ERR(svn_dirent_get_absolute(&temp_dir, dir, global_pool));
 
   return SVN_NO_ERROR;
 }
