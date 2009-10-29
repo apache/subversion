@@ -794,22 +794,50 @@ svn_io_copy_perms(const char *src,
                   const char *dst,
                   apr_pool_t *pool)
 {
-  /* ### FIXME: apr_file_copy with perms may fail on Win32.  We need a
-     platform-specific implementation to get the permissions right. */
-
+  /* ### On Windows, apr_file_perms_set always returns APR_ENOTIMPL,
+         and the path passed to apr_file_perms_set must be encoded
+         in the platform-specific path encoding; not necessary UTF-8.
+         We need a platform-specific implementation to get the
+         permissions right. */
+         
 #ifndef WIN32
   {
     apr_file_t *src_file;
-    apr_finfo_t finfo;
+    apr_fileperms_t perms;
     const char *dst_apr;
     apr_status_t apr_err;
+    svn_error_t *err;
 
-    SVN_ERR(svn_io_file_open(&src_file, src, APR_READ, APR_OS_DEFAULT, pool));
-    SVN_ERR(svn_io_file_info_get(&finfo, APR_FINFO_PROT, src_file, pool));
-    SVN_ERR(svn_io_file_close(src_file, pool));
+    if (src == NULL)
+      perms = APR_OS_DEFAULT;
+    else
+      {
+        err = svn_io_file_open(&src_file, src, APR_READ, APR_OS_DEFAULT, pool);
+        if (err)
+          {
+            /* If the source file doesn't exist on disk, use the OS's
+             * default permissions. */
+            if (APR_STATUS_IS_ENOENT(err->apr_err))
+              {
+                svn_error_clear(err);
+                perms = APR_OS_DEFAULT;
+              }
+            else
+              return svn_error_return(err);
+          }
+        else
+          {
+            apr_finfo_t finfo;
+
+            SVN_ERR(svn_io_file_info_get(&finfo, APR_FINFO_PROT, src_file,
+                                         pool));
+            SVN_ERR(svn_io_file_close(src_file, pool));
+            perms = finfo.protection;
+          }
+      }
 
     SVN_ERR(cstring_from_utf8(&dst_apr, dst, pool));
-    apr_err = apr_file_perms_set(dst_apr, finfo.protection);
+    apr_err = apr_file_perms_set(dst_apr, perms);
 
     /* We shouldn't be able to get APR_INCOMPLETE or APR_ENOTIMPL
        here under normal circumstances, because the perms themselves
