@@ -73,6 +73,7 @@
 ;; e     - svn-status-toggle-edit-cmd-flag
 ;; ?     - svn-status-toggle-hide-unknown
 ;; _     - svn-status-toggle-hide-unmodified
+;; z     - svn-status-toggle-hide-externals
 ;; m     - svn-status-set-user-mark
 ;; u     - svn-status-unset-user-mark
 ;; $     - svn-status-toggle-elide
@@ -302,6 +303,11 @@ This can be toggled with \\[svn-status-toggle-hide-unknown]."
 (defcustom svn-status-hide-unmodified nil
   "*Hide unmodified files in `svn-status-buffer-name' buffer.
 This can be toggled with \\[svn-status-toggle-hide-unmodified]."
+  :type 'boolean
+  :group 'psvn)
+(defcustom svn-status-hide-externals nil
+  "*Hide external files in `svn-status-buffer-name' buffer.
+This can be toggled with \\[svn-status-toggle-hide-externals]."
   :type 'boolean
   :group 'psvn)
 (defcustom svn-status-sort-status-buffer t
@@ -1947,6 +1953,7 @@ A and B must be line-info's."
   (define-key svn-status-mode-map (kbd "V") 'svn-status-svnversion)
   (define-key svn-status-mode-map (kbd "?") 'svn-status-toggle-hide-unknown)
   (define-key svn-status-mode-map (kbd "_") 'svn-status-toggle-hide-unmodified)
+  (define-key svn-status-mode-map (kbd "z") 'svn-status-toggle-hide-externals)
   (define-key svn-status-mode-map (kbd "a") 'svn-status-add-file)
   (define-key svn-status-mode-map (kbd "A") 'svn-status-add-file-recursively)
   (define-key svn-status-mode-map (kbd "+") 'svn-status-make-directory)
@@ -2162,6 +2169,8 @@ A and B must be line-info's."
      :style toggle :selected svn-status-hide-unknown]
     ["Hide Unmodified" svn-status-toggle-hide-unmodified
      :style toggle :selected svn-status-hide-unmodified]
+    ["Hide Externals" svn-status-toggle-hide-externals
+     :style toggle :selected svn-status-hide-externals]
     ["Show Client versions" svn-status-version t]
     ["Prepare bug report" svn-prepare-bug-report t]
     ))
@@ -2411,6 +2420,7 @@ This list holds currently only one element:
   "Return whether the line is visible or not"
   (or (not (or (svn-status-line-info->hide-because-unknown line-info)
                (svn-status-line-info->hide-because-unmodified line-info)
+               (svn-status-line-info->hide-because-externals line-info)
                (svn-status-line-info->hide-because-custom-hide-function line-info)
                (svn-status-line-info->hide-because-user-elide line-info)))
       (svn-status-line-info->update-available line-info) ;; show the line, if an update is available
@@ -2420,6 +2430,10 @@ This list holds currently only one element:
 (defun svn-status-line-info->hide-because-unknown (line-info)
   (and svn-status-hide-unknown
        (eq (svn-status-line-info->filemark line-info) ??)))
+
+(defun svn-status-line-info->hide-because-externals (line-info)
+  (and svn-status-hide-externals
+       (eq (svn-status-line-info->filemark line-info) ?X)))
 
 (defun svn-status-line-info->hide-because-custom-hide-function (line-info)
   (and svn-status-custom-hide-function
@@ -2857,7 +2871,8 @@ Symbolic links to directories count as directories (see `file-directory-p')."
         (filename  ;; <indentation>file or /path/to/file
                      (concat
                       (if (or svn-status-display-full-path
-                              svn-status-hide-unmodified)
+                              svn-status-hide-unmodified
+                              svn-status-hide-externals)
                           (svn-add-face
                            (let ((dir-name (file-name-as-directory
                                             (svn-status-line-info->directory-containing-line-info
@@ -2954,6 +2969,7 @@ Additionally clear the psvn-extra-info field in all line-info lists."
         (overlay)
         (unmodified-count 0)    ;how many unmodified files are hidden
         (unknown-count 0)       ;how many unknown files are hidden
+        (externals-count 0)     ;how many svn:externals files are hidden
         (custom-hide-count 0)   ;how many files are hidden via svn-status-custom-hide-function
         (marked-count 0)        ;how many files are elided
         (user-elide-count 0)
@@ -2983,6 +2999,8 @@ Additionally clear the psvn-extra-info field in all line-info lists."
              (setq unknown-count (1+ unknown-count)))
             ((svn-status-line-info->hide-because-unmodified (car st-info))
              (setq unmodified-count (1+ unmodified-count)))
+            ((svn-status-line-info->hide-because-externals (car st-info))
+             (setq externals-count (1+ externals-count)))
             (t
              (svn-insert-line-in-status-buffer (car st-info))))
       (when (svn-status-line-info->has-usermark (car st-info))
@@ -3013,6 +3031,10 @@ Additionally clear the psvn-extra-info field in all line-info lists."
       (insert
        (format "%d Unmodified file(s) are hidden - press `_' to toggle hiding\n"
                unmodified-count)))
+    (when svn-status-hide-externals
+      (insert
+       (format "%d Externals file(s) are hidden - press `z' to toggle hiding\n"
+               externals-count)))
     (when (> custom-hide-count 0)
       (insert
        (format "%d file(s) are hidden via the svn-status-custom-hide-function\n"
@@ -3261,12 +3283,12 @@ When called from a file buffer provide a structure that contains the filename."
   (interactive)
   (let ((info (svn-status-get-line-information)))
     (if info
-        (message "%S hide-because-unknown: %S hide-because-unmodified: %S" info
+        (message "%S hide-because-unknown: %S hide-because-unmodified: %S hide-because-externals: %S" info
                  (svn-status-line-info->hide-because-unknown info)
-                 (svn-status-line-info->hide-because-unmodified info))
+                 (svn-status-line-info->hide-because-unmodified info)
+                 (svn-status-line-info->hide-because-externals info))
       (message "No file on this line"))))
-
-(defun svn-status-ensure-cursor-on-file ()
+ (defun svn-status-ensure-cursor-on-file ()
     "Raise an error unless point is on a valid file."
   (unless (svn-status-get-line-information)
     (error "No file on the current line")))
@@ -3519,6 +3541,11 @@ If the function is called with a prefix arg, unmark all these files."
 (defun svn-status-toggle-hide-unmodified ()
   (interactive)
   (setq svn-status-hide-unmodified (not svn-status-hide-unmodified))
+  (svn-status-update-buffer))
+
+(defun svn-status-toggle-hide-externals ()
+  (interactive)
+  (setq svn-status-hide-externals (not svn-status-hide-externals))
   (svn-status-update-buffer))
 
 (defun svn-status-get-file-name-buffer-position (name)
@@ -4413,8 +4440,7 @@ static char * data[] = {
    ((fboundp 'vc-backend)
     (eq 'SVN (vc-backend buffer-file-name)))
    ((and (boundp 'vc-mode) vc-mode)
-    (string-match "^ SVN" (svn-substring-no-properties vc-mode)))
-   (else nil)))
+    (string-match "^ SVN" (svn-substring-no-properties vc-mode)))))
 
 (when svn-status-fancy-file-state-in-modeline
   (defadvice vc-find-file-hook (after svn-status-vc-svn-find-file-hook activate)
