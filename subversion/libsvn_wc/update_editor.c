@@ -946,9 +946,6 @@ struct file_baton
 
   /* log accumulator; will be flushed and run in close_file(). */
   svn_stringbuf_t *log_accum;
-  /* wq item accumulator. Array of const svn_skel_t * instances.
-     will be flushed and run in close_file() */
-  apr_array_header_t *wq_accum;
 };
 
 
@@ -998,7 +995,6 @@ make_file_baton(struct file_baton **f_p,
   f->dir_baton         = pb;
 
   f->log_accum = svn_stringbuf_create("", file_pool);
-  f->wq_accum = apr_array_make(file_pool, 4, sizeof(const svn_skel_t *));
 
   /* No need to initialize f->digest, since we used pcalloc(). */
 
@@ -1012,7 +1008,6 @@ make_file_baton(struct file_baton **f_p,
 static svn_error_t *
 flush_file_log(struct file_baton *fb, apr_pool_t *pool)
 {
-  int i;
   if (! svn_stringbuf_isempty(fb->log_accum))
     {
       SVN_ERR(svn_wc__wq_add_loggy(fb->edit_baton->db,
@@ -1020,17 +1015,6 @@ flush_file_log(struct file_baton *fb, apr_pool_t *pool)
                                    fb->log_accum, pool));
       svn_stringbuf_setempty(fb->log_accum);
     }
-
-  for (i = 0; i < fb->wq_accum->nelts; i++)
-    {
-      SVN_ERR(svn_wc__db_wq_add(fb->edit_baton->db,
-                                fb->dir_baton->local_abspath,
-                                APR_ARRAY_IDX(fb->wq_accum, i,
-                                              const svn_skel_t *),
-                                pool));
-    }
-
-  fb->wq_accum->nelts = 0;
 
   return SVN_NO_ERROR;
 }
