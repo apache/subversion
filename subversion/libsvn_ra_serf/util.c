@@ -288,11 +288,6 @@ svn_ra_serf__conn_setup(apr_socket_t *sock,
       /* input stream */
       rb = serf_bucket_ssl_decrypt_create(rb, conn->ssl_context,
                                           conn->bkt_alloc);
-#if SERF_VERSION_AT_LEAST(0, 4, 0)
-      /* output stream */
-      *write_bkt = serf_bucket_ssl_encrypt_create(*write_bkt, conn->ssl_context,
-                                                  conn->bkt_alloc);
-#endif
       if (!conn->ssl_context)
         {
           conn->ssl_context = serf_bucket_ssl_encrypt_context_get(rb);
@@ -326,6 +321,12 @@ svn_ra_serf__conn_setup(apr_socket_t *sock,
                 }
             }
         }
+#if SERF_VERSION_AT_LEAST(0, 4, 0)
+      /* output stream */
+      *write_bkt = serf_bucket_ssl_encrypt_create(*write_bkt, conn->ssl_context,
+                                                  conn->bkt_alloc);
+#endif
+
     }
 
 #if SERF_VERSION_AT_LEAST(0, 4, 0)
