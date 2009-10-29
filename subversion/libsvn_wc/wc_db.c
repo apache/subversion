@@ -440,8 +440,11 @@ create_wcroot(wcroot_t **wcroot,
   (*wcroot)->wc_id = wc_id;
   (*wcroot)->format = format;
 
-  apr_pool_cleanup_register(result_pool, *wcroot, close_wcroot,
-                            apr_pool_cleanup_null);
+  /* SDB will be NULL for pre-NG working copies. We only need to run a
+     cleanup when the SDB is present.  */
+  if (sdb != NULL)
+    apr_pool_cleanup_register(result_pool, *wcroot, close_wcroot,
+                              apr_pool_cleanup_null);
   return SVN_NO_ERROR;
 }
 
