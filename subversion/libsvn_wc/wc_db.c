@@ -2493,22 +2493,80 @@ svn_wc__db_op_add_symlink(svn_wc__db_t *db,
   NOT_IMPLEMENTED();
 }
 
+struct set_props_baton
+{
+  apr_hash_t *props;
+  const char *local_relpath;
+  svn_wc__db_pdh_t *pdh;
+};
+
+static svn_error_t *
+set_props_txn(void *baton, svn_sqlite__db_t *db, apr_pool_t *scratch_pool)
+{
+  struct set_props_baton *spb = baton;
+  svn_sqlite__stmt_t *stmt;
+  int affected_rows;
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, db, STMT_UPDATE_ACTUAL_PROPS));
+
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", spb->pdh->wcroot->wc_id,
+                            spb->local_relpath));
+
+  SVN_ERR(svn_sqlite__bind_properties(stmt, 3, spb->props, scratch_pool));
+  SVN_ERR(svn_sqlite__update(&affected_rows, stmt));
+
+  if (affected_rows == 1)
+    return SVN_NO_ERROR; /* We are done */
+
+
+  /* We have to insert a row in actual */
+  /* ### Check if we have base or working here ? */
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, db, STMT_INSERT_ACTUAL_PROPS));
+
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", spb->pdh->wcroot->wc_id,
+                            spb->local_relpath));
+
+  if (*spb->local_relpath != '\0')
+    SVN_ERR(svn_sqlite__bind_text(stmt, 3,
+                                  svn_relpath_dirname(spb->local_relpath,
+                                                      scratch_pool)));
+
+  SVN_ERR(svn_sqlite__bind_properties(stmt, 4, spb->props, scratch_pool));
+  return svn_error_return(svn_sqlite__step_done(stmt));
+}
 
 svn_error_t *
 svn_wc__db_op_set_props(svn_wc__db_t *db,
                         const char *local_abspath,
-                        const apr_hash_t *props,
+                        apr_hash_t *props,
                         apr_pool_t *scratch_pool)
 {
-  svn_sqlite__stmt_t *stmt;
+  struct set_props_baton spb;
+  spb.props = props;
 
-  SVN_ERR(get_statement_for_path(&stmt, db, local_abspath,
-                                 STMT_UPDATE_ACTUAL_PROPS, scratch_pool));
-  SVN_ERR(svn_sqlite__bind_properties(stmt, 3, props, scratch_pool));
+  SVN_ERR(parse_local_abspath(&spb.pdh, &spb.local_relpath, db, local_abspath,
+                              svn_sqlite__mode_readwrite,
+                              scratch_pool, scratch_pool));
 
-  return svn_sqlite__step_done(stmt);
+  return svn_error_return(
+            svn_sqlite__with_transaction(spb.pdh->wcroot->sdb,
+                                         set_props_txn,
+                                         &spb,
+                                         scratch_pool));
 }
 
+svn_error_t *
+svn_wc__db_temp_op_set_pristine_props(svn_wc__db_t *db,
+                                      const char *local_abspath,
+                                      const apr_hash_t *props,
+                                      svn_boolean_t on_working,
+                                      apr_pool_t *scratch_pool)
+{
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  NOT_IMPLEMENTED();
+}
 
 svn_error_t *
 svn_wc__db_op_delete(svn_wc__db_t *db,
@@ -3521,11 +3579,14 @@ svn_wc__db_read_props(apr_hash_t **props,
     {
       err = svn_sqlite__column_properties(props, stmt, 0, result_pool,
                                           scratch_pool);
-
-      return svn_error_compose_create(err, svn_sqlite__reset(stmt));
     }
+  else
+    have_row = FALSE;
 
   SVN_ERR(svn_error_compose_create(err, svn_sqlite__reset(stmt)));
+
+  if (have_row)
+    return SVN_NO_ERROR;
 
   return svn_error_return(
       svn_wc__db_read_pristine_props(props, db, local_abspath,
@@ -3552,11 +3613,14 @@ svn_wc__db_read_pristine_props(apr_hash_t **props,
     {
       err = svn_sqlite__column_properties(props, stmt, 0, result_pool,
                                           scratch_pool);
-
-      return svn_error_compose_create(err, svn_sqlite__reset(stmt));
     }
+  else
+    have_row = FALSE;
 
   SVN_ERR(svn_error_compose_create(err, svn_sqlite__reset(stmt)));
+
+  if (have_row)
+    return SVN_NO_ERROR;
 
   return svn_error_return(
       svn_wc__db_base_get_props(props, db, local_abspath,

@@ -963,16 +963,17 @@ svn_wc__db_op_add_symlink(svn_wc__db_t *db,
 svn_error_t *
 svn_wc__db_op_set_props(svn_wc__db_t *db,
                         const char *local_abspath,
-                        const apr_hash_t *props,
+                        apr_hash_t *props,
                         apr_pool_t *scratch_pool);
 
-/* Sets the pristine props of LOCAL_ABSPATH on BASE, or in case of an addition
-   on WORKING */
+/* Sets the pristine props of LOCAL_ABSPATH on BASE, or when ON_WORKING is
+   TRUE on WORKING */
 svn_error_t *
-svn_wc__db_op_set_pristine_props(svn_wc__db_t *db,
-                                 const char *local_abspath,
-                                 const apr_hash_t *props,
-                                 apr_pool_t *scratch_pool);
+svn_wc__db_temp_op_set_pristine_props(svn_wc__db_t *db,
+                                      const char *local_abspath,
+                                      const apr_hash_t *props,
+                                      svn_boolean_t on_working,
+                                      apr_pool_t *scratch_pool);
 
 
 /* ### KFF: This handles files, dirs, symlinks, anything else? */
