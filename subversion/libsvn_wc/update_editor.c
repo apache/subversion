@@ -1498,7 +1498,7 @@ tree_has_local_mods(svn_boolean_t *modified,
 
 /* Check whether the incoming change ACTION on FULL_PATH would conflict with
  * LOCAL_ABSPATH's scheduled change. If so, then raise a tree conflict with
- * LOCAL_ABSPATH as the victim, by appending log actions to LOG_ACCUM.
+ * LOCAL_ABSPATH as the victim.
  *
  * The edit baton EB gives information including whether the operation is
  * an update or a switch.
@@ -1525,7 +1525,6 @@ static svn_error_t *
 check_tree_conflict(svn_wc_conflict_description2_t **pconflict,
                     struct edit_baton *eb,
                     const char *local_abspath,
-                    svn_stringbuf_t *log_accum,
                     svn_wc_conflict_action_t action,
                     svn_node_kind_t their_node_kind,
                     const char *their_url,
@@ -1637,8 +1636,7 @@ check_tree_conflict(svn_wc_conflict_description2_t **pconflict,
       break;
     }
 
-  if (pconflict)
-    *pconflict = NULL;
+  *pconflict = NULL;
 
   /* If a conflict was detected, append log commands to the log accumulator
    * to record it. */
@@ -1711,15 +1709,7 @@ check_tree_conflict(svn_wc_conflict_description2_t **pconflict,
       conflict->action = action;
       conflict->reason = reason;
 
-      /* Ensure 'log_accum' is non-null. svn_wc__loggy_add_tree_conflict()
-       * would otherwise quietly set it to point to a newly allocated buffer
-       * but we have no way to propagate that back to our caller. */
-      SVN_ERR_ASSERT(log_accum != NULL);
-
-      SVN_ERR(svn_wc__loggy_add_tree_conflict(&log_accum, conflict, pool));
-
-      if (pconflict)
-        *pconflict = conflict;
+      *pconflict = conflict;
     }
 
   return SVN_NO_ERROR;
@@ -2102,7 +2092,7 @@ do_entry_deletion(struct edit_baton *eb,
    * modified), re-schedule the node to be added back again, as a (modified)
    * copy of the previous base version.
    */
-  SVN_ERR(check_tree_conflict(&tree_conflict, eb, local_abspath, log_item,
+  SVN_ERR(check_tree_conflict(&tree_conflict, eb, local_abspath,
                               svn_wc_conflict_action_delete, svn_node_none,
                               their_url, inside_deleted_subtree, pool));
   if (tree_conflict != NULL)
@@ -2110,6 +2100,8 @@ do_entry_deletion(struct edit_baton *eb,
       /* When we raise a tree conflict on a directory, we want to avoid
        * making any changes inside it. (Will an update ever try to make
        * further changes to or inside a directory it's just deleted?) */
+      SVN_ERR(svn_wc__loggy_add_tree_conflict(&log_item, tree_conflict, pool));
+
       SVN_ERR(remember_skipped_tree(eb, local_abspath));
 
       if (eb->notify_func)
@@ -2556,7 +2548,7 @@ add_directory(const char *path,
 
               /* Raise a tree conflict. */
               SVN_ERR(check_tree_conflict(&tree_conflict, eb,
-                                          db->local_abspath, pb->log_accum,
+                                          db->local_abspath,
                                           svn_wc_conflict_action_add,
                                           svn_node_dir, db->new_URL,
                                           db->inside_deleted_subtree,
@@ -2566,6 +2558,10 @@ add_directory(const char *path,
                 {
                   /* Record this conflict so that its descendants are
                      skipped silently. */
+                  SVN_ERR(svn_wc__loggy_add_tree_conflict(&pb->log_accum,
+                                                          tree_conflict,
+                                                          pool));
+
                   SVN_ERR(remember_skipped_tree(eb, db->local_abspath));
 
                   db->skip_this = TRUE;
@@ -2802,7 +2798,6 @@ open_directory(const char *path,
   /* Is this path a fresh tree conflict victim?  If so, skip the tree
      with one notification. */
   SVN_ERR(check_tree_conflict(&tree_conflict, eb, db->local_abspath,
-                              pb->log_accum,
                               svn_wc_conflict_action_edit,
                               svn_node_dir, db->new_URL, 
                               db->inside_deleted_subtree, pool));
@@ -2810,6 +2805,9 @@ open_directory(const char *path,
   /* Remember the roots of any locally deleted trees. */
   if (tree_conflict != NULL)
     {
+      SVN_ERR(svn_wc__loggy_add_tree_conflict(&pb->log_accum, tree_conflict,
+                                              pool));
+
       if (eb->notify_func)
         {
           svn_wc_notify_t *notify
@@ -3816,7 +3814,6 @@ add_file(const char *path,
 
               SVN_ERR(check_tree_conflict(&tree_conflict, eb,
                                           fb->local_abspath,
-                                          fb->log_accum,
                                           svn_wc_conflict_action_add,
                                           svn_node_file, fb->new_URL,
                                           pb->inside_deleted_subtree,
@@ -3826,6 +3823,9 @@ add_file(const char *path,
                 {
                   /* Record the conflict so that the file is skipped silently
                      by the other callbacks. */
+                  SVN_ERR(svn_wc__loggy_add_tree_conflict(&fb->log_accum,
+                                                          tree_conflict,
+                                                          subpool));
                   SVN_ERR(remember_skipped_tree(eb, fb->local_abspath));
                   fb->skip_this = TRUE;
                   fb->already_notified = TRUE;
@@ -3930,13 +3930,15 @@ open_file(const char *path,
 
   /* Is this path the victim of a newly-discovered tree conflict? */
   SVN_ERR(check_tree_conflict(&tree_conflict, eb, fb->local_abspath,
-                              fb->log_accum,
                               svn_wc_conflict_action_edit,
                               svn_node_file, fb->new_URL, 
                               pb->inside_deleted_subtree, pool));
 
   if (tree_conflict)
     {
+      SVN_ERR(svn_wc__loggy_add_tree_conflict(&fb->log_accum, tree_conflict,
+                                              pool));
+
       if (tree_conflict->reason == svn_wc_conflict_reason_deleted ||
           tree_conflict->reason == svn_wc_conflict_reason_replaced)
         {
