@@ -555,14 +555,20 @@ copy_file_administratively(svn_wc_context_t *wc_ctx,
      * or use OS defaults (which should take umask into account). */
     if (src_exists)
       SVN_ERR(svn_io_copy_perms(src_abspath, dst_abspath, scratch_pool));
+#ifndef WIN32
+    /* ### FIXME: apr_file_perms_set always returns APR_ENOTIMPL on Windows
+                  The path passed to apr_file_perms_set must be encoded
+                  in the platform specific path encoding; not necessary UTF-8
+                  */
     else
       {
         /* ### An svn_io wrapper for apr_file_perms_set would be nice. */
         apr_status_t status;
-        status = apr_file_perms_set(dst_abspath, APR_FPROT_OS_DEFAULT);
+        status = apr_file_perms_set(dst_abspath, APR_OS_DEFAULT);
         if (status)
           return svn_error_wrap_apr(status, "%s", dst_abspath);
       }
+#endif
   }
 
   /* Report the addition to the caller. */
