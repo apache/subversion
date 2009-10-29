@@ -1666,16 +1666,8 @@ insert_base_node(svn_sqlite__db_t *sdb,
   SVN_ERR(svn_sqlite__bind_int64(stmt, 15, base_node->last_mod_time));
 
   if (base_node->properties)
-    {
-      svn_skel_t *skel;
-      svn_stringbuf_t *properties;
-
-      SVN_ERR(svn_skel__unparse_proplist(&skel, base_node->properties,
-                                         scratch_pool));
-      properties = svn_skel__unparse(skel, scratch_pool);
-      SVN_ERR(svn_sqlite__bind_blob(stmt, 16, properties->data,
-                                    properties->len));
-    }
+    SVN_ERR(svn_sqlite__bind_properties(stmt, 16, base_node->properties,
+                                        scratch_pool));
 
   /* Execute and reset the insert clause. */
   return svn_error_return(svn_sqlite__insert(NULL, stmt));
@@ -1687,8 +1679,6 @@ insert_working_node(svn_sqlite__db_t *sdb,
                     apr_pool_t *scratch_pool)
 {
   svn_sqlite__stmt_t *stmt;
-  svn_stringbuf_t *properties;
-  svn_skel_t *skel;
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_INSERT_WORKING_NODE));
 
@@ -1753,13 +1743,8 @@ insert_working_node(svn_sqlite__db_t *sdb,
   SVN_ERR(svn_sqlite__bind_int64(stmt, 17, working_node->last_mod_time));
 
   if (working_node->properties)
-    SVN_ERR(svn_skel__unparse_proplist(&skel, working_node->properties,
-                                       scratch_pool));
-  else
-    skel = svn_skel__make_empty_list(scratch_pool);
-
-  properties = svn_skel__unparse(skel, scratch_pool);
-  SVN_ERR(svn_sqlite__bind_blob(stmt, 18, properties->data, properties->len));
+    SVN_ERR(svn_sqlite__bind_properties(stmt, 18, working_node->properties,
+                                        scratch_pool));
 
   SVN_ERR(svn_sqlite__bind_int64(stmt, 19, working_node->keep_local));
 
@@ -1781,16 +1766,8 @@ insert_actual_node(svn_sqlite__db_t *sdb,
   SVN_ERR(svn_sqlite__bind_text(stmt, 3, actual_node->parent_relpath));
 
   if (actual_node->properties)
-    {
-      svn_skel_t *skel;
-      svn_stringbuf_t *properties;
-
-      SVN_ERR(svn_skel__unparse_proplist(&skel, actual_node->properties,
-                                         scratch_pool));
-      properties = svn_skel__unparse(skel, scratch_pool);
-      SVN_ERR(svn_sqlite__bind_blob(stmt, 4, properties->data,
-                                    properties->len));
-    }
+    SVN_ERR(svn_sqlite__bind_properties(stmt, 4, actual_node->properties,
+                                        scratch_pool));
 
   if (actual_node->conflict_old)
     {
