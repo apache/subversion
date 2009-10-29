@@ -1557,11 +1557,7 @@ run_install_properties(svn_wc__db_t *db,
         actual_props = apr_hash_make(scratch_pool);
     }
 
-
-  /* ### Yes.. we install properties on files that don't exist in the db...
-         I'm not surprised any more... */
-  SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath, TRUE, scratch_pool));
-
+  SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath, FALSE, scratch_pool));
   if (base_props != NULL)
     {
       SVN_ERR(svn_wc__prop_path(&prop_abspath, local_abspath, kind,
