@@ -616,7 +616,8 @@ $(SVN_OBJDIR)/.configured: $(SVN_OBJDIR)/.retrieved
 			--with-sqlite="$(PREFIX)/sqlite" \
 			--with-berkeley-db="$(BDB_FLAG)" \
 			--with-sasl="no" \
-			--with-ruby-sitedir="$(SVN_PREFIX)/lib/ruby/site_ruby"
+			--with-ruby-sitedir="$(SVN_PREFIX)/lib/ruby/site_ruby" \
+			--disable-mod-activation
 	touch $@
 
 # compile svn
@@ -686,9 +687,12 @@ httpd-conf:
 	echo "    Require valid-user" >> $(HTTPD_CHECK_CONF)
 	echo "</Location>" >> $(HTTPD_CHECK_CONF)
 
+# We need this to make sure some targets below pick up the right libraries
+LD_LIBRARY_PATH=$(PREFIX)/apr/lib:$(PREFIX)/bdb/lib:$(PREFIX)/neon/lib:$(PREFIX)/serf/lib:$(PREFIX)/sqlite/lib:$(PREFIX)/svn-$(WC)/lib
+
 svn-check-neon: httpd-conf $(SVN_OBJDIR)/.compiled $(SVN_OBJDIR)/.bindings-compiled
-	$(PREFIX)/httpd/bin/apachectl -f conf/httpd-svn-check-$(WC).conf \
-		-k start
+	env LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) $(PREFIX)/httpd/bin/apachectl \
+		-f conf/httpd-svn-check-$(WC).conf -k start
 	cd $(svn_builddir) && make check FS_TYPE=fsfs \
 	       BASE_URL=http://localhost:$(HTTPD_CHECK_PORT) HTTP_LIBRARY=neon
 	cd $(svn_builddir) && make check FS_TYPE=bdb \
@@ -697,8 +701,8 @@ svn-check-neon: httpd-conf $(SVN_OBJDIR)/.compiled $(SVN_OBJDIR)/.bindings-compi
 		-k stop
 
 svn-check-serf: httpd-conf $(SVN_OBJDIR)/.compiled $(SVN_OBJDIR)/.bindings-compiled
-	$(PREFIX)/httpd/bin/apachectl -f conf/httpd-svn-check-$(WC).conf \
-		-k start
+	env LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) $(PREFIX)/httpd/bin/apachectl \
+		-f conf/httpd-svn-check-$(WC).conf -k start
 	cd $(svn_builddir) && make check FS_TYPE=fsfs \
 	       BASE_URL=http://localhost:$(HTTPD_CHECK_PORT) HTTP_LIBRARY=serf
 	cd $(svn_builddir) && make check FS_TYPE=bdb \
@@ -726,7 +730,6 @@ RUBYLIB=$(SVN_PREFIX)/lib/ruby/site_ruby$(shell grep \
 	cut -d'=' -f2):$(SVN_PREFIX)/lib/ruby/site_ruby$(shell \
 	grep ^svn_cv_ruby_sitedir_libsuffix $(svn_builddir)/config.log | \
 	cut -d'=' -f2)
-LD_LIBRARY_PATH=$(PREFIX)/apr/lib:$(PREFIX)/bdb/lib:$(PREFIX)/neon/lib:$(PREFIX)/serf/lib:$(PREFIX)/sqlite/lib:$(PREFIX)/svn-$(WC)/lib
 svn-check-swig-pl:
 	cd $(svn_builddir) && make check-swig-pl
 svn-check-swig-py:
