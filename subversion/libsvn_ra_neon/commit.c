@@ -1199,6 +1199,9 @@ commit_apply_txdelta(void *file_baton,
   else
     baton->base_checksum = NULL;
 
+  /* ### oh, hell. Neon's request body support is either text (a C string),
+     ### or a FILE*. since we are getting binary data, we must use a FILE*
+     ### for now. isn't that special? */
   SVN_ERR(svn_io_open_unique_file3(&baton->tmpfile, NULL, NULL,
                                    svn_io_file_del_on_pool_cleanup,
                                    file->pool, pool));
