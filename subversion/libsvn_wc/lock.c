@@ -80,6 +80,10 @@ struct svn_wc_adm_access_t
 static const svn_wc_adm_access_t missing;
 #define IS_MISSING(lock) ((lock) == &missing)
 
+/* ### hack for now. future functionality coming in a future revision.  */
+#define svn_wc__db_is_closed(db) FALSE
+
+
 
 /* ### these functions are here for forward references. generally, they're
    ### here to avoid the code churn from moving the definitions.  */
@@ -90,6 +94,17 @@ do_close(svn_wc_adm_access_t *adm_access, svn_boolean_t preserve_lock,
 
 static svn_error_t *
 add_to_shared(svn_wc_adm_access_t *lock, apr_pool_t *scratch_pool);
+
+static svn_error_t *
+close_single(svn_wc_adm_access_t *adm_access,
+             svn_boolean_t preserve_lock,
+             apr_pool_t *scratch_pool);
+
+static svn_error_t *
+alloc_db(svn_wc__db_t **db,
+         svn_config_t *config,
+         apr_pool_t *result_pool,
+         apr_pool_t *scratch_pool);
 
 
 svn_error_t *
@@ -145,12 +160,13 @@ svn_wc_check_wc2(int *wc_format,
 }
 
 
-/* An APR pool cleanup handler.  This handles access batons that have not
-   been closed when their pool gets destroyed.  The physical locks
-   associated with such batons remain in the working copy if they are
-   protecting a log file. */
+/* Cleanup for a locked access baton.
+
+   This handles closing access batons when their pool gets destroyed.
+   The physical locks associated with such batons remain in the working
+   copy if they are protecting work items in the workqueue.  */
 static apr_status_t
-pool_cleanup(void *p)
+pool_cleanup_locked(void *p)
 {
   svn_wc_adm_access_t *lock = p;
   apr_uint64_t id;
@@ -160,13 +176,57 @@ pool_cleanup(void *p)
   if (lock->closed)
     return APR_SUCCESS;
 
+  /* If the DB is closed, then we have a bunch of extra work to do.  */
+  if (svn_wc__db_is_closed(lock->db))
+    {
+      apr_pool_t *scratch_pool;
+      svn_wc__db_t *db;
+
+      lock->closed = TRUE;
+
+      /* If there is no ADM area, then we definitely have no work items
+         or physical locks to worry about. Bail out.  */
+      if (!svn_wc__adm_area_exists(lock, lock->pool))
+        return APR_SUCCESS;
+
+      /* Creating a subpool is safe within a pool cleanup, as long as
+         we're absolutely sure to destroy it before we exit this function.
+
+         We avoid using LOCK->POOL to keep the following functions from
+         hanging cleanups or subpools from it. (the cleanups *might* get
+         run, but the subpools will NOT be destroyed)  */
+      scratch_pool = svn_pool_create(lock->pool);
+
+      err = alloc_db(&db, NULL /* config */, scratch_pool, scratch_pool);
+      if (!err)
+        {
+          err = svn_wc__db_wq_fetch(&id, &work_item, db, lock->abspath,
+                                    scratch_pool, scratch_pool);
+          if (!err && work_item == NULL)
+            {
+              /* There is no remaining work, so we're good to remove any
+                 potential "physical" lock.  */
+              err = svn_wc__db_wclock_remove(db, lock->abspath, scratch_pool);
+            }
+        }
+      svn_error_clear(err);
+
+      /* Closes the DB, too.  */
+      svn_pool_destroy(scratch_pool);
+
+      return APR_SUCCESS;
+    }
+
   /* ### should we create an API that just looks, but doesn't return?  */
   err = svn_wc__db_wq_fetch(&id, &work_item, lock->db, lock->abspath,
                             lock->pool, lock->pool);
-  if (!err)
-    err = do_close(lock, work_item != NULL /* preserve_lock */, lock->pool);
 
-  /* ### Is this the correct way to handle the error? */
+  /* Close just this access baton. The pool cleanup will close the rest.  */
+  if (!err)
+    err = close_single(lock,
+                       work_item != NULL /* preserve_lock */,
+                       lock->pool);
+
   if (err)
     {
       apr_status_t apr_err = err->apr_err;
@@ -177,13 +237,48 @@ pool_cleanup(void *p)
   return APR_SUCCESS;
 }
 
+
+/* Cleanup for a readonly access baton.  */
+static apr_status_t
+pool_cleanup_readonly(void *data)
+{
+  svn_wc_adm_access_t *lock = data;
+  svn_error_t *err;
+
+  if (lock->closed)
+    return APR_SUCCESS;
+
+  /* If the DB is closed, then we have nothing to do. There are no
+     "physical" locks to remove, and we don't care whether this baton
+     is registered with the DB.  */
+  if (svn_wc__db_is_closed(lock->db))
+    return APR_SUCCESS;
+
+  /* Close this baton. No lock to preserve. Since this is part of the
+     pool cleanup, we don't need to close children -- the cleanup process
+     will close all children.  */
+  err = close_single(lock, FALSE /* preserve_lock */, lock->pool);
+  if (err)
+    {
+      apr_status_t result = err->apr_err;
+      svn_error_clear(err);
+      return result;
+    }
+
+  return APR_SUCCESS;
+}
+
+
 /* An APR pool cleanup handler.  This is a child handler, it removes the
    main pool handler. */
 static apr_status_t
 pool_cleanup_child(void *p)
 {
   svn_wc_adm_access_t *lock = p;
-  apr_pool_cleanup_kill(lock->pool, lock, pool_cleanup);
+
+  apr_pool_cleanup_kill(lock->pool, lock, pool_cleanup_locked);
+  apr_pool_cleanup_kill(lock->pool, lock, pool_cleanup_readonly);
+
   return APR_SUCCESS;
 }
 
@@ -234,7 +329,13 @@ adm_access_alloc(svn_wc_adm_access_t **adm_access,
      when the cleanup handler runs.  If the apr_xlate_t cleanup handler
      were to run *before* the access baton cleanup handler, then the access
      baton's handler won't work. */
-  apr_pool_cleanup_register(lock->pool, lock, pool_cleanup,
+
+  /* Register an appropriate cleanup handler, based on the whether this
+     access baton is locked or not.  */
+  apr_pool_cleanup_register(lock->pool, lock,
+                            write_lock
+                              ? pool_cleanup_locked
+                              : pool_cleanup_readonly,
                             pool_cleanup_child);
 
   return SVN_NO_ERROR;
@@ -1335,13 +1436,14 @@ do_close(svn_wc_adm_access_t *adm_access,
         }
     }
 
-  return close_single(adm_access, preserve_lock, scratch_pool);
+  return svn_error_return(close_single(adm_access, preserve_lock,
+                                       scratch_pool));
 }
 
 svn_error_t *
 svn_wc_adm_close2(svn_wc_adm_access_t *adm_access, apr_pool_t *scratch_pool)
 {
-  return do_close(adm_access, FALSE, scratch_pool);
+  return svn_error_return(do_close(adm_access, FALSE, scratch_pool));
 }
 
 svn_boolean_t
