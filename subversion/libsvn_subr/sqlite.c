@@ -430,10 +430,14 @@ svn_sqlite__column_properties(apr_hash_t **props,
       return SVN_NO_ERROR;
     }
 
-  return svn_error_return(svn_skel__parse_proplist(
-                            props,
-                            svn_skel__parse(val, len, scratch_pool),
-                            result_pool));
+  SVN_ERR(svn_skel__parse_proplist(props,
+                                   svn_skel__parse(val, len, scratch_pool),
+                                   result_pool));
+
+  if (*props == NULL)
+    *props = apr_hash_make(result_pool);
+
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
