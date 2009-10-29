@@ -197,6 +197,10 @@ svn_io_open_uniquely_named(apr_file_t **file,
  * issues.)
  *
  * The file will be deleted according to @a delete_when.
+ * Before passing @c svn_io_file_del_none please don't forget to also
+ * remove the temporaty file to avoid filling up the system temp directory.
+ * It is often appropriate to bind the lifetime of the temporary file to
+ * the lifetime of a pool by using @c svn_io_file_del_on_pool_cleanup.
  *
  * Temporary allocations will be performed in @a scratch_pool.
  *
