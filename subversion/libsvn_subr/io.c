@@ -3640,7 +3640,7 @@ svn_io_open_unique_file3(apr_file_t **file,
   if (dirpath == NULL)
     SVN_ERR(svn_io_temp_dir(&dirpath, scratch_pool));
 
-  path = svn_dirent_join(dirpath, "XXXXXX", scratch_pool);
+  path = svn_dirent_join(dirpath, "svn-XXXXXX", scratch_pool);
 
   switch (delete_when)
     {
