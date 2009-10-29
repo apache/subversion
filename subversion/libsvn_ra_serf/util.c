@@ -267,7 +267,6 @@ svn_ra_serf__conn_setup(apr_socket_t *sock,
                         void *baton,
                         apr_pool_t *pool)
 {
-  serf_bucket_t *wb = NULL;
 #else
 /* This is the old API, for compatibility with serf
    versions <= 0.3. */
