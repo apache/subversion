@@ -160,5 +160,18 @@ Candidate changes:
    Votes:
      +1: hwright
 
+ * r35558 (from ^/branches/http-protocol-v2@r35558), r40296
+   Fix issue #3519: ra_serf using Label header unsupported by mod_dav_svn.
+   Justification:
+     This is the cause of the switch-tests.py 19 failures we've been ignoring
+     for our 1.6.x releases.
+   Notes:
+     r35558 (from the http-protocol-v2 branch) is a plumbing change.
+     r40296 (from trunk) is the real fix.
+   Branch:
+     ^/branches/1.6.x-issue3519
+   Votes:
+     cmpilato: +1
+
 Approved changes:
 =================
