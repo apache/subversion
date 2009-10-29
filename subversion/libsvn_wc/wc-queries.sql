@@ -127,6 +127,10 @@ where wc_id = ?1 and local_relpath = ?2;
 update actual_node set properties = ?3
 where wc_id = ?1 and local_relpath = ?2;
 
+-- STMT_INSERT_ACTUAL_PROPS
+insert into actual_node (wc_id, local_relpath, parent_relpath, properties)
+values (?1, ?2, ?3, ?4);
+
 -- STMT_INSERT_LOCK
 insert or replace into lock
 (repos_id, repos_relpath, lock_token, lock_owner, lock_comment,
