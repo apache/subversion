@@ -212,8 +212,8 @@ detranslate_wc_file(const char **detranslated_abspath,
       /* ### svn_subst_copy_and_translate3() also creates a tempfile
          ### internally.  Anyway to piggyback on that? */
       SVN_ERR(svn_io_open_unique_file3(NULL, &detranslated, NULL,
-                                      svn_io_file_del_none, scratch_pool,
-                                      scratch_pool));
+                                      svn_io_file_del_on_pool_cleanup,
+                                      result_pool, scratch_pool));
 
       /* Always 'repair' EOLs here, so that we can apply a diff that
          changes from inconsistent newlines and no 'svn:eol-style' to
@@ -264,8 +264,8 @@ maybe_update_target_eols(const char **new_target_abspath,
 
       svn_subst_eol_style_from_value(NULL, &eol, prop->value->data);
       SVN_ERR(svn_io_open_unique_file3(NULL, &tmp_new, NULL,
-                                       svn_io_file_del_none, scratch_pool,
-                                       scratch_pool));
+                                       svn_io_file_del_on_pool_cleanup,
+                                       result_pool, scratch_pool));
 
       /* Always 'repair' EOLs here, so that we can apply a diff that
          changes from inconsistent newlines and no 'svn:eol-style' to
@@ -611,7 +611,8 @@ preserve_pre_merge_files(svn_stringbuf_t **log_accum,
   if (! svn_dirent_is_ancestor(dir_abspath, left_abspath))
     {
       SVN_ERR(svn_io_open_unique_file3(NULL, &tmp_left, temp_dir,
-                                       svn_io_file_del_none, pool, pool));
+                                       svn_io_file_del_on_pool_cleanup,
+                                       pool, pool));
       SVN_ERR(svn_io_copy_file(left_abspath, tmp_left, TRUE, pool));
     }
   else
@@ -620,7 +621,8 @@ preserve_pre_merge_files(svn_stringbuf_t **log_accum,
   if (! svn_dirent_is_ancestor(dir_abspath, right_abspath))
     {
       SVN_ERR(svn_io_open_unique_file3(NULL, &tmp_right, temp_dir,
-                                       svn_io_file_del_none, pool, pool));
+                                       svn_io_file_del_on_pool_cleanup,
+                                       pool, pool));
       SVN_ERR(svn_io_copy_file(right_abspath, tmp_right, TRUE, pool));
     }
   else
