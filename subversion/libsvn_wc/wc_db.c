@@ -2563,9 +2563,23 @@ svn_wc__db_temp_op_set_pristine_props(svn_wc__db_t *db,
                                       svn_boolean_t on_working,
                                       apr_pool_t *scratch_pool)
 {
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+  svn_sqlite__stmt_t *stmt;
+  int affected_rows;
+  SVN_ERR(get_statement_for_path(&stmt, db, local_abspath,
+                                 on_working ? STMT_UPDATE_WORKING_PROPS
+                                            : STMT_UPDATE_BASE_PROPS,
+                                 scratch_pool));
 
-  NOT_IMPLEMENTED();
+  SVN_ERR(svn_sqlite__bind_properties(stmt, 3, props, scratch_pool));
+  SVN_ERR(svn_sqlite__update(&affected_rows, stmt));
+
+  if (affected_rows != 1)
+    return svn_error_createf(SVN_ERR_WC_DB_ERROR, NULL,
+                             _("No row found for '%s'"),
+                             svn_dirent_local_style(local_abspath,
+                                                    scratch_pool));
+
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
