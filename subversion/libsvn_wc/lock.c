@@ -158,7 +158,7 @@ pool_cleanup(void *p)
   svn_error_t *err;
 
   if (lock->closed)
-    return SVN_NO_ERROR;
+    return APR_SUCCESS;
 
   /* ### should we create an API that just looks, but doesn't return?  */
   err = svn_wc__db_wq_fetch(&id, &work_item, lock->db, lock->abspath,
@@ -612,7 +612,7 @@ open_all(svn_wc_adm_access_t **adm_access,
         }
     }
 
-  return err;
+  return svn_error_return(err);
 }
 
 
@@ -660,8 +660,9 @@ svn_wc_adm_open3(svn_wc_adm_access_t **adm_access,
       db_provided = FALSE;
     }
 
-  return open_all(adm_access, path, db, db_provided,
-                  write_lock, levels_to_lock, cancel_func, cancel_baton, pool);
+  return svn_error_return(open_all(adm_access, path, db, db_provided,
+                                   write_lock, levels_to_lock,
+                                   cancel_func, cancel_baton, pool));
 }
 
 
@@ -1136,7 +1137,7 @@ open_anchor(svn_wc_adm_access_t **anchor_access,
             {
               /* Couldn't open the parent or the target. Bail out.  */
               svn_error_clear(p_access_err);
-              return err;
+              return svn_error_return(err);
             }
 
           if (err->apr_err != SVN_ERR_WC_NOT_WORKING_COPY)
@@ -1144,7 +1145,7 @@ open_anchor(svn_wc_adm_access_t **anchor_access,
               if (p_access)
                 svn_error_clear(svn_wc_adm_close2(p_access, pool));
               svn_error_clear(p_access_err);
-              return err;
+              return svn_error_return(err);
             }
 
           /* This directory is not under version control. Ignore it.  */
@@ -1177,7 +1178,7 @@ open_anchor(svn_wc_adm_access_t **anchor_access,
                 {
                   svn_error_clear(p_access_err);
                   svn_error_clear(svn_wc_adm_close2(t_access, pool));
-                  return err;
+                  return svn_error_return(err);
                 }
               p_access = NULL;
             }
@@ -1192,7 +1193,7 @@ open_anchor(svn_wc_adm_access_t **anchor_access,
           if (t_access)
             svn_error_clear(svn_wc_adm_close2(t_access, pool));
           svn_error_clear(svn_wc_adm_close2(p_access, pool));
-          return p_access_err;
+          return svn_error_return(p_access_err);
         }
       svn_error_clear(p_access_err);
 
@@ -1209,7 +1210,7 @@ open_anchor(svn_wc_adm_access_t **anchor_access,
           else if (err)
             {
               svn_error_clear(svn_wc_adm_close2(p_access, pool));
-              return err;
+              return svn_error_return(err);
             }
           if (obstructed && kind == svn_wc__db_kind_dir)
             {
