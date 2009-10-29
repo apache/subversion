@@ -416,6 +416,12 @@ Any non-nil value overrides that variable, with the same syntax."
 ;; (put 'svn-browse-url-function 'risky-local-variable t)
 ;; already implied by "-function" suffix
 
+(defcustom svn-log-edit-header
+  "## Lines starting with '## ' will be removed from the log message.\n"
+  "*Header content of the *svn-log* buffer"
+  :type 'string
+  :group 'psvn)
+
 (defcustom svn-status-window-alist
   '((diff "*svn-diff*") (log "*svn-log*") (info t) (blame t) (proplist t) (update t))
   "An alist to specify which windows should be used for svn command outputs.
@@ -1172,6 +1178,7 @@ If there is no .svn directory, examine if there is CVS and run
                             (if arg "-u" "")))))
     (save-excursion
       (set-buffer status-buf)
+      (buffer-disable-undo)
       (setq default-directory dir)
       (set-buffer proc-buf)
       (setq default-directory dir
@@ -5218,7 +5225,7 @@ If ARG then show diff between some other version of the selected files."
   (let ((buf-size (- (point-max) (point-min))))
     (save-excursion
       (goto-char (point-min))
-      (insert "## Lines starting with '## ' will be removed from the log message.\n")
+      (insert svn-log-edit-header)
       (insert "## File(s) to commit"
               (if svn-status-recursive-commit " recursively" "") ":\n")
       (let ((file-list svn-status-files-to-commit))
