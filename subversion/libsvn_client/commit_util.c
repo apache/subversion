@@ -1021,18 +1021,18 @@ svn_client__harvest_committables(apr_hash_t **committables,
         {
           const char *parent_abspath = svn_dirent_dirname(target_abspath,
                                                           subpool);
-          const svn_wc_entry_t *p_entry;
+          svn_boolean_t is_added;
 
-          SVN_ERR(svn_wc__maybe_get_entry(&p_entry, ctx->wc_ctx,
-                                          parent_abspath, svn_node_dir,
-                                          FALSE, FALSE, subpool, subpool));
-          if (! p_entry)
+          err = svn_wc__node_is_status_added(&is_added, ctx->wc_ctx,
+                                             parent_abspath, subpool);
+          if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
             return svn_error_createf
               (SVN_ERR_WC_CORRUPT, NULL,
-               _("'%s' is scheduled for addition within unversioned parent"),
-               svn_dirent_local_style(target, pool));
-          if ((p_entry->schedule == svn_wc_schedule_add)
-              || (p_entry->schedule == svn_wc_schedule_replace))
+              _("'%s' is scheduled for addition within unversioned parent"),
+              svn_dirent_local_style(target, pool));
+          SVN_ERR(err);
+
+          if (is_added)
             {
               /* Copy the parent and target into pool; subpool
                  lasts only for this loop iteration, and we check
