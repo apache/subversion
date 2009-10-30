@@ -6,7 +6,7 @@
    let rev = substitute(rev, "^r", "", "")
    if rev
      botright 15new
-     exec "%!svn log ^/ -r " . rev
+     exec '%!svn log "^/" -r ' . rev
      normal gg
      setlocal nomodified readonly buftype=nofile nowrap
    else
