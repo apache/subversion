@@ -987,7 +987,7 @@ typedef enum svn_wc_notify_action_t
       @since New in 1.5. */
   svn_wc_notify_changelist_moved,
 
-  /** A merge operation (to path) has begun.  See #svn_wc_notify.merge_range.
+  /** A merge operation (to path) has begun.  See #svn_wc_notify_t.merge_range.
       @since New in 1.5. */
   svn_wc_notify_merge_begin,
 
@@ -1113,7 +1113,7 @@ typedef enum svn_wc_notify_lock_state_t
  * @c kind, @c content_state, @c prop_state and @c lock_state are from
  * after @c action, not before.
  *
- * @note If @c action is #svn_wc_notify_update, then @c path has
+ * @note If @c action is #svn_wc_notify_update (### what?), then @c path has
  * already been installed, so it is legitimate for an implementation of
  * #svn_wc_notify_func2_t to examine @c path in the working copy.
  *
@@ -1180,8 +1180,8 @@ typedef struct svn_wc_notify_t {
    */
   svn_revnum_t revision;
 
-  /** When @c action is #svn_wc_notify_changelist_add or name.  In all other
-   * cases, it is @c NULL.  @since New in 1.5 */
+  /** When @c action is #svn_wc_notify_changelist_add or name. (### What?)
+   * In all other cases, it is @c NULL.  @since New in 1.5 */
   const char *changelist_name;
 
   /** When @c action is #svn_wc_notify_merge_begin, and both the
@@ -1903,7 +1903,7 @@ svn_wc_conflict_description_create_text2(const char *local_abspath,
 
 
 /** Similar to svn_wc_conflict_description_create_text2(), but returns
- * a #svn_wc_conflict_descriptor_t *.
+ * a #svn_wc_conflict_description_t *.
  *
  * @since New in 1.6.
  * @deprecated Provided for backward compatibility with the 1.6 API.
@@ -1935,7 +1935,7 @@ svn_wc_conflict_description_create_prop2(const char *local_abspath,
                                          apr_pool_t *result_pool);
 
 /** Similar to svn_wc_conflict_descriptor_create_prop(), but returns
- * a #svn_wc_conflict_descriptor_t *.
+ * a #svn_wc_conflict_description_t *.
  *
  * @since New in 1.6.
  * @deprecated Provided for backward compatibility with the 1.6 API.
@@ -1975,7 +1975,7 @@ svn_wc_conflict_description_create_tree2(
 
 
 /** Similar to svn_wc_conflict_description_create_tree(), but returns
- * a #svn_wc_conflict_descriptor_t *.
+ * a #svn_wc_conflict_description_t *.
  *
  * @since New in 1.6.
  * @deprecated Provided for backward compatibility with the 1.6 API.
@@ -2013,7 +2013,7 @@ typedef enum svn_wc_conflict_choice_t
      'conflicted', so user can run 'svn resolved' later. */
   svn_wc_conflict_choose_postpone,
 
-  /* If their were files to choose from, select one as a way of
+  /* If there were files to choose from, select one as a way of
      resolving the conflict here and now.  libsvn_wc will then do the
      work of "installing" the chosen file.
   */
@@ -4996,8 +4996,8 @@ svn_wc_crawl_revisions2(const char *path,
                         apr_pool_t *pool);
 
 /**
- * Similar to svn_wc_crawl_revisions2(), but takes an svn_wc_notify_func_t
- * and a #svn_reporter_t instead.
+ * Similar to svn_wc_crawl_revisions2(), but takes an #svn_wc_notify_func_t
+ * and a #svn_ra_reporter_t instead.
  *
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
