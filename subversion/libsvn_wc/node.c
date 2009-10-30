@@ -624,3 +624,25 @@ svn_wc__node_get_base_rev(svn_revnum_t *base_revision,
 
   return SVN_NO_ERROR;
 }
+
+svn_error_t *
+svn_wc__node_get_lock_token(const char **lock_token,
+                            svn_wc_context_t *wc_ctx,
+                            const char *local_abspath,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool)
+{
+  svn_wc__db_status_t status;
+  svn_wc__db_lock_t *lock;
+
+  SVN_ERR(svn_wc__db_read_info(&status,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, &lock,
+                               wc_ctx->db, local_abspath,
+                               result_pool, scratch_pool));
+  *lock_token = lock ? lock->token : NULL;
+
+  return SVN_NO_ERROR;
+}

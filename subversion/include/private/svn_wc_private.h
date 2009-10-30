@@ -502,6 +502,18 @@ svn_wc__node_get_base_rev(svn_revnum_t *base_revision,
                           const char *local_abspath,
                           apr_pool_t *scratch_pool);
 
+/**
+ * Get the lock token of @a local_abspath using @a wc_ctx or NULL
+ * if there is no lock.  If @a local_abspath is not in the working
+*  copy, return @c SVN_ERR_WC_PATH_NOT_FOUND.
+ */
+svn_error_t *
+svn_wc__node_get_lock_token(const char **lock_token,
+                            svn_wc_context_t *wc_ctx,
+                            const char *local_abspath,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
