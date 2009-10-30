@@ -2976,7 +2976,7 @@ close_directory(void *dir_baton,
         }
       else
         {
-          SVN_ERR(svn_wc__load_props(&base_props, &working_props, NULL,
+          SVN_ERR(svn_wc__load_props(&base_props, &working_props,
                                      db->edit_baton->db, db->local_abspath,
                                      pool, pool));
         }
@@ -3500,8 +3500,8 @@ add_file_with_history(const char *path,
                                               src_local_abspath, subpool,
                                               subpool));
 
-          SVN_ERR(svn_wc__load_props(NULL, NULL, &base_props, db,
-                                     src_local_abspath, pool, subpool));
+          SVN_ERR(svn_wc__load_revert_props(&base_props, db,
+                                            src_local_abspath, pool, subpool));
           /* The old working props are lost, just like the old
              working file text is.  Just use the base props. */
           working_props = base_props;
@@ -3511,7 +3511,7 @@ add_file_with_history(const char *path,
           SVN_ERR(svn_wc__get_pristine_contents(&source_text_base, db,
                                                 src_local_abspath,
                                                 subpool, subpool));
-          SVN_ERR(svn_wc__load_props(&base_props, &working_props, NULL, db,
+          SVN_ERR(svn_wc__load_props(&base_props, &working_props, db,
                                      src_local_abspath, pool, subpool));
         }
 

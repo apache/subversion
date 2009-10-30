@@ -270,7 +270,6 @@ get_existing_prop_reject_file(const char **reject_file,
 svn_error_t *
 svn_wc__load_props(apr_hash_t **base_props_p,
                    apr_hash_t **props_p,
-                   apr_hash_t **revert_props_p,
                    svn_wc__db_t *db,
                    const char *local_abspath,
                    apr_pool_t *result_pool,
@@ -305,6 +304,16 @@ svn_wc__load_props(apr_hash_t **base_props_p,
         *props_p = apr_hash_copy(result_pool, base_props);
     }
 
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc__load_revert_props(apr_hash_t **revert_props_p,
+                          svn_wc__db_t *db,
+                          const char *local_abspath,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool)
+{
   if (revert_props_p)
     {
       svn_boolean_t replaced;
@@ -1571,7 +1580,7 @@ svn_wc__merge_props(svn_stringbuf_t **entry_accum,
         {
           SVN_ERR(svn_wc__load_props(base_props ? NULL : &base_props,
                                      working_props ? NULL : &working_props,
-                                     NULL, db, local_abspath,
+                                     db, local_abspath,
                                      result_pool, scratch_pool));
         }
     }
@@ -1800,7 +1809,7 @@ svn_wc_prop_list2(apr_hash_t **props,
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
   return svn_error_return(
-    svn_wc__load_props(NULL, props, NULL, wc_ctx->db, local_abspath,
+    svn_wc__load_props(NULL, props, wc_ctx->db, local_abspath,
                        result_pool, scratch_pool));
 }
 
@@ -1882,7 +1891,7 @@ svn_wc__internal_propget(const svn_string_t **value,
   else
     {
       /* regular prop */
-      SVN_ERR_W(svn_wc__load_props(NULL, &prophash, NULL, db, local_abspath,
+      SVN_ERR_W(svn_wc__load_props(NULL, &prophash, db, local_abspath,
                                    result_pool, scratch_pool),
                 _("Failed to load properties from disk"));
     }
@@ -2113,7 +2122,7 @@ svn_wc__internal_propset(svn_wc__db_t *db,
       /* If not, we'll set the file to read-only at commit time. */
     }
 
-  SVN_ERR_W(svn_wc__load_props(&base_prophash, &prophash, NULL, db,
+  SVN_ERR_W(svn_wc__load_props(&base_prophash, &prophash, db,
                                local_abspath, scratch_pool, scratch_pool),
             _("Failed to load properties from disk"));
 
@@ -2343,7 +2352,7 @@ svn_wc__has_props(svn_boolean_t *has_props,
   apr_hash_t *base_props;
   apr_hash_t *working_props;
 
-  SVN_ERR(svn_wc__load_props(&base_props, &working_props, NULL,
+  SVN_ERR(svn_wc__load_props(&base_props, &working_props,
                              db, local_abspath, scratch_pool, scratch_pool));
   *has_props =
         ((apr_hash_count(base_props) + apr_hash_count(working_props)) > 0);
@@ -2439,7 +2448,7 @@ svn_wc__internal_propdiff(apr_array_header_t **propchanges,
 
   SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath, FALSE, scratch_pool));
 
-  SVN_ERR(svn_wc__load_props(&baseprops, propchanges ? &props : NULL, NULL,
+  SVN_ERR(svn_wc__load_props(&baseprops, propchanges ? &props : NULL,
                              db, local_abspath, result_pool, scratch_pool));
 
   if (original_props != NULL)

@@ -218,20 +218,28 @@ svn_wc__working_props_committed(svn_wc__db_t *db,
                                 const char *local_abspath,
                                 apr_pool_t *scratch_pool);
 
-/* Load the base, working and revert props for ENTRY at PATH returning
-   them in *BASE_PROPS_P, *PROPS_P and *REVERT_PROPS_P respectively.
-   Any of BASE_PROPS, PROPS and REVERT_PROPS may be NULL.
+/* Load the base and working props for ENTRY at PATH returning
+   them in *BASE_PROPS_P and *PROPS_P respectively.
+   Any of BASE_PROPS and PROPS may be NULL.
    Returned hashes/values are allocated in RESULT_POOL. All temporary
    allocations are made in SCRATCH_POOL.  */
 svn_error_t *
 svn_wc__load_props(apr_hash_t **base_props_p,
                    apr_hash_t **props_p,
-                   apr_hash_t **revert_props_p,
                    svn_wc__db_t *db,
                    const char *local_abspath,
                    apr_pool_t *result_pool,
                    apr_pool_t *scratch_pool);
 
+/* Load the revert props for ENTRY at PATH returning them in *REVERT_PROPS_P.
+   Returned hash/values are allocated in RESULT_POOL. All temporary
+   allocations are made in SCRATCH_POOL.  */
+svn_error_t *
+svn_wc__load_revert_props(apr_hash_t **revert_props_p,
+                          svn_wc__db_t *db,
+                          const char *local_abspath,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool);
 
 svn_error_t *
 svn_wc__marked_as_binary(svn_boolean_t *marked,

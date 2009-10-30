@@ -56,7 +56,7 @@ copy_props(svn_wc__db_t *db,
   apr_hash_t *props;
   apr_hash_index_t *hi;
 
-  SVN_ERR(svn_wc__load_props(NULL, &props, NULL, db, src_abspath,
+  SVN_ERR(svn_wc__load_props(NULL, &props, db, src_abspath,
                              scratch_pool, scratch_pool));
   for (hi = apr_hash_first(scratch_pool, props); hi; hi = apr_hash_next(hi))
     {
@@ -444,7 +444,7 @@ copy_file_administratively(svn_wc_context_t *wc_ctx,
       }
 
     /* Load source base and working props. */
-    SVN_ERR(svn_wc__load_props(&base_props, &props, NULL, db,
+    SVN_ERR(svn_wc__load_props(&base_props, &props, db,
                                src_abspath, scratch_pool, scratch_pool));
 
     /* Copy working copy file to temporary location */
