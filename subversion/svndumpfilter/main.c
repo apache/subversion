@@ -134,10 +134,15 @@ ary_prefix_match(apr_array_header_t *pfxlist, const char *path)
    the PREFIXES list, and the DO_EXCLUDE option. */
 static APR_INLINE svn_boolean_t
 skip_path(const char *path, apr_array_header_t *prefixes,
-          svn_boolean_t do_exclude)
+          svn_boolean_t do_exclude, svn_boolean_t glob)
 {
+  const svn_boolean_t matches =
+    (glob
+     ? svn_cstring_match_glob_list(path, prefixes)
+     : ary_prefix_match(prefixes, path));
+
   /* NXOR */
-  return (ary_prefix_match(prefixes, path) ? do_exclude : !do_exclude);
+  return (matches ? do_exclude : !do_exclude);
 }
 
 
@@ -170,6 +175,7 @@ struct parse_baton_t
   /* Command-line options values. */
   svn_boolean_t do_exclude;
   svn_boolean_t quiet;
+  svn_boolean_t glob;
   svn_boolean_t drop_empty_revs;
   svn_boolean_t do_renumber_revs;
   svn_boolean_t preserve_revprops;
@@ -474,7 +480,8 @@ new_node_record(void **node_baton,
   if (copyfrom_path)
     copyfrom_path = svn_path_join("/", copyfrom_path, pool);
 
-  nb->do_skip = skip_path(node_path, pb->prefixes, pb->do_exclude);
+  nb->do_skip = skip_path(node_path, pb->prefixes,
+                          pb->do_exclude, pb->glob);
 
   /* If we're skipping the node, take note of path, discarding the
      rest.  */
@@ -493,7 +500,7 @@ new_node_record(void **node_baton,
 
       /* Test if this node was copied from dropped source. */
       if (copyfrom_path &&
-          skip_path(copyfrom_path, pb->prefixes, pb->do_exclude))
+          skip_path(copyfrom_path, pb->prefixes, pb->do_exclude, pb->glob))
         {
           /* This node was copied from a dropped source.
              We have a problem, since we did not want to drop this node too.
@@ -668,7 +675,7 @@ adjust_mergeinfo(svn_string_t **final_val, const svn_string_t *initial_val,
       int i;
 
       /* Determine whether the merge_source is a part of the prefix. */
-      if (skip_path(merge_source, pb->prefixes, pb->do_exclude))
+      if (skip_path(merge_source, pb->prefixes, pb->do_exclude, pb->glob))
         {
           if (pb->skip_missing_merge_sources)
             continue;
@@ -864,6 +871,7 @@ enum
     svndumpfilter__skip_missing_merge_sources,
     svndumpfilter__targets,
     svndumpfilter__quiet,
+    svndumpfilter__glob,
     svndumpfilter__version
   };
 
@@ -883,6 +891,8 @@ static const apr_getopt_option_t options_table[] =
      N_("show program version information") },
     {"quiet",              svndumpfilter__quiet, 0,
      N_("Do not display filtering statistics.") },
+    {"pattern",            svndumpfilter__glob, 0,
+     N_("Treat the path prefixes as file glob patterns.") },
     {"drop-empty-revs",    svndumpfilter__drop_empty_revs, 0,
      N_("Remove revisions emptied by filtering.")},
     {"renumber-revs",      svndumpfilter__renumber_revs, 0,
@@ -908,14 +918,16 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
         "usage: svndumpfilter exclude PATH_PREFIX...\n"),
      {svndumpfilter__drop_empty_revs, svndumpfilter__renumber_revs,
       svndumpfilter__skip_missing_merge_sources, svndumpfilter__targets,
-      svndumpfilter__preserve_revprops, svndumpfilter__quiet} },
+      svndumpfilter__preserve_revprops, svndumpfilter__quiet,
+      svndumpfilter__glob} },
 
     {"include", subcommand_include, {0},
      N_("Filter out nodes without given prefixes from dumpstream.\n"
         "usage: svndumpfilter include PATH_PREFIX...\n"),
      {svndumpfilter__drop_empty_revs, svndumpfilter__renumber_revs,
       svndumpfilter__skip_missing_merge_sources, svndumpfilter__targets,
-      svndumpfilter__preserve_revprops, svndumpfilter__quiet} },
+      svndumpfilter__preserve_revprops, svndumpfilter__quiet,
+      svndumpfilter__glob} },
 
     {"help", subcommand_help, {"?", "h"},
      N_("Describe the usage of this program or its subcommands.\n"
@@ -932,6 +944,7 @@ struct svndumpfilter_opt_state
   svn_opt_revision_t start_revision;     /* -r X[:Y] is         */
   svn_opt_revision_t end_revision;       /* not implemented.    */
   svn_boolean_t quiet;                   /* --quiet             */
+  svn_boolean_t glob;                    /* --pattern           */
   svn_boolean_t version;                 /* --version           */
   svn_boolean_t drop_empty_revs;         /* --drop-empty-revs   */
   svn_boolean_t help;                    /* --help or -?        */
@@ -965,6 +978,7 @@ parse_baton_initialize(struct parse_baton_t **pb,
   baton->drop_empty_revs = opt_state->drop_empty_revs;
   baton->preserve_revprops = opt_state->preserve_revprops;
   baton->quiet = opt_state->quiet;
+  baton->glob = opt_state->glob;
   baton->prefixes = opt_state->prefixes;
   baton->skip_missing_merge_sources = opt_state->skip_missing_merge_sources;
   baton->rev_drop_count = 0; /* used to shift revnums while filtering */
@@ -1044,16 +1058,32 @@ do_filter(apr_getopt_t *os,
     {
       apr_pool_t *subpool = svn_pool_create(pool);
 
-      SVN_ERR(svn_cmdline_fprintf(stderr, subpool,
-                                  do_exclude
-                                  ? opt_state->drop_empty_revs
-                                  ? _("Excluding (and dropping empty "
-                                      "revisions for) prefixes:\n")
-                                  : _("Excluding prefixes:\n")
-                                  : opt_state->drop_empty_revs
-                                  ? _("Including (and dropping empty "
-                                      "revisions for) prefixes:\n")
-                                  : _("Including prefixes:\n")));
+      if (opt_state->glob)
+        {
+          SVN_ERR(svn_cmdline_fprintf(stderr, subpool,
+                                      do_exclude
+                                      ? opt_state->drop_empty_revs
+                                      ? _("Excluding (and dropping empty "
+                                          "revisions for) prefixes:\n")
+                                      : _("Excluding prefixes:\n")
+                                      : opt_state->drop_empty_revs
+                                      ? _("Including (and dropping empty "
+                                          "revisions for) prefixes:\n")
+                                      : _("Including prefixes:\n")));
+        }
+      else
+        {
+          SVN_ERR(svn_cmdline_fprintf(stderr, subpool,
+                                      do_exclude
+                                      ? opt_state->drop_empty_revs
+                                      ? _("Excluding (and dropping empty "
+                                          "revisions for) prefix patterns:\n")
+                                      : _("Excluding prefix patterns:\n")
+                                      : opt_state->drop_empty_revs
+                                      ? _("Including (and dropping empty "
+                                          "revisions for) prefix patterns:\n")
+                                      : _("Including prefix patterns:\n")));
+        }
 
       for (i = 0; i < opt_state->prefixes->nelts; i++)
         {
@@ -1270,6 +1300,9 @@ main(int argc, const char *argv[])
           opt_state.version = TRUE;
         case svndumpfilter__quiet:
           opt_state.quiet = TRUE;
+          break;
+        case svndumpfilter__glob:
+          opt_state.glob = TRUE;
           break;
         case svndumpfilter__drop_empty_revs:
           opt_state.drop_empty_revs = TRUE;
