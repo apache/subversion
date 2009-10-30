@@ -18,9 +18,9 @@
    setlocal nowrap
    " create a new window at the left-hand side
    aboveleft 18vnew
-   setlocal nomodified readonly buftype=nofile nowrap winwidth=1
    " blame, ignoring white space changes
    %!svn blame -x-w "#"
+   setlocal nomodified readonly buftype=nofile nowrap winwidth=1
    " return to original line
    exec "normal " . line . "G"
    " synchronize scrolling, and return to original window
