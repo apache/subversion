@@ -3945,8 +3945,11 @@ commit_node(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
   if (have_act)
     prop_blob.data = svn_sqlite__column_blob(stmt_act, 6, &prop_blob.len,
                                              scratch_pool);
-  if (prop_blob.data == NULL)
+  if (have_work && prop_blob.data == NULL)
     prop_blob.data = svn_sqlite__column_blob(stmt_work, 15, &prop_blob.len,
+                                             scratch_pool);
+  if (have_base && prop_blob.data == NULL)
+    prop_blob.data = svn_sqlite__column_blob(stmt_base, 15, &prop_blob.len,
                                              scratch_pool);
 
   if (cb->keep_changelist && have_act)
