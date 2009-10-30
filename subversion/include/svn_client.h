@@ -779,7 +779,7 @@ typedef enum svn_client_diff_summarize_kind_t
 
 
 /** A struct that describes the diff of an item. Passed to
- * #svn_diff_summarize_func_t.
+ * #svn_client_diff_summarize_func_t.
  *
  * @note Fields may be added to the end of this structure in future
  * versions.  Therefore, users shouldn't allocate structures of this
@@ -1370,7 +1370,7 @@ svn_client_switch(svn_revnum_t *result_rev,
  *
  * If @a add_parents is TRUE, recurse up @a path's directory and look for
  * a versioned directory.  If found, add all intermediate paths between it
- * and @a path.  If not found, return #SVN_ERR_CLIENT_NO_VERSIONED_PARENTS.
+ * and @a path.  If not found, return #SVN_ERR_CLIENT_NO_VERSIONED_PARENTS. (### What?)
  *
  * @par Important:
  * This is a *scheduling* operation.  No changes will
@@ -4466,7 +4466,7 @@ svn_client_get_changelists(const char *path,
  * be stored in the working copy if the targets are WC paths.
  *
  * For each target @a ctx->notify_func2/notify_baton2 will be used to indicate
- * whether it was locked.  An action of #svn_wc_notify_state_locked
+ * whether it was locked.  An action of #svn_wc_notify_state_locked (### what?)
  * means that the path was locked.  If the path was not locked because
  * it was out of date or there was already a lock in the repository,
  * the notification function will be called with @c
