@@ -2158,10 +2158,13 @@ svn_wc__db_base_get_props(apr_hash_t **props,
                                  STMT_SELECT_BASE_PROPS, scratch_pool));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   if (!have_row)
-    return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
-                             _("The node '%s' was not found."),
-                             svn_dirent_local_style(local_abspath,
-                                                    scratch_pool));
+    {
+      err = svn_sqlite__reset(stmt);
+      return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, err,
+                               _("The node '%s' was not found."),
+                               svn_dirent_local_style(local_abspath,
+                                                      scratch_pool));
+    }
 
   err = svn_sqlite__column_properties(props, stmt, 0, result_pool,
                                       scratch_pool);
@@ -3616,8 +3619,9 @@ svn_wc__db_read_pristine_props(apr_hash_t **props,
                                apr_pool_t *scratch_pool)
 {
   svn_sqlite__stmt_t *stmt;
-  svn_boolean_t have_row;
+  svn_boolean_t have_row, have_value;
   svn_error_t *err = NULL;
+  *props = NULL;
 
   SVN_ERR(get_statement_for_path(&stmt, db, local_abspath,
                                  STMT_SELECT_WORKING_PROPS, scratch_pool));
@@ -3625,20 +3629,26 @@ svn_wc__db_read_pristine_props(apr_hash_t **props,
 
   if (have_row && !svn_sqlite__column_is_null(stmt, 0))
     {
+      have_value = TRUE;
       err = svn_sqlite__column_properties(props, stmt, 0, result_pool,
                                           scratch_pool);
     }
   else
-    have_row = FALSE;
+    have_value = FALSE;
 
   SVN_ERR(svn_error_compose_create(err, svn_sqlite__reset(stmt)));
 
-  if (have_row)
+  if (have_value)
     return SVN_NO_ERROR;
 
-  return svn_error_return(
-      svn_wc__db_base_get_props(props, db, local_abspath,
-                                result_pool, scratch_pool));
+  err = svn_wc__db_base_get_props(props, db, local_abspath,
+                                  result_pool, scratch_pool);
+
+  if (err && (!have_row || err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND))
+    return svn_error_return(err);
+
+  svn_error_clear(err);
+  return SVN_NO_ERROR;
 }
 
 
@@ -4006,6 +4016,8 @@ commit_node(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
 
   if (have_act)
     {
+      /* ### FIXME: We lose the tree conflict data recorded on the node for its
+                    children here if we use this on a directory */
       if (cb->keep_changelist && changelist != NULL)
         {
           /* The user told us to keep the changelist. Replace the row in
