@@ -496,7 +496,7 @@ get_working_mimetype(const char **mimetype,
     workingprops = &props;
 
   if (*workingprops == NULL)
-    SVN_ERR(svn_wc__load_props(NULL, workingprops, NULL, db, local_abspath,
+    SVN_ERR(svn_wc__load_props(NULL, workingprops, db, local_abspath,
                                result_pool, scratch_pool));
 
   *mimetype = get_prop_mimetype(*workingprops);
@@ -1038,7 +1038,7 @@ report_wc_directory_as_added(struct dir_baton *db,
         SVN_ERR(svn_wc__internal_propdiff(NULL, &wcprops, eb->db, dir_abspath,
                                           pool, pool));
       else
-        SVN_ERR(svn_wc__load_props(NULL, &wcprops, NULL, eb->db, dir_abspath,
+        SVN_ERR(svn_wc__load_props(NULL, &wcprops, eb->db, dir_abspath,
                                    pool, pool));
 
       SVN_ERR(svn_prop_diffs(&propchanges, wcprops, emptyprops, pool));
@@ -1325,7 +1325,7 @@ close_directory(void *dir_baton,
             {
               apr_hash_t *base_props, *repos_props;
 
-              SVN_ERR(svn_wc__load_props(NULL, &originalprops, NULL,
+              SVN_ERR(svn_wc__load_props(NULL, &originalprops,
                                          eb->db, db->local_abspath, pool, pool));
 
               /* Load the BASE and repository directory properties. */
@@ -1650,7 +1650,7 @@ close_file(void *file_baton,
     }
   else
     {
-      SVN_ERR(svn_wc__load_props(NULL, &originalprops, NULL, eb->db,
+      SVN_ERR(svn_wc__load_props(NULL, &originalprops, eb->db,
                                  fb->local_abspath, pool, pool));
 
       /* We have the repository properties in repos_props, and the

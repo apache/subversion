@@ -530,7 +530,7 @@ svn_wc__wq_add_revert(svn_boolean_t *will_revert,
       apr_hash_t *working_props;
       apr_array_header_t *prop_diffs;
 
-      SVN_ERR(svn_wc__load_props(&base_props, &working_props, NULL,
+      SVN_ERR(svn_wc__load_props(&base_props, &working_props,
                                  db, local_abspath,
                                  scratch_pool, scratch_pool));
       SVN_ERR(svn_prop_diffs(&prop_diffs, working_props, base_props,
