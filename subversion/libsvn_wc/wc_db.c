@@ -3702,6 +3702,14 @@ relocate_txn(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
      base_node in the first place. */
   if (rb->have_base_node)
     {
+      /* Purge the DAV cache (wcprops) from any BASE that have 'em. */
+      SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
+                                        STMT_CLEAR_BASE_RECURSIVE_DAV_CACHE));
+      SVN_ERR(svn_sqlite__bindf(stmt, "iss", rb->wc_id, rb->local_relpath,
+                                like_arg));
+      SVN_ERR(svn_sqlite__bind_properties(stmt, 4, NULL, scratch_pool));
+      SVN_ERR(svn_sqlite__step_done(stmt));
+
       /* Update any BASE which have non-NULL repos_id's */
       SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
                                         STMT_UPDATE_BASE_RECURSIVE_REPO));

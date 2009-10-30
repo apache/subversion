@@ -1419,7 +1419,8 @@ svn_wc__db_node_hidden(svn_boolean_t *hidden,
  * at REPOS_ROOT_URL.  The relative path to the repos root will not change,
  * just the repository root.  The repos uuid will also remain the same.
  * This also updates any locks which may exist for the node, as well as any
- * copyfrom repository information.
+ * copyfrom repository information.  Finally, the DAV cache (aka
+ * "wcprops") will be reset for affected entries.
  *
  * Use SCRATCH_POOL for any temporary allocations.
  *
