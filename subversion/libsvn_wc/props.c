@@ -63,6 +63,7 @@
 #include "svn_private_config.h"
 #include "private/svn_debug.h"
 
+/* #define TEST_DB_PROPS */
 
 /*** Reading/writing property hashes from disk ***/
 
@@ -266,6 +267,59 @@ get_existing_prop_reject_file(const char **reject_file,
 /*---------------------------------------------------------------------*/
 
 
+/* Temporary helper for determining where to store pristine properties.
+   All calls will eventually be replaced by direct wc_db operations
+   of the right type. */
+svn_error_t *
+svn_wc__prop_pristine_is_working(svn_boolean_t *working,
+                                 svn_wc__db_t *db,
+                                 const char *local_abspath,
+                                 apr_pool_t *scratch_pool)
+{
+  svn_wc__db_status_t status;
+  svn_boolean_t base_shadowed;
+  *working = TRUE;
+
+  SVN_ERR(svn_wc__db_read_info(&status, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL,
+                               &base_shadowed, NULL, NULL,
+                               db, local_abspath, scratch_pool, scratch_pool));
+
+  switch (status)
+    {
+      case svn_wc__db_status_normal:
+        *working = FALSE;
+        break;
+      case svn_wc__db_status_incomplete:
+        *working = base_shadowed;
+        break;
+      case svn_wc__db_status_deleted:
+        /* ### This call fails in some update_editor scenarios, because
+               the parent directory can be incomplete. In this specific
+               case a caller MUST provide the right location itself.
+               (Which (in this case) is always the BASE_NODE table)*/
+        SVN_ERR(svn_wc__db_scan_deletion(NULL, working, NULL, NULL, db,
+                                         local_abspath, scratch_pool,
+                                         scratch_pool));
+        break;
+      case svn_wc__db_status_added:
+        break;
+      case svn_wc__db_status_not_present:
+      case svn_wc__db_status_absent:
+      case svn_wc__db_status_excluded:
+        SVN_ERR_ASSERT(0 && "Node not here");
+      case svn_wc__db_status_obstructed:
+      case svn_wc__db_status_obstructed_add:
+      case svn_wc__db_status_obstructed_delete:
+        SVN_ERR_ASSERT(0 && "Node misses property information");
+      default:
+        SVN_ERR_ASSERT(0 && "Unhandled status");
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /*** Loading regular properties. ***/
 svn_error_t *
 svn_wc__load_props(apr_hash_t **base_props_p,
@@ -288,6 +342,35 @@ svn_wc__load_props(apr_hash_t **base_props_p,
 
       if (base_props_p)
         *base_props_p = base_props;
+
+#ifdef TEST_DB_PROPS
+      {
+        apr_hash_t *db_base_props;
+        SVN_ERR(svn_wc__db_read_pristine_props(&db_base_props, db,
+                                               local_abspath,
+                                               scratch_pool, scratch_pool));
+
+        if (base_props != NULL)
+          {
+            if (apr_hash_count(base_props) > 0)
+              {
+                apr_array_header_t *diffs;
+
+                SVN_ERR_ASSERT(db_base_props != NULL);
+
+                SVN_ERR(svn_prop_diffs(&diffs, base_props, db_base_props,
+                                       scratch_pool));
+
+                SVN_ERR_ASSERT(diffs->nelts == 0);
+              }
+            else
+              SVN_ERR_ASSERT(db_base_props == NULL ||
+                             (apr_hash_count(db_base_props) == 0));
+          }
+        else
+          SVN_ERR_ASSERT(db_base_props == NULL);
+      }
+#endif
     }
 
   if (props_p)
@@ -302,6 +385,34 @@ svn_wc__load_props(apr_hash_t **base_props_p,
          signifying that all BASE props have been deleted. */
       if (*props_p == NULL)
         *props_p = apr_hash_copy(result_pool, base_props);
+
+#ifdef TEST_DB_PROPS
+      {
+        apr_hash_t *db_props;
+        SVN_ERR(svn_wc__db_read_props(&db_props, db, local_abspath,
+                                      scratch_pool, scratch_pool));
+
+        if (*props_p != NULL)
+          {
+            if (apr_hash_count(*props_p) > 0)
+              {
+                apr_array_header_t *diffs;
+
+                SVN_ERR_ASSERT(db_props != NULL);
+
+                SVN_ERR(svn_prop_diffs(&diffs, *props_p, db_props,
+                                       scratch_pool));
+
+                SVN_ERR_ASSERT(diffs->nelts == 0);
+              }
+            else
+              SVN_ERR_ASSERT(db_props == NULL ||
+                             (apr_hash_count(db_props) == 0));
+          }
+        else
+          SVN_ERR_ASSERT(db_props == NULL);
+      }
+#endif
     }
 
   return SVN_NO_ERROR;
@@ -334,45 +445,45 @@ svn_wc__load_revert_props(apr_hash_t **revert_props_p,
 svn_error_t *
 svn_wc__install_props(svn_wc__db_t *db,
                       const char *local_abspath,
-                      apr_hash_t *base_props,
-                      apr_hash_t *working_props,
-                      svn_boolean_t write_base_props,
-                      apr_pool_t *pool)
+                      apr_hash_t *pristine_props,
+                      apr_hash_t *props,
+                      svn_boolean_t install_pristine_props,
+                      svn_boolean_t force_base_install,
+                      apr_pool_t *scratch_pool)
 {
   apr_array_header_t *prop_diffs;
 
   /* Check if the props are modified. */
-  SVN_ERR(svn_prop_diffs(&prop_diffs, working_props, base_props, pool));
+  SVN_ERR(svn_prop_diffs(&prop_diffs, props, pristine_props, scratch_pool));
 
   /* Save the actual properties file if it differs from base. */
   if (prop_diffs->nelts == 0)
-    working_props = NULL; /* Remove actual properties*/
+    props = NULL; /* Remove actual properties*/
 
-  if (!write_base_props)
-    base_props = NULL; /* Don't change the base properties */
+  if (!install_pristine_props)
+    pristine_props = NULL; /* Don't change the pristine properties */
 
   SVN_ERR(svn_wc__wq_add_install_properties(db,
                                             local_abspath,
-                                            base_props,
-                                            working_props,
-                                            pool));
+                                            pristine_props,
+                                            props,
+                                            force_base_install,
+                                            scratch_pool));
 
   return SVN_NO_ERROR;
 }
 
-
 static svn_error_t *
-immediate_install_props(const char *path,
+immediate_install_props(svn_wc__db_t *db,
+                        const char *local_abspath,
                         svn_wc__db_kind_t kind,
                         apr_hash_t *base_props,
                         apr_hash_t *working_props,
                         apr_pool_t *scratch_pool)
 {
-  const char *local_abspath;
   const char *propfile_abspath;
   apr_array_header_t *prop_diffs;
 
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, scratch_pool));
   SVN_ERR(svn_wc__prop_path(&propfile_abspath, local_abspath, kind,
                             svn_wc__props_working, scratch_pool));
 
@@ -402,6 +513,20 @@ immediate_install_props(const char *path,
       /* No property modifications, remove the file instead. */
       SVN_ERR(svn_io_remove_file2(propfile_abspath, TRUE, scratch_pool));
     }
+
+  {
+    svn_boolean_t in_working;
+    SVN_ERR(svn_wc__prop_pristine_is_working(&in_working, db, local_abspath,
+                                             scratch_pool));
+    SVN_ERR(svn_wc__db_temp_op_set_pristine_props(db, local_abspath,
+                                                  base_props, in_working,
+                                                  scratch_pool));
+
+    SVN_ERR(svn_wc__db_op_set_props(db, local_abspath,
+                                    (prop_diffs->nelts > 0) ? working_props
+                                                            : NULL,
+                                    scratch_pool));
+  }
 
   return SVN_NO_ERROR;
 }
@@ -675,7 +800,7 @@ svn_wc_merge_props3(svn_wc_notify_state_t *state,
   if (!dry_run)
     SVN_ERR(svn_wc__install_props(wc_ctx->db, local_abspath,
                                   new_base_props, new_actual_props,
-                                  base_merge, pool));
+                                  base_merge, FALSE, pool));
 
 
   if (! dry_run)
@@ -2190,7 +2315,7 @@ svn_wc__internal_propset(svn_wc__db_t *db,
 
   /* Drop it right onto the disk. We don't need loggy since we aren't
      coordinating this change with anything else.  */
-  SVN_ERR(immediate_install_props(local_abspath, kind,
+  SVN_ERR(immediate_install_props(db, local_abspath, kind,
                                   base_prophash, prophash, scratch_pool));
 
   if (notify_func)

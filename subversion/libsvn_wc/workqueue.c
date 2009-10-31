@@ -213,12 +213,17 @@ run_revert(svn_wc__db_t *db,
 
       SVN_ERR(move_if_present(revert_props_path, base_props_path,
                               scratch_pool));
+
+      SVN_ERR(svn_wc__db_temp_op_set_pristine_props(db, local_abspath, NULL,
+                                                    TRUE, scratch_pool));
     }
 
   /* The "working" props contain changes. Nuke 'em from orbit.  */
   SVN_ERR(svn_wc__prop_path(&working_props_path, local_abspath,
                             kind, svn_wc__props_working, scratch_pool));
   SVN_ERR(svn_io_remove_file2(working_props_path, TRUE, scratch_pool));
+
+  SVN_ERR(svn_wc__db_op_set_props(db, local_abspath, NULL, scratch_pool));
 
   /* Deal with the working file, as needed.  */
   if (kind == svn_wc__db_kind_file)
@@ -664,6 +669,11 @@ run_prepare_revert_files(svn_wc__db_t *db,
       SVN_ERR(svn_io_set_file_read_only(revert_prop_abspath, FALSE,
                                         scratch_pool));
     }
+
+  /* Stop intheriting BASE_NODE properties */
+  SVN_ERR(svn_wc__db_temp_op_set_pristine_props(db, local_abspath,
+                                                apr_hash_make(scratch_pool),
+                                                TRUE, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -1531,6 +1541,7 @@ run_install_properties(svn_wc__db_t *db,
   apr_hash_t *actual_props;
   svn_wc__db_kind_t kind;
   const char *prop_abspath;
+  svn_boolean_t force_base_install;
 
   /* We need a NUL-terminated path, so copy it out of the skel.  */
   local_abspath = apr_pstrmemdup(scratch_pool, arg->data, arg->len);
@@ -1546,6 +1557,9 @@ run_install_properties(svn_wc__db_t *db,
     actual_props = NULL;
   else
     SVN_ERR(svn_skel__parse_proplist(&actual_props, arg, scratch_pool));
+
+  arg = arg->next;
+  force_base_install = arg && svn_skel__parse_int(arg, scratch_pool);
 
   SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath, FALSE, scratch_pool));
   if (base_props != NULL)
@@ -1569,6 +1583,20 @@ run_install_properties(svn_wc__db_t *db,
 
           SVN_ERR(svn_io_set_file_read_only(prop_abspath, FALSE, scratch_pool));
         }
+
+      {
+        svn_boolean_t in_working;
+
+        if (force_base_install)
+          in_working = FALSE;
+        else
+          SVN_ERR(svn_wc__prop_pristine_is_working(&in_working, db,
+                                                   local_abspath, scratch_pool));
+
+        SVN_ERR(svn_wc__db_temp_op_set_pristine_props(db, local_abspath,
+                                                      base_props, in_working,
+                                                      scratch_pool));
+      }
     }
 
 
@@ -1591,6 +1619,9 @@ run_install_properties(svn_wc__db_t *db,
       SVN_ERR(svn_io_set_file_read_only(prop_abspath, FALSE, scratch_pool));
     }
 
+  SVN_ERR(svn_wc__db_op_set_props(db, local_abspath, actual_props,
+                                  scratch_pool));
+
   return SVN_NO_ERROR;
 }
 
@@ -1600,10 +1631,13 @@ svn_wc__wq_add_install_properties(svn_wc__db_t *db,
                                   const char *local_abspath,
                                   apr_hash_t *base_props,
                                   apr_hash_t *actual_props,
+                                  svn_boolean_t force_base_install,
                                   apr_pool_t *scratch_pool)
 {
   svn_skel_t *work_item = svn_skel__make_empty_list(scratch_pool);
   svn_skel_t *props;
+
+  svn_skel__prepend_int(force_base_install, work_item, scratch_pool);
 
   if (actual_props != NULL)
     {

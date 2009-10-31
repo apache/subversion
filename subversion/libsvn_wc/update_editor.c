@@ -1913,9 +1913,9 @@ set_copied_callback(const char *local_abspath,
                                         local_abspath,
                                         svn_node_dir,
                                         TRUE,
-                                       &tmp_entry,
-                                       SVN_WC__ENTRY_MODIFY_COPIED,
-                                       scratch_pool));
+                                        &tmp_entry,
+                                        SVN_WC__ENTRY_MODIFY_COPIED,
+                                        scratch_pool));
         }
     }
 
@@ -1927,6 +1927,12 @@ set_copied_callback(const char *local_abspath,
   if (status == svn_wc__db_status_normal)
     {
       svn_wc_entry_t tmp_entry;
+      apr_hash_t *props;
+
+      /* We switch the node from BASE to WORKING.. We have to move the
+         properties with it */
+      SVN_ERR(svn_wc__db_read_pristine_props(&props, b->eb->db, local_abspath,
+                                             scratch_pool, scratch_pool));
 
       /* Set the 'copied' flag and write the entry out to disk. */
       tmp_entry.copied = TRUE;
@@ -1939,6 +1945,9 @@ set_copied_callback(const char *local_abspath,
                                     &tmp_entry,
                                     SVN_WC__ENTRY_MODIFY_COPIED,
                                     scratch_pool));
+
+      SVN_ERR(svn_wc__db_temp_op_set_pristine_props(b->eb->db, local_abspath, props,
+                                                    TRUE, scratch_pool));
     }
   return SVN_NO_ERROR;
 }
@@ -1972,6 +1981,10 @@ schedule_existing_item_for_re_add(const svn_wc_entry_t *entry,
 {
   svn_wc_entry_t tmp_entry;
   apr_uint64_t flags = 0;
+  apr_hash_t *props;
+
+  SVN_ERR(svn_wc__db_read_pristine_props(&props, eb->db, local_abspath,
+                                         pool, pool));
 
   /* Update the details of the base rev/url to reflect the incoming
    * delete, while leaving the working version as it is, scheduling it
@@ -2004,6 +2017,9 @@ schedule_existing_item_for_re_add(const svn_wc_entry_t *entry,
                                 FALSE,
                                 &tmp_entry,
                                 flags, pool));
+
+  SVN_ERR(svn_wc__db_temp_op_set_pristine_props(eb->db, local_abspath, props,
+                                                TRUE, pool));
 
   /* If it's a directory, set the 'copied' flag recursively. The rest of the
    * directory tree's state can stay exactly as it was before being
@@ -3109,7 +3125,7 @@ close_directory(void *dir_baton,
   if (new_base_props || new_actual_props)
     SVN_ERR(svn_wc__install_props(eb->db, db->local_abspath,
                                   new_base_props, new_actual_props,
-                                  TRUE /* write_base_props */, pool));
+                                  TRUE /* write_base_props */, TRUE, pool));
 
   /* Flush and run the log. */
   SVN_ERR(flush_log(db, pool));
@@ -4870,7 +4886,7 @@ close_file(void *file_baton,
                      new_base_path, md5_actual_checksum, pool));
 
 
-  if (fb->added)
+  if (fb->added || fb->add_existed)
     {
       /* ### HACK: Before we can set properties, we need a node in
                    the database. This code could be its own WQ item,
@@ -4881,9 +4897,20 @@ close_file(void *file_baton,
                    we just make the property code happy here. */
       svn_wc_entry_t tmp_entry;
       svn_stringbuf_t *create_log = NULL;
+      apr_uint64_t flags = SVN_WC__ENTRY_MODIFY_KIND
+                           | SVN_WC__ENTRY_MODIFY_REVISION;
+
+      if (fb->add_existed)
+        {
+          /* Make sure we have a record in BASE; not in WORKING,
+             or we try to install properties in the wrong place */
+          flags |= SVN_WC__ENTRY_MODIFY_SCHEDULE | SVN_WC__ENTRY_MODIFY_FORCE;
+          tmp_entry.schedule = svn_wc_schedule_normal;
+        }
 
       /* Create a very minimalistic file node that will be overridden
          from the loggy operations we have in the file baton log accumulator */
+      
       tmp_entry.kind = svn_node_file;
       tmp_entry.revision = *eb->target_revision;
 
@@ -4891,8 +4918,7 @@ close_file(void *file_baton,
                                          fb->dir_baton->local_abspath,
                                          fb->local_abspath,
                                          &tmp_entry,
-                                         SVN_WC__ENTRY_MODIFY_KIND |
-                                         SVN_WC__ENTRY_MODIFY_REVISION,
+                                         flags,
                                          pool, pool));
 
       SVN_ERR(svn_wc__wq_add_loggy(eb->db,
@@ -4904,7 +4930,7 @@ close_file(void *file_baton,
   if (new_base_props || new_actual_props)
       SVN_ERR(svn_wc__install_props(eb->db, fb->local_abspath,
                                     new_base_props, new_actual_props,
-                                    TRUE /* write_base_props */, pool));
+                                    TRUE /* write_base_props */, TRUE, pool));
 
   SVN_ERR(flush_file_log(fb, pool));
 
@@ -5819,7 +5845,7 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
   SVN_ERR(svn_wc__wq_add_loggy(wc_ctx->db, dir_abspath, pre_props_accum, pool));
   SVN_ERR(svn_wc__install_props(wc_ctx->db, local_abspath, new_base_props,
                                 new_props ? new_props : new_base_props,
-                                TRUE, pool));
+                                TRUE, FALSE, pool));
   SVN_ERR(svn_wc__wq_add_loggy(wc_ctx->db, dir_abspath, post_props_accum, pool));
 
 
