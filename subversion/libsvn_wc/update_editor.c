@@ -384,12 +384,26 @@ struct handler_baton
      checksum is available */
   svn_checksum_t *expected_source_checksum;
 
+  /* Why two checksums?
+     The editor currently provides an md5 which we use to detect corruption
+     during transmission.  We use the sha1 inside libsvn_wc both for pristine
+     handling and corruption detection.  In the future, the editor will also
+     provide a sha1, so we may not have to calculate both, but for the time
+     being, that's the way it is. */
+
   /* The calculated checksum of the text source or NULL if the acual
      checksum is not being calculated */
-  svn_checksum_t *actual_source_checksum;
+  svn_checksum_t *md5_actual_source_checksum;
+
+  /* A calculated SHA-1, which we'll use for eventually writing the
+     pristine. */
+  svn_checksum_t *sha1_actual_source_checksum;
 
   /* The stream used to calculate the source checksum */
-  svn_stream_t *source_checksum_stream;
+  svn_stream_t *md5_source_checksum_stream;
+
+  /* The stream used to calculate the source sha1 checksum */
+  svn_stream_t *sha1_source_checksum_stream;
 
   /* This is initialized to all zeroes when the baton is created, then
      populated with the MD5 digest of the resultant fulltext after the
@@ -905,15 +919,22 @@ struct file_baton
   const char *new_text_base_path;
 
   /* The checksum for the file located at NEW_TEXT_BASE_PATH. */
-  svn_checksum_t *actual_checksum;
+  svn_checksum_t *md5_actual_checksum;
+
+  /* The sha1 checksum of the pristine. */
+  svn_checksum_t *sha1_actual_checksum;
 
   /* If this file was added with history, this is the path to a copy
      of the text base of the copyfrom file (in the temporary area). */
   const char *copied_text_base;
 
-  /* If this file was added with history, this is the checksum of the
+  /* If this file was added with history, this is the MD5 checksum of the
      text base (see copied_text_base). May be NULL if unknown. */
-  svn_checksum_t *copied_base_checksum;
+  svn_checksum_t *md5_copied_base_checksum;
+
+  /* If this file was added with history, this is the SHA-1 checksum of
+     the text base (see copied_text_base). May be NULL if unknown. */
+  svn_checksum_t *sha1_copied_base_checksum;
 
   /* If this file was added with history, and the copyfrom had local
      mods, this is the path to a copy of the user's version with local
@@ -1037,11 +1058,12 @@ window_handler(svn_txdelta_window_t *window, void *baton)
 
   if (hb->expected_source_checksum)
     {
-      /* Close the stream to calculate the final checksum */
-      svn_error_t *err2 = svn_stream_close(hb->source_checksum_stream);
+      /* Close the stream to calculate the final checksum
+         (This also calculates the md5 as well.) */
+      svn_error_t *err2 = svn_stream_close(hb->sha1_source_checksum_stream);
 
       if (!err2 && !svn_checksum_match(hb->expected_source_checksum,
-                                       hb->actual_source_checksum))
+                                       hb->md5_actual_source_checksum))
         {
           err = svn_error_createf(SVN_ERR_WC_CORRUPT_TEXT_BASE, err,
                     _("Checksum mismatch while updating '%s':\n"
@@ -1050,7 +1072,7 @@ window_handler(svn_txdelta_window_t *window, void *baton)
                     svn_dirent_local_style(fb->local_abspath, hb->pool),
                     svn_checksum_to_cstring(hb->expected_source_checksum,
                                             hb->pool),
-                    svn_checksum_to_cstring(hb->actual_source_checksum,
+                    svn_checksum_to_cstring(hb->md5_actual_source_checksum,
                                             hb->pool));
         }
   
@@ -1068,7 +1090,7 @@ window_handler(svn_txdelta_window_t *window, void *baton)
       fb->new_text_base_path = apr_pstrdup(fb->pool, hb->work_path);
 
       /* ... and its checksum. */
-      fb->actual_checksum =
+      fb->md5_actual_checksum =
         svn_checksum__from_digest(hb->digest, svn_checksum_md5, fb->pool);
     }
 
@@ -3476,10 +3498,15 @@ add_file_with_history(const char *path,
   /* Compute a checksum for the stream as we write stuff into it.
      ### this is temporary. in many cases, we already *know* the checksum
      ### since it is a copy. */
-  copied_stream = svn_stream_checksummed2(copied_stream,
-                                          NULL, &tfb->copied_base_checksum,
-                                          svn_checksum_md5,
-                                          FALSE, pool);
+  copied_stream = svn_stream_checksummed2(
+                                copied_stream,
+                                NULL, &tfb->md5_copied_base_checksum,
+                                svn_checksum_md5, FALSE, pool);
+
+  copied_stream = svn_stream_checksummed2(
+                                copied_stream,
+                                NULL, &tfb->sha1_copied_base_checksum,
+                                svn_checksum_sha1, FALSE, pool);
 
   if (src_local_abspath != NULL) /* Found a file to copy */
     {
@@ -4110,12 +4137,21 @@ apply_textdelta(void *file_baton,
                                      svn_checksum_md5, checksum,
                                      handler_pool));
 
-      /* Wrap stream and store reference to allow calculating */
-      hb->source_checksum_stream =
-                 source = svn_stream_checksummed2(source,
-                                                  &hb->actual_source_checksum,
-                                                  NULL, svn_checksum_md5,
-                                                  TRUE, handler_pool);
+      /* Wrap stream and store reference to allow calculating the md5 */
+      hb->md5_source_checksum_stream =
+                 source = svn_stream_checksummed2(
+                                            source,
+                                            &hb->md5_actual_source_checksum,
+                                            NULL, svn_checksum_md5,
+                                            TRUE, handler_pool);
+
+      /* Wrap *that* checksum to calculate the sha1 */
+      hb->sha1_source_checksum_stream =
+                 source = svn_stream_checksummed2(
+                                            hb->md5_source_checksum_stream,
+                                            &hb->sha1_actual_source_checksum,
+                                            NULL, svn_checksum_sha1,
+                                            TRUE, handler_pool);
     }
 
   /* Open the text base for writing (this will get us a temporary file).  */
@@ -4775,7 +4811,8 @@ close_file(void *file_baton,
   svn_wc_notify_state_t content_state, prop_state;
   svn_wc_notify_lock_state_t lock_state;
   svn_checksum_t *expected_checksum = NULL;
-  svn_checksum_t *actual_checksum;
+  svn_checksum_t *md5_actual_checksum;
+  svn_checksum_t *sha1_actual_checksum;
   const char *new_base_path;
   apr_hash_t *new_base_props = NULL;
   apr_hash_t *new_actual_props = NULL;
@@ -4804,31 +4841,33 @@ close_file(void *file_baton,
                                 eb->db, fb->local_abspath,
                                 fb->pool, pool));
 
-      actual_checksum = fb->copied_base_checksum;
+      md5_actual_checksum = fb->md5_copied_base_checksum;
+      sha1_actual_checksum = fb->sha1_copied_base_checksum;
       new_base_path = fb->copied_text_base;
     }
   else
     {
       /* Pull the actual checksum from the file_baton, computed during
          the application of a text delta. */
-      actual_checksum = fb->actual_checksum;
+      md5_actual_checksum = fb->md5_actual_checksum;
+      sha1_actual_checksum = fb->sha1_actual_checksum;
       new_base_path = fb->new_text_base_path;
     }
 
   /* window-handler assembles new pristine text in .svn/tmp/text-base/  */
   if (new_base_path && expected_checksum
-      && !svn_checksum_match(expected_checksum, actual_checksum))
+      && !svn_checksum_match(expected_checksum, md5_actual_checksum))
     return svn_error_createf(SVN_ERR_CHECKSUM_MISMATCH, NULL,
             _("Checksum mismatch for '%s':\n"
               "   expected:  %s\n"
               "     actual:  %s\n"),
             svn_dirent_local_style(fb->local_abspath, pool),
             expected_hex_digest,
-            svn_checksum_to_cstring_display(actual_checksum, pool));
+            svn_checksum_to_cstring_display(md5_actual_checksum, pool));
 
   SVN_ERR(merge_file(&content_state, &prop_state, &lock_state,
                      &new_base_props, &new_actual_props, fb,
-                     new_base_path, actual_checksum, pool));
+                     new_base_path, md5_actual_checksum, pool));
 
 
   if (fb->added)
