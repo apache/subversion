@@ -767,7 +767,6 @@ svn_fs_base__begin_obliteration_txn(svn_fs_txn_t **txn_p,
   *txn_p = txn;
 
   return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL, NULL);
-  return SVN_NO_ERROR;
 }
 
 
