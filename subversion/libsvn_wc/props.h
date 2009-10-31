@@ -150,16 +150,20 @@ svn_error_t *svn_wc__wcprop_set(svn_wc__db_t *db,
    changing the working file. */
 svn_boolean_t svn_wc__has_magic_property(const apr_array_header_t *properties);
 
-/* Add a working queue item to install PROPS and, if INSTALL_BASE_PROPS is true,
-   BASE_PROPS for the LOCAL_ABSPATH in DB, updating the node to reflect the
-   changes.  BASE_PROPS must be supplied even if INSTALL_BASE_PROPS is false.
-   Use POOL for temporary allocations. */
-svn_error_t *svn_wc__install_props(svn_wc__db_t *db,
-                                   const char *local_abspath,
-                                   apr_hash_t *base_props,
-                                   apr_hash_t *props,
-                                   svn_boolean_t write_base_props,
-                                   apr_pool_t *pool);
+/* Add a working queue item to install PROPS and, if INSTALL_PRISTINE_PROPS is
+   true, BASE_PROPS for the LOCAL_ABSPATH in DB, updating the node to reflect
+   the changes.  PRISTINE_PROPS must be supplied even if INSTALL_PRISTINE_PROPS
+   is false. If FORCE_BASE_INSTALL properties are always installed in BASE_NODE,
+   even though WORKING is used as pristine for the current node.
+   Use SCRATCH_POOL for temporary allocations. */
+svn_error_t *
+svn_wc__install_props(svn_wc__db_t *db,
+                      const char *local_abspath,
+                      apr_hash_t *pristine_props,
+                      apr_hash_t *props,
+                      svn_boolean_t install_pristine_props,
+                      svn_boolean_t force_base_install,
+                      apr_pool_t *scratch_pool);
 
 /* Extend LOG_ACCUM with log entries to save the current baseprops of PATH
    as revert props.
@@ -246,6 +250,17 @@ svn_wc__marked_as_binary(svn_boolean_t *marked,
                          const char *local_abspath,
                          svn_wc__db_t *db,
                          apr_pool_t *scratch_pool);
+
+
+/* Temporary helper for determining where to store pristine properties.
+   All calls will eventually be replaced by direct wc_db operations
+   of the right type. */
+svn_error_t *
+svn_wc__prop_pristine_is_working(svn_boolean_t *working,
+                                 svn_wc__db_t *db,
+                                 const char *local_abspath,
+                                 apr_pool_t *scratch_pool);
+
 
 #ifdef __cplusplus
 }
