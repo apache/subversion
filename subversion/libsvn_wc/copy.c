@@ -284,7 +284,7 @@ determine_copyfrom_info(const char **copyfrom_url,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, &repos_relpath, &root_url, NULL,
                                &rev, NULL, NULL, NULL, NULL,
-                               NULL, db, src_abspath, result_pool,
+                               NULL, db, src_abspath, scratch_pool,
                                scratch_pool));
   if (root_url && repos_relpath)
     {
