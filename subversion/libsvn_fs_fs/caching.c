@@ -88,7 +88,7 @@ dup_dir_listing(void **out,
                 apr_pool_t *pool)
 {
   apr_hash_t *new_entries = apr_hash_make(pool);
-  const apr_hash_t *entries = in;
+  apr_hash_t *entries = (void*)in; /* Cast away const only */
   apr_hash_index_t *hi;
 
   for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
