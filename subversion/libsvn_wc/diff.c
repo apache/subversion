@@ -607,6 +607,20 @@ file_diff(struct dir_baton *db,
     if (kind == svn_node_none)
       SVN_ERR(svn_wc__text_revert_path(&textbase, eb->db, local_abspath,
                                        pool));
+
+    /* If there is no revert base to diff either, don't attempt to diff it.
+     * ### This is a band-aid.
+     * ### In WC-NG, files added within a copied subtree are marked "copied",
+     * ### which will cause the code below to end up calling
+     * ### eb->callbacks->file_changed() with a non-existent text-base.
+     * ### Not sure how to properly tell apart a file added within a copied
+     * ### subtree from a copied file. But eventually we'll have to get the
+     * ### base text from the pristine store anyway and use tempfiles (or
+     * ### streams, hopefully) for diffing, so all this horrible statting
+     * ### the disk for text bases, and this hack, will just go away. */
+    SVN_ERR(svn_io_check_path(textbase, &kind, pool));
+    if (kind == svn_node_none)
+      textbase = NULL;
   }
 
   SVN_ERR(get_empty_file(eb, &empty_file));
