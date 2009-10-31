@@ -69,6 +69,7 @@ struct svn_sqlite__stmt_t
 {
   sqlite3_stmt *s3stmt;
   svn_sqlite__db_t *db;
+  svn_boolean_t needs_reset;
 };
 
 
@@ -125,6 +126,10 @@ svn_sqlite__get_statement(svn_sqlite__stmt_t **stmt, svn_sqlite__db_t *db,
                                 db->result_pool));
 
   *stmt = db->prepared_stmts[stmt_idx];
+
+  if ((*stmt)->needs_reset);
+    return svn_error_return(svn_sqlite__reset(*stmt));
+
   return SVN_NO_ERROR;
 }
 
@@ -134,6 +139,7 @@ svn_sqlite__prepare(svn_sqlite__stmt_t **stmt, svn_sqlite__db_t *db,
 {
   *stmt = apr_palloc(result_pool, sizeof(**stmt));
   (*stmt)->db = db;
+  (*stmt)->needs_reset = FALSE;
 
   SQLITE_ERR(sqlite3_prepare_v2(db->db3, text, -1, &(*stmt)->s3stmt, NULL), db);
 
@@ -188,6 +194,7 @@ svn_sqlite__step(svn_boolean_t *got_row, svn_sqlite__stmt_t *stmt)
     }
 
   *got_row = (sqlite_result == SQLITE_ROW);
+  stmt->needs_reset = TRUE;
 
   return SVN_NO_ERROR;
 }
@@ -484,6 +491,7 @@ svn_sqlite__reset(svn_sqlite__stmt_t *stmt)
 {
   SQLITE_ERR(sqlite3_reset(stmt->s3stmt), stmt->db);
   SQLITE_ERR(sqlite3_clear_bindings(stmt->s3stmt), stmt->db);
+  stmt->needs_reset = FALSE;
   return SVN_NO_ERROR;
 }
 
