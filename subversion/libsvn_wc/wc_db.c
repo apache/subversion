@@ -2578,9 +2578,10 @@ svn_wc__db_temp_op_set_pristine_props(svn_wc__db_t *db,
 
   if (affected_rows != 1)
     return svn_error_createf(SVN_ERR_WC_DB_ERROR, NULL,
-                             _("No row found for '%s'"),
+                             _("Can't store properties for '%s' in '%s'."),
                              svn_dirent_local_style(local_abspath,
-                                                    scratch_pool));
+                                                    scratch_pool),
+                             on_working ? "working_node" : "base_node");
 
   return SVN_NO_ERROR;
 }
