@@ -277,6 +277,9 @@ determine_copyfrom_info(const char **copyfrom_url,
   const char *repos_relpath;
   svn_wc__db_status_t status;
 
+  url = NULL;
+  rev = SVN_INVALID_REVNUM;
+
   SVN_ERR(svn_wc__db_read_info(&status, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, &repos_relpath, &root_url, NULL,
@@ -305,11 +308,6 @@ determine_copyfrom_info(const char **copyfrom_url,
           url = svn_path_url_add_component2(root_url, repos_relpath,
                                             scratch_pool);
         }
-    }
-  else
-    {
-      url = NULL;
-      rev = SVN_INVALID_REVNUM;
     }
 
   if (url && dst_url && strcmp(url, dst_url) == 0 && rev == dst_revision)
