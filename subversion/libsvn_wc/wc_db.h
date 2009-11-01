@@ -1665,7 +1665,7 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
  *
  * There are three further considerations when resolving a deleted node:
  *
- *   If the BASE B/W/D was moved-away, then BASE_REL_ABSPATH will specify
+ *   If the BASE B/W/D was moved-away, then BASE_DEL_ABSPATH will specify
  *   B/W/D as the root of the BASE deletion (not necessarily B/W as an
  *   implicit delete caused by a replacement; only the closest ancestor is
  *   reported). The other parameters will operate as normal, based on what
@@ -1674,7 +1674,7 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
  *
  *   If the BASE B/W/D was deleted explicitly *and* B/W is a replacement,
  *   then the explicit deletion is subsumed by the implicit deletion that
- *   occurred with the B/W replacement. Thus, BASE_REL_ABSPATH will point
+ *   occurred with the B/W replacement. Thus, BASE_DEL_ABSPATH will point
  *   to B/W as the root of the BASE deletion. IOW, we can detect the
  *   explicit move-away, but not an explicit deletion.
  *
@@ -1698,14 +1698,13 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
  * if any. If no ancestors have been moved-away, then this is set to NULL.
  *
  * WORK_DEL_ABSPATH will specify the root of a deleted subtree within
- * content in the WORKING tree (note there is no concept of layered
- * delete operations in WORKING, so there is only one deletion root in
- * the ancestry).
+ * the WORKING tree (note there is no concept of layered delete operations
+ * in WORKING, so there is only one deletion root in the ancestry).
  *
  * All OUT parameters may be set to NULL to indicate a lack of interest in
  * that piece of information.
  *
- * If the node given by LOCAL_ABSPATH does not exit, then
+ * If the node given by LOCAL_ABSPATH does not exist, then
  * SVN_ERR_WC_PATH_NOT_FOUND is returned. If it doesn't have a "deleted"
  * status, then SVN_ERR_WC_PATH_UNEXPECTED_STATUS will be returned.
  *
