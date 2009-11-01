@@ -805,10 +805,27 @@ svn_io_copy_perms(const char *src,
 #ifndef WIN32
   {
     apr_file_t *src_file;
+    apr_file_t *dst_file;
     apr_fileperms_t perms;
     const char *dst_apr;
     apr_status_t apr_err;
+    apr_finfo_t finfo;
     svn_error_t *err;
+
+    /* If DST does not exist, or if it is a symlink, don't bother trying
+     * to set permissions. */
+    err = svn_io_file_open(&dst_file, dst, APR_READ, APR_OS_DEFAULT, pool);
+    if (err && APR_STATUS_IS_ENOENT(err->apr_err))
+      {
+        svn_error_clear(err);
+        return SVN_NO_ERROR;
+      }
+    else
+      SVN_ERR(err);
+    SVN_ERR(svn_io_file_info_get(&finfo, APR_FINFO_TYPE, dst_file, pool));
+    SVN_ERR(svn_io_file_close(dst_file, pool));
+    if (finfo.filetype == APR_LNK)
+      return SVN_NO_ERROR;
 
     if (src == NULL)
       perms = APR_OS_DEFAULT;
@@ -829,8 +846,6 @@ svn_io_copy_perms(const char *src,
           }
         else
           {
-            apr_finfo_t finfo;
-
             SVN_ERR(svn_io_file_info_get(&finfo, APR_FINFO_PROT, src_file,
                                          pool));
             SVN_ERR(svn_io_file_close(src_file, pool));
