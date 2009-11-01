@@ -1245,8 +1245,11 @@ handle_response(serf_request_t *request,
         {
           ctx->session->pending_error =
               svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA,
-                                ctx->session->pending_error,
-                               _("Premature EOF seen from server"));
+                                svn_error_compose_create(
+                                           ctx->session->pending_error,
+                                           svn_error_wrap_apr(status, NULL)),
+                                _("Premature EOF seen from server "
+                                  "(http status=%d)"), sl.code);
           /* This discard may be no-op, but let's preserve the algorithm
              used elsewhere in this function for clarity's sake. */
           svn_ra_serf__response_discard_handler(request, response, NULL, pool);
