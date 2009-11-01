@@ -3666,6 +3666,7 @@ svn_io_open_unique_file3(apr_file_t **file,
                          apr_pool_t *scratch_pool)
 {
   apr_file_t *tempfile;
+  const char *tempname;
   char *path;
   struct temp_file_cleanup_s *baton = NULL;
   apr_int32_t flags = (APR_READ | APR_WRITE | APR_CREATE | APR_EXCL |
@@ -3707,24 +3708,23 @@ svn_io_open_unique_file3(apr_file_t **file,
     }
 
   SVN_ERR(svn_io_file_mktemp(&tempfile, path, flags, result_pool));
+  SVN_ERR(svn_io_file_name_get(&tempname, tempfile, scratch_pool));
 
   if (file)
     *file = tempfile;
+  else
+    SVN_ERR(svn_io_file_close(tempfile, scratch_pool));
 
-  if (unique_path || baton)
+  if (unique_path)
+    *unique_path = apr_pstrdup(result_pool, tempname);
+
+  if (baton)
     {
-      const char *name;
-      SVN_ERR(svn_io_file_name_get(&name, tempfile, result_pool));
-
       if (unique_path)
-        *unique_path = name;
-
-      if (baton)
-        baton->name = name;
+        baton->name = *unique_path;
+      else
+        baton->name = apr_pstrdup(result_pool, tempname);
     }
 
-  if (!file)
-    SVN_ERR(svn_io_file_close(tempfile, scratch_pool));
-    
   return SVN_NO_ERROR;
 }
