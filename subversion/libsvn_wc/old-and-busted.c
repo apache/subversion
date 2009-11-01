@@ -1242,7 +1242,7 @@ svn_wc__read_entries_old(apr_hash_t **entries,
          original format pre-upgrade. */
       SVN_ERR(read_val(&val, &curp, endp));
       if (val)
-        entries_format = (apr_off_t)apr_strtoi64(val, NULL, 0);
+        entries_format = (int)apr_strtoi64(val, NULL, 0);
       else
         return svn_error_createf(SVN_ERR_WC_CORRUPT, NULL,
                                  _("Invalid version line in entries file "
