@@ -27,18 +27,16 @@
 /* these are used in wc_db.c  */
 
 -- STMT_SELECT_BASE_NODE
-select wc_id, local_relpath, repos_id, repos_relpath,
-  presence, kind, revnum, checksum, translated_size,
-  changed_rev, changed_date, changed_author, depth, symlink_target,
-  last_mod_time, properties
+select repos_id, repos_relpath, presence, kind, revnum, checksum,
+  translated_size, changed_rev, changed_date, changed_author, depth,
+  symlink_target, last_mod_time, properties
 from base_node
 where wc_id = ?1 and local_relpath = ?2;
 
 -- STMT_SELECT_BASE_NODE_WITH_LOCK
-select wc_id, local_relpath, base_node.repos_id, base_node.repos_relpath,
-  presence, kind, revnum, checksum, translated_size,
-  changed_rev, changed_date, changed_author, depth, symlink_target,
-  last_mod_time, properties,
+select base_node.repos_id, base_node.repos_relpath, presence, kind,
+  revnum, checksum, translated_size, changed_rev, changed_date,
+  changed_author, depth, symlink_target, last_mod_time, properties,
   lock_token, lock_owner, lock_comment, lock_date
 from base_node
 left outer join lock on base_node.repos_id = lock.repos_id
