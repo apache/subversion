@@ -298,10 +298,6 @@ svn_io_copy_file(const char *src,
 
 /** Copy permission flags from @a src onto the file at @a dst. Both
  * filenames are utf8-encoded filenames.
- *
- * @note As of Subversion 1.7, @a src is allowed to be NULL, or refer
- * to a file which does not exist on disk. In either case, the operating
- * system's default file permissions will be set on @a dst.
  */
 svn_error_t *
 svn_io_copy_perms(const char *src,
