@@ -1828,6 +1828,14 @@ svn_io_file_name_get(const char **filename,
                      apr_file_t *file,
                      apr_pool_t *pool);
 
+/** Wrapper for apr_file_perms_set().
+ *
+ * @since New in 1.7. */
+svn_error_t *
+svn_io_file_perms_set(const char *fname,
+                      apr_fileperms_t perms,
+                      apr_pool_t *pool);
+
 /** @} */
 
 #ifdef __cplusplus

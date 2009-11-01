@@ -3662,6 +3662,24 @@ svn_io_file_name_get(const char **filename,
   return svn_error_return(cstring_to_utf8(filename, fname_apr, pool));
 }
 
+/* Wrapper for apr_file_perms_set(). */
+svn_error_t *
+svn_io_file_perms_set(const char *fname, apr_fileperms_t perms,
+                      apr_pool_t *pool)
+{
+  const char *fname_apr;
+  apr_status_t status;
+
+  SVN_ERR(cstring_from_utf8(&fname_apr, fname, pool));
+
+  status = apr_file_perms_set(fname_apr, perms);
+  if (status)
+    return svn_error_wrap_apr(status, _("Can't set permissions of '%s'"),
+                              fname);
+  else
+    return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_io_open_unique_file3(apr_file_t **file,
                          const char **unique_path,
