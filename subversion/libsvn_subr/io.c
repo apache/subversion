@@ -806,67 +806,37 @@ svn_io_copy_perms(const char *src,
   {
     apr_file_t *src_file;
     apr_file_t *dst_file;
-    apr_fileperms_t perms;
-    const char *dst_apr;
-    apr_status_t apr_err;
     apr_finfo_t finfo;
     svn_error_t *err;
 
-    /* If DST does not exist, or if it is a symlink, don't bother trying
-     * to set permissions. */
-    err = svn_io_file_open(&dst_file, dst, APR_READ, APR_OS_DEFAULT, pool);
-    if (err && APR_STATUS_IS_ENOENT(err->apr_err))
-      {
-        svn_error_clear(err);
-        return SVN_NO_ERROR;
-      }
-    else
-      SVN_ERR(err);
+    /* If DST is a symlink, don't bother copying permissions. */
+    SVN_ERR(svn_io_file_open(&dst_file, dst, APR_READ, APR_OS_DEFAULT, pool));
     SVN_ERR(svn_io_file_info_get(&finfo, APR_FINFO_TYPE, dst_file, pool));
     SVN_ERR(svn_io_file_close(dst_file, pool));
     if (finfo.filetype == APR_LNK)
       return SVN_NO_ERROR;
 
-    if (src == NULL)
-      perms = APR_OS_DEFAULT;
-    else
+    SVN_ERR(svn_io_file_open(&src_file, src, APR_READ, APR_OS_DEFAULT, pool));
+    SVN_ERR(svn_io_file_info_get(&finfo, APR_FINFO_PROT, src_file, pool));
+    SVN_ERR(svn_io_file_close(src_file, pool));
+    err = svn_io_file_perms_set(dst, finfo.protection, pool);
+    if (err)
       {
-        err = svn_io_file_open(&src_file, src, APR_READ, APR_OS_DEFAULT, pool);
-        if (err)
-          {
-            /* If the source file doesn't exist on disk, use the OS's
-             * default permissions. */
-            if (APR_STATUS_IS_ENOENT(err->apr_err))
-              {
-                svn_error_clear(err);
-                perms = APR_OS_DEFAULT;
-              }
-            else
-              return svn_error_return(err);
-          }
+        /* We shouldn't be able to get APR_INCOMPLETE or APR_ENOTIMPL
+           here under normal circumstances, because the perms themselves
+           came from a call to apr_file_info_get(), and we already know
+           this is the non-Win32 case.  But if it does happen, it's not
+           an error. */
+        if (APR_STATUS_IS_INCOMPLETE(err->apr_err) ||
+            APR_STATUS_IS_ENOTIMPL(err->apr_err))
+          svn_error_clear(err);
         else
           {
-            SVN_ERR(svn_io_file_info_get(&finfo, APR_FINFO_PROT, src_file,
-                                         pool));
-            SVN_ERR(svn_io_file_close(src_file, pool));
-            perms = finfo.protection;
+            const char *message;
+            message = apr_psprintf(pool, _("Can't set permissions on '%s'"),
+                                   svn_dirent_local_style(dst, pool));
+            return svn_error_quick_wrap(err, message);
           }
-      }
-
-    SVN_ERR(cstring_from_utf8(&dst_apr, dst, pool));
-    apr_err = apr_file_perms_set(dst_apr, perms);
-
-    /* We shouldn't be able to get APR_INCOMPLETE or APR_ENOTIMPL
-       here under normal circumstances, because the perms themselves
-       came from a call to apr_file_info_get(), and we already know
-       this is the non-Win32 case.  But if it does happen, it's not
-       an error. */
-    if (apr_err != APR_SUCCESS
-        && apr_err != APR_INCOMPLETE
-        && apr_err != APR_ENOTIMPL)
-      {
-        return svn_error_wrap_apr(apr_err, _("Can't set permissions on '%s'"),
-                                  svn_dirent_local_style(dst, pool));
       }
   }
 #endif /* ! WIN32 */
