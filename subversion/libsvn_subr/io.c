@@ -3667,6 +3667,7 @@ svn_io_open_unique_file3(apr_file_t **file,
 {
   apr_file_t *tempfile;
   const char *tempname;
+  apr_fileperms_t perms;
   char *path;
   struct temp_file_cleanup_s *baton = NULL;
   apr_int32_t flags = (APR_READ | APR_WRITE | APR_CREATE | APR_EXCL |
@@ -3709,6 +3710,18 @@ svn_io_open_unique_file3(apr_file_t **file,
 
   SVN_ERR(svn_io_file_mktemp(&tempfile, path, flags, result_pool));
   SVN_ERR(svn_io_file_name_get(&tempname, tempfile, scratch_pool));
+
+  /* ### svn_io_file_mktemp() creates files with mode 0600.
+   * ### As of r40264, tempfiles created by svn_io_open_unique_file3()
+   * ### often end up being copied or renamed into the working copy.
+   * ### This will cause working files having mode 0600 while users might
+   * ### expect to see 644 or 664. Ideally, permissions should be tweaked
+   * ### by our callers after installing tempfiles in the WC, but until
+   * ### that's done we need to avoid breaking pre-r40264 behaviour.
+   * ### So we tweak perms of the tempfile here, but only if the umask
+   * ### allows it. */
+  SVN_ERR(merge_default_file_perms(tempfile, &perms, scratch_pool));
+  SVN_ERR(svn_io_file_perms_set(tempname, perms, scratch_pool));
 
   if (file)
     *file = tempfile;
