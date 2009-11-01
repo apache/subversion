@@ -306,6 +306,9 @@ svn_wc__prop_pristine_is_working(svn_boolean_t *working,
       case svn_wc__db_status_added:
         break;
       case svn_wc__db_status_not_present:
+        *working = FALSE; /* ### merge_tests.py 19 tries to install properties
+                                 even though the node is not present.*/
+        break;
       case svn_wc__db_status_absent:
       case svn_wc__db_status_excluded:
         SVN_ERR_ASSERT(0 && "Node not here");
@@ -514,19 +517,10 @@ immediate_install_props(svn_wc__db_t *db,
       SVN_ERR(svn_io_remove_file2(propfile_abspath, TRUE, scratch_pool));
     }
 
-  {
-    svn_boolean_t in_working;
-    SVN_ERR(svn_wc__prop_pristine_is_working(&in_working, db, local_abspath,
-                                             scratch_pool));
-    SVN_ERR(svn_wc__db_temp_op_set_pristine_props(db, local_abspath,
-                                                  base_props, in_working,
-                                                  scratch_pool));
-
-    SVN_ERR(svn_wc__db_op_set_props(db, local_abspath,
-                                    (prop_diffs->nelts > 0) ? working_props
-                                                            : NULL,
-                                    scratch_pool));
-  }
+  SVN_ERR(svn_wc__db_op_set_props(db, local_abspath,
+                                  (prop_diffs->nelts > 0) ? working_props
+                                                          : NULL,
+                                  scratch_pool));
 
   return SVN_NO_ERROR;
 }
