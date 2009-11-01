@@ -194,25 +194,30 @@ get_copy_pair_ancestors(const apr_array_header_t *copy_pairs,
 {
   apr_pool_t *subpool = svn_pool_create(pool);
   const char *first_dst;
+  const char *first_src;
   const char *top_dst;
+  svn_boolean_t src_is_url;
+  svn_boolean_t dst_is_url;
   char *top_src;
   int i;
 
   /* Because all the destinations are in the same directory, we can easily
      determine their common ancestor. */
   first_dst = APR_ARRAY_IDX(copy_pairs, 0, svn_client__copy_pair_t *)->dst;
+  dst_is_url = svn_path_is_url(first_dst);
+
   if (copy_pairs->nelts == 1)
     top_dst = apr_pstrdup(subpool, first_dst);
-  else if (svn_path_is_url(first_dst))
-    top_dst = svn_uri_dirname(first_dst, subpool);
   else
-    top_dst = svn_dirent_dirname(first_dst, subpool);
+    top_dst = dst_is_url ? svn_uri_dirname(first_dst, subpool)
+                         : svn_dirent_dirname(first_dst, subpool);
 
   /* Sources can came from anywhere, so we have to actually do some
      work for them.  */
-  top_src = apr_pstrdup(subpool,
-                        APR_ARRAY_IDX(copy_pairs, 0,
-                                      svn_client__copy_pair_t *)->src);
+  first_src = APR_ARRAY_IDX(copy_pairs, 0,
+                                      svn_client__copy_pair_t *)->src;
+  src_is_url = svn_path_is_url(first_src);
+  top_src = apr_pstrdup(subpool, first_src);
   for (i = 1; i < copy_pairs->nelts; i++)
     {
       /* We don't need to clear the subpool here for several reasons:
@@ -226,7 +231,11 @@ get_copy_pair_ancestors(const apr_array_header_t *copy_pairs,
       */
       const svn_client__copy_pair_t *pair =
         APR_ARRAY_IDX(copy_pairs, i, svn_client__copy_pair_t *);
-      top_src = svn_path_get_longest_ancestor(top_src, pair->src, subpool);
+
+      top_src =
+           src_is_url
+               ? svn_uri_get_longest_ancestor(top_src, pair->src, subpool)
+               : svn_dirent_get_longest_ancestor(top_src, pair->src, subpool);
     }
 
   if (src_ancestor)
@@ -236,7 +245,10 @@ get_copy_pair_ancestors(const apr_array_header_t *copy_pairs,
     *dst_ancestor = apr_pstrdup(pool, top_dst);
 
   if (common_ancestor)
-    *common_ancestor = svn_path_get_longest_ancestor(top_src, top_dst, pool);
+    *common_ancestor = 
+               src_is_url
+                    ? svn_uri_get_longest_ancestor(top_src, top_dst, pool)
+                    : svn_dirent_get_longest_ancestor(top_src, top_dst, pool);
 
   svn_pool_destroy(subpool);
 
