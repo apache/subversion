@@ -1246,24 +1246,21 @@ reown_file(const char *path,
   return svn_error_return(svn_io_remove_file2(unique_name, FALSE, pool));
 }
 
-/* Determine what the read-write PERMS for PATH should be by ORing
-   together the permissions of PATH and the permissions of a temporary
-   file that we create.  Unfortunately, this is the only way to
-   determine which combination of write bits (User/Group/World) should
-   be set to restore a file from read-only to read-write.  Make
-   temporary allocations in POOL.  */
+/* Determine what the PERMS for a new file should be by looking at the
+   permissions of a temporary file that we create.
+   Unfortunately, umask() as defined in POSIX provides no thread-safe way
+   to get at the current value of the umask, so what we're doing here is
+   the only way we have to determine which combination of write bits
+   (User/Group/World) should be set by default.
+   Make temporary allocations in SCRATCH_POOL.  */
 static svn_error_t *
-get_default_file_perms(const char *path, apr_fileperms_t *perms,
-                       apr_pool_t *pool)
+get_default_file_perms(apr_fileperms_t *perms, apr_pool_t *scratch_pool)
 {
-  apr_status_t status;
-  apr_finfo_t tmp_finfo, finfo;
+  apr_finfo_t finfo;
   apr_file_t *fd;
-  const char *tmp_path;
-  const char *apr_path;
 
-  /* Get the perms for a newly created file to find out what write
-     bits should be set.
+  /* Get the perms for a newly created file to find out what bits
+     should be set.
 
      NOTE: normally del_on_close can be problematic because APR might
        delete the file if we spawned any child processes. In this case,
@@ -1272,34 +1269,35 @@ get_default_file_perms(const char *path, apr_fileperms_t *perms,
 
      NOTE: not so fast, shorty. if some other thread forks off a child,
        then the APR cleanups run, and the file will disappear. sigh.
+
+     Using svn_io_open_uniquely_named() here because other tempfile
+     creation functions tweak the permission bits of files they create.
   */
-  SVN_ERR(svn_io_open_unique_file3(&fd, &tmp_path,
-                                   svn_dirent_dirname(path, pool),
-                                   svn_io_file_del_on_pool_cleanup,
-                                   pool, pool));
-  status = apr_stat(&tmp_finfo, tmp_path, APR_FINFO_PROT, pool);
-  if (status)
-    return svn_error_wrap_apr(status, _("Can't get default file perms "
-                                        "for file at '%s' (file stat error)"),
-                              path);
-  apr_file_close(fd);
+  SVN_ERR(svn_io_open_uniquely_named(&fd, NULL, NULL, "svn-tempfile", ".tmp",
+                                     svn_io_file_del_on_pool_cleanup,
+                                     scratch_pool, scratch_pool));
+  SVN_ERR(svn_io_file_info_get(&finfo, APR_FINFO_PROT, fd, scratch_pool));
+  SVN_ERR(svn_io_file_close(fd, scratch_pool));
 
-  /* Get the perms for the original file so we'll have any other bits
-   * that were already set (like the execute bits, for example). */
-  SVN_ERR(cstring_from_utf8(&apr_path, path, pool));
-  status = apr_file_open(&fd, apr_path, APR_READ | APR_BINARY,
-                         APR_OS_DEFAULT, pool);
-  if (status)
-    return svn_error_wrap_apr(status, _("Can't open file at '%s'"), path);
+  *perms = finfo.protection;
+  return SVN_NO_ERROR;
+}
 
-  status = apr_stat(&finfo, apr_path, APR_FINFO_PROT, pool);
-  if (status)
-    return svn_error_wrap_apr(status, _("Can't get file perms for file at "
-                                        "'%s' (file stat error)"), path);
-  apr_file_close(fd);
+/* OR together permission bits of the file FD and the default permissions
+   of a file as determined by get_default_file_perms(). Do temporary
+   allocations in SCRATCH_POOL. */
+static svn_error_t *
+merge_default_file_perms(apr_file_t *fd, apr_fileperms_t *perms,
+                         apr_pool_t *scratch_pool)
+{
+  apr_finfo_t finfo;
+  apr_fileperms_t default_perms;
+
+  SVN_ERR(get_default_file_perms(&default_perms, scratch_pool));
+  SVN_ERR(svn_io_file_info_get(&finfo, APR_FINFO_PROT, fd, scratch_pool));
 
   /* Glom the perms together. */
-  *perms = tmp_finfo.protection | finfo.protection;
+  *perms = default_perms | finfo.protection;
   return SVN_NO_ERROR;
 }
 
@@ -1345,7 +1343,16 @@ io_set_file_perms(const char *path,
   if (change_readwrite)
     {
       if (enable_write) /* Make read-write. */
-        SVN_ERR(get_default_file_perms(path, &perms_to_set, pool));
+        {
+          apr_file_t *fd;
+
+          /* Get the perms for the original file so we'll have any other bits
+           * that were already set (like the execute bits, for example). */
+          SVN_ERR(svn_io_file_open(&fd, path, APR_READ | APR_BINARY,
+                                   APR_OS_DEFAULT, pool));
+          SVN_ERR(merge_default_file_perms(fd, &perms_to_set, pool));
+          SVN_ERR(svn_io_file_close(fd, pool));
+        }
       else
         {
           if (finfo.protection & APR_UREAD)
