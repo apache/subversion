@@ -236,6 +236,8 @@ file_xfer_under_path(svn_wc__db_t *db,
             svn_error_clear(err);
           }
 
+        SVN_ERR(svn_io_copy_perms(from_abspath, dest_abspath, scratch_pool));
+
         SVN_ERR(svn_wc__maybe_set_read_only(NULL, db, dest_abspath,
                                             scratch_pool));
 
