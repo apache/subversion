@@ -4261,11 +4261,9 @@ def move_below_move(sbox):
   # ### assertion on trunk (BH: 2009-11-01
   expected_status.remove('A', 'A/D', 'A/D/gamma', 'A/D/G', 'A/D/G/pi',
                          'A/D/G/rho', 'A/D/G/tau', 'A/D/H', 'A/D/H/chi',
-                         'A/D/H/omega', 'A/D/H/psi', 'A/D',  'A/D/H',
-                         'A/D/H/chi', 'A/D/H/omega', 'A/D/H/psi', 'A/D/G',
-                         'A/D/G/rho', 'A/D/G/pi', 'A/D/G/tau', 'A/D/gamma',
-                         'A/mu', 'A/B', 'A/B/E', 'A/B/E/alpha',
-                         'A/B/E/beta', 'A/B/F', 'A/B/lambda', 'A/C', 'A/mu')
+                         'A/D/H/omega', 'A/D/H/psi', 'A/B', 'A/B/E',
+                         'A/B/E/alpha', 'A/B/E/beta', 'A/B/F', 'A/B/lambda',
+                         'A/C', 'A/mu')
 
   svntest.actions.run_and_verify_commit(sbox.wc_dir,
                                         expected_output,
@@ -4358,8 +4356,7 @@ test_list = [ None,
               path_move_and_copy_between_wcs_2475,
               path_copy_in_repo_2475,
               XFail(commit_copy_depth_empty),
-              copy_below_copy,
-              XFail(move_below_move)
+              copy_below_copy
              ]
 
 if __name__ == '__main__':
