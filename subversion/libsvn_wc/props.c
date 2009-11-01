@@ -306,9 +306,6 @@ svn_wc__prop_pristine_is_working(svn_boolean_t *working,
       case svn_wc__db_status_added:
         break;
       case svn_wc__db_status_not_present:
-        *working = FALSE; /* ### merge_tests.py 19 tries to install properties
-                                 even though the node is not present.*/
-        break;
       case svn_wc__db_status_absent:
       case svn_wc__db_status_excluded:
         SVN_ERR_ASSERT(0 && "Node not here");
@@ -440,6 +437,28 @@ svn_wc__load_revert_props(apr_hash_t **revert_props_p,
       else
         *revert_props_p = apr_hash_make(result_pool);
     }
+
+  #ifdef TEST_DB_PROPS
+  {
+    apr_hash_t *db_props;
+    SVN_ERR(svn_wc__db_base_get_props(&db_props, db, local_abspath,
+                                      scratch_pool, scratch_pool));
+
+    if (apr_hash_count(*revert_props_p) > 0)
+      {
+        apr_array_header_t *diffs;
+        SVN_ERR_ASSERT(db_props != NULL);
+
+        SVN_ERR(svn_prop_diffs(&diffs, *revert_props_p, db_props,
+                               scratch_pool));
+
+        SVN_ERR_ASSERT(diffs->nelts == 0);
+      }
+    else
+      SVN_ERR_ASSERT(db_props == NULL ||
+                     (apr_hash_count(db_props) == 0));
+  }
+#endif
 
   return SVN_NO_ERROR;
 }

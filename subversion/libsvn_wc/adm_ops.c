@@ -1650,7 +1650,8 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
   /* ### this is totally bogus. we clear these cuz turds might have been
      ### left around. thankfully, this will be properly managed during the
      ### wc-ng upgrade process. for now, we try to compensate... */
-  if ((exists || is_replace) && copyfrom_url == NULL)
+  if (((exists && status != svn_wc__db_status_not_present) || is_replace)
+      && copyfrom_url == NULL)
     SVN_ERR(svn_wc__props_delete(db, local_abspath, svn_wc__props_working,
                                  pool));
 
