@@ -1026,10 +1026,13 @@ svn_client__harvest_committables(apr_hash_t **committables,
           err = svn_wc__node_is_status_added(&is_added, ctx->wc_ctx,
                                              parent_abspath, subpool);
           if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
-            return svn_error_createf
-              (SVN_ERR_WC_CORRUPT, NULL,
-              _("'%s' is scheduled for addition within unversioned parent"),
-              svn_dirent_local_style(target, pool));
+            {
+              svn_error_clear(err);
+              return svn_error_createf(
+                SVN_ERR_WC_CORRUPT, NULL,
+                _("'%s' is scheduled for addition within unversioned parent"),
+                svn_dirent_local_style(target, pool));
+            }
           SVN_ERR(err);
 
           if (is_added)
