@@ -632,10 +632,9 @@ svn_wc__node_get_lock_token(const char **lock_token,
                             apr_pool_t *result_pool,
                             apr_pool_t *scratch_pool)
 {
-  svn_wc__db_status_t status;
   svn_wc__db_lock_t *lock;
 
-  SVN_ERR(svn_wc__db_read_info(&status,
+  SVN_ERR(svn_wc__db_read_info(NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
