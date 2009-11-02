@@ -1470,7 +1470,8 @@ modcheck_found_node(const char *local_abspath,
     modified = TRUE;
   else
     SVN_ERR(entry_has_local_mods(&modified, baton->db, local_abspath,
-                                 kind == svn_wc__db_kind_file
+                                 (kind == svn_wc__db_kind_file
+                                  || kind == svn_wc__db_kind_symlink)
                                    ? svn_node_file : svn_node_dir,
                                  scratch_pool));
 
