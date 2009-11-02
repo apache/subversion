@@ -3667,11 +3667,13 @@ svn_io_open_unique_file3(apr_file_t **file,
 {
   apr_file_t *tempfile;
   const char *tempname;
-  apr_fileperms_t perms;
   char *path;
   struct temp_file_cleanup_s *baton = NULL;
   apr_int32_t flags = (APR_READ | APR_WRITE | APR_CREATE | APR_EXCL |
                        APR_BUFFERED | APR_BINARY);
+#ifndef WIN32
+  apr_fileperms_t perms;
+#endif
 
   SVN_ERR_ASSERT(file || unique_path);
   if (file)
