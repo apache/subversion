@@ -479,6 +479,8 @@ svn_repos_post_revprop_change_hook(svn_repos_t *repos,
 
 /** Return the path to @a repos's pre-obliterate hook, allocated in
  * @a pool.
+ *
+ * @since New in 1.7.
  */
 const char *
 svn_repos_pre_obliterate_hook(svn_repos_t *repos,
@@ -486,6 +488,8 @@ svn_repos_pre_obliterate_hook(svn_repos_t *repos,
 
 /** Return the path to @a repos's post-obliterate hook, allocated in
  * @a pool.
+ *
+ * @since New in 1.7.
  */
 const char *
 svn_repos_post_obliterate_hook(svn_repos_t *repos,
