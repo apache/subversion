@@ -3711,6 +3711,7 @@ svn_io_open_unique_file3(apr_file_t **file,
   SVN_ERR(svn_io_file_mktemp(&tempfile, path, flags, result_pool));
   SVN_ERR(svn_io_file_name_get(&tempname, tempfile, scratch_pool));
 
+#ifndef WIN32
   /* ### svn_io_file_mktemp() creates files with mode 0600.
    * ### As of r40264, tempfiles created by svn_io_open_unique_file3()
    * ### often end up being copied or renamed into the working copy.
@@ -3722,6 +3723,7 @@ svn_io_open_unique_file3(apr_file_t **file,
    * ### allows it. */
   SVN_ERR(merge_default_file_perms(tempfile, &perms, scratch_pool));
   SVN_ERR(svn_io_file_perms_set(tempname, perms, scratch_pool));
+#endif
 
   if (file)
     *file = tempfile;
