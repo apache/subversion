@@ -1883,6 +1883,7 @@ svn_wc__merge_props(svn_stringbuf_t **entry_accum,
                                    reject_path, result_pool));
 
       /* And of course, delete the temporary reject file. */
+      SVN_WC__FLUSH_LOG_ACCUM(db, adm_abspath, *entry_accum, scratch_pool);
       SVN_ERR(svn_wc__loggy_remove(entry_accum, adm_abspath,
                                    reject_tmp_path, result_pool,
                                    scratch_pool));
@@ -1892,6 +1893,7 @@ svn_wc__merge_props(svn_stringbuf_t **entry_accum,
         svn_wc_entry_t entry;
 
         entry.prejfile = svn_dirent_is_child(adm_abspath, reject_path, NULL);
+        SVN_WC__FLUSH_LOG_ACCUM(db, adm_abspath, *entry_accum, scratch_pool);
         SVN_ERR(svn_wc__loggy_entry_modify(entry_accum, adm_abspath,
                                            local_abspath, &entry,
                                            SVN_WC__ENTRY_MODIFY_PREJFILE,
