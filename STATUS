@@ -173,5 +173,30 @@ Candidate changes:
    Votes:
      cmpilato: +1
 
+ * r40200, r40201
+   Provide examples for specifying an auto-prop value for the svn:keywords
+   property which contains several fields separated by whitespace.
+   Also tolerate (but don't advertise) quotes around property values in
+   auto-props specifications.
+   Justification:
+     The current behaviour can be misleading and is not well documented.
+     Users can easily create bogus property values containing literal
+     quoting characters.
+   Notes:
+     There is a trivial text conflict in autoprop_tests.py. To resolve it,
+     use 'postpone' or 'edit', and keep lines added by merge-right.r40201
+     except the one reading:
+                    'escapetest',
+     If correctly resolved the 'filenames' list looks like this:
+      filenames = ['foo.h',
+                   'foo.c',
+                   'foo.jpg',
+                   'fubar.tar',
+                   'foobar.lha',
+                   'spacetest',
+                   'quotetest']
+   Votes:
+     +1: stsp
+
 Approved changes:
 =================
