@@ -399,11 +399,8 @@ struct handler_baton
      pristine. */
   svn_checksum_t *sha1_actual_source_checksum;
 
-  /* The stream used to calculate the source checksum */
-  svn_stream_t *md5_source_checksum_stream;
-
-  /* The stream used to calculate the source sha1 checksum */
-  svn_stream_t *sha1_source_checksum_stream;
+  /* The stream used to calculate the source checksums */
+  svn_stream_t *source_checksum_stream;
 
   /* This is initialized to all zeroes when the baton is created, then
      populated with the MD5 digest of the resultant fulltext after the
@@ -1060,7 +1057,7 @@ window_handler(svn_txdelta_window_t *window, void *baton)
     {
       /* Close the stream to calculate the final checksum
          (This also calculates the md5 as well.) */
-      svn_error_t *err2 = svn_stream_close(hb->sha1_source_checksum_stream);
+      svn_error_t *err2 = svn_stream_close(hb->source_checksum_stream);
 
       if (!err2 && !svn_checksum_match(hb->expected_source_checksum,
                                        hb->md5_actual_source_checksum))
@@ -4155,7 +4152,7 @@ apply_textdelta(void *file_baton,
                                      handler_pool));
 
       /* Wrap stream and store reference to allow calculating the md5 */
-      hb->md5_source_checksum_stream =
+      hb->source_checksum_stream =
                  source = svn_stream_checksummed2(
                                             source,
                                             &hb->md5_actual_source_checksum,
@@ -4163,9 +4160,9 @@ apply_textdelta(void *file_baton,
                                             TRUE, handler_pool);
 
       /* Wrap *that* checksum to calculate the sha1 */
-      hb->sha1_source_checksum_stream =
+      hb->source_checksum_stream =
                  source = svn_stream_checksummed2(
-                                            hb->md5_source_checksum_stream,
+                                            hb->source_checksum_stream,
                                             &hb->sha1_actual_source_checksum,
                                             NULL, svn_checksum_sha1,
                                             TRUE, handler_pool);
