@@ -465,6 +465,7 @@ get_pristine_fname(const char **pristine_abspath,
 
   /* ### code is in transition. make sure we have the proper data.  */
   SVN_ERR_ASSERT(pdh->wcroot != NULL);
+  SVN_ERR_ASSERT(checksum->kind == svn_checksum_sha1);
 
   /* ### need to fix this to use a symbol for ".svn". we don't need
      ### to use join_many since we know "/" is the separator for
