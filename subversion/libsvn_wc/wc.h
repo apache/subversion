@@ -232,6 +232,7 @@ struct svn_wc_traversal_info_t
 #define SVN_WC__ADM_DIR_PROP_REVERT     "dir-prop-revert"
 #define SVN_WC__ADM_LOG                 "log"
 #define SVN_WC__ADM_KILLME              "KILLME"
+#define SVN_WC__ADM_PRISTINE            "pristine"
 
 /* The basename of the ".prej" file, if a directory ever has property
    conflicts.  This .prej file will appear *within* the conflicted

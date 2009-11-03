@@ -512,6 +512,9 @@ init_adm(svn_wc__db_t *db,
   /* SVN_WC__ADM_PROPS */
   SVN_ERR(make_adm_subdir(local_abspath, SVN_WC__ADM_PROPS, FALSE, pool));
 
+  /* SVN_WC__ADM_PRISTINE */
+  SVN_ERR(make_adm_subdir(local_abspath, SVN_WC__ADM_PRISTINE, FALSE, pool));
+
   /** Init the tmp area. ***/
   SVN_ERR(init_adm_tmp_area(local_abspath, pool));
 
