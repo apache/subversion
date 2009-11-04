@@ -2303,6 +2303,38 @@ test_dirent_get_absolute(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+#ifdef WIN32
+static svn_error_t *
+test_dirent_get_absolute_from_lc_drive(apr_pool_t *pool)
+{
+  char current_dir[1024];
+  char current_dir_on_C[1024];
+  char *dir_on_c;
+  svn_error_t *err;
+
+  if (! getcwd(current_dir, sizeof(current_dir)))
+    return svn_error_create(SVN_ERR_BASE, NULL, "getcwd() failed");
+
+   /* 3 stands for drive C: */
+  if (! getdcwd(3, current_dir_on_C, sizeof(current_dir_on_C)))
+    return svn_error_create(SVN_ERR_BASE, NULL, "getdcwd() failed");
+
+  /* Use the same path, but now with a lower case driveletter */
+  dir_on_c = apr_pstrdup(pool, current_dir_on_C);
+  dir_on_c[0] = (char)tolower(dir_on_c[0]);
+
+  chdir(dir_on_c);
+
+  err = test_dirent_get_absolute(pool);
+
+  /* Change back to original directory for next tests */
+  chdir("C:\\"); /* Switch to upper case */
+  chdir(current_dir_on_C); /* Switch cwd on C: */
+  chdir(current_dir); /* Switch back to original cwd */
+  return err;
+}
+#endif
+
 static svn_error_t *
 test_dirent_condense_targets(apr_pool_t *pool)
 {
@@ -2672,6 +2704,10 @@ struct svn_test_descriptor_t test_funcs[] =
                    "test test_uri_skip_ancestor"),
     SVN_TEST_PASS2(test_dirent_get_absolute,
                    "test svn_dirent_get_absolute"),
+#ifdef WIN32
+    SVN_TEST_XFAIL2(test_dirent_get_absolute_from_lc_drive,
+                   "test svn_dirent_get_absolute with lc drive"),
+#endif
     SVN_TEST_PASS2(test_dirent_condense_targets,
                    "test svn_dirent_condense_targets"),
     SVN_TEST_PASS2(test_uri_condense_targets,
