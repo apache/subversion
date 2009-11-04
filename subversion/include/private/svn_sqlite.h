@@ -69,6 +69,12 @@ svn_sqlite__step(svn_boolean_t *got_row, svn_sqlite__stmt_t *stmt);
 svn_error_t *
 svn_sqlite__insert(apr_int64_t *row_id, svn_sqlite__stmt_t *stmt);
 
+/* Perform an an update/delete an then return the number of affected rows.
+   *AFFECTED_ROWS will be set to the number of rows changed.
+   STMT will be reset prior to returning. */
+svn_error_t *
+svn_sqlite__update(int *affected_rows, svn_sqlite__stmt_t *stmt);
+
 /* Return in *VERSION the version of the schema for the database as PATH.
    Use SCRATCH_POOL for temporary allocations. */
 svn_error_t *
@@ -260,7 +266,7 @@ svn_sqlite__column_properties(apr_hash_t **props,
 /* Return the column as a checksum. If the column is null, then NULL will
    be stored into *CHECKSUM. The result will be allocated in RESULT_POOL. */
 svn_error_t *
-svn_sqlite__column_checksum(svn_checksum_t **checksum,
+svn_sqlite__column_checksum(const svn_checksum_t **checksum,
                             svn_sqlite__stmt_t *stmt,
                             int column,
                             apr_pool_t *result_pool);

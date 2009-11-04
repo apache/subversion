@@ -125,6 +125,7 @@ are likely some errors because of that.
 /* The vtable associated with an open transaction object. */
 static txn_vtable_t txn_vtable = {
   svn_fs_fs__commit_txn,
+  svn_fs_fs__commit_obliteration_txn,
   svn_fs_fs__abort_txn,
   svn_fs_fs__txn_prop,
   svn_fs_fs__txn_proplist,
@@ -1127,7 +1128,7 @@ write_config(svn_fs_t *fs,
 "### The following parameter enables rep-sharing in the repository.  It can" NL
 "### be switched on and off at will, but for best space-saving results"      NL
 "### should be enabled consistently over the life of the repository."        NL
-"# " CONFIG_OPTION_ENABLE_REP_SHARING " = false"                             NL
+"# " CONFIG_OPTION_ENABLE_REP_SHARING " = true"                              NL
 
 ;
 #undef NL
@@ -1943,7 +1944,9 @@ read_rep_offsets(representation_t **rep_p,
   return SVN_NO_ERROR;
 }
 
-/* See svn_fs_fs__get_node_revision, which wraps this and adds another
+/* Get the node-revision for the node ID in FS.
+   Set *NODEREV_P to the new node-revision structure, allocated in POOL.
+   See svn_fs_fs__get_node_revision, which wraps this and adds another
    error. */
 static svn_error_t *
 get_node_revision_body(node_revision_t **noderev_p,
@@ -4057,7 +4060,7 @@ fetch_all_changes(apr_hash_t *changed_paths,
                 continue;
 
               /* If we come across a child of our path, remove it. */
-              if (svn_path_is_child(change->path, path, iterpool))
+              if (svn_dirent_is_child(change->path, path, iterpool))
                 apr_hash_set(changed_paths, path, klen, NULL);
             }
         }
@@ -4330,6 +4333,54 @@ svn_fs_fs__create_txn(svn_fs_txn_t **txn_p,
 
   /* Create a new root node for this transaction. */
   SVN_ERR(svn_fs_fs__rev_get_root(&root_id, fs, rev, pool));
+  SVN_ERR(create_new_txn_noderev_from_rev(fs, txn->id, root_id, pool));
+
+  /* Create an empty rev file. */
+  SVN_ERR(svn_io_file_create(path_txn_proto_rev(fs, txn->id, pool), "",
+                             pool));
+
+  /* Create an empty rev-lock file. */
+  SVN_ERR(svn_io_file_create(path_txn_proto_rev_lock(fs, txn->id, pool), "",
+                             pool));
+
+  /* Create an empty changes file. */
+  SVN_ERR(svn_io_file_create(path_txn_changes(fs, txn->id, pool), "",
+                             pool));
+
+  /* Create the next-ids file. */
+  return svn_io_file_create(path_txn_next_ids(fs, txn->id, pool), "0 0\n",
+                            pool);
+}
+
+/* ### Not sure if this creates the right kind of txn for obliterate
+ * - need to construct it differently from a normal txn? */
+static svn_error_t *
+svn_fs_fs__create_obliteration_txn(svn_fs_txn_t **txn_p,
+                                   svn_fs_t *fs,
+                                   svn_revnum_t rev,
+                                   apr_pool_t *pool)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+  svn_fs_txn_t *txn;
+  svn_fs_id_t *root_id;
+
+  txn = apr_pcalloc(pool, sizeof(*txn));
+
+  /* Get the txn_id. */
+  if (ffd->format >= SVN_FS_FS__MIN_TXN_CURRENT_FORMAT)
+    SVN_ERR(create_txn_dir(&txn->id, fs, rev, pool));
+  else
+    SVN_ERR(create_txn_dir_pre_1_5(&txn->id, fs, rev, pool));
+
+  txn->fs = fs;
+  txn->base_rev = rev;
+
+  txn->vtable = &txn_vtable;
+  *txn_p = txn;
+
+  /* Create a new root node for this transaction. */
+  SVN_ERR(svn_fs_fs__rev_get_root(&root_id, fs, rev, pool));
+  /* ### Need to clone the rev root instead of create_new_txn_... */
   SVN_ERR(create_new_txn_noderev_from_rev(fs, txn->id, root_id, pool));
 
   /* Create an empty rev file. */
@@ -5251,11 +5302,18 @@ write_hash_rep(svn_filesize_t *size,
 }
 
 /* Copy a node-revision specified by id ID in fileystem FS from a
-   transaction into the permanent rev-file FILE.  Return the offset of
-   the new node-revision in *OFFSET.  If this is a directory, all
-   children are copied as well.  START_NODE_ID and START_COPY_ID are
+   transaction into the permanent rev-file FILE.  Set *NEW_ID_P to a
+   pointer to the new node-id which will be allocated in POOL.
+   If this is a directory, copy all children as well.
+
+   START_NODE_ID and START_COPY_ID are
    the first available node and copy ids for this filesystem, for older
-   FS formats. Temporary allocations are from POOL. */
+   FS formats.
+
+   If REPS_TO_CACHE is not NULL, append to it a copy (allocated in
+   REPS_POOL) of each data rep that is new in this revision.
+
+   Temporary allocations are also from POOL. */
 static svn_error_t *
 write_final_rev(const svn_fs_id_t **new_id_p,
                 apr_file_t *file,
@@ -5602,7 +5660,7 @@ verify_locks(svn_fs_t *fs,
       /* If this path has already been verified as part of a recursive
          check of one of its parents, no need to do it again.  */
       if (last_recursed
-          && svn_path_is_child(last_recursed->data, path, subpool))
+          && svn_dirent_is_child(last_recursed->data, path, subpool))
         continue;
 
       /* Fetch the change associated with our path.  */
@@ -5808,6 +5866,97 @@ commit_body(void *baton, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+/* The work-horse for svn_fs_fs__commit_obliteration, called with the FS write lock.
+   This implements the svn_fs_fs__with_write_lock() 'body' callback
+   type.  BATON is a 'struct commit_baton *'. */
+static svn_error_t *
+commit_obliteration_body(void *baton, apr_pool_t *pool)
+{
+  struct commit_baton *cb = baton;
+  fs_fs_data_t *ffd = cb->fs->fsap_data;
+  const char *old_rev_filename, *rev_filename, *proto_filename;
+  const char *revprop_filename, *final_revprop;
+  const svn_fs_id_t *root_id, *new_root_id;
+  const char *start_node_id = NULL, *start_copy_id = NULL;
+  svn_revnum_t rev = *cb->new_rev_p;
+  svn_revnum_t old_rev = rev, new_rev = rev;  /* ### relics of normal commit */
+  apr_file_t *proto_file;
+  void *proto_file_lockcookie;
+  apr_off_t changed_path_offset;
+  char *buf;
+
+  SVN_ERR_ASSERT(! is_packed_rev(cb->fs, rev));
+
+  /* Get the next node_id and copy_id to use. */
+  if (ffd->format < SVN_FS_FS__MIN_NO_GLOBAL_IDS_FORMAT)
+    /* ### But not like this, perhaps, for obliterate? Or, if so, then we
+     * should increment and write back this info in the 'current' file as
+     * the non-oblit commit does. */
+    SVN_ERR(get_next_revision_ids(&start_node_id, &start_copy_id, cb->fs,
+                                  pool));
+
+  /* Get a write handle on the proto revision file. */
+  SVN_ERR(get_writable_proto_rev(&proto_file, &proto_file_lockcookie,
+                                 cb->fs, cb->txn->id, pool));
+
+  /* Write out all the node-revisions and directory contents. */
+  root_id = svn_fs_fs__id_txn_create("0", "0", cb->txn->id, pool);
+  SVN_ERR(write_final_rev(&new_root_id, proto_file, new_rev, cb->fs, root_id,
+                          start_node_id, start_copy_id,
+                          cb->reps_to_cache, cb->reps_pool,
+                          pool));
+
+  /* Write the changed-path information. */
+  SVN_ERR(write_final_changed_path_info(&changed_path_offset, proto_file,
+                                        cb->fs, cb->txn->id, pool));
+
+  /* Write the final line. */
+  buf = apr_psprintf(pool, "\n%" APR_OFF_T_FMT " %" APR_OFF_T_FMT "\n",
+                     svn_fs_fs__id_offset(new_root_id),
+                     changed_path_offset);
+  SVN_ERR(svn_io_file_write_full(proto_file, buf, strlen(buf), NULL,
+                                 pool));
+  SVN_ERR(svn_io_file_flush_to_disk(proto_file, pool));
+  SVN_ERR(svn_io_file_close(proto_file, pool));
+
+  /* We don't unlock the prototype revision file immediately to avoid a
+     race with another caller writing to the prototype revision file
+     before we commit it. */
+
+  /* Move the finished rev file into place. */
+  if (is_packed_rev(cb->fs, rev))
+    {
+      /* ### complexity */
+      SVN_ERR_MALFUNCTION();
+    }
+  else
+    {
+      SVN_ERR(svn_fs_fs__path_rev_absolute(&old_rev_filename,
+                                           cb->fs, old_rev, pool));
+      rev_filename = path_rev(cb->fs, new_rev, pool);
+      proto_filename = path_txn_proto_rev(cb->fs, cb->txn->id, pool);
+      SVN_ERR(move_into_place(proto_filename, rev_filename, old_rev_filename,
+                              pool));
+    }
+
+  /* Now that we've moved the prototype revision file out of the way,
+     we can unlock it (since further attempts to write to the file
+     will fail as it no longer exists).  We must do this so that we can
+     remove the transaction directory later. */
+  SVN_ERR(unlock_proto_rev(cb->fs, cb->txn->id, proto_file_lockcookie, pool));
+
+  /* Move the revprops file into place. */
+  revprop_filename = path_txn_props(cb->fs, cb->txn->id, pool);
+  final_revprop = path_revprops(cb->fs, new_rev, pool);
+  SVN_ERR(move_into_place(revprop_filename, final_revprop, old_rev_filename,
+                          pool));
+
+  /* Remove this transaction directory. */
+  SVN_ERR(svn_fs_fs__purge_txn(cb->fs, cb->txn->id, pool));
+
+  return SVN_NO_ERROR;
+}
+
 /* Add the representations in REPS_TO_CACHE (an array of representation_t *)
  * to the rep-cache database of FS. */
 static svn_error_t *
@@ -5879,6 +6028,49 @@ svn_fs_fs__commit(svn_revnum_t *new_rev_p,
       SVN_ERR(svn_sqlite__with_transaction(ffd->rep_cache_db,
                                            commit_sqlite_txn_callback,
                                            &cb, pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs_fs__commit_obliteration(svn_revnum_t rev,
+                               svn_fs_t *fs,
+                               svn_fs_txn_t *txn,
+                               apr_pool_t *pool)
+{
+  struct commit_baton cb;
+  fs_fs_data_t *ffd = fs->fsap_data;
+
+  /* Analogous to svn_fs_fs__commit(). */
+  cb.new_rev_p = &rev;
+  cb.fs = fs;
+  cb.txn = txn;
+
+  if (ffd->rep_sharing_allowed)
+    {
+      cb.reps_to_cache = apr_array_make(pool, 5, sizeof(representation_t *));
+      cb.reps_pool = pool;
+    }
+  else
+    {
+      cb.reps_to_cache = NULL;
+      cb.reps_pool = NULL;
+    }
+
+  /* Commit the obliteration revision */
+  SVN_ERR(svn_fs_fs__with_write_lock(fs, commit_obliteration_body, &cb, pool));
+
+  /* TODO: Update the rep cache: in particular, delete invalid entries, and
+   * ensure we will re-validate entries that may already be in pending txns. */
+  if (ffd->rep_sharing_allowed)
+    {
+      /* ###
+       * SVN_ERR(svn_fs_fs__open_rep_cache(fs, pool));
+       * SVN_ERR(svn_sqlite__with_transaction(ffd->rep_cache_db,
+       *                                      commit_sqlite_txn_callback,
+       *                                      &cb, pool));
+       */
     }
 
   return SVN_NO_ERROR;
@@ -6871,6 +7063,28 @@ svn_fs_fs__begin_txn(svn_fs_txn_t **txn_p,
     }
 
   return svn_fs_fs__change_txn_props(*txn_p, props, pool);
+}
+
+svn_error_t *
+svn_fs_fs__begin_obliteration_txn(svn_fs_txn_t **txn_p,
+                                  svn_fs_t *fs,
+                                  svn_revnum_t rev,
+                                  apr_pool_t *pool)
+{
+  apr_array_header_t *props = apr_array_make(pool, 0, sizeof(svn_prop_t));
+
+  SVN_ERR(svn_fs__check_fs(fs, TRUE));
+
+  SVN_ERR(svn_fs_fs__create_obliteration_txn(txn_p, fs, rev, pool));
+
+  /* ### Not sure if we need to do anything to this txn such as
+   * - setting temporary txn props (as done in svn_fs_fs__begin_txn()) */
+
+  /* ### This "change txn props" call is just because if the txn props file
+   * doesn't exist, a call to svn_fs_fs__txn_proplist() later fails. */
+  SVN_ERR(svn_fs_fs__change_txn_props(*txn_p, props, pool));
+
+  return SVN_NO_ERROR;
 }
 
 

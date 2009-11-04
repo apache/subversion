@@ -55,7 +55,7 @@ extern "C" {
  * @since New in 1.6.
 */
 typedef svn_error_t *(*svn_cache__dup_func_t)(void **out,
-                                              void *in,
+                                              const void *in,
                                               apr_pool_t *pool);
 
 /**

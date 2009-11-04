@@ -112,6 +112,11 @@ svn_wc_relocate4(svn_wc_context_t *wc_ctx,
 
   SVN_ERR(validator(validator_baton, NULL, to, new_repos_root, scratch_pool));
 
+  /* ### FIXME: This will ultimately cause the DAV cache to be
+     recursively cleared, which is great in the recursive case, but
+     overreaching otherwise.  Granted, this only affects performance,
+     and that only for DAV RA implementations that rely on the DAV
+     cache. */
   SVN_ERR(svn_wc__db_global_relocate(wc_ctx->db, local_abspath, new_repos_root,
                                      FALSE, scratch_pool));
 

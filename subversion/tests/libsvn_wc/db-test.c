@@ -305,7 +305,8 @@ static const char * const data_loading_sql[] = {
    ),
 
   WC_METADATA_SQL_13,
-  WC_METADATA_SQL_14
+  WC_METADATA_SQL_14,
+  WC_METADATA_SQL_15
 };
 
 
@@ -388,7 +389,7 @@ test_getting_info(apr_pool_t *pool)
   const char *changed_author;
   apr_time_t last_mod_time;
   svn_depth_t depth;
-  svn_checksum_t *checksum;
+  const svn_checksum_t *checksum;
   svn_filesize_t translated_size;
   const char *target;
   svn_wc__db_lock_t *lock;
@@ -612,6 +613,32 @@ validate_node(svn_wc__db_t *db,
                                    scratch_pool, scratch_pool));
   SVN_TEST_ASSERT(value != NULL && strcmp(value->data, relpath) == 0);
 
+  SVN_ERR(svn_wc__db_read_props(&props, db, path,
+                                scratch_pool, scratch_pool));
+  SVN_TEST_ASSERT(props != NULL);
+  value = apr_hash_get(props, "p1", APR_HASH_KEY_STRING);
+  SVN_TEST_ASSERT(value != NULL && strcmp(value->data, "v1") == 0);
+
+  SVN_ERR(svn_wc__db_read_pristine_props(&props, db, path,
+                                         scratch_pool, scratch_pool));
+  SVN_TEST_ASSERT(props != NULL);
+  value = apr_hash_get(props, "p1", APR_HASH_KEY_STRING);
+  SVN_TEST_ASSERT(value != NULL && strcmp(value->data, "v1") == 0);
+
+  /* Now add a property value and read it back (all on actual) */
+  apr_hash_set(props, "p999", APR_HASH_KEY_STRING, value);
+
+  SVN_ERR(svn_wc__db_op_set_props(db, path, props, scratch_pool));
+  SVN_ERR(svn_wc__db_read_props(&props, db, path,
+                                scratch_pool, scratch_pool));
+  SVN_TEST_ASSERT(props != NULL);
+  value = apr_hash_get(props, "p999", APR_HASH_KEY_STRING);
+  SVN_TEST_ASSERT(value != NULL && strcmp(value->data, "v1") == 0);
+
+  if (status == svn_wc__db_status_normal)
+    SVN_ERR(svn_wc__db_temp_op_set_pristine_props(db, path, props, FALSE,
+                                                  scratch_pool));
+
   return SVN_NO_ERROR;
 }
 
@@ -786,7 +813,7 @@ test_working_info(apr_pool_t *pool)
   const char *changed_author;
   apr_time_t last_mod_time;
   svn_depth_t depth;
-  svn_checksum_t *checksum;
+  const svn_checksum_t *checksum;
   svn_filesize_t translated_size;
   const char *target;
   const char *changelist;
@@ -1262,9 +1289,9 @@ test_global_relocate(apr_pool_t *pool)
 
 
 static svn_error_t *
-test_upgrading_to_f14(apr_pool_t *pool)
+test_upgrading_to_f15(apr_pool_t *pool)
 {
-  SVN_ERR(create_fake_wc("test_f14_upgrade", 14, pool));
+  SVN_ERR(create_fake_wc("test_f15_upgrade", 15, pool));
 
   return SVN_NO_ERROR;
 }
@@ -1359,8 +1386,8 @@ struct svn_test_descriptor_t test_funcs[] =
                    "deletion introspection functions"),
     SVN_TEST_PASS2(test_global_relocate,
                    "relocating a node"),
-    SVN_TEST_PASS2(test_upgrading_to_f14,
-                   "upgrading to format 14"),
+    SVN_TEST_PASS2(test_upgrading_to_f15,
+                   "upgrading to format 15"),
     SVN_TEST_PASS2(test_work_queue,
                    "work queue processing"),
     SVN_TEST_NULL

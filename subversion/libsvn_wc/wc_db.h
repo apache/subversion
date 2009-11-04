@@ -171,11 +171,12 @@ typedef enum {
 
     /* The node has been added (potentially obscuring a delete or move of
        the BASE node; see BASE_SHADOWED param). The text will be marked as
-       modified, and if properties exist, they will be marked as modified. */
-    svn_wc__db_status_added,
+       modified, and if properties exist, they will be marked as modified. 
 
-    /* This node is no longer present because it was the source of a move. */
-    svn_wc__db_status_moved_away,
+       In many cases svn_wc__db_status_added means any of added, moved-here
+       or copied-here. See individual functions for clarification and
+       svn_wc__db_scan_addition() to get more details. */
+    svn_wc__db_status_added,
 
     /* This node has been added with history, based on the move source.
        Text and property modifications are based on whether changes have
@@ -231,13 +232,17 @@ typedef enum {
 
     /* This node is known, but its information is incomplete. Generally,
        it should be treated similar to the other missing status values
-       until some (later) process updates the node with its data. */
+       until some (later) process updates the node with its data.
+
+       When the incomplete status applies to a directory, the list of
+       children and the list of its base properties as recorded in the
+       working copy do not match their working copy versions.
+       The update editor can complete a directory by using a different
+       update algorithm. */
     svn_wc__db_status_incomplete,
 
-    /* The BASE node has been marked as deleted.
-       ### is this internal or external to wc_db? we may be able to hide
-       ### behind status_deleted, and this value is only used within the
-       ### scan_deletion function.  */
+    /* The BASE node has been marked as deleted. Only used as an internal
+       status in wc_db.c and entries.c.  */
     svn_wc__db_status_base_deleted
 
 } svn_wc__db_status_t;
@@ -346,11 +351,25 @@ svn_wc__db_close(svn_wc__db_t *db);
 
 
 /**
- * Initialize the DB for LOCAL_ABSPATH, which should be a working copy path.
+ * Initialize the SDB for LOCAL_ABSPATH, which should be a working copy path.
+ *
+ * A REPOSITORY row will be constructed for the repository identified by
+ * REPOS_ROOT_URL and REPOS_UUID. Neither of these may be NULL.
+ *
+ * A node will be created for the directory at REPOS_RELPATH will be added.
+ * If INITIAL_REV is greater than zero, then the node will be marked as
+ * "incomplete" because we don't know its children. Contrary, if the
+ * INITIAL_REV is zero, then this directory should represent the root and
+ * we know it has no children, so the node is complete.
+ * 
+ * DEPTH is the initial depth of the working copy, it must be a definite
+ * depth, not svn_depth_unknown.
+ *
  * Use SCRATCH_POOL for temporary allocations.
  */
 svn_error_t *
-svn_wc__db_init(const char *local_abspath,
+svn_wc__db_init(svn_wc__db_t *db,
+                const char *local_abspath,
                 const char *repos_relpath,
                 const char *repos_root_url,
                 const char *repos_uuid,
@@ -621,7 +640,7 @@ svn_wc__db_base_get_info(svn_wc__db_status_t *status,
                          const char **changed_author,
                          apr_time_t *last_mod_time,
                          svn_depth_t *depth,
-                         svn_checksum_t **checksum,
+                         const svn_checksum_t **checksum,
                          svn_filesize_t *translated_size,
                          const char **target,
                          svn_wc__db_lock_t **lock,
@@ -711,6 +730,11 @@ svn_wc__db_base_get_dav_cache(apr_hash_t **props,
    ### directory? empty, files, immediates, infinity. recording depth
    ### doesn't seem to be part of BASE, but instructions on how to maintain
    ### the BASE/WORKING/ACTUAL trees. are there other instructional items?
+
+   ### BH: We use depth as a partial incomplete marker on directories. If
+   ### depth < svn_depth_infinity, the directory can miss entries that fall
+   ### out of the scope marked by the depth. (There can still be explicitly
+   ### pulled in targets)
 */
 
 /* ### anything else needed for maintaining the BASE tree? */
@@ -932,15 +956,24 @@ svn_wc__db_op_add_symlink(svn_wc__db_t *db,
 /* ### note: there is no db_op_set_prop() function. callers must read
    ### all the properties, change one, and write all the properties.  */
 
-/* Set the props on the WORKING node for LOCAL_ABSPATH to PROPS.  This will
+/* Set the props on the ACTUAL node for LOCAL_ABSPATH to PROPS.  This will
    overwrite whatever working props the node currently has.  PROPS maps
    property names of type "const char *" to values of type
    "const svn_string_t *".  Use SCRATCH_POOL for temporary allocations. */
 svn_error_t *
 svn_wc__db_op_set_props(svn_wc__db_t *db,
                         const char *local_abspath,
-                        const apr_hash_t *props,
+                        apr_hash_t *props,
                         apr_pool_t *scratch_pool);
+
+/* Sets the pristine props of LOCAL_ABSPATH on BASE, or when ON_WORKING is
+   TRUE on WORKING */
+svn_error_t *
+svn_wc__db_temp_op_set_pristine_props(svn_wc__db_t *db,
+                                      const char *local_abspath,
+                                      const apr_hash_t *props,
+                                      svn_boolean_t on_working,
+                                      apr_pool_t *scratch_pool);
 
 
 /* ### KFF: This handles files, dirs, symlinks, anything else? */
@@ -1101,6 +1134,50 @@ svn_wc__db_op_set_tree_conflict(svn_wc__db_t *db,
  *   CONFLICTED              FALSE
  *   LOCK                    NULL
  *
+ * When STATUS is requested, then it will be one of these values:
+ *
+ *   svn_wc__db_status_normal
+ *     A plain BASE node, with no local changes.
+ *
+ *   svn_wc__db_status_added
+ *   svn_wc__db_status_obstructed_add
+ *     A node has been added/copied/moved to here. See BASE_SHADOWED to see
+ *     if this change overwrites a BASE node. Use scan_addition() to resolve
+ *     whether this has been added, copied, or moved, and the details of the
+ *     operation (this function only looks at LOCAL_ABSPATH, but resolving
+ *     the details requires scanning one or more ancestor nodes).
+ *
+ *   svn_wc__db_status_deleted
+ *   svn_wc__db_status_obstructed_delete
+ *     This node has been deleted or moved away. It may be a delete/move of
+ *     a BASE node, or a child node of a subtree that was copied/moved to
+ *     an ancestor location. Call scan_deletion() to determine the full
+ *     details of the operations upon this node.
+ *
+ *   svn_wc__db_status_obstructed
+ *     The versioned subdirectory is missing or obstructed by a file.
+ *
+ *   svn_wc__db_status_absent
+ *     The node is versioned/known by the server, but the server has
+ *     decided not to provide further information about the node. This
+ *     is a BASE node (since changes are not allowed to this node).
+ *
+ *   svn_wc__db_status_excluded
+ *     The node has been excluded from the working copy tree. This may
+ *     be an exclusion from the BASE tree, or an exclusion for a child
+ *     node of a copy/move to an ancestor (see BASE_SHADOWED to determine
+ *     the situation).
+ *
+ *   svn_wc__db_status_not_present
+ *     This is a node from the BASE tree, has been marked as "not-present"
+ *     within this mixed-revision working copy. This node is at a revision
+ *     that is not in the tree, contrary to its inclusion in the parent
+ *     node's revision.
+ *
+ *   svn_wc__db_status_incomplete
+ *     The BASE or WORKING node is incomplete due to an interrupted
+ *     operation.
+ *
  * If DEPTH is requested, and the node is NOT a directory, then
  * the value will be set to svn_depth_unknown.
  *
@@ -1154,6 +1231,9 @@ svn_wc__db_op_set_tree_conflict(svn_wc__db_t *db,
    ### Would be nice to keep it consistent.  For example, it always
    ### comes first, or always comes first after any result params, or
    ### whatever.
+   ### BH: 'db' is the first argument after the output arguments, the next
+   ### is always 'local_abspath'. Next are other input arguments. Result 
+   ### and scratch pool are last.
 
    ### note that @a base_shadowed can be derived. if the status specifies
    ### an add/copy/move *and* there is a corresponding node in BASE, then
@@ -1171,7 +1251,7 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,  /* ### derived */
                      const char **changed_author,
                      apr_time_t *last_mod_time,
                      svn_depth_t *depth,  /* ### dirs only */
-                     svn_checksum_t **checksum,
+                     const svn_checksum_t **checksum,
                      svn_filesize_t *translated_size,
                      const char **target,
                      const char **changelist,
@@ -1339,7 +1419,8 @@ svn_wc__db_node_hidden(svn_boolean_t *hidden,
  * at REPOS_ROOT_URL.  The relative path to the repos root will not change,
  * just the repository root.  The repos uuid will also remain the same.
  * This also updates any locks which may exist for the node, as well as any
- * copyfrom repository information.
+ * copyfrom repository information.  Finally, the DAV cache (aka
+ * "wcprops") will be reset for affected entries.
  *
  * Use SCRATCH_POOL for any temporary allocations.
  *
@@ -1366,14 +1447,8 @@ svn_wc__db_global_relocate(svn_wc__db_t *db,
 
 /* ### docco
 
-   ### collapse the WORKING and ACTUAL tree changes down into BASE.
-
-   ### BH: This probably needs an exclude filter and some kind of depth
-   ###   support, before it can replace other code.
-   ### GS: nope. the intent is to call this once per committed node. each
-   ###   node is committed transactionally. upper layers can deal with
-   ###   depth and exclusion. this function will combine the functionality
-   ###   of process_committed_leaf() and log_do_committed().
+   ### collapse the WORKING and ACTUAL tree changes down into BASE, called
+       for each committed node.
 
    NEW_REVISION must be the revision number of the revision created by
    the commit. It will become the BASE node's 'revnum' and 'changed_rev'
@@ -1590,7 +1665,7 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
  *
  * There are three further considerations when resolving a deleted node:
  *
- *   If the BASE B/W/D was moved-away, then BASE_REL_ABSPATH will specify
+ *   If the BASE B/W/D was moved-away, then BASE_DEL_ABSPATH will specify
  *   B/W/D as the root of the BASE deletion (not necessarily B/W as an
  *   implicit delete caused by a replacement; only the closest ancestor is
  *   reported). The other parameters will operate as normal, based on what
@@ -1599,7 +1674,7 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
  *
  *   If the BASE B/W/D was deleted explicitly *and* B/W is a replacement,
  *   then the explicit deletion is subsumed by the implicit deletion that
- *   occurred with the B/W replacement. Thus, BASE_REL_ABSPATH will point
+ *   occurred with the B/W replacement. Thus, BASE_DEL_ABSPATH will point
  *   to B/W as the root of the BASE deletion. IOW, we can detect the
  *   explicit move-away, but not an explicit deletion.
  *
@@ -1623,16 +1698,13 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
  * if any. If no ancestors have been moved-away, then this is set to NULL.
  *
  * WORK_DEL_ABSPATH will specify the root of a deleted subtree within
- * content in the WORKING tree (note there is no concept of layered
- * delete operations in WORKING, so there is only one deletion root in
- * the ancestry).
+ * the WORKING tree (note there is no concept of layered delete operations
+ * in WORKING, so there is only one deletion root in the ancestry).
  *
+ * All OUT parameters may be set to NULL to indicate a lack of interest in
+ * that piece of information.
  *
- * NOTE: contrary to some APIs in wc_db.h, ALL of the OUT parameters must
- *   be received. You may NOT pass NULL for any parameter (otherwise, you
- *   would lose important information about the deletion).
- *
- * If the node given by LOCAL_ABSPATH does not exit, then
+ * If the node given by LOCAL_ABSPATH does not exist, then
  * SVN_ERR_WC_PATH_NOT_FOUND is returned. If it doesn't have a "deleted"
  * status, then SVN_ERR_WC_PATH_UNEXPECTED_STATUS will be returned.
  *
@@ -1660,6 +1732,8 @@ svn_wc__db_scan_deletion(const char **base_del_abspath,
 
 svn_error_t *
 svn_wc__db_upgrade_begin(svn_sqlite__db_t **sdb,
+                         apr_int64_t *repos_id,
+                         apr_int64_t *wc_id,
                          const char *local_dir_abspath,
                          const char *repos_root_url,
                          const char *repos_uuid,
@@ -1907,6 +1981,20 @@ svn_wc__db_temp_wcroot_tempdir(const char **temp_dir_abspath,
                                const char *wri_abspath,
                                apr_pool_t *result_pool,
                                apr_pool_t *scratch_pool);
+
+
+svn_error_t *
+svn_wc__db_temp_mark_locked(svn_wc__db_t *db,
+                            const char *local_dir_abspath,
+                            apr_pool_t *scratch_pool);
+
+
+svn_error_t *
+svn_wc__db_temp_own_lock(svn_boolean_t *own_lock,
+                         svn_wc__db_t *db,
+                         const char *local_dir_abspath,
+                         apr_pool_t *scratch_pool);
+
 
 /** @} */
 

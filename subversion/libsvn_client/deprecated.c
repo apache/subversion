@@ -635,10 +635,10 @@ svn_client_diff4(const apr_array_header_t *options,
                  apr_pool_t *pool)
 {
   return svn_client_diff5(options, path1, revision1, path2,
-                          revision2, NULL, depth,
+                          revision2, relative_to_dir, depth,
                           ignore_ancestry, no_diff_deleted, FALSE,
                           ignore_content_type, header_encoding,
-                          outfile, errfile, NULL, ctx, pool);
+                          outfile, errfile, changelists, ctx, pool);
 }
 
 svn_error_t *
@@ -728,7 +728,7 @@ svn_client_diff_peg4(const apr_array_header_t *options,
                               peg_revision,
                               start_revision,
                               end_revision,
-                              NULL,
+                              relative_to_dir,
                               depth,
                               ignore_ancestry,
                               no_diff_deleted,
@@ -737,7 +737,7 @@ svn_client_diff_peg4(const apr_array_header_t *options,
                               header_encoding,
                               outfile,
                               errfile,
-                              NULL,
+                              changelists,
                               ctx,
                               pool);
 }
@@ -1671,7 +1671,8 @@ info_receiver_relpath_wrapper(void *baton,
   struct info_to_relpath_baton *rb = baton;
   const char *path = abspath_or_url;
 
-  if (rb->anchor_relpath)
+  if (rb->anchor_relpath &&
+      svn_dirent_is_ancestor(rb->anchor_abspath, abspath_or_url))
     {
       path = svn_dirent_join(rb->anchor_relpath,
                              svn_dirent_skip_ancestor(rb->anchor_abspath,
@@ -1789,4 +1790,47 @@ svn_client_url_from_path(const char **url,
   SVN_ERR(svn_client_create_context(&ctx, pool));
 
   return svn_client_url_from_path2(url, path_or_url, ctx, pool, pool);
+}
+
+/*** From mergeinfo.c ***/
+svn_error_t *
+svn_client_mergeinfo_log_merged(const char *path_or_url,
+                                const svn_opt_revision_t *peg_revision,
+                                const char *merge_source_path_or_url,
+                                const svn_opt_revision_t *src_peg_revision,
+                                svn_log_entry_receiver_t log_receiver,
+                                void *log_receiver_baton,
+                                svn_boolean_t discover_changed_paths,
+                                const apr_array_header_t *revprops,
+                                svn_client_ctx_t *ctx,
+                                apr_pool_t *pool)
+{
+  return svn_client_mergeinfo_log(path_or_url, TRUE, peg_revision,
+                                  merge_source_path_or_url,
+                                  src_peg_revision,
+                                  log_receiver, log_receiver_baton,
+                                  discover_changed_paths,
+                                  svn_depth_empty, revprops, ctx,
+                                  pool);
+}
+
+svn_error_t *
+svn_client_mergeinfo_log_eligible(const char *path_or_url,
+                                  const svn_opt_revision_t *peg_revision,
+                                  const char *merge_source_path_or_url,
+                                  const svn_opt_revision_t *src_peg_revision,
+                                  svn_log_entry_receiver_t log_receiver,
+                                  void *log_receiver_baton,
+                                  svn_boolean_t discover_changed_paths,
+                                  const apr_array_header_t *revprops,
+                                  svn_client_ctx_t *ctx,
+                                  apr_pool_t *pool)
+{
+  return svn_client_mergeinfo_log(path_or_url, FALSE, peg_revision,
+                                  merge_source_path_or_url,
+                                  src_peg_revision,
+                                  log_receiver, log_receiver_baton,
+                                  discover_changed_paths,
+                                  svn_depth_empty, revprops, ctx,
+                                  pool);
 }

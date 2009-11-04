@@ -160,14 +160,39 @@ enum {
   OPT_BOTH
 };
 
-/* Increment records[rep->sha1_checksum] if all of them are non-NULL.
- * If necessary, allocate the cstring key in RESULT_POOL.  */
+static svn_error_t *check_experimental(void)
+{
+  if (getenv("SVN_REP_SHARING_STATS_IS_EXPERIMENTAL"))
+      return SVN_NO_ERROR;
+
+  return svn_error_create(APR_EGENERAL, NULL,
+                          "This code is experimental and should not "
+                          "be used on live data.");
+}
+
+/* The parts of a rep that determine whether it's being shared. */
+struct key_t
+{
+  svn_revnum_t revision;
+  apr_off_t offset;
+};
+
+/* What we need to know about a rep. */
+struct value_t
+{
+  svn_checksum_t *sha1_checksum;
+  apr_uint64_t refcount;
+};
+
+/* Increment records[rep] if both are non-NULL and REP contains a sha1.
+ * Allocate keys and values in RESULT_POOL.
+ */
 static svn_error_t *record(apr_hash_t *records,
                            representation_t *rep,
                            apr_pool_t *result_pool)
 {
-  const char *cstring;
-  unsigned int oldvalue, newvalue;
+  struct key_t *key;
+  struct value_t *value;
 
   /* Skip if we ignore this particular kind of reps, or if the rep doesn't
    * exist or doesn't have the checksum we are after.  (The latter case
@@ -176,17 +201,39 @@ static svn_error_t *record(apr_hash_t *records,
   if (records == NULL || rep == NULL || rep->sha1_checksum == NULL)
     return SVN_NO_ERROR;
 
-  cstring = svn_checksum_to_cstring_display(rep->sha1_checksum, result_pool);
-  oldvalue = (unsigned int) apr_hash_get(records, cstring, APR_HASH_KEY_STRING);
-  newvalue = oldvalue + 1;
-  apr_hash_set(records, cstring, APR_HASH_KEY_STRING, (void *) newvalue);
+  /* Construct the key.
+   *
+   * Must use calloc() because apr_hash_* pay attention to padding bytes too.
+   */
+  key = apr_pcalloc(result_pool, sizeof(*key));
+  key->revision = rep->revision;
+  key->offset = rep->offset;
+
+  /* Update or create the value. */
+  if (value = apr_hash_get(records, key, sizeof(*key)))
+    {
+      /* Paranoia. */
+      SVN_ERR_ASSERT(value->sha1_checksum != NULL);
+      SVN_ERR_ASSERT(svn_checksum_match(value->sha1_checksum,
+                                        rep->sha1_checksum));
+      /* Real work. */
+      value->refcount++;
+    }
+  else
+    {
+      value = apr_palloc(result_pool, sizeof(*value));
+      value->sha1_checksum = svn_checksum_dup(rep->sha1_checksum, result_pool);
+      value->refcount = 1;
+    }
+
+  /* Store them. */
+  apr_hash_set(records, key, sizeof(*key), value);
 
   return SVN_NO_ERROR;
 }
 
 /* Inspect the data and/or prop reps of revision REVNUM in FS.  Store
- * reference count tallies in passed hashes (allocated in RESULT_POOL),
- * as maps of const char * checksum cstrings to unsigned ints.
+ * reference count tallies in passed hashes (allocated in RESULT_POOL).
  *
  * If PROP_REPS or DATA_REPS is NULL, the respective kind of reps are not
  * tallied.
@@ -199,8 +246,8 @@ process_one_revision(svn_fs_t *fs,
                      apr_hash_t *prop_reps,
                      apr_hash_t *data_reps,
                      apr_hash_t *both_reps,
-                     apr_pool_t *scratch_pool,
-                     apr_pool_t *result_pool)
+                     apr_pool_t *result_pool,
+                     apr_pool_t *scratch_pool)
 {
   svn_fs_root_t *rev_root;
   apr_hash_t *paths_changed;
@@ -255,9 +302,10 @@ process_one_revision(svn_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
-/* Print REPS_REF_COUNT (a hash mapping const char * keys to
- * unsigned ints) to stdout in "value => key" format (for sorting,
- * since the keys are just sha1's).  Prepend each line by NAME.
+/* Print REPS_REF_COUNT (a hash as for process_one_revision())
+ * to stdout in "refcount => sha1" format.  A sha1 may appear
+ * more than once if not all its instances are shared.  Prepend
+ * each line by NAME.
  *
  * Use SCRATCH_POOL for temporary allocations.
  */
@@ -274,12 +322,18 @@ pretty_print(const char *name,
   for (hi = apr_hash_first(scratch_pool, reps_ref_counts);
        hi; hi = apr_hash_next(hi))
     {
-      const char *sha1_cstring = svn_apr_hash_index_key(hi);
-      unsigned int ref_count = (unsigned int) svn_apr_hash_index_val(hi);
+      const struct key_t *key;
+      struct value_t *value;
 
       SVN_ERR(cancel_func(NULL));
-      SVN_ERR(svn_cmdline_printf(scratch_pool, "%s %u %s\n",
-                                 name, ref_count, sha1_cstring));
+
+      key = svn_apr_hash_index_key(hi);
+      value = svn_apr_hash_index_val(hi);
+      SVN_ERR(svn_cmdline_printf(scratch_pool, "%s %" APR_UINT64_T_FMT " %s\n",
+                                 name, value->refcount,
+                                 svn_checksum_to_cstring_display(
+                                   value->sha1_checksum,
+                                   scratch_pool)));
     }
 
   return SVN_NO_ERROR;
@@ -343,7 +397,7 @@ static svn_error_t *process(const char *repos_path,
       svn_pool_clear(iterpool);
       SVN_ERR(cancel_func(NULL));
       SVN_ERR(process_one_revision(fs, rev, prop_reps, data_reps, both_reps,
-                                   iterpool, scratch_pool));
+                                   scratch_pool, iterpool));
     }
   svn_pool_destroy(iterpool);
 
@@ -399,6 +453,8 @@ main(int argc, const char *argv[])
   if (err)
     return svn_cmdline_handle_exit_error(err, pool, "svn-rep-sharing-stats: ");
 
+  SVN_INT_ERR(check_experimental());
+
   os->interleave = 1;
   while (1)
     {
@@ -417,6 +473,7 @@ main(int argc, const char *argv[])
         case OPT_DATA:
           data = TRUE;
           break;
+        /* It seems we don't actually rep-share props yet. */
         case OPT_PROP:
           prop = TRUE;
           break;

@@ -2,7 +2,7 @@
 # tree-conflicts handling. You can use this file as a shell script, just
 # go to your subversion/tests/cmdline directory and run this file.
 
-./update_tests.py "$@" 46:51
+./update_tests.py "$@" 33 34 46:51
 ./switch_tests.py "$@" 31:35
 ./merge_tests.py "$@" 101:103 111:121 128:129
 ./stat_tests.py "$@" 31
@@ -10,4 +10,5 @@
 ./revert_tests.py "$@" 19
 ./commit_tests.py "$@" 59:60
 ./tree_conflict_tests.py "$@"
+./checkout_tests.py "$@" 13
 

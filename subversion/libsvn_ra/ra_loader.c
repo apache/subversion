@@ -1086,6 +1086,19 @@ svn_ra_get_deleted_rev(svn_ra_session_t *session,
   return err;
 }
 
+svn_error_t *
+svn_ra__obliterate(svn_ra_session_t *session,
+                   svn_revnum_t rev,
+                   const char *path,
+                   apr_pool_t *pool)
+{
+  const char *session_url;
+
+  SVN_ERR(svn_ra_get_session_url(session, &session_url, pool));
+
+  return session->vtable->obliterate_path_rev(session, rev, path, pool);
+}
+
 
 
 svn_error_t *

@@ -89,7 +89,7 @@ rewrite_urls(apr_array_header_t *targets,
 svn_error_t *
 svn_cl__switch(apr_getopt_t *os,
                void *baton,
-               apr_pool_t *pool)
+               apr_pool_t *scratch_pool)
 {
   svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
@@ -105,13 +105,13 @@ svn_cl__switch(apr_getopt_t *os,
      switch to ("switch_url"). */
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
                                                       opt_state->targets,
-                                                      ctx, pool));
+                                                      ctx, scratch_pool));
 
   /* handle only-rewrite case specially */
   if (opt_state->relocate)
     return rewrite_urls(targets,
                         SVN_DEPTH_IS_RECURSIVE(opt_state->depth),
-                        ctx, pool);
+                        ctx, scratch_pool);
 
   if (targets->nelts < 1)
     return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, 0, NULL);
@@ -131,7 +131,8 @@ svn_cl__switch(apr_getopt_t *os,
     }
 
   /* Strip peg revision if targets contains an URI. */
-  SVN_ERR(svn_opt_parse_path(&peg_revision, &true_path, switch_url, pool));
+  SVN_ERR(svn_opt_parse_path(&peg_revision, &true_path, switch_url,
+                             scratch_pool));
   APR_ARRAY_IDX(targets, 0, const char *) = true_path;
   switch_url = true_path;
 
@@ -142,11 +143,11 @@ svn_cl__switch(apr_getopt_t *os,
        _("'%s' does not appear to be a URL"), switch_url);
 
   /* Canonicalize the URL. */
-  switch_url = svn_uri_canonicalize(switch_url, pool);
+  switch_url = svn_uri_canonicalize(switch_url, scratch_pool);
 
   if (! opt_state->quiet)
     svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2, FALSE,
-                         FALSE, FALSE, pool);
+                         FALSE, FALSE, scratch_pool);
 
   /* Deal with depthstuffs. */
   if (opt_state->set_depth != svn_depth_unknown)
@@ -164,10 +165,10 @@ svn_cl__switch(apr_getopt_t *os,
   SVN_ERR(svn_client_switch2(NULL, target, switch_url, &peg_revision,
                              &(opt_state->start_revision), depth,
                              depth_is_sticky, opt_state->ignore_externals,
-                             opt_state->force, ctx, pool));
+                             opt_state->force, ctx, scratch_pool));
 
   if (! opt_state->quiet)
-    SVN_ERR(svn_cl__print_conflict_stats(ctx->notify_baton2, pool));
+    SVN_ERR(svn_cl__print_conflict_stats(ctx->notify_baton2, scratch_pool));
 
   return SVN_NO_ERROR;
 }

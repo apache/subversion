@@ -185,7 +185,7 @@ svn_log_entry_create(apr_pool_t *pool)
 }
 
 svn_log_entry_t *
-svn_log_entry_dup(svn_log_entry_t *log_entry, apr_pool_t *pool)
+svn_log_entry_dup(const svn_log_entry_t *log_entry, apr_pool_t *pool)
 {
   apr_hash_index_t *hi;
   svn_log_entry_t *new_entry = svn_log_entry_create(pool);
@@ -193,7 +193,7 @@ svn_log_entry_dup(svn_log_entry_t *log_entry, apr_pool_t *pool)
   *new_entry = *log_entry;
 
   if (log_entry->revprops)
-    log_entry->revprops = svn_prop_hash_dup(log_entry->revprops, pool);
+    new_entry->revprops = svn_prop_hash_dup(log_entry->revprops, pool);
 
   if (log_entry->changed_paths2)
     {
@@ -222,7 +222,7 @@ svn_log_entry_dup(svn_log_entry_t *log_entry, apr_pool_t *pool)
 }
 
 svn_location_segment_t *
-svn_location_segment_dup(svn_location_segment_t *segment,
+svn_location_segment_dup(const svn_location_segment_t *segment,
                          apr_pool_t *pool)
 {
   svn_location_segment_t *new_segment =

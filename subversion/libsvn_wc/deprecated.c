@@ -462,10 +462,15 @@ svn_wc_ensure_adm3(const char *path,
   const char *local_abspath;
   svn_wc_context_t *wc_ctx;
 
+  if (uuid == NULL)
+    return svn_error_create(SVN_ERR_BAD_UUID, NULL, NULL);
+  if (repos == NULL)
+    return svn_error_create(SVN_ERR_BAD_URL, NULL, NULL);
+
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
   SVN_ERR(svn_wc_context_create(&wc_ctx, NULL /* config */, pool, pool));
 
-  SVN_ERR(svn_wc_ensure_adm4(wc_ctx, local_abspath, uuid, url, repos, revision,
+  SVN_ERR(svn_wc_ensure_adm4(wc_ctx, local_abspath, url, repos, uuid, revision,
                              depth, pool));
 
   return svn_error_return(svn_wc_context_destroy(wc_ctx));
@@ -2247,8 +2252,8 @@ svn_wc_get_status_editor4(const svn_delta_editor_t **editor,
                                     target, depth, get_all,
                                     no_ignore, ignore_patterns,
                                     status4_wrapper_func, swb,
-                                    cancel_func, cancel_baton,
                                     external_func, eb,
+                                    cancel_func, cancel_baton,
                                     pool, pool));
 
   /* We can't destroy wc_ctx here, because the editor needs it while it's
@@ -2695,13 +2700,13 @@ svn_wc_get_update_editor3(svn_revnum_t *target_revision,
                                     use_commit_times,
                                     depth, depth_is_sticky,
                                     allow_unver_obstructions,
-                                    notify_func, notify_baton,
-                                    cancel_func, cancel_baton,
-                                    conflict_func, conflict_baton,
-                                    external_func, eb,
-                                    fetch_func, fetch_baton,
                                     diff3_cmd,
                                     preserved_exts,
+                                    fetch_func, fetch_baton,
+                                    conflict_func, conflict_baton,
+                                    external_func, eb,
+                                    cancel_func, cancel_baton,
+                                    notify_func, notify_baton,
                                     pool, pool));
 
   /* We can't destroy wc_ctx here, because the editor needs it while it's
@@ -2812,13 +2817,13 @@ svn_wc_get_switch_editor3(svn_revnum_t *target_revision,
                                     use_commit_times,
                                     depth, depth_is_sticky,
                                     allow_unver_obstructions,
-                                    notify_func, notify_baton,
-                                    cancel_func, cancel_baton,
-                                    conflict_func, conflict_baton,
-                                    external_func, eb,
-                                    NULL, NULL, 
                                     diff3_cmd,
                                     preserved_exts,
+                                    NULL, NULL, 
+                                    conflict_func, conflict_baton,
+                                    external_func, eb,
+                                    cancel_func, cancel_baton,
+                                    notify_func, notify_baton,
                                     pool, pool));
 
   /* We can't destroy wc_ctx here, because the editor needs it while it's
@@ -3617,12 +3622,24 @@ svn_wc_crop_tree(svn_wc_adm_access_t *anchor,
                                   target, pool);
 
   SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL, db, pool));
-  SVN_ERR(svn_wc_crop_tree2(wc_ctx,
-                            local_abspath,
-                            depth,
-                            notify_func, notify_baton,
-                            cancel_func, cancel_baton,
-                            pool));
+
+  if (depth == svn_depth_exclude)
+    {
+      SVN_ERR(svn_wc_exclude(wc_ctx,
+                             local_abspath,
+                             cancel_func, cancel_baton,
+                             notify_func, notify_baton,
+                             pool));
+    }
+  else
+    {
+      SVN_ERR(svn_wc_crop_tree2(wc_ctx,
+                                local_abspath,
+                                depth,
+                                cancel_func, cancel_baton,
+                                notify_func, notify_baton,
+                                pool));
+    }
 
   return svn_error_return(svn_wc_context_destroy(wc_ctx));
 }

@@ -1387,8 +1387,8 @@ test_path_local_style(apr_pool_t *pool)
     { ".",                    "." },
     { "http://host/dir",      "http://host/dir" }, /* Not with local separator */
 #if defined(WIN32) || defined(__CYGWIN__)
-    { "a:/",                 "a:" }, /* Wrong for dirent, but expected for svn_path_*() */
-    { "a:/file",             "a:\\file" },
+    { "a:/",                 "A:\\" },
+    { "a:/file",             "A:\\file" },
     { "dir/file",            "dir\\file" },
     { "/",                   "\\" },
     { "//server/share/dir",  "\\\\server\\share\\dir" },
@@ -1429,10 +1429,9 @@ test_path_internal_style(apr_pool_t *pool)
     { ".",                    "" },
     { "http://host/dir",      "http://host/dir" },
     { "/",                    "/" },
-    { "a:/",                  "a:" },
 #if defined(WIN32) || defined(__CYGWIN__)
-    { "a:\\",                 "a:" }, /* Wrong for dirent, but expected for svn_path_*() */
-    { "a:\\file",             "a:/file" },
+    { "a:\\",                 "A:/" },
+    { "a:\\file",             "A:/file" },
     { "dir\\file",            "dir/file" },
     { "\\",                   "/" },
     { "\\\\server/share/dir",  "//server/share/dir" },

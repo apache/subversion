@@ -136,7 +136,9 @@ copy_node_revision(node_revision_t *noderev,
 }
 
 
-/* Set *NODEREV_P to the cached node-revision for NODE in POOL.
+/* Set *NODEREV_P to the cached node-revision for NODE.
+   If the node-revision was not already cached in NODE, read it in,
+   allocating the cache in POOL.
 
    If you plan to change the contents of NODE, be careful!  We're
    handing you a pointer directly to our cached node-revision, not
@@ -356,7 +358,10 @@ set_entry(dag_node_t *parent,
 /* Make a new entry named NAME in PARENT.  If IS_DIR is true, then the
    node revision the new entry points to will be a directory, else it
    will be a file.  The new node will be allocated in POOL.  PARENT
-   must be mutable, and must not have an entry named NAME.  */
+   must be mutable, and must not have an entry named NAME.
+
+   Use POOL for all allocations including caching the node_revision in PARENT.
+ */
 static svn_error_t *
 make_entry(dag_node_t **child_p,
            dag_node_t *parent,
@@ -1034,7 +1039,7 @@ svn_fs_fs__dag_finalize_edits(dag_node_t *file,
 
 
 dag_node_t *
-svn_fs_fs__dag_dup(dag_node_t *node,
+svn_fs_fs__dag_dup(const dag_node_t *node,
                    apr_pool_t *pool)
 {
   /* Allocate our new node. */
@@ -1059,10 +1064,12 @@ svn_fs_fs__dag_dup(dag_node_t *node,
 
 svn_error_t *
 svn_fs_fs__dag_dup_for_cache(void **out,
-                             void *in,
+                             const void *in,
                              apr_pool_t *pool)
 {
-  dag_node_t *in_node = in, *out_node;
+  const dag_node_t *in_node = in;
+  dag_node_t *out_node;
+
   out_node = svn_fs_fs__dag_dup(in_node, pool);
   out_node->fs = NULL;
   *out = out_node;
@@ -1316,7 +1323,7 @@ svn_fs_fs__dag_get_copyroot(svn_revnum_t *rev,
 {
   node_revision_t *noderev;
 
-  /* Go get a fresh node-revision for FILE. */
+  /* Go get a fresh node-revision for NODE. */
   SVN_ERR(get_node_revision(&noderev, node, pool));
 
   *rev = noderev->copyroot_rev;
@@ -1332,7 +1339,7 @@ svn_fs_fs__dag_get_copyfrom_rev(svn_revnum_t *rev,
 {
   node_revision_t *noderev;
 
-  /* Go get a fresh node-revision for FILE. */
+  /* Go get a fresh node-revision for NODE. */
   SVN_ERR(get_node_revision(&noderev, node, pool));
 
   *rev = noderev->copyfrom_rev;
@@ -1347,7 +1354,7 @@ svn_fs_fs__dag_get_copyfrom_path(const char **path,
 {
   node_revision_t *noderev;
 
-  /* Go get a fresh node-revision for FILE. */
+  /* Go get a fresh node-revision for NODE. */
   SVN_ERR(get_node_revision(&noderev, node, pool));
 
   *path = noderev->copyfrom_path;

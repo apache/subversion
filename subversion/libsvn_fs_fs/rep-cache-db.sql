@@ -1,5 +1,5 @@
 /* rep-cache-db.sql -- schema for use in rep-caching
- *   This is intentd for use with SQLite 3
+ *   This is intended for use with SQLite 3
  *
  * ====================================================================
  *    Licensed to the Subversion Corporation (SVN Corp.) under one

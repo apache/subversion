@@ -330,6 +330,10 @@ svn_wc__node_get_children(const apr_array_header_t **children,
  * @a result_pool for result allocations. Note: the result may be NULL if the
  * given node has no repository root associated with it (e.g. locally added).
  *
+ * If @a scan_added is TRUE, scan parents to find the intended repos root
+ * and/or UUID of added nodes. Otherwise set @a *repos_root_url and
+ * *repos_uuid to NULL for added nodes.
+ *
  * Either input value may be NULL, indicating no interest.
  */
 svn_error_t *
@@ -337,6 +341,7 @@ svn_wc__node_get_repos_info(const char **repos_root_url,
                             const char **repos_uuid,
                             svn_wc_context_t *wc_ctx,
                             const char *local_abspath,
+                            svn_boolean_t scan_added,
                             apr_pool_t *result_pool,
                             apr_pool_t *scratch_pool);
 
@@ -490,17 +495,24 @@ svn_wc__node_is_status_added(svn_boolean_t *is_added,
  * Get the base revision of @a local_abspath using @a wc_ctx.  If
  * @a local_abspath is not in the working copy, return
  * @c SVN_ERR_WC_PATH_NOT_FOUND.
- *
- * If @a scan_added is TRUE, scan parents to find a base revision
- * of added nodes. Otherwise set @a base_revision to -1 for these
- * nodes.
  */
 svn_error_t *
 svn_wc__node_get_base_rev(svn_revnum_t *base_revision,
                           svn_wc_context_t *wc_ctx,
                           const char *local_abspath,
-                          svn_boolean_t scan_added,
                           apr_pool_t *scratch_pool);
+
+/**
+ * Get the lock token of @a local_abspath using @a wc_ctx or NULL
+ * if there is no lock.  If @a local_abspath is not in the working
+*  copy, return @c SVN_ERR_WC_PATH_NOT_FOUND.
+ */
+svn_error_t *
+svn_wc__node_get_lock_token(const char **lock_token,
+                            svn_wc_context_t *wc_ctx,
+                            const char *local_abspath,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool);
 
 #ifdef __cplusplus
 }
