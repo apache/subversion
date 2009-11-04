@@ -574,7 +574,7 @@ add_directory(const char *path,
       svn_wc_notify_t *notify;
       svn_wc_notify_action_t action;
       svn_node_kind_t kind = svn_node_dir;
-      
+
       /* Find out if a pending delete notification for this path is
        * still around. */
       dpn = apr_hash_get(eb->deleted_paths, b->wcpath, APR_HASH_KEY_STRING);
@@ -868,7 +868,7 @@ close_file(void *file_baton,
       svn_wc_notify_t *notify;
       svn_wc_notify_action_t action;
       svn_node_kind_t kind = svn_node_file;
-      
+
       /* Find out if a pending delete notification for this path is
        * still around. */
       dpn = apr_hash_get(eb->deleted_paths, b->wcpath, APR_HASH_KEY_STRING);
@@ -940,7 +940,7 @@ close_directory(void *dir_baton,
   if (err && err->apr_err == SVN_ERR_WC_NOT_LOCKED)
     {
       /* ### maybe try to stat the local b->wcpath? */
-      /* If the path doesn't exist, then send a 'skipped' notification. 
+      /* If the path doesn't exist, then send a 'skipped' notification.
          Don't notify added directories as they triggered notification
          in add_directory. */
       if (! b->added && eb->notify_func)

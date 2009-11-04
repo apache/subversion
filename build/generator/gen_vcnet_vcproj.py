@@ -133,7 +133,7 @@ class Generator(gen_win.WinGeneratorBase):
     sql=[]
     for hdrfile, sqlfile in sorted(self.graph.get_deps(gen_base.DT_SQLHDR),
                                    key=lambda t: t[0]):
-      sql.append(_eztdata(header=hdrfile.replace('/', '\\'), 
+      sql.append(_eztdata(header=hdrfile.replace('/', '\\'),
                           source=sqlfile[0].replace('/', '\\'),
                           svn_python=sys.executable))
 

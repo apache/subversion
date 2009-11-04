@@ -271,7 +271,7 @@ svn_client__parse_mergeinfo(svn_mergeinfo_t *mergeinfo,
    remove any SVN_PROP_MERGEINFO for LOCAL_ABSPATH.  If MERGEINFO is empty,
    record an empty property value (e.g. "").  If CTX->NOTIFY_FUNC2 is
    not null call it with notification type svn_wc_notify_merge_record_info.
-   
+
    Use WC_CTX to access the working copy, and SCRATCH_POOL for any temporary
    allocations. */
 svn_error_t *

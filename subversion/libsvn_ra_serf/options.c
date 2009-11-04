@@ -249,7 +249,7 @@ struct options_response_ctx_t {
   svn_ra_serf__xml_parser_t *parser_ctx;
 
   /* Session into which we'll store server capabilities */
-  svn_ra_serf__session_t *session;      
+  svn_ra_serf__session_t *session;
 
   /* For temporary work only. */
   apr_pool_t *pool;

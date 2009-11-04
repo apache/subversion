@@ -52,8 +52,8 @@ apr_hash_t *svn_wc__adm_access_entries(svn_wc_adm_access_t *adm_access);
 
 /* Returns TRUE if LOCAL_ABSPATH is a working copy directory that is obstructed
    or missing such that an access baton is not available for LOCAL_ABSPATH.
-   This means DB must also include the parent of LOCAL_ABSPATH. 
-   
+   This means DB must also include the parent of LOCAL_ABSPATH.
+
    This function falls back to using svn_wc__adm_available() if no access batons
    for LOCAL_ABSPATH are stored in DB. */
 svn_boolean_t svn_wc__adm_missing(svn_wc__db_t *db,

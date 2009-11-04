@@ -336,7 +336,7 @@ static svn_boolean_t is_tracing_link(svn_error_t *err)
 svn_error_t *
 svn_error_purge_tracing(svn_error_t *err)
 {
-#ifdef SVN_ERR__TRACING  
+#ifdef SVN_ERR__TRACING
   svn_error_t *tmp_err = err;
   svn_error_t *new_err = NULL, *new_err_leaf = NULL;
 
@@ -364,7 +364,7 @@ svn_error_purge_tracing(svn_error_t *err)
       /* Advance to the next link in the original chain. */
       tmp_err = tmp_err->child;
     }
-  
+
   /* If we get here, there had better be a real link in this error chain. */
   SVN_ERR_ASSERT(new_err_leaf);
 

@@ -8,7 +8,7 @@
 # and finally attempt to create valid atom and RSS feeds.
 # Changes by Chandan-Dutta Chowdhury <chandan-dutta chowdhury @ hp com> and
 # Gareth Armstrong <gareth armstrong @ hp com>
-# Also integrate changes from 
+# Also integrate changes from
 # http://code.google.com/p/pybots/source/browse/trunk/master/Feeder.py
 # which adds ability to filter RSS feeds to specific builders.
 # e.g. http://localhost:8012/rss?builder=builder-log4c-rhel-4-i386
@@ -257,7 +257,7 @@ class Rss20StatusResource(FeedResource):
             content = '<![CDATA['
             content += description
             content += lastlog
-            content += ']]>'            
+            content += ']]>'
             data += ('        <description>%s</description>\n' % content)
         if pubDate is not None:
             rfc822pubDate = time.strftime("%a, %d %b %Y %H:%M:%S GMT",
@@ -295,7 +295,7 @@ class Atom10StatusResource(FeedResource):
             data += ('  <link rel="alternate" href="%s/"/>\n' % link)
         if self.description is not None:
             data += ('  <subtitle>%s</subtitle>\n' % self.description)
-        if self.pubdate is not None:            
+        if self.pubdate is not None:
             rfc3339_pubdate = time.strftime("%Y-%m-%dT%H:%M:%SZ",
                                             self.pubdate)
             data += ('  <updated>%s</updated>\n' % rfc3339_pubdate)

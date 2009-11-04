@@ -1,5 +1,5 @@
 /* svnraisetreeconflict
- * 
+ *
  * This is a crude command line tool that publishes API to create
  * tree-conflict markings in a working copy.
  *

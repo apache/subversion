@@ -667,7 +667,7 @@ get_old_version(int *version,
 
   /* This must be a really old working copy!  Fall back to reading the
      format file.
-     
+
      Note that the format file might not exist in newer working copies
      (format 7 and higher), but in that case, the entries file should
      have contained the format number. */
@@ -1073,7 +1073,7 @@ parse_local_abspath(svn_wc__db_pdh_t **pdh,
 
   /* Check to see if this (versioned) directory is obstructing what should
      be a file in the parent directory.
-     
+
      ### obstruction is only possible with per-dir wc.db databases.  */
   if (obstruction_possible)
     {
@@ -1222,7 +1222,7 @@ parse_local_abspath(svn_wc__db_pdh_t **pdh,
 /* Get the statement given by STMT_IDX, and bind the appropriate wc_id and
    local_relpath based upon LOCAL_ABSPATH.  Store it in *STMT, and use
    SCRATCH_POOL for temporary allocations.
-   
+
    Note: WC_ID and LOCAL_RELPATH must be arguments 1 and 2 in the statement. */
 static svn_error_t *
 get_statement_for_path(svn_sqlite__stmt_t **stmt,
@@ -2638,7 +2638,7 @@ set_changelist_txn(void *baton,
   const char *existing_changelist;
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
-  
+
   SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_SELECT_ACTUAL_NODE));
   SVN_ERR(svn_sqlite__bindf(stmt, "is", scb->wc_id, scb->local_relpath));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
@@ -2912,7 +2912,7 @@ svn_wc__db_op_set_last_mod_time(svn_wc__db_t *db,
                             pdh->wcroot->wc_id, local_relpath,
                             last_mod_time));
   SVN_ERR(svn_sqlite__step_done(stmt));
-  
+
   flush_entries(pdh);
 
   return SVN_NO_ERROR;
@@ -2958,7 +2958,7 @@ svn_wc__db_op_read_tree_conflict(
      ### all this parsing, unparsing garbage. */
 
   /* Get the conflict information for the parent of LOCAL_ABSPATH. */
-  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb, 
+  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
                                     STMT_SELECT_ACTUAL_NODE));
   SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id, local_relpath));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
@@ -3003,7 +3003,7 @@ svn_wc__db_temp_op_remove_entry(svn_wc__db_t *db,
   svn_sqlite__db_t *sdb;
   wcroot_t *wcroot;
   const char *current_relpath;
-  
+
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
   SVN_ERR(parse_local_abspath(&pdh, &current_relpath, db, local_abspath,
@@ -3040,7 +3040,7 @@ svn_wc__db_temp_op_remove_entry(svn_wc__db_t *db,
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_DELETE_ACTUAL_NODE));
   SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, current_relpath));
-  
+
   return svn_error_return(svn_sqlite__step_done(stmt));
 }
 
@@ -3058,7 +3058,7 @@ svn_wc__db_temp_op_set_dir_depth(svn_wc__db_t *db,
   wcroot_t *wcroot;
   const char *current_relpath;
 
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath) && 
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath) &&
                  depth >= svn_depth_empty && depth <= svn_depth_infinity);
 
   SVN_ERR(parse_local_abspath(&pdh, &current_relpath, db, local_abspath,
@@ -3483,7 +3483,7 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
         {
           if (have_act)
             {
-              *conflicted = 
+              *conflicted =
                  svn_sqlite__column_text(stmt_act, 2, NULL) || /* old */
                  svn_sqlite__column_text(stmt_act, 3, NULL) || /* new */
                  svn_sqlite__column_text(stmt_act, 4, NULL) || /* working */
@@ -4600,7 +4600,7 @@ svn_wc__db_scan_deletion(const char **base_del_abspath,
              In both cases, set the root of the operation (if we have not
              already set it as part of a moved-away).  */
           if (base_del_abspath != NULL
-              && child_has_base 
+              && child_has_base
               && *base_del_abspath == NULL)
             *base_del_abspath = apr_pstrdup(result_pool, child_abspath);
 
@@ -4831,7 +4831,7 @@ svn_wc__db_wq_add(svn_wc__db_t *db,
 #endif
 
   serialized = svn_skel__unparse(work_item, scratch_pool);
- 
+
   SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
                                     STMT_INSERT_WORK_ITEM));
   SVN_ERR(svn_sqlite__bind_blob(stmt, 1, serialized->data, serialized->len));
@@ -5216,11 +5216,11 @@ svn_wc__db_temp_get_sdb(svn_sqlite__db_t **sdb,
   if (!always_open)
     {
       svn_wc__db_pdh_t *pdh;
-      
+
       pdh = get_or_create_pdh(db, dir_abspath, FALSE, scratch_pool);
 
       if (pdh != NULL &&
-          pdh->wcroot != NULL && 
+          pdh->wcroot != NULL &&
           pdh->wcroot->sdb != NULL &&
           strcmp(pdh->wcroot->abspath, dir_abspath) == 0)
         {
@@ -5411,7 +5411,7 @@ svn_wc__db_read_conflicts(const apr_array_header_t **conflicts,
       const char *conflict_old;
       const char *conflict_new;
       const char *conflict_working;
-      
+
       /* ### Store in description! */
       prop_reject = svn_sqlite__column_text(stmt, 0, result_pool);
       if (prop_reject)
@@ -5442,7 +5442,7 @@ svn_wc__db_read_conflicts(const apr_array_header_t **conflicts,
           desc->their_file = conflict_new;
           desc->my_file = conflict_working;
           desc->merged_file = svn_dirent_basename(local_abspath, result_pool);
-        
+
           APR_ARRAY_PUSH(cflcts, svn_wc_conflict_description2_t*) = desc;
         }
     }

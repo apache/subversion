@@ -184,7 +184,7 @@ copy_added_dir_administratively(svn_wc_context_t *wc_ctx,
       SVN_ERR(svn_io_get_dirents2(&dirents, src_abspath, scratch_pool));
 
       /* Read src_path's entries one by one. */
-      for (hi = apr_hash_first(scratch_pool, dirents); 
+      for (hi = apr_hash_first(scratch_pool, dirents);
            hi;
            hi = apr_hash_next(hi))
         {
@@ -446,7 +446,7 @@ copy_file_administratively(svn_wc_context_t *wc_ctx,
           svn_subst_eol_style_t eol_style;
           const char *eol_str;
           apr_hash_t *keywords;
-          
+
           SVN_ERR(svn_wc__get_keywords(&keywords, db, src_abspath, NULL,
                                        scratch_pool, scratch_pool));
           SVN_ERR(svn_wc__get_eol_style(&eol_style, &eol_str, db,

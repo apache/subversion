@@ -363,7 +363,7 @@ crawl_entries(const char *local_abspath,
 
           SVN_ERR(build_info_for_unversioned(&info, pool));
           info->tree_conflict = svn_wc__cd2_to_cd(tree_conflict, pool);
-          
+
           SVN_ERR(svn_wc__node_get_repos_info(&(info->repos_root_URL),
                                               NULL,
                                               ctx->wc_ctx,
@@ -377,7 +377,7 @@ crawl_entries(const char *local_abspath,
     }
   else if (err)
     return svn_error_return(err);
-  
+
   return SVN_NO_ERROR;
 }
 
@@ -416,7 +416,7 @@ same_resource_in_head(svn_boolean_t *same_p,
       *same_p = FALSE;
       return SVN_NO_ERROR;
     }
-  else 
+  else
     SVN_ERR(err);
 
   /* ### Currently, the URLs should always be equal, since we can't

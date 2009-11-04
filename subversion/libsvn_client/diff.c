@@ -871,7 +871,7 @@ diff_dir_closed(const char *local_dir_abspath,
    associated url in *URL, allocated in RESULT_POOL.  If ABSPATH_OR_URL is
    *already* a URL, that's fine, return ABSPATH_OR_URL allocated in
    RESULT_POOL.
-   
+
    Use SCRATCH_POOL for temporary allocations. */
 static svn_error_t *
 convert_to_url(const char **url,

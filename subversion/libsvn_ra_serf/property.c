@@ -660,7 +660,7 @@ svn_ra_serf__deliver_props(svn_ra_serf__propfind_context_t **prop_ctx,
       if (SVN_IS_VALID_REVNUM(rev))
         {
           SVN_ERR_ASSERT(((*prop_ctx)->label)
-                         && (strcmp((*prop_ctx)->label, 
+                         && (strcmp((*prop_ctx)->label,
                                     apr_ltoa(pool, rev)) == 0));
         }
       else
@@ -1022,7 +1022,7 @@ svn_ra_serf__get_baseline_info(const char **bc_url,
                                                    revision, "DAV:",
                                                    "baseline-collection");
         }
-      
+
       if (!basecoll_url)
         {
           return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
@@ -1035,10 +1035,10 @@ svn_ra_serf__get_baseline_info(const char **bc_url,
       if (latest_revnum)
         {
           const char *version_name;
-          
+
           version_name = svn_ra_serf__get_prop(props, baseline_url,
                                                "DAV:", SVN_DAV__VERSION_NAME);
-          
+
           if (!version_name)
             {
               return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,

@@ -1027,7 +1027,7 @@ svn_error_t *
 svn_stream_close(svn_stream_t *stream);
 
 /** Reset a generic stream back to its origin. E.g. On a file this would be
- * implemented as a seek to position 0).  This function returns a 
+ * implemented as a seek to position 0).  This function returns a
  * @a SVN_ERR_STREAM_RESET_NOT_SUPPORTED error when the stream doesn't
  * implement resetting.
  *
