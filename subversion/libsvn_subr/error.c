@@ -526,10 +526,6 @@ svn_handle_warning2(FILE *stream, svn_error_t *err, const char *prefix)
 {
   char buf[256];
 
-  /* Skip over any trace records.  */
-  while (is_tracing_link(err))
-    err = err->child;
-
   svn_error_clear(svn_cmdline_fprintf
                   (stream, err->pool,
                    _("%swarning: %s\n"),
@@ -540,6 +536,9 @@ svn_handle_warning2(FILE *stream, svn_error_t *err, const char *prefix)
 const char *
 svn_err_best_message(svn_error_t *err, char *buf, apr_size_t bufsize)
 {
+  /* Skip over any trace records.  */
+  while (is_tracing_link(err))
+    err = err->child;
   if (err->message)
     return err->message;
   else
