@@ -3718,7 +3718,6 @@ relocate_txn(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
                                         STMT_CLEAR_BASE_RECURSIVE_DAV_CACHE));
       SVN_ERR(svn_sqlite__bindf(stmt, "iss", rb->wc_id, rb->local_relpath,
                                 like_arg));
-      SVN_ERR(svn_sqlite__bind_properties(stmt, 4, NULL, scratch_pool));
       SVN_ERR(svn_sqlite__step_done(stmt));
 
       /* Update any BASE which have non-NULL repos_id's */
