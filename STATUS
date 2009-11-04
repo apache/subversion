@@ -187,7 +187,7 @@ Candidate changes:
      use 'postpone' or 'edit', and keep lines added by merge-right.r40201
      except the one reading:
                     'escapetest',
-     If correctly resolved the 'filenames' list looks like this:
+     If correctly resolved, the 'filenames' list looks like this:
       filenames = ['foo.h',
                    'foo.c',
                    'foo.jpg',
