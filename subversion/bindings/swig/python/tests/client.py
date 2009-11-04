@@ -346,7 +346,7 @@ class SubversionClientTestCase(unittest.TestCase):
     range = core.svn_opt_revision_range_t()
     range.start = start
     range.end = end
-    
+
     client.merge_peg3(v1x_path, (range,), end, trunk_path,
                       core.svn_depth_infinity, False, False, False, False,
                       None, self.client_ctx)

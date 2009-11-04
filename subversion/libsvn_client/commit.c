@@ -1507,7 +1507,7 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
 
                   if (strcmp(parent_dir, target) == 0)
                     break; /* Reached root directory */
-                  
+
                   target = parent_dir;
                 }
             }
@@ -1662,7 +1662,7 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
 
   /* Perform the commit. */
   cmt_err = svn_client__do_commit(base_url, commit_items, editor, edit_baton,
-                                  notify_prefix, &tempfiles, &checksums, ctx, 
+                                  notify_prefix, &tempfiles, &checksums, ctx,
                                   pool);
 
   /* Handle a successful commit. */

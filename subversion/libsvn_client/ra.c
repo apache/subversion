@@ -103,7 +103,7 @@ get_wc_prop(void *baton,
           svn_client_commit_item3_t *item
             = APR_ARRAY_IDX(cb->commit_items, i,
                             svn_client_commit_item3_t *);
-        
+
           SVN_ERR(svn_dirent_get_absolute(&local_abspath, item->path, pool));
 
           if (! strcmp(relpath,

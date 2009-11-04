@@ -366,7 +366,7 @@ walker_helper(svn_wc__db_t *db,
     {
       const char *child_abspath;
       svn_wc__db_kind_t child_kind;
-      
+
       svn_pool_clear(iterpool);
 
       /* See if someone wants to cancel this operation. */

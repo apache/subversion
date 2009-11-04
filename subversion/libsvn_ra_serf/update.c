@@ -1756,7 +1756,7 @@ end_report(svn_ra_serf__xml_parser_t *parser,
           SVN_ERR(svn_ra_serf__get_relative_path(&fs_path, full_path,
                                                  ctx->sess, NULL, info->pool));
           info->delta_base = svn_string_createf(info->pool, "%s/%ld/%s",
-                                                ctx->sess->rev_root_stub, 
+                                                ctx->sess->rev_root_stub,
                                                 info->base_rev, fs_path);
         }
 
@@ -2647,7 +2647,7 @@ svn_ra_serf__get_file(svn_ra_session_t *ra_session,
   if (SVN_IS_VALID_REVNUM(revision))
     {
       const char *baseline_url, *rel_path;
-      
+
       SVN_ERR(svn_ra_serf__get_baseline_info(&baseline_url, &rel_path,
                                              session, conn, fetch_url,
                                              revision, NULL, pool));

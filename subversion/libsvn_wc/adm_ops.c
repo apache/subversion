@@ -156,7 +156,7 @@ tweak_entries(svn_wc__db_t *db,
 
       /* If a file, or deleted, excluded or absent dir, then tweak the
          entry but don't recurse.
-         
+
          ### how does this translate into wc_db land? */
       if (kind == svn_wc__db_kind_file
             || status == svn_wc__db_status_not_present
@@ -1221,7 +1221,7 @@ svn_wc_delete4(svn_wc_context_t *wc_ctx,
         }
       /* else
          ### Handle added directory that is deleted in parent_access
-             (was_deleted=TRUE). The current behavior is to just delete the 
+             (was_deleted=TRUE). The current behavior is to just delete the
              directory with its administrative area inside, which is OK for WC-1.0,
              but when we move to a single database per working copy something
              must unversion the directory. */
@@ -1297,8 +1297,8 @@ svn_wc_delete4(svn_wc_context_t *wc_ctx,
   if (kind == svn_wc__db_kind_dir && was_add)
     {
       /* We have to release the WC-DB handles, to allow removing
-         the directory on windows. 
-         
+         the directory on windows.
+
          A better solution would probably be to call svn_wc__adm_destroy()
          in the right place, but we can't do that without breaking the API. */
 
@@ -1407,7 +1407,7 @@ mark_tree_copied(svn_wc__db_t *db,
       /* Skip deleted items. */
       if (entry->schedule == svn_wc_schedule_delete)
         continue;
-  
+
       /* If this is a directory, recurse. */
       if (entry->kind == svn_node_dir)
         {
@@ -2220,7 +2220,7 @@ revert_internal(svn_wc__db_t *db,
                                        iterpool));
 
           /* Skip subdirectories if we're called with depth-files. */
-          if ((depth == svn_depth_files) && 
+          if ((depth == svn_depth_files) &&
               (db_kind != svn_wc__db_kind_file) &&
               (db_kind != svn_wc__db_kind_symlink))
             continue;
@@ -2337,7 +2337,7 @@ svn_wc__get_pristine_contents(svn_stream_t **contents,
                               apr_pool_t *scratch_pool)
 {
   const char *text_base;
-  
+
   SVN_ERR(svn_wc__text_base_path(&text_base, db, local_abspath, FALSE,
                                  scratch_pool));
 
@@ -2445,8 +2445,8 @@ svn_wc__internal_remove_from_revision_control(svn_wc__db_t *db,
   else if (svn_wc__adm_missing(db, local_abspath, scratch_pool))
     {
       /* The directory is missing  so don't try to recurse,
-         just delete the entry in the parent directory. 
-         
+         just delete the entry in the parent directory.
+
          ### This case disappears after we move to one DB. */
       SVN_ERR(svn_wc__entry_remove(db, local_abspath, scratch_pool));
     }

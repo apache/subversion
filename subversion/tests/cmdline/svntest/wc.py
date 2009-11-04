@@ -297,7 +297,7 @@ class State:
       path = _shortest_path(unique_other)
       default_singleton_handler('expected ' + label, path,
                                 norm_other.desc[path])
-    
+
     raise svntest.tree.SVNTreeUnequal
 
   def tweak_for_entries_compare(self):

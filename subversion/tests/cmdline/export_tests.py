@@ -399,7 +399,7 @@ def export_HEADplus1_fails(sbox):
   "export -r {HEAD+1} fails"
 
   sbox.build(create_wc = False, read_only = True)
-  
+
   svntest.actions.run_and_verify_svn(None, None, '.*No such revision.*',
                                      'export', sbox.repo_url, sbox.wc_dir,
                                      '-r', 38956)

@@ -983,14 +983,14 @@ def _check_command_line_parsed():
 def is_ra_type_dav():
   _check_command_line_parsed()
   return test_area_url.startswith('http')
-  
+
 def is_ra_type_dav_neon():
   """Return True iff running tests over RA-Neon.
      CAUTION: Result is only valid if svn was built to support both."""
   _check_command_line_parsed()
   return test_area_url.startswith('http') and \
     (preferred_http_library == "neon")
-  
+
 def is_ra_type_dav_serf():
   """Return True iff running tests over RA-Serf.
      CAUTION: Result is only valid if svn was built to support both."""

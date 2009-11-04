@@ -308,7 +308,7 @@ svn_stream_readline(svn_stream_t *stream,
     *stringbuf = svn_stringbuf_dup(str, pool);
 
   /* Done. RIP iterpool. */
-  svn_pool_destroy(iterpool); 
+  svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
 }
@@ -336,18 +336,18 @@ svn_error_t *svn_stream_copy3(svn_stream_t *from, svn_stream_t *to,
           if (err)
              break;
         }
-               
+
       err = svn_stream_read(from, buf, &len);
       if (err)
       	 break;
-      	 
+
       if (len > 0)
         err = svn_stream_write(to, buf, &len);
 
       if (err || (len != SVN__STREAM_CHUNK_SIZE))
           break;
     }
-    
+
   err2 = svn_error_compose_create(svn_stream_close(from),
                                   svn_stream_close(to));
 
@@ -481,7 +481,7 @@ read_handler_apr(void *baton, char *buffer, apr_size_t *len)
     {
       /* Get the current file position and make sure it is in range. */
       apr_off_t pos;
-      
+
       pos = 0;
       SVN_ERR(svn_io_file_seek(btn->file, APR_CUR, &pos, btn->pool));
       if (pos < btn->start)
@@ -501,7 +501,7 @@ read_handler_apr(void *baton, char *buffer, apr_size_t *len)
         {
           /* We're in range, but don't read over the end of the range. */
           if (pos + *len > btn->end)
-              *len = btn->end - pos; 
+              *len = btn->end - pos;
         }
     }
 

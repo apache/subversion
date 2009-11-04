@@ -247,7 +247,7 @@ class SvnBackupOutputCommand(SvnBackupOutput):
         SvnBackupOutput.__init__(self, abspath, filename + file_extension)
         self.__cmd_path    = cmd_path
         self.__cmd_options = cmd_options
- 
+
     def open(self):
         cmd = [ self.__cmd_path, self.__cmd_options ]
 
@@ -320,7 +320,7 @@ class SvnBackup:
         self.__quiet = options.quiet
         self.__deltas = options.deltas
         self.__relative_incremental = options.relative_incremental
-        
+
         # svnadmin/svnlook path
         self.__svnadmin_path = "svnadmin"
         if options.svnadmin_path:
@@ -455,7 +455,7 @@ class SvnBackup:
                     # determine the latest revision dumped
                     highest_rev = rev_end
 
-        return highest_rev    
+        return highest_rev
 
     def transfer_ftp(self, absfilename, filename):
         rc = False

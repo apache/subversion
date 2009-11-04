@@ -597,7 +597,7 @@ class SVNTests extends TestCase
          *
          * @param createWC Whether to create the working copy on disk,
          * and initialize the expected working copy layout.
-         * 
+         *
          * @see #OneTest
          */
         protected OneTest(boolean createWC)

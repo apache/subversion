@@ -212,7 +212,7 @@ svn_client__get_wc_mergeinfo(svn_mergeinfo_t *mergeinfo,
           /* Don't look any higher than the limit path. */
           if (limit_abspath && strcmp(limit_abspath, local_abspath) == 0)
             break;
-          
+
           /* If we've reached the root of the working copy don't look any
              higher. */
           SVN_ERR(svn_wc_is_wc_root2(&is_wc_root, ctx->wc_ctx,
@@ -450,7 +450,7 @@ svn_client__get_repos_mergeinfo(svn_ra_session_t *ra_session,
          mergeinfo for REL_PATH. */
       *target_mergeinfo =
         svn_apr_hash_index_val(apr_hash_first(pool, tgt_mergeinfo_cat));
-      
+
     }
 
   return SVN_NO_ERROR;
@@ -526,7 +526,7 @@ svn_client__get_wc_or_repos_mergeinfo(svn_mergeinfo_t *target_mergeinfo,
                                       apr_pool_t *pool)
 {
   svn_mergeinfo_catalog_t tgt_mergeinfo_cat;
-  
+
   *target_mergeinfo = NULL;
 
   SVN_ERR(svn_client__get_wc_or_repos_mergeinfo_catalog(&tgt_mergeinfo_cat,
@@ -544,7 +544,7 @@ svn_client__get_wc_or_repos_mergeinfo(svn_mergeinfo_t *target_mergeinfo,
          thing in the catalog, so we'll just fetch the first hash item. */
       *target_mergeinfo =
         svn_apr_hash_index_val(apr_hash_first(pool, tgt_mergeinfo_cat));
-      
+
     }
 
   return SVN_NO_ERROR;
@@ -591,7 +591,7 @@ svn_client__get_wc_or_repos_mergeinfo_catalog(
     SVN_ERR(svn_client__get_wc_mergeinfo_catalog(target_mergeinfo_catalog,
                                                  indirect,
                                                  include_descendants,
-                                                 inherit, 
+                                                 inherit,
                                                  local_abspath,
                                                  NULL, NULL, ctx,
                                                  result_pool, scratch_pool));
@@ -1193,7 +1193,7 @@ find_nearest_ancestor(apr_array_header_t *depth_first_catalog_index,
             ancestor_index = i;
         }
     }
-  
+
   if (ancestor_index == -1)
     return NULL;
   else
@@ -1218,7 +1218,7 @@ struct filter_log_entry_baton_t
   /* Mergeinfo catalog for the tree rooted at ABS_REPOS_TARGET_PATH.
      The path keys must be repository-absolute. */
   svn_mergeinfo_catalog_t target_mergeinfo_catalog;
-  
+
   /* Depth first sorted array of svn_sort__item_t's for
      TARGET_MERGEINFO_CATALOG. */
   apr_array_header_t *depth_first_catalog_index;
@@ -1262,7 +1262,7 @@ filter_log_entry_with_rangelist(void *baton,
                                   this_rangelist, FALSE, pool));
   if (! (intersection && intersection->nelts))
     return SVN_NO_ERROR;
-  
+
   SVN_ERR_ASSERT(intersection->nelts == 1);
 
   /* Ok, we know LOG_ENTRY->REVISION is represented in BATON->RANGELIST,
@@ -1286,7 +1286,7 @@ filter_log_entry_with_rangelist(void *baton,
       apr_array_header_t *this_rev_rangelist =
         apr_array_make(pool, 1, sizeof(svn_merge_range_t *));
       apr_pool_t *iterpool = svn_pool_create(pool);
- 
+
       range = apr_pcalloc(pool, sizeof(*range));
       range->start = log_entry->revision - 1;
       range->end = log_entry->revision;
@@ -1336,7 +1336,7 @@ filter_log_entry_with_rangelist(void *baton,
           target_path_affected = svn_uri_join(fleb->abs_repos_target_path,
                                               merge_source_rel_target,
                                               iterpool);
-          
+
           nearest_ancestor_mergeinfo =
             find_nearest_ancestor(fleb->depth_first_catalog_index,
                                   target_path_affected);
@@ -1655,7 +1655,7 @@ svn_client_mergeinfo_log(const char *path_or_url,
                         path_or_url, peg_revision,
                         depth == svn_depth_infinity,
                         ctx, scratch_pool, scratch_pool));
-  
+
   if (!svn_path_is_url(path_or_url))
     SVN_ERR(svn_dirent_get_absolute(&path_or_url, path_or_url, scratch_pool));
 
@@ -1740,7 +1740,7 @@ svn_client_mergeinfo_log(const char *path_or_url,
              subtree.  */
           const char *subtree_rel_path =
             subtree_path + strlen(path_or_url_repos_rel) + 1;
-          
+
           SVN_ERR(svn_mergeinfo__add_suffix_to_mergeinfo(
             &subtree_source_history, source_history,
             subtree_rel_path, scratch_pool, scratch_pool));
@@ -1855,7 +1855,7 @@ svn_client_mergeinfo_log(const char *path_or_url,
                        apr_pstrdup(scratch_pool, subtree_path),
                        APR_HASH_KEY_STRING,
                        apr_array_make(scratch_pool, 0,
-                       sizeof(svn_merge_range_t *)));   
+                       sizeof(svn_merge_range_t *)));
         }
     }
 

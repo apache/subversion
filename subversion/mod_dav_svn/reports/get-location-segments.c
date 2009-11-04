@@ -60,7 +60,7 @@ maybe_send_opener(struct location_segment_baton *b)
     {
       SVN_ERR(dav_svn__brigade_puts(b->bb, b->output, DAV_XML_HEADER DEBUG_CR
                                     "<S:get-location-segments-report "
-                                    "xmlns:S=\"" SVN_XML_NAMESPACE 
+                                    "xmlns:S=\"" SVN_XML_NAMESPACE
                                     "\" xmlns:D=\"DAV:\">" DEBUG_CR));
       b->sent_opener = TRUE;
     }

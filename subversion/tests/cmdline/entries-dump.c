@@ -41,7 +41,7 @@ str_value(const char *name, const char *value)
   else
     printf("e.%s = '%s'\n", name, value);
 }
-  
+
 
 static void
 int_value(const char *name, long int value)

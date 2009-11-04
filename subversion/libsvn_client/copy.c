@@ -245,7 +245,7 @@ get_copy_pair_ancestors(const apr_array_header_t *copy_pairs,
     *dst_ancestor = apr_pstrdup(pool, top_dst);
 
   if (common_ancestor)
-    *common_ancestor = 
+    *common_ancestor =
                src_is_url
                     ? svn_uri_get_longest_ancestor(top_src, top_dst, pool)
                     : svn_dirent_get_longest_ancestor(top_src, top_dst, pool);
@@ -1716,7 +1716,7 @@ try_copy(svn_commit_info_t **commit_info_p,
          svn_client_ctx_t *ctx,
          apr_pool_t *pool)
 {
-  apr_array_header_t *copy_pairs = 
+  apr_array_header_t *copy_pairs =
                         apr_array_make(pool, sources->nelts,
                                        sizeof(svn_client__copy_pair_t *));
   svn_boolean_t srcs_are_urls, dst_is_url;
@@ -1780,7 +1780,7 @@ try_copy(svn_commit_info_t **commit_info_p,
               (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
                _("Cannot mix repository and working copy sources"));
 
-          pair->dst = dst_is_url 
+          pair->dst = dst_is_url
                           ? svn_uri_join(dst_path_in, src_basename, pool)
                           : svn_dirent_join(dst_path_in, src_basename, pool);
           APR_ARRAY_PUSH(copy_pairs, svn_client__copy_pair_t *) = pair;

@@ -385,7 +385,7 @@ test_stream_line_transformer(apr_pool_t *pool)
   stream = svn_stream_from_string(string, pool);
 
   svn_stream_set_line_transformer_callback(stream, line_transformer);
-  
+
   svn_stream_readline(stream, &line, "\n", &eof, pool);
   SVN_ERR_ASSERT(strcmp(line->data, inv_lines[0]) == 0);
 
@@ -426,7 +426,7 @@ test_stream_line_filter_and_transformer(apr_pool_t *pool)
   svn_stream_set_line_filter_callback(stream, line_filter);
 
   svn_stream_set_line_transformer_callback(stream, line_transformer);
-  
+
   /* Line one should be filtered. */
   svn_stream_readline(stream, &line, "\n", &eof, pool);
   SVN_ERR_ASSERT(strcmp(line->data, inv_lines[1]) == 0);

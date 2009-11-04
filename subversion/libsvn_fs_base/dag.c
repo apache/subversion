@@ -257,7 +257,7 @@ txn_body_dag_init_fs(void *baton,
 svn_error_t *
 svn_fs_base__dag_init_fs(svn_fs_t *fs)
 {
-  return svn_fs_base__retry_txn(fs, txn_body_dag_init_fs, NULL, 
+  return svn_fs_base__retry_txn(fs, txn_body_dag_init_fs, NULL,
                                 TRUE, fs->pool);
 }
 
